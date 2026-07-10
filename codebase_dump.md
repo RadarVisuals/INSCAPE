@@ -95,7 +95,6 @@ import { useStore } from '../../store/useStore';
 export default function ArtCanvas() {
   const containerRef = useRef(null);
   const engineRef = useRef(null);
-  const setMousePos = useStore((state) => state.setMousePos);
   
   // Grab overlay params from store
   const scanlineOpacity = useStore((state) => state.scanlineOpacity);
@@ -121,7 +120,9 @@ export default function ArtCanvas() {
   const handleMouseMove = (e) => {
     const x = (e.clientX / window.innerWidth) * 2 - 1;
     const y = (e.clientY / window.innerHeight) * 2 - 1;
-    setMousePos(x, y);
+    if (engineRef.current) {
+      engineRef.current.updateMousePos(x, y);
+    }
   };
 
   return (
@@ -159,25 +160,13 @@ export default function ArtCanvas() {
 ```
 
 ---
-### `src\components\UI\ControlPanel.jsx`
+### `src\components\UI\CompactSlider.jsx`
 ```javascript
-// src/components/UI/ControlPanel.jsx
-import { useState } from 'react';
+// src/components/UI/CompactSlider.jsx
+import React from 'react';
 import { useStore } from '../../store/useStore';
-import { useWalletStore } from '../../store/useWalletStore';
-import { 
-  Eye, 
-  EyeOff, 
-  ShieldCheck, 
-  Skull, 
-  Layers, 
-  Sparkles, 
-  Wind, 
-  Zap,
-  Sliders
-} from 'lucide-react';
 
-const CompactSlider = ({ label, storeKey, min, max, step }) => {
+export default function CompactSlider({ label, storeKey, min, max, step }) {
   const value = useStore((state) => state[storeKey]);
   const setParameter = useStore((state) => state.setParameter);
 
@@ -198,69 +187,55 @@ const CompactSlider = ({ label, storeKey, min, max, step }) => {
       />
     </div>
   );
-};
+}
+```
+
+---
+### `src\components\UI\ControlPanel.jsx`
+```javascript
+// src/components/UI/ControlPanel.jsx
+import React, { useState } from 'react';
+import { useStore } from '../../store/useStore';
+import { 
+  Eye, 
+  EyeOff, 
+  ShieldCheck, 
+  Skull, 
+  Layers, 
+  Sparkles, 
+  Wind, 
+  Zap,
+  Sliders
+} from 'lucide-react';
+
+// Sub-Tab Component Imports
+import SetupTab from './tabs/SetupTab';
+import Web3Tab from './tabs/Web3Tab';
+import SkullTab from './tabs/SkullTab';
+import BgTab from './tabs/BgTab';
+import EyesTab from './tabs/EyesTab';
+import AuraTab from './tabs/AuraTab';
+import AtmosphereTab from './tabs/AtmosphereTab';
+import GlitchTab from './tabs/GlitchTab';
 
 export default function ControlPanel() {
   const isUiVisible = useStore((state) => state.isUiVisible);
   const toggleUi = useStore((state) => state.toggleUi);
-  const autoBlink = useStore((state) => state.autoBlink);
-  const setParameter = useStore((state) => state.setParameter);
-
-  const hostProfileAddress = useWalletStore((state) => state.hostProfileAddress);
-  const isWalletConnected = useWalletStore((state) => state.isWalletConnected);
-  const activeReaction = useStore((state) => state.activeReaction);
-  const reactionProgress = useStore((state) => state.reactionProgress);
-
-  const characterId = useStore((state) => state.characterId);
-  const bgClippingMaskId = useStore((state) => state.bgClippingMaskId);
-  const bgPatternStyle = useStore((state) => state.bgPatternStyle);
-  const bgMountainId = useStore((state) => state.bgMountainId);
 
   const [activeTab, setActiveTab] = useState('setup');
 
-  // List of active actors matching your folder names
-  const availableActors = [
-    { id: "skull_reaper", label: "Skull Reaper" },
-    { id: "abyssal_eye", label: "Abyssal Eye" }
-  ];
-
-  // Configured backdrop options matching your backdrop files
-  const backdropOptions = [
-    { id: "beige", label: "Beige Backdrop" },
-    { id: "black", label: "Black Backdrop" },
-    { id: "darkblue", label: "Dark Blue" },
-    { id: "darkgrey", label: "Dark Grey" },
-    { id: "hotpink", label: "Hot Pink" },
-    { id: "lightblue", label: "Light Blue" },
-    { id: "lightgrey", label: "Light Grey" },
-    { id: "orange", label: "Orange" },
-    { id: "pastelpurple", label: "Pastel Purple" },
-    { id: "purple", label: "Purple" }
-  ];
-
-  // Configured mountain assets
-  const mountainOptions = [
-    { id: 1, label: "Mountain 01" },
-    { id: 2, label: "Mountain 02" },
-    { id: 3, label: "Mountain 03" }
-  ];
-
-  // Configured background pattern prefixes
-  const patternStyleOptions = [
-    { id: "bubble", label: "Bubble Style" },
-    { id: "stone", label: "Stone Style" }
-  ];
-
   const tabs = [
-    { id: 'setup', label: 'Setup', icon: <Sliders size={12} /> },
-    { id: 'web3', label: 'Web3', icon: <ShieldCheck size={12} /> },
-    { id: 'skull', label: 'Skull', icon: <Skull size={12} /> },
-    { id: 'bg', label: 'Background', icon: <Layers size={12} /> },
-    { id: 'eyes', label: 'Eyes', icon: <Eye size={12} /> },
-    { id: 'aura', label: 'Aura', icon: <Sparkles size={12} /> },
-    { id: 'atmosphere', label: 'Atmosphere', icon: <Wind size={12} /> },
-    { id: 'glitch', label: 'Glitch', icon: <Zap size={12} /> }
+    { id: 'setup', label: 'Setup', icon: <Sliders size={12} />, component: <SetupTab /> },
+    { id: 'web3', label: 'Web3', icon: <ShieldCheck size={12} />, component: <Web3Tab /> },
+    { id: 'skull', label: 'Skull', icon: <Skull size={12} />, component: <SkullTab /> },
+    { id: 'bg', label: 'Background', icon: <Layers size={12} />, component: <BgTab /> },
+    { id: 'eyes', label: 'Eyes', icon: <Eye size={12} />, component: <EyesTab /> },
+    { id: 'aura', label: 'Aura', icon: <Sparkles size={12} />, component: <AuraTab /> },
+    { id: 'atmosphere', label: 'Atmosphere', icon: <Wind size={12} />, component: <AtmosphereTab /> },
+    { id: 'glitch', label: 'Glitch', icon: <Zap size={12} />, component: <GlitchTab /> }
   ];
+
+  const currentTab = tabs.find(tab => tab.id === activeTab);
 
   return (
     <>
@@ -288,6 +263,7 @@ export default function ControlPanel() {
           maxHeight: '280px'
         }}
       >
+        {/* Navigation Tabs List */}
         <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', scrollbarWidth: 'none' }}>
           {tabs.map(tab => (
             <button
@@ -306,245 +282,397 @@ export default function ControlPanel() {
           ))}
         </div>
 
+        {/* Dynamic Panel Renderer */}
         <div style={{ overflowY: 'auto', flex: 1, paddingRight: '5px' }}>
-          {activeTab === 'setup' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '20px' }}>
-              {/* Actor Column */}
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Actor Config</h4>
-                
-                <div style={{ marginBottom: '10px' }}>
-                  <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Active Character</label>
-                  <select
-                    value={characterId}
-                    onChange={(e) => setParameter('characterId', e.target.value)}
-                    style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
-                  >
-                    {availableActors.map(actor => (
-                      <option key={actor.id} value={actor.id}>{actor.label}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <p style={{ fontSize: '9px', color: 'var(--text-muted)', lineHeight: '1.2' }}>
-                  * The engine will load mask.webp, patterns, lineart, and eyes/eyelids from the actor's directory automatically.
-                </p>
-              </div>
-
-              {/* Background Column */}
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Background Stage Setup</h4>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '10px', marginBottom: '10px' }}>
-                  <div>
-                    <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Backdrop Color</label>
-                    <select
-                      value={bgClippingMaskId}
-                      onChange={(e) => setParameter('bgClippingMaskId', e.target.value)}
-                      style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
-                    >
-                      {backdropOptions.map(option => (
-                        <option key={option.id} value={option.id}>{option.label.toUpperCase()}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Mountain Layer</label>
-                    <select
-                      value={bgMountainId}
-                      onChange={(e) => setParameter('bgMountainId', parseInt(e.target.value) || 1)}
-                      style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
-                    >
-                      {mountainOptions.map(option => (
-                        <option key={option.id} value={option.id}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Pattern Style</label>
-                  <select
-                    value={bgPatternStyle}
-                    onChange={(e) => setParameter('bgPatternStyle', e.target.value)}
-                    style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
-                  >
-                    {patternStyleOptions.map(option => (
-                      <option key={option.id} value={option.id}>{option.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'web3' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Connection status</h4>
-                <div style={{ padding: '8px', border: '1px solid var(--border-color)', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
-                  <div>Status: <span style={{ color: isWalletConnected ? '#00ff80' : '#8b0000', fontWeight: 'bold' }}>{isWalletConnected ? "CONNECTED" : "DISCONNECTED"}</span></div>
-                  <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginTop: '2px', color: 'var(--text-muted)' }}>
-                    UP: {hostProfileAddress || "No Context Resolved"}
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>LSP1 Simulators</h4>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button
-                    onClick={() => window.simulateGothicEvent && window.simulateGothicEvent('lyx_received')}
-                    style={{ flex: 1, background: 'transparent', border: '1px solid #ff5500', color: '#ff9900', padding: '6px', fontSize: '9px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
-                  >
-                    🔥 LYX
-                  </button>
-                  <button
-                    onClick={() => window.simulateGothicEvent && window.simulateGothicEvent('lsp8_received')}
-                    style={{ flex: 1, background: 'transparent', border: '1px solid #00f3ff', color: '#00f3ff', padding: '6px', fontSize: '9px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
-                  >
-                    👾 NFT
-                  </button>
-                </div>
-                {activeReaction && (
-                  <div style={{ marginTop: '8px', fontSize: '9px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-                    Decaying: <span style={{ color: 'var(--text-main)' }}>{activeReaction.toUpperCase()} ({Math.round(reactionProgress * 100)}%)</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'skull' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Motion Dynamics</h4>
-                <CompactSlider label="Float Speed" storeKey="floatSpeed" min="0" max="3" step="0.1" />
-                <CompactSlider label="Float Amp X" storeKey="floatAmpX" min="0" max="100" step="1" />
-                <CompactSlider label="Float Amp Y" storeKey="floatAmpY" min="0" max="100" step="1" />
-                <CompactSlider label="Float Rotation" storeKey="floatRotation" min="0" max="10" step="0.1" />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Foreground Skull</h4>
-                <CompactSlider label="Pattern Bottom Scale" storeKey="patternBottomScale" min="0.5" max="3" step="0.1" />
-                <CompactSlider label="Pattern Top Scale" storeKey="patternTopScale" min="0.5" max="3" step="0.1" />
-                <CompactSlider label="Warp Intensity" storeKey="warpIntensity" min="0" max="100" step="1" />
-                <CompactSlider label="Warp Speed" storeKey="warpSpeed" min="0" max="5" step="0.1" />
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'bg' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Background Pattern</h4>
-                <CompactSlider label="BG Pattern Bottom Scale" storeKey="bgPatternBottomScale" min="0.5" max="3" step="0.1" />
-                <CompactSlider label="BG Pattern Top Scale" storeKey="bgPatternTopScale" min="0.5" max="3" step="0.1" />
-                <CompactSlider label="BG Warp Intensity" storeKey="bgWarpIntensity" min="0" max="100" step="1" />
-                <CompactSlider label="BG Warp Speed" storeKey="bgWarpSpeed" min="0" max="5" step="0.1" />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Parallax Environment</h4>
-                <CompactSlider label="BG Scroll Speed" storeKey="bgScrollSpeed" min="0" max="150" step="5" />
-                <CompactSlider label="BG2 Parallax Factor" storeKey="bg2ParallaxSpeed" min="0" max="5" step="0.1" />
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'eyes' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Eyelid Cycles</h4>
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', height: '18px' }}>
-                  <input
-                    type="checkbox"
-                    id="autoBlink"
-                    checked={autoBlink}
-                    onChange={(e) => setParameter('autoBlink', e.target.checked)}
-                    style={{
-                      cursor: 'pointer',
-                      accentColor: 'var(--accent-color)',
-                      width: '12px',
-                      height: '12px',
-                      background: 'none',
-                      border: '1px solid var(--border-color)'
-                    }}
-                  />
-                  <label htmlFor="autoBlink" style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-main)', cursor: 'pointer', userSelect: 'none' }}>
-                    Auto Blink
-                  </label>
-                </div>
-
-                <CompactSlider label="Blink Interval" storeKey="blinkInterval" min="1" max="15" step="0.5" />
-                <CompactSlider label="Blink Speed" storeKey="blinkSpeed" min="0.1" max="5" step="0.1" />
-                <CompactSlider label="Eyelid Travel" storeKey="eyelidTravel" min="10" max="100" step="1" />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Pupil Tracking</h4>
-                <CompactSlider label="Manual Eyelid Openness" storeKey="eyelidManualProgress" min="0" max="1" step="0.05" />
-                <CompactSlider label="Pupil Mouse Influence" storeKey="pupilMouseInfluence" min="0" max="2" step="0.1" />
-                <CompactSlider label="Pupil Drift (Wander)" storeKey="pupilWander" min="0" max="3" step="0.1" />
-                <CompactSlider label="Pupil Saccade Jitter" storeKey="pupilSaccade" min="0" max="3" step="0.1" />
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'aura' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Aura Properties</h4>
-                <CompactSlider label="Aura Scale" storeKey="auraScale" min="1.0" max="1.5" step="0.01" />
-                <CompactSlider label="Aura Opacity" storeKey="auraOpacity" min="0" max="1" step="0.05" />
-                <CompactSlider label="Aura Blur strength" storeKey="auraBlur" min="0" max="50" step="1" />
-                <CompactSlider label="Aura Pulse Speed" storeKey="auraPulseSpeed" min="0" max="5" step="0.1" />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Aura Tint (RGB)</h4>
-                <CompactSlider label="Red Channel" storeKey="auraColorR" min="0" max="255" step="1" />
-                <CompactSlider label="Green Channel" storeKey="auraColorG" min="0" max="255" step="1" />
-                <CompactSlider label="Blue Channel" storeKey="auraColorB" min="0" max="255" step="1" />
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'atmosphere' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Particulate Shards</h4>
-                <CompactSlider label="Particle Count" storeKey="particleCount" min="0" max="300" step="5" />
-                <CompactSlider label="Particle Speed" storeKey="particleSpeed" min="0" max="5" step="0.1" />
-                <CompactSlider label="Wind Drift" storeKey="particleWind" min="-20" max="20" step="1" />
-                <CompactSlider label="Flutter Sway" storeKey="particleSway" min="0" max="5" step="0.1" />
-                <CompactSlider label="Particle Size" storeKey="particleSize" min="0.1" max="3.0" step="0.1" />
-                <CompactSlider label="Particle Opacity" storeKey="particleOpacity" min="0" max="1" step="0.05" />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Screen Overlay</h4>
-                <CompactSlider label="Scanline Density" storeKey="scanlineOpacity" min="0" max="1" step="0.05" />
-                <CompactSlider label="Vignette Intensity" storeKey="vignetteOpacity" min="0" max="1" step="0.05" />
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'glitch' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Chromatic Split</h4>
-                <CompactSlider label="RGB Split Amount" storeKey="aberrationAmount" min="0" max="30" step="0.5" />
-                <CompactSlider label="Aberration Speed" storeKey="aberrationSpeed" min="0" max="10" step="0.1" />
-                <CompactSlider label="Glitch Burst Chance" storeKey="aberrationGlitch" min="0" max="5" step="0.1" />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Corruption & Flicker</h4>
-                <CompactSlider label="Flicker Intensity" storeKey="flickerIntensity" min="0" max="0.9" step="0.05" />
-                <CompactSlider label="Flicker Speed" storeKey="flickerSpeed" min="0" max="5" step="0.1" />
-                <CompactSlider label="Screen Shake" storeKey="glitchShakeIntensity" min="0" max="30" step="1" />
-              </div>
-            </div>
-          )}
+          {currentTab ? currentTab.component : null}
         </div>
       </div>
     </>
+  );
+}
+```
+
+---
+### `src\components\UI\tabs\AtmosphereTab.jsx`
+```javascript
+// src/components/UI/tabs/AtmosphereTab.jsx
+import React from 'react';
+import CompactSlider from '../CompactSlider';
+
+export default function AtmosphereTab() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Particulate Shards</h4>
+        <CompactSlider label="Particle Count" storeKey="particleCount" min="0" max="300" step="5" />
+        <CompactSlider label="Particle Speed" storeKey="particleSpeed" min="0" max="5" step="0.1" />
+        <CompactSlider label="Wind Drift" storeKey="particleWind" min="-20" max="20" step="1" />
+        <CompactSlider label="Flutter Sway" storeKey="particleSway" min="0" max="5" step="0.1" />
+        <CompactSlider label="Particle Size" storeKey="particleSize" min="0.1" max="3.0" step="0.1" />
+        <CompactSlider label="Particle Opacity" storeKey="particleOpacity" min="0" max="1" step="0.05" />
+      </div>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Screen Overlay</h4>
+        <CompactSlider label="Scanline Density" storeKey="scanlineOpacity" min="0" max="1" step="0.05" />
+        <CompactSlider label="Vignette Intensity" storeKey="vignetteOpacity" min="0" max="1" step="0.05" />
+      </div>
+    </div>
+  );
+}
+```
+
+---
+### `src\components\UI\tabs\AuraTab.jsx`
+```javascript
+// src/components/UI/tabs/AuraTab.jsx
+import React from 'react';
+import CompactSlider from '../CompactSlider';
+
+export default function AuraTab() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Aura Properties</h4>
+        <CompactSlider label="Aura Scale" storeKey="auraScale" min="1.0" max="1.5" step="0.01" />
+        <CompactSlider label="Aura Opacity" storeKey="auraOpacity" min="0" max="1" step="0.05" />
+        <CompactSlider label="Aura Blur strength" storeKey="auraBlur" min="0" max="50" step="1" />
+        <CompactSlider label="Aura Pulse Speed" storeKey="auraPulseSpeed" min="0" max="5" step="0.1" />
+      </div>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Aura Tint (RGB)</h4>
+        <CompactSlider label="Red Channel" storeKey="auraColorR" min="0" max="255" step="1" />
+        <CompactSlider label="Green Channel" storeKey="auraColorG" min="0" max="255" step="1" />
+        <CompactSlider label="Blue Channel" storeKey="auraColorB" min="0" max="255" step="1" />
+      </div>
+    </div>
+  );
+}
+```
+
+---
+### `src\components\UI\tabs\BgTab.jsx`
+```javascript
+// src/components/UI/tabs/BgTab.jsx
+import React from 'react';
+import CompactSlider from '../CompactSlider';
+
+export default function BgTab() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Background Pattern</h4>
+        <CompactSlider label="BG Pattern Bottom Scale" storeKey="bgPatternBottomScale" min="0.5" max="3" step="0.1" />
+        <CompactSlider label="BG Pattern Top Scale" storeKey="bgPatternTopScale" min="0.5" max="3" step="0.1" />
+        <CompactSlider label="BG Warp Intensity" storeKey="bgWarpIntensity" min="0" max="100" step="1" />
+        <CompactSlider label="BG Warp Speed" storeKey="bgWarpSpeed" min="0" max="5" step="0.1" />
+      </div>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Parallax Environment</h4>
+        <CompactSlider label="BG Scroll Speed" storeKey="bgScrollSpeed" min="0" max="150" step="5" />
+        {/* Still point is now at 0.0 in the middle, allowing reverse motion on the left */}
+        <CompactSlider label="BG2 Parallax Factor" storeKey="bg2ParallaxSpeed" min="-5.0" max="5.0" step="0.1" />
+      </div>
+    </div>
+  );
+}
+```
+
+---
+### `src\components\UI\tabs\EyesTab.jsx`
+```javascript
+// src/components/UI/tabs/EyesTab.jsx
+import React from 'react';
+import { useStore } from '../../../store/useStore';
+import CompactSlider from '../CompactSlider';
+
+export default function EyesTab() {
+  const autoBlink = useStore((state) => state.autoBlink);
+  const setParameter = useStore((state) => state.setParameter);
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Eyelid Cycles</h4>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', height: '18px' }}>
+          <input
+            type="checkbox"
+            id="autoBlink"
+            checked={autoBlink}
+            onChange={(e) => setParameter('autoBlink', e.target.checked)}
+            style={{
+              cursor: 'pointer',
+              accentColor: 'var(--accent-color)',
+              width: '12px',
+              height: '12px',
+              background: 'none',
+              border: '1px solid var(--border-color)'
+            }}
+          />
+          <label htmlFor="autoBlink" style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-main)', cursor: 'pointer', userSelect: 'none' }}>
+            Auto Blink
+          </label>
+        </div>
+
+        <CompactSlider label="Blink Interval" storeKey="blinkInterval" min="1" max="15" step="0.5" />
+        <CompactSlider label="Blink Speed" storeKey="blinkSpeed" min="0.1" max="5" step="0.1" />
+        <CompactSlider label="Eyelid Travel" storeKey="eyelidTravel" min="10" max="100" step="1" />
+      </div>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Pupil Tracking</h4>
+        <CompactSlider label="Manual Eyelid Openness" storeKey="eyelidManualProgress" min="0" max="1" step="0.05" />
+        <CompactSlider label="Pupil Mouse Influence" storeKey="pupilMouseInfluence" min="0" max="2" step="0.1" />
+        <CompactSlider label="Pupil Drift (Wander)" storeKey="pupilWander" min="0" max="3" step="0.1" />
+        <CompactSlider label="Pupil Saccade Jitter" storeKey="pupilSaccade" min="0" max="3" step="0.1" />
+      </div>
+    </div>
+  );
+}
+```
+
+---
+### `src\components\UI\tabs\GlitchTab.jsx`
+```javascript
+// src/components/UI/tabs/GlitchTab.jsx
+import React from 'react';
+import CompactSlider from '../CompactSlider';
+
+export default function GlitchTab() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Chromatic Split</h4>
+        <CompactSlider label="RGB Split Amount" storeKey="aberrationAmount" min="0" max="30" step="0.5" />
+        <CompactSlider label="Aberration Speed" storeKey="aberrationSpeed" min="0" max="10" step="0.1" />
+        <CompactSlider label="Glitch Burst Chance" storeKey="aberrationGlitch" min="0" max="5" step="0.1" />
+      </div>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Corruption & Flicker</h4>
+        <CompactSlider label="Flicker Intensity" storeKey="flickerIntensity" min="0" max="0.9" step="0.05" />
+        <CompactSlider label="Flicker Speed" storeKey="flickerSpeed" min="0" max="5" step="0.1" />
+        <CompactSlider label="Screen Shake" storeKey="glitchShakeIntensity" min="0" max="30" step="1" />
+      </div>
+    </div>
+  );
+}
+```
+
+---
+### `src\components\UI\tabs\SetupTab.jsx`
+```javascript
+// src/components/UI/tabs/SetupTab.jsx
+import React from 'react';
+import { useStore } from '../../../store/useStore';
+
+const availableActors = [
+  { id: "skull_reaper", label: "Skull Reaper" },
+  { id: "abyssal_eye", label: "Abyssal Eye" }
+];
+
+const backdropOptions = [
+  { id: "beige", label: "Beige Backdrop" },
+  { id: "black", label: "Black Backdrop" },
+  { id: "darkblue", label: "Dark Blue" },
+  { id: "darkgrey", label: "Dark Grey" },
+  { id: "hotpink", label: "Hot Pink" },
+  { id: "lightblue", label: "Light Blue" },
+  { id: "lightgrey", label: "Light Grey" },
+  { id: "orange", label: "Orange" },
+  { id: "pastelpurple", label: "Pastel Purple" },
+  { id: "purple", label: "Purple" },
+  { id: "moonpurple", label: "Moon Purple" }
+];
+
+const mountainOptions = [
+  { id: 1, label: "Mountain 01" },
+  { id: 2, label: "Mountain 02" },
+  { id: 3, label: "Mountain 03" }
+];
+
+const patternStyleOptions = [
+  { id: "bubble", label: "Bubble Style" },
+  { id: "stone", label: "Stone Style" },
+  { id: "digitalblob", label: "Digital Blob" }
+];
+
+export default function SetupTab() {
+  const characterId = useStore((state) => state.characterId);
+  const bgClippingMaskId = useStore((state) => state.bgClippingMaskId);
+  const bgPatternStyle = useStore((state) => state.bgPatternStyle);
+  const bgMountainId = useStore((state) => state.bgMountainId);
+  const bgMountainBackId = useStore((state) => state.bgMountainBackId);
+  const setParameter = useStore((state) => state.setParameter);
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '20px' }}>
+      {/* Actor Column */}
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Actor Config</h4>
+        
+        <div style={{ marginBottom: '10px' }}>
+          <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Active Character</label>
+          <select
+            value={characterId}
+            onChange={(e) => setParameter('characterId', e.target.value)}
+            style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
+          >
+            {availableActors.map(actor => (
+              <option key={actor.id} value={actor.id}>{actor.label}</option>
+            ))}
+          </select>
+        </div>
+        
+        <p style={{ fontSize: '9px', color: 'var(--text-muted)', lineHeight: '1.2' }}>
+          * The engine will load mask.webp, patterns, lineart, and eyes/eyelids from the actor's directory automatically.
+        </p>
+      </div>
+
+      {/* Background Column */}
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Background Stage Setup</h4>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '10px', marginBottom: '10px' }}>
+          <div>
+            <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Backdrop Color</label>
+            <select
+              value={bgClippingMaskId}
+              onChange={(e) => setParameter('bgClippingMaskId', e.target.value)}
+              style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
+            >
+              {backdropOptions.map(option => (
+                <option key={option.id} value={option.id}>{option.label.toUpperCase()}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Pattern Style</label>
+            <select
+              value={bgPatternStyle}
+              onChange={(e) => setParameter('bgPatternStyle', e.target.value)}
+              style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
+            >
+              {patternStyleOptions.map(option => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+          <div>
+            <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Back Mountain</label>
+            <select
+              value={bgMountainBackId}
+              onChange={(e) => setParameter('bgMountainBackId', parseInt(e.target.value) || 1)}
+              style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
+            >
+              {mountainOptions.map(option => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Front Mountain</label>
+            <select
+              value={bgMountainId}
+              onChange={(e) => setParameter('bgMountainId', parseInt(e.target.value) || 1)}
+              style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
+            >
+              {mountainOptions.map(option => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+### `src\components\UI\tabs\SkullTab.jsx`
+```javascript
+// src/components/UI/tabs/SkullTab.jsx
+import React from 'react';
+import CompactSlider from '../CompactSlider';
+
+export default function SkullTab() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Flight & Hover Controls</h4>
+        <CompactSlider label="Float Speed" storeKey="floatSpeed" min="0" max="3" step="0.1" />
+        <CompactSlider label="Float Amp X (Sway)" storeKey="floatAmpX" min="0" max="400" step="2" />
+        <CompactSlider label="Float Amp Y (Rise)" storeKey="floatAmpY" min="0" max="400" step="2" />
+        <CompactSlider label="Tilt Bias (Degrees)" storeKey="flyTiltBias" min="-20" max="20" step="0.5" />
+        <CompactSlider label="Hover Pause Factor" storeKey="flyHoverPause" min="1.0" max="5.0" step="0.1" />
+      </div>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Skull Flight Scaling</h4>
+        <CompactSlider label="Scale at Lowest Point" storeKey="flyMinScale" min="0.5" max="1.5" step="0.05" />
+        <CompactSlider label="Scale at Highest Peak" storeKey="flyMaxScale" min="0.3" max="1.2" step="0.05" />
+        <CompactSlider label="Wobble Rotation Osc" storeKey="floatRotation" min="0" max="10" step="0.1" />
+        
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '10px', marginBottom: '8px', color: 'var(--text-muted)' }}>Skull Warp</h4>
+        <CompactSlider label="Pattern Bottom Scale" storeKey="patternBottomScale" min="0.5" max="3" step="0.1" />
+        <CompactSlider label="Pattern Top Scale" storeKey="patternTopScale" min="0.5" max="3" step="0.1" />
+        <CompactSlider label="Warp Intensity" storeKey="warpIntensity" min="0" max="100" step="1" />
+        <CompactSlider label="Warp Speed" storeKey="warpSpeed" min="0" max="5" step="0.1" />
+      </div>
+    </div>
+  );
+}
+```
+
+---
+### `src\components\UI\tabs\Web3Tab.jsx`
+```javascript
+// src/components/UI/tabs/Web3Tab.jsx
+import React from 'react';
+import { useStore } from '../../../store/useStore';
+import { useWalletStore } from '../../../store/useWalletStore';
+
+export default function Web3Tab() {
+  const hostProfileAddress = useWalletStore((state) => state.hostProfileAddress);
+  const isWalletConnected = useWalletStore((state) => state.isWalletConnected);
+  const activeReaction = useStore((state) => state.activeReaction);
+  const reactionProgress = useStore((state) => state.reactionProgress);
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Connection status</h4>
+        <div style={{ padding: '8px', border: '1px solid var(--border-color)', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
+          <div>Status: <span style={{ color: isWalletConnected ? '#00ff80' : '#8b0000', fontWeight: 'bold' }}>{isWalletConnected ? "CONNECTED" : "DISCONNECTED"}</span></div>
+          <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginTop: '2px', color: 'var(--text-muted)' }}>
+            UP: {hostProfileAddress || "No Context Resolved"}
+          </div>
+        </div>
+      </div>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>LSP1 Simulators</h4>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            onClick={() => window.simulateGothicEvent && window.simulateGothicEvent('lyx_received')}
+            style={{ flex: 1, background: 'transparent', border: '1px solid #ff5500', color: '#ff9900', padding: '6px', fontSize: '9px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+          >
+            🔥 LYX
+          </button>
+          <button
+            onClick={() => window.simulateGothicEvent && window.simulateGothicEvent('lsp8_received')}
+            style={{ flex: 1, background: 'transparent', border: '1px solid #00f3ff', color: '#00f3ff', padding: '6px', fontSize: '9px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+          >
+            👾 NFT
+          </button>
+        </div>
+        {activeReaction && (
+          <div style={{ marginTop: '8px', fontSize: '9px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+            Decaying: <span style={{ color: 'var(--text-main)' }}>{activeReaction.toUpperCase()} ({Math.round(reactionProgress * 100)}%)</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 ```
@@ -607,7 +735,6 @@ import {
   Assets, 
   Container, 
   Sprite,
-  TilingSprite,
   Texture,
   Graphics
 } from 'pixi.js';
@@ -615,7 +742,9 @@ import { useStore } from '../store/useStore.js';
 import { EffectsSystem } from './systems/EffectsSystem.js';
 import { ParticleSystem } from './systems/ParticleSystem.js';
 import { EyeSystem } from './systems/EyeSystem.js';
-import { createWarpFilters } from './filters/WarpFilterFactory.js';
+import { FogSystem } from './systems/FogSystem.js';
+import { RenderTextureManager } from './systems/RenderTextureManager.js';
+import { MirroredScrollLayer } from './systems/MirroredScrollLayer.js';
 
 function testImageAsset(src) {
   return new Promise((resolve) => {
@@ -635,9 +764,13 @@ export class PixiEngine {
     this.isReady = false;
     this.isDestroyed = false;
 
+    // Load sequence counter to prevent overlapping asynchronous loading glitches
+    this.loadSequence = 0;
+
     // Direct existential flags
     this.hasBgClippingMask = false;
     this.hasBgMountain = false;
+    this.hasBgMountainBack = false;
     this.hasCharClippingMask = false;
     this.hasLineart = false;
 
@@ -654,10 +787,12 @@ export class PixiEngine {
     this.effectsSystem = new EffectsSystem();
     this.eyeSystem = null;
     this.particleSystem = null;
+    this.renderTextureManager = null;
+    this.bgFog = null;
+    this.fgFog = null;
 
-    // Setup filter instances
-    this.warpFilter = null;
-    this.bgWarpFilter = null;
+    // Internal mouse state bypassed from Zustand
+    this.mousePos = { x: 0, y: 0 };
 
     this.config = { ...useStore.getState() };
 
@@ -666,6 +801,7 @@ export class PixiEngine {
       const prevBgClip = this.config.bgClippingMaskId;
       const prevBgStyle = this.config.bgPatternStyle;
       const prevBgMountain = this.config.bgMountainId;
+      const prevBgMountainBack = this.config.bgMountainBackId;
 
       this.config = state;
 
@@ -673,11 +809,17 @@ export class PixiEngine {
         prevChar !== state.characterId ||
         prevBgClip !== state.bgClippingMaskId ||
         prevBgStyle !== state.bgPatternStyle ||
-        prevBgMountain !== state.bgMountainId
+        prevBgMountain !== state.bgMountainId ||
+        prevBgMountainBack !== state.bgMountainBackId
       ) {
         this.reloadAssetsAndScene().catch(err => console.error("Re-init assets failed:", err));
       }
     });
+  }
+
+  updateMousePos(x, y) {
+    this.mousePos.x = x;
+    this.mousePos.y = y;
   }
 
   async init() {
@@ -698,10 +840,11 @@ export class PixiEngine {
       }
 
       this.container.appendChild(this.app.canvas);
+      
+      const currentSeq = ++this.loadSequence;
       await this.loadAssets();
 
-      if (this.isDestroyed) {
-        this.app.destroy(true);
+      if (this.isDestroyed || currentSeq !== this.loadSequence) {
         return;
       }
       
@@ -716,7 +859,7 @@ export class PixiEngine {
   }
 
   async loadAssets() {
-    const { characterId, bgClippingMaskId, bgPatternStyle, bgMountainId } = this.config;
+    const { characterId, bgClippingMaskId, bgPatternStyle, bgMountainId, bgMountainBackId } = this.config;
     const verifiedLoadQueue = [];
 
     this.discoveredPatterns = [];
@@ -724,18 +867,21 @@ export class PixiEngine {
     this.hasEyelids = false;
     this.isPanoramaMode = false;
     this.hasBg2 = false;
+    this.hasBgMountainBack = false;
 
     console.log(`%c🔍 [PixiEngine] Rig Loader: Locating Stage Assets`, 'color: #00f3ff; font-weight: bold;');
 
     // Normalize IDs to padded 2-digit strings (e.g. 1 -> "01", 2 -> "02")
     const padId = (id) => typeof id === 'number' ? String(id).padStart(2, '0') : id;
     const formattedMountainId = padId(bgMountainId);
+    const formattedMountainBackId = padId(bgMountainBackId);
 
     this.keys = {
       bg_clipping_mask: `bg_clipping_mask_${bgClippingMaskId}`,
       bg_pat_1: `bg_pat_1_${bgPatternStyle}`,
       bg_pat_2: `bg_pat_2_${bgPatternStyle}`,
       bg_mountain: `bg_mountain_${formattedMountainId}`,
+      bg_mountain_back: `bg_mountain_back_${formattedMountainBackId}`,
       char_clipping_mask: `char_clipping_mask_${characterId}`,
       char_lineart: `char_lineart_${characterId}`,
       eyelids_top: `eyelids_top_${characterId}`,
@@ -805,7 +951,7 @@ export class PixiEngine {
         console.warn(`⚠️ [PixiEngine] Missing BG Pattern Bottom at: ${bgPat2Path}`);
       }
 
-      // 3. Mountains Layer
+      // 3. Foreground Mountains Layer
       let mountainPath = `/assets/stage/mountains/mountain_${formattedMountainId}.webp`;
       this.hasBgMountain = await testImageAsset(mountainPath);
       if (!this.hasBgMountain) {
@@ -820,6 +966,21 @@ export class PixiEngine {
         console.warn(`⚠️ [PixiEngine] Missing Mountain Asset at: /assets/stage/mountains/mountain_${formattedMountainId}.webp`);
         Assets.cache.set(this.keys.bg_mountain, Texture.EMPTY);
       }
+
+      // 4. Background Mountains Layer (NEW)
+      let mountainBackPath = `/assets/stage/mountains/mountain_${formattedMountainBackId}.webp`;
+      this.hasBgMountainBack = await testImageAsset(mountainBackPath);
+      if (!this.hasBgMountainBack) {
+        mountainBackPath = `/assets/stage/mountains/mountain_${bgMountainBackId}.webp`;
+        this.hasBgMountainBack = await testImageAsset(mountainBackPath);
+      }
+      if (this.hasBgMountainBack) {
+        console.log(`✅ [PixiEngine] Back Mountain Graphic: ${mountainBackPath}`);
+        verifiedLoadQueue.push({ alias: this.keys.bg_mountain_back, src: mountainBackPath });
+      } else {
+        console.warn(`⚠️ [PixiEngine] Missing Back Mountain Asset at: /assets/stage/mountains/mountain_${formattedMountainBackId}.webp`);
+        Assets.cache.set(this.keys.bg_mountain_back, Texture.EMPTY);
+      }
     }
 
     // --- Foreground Character Clipping Mask ---
@@ -833,7 +994,7 @@ export class PixiEngine {
       Assets.cache.set(this.keys.char_clipping_mask, Texture.EMPTY);
     }
 
-    // --- Foreground Character Patterns (Dynamic sequential scan: pattern_01, pattern_02...) ---
+    // --- Foreground Character Patterns ---
     let patternIndex = 1;
     while (true) {
       const idxStr = padId(patternIndex);
@@ -866,7 +1027,7 @@ export class PixiEngine {
       Assets.cache.set(this.keys.char_lineart, Texture.EMPTY);
     }
 
-    // --- Foreground Character Dynamic Eye Sockets (Sequential scan: socket_01, socket_02...) ---
+    // --- Foreground Character Dynamic Eye Sockets ---
     let socketIndex = 1;
     while (true) {
       const idxStr = padId(socketIndex);
@@ -904,7 +1065,7 @@ export class PixiEngine {
       if (socketIndex > 30) break;
     }
 
-    // --- Foreground Character Eyelids (Flat in eyes folder) ---
+    // --- Foreground Character Eyelids ---
     const eyelidsTopPath = `/assets/actors/${characterId}/eyes/eyelids_top.webp`;
     const eyelidsBottomPath = `/assets/actors/${characterId}/eyes/eyelids_bottom.webp`;
     const hasEyelidsTop = await testImageAsset(eyelidsTopPath);
@@ -958,33 +1119,27 @@ export class PixiEngine {
     this.bgAtmosphereContainer.mask = this.masterClipMask;
     this.masterContainer.addChild(this.bgAtmosphereContainer);
 
-    // Instantiate dynamic warp filters directly
-    const { warpFilter, bgWarpFilter } = createWarpFilters();
-    this.warpFilter = warpFilter;
-    this.bgWarpFilter = bgWarpFilter;
+    // Initialize the off-screen RenderTextureManager to flatten warp filters
+    this.renderTextureManager = new RenderTextureManager({
+      discoveredPatterns: this.discoveredPatterns,
+      bgPat1Alias: this.hasBgPat1 ? this.keys.bg_pat_1 : null,
+      bgPat2Alias: this.hasBgPat2 ? this.keys.bg_pat_2 : null,
+      hasBgPat1: this.hasBgPat1,
+      hasBgPat2: this.hasBgPat2
+    });
 
     // --- ASSEMBLE BACKGROUND ---
     if (this.isPanoramaMode) {
       const bgTexture = Assets.get('bg');
       if (bgTexture && bgTexture !== Texture.EMPTY) {
-        this.layers.bg = new TilingSprite({
-          texture: bgTexture,
-          width: this.bgHeightScale * 6,
-          height: this.bgHeightScale
-        });
-        this.layers.bg.anchor.set(0.5);
+        this.layers.bg = new MirroredScrollLayer(bgTexture, this.bgHeightScale, 1.0);
         this.bgAtmosphereContainer.addChild(this.layers.bg);
       }
 
       if (this.hasBg2) {
         const bg2Texture = Assets.get('bg2');
         if (bg2Texture && bg2Texture !== Texture.EMPTY) {
-          this.layers.bg2 = new TilingSprite({
-            texture: bg2Texture,
-            width: this.bgHeightScale * 6,
-            height: this.bgHeightScale
-          });
-          this.layers.bg2.anchor.set(0.5);
+          this.layers.bg2 = new MirroredScrollLayer(bg2Texture, this.bgHeightScale, this.config.bg2ParallaxSpeed);
           this.bgAtmosphereContainer.addChild(this.layers.bg2);
         }
       }
@@ -995,30 +1150,35 @@ export class PixiEngine {
         this.bgAtmosphereContainer.addChild(this.layers.bg_clip);
       }
 
-      // 2. Background warp patterns container (Applied directly)
+      // 2. Off-Screen RenderTexture Warp patterns
       const hasAnyBgPat = this.hasBgPat1 || this.hasBgPat2;
-      if (hasAnyBgPat) {
-        this.bgPatternsContainer = new Container();
-        this.bgPatternsContainer.filters = [this.bgWarpFilter];
-        this.bgAtmosphereContainer.addChild(this.bgPatternsContainer);
+      if (hasAnyBgPat && this.renderTextureManager) {
+        this.bgAtmosphereContainer.addChild(this.renderTextureManager.bgPatternSprite);
+      }
 
-        // Pattern bottom (bg_pat_2) renders underneath pattern top (bg_pat_1)
-        if (this.hasBgPat2) {
-          const sp2 = createSprite(this.keys.bg_pat_2);
-          this.bgPatternsContainer.addChild(sp2);
-        }
-        if (this.hasBgPat1) {
-          const sp1 = createSprite(this.keys.bg_pat_1);
-          this.bgPatternsContainer.addChild(sp1);
+      // 3. Back Mountains layer (Further away, slower scroll rate, higher vertical coordinate offset, hazy opacity)
+      if (this.hasBgMountainBack) {
+        const mountainBackTex = Assets.get(this.keys.bg_mountain_back);
+        if (mountainBackTex && mountainBackTex !== Texture.EMPTY) {
+          this.layers.bg_mountain_back = new MirroredScrollLayer(mountainBackTex, this.bgHeightScale, 0.18);
+          this.layers.bg_mountain_back.position.y = -35; // Shifts upward to align behind front range
+          this.layers.bg_mountain_back.alpha = 0.75; // Atmospheric perspective haze
+          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_back);
         }
       }
 
-      // 3. Mountains graphic
+      // 4. Foreground Mountains layer (Closer range, standard scroll rate)
       if (this.hasBgMountain) {
-        this.layers.bg_mountain = createSprite(this.keys.bg_mountain);
-        this.bgAtmosphereContainer.addChild(this.layers.bg_mountain);
+        const mountainTex = Assets.get(this.keys.bg_mountain);
+        if (mountainTex && mountainTex !== Texture.EMPTY) {
+          this.layers.bg_mountain = new MirroredScrollLayer(mountainTex, this.bgHeightScale, 0.4);
+          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain);
+        }
       }
     }
+
+    // Decoupled Background Fog Layer
+    this.bgFog = new FogSystem(this.bgAtmosphereContainer, this.bgHeightScale, false);
 
     // Particles
     this.particleSystem = new ParticleSystem(this.app.renderer, this.bgAtmosphereContainer, this.bgHeightScale);
@@ -1043,7 +1203,7 @@ export class PixiEngine {
       // 2. The wrapped container applying only the clip-mask
       this.characterContentContainer = new Container();
       
-      // Use setMask with channel: 'alpha' to bypass color channel processing (fixes purple alpha muffling)
+      // Use setMask with channel: 'alpha' to bypass color channel processing
       this.characterContentContainer.setMask({
         mask: charMaskSprite,
         channel: 'alpha'
@@ -1055,17 +1215,9 @@ export class PixiEngine {
       this.layers.base = createSprite(this.keys.char_clipping_mask);
       this.characterContentContainer.addChild(this.layers.base);
 
-      // 4. Render character patterns container inside masked wrapper (warp applied with zero mask conflicts)
-      if (this.discoveredPatterns.length > 0) {
-        this.patternsContainer = new Container();
-        this.patternsContainer.filters = [this.warpFilter]; 
-        this.characterContentContainer.addChild(this.patternsContainer);
-
-        // Render ascending chronological layers (Pattern 1 on bottom, Pattern 2 on top)
-        for (const patternAlias of this.discoveredPatterns) {
-          const sp = createSprite(patternAlias);
-          this.patternsContainer.addChild(sp);
-        }
+      // 4. Render character patterns using flattened textures
+      if (this.discoveredPatterns.length > 0 && this.renderTextureManager) {
+        this.characterContentContainer.addChild(this.renderTextureManager.patternSprite);
       }
     }
 
@@ -1076,7 +1228,7 @@ export class PixiEngine {
       baseSprite: this.layers.base
     });
 
-    // Render lineart & teeth
+    // Render lineart
     if (this.hasLineart) {
       this.layers.lineart = createSprite(this.keys.char_lineart);
       this.headContainer.addChild(this.layers.lineart);
@@ -1089,26 +1241,48 @@ export class PixiEngine {
       eyelidsTopAlias: this.hasEyelids ? this.keys.eyelids_top : null,
       eyelidsBottomAlias: this.hasEyelids ? this.keys.eyelids_bottom : null
     });
+
+    // Decoupled Foreground Fog Layer (placed on top of character but below overlays)
+    this.fgFog = new FogSystem(this.masterContainer, this.bgHeightScale, true);
   }
 
   async reloadAssetsAndScene() {
     this.isReady = false;
 
-    if (this.masterContainer) {
-      this.masterContainer.destroy({ children: true, texture: false });
-      this.masterContainer = null;
-    }
+    // Capture sequence to discard out-of-order stale operations
+    const currentSeq = ++this.loadSequence;
 
+    // 1. Destroy active subsystems FIRST so they can safely release graphics/WebGL resources
     if (this.eyeSystem?.destroy) {
       this.eyeSystem.destroy();
     }
     if (this.particleSystem?.destroy) {
       this.particleSystem.destroy();
     }
+    if (this.renderTextureManager?.destroy) {
+      this.renderTextureManager.destroy();
+      this.renderTextureManager = null;
+    }
+    if (this.bgFog?.destroy) {
+      this.bgFog.destroy();
+      this.bgFog = null;
+    }
+    if (this.fgFog?.destroy) {
+      this.fgFog.destroy();
+      this.fgFog = null;
+    }
+
+    // 2. Safely dispose of the main rendering display tree
+    if (this.masterContainer) {
+      this.masterContainer.destroy({ children: true, texture: false });
+      this.masterContainer = null;
+    }
 
     await this.loadAssets();
 
-    if (this.isDestroyed) return;
+    if (this.isDestroyed || currentSeq !== this.loadSequence) {
+      return;
+    }
 
     this.buildSceneGraph();
     this.resize();
@@ -1120,56 +1294,53 @@ export class PixiEngine {
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
 
-    const config = this.config;
+    // Synthesize latest coordinates dynamically so that EyeSystem and nested modules receive updates
+    const config = { ...this.config, mousePos: this.mousePos };
     const { isGlitched, currentSplit } = this.effectsSystem.update(this.time, config);
 
+    // --- Custom Flight & Hover Calculations ---
     const tFloat = this.time * config.floatSpeed;
-    let floatX = Math.sin(tFloat) * config.floatAmpX;
-    let floatY = Math.sin(2 * tFloat) * config.floatAmpY;
-    const rotation = Math.cos(tFloat) * config.floatRotation * (Math.PI / 180);
+
+    // Employs a smoothstep curve over clamped waves to generate hover pauses (plateaus) at extrema
+    const rawWave = Math.sin(tFloat) * config.flyHoverPause;
+    const clampedWave = Math.max(-1, Math.min(1, rawWave));
+    
+    // Normalizes clamped wave range to [0.0, 1.0] for linear progress interpolation
+    const normProgress = clampedWave * 0.5 + 0.5; 
+    const smoothProgress = normProgress * normProgress * (3 - 2 * normProgress);
+
+    // Apply vertical displacement limits (0 is the lowest, config.floatAmpY is the highest elevation)
+    let floatY = -(smoothProgress * config.floatAmpY * 1.5);
+    
+    // Horizontal sway
+    let floatX = Math.cos(tFloat * 0.5) * config.floatAmpX;
 
     if (config.glitchShakeIntensity > 0 && (isGlitched || currentSplit > (config.aberrationAmount * 1.15))) {
         floatX += (Math.random() - 0.5) * config.glitchShakeIntensity;
         floatY += (Math.random() - 0.5) * config.glitchShakeIntensity;
     }
     this.headContainer.position.set(floatX, floatY);
-    this.headContainer.rotation = rotation;
 
-    // --- Dynamic Scaling & Warp Shading for Background Patterns ---
-    if (this.bgPatternsContainer && this.bgPatternsContainer.children.length > 0) {
-      const kids = this.bgPatternsContainer.children;
-      if (kids.length === 1) {
-        kids[0].scale.set(config.bgPatternTopScale);
-      } else if (kids.length > 1) {
-        // kids[0] is background bottom (index 0), kids[1] is background top (index 1)
-        kids[0].scale.set(config.bgPatternBottomScale);
-        kids[1].scale.set(config.bgPatternTopScale);
-      }
+    // Dynamic scale: transitions from flyMinScale (bottom) to flyMaxScale (peak)
+    const currentScale = config.flyMinScale - (smoothProgress * (config.flyMinScale - config.flyMaxScale));
+    this.headContainer.scale.set(currentScale);
 
-      if (this.bgWarpFilter && this.bgWarpFilter.resources.warpUniforms) {
-        this.bgWarpFilter.resources.warpUniforms.uniforms.uTime = this.time * config.bgWarpSpeed;
-        this.bgWarpFilter.resources.warpUniforms.uniforms.uWarpIntensity = config.bgWarpIntensity;
-      }
+    // Dynamic rotation: persistent angle bias tilt + slow swaying around bias center
+    const tiltRad = config.flyTiltBias * (Math.PI / 180);
+    const swayOsc = Math.sin(tFloat * 0.7) * (config.floatRotation * 0.5) * (Math.PI / 180);
+    this.headContainer.rotation = tiltRad + swayOsc;
+
+    // Update off-screen RenderTextureManager pass for warp filters
+    if (this.renderTextureManager) {
+      this.renderTextureManager.update(deltaTime, config, this.app.renderer);
     }
 
-    // --- Dynamic Scaling & Warp Shading for Character Patterns ---
-    if (this.patternsContainer && this.patternsContainer.children.length > 0) {
-      const kids = this.patternsContainer.children;
-      if (kids.length === 1) {
-        kids[0].scale.set(config.patternTopScale);
-      } else if (kids.length > 1) {
-        // kids[0] is pattern_1 (bottom)
-        kids[0].scale.set(config.patternBottomScale); // pattern_1 (lowest number) maps to patternBottomScale
-        kids[kids.length - 1].scale.set(config.patternTopScale); // pattern_N maps to patternTopScale
-        for (let i = 1; i < kids.length - 1; i++) {
-          kids[i].scale.set((config.patternBottomScale + config.patternTopScale) / 2);
-        }
-      }
-
-      if (this.warpFilter && this.warpFilter.resources.warpUniforms) {
-        this.warpFilter.resources.warpUniforms.uniforms.uTime = this.time * config.warpSpeed;
-        this.warpFilter.resources.warpUniforms.uniforms.uWarpIntensity = config.warpIntensity;
-      }
+    // Update decoupled background and foreground fog systems
+    if (this.bgFog) {
+      this.bgFog.update(this.time, config);
+    }
+    if (this.fgFog) {
+      this.fgFog.update(this.time, config);
     }
 
     if (this.eyeSystem) {
@@ -1180,13 +1351,26 @@ export class PixiEngine {
       this.particleSystem.update(deltaTime, config);
     }
 
+    // --- Background Side Scrolling Parallax Updates ---
+     // --- Background Side Scrolling (Double Layer Parallax) ---
+    const baseSpeed = config.bgScrollSpeed;
+    const backParallax = config.bg2ParallaxSpeed; // The slider value (supports negative ranges)
+
     if (this.isPanoramaMode) {
-      const baseSpeed = config.bgScrollSpeed;
       if (this.layers.bg) {
-        this.layers.bg.tilePosition.x -= baseSpeed * dtSeconds;
+        this.layers.bg.updatePositions(dtSeconds, baseSpeed, 1.0);
       }
-      if (this.hasBg2 && this.layers.bg2) {
-        this.layers.bg2.tilePosition.x -= (baseSpeed * config.bg2ParallaxSpeed) * dtSeconds;
+      if (this.layers.bg2) {
+        this.layers.bg2.updatePositions(dtSeconds, baseSpeed, backParallax);
+      }
+    } else {
+      if (this.layers.bg_mountain_back) {
+        // Multiplies the back mountain's base speed factor by your custom slider value
+        // Moving the slider to 0.0 halts it, and negative values reverse its direction
+        this.layers.bg_mountain_back.updatePositions(dtSeconds, baseSpeed, 0.15 * backParallax);
+      }
+      if (this.layers.bg_mountain) {
+        this.layers.bg_mountain.updatePositions(dtSeconds, baseSpeed, 0.40);
       }
     }
   }
@@ -1231,6 +1415,18 @@ export class PixiEngine {
         }
         if (this.particleSystem?.destroy) {
           this.particleSystem.destroy();
+        }
+        if (this.renderTextureManager?.destroy) {
+          this.renderTextureManager.destroy();
+          this.renderTextureManager = null;
+        }
+        if (this.bgFog?.destroy) {
+          this.bgFog.destroy();
+          this.bgFog = null;
+        }
+        if (this.fgFog?.destroy) {
+          this.fgFog.destroy();
+          this.fgFog = null;
         }
         this.app.destroy(true, { children: true, texture: true }); 
       } catch (e) {
@@ -1400,6 +1596,8 @@ export class EffectsSystem {
       blue: { x: 0, y: 0 }
     });
     this.auraBlurFilter = new BlurFilter({ strength: 20 });
+    this.auraBlurFilter.padding = 100; // Prevent harsh bounding box edge clipping during large blur pulses
+
     this.colorMatrix = new ColorMatrixFilter();
 
     // Store target references
@@ -1424,6 +1622,7 @@ export class EffectsSystem {
       this.targets.headContainer.filters = [this.rgbSplitFilter];
     }
     if (this.targets.auraSprite) {
+      // Color matrix is removed here so the aura preserves the rich native colors of mask.webp
       this.targets.auraSprite.filters = [this.auraBlurFilter];
     }
     if (this.targets.baseSprite) {
@@ -1485,6 +1684,7 @@ export class EffectsSystem {
       this.targets.auraSprite.scale.set(state.auraScale + (auraPulse * 0.02));
       this.targets.auraSprite.alpha = state.auraOpacity;
       
+      // Standard RGB tinting colorizes the mask's native colors (set sliders to 255 to show original mask color)
       this.targets.auraSprite.tint = 
         (Math.floor(state.auraColorR) << 16) + 
         (Math.floor(state.auraColorG) << 8) + 
@@ -1730,10 +1930,78 @@ export class FogSystem {
 ```
 
 ---
+### `src\engine\systems\MirroredScrollLayer.js`
+```javascript
+// src/engine/systems/MirroredScrollLayer.js
+import { Container, Sprite } from 'pixi.js';
+
+export class MirroredScrollLayer extends Container {
+  constructor(texture, targetHeight, speedFactor) {
+    super();
+    this.texture = texture;
+    this.textureWidth = texture.width;
+    this.textureHeight = texture.height;
+
+    // Scale to fit the target layout height
+    this.spriteScale = targetHeight / this.textureHeight;
+    this.speedFactor = speedFactor;
+    this.scrollX = 0;
+    this.customScaleFactor = 1.0;
+
+    this.items = [];
+    // Instantiate 4 sprites to cover ultra-wide viewports comfortably
+    for (let i = -1; i <= 2; i++) {
+      const sprite = new Sprite(texture);
+      sprite.anchor.set(0.5);
+      sprite.y = 0;
+      this.addChild(sprite);
+      this.items.push({ sprite, baseIndex: i });
+    }
+    
+    this.updatePositions(0);
+  }
+
+  setPatternScale(scaleFactor) {
+    this.customScaleFactor = scaleFactor;
+  }
+
+  updatePositions(dtSeconds, baseSpeed = 0, dynamicSpeedFactor) {
+    // Falls back to constructor's speed factor if no dynamic factor is supplied on tick
+    const activeSpeedFactor = dynamicSpeedFactor !== undefined ? dynamicSpeedFactor : this.speedFactor;
+    this.scrollX -= baseSpeed * activeSpeedFactor * dtSeconds;
+
+    const scaleFactorToUse = this.customScaleFactor !== undefined ? this.customScaleFactor : 1.0;
+    const finalScale = this.spriteScale * scaleFactorToUse;
+    const w = this.textureWidth * finalScale; // Recalculate scaled width dynamically to account for runtime pattern scaling
+    const halfTotal = w * 2;
+
+    this.items.forEach(item => {
+      let localX = (item.baseIndex * w) + this.scrollX;
+
+      // Wrap local X coordinates seamlessly
+      while (localX < -halfTotal) {
+        localX += w * 4;
+      }
+      while (localX > halfTotal) {
+        localX -= w * 4;
+      }
+
+      item.sprite.position.set(localX, 0);
+
+      // Determine absolute grid index to apply correct mirroring flips
+      const gridIndex = Math.round((localX - this.scrollX) / w);
+      const isEven = Math.abs(gridIndex) % 2 === 0;
+      item.sprite.scale.set(finalScale * (isEven ? 1 : -1), finalScale);
+    });
+  }
+}
+```
+
+---
 ### `src\engine\systems\ParticleSystem.js`
 ```javascript
 // src/engine/systems/ParticleSystem.js
-import { Container, Sprite, Graphics, Assets, Texture } from 'pixi.js';
+import { Container, Sprite, Graphics } from 'pixi.js';
 
 export class ParticleSystem {
   constructor(renderer, targetContainer, bgSize) {
@@ -1915,20 +2183,22 @@ export class ParticleSystem {
    * Clears active sprite lists, references and generated textures on component destruction.
    */
   destroy() {
-    if (this.particles) {
-      for (const p of this.particles) {
-        p.destroy();
-      }
-      this.particles = [];
+    // Destroy the main parent container and let Pixi dispose of all child particle nodes recursively
+    if (this.particleContainer) {
+      this.particleContainer.destroy({ children: true });
+      this.particleContainer = null;
     }
+    
+    // Safely clear local tracking array references to avoid double-destruction triggers
+    this.particles = [];
+
     if (this.ashTexture) {
       this.ashTexture.destroy(true);
+      this.ashTexture = null;
     }
     if (this.wispyTexture) {
       this.wispyTexture.destroy(true);
-    }
-    if (this.particleContainer) {
-      this.particleContainer.destroy({ children: true });
+      this.wispyTexture = null;
     }
   }
 }
@@ -1940,6 +2210,7 @@ export class ParticleSystem {
 // src/engine/systems/RenderTextureManager.js
 import { Container, Sprite, RenderTexture, Assets } from 'pixi.js';
 import { createWarpFilters } from '../filters/WarpFilterFactory.js';
+import { MirroredScrollLayer } from './MirroredScrollLayer.js';
 
 export class RenderTextureManager {
   constructor(options = {}) {
@@ -1963,6 +2234,9 @@ export class RenderTextureManager {
     this.bgPatternSprite = null;
     this.patternSprite = null;
 
+    this.bgPat1Layer = null;
+    this.bgPat2Layer = null;
+
     this.buildManager();
   }
 
@@ -1981,18 +2255,18 @@ export class RenderTextureManager {
       this.localBgPatternContainer = new Container();
       this.localBgPatternContainer.filters = [this.bgWarpFilter];
 
-      // Pattern 2 is bottom, Pattern 1 is top
+      // Mirror-repeat wrap arrays applied to clean-rig background patterns
       if (this.hasBgPat2 && this.bgPat2Alias) {
-        const sp2 = Sprite.from(this.bgPat2Alias);
-        sp2.anchor.set(0.5);
-        sp2.position.set(bgW / 2, bgH / 2);
-        this.localBgPatternContainer.addChild(sp2);
+        const tex2 = Assets.get(this.bgPat2Alias);
+        this.bgPat2Layer = new MirroredScrollLayer(tex2, bgH, 1.8); 
+        this.bgPat2Layer.position.set(bgW / 2, bgH / 2);
+        this.localBgPatternContainer.addChild(this.bgPat2Layer);
       }
       if (this.hasBgPat1 && this.bgPat1Alias) {
-        const sp1 = Sprite.from(this.bgPat1Alias);
-        sp1.anchor.set(0.5);
-        sp1.position.set(bgW / 2, bgH / 2);
-        this.localBgPatternContainer.addChild(sp1);
+        const tex1 = Assets.get(this.bgPat1Alias);
+        this.bgPat1Layer = new MirroredScrollLayer(tex1, bgH, 1.0); 
+        this.bgPat1Layer.position.set(bgW / 2, bgH / 2);
+        this.localBgPatternContainer.addChild(this.bgPat1Layer);
       }
 
       this.bgPatternRenderTexture = RenderTexture.create({ width: bgW, height: bgH });
@@ -2058,12 +2332,15 @@ export class RenderTextureManager {
     }
 
     if (this.localBgPatternContainer && this.localBgPatternContainer.children.length > 0) {
-      const kids = this.localBgPatternContainer.children;
-      if (kids.length === 1) {
-        kids[0].scale.set(state.bgPatternTopScale);
-      } else if (kids.length > 1) {
-        kids[0].scale.set(state.bgPatternBottomScale);
-        kids[1].scale.set(state.bgPatternTopScale);
+      const baseSpeed = state.bgScrollSpeed;
+
+      if (this.bgPat2Layer) {
+        this.bgPat2Layer.setPatternScale(state.bgPatternBottomScale);
+        this.bgPat2Layer.updatePositions(dtSeconds, baseSpeed);
+      }
+      if (this.bgPat1Layer) {
+        this.bgPat1Layer.setPatternScale(state.bgPatternTopScale);
+        this.bgPat1Layer.updatePositions(dtSeconds, baseSpeed);
       }
 
       if (this.bgWarpFilter && this.bgWarpFilter.resources.warpUniforms) {
@@ -2080,10 +2357,10 @@ export class RenderTextureManager {
 
   destroy() {
     if (this.patternRenderTexture) {
-      this.patternRenderTexture.destroy(true);
+      this.patternRenderTexture.destroy();
     }
     if (this.bgPatternRenderTexture) {
-      this.bgPatternRenderTexture.destroy(true);
+      this.bgPatternRenderTexture.destroy();
     }
     if (this.localPatternContainer) {
       this.localPatternContainer.destroy({ children: true });
@@ -2113,23 +2390,28 @@ export function useArtworkReactions() {
   const setParameter = useStore((s) => s.setParameter);
   const store = useStore; 
   const frameRef = useRef(null);
+  const originalPresetRef = useRef(null);
 
   const triggerReaction = useCallback((event) => {
     console.log("💀 Real-Time Gothic Reaction Triggered for:", event.type);
     
     const state = store.getState();
-    const originalPreset = {
-      aberrationAmount: state.aberrationAmount,
-      warpIntensity: state.warpIntensity,
-      particleCount: state.particleCount,
-      particleSpeed: state.particleSpeed,
-      auraOpacity: state.auraOpacity,
-      auraScale: state.auraScale,
-      glitchShakeIntensity: state.glitchShakeIntensity,
-      flickerIntensity: state.flickerIntensity,
-      aberrationSpeed: state.aberrationSpeed,
-      aberrationGlitch: state.aberrationGlitch
-    };
+
+    // Only capture baseline settings if no reaction is actively running or decaying
+    if (!state.activeReaction) {
+      originalPresetRef.current = {
+        aberrationAmount: state.aberrationAmount,
+        warpIntensity: state.warpIntensity,
+        particleCount: state.particleCount,
+        particleSpeed: state.particleSpeed,
+        auraOpacity: state.auraOpacity,
+        auraScale: state.auraScale,
+        glitchShakeIntensity: state.glitchShakeIntensity,
+        flickerIntensity: state.flickerIntensity,
+        aberrationSpeed: state.aberrationSpeed,
+        aberrationGlitch: state.aberrationGlitch
+      };
+    }
 
     setParameter("activeReaction", event.type);
     setParameter("reactionProgress", 1.0);
@@ -2158,18 +2440,22 @@ export function useArtworkReactions() {
       
       setParameter("reactionProgress", 1.0 - progress);
 
+      const original = originalPresetRef.current;
+
       if (progress >= 1.0) {
         // Safe restoration back to baseline
-        setParameter("particleCount", originalPreset.particleCount);
-        setParameter("particleSpeed", originalPreset.particleSpeed);
-        setParameter("auraOpacity", originalPreset.auraOpacity);
-        setParameter("auraScale", originalPreset.auraScale);
-        setParameter("aberrationAmount", originalPreset.aberrationAmount);
-        setParameter("aberrationSpeed", originalPreset.aberrationSpeed);
-        setParameter("aberrationGlitch", originalPreset.aberrationGlitch);
-        setParameter("warpIntensity", originalPreset.warpIntensity);
-        setParameter("glitchShakeIntensity", originalPreset.glitchShakeIntensity);
-        setParameter("flickerIntensity", originalPreset.flickerIntensity);
+        if (original) {
+          setParameter("particleCount", original.particleCount);
+          setParameter("particleSpeed", original.particleSpeed);
+          setParameter("auraOpacity", original.auraOpacity);
+          setParameter("auraScale", original.auraScale);
+          setParameter("aberrationAmount", original.aberrationAmount);
+          setParameter("aberrationSpeed", original.aberrationSpeed);
+          setParameter("aberrationGlitch", original.aberrationGlitch);
+          setParameter("warpIntensity", original.warpIntensity);
+          setParameter("glitchShakeIntensity", original.glitchShakeIntensity);
+          setParameter("flickerIntensity", original.flickerIntensity);
+        }
         setParameter("activeReaction", null);
         setParameter("reactionProgress", 0.0);
         
@@ -2179,17 +2465,20 @@ export function useArtworkReactions() {
       }
 
       const invProgress = 1.0 - progress;
-      if (event.type === "lyx_received") {
-        setParameter("particleCount", Math.floor(originalPreset.particleCount + (300 - originalPreset.particleCount) * invProgress));
-        setParameter("particleSpeed", originalPreset.particleSpeed + (4.5 - originalPreset.particleSpeed) * invProgress);
-        setParameter("auraOpacity", originalPreset.auraOpacity + (1.0 - originalPreset.auraOpacity) * invProgress);
-        setParameter("auraScale", originalPreset.auraScale + (1.35 - originalPreset.auraScale) * invProgress);
-      } 
-      else if (event.type === "lsp7_received" || event.type === "lsp8_received") {
-        setParameter("aberrationAmount", originalPreset.aberrationAmount + (30.0 - originalPreset.aberrationAmount) * invProgress);
-        setParameter("warpIntensity", originalPreset.warpIntensity + (90.0 - originalPreset.warpIntensity) * invProgress);
-        setParameter("glitchShakeIntensity", Math.floor(originalPreset.glitchShakeIntensity + (25 - originalPreset.glitchShakeIntensity) * invProgress));
-        setParameter("flickerIntensity", originalPreset.flickerIntensity + (0.85 - originalPreset.flickerIntensity) * invProgress);
+      if (original) {
+        if (event.type === "lyx_received") {
+          setParameter("particleCount", Math.floor(original.particleCount + (300 - original.particleCount) * invProgress));
+          setParameter("particleSpeed", original.particleSpeed + (4.5 - original.particleSpeed) * invProgress);
+          setParameter("auraOpacity", original.auraOpacity + (1.0 - original.auraOpacity) * invProgress);
+          setParameter("auraScale", original.auraScale + (1.35 - original.auraScale) * invProgress);
+          setParameter("warpIntensity", original.warpIntensity + (50.0 - original.warpIntensity) * invProgress);
+        } 
+        else if (event.type === "lsp7_received" || event.type === "lsp8_received") {
+          setParameter("aberrationAmount", original.aberrationAmount + (30.0 - original.aberrationAmount) * invProgress);
+          setParameter("warpIntensity", original.warpIntensity + (90.0 - original.warpIntensity) * invProgress);
+          setParameter("glitchShakeIntensity", Math.floor(original.glitchShakeIntensity + (25 - original.glitchShakeIntensity) * invProgress));
+          setParameter("flickerIntensity", original.flickerIntensity + (0.85 - original.flickerIntensity) * invProgress);
+        }
       }
 
       frameRef.current = requestAnimationFrame(animateDecay);
@@ -2217,9 +2506,9 @@ export function useArtworkReactions() {
 ### `src\hooks\useLsp1Events.js`
 ```javascript
 // src/hooks/useLsp1Events.js
-import { useEffect, useRef } from "react";
-import LSP1EventService from "../services/LSP1EventService";
-import { useWalletStore } from "../store/useWalletStore";
+import { useEffect, useRef } from 'react';
+import { useWalletStore } from '../store/useWalletStore';
+import LSP1EventService from '../services/LSP1EventService';
 
 export function useLsp1Events(onEventReceived) {
   const hostProfileAddress = useWalletStore((s) => s.hostProfileAddress);
@@ -2235,17 +2524,21 @@ export function useLsp1Events(onEventReceived) {
   useEffect(() => {
     if (!hostProfileAddress) return;
 
-    // Instantiate fresh, decoupled event service
+    let isCurrent = true;
     const service = new LSP1EventService();
     serviceRef.current = service;
 
     const startListener = async () => {
       await service.initialize();
+      if (!isCurrent) return;
       
-      // Setup WebSockets stream
       const success = await service.setupEventListeners(hostProfileAddress);
+      if (!isCurrent) {
+        // If the context changed while setup was in progress, dismantle the connection immediately
+        service.cleanupListeners();
+        return;
+      }
       
-      // Bind event callback to the stream emitter
       if (success) {
         unsubscribeRef.current = service.onEvent((event) => {
           if (onEventReceivedRef.current) {
@@ -2259,11 +2552,14 @@ export function useLsp1Events(onEventReceived) {
 
     // Clean teardown during profile swaps or component unmounts
     return () => {
+      isCurrent = false;
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
+        unsubscribeRef.current = null;
       }
       if (serviceRef.current) {
         serviceRef.current.cleanupListeners();
+        serviceRef.current = null;
       }
     };
   }, [hostProfileAddress]);
@@ -2386,11 +2682,12 @@ const LSP8_RECEIVED_DATA_ABI = parseAbiParameters(
 );
 
 export const EVENT_TYPE_MAP = {
-  lyx_received: "0x6bb56a14d5963264663f293c4aa2e5a916669537ec6c77fe66ea595fabc2d51a", // Standard Value Received
-  follower_gained: "0x71e02f9f05bcd5816ec4f3134aa2e5a916669537ec6c77fe66ea595fabc2d51a", // Custom
-  follower_lost: "0x9d3c0b4012b69658977b099bdaa51eff0f0460f421fba96d15669506c00d1c4f",  // Custom
-  lsp7_received: "0x20804611b3e2ea21c480dc465142210acf4a2485947541770ec1fb87dee4a55c", // Custom
-  lsp8_received: "0x0b084a55ebf70fd3c06fd755269dac2212c4d3f0f4d09079780bfa50c1b2984d", // Custom
+  // Map to the official standard keccak256("LSP0ValueReceived") identifier for UP value drops
+  lyx_received: "0x9c4705229491d365fb5434052e12a386d6771d976bea61070a8c694e8affea3d", 
+  follower_gained: "0x71e02f9f05bcd5816ec4f3134aa2e5a916669537ec6c77fe66ea595fabc2d51a", 
+  follower_lost: "0x9d3c0b4012b69658977b099bdaa51eff0f0460f421fba96d15669506c00d1c4f",  
+  lsp7_received: "0x20804611b3e2ea21c480dc465142210acf4a2485947541770ec1fb87dee4a55c", 
+  lsp8_received: "0x0b084a55ebf70fd3c06fd755269dac2212c4d3f0f4d09079780bfa50c1b2984d", 
 };
 
 export const TYPE_ID_TO_EVENT_MAP = Object.fromEntries(
@@ -2480,6 +2777,12 @@ export default class LSP1EventService {
         },
         onError: (error) => {
           console.error(`${logPrefix} WebSocket Stream dropped:`, error);
+          if (this.unwatchEvent) {
+            try {
+              this.unwatchEvent();
+            } catch (e) {}
+            this.unwatchEvent = null; 
+          }
           this.handleReconnect(address);
         },
       });
@@ -2523,7 +2826,7 @@ export default class LSP1EventService {
       try {
         this.unwatchEvent();
       } catch (e) {}
-      this.unwatch = null;
+      this.unwatchEvent = null;
     }
     this.viemClient = null;
     this.recentEvents = [];
@@ -2675,20 +2978,24 @@ export const useStore = create((set) => ({
   isUiVisible: true,
   toggleUi: () => set((state) => ({ isUiVisible: !state.isUiVisible })),
 
-  mousePos: { x: 0, y: 0 },
-  setMousePos: (x, y) => set({ mousePos: { x, y } }),
-
   // Rig-Aligned Stage & Actor Selection
   characterId: "skull_reaper", // Text identifier matching actor folder name
   bgClippingMaskId: "black",   // Backdrop color name suffix
   bgPatternStyle: "bubble",     // Pattern style prefix
-  bgMountainId: 1,             // Mountain asset sequential ID
+  bgMountainId: 1,             // Front mountain asset ID
+  bgMountainBackId: 2,         // Back mountain asset ID
 
   // 1. Motion Dynamics
   floatSpeed: 1.0,
   floatAmpX: 30,
   floatAmpY: 15,
   floatRotation: 2.0,
+
+  // Custom Flight and Hover parameters
+  flyMinScale: 1.0,       // Scale at lowest point of flight
+  flyMaxScale: 0.82,      // Scale at highest peak of flight
+  flyHoverPause: 1.0,     // Hover pause factor (1.0 = smooth sine, up to 5.0 = flat plateau pauses)
+  flyTiltBias: 3.0,       // Persistent tilt bias in degrees
 
   // 2. Skull Pattern & Warp (Foreground)
   patternBottomScale: 1.0,

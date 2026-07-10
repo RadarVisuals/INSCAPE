@@ -11,6 +11,8 @@ export class EffectsSystem {
       blue: { x: 0, y: 0 }
     });
     this.auraBlurFilter = new BlurFilter({ strength: 20 });
+    this.auraBlurFilter.padding = 100; // Prevent harsh bounding box edge clipping during large blur pulses
+
     this.colorMatrix = new ColorMatrixFilter();
 
     // Store target references
@@ -35,6 +37,7 @@ export class EffectsSystem {
       this.targets.headContainer.filters = [this.rgbSplitFilter];
     }
     if (this.targets.auraSprite) {
+      // Color matrix is removed here so the aura preserves the rich native colors of mask.webp
       this.targets.auraSprite.filters = [this.auraBlurFilter];
     }
     if (this.targets.baseSprite) {
@@ -96,6 +99,7 @@ export class EffectsSystem {
       this.targets.auraSprite.scale.set(state.auraScale + (auraPulse * 0.02));
       this.targets.auraSprite.alpha = state.auraOpacity;
       
+      // Standard RGB tinting colorizes the mask's native colors (set sliders to 255 to show original mask color)
       this.targets.auraSprite.tint = 
         (Math.floor(state.auraColorR) << 16) + 
         (Math.floor(state.auraColorG) << 8) + 

@@ -1,6 +1,7 @@
 // src/engine/systems/RenderTextureManager.js
 import { Container, Sprite, RenderTexture, Assets } from 'pixi.js';
 import { createWarpFilters } from '../filters/WarpFilterFactory.js';
+import { MirroredScrollLayer } from './MirroredScrollLayer.js';
 
 export class RenderTextureManager {
   constructor(options = {}) {
@@ -24,6 +25,9 @@ export class RenderTextureManager {
     this.bgPatternSprite = null;
     this.patternSprite = null;
 
+    this.bgPat1Layer = null;
+    this.bgPat2Layer = null;
+
     this.buildManager();
   }
 
@@ -42,18 +46,18 @@ export class RenderTextureManager {
       this.localBgPatternContainer = new Container();
       this.localBgPatternContainer.filters = [this.bgWarpFilter];
 
-      // Pattern 2 is bottom, Pattern 1 is top
+      // Mirror-repeat wrap arrays applied to clean-rig background patterns
       if (this.hasBgPat2 && this.bgPat2Alias) {
-        const sp2 = Sprite.from(this.bgPat2Alias);
-        sp2.anchor.set(0.5);
-        sp2.position.set(bgW / 2, bgH / 2);
-        this.localBgPatternContainer.addChild(sp2);
+        const tex2 = Assets.get(this.bgPat2Alias);
+        this.bgPat2Layer = new MirroredScrollLayer(tex2, bgH, 1.8); 
+        this.bgPat2Layer.position.set(bgW / 2, bgH / 2);
+        this.localBgPatternContainer.addChild(this.bgPat2Layer);
       }
       if (this.hasBgPat1 && this.bgPat1Alias) {
-        const sp1 = Sprite.from(this.bgPat1Alias);
-        sp1.anchor.set(0.5);
-        sp1.position.set(bgW / 2, bgH / 2);
-        this.localBgPatternContainer.addChild(sp1);
+        const tex1 = Assets.get(this.bgPat1Alias);
+        this.bgPat1Layer = new MirroredScrollLayer(tex1, bgH, 1.0); 
+        this.bgPat1Layer.position.set(bgW / 2, bgH / 2);
+        this.localBgPatternContainer.addChild(this.bgPat1Layer);
       }
 
       this.bgPatternRenderTexture = RenderTexture.create({ width: bgW, height: bgH });
@@ -119,12 +123,15 @@ export class RenderTextureManager {
     }
 
     if (this.localBgPatternContainer && this.localBgPatternContainer.children.length > 0) {
-      const kids = this.localBgPatternContainer.children;
-      if (kids.length === 1) {
-        kids[0].scale.set(state.bgPatternTopScale);
-      } else if (kids.length > 1) {
-        kids[0].scale.set(state.bgPatternBottomScale);
-        kids[1].scale.set(state.bgPatternTopScale);
+      const baseSpeed = state.bgScrollSpeed;
+
+      if (this.bgPat2Layer) {
+        this.bgPat2Layer.setPatternScale(state.bgPatternBottomScale);
+        this.bgPat2Layer.updatePositions(dtSeconds, baseSpeed);
+      }
+      if (this.bgPat1Layer) {
+        this.bgPat1Layer.setPatternScale(state.bgPatternTopScale);
+        this.bgPat1Layer.updatePositions(dtSeconds, baseSpeed);
       }
 
       if (this.bgWarpFilter && this.bgWarpFilter.resources.warpUniforms) {
@@ -141,10 +148,10 @@ export class RenderTextureManager {
 
   destroy() {
     if (this.patternRenderTexture) {
-      this.patternRenderTexture.destroy(true);
+      this.patternRenderTexture.destroy();
     }
     if (this.bgPatternRenderTexture) {
-      this.bgPatternRenderTexture.destroy(true);
+      this.bgPatternRenderTexture.destroy();
     }
     if (this.localPatternContainer) {
       this.localPatternContainer.destroy({ children: true });

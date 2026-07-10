@@ -5,20 +5,24 @@ export const useStore = create((set) => ({
   isUiVisible: true,
   toggleUi: () => set((state) => ({ isUiVisible: !state.isUiVisible })),
 
-  mousePos: { x: 0, y: 0 },
-  setMousePos: (x, y) => set({ mousePos: { x, y } }),
-
   // Rig-Aligned Stage & Actor Selection
   characterId: "skull_reaper", // Text identifier matching actor folder name
   bgClippingMaskId: "black",   // Backdrop color name suffix
   bgPatternStyle: "bubble",     // Pattern style prefix
-  bgMountainId: 1,             // Mountain asset sequential ID
+  bgMountainId: 1,             // Front mountain asset ID
+  bgMountainBackId: 2,         // Back mountain asset ID
 
   // 1. Motion Dynamics
   floatSpeed: 1.0,
   floatAmpX: 30,
   floatAmpY: 15,
   floatRotation: 2.0,
+
+  // Custom Flight and Hover parameters
+  flyMinScale: 1.0,       // Scale at lowest point of flight
+  flyMaxScale: 0.82,      // Scale at highest peak of flight
+  flyHoverPause: 1.0,     // Hover pause factor (1.0 = smooth sine, up to 5.0 = flat plateau pauses)
+  flyTiltBias: 3.0,       // Persistent tilt bias in degrees
 
   // 2. Skull Pattern & Warp (Foreground)
   patternBottomScale: 1.0,

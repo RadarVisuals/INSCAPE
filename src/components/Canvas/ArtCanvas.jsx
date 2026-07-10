@@ -6,7 +6,6 @@ import { useStore } from '../../store/useStore';
 export default function ArtCanvas() {
   const containerRef = useRef(null);
   const engineRef = useRef(null);
-  const setMousePos = useStore((state) => state.setMousePos);
   
   // Grab overlay params from store
   const scanlineOpacity = useStore((state) => state.scanlineOpacity);
@@ -32,7 +31,9 @@ export default function ArtCanvas() {
   const handleMouseMove = (e) => {
     const x = (e.clientX / window.innerWidth) * 2 - 1;
     const y = (e.clientY / window.innerHeight) * 2 - 1;
-    setMousePos(x, y);
+    if (engineRef.current) {
+      engineRef.current.updateMousePos(x, y);
+    }
   };
 
   return (

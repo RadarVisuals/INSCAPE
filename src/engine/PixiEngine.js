@@ -4,7 +4,6 @@ import {
   Assets, 
   Container, 
   Sprite,
-  TilingSprite,
   Texture,
   Graphics
 } from 'pixi.js';
@@ -12,7 +11,9 @@ import { useStore } from '../store/useStore.js';
 import { EffectsSystem } from './systems/EffectsSystem.js';
 import { ParticleSystem } from './systems/ParticleSystem.js';
 import { EyeSystem } from './systems/EyeSystem.js';
-import { createWarpFilters } from './filters/WarpFilterFactory.js';
+import { FogSystem } from './systems/FogSystem.js';
+import { RenderTextureManager } from './systems/RenderTextureManager.js';
+import { MirroredScrollLayer } from './systems/MirroredScrollLayer.js';
 
 function testImageAsset(src) {
   return new Promise((resolve) => {
@@ -32,9 +33,13 @@ export class PixiEngine {
     this.isReady = false;
     this.isDestroyed = false;
 
+    // Load sequence counter to prevent overlapping asynchronous loading glitches
+    this.loadSequence = 0;
+
     // Direct existential flags
     this.hasBgClippingMask = false;
     this.hasBgMountain = false;
+    this.hasBgMountainBack = false;
     this.hasCharClippingMask = false;
     this.hasLineart = false;
 
@@ -51,10 +56,12 @@ export class PixiEngine {
     this.effectsSystem = new EffectsSystem();
     this.eyeSystem = null;
     this.particleSystem = null;
+    this.renderTextureManager = null;
+    this.bgFog = null;
+    this.fgFog = null;
 
-    // Setup filter instances
-    this.warpFilter = null;
-    this.bgWarpFilter = null;
+    // Internal mouse state bypassed from Zustand
+    this.mousePos = { x: 0, y: 0 };
 
     this.config = { ...useStore.getState() };
 
@@ -63,6 +70,7 @@ export class PixiEngine {
       const prevBgClip = this.config.bgClippingMaskId;
       const prevBgStyle = this.config.bgPatternStyle;
       const prevBgMountain = this.config.bgMountainId;
+      const prevBgMountainBack = this.config.bgMountainBackId;
 
       this.config = state;
 
@@ -70,11 +78,17 @@ export class PixiEngine {
         prevChar !== state.characterId ||
         prevBgClip !== state.bgClippingMaskId ||
         prevBgStyle !== state.bgPatternStyle ||
-        prevBgMountain !== state.bgMountainId
+        prevBgMountain !== state.bgMountainId ||
+        prevBgMountainBack !== state.bgMountainBackId
       ) {
         this.reloadAssetsAndScene().catch(err => console.error("Re-init assets failed:", err));
       }
     });
+  }
+
+  updateMousePos(x, y) {
+    this.mousePos.x = x;
+    this.mousePos.y = y;
   }
 
   async init() {
@@ -95,10 +109,11 @@ export class PixiEngine {
       }
 
       this.container.appendChild(this.app.canvas);
+      
+      const currentSeq = ++this.loadSequence;
       await this.loadAssets();
 
-      if (this.isDestroyed) {
-        this.app.destroy(true);
+      if (this.isDestroyed || currentSeq !== this.loadSequence) {
         return;
       }
       
@@ -113,7 +128,7 @@ export class PixiEngine {
   }
 
   async loadAssets() {
-    const { characterId, bgClippingMaskId, bgPatternStyle, bgMountainId } = this.config;
+    const { characterId, bgClippingMaskId, bgPatternStyle, bgMountainId, bgMountainBackId } = this.config;
     const verifiedLoadQueue = [];
 
     this.discoveredPatterns = [];
@@ -121,18 +136,21 @@ export class PixiEngine {
     this.hasEyelids = false;
     this.isPanoramaMode = false;
     this.hasBg2 = false;
+    this.hasBgMountainBack = false;
 
     console.log(`%c🔍 [PixiEngine] Rig Loader: Locating Stage Assets`, 'color: #00f3ff; font-weight: bold;');
 
     // Normalize IDs to padded 2-digit strings (e.g. 1 -> "01", 2 -> "02")
     const padId = (id) => typeof id === 'number' ? String(id).padStart(2, '0') : id;
     const formattedMountainId = padId(bgMountainId);
+    const formattedMountainBackId = padId(bgMountainBackId);
 
     this.keys = {
       bg_clipping_mask: `bg_clipping_mask_${bgClippingMaskId}`,
       bg_pat_1: `bg_pat_1_${bgPatternStyle}`,
       bg_pat_2: `bg_pat_2_${bgPatternStyle}`,
       bg_mountain: `bg_mountain_${formattedMountainId}`,
+      bg_mountain_back: `bg_mountain_back_${formattedMountainBackId}`,
       char_clipping_mask: `char_clipping_mask_${characterId}`,
       char_lineart: `char_lineart_${characterId}`,
       eyelids_top: `eyelids_top_${characterId}`,
@@ -202,7 +220,7 @@ export class PixiEngine {
         console.warn(`⚠️ [PixiEngine] Missing BG Pattern Bottom at: ${bgPat2Path}`);
       }
 
-      // 3. Mountains Layer
+      // 3. Foreground Mountains Layer
       let mountainPath = `/assets/stage/mountains/mountain_${formattedMountainId}.webp`;
       this.hasBgMountain = await testImageAsset(mountainPath);
       if (!this.hasBgMountain) {
@@ -217,6 +235,21 @@ export class PixiEngine {
         console.warn(`⚠️ [PixiEngine] Missing Mountain Asset at: /assets/stage/mountains/mountain_${formattedMountainId}.webp`);
         Assets.cache.set(this.keys.bg_mountain, Texture.EMPTY);
       }
+
+      // 4. Background Mountains Layer (NEW)
+      let mountainBackPath = `/assets/stage/mountains/mountain_${formattedMountainBackId}.webp`;
+      this.hasBgMountainBack = await testImageAsset(mountainBackPath);
+      if (!this.hasBgMountainBack) {
+        mountainBackPath = `/assets/stage/mountains/mountain_${bgMountainBackId}.webp`;
+        this.hasBgMountainBack = await testImageAsset(mountainBackPath);
+      }
+      if (this.hasBgMountainBack) {
+        console.log(`✅ [PixiEngine] Back Mountain Graphic: ${mountainBackPath}`);
+        verifiedLoadQueue.push({ alias: this.keys.bg_mountain_back, src: mountainBackPath });
+      } else {
+        console.warn(`⚠️ [PixiEngine] Missing Back Mountain Asset at: /assets/stage/mountains/mountain_${formattedMountainBackId}.webp`);
+        Assets.cache.set(this.keys.bg_mountain_back, Texture.EMPTY);
+      }
     }
 
     // --- Foreground Character Clipping Mask ---
@@ -230,7 +263,7 @@ export class PixiEngine {
       Assets.cache.set(this.keys.char_clipping_mask, Texture.EMPTY);
     }
 
-    // --- Foreground Character Patterns (Dynamic sequential scan: pattern_01, pattern_02...) ---
+    // --- Foreground Character Patterns ---
     let patternIndex = 1;
     while (true) {
       const idxStr = padId(patternIndex);
@@ -263,7 +296,7 @@ export class PixiEngine {
       Assets.cache.set(this.keys.char_lineart, Texture.EMPTY);
     }
 
-    // --- Foreground Character Dynamic Eye Sockets (Sequential scan: socket_01, socket_02...) ---
+    // --- Foreground Character Dynamic Eye Sockets ---
     let socketIndex = 1;
     while (true) {
       const idxStr = padId(socketIndex);
@@ -301,7 +334,7 @@ export class PixiEngine {
       if (socketIndex > 30) break;
     }
 
-    // --- Foreground Character Eyelids (Flat in eyes folder) ---
+    // --- Foreground Character Eyelids ---
     const eyelidsTopPath = `/assets/actors/${characterId}/eyes/eyelids_top.webp`;
     const eyelidsBottomPath = `/assets/actors/${characterId}/eyes/eyelids_bottom.webp`;
     const hasEyelidsTop = await testImageAsset(eyelidsTopPath);
@@ -355,33 +388,27 @@ export class PixiEngine {
     this.bgAtmosphereContainer.mask = this.masterClipMask;
     this.masterContainer.addChild(this.bgAtmosphereContainer);
 
-    // Instantiate dynamic warp filters directly
-    const { warpFilter, bgWarpFilter } = createWarpFilters();
-    this.warpFilter = warpFilter;
-    this.bgWarpFilter = bgWarpFilter;
+    // Initialize the off-screen RenderTextureManager to flatten warp filters
+    this.renderTextureManager = new RenderTextureManager({
+      discoveredPatterns: this.discoveredPatterns,
+      bgPat1Alias: this.hasBgPat1 ? this.keys.bg_pat_1 : null,
+      bgPat2Alias: this.hasBgPat2 ? this.keys.bg_pat_2 : null,
+      hasBgPat1: this.hasBgPat1,
+      hasBgPat2: this.hasBgPat2
+    });
 
     // --- ASSEMBLE BACKGROUND ---
     if (this.isPanoramaMode) {
       const bgTexture = Assets.get('bg');
       if (bgTexture && bgTexture !== Texture.EMPTY) {
-        this.layers.bg = new TilingSprite({
-          texture: bgTexture,
-          width: this.bgHeightScale * 6,
-          height: this.bgHeightScale
-        });
-        this.layers.bg.anchor.set(0.5);
+        this.layers.bg = new MirroredScrollLayer(bgTexture, this.bgHeightScale, 1.0);
         this.bgAtmosphereContainer.addChild(this.layers.bg);
       }
 
       if (this.hasBg2) {
         const bg2Texture = Assets.get('bg2');
         if (bg2Texture && bg2Texture !== Texture.EMPTY) {
-          this.layers.bg2 = new TilingSprite({
-            texture: bg2Texture,
-            width: this.bgHeightScale * 6,
-            height: this.bgHeightScale
-          });
-          this.layers.bg2.anchor.set(0.5);
+          this.layers.bg2 = new MirroredScrollLayer(bg2Texture, this.bgHeightScale, this.config.bg2ParallaxSpeed);
           this.bgAtmosphereContainer.addChild(this.layers.bg2);
         }
       }
@@ -392,30 +419,35 @@ export class PixiEngine {
         this.bgAtmosphereContainer.addChild(this.layers.bg_clip);
       }
 
-      // 2. Background warp patterns container (Applied directly)
+      // 2. Off-Screen RenderTexture Warp patterns
       const hasAnyBgPat = this.hasBgPat1 || this.hasBgPat2;
-      if (hasAnyBgPat) {
-        this.bgPatternsContainer = new Container();
-        this.bgPatternsContainer.filters = [this.bgWarpFilter];
-        this.bgAtmosphereContainer.addChild(this.bgPatternsContainer);
+      if (hasAnyBgPat && this.renderTextureManager) {
+        this.bgAtmosphereContainer.addChild(this.renderTextureManager.bgPatternSprite);
+      }
 
-        // Pattern bottom (bg_pat_2) renders underneath pattern top (bg_pat_1)
-        if (this.hasBgPat2) {
-          const sp2 = createSprite(this.keys.bg_pat_2);
-          this.bgPatternsContainer.addChild(sp2);
-        }
-        if (this.hasBgPat1) {
-          const sp1 = createSprite(this.keys.bg_pat_1);
-          this.bgPatternsContainer.addChild(sp1);
+      // 3. Back Mountains layer (Further away, slower scroll rate, higher vertical coordinate offset, hazy opacity)
+      if (this.hasBgMountainBack) {
+        const mountainBackTex = Assets.get(this.keys.bg_mountain_back);
+        if (mountainBackTex && mountainBackTex !== Texture.EMPTY) {
+          this.layers.bg_mountain_back = new MirroredScrollLayer(mountainBackTex, this.bgHeightScale, 0.18);
+          this.layers.bg_mountain_back.position.y = -35; // Shifts upward to align behind front range
+          this.layers.bg_mountain_back.alpha = 0.75; // Atmospheric perspective haze
+          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_back);
         }
       }
 
-      // 3. Mountains graphic
+      // 4. Foreground Mountains layer (Closer range, standard scroll rate)
       if (this.hasBgMountain) {
-        this.layers.bg_mountain = createSprite(this.keys.bg_mountain);
-        this.bgAtmosphereContainer.addChild(this.layers.bg_mountain);
+        const mountainTex = Assets.get(this.keys.bg_mountain);
+        if (mountainTex && mountainTex !== Texture.EMPTY) {
+          this.layers.bg_mountain = new MirroredScrollLayer(mountainTex, this.bgHeightScale, 0.4);
+          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain);
+        }
       }
     }
+
+    // Decoupled Background Fog Layer
+    this.bgFog = new FogSystem(this.bgAtmosphereContainer, this.bgHeightScale, false);
 
     // Particles
     this.particleSystem = new ParticleSystem(this.app.renderer, this.bgAtmosphereContainer, this.bgHeightScale);
@@ -440,7 +472,7 @@ export class PixiEngine {
       // 2. The wrapped container applying only the clip-mask
       this.characterContentContainer = new Container();
       
-      // Use setMask with channel: 'alpha' to bypass color channel processing (fixes purple alpha muffling)
+      // Use setMask with channel: 'alpha' to bypass color channel processing
       this.characterContentContainer.setMask({
         mask: charMaskSprite,
         channel: 'alpha'
@@ -452,17 +484,9 @@ export class PixiEngine {
       this.layers.base = createSprite(this.keys.char_clipping_mask);
       this.characterContentContainer.addChild(this.layers.base);
 
-      // 4. Render character patterns container inside masked wrapper (warp applied with zero mask conflicts)
-      if (this.discoveredPatterns.length > 0) {
-        this.patternsContainer = new Container();
-        this.patternsContainer.filters = [this.warpFilter]; 
-        this.characterContentContainer.addChild(this.patternsContainer);
-
-        // Render ascending chronological layers (Pattern 1 on bottom, Pattern 2 on top)
-        for (const patternAlias of this.discoveredPatterns) {
-          const sp = createSprite(patternAlias);
-          this.patternsContainer.addChild(sp);
-        }
+      // 4. Render character patterns using flattened textures
+      if (this.discoveredPatterns.length > 0 && this.renderTextureManager) {
+        this.characterContentContainer.addChild(this.renderTextureManager.patternSprite);
       }
     }
 
@@ -473,7 +497,7 @@ export class PixiEngine {
       baseSprite: this.layers.base
     });
 
-    // Render lineart & teeth
+    // Render lineart
     if (this.hasLineart) {
       this.layers.lineart = createSprite(this.keys.char_lineart);
       this.headContainer.addChild(this.layers.lineart);
@@ -486,26 +510,48 @@ export class PixiEngine {
       eyelidsTopAlias: this.hasEyelids ? this.keys.eyelids_top : null,
       eyelidsBottomAlias: this.hasEyelids ? this.keys.eyelids_bottom : null
     });
+
+    // Decoupled Foreground Fog Layer (placed on top of character but below overlays)
+    this.fgFog = new FogSystem(this.masterContainer, this.bgHeightScale, true);
   }
 
   async reloadAssetsAndScene() {
     this.isReady = false;
 
-    if (this.masterContainer) {
-      this.masterContainer.destroy({ children: true, texture: false });
-      this.masterContainer = null;
-    }
+    // Capture sequence to discard out-of-order stale operations
+    const currentSeq = ++this.loadSequence;
 
+    // 1. Destroy active subsystems FIRST so they can safely release graphics/WebGL resources
     if (this.eyeSystem?.destroy) {
       this.eyeSystem.destroy();
     }
     if (this.particleSystem?.destroy) {
       this.particleSystem.destroy();
     }
+    if (this.renderTextureManager?.destroy) {
+      this.renderTextureManager.destroy();
+      this.renderTextureManager = null;
+    }
+    if (this.bgFog?.destroy) {
+      this.bgFog.destroy();
+      this.bgFog = null;
+    }
+    if (this.fgFog?.destroy) {
+      this.fgFog.destroy();
+      this.fgFog = null;
+    }
+
+    // 2. Safely dispose of the main rendering display tree
+    if (this.masterContainer) {
+      this.masterContainer.destroy({ children: true, texture: false });
+      this.masterContainer = null;
+    }
 
     await this.loadAssets();
 
-    if (this.isDestroyed) return;
+    if (this.isDestroyed || currentSeq !== this.loadSequence) {
+      return;
+    }
 
     this.buildSceneGraph();
     this.resize();
@@ -517,56 +563,53 @@ export class PixiEngine {
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
 
-    const config = this.config;
+    // Synthesize latest coordinates dynamically so that EyeSystem and nested modules receive updates
+    const config = { ...this.config, mousePos: this.mousePos };
     const { isGlitched, currentSplit } = this.effectsSystem.update(this.time, config);
 
+    // --- Custom Flight & Hover Calculations ---
     const tFloat = this.time * config.floatSpeed;
-    let floatX = Math.sin(tFloat) * config.floatAmpX;
-    let floatY = Math.sin(2 * tFloat) * config.floatAmpY;
-    const rotation = Math.cos(tFloat) * config.floatRotation * (Math.PI / 180);
+
+    // Employs a smoothstep curve over clamped waves to generate hover pauses (plateaus) at extrema
+    const rawWave = Math.sin(tFloat) * config.flyHoverPause;
+    const clampedWave = Math.max(-1, Math.min(1, rawWave));
+    
+    // Normalizes clamped wave range to [0.0, 1.0] for linear progress interpolation
+    const normProgress = clampedWave * 0.5 + 0.5; 
+    const smoothProgress = normProgress * normProgress * (3 - 2 * normProgress);
+
+    // Apply vertical displacement limits (0 is the lowest, config.floatAmpY is the highest elevation)
+    let floatY = -(smoothProgress * config.floatAmpY * 1.5);
+    
+    // Horizontal sway
+    let floatX = Math.cos(tFloat * 0.5) * config.floatAmpX;
 
     if (config.glitchShakeIntensity > 0 && (isGlitched || currentSplit > (config.aberrationAmount * 1.15))) {
         floatX += (Math.random() - 0.5) * config.glitchShakeIntensity;
         floatY += (Math.random() - 0.5) * config.glitchShakeIntensity;
     }
     this.headContainer.position.set(floatX, floatY);
-    this.headContainer.rotation = rotation;
 
-    // --- Dynamic Scaling & Warp Shading for Background Patterns ---
-    if (this.bgPatternsContainer && this.bgPatternsContainer.children.length > 0) {
-      const kids = this.bgPatternsContainer.children;
-      if (kids.length === 1) {
-        kids[0].scale.set(config.bgPatternTopScale);
-      } else if (kids.length > 1) {
-        // kids[0] is background bottom (index 0), kids[1] is background top (index 1)
-        kids[0].scale.set(config.bgPatternBottomScale);
-        kids[1].scale.set(config.bgPatternTopScale);
-      }
+    // Dynamic scale: transitions from flyMinScale (bottom) to flyMaxScale (peak)
+    const currentScale = config.flyMinScale - (smoothProgress * (config.flyMinScale - config.flyMaxScale));
+    this.headContainer.scale.set(currentScale);
 
-      if (this.bgWarpFilter && this.bgWarpFilter.resources.warpUniforms) {
-        this.bgWarpFilter.resources.warpUniforms.uniforms.uTime = this.time * config.bgWarpSpeed;
-        this.bgWarpFilter.resources.warpUniforms.uniforms.uWarpIntensity = config.bgWarpIntensity;
-      }
+    // Dynamic rotation: persistent angle bias tilt + slow swaying around bias center
+    const tiltRad = config.flyTiltBias * (Math.PI / 180);
+    const swayOsc = Math.sin(tFloat * 0.7) * (config.floatRotation * 0.5) * (Math.PI / 180);
+    this.headContainer.rotation = tiltRad + swayOsc;
+
+    // Update off-screen RenderTextureManager pass for warp filters
+    if (this.renderTextureManager) {
+      this.renderTextureManager.update(deltaTime, config, this.app.renderer);
     }
 
-    // --- Dynamic Scaling & Warp Shading for Character Patterns ---
-    if (this.patternsContainer && this.patternsContainer.children.length > 0) {
-      const kids = this.patternsContainer.children;
-      if (kids.length === 1) {
-        kids[0].scale.set(config.patternTopScale);
-      } else if (kids.length > 1) {
-        // kids[0] is pattern_1 (bottom)
-        kids[0].scale.set(config.patternBottomScale); // pattern_1 (lowest number) maps to patternBottomScale
-        kids[kids.length - 1].scale.set(config.patternTopScale); // pattern_N maps to patternTopScale
-        for (let i = 1; i < kids.length - 1; i++) {
-          kids[i].scale.set((config.patternBottomScale + config.patternTopScale) / 2);
-        }
-      }
-
-      if (this.warpFilter && this.warpFilter.resources.warpUniforms) {
-        this.warpFilter.resources.warpUniforms.uniforms.uTime = this.time * config.warpSpeed;
-        this.warpFilter.resources.warpUniforms.uniforms.uWarpIntensity = config.warpIntensity;
-      }
+    // Update decoupled background and foreground fog systems
+    if (this.bgFog) {
+      this.bgFog.update(this.time, config);
+    }
+    if (this.fgFog) {
+      this.fgFog.update(this.time, config);
     }
 
     if (this.eyeSystem) {
@@ -577,13 +620,26 @@ export class PixiEngine {
       this.particleSystem.update(deltaTime, config);
     }
 
+    // --- Background Side Scrolling Parallax Updates ---
+     // --- Background Side Scrolling (Double Layer Parallax) ---
+    const baseSpeed = config.bgScrollSpeed;
+    const backParallax = config.bg2ParallaxSpeed; // The slider value (supports negative ranges)
+
     if (this.isPanoramaMode) {
-      const baseSpeed = config.bgScrollSpeed;
       if (this.layers.bg) {
-        this.layers.bg.tilePosition.x -= baseSpeed * dtSeconds;
+        this.layers.bg.updatePositions(dtSeconds, baseSpeed, 1.0);
       }
-      if (this.hasBg2 && this.layers.bg2) {
-        this.layers.bg2.tilePosition.x -= (baseSpeed * config.bg2ParallaxSpeed) * dtSeconds;
+      if (this.layers.bg2) {
+        this.layers.bg2.updatePositions(dtSeconds, baseSpeed, backParallax);
+      }
+    } else {
+      if (this.layers.bg_mountain_back) {
+        // Multiplies the back mountain's base speed factor by your custom slider value
+        // Moving the slider to 0.0 halts it, and negative values reverse its direction
+        this.layers.bg_mountain_back.updatePositions(dtSeconds, baseSpeed, 0.15 * backParallax);
+      }
+      if (this.layers.bg_mountain) {
+        this.layers.bg_mountain.updatePositions(dtSeconds, baseSpeed, 0.40);
       }
     }
   }
@@ -628,6 +684,18 @@ export class PixiEngine {
         }
         if (this.particleSystem?.destroy) {
           this.particleSystem.destroy();
+        }
+        if (this.renderTextureManager?.destroy) {
+          this.renderTextureManager.destroy();
+          this.renderTextureManager = null;
+        }
+        if (this.bgFog?.destroy) {
+          this.bgFog.destroy();
+          this.bgFog = null;
+        }
+        if (this.fgFog?.destroy) {
+          this.fgFog.destroy();
+          this.fgFog = null;
         }
         this.app.destroy(true, { children: true, texture: true }); 
       } catch (e) {

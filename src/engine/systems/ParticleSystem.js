@@ -1,5 +1,5 @@
 // src/engine/systems/ParticleSystem.js
-import { Container, Sprite, Graphics, Assets, Texture } from 'pixi.js';
+import { Container, Sprite, Graphics } from 'pixi.js';
 
 export class ParticleSystem {
   constructor(renderer, targetContainer, bgSize) {
@@ -181,20 +181,22 @@ export class ParticleSystem {
    * Clears active sprite lists, references and generated textures on component destruction.
    */
   destroy() {
-    if (this.particles) {
-      for (const p of this.particles) {
-        p.destroy();
-      }
-      this.particles = [];
+    // Destroy the main parent container and let Pixi dispose of all child particle nodes recursively
+    if (this.particleContainer) {
+      this.particleContainer.destroy({ children: true });
+      this.particleContainer = null;
     }
+    
+    // Safely clear local tracking array references to avoid double-destruction triggers
+    this.particles = [];
+
     if (this.ashTexture) {
       this.ashTexture.destroy(true);
+      this.ashTexture = null;
     }
     if (this.wispyTexture) {
       this.wispyTexture.destroy(true);
-    }
-    if (this.particleContainer) {
-      this.particleContainer.destroy({ children: true });
+      this.wispyTexture = null;
     }
   }
 }

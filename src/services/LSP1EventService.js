@@ -40,11 +40,12 @@ const LSP8_RECEIVED_DATA_ABI = parseAbiParameters(
 );
 
 export const EVENT_TYPE_MAP = {
-  lyx_received: "0x6bb56a14d5963264663f293c4aa2e5a916669537ec6c77fe66ea595fabc2d51a", // Standard Value Received
-  follower_gained: "0x71e02f9f05bcd5816ec4f3134aa2e5a916669537ec6c77fe66ea595fabc2d51a", // Custom
-  follower_lost: "0x9d3c0b4012b69658977b099bdaa51eff0f0460f421fba96d15669506c00d1c4f",  // Custom
-  lsp7_received: "0x20804611b3e2ea21c480dc465142210acf4a2485947541770ec1fb87dee4a55c", // Custom
-  lsp8_received: "0x0b084a55ebf70fd3c06fd755269dac2212c4d3f0f4d09079780bfa50c1b2984d", // Custom
+  // Map to the official standard keccak256("LSP0ValueReceived") identifier for UP value drops
+  lyx_received: "0x9c4705229491d365fb5434052e12a386d6771d976bea61070a8c694e8affea3d", 
+  follower_gained: "0x71e02f9f05bcd5816ec4f3134aa2e5a916669537ec6c77fe66ea595fabc2d51a", 
+  follower_lost: "0x9d3c0b4012b69658977b099bdaa51eff0f0460f421fba96d15669506c00d1c4f",  
+  lsp7_received: "0x20804611b3e2ea21c480dc465142210acf4a2485947541770ec1fb87dee4a55c", 
+  lsp8_received: "0x0b084a55ebf70fd3c06fd755269dac2212c4d3f0f4d09079780bfa50c1b2984d", 
 };
 
 export const TYPE_ID_TO_EVENT_MAP = Object.fromEntries(
@@ -134,6 +135,12 @@ export default class LSP1EventService {
         },
         onError: (error) => {
           console.error(`${logPrefix} WebSocket Stream dropped:`, error);
+          if (this.unwatchEvent) {
+            try {
+              this.unwatchEvent();
+            } catch (e) {}
+            this.unwatchEvent = null; 
+          }
           this.handleReconnect(address);
         },
       });
@@ -177,7 +184,7 @@ export default class LSP1EventService {
       try {
         this.unwatchEvent();
       } catch (e) {}
-      this.unwatch = null;
+      this.unwatchEvent = null;
     }
     this.viemClient = null;
     this.recentEvents = [];

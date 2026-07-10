@@ -1,7 +1,7 @@
 // src/hooks/useLsp1Events.js
-import { useEffect, useRef } from "react";
-import LSP1EventService from "../services/LSP1EventService";
-import { useWalletStore } from "../store/useWalletStore";
+import { useEffect, useRef } from 'react';
+import { useWalletStore } from '../store/useWalletStore';
+import LSP1EventService from '../services/LSP1EventService';
 
 export function useLsp1Events(onEventReceived) {
   const hostProfileAddress = useWalletStore((s) => s.hostProfileAddress);
@@ -17,17 +17,21 @@ export function useLsp1Events(onEventReceived) {
   useEffect(() => {
     if (!hostProfileAddress) return;
 
-    // Instantiate fresh, decoupled event service
+    let isCurrent = true;
     const service = new LSP1EventService();
     serviceRef.current = service;
 
     const startListener = async () => {
       await service.initialize();
+      if (!isCurrent) return;
       
-      // Setup WebSockets stream
       const success = await service.setupEventListeners(hostProfileAddress);
+      if (!isCurrent) {
+        // If the context changed while setup was in progress, dismantle the connection immediately
+        service.cleanupListeners();
+        return;
+      }
       
-      // Bind event callback to the stream emitter
       if (success) {
         unsubscribeRef.current = service.onEvent((event) => {
           if (onEventReceivedRef.current) {
@@ -41,11 +45,14 @@ export function useLsp1Events(onEventReceived) {
 
     // Clean teardown during profile swaps or component unmounts
     return () => {
+      isCurrent = false;
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
+        unsubscribeRef.current = null;
       }
       if (serviceRef.current) {
         serviceRef.current.cleanupListeners();
+        serviceRef.current = null;
       }
     };
   }, [hostProfileAddress]);
