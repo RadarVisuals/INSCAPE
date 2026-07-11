@@ -14,15 +14,11 @@ import { EyeSystem } from './systems/EyeSystem.js';
 import { FogSystem } from './systems/FogSystem.js';
 import { RenderTextureManager } from './systems/RenderTextureManager.js';
 import { MirroredScrollLayer } from './systems/MirroredScrollLayer.js';
-
-function testImageAsset(src) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve(true);
-    img.onerror = () => resolve(false);
-    img.src = src;
-  });
-}
+import { AssetResolver } from './assets/AssetResolver.js';
+import { FlightDynamics } from './systems/FlightDynamics.js';
+import { ShockwaveSystem } from './systems/ShockwaveSystem.js';
+import { TrailSystem } from './systems/TrailSystem.js';
+import { SearchlightSystem } from './systems/SearchlightSystem.js';
 
 export class PixiEngine {
   constructor(containerElement) {
@@ -53,15 +49,32 @@ export class PixiEngine {
     this.hasBg2 = false;
     this.keys = {}; 
 
+    // Systems Allocation
     this.effectsSystem = new EffectsSystem();
     this.eyeSystem = null;
     this.particleSystem = null;
     this.renderTextureManager = null;
     this.bgFog = null;
     this.fgFog = null;
+    
+    // Subsystem Coordinators
+    this.flightDynamics = new FlightDynamics();
+    this.shockwaveSystem = null;
+    this.trailSystem = null;
+    this.searchlightSystem = null;
 
-    // Internal mouse state bypassed from Zustand
-    this.mousePos = { x: 0, y: 0 };
+    this.lastGlitchPeak = false;
+
+    // Double Mouse Tracker: Separate absolute screen-coords and normalized [-1, 1] scales
+    this.absoluteMousePos = { x: 0, y: 0 };
+    this.normalizedMousePos = { x: 0, y: 0 };
+
+    // Spring Drift Navigation State Variables (New) [3]
+    this.baselinePosition = { x: 0, y: 0 };   // The floating anchor position
+    this.targetPosition = { x: 0, y: 0 };     // The destination coordinates set on click
+    this.isMovingToTarget = false;            // Movement status flag
+    this.facingDirection = 1.0;               // Target flip direction (1.0 = right, -1.0 = left)
+    this.currentFlipScale = 1.0;              // Smoothly interpolated flip scale ratio
 
     this.config = { ...useStore.getState() };
 
@@ -72,7 +85,17 @@ export class PixiEngine {
       const prevBgMountain = this.config.bgMountainId;
       const prevBgMountainBack = this.config.bgMountainBackId;
 
+      const prevReaction = this.config.activeReaction;
+      const nextReaction = state.activeReaction;
+      const prevProgress = this.config.reactionProgress;
+      const nextProgress = state.reactionProgress;
+
       this.config = state;
+
+      // Detect transaction start or restart trigger signals
+      if (nextReaction !== null && (prevReaction !== nextReaction || nextProgress === 1.0)) {
+        this.startLocalReaction(nextReaction);
+      }
 
       if (
         prevChar !== state.characterId ||
@@ -86,9 +109,33 @@ export class PixiEngine {
     });
   }
 
-  updateMousePos(x, y) {
-    this.mousePos.x = x;
-    this.mousePos.y = y;
+  /**
+   * Tracks target coordinates relative to the screen dimensions.
+   * @param {number} clientX - World horizontal position.
+   * @param {number} clientY - World vertical position.
+   */
+  updateMousePos(clientX, clientY) {
+    this.absoluteMousePos.x = clientX;
+    this.absoluteMousePos.y = clientY;
+
+    // Normalize coordinates to [-1, 1] range to avoid breaking pupil wander scripts
+    this.normalizedMousePos.x = (clientX / window.innerWidth) * 2 - 1;
+    this.normalizedMousePos.y = (clientY / window.innerHeight) * 2 - 1;
+  }
+
+  /**
+   * Triggers the organic spring-easing drift animation towards the clicked target coordinates [3].
+   * @param {number} clientX - Absolute canvas click horizontal position.
+   * @param {number} clientY - Absolute canvas click vertical position.
+   */
+  updateMouseClick(clientX, clientY) {
+    if (!this.masterContainer) return;
+    
+    // Convert global screen pixel coordinates into master relative coordinates [3]
+    const localTarget = this.masterContainer.toLocal({ x: clientX, y: clientY });
+    this.targetPosition.x = localTarget.x;
+    this.targetPosition.y = localTarget.y;
+    this.isMovingToTarget = true;
   }
 
   async init() {
@@ -128,233 +175,28 @@ export class PixiEngine {
   }
 
   async loadAssets() {
-    const { characterId, bgClippingMaskId, bgPatternStyle, bgMountainId, bgMountainBackId } = this.config;
-    const verifiedLoadQueue = [];
-
-    this.discoveredPatterns = [];
-    this.discoveredEyes = [];
-    this.hasEyelids = false;
-    this.isPanoramaMode = false;
-    this.hasBg2 = false;
-    this.hasBgMountainBack = false;
-
     console.log(`%c🔍 [PixiEngine] Rig Loader: Locating Stage Assets`, 'color: #00f3ff; font-weight: bold;');
+    
+    const results = await AssetResolver.resolveRig(this.config);
+    
+    this.keys = results.keys;
+    this.hasBgClippingMask = results.hasBgClippingMask;
+    this.hasBgPat1 = results.hasBgPat1;
+    this.hasBgPat2 = results.hasBgPat2;
+    this.hasBgMountain = results.hasBgMountain;
+    this.hasBgMountainBack = results.hasBgMountainBack;
+    this.hasCharClippingMask = results.hasCharClippingMask;
+    this.hasLineart = results.hasLineart;
+    this.hasEyelids = results.hasEyelids;
+    this.isPanoramaMode = results.isPanoramaMode;
+    this.hasBg2 = results.hasBg2;
+    this.discoveredPatterns = results.discoveredPatterns;
+    this.discoveredEyes = results.discoveredEyes;
 
-    // Normalize IDs to padded 2-digit strings (e.g. 1 -> "01", 2 -> "02")
-    const padId = (id) => typeof id === 'number' ? String(id).padStart(2, '0') : id;
-    const formattedMountainId = padId(bgMountainId);
-    const formattedMountainBackId = padId(bgMountainBackId);
-
-    this.keys = {
-      bg_clipping_mask: `bg_clipping_mask_${bgClippingMaskId}`,
-      bg_pat_1: `bg_pat_1_${bgPatternStyle}`,
-      bg_pat_2: `bg_pat_2_${bgPatternStyle}`,
-      bg_mountain: `bg_mountain_${formattedMountainId}`,
-      bg_mountain_back: `bg_mountain_back_${formattedMountainBackId}`,
-      char_clipping_mask: `char_clipping_mask_${characterId}`,
-      char_lineart: `char_lineart_${characterId}`,
-      eyelids_top: `eyelids_top_${characterId}`,
-      eyelids_bottom: `eyelids_bottom_${characterId}`
-    };
-
-    // --- Legacy Panorama Detection ---
-    let panorama1Path = '/assets/panorama1.webp';
-    let hasPanorama1 = await testImageAsset(panorama1Path);
-    if (!hasPanorama1) {
-      panorama1Path = '/assets/stage/panorama1.webp';
-      hasPanorama1 = await testImageAsset(panorama1Path);
-    }
-
-    if (hasPanorama1) {
-      this.isPanoramaMode = true;
-      console.log("🌌 [PixiEngine] Legacy Panorama detected. Building Tiling Layers.");
-      verifiedLoadQueue.push({ alias: 'bg', src: panorama1Path });
-
-      let panorama2Path = '/assets/panorama2.webp';
-      let hasPanorama2 = await testImageAsset(panorama2Path);
-      if (!hasPanorama2) {
-        panorama2Path = '/assets/stage/panorama2.webp';
-        hasPanorama2 = await testImageAsset(panorama2Path);
-      }
-      if (hasPanorama2) {
-        this.hasBg2 = true;
-        verifiedLoadQueue.push({ alias: 'bg2', src: panorama2Path });
-      } else {
-        Assets.cache.set('bg2', Texture.EMPTY);
-      }
-    } else {
-      Assets.cache.set('bg', Texture.EMPTY);
-      Assets.cache.set('bg2', Texture.EMPTY);
-    }
-
-    // --- Dynamic Background Layers (Clean Rig) ---
-    if (!this.isPanoramaMode) {
-      // 1. Backdrop Color
-      const bgClipPath = `/assets/stage/backdrops/backdrop_${bgClippingMaskId}.webp`;
-      this.hasBgClippingMask = await testImageAsset(bgClipPath);
-      if (this.hasBgClippingMask) {
-        console.log(`✅ [PixiEngine] Backdrop: ${bgClipPath}`);
-        verifiedLoadQueue.push({ alias: this.keys.bg_clipping_mask, src: bgClipPath });
-      } else {
-        console.warn(`⚠️ [PixiEngine] Missing Backdrop Color at: ${bgClipPath}`);
-        Assets.cache.set(this.keys.bg_clipping_mask, Texture.EMPTY);
-      }
-
-      // 2. Background Flat Patterns (style_bottom and style_top)
-      const bgPat1Path = `/assets/stage/patterns/${bgPatternStyle}_top.webp`;
-      const bgPat2Path = `/assets/stage/patterns/${bgPatternStyle}_bottom.webp`;
-      this.hasBgPat1 = await testImageAsset(bgPat1Path);
-      this.hasBgPat2 = await testImageAsset(bgPat2Path);
-
-      if (this.hasBgPat1) {
-        console.log(`✅ [PixiEngine] Found BG Pattern Top: ${bgPat1Path}`);
-        verifiedLoadQueue.push({ alias: this.keys.bg_pat_1, src: bgPat1Path });
-      } else {
-        console.warn(`⚠️ [PixiEngine] Missing BG Pattern Top at: ${bgPat1Path}`);
-      }
-
-      if (this.hasBgPat2) {
-        console.log(`✅ [PixiEngine] Found BG Pattern Bottom: ${bgPat2Path}`);
-        verifiedLoadQueue.push({ alias: this.keys.bg_pat_2, src: bgPat2Path });
-      } else {
-        console.warn(`⚠️ [PixiEngine] Missing BG Pattern Bottom at: ${bgPat2Path}`);
-      }
-
-      // 3. Foreground Mountains Layer
-      let mountainPath = `/assets/stage/mountains/mountain_${formattedMountainId}.webp`;
-      this.hasBgMountain = await testImageAsset(mountainPath);
-      if (!this.hasBgMountain) {
-        // Fallback to unpadded ID
-        mountainPath = `/assets/stage/mountains/mountain_${bgMountainId}.webp`;
-        this.hasBgMountain = await testImageAsset(mountainPath);
-      }
-      if (this.hasBgMountain) {
-        console.log(`✅ [PixiEngine] Mountain Graphic: ${mountainPath}`);
-        verifiedLoadQueue.push({ alias: this.keys.bg_mountain, src: mountainPath });
-      } else {
-        console.warn(`⚠️ [PixiEngine] Missing Mountain Asset at: /assets/stage/mountains/mountain_${formattedMountainId}.webp`);
-        Assets.cache.set(this.keys.bg_mountain, Texture.EMPTY);
-      }
-
-      // 4. Background Mountains Layer (NEW)
-      let mountainBackPath = `/assets/stage/mountains/mountain_${formattedMountainBackId}.webp`;
-      this.hasBgMountainBack = await testImageAsset(mountainBackPath);
-      if (!this.hasBgMountainBack) {
-        mountainBackPath = `/assets/stage/mountains/mountain_${bgMountainBackId}.webp`;
-        this.hasBgMountainBack = await testImageAsset(mountainBackPath);
-      }
-      if (this.hasBgMountainBack) {
-        console.log(`✅ [PixiEngine] Back Mountain Graphic: ${mountainBackPath}`);
-        verifiedLoadQueue.push({ alias: this.keys.bg_mountain_back, src: mountainBackPath });
-      } else {
-        console.warn(`⚠️ [PixiEngine] Missing Back Mountain Asset at: /assets/stage/mountains/mountain_${formattedMountainBackId}.webp`);
-        Assets.cache.set(this.keys.bg_mountain_back, Texture.EMPTY);
-      }
-    }
-
-    // --- Foreground Character Clipping Mask ---
-    const charClipPath = `/assets/actors/${characterId}/mask.webp`;
-    this.hasCharClippingMask = await testImageAsset(charClipPath);
-    if (this.hasCharClippingMask) {
-      console.log(`✅ [PixiEngine] Actor Mask: ${charClipPath}`);
-      verifiedLoadQueue.push({ alias: this.keys.char_clipping_mask, src: charClipPath });
-    } else {
-      console.error(`❌ [PixiEngine] Missing Actor Mask at: ${charClipPath}. Silhouette clipping and patterns bypassed.`);
-      Assets.cache.set(this.keys.char_clipping_mask, Texture.EMPTY);
-    }
-
-    // --- Foreground Character Patterns ---
-    let patternIndex = 1;
-    while (true) {
-      const idxStr = padId(patternIndex);
-      let patPath = `/assets/actors/${characterId}/patterns/pattern_${idxStr}.webp`;
-      let exists = await testImageAsset(patPath);
-
-      if (!exists) {
-        // Fallback checks for unpadded index formatting
-        patPath = `/assets/actors/${characterId}/patterns/pattern_${patternIndex}.webp`;
-        exists = await testImageAsset(patPath);
-      }
-      if (!exists) break;
-
-      console.log(`✅ [PixiEngine] Found Pattern Layer #${patternIndex}: ${patPath}`);
-      const alias = `char_${characterId}_pattern_${patternIndex}`;
-      verifiedLoadQueue.push({ alias, src: patPath });
-      this.discoveredPatterns.push(alias);
-      patternIndex++;
-      if (patternIndex > 30) break;
-    }
-
-    // --- Foreground Character Lineart ---
-    const lineartPath = `/assets/actors/${characterId}/lineart.webp`;
-    this.hasLineart = await testImageAsset(lineartPath);
-    if (this.hasLineart) {
-      console.log(`✅ [PixiEngine] Lineart Layout: ${lineartPath}`);
-      verifiedLoadQueue.push({ alias: this.keys.char_lineart, src: lineartPath });
-    } else {
-      console.error(`❌ [PixiEngine] Missing Lineart File at: ${lineartPath}`);
-      Assets.cache.set(this.keys.char_lineart, Texture.EMPTY);
-    }
-
-    // --- Foreground Character Dynamic Eye Sockets ---
-    let socketIndex = 1;
-    while (true) {
-      const idxStr = padId(socketIndex);
-      let eyeballPath = `/assets/actors/${characterId}/eyes/socket_${idxStr}/eyeball.webp`;
-      let pupilPath = `/assets/actors/${characterId}/eyes/socket_${idxStr}/pupil.webp`;
-
-      let hasEyeball = await testImageAsset(eyeballPath);
-      let hasPupil = await testImageAsset(pupilPath);
-
-      if (!hasEyeball && !hasPupil) {
-        // Fallback checks for unpadded indices
-        eyeballPath = `/assets/actors/${characterId}/eyes/socket_${socketIndex}/eyeball.webp`;
-        pupilPath = `/assets/actors/${characterId}/eyes/socket_${socketIndex}/pupil.webp`;
-        hasEyeball = await testImageAsset(eyeballPath);
-        hasPupil = await testImageAsset(pupilPath);
-      }
-
-      if (!hasEyeball && !hasPupil) break;
-
-      console.log(`👁️ [PixiEngine] Discovered Eye Rig: socket_${idxStr} (Eyeball: ${hasEyeball ? 'Yes' : 'No'}, Pupil: ${hasPupil ? 'Yes' : 'No'})`);
-
-      const scleraAlias = `char_${characterId}_eye_sclera_${socketIndex}`;
-      const pupilAlias = `char_${characterId}_eye_pupil_${socketIndex}`;
-
-      if (hasEyeball) verifiedLoadQueue.push({ alias: scleraAlias, src: eyeballPath });
-      if (hasPupil) verifiedLoadQueue.push({ alias: pupilAlias, src: pupilPath });
-
-      this.discoveredEyes.push({
-        id: socketIndex,
-        scleraAlias: hasEyeball ? scleraAlias : null,
-        pupilAlias: hasPupil ? pupilAlias : null
-      });
-
-      socketIndex++;
-      if (socketIndex > 30) break;
-    }
-
-    // --- Foreground Character Eyelids ---
-    const eyelidsTopPath = `/assets/actors/${characterId}/eyes/eyelids_top.webp`;
-    const eyelidsBottomPath = `/assets/actors/${characterId}/eyes/eyelids_bottom.webp`;
-    const hasEyelidsTop = await testImageAsset(eyelidsTopPath);
-    const hasEyelidsBottom = await testImageAsset(eyelidsBottomPath);
-
-    if (hasEyelidsTop && hasEyelidsBottom) {
-      console.log(`✅ [PixiEngine] Found Flat Eyelid Elements`);
-      verifiedLoadQueue.push({ alias: this.keys.eyelids_top, src: eyelidsTopPath });
-      verifiedLoadQueue.push({ alias: this.keys.eyelids_bottom, src: eyelidsBottomPath });
-      this.hasEyelids = true;
-    } else {
-      console.warn(`⚠️ [PixiEngine] Eyelids missing (Expected flat eyelids_top.webp and eyelids_bottom.webp inside eyes/ folder)`);
-      Assets.cache.set(this.keys.eyelids_top, Texture.EMPTY);
-      Assets.cache.set(this.keys.eyelids_bottom, Texture.EMPTY);
-    }
-
-    if (verifiedLoadQueue.length > 0) {
+    if (results.verifiedLoadQueue.length > 0) {
       try {
-        await Assets.load(verifiedLoadQueue);
-        console.log(`%c✅ [PixiEngine] Dynamic asset payload cached!`, 'color: #00ff80; font-weight: bold;');
+        await Assets.load(results.verifiedLoadQueue);
+        console.log("%c✅ [PixiEngine] Dynamic asset payload cached!", 'color: #00ff80; font-weight: bold;');
       } catch (err) {
         console.error("❌ [PixiEngine] Critical Loader Exception:", err);
       }
@@ -388,7 +230,10 @@ export class PixiEngine {
     this.bgAtmosphereContainer.mask = this.masterClipMask;
     this.masterContainer.addChild(this.bgAtmosphereContainer);
 
-    // Initialize the off-screen RenderTextureManager to flatten warp filters
+    // Initialise Shockwave System
+    this.shockwaveSystem = new ShockwaveSystem();
+
+    // Initialize the off-screen RenderTextureManager to flatten warp patterns
     this.renderTextureManager = new RenderTextureManager({
       discoveredPatterns: this.discoveredPatterns,
       bgPat1Alias: this.hasBgPat1 ? this.keys.bg_pat_1 : null,
@@ -423,9 +268,15 @@ export class PixiEngine {
       const hasAnyBgPat = this.hasBgPat1 || this.hasBgPat2;
       if (hasAnyBgPat && this.renderTextureManager) {
         this.bgAtmosphereContainer.addChild(this.renderTextureManager.bgPatternSprite);
+
+        // Ceiling reflection overlay (screen blended duplicate of offscreen render texture)
+        this.layers.bg_pattern_reflect = new Sprite(this.renderTextureManager.bgPatternRenderTexture);
+        this.layers.bg_pattern_reflect.anchor.set(0.5);
+        this.layers.bg_pattern_reflect.blendMode = 'screen';
+        this.bgAtmosphereContainer.addChild(this.layers.bg_pattern_reflect);
       }
 
-      // 3. Back Mountains layer (Further away, slower scroll rate, higher vertical coordinate offset, hazy opacity)
+      // 3. Back Mountains layer
       if (this.hasBgMountainBack) {
         const mountainBackTex = Assets.get(this.keys.bg_mountain_back);
         if (mountainBackTex && mountainBackTex !== Texture.EMPTY) {
@@ -433,15 +284,26 @@ export class PixiEngine {
           this.layers.bg_mountain_back.position.y = -35; // Shifts upward to align behind front range
           this.layers.bg_mountain_back.alpha = 0.75; // Atmospheric perspective haze
           this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_back);
+
+          // Dynamic Cavern Lighting: Back Mountain Reflector Duplicate
+          this.layers.bg_mountain_back_reflect = new MirroredScrollLayer(mountainBackTex, this.bgHeightScale, 0.18);
+          this.layers.bg_mountain_back_reflect.position.y = -35;
+          this.layers.bg_mountain_back_reflect.blendMode = 'screen';
+          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_back_reflect);
         }
       }
 
-      // 4. Foreground Mountains layer (Closer range, standard scroll rate)
+      // 4. Foreground Mountains layer
       if (this.hasBgMountain) {
         const mountainTex = Assets.get(this.keys.bg_mountain);
         if (mountainTex && mountainTex !== Texture.EMPTY) {
           this.layers.bg_mountain = new MirroredScrollLayer(mountainTex, this.bgHeightScale, 0.4);
           this.bgAtmosphereContainer.addChild(this.layers.bg_mountain);
+
+          // Dynamic Cavern Lighting: Foreground Mountain Reflector Duplicate
+          this.layers.bg_mountain_reflect = new MirroredScrollLayer(mountainTex, this.bgHeightScale, 0.4);
+          this.layers.bg_mountain_reflect.blendMode = 'screen';
+          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_reflect);
         }
       }
     }
@@ -452,11 +314,17 @@ export class PixiEngine {
     // Particles
     this.particleSystem = new ParticleSystem(this.app.renderer, this.bgAtmosphereContainer, this.bgHeightScale);
     
-    // --- ASSEMBLE CHARACTER ---
+    // Initialise Ghost Coordinates System
+    this.trailSystem = new TrailSystem(this.masterContainer, this.hasCharClippingMask ? this.keys.char_clipping_mask : null);
+
+    // Initialize Volumetric Searchlight System
+    this.searchlightSystem = new SearchlightSystem(this.masterContainer);
+
+    // 2. Head Container
     this.headContainer = new Container();
     this.masterContainer.addChild(this.headContainer);
 
-    // Blurry shadow glow container (renders underneath)
+    // Blurry shadow glow container (renders underneath head lineart/features)
     if (this.hasCharClippingMask) {
       this.layers.aura = createSprite(this.keys.char_clipping_mask);
       this.headContainer.addChild(this.layers.aura);
@@ -464,12 +332,12 @@ export class PixiEngine {
 
     // Nested composition to decouple filters from the mask sprite
     if (this.hasCharClippingMask) {
-      // 1. The mask sprite (must be set as renderable=false so it does not draw as a solid colored block)
+      // The mask sprite (must be set as renderable=false so it does not draw as a solid colored block)
       const charMaskSprite = createSprite(this.keys.char_clipping_mask);
       charMaskSprite.renderable = false; 
       this.headContainer.addChild(charMaskSprite);
 
-      // 2. The wrapped container applying only the clip-mask
+      // The wrapped container applying only the clip-mask
       this.characterContentContainer = new Container();
       
       // Use setMask with channel: 'alpha' to bypass color channel processing
@@ -480,21 +348,24 @@ export class PixiEngine {
       
       this.headContainer.addChild(this.characterContentContainer);
 
-      // 3. Render base color (clipping mask file acting as character color) inside masked wrapper
+      // Render base color (clipping mask file acting as character color) inside masked wrapper
       this.layers.base = createSprite(this.keys.char_clipping_mask);
       this.characterContentContainer.addChild(this.layers.base);
 
-      // 4. Render character patterns using flattened textures
+      // Render character patterns using flattened textures
       if (this.discoveredPatterns.length > 0 && this.renderTextureManager) {
         this.characterContentContainer.addChild(this.renderTextureManager.patternSprite);
       }
     }
 
-    // Attach glow behaviors
+    // Attach glow, dynamic cavern lighting, and filters
     this.effectsSystem.attach({
       headContainer: this.headContainer,
       auraSprite: this.layers.aura,
-      baseSprite: this.layers.base
+      baseSprite: this.layers.base,
+      mountainReflector: this.layers.bg_mountain_reflect,
+      mountainBackReflector: this.layers.bg_mountain_back_reflect,
+      ceilingReflector: this.layers.bg_pattern_reflect
     });
 
     // Render lineart
@@ -540,6 +411,18 @@ export class PixiEngine {
       this.fgFog.destroy();
       this.fgFog = null;
     }
+    if (this.trailSystem?.destroy) {
+      this.trailSystem.destroy();
+      this.trailSystem = null;
+    }
+    if (this.shockwaveSystem?.destroy) {
+      this.shockwaveSystem.destroy();
+      this.shockwaveSystem = null;
+    }
+    if (this.searchlightSystem?.destroy) {
+      this.searchlightSystem.destroy();
+      this.searchlightSystem = null;
+    }
 
     // 2. Safely dispose of the main rendering display tree
     if (this.masterContainer) {
@@ -558,46 +441,157 @@ export class PixiEngine {
     this.isReady = true;
   }
 
+  /**
+   * Assigns local animation properties to smoothly transition visually during triggered reactions.
+   */
+  startLocalReaction(reactionType) {
+    this.originalPreset = {
+      aberrationAmount: this.config.aberrationAmount,
+      warpIntensity: this.config.warpIntensity,
+      particleCount: this.config.particleCount,
+      particleSpeed: this.config.particleSpeed,
+      auraOpacity: this.config.auraOpacity,
+      auraScale: this.config.auraScale,
+      glitchShakeIntensity: this.config.glitchShakeIntensity,
+      flickerIntensity: this.config.flickerIntensity,
+      aberrationSpeed: this.config.aberrationSpeed,
+      aberrationGlitch: this.config.aberrationGlitch
+    };
+
+    this.currentLocalReaction = reactionType;
+    this.localReactionProgress = 1.0;
+
+    // Direct WebGL ripples trigger
+    if (this.shockwaveSystem && this.headContainer) {
+      this.shockwaveSystem.trigger(
+        this.headContainer.position,
+        this.masterContainer.scale.x,
+        this.app.screen.width,
+        this.app.screen.height
+      );
+    }
+  }
+
   update(deltaTime) {
     if (!this.isReady) return;
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
 
+    // --- Phase 2: Internal Reaction Decay Step ---
+    if (this.currentLocalReaction && this.originalPreset) {
+      this.localReactionProgress -= 0.007 * deltaTime;
+
+      if (this.localReactionProgress <= 0) {
+        this.localReactionProgress = 0;
+        this.currentLocalReaction = null;
+        this.originalPreset = null;
+
+        // Reset the store values once when the decay concludes [3]
+        const setParameter = useStore.getState().setParameter;
+        setParameter("activeReaction", null);
+        setParameter("reactionProgress", 0.0);
+      } else {
+        // Sync progress dynamically to the store so the Tab indicator updates [3]
+        useStore.getState().setParameter("reactionProgress", this.localReactionProgress);
+      }
+    }
+
+    // --- Spring Drift Navigation & 3D Flipping Calculations [3] ---
+    if (this.isMovingToTarget) {
+      const dx = this.targetPosition.x - this.baselinePosition.x;
+      const dy = this.targetPosition.y - this.baselinePosition.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 15) {
+        // Stop active drifting once reached, dropping back into default baseline hover [3]
+        this.isMovingToTarget = false;
+      } else {
+        // Smoothly ease baseline position vectors towards target click [3]
+        this.baselinePosition.x += dx * 0.0071 * deltaTime;
+        this.baselinePosition.y += dy * 0.0071 * deltaTime;
+
+        // Establish target face vector (1.0 = Right, -1.0 = Left) [3]
+        this.facingDirection = dx > 0 ? 1.0 : -1.0;
+      }
+    }
+
+    // Smoothly ease active horizontal scale ratios to simulate 3D rotational flipping [3]
+    this.currentFlipScale += (this.facingDirection - this.currentFlipScale) * 0.2 * deltaTime;
+
     // Synthesize latest coordinates dynamically so that EyeSystem and nested modules receive updates
-    const config = { ...this.config, mousePos: this.mousePos };
+    const config = { ...this.config, mousePos: this.normalizedMousePos };
+
+    // Apply internal decay overrides over baseline configurations [3]
+    if (this.currentLocalReaction && this.originalPreset) {
+      const invProgress = this.localReactionProgress;
+
+      if (this.currentLocalReaction === "lyx_received") {
+        config.particleCount = Math.floor(this.originalPreset.particleCount + (300 - this.originalPreset.particleCount) * invProgress);
+        config.particleSpeed = this.originalPreset.particleSpeed + (4.5 - this.originalPreset.particleSpeed) * invProgress;
+        config.auraOpacity = this.originalPreset.auraOpacity + (1.0 - this.originalPreset.auraOpacity) * invProgress;
+        config.auraScale = this.originalPreset.auraScale + (1.35 - this.originalPreset.auraScale) * invProgress;
+        config.warpIntensity = this.originalPreset.warpIntensity + (50.0 - this.originalPreset.warpIntensity) * invProgress;
+      } 
+      else if (this.currentLocalReaction === "lsp7_received" || this.currentLocalReaction === "lsp8_received") {
+        config.aberrationAmount = this.originalPreset.aberrationAmount + (30.0 - this.originalPreset.aberrationAmount) * invProgress;
+        config.warpIntensity = this.originalPreset.warpIntensity + (90.0 - this.originalPreset.warpIntensity) * invProgress;
+        config.glitchShakeIntensity = Math.floor(this.originalPreset.glitchShakeIntensity + (25 - this.originalPreset.glitchShakeIntensity) * invProgress);
+        config.flickerIntensity = this.originalPreset.flickerIntensity + (0.85 - this.originalPreset.flickerIntensity) * invProgress;
+        
+        config.aberrationSpeed = 8.0;
+        config.aberrationGlitch = 0;
+      }
+    }
+
+    config.reactionProgress = this.localReactionProgress;
+
     const { isGlitched, currentSplit } = this.effectsSystem.update(this.time, config);
 
-    // --- Custom Flight & Hover Calculations ---
-    const tFloat = this.time * config.floatSpeed;
-
-    // Employs a smoothstep curve over clamped waves to generate hover pauses (plateaus) at extrema
-    const rawWave = Math.sin(tFloat) * config.flyHoverPause;
-    const clampedWave = Math.max(-1, Math.min(1, rawWave));
+    // --- Flight & Hover Subsystem Calculations ---
+    const isGlitchActive = (isGlitched || currentSplit > (config.aberrationAmount * 1.15));
     
-    // Normalizes clamped wave range to [0.0, 1.0] for linear progress interpolation
-    const normProgress = clampedWave * 0.5 + 0.5; 
-    const smoothProgress = normProgress * normProgress * (3 - 2 * normProgress);
+    // Pass baseline and flip parameters to the flight coordinator [3]
+    const headState = this.flightDynamics.calculate(this.time, config, isGlitchActive, this.baselinePosition, this.currentFlipScale);
 
-    // Apply vertical displacement limits (0 is the lowest, config.floatAmpY is the highest elevation)
-    let floatY = -(smoothProgress * config.floatAmpY * 1.5);
-    
-    // Horizontal sway
-    let floatX = Math.cos(tFloat * 0.5) * config.floatAmpX;
+    this.headContainer.position.set(headState.x, headState.y);
+    this.headContainer.scale.set(headState.scaleX, headState.scale); // Independent scale assignment to allow horizontal flip rotations [3]
+    this.headContainer.rotation = headState.rotation;
 
-    if (config.glitchShakeIntensity > 0 && (isGlitched || currentSplit > (config.aberrationAmount * 1.15))) {
-        floatX += (Math.random() - 0.5) * config.glitchShakeIntensity;
-        floatY += (Math.random() - 0.5) * config.glitchShakeIntensity;
+    // --- Searchlight Volumetric System Updates (Orbiting turret tracking mouse) ---
+    if (this.searchlightSystem) {
+      // Pass the float positions of the head to establish the relative center, and the direct absolute mouse coordinates [3]
+      this.searchlightSystem.update(this.headContainer.position, this.absoluteMousePos, deltaTime, config);
     }
-    this.headContainer.position.set(floatX, floatY);
 
-    // Dynamic scale: transitions from flyMinScale (bottom) to flyMaxScale (peak)
-    const currentScale = config.flyMinScale - (smoothProgress * (config.flyMinScale - config.flyMaxScale));
-    this.headContainer.scale.set(currentScale);
+    // --- WebGL Portal Refraction Ripple Subsystem updates ---
+    if (this.shockwaveSystem) {
+      const hasActiveWaves = this.shockwaveSystem.update(
+        dtSeconds, 
+        this.app.screen.width, 
+        this.app.screen.height, 
+        config
+      );
 
-    // Dynamic rotation: persistent angle bias tilt + slow swaying around bias center
-    const tiltRad = config.flyTiltBias * (Math.PI / 180);
-    const swayOsc = Math.sin(tFloat * 0.7) * (config.floatRotation * 0.5) * (Math.PI / 180);
-    this.headContainer.rotation = tiltRad + swayOsc;
+      if (hasActiveWaves) {
+        if (!this.masterContainer.filters || this.masterContainer.filters.length === 0) {
+          this.masterContainer.filters = [this.shockwaveSystem.filter];
+        }
+      } else {
+        this.masterContainer.filters = null;
+      }
+    }
+
+    // Detect visual shakes to auto-fire WebGL ripples
+    const glitchTriggered = isGlitchActive && config.glitchShakeIntensity > 15;
+    if (glitchTriggered && !this.lastGlitchPeak && this.shockwaveSystem) {
+      this.shockwaveSystem.trigger(
+        this.headContainer.position,
+        this.masterContainer.scale.x,
+        this.app.screen.width,
+        this.app.screen.height
+      );
+    }
+    this.lastGlitchPeak = glitchTriggered;
 
     // Update off-screen RenderTextureManager pass for warp filters
     if (this.renderTextureManager) {
@@ -620,8 +614,12 @@ export class PixiEngine {
       this.particleSystem.update(deltaTime, config);
     }
 
-    // --- Background Side Scrolling Parallax Updates ---
-     // --- Background Side Scrolling (Double Layer Parallax) ---
+    // --- Echoing Phase Trails Subsystem calculations ---
+    if (this.trailSystem) {
+      this.trailSystem.update(headState, config, isGlitchActive);
+    }
+
+    // --- Background Side Scrolling (Double Layer Parallax) ---
     const baseSpeed = config.bgScrollSpeed;
     const backParallax = config.bg2ParallaxSpeed; // The slider value (supports negative ranges)
 
@@ -634,12 +632,16 @@ export class PixiEngine {
       }
     } else {
       if (this.layers.bg_mountain_back) {
-        // Multiplies the back mountain's base speed factor by your custom slider value
-        // Moving the slider to 0.0 halts it, and negative values reverse its direction
         this.layers.bg_mountain_back.updatePositions(dtSeconds, baseSpeed, 0.15 * backParallax);
+      }
+      if (this.layers.bg_mountain_back_reflect) {
+        this.layers.bg_mountain_back_reflect.updatePositions(dtSeconds, baseSpeed, 0.15 * backParallax);
       }
       if (this.layers.bg_mountain) {
         this.layers.bg_mountain.updatePositions(dtSeconds, baseSpeed, 0.40);
+      }
+      if (this.layers.bg_mountain_reflect) {
+        this.layers.bg_mountain_reflect.updatePositions(dtSeconds, baseSpeed, 0.40);
       }
     }
   }
@@ -696,6 +698,18 @@ export class PixiEngine {
         if (this.fgFog?.destroy) {
           this.fgFog.destroy();
           this.fgFog = null;
+        }
+        if (this.trailSystem?.destroy) {
+          this.trailSystem.destroy();
+          this.trailSystem = null;
+        }
+        if (this.shockwaveSystem?.destroy) {
+          this.shockwaveSystem.destroy();
+          this.shockwaveSystem = null;
+        }
+        if (this.searchlightSystem?.destroy) {
+          this.searchlightSystem.destroy();
+          this.searchlightSystem = null;
         }
         this.app.destroy(true, { children: true, texture: true }); 
       } catch (e) {

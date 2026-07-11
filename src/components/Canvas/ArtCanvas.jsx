@@ -29,10 +29,16 @@ export default function ArtCanvas() {
   }, []);
 
   const handleMouseMove = (e) => {
-    const x = (e.clientX / window.innerWidth) * 2 - 1;
-    const y = (e.clientY / window.innerHeight) * 2 - 1;
+    // Pass raw screen coordinates. PixiEngine converts these into local targets [3].
     if (engineRef.current) {
-      engineRef.current.updateMousePos(x, y);
+      engineRef.current.updateMousePos(e.clientX, e.clientY);
+    }
+  };
+
+  const handleMouseClick = (e) => {
+    // Pass click position to drift the character to the destination [3]
+    if (engineRef.current) {
+      engineRef.current.updateMouseClick(e.clientX, e.clientY);
     }
   };
 
@@ -43,6 +49,7 @@ export default function ArtCanvas() {
       <div
         ref={containerRef}
         onMouseMove={handleMouseMove}
+        onClick={handleMouseClick}
         style={{
           width: '100%',
           height: '100%',

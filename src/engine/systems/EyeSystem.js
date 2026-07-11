@@ -60,6 +60,24 @@ export class EyeSystem {
     }
   }
 
+  /**
+   * Resolves the current global screen coordinates of all active eye components.
+   * This is used to accurately anchor searchlight emissions dynamically.
+   * @returns {Array<{x: number, y: number}>} Global coordinate positions.
+   */
+  getEyeGlobalPositions() {
+    return this.eyeContainers
+      .map(group => {
+        if (group.pupil) {
+          return group.pupil.getGlobalPosition();
+        } else if (group.sclera) {
+          return group.sclera.getGlobalPosition();
+        }
+        return null;
+      })
+      .filter(pos => pos !== null);
+  }
+
   update(deltaTime, state) {
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;

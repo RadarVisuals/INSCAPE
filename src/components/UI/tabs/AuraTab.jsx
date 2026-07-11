@@ -13,7 +13,8 @@ export default function AuraTab() {
         <CompactSlider label="Aura Pulse Speed" storeKey="auraPulseSpeed" min="0" max="5" step="0.1" />
       </div>
       <div>
-        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Aura Tint (RGB)</h4>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Cavern Light & Tint (RGB)</h4>
+        <CompactSlider label="Cavern Light Intensity" storeKey="cavernLightIntensity" min="0" max="2" step="0.05" />
         <CompactSlider label="Red Channel" storeKey="auraColorR" min="0" max="255" step="1" />
         <CompactSlider label="Green Channel" storeKey="auraColorG" min="0" max="255" step="1" />
         <CompactSlider label="Blue Channel" storeKey="auraColorB" min="0" max="255" step="1" />

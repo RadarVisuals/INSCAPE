@@ -339,7 +339,8 @@ export default function AuraTab() {
         <CompactSlider label="Aura Pulse Speed" storeKey="auraPulseSpeed" min="0" max="5" step="0.1" />
       </div>
       <div>
-        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Aura Tint (RGB)</h4>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Cavern Light & Tint (RGB)</h4>
+        <CompactSlider label="Cavern Light Intensity" storeKey="cavernLightIntensity" min="0" max="2" step="0.05" />
         <CompactSlider label="Red Channel" storeKey="auraColorR" min="0" max="255" step="1" />
         <CompactSlider label="Green Channel" storeKey="auraColorG" min="0" max="255" step="1" />
         <CompactSlider label="Blue Channel" storeKey="auraColorB" min="0" max="255" step="1" />
@@ -441,16 +442,20 @@ export default function GlitchTab() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
       <div>
-        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Chromatic Split</h4>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Chromatic Split & Shocks</h4>
         <CompactSlider label="RGB Split Amount" storeKey="aberrationAmount" min="0" max="30" step="0.5" />
         <CompactSlider label="Aberration Speed" storeKey="aberrationSpeed" min="0" max="10" step="0.1" />
         <CompactSlider label="Glitch Burst Chance" storeKey="aberrationGlitch" min="0" max="5" step="0.1" />
-      </div>
-      <div>
-        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Corruption & Flicker</h4>
         <CompactSlider label="Flicker Intensity" storeKey="flickerIntensity" min="0" max="0.9" step="0.05" />
         <CompactSlider label="Flicker Speed" storeKey="flickerSpeed" min="0" max="5" step="0.1" />
         <CompactSlider label="Screen Shake" storeKey="glitchShakeIntensity" min="0" max="30" step="1" />
+      </div>
+      <div>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Echoing Phase Trails</h4>
+        <CompactSlider label="Trail Count" storeKey="trailCount" min="0" max="3" step="1" />
+        <CompactSlider label="Frame Step Spacing" storeKey="trailSpacing" min="2" max="15" step="1" />
+        <CompactSlider label="Manual Test Alpha" storeKey="trailManualAlpha" min="0" max="1" step="0.05" />
+        <CompactSlider label="Glitch/Web3 Influence" storeKey="trailGlitchInfluence" min="0" max="1" step="0.05" />
       </div>
     </div>
   );
@@ -632,6 +637,7 @@ export default function SkullTab() {
 import React from 'react';
 import { useStore } from '../../../store/useStore';
 import { useWalletStore } from '../../../store/useWalletStore';
+import CompactSlider from '../CompactSlider';
 
 export default function Web3Tab() {
   const hostProfileAddress = useWalletStore((state) => state.hostProfileAddress);
@@ -643,12 +649,18 @@ export default function Web3Tab() {
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
       <div>
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Connection status</h4>
-        <div style={{ padding: '8px', border: '1px solid var(--border-color)', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
+        <div style={{ padding: '8px', border: '1px solid var(--border-color)', fontSize: '10px', fontFamily: 'var(--font-mono)', marginBottom: '12px' }}>
           <div>Status: <span style={{ color: isWalletConnected ? '#00ff80' : '#8b0000', fontWeight: 'bold' }}>{isWalletConnected ? "CONNECTED" : "DISCONNECTED"}</span></div>
           <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginTop: '2px', color: 'var(--text-muted)' }}>
             UP: {hostProfileAddress || "No Context Resolved"}
           </div>
         </div>
+
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Shockwave Rig Setup</h4>
+        <CompactSlider label="Shockwave Strength" storeKey="shockwaveStrength" min="0" max="2" step="0.1" />
+        <CompactSlider label="Wavefront Thickness" storeKey="shockwaveThickness" min="50" max="300" step="10" />
+        <CompactSlider label="Ripple Expansion Time" storeKey="shockwaveDuration" min="0.5" max="4" step="0.1" />
+        <CompactSlider label="Cascading Ripple Count" storeKey="shockwavePulseCount" min="1" max="5" step="1" />
       </div>
       <div>
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>LSP1 Simulators</h4>
@@ -736,7 +748,9 @@ import {
   Container, 
   Sprite,
   Texture,
-  Graphics
+  Graphics,
+  Filter,
+  defaultFilterVert
 } from 'pixi.js';
 import { useStore } from '../store/useStore.js';
 import { EffectsSystem } from './systems/EffectsSystem.js';
@@ -745,6 +759,63 @@ import { EyeSystem } from './systems/EyeSystem.js';
 import { FogSystem } from './systems/FogSystem.js';
 import { RenderTextureManager } from './systems/RenderTextureManager.js';
 import { MirroredScrollLayer } from './systems/MirroredScrollLayer.js';
+
+// --- Custom WebGL 2D Cascading Portal Refraction Shockwave Fragment Shader ---
+const SHOCKWAVE_FRAGMENT_SHADER = `
+precision highp float;
+in vec2 vTextureCoord;
+out vec4 finalColor;
+
+uniform sampler2D uTexture;
+uniform vec4 uInputClamp;
+
+uniform vec2 uCenter;          // Center in screen pixels (gl_FragCoord space: bottom-left origin)
+uniform vec2 uScreenSize;      // Screen dimensions in pixels [width, height]
+uniform float uRadii[5];       // Array of active wavefront radii (in pixels)
+uniform float uActiveWaveCount;// Number of currently executing wave ripples
+uniform float uThickness;      // Width of the refractive wavefront ring (in pixels)
+uniform float uAmplitude;      // Displacement amount (in pixels)
+
+void main() {
+  vec2 uv = vTextureCoord;
+  
+  // Isotropic distance calculation in absolute screen pixels
+  float dist = distance(gl_FragCoord.xy, uCenter);
+
+  vec2 offset = vec2(0.0);
+  int activeCount = int(uActiveWaveCount);
+
+  // Iteratively compute up to 5 overlapping wave fronts within a single pass
+  for (int i = 0; i < 5; i++) {
+    if (i >= activeCount) {
+      break;
+    }
+    
+    float r = uRadii[i];
+    
+    // Check if the current pixel coordinate falls within this wave's refract ring bounds
+    if (dist >= r - uThickness && dist <= r) {
+      float progress = (r - dist) / uThickness; // Normalized progress inside ring (0.0 to 1.0)
+      float wave = sin(progress * 3.14159265);
+      
+      // Calculate radial screen space direction
+      vec2 dir = normalize(gl_FragCoord.xy - uCenter);
+      
+      // Map vertical coordinate offset. Y is top-down in UV coordinates, but bottom-up in gl_FragCoord
+      vec2 uvDir = vec2(dir.x, -dir.y);
+      
+      // Attenuate wavefront impact as it expands towards the screen boundaries
+      float dampening = 1.0 - clamp(r / (uScreenSize.x * 0.85), 0.0, 1.0);
+      
+      // Accumulate displacements translated into UV fraction offset
+      offset += uvDir * wave * (uAmplitude / uScreenSize) * dampening;
+    }
+  }
+
+  vec2 clampedUV = clamp(uv - offset, uInputClamp.xy, uInputClamp.zw);
+  finalColor = texture(uTexture, clampedUV);
+}
+`;
 
 function testImageAsset(src) {
   return new Promise((resolve) => {
@@ -790,6 +861,18 @@ export class PixiEngine {
     this.renderTextureManager = null;
     this.bgFog = null;
     this.fgFog = null;
+
+    // Echoing Phase Trail References
+    this.trailContainer = null;
+    this.trailSprites = [];
+    this.trailHistory = [];
+
+    // Custom Portal Refraction Shockwave State
+    this.shockwaveFilter = null;
+    this.shockwaveActive = false;
+    this.shockwaveTime = 0;
+    this.lastReaction = null;
+    this.lastGlitchPeak = false;
 
     // Internal mouse state bypassed from Zustand
     this.mousePos = { x: 0, y: 0 };
@@ -967,7 +1050,7 @@ export class PixiEngine {
         Assets.cache.set(this.keys.bg_mountain, Texture.EMPTY);
       }
 
-      // 4. Background Mountains Layer (NEW)
+      // 4. Background Mountains Layer
       let mountainBackPath = `/assets/stage/mountains/mountain_${formattedMountainBackId}.webp`;
       this.hasBgMountainBack = await testImageAsset(mountainBackPath);
       if (!this.hasBgMountainBack) {
@@ -1072,12 +1155,12 @@ export class PixiEngine {
     const hasEyelidsBottom = await testImageAsset(eyelidsBottomPath);
 
     if (hasEyelidsTop && hasEyelidsBottom) {
-      console.log(`✅ [PixiEngine] Found Flat Eyelid Elements`);
+      console.log("✅ [PixiEngine] Found Flat Eyelid Elements");
       verifiedLoadQueue.push({ alias: this.keys.eyelids_top, src: eyelidsTopPath });
       verifiedLoadQueue.push({ alias: this.keys.eyelids_bottom, src: eyelidsBottomPath });
       this.hasEyelids = true;
     } else {
-      console.warn(`⚠️ [PixiEngine] Eyelids missing (Expected flat eyelids_top.webp and eyelids_bottom.webp inside eyes/ folder)`);
+      console.warn("⚠️ [PixiEngine] Eyelids missing (Expected flat eyelids_top.webp and eyelids_bottom.webp inside eyes/ folder)");
       Assets.cache.set(this.keys.eyelids_top, Texture.EMPTY);
       Assets.cache.set(this.keys.eyelids_bottom, Texture.EMPTY);
     }
@@ -1085,7 +1168,7 @@ export class PixiEngine {
     if (verifiedLoadQueue.length > 0) {
       try {
         await Assets.load(verifiedLoadQueue);
-        console.log(`%c✅ [PixiEngine] Dynamic asset payload cached!`, 'color: #00ff80; font-weight: bold;');
+        console.log("%c✅ [PixiEngine] Dynamic asset payload cached!", 'color: #00ff80; font-weight: bold;');
       } catch (err) {
         console.error("❌ [PixiEngine] Critical Loader Exception:", err);
       }
@@ -1119,7 +1202,28 @@ export class PixiEngine {
     this.bgAtmosphereContainer.mask = this.masterClipMask;
     this.masterContainer.addChild(this.bgAtmosphereContainer);
 
-    // Initialize the off-screen RenderTextureManager to flatten warp filters
+    // Instantiate custom cascading portal refraction shader setup
+    this.shockwaveFilter = Filter.from({
+      gl: {
+        vertex: defaultFilterVert,
+        fragment: SHOCKWAVE_FRAGMENT_SHADER
+      },
+      resources: {
+        shockwaveUniforms: {
+          uCenter: { value: [0.0, 0.0], type: 'vec2<f32>' },
+          uScreenSize: { value: [1.0, 1.0], type: 'vec2<f32>' },
+          uRadii: { value: new Float32Array([0, 0, 0, 0, 0]), type: 'f32', size: 5 },
+          uActiveWaveCount: { value: 0.0, type: 'f32' },
+          uThickness: { value: 160.0, type: 'f32' },
+          uAmplitude: { value: 30.0, type: 'f32' }
+        }
+      }
+    });
+
+    this.shockwaveActive = false;
+    this.shockwaveTime = 0;
+
+    // Initialize the off-screen RenderTextureManager to flatten warp patterns
     this.renderTextureManager = new RenderTextureManager({
       discoveredPatterns: this.discoveredPatterns,
       bgPat1Alias: this.hasBgPat1 ? this.keys.bg_pat_1 : null,
@@ -1154,9 +1258,15 @@ export class PixiEngine {
       const hasAnyBgPat = this.hasBgPat1 || this.hasBgPat2;
       if (hasAnyBgPat && this.renderTextureManager) {
         this.bgAtmosphereContainer.addChild(this.renderTextureManager.bgPatternSprite);
+
+        // Ceiling reflection overlay (screen blended duplicate of offscreen render texture)
+        this.layers.bg_pattern_reflect = new Sprite(this.renderTextureManager.bgPatternRenderTexture);
+        this.layers.bg_pattern_reflect.anchor.set(0.5);
+        this.layers.bg_pattern_reflect.blendMode = 'screen';
+        this.bgAtmosphereContainer.addChild(this.layers.bg_pattern_reflect);
       }
 
-      // 3. Back Mountains layer (Further away, slower scroll rate, higher vertical coordinate offset, hazy opacity)
+      // 3. Back Mountains layer
       if (this.hasBgMountainBack) {
         const mountainBackTex = Assets.get(this.keys.bg_mountain_back);
         if (mountainBackTex && mountainBackTex !== Texture.EMPTY) {
@@ -1164,15 +1274,26 @@ export class PixiEngine {
           this.layers.bg_mountain_back.position.y = -35; // Shifts upward to align behind front range
           this.layers.bg_mountain_back.alpha = 0.75; // Atmospheric perspective haze
           this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_back);
+
+          // Dynamic Cavern Lighting: Back Mountain Reflector Duplicate
+          this.layers.bg_mountain_back_reflect = new MirroredScrollLayer(mountainBackTex, this.bgHeightScale, 0.18);
+          this.layers.bg_mountain_back_reflect.position.y = -35;
+          this.layers.bg_mountain_back_reflect.blendMode = 'screen';
+          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_back_reflect);
         }
       }
 
-      // 4. Foreground Mountains layer (Closer range, standard scroll rate)
+      // 4. Foreground Mountains layer
       if (this.hasBgMountain) {
         const mountainTex = Assets.get(this.keys.bg_mountain);
         if (mountainTex && mountainTex !== Texture.EMPTY) {
           this.layers.bg_mountain = new MirroredScrollLayer(mountainTex, this.bgHeightScale, 0.4);
           this.bgAtmosphereContainer.addChild(this.layers.bg_mountain);
+
+          // Dynamic Cavern Lighting: Foreground Mountain Reflector Duplicate
+          this.layers.bg_mountain_reflect = new MirroredScrollLayer(mountainTex, this.bgHeightScale, 0.4);
+          this.layers.bg_mountain_reflect.blendMode = 'screen';
+          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_reflect);
         }
       }
     }
@@ -1183,11 +1304,38 @@ export class PixiEngine {
     // Particles
     this.particleSystem = new ParticleSystem(this.app.renderer, this.bgAtmosphereContainer, this.bgHeightScale);
     
-    // --- ASSEMBLE CHARACTER ---
+    // --- ASSEMBLE CHARACTER & SPECTRAL TRAILS ---
+    
+    // 1. Instantiate separate container for historical echoing ghosting trails (placed behind primary nodes)
+    this.trailContainer = new Container();
+    this.masterContainer.addChild(this.trailContainer);
+
+    this.trailSprites = [];
+    this.trailHistory = []; // Flush existing history log on reconstruct
+
+    if (this.hasCharClippingMask) {
+      // Allocate up to 3 echoing spectral silhouettes
+      for (let i = 0; i < 3; i++) {
+        const s = createSprite(this.keys.char_clipping_mask);
+        s.alpha = 0;
+        s.visible = false;
+        s.blendMode = 'screen'; // Use Screen blending to give a bright, spectral energy
+
+        // Assign chromatic offset tints: index 0 (Cyan), index 1 (Magenta), index 2 (Flame Orange/Red)
+        if (i === 0) s.tint = 0x00f3ff;
+        else if (i === 1) s.tint = 0xff00ff;
+        else s.tint = 0xff5500;
+
+        this.trailContainer.addChild(s);
+        this.trailSprites.push(s);
+      }
+    }
+
+    // 2. Head Container
     this.headContainer = new Container();
     this.masterContainer.addChild(this.headContainer);
 
-    // Blurry shadow glow container (renders underneath)
+    // Blurry shadow glow container (renders underneath head lineart/features)
     if (this.hasCharClippingMask) {
       this.layers.aura = createSprite(this.keys.char_clipping_mask);
       this.headContainer.addChild(this.layers.aura);
@@ -1195,12 +1343,12 @@ export class PixiEngine {
 
     // Nested composition to decouple filters from the mask sprite
     if (this.hasCharClippingMask) {
-      // 1. The mask sprite (must be set as renderable=false so it does not draw as a solid colored block)
+      // The mask sprite (must be set as renderable=false so it does not draw as a solid colored block)
       const charMaskSprite = createSprite(this.keys.char_clipping_mask);
       charMaskSprite.renderable = false; 
       this.headContainer.addChild(charMaskSprite);
 
-      // 2. The wrapped container applying only the clip-mask
+      // The wrapped container applying only the clip-mask
       this.characterContentContainer = new Container();
       
       // Use setMask with channel: 'alpha' to bypass color channel processing
@@ -1211,21 +1359,24 @@ export class PixiEngine {
       
       this.headContainer.addChild(this.characterContentContainer);
 
-      // 3. Render base color (clipping mask file acting as character color) inside masked wrapper
+      // Render base color (clipping mask file acting as character color) inside masked wrapper
       this.layers.base = createSprite(this.keys.char_clipping_mask);
       this.characterContentContainer.addChild(this.layers.base);
 
-      // 4. Render character patterns using flattened textures
+      // Render character patterns using flattened textures
       if (this.discoveredPatterns.length > 0 && this.renderTextureManager) {
         this.characterContentContainer.addChild(this.renderTextureManager.patternSprite);
       }
     }
 
-    // Attach glow behaviors
+    // Attach glow, dynamic cavern lighting, and filters
     this.effectsSystem.attach({
       headContainer: this.headContainer,
       auraSprite: this.layers.aura,
-      baseSprite: this.layers.base
+      baseSprite: this.layers.base,
+      mountainReflector: this.layers.bg_mountain_reflect,
+      mountainBackReflector: this.layers.bg_mountain_back_reflect,
+      ceilingReflector: this.layers.bg_pattern_reflect
     });
 
     // Render lineart
@@ -1289,6 +1440,36 @@ export class PixiEngine {
     this.isReady = true;
   }
 
+  /**
+   * Triggers the WebGL Portal Refraction Shockwave filter.
+   */
+  triggerShockwave() {
+    this.shockwaveActive = true;
+    this.shockwaveTime = 0;
+
+    const floatX = this.headContainer ? this.headContainer.position.x : 0;
+    const floatY = this.headContainer ? this.headContainer.position.y : 0;
+
+    const unis = this.shockwaveFilter.resources.shockwaveUniforms.uniforms;
+    const { screen } = this.app;
+    const scale = this.masterContainer.scale.x;
+
+    // Calculate absolute screen-pixel positions relative to the top-left canvas origin
+    const screenX = screen.width / 2 + floatX * scale;
+    const screenY = screen.height / 2 + floatY * scale;
+
+    // Map screen-pixel coordinates perfectly to gl_FragCoord space (which starts bottom-left in OpenGL)
+    unis.uCenter = [screenX, screen.height - screenY];
+    unis.uScreenSize = [screen.width, screen.height];
+
+    // Reset multi-radii arrays and wave counters
+    unis.uRadii = new Float32Array([0, 0, 0, 0, 0]);
+    unis.uActiveWaveCount = 0.0;
+
+    // Apply the filter on the parent masterContainer so it warps BOTH character and environment
+    this.masterContainer.filters = [this.shockwaveFilter];
+  }
+
   update(deltaTime) {
     if (!this.isReady) return;
     const dtSeconds = deltaTime / 60;
@@ -1315,7 +1496,8 @@ export class PixiEngine {
     // Horizontal sway
     let floatX = Math.cos(tFloat * 0.5) * config.floatAmpX;
 
-    if (config.glitchShakeIntensity > 0 && (isGlitched || currentSplit > (config.aberrationAmount * 1.15))) {
+    const isGlitchActive = (isGlitched || currentSplit > (config.aberrationAmount * 1.15));
+    if (config.glitchShakeIntensity > 0 && isGlitchActive) {
         floatX += (Math.random() - 0.5) * config.glitchShakeIntensity;
         floatY += (Math.random() - 0.5) * config.glitchShakeIntensity;
     }
@@ -1329,6 +1511,72 @@ export class PixiEngine {
     const tiltRad = config.flyTiltBias * (Math.PI / 180);
     const swayOsc = Math.sin(tFloat * 0.7) * (config.floatRotation * 0.5) * (Math.PI / 180);
     this.headContainer.rotation = tiltRad + swayOsc;
+
+    // --- Custom Portal Refraction Shockwave Lifecycle and Uniform Updates ---
+    if (this.shockwaveActive) {
+      this.shockwaveTime += dtSeconds;
+
+      const { screen } = this.app;
+      // Define total wave expansion threshold in absolute screen pixels
+      const maxScreenRadius = Math.max(screen.width, screen.height) * 1.15;
+
+      const duration = config.shockwaveDuration ?? 1.8;
+      const pulseCount = Math.max(1, Math.min(5, config.shockwavePulseCount ?? 2));
+      const strength = config.shockwaveStrength ?? 1.0;
+      const thickness = config.shockwaveThickness ?? 160.0;
+
+      // Spacing delay gap between releasing subsequent overlapping waves (e.g. 0.35 seconds)
+      const waveDelay = 0.35;
+
+      const unis = this.shockwaveFilter.resources.shockwaveUniforms.uniforms;
+      unis.uScreenSize = [screen.width, screen.height];
+      unis.uThickness = thickness;
+      unis.uAmplitude = strength * 45.0; // scales user multiplier to maximum pixel translation width
+
+      let activeCount = 0;
+      const radii = new Float32Array([0, 0, 0, 0, 0]);
+
+      for (let i = 0; i < pulseCount; i++) {
+        const waveStartTime = i * waveDelay;
+        if (this.shockwaveTime >= waveStartTime) {
+          const waveAge = this.shockwaveTime - waveStartTime;
+          const waveProgress = waveAge / duration;
+
+          if (waveProgress < 1.0) {
+            radii[i] = waveProgress * maxScreenRadius;
+            activeCount++;
+          }
+        }
+      }
+
+      unis.uRadii = radii;
+      unis.uActiveWaveCount = activeCount;
+
+      // Safe clean up once all active waves complete expansion
+      if (activeCount === 0 && this.shockwaveTime > (pulseCount * waveDelay)) {
+        this.shockwaveActive = false;
+        this.masterContainer.filters = null; // deactivate completely to restore zero pipeline overhead
+      } else {
+        if (!this.masterContainer.filters || this.masterContainer.filters.length === 0) {
+          this.masterContainer.filters = [this.shockwaveFilter];
+        }
+      }
+    }
+
+    // --- Auto Trigger Detection Logic ---
+    // 1. Detect Web3 reaction trigger spikes
+    const activeReaction = config.activeReaction;
+    if (activeReaction && activeReaction !== this.lastReaction) {
+      this.triggerShockwave();
+    }
+    this.lastReaction = activeReaction;
+
+    // 2. Detect peak chromatic split glitches coupled with screen shake action
+    const glitchTriggered = isGlitchActive && config.glitchShakeIntensity > 15;
+    if (glitchTriggered && !this.lastGlitchPeak) {
+      this.triggerShockwave();
+    }
+    this.lastGlitchPeak = glitchTriggered;
 
     // Update off-screen RenderTextureManager pass for warp filters
     if (this.renderTextureManager) {
@@ -1351,8 +1599,67 @@ export class PixiEngine {
       this.particleSystem.update(deltaTime, config);
     }
 
-    // --- Background Side Scrolling Parallax Updates ---
-     // --- Background Side Scrolling (Double Layer Parallax) ---
+    // --- Echoing Phase Trails Historical Queue Update ---
+    this.trailHistory.unshift({
+      x: floatX,
+      y: floatY,
+      scaleX: currentScale,
+      scaleY: currentScale,
+      rotation: this.headContainer.rotation
+    });
+
+    const spacing = Math.max(2, config.trailSpacing ?? 5);
+    const maxHistoryNeeded = spacing * 3 + 2;
+    if (this.trailHistory.length > maxHistoryNeeded) {
+      this.trailHistory.pop();
+    }
+
+    const trailCount = Math.max(0, Math.min(3, config.trailCount ?? 3));
+    const manualAlpha = config.trailManualAlpha ?? 0.0;
+    const glitchInfluence = config.trailGlitchInfluence ?? 0.6;
+
+    // Visibility trigger: active glitch shakes or Web3 transaction decaying progress
+    const shakeIntensity = config.glitchShakeIntensity ?? 0;
+    const activeReactionProgress = config.reactionProgress ?? 0;
+    const motionPulse = (shakeIntensity / 30) * (isGlitchActive ? 1.0 : 0.25);
+    const dynamicAlpha = Math.max(motionPulse, activeReactionProgress) * glitchInfluence;
+
+    // Combine manual override (for custom testing) and dynamic action values
+    const targetBaseAlpha = Math.max(manualAlpha, dynamicAlpha);
+
+    this.trailSprites.forEach((sprite, index) => {
+      if (index >= trailCount || targetBaseAlpha <= 0.01) {
+        sprite.visible = false;
+        sprite.alpha = 0;
+        return;
+      }
+
+      const historyIndex = (index + 1) * spacing - 1;
+      const historyState = this.trailHistory[historyIndex];
+
+      if (historyState) {
+        sprite.visible = true;
+        
+        // Spectral scale expansion: expands the size of older trails so they peek out as a halo outline
+        const scaleExpansion = 1.0 + (index + 1) * 0.04; // 4%, 8%, 12% scale additions
+        
+        // Vertical drift offset: offsets the coordinates upward to simulate floating heat haze
+        const driftOffsetY = (index + 1) * -8; // shifts older steps upward on screen
+
+        sprite.position.set(historyState.x, historyState.y + driftOffsetY);
+        sprite.scale.set(historyState.scaleX * scaleExpansion, historyState.scaleY * scaleExpansion);
+        sprite.rotation = historyState.rotation;
+
+        // Fades coordinates of older trails more deeply
+        const stepDecay = 1.0 - (index * 0.25); // Trail 0: 100%, Trail 1: 75%, Trail 2: 50% of base alpha
+        sprite.alpha = Math.max(0, Math.min(1.0, targetBaseAlpha * stepDecay));
+      } else {
+        sprite.visible = false;
+        sprite.alpha = 0;
+      }
+    });
+
+    // --- Background Side Scrolling (Double Layer Parallax) ---
     const baseSpeed = config.bgScrollSpeed;
     const backParallax = config.bg2ParallaxSpeed; // The slider value (supports negative ranges)
 
@@ -1365,12 +1672,16 @@ export class PixiEngine {
       }
     } else {
       if (this.layers.bg_mountain_back) {
-        // Multiplies the back mountain's base speed factor by your custom slider value
-        // Moving the slider to 0.0 halts it, and negative values reverse its direction
         this.layers.bg_mountain_back.updatePositions(dtSeconds, baseSpeed, 0.15 * backParallax);
+      }
+      if (this.layers.bg_mountain_back_reflect) {
+        this.layers.bg_mountain_back_reflect.updatePositions(dtSeconds, baseSpeed, 0.15 * backParallax);
       }
       if (this.layers.bg_mountain) {
         this.layers.bg_mountain.updatePositions(dtSeconds, baseSpeed, 0.40);
+      }
+      if (this.layers.bg_mountain_reflect) {
+        this.layers.bg_mountain_reflect.updatePositions(dtSeconds, baseSpeed, 0.40);
       }
     }
   }
@@ -1604,16 +1915,22 @@ export class EffectsSystem {
     this.targets = {
       headContainer: null,
       auraSprite: null,
-      baseSprite: null
+      baseSprite: null,
+      mountainReflector: null,
+      mountainBackReflector: null,
+      ceilingReflector: null
     };
   }
 
   /**
    * Connects the initialized filters to their respective target display objects.
-   * @param {Object} targets - Target display objects to receive the filters.
+   * @param {Object} targets - Target display objects to receive the filters and updates.
    * @param {Container} targets.headContainer - Container for head assets.
    * @param {Sprite} targets.auraSprite - Background glow/aura sprite.
    * @param {Sprite} targets.baseSprite - Skull base color sprite.
+   * @param {DisplayObject} targets.mountainReflector - Foreground mountain reflection layer.
+   * @param {DisplayObject} targets.mountainBackReflector - Background mountain reflection layer.
+   * @param {DisplayObject} targets.ceilingReflector - Background pattern/ceiling reflection layer.
    */
   attach(targets) {
     this.targets = { ...this.targets, ...targets };
@@ -1656,6 +1973,7 @@ export class EffectsSystem {
     this.rgbSplitFilter.blue = { x: -metrics.currentSplit, y: 0 };
 
     // 2. Color Matrix / Strobe Calculations
+    let flickerFactor = 1.0;
     if (this.targets.baseSprite) {
       if (state.flickerIntensity > 0) {
         const strobeTime = time * state.flickerSpeed * 45;
@@ -1666,11 +1984,14 @@ export class EffectsSystem {
         if (waveValue > triggerThreshold) {
           this.colorMatrix.brightness(1.8, false);
           this.colorMatrix.contrast(1.5, true);
+          flickerFactor = 1.8;
         } else if (waveValue < -triggerThreshold) {
           this.colorMatrix.brightness(0.05, false);
+          flickerFactor = 0.05;
         } else {
           const randoB = 1.0 + (Math.random() - 0.5) * 0.15 * state.flickerIntensity;
           this.colorMatrix.brightness(randoB, false);
+          flickerFactor = randoB;
         }
       } else {
         this.colorMatrix.reset();
@@ -1678,8 +1999,8 @@ export class EffectsSystem {
     }
 
     // 3. Aura Blur / Dimension Pulse Calculations
+    const auraPulse = Math.sin(time * state.auraPulseSpeed * 2.0) * 0.5 + 0.5;
     if (this.targets.auraSprite) {
-      const auraPulse = Math.sin(time * state.auraPulseSpeed * 2.0) * 0.5 + 0.5;
       this.auraBlurFilter.strength = state.auraBlur + (auraPulse * 10);
       this.targets.auraSprite.scale.set(state.auraScale + (auraPulse * 0.02));
       this.targets.auraSprite.alpha = state.auraOpacity;
@@ -1689,6 +2010,32 @@ export class EffectsSystem {
         (Math.floor(state.auraColorR) << 16) + 
         (Math.floor(state.auraColorG) << 8) + 
         Math.floor(state.auraColorB);
+    }
+
+    // 4. Cavern Lighting Reflector Updates
+    const reflectionTint = 
+      (Math.floor(state.auraColorR) << 16) + 
+      (Math.floor(state.auraColorG) << 8) + 
+      Math.floor(state.auraColorB);
+
+    // Dynamic Cavern Light Alpha scaling influenced by the aura pulse, user intensity slider, and active screen-flicker
+    const baseReflectAlpha = state.auraOpacity * (0.12 + auraPulse * 0.28) * (state.cavernLightIntensity ?? 1.0);
+    const reflectionAlpha = Math.max(0, Math.min(1.0, baseReflectAlpha * flickerFactor));
+
+    if (this.targets.mountainReflector) {
+      this.targets.mountainReflector.tint = reflectionTint;
+      this.targets.mountainReflector.alpha = reflectionAlpha;
+    }
+
+    if (this.targets.mountainBackReflector) {
+      this.targets.mountainBackReflector.tint = reflectionTint;
+      // Background mountains have slightly more subtle reflection due to atmospheric dust/fog layers
+      this.targets.mountainBackReflector.alpha = reflectionAlpha * 0.65;
+    }
+
+    if (this.targets.ceilingReflector) {
+      this.targets.ceilingReflector.tint = reflectionTint;
+      this.targets.ceilingReflector.alpha = reflectionAlpha;
     }
 
     return metrics;
@@ -2421,14 +2768,14 @@ export function useArtworkReactions() {
       setParameter("particleCount", 280);
       setParameter("particleSpeed", 4.5);
       setParameter("auraOpacity", 1.0);
-      setParameter("auraScale", 1.35);
+      setParameter("auraScale", 0.8);
       setParameter("warpIntensity", 50.0);
     } 
     else if (event.type === "lsp7_received" || event.type === "lsp8_received") {
       // SPIKE: Extreme digital gothic glitch split
-      setParameter("aberrationAmount", 30.0);
+      setParameter("aberrationAmount", 0);
       setParameter("aberrationSpeed", 8.0);
-      setParameter("aberrationGlitch", 4.5);
+      setParameter("aberrationGlitch", 0);
       setParameter("glitchShakeIntensity", 22);
       setParameter("warpIntensity", 90.0);
       setParameter("flickerIntensity", 0.90);
@@ -3009,7 +3356,7 @@ export const useStore = create((set) => ({
   bgWarpIntensity: 20.0,
   bgWarpSpeed: 1.0,
 
-  // 4. Aura / Glow
+  // 4. Aura / Glow & Cavern Reflection Control
   auraOpacity: 0.5,
   auraScale: 1.05,
   auraBlur: 20,
@@ -3017,6 +3364,7 @@ export const useStore = create((set) => ({
   auraColorR: 235,
   auraColorG: 200,
   auraColorB: 150,
+  cavernLightIntensity: 0.8, // Slider scale factor for dynamic cavern reflections
 
   // 5. Atmosphere (Particles)
   particleCount: 80,
@@ -3034,15 +3382,27 @@ export const useStore = create((set) => ({
   scanlineOpacity: 0.15,
   vignetteOpacity: 0.5,
 
-  // 8. Corruption / Glitch
+  // 8. Corruption / Glitch & Echoing Phase Trails
   aberrationAmount: 0.0,
   aberrationSpeed: 0.0,
   aberrationGlitch: 0.0,
   glitchShakeIntensity: 0,
   flickerIntensity: 0.0,
   flickerSpeed: 1.0,
+  
+  // Phase Trail Control Parameters
+  trailCount: 3,             // Total active spectral trails (0 - 3)
+  trailSpacing: 5,           // Delayed spacing of historical coordinates in frames
+  trailManualAlpha: 0.0,     // Static override opacity to manually customize/test trails
+  trailGlitchInfluence: 0.6, // Relative opacity scaling factor during spikes and shake actions
 
-  // 9. Eye & Lid Dynamics
+  // 9. Web3 Shockwave Customization Parameters
+  shockwaveStrength: 1.0,     // Max displacement strength multiplier (0.0 - 2.0)
+  shockwaveThickness: 160.0,  // Dynamic width of the expanding ring wavefront in pixels
+  shockwaveDuration: 1.8,     // Single wave expansion lifetime duration in seconds
+  shockwavePulseCount: 2,     // Number of cascading/overlapping waves fired on Web3 triggers (1 - 5)
+
+  // 10. Eye & Lid Dynamics
   eyelidTravel: 20.0,         
   blinkInterval: 5.0,        
   blinkSpeed: 1.0,           
@@ -3052,7 +3412,7 @@ export const useStore = create((set) => ({
   pupilSaccade: 1.0,         
   pupilMouseInfluence: 1.0,  
 
-  // 10. Web3 LSP1 Reaction State Parameters
+  // 11. Web3 LSP1 Reaction State Parameters
   activeReaction: null,      
   reactionProgress: 0.0,     
 
