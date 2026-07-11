@@ -10,4 +10,11 @@ export const createWeb3Slice = (set, get) => ({
   // 11. Web3 LSP1 Reaction State Parameters
   activeReaction: null,      
   reactionProgress: 0.0,     
+
+  // Phase 2A Game State Updates
+  gameState: "menu",          // "menu" or "gameplay"
+  gameScore: 0,
+  gameActiveWave: 1,
+  playerHP: 100,
+  playerShield: 100,
 });

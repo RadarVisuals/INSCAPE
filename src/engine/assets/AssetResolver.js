@@ -234,6 +234,46 @@ export class AssetResolver {
       Assets.cache.set(keys.eyelids_bottom, Texture.EMPTY);
     }
 
+    // --- Phase 2C Swarm Enemy Loading ---
+    let enemySkullPath = '/assets/enemies/enemy_skull_striped.png';
+    let hasEnemySkull = await testImageAsset(enemySkullPath);
+    if (!hasEnemySkull) {
+      enemySkullPath = '/assets/enemies/enemy_skull_striped.webp';
+      hasEnemySkull = await testImageAsset(enemySkullPath);
+    }
+
+    if (hasEnemySkull) {
+      verifiedLoadQueue.push({ alias: 'enemy_skull_striped', src: enemySkullPath });
+    } else {
+      // If file doesn't exist on disk, create a safe, highly visible vector placeholder
+      if (typeof document !== 'undefined') {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        
+        ctx.fillStyle = '#ff3300'; // Bright red boundary
+        ctx.beginPath();
+        ctx.arc(32, 32, 28, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(32, 32, 28, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffff00'; // Crosshair marker
+        ctx.fillRect(26, 30, 12, 4);
+        ctx.fillRect(30, 26, 4, 12);
+
+        const fallbackTex = Texture.from(canvas);
+        Assets.cache.set('enemy_skull_striped', fallbackTex);
+      } else {
+        Assets.cache.set('enemy_skull_striped', Texture.EMPTY);
+      }
+    }
+
     return results;
   }
 }

@@ -111,9 +111,17 @@ export class RenderTextureManager {
         }
       }
 
-      if (this.warpFilter && this.warpFilter.resources.warpUniforms) {
-        this.warpFilter.resources.warpUniforms.uniforms.uTime = this.time * state.warpSpeed;
-        this.warpFilter.resources.warpUniforms.uniforms.uWarpIntensity = state.warpIntensity;
+      // Proxy-aware validation: ensures the internal setter never runs on unallocated proxy data
+      const group = this.warpFilter?.resources?.warpUniforms;
+      const isBufferReady = group && group.uniforms && group.uniforms._data;
+
+      if (isBufferReady) {
+        try {
+          group.uniforms.uTime = this.time * state.warpSpeed;
+          group.uniforms.uWarpIntensity = state.warpIntensity;
+        } catch (e) {
+          // Fallback guard
+        }
       }
 
       renderer.render({
@@ -134,9 +142,17 @@ export class RenderTextureManager {
         this.bgPat1Layer.updatePositions(dtSeconds, baseSpeed);
       }
 
-      if (this.bgWarpFilter && this.bgWarpFilter.resources.warpUniforms) {
-        this.bgWarpFilter.resources.warpUniforms.uniforms.uTime = this.time * state.bgWarpSpeed;
-        this.bgWarpFilter.resources.warpUniforms.uniforms.uWarpIntensity = state.bgWarpIntensity;
+      // Proxy-aware validation: ensures the internal setter never runs on unallocated proxy data
+      const bgGroup = this.bgWarpFilter?.resources?.warpUniforms;
+      const isBgBufferReady = bgGroup && bgGroup.uniforms && bgGroup.uniforms._data;
+
+      if (isBgBufferReady) {
+        try {
+          bgGroup.uniforms.uTime = this.time * state.bgWarpSpeed;
+          bgGroup.uniforms.uWarpIntensity = state.bgWarpIntensity;
+        } catch (e) {
+          // Fallback guard
+        }
       }
 
       renderer.render({

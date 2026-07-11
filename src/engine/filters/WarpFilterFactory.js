@@ -1,5 +1,5 @@
 // src/engine/filters/WarpFilterFactory.js
-import { Filter, defaultFilterVert } from 'pixi.js';
+import { Filter, defaultFilterVert, UniformGroup } from 'pixi.js';
 import { WARP_FRAGMENT_SHADER } from '../shaders/WarpShader';
 
 /**
@@ -14,10 +14,10 @@ export function createWarpFilter(initialIntensity = 20.0) {
       fragment: WARP_FRAGMENT_SHADER
     },
     resources: {
-      warpUniforms: {
+      warpUniforms: new UniformGroup({
         uTime: { value: 0.0, type: 'f32' },
         uWarpIntensity: { value: initialIntensity, type: 'f32' }
-      }
+      }, false, true) // isStatic = false, isUbo = true
     }
   });
 

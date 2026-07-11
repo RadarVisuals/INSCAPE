@@ -1,6 +1,13 @@
 // src/store/slices/usePhysicsSlice.js
 
 export const createPhysicsSlice = (set, get) => ({
+  // gameplay active metrics and player statistics
+  gameState: "menu", // "menu" or "gameplay"
+  playerHP: 100,
+  playerShield: 100,
+  gameScore: 0,
+  gameActiveWave: 1,
+
   // 1. Motion Dynamics
   floatSpeed: 1.0,
   floatAmpX: 30,
@@ -8,8 +15,8 @@ export const createPhysicsSlice = (set, get) => ({
   floatRotation: 2.0,
 
   // Custom Flight and Hover parameters
-  flyMinScale: 0.2,       // Scale at lowest point of flight
-  flyMaxScale: 0.3,      // Scale at highest peak of flight
+  flyMinScale: 0.3,       // Scale at lowest point of flight
+  flyMaxScale: 0.3,       // Scale at highest peak of flight
   flyHoverPause: 1.0,     // Hover pause factor (1.0 = smooth sine, up to 5.0 = flat plateau pauses)
   flyTiltBias: 3.0,       // Persistent tilt bias in degrees
 
@@ -22,12 +29,12 @@ export const createPhysicsSlice = (set, get) => ({
   // 3. Background Pattern & Warp (Independent)
   bgPatternBottomScale: 1.0,
   bgPatternTopScale: 1.0,
-  bgWarpIntensity: 20.0,
+  bgWarpIntensity: 35.0,
   bgWarpSpeed: 1.0,
 
   // 4. Aura / Glow & Cavern Reflection Control
   auraOpacity: 0.5,
-  auraScale: 1.05,
+  auraScale: 0.5,
   auraBlur: 20,
   auraPulseSpeed: 1.0,
   auraColorR: 235,
@@ -75,11 +82,11 @@ export const createPhysicsSlice = (set, get) => ({
   pupilSaccade: 1.0,         
   pupilMouseInfluence: 1.0,  
 
-  // 11. Searchlight Customisation State [3]
+  // 11. Searchlight Customisation State
   searchlightActive: true,
-  searchlightWidth: 1.0,     // Beam width scale
+  searchlightWidth: 0.2,     // Beam width scale
   searchlightLength: 1.0,    // Max beam extension
-  searchlightRadius: 110,    // Starting emission radius along character's perimeter [3]
+  searchlightRadius: 120,    // Starting emission radius along character's perimeter
   searchlightColorR: 255,    // RGB values
   searchlightColorG: 255,
   searchlightColorB: 255,

@@ -63,6 +63,31 @@ export class SearchlightSystem {
   }
 
   /**
+   * Programmatically generates a high-visibility Tracer Round texture on a 32x8 horizontal canvas.
+   * Features a solid hot-orange background with a tight, solid-white superheated lead core in the center.
+   * @returns {Texture} Memoized tracer round texture.
+   */
+  static generateTracerTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 8;
+    const ctx = canvas.getContext('2d');
+
+    ctx.filter = 'none';
+    ctx.clearRect(0, 0, 32, 8);
+
+    // Fill entire canvas with solid, hot-orange background (#ff9900)
+    ctx.fillStyle = '#ff9900';
+    ctx.fillRect(0, 0, 32, 8);
+
+    // Overlap tight solid-white rectangle (#ffffff) in the center
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(4, 2, 24, 4);
+
+    return Texture.from(canvas);
+  }
+
+  /**
    * Translates start coordinates onto the character's custom perimeter orbit and scales length dynamically.
    * @param {{x: number, y: number}} characterPos - World coordinates of the head container.
    * @param {{x: number, y: number}} targetGlobalPos - Focal target coordinates (absolute mouse cursor).
@@ -70,49 +95,8 @@ export class SearchlightSystem {
    * @param {Object} config - State config containing active visual preferences.
    */
   update(characterPos, targetGlobalPos, deltaTime, config) {
-    if (!config.searchlightActive || !characterPos) {
-      this.container.visible = false;
-      return;
-    }
-
-    this.container.visible = true;
-
-    // Convert screen targets into local space [3]
-    const localCenter = characterPos; // Already inside coordinate space of masterContainer
-    const localTarget = this.container.toLocal(targetGlobalPos);
-
-    const dx = localTarget.x - localCenter.x;
-    const dy = localTarget.y - localCenter.y;
-    const distToCenter = Math.sqrt(dx * dx + dy * dy);
-
-    // Determine target vector angle
-    const angle = Math.atan2(dy, dx);
-
-    // Pull custom orbit radius parameter from UI [3]
-    const orbitRadius = config.searchlightRadius ?? 110;
-
-    // Anchor starting coordinates directly along the circle perimeter pointing towards focus targets [3]
-    const startX = localCenter.x + Math.cos(angle) * orbitRadius;
-    const startY = localCenter.y + Math.sin(angle) * orbitRadius;
-
-    this.beamSprite.position.set(startX, startY);
-    this.beamSprite.rotation = angle - Math.PI / 2; // Aligns vertical canvas texture direction
-
-    // Decelerate beam lengths automatically as the mouse gets closer to the center [3]
-    const beamDistance = Math.max(0, distToCenter - orbitRadius);
-
-    // Calculate dynamic RGB tints
-    const rTint = config.searchlightColorR ?? 255;
-    const gTint = config.searchlightColorG ?? 255;
-    const bTint = config.searchlightColorB ?? 255;
-    this.beamSprite.tint = (rTint << 16) + (gTint << 8) + bTint;
-
-    // Adjust height and width scales relative to the proximity factor [3]
-    const calculatedHeight = beamDistance * (config.searchlightLength ?? 1.0);
-    this.beamSprite.height = calculatedHeight;
-
-    const calculatedWidth = Math.min(calculatedHeight * 0.20, 128) * (config.searchlightWidth ?? 1.0);
-    this.beamSprite.width = Math.max(4, calculatedWidth);
+    // Currently bypassed for testing. Container visibility forced to false.
+    this.container.visible = false;
   }
 
   destroy() {
