@@ -1,29 +1,13 @@
 // src/engine/systems/ShockwaveSystem.js
-import { Filter, defaultFilterVert } from 'pixi.js';
-import { SHOCKWAVE_FRAGMENT_SHADER } from '../shaders/ShockwaveShader.js';
+import { EffectFactory } from '../filters/EffectFactory.js';
 
 export class ShockwaveSystem {
   constructor() {
     this.isActive = false;
     this.time = 0;
 
-    // Instantiate custom cascading portal refraction shader setup
-    this.filter = Filter.from({
-      gl: {
-        vertex: defaultFilterVert,
-        fragment: SHOCKWAVE_FRAGMENT_SHADER
-      },
-      resources: {
-        shockwaveUniforms: {
-          uCenter: { value: [0.0, 0.0], type: 'vec2<f32>' },
-          uScreenSize: { value: [1.0, 1.0], type: 'vec2<f32>' },
-          uRadii: { value: new Float32Array([0, 0, 0, 0, 0]), type: 'f32', size: 5 },
-          uActiveWaveCount: { value: 0.0, type: 'f32' },
-          uThickness: { value: 160.0, type: 'f32' },
-          uAmplitude: { value: 30.0, type: 'f32' }
-        }
-      }
-    });
+    // Delegate compilation to the central factory
+    this.filter = EffectFactory.createShockwaveFilter();
   }
 
   /**
@@ -41,11 +25,9 @@ export class ShockwaveSystem {
     const screenX = screenWidth / 2 + headPosition.x * scale;
     const screenY = screenHeight / 2 + headPosition.y * scale;
 
-    // Map screen-pixel coordinates to gl_FragCoord space (bottom-left origin)
     unis.uCenter = [screenX, screenHeight - screenY];
     unis.uScreenSize = [screenWidth, screenHeight];
 
-    // Reset wave tracking properties
     unis.uRadii = new Float32Array([0, 0, 0, 0, 0]);
     unis.uActiveWaveCount = 0.0;
   }
@@ -73,7 +55,7 @@ export class ShockwaveSystem {
     const unis = this.filter.resources.shockwaveUniforms.uniforms;
     unis.uScreenSize = [screenWidth, screenHeight];
     unis.uThickness = thickness;
-    unis.uAmplitude = strength * 45.0; // Scaled displacement index
+    unis.uAmplitude = strength * 45.0; 
 
     let activeCount = 0;
     const radii = new Float32Array([0, 0, 0, 0, 0]);
@@ -94,7 +76,6 @@ export class ShockwaveSystem {
     unis.uRadii = radii;
     unis.uActiveWaveCount = activeCount;
 
-    // Clean up filter execution overhead once ripples fade past active boundaries
     if (activeCount === 0 && this.time > (pulseCount * waveDelay)) {
       this.isActive = false;
       return false;

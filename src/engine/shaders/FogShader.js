@@ -10,7 +10,7 @@ uniform float uOpacity;
 uniform vec3 uColor;
 uniform float uSpeed;
 
-// 2D Random (Removed explicit 'in' qualifier to prevent ANGLE varying collision)
+// 2D Random
 float random (vec2 st) {
     return fract(sin(dot(st.xy, vec2(127.1, 311.7))) * 43758.5453123);
 }
@@ -32,11 +32,10 @@ float fbm (vec2 st) {
     float value = 0.0;
     float amplitude = 0.5;
     
-    // Write into local variable to bypass write-restrictions on function parameters
     vec2 p = st;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 4; i++) {
         value += amplitude * noise(p);
-        p *= 2.0;
+        p *= 2.02;
         amplitude *= 0.5;
     }
     return value;
@@ -45,18 +44,23 @@ float fbm (vec2 st) {
 void main() {
     vec2 uv = vTextureCoord;
     
-    // Volumetric Horizontal Band Mask with spec-compliant descending smoothstep
-    // Gently fades the smoke in at the top and cleanly fades it to 0 opacity before the bottom
-    float band = smoothstep(0.15, 0.45, uv.y) * (1.0 - smoothstep(0.55, 0.85, uv.y));
+    // Volumetric Horizontal Band Mask with smooth edge fade-out at boundaries
+    float band = smoothstep(0.12, 0.45, uv.y) * (1.0 - smoothstep(0.55, 0.88, uv.y));
     
-    // Movement logic
-    vec2 shift = vec2(uTime * uSpeed, uTime * 0.02);
+    // Vector shift driven by wind speed and slow rising heat
+    vec2 shift = vec2(uTime * uSpeed, uTime * -0.05);
     
-    // Generate layered noise
-    float n = fbm(uv * vec2(1.5, 3.0) + shift);
+    // Scale coordinate mapping (12x horizontally, 6x vertically) to create detailed wind-swept clouds
+    vec2 noiseUV = uv * vec2(12.0, 6.0);
     
-    // Distort noise for more "wispiness"
-    n += fbm(uv * 4.0 - shift * 0.5) * 0.5;
+    // Compute layered dynamic noise
+    float n1 = fbm(noiseUV + shift);
+    float n2 = fbm(noiseUV * 2.1 - shift * 0.85) * 0.45;
+    float n = n1 * 0.65 + n2 * 0.35;
+    
+    // Apply contrast and thresholding curves to sculpt flat haze into distinct wisps of smoke
+    n = clamp(n * 1.5 - 0.25, 0.0, 1.0); // Shift dark values down
+    n = pow(n, 2.2) * 1.7;               // Sharpen the cloud edges and deepen shadows
     
     float alpha = n * band * uOpacity;
     

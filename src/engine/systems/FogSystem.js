@@ -1,6 +1,6 @@
 // src/engine/systems/FogSystem.js
-import { Filter, Sprite, Texture, defaultFilterVert } from 'pixi.js';
-import { FOG_FRAGMENT_SHADER } from '../shaders/FogShader.js';
+import { Sprite, Texture } from 'pixi.js';
+import { EffectFactory } from '../filters/EffectFactory.js';
 
 export class FogSystem {
   constructor(targetContainer, bgHeight, isForeground = false) {
@@ -14,51 +14,52 @@ export class FogSystem {
     this.sprite.height = bgHeight;
     this.sprite.alpha = 1.0; 
 
-    this.filter = Filter.from({
-      gl: {
-        vertex: defaultFilterVert,
-        fragment: FOG_FRAGMENT_SHADER
-      },
-      resources: {
-        fogUniforms: {
-          uTime: { value: 0, type: 'f32' },
-          uOpacity: { value: 0.5, type: 'f32' },
-          uColor: { value: [1, 1, 1], type: 'vec3<f32>' },
-          uSpeed: { value: 1.0, type: 'f32' }
-        }
-      }
-    });
+    // Delegate compilation to the central factory
+    this.filter = EffectFactory.createFogFilter();
 
     this.sprite.filters = [this.filter];
     this.targetContainer.addChild(this.sprite);
   }
 
+  /**
+   * Rescales the fog mesh width to cover ultra-wide screen borders.
+   */
+  resize(localW, localH) {
+    if (this.sprite) {
+      this.sprite.width = localW;
+    }
+  }
+
   update(time, config) {
     if (!this.filter) return;
+
+    // Apply strict fallback baselines to safeguard the shader uniforms from NaN corruptions
+    const fogOpacity = config.fogOpacity ?? 0.4;
+    const fogSpeed = config.fogSpeed ?? 1.0;
+    const fogColorR = config.fogColorR ?? 140;
+    const fogColorG = config.fogColorG ?? 120;
+    const fogColorB = config.fogColorB ?? 180;
+    const fogSwaySpeed = config.fogSwaySpeed ?? 0.5;
+    const fogSwayAmp = config.fogSwayAmp ?? 20.0;
 
     const unis = this.filter.resources.fogUniforms.uniforms;
     unis.uTime = time;
     
-    // Foreground fog is slightly thinner to avoid obscuring character details
-    const baseOpacity = this.isForeground ? config.fogOpacity * 0.55 : config.fogOpacity;
+    const baseOpacity = this.isForeground ? fogOpacity * 0.55 : fogOpacity;
     unis.uOpacity = baseOpacity;
     
-    // Foreground fog scrolls faster (simulating spatial overlay depth)
     const velocityScale = this.isForeground ? 1.45 : 0.85;
-    unis.uSpeed = config.fogSpeed * 0.01 * velocityScale;
+    unis.uSpeed = fogSpeed * 0.01 * velocityScale;
     
-    // Normalize color output
     unis.uColor = [
-        config.fogColorR / 255,
-        config.fogColorG / 255,
-        config.fogColorB / 255
+        fogColorR / 255,
+        fogColorG / 255,
+        fogColorB / 255
     ];
 
-    // Horizontal/Phase offsetting between the two layers prevents overlapping synchronized bobbing
     const phaseOffset = this.isForeground ? 1.6 : 0.0;
-    const sway = Math.sin((time * config.fogSwaySpeed) + phaseOffset) * config.fogSwayAmp;
+    const sway = Math.sin((time * fogSwaySpeed) + phaseOffset) * fogSwayAmp;
     
-    // Sit foreground fog slightly lower on screen to overlay the lower skull fangs/chin
     const verticalCenter = this.isForeground ? (this.sprite.height * 0.28) : (this.sprite.height * 0.12);
     this.sprite.y = verticalCenter + sway;
   }

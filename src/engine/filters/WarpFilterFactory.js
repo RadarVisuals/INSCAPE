@@ -8,16 +8,18 @@ import { WARP_FRAGMENT_SHADER } from '../shaders/WarpShader';
  * @returns {Filter} A configured PixiJS v8 Filter instance.
  */
 export function createWarpFilter(initialIntensity = 20.0) {
+  const warpUniformGroup = new UniformGroup({
+    uTime: { value: 0.0, type: 'f32' },
+    uWarpIntensity: { value: initialIntensity, type: 'f32' }
+  }, false, true);
+
   const filter = Filter.from({
     gl: {
       vertex: defaultFilterVert,
       fragment: WARP_FRAGMENT_SHADER
     },
     resources: {
-      warpUniforms: new UniformGroup({
-        uTime: { value: 0.0, type: 'f32' },
-        uWarpIntensity: { value: initialIntensity, type: 'f32' }
-      }, false, true) // isStatic = false, isUbo = true
+      warpUniforms: warpUniformGroup
     }
   });
 

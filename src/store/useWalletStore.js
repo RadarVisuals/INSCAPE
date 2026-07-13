@@ -6,7 +6,8 @@ import { lukso, luksoTestnet } from "viem/chains";
 import { ERC725 } from '@erc725/erc725.js';
 import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json';
 
-const LUKSO_MAINNET_RPC = "https://rpc.lukso.network";
+// LUKSO mainnet and testnet endpoints
+const LUKSO_MAINNET_RPC = "https://rpc.mainnet.lukso.network";
 const LUKSO_TESTNET_RPC = "https://rpc.testnet.lukso.network";
 const IPFS_GATEWAY = "https://api.universalprofile.cloud/ipfs/";
 
@@ -51,6 +52,11 @@ export const useWalletStore = create((set, get) => ({
   isWalletConnected: false,
   isHostProfileOwner: false,
   initializationError: null,
+  
+  // Profile Metadata State Variables
+  profileMetadata: null,
+  isProfileLoading: false,
+  lastFetchedAddress: null, // Tracks the currently active request key to block duplication
 
   initWallet: async () => {
     // 1. Synchronous singleton lock to catch concurrent strict-mode execution threads
@@ -177,6 +183,83 @@ export const useWalletStore = create((set, get) => ({
     set({ hostProfileAddress: cleaned });
     get()._recreateClients();
     get()._checkPermissions();
+    get().fetchProfileMetadata();
+  },
+
+  /**
+   * Queries standard LSP3 Profile Metadata from contract storage keys.
+   */
+  fetchProfileMetadata: async () => {
+    const { hostProfileAddress, publicClient } = get();
+    if (!hostProfileAddress || !publicClient) {
+      set({ profileMetadata: null, isProfileLoading: false, lastFetchedAddress: null });
+      return;
+    }
+
+    // Intercept back-to-back triggers for the exact same Profile address
+    const lastFetched = get().lastFetchedAddress;
+    if (lastFetched && lastFetched.toLowerCase() === hostProfileAddress.toLowerCase()) {
+      return; // Deduplicate concurrent execution loop
+    }
+
+    set({ isProfileLoading: true, lastFetchedAddress: hostProfileAddress });
+    console.log(`ℹ️ [UP Wallet] Querying LSP3 metadata for: ${hostProfileAddress}`);
+
+    try {
+      const rpcUrl = publicClient.transport.url || LUKSO_MAINNET_RPC;
+      const erc725 = new ERC725(
+        lsp3ProfileSchema,
+        hostProfileAddress,
+        rpcUrl,
+        { ipfsGateway: IPFS_GATEWAY }
+      );
+
+      const profileData = await erc725.fetchData('LSP3Profile');
+      
+      if (profileData && profileData.value && profileData.value.LSP3Profile) {
+        const rawProfile = profileData.value.LSP3Profile;
+        
+        // Safe IPFS link parsing helper
+        const resolveIpfsLink = (urlStr) => {
+          if (!urlStr) return "";
+          if (urlStr.startsWith("ipfs://")) {
+            return urlStr.replace("ipfs://", IPFS_GATEWAY);
+          }
+          if (urlStr.startsWith("ipfs/")) {
+            return urlStr.replace("ipfs/", IPFS_GATEWAY);
+          }
+          return urlStr;
+        };
+
+        // Extract raw profile assets
+        let avatarUrl = "";
+        if (rawProfile.profileImage && rawProfile.profileImage.length > 0) {
+          avatarUrl = resolveIpfsLink(rawProfile.profileImage[0].url);
+        }
+
+        let backgroundUrl = "";
+        if (rawProfile.backgroundImage && rawProfile.backgroundImage.length > 0) {
+          backgroundUrl = resolveIpfsLink(rawProfile.backgroundImage[0].url);
+        }
+
+        const parsedMetadata = {
+          name: rawProfile.name || "Anonymous profile",
+          description: rawProfile.description || "",
+          avatarUrl,
+          backgroundUrl,
+          tags: rawProfile.tags || [],
+          links: rawProfile.links || []
+        };
+
+        console.log("✅ [UP Wallet] Metadata queried successfully:", parsedMetadata);
+        set({ profileMetadata: parsedMetadata, isProfileLoading: false });
+      } else {
+        set({ profileMetadata: null, isProfileLoading: false });
+      }
+    } catch (err) {
+      console.warn("⚠️ [UP Wallet] Metadata extraction aborted or failed:", err.message);
+      set({ profileMetadata: null, isProfileLoading: false });
+    }
   },
 
   _recreateClients: () => {
@@ -237,6 +320,7 @@ export const useWalletStore = create((set, get) => ({
     });
 
     await get()._checkPermissions();
+    await get().fetchProfileMetadata(); // Initiate profile metadata updates
   },
 
   _checkPermissions: async () => {

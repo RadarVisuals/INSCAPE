@@ -46,7 +46,6 @@ export class RenderTextureManager {
       this.localBgPatternContainer = new Container();
       this.localBgPatternContainer.filters = [this.bgWarpFilter];
 
-      // Mirror-repeat wrap arrays applied to clean-rig background patterns
       if (this.hasBgPat2 && this.bgPat2Alias) {
         const tex2 = Assets.get(this.bgPat2Alias);
         this.bgPat2Layer = new MirroredScrollLayer(tex2, bgH, 1.8); 
@@ -61,13 +60,12 @@ export class RenderTextureManager {
       }
 
       this.bgPatternRenderTexture = RenderTexture.create({ width: bgW, height: bgH });
-      this.bgPatternSprite = new Sprite(this.bgPatternRenderTexture);
+      this.bgPatternSprite = new MirroredScrollLayer(this.bgPatternRenderTexture, bgH, 0.0);
     } else {
       this.bgPatternRenderTexture = RenderTexture.create({ width: 1, height: 1 });
-      this.bgPatternSprite = new Sprite(this.bgPatternRenderTexture);
+      this.bgPatternSprite = new MirroredScrollLayer(this.bgPatternRenderTexture, 1, 0.0);
       this.bgPatternSprite.visible = false;
     }
-    this.bgPatternSprite.anchor.set(0.5);
 
     // --- FOREGROUND CHARACTER PATTERNS ---
     if (this.discoveredPatterns.length > 0) {
@@ -95,6 +93,62 @@ export class RenderTextureManager {
     this.patternSprite.anchor.set(0.5);
   }
 
+  /**
+   * Swaps the active character's textures dynamically.
+   * This avoids destroying the background render textures so fogs and mountain
+   * layers remain unaffected during updates.
+   */
+  updateActorPatterns(discoveredPatterns) {
+    this.discoveredPatterns = discoveredPatterns || [];
+
+    if (this.localPatternContainer) {
+      this.localPatternContainer.destroy({ children: true });
+      this.localPatternContainer = null;
+    }
+    if (this.patternRenderTexture) {
+      this.patternRenderTexture.destroy(true); // Reclaims the underlying GPU TextureSource during swaps
+      this.patternRenderTexture = null;
+    }
+
+    if (this.discoveredPatterns.length > 0) {
+      const sampleTex = Assets.get(this.discoveredPatterns[0]);
+      const patW = sampleTex ? sampleTex.width : 2000;
+      const patH = sampleTex ? sampleTex.height : 2000;
+
+      this.localPatternContainer = new Container();
+      this.localPatternContainer.filters = [this.warpFilter];
+
+      for (const patternAlias of this.discoveredPatterns) {
+        const sp = Sprite.from(patternAlias);
+        sp.anchor.set(0.5);
+        sp.position.set(patW / 2, patH / 2);
+        this.localPatternContainer.addChild(sp);
+      }
+
+      this.patternRenderTexture = RenderTexture.create({ width: patW, height: patH });
+      
+      if (this.patternSprite) {
+        this.patternSprite.texture = this.patternRenderTexture;
+        this.patternSprite.visible = true;
+      } else {
+        this.patternSprite = new Sprite(this.patternRenderTexture);
+        this.patternSprite.anchor.set(0.5);
+      }
+    } else {
+      this.patternRenderTexture = RenderTexture.create({ width: 1, height: 1 });
+      if (this.patternSprite) {
+        this.patternSprite.texture = this.patternRenderTexture;
+        this.patternSprite.visible = false;
+      }
+    }
+  }
+
+  resize(localW, localH) {
+    if (this.bgPatternSprite && typeof this.bgPatternSprite.resize === 'function') {
+      this.bgPatternSprite.resize(localW, localH);
+    }
+  }
+
   update(deltaTime, state, renderer) {
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
@@ -111,17 +165,21 @@ export class RenderTextureManager {
         }
       }
 
-      // Proxy-aware validation: ensures the internal setter never runs on unallocated proxy data
-      const group = this.warpFilter?.resources?.warpUniforms;
-      const isBufferReady = group && group.uniforms && group.uniforms._data;
+      let warpIntensityMultiplier = 0.0;
+      const reaction = state.activeReaction;
+      const progress = state.reactionProgress ?? 0.0;
 
-      if (isBufferReady) {
-        try {
-          group.uniforms.uTime = this.time * state.warpSpeed;
-          group.uniforms.uWarpIntensity = state.warpIntensity;
-        } catch (e) {
-          // Fallback guard
-        }
+      if (reaction === "lyx_received") {
+        warpIntensityMultiplier = (50.0 / Math.max(0.1, state.warpIntensity) - 1.0) * progress;
+      } else if (reaction === "lsp7_received" || reaction === "lsp8_received") {
+        warpIntensityMultiplier = (90.0 / Math.max(0.1, state.warpIntensity) - 1.0) * progress;
+      }
+
+      const currentWarpIntensity = state.warpIntensity * (1.0 + warpIntensityMultiplier);
+
+      if (this.warpFilter && this.warpFilter.resources.warpUniforms) {
+        this.warpFilter.resources.warpUniforms.uniforms.uTime = this.time * state.warpSpeed;
+        this.warpFilter.resources.warpUniforms.uniforms.uWarpIntensity = currentWarpIntensity;
       }
 
       renderer.render({
@@ -142,17 +200,9 @@ export class RenderTextureManager {
         this.bgPat1Layer.updatePositions(dtSeconds, baseSpeed);
       }
 
-      // Proxy-aware validation: ensures the internal setter never runs on unallocated proxy data
-      const bgGroup = this.bgWarpFilter?.resources?.warpUniforms;
-      const isBgBufferReady = bgGroup && bgGroup.uniforms && bgGroup.uniforms._data;
-
-      if (isBgBufferReady) {
-        try {
-          bgGroup.uniforms.uTime = this.time * state.bgWarpSpeed;
-          bgGroup.uniforms.uWarpIntensity = state.bgWarpIntensity;
-        } catch (e) {
-          // Fallback guard
-        }
+      if (this.bgWarpFilter && this.bgWarpFilter.resources.warpUniforms) {
+        this.bgWarpFilter.resources.warpUniforms.uniforms.uTime = this.time * state.bgWarpSpeed;
+        this.bgWarpFilter.resources.warpUniforms.uniforms.uWarpIntensity = state.bgWarpIntensity;
       }
 
       renderer.render({
@@ -164,10 +214,10 @@ export class RenderTextureManager {
 
   destroy() {
     if (this.patternRenderTexture) {
-      this.patternRenderTexture.destroy();
+      this.patternRenderTexture.destroy(true); // Force-disposes of the GPU TextureSource
     }
     if (this.bgPatternRenderTexture) {
-      this.bgPatternRenderTexture.destroy();
+      this.bgPatternRenderTexture.destroy(true); // Reclaims the WebGL framebuffer allocation
     }
     if (this.localPatternContainer) {
       this.localPatternContainer.destroy({ children: true });

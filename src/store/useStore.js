@@ -1,13 +1,18 @@
 // src/store/useStore.js
 import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
 import { createSetupSlice } from './slices/useSetupSlice';
-import { createPhysicsSlice } from './slices/usePhysicsSlice';
+import { createActorPhysicsSlice } from './slices/createActorPhysicsSlice';
+import { createAtmosphereSlice } from './slices/createAtmosphereSlice';
+import { createGlitchSlice } from './slices/createGlitchSlice';
 import { createWeb3Slice } from './slices/useWeb3Slice';
 
-export const useStore = create((set, get) => ({
-  // Flatten slice definitions into the combined store [3]
+export const useStore = create(subscribeWithSelector((set, get) => ({
+  // Flatten slice definitions into the combined store
   ...createSetupSlice(set, get),
-  ...createPhysicsSlice(set, get),
+  ...createActorPhysicsSlice(set, get),
+  ...createAtmosphereSlice(set, get),
+  ...createGlitchSlice(set, get),
   ...createWeb3Slice(set, get),
   
   /**
@@ -17,4 +22,4 @@ export const useStore = create((set, get) => ({
    * @param {any} value - Assigned configuration value.
    */
   setParameter: (key, value) => set({ [key]: value }),
-}));
+})));

@@ -3,26 +3,33 @@ import {
   Application, 
   Assets, 
   Container, 
-  Sprite,
   Texture,
   Graphics
 } from 'pixi.js';
-import { useStore } from '../store/useStore.js';
 import { EffectsSystem } from './systems/EffectsSystem.js';
-import { ParticleSystem } from './systems/ParticleSystem.js';
-import { EyeSystem } from './systems/EyeSystem.js';
-import { FogSystem } from './systems/FogSystem.js';
 import { RenderTextureManager } from './systems/RenderTextureManager.js';
-import { MirroredScrollLayer } from './systems/MirroredScrollLayer.js';
 import { AssetResolver } from './assets/AssetResolver.js';
-import { FlightDynamics } from './systems/FlightDynamics.js';
+import { CreatorAssetResolver } from './assets/CreatorAssetResolver.js';
 import { ShockwaveSystem } from './systems/ShockwaveSystem.js';
 import { TrailSystem } from './systems/TrailSystem.js';
 import { SearchlightSystem } from './systems/SearchlightSystem.js';
+import { ActorEntity } from './entities/ActorEntity.js';
+import { StageEntity } from './entities/StageEntity.js';
 
 export class PixiEngine {
-  constructor(containerElement) {
+  /**
+   * @param {HTMLDivElement} containerElement - Canvas wrapper element
+   * @param {Object} storeInterface - Decoupled store methods
+   * @param {Function} storeInterface.getState - State reader
+   * @param {Function} storeInterface.subscribe - State change subscription handler
+   */
+  constructor(containerElement, storeInterface = {}) {
     this.container = containerElement;
+    
+    // Assign fallback handlers to maintain stability when running without a store
+    this.getState = storeInterface.getState || (() => ({}));
+    this.subscribe = storeInterface.subscribe || (() => () => {});
+
     this.app = new Application();
     this.layers = {};
     this.time = 0;
@@ -32,76 +39,21 @@ export class PixiEngine {
     // Load sequence counter to prevent overlapping asynchronous loading glitches
     this.loadSequence = 0;
 
-    // Direct canvas DOM reference cache to prevent nullified getter calls on destroy
-    this.canvasElement = null;
-
-    // Direct existential flags
-    this.hasBgClippingMask = false;
-    this.hasBgMountain = false;
-    this.hasBgMountainBack = false;
-    this.hasCharClippingMask = false;
-    this.hasLineart = false;
-
-    this.discoveredPatterns = [];
-    this.discoveredEyes = [];
-    this.hasEyelids = false;
-    this.hasBgPat1 = false;
-    this.hasBgPat2 = false;
-
-    this.isPanoramaMode = false;
-    this.hasBg2 = false;
+    // Active modular entities
+    this.actor = null;
+    this.stage = null;
     
-    // Decoupled keys mapping: this.assetKeys preserves assets loading references while
-    // this.keys processes WASD & Arrow keyboard coordinate flight tracking safely
-    this.assetKeys = {}; 
-    this.keys = { 
-      KeyW: false, 
-      KeyA: false, 
-      KeyS: false, 
-      KeyD: false, 
-      ArrowUp: false, 
-      ArrowDown: false, 
-      ArrowLeft: false, 
-      ArrowRight: false 
-    };
-
-    // Phase 2C Custom Speed Parameter
-    this.playerSpeed = 500; // Modify this value to adjust character WASD movement speed
-
-    // Phase 2B & 2C: Weapon, Swarm Mechanics, Particles & Progression Variables
-    this.playerProjectiles = [];
-    this.enemies = [];
-    this.impactParticles = [];
-    
-    this.recoilOffset = { x: 0, y: 0 };
-    this.recoilGlitch = 0.0;
-    this.lastSpawnTime = 0;
-
-    this.enemySpawnTimer = 0.0;
-    this.spawnInterval = 1.8; // Base interval in seconds
-    
-    this.enemiesSpawnedInWave = 0;
-    this.totalEnemiesToSpawnInWave = 0;
-    this.enemiesDefeatedInWave = 0;
-    
-    this.isWaveTransitionActive = false;
-    this.waveTransitionTimer = 0.0;
-
-    // Phase 2C Mouse Button holding state trackers
-    this.isPointerDown = false;
-    this.pointerPosition = { x: 0, y: 0 };
-    this.fireCooldown = 0.0;
+    // Unified container for loaded asset keys and metadata
+    this.loadedRig = null; 
 
     // Systems Allocation
     this.effectsSystem = new EffectsSystem();
-    this.eyeSystem = null;
-    this.particleSystem = null;
     this.renderTextureManager = null;
-    this.bgFog = null;
-    this.fgFog = null;
+    
+    // Track dynamic visible canvas height coordinate range
+    this.canvasHeight = 1000; 
     
     // Subsystem Coordinators
-    this.flightDynamics = new FlightDynamics();
     this.shockwaveSystem = null;
     this.trailSystem = null;
     this.searchlightSystem = null;
@@ -112,325 +64,71 @@ export class PixiEngine {
     this.absoluteMousePos = { x: 0, y: 0 };
     this.normalizedMousePos = { x: 0, y: 0 };
 
-    // Spring Drift Navigation State Variables
-    this.baselinePosition = { x: 0, y: 0 };   // The floating anchor position
-    this.targetPosition = { x: 0, y: 0 };     // The destination coordinates set on click
-    this.isMovingToTarget = false;            // Movement status flag
-    this.facingDirection = 1.0;               // Target flip direction (1.0 = right, -1.0 = left)
-    this.currentFlipScale = 1.0;              // Smoothly interpolated flip scale ratio
+    // Set up a list to collect selector-based subscriptions
+    this.unsubscribers = [];
 
-    this.config = { ...useStore.getState() };
+    // Trigger explicit asset loading only when setup properties modify
+    const reloadTriggerKeys = [
+      'subjectMode',
+      'characterId',
+      'creatorCharacterId',
+      'creatorPatternId',
+      'creatorPaletteId',
+      'bgClippingMaskId',
+      'bgPatternStyle',
+      'bgMountainId',
+      'bgMountainBackId'
+    ];
 
-    // Setup clear window key event listeners
-    this.handleKeyDown = (e) => {
-      if (e.code in this.keys) {
-        this.keys[e.code] = true;
-      }
-    };
-
-    this.handleKeyUp = (e) => {
-      if (e.code in this.keys) {
-        this.keys[e.code] = false;
-      }
-    };
-
-    window.addEventListener('keydown', this.handleKeyDown);
-    window.addEventListener('keyup', this.handleKeyUp);
-
-    // Native mouse/pointer event listeners to support seamless auto-firing on hold
-    this.handlePointerDown = (e) => {
-      this.isPointerDown = true;
-      this.pointerPosition = { x: e.clientX, y: e.clientY };
-    };
-
-    this.handlePointerUp = () => {
-      this.isPointerDown = false;
-    };
-
-    this.handlePointerMove = (e) => {
-      this.pointerPosition = { x: e.clientX, y: e.clientY };
-    };
-
-    this.unsubscribeStore = useStore.subscribe((state) => {
-      const prevChar = this.config.characterId;
-      const prevBgClip = this.config.bgClippingMaskId;
-      const prevBgStyle = this.config.bgPatternStyle;
-      const prevBgMountain = this.config.bgMountainId;
-      const prevBgMountainBack = this.config.bgMountainBackId;
-      const prevGameState = this.config.gameState;
-
-      const prevReaction = this.config.activeReaction;
-      const nextReaction = state.activeReaction;
-      const prevProgress = this.config.reactionProgress;
-      const nextProgress = state.reactionProgress;
-
-      this.config = state;
-
-      // Detect transaction start or restart trigger signals
-      if (nextReaction !== null && (prevReaction !== nextReaction || nextProgress === 1.0)) {
-        this.startLocalReaction(nextReaction);
-      }
-
-      // Check transition states for gameplay mode shifts
-      if (prevGameState !== state.gameState) {
-        this.handleGameStateTransition(state.gameState);
-      }
-
-      if (
-        prevChar !== state.characterId ||
-        prevBgClip !== state.bgClippingMaskId ||
-        prevBgStyle !== state.bgPatternStyle ||
-        prevBgMountain !== state.bgMountainId ||
-        prevBgMountainBack !== state.bgMountainBackId
-      ) {
-        this.reloadAssetsAndScene().catch(err => console.error("Re-init assets failed:", err));
-      }
+    reloadTriggerKeys.forEach(key => {
+      this.unsubscribers.push(
+        this.subscribe(
+          state => state[key],
+          () => this.reloadAssetsAndScene().catch(err => console.error("Re-init assets failed:", err))
+        )
+      );
     });
+
+    // Detect transaction trigger reactions using explicit selectors
+    this.unsubscribers.push(
+      this.subscribe(
+        state => state.activeReaction,
+        (nextReaction, prevReaction) => {
+          const nextProgress = this.getState().reactionProgress;
+
+          if (nextReaction !== null && (prevReaction !== nextReaction || nextProgress === 1.0)) {
+            this.startLocalReaction(nextReaction);
+          }
+        }
+      )
+    );
   }
 
   /**
-   * Orchestrates visual parameters and assets visibility changes between menu and descent flight viewports.
+   * Tracks target coordinates relative to the screen dimensions.
+   * @param {number} clientX - World horizontal position.
+   * @param {number} clientY - World vertical position.
    */
-  handleGameStateTransition(gameState) {
-    const setParameter = useStore.getState().setParameter;
+  updateMousePos(clientX, clientY) {
+    this.absoluteMousePos.x = clientX;
+    this.absoluteMousePos.y = clientY;
 
-    if (gameState === "gameplay") {
-      this.isMovingToTarget = false;
-
-      // Reset coordinates to clear old arrays [3]
-      this.clearGameplayObjects();
-
-      // Reset Player Statistics
-      setParameter("playerHP", 100);
-      setParameter("playerShield", 100);
-      setParameter("gameScore", 0);
-      setParameter("gameActiveWave", 1);
-
-      // Compute total spawning thresholds for Chapter 1
-      this.enemiesSpawnedInWave = 0;
-      this.enemiesDefeatedInWave = 0;
-      this.totalEnemiesToSpawnInWave = 5; 
-      this.isWaveTransitionActive = false;
-      this.waveTransitionTimer = 0.0;
-
-      // Pivot mechanical skull to a left-side offset starting position scaled appropriately
-      const screenWidth = this.app.screen.width;
-      const currentScale = this.masterContainer?.scale.x || 1.0;
-      const localLeftX = -(screenWidth * 0.35) / currentScale;
-
-      this.baselinePosition = { x: localLeftX, y: 0 };
-      this.recoilOffset = { x: 0, y: 0 };
-      this.facingDirection = 1.0;
-      this.currentFlipScale = 1.0;
-
-      // Transition to fast active flight scrolling velocity
-      setParameter("bgScrollSpeed", 220.0);
-
-      // Restore cavern background elements
-      if (this.bgAtmosphereContainer) {
-        this.bgAtmosphereContainer.visible = true;
-      }
-      if (this.searchlightSystem) {
-        this.searchlightSystem.setActive(this.config.searchlightActive);
-      }
-      if (this.bgFog && this.bgFog.sprite) {
-        this.bgFog.sprite.visible = true;
-      }
-      if (this.fgFog && this.fgFog.sprite) {
-        this.fgFog.sprite.visible = true;
-      }
-    } else if (gameState === "menu") {
-      this.baselinePosition = { x: 0, y: 0 };
-      this.recoilOffset = { x: 0, y: 0 };
-      this.facingDirection = 1.0;
-      this.currentFlipScale = 1.0;
-
-      this.isPointerDown = false;
-
-      // Revert to slow background idle scroll speed
-      setParameter("bgScrollSpeed", 30.0);
-
-      // Cleanly prune active gameplay arrays
-      this.clearGameplayObjects();
-
-      // Cleanly isolate character view inside the terminal
-      if (this.bgAtmosphereContainer) {
-        this.bgAtmosphereContainer.visible = false;
-      }
-      if (this.searchlightSystem) {
-        this.searchlightSystem.setActive(false);
-      }
-      if (this.bgFog && this.bgFog.sprite) {
-        this.bgFog.sprite.visible = false;
-      }
-      if (this.fgFog && this.fgFog.sprite) {
-        this.fgFog.sprite.visible = false;
-      }
-    }
+    // Normalize coordinates to [-1, 1] range to avoid breaking pupil wander scripts
+    this.normalizedMousePos.x = (clientX / window.innerWidth) * 2 - 1;
+    this.normalizedMousePos.y = (clientY / window.innerHeight) * 2 - 1;
   }
 
   /**
-   * Tracks target coordinates relative to the active canvas bounding dimensions.
+   * Commands the active actor to float smoothly toward clicked coordinates.
+   * @param {number} clientX - Absolute canvas click horizontal position.
+   * @param {number} clientY - Absolute canvas click vertical position.
    */
-  updateMousePos(localX, localY, canvasWidth, canvasHeight) {
-    const w = canvasWidth || window.innerWidth;
-    const h = canvasHeight || window.innerHeight;
-
-    this.absoluteMousePos.x = localX;
-    this.absoluteMousePos.y = localY;
-
-    // Normalize coordinates relative to local canvas dimensions to keep pupil tracking stable [3]
-    this.normalizedMousePos.x = (localX / w) * 2 - 1;
-    this.normalizedMousePos.y = (localY / h) * 2 - 1;
-  }
-
-  /**
-   * Fires weapon structures when user interaction click events occur.
-   */
-  updateMouseClick(localX, localY) {
-    if (this.config.gameState === 'gameplay') {
-      this.spawnProjectile(localX, localY);
-    }
-  }
-
-  /**
-   * Spawns a physical tracer round from orbital coordinate positions towards the screen cursor.
-   * Modulates a transient recoil offset to execute spring-back mechanical kickbacks and brief visual glitch flashes.
-   */
-  spawnProjectile(clientX, clientY) {
-    const now = Date.now();
-    // Debounce to safeguard against overlapping browser click dispatch threads
-    if (now - this.lastSpawnTime < 15) return;
-    this.lastSpawnTime = now;
-
-    if (!this.masterContainer || !this.headContainer || !this.isReady) return;
-
-    // Translate global screen interaction points to local coordinates inside master container bounds [3]
+  updateMouseClick(clientX, clientY) {
+    if (!this.masterContainer || !this.actor) return;
+    
+    // Convert global screen pixel coordinates into master relative coordinates
     const localTarget = this.masterContainer.toLocal({ x: clientX, y: clientY });
-    const localCenter = this.headContainer.position;
-
-    const dx = localTarget.x - localCenter.x;
-    const dy = localTarget.y - localCenter.y;
-    const angle = Math.atan2(dy, dx);
-
-    // Retrieve active orbital tracking radius [3]
-    const orbitRadius = this.config.searchlightRadius ?? 110;
-
-    // Calculate spawning position matching searchlight base on orbital perimeter bounds
-    const startX = localCenter.x + Math.cos(angle) * orbitRadius;
-    const startY = localCenter.y + Math.sin(angle) * orbitRadius;
-
-    // Memoize the high-visibility tracer texture [3]
-    if (!SearchlightSystem.tracerTexture) {
-      SearchlightSystem.tracerTexture = SearchlightSystem.generateTracerTexture();
-    }
-
-    const bullet = new Sprite(SearchlightSystem.tracerTexture);
-    bullet.anchor.set(0.5, 0.5);
-    bullet.position.set(startX, startY);
-    bullet.rotation = angle; // Symmetrically align bullet rotation around its center
-
-    // Add directly to masterContainer to inherit global stage scaling and remain visible
-    this.masterContainer.addChild(bullet);
-
-    // Solid, visible velocity rate: 950 pixels per second
-    this.playerProjectiles.push({
-      sprite: bullet,
-      vx: Math.cos(angle) * 950,
-      vy: Math.sin(angle) * 950
-    });
-
-    // Apply recoil kickback force directly to transient recoilOffset (recoil force of 12px)
-    this.recoilOffset.x -= Math.cos(angle) * 12;
-    this.recoilOffset.y -= Math.sin(angle) * 12;
-
-    // Single-frame CRT electromagnetic distortion spike mimicking muzzle flash
-    this.recoilGlitch = 10.0;
-  }
-
-  /**
-   * Spawns spark particle groups representing bullet impacts or hostile destructions.
-   * @param {number} x - Local coordinate horizontal center.
-   * @param {number} y - Local coordinate vertical center.
-   * @param {number} count - Total particle dots to instantiate.
-   * @param {boolean} isExplosion - Flag denoting if a larger, slower flame orange blast occurs.
-   */
-  spawnSparks(x, y, count, isExplosion = false) {
-    for (let i = 0; i < count; i++) {
-      const spark = new Graphics()
-        .circle(0, 0, isExplosion ? Math.random() * 4 + 2 : Math.random() * 3 + 1)
-        .fill({ color: isExplosion ? 0xff4d00 : 0xffaa00 });
-      
-      spark.position.set(x, y);
-
-      const angle = Math.random() * Math.PI * 2;
-      const velocity = isExplosion ? Math.random() * 260 + 100 : Math.random() * 180 + 80;
-
-      this.masterContainer.addChild(spark);
-      
-      this.impactParticles.push({
-        graphic: spark,
-        vx: Math.cos(angle) * velocity,
-        vy: Math.sin(angle) * velocity,
-        alpha: 1.0,
-        life: isExplosion ? 0.6 : 0.4,
-        maxLife: isExplosion ? 0.6 : 0.4
-      });
-    }
-  }
-
-  /**
-   * Cleanly prunes and destroys active projectiles.
-   */
-  clearProjectiles() {
-    if (this.playerProjectiles && this.playerProjectiles.length > 0) {
-      this.playerProjectiles.forEach(proj => {
-        if (proj.sprite) {
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(proj.sprite);
-          }
-          proj.sprite.destroy();
-        }
-      });
-      this.playerProjectiles = [];
-    }
-  }
-
-  /**
-   * Clears and destroys active gameplay entities, particles, and swarm components safely.
-   */
-  clearGameplayObjects() {
-    this.clearProjectiles();
-
-    if (this.enemies && this.enemies.length > 0) {
-      this.enemies.forEach(enemy => {
-        if (enemy.sprite) {
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(enemy.sprite);
-          }
-          enemy.sprite.destroy();
-        }
-      });
-      this.enemies = [];
-    }
-
-    if (this.impactParticles && this.impactParticles.length > 0) {
-      this.impactParticles.forEach(part => {
-        if (part.graphic) {
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(part.graphic);
-          }
-          part.graphic.destroy();
-        }
-      });
-      this.impactParticles = [];
-    }
-
-    this.enemiesSpawnedInWave = 0;
-    this.enemiesDefeatedInWave = 0;
-    this.isWaveTransitionActive = false;
-    this.waveTransitionTimer = 0.0;
-    this.isPointerDown = false;
+    this.actor.moveTo(localTarget.x, localTarget.y);
   }
 
   async init() {
@@ -450,15 +148,7 @@ export class PixiEngine {
         return;
       }
 
-      // Cache a direct reference to the canvas element before unmount cycles occur
-      this.canvasElement = this.app.canvas;
-
-      this.container.appendChild(this.canvasElement);
-
-      // Setup native canvas-level pointer down continuous auto-firing listeners on the cached element
-      this.canvasElement.addEventListener('pointerdown', this.handlePointerDown);
-      window.addEventListener('pointerup', this.handlePointerUp);
-      this.canvasElement.addEventListener('pointermove', this.handlePointerMove);
+      this.container.appendChild(this.app.canvas);
       
       const currentSeq = ++this.loadSequence;
       await this.loadAssets();
@@ -473,28 +163,17 @@ export class PixiEngine {
       
       this.isReady = true;
     } catch (err) {
-      console.error("Failed to boot PixiEngine:", err);
+      console.error("[PixiEngine] Init Error:", err);
     }
   }
 
   async loadAssets() {
     console.log(`%c🔍 [PixiEngine] Rig Loader: Locating Stage Assets`, 'color: #00f3ff; font-weight: bold;');
     
-    const results = await AssetResolver.resolveRig(this.config);
-    
-    this.assetKeys = results.keys;
-    this.hasBgClippingMask = results.hasBgClippingMask;
-    this.hasBgPat1 = results.hasBgPat1;
-    this.hasBgPat2 = results.hasBgPat2;
-    this.hasBgMountain = results.hasBgMountain;
-    this.hasBgMountainBack = results.hasBgMountainBack;
-    this.hasCharClippingMask = results.hasCharClippingMask;
-    this.hasLineart = results.hasLineart;
-    this.hasEyelids = results.hasEyelids;
-    this.isPanoramaMode = results.isPanoramaMode;
-    this.hasBg2 = results.hasBg2;
-    this.discoveredPatterns = results.discoveredPatterns;
-    this.discoveredEyes = results.discoveredEyes;
+    // Resolve active asset configurations and store in a single property
+    const currentStore = this.getState();
+    const results = await this.resolveConfiguredRig(currentStore);
+    this.loadedRig = results;
 
     if (results.verifiedLoadQueue.length > 0) {
       try {
@@ -506,19 +185,47 @@ export class PixiEngine {
     }
   }
 
+  async resolveConfiguredRig(config) {
+    const isCreatorMode = config.subjectMode === 'creator';
+    const sceneRig = await AssetResolver.resolveRig(config, {
+      includeActor: !isCreatorMode
+    });
+
+    if (!isCreatorMode) return sceneRig;
+
+    const creatorRig = await CreatorAssetResolver.resolve(config);
+    return {
+      ...sceneRig,
+      keys: {
+        ...sceneRig.keys,
+        ...creatorRig.keys
+      },
+      verifiedLoadQueue: [
+        ...sceneRig.verifiedLoadQueue,
+        ...creatorRig.verifiedLoadQueue
+      ],
+      hasCharClippingMask: creatorRig.hasCharClippingMask,
+      hasLineart: creatorRig.hasLineart,
+      hasCharBase: creatorRig.hasCharBase,
+      hasEyelids: creatorRig.hasEyelids,
+      discoveredPatterns: creatorRig.discoveredPatterns,
+      discoveredEyes: creatorRig.discoveredEyes,
+      isCreatorRig: true,
+      creatorSelection: creatorRig.selected
+    };
+  }
+
   buildSceneGraph() {
     const { stage } = this.app;
+    const rig = this.loadedRig;
+    if (!rig) return;
+
+    const currentStore = this.getState();
 
     this.masterContainer = new Container();
     stage.addChild(this.masterContainer);
 
-    const createSprite = (alias) => {
-      const s = Sprite.from(alias);
-      s.anchor.set(0.5);
-      return s;
-    };
-
-    let clipTex = Assets.get(this.assetKeys.char_clipping_mask);
+    let clipTex = Assets.get(rig.keys.char_clipping_mask);
     if (!clipTex || clipTex === Texture.EMPTY) {
       clipTex = Assets.get('bg');
     }
@@ -533,170 +240,259 @@ export class PixiEngine {
     this.bgAtmosphereContainer.mask = this.masterClipMask;
     this.masterContainer.addChild(this.bgAtmosphereContainer);
 
-    // Initialise Shockwave System
+    // Initialize Shockwave System
     this.shockwaveSystem = new ShockwaveSystem();
 
     // Initialize the off-screen RenderTextureManager to flatten warp patterns
     this.renderTextureManager = new RenderTextureManager({
-      discoveredPatterns: this.discoveredPatterns,
-      bgPat1Alias: this.hasBgPat1 ? this.assetKeys.bg_pat_1 : null,
-      bgPat2Alias: this.hasBgPat2 ? this.assetKeys.bg_pat_2 : null,
-      hasBgPat1: this.hasBgPat1,
-      hasBgPat2: this.hasBgPat2
+      discoveredPatterns: rig.discoveredPatterns,
+      bgPat1Alias: rig.hasBgPat1 ? rig.keys.bg_pat_1 : null,
+      bgPat2Alias: rig.hasBgPat2 ? rig.keys.bg_pat_2 : null,
+      hasBgPat1: rig.hasBgPat1,
+      hasBgPat2: rig.hasBgPat2
     });
 
-    // --- ASSEMBLE BACKGROUND ---
-    if (this.isPanoramaMode) {
-      const bgTexture = Assets.get('bg');
-      if (bgTexture && bgTexture !== Texture.EMPTY) {
-        this.layers.bg = new MirroredScrollLayer(bgTexture, this.bgHeightScale, 1.0);
-        this.bgAtmosphereContainer.addChild(this.layers.bg);
-      }
+    // --- ENCAPSULATED STAGE CREATION ---
+    const stageFlags = {
+      isPanoramaMode: rig.isPanoramaMode,
+      hasBg2: rig.hasBg2,
+      bg2ParallaxSpeed: currentStore.bg2ParallaxSpeed,
+      hasBgClippingMask: rig.hasBgClippingMask,
+      hasBgPat1: rig.hasBgPat1,
+      hasBgPat2: rig.hasBgPat2,
+      hasBgMountainBack: rig.hasBgMountainBack,
+      hasBgMountain: rig.hasBgMountain
+    };
+    this.stage = new StageEntity(
+      currentStore.bgClippingMaskId, 
+      rig.keys, 
+      stageFlags, 
+      this.bgHeightScale, 
+      this.renderTextureManager, 
+      this.app.renderer
+    );
+    this.bgAtmosphereContainer.addChild(this.stage.bgContainer);
 
-      if (this.hasBg2) {
-        const bg2Texture = Assets.get('bg2');
-        if (bg2Texture && bg2Texture !== Texture.EMPTY) {
-          this.layers.bg2 = new MirroredScrollLayer(bg2Texture, this.bgHeightScale, this.config.bg2ParallaxSpeed);
-          this.bgAtmosphereContainer.addChild(this.layers.bg2);
-        }
-      }
-    } else {
-      // 1. Solid Backdrop Color
-      if (this.hasBgClippingMask) {
-        this.layers.bg_clip = createSprite(this.assetKeys.bg_clipping_mask);
-        this.bgAtmosphereContainer.addChild(this.layers.bg_clip);
-      }
-
-      // 2. Off-Screen RenderTexture Warp patterns
-      const hasAnyBgPat = this.hasBgPat1 || this.hasBgPat2;
-      if (hasAnyBgPat && this.renderTextureManager) {
-        this.bgAtmosphereContainer.addChild(this.renderTextureManager.bgPatternSprite);
-
-        // Ceiling reflection overlay (screen blended duplicate of offscreen render texture)
-        this.layers.bg_pattern_reflect = new Sprite(this.renderTextureManager.bgPatternRenderTexture);
-        this.layers.bg_pattern_reflect.anchor.set(0.5);
-        this.layers.bg_pattern_reflect.blendMode = 'screen';
-        this.bgAtmosphereContainer.addChild(this.layers.bg_pattern_reflect);
-      }
-
-      // 3. Back Mountains layer
-      if (this.hasBgMountainBack) {
-        const mountainBackTex = Assets.get(this.assetKeys.bg_mountain_back);
-        if (mountainBackTex && mountainBackTex !== Texture.EMPTY) {
-          this.layers.bg_mountain_back = new MirroredScrollLayer(mountainBackTex, this.bgHeightScale, 0.18);
-          this.layers.bg_mountain_back.position.y = -35; // Shifts upward to align behind front range
-          this.layers.bg_mountain_back.alpha = 0.75; // Atmospheric perspective haze
-          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_back);
-
-          // Dynamic Cavern Lighting: Back Mountain Reflector Duplicate
-          this.layers.bg_mountain_back_reflect = new MirroredScrollLayer(mountainBackTex, this.bgHeightScale, 0.18);
-          this.layers.bg_mountain_back_reflect.position.y = -35;
-          this.layers.bg_mountain_back_reflect.blendMode = 'screen';
-          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_back_reflect);
-        }
-      }
-
-      // 4. Foreground Mountains layer
-      if (this.hasBgMountain) {
-        const mountainTex = Assets.get(this.assetKeys.bg_mountain);
-        if (mountainTex && mountainTex !== Texture.EMPTY) {
-          this.layers.bg_mountain = new MirroredScrollLayer(mountainTex, this.bgHeightScale, 0.4);
-          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain);
-
-          // Dynamic Cavern Lighting: Foreground Mountain Reflector Duplicate
-          this.layers.bg_mountain_reflect = new MirroredScrollLayer(mountainTex, this.bgHeightScale, 0.4);
-          this.layers.bg_mountain_reflect.blendMode = 'screen';
-          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_reflect);
-        }
-      }
-    }
-
-    // Decoupled Background Fog Layer
-    this.bgFog = new FogSystem(this.bgAtmosphereContainer, this.bgHeightScale, false);
-
-    // Particles
-    this.particleSystem = new ParticleSystem(this.app.renderer, this.bgAtmosphereContainer, this.bgHeightScale);
-    
-    // Initialise Ghost Coordinates System
-    this.trailSystem = new TrailSystem(this.masterContainer, this.hasCharClippingMask ? this.assetKeys.char_clipping_mask : null);
+    // Initialize Ghost Coordinates System
+    this.trailSystem = new TrailSystem(this.masterContainer, rig.keys.char_clipping_mask);
 
     // Initialize Volumetric Searchlight System
     this.searchlightSystem = new SearchlightSystem(this.masterContainer);
-    this.searchlightSystem.isActiveOverride = true;
-    this.searchlightSystem.setActive = (active) => {
-      this.searchlightSystem.isActiveOverride = active;
-      if (this.searchlightSystem.container) {
-        this.searchlightSystem.container.visible = active;
-      }
+
+    // --- ENCAPSULATED ACTOR CREATION ---
+    const actorAssets = {
+      char_clipping_mask: rig.hasCharClippingMask ? rig.keys.char_clipping_mask : null,
+      char_lineart: rig.hasLineart ? rig.keys.char_lineart : null,
+      char_base: rig.hasCharBase ? rig.keys.char_base : null,
+      eyelids_top: rig.hasEyelids ? rig.keys.eyelids_top : null,
+      eyelids_bottom: rig.hasEyelids ? rig.keys.eyelids_bottom : null,
+      discoveredEyes: rig.discoveredEyes,
+      discoveredPatterns: rig.discoveredPatterns,
+      isCreatorRig: rig.isCreatorRig === true
     };
+    this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager);
+    this.masterContainer.addChild(this.actor.container);
 
-    // 2. Head Container
-    this.headContainer = new Container();
-    this.masterContainer.addChild(this.headContainer);
+    // Add stage foreground overlay container on top of the character
+    this.masterContainer.addChild(this.stage.fgContainer);
 
-    // Blurry shadow glow container (renders underneath head lineart/features)
-    if (this.hasCharClippingMask) {
-      this.layers.aura = createSprite(this.assetKeys.char_clipping_mask);
-      this.headContainer.addChild(this.layers.aura);
-    }
+    // Extract effect targets cleanly from both entities and attach lighting/shaders
+    const stageTargets = this.stage.getEffectsTargets();
+    const effectsTarget = this.actor.getEffectsTargets();
+    
+    this.effectsSystem.attach({
+      headContainer: effectsTarget.headContainer,
+      auraSprite: effectsTarget.auraSprite,
+      baseSprite: effectsTarget.baseSprite,
+      mountainReflector: stageTargets.mountainReflector,
+      mountainBackReflector: stageTargets.mountainBackReflector,
+      ceilingReflector: stageTargets.ceilingReflector
+    });
+  }
 
-    // Nested composition to decouple filters from the mask sprite
-    if (this.hasCharClippingMask) {
-      // The mask sprite (must be set as renderable=false so it does not draw as a solid colored block)
-      const charMaskSprite = createSprite(this.assetKeys.char_clipping_mask);
-      charMaskSprite.renderable = false; 
-      this.headContainer.addChild(charMaskSprite);
+  async reloadAssetsAndScene() {
+    const currentSeq = ++this.loadSequence;
 
-      // The wrapped container applying only the clip-mask
-      this.characterContentContainer = new Container();
-      
-      // Use setMask with channel: 'alpha' to bypass color channel processing
-      this.characterContentContainer.setMask({
-        mask: charMaskSprite,
-        channel: 'alpha'
-      });
-      
-      this.headContainer.addChild(this.characterContentContainer);
+    // Pre-resolve and load assets first, before destroying active display blocks
+    const currentStore = this.getState();
+    const nextRig = await this.resolveConfiguredRig(currentStore);
 
-      // Render base color (clipping mask file acting as character color) inside masked wrapper
-      this.layers.base = createSprite(this.assetKeys.char_clipping_mask);
-      this.characterContentContainer.addChild(this.layers.base);
+    if (this.isDestroyed || currentSeq !== this.loadSequence) return;
 
-      // Render character patterns using flattened textures
-      if (this.discoveredPatterns.length > 0 && this.renderTextureManager) {
-        this.characterContentContainer.addChild(this.renderTextureManager.patternSprite);
+    if (nextRig.verifiedLoadQueue.length > 0) {
+      try {
+        await Assets.load(nextRig.verifiedLoadQueue);
+      } catch (err) {
+        console.error("❌ [PixiEngine] Preloading error:", err);
       }
     }
 
-    // Attach glow, dynamic cavern lighting, and filters
-    this.effectsSystem.attach({
-      headContainer: this.headContainer,
-      auraSprite: this.layers.aura,
-      baseSprite: this.layers.base,
-      mountainReflector: this.layers.bg_mountain_reflect,
-      mountainBackReflector: this.layers.bg_mountain_back_reflect,
-      ceilingReflector: this.layers.bg_pattern_reflect
-    });
+    if (this.isDestroyed || currentSeq !== this.loadSequence) return;
 
-    // Render lineart
-    if (this.hasLineart) {
-      this.layers.lineart = createSprite(this.assetKeys.char_lineart);
-      this.headContainer.addChild(this.layers.lineart);
+    this.isReady = false;
+
+    // Detect if stage properties modified. If background setup values did not change, 
+    // we bypass stage entity resets to keep fogs and scrolling mountain environments running.
+    const stageChanged = !this.loadedRig ||
+      this.loadedRig.keys.bg_clipping_mask !== nextRig.keys.bg_clipping_mask ||
+      this.loadedRig.keys.bg_mountain !== nextRig.keys.bg_mountain ||
+      this.loadedRig.keys.bg_mountain_back !== nextRig.keys.bg_mountain_back ||
+      this.loadedRig.isPanoramaMode !== nextRig.isPanoramaMode ||
+      this.loadedRig.hasBgPat1 !== nextRig.hasBgPat1 ||
+      this.loadedRig.hasBgPat2 !== nextRig.hasBgPat2;
+
+    // Clean up current actor structures
+    if (this.actor) {
+      if (this.actor.characterContentContainer) {
+        this.actor.characterContentContainer.mask = null;
+      }
+      this.actor.destroy();
+      this.actor = null;
     }
 
-    // Render eyeballs and lids
-    this.eyeSystem = new EyeSystem(this.headContainer, {
-      discoveredEyes: this.discoveredEyes,
-      hasEyelids: this.hasEyelids,
-      eyelidsTopAlias: this.hasEyelids ? this.assetKeys.eyelids_top : null,
-      eyelidsBottomAlias: this.hasEyelids ? this.assetKeys.eyelids_bottom : null
+    // Always reset tracking and searchlight systems
+    if (this.trailSystem?.destroy) {
+      this.trailSystem.destroy();
+      this.trailSystem = null;
+    }
+    if (this.searchlightSystem?.destroy) {
+      this.searchlightSystem.destroy();
+      this.searchlightSystem = null;
+    }
+
+    // Tear down stage and render textures only if stage setups changed
+    if (stageChanged) {
+      if (this.stage?.destroy) {
+        this.stage.destroy();
+        this.stage = null;
+      }
+      if (this.renderTextureManager?.destroy) {
+        this.renderTextureManager.destroy();
+        this.renderTextureManager = null;
+      }
+    }
+
+    this.loadedRig = nextRig;
+
+    if (!this.masterContainer) {
+      this.masterContainer = new Container();
+      this.app.stage.addChild(this.masterContainer);
+    }
+
+    let clipTex = Assets.get(nextRig.keys.char_clipping_mask);
+    if (!clipTex || clipTex === Texture.EMPTY) {
+      clipTex = Assets.get('bg');
+    }
+    this.bgHeightScale = (clipTex && clipTex !== Texture.EMPTY) ? clipTex.height : 1000;
+
+    if (stageChanged || !this.masterClipMask) {
+      if (this.masterClipMask) this.masterClipMask.destroy();
+      this.masterClipMask = new Graphics()
+        .rect(-this.bgHeightScale / 2, -this.bgHeightScale / 2, this.bgHeightScale, this.bgHeightScale)
+        .fill({ color: 0xffffff });
+      this.masterContainer.addChild(this.masterClipMask);
+    }
+
+    if (stageChanged || !this.bgAtmosphereContainer) {
+      if (this.bgAtmosphereContainer) this.bgAtmosphereContainer.destroy();
+      this.bgAtmosphereContainer = new Container();
+      this.bgAtmosphereContainer.mask = this.masterClipMask;
+      this.masterContainer.addChild(this.bgAtmosphereContainer);
+    }
+
+    if (!this.shockwaveSystem) {
+      this.shockwaveSystem = new ShockwaveSystem();
+    }
+
+    // Reinitialize or update actor patterns on the active texture manager
+    if (!this.renderTextureManager) {
+      this.renderTextureManager = new RenderTextureManager({
+        discoveredPatterns: nextRig.discoveredPatterns,
+        bgPat1Alias: nextRig.hasBgPat1 ? nextRig.keys.bg_pat_1 : null,
+        bgPat2Alias: nextRig.hasBgPat2 ? nextRig.keys.bg_pat_2 : null,
+        hasBgPat1: nextRig.hasBgPat1,
+        hasBgPat2: nextRig.hasBgPat2
+      });
+    } else {
+      this.renderTextureManager.updateActorPatterns(nextRig.discoveredPatterns);
+    }
+
+    // Rebuild stage layer templates if required
+    if (stageChanged || !this.stage) {
+      const stageFlags = {
+        isPanoramaMode: nextRig.isPanoramaMode,
+        hasBg2: nextRig.hasBg2,
+        bg2ParallaxSpeed: currentStore.bg2ParallaxSpeed,
+        hasBgClippingMask: nextRig.hasBgClippingMask,
+        hasBgPat1: nextRig.hasBgPat1,
+        hasBgPat2: nextRig.hasBgPat2,
+        hasBgMountainBack: nextRig.hasBgMountainBack,
+        hasBgMountain: nextRig.hasBgMountain
+      };
+      this.stage = new StageEntity(
+        currentStore.bgClippingMaskId, 
+        nextRig.keys, 
+        stageFlags, 
+        this.bgHeightScale, 
+        this.renderTextureManager, 
+        this.app.renderer
+      );
+      this.bgAtmosphereContainer.addChild(this.stage.bgContainer);
+    }
+
+    this.trailSystem = new TrailSystem(this.masterContainer, nextRig.keys.char_clipping_mask);
+    this.searchlightSystem = new SearchlightSystem(this.masterContainer);
+
+    const actorAssets = {
+      char_clipping_mask: nextRig.hasCharClippingMask ? nextRig.keys.char_clipping_mask : null,
+      char_lineart: nextRig.hasLineart ? nextRig.keys.char_lineart : null,
+      char_base: nextRig.hasCharBase ? nextRig.keys.char_base : null,
+      eyelids_top: nextRig.hasEyelids ? nextRig.keys.eyelids_top : null,
+      eyelids_bottom: nextRig.hasEyelids ? nextRig.keys.eyelids_bottom : null,
+      discoveredEyes: nextRig.discoveredEyes,
+      discoveredPatterns: nextRig.discoveredPatterns,
+      isCreatorRig: nextRig.isCreatorRig === true
+    };
+    this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager);
+    this.masterContainer.addChild(this.actor.container);
+
+    if (this.stage.fgContainer.parent) {
+      this.stage.fgContainer.parent.removeChild(this.stage.fgContainer);
+    }
+    this.masterContainer.addChild(this.stage.fgContainer);
+
+    const stageTargets = this.stage.getEffectsTargets();
+    const effectsTarget = this.actor.getEffectsTargets();
+    
+    this.effectsSystem.attach({
+      headContainer: effectsTarget.headContainer,
+      auraSprite: effectsTarget.auraSprite,
+      baseSprite: effectsTarget.baseSprite,
+      mountainReflector: stageTargets.mountainReflector,
+      mountainBackReflector: stageTargets.mountainBackReflector,
+      ceilingReflector: stageTargets.ceilingReflector
     });
 
-    // Decoupled Foreground Fog Layer (placed on top of character but below overlays)
-    this.fgFog = new FogSystem(this.masterContainer, this.bgHeightScale, true);
+    this.resize();
+    this.isReady = true;
+  }
 
-    // Call the game state handler to establish initial isolated scenery visibility settings correctly
-    this.handleGameStateTransition(this.config.gameState);
+  /**
+   * Assigns local animation preferences to transition visually during triggered reactions.
+   */
+  startLocalReaction(reactionType) {
+    this.currentLocalReaction = reactionType;
+    this.localReactionProgress = 1.0;
+
+    // Direct WebGL ripples trigger centered on active character position
+    if (this.shockwaveSystem && this.actor) {
+      this.shockwaveSystem.trigger(
+        this.actor.container.position,
+        this.masterContainer.scale.x,
+        this.app.screen.width,
+        this.app.screen.height
+      );
+    }
   }
 
   update(deltaTime) {
@@ -704,417 +500,70 @@ export class PixiEngine {
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
 
-    const screenWidth = this.app.screen.width;
-    const screenHeight = this.app.screen.height;
-    const currentScale = this.masterContainer.scale.x;
-
-    // Smoothly decay transient recoil offset back to zero on every frame
-    this.recoilOffset.x += (0 - this.recoilOffset.x) * 0.15 * deltaTime;
-    this.recoilOffset.y += (0 - this.recoilOffset.y) * 0.15 * deltaTime;
-
-    // --- Phase 2: Internal Reaction Decay Step ---
-    if (this.currentLocalReaction && this.originalPreset) {
+    // Decay the dynamic reaction progression metrics
+    if (this.currentLocalReaction) {
       this.localReactionProgress -= 0.007 * deltaTime;
 
       if (this.localReactionProgress <= 0) {
         this.localReactionProgress = 0;
         this.currentLocalReaction = null;
-        this.originalPreset = null;
 
-        // Reset the store values once when the decay concludes
-        const setParameter = useStore.getState().setParameter;
-        setParameter("activeReaction", null);
-        setParameter("reactionProgress", 0.0);
+        // Broadcast final boundary progress cleanly via native CustomEvent before resetting store
+        window.dispatchEvent(new CustomEvent('gothic-reaction-progress', { detail: { progress: 0.0 } }));
+
+        // Reset the store values once when the decay concludes using decoupled state setter
+        const setParameter = this.getState().setParameter;
+        if (typeof setParameter === 'function') {
+          setParameter("activeReaction", null);
+          setParameter("reactionProgress", 0.0);
+        }
       } else {
-        // Sync progress dynamically to the store so the Tab indicator updates
-        useStore.getState().setParameter("reactionProgress", this.localReactionProgress);
+        // Dispatch custom event to avoid triggering high-frequency React state updates
+        window.dispatchEvent(new CustomEvent('gothic-reaction-progress', { detail: { progress: this.localReactionProgress } }));
       }
     }
 
-    // --- Active Gameplay Flight Navigation vs. Spring Menu Drift ---
-    // --- Active Gameplay Flight Navigation vs. Spring Menu Drift ---
-    if (this.config.gameState === "gameplay") {
-      // WASD / Arrow keyboard vector mapping utilizing custom speed parameter
-      const speed = this.playerSpeed * dtSeconds;
-      let moveX = 0;
-      let moveY = 0;
+    // Synchronously fetch latest live properties to completely bypass full store copy callbacks
+    const liveStore = this.getState();
 
-      if (this.keys.KeyW || this.keys.ArrowUp) moveY -= 1;
-      if (this.keys.KeyS || this.keys.ArrowDown) moveY += 1;
-      if (this.keys.KeyA || this.keys.ArrowLeft) moveX -= 1;
-      if (this.keys.KeyD || this.keys.ArrowRight) moveX += 1;
-
-      // Normalize diagonal vectors to prevent speed boosting mechanics
-      if (moveX !== 0 && moveY !== 0) {
-        const length = Math.sqrt(moveX * moveX + moveY * moveY);
-        moveX /= length;
-        moveY /= length;
-      }
-
-      this.baselinePosition.x += moveX * speed;
-      this.baselinePosition.y += moveY * speed;
-
-      const localHalfW = (screenWidth / currentScale) / 2;
-      const localHalfH = (screenHeight / currentScale) / 2;
-
-      // Clamp coordinates to allow movement across the complete width / canvas height
-      const minX = -localHalfW + 60;
-      const maxX = localHalfW - 60; // Expanded to full screen boundary width
-
-      const minY = -localHalfH + 60; // Expanded to full screen boundary height
-      const maxY = localHalfH - 60;
-
-      this.baselinePosition.x = Math.max(minX, Math.min(maxX, this.baselinePosition.x));
-      this.baselinePosition.y = Math.max(minY, Math.min(maxY, this.baselinePosition.y));
-
-      // Dynamically flip character based on relative cursor position to head container
-      const localMouse = this.masterContainer.toLocal({ x: this.absoluteMousePos.x, y: this.absoluteMousePos.y });
-      this.facingDirection = localMouse.x >= this.headContainer.position.x ? 1.0 : -1.0;
-      this.currentFlipScale += (this.facingDirection - this.currentFlipScale) * 0.2 * deltaTime;
-    } else {
-      // Menu Mode: Force stationary central positioning inside terminal items window
-      this.baselinePosition.x = 0;
-      this.baselinePosition.y = 0;
-
-      // Smooth 3D rotational flipping based on mouse hover position
-      this.facingDirection = this.normalizedMousePos.x >= 0 ? 1.0 : -1.0;
-      this.currentFlipScale += (this.facingDirection - this.currentFlipScale) * 0.2 * deltaTime;
-    }
-
-    // Synthesize latest coordinates dynamically so that EyeSystem and nested modules receive updates
-    const config = { ...this.config, mousePos: this.normalizedMousePos };
-
-    // Continuous weapon auto-firing when holding down the mouse button
-    if (this.fireCooldown > 0) {
-      this.fireCooldown -= dtSeconds;
-    }
-    if (config.gameState === "gameplay" && this.isPointerDown && this.fireCooldown <= 0) {
-      this.spawnProjectile(this.pointerPosition.x, this.pointerPosition.y);
-      this.fireCooldown = 0.18; // Fires continuous stream at comfortable 180ms intervals
-    }
-
-    // Apply recoil muzzle flash distortion spikes
-    if (this.recoilGlitch > 0) {
-      config.aberrationAmount += this.recoilGlitch;
-      this.recoilGlitch = 0; // Return to standard settings immediately on the next frame
-    }
-
-    // Apply internal decay overrides over baseline configurations
-    if (this.currentLocalReaction && this.originalPreset) {
-      const invProgress = this.localReactionProgress;
-
-      if (this.currentLocalReaction === "lyx_received") {
-        config.particleCount = Math.floor(this.originalPreset.particleCount + (300 - this.originalPreset.particleCount) * invProgress);
-        config.particleSpeed = this.originalPreset.particleSpeed + (4.5 - this.originalPreset.particleSpeed) * invProgress;
-        config.auraOpacity = this.originalPreset.auraOpacity + (1.0 - this.originalPreset.auraOpacity) * invProgress;
-        config.auraScale = this.originalPreset.auraScale + (1.35 - this.originalPreset.auraScale) * invProgress;
-        config.warpIntensity = this.originalPreset.warpIntensity + (50.0 - this.originalPreset.warpIntensity) * invProgress;
-      } 
-      else if (this.currentLocalReaction === "lsp7_received" || this.currentLocalReaction === "lsp8_received") {
-        config.aberrationAmount = this.originalPreset.aberrationAmount + (30.0 - this.originalPreset.aberrationAmount) * invProgress;
-        config.warpIntensity = this.originalPreset.warpIntensity + (90.0 - this.originalPreset.warpIntensity) * invProgress;
-        config.glitchShakeIntensity = Math.floor(this.originalPreset.glitchShakeIntensity + (25 - this.originalPreset.glitchShakeIntensity) * invProgress);
-        config.flickerIntensity = this.originalPreset.flickerIntensity + (0.85 - this.originalPreset.flickerIntensity) * invProgress;
-        
-        config.aberrationSpeed = 8.0;
-        config.aberrationGlitch = 0;
-      }
-    }
-
-    config.reactionProgress = this.localReactionProgress;
+    // Synthesize latest coordinates and decay flags dynamically
+    const config = { 
+      ...liveStore, 
+      mousePos: this.normalizedMousePos,
+      activeReaction: this.currentLocalReaction,
+      reactionProgress: this.localReactionProgress
+    };
 
     const { isGlitched, currentSplit } = this.effectsSystem.update(this.time, config);
 
-    // --- Phase 2B: Glitch Active Evaluation ---
+    // Glitch status and shake factor calculated cleanly relative to active parameters
+    const glitchShakeIntensity = config.activeReaction === "lyx_received" || config.activeReaction === "lsp8_received"
+      ? config.glitchShakeIntensity + (25 - config.glitchShakeIntensity) * config.reactionProgress
+      : config.glitchShakeIntensity;
+
     const isGlitchActive = (isGlitched || currentSplit > (config.aberrationAmount * 1.15));
-
-    // --- Phase 2C: Cavern Swarm Spawner Logic ---
-    if (config.gameState === "gameplay" && !this.isWaveTransitionActive) {
-      this.enemySpawnTimer += dtSeconds;
-
-      if (this.enemiesSpawnedInWave < this.totalEnemiesToSpawnInWave && this.enemySpawnTimer >= this.spawnInterval) {
-        this.enemySpawnTimer = 0.0;
-
-        // Spawn from right edge of screen bounds in local container coordinates
-        const spawnX = (screenWidth / 2 + 80) / currentScale;
-        const spawnY = ((Math.random() - 0.5) * (screenHeight - 240)) / currentScale;
-
-        // Retrieve mapped striped enemy skull texture
-        const enemyTexture = Assets.get('enemy_skull_striped');
-        const enemySprite = new Sprite(enemyTexture);
-        enemySprite.anchor.set(0.5);
-        enemySprite.scale.set(0.38);
-
-        // Adjust coloration slightly to represent hostile alignment
-        enemySprite.tint = 0xff5533;
-        enemySprite.position.set(spawnX, spawnY);
-
-        this.masterContainer.addChild(enemySprite);
-
-        // Dynamically scale parameters based on the store's current active wave
-        const waveMultiplier = config.gameActiveWave;
-        const enemyHP = 1 + Math.floor(waveMultiplier * 0.4);
-        const enemySpeed = 160 + (waveMultiplier * 15);
-
-      this.enemies.push({
-          sprite: enemySprite,
-          hp: enemyHP,
-          maxHp: enemyHP,
-          speed: enemySpeed,
-          facingDirection: -1.0, // Default to facing left (spawns on the right)
-          currentFlipScale: -1.0
-        });
-
-        this.enemiesSpawnedInWave++;
-      }
+    
+    // 1. Update Environment Stage (parallax backgrounds, fogs, particles)
+    if (this.stage) {
+      this.stage.update(deltaTime, config, this.time);
     }
 
-    // --- Phase 2B: Tracer Projectile Propagation & Boundary Cleanups ---
-    if (this.playerProjectiles && this.playerProjectiles.length > 0) {
-      for (let i = this.playerProjectiles.length - 1; i >= 0; i--) {
-        const proj = this.playerProjectiles[i];
-        proj.sprite.x += proj.vx * dtSeconds;
-        proj.sprite.y += proj.vy * dtSeconds;
-
-        const globalPos = proj.sprite.getGlobalPosition();
-        if (
-          globalPos.x < -100 || 
-          globalPos.x > screenWidth + 100 || 
-          globalPos.y < -100 || 
-          globalPos.y > screenHeight + 100
-        ) {
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(proj.sprite);
-          }
-          proj.sprite.destroy();
-          this.playerProjectiles.splice(i, 1);
-        }
-      }
+    // 2. Update Actor Entity
+    if (this.actor) {
+      this.actor.update(deltaTime, config, isGlitchActive, this.canvasHeight);
     }
 
-    // --- Phase 2C: Enemy Swarm Processing (Active 2D vector pursuit tracking & scale flips) ---
-    if (this.enemies && this.enemies.length > 0) {
-      for (let i = this.enemies.length - 1; i >= 0; i--) {
-        const enemy = this.enemies[i];
-        
-        // Active pursuit tracking vector calculations
-        const playerX = this.headContainer.position.x;
-        const playerY = this.headContainer.position.y;
-
-        const dx = playerX - enemy.sprite.x;
-        const dy = playerY - enemy.sprite.y;
-        const distanceToPlayer = Math.sqrt(dx * dx + dy * dy);
-
-        if (distanceToPlayer > 0) {
-          // Direct 2D movement towards player coordinates (keeps chasing endlessly)
-          enemy.sprite.x += (dx / distanceToPlayer) * enemy.speed * dtSeconds;
-          enemy.sprite.y += (dy / distanceToPlayer) * enemy.speed * dtSeconds;
-        }
-
-       // Dynamic visual flip calculation based on player relative position
-        const baseScale = 0.38;
-        enemy.facingDirection = dx >= 0 ? 1.0 : -1.0;
-
-        // Smoothly interpolate the enemy's scale using the same formula as the player
-        enemy.currentFlipScale += (enemy.facingDirection - enemy.currentFlipScale) * 0.2 * deltaTime;
-        enemy.sprite.scale.x = baseScale * enemy.currentFlipScale;
-
-        // Off-screen boundary checks (only prunes extreme outliers far outside the play area)
-        const outerBoundaryLimit = (screenWidth / currentScale) * 1.5;
-        if (Math.abs(enemy.sprite.x) > outerBoundaryLimit || Math.abs(enemy.sprite.y) > outerBoundaryLimit) {
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(enemy.sprite);
-          }
-          enemy.sprite.destroy();
-          this.enemies.splice(i, 1);
-          
-          this.enemiesDefeatedInWave++;
-        }
-      }
+    // 3. Update Volumetric Searchlight (Tracking mouse around active character)
+    if (this.searchlightSystem && this.actor) {
+      this.searchlightSystem.update(this.actor.container.position, this.absoluteMousePos, deltaTime, config);
     }
 
-    // --- Phase 2C: Dual-Layer Collision Matrices & Particles ---
-    if (config.gameState === "gameplay") {
-      const shieldRadius = config.searchlightRadius ?? 110;
-      const collisionRadius = 35.0; // Dynamic overlapping radius target boundary
-
-      // 1. PROJECTILE-TO-ENEMY COLLISIONS
-      for (let pIdx = this.playerProjectiles.length - 1; pIdx >= 0; pIdx--) {
-        const proj = this.playerProjectiles[pIdx];
-
-        for (let eIdx = this.enemies.length - 1; eIdx >= 0; eIdx--) {
-          const enemy = this.enemies[eIdx];
-
-          const dx = proj.sprite.x - enemy.sprite.x;
-          const dy = proj.sprite.y - enemy.sprite.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-
-          if (distance < collisionRadius) {
-            // Spawn fast impact burst of golden spark particles
-            this.spawnSparks(proj.sprite.x, proj.sprite.y, Math.floor(Math.random() * 4) + 5, false);
-
-            // Destroy Projectile
-            if (this.masterContainer) {
-              this.masterContainer.removeChild(proj.sprite);
-            }
-            proj.sprite.destroy();
-            this.playerProjectiles.splice(pIdx, 1);
-
-            // Deduct Enemy Hit Points
-            enemy.hp--;
-
-            if (enemy.hp <= 0) {
-              // Trigger larger 15-particle explosion burst
-              this.spawnSparks(enemy.sprite.x, enemy.sprite.y, 15, true);
-
-              // Remove enemy from stage
-              if (this.masterContainer) {
-                this.masterContainer.removeChild(enemy.sprite);
-              }
-              enemy.sprite.destroy();
-              this.enemies.splice(eIdx, 1);
-
-              this.enemiesDefeatedInWave++;
-
-              // Increment Score State
-              const currentScore = useStore.getState().gameScore;
-              useStore.getState().setParameter("gameScore", currentScore + 100);
-            }
-
-            break; // Bullet consumed, advance outer projectile queue
-          }
-        }
-      }
-
-      // 2. ENEMY-TO-PLAYER (Shield Boundary) COLLISIONS
-      for (let eIdx = this.enemies.length - 1; eIdx >= 0; eIdx--) {
-        const enemy = this.enemies[eIdx];
-
-        const dx = enemy.sprite.x - this.headContainer.position.x;
-        const dy = enemy.sprite.y - this.headContainer.position.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < shieldRadius) {
-          // Instantly destroy hitting swarm enemy
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(enemy.sprite);
-          }
-          enemy.sprite.destroy();
-          this.enemies.splice(eIdx, 1);
-
-          this.enemiesDefeatedInWave++;
-
-          // Spawn heavy fiery splash particles
-          this.spawnSparks(enemy.sprite.x, enemy.sprite.y, 12, true);
-
-          // Deduct Shield / HP metrics
-          const currentShield = useStore.getState().playerShield;
-          const currentHP = useStore.getState().playerHP;
-          const impactDamage = 15;
-
-          if (currentShield > 0) {
-            const nextShield = Math.max(0, currentShield - impactDamage);
-            useStore.getState().setParameter("playerShield", nextShield);
-          } else {
-            const nextHP = Math.max(0, currentHP - impactDamage);
-            useStore.getState().setParameter("playerHP", nextHP);
-
-            // Handle Game Over transition resets
-            if (nextHP <= 0) {
-              useStore.getState().setParameter("gameState", "menu");
-            }
-          }
-
-          // Visceral gameplay impact camera shake feedback
-          this.recoilOffset.x = (Math.random() - 0.5) * 45;
-          this.recoilOffset.y = (Math.random() - 0.5) * 45;
-
-          // Spike visual glitch splits
-          this.recoilGlitch = 20.0;
-
-          // Momentary screen shake modifier spike
-          useStore.getState().setParameter("glitchShakeIntensity", 25);
-          setTimeout(() => {
-            // Restore previous user/store parameter limits smoothly
-            if (!this.isDestroyed) {
-              useStore.getState().setParameter("glitchShakeIntensity", 0);
-            }
-          }, 450);
-        }
-      }
-
-      // 3. WAVE TIMING & PROGRESSION CHECK
-      if (this.enemiesDefeatedInWave >= this.totalEnemiesToSpawnInWave && this.enemies.length === 0) {
-        if (!this.isWaveTransitionActive) {
-          this.isWaveTransitionActive = true;
-          this.waveTransitionTimer = 3.0; // 3 second transition delay
-        }
-      }
-    }
-
-    // Process transition timer delay tick
-    if (this.isWaveTransitionActive && config.gameState === "gameplay") {
-      this.waveTransitionTimer -= dtSeconds;
-      if (this.waveTransitionTimer <= 0.0) {
-        this.isWaveTransitionActive = false;
-
-        // Advance Wave level index
-        const nextWaveLevel = config.gameActiveWave + 1;
-        useStore.getState().setParameter("gameActiveWave", nextWaveLevel);
-
-        this.enemiesSpawnedInWave = 0;
-        this.enemiesDefeatedInWave = 0;
-
-        // Increment swarm scale counts
-        this.totalEnemiesToSpawnInWave = 5 + (nextWaveLevel * 3);
-        this.spawnInterval = Math.max(0.6, 1.8 - (nextWaveLevel * 0.1));
-      }
-    }
-
-    // --- Phase 2C: Propagation of Spark/Splash Particles ---
-    if (this.impactParticles && this.impactParticles.length > 0) {
-      for (let i = this.impactParticles.length - 1; i >= 0; i--) {
-        const p = this.impactParticles[i];
-        p.graphic.x += p.vx * dtSeconds;
-        p.graphic.y += p.vy * dtSeconds;
-        
-        p.life -= dtSeconds;
-        p.alpha = Math.max(0, p.life / p.maxLife);
-        p.graphic.alpha = p.alpha;
-
-        if (p.life <= 0.0) {
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(p.graphic);
-          }
-          p.graphic.destroy();
-          this.impactParticles.splice(i, 1);
-        }
-      }
-    }
-
-    // --- Flight & Hover Subsystem Calculations ---
-    const headState = this.flightDynamics.calculate(this.time, config, isGlitchActive, this.baselinePosition, this.currentFlipScale);
-
-    // Set head container position combining flight dynamics with elastic spring recoil offsets
-    this.headContainer.position.set(
-      headState.x + this.recoilOffset.x, 
-      headState.y + this.recoilOffset.y
-    );
-    this.headContainer.scale.set(headState.scaleX, headState.scale); // Independent scale assignment to allow horizontal flip rotations
-    this.headContainer.rotation = headState.rotation;
-
-    // --- Searchlight Volumetric System Updates (Orbiting turret tracking mouse) ---
-    // (Bypassed / Temporarily unavailable for testing as requested)
-    if (this.searchlightSystem) {
-      this.searchlightSystem.update(this.headContainer.position, this.absoluteMousePos, deltaTime, config);
-    }
-
-    // --- WebGL Portal Refraction Ripple Subsystem updates ---
-    if (this.shockwaveSystem) {
+    // 4. WebGL Portal Refraction Ripple Subsystem updates
+    if (this.shockwaveSystem && this.actor) {
       const hasActiveWaves = this.shockwaveSystem.update(
         dtSeconds, 
-        screenWidth, 
-        screenHeight, 
+        this.app.screen.width, 
+        this.app.screen.height, 
         config
       );
 
@@ -1127,14 +576,14 @@ export class PixiEngine {
       }
     }
 
-    // Detect visual shakes to auto-fire WebGL ripples
-    const glitchTriggered = isGlitchActive && config.glitchShakeIntensity > 15;
-    if (glitchTriggered && !this.lastGlitchPeak && this.shockwaveSystem) {
+    // Detect visual shakes to auto-fire WebGL ripples on active character position
+    const glitchTriggered = isGlitchActive && glitchShakeIntensity > 15;
+    if (glitchTriggered && !this.lastGlitchPeak && this.shockwaveSystem && this.actor) {
       this.shockwaveSystem.trigger(
-        this.headContainer.position,
+        this.actor.container.position,
         this.masterContainer.scale.x,
-        screenWidth,
-        screenHeight
+        this.app.screen.width,
+        this.app.screen.height
       );
     }
     this.lastGlitchPeak = glitchTriggered;
@@ -1144,51 +593,10 @@ export class PixiEngine {
       this.renderTextureManager.update(deltaTime, config, this.app.renderer);
     }
 
-    // Update decoupled background and foreground fog systems
-    if (this.bgFog) {
-      this.bgFog.update(this.time, config);
-    }
-    if (this.fgFog) {
-      this.fgFog.update(this.time, config);
-    }
-
-    if (this.eyeSystem) {
-      this.eyeSystem.update(deltaTime, config);
-    }
-
-    if (this.particleSystem) {
-      this.particleSystem.update(deltaTime, config);
-    }
-
-    // --- Echoing Phase Trails Subsystem calculations ---
-    if (this.trailSystem) {
-      this.trailSystem.update(headState, config, isGlitchActive);
-    }
-
-    // --- Background Side Scrolling (Double Layer Parallax) ---
-    const baseSpeed = config.bgScrollSpeed;
-    const backParallax = config.bg2ParallaxSpeed; // The slider value (supports negative ranges)
-
-    if (this.isPanoramaMode) {
-      if (this.layers.bg) {
-        this.layers.bg.updatePositions(dtSeconds, baseSpeed, 1.0);
-      }
-      if (this.layers.bg2) {
-        this.layers.bg2.updatePositions(dtSeconds, baseSpeed, backParallax);
-      }
-    } else {
-      if (this.layers.bg_mountain_back) {
-        this.layers.bg_mountain_back.updatePositions(dtSeconds, baseSpeed, 0.15 * backParallax);
-      }
-      if (this.layers.bg_mountain_back_reflect) {
-        this.layers.bg_mountain_back_reflect.updatePositions(dtSeconds, baseSpeed, 0.15 * backParallax);
-      }
-      if (this.layers.bg_mountain) {
-        this.layers.bg_mountain.updatePositions(dtSeconds, baseSpeed, 0.40);
-      }
-      if (this.layers.bg_mountain_reflect) {
-        this.layers.bg_mountain_reflect.updatePositions(dtSeconds, baseSpeed, 0.40);
-      }
+    // --- Echoing Phase Trails Subsystem calculations (Reading active actor state) ---
+    if (this.trailSystem && this.actor) {
+      const configForTrails = { ...config, glitchShakeIntensity };
+      this.trailSystem.update(this.actor.headState, configForTrails, isGlitchActive);
     }
   }
 
@@ -1197,72 +605,62 @@ export class PixiEngine {
     this.app.renderer.resize(window.innerWidth, window.innerHeight);
     const { screen } = this.app;
     
+    // 1. Center the camera container on screen
     this.masterContainer.position.set(screen.width / 2, screen.height / 2);
     
-    const clipTex = Assets.get(this.assetKeys.char_clipping_mask) || Assets.get('bg');
-    const bgWidth = (clipTex && clipTex !== Texture.EMPTY) ? clipTex.width : 1000;
-    const bgHeight = (clipTex && clipTex !== Texture.EMPTY) ? clipTex.height : 1000;
-
-    const scaleX = screen.width / bgWidth;
-    const scaleY = screen.height / bgHeight;
-    const scale = Math.max(scaleX, scaleY);
+    // 2. Define a stable logical height baseline for side-scrollers.
+    const logicalHeight = 1200; 
     
+    // 3. Proportional height scaling: scale depends only on the screen's height
+    const scale = screen.height / logicalHeight;
     this.masterContainer.scale.set(scale);
 
+    // 4. Calculate the resulting visible local bounds
+    const localW = screen.width / scale;
+    const localH = screen.height / scale;
+    
+    // Save the actual coordinate viewport height inside the engine loop
+    this.canvasHeight = localH;
+
     if (this.masterClipMask) {
-      const localW = screen.width / scale;
-      const localH = screen.height / scale;
       this.masterClipMask.clear()
         .rect(-localW / 2, -localH / 2, localW, localH)
         .fill({ color: 0xffffff });
+    }
+
+    // Propagate the new visible layout bounds to the stage layers to prevent edge-cutoffs
+    if (this.stage && typeof this.stage.resize === 'function') {
+      this.stage.resize(localW, localH);
     }
   }
 
   destroy() {
     this.isDestroyed = true;
 
-    // Remove window keyboard trackers
-    window.removeEventListener('keydown', this.handleKeyDown);
-    window.removeEventListener('keyup', this.handleKeyUp);
-
-    if (this.unsubscribeStore) {
-      this.unsubscribeStore();
+    if (this.unsubscribers) {
+      this.unsubscribers.forEach(unsub => {
+        if (typeof unsub === 'function') unsub();
+      });
+      this.unsubscribers = [];
     }
-
-    // Clean up continuous auto-fire pointer tracking using our cached DOM canvas reference
-    if (this.canvasElement) {
-      try {
-        this.canvasElement.removeEventListener('pointerdown', this.handlePointerDown);
-        this.canvasElement.removeEventListener('pointermove', this.handlePointerMove);
-      } catch (e) {
-        // Safe catch
-      }
-      this.canvasElement = null;
-    }
-    window.removeEventListener('pointerup', this.handlePointerUp);
-
-    // Clean up active projectiles, swarms, and particle groups
-    this.clearGameplayObjects();
 
     if (this.isReady && this.app) {
       try { 
-        if (this.eyeSystem?.destroy) {
-          this.eyeSystem.destroy();
+        if (this.actor) {
+          if (this.actor.characterContentContainer) {
+            this.actor.characterContentContainer.mask = null;
+          }
+          this.actor.destroy();
+          this.actor = null;
         }
-        if (this.particleSystem?.destroy) {
-          this.particleSystem.destroy();
+        if (this.stage?.destroy) {
+          this.stage.destroy();
+          this.stage = null;
         }
+
         if (this.renderTextureManager?.destroy) {
           this.renderTextureManager.destroy();
           this.renderTextureManager = null;
-        }
-        if (this.bgFog?.destroy) {
-          this.bgFog.destroy();
-          this.bgFog = null;
-        }
-        if (this.fgFog?.destroy) {
-          this.fgFog.destroy();
-          this.fgFog = null;
         }
         if (this.trailSystem?.destroy) {
           this.trailSystem.destroy();
@@ -1276,9 +674,14 @@ export class PixiEngine {
           this.searchlightSystem.destroy();
           this.searchlightSystem = null;
         }
-        
-        // Fix standard asset texture cache warnings [3]
-        this.app.destroy(true, { children: true, texture: false }); 
+
+        // Only release textures from cache when the app is completely unmounted/unloaded
+        if (this.loadedRig && this.loadedRig.verifiedLoadQueue && this.loadedRig.verifiedLoadQueue.length > 0) {
+          Assets.unload(this.loadedRig.verifiedLoadQueue).catch(() => {});
+          this.loadedRig = null;
+        }
+
+        this.app.destroy(true, { children: true, texture: true }); 
       } catch (e) {
         console.warn("[PixiEngine] Strict cleanup warn:", e);
       }

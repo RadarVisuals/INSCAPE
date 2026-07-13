@@ -38,8 +38,21 @@ export class ParticleSystem {
     const gTint = state.auraColorG ?? 200;
     const bTint = state.auraColorB ?? 150;
 
-    // Pool expansion: Spawn particles to meet targeted configuration count
-    while (this.particles.length < state.particleCount) {
+    // Calculate transition multipliers cleanly on top of baseline slider values
+    let activeReactionMultiplier = 0.0;
+    let particleSpeedMultiplier = 0.0;
+
+    if (state.activeReaction === "lyx_received") {
+      const progress = state.reactionProgress ?? 0.0;
+      activeReactionMultiplier = (300 / Math.max(1, state.particleCount) - 1.0) * progress;
+      particleSpeedMultiplier = (4.5 / Math.max(0.1, state.particleSpeed) - 1.0) * progress;
+    }
+
+    const currentParticleCount = Math.floor(state.particleCount * (1.0 + activeReactionMultiplier));
+    const currentParticleSpeed = state.particleSpeed * (1.0 + particleSpeedMultiplier);
+
+    // Pool expansion: Spawn particles to meet targeted configuration count on demand
+    while (this.particles.length < currentParticleCount) {
       // Distribute types: 75% small jagged ash flakes, 25% large wispy soot motes
       const isMote = Math.random() < 0.25;
       const texture = isMote ? this.wispyTexture : this.ashTexture;
@@ -99,27 +112,40 @@ export class ParticleSystem {
 
       sprite.scale.set(size * state.particleSize);
       sprite.alpha = 0; // Starts completely faded out, soft boundary fading handles transition
+      sprite.visible = true;
+      sprite.renderable = true;
 
       this.particles.push(sprite);
       this.particleContainer.addChild(sprite);
     }
 
-    // Pool contraction: Safely prune extra sprites
-    while (this.particles.length > state.particleCount) {
-      const p = this.particles.pop();
-      this.particleContainer.removeChild(p);
-      p.destroy();
+    // Toggle visibility and renderability properties of cached sprites to prevent GC thrashing
+    for (let i = 0; i < this.particles.length; i++) {
+      const sprite = this.particles[i];
+      if (i < currentParticleCount) {
+        if (!sprite.visible) {
+          sprite.visible = true;
+          sprite.renderable = true;
+        }
+      } else {
+        if (sprite.visible) {
+          sprite.visible = false;
+          sprite.renderable = false;
+        }
+      }
     }
 
-    // Physics propagation, color blending, and boundary calculations
-    for (let i = 0; i < this.particles.length; i++) {
+    // Physics propagation, color blending, and boundary calculations for active pool items
+    for (let i = 0; i < currentParticleCount; i++) {
       const p = this.particles[i];
+      if (!p) continue;
+
       const c = p._custom;
       c.birthTime += dtSeconds;
 
       // Depth Parallax: Larger foreground objects float and drift faster than background ones
       const parallaxFactor = c.size;
-      c.y += c.speedY * state.particleSpeed * parallaxFactor * deltaTime;
+      c.y += c.speedY * currentParticleSpeed * parallaxFactor * deltaTime;
 
       // Motion dynamics: Erratic fluttering for flat ash flakes, slow crawlings for soot motes
       let sway;
@@ -131,7 +157,7 @@ export class ParticleSystem {
         sway = Math.sin(c.birthTime * c.swayFreq) * c.swayWidth * state.particleSway;
       }
 
-      const drift = (c.speedX * state.particleSpeed * parallaxFactor * deltaTime) + (state.particleWind * deltaTime) + sway;
+      const drift = (c.speedX * currentParticleSpeed * parallaxFactor * deltaTime) + (state.particleWind * deltaTime) + sway;
       c.x += drift;
 
       // Eerie Unified Tinting: Blends the default monotone grayscale with the active state color

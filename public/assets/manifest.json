@@ -1,0 +1,47 @@
+{
+  "patterns": [
+    "bigdots",
+    "defqon",
+    "densezebra",
+    "dirtysnakeskin",
+    "distortedleopard",
+    "electric",
+    "fatzebra",
+    "freehanddots",
+    "geometric",
+    "goodsnakeskin",
+    "gradientdots",
+    "hollowleopard",
+    "invertedsnakeskin",
+    "leaf",
+    "marble",
+    "patchedzebra",
+    "patchwork",
+    "polkadots",
+    "tileshift",
+    "timelesszebra",
+    "tribal",
+    "trippydots",
+    "wavey",
+    "windmills"
+  ],
+  "palettes": [
+    "basic_beige",
+    "basic_black",
+    "basic_darkblue",
+    "basic_darkgrey",
+    "basic_hotpink",
+    "basic_lightblue",
+    "basic_lightgrey",
+    "basic_orange",
+    "basic_pastelpurple",
+    "basic_purple"
+  ],
+  "characters": [
+    "01",
+    "02",
+    "03",
+    "04",
+    "05"
+  ]
+}

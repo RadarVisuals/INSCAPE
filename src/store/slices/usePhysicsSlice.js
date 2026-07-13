@@ -1,22 +1,15 @@
 // src/store/slices/usePhysicsSlice.js
 
 export const createPhysicsSlice = (set, get) => ({
-  // gameplay active metrics and player statistics
-  gameState: "menu", // "menu" or "gameplay"
-  playerHP: 100,
-  playerShield: 100,
-  gameScore: 0,
-  gameActiveWave: 1,
-
   // 1. Motion Dynamics
   floatSpeed: 1.0,
   floatAmpX: 30,
-  floatAmpY: 15,
+  floatAmpY: 50,
   floatRotation: 2.0,
 
   // Custom Flight and Hover parameters
-  flyMinScale: 0.3,       // Scale at lowest point of flight
-  flyMaxScale: 0.3,       // Scale at highest peak of flight
+  flyMinScale: 0.7,       // Scale at lowest point of flight
+  flyMaxScale: 0.2,      // Scale at highest peak of flight
   flyHoverPause: 1.0,     // Hover pause factor (1.0 = smooth sine, up to 5.0 = flat plateau pauses)
   flyTiltBias: 3.0,       // Persistent tilt bias in degrees
 
@@ -29,12 +22,12 @@ export const createPhysicsSlice = (set, get) => ({
   // 3. Background Pattern & Warp (Independent)
   bgPatternBottomScale: 1.0,
   bgPatternTopScale: 1.0,
-  bgWarpIntensity: 35.0,
+  bgWarpIntensity: 20.0,
   bgWarpSpeed: 1.0,
 
   // 4. Aura / Glow & Cavern Reflection Control
   auraOpacity: 0.5,
-  auraScale: 0.5,
+  auraScale: 1.05,
   auraBlur: 20,
   auraPulseSpeed: 1.0,
   auraColorR: 235,
@@ -49,6 +42,15 @@ export const createPhysicsSlice = (set, get) => ({
   particleSway: 1.0,
   particleSize: 1.0,
   particleOpacity: 1.0,
+
+  // 5b. Volumetric Atmospheric Fog (New Default State Variables)
+  fogOpacity: 0.4,           // Starting alpha density for the volumetric noise
+  fogSpeed: 1.0,             // Drift wind speed modifier
+  fogColorR: 140,            // Fog RGB tint values
+  fogColorG: 120,
+  fogColorB: 180,
+  fogSwaySpeed: 0.5,         // Vertical bobbing velocity
+  fogSwayAmp: 20.0,          // Vertical bobbing range in pixels
 
   // 6. Atmospheric Parallax Layers
   bgScrollSpeed: 30.0,      
@@ -83,10 +85,10 @@ export const createPhysicsSlice = (set, get) => ({
   pupilMouseInfluence: 1.0,  
 
   // 11. Searchlight Customisation State
-  searchlightActive: true,
+  searchlightActive: false,
   searchlightWidth: 0.2,     // Beam width scale
   searchlightLength: 1.0,    // Max beam extension
-  searchlightRadius: 120,    // Starting emission radius along character's perimeter
+  searchlightRadius: 150,    // Starting emission radius along character's perimeter
   searchlightColorR: 255,    // RGB values
   searchlightColorG: 255,
   searchlightColorB: 255,

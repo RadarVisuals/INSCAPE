@@ -7,13 +7,18 @@ export default function ArtCanvas() {
   const containerRef = useRef(null);
   const engineRef = useRef(null);
   
-  // Grab overlay params from store
   const scanlineOpacity = useStore((state) => state.scanlineOpacity);
   const vignetteOpacity = useStore((state) => state.vignetteOpacity);
 
   useEffect(() => {
     if (engineRef.current || !containerRef.current) return;
-    engineRef.current = new PixiEngine(containerRef.current);
+
+    // Inject state reading and subscription mechanisms as decoupled dependencies
+    engineRef.current = new PixiEngine(containerRef.current, {
+      getState: useStore.getState,
+      subscribe: useStore.subscribe
+    });
+
     engineRef.current.init().catch(err => console.error("Failed to boot PixiEngine:", err));
 
     const handleResize = () => { if (engineRef.current) engineRef.current.resize(); };
@@ -29,14 +34,12 @@ export default function ArtCanvas() {
   }, []);
 
   const handleMouseMove = (e) => {
-    // Pass raw screen coordinates. PixiEngine converts these into local targets [3].
     if (engineRef.current) {
       engineRef.current.updateMousePos(e.clientX, e.clientY);
     }
   };
 
   const handleMouseClick = (e) => {
-    // Pass click position to drift the character to the destination [3]
     if (engineRef.current) {
       engineRef.current.updateMouseClick(e.clientX, e.clientY);
     }
@@ -45,7 +48,7 @@ export default function ArtCanvas() {
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
       
-      {/* PixiJS Container */}
+      {/* PixiJS Canvas Layer */}
       <div
         ref={containerRef}
         onMouseMove={handleMouseMove}

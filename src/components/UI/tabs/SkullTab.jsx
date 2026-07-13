@@ -1,10 +1,28 @@
 // src/components/UI/tabs/SkullTab.jsx
 import React from 'react';
 import CompactSlider from '../CompactSlider';
+import { useStore } from '../../../store/useStore';
 
 export default function SkullTab() {
+  const subjectMode = useStore((state) => state.subjectMode);
+  const mutationMode = useStore((state) => state.mutationMode);
+  const mutationSourceX = useStore((state) => state.mutationSourceX);
+  const mutationSourceY = useStore((state) => state.mutationSourceY);
+  const mutationPatternMode = useStore((state) => state.mutationPatternMode);
+  const setParameter = useStore((state) => state.setParameter);
+
+  const selectStyle = {
+    background: '#1c1c1c',
+    border: '1px solid var(--border-color)',
+    color: 'var(--text-main)',
+    padding: '5px',
+    fontSize: '9px',
+    width: '100%',
+    outline: 'none'
+  };
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: subjectMode === 'creator' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '15px' }}>
       <div>
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Flight & Hover Controls</h4>
         <CompactSlider label="Float Speed" storeKey="floatSpeed" min="0" max="3" step="0.1" />
@@ -25,6 +43,47 @@ export default function SkullTab() {
         <CompactSlider label="Warp Intensity" storeKey="warpIntensity" min="0" max="100" step="1" />
         <CompactSlider label="Warp Speed" storeKey="warpSpeed" min="0" max="5" step="0.1" />
       </div>
+
+      {subjectMode === 'creator' && (
+        <div>
+          <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Creator Mutation Test</h4>
+
+          <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Geometry</label>
+          <select value={mutationMode} onChange={(e) => setParameter('mutationMode', e.target.value)} style={{ ...selectStyle, marginBottom: '8px' }}>
+            <option value="none">Original</option>
+            <option value="mirrorX">Mirror Left / Right</option>
+            <option value="mirrorY">Mirror Top / Bottom</option>
+            <option value="quad">Four Way</option>
+          </select>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+            <div>
+              <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>X Source</label>
+              <select value={mutationSourceX} onChange={(e) => setParameter('mutationSourceX', e.target.value)} style={selectStyle}>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Y Source</label>
+              <select value={mutationSourceY} onChange={(e) => setParameter('mutationSourceY', e.target.value)} style={selectStyle}>
+                <option value="top">Top</option>
+                <option value="bottom">Bottom</option>
+              </select>
+            </div>
+          </div>
+
+          <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Pattern Behavior</label>
+          <select value={mutationPatternMode} onChange={(e) => setParameter('mutationPatternMode', e.target.value)} style={{ ...selectStyle, marginBottom: '8px' }}>
+            <option value="symbiosis">Continuous / Symbiosis</option>
+            <option value="mirrored">Mirror With Geometry</option>
+          </select>
+
+          <CompactSlider label="Vertical Axis" storeKey="mutationAxisX" min="0.05" max="0.95" step="0.001" />
+          <CompactSlider label="Horizontal Axis" storeKey="mutationAxisY" min="0.05" max="0.95" step="0.001" />
+          <CompactSlider label="Source Rotation" storeKey="mutationRotation" min="-180" max="180" step="1" />
+        </div>
+      )}
     </div>
   );
 }

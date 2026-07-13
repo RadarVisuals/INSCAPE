@@ -66,6 +66,8 @@ export default class LSP1EventService {
     this.shouldBeConnected = false;
     this.recentEvents = [];
     this.reconnectAttempts = 0;
+    this.currentSetupId = 0;
+    this.abortController = null;
   }
 
   async initialize() {
@@ -77,11 +79,6 @@ export default class LSP1EventService {
   async setupEventListeners(address) {
     const logPrefix = `[LSP1 Setup Addr:${address?.slice(0, 6)}]`;
     
-    if (this.isSettingUp) {
-      if (import.meta.env.DEV) console.warn(`${logPrefix} Setup already in progress...`);
-      return false;
-    }
-    
     if (!address || !isAddress(address)) {
       this.shouldBeConnected = false;
       return false;
@@ -92,10 +89,24 @@ export default class LSP1EventService {
       return true;
     }
 
+    // 1. Increment setup sequence ID to prevent race conditions during fast toggles
+    const setupId = ++this.currentSetupId;
+
+    // 2. Tear down the previous connection instance, abort pending requests, and close active sockets
+    this.cleanupListeners(); 
+
+    // 3. Initialize the new AbortController for the current setup attempt
+    this.abortController = new AbortController();
+    const signal = this.abortController.signal;
+
     this.isSettingUp = true;
     this.shouldBeConnected = true;
-    this.cleanupListeners(); 
     this.listeningAddress = address;
+
+    if (signal.aborted || setupId !== this.currentSetupId) {
+      this.isSettingUp = false;
+      return false;
+    }
 
     try {
       console.log(`${logPrefix} Connecting WebSocket to watch updates on RPC: ${WSS_RPC_URL}`);
@@ -108,16 +119,36 @@ export default class LSP1EventService {
         }),
       });
 
+      if (signal.aborted || setupId !== this.currentSetupId) {
+        this.isSettingUp = false;
+        return false;
+      }
+
+      // Verify that the address contains bytecode (valid contract check to avoid EOA listener crashes)
+      const bytecode = await this.viemClient.getBytecode({ address });
+      if (signal.aborted || setupId !== this.currentSetupId) {
+        return false;
+      }
+
+      if (!bytecode || bytecode === "0x") {
+        console.warn(`${logPrefix} Target profile address has no deployed bytecode. UniversalReceiver aborted (EOA or undeployed contract detected).`);
+        this.isSettingUp = false;
+        this.shouldBeConnected = false;
+        return false;
+      }
+
       this.unwatchEvent = this.viemClient.watchContractEvent({
         address: this.listeningAddress,
         abi: LSP1_ABI,
         eventName: "UniversalReceiver",
         onLogs: (logs) => {
-          this.reconnectAttempts = 0; // Clear connection errors
+          this.reconnectAttempts = 0; // Clear connection error counters
           if (import.meta.env.DEV) console.log(`${logPrefix} Received ${logs.length} contract events.`);
           
           logs.forEach((log) => {
             if (log.removed) return;
+            if (signal.aborted || setupId !== this.currentSetupId) return;
+
             try {
               const decodedLog = decodeEventLog({
                 abi: LSP1_ABI,
@@ -126,7 +157,7 @@ export default class LSP1EventService {
               });
 
               if (decodedLog.eventName === "UniversalReceiver" && decodedLog.args) {
-                this.handleUniversalReceiver(decodedLog.args);
+                this.handleUniversalReceiver(decodedLog.args, log);
               }
             } catch (e) {
               if (import.meta.env.DEV) console.error(`Log decode error:`, e);
@@ -134,6 +165,8 @@ export default class LSP1EventService {
           });
         },
         onError: (error) => {
+          if (signal.aborted || setupId !== this.currentSetupId) return;
+
           console.error(`${logPrefix} WebSocket Stream dropped:`, error);
           if (this.unwatchEvent) {
             try {
@@ -146,9 +179,14 @@ export default class LSP1EventService {
       });
 
       if (import.meta.env.DEV) console.log(`${logPrefix} WebSocket event service active.`);
-      this.isSettingUp = false;
+      if (setupId === this.currentSetupId) {
+        this.isSettingUp = false;
+      }
       return true;
     } catch (error) {
+      if (signal.aborted || setupId !== this.currentSetupId) {
+        return false;
+      }
       console.error(`${logPrefix} WebSocket Stream initialization failed:`, error);
       this.handleReconnect(address);
       this.isSettingUp = false;
@@ -167,8 +205,9 @@ export default class LSP1EventService {
       console.log(`[LSP1] Reconnecting stream (${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${delay}ms...`);
 
       setTimeout(() => {
-        if (this.shouldBeConnected) {
-          this.setupEventListeners(address);
+        const activeAddress = this.listeningAddress;
+        if (this.shouldBeConnected && activeAddress) {
+          this.setupEventListeners(activeAddress);
         }
       }, delay);
     } else {
@@ -180,17 +219,42 @@ export default class LSP1EventService {
     this.shouldBeConnected = false;
     this.isSettingUp = false;
 
+    // Abort active setup processes
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+
+    // Unsubscribe from events
     if (this.unwatchEvent) {
       try {
         this.unwatchEvent();
       } catch (e) {}
       this.unwatchEvent = null;
     }
+
+    // Safely retrieve the underlying socket object and close the connection
+    const clientToClose = this.viemClient;
+    if (clientToClose && typeof clientToClose.transport?.getSocket === 'function') {
+      clientToClose.transport.getSocket()
+        .then((socket) => {
+          if (socket && typeof socket.close === 'function') {
+            if (import.meta.env.DEV) console.log("[LSP1] Disposing of underlying active WebSocket transport...");
+            socket.close(); // Cleanly close the connection
+          }
+        })
+        .catch((err) => {
+          if (import.meta.env.DEV) {
+            console.warn("[LSP1] Error cleaning up transport connection:", err);
+          }
+        });
+    }
+
     this.viemClient = null;
     this.recentEvents = [];
   }
 
-  handleUniversalReceiver(eventArgs) {
+  handleUniversalReceiver(eventArgs, log = null) {
     if (!eventArgs || typeof eventArgs !== "object" || !eventArgs.typeId) return;
 
     const { from, value, typeId, receivedData } = eventArgs;
@@ -202,7 +266,7 @@ export default class LSP1EventService {
     const eventTypeName = TYPE_ID_TO_EVENT_MAP[lowerCaseTypeId] || "unknown_event";
 
     // Deduplication filter
-    if (this.isDuplicateEvent(typeId, from, stringValue, receivedData)) {
+    if (this.isDuplicateEvent(typeId, from, stringValue, receivedData, log)) {
       return;
     }
 
@@ -248,8 +312,15 @@ export default class LSP1EventService {
     this.notifyEventListeners(eventObj);
   }
 
-  isDuplicateEvent(typeId, from, value, data) {
-    const eventIdentifier = `${typeId}-${from}-${value}-${data || "0x"}`;
+  isDuplicateEvent(typeId, from, value, data, log = null) {
+    let eventIdentifier;
+    if (log && log.transactionHash && log.logIndex !== undefined) {
+      const logIdentifier = `${log.transactionHash}-${log.logIndex}`;
+      eventIdentifier = logIdentifier;
+    } else {
+      eventIdentifier = `${typeId}-${from}-${value}-${data || "0x"}`;
+    }
+
     if (this.recentEvents.includes(eventIdentifier)) {
       return true;
     }

@@ -30,8 +30,9 @@ export class AssetResolver {
    * @param {Object} config - System setup values from the application state.
    * @returns {Promise<Object>} Resolved configuration states, cache keys, and assets load queue.
    */
-  static async resolveRig(config) {
+  static async resolveRig(config, options = {}) {
     const { characterId, bgClippingMaskId, bgPatternStyle, bgMountainId, bgMountainBackId } = config;
+    const includeActor = options.includeActor ?? true;
     const verifiedLoadQueue = [];
 
     const formattedMountainId = this.padId(bgMountainId);
@@ -66,85 +67,48 @@ export class AssetResolver {
       verifiedLoadQueue
     };
 
-    // --- Legacy Panorama Detection ---
-    let panorama1Path = '/assets/panorama1.webp';
-    let hasPanorama1 = await testImageAsset(panorama1Path);
-    if (!hasPanorama1) {
-      panorama1Path = '/assets/stage/panorama1.webp';
-      hasPanorama1 = await testImageAsset(panorama1Path);
-    }
-
-    if (hasPanorama1) {
-      results.isPanoramaMode = true;
-      verifiedLoadQueue.push({ alias: 'bg', src: panorama1Path });
-
-      let panorama2Path = '/assets/panorama2.webp';
-      let hasPanorama2 = await testImageAsset(panorama2Path);
-      if (!hasPanorama2) {
-        panorama2Path = '/assets/stage/panorama2.webp';
-        hasPanorama2 = await testImageAsset(panorama2Path);
-      }
-      if (hasPanorama2) {
-        results.hasBg2 = true;
-        verifiedLoadQueue.push({ alias: 'bg2', src: panorama2Path });
-      } else {
-        Assets.cache.set('bg2', Texture.EMPTY);
-      }
+    // --- Current Stage Asset Contract ---
+    // 1. Backdrop Color
+    const bgClipPath = `/assets/stage/backdrops/backdrop_${bgClippingMaskId}.webp`;
+    results.hasBgClippingMask = await testImageAsset(bgClipPath);
+    if (results.hasBgClippingMask) {
+      verifiedLoadQueue.push({ alias: keys.bg_clipping_mask, src: bgClipPath });
     } else {
-      Assets.cache.set('bg', Texture.EMPTY);
-      Assets.cache.set('bg2', Texture.EMPTY);
+      Assets.cache.set(keys.bg_clipping_mask, Texture.EMPTY);
     }
 
-    // --- Dynamic Background Layers (Clean Rig) ---
-    if (!results.isPanoramaMode) {
-      // 1. Backdrop Color
-      const bgClipPath = `/assets/stage/backdrops/backdrop_${bgClippingMaskId}.webp`;
-      results.hasBgClippingMask = await testImageAsset(bgClipPath);
-      if (results.hasBgClippingMask) {
-        verifiedLoadQueue.push({ alias: keys.bg_clipping_mask, src: bgClipPath });
-      } else {
-        Assets.cache.set(keys.bg_clipping_mask, Texture.EMPTY);
-      }
+    // 2. Background Flat Patterns (style_bottom and style_top)
+    const bgPat1Path = `/assets/stage/patterns/${bgPatternStyle}_top.webp`;
+    const bgPat2Path = `/assets/stage/patterns/${bgPatternStyle}_bottom.webp`;
+    results.hasBgPat1 = await testImageAsset(bgPat1Path);
+    results.hasBgPat2 = await testImageAsset(bgPat2Path);
 
-      // 2. Background Flat Patterns (style_bottom and style_top)
-      const bgPat1Path = `/assets/stage/patterns/${bgPatternStyle}_top.webp`;
-      const bgPat2Path = `/assets/stage/patterns/${bgPatternStyle}_bottom.webp`;
-      results.hasBgPat1 = await testImageAsset(bgPat1Path);
-      results.hasBgPat2 = await testImageAsset(bgPat2Path);
-
-      if (results.hasBgPat1) {
-        verifiedLoadQueue.push({ alias: keys.bg_pat_1, src: bgPat1Path });
-      }
-      if (results.hasBgPat2) {
-        verifiedLoadQueue.push({ alias: keys.bg_pat_2, src: bgPat2Path });
-      }
-
-      // 3. Foreground Mountains Layer
-      let mountainPath = `/assets/stage/mountains/mountain_${formattedMountainId}.webp`;
-      results.hasBgMountain = await testImageAsset(mountainPath);
-      if (!results.hasBgMountain) {
-        mountainPath = `/assets/stage/mountains/mountain_${bgMountainId}.webp`;
-        results.hasBgMountain = await testImageAsset(mountainPath);
-      }
-      if (results.hasBgMountain) {
-        verifiedLoadQueue.push({ alias: keys.bg_mountain, src: mountainPath });
-      } else {
-        Assets.cache.set(keys.bg_mountain, Texture.EMPTY);
-      }
-
-      // 4. Background Mountains Layer
-      let mountainBackPath = `/assets/stage/mountains/mountain_${formattedMountainBackId}.webp`;
-      results.hasBgMountainBack = await testImageAsset(mountainBackPath);
-      if (!results.hasBgMountainBack) {
-        mountainBackPath = `/assets/stage/mountains/mountain_${bgMountainBackId}.webp`;
-        results.hasBgMountainBack = await testImageAsset(mountainBackPath);
-      }
-      if (results.hasBgMountainBack) {
-        verifiedLoadQueue.push({ alias: keys.bg_mountain_back, src: mountainBackPath });
-      } else {
-        Assets.cache.set(keys.bg_mountain_back, Texture.EMPTY);
-      }
+    if (results.hasBgPat1) {
+      verifiedLoadQueue.push({ alias: keys.bg_pat_1, src: bgPat1Path });
     }
+    if (results.hasBgPat2) {
+      verifiedLoadQueue.push({ alias: keys.bg_pat_2, src: bgPat2Path });
+    }
+
+    // 3. Foreground Mountains Layer
+    const mountainPath = `/assets/stage/mountains/mountain_${formattedMountainId}.webp`;
+    results.hasBgMountain = await testImageAsset(mountainPath);
+    if (results.hasBgMountain) {
+      verifiedLoadQueue.push({ alias: keys.bg_mountain, src: mountainPath });
+    } else {
+      Assets.cache.set(keys.bg_mountain, Texture.EMPTY);
+    }
+
+    // 4. Background Mountains Layer
+    const mountainBackPath = `/assets/stage/mountains/mountain_${formattedMountainBackId}.webp`;
+    results.hasBgMountainBack = await testImageAsset(mountainBackPath);
+    if (results.hasBgMountainBack) {
+      verifiedLoadQueue.push({ alias: keys.bg_mountain_back, src: mountainBackPath });
+    } else {
+      Assets.cache.set(keys.bg_mountain_back, Texture.EMPTY);
+    }
+
+    if (!includeActor) return results;
 
     // --- Foreground Character Clipping Mask ---
     const charClipPath = `/assets/actors/${characterId}/mask.webp`;
@@ -159,13 +123,8 @@ export class AssetResolver {
     let patternIndex = 1;
     while (true) {
       const idxStr = this.padId(patternIndex);
-      let patPath = `/assets/actors/${characterId}/patterns/pattern_${idxStr}.webp`;
-      let exists = await testImageAsset(patPath);
-
-      if (!exists) {
-        patPath = `/assets/actors/${characterId}/patterns/pattern_${patternIndex}.webp`;
-        exists = await testImageAsset(patPath);
-      }
+      const patPath = `/assets/actors/${characterId}/patterns/pattern_${idxStr}.webp`;
+      const exists = await testImageAsset(patPath);
       if (!exists) break;
 
       const alias = `char_${characterId}_pattern_${patternIndex}`;
@@ -188,18 +147,11 @@ export class AssetResolver {
     let socketIndex = 1;
     while (true) {
       const idxStr = this.padId(socketIndex);
-      let eyeballPath = `/assets/actors/${characterId}/eyes/socket_${idxStr}/eyeball.webp`;
-      let pupilPath = `/assets/actors/${characterId}/eyes/socket_${idxStr}/pupil.webp`;
+      const eyeballPath = `/assets/actors/${characterId}/eyes/socket_${idxStr}/eyeball.webp`;
+      const pupilPath = `/assets/actors/${characterId}/eyes/socket_${idxStr}/pupil.webp`;
 
-      let hasEyeball = await testImageAsset(eyeballPath);
-      let hasPupil = await testImageAsset(pupilPath);
-
-      if (!hasEyeball && !hasPupil) {
-        eyeballPath = `/assets/actors/${characterId}/eyes/socket_${socketIndex}/eyeball.webp`;
-        pupilPath = `/assets/actors/${characterId}/eyes/socket_${socketIndex}/pupil.webp`;
-        hasEyeball = await testImageAsset(eyeballPath);
-        hasPupil = await testImageAsset(pupilPath);
-      }
+      const hasEyeball = await testImageAsset(eyeballPath);
+      const hasPupil = await testImageAsset(pupilPath);
 
       if (!hasEyeball && !hasPupil) break;
 
@@ -232,46 +184,6 @@ export class AssetResolver {
     } else {
       Assets.cache.set(keys.eyelids_top, Texture.EMPTY);
       Assets.cache.set(keys.eyelids_bottom, Texture.EMPTY);
-    }
-
-    // --- Phase 2C Swarm Enemy Loading ---
-    let enemySkullPath = '/assets/enemies/enemy_skull_striped.png';
-    let hasEnemySkull = await testImageAsset(enemySkullPath);
-    if (!hasEnemySkull) {
-      enemySkullPath = '/assets/enemies/enemy_skull_striped.webp';
-      hasEnemySkull = await testImageAsset(enemySkullPath);
-    }
-
-    if (hasEnemySkull) {
-      verifiedLoadQueue.push({ alias: 'enemy_skull_striped', src: enemySkullPath });
-    } else {
-      // If file doesn't exist on disk, create a safe, highly visible vector placeholder
-      if (typeof document !== 'undefined') {
-        const canvas = document.createElement('canvas');
-        canvas.width = 64;
-        canvas.height = 64;
-        const ctx = canvas.getContext('2d');
-        
-        ctx.fillStyle = '#ff3300'; // Bright red boundary
-        ctx.beginPath();
-        ctx.arc(32, 32, 28, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(32, 32, 28, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.fillStyle = '#ffff00'; // Crosshair marker
-        ctx.fillRect(26, 30, 12, 4);
-        ctx.fillRect(30, 26, 4, 12);
-
-        const fallbackTex = Texture.from(canvas);
-        Assets.cache.set('enemy_skull_striped', fallbackTex);
-      } else {
-        Assets.cache.set('enemy_skull_striped', Texture.EMPTY);
-      }
     }
 
     return results;

@@ -58,33 +58,28 @@ This file compiled your active components, stores, styles, layouts, and engine s
 import React, { useEffect } from 'react';
 import ArtCanvas from './components/Canvas/ArtCanvas';
 import ControlPanel from './components/UI/ControlPanel';
-import { useStore } from './store/useStore';
 import { useWalletStore } from './store/useWalletStore';
 import { useArtworkReactions } from './hooks/useArtworkReactions';
 
 function App() {
   const initWallet = useWalletStore((s) => s.initWallet);
-  const gameState = useStore((s) => s.gameState);
 
-  // Initialize wallet hooks and postMessage channels
   useEffect(() => {
     initWallet();
   }, [initWallet]);
 
-  // Start the background reaction watcher
   useArtworkReactions();
 
   return (
     <>
-      {/* Mount full-screen flight viewport only when actively descending */}
-      {gameState === 'gameplay' && <ArtCanvas />}
-      
+      <ArtCanvas />
       <ControlPanel />
     </>
   );
 }
 
 export default App;
+
 ```
 
 ---
@@ -99,13 +94,18 @@ export default function ArtCanvas() {
   const containerRef = useRef(null);
   const engineRef = useRef(null);
   
-  // Grab overlay params from store
   const scanlineOpacity = useStore((state) => state.scanlineOpacity);
   const vignetteOpacity = useStore((state) => state.vignetteOpacity);
 
   useEffect(() => {
     if (engineRef.current || !containerRef.current) return;
-    engineRef.current = new PixiEngine(containerRef.current);
+
+    // Inject state reading and subscription mechanisms as decoupled dependencies
+    engineRef.current = new PixiEngine(containerRef.current, {
+      getState: useStore.getState,
+      subscribe: useStore.subscribe
+    });
+
     engineRef.current.init().catch(err => console.error("Failed to boot PixiEngine:", err));
 
     const handleResize = () => { if (engineRef.current) engineRef.current.resize(); };
@@ -121,14 +121,12 @@ export default function ArtCanvas() {
   }, []);
 
   const handleMouseMove = (e) => {
-    // Pass raw screen coordinates. PixiEngine converts these into local targets [3].
     if (engineRef.current) {
       engineRef.current.updateMousePos(e.clientX, e.clientY);
     }
   };
 
   const handleMouseClick = (e) => {
-    // Pass click position to drift the character to the destination [3]
     if (engineRef.current) {
       engineRef.current.updateMouseClick(e.clientX, e.clientY);
     }
@@ -137,7 +135,7 @@ export default function ArtCanvas() {
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
       
-      {/* PixiJS Container */}
+      {/* PixiJS Canvas Layer */}
       <div
         ref={containerRef}
         onMouseMove={handleMouseMove}
@@ -167,6 +165,7 @@ export default function ArtCanvas() {
     </div>
   );
 }
+
 ```
 
 ---
@@ -204,1466 +203,100 @@ export default function CompactSlider({ label, storeKey, min, max, step }) {
 ### `src\components\UI\ControlPanel.jsx`
 ```javascript
 // src/components/UI/ControlPanel.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { useWalletStore } from '../../store/useWalletStore';
-import ArtCanvas from '../Canvas/ArtCanvas';
-import { PixiEngine } from '../../engine/PixiEngine';
-import { Assets, Texture } from 'pixi.js';
+import { 
+  Eye, 
+  EyeOff, 
+  ShieldCheck, 
+  Skull, 
+  Layers, 
+  Sparkles, 
+  Wind, 
+  Zap,
+  Sliders
+} from 'lucide-react';
 
-// Monkey-patch PixiEngine initialization to inject transparency parameters
-// before WebGL context generation occurs in PixiJS v8.
-const originalInit = PixiEngine.prototype.init;
-PixiEngine.prototype.init = async function() {
-  const app = this.app;
-  if (app) {
-    const originalAppInit = app.init;
-    app.init = async function(options) {
-      // Force transparent canvas clear-buffers from the start
-      const transparentOptions = {
-        ...options,
-        backgroundAlpha: 0,
-        backgroundColor: undefined
-      };
-      return originalAppInit.call(this, transparentOptions);
-    };
-  }
-  return originalInit.call(this);
-};
-
-const originalBuild = PixiEngine.prototype.buildSceneGraph;
-PixiEngine.prototype.buildSceneGraph = function() {
-  originalBuild.call(this);
-  
-  if (this.config.gameState === 'gameplay') {
-    return;
-  }
-  
-  // Hide background scene assets so the diagnostic interface remains isolated
-  if (this.bgAtmosphereContainer) {
-    this.bgAtmosphereContainer.visible = false;
-  }
-  if (this.fgFog && this.fgFog.sprite) {
-    this.fgFog.sprite.visible = false;
-  }
-  if (this.searchlightSystem && this.searchlightSystem.container) {
-    this.searchlightSystem.container.visible = false;
-  }
-};
-
-const originalUpdate = PixiEngine.prototype.update;
-PixiEngine.prototype.update = function(deltaTime) {
-  originalUpdate.call(this, deltaTime);
-  
-  if (this.config.gameState === 'gameplay') {
-    return;
-  }
-  
-  if (this.searchlightSystem && this.searchlightSystem.container) {
-    this.searchlightSystem.container.visible = false;
-  }
-  
-  // Extract theme color variables
-  const rTint = this.config.auraColorR ?? 255;
-  const gTint = this.config.auraColorG ?? 170;
-  const bTint = this.config.auraColorB ?? 60;
-  const tintColor = (rTint << 16) + (gTint << 8) + bTint;
-  
-  const applyTint = (node) => {
-    if (node.tint !== undefined) {
-      node.tint = tintColor;
-    }
-    if (node.children) {
-      node.children.forEach(applyTint);
-    }
-  };
-  
-  if (this.headContainer) {
-    applyTint(this.headContainer);
-  }
-};
-
-const originalResize = PixiEngine.prototype.resize;
-PixiEngine.prototype.resize = function() {
-  // If in gameplay flight, execute original cover scale layout sizing
-  if (this.config && this.config.gameState === 'gameplay') {
-    originalResize.call(this);
-    return;
-  }
-
-  // Otherwise scale and center to fit the terminal items pane bounds
-  if (!this.app || !this.app.renderer || !this.masterContainer) return;
-  
-  const parent = this.container;
-  const width = parent ? parent.clientWidth : window.innerWidth;
-  const height = parent ? parent.clientHeight : window.innerHeight;
-  
-  this.app.renderer.resize(width, height);
-  const { screen } = this.app;
-  
-  this.masterContainer.position.set(screen.width / 2, screen.height / 2 + 10);
-  
-  // FIX: Sourced clipTex from this.assetKeys instead of this.keys to avoid WASD key collisions [3]
-  const clipTex = Assets.get(this.assetKeys?.char_clipping_mask) || Assets.get('bg');
-  const bgWidth = (clipTex && clipTex !== Texture.EMPTY) ? clipTex.width : 1000;
-  const bgHeight = (clipTex && clipTex !== Texture.EMPTY) ? clipTex.height : 1000;
-
-  const scaleX = screen.width / bgWidth;
-  const scaleY = screen.height / bgHeight;
-  
-  const scale = Math.min(scaleX, scaleY);
-  this.masterContainer.scale.set(scale * 3.8);
-
-  if (this.masterClipMask) {
-    const localW = screen.width / scale;
-    const localH = screen.height / scale;
-    this.masterClipMask.clear()
-      .rect(-localW / 2, -localH / 2, localW, localH)
-      .fill({ color: 0xffffff });
-  }
-};
+// Sub-Tab Component Imports
+import SetupTab from './tabs/SetupTab';
+import Web3Tab from './tabs/Web3Tab';
+import SkullTab from './tabs/SkullTab';
+import BgTab from './tabs/BgTab';
+import EyesTab from './tabs/EyesTab';
+import AuraTab from './tabs/AuraTab';
+import AtmosphereTab from './tabs/AtmosphereTab';
+import GlitchTab from './tabs/GlitchTab';
 
 export default function ControlPanel() {
-  // Terminal power state
-  const [isEntered, setIsEntered] = useState(false);
-  const [isFlickering, setIsFlickering] = useState(false);
+  const isUiVisible = useStore((state) => state.isUiVisible);
+  const toggleUi = useStore((state) => state.toggleUi);
 
-  // Tab selections
-  const [activeTab, setActiveTab] = useState('items'); // items, stats, quests, misc, radio
-  const [activeStatsTab, setActiveStatsTab] = useState('cnd'); // cnd, rad, eff
-  const [activeMiscTab, setActiveMiscTab] = useState('misc-1'); // misc-1, misc-2, misc-3
+  const [activeTab, setActiveTab] = useState('setup');
 
-  // Zustand Store variables
-  const gameState = useStore((state) => state.gameState);
-  const playerHP = useStore((state) => state.playerHP);
-  const playerShield = useStore((state) => state.playerShield);
-  const gameScore = useStore((state) => state.gameScore);
-  const gameActiveWave = useStore((state) => state.gameActiveWave);
+  const tabs = [
+    { id: 'setup', label: 'Setup', icon: <Sliders size={12} />, component: <SetupTab /> },
+    { id: 'web3', label: 'Web3', icon: <ShieldCheck size={12} />, component: <Web3Tab /> },
+    { id: 'skull', label: 'Skull', icon: <Skull size={12} />, component: <SkullTab /> },
+    { id: 'bg', label: 'Background', icon: <Layers size={12} />, component: <BgTab /> },
+    { id: 'eyes', label: 'Eyes', icon: <Eye size={12} />, component: <EyesTab /> },
+    { id: 'aura', label: 'Aura', icon: <Sparkles size={12} />, component: <AuraTab /> },
+    { id: 'atmosphere', label: 'Atmosphere', icon: <Wind size={12} />, component: <AtmosphereTab /> },
+    { id: 'glitch', label: 'Glitch', icon: <Zap size={12} />, component: <GlitchTab /> }
+  ];
 
-  const characterId = useStore((state) => state.characterId);
-  const floatSpeed = useStore((state) => state.floatSpeed);
-  const warpIntensity = useStore((state) => state.warpIntensity);
-  const particleCount = useStore((state) => state.particleCount);
-  const aberrationAmount = useStore((state) => state.aberrationAmount);
-  const flickerIntensity = useStore((state) => state.flickerIntensity);
-  const scanlineOpacity = useStore((state) => state.scanlineOpacity);
-  const vignetteOpacity = useStore((state) => state.vignetteOpacity);
-  const searchlightActive = useStore((state) => state.searchlightActive);
-  const setParameter = useStore((state) => state.setParameter);
-
-  // Web3 Wallet Store variables
-  const hostProfileAddress = useWalletStore((state) => state.hostProfileAddress);
-  const isWalletConnected = useWalletStore((state) => state.isWalletConnected);
-
-  // Toggle gameplay-active document class to handle CSS transitions and filter bypasses
-  useEffect(() => {
-    if (isEntered && gameState === 'gameplay') {
-      document.documentElement.classList.add('gameplay-active');
-    } else {
-      document.documentElement.classList.remove('gameplay-active');
-    }
-  }, [gameState, isEntered]);
-
-  // Handle backlight color updating
-  const handleColorChange = (colorValue) => {
-    document.documentElement.className = colorValue;
-
-    const colorMaps = {
-      amber: { r: 255, g: 170, b: 60 },
-      red: { r: 255, g: 40, b: 0 },
-      green: { r: 0, g: 230, b: 50 },
-      blue: { r: 50, g: 150, b: 255 },
-      white: { r: 245, g: 245, b: 245 },
-      black: { r: 200, g: 220, b: 250 } // Science!
-    };
-
-    const rgb = colorMaps[colorValue] || colorMaps.amber;
-
-    setParameter('auraColorR', rgb.r);
-    setParameter('auraColorG', rgb.g);
-    setParameter('auraColorB', rgb.b);
-    setParameter('searchlightColorR', rgb.r);
-    setParameter('searchlightColorG', rgb.g);
-    setParameter('searchlightColorB', rgb.b);
-    setParameter('fogColorR', rgb.r);
-    setParameter('fogColorG', rgb.g);
-    setParameter('fogColorB', rgb.b);
-  };
-
-  useEffect(() => {
-    handleColorChange('amber');
-  }, []);
-
-  const handleEnter = () => {
-    setIsFlickering(true);
-    setTimeout(() => {
-      setIsEntered(true);
-      setIsFlickering(false);
-    }, 1000);
-  };
+  const currentTab = tabs.find(tab => tab.id === activeTab);
 
   return (
-    <div className={`terminal-wrapper ${gameState === 'gameplay' ? 'gameplay-active' : ''}`}>
-      
-      <style dangerouslySetInnerHTML={{ __html: `
-        /* Fetch full weights from 300 to 700 to enable dense monospace display */
-        @import url("https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,300..700;1,300..700&display=swap");
-
-        * {
-          box-sizing: border-box;
-          scrollbar-width: thin;
-          scrollbar-color: rgb(var(--alt)) transparent;
-        }
-
-        *::-webkit-scrollbar {
-          width: 8px;
-        }
-        *::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        *::-webkit-scrollbar-thumb {
-          background-color: rgb(var(--alt));
-          border-radius: 0;
-        }
-
-        :root {
-          --main: 255, 170, 60;
-          --alt: 120, 75, 20;
-          --black: #12100d;
-        }
-
-        .terminal-wrapper {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          background: #050505;
-          display: grid;
-          align-content: center;
-          margin: 0;
-          font-family: "Roboto Mono", monospace;
-          font-size: 14px;
-          color: rgb(var(--main));
-          overflow: hidden;
-          z-index: 1000;
-          transition: background 0.8s ease;
-        }
-
-        /* Bypass the background and let the flight canvas show through */
-        .terminal-wrapper.gameplay-active {
-          background: transparent !important;
-          pointer-events: none;
-        }
-
-        /* Ensure HUD and inner active buttons handle pointer clicks */
-        .terminal-wrapper.gameplay-active .widescreen-hud {
-          pointer-events: auto !important;
-        }
-        .terminal-wrapper.gameplay-active .widescreen-hud * {
-          pointer-events: auto !important;
-        }
-
-        .noclick {
-          pointer-events: none;
-        }
-
-        .piece {
-          display: block;
-          height: 100%;
-          left: 0;
-          top: 0;
-          width: 100%;
-        }
-
-        .frame {
-          background-color: transparent;
-          border-radius: 30px;
-          border: 20px solid;
-          border-bottom-color: #0f0e0d;
-          border-left-color: #080807;
-          border-right-color: #080807;
-          border-top-color: #020202;
-          box-shadow: inset 0 0 24rem black, inset 0 0 5rem black, 0 0 16rem black;
-          pointer-events: none;
-          max-width: 950px;
-          height: 580px;
-          width: 96%;
-          max-height: calc(100vh - 20px);
-          margin: 0 auto;
-          overflow: hidden;
-          position: relative;
-          min-height: 350px;
-          transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease;
-        }
-
-        /* Slide away the bulky Pip-boy frame when gameplay is active */
-        .gameplay-active .frame {
-          transform: translateY(120%) scale(0.9);
-          opacity: 0;
-          pointer-events: none;
-        }
-
-        /* Widescreen Gameplay HUD */
-        .widescreen-hud {
-          position: fixed;
-          top: 30px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 90%;
-          max-width: 1000px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background: rgba(18, 16, 13, 0.9);
-          border: 1.5px solid rgb(var(--main));
-          padding: 15px 30px;
-          font-family: "Roboto Mono", monospace;
-          font-size: 14px;
-          color: rgb(var(--main));
-          z-index: 1010;
-          box-shadow: 0 0 25px rgba(0, 0, 0, 0.85), inset 0 0 10px rgba(var(--main), 0.1);
-          backdrop-filter: blur(8px);
-          letter-spacing: 0.05em;
-        }
-
-        .hud-metric {
-          text-shadow: 0 0 8px currentColor;
-        }
-
-        .glow-text {
-          font-weight: 700;
-        }
-
-        .exit-hud-btn {
-          background: transparent;
-          border: 1px solid rgb(var(--main));
-          color: rgb(var(--main));
-          padding: 6px 16px;
-          font-family: inherit;
-          font-size: 11px;
-          cursor: pointer;
-          text-transform: uppercase;
-          transition: all 0.2s ease;
-        }
-
-        .exit-hud-btn:hover {
-          background: rgb(var(--main));
-          color: #000;
-          font-weight: bold;
-        }
-
-        /* Complete monochrome filter bypass for gameplay mode */
-        .gameplay-active canvas {
-          filter: none !important;
-        }
-
-        .blinking-btn {
-          animation: blink-button-border 1.5s infinite ease-in-out;
-        }
-
-        @keyframes blink-button-border {
-          0%, 100% { opacity: 1; border-color: rgb(var(--main)); }
-          50% { opacity: 0.5; border-color: rgba(var(--main), 0.2); }
-        }
-
-        .output {
-          animation: crt-output 10ms infinite;
-          background-color: var(--black);
-          position: absolute;
-          padding: 25px 30px;
-          pointer-events: auto;
-          text-shadow: 0rem 0.1rem 0.6rem currentColor;
-          z-index: -1;
-          display: flex;
-          flex-direction: column;
-          justify-content: stretch;
-          height: 100%;
-          width: 100%;
-          overflow: hidden;
-        }
-        
-        .frame * {
-          font-weight: normal;
-        }
-
-        @keyframes crt-output {
-          0% { opacity: 0.94; }
-          50% { opacity: 1; }
-        }
-
-        .scanlines {
-          background: linear-gradient(
-            to bottom,
-            rgba(255, 255, 255, 0),
-            rgba(255, 255, 255, 0) 50%,
-            rgba(0, 0, 0, 0.2) 70%,
-            rgba(0, 0, 0, 0.45)
-          );
-          background-size: 100% 0.4rem;
-          border-radius: 30px;
-          position: absolute;
-          z-index: 99;
-        }
-
-        .glow {
-          animation: crt-glow 60s infinite;
-          background: radial-gradient(
-            circle at center,
-            rgb(var(--main)) 0%,
-            rgba(var(--alt), 0.78) 58%,
-            rgba(var(--alt), 0.55) 80%,
-            rgba(var(--alt), 0.27) 93%,
-            rgba(var(--alt), 0) 100%
-          );
-          opacity: 0.12;
-          pointer-events: none;
-          position: absolute;
-          z-index: 98;
-        }
-
-        @keyframes crt-glow {
-          0%, 100% { opacity: 0.08; }
-          50% { opacity: 0.16; }
-        }
-
-        .flicker-active {
-          animation: monitor-power-on 0.8s steps(1) infinite !important;
-        }
-
-        @keyframes monitor-power-on {
-          0%, 100% { background-color: #000000; filter: brightness(1) invert(0); }
-          15% { background-color: #ffffff; filter: brightness(3.5) contrast(2); }
-          30% { background-color: #12100d; }
-          45% { background-color: #ffffff; }
-          60% { background-color: #050505; }
-          75% { background-color: #ffffff; }
-          90% { background-color: #1a1a1a; }
-        }
-
-        .boot-screen {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background-color: #1a1a1a;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          cursor: pointer;
-          user-select: none;
-          z-index: 100;
-          padding: 20px;
-        }
-
-        /* Cohesive dense-monospace formatting for the landing title */
-        .landing-title {
-          font-family: "Roboto Mono", monospace;
-          font-weight: 700;
-          font-size: clamp(1.8rem, 4.8vw, 3.8rem);
-          letter-spacing: -0.05em;
-          color: rgb(var(--main)) !important;
-          margin: 0;
-          line-height: 1.1;
-          text-transform: uppercase;
-          text-align: center;
-          text-shadow: 0 0 15px rgba(var(--main), 0.7);
-        }
-
-        .landing-subtitle {
-          font-family: "Roboto Mono", monospace;
-          font-size: clamp(0.8rem, 1.8vw, 1.1rem);
-          color: rgba(var(--main), 0.5) !important;
-          margin-top: 1.5rem;
-          text-transform: uppercase;
-          letter-spacing: 0.25em;
-          animation: textPulse 1.8s infinite ease-in-out;
-          text-align: center;
-          text-shadow: 0 0 8px rgba(var(--main), 0.4);
-        }
-
-        @keyframes textPulse {
-          0%, 100% { opacity: 0.3; }
-          50% { opacity: 1; }
-        }
-
-        .pipboy {
-          position: relative;
-          height: 100%;
-          width: 100%;
-          border: 3px solid rgb(var(--main));
-          border-width: 2px 0;
-          padding: 16px;
-          z-index: 1;
-        }
-
-        .pipboy::before,
-        .pipboy::after {
-          position: absolute;
-          content: "";
-          width: 2px;
-          height: 100%;
-          background: linear-gradient(
-            to bottom,
-            rgb(var(--main)) 0%,
-            rgba(0, 0, 0, 0) 35%,
-            rgba(0, 0, 0, 0) 65%,
-            rgb(var(--main)) 100%
-          );
-          top: 0;
-        }
-
-        .pipboy::before { left: 0; }
-        .pipboy::after { right: 0; }
-
-        .pip-title {
-          font-size: 20px;
-          font-weight: 900 !important;
-          background: none;
-          border: none;
-          color: rgb(var(--main));
-          position: absolute;
-          padding: 0 8px;
-          text-transform: uppercase;
-          top: -15px;
-          left: 35px;
-          z-index: 2;
-          letter-spacing: 0.08em;
-        }
-
-        .pip-title::after {
-          background: #111;
-          content: "";
-          height: 3px;
-          width: 100%;
-          left: 0;
-          top: 13px;
-          position: absolute;
-          z-index: -1;
-        }
-
-        .pip-head {
-          position: absolute;
-          top: 0;
-          right: 0;
-          width: max-content;
-          max-width: 100%;
-          text-align: right;
-          background: linear-gradient(
-            to bottom,
-            var(--black) 0%,
-            rgba(0, 0, 0, 0) 100%);
-          z-index: 1;
-        }
-
-        .pip-head li {
-          float: left;
-          margin-left: 10px;
-          padding: 5px 12px;
-          min-width: 110px;
-          position: relative;
-        }
-        
-        .pip-head li::before {
-          content: "";
-          position: absolute;
-          background: var(--black);
-          width: 10px;
-          height: 2px;
-          top: -2px;
-          left: -10px;
-        }
-        
-        .pip-head li::after {
-          content: "";
-          position: absolute;
-          right: 0;
-          top: 0;
-          height: 100%;
-          width: 2px;
-          background: linear-gradient(
-            to bottom,
-            rgb(var(--main)) 0%,
-            rgba(0, 0, 0, 0) 100%
-          );
-        }
-
-        .pip-head li b {
-          float: left;
-          margin-right: 0.6em;
-          font-weight: bold !important;
-        }
-
-        .pipboy a, .pipboy label {
-          color: inherit;
-          text-decoration: none;
-          cursor: pointer;
-        }
-
-        .pipboy ul {
-          margin: 0;
-          padding: 0;
-          list-style: none;
-        }
-
-        .pipboy > .tab-content {
-          line-height: 1.25em;
-          overflow: hidden;
-          display: block;
-          height: 100%;
-        }
-
-        .pipboy > .tab-content > .tab-pane {
-          padding-left: 10px;
-          height: 100%;
-          overflow-y: auto;
-        }
-
-        #items, #stats {
-          margin-top: 15px;
-        }
-
-        .pip-body {
-          position: relative;
-          z-index: 0;
-          display: flex;
-          gap: 15px;
-          height: calc(100% - 30px);
-        }
-
-        .options {
-          display: block;
-          width: 280px;
-          max-width: 35%;
-        }
-
-        .colors {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 5px;
-          margin-top: 10px;
-        }
-
-        .colors label {
-          outline: 1px solid rgb(var(--main));
-          padding: 8px 4px;
-          text-align: center;
-          transition: all 0.1s ease;
-          font-size: 11px;
-          text-transform: uppercase;
-        }
-
-        .options input,
-        .colors input {
-          position: absolute;
-          width: 0;
-          height: 0;
-          opacity: 0;
-          pointer-events: none;
-        }
-
-        .options label, .options a {
-          display: block;
-          padding: 6px 10px 6px 30px;
-          margin: 4px 0;
-          position: relative;
-          outline: 1px solid transparent;
-          width: 100%;
-          text-transform: uppercase;
-          font-size: 13px;
-        }
-
-        .frame label:hover, .options a:hover,
-        .frame label:focus {
-          outline: 2px solid currentColor;
-          background: rgba(var(--alt), 0.25);
-        }
-
-        .colors input:checked + label {
-          color: #000;
-          background: rgb(var(--main));
-          font-weight: bold;
-        }
-
-        .options label::before, .options a::before {
-          content: "";
-          position: absolute;
-          width: 10px;
-          height: 10px;
-          left: 10px;
-          top: 10px;
-          outline: 1.5px solid transparent;
-        }
-
-        .options label:hover::before, .options a:hover::before {
-          outline-color: currentColor;
-        }
-
-        .options input:checked + label::before, .options .active a::before {
-          background: currentColor;
-          outline-color: currentColor;
-        }
-
-        .pip-foot {
-          display: flex;
-          justify-content: space-between;
-          position: absolute;
-          bottom: -14px;
-          width: calc(100% - 60px);
-          left: 30px;
-          z-index: 10;
-        }
-
-        .pip-foot li {
-          flex: 1;
-        }
-
-        .pip-foot a {
-          display: block;
-          text-align: center;
-          height: 28px;
-          line-height: 25px;
-          text-transform: uppercase;
-          font-size: 13px;
-          letter-spacing: 0.05em;
-          position: relative;
-          border: 1.5px solid transparent;
-        }
-
-        .pip-foot a::after {
-          content: "";
-          position: absolute;
-          background: var(--black);
-          width: 100%;
-          height: 2.5px;
-          left: 0;
-          bottom: 11px;
-          z-index: -1;
-        }
-
-        .pip-foot li.active a {
-          outline: 2px solid currentColor;
-          background: var(--black);
-          font-weight: bold !important;
-        }
-
-        .pipboy .side-menu {
-          width: 75px;
-          display: flex;
-          flex-direction: column;
-          gap: 5px;
-        }
-
-        .side-menu a {
-          display: block;
-          line-height: 25px;
-          padding: 2px 10px;
-          text-align: center;
-          text-transform: uppercase;
-          font-size: 12px;
-          border: 1px solid rgba(var(--main), 0.3);
-        }
-
-        .side-menu li.active a {
-          outline: 2px solid currentColor;
-          background: rgba(var(--alt), 0.2);
-          font-weight: bold;
-        }
-
-        .stats-page {
-          flex: 1;
-          padding-left: 15px;
-        }
-
-        .stats-page h4 {
-          border-bottom: 2px solid rgba(var(--main),0.25);
-          margin: 0 0 10px 0;
-          padding-bottom: 6px;
-          text-transform: uppercase;
-          font-size: 15px;
-        }
-
-        .stats-page li {
-          padding: 8px 0;
-          border-bottom: 1.5px solid rgba(var(--main),0.2);
-        }
-
-        .stats-page .right-options {
-          margin-top: 10px;
-        }
-
-        .right-options {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          margin-bottom: 10px;
-        }
-
-        .right-options a, .right-options button {
-          display: block;
-          text-align: left;
-          padding: 6px 12px;
-          border: 1px solid rgb(var(--main));
-          background: transparent;
-          color: inherit;
-          font-family: inherit;
-          text-transform: uppercase;
-          font-size: 11px;
-          cursor: pointer;
-        }
-
-        .right-options a::after, .right-options button::after {
-          content: " »";
-          float: right;
-        }
-
-        .frame .disabled {
-          color: rgb(var(--alt));
-          pointer-events: none;
-          opacity: 0.5;
-        }
-
-        .info {
-          flex: 1;
-          padding-top: 5px;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .right-options {
-          display: block;
-          float: right;
-          padding-right: 1px;
-          max-width: 33%;
-          white-space: nowrap;
-          align-self: flex-end;
-          margin-bottom: 15px;
-        }
-
-        .right-options a {
-          display: block;
-          text-align: right;
-          padding: 3px 5px;
-          margin-bottom: 3px;
-        }
-
-        .right-options a::after {
-          content: "»";
-          padding-left: 5px;
-        }
-
-        .info-body {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: space-between;
-          height: 100%;
-          width: 100%;
-          margin-top: 5px;
-        }
-
-        .art-canvas-portrait-container {
-          width: 100%;
-          height: 250px;
-          position: relative;
-          overflow: hidden;
-          background: transparent;
-          margin-bottom: 8px;
-        }
-
-        /* AGGRESSIVE CSS RULE TO REMOVE ANY OPAQUE BACKGROUND COLORS ACROSS ENTIRE NESTED CHAIN */
-        .art-canvas-portrait-container,
-        .art-canvas-portrait-container *,
-        .art-canvas-portrait-container canvas,
-        .art-canvas-portrait-container div {
-          background: transparent !important;
-          background-color: transparent !important;
-          box-shadow: none !important;
-          border-color: transparent !important;
-        }
-
-        .art-canvas-portrait-container > div {
-          width: 100% !important;
-          height: 100% !important;
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
-          overflow: hidden !important;
-        }
-
-        /* Prevent secondary scanline filters overlay inside the nested thumbnail box */
-        .art-canvas-portrait-container div[style*="mix-blend-mode"] {
-          display: none !important;
-        }
-
-        .art-canvas-portrait-container canvas {
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
-          width: 100% !important;
-          height: 100% !important;
-        }
-
-        .info-table {
-          margin-top: 0px;
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 6px;
-          width: 100%;
-        }
-
-        .info-table li {
-          border-top: 2px solid;
-          padding: 4px 6px;
-          font-size: 11px;
-          text-align: right;
-          position: relative;
-        }
-
-        .info-table li b {
-          float: left;
-          margin-right: 6px;
-          font-weight: bold !important;
-        }
-
-        .info-table li.span-2 {
-          grid-column: span 2;
-          text-align: left;
-        }
-
-        .condition {
-          display: block;
-          background: rgba(var(--alt), 0.25);
-          float: right;
-          height: 12px;
-          width: 60px;
-          position: relative;
-          margin-top: 2px;
-        }
-
-        .condition .fill {
-          display: block;
-          position: absolute;
-          left: 0;
-          top: 0;
-          height: 100%;
-          background: rgb(var(--main));
-        }
-
-        .extra {
-          border-top: 2px solid;
-          float: left;
-          clear: both;
-          width: 100%;
-          position: relative;
-          padding: 5px 6px;
-          margin: 4px 0 0 0;
-          padding-left: 15%;
-          font-size: 11px;
-        }
-
-        .extra b {
-          position: absolute;
-          left: 6px;
-          font-weight: bold !important;
-        }
-
-        .info-table li::after,
-        .extra::after {
-          content: "";
-          position: absolute;
-          right: 0;
-          top: 0;
-          height: 100%;
-          width: 2px;
-          background: linear-gradient(
-            to bottom,
-            rgb(var(--main)) 0%,
-            rgba(0, 0, 0, 0) 100%
-          );
-        }
-
-        .post {
-          line-height: 1.4em;
-          font-size: 12px;
-          max-height: 150px;
-          overflow-y: auto;
-          border: 1px solid rgba(var(--main), 0.2);
-          padding: 8px;
-          background: rgba(0, 0, 0, 0.3);
-        }
-
-        .fade-a {
-          animation: fade-swap 8s infinite;
-          animation-delay: -4s;
-        }
-
-        .fade-b {
-          position: absolute;
-          right: 30px;
-          opacity: 0;
-          animation: fade-swap 8s infinite;
-        }
-
-        @keyframes fade-swap {
-          0%, 100% { opacity: 0; color: rgb(var(--alt)); }
-          30%, 65% { opacity: 1; color: rgb(var(--main)); }
-        }
-
-        .calibration-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 15px;
-          margin-top: 10px;
-        }
-        .calibration-control {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        .calibration-control label {
-          font-size: 10px;
-          text-transform: uppercase;
-          color: rgba(var(--main), 0.7);
-        }
-        .calibration-control input[type="range"] {
-          appearance: none;
-          height: 2px;
-          background: rgba(var(--main), 0.3);
-          outline: none;
-          width: 100%;
-        }
-        .calibration-control input[type="range"]::-webkit-slider-thumb {
-          appearance: none;
-          width: 10px;
-          height: 10px;
-          background: rgb(var(--main));
-          cursor: pointer;
-        }
-
-        .radio-grid {
-          display: grid;
-          grid-template-columns: 1.2fr 0.8fr;
-          gap: 15px;
-          width: 100%;
-        }
-
-        html.amber { --main: 255,170,60; --alt: 120,75,20; }
-        html.white { --main: 245,245,245; --alt: 130,130,130; }
-        html.red { --main: 255,40,0; --alt: 160,20,0; }
-        html.green { --main: 0,230,50; --alt: 0,160,30; }
-        html.blue { --main: 50,150,255; --alt: 20,80,160; }
-        html.black { --main: 200,220,250; --alt: 90,100,150; }
-      `}} />
-
-      {/* Sleek Widescreen HUD for Gameplay overlay */}
-      {isEntered && gameState === 'gameplay' && (
-        <div className="widescreen-hud">
-          <div className="hud-metric">CND: <span className="glow-text">HP {playerHP}/100</span></div>
-          <div className="hud-metric">SHIELD: <span className="glow-text">{playerShield}/100</span></div>
-          <div className="hud-metric">WAVE: <span className="glow-text">{gameActiveWave}</span></div>
-          <div className="hud-metric">DEPTH: <span className="glow-text">{gameScore}m</span></div>
-          <button className="exit-hud-btn" onClick={() => setParameter('gameState', 'menu')}>
-            EXIT VOYAGE
-          </button>
-        </div>
-      )}
-
-      <div id="frame" className="frame">
-        <div className={`piece output container ${isFlickering ? 'flicker-active' : ''}`}>
-          
-          {!isEntered ? (
-            <div className="boot-screen" onClick={handleEnter}>
-              <h1 className="landing-title">UNDERNEATH_OS</h1>
-              <p className="landing-subtitle">CLICK TO ENTER_</p>
-            </div>
-          ) : (
-            
-            <div className="pipboy">
-              <h3 className="pip-title">UNDERNEATH_OS</h3>
-
-              <div className="tab-content">
-
-                {/* ITEMS TAB - Conditionally mounts the items-tab canvas only when activeTab === 'items' [3] */}
-                <div className="tab-pane" style={{ display: activeTab === 'items' ? 'block' : 'none', height: '100%' }}>
-                  <ul className="pip-head">
-                    <li><b>Wg</b> {particleCount}/300</li>
-                    <li><b>HP</b> 100/100</li>
-                    <li><span className="fade-a"><b>DT</b> 24</span><span className="fade-b"><b>DR</b> 15</span></li>
-                    <li><b>Caps</b> {isWalletConnected ? '9999+' : '1721'}</li>
-                  </ul>
-                  
-                  <div className="pip-body">
-                    <ul className="options">
-                      <li>
-                        <input 
-                          type="radio" 
-                          id="radio1" 
-                          name="radio" 
-                          checked={characterId === 'skull_reaper'}
-                          onChange={() => setParameter('characterId', 'skull_reaper')} 
-                        />
-                        <label htmlFor="radio1">Skull Reaper</label>
-                      </li>
-                      <li>
-                        <input 
-                          type="radio" 
-                          id="radio2" 
-                          name="radio" 
-                          checked={characterId === 'abyssal_eye'}
-                          onChange={() => setParameter('characterId', 'abyssal_eye')} 
-                        />
-                        <label htmlFor="radio2">Abyssal Eye</label>
-                      </li>
-                      <li>
-                        <input 
-                          type="checkbox" 
-                          id="radio3" 
-                          checked={searchlightActive}
-                          onChange={(e) => setParameter('searchlightActive', e.target.checked)} 
-                        />
-                        <label htmlFor="radio3">Beam Rig</label>
-                      </li>
-                      <li>
-                        <input 
-                          type="checkbox" 
-                          id="radio4" 
-                          checked={useStore.getState().autoBlink}
-                          onChange={(e) => setParameter('autoBlink', e.target.checked)} 
-                        />
-                        <label htmlFor="radio4">Auto Blink</label>
-                      </li>
-                    </ul>
-
-                    <div className="info">
-                      <div className="right-options">
-                        <a href="#" className="disabled">Maintain</a>
-                        <a href="#" onClick={(e) => { e.preventDefault(); setParameter('warpIntensity', warpIntensity === 20 ? 80 : 20); }}>Mod</a>
-                      </div>
-                      
-                      <div className="info-body">
-                        
-                        {/* Isolated tall portrait box container for 3D model - Only rendered when items tab is selected [3] */}
-                        <div className="art-canvas-portrait-container">
-                          {gameState === 'menu' && activeTab === 'items' && <ArtCanvas />}
-                        </div>
-                        
-                        <ul className="info-table">
-                          <li><b>STR</b> {floatSpeed.toFixed(0)}</li>
-                          <li><b>WG</b> {particleCount}</li>
-                          <li><b>VAL</b> {characterId === 'skull_reaper' ? '2528' : '4120'}</li>
-                          <li className="span-2"><b>CND</b> 
-                            <span className="condition">
-                              <span className="fill" style={{ width: `${Math.max(10, 100 - flickerIntensity * 100)}%` }}></span>
-                            </span>
-                          </li>
-                        </ul>
-                        
-                        <p className="extra"><b>MODS</b> Holographic Interface Link</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* STATS TAB */}
-                <div className="tab-pane" style={{ display: activeTab === 'stats' ? 'block' : 'none' }}>
-                  <ul className="pip-head">
-                    <li><b>LVL</b> 11</li>
-                    <li><b>HP</b> 100/100</li>
-                    <li><b>AP</b> 40/40</li>
-                    <li><b>XP</b> 82.4%</li>
-                  </ul>
-
-                  <div className="pip-body">
-                    <ul className="side-menu">
-                      <li className={activeStatsTab === 'cnd' ? 'active' : ''}>
-                        <a href="#cnd" onClick={(e) => { e.preventDefault(); setActiveStatsTab('cnd'); }}>CND</a>
-                      </li>
-                      <li className={activeStatsTab === 'rad' ? 'active' : ''}>
-                        <a href="#rad" onClick={(e) => { e.preventDefault(); setActiveStatsTab('rad'); }}>RAD</a>
-                      </li>
-                      <li className={activeStatsTab === 'eff' ? 'active' : ''}>
-                        <a href="#eff" onClick={(e) => { e.preventDefault(); setActiveStatsTab('eff'); }}>EFF</a>
-                      </li>
-                      <li className="disabled"><a href="#">H2O</a></li>
-                      <li className="disabled"><a href="#">FOD</a></li>
-                      <li className="disabled"><a href="#">SLP</a></li>
-                    </ul>
-
-                    {activeStatsTab === 'cnd' && (
-                      <div className="stats-page">
-                        <h4>Rig Diagnostics</h4>
-                        <div className="post">
-                          <p>Core WebGL systems normal. Floating kinematics enabled.</p>
-                          <p>Manual Diagnostic Ripple controls are available below to calibrate portal shockwaves:</p>
-                        </div>
-                        <div className="right-options">
-                          <button onClick={() => window.simulateGothicEvent && window.simulateGothicEvent('lyx_received')}>
-                            Trigger LYX shockwave
-                          </button>
-                          <button onClick={() => window.simulateGothicEvent && window.simulateGothicEvent('lsp8_received')}>
-                            Trigger NFT shockwave
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {activeStatsTab === 'rad' && (
-                      <div className="stats-page">
-                        <h4>Universal Connection</h4>
-                        <ul>
-                          <li><b>Connection Status:</b> {isWalletConnected ? 'CONNECTED' : 'OFFLINE'}</li>
-                          <li style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                            <b>Universal Profile:</b> {hostProfileAddress || 'NO PROFILE BOUND'}
-                          </li>
-                          <li><b>LSP1 Event Watcher:</b> Active</li>
-                        </ul>
-                      </div>
-                    )}
-
-                    {activeStatsTab === 'eff' && (
-                      <div className="stats-page">
-                        <h4>Active Effects</h4>
-                        <ul>
-                          <li><b>Kinematic Drift:</b> Height sway of {useStore.getState().floatAmpY}px</li>
-                          <li><b>Atmospheric Shards:</b> Particle rate set to {particleCount}</li>
-                          <li><b>Volumetric Beams:</b> Orbit boundaries normal</li>
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* QUESTS TAB - Updated Chapter 1 catacomb descent objective and initiate descent voyage button */}
-                <div className="tab-pane" style={{ display: activeTab === 'quests' ? 'block' : 'none' }}>
-                  <div className="pip-body" style={{ width: '100%' }}>
-                    <ul className="options" style={{ width: '30%' }}>
-                      <li className="active"><a href="#">Active Signals</a></li>
-                      <li className="disabled"><label>// No other signals</label></li>
-                    </ul>
-                    <div style={{ flex: 1, paddingLeft: '15px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <h4 style={{ textTransform: 'uppercase', borderBottom: '2px solid rgba(var(--main), 0.25)', paddingBottom: '6px', margin: 0 }}>
-                        CHAPTER 1: CATACOMB DESCENT
-                      </h4>
-                      <div className="post" style={{ maxHeight: '110px', overflowY: 'auto', margin: 0 }}>
-                        <p><b>ENVIRONMENT OBJECTIVE:</b> Float down into the ancient sub-cavern passages of LUKSO. Pilot the mechanical skull using <b style={{ color: 'rgb(var(--main))' }}>W-A-S-D</b> or <b style={{ color: 'rgb(var(--main))' }}>ARROWS</b>. Dodge incoming cavern borders and monitor your shield status.</p>
-                        <p style={{ marginTop: '6px', color: 'rgba(var(--main), 0.6)' }}>
-                          Descent kinematics calibrated. Connect your Web3 UP extension to align tactical sensory data.
-                        </p>
-                      </div>
-                      
-                      <button 
-                        onClick={() => setParameter('gameState', 'gameplay')}
-                        className="blinking-btn"
-                        style={{
-                          alignSelf: 'flex-start',
-                          background: 'transparent',
-                          border: '1.5px solid rgb(var(--main))',
-                          color: 'rgb(var(--main))',
-                          padding: '8px 18px',
-                          fontFamily: 'inherit',
-                          fontSize: '11px',
-                          textTransform: 'uppercase',
-                          cursor: 'pointer',
-                          marginTop: '4px'
-                        }}
-                      >
-                        INITIATE DESCENT VOYAGE ▾
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* MISC TAB */}
-                <div className="tab-pane" style={{ display: activeTab === 'misc' ? 'block' : 'none' }}>
-                  <div className="pip-body" style={{ width: '100%', flexDirection: 'column' }}>
-                    
-                    <div style={{ display: 'flex', gap: '10px', borderBottom: '1.5px solid rgba(var(--main), 0.2)', paddingBottom: '5px' }}>
-                      <button 
-                        onClick={() => setActiveMiscTab('misc-1')}
-                        style={{ 
-                          background: activeMiscTab === 'misc-1' ? 'rgb(var(--main))' : 'transparent',
-                          color: activeMiscTab === 'misc-1' ? '#000' : 'inherit',
-                          border: '1px solid rgb(var(--main))',
-                          padding: '4px 10px', textTransform: 'uppercase', fontSize: '11px', cursor: 'pointer'
-                        }}
-                      >
-                        Color Calibration
-                      </button>
-                      <button 
-                        onClick={() => setActiveMiscTab('misc-2')}
-                        style={{ 
-                          background: activeMiscTab === 'misc-2' ? 'rgb(var(--main))' : 'transparent',
-                          color: activeMiscTab === 'misc-2' ? '#000' : 'inherit',
-                          border: '1px solid rgb(var(--main))',
-                          padding: '4px 10px', textTransform: 'uppercase', fontSize: '11px', cursor: 'pointer'
-                        }}
-                      >
-                        Environmental Tuning
-                      </button>
-                    </div>
-
-                    {activeMiscTab === 'misc-1' && (
-                      <div style={{ marginTop: '10px' }}>
-                        <p style={{ fontSize: '12px' }}>SELECT HUD / VOLUMETRIC BACKLIGHT COLOR:</p>
-                        <form className="colors" onChange={(e) => handleColorChange(e.target.value)}>
-                          <input id="b-amber" type="radio" name="colors" value="amber" defaultChecked />
-                          <label htmlFor="b-amber">Amber</label>
-                          <input id="b-red" type="radio" name="colors" value="red" />
-                          <label htmlFor="b-red">Red</label>
-                          <input id="b-green" type="radio" name="colors" value="green" />
-                          <label htmlFor="b-green">Green</label>
-                          <input id="b-blue" type="radio" name="colors" value="blue" />
-                          <label htmlFor="b-blue">Blue</label>
-                          <input id="b-white" type="radio" name="colors" value="white" />
-                          <label htmlFor="b-white">White</label>
-                          <input id="b-black" type="radio" name="colors" value="black" />
-                          <label htmlFor="b-black">Science!</label>
-                        </form>
-                      </div>
-                    )}
-
-                    {activeMiscTab === 'misc-2' && (
-                      <div className="calibration-grid">
-                        <div className="calibration-control">
-                          <label>Dust Intensity ({particleCount})</label>
-                          <input 
-                            type="range" 
-                            min="0" max="300" step="10" 
-                            value={particleCount} 
-                            onChange={(e) => setParameter('particleCount', parseInt(e.target.value))}
-                          />
-                        </div>
-                        <div className="calibration-control">
-                          <label>Vignette Shadow ({vignetteOpacity.toFixed(2)})</label>
-                          <input 
-                            type="range" 
-                            min="0" max="1" step="0.05" 
-                            value={vignetteOpacity} 
-                            onChange={(e) => setParameter('vignetteOpacity', parseFloat(e.target.value))}
-                          />
-                        </div>
-                        <div className="calibration-control">
-                          <label>Scanline Filter ({scanlineOpacity.toFixed(2)})</label>
-                          <input 
-                            type="range" 
-                            min="0" max="1" step="0.05" 
-                            value={scanlineOpacity} 
-                            onChange={(e) => setParameter('scanlineOpacity', parseFloat(e.target.value))}
-                          />
-                        </div>
-                        <div className="calibration-control">
-                          <label>Warp Velocity ({useStore.getState().warpSpeed.toFixed(1)})</label>
-                          <input 
-                            type="range" 
-                            min="0.1" max="5" step="0.1" 
-                            value={useStore.getState().warpSpeed} 
-                            onChange={(e) => setParameter('warpSpeed', parseFloat(e.target.value))}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                  </div>
-                </div>
-
-                {/* RADIO TAB */}
-                <div className="tab-pane" style={{ display: activeTab === 'radio' ? 'block' : 'none' }}>
-                  <div className="pip-body">
-                    <div className="radio-grid">
-                      <ul className="options">
-                        <li>
-                          <input type="checkbox" id="check-hum" defaultChecked />
-                          <label htmlFor="check-hum">00_ambient_hum</label>
-                        </li>
-                        <li className="disabled"><label>// Mojave Static</label></li>
-                      </ul>
-                      <div className="info">
-                        <div className="post">
-                          <pre style={{ fontFamily: 'monospace', fontSize: '9px', lineHeight: '1.1em' }}>
-{` ______   ______  _____  __   _ _______   _______ _______
- |     \ |_____/ |     | | \  | |______   |______ |  |  |
- |_____/ |    \_ |_____| |  \_| |______ . |       |  |  |
-                                                         `}
-                          </pre>
-                          <p style={{ marginTop: '10px', fontSize: '11px' }}>Frequency tuned to low range cosmic static hum.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              <ul className="pip-foot">
-                <li className={activeTab === 'items' ? 'active' : ''}>
-                  <a href="#items" onClick={(e) => { e.preventDefault(); setActiveTab('items'); }}>Items</a>
-                </li>
-                <li className={activeTab === 'stats' ? 'active' : ''}>
-                  <a href="#stats" onClick={(e) => { e.preventDefault(); setActiveTab('stats'); }}>Stats</a>
-                </li>
-                <li className={activeTab === 'quests' ? 'active' : ''}>
-                  <a href="#quests" onClick={(e) => { e.preventDefault(); setActiveTab('quests'); }}>Quests</a>
-                </li>
-                <li className={activeTab === 'misc' ? 'active' : ''}>
-                  <a href="#misc" onClick={(e) => { e.preventDefault(); setActiveTab('misc'); }}>Misc</a>
-                </li>
-                <li className={activeTab === 'radio' ? 'active' : ''}>
-                  <a href="#radio" onClick={(e) => { e.preventDefault(); setActiveTab('radio'); }}>Radio</a>
-                </li>
-              </ul>
-
-            </div>
-          )}
-
-        </div>
-
-        <div className="piece glow noclick"></div>
-        <div className="piece scanlines noclick"></div>
-      </div>
-
-    </div>
-  );
-}
-```
-
----
-### `src\components\UI\DialogueOverlay.jsx`
-```javascript
-// src/components/UI/DialogueOverlay.jsx
-import React from 'react';
-import { useStore } from '../../store/useStore';
-
-export default function DialogueOverlay() {
-  const activeDialog = useStore((state) => state.activeDialog); // e.g. "[HUMMING NOISES]" or null
-  const setParameter = useStore((state) => state.setParameter);
-
-  if (!activeDialog) return null;
-
-  return (
-    <div style={{
-      position: 'absolute', bottom: '15%', left: '50%',
-      transform: 'translateX(-50%)', zIndex: 100,
-      background: 'rgba(5, 5, 5, 0.9)', border: '2px solid var(--accent-color)',
-      padding: '20px 30px', width: '80%', maxWidth: '550px',
-      fontFamily: 'var(--font-mono)', display: 'flex', flexDirection: 'column', gap: '15px'
-    }}>
-      <div style={{ fontSize: '12px', color: '#00f3ff', letterSpacing: '0.5px' }}>
-        {activeDialog}
-      </div>
-      <button 
-        onClick={() => setParameter('activeDialog', null)}
+    <>
+      <button
+        onClick={toggleUi}
         style={{
-          alignSelf: 'flex-end', background: 'transparent', border: 'none',
-          color: 'var(--text-muted)', fontSize: '10px', cursor: 'pointer',
-          textTransform: 'uppercase', fontFamily: 'var(--font-mono)'
+          position: 'fixed', top: '15px', right: '15px', zIndex: 100,
+          background: 'var(--panel-bg)', border: '1px solid var(--border-color)',
+          color: 'var(--text-main)', width: '36px', height: '36px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', borderRadius: '0', 
         }}
       >
-        continue ▾
+        {isUiVisible ? <EyeOff size={16} /> : <Eye size={16} />}
       </button>
-    </div>
+
+      <div
+        style={{
+          position: 'fixed', bottom: 0, left: 0, width: '100%',
+          background: 'var(--panel-bg)', borderTop: '1px solid var(--border-color)',
+          zIndex: 50, padding: '15px', boxSizing: 'border-box',
+          transform: isUiVisible ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          display: 'flex', flexDirection: 'column', gap: '15px',
+          maxHeight: '280px'
+        }}
+      >
+        {/* Navigation Tabs List */}
+        <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', scrollbarWidth: 'none' }}>
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                background: activeTab === tab.id ? 'var(--accent-color)' : 'transparent',
+                border: '1px solid var(--border-color)', color: 'var(--text-main)',
+                fontSize: '9px', textTransform: 'uppercase', padding: '6px 10px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Dynamic Panel Renderer */}
+        <div style={{ overflowY: 'auto', flex: 1, paddingRight: '5px' }}>
+          {currentTab ? currentTab.component : null}
+        </div>
+      </div>
+    </>
   );
 }
 ```
@@ -1688,7 +321,14 @@ export default function AtmosphereTab() {
         <CompactSlider label="Particle Opacity" storeKey="particleOpacity" min="0" max="1" step="0.05" />
       </div>
       <div>
-        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Screen Overlay</h4>
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Volumetric Cave Fog</h4>
+        <CompactSlider label="Fog Opacity" storeKey="fogOpacity" min="0" max="1" step="0.05" />
+        <CompactSlider label="Fog Drift Speed" storeKey="fogSpeed" min="0" max="5" step="0.1" />
+        <CompactSlider label="Fog Color: Red" storeKey="fogColorR" min="0" max="255" step="1" />
+        <CompactSlider label="Fog Color: Green" storeKey="fogColorG" min="0" max="255" step="1" />
+        <CompactSlider label="Fog Color: Blue" storeKey="fogColorB" min="0" max="255" step="1" />
+
+        <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '12px', marginBottom: '8px', color: 'var(--text-muted)' }}>Screen Overlay & Post</h4>
         <CompactSlider label="Scanline Density" storeKey="scanlineOpacity" min="0" max="1" step="0.05" />
         <CompactSlider label="Vignette Intensity" storeKey="vignetteOpacity" min="0" max="1" step="0.05" />
       </div>
@@ -1876,7 +516,7 @@ export default function GlitchTab() {
 ### `src\components\UI\tabs\SetupTab.jsx`
 ```javascript
 // src/components/UI/tabs/SetupTab.jsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../../../store/useStore';
 
 const availableActors = [
@@ -1911,34 +551,111 @@ const patternStyleOptions = [
 ];
 
 export default function SetupTab() {
+  const subjectMode = useStore((state) => state.subjectMode);
   const characterId = useStore((state) => state.characterId);
+  const creatorCharacterId = useStore((state) => state.creatorCharacterId);
+  const creatorPatternId = useStore((state) => state.creatorPatternId);
+  const creatorPaletteId = useStore((state) => state.creatorPaletteId);
   const bgClippingMaskId = useStore((state) => state.bgClippingMaskId);
   const bgPatternStyle = useStore((state) => state.bgPatternStyle);
   const bgMountainId = useStore((state) => state.bgMountainId);
   const bgMountainBackId = useStore((state) => state.bgMountainBackId);
   const setParameter = useStore((state) => state.setParameter);
+  const [creatorManifest, setCreatorManifest] = useState(null);
+  const [manifestError, setManifestError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/assets/manifest.json')
+      .then((response) => {
+        if (!response.ok) throw new Error(`Manifest request failed (${response.status})`);
+        return response.json();
+      })
+      .then((manifest) => {
+        if (!cancelled) setCreatorManifest(manifest);
+      })
+      .catch((error) => {
+        if (!cancelled) setManifestError(error.message);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectStyle = {
+    background: '#1c1c1c',
+    border: '1px solid var(--border-color)',
+    color: 'var(--text-main)',
+    padding: '6px',
+    fontSize: '10px',
+    width: '100%',
+    outline: 'none',
+    cursor: 'pointer'
+  };
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '20px' }}>
       {/* Actor Column */}
       <div>
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Actor Config</h4>
-        
+
         <div style={{ marginBottom: '10px' }}>
-          <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Active Character</label>
+          <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Subject Source</label>
           <select
-            value={characterId}
-            onChange={(e) => setParameter('characterId', e.target.value)}
-            style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
+            value={subjectMode}
+            onChange={(e) => setParameter('subjectMode', e.target.value)}
+            style={selectStyle}
           >
-            {availableActors.map(actor => (
-              <option key={actor.id} value={actor.id}>{actor.label}</option>
-            ))}
+            <option value="actor">Current Animated Actors</option>
+            <option value="creator">Creator Mutation Test</option>
           </select>
         </div>
+
+        {subjectMode === 'actor' ? (
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Active Character</label>
+            <select
+              value={characterId}
+              onChange={(e) => setParameter('characterId', e.target.value)}
+              style={selectStyle}
+            >
+              {availableActors.map(actor => (
+                <option key={actor.id} value={actor.id}>{actor.label}</option>
+              ))}
+            </select>
+          </div>
+        ) : creatorManifest ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '0.7fr 1.3fr 1fr', gap: '6px', marginBottom: '10px' }}>
+            <div>
+              <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Seed</label>
+              <select value={creatorCharacterId} onChange={(e) => setParameter('creatorCharacterId', e.target.value)} style={selectStyle}>
+                {creatorManifest.characters.map((id) => <option key={id} value={id}>{id}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Pattern</label>
+              <select value={creatorPatternId} onChange={(e) => setParameter('creatorPatternId', e.target.value)} style={selectStyle}>
+                {creatorManifest.patterns.map((id) => <option key={id} value={id}>{id}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Palette</label>
+              <select value={creatorPaletteId} onChange={(e) => setParameter('creatorPaletteId', e.target.value)} style={selectStyle}>
+                {creatorManifest.palettes.map((id) => <option key={id} value={id}>{id.replace('basic_', '')}</option>)}
+              </select>
+            </div>
+          </div>
+        ) : (
+          <p style={{ fontSize: '9px', color: manifestError ? '#d66' : 'var(--text-muted)', marginBottom: '10px' }}>
+            {manifestError || 'Loading creator manifest…'}
+          </p>
+        )}
         
         <p style={{ fontSize: '9px', color: 'var(--text-muted)', lineHeight: '1.2' }}>
-          * The engine will load mask.webp, patterns, lineart, and eyes/eyelids from the actor's directory automatically.
+          {subjectMode === 'actor'
+            ? "* Loads the current actor rig without using creator-library assets."
+            : "* Loads only manifest-listed creator masks, shared patterns, and palettes."}
         </p>
       </div>
 
@@ -2003,6 +720,7 @@ export default function SetupTab() {
     </div>
   );
 }
+
 ```
 
 ---
@@ -2011,10 +729,28 @@ export default function SetupTab() {
 // src/components/UI/tabs/SkullTab.jsx
 import React from 'react';
 import CompactSlider from '../CompactSlider';
+import { useStore } from '../../../store/useStore';
 
 export default function SkullTab() {
+  const subjectMode = useStore((state) => state.subjectMode);
+  const mutationMode = useStore((state) => state.mutationMode);
+  const mutationSourceX = useStore((state) => state.mutationSourceX);
+  const mutationSourceY = useStore((state) => state.mutationSourceY);
+  const mutationPatternMode = useStore((state) => state.mutationPatternMode);
+  const setParameter = useStore((state) => state.setParameter);
+
+  const selectStyle = {
+    background: '#1c1c1c',
+    border: '1px solid var(--border-color)',
+    color: 'var(--text-main)',
+    padding: '5px',
+    fontSize: '9px',
+    width: '100%',
+    outline: 'none'
+  };
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: subjectMode === 'creator' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '15px' }}>
       <div>
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Flight & Hover Controls</h4>
         <CompactSlider label="Float Speed" storeKey="floatSpeed" min="0" max="3" step="0.1" />
@@ -2035,36 +771,197 @@ export default function SkullTab() {
         <CompactSlider label="Warp Intensity" storeKey="warpIntensity" min="0" max="100" step="1" />
         <CompactSlider label="Warp Speed" storeKey="warpSpeed" min="0" max="5" step="0.1" />
       </div>
+
+      {subjectMode === 'creator' && (
+        <div>
+          <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Creator Mutation Test</h4>
+
+          <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Geometry</label>
+          <select value={mutationMode} onChange={(e) => setParameter('mutationMode', e.target.value)} style={{ ...selectStyle, marginBottom: '8px' }}>
+            <option value="none">Original</option>
+            <option value="mirrorX">Mirror Left / Right</option>
+            <option value="mirrorY">Mirror Top / Bottom</option>
+            <option value="quad">Four Way</option>
+          </select>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+            <div>
+              <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>X Source</label>
+              <select value={mutationSourceX} onChange={(e) => setParameter('mutationSourceX', e.target.value)} style={selectStyle}>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Y Source</label>
+              <select value={mutationSourceY} onChange={(e) => setParameter('mutationSourceY', e.target.value)} style={selectStyle}>
+                <option value="top">Top</option>
+                <option value="bottom">Bottom</option>
+              </select>
+            </div>
+          </div>
+
+          <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Pattern Behavior</label>
+          <select value={mutationPatternMode} onChange={(e) => setParameter('mutationPatternMode', e.target.value)} style={{ ...selectStyle, marginBottom: '8px' }}>
+            <option value="symbiosis">Continuous / Symbiosis</option>
+            <option value="mirrored">Mirror With Geometry</option>
+          </select>
+
+          <CompactSlider label="Vertical Axis" storeKey="mutationAxisX" min="0.05" max="0.95" step="0.001" />
+          <CompactSlider label="Horizontal Axis" storeKey="mutationAxisY" min="0.05" max="0.95" step="0.001" />
+        </div>
+      )}
     </div>
   );
 }
+
 ```
 
 ---
 ### `src\components\UI\tabs\Web3Tab.jsx`
 ```javascript
 // src/components/UI/tabs/Web3Tab.jsx
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useStore } from '../../../store/useStore';
 import { useWalletStore } from '../../../store/useWalletStore';
 import CompactSlider from '../CompactSlider';
 
+/**
+ * Dynamically binds high-frequency custom events to a target DOM node 
+ * to avoid triggering parent-level React render cycles.
+ */
+function ReactionProgressDisplay({ activeReaction }) {
+  const labelRef = useRef(null);
+
+  useEffect(() => {
+    const handleProgress = (e) => {
+      if (labelRef.current) {
+        labelRef.current.textContent = `${activeReaction.toUpperCase()} (${Math.round(e.detail.progress * 100)}%)`;
+      }
+    };
+
+    if (labelRef.current) {
+      labelRef.current.textContent = `${activeReaction.toUpperCase()} (100%)`;
+    }
+
+    window.addEventListener('gothic-reaction-progress', handleProgress);
+    return () => {
+      window.removeEventListener('gothic-reaction-progress', handleProgress);
+    };
+  }, [activeReaction]);
+
+  return (
+    <span ref={labelRef} style={{ color: 'var(--text-main)' }} />
+  );
+}
+
 export default function Web3Tab() {
   const hostProfileAddress = useWalletStore((state) => state.hostProfileAddress);
   const isWalletConnected = useWalletStore((state) => state.isWalletConnected);
+  const profileMetadata = useWalletStore((state) => state.profileMetadata);
+  const isProfileLoading = useWalletStore((state) => state.isProfileLoading);
   const activeReaction = useStore((state) => state.activeReaction);
-  const reactionProgress = useStore((state) => state.reactionProgress);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
       <div>
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Connection status</h4>
-        <div style={{ padding: '8px', border: '1px solid var(--border-color)', fontSize: '10px', fontFamily: 'var(--font-mono)', marginBottom: '12px' }}>
-          <div>Status: <span style={{ color: isWalletConnected ? '#00ff80' : '#8b0000', fontWeight: 'bold' }}>{isWalletConnected ? "CONNECTED" : "DISCONNECTED"}</span></div>
-          <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginTop: '2px', color: 'var(--text-muted)' }}>
-            UP: {hostProfileAddress || "No Context Resolved"}
+        
+        {/* Dynamic Universal Profile Metadata Display without description/bio */}
+        {isWalletConnected && profileMetadata ? (
+          <div style={{ 
+            display: 'flex', 
+            gap: '12px', 
+            padding: '10px', 
+            border: '1px solid var(--border-color)', 
+            background: 'rgba(255, 255, 255, 0.02)',
+            marginBottom: '12px',
+            alignItems: 'center'
+          }}>
+            {/* Avatar Frame */}
+            {profileMetadata.avatarUrl ? (
+              <img 
+                src={profileMetadata.avatarUrl} 
+                alt={profileMetadata.name} 
+                style={{ 
+                  width: '42px', 
+                  height: '42px', 
+                  border: '1px solid var(--border-color)',
+                  objectFit: 'cover',
+                  display: 'block'
+                }} 
+              />
+            ) : (
+              <div style={{ 
+                width: '42px', 
+                height: '42px', 
+                border: '1px solid var(--border-color)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                background: 'var(--border-color)',
+                fontSize: '14px',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 'bold',
+                color: 'var(--text-main)'
+              }}>
+                {profileMetadata.name ? profileMetadata.name.substring(0, 1).toUpperCase() : "?"}
+              </div>
+            )}
+
+            {/* Profile Info Details */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                <span style={{ 
+                  fontSize: '11px', 
+                  fontWeight: 'bold', 
+                  color: '#00ff80',
+                  fontFamily: 'var(--font-mono)',
+                  textTransform: 'uppercase',
+                  textOverflow: 'ellipsis',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {profileMetadata.name}
+                </span>
+                <span style={{ fontSize: '8px', color: '#00ff80', fontWeight: 'bold', fontFamily: 'var(--font-mono)' }}>[CONNECTED]</span>
+              </div>
+              
+              <div style={{ 
+                fontSize: '8px', 
+                fontFamily: 'var(--font-mono)', 
+                color: 'var(--text-muted)',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                marginTop: '1px'
+              }}>
+                UP: {hostProfileAddress}
+              </div>
+            </div>
           </div>
-        </div>
+        ) : isWalletConnected && isProfileLoading ? (
+          <div style={{ 
+            padding: '16px 12px', 
+            border: '1px solid var(--border-color)', 
+            fontSize: '9px', 
+            fontFamily: 'var(--font-mono)', 
+            color: 'var(--text-muted)', 
+            marginBottom: '12px',
+            textAlign: 'center',
+            letterSpacing: '0.5px'
+          }}>
+            [ QUERYING UNIVERSAL PROFILE METADATA... ]
+          </div>
+        ) : (
+          /* Disconnected Status Block */
+          <div style={{ padding: '8px', border: '1px solid var(--border-color)', fontSize: '10px', fontFamily: 'var(--font-mono)', marginBottom: '12px' }}>
+            <div>Status: <span style={{ color: isWalletConnected ? '#00ff80' : '#8b0000', fontWeight: 'bold' }}>{isWalletConnected ? "CONNECTED" : "DISCONNECTED"}</span></div>
+            <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginTop: '2px', color: 'var(--text-muted)' }}>
+              UP: {hostProfileAddress || "No Context Resolved"}
+            </div>
+          </div>
+        )}
 
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Shockwave Rig Setup</h4>
         <CompactSlider label="Shockwave Strength" storeKey="shockwaveStrength" min="0" max="2" step="0.1" />
@@ -2090,7 +987,7 @@ export default function Web3Tab() {
         </div>
         {activeReaction && (
           <div style={{ marginTop: '8px', fontSize: '9px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
-            Decaying: <span style={{ color: 'var(--text-main)' }}>{activeReaction.toUpperCase()} ({Math.round(reactionProgress * 100)}%)</span>
+            Decaying: <ReactionProgressDisplay activeReaction={activeReaction} />
           </div>
         )}
       </div>
@@ -2100,8 +997,603 @@ export default function Web3Tab() {
 ```
 
 ---
+### `src\engine\entities\ActorEntity.js`
+```javascript
+// src/engine/entities/ActorEntity.js
+import { Assets, Container, Sprite } from 'pixi.js';
+import { EyeSystem } from '../systems/EyeSystem.js';
+import { FlightDynamics } from '../systems/FlightDynamics.js';
+import { createSymmetryFilter } from '../filters/SymmetryFilterFactory.js';
+import { createMutationCompositeFilter } from '../filters/MutationCompositeFilterFactory.js';
+
+const MUTATION_MODE_VALUES = {
+  none: 0,
+  mirrorX: 1,
+  mirrorY: 2,
+  quad: 3
+};
+
+export class ActorEntity {
+  constructor(id, assets, renderTextureManager) {
+    this.id = id;
+    this.assets = assets;
+    this.renderTextureManager = renderTextureManager;
+
+    this.container = new Container();
+    this.container.label = `actor_${id}`;
+    this.visualContainer = new Container();
+    this.visualContainer.label = `actor_visual_${id}`;
+
+    this.baseActorScale = 0.5;
+
+    this.baselinePosition = { x: 0, y: 0 };
+    this.targetPosition = { x: 0, y: 0 };
+    this.isMovingToTarget = false;
+    this.facingDirection = 1.0;
+    this.currentFlipScale = 1.0;
+    this.time = 0;
+
+    this.flightDynamics = new FlightDynamics();
+    this.eyeSystem = null;
+    this.layers = {};
+    this.mutationFilters = {};
+    this.mutationEnabled = assets.isCreatorRig === true;
+    this.headState = { x: 0, y: 0, scale: 1, scaleX: 1, rotation: 0 };
+    
+    this.characterContentContainer = null;
+
+    this.build();
+  }
+
+  build() {
+    const createSprite = (alias) => {
+      const s = Sprite.from(alias);
+      s.anchor.set(0.5);
+      return s;
+    };
+
+    const attachMutationFilter = (sprite, key) => {
+      if (!this.mutationEnabled || !sprite) return;
+      const filter = createSymmetryFilter();
+      this.mutationFilters[key] = filter;
+      sprite.filters = [filter];
+    };
+
+    if (this.assets.char_clipping_mask) {
+      this.layers.aura = createSprite(this.assets.char_clipping_mask);
+      attachMutationFilter(this.layers.aura, 'aura');
+      this.container.addChild(this.layers.aura);
+    }
+
+    this.container.addChild(this.visualContainer);
+
+    if (this.assets.char_clipping_mask && !this.mutationEnabled) {
+      const charMaskSprite = createSprite(this.assets.char_clipping_mask);
+      this.layers.mask = charMaskSprite;
+      this.visualContainer.addChild(charMaskSprite);
+
+      this.characterContentContainer = new Container();
+      
+      // Standard native mask assignment with explicit alpha channel decoding.
+      // PixiJS v8 default sprite mask behavior samples the red channel (great for grayscale, 
+      // but fails if the mask uses high alpha transparency with negligible red values).
+      this.characterContentContainer.setMask({
+        mask: charMaskSprite,
+        channel: 'alpha'
+      });
+      this.visualContainer.addChild(this.characterContentContainer);
+
+      this.layers.base = createSprite(this.assets.char_base || this.assets.char_clipping_mask);
+      this.characterContentContainer.addChild(this.layers.base);
+    } else if (this.assets.char_clipping_mask) {
+      this.characterContentContainer = new Container();
+      this.visualContainer.addChild(this.characterContentContainer);
+
+      const maskTexture = Assets.get(this.assets.char_clipping_mask);
+      const lineartTexture = Assets.get(this.assets.char_lineart);
+      const compositeFilter = createMutationCompositeFilter(maskTexture, lineartTexture);
+      this.mutationFilters.composite = compositeFilter;
+      this.characterContentContainer.filters = [compositeFilter];
+
+      this.layers.base = createSprite(this.assets.char_base || this.assets.char_clipping_mask);
+      this.characterContentContainer.addChild(this.layers.base);
+    }
+
+    if (
+      this.characterContentContainer &&
+      this.assets.discoveredPatterns &&
+      this.assets.discoveredPatterns.length > 0 &&
+      this.renderTextureManager
+    ) {
+      const patternSprite = new Sprite(this.renderTextureManager.patternRenderTexture);
+      patternSprite.anchor.set(0.5);
+      this.layers.pattern = patternSprite;
+      this.characterContentContainer.addChild(patternSprite);
+    }
+
+    if (this.assets.char_lineart && !this.mutationEnabled) {
+      this.layers.lineart = createSprite(this.assets.char_lineart);
+      this.visualContainer.addChild(this.layers.lineart);
+    }
+
+    if (this.assets.discoveredEyes && this.assets.discoveredEyes.length > 0) {
+      this.eyeSystem = new EyeSystem(this.visualContainer, {
+        discoveredEyes: this.assets.discoveredEyes,
+        hasEyelids: !!this.assets.eyelids_top,
+        eyelidsTopAlias: this.assets.eyelids_top || null,
+        eyelidsBottomAlias: this.assets.eyelids_bottom || null
+      });
+    }
+  }
+
+  moveTo(localX, localY) {
+    this.targetPosition.x = localX;
+    this.targetPosition.y = localY;
+    this.isMovingToTarget = true;
+  }
+
+  updateMutation(config) {
+    if (!this.mutationEnabled) return;
+
+    const mode = MUTATION_MODE_VALUES[config.mutationMode] ?? 0;
+    const axisX = Math.max(0.01, Math.min(0.99, config.mutationAxisX ?? 0.5));
+    const axisY = Math.max(0.01, Math.min(0.99, config.mutationAxisY ?? 0.5));
+    const sourceX = config.mutationSourceX === 'right' ? 1.0 : 0.0;
+    const sourceY = config.mutationSourceY === 'bottom' ? 1.0 : 0.0;
+
+    for (const filter of Object.values(this.mutationFilters)) {
+      const uniforms = filter.resources.symmetryUniforms?.uniforms;
+      if (!uniforms) continue;
+      uniforms.uMode = mode;
+      uniforms.uAxisX = axisX;
+      uniforms.uAxisY = axisY;
+      uniforms.uSourceX = sourceX;
+      uniforms.uSourceY = sourceY;
+    }
+
+    const compositeFilter = this.mutationFilters.composite;
+    if (compositeFilter) {
+      const uniforms = compositeFilter.resources.mutationUniforms.uniforms;
+      uniforms.uMode = mode;
+      uniforms.uAxisX = axisX;
+      uniforms.uAxisY = axisY;
+      uniforms.uSourceX = sourceX;
+      uniforms.uSourceY = sourceY;
+      uniforms.uMirrorPattern = mode !== 0 && config.mutationPatternMode === 'mirrored' ? 1.0 : 0.0;
+    }
+  }
+
+  update(deltaTime, config, isGlitchActive, canvasHeight) {
+    const dtSeconds = deltaTime / 60;
+    this.time += dtSeconds;
+
+    if (this.isMovingToTarget) {
+      const dx = this.targetPosition.x - this.baselinePosition.x;
+      const dy = this.targetPosition.y - this.baselinePosition.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 15) {
+        this.isMovingToTarget = false;
+      } else {
+        this.baselinePosition.x += dx * 0.0071 * deltaTime;
+        this.baselinePosition.y += dy * 0.0071 * deltaTime;
+        this.facingDirection = dx > 0 ? 1.0 : -1.0;
+      }
+    }
+
+    this.currentFlipScale += (this.facingDirection - this.currentFlipScale) * 0.2 * deltaTime;
+
+    const headState = this.flightDynamics.calculate(
+      this.time,
+      config,
+      isGlitchActive,
+      this.baselinePosition,
+      this.currentFlipScale,
+      canvasHeight
+    );
+
+    this.headState = headState;
+
+    this.container.position.set(headState.x, headState.y);
+    this.container.scale.set(
+      headState.scale * this.baseActorScale,
+      headState.scale * this.baseActorScale
+    );
+    this.container.rotation = 0;
+    this.visualContainer.scale.set(this.currentFlipScale, 1);
+    this.visualContainer.rotation = headState.rotation;
+
+    this.updateMutation(config);
+
+    if (this.eyeSystem) {
+      this.eyeSystem.update(deltaTime, config);
+    }
+  }
+
+  getEffectsTargets() {
+    return {
+      headContainer: this.visualContainer,
+      auraSprite: this.layers.aura || null,
+      baseSprite: this.layers.base || null
+    };
+  }
+
+  destroy() {
+    if (this.characterContentContainer) {
+      this.characterContentContainer.mask = null;
+      this.characterContentContainer = null;
+    }
+    if (this.eyeSystem?.destroy) {
+      this.eyeSystem.destroy();
+    }
+    for (const filter of Object.values(this.mutationFilters)) {
+      filter.destroy();
+    }
+    this.mutationFilters = {};
+    this.container.destroy({ children: true });
+  }
+}
+
+```
+
+---
+### `src\engine\entities\StageEntity.js`
+```javascript
+// src/engine/entities/StageEntity.js
+import { Container, Sprite, Texture, Assets } from 'pixi.js';
+import { MirroredScrollLayer } from '../systems/MirroredScrollLayer.js';
+import { FogSystem } from '../systems/FogSystem.js';
+import { ParticleSystem } from '../systems/ParticleSystem.js';
+
+export class StageEntity {
+  /**
+   * @param {string} id - Unique identifier for the stage
+   * @param {Object} keys - Resolved stage asset keys
+   * @param {Object} flags - State flags determining layer rendering options
+   * @param {number} bgHeightScale - Height boundary for scaling
+   * @param {RenderTextureManager} renderTextureManager - Reference to the global texture pass
+   * @param {Renderer} renderer - The PixiJS WebGL renderer
+   */
+  constructor(id, keys, flags, bgHeightScale, renderTextureManager, renderer) {
+    this.id = id;
+    this.keys = keys;
+    this.flags = flags;
+    this.bgHeightScale = bgHeightScale;
+    this.renderTextureManager = renderTextureManager;
+    this.renderer = renderer;
+
+    this.bgContainer = new Container();
+    this.bgContainer.label = `stage_bg_${id}`;
+
+    this.fgContainer = new Container();
+    this.fgContainer.label = `stage_fg_${id}`;
+
+    this.layers = {};
+    this.bgFog = null;
+    this.fgFog = null;
+    this.particleSystem = null;
+
+    this.build();
+  }
+
+  build() {
+    if (this.flags.isPanoramaMode) {
+      const bgTexture = Assets.get('bg');
+      if (bgTexture && bgTexture !== Texture.EMPTY) {
+        this.layers.bg = new MirroredScrollLayer(bgTexture, this.bgHeightScale, 1.0);
+        this.bgContainer.addChild(this.layers.bg);
+      }
+
+      if (this.flags.hasBg2) {
+        const bg2Texture = Assets.get('bg2');
+        if (bg2Texture && bg2Texture !== Texture.EMPTY) {
+          this.layers.bg2 = new MirroredScrollLayer(bg2Texture, this.bgHeightScale, this.flags.bg2ParallaxSpeed || 1.8);
+          this.bgContainer.addChild(this.layers.bg2);
+        }
+      }
+    } else {
+      if (this.flags.hasBgClippingMask) {
+        const bgClipTex = Assets.get(this.keys.bg_clipping_mask);
+        if (bgClipTex && bgClipTex !== Texture.EMPTY) {
+          this.layers.bg_clip = new MirroredScrollLayer(bgClipTex, this.bgHeightScale, 0.0);
+          this.bgContainer.addChild(this.layers.bg_clip);
+        }
+      }
+
+      const hasAnyBgPat = this.flags.hasBgPat1 || this.flags.hasBgPat2;
+      if (hasAnyBgPat && this.renderTextureManager) {
+        this.bgContainer.addChild(this.renderTextureManager.bgPatternSprite);
+
+        this.layers.bg_pattern_reflect = new MirroredScrollLayer(
+          this.renderTextureManager.bgPatternRenderTexture, 
+          this.bgHeightScale, 
+          0.0
+        );
+        this.layers.bg_pattern_reflect.blendMode = 'screen';
+        this.bgContainer.addChild(this.layers.bg_pattern_reflect);
+      }
+
+      if (this.flags.hasBgMountainBack) {
+        const mountainBackTex = Assets.get(this.keys.bg_mountain_back);
+        if (mountainBackTex && mountainBackTex !== Texture.EMPTY) {
+          this.layers.bg_mountain_back = new MirroredScrollLayer(mountainBackTex, this.bgHeightScale, 0.18);
+          this.layers.bg_mountain_back.position.y = -35; 
+          this.layers.bg_mountain_back.alpha = 0.75; 
+          this.bgContainer.addChild(this.layers.bg_mountain_back);
+
+          this.layers.bg_mountain_back_reflect = new MirroredScrollLayer(mountainBackTex, this.bgHeightScale, 0.18);
+          this.layers.bg_mountain_back_reflect.position.y = -35;
+          this.layers.bg_mountain_back_reflect.blendMode = 'screen';
+          this.bgContainer.addChild(this.layers.bg_mountain_back_reflect);
+        }
+      }
+
+      if (this.flags.hasBgMountain) {
+        const mountainTex = Assets.get(this.keys.bg_mountain);
+        if (mountainTex && mountainTex !== Texture.EMPTY) {
+          this.layers.bg_mountain = new MirroredScrollLayer(mountainTex, this.bgHeightScale, 0.4);
+          this.bgContainer.addChild(this.layers.bg_mountain);
+
+          this.layers.bg_mountain_reflect = new MirroredScrollLayer(mountainTex, this.bgHeightScale, 0.4);
+          this.layers.bg_mountain_reflect.blendMode = 'screen';
+          this.bgContainer.addChild(this.layers.bg_mountain_reflect);
+        }
+      }
+    }
+
+    this.bgFog = new FogSystem(this.bgContainer, this.bgHeightScale, false);
+    this.particleSystem = new ParticleSystem(this.renderer, this.bgContainer, this.bgHeightScale);
+    this.fgFog = new FogSystem(this.fgContainer, this.bgHeightScale, true);
+  }
+
+  /**
+   * Resizes all internal layers and atmospheric entities dynamically.
+   */
+  resize(localW, localH) {
+    // Resize scrolling layers
+    for (const key in this.layers) {
+      if (this.layers[key] && typeof this.layers[key].resize === 'function') {
+        this.layers[key].resize(localW, localH);
+      }
+    }
+
+    // Resize fog meshes
+    if (this.bgFog) this.bgFog.resize(localW, localH);
+    if (this.fgFog) this.fgFog.resize(localW, localH);
+
+    // Propagate down to the render texture pattern container if applicable
+    if (this.renderTextureManager && typeof this.renderTextureManager.resize === 'function') {
+      this.renderTextureManager.resize(localW, localH);
+    }
+  }
+
+  update(deltaTime, config, time) {
+    const dtSeconds = deltaTime / 60;
+    const baseSpeed = config.bgScrollSpeed;
+    const backParallax = config.bg2ParallaxSpeed;
+
+    if (this.bgFog) {
+      this.bgFog.update(time, config);
+    }
+    if (this.fgFog) {
+      this.fgFog.update(time, config);
+    }
+    if (this.particleSystem) {
+      this.particleSystem.update(deltaTime, config);
+    }
+
+    if (this.flags.isPanoramaMode) {
+      if (this.layers.bg) {
+        this.layers.bg.updatePositions(dtSeconds, baseSpeed, 1.0);
+      }
+      if (this.layers.bg2) {
+        this.layers.bg2.updatePositions(dtSeconds, baseSpeed, backParallax);
+      }
+    } else {
+      if (this.layers.bg_clip) {
+        this.layers.bg_clip.updatePositions(dtSeconds, baseSpeed, 0.0);
+      }
+      if (this.renderTextureManager && this.renderTextureManager.bgPatternSprite) {
+        this.renderTextureManager.bgPatternSprite.updatePositions(dtSeconds, baseSpeed, 0.0);
+      }
+      if (this.layers.bg_pattern_reflect) {
+        this.layers.bg_pattern_reflect.updatePositions(dtSeconds, baseSpeed, 0.0);
+      }
+
+      if (this.layers.bg_mountain_back) {
+        this.layers.bg_mountain_back.updatePositions(dtSeconds, baseSpeed, 0.15 * backParallax);
+      }
+      if (this.layers.bg_mountain_back_reflect) {
+        this.layers.bg_mountain_back_reflect.updatePositions(dtSeconds, baseSpeed, 0.15 * backParallax);
+      }
+      if (this.layers.bg_mountain) {
+        this.layers.bg_mountain.updatePositions(dtSeconds, baseSpeed, 0.40);
+      }
+      if (this.layers.bg_mountain_reflect) {
+        this.layers.bg_mountain_reflect.updatePositions(dtSeconds, baseSpeed, 0.40);
+      }
+    }
+  }
+
+  getEffectsTargets() {
+    return {
+      mountainReflector: this.layers.bg_mountain_reflect || null,
+      mountainBackReflector: this.layers.bg_mountain_back_reflect || null,
+      ceilingReflector: this.layers.bg_pattern_reflect || null
+    };
+  }
+
+  destroy() {
+    if (this.particleSystem?.destroy) {
+      this.particleSystem.destroy();
+    }
+    if (this.bgFog?.destroy) {
+      this.bgFog.destroy();
+    }
+    if (this.fgFog?.destroy) {
+      this.fgFog.destroy();
+    }
+    this.bgContainer.destroy({ children: true });
+    this.fgContainer.destroy({ children: true });
+  }
+}
+```
+
+---
 ### `src\engine\filters\EffectFactory.js`
 ```javascript
+// src/engine/filters/EffectFactory.js
+import { Filter, BlurFilter, ColorMatrixFilter, defaultFilterVert, UniformGroup } from 'pixi.js';
+import { RGBSplitFilter } from 'pixi-filters';
+import { FOG_FRAGMENT_SHADER } from '../shaders/FogShader.js';
+import { SHOCKWAVE_FRAGMENT_SHADER } from '../shaders/ShockwaveShader.js';
+
+export class EffectFactory {
+  /**
+   * Generates a pre-configured RGBSplit chromatic aberration filter
+   */
+  static createChromaticAberration() {
+    return new RGBSplitFilter({
+      red: { x: 0, y: 0 },
+      green: { x: 0, y: 0 },
+      blue: { x: 0, y: 0 }
+    });
+  }
+
+  /**
+   * Generates a pre-configured Blur filter with safety padding to prevent edge cuts
+   * @param {number} initialStrength - Starting blur intensity
+   */
+  static createAuraBlur(initialStrength = 20) {
+    const filter = new BlurFilter({ strength: initialStrength });
+    filter.padding = 100; // Protect against hard bounding box clips during large pulses
+    return filter;
+  }
+
+  /**
+   * Generates a standard Color Matrix Filter
+   */
+  static createColorMatrix() {
+    return new ColorMatrixFilter();
+  }
+
+  /**
+   * Compiles and instantiates the custom WebGL Fog/Atmosphere shader using a typed UniformGroup UBO
+   */
+  static createFogFilter() {
+    const fogUniformGroup = new UniformGroup({
+      uTime: { value: 0, type: 'f32' },
+      uOpacity: { value: 0.5, type: 'f32' },
+      uColor: { value: [1, 1, 1], type: 'vec3<f32>' },
+      uSpeed: { value: 1.0, type: 'f32' }
+    }, false, true);
+
+    return Filter.from({
+      gl: {
+        vertex: defaultFilterVert,
+        fragment: FOG_FRAGMENT_SHADER
+      },
+      resources: {
+        fogUniforms: fogUniformGroup
+      }
+    });
+  }
+
+  /**
+   * Compiles and instantiates the custom WebGL Shockwave shader.
+   * Sets the third parameter of UniformGroup (useUbo) to false to prevent std140 stride alignment issues.
+   */
+  static createShockwaveFilter() {
+    const shockwaveUniformGroup = new UniformGroup({
+      uCenter: { value: [0.0, 0.0], type: 'vec2<f32>' },
+      uScreenSize: { value: [1.0, 1.0], type: 'vec2<f32>' },
+      uRadii: { value: new Float32Array([0, 0, 0, 0, 0]), type: 'f32', size: 5 },
+      uActiveWaveCount: { value: 0.0, type: 'f32' },
+      uThickness: { value: 160.0, type: 'f32' },
+      uAmplitude: { value: 30.0, type: 'f32' }
+    }, false, false); // Disabled UBO to ensure correct scalar packing structure in WebGL2
+
+    return Filter.from({
+      gl: {
+        vertex: defaultFilterVert,
+        fragment: SHOCKWAVE_FRAGMENT_SHADER
+      },
+      resources: {
+        shockwaveUniforms: shockwaveUniformGroup
+      }
+    });
+  }
+}
+```
+
+---
+### `src\engine\filters\MutationCompositeFilterFactory.js`
+```javascript
+import { Filter, UniformGroup, defaultFilterVert } from 'pixi.js';
+import { MUTATION_COMPOSITE_FRAGMENT_SHADER } from '../shaders/MutationCompositeShader.js';
+
+const MUTATION_PADDING = 1000;
+
+export function createMutationCompositeFilter(maskTexture, lineartTexture) {
+  const mutationUniforms = new UniformGroup({
+    uMode: { value: 0.0, type: 'f32' },
+    uAxisX: { value: 0.5, type: 'f32' },
+    uAxisY: { value: 0.5, type: 'f32' },
+    uSourceX: { value: 0.0, type: 'f32' },
+    uSourceY: { value: 0.0, type: 'f32' },
+    uMirrorPattern: { value: 0.0, type: 'f32' },
+    uPadding: { value: MUTATION_PADDING, type: 'f32' }
+  }, false, true);
+
+  const filter = Filter.from({
+    gl: {
+      vertex: defaultFilterVert,
+      fragment: MUTATION_COMPOSITE_FRAGMENT_SHADER
+    },
+    resources: {
+      mutationUniforms,
+      uMaskTexture: maskTexture.source,
+      uLineartTexture: lineartTexture.source
+    }
+  });
+
+  filter.padding = MUTATION_PADDING;
+  return filter;
+}
+
+```
+
+---
+### `src\engine\filters\SymmetryFilterFactory.js`
+```javascript
+import { Filter, UniformGroup, defaultFilterVert } from 'pixi.js';
+import { SYMMETRY_FRAGMENT_SHADER } from '../shaders/SymmetryShader.js';
+
+const MUTATION_PADDING = 1000;
+
+export function createSymmetryFilter() {
+  const symmetryUniforms = new UniformGroup({
+    uMode: { value: 0.0, type: 'f32' },
+    uAxisX: { value: 0.5, type: 'f32' },
+    uAxisY: { value: 0.5, type: 'f32' },
+    uSourceX: { value: 0.0, type: 'f32' },
+    uSourceY: { value: 0.0, type: 'f32' },
+    uPadding: { value: MUTATION_PADDING, type: 'f32' }
+  }, false, true);
+
+  const filter = Filter.from({
+    gl: {
+      vertex: defaultFilterVert,
+      fragment: SYMMETRY_FRAGMENT_SHADER
+    },
+    resources: {
+      symmetryUniforms
+    }
+  });
+
+  filter.padding = MUTATION_PADDING;
+  return filter;
+}
 
 ```
 
@@ -2118,16 +1610,18 @@ import { WARP_FRAGMENT_SHADER } from '../shaders/WarpShader';
  * @returns {Filter} A configured PixiJS v8 Filter instance.
  */
 export function createWarpFilter(initialIntensity = 20.0) {
+  const warpUniformGroup = new UniformGroup({
+    uTime: { value: 0.0, type: 'f32' },
+    uWarpIntensity: { value: initialIntensity, type: 'f32' }
+  }, false, true);
+
   const filter = Filter.from({
     gl: {
       vertex: defaultFilterVert,
       fragment: WARP_FRAGMENT_SHADER
     },
     resources: {
-      warpUniforms: new UniformGroup({
-        uTime: { value: 0.0, type: 'f32' },
-        uWarpIntensity: { value: initialIntensity, type: 'f32' }
-      }, false, true) // isStatic = false, isUbo = true
+      warpUniforms: warpUniformGroup
     }
   });
 
@@ -2156,26 +1650,33 @@ import {
   Application, 
   Assets, 
   Container, 
-  Sprite,
   Texture,
   Graphics
 } from 'pixi.js';
-import { useStore } from '../store/useStore.js';
 import { EffectsSystem } from './systems/EffectsSystem.js';
-import { ParticleSystem } from './systems/ParticleSystem.js';
-import { EyeSystem } from './systems/EyeSystem.js';
-import { FogSystem } from './systems/FogSystem.js';
 import { RenderTextureManager } from './systems/RenderTextureManager.js';
-import { MirroredScrollLayer } from './systems/MirroredScrollLayer.js';
 import { AssetResolver } from './assets/AssetResolver.js';
-import { FlightDynamics } from './systems/FlightDynamics.js';
+import { CreatorAssetResolver } from './assets/CreatorAssetResolver.js';
 import { ShockwaveSystem } from './systems/ShockwaveSystem.js';
 import { TrailSystem } from './systems/TrailSystem.js';
 import { SearchlightSystem } from './systems/SearchlightSystem.js';
+import { ActorEntity } from './entities/ActorEntity.js';
+import { StageEntity } from './entities/StageEntity.js';
 
 export class PixiEngine {
-  constructor(containerElement) {
+  /**
+   * @param {HTMLDivElement} containerElement - Canvas wrapper element
+   * @param {Object} storeInterface - Decoupled store methods
+   * @param {Function} storeInterface.getState - State reader
+   * @param {Function} storeInterface.subscribe - State change subscription handler
+   */
+  constructor(containerElement, storeInterface = {}) {
     this.container = containerElement;
+    
+    // Assign fallback handlers to maintain stability when running without a store
+    this.getState = storeInterface.getState || (() => ({}));
+    this.subscribe = storeInterface.subscribe || (() => () => {});
+
     this.app = new Application();
     this.layers = {};
     this.time = 0;
@@ -2185,76 +1686,21 @@ export class PixiEngine {
     // Load sequence counter to prevent overlapping asynchronous loading glitches
     this.loadSequence = 0;
 
-    // Direct canvas DOM reference cache to prevent nullified getter calls on destroy
-    this.canvasElement = null;
-
-    // Direct existential flags
-    this.hasBgClippingMask = false;
-    this.hasBgMountain = false;
-    this.hasBgMountainBack = false;
-    this.hasCharClippingMask = false;
-    this.hasLineart = false;
-
-    this.discoveredPatterns = [];
-    this.discoveredEyes = [];
-    this.hasEyelids = false;
-    this.hasBgPat1 = false;
-    this.hasBgPat2 = false;
-
-    this.isPanoramaMode = false;
-    this.hasBg2 = false;
+    // Active modular entities
+    this.actor = null;
+    this.stage = null;
     
-    // Decoupled keys mapping: this.assetKeys preserves assets loading references while
-    // this.keys processes WASD & Arrow keyboard coordinate flight tracking safely
-    this.assetKeys = {}; 
-    this.keys = { 
-      KeyW: false, 
-      KeyA: false, 
-      KeyS: false, 
-      KeyD: false, 
-      ArrowUp: false, 
-      ArrowDown: false, 
-      ArrowLeft: false, 
-      ArrowRight: false 
-    };
-
-    // Phase 2C Custom Speed Parameter
-    this.playerSpeed = 500; // Modify this value to adjust character WASD movement speed
-
-    // Phase 2B & 2C: Weapon, Swarm Mechanics, Particles & Progression Variables
-    this.playerProjectiles = [];
-    this.enemies = [];
-    this.impactParticles = [];
-    
-    this.recoilOffset = { x: 0, y: 0 };
-    this.recoilGlitch = 0.0;
-    this.lastSpawnTime = 0;
-
-    this.enemySpawnTimer = 0.0;
-    this.spawnInterval = 1.8; // Base interval in seconds
-    
-    this.enemiesSpawnedInWave = 0;
-    this.totalEnemiesToSpawnInWave = 0;
-    this.enemiesDefeatedInWave = 0;
-    
-    this.isWaveTransitionActive = false;
-    this.waveTransitionTimer = 0.0;
-
-    // Phase 2C Mouse Button holding state trackers
-    this.isPointerDown = false;
-    this.pointerPosition = { x: 0, y: 0 };
-    this.fireCooldown = 0.0;
+    // Unified container for loaded asset keys and metadata
+    this.loadedRig = null; 
 
     // Systems Allocation
     this.effectsSystem = new EffectsSystem();
-    this.eyeSystem = null;
-    this.particleSystem = null;
     this.renderTextureManager = null;
-    this.bgFog = null;
-    this.fgFog = null;
+    
+    // Track dynamic visible canvas height coordinate range
+    this.canvasHeight = 1000; 
     
     // Subsystem Coordinators
-    this.flightDynamics = new FlightDynamics();
     this.shockwaveSystem = null;
     this.trailSystem = null;
     this.searchlightSystem = null;
@@ -2265,325 +1711,71 @@ export class PixiEngine {
     this.absoluteMousePos = { x: 0, y: 0 };
     this.normalizedMousePos = { x: 0, y: 0 };
 
-    // Spring Drift Navigation State Variables
-    this.baselinePosition = { x: 0, y: 0 };   // The floating anchor position
-    this.targetPosition = { x: 0, y: 0 };     // The destination coordinates set on click
-    this.isMovingToTarget = false;            // Movement status flag
-    this.facingDirection = 1.0;               // Target flip direction (1.0 = right, -1.0 = left)
-    this.currentFlipScale = 1.0;              // Smoothly interpolated flip scale ratio
+    // Set up a list to collect selector-based subscriptions
+    this.unsubscribers = [];
 
-    this.config = { ...useStore.getState() };
+    // Trigger explicit asset loading only when setup properties modify
+    const reloadTriggerKeys = [
+      'subjectMode',
+      'characterId',
+      'creatorCharacterId',
+      'creatorPatternId',
+      'creatorPaletteId',
+      'bgClippingMaskId',
+      'bgPatternStyle',
+      'bgMountainId',
+      'bgMountainBackId'
+    ];
 
-    // Setup clear window key event listeners
-    this.handleKeyDown = (e) => {
-      if (e.code in this.keys) {
-        this.keys[e.code] = true;
-      }
-    };
-
-    this.handleKeyUp = (e) => {
-      if (e.code in this.keys) {
-        this.keys[e.code] = false;
-      }
-    };
-
-    window.addEventListener('keydown', this.handleKeyDown);
-    window.addEventListener('keyup', this.handleKeyUp);
-
-    // Native mouse/pointer event listeners to support seamless auto-firing on hold
-    this.handlePointerDown = (e) => {
-      this.isPointerDown = true;
-      this.pointerPosition = { x: e.clientX, y: e.clientY };
-    };
-
-    this.handlePointerUp = () => {
-      this.isPointerDown = false;
-    };
-
-    this.handlePointerMove = (e) => {
-      this.pointerPosition = { x: e.clientX, y: e.clientY };
-    };
-
-    this.unsubscribeStore = useStore.subscribe((state) => {
-      const prevChar = this.config.characterId;
-      const prevBgClip = this.config.bgClippingMaskId;
-      const prevBgStyle = this.config.bgPatternStyle;
-      const prevBgMountain = this.config.bgMountainId;
-      const prevBgMountainBack = this.config.bgMountainBackId;
-      const prevGameState = this.config.gameState;
-
-      const prevReaction = this.config.activeReaction;
-      const nextReaction = state.activeReaction;
-      const prevProgress = this.config.reactionProgress;
-      const nextProgress = state.reactionProgress;
-
-      this.config = state;
-
-      // Detect transaction start or restart trigger signals
-      if (nextReaction !== null && (prevReaction !== nextReaction || nextProgress === 1.0)) {
-        this.startLocalReaction(nextReaction);
-      }
-
-      // Check transition states for gameplay mode shifts
-      if (prevGameState !== state.gameState) {
-        this.handleGameStateTransition(state.gameState);
-      }
-
-      if (
-        prevChar !== state.characterId ||
-        prevBgClip !== state.bgClippingMaskId ||
-        prevBgStyle !== state.bgPatternStyle ||
-        prevBgMountain !== state.bgMountainId ||
-        prevBgMountainBack !== state.bgMountainBackId
-      ) {
-        this.reloadAssetsAndScene().catch(err => console.error("Re-init assets failed:", err));
-      }
+    reloadTriggerKeys.forEach(key => {
+      this.unsubscribers.push(
+        this.subscribe(
+          state => state[key],
+          () => this.reloadAssetsAndScene().catch(err => console.error("Re-init assets failed:", err))
+        )
+      );
     });
+
+    // Detect transaction trigger reactions using explicit selectors
+    this.unsubscribers.push(
+      this.subscribe(
+        state => state.activeReaction,
+        (nextReaction, prevReaction) => {
+          const nextProgress = this.getState().reactionProgress;
+
+          if (nextReaction !== null && (prevReaction !== nextReaction || nextProgress === 1.0)) {
+            this.startLocalReaction(nextReaction);
+          }
+        }
+      )
+    );
   }
 
   /**
-   * Orchestrates visual parameters and assets visibility changes between menu and descent flight viewports.
+   * Tracks target coordinates relative to the screen dimensions.
+   * @param {number} clientX - World horizontal position.
+   * @param {number} clientY - World vertical position.
    */
-  handleGameStateTransition(gameState) {
-    const setParameter = useStore.getState().setParameter;
+  updateMousePos(clientX, clientY) {
+    this.absoluteMousePos.x = clientX;
+    this.absoluteMousePos.y = clientY;
 
-    if (gameState === "gameplay") {
-      this.isMovingToTarget = false;
-
-      // Reset coordinates to clear old arrays [3]
-      this.clearGameplayObjects();
-
-      // Reset Player Statistics
-      setParameter("playerHP", 100);
-      setParameter("playerShield", 100);
-      setParameter("gameScore", 0);
-      setParameter("gameActiveWave", 1);
-
-      // Compute total spawning thresholds for Chapter 1
-      this.enemiesSpawnedInWave = 0;
-      this.enemiesDefeatedInWave = 0;
-      this.totalEnemiesToSpawnInWave = 5; 
-      this.isWaveTransitionActive = false;
-      this.waveTransitionTimer = 0.0;
-
-      // Pivot mechanical skull to a left-side offset starting position scaled appropriately
-      const screenWidth = this.app.screen.width;
-      const currentScale = this.masterContainer?.scale.x || 1.0;
-      const localLeftX = -(screenWidth * 0.35) / currentScale;
-
-      this.baselinePosition = { x: localLeftX, y: 0 };
-      this.recoilOffset = { x: 0, y: 0 };
-      this.facingDirection = 1.0;
-      this.currentFlipScale = 1.0;
-
-      // Transition to fast active flight scrolling velocity
-      setParameter("bgScrollSpeed", 220.0);
-
-      // Restore cavern background elements
-      if (this.bgAtmosphereContainer) {
-        this.bgAtmosphereContainer.visible = true;
-      }
-      if (this.searchlightSystem) {
-        this.searchlightSystem.setActive(this.config.searchlightActive);
-      }
-      if (this.bgFog && this.bgFog.sprite) {
-        this.bgFog.sprite.visible = true;
-      }
-      if (this.fgFog && this.fgFog.sprite) {
-        this.fgFog.sprite.visible = true;
-      }
-    } else if (gameState === "menu") {
-      this.baselinePosition = { x: 0, y: 0 };
-      this.recoilOffset = { x: 0, y: 0 };
-      this.facingDirection = 1.0;
-      this.currentFlipScale = 1.0;
-
-      this.isPointerDown = false;
-
-      // Revert to slow background idle scroll speed
-      setParameter("bgScrollSpeed", 30.0);
-
-      // Cleanly prune active gameplay arrays
-      this.clearGameplayObjects();
-
-      // Cleanly isolate character view inside the terminal
-      if (this.bgAtmosphereContainer) {
-        this.bgAtmosphereContainer.visible = false;
-      }
-      if (this.searchlightSystem) {
-        this.searchlightSystem.setActive(false);
-      }
-      if (this.bgFog && this.bgFog.sprite) {
-        this.bgFog.sprite.visible = false;
-      }
-      if (this.fgFog && this.fgFog.sprite) {
-        this.fgFog.sprite.visible = false;
-      }
-    }
+    // Normalize coordinates to [-1, 1] range to avoid breaking pupil wander scripts
+    this.normalizedMousePos.x = (clientX / window.innerWidth) * 2 - 1;
+    this.normalizedMousePos.y = (clientY / window.innerHeight) * 2 - 1;
   }
 
   /**
-   * Tracks target coordinates relative to the active canvas bounding dimensions.
+   * Commands the active actor to float smoothly toward clicked coordinates.
+   * @param {number} clientX - Absolute canvas click horizontal position.
+   * @param {number} clientY - Absolute canvas click vertical position.
    */
-  updateMousePos(localX, localY, canvasWidth, canvasHeight) {
-    const w = canvasWidth || window.innerWidth;
-    const h = canvasHeight || window.innerHeight;
-
-    this.absoluteMousePos.x = localX;
-    this.absoluteMousePos.y = localY;
-
-    // Normalize coordinates relative to local canvas dimensions to keep pupil tracking stable [3]
-    this.normalizedMousePos.x = (localX / w) * 2 - 1;
-    this.normalizedMousePos.y = (localY / h) * 2 - 1;
-  }
-
-  /**
-   * Fires weapon structures when user interaction click events occur.
-   */
-  updateMouseClick(localX, localY) {
-    if (this.config.gameState === 'gameplay') {
-      this.spawnProjectile(localX, localY);
-    }
-  }
-
-  /**
-   * Spawns a physical tracer round from orbital coordinate positions towards the screen cursor.
-   * Modulates a transient recoil offset to execute spring-back mechanical kickbacks and brief visual glitch flashes.
-   */
-  spawnProjectile(clientX, clientY) {
-    const now = Date.now();
-    // Debounce to safeguard against overlapping browser click dispatch threads
-    if (now - this.lastSpawnTime < 15) return;
-    this.lastSpawnTime = now;
-
-    if (!this.masterContainer || !this.headContainer || !this.isReady) return;
-
-    // Translate global screen interaction points to local coordinates inside master container bounds [3]
+  updateMouseClick(clientX, clientY) {
+    if (!this.masterContainer || !this.actor) return;
+    
+    // Convert global screen pixel coordinates into master relative coordinates
     const localTarget = this.masterContainer.toLocal({ x: clientX, y: clientY });
-    const localCenter = this.headContainer.position;
-
-    const dx = localTarget.x - localCenter.x;
-    const dy = localTarget.y - localCenter.y;
-    const angle = Math.atan2(dy, dx);
-
-    // Retrieve active orbital tracking radius [3]
-    const orbitRadius = this.config.searchlightRadius ?? 110;
-
-    // Calculate spawning position matching searchlight base on orbital perimeter bounds
-    const startX = localCenter.x + Math.cos(angle) * orbitRadius;
-    const startY = localCenter.y + Math.sin(angle) * orbitRadius;
-
-    // Memoize the high-visibility tracer texture [3]
-    if (!SearchlightSystem.tracerTexture) {
-      SearchlightSystem.tracerTexture = SearchlightSystem.generateTracerTexture();
-    }
-
-    const bullet = new Sprite(SearchlightSystem.tracerTexture);
-    bullet.anchor.set(0.5, 0.5);
-    bullet.position.set(startX, startY);
-    bullet.rotation = angle; // Symmetrically align bullet rotation around its center
-
-    // Add directly to masterContainer to inherit global stage scaling and remain visible
-    this.masterContainer.addChild(bullet);
-
-    // Solid, visible velocity rate: 950 pixels per second
-    this.playerProjectiles.push({
-      sprite: bullet,
-      vx: Math.cos(angle) * 950,
-      vy: Math.sin(angle) * 950
-    });
-
-    // Apply recoil kickback force directly to transient recoilOffset (recoil force of 12px)
-    this.recoilOffset.x -= Math.cos(angle) * 12;
-    this.recoilOffset.y -= Math.sin(angle) * 12;
-
-    // Single-frame CRT electromagnetic distortion spike mimicking muzzle flash
-    this.recoilGlitch = 10.0;
-  }
-
-  /**
-   * Spawns spark particle groups representing bullet impacts or hostile destructions.
-   * @param {number} x - Local coordinate horizontal center.
-   * @param {number} y - Local coordinate vertical center.
-   * @param {number} count - Total particle dots to instantiate.
-   * @param {boolean} isExplosion - Flag denoting if a larger, slower flame orange blast occurs.
-   */
-  spawnSparks(x, y, count, isExplosion = false) {
-    for (let i = 0; i < count; i++) {
-      const spark = new Graphics()
-        .circle(0, 0, isExplosion ? Math.random() * 4 + 2 : Math.random() * 3 + 1)
-        .fill({ color: isExplosion ? 0xff4d00 : 0xffaa00 });
-      
-      spark.position.set(x, y);
-
-      const angle = Math.random() * Math.PI * 2;
-      const velocity = isExplosion ? Math.random() * 260 + 100 : Math.random() * 180 + 80;
-
-      this.masterContainer.addChild(spark);
-      
-      this.impactParticles.push({
-        graphic: spark,
-        vx: Math.cos(angle) * velocity,
-        vy: Math.sin(angle) * velocity,
-        alpha: 1.0,
-        life: isExplosion ? 0.6 : 0.4,
-        maxLife: isExplosion ? 0.6 : 0.4
-      });
-    }
-  }
-
-  /**
-   * Cleanly prunes and destroys active projectiles.
-   */
-  clearProjectiles() {
-    if (this.playerProjectiles && this.playerProjectiles.length > 0) {
-      this.playerProjectiles.forEach(proj => {
-        if (proj.sprite) {
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(proj.sprite);
-          }
-          proj.sprite.destroy();
-        }
-      });
-      this.playerProjectiles = [];
-    }
-  }
-
-  /**
-   * Clears and destroys active gameplay entities, particles, and swarm components safely.
-   */
-  clearGameplayObjects() {
-    this.clearProjectiles();
-
-    if (this.enemies && this.enemies.length > 0) {
-      this.enemies.forEach(enemy => {
-        if (enemy.sprite) {
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(enemy.sprite);
-          }
-          enemy.sprite.destroy();
-        }
-      });
-      this.enemies = [];
-    }
-
-    if (this.impactParticles && this.impactParticles.length > 0) {
-      this.impactParticles.forEach(part => {
-        if (part.graphic) {
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(part.graphic);
-          }
-          part.graphic.destroy();
-        }
-      });
-      this.impactParticles = [];
-    }
-
-    this.enemiesSpawnedInWave = 0;
-    this.enemiesDefeatedInWave = 0;
-    this.isWaveTransitionActive = false;
-    this.waveTransitionTimer = 0.0;
-    this.isPointerDown = false;
+    this.actor.moveTo(localTarget.x, localTarget.y);
   }
 
   async init() {
@@ -2603,15 +1795,7 @@ export class PixiEngine {
         return;
       }
 
-      // Cache a direct reference to the canvas element before unmount cycles occur
-      this.canvasElement = this.app.canvas;
-
-      this.container.appendChild(this.canvasElement);
-
-      // Setup native canvas-level pointer down continuous auto-firing listeners on the cached element
-      this.canvasElement.addEventListener('pointerdown', this.handlePointerDown);
-      window.addEventListener('pointerup', this.handlePointerUp);
-      this.canvasElement.addEventListener('pointermove', this.handlePointerMove);
+      this.container.appendChild(this.app.canvas);
       
       const currentSeq = ++this.loadSequence;
       await this.loadAssets();
@@ -2626,28 +1810,17 @@ export class PixiEngine {
       
       this.isReady = true;
     } catch (err) {
-      console.error("Failed to boot PixiEngine:", err);
+      console.error("[PixiEngine] Init Error:", err);
     }
   }
 
   async loadAssets() {
     console.log(`%c🔍 [PixiEngine] Rig Loader: Locating Stage Assets`, 'color: #00f3ff; font-weight: bold;');
     
-    const results = await AssetResolver.resolveRig(this.config);
-    
-    this.assetKeys = results.keys;
-    this.hasBgClippingMask = results.hasBgClippingMask;
-    this.hasBgPat1 = results.hasBgPat1;
-    this.hasBgPat2 = results.hasBgPat2;
-    this.hasBgMountain = results.hasBgMountain;
-    this.hasBgMountainBack = results.hasBgMountainBack;
-    this.hasCharClippingMask = results.hasCharClippingMask;
-    this.hasLineart = results.hasLineart;
-    this.hasEyelids = results.hasEyelids;
-    this.isPanoramaMode = results.isPanoramaMode;
-    this.hasBg2 = results.hasBg2;
-    this.discoveredPatterns = results.discoveredPatterns;
-    this.discoveredEyes = results.discoveredEyes;
+    // Resolve active asset configurations and store in a single property
+    const currentStore = this.getState();
+    const results = await this.resolveConfiguredRig(currentStore);
+    this.loadedRig = results;
 
     if (results.verifiedLoadQueue.length > 0) {
       try {
@@ -2659,19 +1832,47 @@ export class PixiEngine {
     }
   }
 
+  async resolveConfiguredRig(config) {
+    const isCreatorMode = config.subjectMode === 'creator';
+    const sceneRig = await AssetResolver.resolveRig(config, {
+      includeActor: !isCreatorMode
+    });
+
+    if (!isCreatorMode) return sceneRig;
+
+    const creatorRig = await CreatorAssetResolver.resolve(config);
+    return {
+      ...sceneRig,
+      keys: {
+        ...sceneRig.keys,
+        ...creatorRig.keys
+      },
+      verifiedLoadQueue: [
+        ...sceneRig.verifiedLoadQueue,
+        ...creatorRig.verifiedLoadQueue
+      ],
+      hasCharClippingMask: creatorRig.hasCharClippingMask,
+      hasLineart: creatorRig.hasLineart,
+      hasCharBase: creatorRig.hasCharBase,
+      hasEyelids: creatorRig.hasEyelids,
+      discoveredPatterns: creatorRig.discoveredPatterns,
+      discoveredEyes: creatorRig.discoveredEyes,
+      isCreatorRig: true,
+      creatorSelection: creatorRig.selected
+    };
+  }
+
   buildSceneGraph() {
     const { stage } = this.app;
+    const rig = this.loadedRig;
+    if (!rig) return;
+
+    const currentStore = this.getState();
 
     this.masterContainer = new Container();
     stage.addChild(this.masterContainer);
 
-    const createSprite = (alias) => {
-      const s = Sprite.from(alias);
-      s.anchor.set(0.5);
-      return s;
-    };
-
-    let clipTex = Assets.get(this.assetKeys.char_clipping_mask);
+    let clipTex = Assets.get(rig.keys.char_clipping_mask);
     if (!clipTex || clipTex === Texture.EMPTY) {
       clipTex = Assets.get('bg');
     }
@@ -2686,170 +1887,259 @@ export class PixiEngine {
     this.bgAtmosphereContainer.mask = this.masterClipMask;
     this.masterContainer.addChild(this.bgAtmosphereContainer);
 
-    // Initialise Shockwave System
+    // Initialize Shockwave System
     this.shockwaveSystem = new ShockwaveSystem();
 
     // Initialize the off-screen RenderTextureManager to flatten warp patterns
     this.renderTextureManager = new RenderTextureManager({
-      discoveredPatterns: this.discoveredPatterns,
-      bgPat1Alias: this.hasBgPat1 ? this.assetKeys.bg_pat_1 : null,
-      bgPat2Alias: this.hasBgPat2 ? this.assetKeys.bg_pat_2 : null,
-      hasBgPat1: this.hasBgPat1,
-      hasBgPat2: this.hasBgPat2
+      discoveredPatterns: rig.discoveredPatterns,
+      bgPat1Alias: rig.hasBgPat1 ? rig.keys.bg_pat_1 : null,
+      bgPat2Alias: rig.hasBgPat2 ? rig.keys.bg_pat_2 : null,
+      hasBgPat1: rig.hasBgPat1,
+      hasBgPat2: rig.hasBgPat2
     });
 
-    // --- ASSEMBLE BACKGROUND ---
-    if (this.isPanoramaMode) {
-      const bgTexture = Assets.get('bg');
-      if (bgTexture && bgTexture !== Texture.EMPTY) {
-        this.layers.bg = new MirroredScrollLayer(bgTexture, this.bgHeightScale, 1.0);
-        this.bgAtmosphereContainer.addChild(this.layers.bg);
-      }
+    // --- ENCAPSULATED STAGE CREATION ---
+    const stageFlags = {
+      isPanoramaMode: rig.isPanoramaMode,
+      hasBg2: rig.hasBg2,
+      bg2ParallaxSpeed: currentStore.bg2ParallaxSpeed,
+      hasBgClippingMask: rig.hasBgClippingMask,
+      hasBgPat1: rig.hasBgPat1,
+      hasBgPat2: rig.hasBgPat2,
+      hasBgMountainBack: rig.hasBgMountainBack,
+      hasBgMountain: rig.hasBgMountain
+    };
+    this.stage = new StageEntity(
+      currentStore.bgClippingMaskId, 
+      rig.keys, 
+      stageFlags, 
+      this.bgHeightScale, 
+      this.renderTextureManager, 
+      this.app.renderer
+    );
+    this.bgAtmosphereContainer.addChild(this.stage.bgContainer);
 
-      if (this.hasBg2) {
-        const bg2Texture = Assets.get('bg2');
-        if (bg2Texture && bg2Texture !== Texture.EMPTY) {
-          this.layers.bg2 = new MirroredScrollLayer(bg2Texture, this.bgHeightScale, this.config.bg2ParallaxSpeed);
-          this.bgAtmosphereContainer.addChild(this.layers.bg2);
-        }
-      }
-    } else {
-      // 1. Solid Backdrop Color
-      if (this.hasBgClippingMask) {
-        this.layers.bg_clip = createSprite(this.assetKeys.bg_clipping_mask);
-        this.bgAtmosphereContainer.addChild(this.layers.bg_clip);
-      }
-
-      // 2. Off-Screen RenderTexture Warp patterns
-      const hasAnyBgPat = this.hasBgPat1 || this.hasBgPat2;
-      if (hasAnyBgPat && this.renderTextureManager) {
-        this.bgAtmosphereContainer.addChild(this.renderTextureManager.bgPatternSprite);
-
-        // Ceiling reflection overlay (screen blended duplicate of offscreen render texture)
-        this.layers.bg_pattern_reflect = new Sprite(this.renderTextureManager.bgPatternRenderTexture);
-        this.layers.bg_pattern_reflect.anchor.set(0.5);
-        this.layers.bg_pattern_reflect.blendMode = 'screen';
-        this.bgAtmosphereContainer.addChild(this.layers.bg_pattern_reflect);
-      }
-
-      // 3. Back Mountains layer
-      if (this.hasBgMountainBack) {
-        const mountainBackTex = Assets.get(this.assetKeys.bg_mountain_back);
-        if (mountainBackTex && mountainBackTex !== Texture.EMPTY) {
-          this.layers.bg_mountain_back = new MirroredScrollLayer(mountainBackTex, this.bgHeightScale, 0.18);
-          this.layers.bg_mountain_back.position.y = -35; // Shifts upward to align behind front range
-          this.layers.bg_mountain_back.alpha = 0.75; // Atmospheric perspective haze
-          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_back);
-
-          // Dynamic Cavern Lighting: Back Mountain Reflector Duplicate
-          this.layers.bg_mountain_back_reflect = new MirroredScrollLayer(mountainBackTex, this.bgHeightScale, 0.18);
-          this.layers.bg_mountain_back_reflect.position.y = -35;
-          this.layers.bg_mountain_back_reflect.blendMode = 'screen';
-          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_back_reflect);
-        }
-      }
-
-      // 4. Foreground Mountains layer
-      if (this.hasBgMountain) {
-        const mountainTex = Assets.get(this.assetKeys.bg_mountain);
-        if (mountainTex && mountainTex !== Texture.EMPTY) {
-          this.layers.bg_mountain = new MirroredScrollLayer(mountainTex, this.bgHeightScale, 0.4);
-          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain);
-
-          // Dynamic Cavern Lighting: Foreground Mountain Reflector Duplicate
-          this.layers.bg_mountain_reflect = new MirroredScrollLayer(mountainTex, this.bgHeightScale, 0.4);
-          this.layers.bg_mountain_reflect.blendMode = 'screen';
-          this.bgAtmosphereContainer.addChild(this.layers.bg_mountain_reflect);
-        }
-      }
-    }
-
-    // Decoupled Background Fog Layer
-    this.bgFog = new FogSystem(this.bgAtmosphereContainer, this.bgHeightScale, false);
-
-    // Particles
-    this.particleSystem = new ParticleSystem(this.app.renderer, this.bgAtmosphereContainer, this.bgHeightScale);
-    
-    // Initialise Ghost Coordinates System
-    this.trailSystem = new TrailSystem(this.masterContainer, this.hasCharClippingMask ? this.assetKeys.char_clipping_mask : null);
+    // Initialize Ghost Coordinates System
+    this.trailSystem = new TrailSystem(this.masterContainer, rig.keys.char_clipping_mask);
 
     // Initialize Volumetric Searchlight System
     this.searchlightSystem = new SearchlightSystem(this.masterContainer);
-    this.searchlightSystem.isActiveOverride = true;
-    this.searchlightSystem.setActive = (active) => {
-      this.searchlightSystem.isActiveOverride = active;
-      if (this.searchlightSystem.container) {
-        this.searchlightSystem.container.visible = active;
-      }
+
+    // --- ENCAPSULATED ACTOR CREATION ---
+    const actorAssets = {
+      char_clipping_mask: rig.hasCharClippingMask ? rig.keys.char_clipping_mask : null,
+      char_lineart: rig.hasLineart ? rig.keys.char_lineart : null,
+      char_base: rig.hasCharBase ? rig.keys.char_base : null,
+      eyelids_top: rig.hasEyelids ? rig.keys.eyelids_top : null,
+      eyelids_bottom: rig.hasEyelids ? rig.keys.eyelids_bottom : null,
+      discoveredEyes: rig.discoveredEyes,
+      discoveredPatterns: rig.discoveredPatterns,
+      isCreatorRig: rig.isCreatorRig === true
     };
+    this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager);
+    this.masterContainer.addChild(this.actor.container);
 
-    // 2. Head Container
-    this.headContainer = new Container();
-    this.masterContainer.addChild(this.headContainer);
+    // Add stage foreground overlay container on top of the character
+    this.masterContainer.addChild(this.stage.fgContainer);
 
-    // Blurry shadow glow container (renders underneath head lineart/features)
-    if (this.hasCharClippingMask) {
-      this.layers.aura = createSprite(this.assetKeys.char_clipping_mask);
-      this.headContainer.addChild(this.layers.aura);
-    }
+    // Extract effect targets cleanly from both entities and attach lighting/shaders
+    const stageTargets = this.stage.getEffectsTargets();
+    const effectsTarget = this.actor.getEffectsTargets();
+    
+    this.effectsSystem.attach({
+      headContainer: effectsTarget.headContainer,
+      auraSprite: effectsTarget.auraSprite,
+      baseSprite: effectsTarget.baseSprite,
+      mountainReflector: stageTargets.mountainReflector,
+      mountainBackReflector: stageTargets.mountainBackReflector,
+      ceilingReflector: stageTargets.ceilingReflector
+    });
+  }
 
-    // Nested composition to decouple filters from the mask sprite
-    if (this.hasCharClippingMask) {
-      // The mask sprite (must be set as renderable=false so it does not draw as a solid colored block)
-      const charMaskSprite = createSprite(this.assetKeys.char_clipping_mask);
-      charMaskSprite.renderable = false; 
-      this.headContainer.addChild(charMaskSprite);
+  async reloadAssetsAndScene() {
+    const currentSeq = ++this.loadSequence;
 
-      // The wrapped container applying only the clip-mask
-      this.characterContentContainer = new Container();
-      
-      // Use setMask with channel: 'alpha' to bypass color channel processing
-      this.characterContentContainer.setMask({
-        mask: charMaskSprite,
-        channel: 'alpha'
-      });
-      
-      this.headContainer.addChild(this.characterContentContainer);
+    // Pre-resolve and load assets first, before destroying active display blocks
+    const currentStore = this.getState();
+    const nextRig = await this.resolveConfiguredRig(currentStore);
 
-      // Render base color (clipping mask file acting as character color) inside masked wrapper
-      this.layers.base = createSprite(this.assetKeys.char_clipping_mask);
-      this.characterContentContainer.addChild(this.layers.base);
+    if (this.isDestroyed || currentSeq !== this.loadSequence) return;
 
-      // Render character patterns using flattened textures
-      if (this.discoveredPatterns.length > 0 && this.renderTextureManager) {
-        this.characterContentContainer.addChild(this.renderTextureManager.patternSprite);
+    if (nextRig.verifiedLoadQueue.length > 0) {
+      try {
+        await Assets.load(nextRig.verifiedLoadQueue);
+      } catch (err) {
+        console.error("❌ [PixiEngine] Preloading error:", err);
       }
     }
 
-    // Attach glow, dynamic cavern lighting, and filters
-    this.effectsSystem.attach({
-      headContainer: this.headContainer,
-      auraSprite: this.layers.aura,
-      baseSprite: this.layers.base,
-      mountainReflector: this.layers.bg_mountain_reflect,
-      mountainBackReflector: this.layers.bg_mountain_back_reflect,
-      ceilingReflector: this.layers.bg_pattern_reflect
-    });
+    if (this.isDestroyed || currentSeq !== this.loadSequence) return;
 
-    // Render lineart
-    if (this.hasLineart) {
-      this.layers.lineart = createSprite(this.assetKeys.char_lineart);
-      this.headContainer.addChild(this.layers.lineart);
+    this.isReady = false;
+
+    // Detect if stage properties modified. If background setup values did not change, 
+    // we bypass stage entity resets to keep fogs and scrolling mountain environments running.
+    const stageChanged = !this.loadedRig ||
+      this.loadedRig.keys.bg_clipping_mask !== nextRig.keys.bg_clipping_mask ||
+      this.loadedRig.keys.bg_mountain !== nextRig.keys.bg_mountain ||
+      this.loadedRig.keys.bg_mountain_back !== nextRig.keys.bg_mountain_back ||
+      this.loadedRig.isPanoramaMode !== nextRig.isPanoramaMode ||
+      this.loadedRig.hasBgPat1 !== nextRig.hasBgPat1 ||
+      this.loadedRig.hasBgPat2 !== nextRig.hasBgPat2;
+
+    // Clean up current actor structures
+    if (this.actor) {
+      if (this.actor.characterContentContainer) {
+        this.actor.characterContentContainer.mask = null;
+      }
+      this.actor.destroy();
+      this.actor = null;
     }
 
-    // Render eyeballs and lids
-    this.eyeSystem = new EyeSystem(this.headContainer, {
-      discoveredEyes: this.discoveredEyes,
-      hasEyelids: this.hasEyelids,
-      eyelidsTopAlias: this.hasEyelids ? this.assetKeys.eyelids_top : null,
-      eyelidsBottomAlias: this.hasEyelids ? this.assetKeys.eyelids_bottom : null
+    // Always reset tracking and searchlight systems
+    if (this.trailSystem?.destroy) {
+      this.trailSystem.destroy();
+      this.trailSystem = null;
+    }
+    if (this.searchlightSystem?.destroy) {
+      this.searchlightSystem.destroy();
+      this.searchlightSystem = null;
+    }
+
+    // Tear down stage and render textures only if stage setups changed
+    if (stageChanged) {
+      if (this.stage?.destroy) {
+        this.stage.destroy();
+        this.stage = null;
+      }
+      if (this.renderTextureManager?.destroy) {
+        this.renderTextureManager.destroy();
+        this.renderTextureManager = null;
+      }
+    }
+
+    this.loadedRig = nextRig;
+
+    if (!this.masterContainer) {
+      this.masterContainer = new Container();
+      this.app.stage.addChild(this.masterContainer);
+    }
+
+    let clipTex = Assets.get(nextRig.keys.char_clipping_mask);
+    if (!clipTex || clipTex === Texture.EMPTY) {
+      clipTex = Assets.get('bg');
+    }
+    this.bgHeightScale = (clipTex && clipTex !== Texture.EMPTY) ? clipTex.height : 1000;
+
+    if (stageChanged || !this.masterClipMask) {
+      if (this.masterClipMask) this.masterClipMask.destroy();
+      this.masterClipMask = new Graphics()
+        .rect(-this.bgHeightScale / 2, -this.bgHeightScale / 2, this.bgHeightScale, this.bgHeightScale)
+        .fill({ color: 0xffffff });
+      this.masterContainer.addChild(this.masterClipMask);
+    }
+
+    if (stageChanged || !this.bgAtmosphereContainer) {
+      if (this.bgAtmosphereContainer) this.bgAtmosphereContainer.destroy();
+      this.bgAtmosphereContainer = new Container();
+      this.bgAtmosphereContainer.mask = this.masterClipMask;
+      this.masterContainer.addChild(this.bgAtmosphereContainer);
+    }
+
+    if (!this.shockwaveSystem) {
+      this.shockwaveSystem = new ShockwaveSystem();
+    }
+
+    // Reinitialize or update actor patterns on the active texture manager
+    if (!this.renderTextureManager) {
+      this.renderTextureManager = new RenderTextureManager({
+        discoveredPatterns: nextRig.discoveredPatterns,
+        bgPat1Alias: nextRig.hasBgPat1 ? nextRig.keys.bg_pat_1 : null,
+        bgPat2Alias: nextRig.hasBgPat2 ? nextRig.keys.bg_pat_2 : null,
+        hasBgPat1: nextRig.hasBgPat1,
+        hasBgPat2: nextRig.hasBgPat2
+      });
+    } else {
+      this.renderTextureManager.updateActorPatterns(nextRig.discoveredPatterns);
+    }
+
+    // Rebuild stage layer templates if required
+    if (stageChanged || !this.stage) {
+      const stageFlags = {
+        isPanoramaMode: nextRig.isPanoramaMode,
+        hasBg2: nextRig.hasBg2,
+        bg2ParallaxSpeed: currentStore.bg2ParallaxSpeed,
+        hasBgClippingMask: nextRig.hasBgClippingMask,
+        hasBgPat1: nextRig.hasBgPat1,
+        hasBgPat2: nextRig.hasBgPat2,
+        hasBgMountainBack: nextRig.hasBgMountainBack,
+        hasBgMountain: nextRig.hasBgMountain
+      };
+      this.stage = new StageEntity(
+        currentStore.bgClippingMaskId, 
+        nextRig.keys, 
+        stageFlags, 
+        this.bgHeightScale, 
+        this.renderTextureManager, 
+        this.app.renderer
+      );
+      this.bgAtmosphereContainer.addChild(this.stage.bgContainer);
+    }
+
+    this.trailSystem = new TrailSystem(this.masterContainer, nextRig.keys.char_clipping_mask);
+    this.searchlightSystem = new SearchlightSystem(this.masterContainer);
+
+    const actorAssets = {
+      char_clipping_mask: nextRig.hasCharClippingMask ? nextRig.keys.char_clipping_mask : null,
+      char_lineart: nextRig.hasLineart ? nextRig.keys.char_lineart : null,
+      char_base: nextRig.hasCharBase ? nextRig.keys.char_base : null,
+      eyelids_top: nextRig.hasEyelids ? nextRig.keys.eyelids_top : null,
+      eyelids_bottom: nextRig.hasEyelids ? nextRig.keys.eyelids_bottom : null,
+      discoveredEyes: nextRig.discoveredEyes,
+      discoveredPatterns: nextRig.discoveredPatterns,
+      isCreatorRig: nextRig.isCreatorRig === true
+    };
+    this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager);
+    this.masterContainer.addChild(this.actor.container);
+
+    if (this.stage.fgContainer.parent) {
+      this.stage.fgContainer.parent.removeChild(this.stage.fgContainer);
+    }
+    this.masterContainer.addChild(this.stage.fgContainer);
+
+    const stageTargets = this.stage.getEffectsTargets();
+    const effectsTarget = this.actor.getEffectsTargets();
+    
+    this.effectsSystem.attach({
+      headContainer: effectsTarget.headContainer,
+      auraSprite: effectsTarget.auraSprite,
+      baseSprite: effectsTarget.baseSprite,
+      mountainReflector: stageTargets.mountainReflector,
+      mountainBackReflector: stageTargets.mountainBackReflector,
+      ceilingReflector: stageTargets.ceilingReflector
     });
 
-    // Decoupled Foreground Fog Layer (placed on top of character but below overlays)
-    this.fgFog = new FogSystem(this.masterContainer, this.bgHeightScale, true);
+    this.resize();
+    this.isReady = true;
+  }
 
-    // Call the game state handler to establish initial isolated scenery visibility settings correctly
-    this.handleGameStateTransition(this.config.gameState);
+  /**
+   * Assigns local animation preferences to transition visually during triggered reactions.
+   */
+  startLocalReaction(reactionType) {
+    this.currentLocalReaction = reactionType;
+    this.localReactionProgress = 1.0;
+
+    // Direct WebGL ripples trigger centered on active character position
+    if (this.shockwaveSystem && this.actor) {
+      this.shockwaveSystem.trigger(
+        this.actor.container.position,
+        this.masterContainer.scale.x,
+        this.app.screen.width,
+        this.app.screen.height
+      );
+    }
   }
 
   update(deltaTime) {
@@ -2857,417 +2147,70 @@ export class PixiEngine {
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
 
-    const screenWidth = this.app.screen.width;
-    const screenHeight = this.app.screen.height;
-    const currentScale = this.masterContainer.scale.x;
-
-    // Smoothly decay transient recoil offset back to zero on every frame
-    this.recoilOffset.x += (0 - this.recoilOffset.x) * 0.15 * deltaTime;
-    this.recoilOffset.y += (0 - this.recoilOffset.y) * 0.15 * deltaTime;
-
-    // --- Phase 2: Internal Reaction Decay Step ---
-    if (this.currentLocalReaction && this.originalPreset) {
+    // Decay the dynamic reaction progression metrics
+    if (this.currentLocalReaction) {
       this.localReactionProgress -= 0.007 * deltaTime;
 
       if (this.localReactionProgress <= 0) {
         this.localReactionProgress = 0;
         this.currentLocalReaction = null;
-        this.originalPreset = null;
 
-        // Reset the store values once when the decay concludes
-        const setParameter = useStore.getState().setParameter;
-        setParameter("activeReaction", null);
-        setParameter("reactionProgress", 0.0);
+        // Broadcast final boundary progress cleanly via native CustomEvent before resetting store
+        window.dispatchEvent(new CustomEvent('gothic-reaction-progress', { detail: { progress: 0.0 } }));
+
+        // Reset the store values once when the decay concludes using decoupled state setter
+        const setParameter = this.getState().setParameter;
+        if (typeof setParameter === 'function') {
+          setParameter("activeReaction", null);
+          setParameter("reactionProgress", 0.0);
+        }
       } else {
-        // Sync progress dynamically to the store so the Tab indicator updates
-        useStore.getState().setParameter("reactionProgress", this.localReactionProgress);
+        // Dispatch custom event to avoid triggering high-frequency React state updates
+        window.dispatchEvent(new CustomEvent('gothic-reaction-progress', { detail: { progress: this.localReactionProgress } }));
       }
     }
 
-    // --- Active Gameplay Flight Navigation vs. Spring Menu Drift ---
-    // --- Active Gameplay Flight Navigation vs. Spring Menu Drift ---
-    if (this.config.gameState === "gameplay") {
-      // WASD / Arrow keyboard vector mapping utilizing custom speed parameter
-      const speed = this.playerSpeed * dtSeconds;
-      let moveX = 0;
-      let moveY = 0;
+    // Synchronously fetch latest live properties to completely bypass full store copy callbacks
+    const liveStore = this.getState();
 
-      if (this.keys.KeyW || this.keys.ArrowUp) moveY -= 1;
-      if (this.keys.KeyS || this.keys.ArrowDown) moveY += 1;
-      if (this.keys.KeyA || this.keys.ArrowLeft) moveX -= 1;
-      if (this.keys.KeyD || this.keys.ArrowRight) moveX += 1;
-
-      // Normalize diagonal vectors to prevent speed boosting mechanics
-      if (moveX !== 0 && moveY !== 0) {
-        const length = Math.sqrt(moveX * moveX + moveY * moveY);
-        moveX /= length;
-        moveY /= length;
-      }
-
-      this.baselinePosition.x += moveX * speed;
-      this.baselinePosition.y += moveY * speed;
-
-      const localHalfW = (screenWidth / currentScale) / 2;
-      const localHalfH = (screenHeight / currentScale) / 2;
-
-      // Clamp coordinates to allow movement across the complete width / canvas height
-      const minX = -localHalfW + 60;
-      const maxX = localHalfW - 60; // Expanded to full screen boundary width
-
-      const minY = -localHalfH + 60; // Expanded to full screen boundary height
-      const maxY = localHalfH - 60;
-
-      this.baselinePosition.x = Math.max(minX, Math.min(maxX, this.baselinePosition.x));
-      this.baselinePosition.y = Math.max(minY, Math.min(maxY, this.baselinePosition.y));
-
-      // Dynamically flip character based on relative cursor position to head container
-      const localMouse = this.masterContainer.toLocal({ x: this.absoluteMousePos.x, y: this.absoluteMousePos.y });
-      this.facingDirection = localMouse.x >= this.headContainer.position.x ? 1.0 : -1.0;
-      this.currentFlipScale += (this.facingDirection - this.currentFlipScale) * 0.2 * deltaTime;
-    } else {
-      // Menu Mode: Force stationary central positioning inside terminal items window
-      this.baselinePosition.x = 0;
-      this.baselinePosition.y = 0;
-
-      // Smooth 3D rotational flipping based on mouse hover position
-      this.facingDirection = this.normalizedMousePos.x >= 0 ? 1.0 : -1.0;
-      this.currentFlipScale += (this.facingDirection - this.currentFlipScale) * 0.2 * deltaTime;
-    }
-
-    // Synthesize latest coordinates dynamically so that EyeSystem and nested modules receive updates
-    const config = { ...this.config, mousePos: this.normalizedMousePos };
-
-    // Continuous weapon auto-firing when holding down the mouse button
-    if (this.fireCooldown > 0) {
-      this.fireCooldown -= dtSeconds;
-    }
-    if (config.gameState === "gameplay" && this.isPointerDown && this.fireCooldown <= 0) {
-      this.spawnProjectile(this.pointerPosition.x, this.pointerPosition.y);
-      this.fireCooldown = 0.18; // Fires continuous stream at comfortable 180ms intervals
-    }
-
-    // Apply recoil muzzle flash distortion spikes
-    if (this.recoilGlitch > 0) {
-      config.aberrationAmount += this.recoilGlitch;
-      this.recoilGlitch = 0; // Return to standard settings immediately on the next frame
-    }
-
-    // Apply internal decay overrides over baseline configurations
-    if (this.currentLocalReaction && this.originalPreset) {
-      const invProgress = this.localReactionProgress;
-
-      if (this.currentLocalReaction === "lyx_received") {
-        config.particleCount = Math.floor(this.originalPreset.particleCount + (300 - this.originalPreset.particleCount) * invProgress);
-        config.particleSpeed = this.originalPreset.particleSpeed + (4.5 - this.originalPreset.particleSpeed) * invProgress;
-        config.auraOpacity = this.originalPreset.auraOpacity + (1.0 - this.originalPreset.auraOpacity) * invProgress;
-        config.auraScale = this.originalPreset.auraScale + (1.35 - this.originalPreset.auraScale) * invProgress;
-        config.warpIntensity = this.originalPreset.warpIntensity + (50.0 - this.originalPreset.warpIntensity) * invProgress;
-      } 
-      else if (this.currentLocalReaction === "lsp7_received" || this.currentLocalReaction === "lsp8_received") {
-        config.aberrationAmount = this.originalPreset.aberrationAmount + (30.0 - this.originalPreset.aberrationAmount) * invProgress;
-        config.warpIntensity = this.originalPreset.warpIntensity + (90.0 - this.originalPreset.warpIntensity) * invProgress;
-        config.glitchShakeIntensity = Math.floor(this.originalPreset.glitchShakeIntensity + (25 - this.originalPreset.glitchShakeIntensity) * invProgress);
-        config.flickerIntensity = this.originalPreset.flickerIntensity + (0.85 - this.originalPreset.flickerIntensity) * invProgress;
-        
-        config.aberrationSpeed = 8.0;
-        config.aberrationGlitch = 0;
-      }
-    }
-
-    config.reactionProgress = this.localReactionProgress;
+    // Synthesize latest coordinates and decay flags dynamically
+    const config = { 
+      ...liveStore, 
+      mousePos: this.normalizedMousePos,
+      activeReaction: this.currentLocalReaction,
+      reactionProgress: this.localReactionProgress
+    };
 
     const { isGlitched, currentSplit } = this.effectsSystem.update(this.time, config);
 
-    // --- Phase 2B: Glitch Active Evaluation ---
+    // Glitch status and shake factor calculated cleanly relative to active parameters
+    const glitchShakeIntensity = config.activeReaction === "lyx_received" || config.activeReaction === "lsp8_received"
+      ? config.glitchShakeIntensity + (25 - config.glitchShakeIntensity) * config.reactionProgress
+      : config.glitchShakeIntensity;
+
     const isGlitchActive = (isGlitched || currentSplit > (config.aberrationAmount * 1.15));
-
-    // --- Phase 2C: Cavern Swarm Spawner Logic ---
-    if (config.gameState === "gameplay" && !this.isWaveTransitionActive) {
-      this.enemySpawnTimer += dtSeconds;
-
-      if (this.enemiesSpawnedInWave < this.totalEnemiesToSpawnInWave && this.enemySpawnTimer >= this.spawnInterval) {
-        this.enemySpawnTimer = 0.0;
-
-        // Spawn from right edge of screen bounds in local container coordinates
-        const spawnX = (screenWidth / 2 + 80) / currentScale;
-        const spawnY = ((Math.random() - 0.5) * (screenHeight - 240)) / currentScale;
-
-        // Retrieve mapped striped enemy skull texture
-        const enemyTexture = Assets.get('enemy_skull_striped');
-        const enemySprite = new Sprite(enemyTexture);
-        enemySprite.anchor.set(0.5);
-        enemySprite.scale.set(0.38);
-
-        // Adjust coloration slightly to represent hostile alignment
-        enemySprite.tint = 0xff5533;
-        enemySprite.position.set(spawnX, spawnY);
-
-        this.masterContainer.addChild(enemySprite);
-
-        // Dynamically scale parameters based on the store's current active wave
-        const waveMultiplier = config.gameActiveWave;
-        const enemyHP = 1 + Math.floor(waveMultiplier * 0.4);
-        const enemySpeed = 160 + (waveMultiplier * 15);
-
-      this.enemies.push({
-          sprite: enemySprite,
-          hp: enemyHP,
-          maxHp: enemyHP,
-          speed: enemySpeed,
-          facingDirection: -1.0, // Default to facing left (spawns on the right)
-          currentFlipScale: -1.0
-        });
-
-        this.enemiesSpawnedInWave++;
-      }
+    
+    // 1. Update Environment Stage (parallax backgrounds, fogs, particles)
+    if (this.stage) {
+      this.stage.update(deltaTime, config, this.time);
     }
 
-    // --- Phase 2B: Tracer Projectile Propagation & Boundary Cleanups ---
-    if (this.playerProjectiles && this.playerProjectiles.length > 0) {
-      for (let i = this.playerProjectiles.length - 1; i >= 0; i--) {
-        const proj = this.playerProjectiles[i];
-        proj.sprite.x += proj.vx * dtSeconds;
-        proj.sprite.y += proj.vy * dtSeconds;
-
-        const globalPos = proj.sprite.getGlobalPosition();
-        if (
-          globalPos.x < -100 || 
-          globalPos.x > screenWidth + 100 || 
-          globalPos.y < -100 || 
-          globalPos.y > screenHeight + 100
-        ) {
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(proj.sprite);
-          }
-          proj.sprite.destroy();
-          this.playerProjectiles.splice(i, 1);
-        }
-      }
+    // 2. Update Actor Entity
+    if (this.actor) {
+      this.actor.update(deltaTime, config, isGlitchActive, this.canvasHeight);
     }
 
-    // --- Phase 2C: Enemy Swarm Processing (Active 2D vector pursuit tracking & scale flips) ---
-    if (this.enemies && this.enemies.length > 0) {
-      for (let i = this.enemies.length - 1; i >= 0; i--) {
-        const enemy = this.enemies[i];
-        
-        // Active pursuit tracking vector calculations
-        const playerX = this.headContainer.position.x;
-        const playerY = this.headContainer.position.y;
-
-        const dx = playerX - enemy.sprite.x;
-        const dy = playerY - enemy.sprite.y;
-        const distanceToPlayer = Math.sqrt(dx * dx + dy * dy);
-
-        if (distanceToPlayer > 0) {
-          // Direct 2D movement towards player coordinates (keeps chasing endlessly)
-          enemy.sprite.x += (dx / distanceToPlayer) * enemy.speed * dtSeconds;
-          enemy.sprite.y += (dy / distanceToPlayer) * enemy.speed * dtSeconds;
-        }
-
-       // Dynamic visual flip calculation based on player relative position
-        const baseScale = 0.38;
-        enemy.facingDirection = dx >= 0 ? 1.0 : -1.0;
-
-        // Smoothly interpolate the enemy's scale using the same formula as the player
-        enemy.currentFlipScale += (enemy.facingDirection - enemy.currentFlipScale) * 0.2 * deltaTime;
-        enemy.sprite.scale.x = baseScale * enemy.currentFlipScale;
-
-        // Off-screen boundary checks (only prunes extreme outliers far outside the play area)
-        const outerBoundaryLimit = (screenWidth / currentScale) * 1.5;
-        if (Math.abs(enemy.sprite.x) > outerBoundaryLimit || Math.abs(enemy.sprite.y) > outerBoundaryLimit) {
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(enemy.sprite);
-          }
-          enemy.sprite.destroy();
-          this.enemies.splice(i, 1);
-          
-          this.enemiesDefeatedInWave++;
-        }
-      }
+    // 3. Update Volumetric Searchlight (Tracking mouse around active character)
+    if (this.searchlightSystem && this.actor) {
+      this.searchlightSystem.update(this.actor.container.position, this.absoluteMousePos, deltaTime, config);
     }
 
-    // --- Phase 2C: Dual-Layer Collision Matrices & Particles ---
-    if (config.gameState === "gameplay") {
-      const shieldRadius = config.searchlightRadius ?? 110;
-      const collisionRadius = 35.0; // Dynamic overlapping radius target boundary
-
-      // 1. PROJECTILE-TO-ENEMY COLLISIONS
-      for (let pIdx = this.playerProjectiles.length - 1; pIdx >= 0; pIdx--) {
-        const proj = this.playerProjectiles[pIdx];
-
-        for (let eIdx = this.enemies.length - 1; eIdx >= 0; eIdx--) {
-          const enemy = this.enemies[eIdx];
-
-          const dx = proj.sprite.x - enemy.sprite.x;
-          const dy = proj.sprite.y - enemy.sprite.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-
-          if (distance < collisionRadius) {
-            // Spawn fast impact burst of golden spark particles
-            this.spawnSparks(proj.sprite.x, proj.sprite.y, Math.floor(Math.random() * 4) + 5, false);
-
-            // Destroy Projectile
-            if (this.masterContainer) {
-              this.masterContainer.removeChild(proj.sprite);
-            }
-            proj.sprite.destroy();
-            this.playerProjectiles.splice(pIdx, 1);
-
-            // Deduct Enemy Hit Points
-            enemy.hp--;
-
-            if (enemy.hp <= 0) {
-              // Trigger larger 15-particle explosion burst
-              this.spawnSparks(enemy.sprite.x, enemy.sprite.y, 15, true);
-
-              // Remove enemy from stage
-              if (this.masterContainer) {
-                this.masterContainer.removeChild(enemy.sprite);
-              }
-              enemy.sprite.destroy();
-              this.enemies.splice(eIdx, 1);
-
-              this.enemiesDefeatedInWave++;
-
-              // Increment Score State
-              const currentScore = useStore.getState().gameScore;
-              useStore.getState().setParameter("gameScore", currentScore + 100);
-            }
-
-            break; // Bullet consumed, advance outer projectile queue
-          }
-        }
-      }
-
-      // 2. ENEMY-TO-PLAYER (Shield Boundary) COLLISIONS
-      for (let eIdx = this.enemies.length - 1; eIdx >= 0; eIdx--) {
-        const enemy = this.enemies[eIdx];
-
-        const dx = enemy.sprite.x - this.headContainer.position.x;
-        const dy = enemy.sprite.y - this.headContainer.position.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < shieldRadius) {
-          // Instantly destroy hitting swarm enemy
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(enemy.sprite);
-          }
-          enemy.sprite.destroy();
-          this.enemies.splice(eIdx, 1);
-
-          this.enemiesDefeatedInWave++;
-
-          // Spawn heavy fiery splash particles
-          this.spawnSparks(enemy.sprite.x, enemy.sprite.y, 12, true);
-
-          // Deduct Shield / HP metrics
-          const currentShield = useStore.getState().playerShield;
-          const currentHP = useStore.getState().playerHP;
-          const impactDamage = 15;
-
-          if (currentShield > 0) {
-            const nextShield = Math.max(0, currentShield - impactDamage);
-            useStore.getState().setParameter("playerShield", nextShield);
-          } else {
-            const nextHP = Math.max(0, currentHP - impactDamage);
-            useStore.getState().setParameter("playerHP", nextHP);
-
-            // Handle Game Over transition resets
-            if (nextHP <= 0) {
-              useStore.getState().setParameter("gameState", "menu");
-            }
-          }
-
-          // Visceral gameplay impact camera shake feedback
-          this.recoilOffset.x = (Math.random() - 0.5) * 45;
-          this.recoilOffset.y = (Math.random() - 0.5) * 45;
-
-          // Spike visual glitch splits
-          this.recoilGlitch = 20.0;
-
-          // Momentary screen shake modifier spike
-          useStore.getState().setParameter("glitchShakeIntensity", 25);
-          setTimeout(() => {
-            // Restore previous user/store parameter limits smoothly
-            if (!this.isDestroyed) {
-              useStore.getState().setParameter("glitchShakeIntensity", 0);
-            }
-          }, 450);
-        }
-      }
-
-      // 3. WAVE TIMING & PROGRESSION CHECK
-      if (this.enemiesDefeatedInWave >= this.totalEnemiesToSpawnInWave && this.enemies.length === 0) {
-        if (!this.isWaveTransitionActive) {
-          this.isWaveTransitionActive = true;
-          this.waveTransitionTimer = 3.0; // 3 second transition delay
-        }
-      }
-    }
-
-    // Process transition timer delay tick
-    if (this.isWaveTransitionActive && config.gameState === "gameplay") {
-      this.waveTransitionTimer -= dtSeconds;
-      if (this.waveTransitionTimer <= 0.0) {
-        this.isWaveTransitionActive = false;
-
-        // Advance Wave level index
-        const nextWaveLevel = config.gameActiveWave + 1;
-        useStore.getState().setParameter("gameActiveWave", nextWaveLevel);
-
-        this.enemiesSpawnedInWave = 0;
-        this.enemiesDefeatedInWave = 0;
-
-        // Increment swarm scale counts
-        this.totalEnemiesToSpawnInWave = 5 + (nextWaveLevel * 3);
-        this.spawnInterval = Math.max(0.6, 1.8 - (nextWaveLevel * 0.1));
-      }
-    }
-
-    // --- Phase 2C: Propagation of Spark/Splash Particles ---
-    if (this.impactParticles && this.impactParticles.length > 0) {
-      for (let i = this.impactParticles.length - 1; i >= 0; i--) {
-        const p = this.impactParticles[i];
-        p.graphic.x += p.vx * dtSeconds;
-        p.graphic.y += p.vy * dtSeconds;
-        
-        p.life -= dtSeconds;
-        p.alpha = Math.max(0, p.life / p.maxLife);
-        p.graphic.alpha = p.alpha;
-
-        if (p.life <= 0.0) {
-          if (this.masterContainer) {
-            this.masterContainer.removeChild(p.graphic);
-          }
-          p.graphic.destroy();
-          this.impactParticles.splice(i, 1);
-        }
-      }
-    }
-
-    // --- Flight & Hover Subsystem Calculations ---
-    const headState = this.flightDynamics.calculate(this.time, config, isGlitchActive, this.baselinePosition, this.currentFlipScale);
-
-    // Set head container position combining flight dynamics with elastic spring recoil offsets
-    this.headContainer.position.set(
-      headState.x + this.recoilOffset.x, 
-      headState.y + this.recoilOffset.y
-    );
-    this.headContainer.scale.set(headState.scaleX, headState.scale); // Independent scale assignment to allow horizontal flip rotations
-    this.headContainer.rotation = headState.rotation;
-
-    // --- Searchlight Volumetric System Updates (Orbiting turret tracking mouse) ---
-    // (Bypassed / Temporarily unavailable for testing as requested)
-    if (this.searchlightSystem) {
-      this.searchlightSystem.update(this.headContainer.position, this.absoluteMousePos, deltaTime, config);
-    }
-
-    // --- WebGL Portal Refraction Ripple Subsystem updates ---
-    if (this.shockwaveSystem) {
+    // 4. WebGL Portal Refraction Ripple Subsystem updates
+    if (this.shockwaveSystem && this.actor) {
       const hasActiveWaves = this.shockwaveSystem.update(
         dtSeconds, 
-        screenWidth, 
-        screenHeight, 
+        this.app.screen.width, 
+        this.app.screen.height, 
         config
       );
 
@@ -3280,14 +2223,14 @@ export class PixiEngine {
       }
     }
 
-    // Detect visual shakes to auto-fire WebGL ripples
-    const glitchTriggered = isGlitchActive && config.glitchShakeIntensity > 15;
-    if (glitchTriggered && !this.lastGlitchPeak && this.shockwaveSystem) {
+    // Detect visual shakes to auto-fire WebGL ripples on active character position
+    const glitchTriggered = isGlitchActive && glitchShakeIntensity > 15;
+    if (glitchTriggered && !this.lastGlitchPeak && this.shockwaveSystem && this.actor) {
       this.shockwaveSystem.trigger(
-        this.headContainer.position,
+        this.actor.container.position,
         this.masterContainer.scale.x,
-        screenWidth,
-        screenHeight
+        this.app.screen.width,
+        this.app.screen.height
       );
     }
     this.lastGlitchPeak = glitchTriggered;
@@ -3297,51 +2240,10 @@ export class PixiEngine {
       this.renderTextureManager.update(deltaTime, config, this.app.renderer);
     }
 
-    // Update decoupled background and foreground fog systems
-    if (this.bgFog) {
-      this.bgFog.update(this.time, config);
-    }
-    if (this.fgFog) {
-      this.fgFog.update(this.time, config);
-    }
-
-    if (this.eyeSystem) {
-      this.eyeSystem.update(deltaTime, config);
-    }
-
-    if (this.particleSystem) {
-      this.particleSystem.update(deltaTime, config);
-    }
-
-    // --- Echoing Phase Trails Subsystem calculations ---
-    if (this.trailSystem) {
-      this.trailSystem.update(headState, config, isGlitchActive);
-    }
-
-    // --- Background Side Scrolling (Double Layer Parallax) ---
-    const baseSpeed = config.bgScrollSpeed;
-    const backParallax = config.bg2ParallaxSpeed; // The slider value (supports negative ranges)
-
-    if (this.isPanoramaMode) {
-      if (this.layers.bg) {
-        this.layers.bg.updatePositions(dtSeconds, baseSpeed, 1.0);
-      }
-      if (this.layers.bg2) {
-        this.layers.bg2.updatePositions(dtSeconds, baseSpeed, backParallax);
-      }
-    } else {
-      if (this.layers.bg_mountain_back) {
-        this.layers.bg_mountain_back.updatePositions(dtSeconds, baseSpeed, 0.15 * backParallax);
-      }
-      if (this.layers.bg_mountain_back_reflect) {
-        this.layers.bg_mountain_back_reflect.updatePositions(dtSeconds, baseSpeed, 0.15 * backParallax);
-      }
-      if (this.layers.bg_mountain) {
-        this.layers.bg_mountain.updatePositions(dtSeconds, baseSpeed, 0.40);
-      }
-      if (this.layers.bg_mountain_reflect) {
-        this.layers.bg_mountain_reflect.updatePositions(dtSeconds, baseSpeed, 0.40);
-      }
+    // --- Echoing Phase Trails Subsystem calculations (Reading active actor state) ---
+    if (this.trailSystem && this.actor) {
+      const configForTrails = { ...config, glitchShakeIntensity };
+      this.trailSystem.update(this.actor.headState, configForTrails, isGlitchActive);
     }
   }
 
@@ -3350,72 +2252,62 @@ export class PixiEngine {
     this.app.renderer.resize(window.innerWidth, window.innerHeight);
     const { screen } = this.app;
     
+    // 1. Center the camera container on screen
     this.masterContainer.position.set(screen.width / 2, screen.height / 2);
     
-    const clipTex = Assets.get(this.assetKeys.char_clipping_mask) || Assets.get('bg');
-    const bgWidth = (clipTex && clipTex !== Texture.EMPTY) ? clipTex.width : 1000;
-    const bgHeight = (clipTex && clipTex !== Texture.EMPTY) ? clipTex.height : 1000;
-
-    const scaleX = screen.width / bgWidth;
-    const scaleY = screen.height / bgHeight;
-    const scale = Math.max(scaleX, scaleY);
+    // 2. Define a stable logical height baseline for side-scrollers.
+    const logicalHeight = 1200; 
     
+    // 3. Proportional height scaling: scale depends only on the screen's height
+    const scale = screen.height / logicalHeight;
     this.masterContainer.scale.set(scale);
 
+    // 4. Calculate the resulting visible local bounds
+    const localW = screen.width / scale;
+    const localH = screen.height / scale;
+    
+    // Save the actual coordinate viewport height inside the engine loop
+    this.canvasHeight = localH;
+
     if (this.masterClipMask) {
-      const localW = screen.width / scale;
-      const localH = screen.height / scale;
       this.masterClipMask.clear()
         .rect(-localW / 2, -localH / 2, localW, localH)
         .fill({ color: 0xffffff });
+    }
+
+    // Propagate the new visible layout bounds to the stage layers to prevent edge-cutoffs
+    if (this.stage && typeof this.stage.resize === 'function') {
+      this.stage.resize(localW, localH);
     }
   }
 
   destroy() {
     this.isDestroyed = true;
 
-    // Remove window keyboard trackers
-    window.removeEventListener('keydown', this.handleKeyDown);
-    window.removeEventListener('keyup', this.handleKeyUp);
-
-    if (this.unsubscribeStore) {
-      this.unsubscribeStore();
+    if (this.unsubscribers) {
+      this.unsubscribers.forEach(unsub => {
+        if (typeof unsub === 'function') unsub();
+      });
+      this.unsubscribers = [];
     }
-
-    // Clean up continuous auto-fire pointer tracking using our cached DOM canvas reference
-    if (this.canvasElement) {
-      try {
-        this.canvasElement.removeEventListener('pointerdown', this.handlePointerDown);
-        this.canvasElement.removeEventListener('pointermove', this.handlePointerMove);
-      } catch (e) {
-        // Safe catch
-      }
-      this.canvasElement = null;
-    }
-    window.removeEventListener('pointerup', this.handlePointerUp);
-
-    // Clean up active projectiles, swarms, and particle groups
-    this.clearGameplayObjects();
 
     if (this.isReady && this.app) {
       try { 
-        if (this.eyeSystem?.destroy) {
-          this.eyeSystem.destroy();
+        if (this.actor) {
+          if (this.actor.characterContentContainer) {
+            this.actor.characterContentContainer.mask = null;
+          }
+          this.actor.destroy();
+          this.actor = null;
         }
-        if (this.particleSystem?.destroy) {
-          this.particleSystem.destroy();
+        if (this.stage?.destroy) {
+          this.stage.destroy();
+          this.stage = null;
         }
+
         if (this.renderTextureManager?.destroy) {
           this.renderTextureManager.destroy();
           this.renderTextureManager = null;
-        }
-        if (this.bgFog?.destroy) {
-          this.bgFog.destroy();
-          this.bgFog = null;
-        }
-        if (this.fgFog?.destroy) {
-          this.fgFog.destroy();
-          this.fgFog = null;
         }
         if (this.trailSystem?.destroy) {
           this.trailSystem.destroy();
@@ -3429,15 +2321,21 @@ export class PixiEngine {
           this.searchlightSystem.destroy();
           this.searchlightSystem = null;
         }
-        
-        // Fix standard asset texture cache warnings [3]
-        this.app.destroy(true, { children: true, texture: false }); 
+
+        // Only release textures from cache when the app is completely unmounted/unloaded
+        if (this.loadedRig && this.loadedRig.verifiedLoadQueue && this.loadedRig.verifiedLoadQueue.length > 0) {
+          Assets.unload(this.loadedRig.verifiedLoadQueue).catch(() => {});
+          this.loadedRig = null;
+        }
+
+        this.app.destroy(true, { children: true, texture: true }); 
       } catch (e) {
         console.warn("[PixiEngine] Strict cleanup warn:", e);
       }
     }
   }
 }
+
 ```
 
 ---
@@ -3455,7 +2353,7 @@ uniform float uOpacity;
 uniform vec3 uColor;
 uniform float uSpeed;
 
-// 2D Random (Removed explicit 'in' qualifier to prevent ANGLE varying collision)
+// 2D Random
 float random (vec2 st) {
     return fract(sin(dot(st.xy, vec2(127.1, 311.7))) * 43758.5453123);
 }
@@ -3477,11 +2375,10 @@ float fbm (vec2 st) {
     float value = 0.0;
     float amplitude = 0.5;
     
-    // Write into local variable to bypass write-restrictions on function parameters
     vec2 p = st;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 4; i++) {
         value += amplitude * noise(p);
-        p *= 2.0;
+        p *= 2.02;
         amplitude *= 0.5;
     }
     return value;
@@ -3490,24 +2387,94 @@ float fbm (vec2 st) {
 void main() {
     vec2 uv = vTextureCoord;
     
-    // Volumetric Horizontal Band Mask with spec-compliant descending smoothstep
-    // Gently fades the smoke in at the top and cleanly fades it to 0 opacity before the bottom
-    float band = smoothstep(0.15, 0.45, uv.y) * (1.0 - smoothstep(0.55, 0.85, uv.y));
+    // Volumetric Horizontal Band Mask with smooth edge fade-out at boundaries
+    float band = smoothstep(0.12, 0.45, uv.y) * (1.0 - smoothstep(0.55, 0.88, uv.y));
     
-    // Movement logic
-    vec2 shift = vec2(uTime * uSpeed, uTime * 0.02);
+    // Vector shift driven by wind speed and slow rising heat
+    vec2 shift = vec2(uTime * uSpeed, uTime * -0.05);
     
-    // Generate layered noise
-    float n = fbm(uv * vec2(1.5, 3.0) + shift);
+    // Scale coordinate mapping (12x horizontally, 6x vertically) to create detailed wind-swept clouds
+    vec2 noiseUV = uv * vec2(12.0, 6.0);
     
-    // Distort noise for more "wispiness"
-    n += fbm(uv * 4.0 - shift * 0.5) * 0.5;
+    // Compute layered dynamic noise
+    float n1 = fbm(noiseUV + shift);
+    float n2 = fbm(noiseUV * 2.1 - shift * 0.85) * 0.45;
+    float n = n1 * 0.65 + n2 * 0.35;
+    
+    // Apply contrast and thresholding curves to sculpt flat haze into distinct wisps of smoke
+    n = clamp(n * 1.5 - 0.25, 0.0, 1.0); // Shift dark values down
+    n = pow(n, 2.2) * 1.7;               // Sharpen the cloud edges and deepen shadows
     
     float alpha = n * band * uOpacity;
     
     finalColor = vec4(uColor * alpha, alpha);
 }
 `;
+```
+
+---
+### `src\engine\shaders\MutationCompositeShader.js`
+```javascript
+export const MUTATION_COMPOSITE_FRAGMENT_SHADER = `
+precision highp float;
+
+in vec2 vTextureCoord;
+out vec4 finalColor;
+
+uniform sampler2D uTexture;
+uniform sampler2D uMaskTexture;
+uniform sampler2D uLineartTexture;
+uniform vec4 uInputClamp;
+uniform vec4 uInputSize;
+uniform vec4 uOutputFrame;
+uniform float uMode;
+uniform float uAxisX;
+uniform float uAxisY;
+uniform float uSourceX;
+uniform float uSourceY;
+uniform float uMirrorPattern;
+uniform float uPadding;
+
+float reflectCoordinate(float outputCoordinate, float axis, float sourceSide) {
+  if (sourceSide < 0.5) {
+    return outputCoordinate <= axis ? outputCoordinate : 2.0 * axis - outputCoordinate;
+  }
+  return outputCoordinate >= axis ? outputCoordinate : 2.0 * axis - outputCoordinate;
+}
+
+void main() {
+  vec2 inputPixel = vTextureCoord * uInputSize.xy;
+  vec2 contentSize = max(uOutputFrame.zw - vec2(uPadding * 2.0), vec2(1.0));
+  vec2 localUv = (inputPixel - vec2(uPadding)) / contentSize;
+  vec2 geometryUv = localUv;
+
+  bool mirrorX = uMode > 0.5 && (uMode < 1.5 || uMode > 2.5);
+  bool mirrorY = uMode > 1.5;
+
+  if (mirrorX) {
+    geometryUv.x = reflectCoordinate(localUv.x, uAxisX, uSourceX);
+  }
+  if (mirrorY) {
+    geometryUv.y = reflectCoordinate(localUv.y, uAxisY, uSourceY);
+  }
+
+  if (geometryUv.x < 0.0 || geometryUv.x > 1.0 ||
+      geometryUv.y < 0.0 || geometryUv.y > 1.0) {
+    finalColor = vec4(0.0);
+    return;
+  }
+
+  vec2 contentUv = uMirrorPattern > 0.5 ? geometryUv : localUv;
+  vec2 inputUv = (vec2(uPadding) + contentUv * contentSize) * uInputSize.zw;
+  vec4 content = texture(uTexture, clamp(inputUv, uInputClamp.xy, uInputClamp.zw));
+  float maskAlpha = texture(uMaskTexture, geometryUv).a;
+  vec4 lineart = texture(uLineartTexture, geometryUv);
+  vec4 clippedContent = content * maskAlpha;
+
+  finalColor = lineart + clippedContent * (1.0 - lineart.a);
+}
+`;
+
 ```
 
 ---
@@ -3570,6 +2537,62 @@ void main() {
   finalColor = texture(uTexture, clampedUV);
 }
 `;
+```
+
+---
+### `src\engine\shaders\SymmetryShader.js`
+```javascript
+export const SYMMETRY_FRAGMENT_SHADER = `
+precision highp float;
+
+in vec2 vTextureCoord;
+out vec4 finalColor;
+
+uniform sampler2D uTexture;
+uniform vec4 uInputClamp;
+uniform vec4 uInputSize;
+uniform vec4 uOutputFrame;
+uniform float uMode;
+uniform float uAxisX;
+uniform float uAxisY;
+uniform float uSourceX;
+uniform float uSourceY;
+uniform float uPadding;
+
+float reflectCoordinate(float outputCoordinate, float axis, float sourceSide) {
+  if (sourceSide < 0.5) {
+    return outputCoordinate <= axis ? outputCoordinate : 2.0 * axis - outputCoordinate;
+  }
+  return outputCoordinate >= axis ? outputCoordinate : 2.0 * axis - outputCoordinate;
+}
+
+void main() {
+  vec2 inputPixel = vTextureCoord * uInputSize.xy;
+  vec2 contentSize = max(uOutputFrame.zw - vec2(uPadding * 2.0), vec2(1.0));
+  vec2 localUv = (inputPixel - vec2(uPadding)) / contentSize;
+  vec2 sampleLocalUv = localUv;
+
+  bool mirrorX = uMode > 0.5 && (uMode < 1.5 || uMode > 2.5);
+  bool mirrorY = uMode > 1.5;
+
+  if (mirrorX) {
+    sampleLocalUv.x = reflectCoordinate(localUv.x, uAxisX, uSourceX);
+  }
+  if (mirrorY) {
+    sampleLocalUv.y = reflectCoordinate(localUv.y, uAxisY, uSourceY);
+  }
+
+  if (sampleLocalUv.x < 0.0 || sampleLocalUv.x > 1.0 ||
+      sampleLocalUv.y < 0.0 || sampleLocalUv.y > 1.0) {
+    finalColor = vec4(0.0);
+    return;
+  }
+
+  vec2 sampleUv = (vec2(uPadding) + sampleLocalUv * contentSize) * uInputSize.zw;
+  finalColor = texture(uTexture, clamp(sampleUv, uInputClamp.xy, uInputClamp.zw));
+}
+`;
+
 ```
 
 ---
@@ -3649,21 +2672,14 @@ void main() {
 ### `src\engine\systems\EffectsSystem.js`
 ```javascript
 // src/engine/systems/EffectsSystem.js
-import { BlurFilter, ColorMatrixFilter } from 'pixi.js';
-import { RGBSplitFilter } from 'pixi-filters';
+import { EffectFactory } from '../filters/EffectFactory.js';
 
 export class EffectsSystem {
   constructor() {
-    // 1. Instantiate filter instances
-    this.rgbSplitFilter = new RGBSplitFilter({
-      red: { x: 0, y: 0 },
-      green: { x: 0, y: 0 },
-      blue: { x: 0, y: 0 }
-    });
-    this.auraBlurFilter = new BlurFilter({ strength: 20 });
-    this.auraBlurFilter.padding = 100; // Prevent harsh bounding box edge clipping during large blur pulses
-
-    this.colorMatrix = new ColorMatrixFilter();
+    // 1. Instantiate filter instances via the central factory
+    this.rgbSplitFilter = EffectFactory.createChromaticAberration();
+    this.auraBlurFilter = EffectFactory.createAuraBlur(20);
+    this.colorMatrix = EffectFactory.createColorMatrix();
 
     // Store target references
     this.targets = {
@@ -3679,12 +2695,6 @@ export class EffectsSystem {
   /**
    * Connects the initialized filters to their respective target display objects.
    * @param {Object} targets - Target display objects to receive the filters and updates.
-   * @param {Container} targets.headContainer - Container for head assets.
-   * @param {Sprite} targets.auraSprite - Background glow/aura sprite.
-   * @param {Sprite} targets.baseSprite - Skull base color sprite.
-   * @param {DisplayObject} targets.mountainReflector - Foreground mountain reflection layer.
-   * @param {DisplayObject} targets.mountainBackReflector - Background mountain reflection layer.
-   * @param {DisplayObject} targets.ceilingReflector - Background pattern/ceiling reflection layer.
    */
   attach(targets) {
     this.targets = { ...this.targets, ...targets };
@@ -3693,11 +2703,18 @@ export class EffectsSystem {
       this.targets.headContainer.filters = [this.rgbSplitFilter];
     }
     if (this.targets.auraSprite) {
-      // Color matrix is removed here so the aura preserves the rich native colors of mask.webp
-      this.targets.auraSprite.filters = [this.auraBlurFilter];
+      const hasMutationFilter = (this.targets.auraSprite.filters || []).length > 0;
+      this.auraBlurFilter.padding = hasMutationFilter ? 0 : 100;
+      this.targets.auraSprite.filters = [
+        ...(this.targets.auraSprite.filters || []),
+        this.auraBlurFilter
+      ];
     }
     if (this.targets.baseSprite) {
-      this.targets.baseSprite.filters = [this.colorMatrix];
+      this.targets.baseSprite.filters = [
+        ...(this.targets.baseSprite.filters || []),
+        this.colorMatrix
+      ];
     }
   }
 
@@ -3705,7 +2722,7 @@ export class EffectsSystem {
    * Updates visual parameters on a per-frame basis.
    * @param {number} time - Elapsed time in seconds.
    * @param {Object} state - State from useStore.
-   * @returns {Object} Glitch state metrics for the main engine (such as screen shake).
+   * @returns {Object} Glitch state metrics for the main engine.
    */
   update(time, state) {
     const metrics = {
@@ -3713,13 +2730,41 @@ export class EffectsSystem {
       currentSplit: state.aberrationAmount
     };
 
-    // 1. RGB Split / Glitch Calculations
-    if (state.aberrationSpeed > 0) {
-      const pulseWave = Math.sin(time * state.aberrationSpeed * 3);
-      metrics.currentSplit = Math.abs(pulseWave) * state.aberrationAmount;
+    // Calculate transition multipliers/modifiers cleanly on top of baseline slider values
+    let aberrationAmountModifier = 0.0;
+    let aberrationSpeedOverride = state.aberrationSpeed;
+    let auraOpacityMultiplier = 0.0;
+    let auraScaleMultiplier = 0.0;
+    let flickerIntensityModifier = 0.0;
 
-      if (state.aberrationGlitch > 0 && Math.random() < (0.008 * state.aberrationGlitch)) {
-        metrics.currentSplit = state.aberrationAmount * (1.5 + Math.random() * 1.5);
+    const reaction = state.activeReaction;
+    const progress = state.reactionProgress ?? 0.0;
+
+    if (reaction === "lyx_received") {
+      auraOpacityMultiplier = (1.0 / Math.max(0.01, state.auraOpacity) - 1.0) * progress;
+      auraScaleMultiplier = (1.35 / Math.max(0.1, state.auraScale) - 1.0) * progress;
+    } else if (reaction === "lsp7_received" || reaction === "lsp8_received") {
+      aberrationAmountModifier = (30.0 - state.aberrationAmount) * progress;
+      flickerIntensityModifier = (0.85 - state.flickerIntensity) * progress;
+      aberrationSpeedOverride = 8.0;
+    }
+
+    const currentAberrationAmount = state.aberrationAmount + aberrationAmountModifier;
+    const currentAuraOpacity = state.auraOpacity * (1.0 + auraOpacityMultiplier);
+    const currentAuraScale = state.auraScale * (1.0 + auraScaleMultiplier);
+    const currentFlickerIntensity = state.flickerIntensity + flickerIntensityModifier;
+
+    // 1. RGB Split / Glitch Calculations
+    if (aberrationSpeedOverride > 0) {
+      const pulseWave = Math.sin(time * aberrationSpeedOverride * 3);
+      metrics.currentSplit = Math.abs(pulseWave) * currentAberrationAmount;
+
+      const activeGlitchChance = (reaction === "lsp7_received" || reaction === "lsp8_received") 
+        ? 0.0 
+        : state.aberrationGlitch;
+
+      if (activeGlitchChance > 0 && Math.random() < (0.008 * activeGlitchChance)) {
+        metrics.currentSplit = currentAberrationAmount * (1.5 + Math.random() * 1.5);
         metrics.isGlitched = true;
       }
     }
@@ -3729,10 +2774,10 @@ export class EffectsSystem {
     // 2. Color Matrix / Strobe Calculations
     let flickerFactor = 1.0;
     if (this.targets.baseSprite) {
-      if (state.flickerIntensity > 0) {
+      if (currentFlickerIntensity > 0) {
         const strobeTime = time * state.flickerSpeed * 45;
         const waveValue = Math.sin(strobeTime) * Math.sin(strobeTime * 2.3) * Math.cos(strobeTime * 0.85);
-        const triggerThreshold = 1.0 - state.flickerIntensity;
+        const triggerThreshold = 1.0 - currentFlickerIntensity;
         this.colorMatrix.reset();
 
         if (waveValue > triggerThreshold) {
@@ -3743,7 +2788,7 @@ export class EffectsSystem {
           this.colorMatrix.brightness(0.05, false);
           flickerFactor = 0.05;
         } else {
-          const randoB = 1.0 + (Math.random() - 0.5) * 0.15 * state.flickerIntensity;
+          const randoB = 1.0 + (Math.random() - 0.5) * 0.15 * currentFlickerIntensity;
           this.colorMatrix.brightness(randoB, false);
           flickerFactor = randoB;
         }
@@ -3756,10 +2801,9 @@ export class EffectsSystem {
     const auraPulse = Math.sin(time * state.auraPulseSpeed * 2.0) * 0.5 + 0.5;
     if (this.targets.auraSprite) {
       this.auraBlurFilter.strength = state.auraBlur + (auraPulse * 10);
-      this.targets.auraSprite.scale.set(state.auraScale + (auraPulse * 0.02));
-      this.targets.auraSprite.alpha = state.auraOpacity;
+      this.targets.auraSprite.scale.set(currentAuraScale + (auraPulse * 0.02));
+      this.targets.auraSprite.alpha = currentAuraOpacity;
       
-      // Standard RGB tinting colorizes the mask's native colors (set sliders to 255 to show original mask color)
       this.targets.auraSprite.tint = 
         (Math.floor(state.auraColorR) << 16) + 
         (Math.floor(state.auraColorG) << 8) + 
@@ -3772,8 +2816,7 @@ export class EffectsSystem {
       (Math.floor(state.auraColorG) << 8) + 
       Math.floor(state.auraColorB);
 
-    // Dynamic Cavern Light Alpha scaling influenced by the aura pulse, user intensity slider, and active screen-flicker
-    const baseReflectAlpha = state.auraOpacity * (0.12 + auraPulse * 0.28) * (state.cavernLightIntensity ?? 1.0);
+    const baseReflectAlpha = currentAuraOpacity * (0.12 + auraPulse * 0.28) * (state.cavernLightIntensity ?? 1.0);
     const reflectionAlpha = Math.max(0, Math.min(1.0, baseReflectAlpha * flickerFactor));
 
     if (this.targets.mountainReflector) {
@@ -3783,7 +2826,6 @@ export class EffectsSystem {
 
     if (this.targets.mountainBackReflector) {
       this.targets.mountainBackReflector.tint = reflectionTint;
-      // Background mountains have slightly more subtle reflection due to atmospheric dust/fog layers
       this.targets.mountainBackReflector.alpha = reflectionAlpha * 0.65;
     }
 
@@ -3795,6 +2837,7 @@ export class EffectsSystem {
     return metrics;
   }
 }
+
 ```
 
 ---
@@ -3983,11 +3026,12 @@ export class FlightDynamics {
    * @param {number} time - Elapsed execution time in seconds.
    * @param {Object} config - Normalized application state variables.
    * @param {boolean} isGlitchActive - Flag denoting if a peak glitch state is occurring.
-   * @param {{x: number, y: number}} baselinePos - Dynamic target coordinates currently centered on the head [3].
-   * @param {number} currentFlipScale - Horizontal scale factor supporting smooth rotational flipping [3].
+   * @param {{x: number, y: number}} baselinePos - Dynamic target coordinates currently centered on the head.
+   * @param {number} currentFlipScale - Horizontal scale factor supporting smooth rotational flipping.
+   * @param {number} canvasHeight - Total visible viewport height in local coordinate units.
    * @returns {Object} Target positions, rotation angles, and horizontal/vertical scales.
    */
-  calculate(time, config, isGlitchActive, baselinePos, currentFlipScale) {
+  calculate(time, config, isGlitchActive, baselinePos, currentFlipScale, canvasHeight = 1000) {
     const tFloat = time * config.floatSpeed;
 
     // Generate smooth hover pauses (plateaus) at wave extrema using smoothstep interpolation
@@ -3998,10 +3042,10 @@ export class FlightDynamics {
     const normProgress = clampedWave * 0.5 + 0.5; 
     const smoothProgress = normProgress * normProgress * (3.0 - 2.0 * normProgress);
 
-    // Apply vertical displacement boundaries relative to the dynamic baseline [3]
+    // Apply vertical displacement boundaries relative to the dynamic baseline
     let y = baselinePos.y - (smoothProgress * config.floatAmpY * 1.5);
     
-    // Apply horizontal sway relative to the dynamic baseline [3]
+    // Apply horizontal sway relative to the dynamic baseline
     let x = baselinePos.x + Math.cos(tFloat * 0.5) * config.floatAmpX;
 
     // Apply erratic noise coordinates if a screen shake action is active
@@ -4010,8 +3054,17 @@ export class FlightDynamics {
       y += (Math.random() - 0.5) * config.glitchShakeIntensity;
     }
 
-    // Process dynamic visual scale based on active coordinate height
-    const scale = config.flyMinScale - (smoothProgress * (config.flyMinScale - config.flyMaxScale));
+    // --- Dynamic Height-Based Scaling ---
+    // The top of the visible screen is at -halfHeight, and the bottom is at +halfHeight
+    const halfHeight = canvasHeight / 2;
+    const clampedY = Math.max(-halfHeight, Math.min(halfHeight, baselinePos.y));
+    
+    // Convert coordinate to a clean normalized [0.0, 1.0] ratio 
+    // -halfHeight (top of screen) maps to 0.0, halfHeight (bottom of screen) maps to 1.0
+    const heightRatio = (clampedY + halfHeight) / canvasHeight;
+
+    // Interpolate: flyMaxScale (smaller, further away / top) up to flyMinScale (closer / bottom)
+    const scale = config.flyMaxScale + heightRatio * (config.flyMinScale - config.flyMaxScale);
 
     // Process dynamic tilt (persistent bias angles + swaying)
     const tiltRad = config.flyTiltBias * (Math.PI / 180.0);
@@ -4022,7 +3075,7 @@ export class FlightDynamics {
       x, 
       y, 
       scale, 
-      scaleX: scale * currentFlipScale, // Apply the horizontal rotation flip factor [3]
+      scaleX: scale * currentFlipScale, // Apply the horizontal rotation flip factor
       rotation 
     };
   }
@@ -4033,8 +3086,8 @@ export class FlightDynamics {
 ### `src\engine\systems\FogSystem.js`
 ```javascript
 // src/engine/systems/FogSystem.js
-import { Filter, Sprite, Texture, defaultFilterVert } from 'pixi.js';
-import { FOG_FRAGMENT_SHADER } from '../shaders/FogShader.js';
+import { Sprite, Texture } from 'pixi.js';
+import { EffectFactory } from '../filters/EffectFactory.js';
 
 export class FogSystem {
   constructor(targetContainer, bgHeight, isForeground = false) {
@@ -4048,51 +3101,52 @@ export class FogSystem {
     this.sprite.height = bgHeight;
     this.sprite.alpha = 1.0; 
 
-    this.filter = Filter.from({
-      gl: {
-        vertex: defaultFilterVert,
-        fragment: FOG_FRAGMENT_SHADER
-      },
-      resources: {
-        fogUniforms: {
-          uTime: { value: 0, type: 'f32' },
-          uOpacity: { value: 0.5, type: 'f32' },
-          uColor: { value: [1, 1, 1], type: 'vec3<f32>' },
-          uSpeed: { value: 1.0, type: 'f32' }
-        }
-      }
-    });
+    // Delegate compilation to the central factory
+    this.filter = EffectFactory.createFogFilter();
 
     this.sprite.filters = [this.filter];
     this.targetContainer.addChild(this.sprite);
   }
 
+  /**
+   * Rescales the fog mesh width to cover ultra-wide screen borders.
+   */
+  resize(localW, localH) {
+    if (this.sprite) {
+      this.sprite.width = localW;
+    }
+  }
+
   update(time, config) {
     if (!this.filter) return;
+
+    // Apply strict fallback baselines to safeguard the shader uniforms from NaN corruptions
+    const fogOpacity = config.fogOpacity ?? 0.4;
+    const fogSpeed = config.fogSpeed ?? 1.0;
+    const fogColorR = config.fogColorR ?? 140;
+    const fogColorG = config.fogColorG ?? 120;
+    const fogColorB = config.fogColorB ?? 180;
+    const fogSwaySpeed = config.fogSwaySpeed ?? 0.5;
+    const fogSwayAmp = config.fogSwayAmp ?? 20.0;
 
     const unis = this.filter.resources.fogUniforms.uniforms;
     unis.uTime = time;
     
-    // Foreground fog is slightly thinner to avoid obscuring character details
-    const baseOpacity = this.isForeground ? config.fogOpacity * 0.55 : config.fogOpacity;
+    const baseOpacity = this.isForeground ? fogOpacity * 0.55 : fogOpacity;
     unis.uOpacity = baseOpacity;
     
-    // Foreground fog scrolls faster (simulating spatial overlay depth)
     const velocityScale = this.isForeground ? 1.45 : 0.85;
-    unis.uSpeed = config.fogSpeed * 0.01 * velocityScale;
+    unis.uSpeed = fogSpeed * 0.01 * velocityScale;
     
-    // Normalize color output
     unis.uColor = [
-        config.fogColorR / 255,
-        config.fogColorG / 255,
-        config.fogColorB / 255
+        fogColorR / 255,
+        fogColorG / 255,
+        fogColorB / 255
     ];
 
-    // Horizontal/Phase offsetting between the two layers prevents overlapping synchronized bobbing
     const phaseOffset = this.isForeground ? 1.6 : 0.0;
-    const sway = Math.sin((time * config.fogSwaySpeed) + phaseOffset) * config.fogSwayAmp;
+    const sway = Math.sin((time * fogSwaySpeed) + phaseOffset) * fogSwayAmp;
     
-    // Sit foreground fog slightly lower on screen to overlay the lower skull fangs/chin
     const verticalCenter = this.isForeground ? (this.sprite.height * 0.28) : (this.sprite.height * 0.12);
     this.sprite.y = verticalCenter + sway;
   }
@@ -4125,46 +3179,82 @@ export class MirroredScrollLayer extends Container {
     this.customScaleFactor = 1.0;
 
     this.items = [];
-    // Instantiate 4 sprites to cover ultra-wide viewports comfortably
-    for (let i = -1; i <= 2; i++) {
-      const sprite = new Sprite(texture);
-      sprite.anchor.set(0.5);
-      sprite.y = 0;
-      this.addChild(sprite);
-      this.items.push({ sprite, baseIndex: i });
-    }
+    this.localW = 2000; // Default fallback width
     
-    this.updatePositions(0);
+    this.rebuildSprites();
   }
 
   setPatternScale(scaleFactor) {
     this.customScaleFactor = scaleFactor;
   }
 
+  /**
+   * Resizes the layer and adjusts the sprite pool count dynamically to prevent seams.
+   */
+  resize(localW, localH) {
+    this.localW = localW;
+    this.rebuildSprites();
+  }
+
+  /**
+   * Calculates the exact number of sprites needed to tile the current screen width seamlessly.
+   */
+  rebuildSprites() {
+    const scaleFactorToUse = this.customScaleFactor !== undefined ? this.customScaleFactor : 1.0;
+    const finalScale = this.spriteScale * scaleFactorToUse;
+    const w = this.textureWidth * finalScale;
+
+    // Determine the pool size: visible viewport divided by sprite width, plus 2 padding sprites
+    const needed = Math.max(4, Math.ceil(this.localW / w) + 2);
+
+    if (this.items.length !== needed) {
+      // Safely clear old child nodes to avoid leaks
+      this.items.forEach(item => {
+        if (item.sprite) {
+          this.removeChild(item.sprite);
+          item.sprite.destroy({ children: true, texture: false }); // Safely clean up sprite references while preserving shared source textures
+        }
+      });
+      this.items = [];
+
+      // Re-populate sprite pool centered horizontally
+      const startIdx = -Math.floor(needed / 2);
+      for (let i = 0; i < needed; i++) {
+        const baseIndex = startIdx + i;
+        const sprite = new Sprite(this.texture);
+        sprite.anchor.set(0.5);
+        sprite.y = 0;
+        this.addChild(sprite);
+        this.items.push({ sprite, baseIndex });
+      }
+    }
+  }
+
   updatePositions(dtSeconds, baseSpeed = 0, dynamicSpeedFactor) {
-    // Falls back to constructor's speed factor if no dynamic factor is supplied on tick
     const activeSpeedFactor = dynamicSpeedFactor !== undefined ? dynamicSpeedFactor : this.speedFactor;
     this.scrollX -= baseSpeed * activeSpeedFactor * dtSeconds;
 
     const scaleFactorToUse = this.customScaleFactor !== undefined ? this.customScaleFactor : 1.0;
     const finalScale = this.spriteScale * scaleFactorToUse;
-    const w = this.textureWidth * finalScale; // Recalculate scaled width dynamically to account for runtime pattern scaling
-    const halfTotal = w * 2;
+    const w = this.textureWidth * finalScale;
+
+    const totalWidth = this.items.length * w;
+    const halfTotalWidth = totalWidth / 2;
 
     this.items.forEach(item => {
       let localX = (item.baseIndex * w) + this.scrollX;
 
-      // Wrap local X coordinates seamlessly
-      while (localX < -halfTotal) {
-        localX += w * 4;
+      // Wrap local coordinates based on the total width of the active sprite pool
+      while (localX < -halfTotalWidth) {
+        localX += totalWidth;
       }
-      while (localX > halfTotal) {
-        localX -= w * 4;
+      while (localX > halfTotalWidth) {
+        localX -= totalWidth;
       }
 
       item.sprite.position.set(localX, 0);
 
-      // Determine absolute grid index to apply correct mirroring flips
+      // Apply mirroring flips to ensure seamless transitions at texture boundaries
       const gridIndex = Math.round((localX - this.scrollX) / w);
       const isEven = Math.abs(gridIndex) % 2 === 0;
       item.sprite.scale.set(finalScale * (isEven ? 1 : -1), finalScale);
@@ -4216,8 +3306,21 @@ export class ParticleSystem {
     const gTint = state.auraColorG ?? 200;
     const bTint = state.auraColorB ?? 150;
 
-    // Pool expansion: Spawn particles to meet targeted configuration count
-    while (this.particles.length < state.particleCount) {
+    // Calculate transition multipliers cleanly on top of baseline slider values
+    let activeReactionMultiplier = 0.0;
+    let particleSpeedMultiplier = 0.0;
+
+    if (state.activeReaction === "lyx_received") {
+      const progress = state.reactionProgress ?? 0.0;
+      activeReactionMultiplier = (300 / Math.max(1, state.particleCount) - 1.0) * progress;
+      particleSpeedMultiplier = (4.5 / Math.max(0.1, state.particleSpeed) - 1.0) * progress;
+    }
+
+    const currentParticleCount = Math.floor(state.particleCount * (1.0 + activeReactionMultiplier));
+    const currentParticleSpeed = state.particleSpeed * (1.0 + particleSpeedMultiplier);
+
+    // Pool expansion: Spawn particles to meet targeted configuration count on demand
+    while (this.particles.length < currentParticleCount) {
       // Distribute types: 75% small jagged ash flakes, 25% large wispy soot motes
       const isMote = Math.random() < 0.25;
       const texture = isMote ? this.wispyTexture : this.ashTexture;
@@ -4277,27 +3380,40 @@ export class ParticleSystem {
 
       sprite.scale.set(size * state.particleSize);
       sprite.alpha = 0; // Starts completely faded out, soft boundary fading handles transition
+      sprite.visible = true;
+      sprite.renderable = true;
 
       this.particles.push(sprite);
       this.particleContainer.addChild(sprite);
     }
 
-    // Pool contraction: Safely prune extra sprites
-    while (this.particles.length > state.particleCount) {
-      const p = this.particles.pop();
-      this.particleContainer.removeChild(p);
-      p.destroy();
+    // Toggle visibility and renderability properties of cached sprites to prevent GC thrashing
+    for (let i = 0; i < this.particles.length; i++) {
+      const sprite = this.particles[i];
+      if (i < currentParticleCount) {
+        if (!sprite.visible) {
+          sprite.visible = true;
+          sprite.renderable = true;
+        }
+      } else {
+        if (sprite.visible) {
+          sprite.visible = false;
+          sprite.renderable = false;
+        }
+      }
     }
 
-    // Physics propagation, color blending, and boundary calculations
-    for (let i = 0; i < this.particles.length; i++) {
+    // Physics propagation, color blending, and boundary calculations for active pool items
+    for (let i = 0; i < currentParticleCount; i++) {
       const p = this.particles[i];
+      if (!p) continue;
+
       const c = p._custom;
       c.birthTime += dtSeconds;
 
       // Depth Parallax: Larger foreground objects float and drift faster than background ones
       const parallaxFactor = c.size;
-      c.y += c.speedY * state.particleSpeed * parallaxFactor * deltaTime;
+      c.y += c.speedY * currentParticleSpeed * parallaxFactor * deltaTime;
 
       // Motion dynamics: Erratic fluttering for flat ash flakes, slow crawlings for soot motes
       let sway;
@@ -4309,7 +3425,7 @@ export class ParticleSystem {
         sway = Math.sin(c.birthTime * c.swayFreq) * c.swayWidth * state.particleSway;
       }
 
-      const drift = (c.speedX * state.particleSpeed * parallaxFactor * deltaTime) + (state.particleWind * deltaTime) + sway;
+      const drift = (c.speedX * currentParticleSpeed * parallaxFactor * deltaTime) + (state.particleWind * deltaTime) + sway;
       c.x += drift;
 
       // Eerie Unified Tinting: Blends the default monotone grayscale with the active state color
@@ -4431,7 +3547,6 @@ export class RenderTextureManager {
       this.localBgPatternContainer = new Container();
       this.localBgPatternContainer.filters = [this.bgWarpFilter];
 
-      // Mirror-repeat wrap arrays applied to clean-rig background patterns
       if (this.hasBgPat2 && this.bgPat2Alias) {
         const tex2 = Assets.get(this.bgPat2Alias);
         this.bgPat2Layer = new MirroredScrollLayer(tex2, bgH, 1.8); 
@@ -4446,13 +3561,12 @@ export class RenderTextureManager {
       }
 
       this.bgPatternRenderTexture = RenderTexture.create({ width: bgW, height: bgH });
-      this.bgPatternSprite = new Sprite(this.bgPatternRenderTexture);
+      this.bgPatternSprite = new MirroredScrollLayer(this.bgPatternRenderTexture, bgH, 0.0);
     } else {
       this.bgPatternRenderTexture = RenderTexture.create({ width: 1, height: 1 });
-      this.bgPatternSprite = new Sprite(this.bgPatternRenderTexture);
+      this.bgPatternSprite = new MirroredScrollLayer(this.bgPatternRenderTexture, 1, 0.0);
       this.bgPatternSprite.visible = false;
     }
-    this.bgPatternSprite.anchor.set(0.5);
 
     // --- FOREGROUND CHARACTER PATTERNS ---
     if (this.discoveredPatterns.length > 0) {
@@ -4480,6 +3594,62 @@ export class RenderTextureManager {
     this.patternSprite.anchor.set(0.5);
   }
 
+  /**
+   * Swaps the active character's textures dynamically.
+   * This avoids destroying the background render textures so fogs and mountain
+   * layers remain unaffected during updates.
+   */
+  updateActorPatterns(discoveredPatterns) {
+    this.discoveredPatterns = discoveredPatterns || [];
+
+    if (this.localPatternContainer) {
+      this.localPatternContainer.destroy({ children: true });
+      this.localPatternContainer = null;
+    }
+    if (this.patternRenderTexture) {
+      this.patternRenderTexture.destroy(true); // Reclaims the underlying GPU TextureSource during swaps
+      this.patternRenderTexture = null;
+    }
+
+    if (this.discoveredPatterns.length > 0) {
+      const sampleTex = Assets.get(this.discoveredPatterns[0]);
+      const patW = sampleTex ? sampleTex.width : 2000;
+      const patH = sampleTex ? sampleTex.height : 2000;
+
+      this.localPatternContainer = new Container();
+      this.localPatternContainer.filters = [this.warpFilter];
+
+      for (const patternAlias of this.discoveredPatterns) {
+        const sp = Sprite.from(patternAlias);
+        sp.anchor.set(0.5);
+        sp.position.set(patW / 2, patH / 2);
+        this.localPatternContainer.addChild(sp);
+      }
+
+      this.patternRenderTexture = RenderTexture.create({ width: patW, height: patH });
+      
+      if (this.patternSprite) {
+        this.patternSprite.texture = this.patternRenderTexture;
+        this.patternSprite.visible = true;
+      } else {
+        this.patternSprite = new Sprite(this.patternRenderTexture);
+        this.patternSprite.anchor.set(0.5);
+      }
+    } else {
+      this.patternRenderTexture = RenderTexture.create({ width: 1, height: 1 });
+      if (this.patternSprite) {
+        this.patternSprite.texture = this.patternRenderTexture;
+        this.patternSprite.visible = false;
+      }
+    }
+  }
+
+  resize(localW, localH) {
+    if (this.bgPatternSprite && typeof this.bgPatternSprite.resize === 'function') {
+      this.bgPatternSprite.resize(localW, localH);
+    }
+  }
+
   update(deltaTime, state, renderer) {
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
@@ -4496,17 +3666,21 @@ export class RenderTextureManager {
         }
       }
 
-      // Proxy-aware validation: ensures the internal setter never runs on unallocated proxy data
-      const group = this.warpFilter?.resources?.warpUniforms;
-      const isBufferReady = group && group.uniforms && group.uniforms._data;
+      let warpIntensityMultiplier = 0.0;
+      const reaction = state.activeReaction;
+      const progress = state.reactionProgress ?? 0.0;
 
-      if (isBufferReady) {
-        try {
-          group.uniforms.uTime = this.time * state.warpSpeed;
-          group.uniforms.uWarpIntensity = state.warpIntensity;
-        } catch (e) {
-          // Fallback guard
-        }
+      if (reaction === "lyx_received") {
+        warpIntensityMultiplier = (50.0 / Math.max(0.1, state.warpIntensity) - 1.0) * progress;
+      } else if (reaction === "lsp7_received" || reaction === "lsp8_received") {
+        warpIntensityMultiplier = (90.0 / Math.max(0.1, state.warpIntensity) - 1.0) * progress;
+      }
+
+      const currentWarpIntensity = state.warpIntensity * (1.0 + warpIntensityMultiplier);
+
+      if (this.warpFilter && this.warpFilter.resources.warpUniforms) {
+        this.warpFilter.resources.warpUniforms.uniforms.uTime = this.time * state.warpSpeed;
+        this.warpFilter.resources.warpUniforms.uniforms.uWarpIntensity = currentWarpIntensity;
       }
 
       renderer.render({
@@ -4527,17 +3701,9 @@ export class RenderTextureManager {
         this.bgPat1Layer.updatePositions(dtSeconds, baseSpeed);
       }
 
-      // Proxy-aware validation: ensures the internal setter never runs on unallocated proxy data
-      const bgGroup = this.bgWarpFilter?.resources?.warpUniforms;
-      const isBgBufferReady = bgGroup && bgGroup.uniforms && bgGroup.uniforms._data;
-
-      if (isBgBufferReady) {
-        try {
-          bgGroup.uniforms.uTime = this.time * state.bgWarpSpeed;
-          bgGroup.uniforms.uWarpIntensity = state.bgWarpIntensity;
-        } catch (e) {
-          // Fallback guard
-        }
+      if (this.bgWarpFilter && this.bgWarpFilter.resources.warpUniforms) {
+        this.bgWarpFilter.resources.warpUniforms.uniforms.uTime = this.time * state.bgWarpSpeed;
+        this.bgWarpFilter.resources.warpUniforms.uniforms.uWarpIntensity = state.bgWarpIntensity;
       }
 
       renderer.render({
@@ -4549,10 +3715,10 @@ export class RenderTextureManager {
 
   destroy() {
     if (this.patternRenderTexture) {
-      this.patternRenderTexture.destroy();
+      this.patternRenderTexture.destroy(true); // Force-disposes of the GPU TextureSource
     }
     if (this.bgPatternRenderTexture) {
-      this.bgPatternRenderTexture.destroy();
+      this.bgPatternRenderTexture.destroy(true); // Reclaims the WebGL framebuffer allocation
     }
     if (this.localPatternContainer) {
       this.localPatternContainer.destroy({ children: true });
@@ -4574,7 +3740,7 @@ export class RenderTextureManager {
 ### `src\engine\systems\SearchlightSystem.js`
 ```javascript
 // src/engine/systems/SearchlightSystem.js
-import { Container, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, FillGradient } from 'pixi.js';
 
 export class SearchlightSystem {
   /**
@@ -4588,78 +3754,9 @@ export class SearchlightSystem {
     this.container.zIndex = 4; // Renders on top of character graphics but below overlays
     this.parentContainer.addChild(this.container);
 
-    // Generate our soft gradient beam texture on startup
-    if (!SearchlightSystem.beamTexture) {
-      SearchlightSystem.beamTexture = SearchlightSystem.generateVolumetricTexture();
-    }
-
-    // Allocate 1 single searchlight beam sprite pointing at target coordinates [3]
-    this.beamSprite = new Sprite(SearchlightSystem.beamTexture);
-    this.beamSprite.anchor.set(0.5, 0.0); // Pivots directly at the tapered top-center of the cone [3]
-    
-    // Normal blending ensures the beam is 100% opaque and blocks the background [3]
-    this.beamSprite.blendMode = 'normal';
-    
-    this.container.addChild(this.beamSprite);
-  }
-
-  /**
-   * Programmatically creates a solid conical texture.
-   * Features razor-sharp lateral edges and short, snappy linear gradients at 
-   * the front and end to smoothly transition the beam [3].
-   * @returns {Texture} Memoized volumetric texture.
-   */
-  static generateVolumetricTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-
-    // Remove any filters to keep the side edges completely sharp
-    ctx.filter = 'none';
-
-    // Linear gradient along the Y-axis (from root to end) [3]
-    const grad = ctx.createLinearGradient(64, 0, 64, 512);
-    grad.addColorStop(0.0, 'rgba(255, 255, 255, 0.0)');  // Starts transparent at 0%
-    grad.addColorStop(0.06, 'rgba(255, 255, 255, 1.0)'); // Short 6% fade-in to 100% opacity [3]
-    grad.addColorStop(0.94, 'rgba(255, 255, 255, 1.0)'); // Stays 100% opaque [3]
-    grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');  // Short 6% fade-out at the tip [3]
-
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(56, 10);    // Root top-left
-    ctx.lineTo(72, 10);    // Root top-right
-    ctx.lineTo(112, 502);  // End bottom-right
-    ctx.lineTo(16, 502);   // End bottom-left
-    ctx.closePath();
-    ctx.fill();
-
-    return Texture.from(canvas);
-  }
-
-  /**
-   * Programmatically generates a high-visibility Tracer Round texture on a 32x8 horizontal canvas.
-   * Features a solid hot-orange background with a tight, solid-white superheated lead core in the center.
-   * @returns {Texture} Memoized tracer round texture.
-   */
-  static generateTracerTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 32;
-    canvas.height = 8;
-    const ctx = canvas.getContext('2d');
-
-    ctx.filter = 'none';
-    ctx.clearRect(0, 0, 32, 8);
-
-    // Fill entire canvas with solid, hot-orange background (#ff9900)
-    ctx.fillStyle = '#ff9900';
-    ctx.fillRect(0, 0, 32, 8);
-
-    // Overlap tight solid-white rectangle (#ffffff) in the center
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(4, 2, 24, 4);
-
-    return Texture.from(canvas);
+    // Create a native Graphics instance instead of drawing to an HTML Canvas
+    this.beamGraphics = new Graphics();
+    this.container.addChild(this.beamGraphics);
   }
 
   /**
@@ -4670,8 +3767,69 @@ export class SearchlightSystem {
    * @param {Object} config - State config containing active visual preferences.
    */
   update(characterPos, targetGlobalPos, deltaTime, config) {
-    // Currently bypassed for testing. Container visibility forced to false.
-    this.container.visible = false;
+    if (!config.searchlightActive || !characterPos) {
+      this.container.visible = false;
+      return;
+    }
+
+    this.container.visible = true;
+
+    // Convert screen targets into local space [3]
+    const localCenter = characterPos; 
+    const localTarget = this.container.toLocal(targetGlobalPos);
+
+    const dx = localTarget.x - localCenter.x;
+    const dy = localTarget.y - localCenter.y;
+    const distToCenter = Math.sqrt(dx * dx + dy * dy);
+
+    // Determine target vector angle
+    const angle = Math.atan2(dy, dx);
+
+    // Pull custom orbit radius parameter from UI [3]
+    const orbitRadius = config.searchlightRadius ?? 110;
+
+    // Anchor starting coordinates directly along the circle perimeter pointing towards focus targets [3]
+    const startX = localCenter.x + Math.cos(angle) * orbitRadius;
+    const startY = localCenter.y + Math.sin(angle) * orbitRadius;
+
+    this.beamGraphics.position.set(startX, startY);
+    this.beamGraphics.rotation = angle - Math.PI / 2; // Aligns vertical canvas texture direction
+
+    // Decelerate beam lengths automatically as the mouse gets closer to the center [3]
+    const beamDistance = Math.max(0, distToCenter - orbitRadius);
+
+    // Calculate dynamic RGB tints
+    const rTint = config.searchlightColorR ?? 255;
+    const gTint = config.searchlightColorG ?? 255;
+    const bTint = config.searchlightColorB ?? 255;
+    this.beamGraphics.tint = (rTint << 16) + (gTint << 8) + bTint;
+
+    const beamLength = beamDistance * (config.searchlightLength ?? 1.0);
+    const bottomWidth = Math.max(4, Math.min(beamLength * 0.20, 128) * (config.searchlightWidth ?? 1.0));
+    const topWidth = bottomWidth / 6;
+
+    this.beamGraphics.clear();
+
+    if (beamLength > 1) {
+      // Create volumetric linear gradient matching the original canvas texture
+      const gradient = new FillGradient(0, 0, 0, beamLength);
+      gradient.addColorStop(0.0, 'rgba(255, 255, 255, 0.0)');  // Starts transparent at 0%
+      gradient.addColorStop(0.06, 'rgba(255, 255, 255, 1.0)'); // Short 6% fade-in to 100% opacity
+      gradient.addColorStop(0.94, 'rgba(255, 255, 255, 1.0)'); // Stays 100% opaque
+      gradient.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');  // Short 6% fade-out at the tip
+
+      const halfTop = topWidth / 2;
+      const halfBottom = bottomWidth / 2;
+
+      // Draw tapered cone geometry procedurally
+      this.beamGraphics
+        .moveTo(-halfTop, 0)
+        .lineTo(halfTop, 0)
+        .lineTo(halfBottom, beamLength)
+        .lineTo(-halfBottom, beamLength)
+        .closePath()
+        .fill({ fill: gradient });
+    }
   }
 
   destroy() {
@@ -4680,7 +3838,7 @@ export class SearchlightSystem {
       this.container.destroy({ children: true });
       this.container = null;
     }
-    this.beamSprite = null;
+    this.beamGraphics = null;
   }
 }
 ```
@@ -4689,31 +3847,15 @@ export class SearchlightSystem {
 ### `src\engine\systems\ShockwaveSystem.js`
 ```javascript
 // src/engine/systems/ShockwaveSystem.js
-import { Filter, defaultFilterVert } from 'pixi.js';
-import { SHOCKWAVE_FRAGMENT_SHADER } from '../shaders/ShockwaveShader.js';
+import { EffectFactory } from '../filters/EffectFactory.js';
 
 export class ShockwaveSystem {
   constructor() {
     this.isActive = false;
     this.time = 0;
 
-    // Instantiate custom cascading portal refraction shader setup
-    this.filter = Filter.from({
-      gl: {
-        vertex: defaultFilterVert,
-        fragment: SHOCKWAVE_FRAGMENT_SHADER
-      },
-      resources: {
-        shockwaveUniforms: {
-          uCenter: { value: [0.0, 0.0], type: 'vec2<f32>' },
-          uScreenSize: { value: [1.0, 1.0], type: 'vec2<f32>' },
-          uRadii: { value: new Float32Array([0, 0, 0, 0, 0]), type: 'f32', size: 5 },
-          uActiveWaveCount: { value: 0.0, type: 'f32' },
-          uThickness: { value: 160.0, type: 'f32' },
-          uAmplitude: { value: 30.0, type: 'f32' }
-        }
-      }
-    });
+    // Delegate compilation to the central factory
+    this.filter = EffectFactory.createShockwaveFilter();
   }
 
   /**
@@ -4731,11 +3873,9 @@ export class ShockwaveSystem {
     const screenX = screenWidth / 2 + headPosition.x * scale;
     const screenY = screenHeight / 2 + headPosition.y * scale;
 
-    // Map screen-pixel coordinates to gl_FragCoord space (bottom-left origin)
     unis.uCenter = [screenX, screenHeight - screenY];
     unis.uScreenSize = [screenWidth, screenHeight];
 
-    // Reset wave tracking properties
     unis.uRadii = new Float32Array([0, 0, 0, 0, 0]);
     unis.uActiveWaveCount = 0.0;
   }
@@ -4763,7 +3903,7 @@ export class ShockwaveSystem {
     const unis = this.filter.resources.shockwaveUniforms.uniforms;
     unis.uScreenSize = [screenWidth, screenHeight];
     unis.uThickness = thickness;
-    unis.uAmplitude = strength * 45.0; // Scaled displacement index
+    unis.uAmplitude = strength * 45.0; 
 
     let activeCount = 0;
     const radii = new Float32Array([0, 0, 0, 0, 0]);
@@ -4784,7 +3924,6 @@ export class ShockwaveSystem {
     unis.uRadii = radii;
     unis.uActiveWaveCount = activeCount;
 
-    // Clean up filter execution overhead once ripples fade past active boundaries
     if (activeCount === 0 && this.time > (pulseCount * waveDelay)) {
       this.isActive = false;
       return false;
@@ -5166,6 +4305,8 @@ export default class LSP1EventService {
     this.shouldBeConnected = false;
     this.recentEvents = [];
     this.reconnectAttempts = 0;
+    this.currentSetupId = 0;
+    this.abortController = null;
   }
 
   async initialize() {
@@ -5177,11 +4318,6 @@ export default class LSP1EventService {
   async setupEventListeners(address) {
     const logPrefix = `[LSP1 Setup Addr:${address?.slice(0, 6)}]`;
     
-    if (this.isSettingUp) {
-      if (import.meta.env.DEV) console.warn(`${logPrefix} Setup already in progress...`);
-      return false;
-    }
-    
     if (!address || !isAddress(address)) {
       this.shouldBeConnected = false;
       return false;
@@ -5192,10 +4328,24 @@ export default class LSP1EventService {
       return true;
     }
 
+    // 1. Increment setup sequence ID to prevent race conditions during fast toggles
+    const setupId = ++this.currentSetupId;
+
+    // 2. Tear down the previous connection instance, abort pending requests, and close active sockets
+    this.cleanupListeners(); 
+
+    // 3. Initialize the new AbortController for the current setup attempt
+    this.abortController = new AbortController();
+    const signal = this.abortController.signal;
+
     this.isSettingUp = true;
     this.shouldBeConnected = true;
-    this.cleanupListeners(); 
     this.listeningAddress = address;
+
+    if (signal.aborted || setupId !== this.currentSetupId) {
+      this.isSettingUp = false;
+      return false;
+    }
 
     try {
       console.log(`${logPrefix} Connecting WebSocket to watch updates on RPC: ${WSS_RPC_URL}`);
@@ -5208,16 +4358,36 @@ export default class LSP1EventService {
         }),
       });
 
+      if (signal.aborted || setupId !== this.currentSetupId) {
+        this.isSettingUp = false;
+        return false;
+      }
+
+      // Verify that the address contains bytecode (valid contract check to avoid EOA listener crashes)
+      const bytecode = await this.viemClient.getBytecode({ address });
+      if (signal.aborted || setupId !== this.currentSetupId) {
+        return false;
+      }
+
+      if (!bytecode || bytecode === "0x") {
+        console.warn(`${logPrefix} Target profile address has no deployed bytecode. UniversalReceiver aborted (EOA or undeployed contract detected).`);
+        this.isSettingUp = false;
+        this.shouldBeConnected = false;
+        return false;
+      }
+
       this.unwatchEvent = this.viemClient.watchContractEvent({
         address: this.listeningAddress,
         abi: LSP1_ABI,
         eventName: "UniversalReceiver",
         onLogs: (logs) => {
-          this.reconnectAttempts = 0; // Clear connection errors
+          this.reconnectAttempts = 0; // Clear connection error counters
           if (import.meta.env.DEV) console.log(`${logPrefix} Received ${logs.length} contract events.`);
           
           logs.forEach((log) => {
             if (log.removed) return;
+            if (signal.aborted || setupId !== this.currentSetupId) return;
+
             try {
               const decodedLog = decodeEventLog({
                 abi: LSP1_ABI,
@@ -5226,7 +4396,7 @@ export default class LSP1EventService {
               });
 
               if (decodedLog.eventName === "UniversalReceiver" && decodedLog.args) {
-                this.handleUniversalReceiver(decodedLog.args);
+                this.handleUniversalReceiver(decodedLog.args, log);
               }
             } catch (e) {
               if (import.meta.env.DEV) console.error(`Log decode error:`, e);
@@ -5234,6 +4404,8 @@ export default class LSP1EventService {
           });
         },
         onError: (error) => {
+          if (signal.aborted || setupId !== this.currentSetupId) return;
+
           console.error(`${logPrefix} WebSocket Stream dropped:`, error);
           if (this.unwatchEvent) {
             try {
@@ -5246,9 +4418,14 @@ export default class LSP1EventService {
       });
 
       if (import.meta.env.DEV) console.log(`${logPrefix} WebSocket event service active.`);
-      this.isSettingUp = false;
+      if (setupId === this.currentSetupId) {
+        this.isSettingUp = false;
+      }
       return true;
     } catch (error) {
+      if (signal.aborted || setupId !== this.currentSetupId) {
+        return false;
+      }
       console.error(`${logPrefix} WebSocket Stream initialization failed:`, error);
       this.handleReconnect(address);
       this.isSettingUp = false;
@@ -5267,8 +4444,9 @@ export default class LSP1EventService {
       console.log(`[LSP1] Reconnecting stream (${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${delay}ms...`);
 
       setTimeout(() => {
-        if (this.shouldBeConnected) {
-          this.setupEventListeners(address);
+        const activeAddress = this.listeningAddress;
+        if (this.shouldBeConnected && activeAddress) {
+          this.setupEventListeners(activeAddress);
         }
       }, delay);
     } else {
@@ -5280,17 +4458,42 @@ export default class LSP1EventService {
     this.shouldBeConnected = false;
     this.isSettingUp = false;
 
+    // Abort active setup processes
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+
+    // Unsubscribe from events
     if (this.unwatchEvent) {
       try {
         this.unwatchEvent();
       } catch (e) {}
       this.unwatchEvent = null;
     }
+
+    // Safely retrieve the underlying socket object and close the connection
+    const clientToClose = this.viemClient;
+    if (clientToClose && typeof clientToClose.transport?.getSocket === 'function') {
+      clientToClose.transport.getSocket()
+        .then((socket) => {
+          if (socket && typeof socket.close === 'function') {
+            if (import.meta.env.DEV) console.log("[LSP1] Disposing of underlying active WebSocket transport...");
+            socket.close(); // Cleanly close the connection
+          }
+        })
+        .catch((err) => {
+          if (import.meta.env.DEV) {
+            console.warn("[LSP1] Error cleaning up transport connection:", err);
+          }
+        });
+    }
+
     this.viemClient = null;
     this.recentEvents = [];
   }
 
-  handleUniversalReceiver(eventArgs) {
+  handleUniversalReceiver(eventArgs, log = null) {
     if (!eventArgs || typeof eventArgs !== "object" || !eventArgs.typeId) return;
 
     const { from, value, typeId, receivedData } = eventArgs;
@@ -5302,7 +4505,7 @@ export default class LSP1EventService {
     const eventTypeName = TYPE_ID_TO_EVENT_MAP[lowerCaseTypeId] || "unknown_event";
 
     // Deduplication filter
-    if (this.isDuplicateEvent(typeId, from, stringValue, receivedData)) {
+    if (this.isDuplicateEvent(typeId, from, stringValue, receivedData, log)) {
       return;
     }
 
@@ -5348,8 +4551,15 @@ export default class LSP1EventService {
     this.notifyEventListeners(eventObj);
   }
 
-  isDuplicateEvent(typeId, from, value, data) {
-    const eventIdentifier = `${typeId}-${from}-${value}-${data || "0x"}`;
+  isDuplicateEvent(typeId, from, value, data, log = null) {
+    let eventIdentifier;
+    if (log && log.transactionHash && log.logIndex !== undefined) {
+      const logIdentifier = `${log.transactionHash}-${log.logIndex}`;
+      eventIdentifier = logIdentifier;
+    } else {
+      eventIdentifier = `${typeId}-${from}-${value}-${data || "0x"}`;
+    }
+
     if (this.recentEvents.includes(eventIdentifier)) {
       return true;
     }
@@ -5427,27 +4637,145 @@ export default class LSP1EventService {
 ```
 
 ---
+### `src\store\slices\createActorPhysicsSlice.js`
+```javascript
+// src/store/slices/createActorPhysicsSlice.js
+
+export const createActorPhysicsSlice = (set, get) => ({
+  // 1. Motion & Hover Dynamics
+  floatSpeed: 1.0,
+  floatAmpX: 30,
+  floatAmpY: 50,
+  floatRotation: 2.0,
+
+  // Flight & Hover parameters
+  flyMinScale: 0.7,       // Scale at lowest point of flight (closer)
+  flyMaxScale: 0.2,       // Scale at highest peak of flight (further)
+  flyHoverPause: 1.0,     // Hover pause factor (1.0 = smooth sine, 5.0 = flat plateau pauses)
+  flyTiltBias: 3.0,       // Persistent tilt bias in degrees
+
+  // 2. Skull Pattern & Warp (Foreground)
+  patternBottomScale: 1.0,
+  patternTopScale: 1.0,
+  warpIntensity: 20.0,
+  warpSpeed: 1.0,
+
+  // Creator-only mutation experiment
+  mutationMode: 'none',
+  mutationAxisX: 0.5,
+  mutationAxisY: 0.5,
+  mutationSourceX: 'left',
+  mutationSourceY: 'top',
+  mutationPatternMode: 'symbiosis',
+
+  // 3. Eye & Lid Dynamics
+  eyelidTravel: 20.0,         
+  blinkInterval: 5.0,        
+  blinkSpeed: 1.0,           
+  autoBlink: true,           
+  eyelidManualProgress: 1.0, 
+  pupilWander: 1.0,          
+  pupilSaccade: 1.0,         
+  pupilMouseInfluence: 1.0,  
+
+  // 4. Searchlight Customisation
+  searchlightActive: false,
+  searchlightWidth: 0.2,     // Beam width scale
+  searchlightLength: 1.0,    // Max beam extension
+  searchlightRadius: 150,    // Starting emission radius along character's perimeter
+  searchlightColorR: 255,    // RGB values
+  searchlightColorG: 255,
+  searchlightColorB: 255,
+});
+
+```
+
+---
+### `src\store\slices\createAtmosphereSlice.js`
+```javascript
+// src/store/slices/createAtmosphereSlice.js
+
+export const createAtmosphereSlice = (set, get) => ({
+  // 1. Aura / Glow & Cavern Reflection Control
+  auraOpacity: 0.5,
+  auraScale: 1.05,
+  auraBlur: 20,
+  auraPulseSpeed: 1.0,
+  auraColorR: 235,
+  auraColorG: 200,
+  auraColorB: 150,
+  cavernLightIntensity: 0.8, // Slider scale factor for dynamic cavern reflections
+
+  // 2. Particulate Atmosphere (Particles)
+  particleCount: 80,
+  particleSpeed: 1.0,
+  particleWind: 0,
+  particleSway: 1.0,
+  particleSize: 1.0,
+  particleOpacity: 1.0,
+
+  // 3. Volumetric Atmospheric Fog
+  fogOpacity: 0.4,           // Starting alpha density for the volumetric noise
+  fogSpeed: 1.0,             // Drift wind speed modifier
+  fogColorR: 140,            // Fog RGB tint values
+  fogColorG: 120,
+  fogColorB: 180,
+  fogSwaySpeed: 0.5,         // Vertical bobbing velocity
+  fogSwayAmp: 20.0,          // Vertical bobbing range in pixels
+
+  // 4. Parallax Background Layers & Scroll Speed
+  bgScrollSpeed: 30.0,      
+  bg2ParallaxSpeed: 1.8,    
+
+  // 5. Retro Screen Overlays (Post-processing indicators)
+  scanlineOpacity: 0.15,
+  vignetteOpacity: 0.5,
+});
+```
+
+---
+### `src\store\slices\createGlitchSlice.js`
+```javascript
+// src/store/slices/createGlitchSlice.js
+
+export const createGlitchSlice = (set, get) => ({
+  // 1. Background Pattern Warp (Independent)
+  bgPatternBottomScale: 1.0,
+  bgPatternTopScale: 1.0,
+  bgWarpIntensity: 20.0,
+  bgWarpSpeed: 1.0,
+
+  // 2. Chromatic Aberration & Visual Shakes
+  aberrationAmount: 0.0,
+  aberrationSpeed: 0.0,
+  aberrationGlitch: 0.0,
+  glitchShakeIntensity: 0,
+  flickerIntensity: 0.0,
+  flickerSpeed: 1.0,
+  
+  // 3. Spectral Phase Trail Control
+  trailCount: 3,             // Total active spectral trails (0 - 3)
+  trailSpacing: 5,           // Delayed spacing of historical coordinates in frames
+  trailManualAlpha: 0.0,     // Static override opacity to manually customize/test trails
+  trailGlitchInfluence: 0.6, // Relative opacity scaling factor during spikes and shake actions
+});
+```
+
+---
 ### `src\store\slices\usePhysicsSlice.js`
 ```javascript
 // src/store/slices/usePhysicsSlice.js
 
 export const createPhysicsSlice = (set, get) => ({
-  // gameplay active metrics and player statistics
-  gameState: "menu", // "menu" or "gameplay"
-  playerHP: 100,
-  playerShield: 100,
-  gameScore: 0,
-  gameActiveWave: 1,
-
   // 1. Motion Dynamics
   floatSpeed: 1.0,
   floatAmpX: 30,
-  floatAmpY: 15,
+  floatAmpY: 50,
   floatRotation: 2.0,
 
   // Custom Flight and Hover parameters
-  flyMinScale: 0.3,       // Scale at lowest point of flight
-  flyMaxScale: 0.3,       // Scale at highest peak of flight
+  flyMinScale: 0.7,       // Scale at lowest point of flight
+  flyMaxScale: 0.2,      // Scale at highest peak of flight
   flyHoverPause: 1.0,     // Hover pause factor (1.0 = smooth sine, up to 5.0 = flat plateau pauses)
   flyTiltBias: 3.0,       // Persistent tilt bias in degrees
 
@@ -5460,12 +4788,12 @@ export const createPhysicsSlice = (set, get) => ({
   // 3. Background Pattern & Warp (Independent)
   bgPatternBottomScale: 1.0,
   bgPatternTopScale: 1.0,
-  bgWarpIntensity: 35.0,
+  bgWarpIntensity: 20.0,
   bgWarpSpeed: 1.0,
 
   // 4. Aura / Glow & Cavern Reflection Control
   auraOpacity: 0.5,
-  auraScale: 0.5,
+  auraScale: 1.05,
   auraBlur: 20,
   auraPulseSpeed: 1.0,
   auraColorR: 235,
@@ -5480,6 +4808,15 @@ export const createPhysicsSlice = (set, get) => ({
   particleSway: 1.0,
   particleSize: 1.0,
   particleOpacity: 1.0,
+
+  // 5b. Volumetric Atmospheric Fog (New Default State Variables)
+  fogOpacity: 0.4,           // Starting alpha density for the volumetric noise
+  fogSpeed: 1.0,             // Drift wind speed modifier
+  fogColorR: 140,            // Fog RGB tint values
+  fogColorG: 120,
+  fogColorB: 180,
+  fogSwaySpeed: 0.5,         // Vertical bobbing velocity
+  fogSwayAmp: 20.0,          // Vertical bobbing range in pixels
 
   // 6. Atmospheric Parallax Layers
   bgScrollSpeed: 30.0,      
@@ -5514,10 +4851,10 @@ export const createPhysicsSlice = (set, get) => ({
   pupilMouseInfluence: 1.0,  
 
   // 11. Searchlight Customisation State
-  searchlightActive: true,
+  searchlightActive: false,
   searchlightWidth: 0.2,     // Beam width scale
   searchlightLength: 1.0,    // Max beam extension
-  searchlightRadius: 120,    // Starting emission radius along character's perimeter
+  searchlightRadius: 150,    // Starting emission radius along character's perimeter
   searchlightColorR: 255,    // RGB values
   searchlightColorG: 255,
   searchlightColorB: 255,
@@ -5528,18 +4865,21 @@ export const createPhysicsSlice = (set, get) => ({
 ### `src\store\slices\useSetupSlice.js`
 ```javascript
 // src/store/slices/useSetupSlice.js
-
 export const createSetupSlice = (set, get) => ({
   isUiVisible: true,
   toggleUi: () => set((state) => ({ isUiVisible: !state.isUiVisible })),
 
-  // Rig-Aligned Stage & Actor Selection
-  characterId: "abyssal_eye", // Text identifier matching actor folder name
-  bgClippingMaskId: "moonpurple",   // Backdrop color name suffix
-  bgPatternStyle: "stone",    // Pattern style prefix
-  bgMountainId: 2,             // Front mountain asset ID
-  bgMountainBackId: 3,         // Back mountain asset ID
+  subjectMode: "actor",
+  characterId: "abyssal_eye", 
+  creatorCharacterId: "01",
+  creatorPatternId: "patchedzebra",
+  creatorPaletteId: "basic_purple",
+  bgClippingMaskId: "moonpurple",   
+  bgPatternStyle: "digitalblob",    
+  bgMountainId: 2,             
+  bgMountainBackId: 3,         
 });
+
 ```
 
 ---
@@ -5557,13 +4897,6 @@ export const createWeb3Slice = (set, get) => ({
   // 11. Web3 LSP1 Reaction State Parameters
   activeReaction: null,      
   reactionProgress: 0.0,     
-
-  // Phase 2A Game State Updates
-  gameState: "menu",          // "menu" or "gameplay"
-  gameScore: 0,
-  gameActiveWave: 1,
-  playerHP: 100,
-  playerShield: 100,
 });
 ```
 
@@ -5572,14 +4905,19 @@ export const createWeb3Slice = (set, get) => ({
 ```javascript
 // src/store/useStore.js
 import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
 import { createSetupSlice } from './slices/useSetupSlice';
-import { createPhysicsSlice } from './slices/usePhysicsSlice';
+import { createActorPhysicsSlice } from './slices/createActorPhysicsSlice';
+import { createAtmosphereSlice } from './slices/createAtmosphereSlice';
+import { createGlitchSlice } from './slices/createGlitchSlice';
 import { createWeb3Slice } from './slices/useWeb3Slice';
 
-export const useStore = create((set, get) => ({
-  // Flatten slice definitions into the combined store [3]
+export const useStore = create(subscribeWithSelector((set, get) => ({
+  // Flatten slice definitions into the combined store
   ...createSetupSlice(set, get),
-  ...createPhysicsSlice(set, get),
+  ...createActorPhysicsSlice(set, get),
+  ...createAtmosphereSlice(set, get),
+  ...createGlitchSlice(set, get),
   ...createWeb3Slice(set, get),
   
   /**
@@ -5589,7 +4927,7 @@ export const useStore = create((set, get) => ({
    * @param {any} value - Assigned configuration value.
    */
   setParameter: (key, value) => set({ [key]: value }),
-}));
+})));
 ```
 
 ---
@@ -5603,7 +4941,8 @@ import { lukso, luksoTestnet } from "viem/chains";
 import { ERC725 } from '@erc725/erc725.js';
 import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json';
 
-const LUKSO_MAINNET_RPC = "https://rpc.lukso.network";
+// LUKSO mainnet and testnet endpoints
+const LUKSO_MAINNET_RPC = "https://rpc.mainnet.lukso.network";
 const LUKSO_TESTNET_RPC = "https://rpc.testnet.lukso.network";
 const IPFS_GATEWAY = "https://api.universalprofile.cloud/ipfs/";
 
@@ -5648,6 +4987,11 @@ export const useWalletStore = create((set, get) => ({
   isWalletConnected: false,
   isHostProfileOwner: false,
   initializationError: null,
+  
+  // Profile Metadata State Variables
+  profileMetadata: null,
+  isProfileLoading: false,
+  lastFetchedAddress: null, // Tracks the currently active request key to block duplication
 
   initWallet: async () => {
     // 1. Synchronous singleton lock to catch concurrent strict-mode execution threads
@@ -5774,6 +5118,83 @@ export const useWalletStore = create((set, get) => ({
     set({ hostProfileAddress: cleaned });
     get()._recreateClients();
     get()._checkPermissions();
+    get().fetchProfileMetadata();
+  },
+
+  /**
+   * Queries standard LSP3 Profile Metadata from contract storage keys.
+   */
+  fetchProfileMetadata: async () => {
+    const { hostProfileAddress, publicClient } = get();
+    if (!hostProfileAddress || !publicClient) {
+      set({ profileMetadata: null, isProfileLoading: false, lastFetchedAddress: null });
+      return;
+    }
+
+    // Intercept back-to-back triggers for the exact same Profile address
+    const lastFetched = get().lastFetchedAddress;
+    if (lastFetched && lastFetched.toLowerCase() === hostProfileAddress.toLowerCase()) {
+      return; // Deduplicate concurrent execution loop
+    }
+
+    set({ isProfileLoading: true, lastFetchedAddress: hostProfileAddress });
+    console.log(`ℹ️ [UP Wallet] Querying LSP3 metadata for: ${hostProfileAddress}`);
+
+    try {
+      const rpcUrl = publicClient.transport.url || LUKSO_MAINNET_RPC;
+      const erc725 = new ERC725(
+        lsp3ProfileSchema,
+        hostProfileAddress,
+        rpcUrl,
+        { ipfsGateway: IPFS_GATEWAY }
+      );
+
+      const profileData = await erc725.fetchData('LSP3Profile');
+      
+      if (profileData && profileData.value && profileData.value.LSP3Profile) {
+        const rawProfile = profileData.value.LSP3Profile;
+        
+        // Safe IPFS link parsing helper
+        const resolveIpfsLink = (urlStr) => {
+          if (!urlStr) return "";
+          if (urlStr.startsWith("ipfs://")) {
+            return urlStr.replace("ipfs://", IPFS_GATEWAY);
+          }
+          if (urlStr.startsWith("ipfs/")) {
+            return urlStr.replace("ipfs/", IPFS_GATEWAY);
+          }
+          return urlStr;
+        };
+
+        // Extract raw profile assets
+        let avatarUrl = "";
+        if (rawProfile.profileImage && rawProfile.profileImage.length > 0) {
+          avatarUrl = resolveIpfsLink(rawProfile.profileImage[0].url);
+        }
+
+        let backgroundUrl = "";
+        if (rawProfile.backgroundImage && rawProfile.backgroundImage.length > 0) {
+          backgroundUrl = resolveIpfsLink(rawProfile.backgroundImage[0].url);
+        }
+
+        const parsedMetadata = {
+          name: rawProfile.name || "Anonymous profile",
+          description: rawProfile.description || "",
+          avatarUrl,
+          backgroundUrl,
+          tags: rawProfile.tags || [],
+          links: rawProfile.links || []
+        };
+
+        console.log("✅ [UP Wallet] Metadata queried successfully:", parsedMetadata);
+        set({ profileMetadata: parsedMetadata, isProfileLoading: false });
+      } else {
+        set({ profileMetadata: null, isProfileLoading: false });
+      }
+    } catch (err) {
+      console.warn("⚠️ [UP Wallet] Metadata extraction aborted or failed:", err.message);
+      set({ profileMetadata: null, isProfileLoading: false });
+    }
   },
 
   _recreateClients: () => {
@@ -5834,6 +5255,7 @@ export const useWalletStore = create((set, get) => ({
     });
 
     await get()._checkPermissions();
+    await get().fetchProfileMetadata(); // Initiate profile metadata updates
   },
 
   _checkPermissions: async () => {

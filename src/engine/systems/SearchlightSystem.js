@@ -1,5 +1,5 @@
 // src/engine/systems/SearchlightSystem.js
-import { Container, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, FillGradient } from 'pixi.js';
 
 export class SearchlightSystem {
   /**
@@ -13,78 +13,9 @@ export class SearchlightSystem {
     this.container.zIndex = 4; // Renders on top of character graphics but below overlays
     this.parentContainer.addChild(this.container);
 
-    // Generate our soft gradient beam texture on startup
-    if (!SearchlightSystem.beamTexture) {
-      SearchlightSystem.beamTexture = SearchlightSystem.generateVolumetricTexture();
-    }
-
-    // Allocate 1 single searchlight beam sprite pointing at target coordinates [3]
-    this.beamSprite = new Sprite(SearchlightSystem.beamTexture);
-    this.beamSprite.anchor.set(0.5, 0.0); // Pivots directly at the tapered top-center of the cone [3]
-    
-    // Normal blending ensures the beam is 100% opaque and blocks the background [3]
-    this.beamSprite.blendMode = 'normal';
-    
-    this.container.addChild(this.beamSprite);
-  }
-
-  /**
-   * Programmatically creates a solid conical texture.
-   * Features razor-sharp lateral edges and short, snappy linear gradients at 
-   * the front and end to smoothly transition the beam [3].
-   * @returns {Texture} Memoized volumetric texture.
-   */
-  static generateVolumetricTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-
-    // Remove any filters to keep the side edges completely sharp
-    ctx.filter = 'none';
-
-    // Linear gradient along the Y-axis (from root to end) [3]
-    const grad = ctx.createLinearGradient(64, 0, 64, 512);
-    grad.addColorStop(0.0, 'rgba(255, 255, 255, 0.0)');  // Starts transparent at 0%
-    grad.addColorStop(0.06, 'rgba(255, 255, 255, 1.0)'); // Short 6% fade-in to 100% opacity [3]
-    grad.addColorStop(0.94, 'rgba(255, 255, 255, 1.0)'); // Stays 100% opaque [3]
-    grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');  // Short 6% fade-out at the tip [3]
-
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(56, 10);    // Root top-left
-    ctx.lineTo(72, 10);    // Root top-right
-    ctx.lineTo(112, 502);  // End bottom-right
-    ctx.lineTo(16, 502);   // End bottom-left
-    ctx.closePath();
-    ctx.fill();
-
-    return Texture.from(canvas);
-  }
-
-  /**
-   * Programmatically generates a high-visibility Tracer Round texture on a 32x8 horizontal canvas.
-   * Features a solid hot-orange background with a tight, solid-white superheated lead core in the center.
-   * @returns {Texture} Memoized tracer round texture.
-   */
-  static generateTracerTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 32;
-    canvas.height = 8;
-    const ctx = canvas.getContext('2d');
-
-    ctx.filter = 'none';
-    ctx.clearRect(0, 0, 32, 8);
-
-    // Fill entire canvas with solid, hot-orange background (#ff9900)
-    ctx.fillStyle = '#ff9900';
-    ctx.fillRect(0, 0, 32, 8);
-
-    // Overlap tight solid-white rectangle (#ffffff) in the center
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(4, 2, 24, 4);
-
-    return Texture.from(canvas);
+    // Create a native Graphics instance instead of drawing to an HTML Canvas
+    this.beamGraphics = new Graphics();
+    this.container.addChild(this.beamGraphics);
   }
 
   /**
@@ -95,8 +26,69 @@ export class SearchlightSystem {
    * @param {Object} config - State config containing active visual preferences.
    */
   update(characterPos, targetGlobalPos, deltaTime, config) {
-    // Currently bypassed for testing. Container visibility forced to false.
-    this.container.visible = false;
+    if (!config.searchlightActive || !characterPos) {
+      this.container.visible = false;
+      return;
+    }
+
+    this.container.visible = true;
+
+    // Convert screen targets into local space [3]
+    const localCenter = characterPos; 
+    const localTarget = this.container.toLocal(targetGlobalPos);
+
+    const dx = localTarget.x - localCenter.x;
+    const dy = localTarget.y - localCenter.y;
+    const distToCenter = Math.sqrt(dx * dx + dy * dy);
+
+    // Determine target vector angle
+    const angle = Math.atan2(dy, dx);
+
+    // Pull custom orbit radius parameter from UI [3]
+    const orbitRadius = config.searchlightRadius ?? 110;
+
+    // Anchor starting coordinates directly along the circle perimeter pointing towards focus targets [3]
+    const startX = localCenter.x + Math.cos(angle) * orbitRadius;
+    const startY = localCenter.y + Math.sin(angle) * orbitRadius;
+
+    this.beamGraphics.position.set(startX, startY);
+    this.beamGraphics.rotation = angle - Math.PI / 2; // Aligns vertical canvas texture direction
+
+    // Decelerate beam lengths automatically as the mouse gets closer to the center [3]
+    const beamDistance = Math.max(0, distToCenter - orbitRadius);
+
+    // Calculate dynamic RGB tints
+    const rTint = config.searchlightColorR ?? 255;
+    const gTint = config.searchlightColorG ?? 255;
+    const bTint = config.searchlightColorB ?? 255;
+    this.beamGraphics.tint = (rTint << 16) + (gTint << 8) + bTint;
+
+    const beamLength = beamDistance * (config.searchlightLength ?? 1.0);
+    const bottomWidth = Math.max(4, Math.min(beamLength * 0.20, 128) * (config.searchlightWidth ?? 1.0));
+    const topWidth = bottomWidth / 6;
+
+    this.beamGraphics.clear();
+
+    if (beamLength > 1) {
+      // Create volumetric linear gradient matching the original canvas texture
+      const gradient = new FillGradient(0, 0, 0, beamLength);
+      gradient.addColorStop(0.0, 'rgba(255, 255, 255, 0.0)');  // Starts transparent at 0%
+      gradient.addColorStop(0.06, 'rgba(255, 255, 255, 1.0)'); // Short 6% fade-in to 100% opacity
+      gradient.addColorStop(0.94, 'rgba(255, 255, 255, 1.0)'); // Stays 100% opaque
+      gradient.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');  // Short 6% fade-out at the tip
+
+      const halfTop = topWidth / 2;
+      const halfBottom = bottomWidth / 2;
+
+      // Draw tapered cone geometry procedurally
+      this.beamGraphics
+        .moveTo(-halfTop, 0)
+        .lineTo(halfTop, 0)
+        .lineTo(halfBottom, beamLength)
+        .lineTo(-halfBottom, beamLength)
+        .closePath()
+        .fill({ fill: gradient });
+    }
   }
 
   destroy() {
@@ -105,6 +97,6 @@ export class SearchlightSystem {
       this.container.destroy({ children: true });
       this.container = null;
     }
-    this.beamSprite = null;
+    this.beamGraphics = null;
   }
 }
