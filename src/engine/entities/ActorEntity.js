@@ -98,8 +98,14 @@ export class ActorEntity {
       const textures = {
         mask: Assets.get(this.assets.char_clipping_mask),
         lineart: Assets.get(this.assets.char_lineart),
-        base: Assets.get(this.assets.char_base || this.assets.char_clipping_mask),
-        pattern: this.renderTextureManager.patternRenderTexture
+        pattern1: Assets.get(this.assets.creator_pattern),
+        pattern2: Assets.get(this.assets.creator_pattern_2),
+        baseA: Assets.get(this.assets.creator_base_a),
+        baseB: Assets.get(this.assets.creator_base_b),
+        pattern1A: Assets.get(this.assets.creator_pattern_1_a),
+        pattern1B: Assets.get(this.assets.creator_pattern_1_b),
+        pattern2A: Assets.get(this.assets.creator_pattern_2_a),
+        pattern2B: Assets.get(this.assets.creator_pattern_2_b)
       };
 
       const bodyMutation = createMutationMesh(textures);
@@ -160,6 +166,24 @@ export class ActorEntity {
       uniforms.uSourceY = sourceY;
       uniforms.uMirrorPattern = mode !== 0 && config.mutationPatternMode === 'mirrored' ? 1.0 : 0.0;
       uniforms.uSourceRotation = (config.mutationRotation ?? 0) * (Math.PI / 180);
+      uniforms.uTime = this.time * (config.warpSpeed ?? 1);
+      uniforms.uWarpIntensity = config.warpIntensity ?? 20;
+      uniforms.uBaseGradientMode = config.creatorBaseColorMode === 'gradient' ? 1.0 : 0.0;
+      uniforms.uBaseGradientAngle = (config.creatorBaseGradientAngle ?? 0) * (Math.PI / 180);
+      uniforms.uBaseGradientBalance = config.creatorBaseGradientBalance ?? 0.5;
+      uniforms.uBaseOpacity = config.creatorBaseOpacity ?? 1;
+      uniforms.uPattern1GradientMode = config.creatorPattern1ColorMode === 'gradient' ? 1.0 : 0.0;
+      uniforms.uPattern1GradientAngle = (config.creatorPattern1GradientAngle ?? 0) * (Math.PI / 180);
+      uniforms.uPattern1GradientBalance = config.creatorPattern1GradientBalance ?? 0.5;
+      uniforms.uPattern1Opacity = config.creatorPattern1Opacity ?? 1;
+      uniforms.uPattern1Scale = config.creatorPattern1Scale ?? 1;
+      uniforms.uPattern2GradientMode = config.creatorPattern2ColorMode === 'gradient' ? 1.0 : 0.0;
+      uniforms.uPattern2GradientAngle = (config.creatorPattern2GradientAngle ?? 0) * (Math.PI / 180);
+      uniforms.uPattern2GradientBalance = config.creatorPattern2GradientBalance ?? 0.5;
+      uniforms.uPattern2Opacity = config.creatorPattern2Opacity ?? 0;
+      uniforms.uPattern2Scale = config.creatorPattern2Scale ?? 1;
+      uniforms.uNoiseIntensity = config.creatorNoiseIntensity ?? 0;
+      uniforms.uNoiseScale = config.creatorNoiseScale ?? 180;
     }
   }
 

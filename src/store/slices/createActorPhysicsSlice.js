@@ -28,6 +28,24 @@ export const createActorPhysicsSlice = (set, get) => ({
   mutationPatternMode: 'symbiosis',
   mutationRotation: 0,
 
+  // Creator colour synthesis (all values are applied below the line art)
+  creatorBaseColorMode: 'solid',
+  creatorBaseGradientAngle: 0,
+  creatorBaseGradientBalance: 0.5,
+  creatorBaseOpacity: 1,
+  creatorPattern1ColorMode: 'solid',
+  creatorPattern1GradientAngle: 0,
+  creatorPattern1GradientBalance: 0.5,
+  creatorPattern1Opacity: 1,
+  creatorPattern1Scale: 1,
+  creatorPattern2ColorMode: 'solid',
+  creatorPattern2GradientAngle: 90,
+  creatorPattern2GradientBalance: 0.5,
+  creatorPattern2Opacity: 0,
+  creatorPattern2Scale: 1,
+  creatorNoiseIntensity: 0,
+  creatorNoiseScale: 180,
+
   // 3. Eye & Lid Dynamics
   eyelidTravel: 20.0,         
   blinkInterval: 5.0,        
