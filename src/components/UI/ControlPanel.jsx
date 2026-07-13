@@ -23,6 +23,7 @@ import AuraTab from './tabs/AuraTab';
 import AtmosphereTab from './tabs/AtmosphereTab';
 import GlitchTab from './tabs/GlitchTab';
 import CreatorLayersTab from './tabs/CreatorLayersTab';
+import MutationRecipesTab from './tabs/MutationRecipesTab';
 
 export default function ControlPanel() {
   const isUiVisible = useStore((state) => state.isUiVisible);
@@ -35,6 +36,7 @@ export default function ControlPanel() {
     { id: 'web3', label: 'Web3', icon: <ShieldCheck size={12} />, component: <Web3Tab /> },
     { id: 'skull', label: 'Skull', icon: <Skull size={12} />, component: <SkullTab /> },
     { id: 'creator-layers', label: 'Layers', icon: <Layers size={12} />, component: <CreatorLayersTab /> },
+    { id: 'recipes', label: 'Recipes', icon: <Sliders size={12} />, component: <MutationRecipesTab /> },
     { id: 'bg', label: 'Background', icon: <Layers size={12} />, component: <BgTab /> },
     { id: 'eyes', label: 'Eyes', icon: <Eye size={12} />, component: <EyesTab /> },
     { id: 'aura', label: 'Aura', icon: <Sparkles size={12} />, component: <AuraTab /> },

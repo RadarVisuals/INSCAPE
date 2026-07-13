@@ -2,11 +2,15 @@
 import React from 'react';
 import { useStore } from '../../../store/useStore';
 import CompactSlider from '../CompactSlider';
+import CreatorEyesTab from './CreatorEyesTab';
 
 export default function EyesTab() {
+  const subjectMode = useStore((state) => state.subjectMode);
   const autoBlink = useStore((state) => state.autoBlink);
   const searchlightActive = useStore((state) => state.searchlightActive);
   const setParameter = useStore((state) => state.setParameter);
+
+  if (subjectMode === 'creator') return <CreatorEyesTab />;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>

@@ -3,6 +3,7 @@ import { Assets, Container, Graphics, Sprite } from 'pixi.js';
 import { EyeSystem } from '../systems/EyeSystem.js';
 import { FlightDynamics } from '../systems/FlightDynamics.js';
 import { createMutationMesh } from './MutationMeshFactory.js';
+import { CreatorEyeSystem } from '../systems/CreatorEyeSystem.js';
 
 const MUTATION_MODE_VALUES = {
   none: 0,
@@ -33,6 +34,7 @@ export class ActorEntity {
 
     this.flightDynamics = new FlightDynamics();
     this.eyeSystem = null;
+    this.creatorEyeSystem = null;
     this.layers = {};
     this.mutationMeshes = [];
     this.mutationEnabled = assets.isCreatorRig === true;
@@ -112,6 +114,14 @@ export class ActorEntity {
       this.mutationMeshes.push(bodyMutation);
       this.layers.mutationBody = bodyMutation.mesh;
       this.visualContainer.addChild(this.layers.mutationBody);
+      this.creatorEyeSystem = new CreatorEyeSystem(this.visualContainer, {
+        white: this.assets.creator_eye_white,
+        irisMask: this.assets.creator_eye_iris_mask,
+        pupil: this.assets.creator_eye_pupil,
+        glint: this.assets.creator_eye_glint,
+        lidTop: this.assets.creator_eye_lid_top,
+        lidBottom: this.assets.creator_eye_lid_bottom
+      });
     }
 
     if (
@@ -228,6 +238,9 @@ export class ActorEntity {
     this.visualContainer.rotation = headState.rotation;
 
     this.updateMutation(config);
+    if (this.creatorEyeSystem) {
+      this.creatorEyeSystem.update(config, this.time);
+    }
 
     if (this.eyeSystem) {
       this.eyeSystem.update(deltaTime, config);
@@ -249,6 +262,10 @@ export class ActorEntity {
     }
     if (this.eyeSystem?.destroy) {
       this.eyeSystem.destroy();
+    }
+    if (this.creatorEyeSystem) {
+      this.creatorEyeSystem.destroy();
+      this.creatorEyeSystem = null;
     }
     for (const mutationMesh of this.mutationMeshes) {
       mutationMesh.shader.destroy();

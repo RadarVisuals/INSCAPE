@@ -66,6 +66,7 @@ export class PixiEngine {
 
     // Set up a list to collect selector-based subscriptions
     this.unsubscribers = [];
+    this.assetReloadScheduled = false;
 
     // Trigger explicit asset loading only when setup properties modify
     const reloadTriggerKeys = [
@@ -90,7 +91,7 @@ export class PixiEngine {
       this.unsubscribers.push(
         this.subscribe(
           state => state[key],
-          () => this.reloadAssetsAndScene().catch(err => console.error("Re-init assets failed:", err))
+          () => this.scheduleAssetReload()
         )
       );
     });
@@ -189,6 +190,17 @@ export class PixiEngine {
         console.error("❌ [PixiEngine] Critical Loader Exception:", err);
       }
     }
+  }
+
+  scheduleAssetReload() {
+    if (this.assetReloadScheduled || this.isDestroyed) return;
+    this.assetReloadScheduled = true;
+    queueMicrotask(() => {
+      this.assetReloadScheduled = false;
+      if (!this.isDestroyed) {
+        this.reloadAssetsAndScene().catch((error) => console.error('Re-init assets failed:', error));
+      }
+    });
   }
 
   async resolveConfiguredRig(config) {
@@ -298,6 +310,12 @@ export class PixiEngine {
       creator_pattern_1_b: rig.keys.creator_pattern_1_b || null,
       creator_pattern_2_a: rig.keys.creator_pattern_2_a || null,
       creator_pattern_2_b: rig.keys.creator_pattern_2_b || null,
+      creator_eye_white: rig.keys.creator_eye_white || null,
+      creator_eye_iris_mask: rig.keys.creator_eye_iris_mask || null,
+      creator_eye_pupil: rig.keys.creator_eye_pupil || null,
+      creator_eye_glint: rig.keys.creator_eye_glint || null,
+      creator_eye_lid_top: rig.keys.creator_eye_lid_top || null,
+      creator_eye_lid_bottom: rig.keys.creator_eye_lid_bottom || null,
       eyelids_top: rig.hasEyelids ? rig.keys.eyelids_top : null,
       eyelids_bottom: rig.hasEyelids ? rig.keys.eyelids_bottom : null,
       discoveredEyes: rig.discoveredEyes,
@@ -469,6 +487,12 @@ export class PixiEngine {
       creator_pattern_1_b: nextRig.keys.creator_pattern_1_b || null,
       creator_pattern_2_a: nextRig.keys.creator_pattern_2_a || null,
       creator_pattern_2_b: nextRig.keys.creator_pattern_2_b || null,
+      creator_eye_white: nextRig.keys.creator_eye_white || null,
+      creator_eye_iris_mask: nextRig.keys.creator_eye_iris_mask || null,
+      creator_eye_pupil: nextRig.keys.creator_eye_pupil || null,
+      creator_eye_glint: nextRig.keys.creator_eye_glint || null,
+      creator_eye_lid_top: nextRig.keys.creator_eye_lid_top || null,
+      creator_eye_lid_bottom: nextRig.keys.creator_eye_lid_bottom || null,
       eyelids_top: nextRig.hasEyelids ? nextRig.keys.eyelids_top : null,
       eyelids_bottom: nextRig.hasEyelids ? nextRig.keys.eyelids_bottom : null,
       discoveredEyes: nextRig.discoveredEyes,

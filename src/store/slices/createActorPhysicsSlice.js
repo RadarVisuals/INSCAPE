@@ -45,6 +45,26 @@ export const createActorPhysicsSlice = (set, get) => ({
   creatorPattern2Scale: 1,
   creatorNoiseIntensity: 0,
   creatorNoiseScale: 180,
+  creatorEyes: [],
+  addCreatorEye: () => set((state) => ({
+    creatorEyes: [...state.creatorEyes, {
+      id: `eye-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      x: 0,
+      y: 0,
+      scale: 1,
+      rotation: 0,
+      irisColor: '#6f00ff',
+      gazeX: 0,
+      gazeY: 0,
+      eyelidOpen: 1
+    }]
+  })),
+  updateCreatorEye: (id, key, value) => set((state) => ({
+    creatorEyes: state.creatorEyes.map((eye) => eye.id === id ? { ...eye, [key]: value } : eye)
+  })),
+  removeCreatorEye: (id) => set((state) => ({
+    creatorEyes: state.creatorEyes.filter((eye) => eye.id !== id)
+  })),
 
   // 3. Eye & Lid Dynamics
   eyelidTravel: 20.0,         

@@ -84,7 +84,13 @@ export class CreatorAssetResolver {
       creator_pattern_1_a: `creator_palette_${palettes.pattern1A}`,
       creator_pattern_1_b: `creator_palette_${palettes.pattern1B}`,
       creator_pattern_2_a: `creator_palette_${palettes.pattern2A}`,
-      creator_pattern_2_b: `creator_palette_${palettes.pattern2B}`
+      creator_pattern_2_b: `creator_palette_${palettes.pattern2B}`,
+      creator_eye_white: 'creator_eye_white',
+      creator_eye_iris_mask: 'creator_eye_iris_mask',
+      creator_eye_pupil: 'creator_eye_pupil',
+      creator_eye_glint: 'creator_eye_glint',
+      creator_eye_lid_top: 'creator_eye_lid_top',
+      creator_eye_lid_bottom: 'creator_eye_lid_bottom'
     };
 
     const paths = {
@@ -98,7 +104,13 @@ export class CreatorAssetResolver {
       pattern1A: `/assets/palettes/${palettes.pattern1A}.webp`,
       pattern1B: `/assets/palettes/${palettes.pattern1B}.webp`,
       pattern2A: `/assets/palettes/${palettes.pattern2A}.webp`,
-      pattern2B: `/assets/palettes/${palettes.pattern2B}.webp`
+      pattern2B: `/assets/palettes/${palettes.pattern2B}.webp`,
+      eyeWhite: '/assets/eyes/eyeball_white.webp',
+      eyeIrisMask: '/assets/eyes/iris_mask.webp',
+      eyePupil: '/assets/eyes/pupil.webp',
+      eyeGlint: '/assets/eyes/glint.webp',
+      eyeLidTop: '/assets/eyes/eyelid_top.webp',
+      eyeLidBottom: '/assets/eyes/eyelids_bottom.webp'
     };
 
     const existenceChecks = await Promise.all(
@@ -123,7 +135,13 @@ export class CreatorAssetResolver {
       { alias: keys.creator_pattern_1_a, src: paths.pattern1A },
       { alias: keys.creator_pattern_1_b, src: paths.pattern1B },
       { alias: keys.creator_pattern_2_a, src: paths.pattern2A },
-      { alias: keys.creator_pattern_2_b, src: paths.pattern2B }
+      { alias: keys.creator_pattern_2_b, src: paths.pattern2B },
+      { alias: keys.creator_eye_white, src: paths.eyeWhite },
+      { alias: keys.creator_eye_iris_mask, src: paths.eyeIrisMask },
+      { alias: keys.creator_eye_pupil, src: paths.eyePupil },
+      { alias: keys.creator_eye_glint, src: paths.eyeGlint },
+      { alias: keys.creator_eye_lid_top, src: paths.eyeLidTop },
+      { alias: keys.creator_eye_lid_bottom, src: paths.eyeLidBottom }
     ];
     // Palette A and B may deliberately point at the same colour. Pixi aliases
     // are unique, so collapse duplicate selections before asking Assets to load.
