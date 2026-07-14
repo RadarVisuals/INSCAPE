@@ -197,11 +197,11 @@ export class ActorEntity {
     }
   }
 
-  update(deltaTime, config, isGlitchActive, canvasHeight) {
+  update(deltaTime, config, isGlitchActive, canvasHeight, motionOverride = null) {
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
 
-    if (this.isMovingToTarget) {
+    if (!motionOverride && this.isMovingToTarget) {
       const dx = this.targetPosition.x - this.baselinePosition.x;
       const dy = this.targetPosition.y - this.baselinePosition.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -215,16 +215,18 @@ export class ActorEntity {
       }
     }
 
-    this.currentFlipScale += (this.facingDirection - this.currentFlipScale) * 0.2 * deltaTime;
+    if (!motionOverride) {
+      this.currentFlipScale += (this.facingDirection - this.currentFlipScale) * 0.2 * deltaTime;
+    }
 
-    const headState = this.flightDynamics.calculate(
-      this.time,
-      config,
-      isGlitchActive,
-      this.baselinePosition,
-      this.currentFlipScale,
-      canvasHeight
-    );
+    const headState = motionOverride || this.flightDynamics.calculate(
+        this.time,
+        config,
+        isGlitchActive,
+        this.baselinePosition,
+        this.currentFlipScale,
+        canvasHeight
+      );
 
     this.headState = headState;
 
@@ -234,7 +236,7 @@ export class ActorEntity {
       headState.scale * this.baseActorScale
     );
     this.container.rotation = 0;
-    this.visualContainer.scale.set(this.currentFlipScale, 1);
+    this.visualContainer.scale.set(motionOverride ? 1 : this.currentFlipScale, 1);
     this.visualContainer.rotation = headState.rotation;
 
     this.updateMutation(config);

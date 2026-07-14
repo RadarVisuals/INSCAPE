@@ -15,6 +15,7 @@ import { TrailSystem } from './systems/TrailSystem.js';
 import { SearchlightSystem } from './systems/SearchlightSystem.js';
 import { ActorEntity } from './entities/ActorEntity.js';
 import { StageEntity } from './entities/StageEntity.js';
+import { GrapplePrototypeSystem } from './systems/GrapplePrototypeSystem.js';
 
 export class PixiEngine {
   /**
@@ -57,6 +58,7 @@ export class PixiEngine {
     this.shockwaveSystem = null;
     this.trailSystem = null;
     this.searchlightSystem = null;
+    this.grappleSystem = null;
 
     this.lastGlitchPeak = false;
 
@@ -131,11 +133,21 @@ export class PixiEngine {
    * @param {number} clientY - Absolute canvas click vertical position.
    */
   updateMouseClick(clientX, clientY) {
+    if (this.grappleSystem) return;
     if (!this.masterContainer || !this.actor) return;
     
     // Convert global screen pixel coordinates into master relative coordinates
     const localTarget = this.masterContainer.toLocal({ x: clientX, y: clientY });
     this.actor.moveTo(localTarget.x, localTarget.y);
+  }
+
+  startGrapple(clientY) {
+    if (!this.grappleSystem) return;
+    this.grappleSystem.press(clientY < this.app.screen.height / 2 ? 'ceiling' : 'floor');
+  }
+
+  releaseGrapple() {
+    this.grappleSystem?.release();
   }
 
   async init() {
@@ -204,7 +216,7 @@ export class PixiEngine {
   }
 
   async resolveConfiguredRig(config) {
-    const isCreatorMode = config.subjectMode === 'creator';
+    const isCreatorMode = config.subjectMode === 'creator' && !config.grapplePrototypeEnabled;
     const sceneRig = await AssetResolver.resolveRig(config, {
       includeActor: !isCreatorMode
     });
@@ -324,6 +336,7 @@ export class PixiEngine {
     };
     this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager);
     this.masterContainer.addChild(this.actor.container);
+    this.setupGrapplePrototype(currentStore);
 
     // Add stage foreground overlay container on top of the character
     this.masterContainer.addChild(this.stage.fgContainer);
@@ -340,6 +353,19 @@ export class PixiEngine {
       mountainBackReflector: stageTargets.mountainBackReflector,
       ceilingReflector: stageTargets.ceilingReflector
     });
+  }
+
+  setupGrapplePrototype(config) {
+    if (this.grappleSystem) {
+      this.grappleSystem.destroy();
+      this.grappleSystem = null;
+    }
+    if (!config.grapplePrototypeEnabled || !this.actor || this.actor.mutationEnabled) return;
+
+    this.grappleSystem = new GrapplePrototypeSystem();
+    this.grappleSystem.resize(this.canvasWidth || 1600, this.canvasHeight || 1200);
+    const actorIndex = this.masterContainer.getChildIndex(this.actor.container);
+    this.masterContainer.addChildAt(this.grappleSystem.container, Math.max(0, actorIndex));
   }
 
   async reloadAssetsAndScene() {
@@ -374,6 +400,10 @@ export class PixiEngine {
       this.loadedRig.hasBgPat2 !== nextRig.hasBgPat2;
 
     // Clean up current actor structures
+    if (this.grappleSystem) {
+      this.grappleSystem.destroy();
+      this.grappleSystem = null;
+    }
     if (this.actor) {
       if (this.actor.characterContentContainer) {
         this.actor.characterContentContainer.mask = null;
@@ -501,6 +531,7 @@ export class PixiEngine {
     };
     this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager);
     this.masterContainer.addChild(this.actor.container);
+    this.setupGrapplePrototype(currentStore);
 
     if (this.stage.fgContainer.parent) {
       this.stage.fgContainer.parent.removeChild(this.stage.fgContainer);
@@ -580,6 +611,12 @@ export class PixiEngine {
       reactionProgress: this.localReactionProgress
     };
 
+    let grapplePose = null;
+    if (this.grappleSystem) {
+      grapplePose = this.grappleSystem.update(dtSeconds);
+      config.bgScrollSpeed = this.grappleSystem.worldSpeed;
+    }
+
     const { isGlitched, currentSplit } = this.effectsSystem.update(this.time, config);
 
     // Glitch status and shake factor calculated cleanly relative to active parameters
@@ -596,7 +633,7 @@ export class PixiEngine {
 
     // 2. Update Actor Entity
     if (this.actor) {
-      this.actor.update(deltaTime, config, isGlitchActive, this.canvasHeight);
+      this.actor.update(deltaTime, config, isGlitchActive, this.canvasHeight, grapplePose);
     }
 
     // 3. Update Volumetric Searchlight (Tracking mouse around active character)
@@ -666,7 +703,12 @@ export class PixiEngine {
     const localH = screen.height / scale;
     
     // Save the actual coordinate viewport height inside the engine loop
+    this.canvasWidth = localW;
     this.canvasHeight = localH;
+
+    if (this.grappleSystem) {
+      this.grappleSystem.resize(localW, localH);
+    }
 
     if (this.masterClipMask) {
       this.masterClipMask.clear()
@@ -698,6 +740,10 @@ export class PixiEngine {
           }
           this.actor.destroy();
           this.actor = null;
+        }
+        if (this.grappleSystem) {
+          this.grappleSystem.destroy();
+          this.grappleSystem = null;
         }
         if (this.stage?.destroy) {
           this.stage.destroy();
