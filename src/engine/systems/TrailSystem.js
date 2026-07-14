@@ -84,7 +84,7 @@ export class TrailSystem {
         sprite.visible = true;
         
         // Spectral scale expansion: ensures older nodes peak out as outlines
-        const scaleExpansion = 1.0 + (index + 1) * 0.04; 
+        const scaleExpansion = 1.0 + (index + 1) * 0.04;
         
         // Vertical drift offset: simulates rising spectral smoke currents
         const driftOffsetY = (index + 1) * -8;
@@ -94,7 +94,7 @@ export class TrailSystem {
         sprite.rotation = historyState.rotation;
 
         // Progressively fade coordinates of older trails
-        const stepDecay = 1.0 - (index * 0.25); 
+        const stepDecay = 1.0 - (index * 0.25);
         sprite.alpha = Math.max(0, Math.min(1.0, targetBaseAlpha * stepDecay));
       } else {
         sprite.visible = false;

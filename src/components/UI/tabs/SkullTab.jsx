@@ -9,6 +9,9 @@ export default function SkullTab() {
   const mutationSourceX = useStore((state) => state.mutationSourceX);
   const mutationSourceY = useStore((state) => state.mutationSourceY);
   const mutationPatternMode = useStore((state) => state.mutationPatternMode);
+  const mutationAutoRotate = useStore((state) => state.mutationAutoRotate);
+  const mutationRotationDirection = useStore((state) => state.mutationRotationDirection);
+  const warpMode = useStore((state) => state.warpMode);
   const setParameter = useStore((state) => state.setParameter);
 
   const selectStyle = {
@@ -22,7 +25,7 @@ export default function SkullTab() {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: subjectMode === 'creator' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '15px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
       <div>
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Flight & Hover Controls</h4>
         <CompactSlider label="Float Speed" storeKey="floatSpeed" min="0" max="3" step="0.1" />
@@ -42,11 +45,23 @@ export default function SkullTab() {
         <CompactSlider label="Pattern Top Scale" storeKey="patternTopScale" min="0.5" max="3" step="0.1" />
         <CompactSlider label="Warp Intensity" storeKey="warpIntensity" min="0" max="100" step="1" />
         <CompactSlider label="Warp Speed" storeKey="warpSpeed" min="0" max="5" step="0.1" />
+        <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Warp Behavior</label>
+        <select value={warpMode} onChange={(e) => setParameter('warpMode', e.target.value)} style={{ ...selectStyle, marginBottom: '12px' }}>
+          <option value="classic">Classic / Original</option>
+          <option value="organic">Organic / Layered</option>
+        </select>
+        {warpMode === 'organic' && (
+          <>
+            <CompactSlider label="Morph Range" storeKey="warpOrganicRange" min="0" max="3" step="0.05" />
+            <CompactSlider label="Layer Divergence" storeKey="warpLayerDivergence" min="0" max="1" step="0.05" />
+            <CompactSlider label="Cursor Influence" storeKey="warpCursorInfluence" min="0" max="1" step="0.05" />
+            <CompactSlider label="Cursor Radius" storeKey="warpCursorRadius" min="0.05" max="0.5" step="0.01" />
+          </>
+        )}
       </div>
 
-      {subjectMode === 'creator' && (
-        <div>
-          <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Creator Mutation Test</h4>
+      <div>
+          <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Geometry Mutation</h4>
 
           <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Geometry</label>
           <select value={mutationMode} onChange={(e) => setParameter('mutationMode', e.target.value)} style={{ ...selectStyle, marginBottom: '8px' }}>
@@ -73,17 +88,44 @@ export default function SkullTab() {
             </div>
           </div>
 
-          <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Pattern Behavior</label>
-          <select value={mutationPatternMode} onChange={(e) => setParameter('mutationPatternMode', e.target.value)} style={{ ...selectStyle, marginBottom: '8px' }}>
-            <option value="symbiosis">Continuous / Symbiosis</option>
-            <option value="mirrored">Mirror With Geometry</option>
-          </select>
+          {subjectMode === 'creator' && (
+            <>
+              <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Pattern Behavior</label>
+              <select value={mutationPatternMode} onChange={(e) => setParameter('mutationPatternMode', e.target.value)} style={{ ...selectStyle, marginBottom: '8px' }}>
+                <option value="symbiosis">Continuous / Symbiosis</option>
+                <option value="mirrored">Mirror With Geometry</option>
+              </select>
+            </>
+          )}
 
           <CompactSlider label="Vertical Axis" storeKey="mutationAxisX" min="0.05" max="0.95" step="0.001" />
           <CompactSlider label="Horizontal Axis" storeKey="mutationAxisY" min="0.05" max="0.95" step="0.001" />
-          <CompactSlider label="Source Rotation" storeKey="mutationRotation" min="-180" max="180" step="1" />
+          <CompactSlider label="Source Rotation Offset" storeKey="mutationRotation" min="-180" max="180" step="1" />
+
+          <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', margin: '8px 0' }}>
+            <input
+              type="checkbox"
+              checked={mutationAutoRotate}
+              onChange={(e) => setParameter('mutationAutoRotate', e.target.checked)}
+            />
+            Auto Source Rotation
+          </label>
+
+          {mutationAutoRotate && (
+            <>
+              <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Rotation Direction</label>
+              <select
+                value={mutationRotationDirection}
+                onChange={(e) => setParameter('mutationRotationDirection', e.target.value)}
+                style={{ ...selectStyle, marginBottom: '8px' }}
+              >
+                <option value="clockwise">Clockwise</option>
+                <option value="counterclockwise">Counter-clockwise</option>
+              </select>
+              <CompactSlider label="Rotation Speed (Deg / Sec)" storeKey="mutationRotationSpeed" min="0" max="90" step="0.5" />
+            </>
+          )}
         </div>
-      )}
     </div>
   );
 }

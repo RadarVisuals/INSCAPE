@@ -18,8 +18,13 @@ export const createActorPhysicsSlice = (set, get) => ({
   patternTopScale: 1.0,
   warpIntensity: 20.0,
   warpSpeed: 1.0,
+  warpMode: 'classic',
+  warpOrganicRange: 1.0,
+  warpLayerDivergence: 0.3,
+  warpCursorInfluence: 0.45,
+  warpCursorRadius: 0.22,
 
-  // Creator-only mutation experiment
+  // Shared geometry mutation (authored actors and modular creator bodies)
   mutationMode: 'none',
   mutationAxisX: 0.5,
   mutationAxisY: 0.5,
@@ -27,6 +32,9 @@ export const createActorPhysicsSlice = (set, get) => ({
   mutationSourceY: 'top',
   mutationPatternMode: 'symbiosis',
   mutationRotation: 0,
+  mutationAutoRotate: false,
+  mutationRotationDirection: 'clockwise',
+  mutationRotationSpeed: 12,
 
   // Creator colour synthesis (all values are applied below the line art)
   creatorBaseColorMode: 'solid',

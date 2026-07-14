@@ -15,6 +15,8 @@ import { TrailSystem } from './systems/TrailSystem.js';
 import { SearchlightSystem } from './systems/SearchlightSystem.js';
 import { ActorEntity } from './entities/ActorEntity.js';
 import { StageEntity } from './entities/StageEntity.js';
+import { BoundaryExhaleSystem } from './systems/BoundaryExhaleSystem.js';
+import { ShedSkinTrailSystem } from './systems/ShedSkinTrailSystem.js';
 
 export class PixiEngine {
   /**
@@ -57,12 +59,15 @@ export class PixiEngine {
     this.shockwaveSystem = null;
     this.trailSystem = null;
     this.searchlightSystem = null;
+    this.boundaryExhaleSystem = null;
+    this.shedSkinTrailSystem = null;
 
     this.lastGlitchPeak = false;
 
     // Double Mouse Tracker: Separate absolute screen-coords and normalized [-1, 1] scales
     this.absoluteMousePos = { x: 0, y: 0 };
     this.normalizedMousePos = { x: 0, y: 0 };
+    this.hasMousePosition = false;
 
     // Set up a list to collect selector-based subscriptions
     this.unsubscribers = [];
@@ -119,6 +124,7 @@ export class PixiEngine {
   updateMousePos(clientX, clientY) {
     this.absoluteMousePos.x = clientX;
     this.absoluteMousePos.y = clientY;
+    this.hasMousePosition = true;
 
     // Normalize coordinates to [-1, 1] range to avoid breaking pupil wander scripts
     this.normalizedMousePos.x = (clientX / window.innerWidth) * 2 - 1;
@@ -322,8 +328,10 @@ export class PixiEngine {
       discoveredPatterns: rig.discoveredPatterns,
       isCreatorRig: rig.isCreatorRig === true
     };
-    this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager);
+    this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager, this.app.renderer);
     this.masterContainer.addChild(this.actor.container);
+    this.boundaryExhaleSystem = new BoundaryExhaleSystem(this.masterContainer, this.app.renderer, this.actor);
+    this.shedSkinTrailSystem = new ShedSkinTrailSystem(this.masterContainer, this.app.renderer, this.actor, rig.keys.char_clipping_mask);
 
     // Add stage foreground overlay container on top of the character
     this.masterContainer.addChild(this.stage.fgContainer);
@@ -375,6 +383,10 @@ export class PixiEngine {
 
     // Clean up current actor structures
     if (this.actor) {
+      this.boundaryExhaleSystem?.destroy();
+      this.boundaryExhaleSystem = null;
+      this.shedSkinTrailSystem?.destroy();
+      this.shedSkinTrailSystem = null;
       if (this.actor.characterContentContainer) {
         this.actor.characterContentContainer.mask = null;
       }
@@ -499,8 +511,10 @@ export class PixiEngine {
       discoveredPatterns: nextRig.discoveredPatterns,
       isCreatorRig: nextRig.isCreatorRig === true
     };
-    this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager);
+    this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager, this.app.renderer);
     this.masterContainer.addChild(this.actor.container);
+    this.boundaryExhaleSystem = new BoundaryExhaleSystem(this.masterContainer, this.app.renderer, this.actor);
+    this.shedSkinTrailSystem = new ShedSkinTrailSystem(this.masterContainer, this.app.renderer, this.actor, nextRig.keys.char_clipping_mask);
 
     if (this.stage.fgContainer.parent) {
       this.stage.fgContainer.parent.removeChild(this.stage.fgContainer);
@@ -576,6 +590,8 @@ export class PixiEngine {
     const config = { 
       ...liveStore, 
       mousePos: this.normalizedMousePos,
+      absoluteMousePos: this.absoluteMousePos,
+      hasMousePosition: this.hasMousePosition,
       activeReaction: this.currentLocalReaction,
       reactionProgress: this.localReactionProgress
     };
@@ -597,6 +613,8 @@ export class PixiEngine {
     // 2. Update Actor Entity
     if (this.actor) {
       this.actor.update(deltaTime, config, isGlitchActive, this.canvasHeight);
+      this.boundaryExhaleSystem?.update(deltaTime, config);
+      this.shedSkinTrailSystem?.update(deltaTime, this.actor.headState, config);
     }
 
     // 3. Update Volumetric Searchlight (Tracking mouse around active character)
@@ -636,7 +654,12 @@ export class PixiEngine {
 
     // Update off-screen RenderTextureManager pass for warp filters
     if (this.renderTextureManager) {
-      this.renderTextureManager.update(deltaTime, config, this.app.renderer);
+      this.renderTextureManager.update(
+        deltaTime,
+        config,
+        this.app.renderer,
+        this.actor?.warpPointer || null
+      );
     }
 
     // --- Echoing Phase Trails Subsystem calculations (Reading active actor state) ---
@@ -693,6 +716,10 @@ export class PixiEngine {
     if (this.isReady && this.app) {
       try { 
         if (this.actor) {
+          this.boundaryExhaleSystem?.destroy();
+          this.boundaryExhaleSystem = null;
+          this.shedSkinTrailSystem?.destroy();
+          this.shedSkinTrailSystem = null;
           if (this.actor.characterContentContainer) {
             this.actor.characterContentContainer.mask = null;
           }

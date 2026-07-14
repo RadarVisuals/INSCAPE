@@ -1,6 +1,7 @@
 // src/engine/systems/RenderTextureManager.js
 import { Container, Sprite, RenderTexture, Assets } from 'pixi.js';
 import { createWarpFilters } from '../filters/WarpFilterFactory.js';
+import { createOrganicWarpFilter } from '../filters/OrganicWarpFilterFactory.js';
 import { MirroredScrollLayer } from './MirroredScrollLayer.js';
 
 export class RenderTextureManager {
@@ -15,6 +16,8 @@ export class RenderTextureManager {
 
     this.warpFilter = null;
     this.bgWarpFilter = null;
+    this.organicWarpFilters = [];
+    this.activePatternWarpMode = 'classic';
 
     this.localPatternContainer = null;
     this.localBgPatternContainer = null;
@@ -76,11 +79,13 @@ export class RenderTextureManager {
       this.localPatternContainer = new Container();
       this.localPatternContainer.filters = [this.warpFilter];
 
-      for (const patternAlias of this.discoveredPatterns) {
+      for (let index = 0; index < this.discoveredPatterns.length; index += 1) {
+        const patternAlias = this.discoveredPatterns[index];
         const sp = Sprite.from(patternAlias);
         sp.anchor.set(0.5);
         sp.position.set(patW / 2, patH / 2);
         this.localPatternContainer.addChild(sp);
+        this.organicWarpFilters.push(createOrganicWarpFilter(index));
       }
 
       this.patternRenderTexture = RenderTexture.create({ width: patW, height: patH });
@@ -101,7 +106,13 @@ export class RenderTextureManager {
   updateActorPatterns(discoveredPatterns) {
     this.discoveredPatterns = discoveredPatterns || [];
 
+    this.destroyOrganicWarpFilters();
+    this.activePatternWarpMode = 'classic';
+
     if (this.localPatternContainer) {
+      for (const child of this.localPatternContainer.children) {
+        child.filters = null;
+      }
       this.localPatternContainer.destroy({ children: true });
       this.localPatternContainer = null;
     }
@@ -118,11 +129,13 @@ export class RenderTextureManager {
       this.localPatternContainer = new Container();
       this.localPatternContainer.filters = [this.warpFilter];
 
-      for (const patternAlias of this.discoveredPatterns) {
+      for (let index = 0; index < this.discoveredPatterns.length; index += 1) {
+        const patternAlias = this.discoveredPatterns[index];
         const sp = Sprite.from(patternAlias);
         sp.anchor.set(0.5);
         sp.position.set(patW / 2, patH / 2);
         this.localPatternContainer.addChild(sp);
+        this.organicWarpFilters.push(createOrganicWarpFilter(index));
       }
 
       this.patternRenderTexture = RenderTexture.create({ width: patW, height: patH });
@@ -149,11 +162,34 @@ export class RenderTextureManager {
     }
   }
 
-  update(deltaTime, state, renderer) {
+  setPatternWarpMode(mode) {
+    if (!this.localPatternContainer || mode === this.activePatternWarpMode) return;
+
+    const organicEnabled = mode === 'organic';
+    this.localPatternContainer.filters = organicEnabled ? null : [this.warpFilter];
+    for (let index = 0; index < this.localPatternContainer.children.length; index += 1) {
+      const child = this.localPatternContainer.children[index];
+      const organicFilter = this.organicWarpFilters[index];
+      child.filters = organicEnabled && organicFilter ? [organicFilter] : null;
+    }
+    this.activePatternWarpMode = organicEnabled ? 'organic' : 'classic';
+  }
+
+  destroyOrganicWarpFilters() {
+    for (const filter of this.organicWarpFilters) {
+      filter?.destroy();
+    }
+    this.organicWarpFilters = [];
+  }
+
+  update(deltaTime, state, renderer, pointer = null) {
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
 
     if (this.localPatternContainer && this.localPatternContainer.children.length > 0) {
+      const requestedWarpMode = state.warpMode === 'organic' ? 'organic' : 'classic';
+      this.setPatternWarpMode(requestedWarpMode);
+
       const kids = this.localPatternContainer.children;
       if (kids.length === 1) {
         kids[0].scale.set(state.patternTopScale);
@@ -180,6 +216,25 @@ export class RenderTextureManager {
       if (this.warpFilter && this.warpFilter.resources.warpUniforms) {
         this.warpFilter.resources.warpUniforms.uniforms.uTime = this.time * state.warpSpeed;
         this.warpFilter.resources.warpUniforms.uniforms.uWarpIntensity = currentWarpIntensity;
+      }
+
+      if (requestedWarpMode === 'organic') {
+        const cursorPosition = pointer?.position || [0.5, 0.5];
+        const cursorVelocity = pointer?.velocity || [0.0, 0.0];
+        const cursorActive = pointer?.active ?? 0.0;
+        for (const organicFilter of this.organicWarpFilters) {
+          const uniforms = organicFilter?.resources.organicWarpUniforms?.uniforms;
+          if (!uniforms) continue;
+          uniforms.uTime = this.time * (state.warpSpeed ?? 1);
+          uniforms.uWarpIntensity = currentWarpIntensity;
+          uniforms.uMorphRange = state.warpOrganicRange ?? 1.0;
+          uniforms.uLayerDivergence = state.warpLayerDivergence ?? 0.3;
+          uniforms.uCursorPosition = cursorPosition;
+          uniforms.uCursorVelocity = cursorVelocity;
+          uniforms.uCursorActive = cursorActive;
+          uniforms.uCursorInfluence = state.warpCursorInfluence ?? 0.45;
+          uniforms.uCursorRadius = state.warpCursorRadius ?? 0.22;
+        }
       }
 
       renderer.render({
@@ -213,6 +268,12 @@ export class RenderTextureManager {
   }
 
   destroy() {
+    if (this.localPatternContainer) {
+      for (const child of this.localPatternContainer.children) {
+        child.filters = null;
+      }
+    }
+    this.destroyOrganicWarpFilters();
     if (this.patternRenderTexture) {
       this.patternRenderTexture.destroy(true); // Force-disposes of the GPU TextureSource
     }

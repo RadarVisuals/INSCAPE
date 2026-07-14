@@ -7,6 +7,7 @@ import { createAtmosphereSlice } from './slices/createAtmosphereSlice';
 import { createGlitchSlice } from './slices/createGlitchSlice';
 import { createWeb3Slice } from './slices/useWeb3Slice';
 import { createMutationRecipeSlice } from './slices/createMutationRecipeSlice';
+import { createPhenomenaSlice } from './slices/createPhenomenaSlice';
 
 export const useStore = create(subscribeWithSelector((set, get) => ({
   // Flatten slice definitions into the combined store
@@ -16,6 +17,7 @@ export const useStore = create(subscribeWithSelector((set, get) => ({
   ...createGlitchSlice(set, get),
   ...createWeb3Slice(set, get),
   ...createMutationRecipeSlice(set, get),
+  ...createPhenomenaSlice(set, get),
   
   /**
    * Central state mutator.

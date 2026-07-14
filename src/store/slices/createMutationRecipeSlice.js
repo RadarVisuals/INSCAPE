@@ -17,8 +17,16 @@ export const MUTATION_RECIPE_KEYS = [
   'mutationSourceY',
   'mutationPatternMode',
   'mutationRotation',
+  'mutationAutoRotate',
+  'mutationRotationDirection',
+  'mutationRotationSpeed',
   'warpIntensity',
   'warpSpeed',
+  'warpMode',
+  'warpOrganicRange',
+  'warpLayerDivergence',
+  'warpCursorInfluence',
+  'warpCursorRadius',
   'creatorBaseColorMode',
   'creatorBaseGradientAngle',
   'creatorBaseGradientBalance',
@@ -93,7 +101,9 @@ export const createMutationRecipeSlice = (set, get) => ({
         .filter((key) => Object.prototype.hasOwnProperty.call(recipe.values, key))
         .map((key) => [key, recipe.values[key]])
     );
-    set({ subjectMode: 'creator', ...safeValues });
+    // Geometry recipes are source-agnostic. Applying one should not silently
+    // replace the currently selected authored actor with a creator seed.
+    set({ ...safeValues });
     return true;
   },
 
