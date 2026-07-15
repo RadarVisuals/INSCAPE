@@ -1,4 +1,6 @@
 // src/store/slices/createActorPhysicsSlice.js
+import { DEFAULT_RENDER_CONFIG } from '../../config/renderConfig.defaults.js';
+import { toFlatRenderParameters } from '../../config/normalizeRenderConfig.js';
 
 export const createActorPhysicsSlice = (set, get) => ({
   // 1. Motion & Hover Dynamics
@@ -13,66 +15,8 @@ export const createActorPhysicsSlice = (set, get) => ({
   flyHoverPause: 1.0,     // Hover pause factor (1.0 = smooth sine, 5.0 = flat plateau pauses)
   flyTiltBias: 3.0,       // Persistent tilt bias in degrees
 
-  // 2. Skull Pattern & Warp (Foreground)
-  patternBottomScale: 1.0,
-  patternTopScale: 1.0,
-  warpIntensity: 20.0,
-  warpSpeed: 1.0,
-  warpMode: 'classic',
-  warpOrganicRange: 1.0,
-  warpLayerDivergence: 0.3,
-  warpCursorInfluence: 0.45,
-  warpCursorRadius: 0.22,
-
-  // Shared geometry mutation (authored actors and modular creator bodies)
-  mutationMode: 'none',
-  mutationAxisX: 0.5,
-  mutationAxisY: 0.5,
-  mutationSourceX: 'left',
-  mutationSourceY: 'top',
-  mutationPatternMode: 'symbiosis',
-  mutationRotation: 0,
-  mutationAutoRotate: false,
-  mutationRotationDirection: 'clockwise',
-  mutationRotationSpeed: 12,
-
-  // Creator colour synthesis (all values are applied below the line art)
-  creatorBaseColorMode: 'solid',
-  creatorBaseGradientAngle: 0,
-  creatorBaseGradientBalance: 0.5,
-  creatorBaseOpacity: 1,
-  creatorPattern1ColorMode: 'solid',
-  creatorPattern1GradientAngle: 0,
-  creatorPattern1GradientBalance: 0.5,
-  creatorPattern1Opacity: 1,
-  creatorPattern1Scale: 1,
-  creatorPattern2ColorMode: 'solid',
-  creatorPattern2GradientAngle: 90,
-  creatorPattern2GradientBalance: 0.5,
-  creatorPattern2Opacity: 0,
-  creatorPattern2Scale: 1,
-  creatorNoiseIntensity: 0,
-  creatorNoiseScale: 180,
-  creatorEyes: [],
-  addCreatorEye: () => set((state) => ({
-    creatorEyes: [...state.creatorEyes, {
-      id: `eye-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      x: 0,
-      y: 0,
-      scale: 1,
-      rotation: 0,
-      irisColor: '#6f00ff',
-      gazeX: 0,
-      gazeY: 0,
-      eyelidOpen: 1
-    }]
-  })),
-  updateCreatorEye: (id, key, value) => set((state) => ({
-    creatorEyes: state.creatorEyes.map((eye) => eye.id === id ? { ...eye, [key]: value } : eye)
-  })),
-  removeCreatorEye: (id) => set((state) => ({
-    creatorEyes: state.creatorEyes.filter((eye) => eye.id !== id)
-  })),
+  // Actor geometry and warp defaults come from the render contract.
+  ...toFlatRenderParameters(DEFAULT_RENDER_CONFIG, 'actor'),
 
   // 3. Eye & Lid Dynamics
   eyelidTravel: 20.0,         

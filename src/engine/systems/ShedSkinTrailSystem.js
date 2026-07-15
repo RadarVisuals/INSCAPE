@@ -112,11 +112,11 @@ export class ShedSkinTrailSystem {
     const speedEase = 1 - Math.exp(-dt * (rawSpeed > this.speed ? 18 : 6));
     this.speed += (rawSpeed - this.speed) * speedEase;
 
-    const count = clamp(Math.round(config.shedSkinCount ?? 6), 0, MAX_SNAPSHOTS);
-    const spacing = clamp(config.shedSkinSpacing ?? 4, 1, 30);
-    const enabled = config.shedSkinEnabled !== false && count > 0;
-    const threshold = Math.max(0, config.shedSkinMotionThreshold ?? 0.035);
-    const fullSpeed = Math.max(threshold + 0.01, config.shedSkinFullSpeed ?? 1.3);
+    const count = clamp(config.count, 0, MAX_SNAPSHOTS);
+    const spacing = config.spacing;
+    const enabled = config.enabled && count > 0;
+    const threshold = config.motionThreshold;
+    const fullSpeed = Math.max(threshold + 0.01, config.fullSpeed);
     const normalizedSpeed = clamp((this.speed - threshold) / (fullSpeed - threshold), 0, 1);
     const motion = normalizedSpeed * normalizedSpeed * (3 - 2 * normalizedSpeed);
 
@@ -125,19 +125,15 @@ export class ShedSkinTrailSystem {
       this.capture(headState, count);
     }
 
-    const lifetime = Math.max(0.08, config.shedSkinLifetime ?? 0.72);
-    const opacity = clamp(config.shedSkinOpacity ?? 0.58, 0, 1);
-    const fadePower = Math.max(0.2, config.shedSkinFade ?? 1.45);
-    const backslide = Math.max(0, config.shedSkinBackslide ?? 8);
-    const drift = Math.max(0, config.shedSkinDrift ?? 2);
-    const expansion = Math.max(0, config.shedSkinExpansion ?? 0.018);
-    const dissolve = clamp(config.shedSkinDissolve ?? 0.36, 0, 1);
-    const tintStrength = clamp(config.shedSkinColorMix ?? 0.58, 0, 1);
-    const color = [
-      clamp(config.shedSkinColorR ?? 112, 0, 255) / 255,
-      clamp(config.shedSkinColorG ?? 24, 0, 255) / 255,
-      clamp(config.shedSkinColorB ?? 164, 0, 255) / 255
-    ];
+    const lifetime = config.lifetime;
+    const opacity = config.opacity;
+    const fadePower = config.fade;
+    const backslide = config.backslide;
+    const drift = config.drift;
+    const expansion = config.expansion;
+    const dissolve = config.dissolve;
+    const tintStrength = config.colorMix;
+    const color = config.color.map((value) => value / 255);
 
     this.snapshots.forEach((snapshot, index) => {
       const { sprite } = snapshot;

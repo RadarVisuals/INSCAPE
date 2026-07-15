@@ -1,5 +1,5 @@
 // src/components/UI/tabs/SetupTab.jsx
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useStore } from '../../../store/useStore';
 
 const availableActors = [
@@ -34,38 +34,12 @@ const patternStyleOptions = [
 ];
 
 export default function SetupTab() {
-  const subjectMode = useStore((state) => state.subjectMode);
   const characterId = useStore((state) => state.characterId);
-  const creatorCharacterId = useStore((state) => state.creatorCharacterId);
-  const creatorPatternId = useStore((state) => state.creatorPatternId);
-  const creatorPaletteId = useStore((state) => state.creatorPaletteId);
   const bgClippingMaskId = useStore((state) => state.bgClippingMaskId);
   const bgPatternStyle = useStore((state) => state.bgPatternStyle);
   const bgMountainId = useStore((state) => state.bgMountainId);
   const bgMountainBackId = useStore((state) => state.bgMountainBackId);
   const setParameter = useStore((state) => state.setParameter);
-  const [creatorManifest, setCreatorManifest] = useState(null);
-  const [manifestError, setManifestError] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/assets/manifest.json')
-      .then((response) => {
-        if (!response.ok) throw new Error(`Manifest request failed (${response.status})`);
-        return response.json();
-      })
-      .then((manifest) => {
-        if (!cancelled) setCreatorManifest(manifest);
-      })
-      .catch((error) => {
-        if (!cancelled) setManifestError(error.message);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const selectStyle = {
     background: '#1c1c1c',
     border: '1px solid var(--border-color)',
@@ -84,19 +58,6 @@ export default function SetupTab() {
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Actor Config</h4>
 
         <div style={{ marginBottom: '10px' }}>
-          <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Subject Source</label>
-          <select
-            value={subjectMode}
-            onChange={(e) => setParameter('subjectMode', e.target.value)}
-            style={selectStyle}
-          >
-            <option value="actor">Current Animated Actors</option>
-            <option value="creator">Creator Mutation Test</option>
-          </select>
-        </div>
-
-        {subjectMode === 'actor' ? (
-          <div style={{ marginBottom: '10px' }}>
             <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Active Character</label>
             <select
               value={characterId}
@@ -107,38 +68,9 @@ export default function SetupTab() {
                 <option key={actor.id} value={actor.id}>{actor.label}</option>
               ))}
             </select>
-          </div>
-        ) : creatorManifest ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '0.7fr 1.3fr 1fr', gap: '6px', marginBottom: '10px' }}>
-            <div>
-              <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Seed</label>
-              <select value={creatorCharacterId} onChange={(e) => setParameter('creatorCharacterId', e.target.value)} style={selectStyle}>
-                {creatorManifest.characters.map((id) => <option key={id} value={id}>{id}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Pattern</label>
-              <select value={creatorPatternId} onChange={(e) => setParameter('creatorPatternId', e.target.value)} style={selectStyle}>
-                {creatorManifest.patterns.map((id) => <option key={id} value={id}>{id}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Palette</label>
-              <select value={creatorPaletteId} onChange={(e) => setParameter('creatorPaletteId', e.target.value)} style={selectStyle}>
-                {creatorManifest.palettes.map((id) => <option key={id} value={id}>{id.replace('basic_', '')}</option>)}
-              </select>
-            </div>
-          </div>
-        ) : (
-          <p style={{ fontSize: '9px', color: manifestError ? '#d66' : 'var(--text-muted)', marginBottom: '10px' }}>
-            {manifestError || 'Loading creator manifest…'}
-          </p>
-        )}
-        
+        </div>
         <p style={{ fontSize: '9px', color: 'var(--text-muted)', lineHeight: '1.2' }}>
-          {subjectMode === 'actor'
-            ? "* Loads the current actor rig without using creator-library assets."
-            : "* Loads only manifest-listed creator masks, shared patterns, and palettes."}
+          * Loads an authored actor rig. Geometry mutation and effects are configured independently.
         </p>
       </div>
 

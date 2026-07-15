@@ -30,9 +30,8 @@ export class AssetResolver {
    * @param {Object} config - System setup values from the application state.
    * @returns {Promise<Object>} Resolved configuration states, cache keys, and assets load queue.
    */
-  static async resolveRig(config, options = {}) {
+  static async resolveRig(config) {
     const { characterId, bgClippingMaskId, bgPatternStyle, bgMountainId, bgMountainBackId } = config;
-    const includeActor = options.includeActor ?? true;
     const verifiedLoadQueue = [];
 
     const formattedMountainId = this.padId(bgMountainId);
@@ -107,8 +106,6 @@ export class AssetResolver {
     } else {
       Assets.cache.set(keys.bg_mountain_back, Texture.EMPTY);
     }
-
-    if (!includeActor) return results;
 
     // --- Foreground Character Clipping Mask ---
     const charClipPath = `/assets/actors/${characterId}/mask.webp`;

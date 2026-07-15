@@ -9,14 +9,13 @@ import {
 import { EffectsSystem } from './systems/EffectsSystem.js';
 import { RenderTextureManager } from './systems/RenderTextureManager.js';
 import { AssetResolver } from './assets/AssetResolver.js';
-import { CreatorAssetResolver } from './assets/CreatorAssetResolver.js';
 import { ShockwaveSystem } from './systems/ShockwaveSystem.js';
 import { TrailSystem } from './systems/TrailSystem.js';
 import { SearchlightSystem } from './systems/SearchlightSystem.js';
 import { ActorEntity } from './entities/ActorEntity.js';
 import { StageEntity } from './entities/StageEntity.js';
-import { BoundaryExhaleSystem } from './systems/BoundaryExhaleSystem.js';
 import { ShedSkinTrailSystem } from './systems/ShedSkinTrailSystem.js';
+import { DEFAULT_RENDER_CONFIG } from '../config/renderConfig.defaults.js';
 
 export class PixiEngine {
   /**
@@ -59,7 +58,6 @@ export class PixiEngine {
     this.shockwaveSystem = null;
     this.trailSystem = null;
     this.searchlightSystem = null;
-    this.boundaryExhaleSystem = null;
     this.shedSkinTrailSystem = null;
 
     this.lastGlitchPeak = false;
@@ -75,17 +73,7 @@ export class PixiEngine {
 
     // Trigger explicit asset loading only when setup properties modify
     const reloadTriggerKeys = [
-      'subjectMode',
       'characterId',
-      'creatorCharacterId',
-      'creatorPatternId',
-      'creatorPaletteId',
-      'creatorBasePaletteBId',
-      'creatorPattern1PaletteAId',
-      'creatorPattern1PaletteBId',
-      'creatorPattern2Id',
-      'creatorPattern2PaletteAId',
-      'creatorPattern2PaletteBId',
       'bgClippingMaskId',
       'bgPatternStyle',
       'bgMountainId',
@@ -210,33 +198,7 @@ export class PixiEngine {
   }
 
   async resolveConfiguredRig(config) {
-    const isCreatorMode = config.subjectMode === 'creator';
-    const sceneRig = await AssetResolver.resolveRig(config, {
-      includeActor: !isCreatorMode
-    });
-
-    if (!isCreatorMode) return sceneRig;
-
-    const creatorRig = await CreatorAssetResolver.resolve(config);
-    return {
-      ...sceneRig,
-      keys: {
-        ...sceneRig.keys,
-        ...creatorRig.keys
-      },
-      verifiedLoadQueue: [
-        ...sceneRig.verifiedLoadQueue,
-        ...creatorRig.verifiedLoadQueue
-      ],
-      hasCharClippingMask: creatorRig.hasCharClippingMask,
-      hasLineart: creatorRig.hasLineart,
-      hasCharBase: creatorRig.hasCharBase,
-      hasEyelids: creatorRig.hasEyelids,
-      discoveredPatterns: creatorRig.discoveredPatterns,
-      discoveredEyes: creatorRig.discoveredEyes,
-      isCreatorRig: true,
-      creatorSelection: creatorRig.selected
-    };
+    return AssetResolver.resolveRig(config);
   }
 
   buildSceneGraph() {
@@ -308,29 +270,13 @@ export class PixiEngine {
       char_clipping_mask: rig.hasCharClippingMask ? rig.keys.char_clipping_mask : null,
       char_lineart: rig.hasLineart ? rig.keys.char_lineart : null,
       char_base: rig.hasCharBase ? rig.keys.char_base : null,
-      creator_pattern: rig.keys.creator_pattern || null,
-      creator_pattern_2: rig.keys.creator_pattern_2 || null,
-      creator_base_a: rig.keys.creator_base_a || null,
-      creator_base_b: rig.keys.creator_base_b || null,
-      creator_pattern_1_a: rig.keys.creator_pattern_1_a || null,
-      creator_pattern_1_b: rig.keys.creator_pattern_1_b || null,
-      creator_pattern_2_a: rig.keys.creator_pattern_2_a || null,
-      creator_pattern_2_b: rig.keys.creator_pattern_2_b || null,
-      creator_eye_white: rig.keys.creator_eye_white || null,
-      creator_eye_iris_mask: rig.keys.creator_eye_iris_mask || null,
-      creator_eye_pupil: rig.keys.creator_eye_pupil || null,
-      creator_eye_glint: rig.keys.creator_eye_glint || null,
-      creator_eye_lid_top: rig.keys.creator_eye_lid_top || null,
-      creator_eye_lid_bottom: rig.keys.creator_eye_lid_bottom || null,
       eyelids_top: rig.hasEyelids ? rig.keys.eyelids_top : null,
       eyelids_bottom: rig.hasEyelids ? rig.keys.eyelids_bottom : null,
       discoveredEyes: rig.discoveredEyes,
-      discoveredPatterns: rig.discoveredPatterns,
-      isCreatorRig: rig.isCreatorRig === true
+      discoveredPatterns: rig.discoveredPatterns
     };
     this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager, this.app.renderer);
     this.masterContainer.addChild(this.actor.container);
-    this.boundaryExhaleSystem = new BoundaryExhaleSystem(this.masterContainer, this.app.renderer, this.actor);
     this.shedSkinTrailSystem = new ShedSkinTrailSystem(this.masterContainer, this.app.renderer, this.actor, rig.keys.char_clipping_mask);
 
     // Add stage foreground overlay container on top of the character
@@ -383,8 +329,6 @@ export class PixiEngine {
 
     // Clean up current actor structures
     if (this.actor) {
-      this.boundaryExhaleSystem?.destroy();
-      this.boundaryExhaleSystem = null;
       this.shedSkinTrailSystem?.destroy();
       this.shedSkinTrailSystem = null;
       if (this.actor.characterContentContainer) {
@@ -491,29 +435,13 @@ export class PixiEngine {
       char_clipping_mask: nextRig.hasCharClippingMask ? nextRig.keys.char_clipping_mask : null,
       char_lineart: nextRig.hasLineart ? nextRig.keys.char_lineart : null,
       char_base: nextRig.hasCharBase ? nextRig.keys.char_base : null,
-      creator_pattern: nextRig.keys.creator_pattern || null,
-      creator_pattern_2: nextRig.keys.creator_pattern_2 || null,
-      creator_base_a: nextRig.keys.creator_base_a || null,
-      creator_base_b: nextRig.keys.creator_base_b || null,
-      creator_pattern_1_a: nextRig.keys.creator_pattern_1_a || null,
-      creator_pattern_1_b: nextRig.keys.creator_pattern_1_b || null,
-      creator_pattern_2_a: nextRig.keys.creator_pattern_2_a || null,
-      creator_pattern_2_b: nextRig.keys.creator_pattern_2_b || null,
-      creator_eye_white: nextRig.keys.creator_eye_white || null,
-      creator_eye_iris_mask: nextRig.keys.creator_eye_iris_mask || null,
-      creator_eye_pupil: nextRig.keys.creator_eye_pupil || null,
-      creator_eye_glint: nextRig.keys.creator_eye_glint || null,
-      creator_eye_lid_top: nextRig.keys.creator_eye_lid_top || null,
-      creator_eye_lid_bottom: nextRig.keys.creator_eye_lid_bottom || null,
       eyelids_top: nextRig.hasEyelids ? nextRig.keys.eyelids_top : null,
       eyelids_bottom: nextRig.hasEyelids ? nextRig.keys.eyelids_bottom : null,
       discoveredEyes: nextRig.discoveredEyes,
-      discoveredPatterns: nextRig.discoveredPatterns,
-      isCreatorRig: nextRig.isCreatorRig === true
+      discoveredPatterns: nextRig.discoveredPatterns
     };
     this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager, this.app.renderer);
     this.masterContainer.addChild(this.actor.container);
-    this.boundaryExhaleSystem = new BoundaryExhaleSystem(this.masterContainer, this.app.renderer, this.actor);
     this.shedSkinTrailSystem = new ShedSkinTrailSystem(this.masterContainer, this.app.renderer, this.actor, nextRig.keys.char_clipping_mask);
 
     if (this.stage.fgContainer.parent) {
@@ -589,6 +517,18 @@ export class PixiEngine {
     // Synthesize latest coordinates and decay flags dynamically
     const config = { 
       ...liveStore, 
+      renderConfig: liveStore.renderConfig ?? DEFAULT_RENDER_CONFIG,
+      runtime: {
+        reaction: {
+          active: this.currentLocalReaction,
+          progress: this.localReactionProgress
+        },
+        pointer: {
+          normalized: this.normalizedMousePos,
+          absolute: this.absoluteMousePos,
+          available: this.hasMousePosition
+        }
+      },
       mousePos: this.normalizedMousePos,
       absoluteMousePos: this.absoluteMousePos,
       hasMousePosition: this.hasMousePosition,
@@ -613,8 +553,7 @@ export class PixiEngine {
     // 2. Update Actor Entity
     if (this.actor) {
       this.actor.update(deltaTime, config, isGlitchActive, this.canvasHeight);
-      this.boundaryExhaleSystem?.update(deltaTime, config);
-      this.shedSkinTrailSystem?.update(deltaTime, this.actor.headState, config);
+      this.shedSkinTrailSystem?.update(deltaTime, this.actor.headState, config.renderConfig.phenomena.shedSkin);
     }
 
     // 3. Update Volumetric Searchlight (Tracking mouse around active character)
@@ -716,8 +655,6 @@ export class PixiEngine {
     if (this.isReady && this.app) {
       try { 
         if (this.actor) {
-          this.boundaryExhaleSystem?.destroy();
-          this.boundaryExhaleSystem = null;
           this.shedSkinTrailSystem?.destroy();
           this.shedSkinTrailSystem = null;
           if (this.actor.characterContentContainer) {

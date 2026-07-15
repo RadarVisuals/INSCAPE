@@ -1,5 +1,4 @@
-// A composable character-surface shader stage. It is compiled into the creator
-// body pass so the veins remain beneath the authoritative line art.
+// A composable character-surface shader stage kept beneath authored line art.
 export const VEIN_PULSE_UNIFORMS = `
   uniform float uVeinEnabled;
   uniform float uVeinTime;

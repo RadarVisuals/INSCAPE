@@ -1,13 +1,10 @@
 // src/engine/entities/ActorEntity.js
-import { Assets, Container, Graphics, Matrix, RenderTexture, Sprite } from 'pixi.js';
+import { Assets, Container, Matrix, RenderTexture, Sprite } from 'pixi.js';
 import { EyeSystem } from '../systems/EyeSystem.js';
 import { FlightDynamics } from '../systems/FlightDynamics.js';
-import { createMutationMesh } from './MutationMeshFactory.js';
-import { CreatorEyeSystem } from '../systems/CreatorEyeSystem.js';
 import { createCaptiveWeatherOverlay, createVeinPulseOverlay } from './CharacterPhenomenaMeshFactory.js';
 import { VeinPulseSystem } from '../systems/VeinPulseSystem.js';
 import { CaptiveWeatherSystem } from '../systems/CaptiveWeatherSystem.js';
-import { createPatternTransfusionFilter } from '../filters/PatternTransfusionFilterFactory.js';
 import { createActorMutationMesh } from './ActorMutationMeshFactory.js';
 
 const MUTATION_MODE_VALUES = {
@@ -40,14 +37,10 @@ export class ActorEntity {
 
     this.flightDynamics = new FlightDynamics();
     this.eyeSystem = null;
-    this.creatorEyeSystem = null;
     this.layers = {};
-    this.mutationMeshes = [];
     this.phenomenaMeshes = [];
     this.veinPulseSystem = null;
     this.captiveWeatherSystem = null;
-    this.patternTransfusionFilter = null;
-    this.isCreatorRig = assets.isCreatorRig === true;
     this.authoredSourceContainer = null;
     this.authoredSourceTexture = null;
     this.authoredSourcePlacement = null;
@@ -74,22 +67,6 @@ export class ActorEntity {
       return s;
     };
 
-    const createCreatorAura = () => {
-      const aura = new Graphics();
-
-      // A soft camera-facing field reads as emitted light without duplicating
-      // or exposing the mutated silhouette while the artwork tilts and flips.
-      for (let ring = 12; ring >= 1; ring -= 1) {
-        const progress = (13 - ring) / 12;
-        const radiusX = 430 + ring * 36;
-        const radiusY = 350 + ring * 30;
-        const alpha = 0.015 + progress * progress * 0.16;
-        aura.ellipse(0, 0, radiusX, radiusY).fill({ color: 0xffffff, alpha });
-      }
-
-      return aura;
-    };
-
     const maskTexture = this.assets.char_clipping_mask
       ? Assets.get(this.assets.char_clipping_mask)
       : null;
@@ -98,22 +75,17 @@ export class ActorEntity {
       this.warpTextureSize.height = maskTexture.height;
     }
 
-    if (!this.isCreatorRig) {
-      this.authoredSourceContainer = new Container();
-      this.authoredSourceContainer.label = `actor_source_${this.id}`;
-    }
+    this.authoredSourceContainer = new Container();
+    this.authoredSourceContainer.label = `actor_source_${this.id}`;
 
-    if (this.assets.char_clipping_mask && !this.isCreatorRig) {
+    if (this.assets.char_clipping_mask) {
       this.layers.aura = createSprite(this.assets.char_clipping_mask);
-      this.container.addChild(this.layers.aura);
-    } else if (this.assets.char_clipping_mask) {
-      this.layers.aura = createCreatorAura();
       this.container.addChild(this.layers.aura);
     }
 
     this.container.addChild(this.visualContainer);
 
-    if (this.assets.char_clipping_mask && !this.isCreatorRig) {
+    if (this.assets.char_clipping_mask) {
       const charMaskSprite = createSprite(this.assets.char_clipping_mask);
       this.layers.mask = charMaskSprite;
       this.authoredSourceContainer.addChild(charMaskSprite);
@@ -138,39 +110,10 @@ export class ActorEntity {
       this.authoredSourceContainer.addChild(weatherOverlay.mesh, veinOverlay.mesh);
       this.captiveWeatherSystem = new CaptiveWeatherSystem([weatherOverlay]);
       this.veinPulseSystem = new VeinPulseSystem([veinOverlay]);
-    } else if (this.assets.char_clipping_mask) {
-      const textures = {
-        mask: Assets.get(this.assets.char_clipping_mask),
-        lineart: Assets.get(this.assets.char_lineart),
-        pattern1: Assets.get(this.assets.creator_pattern),
-        pattern2: Assets.get(this.assets.creator_pattern_2),
-        baseA: Assets.get(this.assets.creator_base_a),
-        baseB: Assets.get(this.assets.creator_base_b),
-        pattern1A: Assets.get(this.assets.creator_pattern_1_a),
-        pattern1B: Assets.get(this.assets.creator_pattern_1_b),
-        pattern2A: Assets.get(this.assets.creator_pattern_2_a),
-        pattern2B: Assets.get(this.assets.creator_pattern_2_b)
-      };
-
-      const bodyMutation = createMutationMesh(textures);
-      this.mutationMeshes.push(bodyMutation);
-      this.layers.mutationBody = bodyMutation.mesh;
-      this.visualContainer.addChild(this.layers.mutationBody);
-      this.captiveWeatherSystem = new CaptiveWeatherSystem(this.mutationMeshes);
-      this.veinPulseSystem = new VeinPulseSystem(this.mutationMeshes);
-      this.creatorEyeSystem = new CreatorEyeSystem(this.visualContainer, {
-        white: this.assets.creator_eye_white,
-        irisMask: this.assets.creator_eye_iris_mask,
-        pupil: this.assets.creator_eye_pupil,
-        glint: this.assets.creator_eye_glint,
-        lidTop: this.assets.creator_eye_lid_top,
-        lidBottom: this.assets.creator_eye_lid_bottom
-      });
     }
 
     if (
       this.characterContentContainer &&
-      !this.isCreatorRig &&
       this.assets.discoveredPatterns &&
       this.assets.discoveredPatterns.length > 0 &&
       this.renderTextureManager
@@ -179,17 +122,15 @@ export class ActorEntity {
       patternSprite.anchor.set(0.5);
       this.layers.pattern = patternSprite;
       this.characterContentContainer.addChild(patternSprite);
-      this.patternTransfusionFilter = createPatternTransfusionFilter();
-      patternSprite.filters = [this.patternTransfusionFilter];
     }
 
-    if (this.assets.char_lineart && !this.isCreatorRig) {
+    if (this.assets.char_lineart) {
       this.layers.lineart = createSprite(this.assets.char_lineart);
       this.authoredSourceContainer.addChild(this.layers.lineart);
     }
 
     if (this.assets.discoveredEyes && this.assets.discoveredEyes.length > 0) {
-      this.eyeSystem = new EyeSystem(this.isCreatorRig ? this.visualContainer : this.authoredSourceContainer, {
+      this.eyeSystem = new EyeSystem(this.authoredSourceContainer, {
         discoveredEyes: this.assets.discoveredEyes,
         hasEyelids: !!this.assets.eyelids_top,
         eyelidsTopAlias: this.assets.eyelids_top || null,
@@ -197,7 +138,7 @@ export class ActorEntity {
       });
     }
 
-    if (!this.isCreatorRig && maskTexture?.width && maskTexture?.height) {
+    if (maskTexture?.width && maskTexture?.height) {
       this.buildAuthoredMutationSurface(maskTexture.width, maskTexture.height);
     }
   }
@@ -231,15 +172,15 @@ export class ActorEntity {
     this.isMovingToTarget = true;
   }
 
-  updateWarpPointer(dtSeconds, config) {
+  updateWarpPointer(dtSeconds, config, runtimePointer) {
     const pointer = this.warpPointer;
-    const canTransformPointer = config.hasMousePosition === true &&
-      config.absoluteMousePos &&
+    const canTransformPointer = runtimePointer.available &&
+      runtimePointer.absolute &&
       Math.abs(this.currentFlipScale) > 0.05;
     let targetActive = 0.0;
 
     if (canTransformPointer) {
-      const local = this.visualContainer.toLocal(config.absoluteMousePos);
+      const local = this.visualContainer.toLocal(runtimePointer.absolute);
       const width = Math.max(this.warpTextureSize.width, 1);
       const height = Math.max(this.warpTextureSize.height, 1);
       const nextX = local.x / width + 0.5;
@@ -269,7 +210,7 @@ export class ActorEntity {
       pointer.velocity[1] *= velocityDecay;
     }
 
-    if (config.warpMode !== 'organic' || (config.warpCursorInfluence ?? 0.45) <= 0.0) {
+    if (config.mode !== 'organic' || config.cursorInfluence <= 0.0) {
       targetActive = 0.0;
     }
     const activeBlend = 1.0 - Math.exp(-dtSeconds * 10.0);
@@ -277,22 +218,20 @@ export class ActorEntity {
   }
 
   updateMutation(dtSeconds, config) {
-    if (config.mutationAutoRotate === true) {
-      const direction = config.mutationRotationDirection === 'counterclockwise' ? -1 : 1;
-      this.autoRotationDegrees += dtSeconds * Math.max(0, config.mutationRotationSpeed ?? 12) * direction;
+    if (config.autoRotate) {
+      const direction = config.rotationDirection === 'counterclockwise' ? -1 : 1;
+      this.autoRotationDegrees += dtSeconds * config.rotationSpeed * direction;
       if (Math.abs(this.autoRotationDegrees) > 36000) this.autoRotationDegrees %= 360;
     }
-    const mode = MUTATION_MODE_VALUES[config.mutationMode] ?? 0;
-    const axisX = Math.max(0.01, Math.min(0.99, config.mutationAxisX ?? 0.5));
-    const axisY = Math.max(0.01, Math.min(0.99, config.mutationAxisY ?? 0.5));
-    const sourceX = config.mutationSourceX === 'right' ? 1.0 : 0.0;
-    const sourceY = config.mutationSourceY === 'bottom' ? 1.0 : 0.0;
+    const mode = MUTATION_MODE_VALUES[config.mode] ?? 0;
+    const sourceX = config.sourceX === 'right' ? 1.0 : 0.0;
+    const sourceY = config.sourceY === 'bottom' ? 1.0 : 0.0;
 
-    const effectiveRotation = ((config.mutationRotation ?? 0) + this.autoRotationDegrees) * (Math.PI / 180);
+    const effectiveRotation = (config.rotation + this.autoRotationDegrees) * (Math.PI / 180);
     const applyGeometryUniforms = (uniforms) => {
       uniforms.uMode = mode;
-      uniforms.uAxisX = axisX;
-      uniforms.uAxisY = axisY;
+      uniforms.uAxisX = config.axisX;
+      uniforms.uAxisY = config.axisY;
       uniforms.uSourceX = sourceX;
       uniforms.uSourceY = sourceY;
       uniforms.uSourceRotation = effectiveRotation;
@@ -302,43 +241,6 @@ export class ActorEntity {
       applyGeometryUniforms(this.actorMutationMesh.shader.resources.mutationUniforms.uniforms);
     }
 
-    for (const mutationMesh of this.mutationMeshes) {
-      const uniforms = mutationMesh.shader.resources.mutationUniforms.uniforms;
-      applyGeometryUniforms(uniforms);
-      uniforms.uMirrorPattern = mode !== 0 && config.mutationPatternMode === 'mirrored' ? 1.0 : 0.0;
-      uniforms.uTime = this.time * (config.warpSpeed ?? 1);
-      uniforms.uWarpIntensity = config.warpIntensity ?? 20;
-      uniforms.uWarpMode = config.warpMode === 'organic' ? 1.0 : 0.0;
-      uniforms.uMorphRange = config.warpOrganicRange ?? 1.0;
-      uniforms.uLayerDivergence = config.warpLayerDivergence ?? 0.3;
-      uniforms.uCursorPosition = this.warpPointer.position;
-      uniforms.uCursorVelocity = this.warpPointer.velocity;
-      uniforms.uCursorActive = this.warpPointer.active;
-      uniforms.uCursorInfluence = config.warpCursorInfluence ?? 0.45;
-      uniforms.uCursorRadius = config.warpCursorRadius ?? 0.22;
-      uniforms.uBaseGradientMode = config.creatorBaseColorMode === 'gradient' ? 1.0 : 0.0;
-      uniforms.uBaseGradientAngle = (config.creatorBaseGradientAngle ?? 0) * (Math.PI / 180);
-      uniforms.uBaseGradientBalance = config.creatorBaseGradientBalance ?? 0.5;
-      uniforms.uBaseOpacity = config.creatorBaseOpacity ?? 1;
-      uniforms.uPattern1GradientMode = config.creatorPattern1ColorMode === 'gradient' ? 1.0 : 0.0;
-      uniforms.uPattern1GradientAngle = (config.creatorPattern1GradientAngle ?? 0) * (Math.PI / 180);
-      uniforms.uPattern1GradientBalance = config.creatorPattern1GradientBalance ?? 0.5;
-      uniforms.uPattern1Opacity = config.creatorPattern1Opacity ?? 1;
-      uniforms.uPattern1Scale = config.creatorPattern1Scale ?? 1;
-      uniforms.uPattern2GradientMode = config.creatorPattern2ColorMode === 'gradient' ? 1.0 : 0.0;
-      uniforms.uPattern2GradientAngle = (config.creatorPattern2GradientAngle ?? 0) * (Math.PI / 180);
-      uniforms.uPattern2GradientBalance = config.creatorPattern2GradientBalance ?? 0.5;
-      uniforms.uPattern2Opacity = config.creatorPattern2Opacity ?? 0;
-      uniforms.uPattern2Scale = config.creatorPattern2Scale ?? 1;
-      uniforms.uNoiseIntensity = config.creatorNoiseIntensity ?? 0;
-      uniforms.uNoiseScale = config.creatorNoiseScale ?? 180;
-      uniforms.uTransfusionEnabled = config.transfusionEnabled === false ? 0.0 : 1.0;
-      uniforms.uTransfusionTime = this.time;
-      uniforms.uTransfusionIntensity = config.transfusionIntensity ?? 0.78;
-      uniforms.uTransfusionScale = config.transfusionScale ?? 3.4;
-      uniforms.uTransfusionBalance = config.transfusionBalance ?? 0.5;
-      uniforms.uTransfusionEdge = config.transfusionEdge ?? 0.38;
-    }
   }
 
   update(deltaTime, config, isGlitchActive, canvasHeight) {
@@ -381,23 +283,12 @@ export class ActorEntity {
     this.visualContainer.scale.set(this.currentFlipScale, 1);
     this.visualContainer.rotation = headState.rotation;
 
-    this.updateWarpPointer(dtSeconds, config);
-    this.updateMutation(dtSeconds, config);
-    this.veinPulseSystem?.update(this.time, config);
-    this.captiveWeatherSystem?.update(this.time, config);
-    if (this.patternTransfusionFilter) {
-      const uniforms = this.patternTransfusionFilter.resources.transfusionUniforms.uniforms;
-      uniforms.uEnabled = config.transfusionEnabled === false ? 0.0 : 1.0;
-      uniforms.uTime = this.time;
-      uniforms.uIntensity = config.transfusionIntensity ?? 0.78;
-      uniforms.uScale = config.transfusionScale ?? 3.4;
-      uniforms.uBalance = config.transfusionBalance ?? 0.5;
-      uniforms.uEdge = config.transfusionEdge ?? 0.38;
-    }
-    if (this.creatorEyeSystem) {
-      this.creatorEyeSystem.update(config, this.time);
-    }
-
+    this.updateWarpPointer(dtSeconds, config.renderConfig.actor.warp, config.runtime.pointer);
+    this.updateMutation(dtSeconds, config.renderConfig.actor.geometry);
+    const phenomena = config.renderConfig.phenomena;
+    const reaction = config.runtime.reaction;
+    this.veinPulseSystem?.update(this.time, phenomena.veins, reaction);
+    this.captiveWeatherSystem?.update(this.time, phenomena.weather, reaction);
     if (this.eyeSystem) {
       this.eyeSystem.update(deltaTime, config);
     }
@@ -420,15 +311,6 @@ export class ActorEntity {
     if (this.eyeSystem?.destroy) {
       this.eyeSystem.destroy();
     }
-    if (this.creatorEyeSystem) {
-      this.creatorEyeSystem.destroy();
-      this.creatorEyeSystem = null;
-    }
-    for (const mutationMesh of this.mutationMeshes) {
-      mutationMesh.shader.destroy();
-      mutationMesh.geometry.destroy();
-    }
-    this.mutationMeshes = [];
     if (this.actorMutationMesh) {
       this.actorMutationMesh.shader.destroy();
       this.actorMutationMesh.geometry.destroy();
@@ -451,8 +333,6 @@ export class ActorEntity {
       phenomenon.geometry.destroy();
     }
     this.phenomenaMeshes = [];
-    this.patternTransfusionFilter?.destroy();
-    this.patternTransfusionFilter = null;
     this.renderer = null;
     this.container.destroy({ children: true });
   }

@@ -1,0 +1,77 @@
+const number = (path, label, min, max, step, options = {}) => Object.freeze({
+  path, label, type: 'number', min, max, step, integer: options.integer === true
+});
+
+const boolean = (path, label) => Object.freeze({ path, label, type: 'boolean' });
+const enumeration = (path, label, options) => Object.freeze({
+  path,
+  label,
+  type: 'enum',
+  options: Object.freeze(options),
+  values: Object.freeze(options.map((option) => option.value))
+});
+
+export const RENDER_PARAMETER_DEFINITIONS = Object.freeze({
+  mutationMode: enumeration(['actor', 'geometry', 'mode'], 'Geometry', [
+    { value: 'none', label: 'Original' },
+    { value: 'mirrorX', label: 'Mirror Left / Right' },
+    { value: 'mirrorY', label: 'Mirror Top / Bottom' },
+    { value: 'quad', label: 'Four Way' }
+  ]),
+  mutationAxisX: number(['actor', 'geometry', 'axisX'], 'Vertical Axis', 0.05, 0.95, 0.001),
+  mutationAxisY: number(['actor', 'geometry', 'axisY'], 'Horizontal Axis', 0.05, 0.95, 0.001),
+  mutationSourceX: enumeration(['actor', 'geometry', 'sourceX'], 'X Source', [{ value: 'left', label: 'Left' }, { value: 'right', label: 'Right' }]),
+  mutationSourceY: enumeration(['actor', 'geometry', 'sourceY'], 'Y Source', [{ value: 'top', label: 'Top' }, { value: 'bottom', label: 'Bottom' }]),
+  mutationRotation: number(['actor', 'geometry', 'rotation'], 'Source Rotation Offset', -180, 180, 1),
+  mutationAutoRotate: boolean(['actor', 'geometry', 'autoRotate'], 'Auto Source Rotation'),
+  mutationRotationDirection: enumeration(['actor', 'geometry', 'rotationDirection'], 'Rotation Direction', [{ value: 'clockwise', label: 'Clockwise' }, { value: 'counterclockwise', label: 'Counter-clockwise' }]),
+  mutationRotationSpeed: number(['actor', 'geometry', 'rotationSpeed'], 'Rotation Speed (Deg / Sec)', 0, 90, 0.5),
+  patternBottomScale: number(['actor', 'warp', 'patternBottomScale'], 'Pattern Bottom Scale', 0.5, 3, 0.1),
+  patternTopScale: number(['actor', 'warp', 'patternTopScale'], 'Pattern Top Scale', 0.5, 3, 0.1),
+  warpIntensity: number(['actor', 'warp', 'intensity'], 'Warp Intensity', 0, 100, 1),
+  warpSpeed: number(['actor', 'warp', 'speed'], 'Warp Speed', 0, 5, 0.1),
+  warpMode: enumeration(['actor', 'warp', 'mode'], 'Warp Behavior', [{ value: 'classic', label: 'Classic / Original' }, { value: 'organic', label: 'Organic / Layered' }]),
+  warpOrganicRange: number(['actor', 'warp', 'organicRange'], 'Morph Range', 0, 3, 0.05),
+  warpLayerDivergence: number(['actor', 'warp', 'layerDivergence'], 'Layer Divergence', 0, 1, 0.05),
+  warpCursorInfluence: number(['actor', 'warp', 'cursorInfluence'], 'Cursor Influence', 0, 1, 0.05),
+  warpCursorRadius: number(['actor', 'warp', 'cursorRadius'], 'Cursor Radius', 0.05, 0.5, 0.01),
+  veinEnabled: boolean(['phenomena', 'veins', 'enabled'], 'Enabled'),
+  veinIntensity: number(['phenomena', 'veins', 'intensity'], 'Intensity', 0, 2, 0.01),
+  veinReactionBoost: number(['phenomena', 'veins', 'reactionBoost'], 'Reaction Boost', 0, 2, 0.01),
+  veinSpeed: number(['phenomena', 'veins', 'speed'], 'Speed', 0, 4, 0.01),
+  veinScale: number(['phenomena', 'veins', 'scale'], 'Branch Scale', 1, 40, 0.1),
+  veinWidth: number(['phenomena', 'veins', 'width'], 'Width', 0.2, 3, 0.01),
+  veinCore: number(['phenomena', 'veins', 'core'], 'Core Light', 0, 3, 0.01),
+  veinColorR: number(['phenomena', 'veins', 'color', 0], 'Color R', 0, 255, 1, { integer: true }),
+  veinColorG: number(['phenomena', 'veins', 'color', 1], 'Color G', 0, 255, 1, { integer: true }),
+  veinColorB: number(['phenomena', 'veins', 'color', 2], 'Color B', 0, 255, 1, { integer: true }),
+  veinSourceX: number(['phenomena', 'veins', 'source', 0], 'Source X', 0, 1, 0.01),
+  veinSourceY: number(['phenomena', 'veins', 'source', 1], 'Source Y', 0, 1, 0.01),
+  weatherEnabled: boolean(['phenomena', 'weather', 'enabled'], 'Enabled'),
+  weatherIntensity: number(['phenomena', 'weather', 'intensity'], 'Intensity', 0, 1.5, 0.01),
+  weatherScale: number(['phenomena', 'weather', 'scale'], 'Scale', 0.5, 8, 0.01),
+  weatherSpeed: number(['phenomena', 'weather', 'speed'], 'Speed', 0, 3, 0.01),
+  weatherColorR: number(['phenomena', 'weather', 'color', 0], 'Color R', 0, 255, 1, { integer: true }),
+  weatherColorG: number(['phenomena', 'weather', 'color', 1], 'Color G', 0, 255, 1, { integer: true }),
+  weatherColorB: number(['phenomena', 'weather', 'color', 2], 'Color B', 0, 255, 1, { integer: true }),
+  shedSkinEnabled: boolean(['phenomena', 'shedSkin', 'enabled'], 'Enabled'),
+  shedSkinCount: number(['phenomena', 'shedSkin', 'count'], 'Shell Count', 0, 8, 1, { integer: true }),
+  shedSkinSpacing: number(['phenomena', 'shedSkin', 'spacing'], 'Frame Spacing', 1, 16, 1, { integer: true }),
+  shedSkinLifetime: number(['phenomena', 'shedSkin', 'lifetime'], 'Lifetime', 0.08, 3, 0.01),
+  shedSkinOpacity: number(['phenomena', 'shedSkin', 'opacity'], 'Opacity', 0, 1, 0.01),
+  shedSkinMotionThreshold: number(['phenomena', 'shedSkin', 'motionThreshold'], 'Motion Threshold', 0, 1, 0.01),
+  shedSkinFullSpeed: number(['phenomena', 'shedSkin', 'fullSpeed'], 'Full Speed', 0.1, 5, 0.05),
+  shedSkinFade: number(['phenomena', 'shedSkin', 'fade'], 'Age Fade', 0.2, 3, 0.05),
+  shedSkinBackslide: number(['phenomena', 'shedSkin', 'backslide'], 'Backslide', 0, 80, 1),
+  shedSkinDrift: number(['phenomena', 'shedSkin', 'drift'], 'Upward Drift', 0, 20, 0.5),
+  shedSkinExpansion: number(['phenomena', 'shedSkin', 'expansion'], 'Shell Expansion', 0, 0.08, 0.001),
+  shedSkinDissolve: number(['phenomena', 'shedSkin', 'dissolve'], 'Dissolve', 0, 1, 0.01),
+  shedSkinColorMix: number(['phenomena', 'shedSkin', 'colorMix'], 'Color Mix', 0, 1, 0.01),
+  shedSkinColorR: number(['phenomena', 'shedSkin', 'color', 0], 'Color R', 0, 255, 1, { integer: true }),
+  shedSkinColorG: number(['phenomena', 'shedSkin', 'color', 1], 'Color G', 0, 255, 1, { integer: true }),
+  shedSkinColorB: number(['phenomena', 'shedSkin', 'color', 2], 'Color B', 0, 255, 1, { integer: true })
+});
+
+export function getRenderParameterDefinition(key) {
+  return RENDER_PARAMETER_DEFINITIONS[key] ?? null;
+}

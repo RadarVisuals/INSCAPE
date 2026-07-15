@@ -22,8 +22,7 @@ import EyesTab from './tabs/EyesTab';
 import AuraTab from './tabs/AuraTab';
 import AtmosphereTab from './tabs/AtmosphereTab';
 import GlitchTab from './tabs/GlitchTab';
-import CreatorLayersTab from './tabs/CreatorLayersTab';
-import MutationRecipesTab from './tabs/MutationRecipesTab';
+import ActorPresetsTab from './tabs/ActorPresetsTab';
 import PhenomenaTab from './tabs/PhenomenaTab';
 
 export default function ControlPanel() {
@@ -36,8 +35,7 @@ export default function ControlPanel() {
     { id: 'setup', label: 'Setup', icon: <Sliders size={12} />, component: <SetupTab /> },
     { id: 'web3', label: 'Web3', icon: <ShieldCheck size={12} />, component: <Web3Tab /> },
     { id: 'skull', label: 'Skull', icon: <Skull size={12} />, component: <SkullTab /> },
-    { id: 'creator-layers', label: 'Layers', icon: <Layers size={12} />, component: <CreatorLayersTab /> },
-    { id: 'recipes', label: 'Recipes', icon: <Sliders size={12} />, component: <MutationRecipesTab /> },
+    { id: 'presets', label: 'Presets', icon: <Sliders size={12} />, component: <ActorPresetsTab /> },
     { id: 'phenomena', label: 'Phenomena', icon: <Sparkles size={12} />, component: <PhenomenaTab /> },
     { id: 'bg', label: 'Background', icon: <Layers size={12} />, component: <BgTab /> },
     { id: 'eyes', label: 'Eyes', icon: <Eye size={12} />, component: <EyesTab /> },
