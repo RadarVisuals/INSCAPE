@@ -29,7 +29,7 @@ export class ParticleSystem {
    * @param {number} deltaTime - Current update tick step size.
    * @param {Object} state - State from useStore.
    */
-  update(deltaTime, state) {
+  update(deltaTime, state, reaction) {
     const dtSeconds = deltaTime / 60;
     const halfSize = this.bgSize / 2;
 
@@ -42,8 +42,8 @@ export class ParticleSystem {
     let activeReactionMultiplier = 0.0;
     let particleSpeedMultiplier = 0.0;
 
-    if (state.activeReaction === "lyx_received") {
-      const progress = state.reactionProgress ?? 0.0;
+    if (reaction.active === "lyx_received") {
+      const progress = reaction.progress;
       activeReactionMultiplier = (300 / Math.max(1, state.particleCount) - 1.0) * progress;
       particleSpeedMultiplier = (4.5 / Math.max(0.1, state.particleSpeed) - 1.0) * progress;
     }

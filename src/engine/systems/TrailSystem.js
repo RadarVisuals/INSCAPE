@@ -43,7 +43,7 @@ export class TrailSystem {
    * @param {Object} config - Normalized application state variables.
    * @param {boolean} isGlitchActive - Flag denoting if a peak glitch state is occurring.
    */
-  update(headState, config, isGlitchActive) {
+  update(headState, config, isGlitchActive, reaction) {
     this.trailHistory.unshift({
       x: headState.x,
       y: headState.y,
@@ -64,7 +64,7 @@ export class TrailSystem {
 
     // Scale trail visibility during visual shocks
     const shakeIntensity = config.glitchShakeIntensity ?? 0;
-    const activeReactionProgress = config.reactionProgress ?? 0;
+    const activeReactionProgress = reaction.progress;
     const motionPulse = (shakeIntensity / 30) * (isGlitchActive ? 1.0 : 0.25);
     const dynamicAlpha = Math.max(motionPulse, activeReactionProgress) * glitchInfluence;
 

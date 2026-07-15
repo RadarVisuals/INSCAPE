@@ -6,7 +6,11 @@ function cloneDefaults() {
     schemaVersion: RENDER_CONFIG_VERSION,
     actor: {
       geometry: { ...DEFAULT_RENDER_CONFIG.actor.geometry },
-      warp: { ...DEFAULT_RENDER_CONFIG.actor.warp }
+      warp: { ...DEFAULT_RENDER_CONFIG.actor.warp },
+      motion: { ...DEFAULT_RENDER_CONFIG.actor.motion },
+      eyes: { ...DEFAULT_RENDER_CONFIG.actor.eyes },
+      aura: { ...DEFAULT_RENDER_CONFIG.actor.aura, color: [...DEFAULT_RENDER_CONFIG.actor.aura.color] },
+      searchlight: { ...DEFAULT_RENDER_CONFIG.actor.searchlight, color: [...DEFAULT_RENDER_CONFIG.actor.searchlight.color] }
     },
     phenomena: {
       veins: { ...DEFAULT_RENDER_CONFIG.phenomena.veins, color: [...DEFAULT_RENDER_CONFIG.phenomena.veins.color], source: [...DEFAULT_RENDER_CONFIG.phenomena.veins.source] },
@@ -31,6 +35,9 @@ export function normalizeRenderParameter(definition, value, fallback) {
   if (definition.type === 'enum') return definition.values.includes(value) ? value : fallback;
   const numericValue = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(numericValue)) return fallback;
+  // Some authored defaults intentionally predate and sit outside their editor range.
+  // Preserve those defaults during normalization without allowing new invalid edits.
+  if (numericValue === fallback) return fallback;
   const clamped = Math.max(definition.min, Math.min(definition.max, numericValue));
   return definition.integer ? Math.round(clamped) : clamped;
 }

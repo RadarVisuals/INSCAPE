@@ -47,39 +47,41 @@ export class EffectsSystem {
 
   /**
    * Updates visual parameters on a per-frame basis.
-   * @param {number} time - Elapsed time in seconds.
-   * @param {Object} state - State from useStore.
+   * @param {Object} aura - Actor aura configuration.
+   * @param {Object} glitch - Glitch configuration.
+   * @param {Object} runtime - Per-frame runtime state.
    * @returns {Object} Glitch state metrics for the main engine.
    */
-  update(time, state) {
+  update(aura, glitch, runtime) {
+    const time = runtime.elapsed;
     const metrics = {
       isGlitched: false,
-      currentSplit: state.aberrationAmount
+      currentSplit: glitch.aberrationAmount
     };
 
     // Calculate transition multipliers/modifiers cleanly on top of baseline slider values
     let aberrationAmountModifier = 0.0;
-    let aberrationSpeedOverride = state.aberrationSpeed;
+    let aberrationSpeedOverride = glitch.aberrationSpeed;
     let auraOpacityMultiplier = 0.0;
     let auraScaleMultiplier = 0.0;
     let flickerIntensityModifier = 0.0;
 
-    const reaction = state.activeReaction;
-    const progress = state.reactionProgress ?? 0.0;
+    const reaction = runtime.reaction.active;
+    const progress = runtime.reaction.progress;
 
     if (reaction === "lyx_received") {
-      auraOpacityMultiplier = (1.0 / Math.max(0.01, state.auraOpacity) - 1.0) * progress;
-      auraScaleMultiplier = (1.35 / Math.max(0.1, state.auraScale) - 1.0) * progress;
+      auraOpacityMultiplier = (1.0 / Math.max(0.01, aura.opacity) - 1.0) * progress;
+      auraScaleMultiplier = (1.35 / Math.max(0.1, aura.scale) - 1.0) * progress;
     } else if (reaction === "lsp7_received" || reaction === "lsp8_received") {
-      aberrationAmountModifier = (30.0 - state.aberrationAmount) * progress;
-      flickerIntensityModifier = (0.85 - state.flickerIntensity) * progress;
+      aberrationAmountModifier = (30.0 - glitch.aberrationAmount) * progress;
+      flickerIntensityModifier = (0.85 - glitch.flickerIntensity) * progress;
       aberrationSpeedOverride = 8.0;
     }
 
-    const currentAberrationAmount = state.aberrationAmount + aberrationAmountModifier;
-    const currentAuraOpacity = state.auraOpacity * (1.0 + auraOpacityMultiplier);
-    const currentAuraScale = state.auraScale * (1.0 + auraScaleMultiplier);
-    const currentFlickerIntensity = state.flickerIntensity + flickerIntensityModifier;
+    const currentAberrationAmount = glitch.aberrationAmount + aberrationAmountModifier;
+    const currentAuraOpacity = aura.opacity * (1.0 + auraOpacityMultiplier);
+    const currentAuraScale = aura.scale * (1.0 + auraScaleMultiplier);
+    const currentFlickerIntensity = glitch.flickerIntensity + flickerIntensityModifier;
 
     // 1. RGB Split / Glitch Calculations
     if (aberrationSpeedOverride > 0) {
@@ -88,7 +90,7 @@ export class EffectsSystem {
 
       const activeGlitchChance = (reaction === "lsp7_received" || reaction === "lsp8_received") 
         ? 0.0 
-        : state.aberrationGlitch;
+        : glitch.aberrationGlitch;
 
       if (activeGlitchChance > 0 && Math.random() < (0.008 * activeGlitchChance)) {
         metrics.currentSplit = currentAberrationAmount * (1.5 + Math.random() * 1.5);
@@ -102,7 +104,7 @@ export class EffectsSystem {
     let flickerFactor = 1.0;
     if (this.targets.baseSprite) {
       if (currentFlickerIntensity > 0) {
-        const strobeTime = time * state.flickerSpeed * 45;
+        const strobeTime = time * glitch.flickerSpeed * 45;
         const waveValue = Math.sin(strobeTime) * Math.sin(strobeTime * 2.3) * Math.cos(strobeTime * 0.85);
         const triggerThreshold = 1.0 - currentFlickerIntensity;
         this.colorMatrix.reset();
@@ -125,25 +127,25 @@ export class EffectsSystem {
     }
 
     // 3. Aura Blur / Dimension Pulse Calculations
-    const auraPulse = Math.sin(time * state.auraPulseSpeed * 2.0) * 0.5 + 0.5;
+    const auraPulse = Math.sin(time * aura.pulseSpeed * 2.0) * 0.5 + 0.5;
     if (this.targets.auraSprite) {
-      this.auraBlurFilter.strength = state.auraBlur + (auraPulse * 10);
+      this.auraBlurFilter.strength = aura.blur + (auraPulse * 10);
       this.targets.auraSprite.scale.set(currentAuraScale + (auraPulse * 0.02));
       this.targets.auraSprite.alpha = currentAuraOpacity;
       
       this.targets.auraSprite.tint = 
-        (Math.floor(state.auraColorR) << 16) + 
-        (Math.floor(state.auraColorG) << 8) + 
-        Math.floor(state.auraColorB);
+        (Math.floor(aura.color[0]) << 16) +
+        (Math.floor(aura.color[1]) << 8) +
+        Math.floor(aura.color[2]);
     }
 
     // 4. Cavern Lighting Reflector Updates
     const reflectionTint = 
-      (Math.floor(state.auraColorR) << 16) + 
-      (Math.floor(state.auraColorG) << 8) + 
-      Math.floor(state.auraColorB);
+      (Math.floor(aura.color[0]) << 16) +
+      (Math.floor(aura.color[1]) << 8) +
+      Math.floor(aura.color[2]);
 
-    const baseReflectAlpha = currentAuraOpacity * (0.12 + auraPulse * 0.28) * (state.cavernLightIntensity ?? 1.0);
+    const baseReflectAlpha = currentAuraOpacity * (0.12 + auraPulse * 0.28) * aura.cavernLightIntensity;
     const reflectionAlpha = Math.max(0, Math.min(1.0, baseReflectAlpha * flickerFactor));
 
     if (this.targets.mountainReflector) {

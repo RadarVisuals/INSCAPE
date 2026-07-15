@@ -22,11 +22,10 @@ export class SearchlightSystem {
    * Translates start coordinates onto the character's custom perimeter orbit and scales length dynamically.
    * @param {{x: number, y: number}} characterPos - World coordinates of the head container.
    * @param {{x: number, y: number}} targetGlobalPos - Focal target coordinates (absolute mouse cursor).
-   * @param {number} deltaTime - Frame step timing factor.
-   * @param {Object} config - State config containing active visual preferences.
+   * @param {Object} config - Actor searchlight configuration.
    */
-  update(characterPos, targetGlobalPos, deltaTime, config) {
-    if (!config.searchlightActive || !characterPos) {
+  update(characterPos, targetGlobalPos, config) {
+    if (!config.enabled || !characterPos) {
       this.container.visible = false;
       return;
     }
@@ -45,7 +44,7 @@ export class SearchlightSystem {
     const angle = Math.atan2(dy, dx);
 
     // Pull custom orbit radius parameter from UI [3]
-    const orbitRadius = config.searchlightRadius ?? 110;
+    const orbitRadius = config.radius;
 
     // Anchor starting coordinates directly along the circle perimeter pointing towards focus targets [3]
     const startX = localCenter.x + Math.cos(angle) * orbitRadius;
@@ -58,13 +57,11 @@ export class SearchlightSystem {
     const beamDistance = Math.max(0, distToCenter - orbitRadius);
 
     // Calculate dynamic RGB tints
-    const rTint = config.searchlightColorR ?? 255;
-    const gTint = config.searchlightColorG ?? 255;
-    const bTint = config.searchlightColorB ?? 255;
+    const [rTint, gTint, bTint] = config.color;
     this.beamGraphics.tint = (rTint << 16) + (gTint << 8) + bTint;
 
-    const beamLength = beamDistance * (config.searchlightLength ?? 1.0);
-    const bottomWidth = Math.max(4, Math.min(beamLength * 0.20, 128) * (config.searchlightWidth ?? 1.0));
+    const beamLength = beamDistance * config.length;
+    const bottomWidth = Math.max(4, Math.min(beamLength * 0.20, 128) * config.width);
     const topWidth = bottomWidth / 6;
 
     this.beamGraphics.clear();

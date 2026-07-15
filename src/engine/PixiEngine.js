@@ -513,52 +513,66 @@ export class PixiEngine {
 
     // Synchronously fetch latest live properties to completely bypass full store copy callbacks
     const liveStore = this.getState();
+    const {
+      activeReaction: ignoredActiveReaction,
+      reactionProgress: ignoredReactionProgress,
+      ...configuration
+    } = liveStore;
 
-    // Synthesize latest coordinates and decay flags dynamically
-    const config = { 
-      ...liveStore, 
-      renderConfig: liveStore.renderConfig ?? DEFAULT_RENDER_CONFIG,
-      runtime: {
-        reaction: {
-          active: this.currentLocalReaction,
-          progress: this.localReactionProgress
-        },
-        pointer: {
-          normalized: this.normalizedMousePos,
-          absolute: this.absoluteMousePos,
-          available: this.hasMousePosition
-        }
-      },
-      mousePos: this.normalizedMousePos,
-      absoluteMousePos: this.absoluteMousePos,
-      hasMousePosition: this.hasMousePosition,
-      activeReaction: this.currentLocalReaction,
-      reactionProgress: this.localReactionProgress
+    const config = {
+      ...configuration,
+      renderConfig: liveStore.renderConfig ?? DEFAULT_RENDER_CONFIG
     };
+    const runtime = {
+      elapsed: this.time,
+      reaction: {
+        active: this.currentLocalReaction,
+        progress: this.localReactionProgress
+      },
+      pointer: {
+        normalized: this.normalizedMousePos,
+        absolute: this.absoluteMousePos,
+        available: this.hasMousePosition
+      }
+    };
+    const glitchConfig = {
+      aberrationAmount: config.aberrationAmount,
+      aberrationSpeed: config.aberrationSpeed,
+      aberrationGlitch: config.aberrationGlitch,
+      flickerIntensity: config.flickerIntensity,
+      flickerSpeed: config.flickerSpeed
+    };
+    const actorConfig = config.renderConfig.actor;
 
-    const { isGlitched, currentSplit } = this.effectsSystem.update(this.time, config);
+    const { isGlitched, currentSplit } = this.effectsSystem.update(actorConfig.aura, glitchConfig, runtime);
 
     // Glitch status and shake factor calculated cleanly relative to active parameters
-    const glitchShakeIntensity = config.activeReaction === "lyx_received" || config.activeReaction === "lsp8_received"
-      ? config.glitchShakeIntensity + (25 - config.glitchShakeIntensity) * config.reactionProgress
+    const glitchShakeIntensity = runtime.reaction.active === "lyx_received" || runtime.reaction.active === "lsp8_received"
+      ? config.glitchShakeIntensity + (25 - config.glitchShakeIntensity) * runtime.reaction.progress
       : config.glitchShakeIntensity;
 
     const isGlitchActive = (isGlitched || currentSplit > (config.aberrationAmount * 1.15));
     
     // 1. Update Environment Stage (parallax backgrounds, fogs, particles)
     if (this.stage) {
-      this.stage.update(deltaTime, config, this.time);
+      this.stage.update(deltaTime, config, runtime);
     }
 
     // 2. Update Actor Entity
     if (this.actor) {
-      this.actor.update(deltaTime, config, isGlitchActive, this.canvasHeight);
+      this.actor.update(
+        deltaTime,
+        actorConfig,
+        config.renderConfig.phenomena,
+        runtime,
+        { isGlitchActive, glitchShakeIntensity, canvasHeight: this.canvasHeight }
+      );
       this.shedSkinTrailSystem?.update(deltaTime, this.actor.headState, config.renderConfig.phenomena.shedSkin);
     }
 
     // 3. Update Volumetric Searchlight (Tracking mouse around active character)
     if (this.searchlightSystem && this.actor) {
-      this.searchlightSystem.update(this.actor.container.position, this.absoluteMousePos, deltaTime, config);
+      this.searchlightSystem.update(this.actor.container.position, runtime.pointer.absolute, actorConfig.searchlight);
     }
 
     // 4. WebGL Portal Refraction Ripple Subsystem updates
@@ -597,14 +611,15 @@ export class PixiEngine {
         deltaTime,
         config,
         this.app.renderer,
-        this.actor?.warpPointer || null
+        this.actor?.warpPointer || null,
+        runtime.reaction
       );
     }
 
     // --- Echoing Phase Trails Subsystem calculations (Reading active actor state) ---
     if (this.trailSystem && this.actor) {
       const configForTrails = { ...config, glitchShakeIntensity };
-      this.trailSystem.update(this.actor.headState, configForTrails, isGlitchActive);
+      this.trailSystem.update(this.actor.headState, configForTrails, isGlitchActive, runtime.reaction);
     }
   }
 

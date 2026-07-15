@@ -126,19 +126,19 @@ export class StageEntity {
     }
   }
 
-  update(deltaTime, config, time) {
+  update(deltaTime, config, runtime) {
     const dtSeconds = deltaTime / 60;
     const baseSpeed = config.bgScrollSpeed;
     const backParallax = config.bg2ParallaxSpeed;
 
     if (this.bgFog) {
-      this.bgFog.update(time, config);
+      this.bgFog.update(runtime.elapsed, config);
     }
     if (this.fgFog) {
-      this.fgFog.update(time, config);
+      this.fgFog.update(runtime.elapsed, config);
     }
     if (this.particleSystem) {
-      this.particleSystem.update(deltaTime, config);
+      this.particleSystem.update(deltaTime, config, runtime.reaction);
     }
 
     if (this.flags.isPanoramaMode) {

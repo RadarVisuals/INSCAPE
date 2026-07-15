@@ -33,15 +33,10 @@ export default function EyesTab() {
           </label>
         </div>
 
-        <CompactSlider label="Blink Interval" storeKey="blinkInterval" min="1" max="15" step="0.5" />
-        <CompactSlider label="Blink Speed" storeKey="blinkSpeed" min="0.1" max="5" step="0.1" />
-        <CompactSlider label="Eyelid Travel" storeKey="eyelidTravel" min="10" max="100" step="1" />
+        {['blinkInterval', 'blinkSpeed', 'eyelidTravel'].map((storeKey) => <CompactSlider key={storeKey} storeKey={storeKey} />)}
         
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '10px', marginBottom: '8px', color: 'var(--text-muted)' }}>Pupil Tracking</h4>
-        <CompactSlider label="Manual Eyelid Openness" storeKey="eyelidManualProgress" min="0" max="1" step="0.05" />
-        <CompactSlider label="Pupil Mouse Influence" storeKey="pupilMouseInfluence" min="0" max="2" step="0.1" />
-        <CompactSlider label="Pupil Drift (Wander)" storeKey="pupilWander" min="0" max="3" step="0.1" />
-        <CompactSlider label="Pupil Saccade Jitter" storeKey="pupilSaccade" min="0" max="3" step="0.1" />
+        {['eyelidManualProgress', 'pupilMouseInfluence', 'pupilWander', 'pupilSaccade'].map((storeKey) => <CompactSlider key={storeKey} storeKey={storeKey} />)}
       </div>
 
       {/* Customizable Searchlight Column [3] */}
@@ -68,14 +63,10 @@ export default function EyesTab() {
           </label>
         </div>
 
-        <CompactSlider label="Emit Orbit Radius" storeKey="searchlightRadius" min="0" max="300" step="1" />
-        <CompactSlider label="Beam Width" storeKey="searchlightWidth" min="0.1" max="3.0" step="0.05" />
-        <CompactSlider label="Beam Length" storeKey="searchlightLength" min="0.2" max="2.0" step="0.05" />
+        {['searchlightRadius', 'searchlightWidth', 'searchlightLength'].map((storeKey) => <CompactSlider key={storeKey} storeKey={storeKey} />)}
 
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '10px', marginBottom: '8px', color: 'var(--text-muted)' }}>Beam Color Tints</h4>
-        <CompactSlider label="Beam Color: Red" storeKey="searchlightColorR" min="0" max="255" step="1" />
-        <CompactSlider label="Beam Color: Green" storeKey="searchlightColorG" min="0" max="255" step="1" />
-        <CompactSlider label="Beam Color: Blue" storeKey="searchlightColorB" min="0" max="255" step="1" />
+        {['searchlightColorR', 'searchlightColorG', 'searchlightColorB'].map((storeKey) => <CompactSlider key={storeKey} storeKey={storeKey} />)}
       </div>
     </div>
   );

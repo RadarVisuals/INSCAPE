@@ -14,8 +14,6 @@ export class EyeSystem {
     this.blinkDurationTimer = 0;
     this.eyelidProgress = 1.0; 
 
-    this.time = 0;
-
     this.eyeContainers = [];
     this.eyelidTopSprite = null;
     this.eyelidBottomSprite = null;
@@ -78,21 +76,22 @@ export class EyeSystem {
       .filter(pos => pos !== null);
   }
 
-  update(deltaTime, state) {
+  update(deltaTime, config, runtime) {
     const dtSeconds = deltaTime / 60;
-    this.time += dtSeconds;
+    const elapsed = runtime.elapsed;
+    const mousePosition = runtime.pointer.normalized;
 
     // 1. EYELID BLINKING CYCLE
-    if (state.autoBlink) {
+    if (config.autoBlink) {
       if (!this.isBlinking) {
         this.blinkTimer += dtSeconds;
-        if (this.blinkTimer >= state.blinkInterval) {
+        if (this.blinkTimer >= config.blinkInterval) {
           this.isBlinking = true;
           this.blinkDurationTimer = 0;
         }
         this.eyelidProgress = 1.0;
       } else {
-        const blinkDuration = 0.22 / state.blinkSpeed; 
+        const blinkDuration = 0.22 / config.blinkSpeed;
         this.blinkDurationTimer += dtSeconds;
         const phase = this.blinkDurationTimer / blinkDuration;
 
@@ -105,11 +104,11 @@ export class EyeSystem {
         }
       }
     } else {
-      this.eyelidProgress = state.eyelidManualProgress;
+      this.eyelidProgress = config.eyelidManualProgress;
     }
 
     if (this.hasEyelids && this.eyelidTopSprite && this.eyelidBottomSprite) {
-      const travel = state.eyelidTravel;
+      const travel = config.eyelidTravel;
       const topEyelidY = -(this.eyelidProgress * travel);
       const bottomEyelidY = (this.eyelidProgress * travel);
       
@@ -119,22 +118,22 @@ export class EyeSystem {
 
     // 2. ORGANIC DYNAMIC EYE TRACKING
     const driftSpeed = 0.7;
-    const driftX = Math.sin(this.time * driftSpeed) * 6 * state.pupilWander;
-    const driftY = Math.cos(this.time * driftSpeed * 0.65) * 4 * state.pupilWander;
+    const driftX = Math.sin(elapsed * driftSpeed) * 6 * config.pupilWander;
+    const driftY = Math.cos(elapsed * driftSpeed * 0.65) * 4 * config.pupilWander;
 
-    const mouseX = state.mousePos.x * 24 * state.pupilMouseInfluence;
-    const mouseY = state.mousePos.y * 14 * state.pupilMouseInfluence;
+    const mouseX = mousePosition.x * 24 * config.pupilMouseInfluence;
+    const mouseY = mousePosition.y * 14 * config.pupilMouseInfluence;
 
     const sharedTargetX = mouseX + driftX;
     const sharedTargetY = mouseY + driftY;
 
-    const saccadeChance = Math.sin(this.time * 2.8) * Math.cos(this.time * 0.85);
+    const saccadeChance = Math.sin(elapsed * 2.8) * Math.cos(elapsed * 0.85);
     const triggerTwitch = saccadeChance > 0.72;
 
     this.eyeContainers.forEach((group, index) => {
       const seed = index * 3.5;
-      const saccadeX = triggerTwitch ? Math.sin(this.time * 22.0 + seed) * 3 * state.pupilSaccade : 0;
-      const saccadeY = triggerTwitch ? Math.cos(this.time * 26.0 + seed) * 2 * state.pupilSaccade : 0;
+      const saccadeX = triggerTwitch ? Math.sin(elapsed * 22.0 + seed) * 3 * config.pupilSaccade : 0;
+      const saccadeY = triggerTwitch ? Math.cos(elapsed * 26.0 + seed) * 2 * config.pupilSaccade : 0;
 
       const targetX = sharedTargetX + saccadeX;
       const targetY = sharedTargetY + saccadeY;

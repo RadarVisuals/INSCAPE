@@ -1,4 +1,4 @@
-export const RENDER_CONFIG_VERSION = 1;
+export const RENDER_CONFIG_VERSION = 2;
 
 export const DEFAULT_RENDER_CONFIG = Object.freeze({
   schemaVersion: RENDER_CONFIG_VERSION,
@@ -24,6 +24,41 @@ export const DEFAULT_RENDER_CONFIG = Object.freeze({
       layerDivergence: 0.3,
       cursorInfluence: 0.45,
       cursorRadius: 0.22
+    }),
+    motion: Object.freeze({
+      floatSpeed: 1,
+      floatAmpX: 30,
+      floatAmpY: 50,
+      floatRotation: 2,
+      flyMinScale: 0.7,
+      flyMaxScale: 0.2,
+      flyHoverPause: 1,
+      flyTiltBias: 3
+    }),
+    eyes: Object.freeze({
+      eyelidTravel: 20,
+      blinkInterval: 5,
+      blinkSpeed: 1,
+      autoBlink: true,
+      eyelidManualProgress: 1,
+      pupilWander: 1,
+      pupilSaccade: 1,
+      pupilMouseInfluence: 1
+    }),
+    aura: Object.freeze({
+      opacity: 0.5,
+      scale: 1.05,
+      blur: 20,
+      pulseSpeed: 1,
+      color: Object.freeze([235, 200, 150]),
+      cavernLightIntensity: 0.8
+    }),
+    searchlight: Object.freeze({
+      enabled: false,
+      width: 0.2,
+      length: 1,
+      radius: 150,
+      color: Object.freeze([255, 255, 255])
     })
   }),
   phenomena: Object.freeze({

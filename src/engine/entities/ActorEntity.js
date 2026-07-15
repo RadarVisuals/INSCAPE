@@ -33,8 +33,6 @@ export class ActorEntity {
     this.isMovingToTarget = false;
     this.facingDirection = 1.0;
     this.currentFlipScale = 1.0;
-    this.time = 0;
-
     this.flightDynamics = new FlightDynamics();
     this.eyeSystem = null;
     this.layers = {};
@@ -243,9 +241,8 @@ export class ActorEntity {
 
   }
 
-  update(deltaTime, config, isGlitchActive, canvasHeight) {
+  update(deltaTime, actorConfig, phenomena, runtime, dynamics) {
     const dtSeconds = deltaTime / 60;
-    this.time += dtSeconds;
 
     if (this.isMovingToTarget) {
       const dx = this.targetPosition.x - this.baselinePosition.x;
@@ -264,12 +261,13 @@ export class ActorEntity {
     this.currentFlipScale += (this.facingDirection - this.currentFlipScale) * 0.2 * deltaTime;
 
     const headState = this.flightDynamics.calculate(
-      this.time,
-      config,
-      isGlitchActive,
+      runtime.elapsed,
+      actorConfig.motion,
+      dynamics.glitchShakeIntensity,
+      dynamics.isGlitchActive,
       this.baselinePosition,
       this.currentFlipScale,
-      canvasHeight
+      dynamics.canvasHeight
     );
 
     this.headState = headState;
@@ -283,14 +281,12 @@ export class ActorEntity {
     this.visualContainer.scale.set(this.currentFlipScale, 1);
     this.visualContainer.rotation = headState.rotation;
 
-    this.updateWarpPointer(dtSeconds, config.renderConfig.actor.warp, config.runtime.pointer);
-    this.updateMutation(dtSeconds, config.renderConfig.actor.geometry);
-    const phenomena = config.renderConfig.phenomena;
-    const reaction = config.runtime.reaction;
-    this.veinPulseSystem?.update(this.time, phenomena.veins, reaction);
-    this.captiveWeatherSystem?.update(this.time, phenomena.weather, reaction);
+    this.updateWarpPointer(dtSeconds, actorConfig.warp, runtime.pointer);
+    this.updateMutation(dtSeconds, actorConfig.geometry);
+    this.veinPulseSystem?.update(runtime.elapsed, phenomena.veins, runtime.reaction);
+    this.captiveWeatherSystem?.update(runtime.elapsed, phenomena.weather, runtime.reaction);
     if (this.eyeSystem) {
-      this.eyeSystem.update(deltaTime, config);
+      this.eyeSystem.update(deltaTime, actorConfig.eyes, runtime);
     }
     this.renderAuthoredMutationSource();
   }

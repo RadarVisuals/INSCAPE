@@ -182,7 +182,7 @@ export class RenderTextureManager {
     this.organicWarpFilters = [];
   }
 
-  update(deltaTime, state, renderer, pointer = null) {
+  update(deltaTime, state, renderer, pointer = null, reactionState = { active: null, progress: 0 }) {
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
 
@@ -202,8 +202,8 @@ export class RenderTextureManager {
       }
 
       let warpIntensityMultiplier = 0.0;
-      const reaction = state.activeReaction;
-      const progress = state.reactionProgress ?? 0.0;
+      const reaction = reactionState.active;
+      const progress = reactionState.progress;
 
       if (reaction === "lyx_received") {
         warpIntensityMultiplier = (50.0 / Math.max(0.1, state.warpIntensity) - 1.0) * progress;

@@ -3,16 +3,17 @@
 export class FlightDynamics {
   /**
    * Compiles coordinates, rotation tilts, and scale modifications on a per-frame basis.
-   * @param {number} time - Elapsed execution time in seconds.
-   * @param {Object} config - Normalized application state variables.
+   * @param {number} elapsed - Elapsed execution time in seconds.
+   * @param {Object} config - Actor motion configuration.
+   * @param {number} glitchShakeIntensity - Current runtime shake strength.
    * @param {boolean} isGlitchActive - Flag denoting if a peak glitch state is occurring.
    * @param {{x: number, y: number}} baselinePos - Dynamic target coordinates currently centered on the head.
    * @param {number} currentFlipScale - Horizontal scale factor supporting smooth rotational flipping.
    * @param {number} canvasHeight - Total visible viewport height in local coordinate units.
    * @returns {Object} Target positions, rotation angles, and horizontal/vertical scales.
    */
-  calculate(time, config, isGlitchActive, baselinePos, currentFlipScale, canvasHeight = 1000) {
-    const tFloat = time * config.floatSpeed;
+  calculate(elapsed, config, glitchShakeIntensity, isGlitchActive, baselinePos, currentFlipScale, canvasHeight = 1000) {
+    const tFloat = elapsed * config.floatSpeed;
 
     // Generate smooth hover pauses (plateaus) at wave extrema using smoothstep interpolation
     const rawWave = Math.sin(tFloat) * config.flyHoverPause;
@@ -29,9 +30,9 @@ export class FlightDynamics {
     let x = baselinePos.x + Math.cos(tFloat * 0.5) * config.floatAmpX;
 
     // Apply erratic noise coordinates if a screen shake action is active
-    if (config.glitchShakeIntensity > 0 && isGlitchActive) {
-      x += (Math.random() - 0.5) * config.glitchShakeIntensity;
-      y += (Math.random() - 0.5) * config.glitchShakeIntensity;
+    if (glitchShakeIntensity > 0 && isGlitchActive) {
+      x += (Math.random() - 0.5) * glitchShakeIntensity;
+      y += (Math.random() - 0.5) * glitchShakeIntensity;
     }
 
     // --- Dynamic Height-Based Scaling ---
