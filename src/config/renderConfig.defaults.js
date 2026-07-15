@@ -1,4 +1,8 @@
-export const RENDER_CONFIG_VERSION = 4;
+export const RENDER_CONFIG_VERSION = 5;
+
+// The previous frame-based decay was 0.007 per 60 Hz tick. Expressing that
+// tuning in seconds keeps the exact envelope while making profiles portable.
+export const DEFAULT_REACTION_DURATION = 1 / (0.007 * 60);
 
 export const DEFAULT_RENDER_CONFIG = Object.freeze({
   schemaVersion: RENDER_CONFIG_VERSION,
@@ -159,6 +163,101 @@ export const DEFAULT_RENDER_CONFIG = Object.freeze({
       thickness: 160.0,
       duration: 1.8,
       pulseCount: 2
+    })
+  }),
+  reactions: Object.freeze({
+    events: Object.freeze({
+      lyx_received: 'lyx_received',
+      lsp7_received: 'lsp7_received',
+      lsp8_received: 'lsp8_received'
+    }),
+    profiles: Object.freeze({
+      lyx_received: Object.freeze({
+        enabled: true,
+        duration: DEFAULT_REACTION_DURATION,
+        easing: 'linear',
+        decay: 'out',
+        channels: Object.freeze({
+          aura: Object.freeze({ opacity: 1, scale: 1.35 }),
+          particles: Object.freeze({ count: 300, speed: 4.5 }),
+          warp: Object.freeze({ intensity: 50 }),
+          screenShake: Object.freeze({ intensity: 25 }),
+          trail: Object.freeze({ enabled: true, intensity: 1 }),
+          shockwave: Object.freeze({ enabled: true }),
+          phenomena: Object.freeze({
+            veins: Object.freeze({
+              pulse: 1,
+              reactionBoostMultiplier: 1,
+              color: Object.freeze({
+                target: Object.freeze([255, null, 7.65]),
+                minimum: Object.freeze([null, 61.2, null])
+              })
+            }),
+            weather: Object.freeze({ intensityBoost: 0.34 })
+          })
+        })
+      }),
+      lsp7_received: Object.freeze({
+        enabled: true,
+        duration: DEFAULT_REACTION_DURATION,
+        easing: 'linear',
+        decay: 'out',
+        channels: Object.freeze({
+          warp: Object.freeze({ intensity: 90 }),
+          chromaticAberration: Object.freeze({
+            amount: 30,
+            speed: 8,
+            glitchBurstChance: 0,
+            instantSpeed: true,
+            instantGlitchBurstChance: true
+          }),
+          flicker: Object.freeze({ intensity: 0.85 }),
+          trail: Object.freeze({ enabled: true, intensity: 1 }),
+          shockwave: Object.freeze({ enabled: true }),
+          phenomena: Object.freeze({
+            veins: Object.freeze({
+              pulse: 1,
+              reactionBoostMultiplier: 1,
+              color: Object.freeze({
+                target: Object.freeze([null, 20.4, 255]),
+                minimum: Object.freeze([66.3, null, null])
+              })
+            }),
+            weather: Object.freeze({ intensityBoost: 0.34 })
+          })
+        })
+      }),
+      lsp8_received: Object.freeze({
+        enabled: true,
+        duration: DEFAULT_REACTION_DURATION,
+        easing: 'linear',
+        decay: 'out',
+        channels: Object.freeze({
+          warp: Object.freeze({ intensity: 90 }),
+          chromaticAberration: Object.freeze({
+            amount: 30,
+            speed: 8,
+            glitchBurstChance: 0,
+            instantSpeed: true,
+            instantGlitchBurstChance: true
+          }),
+          flicker: Object.freeze({ intensity: 0.85 }),
+          screenShake: Object.freeze({ intensity: 25 }),
+          trail: Object.freeze({ enabled: true, intensity: 1 }),
+          shockwave: Object.freeze({ enabled: true }),
+          phenomena: Object.freeze({
+            veins: Object.freeze({
+              pulse: 1,
+              reactionBoostMultiplier: 1,
+              color: Object.freeze({
+                target: Object.freeze([null, 20.4, 255]),
+                minimum: Object.freeze([66.3, null, null])
+              })
+            }),
+            weather: Object.freeze({ intensityBoost: 0.34 })
+          })
+        })
+      })
     })
   })
 });

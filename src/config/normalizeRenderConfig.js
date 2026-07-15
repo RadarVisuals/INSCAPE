@@ -1,5 +1,6 @@
 import { DEFAULT_RENDER_CONFIG, RENDER_CONFIG_VERSION } from './renderConfig.defaults.js';
 import { RENDER_PARAMETER_DEFINITIONS } from './renderConfig.schema.js';
+import { normalizeReactionsConfig } from './reactionProfiles.js';
 
 function cloneDefaults() {
   return {
@@ -35,7 +36,8 @@ function cloneDefaults() {
       spectralTrail: { ...DEFAULT_RENDER_CONFIG.effects.spectralTrail },
       screen: { ...DEFAULT_RENDER_CONFIG.effects.screen },
       shockwave: { ...DEFAULT_RENDER_CONFIG.effects.shockwave }
-    }
+    },
+    reactions: normalizeReactionsConfig()
   };
 }
 
@@ -68,6 +70,7 @@ export function normalizeRenderConfig(candidate = {}) {
     const fallback = getAtPath(normalized, definition.path);
     setAtPath(normalized, definition.path, normalizeRenderParameter(definition, supplied, fallback));
   }
+  normalized.reactions = normalizeReactionsConfig(candidate.reactions);
   return normalized;
 }
 

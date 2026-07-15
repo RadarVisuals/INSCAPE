@@ -216,7 +216,7 @@ export class RenderTextureManager {
     this.organicWarpFilters = [];
   }
 
-  update(deltaTime, actorWarp, backgroundConfig, renderer, pointer = null, reactionState = { active: null, progress: 0 }) {
+  update(deltaTime, actorWarp, backgroundConfig, renderer, pointer = null, reactionModifiers = {}) {
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
 
@@ -235,17 +235,7 @@ export class RenderTextureManager {
         }
       }
 
-      let warpIntensityMultiplier = 0.0;
-      const reaction = reactionState.active;
-      const progress = reactionState.progress;
-
-      if (reaction === "lyx_received") {
-        warpIntensityMultiplier = (50.0 / Math.max(0.1, actorWarp.intensity) - 1.0) * progress;
-      } else if (reaction === "lsp7_received" || reaction === "lsp8_received") {
-        warpIntensityMultiplier = (90.0 / Math.max(0.1, actorWarp.intensity) - 1.0) * progress;
-      }
-
-      const currentWarpIntensity = actorWarp.intensity * (1.0 + warpIntensityMultiplier);
+      const currentWarpIntensity = reactionModifiers.warp?.intensity ?? actorWarp.intensity;
 
       if (this.warpFilter && this.warpFilter.resources.warpUniforms) {
         this.warpFilter.resources.warpUniforms.uniforms.uTime = this.time * actorWarp.speed;

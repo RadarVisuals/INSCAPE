@@ -22,8 +22,9 @@ export function recordTrailTransform(history, renderTransform, spacing) {
 }
 
 export function getTrailPresentation(history, index, config, runtime) {
-  const activeReactionProgress = runtime.reaction.active && Number.isFinite(runtime.reaction.progress)
-    ? Math.max(0, Math.min(1, runtime.reaction.progress))
+  const reactionTrailIntensity = runtime.reactionModifiers.trail?.intensity;
+  const activeReactionProgress = Number.isFinite(reactionTrailIntensity)
+    ? Math.max(0, Math.min(1, reactionTrailIntensity))
     : 0;
   const motionPulse = (runtime.screenShakeIntensity / 30) * (runtime.isGlitchActive ? 1.0 : 0.25);
   const dynamicAlpha = Math.max(motionPulse, activeReactionProgress) * config.glitchInfluence;

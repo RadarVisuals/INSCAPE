@@ -15,7 +15,7 @@ test('default config round-trips through the flat editor compatibility layer', (
 
   assert.deepEqual(restored, normalizeRenderConfig(DEFAULT_RENDER_CONFIG));
   assert.equal(restored.schemaVersion, RENDER_CONFIG_VERSION);
-  assert.equal(RENDER_CONFIG_VERSION, 4);
+  assert.equal(RENDER_CONFIG_VERSION, 5);
 });
 
 test('normalization clamps numeric input and rejects invalid booleans', () => {

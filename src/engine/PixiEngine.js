@@ -16,6 +16,7 @@ import { ActorEntity } from './entities/ActorEntity.js';
 import { StageEntity } from './entities/StageEntity.js';
 import { ShedSkinTrailSystem } from './systems/ShedSkinTrailSystem.js';
 import { DEFAULT_RENDER_CONFIG } from '../config/renderConfig.defaults.js';
+import { resolveReactionFrame } from '../config/reactionProfiles.js';
 import { getAssetReloadScope } from './stageAssetConfig.js';
 
 export class PixiEngine {
@@ -63,6 +64,7 @@ export class PixiEngine {
 
     this.lastGlitchPeak = false;
     this.currentLocalReaction = null;
+    this.localReactionElapsed = 0.0;
     this.localReactionProgress = 0.0;
 
     // Double Mouse Tracker: Separate absolute screen-coords and normalized [-1, 1] scales
@@ -478,11 +480,23 @@ export class PixiEngine {
    * Assigns local animation preferences to transition visually during triggered reactions.
    */
   startLocalReaction(reactionType) {
+    const renderConfig = this.getState().renderConfig ?? DEFAULT_RENDER_CONFIG;
+    const reaction = resolveReactionFrame(renderConfig, reactionType, 0);
+    if (!reaction.active) {
+      const setParameter = this.getState().setParameter;
+      if (typeof setParameter === 'function') {
+        setParameter('activeReaction', null);
+        setParameter('reactionProgress', 0.0);
+      }
+      return;
+    }
+
     this.currentLocalReaction = reactionType;
+    this.localReactionElapsed = 0.0;
     this.localReactionProgress = 1.0;
 
     // Direct WebGL ripples trigger centered on active character position
-    if (this.shockwaveSystem && this.actor) {
+    if (reaction.modifiers.shockwave?.enabled && this.shockwaveSystem && this.actor) {
       this.shockwaveSystem.trigger(
         this.actor.container.position,
         this.masterContainer.scale.x,
@@ -496,14 +510,21 @@ export class PixiEngine {
     if (!this.isReady) return;
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
+    const liveStore = this.getState();
+    const renderConfig = liveStore.renderConfig ?? DEFAULT_RENDER_CONFIG;
+    let resolvedReaction = resolveReactionFrame(renderConfig, null, 0);
 
     // Decay the dynamic reaction progression metrics
     if (this.currentLocalReaction) {
-      this.localReactionProgress -= 0.007 * deltaTime;
+      this.localReactionElapsed += dtSeconds;
+      resolvedReaction = resolveReactionFrame(renderConfig, this.currentLocalReaction, this.localReactionElapsed);
+      this.localReactionProgress = resolvedReaction.progress;
 
-      if (this.localReactionProgress <= 0) {
+      if (resolvedReaction.complete) {
         this.localReactionProgress = 0;
+        this.localReactionElapsed = 0;
         this.currentLocalReaction = null;
+        resolvedReaction = resolveReactionFrame(renderConfig, null, 0);
 
         // Broadcast final boundary progress cleanly via native CustomEvent before resetting store
         window.dispatchEvent(new CustomEvent('gothic-reaction-progress', { detail: { progress: 0.0 } }));
@@ -521,14 +542,9 @@ export class PixiEngine {
     }
 
     // Persistent authored values come only from RenderConfig. Animation state stays local.
-    const liveStore = this.getState();
-    const renderConfig = liveStore.renderConfig ?? DEFAULT_RENDER_CONFIG;
     const runtime = {
       elapsed: this.time,
-      reaction: {
-        active: this.currentLocalReaction,
-        progress: this.localReactionProgress
-      },
+      reaction: resolvedReaction,
       pointer: {
         normalized: this.normalizedMousePos,
         absolute: this.absoluteMousePos,
@@ -544,19 +560,21 @@ export class PixiEngine {
         chromaticAberration: effectsConfig.chromaticAberration,
         flicker: effectsConfig.flicker
       },
-      runtime
+      { elapsed: runtime.elapsed, reactionModifiers: runtime.reaction.modifiers }
     );
 
     // Glitch status and shake factor calculated cleanly relative to active parameters
-    const glitchShakeIntensity = runtime.reaction.active === "lyx_received" || runtime.reaction.active === "lsp8_received"
-      ? effectsConfig.glitch.screenShakeIntensity + (25 - effectsConfig.glitch.screenShakeIntensity) * runtime.reaction.progress
-      : effectsConfig.glitch.screenShakeIntensity;
+    const glitchShakeIntensity = runtime.reaction.modifiers.screenShake?.intensity
+      ?? effectsConfig.glitch.screenShakeIntensity;
 
     const isGlitchActive = (isGlitched || currentSplit > (effectsConfig.chromaticAberration.amount * 1.15));
     
     // 1. Update Environment Stage (parallax backgrounds, fogs, particles)
     if (this.stage) {
-      this.stage.update(deltaTime, renderConfig.scene, actorConfig.aura.color, runtime);
+      this.stage.update(deltaTime, renderConfig.scene, actorConfig.aura.color, {
+        elapsed: runtime.elapsed,
+        reactionModifiers: runtime.reaction.modifiers
+      });
     }
 
     // 2. Update Actor Entity
@@ -565,7 +583,11 @@ export class PixiEngine {
         deltaTime,
         actorConfig,
         renderConfig.phenomena,
-        runtime,
+        {
+          elapsed: runtime.elapsed,
+          pointer: runtime.pointer,
+          reactionModifiers: runtime.reaction.modifiers
+        },
         { isGlitchActive, glitchShakeIntensity, canvasHeight: this.canvasHeight }
       );
       this.shedSkinTrailSystem?.update(deltaTime, this.actor.headState, renderConfig.phenomena.shedSkin);
@@ -614,7 +636,7 @@ export class PixiEngine {
         renderConfig.scene.background,
         this.app.renderer,
         this.actor?.warpPointer || null,
-        runtime.reaction
+        runtime.reaction.modifiers
       );
     }
 
@@ -623,7 +645,7 @@ export class PixiEngine {
       this.trailSystem.update(this.actor.getTrailRenderTransformSnapshot(), effectsConfig.spectralTrail, {
         isGlitchActive,
         screenShakeIntensity: glitchShakeIntensity,
-        reaction: runtime.reaction
+        reactionModifiers: runtime.reaction.modifiers
       });
     }
   }

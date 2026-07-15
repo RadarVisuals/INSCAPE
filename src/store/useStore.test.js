@@ -192,3 +192,39 @@ test('actor presets restore canonical effects and synchronized flat aliases', ()
   useStore.getState().deleteActorPreset(presetId);
   useStore.getState().setParameter('activeReaction', null);
 });
+
+test('store and presets retain validated reaction assignments without flattening runtime state', () => {
+  useStore.getState().applyRenderConfig({
+    ...DEFAULT_RENDER_CONFIG,
+    reactions: {
+      ...DEFAULT_RENDER_CONFIG.reactions,
+      events: { ...DEFAULT_RENDER_CONFIG.reactions.events, arbitrary_event: 'custom_profile' },
+      profiles: {
+        ...DEFAULT_RENDER_CONFIG.reactions.profiles,
+        custom_profile: {
+          duration: 3,
+          easing: 'linear',
+          decay: 'out',
+          channels: { warp: { intensity: 64 }, trail: { enabled: true, intensity: 0.4 } }
+        }
+      },
+      activeReaction: 'must_not_persist',
+      reactionProgress: 0.5
+    }
+  });
+
+  const presetId = useStore.getState().saveActorPreset('reaction profile preset');
+  useStore.getState().applyRenderConfig(DEFAULT_RENDER_CONFIG);
+  assert.equal(useStore.getState().renderConfig.reactions.events.arbitrary_event, undefined);
+
+  useStore.getState().applyActorPreset(presetId);
+  const state = useStore.getState();
+  assert.equal(state.renderConfig.reactions.events.arbitrary_event, 'custom_profile');
+  assert.equal(state.renderConfig.reactions.profiles.custom_profile.channels.warp.intensity, 64);
+  assert.equal(state.renderConfig.reactions.profiles.custom_profile.channels.trail.intensity, 0.4);
+  assert.equal(Object.hasOwn(state.renderConfig.reactions, 'activeReaction'), false);
+  assert.equal(Object.hasOwn(state.renderConfig.reactions, 'reactionProgress'), false);
+
+  useStore.getState().deleteActorPreset(presetId);
+  useStore.getState().applyRenderConfig(DEFAULT_RENDER_CONFIG);
+});

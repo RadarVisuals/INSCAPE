@@ -3,16 +3,10 @@ export class VeinPulseSystem {
     this.targets = targets;
   }
 
-  update(time, config, reaction) {
-    const reactionPulse = reaction.active ? reaction.progress : 0;
-    const baseColor = config.color.map((value) => value / 255);
-    let color = baseColor;
-
-    if (reaction.active === 'lyx_received') {
-      color = [1.0, Math.max(baseColor[1], 0.24), 0.03];
-    } else if (reaction.active === 'lsp7_received' || reaction.active === 'lsp8_received') {
-      color = [Math.max(baseColor[0], 0.26), 0.08, 1.0];
-    }
+  update(time, config, reactionModifiers) {
+    const modifiers = reactionModifiers.phenomena?.veins;
+    const reactionPulse = modifiers?.pulse ?? 0;
+    const color = (modifiers?.color ?? config.color).map((value) => value / 255);
 
     for (const target of this.targets) {
       const uniforms = target.shader.resources.mutationUniforms?.uniforms
@@ -21,7 +15,7 @@ export class VeinPulseSystem {
       uniforms.uVeinEnabled = config.enabled ? 1.0 : 0.0;
       uniforms.uVeinTime = time * config.speed;
       uniforms.uVeinPulse = reactionPulse;
-      uniforms.uVeinIntensity = config.intensity + reactionPulse * config.reactionBoost;
+      uniforms.uVeinIntensity = config.intensity + (modifiers?.intensityBoost ?? 0);
       uniforms.uVeinScale = config.scale;
       uniforms.uVeinWidth = config.width;
       uniforms.uVeinCore = config.core;

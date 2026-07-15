@@ -3,8 +3,8 @@ export class CaptiveWeatherSystem {
     this.targets = targets;
   }
 
-  update(time, config, reaction) {
-    const reactionBoost = reaction.active ? reaction.progress * 0.34 : 0;
+  update(time, config, reactionModifiers) {
+    const reactionBoost = reactionModifiers.phenomena?.weather?.intensityBoost ?? 0;
 
     for (const target of this.targets) {
       const uniforms = target.shader.resources.mutationUniforms?.uniforms

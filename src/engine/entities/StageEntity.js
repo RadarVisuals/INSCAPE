@@ -139,7 +139,7 @@ export class StageEntity {
       this.fgFog.update(runtime.elapsed, atmosphere.fog);
     }
     if (this.particleSystem) {
-      this.particleSystem.update(deltaTime, atmosphere.particles, auraColor, runtime.reaction);
+      this.particleSystem.update(deltaTime, atmosphere.particles, auraColor, runtime.reactionModifiers);
     }
 
     if (this.flags.isPanoramaMode) {

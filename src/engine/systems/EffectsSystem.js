@@ -60,38 +60,22 @@ export class EffectsSystem {
       currentSplit: chromaticAberration.amount
     };
 
-    // Calculate transition multipliers/modifiers cleanly on top of baseline slider values
-    let aberrationAmountModifier = 0.0;
-    let aberrationSpeedOverride = chromaticAberration.speed;
-    let auraOpacityMultiplier = 0.0;
-    let auraScaleMultiplier = 0.0;
-    let flickerIntensityModifier = 0.0;
-
-    const reaction = runtime.reaction.active;
-    const progress = runtime.reaction.progress;
-
-    if (reaction === "lyx_received") {
-      auraOpacityMultiplier = (1.0 / Math.max(0.01, aura.opacity) - 1.0) * progress;
-      auraScaleMultiplier = (1.35 / Math.max(0.1, aura.scale) - 1.0) * progress;
-    } else if (reaction === "lsp7_received" || reaction === "lsp8_received") {
-      aberrationAmountModifier = (30.0 - chromaticAberration.amount) * progress;
-      flickerIntensityModifier = (0.85 - flicker.intensity) * progress;
-      aberrationSpeedOverride = 8.0;
-    }
-
-    const currentAberrationAmount = chromaticAberration.amount + aberrationAmountModifier;
-    const currentAuraOpacity = aura.opacity * (1.0 + auraOpacityMultiplier);
-    const currentAuraScale = aura.scale * (1.0 + auraScaleMultiplier);
-    const currentFlickerIntensity = flicker.intensity + flickerIntensityModifier;
+    const modifiers = runtime.reactionModifiers;
+    const resolvedAberration = modifiers.chromaticAberration;
+    const resolvedFlicker = modifiers.flicker;
+    const resolvedAura = modifiers.aura;
+    const currentAberrationAmount = resolvedAberration?.amount ?? chromaticAberration.amount;
+    const aberrationSpeedOverride = resolvedAberration?.speed ?? chromaticAberration.speed;
+    const activeGlitchChance = resolvedAberration?.glitchBurstChance ?? chromaticAberration.glitchBurstChance;
+    const currentAuraOpacity = resolvedAura?.opacity ?? aura.opacity;
+    const currentAuraScale = resolvedAura?.scale ?? aura.scale;
+    const currentFlickerIntensity = resolvedFlicker?.intensity ?? flicker.intensity;
+    const currentFlickerSpeed = resolvedFlicker?.speed ?? flicker.speed;
 
     // 1. RGB Split / Glitch Calculations
     if (aberrationSpeedOverride > 0) {
       const pulseWave = Math.sin(time * aberrationSpeedOverride * 3);
       metrics.currentSplit = Math.abs(pulseWave) * currentAberrationAmount;
-
-      const activeGlitchChance = (reaction === "lsp7_received" || reaction === "lsp8_received") 
-        ? 0.0 
-        : chromaticAberration.glitchBurstChance;
 
       if (activeGlitchChance > 0 && Math.random() < (0.008 * activeGlitchChance)) {
         metrics.currentSplit = currentAberrationAmount * (1.5 + Math.random() * 1.5);
@@ -105,7 +89,7 @@ export class EffectsSystem {
     let flickerFactor = 1.0;
     if (this.targets.baseSprite) {
       if (currentFlickerIntensity > 0) {
-        const strobeTime = time * flicker.speed * 45;
+        const strobeTime = time * currentFlickerSpeed * 45;
         const waveValue = Math.sin(strobeTime) * Math.sin(strobeTime * 2.3) * Math.cos(strobeTime * 0.85);
         const triggerThreshold = 1.0 - currentFlickerIntensity;
         this.colorMatrix.reset();

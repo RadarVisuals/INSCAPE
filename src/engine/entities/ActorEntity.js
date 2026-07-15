@@ -284,8 +284,8 @@ export class ActorEntity {
 
     this.updateWarpPointer(dtSeconds, actorConfig.warp, runtime.pointer);
     this.updateMutation(dtSeconds, actorConfig.geometry);
-    this.veinPulseSystem?.update(runtime.elapsed, phenomena.veins, runtime.reaction);
-    this.captiveWeatherSystem?.update(runtime.elapsed, phenomena.weather, runtime.reaction);
+    this.veinPulseSystem?.update(runtime.elapsed, phenomena.veins, runtime.reactionModifiers);
+    this.captiveWeatherSystem?.update(runtime.elapsed, phenomena.weather, runtime.reactionModifiers);
     if (this.eyeSystem) {
       this.eyeSystem.update(deltaTime, actorConfig.eyes, runtime);
     }

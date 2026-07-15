@@ -29,25 +29,16 @@ export class ParticleSystem {
    * @param {number} deltaTime - Current update tick step size.
    * @param {Object} particleConfig - Persistent particle configuration.
    */
-  update(deltaTime, particleConfig, auraColor, reaction) {
+  update(deltaTime, particleConfig, auraColor, reactionModifiers) {
     const dtSeconds = deltaTime / 60;
     const halfSize = this.bgSize / 2;
 
     // Retrieve active visual variables from the store (falls back to a default bone-white if missing)
     const [rTint, gTint, bTint] = auraColor;
 
-    // Calculate transition multipliers cleanly on top of baseline slider values
-    let activeReactionMultiplier = 0.0;
-    let particleSpeedMultiplier = 0.0;
-
-    if (reaction.active === "lyx_received") {
-      const progress = reaction.progress;
-      activeReactionMultiplier = (300 / Math.max(1, particleConfig.count) - 1.0) * progress;
-      particleSpeedMultiplier = (4.5 / Math.max(0.1, particleConfig.speed) - 1.0) * progress;
-    }
-
-    const currentParticleCount = Math.floor(particleConfig.count * (1.0 + activeReactionMultiplier));
-    const currentParticleSpeed = particleConfig.speed * (1.0 + particleSpeedMultiplier);
+    const resolvedParticles = reactionModifiers.particles;
+    const currentParticleCount = Math.floor(resolvedParticles?.count ?? particleConfig.count);
+    const currentParticleSpeed = resolvedParticles?.speed ?? particleConfig.speed;
 
     // Pool expansion: Spawn particles to meet targeted configuration count on demand
     while (this.particles.length < currentParticleCount) {

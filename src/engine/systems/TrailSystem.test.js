@@ -48,20 +48,20 @@ test('active reaction progress reveals trails and decays without becoming a pers
   const inactive = {
     isGlitchActive: false,
     screenShakeIntensity: 0,
-    reaction: { active: null, progress: 0 }
+    reactionModifiers: {}
   };
 
   recordTrailTransform(history, transform, config.spacing);
   recordTrailTransform(history, transform, config.spacing);
   let presentation = getTrailPresentation(history, 0, config, {
     ...inactive,
-    reaction: { active: 'custom_configured_reaction', progress: 1 }
+    reactionModifiers: { trail: { enabled: true, intensity: 1 } }
   });
   assert.equal(presentation.alpha, 0.6);
 
   presentation = getTrailPresentation(history, 0, config, {
     ...inactive,
-    reaction: { active: 'custom_configured_reaction', progress: 0.5 }
+    reactionModifiers: { trail: { enabled: true, intensity: 0.5 } }
   });
   assert.equal(presentation.alpha, 0.3);
 
@@ -78,7 +78,7 @@ test('historical trails preserve signed scale, rendered position, and rotation',
   const runtime = {
     isGlitchActive: false,
     screenShakeIntensity: 0,
-    reaction: { active: 'lyx_received', progress: 1 }
+    reactionModifiers: { trail: { enabled: true, intensity: 1 } }
   };
   const historicalTransform = {
     x: -35,
