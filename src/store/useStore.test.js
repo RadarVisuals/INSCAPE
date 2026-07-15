@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_RENDER_CONFIG } from '../config/renderConfig.defaults.js';
+import { decodeActorPresets } from './slices/createActorPresetSlice.js';
 import { useStore } from './useStore.js';
 
 test('editor parameter writes stay synchronized with the actor RenderConfig', () => {
@@ -227,4 +228,36 @@ test('store and presets retain validated reaction assignments without flattening
 
   useStore.getState().deleteActorPreset(presetId);
   useStore.getState().applyRenderConfig(DEFAULT_RENDER_CONFIG);
+});
+
+test('corrupt or incompatible actor presets fail safely', () => {
+  useStore.getState().applyRenderConfig(DEFAULT_RENDER_CONFIG);
+  const before = useStore.getState().renderConfig;
+  const corruptPresets = [
+    { id: 'missing-version', name: 'Missing version', renderConfig: { actor: {} } },
+    { id: 'future', name: 'Future', renderConfig: { schemaVersion: 999 } },
+    { id: 'valid', name: 'Valid', renderConfig: DEFAULT_RENDER_CONFIG, values: { activeReaction: 'must-not-load' } }
+  ];
+
+  assert.deepEqual(decodeActorPresets(JSON.stringify(corruptPresets)).map((preset) => preset.id), ['valid']);
+  useStore.setState({ actorPresets: corruptPresets });
+  assert.equal(useStore.getState().applyActorPreset('missing-version'), false);
+  assert.equal(useStore.getState().applyActorPreset('future'), false);
+  assert.strictEqual(useStore.getState().renderConfig, before);
+
+  useStore.setState({ actorPresets: [] });
+});
+
+test('saved presets contain only metadata and a detached canonical document', () => {
+  useStore.getState().applyRenderConfig(DEFAULT_RENDER_CONFIG);
+  const source = useStore.getState().renderConfig;
+  const presetId = useStore.getState().saveActorPreset('document boundary preset');
+  const preset = useStore.getState().actorPresets.find((candidate) => candidate.id === presetId);
+
+  assert.deepEqual(Object.keys(preset).sort(), ['createdAt', 'id', 'name', 'renderConfig', 'updatedAt']);
+  assert.notStrictEqual(preset.renderConfig, source);
+  assert.notStrictEqual(preset.renderConfig.actor.aura.color, source.actor.aura.color);
+  assert.equal(Object.hasOwn(preset, 'values'), false);
+
+  useStore.getState().deleteActorPreset(presetId);
 });

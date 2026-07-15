@@ -77,18 +77,18 @@ export class PixiEngine {
     this.assetReloadScheduled = false;
 
     // Trigger explicit asset loading only when setup properties modify
-    const reloadTriggerKeys = [
-      'characterId',
-      'bgClippingMaskId',
-      'bgPatternStyle',
-      'bgMountainId',
-      'bgMountainBackId'
+    const reloadTriggerSelectors = [
+      state => state.renderConfig?.actor.id,
+      state => state.renderConfig?.scene.background.backdropId,
+      state => state.renderConfig?.scene.background.patternStyle,
+      state => state.renderConfig?.scene.background.mountainFrontId,
+      state => state.renderConfig?.scene.background.mountainBackId
     ];
 
-    reloadTriggerKeys.forEach(key => {
+    reloadTriggerSelectors.forEach(selector => {
       this.unsubscribers.push(
         this.subscribe(
-          state => state[key],
+          selector,
           () => this.scheduleAssetReload()
         )
       );

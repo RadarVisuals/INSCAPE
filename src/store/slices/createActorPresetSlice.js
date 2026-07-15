@@ -1,59 +1,36 @@
+import { decodeRenderConfigDocument, parseRenderConfigDocument } from '../../config/renderConfigDocument.js';
+
 const STORAGE_KEY = 'underneath.actor-presets.v1';
 
-export const ACTOR_PRESET_STATE_KEYS = [
-  'floatSpeed',
-  'floatAmpX',
-  'floatAmpY',
-  'floatRotation',
-  'flyMinScale',
-  'flyMaxScale',
-  'flyHoverPause',
-  'flyTiltBias',
-  'eyelidTravel',
-  'blinkInterval',
-  'blinkSpeed',
-  'autoBlink',
-  'eyelidManualProgress',
-  'pupilWander',
-  'pupilSaccade',
-  'pupilMouseInfluence',
-  'searchlightActive',
-  'searchlightWidth',
-  'searchlightLength',
-  'searchlightRadius',
-  'searchlightColorR',
-  'searchlightColorG',
-  'searchlightColorB',
-  'auraOpacity',
-  'auraScale',
-  'auraBlur',
-  'auraPulseSpeed',
-  'auraColorR',
-  'auraColorG',
-  'auraColorB',
-  'cavernLightIntensity',
-  'particleCount',
-  'particleSpeed',
-  'particleWind',
-  'particleSway',
-  'particleSize',
-  'particleOpacity',
-  'fogOpacity',
-  'fogSpeed',
-  'fogColorR',
-  'fogColorG',
-  'fogColorB',
-  'fogSwaySpeed',
-  'fogSwayAmp',
-  'scanlineOpacity',
-  'vignetteOpacity'
-];
+function normalizePreset(candidate) {
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
+  if (typeof candidate.id !== 'string' || typeof candidate.name !== 'string' || !candidate.name.trim()) return null;
+  const decoded = decodeRenderConfigDocument(candidate.renderConfig);
+  if (!decoded.ok) return null;
+  return {
+    id: candidate.id,
+    name: candidate.name.trim(),
+    createdAt: typeof candidate.createdAt === 'string' ? candidate.createdAt : null,
+    updatedAt: typeof candidate.updatedAt === 'string' ? candidate.updatedAt : null,
+    renderConfig: decoded.value
+  };
+}
+
+export function decodeActorPresets(source) {
+  let parsed;
+  try {
+    parsed = typeof source === 'string' ? JSON.parse(source) : source;
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed.map(normalizePreset).filter(Boolean);
+}
 
 function readPresets() {
   if (typeof window === 'undefined') return [];
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '[]');
-    return Array.isArray(parsed) ? parsed : [];
+    return decodeActorPresets(window.localStorage.getItem(STORAGE_KEY) || '[]');
   } catch (error) {
     console.warn('[ActorPresets] Could not read saved presets:', error);
     return [];
@@ -63,7 +40,8 @@ function readPresets() {
 function persistPresets(presets) {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+    const safePresets = presets.map(normalizePreset).filter(Boolean);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(safePresets));
   } catch (error) {
     console.warn('[ActorPresets] Could not persist presets:', error);
   }
@@ -82,12 +60,12 @@ export const createActorPresetSlice = (set, get) => ({
     if (!name) return null;
 
     const state = get();
-    const values = Object.fromEntries(ACTOR_PRESET_STATE_KEYS.map((key) => [key, state[key]]));
+    const renderConfig = parseRenderConfigDocument(state.renderConfig);
     const timestamp = new Date().toISOString();
     const existing = state.actorPresets.find((preset) => preset.name.toLowerCase() === name.toLowerCase());
     const savedPreset = existing
-      ? { ...existing, name, updatedAt: timestamp, renderConfig: state.renderConfig, values }
-      : { id: createPresetId(), name, createdAt: timestamp, updatedAt: timestamp, renderConfig: state.renderConfig, values };
+      ? { ...existing, name, updatedAt: timestamp, renderConfig }
+      : { id: createPresetId(), name, createdAt: timestamp, updatedAt: timestamp, renderConfig };
     const actorPresets = existing
       ? state.actorPresets.map((preset) => preset.id === existing.id ? savedPreset : preset)
       : [...state.actorPresets, savedPreset];
@@ -99,13 +77,13 @@ export const createActorPresetSlice = (set, get) => ({
 
   applyActorPreset: (presetId) => {
     const preset = get().actorPresets.find((candidate) => candidate.id === presetId);
-    if (!preset?.renderConfig || !preset?.values) return false;
+    const decoded = decodeRenderConfigDocument(preset?.renderConfig);
+    if (!decoded.ok) return false;
     const currentActorId = get().renderConfig.actor.id;
     get().applyRenderConfig({
-      ...preset.renderConfig,
-      actor: { ...preset.renderConfig.actor, id: currentActorId }
+      ...decoded.value,
+      actor: { ...decoded.value.actor, id: currentActorId }
     });
-    get().applyRenderParameters(preset.values);
     return true;
   },
 

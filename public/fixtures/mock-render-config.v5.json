@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 5,
+  "actor": {
+    "id": "skull_reaper",
+    "geometry": { "mode": "mirrorX", "axisX": 0.42 },
+    "warp": { "intensity": 36, "speed": 1.4 }
+  },
+  "scene": {
+    "background": { "backdropId": "darkblue", "patternStyle": "stone" },
+    "atmosphere": { "particles": { "count": 120 }, "fog": { "opacity": 0.55 } }
+  },
+  "phenomena": {
+    "veins": { "intensity": 0.7 },
+    "weather": { "intensity": 0.4 },
+    "shedSkin": { "count": 4 }
+  },
+  "effects": {
+    "chromaticAberration": { "amount": 4 },
+    "screen": { "vignetteOpacity": 0.65 }
+  },
+  "reactions": {
+    "events": { "preview_received": "preview_pulse" },
+    "profiles": {
+      "preview_pulse": {
+        "enabled": true,
+        "duration": 2.5,
+        "easing": "easeOut",
+        "decay": "out",
+        "channels": { "warp": { "intensity": 72 }, "trail": { "enabled": true, "intensity": 0.6 } }
+      }
+    }
+  }
+}
