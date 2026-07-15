@@ -15,7 +15,7 @@ test('default config round-trips through the flat editor compatibility layer', (
 
   assert.deepEqual(restored, normalizeRenderConfig(DEFAULT_RENDER_CONFIG));
   assert.equal(restored.schemaVersion, RENDER_CONFIG_VERSION);
-  assert.equal(RENDER_CONFIG_VERSION, 3);
+  assert.equal(RENDER_CONFIG_VERSION, 4);
 });
 
 test('normalization clamps numeric input and rejects invalid booleans', () => {
@@ -185,6 +185,52 @@ test('legacy motion default remains stable outside its editor range', () => {
   assert.equal(edited.value, 0.3);
 });
 
+test('effects defaults round-trip through every flat editor alias', () => {
+  const flat = toFlatRenderParameters(DEFAULT_RENDER_CONFIG, 'effects');
+  const restored = createRenderConfigFromFlatState(flat);
+
+  assert.deepEqual(restored.effects, DEFAULT_RENDER_CONFIG.effects);
+  assert.equal(flat.aberrationAmount, 0);
+  assert.equal(flat.flickerSpeed, 1);
+  assert.equal(flat.trailCount, 3);
+  assert.equal(flat.trailSpacing, 5);
+  assert.equal(flat.scanlineOpacity, 0.15);
+  assert.equal(flat.shockwaveThickness, 160);
+});
+
+test('effects values are validated by canonical definitions', () => {
+  const normalized = normalizeRenderConfig({
+    effects: {
+      chromaticAberration: { amount: 99, speed: -2, glitchBurstChance: 8 },
+      flicker: { intensity: 2, speed: -1 },
+      glitch: { screenShakeIntensity: 44 },
+      spectralTrail: { count: 1.6, spacing: 8.7, manualAlpha: -1, glitchInfluence: 4 },
+      screen: { scanlineOpacity: 2, vignetteOpacity: -1 },
+      shockwave: { strength: 3, thickness: 10, duration: 8, pulseCount: 3.6 }
+    }
+  });
+
+  assert.deepEqual(normalized.effects.chromaticAberration, { amount: 30, speed: 0, glitchBurstChance: 5 });
+  assert.deepEqual(normalized.effects.flicker, { intensity: 0.9, speed: 0 });
+  assert.equal(normalized.effects.glitch.screenShakeIntensity, 30);
+  assert.deepEqual(normalized.effects.spectralTrail, { count: 2, spacing: 9, manualAlpha: 0, glitchInfluence: 1 });
+  assert.deepEqual(normalized.effects.screen, { scanlineOpacity: 1, vignetteOpacity: 0 });
+  assert.deepEqual(normalized.effects.shockwave, { strength: 2, thickness: 50, duration: 4, pulseCount: 4 });
+
+  assert.equal(RENDER_PARAMETER_DEFINITIONS.trailCount.integer, true);
+  assert.equal(RENDER_PARAMETER_DEFINITIONS.trailSpacing.integer, true);
+  assert.equal(RENDER_PARAMETER_DEFINITIONS.shockwavePulseCount.integer, true);
+  assert.deepEqual(
+    {
+      label: RENDER_PARAMETER_DEFINITIONS.shockwaveThickness.label,
+      min: RENDER_PARAMETER_DEFINITIONS.shockwaveThickness.min,
+      max: RENDER_PARAMETER_DEFINITIONS.shockwaveThickness.max,
+      step: RENDER_PARAMETER_DEFINITIONS.shockwaveThickness.step
+    },
+    { label: 'Wavefront Thickness', min: 50, max: 300, step: 10 }
+  );
+});
+
 test('runtime-only fields are not RenderConfig parameters', () => {
   const config = createRenderConfigFromFlatState({
     pointer: { x: 1, y: 1 },
@@ -192,12 +238,26 @@ test('runtime-only fields are not RenderConfig parameters', () => {
     activeReaction: 'lyx_received',
     reactionProgress: 0.75,
     loadingState: 'loading',
+    activeShockwaves: [{ radius: 20 }],
+    randomGlitchEvents: [{ split: 12 }],
+    trailHistory: [{ x: 1, y: 2 }],
     calculatedAnimationValue: 123
   });
   const flat = toFlatRenderParameters(config);
 
-  for (const key of ['pointer', 'elapsed', 'activeReaction', 'reactionProgress', 'loadingState', 'calculatedAnimationValue']) {
+  for (const key of [
+    'pointer',
+    'elapsed',
+    'activeReaction',
+    'reactionProgress',
+    'loadingState',
+    'activeShockwaves',
+    'randomGlitchEvents',
+    'trailHistory',
+    'calculatedAnimationValue'
+  ]) {
     assert.equal(Object.prototype.hasOwnProperty.call(flat, key), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(config, key), false);
     assert.equal(updateRenderConfigParameter(config, key, 1), null);
   }
 });

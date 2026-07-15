@@ -151,7 +151,23 @@ export const RENDER_PARAMETER_DEFINITIONS = Object.freeze({
   shedSkinColorMix: number(['phenomena', 'shedSkin', 'colorMix'], 'Color Mix', 0, 1, 0.01),
   shedSkinColorR: number(['phenomena', 'shedSkin', 'color', 0], 'Color R', 0, 255, 1, { integer: true }),
   shedSkinColorG: number(['phenomena', 'shedSkin', 'color', 1], 'Color G', 0, 255, 1, { integer: true }),
-  shedSkinColorB: number(['phenomena', 'shedSkin', 'color', 2], 'Color B', 0, 255, 1, { integer: true })
+  shedSkinColorB: number(['phenomena', 'shedSkin', 'color', 2], 'Color B', 0, 255, 1, { integer: true }),
+  aberrationAmount: number(['effects', 'chromaticAberration', 'amount'], 'RGB Split Amount', 0, 30, 0.5),
+  aberrationSpeed: number(['effects', 'chromaticAberration', 'speed'], 'Aberration Speed', 0, 10, 0.1),
+  aberrationGlitch: number(['effects', 'chromaticAberration', 'glitchBurstChance'], 'Glitch Burst Chance', 0, 5, 0.1),
+  flickerIntensity: number(['effects', 'flicker', 'intensity'], 'Flicker Intensity', 0, 0.9, 0.05),
+  flickerSpeed: number(['effects', 'flicker', 'speed'], 'Flicker Speed', 0, 5, 0.1),
+  glitchShakeIntensity: number(['effects', 'glitch', 'screenShakeIntensity'], 'Screen Shake', 0, 30, 1),
+  trailCount: number(['effects', 'spectralTrail', 'count'], 'Trail Count', 0, 3, 1, { integer: true }),
+  trailSpacing: number(['effects', 'spectralTrail', 'spacing'], 'Frame Step Spacing', 2, 15, 1, { integer: true }),
+  trailManualAlpha: number(['effects', 'spectralTrail', 'manualAlpha'], 'Manual Test Alpha', 0, 1, 0.05),
+  trailGlitchInfluence: number(['effects', 'spectralTrail', 'glitchInfluence'], 'Glitch/Web3 Influence', 0, 1, 0.05),
+  scanlineOpacity: number(['effects', 'screen', 'scanlineOpacity'], 'Scanline Density', 0, 1, 0.05),
+  vignetteOpacity: number(['effects', 'screen', 'vignetteOpacity'], 'Vignette Intensity', 0, 1, 0.05),
+  shockwaveStrength: number(['effects', 'shockwave', 'strength'], 'Shockwave Strength', 0, 2, 0.1),
+  shockwaveThickness: number(['effects', 'shockwave', 'thickness'], 'Wavefront Thickness', 50, 300, 10),
+  shockwaveDuration: number(['effects', 'shockwave', 'duration'], 'Ripple Expansion Time', 0.5, 4, 0.1),
+  shockwavePulseCount: number(['effects', 'shockwave', 'pulseCount'], 'Cascading Ripple Count', 1, 5, 1, { integer: true })
 });
 
 export function getRenderParameterDefinition(key) {

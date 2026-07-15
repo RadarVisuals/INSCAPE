@@ -27,6 +27,14 @@ function cloneDefaults() {
       veins: { ...DEFAULT_RENDER_CONFIG.phenomena.veins, color: [...DEFAULT_RENDER_CONFIG.phenomena.veins.color], source: [...DEFAULT_RENDER_CONFIG.phenomena.veins.source] },
       weather: { ...DEFAULT_RENDER_CONFIG.phenomena.weather, color: [...DEFAULT_RENDER_CONFIG.phenomena.weather.color] },
       shedSkin: { ...DEFAULT_RENDER_CONFIG.phenomena.shedSkin, color: [...DEFAULT_RENDER_CONFIG.phenomena.shedSkin.color] }
+    },
+    effects: {
+      chromaticAberration: { ...DEFAULT_RENDER_CONFIG.effects.chromaticAberration },
+      flicker: { ...DEFAULT_RENDER_CONFIG.effects.flicker },
+      glitch: { ...DEFAULT_RENDER_CONFIG.effects.glitch },
+      spectralTrail: { ...DEFAULT_RENDER_CONFIG.effects.spectralTrail },
+      screen: { ...DEFAULT_RENDER_CONFIG.effects.screen },
+      shockwave: { ...DEFAULT_RENDER_CONFIG.effects.shockwave }
     }
   };
 }

@@ -48,20 +48,21 @@ export class EffectsSystem {
   /**
    * Updates visual parameters on a per-frame basis.
    * @param {Object} aura - Actor aura configuration.
-   * @param {Object} glitch - Glitch configuration.
+   * @param {Object} effects - Chromatic aberration and flicker configuration.
    * @param {Object} runtime - Per-frame runtime state.
    * @returns {Object} Glitch state metrics for the main engine.
    */
-  update(aura, glitch, runtime) {
+  update(aura, effects, runtime) {
+    const { chromaticAberration, flicker } = effects;
     const time = runtime.elapsed;
     const metrics = {
       isGlitched: false,
-      currentSplit: glitch.aberrationAmount
+      currentSplit: chromaticAberration.amount
     };
 
     // Calculate transition multipliers/modifiers cleanly on top of baseline slider values
     let aberrationAmountModifier = 0.0;
-    let aberrationSpeedOverride = glitch.aberrationSpeed;
+    let aberrationSpeedOverride = chromaticAberration.speed;
     let auraOpacityMultiplier = 0.0;
     let auraScaleMultiplier = 0.0;
     let flickerIntensityModifier = 0.0;
@@ -73,15 +74,15 @@ export class EffectsSystem {
       auraOpacityMultiplier = (1.0 / Math.max(0.01, aura.opacity) - 1.0) * progress;
       auraScaleMultiplier = (1.35 / Math.max(0.1, aura.scale) - 1.0) * progress;
     } else if (reaction === "lsp7_received" || reaction === "lsp8_received") {
-      aberrationAmountModifier = (30.0 - glitch.aberrationAmount) * progress;
-      flickerIntensityModifier = (0.85 - glitch.flickerIntensity) * progress;
+      aberrationAmountModifier = (30.0 - chromaticAberration.amount) * progress;
+      flickerIntensityModifier = (0.85 - flicker.intensity) * progress;
       aberrationSpeedOverride = 8.0;
     }
 
-    const currentAberrationAmount = glitch.aberrationAmount + aberrationAmountModifier;
+    const currentAberrationAmount = chromaticAberration.amount + aberrationAmountModifier;
     const currentAuraOpacity = aura.opacity * (1.0 + auraOpacityMultiplier);
     const currentAuraScale = aura.scale * (1.0 + auraScaleMultiplier);
-    const currentFlickerIntensity = glitch.flickerIntensity + flickerIntensityModifier;
+    const currentFlickerIntensity = flicker.intensity + flickerIntensityModifier;
 
     // 1. RGB Split / Glitch Calculations
     if (aberrationSpeedOverride > 0) {
@@ -90,7 +91,7 @@ export class EffectsSystem {
 
       const activeGlitchChance = (reaction === "lsp7_received" || reaction === "lsp8_received") 
         ? 0.0 
-        : glitch.aberrationGlitch;
+        : chromaticAberration.glitchBurstChance;
 
       if (activeGlitchChance > 0 && Math.random() < (0.008 * activeGlitchChance)) {
         metrics.currentSplit = currentAberrationAmount * (1.5 + Math.random() * 1.5);
@@ -104,7 +105,7 @@ export class EffectsSystem {
     let flickerFactor = 1.0;
     if (this.targets.baseSprite) {
       if (currentFlickerIntensity > 0) {
-        const strobeTime = time * glitch.flickerSpeed * 45;
+        const strobeTime = time * flicker.speed * 45;
         const waveValue = Math.sin(strobeTime) * Math.sin(strobeTime * 2.3) * Math.cos(strobeTime * 0.85);
         const triggerThreshold = 1.0 - currentFlickerIntensity;
         this.colorMatrix.reset();

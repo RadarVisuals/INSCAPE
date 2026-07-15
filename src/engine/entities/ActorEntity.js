@@ -6,6 +6,7 @@ import { createCaptiveWeatherOverlay, createVeinPulseOverlay } from './Character
 import { VeinPulseSystem } from '../systems/VeinPulseSystem.js';
 import { CaptiveWeatherSystem } from '../systems/CaptiveWeatherSystem.js';
 import { createActorMutationMesh } from './ActorMutationMeshFactory.js';
+import { createTrailRenderTransformSnapshot } from '../systems/trailRuntime.js';
 
 const MUTATION_MODE_VALUES = {
   none: 0,
@@ -297,6 +298,10 @@ export class ActorEntity {
       auraSprite: this.layers.aura || null,
       baseSprite: this.layers.base || null
     };
+  }
+
+  getTrailRenderTransformSnapshot() {
+    return createTrailRenderTransformSnapshot(this.container, this.visualContainer);
   }
 
   destroy() {

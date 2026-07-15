@@ -62,6 +62,8 @@ export class PixiEngine {
     this.shedSkinTrailSystem = null;
 
     this.lastGlitchPeak = false;
+    this.currentLocalReaction = null;
+    this.localReactionProgress = 0.0;
 
     // Double Mouse Tracker: Separate absolute screen-coords and normalized [-1, 1] scales
     this.absoluteMousePos = { x: 0, y: 0 };
@@ -518,18 +520,9 @@ export class PixiEngine {
       }
     }
 
-    // Synchronously fetch latest live properties to completely bypass full store copy callbacks
+    // Persistent authored values come only from RenderConfig. Animation state stays local.
     const liveStore = this.getState();
-    const {
-      activeReaction: ignoredActiveReaction,
-      reactionProgress: ignoredReactionProgress,
-      ...configuration
-    } = liveStore;
-
-    const config = {
-      ...configuration,
-      renderConfig: liveStore.renderConfig ?? DEFAULT_RENDER_CONFIG
-    };
+    const renderConfig = liveStore.renderConfig ?? DEFAULT_RENDER_CONFIG;
     const runtime = {
       elapsed: this.time,
       reaction: {
@@ -542,27 +535,28 @@ export class PixiEngine {
         available: this.hasMousePosition
       }
     };
-    const glitchConfig = {
-      aberrationAmount: config.aberrationAmount,
-      aberrationSpeed: config.aberrationSpeed,
-      aberrationGlitch: config.aberrationGlitch,
-      flickerIntensity: config.flickerIntensity,
-      flickerSpeed: config.flickerSpeed
-    };
-    const actorConfig = config.renderConfig.actor;
+    const actorConfig = renderConfig.actor;
+    const effectsConfig = renderConfig.effects;
 
-    const { isGlitched, currentSplit } = this.effectsSystem.update(actorConfig.aura, glitchConfig, runtime);
+    const { isGlitched, currentSplit } = this.effectsSystem.update(
+      actorConfig.aura,
+      {
+        chromaticAberration: effectsConfig.chromaticAberration,
+        flicker: effectsConfig.flicker
+      },
+      runtime
+    );
 
     // Glitch status and shake factor calculated cleanly relative to active parameters
     const glitchShakeIntensity = runtime.reaction.active === "lyx_received" || runtime.reaction.active === "lsp8_received"
-      ? config.glitchShakeIntensity + (25 - config.glitchShakeIntensity) * runtime.reaction.progress
-      : config.glitchShakeIntensity;
+      ? effectsConfig.glitch.screenShakeIntensity + (25 - effectsConfig.glitch.screenShakeIntensity) * runtime.reaction.progress
+      : effectsConfig.glitch.screenShakeIntensity;
 
-    const isGlitchActive = (isGlitched || currentSplit > (config.aberrationAmount * 1.15));
+    const isGlitchActive = (isGlitched || currentSplit > (effectsConfig.chromaticAberration.amount * 1.15));
     
     // 1. Update Environment Stage (parallax backgrounds, fogs, particles)
     if (this.stage) {
-      this.stage.update(deltaTime, config.renderConfig.scene, actorConfig.aura.color, runtime);
+      this.stage.update(deltaTime, renderConfig.scene, actorConfig.aura.color, runtime);
     }
 
     // 2. Update Actor Entity
@@ -570,11 +564,11 @@ export class PixiEngine {
       this.actor.update(
         deltaTime,
         actorConfig,
-        config.renderConfig.phenomena,
+        renderConfig.phenomena,
         runtime,
         { isGlitchActive, glitchShakeIntensity, canvasHeight: this.canvasHeight }
       );
-      this.shedSkinTrailSystem?.update(deltaTime, this.actor.headState, config.renderConfig.phenomena.shedSkin);
+      this.shedSkinTrailSystem?.update(deltaTime, this.actor.headState, renderConfig.phenomena.shedSkin);
     }
 
     // 3. Update Volumetric Searchlight (Tracking mouse around active character)
@@ -588,7 +582,7 @@ export class PixiEngine {
         dtSeconds, 
         this.app.screen.width, 
         this.app.screen.height, 
-        config
+        effectsConfig.shockwave
       );
 
       if (hasActiveWaves) {
@@ -617,7 +611,7 @@ export class PixiEngine {
       this.renderTextureManager.update(
         deltaTime,
         actorConfig.warp,
-        config.renderConfig.scene.background,
+        renderConfig.scene.background,
         this.app.renderer,
         this.actor?.warpPointer || null,
         runtime.reaction
@@ -626,8 +620,11 @@ export class PixiEngine {
 
     // --- Echoing Phase Trails Subsystem calculations (Reading active actor state) ---
     if (this.trailSystem && this.actor) {
-      const configForTrails = { ...config, glitchShakeIntensity };
-      this.trailSystem.update(this.actor.headState, configForTrails, isGlitchActive, runtime.reaction);
+      this.trailSystem.update(this.actor.getTrailRenderTransformSnapshot(), effectsConfig.spectralTrail, {
+        isGlitchActive,
+        screenShakeIntensity: glitchShakeIntensity,
+        reaction: runtime.reaction
+      });
     }
   }
 

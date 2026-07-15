@@ -1,4 +1,4 @@
-export const RENDER_CONFIG_VERSION = 3;
+export const RENDER_CONFIG_VERSION = 4;
 
 export const DEFAULT_RENDER_CONFIG = Object.freeze({
   schemaVersion: RENDER_CONFIG_VERSION,
@@ -129,6 +129,36 @@ export const DEFAULT_RENDER_CONFIG = Object.freeze({
       dissolve: 0.36,
       colorMix: 0.58,
       color: Object.freeze([112, 24, 164])
+    })
+  }),
+  effects: Object.freeze({
+    chromaticAberration: Object.freeze({
+      amount: 0.0,
+      speed: 0.0,
+      glitchBurstChance: 0.0
+    }),
+    flicker: Object.freeze({
+      intensity: 0.0,
+      speed: 1.0
+    }),
+    glitch: Object.freeze({
+      screenShakeIntensity: 0
+    }),
+    spectralTrail: Object.freeze({
+      count: 3,
+      spacing: 5,
+      manualAlpha: 0.0,
+      glitchInfluence: 0.6
+    }),
+    screen: Object.freeze({
+      scanlineOpacity: 0.15,
+      vignetteOpacity: 0.5
+    }),
+    shockwave: Object.freeze({
+      strength: 1.0,
+      thickness: 160.0,
+      duration: 1.8,
+      pulseCount: 2
     })
   })
 });

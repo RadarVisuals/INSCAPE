@@ -23,8 +23,8 @@ export default function AtmosphereTab() {
         <CompactSlider storeKey="fogColorB" />
 
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '12px', marginBottom: '8px', color: 'var(--text-muted)' }}>Screen Overlay & Post</h4>
-        <CompactSlider label="Scanline Density" storeKey="scanlineOpacity" min="0" max="1" step="0.05" />
-        <CompactSlider label="Vignette Intensity" storeKey="vignetteOpacity" min="0" max="1" step="0.05" />
+        <CompactSlider storeKey="scanlineOpacity" />
+        <CompactSlider storeKey="vignetteOpacity" />
       </div>
     </div>
   );

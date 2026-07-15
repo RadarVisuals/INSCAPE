@@ -37,7 +37,7 @@ export class ShockwaveSystem {
    * @param {number} dtSeconds - Delta frame time in seconds.
    * @param {number} screenWidth - Active canvas width.
    * @param {number} screenHeight - Active canvas height.
-   * @param {Object} config - Normalized application state variables.
+   * @param {Object} config - Persistent shockwave configuration.
    * @returns {boolean} True if WebGL filters should remain attached to the container.
    */
   update(dtSeconds, screenWidth, screenHeight, config) {
@@ -46,10 +46,10 @@ export class ShockwaveSystem {
     this.time += dtSeconds;
     const maxScreenRadius = Math.max(screenWidth, screenHeight) * 1.15;
 
-    const duration = config.shockwaveDuration ?? 1.8;
-    const pulseCount = Math.max(1, Math.min(5, config.shockwavePulseCount ?? 2));
-    const strength = config.shockwaveStrength ?? 1.0;
-    const thickness = config.shockwaveThickness ?? 160.0;
+    const duration = config.duration;
+    const pulseCount = config.pulseCount;
+    const strength = config.strength;
+    const thickness = config.thickness;
     const waveDelay = 0.35;
 
     const unis = this.filter.resources.shockwaveUniforms.uniforms;

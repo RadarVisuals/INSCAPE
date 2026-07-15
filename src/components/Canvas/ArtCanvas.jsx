@@ -7,8 +7,7 @@ export default function ArtCanvas() {
   const containerRef = useRef(null);
   const engineRef = useRef(null);
   
-  const scanlineOpacity = useStore((state) => state.scanlineOpacity);
-  const vignetteOpacity = useStore((state) => state.vignetteOpacity);
+  const screenEffects = useStore((state) => state.renderConfig.effects.screen);
 
   useEffect(() => {
     if (engineRef.current || !containerRef.current) return;
@@ -69,8 +68,8 @@ export default function ArtCanvas() {
             position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
             pointerEvents: 'none', zIndex: 10,
             background: `
-              radial-gradient(circle, transparent 35%, rgba(0,0,0,${vignetteOpacity}) 100%),
-              repeating-linear-gradient(rgba(0,0,0,${scanlineOpacity}) 0px, rgba(0,0,0,${scanlineOpacity}) 1px, transparent 1px, transparent 3px)
+              radial-gradient(circle, transparent 35%, rgba(0,0,0,${screenEffects.vignetteOpacity}) 100%),
+              repeating-linear-gradient(rgba(0,0,0,${screenEffects.scanlineOpacity}) 0px, rgba(0,0,0,${screenEffects.scanlineOpacity}) 1px, transparent 1px, transparent 3px)
             `,
             mixBlendMode: 'multiply'
         }}

@@ -90,6 +90,45 @@ test('runtime state writes do not enter RenderConfig', () => {
   assert.strictEqual(useStore.getState().renderConfig, before);
 });
 
+test('effects configuration synchronizes in both directions with flat editor fields', () => {
+  useStore.getState().applyRenderConfig(DEFAULT_RENDER_CONFIG);
+  useStore.getState().applyRenderParameters({
+    aberrationAmount: 18.5,
+    flickerSpeed: 2.4,
+    glitchShakeIntensity: 11,
+    trailCount: 1.8,
+    trailManualAlpha: 0.35,
+    scanlineOpacity: 0.45,
+    shockwavePulseCount: 4.4
+  });
+
+  let state = useStore.getState();
+  assert.equal(state.renderConfig.effects.chromaticAberration.amount, 18.5);
+  assert.equal(state.renderConfig.effects.flicker.speed, 2.4);
+  assert.equal(state.renderConfig.effects.glitch.screenShakeIntensity, 11);
+  assert.equal(state.renderConfig.effects.spectralTrail.count, 2);
+  assert.equal(state.renderConfig.effects.spectralTrail.manualAlpha, 0.35);
+  assert.equal(state.renderConfig.effects.screen.scanlineOpacity, 0.45);
+  assert.equal(state.renderConfig.effects.shockwave.pulseCount, 4);
+
+  useStore.getState().applyRenderConfig({
+    effects: {
+      chromaticAberration: { glitchBurstChance: 3.2 },
+      flicker: { intensity: 0.55 },
+      spectralTrail: { spacing: 12 },
+      screen: { vignetteOpacity: 0.2 },
+      shockwave: { strength: 1.7, thickness: 230 }
+    }
+  });
+  state = useStore.getState();
+  assert.equal(state.aberrationGlitch, 3.2);
+  assert.equal(state.flickerIntensity, 0.55);
+  assert.equal(state.trailSpacing, 12);
+  assert.equal(state.vignetteOpacity, 0.2);
+  assert.equal(state.shockwaveStrength, 1.7);
+  assert.equal(state.shockwaveThickness, 230);
+});
+
 test('actor presets restore render configuration and actor state without changing actor identity', () => {
   const store = useStore.getState();
   store.setParameter('characterId', 'abyssal_eye');
@@ -118,4 +157,38 @@ test('actor presets restore render configuration and actor state without changin
   assert.equal(useStore.getState().renderConfig.actor.id, 'skull_reaper');
 
   useStore.getState().deleteActorPreset(presetId);
+});
+
+test('actor presets restore canonical effects and synchronized flat aliases', () => {
+  useStore.getState().applyRenderConfig(DEFAULT_RENDER_CONFIG);
+  useStore.getState().applyRenderParameters({
+    aberrationSpeed: 6.5,
+    trailSpacing: 11,
+    vignetteOpacity: 0.75,
+    shockwaveDuration: 3.2
+  });
+  const presetId = useStore.getState().saveActorPreset('effects preset');
+
+  useStore.getState().applyRenderParameters({
+    aberrationSpeed: 0.5,
+    trailSpacing: 2,
+    vignetteOpacity: 0.1,
+    shockwaveDuration: 0.5
+  });
+  useStore.getState().setParameter('activeReaction', 'lsp8_received');
+  useStore.getState().applyActorPreset(presetId);
+
+  const state = useStore.getState();
+  assert.equal(state.renderConfig.effects.chromaticAberration.speed, 6.5);
+  assert.equal(state.renderConfig.effects.spectralTrail.spacing, 11);
+  assert.equal(state.renderConfig.effects.screen.vignetteOpacity, 0.75);
+  assert.equal(state.renderConfig.effects.shockwave.duration, 3.2);
+  assert.equal(state.aberrationSpeed, 6.5);
+  assert.equal(state.trailSpacing, 11);
+  assert.equal(state.vignetteOpacity, 0.75);
+  assert.equal(state.shockwaveDuration, 3.2);
+  assert.equal(state.activeReaction, 'lsp8_received');
+
+  useStore.getState().deleteActorPreset(presetId);
+  useStore.getState().setParameter('activeReaction', null);
 });

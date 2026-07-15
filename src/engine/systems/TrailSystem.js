@@ -1,5 +1,6 @@
 // src/engine/systems/TrailSystem.js
 import { Container, Sprite } from 'pixi.js';
+import { getTrailPresentation, recordTrailTransform } from './trailRuntime.js';
 
 export class TrailSystem {
   /**
@@ -39,67 +40,26 @@ export class TrailSystem {
 
   /**
    * Steers position mappings, scale expansions, and boundary alpha transitions.
-   * @param {Object} headState - Target configuration offsets computed for the head.
-   * @param {Object} config - Normalized application state variables.
-   * @param {boolean} isGlitchActive - Flag denoting if a peak glitch state is occurring.
+   * @param {Object} renderTransform - Actor transform as rendered under the trail parent.
+   * @param {Object} config - Persistent spectral trail configuration.
+   * @param {Object} runtime - Calculated glitch and reaction state.
    */
-  update(headState, config, isGlitchActive, reaction) {
-    this.trailHistory.unshift({
-      x: headState.x,
-      y: headState.y,
-      scaleX: headState.scale,
-      scaleY: headState.scale,
-      rotation: headState.rotation
-    });
-
-    const spacing = Math.max(2, config.trailSpacing ?? 5);
-    const maxHistoryNeeded = spacing * 3 + 2;
-    if (this.trailHistory.length > maxHistoryNeeded) {
-      this.trailHistory.pop();
-    }
-
-    const trailCount = Math.max(0, Math.min(3, config.trailCount ?? 3));
-    const manualAlpha = config.trailManualAlpha ?? 0.0;
-    const glitchInfluence = config.trailGlitchInfluence ?? 0.6;
-
-    // Scale trail visibility during visual shocks
-    const shakeIntensity = config.glitchShakeIntensity ?? 0;
-    const activeReactionProgress = reaction.progress;
-    const motionPulse = (shakeIntensity / 30) * (isGlitchActive ? 1.0 : 0.25);
-    const dynamicAlpha = Math.max(motionPulse, activeReactionProgress) * glitchInfluence;
-
-    const targetBaseAlpha = Math.max(manualAlpha, dynamicAlpha);
+  update(renderTransform, config, runtime) {
+    recordTrailTransform(this.trailHistory, renderTransform, config.spacing);
 
     this.trailSprites.forEach((sprite, index) => {
-      if (index >= trailCount || targetBaseAlpha <= 0.01) {
+      const presentation = getTrailPresentation(this.trailHistory, index, config, runtime);
+      if (!presentation) {
         sprite.visible = false;
         sprite.alpha = 0;
         return;
       }
 
-      const historyIndex = (index + 1) * spacing - 1;
-      const historyState = this.trailHistory[historyIndex];
-
-      if (historyState) {
-        sprite.visible = true;
-        
-        // Spectral scale expansion: ensures older nodes peak out as outlines
-        const scaleExpansion = 1.0 + (index + 1) * 0.04;
-        
-        // Vertical drift offset: simulates rising spectral smoke currents
-        const driftOffsetY = (index + 1) * -8;
-
-        sprite.position.set(historyState.x, historyState.y + driftOffsetY);
-        sprite.scale.set(historyState.scaleX * scaleExpansion, historyState.scaleY * scaleExpansion);
-        sprite.rotation = historyState.rotation;
-
-        // Progressively fade coordinates of older trails
-        const stepDecay = 1.0 - (index * 0.25);
-        sprite.alpha = Math.max(0, Math.min(1.0, targetBaseAlpha * stepDecay));
-      } else {
-        sprite.visible = false;
-        sprite.alpha = 0;
-      }
+      sprite.visible = true;
+      sprite.position.set(presentation.x, presentation.y);
+      sprite.scale.set(presentation.scaleX, presentation.scaleY);
+      sprite.rotation = presentation.rotation;
+      sprite.alpha = presentation.alpha;
     });
   }
 

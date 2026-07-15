@@ -142,10 +142,10 @@ export default function Web3Tab() {
         )}
 
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Shockwave Rig Setup</h4>
-        <CompactSlider label="Shockwave Strength" storeKey="shockwaveStrength" min="0" max="2" step="0.1" />
-        <CompactSlider label="Wavefront Thickness" storeKey="shockwaveThickness" min="50" max="300" step="10" />
-        <CompactSlider label="Ripple Expansion Time" storeKey="shockwaveDuration" min="0.5" max="4" step="0.1" />
-        <CompactSlider label="Cascading Ripple Count" storeKey="shockwavePulseCount" min="1" max="5" step="1" />
+        <CompactSlider storeKey="shockwaveStrength" />
+        <CompactSlider storeKey="shockwaveThickness" />
+        <CompactSlider storeKey="shockwaveDuration" />
+        <CompactSlider storeKey="shockwavePulseCount" />
       </div>
       <div>
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>LSP1 Simulators</h4>
