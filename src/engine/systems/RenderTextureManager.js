@@ -39,6 +39,37 @@ export class RenderTextureManager {
     this.warpFilter = warpFilter;
     this.bgWarpFilter = bgWarpFilter;
 
+    this.buildBackgroundPatterns();
+
+    // --- FOREGROUND CHARACTER PATTERNS ---
+    if (this.discoveredPatterns.length > 0) {
+      const sampleTex = Assets.get(this.discoveredPatterns[0]);
+      const patW = sampleTex ? sampleTex.width : 2000;
+      const patH = sampleTex ? sampleTex.height : 2000;
+
+      this.localPatternContainer = new Container();
+      this.localPatternContainer.filters = [this.warpFilter];
+
+      for (let index = 0; index < this.discoveredPatterns.length; index += 1) {
+        const patternAlias = this.discoveredPatterns[index];
+        const sp = Sprite.from(patternAlias);
+        sp.anchor.set(0.5);
+        sp.position.set(patW / 2, patH / 2);
+        this.localPatternContainer.addChild(sp);
+        this.organicWarpFilters.push(createOrganicWarpFilter(index));
+      }
+
+      this.patternRenderTexture = RenderTexture.create({ width: patW, height: patH });
+      this.patternSprite = new Sprite(this.patternRenderTexture);
+    } else {
+      this.patternRenderTexture = RenderTexture.create({ width: 1, height: 1 });
+      this.patternSprite = new Sprite(this.patternRenderTexture);
+      this.patternSprite.visible = false;
+    }
+    this.patternSprite.anchor.set(0.5);
+  }
+
+  buildBackgroundPatterns() {
     // --- BACKGROUND PATTERNS ---
     const hasAnyBgPat = this.hasBgPat1 || this.hasBgPat2;
     if (hasAnyBgPat) {
@@ -69,33 +100,36 @@ export class RenderTextureManager {
       this.bgPatternSprite = new MirroredScrollLayer(this.bgPatternRenderTexture, 1, 0.0);
       this.bgPatternSprite.visible = false;
     }
+  }
 
-    // --- FOREGROUND CHARACTER PATTERNS ---
-    if (this.discoveredPatterns.length > 0) {
-      const sampleTex = Assets.get(this.discoveredPatterns[0]);
-      const patW = sampleTex ? sampleTex.width : 2000;
-      const patH = sampleTex ? sampleTex.height : 2000;
-
-      this.localPatternContainer = new Container();
-      this.localPatternContainer.filters = [this.warpFilter];
-
-      for (let index = 0; index < this.discoveredPatterns.length; index += 1) {
-        const patternAlias = this.discoveredPatterns[index];
-        const sp = Sprite.from(patternAlias);
-        sp.anchor.set(0.5);
-        sp.position.set(patW / 2, patH / 2);
-        this.localPatternContainer.addChild(sp);
-        this.organicWarpFilters.push(createOrganicWarpFilter(index));
+  destroyBackgroundPatterns() {
+    if (this.bgPatternSprite) {
+      if (this.bgPatternSprite.parent) {
+        this.bgPatternSprite.parent.removeChild(this.bgPatternSprite);
       }
-
-      this.patternRenderTexture = RenderTexture.create({ width: patW, height: patH });
-      this.patternSprite = new Sprite(this.patternRenderTexture);
-    } else {
-      this.patternRenderTexture = RenderTexture.create({ width: 1, height: 1 });
-      this.patternSprite = new Sprite(this.patternRenderTexture);
-      this.patternSprite.visible = false;
+      this.bgPatternSprite.destroy({ children: true });
+      this.bgPatternSprite = null;
     }
-    this.patternSprite.anchor.set(0.5);
+    if (this.localBgPatternContainer) {
+      this.localBgPatternContainer.filters = null;
+      this.localBgPatternContainer.destroy({ children: true });
+      this.localBgPatternContainer = null;
+    }
+    if (this.bgPatternRenderTexture) {
+      this.bgPatternRenderTexture.destroy(true);
+      this.bgPatternRenderTexture = null;
+    }
+    this.bgPat1Layer = null;
+    this.bgPat2Layer = null;
+  }
+
+  updateBackgroundPatterns(options = {}) {
+    this.bgPat1Alias = options.bgPat1Alias || null;
+    this.bgPat2Alias = options.bgPat2Alias || null;
+    this.hasBgPat1 = options.hasBgPat1 ?? false;
+    this.hasBgPat2 = options.hasBgPat2 ?? false;
+    this.destroyBackgroundPatterns();
+    this.buildBackgroundPatterns();
   }
 
   /**
@@ -182,22 +216,22 @@ export class RenderTextureManager {
     this.organicWarpFilters = [];
   }
 
-  update(deltaTime, state, renderer, pointer = null, reactionState = { active: null, progress: 0 }) {
+  update(deltaTime, actorWarp, backgroundConfig, renderer, pointer = null, reactionState = { active: null, progress: 0 }) {
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
 
     if (this.localPatternContainer && this.localPatternContainer.children.length > 0) {
-      const requestedWarpMode = state.warpMode === 'organic' ? 'organic' : 'classic';
+      const requestedWarpMode = actorWarp.mode === 'organic' ? 'organic' : 'classic';
       this.setPatternWarpMode(requestedWarpMode);
 
       const kids = this.localPatternContainer.children;
       if (kids.length === 1) {
-        kids[0].scale.set(state.patternTopScale);
+        kids[0].scale.set(actorWarp.patternTopScale);
       } else if (kids.length > 1) {
-        kids[0].scale.set(state.patternBottomScale);
-        kids[kids.length - 1].scale.set(state.patternTopScale);
+        kids[0].scale.set(actorWarp.patternBottomScale);
+        kids[kids.length - 1].scale.set(actorWarp.patternTopScale);
         for (let i = 1; i < kids.length - 1; i++) {
-          kids[i].scale.set((state.patternBottomScale + state.patternTopScale) / 2);
+          kids[i].scale.set((actorWarp.patternBottomScale + actorWarp.patternTopScale) / 2);
         }
       }
 
@@ -206,15 +240,15 @@ export class RenderTextureManager {
       const progress = reactionState.progress;
 
       if (reaction === "lyx_received") {
-        warpIntensityMultiplier = (50.0 / Math.max(0.1, state.warpIntensity) - 1.0) * progress;
+        warpIntensityMultiplier = (50.0 / Math.max(0.1, actorWarp.intensity) - 1.0) * progress;
       } else if (reaction === "lsp7_received" || reaction === "lsp8_received") {
-        warpIntensityMultiplier = (90.0 / Math.max(0.1, state.warpIntensity) - 1.0) * progress;
+        warpIntensityMultiplier = (90.0 / Math.max(0.1, actorWarp.intensity) - 1.0) * progress;
       }
 
-      const currentWarpIntensity = state.warpIntensity * (1.0 + warpIntensityMultiplier);
+      const currentWarpIntensity = actorWarp.intensity * (1.0 + warpIntensityMultiplier);
 
       if (this.warpFilter && this.warpFilter.resources.warpUniforms) {
-        this.warpFilter.resources.warpUniforms.uniforms.uTime = this.time * state.warpSpeed;
+        this.warpFilter.resources.warpUniforms.uniforms.uTime = this.time * actorWarp.speed;
         this.warpFilter.resources.warpUniforms.uniforms.uWarpIntensity = currentWarpIntensity;
       }
 
@@ -225,15 +259,15 @@ export class RenderTextureManager {
         for (const organicFilter of this.organicWarpFilters) {
           const uniforms = organicFilter?.resources.organicWarpUniforms?.uniforms;
           if (!uniforms) continue;
-          uniforms.uTime = this.time * (state.warpSpeed ?? 1);
+          uniforms.uTime = this.time * actorWarp.speed;
           uniforms.uWarpIntensity = currentWarpIntensity;
-          uniforms.uMorphRange = state.warpOrganicRange ?? 1.0;
-          uniforms.uLayerDivergence = state.warpLayerDivergence ?? 0.3;
+          uniforms.uMorphRange = actorWarp.organicRange;
+          uniforms.uLayerDivergence = actorWarp.layerDivergence;
           uniforms.uCursorPosition = cursorPosition;
           uniforms.uCursorVelocity = cursorVelocity;
           uniforms.uCursorActive = cursorActive;
-          uniforms.uCursorInfluence = state.warpCursorInfluence ?? 0.45;
-          uniforms.uCursorRadius = state.warpCursorRadius ?? 0.22;
+          uniforms.uCursorInfluence = actorWarp.cursorInfluence;
+          uniforms.uCursorRadius = actorWarp.cursorRadius;
         }
       }
 
@@ -244,20 +278,21 @@ export class RenderTextureManager {
     }
 
     if (this.localBgPatternContainer && this.localBgPatternContainer.children.length > 0) {
-      const baseSpeed = state.bgScrollSpeed;
+      const baseSpeed = backgroundConfig.scrollSpeed;
+      const patternWarp = backgroundConfig.patternWarp;
 
       if (this.bgPat2Layer) {
-        this.bgPat2Layer.setPatternScale(state.bgPatternBottomScale);
+        this.bgPat2Layer.setPatternScale(patternWarp.bottomScale);
         this.bgPat2Layer.updatePositions(dtSeconds, baseSpeed);
       }
       if (this.bgPat1Layer) {
-        this.bgPat1Layer.setPatternScale(state.bgPatternTopScale);
+        this.bgPat1Layer.setPatternScale(patternWarp.topScale);
         this.bgPat1Layer.updatePositions(dtSeconds, baseSpeed);
       }
 
       if (this.bgWarpFilter && this.bgWarpFilter.resources.warpUniforms) {
-        this.bgWarpFilter.resources.warpUniforms.uniforms.uTime = this.time * state.bgWarpSpeed;
-        this.bgWarpFilter.resources.warpUniforms.uniforms.uWarpIntensity = state.bgWarpIntensity;
+        this.bgWarpFilter.resources.warpUniforms.uniforms.uTime = this.time * patternWarp.speed;
+        this.bgWarpFilter.resources.warpUniforms.uniforms.uWarpIntensity = patternWarp.intensity;
       }
 
       renderer.render({
@@ -277,20 +312,12 @@ export class RenderTextureManager {
     if (this.patternRenderTexture) {
       this.patternRenderTexture.destroy(true); // Force-disposes of the GPU TextureSource
     }
-    if (this.bgPatternRenderTexture) {
-      this.bgPatternRenderTexture.destroy(true); // Reclaims the WebGL framebuffer allocation
-    }
+    this.destroyBackgroundPatterns();
     if (this.localPatternContainer) {
       this.localPatternContainer.destroy({ children: true });
     }
-    if (this.localBgPatternContainer) {
-      this.localBgPatternContainer.destroy({ children: true });
-    }
     if (this.patternSprite) {
       this.patternSprite.destroy();
-    }
-    if (this.bgPatternSprite) {
-      this.bgPatternSprite.destroy();
     }
   }
 }

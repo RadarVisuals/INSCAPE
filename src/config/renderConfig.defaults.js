@@ -1,8 +1,9 @@
-export const RENDER_CONFIG_VERSION = 2;
+export const RENDER_CONFIG_VERSION = 3;
 
 export const DEFAULT_RENDER_CONFIG = Object.freeze({
   schemaVersion: RENDER_CONFIG_VERSION,
   actor: Object.freeze({
+    id: 'abyssal_eye',
     geometry: Object.freeze({
       mode: 'none',
       axisX: 0.5,
@@ -59,6 +60,39 @@ export const DEFAULT_RENDER_CONFIG = Object.freeze({
       length: 1,
       radius: 150,
       color: Object.freeze([255, 255, 255])
+    })
+  }),
+  scene: Object.freeze({
+    background: Object.freeze({
+      backdropId: 'moonpurple',
+      patternStyle: 'digitalblob',
+      mountainFrontId: 2,
+      mountainBackId: 3,
+      scrollSpeed: 30,
+      parallaxSpeed: 1.8,
+      patternWarp: Object.freeze({
+        bottomScale: 1,
+        topScale: 1,
+        intensity: 20,
+        speed: 1
+      })
+    }),
+    atmosphere: Object.freeze({
+      particles: Object.freeze({
+        count: 80,
+        speed: 1,
+        wind: 0,
+        sway: 1,
+        size: 1,
+        opacity: 1
+      }),
+      fog: Object.freeze({
+        opacity: 0.4,
+        speed: 1,
+        color: Object.freeze([140, 120, 180]),
+        swaySpeed: 0.5,
+        swayAmplitude: 20
+      })
     })
   }),
   phenomena: Object.freeze({

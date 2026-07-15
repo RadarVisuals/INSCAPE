@@ -27,16 +27,14 @@ export class ParticleSystem {
   /**
    * Main updates frame logic including particle properties, fluttering, drifting, and color blending.
    * @param {number} deltaTime - Current update tick step size.
-   * @param {Object} state - State from useStore.
+   * @param {Object} particleConfig - Persistent particle configuration.
    */
-  update(deltaTime, state, reaction) {
+  update(deltaTime, particleConfig, auraColor, reaction) {
     const dtSeconds = deltaTime / 60;
     const halfSize = this.bgSize / 2;
 
     // Retrieve active visual variables from the store (falls back to a default bone-white if missing)
-    const rTint = state.auraColorR ?? 235;
-    const gTint = state.auraColorG ?? 200;
-    const bTint = state.auraColorB ?? 150;
+    const [rTint, gTint, bTint] = auraColor;
 
     // Calculate transition multipliers cleanly on top of baseline slider values
     let activeReactionMultiplier = 0.0;
@@ -44,12 +42,12 @@ export class ParticleSystem {
 
     if (reaction.active === "lyx_received") {
       const progress = reaction.progress;
-      activeReactionMultiplier = (300 / Math.max(1, state.particleCount) - 1.0) * progress;
-      particleSpeedMultiplier = (4.5 / Math.max(0.1, state.particleSpeed) - 1.0) * progress;
+      activeReactionMultiplier = (300 / Math.max(1, particleConfig.count) - 1.0) * progress;
+      particleSpeedMultiplier = (4.5 / Math.max(0.1, particleConfig.speed) - 1.0) * progress;
     }
 
-    const currentParticleCount = Math.floor(state.particleCount * (1.0 + activeReactionMultiplier));
-    const currentParticleSpeed = state.particleSpeed * (1.0 + particleSpeedMultiplier);
+    const currentParticleCount = Math.floor(particleConfig.count * (1.0 + activeReactionMultiplier));
+    const currentParticleSpeed = particleConfig.speed * (1.0 + particleSpeedMultiplier);
 
     // Pool expansion: Spawn particles to meet targeted configuration count on demand
     while (this.particles.length < currentParticleCount) {
@@ -110,7 +108,7 @@ export class ParticleSystem {
         grayscale: grayscale
       };
 
-      sprite.scale.set(size * state.particleSize);
+      sprite.scale.set(size * particleConfig.size);
       sprite.alpha = 0; // Starts completely faded out, soft boundary fading handles transition
       sprite.visible = true;
       sprite.renderable = true;
@@ -151,13 +149,13 @@ export class ParticleSystem {
       let sway;
       if (c.type === 'ash') {
         // Asymmetric fluttering math
-        sway = Math.sin(c.birthTime * c.swayFreq * 2.8) * c.swayWidth * 1.5 * state.particleSway;
+        sway = Math.sin(c.birthTime * c.swayFreq * 2.8) * c.swayWidth * 1.5 * particleConfig.sway;
       } else {
         // Slow crawling
-        sway = Math.sin(c.birthTime * c.swayFreq) * c.swayWidth * state.particleSway;
+        sway = Math.sin(c.birthTime * c.swayFreq) * c.swayWidth * particleConfig.sway;
       }
 
-      const drift = (c.speedX * currentParticleSpeed * parallaxFactor * deltaTime) + (state.particleWind * deltaTime) + sway;
+      const drift = (c.speedX * currentParticleSpeed * parallaxFactor * deltaTime) + (particleConfig.wind * deltaTime) + sway;
       c.x += drift;
 
       // Eerie Unified Tinting: Blends the default monotone grayscale with the active state color
@@ -190,8 +188,8 @@ export class ParticleSystem {
       }
 
       // Apply modifiers from user panel sliders
-      p.alpha = Math.max(0, Math.min(1, fadeAlpha * state.particleOpacity));
-      p.scale.set(c.size * state.particleSize);
+      p.alpha = Math.max(0, Math.min(1, fadeAlpha * particleConfig.opacity));
+      p.scale.set(c.size * particleConfig.size);
       p.position.set(c.x, c.y);
 
       // Reset particle when reaching the boundaries of the scene bounds

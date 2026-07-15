@@ -12,6 +12,10 @@ const enumeration = (path, label, options) => Object.freeze({
 });
 
 export const RENDER_PARAMETER_DEFINITIONS = Object.freeze({
+  characterId: enumeration(['actor', 'id'], 'Active Character', [
+    { value: 'skull_reaper', label: 'Skull Reaper' },
+    { value: 'abyssal_eye', label: 'Abyssal Eye' }
+  ]),
   mutationMode: enumeration(['actor', 'geometry', 'mode'], 'Geometry', [
     { value: 'none', label: 'Original' },
     { value: 'mirrorX', label: 'Mirror Left / Right' },
@@ -66,6 +70,53 @@ export const RENDER_PARAMETER_DEFINITIONS = Object.freeze({
   searchlightColorR: number(['actor', 'searchlight', 'color', 0], 'Beam Color: Red', 0, 255, 1, { integer: true }),
   searchlightColorG: number(['actor', 'searchlight', 'color', 1], 'Beam Color: Green', 0, 255, 1, { integer: true }),
   searchlightColorB: number(['actor', 'searchlight', 'color', 2], 'Beam Color: Blue', 0, 255, 1, { integer: true }),
+  bgClippingMaskId: enumeration(['scene', 'background', 'backdropId'], 'Backdrop Color', [
+    { value: 'beige', label: 'Beige Backdrop' },
+    { value: 'black', label: 'Black Backdrop' },
+    { value: 'darkblue', label: 'Dark Blue' },
+    { value: 'darkgrey', label: 'Dark Grey' },
+    { value: 'hotpink', label: 'Hot Pink' },
+    { value: 'lightblue', label: 'Light Blue' },
+    { value: 'lightgrey', label: 'Light Grey' },
+    { value: 'orange', label: 'Orange' },
+    { value: 'pastelpurple', label: 'Pastel Purple' },
+    { value: 'purple', label: 'Purple' },
+    { value: 'moonpurple', label: 'Moon Purple' }
+  ]),
+  bgPatternStyle: enumeration(['scene', 'background', 'patternStyle'], 'Pattern Style', [
+    { value: 'bubble', label: 'Bubble Style' },
+    { value: 'stone', label: 'Stone Style' },
+    { value: 'digitalblob', label: 'Digital Blob' }
+  ]),
+  bgMountainId: enumeration(['scene', 'background', 'mountainFrontId'], 'Front Mountain', [
+    { value: 1, label: 'Mountain 01' },
+    { value: 2, label: 'Mountain 02' },
+    { value: 3, label: 'Mountain 03' }
+  ]),
+  bgMountainBackId: enumeration(['scene', 'background', 'mountainBackId'], 'Back Mountain', [
+    { value: 1, label: 'Mountain 01' },
+    { value: 2, label: 'Mountain 02' },
+    { value: 3, label: 'Mountain 03' }
+  ]),
+  bgScrollSpeed: number(['scene', 'background', 'scrollSpeed'], 'BG Scroll Speed', 0, 150, 5),
+  bg2ParallaxSpeed: number(['scene', 'background', 'parallaxSpeed'], 'BG2 Parallax Factor', -5, 5, 0.1),
+  bgPatternBottomScale: number(['scene', 'background', 'patternWarp', 'bottomScale'], 'BG Pattern Bottom Scale', 0.5, 3, 0.1),
+  bgPatternTopScale: number(['scene', 'background', 'patternWarp', 'topScale'], 'BG Pattern Top Scale', 0.5, 3, 0.1),
+  bgWarpIntensity: number(['scene', 'background', 'patternWarp', 'intensity'], 'BG Warp Intensity', 0, 100, 1),
+  bgWarpSpeed: number(['scene', 'background', 'patternWarp', 'speed'], 'BG Warp Speed', 0, 5, 0.1),
+  particleCount: number(['scene', 'atmosphere', 'particles', 'count'], 'Particle Count', 0, 300, 5, { integer: true }),
+  particleSpeed: number(['scene', 'atmosphere', 'particles', 'speed'], 'Particle Speed', 0, 5, 0.1),
+  particleWind: number(['scene', 'atmosphere', 'particles', 'wind'], 'Wind Drift', -20, 20, 1),
+  particleSway: number(['scene', 'atmosphere', 'particles', 'sway'], 'Flutter Sway', 0, 5, 0.1),
+  particleSize: number(['scene', 'atmosphere', 'particles', 'size'], 'Particle Size', 0.1, 3, 0.1),
+  particleOpacity: number(['scene', 'atmosphere', 'particles', 'opacity'], 'Particle Opacity', 0, 1, 0.05),
+  fogOpacity: number(['scene', 'atmosphere', 'fog', 'opacity'], 'Fog Opacity', 0, 1, 0.05),
+  fogSpeed: number(['scene', 'atmosphere', 'fog', 'speed'], 'Fog Drift Speed', 0, 5, 0.1),
+  fogColorR: number(['scene', 'atmosphere', 'fog', 'color', 0], 'Fog Color: Red', 0, 255, 1, { integer: true }),
+  fogColorG: number(['scene', 'atmosphere', 'fog', 'color', 1], 'Fog Color: Green', 0, 255, 1, { integer: true }),
+  fogColorB: number(['scene', 'atmosphere', 'fog', 'color', 2], 'Fog Color: Blue', 0, 255, 1, { integer: true }),
+  fogSwaySpeed: number(['scene', 'atmosphere', 'fog', 'swaySpeed'], 'Fog Sway Speed', 0, 5, 0.1),
+  fogSwayAmp: number(['scene', 'atmosphere', 'fog', 'swayAmplitude'], 'Fog Sway Amplitude', 0, 100, 1),
   veinEnabled: boolean(['phenomena', 'veins', 'enabled'], 'Enabled'),
   veinIntensity: number(['phenomena', 'veins', 'intensity'], 'Intensity', 0, 2, 0.01),
   veinReactionBoost: number(['phenomena', 'veins', 'reactionBoost'], 'Reaction Boost', 0, 2, 0.01),

@@ -46,7 +46,7 @@ export class StageEntity {
       if (this.flags.hasBg2) {
         const bg2Texture = Assets.get('bg2');
         if (bg2Texture && bg2Texture !== Texture.EMPTY) {
-          this.layers.bg2 = new MirroredScrollLayer(bg2Texture, this.bgHeightScale, this.flags.bg2ParallaxSpeed || 1.8);
+          this.layers.bg2 = new MirroredScrollLayer(bg2Texture, this.bgHeightScale, this.flags.bg2ParallaxSpeed);
           this.bgContainer.addChild(this.layers.bg2);
         }
       }
@@ -126,19 +126,20 @@ export class StageEntity {
     }
   }
 
-  update(deltaTime, config, runtime) {
+  update(deltaTime, sceneConfig, auraColor, runtime) {
     const dtSeconds = deltaTime / 60;
-    const baseSpeed = config.bgScrollSpeed;
-    const backParallax = config.bg2ParallaxSpeed;
+    const { background, atmosphere } = sceneConfig;
+    const baseSpeed = background.scrollSpeed;
+    const backParallax = background.parallaxSpeed;
 
     if (this.bgFog) {
-      this.bgFog.update(runtime.elapsed, config);
+      this.bgFog.update(runtime.elapsed, atmosphere.fog);
     }
     if (this.fgFog) {
-      this.fgFog.update(runtime.elapsed, config);
+      this.fgFog.update(runtime.elapsed, atmosphere.fog);
     }
     if (this.particleSystem) {
-      this.particleSystem.update(deltaTime, config, runtime.reaction);
+      this.particleSystem.update(deltaTime, atmosphere.particles, auraColor, runtime.reaction);
     }
 
     if (this.flags.isPanoramaMode) {
@@ -191,6 +192,10 @@ export class StageEntity {
     }
     if (this.fgFog?.destroy) {
       this.fgFog.destroy();
+    }
+    const sharedBgPatternSprite = this.renderTextureManager?.bgPatternSprite;
+    if (sharedBgPatternSprite?.parent === this.bgContainer) {
+      this.bgContainer.removeChild(sharedBgPatternSprite);
     }
     this.bgContainer.destroy({ children: true });
     this.fgContainer.destroy({ children: true });

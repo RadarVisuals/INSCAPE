@@ -27,11 +27,18 @@ export class AssetResolver {
 
   /**
    * Probes active actor directories and backdrops to construct a verified load payload.
-   * @param {Object} config - System setup values from the application state.
+   * @param {string} actorId - Persistent authored actor identity.
+   * @param {Object} backgroundConfig - Persistent scene background configuration.
    * @returns {Promise<Object>} Resolved configuration states, cache keys, and assets load queue.
    */
-  static async resolveRig(config) {
-    const { characterId, bgClippingMaskId, bgPatternStyle, bgMountainId, bgMountainBackId } = config;
+  static async resolveRig(actorId, backgroundConfig) {
+    const characterId = actorId;
+    const {
+      backdropId: bgClippingMaskId,
+      patternStyle: bgPatternStyle,
+      mountainFrontId: bgMountainId,
+      mountainBackId: bgMountainBackId
+    } = backgroundConfig;
     const verifiedLoadQueue = [];
 
     const formattedMountainId = this.padId(bgMountainId);

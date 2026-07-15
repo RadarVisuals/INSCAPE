@@ -5,12 +5,23 @@ function cloneDefaults() {
   return {
     schemaVersion: RENDER_CONFIG_VERSION,
     actor: {
+      id: DEFAULT_RENDER_CONFIG.actor.id,
       geometry: { ...DEFAULT_RENDER_CONFIG.actor.geometry },
       warp: { ...DEFAULT_RENDER_CONFIG.actor.warp },
       motion: { ...DEFAULT_RENDER_CONFIG.actor.motion },
       eyes: { ...DEFAULT_RENDER_CONFIG.actor.eyes },
       aura: { ...DEFAULT_RENDER_CONFIG.actor.aura, color: [...DEFAULT_RENDER_CONFIG.actor.aura.color] },
       searchlight: { ...DEFAULT_RENDER_CONFIG.actor.searchlight, color: [...DEFAULT_RENDER_CONFIG.actor.searchlight.color] }
+    },
+    scene: {
+      background: {
+        ...DEFAULT_RENDER_CONFIG.scene.background,
+        patternWarp: { ...DEFAULT_RENDER_CONFIG.scene.background.patternWarp }
+      },
+      atmosphere: {
+        particles: { ...DEFAULT_RENDER_CONFIG.scene.atmosphere.particles },
+        fog: { ...DEFAULT_RENDER_CONFIG.scene.atmosphere.fog, color: [...DEFAULT_RENDER_CONFIG.scene.atmosphere.fog.color] }
+      }
     },
     phenomena: {
       veins: { ...DEFAULT_RENDER_CONFIG.phenomena.veins, color: [...DEFAULT_RENDER_CONFIG.phenomena.veins.color], source: [...DEFAULT_RENDER_CONFIG.phenomena.veins.source] },

@@ -15,6 +15,7 @@ test('default config round-trips through the flat editor compatibility layer', (
 
   assert.deepEqual(restored, normalizeRenderConfig(DEFAULT_RENDER_CONFIG));
   assert.equal(restored.schemaVersion, RENDER_CONFIG_VERSION);
+  assert.equal(RENDER_CONFIG_VERSION, 3);
 });
 
 test('normalization clamps numeric input and rejects invalid booleans', () => {
@@ -97,6 +98,63 @@ test('actor completion defaults round-trip through every flat editor alias', () 
   assert.equal(flat.searchlightRadius, 150);
 });
 
+test('scene defaults round-trip through every flat editor alias', () => {
+  const flat = toFlatRenderParameters(DEFAULT_RENDER_CONFIG, 'scene');
+  const restored = createRenderConfigFromFlatState({
+    ...toFlatRenderParameters(DEFAULT_RENDER_CONFIG, 'actor'),
+    ...flat
+  });
+
+  assert.deepEqual(restored.scene, DEFAULT_RENDER_CONFIG.scene);
+  assert.equal(flat.bgClippingMaskId, 'moonpurple');
+  assert.equal(flat.bgMountainId, 2);
+  assert.equal(flat.bgPatternBottomScale, 1);
+  assert.equal(flat.particleCount, 80);
+  assert.equal(flat.fogColorB, 180);
+});
+
+test('scene normalization clamps invalid numbers and normalizes RGB channels', () => {
+  const normalized = normalizeRenderConfig({
+    scene: {
+      background: { scrollSpeed: 999, parallaxSpeed: -99, patternWarp: { bottomScale: 0 } },
+      atmosphere: {
+        particles: { count: 12.7, size: -5 },
+        fog: { opacity: 7, color: [-1, 42.6, 999], swayAmplitude: 'invalid' }
+      }
+    }
+  });
+
+  assert.equal(normalized.scene.background.scrollSpeed, 150);
+  assert.equal(normalized.scene.background.parallaxSpeed, -5);
+  assert.equal(normalized.scene.background.patternWarp.bottomScale, 0.5);
+  assert.equal(normalized.scene.atmosphere.particles.count, 13);
+  assert.equal(normalized.scene.atmosphere.particles.size, 0.1);
+  assert.equal(normalized.scene.atmosphere.fog.opacity, 1);
+  assert.deepEqual(normalized.scene.atmosphere.fog.color, [0, 43, 255]);
+  assert.equal(normalized.scene.atmosphere.fog.swayAmplitude, DEFAULT_RENDER_CONFIG.scene.atmosphere.fog.swayAmplitude);
+});
+
+test('invalid actor and scene dropdown values fall back without changing option sets', () => {
+  const normalized = normalizeRenderConfig({
+    actor: { id: 'missing_actor' },
+    scene: { background: { backdropId: 'missing', patternStyle: 'missing', mountainFrontId: 99, mountainBackId: 0 } }
+  });
+
+  assert.equal(normalized.actor.id, DEFAULT_RENDER_CONFIG.actor.id);
+  assert.equal(normalized.scene.background.backdropId, DEFAULT_RENDER_CONFIG.scene.background.backdropId);
+  assert.equal(normalized.scene.background.patternStyle, DEFAULT_RENDER_CONFIG.scene.background.patternStyle);
+  assert.equal(normalized.scene.background.mountainFrontId, DEFAULT_RENDER_CONFIG.scene.background.mountainFrontId);
+  assert.equal(normalized.scene.background.mountainBackId, DEFAULT_RENDER_CONFIG.scene.background.mountainBackId);
+  assert.deepEqual(RENDER_PARAMETER_DEFINITIONS.characterId.values, ['skull_reaper', 'abyssal_eye']);
+  assert.deepEqual(RENDER_PARAMETER_DEFINITIONS.bgClippingMaskId.values, [
+    'beige', 'black', 'darkblue', 'darkgrey', 'hotpink', 'lightblue',
+    'lightgrey', 'orange', 'pastelpurple', 'purple', 'moonpurple'
+  ]);
+  assert.deepEqual(RENDER_PARAMETER_DEFINITIONS.bgPatternStyle.values, ['bubble', 'stone', 'digitalblob']);
+  assert.deepEqual(RENDER_PARAMETER_DEFINITIONS.bgMountainId.values, [1, 2, 3]);
+  assert.deepEqual(RENDER_PARAMETER_DEFINITIONS.bgMountainId.options, RENDER_PARAMETER_DEFINITIONS.bgMountainBackId.options);
+});
+
 test('actor completion values are validated by canonical definitions', () => {
   const normalized = normalizeRenderConfig({
     actor: {
@@ -132,11 +190,13 @@ test('runtime-only fields are not RenderConfig parameters', () => {
     pointer: { x: 1, y: 1 },
     elapsed: 42,
     activeReaction: 'lyx_received',
-    reactionProgress: 0.75
+    reactionProgress: 0.75,
+    loadingState: 'loading',
+    calculatedAnimationValue: 123
   });
   const flat = toFlatRenderParameters(config);
 
-  for (const key of ['pointer', 'elapsed', 'activeReaction', 'reactionProgress']) {
+  for (const key of ['pointer', 'elapsed', 'activeReaction', 'reactionProgress', 'loadingState', 'calculatedAnimationValue']) {
     assert.equal(Object.prototype.hasOwnProperty.call(flat, key), false);
     assert.equal(updateRenderConfigParameter(config, key, 1), null);
   }

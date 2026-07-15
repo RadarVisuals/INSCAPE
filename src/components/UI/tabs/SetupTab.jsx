@@ -1,37 +1,12 @@
 // src/components/UI/tabs/SetupTab.jsx
 import React from 'react';
 import { useStore } from '../../../store/useStore';
+import { RENDER_PARAMETER_DEFINITIONS } from '../../../config/renderConfig.schema.js';
 
-const availableActors = [
-  { id: "skull_reaper", label: "Skull Reaper" },
-  { id: "abyssal_eye", label: "Abyssal Eye" }
-];
-
-const backdropOptions = [
-  { id: "beige", label: "Beige Backdrop" },
-  { id: "black", label: "Black Backdrop" },
-  { id: "darkblue", label: "Dark Blue" },
-  { id: "darkgrey", label: "Dark Grey" },
-  { id: "hotpink", label: "Hot Pink" },
-  { id: "lightblue", label: "Light Blue" },
-  { id: "lightgrey", label: "Light Grey" },
-  { id: "orange", label: "Orange" },
-  { id: "pastelpurple", label: "Pastel Purple" },
-  { id: "purple", label: "Purple" },
-  { id: "moonpurple", label: "Moon Purple" }
-];
-
-const mountainOptions = [
-  { id: 1, label: "Mountain 01" },
-  { id: 2, label: "Mountain 02" },
-  { id: 3, label: "Mountain 03" }
-];
-
-const patternStyleOptions = [
-  { id: "bubble", label: "Bubble Style" },
-  { id: "stone", label: "Stone Style" },
-  { id: "digitalblob", label: "Digital Blob" }
-];
+const availableActors = RENDER_PARAMETER_DEFINITIONS.characterId.options;
+const backdropOptions = RENDER_PARAMETER_DEFINITIONS.bgClippingMaskId.options;
+const mountainOptions = RENDER_PARAMETER_DEFINITIONS.bgMountainId.options;
+const patternStyleOptions = RENDER_PARAMETER_DEFINITIONS.bgPatternStyle.options;
 
 export default function SetupTab() {
   const characterId = useStore((state) => state.characterId);
@@ -65,7 +40,7 @@ export default function SetupTab() {
               style={selectStyle}
             >
               {availableActors.map(actor => (
-                <option key={actor.id} value={actor.id}>{actor.label}</option>
+                <option key={actor.value} value={actor.value}>{actor.label}</option>
               ))}
             </select>
         </div>
@@ -87,7 +62,7 @@ export default function SetupTab() {
               style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
             >
               {backdropOptions.map(option => (
-                <option key={option.id} value={option.id}>{option.label.toUpperCase()}</option>
+                <option key={option.value} value={option.value}>{option.label.toUpperCase()}</option>
               ))}
             </select>
           </div>
@@ -99,7 +74,7 @@ export default function SetupTab() {
               style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
             >
               {patternStyleOptions.map(option => (
-                <option key={option.id} value={option.id}>{option.label}</option>
+                <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
           </div>
@@ -110,11 +85,11 @@ export default function SetupTab() {
             <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Back Mountain</label>
             <select
               value={bgMountainBackId}
-              onChange={(e) => setParameter('bgMountainBackId', parseInt(e.target.value) || 1)}
+              onChange={(e) => setParameter('bgMountainBackId', parseInt(e.target.value))}
               style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
             >
               {mountainOptions.map(option => (
-                <option key={option.id} value={option.id}>{option.label}</option>
+                <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
           </div>
@@ -122,11 +97,11 @@ export default function SetupTab() {
             <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Front Mountain</label>
             <select
               value={bgMountainId}
-              onChange={(e) => setParameter('bgMountainId', parseInt(e.target.value) || 1)}
+              onChange={(e) => setParameter('bgMountainId', parseInt(e.target.value))}
               style={{ background: '#1c1c1c', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px', fontSize: '10px', width: '100%', outline: 'none', cursor: 'pointer' }}
             >
               {mountainOptions.map(option => (
-                <option key={option.id} value={option.id}>{option.label}</option>
+                <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
           </div>

@@ -30,35 +30,28 @@ export class FogSystem {
     }
   }
 
-  update(time, config) {
+  update(time, fogConfig) {
     if (!this.filter) return;
 
-    // Apply strict fallback baselines to safeguard the shader uniforms from NaN corruptions
-    const fogOpacity = config.fogOpacity ?? 0.4;
-    const fogSpeed = config.fogSpeed ?? 1.0;
-    const fogColorR = config.fogColorR ?? 140;
-    const fogColorG = config.fogColorG ?? 120;
-    const fogColorB = config.fogColorB ?? 180;
-    const fogSwaySpeed = config.fogSwaySpeed ?? 0.5;
-    const fogSwayAmp = config.fogSwayAmp ?? 20.0;
+    const { opacity, speed, color, swaySpeed, swayAmplitude } = fogConfig;
 
     const unis = this.filter.resources.fogUniforms.uniforms;
     unis.uTime = time;
     
-    const baseOpacity = this.isForeground ? fogOpacity * 0.55 : fogOpacity;
+    const baseOpacity = this.isForeground ? opacity * 0.55 : opacity;
     unis.uOpacity = baseOpacity;
     
     const velocityScale = this.isForeground ? 1.45 : 0.85;
-    unis.uSpeed = fogSpeed * 0.01 * velocityScale;
+    unis.uSpeed = speed * 0.01 * velocityScale;
     
     unis.uColor = [
-        fogColorR / 255,
-        fogColorG / 255,
-        fogColorB / 255
+        color[0] / 255,
+        color[1] / 255,
+        color[2] / 255
     ];
 
     const phaseOffset = this.isForeground ? 1.6 : 0.0;
-    const sway = Math.sin((time * fogSwaySpeed) + phaseOffset) * fogSwayAmp;
+    const sway = Math.sin((time * swaySpeed) + phaseOffset) * swayAmplitude;
     
     const verticalCenter = this.isForeground ? (this.sprite.height * 0.28) : (this.sprite.height * 0.12);
     this.sprite.y = verticalCenter + sway;

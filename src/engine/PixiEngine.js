@@ -16,6 +16,7 @@ import { ActorEntity } from './entities/ActorEntity.js';
 import { StageEntity } from './entities/StageEntity.js';
 import { ShedSkinTrailSystem } from './systems/ShedSkinTrailSystem.js';
 import { DEFAULT_RENDER_CONFIG } from '../config/renderConfig.defaults.js';
+import { getAssetReloadScope } from './stageAssetConfig.js';
 
 export class PixiEngine {
   /**
@@ -172,8 +173,8 @@ export class PixiEngine {
     console.log(`%c🔍 [PixiEngine] Rig Loader: Locating Stage Assets`, 'color: #00f3ff; font-weight: bold;');
     
     // Resolve active asset configurations and store in a single property
-    const currentStore = this.getState();
-    const results = await this.resolveConfiguredRig(currentStore);
+    const renderConfig = this.getState().renderConfig ?? DEFAULT_RENDER_CONFIG;
+    const results = await this.resolveConfiguredRig(renderConfig);
     this.loadedRig = results;
 
     if (results.verifiedLoadQueue.length > 0) {
@@ -197,8 +198,8 @@ export class PixiEngine {
     });
   }
 
-  async resolveConfiguredRig(config) {
-    return AssetResolver.resolveRig(config);
+  async resolveConfiguredRig(renderConfig) {
+    return AssetResolver.resolveRig(renderConfig.actor.id, renderConfig.scene.background);
   }
 
   buildSceneGraph() {
@@ -206,7 +207,7 @@ export class PixiEngine {
     const rig = this.loadedRig;
     if (!rig) return;
 
-    const currentStore = this.getState();
+    const renderConfig = this.getState().renderConfig ?? DEFAULT_RENDER_CONFIG;
 
     this.masterContainer = new Container();
     stage.addChild(this.masterContainer);
@@ -242,7 +243,7 @@ export class PixiEngine {
     const stageFlags = {
       isPanoramaMode: rig.isPanoramaMode,
       hasBg2: rig.hasBg2,
-      bg2ParallaxSpeed: currentStore.bg2ParallaxSpeed,
+      bg2ParallaxSpeed: renderConfig.scene.background.parallaxSpeed,
       hasBgClippingMask: rig.hasBgClippingMask,
       hasBgPat1: rig.hasBgPat1,
       hasBgPat2: rig.hasBgPat2,
@@ -250,7 +251,7 @@ export class PixiEngine {
       hasBgMountain: rig.hasBgMountain
     };
     this.stage = new StageEntity(
-      currentStore.bgClippingMaskId, 
+      renderConfig.scene.background.backdropId,
       rig.keys, 
       stageFlags, 
       this.bgHeightScale, 
@@ -300,8 +301,8 @@ export class PixiEngine {
     const currentSeq = ++this.loadSequence;
 
     // Pre-resolve and load assets first, before destroying active display blocks
-    const currentStore = this.getState();
-    const nextRig = await this.resolveConfiguredRig(currentStore);
+    const renderConfig = this.getState().renderConfig ?? DEFAULT_RENDER_CONFIG;
+    const nextRig = await this.resolveConfiguredRig(renderConfig);
 
     if (this.isDestroyed || currentSeq !== this.loadSequence) return;
 
@@ -317,46 +318,34 @@ export class PixiEngine {
 
     this.isReady = false;
 
-    // Detect if stage properties modified. If background setup values did not change, 
-    // we bypass stage entity resets to keep fogs and scrolling mountain environments running.
-    const stageChanged = !this.loadedRig ||
-      this.loadedRig.keys.bg_clipping_mask !== nextRig.keys.bg_clipping_mask ||
-      this.loadedRig.keys.bg_mountain !== nextRig.keys.bg_mountain ||
-      this.loadedRig.keys.bg_mountain_back !== nextRig.keys.bg_mountain_back ||
-      this.loadedRig.isPanoramaMode !== nextRig.isPanoramaMode ||
-      this.loadedRig.hasBgPat1 !== nextRig.hasBgPat1 ||
-      this.loadedRig.hasBgPat2 !== nextRig.hasBgPat2;
+    const { actorChanged, backgroundPatternChanged, stageChanged } = getAssetReloadScope(this.loadedRig, nextRig);
 
-    // Clean up current actor structures
-    if (this.actor) {
-      this.shedSkinTrailSystem?.destroy();
-      this.shedSkinTrailSystem = null;
-      if (this.actor.characterContentContainer) {
-        this.actor.characterContentContainer.mask = null;
+    // Actor identity owns actor runtime state. Scene-only changes leave it untouched.
+    if (actorChanged) {
+      if (this.actor) {
+        this.shedSkinTrailSystem?.destroy();
+        this.shedSkinTrailSystem = null;
+        if (this.actor.characterContentContainer) {
+          this.actor.characterContentContainer.mask = null;
+        }
+        this.actor.destroy();
+        this.actor = null;
       }
-      this.actor.destroy();
-      this.actor = null;
+      if (this.trailSystem?.destroy) {
+        this.trailSystem.destroy();
+        this.trailSystem = null;
+      }
+      if (this.searchlightSystem?.destroy) {
+        this.searchlightSystem.destroy();
+        this.searchlightSystem = null;
+      }
     }
 
-    // Always reset tracking and searchlight systems
-    if (this.trailSystem?.destroy) {
-      this.trailSystem.destroy();
-      this.trailSystem = null;
-    }
-    if (this.searchlightSystem?.destroy) {
-      this.searchlightSystem.destroy();
-      this.searchlightSystem = null;
-    }
-
-    // Tear down stage and render textures only if stage setups changed
+    // Stage resources can be rebuilt independently of the actor render pass.
     if (stageChanged) {
       if (this.stage?.destroy) {
         this.stage.destroy();
         this.stage = null;
-      }
-      if (this.renderTextureManager?.destroy) {
-        this.renderTextureManager.destroy();
-        this.renderTextureManager = null;
       }
     }
 
@@ -373,16 +362,18 @@ export class PixiEngine {
     }
     this.bgHeightScale = (clipTex && clipTex !== Texture.EMPTY) ? clipTex.height : 1000;
 
-    if (stageChanged || !this.masterClipMask) {
+    if (actorChanged || !this.masterClipMask) {
       if (this.masterClipMask) this.masterClipMask.destroy();
       this.masterClipMask = new Graphics()
         .rect(-this.bgHeightScale / 2, -this.bgHeightScale / 2, this.bgHeightScale, this.bgHeightScale)
         .fill({ color: 0xffffff });
       this.masterContainer.addChild(this.masterClipMask);
+      if (this.bgAtmosphereContainer) {
+        this.bgAtmosphereContainer.mask = this.masterClipMask;
+      }
     }
 
-    if (stageChanged || !this.bgAtmosphereContainer) {
-      if (this.bgAtmosphereContainer) this.bgAtmosphereContainer.destroy();
+    if (!this.bgAtmosphereContainer) {
       this.bgAtmosphereContainer = new Container();
       this.bgAtmosphereContainer.mask = this.masterClipMask;
       this.masterContainer.addChild(this.bgAtmosphereContainer);
@@ -392,7 +383,7 @@ export class PixiEngine {
       this.shockwaveSystem = new ShockwaveSystem();
     }
 
-    // Reinitialize or update actor patterns on the active texture manager
+    // Keep actor and background render passes independently replaceable.
     if (!this.renderTextureManager) {
       this.renderTextureManager = new RenderTextureManager({
         discoveredPatterns: nextRig.discoveredPatterns,
@@ -401,8 +392,16 @@ export class PixiEngine {
         hasBgPat1: nextRig.hasBgPat1,
         hasBgPat2: nextRig.hasBgPat2
       });
-    } else {
+    } else if (actorChanged) {
       this.renderTextureManager.updateActorPatterns(nextRig.discoveredPatterns);
+    }
+    if (backgroundPatternChanged) {
+      this.renderTextureManager.updateBackgroundPatterns({
+        bgPat1Alias: nextRig.hasBgPat1 ? nextRig.keys.bg_pat_1 : null,
+        bgPat2Alias: nextRig.hasBgPat2 ? nextRig.keys.bg_pat_2 : null,
+        hasBgPat1: nextRig.hasBgPat1,
+        hasBgPat2: nextRig.hasBgPat2
+      });
     }
 
     // Rebuild stage layer templates if required
@@ -410,7 +409,7 @@ export class PixiEngine {
       const stageFlags = {
         isPanoramaMode: nextRig.isPanoramaMode,
         hasBg2: nextRig.hasBg2,
-        bg2ParallaxSpeed: currentStore.bg2ParallaxSpeed,
+        bg2ParallaxSpeed: renderConfig.scene.background.parallaxSpeed,
         hasBgClippingMask: nextRig.hasBgClippingMask,
         hasBgPat1: nextRig.hasBgPat1,
         hasBgPat2: nextRig.hasBgPat2,
@@ -418,7 +417,7 @@ export class PixiEngine {
         hasBgMountain: nextRig.hasBgMountain
       };
       this.stage = new StageEntity(
-        currentStore.bgClippingMaskId, 
+        renderConfig.scene.background.backdropId,
         nextRig.keys, 
         stageFlags, 
         this.bgHeightScale, 
@@ -428,21 +427,23 @@ export class PixiEngine {
       this.bgAtmosphereContainer.addChild(this.stage.bgContainer);
     }
 
-    this.trailSystem = new TrailSystem(this.masterContainer, nextRig.keys.char_clipping_mask);
-    this.searchlightSystem = new SearchlightSystem(this.masterContainer);
+    if (actorChanged) {
+      this.trailSystem = new TrailSystem(this.masterContainer, nextRig.keys.char_clipping_mask);
+      this.searchlightSystem = new SearchlightSystem(this.masterContainer);
 
-    const actorAssets = {
-      char_clipping_mask: nextRig.hasCharClippingMask ? nextRig.keys.char_clipping_mask : null,
-      char_lineart: nextRig.hasLineart ? nextRig.keys.char_lineart : null,
-      char_base: nextRig.hasCharBase ? nextRig.keys.char_base : null,
-      eyelids_top: nextRig.hasEyelids ? nextRig.keys.eyelids_top : null,
-      eyelids_bottom: nextRig.hasEyelids ? nextRig.keys.eyelids_bottom : null,
-      discoveredEyes: nextRig.discoveredEyes,
-      discoveredPatterns: nextRig.discoveredPatterns
-    };
-    this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager, this.app.renderer);
-    this.masterContainer.addChild(this.actor.container);
-    this.shedSkinTrailSystem = new ShedSkinTrailSystem(this.masterContainer, this.app.renderer, this.actor, nextRig.keys.char_clipping_mask);
+      const actorAssets = {
+        char_clipping_mask: nextRig.hasCharClippingMask ? nextRig.keys.char_clipping_mask : null,
+        char_lineart: nextRig.hasLineart ? nextRig.keys.char_lineart : null,
+        char_base: nextRig.hasCharBase ? nextRig.keys.char_base : null,
+        eyelids_top: nextRig.hasEyelids ? nextRig.keys.eyelids_top : null,
+        eyelids_bottom: nextRig.hasEyelids ? nextRig.keys.eyelids_bottom : null,
+        discoveredEyes: nextRig.discoveredEyes,
+        discoveredPatterns: nextRig.discoveredPatterns
+      };
+      this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager, this.app.renderer);
+      this.masterContainer.addChild(this.actor.container);
+      this.shedSkinTrailSystem = new ShedSkinTrailSystem(this.masterContainer, this.app.renderer, this.actor, nextRig.keys.char_clipping_mask);
+    }
 
     if (this.stage.fgContainer.parent) {
       this.stage.fgContainer.parent.removeChild(this.stage.fgContainer);
@@ -450,16 +451,22 @@ export class PixiEngine {
     this.masterContainer.addChild(this.stage.fgContainer);
 
     const stageTargets = this.stage.getEffectsTargets();
-    const effectsTarget = this.actor.getEffectsTargets();
-    
-    this.effectsSystem.attach({
-      headContainer: effectsTarget.headContainer,
-      auraSprite: effectsTarget.auraSprite,
-      baseSprite: effectsTarget.baseSprite,
+    const stageEffectTargets = {
       mountainReflector: stageTargets.mountainReflector,
       mountainBackReflector: stageTargets.mountainBackReflector,
       ceilingReflector: stageTargets.ceilingReflector
-    });
+    };
+    if (actorChanged) {
+      const effectsTarget = this.actor.getEffectsTargets();
+      this.effectsSystem.attach({
+        headContainer: effectsTarget.headContainer,
+        auraSprite: effectsTarget.auraSprite,
+        baseSprite: effectsTarget.baseSprite,
+        ...stageEffectTargets
+      });
+    } else {
+      this.effectsSystem.attach(stageEffectTargets);
+    }
 
     this.resize();
     this.isReady = true;
@@ -555,7 +562,7 @@ export class PixiEngine {
     
     // 1. Update Environment Stage (parallax backgrounds, fogs, particles)
     if (this.stage) {
-      this.stage.update(deltaTime, config, runtime);
+      this.stage.update(deltaTime, config.renderConfig.scene, actorConfig.aura.color, runtime);
     }
 
     // 2. Update Actor Entity
@@ -609,7 +616,8 @@ export class PixiEngine {
     if (this.renderTextureManager) {
       this.renderTextureManager.update(
         deltaTime,
-        config,
+        actorConfig.warp,
+        config.renderConfig.scene.background,
         this.app.renderer,
         this.actor?.warpPointer || null,
         runtime.reaction

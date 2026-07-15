@@ -100,7 +100,11 @@ export const createActorPresetSlice = (set, get) => ({
   applyActorPreset: (presetId) => {
     const preset = get().actorPresets.find((candidate) => candidate.id === presetId);
     if (!preset?.renderConfig || !preset?.values) return false;
-    get().applyRenderConfig(preset.renderConfig);
+    const currentActorId = get().renderConfig.actor.id;
+    get().applyRenderConfig({
+      ...preset.renderConfig,
+      actor: { ...preset.renderConfig.actor, id: currentActorId }
+    });
     get().applyRenderParameters(preset.values);
     return true;
   },
