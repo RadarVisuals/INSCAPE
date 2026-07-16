@@ -50,6 +50,8 @@ export default function ControlPanel() {
     <>
       <button
         onClick={toggleUi}
+        type="button"
+        aria-label={isUiVisible ? 'Hide Atelier controls' : 'Show Atelier controls'}
         style={{
           position: 'fixed', top: '15px', right: '15px', zIndex: 100,
           background: 'var(--panel-bg)', border: '1px solid var(--border-color)',

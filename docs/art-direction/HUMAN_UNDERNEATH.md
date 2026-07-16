@@ -65,6 +65,8 @@ The following remain open design questions:
 - dialogue-box shape and placement;
 - how applications accommodate a moving character;
 - window opening, closing, and minimizing transitions;
+- exact translucency, blur, tint, and refraction treatment across different
+  world palettes;
 - how much illustration is appropriate inside functional content surfaces;
 - sound, voice, and ambient interface treatment.
 
@@ -156,6 +158,10 @@ from the artwork without turning every control into a miniature illustration.
 ### Appropriate Translation
 
 - dark, restrained content surfaces with high text contrast;
+- controlled translucent surfaces that allow the illustrated world to remain
+  visibly continuous through functional content;
+- blur, tint, and opacity tuned to preserve the active world's color energy
+  and composition without sacrificing text contrast;
 - fine ink-like or engraved borders used selectively;
 - asymmetry or organic interruption in prominent frames, not every button;
 - large application icons conceived as artifacts, specimens, instruments,
@@ -170,13 +176,34 @@ from the artwork without turning every control into a miniature illustration.
 - a generic white NFT marketplace placed over the scene;
 - a conventional SaaS dashboard;
 - default blue accents;
-- excessive glassmorphism or blur;
+- generic glassmorphism used as a complete borrowed visual style;
+- uniform frosted cards applied to every piece of content;
+- blur or tint strong enough to reduce the world to indistinct decoration;
+- translucent surfaces without sufficient separation from busy linework;
 - rounded cards used everywhere by default;
 - direct Windows or macOS imitation;
+- conventional desktop-window chrome repeated without adapting its geometry to
+  the illustrated world;
 - permanent panels that cover most of the illustrated world;
 - unrelated stock iconography presented as final art;
+- arbitrary serial numbers, telemetry, system codes, or pseudo-technical labels
+  used primarily as decoration;
+- repeated micro-labels that make the experience read as a terminal, laboratory
+  dashboard, or spaceship control panel by default;
 - bouncy, playful consumer-app animation;
 - decorative complexity that makes text and transactions ambiguous.
+
+Translucency is an approved material direction when it keeps the environment
+present and visually active through the interface. It should be treated as
+world-permeable UI rather than as a generic glassmorphism preset: the active
+illustration supplies the color and atmosphere, while the interface supplies
+readability, focus, and deliberate framing. Not every control or surface needs
+to be translucent.
+
+Technical language should be semantic. Codes, classifications, channel states,
+and signal terminology are appropriate when they communicate real identity,
+provenance, navigation, or system state. They should not be added only to make
+the interface appear futuristic.
 
 Familiar controls and symbols are still appropriate when they improve safety or
 immediate comprehension. Character does not justify obscuring navigation,
