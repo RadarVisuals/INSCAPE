@@ -4,10 +4,11 @@ function gatewayBase(gateway) {
   return `${String(gateway || IPFS_GATEWAY_URL).replace(/\/+$/, '')}/`;
 }
 
-export function resolveContentUrl(value, { ipfsGateway = IPFS_GATEWAY_URL } = {}) {
+export function resolveContentUrl(value, { ipfsGateway = IPFS_GATEWAY_URL, allowRelative = false } = {}) {
   if (typeof value !== 'string') return null;
   const source = value.trim();
   if (!source) return null;
+  if (allowRelative && /^\/(?!\/)/u.test(source) && !/[\s<>"']/u.test(source)) return source;
   if (/^ipfs:\/\//i.test(source)) {
     const path = source.replace(/^ipfs:\/\/(ipfs\/)?/i, '').replace(/^\/+/, '');
     if (!path || /[\s<>"']/u.test(path)) return null;

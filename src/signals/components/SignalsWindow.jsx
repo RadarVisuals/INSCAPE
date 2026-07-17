@@ -1,10 +1,32 @@
-import { useEffect } from 'react';
-import { RefreshCw, RotateCcw, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Copy, ExternalLink, RefreshCw, RotateCcw, X } from 'lucide-react';
 import { abbreviateAddress } from '../domain/signalMessages.js';
 import { useSignalStore } from '../state/useSignalStore.js';
+import { getOfficialProfileUrl, PROFILE_IDENTITY_STATUS, useProfileIdentity } from '../../profileIdentity/index.js';
 
 const LABELS = { ASSET_RECEIVED: 'Asset received', ASSET_SENT: 'Asset sent', LYX_RECEIVED: 'LYX received', LYX_SENT: 'LYX sent', UNKNOWN_ACTIVITY: 'Activity' };
 const formatTime = (timestamp) => timestamp ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(timestamp)) : 'Unknown time';
+
+function CounterpartyIdentity({ signal }) {
+  const identity = useProfileIdentity(signal.counterparty, { sourceMode: signal.sourceMode });
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const addressLabel = abbreviateAddress(signal.counterparty);
+  if (!addressLabel) return <span>Profile signal</span>;
+  const resolvedName = identity?.status === PROFILE_IDENTITY_STATUS.RESOLVED ? identity.name : null;
+  const profileUrl = identity?.isUniversalProfile ? getOfficialProfileUrl(signal.counterparty) : null;
+  const copyAddress = async () => { try { await navigator.clipboard.writeText(signal.counterparty); } catch { /* Clipboard is optional. */ } };
+  return <div className="signal-identity" title={signal.counterparty}>
+    <span className="signal-identity__avatar" aria-hidden="true">
+      {identity?.avatarUrl && !avatarFailed ? <img src={identity.avatarUrl} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setAvatarFailed(true)} /> : <i />}
+    </span>
+    <span className="signal-identity__labels">
+      {profileUrl && resolvedName ? <a href={profileUrl} target="_blank" rel="noopener noreferrer" aria-label={`Open ${resolvedName} Universal Profile`}><b>{resolvedName}</b><ExternalLink aria-hidden="true" /></a> : <b>{resolvedName || addressLabel}</b>}
+      {resolvedName && <small>{addressLabel}</small>}
+      <span className="sr-only">Canonical address {signal.counterparty}</span>
+    </span>
+    <button type="button" className="signal-identity__copy" onClick={copyAddress} aria-label={`Copy address ${signal.counterparty}`} title="Copy address"><Copy aria-hidden="true" /></button>
+  </div>;
+}
 
 export default function SignalsWindow({ onClose, dragHandleProps, dragEnabled, editMode, escapeEnabled }) {
   const history = useSignalStore((state) => state.history); const status = useSignalStore((state) => state.status);
@@ -39,7 +61,7 @@ export default function SignalsWindow({ onClose, dragHandleProps, dragEnabled, e
           const replayState = currentReactionId === signal.id ? 'playing' : queuedReactionIds.includes(signal.id) ? 'queued' : 'ready';
           return <li key={signal.id} data-seen={signal.seen || undefined}>
             <i aria-hidden="true" /><div><header><strong>{LABELS[signal.type] || 'Activity'}</strong><span>{signal.sourceMode}</span></header>
-              <h3>{signal.title}</h3><p>{[signal.assetReference?.standard, abbreviateAddress(signal.counterparty)].filter(Boolean).join(' / ') || 'Profile signal'}</p>
+              <h3>{signal.title}</h3><div className="signals-list__context">{signal.assetReference?.standard && <span>{signal.assetReference.standard}</span>}<CounterpartyIdentity signal={signal} /></div>
               <time dateTime={new Date(signal.timestamp).toISOString()}>{formatTime(signal.timestamp)}</time></div>
             <div className="signals-list__actions">{!signal.seen && <button type="button" onClick={() => markSeen(signal.id)}>Mark seen</button>}
               {editMode && <button type="button" disabled={replayState !== 'ready'} data-replay-state={replayState}

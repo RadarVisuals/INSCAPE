@@ -8,3 +8,9 @@ test('message construction includes known metadata and abbreviated counterparty'
 test('message construction uses atmospheric fallback when metadata is unavailable', () => {
   assert.equal(buildKeeperMessage({ type: 'ASSET_RECEIVED', direction: 'INCOMING', assetReference: { name: 'Unknown asset', metadataStatus: 'unavailable' } }).text, 'Something new arrived.');
 });
+test('message construction uses separately resolved identity without mutating the signal', () => {
+  const signal = { type: 'LYX_RECEIVED', direction: 'INCOMING', counterparty: '0x1234567890abcdef1234567890abcdef123489ef', value: '12000000000000000000' };
+  const before = structuredClone(signal);
+  assert.match(buildKeeperMessage(signal, { name: 'RADAR' }).text, /12 LYX arrived from RADAR/);
+  assert.deepEqual(signal, before);
+});

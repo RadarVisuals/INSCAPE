@@ -18,3 +18,8 @@ test('selects a modest thumbnail and the largest preview', () => {
   assert.equal(urls.thumbnailUrl, 'https://example.test/medium.png');
   assert.equal(urls.imageUrl, 'https://example.test/large.png');
 });
+
+test('root-relative content is accepted only for explicit trusted fixture use', () => {
+  assert.equal(resolveContentUrl('/fixtures/avatar.svg'), null);
+  assert.equal(resolveContentUrl('/fixtures/avatar.svg', { allowRelative: true }), '/fixtures/avatar.svg');
+});

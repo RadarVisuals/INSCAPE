@@ -1,7 +1,8 @@
 import { createFixtureSignal, SIGNAL_DIRECTIONS, SIGNAL_TYPES, sortSignalsNewestFirst } from '../domain/keeperSignal.js';
+import { FIXTURE_IDENTITY_ADDRESSES } from '../../profileIdentity/data/fixtureProfileIdentityRepository.js';
 
-const FROM = '0x1234567890abcdef1234567890abcdef123489ef';
-const TO = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd';
+const FROM = FIXTURE_IDENTITY_ADDRESSES.RADAR;
+const TO = FIXTURE_IDENTITY_ADDRESSES.NAME_ONLY;
 const ASSET = '0x1111111111111111111111111111111111111111';
 const base = 1_735_689_600;
 const fixtures = [
@@ -12,8 +13,16 @@ const fixtures = [
   { sourceReference: 'fixture-lyx-received', type: SIGNAL_TYPES.LYX_RECEIVED, direction: SIGNAL_DIRECTIONS.INCOMING, timestamp: base + 400, counterparty: FROM, value: '1250000000000000000' },
   { sourceReference: 'fixture-lyx-sent', type: SIGNAL_TYPES.LYX_SENT, direction: SIGNAL_DIRECTIONS.OUTGOING, timestamp: base + 300, counterparty: TO, value: '500000000000000000' },
   { sourceReference: 'fixture-missing-metadata', type: SIGNAL_TYPES.ASSET_RECEIVED, direction: SIGNAL_DIRECTIONS.INCOMING, timestamp: base + 200,
-    counterparty: FROM, assetContract: '0x2222222222222222222222222222222222222222', tokenId: '0x03',
-    assetReference: { id: '42:0x2222222222222222222222222222222222222222:0x03', name: 'Unknown asset', standard: 'LSP8', imageUrl: null, metadataStatus: 'unavailable' } }
+    counterparty: FIXTURE_IDENTITY_ADDRESSES.MISSING, assetContract: '0x2222222222222222222222222222222222222222', tokenId: '0x03',
+    assetReference: { id: '42:0x2222222222222222222222222222222222222222:0x03', name: 'Unknown asset', standard: 'LSP8', imageUrl: null, metadataStatus: 'unavailable' } },
+  { sourceReference: 'fixture-eoa', type: SIGNAL_TYPES.LYX_RECEIVED, direction: SIGNAL_DIRECTIONS.INCOMING, timestamp: base + 150,
+    counterparty: FIXTURE_IDENTITY_ADDRESSES.EOA, value: '100000000000000000' },
+  { sourceReference: 'fixture-malformed-profile', type: SIGNAL_TYPES.ASSET_RECEIVED, direction: SIGNAL_DIRECTIONS.INCOMING, timestamp: base + 120,
+    counterparty: FIXTURE_IDENTITY_ADDRESSES.MALFORMED, assetContract: ASSET, tokenId: '0x04', assetReference: { id: `42:${ASSET}:0x04`, name: 'DAMAGED INDEX', standard: 'LSP8', metadataStatus: 'partial' } },
+  { sourceReference: 'fixture-identity-failure', type: SIGNAL_TYPES.LYX_RECEIVED, direction: SIGNAL_DIRECTIONS.INCOMING, timestamp: base + 90,
+    counterparty: FIXTURE_IDENTITY_ADDRESSES.FAILURE, value: '200000000000000000' },
+  { sourceReference: 'fixture-hostile-name', type: SIGNAL_TYPES.ASSET_RECEIVED, direction: SIGNAL_DIRECTIONS.INCOMING, timestamp: base + 60,
+    counterparty: FIXTURE_IDENTITY_ADDRESSES.HOSTILE, assetContract: ASSET, tokenId: '0x05', assetReference: { id: `42:${ASSET}:0x05`, name: 'UNTRUSTED TEXT', standard: 'LSP8', metadataStatus: 'ready' } }
 ];
 
 export const fixtureActivityRepository = {

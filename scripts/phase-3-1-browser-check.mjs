@@ -1,0 +1,36 @@
+import WebSocket from 'ws';
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const tabs = await fetch('http://127.0.0.1:9222/json').then((response) => response.json());
+const tab = tabs.find((entry) => entry.type === 'page' && entry.url.startsWith('http://127.0.0.1:5173'));
+if (!tab) throw new Error('OS_UNDERNEATH tab not found');
+const socket = new WebSocket(tab.webSocketDebuggerUrl);
+await new Promise((resolve, reject) => { socket.once('open', resolve); socket.once('error', reject); });
+let id = 0; const pending = new Map();
+socket.on('message', (raw) => { const message = JSON.parse(raw); const waiter = pending.get(message.id); if (!waiter) return; pending.delete(message.id); message.error ? waiter.reject(new Error(message.error.message)) : waiter.resolve(message.result); });
+const send = (method, params = {}) => new Promise((resolve, reject) => { const requestId = ++id; pending.set(requestId, { resolve, reject }); socket.send(JSON.stringify({ id: requestId, method, params })); });
+const evaluate = async (expression) => { try { const response = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }); if (response.exceptionDetails) throw new Error(response.exceptionDetails.text); return response.result.value; } catch (error) { throw new Error(`${error.message}\nExpression: ${expression.slice(0, 180)}`); } };
+const waitFor = async (expression, label, timeout = 20_000) => { const start = Date.now(); while (Date.now() - start < timeout) { if (await evaluate(expression)) return; await delay(150); } throw new Error(`Timed out: ${label}`); };
+
+await send('Runtime.enable');
+await evaluate(`localStorage.clear(); location.reload()`); await delay(1000);
+await waitFor(`[...document.querySelectorAll('button')].some(b=>/enter/i.test(b.textContent))`, 'Enter');
+await evaluate(`[...document.querySelectorAll('button')].find(b=>/enter/i.test(b.textContent)).click()`);
+await waitFor(`document.querySelector('button[aria-label="Open Signals module"]')&&!document.querySelector('button[aria-label="Open Signals module"]').disabled`, 'Signals launcher');
+await evaluate(`document.querySelector('button[aria-label="Open Signals module"]').click()`);
+await waitFor(`!!document.querySelector('.signals-window')`, 'LIVE window');
+const live = await evaluate(`({source:document.querySelector('.signals-window__header b')?.textContent,rendered:!!document.querySelector('.signals-list,.signals-window__empty'),error:document.querySelector('.signals-window__error')?.textContent||null})`);
+if (!live.rendered) throw new Error('LIVE history was blocked');
+
+await evaluate(`[...document.querySelectorAll('.system-hud__commands button')].find(b=>/edit/i.test(b.textContent)).click()`);
+await waitFor(`[...document.querySelectorAll('.signals-window__toolbar button')].some(b=>/fixture mode/i.test(b.textContent))`, 'Fixture control');
+await evaluate(`[...document.querySelectorAll('.signals-window__toolbar button')].find(b=>/fixture mode/i.test(b.textContent)).click()`);
+await waitFor(`document.querySelector('.signals-window__header b')?.textContent==='FIXTURE'`, 'Fixture source');
+await waitFor(`[...document.querySelectorAll('.signal-identity__labels b')].some(n=>n.textContent==='RADAR')`, 'RADAR');
+await evaluate(`Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async v=>window.__copied=v}})`);
+await evaluate(`document.querySelector('.signal-identity[title="0x1234567890abcdef1234567890abcdef123489ef"] .signal-identity__copy').click()`);
+const fixture = await evaluate(`({rows:document.querySelectorAll('.signals-list li').length,radar:[...document.querySelectorAll('.signal-identity__labels b')].some(n=>n.textContent==='RADAR'),nameOnly:[...document.querySelectorAll('.signal-identity__labels b')].some(n=>n.textContent==='NOCTURNE'),avatar:!!document.querySelector('img[src$="profile-identity-radar.svg"]'),fallback:[...document.querySelectorAll('.signal-identity')].some(n=>n.title==='0x4444444444444444444444444444444444444444'&&/0x4444/.test(n.textContent)),link:document.querySelector('.signal-identity[title="0x1234567890abcdef1234567890abcdef123489ef"] a')?.href,copied:window.__copied,hostileText:document.body.textContent.includes('<script>alert(1)</script>'),hostileElement:!!document.querySelector('.signal-identity script')})`);
+if (fixture.rows < 8 || !fixture.radar || !fixture.nameOnly || !fixture.avatar || !fixture.fallback || !fixture.link?.startsWith('https://universaleverything.io/') || !fixture.copied || !fixture.hostileText || fixture.hostileElement) throw new Error(JSON.stringify(fixture));
+await waitFor(`!!document.querySelector('.keeper-speech')`, 'Keeper speech', 10_000);
+const speech = await evaluate(`document.querySelector('.keeper-speech').textContent`);
+if (!speech.includes('RADAR')) throw new Error(`Speech fallback used unexpectedly: ${speech}`);
+console.log(JSON.stringify({ live, fixture, speech: speech.trim() }, null, 2)); socket.close();

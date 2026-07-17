@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import { buildKeeperMessage } from '../domain/signalMessages.js';
 
 export default function KeeperSpeechBubble({ signal, onDismiss }) {
-  const message = buildKeeperMessage(signal);
+  const message = buildKeeperMessage(signal, signal?.displayIdentity);
   return (
     <aside className="keeper-speech" role="status" aria-atomic="true">
       <span className="keeper-speech__label">{message.label}</span>

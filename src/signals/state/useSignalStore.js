@@ -5,8 +5,10 @@ import { luksoActivityRepository } from '../data/luksoActivityRepository.js';
 import { completeReaction, enqueueManualReplay, getCompletionCooldown } from '../domain/reactionDirector.js';
 import { addReactionsToQueue, mergeSignalSnapshot } from './signalState.js';
 import { loadSignalDocument, saveSignalDocument } from '../storage/signalStorage.js';
+import { getProfileIdentityCache, primeProfileIdentities } from '../../profileIdentity/state/profileIdentityService.js';
 
 const profileAddress = resolveLibraryProfile();
+export const REACTION_IDENTITY_WAIT_MS = 450;
 let signalStorage = typeof window === 'undefined' ? null : window.localStorage;
 let saveTimer = null;
 function persist(document) {
@@ -31,6 +33,7 @@ export const useSignalStore = create((set, get) => {
         const result = await repository.loadRecentActivity(get().profileAddress);
         if (get().syncGeneration !== generation) return;
         const merged = mergeSignalSnapshot(get().document, result.signals, { explicitReplay });
+        primeProfileIdentities(result.signals, repository.source);
         const notifications = merged.document.settings.notifications;
         const queue = notifications ? addReactionsToQueue(get().queue, merged.reactions) : get().queue;
         set({ document: merged.document, history: merged.document.history, settings: merged.document.settings,
@@ -53,11 +56,22 @@ export const useSignalStore = create((set, get) => {
     },
     replay(signal) {
       if (!signal || !get().settings.notifications) return;
+      getProfileIdentityCache(signal.sourceMode).resolve(signal.counterparty).catch(() => {});
       set({ queue: enqueueManualReplay(get().queue, signal), cooldownUntil: 0 });
     },
     beginNextReaction() {
       if (get().currentReaction || !get().queue.length) return null;
-      const [currentReaction, ...queue] = get().queue; set({ currentReaction, queue }); return currentReaction;
+      const [signal, ...queue] = get().queue;
+      const identityCache = getProfileIdentityCache(signal.sourceMode);
+      const displayIdentity = identityCache.peek(signal.counterparty);
+      const now = Date.now();
+      if (!displayIdentity && signal.counterparty && !signal.identityWaitUntil) {
+        set({ queue: [{ ...signal, identityWaitUntil: now + REACTION_IDENTITY_WAIT_MS }, ...queue] });
+        return null;
+      }
+      if (!displayIdentity && signal.identityWaitUntil > now) return null;
+      const currentReaction = displayIdentity ? { ...signal, displayIdentity } : signal;
+      set({ currentReaction, queue }); return currentReaction;
     },
     finishReaction(now = Date.now()) { set(completeReaction(now, getCompletionCooldown(get().queue))); },
     clearReaction() { set({ currentReaction: null }); }
