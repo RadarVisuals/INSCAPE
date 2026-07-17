@@ -2,7 +2,7 @@ const LOCAL_PROFILE_FIXTURE = Object.freeze({
   name: 'Morrow, Beneath the Static',
   address: 'morrow.underneath',
   description: 'A resident signal moving through illustrated caverns, collecting fragments, sightings, and unfinished transmissions.',
-  tags: ['resident', 'specimen 017', 'ink-born', 'signal-sensitive'],
+  tags: ['cavern dweller', 'ink-born', 'signal-sensitive'],
   social: { followers: 1284, following: 73 },
   wallet: { connected: false }
 });
@@ -35,7 +35,7 @@ export function normalizePublicProfile(source) {
     followAction: Object.freeze({
       label: 'Follow unavailable',
       disabled: true,
-      explanation: 'Local preview only. No relationship or transaction has been loaded.'
+      explanation: 'Local preview only. Following is unavailable.'
     })
   });
 }

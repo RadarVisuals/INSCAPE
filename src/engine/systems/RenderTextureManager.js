@@ -27,6 +27,13 @@ export class RenderTextureManager {
 
     this.bgPatternSprite = null;
     this.patternSprite = null;
+    this.actorPatternDirty = true;
+    this.backgroundPatternDirty = true;
+    this.lastActorPatternSignature = '';
+    this.lastBackgroundPatternSignature = '';
+    this.actorPatternRendererSignatures = new WeakMap();
+    this.backgroundPatternRendererSignatures = new WeakMap();
+    this.renderPassCounts = { actorPattern: 0, backgroundPattern: 0 };
 
     this.bgPat1Layer = null;
     this.bgPat2Layer = null;
@@ -130,6 +137,8 @@ export class RenderTextureManager {
     this.hasBgPat2 = options.hasBgPat2 ?? false;
     this.destroyBackgroundPatterns();
     this.buildBackgroundPatterns();
+    this.backgroundPatternDirty = true;
+    this.backgroundPatternRendererSignatures = new WeakMap();
   }
 
   /**
@@ -139,6 +148,8 @@ export class RenderTextureManager {
    */
   updateActorPatterns(discoveredPatterns) {
     this.discoveredPatterns = discoveredPatterns || [];
+    this.actorPatternDirty = true;
+    this.actorPatternRendererSignatures = new WeakMap();
 
     this.destroyOrganicWarpFilters();
     this.activePatternWarpMode = 'classic';
@@ -216,11 +227,13 @@ export class RenderTextureManager {
     this.organicWarpFilters = [];
   }
 
-  update(deltaTime, actorWarp, backgroundConfig, renderer, pointer = null, reactionModifiers = {}) {
+  update(deltaTime, actorWarp, backgroundConfig, renderer, pointer = null, reactionModifiers = {}, passes = {}) {
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
+    const updateActorPattern = passes.actor !== false;
+    const updateBackgroundPattern = passes.background !== false;
 
-    if (this.localPatternContainer && this.localPatternContainer.children.length > 0) {
+    if (updateActorPattern && this.localPatternContainer && this.localPatternContainer.children.length > 0) {
       const requestedWarpMode = actorWarp.mode === 'organic' ? 'organic' : 'classic';
       this.setPatternWarpMode(requestedWarpMode);
 
@@ -236,6 +249,21 @@ export class RenderTextureManager {
       }
 
       const currentWarpIntensity = reactionModifiers.warp?.intensity ?? actorWarp.intensity;
+      const actorSignature = [
+        requestedWarpMode,
+        actorWarp.patternBottomScale,
+        actorWarp.patternTopScale,
+        currentWarpIntensity,
+        actorWarp.speed,
+        actorWarp.organicRange,
+        actorWarp.layerDivergence,
+        actorWarp.cursorInfluence,
+        actorWarp.cursorRadius
+      ].join('|');
+      if (actorSignature !== this.lastActorPatternSignature) {
+        this.actorPatternDirty = true;
+        this.lastActorPatternSignature = actorSignature;
+      }
 
       if (this.warpFilter && this.warpFilter.resources.warpUniforms) {
         this.warpFilter.resources.warpUniforms.uniforms.uTime = this.time * actorWarp.speed;
@@ -261,15 +289,35 @@ export class RenderTextureManager {
         }
       }
 
-      renderer.render({
-        container: this.localPatternContainer,
-        target: this.patternRenderTexture
-      });
+      const pointerAnimated = requestedWarpMode === 'organic' &&
+        currentWarpIntensity !== 0 && actorWarp.cursorInfluence !== 0 && (pointer?.active ?? 0) > 0;
+      const timeAnimated = currentWarpIntensity !== 0 && actorWarp.speed !== 0;
+      const rendererNeedsPattern = this.actorPatternRendererSignatures.get(renderer) !== actorSignature;
+      if (this.actorPatternDirty || rendererNeedsPattern || pointerAnimated || timeAnimated) {
+        renderer.render({
+          container: this.localPatternContainer,
+          target: this.patternRenderTexture
+        });
+        this.renderPassCounts.actorPattern += 1;
+        this.actorPatternRendererSignatures.set(renderer, actorSignature);
+        this.actorPatternDirty = false;
+      }
     }
 
-    if (this.localBgPatternContainer && this.localBgPatternContainer.children.length > 0) {
+    if (updateBackgroundPattern && this.localBgPatternContainer && this.localBgPatternContainer.children.length > 0) {
       const baseSpeed = backgroundConfig.scrollSpeed;
       const patternWarp = backgroundConfig.patternWarp;
+      const backgroundSignature = [
+        baseSpeed,
+        patternWarp.bottomScale,
+        patternWarp.topScale,
+        patternWarp.intensity,
+        patternWarp.speed
+      ].join('|');
+      if (backgroundSignature !== this.lastBackgroundPatternSignature) {
+        this.backgroundPatternDirty = true;
+        this.lastBackgroundPatternSignature = backgroundSignature;
+      }
 
       if (this.bgPat2Layer) {
         this.bgPat2Layer.setPatternScale(patternWarp.bottomScale);
@@ -285,10 +333,18 @@ export class RenderTextureManager {
         this.bgWarpFilter.resources.warpUniforms.uniforms.uWarpIntensity = patternWarp.intensity;
       }
 
-      renderer.render({
-        container: this.localBgPatternContainer,
-        target: this.bgPatternRenderTexture
-      });
+      const backgroundAnimated = baseSpeed !== 0 ||
+        (patternWarp.intensity !== 0 && patternWarp.speed !== 0);
+      const rendererNeedsBackground = this.backgroundPatternRendererSignatures.get(renderer) !== backgroundSignature;
+      if (this.backgroundPatternDirty || rendererNeedsBackground || backgroundAnimated) {
+        renderer.render({
+          container: this.localBgPatternContainer,
+          target: this.bgPatternRenderTexture
+        });
+        this.renderPassCounts.backgroundPattern += 1;
+        this.backgroundPatternRendererSignatures.set(renderer, backgroundSignature);
+        this.backgroundPatternDirty = false;
+      }
     }
   }
 

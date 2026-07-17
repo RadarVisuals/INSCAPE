@@ -7,6 +7,13 @@ import { VeinPulseSystem } from '../systems/VeinPulseSystem.js';
 import { CaptiveWeatherSystem } from '../systems/CaptiveWeatherSystem.js';
 import { createActorMutationMesh } from './ActorMutationMeshFactory.js';
 import { createTrailRenderTransformSnapshot } from '../systems/trailRuntime.js';
+import {
+  clearActorMovementBounds,
+  isActorWithinMovementBounds,
+  moveActorTo,
+  setActorMovementBounds,
+  updateActorTargetMovement
+} from './actorMovement.js';
 
 const MUTATION_MODE_VALUES = {
   none: 0,
@@ -32,6 +39,10 @@ export class ActorEntity {
     this.baselinePosition = { x: 0, y: 0 };
     this.targetPosition = { x: 0, y: 0 };
     this.isMovingToTarget = false;
+    this.movementBounds = null;
+    this.preBoundPosition = null;
+    this.isEnteringMovementBounds = false;
+    this.areMovementBoundsActive = false;
     this.facingDirection = 1.0;
     this.currentFlipScale = 1.0;
     this.flightDynamics = new FlightDynamics();
@@ -166,9 +177,23 @@ export class ActorEntity {
   }
 
   moveTo(localX, localY) {
-    this.targetPosition.x = localX;
-    this.targetPosition.y = localY;
-    this.isMovingToTarget = true;
+    moveActorTo(this, localX, localY);
+  }
+
+  setMovementBounds(bounds, options = {}) {
+    setActorMovementBounds(this, bounds, options);
+  }
+
+  clearMovementBounds(options = {}) {
+    clearActorMovementBounds(this, options);
+  }
+
+  isWithinMovementBounds(position) {
+    return isActorWithinMovementBounds(this, position);
+  }
+
+  updateTargetMovement(deltaTime) {
+    updateActorTargetMovement(this, deltaTime);
   }
 
   updateWarpPointer(dtSeconds, config, runtimePointer) {
@@ -245,19 +270,7 @@ export class ActorEntity {
   update(deltaTime, actorConfig, phenomena, runtime, dynamics) {
     const dtSeconds = deltaTime / 60;
 
-    if (this.isMovingToTarget) {
-      const dx = this.targetPosition.x - this.baselinePosition.x;
-      const dy = this.targetPosition.y - this.baselinePosition.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist < 15) {
-        this.isMovingToTarget = false;
-      } else {
-        this.baselinePosition.x += dx * 0.0071 * deltaTime;
-        this.baselinePosition.y += dy * 0.0071 * deltaTime;
-        this.facingDirection = dx > 0 ? 1.0 : -1.0;
-      }
-    }
+    this.updateTargetMovement(deltaTime);
 
     this.currentFlipScale += (this.facingDirection - this.currentFlipScale) * 0.2 * deltaTime;
 
@@ -270,6 +283,13 @@ export class ActorEntity {
       this.currentFlipScale,
       dynamics.canvasHeight
     );
+
+    if (this.movementBounds && this.areMovementBoundsActive) {
+      headState.x = Math.max(this.movementBounds.left, Math.min(this.movementBounds.right, headState.x));
+      headState.y = Math.max(this.movementBounds.top, Math.min(this.movementBounds.bottom, headState.y));
+      this.baselinePosition.x = Math.max(this.movementBounds.left, Math.min(this.movementBounds.right, this.baselinePosition.x));
+      this.baselinePosition.y = Math.max(this.movementBounds.top, Math.min(this.movementBounds.bottom, this.baselinePosition.y));
+    }
 
     this.headState = headState;
 

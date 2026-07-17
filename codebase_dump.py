@@ -4,12 +4,14 @@ from pathlib import Path
 # === CONFIGURATION ===
 # Directories to completely bypass to avoid unreadable files and bloat
 EXCLUDE_DIRS = {
-    "node_modules", 
-    ".git", 
-    "dist", 
-    "build", 
-    "assets",      # Skipping the binary webp image directory
-    "__pycache__"
+    "node_modules",
+    ".git",
+    ".edge-codex",
+    ".agents",
+    "dist",
+    "build",
+    "assets",
+    "__pycache__",
 }
 
 # Only gather standard textual files to prevent corruption or binary read errors
@@ -51,23 +53,24 @@ def format_file_content(file_path: Path, project_root: Path) -> str:
 
     return f"\n---\n### `{relative_path}`\n```{language}\n{content}\n```\n"
 
-def collect_valid_files(root_dir: Path) -> list:
+def collect_valid_files(root_dir: Path) -> list[Path]:
     """
     Recursively scans the directory and gathers paths of all text files matching criteria.
     """
     valid_files = []
-    for path in root_dir.rglob("*"):
-        # Check if any parent directory of this path is in the exclude list
-        if any(part in EXCLUDE_DIRS for part in path.parts):
-            continue
-            
-        if (
-            path.is_file() and
-            path.suffix in ALLOWED_SUFFIXES and
-            path.name not in EXCLUDE_FILES and
-            path.name != OUTPUT_FILE_NAME
-        ):
-            valid_files.append(path)
+    for current_dir, dir_names, file_names in os.walk(root_dir):
+        # Prune excluded directories so the scanner never enters them.
+        dir_names[:] = [name for name in dir_names if name not in EXCLUDE_DIRS]
+
+        current_path = Path(current_dir)
+        for file_name in file_names:
+            path = current_path / file_name
+            if (
+                path.suffix.lower() in ALLOWED_SUFFIXES and
+                path.name not in EXCLUDE_FILES and
+                path.name != OUTPUT_FILE_NAME
+            ):
+                valid_files.append(path)
             
     return sorted(valid_files)
 
@@ -83,15 +86,15 @@ def main():
     print(f"Writing structured contents to {OUTPUT_FILE_NAME}...")
     try:
         with open(output_path, "w", encoding="utf-8") as f:
-            f.write("# 📦 Gothic Art Animator Codebase Dump\n")
+            f.write("# Gothic Art Animator Codebase Dump\n")
             f.write("This file compiled your active components, stores, styles, layouts, and engine scripts.\n")
             
             for file_path in all_files:
                 f.write(format_file_content(file_path, project_root))
                 
-        print(f"✅ Compilation finished! Open '{OUTPUT_FILE_NAME}' in your editor.")
+        print(f"Compilation finished! Open '{OUTPUT_FILE_NAME}' in your editor.")
     except Exception as error:
-        print(f"❌ Failed to write codebase dump file: {error}")
+        print(f"Failed to write codebase dump file: {error}")
 
 if __name__ == "__main__":
     main()

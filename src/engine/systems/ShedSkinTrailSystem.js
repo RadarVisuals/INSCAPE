@@ -24,6 +24,7 @@ export class ShedSkinTrailSystem {
     this.cursor = 0;
     this.frameAccumulator = 0;
     this.previousPosition = null;
+    this.tintColor = new Float32Array(3);
     this.velocity = { x: 0, y: 0 };
     this.speed = 0;
     this.time = 0;
@@ -59,7 +60,8 @@ export class ShedSkinTrailSystem {
         active: false,
         bornAt: 0,
         baseScale: 1,
-        direction: { x: 1, y: 0 }
+        direction: { x: 1, y: 0 },
+        uniformDirection: new Float32Array(2)
       });
     }
   }
@@ -104,7 +106,12 @@ export class ShedSkinTrailSystem {
     const frameScale = 1 / Math.max(0.25, deltaTime);
     const rawVx = (headState.x - previous.x) * frameScale;
     const rawVy = (headState.y - previous.y) * frameScale;
-    this.previousPosition = { x: headState.x, y: headState.y };
+    if (this.previousPosition) {
+      this.previousPosition.x = headState.x;
+      this.previousPosition.y = headState.y;
+    } else {
+      this.previousPosition = { x: headState.x, y: headState.y };
+    }
     const velocityEase = 1 - Math.exp(-dt * 14);
     this.velocity.x += (rawVx - this.velocity.x) * velocityEase;
     this.velocity.y += (rawVy - this.velocity.y) * velocityEase;
@@ -125,6 +132,15 @@ export class ShedSkinTrailSystem {
       this.capture(headState, count);
     }
 
+    if (!enabled) {
+      for (const snapshot of this.snapshots) {
+        snapshot.active = false;
+        snapshot.sprite.visible = false;
+        snapshot.sprite.alpha = 0;
+      }
+      return;
+    }
+
     const lifetime = config.lifetime;
     const opacity = config.opacity;
     const fadePower = config.fade;
@@ -133,15 +149,18 @@ export class ShedSkinTrailSystem {
     const expansion = config.expansion;
     const dissolve = config.dissolve;
     const tintStrength = config.colorMix;
-    const color = config.color.map((value) => value / 255);
+    this.tintColor[0] = config.color[0] / 255;
+    this.tintColor[1] = config.color[1] / 255;
+    this.tintColor[2] = config.color[2] / 255;
 
-    this.snapshots.forEach((snapshot, index) => {
+    for (let index = 0; index < this.snapshots.length; index += 1) {
+      const snapshot = this.snapshots[index];
       const { sprite } = snapshot;
-      if (!snapshot.active || !enabled || index >= count) {
+      if (!snapshot.active || index >= count) {
         snapshot.active = false;
         sprite.visible = false;
         sprite.alpha = 0;
-        return;
+        continue;
       }
 
       const progress = clamp((this.time - snapshot.bornAt) / lifetime, 0, 1);
@@ -149,7 +168,7 @@ export class ShedSkinTrailSystem {
         snapshot.active = false;
         sprite.visible = false;
         sprite.alpha = 0;
-        return;
+        continue;
       }
 
       const filter = sprite.filters?.[0];
@@ -158,8 +177,10 @@ export class ShedSkinTrailSystem {
         uniforms.uProgress = progress;
         uniforms.uTime = this.time;
         uniforms.uDissolve = dissolve;
-        uniforms.uDirection = [snapshot.direction.x, snapshot.direction.y];
-        uniforms.uTint = color;
+        snapshot.uniformDirection[0] = snapshot.direction.x;
+        snapshot.uniformDirection[1] = snapshot.direction.y;
+        uniforms.uDirection = snapshot.uniformDirection;
+        uniforms.uTint = this.tintColor;
         uniforms.uTintStrength = tintStrength;
       }
 
@@ -169,7 +190,7 @@ export class ShedSkinTrailSystem {
       sprite.position.y -= snapshot.direction.y * backslide * dt + drift * dt;
       sprite.scale.set(snapshot.baseScale * grow);
       sprite.alpha = opacity * fade;
-    });
+    }
   }
 
   destroy() {

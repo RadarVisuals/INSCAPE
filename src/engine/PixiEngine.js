@@ -18,6 +18,7 @@ import { ShedSkinTrailSystem } from './systems/ShedSkinTrailSystem.js';
 import { DEFAULT_RENDER_CONFIG } from '../config/renderConfig.defaults.js';
 import { resolveReactionFrame } from '../config/reactionProfiles.js';
 import { getAssetReloadScope } from './stageAssetConfig.js';
+import { getRenderResolution } from './renderResolution.js';
 
 export class PixiEngine {
   /**
@@ -28,6 +29,14 @@ export class PixiEngine {
    */
   constructor(containerElement, storeInterface = {}) {
     this.container = containerElement;
+    this.performanceStats = {
+      samples: new Float32Array(120),
+      sampleIndex: 0,
+      sampleCount: 0,
+      averageFrameMs: 0,
+      slowFrames16: 0,
+      slowFrames33: 0
+    };
     
     // Assign fallback handlers to maintain stability when running without a store
     this.getState = storeInterface.getState || (() => ({}));
@@ -38,6 +47,8 @@ export class PixiEngine {
     this.time = 0;
     this.isReady = false;
     this.isDestroyed = false;
+    this.residentHabitat = null;
+    this.residentReturnPosition = null;
 
     // Load sequence counter to prevent overlapping asynchronous loading glitches
     this.loadSequence = 0;
@@ -137,6 +148,49 @@ export class PixiEngine {
     this.actor.moveTo(localTarget.x, localTarget.y);
   }
 
+  setResidentHabitat(bounds, options = {}) {
+    if (bounds) {
+      const isOpening = !this.residentHabitat;
+      if (isOpening && this.actor) {
+        this.residentReturnPosition = { ...this.actor.baselinePosition };
+      }
+      this.residentHabitat = { bounds: { ...bounds }, options: { ...(options || {}) } };
+      this.syncResidentHabitat();
+      return;
+    }
+
+    this.residentHabitat = null;
+    this.syncResidentHabitat();
+    this.residentReturnPosition = null;
+  }
+
+  syncResidentHabitat() {
+    if (!this.masterContainer || !this.actor) return;
+    if (!this.residentHabitat) {
+      this.actor.clearMovementBounds(this.lastHabitatOptions ?? {});
+      this.lastHabitatOptions = null;
+      return;
+    }
+
+    const { bounds, options } = this.residentHabitat;
+    const topLeft = this.masterContainer.toLocal({
+      x: bounds.left,
+      y: bounds.top
+    });
+    const bottomRight = this.masterContainer.toLocal({
+      x: bounds.right,
+      y: bounds.bottom
+    });
+
+    this.lastHabitatOptions = options;
+    this.actor.setMovementBounds({
+      left: Math.min(topLeft.x, bottomRight.x),
+      right: Math.max(topLeft.x, bottomRight.x),
+      top: Math.min(topLeft.y, bottomRight.y),
+      bottom: Math.max(topLeft.y, bottomRight.y)
+    }, { ...options, returnPosition: this.residentReturnPosition });
+  }
+
   async init() {
     try {
       await this.app.init({
@@ -144,7 +198,7 @@ export class PixiEngine {
         height: window.innerHeight,
         backgroundAlpha: 1,
         backgroundColor: 0x050505,
-        resolution: window.devicePixelRatio || 1,
+        resolution: getRenderResolution(),
         autoDensity: true,
         preference: 'webgl', 
       });
@@ -164,7 +218,7 @@ export class PixiEngine {
       }
       
       this.buildSceneGraph();
-      this.app.ticker.add((ticker) => this.update(ticker.deltaTime));
+      this.app.ticker.add((ticker) => this.update(ticker.deltaTime, ticker.elapsedMS));
       this.resize();
       
       this.isReady = true;
@@ -282,6 +336,7 @@ export class PixiEngine {
     };
     this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager, this.app.renderer);
     this.masterContainer.addChild(this.actor.container);
+    this.syncResidentHabitat();
     this.shedSkinTrailSystem = new ShedSkinTrailSystem(this.masterContainer, this.app.renderer, this.actor, rig.keys.char_clipping_mask);
 
     // Add stage foreground overlay container on top of the character
@@ -446,6 +501,7 @@ export class PixiEngine {
       };
       this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager, this.app.renderer);
       this.masterContainer.addChild(this.actor.container);
+      this.syncResidentHabitat();
       this.shedSkinTrailSystem = new ShedSkinTrailSystem(this.masterContainer, this.app.renderer, this.actor, nextRig.keys.char_clipping_mask);
     }
 
@@ -506,8 +562,9 @@ export class PixiEngine {
     }
   }
 
-  update(deltaTime) {
+  update(deltaTime, elapsedMS = deltaTime * (1000 / 60)) {
     if (!this.isReady) return;
+    if (import.meta.env.DEV) this.recordFramePerformance(elapsedMS);
     const dtSeconds = deltaTime / 60;
     this.time += dtSeconds;
     const liveStore = this.getState();
@@ -682,6 +739,7 @@ export class PixiEngine {
     if (this.stage && typeof this.stage.resize === 'function') {
       this.stage.resize(localW, localH);
     }
+    this.syncResidentHabitat();
   }
 
   destroy() {
@@ -738,5 +796,18 @@ export class PixiEngine {
         console.warn("[PixiEngine] Strict cleanup warn:", e);
       }
     }
+  }
+
+  recordFramePerformance(elapsedMS) {
+    const stats = this.performanceStats;
+    const frameMs = Number.isFinite(elapsedMS) ? elapsedMS : 0;
+    stats.samples[stats.sampleIndex] = frameMs;
+    stats.sampleIndex = (stats.sampleIndex + 1) % stats.samples.length;
+    stats.sampleCount = Math.min(stats.sampleCount + 1, stats.samples.length);
+    if (frameMs > 16.7) stats.slowFrames16 += 1;
+    if (frameMs > 33.3) stats.slowFrames33 += 1;
+    let total = 0;
+    for (let index = 0; index < stats.sampleCount; index += 1) total += stats.samples[index];
+    stats.averageFrameMs = stats.sampleCount > 0 ? total / stats.sampleCount : 0;
   }
 }

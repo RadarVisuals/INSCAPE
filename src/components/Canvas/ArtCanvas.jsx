@@ -1,13 +1,19 @@
 // src/components/Canvas/ArtCanvas.jsx
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { PixiEngine } from '../../engine/PixiEngine';
 import { useStore } from '../../store/useStore';
 
-export default function ArtCanvas() {
+const ArtCanvas = forwardRef(function ArtCanvas(_props, ref) {
   const containerRef = useRef(null);
   const engineRef = useRef(null);
   
   const screenEffects = useStore((state) => state.renderConfig.effects.screen);
+
+  useImperativeHandle(ref, () => ({
+    setResidentHabitat(bounds, options = {}) {
+      engineRef.current?.setResidentHabitat(bounds, options);
+    }
+  }), []);
 
   useEffect(() => {
     if (engineRef.current || !containerRef.current) return;
@@ -18,6 +24,8 @@ export default function ArtCanvas() {
       subscribe: useStore.subscribe
     });
 
+    if (import.meta.env.DEV) window.__UNDERNEATH_ENGINE__ = engineRef.current;
+
     engineRef.current.init().catch(err => console.error("Failed to boot PixiEngine:", err));
 
     const handleResize = () => { if (engineRef.current) engineRef.current.resize(); };
@@ -26,6 +34,9 @@ export default function ArtCanvas() {
     return () => {
       window.removeEventListener('resize', handleResize);
       if (engineRef.current) {
+        if (import.meta.env.DEV && window.__UNDERNEATH_ENGINE__ === engineRef.current) {
+          delete window.__UNDERNEATH_ENGINE__;
+        }
         engineRef.current.destroy();
         engineRef.current = null;
       }
@@ -76,4 +87,6 @@ export default function ArtCanvas() {
       />
     </div>
   );
-}
+});
+
+export default ArtCanvas;

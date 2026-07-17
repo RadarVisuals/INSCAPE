@@ -1,6 +1,6 @@
 // src/engine/filters/WarpFilterFactory.js
 import { Filter, defaultFilterVert, UniformGroup } from 'pixi.js';
-import { WARP_FRAGMENT_SHADER } from '../shaders/WarpShader';
+import { WARP_FRAGMENT_SHADER } from '../shaders/WarpShader.js';
 
 /**
  * Creates an instance of the custom WebGL warp filter.

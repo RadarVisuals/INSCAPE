@@ -1,5 +1,5 @@
 // src/components/UI/ControlPanel.jsx
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { 
   Eye, 
@@ -15,7 +15,6 @@ import {
 
 // Sub-Tab Component Imports
 import SetupTab from './tabs/SetupTab';
-import Web3Tab from './tabs/Web3Tab';
 import SkullTab from './tabs/SkullTab';
 import BgTab from './tabs/BgTab';
 import EyesTab from './tabs/EyesTab';
@@ -25,6 +24,12 @@ import GlitchTab from './tabs/GlitchTab';
 import ActorPresetsTab from './tabs/ActorPresetsTab';
 import PhenomenaTab from './tabs/PhenomenaTab';
 
+const Web3Tab = lazy(() => import('./tabs/Web3Tab'));
+
+function TabLoadingFallback() {
+  return <p role="status" style={{ fontFamily: 'var(--font-mono)', fontSize: '9px' }}>Loading panel…</p>;
+}
+
 export default function ControlPanel() {
   const isUiVisible = useStore((state) => state.isUiVisible);
   const toggleUi = useStore((state) => state.toggleUi);
@@ -33,7 +38,7 @@ export default function ControlPanel() {
 
   const tabs = [
     { id: 'setup', label: 'Setup', icon: <Sliders size={12} />, component: <SetupTab /> },
-    { id: 'web3', label: 'Web3', icon: <ShieldCheck size={12} />, component: <Web3Tab /> },
+    { id: 'web3', label: 'Web3', icon: <ShieldCheck size={12} />, component: <Suspense fallback={<TabLoadingFallback />}><Web3Tab /></Suspense> },
     { id: 'skull', label: 'Skull', icon: <Skull size={12} />, component: <SkullTab /> },
     { id: 'presets', label: 'Presets', icon: <Sliders size={12} />, component: <ActorPresetsTab /> },
     { id: 'phenomena', label: 'Phenomena', icon: <Sparkles size={12} />, component: <PhenomenaTab /> },

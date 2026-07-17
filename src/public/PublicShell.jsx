@@ -6,7 +6,7 @@ import { initialWindowState, publicWindowReducer } from './windows/windowState.j
 import './publicShell.css';
 
 const APPLICATIONS = Object.freeze([
-  { id: 'identity', label: 'Identity', code: 'ID.01', Icon: Fingerprint },
+  { id: 'identity', label: 'Identity', code: 'Resident', Icon: Fingerprint },
   { id: 'collection', label: 'Collection', code: 'AR.02', Icon: Archive },
   { id: 'creations', label: 'Creations', code: 'MK.03', Icon: Sparkles },
   { id: 'signals', label: 'Signals', code: 'RX.04', Icon: Radio }
@@ -22,7 +22,7 @@ function PlaceholderWindow({ name }) {
   );
 }
 
-export default function PublicShell({ onRequestAtelier }) {
+export default function PublicShell({ onRequestAtelier, onResidentHabitatChange }) {
   const [windowState, dispatch] = useReducer(publicWindowReducer, initialWindowState);
   const launcherRefs = useRef(new Map());
   const windowRefs = useRef(new Map());
@@ -58,6 +58,7 @@ export default function PublicShell({ onRequestAtelier }) {
     <main
       className="public-shell"
       data-application-mode="public"
+      data-identity-open={windowState.openIds.includes('identity') || undefined}
       style={DEFAULT_PUBLIC_THEME}
       aria-label="UNDERNEATH.OS public world"
     >
@@ -78,6 +79,7 @@ export default function PublicShell({ onRequestAtelier }) {
           return (
             <button
               className="application-launcher"
+              data-application-id={id}
               data-launcher-index={index}
               data-active={isActive || undefined}
               key={id}
@@ -110,7 +112,7 @@ export default function PublicShell({ onRequestAtelier }) {
           const isActive = id === windowState.activeId;
           return (
             <section
-              className="public-window"
+              className={`public-window${id === 'identity' ? ' public-window--identity' : ''}`}
               data-active={isActive || undefined}
               id={`public-window-${id}`}
               key={id}
@@ -128,23 +130,31 @@ export default function PublicShell({ onRequestAtelier }) {
                 if (!isActive) dispatch({ type: 'focus', id });
               }}
             >
-              <header className="public-window__titlebar">
-                <div>
-                  <span>{application.code}</span>
-                  <h2 id={`public-window-title-${id}`}>{application.label}</h2>
-                </div>
-                <p>{isActive ? 'Receiving focus' : 'Inactive layer'}</p>
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: 'close', id })}
-                  aria-label={`Close ${application.label}`}
-                >
-                  <X aria-hidden="true" />
-                </button>
-              </header>
+              {id !== 'identity' && (
+                <header className="public-window__titlebar">
+                  <div>
+                    <span>{application.code}</span>
+                    <h2 id={`public-window-title-${id}`}>{application.label}</h2>
+                  </div>
+                  <p>{isActive ? 'Receiving focus' : 'Inactive layer'}</p>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: 'close', id })}
+                    aria-label={`Close ${application.label}`}
+                  >
+                    <X aria-hidden="true" />
+                  </button>
+                </header>
+              )}
               <div className="public-window__content">
                 {id === 'identity'
-                  ? <IdentityWindow />
+                  ? (
+                    <IdentityWindow
+                      titleId={`public-window-title-${id}`}
+                      onClose={() => dispatch({ type: 'close', id })}
+                      onHabitatChange={onResidentHabitatChange}
+                    />
+                  )
                   : <PlaceholderWindow name={application.label} />}
               </div>
             </section>

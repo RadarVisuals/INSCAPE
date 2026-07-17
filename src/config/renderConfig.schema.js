@@ -86,7 +86,8 @@ export const RENDER_PARAMETER_DEFINITIONS = Object.freeze({
   bgPatternStyle: enumeration(['scene', 'background', 'patternStyle'], 'Pattern Style', [
     { value: 'bubble', label: 'Bubble Style' },
     { value: 'stone', label: 'Stone Style' },
-    { value: 'digitalblob', label: 'Digital Blob' }
+    { value: 'digitalblob', label: 'Digital Blob' },
+    { value: 'zebra', label: 'Zebra' }
   ]),
   bgMountainId: enumeration(['scene', 'background', 'mountainFrontId'], 'Front Mountain', [
     { value: 1, label: 'Mountain 01' },

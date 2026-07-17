@@ -150,7 +150,7 @@ test('invalid actor and scene dropdown values fall back without changing option 
     'beige', 'black', 'darkblue', 'darkgrey', 'hotpink', 'lightblue',
     'lightgrey', 'orange', 'pastelpurple', 'purple', 'moonpurple'
   ]);
-  assert.deepEqual(RENDER_PARAMETER_DEFINITIONS.bgPatternStyle.values, ['bubble', 'stone', 'digitalblob']);
+  assert.deepEqual(RENDER_PARAMETER_DEFINITIONS.bgPatternStyle.values, ['bubble', 'stone', 'digitalblob', 'zebra']);
   assert.deepEqual(RENDER_PARAMETER_DEFINITIONS.bgMountainId.values, [1, 2, 3]);
   assert.deepEqual(RENDER_PARAMETER_DEFINITIONS.bgMountainId.options, RENDER_PARAMETER_DEFINITIONS.bgMountainBackId.options);
 });
