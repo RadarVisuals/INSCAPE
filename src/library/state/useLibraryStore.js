@@ -2,16 +2,27 @@ import { create } from 'zustand';
 import { resolveLibraryProfile } from '../config.js';
 import { fixtureProfileRepository } from '../data/fixtureProfileRepository.js';
 import { luksoProfileRepository } from '../data/luksoProfileRepository.js';
-import { createFolder, deleteFolder, renameFolder, setFolderAsset, toggleFavorite } from '../domain/libraryWorkspace.js';
+import {
+  createFolder,
+  deleteFolder,
+  pinLibraryView,
+  renameFolder,
+  resetCanvasLayout,
+  setFolderAsset,
+  setLauncherPosition,
+  setLauncherWindowPosition,
+  toggleFavorite,
+  unpinLibraryView
+} from '../domain/libraryWorkspace.js';
 import { loadLibraryWorkspace, saveLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
 
 const profileAddress = resolveLibraryProfile();
-const storage = typeof window === 'undefined' ? null : window.localStorage;
+let workspaceStorage = typeof window === 'undefined' ? null : window.localStorage;
 let saveTimer = null;
 
 function scheduleSave(workspace) {
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => saveLibraryWorkspace(storage, workspace), 180);
+  saveTimer = setTimeout(() => saveLibraryWorkspace(workspaceStorage, workspace), 180);
 }
 
 function uniqueAssets(existing, incoming) {
@@ -31,7 +42,7 @@ export const useLibraryStore = create((set, get) => ({
   searchQuery: '',
   activeView: { type: 'all', id: null },
   selectedAssetId: null,
-  workspace: loadLibraryWorkspace(storage, profileAddress),
+  workspace: loadLibraryWorkspace(workspaceStorage, profileAddress),
   loadGeneration: 0,
 
   async load({ forceLive = false } = {}) {
@@ -87,11 +98,35 @@ export const useLibraryStore = create((set, get) => ({
   },
   toggleFavorite(assetId) {
     const workspace = toggleFavorite(get().workspace, assetId); set({ workspace }); scheduleSave(workspace);
+  },
+  pinView(view) {
+    const workspace = pinLibraryView(get().workspace, view); set({ workspace }); scheduleSave(workspace);
+  },
+  unpinView(view) {
+    const workspace = unpinLibraryView(get().workspace, view); set({ workspace }); scheduleSave(workspace);
+  },
+  setLauncherPosition(launcherId, position) {
+    const workspace = setLauncherPosition(get().workspace, launcherId, position); set({ workspace }); scheduleSave(workspace);
+  },
+  setLauncherWindowPosition(launcherId, position) {
+    const workspace = setLauncherWindowPosition(get().workspace, launcherId, position); set({ workspace }); scheduleSave(workspace);
+  },
+  resetCanvasLayout() {
+    const workspace = resetCanvasLayout(get().workspace); set({ workspace }); scheduleSave(workspace);
   }
 }));
 
 export function resetLibraryStoreForTests(nextProfileAddress, nextStorage) {
+  workspaceStorage = nextStorage;
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = null;
   const workspace = loadLibraryWorkspace(nextStorage, nextProfileAddress);
   useLibraryStore.setState({ profileAddress: nextProfileAddress, workspace, assets: [], status: 'idle', sourceMode: null,
     progress: { resolved: 0, total: 0, failures: 0 }, searchQuery: '', activeView: { type: 'all', id: null }, selectedAssetId: null });
+}
+
+export function flushLibraryWorkspaceForTests() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = null;
+  return saveLibraryWorkspace(workspaceStorage, useLibraryStore.getState().workspace);
 }

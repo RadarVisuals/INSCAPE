@@ -515,11 +515,25 @@
   font-variant-caps: normal;
   text-align: left;
   text-transform: uppercase;
-  cursor: grab;
+  cursor: pointer;
   box-shadow: none;
   touch-action: none;
   user-select: none;
   transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.public-shell[data-edit-mode] .module-button {
+  cursor: grab;
+}
+
+.public-shell[data-edit-mode] .module-button::after {
+  content: '';
+  position: absolute;
+  right: 7px;
+  top: 7px;
+  width: 4px;
+  height: 4px;
+  border: 1px solid rgba(238, 235, 223, 0.45);
 }
 
 .module-button[data-entry-state="pending"] {
@@ -568,6 +582,25 @@
   font-size: clamp(0.72rem, 0.95vw, 0.86rem);
   font-weight: 540;
   letter-spacing: 0.035em;
+}
+
+.module-button--folder {
+  min-width: 0;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.module-button--folder .module-button__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.module-button--folder small {
+  flex: 0 0 auto;
+  color: var(--hu-text-muted);
+  font: 600 0.5rem/1 'Oxanium', var(--font-interface);
 }
 
 .module-button[data-entry-state="ready"] span {

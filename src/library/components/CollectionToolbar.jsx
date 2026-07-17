@@ -1,13 +1,13 @@
 import { Search, X } from 'lucide-react';
 
-export default function CollectionToolbar({ inputRef, query, onQueryChange, sourceMode, status, progress, liveError, onRetry }) {
+export default function CollectionToolbar({ inputRef, query, onQueryChange, sourceMode, status, progress, liveError, onRetry, searchLabel = 'Search owned images', placeholder = 'Search owned images…' }) {
   const loading = status === 'loading' || status === 'fallback';
   return (
     <div className="collection-toolbar">
       <label className="collection-search">
-        <span className="sr-only">Search owned images</span>
+        <span className="sr-only">{searchLabel}</span>
         <Search aria-hidden="true" />
-        <input ref={inputRef} type="search" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search owned images…" />
+        <input ref={inputRef} type="search" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={placeholder} />
         {query && <button type="button" onClick={() => onQueryChange('')} aria-label="Clear search"><X aria-hidden="true" /></button>}
       </label>
       <div className="collection-status" role="status" aria-live="polite">

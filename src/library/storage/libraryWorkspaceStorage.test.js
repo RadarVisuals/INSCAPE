@@ -23,3 +23,30 @@ test('malformed and wrong-profile storage recovers to an empty workspace', () =>
   const wrong = normalizeWorkspace({ version: 1, profileAddress: '0x1111111111111111111111111111111111111111', favorites: ['x'], folders: [] }, profile);
   assert.deepEqual(wrong.favorites, []);
 });
+
+test('Phase 1 data migrates to v2 without changing favorites, folder names, or multi-folder memberships', () => {
+  const phaseOne = { version: 1, profileAddress: profile, favorites: ['asset-a', 'asset-b'], folders: [
+    { id: 'one', name: 'One / Ones', assetIds: ['asset-a', 'asset-c'], createdAt: 1, updatedAt: 2 },
+    { id: 'friends', name: 'Works by Friends', assetIds: ['asset-a', 'asset-d'], createdAt: 3, updatedAt: 4 }
+  ] };
+  const storage = memoryStorage({ [libraryWorkspaceKey(profile, 1)]: JSON.stringify(phaseOne) });
+  const migrated = loadLibraryWorkspace(storage, profile);
+
+  assert.equal(migrated.version, 2);
+  assert.deepEqual(migrated.favorites, phaseOne.favorites);
+  assert.deepEqual(migrated.folders, phaseOne.folders);
+  assert.deepEqual(migrated.canvas.launchers, []);
+  assert.ok(storage.values.has(libraryWorkspaceKey(profile)));
+});
+
+test('pinned launcher identity and placement persist across a reload', () => {
+  const storage = memoryStorage();
+  const workspace = normalizeWorkspace({ version: 2, profileAddress: profile, favorites: [], folders: [
+    { id: 'archive', name: 'Archive', assetIds: ['asset-a'], createdAt: 1, updatedAt: 2 }
+  ], canvas: { launchers: [{ id: 'ignored-input-id', viewType: 'folder', folderId: 'archive', position: { column: 3, row: 4 }, windowPosition: { column: 1, row: 2 } }] } }, profile);
+
+  saveLibraryWorkspace(storage, workspace);
+  assert.deepEqual(loadLibraryWorkspace(storage, profile).canvas.launchers, [{
+    id: 'library:folder:archive', viewType: 'folder', folderId: 'archive', position: { column: 3, row: 4 }, windowPosition: { column: 1, row: 2 }
+  }]);
+});

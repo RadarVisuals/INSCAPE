@@ -59,6 +59,14 @@ export function getCollectionSpan(geometry) {
   };
 }
 
+export function getCanvasSpaceSpan(geometry) {
+  if (geometry.narrow) return { columns: geometry.columns, rows: geometry.rows };
+  return {
+    columns: Math.min(5, Math.max(3, geometry.columns - 1)),
+    rows: Math.min(12, geometry.rows)
+  };
+}
+
 export function getDefaultModulePositions(geometry) {
   if (geometry.narrow) {
     return {
@@ -95,7 +103,7 @@ export function isModulePlacementAvailable(id, position, span, positions, geomet
   const clamped = clampModulePosition(position, span, geometry);
   if (clamped.column !== position.column || clamped.row !== position.row) return false;
 
-  return MODULE_IDS.every((otherId) => {
+  return Object.keys(positions).every((otherId) => {
     if (otherId === id || !positions[otherId]) return true;
     return !moduleRectsOverlap(position, span, positions[otherId], { columns: 1, rows: 1 });
   });

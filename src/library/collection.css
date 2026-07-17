@@ -6,6 +6,7 @@
 .collection-window__header div { min-width: 0; display: flex; align-items: baseline; gap: 12px; }
 .collection-window__header span, .collection-window__header p { color: var(--hu-text-muted); font-size: .56rem; letter-spacing: .14em; }
 .collection-window__header h2 { margin: 0; color: var(--module-accent); font: 700 .92rem/1 'Oxanium', sans-serif; letter-spacing: .13em; }
+.collection-window__header h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .collection-window__header p { margin: 0; }
 .collection-window__header button { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid transparent; color: inherit; background: none; }
 .collection-window__header button:hover { border-color: var(--module-accent); color: var(--module-accent); }
@@ -28,13 +29,20 @@
 .collection-sidebar > button[data-active], .collection-folder[data-active] > button:first-child { border-left-color: var(--module-accent); color: var(--module-accent); background: rgba(232,121,69,.08); }
 .collection-sidebar small { color: var(--hu-text-muted); }
 .collection-folder { display: grid; grid-template-columns: minmax(0,1fr) 24px 24px; }
+.collection-folder:not([data-edit-mode]) { grid-template-columns: minmax(0,1fr); }
+.collection-folder > button:first-child { min-width: 0; overflow: hidden; }
+.collection-folder > button:first-child span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.collection-folder > button:first-child small { flex: 0 0 auto; }
 .collection-folder > button:not(:first-child) { padding: 0; border: 0; color: var(--hu-text-muted); background: none; font-size: .58rem; }
 .collection-folder > button:not(:first-child):hover { color: var(--module-accent); }
 .collection-sidebar .collection-sidebar__new { margin-top: 8px; border: 1px solid rgba(238,235,223,.16); text-transform: uppercase; }
 .collection-content { min-width: 0; min-height: 0; display: grid; grid-template-rows: 34px minmax(0,1fr); overflow: hidden; }
 .collection-content__heading { display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid rgba(238,235,223,.1); }
 .collection-content__heading h3 { margin: 0; font-size: .66rem; letter-spacing: .12em; text-transform: uppercase; }
+.collection-content__heading h3 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.collection-content__heading > div { display: flex; align-items: center; gap: 8px; }
 .collection-content__heading span { color: var(--hu-text-muted); font-size: .56rem; text-transform: uppercase; }
+.collection-content__heading button { padding: 5px 7px; border: 1px solid var(--module-accent); color: var(--module-accent); background: rgba(232,121,69,.06); font-size: .54rem; text-transform: uppercase; white-space: nowrap; }
 .asset-grid { overflow: auto; padding: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)); align-content: start; gap: 10px; }
 .asset-card { min-width: 0; position: relative; border: 1px solid rgba(238,235,223,.15); background: #1a1d1c; }
 .asset-card:focus-within, .asset-card:hover { border-color: rgba(232,121,69,.75); }
@@ -55,6 +63,7 @@
 .asset-card__folders svg { width: 14px; }
 .asset-card__folders > div { position: absolute; z-index: 3; top: 30px; right: 0; width: 150px; padding: 8px; display: grid; gap: 6px; border: 1px solid var(--module-accent); background: #111313; font-size: .6rem; }
 .asset-card__folders label { display: flex; gap: 6px; }
+.asset-card__folders button, .asset-preview fieldset button { padding: 6px 7px; border: 1px solid rgba(238,235,223,.25); color: var(--module-accent); background: transparent; font-size: .56rem; text-align: left; text-transform: uppercase; }
 .collection-empty { display: grid; place-items: center; padding: 30px; color: var(--hu-text-muted); text-align: center; font-size: .66rem; text-transform: uppercase; }
 .asset-preview { position: absolute; z-index: 4; inset: 0 0 0 148px; display: grid; grid-template-columns: minmax(240px, 1.4fr) minmax(220px, .8fr); grid-template-rows: 48px minmax(0,1fr); background: #111313; }
 .asset-preview > header { grid-column: 1/-1; display: flex; align-items: center; justify-content: space-between; padding: 0 10px 0 14px; border-bottom: 1px solid rgba(238,235,223,.2); }
@@ -75,6 +84,18 @@
 .asset-preview__metadata > button[aria-pressed="true"] { color: var(--module-accent); border-color: var(--module-accent); }
 .asset-preview__metadata svg { width: 14px; }
 .asset-preview fieldset { margin: 8px 0 14px; display: grid; gap: 6px; border: 1px solid rgba(238,235,223,.18); }
+.folder-window__body { grid-template-columns: minmax(0, 1fr); }
+.folder-window .asset-preview { inset: 0; }
+.collection-folder-dialog { position: absolute; z-index: 8; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(5,7,7,.78); backdrop-filter: blur(3px); }
+.collection-folder-dialog form { width: min(360px, 100%); padding: 18px; display: grid; gap: 10px; border: 1px solid var(--module-accent); background: #151717; box-shadow: 12px 12px 0 rgba(0,0,0,.35); }
+.collection-folder-dialog span, .collection-folder-dialog label { color: var(--hu-text-muted); font-size: .56rem; letter-spacing: .1em; text-transform: uppercase; }
+.collection-folder-dialog h3 { margin: 0 0 4px; color: var(--module-accent); font-size: .9rem; letter-spacing: .1em; text-transform: uppercase; }
+.collection-folder-dialog input { height: 36px; padding: 0 9px; border: 1px solid rgba(238,235,223,.3); outline: 0; color: var(--hu-text); background: #0f1111; font-size: .72rem; }
+.collection-folder-dialog input:focus { border-color: var(--module-accent); }
+.collection-folder-dialog form > div { display: flex; justify-content: flex-end; gap: 8px; margin-top: 5px; }
+.collection-folder-dialog button { padding: 7px 9px; border: 1px solid rgba(238,235,223,.25); color: var(--hu-text); background: transparent; font-size: .58rem; text-transform: uppercase; }
+.collection-folder-dialog button[type="submit"] { border-color: var(--module-accent); color: var(--module-accent); }
+.collection-folder-dialog button:disabled { opacity: .4; }
 .asset-preview legend { color: var(--hu-text-muted); text-transform: uppercase; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @media (max-width: 719px) {

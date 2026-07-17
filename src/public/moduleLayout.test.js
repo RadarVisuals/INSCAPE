@@ -5,6 +5,7 @@ import {
   decodeModuleLayout,
   encodeModuleLayout,
   findNearestAvailableModulePosition,
+  getCanvasSpaceSpan,
   getDefaultModulePositions,
   getCollectionSpan,
   getIdentitySpan,
@@ -53,6 +54,16 @@ test('expanded Collection has a bounded desktop and full mobile span', () => {
   assert.ok(getCollectionSpan(shortDesktop).rows <= shortDesktop.rows);
   const mobile = createModuleGridGeometry(390, 844);
   assert.deepEqual(getCollectionSpan(mobile), { columns: mobile.columns, rows: mobile.rows });
+  assert.deepEqual(getCanvasSpaceSpan(mobile), { columns: mobile.columns, rows: mobile.rows });
+  const folderSpan = getCanvasSpaceSpan(desktop);
+  assert.ok(folderSpan.columns <= desktop.columns && folderSpan.rows <= desktop.rows);
+});
+
+test('custom launcher IDs participate in collision-safe placement', () => {
+  const geometry = createModuleGridGeometry(1280, 720);
+  const positions = { ...getDefaultModulePositions(geometry), 'library:folder:first': { column: 2, row: 2 } };
+  const placement = findNearestAvailableModulePosition('library:folder:second', { column: 2, row: 2 }, { columns: 1, rows: 1 }, positions, geometry);
+  assert.notDeepEqual(placement, positions['library:folder:first']);
 });
 
 test('mobile ignores stored desktop coordinates and returns an ordered fallback', () => {

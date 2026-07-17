@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IdentityDossier from './IdentityDossier.jsx';
-import { CollectionWindow } from '../library/index.js';
+import { CollectionWindow, FolderWindow, useLibraryStore } from '../library/index.js';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { getPublicTheme } from './themeTokens.js';
 import {
@@ -12,6 +12,7 @@ import {
   findNearestAvailableModulePosition,
   findNearestExpandedModulePosition,
   getDefaultModulePositions,
+  getCanvasSpaceSpan,
   getCollectionSpan,
   getIdentitySpan,
   isExpandedModulePlacementAvailable,
@@ -112,6 +113,8 @@ export default function ModuleGridShell({
   const [collectionOpen, setCollectionOpen] = useState(false);
   const [collectionPanelPosition, setCollectionPanelPosition] = useState(null);
   const [collectionSearchRequest, setCollectionSearchRequest] = useState(0);
+  const [editMode, setEditMode] = useState(false);
+  const [openFolderLauncherId, setOpenFolderLauncherId] = useState(null);
   const [activeModuleId, setActiveModuleId] = useState(null);
   const [activeHudCommand, setActiveHudCommand] = useState(null);
   const [availableModuleIds, setAvailableModuleIds] = useState(() => new Set());
@@ -119,6 +122,7 @@ export default function ModuleGridShell({
   const identityRef = useRef(null);
   const identityPanelRef = useRef(null);
   const collectionPanelRef = useRef(null);
+  const folderPanelRef = useRef(null);
   const shellRef = useRef(null);
   const gridRef = useRef(null);
   const previewRef = useRef(null);
@@ -127,6 +131,34 @@ export default function ModuleGridShell({
   const theme = useMemo(() => getPublicTheme(activeActorId), [activeActorId]);
   const identitySpan = useMemo(() => getIdentitySpan(geometry), [geometry]);
   const collectionSpan = useMemo(() => getCollectionSpan(geometry), [geometry]);
+  const folderSpan = useMemo(() => getCanvasSpaceSpan(geometry), [geometry]);
+  const workspace = useLibraryStore((state) => state.workspace);
+  const setLauncherPosition = useLibraryStore((state) => state.setLauncherPosition);
+  const setLauncherWindowPosition = useLibraryStore((state) => state.setLauncherWindowPosition);
+  const resetWorkspaceCanvasLayout = useLibraryStore((state) => state.resetCanvasLayout);
+  const pinnedLaunchers = workspace.canvas.launchers;
+  const pinnedLauncherKey = pinnedLaunchers.map((launcher) => launcher.id).join('|');
+  const canvasPositions = useMemo(() => {
+    const next = { ...positions };
+    pinnedLaunchers.forEach((launcher, index) => {
+      const fallback = {
+        column: index % geometry.columns,
+        row: Math.min(geometry.rows - 1, 2 + Math.floor(index / geometry.columns) * 2)
+      };
+      next[launcher.id] = findNearestAvailableModulePosition(
+        launcher.id,
+        launcher.position || fallback,
+        { columns: 1, rows: 1 },
+        next,
+        geometry
+      );
+    });
+    return next;
+  }, [geometry, pinnedLaunchers, positions]);
+  const openFolderLauncher = pinnedLaunchers.find((launcher) => launcher.id === openFolderLauncherId) || null;
+  const openFolderPosition = openFolderLauncher
+    ? findNearestExpandedModulePosition(openFolderLauncher.windowPosition || canvasPositions[openFolderLauncher.id], folderSpan, canvasPositions, geometry)
+    : null;
 
   useEffect(() => {
     if (!interfaceVisible) {
@@ -135,10 +167,10 @@ export default function ModuleGridShell({
     }
 
     const groupedEntry = revealPresentation.sequence !== 'full' || revealPresentation.reducedMotion;
-    const timers = MODULES.map(({ id }) => {
+    const timers = [...MODULES, ...pinnedLaunchers].map(({ id }, index) => {
       const delay = groupedEntry
         ? GROUPED_MODULE_ENTRY_MS
-        : FULL_MODULE_ENTRY_BASE_MS + MODULE_ENTRY_ORDER[id] * FULL_MODULE_ENTRY_STAGGER_MS;
+        : FULL_MODULE_ENTRY_BASE_MS + (MODULE_ENTRY_ORDER[id] ?? index) * FULL_MODULE_ENTRY_STAGGER_MS;
       return window.setTimeout(() => {
         setAvailableModuleIds((current) => {
           const next = new Set(current);
@@ -149,27 +181,40 @@ export default function ModuleGridShell({
     });
 
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [interfaceVisible, revealPresentation.reducedMotion, revealPresentation.sequence]);
+  }, [interfaceVisible, pinnedLauncherKey, revealPresentation.reducedMotion, revealPresentation.sequence]);
+
+  useEffect(() => {
+    pinnedLaunchers.forEach((launcher) => {
+      if (!launcher.position && canvasPositions[launcher.id]) setLauncherPosition(launcher.id, canvasPositions[launcher.id]);
+    });
+  }, [canvasPositions, pinnedLauncherKey, setLauncherPosition]);
+
+  useEffect(() => {
+    if (openFolderLauncherId && !pinnedLaunchers.some((launcher) => launcher.id === openFolderLauncherId)) {
+      setOpenFolderLauncherId(null);
+      setActiveModuleId(null);
+    }
+  }, [openFolderLauncherId, pinnedLauncherKey]);
 
   useEffect(() => {
     if (!identityOpen) return;
     setIdentityPanelPosition((current) => findNearestExpandedModulePosition(
-      current ?? positions.identity,
+      current ?? canvasPositions.identity,
       identitySpan,
-      positions,
+      canvasPositions,
       geometry
     ));
-  }, [geometry, identityOpen, identitySpan, positions]);
+  }, [canvasPositions, geometry, identityOpen, identitySpan]);
 
   useEffect(() => {
     if (!collectionOpen) return;
     setCollectionPanelPosition((current) => findNearestExpandedModulePosition(
-      current ?? positions.collection,
+      current ?? canvasPositions.collection,
       collectionSpan,
-      positions,
+      canvasPositions,
       geometry
     ));
-  }, [collectionOpen, collectionSpan, geometry, positions]);
+  }, [canvasPositions, collectionOpen, collectionSpan, geometry]);
 
   useEffect(() => {
     const resize = () => {
@@ -219,14 +264,25 @@ export default function ModuleGridShell({
   }, [geometry.narrow]);
 
   const commitPosition = useCallback((id, position) => {
+    if (!Object.hasOwn(MODULE_ENTRY_ORDER, id)) {
+      setLauncherPosition(id, position);
+      return;
+    }
     setPositions((current) => {
       const next = { ...current, [id]: position };
       persistPositions(next);
       return next;
     });
-  }, [persistPositions]);
+  }, [persistPositions, setLauncherPosition]);
 
   const openModule = useCallback((id) => {
+    const folderLauncher = pinnedLaunchers.find((launcher) => launcher.id === id);
+    if (folderLauncher) {
+      const closing = openFolderLauncherId === id;
+      setOpenFolderLauncherId(closing ? null : id);
+      setActiveModuleId(closing ? null : id);
+      return;
+    }
     if (id === 'identity' && identityOpen) {
       identityRef.current?.requestClose();
       return;
@@ -240,9 +296,9 @@ export default function ModuleGridShell({
     setActiveModuleId(id);
     if (id === 'collection') {
       setCollectionPanelPosition((current) => findNearestExpandedModulePosition(
-        current ?? positions.collection,
+        current ?? canvasPositions.collection,
         collectionSpan,
-        positions,
+        canvasPositions,
         geometry
       ));
       setCollectionOpen(true);
@@ -250,14 +306,14 @@ export default function ModuleGridShell({
     }
     if (id !== 'identity') return;
     setIdentityPanelPosition((current) => findNearestExpandedModulePosition(
-      current ?? positions.identity,
+      current ?? canvasPositions.identity,
       identitySpan,
-      positions,
+      canvasPositions,
       geometry
     ));
     setIdentityPhase('approaching');
     setIdentityOpen(true);
-  }, [collectionOpen, collectionSpan, geometry, identityOpen, identitySpan, positions]);
+  }, [canvasPositions, collectionOpen, collectionSpan, geometry, identityOpen, identitySpan, openFolderLauncherId, pinnedLaunchers]);
 
   const openCollectionSearch = useCallback(() => {
     if (!collectionOpen) openModule('collection');
@@ -280,8 +336,8 @@ export default function ModuleGridShell({
   }, [geometry]);
 
   const moduleStyle = useCallback((id, span = { columns: 1, rows: 1 }, inset = 4) => (
-    positionStyle(positions[id], span, inset)
-  ), [positionStyle, positions]);
+    positionStyle(canvasPositions[id], span, inset)
+  ), [canvasPositions, positionStyle]);
 
   const clearDragPresentation = useCallback(() => {
     const drag = dragRef.current;
@@ -307,15 +363,15 @@ export default function ModuleGridShell({
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      origin: positions[id],
-      candidate: positions[id],
+      origin: canvasPositions[id],
+      candidate: canvasPositions[id],
       moved: false,
       frame: 0,
       deltaX: 0,
       deltaY: 0,
       valid: true
     };
-  }, [geometry.narrow, positions]);
+  }, [canvasPositions, geometry.narrow]);
 
   const startExpandedPanelDrag = useCallback((event, id, span, position, panelRef, enabled) => {
     if (geometry.narrow || !enabled || !position) return;
@@ -354,8 +410,8 @@ export default function ModuleGridShell({
       row: drag.origin.row + Math.round(drag.deltaY / geometry.cellHeight)
     }, drag.span, geometry);
     drag.valid = drag.kind === 'expanded'
-      ? isExpandedModulePlacementAvailable(drag.candidate, drag.span, positions, geometry)
-      : isModulePlacementAvailable(drag.id, drag.candidate, drag.span, positions, geometry);
+      ? isExpandedModulePlacementAvailable(drag.candidate, drag.span, canvasPositions, geometry)
+      : isModulePlacementAvailable(drag.id, drag.candidate, drag.span, canvasPositions, geometry);
     drag.shell.dataset.dragging = 'true';
     if (shellRef.current) shellRef.current.dataset.dragging = drag.id;
 
@@ -373,7 +429,7 @@ export default function ModuleGridShell({
         preview.style.height = `${drag.span.rows * geometry.cellHeight - 8}px`;
       });
     }
-  }, [geometry, positions]);
+  }, [canvasPositions, geometry]);
 
   const endDrag = useCallback((event, activateOnClick = false) => {
     const drag = dragRef.current;
@@ -382,26 +438,28 @@ export default function ModuleGridShell({
     const id = drag.id;
     const nextPosition = wasMoved
       ? drag.kind === 'expanded'
-        ? findNearestExpandedModulePosition(drag.candidate, drag.span, positions, geometry)
-        : findNearestAvailableModulePosition(id, drag.candidate, drag.span, positions, geometry)
+        ? findNearestExpandedModulePosition(drag.candidate, drag.span, canvasPositions, geometry)
+        : findNearestAvailableModulePosition(id, drag.candidate, drag.span, canvasPositions, geometry)
       : null;
     clearDragPresentation();
     if (wasMoved && drag.kind === 'expanded') {
       if (id === 'identity-panel') setIdentityPanelPosition(nextPosition);
       if (id === 'collection-panel') setCollectionPanelPosition(nextPosition);
+      if (id.startsWith('folder-panel:')) setLauncherWindowPosition(id.slice('folder-panel:'.length), nextPosition);
     }
     else if (wasMoved) commitPosition(id, nextPosition);
     else if (activateOnClick) openModule(id);
-  }, [clearDragPresentation, commitPosition, geometry, openModule, positions]);
+  }, [canvasPositions, clearDragPresentation, commitPosition, geometry, openModule, setLauncherWindowPosition]);
 
   const resetLayout = () => {
     const defaults = getDefaultModulePositions(geometry);
     setPositions(defaults);
+    resetWorkspaceCanvasLayout();
     if (identityOpen) {
       setIdentityPanelPosition(findNearestExpandedModulePosition(
         defaults.identity,
         identitySpan,
-        defaults,
+        { ...defaults },
         geometry
       ));
     }
@@ -409,26 +467,35 @@ export default function ModuleGridShell({
       setCollectionPanelPosition(findNearestExpandedModulePosition(
         defaults.collection,
         collectionSpan,
-        defaults,
+        { ...defaults },
         geometry
       ));
     }
-    persistPositions(defaults);
+    if (geometry.narrow) {
+      try { window.localStorage.removeItem(MODULE_LAYOUT_STORAGE_KEY); } catch { /* Storage is optional. */ }
+    } else persistPositions(defaults);
   };
 
   const identityDragProps = {
-    onPointerDown: (event) => startExpandedPanelDrag(event, 'identity-panel', identitySpan, identityPanelPosition, identityPanelRef, identityPhase === 'open'),
+    onPointerDown: (event) => startExpandedPanelDrag(event, 'identity-panel', identitySpan, identityPanelPosition, identityPanelRef, editMode && identityPhase === 'open'),
     onPointerMove: moveDrag,
     onPointerUp: (event) => endDrag(event, false),
     onPointerCancel: clearDragPresentation
   };
 
   const collectionDragProps = {
-    onPointerDown: (event) => startExpandedPanelDrag(event, 'collection-panel', collectionSpan, collectionPanelPosition, collectionPanelRef, true),
+    onPointerDown: (event) => startExpandedPanelDrag(event, 'collection-panel', collectionSpan, collectionPanelPosition, collectionPanelRef, editMode),
     onPointerMove: moveDrag,
     onPointerUp: (event) => endDrag(event, false),
     onPointerCancel: clearDragPresentation
   };
+
+  const folderDragProps = openFolderLauncher ? {
+    onPointerDown: (event) => startExpandedPanelDrag(event, `folder-panel:${openFolderLauncher.id}`, folderSpan, openFolderPosition, folderPanelRef, editMode),
+    onPointerMove: moveDrag,
+    onPointerUp: (event) => endDrag(event, false),
+    onPointerCancel: clearDragPresentation
+  } : {};
 
   return (
     <main
@@ -440,6 +507,7 @@ export default function ModuleGridShell({
       data-interface-visible={interfaceVisible || undefined}
       data-entry-sequence={revealPresentation.sequence}
       data-reduced-motion={revealPresentation.reducedMotion || undefined}
+      data-edit-mode={editMode || undefined}
       style={theme}
       aria-label="OS Underneath public world"
       ref={shellRef}
@@ -464,7 +532,8 @@ export default function ModuleGridShell({
             [ Search ]
           </button>
           <button type="button" onClick={() => openModule('identity')} aria-expanded={identityOpen}>[ Share ]</button>
-          <button type="button" onClick={onRequestAtelier} aria-label="Edit in Atelier">[ Edit ]</button>
+          <button type="button" onClick={() => setEditMode((current) => !current)} aria-pressed={editMode}>[ {editMode ? 'Done' : 'Edit'} ]</button>
+          {editMode && <button type="button" onClick={resetLayout}>[ Reset Layout ]</button>}
           <button
             type="button"
             aria-pressed={activeHudCommand === 'settings'}
@@ -520,15 +589,53 @@ export default function ModuleGridShell({
                 if (node) moduleRefs.current.set(id, node);
                 else moduleRefs.current.delete(id);
               }}
-              onPointerDown={(event) => startDrag(event, id)}
+              onPointerDown={(event) => startDrag(event, id, undefined, editMode)}
               onPointerMove={moveDrag}
               onPointerUp={(event) => endDrag(event, true)}
               onPointerCancel={clearDragPresentation}
               onClick={(event) => {
-                if (event.detail === 0) openModule(id);
+                if (event.detail === 0 || !editMode) openModule(id);
               }}
             >
               <span>{label}</span>
+            </button>
+          );
+        })}
+
+        {pinnedLaunchers.map((launcher, launcherIndex) => {
+          const folder = workspace.folders.find((entry) => entry.id === launcher.folderId);
+          const label = launcher.viewType === 'favorites' ? 'Favorites' : folder?.name || 'Missing folder';
+          const count = launcher.viewType === 'favorites' ? workspace.favorites.length : folder?.assetIds.length || 0;
+          const isActive = activeModuleId === launcher.id || openFolderLauncherId === launcher.id;
+          const entryAvailable = availableModuleIds.has(launcher.id);
+          const entryIndex = MODULES.length + launcherIndex;
+          return (
+            <button
+              className="module-shell module-button module-button--folder"
+              data-module-shell
+              data-module-id={launcher.id}
+              data-module-entry-index={entryIndex}
+              data-entry-state={entryAvailable ? 'ready' : 'pending'}
+              data-active={isActive || undefined}
+              key={launcher.id}
+              type="button"
+              disabled={!entryAvailable}
+              aria-hidden={!entryAvailable || undefined}
+              aria-expanded={openFolderLauncherId === launcher.id}
+              aria-label={`Open ${label} folder, ${count} assets`}
+              style={{ ...moduleStyle(launcher.id, undefined, 0), '--module-entry-index': entryIndex }}
+              ref={(node) => {
+                if (node) moduleRefs.current.set(launcher.id, node);
+                else moduleRefs.current.delete(launcher.id);
+              }}
+              onPointerDown={(event) => startDrag(event, launcher.id, undefined, editMode)}
+              onPointerMove={moveDrag}
+              onPointerUp={(event) => endDrag(event, true)}
+              onPointerCancel={clearDragPresentation}
+              onClick={(event) => { if (event.detail === 0 || !editMode) openModule(launcher.id); }}
+            >
+              <span className="module-button__label">{label}</span>
+              <small>{count}</small>
             </button>
           );
         })}
@@ -552,7 +659,7 @@ export default function ModuleGridShell({
               actorId={activeActorId}
               residentHandoff={residentHandoff}
               dragHandleProps={identityDragProps}
-              dragEnabled={!geometry.narrow && identityPhase === 'open'}
+              dragEnabled={editMode && !geometry.narrow && identityPhase === 'open'}
               onTransitionStateChange={setIdentityPhase}
               onClose={() => {
                 setIdentityOpen(false);
@@ -578,7 +685,8 @@ export default function ModuleGridShell({
           >
             <CollectionWindow
               dragHandleProps={collectionDragProps}
-              dragEnabled={!geometry.narrow}
+              dragEnabled={editMode && !geometry.narrow}
+              editMode={editMode}
               focusSearchRequest={collectionSearchRequest}
               escapeEnabled={activeModuleId === 'collection'}
               onClose={() => {
@@ -586,6 +694,34 @@ export default function ModuleGridShell({
                 setActiveModuleId(identityOpen ? 'identity' : null);
                 setActiveHudCommand((current) => current === 'search' ? null : current);
                 window.requestAnimationFrame(() => moduleRefs.current.get('collection')?.focus());
+              }}
+            />
+          </section>
+        )}
+
+        {openFolderLauncher && openFolderPosition && (
+          <section
+            className="module-shell module-shell--expanded module-shell--collection module-shell--folder"
+            data-module-shell
+            data-module-id={`folder-panel:${openFolderLauncher.id}`}
+            ref={folderPanelRef}
+            style={positionStyle(openFolderPosition, folderSpan)}
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby={`folder-title-${openFolderLauncher.id}`}
+            onPointerDownCapture={() => setActiveModuleId(openFolderLauncher.id)}
+          >
+            <FolderWindow
+              launcher={openFolderLauncher}
+              dragHandleProps={folderDragProps}
+              dragEnabled={editMode && !geometry.narrow}
+              editMode={editMode}
+              escapeEnabled={activeModuleId === openFolderLauncher.id}
+              onClose={() => {
+                const launcherId = openFolderLauncher.id;
+                setOpenFolderLauncherId(null);
+                setActiveModuleId(identityOpen ? 'identity' : collectionOpen ? 'collection' : null);
+                window.requestAnimationFrame(() => moduleRefs.current.get(launcherId)?.focus());
               }}
             />
           </section>

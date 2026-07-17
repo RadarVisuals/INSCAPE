@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createEmptyWorkspace, createFolder, deleteFolder, renameFolder, setFolderAsset, toggleFavorite } from './libraryWorkspace.js';
+import {
+  createEmptyWorkspace,
+  createFolder,
+  deleteFolder,
+  getPinnedLauncher,
+  isProtectedLibraryView,
+  pinLibraryView,
+  renameFolder,
+  resetCanvasLayout,
+  setFolderAsset,
+  setLauncherPosition,
+  toggleFavorite,
+  unpinLibraryView
+} from './libraryWorkspace.js';
 
 test('folders create, rename, add/remove references, and delete without touching favorites', () => {
   let workspace = createEmptyWorkspace('0xprofile');
@@ -16,4 +29,48 @@ test('folders create, rename, add/remove references, and delete without touching
   workspace = deleteFolder(workspace, id);
   assert.deepEqual(workspace.folders, []);
   assert.deepEqual(workspace.favorites, ['asset-b']);
+});
+
+test('pinning and unpinning preserve membership and use a stable launcher identity', () => {
+  let workspace = createFolder(createEmptyWorkspace('0xprofile'), 'Archive', 10);
+  const folderId = workspace.folders[0].id;
+  workspace = setFolderAsset(workspace, folderId, 'asset-a', true, 20);
+  workspace = setFolderAsset(workspace, folderId, 'asset-b', true, 30);
+  const organization = structuredClone({ favorites: workspace.favorites, folders: workspace.folders });
+
+  workspace = pinLibraryView(workspace, { type: 'folder', id: folderId });
+  const firstId = getPinnedLauncher(workspace, { type: 'folder', id: folderId }).id;
+  workspace = unpinLibraryView(workspace, { type: 'folder', id: folderId });
+  workspace = pinLibraryView(workspace, { type: 'folder', id: folderId });
+
+  assert.equal(getPinnedLauncher(workspace, { type: 'folder', id: folderId }).id, firstId);
+  assert.deepEqual({ favorites: workspace.favorites, folders: workspace.folders }, organization);
+});
+
+test('Favorites can be pinned but protected system views cannot be renamed, deleted, or pinned as All Assets', () => {
+  let workspace = createEmptyWorkspace('0xprofile');
+  workspace = pinLibraryView(workspace, { type: 'favorites', id: null });
+  workspace = pinLibraryView(workspace, { type: 'all', id: null });
+
+  assert.equal(workspace.canvas.launchers.length, 1);
+  assert.equal(workspace.canvas.launchers[0].id, 'library:favorites');
+  assert.equal(isProtectedLibraryView({ type: 'all' }), true);
+  assert.equal(isProtectedLibraryView({ type: 'favorites' }), true);
+  assert.equal(renameFolder(workspace, 'all', 'Renamed'), workspace);
+  assert.equal(deleteFolder(workspace, 'favorites'), workspace);
+});
+
+test('Reset Layout clears placement without deleting library organization or pins', () => {
+  let workspace = createFolder(createEmptyWorkspace('0xprofile'), 'Exhibition', 10);
+  const folderId = workspace.folders[0].id;
+  workspace = toggleFavorite(setFolderAsset(workspace, folderId, 'asset-a', true, 20), 'asset-b');
+  workspace = pinLibraryView(workspace, { type: 'folder', id: folderId });
+  const launcherId = workspace.canvas.launchers[0].id;
+  workspace = setLauncherPosition(workspace, launcherId, { column: 4, row: 5 });
+  const organization = structuredClone({ favorites: workspace.favorites, folders: workspace.folders });
+
+  const reset = resetCanvasLayout(workspace);
+  assert.deepEqual({ favorites: reset.favorites, folders: reset.folders }, organization);
+  assert.equal(reset.canvas.launchers.length, 1);
+  assert.equal(reset.canvas.launchers[0].position, null);
 });

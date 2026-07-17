@@ -1,6 +1,6 @@
 import { ArrowUpRight, Heart, X } from 'lucide-react';
 
-export default function AssetPreview({ asset, workspace, onClose, onFavorite, onFolder }) {
+export default function AssetPreview({ asset, workspace, onClose, onFavorite, onFolder, onCreateFolder, authoringEnabled = false }) {
   if (!asset) return null;
   return (
     <section className="asset-preview" aria-label={`${asset.name} details`}>
@@ -10,8 +10,8 @@ export default function AssetPreview({ asset, workspace, onClose, onFavorite, on
         <p>{asset.collectionName || 'Uncatalogued asset'}</p>
         {asset.description && <p>{asset.description}</p>}
         <dl><div><dt>Contract</dt><dd>{asset.contractAddress}</dd></div>{asset.tokenId && <div><dt>Token ID</dt><dd>{asset.tokenId}</dd></div>}</dl>
-        <button type="button" aria-pressed={workspace.favorites.includes(asset.id)} onClick={() => onFavorite(asset.id)}><Heart aria-hidden="true" /> Favorite</button>
-        <fieldset><legend>Folder membership</legend>{workspace.folders.length ? workspace.folders.map((folder) => <label key={folder.id}><input type="checkbox" checked={folder.assetIds.includes(asset.id)} onChange={(event) => onFolder(folder.id, asset.id, event.target.checked)} /> {folder.name}</label>) : <span>No personal folders yet.</span>}</fieldset>
+        {authoringEnabled && <button type="button" aria-pressed={workspace.favorites.includes(asset.id)} onClick={() => onFavorite(asset.id)}><Heart aria-hidden="true" /> Favorite</button>}
+        {authoringEnabled && <fieldset><legend>Folder membership</legend>{workspace.folders.map((folder) => <label key={folder.id}><input type="checkbox" checked={folder.assetIds.includes(asset.id)} onChange={(event) => onFolder(folder.id, asset.id, event.target.checked)} /> {folder.name}</label>)}{onCreateFolder && <button type="button" onClick={onCreateFolder}>+ New folder</button>}</fieldset>}
         {asset.imageUrl && <a href={asset.imageUrl} target="_blank" rel="noreferrer">Open original <ArrowUpRight aria-hidden="true" /></a>}
       </div>
     </section>
