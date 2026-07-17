@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IdentityDossier from './IdentityDossier.jsx';
+import { CollectionWindow } from '../library/index.js';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { getPublicTheme } from './themeTokens.js';
 import {
@@ -11,11 +12,13 @@ import {
   findNearestAvailableModulePosition,
   findNearestExpandedModulePosition,
   getDefaultModulePositions,
+  getCollectionSpan,
   getIdentitySpan,
   isExpandedModulePlacementAvailable,
   isModulePlacementAvailable
 } from './moduleLayout.js';
 import './moduleGrid.css';
+import '../library/collection.css';
 
 const MODULES = Object.freeze([
   { id: 'identity', label: 'Profile Card' },
@@ -106,12 +109,16 @@ export default function ModuleGridShell({
   const [identityOpen, setIdentityOpen] = useState(false);
   const [identityPhase, setIdentityPhase] = useState('closed');
   const [identityPanelPosition, setIdentityPanelPosition] = useState(null);
+  const [collectionOpen, setCollectionOpen] = useState(false);
+  const [collectionPanelPosition, setCollectionPanelPosition] = useState(null);
+  const [collectionSearchRequest, setCollectionSearchRequest] = useState(0);
   const [activeModuleId, setActiveModuleId] = useState(null);
-  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [activeHudCommand, setActiveHudCommand] = useState(null);
   const [availableModuleIds, setAvailableModuleIds] = useState(() => new Set());
   const moduleRefs = useRef(new Map());
   const identityRef = useRef(null);
   const identityPanelRef = useRef(null);
+  const collectionPanelRef = useRef(null);
   const shellRef = useRef(null);
   const gridRef = useRef(null);
   const previewRef = useRef(null);
@@ -119,6 +126,7 @@ export default function ModuleGridShell({
   const resizeFrameRef = useRef(0);
   const theme = useMemo(() => getPublicTheme(activeActorId), [activeActorId]);
   const identitySpan = useMemo(() => getIdentitySpan(geometry), [geometry]);
+  const collectionSpan = useMemo(() => getCollectionSpan(geometry), [geometry]);
 
   useEffect(() => {
     if (!interfaceVisible) {
@@ -154,6 +162,16 @@ export default function ModuleGridShell({
   }, [geometry, identityOpen, identitySpan, positions]);
 
   useEffect(() => {
+    if (!collectionOpen) return;
+    setCollectionPanelPosition((current) => findNearestExpandedModulePosition(
+      current ?? positions.collection,
+      collectionSpan,
+      positions,
+      geometry
+    ));
+  }, [collectionOpen, collectionSpan, geometry, positions]);
+
+  useEffect(() => {
     const resize = () => {
       if (resizeFrameRef.current) return;
       resizeFrameRef.current = window.requestAnimationFrame(() => {
@@ -174,11 +192,11 @@ export default function ModuleGridShell({
 
   useEffect(() => {
     const closeIdentity = (event) => {
-      if (event.key === 'Escape' && identityOpen) identityRef.current?.requestClose();
+      if (event.key === 'Escape' && identityOpen && activeModuleId === 'identity') identityRef.current?.requestClose();
     };
     window.addEventListener('keydown', closeIdentity);
     return () => window.removeEventListener('keydown', closeIdentity);
-  }, [identityOpen]);
+  }, [activeModuleId, identityOpen]);
 
   useEffect(() => {
     residentHandoff?.trackActorPosition?.(gridRef.current);
@@ -213,7 +231,23 @@ export default function ModuleGridShell({
       identityRef.current?.requestClose();
       return;
     }
+    if (id === 'collection' && collectionOpen) {
+      setCollectionOpen(false);
+      setActiveModuleId(null);
+      window.requestAnimationFrame(() => moduleRefs.current.get('collection')?.focus());
+      return;
+    }
     setActiveModuleId(id);
+    if (id === 'collection') {
+      setCollectionPanelPosition((current) => findNearestExpandedModulePosition(
+        current ?? positions.collection,
+        collectionSpan,
+        positions,
+        geometry
+      ));
+      setCollectionOpen(true);
+      return;
+    }
     if (id !== 'identity') return;
     setIdentityPanelPosition((current) => findNearestExpandedModulePosition(
       current ?? positions.identity,
@@ -223,7 +257,14 @@ export default function ModuleGridShell({
     ));
     setIdentityPhase('approaching');
     setIdentityOpen(true);
-  }, [geometry, identityOpen, identitySpan, positions]);
+  }, [collectionOpen, collectionSpan, geometry, identityOpen, identitySpan, positions]);
+
+  const openCollectionSearch = useCallback(() => {
+    if (!collectionOpen) openModule('collection');
+    setActiveModuleId('collection');
+    setActiveHudCommand('search');
+    setCollectionSearchRequest((value) => value + 1);
+  }, [collectionOpen, openModule]);
 
   const positionStyle = useCallback((position, span = { columns: 1, rows: 1 }, inset = 4) => {
     const left = Math.round(position.column * geometry.cellWidth);
@@ -276,29 +317,29 @@ export default function ModuleGridShell({
     };
   }, [geometry.narrow, positions]);
 
-  const startIdentityPanelDrag = useCallback((event) => {
-    if (geometry.narrow || identityPhase !== 'open' || !identityPanelPosition) return;
+  const startExpandedPanelDrag = useCallback((event, id, span, position, panelRef, enabled) => {
+    if (geometry.narrow || !enabled || !position) return;
     if (event.button !== undefined && event.button !== 0) return;
-    const shell = identityPanelRef.current;
+    const shell = panelRef.current;
     if (!shell) return;
     event.currentTarget.setPointerCapture?.(event.pointerId);
     dragRef.current = {
-      id: 'identity-panel',
+      id,
       kind: 'expanded',
-      span: identitySpan,
+      span,
       shell,
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      origin: identityPanelPosition,
-      candidate: identityPanelPosition,
+      origin: position,
+      candidate: position,
       moved: false,
       frame: 0,
       deltaX: 0,
       deltaY: 0,
       valid: true
     };
-  }, [geometry.narrow, identityPanelPosition, identityPhase, identitySpan]);
+  }, [geometry.narrow]);
 
   const moveDrag = useCallback((event) => {
     const drag = dragRef.current;
@@ -345,7 +386,10 @@ export default function ModuleGridShell({
         : findNearestAvailableModulePosition(id, drag.candidate, drag.span, positions, geometry)
       : null;
     clearDragPresentation();
-    if (wasMoved && drag.kind === 'expanded') setIdentityPanelPosition(nextPosition);
+    if (wasMoved && drag.kind === 'expanded') {
+      if (id === 'identity-panel') setIdentityPanelPosition(nextPosition);
+      if (id === 'collection-panel') setCollectionPanelPosition(nextPosition);
+    }
     else if (wasMoved) commitPosition(id, nextPosition);
     else if (activateOnClick) openModule(id);
   }, [clearDragPresentation, commitPosition, geometry, openModule, positions]);
@@ -361,11 +405,26 @@ export default function ModuleGridShell({
         geometry
       ));
     }
+    if (collectionOpen) {
+      setCollectionPanelPosition(findNearestExpandedModulePosition(
+        defaults.collection,
+        collectionSpan,
+        defaults,
+        geometry
+      ));
+    }
     persistPositions(defaults);
   };
 
   const identityDragProps = {
-    onPointerDown: startIdentityPanelDrag,
+    onPointerDown: (event) => startExpandedPanelDrag(event, 'identity-panel', identitySpan, identityPanelPosition, identityPanelRef, identityPhase === 'open'),
+    onPointerMove: moveDrag,
+    onPointerUp: (event) => endDrag(event, false),
+    onPointerCancel: clearDragPresentation
+  };
+
+  const collectionDragProps = {
+    onPointerDown: (event) => startExpandedPanelDrag(event, 'collection-panel', collectionSpan, collectionPanelPosition, collectionPanelRef, true),
     onPointerMove: moveDrag,
     onPointerUp: (event) => endDrag(event, false),
     onPointerCancel: clearDragPresentation
@@ -387,23 +446,32 @@ export default function ModuleGridShell({
     >
       <header className="public-shell__masthead">
         <div className="system-hud__identity">
-          <h1 aria-label="OS Underneath"><span aria-hidden="true">[</span> OS_UNDERNEATH <span aria-hidden="true">]</span></h1>
+          <h1 aria-label="OS Underneath">
+            <span className="system-hud__bracket" aria-hidden="true">[</span>
+            {' OS_'}<span className="system-hud__brand-accent">UNDERNEATH</span>{' '}
+            <span className="system-hud__bracket" aria-hidden="true">]</span>
+          </h1>
           <span className="system-hud__operator">{profile.artistName}</span>
           <span className="system-hud__live"><i aria-hidden="true" />Live</span>
         </div>
 
         <nav className="system-hud__commands" aria-label="OS Underneath controls">
-          <button className="system-hud__command--secondary" type="button" onClick={resetLayout} aria-label="Reset module layout">[ Reset ]</button>
-          <button type="button" onClick={onRequestAtelier} aria-label="Edit in Atelier">[ Edit ]</button>
           <button
-            className="system-hud__command--secondary"
             type="button"
-            aria-pressed={audioEnabled}
-            onClick={() => setAudioEnabled((current) => !current)}
+            aria-pressed={activeHudCommand === 'search'}
+            onClick={openCollectionSearch}
           >
-            [ Audio ]
+            [ Search ]
           </button>
           <button type="button" onClick={() => openModule('identity')} aria-expanded={identityOpen}>[ Share ]</button>
+          <button type="button" onClick={onRequestAtelier} aria-label="Edit in Atelier">[ Edit ]</button>
+          <button
+            type="button"
+            aria-pressed={activeHudCommand === 'settings'}
+            onClick={() => setActiveHudCommand((current) => current === 'settings' ? null : 'settings')}
+          >
+            [ Settings ]
+          </button>
         </nav>
       </header>
 
@@ -426,7 +494,7 @@ export default function ModuleGridShell({
         <div className="module-grid__placement-preview" ref={previewRef} hidden />
 
         {MODULES.map(({ id, label }) => {
-          const isActive = activeModuleId === id || (id === 'identity' && identityOpen);
+          const isActive = activeModuleId === id || (id === 'identity' && identityOpen) || (id === 'collection' && collectionOpen);
           const entryAvailable = availableModuleIds.has(id);
           const entryIndex = MODULE_ENTRY_ORDER[id];
           return (
@@ -441,7 +509,7 @@ export default function ModuleGridShell({
               type="button"
               disabled={!entryAvailable}
               aria-hidden={!entryAvailable || undefined}
-              aria-expanded={id === 'identity' ? identityOpen : undefined}
+              aria-expanded={id === 'identity' ? identityOpen : id === 'collection' ? collectionOpen : undefined}
               aria-pressed={id === 'identity' ? undefined : isActive}
               aria-label={`Open ${label} module`}
               style={{
@@ -476,6 +544,7 @@ export default function ModuleGridShell({
             role="dialog"
             aria-modal="false"
             aria-labelledby="identity-title"
+            onPointerDownCapture={() => setActiveModuleId('identity')}
           >
             <IdentityDossier
               ref={identityRef}
@@ -488,8 +557,35 @@ export default function ModuleGridShell({
               onClose={() => {
                 setIdentityOpen(false);
                 setIdentityPhase('closed');
-                setActiveModuleId(null);
+                setActiveModuleId(collectionOpen ? 'collection' : null);
                 window.requestAnimationFrame(() => moduleRefs.current.get('identity')?.focus());
+              }}
+            />
+          </section>
+        )}
+
+        {collectionOpen && collectionPanelPosition && (
+          <section
+            className="module-shell module-shell--expanded module-shell--collection"
+            data-module-shell
+            data-module-id="collection-panel"
+            ref={collectionPanelRef}
+            style={positionStyle(collectionPanelPosition, collectionSpan)}
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby="collection-title"
+            onPointerDownCapture={() => setActiveModuleId('collection')}
+          >
+            <CollectionWindow
+              dragHandleProps={collectionDragProps}
+              dragEnabled={!geometry.narrow}
+              focusSearchRequest={collectionSearchRequest}
+              escapeEnabled={activeModuleId === 'collection'}
+              onClose={() => {
+                setCollectionOpen(false);
+                setActiveModuleId(identityOpen ? 'identity' : null);
+                setActiveHudCommand((current) => current === 'search' ? null : current);
+                window.requestAnimationFrame(() => moduleRefs.current.get('collection')?.focus());
               }}
             />
           </section>

@@ -312,22 +312,22 @@
 }
 
 .public-shell__masthead {
-  top: 11px;
-  left: 50%;
-  right: auto;
-  width: min(760px, calc(100vw - 48px));
-  height: 42px;
+  top: 12px;
+  left: 24px;
+  right: 24px;
+  width: auto;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 0 20px;
-  border: 1px solid rgba(238, 235, 223, 0.13);
-  border-radius: 22px;
-  background: rgba(18, 20, 20, 0.9);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
-  transform: translateX(-50%);
-  backdrop-filter: blur(5px);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  backdrop-filter: none;
   opacity: 0;
   visibility: hidden;
   clip-path: inset(0 52% 0 48%);
@@ -349,6 +349,11 @@
   min-width: 0;
   flex: 0 1 auto;
   gap: 15px;
+  height: 100%;
+  padding: 0 13px;
+  border-top: 1px solid rgba(238, 235, 223, 0.14);
+  border-bottom: 1px solid rgba(238, 235, 223, 0.14);
+  background: rgba(14, 16, 16, 0.82);
   white-space: nowrap;
 }
 
@@ -360,8 +365,12 @@
   text-shadow: none;
 }
 
-.system-hud__identity h1 span {
+.system-hud__brand-accent {
   color: var(--module-accent);
+}
+
+.system-hud__bracket {
+  color: var(--hu-text);
 }
 
 .system-hud__operator {
@@ -387,7 +396,12 @@
 
 .system-hud__commands {
   flex: 0 0 auto;
+  height: 100%;
   gap: 12px;
+  padding: 0 12px;
+  border-top: 1px solid rgba(238, 235, 223, 0.14);
+  border-bottom: 1px solid rgba(238, 235, 223, 0.14);
+  background: rgba(14, 16, 16, 0.82);
   pointer-events: auto;
 }
 
@@ -1025,7 +1039,9 @@
 
 @media (max-width: 1050px) and (min-width: 720px) {
   .public-shell__masthead {
-    width: min(720px, calc(100vw - 40px));
+    left: 20px;
+    right: 20px;
+    width: auto;
   }
 
   .profile-strip__person {
@@ -1059,12 +1075,12 @@
 @media (max-width: 719px) {
   .public-shell__masthead {
     top: 10px;
-    left: 50%;
-    right: auto;
-    width: calc(100vw - 24px);
-    height: 42px;
-    gap: 12px;
-    padding: 0 14px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    height: 36px;
+    gap: 8px;
+    padding: 0;
   }
 
   .system-hud__identity {
@@ -1076,7 +1092,7 @@
   }
 
   .system-hud__operator {
-    font-size: 0.54rem;
+    display: none;
   }
 
   .system-hud__live {
@@ -1090,15 +1106,12 @@
   }
 
   .system-hud__commands {
-    gap: 8px;
+    gap: 4px;
+    padding: 0 7px;
   }
 
   .system-hud__commands button {
-    font-size: 0.48rem;
-  }
-
-  .system-hud__command--secondary {
-    display: none;
+    font-size: 0.43rem;
   }
 
   .profile-strip__person {
@@ -1218,7 +1231,7 @@
 @media (max-height: 500px) and (min-width: 720px) {
   .public-shell__masthead {
     top: 8px;
-    height: 40px;
+    height: 34px;
   }
 
   .profile-strip__person {

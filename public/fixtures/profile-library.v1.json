@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "42:0x1111111111111111111111111111111111111111:0x01",
+      "chainId": 42,
+      "contractAddress": "0x1111111111111111111111111111111111111111",
+      "tokenId": "0x01",
+      "standard": "LSP8",
+      "name": "Keeper at Dusk",
+      "description": "A fixture artwork used when live LUKSO data is unavailable.",
+      "collectionName": "HUMAN UNDERNEATH",
+      "imageUrl": "/fixtures/library-keeper.svg",
+      "thumbnailUrl": "/fixtures/library-keeper.svg",
+      "originalImageUrl": "/fixtures/library-keeper.svg",
+      "creators": [{ "name": "Hidden Swarm", "address": "0xf3c189819fd5b042f692983bfbfd57ab607ee709" }],
+      "attributes": [{ "key": "Mood", "value": "Watchful" }],
+      "metadataStatus": "ready",
+      "rawMetadata": { "fixture": true }
+    },
+    {
+      "id": "42:0x2222222222222222222222222222222222222222:0x02",
+      "chainId": 42,
+      "contractAddress": "0x2222222222222222222222222222222222222222",
+      "tokenId": "0x02",
+      "standard": "LSP8",
+      "name": "Orange Signal",
+      "description": "",
+      "collectionName": "Signals From Below",
+      "imageUrl": "/fixtures/library-signal.svg",
+      "thumbnailUrl": "/fixtures/library-signal.svg",
+      "originalImageUrl": "/fixtures/library-signal.svg",
+      "creators": [], "attributes": [], "metadataStatus": "partial", "rawMetadata": { "fixture": true }
+    },
+    {
+      "id": "42:0x3333333333333333333333333333333333333333:contract",
+      "chainId": 42,
+      "contractAddress": "0x3333333333333333333333333333333333333333",
+      "tokenId": null,
+      "standard": "LSP7",
+      "name": "Underneath Study",
+      "description": "Contract-level fixture image without a collection name.",
+      "collectionName": null,
+      "imageUrl": "/fixtures/library-study.svg",
+      "thumbnailUrl": "/fixtures/library-study.svg",
+      "originalImageUrl": "/fixtures/library-study.svg",
+      "creators": [], "attributes": [], "metadataStatus": "partial", "rawMetadata": { "fixture": true }
+    },
+    {
+      "id": "42:0x4444444444444444444444444444444444444444:0x04",
+      "chainId": 42,
+      "contractAddress": "0x4444444444444444444444444444444444444444",
+      "tokenId": "0x04",
+      "standard": "LSP8",
+      "name": "Unavailable Specimen",
+      "description": "Metadata exists but no safe image could be resolved.",
+      "collectionName": "Broken Archive",
+      "imageUrl": null, "thumbnailUrl": null, "originalImageUrl": null,
+      "creators": [], "attributes": [], "metadataStatus": "unavailable", "rawMetadata": { "fixture": true, "error": "missing image" }
+    }
+  ]
+}

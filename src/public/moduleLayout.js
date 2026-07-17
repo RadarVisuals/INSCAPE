@@ -51,6 +51,14 @@ export function getIdentitySpan(geometry) {
   };
 }
 
+export function getCollectionSpan(geometry) {
+  if (geometry.narrow) return { columns: geometry.columns, rows: geometry.rows };
+  return {
+    columns: Math.min(6, Math.max(4, geometry.columns - 1)),
+    rows: Math.min(15, geometry.rows)
+  };
+}
+
 export function getDefaultModulePositions(geometry) {
   if (geometry.narrow) {
     return {
