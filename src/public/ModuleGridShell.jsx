@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IdentityDossier from './IdentityDossier.jsx';
 import { CollectionWindow, FolderWindow, useLibraryStore } from '../library/index.js';
+import KeeperSignalsLayer from '../signals/components/KeeperSignalsLayer.jsx';
+import SignalSettings from '../signals/components/SignalSettings.jsx';
+import SignalsWindow from '../signals/components/SignalsWindow.jsx';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { getPublicTheme } from './themeTokens.js';
 import {
@@ -20,6 +23,7 @@ import {
 } from './moduleLayout.js';
 import './moduleGrid.css';
 import '../library/collection.css';
+import '../signals/signals.css';
 
 const MODULES = Object.freeze([
   { id: 'identity', label: 'Profile Card' },
@@ -102,6 +106,7 @@ export default function ModuleGridShell({
   activeActorId,
   avatarSrc,
   residentHandoff,
+  keeperReactions,
   interfaceVisible = true,
   revealPresentation = { sequence: 'short', reducedMotion: false }
 }) {
@@ -113,6 +118,8 @@ export default function ModuleGridShell({
   const [collectionOpen, setCollectionOpen] = useState(false);
   const [collectionPanelPosition, setCollectionPanelPosition] = useState(null);
   const [collectionSearchRequest, setCollectionSearchRequest] = useState(0);
+  const [signalsOpen, setSignalsOpen] = useState(false);
+  const [signalsPanelPosition, setSignalsPanelPosition] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [openFolderLauncherId, setOpenFolderLauncherId] = useState(null);
   const [activeModuleId, setActiveModuleId] = useState(null);
@@ -122,6 +129,7 @@ export default function ModuleGridShell({
   const identityRef = useRef(null);
   const identityPanelRef = useRef(null);
   const collectionPanelRef = useRef(null);
+  const signalsPanelRef = useRef(null);
   const folderPanelRef = useRef(null);
   const shellRef = useRef(null);
   const gridRef = useRef(null);
@@ -131,6 +139,7 @@ export default function ModuleGridShell({
   const theme = useMemo(() => getPublicTheme(activeActorId), [activeActorId]);
   const identitySpan = useMemo(() => getIdentitySpan(geometry), [geometry]);
   const collectionSpan = useMemo(() => getCollectionSpan(geometry), [geometry]);
+  const signalsSpan = collectionSpan;
   const folderSpan = useMemo(() => getCanvasSpaceSpan(geometry), [geometry]);
   const workspace = useLibraryStore((state) => state.workspace);
   const setLauncherPosition = useLibraryStore((state) => state.setLauncherPosition);
@@ -217,6 +226,16 @@ export default function ModuleGridShell({
   }, [canvasPositions, collectionOpen, collectionSpan, geometry]);
 
   useEffect(() => {
+    if (!signalsOpen) return;
+    setSignalsPanelPosition((current) => findNearestExpandedModulePosition(
+      current ?? canvasPositions.signals,
+      signalsSpan,
+      canvasPositions,
+      geometry
+    ));
+  }, [canvasPositions, geometry, signalsOpen, signalsSpan]);
+
+  useEffect(() => {
     const resize = () => {
       if (resizeFrameRef.current) return;
       resizeFrameRef.current = window.requestAnimationFrame(() => {
@@ -244,7 +263,7 @@ export default function ModuleGridShell({
   }, [activeModuleId, identityOpen]);
 
   useEffect(() => {
-    residentHandoff?.trackActorPosition?.(gridRef.current);
+    residentHandoff?.trackActorPosition?.([gridRef.current, shellRef.current]);
     return () => residentHandoff?.trackActorPosition?.(null);
   }, [residentHandoff]);
 
@@ -293,6 +312,12 @@ export default function ModuleGridShell({
       window.requestAnimationFrame(() => moduleRefs.current.get('collection')?.focus());
       return;
     }
+    if (id === 'signals' && signalsOpen) {
+      setSignalsOpen(false);
+      setActiveModuleId(null);
+      window.requestAnimationFrame(() => moduleRefs.current.get('signals')?.focus());
+      return;
+    }
     setActiveModuleId(id);
     if (id === 'collection') {
       setCollectionPanelPosition((current) => findNearestExpandedModulePosition(
@@ -304,6 +329,16 @@ export default function ModuleGridShell({
       setCollectionOpen(true);
       return;
     }
+    if (id === 'signals') {
+      setSignalsPanelPosition((current) => findNearestExpandedModulePosition(
+        current ?? canvasPositions.signals,
+        signalsSpan,
+        canvasPositions,
+        geometry
+      ));
+      setSignalsOpen(true);
+      return;
+    }
     if (id !== 'identity') return;
     setIdentityPanelPosition((current) => findNearestExpandedModulePosition(
       current ?? canvasPositions.identity,
@@ -313,7 +348,7 @@ export default function ModuleGridShell({
     ));
     setIdentityPhase('approaching');
     setIdentityOpen(true);
-  }, [canvasPositions, collectionOpen, collectionSpan, geometry, identityOpen, identitySpan, openFolderLauncherId, pinnedLaunchers]);
+  }, [canvasPositions, collectionOpen, collectionSpan, geometry, identityOpen, identitySpan, openFolderLauncherId, pinnedLaunchers, signalsOpen, signalsSpan]);
 
   const openCollectionSearch = useCallback(() => {
     if (!collectionOpen) openModule('collection');
@@ -445,6 +480,7 @@ export default function ModuleGridShell({
     if (wasMoved && drag.kind === 'expanded') {
       if (id === 'identity-panel') setIdentityPanelPosition(nextPosition);
       if (id === 'collection-panel') setCollectionPanelPosition(nextPosition);
+      if (id === 'signals-panel') setSignalsPanelPosition(nextPosition);
       if (id.startsWith('folder-panel:')) setLauncherWindowPosition(id.slice('folder-panel:'.length), nextPosition);
     }
     else if (wasMoved) commitPosition(id, nextPosition);
@@ -471,6 +507,9 @@ export default function ModuleGridShell({
         geometry
       ));
     }
+    if (signalsOpen) {
+      setSignalsPanelPosition(findNearestExpandedModulePosition(defaults.signals, signalsSpan, { ...defaults }, geometry));
+    }
     if (geometry.narrow) {
       try { window.localStorage.removeItem(MODULE_LAYOUT_STORAGE_KEY); } catch { /* Storage is optional. */ }
     } else persistPositions(defaults);
@@ -485,6 +524,13 @@ export default function ModuleGridShell({
 
   const collectionDragProps = {
     onPointerDown: (event) => startExpandedPanelDrag(event, 'collection-panel', collectionSpan, collectionPanelPosition, collectionPanelRef, editMode),
+    onPointerMove: moveDrag,
+    onPointerUp: (event) => endDrag(event, false),
+    onPointerCancel: clearDragPresentation
+  };
+
+  const signalsDragProps = {
+    onPointerDown: (event) => startExpandedPanelDrag(event, 'signals-panel', signalsSpan, signalsPanelPosition, signalsPanelRef, editMode),
     onPointerMove: moveDrag,
     onPointerUp: (event) => endDrag(event, false),
     onPointerCancel: clearDragPresentation
@@ -561,9 +607,8 @@ export default function ModuleGridShell({
       >
         <GridBackdrop geometry={geometry} />
         <div className="module-grid__placement-preview" ref={previewRef} hidden />
-
         {MODULES.map(({ id, label }) => {
-          const isActive = activeModuleId === id || (id === 'identity' && identityOpen) || (id === 'collection' && collectionOpen);
+          const isActive = activeModuleId === id || (id === 'identity' && identityOpen) || (id === 'collection' && collectionOpen) || (id === 'signals' && signalsOpen);
           const entryAvailable = availableModuleIds.has(id);
           const entryIndex = MODULE_ENTRY_ORDER[id];
           return (
@@ -578,7 +623,7 @@ export default function ModuleGridShell({
               type="button"
               disabled={!entryAvailable}
               aria-hidden={!entryAvailable || undefined}
-              aria-expanded={id === 'identity' ? identityOpen : id === 'collection' ? collectionOpen : undefined}
+              aria-expanded={id === 'identity' ? identityOpen : id === 'collection' ? collectionOpen : id === 'signals' ? signalsOpen : undefined}
               aria-pressed={id === 'identity' ? undefined : isActive}
               aria-label={`Open ${label} module`}
               style={{
@@ -699,6 +744,32 @@ export default function ModuleGridShell({
           </section>
         )}
 
+        {signalsOpen && signalsPanelPosition && (
+          <section
+            className="module-shell module-shell--expanded module-shell--collection module-shell--signals"
+            data-module-shell
+            data-module-id="signals-panel"
+            ref={signalsPanelRef}
+            style={positionStyle(signalsPanelPosition, signalsSpan)}
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby="signals-title"
+            onPointerDownCapture={() => setActiveModuleId('signals')}
+          >
+            <SignalsWindow
+              dragHandleProps={signalsDragProps}
+              dragEnabled={editMode && !geometry.narrow}
+              editMode={editMode}
+              escapeEnabled={activeModuleId === 'signals'}
+              onClose={() => {
+                setSignalsOpen(false);
+                setActiveModuleId(identityOpen ? 'identity' : collectionOpen ? 'collection' : null);
+                window.requestAnimationFrame(() => moduleRefs.current.get('signals')?.focus());
+              }}
+            />
+          </section>
+        )}
+
         {openFolderLauncher && openFolderPosition && (
           <section
             className="module-shell module-shell--expanded module-shell--collection module-shell--folder"
@@ -727,6 +798,13 @@ export default function ModuleGridShell({
           </section>
         )}
       </section>
+      <KeeperSignalsLayer
+        interfaceReady={interfaceVisible}
+        residentHandoffActive={identityPhase !== 'closed'}
+        reducedMotion={revealPresentation.reducedMotion}
+        reactionBridge={keeperReactions}
+      />
+      {activeHudCommand === 'settings' && <SignalSettings />}
     </main>
   );
 }

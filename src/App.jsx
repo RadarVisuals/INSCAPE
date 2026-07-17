@@ -61,6 +61,15 @@ function App() {
     }
   }), []);
 
+  const keeperReactions = useMemo(() => ({
+    getAvailability() {
+      return canvasRef.current?.getKeeperReactionAvailability?.();
+    },
+    trigger(reactionType) {
+      return canvasRef.current?.triggerKeeperReaction?.(reactionType);
+    }
+  }), []);
+
   const handleUserGesture = useCallback(() => {
     canvasRef.current?.acknowledgeUserGesture();
   }, []);
@@ -91,6 +100,7 @@ function App() {
             activeActorId={activeActorId}
             avatarSrc={AssetResolver.resolveActorAvatarPath(activeActorId)}
             residentHandoff={residentHandoff}
+            keeperReactions={keeperReactions}
             interfaceVisible={interfaceVisible}
             revealPresentation={revealPresentation}
           />

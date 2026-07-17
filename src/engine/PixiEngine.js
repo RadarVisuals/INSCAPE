@@ -160,6 +160,21 @@ export class PixiEngine {
     this.hasUserGesture = true;
   }
 
+  getKeeperReactionAvailability() {
+    return {
+      ready: this.isReady === true,
+      residentHandoff: Boolean(this.residentHandoff),
+      actorMoving: Boolean(this.actor?.isMovingToTarget)
+    };
+  }
+
+  triggerKeeperReaction(reactionType) {
+    const availability = this.getKeeperReactionAvailability();
+    if (!availability.ready || availability.residentHandoff || availability.actorMoving) return false;
+    this.startLocalReaction(reactionType);
+    return true;
+  }
+
   setResidentRevealVisible(visible, options = {}) {
     const nextVisible = visible !== false;
     const changed = nextVisible !== this.residentRevealVisible;
@@ -222,20 +237,26 @@ export class PixiEngine {
   }
 
   updateActorScreenPositionPresentation() {
-    const target = this.actorScreenPositionTarget;
-    if (!target) return;
+    const targets = (Array.isArray(this.actorScreenPositionTarget)
+      ? this.actorScreenPositionTarget
+      : [this.actorScreenPositionTarget]).filter(Boolean);
+    if (!targets.length) return;
     if (!this.masterContainer || !this.actor) {
-      target.style.setProperty('--actor-void-radius', '0px');
-      target.style.setProperty('--actor-void-falloff', '0px');
+      targets.forEach((target) => {
+        target.style.setProperty('--actor-void-radius', '0px');
+        target.style.setProperty('--actor-void-falloff', '0px');
+      });
       return;
     }
 
     const actorGlobal = this.masterContainer.toGlobal(this.actor.container.position);
-    target.style.setProperty('--actor-screen-x', `${actorGlobal.x.toFixed(1)}px`);
-    target.style.setProperty('--actor-screen-y', `${actorGlobal.y.toFixed(1)}px`);
     const actorPresented = this.actor.container.visible && this.residentRevealAlpha > 0.05;
-    target.style.setProperty('--actor-void-radius', actorPresented ? '104px' : '0px');
-    target.style.setProperty('--actor-void-falloff', actorPresented ? '28px' : '0px');
+    targets.forEach((target) => {
+      target.style.setProperty('--actor-screen-x', `${actorGlobal.x.toFixed(1)}px`);
+      target.style.setProperty('--actor-screen-y', `${actorGlobal.y.toFixed(1)}px`);
+      target.style.setProperty('--actor-void-radius', actorPresented ? '104px' : '0px');
+      target.style.setProperty('--actor-void-falloff', actorPresented ? '28px' : '0px');
+    });
   }
 
   getResidentBoundary(bounds, preferredEdge = null, referencePosition = null) {

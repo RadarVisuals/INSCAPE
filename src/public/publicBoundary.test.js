@@ -32,11 +32,14 @@ test('public modules do not depend on private editor state or compatibility alia
 test('the shared canvas remains outside the public/private mode branch', () => {
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
   const canvasIndex = appSource.indexOf('<ArtCanvas');
+  const canvasCloseIndex = appSource.indexOf('/>', canvasIndex);
   const modeBranchIndex = appSource.indexOf('applicationMode === APPLICATION_MODES.ATELIER');
 
   assert.ok(canvasIndex >= 0);
-  assert.ok(modeBranchIndex > canvasIndex);
-  assert.equal(appSource.match(/<ArtCanvas(?:\s[^>]*)?\s*\/>/g)?.length, 1);
+  assert.ok(canvasCloseIndex > canvasIndex);
+  assert.ok(modeBranchIndex > canvasCloseIndex);
+  assert.equal(appSource.match(/import ArtCanvas from/g)?.length, 1);
+  assert.equal(appSource.match(/<ArtCanvas\b/g)?.length, 1);
 });
 
 test('window state stays a UI-only document with no RenderConfig fields', () => {

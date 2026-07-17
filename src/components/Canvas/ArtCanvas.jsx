@@ -27,6 +27,12 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, reducedMo
     },
     acknowledgeUserGesture() {
       engineRef.current?.acknowledgeUserGesture();
+    },
+    getKeeperReactionAvailability() {
+      return engineRef.current?.getKeeperReactionAvailability();
+    },
+    triggerKeeperReaction(reactionType) {
+      return engineRef.current?.triggerKeeperReaction(reactionType);
     }
   }), []);
 
