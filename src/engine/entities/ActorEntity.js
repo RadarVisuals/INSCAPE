@@ -270,7 +270,7 @@ export class ActorEntity {
   update(deltaTime, actorConfig, phenomena, runtime, dynamics) {
     const dtSeconds = deltaTime / 60;
 
-    this.updateTargetMovement(deltaTime);
+    this.updateTargetMovement(deltaTime * (dynamics.targetMovementMultiplier ?? 1));
 
     this.currentFlipScale += (this.facingDirection - this.currentFlipScale) * 0.2 * deltaTime;
 

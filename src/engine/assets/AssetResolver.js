@@ -16,6 +16,13 @@ export async function testImageAsset(src) {
 }
 
 export class AssetResolver {
+  static resolveActorAvatarPath(actorId) {
+    const normalizedActorId = typeof actorId === 'string' && /^[a-z0-9_-]+$/i.test(actorId)
+      ? actorId
+      : 'abyssal_eye';
+    return `/assets/actors/${normalizedActorId}/full.webp`;
+  }
+
   /**
    * Pads IDs to 2-digit strings for matching standard file structures.
    * @param {number|string} id 

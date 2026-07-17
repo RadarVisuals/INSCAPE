@@ -10,6 +10,7 @@
   
   --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-interface: "Bahnschrift Condensed", "Arial Narrow", "Aptos Narrow", sans-serif;
 }
 
 *, *::before, *::after {
@@ -39,6 +40,43 @@ html, body {
   height: 100%;
   position: relative;
   isolation: isolate;
+}
+
+.application-world,
+.application-interface {
+  position: absolute;
+  inset: 0;
+}
+
+.application-world {
+  opacity: 0;
+  transition: opacity 350ms ease-out;
+}
+
+.application-world[data-visible] { opacity: 1; }
+
+.application-interface {
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+
+.application-interface[data-visible] {
+  opacity: 1;
+}
+
+.application-root[data-application-mode="public"] .application-interface {
+  transition: none;
+}
+
+.application-root[data-application-mode="atelier"] .application-interface[data-visible] {
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .application-world,
+  .application-interface { transition-duration: 160ms; }
 }
 
 /* Brutalist Scrollbar */

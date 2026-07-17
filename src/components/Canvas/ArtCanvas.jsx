@@ -3,15 +3,30 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { PixiEngine } from '../../engine/PixiEngine';
 import { useStore } from '../../store/useStore';
 
-const ArtCanvas = forwardRef(function ArtCanvas(_props, ref) {
+const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, reducedMotion = false, onReady }, ref) {
   const containerRef = useRef(null);
   const engineRef = useRef(null);
   
   const screenEffects = useStore((state) => state.renderConfig.effects.screen);
 
   useImperativeHandle(ref, () => ({
-    setResidentHabitat(bounds, options = {}) {
-      engineRef.current?.setResidentHabitat(bounds, options);
+    startResidentHandoff(bounds, options = {}) {
+      return engineRef.current?.startResidentHandoff(bounds, options);
+    },
+    updateResidentHandoffBounds(bounds) {
+      return engineRef.current?.updateResidentHandoffBounds(bounds);
+    },
+    exitResidentHandoff(bounds, options = {}) {
+      return engineRef.current?.exitResidentHandoff(bounds, options);
+    },
+    cancelResidentHandoff() {
+      engineRef.current?.cancelResidentHandoff();
+    },
+    setActorScreenPositionTarget(target) {
+      engineRef.current?.setActorScreenPositionTarget(target);
+    },
+    acknowledgeUserGesture() {
+      engineRef.current?.acknowledgeUserGesture();
     }
   }), []);
 
@@ -26,7 +41,10 @@ const ArtCanvas = forwardRef(function ArtCanvas(_props, ref) {
 
     if (import.meta.env.DEV) window.__UNDERNEATH_ENGINE__ = engineRef.current;
 
-    engineRef.current.init().catch(err => console.error("Failed to boot PixiEngine:", err));
+    engineRef.current.setResidentRevealVisible(actorVisible, { reducedMotion });
+    engineRef.current.init().then((ready) => {
+      if (ready) onReady?.();
+    }).catch(err => console.error("Failed to boot PixiEngine:", err));
 
     const handleResize = () => { if (engineRef.current) engineRef.current.resize(); };
     window.addEventListener('resize', handleResize);
@@ -42,6 +60,10 @@ const ArtCanvas = forwardRef(function ArtCanvas(_props, ref) {
       }
     };
   }, []);
+
+  useEffect(() => {
+    engineRef.current?.setResidentRevealVisible(actorVisible, { reducedMotion });
+  }, [actorVisible, reducedMotion]);
 
   const handleMouseMove = (e) => {
     if (engineRef.current) {

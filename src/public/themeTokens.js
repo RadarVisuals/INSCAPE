@@ -17,3 +17,25 @@ export const DEFAULT_PUBLIC_THEME = Object.freeze({
   '--hu-destructive': '#ff765f',
   '--hu-signal': '#dc6847'
 });
+
+const ACTOR_ACCENTS = Object.freeze({
+  abyssal_eye: Object.freeze({
+    '--hu-accent-primary': '#b86af0',
+    '--hu-accent-secondary': '#f0c8ff',
+    '--hu-focus': '#fff2ff',
+    '--hu-signal': '#d85cff'
+  }),
+  skull_reaper: Object.freeze({
+    '--hu-accent-primary': '#dc6847',
+    '--hu-accent-secondary': '#f1cf78',
+    '--hu-focus': '#fff0a5',
+    '--hu-signal': '#ff765f'
+  })
+});
+
+export function getPublicTheme(actorId) {
+  return Object.freeze({
+    ...DEFAULT_PUBLIC_THEME,
+    ...(ACTOR_ACCENTS[actorId] || {})
+  });
+}

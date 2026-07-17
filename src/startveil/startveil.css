@@ -1,0 +1,207 @@
+.startveil {
+  --veil-white: #e8e8e4;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--veil-white);
+  background: #070807;
+  font-family: var(--font-mono);
+  isolation: isolate;
+}
+
+.startveil::before,
+.startveil::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.startveil::before {
+  z-index: 6;
+  opacity: 0.14;
+  background: repeating-linear-gradient(to bottom, transparent 0 3px, rgba(255,255,255,0.08) 3px 4px);
+}
+
+.startveil::after {
+  z-index: 5;
+  background: radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.38) 72%, rgba(0,0,0,0.82) 120%);
+}
+
+.startveil__texture {
+  position: absolute;
+  inset: -30%;
+  z-index: 1;
+  opacity: 0.11;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
+  transform: translate3d(0, 0, 0) rotate(3deg);
+  animation: startveil-noise-shift 900ms steps(1, end) infinite;
+  will-change: transform;
+}
+
+.startveil__mark {
+  position: relative;
+  z-index: 3;
+  width: min(38vw, 44vh, 29rem);
+  transform-style: preserve-3d;
+  perspective: 900px;
+}
+
+.startveil__logo,
+.startveil__ghost img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  filter: grayscale(1) contrast(1.08) brightness(0.92);
+}
+
+.startveil__ghost {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.startveil__ghost--top { clip-path: inset(19% 0 57% 0); }
+.startveil__ghost--bottom { clip-path: inset(58% 0 17% 0); }
+
+.startveil__terminal {
+  position: absolute;
+  z-index: 7;
+  left: clamp(1.25rem, 5vw, 5rem);
+  bottom: clamp(1.25rem, 6vh, 4rem);
+  width: min(31rem, calc(100vw - 2.5rem));
+  font-size: clamp(0.68rem, 0.78vw, 0.8rem);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.startveil__terminal header {
+  margin-bottom: 1.5rem;
+  padding-left: 0.8rem;
+  border-left: 1px solid rgba(255,255,255,0.75);
+}
+
+.startveil__terminal header p { margin-bottom: 0.35rem; font-size: 1.05em; letter-spacing: 0.2em; }
+.startveil__terminal header span { color: rgba(232,232,228,0.5); }
+.startveil__terminal dl { display: grid; gap: 0.38rem; margin-bottom: 1.3rem; }
+.startveil__terminal dl div { display: grid; grid-template-columns: minmax(9rem, 1fr) auto; gap: 1rem; }
+.startveil__terminal dt { overflow: hidden; white-space: nowrap; color: rgba(232,232,228,0.58); }
+.startveil__terminal dt::after { content: ' ................................'; color: rgba(232,232,228,0.22); }
+.startveil__terminal dd { color: rgba(232,232,228,0.9); }
+
+.startveil__entry {
+  display: grid;
+  min-width: 15rem;
+  min-height: 3.25rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(232,232,228,0.34);
+  border-radius: 0;
+  color: inherit;
+  background: rgba(255,255,255,0.025);
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.startveil__entry:hover:not(:disabled) { color: #fff; border-color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.06); }
+.startveil__entry:focus-visible { outline: 1px solid #fff; outline-offset: 4px; }
+.startveil__entry:disabled { color: rgba(232,232,228,0.32); cursor: wait; }
+.startveil__entry strong { margin-top: 0.45rem; color: #fff; font: inherit; }
+
+.startveil__boot {
+  position: absolute;
+  z-index: 2;
+  top: 18%;
+  right: 7%;
+  display: grid;
+  gap: 0.55rem;
+  opacity: 0;
+  color: rgba(232,232,228,0.48);
+  font: 0.62rem/1 var(--font-mono);
+  letter-spacing: 0.12em;
+}
+
+.startveil__scan {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  opacity: 0;
+  background: #fff;
+  box-shadow: 0 0 12px 2px rgba(255,255,255,0.65), 0 0 70px 8px rgba(255,255,255,0.25);
+}
+
+.startveil[data-state='entering'] .startveil__mark { animation: startveil-turn 0.26s cubic-bezier(.62,.02,.28,1) both; }
+.startveil[data-state='booting'] .startveil__mark { animation: startveil-resolve 0.6s cubic-bezier(.2,.8,.2,1) both; }
+.startveil[data-state='booting'] .startveil__ghost { animation: startveil-slice 0.3s steps(2,end) 0.06s both; }
+.startveil[data-state='booting'] .startveil__ghost--bottom { animation-delay: 0.11s; animation-direction: reverse; }
+.startveil[data-state='booting'] .startveil__boot { animation: startveil-boot-text 0.5s steps(3,end) both; }
+.startveil[data-state='black-handoff'] > div,
+.startveil[data-state='revealing-world'] > div,
+.startveil[data-state='revealing-resident'] > div,
+.startveil[data-state='revealing-interface'] > div { visibility: hidden; }
+.startveil[data-state='black-handoff']::before,
+.startveil[data-state='black-handoff']::after,
+.startveil[data-state='revealing-world']::before,
+.startveil[data-state='revealing-world']::after { opacity: 0; }
+.startveil[data-state='revealing-world'] {
+  pointer-events: none;
+  animation: startveil-world-out 350ms ease-out both;
+}
+.startveil[data-state='revealing-resident'],
+.startveil[data-state='revealing-interface'] { pointer-events: none; opacity: 0; background: transparent; }
+
+@keyframes startveil-turn {
+  0% { transform: rotateY(0deg) scale(1); filter: brightness(1); }
+  100% { transform: rotateY(88deg) scale(0.94); filter: brightness(1.5); }
+}
+@keyframes startveil-resolve { from { transform: rotateY(88deg); } 72% { transform: rotateY(355deg); } to { transform: rotateY(360deg); filter: brightness(1.35); } }
+@keyframes startveil-slice { 0%,100% { opacity: 0; transform: translateX(0); } 25%,75% { opacity: 0.62; transform: translateX(18px); } 50% { opacity: 0.3; transform: translateX(-11px); } }
+@keyframes startveil-boot-text { 0% { opacity: 0; } 30% { opacity: 0.65; } 75% { opacity: 0.18; } 100% { opacity: 0; } }
+@keyframes startveil-world-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes startveil-short-pulse { from { filter: brightness(1); } 50% { filter: brightness(1.5); } to { filter: brightness(1); } }
+@keyframes startveil-noise-shift {
+  0% { transform: translate3d(0, 0, 0) rotate(3deg); }
+  12.5% { transform: translate3d(-1.2%, 0.7%, 0) rotate(3deg); }
+  25% { transform: translate3d(0.8%, -1.1%, 0) rotate(3deg); }
+  37.5% { transform: translate3d(-0.5%, -0.4%, 0) rotate(3deg); }
+  50% { transform: translate3d(1.1%, 0.9%, 0) rotate(3deg); }
+  62.5% { transform: translate3d(0.3%, -0.8%, 0) rotate(3deg); }
+  75% { transform: translate3d(-0.9%, 1.1%, 0) rotate(3deg); }
+  87.5% { transform: translate3d(0.7%, 0.2%, 0) rotate(3deg); }
+  100% { transform: translate3d(0, 0, 0) rotate(3deg); }
+}
+
+.startveil[data-sequence='short'][data-state='entering'] .startveil__mark { animation: startveil-short-pulse 0.16s ease both; }
+.startveil[data-sequence='short'][data-state='booting'] .startveil__mark { animation: none; }
+.startveil[data-sequence='short'][data-state='booting'] .startveil__ghost,
+.startveil[data-sequence='short'][data-state='booting'] .startveil__boot { animation: none; }
+.startveil[data-sequence='short'][data-state='revealing-world'] { animation-duration: 140ms; }
+
+@media (max-width: 700px) {
+  .startveil { place-items: center; }
+  .startveil__mark { width: min(72vw, 42vh, 22rem); margin-top: -11vh; }
+  .startveil__terminal { left: 1.25rem; right: 1.25rem; bottom: max(1.5rem, env(safe-area-inset-bottom)); width: auto; }
+  .startveil__boot { top: 12%; right: 1.25rem; }
+  .startveil__entry { width: 100%; min-width: 0; min-height: 3.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .startveil__texture,
+  .startveil[data-state] .startveil__mark,
+  .startveil[data-state] .startveil__ghost,
+  .startveil[data-state] .startveil__boot,
+  .startveil[data-state] .startveil__scan { animation: none; }
+  .startveil[data-state='booting'] .startveil__mark { filter: brightness(1.35); transition: filter 0.15s ease; }
+  .startveil[data-state='revealing-world'] { animation: startveil-world-out 140ms ease-out both; }
+}

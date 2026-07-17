@@ -126,14 +126,12 @@ test('reduced motion places and restores the actor immediately', () => {
   assert.equal(actor.isMovingToTarget, false);
 });
 
-test('clearing an inactive habitat accepts null startup options', () => {
+test('clearing inactive movement bounds accepts null startup options', () => {
   const actorSource = readFileSync(new URL('./ActorEntity.js', import.meta.url), 'utf8');
   const movementSource = readFileSync(new URL('./actorMovement.js', import.meta.url), 'utf8');
-  const engineSource = readFileSync(new URL('../PixiEngine.js', import.meta.url), 'utf8');
 
   assert.match(actorSource, /clearActorMovementBounds\(this, options\)/);
   assert.match(movementSource, /const \{ reducedMotion = false \} = options \|\| \{\}/);
-  assert.match(engineSource, /clearMovementBounds\(this\.lastHabitatOptions \?\? \{\}\)/);
 
   const actor = createMovementActor();
   assert.doesNotThrow(() => actor.clearMovementBounds(null));

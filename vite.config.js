@@ -27,4 +27,13 @@ function pruneProductionAuthoringAssets() {
 
 export default defineConfig({
   plugins: [react(), pruneProductionAuthoringAssets()],
+  server: {
+    watch: {
+      ignored: [
+        '**/.edge-*/**',
+        '**/.agents/**',
+        '**/codebase_dump.md'
+      ]
+    }
+  }
 });

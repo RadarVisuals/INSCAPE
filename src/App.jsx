@@ -1,12 +1,15 @@
 // src/App.jsx
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   APPLICATION_MODES,
   createApplicationModeUrl,
   resolveApplicationMode
 } from './app/appMode.js';
 import ArtCanvas from './components/Canvas/ArtCanvas';
-import PublicShell from './public/PublicShell.jsx';
+import ModuleGridShell from './public/ModuleGridShell.jsx';
+import { AssetResolver } from './engine/assets/AssetResolver.js';
+import { Startveil } from './startveil/index.js';
+import { useStore } from './store/useStore.js';
 
 const AtelierExperience = lazy(() => import('./app/AtelierExperience.jsx'));
 
@@ -17,6 +20,16 @@ function AtelierLoadingFallback() {
 function App() {
   const canvasRef = useRef(null);
   const [applicationMode, setApplicationMode] = useState(() => resolveApplicationMode(window.location));
+  const [worldReady, setWorldReady] = useState(false);
+  const [revealStage, setRevealStage] = useState('sealed');
+  const [revealPresentation, setRevealPresentation] = useState({
+    sequence: 'full',
+    reducedMotion: false
+  });
+  const activeActorId = useStore((state) => state.renderConfig.actor.id);
+  const worldVisible = ['world', 'resident', 'interface', 'complete'].includes(revealStage);
+  const actorVisible = ['resident', 'interface', 'complete'].includes(revealStage);
+  const interfaceVisible = ['interface', 'complete'].includes(revealStage);
 
   useEffect(() => {
     const syncModeFromUrl = () => setApplicationMode(resolveApplicationMode(window.location));
@@ -30,25 +43,68 @@ function App() {
     setApplicationMode(mode);
   }, []);
 
-  const setResidentHabitat = useCallback((bounds, options) => {
-    canvasRef.current?.setResidentHabitat(bounds, options);
+  const residentHandoff = useMemo(() => ({
+    start(bounds, options) {
+      return canvasRef.current?.startResidentHandoff(bounds, options);
+    },
+    updateBounds(bounds) {
+      return canvasRef.current?.updateResidentHandoffBounds(bounds);
+    },
+    exit(bounds, options) {
+      return canvasRef.current?.exitResidentHandoff(bounds, options);
+    },
+    cancel() {
+      canvasRef.current?.cancelResidentHandoff();
+    },
+    trackActorPosition(target) {
+      canvasRef.current?.setActorScreenPositionTarget(target);
+    }
+  }), []);
+
+  const handleUserGesture = useCallback(() => {
+    canvasRef.current?.acknowledgeUserGesture();
   }, []);
 
   return (
-    <div className="application-root" data-application-mode={applicationMode}>
-      <ArtCanvas ref={canvasRef} />
-      {applicationMode === APPLICATION_MODES.ATELIER ? (
-        <Suspense fallback={<AtelierLoadingFallback />}>
-          <AtelierExperience
-            onRequestPublic={() => changeApplicationMode(APPLICATION_MODES.PUBLIC)}
-          />
-        </Suspense>
-      ) : (
-        <PublicShell
-          onRequestAtelier={() => changeApplicationMode(APPLICATION_MODES.ATELIER)}
-          onResidentHabitatChange={setResidentHabitat}
+    <div className="application-root" data-application-mode={applicationMode} data-startveil-stage={revealStage}>
+      <div className="application-world" data-visible={worldVisible || undefined}>
+        <ArtCanvas
+          ref={canvasRef}
+          actorVisible={actorVisible}
+          reducedMotion={revealPresentation.reducedMotion}
+          onReady={() => setWorldReady(true)}
         />
-      )}
+      </div>
+      <div
+        className="application-interface"
+        data-visible={interfaceVisible || undefined}
+        aria-hidden={!interfaceVisible}
+        inert={interfaceVisible ? undefined : ''}
+      >
+        {applicationMode === APPLICATION_MODES.ATELIER ? (
+          <Suspense fallback={<AtelierLoadingFallback />}>
+            <AtelierExperience onRequestPublic={() => changeApplicationMode(APPLICATION_MODES.PUBLIC)} />
+          </Suspense>
+        ) : (
+          <ModuleGridShell
+            onRequestAtelier={() => changeApplicationMode(APPLICATION_MODES.ATELIER)}
+            activeActorId={activeActorId}
+            avatarSrc={AssetResolver.resolveActorAvatarPath(activeActorId)}
+            residentHandoff={residentHandoff}
+            interfaceVisible={interfaceVisible}
+            revealPresentation={revealPresentation}
+          />
+        )}
+      </div>
+      <Startveil
+        ready={worldReady}
+        onUserGesture={handleUserGesture}
+        onPresentationMode={setRevealPresentation}
+        onRevealWorld={() => setRevealStage('world')}
+        onRevealActor={() => setRevealStage('resident')}
+        onRevealInterface={() => setRevealStage('interface')}
+        onComplete={() => setRevealStage('complete')}
+      />
     </div>
   );
 }

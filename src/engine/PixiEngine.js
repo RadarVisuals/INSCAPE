@@ -47,8 +47,16 @@ export class PixiEngine {
     this.time = 0;
     this.isReady = false;
     this.isDestroyed = false;
-    this.residentHabitat = null;
-    this.residentReturnPosition = null;
+    this.hasUserGesture = false;
+    this.residentRevealVisible = true;
+    this.residentRevealAlpha = 1;
+    this.residentRevealStartAlpha = 1;
+    this.residentRevealElapsed = 0;
+    this.residentRevealDuration = 0.35;
+    this.residentRevealAnimating = false;
+    this.residentHandoff = null;
+    this.residentHandoffGeneration = 0;
+    this.actorScreenPositionTarget = null;
 
     // Load sequence counter to prevent overlapping asynchronous loading glitches
     this.loadSequence = 0;
@@ -148,47 +156,271 @@ export class PixiEngine {
     this.actor.moveTo(localTarget.x, localTarget.y);
   }
 
-  setResidentHabitat(bounds, options = {}) {
-    if (bounds) {
-      const isOpening = !this.residentHabitat;
-      if (isOpening && this.actor) {
-        this.residentReturnPosition = { ...this.actor.baselinePosition };
-      }
-      this.residentHabitat = { bounds: { ...bounds }, options: { ...(options || {}) } };
-      this.syncResidentHabitat();
-      return;
-    }
-
-    this.residentHabitat = null;
-    this.syncResidentHabitat();
-    this.residentReturnPosition = null;
+  acknowledgeUserGesture() {
+    this.hasUserGesture = true;
   }
 
-  syncResidentHabitat() {
-    if (!this.masterContainer || !this.actor) return;
-    if (!this.residentHabitat) {
-      this.actor.clearMovementBounds(this.lastHabitatOptions ?? {});
-      this.lastHabitatOptions = null;
+  setResidentRevealVisible(visible, options = {}) {
+    const nextVisible = visible !== false;
+    const changed = nextVisible !== this.residentRevealVisible;
+    this.residentRevealVisible = nextVisible;
+
+    if (changed && nextVisible) {
+      this.residentRevealStartAlpha = this.residentRevealAlpha;
+      this.residentRevealElapsed = 0;
+      this.residentRevealDuration = options.reducedMotion === true ? 0.16 : 0.35;
+      this.residentRevealAnimating = this.residentRevealAlpha < 1;
+    } else if (!nextVisible) {
+      this.residentRevealAlpha = 0;
+      this.residentRevealStartAlpha = 0;
+      this.residentRevealElapsed = 0;
+      this.residentRevealAnimating = false;
+    }
+
+    this.applyResidentRevealPresentation();
+    this.updateActorScreenPositionPresentation();
+  }
+
+  applyResidentRevealPresentation() {
+    const representedByAvatar = this.isResidentRepresentedByAvatar();
+    const visible = this.residentRevealVisible && !representedByAvatar;
+    if (this.actor?.container && !this.residentHandoff) {
+      this.actor.container.visible = visible;
+      this.actor.container.alpha = this.residentRevealAlpha;
+    }
+    if (this.trailSystem?.trailContainer) {
+      this.trailSystem.trailContainer.visible = visible;
+      this.trailSystem.trailContainer.alpha = this.residentRevealAlpha;
+    }
+    if (this.shedSkinTrailSystem?.container) {
+      this.shedSkinTrailSystem.container.visible = visible;
+      this.shedSkinTrailSystem.container.alpha = this.residentRevealAlpha;
+    }
+    if (this.searchlightSystem?.container) {
+      if (!visible) this.searchlightSystem.container.visible = false;
+      this.searchlightSystem.container.alpha = this.residentRevealAlpha;
+    }
+  }
+
+  updateResidentReveal(deltaTime) {
+    if (!this.residentRevealAnimating) return;
+    this.residentRevealElapsed += Math.max(0, deltaTime) / 60;
+    const progress = Math.min(1, this.residentRevealElapsed / this.residentRevealDuration);
+    const easedProgress = 1 - ((1 - progress) * (1 - progress));
+    this.residentRevealAlpha = this.residentRevealStartAlpha
+      + (1 - this.residentRevealStartAlpha) * easedProgress;
+    if (progress >= 1) {
+      this.residentRevealAlpha = 1;
+      this.residentRevealAnimating = false;
+    }
+    this.applyResidentRevealPresentation();
+  }
+
+  setActorScreenPositionTarget(target) {
+    this.actorScreenPositionTarget = target || null;
+    this.updateActorScreenPositionPresentation();
+  }
+
+  updateActorScreenPositionPresentation() {
+    const target = this.actorScreenPositionTarget;
+    if (!target) return;
+    if (!this.masterContainer || !this.actor) {
+      target.style.setProperty('--actor-void-radius', '0px');
+      target.style.setProperty('--actor-void-falloff', '0px');
       return;
     }
 
-    const { bounds, options } = this.residentHabitat;
-    const topLeft = this.masterContainer.toLocal({
-      x: bounds.left,
-      y: bounds.top
-    });
-    const bottomRight = this.masterContainer.toLocal({
-      x: bounds.right,
-      y: bounds.bottom
-    });
+    const actorGlobal = this.masterContainer.toGlobal(this.actor.container.position);
+    target.style.setProperty('--actor-screen-x', `${actorGlobal.x.toFixed(1)}px`);
+    target.style.setProperty('--actor-screen-y', `${actorGlobal.y.toFixed(1)}px`);
+    const actorPresented = this.actor.container.visible && this.residentRevealAlpha > 0.05;
+    target.style.setProperty('--actor-void-radius', actorPresented ? '104px' : '0px');
+    target.style.setProperty('--actor-void-falloff', actorPresented ? '28px' : '0px');
+  }
 
-    this.lastHabitatOptions = options;
-    this.actor.setMovementBounds({
-      left: Math.min(topLeft.x, bottomRight.x),
-      right: Math.max(topLeft.x, bottomRight.x),
-      top: Math.min(topLeft.y, bottomRight.y),
-      bottom: Math.max(topLeft.y, bottomRight.y)
-    }, { ...options, returnPosition: this.residentReturnPosition });
+  getResidentBoundary(bounds, preferredEdge = null, referencePosition = null) {
+    if (!this.masterContainer || !this.actor || !bounds) return null;
+    const actorGlobal = this.masterContainer.toGlobal(referencePosition || this.actor.baselinePosition);
+    const left = Number(bounds.left) || 0;
+    const right = Number(bounds.right) || left;
+    const top = Number(bounds.top) || 0;
+    const bottom = Number(bounds.bottom) || top;
+    const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
+    const candidates = [
+      { edge: 'top', x: clamp(actorGlobal.x, left, right), y: top },
+      { edge: 'bottom', x: clamp(actorGlobal.x, left, right), y: bottom },
+      { edge: 'left', x: left, y: clamp(actorGlobal.y, top, bottom) },
+      { edge: 'right', x: right, y: clamp(actorGlobal.y, top, bottom) }
+    ];
+    candidates.sort((first, second) => (
+      Math.hypot(first.x - actorGlobal.x, first.y - actorGlobal.y) -
+      Math.hypot(second.x - actorGlobal.x, second.y - actorGlobal.y)
+    ));
+    const boundary = candidates.find((candidate) => candidate.edge === preferredEdge) || candidates[0];
+    return {
+      edge: boundary.edge,
+      point: this.masterContainer.toLocal(boundary)
+    };
+  }
+
+  startResidentHandoff(bounds, options = {}) {
+    const generation = ++this.residentHandoffGeneration;
+    const returnPosition = this.residentHandoff?.returnPosition || (this.actor
+      ? { ...this.actor.baselinePosition }
+      : null);
+    const boundary = this.getResidentBoundary(bounds, null, returnPosition);
+    this.residentHandoff = {
+      generation,
+      phase: 'approaching',
+      bounds: { ...bounds },
+      entryEdge: boundary?.edge || 'top',
+      reducedMotion: options.reducedMotion === true,
+      returnPosition,
+      elapsed: 0,
+      duration: options.reducedMotion === true ? 0.06 : 0.28,
+      startAlpha: 1,
+      onEntering: options.onEntering,
+      onEntered: options.onEntered,
+      onComplete: null
+    };
+    this.syncResidentHandoff();
+    return this.residentHandoff.entryEdge;
+  }
+
+  updateResidentHandoffBounds(bounds) {
+    if (!this.residentHandoff || !bounds) return null;
+    this.residentHandoff.bounds = { ...bounds };
+    const boundary = this.getResidentBoundary(bounds, null, this.residentHandoff.returnPosition);
+    if (boundary) this.residentHandoff.entryEdge = boundary.edge;
+    if (this.residentHandoff.phase === 'approaching') this.syncResidentHandoff();
+    return this.residentHandoff.entryEdge;
+  }
+
+  syncResidentHandoff() {
+    const handoff = this.residentHandoff;
+    if (!handoff || !this.masterContainer || !this.actor) return;
+    if (!handoff.returnPosition) handoff.returnPosition = { ...this.actor.baselinePosition };
+
+    if (handoff.phase === 'open') {
+      this.actor.container.alpha = 0;
+      this.actor.container.visible = false;
+      return;
+    }
+    if (handoff.phase !== 'approaching') return;
+
+    const boundary = this.getResidentBoundary(handoff.bounds, handoff.entryEdge, handoff.returnPosition);
+    if (!boundary) return;
+    const boundaryPoint = boundary.point;
+    this.actor.container.visible = true;
+    this.actor.container.alpha = 1;
+    if (handoff.reducedMotion) {
+      this.actor.baselinePosition.x = boundaryPoint.x;
+      this.actor.baselinePosition.y = boundaryPoint.y;
+      this.actor.targetPosition.x = boundaryPoint.x;
+      this.actor.targetPosition.y = boundaryPoint.y;
+      this.actor.isMovingToTarget = false;
+      handoff.phase = 'entering';
+      handoff.onEntering?.();
+    } else {
+      this.actor.moveTo(boundaryPoint.x, boundaryPoint.y);
+    }
+  }
+
+  exitResidentHandoff(bounds, options = {}) {
+    const handoff = this.residentHandoff;
+    if (!handoff || !this.actor || !this.masterContainer) {
+      queueMicrotask(() => options.onComplete?.());
+      return null;
+    }
+
+    ++this.residentHandoffGeneration;
+    handoff.generation = this.residentHandoffGeneration;
+    handoff.bounds = bounds ? { ...bounds } : handoff.bounds;
+    handoff.onComplete = options.onComplete;
+    handoff.reducedMotion = options.reducedMotion === true;
+
+    if (handoff.phase === 'approaching' && this.actor.container.alpha >= 0.999) {
+      const returnPosition = handoff.returnPosition;
+      this.actor.container.visible = true;
+      this.actor.container.alpha = 1;
+      this.residentHandoff = null;
+      if (returnPosition) this.actor.moveTo(returnPosition.x, returnPosition.y);
+      queueMicrotask(() => options.onComplete?.());
+      return handoff.entryEdge;
+    }
+
+    const boundary = this.getResidentBoundary(handoff.bounds, null, handoff.returnPosition);
+    if (boundary) {
+      handoff.entryEdge = boundary.edge;
+      const boundaryPoint = boundary.point;
+      this.actor.baselinePosition.x = boundaryPoint.x;
+      this.actor.baselinePosition.y = boundaryPoint.y;
+      this.actor.targetPosition.x = boundaryPoint.x;
+      this.actor.targetPosition.y = boundaryPoint.y;
+      this.actor.isMovingToTarget = false;
+    }
+    handoff.phase = 'exiting';
+    handoff.elapsed = 0;
+    handoff.duration = handoff.reducedMotion ? 0.06 : 0.28;
+    handoff.startAlpha = Math.max(0, Math.min(1, this.actor.container.alpha || 0));
+    this.actor.container.visible = true;
+    return handoff.entryEdge;
+  }
+
+  finishResidentExit(handoff) {
+    if (!this.actor || this.residentHandoff !== handoff) return;
+    const returnPosition = handoff.returnPosition;
+    const onComplete = handoff.onComplete;
+    this.actor.container.visible = true;
+    this.actor.container.alpha = 1;
+    this.residentHandoff = null;
+    if (returnPosition) this.actor.moveTo(returnPosition.x, returnPosition.y);
+    onComplete?.();
+  }
+
+  cancelResidentHandoff() {
+    const handoff = this.residentHandoff;
+    this.residentHandoff = null;
+    ++this.residentHandoffGeneration;
+    if (!this.actor) return;
+    this.actor.container.visible = true;
+    this.actor.container.alpha = 1;
+    if (handoff?.returnPosition) this.actor.moveTo(handoff.returnPosition.x, handoff.returnPosition.y);
+  }
+
+  updateResidentHandoff(deltaTime) {
+    const handoff = this.residentHandoff;
+    if (!handoff || !this.actor) return;
+
+    if (handoff.phase === 'approaching' && !this.actor.isMovingToTarget) {
+      handoff.phase = 'entering';
+      handoff.elapsed = 0;
+      handoff.onEntering?.();
+    }
+
+    if (handoff.phase === 'entering') {
+      handoff.elapsed += Math.max(0, deltaTime) / 60;
+      const progress = Math.min(1, handoff.elapsed / handoff.duration);
+      this.actor.container.alpha = 1 - progress;
+      if (progress >= 1) {
+        this.actor.container.alpha = 0;
+        this.actor.container.visible = false;
+        handoff.phase = 'open';
+        handoff.onEntered?.();
+      }
+      return;
+    }
+
+    if (handoff.phase === 'exiting') {
+      handoff.elapsed += Math.max(0, deltaTime) / 60;
+      const progress = Math.min(1, handoff.elapsed / handoff.duration);
+      this.actor.container.alpha = handoff.startAlpha + (1 - handoff.startAlpha) * progress;
+      if (progress >= 1) this.finishResidentExit(handoff);
+    }
+  }
+
+  isResidentRepresentedByAvatar() {
+    return this.residentHandoff?.phase === 'open';
   }
 
   async init() {
@@ -222,8 +454,10 @@ export class PixiEngine {
       this.resize();
       
       this.isReady = true;
+      return true;
     } catch (err) {
       console.error("[PixiEngine] Init Error:", err);
+      return false;
     }
   }
 
@@ -336,8 +570,9 @@ export class PixiEngine {
     };
     this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager, this.app.renderer);
     this.masterContainer.addChild(this.actor.container);
-    this.syncResidentHabitat();
+    this.syncResidentHandoff();
     this.shedSkinTrailSystem = new ShedSkinTrailSystem(this.masterContainer, this.app.renderer, this.actor, rig.keys.char_clipping_mask);
+    this.setResidentRevealVisible(this.residentRevealVisible);
 
     // Add stage foreground overlay container on top of the character
     this.masterContainer.addChild(this.stage.fgContainer);
@@ -501,8 +736,9 @@ export class PixiEngine {
       };
       this.actor = new ActorEntity("active_character", actorAssets, this.renderTextureManager, this.app.renderer);
       this.masterContainer.addChild(this.actor.container);
-      this.syncResidentHabitat();
+      this.syncResidentHandoff();
       this.shedSkinTrailSystem = new ShedSkinTrailSystem(this.masterContainer, this.app.renderer, this.actor, nextRig.keys.char_clipping_mask);
+      this.setResidentRevealVisible(this.residentRevealVisible);
     }
 
     if (this.stage.fgContainer.parent) {
@@ -645,13 +881,25 @@ export class PixiEngine {
           pointer: runtime.pointer,
           reactionModifiers: runtime.reaction.modifiers
         },
-        { isGlitchActive, glitchShakeIntensity, canvasHeight: this.canvasHeight }
+        {
+          isGlitchActive,
+          glitchShakeIntensity,
+          canvasHeight: this.canvasHeight,
+          targetMovementMultiplier: this.residentHandoff?.phase === 'approaching' ? 4 : 1
+        }
       );
-      this.shedSkinTrailSystem?.update(deltaTime, this.actor.headState, renderConfig.phenomena.shedSkin);
+      this.updateResidentReveal(deltaTime);
+      this.updateResidentHandoff(deltaTime);
+      const actorIsAvatar = this.isResidentRepresentedByAvatar();
+      if (this.shedSkinTrailSystem?.container) this.shedSkinTrailSystem.container.visible = this.residentRevealVisible && !actorIsAvatar;
+      if (this.residentRevealVisible && !actorIsAvatar) {
+        this.shedSkinTrailSystem?.update(deltaTime, this.actor.headState, renderConfig.phenomena.shedSkin);
+      }
     }
+    this.updateActorScreenPositionPresentation();
 
     // 3. Update Volumetric Searchlight (Tracking mouse around active character)
-    if (this.searchlightSystem && this.actor) {
+    if (this.residentRevealVisible && this.searchlightSystem && this.actor && !this.isResidentRepresentedByAvatar()) {
       this.searchlightSystem.update(this.actor.container.position, runtime.pointer.absolute, actorConfig.searchlight);
     }
 
@@ -698,7 +946,10 @@ export class PixiEngine {
     }
 
     // --- Echoing Phase Trails Subsystem calculations (Reading active actor state) ---
-    if (this.trailSystem && this.actor) {
+    if (this.trailSystem?.trailContainer) {
+      this.trailSystem.trailContainer.visible = this.residentRevealVisible && !this.isResidentRepresentedByAvatar();
+    }
+    if (this.residentRevealVisible && this.trailSystem && this.actor && !this.isResidentRepresentedByAvatar()) {
       this.trailSystem.update(this.actor.getTrailRenderTransformSnapshot(), effectsConfig.spectralTrail, {
         isGlitchActive,
         screenShakeIntensity: glitchShakeIntensity,
@@ -739,11 +990,13 @@ export class PixiEngine {
     if (this.stage && typeof this.stage.resize === 'function') {
       this.stage.resize(localW, localH);
     }
-    this.syncResidentHabitat();
+    this.syncResidentHandoff();
+    this.updateActorScreenPositionPresentation();
   }
 
   destroy() {
     this.isDestroyed = true;
+    this.actorScreenPositionTarget = null;
 
     if (this.unsubscribers) {
       this.unsubscribers.forEach(unsub => {
