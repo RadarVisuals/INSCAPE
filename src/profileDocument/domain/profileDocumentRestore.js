@@ -28,7 +28,7 @@ export function createProfileDocumentRestorePlan(document, currentWorkspace) {
     if (prior) workspace.folders = workspace.folders.map((item) => item.id === id ? folder : item); else workspace.folders.push(folder);
     existing.set(id, folder); restoredFolderIds.add(id);
     launchers.push({ id: `library:folder:${id}`, viewType: 'folder', folderId: id, visitorVisible: true,
-      position: space.placement, windowPosition: space.windowPlacement });
+      position: space.placement, windowPosition: space.windowPlacement, appearanceMode: space.appearance?.mode || 'label', iconKey: space.appearance?.iconKey || 'folder', span: { columns: space.appearance?.columnSpan || 3, rows: space.appearance?.rowSpan || 1 }, presentationOrder: space.order + 4 });
   };
   for (const space of [...value.spaces].sort((a, b) => a.order - b.order)) {
     if (space.kind === 'favorites') {
@@ -36,7 +36,7 @@ export function createProfileDocumentRestorePlan(document, currentWorkspace) {
       else {
         workspace.favorites = [...new Set([...workspace.favorites, ...space.assets.map((asset) => asset.stableAssetId)])];
         launchers.push({ id: 'library:favorites', viewType: 'favorites', folderId: null, visitorVisible: true,
-          position: space.placement, windowPosition: space.windowPlacement });
+          position: space.placement, windowPosition: space.windowPlacement, appearanceMode: space.appearance?.mode || 'label', iconKey: space.appearance?.iconKey || 'favorites', span: { columns: space.appearance?.columnSpan || 3, rows: space.appearance?.rowSpan || 1 }, presentationOrder: space.order + 4 });
       }
       continue;
     }

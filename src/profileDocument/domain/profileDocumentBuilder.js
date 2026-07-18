@@ -24,6 +24,7 @@ export function buildProfileDocumentV1({ profileAddress, workspace, assets = [],
     return [{ id: launcher.id, launcherId: launcher.id, kind: launcher.viewType,
       label: launcher.viewType === 'favorites' ? 'Favorites' : String(folder?.name || 'Unavailable space').trim().slice(0, 80), order,
       placement: cleanPosition(launcher.position), windowPlacement: cleanPosition(launcher.windowPosition),
+      appearance: { mode: ['label','icon','icon_label'].includes(launcher.appearanceMode) ? launcher.appearanceMode : 'label', iconKey: typeof launcher.iconKey === 'string' ? launcher.iconKey : launcher.viewType === 'favorites' ? 'favorites' : 'folder', showLabel: launcher.appearanceMode !== 'icon', columnSpan: Math.max(1, Math.min(12, launcher.span?.columns || 3)), rowSpan: Math.max(1, Math.min(8, launcher.span?.rows || 1)) },
       assets: [...new Set(assetIds)].map((id) => buildAssetReference(assetById.get(id), id)).filter(Boolean) }];
   });
   return {

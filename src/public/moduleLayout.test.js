@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   createModuleGridGeometry,
+  clampModulePosition,
   decodeModuleLayout,
+  decodeWindowGeometry,
   encodeModuleLayout,
+  encodeWindowGeometry,
   findNearestAvailableModulePosition,
   getCanvasSpaceSpan,
   getDefaultModulePositions,
@@ -11,6 +14,11 @@ import {
   getIdentitySpan,
   moduleRectsOverlap
 } from './moduleLayout.js';
+
+test('desktop windows retain intentional usable defaults on the square grid',()=>{const geometry=createModuleGridGeometry(1440,900);const identity=getIdentitySpan(geometry);const collection=getCollectionSpan(geometry);assert.ok(identity.columns*geometry.cellWidth>=600);assert.ok(identity.rows*geometry.cellHeight>=380);assert.ok(collection.columns*geometry.cellWidth>=760);});
+
+test('window geometry persists, clamps, and corrupt records reset safely',()=>{const geometry=createModuleGridGeometry(1280,720);const encoded=encodeWindowGeometry({identity:{columns:999,rows:1},signals:{columns:8,rows:6}});const decoded=decodeWindowGeometry(encoded,geometry);assert.equal(decoded.identity.columns,geometry.columns);assert.equal(decoded.identity.rows,5);assert.deepEqual(decoded.signals,{columns:8,rows:6});assert.deepEqual(decodeWindowGeometry('{bad',geometry),{});});
+test('resized window span survives move and a later resize from the moved origin',()=>{const geometry=createModuleGridGeometry(1440,900);const resized={columns:12,rows:8};const stored=decodeWindowGeometry(encodeWindowGeometry({identity:resized}),geometry).identity;const moved=clampModulePosition({column:20,row:10},stored,geometry);assert.deepEqual(stored,resized);assert.deepEqual(moved,{column:geometry.columns-resized.columns,row:geometry.rows-resized.rows});const resizedAgain={columns:10,rows:7};assert.deepEqual(decodeWindowGeometry(encodeWindowGeometry({identity:resizedAgain}),geometry).identity,resizedAgain);});
 
 test('desktop module geometry aligns positions to a stable responsive cell grid', () => {
   const geometry = createModuleGridGeometry(1280, 720);

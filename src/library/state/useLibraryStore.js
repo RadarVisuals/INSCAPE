@@ -10,8 +10,9 @@ import {
   resetCanvasLayout,
   setFolderAsset,
   setLauncherPosition,
+  setLauncherGeometry,
   setLauncherVisitorVisibility,
-  setLauncherWindowPosition,
+  setLauncherWindowPosition, setLauncherPresentation,
   toggleFavorite,
   unpinLibraryView
 } from '../domain/libraryWorkspace.js';
@@ -109,11 +110,17 @@ export const useLibraryStore = create((set, get) => ({
   setLauncherPosition(launcherId, position) {
     const workspace = setLauncherPosition(get().workspace, launcherId, position); set({ workspace }); scheduleSave(workspace);
   },
+  setLauncherGeometry(launcherId, geometry) {
+    const workspace = setLauncherGeometry(get().workspace, launcherId, geometry); set({ workspace }); scheduleSave(workspace);
+  },
   setLauncherWindowPosition(launcherId, position) {
     const workspace = setLauncherWindowPosition(get().workspace, launcherId, position); set({ workspace }); scheduleSave(workspace);
   },
   setLauncherVisitorVisibility(launcherId, visitorVisible) {
     const workspace = setLauncherVisitorVisibility(get().workspace, launcherId, visitorVisible); set({ workspace }); scheduleSave(workspace);
+  },
+  setLauncherPresentation(launcherId, presentation) {
+    const workspace = setLauncherPresentation(get().workspace, launcherId, presentation); set({ workspace }); scheduleSave(workspace);
   },
   resetCanvasLayout() {
     const workspace = resetCanvasLayout(get().workspace); set({ workspace }); scheduleSave(workspace);

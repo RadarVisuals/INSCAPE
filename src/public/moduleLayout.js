@@ -1,9 +1,7 @@
 export const MODULE_IDS = Object.freeze(['identity', 'collection', 'creations', 'signals']);
-export const MODULE_LAYOUT_STORAGE_KEY = 'human-underneath.module-grid.prototype.v3';
-export const MODULE_LAYOUT_VERSION = 3;
-
-const DESKTOP_TARGET_CELL_WIDTH = 168;
-const DESKTOP_TARGET_CELL_HEIGHT = 118;
+export const MODULE_LAYOUT_STORAGE_KEY = 'human-underneath.module-grid.prototype.v4';
+export const LEGACY_MODULE_LAYOUT_STORAGE_KEY = 'human-underneath.module-grid.prototype.v3';
+export const MODULE_LAYOUT_VERSION = 4;
 
 function clamp(value, minimum, maximum) {
   return Math.max(minimum, Math.min(maximum, value));
@@ -13,18 +11,19 @@ export function createModuleGridGeometry(width, height) {
   const safeWidth = Math.max(280, Number(width) || 0);
   const safeHeight = Math.max(320, Number(height) || 0);
   const narrow = safeWidth < 720;
-  const left = narrow ? 12 : 24;
+  const baseLeft = narrow ? 12 : 24;
   const right = narrow ? 12 : 24;
   const top = narrow ? 64 : safeHeight < 560 ? 58 : 64;
   const bottom = narrow ? 12 : 24;
-  const usableWidth = Math.max(1, safeWidth - left - right);
-  const usableHeight = Math.max(1, safeHeight - top - bottom);
-  const columns = narrow ? 2 : Math.max(4, Math.floor(usableWidth / DESKTOP_TARGET_CELL_WIDTH));
-  const majorRows = narrow
-    ? Math.max(2, Math.floor(usableHeight / 78))
-    : Math.max(2, Math.floor(usableHeight / DESKTOP_TARGET_CELL_HEIGHT));
-  const rows = majorRows * 3;
-  const majorCellHeight = usableHeight / majorRows;
+  const availableWidth = Math.max(1, safeWidth - baseLeft - right);
+  const availableHeight = Math.max(1, safeHeight - top - bottom);
+  const columns = narrow ? 4 : 24;
+  const cellSize = narrow ? availableWidth / columns : Math.max(28, Math.floor(Math.min(availableWidth / columns, availableHeight / 13)));
+  const rows = Math.max(narrow ? 10 : 8, Math.floor(availableHeight / cellSize));
+  const usableWidth = cellSize * columns;
+  const usableHeight = cellSize * rows;
+  const left = baseLeft + Math.max(0, Math.floor((availableWidth - usableWidth) / 2));
+  const majorRows = rows;
 
   return Object.freeze({
     width: safeWidth,
@@ -36,52 +35,40 @@ export function createModuleGridGeometry(width, height) {
     columns,
     majorRows,
     rows,
-    cellWidth: usableWidth / columns,
-    majorCellHeight,
-    cellHeight: majorCellHeight / 3,
+    cellWidth: cellSize,
+    majorCellHeight: cellSize,
+    cellHeight: cellSize,
     narrow
   });
 }
 
 export function getIdentitySpan(geometry) {
   if (geometry.narrow) return { columns: geometry.columns, rows: geometry.rows };
-  return {
-    columns: Math.min(4, Math.max(3, geometry.columns - 1)),
-    rows: Math.min(9, geometry.rows)
-  };
+  return { columns: Math.min(geometry.columns, Math.max(8, Math.ceil(680 / geometry.cellWidth))), rows: Math.min(geometry.rows, Math.max(7, Math.ceil(430 / geometry.cellHeight))) };
 }
 
 export function getCollectionSpan(geometry) {
   if (geometry.narrow) return { columns: geometry.columns, rows: geometry.rows };
-  return {
-    columns: Math.min(6, Math.max(4, geometry.columns - 1)),
-    rows: Math.min(15, geometry.rows)
-  };
+  return { columns: Math.min(geometry.columns, Math.max(10, Math.ceil(860 / geometry.cellWidth))), rows: Math.min(geometry.rows, Math.max(8, Math.ceil(580 / geometry.cellHeight))) };
 }
 
 export function getCanvasSpaceSpan(geometry) {
   if (geometry.narrow) return { columns: geometry.columns, rows: geometry.rows };
-  return {
-    columns: Math.min(5, Math.max(3, geometry.columns - 1)),
-    rows: Math.min(12, geometry.rows)
-  };
+  return { columns: Math.min(geometry.columns, Math.max(9, Math.ceil(760 / geometry.cellWidth))), rows: Math.min(geometry.rows, Math.max(8, Math.ceil(540 / geometry.cellHeight))) };
 }
 
 export function getDefaultModulePositions(geometry) {
   if (geometry.narrow) {
     return {
-      identity: { column: 0, row: 0 },
-      collection: { column: 1, row: 0 },
-      creations: { column: 0, row: 1 },
-      signals: { column: 1, row: 1 }
+      identity: { column: 0, row: 0 }, collection: { column: 1, row: 0 }, creations: { column: 2, row: 0 }, signals: { column: 3, row: 0 }
     };
   }
 
   return {
     identity: { column: 0, row: 0 },
-    collection: { column: geometry.columns - 1, row: 0 },
+    collection: { column: geometry.columns - 3, row: 0 },
     creations: { column: 0, row: Math.min(geometry.rows - 1, Math.ceil(geometry.rows * 0.6)) },
-    signals: { column: geometry.columns - 1, row: geometry.rows - 1 }
+    signals: { column: geometry.columns - 3, row: geometry.rows - 1 }
   };
 }
 
@@ -193,3 +180,17 @@ export function decodeModuleLayout(source, geometry) {
 export function encodeModuleLayout(positions) {
   return JSON.stringify({ version: MODULE_LAYOUT_VERSION, positions });
 }
+
+export function normalizeWindowSpans(candidate, geometry) {
+  if (!candidate || typeof candidate !== 'object') return {};
+  return Object.fromEntries(Object.entries(candidate).flatMap(([id, span]) => {
+    if (typeof id !== 'string' || !Number.isInteger(span?.columns) || !Number.isInteger(span?.rows)) return [];
+    return [[id, { columns: clamp(span.columns, 6, geometry.columns), rows: clamp(span.rows, 5, geometry.rows) }]];
+  }));
+}
+
+export function decodeWindowGeometry(source, geometry) {
+  try { const record=typeof source==='string'?JSON.parse(source):source; return record?.version===1?normalizeWindowSpans(record.spans,geometry):{}; } catch { return {}; }
+}
+
+export function encodeWindowGeometry(spans) { return JSON.stringify({version:1,spans}); }

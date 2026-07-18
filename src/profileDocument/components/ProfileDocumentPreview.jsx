@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useProfileIdentity } from '../../profileIdentity/index.js';
 import ProfileDocumentSpaceWindow from './ProfileDocumentSpaceWindow.jsx';
+import { iconGlyph } from '../../public/sceneIcons.js';
 
 export default function ProfileDocumentPreview({ document, onExit }) {
   const [openSpaceId, setOpenSpaceId] = useState(null);
@@ -18,9 +19,9 @@ export default function ProfileDocumentPreview({ document, onExit }) {
       {avatarUrl ? <img src={avatarUrl} alt="" /> : <span aria-hidden="true">UP</span>}<div><strong>{displayName}</strong><small>{document.profile.address}</small></div>
     </section>
     <section className="profile-document-preview__spaces" aria-label="Published Canvas Spaces">
-      {[...document.spaces].sort((a, b) => a.order - b.order).map((space) => <button key={space.id} type="button" style={{ '--space-column': space.placement?.column ?? 0, '--space-row': space.placement?.row ?? space.order }} onClick={() => setOpenSpaceId(space.id)} aria-expanded={openSpaceId === space.id}>
-        <span>{space.label}</span><small>{space.assets.length} assets</small>
-      </button>)}
+      {[...document.spaces].sort((a, b) => a.order - b.order).map((space) => { const appearance=space.appearance||{mode:'label',iconKey:space.kind==='favorites'?'favorites':'folder',showLabel:true,columnSpan:3,rowSpan:1}; return <button data-appearance={appearance.mode} key={space.id} type="button" style={{ '--space-column': space.placement?.column ?? 0, '--space-row': space.placement?.row ?? space.order, '--space-columns':appearance.columnSpan,'--space-rows':appearance.rowSpan }} onClick={() => setOpenSpaceId(space.id)} aria-expanded={openSpaceId === space.id} aria-label={`Open ${space.label}, ${space.assets.length} assets`}>
+        {appearance.mode !== 'label' && <b aria-hidden="true">{iconGlyph(appearance.iconKey)}</b>}{appearance.showLabel && <span>{space.label}</span>}{appearance.mode !== 'icon' && <small>{space.assets.length} assets</small>}
+      </button>; })}
     </section>
     {openSpace && <section className="module-shell module-shell--expanded module-shell--collection module-shell--folder profile-document-preview__window"><ProfileDocumentSpaceWindow space={openSpace} onClose={() => setOpenSpaceId(null)} /></section>}
   </main>;

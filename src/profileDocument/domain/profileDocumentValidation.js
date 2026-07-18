@@ -10,6 +10,8 @@ const validId = (value) => typeof value === 'string' && value.length > 0 && valu
 const validText = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.length <= max && !/[\u0000-\u001f\u007f]/.test(value);
 const validTime = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value));
 const validPosition = (value) => value === null || (exactKeys(value, ['column', 'row']) && Number.isInteger(value.column) && Number.isInteger(value.row) && value.column >= 0 && value.column <= 63 && value.row >= 0 && value.row <= 127);
+const ICON_KEYS = new Set(['profile','collection','signals','creations','folder','favorites','search','gallery','external','music']);
+const validAppearance = (value) => value === undefined || (exactKeys(value,['mode','iconKey','showLabel','columnSpan','rowSpan']) && ['label','icon','icon_label'].includes(value?.mode) && ICON_KEYS.has(value?.iconKey) && typeof value?.showLabel === 'boolean' && Number.isInteger(value?.columnSpan) && value.columnSpan >= 1 && value.columnSpan <= 12 && Number.isInteger(value?.rowSpan) && value.rowSpan >= 1 && value.rowSpan <= 8);
 const validUrl = (value) => typeof value === 'string' && value.length <= L.maxUrlLength && /^(https?:\/\/|ipfs:\/\/)/i.test(value) && !/[\u0000-\u001f\u007f]/.test(value);
 function depth(value, current = 0) { if (!value || typeof value !== 'object') return current; return Object.values(value).reduce((max, child) => Math.max(max, depth(child, current + 1)), current); }
 
@@ -45,10 +47,10 @@ export function validateProfileDocument(input, { rawSize } = {}) {
     const ids = new Set(); const launcherIds = new Set(); let total = 0;
     input.spaces.forEach((space, index) => {
       const path = `spaces[${index}]`;
-      if (!exactKeys(space, ['id', 'launcherId', 'kind', 'label', 'order', 'placement', 'windowPlacement', 'assets'])) fail(path, 'unexpected_fields', 'Space contains unexpected fields');
+      if (!exactKeys(space, ['id', 'launcherId', 'kind', 'label', 'order', 'placement', 'windowPlacement', 'appearance', 'assets'])) fail(path, 'unexpected_fields', 'Space contains unexpected fields');
       if (!validId(space?.id) || ids.has(space.id)) fail(`${path}.id`, 'duplicate_or_invalid_id', 'Space ID must be valid and unique'); else ids.add(space.id);
       if (!validId(space?.launcherId) || launcherIds.has(space.launcherId)) fail(`${path}.launcherId`, 'duplicate_or_invalid_id', 'Launcher ID must be valid and unique'); else launcherIds.add(space.launcherId);
-      if (!['folder', 'favorites'].includes(space?.kind) || !validText(space?.label, L.maxLabelLength) || !Number.isInteger(space?.order) || space.order < 0 || !validPosition(space?.placement) || !validPosition(space?.windowPlacement)) fail(path, 'invalid_space', 'Invalid public space fields');
+      if (!['folder', 'favorites'].includes(space?.kind) || !validText(space?.label, L.maxLabelLength) || !Number.isInteger(space?.order) || space.order < 0 || !validPosition(space?.placement) || !validPosition(space?.windowPlacement) || !validAppearance(space?.appearance)) fail(path, 'invalid_space', 'Invalid public space fields');
       if (!Array.isArray(space?.assets)) { fail(`${path}.assets`, 'invalid_assets', 'Assets must be an array'); return; }
       total += space.assets.length;
       if (space.assets.length > L.maxAssetsPerSpace) fail(`${path}.assets`, 'too_many_assets', 'Too many assets in a space');

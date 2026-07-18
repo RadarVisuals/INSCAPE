@@ -1,4 +1,4 @@
-export const LIBRARY_WORKSPACE_VERSION = 3;
+export const LIBRARY_WORKSPACE_VERSION = 4;
 
 export const LIBRARY_VIEW_TYPES = Object.freeze({ ALL: 'all', FAVORITES: 'favorites', FOLDER: 'folder' });
 
@@ -63,7 +63,7 @@ export function pinLibraryView(workspace, view) {
   if (!id || getPinnedLauncher(workspace, view)) return workspace;
   if (view.type === LIBRARY_VIEW_TYPES.FOLDER && !workspace.folders.some((folder) => folder.id === view.id)) return workspace;
   const launcher = { id, viewType: view.type, folderId: view.type === LIBRARY_VIEW_TYPES.FOLDER ? view.id : null,
-    visitorVisible: false, position: null, windowPosition: null };
+    visitorVisible: false, position: null, windowPosition: null, appearanceMode: 'label', iconKey: view.type === LIBRARY_VIEW_TYPES.FAVORITES ? 'favorites' : 'folder', span: { columns: 3, rows: 1 }, presentationOrder: workspace.canvas.launchers.length + 4 };
   return { ...workspace, canvas: { ...workspace.canvas, launchers: [...workspace.canvas.launchers, launcher] } };
 }
 
@@ -90,8 +90,31 @@ export function setLauncherPosition(workspace, launcherId, position) {
   return setLauncherPlacement(workspace, launcherId, 'position', position);
 }
 
+export function setLauncherGeometry(workspace, launcherId, geometry) {
+  if (!workspace.canvas.launchers.some((launcher) => launcher.id === launcherId)) return workspace;
+  if (!geometry || !['column','row','columnSpan','rowSpan'].every((key) => Number.isInteger(geometry[key])) || geometry.column < 0 || geometry.row < 0 || geometry.columnSpan < 1 || geometry.rowSpan < 1) return workspace;
+  return { ...workspace, canvas: { ...workspace.canvas, launchers: workspace.canvas.launchers.map((launcher) => launcher.id === launcherId ? {
+    ...launcher,
+    position: { column: geometry.column, row: geometry.row },
+    span: { columns: geometry.columnSpan, rows: geometry.rowSpan }
+  } : launcher) } };
+}
+
 export function setLauncherWindowPosition(workspace, launcherId, position) {
   return setLauncherPlacement(workspace, launcherId, 'windowPosition', position);
+}
+
+export function setLauncherPresentation(workspace, launcherId, patch) {
+  const modes = new Set(['label', 'icon', 'icon_label']);
+  if (!workspace.canvas.launchers.some((launcher) => launcher.id === launcherId)) return workspace;
+  return { ...workspace, canvas: { ...workspace.canvas, launchers: workspace.canvas.launchers.map((launcher) => {
+    if (launcher.id !== launcherId) return launcher;
+    const appearanceMode = modes.has(patch?.appearanceMode) ? patch.appearanceMode : launcher.appearanceMode;
+    const minimum = appearanceMode === 'icon' ? 1 : 2;
+    const span = patch?.span ? { columns: Math.max(minimum, Math.min(12, Math.round(Number(patch.span.columns) || launcher.span.columns))), rows: Math.max(1, Math.min(8, Math.round(Number(patch.span.rows) || launcher.span.rows))) } : launcher.span;
+    const iconKey = typeof patch?.iconKey === 'string' && patch.iconKey.length <= 40 ? patch.iconKey : launcher.iconKey;
+    return { ...launcher, appearanceMode, iconKey, span };
+  }) } };
 }
 
 export function resetCanvasLayout(workspace) {
