@@ -603,6 +603,21 @@
   font: 600 0.5rem/1 'Oxanium', var(--font-interface);
 }
 
+.module-button--folder .module-button__visibility {
+  position: absolute;
+  right: 5px;
+  bottom: 4px;
+  color: var(--hu-text-muted);
+  font: 650 0.42rem/1 'Oxanium', var(--font-interface);
+  font-style: normal;
+  letter-spacing: 0.09em;
+  pointer-events: none;
+}
+
+.module-button--folder[data-visitor-visible="true"] .module-button__visibility {
+  color: var(--module-accent);
+}
+
 .module-button[data-entry-state="ready"] span {
   animation: module-label-resolve 240ms steps(4, end) 35ms both;
 }

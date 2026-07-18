@@ -57,7 +57,8 @@ export default function CollectionWindow({ onClose, dragHandleProps, dragEnabled
   };
   const activeFolder = state.workspace.folders.find((folder) => folder.id === state.activeView.id);
   const pinnableView = state.activeView.type === 'favorites' || state.activeView.type === 'folder' ? state.activeView : null;
-  const pinned = pinnableView ? Boolean(getPinnedLauncher(state.workspace, pinnableView)) : false;
+  const pinnedLauncher = pinnableView ? getPinnedLauncher(state.workspace, pinnableView) : null;
+  const pinned = Boolean(pinnedLauncher);
   const emptyMessage = state.status === 'error' ? 'Live data and the local fixture are unavailable.'
     : state.status === 'loading' && !state.assets.length ? 'Loading profile inventory…'
       : state.searchQuery ? `No loaded images match “${state.searchQuery.trim()}”.${state.status === 'loading' ? ' Loading continues.' : ''}`
@@ -78,12 +79,12 @@ export default function CollectionWindow({ onClose, dragHandleProps, dragEnabled
         <CollectionSidebar workspace={state.workspace} activeView={state.activeView} onOpenView={state.setActiveView}
           onCreate={requestCreateFolder} onRename={requestRenameFolder} onDelete={state.deleteFolder} editMode={editMode} />
         <main className="collection-content">
-          <div className="collection-content__heading"><h3>{activeFolder?.name || (state.activeView.type === 'favorites' ? 'Favorites' : 'All images')}</h3><div><span>{viewAssets.length} visible</span>{editMode && pinnableView && <button type="button" onClick={() => pinned ? state.unpinView(pinnableView) : state.pinView(pinnableView)}>{pinned ? 'Unpin from canvas' : 'Pin to canvas'}</button>}</div></div>
+          <div className="collection-content__heading"><h3>{activeFolder?.name || (state.activeView.type === 'favorites' ? 'Favorites' : 'All images')}</h3><div><span>{viewAssets.length} visible</span>{editMode && pinnableView && <button type="button" onClick={() => pinned ? state.unpinView(pinnableView) : state.pinView(pinnableView)}>{pinned ? 'Unpin from canvas' : 'Pin to canvas'}</button>}{editMode && pinnedLauncher && <button className="collection-content__visibility" type="button" aria-pressed={pinnedLauncher.visitorVisible} aria-label={`Show ${activeFolder?.name || 'Favorites'} to visitors`} onClick={() => state.setLauncherVisitorVisibility(pinnedLauncher.id, !pinnedLauncher.visitorVisible)}>Show to visitors <b>{pinnedLauncher.visitorVisible ? 'ON' : 'OFF'}</b></button>}</div></div>
           <AssetGrid assets={viewAssets} workspace={state.workspace} onSelect={state.selectAsset}
-            onFavorite={state.toggleFavorite} onFolder={state.setFolderAsset} onCreateFolder={requestCreateFolder} emptyMessage={emptyMessage} authoringEnabled />
+            onFavorite={state.toggleFavorite} onFolder={state.setFolderAsset} onCreateFolder={requestCreateFolder} emptyMessage={emptyMessage} authoringEnabled={editMode} />
         </main>
         <AssetPreview asset={selectedAsset} workspace={state.workspace} onClose={() => state.selectAsset(null)}
-          onFavorite={state.toggleFavorite} onFolder={state.setFolderAsset} onCreateFolder={requestCreateFolder} authoringEnabled />
+          onFavorite={state.toggleFavorite} onFolder={state.setFolderAsset} onCreateFolder={requestCreateFolder} authoringEnabled={editMode} />
       </div>
       {folderDialogOpen && <div className="collection-folder-dialog" role="dialog" aria-modal="true" aria-labelledby="folder-dialog-title">
         <form onSubmit={submitFolderName}>

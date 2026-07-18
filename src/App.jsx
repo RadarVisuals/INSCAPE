@@ -10,6 +10,8 @@ import ModuleGridShell from './public/ModuleGridShell.jsx';
 import { AssetResolver } from './engine/assets/AssetResolver.js';
 import { Startveil } from './startveil/index.js';
 import { useStore } from './store/useStore.js';
+import { resolveLibraryProfile } from './library/config.js';
+import { loadRestoredPresentation } from './profileDocument/storage/profileDocumentStorage.js';
 
 const AtelierExperience = lazy(() => import('./app/AtelierExperience.jsx'));
 
@@ -26,7 +28,10 @@ function App() {
     sequence: 'full',
     reducedMotion: false
   });
+  const [previewDocument, setPreviewDocument] = useState(null);
   const activeActorId = useStore((state) => state.renderConfig.actor.id);
+  const activeStageId = useStore((state) => state.renderConfig.scene.background.backdropId);
+  const applyRenderConfig = useStore((state) => state.applyRenderConfig);
   const worldVisible = ['world', 'resident', 'interface', 'complete'].includes(revealStage);
   const actorVisible = ['resident', 'interface', 'complete'].includes(revealStage);
   const interfaceVisible = ['interface', 'complete'].includes(revealStage);
@@ -36,6 +41,17 @@ function App() {
     window.addEventListener('popstate', syncModeFromUrl);
     return () => window.removeEventListener('popstate', syncModeFromUrl);
   }, []);
+
+  const applyPublicPresentation = useCallback(({ keeperId, stageId }) => {
+    const current = useStore.getState().renderConfig;
+    applyRenderConfig({ ...current, actor: { ...current.actor, id: keeperId },
+      scene: { ...current.scene, background: { ...current.scene.background, backdropId: stageId } } });
+  }, [applyRenderConfig]);
+
+  useEffect(() => {
+    const restored = loadRestoredPresentation(window.localStorage, resolveLibraryProfile());
+    if (restored) applyPublicPresentation(restored);
+  }, [applyPublicPresentation]);
 
   const changeApplicationMode = useCallback((mode) => {
     const nextUrl = createApplicationModeUrl(window.location, mode);
@@ -81,6 +97,7 @@ function App() {
           ref={canvasRef}
           actorVisible={actorVisible}
           reducedMotion={revealPresentation.reducedMotion}
+          presentationOverride={previewDocument?.presentation || null}
           onReady={() => setWorldReady(true)}
         />
       </div>
@@ -98,11 +115,14 @@ function App() {
           <ModuleGridShell
             onRequestAtelier={() => changeApplicationMode(APPLICATION_MODES.ATELIER)}
             activeActorId={activeActorId}
+            stageId={activeStageId}
             avatarSrc={AssetResolver.resolveActorAvatarPath(activeActorId)}
             residentHandoff={residentHandoff}
             keeperReactions={keeperReactions}
             interfaceVisible={interfaceVisible}
             revealPresentation={revealPresentation}
+            onApplyRestoredPresentation={applyPublicPresentation}
+            onPreviewDocumentChange={setPreviewDocument}
           />
         )}
       </div>

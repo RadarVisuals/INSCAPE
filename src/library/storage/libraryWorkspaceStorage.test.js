@@ -24,7 +24,7 @@ test('malformed and wrong-profile storage recovers to an empty workspace', () =>
   assert.deepEqual(wrong.favorites, []);
 });
 
-test('Phase 1 data migrates to v2 without changing favorites, folder names, or multi-folder memberships', () => {
+test('Phase 1 data migrates to v3 without changing favorites, folder names, or multi-folder memberships', () => {
   const phaseOne = { version: 1, profileAddress: profile, favorites: ['asset-a', 'asset-b'], folders: [
     { id: 'one', name: 'One / Ones', assetIds: ['asset-a', 'asset-c'], createdAt: 1, updatedAt: 2 },
     { id: 'friends', name: 'Works by Friends', assetIds: ['asset-a', 'asset-d'], createdAt: 3, updatedAt: 4 }
@@ -32,7 +32,7 @@ test('Phase 1 data migrates to v2 without changing favorites, folder names, or m
   const storage = memoryStorage({ [libraryWorkspaceKey(profile, 1)]: JSON.stringify(phaseOne) });
   const migrated = loadLibraryWorkspace(storage, profile);
 
-  assert.equal(migrated.version, 2);
+  assert.equal(migrated.version, 3);
   assert.deepEqual(migrated.favorites, phaseOne.favorites);
   assert.deepEqual(migrated.folders, phaseOne.folders);
   assert.deepEqual(migrated.canvas.launchers, []);
@@ -41,12 +41,25 @@ test('Phase 1 data migrates to v2 without changing favorites, folder names, or m
 
 test('pinned launcher identity and placement persist across a reload', () => {
   const storage = memoryStorage();
-  const workspace = normalizeWorkspace({ version: 2, profileAddress: profile, favorites: [], folders: [
+  const workspace = normalizeWorkspace({ version: 3, profileAddress: profile, favorites: [], folders: [
     { id: 'archive', name: 'Archive', assetIds: ['asset-a'], createdAt: 1, updatedAt: 2 }
-  ], canvas: { launchers: [{ id: 'ignored-input-id', viewType: 'folder', folderId: 'archive', position: { column: 3, row: 4 }, windowPosition: { column: 1, row: 2 } }] } }, profile);
+  ], canvas: { launchers: [{ id: 'ignored-input-id', viewType: 'folder', folderId: 'archive', visitorVisible: false, position: { column: 3, row: 4 }, windowPosition: { column: 1, row: 2 } }] } }, profile);
 
   saveLibraryWorkspace(storage, workspace);
   assert.deepEqual(loadLibraryWorkspace(storage, profile).canvas.launchers, [{
-    id: 'library:folder:archive', viewType: 'folder', folderId: 'archive', position: { column: 3, row: 4 }, windowPosition: { column: 1, row: 2 }
+    id: 'library:folder:archive', viewType: 'folder', folderId: 'archive', visitorVisible: false, position: { column: 3, row: 4 }, windowPosition: { column: 1, row: 2 }
   }]);
+});
+
+test('v2 pinned spaces migrate public while malformed v3 visibility recovers private', () => {
+  const phaseTwo = { version: 2, profileAddress: profile, favorites: [], folders: [
+    { id: 'existing', name: 'Existing', assetIds: ['asset-a'], createdAt: 1, updatedAt: 2 }
+  ], canvas: { launchers: [{ id: 'ignored', viewType: 'folder', folderId: 'existing', position: { column: 3, row: 4 }, windowPosition: null }] } };
+  const storage = memoryStorage({ [libraryWorkspaceKey(profile, 2)]: JSON.stringify(phaseTwo) });
+  const migrated = loadLibraryWorkspace(storage, profile);
+  assert.equal(migrated.version, 3);
+  assert.equal(migrated.canvas.launchers[0].visitorVisible, true);
+  assert.ok(storage.values.has(libraryWorkspaceKey(profile)));
+  const contradictory = normalizeWorkspace({ ...migrated, canvas: { launchers: [{ ...migrated.canvas.launchers[0], visitorVisible: 'yes' }] } }, profile);
+  assert.equal(contradictory.canvas.launchers[0].visitorVisible, false);
 });

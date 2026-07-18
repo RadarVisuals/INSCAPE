@@ -3,9 +3,12 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { PixiEngine } from '../../engine/PixiEngine';
 import { useStore } from '../../store/useStore';
 
-const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, reducedMotion = false, onReady }, ref) {
+const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, reducedMotion = false, presentationOverride = null, onReady }, ref) {
   const containerRef = useRef(null);
   const engineRef = useRef(null);
+  const presentationOverrideRef = useRef(presentationOverride);
+  const overrideSubscribersRef = useRef(new Set());
+  presentationOverrideRef.current = presentationOverride;
   
   const screenEffects = useStore((state) => state.renderConfig.effects.screen);
 
@@ -39,10 +42,28 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, reducedMo
   useEffect(() => {
     if (engineRef.current || !containerRef.current) return;
 
-    // Inject state reading and subscription mechanisms as decoupled dependencies
+    const getPresentationState = () => {
+      const state = useStore.getState();
+      const override = presentationOverrideRef.current;
+      if (!override) return state;
+      return { ...state, renderConfig: { ...state.renderConfig,
+        actor: { ...state.renderConfig.actor, id: override.keeperId || state.renderConfig.actor.id },
+        scene: { ...state.renderConfig.scene, background: { ...state.renderConfig.scene.background, backdropId: override.stageId || state.renderConfig.scene.background.backdropId } }
+      } };
+    };
+    const subscribePresentation = (selector, listener, options = {}) => {
+      let previous = selector(getPresentationState());
+      const emit = () => { const next = selector(getPresentationState()); if (!Object.is(next, previous)) { const before = previous; previous = next; listener(next, before); } };
+      const unsubscribeStore = useStore.subscribe(emit);
+      overrideSubscribersRef.current.add(emit);
+      if (options.fireImmediately) listener(previous, previous);
+      return () => { unsubscribeStore(); overrideSubscribersRef.current.delete(emit); };
+    };
+
+    // Inject state reading and subscription mechanisms as decoupled dependencies.
     engineRef.current = new PixiEngine(containerRef.current, {
-      getState: useStore.getState,
-      subscribe: useStore.subscribe
+      getState: getPresentationState,
+      subscribe: subscribePresentation
     });
 
     if (import.meta.env.DEV) window.__UNDERNEATH_ENGINE__ = engineRef.current;
@@ -66,6 +87,8 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, reducedMo
       }
     };
   }, []);
+
+  useEffect(() => { overrideSubscribersRef.current.forEach((notify) => notify()); }, [presentationOverride]);
 
   useEffect(() => {
     engineRef.current?.setResidentRevealVisible(actorVisible, { reducedMotion });

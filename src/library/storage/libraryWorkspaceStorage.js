@@ -1,13 +1,16 @@
 import { normalizeProfileAddress } from '../config.js';
 import { LIBRARY_WORKSPACE_VERSION, createEmptyWorkspace, launcherIdForView } from '../domain/libraryWorkspace.js';
 
-export const LIBRARY_WORKSPACE_KEY_PREFIX = 'os-underneath.library-workspace.v2:';
+export const LIBRARY_WORKSPACE_KEY_PREFIX = 'os-underneath.library-workspace.v3:';
+export const LEGACY_V2_LIBRARY_WORKSPACE_KEY_PREFIX = 'os-underneath.library-workspace.v2:';
 export const LEGACY_LIBRARY_WORKSPACE_KEY_PREFIX = 'os-underneath.library-workspace.v1:';
 
 export function libraryWorkspaceKey(profileAddress, version = LIBRARY_WORKSPACE_VERSION) {
   const normalized = normalizeProfileAddress(profileAddress);
   if (!normalized) throw new TypeError('A valid profile address is required');
-  return `${version === 1 ? LEGACY_LIBRARY_WORKSPACE_KEY_PREFIX : LIBRARY_WORKSPACE_KEY_PREFIX}${normalized}`;
+  const prefix = version === 1 ? LEGACY_LIBRARY_WORKSPACE_KEY_PREFIX
+    : version === 2 ? LEGACY_V2_LIBRARY_WORKSPACE_KEY_PREFIX : LIBRARY_WORKSPACE_KEY_PREFIX;
+  return `${prefix}${normalized}`;
 }
 
 function normalizePosition(position) {
@@ -19,7 +22,7 @@ function normalizePosition(position) {
 export function normalizeWorkspace(candidate, profileAddress) {
   const profile = normalizeProfileAddress(profileAddress);
   const empty = createEmptyWorkspace(profile);
-  if (!profile || !candidate || ![1, LIBRARY_WORKSPACE_VERSION].includes(candidate.version) || normalizeProfileAddress(candidate.profileAddress) !== profile) return empty;
+  if (!profile || !candidate || ![1, 2, LIBRARY_WORKSPACE_VERSION].includes(candidate.version) || normalizeProfileAddress(candidate.profileAddress) !== profile) return empty;
   const favorites = [...new Set((Array.isArray(candidate.favorites) ? candidate.favorites : []).filter((id) => typeof id === 'string' && id.length <= 300))];
   const seen = new Set();
   const folders = (Array.isArray(candidate.folders) ? candidate.folders : []).flatMap((folder) => {
@@ -32,7 +35,7 @@ export function normalizeWorkspace(candidate, profileAddress) {
   });
   const folderIds = new Set(folders.map((folder) => folder.id));
   const launcherIds = new Set();
-  const launchers = (candidate.version === LIBRARY_WORKSPACE_VERSION && Array.isArray(candidate.canvas?.launchers) ? candidate.canvas.launchers : []).flatMap((launcher) => {
+  const launchers = (candidate.version >= 2 && Array.isArray(candidate.canvas?.launchers) ? candidate.canvas.launchers : []).flatMap((launcher) => {
     const view = launcher?.viewType === 'favorites'
       ? { type: 'favorites', id: null }
       : launcher?.viewType === 'folder' && folderIds.has(launcher.folderId) ? { type: 'folder', id: launcher.folderId } : null;
@@ -40,6 +43,7 @@ export function normalizeWorkspace(candidate, profileAddress) {
     if (!id || launcherIds.has(id)) return [];
     launcherIds.add(id);
     return [{ id, viewType: view.type, folderId: view.type === 'folder' ? view.id : null,
+      visitorVisible: candidate.version === 2 ? true : launcher.visitorVisible === true,
       position: normalizePosition(launcher.position), windowPosition: normalizePosition(launcher.windowPosition) }];
   });
   return { version: LIBRARY_WORKSPACE_VERSION, profileAddress: profile, favorites, folders, canvas: { launchers } };
@@ -53,7 +57,9 @@ export function loadLibraryWorkspace(storage, profileAddress) {
       try { return normalizeWorkspace(JSON.parse(current), profileAddress); }
       catch { /* Fall through to the intact Phase 1 record when available. */ }
     }
-    const legacy = storage.getItem(libraryWorkspaceKey(profileAddress, 1));
+    const phaseTwo = storage.getItem(libraryWorkspaceKey(profileAddress, 2));
+    const phaseOne = storage.getItem(libraryWorkspaceKey(profileAddress, 1));
+    const legacy = phaseTwo || phaseOne;
     if (!legacy) return createEmptyWorkspace(normalizeProfileAddress(profileAddress));
     const migrated = normalizeWorkspace(JSON.parse(legacy), profileAddress);
     saveLibraryWorkspace(storage, migrated);

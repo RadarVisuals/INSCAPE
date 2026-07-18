@@ -52,7 +52,14 @@ export const useSignalStore = create((set, get) => {
       if (!Object.hasOwn(get().settings, key) || typeof value !== 'boolean') return;
       const settings = { ...get().settings, [key]: value }; const document = { ...get().document, settings };
       set({ settings, document, queue: key === 'notifications' && !value ? [] : get().queue,
-        currentReaction: key === 'notifications' && !value ? null : get().currentReaction }); persist(document);
+      currentReaction: key === 'notifications' && !value ? null : get().currentReaction }); persist(document);
+    },
+    replaceSettings(settings, { persist: shouldPersist = true } = {}) {
+      const next = Object.fromEntries(Object.keys(get().settings).map((key) => [key, typeof settings?.[key] === 'boolean' ? settings[key] : get().settings[key]]));
+      const document = { ...get().document, settings: next };
+      if (shouldPersist && !saveSignalDocument(signalStorage, document)) return false;
+      set({ settings: next, document, queue: next.notifications ? get().queue : [], currentReaction: next.notifications ? get().currentReaction : null });
+      return true;
     },
     replay(signal) {
       if (!signal || !get().settings.notifications) return;

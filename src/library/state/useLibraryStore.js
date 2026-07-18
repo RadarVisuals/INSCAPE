@@ -10,6 +10,7 @@ import {
   resetCanvasLayout,
   setFolderAsset,
   setLauncherPosition,
+  setLauncherVisitorVisibility,
   setLauncherWindowPosition,
   toggleFavorite,
   unpinLibraryView
@@ -111,8 +112,16 @@ export const useLibraryStore = create((set, get) => ({
   setLauncherWindowPosition(launcherId, position) {
     const workspace = setLauncherWindowPosition(get().workspace, launcherId, position); set({ workspace }); scheduleSave(workspace);
   },
+  setLauncherVisitorVisibility(launcherId, visitorVisible) {
+    const workspace = setLauncherVisitorVisibility(get().workspace, launcherId, visitorVisible); set({ workspace }); scheduleSave(workspace);
+  },
   resetCanvasLayout() {
     const workspace = resetCanvasLayout(get().workspace); set({ workspace }); scheduleSave(workspace);
+  },
+  replaceWorkspace(workspace, { persist = true } = {}) {
+    if (persist && !saveLibraryWorkspace(workspaceStorage, workspace)) return false;
+    set({ workspace });
+    return true;
   }
 }));
 

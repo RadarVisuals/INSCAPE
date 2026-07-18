@@ -1,4 +1,4 @@
-export const LIBRARY_WORKSPACE_VERSION = 2;
+export const LIBRARY_WORKSPACE_VERSION = 3;
 
 export const LIBRARY_VIEW_TYPES = Object.freeze({ ALL: 'all', FAVORITES: 'favorites', FOLDER: 'folder' });
 
@@ -62,7 +62,8 @@ export function pinLibraryView(workspace, view) {
   const id = launcherIdForView(view);
   if (!id || getPinnedLauncher(workspace, view)) return workspace;
   if (view.type === LIBRARY_VIEW_TYPES.FOLDER && !workspace.folders.some((folder) => folder.id === view.id)) return workspace;
-  const launcher = { id, viewType: view.type, folderId: view.type === LIBRARY_VIEW_TYPES.FOLDER ? view.id : null, position: null, windowPosition: null };
+  const launcher = { id, viewType: view.type, folderId: view.type === LIBRARY_VIEW_TYPES.FOLDER ? view.id : null,
+    visitorVisible: false, position: null, windowPosition: null };
   return { ...workspace, canvas: { ...workspace.canvas, launchers: [...workspace.canvas.launchers, launcher] } };
 }
 
@@ -70,6 +71,13 @@ export function unpinLibraryView(workspace, view) {
   const id = launcherIdForView(view);
   if (!id || !getPinnedLauncher(workspace, view)) return workspace;
   return { ...workspace, canvas: { ...workspace.canvas, launchers: workspace.canvas.launchers.filter((launcher) => launcher.id !== id) } };
+}
+
+export function setLauncherVisitorVisibility(workspace, launcherId, visitorVisible) {
+  if (typeof visitorVisible !== 'boolean' || !workspace.canvas.launchers.some((launcher) => launcher.id === launcherId)) return workspace;
+  return { ...workspace, canvas: { ...workspace.canvas, launchers: workspace.canvas.launchers.map((launcher) => (
+    launcher.id === launcherId ? { ...launcher, visitorVisible } : launcher
+  )) } };
 }
 
 function setLauncherPlacement(workspace, launcherId, field, position) {

@@ -4,6 +4,16 @@ import { CollectionWindow, FolderWindow, useLibraryStore } from '../library/inde
 import KeeperSignalsLayer from '../signals/components/KeeperSignalsLayer.jsx';
 import SignalSettings from '../signals/components/SignalSettings.jsx';
 import SignalsWindow from '../signals/components/SignalsWindow.jsx';
+import { useSignalStore } from '../signals/state/useSignalStore.js';
+import { useProfileIdentity } from '../profileIdentity/index.js';
+import ProfileDocumentPanel from '../profileDocument/components/ProfileDocumentPanel.jsx';
+import ProfileDocumentPreview from '../profileDocument/components/ProfileDocumentPreview.jsx';
+import { useProfileDocumentStore } from '../profileDocument/state/useProfileDocumentStore.js';
+import { buildProfileDocumentV1 } from '../profileDocument/domain/profileDocumentBuilder.js';
+import { assertValidProfileDocument } from '../profileDocument/domain/profileDocumentValidation.js';
+import { createProfileDocumentRestorePlan } from '../profileDocument/domain/profileDocumentRestore.js';
+import { profileDocumentContentFingerprint } from '../profileDocument/domain/profileDocumentSerialization.js';
+import { loadProfileSnapshot, profilePresentationKey, saveProfileSnapshot } from '../profileDocument/storage/profileDocumentStorage.js';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { getPublicTheme } from './themeTokens.js';
 import {
@@ -24,6 +34,7 @@ import {
 import './moduleGrid.css';
 import '../library/collection.css';
 import '../signals/signals.css';
+import '../profileDocument/profileDocument.css';
 
 const MODULES = Object.freeze([
   { id: 'identity', label: 'Profile Card' },
@@ -107,6 +118,9 @@ export default function ModuleGridShell({
   avatarSrc,
   residentHandoff,
   keeperReactions,
+  stageId = 'moonpurple',
+  onApplyRestoredPresentation,
+  onPreviewDocumentChange,
   interfaceVisible = true,
   revealPresentation = { sequence: 'short', reducedMotion: false }
 }) {
@@ -142,6 +156,20 @@ export default function ModuleGridShell({
   const signalsSpan = collectionSpan;
   const folderSpan = useMemo(() => getCanvasSpaceSpan(geometry), [geometry]);
   const workspace = useLibraryStore((state) => state.workspace);
+  const libraryAssets = useLibraryStore((state) => state.assets);
+  const replaceWorkspace = useLibraryStore((state) => state.replaceWorkspace);
+  const signalSettings = useSignalStore((state) => state.settings);
+  const replaceSignalSettings = useSignalStore((state) => state.replaceSettings);
+  const profileIdentity = useProfileIdentity(workspace.profileAddress);
+  const snapshot = useProfileDocumentStore((state) => state.snapshot);
+  const importedDocument = useProfileDocumentStore((state) => state.imported);
+  const previewDocument = useProfileDocumentStore((state) => state.preview);
+  const installSnapshot = useProfileDocumentStore((state) => state.installSnapshot);
+  const installImported = useProfileDocumentStore((state) => state.installImported);
+  const enterPreview = useProfileDocumentStore((state) => state.enterPreview);
+  const exitPreview = useProfileDocumentStore((state) => state.exitPreview);
+  const setDocumentError = useProfileDocumentStore((state) => state.setError);
+  const documentError = useProfileDocumentStore((state) => state.error);
   const setLauncherPosition = useLibraryStore((state) => state.setLauncherPosition);
   const setLauncherWindowPosition = useLibraryStore((state) => state.setLauncherWindowPosition);
   const resetWorkspaceCanvasLayout = useLibraryStore((state) => state.resetCanvasLayout);
@@ -168,6 +196,52 @@ export default function ModuleGridShell({
   const openFolderPosition = openFolderLauncher
     ? findNearestExpandedModulePosition(openFolderLauncher.windowPosition || canvasPositions[openFolderLauncher.id], folderSpan, canvasPositions, geometry)
     : null;
+  const draftDocument = useMemo(() => buildProfileDocumentV1({
+    profileAddress: workspace.profileAddress, workspace, assets: libraryAssets,
+    publicPresentation: { keeperId: activeActorId, stageId },
+    signalSettings, profileIdentity, modulePositions: positions, createdAt: 0, exportedAt: 0
+  }), [activeActorId, libraryAssets, positions, profileIdentity, signalSettings, stageId, workspace]);
+  const draftFingerprint = useMemo(() => profileDocumentContentFingerprint(draftDocument), [draftDocument]);
+  const snapshotStale = Boolean(snapshot && useProfileDocumentStore.getState().snapshotDraftFingerprint !== draftFingerprint);
+
+  useEffect(() => {
+    if (snapshot) return;
+    const stored = loadProfileSnapshot(window.localStorage, workspace.profileAddress);
+    if (stored) installSnapshot(stored, profileDocumentContentFingerprint(stored));
+  }, [installSnapshot, snapshot, workspace.profileAddress]);
+
+  const buildSnapshot = useCallback(() => {
+    try {
+      const now = Date.now();
+      const document = buildProfileDocumentV1({ profileAddress: workspace.profileAddress, workspace, assets: libraryAssets,
+        publicPresentation: { keeperId: activeActorId, stageId }, signalSettings, profileIdentity,
+        modulePositions: positions, revision: (snapshot?.revision || 0) + 1, createdAt: snapshot?.createdAt || now, exportedAt: now });
+      const valid = assertValidProfileDocument(document); installSnapshot(valid, profileDocumentContentFingerprint(valid));
+      saveProfileSnapshot(window.localStorage, valid); setDocumentError(null);
+    } catch (error) { setDocumentError(error.message); }
+  }, [activeActorId, installSnapshot, libraryAssets, positions, profileIdentity, setDocumentError, signalSettings, snapshot, stageId, workspace]);
+
+  const startPreview = useCallback((source) => { enterPreview(source); setActiveHudCommand(null); }, [enterPreview]);
+  const stopPreview = useCallback(() => { exitPreview(); onPreviewDocumentChange?.(null); }, [exitPreview, onPreviewDocumentChange]);
+  useEffect(() => { onPreviewDocumentChange?.(previewDocument); }, [onPreviewDocumentChange, previewDocument]);
+
+  const restoreImportedPresentation = useCallback(() => {
+    if (!importedDocument || !window.confirm('Restore this document’s public presentation? Private Favorites, unpinned folders, Signals history, and caches will be preserved.')) return;
+    const previousWorkspace = structuredClone(workspace); const previousSettings = { ...signalSettings };
+    const previousPresentation = { keeperId: activeActorId, stageId }; const key = profilePresentationKey(workspace.profileAddress);
+    const previousStoredPresentation = window.localStorage.getItem(key);
+    try {
+      const plan = createProfileDocumentRestorePlan(importedDocument, workspace);
+      if (!replaceWorkspace(plan.workspace)) throw new Error('Could not persist restored Canvas Spaces');
+      if (!replaceSignalSettings(plan.signalSettings)) throw new Error('Could not persist restored Signals settings');
+      window.localStorage.setItem(key, JSON.stringify({ version: 1, keeperId: plan.keeperId, stageId: plan.stageId }));
+      onApplyRestoredPresentation?.({ keeperId: plan.keeperId, stageId: plan.stageId }); setDocumentError(null);
+    } catch (error) {
+      replaceWorkspace(previousWorkspace); replaceSignalSettings(previousSettings);
+      try { if (previousStoredPresentation == null) window.localStorage.removeItem(key); else window.localStorage.setItem(key, previousStoredPresentation); } catch { /* Best-effort rollback. */ }
+      onApplyRestoredPresentation?.(previousPresentation); setDocumentError(error.message);
+    }
+  }, [activeActorId, importedDocument, onApplyRestoredPresentation, replaceSignalSettings, replaceWorkspace, setDocumentError, signalSettings, stageId, workspace]);
 
   useEffect(() => {
     if (!interfaceVisible) {
@@ -543,6 +617,8 @@ export default function ModuleGridShell({
     onPointerCancel: clearDragPresentation
   } : {};
 
+  if (previewDocument) return <ProfileDocumentPreview document={previewDocument} onExit={stopPreview} />;
+
   return (
     <main
       className="public-shell"
@@ -577,7 +653,7 @@ export default function ModuleGridShell({
           >
             [ Search ]
           </button>
-          <button type="button" onClick={() => openModule('identity')} aria-expanded={identityOpen}>[ Share ]</button>
+          <button type="button" onClick={() => setActiveHudCommand((current) => current === 'share' ? null : 'share')} aria-expanded={activeHudCommand === 'share'}>[ Share ]</button>
           <button type="button" onClick={() => setEditMode((current) => !current)} aria-pressed={editMode}>[ {editMode ? 'Done' : 'Edit'} ]</button>
           {editMode && <button type="button" onClick={resetLayout}>[ Reset Layout ]</button>}
           <button
@@ -662,6 +738,7 @@ export default function ModuleGridShell({
               data-module-entry-index={entryIndex}
               data-entry-state={entryAvailable ? 'ready' : 'pending'}
               data-active={isActive || undefined}
+              data-visitor-visible={launcher.visitorVisible || undefined}
               key={launcher.id}
               type="button"
               disabled={!entryAvailable}
@@ -681,6 +758,7 @@ export default function ModuleGridShell({
             >
               <span className="module-button__label">{label}</span>
               <small>{count}</small>
+              {editMode && <em className="module-button__visibility">{launcher.visitorVisible ? 'PUBLIC' : 'PRIVATE'}</em>}
             </button>
           );
         })}
@@ -805,6 +883,18 @@ export default function ModuleGridShell({
         reactionBridge={keeperReactions}
       />
       {activeHudCommand === 'settings' && <SignalSettings />}
+      {activeHudCommand === 'share' && <ProfileDocumentPanel
+        snapshot={snapshot}
+        imported={importedDocument}
+        stale={snapshotStale}
+        error={documentError}
+        activeProfileAddress={workspace.profileAddress}
+        onBuild={buildSnapshot}
+        onPreview={startPreview}
+        onImport={installImported}
+        onRestore={restoreImportedPresentation}
+        onClose={() => setActiveHudCommand(null)}
+      />}
     </main>
   );
 }
