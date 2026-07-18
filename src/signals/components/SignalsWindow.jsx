@@ -43,8 +43,8 @@ export default function SignalsWindow({ onClose, dragHandleProps, dragEnabled, e
   }, [escapeEnabled, onClose]);
   return (
     <div className="signals-window">
-      <header className="signals-window__header" data-enabled={dragEnabled || undefined} {...dragHandleProps}>
-        <div><span>RX.04</span><h2 id="signals-title">Signals</h2></div><b data-source={sourceMode || undefined}>{sourceMode || 'OFFLINE'}</b>
+      <header className="signals-window__header" data-window-titlebar="signals-panel" data-enabled={dragEnabled || undefined} {...dragHandleProps}>
+        <div><span>RX.04 / SIGNALS</span><h2 id="signals-title">Activity</h2></div><b data-source={sourceMode || undefined}>{sourceMode || 'OFFLINE'}</b>
         <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={onClose} aria-label="Close Signals"><X aria-hidden="true" /></button>
       </header>
       <div className="signals-window__toolbar">

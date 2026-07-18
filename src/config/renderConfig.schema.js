@@ -70,6 +70,13 @@ export const RENDER_PARAMETER_DEFINITIONS = Object.freeze({
   searchlightColorR: number(['actor', 'searchlight', 'color', 0], 'Beam Color: Red', 0, 255, 1, { integer: true }),
   searchlightColorG: number(['actor', 'searchlight', 'color', 1], 'Beam Color: Green', 0, 255, 1, { integer: true }),
   searchlightColorB: number(['actor', 'searchlight', 'color', 2], 'Beam Color: Blue', 0, 255, 1, { integer: true }),
+  environmentType: enumeration(['scene', 'environment', 'type'], 'Environment Type', [
+    { value: 'illustrated', label: 'Illustrated Stage' },
+    { value: 'shader', label: 'Shader Environment' }
+  ]),
+  environmentShaderId: enumeration(['scene', 'environment', 'shaderId'], 'Shader', [
+    { value: 'neural-field', label: 'Neural Field' }
+  ]),
   bgClippingMaskId: enumeration(['scene', 'background', 'backdropId'], 'Backdrop Color', [
     { value: 'beige', label: 'Beige Backdrop' },
     { value: 'black', label: 'Black Backdrop' },

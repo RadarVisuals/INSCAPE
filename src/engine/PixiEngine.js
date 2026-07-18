@@ -98,6 +98,8 @@ export class PixiEngine {
     // Trigger explicit asset loading only when setup properties modify
     const reloadTriggerSelectors = [
       state => state.renderConfig?.actor.id,
+      state => state.renderConfig?.scene.environment.type,
+      state => state.renderConfig?.scene.environment.shaderId,
       state => state.renderConfig?.scene.background.backdropId,
       state => state.renderConfig?.scene.background.patternStyle,
       state => state.renderConfig?.scene.background.mountainFrontId,
@@ -194,6 +196,12 @@ export class PixiEngine {
 
     this.applyResidentRevealPresentation();
     this.updateActorScreenPositionPresentation();
+  }
+
+  setStageVisible(visible) {
+    this.stagePresentationVisible = visible !== false;
+    if (this.stage?.bgContainer) this.stage.bgContainer.visible = this.stagePresentationVisible;
+    if (this.stage?.fgContainer) this.stage.fgContainer.visible = this.stagePresentationVisible;
   }
 
   applyResidentRevealPresentation() {
@@ -512,7 +520,7 @@ export class PixiEngine {
   }
 
   async resolveConfiguredRig(renderConfig) {
-    return AssetResolver.resolveRig(renderConfig.actor.id, renderConfig.scene.background);
+    return AssetResolver.resolveRig(renderConfig.actor.id, renderConfig.scene.background, renderConfig.scene.environment);
   }
 
   buildSceneGraph() {
@@ -569,7 +577,8 @@ export class PixiEngine {
       stageFlags, 
       this.bgHeightScale, 
       this.renderTextureManager, 
-      this.app.renderer
+      this.app.renderer,
+      renderConfig.scene
     );
     this.bgAtmosphereContainer.addChild(this.stage.bgContainer);
 
@@ -597,6 +606,7 @@ export class PixiEngine {
 
     // Add stage foreground overlay container on top of the character
     this.masterContainer.addChild(this.stage.fgContainer);
+    this.setStageVisible(this.stagePresentationVisible !== false);
 
     // Extract effect targets cleanly from both entities and attach lighting/shaders
     const stageTargets = this.stage.getEffectsTargets();
@@ -737,7 +747,8 @@ export class PixiEngine {
         stageFlags, 
         this.bgHeightScale, 
         this.renderTextureManager, 
-        this.app.renderer
+        this.app.renderer,
+        renderConfig.scene
       );
       this.bgAtmosphereContainer.addChild(this.stage.bgContainer);
     }
@@ -766,6 +777,7 @@ export class PixiEngine {
       this.stage.fgContainer.parent.removeChild(this.stage.fgContainer);
     }
     this.masterContainer.addChild(this.stage.fgContainer);
+    this.setStageVisible(this.stagePresentationVisible !== false);
 
     const stageTargets = this.stage.getEffectsTargets();
     const stageEffectTargets = {
@@ -887,6 +899,11 @@ export class PixiEngine {
     if (this.stage) {
       this.stage.update(deltaTime, renderConfig.scene, actorConfig.aura.color, {
         elapsed: runtime.elapsed,
+        actorPosition: this.actor ? {
+          x: this.actor.container.position.x,
+          y: this.actor.container.position.y
+        } : null,
+        actorAvailable: Boolean(this.actor?.container?.visible && this.residentRevealVisible && !this.isResidentRepresentedByAvatar()),
         reactionModifiers: runtime.reaction.modifiers
       });
     }
@@ -962,7 +979,8 @@ export class PixiEngine {
         renderConfig.scene.background,
         this.app.renderer,
         this.actor?.warpPointer || null,
-        runtime.reaction.modifiers
+        runtime.reaction.modifiers,
+        { background: renderConfig.scene.environment.type === 'illustrated' }
       );
     }
 

@@ -38,7 +38,7 @@ export class AssetResolver {
    * @param {Object} backgroundConfig - Persistent scene background configuration.
    * @returns {Promise<Object>} Resolved configuration states, cache keys, and assets load queue.
    */
-  static async resolveRig(actorId, backgroundConfig) {
+  static async resolveRig(actorId, backgroundConfig, environmentConfig = { type: 'illustrated', shaderId: 'neural-field' }) {
     const characterId = actorId;
     const {
       backdropId: bgClippingMaskId,
@@ -47,6 +47,7 @@ export class AssetResolver {
       mountainBackId: bgMountainBackId
     } = backgroundConfig;
     const verifiedLoadQueue = [];
+    const includeIllustratedStageAssets = environmentConfig.type !== 'shader';
 
     const formattedMountainId = this.padId(bgMountainId);
     const formattedMountainBackId = this.padId(bgMountainBackId);
@@ -64,6 +65,9 @@ export class AssetResolver {
     };
 
     const results = {
+      environment: { type: environmentConfig.type, shaderId: environmentConfig.shaderId },
+      illustratedIdentity: { backdropId: bgClippingMaskId, patternStyle: bgPatternStyle,
+        mountainFrontId: bgMountainId, mountainBackId: bgMountainBackId },
       keys,
       hasBgClippingMask: false,
       hasBgPat1: false,
@@ -83,18 +87,18 @@ export class AssetResolver {
     // --- Current Stage Asset Contract ---
     // 1. Backdrop Color
     const bgClipPath = `/assets/stage/backdrops/backdrop_${bgClippingMaskId}.webp`;
-    results.hasBgClippingMask = await testImageAsset(bgClipPath);
+    results.hasBgClippingMask = includeIllustratedStageAssets && await testImageAsset(bgClipPath);
     if (results.hasBgClippingMask) {
       verifiedLoadQueue.push({ alias: keys.bg_clipping_mask, src: bgClipPath });
-    } else {
+    } else if (includeIllustratedStageAssets) {
       Assets.cache.set(keys.bg_clipping_mask, Texture.EMPTY);
     }
 
     // 2. Background Flat Patterns (style_bottom and style_top)
     const bgPat1Path = `/assets/stage/patterns/${bgPatternStyle}_top.webp`;
     const bgPat2Path = `/assets/stage/patterns/${bgPatternStyle}_bottom.webp`;
-    results.hasBgPat1 = await testImageAsset(bgPat1Path);
-    results.hasBgPat2 = await testImageAsset(bgPat2Path);
+    results.hasBgPat1 = includeIllustratedStageAssets && await testImageAsset(bgPat1Path);
+    results.hasBgPat2 = includeIllustratedStageAssets && await testImageAsset(bgPat2Path);
 
     if (results.hasBgPat1) {
       verifiedLoadQueue.push({ alias: keys.bg_pat_1, src: bgPat1Path });
@@ -105,19 +109,19 @@ export class AssetResolver {
 
     // 3. Foreground Mountains Layer
     const mountainPath = `/assets/stage/mountains/mountain_${formattedMountainId}.webp`;
-    results.hasBgMountain = await testImageAsset(mountainPath);
+    results.hasBgMountain = includeIllustratedStageAssets && await testImageAsset(mountainPath);
     if (results.hasBgMountain) {
       verifiedLoadQueue.push({ alias: keys.bg_mountain, src: mountainPath });
-    } else {
+    } else if (includeIllustratedStageAssets) {
       Assets.cache.set(keys.bg_mountain, Texture.EMPTY);
     }
 
     // 4. Background Mountains Layer
     const mountainBackPath = `/assets/stage/mountains/mountain_${formattedMountainBackId}.webp`;
-    results.hasBgMountainBack = await testImageAsset(mountainBackPath);
+    results.hasBgMountainBack = includeIllustratedStageAssets && await testImageAsset(mountainBackPath);
     if (results.hasBgMountainBack) {
       verifiedLoadQueue.push({ alias: keys.bg_mountain_back, src: mountainBackPath });
-    } else {
+    } else if (includeIllustratedStageAssets) {
       Assets.cache.set(keys.bg_mountain_back, Texture.EMPTY);
     }
 

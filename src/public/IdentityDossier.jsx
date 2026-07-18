@@ -102,7 +102,7 @@ const IdentityDossier = forwardRef(function IdentityDossier({
 
   return (
     <article className="identity-dossier" data-phase={phase} data-entry-edge={entryEdge} ref={rootRef}>
-      <header className="identity-dossier__header">
+      <header className="identity-dossier__header" data-window-titlebar="identity-panel">
         <div
           className="identity-dossier__drag-handle"
           data-enabled={dragEnabled || undefined}

@@ -67,7 +67,7 @@ export default function CollectionWindow({ onClose, dragHandleProps, dragEnabled
 
   return (
     <article className="collection-window">
-      <header className="collection-window__header" {...dragHandleProps} data-enabled={dragEnabled || undefined}>
+      <header className="collection-window__header" data-window-titlebar="collection-panel" {...dragHandleProps} data-enabled={dragEnabled || undefined}>
         <div><span>02 / Library</span><h2 id="collection-title">Collection</h2></div>
         <p>{dragEnabled ? 'Drag to place' : 'Image library'}</p>
         <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={onClose} aria-label="Close Collection"><X aria-hidden="true" /></button>

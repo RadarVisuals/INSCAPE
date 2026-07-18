@@ -49,6 +49,8 @@ test('scene and actor identity synchronize in both directions with flat editor f
   useStore.getState().applyRenderConfig(DEFAULT_RENDER_CONFIG);
   useStore.getState().applyRenderParameters({
     characterId: 'skull_reaper',
+    environmentType: 'shader',
+    environmentShaderId: 'neural-field',
     bgPatternStyle: 'stone',
     bgMountainBackId: 1,
     bgWarpIntensity: 77,
@@ -58,6 +60,7 @@ test('scene and actor identity synchronize in both directions with flat editor f
 
   let state = useStore.getState();
   assert.equal(state.renderConfig.actor.id, 'skull_reaper');
+  assert.deepEqual(state.renderConfig.scene.environment, { type: 'shader', shaderId: 'neural-field' });
   assert.equal(state.renderConfig.scene.background.patternStyle, 'stone');
   assert.equal(state.renderConfig.scene.background.mountainBackId, 1);
   assert.equal(state.renderConfig.scene.background.patternWarp.intensity, 77);
@@ -67,12 +70,14 @@ test('scene and actor identity synchronize in both directions with flat editor f
   useStore.getState().applyRenderConfig({
     actor: { id: 'abyssal_eye' },
     scene: {
+      environment: { type: 'illustrated', shaderId: 'neural-field' },
       background: { backdropId: 'orange', scrollSpeed: 95 },
       atmosphere: { particles: { opacity: 0.25 }, fog: { color: [4, 5, 6] } }
     }
   });
   state = useStore.getState();
   assert.equal(state.characterId, 'abyssal_eye');
+  assert.equal(state.environmentType, 'illustrated');
   assert.equal(state.bgClippingMaskId, 'orange');
   assert.equal(state.bgScrollSpeed, 95);
   assert.equal(state.particleOpacity, 0.25);

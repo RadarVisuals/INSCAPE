@@ -27,16 +27,16 @@ export function createProfileDocumentRestorePlan(document, currentWorkspace) {
       createdAt: prior?.createdAt || 0, updatedAt: Math.max(prior?.updatedAt || 0, Date.parse(value.exportedAt) || 0) };
     if (prior) workspace.folders = workspace.folders.map((item) => item.id === id ? folder : item); else workspace.folders.push(folder);
     existing.set(id, folder); restoredFolderIds.add(id);
-    launchers.push({ id: `library:folder:${id}`, viewType: 'folder', folderId: id, visitorVisible: true,
-      position: space.placement, windowPosition: space.windowPlacement, appearanceMode: space.appearance?.mode || 'label', iconKey: space.appearance?.iconKey || 'folder', span: { columns: space.appearance?.columnSpan || 3, rows: space.appearance?.rowSpan || 1 }, presentationOrder: space.order + 4 });
+    launchers.push({ id: `library:folder:${id}`, viewType: 'folder', folderId: id, visitorVisible: true, startOpen: space.startOpen,
+      position: space.placement, windowPosition: space.windowPlacement, windowGeometry: space.windowGeometry, appearanceMode: space.appearance?.mode || 'label', iconKey: space.appearance?.iconKey || 'folder', span: { columns: space.appearance?.columnSpan || 3, rows: space.appearance?.rowSpan || 1 }, presentationOrder: space.order + 4 });
   };
   for (const space of [...value.spaces].sort((a, b) => a.order - b.order)) {
     if (space.kind === 'favorites') {
       if (privateFavorites) restoreAsFolder(space, 'restored-favorites');
       else {
         workspace.favorites = [...new Set([...workspace.favorites, ...space.assets.map((asset) => asset.stableAssetId)])];
-        launchers.push({ id: 'library:favorites', viewType: 'favorites', folderId: null, visitorVisible: true,
-          position: space.placement, windowPosition: space.windowPlacement, appearanceMode: space.appearance?.mode || 'label', iconKey: space.appearance?.iconKey || 'favorites', span: { columns: space.appearance?.columnSpan || 3, rows: space.appearance?.rowSpan || 1 }, presentationOrder: space.order + 4 });
+        launchers.push({ id: 'library:favorites', viewType: 'favorites', folderId: null, visitorVisible: true, startOpen: space.startOpen,
+          position: space.placement, windowPosition: space.windowPlacement, windowGeometry: space.windowGeometry, appearanceMode: space.appearance?.mode || 'label', iconKey: space.appearance?.iconKey || 'favorites', span: { columns: space.appearance?.columnSpan || 3, rows: space.appearance?.rowSpan || 1 }, presentationOrder: space.order + 4 });
       }
       continue;
     }
@@ -45,6 +45,7 @@ export function createProfileDocumentRestorePlan(document, currentWorkspace) {
   }
   workspace.canvas = { ...workspace.canvas, launchers };
   return { workspace, keeperId: value.presentation.keeperId, stageId: value.presentation.stageId,
+    environment: { ...value.presentation.environment },
     signalSettings: { ...value.presentation.signals }, restoredFolderIds: [...restoredFolderIds] };
 }
 
@@ -53,7 +54,7 @@ export async function executeAtomicRestore(plan, adapters) {
   try {
     if (await adapters.persistWorkspace(plan.workspace) === false) throw new Error('Workspace persistence failed');
     adapters.applyWorkspace(plan.workspace);
-    adapters.applyPresentation({ keeperId: plan.keeperId, stageId: plan.stageId });
+    adapters.applyPresentation({ keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment });
     adapters.applySignalSettings(plan.signalSettings);
     return true;
   } catch (error) {

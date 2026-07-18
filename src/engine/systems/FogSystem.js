@@ -59,7 +59,11 @@ export class FogSystem {
 
   destroy() {
     if (this.sprite) {
-      this.sprite.destroy(true);
+      this.sprite.filters = null;
+      this.sprite.destroy({ texture: false, textureSource: false });
+      this.sprite = null;
     }
+    this.filter?.destroy?.();
+    this.filter = null;
   }
 }

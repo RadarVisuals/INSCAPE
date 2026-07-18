@@ -1,4 +1,4 @@
-export const RENDER_CONFIG_VERSION = 5;
+export const RENDER_CONFIG_VERSION = 6;
 
 // The previous frame-based decay was 0.007 per 60 Hz tick. Expressing that
 // tuning in seconds keeps the exact envelope while making profiles portable.
@@ -67,6 +67,10 @@ export const DEFAULT_RENDER_CONFIG = Object.freeze({
     })
   }),
   scene: Object.freeze({
+    environment: Object.freeze({
+      type: 'illustrated',
+      shaderId: 'neural-field'
+    }),
     background: Object.freeze({
       backdropId: 'moonpurple',
       patternStyle: 'digitalblob',

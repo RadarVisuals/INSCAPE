@@ -11,6 +11,7 @@ import {
   resetCanvasLayout,
   setFolderAsset,
   setLauncherPosition,
+  setLauncherStartOpen,
   setLauncherVisitorVisibility,
   toggleFavorite,
   unpinLibraryView
@@ -96,4 +97,19 @@ test('visitor visibility toggles only pinned presentation state', () => {
   assert.equal(setLauncherVisitorVisibility(workspace, 'not-pinned', true), workspace);
   workspace = unpinLibraryView(workspace, { type: 'folder', id: folderId });
   assert.equal(workspace.canvas.launchers.length, 0);
+});
+
+test('visitor start-open is authored independently from runtime and organization', () => {
+  let workspace = createFolder(createEmptyWorkspace('0xprofile'), 'Opening exhibition', 10);
+  const folderId = workspace.folders[0].id;
+  workspace = pinLibraryView(workspace, { type: 'folder', id: folderId });
+  const launcher = workspace.canvas.launchers[0];
+  const organization = structuredClone(workspace.folders);
+  workspace = setLauncherStartOpen(workspace, launcher.id, true, { column: 2, row: 3, columnSpan: 10, rowSpan: 8 });
+  assert.equal(workspace.canvas.launchers[0].startOpen, true);
+  assert.deepEqual(workspace.canvas.launchers[0].windowGeometry, { column: 2, row: 3, columnSpan: 10, rowSpan: 8 });
+  workspace = setLauncherStartOpen(workspace, launcher.id, true, { column: 2, row: 3, columnSpan: 0, rowSpan: 8 });
+  assert.deepEqual(workspace.canvas.launchers[0].windowGeometry, { column: 2, row: 3, columnSpan: 10, rowSpan: 8 });
+  assert.deepEqual(workspace.folders, organization);
+  assert.equal(setLauncherStartOpen(workspace, 'missing', false), workspace);
 });

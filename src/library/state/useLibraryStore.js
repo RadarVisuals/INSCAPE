@@ -12,6 +12,7 @@ import {
   setLauncherPosition,
   setLauncherGeometry,
   setLauncherVisitorVisibility,
+  setLauncherStartOpen,
   setLauncherWindowPosition, setLauncherPresentation,
   toggleFavorite,
   unpinLibraryView
@@ -84,9 +85,11 @@ export const useLibraryStore = create((set, get) => ({
   selectAsset: (selectedAssetId) => set({ selectedAssetId }),
   createFolder(name) {
     const workspace = createFolder(get().workspace, name);
+    const created = workspace.folders.length > get().workspace.folders.length ? workspace.folders.at(-1) : null;
     set({ workspace, activeView: workspace.folders.length > get().workspace.folders.length
       ? { type: 'folder', id: workspace.folders.at(-1).id } : get().activeView });
     scheduleSave(workspace);
+    return created?.id || null;
   },
   renameFolder(id, name) {
     const workspace = renameFolder(get().workspace, id, name); set({ workspace }); scheduleSave(workspace);
@@ -118,6 +121,9 @@ export const useLibraryStore = create((set, get) => ({
   },
   setLauncherVisitorVisibility(launcherId, visitorVisible) {
     const workspace = setLauncherVisitorVisibility(get().workspace, launcherId, visitorVisible); set({ workspace }); scheduleSave(workspace);
+  },
+  setLauncherStartOpen(launcherId, startOpen, windowGeometry) {
+    const workspace = setLauncherStartOpen(get().workspace, launcherId, startOpen, windowGeometry); set({ workspace }); scheduleSave(workspace);
   },
   setLauncherPresentation(launcherId, presentation) {
     const workspace = setLauncherPresentation(get().workspace, launcherId, presentation); set({ workspace }); scheduleSave(workspace);

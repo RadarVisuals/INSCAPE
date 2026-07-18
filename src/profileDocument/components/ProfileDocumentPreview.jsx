@@ -4,7 +4,7 @@ import ProfileDocumentSpaceWindow from './ProfileDocumentSpaceWindow.jsx';
 import { iconGlyph } from '../../public/sceneIcons.js';
 
 export default function ProfileDocumentPreview({ document, onExit }) {
-  const [openSpaceId, setOpenSpaceId] = useState(null);
+  const [openSpaceId, setOpenSpaceId] = useState(() => document.spaces.find((space) => space.startOpen)?.id || null);
   const liveIdentity = useProfileIdentity(document.profile.address);
   const cached = document.profile.cachedIdentity;
   const displayName = liveIdentity?.name || cached.name || `${document.profile.address.slice(0, 8)}…${document.profile.address.slice(-6)}`;

@@ -6,6 +6,7 @@ import { migrateProfileDocument } from './profileDocumentMigration.js';
 import { parseProfileDocumentJson, ProfileDocumentValidationError, validateProfileDocument } from './profileDocumentValidation.js';
 import { createProfileDocumentRestorePlan, executeAtomicRestore } from './profileDocumentRestore.js';
 import { createProfileDocumentState, enterDocumentPreview, exitDocumentPreview, isSnapshotStale, setImportedDocument, setSnapshot } from '../state/profileDocumentState.js';
+import { loadRestoredPresentation, profilePresentationKey } from '../storage/profileDocumentStorage.js';
 
 const PROFILE = '0xf3C189819Fd5b042f692983bFbFD57ab607ee709';
 const CONTRACT_A = '0x1111111111111111111111111111111111111111';
@@ -35,7 +36,7 @@ function build(overrides = {}) {
     documentId: 'profile:test', revision: 3, createdAt: 1000, exportedAt: 2000, ...overrides });
 }
 
-test('v1 builder emits a valid allowlisted deterministic public document', () => {
+test('builder emits a valid allowlisted deterministic v3 public document', () => {
   const first = build(); const second = build();
   assert.equal(validateProfileDocument(first).valid, true);
   assert.deepEqual(first, second);
@@ -71,6 +72,17 @@ test('builder omits private pinned spaces and produces a valid empty projection 
   assert.deepEqual(empty.spaces, []);
 });
 
+test('builder drops malformed local window geometry instead of exporting invalid presentation', () => {
+  const malformed = workspace();
+  malformed.canvas.launchers[0].windowGeometry = { column: 2, row: 2, columnSpan: 0, rowSpan: 8 };
+  const document = build({ workspace: malformed, systemPresentation: {
+    identity: { startOpen: true, windowGeometry: { column: -1, row: 2, columnSpan: 8, rowSpan: 8 } }
+  } });
+  assert.equal(document.spaces[0].windowGeometry, null);
+  assert.equal(document.presentation.systemModules.find((module) => module.id === 'identity').windowGeometry, null);
+  assert.equal(validateProfileDocument(document).valid, true);
+});
+
 test('formatted export/import round trip preserves semantic and canonical content', () => {
   const source = build(); const imported = parseProfileDocumentJson(formatProfileDocumentJson(source));
   assert.deepEqual(imported, source); assert.equal(canonicalSerializeProfileDocument(imported), canonicalSerializeProfileDocument(source));
@@ -79,7 +91,7 @@ test('formatted export/import round trip preserves semantic and canonical conten
 test('strict validation rejects malformed JSON, wrong type, future versions, addresses, duplicates, placement, fields and URLs', () => {
   assert.throws(() => parseProfileDocumentJson('{no'), ProfileDocumentValidationError);
   const cases = [
-    { documentType: 'OTHER' }, { version: 2 }, { profile: { address: 'bad', cachedIdentity: { address: 'bad' } } },
+    { documentType: 'OTHER' }, { version: 4 }, { profile: { address: 'bad', cachedIdentity: { address: 'bad' } } },
     { spaces: [build().spaces[0], build().spaces[0]] },
     { spaces: [{ ...build().spaces[0], placement: { column: -1, row: 0 } }] },
     { spaces: [{ ...build().spaces[0], privateState: true }] },
@@ -96,16 +108,41 @@ test('validation enforces space, asset, total-size and canonical-reference limit
   assert.equal(validateProfileDocument({ ...base, spaces: [{ ...space, assets: [{ ...space.assets[0], stableAssetId: `42:${CONTRACT_B}:0x01` }] }] }).valid, false);
 });
 
-test('migration accepts only valid v1 documents and never guesses', () => {
+test('migration defaults v1 and v2 documents to the illustrated environment', () => {
   assert.deepEqual(migrateProfileDocument(build()), build());
+  const legacy = structuredClone(build()); legacy.version = 1;
+  delete legacy.presentation.environment;
+  legacy.presentation.systemModules = legacy.presentation.systemModules.map(({ startOpen, windowGeometry, ...module }) => module);
+  legacy.spaces = legacy.spaces.map(({ startOpen, windowGeometry, ...space }) => space);
+  const migrated = migrateProfileDocument(legacy);
+  assert.equal(migrated.version, 3); assert.equal(migrated.spaces[0].startOpen, false); assert.equal(migrated.spaces[0].windowGeometry, null);
+  assert.deepEqual(migrated.presentation.environment, { type: 'illustrated', shaderId: 'neural-field' });
+  const v2 = structuredClone(build()); v2.version = 2; delete v2.presentation.environment;
+  assert.deepEqual(migrateProfileDocument(v2).presentation.environment, { type: 'illustrated', shaderId: 'neural-field' });
   assert.throws(() => migrateProfileDocument({ documentType: 'OTHER', version: 1 }), ProfileDocumentValidationError);
   assert.throws(() => migrateProfileDocument({ ...build(), version: 9 }), ProfileDocumentValidationError);
+});
+
+test('profile documents round-trip a controlled shader environment and reject unknown shader IDs', () => {
+  const shader = build({ publicPresentation: { keeperId: 'skull_reaper', stageId: 'black', environment: { type: 'shader', shaderId: 'neural-field' } } });
+  assert.deepEqual(parseProfileDocumentJson(formatProfileDocumentJson(shader)).presentation.environment, { type: 'shader', shaderId: 'neural-field' });
+  const remote = structuredClone(shader); remote.presentation.environment.shaderId = '../untrusted.glsl';
+  assert.equal(validateProfileDocument(remote).valid, false);
 });
 
 test('snapshot stale detection ignores revision timestamps but detects authored public changes', () => {
   const source = build(); let state = setSnapshot(createProfileDocumentState(), source, profileDocumentContentFingerprint(source));
   assert.equal(isSnapshotStale(state, { ...source, revision: 99, exportedAt: new Date(9999).toISOString() }), false);
   const changed = structuredClone(source); changed.spaces[0].label = 'Changed'; assert.equal(isSnapshotStale(state, changed), true);
+});
+
+test('runtime desktop state is excluded while authored start-open presentation stales snapshots', () => {
+  const source = build();
+  const runtimeOnly = workspace(); runtimeOnly.runtimeDesktop = { openIds: ['private'], rects: { private: { column: 1 } } };
+  assert.equal(profileDocumentContentFingerprint(build({ workspace: runtimeOnly })), profileDocumentContentFingerprint(source));
+  const authored = workspace(); authored.canvas.launchers.find((launcher) => launcher.folderId === 'public-a').startOpen = true;
+  authored.canvas.launchers.find((launcher) => launcher.folderId === 'public-a').windowGeometry = { column: 2, row: 2, columnSpan: 10, rowSpan: 8 };
+  assert.notEqual(profileDocumentContentFingerprint(build({ workspace: authored })), profileDocumentContentFingerprint(source));
 });
 
 test('private content edits do not stale public content, while either visibility transition does', () => {
@@ -123,9 +160,22 @@ test('private content edits do not stale public content, while either visibility
 });
 
 test('import preview is isolated and exit preserves draft state', () => {
-  const draft = workspace(); let state = setImportedDocument(createProfileDocumentState(), build());
+  const draft = workspace(); const shaderDocument = build({ publicPresentation: { keeperId: 'skull_reaper', stageId: 'black', environment: { type: 'shader', shaderId: 'neural-field' } } });
+  let state = setImportedDocument(createProfileDocumentState(), shaderDocument);
   state = enterDocumentPreview(state, 'imported'); state.preview.spaces[0].label = 'Visitor mutation';
+  assert.deepEqual(state.preview.presentation.environment, { type: 'shader', shaderId: 'neural-field' });
   state = exitDocumentPreview(state); assert.deepEqual(workspace(), draft); assert.equal(state.imported.spaces[0].label, 'Public A');
+});
+
+test('restored-presentation records preserve controlled environments and migrate legacy records', () => {
+  const records = new Map(); const storage = { getItem: (key) => records.get(key) ?? null };
+  const key = profilePresentationKey(PROFILE);
+  records.set(key, JSON.stringify({ version: 2, keeperId: 'skull_reaper', stageId: 'black', environment: { type: 'shader', shaderId: 'neural-field' } }));
+  assert.equal(loadRestoredPresentation(storage, PROFILE).environment.type, 'shader');
+  records.set(key, JSON.stringify({ version: 1, keeperId: 'skull_reaper', stageId: 'black' }));
+  assert.equal(loadRestoredPresentation(storage, PROFILE).environment.type, 'illustrated');
+  records.set(key, JSON.stringify({ version: 2, keeperId: 'skull_reaper', stageId: 'black', environment: { type: 'shader', shaderId: 'remote' } }));
+  assert.equal(loadRestoredPresentation(storage, PROFILE), null);
 });
 
 test('restore plan replaces only public presentation and preserves private Favorites/folders', () => {
@@ -136,6 +186,7 @@ test('restore plan replaces only public presentation and preserves private Favor
   assert.equal(plan.workspace.canvas.launchers.filter((launcher) => launcher.visitorVisible).length, 2);
   assert.deepEqual(plan.workspace.folders.find((folder) => folder.id === 'public-a').assetIds, [assetA.id, assetB.id]);
   assert.equal(plan.keeperId, 'skull_reaper'); assert.equal(plan.stageId, 'black');
+  assert.deepEqual(plan.environment, { type: 'illustrated', shaderId: 'neural-field' });
 });
 
 test('restore collisions preserve an unpinned private folder deterministically', () => {

@@ -4,6 +4,8 @@ import { didStageAssetConfigurationChange, getAssetReloadScope } from './stageAs
 
 function createRig(patternStyle = 'bubble') {
   return {
+    environment: { type: 'illustrated', shaderId: 'neural-field' },
+    illustratedIdentity: { backdropId: 'moonpurple', patternStyle, mountainFrontId: 2, mountainBackId: 3 },
     keys: {
       bg_clipping_mask: 'bg_clipping_mask_moonpurple',
       bg_pat_1: `bg_pat_1_${patternStyle}`,
@@ -20,6 +22,24 @@ function createRig(patternStyle = 'bubble') {
 
 test('unchanged stage asset configuration preserves stage resources', () => {
   assert.equal(didStageAssetConfigurationChange(createRig(), createRig()), false);
+});
+
+test('environment type and shader identity rebuild only the stage', () => {
+  const illustrated = createRig();
+  const shader = { ...createRig(), environment: { type: 'shader', shaderId: 'neural-field' },
+    hasBgPat1: false, hasBgPat2: false };
+  assert.deepEqual(getAssetReloadScope(illustrated, shader), {
+    actorChanged: false, backgroundPatternChanged: false, stageChanged: true
+  });
+  assert.equal(didStageAssetConfigurationChange(shader, { ...shader }), false);
+});
+
+test('illustrated identity remains authored and stable while a shader is active', () => {
+  const shader = { ...createRig(), environment: { type: 'shader', shaderId: 'neural-field' } };
+  const changedBackdrop = { ...shader, keys: { ...shader.keys, bg_clipping_mask: 'bg_clipping_mask_black' },
+    illustratedIdentity: { ...shader.illustratedIdentity, backdropId: 'black' } };
+  assert.equal(didStageAssetConfigurationChange(shader, changedBackdrop), false);
+  assert.deepEqual(changedBackdrop.illustratedIdentity, { backdropId: 'black', patternStyle: 'bubble', mountainFrontId: 2, mountainBackId: 3 });
 });
 
 test('changing resolved background pattern keys rebuilds stage resources', () => {

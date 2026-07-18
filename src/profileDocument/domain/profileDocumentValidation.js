@@ -1,6 +1,7 @@
 import { normalizeProfileAddress } from '../../library/config.js';
 import { createCanonicalAssetId, normalizeTokenId } from './assetReference.js';
-import { KNOWN_KEEPER_IDS, KNOWN_STAGE_IDS, PROFILE_DOCUMENT_LIMITS as L, PROFILE_DOCUMENT_TYPE, PROFILE_DOCUMENT_VERSION } from './constants.js';
+import { KNOWN_ENVIRONMENT_TYPES, KNOWN_KEEPER_IDS, KNOWN_SHADER_ENVIRONMENT_IDS, KNOWN_STAGE_IDS, PROFILE_DOCUMENT_LIMITS as L, PROFILE_DOCUMENT_TYPE, PROFILE_DOCUMENT_VERSION } from './constants.js';
+import { migrateProfileDocument } from './profileDocumentMigration.js';
 
 const ID = /^[A-Za-z0-9:_-]+$/;
 const SAFE_MODULE_IDS = new Set(['identity', 'signals']);
@@ -10,6 +11,7 @@ const validId = (value) => typeof value === 'string' && value.length > 0 && valu
 const validText = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.length <= max && !/[\u0000-\u001f\u007f]/.test(value);
 const validTime = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value));
 const validPosition = (value) => value === null || (exactKeys(value, ['column', 'row']) && Number.isInteger(value.column) && Number.isInteger(value.row) && value.column >= 0 && value.column <= 63 && value.row >= 0 && value.row <= 127);
+const validWindowGeometry = (value) => value === null || (exactKeys(value, ['column','row','columnSpan','rowSpan']) && Number.isInteger(value.column) && value.column >= 0 && value.column <= 63 && Number.isInteger(value.row) && value.row >= 0 && value.row <= 127 && Number.isInteger(value.columnSpan) && value.columnSpan >= 1 && value.columnSpan <= 64 && Number.isInteger(value.rowSpan) && value.rowSpan >= 1 && value.rowSpan <= 128);
 const ICON_KEYS = new Set(['profile','collection','signals','creations','folder','favorites','search','gallery','external','music']);
 const validAppearance = (value) => value === undefined || (exactKeys(value,['mode','iconKey','showLabel','columnSpan','rowSpan']) && ['label','icon','icon_label'].includes(value?.mode) && ICON_KEYS.has(value?.iconKey) && typeof value?.showLabel === 'boolean' && Number.isInteger(value?.columnSpan) && value.columnSpan >= 1 && value.columnSpan <= 12 && Number.isInteger(value?.rowSpan) && value.rowSpan >= 1 && value.rowSpan <= 8);
 const validUrl = (value) => typeof value === 'string' && value.length <= L.maxUrlLength && /^(https?:\/\/|ipfs:\/\/)/i.test(value) && !/[\u0000-\u001f\u007f]/.test(value);
@@ -37,20 +39,21 @@ export function validateProfileDocument(input, { rawSize } = {}) {
   const identity = input?.profile?.cachedIdentity;
   if (!exactKeys(identity, ['address', 'name', 'avatarUrl']) || normalizeProfileAddress(identity?.address) !== address || (identity?.name !== undefined && !validText(identity.name, L.maxNameLength)) || (identity?.avatarUrl !== undefined && !validUrl(identity.avatarUrl))) fail('profile.cachedIdentity', 'invalid_identity', 'Invalid cached public identity fallback');
   const presentation = input?.presentation;
-  if (!exactKeys(presentation, ['keeperId', 'stageId', 'systemModules', 'signals']) || !KNOWN_KEEPER_IDS.includes(presentation?.keeperId) || !KNOWN_STAGE_IDS.includes(presentation?.stageId)) fail('presentation', 'invalid_presentation', 'Unknown Keeper or stage');
-  if (!Array.isArray(presentation?.systemModules) || presentation.systemModules.length > 8 || new Set((presentation?.systemModules || []).map((module) => module.id)).size !== (presentation?.systemModules || []).length || presentation.systemModules.some((module) => !exactKeys(module, ['id', 'visible', 'placement']) || !SAFE_MODULE_IDS.has(module.id) || typeof module.visible !== 'boolean' || !validPosition(module.placement))) fail('presentation.systemModules', 'invalid_modules', 'Invalid public system module projection');
+  if (!exactKeys(presentation, ['keeperId', 'stageId', 'environment', 'systemModules', 'signals']) || !KNOWN_KEEPER_IDS.includes(presentation?.keeperId) || !KNOWN_STAGE_IDS.includes(presentation?.stageId)) fail('presentation', 'invalid_presentation', 'Unknown Keeper, stage, or presentation fields');
+  if (!exactKeys(presentation?.environment, ['type', 'shaderId']) || !KNOWN_ENVIRONMENT_TYPES.includes(presentation?.environment?.type) || !KNOWN_SHADER_ENVIRONMENT_IDS.includes(presentation?.environment?.shaderId)) fail('presentation.environment', 'invalid_environment', 'Unknown environment type or controlled shader ID');
+  if (!Array.isArray(presentation?.systemModules) || presentation.systemModules.length > 8 || new Set((presentation?.systemModules || []).map((module) => module.id)).size !== (presentation?.systemModules || []).length || presentation.systemModules.some((module) => !exactKeys(module, ['id', 'visible', 'placement', 'startOpen', 'windowGeometry']) || !SAFE_MODULE_IDS.has(module.id) || typeof module.visible !== 'boolean' || typeof module.startOpen !== 'boolean' || !validPosition(module.placement) || !validWindowGeometry(module.windowGeometry))) fail('presentation.systemModules', 'invalid_modules', 'Invalid public system module projection');
   if (!exactKeys(presentation?.signals, ['notifications', 'speech', 'visualEffects', 'audio']) || Object.values(presentation?.signals || {}).some((value) => typeof value !== 'boolean')) fail('presentation.signals', 'invalid_settings', 'Invalid visitor-facing Signals settings');
-  if (!exactKeys(input?.metadata, [])) fail('metadata', 'unexpected_fields', 'Version 1 metadata must be empty');
+  if (!exactKeys(input?.metadata, [])) fail('metadata', 'unexpected_fields', 'Profile metadata must be empty');
   if (!Array.isArray(input?.spaces)) fail('spaces', 'invalid_spaces', 'Spaces must be an array');
   else {
     if (input.spaces.length > L.maxSpaces) fail('spaces', 'too_many_spaces', 'Too many public spaces');
     const ids = new Set(); const launcherIds = new Set(); let total = 0;
     input.spaces.forEach((space, index) => {
       const path = `spaces[${index}]`;
-      if (!exactKeys(space, ['id', 'launcherId', 'kind', 'label', 'order', 'placement', 'windowPlacement', 'appearance', 'assets'])) fail(path, 'unexpected_fields', 'Space contains unexpected fields');
+      if (!exactKeys(space, ['id', 'launcherId', 'kind', 'label', 'order', 'placement', 'windowPlacement', 'startOpen', 'windowGeometry', 'appearance', 'assets'])) fail(path, 'unexpected_fields', 'Space contains unexpected fields');
       if (!validId(space?.id) || ids.has(space.id)) fail(`${path}.id`, 'duplicate_or_invalid_id', 'Space ID must be valid and unique'); else ids.add(space.id);
       if (!validId(space?.launcherId) || launcherIds.has(space.launcherId)) fail(`${path}.launcherId`, 'duplicate_or_invalid_id', 'Launcher ID must be valid and unique'); else launcherIds.add(space.launcherId);
-      if (!['folder', 'favorites'].includes(space?.kind) || !validText(space?.label, L.maxLabelLength) || !Number.isInteger(space?.order) || space.order < 0 || !validPosition(space?.placement) || !validPosition(space?.windowPlacement) || !validAppearance(space?.appearance)) fail(path, 'invalid_space', 'Invalid public space fields');
+      if (!['folder', 'favorites'].includes(space?.kind) || !validText(space?.label, L.maxLabelLength) || !Number.isInteger(space?.order) || space.order < 0 || !validPosition(space?.placement) || !validPosition(space?.windowPlacement) || typeof space?.startOpen !== 'boolean' || !validWindowGeometry(space?.windowGeometry) || !validAppearance(space?.appearance)) fail(path, 'invalid_space', 'Invalid public space fields');
       if (!Array.isArray(space?.assets)) { fail(`${path}.assets`, 'invalid_assets', 'Assets must be an array'); return; }
       total += space.assets.length;
       if (space.assets.length > L.maxAssetsPerSpace) fail(`${path}.assets`, 'too_many_assets', 'Too many assets in a space');
@@ -76,5 +79,6 @@ export function parseProfileDocumentJson(raw) {
   const size = new TextEncoder().encode(raw).length;
   if (size > L.maxJsonBytes) throw new ProfileDocumentValidationError([{ path: '$', code: 'document_too_large', message: `Document exceeds ${L.maxJsonBytes} bytes` }]);
   let input; try { input = JSON.parse(raw); } catch { throw new ProfileDocumentValidationError([{ path: '$', code: 'invalid_json', message: 'Malformed JSON' }]); }
+  if (input?.version === 1 || input?.version === 2) return migrateProfileDocument(input);
   return assertValidProfileDocument(input, { rawSize: size });
 }

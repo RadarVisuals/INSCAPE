@@ -21,6 +21,7 @@ function AtelierLoadingFallback() {
 
 function App() {
   const canvasRef = useRef(null);
+  const desktopContextMenuRef = useRef(null);
   const [applicationMode, setApplicationMode] = useState(() => resolveApplicationMode(window.location));
   const [worldReady, setWorldReady] = useState(false);
   const [revealStage, setRevealStage] = useState('sealed');
@@ -29,8 +30,11 @@ function App() {
     reducedMotion: false
   });
   const [previewDocument, setPreviewDocument] = useState(null);
+  const [keeperUserVisible, setKeeperUserVisible] = useState(true);
+  const [stageUserVisible, setStageUserVisible] = useState(true);
   const activeActorId = useStore((state) => state.renderConfig.actor.id);
   const activeStageId = useStore((state) => state.renderConfig.scene.background.backdropId);
+  const activeEnvironment = useStore((state) => state.renderConfig.scene.environment);
   const applyRenderConfig = useStore((state) => state.applyRenderConfig);
   const worldVisible = ['world', 'resident', 'interface', 'complete'].includes(revealStage);
   const actorVisible = ['resident', 'interface', 'complete'].includes(revealStage);
@@ -42,10 +46,12 @@ function App() {
     return () => window.removeEventListener('popstate', syncModeFromUrl);
   }, []);
 
-  const applyPublicPresentation = useCallback(({ keeperId, stageId }) => {
+  const applyPublicPresentation = useCallback(({ keeperId, stageId, environment }) => {
     const current = useStore.getState().renderConfig;
     applyRenderConfig({ ...current, actor: { ...current.actor, id: keeperId },
-      scene: { ...current.scene, background: { ...current.scene.background, backdropId: stageId } } });
+      scene: { ...current.scene,
+        environment: environment || current.scene.environment,
+        background: { ...current.scene.background, backdropId: stageId } } });
   }, [applyRenderConfig]);
 
   useEffect(() => {
@@ -90,12 +96,21 @@ function App() {
     canvasRef.current?.acknowledgeUserGesture();
   }, []);
 
+  const registerDesktopContextMenu = useCallback((handler) => {
+    desktopContextMenuRef.current = handler;
+  }, []);
+
   return (
     <div className="application-root" data-application-mode={applicationMode} data-startveil-stage={revealStage}>
-      <div className="application-world" data-visible={worldVisible || undefined}>
+      <div
+        className="application-world"
+        data-visible={worldVisible || undefined}
+        onContextMenu={(event) => desktopContextMenuRef.current?.(event)}
+      >
         <ArtCanvas
           ref={canvasRef}
-          actorVisible={actorVisible}
+          actorVisible={actorVisible && keeperUserVisible}
+          stageVisible={stageUserVisible}
           reducedMotion={revealPresentation.reducedMotion}
           presentationOverride={previewDocument?.presentation || null}
           onReady={() => setWorldReady(true)}
@@ -116,6 +131,7 @@ function App() {
             onRequestAtelier={() => changeApplicationMode(APPLICATION_MODES.ATELIER)}
             activeActorId={activeActorId}
             stageId={activeStageId}
+            environment={activeEnvironment}
             avatarSrc={AssetResolver.resolveActorAvatarPath(activeActorId)}
             residentHandoff={residentHandoff}
             keeperReactions={keeperReactions}
@@ -123,6 +139,11 @@ function App() {
             revealPresentation={revealPresentation}
             onApplyRestoredPresentation={applyPublicPresentation}
             onPreviewDocumentChange={setPreviewDocument}
+            keeperVisible={keeperUserVisible}
+            stageVisible={stageUserVisible}
+            onKeeperVisibilityChange={setKeeperUserVisible}
+            onStageVisibilityChange={setStageUserVisible}
+            registerWorldContextMenu={registerDesktopContextMenu}
           />
         )}
       </div>

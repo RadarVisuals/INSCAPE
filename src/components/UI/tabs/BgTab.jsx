@@ -1,8 +1,11 @@
 // src/components/UI/tabs/BgTab.jsx
 import React from 'react';
 import CompactSlider from '../CompactSlider';
+import { useStore } from '../../../store/useStore';
 
 export default function BgTab() {
+  const environmentType = useStore((state) => state.environmentType);
+  if (environmentType === 'shader') return <p style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Neural Field uses its controlled authored defaults. Illustrated background controls are preserved and return when Illustrated Stage is selected.</p>;
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
       <div>

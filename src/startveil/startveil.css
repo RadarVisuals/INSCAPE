@@ -1,5 +1,6 @@
 .startveil {
   --veil-white: #e8e8e4;
+  --veil-phosphor: #dff8ec;
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -7,9 +8,12 @@
   place-items: center;
   overflow: hidden;
   color: var(--veil-white);
-  background: #070807;
+  background:
+    radial-gradient(ellipse at 50% 46%, rgba(194, 229, 215, 0.07) 0%, rgba(19, 28, 24, 0.04) 44%, transparent 67%),
+    #050605;
   font-family: var(--font-mono);
   isolation: isolate;
+  animation: startveil-crt-flicker 6s steps(1, end) infinite;
 }
 
 .startveil::before,
@@ -22,24 +26,33 @@
 
 .startveil::before {
   z-index: 6;
-  opacity: 0.14;
-  background: repeating-linear-gradient(to bottom, transparent 0 3px, rgba(255,255,255,0.08) 3px 4px);
+  opacity: 0.36;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, 0.34) 2px 4px),
+    repeating-linear-gradient(to right, rgba(210, 255, 235, 0.025) 0 1px, transparent 1px 3px);
+  mix-blend-mode: overlay;
 }
 
 .startveil::after {
   z-index: 5;
-  background: radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.38) 72%, rgba(0,0,0,0.82) 120%);
+  border: 1px solid rgba(220, 255, 240, 0.04);
+  background: radial-gradient(ellipse at center, transparent 38%, rgba(0, 0, 0, 0.28) 69%, rgba(0, 0, 0, 0.88) 112%);
+  box-shadow: inset 0 0 8rem 1.7rem rgba(0, 0, 0, 0.8), inset 0 0 1.5rem rgba(205, 255, 233, 0.04);
 }
 
 .startveil__texture {
   position: absolute;
-  inset: -30%;
-  z-index: 1;
-  opacity: 0.11;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
-  transform: translate3d(0, 0, 0) rotate(3deg);
-  animation: startveil-noise-shift 900ms steps(1, end) infinite;
-  will-change: transform;
+  inset: 0;
+  z-index: 4;
+  opacity: 0.12;
+  background-image: url('/assets/bluenoise128.png');
+  background-position: 0 0;
+  background-repeat: repeat;
+  background-size: 512px 512px;
+  image-rendering: pixelated;
+  mix-blend-mode: screen;
+  animation: startveil-noise-shift 480ms steps(1, end) infinite;
+  will-change: background-position;
 }
 
 .startveil__mark {
@@ -48,6 +61,7 @@
   width: min(38vw, 44vh, 29rem);
   transform-style: preserve-3d;
   perspective: 900px;
+  filter: drop-shadow(0 0 0.75rem rgba(213, 255, 238, 0.1));
 }
 
 .startveil__logo,
@@ -56,7 +70,7 @@
   width: 100%;
   height: auto;
   object-fit: contain;
-  filter: grayscale(1) contrast(1.08) brightness(0.92);
+  filter: grayscale(1) sepia(0.12) hue-rotate(92deg) contrast(1.18) brightness(0.96);
 }
 
 .startveil__ghost {
@@ -66,10 +80,26 @@
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
+  mix-blend-mode: screen;
 }
 
-.startveil__ghost--top { clip-path: inset(19% 0 57% 0); }
-.startveil__ghost--bottom { clip-path: inset(58% 0 17% 0); }
+.startveil__ghost--top {
+  clip-path: inset(19% 0 57% 0);
+  filter: drop-shadow(-3px 0 rgba(153, 255, 226, 0.38));
+}
+.startveil__ghost--bottom {
+  clip-path: inset(58% 0 17% 0);
+  filter: drop-shadow(3px 0 rgba(224, 238, 255, 0.3));
+}
+
+.startveil[data-state='loading'] .startveil__mark,
+.startveil[data-state='dormant'] .startveil__mark { animation: startveil-logo-carrier 1.8s steps(1, end) infinite; }
+.startveil[data-state='loading'] .startveil__logo,
+.startveil[data-state='dormant'] .startveil__logo { animation: startveil-logo-signal 1.8s steps(1, end) infinite; }
+.startveil[data-state='loading'] .startveil__ghost--top,
+.startveil[data-state='dormant'] .startveil__ghost--top { animation: startveil-glitch-top 1.8s steps(1, end) infinite; }
+.startveil[data-state='loading'] .startveil__ghost--bottom,
+.startveil[data-state='dormant'] .startveil__ghost--bottom { animation: startveil-glitch-bottom 1.8s steps(1, end) infinite; }
 
 .startveil__terminal {
   position: absolute;
@@ -80,6 +110,7 @@
   font-size: clamp(0.68rem, 0.78vw, 0.8rem);
   letter-spacing: 0.09em;
   text-transform: uppercase;
+  text-shadow: 0 0 0.45rem rgba(205, 255, 232, 0.22);
 }
 
 .startveil__terminal header {
@@ -88,7 +119,7 @@
   border-left: 1px solid rgba(255,255,255,0.75);
 }
 
-.startveil__terminal header p { margin-bottom: 0.35rem; font-size: 1.05em; letter-spacing: 0.2em; }
+.startveil__terminal header p { margin-bottom: 0.35rem; color: var(--veil-phosphor); font-size: 1.05em; letter-spacing: 0.2em; text-shadow: 0 0 0.7rem rgba(205,255,232,0.42); }
 .startveil__terminal header span { color: rgba(232,232,228,0.5); }
 .startveil__terminal dl { display: grid; gap: 0.38rem; margin-bottom: 1.3rem; }
 .startveil__terminal dl div { display: grid; grid-template-columns: minmax(9rem, 1fr) auto; gap: 1rem; }
@@ -97,6 +128,7 @@
 .startveil__terminal dd { color: rgba(232,232,228,0.9); }
 
 .startveil__entry {
+  position: relative;
   display: grid;
   min-width: 15rem;
   min-height: 3.25rem;
@@ -109,9 +141,18 @@
   letter-spacing: inherit;
   text-align: left;
   cursor: pointer;
+  box-shadow: inset 0 0 1.4rem rgba(208, 255, 235, 0.018), 0 0 1rem rgba(208, 255, 235, 0.025);
 }
 
-.startveil__entry:hover:not(:disabled) { color: #fff; border-color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.06); }
+.startveil__entry::after {
+  content: '\2588';
+  position: absolute;
+  right: 0.85rem;
+  top: 0.75rem;
+  color: var(--veil-phosphor);
+  animation: startveil-cursor 880ms steps(1, end) infinite;
+}
+.startveil__entry:hover:not(:disabled) { color: #fff; border-color: rgba(223,248,236,0.82); background: rgba(211,255,234,0.055); box-shadow: inset 0 0 1.7rem rgba(208,255,235,0.035), 0 0 1.1rem rgba(208,255,235,0.06); }
 .startveil__entry:focus-visible { outline: 1px solid #fff; outline-offset: 4px; }
 .startveil__entry:disabled { color: rgba(232,232,228,0.32); cursor: wait; }
 .startveil__entry strong { margin-top: 0.45rem; color: #fff; font: inherit; }
@@ -132,16 +173,39 @@
 .startveil__scan {
   position: absolute;
   z-index: 4;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 1px;
-  opacity: 0;
-  background: #fff;
-  box-shadow: 0 0 12px 2px rgba(255,255,255,0.65), 0 0 70px 8px rgba(255,255,255,0.25);
+  top: -16%;
+  right: 0;
+  left: 0;
+  height: 12%;
+  opacity: 0.2;
+  background: linear-gradient(to bottom, transparent, rgba(211, 255, 234, 0.035) 64%, rgba(231, 255, 244, 0.2) 95%, transparent);
+  transform: translateY(0);
+  animation: startveil-scan-roll 4.6s linear infinite;
+  will-change: transform;
 }
 
-.startveil[data-state='entering'] .startveil__mark { animation: startveil-turn 0.26s cubic-bezier(.62,.02,.28,1) both; }
+.startveil__sync {
+  position: absolute;
+  z-index: 6;
+  top: 18%;
+  right: -3%;
+  left: -3%;
+  height: 7%;
+  opacity: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, transparent, rgba(218, 255, 239, 0.12), rgba(0, 0, 0, 0.36), transparent),
+    url('/assets/bluenoise128.png');
+  background-size: auto, 512px 512px;
+  border-top: 1px solid rgba(225, 255, 243, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.42);
+  backdrop-filter: contrast(1.65) brightness(1.18) blur(0.35px);
+  mix-blend-mode: screen;
+  animation: startveil-sync-tear 3.2s steps(1, end) infinite;
+  will-change: top, height, opacity, transform;
+}
+
+.startveil[data-state='entering'] .startveil__mark { animation: startveil-turn 0.26s steps(5, end) both; }
 .startveil[data-state='booting'] .startveil__mark { animation: startveil-resolve 0.6s cubic-bezier(.2,.8,.2,1) both; }
 .startveil[data-state='booting'] .startveil__ghost { animation: startveil-slice 0.3s steps(2,end) 0.06s both; }
 .startveil[data-state='booting'] .startveil__ghost--bottom { animation-delay: 0.11s; animation-direction: reverse; }
@@ -162,24 +226,75 @@
 .startveil[data-state='revealing-interface'] { pointer-events: none; opacity: 0; background: transparent; }
 
 @keyframes startveil-turn {
-  0% { transform: rotateY(0deg) scale(1); filter: brightness(1); }
-  100% { transform: rotateY(88deg) scale(0.94); filter: brightness(1.5); }
+  0% { transform: translate(0) scale(1); filter: brightness(1); }
+  20% { transform: translate(-9px, 1px) skewX(5deg) scale(1.015, 0.96); filter: brightness(1.8); }
+  40% { transform: translate(12px, -1px) skewX(-7deg) scale(0.97, 1.03); filter: brightness(0.72); }
+  64% { transform: translate(-4px) scale(1.08, 0.76); filter: brightness(2.2); }
+  82% { transform: translate(7px) scale(0.9, 0.18); filter: brightness(3); }
+  100% { transform: scale(0.02, 0.004); filter: brightness(5); }
 }
-@keyframes startveil-resolve { from { transform: rotateY(88deg); } 72% { transform: rotateY(355deg); } to { transform: rotateY(360deg); filter: brightness(1.35); } }
+@keyframes startveil-resolve { 0% { transform: scale(0.02, 0.004); filter: brightness(4); } 18% { transform: scale(1.08, 0.03); } 36% { transform: translateX(-13px) scale(0.94, 0.55); } 52% { transform: translateX(9px) skewX(-5deg) scale(1.03, 0.88); } 72% { transform: translateX(-3px) scale(0.99, 1.02); } 100% { transform: translateX(0) scale(1); filter: brightness(1.35); } }
 @keyframes startveil-slice { 0%,100% { opacity: 0; transform: translateX(0); } 25%,75% { opacity: 0.62; transform: translateX(18px); } 50% { opacity: 0.3; transform: translateX(-11px); } }
 @keyframes startveil-boot-text { 0% { opacity: 0; } 30% { opacity: 0.65; } 75% { opacity: 0.18; } 100% { opacity: 0; } }
 @keyframes startveil-world-out { from { opacity: 1; } to { opacity: 0; } }
 @keyframes startveil-short-pulse { from { filter: brightness(1); } 50% { filter: brightness(1.5); } to { filter: brightness(1); } }
+@keyframes startveil-crt-flicker {
+  0%, 18%, 22%, 62%, 64%, 100% { opacity: 1; }
+  19% { opacity: 0.985; }
+  63% { opacity: 0.972; }
+}
+@keyframes startveil-cursor { 0%, 48% { opacity: 0.9; } 49%, 100% { opacity: 0.08; } }
+@keyframes startveil-scan-roll { from { transform: translateY(0); } to { transform: translateY(966%); } }
+@keyframes startveil-sync-tear {
+  0%, 67%, 76%, 100% { top: 18%; height: 7%; opacity: 0; transform: translateX(0); background-position: 0 0, 0 0; }
+  68% { top: 23%; height: 2%; opacity: 0.36; transform: translateX(-14px); background-position: 0 0, -137px 83px; }
+  69% { top: 64%; height: 8%; opacity: 0.17; transform: translateX(9px); background-position: 0 0, 71px -191px; }
+  70% { top: 37%; height: 1px; opacity: 0.72; transform: translateX(-5px); background-position: 0 0, -223px -47px; }
+  71% { top: 71%; height: 3%; opacity: 0.24; transform: translateX(18px); background-position: 0 0, 181px 149px; }
+  72% { top: 46%; height: 12%; opacity: 0.1; transform: translateX(-11px); background-position: 0 0, 43px -269px; }
+  73% { top: 15%; height: 1%; opacity: 0.52; transform: translateX(6px); background-position: 0 0, -307px 211px; }
+  74% { top: 53%; height: 5%; opacity: 0.15; transform: translateX(-3px); background-position: 0 0, 251px 37px; }
+  75% { top: 81%; height: 1px; opacity: 0.34; transform: translateX(0); background-position: 0 0, 0 0; }
+}
+@keyframes startveil-logo-carrier {
+  0%, 72%, 78%, 100% { transform: translate(0); }
+  73% { transform: translate(-2px, 1px) skewX(0.8deg); }
+  74% { transform: translate(3px, -1px) skewX(-1.2deg); }
+  75% { transform: translate(-5px, 0) scaleX(1.012); }
+  76% { transform: translate(2px, 1px); }
+  77% { transform: translate(-1px, 0); }
+}
+@keyframes startveil-logo-signal {
+  0%, 70%, 79%, 100% { opacity: 1; filter: grayscale(1) sepia(0.12) hue-rotate(92deg) contrast(1.18) brightness(0.96); }
+  72% { opacity: 0.68; filter: grayscale(1) contrast(1.65) brightness(1.7); }
+  74% { opacity: 0.94; filter: grayscale(1) contrast(1.3) brightness(0.72); }
+  76% { opacity: 0.75; filter: grayscale(1) contrast(1.8) brightness(1.45); }
+  78% { opacity: 1; filter: grayscale(1) sepia(0.12) hue-rotate(92deg) contrast(1.18) brightness(1.08); }
+}
+@keyframes startveil-glitch-top {
+  0%, 70%, 79%, 100% { opacity: 0; transform: translateX(0); clip-path: inset(19% 0 57% 0); }
+  71% { opacity: 0.62; transform: translateX(13px); clip-path: inset(11% 0 72% 0); }
+  73% { opacity: 0.36; transform: translateX(-8px); clip-path: inset(35% 0 48% 0); }
+  75% { opacity: 0.75; transform: translateX(6px); clip-path: inset(4% 0 84% 0); }
+  77% { opacity: 0.28; transform: translateX(-4px); clip-path: inset(52% 0 35% 0); }
+}
+@keyframes startveil-glitch-bottom {
+  0%, 71%, 80%, 100% { opacity: 0; transform: translateX(0); clip-path: inset(58% 0 17% 0); }
+  72% { opacity: 0.35; transform: translateX(-11px); clip-path: inset(63% 0 24% 0); }
+  74% { opacity: 0.7; transform: translateX(9px); clip-path: inset(46% 0 37% 0); }
+  76% { opacity: 0.42; transform: translateX(-6px); clip-path: inset(77% 0 9% 0); }
+  78% { opacity: 0.58; transform: translateX(4px); clip-path: inset(27% 0 59% 0); }
+}
 @keyframes startveil-noise-shift {
-  0% { transform: translate3d(0, 0, 0) rotate(3deg); }
-  12.5% { transform: translate3d(-1.2%, 0.7%, 0) rotate(3deg); }
-  25% { transform: translate3d(0.8%, -1.1%, 0) rotate(3deg); }
-  37.5% { transform: translate3d(-0.5%, -0.4%, 0) rotate(3deg); }
-  50% { transform: translate3d(1.1%, 0.9%, 0) rotate(3deg); }
-  62.5% { transform: translate3d(0.3%, -0.8%, 0) rotate(3deg); }
-  75% { transform: translate3d(-0.9%, 1.1%, 0) rotate(3deg); }
-  87.5% { transform: translate3d(0.7%, 0.2%, 0) rotate(3deg); }
-  100% { transform: translate3d(0, 0, 0) rotate(3deg); }
+  0% { background-position: 0 0; }
+  12.5% { background-position: -137px 83px; }
+  25% { background-position: 71px -191px; }
+  37.5% { background-position: -223px -47px; }
+  50% { background-position: 181px 149px; }
+  62.5% { background-position: 43px -269px; }
+  75% { background-position: -307px 211px; }
+  87.5% { background-position: 251px 37px; }
+  100% { background-position: 0 0; }
 }
 
 .startveil[data-sequence='short'][data-state='entering'] .startveil__mark { animation: startveil-short-pulse 0.16s ease both; }
@@ -197,11 +312,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .startveil,
   .startveil__texture,
   .startveil[data-state] .startveil__mark,
   .startveil[data-state] .startveil__ghost,
   .startveil[data-state] .startveil__boot,
-  .startveil[data-state] .startveil__scan { animation: none; }
+  .startveil[data-state] .startveil__scan,
+  .startveil[data-state] .startveil__sync,
+  .startveil__entry::after { animation: none; }
   .startveil[data-state='booting'] .startveil__mark { filter: brightness(1.35); transition: filter 0.15s ease; }
   .startveil[data-state='revealing-world'] { animation: startveil-world-out 140ms ease-out both; }
 }

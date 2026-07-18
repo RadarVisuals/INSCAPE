@@ -1,6 +1,6 @@
 import { normalizeProfileAddress } from '../../library/config.js';
-import { assertValidProfileDocument, validateProfileDocument } from '../domain/profileDocumentValidation.js';
-import { PROFILE_DOCUMENT_VERSION } from '../domain/constants.js';
+import { assertValidProfileDocument } from '../domain/profileDocumentValidation.js';
+import { migrateProfileDocument } from '../domain/profileDocumentMigration.js';
 
 export const PROFILE_SNAPSHOT_KEY_PREFIX = 'os-underneath.profile-snapshot.v1:';
 export const PROFILE_PRESENTATION_KEY_PREFIX = 'os-underneath.restored-presentation.v1:';
@@ -13,13 +13,16 @@ export function saveProfileSnapshot(storage, document) {
 export function loadProfileSnapshot(storage, address) {
   try {
     const input = JSON.parse(storage?.getItem(profileSnapshotKey(address)) || 'null');
-    const result = validateProfileDocument(input);
-    return result.valid && result.value.profile.address === normalizeProfileAddress(address) ? result.value : null;
+    const value = migrateProfileDocument(input);
+    return value.profile.address === normalizeProfileAddress(address) ? value : null;
   } catch { return null; }
 }
 export function loadRestoredPresentation(storage, address) {
   try {
     const input = JSON.parse(storage?.getItem(profilePresentationKey(address)) || 'null');
-    return input?.version === PROFILE_DOCUMENT_VERSION && ['abyssal_eye', 'skull_reaper'].includes(input.keeperId) && typeof input.stageId === 'string' ? input : null;
+    if (!['abyssal_eye', 'skull_reaper'].includes(input?.keeperId) || typeof input?.stageId !== 'string') return null;
+    if (input.version === 1) return { ...input, environment: { type: 'illustrated', shaderId: 'neural-field' } };
+    if (input.version !== 2 || !['illustrated', 'shader'].includes(input.environment?.type) || input.environment?.shaderId !== 'neural-field') return null;
+    return input;
   } catch { return null; }
 }

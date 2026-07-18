@@ -3,7 +3,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { PixiEngine } from '../../engine/PixiEngine';
 import { useStore } from '../../store/useStore';
 
-const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, reducedMotion = false, presentationOverride = null, onReady }, ref) {
+const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisible = true, reducedMotion = false, presentationOverride = null, onReady }, ref) {
   const containerRef = useRef(null);
   const engineRef = useRef(null);
   const presentationOverrideRef = useRef(presentationOverride);
@@ -36,6 +36,9 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, reducedMo
     },
     triggerKeeperReaction(reactionType) {
       return engineRef.current?.triggerKeeperReaction(reactionType);
+    },
+    setStageVisible(visible) {
+      return engineRef.current?.setStageVisible(visible);
     }
   }), []);
 
@@ -48,7 +51,9 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, reducedMo
       if (!override) return state;
       return { ...state, renderConfig: { ...state.renderConfig,
         actor: { ...state.renderConfig.actor, id: override.keeperId || state.renderConfig.actor.id },
-        scene: { ...state.renderConfig.scene, background: { ...state.renderConfig.scene.background, backdropId: override.stageId || state.renderConfig.scene.background.backdropId } }
+        scene: { ...state.renderConfig.scene,
+          environment: override.environment || state.renderConfig.scene.environment,
+          background: { ...state.renderConfig.scene.background, backdropId: override.stageId || state.renderConfig.scene.background.backdropId } }
       } };
     };
     const subscribePresentation = (selector, listener, options = {}) => {
@@ -69,6 +74,7 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, reducedMo
     if (import.meta.env.DEV) window.__UNDERNEATH_ENGINE__ = engineRef.current;
 
     engineRef.current.setResidentRevealVisible(actorVisible, { reducedMotion });
+    engineRef.current.setStageVisible(stageVisible);
     engineRef.current.init().then((ready) => {
       if (ready) onReady?.();
     }).catch(err => console.error("Failed to boot PixiEngine:", err));
@@ -93,6 +99,8 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, reducedMo
   useEffect(() => {
     engineRef.current?.setResidentRevealVisible(actorVisible, { reducedMotion });
   }, [actorVisible, reducedMotion]);
+
+  useEffect(() => { engineRef.current?.setStageVisible(stageVisible); }, [stageVisible]);
 
   const handleMouseMove = (e) => {
     if (engineRef.current) {

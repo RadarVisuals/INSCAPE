@@ -54,6 +54,7 @@ export default function ControlPanel() {
   return (
     <>
       <button
+        className="atelier-controls-toggle"
         onClick={toggleUi}
         type="button"
         aria-label={isUiVisible ? 'Hide Atelier controls' : 'Show Atelier controls'}
@@ -69,6 +70,7 @@ export default function ControlPanel() {
       </button>
 
       <div
+        className="atelier-controls-panel"
         style={{
           position: 'fixed', bottom: 0, left: 0, width: '100%',
           background: 'var(--panel-bg)', borderTop: '1px solid var(--border-color)',

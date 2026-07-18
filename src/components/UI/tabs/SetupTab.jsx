@@ -7,8 +7,12 @@ const availableActors = RENDER_PARAMETER_DEFINITIONS.characterId.options;
 const backdropOptions = RENDER_PARAMETER_DEFINITIONS.bgClippingMaskId.options;
 const mountainOptions = RENDER_PARAMETER_DEFINITIONS.bgMountainId.options;
 const patternStyleOptions = RENDER_PARAMETER_DEFINITIONS.bgPatternStyle.options;
+const environmentTypeOptions = RENDER_PARAMETER_DEFINITIONS.environmentType.options;
+const shaderOptions = RENDER_PARAMETER_DEFINITIONS.environmentShaderId.options;
 
 export default function SetupTab() {
+  const environmentType = useStore((state) => state.environmentType);
+  const environmentShaderId = useStore((state) => state.environmentShaderId);
   const characterId = useStore((state) => state.characterId);
   const bgClippingMaskId = useStore((state) => state.bgClippingMaskId);
   const bgPatternStyle = useStore((state) => state.bgPatternStyle);
@@ -52,6 +56,18 @@ export default function SetupTab() {
       {/* Background Column */}
       <div>
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>Background Stage Setup</h4>
+        <div style={{ marginBottom: '10px' }}>
+          <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Environment Type</label>
+          <select value={environmentType} onChange={(event) => setParameter('environmentType', event.target.value)} style={selectStyle}>
+            {environmentTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+        </div>
+        {environmentType === 'shader' ? <div style={{ marginBottom: '10px' }}>
+          <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Shader</label>
+          <select value={environmentShaderId} onChange={(event) => setParameter('environmentShaderId', event.target.value)} style={selectStyle}>
+            {shaderOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+        </div> : <>
         
         <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '10px', marginBottom: '10px' }}>
           <div>
@@ -106,6 +122,7 @@ export default function SetupTab() {
             </select>
           </div>
         </div>
+        </>}
       </div>
     </div>
   );

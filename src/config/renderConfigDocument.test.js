@@ -50,15 +50,18 @@ test('invalid JSON and missing schema versions are rejected with diagnostics', (
   assert.throws(() => parseRenderConfigDocument({ actor: {} }), RenderConfigDocumentError);
 });
 
-test('future and unregistered legacy schema versions are rejected explicitly', () => {
+test('v5 migrates deterministically while future and unregistered legacy versions are rejected', () => {
   const future = decodeRenderConfigDocument({ schemaVersion: RENDER_CONFIG_VERSION + 1 });
   const legacy = decodeRenderConfigDocument({ schemaVersion: 4 });
+  const v5 = decodeRenderConfigDocument({ ...DEFAULT_RENDER_CONFIG, schemaVersion: 5, scene: { ...DEFAULT_RENDER_CONFIG.scene, environment: undefined } });
 
   assert.equal(future.ok, false);
   assert.equal(future.diagnostics[0].code, 'unsupported_future_schema_version');
   assert.equal(legacy.ok, false);
   assert.equal(legacy.diagnostics[0].code, 'unsupported_schema_version');
-  assert.deepEqual(Object.keys(RENDER_CONFIG_MIGRATIONS), ['5']);
+  assert.equal(v5.ok, true);
+  assert.deepEqual(v5.value.scene.environment, { type: 'illustrated', shaderId: 'neural-field' });
+  assert.deepEqual(Object.keys(RENDER_CONFIG_MIGRATIONS), ['5', '6']);
 });
 
 test('unknown and runtime fields are removed while corrected values are diagnosed', () => {
@@ -106,11 +109,12 @@ test('custom reaction assignments and profiles survive the document boundary', (
   assert.equal(parsed.reactions.profiles.custom_profile.channels.trail.intensity, 0.45);
 });
 
-test('the public mock fixture is a valid v5 RenderConfig document', () => {
+test('the public v5 mock fixture migrates to the current RenderConfig document', () => {
   const fixture = readFileSync(new URL('../../public/fixtures/mock-render-config.v5.json', import.meta.url), 'utf8');
   const parsed = parseRenderConfigDocument(fixture);
 
-  assert.equal(parsed.schemaVersion, 5);
+  assert.equal(parsed.schemaVersion, 6);
+  assert.equal(parsed.scene.environment.type, 'illustrated');
   assert.equal(parsed.actor.id, 'skull_reaper');
   assert.equal(parsed.reactions.events.preview_received, 'preview_pulse');
 });

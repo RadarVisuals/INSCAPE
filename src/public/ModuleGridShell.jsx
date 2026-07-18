@@ -9,7 +9,7 @@ import { useProfileIdentity } from '../profileIdentity/index.js';
 import ProfileDocumentPanel from '../profileDocument/components/ProfileDocumentPanel.jsx';
 import ProfileDocumentPreview from '../profileDocument/components/ProfileDocumentPreview.jsx';
 import { useProfileDocumentStore } from '../profileDocument/state/useProfileDocumentStore.js';
-import { buildProfileDocumentV1 } from '../profileDocument/domain/profileDocumentBuilder.js';
+import { buildProfileDocumentV3 } from '../profileDocument/domain/profileDocumentBuilder.js';
 import { assertValidProfileDocument } from '../profileDocument/domain/profileDocumentValidation.js';
 import { createProfileDocumentRestorePlan } from '../profileDocument/domain/profileDocumentRestore.js';
 import { profileDocumentContentFingerprint } from '../profileDocument/domain/profileDocumentSerialization.js';
@@ -20,7 +20,10 @@ import { findScenePlacement, isScenePlacementAvailable, LAUNCHER_SIZE_PRESETS, n
 import { gridRectToPixelRect, launcherGeometryAvailable, movementCandidateFromPointer, normalizeGridRect, resizeCandidateFromPointer } from './gridGeometry.js';
 import { activateInteraction, createInteraction, effectiveGeometry, INTERACTION_KIND } from './gridInteraction.js';
 import { iconGlyph, normalizeIconKey, SCENE_ICONS } from './sceneIcons.js';
-import { decodeWindowGridGeometry, defaultWindowGridRect, encodeWindowGridGeometry, windowMinimumSpan } from './windowGeometry.js';
+import { decodeWindowGridGeometry, defaultWindowGridRect, windowMinimumSpan } from './windowGeometry.js';
+import { createRuntimeWindowState, loadRuntimeWindowState, saveRuntimeWindowState, updateRuntimeWindowState, windowZIndex } from './windows/runtimeWindowState.js';
+import { contextMenuCommands, resolveContextTarget } from './menus/contextMenuModel.js';
+import DesktopMenu from './menus/DesktopMenu.jsx';
 import {
   MODULE_LAYOUT_STORAGE_KEY,
   LEGACY_MODULE_LAYOUT_STORAGE_KEY,
@@ -42,7 +45,7 @@ const MODULES = Object.freeze([
   { id: 'identity', label: 'Profile Card' },
   { id: 'collection', label: 'Collection' },
   { id: 'creations', label: 'Creations' },
-  { id: 'signals', label: 'Signals' }
+  { id: 'signals', label: 'Activity' }
 ]);
 
 const MODULE_ENTRY_ORDER = Object.freeze({
@@ -57,15 +60,13 @@ const FULL_MODULE_ENTRY_STAGGER_MS = 220;
 const GROUPED_MODULE_ENTRY_MS = 70;
 const SYSTEM_SCENE_KEY = 'os-underneath.system-launchers.v1';
 const GRID_PREFERENCE_KEY = 'os-underneath.grid-preference.v1';
-const WINDOW_GEOMETRY_KEY = 'os-underneath.window-geometry.v1';
+const LEGACY_WINDOW_GEOMETRY_KEY = 'os-underneath.window-geometry.v1';
 const SYSTEM_ICONS = Object.freeze({ identity: 'profile', collection: 'collection', creations: 'creations', signals: 'signals' });
-const GRID_LIFECYCLE_KEY='__OS_UNDERNEATH_GRID_LIFECYCLE__';
-if(typeof window!=='undefined'&&!window[GRID_LIFECYCLE_KEY]?.installed){const lifecycle={installed:true,move:null,finish:null};window[GRID_LIFECYCLE_KEY]=lifecycle;window.addEventListener('pointermove',(event)=>lifecycle.move?.(event),true);window.addEventListener('pointerup',(event)=>lifecycle.finish?.(event,false),true);window.addEventListener('pointercancel',(event)=>lifecycle.finish?.(event,true),true);}
 
-function defaultSystemPresentation(id, order) { return { appearanceMode: 'label', iconKey: SYSTEM_ICONS[id], span: { columns: 3, rows: 1 }, presentationOrder: order }; }
-function readSystemPresentation() { try { const value = JSON.parse(window.localStorage.getItem(SYSTEM_SCENE_KEY)); return Object.fromEntries(MODULES.map((module, index) => { const item=value?.[module.id]; return [module.id,{ ...defaultSystemPresentation(module.id,index), ...(item || {}), iconKey:normalizeIconKey(item?.iconKey,SYSTEM_ICONS[module.id]), span:normalizeSpan(item?.span,item?.appearanceMode) }]; })); } catch { return Object.fromEntries(MODULES.map((module,index)=>[module.id,defaultSystemPresentation(module.id,index)])); } }
+function defaultSystemPresentation(id, order) { return { appearanceMode: 'label', iconKey: SYSTEM_ICONS[id], span: { columns: 3, rows: 1 }, presentationOrder: order, startOpen: false, windowGeometry: null }; }
+function readSystemPresentation() { try { const value = JSON.parse(window.localStorage.getItem(SYSTEM_SCENE_KEY)); return Object.fromEntries(MODULES.map((module, index) => { const item=value?.[module.id]; return [module.id,{ ...defaultSystemPresentation(module.id,index), ...(item || {}), label:typeof item?.label==='string'&&item.label.trim()?item.label.trim().slice(0,80):module.label, iconKey:normalizeIconKey(item?.iconKey,SYSTEM_ICONS[module.id]), span:normalizeSpan(item?.span,item?.appearanceMode) }]; })); } catch { return Object.fromEntries(MODULES.map((module,index)=>[module.id,{...defaultSystemPresentation(module.id,index),label:module.label}])); } }
 function readGridPreference(){try{return JSON.parse(window.localStorage.getItem(GRID_PREFERENCE_KEY))?.visible!==false}catch{return true}}
-function readWindowGeometry(){const geometry=getInitialGeometry();return decodeWindowGridGeometry(window.localStorage.getItem(WINDOW_GEOMETRY_KEY),geometry,readStoredPositions(geometry))}
+function readLegacyWindowGeometry(geometry){return decodeWindowGridGeometry(window.localStorage.getItem(LEGACY_WINDOW_GEOMETRY_KEY),geometry,readStoredPositions(geometry))}
 
 const profile = getIdentityProfileViewModel();
 
@@ -127,8 +128,14 @@ export default function ModuleGridShell({
   residentHandoff,
   keeperReactions,
   stageId = 'moonpurple',
+  environment = { type: 'illustrated', shaderId: 'neural-field' },
   onApplyRestoredPresentation,
   onPreviewDocumentChange,
+  keeperVisible = true,
+  stageVisible = true,
+  onKeeperVisibilityChange,
+  onStageVisibilityChange,
+  registerWorldContextMenu,
   interfaceVisible = true,
   revealPresentation = { sequence: 'short', reducedMotion: false }
 }) {
@@ -137,7 +144,7 @@ export default function ModuleGridShell({
   const [systemPresentation, setSystemPresentation] = useState(readSystemPresentation);
   const [gridVisible, setGridVisible] = useState(readGridPreference);
   const [selectedSceneId, setSelectedSceneId] = useState(null);
-  const [windowGeometry,setWindowGeometry]=useState(readWindowGeometry);
+  const [runtimeWindows,setRuntimeWindows]=useState(createRuntimeWindowState);
   const [identityOpen, setIdentityOpen] = useState(false);
   const [identityPhase, setIdentityPhase] = useState('closed');
   const [collectionOpen, setCollectionOpen] = useState(false);
@@ -147,6 +154,8 @@ export default function ModuleGridShell({
   const [openFolderLauncherId, setOpenFolderLauncherId] = useState(null);
   const [activeModuleId, setActiveModuleId] = useState(null);
   const [activeHudCommand, setActiveHudCommand] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
+  const [inspectorAnchor, setInspectorAnchor] = useState(null);
   const [availableModuleIds, setAvailableModuleIds] = useState(() => new Set());
   const moduleRefs = useRef(new Map());
   const identityRef = useRef(null);
@@ -154,12 +163,32 @@ export default function ModuleGridShell({
   const collectionPanelRef = useRef(null);
   const signalsPanelRef = useRef(null);
   const folderPanelRef = useRef(null);
+  const launcherInspectorRef = useRef(null);
   const shellRef = useRef(null);
   const gridRef = useRef(null);
   const [interaction, setInteraction] = useState(null);
   const interactionRef = useRef(null);
   const lifecycleHandlersRef = useRef({move:null,finish:null});
+  const loadedRuntimeProfileRef = useRef(null);
+  const suppressLauncherClickRef = useRef(false);
   const resizeFrameRef = useRef(0);
+
+  const openWorldContextMenu = useCallback((event) => {
+    if (!interfaceVisible) return;
+    event.preventDefault();
+    setContextMenu({
+      target: { type: 'canvas', id: 'canvas' },
+      menu: 'root',
+      anchor: { x: event.clientX, y: event.clientY },
+      returnFocus: null
+    });
+  }, [interfaceVisible]);
+
+  useEffect(() => {
+    registerWorldContextMenu?.(openWorldContextMenu);
+    return () => registerWorldContextMenu?.(null);
+  }, [openWorldContextMenu, registerWorldContextMenu]);
+
   const theme = useMemo(() => getPublicTheme(activeActorId), [activeActorId]);
   const workspace = useLibraryStore((state) => state.workspace);
   const libraryAssets = useLibraryStore((state) => state.assets);
@@ -180,6 +209,12 @@ export default function ModuleGridShell({
   const setLauncherGeometry = useLibraryStore((state) => state.setLauncherGeometry);
   const setLauncherPresentation = useLibraryStore((state) => state.setLauncherPresentation);
   const resetWorkspaceCanvasLayout = useLibraryStore((state) => state.resetCanvasLayout);
+  const setLauncherVisitorVisibility = useLibraryStore((state) => state.setLauncherVisitorVisibility);
+  const setLauncherStartOpen = useLibraryStore((state) => state.setLauncherStartOpen);
+  const unpinView = useLibraryStore((state) => state.unpinView);
+  const createFolder = useLibraryStore((state) => state.createFolder);
+  const renameFolder = useLibraryStore((state) => state.renameFolder);
+  const pinView = useLibraryStore((state) => state.pinView);
   const pinnedLaunchers = workspace.canvas.launchers;
   const pinnedLauncherKey = pinnedLaunchers.map((launcher) => launcher.id).join('|');
   const sceneItems = useMemo(() => {
@@ -191,16 +226,23 @@ export default function ModuleGridShell({
   const canvasPositions = useMemo(() => Object.fromEntries(sceneItems.map((item)=>[item.id,item.position])),[sceneItems]);
   const sceneById = useMemo(() => Object.fromEntries(sceneItems.map((item)=>{const effective=effectiveGeometry(item.geometry,interaction,item.id);return [item.id,{...item,geometry:effective,position:{column:effective.column,row:effective.row},span:{columns:effective.columnSpan,rows:effective.rowSpan}}]})),[interaction,sceneItems]);
   const openFolderLauncher = pinnedLaunchers.find((launcher) => launcher.id === openFolderLauncherId) || null;
-  const windowGeometryFor = useCallback((key, anchor) => effectiveGeometry(windowGeometry[key] || defaultWindowGridRect(key,geometry,anchor),interaction,['identity','collection','signals'].includes(key)?`${key}-panel`:`folder-panel:${key}`),[geometry,interaction,windowGeometry]);
+  const windowGeometryFor = useCallback((key, anchor) => effectiveGeometry(runtimeWindows.rects[key] || defaultWindowGridRect(key,geometry,anchor),interaction,['identity','collection','signals'].includes(key)?`${key}-panel`:`folder-panel:${key}`),[geometry,interaction,runtimeWindows.rects]);
   const identityPanelPosition = windowGeometryFor('identity',canvasPositions.identity);
   const collectionPanelPosition = windowGeometryFor('collection',canvasPositions.collection);
   const signalsPanelPosition = windowGeometryFor('signals',canvasPositions.signals);
   const openFolderPosition = openFolderLauncher ? windowGeometryFor(openFolderLauncher.id,canvasPositions[openFolderLauncher.id]) : null;
-  const draftDocument = useMemo(() => buildProfileDocumentV1({
+  const authoredWindowDefaults = useMemo(() => {
+    const openIds = MODULES.filter(({ id }) => systemPresentation[id]?.startOpen).map(({ id }) => id);
+    const rects = {};
+    MODULES.forEach(({ id }) => { if (systemPresentation[id]?.windowGeometry) rects[id] = systemPresentation[id].windowGeometry; });
+    pinnedLaunchers.forEach((launcher) => { if (launcher.startOpen) openIds.push(launcher.id); if (launcher.windowGeometry) rects[launcher.id] = launcher.windowGeometry; });
+    return createRuntimeWindowState({ openIds, zOrder: openIds, rects });
+  }, [pinnedLaunchers, systemPresentation]);
+  const draftDocument = useMemo(() => buildProfileDocumentV3({
     profileAddress: workspace.profileAddress, workspace, assets: libraryAssets,
-    publicPresentation: { keeperId: activeActorId, stageId },
-    signalSettings, profileIdentity, modulePositions: positions, createdAt: 0, exportedAt: 0
-  }), [activeActorId, libraryAssets, positions, profileIdentity, signalSettings, stageId, workspace]);
+    publicPresentation: { keeperId: activeActorId, stageId, environment },
+    signalSettings, profileIdentity, modulePositions: positions, systemPresentation, createdAt: 0, exportedAt: 0
+  }), [activeActorId, environment, libraryAssets, positions, profileIdentity, signalSettings, stageId, systemPresentation, workspace]);
   const draftFingerprint = useMemo(() => profileDocumentContentFingerprint(draftDocument), [draftDocument]);
   const snapshotStale = Boolean(snapshot && useProfileDocumentStore.getState().snapshotDraftFingerprint !== draftFingerprint);
 
@@ -210,16 +252,33 @@ export default function ModuleGridShell({
     if (stored) installSnapshot(stored, profileDocumentContentFingerprint(stored));
   }, [installSnapshot, snapshot, workspace.profileAddress]);
 
+  useEffect(() => {
+    let keyExists = false;
+    try { keyExists = window.localStorage.getItem(`os-underneath.runtime-windows.v1:${workspace.profileAddress}`) !== null; } catch { /* Storage is optional. */ }
+    const loaded = loadRuntimeWindowState(window.localStorage, workspace.profileAddress, { rects: readLegacyWindowGeometry(geometry) });
+    const next = keyExists || Object.keys(loaded.rects).length ? loaded : authoredWindowDefaults;
+    loadedRuntimeProfileRef.current = workspace.profileAddress;
+    setRuntimeWindows(next);
+    setIdentityOpen(next.openIds.includes('identity')); setCollectionOpen(next.openIds.includes('collection')); setSignalsOpen(next.openIds.includes('signals'));
+    setOpenFolderLauncherId(next.openIds.find((id) => id.startsWith('library:')) || null);
+  // Runtime records load only when the active profile changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspace.profileAddress]);
+
+  useEffect(() => {
+    if (loadedRuntimeProfileRef.current === workspace.profileAddress) saveRuntimeWindowState(window.localStorage, workspace.profileAddress, runtimeWindows);
+  }, [runtimeWindows, workspace.profileAddress]);
+
   const buildSnapshot = useCallback(() => {
     try {
       const now = Date.now();
-      const document = buildProfileDocumentV1({ profileAddress: workspace.profileAddress, workspace, assets: libraryAssets,
-        publicPresentation: { keeperId: activeActorId, stageId }, signalSettings, profileIdentity,
-        modulePositions: positions, revision: (snapshot?.revision || 0) + 1, createdAt: snapshot?.createdAt || now, exportedAt: now });
+      const document = buildProfileDocumentV3({ profileAddress: workspace.profileAddress, workspace, assets: libraryAssets,
+        publicPresentation: { keeperId: activeActorId, stageId, environment }, signalSettings, profileIdentity,
+        modulePositions: positions, systemPresentation, revision: (snapshot?.revision || 0) + 1, createdAt: snapshot?.createdAt || now, exportedAt: now });
       const valid = assertValidProfileDocument(document); installSnapshot(valid, profileDocumentContentFingerprint(valid));
       saveProfileSnapshot(window.localStorage, valid); setDocumentError(null);
     } catch (error) { setDocumentError(error.message); }
-  }, [activeActorId, installSnapshot, libraryAssets, positions, profileIdentity, setDocumentError, signalSettings, snapshot, stageId, workspace]);
+  }, [activeActorId, environment, installSnapshot, libraryAssets, positions, profileIdentity, setDocumentError, signalSettings, snapshot, stageId, systemPresentation, workspace]);
 
   const startPreview = useCallback((source) => { enterPreview(source); setActiveHudCommand(null); }, [enterPreview]);
   const stopPreview = useCallback(() => { exitPreview(); onPreviewDocumentChange?.(null); }, [exitPreview, onPreviewDocumentChange]);
@@ -228,20 +287,20 @@ export default function ModuleGridShell({
   const restoreImportedPresentation = useCallback(() => {
     if (!importedDocument || !window.confirm('Restore this document’s public presentation? Private Favorites, unpinned folders, Signals history, and caches will be preserved.')) return;
     const previousWorkspace = structuredClone(workspace); const previousSettings = { ...signalSettings };
-    const previousPresentation = { keeperId: activeActorId, stageId }; const key = profilePresentationKey(workspace.profileAddress);
+    const previousPresentation = { keeperId: activeActorId, stageId, environment }; const key = profilePresentationKey(workspace.profileAddress);
     const previousStoredPresentation = window.localStorage.getItem(key);
     try {
       const plan = createProfileDocumentRestorePlan(importedDocument, workspace);
       if (!replaceWorkspace(plan.workspace)) throw new Error('Could not persist restored Canvas Spaces');
       if (!replaceSignalSettings(plan.signalSettings)) throw new Error('Could not persist restored Signals settings');
-      window.localStorage.setItem(key, JSON.stringify({ version: 1, keeperId: plan.keeperId, stageId: plan.stageId }));
-      onApplyRestoredPresentation?.({ keeperId: plan.keeperId, stageId: plan.stageId }); setDocumentError(null);
+      window.localStorage.setItem(key, JSON.stringify({ version: 2, keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment }));
+      onApplyRestoredPresentation?.({ keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment }); setDocumentError(null);
     } catch (error) {
       replaceWorkspace(previousWorkspace); replaceSignalSettings(previousSettings);
       try { if (previousStoredPresentation == null) window.localStorage.removeItem(key); else window.localStorage.setItem(key, previousStoredPresentation); } catch { /* Best-effort rollback. */ }
       onApplyRestoredPresentation?.(previousPresentation); setDocumentError(error.message);
     }
-  }, [activeActorId, importedDocument, onApplyRestoredPresentation, replaceSignalSettings, replaceWorkspace, setDocumentError, signalSettings, stageId, workspace]);
+  }, [activeActorId, environment, importedDocument, onApplyRestoredPresentation, replaceSignalSettings, replaceWorkspace, setDocumentError, signalSettings, stageId, workspace]);
 
   useEffect(() => {
     if (!interfaceVisible) {
@@ -340,7 +399,8 @@ export default function ModuleGridShell({
     if (Object.hasOwn(MODULE_ENTRY_ORDER,id)) setSystemPresentation((current)=>{ const next={...current,[id]:{...current[id],...patch}}; try{window.localStorage.setItem(SYSTEM_SCENE_KEY,JSON.stringify(next));}catch{} return next; });
     else setLauncherPresentation(id,patch);
   },[geometry,sceneById,sceneItems,setLauncherPresentation]);
-  const commitWindowGeometry=useCallback((id,rect)=>{const key=id.startsWith('folder-panel:')?id.slice('folder-panel:'.length):id.replace('-panel','');setWindowGeometry((current)=>{const next={...current,[key]:rect};try{window.localStorage.setItem(WINDOW_GEOMETRY_KEY,encodeWindowGridGeometry(next))}catch{}return next});},[]);
+  const updateRuntime = useCallback((action) => setRuntimeWindows((current) => updateRuntimeWindowState(current, action)), []);
+  const commitWindowGeometry=useCallback((id,rect)=>{const key=id.startsWith('folder-panel:')?id.slice('folder-panel:'.length):id.replace('-panel','');updateRuntime({ type: 'geometry', id: key, rect });},[updateRuntime]);
 
   const commitLauncherGeometry = useCallback((id,rect) => {
     if (!Object.hasOwn(MODULE_ENTRY_ORDER,id)) { setLauncherGeometry(id,rect); return; }
@@ -364,8 +424,10 @@ export default function ModuleGridShell({
     const folderLauncher = pinnedLaunchers.find((launcher) => launcher.id === id);
     if (folderLauncher) {
       const closing = openFolderLauncherId === id;
+      if (!closing && openFolderLauncherId) updateRuntime({ type: 'close', id: openFolderLauncherId });
       setOpenFolderLauncherId(closing ? null : id);
       setActiveModuleId(closing ? null : id);
+      updateRuntime({ type: closing ? 'close' : 'open', id });
       return;
     }
     if (id === 'identity' && identityOpen) {
@@ -374,17 +436,20 @@ export default function ModuleGridShell({
     }
     if (id === 'collection' && collectionOpen) {
       setCollectionOpen(false);
+      updateRuntime({ type: 'close', id });
       setActiveModuleId(null);
       window.requestAnimationFrame(() => moduleRefs.current.get('collection')?.focus());
       return;
     }
     if (id === 'signals' && signalsOpen) {
       setSignalsOpen(false);
+      updateRuntime({ type: 'close', id });
       setActiveModuleId(null);
       window.requestAnimationFrame(() => moduleRefs.current.get('signals')?.focus());
       return;
     }
     setActiveModuleId(id);
+    updateRuntime({ type: 'open', id });
     if (id === 'collection') {
       setCollectionOpen(true);
       return;
@@ -396,7 +461,7 @@ export default function ModuleGridShell({
     if (id !== 'identity') return;
     setIdentityPhase('approaching');
     setIdentityOpen(true);
-  }, [collectionOpen, identityOpen, openFolderLauncherId, pinnedLaunchers, signalsOpen]);
+  }, [collectionOpen, identityOpen, openFolderLauncherId, pinnedLaunchers, signalsOpen, updateRuntime]);
 
   const openCollectionSearch = useCallback(() => {
     if (!collectionOpen) openModule('collection');
@@ -411,14 +476,13 @@ export default function ModuleGridShell({
   const installInteraction = useCallback((next,event) => {
     if (interactionRef.current || !next) return false;
     interactionRef.current = next; setInteraction(next);
-    event.currentTarget.dataset.interactionId=String(next.interactionId);
-    next.ownerElement=event.currentTarget;
     next.captureElement.setPointerCapture?.(event.pointerId);
     return true;
   },[]);
 
   const beginInteraction = useCallback((event,{kind,targetId,rect,element,minimumSpan})=>{
-    if(geometry.narrow||!editMode||!rect||!element||event.pointerType==='mouse'&&event.button!==0)return;
+    const launcherKind=kind===INTERACTION_KIND.MOVE_LAUNCHER||kind===INTERACTION_KIND.RESIZE_LAUNCHER;
+    if(geometry.narrow||(launcherKind&&!editMode)||!rect||!element||event.pointerType==='mouse'&&event.button!==0)return;
     if(kind===INTERACTION_KIND.MOVE_WINDOW&&event.target.closest('button,a,input,select,textarea,[data-resize-control]'))return;
     event.preventDefault();
     if(kind.includes('RESIZE'))event.stopPropagation();
@@ -426,7 +490,7 @@ export default function ModuleGridShell({
     const resize=kind.includes('RESIZE');
     const next=createInteraction({kind,targetId,pointerId:event.pointerId,originGeometry:rect,gridBounds:{columns:geometry.columns,rows:geometry.rows},cellWidth:geometry.cellWidth,cellHeight:geometry.cellHeight,pointerGrabOffset:resize?{x:event.clientX-rendered.right,y:event.clientY-rendered.bottom}:{x:event.clientX-rendered.left,y:event.clientY-rendered.top},startPointer:{x:event.clientX,y:event.clientY},captureElement:event.target});
     next.gridClientRect=gridRef.current.getBoundingClientRect();next.minimumSpan=minimumSpan;
-    const installed=installInteraction(next,event);if(installed){const lifecycle=window[GRID_LIFECYCLE_KEY];lifecycle.move=(pointerEvent)=>lifecycleHandlersRef.current.move?.(pointerEvent);lifecycle.finish=(pointerEvent,cancel)=>lifecycleHandlersRef.current.finish?.(pointerEvent,cancel);next.cleanupLifecycle=()=>{if(lifecycle.interactionId===next.interactionId||lifecycle.interactionId==null){lifecycle.move=null;lifecycle.finish=null;}};lifecycle.interactionId=next.interactionId;}
+    installInteraction(next,event);
   },[editMode,geometry,installInteraction]);
 
   const moveInteraction = useCallback((event)=>{
@@ -444,9 +508,9 @@ export default function ModuleGridShell({
     const current=interactionRef.current;
     if(!current||current.pointerId!==event.pointerId)return;
     if(event.type==='lostpointercapture'&&event.currentTarget.hasPointerCapture?.(event.pointerId))return;
-    current.cleanupLifecycle?.();interactionRef.current=null;setInteraction(null);delete current.ownerElement?.dataset.interactionId;
+    interactionRef.current=null;setInteraction(null);
     if(cancel||!current.activated)return;
-    if(current.kind===INTERACTION_KIND.MOVE_LAUNCHER||current.kind===INTERACTION_KIND.RESIZE_LAUNCHER)commitLauncherGeometry(current.targetId,current.candidateGeometry);
+    if(current.kind===INTERACTION_KIND.MOVE_LAUNCHER||current.kind===INTERACTION_KIND.RESIZE_LAUNCHER){suppressLauncherClickRef.current=true;commitLauncherGeometry(current.targetId,current.candidateGeometry);}
     else commitWindowGeometry(current.targetId,current.candidateGeometry);
   },[commitLauncherGeometry,commitWindowGeometry]);
 
@@ -455,22 +519,115 @@ export default function ModuleGridShell({
   const startExpandedPanelDrag=useCallback((event,id,rect,panelRef,enabled)=>{if(enabled)beginInteraction(event,{kind:INTERACTION_KIND.MOVE_WINDOW,targetId:id,rect,element:panelRef.current});},[beginInteraction]);
   const startWindowResize=useCallback((event,id,rect,panelRef)=>beginInteraction(event,{kind:INTERACTION_KIND.RESIZE_WINDOW,targetId:id,rect,element:panelRef.current,minimumSpan:windowMinimumSpan(id,geometry)}),[beginInteraction,geometry]);
   lifecycleHandlersRef.current={move:moveInteraction,finish:finishInteraction};
-  useEffect(()=>()=>{interactionRef.current?.cleanupLifecycle?.();interactionRef.current=null;},[]);
-  useEffect(()=>{if(!editMode&&interactionRef.current){interactionRef.current=null;setInteraction(null);}},[editMode]);
+  useEffect(() => {
+    if (!interaction) return undefined;
+    const move = (event) => lifecycleHandlersRef.current.move?.(event);
+    const up = (event) => lifecycleHandlersRef.current.finish?.(event, false);
+    const cancel = (event) => lifecycleHandlersRef.current.finish?.(event, true);
+    window.addEventListener('pointermove', move, true); window.addEventListener('pointerup', up, true); window.addEventListener('pointercancel', cancel, true);
+    return () => { window.removeEventListener('pointermove', move, true); window.removeEventListener('pointerup', up, true); window.removeEventListener('pointercancel', cancel, true); };
+  }, [interaction?.interactionId]);
+  useEffect(()=>()=>{interactionRef.current=null;},[]);
 
   const resetLayout = () => {
     const defaults = getDefaultModulePositions(geometry);
     setPositions(defaults);
     resetWorkspaceCanvasLayout();
-    setWindowGeometry({});
-    try { window.localStorage.removeItem(WINDOW_GEOMETRY_KEY); } catch { /* Optional preference storage. */ }
     if (geometry.narrow) {
       try { window.localStorage.removeItem(MODULE_LAYOUT_STORAGE_KEY); } catch { /* Storage is optional. */ }
     } else persistPositions(defaults);
   };
 
+  const resetWindows = useCallback(() => {
+    setRuntimeWindows((current) => updateRuntimeWindowState(current, { type: 'reset', initial: authoredWindowDefaults }));
+    setIdentityOpen(authoredWindowDefaults.openIds.includes('identity'));
+    setCollectionOpen(authoredWindowDefaults.openIds.includes('collection'));
+    setSignalsOpen(authoredWindowDefaults.openIds.includes('signals'));
+    setOpenFolderLauncherId(authoredWindowDefaults.openIds.find((id) => id.startsWith('library:')) || null);
+  }, [authoredWindowDefaults]);
+
+  const closeAllWindows = useCallback(() => {
+    updateRuntime({ type: 'close-all' }); setIdentityOpen(false); setIdentityPhase('closed'); setCollectionOpen(false); setSignalsOpen(false); setOpenFolderLauncherId(null); setActiveModuleId(null);
+  }, [updateRuntime]);
+
+  const toggleGrid = useCallback(() => setGridVisible((value) => { const next=!value; try { window.localStorage.setItem(GRID_PREFERENCE_KEY,JSON.stringify({version:1,visible:next})); } catch {} return next; }), []);
+
+  const openLauncherInspector = useCallback((id) => {
+    const rect = moduleRefs.current.get(id)?.getBoundingClientRect();
+    const width = Math.min(280, window.innerWidth - 24);
+    setSelectedSceneId(id); setInspectorAnchor(rect ? { x: rect.right + 10 + width <= window.innerWidth - 12 ? rect.right + 10 : Math.max(12, rect.left - width - 10), y: Math.max(12, Math.min(rect.top, window.innerHeight - 360)) } : { x: Math.max(12, (window.innerWidth-width)/2), y: 72 });
+  }, []);
+
+  const activateLauncher = useCallback((id) => {
+    if (suppressLauncherClickRef.current) { suppressLauncherClickRef.current = false; return; }
+    if (editMode) openLauncherInspector(id);
+    else openModule(id);
+  }, [editMode, openLauncherInspector, openModule]);
+
+  const createFolderAtContext = useCallback(() => {
+    const existing = new Set(workspace.folders.map((folder) => folder.name.toLowerCase()));
+    let name = 'New Folder'; let suffix = 2;
+    while (existing.has(name.toLowerCase())) { name = `New Folder ${suffix}`; suffix += 1; }
+    const folderId = createFolder(name);
+    if (!folderId) return;
+    pinView({ type: 'folder', id: folderId });
+    const launcherId = `library:folder:${folderId}`;
+    const bounds = gridRef.current?.getBoundingClientRect();
+    const requested = bounds ? {
+      column: Math.max(0, Math.min(geometry.columns - 3, Math.floor((contextMenu.anchor.x - bounds.left) / geometry.cellWidth))),
+      row: Math.max(0, Math.min(geometry.rows - 1, Math.floor((contextMenu.anchor.y - bounds.top) / geometry.cellHeight)))
+    } : { column: 0, row: 2 };
+    const position = findScenePlacement(launcherId, requested, { columns: 3, rows: 1 }, sceneItems, geometry);
+    setLauncherPosition(launcherId, position);
+    setSelectedSceneId(launcherId);
+    setInspectorAnchor({ x: Math.max(12, Math.min(contextMenu.anchor.x + 12, window.innerWidth - 292)), y: Math.max(12, Math.min(contextMenu.anchor.y, window.innerHeight - 360)) });
+  }, [contextMenu, createFolder, geometry, pinView, sceneItems, setLauncherPosition, workspace.folders]);
+
+  const executeContextCommand = useCallback((command) => {
+    const target = contextMenu?.target; if (!target) return;
+    const runtimeId = target.id?.endsWith('-panel') ? target.id.replace('-panel','') : target.id?.startsWith('folder-panel:') ? target.id.slice(13) : target.id;
+    const launcher = pinnedLaunchers.find((entry) => entry.id === (target.type === 'window' ? runtimeId : target.id));
+    if (command === 'menu-create') { setContextMenu((current) => ({ ...current, menu: 'create' })); return; }
+    if (command === 'menu-view') { setContextMenu((current) => ({ ...current, menu: 'view' })); return; }
+    if (command === 'menu-root') { setContextMenu((current) => ({ ...current, menu: 'root' })); return; }
+    if (command === 'create-folder') createFolderAtContext();
+    else if (command === 'toggle-keeper') onKeeperVisibilityChange?.(!keeperVisible);
+    else if (command === 'toggle-stage') onStageVisibilityChange?.(!stageVisible);
+    else if (command === 'toggle-edit') setEditMode((value) => !value);
+    else if (command === 'toggle-grid') toggleGrid();
+    else if (command === 'reset-windows') resetWindows();
+    else if (command === 'close-all') closeAllWindows();
+    else if (command === 'settings') setActiveHudCommand('settings');
+    else if (command === 'open') openModule(target.id);
+    else if (command === 'edit-launcher') openLauncherInspector(target.id);
+    else if (command === 'toggle-visibility' && launcher) setLauncherVisitorVisibility(launcher.id, !launcher.visitorVisible);
+    else if (command === 'unpin' && launcher) unpinView({ type: launcher.viewType, id: launcher.folderId });
+    else if (command === 'close') openModule(runtimeId);
+    else if (command === 'reset-window') updateRuntime({ type: 'reset-window', id: runtimeId, rect: authoredWindowDefaults.rects[runtimeId] || null });
+    else if (command === 'toggle-start-open') {
+      const rect = runtimeWindows.rects[runtimeId] || defaultWindowGridRect(runtimeId, geometry, canvasPositions[runtimeId]);
+      if (launcher) setLauncherStartOpen(launcher.id, !launcher.startOpen, rect);
+      else setSystemPresentation((current) => { const next={...current,[runtimeId]:{...current[runtimeId],startOpen:!current[runtimeId]?.startOpen,windowGeometry:rect}}; try{window.localStorage.setItem(SYSTEM_SCENE_KEY,JSON.stringify(next));}catch{} return next; });
+    }
+    setContextMenu(null);
+  }, [authoredWindowDefaults, canvasPositions, closeAllWindows, contextMenu, createFolderAtContext, geometry, keeperVisible, onKeeperVisibilityChange, onStageVisibilityChange, openLauncherInspector, openModule, pinnedLaunchers, resetWindows, runtimeWindows.rects, setLauncherStartOpen, setLauncherVisitorVisibility, stageVisible, toggleGrid, unpinView, updateRuntime]);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const exists = contextMenu.target.type === 'canvas' || sceneById[contextMenu.target.id] || runtimeWindows.openIds.includes(contextMenu.target.id.replace?.('-panel','')) || contextMenu.target.id.startsWith?.('folder-panel:');
+    if (!exists) setContextMenu(null);
+  }, [contextMenu, runtimeWindows.openIds, sceneById]);
+
+  useEffect(() => {
+    if (!inspectorAnchor) return undefined;
+    const close = (event) => { if (event.key === 'Escape') { setInspectorAnchor(null); moduleRefs.current.get(selectedSceneId)?.focus(); } };
+    const outside = (event) => { if (!launcherInspectorRef.current?.contains(event.target) && !moduleRefs.current.get(selectedSceneId)?.contains(event.target)) setInspectorAnchor(null); };
+    window.addEventListener('keydown', close); window.addEventListener('pointerdown', outside, true);
+    return () => { window.removeEventListener('keydown', close); window.removeEventListener('pointerdown', outside, true); };
+  }, [inspectorAnchor, selectedSceneId]);
+
   const identityDragProps = {
-    onPointerDown: (event) => startExpandedPanelDrag(event, 'identity-panel', identityPanelPosition, identityPanelRef, editMode && identityPhase === 'open'),
+    onPointerDown: (event) => startExpandedPanelDrag(event, 'identity-panel', identityPanelPosition, identityPanelRef, identityPhase === 'open'),
     onPointerMove: moveInteraction,
     onPointerUp: finishInteraction,
     onPointerCancel: (event) => finishInteraction(event,true),
@@ -478,7 +635,7 @@ export default function ModuleGridShell({
   };
 
   const collectionDragProps = {
-    onPointerDown: (event) => startExpandedPanelDrag(event, 'collection-panel', collectionPanelPosition, collectionPanelRef, editMode),
+    onPointerDown: (event) => startExpandedPanelDrag(event, 'collection-panel', collectionPanelPosition, collectionPanelRef, true),
     onPointerMove: moveInteraction,
     onPointerUp: finishInteraction,
     onPointerCancel: (event) => finishInteraction(event,true),
@@ -486,7 +643,7 @@ export default function ModuleGridShell({
   };
 
   const signalsDragProps = {
-    onPointerDown: (event) => startExpandedPanelDrag(event, 'signals-panel', signalsPanelPosition, signalsPanelRef, editMode),
+    onPointerDown: (event) => startExpandedPanelDrag(event, 'signals-panel', signalsPanelPosition, signalsPanelRef, true),
     onPointerMove: moveInteraction,
     onPointerUp: finishInteraction,
     onPointerCancel: (event) => finishInteraction(event,true),
@@ -494,7 +651,7 @@ export default function ModuleGridShell({
   };
 
   const folderDragProps = openFolderLauncher ? {
-    onPointerDown: (event) => startExpandedPanelDrag(event, `folder-panel:${openFolderLauncher.id}`, openFolderPosition, folderPanelRef, editMode),
+    onPointerDown: (event) => startExpandedPanelDrag(event, `folder-panel:${openFolderLauncher.id}`, openFolderPosition, folderPanelRef, true),
     onPointerMove: moveInteraction,
     onPointerUp: finishInteraction,
     onPointerCancel: (event) => finishInteraction(event,true),
@@ -518,6 +675,7 @@ export default function ModuleGridShell({
       style={theme}
       aria-label="OS Underneath public world"
       ref={shellRef}
+      onContextMenu={(event) => { const target=resolveContextTarget(event.target,shellRef.current); if(!target)return; event.preventDefault(); setContextMenu({ target, menu:'root', anchor:{x:event.clientX,y:event.clientY}, returnFocus:event.target.closest?.('button,[tabindex]') }); }}
     >
       <header className="public-shell__masthead">
         <div className="system-hud__identity">
@@ -539,8 +697,8 @@ export default function ModuleGridShell({
             [ Search ]
           </button>
           <button type="button" onClick={() => setActiveHudCommand((current) => current === 'share' ? null : 'share')} aria-expanded={activeHudCommand === 'share'}>[ Share ]</button>
-          <button type="button" onClick={() => setEditMode((current) => !current)} aria-pressed={editMode}>[ {editMode ? 'Done' : 'Edit'} ]</button>
-          {editMode && <button type="button" onClick={resetLayout}>[ Reset Layout ]</button>}
+          <button type="button" onClick={() => setEditMode((current) => !current)} aria-pressed={editMode}>[ {editMode ? 'Done Arranging' : 'Arrange Desktop'} ]</button>
+          {editMode && <button type="button" onClick={() => { if(window.confirm('Reset the authored canvas launcher layout? Folders, assets, visibility, and runtime windows will be preserved.')) resetLayout(); }}>[ Reset Authored Canvas ]</button>}
           <button
             type="button"
             aria-pressed={activeHudCommand === 'settings'}
@@ -549,12 +707,14 @@ export default function ModuleGridShell({
             [ Settings ]
           </button>
         </nav>
+        <button className="system-sigil" type="button" aria-label="Open OS Underneath system menu" aria-expanded={activeHudCommand === 'system'} onClick={() => { setActiveHudCommand((current)=>current==='system'?null:'system'); setContextMenu(null); }}><img src="/assets/logo/underneath_os.webp" alt="" /></button>
       </header>
 
       <section
         className="module-grid"
         aria-label="Modules"
         ref={gridRef}
+        data-desktop-canvas
         style={{
           left: geometry.left,
           top: geometry.top,
@@ -569,6 +729,7 @@ export default function ModuleGridShell({
         {editMode && gridVisible && <GridBackdrop geometry={geometry} />}
         {MODULES.map(({ id, label }) => {
           const scene = sceneById[id];
+          const displayLabel = scene?.label || label;
           const isActive = activeModuleId === id || (id === 'identity' && identityOpen) || (id === 'collection' && collectionOpen) || (id === 'signals' && signalsOpen);
           const entryAvailable = availableModuleIds.has(id);
           const entryIndex = MODULE_ENTRY_ORDER[id];
@@ -577,6 +738,7 @@ export default function ModuleGridShell({
               className="module-shell module-button"
               data-module-shell
               data-module-id={id}
+              data-launcher-id={id}
               data-module-entry-index={entryIndex}
               data-entry-state={entryAvailable ? 'ready' : 'pending'}
               data-active={isActive || undefined}
@@ -589,7 +751,7 @@ export default function ModuleGridShell({
               aria-hidden={!entryAvailable || undefined}
               aria-expanded={id === 'identity' ? identityOpen : id === 'collection' ? collectionOpen : id === 'signals' ? signalsOpen : undefined}
               aria-pressed={id === 'identity' ? undefined : isActive}
-              aria-label={`Open ${label} module`}
+              aria-label={`Open ${displayLabel} module`}
               style={{
                 ...moduleStyle(id, scene?.span, 2),
                 '--module-entry-index': entryIndex
@@ -603,20 +765,18 @@ export default function ModuleGridShell({
               onPointerUp={finishInteraction}
               onPointerCancel={(event)=>finishInteraction(event,true)}
               onLostPointerCapture={(event)=>finishInteraction(event,true)}
-              onClick={(event) => {
-                if (event.detail === 0 || !editMode) openModule(id);
-              }}
+              onClick={() => activateLauncher(id)}
             >
               {scene?.appearanceMode !== 'label' && <b className="module-button__icon" aria-hidden="true">{iconGlyph(scene.iconKey)}</b>}
-              {scene?.appearanceMode !== 'icon' && <span>{label}</span>}
-              {editMode && <i className="module-button__resize" data-resize-control aria-label={`Resize ${label}`} onPointerDown={(event)=>startResize(event,id)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
+              {scene?.appearanceMode !== 'icon' && <span>{displayLabel}</span>}
+              {editMode && <i className="module-button__resize" data-resize-control aria-label={`Resize ${displayLabel}`} onPointerDown={(event)=>startResize(event,id)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
             </button>
           );
         })}
 
         {pinnedLaunchers.map((launcher, launcherIndex) => {
           const folder = workspace.folders.find((entry) => entry.id === launcher.folderId);
-          const label = launcher.viewType === 'favorites' ? 'Favorites' : folder?.name || 'Missing folder';
+          const label = launcher.viewType === 'favorites' ? launcher.label || 'Favorites' : folder?.name || 'Missing folder';
           const count = launcher.viewType === 'favorites' ? workspace.favorites.length : folder?.assetIds.length || 0;
           const isActive = activeModuleId === launcher.id || openFolderLauncherId === launcher.id;
           const entryAvailable = availableModuleIds.has(launcher.id);
@@ -627,6 +787,7 @@ export default function ModuleGridShell({
               className="module-shell module-button module-button--folder"
               data-module-shell
               data-module-id={launcher.id}
+              data-launcher-id={launcher.id}
               data-module-entry-index={entryIndex}
               data-entry-state={entryAvailable ? 'ready' : 'pending'}
               data-active={isActive || undefined}
@@ -650,7 +811,7 @@ export default function ModuleGridShell({
               onPointerUp={finishInteraction}
               onPointerCancel={(event)=>finishInteraction(event,true)}
               onLostPointerCapture={(event)=>finishInteraction(event,true)}
-              onClick={(event) => { if (event.detail === 0 || !editMode) openModule(launcher.id); }}
+              onClick={() => activateLauncher(launcher.id)}
             >
               {scene?.appearanceMode !== 'label' && <b className="module-button__icon" aria-hidden="true">{iconGlyph(scene.iconKey)}</b>}
               {scene?.appearanceMode !== 'icon' && <span className="module-button__label">{label}</span>}
@@ -669,11 +830,11 @@ export default function ModuleGridShell({
             data-transition-state={identityPhase}
             data-interacting={interaction?.targetId === 'identity-panel' || undefined}
             ref={identityPanelRef}
-            style={windowStyle(identityPanelPosition)}
+            style={{...windowStyle(identityPanelPosition),zIndex:windowZIndex(runtimeWindows,'identity')}}
             role="dialog"
             aria-modal="false"
             aria-labelledby="identity-title"
-            onPointerDownCapture={() => setActiveModuleId('identity')}
+            onPointerDownCapture={() => { setActiveModuleId('identity'); updateRuntime({type:'focus',id:'identity'}); }}
           >
             <IdentityDossier
               ref={identityRef}
@@ -681,16 +842,16 @@ export default function ModuleGridShell({
               actorId={activeActorId}
               residentHandoff={residentHandoff}
               dragHandleProps={identityDragProps}
-              dragEnabled={editMode && !geometry.narrow && identityPhase === 'open'}
+              dragEnabled={!geometry.narrow && identityPhase === 'open'}
               onTransitionStateChange={setIdentityPhase}
               onClose={() => {
-                setIdentityOpen(false);
+                setIdentityOpen(false); updateRuntime({type:'close',id:'identity'});
                 setIdentityPhase('closed');
                 setActiveModuleId(collectionOpen ? 'collection' : null);
                 window.requestAnimationFrame(() => moduleRefs.current.get('identity')?.focus());
               }}
             />
-            {editMode && !geometry.narrow && <i className="module-window__resize" data-resize-control aria-label="Resize Profile Card" onPointerDown={(event)=>startWindowResize(event,'identity-panel',identityPanelPosition,identityPanelRef)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
+            {!geometry.narrow && <i className="module-window__resize" data-resize-control tabIndex="0" aria-label="Resize Profile Card" onPointerDown={(event)=>startWindowResize(event,'identity-panel',identityPanelPosition,identityPanelRef)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
           </section>
         )}
 
@@ -701,26 +862,26 @@ export default function ModuleGridShell({
             data-module-id="collection-panel"
             ref={collectionPanelRef}
             data-interacting={interaction?.targetId === 'collection-panel' || undefined}
-            style={windowStyle(collectionPanelPosition)}
+            style={{...windowStyle(collectionPanelPosition),zIndex:windowZIndex(runtimeWindows,'collection')}}
             role="dialog"
             aria-modal="false"
             aria-labelledby="collection-title"
-            onPointerDownCapture={() => setActiveModuleId('collection')}
+            onPointerDownCapture={() => { setActiveModuleId('collection'); updateRuntime({type:'focus',id:'collection'}); }}
           >
             <CollectionWindow
               dragHandleProps={collectionDragProps}
-              dragEnabled={editMode && !geometry.narrow}
+              dragEnabled={!geometry.narrow}
               editMode={editMode}
               focusSearchRequest={collectionSearchRequest}
               escapeEnabled={activeModuleId === 'collection'}
               onClose={() => {
-                setCollectionOpen(false);
+                setCollectionOpen(false); updateRuntime({type:'close',id:'collection'});
                 setActiveModuleId(identityOpen ? 'identity' : null);
                 setActiveHudCommand((current) => current === 'search' ? null : current);
                 window.requestAnimationFrame(() => moduleRefs.current.get('collection')?.focus());
               }}
             />
-            {editMode && !geometry.narrow && <i className="module-window__resize" data-resize-control aria-label="Resize Collection" onPointerDown={(event)=>startWindowResize(event,'collection-panel',collectionPanelPosition,collectionPanelRef)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
+            {!geometry.narrow && <i className="module-window__resize" data-resize-control tabIndex="0" aria-label="Resize Collection" onPointerDown={(event)=>startWindowResize(event,'collection-panel',collectionPanelPosition,collectionPanelRef)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
           </section>
         )}
 
@@ -731,24 +892,24 @@ export default function ModuleGridShell({
             data-module-id="signals-panel"
             ref={signalsPanelRef}
             data-interacting={interaction?.targetId === 'signals-panel' || undefined}
-            style={windowStyle(signalsPanelPosition)}
+            style={{...windowStyle(signalsPanelPosition),zIndex:windowZIndex(runtimeWindows,'signals')}}
             role="dialog"
             aria-modal="false"
             aria-labelledby="signals-title"
-            onPointerDownCapture={() => setActiveModuleId('signals')}
+            onPointerDownCapture={() => { setActiveModuleId('signals'); updateRuntime({type:'focus',id:'signals'}); }}
           >
             <SignalsWindow
               dragHandleProps={signalsDragProps}
-              dragEnabled={editMode && !geometry.narrow}
+              dragEnabled={!geometry.narrow}
               editMode={editMode}
               escapeEnabled={activeModuleId === 'signals'}
               onClose={() => {
-                setSignalsOpen(false);
+                setSignalsOpen(false); updateRuntime({type:'close',id:'signals'});
                 setActiveModuleId(identityOpen ? 'identity' : collectionOpen ? 'collection' : null);
                 window.requestAnimationFrame(() => moduleRefs.current.get('signals')?.focus());
               }}
             />
-            {editMode && !geometry.narrow && <i className="module-window__resize" data-resize-control aria-label="Resize Signals" onPointerDown={(event)=>startWindowResize(event,'signals-panel',signalsPanelPosition,signalsPanelRef)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
+            {!geometry.narrow && <i className="module-window__resize" data-resize-control tabIndex="0" aria-label="Resize Signals" onPointerDown={(event)=>startWindowResize(event,'signals-panel',signalsPanelPosition,signalsPanelRef)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
           </section>
         )}
 
@@ -759,38 +920,45 @@ export default function ModuleGridShell({
             data-module-id={`folder-panel:${openFolderLauncher.id}`}
             ref={folderPanelRef}
             data-interacting={interaction?.targetId === `folder-panel:${openFolderLauncher.id}` || undefined}
-            style={windowStyle(openFolderPosition)}
+            style={{...windowStyle(openFolderPosition),zIndex:windowZIndex(runtimeWindows,openFolderLauncher.id)}}
             role="dialog"
             aria-modal="false"
             aria-labelledby={`folder-title-${openFolderLauncher.id}`}
-            onPointerDownCapture={() => setActiveModuleId(openFolderLauncher.id)}
+            onPointerDownCapture={() => { setActiveModuleId(openFolderLauncher.id); updateRuntime({type:'focus',id:openFolderLauncher.id}); }}
           >
             <FolderWindow
               launcher={openFolderLauncher}
               dragHandleProps={folderDragProps}
-              dragEnabled={editMode && !geometry.narrow}
+              dragEnabled={!geometry.narrow}
               editMode={editMode}
               escapeEnabled={activeModuleId === openFolderLauncher.id}
               onClose={() => {
                 const launcherId = openFolderLauncher.id;
-                setOpenFolderLauncherId(null);
+                setOpenFolderLauncherId(null); updateRuntime({type:'close',id:launcherId});
                 setActiveModuleId(identityOpen ? 'identity' : collectionOpen ? 'collection' : null);
                 window.requestAnimationFrame(() => moduleRefs.current.get(launcherId)?.focus());
               }}
             />
-            {editMode && !geometry.narrow && <i className="module-window__resize" data-resize-control aria-label="Resize folder window" onPointerDown={(event)=>startWindowResize(event,`folder-panel:${openFolderLauncher.id}`,openFolderPosition,folderPanelRef)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
+            {!geometry.narrow && <i className="module-window__resize" data-resize-control tabIndex="0" aria-label="Resize folder window" onPointerDown={(event)=>startWindowResize(event,`folder-panel:${openFolderLauncher.id}`,openFolderPosition,folderPanelRef)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
           </section>
         )}
       </section>
-      {editMode && selectedSceneId && sceneById[selectedSceneId] && (()=>{ const scene=sceneById[selectedSceneId]; return <aside className="launcher-inspector" aria-label="Launcher appearance">
+      {inspectorAnchor && selectedSceneId && sceneById[selectedSceneId] && (()=>{ const scene=sceneById[selectedSceneId]; const launcher=pinnedLaunchers.find((entry)=>entry.id===selectedSceneId); const folder=launcher?.folderId?workspace.folders.find((entry)=>entry.id===launcher.folderId):null; const currentName=folder?.name||launcher?.label||scene.label||MODULES.find((entry)=>entry.id===selectedSceneId)?.label||'Launcher'; const saveName=(value)=>{const name=value.trim();if(!name)return;if(folder)renameFolder(folder.id,name);else if(launcher)setLauncherPresentation(launcher.id,{label:name});else updatePresentation(selectedSceneId,{label:name});}; return <aside key={selectedSceneId} ref={launcherInspectorRef} className="launcher-inspector" aria-label="Launcher appearance" style={{left:inspectorAnchor.x,top:inspectorAnchor.y}}>
         <strong>Launcher</strong><span>{selectedSceneId}</span>
+        <label className="launcher-inspector__name">Name<input autoFocus aria-label="Launcher name" defaultValue={currentName} onBlur={(event)=>saveName(event.target.value)} onKeyDown={(event)=>{if(event.key==='Enter'){event.currentTarget.blur();}if(event.key==='Escape'){event.currentTarget.value=currentName;event.currentTarget.blur();}}} /></label>
         <label>Display<select value={scene.appearanceMode} onChange={(event)=>updatePresentation(selectedSceneId,{appearanceMode:event.target.value,span:normalizeSpan(scene.span,event.target.value,geometry)})}><option value="label">Label</option><option value="icon">Icon</option><option value="icon_label">Icon + label</option></select></label>
         <label>Icon<select value={scene.iconKey} onChange={(event)=>updatePresentation(selectedSceneId,{iconKey:event.target.value})}>{Object.keys(SCENE_ICONS).map((key)=><option key={key} value={key}>{key}</option>)}</select></label>
         <div className="launcher-inspector__presets">{Object.entries(LAUNCHER_SIZE_PRESETS).map(([name,preset])=><button key={name} type="button" onClick={()=>updatePresentation(selectedSceneId,{appearanceMode:preset.appearanceMode,span:{columns:preset.columns,rows:preset.rows}})}>{name}</button>)}</div>
         <label>Width<input aria-label="Launcher width in cells" type="number" min={scene.appearanceMode==='icon'?1:2} max="12" value={scene.span.columns} onChange={(event)=>updatePresentation(selectedSceneId,{span:{...scene.span,columns:Number(event.target.value)}})} /></label>
         <label>Height<input aria-label="Launcher height in cells" type="number" min="1" max="8" value={scene.span.rows} onChange={(event)=>updatePresentation(selectedSceneId,{span:{...scene.span,rows:Number(event.target.value)}})} /></label>
-        <button type="button" onClick={()=>setGridVisible((value)=>{const next=!value;try{window.localStorage.setItem(GRID_PREFERENCE_KEY,JSON.stringify({version:1,visible:next}))}catch{}return next})}>Grid {gridVisible?'off':'on'}</button>
+        {launcher && <button type="button" aria-pressed={launcher.visitorVisible} onClick={()=>setLauncherVisitorVisibility(launcher.id,!launcher.visitorVisible)}>{launcher.visitorVisible?'Make private':'Show to visitors'}</button>}
+        <button type="button" onClick={toggleGrid}>Grid {gridVisible?'off':'on'}</button>
       </aside>; })()}
+      {contextMenu && (()=>{const runtimeId=contextMenu.target.id?.startsWith?.('folder-panel:')?contextMenu.target.id.slice(13):contextMenu.target.id?.replace?.('-panel',''); const launcher=pinnedLaunchers.find((entry)=>entry.id===(contextMenu.target.type==='window'?runtimeId:contextMenu.target.id)); const startOpen=launcher?.startOpen||systemPresentation[runtimeId]?.startOpen; return <DesktopMenu key={`${contextMenu.target.type}:${contextMenu.menu}`} anchor={contextMenu.anchor} label={`${contextMenu.target.type} commands`} commands={contextMenuCommands({target:contextMenu.target,editMode,launcher,startOpen,menu:contextMenu.menu,keeperVisible,stageVisible})} onCommand={executeContextCommand} onClose={()=>setContextMenu(null)} returnFocus={contextMenu.returnFocus}/>;})()}
+      {activeHudCommand === 'system' && <DesktopMenu anchor={{x:window.innerWidth/2-90,y:48}} label="OS Underneath system menu" commands={[
+        {id:'about',label:'About OS_UNDERNEATH'}, {id:'status',label:`Profile / ${workspace.profileAddress.slice(0,8)}…`}, {id:'atelier',label:'Open Atelier'}, {id:'edit',label:editMode?'Finish Arranging':'Arrange Desktop'}, {id:'reset',label:'Reset Windows'}, {id:'close-all',label:'Close All Windows'}, {id:'settings',label:'Settings'}
+      ]} onCommand={(command)=>{if(command==='about'||command==='status')setActiveHudCommand('about');else if(command==='atelier'){setActiveHudCommand(null);onRequestAtelier?.();}else if(command==='edit'){setEditMode((value)=>!value);setActiveHudCommand(null);}else if(command==='reset'){resetWindows();setActiveHudCommand(null);}else if(command==='close-all'){closeAllWindows();setActiveHudCommand(null);}else if(command==='settings')setActiveHudCommand('settings');}} onClose={()=>setActiveHudCommand(null)}/>}
+      {activeHudCommand === 'about' && <aside className="system-about" role="dialog" aria-label="About OS Underneath"><strong>OS_UNDERNEATH</strong><p>Your profile is not a page. It is a place.</p><small>{workspace.profileAddress}<br/>LUKSO MAINNET / READ-ONLY</small><button type="button" onClick={()=>setActiveHudCommand(null)}>[ Close ]</button></aside>}
       <KeeperSignalsLayer
         interfaceReady={interfaceVisible}
         residentHandoffActive={identityPhase !== 'closed'}

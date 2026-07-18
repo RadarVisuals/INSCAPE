@@ -15,6 +15,7 @@ function cloneDefaults() {
       searchlight: { ...DEFAULT_RENDER_CONFIG.actor.searchlight, color: [...DEFAULT_RENDER_CONFIG.actor.searchlight.color] }
     },
     scene: {
+      environment: { ...DEFAULT_RENDER_CONFIG.scene.environment },
       background: {
         ...DEFAULT_RENDER_CONFIG.scene.background,
         patternWarp: { ...DEFAULT_RENDER_CONFIG.scene.background.patternWarp }

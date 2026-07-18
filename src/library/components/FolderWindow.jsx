@@ -39,7 +39,7 @@ export default function FolderWindow({ launcher, onClose, dragHandleProps, dragE
 
   return (
     <article className="collection-window folder-window">
-      <header className="collection-window__header" {...dragHandleProps} data-enabled={dragEnabled || undefined}>
+      <header className="collection-window__header" data-window-titlebar={`folder-panel:${launcher.id}`} {...dragHandleProps} data-enabled={dragEnabled || undefined}>
         <div><span>Space / {launcher.viewType}</span><h2 id={`folder-title-${launcher.id}`}>{label}</h2></div>
         <p>{dragEnabled ? 'Drag to place' : `${viewAssets.length} assets`}</p>
         <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={onClose} aria-label={`Close ${label}`}><X aria-hidden="true" /></button>

@@ -9,6 +9,16 @@ import { RENDER_CONFIG_VERSION } from './renderConfig.defaults.js';
 export const RENDER_CONFIG_MIGRATIONS = Object.freeze({
   5: Object.freeze({
     version: 5,
+    migrateToNext: (document) => ({
+      ...document,
+      scene: {
+        ...document.scene,
+        environment: { type: 'illustrated', shaderId: 'neural-field' }
+      }
+    })
+  }),
+  6: Object.freeze({
+    version: 6,
     migrateToNext: null
   })
 });

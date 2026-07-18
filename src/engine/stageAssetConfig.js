@@ -1,5 +1,7 @@
 export function didBackgroundPatternConfigurationChange(currentRig, nextRig) {
+  if (nextRig?.environment?.type === 'shader') return false;
   return !currentRig ||
+    currentRig?.environment?.type === 'shader' ||
     currentRig.keys.bg_pat_1 !== nextRig.keys.bg_pat_1 ||
     currentRig.keys.bg_pat_2 !== nextRig.keys.bg_pat_2 ||
     currentRig.hasBgPat1 !== nextRig.hasBgPat1 ||
@@ -7,8 +9,12 @@ export function didBackgroundPatternConfigurationChange(currentRig, nextRig) {
 }
 
 export function didStageAssetConfigurationChange(currentRig, nextRig) {
-  return !currentRig ||
-    currentRig.keys.bg_clipping_mask !== nextRig.keys.bg_clipping_mask ||
+  if (!currentRig) return true;
+  const currentEnvironment = currentRig.environment || { type: 'illustrated', shaderId: 'neural-field' };
+  const nextEnvironment = nextRig.environment || { type: 'illustrated', shaderId: 'neural-field' };
+  if (currentEnvironment.type !== nextEnvironment.type || currentEnvironment.shaderId !== nextEnvironment.shaderId) return true;
+  if (nextEnvironment.type === 'shader') return false;
+  return currentRig.keys.bg_clipping_mask !== nextRig.keys.bg_clipping_mask ||
     didBackgroundPatternConfigurationChange(currentRig, nextRig) ||
     currentRig.keys.bg_mountain !== nextRig.keys.bg_mountain ||
     currentRig.keys.bg_mountain_back !== nextRig.keys.bg_mountain_back ||

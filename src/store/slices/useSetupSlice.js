@@ -9,6 +9,8 @@ export const createSetupSlice = (set, get) => ({
   toggleUi: () => set((state) => ({ isUiVisible: !state.isUiVisible })),
 
   characterId: canonicalSetupAliases.characterId,
+  environmentType: canonicalSetupAliases.environmentType,
+  environmentShaderId: canonicalSetupAliases.environmentShaderId,
   bgClippingMaskId: canonicalSetupAliases.bgClippingMaskId,
   bgPatternStyle: canonicalSetupAliases.bgPatternStyle,
   bgMountainId: canonicalSetupAliases.bgMountainId,

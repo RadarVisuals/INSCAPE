@@ -315,6 +315,7 @@
   top: 12px;
   left: 24px;
   right: 24px;
+  z-index: 80;
   width: auto;
   height: 36px;
   display: flex;
@@ -424,6 +425,20 @@
   color: var(--module-accent);
 }
 
+.system-sigil { position:absolute; left:50%; top:calc(50% + 10px); width:48px; height:48px; display:grid; place-items:center; padding:0; border:0; background:transparent; box-shadow:none; transform:translate(-50%,-50%); cursor:pointer; pointer-events:auto; }
+.system-sigil img { display:block; width:40px; height:40px; object-fit:contain; opacity:.82; filter:grayscale(1) brightness(1.8) drop-shadow(0 0 5px rgba(238,235,223,.16)); transition:filter 120ms linear,opacity 120ms linear,transform 120ms ease-out; }
+.system-sigil:hover img,.system-sigil:focus-visible img,.system-sigil[aria-expanded="true"] img { transform:scale(1.06); }
+.system-sigil:hover img,.system-sigil:focus-visible img,.system-sigil[aria-expanded="true"] img { opacity:1; filter:sepia(1) saturate(4) hue-rotate(330deg) brightness(1.15); }
+.desktop-menu { position:fixed; z-index:110; width:min(224px,calc(100vw - 16px)); padding:4px; border:1px solid rgba(238,235,223,.35); border-left:2px solid var(--module-accent); background:rgba(12,14,14,.98); color:var(--hu-text); pointer-events:auto; }
+.desktop-menu button { width:100%; min-height:29px; display:grid; grid-template-columns:8px 1fr; align-items:center; gap:7px; padding:5px 8px; border:0; border-bottom:1px solid rgba(238,235,223,.08); border-radius:0; background:transparent; color:inherit; font:600 .56rem/1.2 'Oxanium',var(--font-interface); letter-spacing:.055em; text-align:left; text-transform:uppercase; cursor:pointer; }
+.desktop-menu button:last-child { border-bottom:0; }
+.desktop-menu button i { width:2px; height:0; background:var(--module-accent); transition:height 80ms linear; }
+.desktop-menu button:hover,.desktop-menu button:focus-visible { outline:0; background:rgba(238,235,223,.06); color:var(--module-accent); }
+.desktop-menu button:hover i,.desktop-menu button:focus-visible i { height:100%; }
+.system-about { position:fixed; z-index:105; left:50%; top:62px; width:min(340px,calc(100vw - 24px)); padding:14px; border:1px solid rgba(238,235,223,.32); border-left:2px solid var(--module-accent); background:rgba(12,14,14,.97); color:var(--hu-text); transform:translateX(-50%); font:600 .58rem/1.5 'Oxanium',var(--font-interface); text-transform:uppercase; }
+.system-about p,.system-about small { display:block; margin:8px 0; color:var(--hu-text-muted); overflow-wrap:anywhere; }
+.system-about button { border:0; background:transparent; color:var(--hu-text); font:inherit; cursor:pointer; }
+
 .module-grid {
   --actor-screen-x: 50vw;
   --actor-screen-y: 50vh;
@@ -526,10 +541,12 @@
 .module-button__icon { flex:0 0 auto; display:grid; place-items:center; min-width:1.25em; font:700 clamp(.9rem,1.5vw,1.35rem)/1 'Oxanium',var(--font-interface); color:currentColor; }
 .module-button__resize{position:absolute;right:-11px;bottom:-11px;width:28px;height:28px;cursor:nwse-resize;z-index:6}
 .module-button__resize::after{content:'';position:absolute;right:9px;bottom:9px;width:8px;height:8px;border-right:2px solid rgba(238,235,223,.7);border-bottom:2px solid rgba(238,235,223,.7)}
-.module-window__resize{position:absolute;right:0;bottom:0;width:32px;height:32px;z-index:20;cursor:nwse-resize;background:linear-gradient(135deg,transparent 58%,rgba(238,235,223,.65) 59% 63%,transparent 64%)}
+.module-window__resize{position:absolute;right:0;bottom:0;width:32px;height:32px;z-index:20;cursor:nwse-resize;opacity:.3;background:linear-gradient(135deg,transparent 58%,rgba(238,235,223,.75) 59% 63%,transparent 64%);transition:opacity 100ms linear}
+.module-window__resize:hover,.module-window__resize:focus-visible{opacity:1;outline:1px solid var(--module-accent);outline-offset:-3px}
 .module-button:has(.module-button__icon):not(:has(span)) { justify-content:center; padding:4px; }
-.launcher-inspector { position:fixed; z-index:85; right:24px; top:72px; bottom:auto; max-height:calc(100vh - 96px); overflow:auto; width:min(280px,calc(100vw - 24px)); display:grid; grid-template-columns:1fr 1fr; gap:7px; padding:12px; pointer-events:auto; border:1px solid rgba(238,235,223,.3); border-left:2px solid var(--module-accent); background:rgba(13,14,14,.97); color:var(--hu-text); font:600 .58rem/1.25 'Oxanium',var(--font-interface); text-transform:uppercase; box-shadow:10px 10px 0 rgba(0,0,0,.35); }
+.launcher-inspector { position:fixed; z-index:85; right:auto; bottom:auto; max-height:calc(100vh - 24px); overflow:auto; width:min(280px,calc(100vw - 24px)); display:grid; grid-template-columns:1fr 1fr; gap:7px; padding:12px; pointer-events:auto; border:1px solid rgba(238,235,223,.3); border-left:2px solid var(--module-accent); background:rgba(13,14,14,.97); color:var(--hu-text); font:600 .58rem/1.25 'Oxanium',var(--font-interface); text-transform:uppercase; box-shadow:8px 8px 0 rgba(0,0,0,.3); }
 .launcher-inspector>strong,.launcher-inspector>span,.launcher-inspector__presets { grid-column:1/-1; }
+.launcher-inspector__name { grid-column:1/-1; }
 .launcher-inspector>span { overflow:hidden;text-overflow:ellipsis;color:var(--hu-text-muted); }
 .launcher-inspector label { display:grid; gap:4px; }
 .launcher-inspector select,.launcher-inspector input,.launcher-inspector button { min-height:28px; border:1px solid rgba(238,235,223,.25); background:#151717; color:inherit; font:inherit; text-transform:uppercase; }
@@ -592,7 +609,8 @@
   font-weight: 540;
   letter-spacing: 0.035em;
 }
-@media (max-width:719px){.launcher-inspector{left:12px;right:12px;top:auto;bottom:12px;width:auto;max-height:42vh}.module-button{padding:4px 7px}.module-button span{font-size:.58rem}.module-button--folder small{display:none}}
+@media (max-width:719px){.launcher-inspector{left:12px!important;right:12px;top:auto!important;bottom:12px;width:auto;max-height:42vh}.module-button{padding:4px 7px}.module-button span{font-size:.58rem}.module-button--folder small{display:none}.module-window__resize{display:none}}
+@media (max-width:900px){.system-sigil{display:none}}
 
 .module-button--folder {
   min-width: 0;
@@ -633,8 +651,8 @@
 }
 
 @keyframes system-hud-resolve {
-  from { opacity: 0; clip-path: inset(0 52% 0 48%); }
-  to { opacity: 1; clip-path: inset(0); }
+  from { opacity: 0; clip-path: inset(-48px 52% -48px 48%); }
+  to { opacity: 1; clip-path: inset(-48px 0); }
 }
 
 @keyframes module-endpoint-connect {

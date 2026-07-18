@@ -15,7 +15,7 @@ test('default config round-trips through the flat editor compatibility layer', (
 
   assert.deepEqual(restored, normalizeRenderConfig(DEFAULT_RENDER_CONFIG));
   assert.equal(restored.schemaVersion, RENDER_CONFIG_VERSION);
-  assert.equal(RENDER_CONFIG_VERSION, 5);
+  assert.equal(RENDER_CONFIG_VERSION, 6);
 });
 
 test('normalization clamps numeric input and rejects invalid booleans', () => {
@@ -107,6 +107,8 @@ test('scene defaults round-trip through every flat editor alias', () => {
 
   assert.deepEqual(restored.scene, DEFAULT_RENDER_CONFIG.scene);
   assert.equal(flat.bgClippingMaskId, 'moonpurple');
+  assert.equal(flat.environmentType, 'illustrated');
+  assert.equal(flat.environmentShaderId, 'neural-field');
   assert.equal(flat.bgMountainId, 2);
   assert.equal(flat.bgPatternBottomScale, 1);
   assert.equal(flat.particleCount, 80);
@@ -137,7 +139,7 @@ test('scene normalization clamps invalid numbers and normalizes RGB channels', (
 test('invalid actor and scene dropdown values fall back without changing option sets', () => {
   const normalized = normalizeRenderConfig({
     actor: { id: 'missing_actor' },
-    scene: { background: { backdropId: 'missing', patternStyle: 'missing', mountainFrontId: 99, mountainBackId: 0 } }
+    scene: { environment: { type: 'remote-code', shaderId: '../../payload.glsl' }, background: { backdropId: 'missing', patternStyle: 'missing', mountainFrontId: 99, mountainBackId: 0 } }
   });
 
   assert.equal(normalized.actor.id, DEFAULT_RENDER_CONFIG.actor.id);
@@ -145,6 +147,7 @@ test('invalid actor and scene dropdown values fall back without changing option 
   assert.equal(normalized.scene.background.patternStyle, DEFAULT_RENDER_CONFIG.scene.background.patternStyle);
   assert.equal(normalized.scene.background.mountainFrontId, DEFAULT_RENDER_CONFIG.scene.background.mountainFrontId);
   assert.equal(normalized.scene.background.mountainBackId, DEFAULT_RENDER_CONFIG.scene.background.mountainBackId);
+  assert.deepEqual(normalized.scene.environment, { type: 'illustrated', shaderId: 'neural-field' });
   assert.deepEqual(RENDER_PARAMETER_DEFINITIONS.characterId.values, ['skull_reaper', 'abyssal_eye']);
   assert.deepEqual(RENDER_PARAMETER_DEFINITIONS.bgClippingMaskId.values, [
     'beige', 'black', 'darkblue', 'darkgrey', 'hotpink', 'lightblue',

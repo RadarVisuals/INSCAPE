@@ -22,6 +22,7 @@ export default function Startveil(props) {
         <span className="startveil__ghost startveil__ghost--bottom"><img src="/assets/logo/underneath_os.webp" alt="" /></span>
       </div>
       <div className="startveil__scan" aria-hidden="true" />
+      <div className="startveil__sync" aria-hidden="true" />
       <div className="startveil__terminal" aria-live="polite">
         <header><p>OS_UNDERNEATH</p><span>SYSTEM STATE: {active ? 'AWAKENING' : ready ? 'DORMANT' : 'SEALED'}</span></header>
         <dl>
