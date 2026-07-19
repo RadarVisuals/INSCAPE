@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createRuntimeWindowState, loadRuntimeWindowState, runtimeWindowKey, updateRuntimeWindowState, windowZIndex } from './runtimeWindowState.js';
+import { createRuntimeWindowState, loadRuntimeWindowState, normalizeRuntimeWindowGeometry, runtimeWindowKey, updateRuntimeWindowState, windowZIndex } from './runtimeWindowState.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 test('runtime geometry, open state, and bounded deterministic stacking are independent state', () => {
@@ -21,4 +21,14 @@ test('runtime reset restores only supplied authored defaults and corrupt records
   const storage = { getItem: () => '{bad' };
   assert.deepEqual(loadRuntimeWindowState(storage, PROFILE), { version: 1, openIds: [], zOrder: [], rects: {} });
   assert.match(runtimeWindowKey(PROFILE), /runtime-windows\.v1/);
+});
+
+test('viewport shrink keeps runtime windows reachable and preserves valid rectangles', () => {
+  const state = createRuntimeWindowState({ rects: {
+    outside: { column: 18, row: 10, columnSpan: 8, rowSpan: 6 },
+    valid: { column: -2, row: 1, columnSpan: 6, rowSpan: 5 }
+  } });
+  const normalized = normalizeRuntimeWindowGeometry(state, { minColumn: -5, minRow: -3, columns: 20, rows: 12 });
+  assert.deepEqual(normalized.rects.outside, { column: 7, row: 3, columnSpan: 8, rowSpan: 6 });
+  assert.deepEqual(normalized.rects.valid, state.rects.valid);
 });

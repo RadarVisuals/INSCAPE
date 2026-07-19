@@ -50,7 +50,7 @@ test('public home is resident-only while Atelier retains stage authoring', () =>
   assert.match(appSource, /stageVisible={effectiveApplicationMode === APPLICATION_MODES\.ATELIER && stageUserVisible}/);
   assert.match(appSource, /foregroundOnly={effectiveApplicationMode === APPLICATION_MODES\.PUBLIC}/);
   assert.match(shellSource, /<HomeWorldSurface/);
-  assert.match(homeSource, /onCameraChange\(clampCamera/);
+  assert.match(homeSource, /onCameraChange\(clampHomeWorldCamera/);
   assert.match(homeSource, /createPortal\(surface, root\)/);
 });
 

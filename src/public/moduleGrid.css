@@ -693,7 +693,7 @@
 .module-button__icon { flex:0 0 auto; display:grid; place-items:center; min-width:1.25em; font:700 clamp(.9rem,1.5vw,1.35rem)/1 'Oxanium',var(--font-interface); color:currentColor; }
 .module-button__resize{position:absolute;right:-11px;bottom:-11px;width:28px;height:28px;cursor:nwse-resize;z-index:6}
 .module-button__resize::after{content:'';position:absolute;right:9px;bottom:9px;width:8px;height:8px;border-right:2px solid rgba(238,235,223,.7);border-bottom:2px solid rgba(238,235,223,.7)}
-.module-window__resize{position:absolute;right:0;bottom:0;width:32px;height:32px;z-index:20;cursor:nwse-resize;opacity:.3;background:linear-gradient(135deg,transparent 58%,rgba(238,235,223,.75) 59% 63%,transparent 64%);transition:opacity 100ms linear}
+.module-window__resize{position:absolute;right:0;bottom:0;width:32px;height:32px;z-index:20;cursor:nwse-resize;opacity:.3;background:linear-gradient(135deg,transparent 58%,rgba(238,235,223,.75) 59% 63%,transparent 64%);touch-action:none;transition:opacity 100ms linear}
 .module-window__resize:hover,.module-window__resize:focus-visible{opacity:1;outline:1px solid var(--module-accent);outline-offset:-3px}
 .module-button:has(.module-button__icon):not(:has(span)) { justify-content:center; padding:4px; }
 .launcher-inspector { position:fixed; z-index:85; right:auto; bottom:auto; max-height:calc(100vh - 24px); overflow:auto; width:min(280px,calc(100vw - 24px)); display:grid; grid-template-columns:1fr 1fr; gap:7px; padding:12px; pointer-events:auto; border:1px solid rgba(238,235,223,.3); border-left:2px solid var(--module-accent); background:rgba(13,14,14,.97); color:var(--hu-text); font:600 .58rem/1.25 'Oxanium',var(--font-interface); text-transform:uppercase; box-shadow:8px 8px 0 rgba(0,0,0,.3); }
@@ -899,7 +899,6 @@
   background: rgba(4, 5, 5, 0.94);
   box-shadow: none;
   overflow: hidden;
-  touch-action: none;
   box-sizing: border-box;
 }
 

@@ -1,4 +1,5 @@
 import { normalizeProfileAddress } from '../../library/config.js';
+import { isGridRectWithinBounds, normalizeGridRect } from '../gridGeometry.js';
 
 export const RUNTIME_WINDOW_STATE_VERSION = 1;
 export const RUNTIME_WINDOW_KEY_PREFIX = 'os-underneath.runtime-windows.v1:';
@@ -19,6 +20,17 @@ export function createRuntimeWindowState(initial = {}) {
   openIds.forEach((id) => { if (!zOrder.includes(id)) zOrder.push(id); });
   const rects = Object.fromEntries(Object.entries(initial.rects || {}).flatMap(([id, rect]) => validId(id) && validRect(rect) ? [[id, { ...rect }]] : []));
   return { version: RUNTIME_WINDOW_STATE_VERSION, openIds, zOrder, rects };
+}
+
+export function normalizeRuntimeWindowGeometry(state, bounds) {
+  const current = createRuntimeWindowState(state);
+  let changed = false;
+  const rects = Object.fromEntries(Object.entries(current.rects).map(([id, rect]) => {
+    if (isGridRectWithinBounds(rect, bounds)) return [id, rect];
+    changed = true;
+    return [id, normalizeGridRect(rect, bounds, { fallback: rect })];
+  }));
+  return changed ? { ...current, rects } : current;
 }
 
 export function updateRuntimeWindowState(state, action) {

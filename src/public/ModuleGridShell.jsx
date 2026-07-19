@@ -19,12 +19,12 @@ import { profileDocumentContentFingerprint } from '../profileDocument/domain/pro
 import { loadProfileSnapshot, profilePresentationKey, saveProfileSnapshot } from '../profileDocument/storage/profileDocumentStorage.js';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { getPublicTheme } from './themeTokens.js';
-import { findScenePlacement, isScenePlacementAvailable, LAUNCHER_SIZE_PRESETS, normalizeSpan, packCompactCanvasObjects, packCompactScene } from './sceneGrid.js';
+import { findScenePlacement, findScenePlacementAtPointer, isScenePlacementAvailable, LAUNCHER_SIZE_PRESETS, normalizeSpan, packCompactCanvasObjects, packCompactScene } from './sceneGrid.js';
 import { gridRectToPixelRect, launcherGeometryAvailable, movementCandidateFromPointer, normalizeGridRect, resizeCandidateFromPointer } from './gridGeometry.js';
 import { activateInteraction, createInteraction, effectiveGeometry, INTERACTION_KIND } from './gridInteraction.js';
 import { iconGlyph, normalizeIconKey, SCENE_ICONS } from './sceneIcons.js';
 import { decodeWindowGridGeometry, defaultFolderWindowGridRect, defaultWindowGridRect, windowMinimumSpan } from './windowGeometry.js';
-import { createRuntimeWindowState, loadRuntimeWindowState, saveRuntimeWindowState, updateRuntimeWindowState, windowZIndex } from './windows/runtimeWindowState.js';
+import { createRuntimeWindowState, loadRuntimeWindowState, normalizeRuntimeWindowGeometry, saveRuntimeWindowState, updateRuntimeWindowState, windowZIndex } from './windows/runtimeWindowState.js';
 import { contextMenuCommands, resolveContextTarget } from './menus/contextMenuModel.js';
 import DesktopMenu from './menus/DesktopMenu.jsx';
 import FramedArtwork from './FramedArtwork.jsx';
@@ -34,7 +34,7 @@ import GalleryWorld from './GalleryWorld.jsx';
 import HomeWorldSurface from './HomeWorldSurface.jsx';
 import KeeperDock from './KeeperDock.jsx';
 import ProfileDiscovery from '../profileDiscovery/ProfileDiscovery.jsx';
-import { getWindowRevealCamera, getZoomedHomeWorldCamera, HOME_WORLD_ZOOM_LEVELS, loadHomeWorldCamera, saveHomeWorldCamera } from './homeWorldCamera.js';
+import { clampHomeWorldCamera, getWindowRevealCamera, getZoomedHomeWorldCamera, HOME_WORLD_ZOOM_LEVELS, loadHomeWorldCamera, saveHomeWorldCamera } from './homeWorldCamera.js';
 import { CANVAS_OBJECT_KIND, getCanvasObjectDefinition } from '../library/domain/canvasObjectRegistry.js';
 import { CANVAS_OBJECT_ORDER_COMMAND } from '../library/domain/canvasObjects.js';
 import { runOwnerAuthoringMutation, selectLiveCanvasContent } from './publicAccess.js';
@@ -376,9 +376,9 @@ export default function ModuleGridShell({
     cameraTransitionFrameRef.current = 0;
     setHomeCameraState({
       profileAddress: workspace.profileAddress,
-      camera: loadHomeWorldCamera(window.localStorage, workspace.profileAddress, homeOrigin)
+      camera: clampHomeWorldCamera(loadHomeWorldCamera(window.localStorage, workspace.profileAddress, homeOrigin), homeWorld)
     });
-  }, [homeOrigin, workspace.profileAddress]);
+  }, [homeOrigin, homeWorld, workspace.profileAddress]);
 
   useEffect(() => {
     if (homeCameraState.profileAddress !== workspace.profileAddress) return;
@@ -392,7 +392,7 @@ export default function ModuleGridShell({
     let keyExists = false;
     try { keyExists = window.localStorage.getItem(`os-underneath.runtime-windows.v1:${workspace.profileAddress}`) !== null; } catch { /* Storage is optional. */ }
     const loaded = loadRuntimeWindowState(window.localStorage, workspace.profileAddress, { rects: readLegacyWindowGeometry(createHomePlacementGeometry(geometry)) });
-    const next = keyExists || Object.keys(loaded.rects).length ? loaded : authoredWindowDefaults;
+    const next = normalizeRuntimeWindowGeometry(keyExists || Object.keys(loaded.rects).length ? loaded : authoredWindowDefaults, placementGeometry);
     loadedRuntimeProfileRef.current = workspace.profileAddress;
     setRuntimeWindows(next);
     setIdentityOpen(next.openIds.includes('identity')); setCollectionOpen(next.openIds.includes('collection')); setCreationsOpen(next.openIds.includes('creations')); setSignalsOpen(next.openIds.includes('signals'));
@@ -400,6 +400,10 @@ export default function ModuleGridShell({
   // Runtime records load only when the active profile changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspace.profileAddress]);
+
+  useEffect(() => {
+    setRuntimeWindows((current) => normalizeRuntimeWindowGeometry(current, placementGeometry));
+  }, [placementGeometry]);
 
   useEffect(() => {
     if (loadedRuntimeProfileRef.current === workspace.profileAddress) saveRuntimeWindowState(window.localStorage, workspace.profileAddress, runtimeWindows);
@@ -894,12 +898,11 @@ export default function ModuleGridShell({
     if (!ownerAuthoringEnabled) return;
     artworkChoicePendingRef.current=false;
     const definition=getCanvasObjectDefinition(CANVAS_OBJECT_KIND.FRAMED_ARTWORK); const bounds=gridRef.current?.getBoundingClientRect(); const anchor=contextMenu?.anchor || {x:window.innerWidth/2,y:window.innerHeight/2};
-    const requested=bounds?{column:Math.floor((anchor.x-bounds.left)/(geometry.cellWidth*homeZoom)),row:Math.floor((anchor.y-bounds.top)/(geometry.cellHeight*homeZoom))}:{column:0,row:2};
-    const span={columns:Math.min(definition.defaultSpan.columns,geometry.columns),rows:Math.min(definition.defaultSpan.rows,geometry.rows)};
+    const span={columns:Math.min(definition.defaultSpan.columns,placementGeometry.columns),rows:Math.min(definition.defaultSpan.rows,placementGeometry.rows)};
     const occupied=[...spatialSceneItems,...Object.values(canvasObjectScenes).map((object)=>({id:object.id,position:object.position,span:object.span}))];
-    const placement=findScenePlacement('canvas:artwork:pending',requested,span,occupied,geometry);
+    const placement=bounds?findScenePlacementAtPointer({id:'canvas:artwork:pending',pointer:anchor,gridClientRect:bounds,zoom:homeZoom,span,items:occupied,geometry:placementGeometry}):findScenePlacement('canvas:artwork:pending',{column:0,row:2},span,occupied,placementGeometry);
     setArtworkChooser({mode,targetId,placement,anchor}); setContextMenu(null); if(libraryStatus==='idle')loadLibrary();
-  },[canvasObjectScenes,contextMenu,geometry,homeZoom,libraryStatus,loadLibrary,ownerAuthoringEnabled,spatialSceneItems]);
+  },[canvasObjectScenes,contextMenu,geometry,homeZoom,libraryStatus,loadLibrary,ownerAuthoringEnabled,placementGeometry,spatialSceneItems]);
 
   const chooseArtwork = useCallback((asset) => {
     if (!ownerAuthoringEnabled) return;

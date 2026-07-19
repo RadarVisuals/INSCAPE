@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { findScenePlacement, gridPixelRect, isScenePlacementAvailable, LAUNCHER_SIZE_PRESETS, normalizeSpan, packCompactCanvasObjects, packCompactScene, resizeSpanFromPointer } from './sceneGrid.js';
+import { findScenePlacement, findScenePlacementAtPointer, gridPixelRect, isScenePlacementAvailable, LAUNCHER_SIZE_PRESETS, normalizeSpan, packCompactCanvasObjects, packCompactScene, resizeSpanFromPointer } from './sceneGrid.js';
 import { iconGlyph, normalizeIconKey } from './sceneIcons.js';
 
 const geometry={columns:8,rows:8};
@@ -14,3 +14,4 @@ test('launcher presets intentionally expose only square and compact starting poi
 test('absolute resize preserves the external handle grab offset and snaps to the nearest boundary',()=>{const g={columns:12,rows:10,cellWidth:50,cellHeight:50};const base={grabOffsetX:12,grabOffsetY:12,gridLeft:100,gridTop:40,origin:{column:2,row:1},geometry:g,appearanceMode:'label',inset:2};assert.deepEqual(resizeSpanFromPointer({...base,pointerX:360,pointerY:200}),{columns:3,rows:2});assert.deepEqual(resizeSpanFromPointer({...base,pointerX:388,pointerY:228}),{columns:4,rows:3});});
 test('absolute resize follows the pointer directly, honors minimums, and does not depend on event count',()=>{const g={columns:12,rows:10,cellWidth:50,cellHeight:50};const common={grabOffsetX:0,grabOffsetY:0,gridLeft:0,gridTop:0,origin:{column:0,row:0},geometry:g,inset:2};assert.deepEqual(resizeSpanFromPointer({...common,pointerX:120,pointerY:70,appearanceMode:'label'}),{columns:2,rows:1});assert.deepEqual(resizeSpanFromPointer({...common,pointerX:425,pointerY:325,appearanceMode:'label'}),{columns:9,rows:7});assert.deepEqual(resizeSpanFromPointer({...common,pointerX:1,pointerY:1,appearanceMode:'icon'}),{columns:1,rows:1});assert.deepEqual(resizeSpanFromPointer({...common,pointerX:1,pointerY:1,minimumSpan:{columns:6,rows:5}}),{columns:6,rows:5});});
 test('live and committed grid rectangles share identical inset geometry',()=>{assert.deepEqual(gridPixelRect({column:2,row:3},{columns:4,rows:2},{cellWidth:50,cellHeight:40},2),{left:102,top:122,width:196,height:76});});
+test('outer-sector pointer placement stays in the expanded signed world',()=>{const expanded={minColumn:-20,minRow:-12,columns:60,rows:36,cellWidth:40,cellHeight:40};const placement=findScenePlacementAtPointer({id:'canvas:artwork:pending',pointer:{x:1700,y:900},gridClientRect:{left:100,top:100},span:{columns:4,rows:4},items:[],geometry:expanded});assert.deepEqual(placement,{column:40-4,row:20});});

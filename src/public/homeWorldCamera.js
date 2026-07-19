@@ -26,6 +26,15 @@ export function normalizeHomeWorldCamera(camera) {
   return { ...point, zoom };
 }
 
+export function clampHomeWorldCamera(camera, world) {
+  const normalized = normalizeHomeWorldCamera(camera);
+  const viewportWidth = Math.max(0, Number(world?.viewportWidth) || 0) / normalized.zoom;
+  const viewportHeight = Math.max(0, Number(world?.viewportHeight) || 0) / normalized.zoom;
+  const maxX = Math.max(0, (Number(world?.width) || 0) - viewportWidth);
+  const maxY = Math.max(0, (Number(world?.height) || 0) - viewportHeight);
+  return { ...normalized, ...clampSpatialCamera(normalized, { minX: 0, maxX, minY: 0, maxY }) };
+}
+
 export function getZoomedHomeWorldCamera(camera, nextZoom, anchor, world) {
   const current = normalizeHomeWorldCamera(camera);
   const zoomed = normalizeHomeWorldCamera({ ...current, zoom: nextZoom });

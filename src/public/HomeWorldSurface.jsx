@@ -1,16 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { getZoomedHomeWorldCamera, HOME_WORLD_ZOOM_LEVELS, normalizeHomeWorldCamera } from './homeWorldCamera.js';
+import { clampHomeWorldCamera, getZoomedHomeWorldCamera, HOME_WORLD_ZOOM_LEVELS } from './homeWorldCamera.js';
 import './homeWorld.css';
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
-
-function clampCamera(camera, world) {
-  const normalized = normalizeHomeWorldCamera(camera);
-  return { ...normalized,
-    x:clamp(normalized.x,0,Math.max(0,world.width-world.viewportWidth/normalized.zoom)),
-    y:clamp(normalized.y,0,Math.max(0,world.height-world.viewportHeight/normalized.zoom)) };
-}
 
 export default function HomeWorldSurface({ camera, geometry, world, locations = [], gridVisible, theme, visible, onCameraChange, onMoveKeeper, onOpenContextMenu }) {
   const dragRef = useRef(null);
@@ -42,11 +35,11 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
     const dx=event.clientX-drag.originPointer.x;const dy=event.clientY-drag.originPointer.y;
     drag.moved ||= Math.hypot(dx,dy) > 5;
     if (!drag.moved) return;
-    onCameraChange(clampCamera({...drag.originCamera,x:drag.originCamera.x-dx/zoom,y:drag.originCamera.y-dy/zoom},world));
+    onCameraChange(clampHomeWorldCamera({...drag.originCamera,x:drag.originCamera.x-dx/zoom,y:drag.originCamera.y-dy/zoom},world));
   };
 
   const changeZoom=(nextZoom,anchor={x:world.viewportWidth/2,y:world.viewportHeight/2})=>onCameraChange(getZoomedHomeWorldCamera(camera,nextZoom,anchor,world));
-  const moveFromMap=(event)=>{const rect=event.currentTarget.getBoundingClientRect();const x=((event.clientX-rect.left)/rect.width)*world.width;const y=((event.clientY-rect.top)/rect.height)*world.height;onCameraChange(clampCamera({x:x-world.viewportWidth/(2*zoom),y:y-world.viewportHeight/(2*zoom),zoom},world));};
+  const moveFromMap=(event)=>{const rect=event.currentTarget.getBoundingClientRect();const x=((event.clientX-rect.left)/rect.width)*world.width;const y=((event.clientY-rect.top)/rect.height)*world.height;onCameraChange(clampHomeWorldCamera({x:x-world.viewportWidth/(2*zoom),y:y-world.viewportHeight/(2*zoom),zoom},world));};
   const startMapDrag=(event)=>{if(event.pointerType==='mouse'&&event.button!==0)return;event.preventDefault();event.stopPropagation();mapDragRef.current=event.pointerId;event.currentTarget.setPointerCapture?.(event.pointerId);moveFromMap(event);};
   const moveMapDrag=(event)=>{if(mapDragRef.current!==event.pointerId)return;event.preventDefault();moveFromMap(event);};
   const finishMapDrag=(event)=>{if(mapDragRef.current===event.pointerId)mapDragRef.current=null;};
@@ -63,7 +56,7 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
     event.preventDefault();
     const horizontal=event.shiftKey?event.deltaY:event.deltaX;
     const vertical=event.shiftKey?0:event.deltaY;
-    onCameraChange(clampCamera({...camera,x:camera.x+horizontal/zoom,y:camera.y+vertical/zoom},world));
+    onCameraChange(clampHomeWorldCamera({...camera,x:camera.x+horizontal/zoom,y:camera.y+vertical/zoom},world));
   };
 
   useEffect(()=>{

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   HOME_WORLD_CAMERA_LIMIT,
+  clampHomeWorldCamera,
   getWindowRevealCamera,
   getZoomedHomeWorldCamera,
   homeWorldCameraKey,
@@ -39,4 +40,12 @@ test('home camera state rejects corrupt records and bounds extreme coordinates',
   const storage = { getItem: () => '{broken' };
   assert.deepEqual(loadHomeWorldCamera(storage, 'profile'), { x: 0, y: 0, zoom: 1 });
   assert.deepEqual(normalizeHomeWorldCamera({ x: Infinity, y: HOME_WORLD_CAMERA_LIMIT * 2 }), { x: 0, y: HOME_WORLD_CAMERA_LIMIT, zoom: 1 });
+});
+
+test('large-to-small world resize clamps only cameras outside the reachable world', () => {
+  const largeWorld = { width: 3600, height: 2400, viewportWidth: 1200, viewportHeight: 800 };
+  const smallWorld = { width: 1800, height: 1200, viewportWidth: 600, viewportHeight: 400 };
+  const previouslyReachable = clampHomeWorldCamera({ x: 2200, y: 1500, zoom: 1 }, largeWorld);
+  assert.deepEqual(clampHomeWorldCamera(previouslyReachable, smallWorld), { x: 1200, y: 800, zoom: 1 });
+  assert.deepEqual(clampHomeWorldCamera({ x: 500, y: 300, zoom: 1 }, smallWorld), { x: 500, y: 300, zoom: 1 });
 });

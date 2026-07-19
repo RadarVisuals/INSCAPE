@@ -26,8 +26,10 @@ export class PixiEngine {
    * @param {Object} storeInterface - Decoupled store methods
    * @param {Function} storeInterface.getState - State reader
    * @param {Function} storeInterface.subscribe - State change subscription handler
+   * @param {Object} dependencies - Optional lifecycle test dependencies
+   * @param {Application} dependencies.application - Injected Pixi application
    */
-  constructor(containerElement, storeInterface = {}) {
+  constructor(containerElement, storeInterface = {}, dependencies = {}) {
     this.container = containerElement;
     this.performanceStats = {
       samples: new Float32Array(120),
@@ -42,11 +44,15 @@ export class PixiEngine {
     this.getState = storeInterface.getState || (() => ({}));
     this.subscribe = storeInterface.subscribe || (() => () => {});
 
-    this.app = new Application();
+    // The injected application is a deliberately small lifecycle-test seam.
+    this.app = dependencies.application || new Application();
+    this.appInitialized = false;
+    this.appDestroyed = false;
     this.layers = {};
     this.time = 0;
     this.isReady = false;
     this.isDestroyed = false;
+    this.isInitializing = false;
     this.hasUserGesture = false;
     this.residentRevealVisible = true;
     this.residentRevealAlpha = 1;
@@ -94,6 +100,8 @@ export class PixiEngine {
     // Set up a list to collect selector-based subscriptions
     this.unsubscribers = [];
     this.assetReloadScheduled = false;
+    this.assetReloadRequested = false;
+    this.assetReloadInFlight = false;
 
     // Trigger explicit asset loading only when setup properties modify
     const reloadTriggerSelectors = [
@@ -659,6 +667,8 @@ export class PixiEngine {
   }
 
   async init() {
+    if (this.isDestroyed || this.isInitializing || this.isReady) return false;
+    this.isInitializing = true;
     try {
       await this.app.init({
         width: window.innerWidth,
@@ -671,40 +681,51 @@ export class PixiEngine {
         autoDensity: true,
         preference: 'webgl', 
       });
+      this.appInitialized = true;
 
       if (this.isDestroyed) {
-        this.app.destroy(true);
-        return;
+        this.destroyApplication();
+        return false;
       }
 
       this.container.appendChild(this.app.canvas);
-      
-      const currentSeq = ++this.loadSequence;
-      await this.loadAssets();
 
-      if (this.isDestroyed || currentSeq !== this.loadSequence) {
-        return;
-      }
+      // Configuration changes during a load request another serial pass. The
+      // scene is installed only after the latest store state has been loaded.
+      do {
+        this.assetReloadRequested = false;
+        const currentSeq = ++this.loadSequence;
+        await this.loadAssets(currentSeq);
+        if (this.isDestroyed || currentSeq !== this.loadSequence) return false;
+      } while (this.assetReloadRequested);
       
       this.buildSceneGraph();
+      if (this.isDestroyed) return false;
       this.app.ticker.add((ticker) => this.update(ticker.deltaTime, ticker.elapsedMS));
       this.resize();
       
       this.isReady = true;
       return true;
     } catch (err) {
-      console.error("[PixiEngine] Init Error:", err);
+      if (!this.isDestroyed) {
+        console.error("[PixiEngine] Init Error:", err);
+        this.destroyApplication();
+      }
       return false;
+    } finally {
+      this.isInitializing = false;
+      if (this.isDestroyed) this.destroyApplication();
+      else if (this.assetReloadRequested && this.isReady) this.scheduleAssetReload();
     }
   }
 
-  async loadAssets() {
+  async loadAssets(sequence = this.loadSequence) {
     console.log(`%c🔍 [PixiEngine] Rig Loader: Locating Stage Assets`, 'color: #00f3ff; font-weight: bold;');
     
     // Resolve active asset configurations and store in a single property
     const renderConfig = this.getState().renderConfig ?? DEFAULT_RENDER_CONFIG;
     const results = await this.resolveConfiguredRig(renderConfig);
-    this.loadedRig = results;
+    if (this.isDestroyed || sequence !== this.loadSequence) return false;
 
     if (results.verifiedLoadQueue.length > 0) {
       try {
@@ -714,17 +735,37 @@ export class PixiEngine {
         console.error("❌ [PixiEngine] Critical Loader Exception:", err);
       }
     }
+    if (this.isDestroyed || sequence !== this.loadSequence) {
+      if (results.verifiedLoadQueue.length > 0) Assets.unload(results.verifiedLoadQueue).catch(() => {});
+      return false;
+    }
+    this.loadedRig = results;
+    return true;
   }
 
   scheduleAssetReload() {
-    if (this.assetReloadScheduled || this.isDestroyed) return;
+    if (this.isDestroyed) return;
+    this.assetReloadRequested = true;
+    if (this.isInitializing || this.assetReloadInFlight || !this.isReady || this.assetReloadScheduled) return;
     this.assetReloadScheduled = true;
     queueMicrotask(() => {
       this.assetReloadScheduled = false;
-      if (!this.isDestroyed) {
-        this.reloadAssetsAndScene().catch((error) => console.error('Re-init assets failed:', error));
-      }
+      this.drainAssetReloads().catch((error) => console.error('Re-init assets failed:', error));
     });
+  }
+
+  async drainAssetReloads() {
+    if (this.isDestroyed || this.isInitializing || this.assetReloadInFlight || !this.isReady) return;
+    this.assetReloadInFlight = true;
+    try {
+      while (this.assetReloadRequested && !this.isDestroyed) {
+        this.assetReloadRequested = false;
+        await this.reloadAssetsAndScene();
+      }
+    } finally {
+      this.assetReloadInFlight = false;
+      if (this.assetReloadRequested && this.isReady && !this.isDestroyed) this.scheduleAssetReload();
+    }
   }
 
   async resolveConfiguredRig(renderConfig) {
@@ -1246,7 +1287,12 @@ export class PixiEngine {
   }
 
   destroy() {
+    if (this.isDestroyed) return;
     this.isDestroyed = true;
+    this.isReady = false;
+    this.assetReloadRequested = false;
+    this.assetReloadScheduled = false;
+    ++this.loadSequence;
     this.actorScreenPositionTarget = null;
 
     if (this.unsubscribers) {
@@ -1256,49 +1302,41 @@ export class PixiEngine {
       this.unsubscribers = [];
     }
 
-    if (this.isReady && this.app) {
-      try { 
-        if (this.actor) {
-          this.shedSkinTrailSystem?.destroy();
-          this.shedSkinTrailSystem = null;
-          if (this.actor.characterContentContainer) {
-            this.actor.characterContentContainer.mask = null;
-          }
-          this.actor.destroy();
-          this.actor = null;
-        }
-        if (this.stage?.destroy) {
-          this.stage.destroy();
-          this.stage = null;
-        }
+    this.destroySceneResources();
+    if (this.appInitialized) this.destroyApplication();
+  }
 
-        if (this.renderTextureManager?.destroy) {
-          this.renderTextureManager.destroy();
-          this.renderTextureManager = null;
-        }
-        if (this.trailSystem?.destroy) {
-          this.trailSystem.destroy();
-          this.trailSystem = null;
-        }
-        if (this.shockwaveSystem?.destroy) {
-          this.shockwaveSystem.destroy();
-          this.shockwaveSystem = null;
-        }
-        if (this.searchlightSystem?.destroy) {
-          this.searchlightSystem.destroy();
-          this.searchlightSystem = null;
-        }
+  destroySceneResources() {
+    try {
+      this.shedSkinTrailSystem?.destroy();
+      this.shedSkinTrailSystem = null;
+      if (this.actor?.characterContentContainer) this.actor.characterContentContainer.mask = null;
+      this.actor?.destroy();
+      this.actor = null;
+      this.stage?.destroy?.();
+      this.stage = null;
+      this.renderTextureManager?.destroy?.();
+      this.renderTextureManager = null;
+      this.trailSystem?.destroy?.();
+      this.trailSystem = null;
+      this.shockwaveSystem?.destroy?.();
+      this.shockwaveSystem = null;
+      this.searchlightSystem?.destroy?.();
+      this.searchlightSystem = null;
+      if (this.loadedRig?.verifiedLoadQueue?.length > 0) Assets.unload(this.loadedRig.verifiedLoadQueue).catch(() => {});
+      this.loadedRig = null;
+    } catch (error) {
+      console.warn("[PixiEngine] Strict cleanup warn:", error);
+    }
+  }
 
-        // Only release textures from cache when the app is completely unmounted/unloaded
-        if (this.loadedRig && this.loadedRig.verifiedLoadQueue && this.loadedRig.verifiedLoadQueue.length > 0) {
-          Assets.unload(this.loadedRig.verifiedLoadQueue).catch(() => {});
-          this.loadedRig = null;
-        }
-
-        this.app.destroy(true, { children: true, texture: true }); 
-      } catch (e) {
-        console.warn("[PixiEngine] Strict cleanup warn:", e);
-      }
+  destroyApplication() {
+    if (this.appDestroyed || !this.app) return;
+    this.appDestroyed = true;
+    try {
+      this.app.destroy(true, { children: true, texture: true });
+    } catch (error) {
+      console.warn("[PixiEngine] Application cleanup warn:", error);
     }
   }
 
