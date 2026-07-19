@@ -307,21 +307,68 @@ export class PixiEngine {
     };
   }
 
+  snapshotResidentBounds(bounds) {
+    if (!bounds) return null;
+    const left = Number(bounds.left) || 0;
+    const top = Number(bounds.top) || 0;
+    const width = Math.max(0, Number(bounds.width) || ((Number(bounds.right) || left) - left));
+    const height = Math.max(0, Number(bounds.height) || ((Number(bounds.bottom) || top) - top));
+    return {
+      left,
+      top,
+      right: Number.isFinite(Number(bounds.right)) ? Number(bounds.right) : left + width,
+      bottom: Number.isFinite(Number(bounds.bottom)) ? Number(bounds.bottom) : top + height,
+      width,
+      height
+    };
+  }
+
+  getResidentHandoffTarget(bounds, targetMode = 'boundary', preferredEdge = null, referencePosition = null) {
+    if (!this.masterContainer || !bounds) return null;
+    if (targetMode === 'center') {
+      const left = Number(bounds.left) || 0;
+      const right = Number(bounds.right) || left;
+      const top = Number(bounds.top) || 0;
+      const bottom = Number(bounds.bottom) || top;
+      return {
+        edge: 'center',
+        point: this.masterContainer.toLocal({ x: (left + right) / 2, y: (top + bottom) / 2 })
+      };
+    }
+    return this.getResidentBoundary(bounds, preferredEdge, referencePosition);
+  }
+
   startResidentHandoff(bounds, options = {}) {
     const generation = ++this.residentHandoffGeneration;
     const returnPosition = this.residentHandoff?.returnPosition || (this.actor
       ? { ...this.actor.baselinePosition }
       : null);
-    const boundary = this.getResidentBoundary(bounds, null, returnPosition);
+    const targetMode = options.targetMode === 'center' ? 'center' : 'boundary';
+    const handoffBounds = this.snapshotResidentBounds(bounds);
+    const boundary = this.getResidentHandoffTarget(handoffBounds, targetMode, null, returnPosition);
+    const approachDistance = boundary && this.actor
+      ? Math.hypot(
+        boundary.point.x - this.actor.baselinePosition.x,
+        boundary.point.y - this.actor.baselinePosition.y
+      )
+      : 0;
     this.residentHandoff = {
       generation,
       phase: 'approaching',
-      bounds: { ...bounds },
+      bounds: handoffBounds,
       entryEdge: boundary?.edge || 'top',
+      targetMode,
+      keepVisible: options.keepVisible === true,
+      residentScale: Math.max(0.2, Math.min(1, Number(options.residentScale) || 1)),
+      residentFacing: options.residentFacing === -1 ? -1 : options.residentFacing === 1 ? 1 : null,
+      scaleMultiplier: 1,
+      approachDistance,
       reducedMotion: options.reducedMotion === true,
       returnPosition,
       elapsed: 0,
-      duration: options.reducedMotion === true ? 0.06 : 0.28,
+      duration: options.reducedMotion === true
+        ? 0.06
+        : Math.max(0.18, Math.min(1.2, Number(options.duration) || 0.28)),
       startAlpha: 1,
       onEntering: options.onEntering,
       onEntered: options.onEntered,
@@ -333,8 +380,13 @@ export class PixiEngine {
 
   updateResidentHandoffBounds(bounds) {
     if (!this.residentHandoff || !bounds) return null;
-    this.residentHandoff.bounds = { ...bounds };
-    const boundary = this.getResidentBoundary(bounds, null, this.residentHandoff.returnPosition);
+    this.residentHandoff.bounds = this.snapshotResidentBounds(bounds);
+    const boundary = this.getResidentHandoffTarget(
+      this.residentHandoff.bounds,
+      this.residentHandoff.targetMode,
+      null,
+      this.residentHandoff.returnPosition
+    );
     if (boundary) this.residentHandoff.entryEdge = boundary.edge;
     if (this.residentHandoff.phase === 'approaching') this.syncResidentHandoff();
     return this.residentHandoff.entryEdge;
@@ -346,13 +398,18 @@ export class PixiEngine {
     if (!handoff.returnPosition) handoff.returnPosition = { ...this.actor.baselinePosition };
 
     if (handoff.phase === 'open') {
-      this.actor.container.alpha = 0;
-      this.actor.container.visible = false;
+      this.actor.container.alpha = handoff.keepVisible ? 1 : 0;
+      this.actor.container.visible = handoff.keepVisible;
       return;
     }
     if (handoff.phase !== 'approaching') return;
 
-    const boundary = this.getResidentBoundary(handoff.bounds, handoff.entryEdge, handoff.returnPosition);
+    const boundary = this.getResidentHandoffTarget(
+      handoff.bounds,
+      handoff.targetMode,
+      handoff.entryEdge,
+      handoff.returnPosition
+    );
     if (!boundary) return;
     const boundaryPoint = boundary.point;
     this.actor.container.visible = true;
@@ -363,8 +420,16 @@ export class PixiEngine {
       this.actor.targetPosition.x = boundaryPoint.x;
       this.actor.targetPosition.y = boundaryPoint.y;
       this.actor.isMovingToTarget = false;
-      handoff.phase = 'entering';
-      handoff.onEntering?.();
+      if (handoff.keepVisible) {
+        handoff.phase = 'open';
+        handoff.scaleMultiplier = handoff.residentScale;
+        this.resetResidentTravelEffects();
+        handoff.onEntering?.();
+        handoff.onEntered?.();
+      } else {
+        handoff.phase = 'entering';
+        handoff.onEntering?.();
+      }
     } else {
       this.actor.moveTo(boundaryPoint.x, boundaryPoint.y);
     }
@@ -376,25 +441,21 @@ export class PixiEngine {
       queueMicrotask(() => options.onComplete?.());
       return null;
     }
+    if (handoff.phase === 'exiting') return handoff.entryEdge;
 
     ++this.residentHandoffGeneration;
     handoff.generation = this.residentHandoffGeneration;
-    handoff.bounds = bounds ? { ...bounds } : handoff.bounds;
+    handoff.bounds = bounds ? this.snapshotResidentBounds(bounds) : handoff.bounds;
     handoff.onComplete = options.onComplete;
     handoff.reducedMotion = options.reducedMotion === true;
 
-    if (handoff.phase === 'approaching' && this.actor.container.alpha >= 0.999) {
-      const returnPosition = handoff.returnPosition;
-      this.actor.container.visible = true;
-      this.actor.container.alpha = 1;
-      this.residentHandoff = null;
-      if (returnPosition) this.actor.moveTo(returnPosition.x, returnPosition.y);
-      queueMicrotask(() => options.onComplete?.());
-      return handoff.entryEdge;
-    }
-
-    const boundary = this.getResidentBoundary(handoff.bounds, null, handoff.returnPosition);
-    if (boundary) {
+    const boundary = this.getResidentHandoffTarget(
+      handoff.bounds,
+      handoff.targetMode,
+      null,
+      handoff.returnPosition
+    );
+    if (boundary && !handoff.keepVisible) {
       handoff.entryEdge = boundary.edge;
       const boundaryPoint = boundary.point;
       this.actor.baselinePosition.x = boundaryPoint.x;
@@ -403,23 +464,69 @@ export class PixiEngine {
       this.actor.targetPosition.y = boundaryPoint.y;
       this.actor.isMovingToTarget = false;
     }
+    handoff.exitStartScale = handoff.keepVisible
+      ? Math.max(handoff.residentScale, Math.min(1, handoff.scaleMultiplier ?? handoff.residentScale))
+      : 1;
+    handoff.exitPosition = options.screenTarget &&
+      Number.isFinite(options.screenTarget.clientX) &&
+      Number.isFinite(options.screenTarget.clientY)
+      ? this.masterContainer.toLocal({
+        x: options.screenTarget.clientX,
+        y: options.screenTarget.clientY
+      })
+      : handoff.returnPosition;
     handoff.phase = 'exiting';
     handoff.elapsed = 0;
-    handoff.duration = handoff.reducedMotion ? 0.06 : 0.28;
+    handoff.duration = handoff.reducedMotion
+      ? 0.06
+      : Math.max(0.18, Math.min(1.2, Number(options.duration) || 0.28));
     handoff.startAlpha = Math.max(0, Math.min(1, this.actor.container.alpha || 0));
     this.actor.container.visible = true;
+    this.resetResidentTravelEffects();
+    if (this.trailSystem?.trailContainer) {
+      this.trailSystem.trailContainer.visible = this.residentRevealVisible;
+    }
+    if (this.shedSkinTrailSystem?.container) {
+      this.shedSkinTrailSystem.container.visible = this.residentRevealVisible;
+    }
+    if (handoff.keepVisible && handoff.exitPosition) {
+      handoff.exitDistance = Math.hypot(
+        handoff.exitPosition.x - this.actor.baselinePosition.x,
+        handoff.exitPosition.y - this.actor.baselinePosition.y
+      );
+      if (handoff.reducedMotion || handoff.exitDistance <= 0.001) {
+        this.actor.baselinePosition.x = handoff.exitPosition.x;
+        this.actor.baselinePosition.y = handoff.exitPosition.y;
+        this.actor.targetPosition.x = handoff.exitPosition.x;
+        this.actor.targetPosition.y = handoff.exitPosition.y;
+        this.actor.isMovingToTarget = false;
+        this.finishResidentExit(handoff);
+      } else {
+        this.actor.moveTo(handoff.exitPosition.x, handoff.exitPosition.y);
+      }
+    } else if (handoff.keepVisible) {
+      this.finishResidentExit(handoff);
+    }
     return handoff.entryEdge;
   }
 
   finishResidentExit(handoff) {
     if (!this.actor || this.residentHandoff !== handoff) return;
-    const returnPosition = handoff.returnPosition;
     const onComplete = handoff.onComplete;
+    handoff.onComplete = null;
     this.actor.container.visible = true;
     this.actor.container.alpha = 1;
+    this.actor.container.scale.set(
+      this.actor.headState.scale * this.actor.baseActorScale,
+      this.actor.headState.scale * this.actor.baseActorScale
+    );
     this.residentHandoff = null;
-    if (returnPosition) this.actor.moveTo(returnPosition.x, returnPosition.y);
     onComplete?.();
+  }
+
+  resetResidentTravelEffects() {
+    this.trailSystem?.reset?.();
+    this.shedSkinTrailSystem?.reset?.(this.actor?.headState);
   }
 
   cancelResidentHandoff() {
@@ -435,6 +542,22 @@ export class PixiEngine {
   updateResidentHandoff(deltaTime) {
     const handoff = this.residentHandoff;
     if (!handoff || !this.actor) return;
+
+    if (handoff.phase === 'approaching' && handoff.keepVisible) {
+      const progress = this.getResidentTravelProgress(handoff.approachDistance, this.actor.targetPosition);
+      const easedProgress = progress * progress * (3 - (2 * progress));
+      const scale = 1 - ((1 - handoff.residentScale) * easedProgress);
+      handoff.scaleMultiplier = scale;
+      this.actor.container.scale.set(this.actor.container.scale.x * scale, this.actor.container.scale.y * scale);
+      if (!this.actor.isMovingToTarget) {
+        handoff.phase = 'open';
+        handoff.scaleMultiplier = handoff.residentScale;
+        this.resetResidentTravelEffects();
+        handoff.onEntering?.();
+        handoff.onEntered?.();
+      }
+      return;
+    }
 
     if (handoff.phase === 'approaching' && !this.actor.isMovingToTarget) {
       handoff.phase = 'entering';
@@ -455,7 +578,28 @@ export class PixiEngine {
       return;
     }
 
+    if (handoff.phase === 'open' && handoff.keepVisible) {
+      this.actor.container.visible = true;
+      this.actor.container.alpha = 1;
+      this.actor.container.scale.set(
+        this.actor.container.scale.x * handoff.residentScale,
+        this.actor.container.scale.y * handoff.residentScale
+      );
+      handoff.scaleMultiplier = handoff.residentScale;
+      return;
+    }
+
     if (handoff.phase === 'exiting') {
+      if (handoff.keepVisible) {
+        const progress = this.getResidentTravelProgress(handoff.exitDistance, handoff.exitPosition);
+        const easedProgress = progress * progress * (3 - (2 * progress));
+        const scale = handoff.exitStartScale + ((1 - handoff.exitStartScale) * easedProgress);
+        handoff.scaleMultiplier = scale;
+        this.actor.container.alpha = 1;
+        this.actor.container.scale.set(this.actor.container.scale.x * scale, this.actor.container.scale.y * scale);
+        if (!this.actor.isMovingToTarget) this.finishResidentExit(handoff);
+        return;
+      }
       handoff.elapsed += Math.max(0, deltaTime) / 60;
       const progress = Math.min(1, handoff.elapsed / handoff.duration);
       this.actor.container.alpha = handoff.startAlpha + (1 - handoff.startAlpha) * progress;
@@ -464,7 +608,54 @@ export class PixiEngine {
   }
 
   isResidentRepresentedByAvatar() {
-    return this.residentHandoff?.phase === 'open';
+    return this.residentHandoff?.phase === 'entering' || this.residentHandoff?.phase === 'open';
+  }
+
+  getResidentTravelProgress(totalDistance, targetPosition) {
+    if (!this.actor || !targetPosition || !Number.isFinite(totalDistance) || totalDistance <= 0.001) return 1;
+    const remainingDistance = Math.hypot(
+      targetPosition.x - this.actor.baselinePosition.x,
+      targetPosition.y - this.actor.baselinePosition.y
+    );
+    return Math.min(1, Math.max(0, 1 - (remainingDistance / totalDistance)));
+  }
+
+  getResidentHandoffDynamics() {
+    const handoff = this.residentHandoff;
+    if (!handoff?.keepVisible) {
+      return { motionScale: 1, facing: null, facingResponse: 0.2 };
+    }
+    if (handoff.phase === 'approaching') {
+      const progress = this.getResidentTravelProgress(handoff.approachDistance, this.actor?.targetPosition);
+      const easedProgress = progress * progress * (3 - (2 * progress));
+      return {
+        motionScale: 1 - (0.92 * easedProgress),
+        facing: null,
+        facingResponse: 0.2
+      };
+    }
+    if (handoff.phase === 'open') {
+      return { motionScale: 0.08, facing: handoff.residentFacing, facingResponse: 0.065 };
+    }
+    const progress = Math.min(1, Math.max(0, handoff.elapsed / Math.max(0.001, handoff.duration)));
+    const easedProgress = progress * progress * (3 - (2 * progress));
+    if (handoff.phase === 'entering') {
+      return {
+        motionScale: 1 - (0.92 * easedProgress),
+        facing: progress >= 0.42 ? handoff.residentFacing : null,
+        facingResponse: 0.05
+      };
+    }
+    if (handoff.phase === 'exiting') {
+      const travelProgress = this.getResidentTravelProgress(handoff.exitDistance, handoff.exitPosition);
+      const easedTravelProgress = travelProgress * travelProgress * (3 - (2 * travelProgress));
+      return {
+        motionScale: 0.08 + (0.92 * easedTravelProgress),
+        facing: null,
+        facingResponse: 0.12
+      };
+    }
+    return { motionScale: 1, facing: null, facingResponse: 0.2 };
   }
 
   async init() {
@@ -927,6 +1118,7 @@ export class PixiEngine {
 
     // 2. Update Actor Entity
     if (this.actor) {
+      const residentDynamics = this.getResidentHandoffDynamics();
       this.actor.update(
         deltaTime,
         actorConfig,
@@ -940,7 +1132,10 @@ export class PixiEngine {
           isGlitchActive,
           glitchShakeIntensity,
           canvasHeight: this.canvasHeight,
-          targetMovementMultiplier: this.residentHandoff?.phase === 'approaching' ? 4 : 1
+          targetMovementMultiplier: this.residentHandoff?.phase === 'approaching' ? 2.2 : 1,
+          residentMotionScale: residentDynamics.motionScale,
+          residentFacing: residentDynamics.facing,
+          facingResponse: residentDynamics.facingResponse
         }
       );
       this.updateResidentReveal(deltaTime);

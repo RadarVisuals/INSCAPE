@@ -83,8 +83,8 @@ export function setLauncherVisitorVisibility(workspace, launcherId, visitorVisib
 export function setLauncherStartOpen(workspace, launcherId, startOpen, windowGeometry = null) {
   if (typeof startOpen !== 'boolean' || !workspace.canvas.launchers.some((launcher) => launcher.id === launcherId)) return workspace;
   const valid = windowGeometry
-    && Number.isInteger(windowGeometry.column) && windowGeometry.column >= 0
-    && Number.isInteger(windowGeometry.row) && windowGeometry.row >= 0
+    && Number.isInteger(windowGeometry.column)
+    && Number.isInteger(windowGeometry.row)
     && Number.isInteger(windowGeometry.columnSpan) && windowGeometry.columnSpan >= 1
     && Number.isInteger(windowGeometry.rowSpan) && windowGeometry.rowSpan >= 1
     ? { ...windowGeometry } : null;
@@ -103,7 +103,7 @@ export function setLauncherPosition(workspace, launcherId, position) {
 
 export function setLauncherGeometry(workspace, launcherId, geometry) {
   if (!workspace.canvas.launchers.some((launcher) => launcher.id === launcherId)) return workspace;
-  if (!geometry || !['column','row','columnSpan','rowSpan'].every((key) => Number.isInteger(geometry[key])) || geometry.column < 0 || geometry.row < 0 || geometry.columnSpan < 1 || geometry.rowSpan < 1) return workspace;
+  if (!geometry || !['column','row','columnSpan','rowSpan'].every((key) => Number.isInteger(geometry[key])) || geometry.columnSpan < 1 || geometry.rowSpan < 1) return workspace;
   return { ...workspace, canvas: { ...workspace.canvas, launchers: workspace.canvas.launchers.map((launcher) => launcher.id === launcherId ? {
     ...launcher,
     position: { column: geometry.column, row: geometry.row },

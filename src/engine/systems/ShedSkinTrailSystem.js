@@ -193,6 +193,22 @@ export class ShedSkinTrailSystem {
     }
   }
 
+  reset(headState = null) {
+    this.cursor = 0;
+    this.frameAccumulator = 0;
+    this.previousPosition = headState
+      ? { x: headState.x, y: headState.y }
+      : null;
+    this.velocity.x = 0;
+    this.velocity.y = 0;
+    this.speed = 0;
+    for (const snapshot of this.snapshots) {
+      snapshot.active = false;
+      snapshot.sprite.visible = false;
+      snapshot.sprite.alpha = 0;
+    }
+  }
+
   destroy() {
     for (const snapshot of this.snapshots) {
       snapshot.sprite.filters?.forEach((filter) => filter.destroy());

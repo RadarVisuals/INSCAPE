@@ -1,15 +1,15 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 
-const profile = getIdentityProfileViewModel();
-
 function getReducedMotionPreference() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 const IdentityDossier = forwardRef(function IdentityDossier({
-  avatarSrc,
   actorId,
+  profileIdentity,
+  profileAddress,
+  walletConnected,
   residentHandoff,
   dragHandleProps,
   dragEnabled,
@@ -22,9 +22,8 @@ const IdentityDossier = forwardRef(function IdentityDossier({
   const completedRef = useRef(false);
   const [phase, setPhase] = useState('approaching');
   const [entryEdge, setEntryEdge] = useState('top');
-  const [following, setFollowing] = useState(false);
-  const [tipFeedback, setTipFeedback] = useState('');
   const [avatarLoaded, setAvatarLoaded] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   const changePhase = useCallback((nextPhase) => {
     if (!mountedRef.current) return;
@@ -93,7 +92,17 @@ const IdentityDossier = forwardRef(function IdentityDossier({
     if (bounds) residentHandoff?.updateBounds?.(bounds);
   }, [phase, residentHandoff]);
 
-  const followerCount = profile.followers + (following ? 1 : 0);
+  const profile = getIdentityProfileViewModel(profileIdentity, { walletConnected });
+  const displayName = profile.name;
+  const displayAddress = profile.displayAddress;
+  const officialProfileLink = profile.links.find((link) => link.primary);
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
   const phaseMessage = {
     approaching: 'Actor approaching Profile Card',
     entering: 'Actor entering Profile Card',
@@ -109,7 +118,7 @@ const IdentityDossier = forwardRef(function IdentityDossier({
           aria-label={dragEnabled ? 'Drag Profile Card module' : undefined}
           {...dragHandleProps}
         >
-          <p>Profile Card</p>
+          <p>Profile</p>
         </div>
         <p className="identity-dossier__transition" role="status" aria-live="polite">{phaseMessage}</p>
         <button className="identity-dossier__close" type="button" onClick={requestClose} aria-label="Close Profile Card">
@@ -117,71 +126,72 @@ const IdentityDossier = forwardRef(function IdentityDossier({
         </button>
       </header>
 
-      <figure className="identity-avatar" data-ready={avatarLoaded || undefined}>
-        <img
-          src={avatarSrc}
-          alt={`Avatar for ${profile.artistName}`}
-          draggable="false"
-          onLoad={() => setAvatarLoaded(true)}
-        />
-        <figcaption>{actorId?.replaceAll('_', ' ')}</figcaption>
-      </figure>
+      <section className="identity-dossier__identity" aria-labelledby="identity-title">
+        <figure className="identity-avatar" data-ready={avatarLoaded || undefined} data-failed={avatarFailed || undefined}>
+          {profile.avatarUrl && !avatarFailed && (
+            <img
+              src={profile.avatarUrl}
+              alt={`Avatar for ${displayName}`}
+              draggable="false"
+              onLoad={() => setAvatarLoaded(true)}
+              onError={() => setAvatarFailed(true)}
+            />
+          )}
+          {(!profile.avatarUrl || avatarFailed) && <span className="identity-avatar__fallback" aria-hidden="true">{initials}</span>}
+        </figure>
 
-      <section className="identity-dossier__profile" aria-labelledby="identity-title">
-        <div className="identity-dossier__profile-heading">
-          <h2 id="identity-title">{profile.artistName}</h2>
-          <ul className="identity-dossier__badges" aria-label="Earned badges">
-            {profile.badges.map((badge) => (
-              <li key={badge.id} title={badge.label} aria-label={badge.label}>
-                <span aria-hidden="true">{badge.mark}</span>
-              </li>
-            ))}
-          </ul>
+        <div className="identity-dossier__profile">
+          <p className="identity-dossier__eyebrow">Profile being visited</p>
+          <h2 id="identity-title">{displayName}</h2>
+          <p className="identity-dossier__address" title={profileAddress}>{displayAddress}</p>
         </div>
-        <ul className="identity-dossier__tags" aria-label="Profile tags">
-          {profile.tags.map((tag) => <li key={tag}>{tag}</li>)}
-        </ul>
-        <nav className="identity-dossier__links" aria-label="External profile links">
-          <span className="identity-dossier__links-label" aria-hidden="true">Linked</span>
-          {profile.links.map((link) => (
-            <a
-              href={`#identity-${link.id}`}
-              key={link.id}
-              data-primary={link.primary || undefined}
-              aria-label={`${link.label} (prototype link)`}
-              title={`${link.label} - prototype link`}
-              onClick={(event) => event.preventDefault()}
-            >
-              <span aria-hidden="true">{link.mark}</span>
-              {link.primary && <strong>{link.label}</strong>}
-            </a>
-          ))}
-        </nav>
+
+        <div className="identity-dossier__states" aria-label="Profile and wallet status">
+          <p className="identity-dossier__connection" data-connected={profile.metadataResolved || undefined}>
+            <span aria-hidden="true" />{profile.metadataStatusLabel}
+          </p>
+          <p className="identity-dossier__connection" data-connected={profile.walletConnected || undefined}>
+            <span aria-hidden="true" />{profile.walletConnected ? 'Wallet connected' : 'Wallet not connected'}
+          </p>
+        </div>
       </section>
 
-      <section className="identity-dossier__relationship" aria-label="Profile relationship">
-        <div>
-          <strong>{followerCount.toLocaleString('en-US')}</strong>
-          <span>Followers</span>
-        </div>
-        <p className="identity-dossier__connection" data-connected={profile.connected || undefined}>
-          <span aria-hidden="true" />
-          {profile.connected ? 'Connected' : 'Not connected'}
-        </p>
+      <section className="identity-dossier__metadata">
+        {profile.bio && <p className="identity-dossier__bio">{profile.bio}</p>}
+        <dl className="identity-dossier__stats">
+          <div><dt>Metadata</dt><dd>{profile.metadataResolved ? 'Available' : 'Unavailable'}</dd></div>
+          <div><dt>Wallet</dt><dd>{profile.walletConnected ? 'Connected' : 'Not connected'}</dd></div>
+          <div><dt>Resident</dt><dd>{actorId?.replaceAll('_', ' ') || 'None'}</dd></div>
+        </dl>
+        {profile.tags.length > 0 && (
+          <ul className="identity-dossier__tags" aria-label="Profile tags">
+            {profile.tags.map((tag, index) => <li key={`${tag}-${index}`}>{tag}</li>)}
+          </ul>
+        )}
+        {profile.links.length > 0 && (
+          <nav className="identity-dossier__links" aria-label="External profile links">
+            <span className="identity-dossier__links-label">Linked</span>
+            {profile.links.map((link) => (
+            <a
+              href={link.url}
+              key={link.id}
+              data-primary={link.primary || undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={link.label}
+            >
+              <span aria-hidden="true">↗</span>
+              <strong>{link.label}</strong>
+            </a>
+            ))}
+          </nav>
+        )}
       </section>
 
       <section className="identity-dossier__actions" aria-label="Profile actions">
-        <button
-          type="button"
-          onClick={() => setTipFeedback('Tip is unavailable in this visual prototype.')}
-          aria-describedby={tipFeedback ? 'tip-feedback' : undefined}
-        >
-          Tip
-        </button>
-        <button type="button" aria-pressed={following} onClick={() => setFollowing((current) => !current)}>
-          {following ? 'Following' : 'Follow'}
-        </button>
-        <p id="tip-feedback" role="status">{tipFeedback}</p>
+        {officialProfileLink && (
+          <a href={officialProfileLink.url} target="_blank" rel="noopener noreferrer">View Universal Profile</a>
+        )}
       </section>
     </article>
   );

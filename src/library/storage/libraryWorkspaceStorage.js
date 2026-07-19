@@ -18,7 +18,7 @@ export function libraryWorkspaceKey(profileAddress, version = LIBRARY_WORKSPACE_
 }
 
 function normalizePosition(position) {
-  return position && Number.isInteger(position.column) && Number.isInteger(position.row) && position.column >= 0 && position.row >= 0
+  return position && Number.isInteger(position.column) && Number.isInteger(position.row) && position.column >= -255 && position.column <= 255 && position.row >= -255 && position.row <= 255
     ? { column: position.column, row: position.row }
     : null;
 }
@@ -51,8 +51,8 @@ export function normalizeWorkspace(candidate, profileAddress) {
       label: candidate.version >= 5 && typeof launcher.label === 'string' && launcher.label.trim() ? launcher.label.trim().slice(0, 80) : null,
       position: normalizePosition(launcher.position), windowPosition: normalizePosition(launcher.windowPosition),
       windowGeometry: candidate.version >= 5 && launcher.windowGeometry
-        && Number.isInteger(launcher.windowGeometry.column) && launcher.windowGeometry.column >= 0
-        && Number.isInteger(launcher.windowGeometry.row) && launcher.windowGeometry.row >= 0
+        && Number.isInteger(launcher.windowGeometry.column) && launcher.windowGeometry.column >= -255 && launcher.windowGeometry.column <= 255
+        && Number.isInteger(launcher.windowGeometry.row) && launcher.windowGeometry.row >= -255 && launcher.windowGeometry.row <= 255
         && Number.isInteger(launcher.windowGeometry.columnSpan) && launcher.windowGeometry.columnSpan >= 1
         && Number.isInteger(launcher.windowGeometry.rowSpan) && launcher.windowGeometry.rowSpan >= 1
         ? { ...launcher.windowGeometry } : null,

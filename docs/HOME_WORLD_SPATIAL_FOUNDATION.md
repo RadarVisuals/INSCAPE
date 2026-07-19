@@ -2,13 +2,17 @@
 
 ## Status
 
-The gallery stabilization introduced the first reusable pieces for a two-dimensional home world. The existing home desktop has not yet been migrated to an unbounded coordinate plane. Its authored launcher, artwork, and runtime-window persistence remain unchanged.
+The public home now runs as a stage-free two-dimensional spatial world. The illustrated/shader stage, foreground layers, and screen treatment remain implemented and editable in Atelier, but public home and gallery presentation deliberately omit them. They are reserved for a future dedicated free-roam mode.
+
+Authored launcher, artwork, and runtime-window persistence remain compatible with the bounded grid schema while the camera itself is unbounded runtime navigation state.
 
 Implemented foundations:
 
 - `spatialWorldCamera.js` owns framework-neutral two-axis camera clamping, pointer panning, screen/world conversion, and repeating-grid offsets.
 - `SpatialWireframeGrid.jsx` renders a camera-aware full-area orthogonal grid.
-- The existing desktop grid now uses `SpatialWireframeGrid` at camera `{ x: 0, y: 0 }`, proving that the reusable renderer preserves the current bounded desktop before camera movement is enabled.
+- `HomeWorldSurface.jsx` portals a near-black full-viewport grid below the transparent Keeper canvas and owns click-versus-pan routing.
+- The home camera pans launchers and canvas artwork through one accelerated spatial layer while runtime windows remain viewport-fixed.
+- Home camera state is versioned, bounded for corrupt-state safety, and persisted per profile.
 - The gallery uses the shared camera clamp, pointer-pan, and grid-offset math while constraining its Y axis to zero.
 
 ## Intended compositor
@@ -20,7 +24,7 @@ world architecture / spatial grid
         -> fixed system bar, menus, inspectors, previews
 ```
 
-The gallery now follows this order. The home migration should use the same explicit layer boundary rather than relying on child `z-index` values inside one interface stacking context.
+The home and gallery follow the same root compositor boundary. The public stage is not part of this stack. Atelier retains the stage system for authoring and future free-roam work.
 
 ## Home interaction contract
 
@@ -54,13 +58,11 @@ The current runtime-window model remains untouched until that choice is reviewed
 
 ## Next integration slice
 
-1. Add profile-scoped runtime camera state with a reset-to-origin command.
-2. Expand the desktop world layer to the viewport and render the wireframe grid continuously, not only in Arrange mode.
-3. Route empty-canvas pointer gestures through the shared pan threshold while preserving the existing context-menu and Keeper click routes.
-4. Apply camera transforms to launchers and canvas objects through one world container.
-5. Convert pointer coordinates to world coordinates before placement, drag, resize, and context-menu creation.
-6. Add deterministic migration and portable-document coverage before allowing authored positions outside the old bounded grid.
-7. Decide window anchoring, then migrate runtime geometry separately from authored presentation.
+1. Visually tune grid scale, contrast, initial object composition, and Keeper depth against representative profiles.
+2. Add deterministic migration and portable-document coverage before allowing authored positions outside the old bounded grid.
+3. Add accessible keyboard camera navigation without taking arrow keys from open applications.
+4. Decide whether any window type should optionally become world-anchored; runtime windows are viewport-fixed today.
+5. Define a dedicated free-roam mode before reconnecting the preserved stage renderer to public navigation.
 
 ## Gallery stabilization captured by this foundation
 

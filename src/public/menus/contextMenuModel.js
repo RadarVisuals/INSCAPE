@@ -20,15 +20,16 @@ export function resolveContextTarget(target, desktop) {
   return null;
 }
 
-export function contextMenuCommands({ target, editMode, launcher, canvasObject, startOpen = false, menu = 'root', keeperVisible = true, stageVisible = true }) {
+export function contextMenuCommands({ target, editMode, launcher, canvasObject, startOpen = false, menu = 'root', keeperVisible = true, stageVisible = true, stageAvailable = true }) {
   if (target?.type === 'canvas' && menu === 'create') return [
     { id: 'menu-root', label: '< Back' }, { id: 'create-folder', label: 'Folder' }, { id: 'create-framed-artwork', label: 'Framed Artwork' }
   ];
   if (target?.type === 'canvas' && menu === 'view') return [
     { id: 'menu-root', label: '< Back' },
     { id: 'toggle-keeper', label: keeperVisible ? 'Hide Keeper' : 'Show Keeper' },
-    { id: 'toggle-stage', label: stageVisible ? 'Hide Stage' : 'Show Stage' },
-    { id: 'toggle-grid', label: 'Toggle Grid' }
+    ...(stageAvailable ? [{ id: 'toggle-stage', label: stageVisible ? 'Hide Stage' : 'Show Stage' }] : []),
+    { id: 'toggle-grid', label: 'Toggle Grid' },
+    { id: 'reset-home-camera', label: 'Return to Origin' }
   ];
   if (target?.type === 'canvas') return [
     { id: 'toggle-edit', label: editMode ? 'Finish Arranging' : 'Arrange Desktop' },
@@ -39,7 +40,7 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
   if (target?.type === 'launcher') return [
     { id: 'open', label: 'Open' },
     { id: 'edit-launcher', label: 'Edit Launcher' },
-    ...(launcher ? [
+    ...(launcher && launcher.viewType !== 'folder' ? [
       { id: 'toggle-visibility', label: launcher.visitorVisible ? 'Make Private' : 'Show to Visitors' },
       { id: 'unpin', label: 'Unpin from Canvas' }
     ] : [])
@@ -54,8 +55,8 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
     { id: 'menu-layer', label: 'Layer >' }, { id: 'remove-artwork', label: 'Remove from Canvas' }
   ];
   if (target?.type === 'window') return [
-    { id: 'close', label: 'Close' }, { id: 'reset-window', label: 'Reset Position and Size' },
-    { id: 'toggle-start-open', label: startOpen ? 'Remove from Visitor Start Layout' : 'Set as Visitor Start Window' }
+    { id: 'close', label: 'Close' }, { id: 'reset-window', label: launcher ? 'Reset Near Folder' : 'Reset Position and Size' },
+    ...(launcher?.viewType === 'folder' ? [] : [{ id: 'toggle-start-open', label: startOpen ? 'Remove from Visitor Start Layout' : 'Set as Visitor Start Window' }])
   ];
   return [];
 }

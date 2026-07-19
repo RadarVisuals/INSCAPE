@@ -323,3 +323,63 @@
   .startveil[data-state='booting'] .startveil__mark { filter: brightness(1.35); transition: filter 0.15s ease; }
   .startveil[data-state='revealing-world'] { animation: startveil-world-out 140ms ease-out both; }
 }
+
+/* The veil is now the first system surface: atmospheric, but built from the
+   same grid, hairlines and orange access edge as the world behind it. */
+.startveil {
+  --veil-white:#eeebdf;
+  --veil-phosphor:#e87945;
+  background-color:#030405;
+  background-image:
+    linear-gradient(to right,rgba(224,226,218,.05) 1px,transparent 1px),
+    linear-gradient(to bottom,rgba(224,226,218,.05) 1px,transparent 1px),
+    linear-gradient(to right,rgba(224,226,218,.11) 1px,transparent 1px),
+    linear-gradient(to bottom,rgba(224,226,218,.11) 1px,transparent 1px);
+  background-size:40px 40px,40px 40px,80px 80px,80px 80px;
+  animation:none;
+}
+.startveil::before { opacity:.13; mix-blend-mode:normal; }
+.startveil::after { border:0; background:radial-gradient(ellipse at center,transparent 35%,rgba(0,0,0,.3) 72%,rgba(0,0,0,.8) 115%); box-shadow:none; }
+.startveil__texture { opacity:.035; mix-blend-mode:screen; animation-duration:900ms; }
+.startveil__mark { position:absolute; top:clamp(70px,16vh,145px); width:clamp(92px,9vw,132px); filter:none; }
+.startveil__logo,.startveil__ghost img { filter:grayscale(1) brightness(1.65); }
+.startveil__ghost { display:none; }
+.startveil__scan { opacity:.07; }
+.startveil__sync { opacity:0; }
+.startveil__terminal {
+  left:50%;
+  bottom:clamp(32px,11vh,100px);
+  width:min(430px,calc(100vw - 32px));
+  padding:17px 18px 16px;
+  border:1px solid rgba(238,235,223,.24);
+  border-left:2px solid var(--veil-phosphor);
+  background:rgba(8,10,10,.94);
+  box-shadow:10px 12px 0 rgba(0,0,0,.22);
+  font-family:'Oxanium',var(--font-interface);
+  font-size:.55rem;
+  letter-spacing:.08em;
+  text-shadow:none;
+  transform:translateX(-50%);
+}
+.startveil__terminal header { margin-bottom:14px; padding:0 0 10px; border-left:0; border-bottom:1px solid rgba(238,235,223,.1); }
+.startveil__terminal header p { margin:0 0 5px; color:var(--veil-white); font-size:.66rem; letter-spacing:.1em; text-shadow:none; }
+.startveil__terminal header span { color:rgba(238,235,223,.4); font-size:.46rem; }
+.startveil__terminal dl { gap:5px; margin-bottom:14px; }
+.startveil__terminal dt { color:rgba(238,235,223,.42); }
+.startveil__terminal dt::after { color:rgba(238,235,223,.12); }
+.startveil__terminal dd { color:rgba(238,235,223,.72); }
+.startveil__entry { min-width:0; min-height:34px; width:100%; display:flex; align-items:center; justify-content:space-between; padding:0 10px; border-color:rgba(238,235,223,.16); background:transparent; box-shadow:none; }
+.startveil__entry::after { right:10px; top:50%; color:var(--veil-phosphor); transform:translateY(-50%); }
+.startveil__entry:hover:not(:disabled) { color:var(--veil-phosphor); border-color:var(--veil-phosphor); background:rgba(232,121,69,.05); box-shadow:none; }
+.startveil__entry strong { margin:0 20px 0 0; color:var(--veil-phosphor); font-size:.43rem; }
+.startveil__boot { top:auto; right:18px; bottom:18px; gap:4px; color:rgba(238,235,223,.25); font-size:.43rem; }
+.startveil[data-state='loading'] .startveil__mark,.startveil[data-state='dormant'] .startveil__mark { animation:none; }
+.startveil[data-state='loading'] .startveil__logo,.startveil[data-state='dormant'] .startveil__logo { animation:startveil-clean-signal 2.8s ease-in-out infinite; }
+@keyframes startveil-clean-signal { 0%,88%,100%{opacity:.76;filter:grayscale(1) brightness(1.65)} 92%{opacity:1;filter:grayscale(1) brightness(2.1)} 95%{opacity:.58;filter:grayscale(1) brightness(1.25)} }
+.startveil__terminal header span,.startveil__entry strong,.startveil__boot { font-size:.54rem; }
+
+@media(max-width:700px){
+  .startveil__mark{top:11vh;width:92px;margin:0}
+  .startveil__terminal{left:16px;right:16px;bottom:max(24px,env(safe-area-inset-bottom));width:auto;transform:none}
+  .startveil__boot{display:none}
+}

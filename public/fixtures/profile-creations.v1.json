@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "42:0x1111111111111111111111111111111111111111:0x01", "chainId": 42,
+      "contractAddress": "0x1111111111111111111111111111111111111111", "tokenId": "0x01", "standard": "LSP8",
+      "name": "Keeper at Dusk", "description": "Created and currently held by the viewed profile.", "collectionName": "HUMAN UNDERNEATH",
+      "imageUrl": "/fixtures/library-keeper.svg", "thumbnailUrl": "/fixtures/library-keeper.svg", "originalImageUrl": "/fixtures/library-keeper.svg",
+      "creators": [{ "name": "Hidden Swarm", "address": "0xf3c189819fd5b042f692983bfbfd57ab607ee709" }],
+      "viewedProfileIsCreator": true, "creatorAttributionLevel": "token", "currentOwnerAddress": "0xf3c189819fd5b042f692983bfbfd57ab607ee709",
+      "isOwnedByViewedProfile": true, "ownershipKnown": true, "attributes": [], "metadataStatus": "ready", "rawMetadata": { "fixture": true }
+    },
+    {
+      "id": "42:0x5555555555555555555555555555555555555555:0x02", "chainId": 42,
+      "contractAddress": "0x5555555555555555555555555555555555555555", "tokenId": "0x02", "standard": "LSP8",
+      "name": "Released Signal", "description": "Creator-attributed work no longer held by the viewed profile.", "collectionName": "Signals From Below",
+      "imageUrl": "/fixtures/library-signal.svg", "thumbnailUrl": "/fixtures/library-signal.svg", "originalImageUrl": "/fixtures/library-signal.svg",
+      "creators": [{ "name": "Hidden Swarm", "address": "0xf3c189819fd5b042f692983bfbfd57ab607ee709" }, { "name": "Collaborator", "address": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }],
+      "viewedProfileIsCreator": true, "creatorAttributionLevel": "token", "currentOwnerAddress": null,
+      "isOwnedByViewedProfile": false, "ownershipKnown": true, "attributes": [], "metadataStatus": "ready", "rawMetadata": { "fixture": true }
+    },
+    {
+      "id": "42:0x6666666666666666666666666666666666666666:contract", "chainId": 42,
+      "contractAddress": "0x6666666666666666666666666666666666666666", "tokenId": null, "standard": "LSP7",
+      "name": "Contract Study", "description": "Contract-level LSP4 attribution.", "collectionName": null,
+      "imageUrl": "/fixtures/library-study.svg", "thumbnailUrl": "/fixtures/library-study.svg", "originalImageUrl": "/fixtures/library-study.svg",
+      "creators": [{ "name": "Hidden Swarm", "address": "0xf3c189819fd5b042f692983bfbfd57ab607ee709" }],
+      "viewedProfileIsCreator": true, "creatorAttributionLevel": "contract", "currentOwnerAddress": null,
+      "isOwnedByViewedProfile": false, "ownershipKnown": true, "attributes": [], "metadataStatus": "ready", "rawMetadata": { "fixture": true }
+    },
+    {
+      "id": "42:0x7777777777777777777777777777777777777777:0x03", "chainId": 42,
+      "contractAddress": "0x7777777777777777777777777777777777777777", "tokenId": "0x03", "standard": "LSP8",
+      "name": "Partial Specimen", "description": "", "collectionName": null,
+      "imageUrl": null, "thumbnailUrl": null, "originalImageUrl": null,
+      "creators": [{ "name": "Hidden Swarm", "address": "0xf3c189819fd5b042f692983bfbfd57ab607ee709" }],
+      "viewedProfileIsCreator": true, "creatorAttributionLevel": "token", "currentOwnerAddress": null,
+      "isOwnedByViewedProfile": false, "ownershipKnown": true, "attributes": [], "metadataStatus": "partial", "rawMetadata": { "fixture": true }
+    },
+    {
+      "id": "42:0x7777777777777777777777777777777777777777:0x03", "chainId": 42,
+      "contractAddress": "0x7777777777777777777777777777777777777777", "tokenId": "0x03", "standard": "LSP8",
+      "name": "Partial Specimen", "description": "", "collectionName": null,
+      "imageUrl": null, "thumbnailUrl": null, "originalImageUrl": null,
+      "creators": [{ "name": "Hidden Swarm", "address": "0xf3c189819fd5b042f692983bfbfd57ab607ee709" }],
+      "viewedProfileIsCreator": true, "creatorAttributionLevel": "contract", "currentOwnerAddress": null,
+      "isOwnedByViewedProfile": false, "ownershipKnown": true, "attributes": [], "metadataStatus": "partial", "rawMetadata": { "fixture": true, "duplicatePath": true }
+    },
+    {
+      "id": "42:0x8888888888888888888888888888888888888888:0x04", "chainId": 42,
+      "contractAddress": "0x8888888888888888888888888888888888888888", "tokenId": "0x04", "standard": "LSP8",
+      "name": "Owned Outsider", "description": "Held by the profile but created by another profile.", "collectionName": "Not Creations",
+      "imageUrl": "/fixtures/library-signal.svg", "thumbnailUrl": "/fixtures/library-signal.svg", "originalImageUrl": "/fixtures/library-signal.svg",
+      "creators": [{ "name": "Someone Else", "address": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }],
+      "viewedProfileIsCreator": false, "creatorAttributionLevel": "token", "currentOwnerAddress": "0xf3c189819fd5b042f692983bfbfd57ab607ee709",
+      "isOwnedByViewedProfile": true, "ownershipKnown": true, "attributes": [], "metadataStatus": "ready", "rawMetadata": { "fixture": true }
+    }
+  ]
+}

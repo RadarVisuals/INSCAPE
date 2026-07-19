@@ -7,9 +7,9 @@ import './publicShell.css';
 
 const APPLICATIONS = Object.freeze([
   { id: 'identity', label: 'Identity', code: 'Resident', Icon: Fingerprint },
-  { id: 'collection', label: 'Collection', code: 'AR.02', Icon: Archive },
+  { id: 'collection', label: 'Library', code: null, Icon: Archive },
   { id: 'creations', label: 'Creations', code: 'MK.03', Icon: Sparkles },
-  { id: 'signals', label: 'Signals', code: 'RX.04', Icon: Radio }
+  { id: 'signals', label: 'Activity', code: null, Icon: Radio }
 ]);
 
 function PlaceholderWindow({ name }) {
@@ -93,7 +93,7 @@ export default function PublicShell({ onRequestAtelier, onResidentHabitatChange 
               }}
               onClick={() => dispatch({ type: 'open', id })}
             >
-              <span className="application-launcher__code">{code}</span>
+              {code && <span className="application-launcher__code">{code}</span>}
               <span className="application-launcher__artifact" aria-hidden="true">
                 <Icon strokeWidth={1.25} />
               </span>
@@ -133,7 +133,7 @@ export default function PublicShell({ onRequestAtelier, onResidentHabitatChange 
               {id !== 'identity' && (
                 <header className="public-window__titlebar">
                   <div>
-                    <span>{application.code}</span>
+                    {application.code && <span>{application.code}</span>}
                     <h2 id={`public-window-title-${id}`}>{application.label}</h2>
                   </div>
                   <p>{isActive ? 'Receiving focus' : 'Inactive layer'}</p>

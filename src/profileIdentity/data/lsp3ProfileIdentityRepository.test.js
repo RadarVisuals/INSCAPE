@@ -6,10 +6,16 @@ const ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
 const makeRepository = (erc725, codeReader = async () => '0x6000') => createLsp3ProfileIdentityRepository({ erc725Factory: () => erc725, codeReader, ipfsGateway: 'https://gw.test/ipfs/' });
 
 test('resolves and normalizes verified LSP3 profile metadata', async () => {
-  const repository = makeRepository({ supportsInterface: async () => true, fetchData: async () => ({ value: { LSP3Profile: { name: 'RADAR', profileImage: [{ url: 'ipfs://avatar', width: 96 }] } } }) });
+  const repository = makeRepository({ supportsInterface: async () => true, fetchData: async () => ({ value: { LSP3Profile: {
+    name: 'RADAR', description: 'Live bio', profileImage: [{ url: 'ipfs://avatar', width: 96 }],
+    tags: ['art'], links: [{ title: 'Home', url: 'ipfs://home' }]
+  } } }) });
   const identity = await repository.resolve(ADDRESS);
   assert.equal(identity.name, 'RADAR');
+  assert.equal(identity.description, 'Live bio');
   assert.equal(identity.avatarUrl, 'https://gw.test/ipfs/avatar');
+  assert.deepEqual(identity.tags, ['art']);
+  assert.equal(identity.links[0].url, 'https://gw.test/ipfs/home');
   assert.equal(identity.isUniversalProfile, true);
 });
 

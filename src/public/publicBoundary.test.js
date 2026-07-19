@@ -42,6 +42,18 @@ test('the shared canvas remains outside the public/private mode branch', () => {
   assert.equal(appSource.match(/<ArtCanvas\b/g)?.length, 1);
 });
 
+test('public home is resident-only while Atelier retains stage authoring', () => {
+  const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
+  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
+  const homeSource = readFileSync(new URL('./HomeWorldSurface.jsx', import.meta.url), 'utf8');
+
+  assert.match(appSource, /stageVisible={applicationMode === 'atelier' && stageUserVisible}/);
+  assert.match(appSource, /foregroundOnly={applicationMode === 'public'}/);
+  assert.match(shellSource, /<HomeWorldSurface/);
+  assert.match(homeSource, /onCameraChange\(clampCamera/);
+  assert.match(homeSource, /createPortal\(surface, root\)/);
+});
+
 test('window state stays a UI-only document with no RenderConfig fields', () => {
   const stateSource = readFileSync(new URL('./windows/windowState.js', import.meta.url), 'utf8');
 
@@ -66,16 +78,29 @@ test('framed artwork keeps form controls interactive and presentation layers ind
   assert.match(documentPreviewSource, /<FramedArtwork/);
 });
 
-test('Creations enters a world gallery that reuses the canonical framed artwork renderer', () => {
+test('Gallery remains spatial while Creations is an independent system window', () => {
   const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
   const gallerySource = readFileSync(new URL('./GalleryWorld.jsx', import.meta.url), 'utf8');
 
-  assert.match(shellSource, /id === 'creations'\) enterGallery\(\)/);
+  assert.match(shellSource, /moduleRefs\.current\.set\('gallery'/);
+  assert.match(shellSource, /moduleRefs\.current\.set\('creations'/);
+  assert.match(shellSource, /<CreationsWindow/);
   assert.match(shellSource, /<GalleryWorld/);
+  assert.doesNotMatch(shellSource, /id === 'creations'\) enterGallery\(\)/);
+  assert.doesNotMatch(shellSource, /setActiveModuleId\('creations'\);\s*\n\s*}, \[closeAllWindows\]\)/);
   assert.match(gallerySource, /import FramedArtwork/);
   assert.match(gallerySource, /<FramedArtwork/);
   assert.match(gallerySource, /GalleryFloorGrid/);
   assert.match(gallerySource, /createPortal\(<>{backdrop}{gallery}<\/>/);
   assert.match(gallerySource, /onMoveKeeperHorizontally/);
   assert.doesNotMatch(gallerySource, /if \(direction\) onMoveKeeper\?\./);
+});
+
+test('system destination order is Activity, Gallery, Creations, Library', () => {
+  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
+  const activity = shellSource.indexOf('>[ Activity ]</button>');
+  const gallery = shellSource.indexOf('>[ Gallery ]</button>');
+  const creations = shellSource.indexOf('>[ Creations ]</button>');
+  const library = shellSource.indexOf('>[ Library ]</button>');
+  assert.ok(activity >= 0 && activity < gallery && gallery < creations && creations < library);
 });

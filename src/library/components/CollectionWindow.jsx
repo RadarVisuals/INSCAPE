@@ -8,7 +8,7 @@ import AssetPreview from './AssetPreview.jsx';
 import CollectionSidebar from './CollectionSidebar.jsx';
 import CollectionToolbar from './CollectionToolbar.jsx';
 
-export default function CollectionWindow({ onClose, dragHandleProps, dragEnabled, focusSearchRequest = 0, escapeEnabled = true, editMode = false }) {
+export default function CollectionWindow({ onClose, dragHandleProps, dragEnabled, focusSearchRequest = 0, escapeEnabled = true, canAuthorLibrary = false }) {
   const searchRef = useRef(null);
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [folderDialogMode, setFolderDialogMode] = useState('create');
@@ -68,27 +68,27 @@ export default function CollectionWindow({ onClose, dragHandleProps, dragEnabled
   return (
     <article className="collection-window">
       <header className="collection-window__header" data-window-titlebar="collection-panel" {...dragHandleProps} data-enabled={dragEnabled || undefined}>
-        <div><span>02 / Library</span><h2 id="collection-title">Collection</h2></div>
+        <div><h2 id="collection-title">Library</h2></div>
         <p>{dragEnabled ? 'Drag to place' : 'Image library'}</p>
-        <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={onClose} aria-label="Close Collection"><X aria-hidden="true" /></button>
+        <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={onClose} aria-label="Close Library"><X aria-hidden="true" /></button>
       </header>
       <CollectionToolbar inputRef={searchRef} query={state.searchQuery} onQueryChange={state.setSearchQuery}
         sourceMode={state.sourceMode} status={state.status} progress={state.progress} liveError={state.liveError}
         onRetry={() => state.load({ forceLive: true })} />
       <div className="collection-window__body">
         <CollectionSidebar workspace={state.workspace} activeView={state.activeView} onOpenView={state.setActiveView}
-          onCreate={requestCreateFolder} onRename={requestRenameFolder} onDelete={state.deleteFolder} editMode={editMode} />
+          onCreate={requestCreateFolder} onRename={requestRenameFolder} onDelete={state.deleteFolder} canAuthorLibrary={canAuthorLibrary} />
         <main className="collection-content">
-          <div className="collection-content__heading"><h3>{activeFolder?.name || (state.activeView.type === 'favorites' ? 'Favorites' : 'All images')}</h3><div><span>{viewAssets.length} visible</span>{editMode && pinnableView && <button type="button" onClick={() => pinned ? state.unpinView(pinnableView) : state.pinView(pinnableView)}>{pinned ? 'Unpin from canvas' : 'Pin to canvas'}</button>}{editMode && pinnedLauncher && <button className="collection-content__visibility" type="button" aria-pressed={pinnedLauncher.visitorVisible} aria-label={`Show ${activeFolder?.name || 'Favorites'} to visitors`} onClick={() => state.setLauncherVisitorVisibility(pinnedLauncher.id, !pinnedLauncher.visitorVisible)}>Show to visitors <b>{pinnedLauncher.visitorVisible ? 'ON' : 'OFF'}</b></button>}</div></div>
+          <div className="collection-content__heading"><h3>{activeFolder?.name || (state.activeView.type === 'favorites' ? 'Favorites' : 'All images')}</h3><div><span>{viewAssets.length} visible</span>{canAuthorLibrary && pinnableView && <button type="button" onClick={() => pinned ? state.unpinView(pinnableView) : state.pinView(pinnableView)}>{pinned ? 'Unpin from canvas' : 'Pin to canvas'}</button>}{canAuthorLibrary && pinnedLauncher && <button className="collection-content__visibility" type="button" aria-pressed={pinnedLauncher.visitorVisible} aria-label={`Show ${activeFolder?.name || 'Favorites'} to visitors`} onClick={() => state.setLauncherVisitorVisibility(pinnedLauncher.id, !pinnedLauncher.visitorVisible)}>Show to visitors <b>{pinnedLauncher.visitorVisible ? 'ON' : 'OFF'}</b></button>}</div></div>
           <AssetGrid assets={viewAssets} workspace={state.workspace} onSelect={state.selectAsset}
-            onFavorite={state.toggleFavorite} onFolder={state.setFolderAsset} onCreateFolder={requestCreateFolder} emptyMessage={emptyMessage} authoringEnabled={editMode} />
+            onFavorite={state.toggleFavorite} onFolder={state.setFolderAsset} onCreateFolder={requestCreateFolder} emptyMessage={emptyMessage} authoringEnabled={canAuthorLibrary} />
         </main>
         <AssetPreview asset={selectedAsset} workspace={state.workspace} onClose={() => state.selectAsset(null)}
-          onFavorite={state.toggleFavorite} onFolder={state.setFolderAsset} onCreateFolder={requestCreateFolder} authoringEnabled={editMode} />
+          onFavorite={state.toggleFavorite} onFolder={state.setFolderAsset} onCreateFolder={requestCreateFolder} authoringEnabled={canAuthorLibrary} />
       </div>
-      {folderDialogOpen && <div className="collection-folder-dialog" role="dialog" aria-modal="true" aria-labelledby="folder-dialog-title">
+      {canAuthorLibrary && folderDialogOpen && <div className="collection-folder-dialog" role="dialog" aria-modal="true" aria-labelledby="folder-dialog-title">
         <form onSubmit={submitFolderName}>
-          <span>Collection / {folderDialogMode === 'rename' ? 'Edit directory' : 'New directory'}</span>
+          <span>Library / {folderDialogMode === 'rename' ? 'Edit directory' : 'New directory'}</span>
           <h3 id="folder-dialog-title">{folderDialogMode === 'rename' ? 'Rename folder' : 'Create folder'}</h3>
           <label htmlFor="folder-name">Folder name</label>
           <input id="folder-name" autoFocus value={folderName} maxLength={80} onChange={(event) => setFolderName(event.target.value)} placeholder="1/1 Art" />

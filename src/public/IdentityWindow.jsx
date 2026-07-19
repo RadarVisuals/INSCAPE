@@ -3,10 +3,9 @@ import { X } from 'lucide-react';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { habitatBoundsEqual, measureRoundedHabitatBounds } from './identity/habitatBounds.js';
 
-const profile = getIdentityProfileViewModel();
-
-export default function IdentityWindow({ titleId, onClose, onHabitatChange }) {
+export default function IdentityWindow({ titleId, onClose, onHabitatChange, profileIdentity, walletConnected = false }) {
   const habitatRef = useRef(null);
+  const profile = getIdentityProfileViewModel(profileIdentity, { walletConnected });
 
   useEffect(() => {
     const habitat = habitatRef.current;
@@ -60,7 +59,7 @@ export default function IdentityWindow({ titleId, onClose, onHabitatChange }) {
         <p className="identity-profile__eyebrow">Known as</p>
         <h2 id={titleId}>{profile.name}</h2>
         <p className="identity-profile__address">{profile.address}</p>
-        <p className="identity-profile__description">{profile.description}</p>
+        {profile.bio && <p className="identity-profile__description">{profile.bio}</p>}
 
         <ul className="identity-profile__tags" aria-label="Profile tags">
           {profile.tags.map((tag) => <li key={tag}>{tag}</li>)}
@@ -70,33 +69,15 @@ export default function IdentityWindow({ titleId, onClose, onHabitatChange }) {
       <section className="identity-profile__social" aria-label="Social information">
         <p className="identity-profile__section-label">Connections</p>
         <dl className="identity-profile__stats">
-          {profile.stats.map((stat) => (
-            <div key={stat.label}>
-              <dd>{stat.value}</dd>
-              <dt>{stat.label}</dt>
-            </div>
-          ))}
+          <div><dd>{profile.metadataStatusLabel}</dd><dt>Profile metadata</dt></div>
+          <div><dd>{profile.walletConnected ? 'Connected' : 'Not connected'}</dd><dt>Visitor wallet</dt></div>
         </dl>
       </section>
 
       <section className="identity-profile__actions" aria-label="Profile actions">
-        <div className="identity-profile__wallet">
-          <span className="status-mark" aria-hidden="true" />
-          <span>
-            <small>Wallet</small>
-            {profile.wallet.label}
-          </span>
-        </div>
-        <button
-          type="button"
-          disabled={profile.followAction.disabled}
-          aria-describedby="follow-explanation"
-        >
-          {profile.followAction.label}
-        </button>
-        <p id="follow-explanation" className="identity-profile__disclaimer">
-          {profile.followAction.explanation}
-        </p>
+        {profile.links.map((link) => (
+          <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a>
+        ))}
       </section>
     </article>
   );

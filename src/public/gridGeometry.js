@@ -3,7 +3,7 @@ const integer = (value, fallback = 0) => Number.isFinite(Number(value)) ? Math.r
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 
 export function isGridRect(value) {
-  return Boolean(value && GRID_RECT_KEYS.every((key) => Number.isInteger(value[key])) && value.column >= 0 && value.row >= 0 && value.columnSpan >= 1 && value.rowSpan >= 1);
+  return Boolean(value && GRID_RECT_KEYS.every((key) => Number.isInteger(value[key])) && value.columnSpan >= 1 && value.rowSpan >= 1);
 }
 
 export function normalizeGridRect(value, bounds, options = {}) {
@@ -11,13 +11,16 @@ export function normalizeGridRect(value, bounds, options = {}) {
   const minimum = options.minimumSpan || { columns: 1, rows: 1 };
   const columns = Math.max(1, integer(bounds?.columns, 1));
   const rows = Math.max(1, integer(bounds?.rows, 1));
+  const minColumn = integer(bounds?.minColumn, 0);
+  const minRow = integer(bounds?.minRow, 0);
   const columnSpan = clamp(integer(value?.columnSpan, fallback.columnSpan), Math.min(minimum.columns, columns), columns);
   const rowSpan = clamp(integer(value?.rowSpan, fallback.rowSpan), Math.min(minimum.rows, rows), rows);
-  return { column: clamp(integer(value?.column, fallback.column), 0, columns - columnSpan), row: clamp(integer(value?.row, fallback.row), 0, rows - rowSpan), columnSpan, rowSpan };
+  return { column: clamp(integer(value?.column, fallback.column), minColumn, minColumn + columns - columnSpan), row: clamp(integer(value?.row, fallback.row), minRow, minRow + rows - rowSpan), columnSpan, rowSpan };
 }
 
 export function isGridRectWithinBounds(rect, bounds, minimumSpan = { columns: 1, rows: 1 }) {
-  return isGridRect(rect) && rect.columnSpan >= minimumSpan.columns && rect.rowSpan >= minimumSpan.rows && rect.column + rect.columnSpan <= bounds.columns && rect.row + rect.rowSpan <= bounds.rows;
+  const minColumn = integer(bounds?.minColumn, 0); const minRow = integer(bounds?.minRow, 0);
+  return isGridRect(rect) && rect.columnSpan >= minimumSpan.columns && rect.rowSpan >= minimumSpan.rows && rect.column >= minColumn && rect.row >= minRow && rect.column + rect.columnSpan <= minColumn + bounds.columns && rect.row + rect.rowSpan <= minRow + bounds.rows;
 }
 
 export function gridRectToPixelRect(rect, geometry, inset = 2) {

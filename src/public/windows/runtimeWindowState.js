@@ -4,7 +4,7 @@ export const RUNTIME_WINDOW_STATE_VERSION = 1;
 export const RUNTIME_WINDOW_KEY_PREFIX = 'os-underneath.runtime-windows.v1:';
 
 const validRect = (rect) => rect && ['column', 'row', 'columnSpan', 'rowSpan'].every((key) => Number.isInteger(rect[key]))
-  && rect.column >= 0 && rect.row >= 0 && rect.columnSpan >= 1 && rect.rowSpan >= 1;
+  && rect.columnSpan >= 1 && rect.rowSpan >= 1;
 const validId = (id) => typeof id === 'string' && id.length > 0 && id.length <= 240;
 
 export function runtimeWindowKey(profileAddress) {

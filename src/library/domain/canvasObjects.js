@@ -5,8 +5,10 @@ export const CANVAS_OBJECT_ORDER_COMMAND = Object.freeze({
   FORWARD: 'forward', BACKWARD: 'backward', FRONT: 'front', BACK: 'back'
 });
 
-const MAX_COLUMN = 63;
-const MAX_ROW = 127;
+const MIN_COLUMN = -255;
+const MIN_ROW = -255;
+const MAX_COLUMN = 255;
+const MAX_ROW = 255;
 export const MAX_CANVAS_OBJECT_ID_LENGTH = 200;
 export const isValidCanvasObjectId = (value) => typeof value === 'string'
   && value.length <= MAX_CANVAS_OBJECT_ID_LENGTH
@@ -29,8 +31,8 @@ export function normalizeCanvasObject(candidate) {
   if (!definition || !isValidCanvasObjectId(candidate?.id) || !parseCanonicalAssetId(candidate?.stableAssetId)) return null;
   const columns = clamp(integer(candidate?.span?.columns, definition.defaultSpan.columns), definition.minimumSpan.columns, definition.maximumSpan.columns);
   const rows = clamp(integer(candidate?.span?.rows, definition.defaultSpan.rows), definition.minimumSpan.rows, definition.maximumSpan.rows);
-  const column = clamp(integer(candidate?.placement?.column, 0), 0, MAX_COLUMN - columns + 1);
-  const row = clamp(integer(candidate?.placement?.row, 0), 0, MAX_ROW - rows + 1);
+  const column = clamp(integer(candidate?.placement?.column, 0), MIN_COLUMN, MAX_COLUMN - columns + 1);
+  const row = clamp(integer(candidate?.placement?.row, 0), MIN_ROW, MAX_ROW - rows + 1);
   return {
     id: candidate.id,
     kind: definition.kind,

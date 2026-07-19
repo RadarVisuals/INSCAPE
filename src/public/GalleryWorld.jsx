@@ -153,9 +153,6 @@ export default function GalleryWorld({ objects, assets, theme, onOpenArtwork, on
       <span className="gallery-world__terminus" aria-hidden="true" style={{ left: layout.worldWidth - 220 }}>END OF EXHIBITION</span>
     </div>
     {!layout.items.length && <div className="gallery-world__empty"><strong>Gallery awaiting works</strong><span>Add framed artwork to the desktop to populate this wall.</span></div>}
-    <aside className="gallery-world__readout" aria-live="polite">
-      <span>CREATIONS / GALLERY</span><small>{layout.items.length} {layout.items.length === 1 ? 'work' : 'works'} · {Math.round(progress * 100)}%</small>
-    </aside>
     <nav className="gallery-world__controls" aria-label="Gallery movement">
       <button type="button" onClick={() => moveCamera((current) => current - viewport.width * 0.7, -1)} aria-label="Move gallery left">←</button>
       <span>Drag · Scroll · Arrow keys</span>

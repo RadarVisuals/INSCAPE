@@ -63,6 +63,14 @@ export class TrailSystem {
     });
   }
 
+  reset() {
+    this.trailHistory = [];
+    for (const sprite of this.trailSprites) {
+      sprite.visible = false;
+      sprite.alpha = 0;
+    }
+  }
+
   destroy() {
     if (this.trailContainer) {
       this.parentContainer.removeChild(this.trailContainer);

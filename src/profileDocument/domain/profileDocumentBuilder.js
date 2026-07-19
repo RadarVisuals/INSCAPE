@@ -3,10 +3,10 @@ import { buildAssetReference } from './assetReference.js';
 import { PROFILE_DOCUMENT_LIMITS, PROFILE_DOCUMENT_NETWORK, PROFILE_DOCUMENT_TYPE, PROFILE_DOCUMENT_VERSION } from './constants.js';
 import { getCanvasObjectDefinition, normalizeCanvasObjectPresentation } from '../../library/domain/canvasObjectRegistry.js';
 
-const cleanPosition = (value) => value && Number.isInteger(value.column) && Number.isInteger(value.row) ? { column: value.column, row: value.row } : null;
+const cleanPosition = (value) => value && Number.isInteger(value.column) && value.column >= -255 && value.column <= 255 && Number.isInteger(value.row) && value.row >= -255 && value.row <= 255 ? { column: value.column, row: value.row } : null;
 const cleanWindowGeometry = (value) => value
-  && Number.isInteger(value.column) && value.column >= 0 && value.column <= 63
-  && Number.isInteger(value.row) && value.row >= 0 && value.row <= 127
+  && Number.isInteger(value.column) && value.column >= -255 && value.column <= 255
+  && Number.isInteger(value.row) && value.row >= -255 && value.row <= 255
   && Number.isInteger(value.columnSpan) && value.columnSpan >= 1 && value.columnSpan <= 64
   && Number.isInteger(value.rowSpan) && value.rowSpan >= 1 && value.rowSpan <= 128
   ? { column: value.column, row: value.row, columnSpan: value.columnSpan, rowSpan: value.rowSpan }

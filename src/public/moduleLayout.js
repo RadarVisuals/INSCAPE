@@ -18,7 +18,9 @@ export function createModuleGridGeometry(width, height) {
   const availableWidth = Math.max(1, safeWidth - baseLeft - right);
   const availableHeight = Math.max(1, safeHeight - top - bottom);
   const columns = narrow ? 4 : 24;
-  const cellSize = narrow ? availableWidth / columns : Math.max(28, Math.floor(Math.min(availableWidth / columns, availableHeight / 13)));
+  // Public spatial-world geometry uses a stable 40px authored unit. The visual
+  // surface emphasizes every second line to reproduce the gallery's 80px rhythm.
+  const cellSize = narrow ? availableWidth / columns : 40;
   const rows = Math.max(narrow ? 10 : 8, Math.floor(availableHeight / cellSize));
   const usableWidth = cellSize * columns;
   const usableHeight = cellSize * rows;
@@ -73,9 +75,11 @@ export function getDefaultModulePositions(geometry) {
 }
 
 export function clampModulePosition(position, span, geometry) {
+  const minColumn = geometry.minColumn || 0;
+  const minRow = geometry.minRow || 0;
   return {
-    column: clamp(Math.round(Number(position?.column) || 0), 0, Math.max(0, geometry.columns - span.columns)),
-    row: clamp(Math.round(Number(position?.row) || 0), 0, Math.max(0, geometry.rows - span.rows))
+    column: clamp(Math.round(Number(position?.column) || 0), minColumn, minColumn + geometry.columns - span.columns),
+    row: clamp(Math.round(Number(position?.row) || 0), minRow, minRow + geometry.rows - span.rows)
   };
 }
 
@@ -99,8 +103,8 @@ export function isModulePlacementAvailable(id, position, span, positions, geomet
 export function findNearestAvailableModulePosition(id, requestedPosition, span, positions, geometry) {
   const requested = clampModulePosition(requestedPosition, span, geometry);
   const candidates = [];
-  for (let row = 0; row <= geometry.rows - span.rows; row += 1) {
-    for (let column = 0; column <= geometry.columns - span.columns; column += 1) {
+  for (let row = geometry.minRow || 0; row <= (geometry.minRow || 0) + geometry.rows - span.rows; row += 1) {
+    for (let column = geometry.minColumn || 0; column <= (geometry.minColumn || 0) + geometry.columns - span.columns; column += 1) {
       const position = { column, row };
       if (!isModulePlacementAvailable(id, position, span, positions, geometry)) continue;
       const distance = Math.abs(column - requested.column) + Math.abs(row - requested.row);
@@ -125,8 +129,8 @@ export function findNearestExpandedModulePosition(requestedPosition, span, posit
   const requested = clampModulePosition(requestedPosition, span, geometry);
   const candidates = [];
 
-  for (let row = 0; row <= geometry.rows - span.rows; row += 1) {
-    for (let column = 0; column <= geometry.columns - span.columns; column += 1) {
+  for (let row = geometry.minRow || 0; row <= (geometry.minRow || 0) + geometry.rows - span.rows; row += 1) {
+    for (let column = geometry.minColumn || 0; column <= (geometry.minColumn || 0) + geometry.columns - span.columns; column += 1) {
       const position = { column, row };
       const overlapCount = Object.values(positions).filter((launcherPosition) => (
         moduleRectsOverlap(position, span, launcherPosition, { columns: 1, rows: 1 })

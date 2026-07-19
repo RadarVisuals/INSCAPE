@@ -272,7 +272,12 @@ export class ActorEntity {
 
     this.updateTargetMovement(deltaTime * (dynamics.targetMovementMultiplier ?? 1));
 
-    this.currentFlipScale += (this.facingDirection - this.currentFlipScale) * 0.2 * deltaTime;
+    if (dynamics.residentFacing === -1 || dynamics.residentFacing === 1) {
+      this.facingDirection = dynamics.residentFacing;
+    }
+    const facingResponse = Math.max(0.01, Math.min(0.3, dynamics.facingResponse ?? 0.2));
+    const facingBlend = Math.min(1, facingResponse * deltaTime);
+    this.currentFlipScale += (this.facingDirection - this.currentFlipScale) * facingBlend;
 
     const headState = this.flightDynamics.calculate(
       runtime.elapsed,
@@ -283,6 +288,13 @@ export class ActorEntity {
       this.currentFlipScale,
       dynamics.canvasHeight
     );
+
+    const residentMotionScale = Math.max(0, Math.min(1, dynamics.residentMotionScale ?? 1));
+    if (residentMotionScale < 1) {
+      headState.x = this.baselinePosition.x + ((headState.x - this.baselinePosition.x) * residentMotionScale);
+      headState.y = this.baselinePosition.y + ((headState.y - this.baselinePosition.y) * residentMotionScale);
+      headState.rotation *= residentMotionScale;
+    }
 
     if (this.movementBounds && this.areMovementBoundsActive) {
       headState.x = Math.max(this.movementBounds.left, Math.min(this.movementBounds.right, headState.x));

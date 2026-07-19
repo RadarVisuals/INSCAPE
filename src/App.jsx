@@ -10,8 +10,10 @@ import ModuleGridShell from './public/ModuleGridShell.jsx';
 import { AssetResolver } from './engine/assets/AssetResolver.js';
 import { Startveil } from './startveil/index.js';
 import { useStore } from './store/useStore.js';
+import { useWalletStore } from './store/useWalletStore.js';
 import { resolveLibraryProfile } from './library/config.js';
 import { loadRestoredPresentation } from './profileDocument/storage/profileDocumentStorage.js';
+import { createViewedProfileUrl, resolveViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
 
 const AtelierExperience = lazy(() => import('./app/AtelierExperience.jsx'));
 
@@ -23,6 +25,8 @@ function App() {
   const canvasRef = useRef(null);
   const desktopContextMenuRef = useRef(null);
   const [applicationMode, setApplicationMode] = useState(() => resolveApplicationMode(window.location));
+  const connectedWorkspaceProfileAddress = useMemo(() => resolveLibraryProfile(window.location), []);
+  const [viewedProfileAddress, setViewedProfileAddress] = useState(() => resolveViewedProfile(window.location, connectedWorkspaceProfileAddress));
   const [worldReady, setWorldReady] = useState(false);
   const [revealStage, setRevealStage] = useState('sealed');
   const [revealPresentation, setRevealPresentation] = useState({
@@ -36,16 +40,26 @@ function App() {
   const activeActorId = useStore((state) => state.renderConfig.actor.id);
   const activeStageId = useStore((state) => state.renderConfig.scene.background.backdropId);
   const activeEnvironment = useStore((state) => state.renderConfig.scene.environment);
+  const visitorWalletConnected = useWalletStore((state) => state.isWalletConnected);
+  const connectedVisitorProfileAddress = useWalletStore((state) => state.loggedInUserUPAddress || state.hostProfileAddress);
+  const initWallet = useWalletStore((state) => state.initWallet);
   const applyRenderConfig = useStore((state) => state.applyRenderConfig);
   const worldVisible = ['world', 'resident', 'interface', 'complete'].includes(revealStage);
   const actorVisible = ['resident', 'interface', 'complete'].includes(revealStage);
   const interfaceVisible = ['interface', 'complete'].includes(revealStage);
 
   useEffect(() => {
-    const syncModeFromUrl = () => setApplicationMode(resolveApplicationMode(window.location));
+    initWallet();
+  }, [initWallet]);
+
+  useEffect(() => {
+    const syncModeFromUrl = () => {
+      setApplicationMode(resolveApplicationMode(window.location));
+      setViewedProfileAddress(resolveViewedProfile(window.location, connectedWorkspaceProfileAddress));
+    };
     window.addEventListener('popstate', syncModeFromUrl);
     return () => window.removeEventListener('popstate', syncModeFromUrl);
-  }, []);
+  }, [connectedWorkspaceProfileAddress]);
 
   const applyPublicPresentation = useCallback(({ keeperId, stageId, environment }) => {
     const current = useStore.getState().renderConfig;
@@ -65,6 +79,12 @@ function App() {
     window.history.pushState({ applicationMode: mode }, '', nextUrl);
     setApplicationMode(mode);
   }, []);
+
+  const visitProfile = useCallback((address) => {
+    const nextUrl = createViewedProfileUrl(window.location, address, connectedWorkspaceProfileAddress);
+    window.history.pushState({ viewedProfileAddress: address }, '', nextUrl);
+    setViewedProfileAddress(resolveViewedProfile(window.location, connectedWorkspaceProfileAddress));
+  }, [connectedWorkspaceProfileAddress]);
 
   const residentHandoff = useMemo(() => ({
     start(bounds, options) {
@@ -117,8 +137,8 @@ function App() {
         <ArtCanvas
           ref={canvasRef}
           actorVisible={actorVisible && keeperUserVisible}
-          stageVisible={stageUserVisible && !galleryActive}
-          foregroundOnly={galleryActive}
+          stageVisible={applicationMode === 'atelier' && stageUserVisible}
+          foregroundOnly={applicationMode === 'public'}
           reducedMotion={revealPresentation.reducedMotion}
           presentationOverride={previewDocument?.presentation || null}
           onReady={() => setWorldReady(true)}
@@ -136,6 +156,12 @@ function App() {
           </Suspense>
         ) : (
           <ModuleGridShell
+            canAuthorLibrary={viewedProfileAddress === connectedWorkspaceProfileAddress}
+            visitorWalletConnected={visitorWalletConnected}
+            connectedVisitorProfileAddress={connectedVisitorProfileAddress}
+            connectedWorkspaceProfileAddress={connectedWorkspaceProfileAddress}
+            viewedProfileAddress={viewedProfileAddress}
+            onVisitProfile={visitProfile}
             onRequestAtelier={() => changeApplicationMode(APPLICATION_MODES.ATELIER)}
             activeActorId={activeActorId}
             stageId={activeStageId}
@@ -148,7 +174,7 @@ function App() {
             onApplyRestoredPresentation={applyPublicPresentation}
             onPreviewDocumentChange={setPreviewDocument}
             keeperVisible={keeperUserVisible}
-            stageVisible={stageUserVisible}
+            stageVisible={false}
             onKeeperVisibilityChange={setKeeperUserVisible}
             onStageVisibilityChange={setStageUserVisible}
             registerWorldContextMenu={registerDesktopContextMenu}

@@ -55,9 +55,9 @@ html, body {
 
 .application-world[data-visible] { opacity: 1; }
 
-.application-root[data-gallery-active] .application-world {
-  /* Gallery architecture is portaled below this transparent resident canvas;
-     the fixed public interface remains above it. */
+.application-root[data-application-mode="public"] .application-world {
+  /* Public spatial architecture is portaled below this transparent resident
+     canvas; fixed OS chrome and runtime windows remain above it. */
   z-index: 15;
   pointer-events: none;
 }

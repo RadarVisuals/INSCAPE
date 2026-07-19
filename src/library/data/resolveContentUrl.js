@@ -33,3 +33,34 @@ export function selectImageUrls(images, options) {
   const largest = byWidth.at(-1);
   return { thumbnailUrl: thumbnail.resolved, imageUrl: largest.resolved, originalImageUrl: largest.url || largest.src || null };
 }
+
+export function selectImageGroups(images, options) {
+  const groups = new Map();
+  for (const image of Array.isArray(images) ? images : []) {
+    const resolved = resolveContentUrl(image?.src || image?.url, options);
+    if (!resolved) continue;
+    const index = Number.isInteger(image?.index) && image.index >= 0 ? image.index : 0;
+    if (!groups.has(index)) groups.set(index, []);
+    groups.get(index).push({ ...image, resolved });
+  }
+
+  return [...groups.entries()].sort(([first], [second]) => first - second).map(([index, variants]) => {
+    const byWidth = [...variants].sort((first, second) => (Number(first.width) || Infinity) - (Number(second.width) || Infinity));
+    const thumbnail = byWidth.find((variant) => (Number(variant.width) || 0) >= 320) || byWidth[0];
+    const largest = byWidth.at(-1);
+    return {
+      index,
+      thumbnailUrl: thumbnail.resolved,
+      imageUrl: largest.resolved,
+      originalImageUrl: largest.resolved,
+      width: Number(largest.width) || null,
+      height: Number(largest.height) || null,
+      variants: byWidth.map((variant) => ({
+        url: variant.resolved,
+        width: Number(variant.width) || null,
+        height: Number(variant.height) || null,
+        fileType: variant.fileType || null
+      }))
+    };
+  });
+}
