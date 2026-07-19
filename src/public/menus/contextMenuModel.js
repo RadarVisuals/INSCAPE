@@ -20,7 +20,9 @@ export function resolveContextTarget(target, desktop) {
   return null;
 }
 
-export function contextMenuCommands({ target, editMode, launcher, canvasObject, startOpen = false, menu = 'root', keeperVisible = true, stageVisible = true, stageAvailable = true }) {
+export function contextMenuCommands({ target, editMode, launcher, canvasObject, startOpen = false, menu = 'root', keeperVisible = true, stageVisible = true, stageAvailable = true, ownerAuthoringEnabled = false }) {
+  if (!ownerAuthoringEnabled && target?.type === 'launcher') return [{ id: 'open', label: 'Open' }];
+  if (!ownerAuthoringEnabled && target?.type === 'canvas-object') return [{ id: 'open-artwork', label: 'Open Artwork' }];
   if (target?.type === 'canvas' && menu === 'create') return [
     { id: 'menu-root', label: '< Back' }, { id: 'create-folder', label: 'Folder' }, { id: 'create-framed-artwork', label: 'Framed Artwork' }
   ];
@@ -32,10 +34,10 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
     { id: 'reset-home-camera', label: 'Return to Origin' }
   ];
   if (target?.type === 'canvas') return [
-    { id: 'toggle-edit', label: editMode ? 'Finish Arranging' : 'Arrange Desktop' },
-    { id: 'menu-create', label: 'Create >' }, { id: 'menu-view', label: 'View >' },
+    ...(ownerAuthoringEnabled ? [{ id: 'toggle-edit', label: editMode ? 'Finish Arranging' : 'Arrange Desktop' }, { id: 'menu-create', label: 'Create >' }] : []),
+    { id: 'menu-view', label: 'View >' },
     { id: 'reset-windows', label: 'Reset Windows' }, { id: 'close-all', label: 'Close All Windows' },
-    { id: 'settings', label: 'Settings' }
+    ...(ownerAuthoringEnabled ? [{ id: 'settings', label: 'Settings' }] : [])
   ];
   if (target?.type === 'launcher') return [
     { id: 'open', label: 'Open' },
@@ -56,7 +58,7 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
   ];
   if (target?.type === 'window') return [
     { id: 'close', label: 'Close' }, { id: 'reset-window', label: launcher ? 'Reset Near Folder' : 'Reset Position and Size' },
-    ...(launcher?.viewType === 'folder' ? [] : [{ id: 'toggle-start-open', label: startOpen ? 'Remove from Visitor Start Layout' : 'Set as Visitor Start Window' }])
+    ...(ownerAuthoringEnabled && launcher?.viewType !== 'folder' ? [{ id: 'toggle-start-open', label: startOpen ? 'Remove from Visitor Start Layout' : 'Set as Visitor Start Window' }] : [])
   ];
   return [];
 }

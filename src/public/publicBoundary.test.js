@@ -33,7 +33,7 @@ test('the shared canvas remains outside the public/private mode branch', () => {
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
   const canvasIndex = appSource.indexOf('<ArtCanvas');
   const canvasCloseIndex = appSource.indexOf('/>', canvasIndex);
-  const modeBranchIndex = appSource.indexOf('applicationMode === APPLICATION_MODES.ATELIER');
+  const modeBranchIndex = appSource.indexOf('{effectiveApplicationMode === APPLICATION_MODES.ATELIER ? (');
 
   assert.ok(canvasIndex >= 0);
   assert.ok(canvasCloseIndex > canvasIndex);
@@ -47,8 +47,8 @@ test('public home is resident-only while Atelier retains stage authoring', () =>
   const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
   const homeSource = readFileSync(new URL('./HomeWorldSurface.jsx', import.meta.url), 'utf8');
 
-  assert.match(appSource, /stageVisible={applicationMode === 'atelier' && stageUserVisible}/);
-  assert.match(appSource, /foregroundOnly={applicationMode === 'public'}/);
+  assert.match(appSource, /stageVisible={effectiveApplicationMode === APPLICATION_MODES\.ATELIER && stageUserVisible}/);
+  assert.match(appSource, /foregroundOnly={effectiveApplicationMode === APPLICATION_MODES\.PUBLIC}/);
   assert.match(shellSource, /<HomeWorldSurface/);
   assert.match(homeSource, /onCameraChange\(clampCamera/);
   assert.match(homeSource, /createPortal\(surface, root\)/);
@@ -103,4 +103,11 @@ test('system destination order is Activity, Gallery, Creations, Library', () => 
   const creations = shellSource.indexOf('>[ Creations ]</button>');
   const library = shellSource.indexOf('>[ Library ]</button>');
   assert.ok(activity >= 0 && activity < gallery && gallery < creations && creations < library);
+});
+
+test('viewing another profile mounts the unavailable surface instead of the local workspace shell', () => {
+  const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
+  assert.match(appSource, /viewingConnectedWorkspace \? <ModuleGridShell/);
+  assert.match(appSource, /: <UnavailableProfileSurface/);
+  assert.match(appSource, /actorVisible=.*viewingConnectedWorkspace/);
 });

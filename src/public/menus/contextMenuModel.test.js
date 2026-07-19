@@ -6,21 +6,28 @@ test('menu position is clamped on every viewport edge', () => {
   assert.deepEqual(clampMenuPosition({ x: -20, y: -4 }, { width: 220, height: 260 }, { width: 1000, height: 800 }), { x: 8, y: 8 });
 });
 test('launcher editing and visitor-start commands are directly available', () => {
-  assert.deepEqual(contextMenuCommands({ target: { type: 'launcher' }, editMode: false }).map((item) => item.id), ['open', 'edit-launcher']);
-  assert.ok(contextMenuCommands({ target: { type: 'launcher' }, editMode: false, launcher: { visitorVisible: false } }).some((item) => item.id === 'toggle-visibility'));
-  assert.deepEqual(contextMenuCommands({ target: { type: 'launcher' }, editMode: false, launcher: { viewType: 'folder', visitorVisible: false } }).map((item) => item.id), ['open', 'edit-launcher']);
-  assert.ok(contextMenuCommands({ target: { type: 'window' }, editMode: false }).some((item) => item.id === 'toggle-start-open'));
+  assert.deepEqual(contextMenuCommands({ target: { type: 'launcher' }, editMode: false, ownerAuthoringEnabled: true }).map((item) => item.id), ['open', 'edit-launcher']);
+  assert.ok(contextMenuCommands({ target: { type: 'launcher' }, editMode: false, launcher: { visitorVisible: false }, ownerAuthoringEnabled: true }).some((item) => item.id === 'toggle-visibility'));
+  assert.deepEqual(contextMenuCommands({ target: { type: 'launcher' }, editMode: false, launcher: { viewType: 'folder', visitorVisible: false }, ownerAuthoringEnabled: true }).map((item) => item.id), ['open', 'edit-launcher']);
+  assert.ok(contextMenuCommands({ target: { type: 'window' }, editMode: false, ownerAuthoringEnabled: true }).some((item) => item.id === 'toggle-start-open'));
   assert.equal(contextMenuCommands({ target: { type: 'window' }, editMode: false, launcher: { id: 'library:folder:one' } }).find((item) => item.id === 'reset-window').label, 'Reset Near Folder');
   assert.equal(contextMenuCommands({ target: { type: 'window' }, editMode: false, launcher: { id: 'library:folder:one', viewType: 'folder' } }).some((item) => item.id === 'toggle-start-open'), false);
 });
 
 test('canvas creation and framed-artwork commands stay controlled and keyboard-menu compatible', () => {
-  const create = contextMenuCommands({ target: { type: 'canvas', id: 'canvas' }, menu: 'create' });
+  const create = contextMenuCommands({ target: { type: 'canvas', id: 'canvas' }, menu: 'create', ownerAuthoringEnabled: true });
   assert.deepEqual(create.map((command) => command.id), ['menu-root', 'create-folder', 'create-framed-artwork']);
-  const object = contextMenuCommands({ target: { type: 'canvas-object', id: 'canvas:artwork:one' }, canvasObject: { visitorVisible: true } });
+  const object = contextMenuCommands({ target: { type: 'canvas-object', id: 'canvas:artwork:one' }, canvasObject: { visitorVisible: true }, ownerAuthoringEnabled: true });
   assert.deepEqual(object.map((command) => command.id), ['open-artwork', 'edit-artwork', 'replace-artwork', 'toggle-object-visibility', 'menu-layer', 'remove-artwork']);
-  const layer = contextMenuCommands({ target: { type: 'canvas-object', id: 'canvas:artwork:one' }, menu: 'layer' });
+  const layer = contextMenuCommands({ target: { type: 'canvas-object', id: 'canvas:artwork:one' }, menu: 'layer', ownerAuthoringEnabled: true });
   assert.deepEqual(layer.map((command) => command.id), ['menu-root', 'object-forward', 'object-backward', 'object-front', 'object-back']);
+});
+
+test('visitor menus expose runtime viewing commands but no authoring commands', () => {
+  assert.deepEqual(contextMenuCommands({ target: { type: 'launcher' } }).map((item) => item.id), ['open']);
+  assert.deepEqual(contextMenuCommands({ target: { type: 'canvas-object' } }).map((item) => item.id), ['open-artwork']);
+  const canvas = contextMenuCommands({ target: { type: 'canvas' } }).map((item) => item.id);
+  assert.equal(canvas.some((id) => ['toggle-edit', 'menu-create', 'settings'].includes(id)), false);
 });
 
 test('stage-free spatial home omits stage controls and exposes camera reset', () => {

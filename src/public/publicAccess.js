@@ -1,0 +1,29 @@
+import { normalizeProfileAddress } from '../library/config.js';
+
+export function resolveOwnerAuthoringEnabled({
+  ownershipVerified,
+  verifiedOwnerProfileAddress,
+  workspaceProfileAddress,
+  viewedProfileAddress
+}) {
+  const verified = normalizeProfileAddress(verifiedOwnerProfileAddress);
+  const workspace = normalizeProfileAddress(workspaceProfileAddress);
+  const viewed = normalizeProfileAddress(viewedProfileAddress);
+  return ownershipVerified === true && Boolean(verified && workspace && viewed)
+    && verified === workspace && viewed === workspace;
+}
+
+export function selectLiveCanvasContent(workspace, ownerAuthoringEnabled) {
+  const launchers = Array.isArray(workspace?.canvas?.launchers) ? workspace.canvas.launchers : [];
+  const objects = Array.isArray(workspace?.canvas?.objects) ? workspace.canvas.objects : [];
+  if (ownerAuthoringEnabled) return { launchers, objects };
+  return {
+    launchers: launchers.filter((launcher) => launcher.visitorVisible === true),
+    objects: objects.filter((object) => object.visitorVisible === true)
+  };
+}
+
+export function runOwnerAuthoringMutation(ownerAuthoringEnabled, mutation) {
+  if (!ownerAuthoringEnabled || typeof mutation !== 'function') return undefined;
+  return mutation();
+}
