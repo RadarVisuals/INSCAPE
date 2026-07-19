@@ -66,7 +66,7 @@ test('framed artwork keeps form controls interactive and presentation layers ind
   const shellStyles = readFileSync(new URL('./moduleGrid.css', import.meta.url), 'utf8');
   const artworkSource = readFileSync(new URL('./FramedArtwork.jsx', import.meta.url), 'utf8');
   const artworkStyles = readFileSync(new URL('./canvasObjects.css', import.meta.url), 'utf8');
-  const documentPreviewSource = readFileSync(new URL('../profileDocument/components/ProfileDocumentPreview.jsx', import.meta.url), 'utf8');
+  const documentPreviewSource = readFileSync(new URL('../profileDocument/components/ProfileDocumentSurface.jsx', import.meta.url), 'utf8');
 
   assert.match(shellStyles, /\.public-shell input,[\s\S]*\.public-shell select,[\s\S]*pointer-events:\s*auto/);
   assert.match(artworkSource, /canvas-artwork__mat/);
@@ -105,11 +105,12 @@ test('system destination order is Activity, Gallery, Creations, Library', () => 
   assert.ok(activity >= 0 && activity < gallery && gallery < creations && creations < library);
 });
 
-test('viewing another profile mounts the unavailable surface instead of the local workspace shell', () => {
+test('all non-owner routes mount the published boundary instead of the local workspace shell', () => {
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
-  assert.match(appSource, /viewingConnectedWorkspace \? <ModuleGridShell/);
-  assert.match(appSource, /: <UnavailableProfileSurface/);
-  assert.match(appSource, /actorVisible=.*viewingConnectedWorkspace/);
+  assert.match(appSource, /localOwnerRoute \? <ModuleGridShell/);
+  assert.match(appSource, /: <PublishedProfileBoundary/);
+  assert.match(appSource, /selectPublicProfileRoute\(ownerAuthoringEnabled\)/);
+  assert.doesNotMatch(appSource, /viewingConnectedWorkspace \? <ModuleGridShell/);
 });
 
 test('profile restore guards presentation storage reads and reports controlled document errors', () => {

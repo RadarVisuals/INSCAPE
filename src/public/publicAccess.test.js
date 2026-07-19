@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveOwnerAuthoringEnabled, runOwnerAuthoringMutation, selectLiveCanvasContent } from './publicAccess.js';
+import { resolveOwnerAuthoringEnabled, runOwnerAuthoringMutation, selectLiveCanvasContent, selectPublicProfileRoute } from './publicAccess.js';
 
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
@@ -11,6 +11,12 @@ test('URL equality is insufficient and verified owner authoring remains function
   assert.equal(resolveOwnerAuthoringEnabled({ ...input, ownershipVerified: true }), true);
   assert.equal(resolveOwnerAuthoringEnabled({ ...input, ownershipVerified: true, viewedProfileAddress: PROFILE_B }), false);
   assert.equal(resolveOwnerAuthoringEnabled({ ...input, ownershipVerified: true, verifiedOwnerProfileAddress: PROFILE_B }), false);
+});
+
+test('only verified matching owners route to the local shell', () => {
+  assert.equal(selectPublicProfileRoute(true), 'LOCAL_OWNER');
+  assert.equal(selectPublicProfileRoute(false), 'PUBLISHED_VISITOR');
+  assert.equal(selectPublicProfileRoute(undefined), 'PUBLISHED_VISITOR');
 });
 
 test('visitors see public launchers and artwork but never private canvas records', () => {

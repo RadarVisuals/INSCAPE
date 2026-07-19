@@ -13,6 +13,10 @@ export function resolveOwnerAuthoringEnabled({
     && verified === workspace && viewed === workspace;
 }
 
+export function selectPublicProfileRoute(ownerAuthoringEnabled) {
+  return ownerAuthoringEnabled === true ? 'LOCAL_OWNER' : 'PUBLISHED_VISITOR';
+}
+
 export function selectLiveCanvasContent(workspace, ownerAuthoringEnabled) {
   const launchers = Array.isArray(workspace?.canvas?.launchers) ? workspace.canvas.launchers : [];
   const objects = Array.isArray(workspace?.canvas?.objects) ? workspace.canvas.objects : [];

@@ -14,8 +14,8 @@ import { useWalletStore } from './store/useWalletStore.js';
 import { resolveLibraryProfile } from './library/config.js';
 import { loadRestoredPresentation } from './profileDocument/storage/profileDocumentStorage.js';
 import { createViewedProfileUrl, resolveViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
-import UnavailableProfileSurface from './profileDiscovery/UnavailableProfileSurface.jsx';
-import { resolveOwnerAuthoringEnabled } from './public/publicAccess.js';
+import PublishedProfileBoundary from './profileDocument/components/PublishedProfileBoundary.jsx';
+import { resolveOwnerAuthoringEnabled, selectPublicProfileRoute } from './public/publicAccess.js';
 
 const AtelierExperience = lazy(() => import('./app/AtelierExperience.jsx'));
 
@@ -36,6 +36,7 @@ function App() {
     reducedMotion: false
   });
   const [previewDocument, setPreviewDocument] = useState(null);
+  const [publishedDocument, setPublishedDocument] = useState(null);
   const [keeperUserVisible, setKeeperUserVisible] = useState(true);
   const [stageUserVisible, setStageUserVisible] = useState(true);
   const [galleryActive, setGalleryActive] = useState(false);
@@ -45,13 +46,11 @@ function App() {
   const visitorWalletConnected = useWalletStore((state) => state.isWalletConnected);
   const ownershipVerified = useWalletStore((state) => state.isHostProfileOwner);
   const verifiedOwnerProfileAddress = useWalletStore((state) => state.hostProfileAddress);
-  const connectedVisitorProfileAddress = useWalletStore((state) => state.loggedInUserUPAddress || state.hostProfileAddress);
   const initWallet = useWalletStore((state) => state.initWallet);
   const applyRenderConfig = useStore((state) => state.applyRenderConfig);
   const worldVisible = ['world', 'resident', 'interface', 'complete'].includes(revealStage);
   const actorVisible = ['resident', 'interface', 'complete'].includes(revealStage);
   const interfaceVisible = ['interface', 'complete'].includes(revealStage);
-  const viewingConnectedWorkspace = viewedProfileAddress === connectedWorkspaceProfileAddress;
   const ownerAuthoringEnabled = resolveOwnerAuthoringEnabled({
     ownershipVerified,
     verifiedOwnerProfileAddress,
@@ -61,6 +60,9 @@ function App() {
   const effectiveApplicationMode = applicationMode === APPLICATION_MODES.ATELIER && ownerAuthoringEnabled
     ? APPLICATION_MODES.ATELIER
     : APPLICATION_MODES.PUBLIC;
+  const publicProfileRoute = selectPublicProfileRoute(ownerAuthoringEnabled);
+  const localOwnerRoute = publicProfileRoute === 'LOCAL_OWNER';
+  const canvasDocument = localOwnerRoute ? previewDocument : publishedDocument;
 
   useEffect(() => {
     initWallet();
@@ -84,9 +86,10 @@ function App() {
   }, [applyRenderConfig]);
 
   useEffect(() => {
-    const restored = loadRestoredPresentation(window.localStorage, resolveLibraryProfile());
+    if (!ownerAuthoringEnabled) return;
+    const restored = loadRestoredPresentation(window.localStorage, connectedWorkspaceProfileAddress);
     if (restored) applyPublicPresentation(restored);
-  }, [applyPublicPresentation]);
+  }, [applyPublicPresentation, connectedWorkspaceProfileAddress, ownerAuthoringEnabled]);
 
   const changeApplicationMode = useCallback((mode) => {
     const nextUrl = createApplicationModeUrl(window.location, mode);
@@ -150,11 +153,11 @@ function App() {
       >
         <ArtCanvas
           ref={canvasRef}
-          actorVisible={actorVisible && keeperUserVisible && (effectiveApplicationMode === APPLICATION_MODES.ATELIER || viewingConnectedWorkspace)}
+          actorVisible={actorVisible && keeperUserVisible && (effectiveApplicationMode === APPLICATION_MODES.ATELIER || localOwnerRoute || Boolean(publishedDocument))}
           stageVisible={effectiveApplicationMode === APPLICATION_MODES.ATELIER && stageUserVisible}
           foregroundOnly={effectiveApplicationMode === APPLICATION_MODES.PUBLIC}
           reducedMotion={revealPresentation.reducedMotion}
-          presentationOverride={previewDocument?.presentation || null}
+          presentationOverride={canvasDocument?.presentation || null}
           onReady={() => setWorldReady(true)}
         />
       </div>
@@ -169,7 +172,7 @@ function App() {
             <AtelierExperience onRequestPublic={() => changeApplicationMode(APPLICATION_MODES.PUBLIC)} />
           </Suspense>
         ) : (
-          viewingConnectedWorkspace ? <ModuleGridShell
+          localOwnerRoute ? <ModuleGridShell
             ownerAuthoringEnabled={ownerAuthoringEnabled}
             visitorWalletConnected={visitorWalletConnected}
             viewedProfileAddress={viewedProfileAddress}
@@ -191,12 +194,7 @@ function App() {
             onStageVisibilityChange={setStageUserVisible}
             registerWorldContextMenu={registerDesktopContextMenu}
             onGalleryOpenChange={setGalleryActive}
-          /> : <UnavailableProfileSurface
-            viewedProfileAddress={viewedProfileAddress}
-            connectedProfileAddress={connectedWorkspaceProfileAddress}
-            connectedVisitorProfileAddress={connectedVisitorProfileAddress}
-            onVisitProfile={visitProfile}
-          />
+          /> : <PublishedProfileBoundary address={viewedProfileAddress} onDocumentChange={setPublishedDocument} />
         )}
       </div>
       <Startveil
