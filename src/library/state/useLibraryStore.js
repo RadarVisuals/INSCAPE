@@ -160,6 +160,8 @@ export const useLibraryStore = create((set, get) => ({
   },
   replaceWorkspace(workspace, { persist = true } = {}) {
     if (persist && !saveLibraryWorkspace(workspaceStorage, workspace)) return false;
+    if (persist && saveTimer) clearTimeout(saveTimer);
+    if (persist) saveTimer = null;
     set({ workspace });
     return true;
   }

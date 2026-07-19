@@ -426,17 +426,26 @@ export default function ModuleGridShell({
     if (!importedDocument || !window.confirm('Restore this document’s public presentation? Private Favorites, unpinned folders, Activity history, and caches will be preserved.')) return;
     const previousWorkspace = structuredClone(workspace); const previousSettings = { ...signalSettings };
     const previousPresentation = { keeperId: activeActorId, stageId, environment }; const key = profilePresentationKey(workspace.profileAddress);
-    const previousStoredPresentation = window.localStorage.getItem(key);
+    let previousStoredPresentation; let previousPresentationRead = false; let restoreStarted = false;
     try {
+      previousStoredPresentation = window.localStorage.getItem(key);
+      previousPresentationRead = true;
       const plan = createProfileDocumentRestorePlan(importedDocument, workspace);
+      restoreStarted = true;
       if (!replaceWorkspace(plan.workspace)) throw new Error('Could not persist restored Canvas Spaces');
       if (!replaceSignalSettings(plan.signalSettings)) throw new Error('Could not persist restored Activity settings');
       window.localStorage.setItem(key, JSON.stringify({ version: 2, keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment }));
       onApplyRestoredPresentation?.({ keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment }); setDocumentError(null);
     } catch (error) {
-      replaceWorkspace(previousWorkspace); replaceSignalSettings(previousSettings);
-      try { if (previousStoredPresentation == null) window.localStorage.removeItem(key); else window.localStorage.setItem(key, previousStoredPresentation); } catch { /* Best-effort rollback. */ }
-      onApplyRestoredPresentation?.(previousPresentation); setDocumentError(error.message);
+      if (restoreStarted) {
+        try { if (!replaceWorkspace(previousWorkspace)) replaceWorkspace(previousWorkspace, { persist: false }); } catch { /* Best-effort rollback. */ }
+        try { if (!replaceSignalSettings(previousSettings)) replaceSignalSettings(previousSettings, { persist: false }); } catch { /* Best-effort rollback. */ }
+        if (previousPresentationRead) {
+          try { if (previousStoredPresentation == null) window.localStorage.removeItem(key); else window.localStorage.setItem(key, previousStoredPresentation); } catch { /* Best-effort rollback. */ }
+        }
+        try { onApplyRestoredPresentation?.(previousPresentation); } catch { /* Best-effort rollback. */ }
+      }
+      setDocumentError(error instanceof Error ? error.message : String(error));
     }
   }, [activeActorId, environment, importedDocument, onApplyRestoredPresentation, ownerAuthoringEnabled, replaceSignalSettings, replaceWorkspace, setDocumentError, signalSettings, stageId, workspace]);
 

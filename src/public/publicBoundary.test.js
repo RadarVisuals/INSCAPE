@@ -111,3 +111,16 @@ test('viewing another profile mounts the unavailable surface instead of the loca
   assert.match(appSource, /: <UnavailableProfileSurface/);
   assert.match(appSource, /actorVisible=.*viewingConnectedWorkspace/);
 });
+
+test('profile restore guards presentation storage reads and reports controlled document errors', () => {
+  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
+  const restoreStart = shellSource.indexOf('const restoreImportedPresentation');
+  const restoreEnd = shellSource.indexOf('\n  useEffect(() => {', restoreStart);
+  const restoreSource = shellSource.slice(restoreStart, restoreEnd);
+  const tryIndex = restoreSource.indexOf('try {');
+  const readIndex = restoreSource.indexOf('window.localStorage.getItem(key)');
+
+  assert.ok(tryIndex >= 0 && readIndex > tryIndex, 'the prior presentation read is inside the guarded restore path');
+  assert.match(restoreSource, /if \(restoreStarted\)/);
+  assert.match(restoreSource, /setDocumentError\(error instanceof Error \? error\.message : String\(error\)\)/);
+});

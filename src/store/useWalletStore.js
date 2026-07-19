@@ -4,7 +4,7 @@ import { createClientUPProvider } from "@lukso/up-provider";
 import { createWalletClient, createPublicClient, custom, http, numberToHex, getAddress, isAddress } from "viem";
 import { lukso, luksoTestnet } from "viem/chains";
 import { ERC725 } from '@erc725/erc725.js';
-import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json';
+import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' assert { type: 'json' };
 
 // LUKSO mainnet and testnet endpoints
 const LUKSO_MAINNET_RPC = "https://rpc.mainnet.lukso.network";
@@ -14,6 +14,11 @@ const IPFS_GATEWAY = "https://api.universalprofile.cloud/ipfs/";
 // Module-level singletons to survive React StrictMode concurrently
 let globalProviderInstance = null;
 let isInitializing = false;
+let metadataRequestGeneration = 0;
+let permissionRequestGeneration = 0;
+
+const sameAddress = (left, right) => typeof left === 'string' && typeof right === 'string'
+  && left.toLowerCase() === right.toLowerCase();
 
 const normalizeChainId = (chainId) => {
   if (chainId === null || chainId === undefined) return null;
@@ -190,8 +195,9 @@ export const useWalletStore = create((set, get) => ({
    * Queries standard LSP3 Profile Metadata from contract storage keys.
    */
   fetchProfileMetadata: async () => {
-    const { hostProfileAddress, publicClient } = get();
+    const { hostProfileAddress, publicClient, chainId } = get();
     if (!hostProfileAddress || !publicClient) {
+      metadataRequestGeneration += 1;
       set({ profileMetadata: null, isProfileLoading: false, lastFetchedAddress: null });
       return;
     }
@@ -202,6 +208,14 @@ export const useWalletStore = create((set, get) => ({
       return; // Deduplicate concurrent execution loop
     }
 
+    const generation = ++metadataRequestGeneration;
+    const requestIsCurrent = () => {
+      const current = get();
+      return metadataRequestGeneration === generation
+        && sameAddress(current.hostProfileAddress, hostProfileAddress)
+        && current.publicClient === publicClient
+        && current.chainId === chainId;
+    };
     set({ isProfileLoading: true, lastFetchedAddress: hostProfileAddress });
     console.log(`ℹ️ [UP Wallet] Querying LSP3 metadata for: ${hostProfileAddress}`);
 
@@ -252,13 +266,13 @@ export const useWalletStore = create((set, get) => ({
         };
 
         console.log("✅ [UP Wallet] Metadata queried successfully:", parsedMetadata);
-        set({ profileMetadata: parsedMetadata, isProfileLoading: false });
+        if (requestIsCurrent()) set({ profileMetadata: parsedMetadata, isProfileLoading: false });
       } else {
-        set({ profileMetadata: null, isProfileLoading: false });
+        if (requestIsCurrent()) set({ profileMetadata: null, isProfileLoading: false, lastFetchedAddress: null });
       }
     } catch (err) {
       console.warn("⚠️ [UP Wallet] Metadata extraction aborted or failed:", err.message);
-      set({ profileMetadata: null, isProfileLoading: false });
+      if (requestIsCurrent()) set({ profileMetadata: null, isProfileLoading: false, lastFetchedAddress: null });
     }
   },
 
@@ -314,9 +328,16 @@ export const useWalletStore = create((set, get) => ({
       activeAccount: accounts[0] || "None"
     });
 
-    set({ 
+    metadataRequestGeneration += 1;
+    permissionRequestGeneration += 1;
+    set({
       isWalletConnected: isConnected,
-      hostProfileAddress 
+      hostProfileAddress,
+      isHostProfileOwner: false,
+      loggedInUserUPAddress: null,
+      profileMetadata: null,
+      isProfileLoading: false,
+      lastFetchedAddress: null
     });
 
     await get()._checkPermissions();
@@ -324,12 +345,22 @@ export const useWalletStore = create((set, get) => ({
   },
 
   _checkPermissions: async () => {
-    const { accounts, hostProfileAddress, publicClient } = get();
+    const { accounts, hostProfileAddress, publicClient, chainId } = get();
     const controllerAddress = accounts[0];
+    const generation = ++permissionRequestGeneration;
+    set({ isHostProfileOwner: false, loggedInUserUPAddress: null });
+
+    const requestIsCurrent = () => {
+      const current = get();
+      return permissionRequestGeneration === generation
+        && sameAddress(current.accounts[0], controllerAddress)
+        && sameAddress(current.hostProfileAddress, hostProfileAddress)
+        && current.chainId === chainId
+        && current.publicClient === publicClient;
+    };
 
     if (!controllerAddress || !hostProfileAddress || !publicClient) {
       console.log("🔒 [UP Wallet] Standard permissions bypass: missing active connection elements.");
-      set({ isHostProfileOwner: false, loggedInUserUPAddress: null });
       return;
     }
 
@@ -361,12 +392,25 @@ export const useWalletStore = create((set, get) => ({
       }
     }
 
-    set({ 
-      isHostProfileOwner: isOwner, 
-      loggedInUserUPAddress: isOwner ? hostProfileAddress : null
-    });
+    if (requestIsCurrent()) {
+      set({
+        isHostProfileOwner: isOwner,
+        loggedInUserUPAddress: isOwner ? hostProfileAddress : null
+      });
+    }
   }
 }));
+
+export function resetWalletStoreForTests() {
+  metadataRequestGeneration = 0;
+  permissionRequestGeneration = 0;
+  useWalletStore.setState({
+    provider: null, walletClient: null, publicClient: null, chainId: null,
+    accounts: [], contextAccounts: [], hostProfileAddress: null, loggedInUserUPAddress: null,
+    isWalletConnected: false, isHostProfileOwner: false, initializationError: null,
+    profileMetadata: null, isProfileLoading: false, lastFetchedAddress: null
+  });
+}
 
 // Bind store to window object in browser development settings for diagnostic queries
 if (typeof window !== "undefined") {

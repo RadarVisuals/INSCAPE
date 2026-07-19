@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { loadSignalDocument } from '../storage/signalStorage.js';
+import { resetSignalStoreForTests, useSignalStore } from './useSignalStore.js';
+
+const PROFILE = '0xf3c189819fd5b042f692983bfbfd57ab607ee709';
+const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const memoryStorage = () => {
+  const values = new Map();
+  return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), values };
+};
+
+test('a pending Signals save cannot overwrite immediately restored settings', async () => {
+  const storage = memoryStorage();
+  resetSignalStoreForTests(PROFILE, storage);
+  useSignalStore.getState().updateSetting('audio', true);
+  const restored = { notifications: true, speech: false, visualEffects: true, audio: false };
+
+  assert.equal(useSignalStore.getState().replaceSettings(restored), true);
+  await delay(140);
+  assert.deepEqual(loadSignalDocument(storage, PROFILE).settings, restored);
+  assert.deepEqual(useSignalStore.getState().settings, restored);
+
+  resetSignalStoreForTests(PROFILE, storage);
+  assert.deepEqual(useSignalStore.getState().settings, restored);
+});
+
+test('failed immediate Signals persistence preserves current settings', () => {
+  const storage = { getItem: () => null, setItem: () => { throw new Error('quota'); } };
+  resetSignalStoreForTests(PROFILE, storage);
+  const before = useSignalStore.getState().settings;
+  assert.equal(useSignalStore.getState().replaceSettings({ ...before, audio: true }), false);
+  assert.deepEqual(useSignalStore.getState().settings, before);
+  resetSignalStoreForTests(PROFILE, memoryStorage());
+});

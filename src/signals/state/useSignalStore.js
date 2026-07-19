@@ -58,6 +58,8 @@ export const useSignalStore = create((set, get) => {
       const next = Object.fromEntries(Object.keys(get().settings).map((key) => [key, typeof settings?.[key] === 'boolean' ? settings[key] : get().settings[key]]));
       const document = { ...get().document, settings: next };
       if (shouldPersist && !saveSignalDocument(signalStorage, document)) return false;
+      if (shouldPersist && saveTimer) clearTimeout(saveTimer);
+      if (shouldPersist) saveTimer = null;
       set({ settings: next, document, queue: next.notifications ? get().queue : [], currentReaction: next.notifications ? get().currentReaction : null });
       return true;
     },
