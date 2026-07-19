@@ -1,6 +1,7 @@
 import { normalizeProfileAddress } from '../../library/config.js';
 import { buildAssetReference } from './assetReference.js';
-import { PROFILE_DOCUMENT_NETWORK, PROFILE_DOCUMENT_TYPE, PROFILE_DOCUMENT_VERSION } from './constants.js';
+import { PROFILE_DOCUMENT_LIMITS, PROFILE_DOCUMENT_NETWORK, PROFILE_DOCUMENT_TYPE, PROFILE_DOCUMENT_VERSION } from './constants.js';
+import { getCanvasObjectDefinition, normalizeCanvasObjectPresentation } from '../../library/domain/canvasObjectRegistry.js';
 
 const cleanPosition = (value) => value && Number.isInteger(value.column) && Number.isInteger(value.row) ? { column: value.column, row: value.row } : null;
 const cleanWindowGeometry = (value) => value
@@ -35,6 +36,19 @@ export function buildProfileDocumentV3({ profileAddress, workspace, assets = [],
       appearance: { mode: ['label','icon','icon_label'].includes(launcher.appearanceMode) ? launcher.appearanceMode : 'label', iconKey: typeof launcher.iconKey === 'string' ? launcher.iconKey : launcher.viewType === 'favorites' ? 'favorites' : 'folder', showLabel: launcher.appearanceMode !== 'icon', columnSpan: Math.max(1, Math.min(12, launcher.span?.columns || 3)), rowSpan: Math.max(1, Math.min(8, launcher.span?.rows || 1)) },
       assets: [...new Set(assetIds)].map((id) => buildAssetReference(assetById.get(id), id)).filter(Boolean) }];
   });
+  const canvasObjects = (Array.isArray(workspace?.canvas?.objects) ? workspace.canvas.objects : [])
+    .filter((object) => object.visitorVisible === true)
+    .sort((a, b) => a.presentationOrder - b.presentationOrder || a.id.localeCompare(b.id))
+    .slice(0, PROFILE_DOCUMENT_LIMITS.maxCanvasObjects)
+    .flatMap((object, order) => {
+      const definition = getCanvasObjectDefinition(object.kind);
+      const asset = buildAssetReference(assetById.get(object.stableAssetId), object.stableAssetId);
+      if (!definition || !asset) return [];
+      const columns = Math.max(definition.minimumSpan.columns, Math.min(definition.maximumSpan.columns, Math.round(Number(object.span?.columns) || definition.defaultSpan.columns)));
+      const rows = Math.max(definition.minimumSpan.rows, Math.min(definition.maximumSpan.rows, Math.round(Number(object.span?.rows) || definition.defaultSpan.rows)));
+      return [{ id: object.id, kind: object.kind, asset, placement: cleanPosition(object.placement), span: { columns, rows }, order,
+        presentation: normalizeCanvasObjectPresentation(object.kind, object.presentation) }];
+    });
   return {
     documentType: PROFILE_DOCUMENT_TYPE, version: PROFILE_DOCUMENT_VERSION,
     documentId: documentId || `profile:${address}`, revision: Math.max(1, Math.trunc(Number(revision) || 1)),
@@ -48,10 +62,11 @@ export function buildProfileDocumentV3({ profileAddress, workspace, assets = [],
       systemModules: [{ id: 'identity', visible: true, placement: cleanPosition(modulePositions.identity), startOpen: systemPresentation.identity?.startOpen === true, windowGeometry: cleanWindowGeometry(systemPresentation.identity?.windowGeometry) }, { id: 'signals', visible: true, placement: cleanPosition(modulePositions.signals), startOpen: systemPresentation.signals?.startOpen === true, windowGeometry: cleanWindowGeometry(systemPresentation.signals?.windowGeometry) }],
       signals: { notifications: signalSettings?.notifications !== false, speech: signalSettings?.speech !== false,
         visualEffects: signalSettings?.visualEffects !== false, audio: signalSettings?.audio === true } },
-    spaces, metadata: {}
+    spaces, canvasObjects, metadata: {}
   };
 }
 // Compatibility export for Phase 4 callers; it now builds the current migrated schema.
 export const buildProfileDocumentV2 = buildProfileDocumentV3;
 export const buildProfileDocumentV1 = buildProfileDocumentV3;
-export const countProfileDocumentAssets = (document) => document?.spaces?.reduce((sum, space) => sum + space.assets.length, 0) || 0;
+export const countProfileDocumentAssets = (document) => (document?.spaces?.reduce((sum, space) => sum + space.assets.length, 0) || 0)
+  + (document?.canvasObjects?.length || 0);

@@ -17,6 +17,10 @@ import {
   toggleFavorite,
   unpinLibraryView
 } from '../domain/libraryWorkspace.js';
+import {
+  createCanvasObject, removeCanvasObject, reorderCanvasObject, replaceCanvasObjectAsset,
+  setCanvasObjectGeometry, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility
+} from '../domain/canvasObjects.js';
 import { loadLibraryWorkspace, saveLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
 
 const profileAddress = resolveLibraryProfile();
@@ -127,6 +131,29 @@ export const useLibraryStore = create((set, get) => ({
   },
   setLauncherPresentation(launcherId, presentation) {
     const workspace = setLauncherPresentation(get().workspace, launcherId, presentation); set({ workspace }); scheduleSave(workspace);
+  },
+  createCanvasObject(input) {
+    const previous = get().workspace;
+    const workspace = createCanvasObject(previous, input); set({ workspace }); scheduleSave(workspace);
+    return workspace === previous ? null : workspace.canvas.objects.find((object) => !previous.canvas.objects.some((prior) => prior.id === object.id))?.id || null;
+  },
+  setCanvasObjectGeometry(id, geometry) {
+    const workspace = setCanvasObjectGeometry(get().workspace, id, geometry); set({ workspace }); scheduleSave(workspace);
+  },
+  setCanvasObjectPresentation(id, presentation) {
+    const workspace = setCanvasObjectPresentation(get().workspace, id, presentation); set({ workspace }); scheduleSave(workspace);
+  },
+  replaceCanvasObjectAsset(id, stableAssetId) {
+    const workspace = replaceCanvasObjectAsset(get().workspace, id, stableAssetId); set({ workspace }); scheduleSave(workspace);
+  },
+  setCanvasObjectVisitorVisibility(id, visitorVisible) {
+    const workspace = setCanvasObjectVisitorVisibility(get().workspace, id, visitorVisible); set({ workspace }); scheduleSave(workspace);
+  },
+  reorderCanvasObject(id, command) {
+    const workspace = reorderCanvasObject(get().workspace, id, command); set({ workspace }); scheduleSave(workspace);
+  },
+  removeCanvasObject(id) {
+    const workspace = removeCanvasObject(get().workspace, id); set({ workspace }); scheduleSave(workspace);
   },
   resetCanvasLayout() {
     const workspace = resetCanvasLayout(get().workspace); set({ workspace }); scheduleSave(workspace);

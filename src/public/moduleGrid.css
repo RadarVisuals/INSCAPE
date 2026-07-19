@@ -17,6 +17,9 @@
 
 .public-shell button,
 .public-shell a[href],
+.public-shell input,
+.public-shell select,
+.public-shell textarea,
 .public-shell [tabindex],
 .identity-dossier__drag-handle[data-enabled] {
   pointer-events: auto;

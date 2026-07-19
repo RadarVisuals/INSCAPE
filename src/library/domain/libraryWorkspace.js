@@ -1,4 +1,4 @@
-export const LIBRARY_WORKSPACE_VERSION = 5;
+export const LIBRARY_WORKSPACE_VERSION = 6;
 
 export const LIBRARY_VIEW_TYPES = Object.freeze({ ALL: 'all', FAVORITES: 'favorites', FOLDER: 'folder' });
 
@@ -7,7 +7,7 @@ function folderId() {
 }
 
 export function createEmptyWorkspace(profileAddress) {
-  return { version: LIBRARY_WORKSPACE_VERSION, profileAddress, favorites: [], folders: [], canvas: { launchers: [] } };
+  return { version: LIBRARY_WORKSPACE_VERSION, profileAddress, favorites: [], folders: [], canvas: { launchers: [], objects: [] } };
 }
 
 export function createFolder(workspace, name, now = Date.now()) {
@@ -130,5 +130,9 @@ export function setLauncherPresentation(workspace, launcherId, patch) {
 }
 
 export function resetCanvasLayout(workspace) {
-  return { ...workspace, canvas: { ...workspace.canvas, launchers: workspace.canvas.launchers.map((launcher) => ({ ...launcher, position: null, windowPosition: null, windowGeometry: null })) } };
+  return { ...workspace, canvas: {
+    ...workspace.canvas,
+    launchers: workspace.canvas.launchers.map((launcher) => ({ ...launcher, position: null, windowPosition: null, windowGeometry: null })),
+    objects: workspace.canvas.objects.map((object) => ({ ...object, placement: { column: 0, row: object.presentationOrder * object.span.rows } }))
+  } };
 }

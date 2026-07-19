@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { findScenePlacement, gridPixelRect, isScenePlacementAvailable, LAUNCHER_SIZE_PRESETS, normalizeSpan, packCompactScene, resizeSpanFromPointer } from './sceneGrid.js';
+import { findScenePlacement, gridPixelRect, isScenePlacementAvailable, LAUNCHER_SIZE_PRESETS, normalizeSpan, packCompactCanvasObjects, packCompactScene, resizeSpanFromPointer } from './sceneGrid.js';
 import { iconGlyph, normalizeIconKey } from './sceneIcons.js';
 
 const geometry={columns:8,rows:8};
@@ -8,6 +8,7 @@ test('scene spans enforce appearance minimums and bounds',()=>{ assert.deepEqual
 test('collision checks full rectangular spans',()=>{ const items=[{id:'a',position:{column:0,row:0},span:{columns:3,rows:2}}]; assert.equal(isScenePlacementAvailable('b',{column:2,row:1},{columns:2,rows:1},items,geometry),false); assert.equal(isScenePlacementAvailable('b',{column:3,row:1},{columns:2,rows:1},items,geometry),true); });
 test('automatic placement is deterministic and collision safe',()=>{ const items=[{id:'a',position:{column:0,row:0},span:{columns:3,rows:1}}]; assert.deepEqual(findScenePlacement('b',{column:0,row:0},{columns:2,rows:1},items,geometry),{column:0,row:1}); });
 test('compact packing follows presentation order and prevents overlap',()=>{ const packed=packCompactScene([{id:'b',presentationOrder:2,appearanceMode:'label',span:{columns:3,rows:2}},{id:'a',presentationOrder:1,appearanceMode:'icon',span:{columns:1,rows:1}}],{columns:4,rows:8}); assert.deepEqual(packed.map(i=>i.id),['a','b']); assert.equal(packed[1].span.rows,1); });
+test('compact canvas-object packing is deterministic and preserves authored inputs',()=>{const g={columns:6,rows:20};const source=[{id:'b',presentationOrder:1,position:{column:5,row:9},span:{columns:4,rows:3}},{id:'a',presentationOrder:0,position:{column:4,row:8},span:{columns:3,rows:2}}];const first=packCompactCanvasObjects(source,g);const second=packCompactCanvasObjects([...source].reverse(),g);assert.deepEqual(first,second);assert.deepEqual(source[0].position,{column:5,row:9});assert.equal(first[0].id,'a');});
 test('controlled icon registry falls back and presets remain serializable',()=>{ assert.equal(normalizeIconKey('javascript'),'folder'); assert.equal(iconGlyph('profile'),'\u25c9'); assert.equal(LAUNCHER_SIZE_PRESETS.square.appearanceMode,'icon'); });
 test('launcher presets intentionally expose only square and compact starting points',()=>{assert.deepEqual(Object.keys(LAUNCHER_SIZE_PRESETS),['square','compact']);assert.deepEqual(LAUNCHER_SIZE_PRESETS.compact,{columns:2,rows:1,appearanceMode:'icon_label'});});
 test('absolute resize preserves the external handle grab offset and snaps to the nearest boundary',()=>{const g={columns:12,rows:10,cellWidth:50,cellHeight:50};const base={grabOffsetX:12,grabOffsetY:12,gridLeft:100,gridTop:40,origin:{column:2,row:1},geometry:g,appearanceMode:'label',inset:2};assert.deepEqual(resizeSpanFromPointer({...base,pointerX:360,pointerY:200}),{columns:3,rows:2});assert.deepEqual(resizeSpanFromPointer({...base,pointerX:388,pointerY:228}),{columns:4,rows:3});});

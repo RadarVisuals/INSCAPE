@@ -1,9 +1,11 @@
 import { normalizeProfileAddress } from '../config.js';
 import { LIBRARY_WORKSPACE_VERSION, createEmptyWorkspace, launcherIdForView } from '../domain/libraryWorkspace.js';
+import { normalizeCanvasObjects } from '../domain/canvasObjects.js';
 
 export const LIBRARY_WORKSPACE_KEY_PREFIX = 'os-underneath.library-workspace.v3:';
 export const LIBRARY_WORKSPACE_V4_KEY_PREFIX = 'os-underneath.library-workspace.v4:';
 export const LIBRARY_WORKSPACE_V5_KEY_PREFIX = 'os-underneath.library-workspace.v5:';
+export const LIBRARY_WORKSPACE_V6_KEY_PREFIX = 'os-underneath.library-workspace.v6:';
 export const LEGACY_V2_LIBRARY_WORKSPACE_KEY_PREFIX = 'os-underneath.library-workspace.v2:';
 export const LEGACY_LIBRARY_WORKSPACE_KEY_PREFIX = 'os-underneath.library-workspace.v1:';
 
@@ -11,7 +13,7 @@ export function libraryWorkspaceKey(profileAddress, version = LIBRARY_WORKSPACE_
   const normalized = normalizeProfileAddress(profileAddress);
   if (!normalized) throw new TypeError('A valid profile address is required');
   const prefix = version === 1 ? LEGACY_LIBRARY_WORKSPACE_KEY_PREFIX
-    : version === 2 ? LEGACY_V2_LIBRARY_WORKSPACE_KEY_PREFIX : version === 3 ? LIBRARY_WORKSPACE_KEY_PREFIX : version === 4 ? LIBRARY_WORKSPACE_V4_KEY_PREFIX : LIBRARY_WORKSPACE_V5_KEY_PREFIX;
+    : version === 2 ? LEGACY_V2_LIBRARY_WORKSPACE_KEY_PREFIX : version === 3 ? LIBRARY_WORKSPACE_KEY_PREFIX : version === 4 ? LIBRARY_WORKSPACE_V4_KEY_PREFIX : version === 5 ? LIBRARY_WORKSPACE_V5_KEY_PREFIX : LIBRARY_WORKSPACE_V6_KEY_PREFIX;
   return `${prefix}${normalized}`;
 }
 
@@ -24,7 +26,7 @@ function normalizePosition(position) {
 export function normalizeWorkspace(candidate, profileAddress) {
   const profile = normalizeProfileAddress(profileAddress);
   const empty = createEmptyWorkspace(profile);
-  if (!profile || !candidate || ![1, 2, 3, 4, LIBRARY_WORKSPACE_VERSION].includes(candidate.version) || normalizeProfileAddress(candidate.profileAddress) !== profile) return empty;
+  if (!profile || !candidate || ![1, 2, 3, 4, 5, LIBRARY_WORKSPACE_VERSION].includes(candidate.version) || normalizeProfileAddress(candidate.profileAddress) !== profile) return empty;
   const favorites = [...new Set((Array.isArray(candidate.favorites) ? candidate.favorites : []).filter((id) => typeof id === 'string' && id.length <= 300))];
   const seen = new Set();
   const folders = (Array.isArray(candidate.folders) ? candidate.folders : []).flatMap((folder) => {
@@ -59,7 +61,8 @@ export function normalizeWorkspace(candidate, profileAddress) {
       span: { columns: Math.max(1, Math.min(12, Math.round(Number(launcher.span?.columns) || 3))), rows: Math.max(1, Math.min(8, Math.round(Number(launcher.span?.rows) || 1))) },
       presentationOrder: Number.isInteger(launcher.presentationOrder) ? launcher.presentationOrder : launcherIds.size + 3 }];
   });
-  return { version: LIBRARY_WORKSPACE_VERSION, profileAddress: profile, favorites, folders, canvas: { launchers } };
+  const objects = candidate.version >= 6 ? normalizeCanvasObjects(candidate.canvas?.objects) : [];
+  return { version: LIBRARY_WORKSPACE_VERSION, profileAddress: profile, favorites, folders, canvas: { launchers, objects } };
 }
 
 export function loadLibraryWorkspace(storage, profileAddress) {
@@ -70,11 +73,12 @@ export function loadLibraryWorkspace(storage, profileAddress) {
       try { return normalizeWorkspace(JSON.parse(current), profileAddress); }
       catch { /* Fall through to the intact Phase 1 record when available. */ }
     }
+    const phaseFive = storage.getItem(libraryWorkspaceKey(profileAddress, 5));
     const phaseFour = storage.getItem(libraryWorkspaceKey(profileAddress, 4));
     const phaseThree = storage.getItem(libraryWorkspaceKey(profileAddress, 3));
     const phaseTwo = storage.getItem(libraryWorkspaceKey(profileAddress, 2));
     const phaseOne = storage.getItem(libraryWorkspaceKey(profileAddress, 1));
-    const legacy = phaseFour || phaseThree || phaseTwo || phaseOne;
+    const legacy = phaseFive || phaseFour || phaseThree || phaseTwo || phaseOne;
     if (!legacy) return createEmptyWorkspace(normalizeProfileAddress(profileAddress));
     const migrated = normalizeWorkspace(JSON.parse(legacy), profileAddress);
     saveLibraryWorkspace(storage, migrated);

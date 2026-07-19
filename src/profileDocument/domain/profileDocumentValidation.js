@@ -2,6 +2,8 @@ import { normalizeProfileAddress } from '../../library/config.js';
 import { createCanonicalAssetId, normalizeTokenId } from './assetReference.js';
 import { KNOWN_ENVIRONMENT_TYPES, KNOWN_KEEPER_IDS, KNOWN_SHADER_ENVIRONMENT_IDS, KNOWN_STAGE_IDS, PROFILE_DOCUMENT_LIMITS as L, PROFILE_DOCUMENT_TYPE, PROFILE_DOCUMENT_VERSION } from './constants.js';
 import { migrateProfileDocument } from './profileDocumentMigration.js';
+import { CANVAS_OBJECT_PRESENTATION_ENUMS, getCanvasObjectDefinition } from '../../library/domain/canvasObjectRegistry.js';
+import { isValidCanvasObjectId } from '../../library/domain/canvasObjects.js';
 
 const ID = /^[A-Za-z0-9:_-]+$/;
 const SAFE_MODULE_IDS = new Set(['identity', 'signals']);
@@ -15,6 +17,15 @@ const validWindowGeometry = (value) => value === null || (exactKeys(value, ['col
 const ICON_KEYS = new Set(['profile','collection','signals','creations','folder','favorites','search','gallery','external','music']);
 const validAppearance = (value) => value === undefined || (exactKeys(value,['mode','iconKey','showLabel','columnSpan','rowSpan']) && ['label','icon','icon_label'].includes(value?.mode) && ICON_KEYS.has(value?.iconKey) && typeof value?.showLabel === 'boolean' && Number.isInteger(value?.columnSpan) && value.columnSpan >= 1 && value.columnSpan <= 12 && Number.isInteger(value?.rowSpan) && value.rowSpan >= 1 && value.rowSpan <= 8);
 const validUrl = (value) => typeof value === 'string' && value.length <= L.maxUrlLength && /^(https?:\/\/|ipfs:\/\/)/i.test(value) && !/[\u0000-\u001f\u007f]/.test(value);
+const validAssetReference = (asset) => {
+  if (!exactKeys(asset, ['stableAssetId', 'network', 'chainId', 'tokenStandard', 'contractAddress', 'tokenId', 'cachedName', 'cachedPreviewUrl'])) return false;
+  const token = asset?.tokenId === null ? null : normalizeTokenId(asset?.tokenId);
+  const canonical = createCanonicalAssetId({ chainId: asset?.chainId, contractAddress: asset?.contractAddress, tokenId: token });
+  return Boolean(canonical && canonical === asset?.stableAssetId && asset?.network === 'lukso-mainnet' && asset?.chainId === 42 && STANDARD.has(asset?.tokenStandard)
+    && !(asset?.tokenStandard === 'LSP8' && !token) && !(asset?.tokenStandard === 'LSP7' && token)
+    && (asset?.cachedName === undefined || validText(asset.cachedName, L.maxNameLength))
+    && (asset?.cachedPreviewUrl === undefined || validUrl(asset.cachedPreviewUrl)));
+};
 function depth(value, current = 0) { if (!value || typeof value !== 'object') return current; return Object.values(value).reduce((max, child) => Math.max(max, depth(child, current + 1)), current); }
 
 export class ProfileDocumentValidationError extends Error {
@@ -27,7 +38,7 @@ export function validateProfileDocument(input, { rawSize } = {}) {
   try { measuredSize ??= new TextEncoder().encode(JSON.stringify(input)).length; } catch { measuredSize = Infinity; }
   if (measuredSize > L.maxJsonBytes) fail('$', 'document_too_large', `Document exceeds ${L.maxJsonBytes} bytes`);
   if (depth(input) > L.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!exactKeys(input, ['documentType', 'version', 'documentId', 'revision', 'createdAt', 'exportedAt', 'network', 'profile', 'presentation', 'spaces', 'metadata'])) fail('$', 'unexpected_fields', 'Document contains unexpected or missing object structure');
+  if (!exactKeys(input, ['documentType', 'version', 'documentId', 'revision', 'createdAt', 'exportedAt', 'network', 'profile', 'presentation', 'spaces', 'canvasObjects', 'metadata'])) fail('$', 'unexpected_fields', 'Document contains unexpected or missing object structure');
   if (input?.documentType !== PROFILE_DOCUMENT_TYPE) fail('documentType', 'wrong_document_type', 'Not an OS_UNDERNEATH profile document');
   if (input?.version !== PROFILE_DOCUMENT_VERSION) fail('version', 'unsupported_version', `Unsupported profile document version: ${String(input?.version)}`);
   if (!validId(input?.documentId)) fail('documentId', 'invalid_id', 'Invalid document ID');
@@ -71,6 +82,24 @@ export function validateProfileDocument(input, { rawSize } = {}) {
     });
     if (total > L.maxTotalAssetReferences) fail('spaces', 'too_many_asset_references', 'Too many total asset references');
   }
+  if (!Array.isArray(input?.canvasObjects)) fail('canvasObjects', 'invalid_canvas_objects', 'Canvas objects must be an array');
+  else {
+    if (input.canvasObjects.length > L.maxCanvasObjects) fail('canvasObjects', 'too_many_canvas_objects', 'Too many public canvas objects');
+    const ids = new Set(); const orders = new Set();
+    input.canvasObjects.forEach((object, index) => {
+      const path = `canvasObjects[${index}]`; const definition = getCanvasObjectDefinition(object?.kind);
+      if (!exactKeys(object, ['id', 'kind', 'asset', 'placement', 'span', 'order', 'presentation'])) fail(path, 'unexpected_fields', 'Canvas object contains unexpected fields');
+      if (!isValidCanvasObjectId(object?.id) || ids.has(object.id)) fail(`${path}.id`, 'duplicate_or_invalid_id', 'Canvas object ID must be controlled and unique'); else ids.add(object.id);
+      if (!definition) fail(`${path}.kind`, 'unknown_kind', 'Unknown canvas object kind');
+      if (!Number.isInteger(object?.order) || object.order < 0 || object.order >= input.canvasObjects.length || orders.has(object.order)) fail(`${path}.order`, 'invalid_order', 'Canvas object order must be bounded and unique'); else orders.add(object.order);
+      if (!validPosition(object?.placement) || object.placement === null) fail(`${path}.placement`, 'invalid_placement', 'Canvas object placement is required');
+      if (!exactKeys(object?.span, ['columns', 'rows']) || !Number.isInteger(object?.span?.columns) || !Number.isInteger(object?.span?.rows)
+        || !definition || object.span.columns < definition.minimumSpan.columns || object.span.columns > definition.maximumSpan.columns || object.span.rows < definition.minimumSpan.rows || object.span.rows > definition.maximumSpan.rows) fail(`${path}.span`, 'invalid_span', 'Canvas object span is outside controlled bounds');
+      if (!validAssetReference(object?.asset)) fail(`${path}.asset`, 'invalid_asset_reference', 'Invalid canonical canvas object asset reference');
+      const presentationKeys = ['fit', 'frame', 'mat', 'background'];
+      if (!exactKeys(object?.presentation, presentationKeys) || presentationKeys.some((key) => !CANVAS_OBJECT_PRESENTATION_ENUMS[key].includes(object?.presentation?.[key]))) fail(`${path}.presentation`, 'invalid_presentation', 'Invalid framed artwork presentation');
+    });
+  }
   return { valid: errors.length === 0, errors, value: errors.length ? null : structuredClone(input), size: measuredSize };
 }
 export function assertValidProfileDocument(input, options) { const result = validateProfileDocument(input, options); if (!result.valid) throw new ProfileDocumentValidationError(result.errors); return result.value; }
@@ -79,6 +108,6 @@ export function parseProfileDocumentJson(raw) {
   const size = new TextEncoder().encode(raw).length;
   if (size > L.maxJsonBytes) throw new ProfileDocumentValidationError([{ path: '$', code: 'document_too_large', message: `Document exceeds ${L.maxJsonBytes} bytes` }]);
   let input; try { input = JSON.parse(raw); } catch { throw new ProfileDocumentValidationError([{ path: '$', code: 'invalid_json', message: 'Malformed JSON' }]); }
-  if (input?.version === 1 || input?.version === 2) return migrateProfileDocument(input);
+  if ([1, 2, 3].includes(input?.version)) return migrateProfileDocument(input);
   return assertValidProfileDocument(input, { rawSize: size });
 }

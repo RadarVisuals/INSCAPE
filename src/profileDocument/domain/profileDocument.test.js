@@ -7,6 +7,8 @@ import { parseProfileDocumentJson, ProfileDocumentValidationError, validateProfi
 import { createProfileDocumentRestorePlan, executeAtomicRestore } from './profileDocumentRestore.js';
 import { createProfileDocumentState, enterDocumentPreview, exitDocumentPreview, isSnapshotStale, setImportedDocument, setSnapshot } from '../state/profileDocumentState.js';
 import { loadRestoredPresentation, profilePresentationKey } from '../storage/profileDocumentStorage.js';
+import { projectDocumentAsset } from './documentProjection.js';
+import { PROFILE_DOCUMENT_LIMITS } from './constants.js';
 
 const PROFILE = '0xf3C189819Fd5b042f692983bFbFD57ab607ee709';
 const CONTRACT_A = '0x1111111111111111111111111111111111111111';
@@ -25,6 +27,9 @@ function workspace() {
       { id: 'library:folder:public-a', viewType: 'folder', folderId: 'public-a', visitorVisible: true, position: { column: 2, row: 3 }, windowPosition: { column: 1, row: 2 } },
       { id: 'library:folder:public-b', viewType: 'folder', folderId: 'public-b', visitorVisible: true, position: null, windowPosition: null },
       { id: 'library:folder:private-folder', viewType: 'folder', folderId: 'private-folder', visitorVisible: false, position: { column: 5, row: 6 }, windowPosition: { column: 2, row: 4 } }
+    ], objects: [
+      { id: 'canvas:artwork:public', kind: 'framed-artwork', stableAssetId: assetA.id, visitorVisible: true, placement: { column: 8, row: 3 }, span: { columns: 4, rows: 4 }, presentationOrder: 1, presentation: { fit: 'contain', frame: 'thin', mat: 'none', background: 'dark' } },
+      { id: 'canvas:artwork:private', kind: 'framed-artwork', stableAssetId: PRIVATE_ASSET_ID, visitorVisible: false, placement: { column: 1, row: 1 }, span: { columns: 3, rows: 3 }, presentationOrder: 0, presentation: { fit: 'cover', frame: 'heavy', mat: 'dark', background: 'light' } }
     ] } };
 }
 function build(overrides = {}) {
@@ -36,7 +41,7 @@ function build(overrides = {}) {
     documentId: 'profile:test', revision: 3, createdAt: 1000, exportedAt: 2000, ...overrides });
 }
 
-test('builder emits a valid allowlisted deterministic v3 public document', () => {
+test('builder emits a valid allowlisted deterministic v4 public document', () => {
   const first = build(); const second = build();
   assert.equal(validateProfileDocument(first).valid, true);
   assert.deepEqual(first, second);
@@ -44,11 +49,12 @@ test('builder emits a valid allowlisted deterministic v3 public document', () =>
   assert.deepEqual(first.spaces.map((space) => space.label), ['Public A', 'Public B']);
   assert.equal(first.spaces[0].assets[0].stableAssetId, assetA.id);
   assert.equal(first.spaces[1].assets[0].stableAssetId, assetA.id, 'multi-space membership is preserved');
+  assert.equal(first.version, 4); assert.equal(first.canvasObjects.length, 1); assert.equal(first.canvasObjects[0].asset.stableAssetId, assetA.id);
 });
 
 test('empty authored profiles are valid', () => {
-  const document = build({ workspace: { ...workspace(), folders: [], favorites: [], canvas: { launchers: [] } }, assets: [] });
-  assert.equal(validateProfileDocument(document).valid, true); assert.deepEqual(document.spaces, []);
+  const document = build({ workspace: { ...workspace(), folders: [], favorites: [], canvas: { launchers: [], objects: [] } }, assets: [] });
+  assert.equal(validateProfileDocument(document).valid, true); assert.deepEqual(document.spaces, []); assert.deepEqual(document.canvasObjects, []);
 });
 
 test('private subsystem and local persistence fields cannot leak through builder allowlisting', () => {
@@ -91,7 +97,7 @@ test('formatted export/import round trip preserves semantic and canonical conten
 test('strict validation rejects malformed JSON, wrong type, future versions, addresses, duplicates, placement, fields and URLs', () => {
   assert.throws(() => parseProfileDocumentJson('{no'), ProfileDocumentValidationError);
   const cases = [
-    { documentType: 'OTHER' }, { version: 4 }, { profile: { address: 'bad', cachedIdentity: { address: 'bad' } } },
+    { documentType: 'OTHER' }, { version: 5 }, { profile: { address: 'bad', cachedIdentity: { address: 'bad' } } },
     { spaces: [build().spaces[0], build().spaces[0]] },
     { spaces: [{ ...build().spaces[0], placement: { column: -1, row: 0 } }] },
     { spaces: [{ ...build().spaces[0], privateState: true }] },
@@ -115,7 +121,7 @@ test('migration defaults v1 and v2 documents to the illustrated environment', ()
   legacy.presentation.systemModules = legacy.presentation.systemModules.map(({ startOpen, windowGeometry, ...module }) => module);
   legacy.spaces = legacy.spaces.map(({ startOpen, windowGeometry, ...space }) => space);
   const migrated = migrateProfileDocument(legacy);
-  assert.equal(migrated.version, 3); assert.equal(migrated.spaces[0].startOpen, false); assert.equal(migrated.spaces[0].windowGeometry, null);
+  assert.equal(migrated.version, 4); assert.equal(migrated.spaces[0].startOpen, false); assert.equal(migrated.spaces[0].windowGeometry, null); assert.deepEqual(migrated.canvasObjects, []);
   assert.deepEqual(migrated.presentation.environment, { type: 'illustrated', shaderId: 'neural-field' });
   const v2 = structuredClone(build()); v2.version = 2; delete v2.presentation.environment;
   assert.deepEqual(migrateProfileDocument(v2).presentation.environment, { type: 'illustrated', shaderId: 'neural-field' });
@@ -223,4 +229,60 @@ test('atomic restore succeeds or rolls all state back after persistence failure'
 test('different-profile imports remain valid and can be warned without mutation', () => {
   const other = build({ profileAddress: '0x3333333333333333333333333333333333333333', documentId: 'profile:other' });
   assert.equal(validateProfileDocument(other).valid, true); assert.notEqual(other.profile.address, PROFILE.toLowerCase());
+});
+
+test('private canvas objects never enter documents or fingerprints while public changes stale snapshots', () => {
+  const sourceWorkspace = workspace(); const source = build({ workspace: sourceWorkspace });
+  assert.deepEqual(source.canvasObjects.map((object) => object.id), ['canvas:artwork:public']);
+  assert.equal(canonicalSerializeProfileDocument(source).includes('canvas:artwork:private'), false);
+  const state = setSnapshot(createProfileDocumentState(), source, profileDocumentContentFingerprint(source));
+  const privateEdit = workspace(); privateEdit.canvas.objects.find((object) => !object.visitorVisible).presentation.frame = 'none';
+  assert.equal(isSnapshotStale(state, build({ workspace: privateEdit })), false);
+  const publicEdit = workspace(); publicEdit.canvas.objects.find((object) => object.visitorVisible).presentation.fit = 'cover';
+  assert.equal(isSnapshotStale(state, build({ workspace: publicEdit })), true);
+});
+
+test('canvas artwork validates strict controlled fields and rejects remote renderer escape hatches', () => {
+  const source = build(); const object = source.canvasObjects[0];
+  for (const changed of [
+    { ...object, kind: 'remote-widget' }, { ...object, span: { columns: 0, rows: 4 } },
+    { ...object, presentation: { ...object.presentation, fit: 'crop-script' } }, { ...object, stableAssetId: 'bad' },
+    { ...object, id: 'canvas:artwork:remote/path' }, { ...object, placement: null },
+    { ...object, renderer: '/remote/component.jsx' }, { ...object, shaderSource: 'void main(){}' }
+  ]) assert.equal(validateProfileDocument({ ...source, canvasObjects: [changed] }).valid, false);
+});
+
+test('builder deterministically bounds the public canvas-object projection', () => {
+  const crowded = workspace(); const template = crowded.canvas.objects[0];
+  crowded.canvas.objects = Array.from({ length: PROFILE_DOCUMENT_LIMITS.maxCanvasObjects + 4 }, (_, index) => ({
+    ...structuredClone(template), id: `canvas:artwork:bounded-${String(index).padStart(2, '0')}`, presentationOrder: index
+  }));
+  const document = build({ workspace: crowded });
+  assert.equal(document.canvasObjects.length, PROFILE_DOCUMENT_LIMITS.maxCanvasObjects);
+  assert.equal(validateProfileDocument(document).valid, true);
+  assert.equal(document.canvasObjects.at(-1).id, 'canvas:artwork:bounded-47');
+});
+
+test('framed artwork round-trips through serialize, parse, projection, and restore with collision-safe IDs', () => {
+  const source = build(); const parsed = parseProfileDocumentJson(formatProfileDocumentJson(source));
+  assert.deepEqual(parsed.canvasObjects, source.canvasObjects);
+  const current = workspace(); current.canvas.objects = [{ ...current.canvas.objects[1], id: 'canvas:artwork:public' }];
+  const plan = createProfileDocumentRestorePlan(parsed, current);
+  assert.equal(plan.workspace.canvas.objects.find((object) => object.visitorVisible).id, 'canvas:artwork:public-2');
+  assert.equal(plan.workspace.canvas.objects.find((object) => object.visitorVisible).stableAssetId, assetA.id);
+  assert.deepEqual(current.canvas.objects[0].presentation, workspace().canvas.objects[1].presentation, 'private local object remains untouched');
+});
+
+test('restore collision suffixes remain inside the portable canvas-object ID limit', () => {
+  const source = build(); const maximumId = `canvas:artwork:${'a'.repeat(200 - 'canvas:artwork:'.length)}`;
+  source.canvasObjects[0].id = maximumId;
+  const current = workspace(); current.canvas.objects = [{ ...current.canvas.objects[1], id: maximumId }];
+  const plan = createProfileDocumentRestorePlan(source, current);
+  const restored = plan.workspace.canvas.objects.find((object) => object.visitorVisible);
+  assert.equal(restored.id.length, 200); assert.match(restored.id, /-2$/);
+});
+
+test('missing public asset metadata projects a readable safe fallback', () => {
+  const reference = build().canvasObjects[0].asset; const missing = projectDocumentAsset({ ...reference, cachedName: 'Missing portrait', cachedPreviewUrl: undefined }, []);
+  assert.equal(missing.name, 'Missing portrait'); assert.equal(missing.metadataStatus, 'unavailable'); assert.equal(missing.imageUrl, null);
 });

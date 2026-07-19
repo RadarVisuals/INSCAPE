@@ -10,3 +10,12 @@ test('launcher editing and visitor-start commands are directly available', () =>
   assert.ok(contextMenuCommands({ target: { type: 'launcher' }, editMode: false, launcher: { visitorVisible: false } }).some((item) => item.id === 'toggle-visibility'));
   assert.ok(contextMenuCommands({ target: { type: 'window' }, editMode: false }).some((item) => item.id === 'toggle-start-open'));
 });
+
+test('canvas creation and framed-artwork commands stay controlled and keyboard-menu compatible', () => {
+  const create = contextMenuCommands({ target: { type: 'canvas', id: 'canvas' }, menu: 'create' });
+  assert.deepEqual(create.map((command) => command.id), ['menu-root', 'create-folder', 'create-framed-artwork']);
+  const object = contextMenuCommands({ target: { type: 'canvas-object', id: 'canvas:artwork:one' }, canvasObject: { visitorVisible: true } });
+  assert.deepEqual(object.map((command) => command.id), ['open-artwork', 'edit-artwork', 'replace-artwork', 'toggle-object-visibility', 'menu-layer', 'remove-artwork']);
+  const layer = contextMenuCommands({ target: { type: 'canvas-object', id: 'canvas:artwork:one' }, menu: 'layer' });
+  assert.deepEqual(layer.map((command) => command.id), ['menu-root', 'object-forward', 'object-backward', 'object-front', 'object-back']);
+});

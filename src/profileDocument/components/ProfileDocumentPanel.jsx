@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { countProfileDocumentAssets } from '../domain/profileDocumentBuilder.js';
 import { createProfileDocumentFilename, formatProfileDocumentJson } from '../domain/profileDocumentSerialization.js';
 import { parseProfileDocumentJson } from '../domain/profileDocumentValidation.js';
-import { PROFILE_DOCUMENT_LIMITS } from '../domain/constants.js';
+import { PROFILE_DOCUMENT_LIMITS, PROFILE_DOCUMENT_VERSION } from '../domain/constants.js';
 
 export default function ProfileDocumentPanel({ snapshot, imported, stale, error, activeProfileAddress, onBuild, onPreview, onImport, onRestore, onClose }) {
   const fileRef = useRef(null); const [message, setMessage] = useState('');
@@ -22,9 +22,9 @@ export default function ProfileDocumentPanel({ snapshot, imported, stale, error,
   };
   return <aside className="profile-document-panel" role="dialog" aria-modal="false" aria-labelledby="profile-document-title">
     <header><div><span>Portable profile document</span><h2 id="profile-document-title">Share profile</h2></div><button type="button" onClick={onClose} aria-label="Close Share"><X aria-hidden="true" /></button></header>
-    <div className="profile-document-panel__status"><span>{current ? 'DOCUMENT VALID' : 'LOCAL SNAPSHOT EMPTY'}</span><span>VERSION 1</span>{stale && <span>DRAFT CHANGED</span>}{imported && <span>IMPORTED DOCUMENT</span>}</div>
+    <div className="profile-document-panel__status"><span>{current ? 'DOCUMENT VALID' : 'LOCAL SNAPSHOT EMPTY'}</span><span>VERSION {current?.version || PROFILE_DOCUMENT_VERSION}</span>{stale && <span>DRAFT CHANGED</span>}{imported && <span>IMPORTED DOCUMENT</span>}</div>
     {current ? <dl><div><dt>Profile</dt><dd>{current.profile.cachedIdentity.name || current.profile.address}</dd></div><div><dt>Revision</dt><dd>{current.revision}</dd></div><div><dt>Public spaces</dt><dd>{current.spaces.length}</dd></div><div><dt>Public asset references</dt><dd>{countProfileDocumentAssets(current)}</dd></div><div><dt>Keeper</dt><dd>{current.presentation.keeperId}</dd></div></dl> : <p>No public snapshot has been generated.</p>}
-    <p className="profile-document-panel__hint">Private pinned spaces are excluded.</p>
+    <p className="profile-document-panel__hint">Private spaces and canvas artwork are excluded.</p>
     <div className="profile-document-panel__actions"><button type="button" onClick={onBuild}>{snapshot ? 'Rebuild snapshot' : 'Build snapshot'}</button><button type="button" disabled={!snapshot} onClick={() => onPreview('snapshot')}>Preview profile</button><button type="button" disabled={!snapshot || stale} onClick={exportSnapshot}>Export profile</button><button type="button" onClick={() => fileRef.current?.click()}>Import profile</button>{imported && <><button type="button" onClick={() => onPreview('imported')}>Preview import</button><button type="button" onClick={onRestore}>Restore presentation</button></>}</div>
     <input ref={fileRef} hidden type="file" accept="application/json,.json" onChange={readImport} />
     {(message || error) && <p className="profile-document-panel__message" role="status">{message || error}</p>}

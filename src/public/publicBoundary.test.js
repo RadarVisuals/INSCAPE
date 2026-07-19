@@ -49,3 +49,19 @@ test('window state stays a UI-only document with no RenderConfig fields', () => 
   assert.match(stateSource, /openIds/);
   assert.match(stateSource, /activeId/);
 });
+
+test('framed artwork keeps form controls interactive and presentation layers independent', () => {
+  const shellStyles = readFileSync(new URL('./moduleGrid.css', import.meta.url), 'utf8');
+  const artworkSource = readFileSync(new URL('./FramedArtwork.jsx', import.meta.url), 'utf8');
+  const artworkStyles = readFileSync(new URL('./canvasObjects.css', import.meta.url), 'utf8');
+  const documentPreviewSource = readFileSync(new URL('../profileDocument/components/ProfileDocumentPreview.jsx', import.meta.url), 'utf8');
+
+  assert.match(shellStyles, /\.public-shell input,[\s\S]*\.public-shell select,[\s\S]*pointer-events:\s*auto/);
+  assert.match(artworkSource, /canvas-artwork__mat/);
+  assert.match(artworkSource, /canvas-artwork__image-bed/);
+  assert.match(artworkStyles, /data-mat="light"[^}]*\.canvas-artwork__mat/);
+  assert.match(artworkStyles, /data-background="light"[^}]*\.canvas-artwork__image-bed/);
+  assert.doesNotMatch(artworkStyles, /data-private[^}]*content:\s*["']PRIVATE/);
+  assert.match(artworkSource, /arranging && selected/);
+  assert.match(documentPreviewSource, /<FramedArtwork/);
+});

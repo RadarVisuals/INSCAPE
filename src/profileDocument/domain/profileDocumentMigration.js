@@ -8,12 +8,18 @@ export function migrateProfileDocument(input) {
     migrated.presentation.systemModules = migrated.presentation.systemModules.map((module) => ({ ...module, startOpen: false, windowGeometry: null }));
     migrated.spaces = migrated.spaces.map((space) => ({ ...space, startOpen: false, windowGeometry: null }));
     migrated.presentation.environment = { type: 'illustrated', shaderId: 'neural-field' };
+    migrated.canvasObjects = [];
     migrated.version = PROFILE_DOCUMENT_VERSION;
     return assertValidProfileDocument(migrated);
   }
   if (input.version === 2) {
     const migrated = structuredClone(input); migrated.version = PROFILE_DOCUMENT_VERSION;
     migrated.presentation.environment = { type: 'illustrated', shaderId: 'neural-field' };
+    migrated.canvasObjects = [];
+    return assertValidProfileDocument(migrated);
+  }
+  if (input.version === 3) {
+    const migrated = structuredClone(input); migrated.version = PROFILE_DOCUMENT_VERSION; migrated.canvasObjects = [];
     return assertValidProfileDocument(migrated);
   }
   if (input.version !== PROFILE_DOCUMENT_VERSION) throw new ProfileDocumentValidationError([{ path: 'version', code: 'unsupported_version', message: `Unsupported profile document version: ${String(input.version)}` }]);

@@ -1,4 +1,5 @@
 import { assertValidProfileDocument } from './profileDocumentValidation.js';
+import { MAX_CANVAS_OBJECT_ID_LENGTH } from '../../library/domain/canvasObjects.js';
 
 function folderIdFromSpace(space) {
   const prefix = 'library:folder:';
@@ -43,7 +44,27 @@ export function createProfileDocumentRestorePlan(document, currentWorkspace) {
     const requested = folderIdFromSpace(space) || `restored-${space.id}`;
     restoreAsFolder(space, requested);
   }
-  workspace.canvas = { ...workspace.canvas, launchers };
+  // Restore follows the existing public-presentation replacement policy: public objects are replaced,
+  // unrelated private local objects survive, and imported IDs are suffixed only when they collide.
+  const privateObjects = (workspace.canvas?.objects || []).filter((object) => object.visitorVisible !== true);
+  const usedObjectIds = new Set(privateObjects.map((object) => object.id));
+  const uniqueObjectId = (requested) => {
+    if (!usedObjectIds.has(requested)) { usedObjectIds.add(requested); return requested; }
+    let suffix = 2;
+    let id;
+    do {
+      const ending = `-${suffix}`;
+      id = `${requested.slice(0, MAX_CANVAS_OBJECT_ID_LENGTH - ending.length)}${ending}`;
+      suffix += 1;
+    } while (usedObjectIds.has(id));
+    usedObjectIds.add(id); return id;
+  };
+  const restoredObjects = [...value.canvasObjects].sort((a, b) => a.order - b.order).map((object, index) => ({
+    id: uniqueObjectId(object.id), kind: object.kind, stableAssetId: object.asset.stableAssetId, visitorVisible: true,
+    placement: { ...object.placement }, span: { ...object.span }, presentationOrder: privateObjects.length + index,
+    presentation: { ...object.presentation }
+  }));
+  workspace.canvas = { ...workspace.canvas, launchers, objects: [...privateObjects, ...restoredObjects] };
   return { workspace, keeperId: value.presentation.keeperId, stageId: value.presentation.stageId,
     environment: { ...value.presentation.environment },
     signalSettings: { ...value.presentation.signals }, restoredFolderIds: [...restoredFolderIds] };

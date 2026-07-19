@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IdentityDossier from './IdentityDossier.jsx';
 import { CollectionWindow, FolderWindow, useLibraryStore } from '../library/index.js';
+import AssetPreview from '../library/components/AssetPreview.jsx';
 import KeeperSignalsLayer from '../signals/components/KeeperSignalsLayer.jsx';
 import SignalSettings from '../signals/components/SignalSettings.jsx';
 import SignalsWindow from '../signals/components/SignalsWindow.jsx';
@@ -16,7 +17,7 @@ import { profileDocumentContentFingerprint } from '../profileDocument/domain/pro
 import { loadProfileSnapshot, profilePresentationKey, saveProfileSnapshot } from '../profileDocument/storage/profileDocumentStorage.js';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { getPublicTheme } from './themeTokens.js';
-import { findScenePlacement, isScenePlacementAvailable, LAUNCHER_SIZE_PRESETS, normalizeSpan, packCompactScene } from './sceneGrid.js';
+import { findScenePlacement, isScenePlacementAvailable, LAUNCHER_SIZE_PRESETS, normalizeSpan, packCompactCanvasObjects, packCompactScene } from './sceneGrid.js';
 import { gridRectToPixelRect, launcherGeometryAvailable, movementCandidateFromPointer, normalizeGridRect, resizeCandidateFromPointer } from './gridGeometry.js';
 import { activateInteraction, createInteraction, effectiveGeometry, INTERACTION_KIND } from './gridInteraction.js';
 import { iconGlyph, normalizeIconKey, SCENE_ICONS } from './sceneIcons.js';
@@ -24,6 +25,11 @@ import { decodeWindowGridGeometry, defaultWindowGridRect, windowMinimumSpan } fr
 import { createRuntimeWindowState, loadRuntimeWindowState, saveRuntimeWindowState, updateRuntimeWindowState, windowZIndex } from './windows/runtimeWindowState.js';
 import { contextMenuCommands, resolveContextTarget } from './menus/contextMenuModel.js';
 import DesktopMenu from './menus/DesktopMenu.jsx';
+import FramedArtwork from './FramedArtwork.jsx';
+import ArtworkChooser from './ArtworkChooser.jsx';
+import ArtworkInspector from './ArtworkInspector.jsx';
+import { CANVAS_OBJECT_KIND, getCanvasObjectDefinition } from '../library/domain/canvasObjectRegistry.js';
+import { CANVAS_OBJECT_ORDER_COMMAND } from '../library/domain/canvasObjects.js';
 import {
   MODULE_LAYOUT_STORAGE_KEY,
   LEGACY_MODULE_LAYOUT_STORAGE_KEY,
@@ -40,6 +46,7 @@ import '../library/collection.css';
 import '../signals/signals.css';
 import '../profileDocument/profileDocument.css';
 import './scenePreview.css';
+import './canvasObjects.css';
 
 const MODULES = Object.freeze([
   { id: 'identity', label: 'Profile Card' },
@@ -156,6 +163,10 @@ export default function ModuleGridShell({
   const [activeHudCommand, setActiveHudCommand] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [inspectorAnchor, setInspectorAnchor] = useState(null);
+  const [artworkInspector, setArtworkInspector] = useState(null);
+  const [selectedCanvasObjectId, setSelectedCanvasObjectId] = useState(null);
+  const [artworkChooser, setArtworkChooser] = useState(null);
+  const [previewObjectId, setPreviewObjectId] = useState(null);
   const [availableModuleIds, setAvailableModuleIds] = useState(() => new Set());
   const moduleRefs = useRef(new Map());
   const identityRef = useRef(null);
@@ -164,6 +175,7 @@ export default function ModuleGridShell({
   const signalsPanelRef = useRef(null);
   const folderPanelRef = useRef(null);
   const launcherInspectorRef = useRef(null);
+  const canvasObjectRefs = useRef(new Map());
   const shellRef = useRef(null);
   const gridRef = useRef(null);
   const [interaction, setInteraction] = useState(null);
@@ -171,6 +183,7 @@ export default function ModuleGridShell({
   const lifecycleHandlersRef = useRef({move:null,finish:null});
   const loadedRuntimeProfileRef = useRef(null);
   const suppressLauncherClickRef = useRef(false);
+  const artworkChoicePendingRef = useRef(false);
   const resizeFrameRef = useRef(0);
 
   const openWorldContextMenu = useCallback((event) => {
@@ -192,6 +205,9 @@ export default function ModuleGridShell({
   const theme = useMemo(() => getPublicTheme(activeActorId), [activeActorId]);
   const workspace = useLibraryStore((state) => state.workspace);
   const libraryAssets = useLibraryStore((state) => state.assets);
+  const libraryStatus = useLibraryStore((state) => state.status);
+  const libraryError = useLibraryStore((state) => state.error || state.liveError);
+  const loadLibrary = useLibraryStore((state) => state.load);
   const replaceWorkspace = useLibraryStore((state) => state.replaceWorkspace);
   const signalSettings = useSignalStore((state) => state.settings);
   const replaceSignalSettings = useSignalStore((state) => state.replaceSettings);
@@ -215,7 +231,15 @@ export default function ModuleGridShell({
   const createFolder = useLibraryStore((state) => state.createFolder);
   const renameFolder = useLibraryStore((state) => state.renameFolder);
   const pinView = useLibraryStore((state) => state.pinView);
+  const createCanvasObject = useLibraryStore((state) => state.createCanvasObject);
+  const setCanvasObjectGeometry = useLibraryStore((state) => state.setCanvasObjectGeometry);
+  const setCanvasObjectPresentation = useLibraryStore((state) => state.setCanvasObjectPresentation);
+  const replaceCanvasObjectAsset = useLibraryStore((state) => state.replaceCanvasObjectAsset);
+  const setCanvasObjectVisitorVisibility = useLibraryStore((state) => state.setCanvasObjectVisitorVisibility);
+  const reorderCanvasObject = useLibraryStore((state) => state.reorderCanvasObject);
+  const removeCanvasObject = useLibraryStore((state) => state.removeCanvasObject);
   const pinnedLaunchers = workspace.canvas.launchers;
+  const canvasObjects = workspace.canvas.objects;
   const pinnedLauncherKey = pinnedLaunchers.map((launcher) => launcher.id).join('|');
   const sceneItems = useMemo(() => {
     const items=[];
@@ -225,6 +249,12 @@ export default function ModuleGridShell({
   },[geometry,pinnedLaunchers,positions,systemPresentation]);
   const canvasPositions = useMemo(() => Object.fromEntries(sceneItems.map((item)=>[item.id,item.position])),[sceneItems]);
   const sceneById = useMemo(() => Object.fromEntries(sceneItems.map((item)=>{const effective=effectiveGeometry(item.geometry,interaction,item.id);return [item.id,{...item,geometry:effective,position:{column:effective.column,row:effective.row},span:{columns:effective.columnSpan,rows:effective.rowSpan}}]})),[interaction,sceneItems]);
+  const canvasObjectScenes = useMemo(() => {
+    const items=canvasObjects.map((object)=>{const definition=getCanvasObjectDefinition(object.kind);const rect=normalizeGridRect({column:object.placement.column,row:object.placement.row,columnSpan:object.span.columns,rowSpan:object.span.rows},geometry,{minimumSpan:definition.minimumSpan});return {...object,geometry:rect,position:{column:rect.column,row:rect.row},span:{columns:rect.columnSpan,rows:rect.rowSpan}};});
+    const responsive=geometry.narrow?packCompactCanvasObjects(items,geometry):items;
+    return Object.fromEntries(responsive.map((item)=>{const effective=effectiveGeometry(item.geometry,interaction,item.id);return [item.id,{...item,geometry:effective,position:{column:effective.column,row:effective.row},span:{columns:effective.columnSpan,rows:effective.rowSpan}}]}));
+  },[canvasObjects,geometry,interaction]);
+  const canvasObjectById = useMemo(() => Object.fromEntries(canvasObjects.map((object)=>[object.id,object])),[canvasObjects]);
   const openFolderLauncher = pinnedLaunchers.find((launcher) => launcher.id === openFolderLauncherId) || null;
   const windowGeometryFor = useCallback((key, anchor) => effectiveGeometry(runtimeWindows.rects[key] || defaultWindowGridRect(key,geometry,anchor),interaction,['identity','collection','signals'].includes(key)?`${key}-panel`:`folder-panel:${key}`),[geometry,interaction,runtimeWindows.rects]);
   const identityPanelPosition = windowGeometryFor('identity',canvasPositions.identity);
@@ -407,6 +437,7 @@ export default function ModuleGridShell({
     const nextPositions={...positions,[id]:{column:rect.column,row:rect.row}};setPositions(nextPositions);persistPositions(nextPositions);
     const nextPresentation={...systemPresentation,[id]:{...systemPresentation[id],span:{columns:rect.columnSpan,rows:rect.rowSpan}}};setSystemPresentation(nextPresentation);try{window.localStorage.setItem(SYSTEM_SCENE_KEY,JSON.stringify(nextPresentation))}catch{}
   },[persistPositions,positions,setLauncherGeometry,systemPresentation]);
+  const commitCanvasObjectGeometry = useCallback((id,rect) => setCanvasObjectGeometry(id,rect),[setCanvasObjectGeometry]);
 
   const commitPosition = useCallback((id, position) => {
     if (!Object.hasOwn(MODULE_ENTRY_ORDER, id)) {
@@ -481,8 +512,8 @@ export default function ModuleGridShell({
   },[]);
 
   const beginInteraction = useCallback((event,{kind,targetId,rect,element,minimumSpan})=>{
-    const launcherKind=kind===INTERACTION_KIND.MOVE_LAUNCHER||kind===INTERACTION_KIND.RESIZE_LAUNCHER;
-    if(geometry.narrow||(launcherKind&&!editMode)||!rect||!element||event.pointerType==='mouse'&&event.button!==0)return;
+    const authoredKind=[INTERACTION_KIND.MOVE_LAUNCHER,INTERACTION_KIND.RESIZE_LAUNCHER,INTERACTION_KIND.MOVE_CANVAS_OBJECT,INTERACTION_KIND.RESIZE_CANVAS_OBJECT].includes(kind);
+    if(geometry.narrow||(authoredKind&&!editMode)||!rect||!element||event.pointerType==='mouse'&&event.button!==0)return;
     if(kind===INTERACTION_KIND.MOVE_WINDOW&&event.target.closest('button,a,input,select,textarea,[data-resize-control]'))return;
     event.preventDefault();
     if(kind.includes('RESIZE'))event.stopPropagation();
@@ -511,11 +542,14 @@ export default function ModuleGridShell({
     interactionRef.current=null;setInteraction(null);
     if(cancel||!current.activated)return;
     if(current.kind===INTERACTION_KIND.MOVE_LAUNCHER||current.kind===INTERACTION_KIND.RESIZE_LAUNCHER){suppressLauncherClickRef.current=true;commitLauncherGeometry(current.targetId,current.candidateGeometry);}
+    else if(current.kind===INTERACTION_KIND.MOVE_CANVAS_OBJECT||current.kind===INTERACTION_KIND.RESIZE_CANVAS_OBJECT){suppressLauncherClickRef.current=true;commitCanvasObjectGeometry(current.targetId,current.candidateGeometry);}
     else commitWindowGeometry(current.targetId,current.candidateGeometry);
-  },[commitLauncherGeometry,commitWindowGeometry]);
+  },[commitCanvasObjectGeometry,commitLauncherGeometry,commitWindowGeometry]);
 
   const startDrag=useCallback((event,id,unused,enabled=true)=>{if(enabled)beginInteraction(event,{kind:INTERACTION_KIND.MOVE_LAUNCHER,targetId:id,rect:sceneById[id]?.geometry,element:moduleRefs.current.get(id)});},[beginInteraction,sceneById]);
   const startResize=useCallback((event,id)=>beginInteraction(event,{kind:INTERACTION_KIND.RESIZE_LAUNCHER,targetId:id,rect:sceneById[id]?.geometry,element:moduleRefs.current.get(id),minimumSpan:{columns:sceneById[id]?.appearanceMode==='icon'?1:2,rows:1}}),[beginInteraction,sceneById]);
+  const startObjectDrag=useCallback((event,id)=>beginInteraction(event,{kind:INTERACTION_KIND.MOVE_CANVAS_OBJECT,targetId:id,rect:canvasObjectScenes[id]?.geometry,element:canvasObjectRefs.current.get(id)}),[beginInteraction,canvasObjectScenes]);
+  const startObjectResize=useCallback((event,id)=>{const definition=getCanvasObjectDefinition(canvasObjectById[id]?.kind);beginInteraction(event,{kind:INTERACTION_KIND.RESIZE_CANVAS_OBJECT,targetId:id,rect:canvasObjectScenes[id]?.geometry,element:canvasObjectRefs.current.get(id),minimumSpan:definition.minimumSpan});},[beginInteraction,canvasObjectById,canvasObjectScenes]);
   const startExpandedPanelDrag=useCallback((event,id,rect,panelRef,enabled)=>{if(enabled)beginInteraction(event,{kind:INTERACTION_KIND.MOVE_WINDOW,targetId:id,rect,element:panelRef.current});},[beginInteraction]);
   const startWindowResize=useCallback((event,id,rect,panelRef)=>beginInteraction(event,{kind:INTERACTION_KIND.RESIZE_WINDOW,targetId:id,rect,element:panelRef.current,minimumSpan:windowMinimumSpan(id,geometry)}),[beginInteraction,geometry]);
   lifecycleHandlersRef.current={move:moveInteraction,finish:finishInteraction};
@@ -583,14 +617,49 @@ export default function ModuleGridShell({
     setInspectorAnchor({ x: Math.max(12, Math.min(contextMenu.anchor.x + 12, window.innerWidth - 292)), y: Math.max(12, Math.min(contextMenu.anchor.y, window.innerHeight - 360)) });
   }, [contextMenu, createFolder, geometry, pinView, sceneItems, setLauncherPosition, workspace.folders]);
 
+  const openArtworkInspector = useCallback((id, preferredAnchor) => {
+    const rect=canvasObjectRefs.current.get(id)?.getBoundingClientRect(); const width=Math.min(300,window.innerWidth-24);
+    const anchor=preferredAnchor || (rect ? {x:rect.right+10+width<=window.innerWidth-12?rect.right+10:Math.max(12,rect.left-width-10),y:Math.max(12,Math.min(rect.top,window.innerHeight-520))}:{x:Math.max(12,(window.innerWidth-width)/2),y:72});
+    setArtworkInspector({id,anchor}); setSelectedCanvasObjectId(id); setSelectedSceneId(null); setInspectorAnchor(null);
+  },[]);
+
+  const beginArtworkChoice = useCallback((mode,targetId=null) => {
+    artworkChoicePendingRef.current=false;
+    const definition=getCanvasObjectDefinition(CANVAS_OBJECT_KIND.FRAMED_ARTWORK); const bounds=gridRef.current?.getBoundingClientRect(); const anchor=contextMenu?.anchor || {x:window.innerWidth/2,y:window.innerHeight/2};
+    const requested=bounds?{column:Math.floor((anchor.x-bounds.left)/geometry.cellWidth),row:Math.floor((anchor.y-bounds.top)/geometry.cellHeight)}:{column:0,row:2};
+    const span={columns:Math.min(definition.defaultSpan.columns,geometry.columns),rows:Math.min(definition.defaultSpan.rows,geometry.rows)};
+    const occupied=[...sceneItems,...Object.values(canvasObjectScenes).map((object)=>({id:object.id,position:object.position,span:object.span}))];
+    const placement=findScenePlacement('canvas:artwork:pending',requested,span,occupied,geometry);
+    setArtworkChooser({mode,targetId,placement,anchor}); setContextMenu(null); if(libraryStatus==='idle')loadLibrary();
+  },[canvasObjectScenes,contextMenu,geometry,libraryStatus,loadLibrary,sceneItems]);
+
+  const chooseArtwork = useCallback((asset) => {
+    if(!artworkChooser||artworkChoicePendingRef.current)return; artworkChoicePendingRef.current=true;
+    if(artworkChooser.mode==='replace'&&artworkChooser.targetId){replaceCanvasObjectAsset(artworkChooser.targetId,asset.id);setArtworkChooser(null);openArtworkInspector(artworkChooser.targetId,artworkChooser.anchor);return;}
+    const id=createCanvasObject({kind:CANVAS_OBJECT_KIND.FRAMED_ARTWORK,stableAssetId:asset.id,placement:artworkChooser.placement});
+    setArtworkChooser(null);if(id)openArtworkInspector(id,artworkChooser.anchor);
+  },[artworkChooser,createCanvasObject,openArtworkInspector,replaceCanvasObjectAsset]);
+
+  const openArtworkPreview = useCallback((id)=>{setPreviewObjectId(id);setArtworkInspector(null);setSelectedCanvasObjectId(null);},[]);
+  const closeArtworkPreview = useCallback(()=>{const id=previewObjectId;setPreviewObjectId(null);window.requestAnimationFrame(()=>canvasObjectRefs.current.get(id)?.querySelector('button')?.focus());},[previewObjectId]);
+
+  useEffect(()=>{
+    if(!previewObjectId)return undefined;
+    const close=(event)=>{if(event.key==='Escape'){event.preventDefault();closeArtworkPreview();}};
+    window.addEventListener('keydown',close);
+    return()=>window.removeEventListener('keydown',close);
+  },[closeArtworkPreview,previewObjectId]);
+
   const executeContextCommand = useCallback((command) => {
     const target = contextMenu?.target; if (!target) return;
     const runtimeId = target.id?.endsWith('-panel') ? target.id.replace('-panel','') : target.id?.startsWith('folder-panel:') ? target.id.slice(13) : target.id;
     const launcher = pinnedLaunchers.find((entry) => entry.id === (target.type === 'window' ? runtimeId : target.id));
     if (command === 'menu-create') { setContextMenu((current) => ({ ...current, menu: 'create' })); return; }
     if (command === 'menu-view') { setContextMenu((current) => ({ ...current, menu: 'view' })); return; }
+    if (command === 'menu-layer') { setContextMenu((current) => ({ ...current, menu: 'layer' })); return; }
     if (command === 'menu-root') { setContextMenu((current) => ({ ...current, menu: 'root' })); return; }
     if (command === 'create-folder') createFolderAtContext();
+    else if (command === 'create-framed-artwork') { beginArtworkChoice('create'); return; }
     else if (command === 'toggle-keeper') onKeeperVisibilityChange?.(!keeperVisible);
     else if (command === 'toggle-stage') onStageVisibilityChange?.(!stageVisible);
     else if (command === 'toggle-edit') setEditMode((value) => !value);
@@ -602,6 +671,15 @@ export default function ModuleGridShell({
     else if (command === 'edit-launcher') openLauncherInspector(target.id);
     else if (command === 'toggle-visibility' && launcher) setLauncherVisitorVisibility(launcher.id, !launcher.visitorVisible);
     else if (command === 'unpin' && launcher) unpinView({ type: launcher.viewType, id: launcher.folderId });
+    else if (command === 'open-artwork') openArtworkPreview(target.id);
+    else if (command === 'edit-artwork') openArtworkInspector(target.id);
+    else if (command === 'replace-artwork') { beginArtworkChoice('replace',target.id); return; }
+    else if (command === 'toggle-object-visibility' && canvasObjectById[target.id]) setCanvasObjectVisitorVisibility(target.id,!canvasObjectById[target.id].visitorVisible);
+    else if (command === 'object-forward') reorderCanvasObject(target.id,CANVAS_OBJECT_ORDER_COMMAND.FORWARD);
+    else if (command === 'object-backward') reorderCanvasObject(target.id,CANVAS_OBJECT_ORDER_COMMAND.BACKWARD);
+    else if (command === 'object-front') reorderCanvasObject(target.id,CANVAS_OBJECT_ORDER_COMMAND.FRONT);
+    else if (command === 'object-back') reorderCanvasObject(target.id,CANVAS_OBJECT_ORDER_COMMAND.BACK);
+    else if (command === 'remove-artwork' && window.confirm('Remove this framed artwork from the canvas? The owned asset will remain in your library.')) { removeCanvasObject(target.id); setArtworkInspector(null); setSelectedCanvasObjectId(null); }
     else if (command === 'close') openModule(runtimeId);
     else if (command === 'reset-window') updateRuntime({ type: 'reset-window', id: runtimeId, rect: authoredWindowDefaults.rects[runtimeId] || null });
     else if (command === 'toggle-start-open') {
@@ -610,13 +688,13 @@ export default function ModuleGridShell({
       else setSystemPresentation((current) => { const next={...current,[runtimeId]:{...current[runtimeId],startOpen:!current[runtimeId]?.startOpen,windowGeometry:rect}}; try{window.localStorage.setItem(SYSTEM_SCENE_KEY,JSON.stringify(next));}catch{} return next; });
     }
     setContextMenu(null);
-  }, [authoredWindowDefaults, canvasPositions, closeAllWindows, contextMenu, createFolderAtContext, geometry, keeperVisible, onKeeperVisibilityChange, onStageVisibilityChange, openLauncherInspector, openModule, pinnedLaunchers, resetWindows, runtimeWindows.rects, setLauncherStartOpen, setLauncherVisitorVisibility, stageVisible, toggleGrid, unpinView, updateRuntime]);
+  }, [authoredWindowDefaults, beginArtworkChoice, canvasObjectById, canvasPositions, closeAllWindows, contextMenu, createFolderAtContext, geometry, keeperVisible, onKeeperVisibilityChange, onStageVisibilityChange, openArtworkInspector, openArtworkPreview, openLauncherInspector, openModule, pinnedLaunchers, removeCanvasObject, reorderCanvasObject, resetWindows, runtimeWindows.rects, setCanvasObjectVisitorVisibility, setLauncherStartOpen, setLauncherVisitorVisibility, stageVisible, toggleGrid, unpinView, updateRuntime]);
 
   useEffect(() => {
     if (!contextMenu) return;
-    const exists = contextMenu.target.type === 'canvas' || sceneById[contextMenu.target.id] || runtimeWindows.openIds.includes(contextMenu.target.id.replace?.('-panel','')) || contextMenu.target.id.startsWith?.('folder-panel:');
+    const exists = contextMenu.target.type === 'canvas' || sceneById[contextMenu.target.id] || canvasObjectById[contextMenu.target.id] || runtimeWindows.openIds.includes(contextMenu.target.id.replace?.('-panel','')) || contextMenu.target.id.startsWith?.('folder-panel:');
     if (!exists) setContextMenu(null);
-  }, [contextMenu, runtimeWindows.openIds, sceneById]);
+  }, [canvasObjectById, contextMenu, runtimeWindows.openIds, sceneById]);
 
   useEffect(() => {
     if (!inspectorAnchor) return undefined;
@@ -698,7 +776,7 @@ export default function ModuleGridShell({
           </button>
           <button type="button" onClick={() => setActiveHudCommand((current) => current === 'share' ? null : 'share')} aria-expanded={activeHudCommand === 'share'}>[ Share ]</button>
           <button type="button" onClick={() => setEditMode((current) => !current)} aria-pressed={editMode}>[ {editMode ? 'Done Arranging' : 'Arrange Desktop'} ]</button>
-          {editMode && <button type="button" onClick={() => { if(window.confirm('Reset the authored canvas launcher layout? Folders, assets, visibility, and runtime windows will be preserved.')) resetLayout(); }}>[ Reset Authored Canvas ]</button>}
+          {editMode && <button type="button" onClick={() => { if(window.confirm('Reset the authored desktop layout? Folders, owned assets, visibility, and runtime windows will be preserved.')) resetLayout(); }}>[ Reset Authored Canvas ]</button>}
           <button
             type="button"
             aria-pressed={activeHudCommand === 'settings'}
@@ -820,6 +898,16 @@ export default function ModuleGridShell({
               {editMode && <i className="module-button__resize" data-resize-control aria-label={`Resize ${label}`} onPointerDown={(event)=>startResize(event,launcher.id)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
             </button>
           );
+        })}
+
+        {/* Canvas objects live in the DOM public-interface compositor above the Pixi world. Runtime windows, HUD, menus, and dialogs retain their higher interface layers. */}
+        {canvasObjects.map((object) => {
+          const scene=canvasObjectScenes[object.id]; if(!scene)return null; const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId) || null;
+          const interactionProps={onPointerDown:(event)=>{setSelectedCanvasObjectId(object.id);startObjectDrag(event,object.id);},onPointerMove:moveInteraction,onPointerUp:finishInteraction,onPointerCancel:(event)=>finishInteraction(event,true),onLostPointerCapture:(event)=>finishInteraction(event,true)};
+          const resizeProps={onPointerDown:(event)=>startObjectResize(event,object.id),onPointerMove:moveInteraction,onPointerUp:finishInteraction,onPointerCancel:(event)=>finishInteraction(event,true),onLostPointerCapture:(event)=>finishInteraction(event,true)};
+          return <FramedArtwork key={object.id} object={object} asset={asset} arranging={editMode} compact={geometry.narrow} selected={selectedCanvasObjectId===object.id}
+            style={{...gridRectToPixelRect(scene.geometry,geometry,2),zIndex:10+object.presentationOrder}} containerRef={(node)=>{if(node)canvasObjectRefs.current.set(object.id,node);else canvasObjectRefs.current.delete(object.id);}}
+            interactionProps={interactionProps} resizeProps={resizeProps} onEdit={()=>openArtworkInspector(object.id)} onActivate={()=>{if(suppressLauncherClickRef.current){suppressLauncherClickRef.current=false;return;}if(editMode){setSelectedCanvasObjectId(object.id);return;}openArtworkPreview(object.id);}} />;
         })}
 
         {identityOpen && identityPanelPosition && (
@@ -954,7 +1042,8 @@ export default function ModuleGridShell({
         {launcher && <button type="button" aria-pressed={launcher.visitorVisible} onClick={()=>setLauncherVisitorVisibility(launcher.id,!launcher.visitorVisible)}>{launcher.visitorVisible?'Make private':'Show to visitors'}</button>}
         <button type="button" onClick={toggleGrid}>Grid {gridVisible?'off':'on'}</button>
       </aside>; })()}
-      {contextMenu && (()=>{const runtimeId=contextMenu.target.id?.startsWith?.('folder-panel:')?contextMenu.target.id.slice(13):contextMenu.target.id?.replace?.('-panel',''); const launcher=pinnedLaunchers.find((entry)=>entry.id===(contextMenu.target.type==='window'?runtimeId:contextMenu.target.id)); const startOpen=launcher?.startOpen||systemPresentation[runtimeId]?.startOpen; return <DesktopMenu key={`${contextMenu.target.type}:${contextMenu.menu}`} anchor={contextMenu.anchor} label={`${contextMenu.target.type} commands`} commands={contextMenuCommands({target:contextMenu.target,editMode,launcher,startOpen,menu:contextMenu.menu,keeperVisible,stageVisible})} onCommand={executeContextCommand} onClose={()=>setContextMenu(null)} returnFocus={contextMenu.returnFocus}/>;})()}
+      {artworkInspector && canvasObjectById[artworkInspector.id] && (()=>{const object=canvasObjectById[artworkInspector.id];const scene=canvasObjectScenes[object.id];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId);const definition=getCanvasObjectDefinition(object.kind);return <ArtworkInspector object={object} assetName={asset?.name||'Unavailable artwork'} anchor={artworkInspector.anchor} onClose={()=>{setArtworkInspector(null);setSelectedCanvasObjectId(null);canvasObjectRefs.current.get(object.id)?.querySelector('button')?.focus();}} onPresentation={(patch)=>setCanvasObjectPresentation(object.id,patch)} onGeometry={(span)=>{const columns=Math.max(definition.minimumSpan.columns,Math.min(definition.maximumSpan.columns,Math.round(span.columns)||object.span.columns));const rows=Math.max(definition.minimumSpan.rows,Math.min(definition.maximumSpan.rows,Math.round(span.rows)||object.span.rows));const rect=normalizeGridRect({...scene.geometry,columnSpan:columns,rowSpan:rows},geometry,{minimumSpan:definition.minimumSpan});setCanvasObjectGeometry(object.id,rect);}} onVisibility={()=>setCanvasObjectVisitorVisibility(object.id,!object.visitorVisible)} onReplace={()=>beginArtworkChoice('replace',object.id)} onReorder={(command)=>reorderCanvasObject(object.id,command)} onRemove={()=>{if(window.confirm('Remove this framed artwork from the canvas? The owned asset will remain in your library.')){removeCanvasObject(object.id);setArtworkInspector(null);setSelectedCanvasObjectId(null);}}} />;})()}
+      {contextMenu && (()=>{const runtimeId=contextMenu.target.id?.startsWith?.('folder-panel:')?contextMenu.target.id.slice(13):contextMenu.target.id?.replace?.('-panel',''); const launcher=pinnedLaunchers.find((entry)=>entry.id===(contextMenu.target.type==='window'?runtimeId:contextMenu.target.id)); const canvasObject=canvasObjectById[contextMenu.target.id]; const startOpen=launcher?.startOpen||systemPresentation[runtimeId]?.startOpen; return <DesktopMenu key={`${contextMenu.target.type}:${contextMenu.menu}`} anchor={contextMenu.anchor} label={`${contextMenu.target.type} commands`} commands={contextMenuCommands({target:contextMenu.target,editMode,launcher,canvasObject,startOpen,menu:contextMenu.menu,keeperVisible,stageVisible})} onCommand={executeContextCommand} onClose={()=>setContextMenu(null)} returnFocus={contextMenu.returnFocus}/>;})()}
       {activeHudCommand === 'system' && <DesktopMenu anchor={{x:window.innerWidth/2-90,y:48}} label="OS Underneath system menu" commands={[
         {id:'about',label:'About OS_UNDERNEATH'}, {id:'status',label:`Profile / ${workspace.profileAddress.slice(0,8)}…`}, {id:'atelier',label:'Open Atelier'}, {id:'edit',label:editMode?'Finish Arranging':'Arrange Desktop'}, {id:'reset',label:'Reset Windows'}, {id:'close-all',label:'Close All Windows'}, {id:'settings',label:'Settings'}
       ]} onCommand={(command)=>{if(command==='about'||command==='status')setActiveHudCommand('about');else if(command==='atelier'){setActiveHudCommand(null);onRequestAtelier?.();}else if(command==='edit'){setEditMode((value)=>!value);setActiveHudCommand(null);}else if(command==='reset'){resetWindows();setActiveHudCommand(null);}else if(command==='close-all'){closeAllWindows();setActiveHudCommand(null);}else if(command==='settings')setActiveHudCommand('settings');}} onClose={()=>setActiveHudCommand(null)}/>}
@@ -978,6 +1067,8 @@ export default function ModuleGridShell({
         onRestore={restoreImportedPresentation}
         onClose={() => setActiveHudCommand(null)}
       />}
+      {artworkChooser && <ArtworkChooser assets={libraryAssets} status={libraryStatus} error={libraryError} title={artworkChooser.mode==='replace'?'Replace artwork':'Choose artwork'} onSelect={chooseArtwork} onCancel={()=>{artworkChoicePendingRef.current=false;setArtworkChooser(null);}} />}
+      {previewObjectId && canvasObjectById[previewObjectId] && (()=>{const object=canvasObjectById[previewObjectId];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId)||{id:object.stableAssetId,name:'Unavailable artwork',standard:'UNKNOWN',contractAddress:'Unavailable',tokenId:null,imageUrl:null};return <div className="canvas-artwork-preview" role="dialog" aria-modal="true" aria-label={`Artwork preview: ${asset.name}`}><AssetPreview asset={asset} workspace={workspace} authoringEnabled={false} onClose={closeArtworkPreview} /></div>;})()}
     </main>
   );
 }
