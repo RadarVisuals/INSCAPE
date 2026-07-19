@@ -47,7 +47,14 @@ world = screen + camera
 
 Camera position is runtime navigation state. It should be profile-scoped local state and should not enter a portable public profile document by default.
 
-Authored launcher and canvas-object positions are public presentation. Migrating them from bounded grid cells to spatial coordinates requires a deliberate workspace/profile-document version change. Existing positions should map deterministically into an initial world region; the migration must preserve ordering, spans, visibility, folders, start-open configuration, and object references.
+Desktop placement uses one signed, bounded grid contract. Positions are integer `{ column, row }` origins in the range `-255` through `255`; spans are positive integer grid-cell counts. Negative columns and rows are intentional: they identify cells left of or above the world origin. They are not corrupt values and they are not camera coordinates.
+
+- Launchers and canvas artwork are world-anchored. They move on screen when the camera moves.
+- Runtime windows persist rectangles in the same grid vocabulary, but remain viewport-fixed while the camera moves.
+- Portable profile documents validate the same signed placement bounds. A builder drops malformed local geometry, and an imported document outside the bounds is rejected.
+- Camera position uses world pixels, is profile-scoped runtime state, and is never copied into authored placement fields.
+
+Authored launcher and canvas-object positions remain public presentation. A future migration from bounded grid cells to unrestricted spatial pixel coordinates would require a deliberate workspace/profile-document version change. That migration must preserve ordering, spans, visibility, folders, start-open configuration, and object references.
 
 Runtime windows need a separate product decision before migration:
 

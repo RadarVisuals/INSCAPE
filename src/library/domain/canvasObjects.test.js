@@ -33,7 +33,7 @@ test('creation creates exactly one stable reference while invalid kinds and asse
 test('normalization clamps spans and placement and strips uncontrolled fields', () => {
   const object = normalizeCanvasObject({ ...input('canvas:artwork:bounded'), visitorVisible: true, placement: { column: 999, row: -4 }, span: { columns: 999, rows: 0 }, presentationOrder: 999,
     presentation: { fit: 'bad', frame: 'heavy', mat: 'bad', background: 'light' }, renderer: '/remote.jsx', shaderSource: 'void main(){}' });
-  assert.deepEqual(object.span, { columns: 12, rows: 2 }); assert.deepEqual(object.placement, { column: 52, row: 0 });
+  assert.deepEqual(object.span, { columns: 12, rows: 2 }); assert.deepEqual(object.placement, { column: 244, row: -4 });
   assert.deepEqual(object.presentation, { fit: 'contain', frame: 'heavy', mat: 'none', background: 'light' }); assert.equal('renderer' in object, false);
 });
 

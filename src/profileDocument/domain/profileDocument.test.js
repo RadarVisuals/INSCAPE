@@ -82,7 +82,7 @@ test('builder drops malformed local window geometry instead of exporting invalid
   const malformed = workspace();
   malformed.canvas.launchers[0].windowGeometry = { column: 2, row: 2, columnSpan: 0, rowSpan: 8 };
   const document = build({ workspace: malformed, systemPresentation: {
-    identity: { startOpen: true, windowGeometry: { column: -1, row: 2, columnSpan: 8, rowSpan: 8 } }
+    identity: { startOpen: true, windowGeometry: { column: -256, row: 2, columnSpan: 8, rowSpan: 8 } }
   } });
   assert.equal(document.spaces[0].windowGeometry, null);
   assert.equal(document.presentation.systemModules.find((module) => module.id === 'identity').windowGeometry, null);
@@ -99,7 +99,7 @@ test('strict validation rejects malformed JSON, wrong type, future versions, add
   const cases = [
     { documentType: 'OTHER' }, { version: 5 }, { profile: { address: 'bad', cachedIdentity: { address: 'bad' } } },
     { spaces: [build().spaces[0], build().spaces[0]] },
-    { spaces: [{ ...build().spaces[0], placement: { column: -1, row: 0 } }] },
+    { spaces: [{ ...build().spaces[0], placement: { column: -256, row: 0 } }] },
     { spaces: [{ ...build().spaces[0], privateState: true }] },
     { spaces: [{ ...build().spaces[0], assets: [{ ...build().spaces[0].assets[0], cachedPreviewUrl: 'javascript:alert(1)' }] }] }
   ];
