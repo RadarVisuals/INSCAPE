@@ -4,6 +4,8 @@ export const LUKSO_INDEXER_URL = import.meta.env?.VITE_LUKSO_INDEXER_URL
   || 'https://envio.lukso-mainnet.universal.tech/v1/graphql';
 export const IPFS_GATEWAY_URL = import.meta.env?.VITE_IPFS_GATEWAY_URL
   || 'https://api.universalprofile.cloud/ipfs/';
+export const PROFILE_DOCUMENT_IPFS_GATEWAY_URL = import.meta.env?.VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL
+  || IPFS_GATEWAY_URL;
 export const LUKSO_RPC_URL = import.meta.env?.VITE_LUKSO_RPC_URL || 'https://rpc.mainnet.lukso.network';
 export const LIBRARY_PAGE_SIZE = 24;
 

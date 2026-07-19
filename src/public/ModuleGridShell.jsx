@@ -140,6 +140,7 @@ export default function ModuleGridShell({
   onGalleryOpenChange,
   interfaceVisible = true,
   ownerAuthoringEnabled = false,
+  getWalletPublicationContext,
   visitorWalletConnected = false,
   viewedProfileAddress: requestedViewedProfileAddress,
   onVisitProfile,
@@ -364,6 +365,13 @@ export default function ModuleGridShell({
   }), [activeActorId, environment, libraryAssets, positions, profileIdentity, signalSettings, stageId, systemPresentation, workspace]);
   const draftFingerprint = useMemo(() => profileDocumentContentFingerprint(draftDocument), [draftDocument]);
   const snapshotStale = Boolean(snapshot && useProfileDocumentStore.getState().snapshotDraftFingerprint !== draftFingerprint);
+  const getPublicationContext = useCallback(() => {
+    const wallet = getWalletPublicationContext?.() || {};
+    const liveWorkspaceAddress = useLibraryStore.getState().workspace.profileAddress;
+    const host = wallet.hostProfileAddress?.toLowerCase(); const workspaceAddress = liveWorkspaceAddress?.toLowerCase();
+    return { ...wallet, workspaceProfileAddress: liveWorkspaceAddress,
+      ownerAuthoringEnabled: Boolean(wallet.isHostProfileOwner && host && host === workspaceAddress && host === viewedProfileAddress?.toLowerCase()) };
+  }, [getWalletPublicationContext, viewedProfileAddress]);
 
   useEffect(() => {
     if (snapshot) return;
@@ -1443,6 +1451,7 @@ export default function ModuleGridShell({
         stale={snapshotStale}
         error={documentError}
         activeProfileAddress={workspace.profileAddress}
+        getPublicationContext={getPublicationContext}
         onBuild={buildSnapshot}
         onPreview={startPreview}
         onImport={installImported}

@@ -1,6 +1,6 @@
 import { decodeDataSourceWithHash } from '@erc725/erc725.js';
 import { decodeFunctionResult, encodeFunctionData, keccak256 } from 'viem';
-import { IPFS_GATEWAY_URL, LUKSO_RPC_URL, normalizeProfileAddress } from '../../library/config.js';
+import { LUKSO_RPC_URL, normalizeProfileAddress, PROFILE_DOCUMENT_IPFS_GATEWAY_URL } from '../../library/config.js';
 import { PROFILE_DOCUMENT_LIMITS } from '../domain/constants.js';
 import { parseProfileDocumentJson } from '../domain/profileDocumentValidation.js';
 
@@ -77,7 +77,7 @@ function decodePointer(value) {
   }
 }
 
-export function createLuksoPublishedProfileRepository({ rpcUrl = LUKSO_RPC_URL, ipfsGateway = IPFS_GATEWAY_URL,
+export function createLuksoPublishedProfileRepository({ rpcUrl = LUKSO_RPC_URL, ipfsGateway = PROFILE_DOCUMENT_IPFS_GATEWAY_URL,
   fetchImpl = globalThis.fetch, dataReader = null } = {}) {
   if (typeof fetchImpl !== 'function') throw new TypeError('A fetch implementation is required');
   return { source: 'LUKSO_MAINNET', async resolve(address, { signal } = {}) {

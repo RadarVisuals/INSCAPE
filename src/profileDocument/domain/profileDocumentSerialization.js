@@ -18,3 +18,6 @@ export function createProfileDocumentFilename(document) {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || document.profile.address.slice(2, 10);
   return `os-underneath-${slug}-profile-v${document.version}.json`;
 }
+export function createProfileDocumentPublicationFilename(document) {
+  return createProfileDocumentFilename(document).replace(/\.json$/u, '-publication.json');
+}

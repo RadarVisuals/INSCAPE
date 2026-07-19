@@ -57,6 +57,7 @@ function App() {
     workspaceProfileAddress: connectedWorkspaceProfileAddress,
     viewedProfileAddress
   });
+  const getWalletPublicationContext = useCallback(() => useWalletStore.getState(), []);
   const effectiveApplicationMode = applicationMode === APPLICATION_MODES.ATELIER && ownerAuthoringEnabled
     ? APPLICATION_MODES.ATELIER
     : APPLICATION_MODES.PUBLIC;
@@ -174,6 +175,7 @@ function App() {
         ) : (
           localOwnerRoute ? <ModuleGridShell
             ownerAuthoringEnabled={ownerAuthoringEnabled}
+            getWalletPublicationContext={getWalletPublicationContext}
             visitorWalletConnected={visitorWalletConnected}
             viewedProfileAddress={viewedProfileAddress}
             onVisitProfile={visitProfile}

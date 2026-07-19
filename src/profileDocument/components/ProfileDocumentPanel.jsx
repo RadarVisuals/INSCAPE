@@ -1,18 +1,34 @@
 import { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { countProfileDocumentAssets } from '../domain/profileDocumentBuilder.js';
-import { createProfileDocumentFilename, formatProfileDocumentJson } from '../domain/profileDocumentSerialization.js';
+import { canonicalSerializeProfileDocument, createProfileDocumentFilename, createProfileDocumentPublicationFilename, formatProfileDocumentJson } from '../domain/profileDocumentSerialization.js';
 import { parseProfileDocumentJson } from '../domain/profileDocumentValidation.js';
 import { PROFILE_DOCUMENT_LIMITS, PROFILE_DOCUMENT_VERSION } from '../domain/constants.js';
+import { PROFILE_DOCUMENT_PUBLICATION_STATUS } from '../domain/profileDocumentPublication.js';
+import { useProfileDocumentPublication } from '../state/useProfileDocumentPublication.js';
 
-export default function ProfileDocumentPanel({ snapshot, imported, stale, error, activeProfileAddress, onBuild, onPreview, onImport, onRestore, onClose }) {
-  const fileRef = useRef(null); const [message, setMessage] = useState('');
+function downloadText(text, filename) {
+  const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob); const link = document.createElement('a');
+  link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url);
+}
+
+export default function ProfileDocumentPanel({ snapshot, imported, stale, error, activeProfileAddress, getPublicationContext, onBuild, onPreview, onImport, onRestore, onClose }) {
+  const fileRef = useRef(null); const [message, setMessage] = useState(''); const [cid, setCid] = useState('');
+  const publication = useProfileDocumentPublication(getPublicationContext);
   const current = imported || snapshot;
   const exportSnapshot = () => {
     try {
       if (!snapshot) throw new Error('Build a snapshot before export');
-      const json = formatProfileDocumentJson(snapshot); const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = createProfileDocumentFilename(snapshot); link.click(); URL.revokeObjectURL(url); setMessage('Export ready. This is a local document, not a publication.');
+      downloadText(formatProfileDocumentJson(snapshot), createProfileDocumentFilename(snapshot)); setMessage('Export ready. This is a local document, not a publication.');
+    } catch (error) { setMessage(error.message); }
+  };
+  const downloadPublication = () => {
+    try {
+      if (!snapshot) throw new Error('Build a snapshot before publication');
+      if (stale) throw new Error('Rebuild the stale snapshot before publication');
+      downloadText(canonicalSerializeProfileDocument(snapshot), createProfileDocumentPublicationFilename(snapshot));
+      setMessage('Canonical publication file ready. Upload this exact file unchanged to Pinata Public IPFS.');
     } catch (error) { setMessage(error.message); }
   };
   const readImport = async (event) => {
@@ -26,6 +42,20 @@ export default function ProfileDocumentPanel({ snapshot, imported, stale, error,
     {current ? <dl><div><dt>Profile</dt><dd>{current.profile.cachedIdentity.name || current.profile.address}</dd></div><div><dt>Revision</dt><dd>{current.revision}</dd></div><div><dt>Public spaces</dt><dd>{current.spaces.length}</dd></div><div><dt>Public asset references</dt><dd>{countProfileDocumentAssets(current)}</dd></div><div><dt>Keeper</dt><dd>{current.presentation.keeperId}</dd></div></dl> : <p>No public snapshot has been generated.</p>}
     <p className="profile-document-panel__hint">Private spaces and canvas artwork are excluded.</p>
     <div className="profile-document-panel__actions"><button type="button" onClick={onBuild}>{snapshot ? 'Rebuild snapshot' : 'Build snapshot'}</button><button type="button" disabled={!snapshot} onClick={() => onPreview('snapshot')}>Preview profile</button><button type="button" disabled={!snapshot || stale} onClick={exportSnapshot}>Export profile</button><button type="button" onClick={() => fileRef.current?.click()}>Import profile</button>{imported && <><button type="button" onClick={() => onPreview('imported')}>Preview import</button><button type="button" onClick={onRestore}>Restore presentation</button></>}</div>
+    <section className="profile-document-panel__publication" aria-labelledby="profile-publication-title">
+      <h3 id="profile-publication-title">Public IPFS publication</h3>
+      <p>Download the canonical file, upload it unchanged to Pinata Public IPFS, then paste the returned CID.</p>
+      <button type="button" disabled={!snapshot || stale || publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_CID} onClick={downloadPublication}>Download canonical publication file</button>
+      <label htmlFor="profile-publication-cid">Pinata CID</label>
+      <input id="profile-publication-cid" value={cid} onChange={(event) => setCid(event.target.value)} placeholder="CID or ipfs://CID" autoComplete="off" spellCheck="false" />
+      <div className="profile-document-panel__actions">
+        <button type="button" disabled={!snapshot || stale || !cid.trim() || ['VERIFYING_CID','AWAITING_WALLET','CONFIRMING_TRANSACTION','VERIFYING_PUBLICATION'].includes(publication.status)} onClick={() => publication.verifyCid(snapshot, cid, { stale })}>Verify CID</button>
+        <button type="button" disabled={(publication.status !== PROFILE_DOCUMENT_PUBLICATION_STATUS.CID_VERIFIED && publication.status !== PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR) || !publication.verified} onClick={publication.publish}>{publication.receiptConfirmed ? 'Retry publication verification' : 'Request wallet publication'}</button>
+      </div>
+      <p className="profile-document-panel__publication-state" data-state={publication.status}>Publication: {publication.status}</p>
+      {publication.transactionHash && <p className="profile-document-panel__hash">Transaction: {publication.transactionHash}</p>}
+      {publication.error && <p className="profile-document-panel__message" role="alert">{publication.error}</p>}
+    </section>
     <input ref={fileRef} hidden type="file" accept="application/json,.json" onChange={readImport} />
     {(message || error) && <p className="profile-document-panel__message" role="status">{message || error}</p>}
   </aside>;
