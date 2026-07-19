@@ -32,6 +32,7 @@ function App() {
   const [previewDocument, setPreviewDocument] = useState(null);
   const [keeperUserVisible, setKeeperUserVisible] = useState(true);
   const [stageUserVisible, setStageUserVisible] = useState(true);
+  const [galleryActive, setGalleryActive] = useState(false);
   const activeActorId = useStore((state) => state.renderConfig.actor.id);
   const activeStageId = useStore((state) => state.renderConfig.scene.background.backdropId);
   const activeEnvironment = useStore((state) => state.renderConfig.scene.environment);
@@ -80,6 +81,12 @@ function App() {
     },
     trackActorPosition(target) {
       canvasRef.current?.setActorScreenPositionTarget(target);
+    },
+    moveToScreenPosition(clientX, clientY) {
+      canvasRef.current?.moveActorToScreenPosition(clientX, clientY);
+    },
+    moveHorizontallyToScreenPosition(clientX) {
+      canvasRef.current?.moveActorHorizontallyToScreenPosition(clientX);
     }
   }), []);
 
@@ -101,7 +108,7 @@ function App() {
   }, []);
 
   return (
-    <div className="application-root" data-application-mode={applicationMode} data-startveil-stage={revealStage}>
+    <div className="application-root" data-application-mode={applicationMode} data-startveil-stage={revealStage} data-gallery-active={galleryActive || undefined}>
       <div
         className="application-world"
         data-visible={worldVisible || undefined}
@@ -110,7 +117,8 @@ function App() {
         <ArtCanvas
           ref={canvasRef}
           actorVisible={actorVisible && keeperUserVisible}
-          stageVisible={stageUserVisible}
+          stageVisible={stageUserVisible && !galleryActive}
+          foregroundOnly={galleryActive}
           reducedMotion={revealPresentation.reducedMotion}
           presentationOverride={previewDocument?.presentation || null}
           onReady={() => setWorldReady(true)}
@@ -144,6 +152,7 @@ function App() {
             onKeeperVisibilityChange={setKeeperUserVisible}
             onStageVisibilityChange={setStageUserVisible}
             registerWorldContextMenu={registerDesktopContextMenu}
+            onGalleryOpenChange={setGalleryActive}
           />
         )}
       </div>

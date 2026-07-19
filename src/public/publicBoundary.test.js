@@ -65,3 +65,17 @@ test('framed artwork keeps form controls interactive and presentation layers ind
   assert.match(artworkSource, /arranging && selected/);
   assert.match(documentPreviewSource, /<FramedArtwork/);
 });
+
+test('Creations enters a world gallery that reuses the canonical framed artwork renderer', () => {
+  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
+  const gallerySource = readFileSync(new URL('./GalleryWorld.jsx', import.meta.url), 'utf8');
+
+  assert.match(shellSource, /id === 'creations'\) enterGallery\(\)/);
+  assert.match(shellSource, /<GalleryWorld/);
+  assert.match(gallerySource, /import FramedArtwork/);
+  assert.match(gallerySource, /<FramedArtwork/);
+  assert.match(gallerySource, /GalleryFloorGrid/);
+  assert.match(gallerySource, /createPortal\(<>{backdrop}{gallery}<\/>/);
+  assert.match(gallerySource, /onMoveKeeperHorizontally/);
+  assert.doesNotMatch(gallerySource, /if \(direction\) onMoveKeeper\?\./);
+});

@@ -13,5 +13,8 @@ test('Identity handoff uses only the existing Pixi application renderer and canv
   assert.match(engineSource, /startResidentHandoff\(bounds, options = \{\}\)/);
   assert.match(engineSource, /this\.syncResidentHandoff\(\)/);
   assert.match(engineSource, /isResidentRepresentedByAvatar\(\)/);
+  assert.match(engineSource, /updateHorizontalMove\(clientX\)/);
+  assert.match(engineSource, /toGlobal\(this\.actor\.container\.position\)/);
+  assert.match(engineSource, /moveTo\(localTarget\.x, this\.actor\.targetPosition\.y\)/);
   assert.doesNotMatch(engineSource, /setResidentHabitat|syncResidentHabitat/);
 });

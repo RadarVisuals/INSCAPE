@@ -46,6 +46,13 @@
   border: 0;
   background: transparent;
   pointer-events: none;
+  z-index: 70;
+}
+
+.public-shell[data-gallery-open] .module-grid {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .profile-strip__person {

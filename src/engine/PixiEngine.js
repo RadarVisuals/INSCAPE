@@ -158,6 +158,21 @@ export class PixiEngine {
     this.actor.moveTo(localTarget.x, localTarget.y);
   }
 
+  /**
+   * Moves the actor horizontally in screen space without changing its current
+   * presented height. Spatial worlds use this while their camera pans so a
+   * horizontal navigation gesture cannot pull the resident toward a horizon.
+   * @param {number} clientX - Absolute canvas horizontal position.
+   */
+  updateHorizontalMove(clientX) {
+    if (!this.masterContainer || !this.actor) return;
+    const actorGlobal = this.masterContainer.toGlobal(this.actor.container.position);
+    const localTarget = this.masterContainer.toLocal({ x: clientX, y: actorGlobal.y });
+    // Keep the already-authored local Y target verbatim. Repeated global/local
+    // round-trips accumulate transform drift while the actor is animating.
+    this.actor.moveTo(localTarget.x, this.actor.targetPosition.y);
+  }
+
   acknowledgeUserGesture() {
     this.hasUserGesture = true;
   }
@@ -457,7 +472,9 @@ export class PixiEngine {
       await this.app.init({
         width: window.innerWidth,
         height: window.innerHeight,
-        backgroundAlpha: 1,
+        // The host element supplies the normal black backing. Keeping the renderer
+        // transparent lets gallery architecture sit behind the resident canvas.
+        backgroundAlpha: 0,
         backgroundColor: 0x050505,
         resolution: getRenderResolution(),
         autoDensity: true,

@@ -3,7 +3,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { PixiEngine } from '../../engine/PixiEngine';
 import { useStore } from '../../store/useStore';
 
-const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisible = true, reducedMotion = false, presentationOverride = null, onReady }, ref) {
+const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisible = true, foregroundOnly = false, reducedMotion = false, presentationOverride = null, onReady }, ref) {
   const containerRef = useRef(null);
   const engineRef = useRef(null);
   const presentationOverrideRef = useRef(presentationOverride);
@@ -27,6 +27,12 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisi
     },
     setActorScreenPositionTarget(target) {
       engineRef.current?.setActorScreenPositionTarget(target);
+    },
+    moveActorToScreenPosition(clientX, clientY) {
+      engineRef.current?.updateMouseClick(clientX, clientY);
+    },
+    moveActorHorizontallyToScreenPosition(clientX) {
+      engineRef.current?.updateHorizontalMove(clientX);
     },
     acknowledgeUserGesture() {
       engineRef.current?.acknowledgeUserGesture();
@@ -128,7 +134,7 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisi
           position: 'absolute',
           top: 0, left: 0, zIndex: 1,
           cursor: 'crosshair',
-          backgroundColor: '#050505' 
+          backgroundColor: foregroundOnly ? 'transparent' : '#050505'
         }}
       />
 
@@ -141,7 +147,8 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisi
               radial-gradient(circle, transparent 35%, rgba(0,0,0,${screenEffects.vignetteOpacity}) 100%),
               repeating-linear-gradient(rgba(0,0,0,${screenEffects.scanlineOpacity}) 0px, rgba(0,0,0,${screenEffects.scanlineOpacity}) 1px, transparent 1px, transparent 3px)
             `,
-            mixBlendMode: 'multiply'
+            mixBlendMode: 'multiply',
+            opacity: foregroundOnly ? 0 : 1
         }}
       />
     </div>

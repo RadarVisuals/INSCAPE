@@ -28,6 +28,8 @@ import DesktopMenu from './menus/DesktopMenu.jsx';
 import FramedArtwork from './FramedArtwork.jsx';
 import ArtworkChooser from './ArtworkChooser.jsx';
 import ArtworkInspector from './ArtworkInspector.jsx';
+import GalleryWorld from './GalleryWorld.jsx';
+import SpatialWireframeGrid from './SpatialWireframeGrid.jsx';
 import { CANVAS_OBJECT_KIND, getCanvasObjectDefinition } from '../library/domain/canvasObjectRegistry.js';
 import { CANVAS_OBJECT_ORDER_COMMAND } from '../library/domain/canvasObjects.js';
 import {
@@ -93,39 +95,15 @@ function readStoredPositions(geometry) {
 }
 
 function GridBackdrop({ geometry }) {
-  const intersections = [];
-  for (let row = 0; row <= geometry.majorRows; row += 1) {
-    for (let column = 0; column <= geometry.columns; column += 1) {
-      intersections.push({
-        x: Math.round(column * geometry.cellWidth),
-        y: Math.round(row * geometry.majorCellHeight),
-        key: `${column}-${row}`
-      });
-    }
-  }
-
-  return (
-    <svg
-      className="module-grid__backdrop"
-      viewBox={`0 0 ${geometry.usableWidth} ${geometry.usableHeight}`}
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <g className="module-grid__lines">
-        {Array.from({ length: geometry.columns + 1 }, (_, index) => (
-          <line key={`v-${index}`} x1={Math.round(index * geometry.cellWidth)} y1="0" x2={Math.round(index * geometry.cellWidth)} y2={geometry.usableHeight} />
-        ))}
-        {Array.from({ length: geometry.majorRows + 1 }, (_, index) => (
-          <line key={`h-${index}`} x1="0" y1={Math.round(index * geometry.majorCellHeight)} x2={geometry.usableWidth} y2={Math.round(index * geometry.majorCellHeight)} />
-        ))}
-      </g>
-      <g className="module-grid__crosses">
-        {intersections.map(({ x, y, key }) => (
-          <circle key={key} cx={x} cy={y} r="1.5" />
-        ))}
-      </g>
-    </svg>
-  );
+  return <SpatialWireframeGrid
+    className="module-grid__backdrop"
+    lineClassName="module-grid__lines"
+    intersectionClassName="module-grid__crosses"
+    width={geometry.usableWidth}
+    height={geometry.usableHeight}
+    cellWidth={geometry.cellWidth}
+    cellHeight={geometry.majorCellHeight}
+  />;
 }
 
 export default function ModuleGridShell({
@@ -143,6 +121,7 @@ export default function ModuleGridShell({
   onKeeperVisibilityChange,
   onStageVisibilityChange,
   registerWorldContextMenu,
+  onGalleryOpenChange,
   interfaceVisible = true,
   revealPresentation = { sequence: 'short', reducedMotion: false }
 }) {
@@ -167,6 +146,7 @@ export default function ModuleGridShell({
   const [selectedCanvasObjectId, setSelectedCanvasObjectId] = useState(null);
   const [artworkChooser, setArtworkChooser] = useState(null);
   const [previewObjectId, setPreviewObjectId] = useState(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [availableModuleIds, setAvailableModuleIds] = useState(() => new Set());
   const moduleRefs = useRef(new Map());
   const identityRef = useRef(null);
@@ -584,6 +564,30 @@ export default function ModuleGridShell({
     updateRuntime({ type: 'close-all' }); setIdentityOpen(false); setIdentityPhase('closed'); setCollectionOpen(false); setSignalsOpen(false); setOpenFolderLauncherId(null); setActiveModuleId(null);
   }, [updateRuntime]);
 
+  const exitGallery = useCallback(() => {
+    setGalleryOpen(false);
+    setActiveModuleId(null);
+    window.requestAnimationFrame(() => moduleRefs.current.get('creations')?.focus());
+  }, []);
+
+  const enterGallery = useCallback(() => {
+    closeAllWindows();
+    setEditMode(false);
+    setSelectedSceneId(null);
+    setSelectedCanvasObjectId(null);
+    setInspectorAnchor(null);
+    setArtworkInspector(null);
+    setContextMenu(null);
+    setActiveHudCommand(null);
+    setGalleryOpen(true);
+    setActiveModuleId('creations');
+  }, [closeAllWindows]);
+
+  useEffect(() => {
+    onGalleryOpenChange?.(galleryOpen);
+    return () => { if (galleryOpen) onGalleryOpenChange?.(false); };
+  }, [galleryOpen, onGalleryOpenChange]);
+
   const toggleGrid = useCallback(() => setGridVisible((value) => { const next=!value; try { window.localStorage.setItem(GRID_PREFERENCE_KEY,JSON.stringify({version:1,visible:next})); } catch {} return next; }), []);
 
   const openLauncherInspector = useCallback((id) => {
@@ -595,8 +599,9 @@ export default function ModuleGridShell({
   const activateLauncher = useCallback((id) => {
     if (suppressLauncherClickRef.current) { suppressLauncherClickRef.current = false; return; }
     if (editMode) openLauncherInspector(id);
+    else if (id === 'creations') enterGallery();
     else openModule(id);
-  }, [editMode, openLauncherInspector, openModule]);
+  }, [editMode, enterGallery, openLauncherInspector, openModule]);
 
   const createFolderAtContext = useCallback(() => {
     const existing = new Set(workspace.folders.map((folder) => folder.name.toLowerCase()));
@@ -749,6 +754,7 @@ export default function ModuleGridShell({
       data-entry-sequence={revealPresentation.sequence}
       data-reduced-motion={revealPresentation.reducedMotion || undefined}
       data-edit-mode={editMode || undefined}
+      data-gallery-open={galleryOpen || undefined}
       data-dragging={interaction?.activated ? interaction.targetId : undefined}
       style={theme}
       aria-label="OS Underneath public world"
@@ -770,13 +776,15 @@ export default function ModuleGridShell({
           <button
             type="button"
             aria-pressed={activeHudCommand === 'search'}
-            onClick={openCollectionSearch}
+            onClick={() => { if (galleryOpen) exitGallery(); openCollectionSearch(); }}
           >
             [ Search ]
           </button>
           <button type="button" onClick={() => setActiveHudCommand((current) => current === 'share' ? null : 'share')} aria-expanded={activeHudCommand === 'share'}>[ Share ]</button>
-          <button type="button" onClick={() => setEditMode((current) => !current)} aria-pressed={editMode}>[ {editMode ? 'Done Arranging' : 'Arrange Desktop'} ]</button>
-          {editMode && <button type="button" onClick={() => { if(window.confirm('Reset the authored desktop layout? Folders, owned assets, visibility, and runtime windows will be preserved.')) resetLayout(); }}>[ Reset Authored Canvas ]</button>}
+          {galleryOpen
+            ? <button type="button" onClick={exitGallery}>[ Exit Gallery ]</button>
+            : <button type="button" onClick={() => setEditMode((current) => !current)} aria-pressed={editMode}>[ {editMode ? 'Done Arranging' : 'Arrange Desktop'} ]</button>}
+          {editMode && !galleryOpen && <button type="button" onClick={() => { if(window.confirm('Reset the authored desktop layout? Folders, owned assets, visibility, and runtime windows will be preserved.')) resetLayout(); }}>[ Reset Authored Canvas ]</button>}
           <button
             type="button"
             aria-pressed={activeHudCommand === 'settings'}
@@ -1031,6 +1039,15 @@ export default function ModuleGridShell({
           </section>
         )}
       </section>
+      {galleryOpen && <GalleryWorld
+        objects={canvasObjects}
+        assets={libraryAssets}
+        theme={theme}
+        onOpenArtwork={openArtworkPreview}
+        onExit={exitGallery}
+        onMoveKeeper={(clientX, clientY) => residentHandoff?.moveToScreenPosition?.(clientX, clientY)}
+        onMoveKeeperHorizontally={(clientX) => residentHandoff?.moveHorizontallyToScreenPosition?.(clientX)}
+      />}
       {inspectorAnchor && selectedSceneId && sceneById[selectedSceneId] && (()=>{ const scene=sceneById[selectedSceneId]; const launcher=pinnedLaunchers.find((entry)=>entry.id===selectedSceneId); const folder=launcher?.folderId?workspace.folders.find((entry)=>entry.id===launcher.folderId):null; const currentName=folder?.name||launcher?.label||scene.label||MODULES.find((entry)=>entry.id===selectedSceneId)?.label||'Launcher'; const saveName=(value)=>{const name=value.trim();if(!name)return;if(folder)renameFolder(folder.id,name);else if(launcher)setLauncherPresentation(launcher.id,{label:name});else updatePresentation(selectedSceneId,{label:name});}; return <aside key={selectedSceneId} ref={launcherInspectorRef} className="launcher-inspector" aria-label="Launcher appearance" style={{left:inspectorAnchor.x,top:inspectorAnchor.y}}>
         <strong>Launcher</strong><span>{selectedSceneId}</span>
         <label className="launcher-inspector__name">Name<input autoFocus aria-label="Launcher name" defaultValue={currentName} onBlur={(event)=>saveName(event.target.value)} onKeyDown={(event)=>{if(event.key==='Enter'){event.currentTarget.blur();}if(event.key==='Escape'){event.currentTarget.value=currentName;event.currentTarget.blur();}}} /></label>
