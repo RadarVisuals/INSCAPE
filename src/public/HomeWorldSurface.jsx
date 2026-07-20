@@ -7,6 +7,7 @@ import './homeWorld.css';
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 
 export default function HomeWorldSurface({ camera, geometry, world, locations = [], gridVisible, theme, visible, onCameraChange, onMoveKeeper, onOpenContextMenu }) {
+  const surfaceRef = useRef(null);
   const dragRef = useRef(null);
   const mapDragRef = useRef(null);
   const touchPointersRef = useRef(new Map());
@@ -86,6 +87,13 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
     onCameraChange(clampHomeWorldCamera({...camera,x:camera.x+horizontal/zoom,y:camera.y+vertical/zoom},world));
   };
 
+  useEffect(() => {
+    const surface = surfaceRef.current;
+    if (!surface || narrow) return undefined;
+    surface.addEventListener('wheel', handleWheel, { passive: false });
+    return () => surface.removeEventListener('wheel', handleWheel);
+  }, [camera, narrow, world]);
+
   useEffect(()=>{
     if(narrow)return undefined;
     const keydown=(event)=>{
@@ -116,6 +124,7 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
 
   const root = typeof document === 'undefined' ? null : document.querySelector('.application-root');
   const surface = <section
+    ref={surfaceRef}
     className="home-world-surface"
     data-desktop-canvas
     data-pannable={!narrow || undefined}
@@ -125,7 +134,6 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
     style={worldTheme}
     onPointerDown={handlePointerDown}
     onPointerMove={handlePointerMove}
-    onWheel={handleWheel}
     onPointerUp={finishPointer}
     onPointerCancel={(event) => finishPointer(event, true)}
     onLostPointerCapture={(event) => finishPointer(event, true)}

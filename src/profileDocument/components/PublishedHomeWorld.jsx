@@ -12,6 +12,7 @@ import {
   publishedItemPixelRect,
   publishedNavigatorLocations,
   publishedWorldTransform,
+  snapVisitorWindowRect,
   visitorWindowTransition
 } from '../domain/publishedVisitorWorld.js';
 import PublishedProfileDocumentSpaceWindow from './PublishedProfileDocumentSpaceWindow.jsx';
@@ -56,7 +57,7 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
   }, [layout.geometry.narrow, layout.world, viewport]);
 
   const transitionWindow = useCallback((action) => setWindowState((state) => visitorWindowTransition(state, action)), []);
-  const openSpace = useCallback((space) => transitionWindow({ type: 'open', id: space.id, rect: windowState.windows[space.id]?.rect || initialVisitorWindowRect(space, layout, camera) }), [camera, layout, transitionWindow, windowState.windows]);
+  const toggleSpace = useCallback((space) => transitionWindow({ type: 'toggle', id: space.id, rect: initialVisitorWindowRect(space, layout, camera) }), [camera, layout, transitionWindow]);
   const beginWindowInteraction = useCallback((event, id, kind) => {
     if (layout.geometry.narrow || (event.pointerType === 'mouse' && event.button !== 0)) return;
     const entry = windowState.windows[id]; if (!entry) return;
@@ -70,7 +71,7 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
     const rect = active.kind === 'resize'
       ? { ...active.rect, width: active.rect.width + dx, height: active.rect.height + dy }
       : { ...active.rect, left: active.rect.left + dx, top: active.rect.top + dy };
-    transitionWindow({ type: 'geometry', id: active.id, rect: clampVisitorWindowRect(rect, viewport) });
+    transitionWindow({ type: 'geometry', id: active.id, rect: snapVisitorWindowRect(rect, viewport) });
   }, [transitionWindow, viewport]);
   const finishWindowInteraction = useCallback((event) => { if (interactionRef.current?.pointerId === event.pointerId) interactionRef.current = null; }, []);
 
@@ -91,13 +92,13 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
     <section className="published-home-world__identity" aria-label="Public profile identity">{cached.avatarUrl ? <img src={cached.avatarUrl} alt="" /> : <span aria-hidden="true">UP</span>}<div><strong>{displayName}</strong><small>{document.profile.address}</small></div></section>
     <HomeWorldSurface camera={camera} geometry={layout.geometry} world={layout.world} locations={locations} gridVisible theme={THEME} visible onCameraChange={setCamera} onMoveKeeper={onMoveKeeper} />
     <section className="published-home-world__spatial" aria-label="Published Canvas Spaces and artwork" style={{ width: layout.placementGeometry.usableWidth, height: layout.placementGeometry.usableHeight, transform, '--grid-cell-width': `${layout.geometry.cellWidth}px`, '--grid-cell-height': `${layout.geometry.cellHeight}px` }}>
-      {layout.spaces.map((item) => <button className="module-shell module-button module-button--folder" data-entry-state="ready" data-launcher-id={item.id} data-active={windowState.windows[item.id] ? true : undefined} key={item.id} type="button" style={publishedItemPixelRect(item, layout)} onClick={() => openSpace(item.space)} aria-expanded={Boolean(windowState.windows[item.id])} aria-label={`Open ${item.space.label}, ${item.space.assets.length} assets`}>
+      {layout.spaces.map((item) => { const entry = windowState.windows[item.id]; const launcherAction = !entry ? 'Open' : entry.minimized ? 'Restore' : 'Close'; return <button className="module-shell module-button module-button--folder" data-entry-state="ready" data-launcher-id={item.id} data-window-state={!entry ? 'closed' : entry.minimized ? 'minimized' : 'open'} data-active={entry ? true : undefined} key={item.id} type="button" style={publishedItemPixelRect(item, layout)} onClick={() => toggleSpace(item.space)} aria-expanded={Boolean(entry && !entry.minimized)} aria-label={`${launcherAction} ${item.space.label}, ${item.space.assets.length} assets`}>
         {item.appearance.mode !== 'label' && <b className="module-button__icon" aria-hidden="true">{iconGlyph(item.appearance.iconKey)}</b>}{item.appearance.showLabel !== false && item.appearance.mode !== 'icon' && <span className="module-button__label">{item.space.label}</span>}{item.appearance.mode !== 'icon' && <small>{item.space.assets.length}</small>}
-      </button>)}
-      {layout.objects.map((object) => <FramedArtwork key={object.id} object={{ ...object, stableAssetId: object.asset.stableAssetId, visitorVisible: true }} asset={projectDocumentAsset(object.asset)} arranging={false} compact={layout.geometry.narrow} selected={false} style={{ ...publishedItemPixelRect(object, layout), zIndex: 10 + object.order }} onActivate={() => setOpenArtworkId(object.id)} onEdit={() => {}} />)}
+      </button>; })}
+      {layout.objects.map((object) => <FramedArtwork key={object.id} object={{ ...object, stableAssetId: object.asset.stableAssetId, visitorVisible: true }} asset={projectDocumentAsset(object.asset)} arranging={false} compact={layout.geometry.narrow} selected={false} style={{ ...publishedItemPixelRect(object, layout), zIndex: 10 + object.order }} onActivate={() => setOpenArtworkId(object.id)} />)}
     </section>
     {windowState.zOrder.map((id, index) => { const entry = windowState.windows[id]; const space = document.spaces.find((candidate) => candidate.id === id); if (!entry || !space) return null; return <section key={id} className="module-shell module-shell--expanded module-shell--collection module-shell--folder published-home-world__window" data-minimized={entry.minimized || undefined} style={{ ...entry.rect, zIndex: 60 + index }} role="dialog" aria-modal="false" aria-label={`Published space: ${space.label}`} onPointerDownCapture={() => transitionWindow({ type: 'focus', id })}>
-      <PublishedProfileDocumentSpaceWindow space={space} minimized={entry.minimized} dragHandleProps={{ onPointerDown: (event) => beginWindowInteraction(event, id, 'move'), onPointerMove: moveWindowInteraction, onPointerUp: finishWindowInteraction, onPointerCancel: finishWindowInteraction, onLostPointerCapture: finishWindowInteraction }} onMinimize={() => transitionWindow({ type: 'minimize', id })} onClose={() => transitionWindow({ type: 'close', id })} />
+      <PublishedProfileDocumentSpaceWindow space={space} minimized={entry.minimized} dragHandleProps={{ onPointerDown: (event) => beginWindowInteraction(event, id, 'move'), onPointerMove: moveWindowInteraction, onPointerUp: finishWindowInteraction, onPointerCancel: finishWindowInteraction, onLostPointerCapture: finishWindowInteraction }} onMinimize={() => transitionWindow({ type: entry.minimized ? 'restore' : 'minimize', id })} onClose={() => transitionWindow({ type: 'close', id })} />
       {!layout.geometry.narrow && !entry.minimized && <i className="module-window__resize" data-resize-control tabIndex="0" aria-label={`Resize ${space.label} window`} onPointerDown={(event) => beginWindowInteraction(event, id, 'resize')} onPointerMove={moveWindowInteraction} onPointerUp={finishWindowInteraction} onPointerCancel={finishWindowInteraction} onLostPointerCapture={finishWindowInteraction} />}
     </section>; })}
     {openArtwork && (() => { const asset = projectDocumentAsset(openArtwork.asset); return <section ref={artworkDialogRef} className="profile-document-preview__artwork" role="dialog" aria-modal="true" aria-label={`Artwork preview: ${asset.name}`}><header><strong>{asset.name}</strong><button type="button" onClick={() => setOpenArtworkId(null)} aria-label="Close artwork preview">×</button></header>{asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} /> : <p>Artwork unavailable</p>}</section>; })()}

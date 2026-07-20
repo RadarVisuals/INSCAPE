@@ -12,6 +12,7 @@ import {
   initialVisitorWindowRect,
   publishedItemPixelRect,
   publishedNavigatorLocations,
+  snapVisitorWindowRect,
   visitorWindowTransition
 } from '../domain/publishedVisitorWorld.js';
 
@@ -45,10 +46,14 @@ test('camera mouse-pan math and anchored zoom remain clamped to the published wo
   assert.equal(clampHomeWorldCamera({ x: -9999, y: 999999, zoom: -20 }, layout.world).x, 0);
 });
 
-test('launcher opening, focus, minimize, drag/resize geometry, and close stay ephemeral', () => {
+test('launcher toggles open, close, and restore while minimize remains an explicit ephemeral state', () => {
   const rect = { left: 40, top: 80, width: 700, height: 480 };
   let state = createVisitorWindowState();
-  state = visitorWindowTransition(state, { type: 'open', id: 'space:west', rect });
+  state = visitorWindowTransition(state, { type: 'toggle', id: 'space:west', rect });
+  assert.deepEqual(state.windows['space:west'], { rect, minimized: false });
+  state = visitorWindowTransition(state, { type: 'toggle', id: 'space:west', rect });
+  assert.equal(state.windows['space:west'], undefined, 'an open launcher closes its runtime window');
+  state = visitorWindowTransition(state, { type: 'toggle', id: 'space:west', rect });
   state = visitorWindowTransition(state, { type: 'open', id: 'space:east', rect: { ...rect, left: 90 } });
   state = visitorWindowTransition(state, { type: 'focus', id: 'space:west' });
   assert.deepEqual(state.zOrder, ['space:east', 'space:west']);
@@ -56,9 +61,29 @@ test('launcher opening, focus, minimize, drag/resize geometry, and close stay ep
   state = visitorWindowTransition(state, { type: 'minimize', id: 'space:west' });
   assert.equal(state.windows['space:west'].minimized, true);
   assert.equal(state.windows['space:west'].rect.left, 150);
+  state = visitorWindowTransition(state, { type: 'minimize', id: 'space:west' });
+  assert.equal(state.windows['space:west'].minimized, true, 'minimize cannot accidentally restore');
+  state = visitorWindowTransition(state, { type: 'toggle', id: 'space:west', rect });
+  assert.equal(state.windows['space:west'].minimized, false, 'a minimized launcher restores its prior geometry');
+  assert.equal(state.windows['space:west'].rect.left, 150);
+  assert.equal(state.zOrder.at(-1), 'space:west', 'restore also focuses the runtime window');
   assert.equal(documentFixture.spaces[0].windowGeometry.column, -3, 'runtime geometry never writes authored geometry');
   state = visitorWindowTransition(state, { type: 'close', id: 'space:west' });
   assert.equal(state.windows['space:west'], undefined);
+});
+
+test('desktop visitor drag and resize snap every viewport dimension to 40px before clamping', () => {
+  assert.deepEqual(
+    snapVisitorWindowRect({ left: 113, top: 131, width: 707, height: 493 }, { width: 1280, height: 720 }),
+    { left: 120, top: 120, width: 720, height: 480 }
+  );
+  assert.deepEqual(
+    snapVisitorWindowRect({ left: 1261, top: -20, width: 709, height: 501 }, { width: 1280, height: 720 }),
+    { left: 536, top: 64, width: 720, height: 520 },
+    'the snapped rectangle is finally clamped with its controls reachable'
+  );
+  const cameraAndZoomIndependent = snapVisitorWindowRect({ left: 203, top: 197, width: 641, height: 399 }, { width: 1280, height: 720 });
+  assert.deepEqual(cameraAndZoomIndependent, { left: 200, top: 200, width: 640, height: 400 });
 });
 
 test('authored window geometry is projected through the ephemeral visitor camera zoom', () => {
@@ -72,7 +97,7 @@ test('authored window geometry is projected through the ephemeral visitor camera
 test('published component exposes launcher/artwork activation and structural mouse/touch pointer handling', () => {
   const source = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
   const cameraSource = readFileSync(resolve(here, '../../public/HomeWorldSurface.jsx'), 'utf8');
-  assert.match(source, /onClick=\{\(\) => openSpace\(item\.space\)\}/);
+  assert.match(source, /onClick=\{\(\) => toggleSpace\(item\.space\)\}/);
   assert.match(source, /setOpenArtworkId\(object\.id\)/);
   assert.match(source, /event\.pointerType === 'mouse'/);
   assert.match(source, /setPointerCapture/);
@@ -80,8 +105,46 @@ test('published component exposes launcher/artwork activation and structural mou
   assert.match(cameraSource, /touchPointersRef/);
   assert.match(cameraSource, /ArrowLeft/);
   assert.match(cameraSource, /onPointerCancel/);
-  assert.match(cameraSource, /onWheel=\{handleWheel\}/);
+  assert.match(cameraSource, /addEventListener\('wheel', handleWheel, \{ passive: false \}\)/);
+  assert.match(cameraSource, /removeEventListener\('wheel', handleWheel\)/);
+  assert.doesNotMatch(cameraSource, /onWheel=\{handleWheel\}/);
   assert.match(cameraSource, /event\.target\.closest\?\.\('button,\.spatial-index'\)/);
+});
+
+test('published controls are distinct, keyboard labelled, and cannot initiate window dragging', () => {
+  const worldSource = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
+  const windowSource = readFileSync(resolve(here, 'PublishedProfileDocumentSpaceWindow.jsx'), 'utf8');
+  assert.match(windowSource, /published-space-window__controls/);
+  assert.match(windowSource, /minimized \? 'Restore' : 'Minimize'/);
+  assert.match(windowSource, /aria-label=\{`Close \$\{space\.label\}`\}/);
+  assert.equal(windowSource.match(/onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/g)?.length, 2);
+  assert.match(worldSource, /type: entry\.minimized \? 'restore' : 'minimize'/);
+  assert.match(worldSource, /!layout\.geometry\.narrow && !entry\.minimized/);
+  assert.match(worldSource, /if \(layout\.geometry\.narrow/);
+});
+
+test('published artwork fails closed for editing while the verified owner keeps the real edit callback', () => {
+  const artworkSource = readFileSync(resolve(here, '../../public/FramedArtwork.jsx'), 'utf8');
+  const worldSource = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
+  const previewSource = readFileSync(resolve(here, 'ProfileDocumentSurface.jsx'), 'utf8');
+  const ownerSource = readFileSync(resolve(here, '../../public/ModuleGridShell.jsx'), 'utf8');
+  assert.match(artworkSource, /editable = false/);
+  assert.match(artworkSource, /editable && \(\(compact && !arranging\)/);
+  assert.doesNotMatch(worldSource + previewSource, /onEdit=\{\(\) => \{\}\}/);
+  assert.doesNotMatch(worldSource + previewSource, /editable=\{/);
+  assert.match(ownerSource, /editable=\{ownerAuthoringEnabled\}/);
+  assert.match(ownerSource, /onEdit=\{\(\)=>openArtworkInspector\(object\.id\)\}/);
+});
+
+test('compact published content clears masthead and identity through 719px, with 720px spatial mode', () => {
+  const css = readFileSync(resolve(here, '../profileDocument.css'), 'utf8');
+  for (const width of [320, 390, 719]) assert.equal(createPublishedVisitorLayout(documentFixture, width, 800).geometry.narrow, true);
+  assert.equal(createPublishedVisitorLayout(documentFixture, 720, 800).geometry.narrow, false);
+  assert.match(css, /@media\(max-width:719px\)/);
+  assert.match(css, /top:calc\(124px \+ env\(safe-area-inset-top,0px\)\)/);
+  assert.match(css, /bottom:calc\(12px \+ env\(safe-area-inset-bottom,0px\)\)/);
+  assert.match(css, /overflow-y:auto/);
+  assert.match(css, /touch-action:pan-y/);
 });
 
 test('published Keeper movement callback is wired without passing the owner handoff object into the published graph', () => {

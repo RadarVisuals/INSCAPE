@@ -4,6 +4,7 @@ import { createModuleGridGeometry } from '../../public/moduleLayout.js';
 import { normalizeSpan, packCompactCanvasObjects, packCompactScene } from '../../public/sceneGrid.js';
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
+export const VISITOR_WINDOW_GRID_SIZE = 40;
 
 export function createPublishedVisitorLayout(document, width, height) {
   const geometry = createModuleGridGeometry(width, height);
@@ -71,6 +72,17 @@ export function clampVisitorWindowRect(rect, viewport) {
   };
 }
 
+export function snapVisitorWindowRect(rect, viewport, gridSize = VISITOR_WINDOW_GRID_SIZE) {
+  const interval = Math.max(1, Number(gridSize) || VISITOR_WINDOW_GRID_SIZE);
+  const snap = (value) => Math.round((Number(value) || 0) / interval) * interval;
+  return clampVisitorWindowRect({
+    left: snap(rect?.left),
+    top: snap(rect?.top),
+    width: snap(rect?.width),
+    height: snap(rect?.height)
+  }, viewport);
+}
+
 export function initialVisitorWindowRect(space, layout, camera) {
   const authored = space.windowGeometry;
   const launcher = layout.spaces.find((item) => item.id === space.id);
@@ -96,13 +108,23 @@ export function visitorWindowTransition(state, action) {
     const windows = { ...current.windows }; delete windows[id];
     return { windows, zOrder: current.zOrder.filter((entry) => entry !== id) };
   }
+  if (action.type === 'toggle') {
+    const entry = current.windows[id];
+    if (!entry) return visitorWindowTransition(current, { type: 'open', id, rect: action.rect });
+    if (entry.minimized) return visitorWindowTransition(current, { type: 'restore', id });
+    return visitorWindowTransition(current, { type: 'close', id });
+  }
   if (action.type === 'open') return {
     windows: { ...current.windows, [id]: { rect: { ...action.rect }, minimized: false } },
     zOrder: [...current.zOrder.filter((entry) => entry !== id), id]
   };
   if (!current.windows[id]) return current;
   if (action.type === 'focus') return { ...current, zOrder: [...current.zOrder.filter((entry) => entry !== id), id] };
-  if (action.type === 'minimize') return { ...current, windows: { ...current.windows, [id]: { ...current.windows[id], minimized: !current.windows[id].minimized } } };
+  if (action.type === 'minimize') return { ...current, windows: { ...current.windows, [id]: { ...current.windows[id], minimized: true } } };
+  if (action.type === 'restore') return {
+    windows: { ...current.windows, [id]: { ...current.windows[id], minimized: false } },
+    zOrder: [...current.zOrder.filter((entry) => entry !== id), id]
+  };
   if (action.type === 'geometry') return { ...current, windows: { ...current.windows, [id]: { ...current.windows[id], rect: { ...action.rect } } } };
   return current;
 }

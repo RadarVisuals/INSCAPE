@@ -1251,7 +1251,7 @@ export default function ModuleGridShell({
           const scene=canvasObjectScenes[object.id]; if(!scene)return null; const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId) || null;
           const interactionProps={onPointerDown:(event)=>{setSelectedCanvasObjectId(object.id);startObjectDrag(event,object.id);},onPointerMove:moveInteraction,onPointerUp:finishInteraction,onPointerCancel:(event)=>finishInteraction(event,true),onLostPointerCapture:(event)=>finishInteraction(event,true)};
           const resizeProps={onPointerDown:(event)=>startObjectResize(event,object.id),onPointerMove:moveInteraction,onPointerUp:finishInteraction,onPointerCancel:(event)=>finishInteraction(event,true),onLostPointerCapture:(event)=>finishInteraction(event,true)};
-          return <FramedArtwork key={object.id} object={object} asset={asset} arranging={editMode} compact={geometry.narrow} selected={selectedCanvasObjectId===object.id}
+          return <FramedArtwork key={object.id} object={object} asset={asset} arranging={editMode} compact={geometry.narrow} editable={ownerAuthoringEnabled} selected={selectedCanvasObjectId===object.id}
             style={{...gridRectToPixelRect(scene.geometry,geometry,2),zIndex:10+object.presentationOrder}} containerRef={(node)=>{if(node)canvasObjectRefs.current.set(object.id,node);else canvasObjectRefs.current.delete(object.id);}}
             interactionProps={interactionProps} resizeProps={resizeProps} onEdit={()=>openArtworkInspector(object.id)} onActivate={()=>{if(suppressLauncherClickRef.current){suppressLauncherClickRef.current=false;return;}if(editMode){setSelectedCanvasObjectId(object.id);return;}openArtworkPreview(object.id);}} />;
         })}
