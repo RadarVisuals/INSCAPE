@@ -1,15 +1,7 @@
-import { useEffect } from 'react';
 import ControlPanel from '../components/UI/ControlPanel';
 import { useArtworkReactions } from '../hooks/useArtworkReactions';
-import { useWalletStore } from '../store/useWalletStore';
 
 export default function AtelierExperience({ onRequestPublic }) {
-  const initWallet = useWalletStore((state) => state.initWallet);
-
-  useEffect(() => {
-    initWallet();
-  }, [initWallet]);
-
   useArtworkReactions();
 
   return (

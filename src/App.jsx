@@ -47,6 +47,7 @@ function App() {
   const ownershipVerified = useWalletStore((state) => state.isHostProfileOwner);
   const verifiedOwnerProfileAddress = useWalletStore((state) => state.hostProfileAddress);
   const initWallet = useWalletStore((state) => state.initWallet);
+  const disposeWallet = useWalletStore((state) => state.disposeWallet);
   const applyRenderConfig = useStore((state) => state.applyRenderConfig);
   const loadActorPresets = useStore((state) => state.loadActorPresets);
   const worldVisible = ['world', 'resident', 'interface', 'complete'].includes(revealStage);
@@ -68,7 +69,8 @@ function App() {
 
   useEffect(() => {
     initWallet();
-  }, [initWallet]);
+    return () => disposeWallet();
+  }, [disposeWallet, initWallet]);
 
   useEffect(() => {
     const syncModeFromUrl = () => {

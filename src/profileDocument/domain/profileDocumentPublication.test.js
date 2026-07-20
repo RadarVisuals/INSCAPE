@@ -238,6 +238,23 @@ test('receipt and resolver retry after a hash never submit another wallet reques
   assert.equal(result.transactionHash, '0xsubmitted'); assert.equal(writes, 1); assert.equal(receipts, 2); assert.equal(reads, 2);
 });
 
+test('Viem cancellation after a known hash is retained and can never trigger another wallet request', async () => {
+  const document = documentFor(); const artifact = createCanonicalPublication(document); const live = context(); let writes = 0;
+  live.walletClient.writeContract = async () => { writes += 1; return '0xsubmitted'; };
+  live.publicClient.waitForTransactionReceipt = async ({ onReplaced }) => {
+    onReplaced({ reason: 'cancelled', transaction: { hash: '0xcancelled' } });
+    return { status: 'success' };
+  };
+  const publisher = createProfileDocumentPublisher({ getContext: () => live, ipfsGateway: 'https://gateway.test/ipfs/',
+    fetchImpl: async () => responseFor(artifact.bytes), resolvePublished: async () => ({ status: PUBLISHED_PROFILE_STATUS.RESOLVED, document }) });
+  const verified = await publisher.verifyCid(document, CID);
+  await assert.rejects(() => publisher.publish(verified), (error) => {
+    assert.equal(error.replacementReason, 'cancelled'); assert.equal(error.transactionHash, '0xsubmitted'); return true;
+  });
+  await assert.rejects(() => publisher.publish(verified));
+  assert.equal(writes, 1);
+});
+
 test('every publication identity binding invalidates a verified artifact before submission', async () => {
   const cases = [
     ['draft', (live) => ({ ...live, draftFingerprint: `${live.draftFingerprint}:edit`, draftGeneration: live.draftGeneration + 1, snapshotStale: true })],
@@ -276,6 +293,23 @@ test('a draft change after provider invocation confirms only the frozen submitte
   assert.equal(writes, 1); assert.equal(result.transactionHash, '0xold-artifact');
   assert.equal(canonicalSerializeProfileDocument(result.result.document), artifact.text);
   assert.equal(publisher.isFresh(verified), false);
+});
+
+test('provider, account, and chain changes after the hash preserve the submitted record without resubmission', async () => {
+  const document = documentFor(); const artifact = createCanonicalPublication(document); let live = context(); let writes = 0;
+  const receipt = deferred();
+  live.walletClient.writeContract = async () => { writes += 1; return '0xsubmitted-context'; };
+  live.publicClient.waitForTransactionReceipt = () => receipt.promise;
+  const publisher = createProfileDocumentPublisher({ getContext: () => live, ipfsGateway: 'https://gateway.test/ipfs/',
+    fetchImpl: async () => responseFor(artifact.bytes), resolvePublished: async () => ({ status: PUBLISHED_PROFILE_STATUS.RESOLVED, document }) });
+  const verified = await publisher.verifyCid(document, CID); const pending = publisher.publish(verified);
+  await Promise.resolve();
+  live = context({ provider: {}, chainId: '0x1', walletClient: { account: PROFILE_B, writeContract: async () => { writes += 1; } },
+    publicationContextGeneration: 2, ownerAuthoringEnabled: false, isHostProfileOwner: false });
+  receipt.resolve({ status: 'success' });
+  const first = await pending; const retry = await publisher.publish(verified);
+  assert.equal(first.transactionHash, '0xsubmitted-context'); assert.equal(retry.transactionHash, '0xsubmitted-context');
+  assert.equal(writes, 1); assert.equal(publisher.isFresh(verified), false);
 });
 
 test('provider and LSP6 failures are decoded accurately', () => {

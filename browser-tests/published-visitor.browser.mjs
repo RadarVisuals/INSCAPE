@@ -128,6 +128,11 @@ async function navigateCsp(address = profileA) {
   await viewport(activeViewport.width, activeViewport.height, activeViewport.touch);
 }
 
+async function navigateProviderFixture() {
+  await cdp.send('Page.navigate', { url: `${baseUrl}/browser-tests/provider-lifecycle-fixture.html` });
+  await waitFor(`!!window.__providerFixture`, 'provider lifecycle fixture');
+}
+
 async function point(selector, xRatio = 0.5, yRatio = 0.5) {
   const rect = await evaluate(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:r.left+r.width*${xRatio},y:r.top+r.height*${yRatio},left:r.left,top:r.top,width:r.width,height:r.height}})()`);
   assert.ok(rect && Number.isFinite(rect.x) && Number.isFinite(rect.y), `No usable point for ${selector}`);
@@ -231,6 +236,35 @@ after(async () => {
     await vite?.close();
   }
   assert.deepEqual(browserProblems, [], `Unexpected browser diagnostics:\n${browserProblems.join('\n')}`);
+});
+
+test('mock provider mount, unmount, remount, replacement, and chain recovery stay generation-safe', async () => {
+  await navigateProviderFixture();
+  const result = await evaluate(`(async()=>{
+    const f=window.__providerFixture;const first=f.firstProvider;
+    const a=f.mount();const b=f.mount();await Promise.all([a,b]);
+    const initial={attach:{...first.attach},state:f.state()};
+    const captured=first.callbacks('accountsChanged')[0];f.unmount();
+    const disposed={remove:{...first.remove},state:f.state()};
+    await f.mount();const remounted={attach:{...first.attach},listeners:first.callbacks('accountsChanged').length};
+    first.chainId='0x1';first.emit('chainChanged','0x1');const immediate=f.state();await new Promise(r=>setTimeout(r,0));
+    first.chainId='0x2a';first.accounts=['0x2222222222222222222222222222222222222222'];first.contextAccounts=[...first.accounts];
+    const before=first.requests.length;first.emit('chainChanged','0x2a');await new Promise(r=>setTimeout(r,0));
+    const recovered={state:f.state(),requests:first.requests.slice(before)};
+    const next=f.createProvider({accounts:['0x3333333333333333333333333333333333333333'],contextAccounts:['0x3333333333333333333333333333333333333333']});
+    await f.replace(next);captured(['0x1111111111111111111111111111111111111111']);await new Promise(r=>setTimeout(r,0));
+    return {initial,disposed,remounted,immediate,recovered,replaced:f.state()};
+  })()`);
+  for (const event of ['accountsChanged', 'chainChanged', 'contextAccountsChanged']) {
+    assert.equal(result.initial.attach[event], 1); assert.equal(result.disposed.remove[event], 1);
+  }
+  assert.equal(result.initial.state.owner, true); assert.equal(result.disposed.state.owner, false);
+  assert.equal(result.remounted.attach.accountsChanged, 2); assert.equal(result.remounted.listeners, 1);
+  assert.equal(result.immediate.chainId, null); assert.equal(result.immediate.owner, false);
+  assert.deepEqual(result.recovered.requests.sort(), ['eth_accounts', 'eth_chainId', 'up_contextAccounts']);
+  assert.equal(result.recovered.state.owner, true); assert.equal(result.recovered.state.accounts[0], '0x2222222222222222222222222222222222222222');
+  assert.equal(result.replaced.accounts[0], '0x3333333333333333333333333333333333333333');
+  await navigate();
 });
 
 test('desktop empty-world click moves the Keeper exactly once', async () => {

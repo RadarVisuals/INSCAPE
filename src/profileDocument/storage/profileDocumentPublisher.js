@@ -2,33 +2,15 @@ import { canonicalSerializeProfileDocument } from '../domain/profileDocumentSeri
 import { assertPublicationContext, createCanonicalPublication, encodeProfileDocumentVerifiableUri, normalizeProfileDocumentCid, publicationContentFingerprint } from '../domain/profileDocumentPublication.js';
 import { createLuksoPublishedProfileRepository, OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, PUBLISHED_PROFILE_STATUS } from './luksoPublishedProfileRepository.js';
 import { PROFILE_DOCUMENT_IPFS_GATEWAY_URL, normalizeProfileAddress } from '../../library/config.js';
-import { decodeErrorResult, keccak256 } from 'viem';
+import { keccak256 } from 'viem';
+import { describePublicationError, PUBLICATION_ERROR_ABI } from './publicationError.js';
 
-const PUBLICATION_ERROR_ABI = [
-  { type: 'error', name: 'NoPermissionsSet', inputs: [{ name: 'from', type: 'address' }] },
-  { type: 'error', name: 'NotAllowedERC725YDataKey', inputs: [{ name: 'from', type: 'address' }, { name: 'disallowedKey', type: 'bytes32' }] }
-];
 export const SET_PROFILE_DOCUMENT_ABI = [
   { type: 'function', name: 'setData', stateMutability: 'payable', inputs: [{ name: 'dataKey', type: 'bytes32' }, { name: 'dataValue', type: 'bytes' }], outputs: [] },
   ...PUBLICATION_ERROR_ABI
 ];
 
-export function describePublicationError(error) {
-  let current = error; let rawData = null; let decoded = null;
-  for (let depth = 0; current && depth < 10; depth += 1, current = current.cause) {
-    if (current.code === 4001) return 'Wallet request rejected by the user';
-    if (current.data?.errorName) decoded = current.data;
-    if (typeof current.data === 'string' && /^0x[0-9a-f]+$/iu.test(current.data)) rawData = current.data;
-  }
-  if (!decoded && rawData) {
-    try { decoded = decodeErrorResult({ abi: PUBLICATION_ERROR_ABI, data: rawData }); } catch { /* Unknown contract error. */ }
-  }
-  if (decoded?.errorName === 'NoPermissionsSet') return `NoPermissionsSet: ${decoded.args?.[0] || 'the sender'} has no LSP6 permissions`;
-  if (decoded?.errorName === 'NotAllowedERC725YDataKey') {
-    return `NotAllowedERC725YDataKey: ${decoded.args?.[0] || 'the sender'} cannot set ${decoded.args?.[1] || 'this ERC725Y key'}`;
-  }
-  return error?.shortMessage || error?.message || String(error);
-}
+export { describePublicationError };
 
 function matchesArtifact(document, artifact) {
   return keccak256(new TextEncoder().encode(canonicalSerializeProfileDocument(document))).toLowerCase() === artifact.hash.toLowerCase();
@@ -100,14 +82,32 @@ export function createProfileDocumentPublisher({ getContext, fetchImpl = globalT
   };
 
   const confirmSubmitted = async (record) => {
-    if (!record.receipt) {
-      onStatus('CONFIRMING_TRANSACTION', record.verified, record.transactionHash);
-      const receipt = await record.publicClient.waitForTransactionReceipt({ hash: record.transactionHash });
-      if (receipt?.status !== 'success') throw new Error('The publication transaction reverted');
-      record.receipt = receipt;
+    try {
+      if (!record.receipt) {
+        onStatus('CONFIRMING_TRANSACTION', record.verified, record.transactionHash);
+        let replacement = null;
+        const receipt = await record.publicClient.waitForTransactionReceipt({
+          hash: record.transactionHash,
+          onReplaced: (value) => { replacement = value; }
+        });
+        if (replacement?.reason === 'cancelled' || replacement?.reason === 'replaced') {
+          throw Object.assign(new Error(`The submitted transaction was ${replacement.reason}`), {
+            replacementReason: replacement.reason,
+            replacementTransactionHash: replacement.transaction?.hash || null
+          });
+        }
+        if (receipt?.status !== 'success') throw Object.assign(new Error('The publication transaction reverted'), { code: 'RECEIPT_REVERTED', receipt });
+        record.receipt = receipt;
+        record.replacement = replacement;
+      }
+      if (!record.result) record.result = await verifyPublication(record.verified, record.transactionHash);
+      return { transactionHash: record.transactionHash, receipt: record.receipt, result: record.result };
+    } catch (error) {
+      if (error && typeof error === 'object') {
+        try { error.transactionHash = record.transactionHash; } catch { /* Non-extensible provider error. */ }
+      }
+      throw error;
     }
-    if (!record.result) record.result = await verifyPublication(record.verified, record.transactionHash);
-    return { transactionHash: record.transactionHash, receipt: record.receipt, result: record.result };
   };
 
   const runLocked = (identity, operation) => {

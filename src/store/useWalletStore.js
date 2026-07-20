@@ -1,49 +1,42 @@
 // src/store/useWalletStore.js
 import { create } from 'zustand';
 import { createClientUPProvider } from "@lukso/up-provider";
-import { createWalletClient, createPublicClient, custom, http, numberToHex, getAddress, isAddress } from "viem";
-import { lukso, luksoTestnet } from "viem/chains";
+import { createWalletClient, createPublicClient, custom, http, numberToHex, getAddress } from "viem";
+import { lukso } from "viem/chains";
 import { ERC725 } from '@erc725/erc725.js';
 import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' assert { type: 'json' };
+import { createWalletProviderLifecycle } from './walletProviderLifecycle.js';
 
-// LUKSO mainnet and testnet endpoints
 const LUKSO_MAINNET_RPC = "https://rpc.mainnet.lukso.network";
-const LUKSO_TESTNET_RPC = "https://rpc.testnet.lukso.network";
 const IPFS_GATEWAY = "https://api.universalprofile.cloud/ipfs/";
 
-// Module-level singletons to survive React StrictMode concurrently
-let globalProviderInstance = null;
-let isInitializing = false;
 let metadataRequestGeneration = 0;
 let permissionRequestGeneration = 0;
+let providerLifecycleManager = null;
 
 const sameAddress = (left, right) => typeof left === 'string' && typeof right === 'string'
   && left.toLowerCase() === right.toLowerCase();
 
-const normalizeChainId = (chainId) => {
+export const normalizeWalletChainId = (chainId) => {
   if (chainId === null || chainId === undefined) return null;
   if (typeof chainId === "number") return numberToHex(chainId);
   if (typeof chainId === "string") {
     const lower = chainId.toLowerCase().trim();
-    if (/^0x[0-9a-f]+$/.test(lower)) return lower;
-    try {
-      const num = parseInt(lower, 10);
-      if (!isNaN(num) && num >= 0) return numberToHex(num);
-    } catch (_) {}
-    if (/^[0-9a-f]+$/.test(lower)) return `0x${lower}`;
+    if (/^0x[0-9a-f]+$/u.test(lower)) return numberToHex(Number.parseInt(lower, 16));
+    if (/^[0-9]+$/u.test(lower)) return numberToHex(Number.parseInt(lower, 10));
   }
   return null;
 };
 
-const VIEM_CHAINS = {
-  [normalizeChainId(lukso.id)]: lukso,
-  [normalizeChainId(luksoTestnet.id)]: luksoTestnet,
-};
+const LUKSO_MAINNET_CHAIN_ID = normalizeWalletChainId(lukso.id);
 
-const RPC_URLS = {
-  [normalizeChainId(lukso.id)]: LUKSO_MAINNET_RPC,
-  [normalizeChainId(luksoTestnet.id)]: LUKSO_TESTNET_RPC,
-};
+function lifecycleManager(set, get) {
+  if (!providerLifecycleManager) providerLifecycleManager = createWalletProviderLifecycle({
+    get, set, createProvider: createClientUPProvider,
+    normalizeChainId: normalizeWalletChainId, supportedChainId: LUKSO_MAINNET_CHAIN_ID
+  });
+  return providerLifecycleManager;
+}
 
 export const useWalletStore = create((set, get) => ({
   provider: null,
@@ -57,6 +50,7 @@ export const useWalletStore = create((set, get) => ({
   isWalletConnected: false,
   isHostProfileOwner: false,
   publicationContextGeneration: 0,
+  providerCleanupLimitation: null,
   initializationError: null,
   
   // Profile Metadata State Variables
@@ -64,139 +58,42 @@ export const useWalletStore = create((set, get) => ({
   isProfileLoading: false,
   lastFetchedAddress: null, // Tracks the currently active request key to block duplication
 
-  initWallet: async () => {
-    // 1. Synchronous singleton lock to catch concurrent strict-mode execution threads
-    if (globalProviderInstance || get().provider || isInitializing) {
-      console.log("⚡ [UP Wallet] Singleton initialization guarded. Exiting duplicate thread.");
-      return;
+
+  initWallet: (options = {}) => {
+    if (typeof window === 'undefined' && !options.provider) {
+      set({ initializationError: new Error('Window environment not found.') });
+      return Promise.resolve(false);
     }
-    
-    isInitializing = true;
-    console.log("🔌 [UP Wallet] Initializing UP Provider...");
-    await new Promise(r => setTimeout(r, 100));
+    return lifecycleManager(set, get).initialize(options);
+  },
 
-    if (typeof window !== "undefined") {
-      try {
-        globalProviderInstance = createClientUPProvider();
-        console.log("✅ [UP Wallet] Singleton provider instance created successfully:", globalProviderInstance);
-        set((state) => ({ provider: globalProviderInstance, publicationContextGeneration: state.publicationContextGeneration + 1 }));
-      } catch (error) {
-        console.error("❌ [UP Wallet] Client provider generation failed:", error);
-        isInitializing = false;
-        set({ initializationError: error });
-        return;
-      }
-    } else {
-      isInitializing = false;
-      set({ initializationError: new Error("Window environment not found.") });
-      return;
-    }
+  disposeWallet: () => lifecycleManager(set, get).dispose(),
+  _recoverProviderContext: (reason) => lifecycleManager(set, get).recover(reason),
 
-    const provider = globalProviderInstance;
+  _failClosedProviderContext: (initializationError = null) => {
+    metadataRequestGeneration += 1;
+    permissionRequestGeneration += 1;
+    set((state) => ({ chainId: null, accounts: [], contextAccounts: [], hostProfileAddress: null,
+      loggedInUserUPAddress: null, walletClient: null, publicClient: null,
+      isWalletConnected: false, isHostProfileOwner: false, profileMetadata: null,
+      isProfileLoading: false, lastFetchedAddress: null, initializationError,
+      publicationContextGeneration: state.publicationContextGeneration + 1 }));
+  },
 
-    // Handshake Event Listeners
-    const handleAccountsChanged = (rawAccounts) => {
-      console.log("🔔 [UP Wallet] Event triggered: accountsChanged ->", rawAccounts);
-      get()._handleAccountsChanged(rawAccounts);
-    };
-
-    const handleChainChanged = (rawChainId) => {
-      console.log("🔔 [UP Wallet] Event triggered: chainChanged ->", rawChainId);
-      get()._handleChainChanged(rawChainId);
-    };
-
-    const handleContextAccountsChanged = (rawContext) => {
-      console.log("🔔 [UP Wallet] Event triggered: contextAccountsChanged ->", rawContext);
-      get()._handleContextAccountsChanged(rawContext);
-    };
-
+  _applyAuthoritativeProviderContext: async ({ provider, accounts, contextAccounts, chainId, isCurrent }) => {
+    let normalizedAccounts; let normalizedContext;
     try {
-      provider.on("accountsChanged", handleAccountsChanged);
-      provider.on("chainChanged", handleChainChanged);
-      provider.on("contextAccountsChanged", handleContextAccountsChanged);
-      console.log("✅ [UP Wallet] Handshake postMessage event listeners attached.");
-    } catch (e) {
-      console.warn("⚠️ [UP Wallet] Failed to attach handshake handlers:", e);
+      normalizedAccounts = (Array.isArray(accounts) ? accounts : []).map((address) => getAddress(address));
+      normalizedContext = (Array.isArray(contextAccounts) ? contextAccounts : []).map((address) => getAddress(address));
+    } catch {
+      normalizedAccounts = []; normalizedContext = [];
     }
-
-    console.log("🕒 [UP Wallet] Querying eth_accounts and eth_chainId...");
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Handshake timeout")), 6000)
-    );
-
-    const fetchPromise = Promise.all([
-      provider.request({ method: "eth_accounts" }),
-      provider.request({ method: "eth_chainId" })
-    ]);
-
-    try {
-      const [initialAccounts, initialChainId] = await Promise.race([
-          fetchPromise,
-          timeoutPromise
-      ]);
-
-      console.log("✅ [UP Wallet] Handshake completed successfully. Accounts:", initialAccounts, "Chain ID:", initialChainId);
-
-      const normalizedChainId = normalizeChainId(initialChainId);
-      const isValidChain = !!normalizedChainId && !!VIEM_CHAINS[normalizedChainId];
-
-      set({
-        accounts: (initialAccounts || []).map(a => getAddress(a)),
-        contextAccounts: (provider.contextAccounts || []).map(a => getAddress(a)),
-        chainId: isValidChain ? normalizedChainId : null
-      });
-
-      get()._recreateClients();
-      get()._updateConnectionStatus();
-
-    } catch (err) {
-      console.warn("⚠️ [UP Wallet] Handshake timed out or failed standalone context check. Applying fallback default chain state.", err.message);
-      
-      set({
-        accounts: [],
-        contextAccounts: (provider.contextAccounts || []).map(a => getAddress(a)),
-        chainId: null
-      });
-      get()._recreateClients();
-      get()._updateConnectionStatus();
-    } finally {
-      isInitializing = false;
-    }
-  },
-
-  _handleAccountsChanged: (rawAccounts) => {
-    set((state) => ({ accounts: (rawAccounts || []).map((address) => getAddress(address)), publicationContextGeneration: state.publicationContextGeneration + 1 }));
+    if (!isCurrent()) return;
+    set((state) => ({ provider, accounts: normalizedAccounts, contextAccounts: normalizedContext, chainId,
+      initializationError: null, publicationContextGeneration: state.publicationContextGeneration + 1 }));
     get()._recreateClients();
-    return get()._updateConnectionStatus();
-  },
-
-  _handleChainChanged: (rawChainId) => {
-    const normalized = normalizeChainId(rawChainId);
-    const isValid = Boolean(normalized && VIEM_CHAINS[normalized]);
-    set((state) => ({ chainId: isValid ? normalized : null, publicationContextGeneration: state.publicationContextGeneration + 1,
-      ...(isValid ? {} : { accounts: [], contextAccounts: [] }) }));
-    if (!isValid) console.warn("⚠️ [UP Wallet] Context is connected to unsupported chain:", rawChainId);
-    get()._recreateClients();
-    return get()._updateConnectionStatus();
-  },
-
-  _handleContextAccountsChanged: (rawContext) => {
-    set((state) => ({ contextAccounts: (rawContext || []).map((address) => getAddress(address)), publicationContextGeneration: state.publicationContextGeneration + 1 }));
-    return get()._updateConnectionStatus();
-  },
-
-  // Manual Development Override action
-  setHostProfileAddress: (address) => {
-    if (!address || !isAddress(address)) {
-      console.error("❌ [UP Wallet Override] Invalid Universal Profile address.");
-      return;
-    }
-    const cleaned = getAddress(address);
-    console.log("🛠️ [UP Wallet Override] Manually assigning profile address:", cleaned);
-    set((state) => ({ hostProfileAddress: cleaned, publicationContextGeneration: state.publicationContextGeneration + 1 }));
-    get()._recreateClients();
-    get()._checkPermissions();
-    get().fetchProfileMetadata();
+    if (!isCurrent()) return;
+    await get()._updateConnectionStatus();
   },
 
   /**
@@ -286,11 +183,15 @@ export const useWalletStore = create((set, get) => ({
 
   _recreateClients: () => {
     const { provider, chainId, accounts, initializationError } = get();
-    const activeChainId = chainId || "0x2a";
+    const activeChainId = chainId;
     console.log("⚙️ [UP Wallet] Generating Viem clients for active chain context:", activeChainId);
 
-    const currentChain = VIEM_CHAINS[activeChainId] || lukso;
-    const rpcUrl = RPC_URLS[activeChainId] || LUKSO_MAINNET_RPC;
+    if (activeChainId !== LUKSO_MAINNET_CHAIN_ID) {
+      set({ publicClient: null, walletClient: null });
+      return;
+    }
+    const currentChain = lukso;
+    const rpcUrl = LUKSO_MAINNET_RPC;
 
     try {
       const publicClient = createPublicClient({
@@ -324,7 +225,7 @@ export const useWalletStore = create((set, get) => ({
 
   _updateConnectionStatus: async () => {
     const { chainId, accounts, contextAccounts } = get();
-    const isConnected = !!chainId && accounts.length > 0 && contextAccounts.length > 0;
+    const isConnected = chainId === LUKSO_MAINNET_CHAIN_ID && accounts.length > 0 && contextAccounts.length > 0;
     
     const hostProfileAddress = (contextAccounts && contextAccounts.length > 0) 
       ? contextAccounts[0] 
@@ -354,31 +255,34 @@ export const useWalletStore = create((set, get) => ({
   },
 
   _checkPermissions: async () => {
-    const { accounts, hostProfileAddress, publicClient, chainId } = get();
-    const controllerAddress = accounts[0];
+    const { accounts, hostProfileAddress, publicClient, chainId, provider } = get();
+    const exposedAccountAddress = accounts[0];
     const generation = ++permissionRequestGeneration;
     set({ isHostProfileOwner: false, loggedInUserUPAddress: null });
 
     const requestIsCurrent = () => {
       const current = get();
       return permissionRequestGeneration === generation
-        && sameAddress(current.accounts[0], controllerAddress)
+        && sameAddress(current.accounts[0], exposedAccountAddress)
         && sameAddress(current.hostProfileAddress, hostProfileAddress)
         && current.chainId === chainId
-        && current.publicClient === publicClient;
+        && current.publicClient === publicClient
+        && current.provider === provider;
     };
 
-    if (!controllerAddress || !hostProfileAddress || !publicClient) {
+    if (!exposedAccountAddress || !hostProfileAddress || !publicClient || chainId !== LUKSO_MAINNET_CHAIN_ID) {
       console.log("🔒 [UP Wallet] Standard permissions bypass: missing active connection elements.");
       return;
     }
 
-    console.log(`🔐 [UP Wallet] Fetching ERC725 permissions from key supervisor for ${controllerAddress}...`);
+    console.log(`🔐 [UP Wallet] Fetching ERC725 permissions for exposed account ${exposedAccountAddress}...`);
     let isOwner = false;
 
-    if (controllerAddress.toLowerCase() === hostProfileAddress.toLowerCase()) {
+    if (exposedAccountAddress.toLowerCase() === hostProfileAddress.toLowerCase()) {
+      // UP Provider exposes the Universal Profile. Its privately selected authorized
+      // controller remains inside the provider and is never inferred by this app.
       isOwner = true;
-      console.log("👑 [UP Wallet] Verified: connected controller is the host profile owner.");
+      console.log("👑 [UP Wallet] Verified: the exposed Universal Profile matches the host profile.");
     } else {
       try {
         const erc725 = new ERC725(
@@ -387,7 +291,7 @@ export const useWalletStore = create((set, get) => ({
           publicClient.transport.url, 
           { ipfsGateway: IPFS_GATEWAY }
         );
-        const permissions = await erc725.getPermissions(controllerAddress);
+        const permissions = await erc725.getPermissions(exposedAccountAddress);
         if (typeof permissions === 'string') {
            const decoded = ERC725.decodePermissions(permissions);
            isOwner = decoded.SUPER_SETDATA;
@@ -412,12 +316,15 @@ export const useWalletStore = create((set, get) => ({
 }));
 
 export function resetWalletStoreForTests() {
+  providerLifecycleManager?.dispose();
+  providerLifecycleManager = null;
   metadataRequestGeneration = 0;
   permissionRequestGeneration = 0;
   useWalletStore.setState({
     provider: null, walletClient: null, publicClient: null, chainId: null,
     accounts: [], contextAccounts: [], hostProfileAddress: null, loggedInUserUPAddress: null,
-    isWalletConnected: false, isHostProfileOwner: false, publicationContextGeneration: 0, initializationError: null,
+    isWalletConnected: false, isHostProfileOwner: false, publicationContextGeneration: 0,
+    providerCleanupLimitation: null, initializationError: null,
     profileMetadata: null, isProfileLoading: false, lastFetchedAddress: null
   });
 }

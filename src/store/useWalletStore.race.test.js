@@ -61,7 +61,7 @@ test('an old permission result cannot grant ownership after controller, profile,
 
   useWalletStore.setState({ accounts: [CONTROLLER_A], contextAccounts: [PROFILE_A], hostProfileAddress: PROFILE_A, publicClient: clientA, chainId: '0x2a' });
   const oldRequest = useWalletStore.getState()._checkPermissions();
-  useWalletStore.setState({ accounts: [CONTROLLER_B], contextAccounts: [PROFILE_B], publicClient: clientB, chainId: '0x1069', isHostProfileOwner: true, loggedInUserUPAddress: PROFILE_A });
+  useWalletStore.setState({ accounts: [CONTROLLER_B], contextAccounts: [PROFILE_B], publicClient: clientB, chainId: '0x2a', isHostProfileOwner: true, loggedInUserUPAddress: PROFILE_A });
   const contextChange = useWalletStore.getState()._updateConnectionStatus();
 
   assert.equal(useWalletStore.getState().isHostProfileOwner, false, 'new context fails closed while unresolved');
@@ -91,25 +91,4 @@ test('failed metadata resolution clears deduplication and can be retried', async
   await useWalletStore.getState().fetchProfileMetadata();
   assert.equal(attempts, 2);
   assert.equal(useWalletStore.getState().profileMetadata.name, 'Retried profile');
-});
-
-test('late account and context events after a timed-out handshake rebuild a usable wallet client', async () => {
-  resetWalletStoreForTests();
-  ERC725.prototype.fetchData = async () => profileResult('Late profile');
-  const provider = { request: async () => null };
-  useWalletStore.setState({ provider, accounts: [], contextAccounts: [], chainId: null,
-    walletClient: null, isWalletConnected: false, isHostProfileOwner: false });
-
-  await useWalletStore.getState()._handleChainChanged('0x2a');
-  assert.equal(useWalletStore.getState().walletClient, null, 'chain arrival alone cannot create an account-bound client');
-  await useWalletStore.getState()._handleAccountsChanged([PROFILE_A]);
-  await useWalletStore.getState()._handleContextAccountsChanged([PROFILE_A]);
-
-  const state = useWalletStore.getState();
-  assert.equal(state.chainId, '0x2a');
-  assert.equal(state.walletClient.account.address.toLowerCase(), PROFILE_A);
-  assert.equal(state.walletClient.transport.type, 'custom');
-  assert.equal(state.isWalletConnected, true);
-  assert.equal(state.isHostProfileOwner, true);
-  assert.equal(state.hostProfileAddress.toLowerCase(), PROFILE_A);
 });
