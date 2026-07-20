@@ -107,10 +107,10 @@ test('system destination order is Activity, Gallery, Creations, Library', () => 
 
 test('all non-owner routes mount the published boundary instead of the local workspace shell', () => {
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
-  assert.match(appSource, /localOwnerRoute \? <ModuleGridShell/);
+  assert.match(appSource, /localOwnerRoute \? <OwnerRuntimeBoundary/);
   assert.match(appSource, /: <PublishedProfileBoundary/);
   assert.match(appSource, /selectPublicProfileRoute\(ownerAuthoringEnabled\)/);
-  assert.doesNotMatch(appSource, /viewingConnectedWorkspace \? <ModuleGridShell/);
+  assert.doesNotMatch(appSource, /viewingConnectedWorkspace \? <OwnerRuntimeBoundary/);
 });
 
 test('profile restore guards presentation storage reads and reports controlled document errors', () => {

@@ -6,7 +6,7 @@ import {
   resolveApplicationMode
 } from './app/appMode.js';
 import ArtCanvas from './components/Canvas/ArtCanvas';
-import ModuleGridShell from './public/ModuleGridShell.jsx';
+import OwnerRuntimeBoundary from './public/OwnerRuntimeBoundary.jsx';
 import { AssetResolver } from './engine/assets/AssetResolver.js';
 import { Startveil } from './startveil/index.js';
 import { useStore } from './store/useStore.js';
@@ -48,6 +48,7 @@ function App() {
   const verifiedOwnerProfileAddress = useWalletStore((state) => state.hostProfileAddress);
   const initWallet = useWalletStore((state) => state.initWallet);
   const applyRenderConfig = useStore((state) => state.applyRenderConfig);
+  const loadActorPresets = useStore((state) => state.loadActorPresets);
   const worldVisible = ['world', 'resident', 'interface', 'complete'].includes(revealStage);
   const actorVisible = ['resident', 'interface', 'complete'].includes(revealStage);
   const interfaceVisible = ['interface', 'complete'].includes(revealStage);
@@ -88,9 +89,10 @@ function App() {
 
   useEffect(() => {
     if (!ownerAuthoringEnabled) return;
+    loadActorPresets();
     const restored = loadRestoredPresentation(window.localStorage, connectedWorkspaceProfileAddress);
     if (restored) applyPublicPresentation(restored);
-  }, [applyPublicPresentation, connectedWorkspaceProfileAddress, ownerAuthoringEnabled]);
+  }, [applyPublicPresentation, connectedWorkspaceProfileAddress, loadActorPresets, ownerAuthoringEnabled]);
 
   const changeApplicationMode = useCallback((mode) => {
     const nextUrl = createApplicationModeUrl(window.location, mode);
@@ -173,7 +175,7 @@ function App() {
             <AtelierExperience onRequestPublic={() => changeApplicationMode(APPLICATION_MODES.PUBLIC)} />
           </Suspense>
         ) : (
-          localOwnerRoute ? <ModuleGridShell
+          localOwnerRoute ? <OwnerRuntimeBoundary
             ownerAuthoringEnabled={ownerAuthoringEnabled}
             getWalletPublicationContext={getWalletPublicationContext}
             visitorWalletConnected={visitorWalletConnected}

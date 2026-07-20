@@ -53,7 +53,9 @@ function createPresetId() {
 }
 
 export const createActorPresetSlice = (set, get) => ({
-  actorPresets: readPresets(),
+  actorPresets: [],
+
+  loadActorPresets: () => set({ actorPresets: readPresets() }),
 
   saveActorPreset: (requestedName) => {
     const name = requestedName.trim();
