@@ -92,3 +92,24 @@ test('failed metadata resolution clears deduplication and can be retried', async
   assert.equal(attempts, 2);
   assert.equal(useWalletStore.getState().profileMetadata.name, 'Retried profile');
 });
+
+test('late account and context events after a timed-out handshake rebuild a usable wallet client', async () => {
+  resetWalletStoreForTests();
+  ERC725.prototype.fetchData = async () => profileResult('Late profile');
+  const provider = { request: async () => null };
+  useWalletStore.setState({ provider, accounts: [], contextAccounts: [], chainId: null,
+    walletClient: null, isWalletConnected: false, isHostProfileOwner: false });
+
+  await useWalletStore.getState()._handleChainChanged('0x2a');
+  assert.equal(useWalletStore.getState().walletClient, null, 'chain arrival alone cannot create an account-bound client');
+  await useWalletStore.getState()._handleAccountsChanged([PROFILE_A]);
+  await useWalletStore.getState()._handleContextAccountsChanged([PROFILE_A]);
+
+  const state = useWalletStore.getState();
+  assert.equal(state.chainId, '0x2a');
+  assert.equal(state.walletClient.account.address.toLowerCase(), PROFILE_A);
+  assert.equal(state.walletClient.transport.type, 'custom');
+  assert.equal(state.isWalletConnected, true);
+  assert.equal(state.isHostProfileOwner, true);
+  assert.equal(state.hostProfileAddress.toLowerCase(), PROFILE_A);
+});

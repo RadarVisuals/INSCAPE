@@ -96,31 +96,17 @@ export const useWalletStore = create((set, get) => ({
     // Handshake Event Listeners
     const handleAccountsChanged = (rawAccounts) => {
       console.log("🔔 [UP Wallet] Event triggered: accountsChanged ->", rawAccounts);
-      const accounts = (rawAccounts || []).map(a => getAddress(a));
-      set({ accounts });
-      get()._updateConnectionStatus();
+      get()._handleAccountsChanged(rawAccounts);
     };
 
     const handleChainChanged = (rawChainId) => {
       console.log("🔔 [UP Wallet] Event triggered: chainChanged ->", rawChainId);
-      const normalized = normalizeChainId(rawChainId);
-      const isValid = !!normalized && !!VIEM_CHAINS[normalized];
-      
-      set({ chainId: isValid ? normalized : null });
-      if (!isValid) {
-        console.warn("⚠️ [UP Wallet] Context is connected to unsupported chain:", rawChainId);
-        set({ accounts: [], contextAccounts: [] });
-      }
-      
-      get()._recreateClients();
-      get()._updateConnectionStatus();
+      get()._handleChainChanged(rawChainId);
     };
 
     const handleContextAccountsChanged = (rawContext) => {
       console.log("🔔 [UP Wallet] Event triggered: contextAccountsChanged ->", rawContext);
-      const contextAccounts = (rawContext || []).map(a => getAddress(a));
-      set({ contextAccounts });
-      get()._updateConnectionStatus();
+      get()._handleContextAccountsChanged(rawContext);
     };
 
     try {
@@ -175,6 +161,27 @@ export const useWalletStore = create((set, get) => ({
     } finally {
       isInitializing = false;
     }
+  },
+
+  _handleAccountsChanged: (rawAccounts) => {
+    set({ accounts: (rawAccounts || []).map((address) => getAddress(address)) });
+    get()._recreateClients();
+    return get()._updateConnectionStatus();
+  },
+
+  _handleChainChanged: (rawChainId) => {
+    const normalized = normalizeChainId(rawChainId);
+    const isValid = Boolean(normalized && VIEM_CHAINS[normalized]);
+    set({ chainId: isValid ? normalized : null,
+      ...(isValid ? {} : { accounts: [], contextAccounts: [] }) });
+    if (!isValid) console.warn("⚠️ [UP Wallet] Context is connected to unsupported chain:", rawChainId);
+    get()._recreateClients();
+    return get()._updateConnectionStatus();
+  },
+
+  _handleContextAccountsChanged: (rawContext) => {
+    set({ contextAccounts: (rawContext || []).map((address) => getAddress(address)) });
+    return get()._updateConnectionStatus();
   },
 
   // Manual Development Override action
