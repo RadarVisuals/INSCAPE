@@ -145,6 +145,7 @@ test('compact published content clears masthead and identity through 719px, with
   assert.match(css, /bottom:calc\(12px \+ env\(safe-area-inset-bottom,0px\)\)/);
   assert.match(css, /overflow-y:auto/);
   assert.match(css, /touch-action:pan-y/);
+  assert.match(css, /published-home-world__spatial>\.module-button\{touch-action:pan-y\}/);
 });
 
 test('minimized published bars use the closed header height without dashed borders or enlarged mobile controls', () => {

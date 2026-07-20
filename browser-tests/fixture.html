@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Published visitor browser fixture</title>
+    <link rel="icon" href="data:," />
+    <style>[data-testid="keeper-moves"] { display: none; }</style>
+    <script>
+      window.__visitorStorageOps = [];
+      for (const method of ['getItem', 'setItem', 'removeItem', 'clear', 'key']) {
+        const original = Storage.prototype[method];
+        Storage.prototype[method] = function (...args) {
+          window.__visitorStorageOps.push({ storage: this === localStorage ? 'localStorage' : 'sessionStorage', method, args });
+          return original.apply(this, args);
+        };
+      }
+      for (const method of ['open', 'deleteDatabase']) {
+        const original = indexedDB[method].bind(indexedDB);
+        indexedDB[method] = (...args) => {
+          window.__visitorStorageOps.push({ storage: 'indexedDB', method, args });
+          return original(...args);
+        };
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/browser-tests/fixture.jsx"></script>
+  </body>
+</html>
