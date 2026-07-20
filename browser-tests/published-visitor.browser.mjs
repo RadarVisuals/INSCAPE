@@ -1,12 +1,18 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import { spawn } from 'node:child_process';
-import { access, rm } from 'node:fs/promises';
+import { access } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
 import { createServer as createViteServer } from 'vite';
+import {
+  createBrowserTestCleanup,
+  createOwnedProcessTree,
+  listWindowsProcesses,
+  terminateWindowsProcessTree
+} from './browser-test-lifecycle.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const profileDir = resolve(root, '.browser-test-profile');
@@ -22,6 +28,8 @@ const browserCandidates = [
 
 let vite;
 let browser;
+let browserTree;
+let cleanupBrowserTest;
 let cdp;
 let baseUrl;
 let activeViewport = { width: 1280, height: 720, touch: false };
@@ -48,17 +56,6 @@ async function findBrowser() {
     try { await access(candidate); return candidate; } catch { /* try next */ }
   }
   throw new Error('No Chromium browser found. Set BROWSER_PATH to Edge, Chrome, or Chromium.');
-}
-
-async function stopTestBrowser() {
-  if (!browser) return;
-  if (process.platform === 'win32') {
-    const killer = spawn('taskkill', ['/PID', String(browser.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
-    await Promise.race([new Promise((resolveExit) => killer.once('exit', resolveExit)), delay(5_000)]);
-    return;
-  }
-  const exited = new Promise((resolveExit) => browser.once('exit', resolveExit));
-  browser.kill(); await Promise.race([exited, delay(5_000)]);
 }
 
 class CdpClient {
@@ -94,9 +91,14 @@ class CdpClient {
       this.socket.send(JSON.stringify({ id, method, params }));
     });
   }
-  close() {
+  async close() {
     for (const request of this.pending.values()) { clearTimeout(request.timer); request.reject(new Error('Browser connection closed')); }
-    this.pending.clear(); this.socket.close();
+    this.pending.clear();
+    if ([WebSocket.CLOSED, WebSocket.CLOSING].includes(this.socket.readyState)) return;
+    const closed = new Promise((resolveClose) => this.socket.once('close', resolveClose));
+    this.socket.close();
+    await Promise.race([closed, delay(1_000)]);
+    if (this.socket.readyState !== WebSocket.CLOSED) this.socket.terminate();
   }
 }
 
@@ -199,6 +201,7 @@ async function closeFixtureWindows() {
 
 describe('published visitor world', { concurrency: false }, () => {
 before(async () => {
+  try {
   const browserPath = await findBrowser();
   const vitePort = await availablePort(); const debugPort = await availablePort();
   baseUrl = `http://127.0.0.1:${vitePort}`;
@@ -209,15 +212,24 @@ before(async () => {
     });
   } }], server: { host: '127.0.0.1', port: vitePort, strictPort: true } });
   await vite.listen();
+  console.log('Browser setup: test-owned Vite listening');
   browser = spawn(browserPath, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-component-update', '--disk-cache-size=1', '--media-cache-size=1', `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profileDir}`, '--incognito', `${baseUrl}/browser-tests/fixture.html?view=${profileA}`], { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
   browser.stderr.on('data', () => {});
+  if (process.platform === 'win32') {
+    browserTree = createOwnedProcessTree({ rootPid: browser.pid, listProcesses: listWindowsProcesses, terminateTree: terminateWindowsProcessTree });
+    await browserTree.observe();
+  }
+  console.log(`Browser setup: Edge PID ${browser.pid} ownership recorded`);
+  cleanupBrowserTest = createBrowserTestCleanup({ rootPid: browser.pid, processTree: browserTree, profilePath: profileDir, workspaceRoot: root });
   let target; const started = Date.now();
-  while (Date.now() - started < 15_000) {
-    try { target = (await fetch(`http://127.0.0.1:${debugPort}/json`).then((response) => response.json())).find((entry) => entry.type === 'page' && entry.url.startsWith(baseUrl)); } catch { /* starting */ }
+  while (Date.now() - started < 60_000) {
+    try { target = (await fetch(`http://127.0.0.1:${debugPort}/json`, { signal: AbortSignal.timeout(2_000) }).then((response) => response.json())).find((entry) => entry.type === 'page' && entry.url.startsWith(baseUrl)); } catch { /* starting */ }
     if (target) break; await delay(100);
   }
   assert.ok(target, 'Edge/Chromium did not expose a page target');
+  console.log('Browser setup: CDP page target discovered');
   cdp = new CdpClient(target.webSocketDebuggerUrl); await cdp.open();
+  console.log('Browser setup: CDP socket open');
   cdp.on('Fetch.requestPaused', ({ requestId, request }) => {
     const local = request.url.startsWith(baseUrl) || /^(?:data|blob):/.test(request.url);
     const publishedImage = request.url.startsWith('https://published-images.invalid/');
@@ -235,20 +247,27 @@ before(async () => {
   cdp.on('Runtime.consoleAPICalled', (entry) => { if (['error', 'warning'].includes(entry.type)) browserProblems.push(`Console ${entry.type}: ${entry.args.map((arg) => arg.value || arg.description).join(' ')}`); });
   cdp.on('Log.entryAdded', ({ entry }) => { if (['error', 'warning'].includes(entry.level)) browserProblems.push(`Browser ${entry.level}: ${entry.text}`); });
   await Promise.all([cdp.send('Runtime.enable'), cdp.send('Page.enable'), cdp.send('Log.enable'), cdp.send('Accessibility.enable'), cdp.send('Fetch.enable', { patterns: [{ urlPattern: '*' }] })]);
+  console.log('Browser setup: CDP domains enabled');
   await viewport(1280, 720); await navigate();
+  console.log('Browser setup complete');
+  } catch (setupError) {
+    cleanupBrowserTest ||= createBrowserTestCleanup({ rootPid: browser?.pid, processTree: browserTree, profilePath: profileDir, workspaceRoot: root });
+    try { await cleanupBrowserTest({ cdp, vite }); } catch (cleanupError) {
+      throw new AggregateError([setupError, cleanupError], 'Browser setup failed and cleanup also failed');
+    }
+    throw setupError;
+  }
 });
 
 after(async () => {
+  const failures = [];
   try {
-    if (cdp) await Promise.race([cdp.send('Browser.close', {}, 5_000).catch(() => {}), delay(5_000)]);
-  } finally {
-    cdp?.close();
-    await stopTestBrowser();
-    vite?.httpServer?.closeAllConnections?.();
-    await vite?.close();
-    await rm(profileDir, { recursive: true, force: true });
-  }
-  assert.deepEqual(browserProblems, [], `Unexpected browser diagnostics:\n${browserProblems.join('\n')}`);
+    cleanupBrowserTest ||= createBrowserTestCleanup({ profilePath: profileDir, workspaceRoot: root });
+    const result = await cleanupBrowserTest({ cdp, vite });
+    console.log(`Browser cleanup complete: root PID ${result.rootPid ?? 'not-started'}; forced PIDs ${result.forcedPids.length ? result.forcedPids.join(',') : 'none'}; remaining PIDs none; profile removed in ${result.profileAttempts ?? 0} attempt(s); ${result.elapsedMs}ms`);
+  } catch (error) { failures.push(error); }
+  if (browserProblems.length) failures.push(new Error(`Unexpected browser diagnostics:\n${browserProblems.join('\n')}`));
+  if (failures.length) throw new AggregateError(failures, 'Published visitor browser after-hook failed');
 });
 
 test('React StrictMode reuses one factory provider while cleanup, replacement, and recovery stay safe', async () => {
