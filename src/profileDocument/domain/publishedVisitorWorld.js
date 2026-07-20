@@ -83,6 +83,22 @@ export function snapVisitorWindowRect(rect, viewport, gridSize = VISITOR_WINDOW_
   }, viewport);
 }
 
+export function resizeVisitorWindowByKey(rect, key, viewport, gridSize = VISITOR_WINDOW_GRID_SIZE) {
+  const interval = Math.max(1, Number(gridSize) || VISITOR_WINDOW_GRID_SIZE);
+  const delta = {
+    ArrowLeft: { width: -interval, height: 0 },
+    ArrowRight: { width: interval, height: 0 },
+    ArrowUp: { width: 0, height: -interval },
+    ArrowDown: { width: 0, height: interval }
+  }[key];
+  if (!delta) return null;
+  return clampVisitorWindowRect({
+    ...rect,
+    width: rect.width + delta.width,
+    height: rect.height + delta.height
+  }, viewport);
+}
+
 export function initialVisitorWindowRect(space, layout, camera) {
   const authored = space.windowGeometry;
   const launcher = layout.spaces.find((item) => item.id === space.id);

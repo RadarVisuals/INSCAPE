@@ -12,6 +12,7 @@ import {
   initialVisitorWindowRect,
   publishedItemPixelRect,
   publishedNavigatorLocations,
+  resizeVisitorWindowByKey,
   snapVisitorWindowRect,
   visitorWindowTransition
 } from '../domain/publishedVisitorWorld.js';
@@ -84,6 +85,26 @@ test('desktop visitor drag and resize snap every viewport dimension to 40px befo
   );
   const cameraAndZoomIndependent = snapVisitorWindowRect({ left: 203, top: 197, width: 641, height: 399 }, { width: 1280, height: 720 });
   assert.deepEqual(cameraAndZoomIndependent, { left: 200, top: 200, width: 640, height: 400 });
+});
+
+test('published keyboard resizing uses arrow-key grid steps with the existing minimums and viewport bounds', () => {
+  const viewport = { width: 1280, height: 720 };
+  const rect = { left: 120, top: 120, width: 720, height: 480 };
+  assert.deepEqual(resizeVisitorWindowByKey(rect, 'ArrowRight', viewport), { ...rect, width: 760 });
+  assert.deepEqual(resizeVisitorWindowByKey(rect, 'ArrowDown', viewport), { ...rect, height: 520 });
+  assert.deepEqual(resizeVisitorWindowByKey(rect, 'ArrowLeft', viewport), { ...rect, width: 680 });
+  assert.deepEqual(resizeVisitorWindowByKey(rect, 'ArrowUp', viewport), { ...rect, height: 440 });
+  assert.equal(resizeVisitorWindowByKey(rect, 'Enter', viewport), null);
+
+  let minimum = { left: 24, top: 64, width: 320, height: 260 };
+  for (let index = 0; index < 20; index += 1) {
+    minimum = resizeVisitorWindowByKey(minimum, 'ArrowLeft', viewport);
+    minimum = resizeVisitorWindowByKey(minimum, 'ArrowUp', viewport);
+  }
+  assert.deepEqual(minimum, { left: 24, top: 64, width: 320, height: 260 });
+
+  const bounded = resizeVisitorWindowByKey({ left: 536, top: 64, width: 720, height: 520 }, 'ArrowRight', viewport);
+  assert.deepEqual(bounded, { left: 496, top: 64, width: 760, height: 520 });
 });
 
 test('authored window geometry is projected through the ephemeral visitor camera zoom', () => {
