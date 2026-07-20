@@ -9,7 +9,9 @@ import {
   clampVisitorWindowRect,
   createPublishedVisitorLayout,
   createVisitorWindowState,
+  initialVisitorWindowRect,
   publishedItemPixelRect,
+  publishedNavigatorLocations,
   visitorWindowTransition
 } from '../domain/publishedVisitorWorld.js';
 
@@ -30,6 +32,7 @@ test('published desktop layout preserves authored signed-grid launcher and artwo
   assert.deepEqual(layout.spaces.map((item) => item.position), [{ column: -7, row: 4 }, { column: 12, row: -5 }]);
   assert.deepEqual(layout.objects[0].position, { column: -2, row: -3 });
   assert.equal(publishedItemPixelRect(layout.spaces[0], layout).left, -278);
+  assert.deepEqual(publishedNavigatorLocations(layout)[0], { id: 'space:west', label: 'West archive', kind: 'launcher', x: 1240, y: 1000 });
   assert.deepEqual(source, documentFixture, 'visitor projection cannot mutate the authored document');
 });
 
@@ -58,6 +61,14 @@ test('launcher opening, focus, minimize, drag/resize geometry, and close stay ep
   assert.equal(state.windows['space:west'], undefined);
 });
 
+test('authored window geometry is projected through the ephemeral visitor camera zoom', () => {
+  const layout = createPublishedVisitorLayout(documentFixture, 1280, 720);
+  const camera = { x: 1140, y: 630, zoom: 1.25 };
+  const rect = initialVisitorWindowRect(documentFixture.spaces[0], layout, camera);
+  assert.deepEqual(rect, { left: 225, top: 246, width: 650, height: 450 });
+  assert.deepEqual(documentFixture.spaces[0].windowGeometry, { column: -3, row: 2, columnSpan: 13, rowSpan: 9 });
+});
+
 test('published component exposes launcher/artwork activation and structural mouse/touch pointer handling', () => {
   const source = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
   const cameraSource = readFileSync(resolve(here, '../../public/HomeWorldSurface.jsx'), 'utf8');
@@ -74,11 +85,13 @@ test('published component exposes launcher/artwork activation and structural mou
 
 test('published renderer import graph cannot reach owner stores, persistence, or ModuleGridShell', () => {
   const visited = new Set();
-  const forbidden = /useLibraryStore|useSignalStore|useProfileDocumentStore|profileDocumentStorage|runtimeWindowState|ModuleGridShell|localStorage|snapshotStorage/i;
+  const forbiddenSource = /useLibraryStore|useSignalStore|useProfileDocumentStore|\buseStore\b|profileDocumentStorage|runtimeWindowState|ModuleGridShell|localStorage|sessionStorage|indexedDB|snapshotStorage/i;
+  const forbiddenPath = /[\\/](?:store|signals[\\/]state|library[\\/]state|profileDocument[\\/]storage[\\/]profileDocumentStorage)(?:[\\/]|\.)/i;
   function visit(filename) {
     const full = resolve(filename); if (visited.has(full)) return; visited.add(full);
     const source = readFileSync(full, 'utf8');
-    assert.doesNotMatch(source, forbidden, `${full} crossed the published visitor boundary`);
+    assert.doesNotMatch(full, forbiddenPath, `${full} crossed into a private store or persistence path`);
+    assert.doesNotMatch(source, forbiddenSource, `${full} crossed the published visitor boundary`);
     for (const match of source.matchAll(/(?:import|export)\s+(?:[^'\"]*?\s+from\s+)?['\"](\.[^'\"]+)['\"]/g)) {
       const target = resolve(dirname(full), match[1]);
       const candidates = /\.[cm]?[jt]sx?$/.test(target) ? [target] : [`${target}.js`, `${target}.jsx`, resolve(target, 'index.js')];

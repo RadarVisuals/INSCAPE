@@ -47,9 +47,13 @@ export function publishedItemPixelRect(item, layout) {
 }
 
 export function publishedNavigatorLocations(layout) {
+  const center = (item) => ({
+    x: layout.originX + (item.position.column + item.span.columns / 2) * layout.geometry.cellWidth,
+    y: layout.originY + (item.position.row + item.span.rows / 2) * layout.geometry.cellHeight
+  });
   return [
-    ...layout.spaces.map((item) => ({ id: item.id, label: item.space.label, kind: 'launcher', x: layout.originX + item.position.column * layout.geometry.cellWidth, y: layout.originY + item.position.row * layout.geometry.cellHeight })),
-    ...layout.objects.map((item) => ({ id: item.id, label: item.asset.cachedName || 'Artwork', kind: 'artwork', x: layout.originX + item.position.column * layout.geometry.cellWidth, y: layout.originY + item.position.row * layout.geometry.cellHeight }))
+    ...layout.spaces.map((item) => ({ id: item.id, label: item.space.label, kind: 'launcher', ...center(item) })),
+    ...layout.objects.map((item) => ({ id: item.id, label: item.asset.cachedName || 'Artwork', kind: 'artwork', ...center(item) }))
   ];
 }
 
@@ -72,10 +76,10 @@ export function initialVisitorWindowRect(space, layout, camera) {
   const launcher = layout.spaces.find((item) => item.id === space.id);
   const source = authored || (launcher ? { column: launcher.position.column + launcher.span.columns + 1, row: launcher.position.row, columnSpan: 13, rowSpan: 9 } : null);
   const rect = source ? {
-    left: layout.originX + source.column * layout.geometry.cellWidth - camera.x * camera.zoom,
-    top: layout.originY + source.row * layout.geometry.cellHeight - camera.y * camera.zoom,
-    width: source.columnSpan * layout.geometry.cellWidth,
-    height: source.rowSpan * layout.geometry.cellHeight
+    left: (layout.originX + source.column * layout.geometry.cellWidth - camera.x) * camera.zoom,
+    top: (layout.originY + source.row * layout.geometry.cellHeight - camera.y) * camera.zoom,
+    width: source.columnSpan * layout.geometry.cellWidth * camera.zoom,
+    height: source.rowSpan * layout.geometry.cellHeight * camera.zoom
   } : null;
   return clampVisitorWindowRect(rect, { width: layout.geometry.width, height: layout.geometry.height });
 }
