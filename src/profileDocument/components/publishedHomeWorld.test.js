@@ -147,6 +147,14 @@ test('compact published content clears masthead and identity through 719px, with
   assert.match(css, /touch-action:pan-y/);
 });
 
+test('minimized published bars use the closed header height without dashed borders or enlarged mobile controls', () => {
+  const css = readFileSync(resolve(here, '../profileDocument.css'), 'utf8');
+  assert.match(css, /published-home-world__window\[data-minimized\]\{height:36px!important/);
+  assert.match(css, /profile-document-space-window\{grid-template-rows:34px\}/);
+  assert.doesNotMatch(css, /border-style:dashed/);
+  assert.doesNotMatch(css, /44px/);
+});
+
 test('published Keeper movement callback is wired without passing the owner handoff object into the published graph', () => {
   const appSource = readFileSync(resolve(here, '../../App.jsx'), 'utf8');
   const boundarySource = readFileSync(resolve(here, 'PublishedProfileBoundary.jsx'), 'utf8');
