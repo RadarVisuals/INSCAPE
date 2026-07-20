@@ -1,21 +1,26 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { spawn } from 'node:child_process';
 import { access } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
-import WebSocket from 'ws';
 import { createServer as createViteServer } from 'vite';
 import {
+  BROWSER_LIFECYCLE_TIMEOUTS,
   createBrowserTestCleanup,
-  createOwnedProcessTree,
-  listWindowsProcesses,
-  terminateWindowsProcessTree
+  createLifecycleDiagnostics,
+  runBrowserSetupWithCleanup,
+  withinDeadline
 } from './browser-test-lifecycle.mjs';
+import {
+  createPlaywrightRouteController,
+  launchPlaywrightEdge,
+  settlePlaywrightAnimationFrames,
+  waitForCspFixtureReady
+} from './playwright-browser-adapter.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const profileDir = resolve(root, '.browser-test-profile');
+const runtimeDir = resolve(root, '.browser-test-runtime');
 const profileA = '0x1111111111111111111111111111111111111111';
 const profileB = '0x2222222222222222222222222222222222222222';
 const browserCandidates = [
@@ -27,122 +32,117 @@ const browserCandidates = [
 ].filter(Boolean);
 
 let vite;
+let browserServer;
 let browser;
+let context;
+let page;
 let browserTree;
 let cleanupBrowserTest;
-let cdp;
+let pageCdp;
 let baseUrl;
+let setupAbortController;
+let interceptionInstalled = false;
+let routeController;
 let activeViewport = { width: 1280, height: 720, touch: false };
 let navigationSequence = 0;
+const resources = {};
 const browserProblems = [];
 const imageRequests = [];
 const transparentPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+XwHjWQAAAABJRU5ErkJggg==';
 const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
+const lifecycleDiagnostic = createLifecycleDiagnostics();
 
 async function availablePort() {
-  return new Promise((resolvePort, reject) => {
-    const socket = createServer();
+  const socket = createServer();
+  return withinDeadline(new Promise((resolvePort, reject) => {
     socket.unref();
     socket.once('error', reject);
     socket.listen(0, '127.0.0.1', () => {
       const { port } = socket.address();
       socket.close(() => resolvePort(port));
     });
-  });
+  }), BROWSER_LIFECYCLE_TIMEOUTS.commandMs, 'Timed out acquiring a local browser-test port', () => socket.close());
 }
 
 async function findBrowser() {
   for (const candidate of browserCandidates) {
-    try { await access(candidate); return candidate; } catch { /* try next */ }
+    try {
+      await withinDeadline(access(candidate), BROWSER_LIFECYCLE_TIMEOUTS.commandMs, `Timed out inspecting browser candidate: ${candidate}`);
+      return candidate;
+    } catch { /* try next */ }
   }
   throw new Error('No Chromium browser found. Set BROWSER_PATH to Edge, Chrome, or Chromium.');
 }
 
-class CdpClient {
-  constructor(url) { this.socket = new WebSocket(url); this.sequence = 0; this.pending = new Map(); this.listeners = new Map(); }
-  async open() {
-    await new Promise((resolveOpen, reject) => {
-      const timer = setTimeout(() => reject(new Error('Timed out opening browser control socket')), 10_000);
-      this.socket.once('open', () => { clearTimeout(timer); resolveOpen(); });
-      this.socket.once('error', (error) => { clearTimeout(timer); reject(error); });
-    });
-    this.socket.on('message', (raw) => {
-      const message = JSON.parse(raw);
-      if (message.id) {
-        const request = this.pending.get(message.id);
-        if (!request) return;
-        this.pending.delete(message.id); clearTimeout(request.timer);
-        message.error ? request.reject(new Error(message.error.message)) : request.resolve(message.result);
-        return;
-      }
-      for (const listener of this.listeners.get(message.method) || []) listener(message.params);
-    });
-    this.socket.on('close', () => {
-      for (const request of this.pending.values()) { clearTimeout(request.timer); request.reject(new Error('Browser control socket closed')); }
-      this.pending.clear();
-    });
+async function waitForViteReadiness(url, signal, timeoutMs = 5_000) {
+  const started = Date.now(); let lastError;
+  while (Date.now() - started < timeoutMs) {
+    signal.throwIfAborted();
+    try {
+      const response = await fetch(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(2_000)]) });
+      if (response.ok) return;
+      lastError = new Error(`HTTP ${response.status}`);
+    } catch (error) { lastError = error; }
+    await delay(50);
   }
-  on(method, listener) { const list = this.listeners.get(method) || []; list.push(listener); this.listeners.set(method, list); }
-  send(method, params = {}, timeout = 10_000) {
-    return new Promise((resolveSend, reject) => {
-      const id = ++this.sequence;
-      const timer = setTimeout(() => { this.pending.delete(id); reject(new Error(`Timed out calling ${method}`)); }, timeout);
-      this.pending.set(id, { resolve: resolveSend, reject, timer });
-      this.socket.send(JSON.stringify({ id, method, params }));
-    });
-  }
-  async close() {
-    for (const request of this.pending.values()) { clearTimeout(request.timer); request.reject(new Error('Browser connection closed')); }
-    this.pending.clear();
-    if ([WebSocket.CLOSED, WebSocket.CLOSING].includes(this.socket.readyState)) return;
-    const closed = new Promise((resolveClose) => this.socket.once('close', resolveClose));
-    this.socket.close();
-    await Promise.race([closed, delay(1_000)]);
-    if (this.socket.readyState !== WebSocket.CLOSED) this.socket.terminate();
-  }
+  throw new Error(`Test-owned Vite did not become HTTP-ready within ${timeoutMs}ms${lastError ? `: ${lastError.message}` : ''}`);
 }
 
 async function evaluate(expression) {
-  const result = await cdp.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-  if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
-  return result.result.value;
+  return page.evaluate(expression);
 }
 
 async function waitFor(expression, label, timeout = 10_000) {
-  const started = Date.now(); let lastError;
-  while (Date.now() - started < timeout) {
-    try { if (await evaluate(expression)) return; } catch (error) { lastError = error; }
-    await delay(50);
-  }
-  throw new Error(`Timed out waiting for ${label}${lastError ? `: ${lastError.message}` : ''}`);
+  try { const handle = await page.waitForFunction(expression, undefined, { timeout, polling: 50 }); await handle.dispose(); }
+  catch (error) { throw Object.assign(new Error(`Timed out waiting for ${label}: ${error.message}`, { cause: error }), { code: 'ETIMEDOUT' }); }
 }
 
 async function viewport(width, height, touch = false) {
   activeViewport = { width, height, touch };
-  await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: touch });
-  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: touch, maxTouchPoints: touch ? 5 : 1 });
+  await page.setViewportSize({ width, height });
+  await pageCdp.send('Emulation.setTouchEmulationEnabled', { enabled: touch, maxTouchPoints: touch ? 5 : 1 });
   await waitFor(`innerWidth === ${width} && innerHeight === ${height}`, `${width}x${height} viewport`);
 }
 
 async function navigate(address = profileA) {
   const run = String(++navigationSequence);
-  await cdp.send('Page.navigate', { url: `${baseUrl}/browser-tests/fixture.html?view=${address}&run=${run}` });
-  await waitFor(`new URLSearchParams(location.search).get('run') === ${JSON.stringify(run)}`, 'new fixture navigation');
-  await viewport(activeViewport.width, activeViewport.height, activeViewport.touch);
-  await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(address)}`, 'published fixture');
-  await waitFor(`document.querySelector('.published-home-world') && window.__fixture`, 'published visitor world');
+  const fixtureUrl = `${baseUrl}/browser-tests/fixture.html?view=${address}&run=${run}`;
+  try {
+    assert.equal(interceptionInstalled, true, 'Playwright routing must exist before navigation');
+    const response = await page.goto(fixtureUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 });
+    assert.ok(response?.ok(), `Fixture navigation returned HTTP ${response?.status() ?? 'unknown'}`);
+    lifecycleDiagnostic('bootstrap:document-loaded');
+    await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(address)}`, 'published fixture');
+    lifecycleDiagnostic('bootstrap:fixture-mounted');
+    await waitFor(`document.querySelector('.published-home-world') && window.__fixture`, 'published visitor world');
+    lifecycleDiagnostic('bootstrap:published-ready');
+  } catch (error) {
+    await collectBootstrapDiagnostics(error, fixtureUrl);
+    throw error;
+  }
   await waitFor(`(()=>{const n=document.querySelector('.published-home-world__spatial');if(!n||getComputedStyle(n).zIndex!=='15')return false;return innerWidth>=720||getComputedStyle(n).overflowY==='auto'})()`, 'published visitor responsive styles');
+}
+
+async function collectBootstrapDiagnostics(error, fixtureUrl) {
+  let state = {}; let viteReachable = false;
+  try { state = await evaluate(`(()=>{const root=document.querySelector('[data-browser-fixture]');return {href:location.href,readyState:document.readyState,root:Boolean(root),rootChildren:Math.min(root?.childElementCount||0,100),published:Boolean(document.querySelector('.published-home-world')&&window.__fixture)}})()`); } catch { state = { evaluation: 'unavailable' }; }
+  try { viteReachable = (await fetch(fixtureUrl, { signal: AbortSignal.timeout(BROWSER_LIFECYCLE_TIMEOUTS.resourceCloseMs) })).ok; } catch { /* bounded diagnostic only */ }
+  lifecycleDiagnostic('bootstrap:failed-state', {
+    code: error.code || 'ERROR', location: state.href?.startsWith(baseUrl) ? 'fixture' : state.href || 'unknown', readyState: state.readyState || 'unknown',
+    fixtureRoot: state.root ?? 'unknown', rootChildren: state.rootChildren ?? 'unknown', published: state.published ?? 'unknown',
+    interceptionBeforeNavigation: interceptionInstalled, viteReachable
+  });
 }
 
 async function navigateCsp(address = profileA) {
   const run = String(++navigationSequence);
-  await cdp.send('Page.navigate', { url: `${baseUrl}/browser-tests/fixture.html?view=${address}&run=${run}&csp=1` });
-  await waitFor(`new URLSearchParams(location.search).get('csp') === '1' && document.querySelector('.published-home-world') && window.__fixture`, 'CSP fixture navigation');
+  await page.goto(`${baseUrl}/browser-tests/fixture.html?view=${address}&run=${run}&csp=1`, { waitUntil: 'domcontentloaded', timeout: 10_000 });
+  await waitForCspFixtureReady(page, { fixtureOrigin: baseUrl });
   await viewport(activeViewport.width, activeViewport.height, activeViewport.touch);
 }
 
 async function navigateProviderFixture() {
-  await cdp.send('Page.navigate', { url: `${baseUrl}/browser-tests/provider-lifecycle-fixture.html` });
+  await page.goto(`${baseUrl}/browser-tests/provider-lifecycle-fixture.html`, { waitUntil: 'domcontentloaded', timeout: 10_000 });
   await waitFor(`!!window.__providerFixture`, 'provider lifecycle fixture');
 }
 
@@ -159,10 +159,10 @@ async function reachablePoint(selector, ancestorSelector = selector) {
 }
 
 async function mouse(type, x, y, options = {}) {
-  const params = { type, x, y, button: options.button || 'left', buttons: options.buttons ?? (type === 'mouseReleased' ? 0 : 1), clickCount: options.clickCount ?? (type === 'mouseMoved' ? 0 : 1), modifiers: options.modifiers || 0 };
-  if (options.deltaX !== undefined) params.deltaX = options.deltaX;
-  if (options.deltaY !== undefined) params.deltaY = options.deltaY;
-  await cdp.send('Input.dispatchMouseEvent', params);
+  await page.mouse.move(x, y);
+  if (type === 'mousePressed') await page.mouse.down({ button: options.button || 'left', clickCount: options.clickCount || 1 });
+  else if (type === 'mouseReleased') await page.mouse.up({ button: options.button || 'left', clickCount: options.clickCount || 1 });
+  else if (type === 'mouseWheel') await page.mouse.wheel(options.deltaX || 0, options.deltaY || 0);
 }
 
 async function click(selector) {
@@ -172,99 +172,114 @@ async function click(selector) {
   await mouse('mousePressed', target.x, target.y); await mouse('mouseReleased', target.x, target.y);
 }
 async function pressKey(key, modifiers = 0) {
-  const keys = {
-    Tab: { code: 'Tab', value: 9 }, Enter: { code: 'Enter', value: 13 }, Space: { code: 'Space', value: 32, key: ' ' }, Escape: { code: 'Escape', value: 27 },
-    ArrowLeft: { code: 'ArrowLeft', value: 37 }, ArrowUp: { code: 'ArrowUp', value: 38 },
-    ArrowRight: { code: 'ArrowRight', value: 39 }, ArrowDown: { code: 'ArrowDown', value: 40 }
-  };
-  const entry = keys[key]; assert.ok(entry, `Unsupported test key ${key}`);
-  const params = { key: entry.key || key, code: entry.code, windowsVirtualKeyCode: entry.value, nativeVirtualKeyCode: entry.value, modifiers };
-  const text = key === 'Enter' ? '\r' : key === 'Space' ? ' ' : '';
-  await cdp.send('Input.dispatchKeyEvent', { type: text ? 'keyDown' : 'rawKeyDown', ...params, ...(text ? { text, unmodifiedText: text } : {}) });
-  await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', ...params });
+  const supported = new Set(['Tab', 'Enter', 'Space', 'Escape', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown']);
+  assert.ok(supported.has(key), `Unsupported test key ${key}`);
+  const modifierKeys = [[1, 'Alt'], [2, 'Control'], [4, 'Meta'], [8, 'Shift']].filter(([mask]) => modifiers & mask).map(([, name]) => name);
+  for (const modifier of modifierKeys) await page.keyboard.down(modifier);
+  try { await page.keyboard.press(key); } finally { for (const modifier of modifierKeys.reverse()) await page.keyboard.up(modifier); }
 }
 async function accessibilityNode(selector) {
-  const { root: documentNode } = await cdp.send('DOM.getDocument', { depth: 0 });
-  const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: documentNode.nodeId, selector });
+  const { root: documentNode } = await pageCdp.send('DOM.getDocument', { depth: 0 });
+  const { nodeId } = await pageCdp.send('DOM.querySelector', { nodeId: documentNode.nodeId, selector });
   assert.ok(nodeId, `No DOM node for accessibility selector ${selector}`);
-  const { node } = await cdp.send('DOM.describeNode', { nodeId });
-  const { nodes } = await cdp.send('Accessibility.getPartialAXTree', { backendNodeId: node.backendNodeId, fetchRelatives: false });
+  const { node } = await pageCdp.send('DOM.describeNode', { nodeId });
+  const { nodes } = await pageCdp.send('Accessibility.getPartialAXTree', { backendNodeId: node.backendNodeId, fetchRelatives: false });
   const target = nodes.find((entry) => entry.backendDOMNodeId === node.backendNodeId) || nodes[0];
   return { role: target?.role?.value, name: target?.name?.value, description: target?.description?.value };
 }
-async function touch(type, points) { await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points.map((entry, index) => ({ x: entry.x, y: entry.y, id: entry.id ?? index + 1, radiusX: 2, radiusY: 2, force: 1 })) }); }
+async function touch(type, points) { await pageCdp.send('Input.dispatchTouchEvent', { type, touchPoints: points.map((entry, index) => ({ x: entry.x, y: entry.y, id: entry.id ?? index + 1, radiusX: 2, radiusY: 2, force: 1 })) }); }
 function styleRect(selector) { return `(()=>{const n=document.querySelector(${JSON.stringify(selector)});return n&&['left','top','width','height','zIndex'].reduce((o,k)=>(o[k]=parseFloat(n.style[k])||0,o),{})})()`; }
 async function closeFixtureWindows() {
   await evaluate(`[...document.querySelectorAll('[aria-label^="Close Alpha Archive"],[aria-label^="Close Beta Archive"]')].forEach((button) => button.click())`);
   await waitFor(`document.querySelectorAll('.published-home-world__window').length === 0`, 'fixture windows close');
+  await settlePlaywrightAnimationFrames(page);
+  assert.equal(await evaluate(`document.querySelectorAll('.published-home-world__window').length`), 0, 'fixture windows remained closed after focus restoration settled');
 }
 
 describe('published visitor world', { concurrency: false }, () => {
-before(async () => {
-  try {
+before(async () => runBrowserSetupWithCleanup(async () => {
+  setupAbortController = new AbortController();
+  const { signal } = setupAbortController;
   const browserPath = await findBrowser();
-  const vitePort = await availablePort(); const debugPort = await availablePort();
+  signal.throwIfAborted();
+  const vitePort = await availablePort();
+  signal.throwIfAborted();
   baseUrl = `http://127.0.0.1:${vitePort}`;
-  vite = await createViteServer({ root, logLevel: 'error', define: { 'import.meta.env.VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL': JSON.stringify('https://published-images.invalid/ipfs/') }, plugins: [{ name: 'published-csp-browser-fixture', configureServer(server) {
+  cleanupBrowserTest = createBrowserTestCleanup({ runtimePath: runtimeDir, workspaceRoot: root, diagnostic: lifecycleDiagnostic });
+  lifecycleDiagnostic('setup:vite-create:start');
+  const viteCreation = createViteServer({ root, logLevel: 'error', define: { 'import.meta.env.VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL': JSON.stringify('https://published-images.invalid/ipfs/') }, plugins: [{ name: 'published-csp-browser-fixture', configureServer(server) {
     server.middlewares.use((request, response, next) => {
       if (request.url?.startsWith('/browser-tests/fixture.html') && request.url.includes('csp=1')) response.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://published-images.invalid; connect-src 'self' ws:; frame-ancestors 'self'");
       next();
     });
   } }], server: { host: '127.0.0.1', port: vitePort, strictPort: true } });
-  await vite.listen();
-  console.log('Browser setup: test-owned Vite listening');
-  browser = spawn(browserPath, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-component-update', '--disk-cache-size=1', '--media-cache-size=1', `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profileDir}`, '--incognito', `${baseUrl}/browser-tests/fixture.html?view=${profileA}`], { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
-  browser.stderr.on('data', () => {});
-  if (process.platform === 'win32') {
-    browserTree = createOwnedProcessTree({ rootPid: browser.pid, listProcesses: listWindowsProcesses, terminateTree: terminateWindowsProcessTree });
-    await browserTree.observe();
-  }
-  console.log(`Browser setup: Edge PID ${browser.pid} ownership recorded`);
-  cleanupBrowserTest = createBrowserTestCleanup({ rootPid: browser.pid, processTree: browserTree, profilePath: profileDir, workspaceRoot: root });
-  let target; const started = Date.now();
-  while (Date.now() - started < 60_000) {
-    try { target = (await fetch(`http://127.0.0.1:${debugPort}/json`, { signal: AbortSignal.timeout(2_000) }).then((response) => response.json())).find((entry) => entry.type === 'page' && entry.url.startsWith(baseUrl)); } catch { /* starting */ }
-    if (target) break; await delay(100);
-  }
-  assert.ok(target, 'Edge/Chromium did not expose a page target');
-  console.log('Browser setup: CDP page target discovered');
-  cdp = new CdpClient(target.webSocketDebuggerUrl); await cdp.open();
-  console.log('Browser setup: CDP socket open');
-  cdp.on('Fetch.requestPaused', ({ requestId, request }) => {
-    const local = request.url.startsWith(baseUrl) || /^(?:data|blob):/.test(request.url);
-    const publishedImage = request.url.startsWith('https://published-images.invalid/');
-    if (publishedImage || request.url.startsWith('http://published-images.invalid/')) imageRequests.push(request.url);
-    const action = local
-      ? cdp.send('Fetch.continueRequest', { requestId })
-      : publishedImage && !request.url.includes('broken')
-        ? cdp.send('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'image/png' }, { name: 'Cache-Control', value: 'no-store' }], body: transparentPng })
-        : publishedImage
-          ? cdp.send('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'image/png' }, { name: 'Cache-Control', value: 'no-store' }], body: btoa('not-an-image') })
-      : cdp.send('Fetch.fulfillRequest', { requestId, responseCode: 204, responseHeaders: [{ name: 'Content-Type', value: 'text/plain' }] });
-    action.catch((error) => { if (!/Invalid InterceptionId/iu.test(error.message)) browserProblems.push(`Request interception: ${error.message}`); });
+  let viteCreationExpired = false;
+  viteCreation.then((lateVite) => {
+    if (!viteCreationExpired) return;
+    lateVite.httpServer?.closeAllConnections?.();
+    void lateVite.close().catch(() => {});
+  }).catch(() => {});
+  vite = await withinDeadline(viteCreation, BROWSER_LIFECYCLE_TIMEOUTS.resourceCloseMs, 'Vite creation deadline exceeded', () => { viteCreationExpired = true; });
+  resources.vite = vite;
+  signal.throwIfAborted();
+  lifecycleDiagnostic('setup:vite-create:complete');
+  await withinDeadline(vite.listen(), BROWSER_LIFECYCLE_TIMEOUTS.resourceCloseMs, 'Test-owned Vite listen deadline exceeded', () => {
+    vite.httpServer?.closeAllConnections?.();
+    void vite.close().catch(() => {});
   });
-  cdp.on('Runtime.exceptionThrown', (entry) => browserProblems.push(`Uncaught: ${entry.exceptionDetails.exception?.description || entry.exceptionDetails.text}`));
-  cdp.on('Runtime.consoleAPICalled', (entry) => { if (['error', 'warning'].includes(entry.type)) browserProblems.push(`Console ${entry.type}: ${entry.args.map((arg) => arg.value || arg.description).join(' ')}`); });
-  cdp.on('Log.entryAdded', ({ entry }) => { if (['error', 'warning'].includes(entry.level)) browserProblems.push(`Browser ${entry.level}: ${entry.text}`); });
-  await Promise.all([cdp.send('Runtime.enable'), cdp.send('Page.enable'), cdp.send('Log.enable'), cdp.send('Accessibility.enable'), cdp.send('Fetch.enable', { patterns: [{ urlPattern: '*' }] })]);
-  console.log('Browser setup: CDP domains enabled');
-  await viewport(1280, 720); await navigate();
-  console.log('Browser setup complete');
-  } catch (setupError) {
-    cleanupBrowserTest ||= createBrowserTestCleanup({ rootPid: browser?.pid, processTree: browserTree, profilePath: profileDir, workspaceRoot: root });
-    try { await cleanupBrowserTest({ cdp, vite }); } catch (cleanupError) {
-      throw new AggregateError([setupError, cleanupError], 'Browser setup failed and cleanup also failed');
+  signal.throwIfAborted();
+  lifecycleDiagnostic('setup:vite-listen:complete', { port: vitePort });
+  lifecycleDiagnostic('setup:vite-readiness:start');
+  await waitForViteReadiness(`${baseUrl}/browser-tests/fixture.html`, signal);
+  lifecycleDiagnostic('setup:vite-readiness:complete');
+  console.log('Browser setup: test-owned Vite listening');
+  const knownExternalOrigins = [
+    'https://published-images.invalid', 'http://published-images.invalid', 'https://rpc.mainnet.lukso.network',
+    'https://api.universalprofile.cloud', 'https://envio.lukso-mainnet.universal.tech',
+    'https://fonts.googleapis.com', 'https://fonts.gstatic.com'
+  ];
+  routeController = createPlaywrightRouteController({ loopbackOrigin: baseUrl, knownOrigins: knownExternalOrigins,
+    onUnexpected: (origin) => browserProblems.push(`Unexpected external request blocked: ${origin}`),
+    decideKnown: ({ request, origin }) => {
+      if (origin === 'https://published-images.invalid' || origin === 'http://published-images.invalid') {
+        imageRequests.push(request.url());
+        if (origin === 'http://published-images.invalid') return { action: 'abort', errorCode: 'blockedbyclient' };
+        return { action: 'fulfill', options: { status: 200, contentType: 'image/png', headers: { 'Cache-Control': 'no-store' },
+          body: request.url().includes('broken') ? Buffer.from('not-an-image') : Buffer.from(transparentPng, 'base64') } };
+      }
+      return { action: 'fulfill', options: { status: 204, contentType: 'text/plain', body: '' } };
+    } });
+  await launchPlaywrightEdge({ edgePath: browserPath, runtimePath: runtimeDir, workspaceRoot: root, loopbackOrigin: baseUrl,
+    routeController, resources, diagnostic: lifecycleDiagnostic, onBrowserProblem: (problem) => browserProblems.push(problem),
+    onOwnedProcess: ({ rootPid, processTree }) => {
+      browserTree = processTree;
+      cleanupBrowserTest = createBrowserTestCleanup({ rootPid, processTree, runtimePath: runtimeDir, workspaceRoot: root, diagnostic: lifecycleDiagnostic });
     }
-    throw setupError;
-  }
-});
+  });
+  ({ browserServer, browser, context, page } = resources);
+  pageCdp = await context.newCDPSession(page);
+  resources.pageCdp = pageCdp;
+  interceptionInstalled = true;
+  signal.throwIfAborted();
+  lifecycleDiagnostic('setup:playwright-ready', { routingBeforeNavigation: true });
+  await viewport(1280, 720); await navigate();
+  lifecycleDiagnostic('setup:fixture-ready');
+  console.log('Browser setup complete');
+}, async () => {
+    cleanupBrowserTest ||= createBrowserTestCleanup({ runtimePath: runtimeDir, workspaceRoot: root, diagnostic: lifecycleDiagnostic });
+    await cleanupBrowserTest(resources);
+  }, {
+    timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.setupOverallMs,
+    diagnostic: lifecycleDiagnostic,
+    cancelSetup: () => { setupAbortController?.abort(); void resources.browserServer?.kill?.(); }
+  }));
 
 after(async () => {
   const failures = [];
   try {
-    cleanupBrowserTest ||= createBrowserTestCleanup({ profilePath: profileDir, workspaceRoot: root });
-    const result = await cleanupBrowserTest({ cdp, vite });
-    console.log(`Browser cleanup complete: root PID ${result.rootPid ?? 'not-started'}; forced PIDs ${result.forcedPids.length ? result.forcedPids.join(',') : 'none'}; remaining PIDs none; profile removed in ${result.profileAttempts ?? 0} attempt(s); ${result.elapsedMs}ms`);
+    cleanupBrowserTest ||= createBrowserTestCleanup({ runtimePath: runtimeDir, workspaceRoot: root, diagnostic: lifecycleDiagnostic });
+    const result = await cleanupBrowserTest(resources);
+    console.log(`Browser cleanup complete: root PID ${result.rootPid ?? 'not-started'}; shutdown ${result.shutdownMode}; forced PIDs ${result.forcedPids.length ? result.forcedPids.join(',') : 'none'}; remaining PIDs none; runtime removed; ${result.elapsedMs}ms`);
   } catch (error) { failures.push(error); }
   if (browserProblems.length) failures.push(new Error(`Unexpected browser diagnostics:\n${browserProblems.join('\n')}`));
   if (failures.length) throw new AggregateError(failures, 'Published visitor browser after-hook failed');
@@ -349,7 +364,18 @@ test('launcher open, minimize, restore, toggle-close, and explicit close control
 test('window controls expose semantic actions and preserve focus across minimize, restore, and close', async () => {
   await viewport(1280, 720); await navigate(); await closeFixtureWindows();
   const launcher = '[data-launcher-id="space:Alpha:6"]';
-  await evaluate(`document.querySelector(${JSON.stringify(launcher)}).focus()`); await pressKey('Enter');
+  const launcherLocator = page.locator(launcher);
+  await launcherLocator.focus();
+  const beforeKey = await launcherLocator.evaluate((node) => ({
+    active: document.activeElement === node,
+    activeLabel: document.activeElement?.getAttribute('aria-label'),
+    activeLauncherId: document.activeElement?.dataset?.launcherId,
+    state: node.dataset.windowState
+  }));
+  assert.equal(beforeKey.state, 'closed', `Archive 7 launcher was not closed before Enter: ${JSON.stringify(beforeKey)}`);
+  assert.equal(beforeKey.active, true, `Archive 7 launcher lost focus before Enter: ${JSON.stringify(beforeKey)}`);
+  await launcherLocator.press('Enter');
+  await waitFor(`document.querySelector(${JSON.stringify(launcher)}).dataset.windowState === 'open'`, 'keyboard-opened launcher state');
   await waitFor(`!!document.querySelector('[aria-label="Minimize Alpha Archive 7"]')`, 'keyboard-opened window');
   assert.deepEqual(await accessibilityNode('[aria-label="Minimize Alpha Archive 7"]'), { role: 'button', name: 'Minimize Alpha Archive 7', description: undefined });
   await evaluate(`document.querySelector('[data-resize-control]').focus();document.querySelector('[aria-label="Minimize Alpha Archive 7"]').click()`);
@@ -454,7 +480,7 @@ test('an actual CSP response header blocks a disallowed image and the UI falls b
   await viewport(1280, 720, false); await navigateCsp();
   const beforeProblems = browserProblems.length;
   await evaluate(`window.__fixture.setArtworkUrl('https://csp-blocked.invalid/art.png')`);
-  await waitFor(`!!document.querySelector('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]')`, 'CSP-blocked image fallback');
+  await page.locator('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]').waitFor({ state: 'visible', timeout: 10_000 });
   const newProblems = browserProblems.splice(beforeProblems);
   const cspProblems = newProblems.filter((problem) => /csp-blocked\.invalid|content security policy/iu.test(problem));
   browserProblems.push(...newProblems.filter((problem) => !cspProblems.includes(problem)));
@@ -516,7 +542,7 @@ test('320px narrow launchers stack and windows remain reachable', async () => {
 test('390px narrow accessibility tree exposes no misleading resize control', async () => {
   await viewport(390, 844, true); await navigate();
   assert.equal(await evaluate(`document.querySelectorAll('[data-resize-control]').length`), 0);
-  const tree = await cdp.send('Accessibility.getFullAXTree');
+  const tree = await pageCdp.send('Accessibility.getFullAXTree');
   assert.equal(tree.nodes.some((node) => /^Resize .* window$/.test(node.name?.value || '')), false);
 });
 
@@ -526,7 +552,7 @@ test('profile transition and route reload discard ephemeral visitor state', asyn
   await waitFor(`!!document.querySelector('[data-launcher-id="space:Beta:0"]')`, 'Beta document');
   assert.equal(await evaluate(`document.querySelectorAll('[data-launcher-id^="space:Alpha:"]').length`), 0); assert.equal(await evaluate(`!!document.querySelector('[aria-label^="Artwork preview:"]')`), false);
   assert.equal(await evaluate(`document.querySelectorAll('.published-home-world__window').length`), 2, 'only Beta start-open windows remain');
-  await evaluate(`document.querySelector('[data-launcher-id="space:Beta:6"]').click()`); const priorLoad = await evaluate(`performance.timeOrigin`); await cdp.send('Page.reload', { ignoreCache: true });
+  await evaluate(`document.querySelector('[data-launcher-id="space:Beta:6"]').click()`); const priorLoad = await evaluate(`performance.timeOrigin`); await page.reload({ waitUntil: 'domcontentloaded', timeout: 10_000 });
   await waitFor(`performance.timeOrigin !== ${priorLoad}`, 'route reload navigation');
   await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileB)}`, 'reloaded Beta route'); await waitFor(`document.querySelectorAll('.published-home-world__window').length === 2`, 'reload default window state');
   assert.equal(await evaluate(`document.querySelector('[data-launcher-id="space:Beta:6"]').dataset.windowState`), 'closed');
