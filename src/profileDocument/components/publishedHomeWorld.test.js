@@ -174,7 +174,42 @@ test('empty-world click or tap activates Keeper movement while drag, explicit pa
   assert.equal(shouldActivateSpatialPointer({ moved: false, panning: false }), true);
   assert.equal(shouldActivateSpatialPointer({ moved: true, panning: false }), false);
   assert.equal(shouldActivateSpatialPointer({ moved: false, panning: true }), false);
+  assert.equal(shouldActivateSpatialPointer({ moved: false, panning: false, multiTouch: true }), false);
   assert.equal(shouldActivateSpatialPointer({ moved: false, panning: false }, true), false);
+});
+
+test('390px narrow empty-space taps activate but scrolling, cancellation, multi-touch, and child targets do not', () => {
+  assert.equal(createPublishedVisitorLayout(documentFixture, 390, 800).geometry.narrow, true);
+  const origin = { x: 180, y: 420 };
+  const stationaryTap = { originPointer: origin, moved: exceedsSpatialPointerDragThreshold(origin, { x: 183, y: 424 }), panning: false, multiTouch: false };
+  const scrollingSwipe = { originPointer: origin, moved: exceedsSpatialPointerDragThreshold(origin, { x: 181, y: 448 }), panning: false, multiTouch: false };
+  assert.equal(shouldActivateSpatialPointer(stationaryTap), true);
+  assert.equal(shouldActivateSpatialPointer(scrollingSwipe), false);
+  assert.equal(shouldActivateSpatialPointer(stationaryTap, true), false);
+  assert.equal(shouldActivateSpatialPointer({ ...stationaryTap, multiTouch: true }), false);
+
+  const source = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
+  const recognizer = source.slice(source.indexOf('const beginCompactTap'), source.indexOf('const openArtwork'));
+  assert.match(recognizer, /event\.target !== event\.currentTarget/);
+  assert.match(recognizer, /activePointers\.size > 1/);
+  assert.match(recognizer, /tracking\.multiTouch = true/);
+  assert.match(recognizer, /exceedsSpatialPointerDragThreshold/);
+  assert.match(recognizer, /shouldActivateSpatialPointer\(candidate, cancelled \|\| tracking\.multiTouch\)/);
+  assert.doesNotMatch(recognizer, /preventDefault|setPointerCapture/);
+});
+
+test('narrow published scrolling is explicitly bounded and leaves browser touch scrolling native', () => {
+  const css = readFileSync(resolve(here, '../profileDocument.css'), 'utf8');
+  const cameraSource = readFileSync(resolve(here, '../../public/HomeWorldSurface.jsx'), 'utf8');
+  assert.match(css, /published-home-world__spatial\{position:fixed/);
+  assert.match(css, /height:calc\(100dvh - 136px - env\(safe-area-inset-top,0px\) - env\(safe-area-inset-bottom,0px\)\)!important/);
+  assert.match(css, /overflow-y:auto/);
+  assert.match(css, /touch-action:pan-y/);
+  assert.match(css, /-webkit-overflow-scrolling:touch/);
+  assert.match(cameraSource, /if \(!surface \|\| narrow\) return undefined/);
+  assert.match(cameraSource, /if \(narrow && event\.isPrimary === false\) return/);
+  assert.match(cameraSource, /if \(narrow\) return;\s*event\.preventDefault\(\)/);
+  assert.match(cameraSource, /cancelled \|\| sharedMultiTouch/);
 });
 
 test('published renderer import graph cannot reach owner stores, persistence, or ModuleGridShell', () => {

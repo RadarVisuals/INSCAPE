@@ -6,7 +6,7 @@ import './homeWorld.css';
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 
-export default function HomeWorldSurface({ camera, geometry, world, locations = [], gridVisible, theme, visible, onCameraChange, onMoveKeeper, onOpenContextMenu }) {
+export default function HomeWorldSurface({ camera, geometry, world, locations = [], gridVisible, theme, visible, onCameraChange, onMoveKeeper, onOpenContextMenu, narrowGestureRef }) {
   const surfaceRef = useRef(null);
   const dragRef = useRef(null);
   const mapDragRef = useRef(null);
@@ -22,6 +22,10 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
   const handlePointerDown = (event) => {
     if (event.pointerType !== 'mouse') {
       touchPointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (narrow && narrowGestureRef?.current) {
+        narrowGestureRef.current.activePointers.add(event.pointerId);
+        if (narrowGestureRef.current.activePointers.size > 1) narrowGestureRef.current.multiTouch = true;
+      }
       if (!narrow && touchPointersRef.current.size === 2) {
         const [first, second] = [...touchPointersRef.current.values()];
         pinchRef.current = { distance: Math.hypot(second.x-first.x,second.y-first.y), camera };
@@ -29,16 +33,23 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
         event.preventDefault(); event.currentTarget.setPointerCapture?.(event.pointerId);
         return;
       }
+      if (narrow && touchPointersRef.current.size > 1) {
+        if (dragRef.current) dragRef.current.multiTouch = true;
+        return;
+      }
     }
-    const panButton = event.pointerType !== 'mouse' || event.button === 0 || event.button === 1;
-    if (narrow || !panButton || event.target.closest?.('button,.spatial-index')) return;
+    const panButton = event.pointerType !== 'mouse' || event.button === 0 || (!narrow && event.button === 1);
+    if (narrow && event.isPrimary === false) return;
+    if (!panButton || event.target.closest?.('button,.spatial-index')) return;
     dragRef.current = {
       pointerId: event.pointerId,
       originPointer: { x: event.clientX, y: event.clientY },
       originCamera: camera,
       moved: false,
-      panning: event.button === 1 || spaceHeldRef.current
+      panning: !narrow && (event.button === 1 || spaceHeldRef.current),
+      multiTouch: false
     };
+    if (narrow) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture?.(event.pointerId);
   };
@@ -62,7 +73,7 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
     if (!drag || drag.pointerId !== event.pointerId) return;
     const dx=event.clientX-drag.originPointer.x;const dy=event.clientY-drag.originPointer.y;
     drag.moved ||= exceedsSpatialPointerDragThreshold(drag.originPointer, { x: event.clientX, y: event.clientY });
-    if (!drag.moved) return;
+    if (!drag.moved || narrow) return;
     onCameraChange(clampHomeWorldCamera({...drag.originCamera,x:drag.originCamera.x-dx/zoom,y:drag.originCamera.y-dy/zoom},world));
   };
 
@@ -115,11 +126,15 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
 
   const finishPointer = (event, cancelled = false) => {
     touchPointersRef.current.delete(event.pointerId);
+    const sharedGesture = narrow && narrowGestureRef?.current;
+    const sharedMultiTouch = Boolean(sharedGesture?.multiTouch);
+    if (event.pointerType !== 'mouse') sharedGesture?.activePointers.delete(event.pointerId);
+    if (sharedGesture?.activePointers.size === 0) sharedGesture.multiTouch = false;
     if (touchPointersRef.current.size < 2) pinchRef.current = null;
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     dragRef.current = null;
-    if (shouldActivateSpatialPointer(drag, cancelled)) onMoveKeeper?.(event.clientX, event.clientY);
+    if (shouldActivateSpatialPointer(drag, cancelled || sharedMultiTouch)) onMoveKeeper?.(event.clientX, event.clientY);
   };
 
   const root = typeof document === 'undefined' ? null : document.querySelector('.application-root');

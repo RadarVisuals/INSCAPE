@@ -3,6 +3,7 @@ import FramedArtwork from '../../public/FramedArtwork.jsx';
 import HomeWorldSurface from '../../public/HomeWorldSurface.jsx';
 import { iconGlyph } from '../../public/sceneIcons.js';
 import { clampHomeWorldCamera } from '../../public/homeWorldCamera.js';
+import { exceedsSpatialPointerDragThreshold, shouldActivateSpatialPointer } from '../../public/spatialWorldCamera.js';
 import { projectDocumentAsset } from '../domain/documentProjection.js';
 import {
   clampVisitorWindowRect,
@@ -33,6 +34,7 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
   const [openArtworkId, setOpenArtworkId] = useState(null);
   const artworkDialogRef = useRef(null);
   const interactionRef = useRef(null);
+  const compactTapRef = useRef({ activePointers: new Set(), candidate: null, multiTouch: false });
   const cached = document.profile.cachedIdentity;
   const displayName = cached.name || `${document.profile.address.slice(0, 8)}…${document.profile.address.slice(-6)}`;
 
@@ -74,6 +76,36 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
     transitionWindow({ type: 'geometry', id: active.id, rect: snapVisitorWindowRect(rect, viewport) });
   }, [transitionWindow, viewport]);
   const finishWindowInteraction = useCallback((event) => { if (interactionRef.current?.pointerId === event.pointerId) interactionRef.current = null; }, []);
+  const beginCompactTap = useCallback((event) => {
+    if (!layout.geometry.narrow) return;
+    const tracking = compactTapRef.current;
+    if (event.pointerType !== 'mouse') tracking.activePointers.add(event.pointerId);
+    if (tracking.activePointers.size > 1) {
+      tracking.multiTouch = true;
+      if (tracking.candidate) tracking.candidate.multiTouch = true;
+      return;
+    }
+    const primaryButton = event.pointerType !== 'mouse' || event.button === 0;
+    if (!primaryButton || event.isPrimary === false || event.target !== event.currentTarget) return;
+    tracking.candidate = { pointerId: event.pointerId, originPointer: { x: event.clientX, y: event.clientY }, moved: false, panning: false, multiTouch: false };
+  }, [layout.geometry.narrow]);
+  const moveCompactTap = useCallback((event) => {
+    const candidate = compactTapRef.current.candidate;
+    if (!candidate || candidate.pointerId !== event.pointerId) return;
+    candidate.moved ||= exceedsSpatialPointerDragThreshold(candidate.originPointer, { x: event.clientX, y: event.clientY });
+  }, []);
+  const finishCompactTap = useCallback((event, cancelled = false) => {
+    const tracking = compactTapRef.current;
+    if (event.pointerType !== 'mouse') tracking.activePointers.delete(event.pointerId);
+    const candidate = tracking.candidate;
+    if (!candidate || candidate.pointerId !== event.pointerId) {
+      if (tracking.activePointers.size === 0) tracking.multiTouch = false;
+      return;
+    }
+    tracking.candidate = null;
+    if (shouldActivateSpatialPointer(candidate, cancelled || tracking.multiTouch)) onMoveKeeper?.(event.clientX, event.clientY);
+    if (tracking.activePointers.size === 0) tracking.multiTouch = false;
+  }, [onMoveKeeper]);
 
   const openArtwork = document.canvasObjects.find((object) => object.id === openArtworkId) || null;
   useEffect(() => {
@@ -90,8 +122,8 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
   return <main className="public-shell published-home-world" data-interface-visible data-preview-mode="visitor" aria-label="Published profile visitor world" style={THEME}>
     <header className="public-shell__masthead published-home-world__header"><div className="system-hud__identity"><h1>[ <span className="system-hud__brand-accent">PUBLISHED WORLD</span> ]</h1><span className="system-hud__operator">{displayName}</span><span className="system-hud__live"><i aria-hidden="true" />Document v{document.version}</span></div></header>
     <section className="published-home-world__identity" aria-label="Public profile identity">{cached.avatarUrl ? <img src={cached.avatarUrl} alt="" /> : <span aria-hidden="true">UP</span>}<div><strong>{displayName}</strong><small>{document.profile.address}</small></div></section>
-    <HomeWorldSurface camera={camera} geometry={layout.geometry} world={layout.world} locations={locations} gridVisible theme={THEME} visible onCameraChange={setCamera} onMoveKeeper={onMoveKeeper} />
-    <section className="published-home-world__spatial" aria-label="Published Canvas Spaces and artwork" style={{ width: layout.placementGeometry.usableWidth, height: layout.placementGeometry.usableHeight, transform, '--grid-cell-width': `${layout.geometry.cellWidth}px`, '--grid-cell-height': `${layout.geometry.cellHeight}px` }}>
+    <HomeWorldSurface camera={camera} geometry={layout.geometry} world={layout.world} locations={locations} gridVisible theme={THEME} visible onCameraChange={setCamera} onMoveKeeper={onMoveKeeper} narrowGestureRef={compactTapRef} />
+    <section className="published-home-world__spatial" aria-label="Published Canvas Spaces and artwork" style={{ width: layout.placementGeometry.usableWidth, height: layout.placementGeometry.usableHeight, transform, '--grid-cell-width': `${layout.geometry.cellWidth}px`, '--grid-cell-height': `${layout.geometry.cellHeight}px` }} onPointerDown={beginCompactTap} onPointerMove={moveCompactTap} onPointerUp={finishCompactTap} onPointerCancel={(event) => finishCompactTap(event, true)} onPointerLeave={(event) => { if (event.pointerType === 'mouse') finishCompactTap(event, true); }}>
       {layout.spaces.map((item) => { const entry = windowState.windows[item.id]; const launcherAction = !entry ? 'Open' : entry.minimized ? 'Restore' : 'Close'; return <button className="module-shell module-button module-button--folder" data-entry-state="ready" data-launcher-id={item.id} data-window-state={!entry ? 'closed' : entry.minimized ? 'minimized' : 'open'} data-active={entry ? true : undefined} key={item.id} type="button" style={publishedItemPixelRect(item, layout)} onClick={() => toggleSpace(item.space)} aria-expanded={Boolean(entry && !entry.minimized)} aria-label={`${launcherAction} ${item.space.label}, ${item.space.assets.length} assets`}>
         {item.appearance.mode !== 'label' && <b className="module-button__icon" aria-hidden="true">{iconGlyph(item.appearance.iconKey)}</b>}{item.appearance.showLabel !== false && item.appearance.mode !== 'icon' && <span className="module-button__label">{item.space.label}</span>}{item.appearance.mode !== 'icon' && <small>{item.space.assets.length}</small>}
       </button>; })}
