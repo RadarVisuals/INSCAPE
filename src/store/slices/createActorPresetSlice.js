@@ -1,4 +1,5 @@
 import { decodeRenderConfigDocument, parseRenderConfigDocument } from '../../config/renderConfigDocument.js';
+import { reportControlledError } from '../../diagnostics.js';
 
 const STORAGE_KEY = 'underneath.actor-presets.v1';
 
@@ -32,7 +33,7 @@ function readPresets() {
   try {
     return decodeActorPresets(window.localStorage.getItem(STORAGE_KEY) || '[]');
   } catch (error) {
-    console.warn('[ActorPresets] Could not read saved presets:', error);
+    reportControlledError('actor-presets-read', error);
     return [];
   }
 }
@@ -43,7 +44,7 @@ function persistPresets(presets) {
     const safePresets = presets.map(normalizePreset).filter(Boolean);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(safePresets));
   } catch (error) {
-    console.warn('[ActorPresets] Could not persist presets:', error);
+    reportControlledError('actor-presets-write', error);
   }
 }
 

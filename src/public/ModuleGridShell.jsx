@@ -13,6 +13,7 @@ import ProfileDocumentPanel from '../profileDocument/components/ProfileDocumentP
 import ProfileDocumentPreview from '../profileDocument/components/ProfileDocumentPreview.jsx';
 import { useProfileDocumentStore } from '../profileDocument/state/useProfileDocumentStore.js';
 import { buildProfileDocumentV3 } from '../profileDocument/domain/profileDocumentBuilder.js';
+import { reportControlledError } from '../diagnostics.js';
 import { assertValidProfileDocument } from '../profileDocument/domain/profileDocumentValidation.js';
 import { createProfileDocumentRestorePlan } from '../profileDocument/domain/profileDocumentRestore.js';
 import { profileDocumentContentFingerprint } from '../profileDocument/domain/profileDocumentSerialization.js';
@@ -556,7 +557,7 @@ export default function ModuleGridShell({
     try {
       window.localStorage.setItem(MODULE_LAYOUT_STORAGE_KEY, encodeModuleLayout(nextPositions));
     } catch (error) {
-      console.warn('[ModuleGrid] Could not persist layout:', error);
+      reportControlledError('module-grid-layout-persist', error);
     }
   }, [geometry.narrow]);
 

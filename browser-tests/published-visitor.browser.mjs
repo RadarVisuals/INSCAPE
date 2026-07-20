@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import { spawn } from 'node:child_process';
-import { access } from 'node:fs/promises';
+import { access, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
@@ -48,6 +48,17 @@ async function findBrowser() {
     try { await access(candidate); return candidate; } catch { /* try next */ }
   }
   throw new Error('No Chromium browser found. Set BROWSER_PATH to Edge, Chrome, or Chromium.');
+}
+
+async function stopTestBrowser() {
+  if (!browser) return;
+  if (process.platform === 'win32') {
+    const killer = spawn('taskkill', ['/PID', String(browser.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
+    await Promise.race([new Promise((resolveExit) => killer.once('exit', resolveExit)), delay(5_000)]);
+    return;
+  }
+  const exited = new Promise((resolveExit) => browser.once('exit', resolveExit));
+  browser.kill(); await Promise.race([exited, delay(5_000)]);
 }
 
 class CdpClient {
@@ -228,12 +239,14 @@ before(async () => {
 });
 
 after(async () => {
-  try { cdp?.close(); } finally {
-    if (browser && !browser.killed) {
-      const exited = new Promise((resolveExit) => browser.once('exit', resolveExit));
-      browser.kill(); await Promise.race([exited, delay(5_000)]);
-    }
+  try {
+    if (cdp) await Promise.race([cdp.send('Browser.close', {}, 5_000).catch(() => {}), delay(5_000)]);
+  } finally {
+    cdp?.close();
+    await stopTestBrowser();
+    vite?.httpServer?.closeAllConnections?.();
     await vite?.close();
+    await rm(profileDir, { recursive: true, force: true });
   }
   assert.deepEqual(browserProblems, [], `Unexpected browser diagnostics:\n${browserProblems.join('\n')}`);
 });

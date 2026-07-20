@@ -3,6 +3,7 @@ import React, { useRef, useEffect } from 'react';
 import { useStore } from '../../../store/useStore';
 import { useWalletStore } from '../../../store/useWalletStore';
 import CompactSlider from '../CompactSlider';
+import { triggerArtworkReaction } from '../../../hooks/artworkReaction.js';
 
 /**
  * Dynamically binds high-frequency custom events to a target DOM node 
@@ -151,13 +152,13 @@ export default function Web3Tab() {
         <h4 style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', color: 'var(--text-muted)' }}>LSP1 Simulators</h4>
         <div style={{ display: 'flex', gap: '6px' }}>
           <button
-            onClick={() => window.simulateGothicEvent && window.simulateGothicEvent('lyx_received')}
+            onClick={() => triggerArtworkReaction('lyx_received')}
             style={{ flex: 1, background: 'transparent', border: '1px solid #ff5500', color: '#ff9900', padding: '6px', fontSize: '9px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
           >
             🔥 LYX
           </button>
           <button
-            onClick={() => window.simulateGothicEvent && window.simulateGothicEvent('lsp8_received')}
+            onClick={() => triggerArtworkReaction('lsp8_received')}
             style={{ flex: 1, background: 'transparent', border: '1px solid #00f3ff', color: '#00f3ff', padding: '6px', fontSize: '9px', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
           >
             👾 NFT

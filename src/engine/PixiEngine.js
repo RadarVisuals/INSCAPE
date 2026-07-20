@@ -19,6 +19,9 @@ import { DEFAULT_RENDER_CONFIG } from '../config/renderConfig.defaults.js';
 import { resolveReactionFrame } from '../config/reactionProfiles.js';
 import { getAssetReloadScope } from './stageAssetConfig.js';
 import { getRenderResolution } from './renderResolution.js';
+import { developmentLog, reportControlledError } from '../diagnostics.js';
+
+const DEV_DIAGNOSTICS = typeof __DEVELOPMENT_DIAGNOSTICS__ !== 'undefined' && __DEVELOPMENT_DIAGNOSTICS__ === true;
 
 export class PixiEngine {
   /**
@@ -708,7 +711,7 @@ export class PixiEngine {
       return true;
     } catch (err) {
       if (!this.isDestroyed) {
-        console.error("[PixiEngine] Init Error:", err);
+        reportControlledError('pixi-init', err);
         this.destroyApplication();
       }
       return false;
@@ -720,7 +723,7 @@ export class PixiEngine {
   }
 
   async loadAssets(sequence = this.loadSequence) {
-    console.log(`%c🔍 [PixiEngine] Rig Loader: Locating Stage Assets`, 'color: #00f3ff; font-weight: bold;');
+    if (DEV_DIAGNOSTICS) developmentLog('[pixi-assets] resolving rig');
     
     // Resolve active asset configurations and store in a single property
     const renderConfig = this.getState().renderConfig ?? DEFAULT_RENDER_CONFIG;
@@ -730,9 +733,9 @@ export class PixiEngine {
     if (results.verifiedLoadQueue.length > 0) {
       try {
         await Assets.load(results.verifiedLoadQueue);
-        console.log("%c✅ [PixiEngine] Dynamic asset payload cached!", 'color: #00ff80; font-weight: bold;');
+        if (DEV_DIAGNOSTICS) developmentLog('[pixi-assets] payload cached');
       } catch (err) {
-        console.error("❌ [PixiEngine] Critical Loader Exception:", err);
+        reportControlledError('pixi-asset-load', err);
       }
     }
     if (this.isDestroyed || sequence !== this.loadSequence) {
@@ -750,7 +753,7 @@ export class PixiEngine {
     this.assetReloadScheduled = true;
     queueMicrotask(() => {
       this.assetReloadScheduled = false;
-      this.drainAssetReloads().catch((error) => console.error('Re-init assets failed:', error));
+      this.drainAssetReloads().catch((error) => reportControlledError('pixi-asset-reload', error));
     });
   }
 
@@ -884,7 +887,7 @@ export class PixiEngine {
       try {
         await Assets.load(nextRig.verifiedLoadQueue);
       } catch (err) {
-        console.error("❌ [PixiEngine] Preloading error:", err);
+        reportControlledError('pixi-asset-preload', err);
       }
     }
 
@@ -1326,7 +1329,7 @@ export class PixiEngine {
       if (this.loadedRig?.verifiedLoadQueue?.length > 0) Assets.unload(this.loadedRig.verifiedLoadQueue).catch(() => {});
       this.loadedRig = null;
     } catch (error) {
-      console.warn("[PixiEngine] Strict cleanup warn:", error);
+      reportControlledError('pixi-scene-cleanup', error);
     }
   }
 
@@ -1336,7 +1339,7 @@ export class PixiEngine {
     try {
       this.app.destroy(true, { children: true, texture: true });
     } catch (error) {
-      console.warn("[PixiEngine] Application cleanup warn:", error);
+      reportControlledError('pixi-application-cleanup', error);
     }
   }
 

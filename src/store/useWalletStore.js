@@ -6,6 +6,9 @@ import { lukso } from "viem/chains";
 import { ERC725 } from '@erc725/erc725.js';
 import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' assert { type: 'json' };
 import { createWalletProviderLifecycle } from './walletProviderLifecycle.js';
+import { developmentLog, installDevelopmentGlobal, reportControlledError } from '../diagnostics.js';
+
+const DEV_DIAGNOSTICS = typeof __DEVELOPMENT_DIAGNOSTICS__ !== 'undefined' && __DEVELOPMENT_DIAGNOSTICS__ === true;
 
 const LUKSO_MAINNET_RPC = "https://rpc.mainnet.lukso.network";
 const IPFS_GATEWAY = "https://api.universalprofile.cloud/ipfs/";
@@ -123,7 +126,7 @@ export const useWalletStore = create((set, get) => ({
         && current.chainId === chainId;
     };
     set({ isProfileLoading: true, lastFetchedAddress: hostProfileAddress });
-    console.log(`ℹ️ [UP Wallet] Querying LSP3 metadata for: ${hostProfileAddress}`);
+    if (DEV_DIAGNOSTICS) developmentLog('[wallet-metadata] query started');
 
     try {
       const rpcUrl = publicClient.transport.url || LUKSO_MAINNET_RPC;
@@ -171,13 +174,13 @@ export const useWalletStore = create((set, get) => ({
           links: rawProfile.links || []
         };
 
-        console.log("✅ [UP Wallet] Metadata queried successfully:", parsedMetadata);
+        if (DEV_DIAGNOSTICS) developmentLog('[wallet-metadata] query completed');
         if (requestIsCurrent()) set({ profileMetadata: parsedMetadata, isProfileLoading: false });
       } else {
         if (requestIsCurrent()) set({ profileMetadata: null, isProfileLoading: false, lastFetchedAddress: null });
       }
     } catch (err) {
-      console.warn("⚠️ [UP Wallet] Metadata extraction aborted or failed:", err.message);
+      reportControlledError('wallet-metadata-unavailable', err);
       if (requestIsCurrent()) set({ profileMetadata: null, isProfileLoading: false, lastFetchedAddress: null });
     }
   },
@@ -185,7 +188,7 @@ export const useWalletStore = create((set, get) => ({
   _recreateClients: () => {
     const { provider, chainId, accounts, initializationError } = get();
     const activeChainId = chainId;
-    console.log("⚙️ [UP Wallet] Generating Viem clients for active chain context:", activeChainId);
+    if (DEV_DIAGNOSTICS) developmentLog('[wallet-client] rebuilding for verified chain');
 
     if (activeChainId !== LUKSO_MAINNET_CHAIN_ID) {
       set({ publicClient: null, walletClient: null });
@@ -200,9 +203,9 @@ export const useWalletStore = create((set, get) => ({
         transport: http(rpcUrl, { timeout: 30000 })
       });
       set({ publicClient });
-      console.log("✅ [UP Wallet] Public Viem reader successfully connected.");
+      if (DEV_DIAGNOSTICS) developmentLog('[wallet-client] public reader ready');
     } catch (err) {
-      console.error("❌ [UP Wallet] Viem Public initialization failed:", err);
+      reportControlledError('wallet-public-client-init', err);
       set({ publicClient: null });
     }
 
@@ -214,9 +217,9 @@ export const useWalletStore = create((set, get) => ({
           account: accounts[0]
         });
         set({ walletClient });
-        console.log("✅ [UP Wallet] Wallet write-client active for address:", accounts[0]);
+        if (DEV_DIAGNOSTICS) developmentLog('[wallet-client] write client ready');
       } catch (err) {
-        console.error("❌ [UP Wallet] Viem Wallet initialization failed:", err);
+        reportControlledError('wallet-write-client-init', err);
         set({ walletClient: null });
       }
     } else {
@@ -232,11 +235,7 @@ export const useWalletStore = create((set, get) => ({
       ? contextAccounts[0] 
       : null;
 
-    console.log("📊 [UP Wallet] Status refresh executed:", {
-      isWalletConnected: isConnected,
-      hostProfileAddress,
-      activeAccount: accounts[0] || "None"
-    });
+    if (DEV_DIAGNOSTICS) developmentLog('[wallet-session] authoritative status refreshed');
 
     metadataRequestGeneration += 1;
     permissionRequestGeneration += 1;
@@ -272,18 +271,18 @@ export const useWalletStore = create((set, get) => ({
     };
 
     if (!exposedAccountAddress || !hostProfileAddress || !publicClient || chainId !== LUKSO_MAINNET_CHAIN_ID) {
-      console.log("🔒 [UP Wallet] Standard permissions bypass: missing active connection elements.");
+      if (DEV_DIAGNOSTICS) developmentLog('[wallet-permissions] skipped without authoritative context');
       return;
     }
 
-    console.log(`🔐 [UP Wallet] Fetching ERC725 permissions for exposed account ${exposedAccountAddress}...`);
+    if (DEV_DIAGNOSTICS) developmentLog('[wallet-permissions] verification started');
     let isOwner = false;
 
     if (exposedAccountAddress.toLowerCase() === hostProfileAddress.toLowerCase()) {
       // UP Provider exposes the Universal Profile. Its privately selected authorized
       // controller remains inside the provider and is never inferred by this app.
       isOwner = true;
-      console.log("👑 [UP Wallet] Verified: the exposed Universal Profile matches the host profile.");
+      if (DEV_DIAGNOSTICS) developmentLog('[wallet-permissions] host profile verified');
     } else {
       try {
         const erc725 = new ERC725(
@@ -299,9 +298,9 @@ export const useWalletStore = create((set, get) => ({
         } else if (typeof permissions === 'object') {
            isOwner = permissions.SUPER_SETDATA;
         }
-        console.log("🔑 [UP Wallet] ERC725 Permissions resolved (SUPER_SETDATA):", isOwner);
+        if (DEV_DIAGNOSTICS) developmentLog('[wallet-permissions] contract permissions resolved');
       } catch (e) {
-        console.warn("⚠️ [UP Wallet] Key supervisor check bypassed or failed:", e.message);
+        reportControlledError('wallet-permission-check', e);
         isOwner = false;
       }
     }
@@ -331,6 +330,4 @@ export function resetWalletStoreForTests() {
 }
 
 // Bind store to window object in browser development settings for diagnostic queries
-if (typeof window !== "undefined") {
-  window.useWalletStore = useWalletStore;
-}
+if (DEV_DIAGNOSTICS) installDevelopmentGlobal('useWalletStore', useWalletStore);

@@ -9,6 +9,9 @@ import {
   parseAbiParameters,
 } from "viem";
 import { lukso } from "viem/chains";
+import { developmentLog, reportControlledError } from '../diagnostics.js';
+
+const DEV_DIAGNOSTICS = typeof __DEVELOPMENT_DIAGNOSTICS__ !== 'undefined' && __DEVELOPMENT_DIAGNOSTICS__ === true;
 
 const DEFAULT_LUKSO_WSS_RPC_URL = "wss://ws-rpc.mainnet.lukso.network";
 const WSS_RPC_URL = import.meta.env.VITE_LUKSO_WSS_RPC_URL || DEFAULT_LUKSO_WSS_RPC_URL;
@@ -109,7 +112,7 @@ export default class LSP1EventService {
     }
 
     try {
-      console.log(`${logPrefix} Connecting WebSocket to watch updates on RPC: ${WSS_RPC_URL}`);
+      if (DEV_DIAGNOSTICS) developmentLog(`${logPrefix} connecting WebSocket stream`);
       this.viemClient = createPublicClient({
         chain: lukso,
         transport: webSocket(WSS_RPC_URL, {
@@ -131,7 +134,7 @@ export default class LSP1EventService {
       }
 
       if (!bytecode || bytecode === "0x") {
-        console.warn(`${logPrefix} Target profile address has no deployed bytecode. UniversalReceiver aborted (EOA or undeployed contract detected).`);
+        if (DEV_DIAGNOSTICS) developmentLog(`${logPrefix} target has no deployed bytecode`);
         this.isSettingUp = false;
         this.shouldBeConnected = false;
         return false;
@@ -143,7 +146,7 @@ export default class LSP1EventService {
         eventName: "UniversalReceiver",
         onLogs: (logs) => {
           this.reconnectAttempts = 0; // Clear connection error counters
-          if (import.meta.env.DEV) console.log(`${logPrefix} Received ${logs.length} contract events.`);
+          if (DEV_DIAGNOSTICS) developmentLog(`${logPrefix} received ${logs.length} contract events`);
           
           logs.forEach((log) => {
             if (log.removed) return;
@@ -160,14 +163,14 @@ export default class LSP1EventService {
                 this.handleUniversalReceiver(decodedLog.args, log);
               }
             } catch (e) {
-              if (import.meta.env.DEV) console.error(`Log decode error:`, e);
+              if (DEV_DIAGNOSTICS) reportControlledError('lsp1-log-decode', e);
             }
           });
         },
         onError: (error) => {
           if (signal.aborted || setupId !== this.currentSetupId) return;
 
-          console.error(`${logPrefix} WebSocket Stream dropped:`, error);
+          reportControlledError('lsp1-stream-dropped', error);
           if (this.unwatchEvent) {
             try {
               this.unwatchEvent();
@@ -178,7 +181,7 @@ export default class LSP1EventService {
         },
       });
 
-      if (import.meta.env.DEV) console.log(`${logPrefix} WebSocket event service active.`);
+      if (DEV_DIAGNOSTICS) developmentLog(`${logPrefix} event service active`);
       if (setupId === this.currentSetupId) {
         this.isSettingUp = false;
       }
@@ -187,7 +190,7 @@ export default class LSP1EventService {
       if (signal.aborted || setupId !== this.currentSetupId) {
         return false;
       }
-      console.error(`${logPrefix} WebSocket Stream initialization failed:`, error);
+      reportControlledError('lsp1-stream-init', error);
       this.handleReconnect(address);
       this.isSettingUp = false;
       this.shouldBeConnected = false;
@@ -202,7 +205,7 @@ export default class LSP1EventService {
       this.reconnectAttempts++;
       const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
       
-      console.log(`[LSP1] Reconnecting stream (${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${delay}ms...`);
+      if (DEV_DIAGNOSTICS) developmentLog(`[LSP1] reconnect ${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}`);
 
       setTimeout(() => {
         const activeAddress = this.listeningAddress;
@@ -211,7 +214,7 @@ export default class LSP1EventService {
         }
       }, delay);
     } else {
-      console.error("[LSP1] Critical: Maximum reconnection attempts reached. Listener inactive.");
+      reportControlledError('lsp1-reconnect-exhausted');
     }
   }
 
@@ -239,14 +242,12 @@ export default class LSP1EventService {
       clientToClose.transport.getSocket()
         .then((socket) => {
           if (socket && typeof socket.close === 'function') {
-            if (import.meta.env.DEV) console.log("[LSP1] Disposing of underlying active WebSocket transport...");
+            if (DEV_DIAGNOSTICS) developmentLog('[LSP1] disposing WebSocket transport');
             socket.close(); // Cleanly close the connection
           }
         })
         .catch((err) => {
-          if (import.meta.env.DEV) {
-            console.warn("[LSP1] Error cleaning up transport connection:", err);
-          }
+          if (DEV_DIAGNOSTICS) reportControlledError('lsp1-transport-cleanup', err);
         });
     }
 
@@ -286,7 +287,7 @@ export default class LSP1EventService {
           actualSender = getAddress(decodedDataArray[1]);
         }
       } catch (decodeError) {
-        if (import.meta.env.DEV) console.error(`[LSP1] receivedData decode failed:`, decodeError);
+        if (DEV_DIAGNOSTICS) reportControlledError('lsp1-received-data-decode', decodeError);
       }
     }
 
@@ -348,7 +349,7 @@ export default class LSP1EventService {
       try {
         callback(event);
       } catch (e) {
-        console.error(`Error in event callback:`, e);
+        reportControlledError('lsp1-event-callback', e);
       }
     });
   }

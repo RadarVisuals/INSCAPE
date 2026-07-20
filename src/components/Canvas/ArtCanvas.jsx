@@ -2,6 +2,9 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { PixiEngine } from '../../engine/PixiEngine';
 import { useStore } from '../../store/useStore';
+import { installDevelopmentGlobal, removeDevelopmentGlobal, reportControlledError } from '../../diagnostics.js';
+
+const DEV_DIAGNOSTICS = typeof __DEVELOPMENT_DIAGNOSTICS__ !== 'undefined' && __DEVELOPMENT_DIAGNOSTICS__ === true;
 
 const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisible = true, foregroundOnly = false, reducedMotion = false, presentationOverride = null, onReady }, ref) {
   const containerRef = useRef(null);
@@ -77,13 +80,13 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisi
       subscribe: subscribePresentation
     });
 
-    if (import.meta.env.DEV) window.__UNDERNEATH_ENGINE__ = engineRef.current;
+    if (DEV_DIAGNOSTICS) installDevelopmentGlobal('__UNDERNEATH_ENGINE__', engineRef.current);
 
     engineRef.current.setResidentRevealVisible(actorVisible, { reducedMotion });
     engineRef.current.setStageVisible(stageVisible);
     engineRef.current.init().then((ready) => {
       if (ready) onReady?.();
-    }).catch(err => console.error("Failed to boot PixiEngine:", err));
+    }).catch((error) => reportControlledError('pixi-boot', error));
 
     const handleResize = () => { if (engineRef.current) engineRef.current.resize(); };
     window.addEventListener('resize', handleResize);
@@ -91,9 +94,7 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisi
     return () => {
       window.removeEventListener('resize', handleResize);
       if (engineRef.current) {
-        if (import.meta.env.DEV && window.__UNDERNEATH_ENGINE__ === engineRef.current) {
-          delete window.__UNDERNEATH_ENGINE__;
-        }
+        if (DEV_DIAGNOSTICS) removeDevelopmentGlobal('__UNDERNEATH_ENGINE__', engineRef.current);
         engineRef.current.destroy();
         engineRef.current = null;
       }

@@ -52,3 +52,15 @@ export function assertOwnerRuntimeGraph(graph) {
       .map(({ entry, ownerChunk }) => `${entry} -> ${ownerChunk}`).join(', ')}`);
   }
 }
+
+export function ownerRuntimeIsolationPlugin() {
+  return {
+    name: 'assert-owner-runtime-isolation',
+    apply: 'build',
+    generateBundle(_options, bundle) {
+      const graph = createOwnerRuntimeGraph(bundle);
+      assertOwnerRuntimeGraph(graph);
+      this.emitFile({ type: 'asset', fileName: 'owner-runtime-graph.json', source: JSON.stringify(graph, null, 2) });
+    }
+  };
+}
