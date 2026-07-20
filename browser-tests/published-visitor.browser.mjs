@@ -238,32 +238,38 @@ after(async () => {
   assert.deepEqual(browserProblems, [], `Unexpected browser diagnostics:\n${browserProblems.join('\n')}`);
 });
 
-test('mock provider mount, unmount, remount, replacement, and chain recovery stay generation-safe', async () => {
+test('React StrictMode reuses one factory provider while cleanup, replacement, and recovery stay safe', async () => {
   await navigateProviderFixture();
+  await waitFor(`document.querySelector('[data-owner-route="true"]') && window.__providerFixture.factoryCalls() === 1`, 'Strict Mode owner route');
   const result = await evaluate(`(async()=>{
-    const f=window.__providerFixture;const first=f.firstProvider;
-    const a=f.mount();const b=f.mount();await Promise.all([a,b]);
-    const initial={attach:{...first.attach},state:f.state()};
-    const captured=first.callbacks('accountsChanged')[0];f.unmount();
-    const disposed={remove:{...first.remove},state:f.state()};
-    await f.mount();const remounted={attach:{...first.attach},listeners:first.callbacks('accountsChanged').length};
+    const f=window.__providerFixture;const first=f.createdProviders[0];
+    const strict={factoryCalls:f.factoryCalls(),providers:f.createdProviders.length,attach:{...first.attach},listeners:first.callbacks('accountsChanged').length,state:f.state(),route:document.querySelector('[data-owner-route]')?.dataset.ownerRoute};
+    const captured=first.callbacks('accountsChanged')[0];
     first.chainId='0x1';first.emit('chainChanged','0x1');const immediate=f.state();await new Promise(r=>setTimeout(r,0));
     first.chainId='0x2a';first.accounts=['0x2222222222222222222222222222222222222222'];first.contextAccounts=[...first.accounts];
     const before=first.requests.length;first.emit('chainChanged','0x2a');await new Promise(r=>setTimeout(r,0));
     const recovered={state:f.state(),requests:first.requests.slice(before)};
     const next=f.createProvider({accounts:['0x3333333333333333333333333333333333333333'],contextAccounts:['0x3333333333333333333333333333333333333333']});
     await f.replace(next);captured(['0x1111111111111111111111111111111111111111']);await new Promise(r=>setTimeout(r,0));
-    return {initial,disposed,remounted,immediate,recovered,replaced:f.state()};
+    const replaced={state:f.state(),firstRemove:{...first.remove},nextAttach:{...next.attach},factoryCalls:f.factoryCalls()};
+    f.unmountRoot();await new Promise(r=>setTimeout(r,0));
+    return {strict,immediate,recovered,replaced,unmounted:{state:f.state(),nextRemove:{...next.remove}}};
   })()`);
   for (const event of ['accountsChanged', 'chainChanged', 'contextAccountsChanged']) {
-    assert.equal(result.initial.attach[event], 1); assert.equal(result.disposed.remove[event], 1);
+    assert.equal(result.strict.attach[event], 1);
+    assert.equal(result.replaced.firstRemove[event], 1);
+    assert.equal(result.replaced.nextAttach[event], 1);
+    assert.equal(result.unmounted.nextRemove[event], 1);
   }
-  assert.equal(result.initial.state.owner, true); assert.equal(result.disposed.state.owner, false);
-  assert.equal(result.remounted.attach.accountsChanged, 2); assert.equal(result.remounted.listeners, 1);
+  assert.deepEqual({ factoryCalls: result.strict.factoryCalls, providers: result.strict.providers,
+    listeners: result.strict.listeners, owner: result.strict.state.owner, route: result.strict.route },
+  { factoryCalls: 1, providers: 1, listeners: 1, owner: true, route: 'true' });
   assert.equal(result.immediate.chainId, null); assert.equal(result.immediate.owner, false);
   assert.deepEqual(result.recovered.requests.sort(), ['eth_accounts', 'eth_chainId', 'up_contextAccounts']);
   assert.equal(result.recovered.state.owner, true); assert.equal(result.recovered.state.accounts[0], '0x2222222222222222222222222222222222222222');
-  assert.equal(result.replaced.accounts[0], '0x3333333333333333333333333333333333333333');
+  assert.equal(result.replaced.state.accounts[0], '0x3333333333333333333333333333333333333333');
+  assert.equal(result.replaced.factoryCalls, 1, 'explicit provider replacement did not call the real provider factory');
+  assert.equal(result.unmounted.state.owner, false); assert.equal(result.unmounted.state.provider, null);
   await navigate();
 });
 

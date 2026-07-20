@@ -1,4 +1,6 @@
 import { createWalletProviderLifecycle } from '../src/store/walletProviderLifecycle.js';
+import React, { StrictMode, useEffect, useSyncExternalStore } from 'react';
+import { createRoot } from 'react-dom/client';
 
 function provider(initial = {}) {
   const listeners = new Map();
@@ -22,23 +24,46 @@ function provider(initial = {}) {
 }
 
 let state = {};
+const subscribers = new Set();
+const publish = (next) => { state = next; for (const subscriber of subscribers) subscriber(); };
+const subscribe = (subscriber) => { subscribers.add(subscriber); return () => subscribers.delete(subscriber); };
 const get = () => ({
-  _failClosedProviderContext(error = null) { state = { ...state, chainId: null, accounts: [], contextAccounts: [], owner: false, error: error?.code || null }; },
+  _failClosedProviderContext(error = null) { publish({ ...state, chainId: null, accounts: [], contextAccounts: [], owner: false, error: error?.code || null }); },
   async _applyAuthoritativeProviderContext(context) {
-    if (context.isCurrent()) state = { ...state, provider: context.provider, chainId: context.chainId,
-      accounts: context.accounts, contextAccounts: context.contextAccounts, owner: context.accounts[0] === context.contextAccounts[0], error: null };
+    if (context.isCurrent()) publish({ ...state, provider: context.provider, chainId: context.chainId,
+      accounts: context.accounts, contextAccounts: context.contextAccounts, owner: context.accounts[0] === context.contextAccounts[0], error: null });
   }
 });
-const set = (update) => { state = { ...state, ...(typeof update === 'function' ? update(state) : update) }; };
-const manager = createWalletProviderLifecycle({ get, set, createProvider: provider,
+const set = (update) => publish({ ...state, ...(typeof update === 'function' ? update(state) : update) });
+let factoryCalls = 0;
+const createdProviders = [];
+const createProvider = () => {
+  factoryCalls += 1;
+  const created = provider(); created.id = `provider-${factoryCalls}`; createdProviders.push(created);
+  return created;
+};
+const manager = createWalletProviderLifecycle({ get, set, createProvider,
   normalizeChainId: (value) => typeof value === 'number' ? `0x${value.toString(16)}` : String(value).toLowerCase(), supportedChainId: '0x2a' });
-const firstProvider = provider();
+
+function WalletOwningRoot() {
+  const snapshot = useSyncExternalStore(subscribe, () => state, () => state);
+  useEffect(() => {
+    manager.initialize({ handshakeTimeoutMs: 50 });
+    return () => manager.scheduleRelease();
+  }, []);
+  return React.createElement('div', { 'data-provider-fixture': true,
+    'data-owner-route': snapshot.owner === true ? 'true' : 'false' }, snapshot.owner ? 'Owner World' : 'Published World');
+}
+
+let reactRoot = createRoot(document.getElementById('provider-root'));
+reactRoot.render(React.createElement(StrictMode, null, React.createElement(WalletOwningRoot)));
 
 window.__providerFixture = {
-  firstProvider,
+  factoryCalls: () => factoryCalls,
+  createdProviders,
   state: () => state,
-  mount: (target = firstProvider) => manager.initialize({ provider: target, handshakeTimeoutMs: 50 }),
-  unmount: () => manager.dispose(),
   createProvider: provider,
-  replace: (target) => manager.initialize({ provider: target, handshakeTimeoutMs: 50 })
+  replace: (target) => manager.initialize({ provider: target, handshakeTimeoutMs: 50 }),
+  unmountRoot: () => reactRoot.unmount(),
+  dispose: () => manager.dispose()
 };

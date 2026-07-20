@@ -2,7 +2,9 @@
 
 ## Provider lifecycle ownership
 
-The application root is the single lifecycle owner. Its effect initializes the UP Provider and returns the explicit `disposeWallet` cleanup; the lazily mounted Atelier no longer initializes a second provider. Initialization is synchronously idempotent for an active provider, including repeated StrictMode/HMR-style calls.
+The application root is the single lifecycle owner. Its effect acquires the UP Provider lifecycle and schedules final release from cleanup; the lazily mounted Atelier does not initialize a second provider. Initialization is synchronously idempotent for an active provider, including repeated StrictMode/HMR-style calls.
+
+React development Strict Mode replays effects as setup, cleanup, then setup. Cleanup therefore schedules final disposal on the next microtask boundary. An immediate reacquisition cancels that pending release and reuses the same provider instance, message channel, ready promise, and listener set. A genuine unmount with no reacquisition reaches final disposal at that boundary. Direct `disposeWallet` remains synchronous for tests and explicit provider replacement; an explicitly different provider cancels any pending release, disposes the old generation immediately, and cannot leak the old channel into the replacement.
 
 The installed `@lukso/up-provider` 0.3.7 client exposes and documents three relevant events: `accountsChanged`, `contextAccountsChanged`, and `chainChanged`. The application installs one stable named callback for each event. Disposal removes only those callbacks, preferring the documented `removeListener` API and accepting `off` when that is the provider's removal API. Disposal and repeated initialization are idempotent. Provider replacement invalidates and disposes the previous generation before the replacement can become authoritative.
 

@@ -22,7 +22,15 @@ async function queryContextAccounts(provider) {
 export function createWalletProviderLifecycle({ get, set, createProvider, normalizeChainId, supportedChainId }) {
   let active = null;
   let providerGeneration = 0;
+  let pendingFinalRelease = null;
   const attachments = new WeakMap();
+
+  const cancelPendingFinalRelease = () => {
+    if (!pendingFinalRelease) return false;
+    pendingFinalRelease.cancelled = true;
+    pendingFinalRelease = null;
+    return true;
+  };
 
   const isCurrent = (lifecycle, recoveryGeneration) => active === lifecycle && !lifecycle?.disposed
     && lifecycle.providerGeneration === providerGeneration
@@ -120,6 +128,7 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
   }
 
   const dispose = () => {
+    cancelPendingFinalRelease();
     const lifecycle = active;
     if (!lifecycle) return { disposed: true, listenersRemoved: true, limitation: null };
     if (lifecycle.disposed) return lifecycle.disposalReport;
@@ -141,7 +150,21 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
     return lifecycle.disposalReport;
   };
 
+  const scheduleRelease = () => {
+    if (!active || active.disposed) return false;
+    if (pendingFinalRelease) return true;
+    const release = { cancelled: false };
+    pendingFinalRelease = release;
+    queueMicrotask(() => {
+      if (release.cancelled || pendingFinalRelease !== release) return;
+      pendingFinalRelease = null;
+      dispose();
+    });
+    return true;
+  };
+
   const initialize = (options = {}) => {
+    cancelPendingFinalRelease();
     if (!options.provider && active && !active.disposed) return active.readyPromise;
     let provider;
     try { provider = options.provider || createProvider(); }
@@ -166,5 +189,5 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
     return lifecycle.readyPromise;
   };
 
-  return { initialize, dispose, recover, isCurrent, getActive: () => active };
+  return { initialize, scheduleRelease, dispose, recover, isCurrent, getActive: () => active };
 }

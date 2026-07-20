@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test, { afterEach } from 'node:test';
 import { ERC725 } from '@erc725/erc725.js';
 import { resetWalletStoreForTests, useWalletStore } from './useWalletStore.js';
+import { createWalletProviderLifecycle } from './walletProviderLifecycle.js';
 
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
@@ -55,6 +56,41 @@ afterEach(() => {
   resetWalletStoreForTests();
 });
 
+test('Strict Mode scheduled cleanup and immediate reacquire reuse one factory-created provider', async () => {
+  let state = { publicationContextGeneration: 0 }; let factoryCalls = 0;
+  const created = [];
+  const set = (update) => { state = { ...state, ...(typeof update === 'function' ? update(state) : update) }; };
+  const get = () => ({
+    _failClosedProviderContext(error = null) { set({ chainId: null, accounts: [], contextAccounts: [], owner: false, error }); },
+    async _applyAuthoritativeProviderContext(context) {
+      if (context.isCurrent()) set({ provider: context.provider, chainId: context.chainId,
+        accounts: context.accounts, contextAccounts: context.contextAccounts, owner: context.accounts[0] === context.contextAccounts[0] });
+    }
+  });
+  const lifecycle = createWalletProviderLifecycle({ get, set,
+    createProvider: () => { factoryCalls += 1; const next = providerFixture(); created.push(next); return next; },
+    normalizeChainId: (value) => value, supportedChainId: '0x2a' });
+
+  const firstReady = lifecycle.initialize();
+  lifecycle.scheduleRelease();
+  const secondReady = lifecycle.initialize();
+  assert.equal(factoryCalls, 1);
+  assert.strictEqual(lifecycle.getActive().provider, created[0]);
+  assert.strictEqual(secondReady, firstReady);
+  await secondReady;
+  for (const event of ['accountsChanged', 'chainChanged', 'contextAccountsChanged']) {
+    assert.equal(created[0].attachmentCalls.get(event), 1); assert.equal(created[0].listeners(event).length, 1);
+  }
+  assert.equal(state.owner, true);
+  lifecycle.scheduleRelease();
+  await Promise.resolve();
+  assert.equal(lifecycle.getActive(), null);
+  assert.equal(state.owner, false);
+  for (const event of ['accountsChanged', 'chainChanged', 'contextAccountsChanged']) {
+    assert.equal(created[0].removalCalls.get(event), 1); assert.equal(created[0].listeners(event).length, 0);
+  }
+});
+
 test('initialization is idempotent, disposal owns all listeners, and remount installs one fresh set', async () => {
   ERC725.prototype.fetchData = async () => profileResult();
   const provider = providerFixture();
@@ -80,6 +116,7 @@ test('provider replacement and disposal make captured old callbacks generation-i
   const oldProvider = providerFixture(); const nextProvider = providerFixture({ accounts: [PROFILE_B], contextAccounts: [PROFILE_B] });
   await useWalletStore.getState().initWallet({ provider: oldProvider });
   const late = ['accountsChanged', 'chainChanged', 'contextAccountsChanged'].map((event) => oldProvider.listeners(event)[0]);
+  useWalletStore.getState().scheduleWalletRelease();
   await useWalletStore.getState().initWallet({ provider: nextProvider });
   late[0]([PROFILE_A]); late[1]('0x1'); late[2]([PROFILE_A]); await settle();
   const state = useWalletStore.getState();
