@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { clampHomeWorldCamera, getZoomedHomeWorldCamera, HOME_WORLD_ZOOM_LEVELS } from '../../public/homeWorldCamera.js';
-import { panSpatialCamera } from '../../public/spatialWorldCamera.js';
+import { exceedsSpatialPointerDragThreshold, panSpatialCamera, shouldActivateSpatialPointer } from '../../public/spatialWorldCamera.js';
 import {
   clampVisitorWindowRect,
   createPublishedVisitorLayout,
@@ -81,6 +81,29 @@ test('published component exposes launcher/artwork activation and structural mou
   assert.match(cameraSource, /ArrowLeft/);
   assert.match(cameraSource, /onPointerCancel/);
   assert.match(cameraSource, /onWheel=\{handleWheel\}/);
+  assert.match(cameraSource, /event\.target\.closest\?\.\('button,\.spatial-index'\)/);
+});
+
+test('published Keeper movement callback is wired without passing the owner handoff object into the published graph', () => {
+  const appSource = readFileSync(resolve(here, '../../App.jsx'), 'utf8');
+  const boundarySource = readFileSync(resolve(here, 'PublishedProfileBoundary.jsx'), 'utf8');
+  const previewSource = readFileSync(resolve(here, 'PublishedProfileDocumentPreview.jsx'), 'utf8');
+  const worldSource = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
+  assert.match(appSource, /<PublishedProfileBoundary[^>]*onMoveKeeper=\{residentHandoff\.moveToScreenPosition\}/);
+  assert.match(boundarySource, /<PublishedProfileDocumentPreview document=\{visibleDocument\} onMoveKeeper=\{onMoveKeeper\}/);
+  assert.match(previewSource, /<PublishedHomeWorld document=\{document\} onMoveKeeper=\{onMoveKeeper\}/);
+  assert.match(worldSource, /<HomeWorldSurface[^>]*onMoveKeeper=\{onMoveKeeper\}/);
+  assert.doesNotMatch(boundarySource + previewSource + worldSource, /residentHandoff/);
+});
+
+test('empty-world click or tap activates Keeper movement while drag, explicit pan, and cancellation do not', () => {
+  const origin = { x: 100, y: 100 };
+  assert.equal(exceedsSpatialPointerDragThreshold(origin, { x: 103, y: 104 }), false, 'the existing 5px threshold remains a click');
+  assert.equal(exceedsSpatialPointerDragThreshold(origin, { x: 106, y: 100 }), true, 'movement beyond the threshold is a drag');
+  assert.equal(shouldActivateSpatialPointer({ moved: false, panning: false }), true);
+  assert.equal(shouldActivateSpatialPointer({ moved: true, panning: false }), false);
+  assert.equal(shouldActivateSpatialPointer({ moved: false, panning: true }), false);
+  assert.equal(shouldActivateSpatialPointer({ moved: false, panning: false }, true), false);
 });
 
 test('published renderer import graph cannot reach owner stores, persistence, or ModuleGridShell', () => {

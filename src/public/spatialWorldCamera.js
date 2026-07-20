@@ -1,5 +1,6 @@
 const finiteOr = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
+export const SPATIAL_POINTER_DRAG_THRESHOLD = 5;
 
 export function normalizeSpatialPoint(point) {
   return { x: finiteOr(point?.x), y: finiteOr(point?.y) };
@@ -25,6 +26,16 @@ export function panSpatialCamera(originCamera, originPointer, currentPointer, bo
     x: camera.x - (current.x - origin.x),
     y: camera.y - (current.y - origin.y)
   }, bounds);
+}
+
+export function exceedsSpatialPointerDragThreshold(originPointer, currentPointer, threshold = SPATIAL_POINTER_DRAG_THRESHOLD) {
+  const origin = normalizeSpatialPoint(originPointer);
+  const current = normalizeSpatialPoint(currentPointer);
+  return Math.hypot(current.x - origin.x, current.y - origin.y) > Math.max(0, finiteOr(threshold, SPATIAL_POINTER_DRAG_THRESHOLD));
+}
+
+export function shouldActivateSpatialPointer(drag, cancelled = false) {
+  return Boolean(drag && !cancelled && !drag.moved && !drag.panning);
 }
 
 export function screenToSpatialWorld(screenPoint, camera) {

@@ -21,12 +21,12 @@ function PublishedStatusSurface({ state }) {
   </main>;
 }
 
-export default function PublishedProfileBoundary({ address, onDocumentChange }) {
+export default function PublishedProfileBoundary({ address, onDocumentChange, onMoveKeeper }) {
   const resolution = usePublishedProfile(address);
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
   useEffect(() => { onDocumentChange?.(visibleDocument); return () => onDocumentChange?.(null); }, [onDocumentChange, visibleDocument]);
   if (!visibleDocument) return <PublishedStatusSurface state={resolution} />;
-  return <><PublishedProfileDocumentPreview document={visibleDocument} />
+  return <><PublishedProfileDocumentPreview document={visibleDocument} onMoveKeeper={onMoveKeeper} />
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status">Showing the last verified document while the network is unavailable.</div>}
   </>;
 }

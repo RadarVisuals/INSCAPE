@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { clampHomeWorldCamera, getZoomedHomeWorldCamera, HOME_WORLD_ZOOM_LEVELS } from './homeWorldCamera.js';
+import { exceedsSpatialPointerDragThreshold, shouldActivateSpatialPointer } from './spatialWorldCamera.js';
 import './homeWorld.css';
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
@@ -59,7 +60,7 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     const dx=event.clientX-drag.originPointer.x;const dy=event.clientY-drag.originPointer.y;
-    drag.moved ||= Math.hypot(dx,dy) > 5;
+    drag.moved ||= exceedsSpatialPointerDragThreshold(drag.originPointer, { x: event.clientX, y: event.clientY });
     if (!drag.moved) return;
     onCameraChange(clampHomeWorldCamera({...drag.originCamera,x:drag.originCamera.x-dx/zoom,y:drag.originCamera.y-dy/zoom},world));
   };
@@ -110,7 +111,7 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     dragRef.current = null;
-    if (!cancelled && !drag.moved && !drag.panning) onMoveKeeper?.(event.clientX, event.clientY);
+    if (shouldActivateSpatialPointer(drag, cancelled)) onMoveKeeper?.(event.clientX, event.clientY);
   };
 
   const root = typeof document === 'undefined' ? null : document.querySelector('.application-root');

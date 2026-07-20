@@ -196,7 +196,7 @@ function App() {
             onStageVisibilityChange={setStageUserVisible}
             registerWorldContextMenu={registerDesktopContextMenu}
             onGalleryOpenChange={setGalleryActive}
-          /> : <PublishedProfileBoundary address={viewedProfileAddress} onDocumentChange={setPublishedDocument} />
+          /> : <PublishedProfileBoundary address={viewedProfileAddress} onDocumentChange={setPublishedDocument} onMoveKeeper={residentHandoff.moveToScreenPosition} />
         )}
       </div>
       <Startveil

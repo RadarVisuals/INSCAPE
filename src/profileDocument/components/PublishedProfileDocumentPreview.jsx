@@ -1,5 +1,5 @@
 import PublishedHomeWorld from './PublishedHomeWorld.jsx';
 
-export default function PublishedProfileDocumentPreview({ document }) {
-  return <PublishedHomeWorld document={document} />;
+export default function PublishedProfileDocumentPreview({ document, onMoveKeeper }) {
+  return <PublishedHomeWorld document={document} onMoveKeeper={onMoveKeeper} />;
 }

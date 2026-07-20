@@ -22,7 +22,7 @@ function viewportSize() {
   return { width: globalThis.innerWidth || 1280, height: globalThis.innerHeight || 720 };
 }
 
-export default function PublishedHomeWorld({ document }) {
+export default function PublishedHomeWorld({ document, onMoveKeeper }) {
   const [viewport, setViewport] = useState(viewportSize);
   const layout = useMemo(() => createPublishedVisitorLayout(document, viewport.width, viewport.height), [document, viewport]);
   const [camera, setCamera] = useState(layout.camera);
@@ -89,7 +89,7 @@ export default function PublishedHomeWorld({ document }) {
   return <main className="public-shell published-home-world" data-interface-visible data-preview-mode="visitor" aria-label="Published profile visitor world" style={THEME}>
     <header className="public-shell__masthead published-home-world__header"><div className="system-hud__identity"><h1>[ <span className="system-hud__brand-accent">PUBLISHED WORLD</span> ]</h1><span className="system-hud__operator">{displayName}</span><span className="system-hud__live"><i aria-hidden="true" />Document v{document.version}</span></div></header>
     <section className="published-home-world__identity" aria-label="Public profile identity">{cached.avatarUrl ? <img src={cached.avatarUrl} alt="" /> : <span aria-hidden="true">UP</span>}<div><strong>{displayName}</strong><small>{document.profile.address}</small></div></section>
-    <HomeWorldSurface camera={camera} geometry={layout.geometry} world={layout.world} locations={locations} gridVisible theme={THEME} visible onCameraChange={setCamera} />
+    <HomeWorldSurface camera={camera} geometry={layout.geometry} world={layout.world} locations={locations} gridVisible theme={THEME} visible onCameraChange={setCamera} onMoveKeeper={onMoveKeeper} />
     <section className="published-home-world__spatial" aria-label="Published Canvas Spaces and artwork" style={{ width: layout.placementGeometry.usableWidth, height: layout.placementGeometry.usableHeight, transform, '--grid-cell-width': `${layout.geometry.cellWidth}px`, '--grid-cell-height': `${layout.geometry.cellHeight}px` }}>
       {layout.spaces.map((item) => <button className="module-shell module-button module-button--folder" data-entry-state="ready" data-launcher-id={item.id} data-active={windowState.windows[item.id] ? true : undefined} key={item.id} type="button" style={publishedItemPixelRect(item, layout)} onClick={() => openSpace(item.space)} aria-expanded={Boolean(windowState.windows[item.id])} aria-label={`Open ${item.space.label}, ${item.space.assets.length} assets`}>
         {item.appearance.mode !== 'label' && <b className="module-button__icon" aria-hidden="true">{iconGlyph(item.appearance.iconKey)}</b>}{item.appearance.showLabel !== false && item.appearance.mode !== 'icon' && <span className="module-button__label">{item.space.label}</span>}{item.appearance.mode !== 'icon' && <small>{item.space.assets.length}</small>}
