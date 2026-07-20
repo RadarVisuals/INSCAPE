@@ -1,6 +1,5 @@
-import ProfileDocumentSurface from './ProfileDocumentSurface.jsx';
-import PublishedProfileDocumentSpaceWindow from './PublishedProfileDocumentSpaceWindow.jsx';
+import PublishedHomeWorld from './PublishedHomeWorld.jsx';
 
 export default function PublishedProfileDocumentPreview({ document }) {
-  return <ProfileDocumentSurface document={document} heading="PUBLISHED PROFILE" SpaceWindow={PublishedProfileDocumentSpaceWindow} />;
+  return <PublishedHomeWorld document={document} />;
 }

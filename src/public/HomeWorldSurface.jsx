@@ -8,6 +8,8 @@ const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, v
 export default function HomeWorldSurface({ camera, geometry, world, locations = [], gridVisible, theme, visible, onCameraChange, onMoveKeeper, onOpenContextMenu }) {
   const dragRef = useRef(null);
   const mapDragRef = useRef(null);
+  const touchPointersRef = useRef(new Map());
+  const pinchRef = useRef(null);
   const spaceHeldRef = useRef(false);
   const zoomWheelRef = useRef(0);
   const [spaceHeld, setSpaceHeld] = useState(false);
@@ -16,6 +18,16 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
   const worldTheme = { ...theme, '--module-accent': theme?.['--os-accent'] || '#e87945' };
 
   const handlePointerDown = (event) => {
+    if (event.pointerType !== 'mouse') {
+      touchPointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (!narrow && touchPointersRef.current.size === 2) {
+        const [first, second] = [...touchPointersRef.current.values()];
+        pinchRef.current = { distance: Math.hypot(second.x-first.x,second.y-first.y), camera };
+        dragRef.current = null;
+        event.preventDefault(); event.currentTarget.setPointerCapture?.(event.pointerId);
+        return;
+      }
+    }
     const panButton = event.pointerType !== 'mouse' || event.button === 0 || event.button === 1;
     if (narrow || !panButton || event.target.closest?.('button,.spatial-index')) return;
     dragRef.current = {
@@ -30,6 +42,20 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
   };
 
   const handlePointerMove = (event) => {
+    if (event.pointerType !== 'mouse' && touchPointersRef.current.has(event.pointerId)) {
+      touchPointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pinchRef.current && touchPointersRef.current.size >= 2) {
+        const [first, second] = [...touchPointersRef.current.values()];
+        const distance = Math.hypot(second.x-first.x,second.y-first.y);
+        const ratio = pinchRef.current.distance > 0 ? distance / pinchRef.current.distance : 1;
+        const requested = pinchRef.current.camera.zoom * ratio;
+        const nextZoom = HOME_WORLD_ZOOM_LEVELS.reduce((nearest, candidate) => Math.abs(candidate-requested)<Math.abs(nearest-requested)?candidate:nearest, pinchRef.current.camera.zoom);
+        const anchor = { x: (first.x+second.x)/2, y: (first.y+second.y)/2 };
+        event.preventDefault();
+        onCameraChange(getZoomedHomeWorldCamera(pinchRef.current.camera,nextZoom,anchor,world));
+        return;
+      }
+    }
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     const dx=event.clientX-drag.originPointer.x;const dy=event.clientY-drag.originPointer.y;
@@ -64,6 +90,8 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
     const keydown=(event)=>{
       if(event.target.closest?.('input,textarea,select,[contenteditable="true"]'))return;
       if(event.code==='Space'){event.preventDefault();spaceHeldRef.current=true;setSpaceHeld(true);return;}
+      const arrow = {ArrowLeft:{x:-80,y:0},ArrowRight:{x:80,y:0},ArrowUp:{x:0,y:-80},ArrowDown:{x:0,y:80}}[event.key];
+      if(arrow){event.preventDefault();onCameraChange(clampHomeWorldCamera({...camera,x:camera.x+arrow.x/camera.zoom,y:camera.y+arrow.y/camera.zoom},world));return;}
       if(!event.ctrlKey)return;
       const index=HOME_WORLD_ZOOM_LEVELS.indexOf(camera.zoom);
       if(event.key==='0'){event.preventDefault();changeZoom(1);}
@@ -77,6 +105,8 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
   },[camera,narrow,world]);
 
   const finishPointer = (event, cancelled = false) => {
+    touchPointersRef.current.delete(event.pointerId);
+    if (touchPointersRef.current.size < 2) pinchRef.current = null;
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     dragRef.current = null;
