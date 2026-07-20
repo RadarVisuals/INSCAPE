@@ -2,6 +2,7 @@ import { normalizeProfileAddress } from '../../library/config.js';
 import { buildAssetReference } from './assetReference.js';
 import { PROFILE_DOCUMENT_LIMITS, PROFILE_DOCUMENT_NETWORK, PROFILE_DOCUMENT_TYPE, PROFILE_DOCUMENT_VERSION } from './constants.js';
 import { getCanvasObjectDefinition, normalizeCanvasObjectPresentation } from '../../library/domain/canvasObjectRegistry.js';
+import { parsePublishedAssetUrl } from './publishedAssetUrl.js';
 
 const cleanPosition = (value) => value && Number.isInteger(value.column) && value.column >= -255 && value.column <= 255 && Number.isInteger(value.row) && value.row >= -255 && value.row <= 255 ? { column: value.column, row: value.row } : null;
 const cleanWindowGeometry = (value) => value
@@ -14,7 +15,7 @@ const cleanWindowGeometry = (value) => value
 function cleanIdentity(identity, address) {
   const name = typeof identity?.name === 'string' ? identity.name.trim().slice(0, 80) : '';
   const avatarCandidate = typeof identity?.avatarUrl === 'string' ? identity.avatarUrl.trim() : '';
-  const avatarUrl = /^(https?:\/\/|ipfs:\/\/)/i.test(avatarCandidate) ? avatarCandidate.slice(0, 2048) : '';
+  const avatarUrl = parsePublishedAssetUrl(avatarCandidate.slice(0, 2048))?.value || '';
   return { address, ...(name ? { name } : {}), ...(avatarUrl ? { avatarUrl } : {}) };
 }
 /** Pure allowlisted projection from subsystem-owned state into the current public document. */

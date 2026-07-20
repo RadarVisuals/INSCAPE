@@ -1,11 +1,11 @@
 import { ArrowUpRight, Heart, X } from 'lucide-react';
 
-export default function AssetPreview({ asset, workspace, onClose, onFavorite, onFolder, onCreateFolder, authoringEnabled = false }) {
+export default function AssetPreview({ asset, workspace, onClose, onFavorite, onFolder, onCreateFolder, authoringEnabled = false, renderImage }) {
   if (!asset) return null;
   return (
     <section className="asset-preview" aria-label={`${asset.name} details`}>
       <header><div><span>{asset.standard}</span><h3>{asset.name}</h3></div><button type="button" onClick={onClose} aria-label="Close image preview"><X aria-hidden="true" /></button></header>
-      <div className="asset-preview__image">{asset.imageUrl ? <img src={asset.imageUrl} alt={asset.name} /> : <span>Image unavailable</span>}</div>
+      <div className="asset-preview__image">{asset.imageUrl ? renderImage?.({ src: asset.imageUrl, alt: asset.name, fallback: <span>Image unavailable</span> }) || <img src={asset.imageUrl} alt={asset.name} /> : <span>Image unavailable</span>}</div>
       <div className="asset-preview__metadata">
         <p>{asset.collectionName || 'Uncatalogued asset'}</p>
         {asset.description && <p>{asset.description}</p>}

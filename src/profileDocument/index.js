@@ -1,5 +1,6 @@
 export * from './domain/constants.js';
 export * from './domain/assetReference.js';
+export * from './domain/publishedAssetUrl.js';
 export * from './domain/profileDocumentBuilder.js';
 export * from './domain/profileDocumentValidation.js';
 export * from './domain/profileDocumentSerialization.js';

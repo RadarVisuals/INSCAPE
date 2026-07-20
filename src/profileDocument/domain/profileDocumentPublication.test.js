@@ -107,6 +107,16 @@ test('invalid, oversized, wrong-profile, and hash-mismatched gateway content nev
   assert.equal(calls, 0);
 });
 
+test('an insecure snapshot is refused before publication context or wallet access', async () => {
+  const document = documentFor(); document.profile.cachedIdentity.avatarUrl = 'http://images.example/avatar.png';
+  let contextReads = 0; let walletCalls = 0;
+  const live = context({ walletClient: { account: PROFILE_A, writeContract: async () => { walletCalls += 1; } } });
+  const publisher = createProfileDocumentPublisher({ getContext: () => { contextReads += 1; return live; },
+    ipfsGateway: 'https://gateway.test/ipfs/', fetchImpl: async () => responseFor(new Uint8Array()) });
+  await assert.rejects(() => publisher.verifyCid(document, CID), /Invalid cached public identity fallback/);
+  assert.equal(contextReads, 0); assert.equal(walletCalls, 0);
+});
+
 async function verifiedFixture({ mutateBeforeSubmission, walletError, receiptStatus = 'success', readBackDocument = documentFor() } = {}) {
   const document = documentFor(); const artifact = createCanonicalPublication(document); let live = context(); let calls = 0; let simulations = 0; let readBacks = 0;
   let publishing = false; let publicationContextReads = 0;

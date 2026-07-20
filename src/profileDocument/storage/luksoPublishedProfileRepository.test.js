@@ -57,6 +57,14 @@ test('matching exact bytes, valid schema, and matching authority resolve a detac
   assert.deepEqual(result.document, documentFor()); assert.notStrictEqual(result.document, documentFor());
 });
 
+test('hash-valid published content with an insecure asset URL is INVALID', async () => {
+  const document = documentFor(); document.profile.cachedIdentity.avatarUrl = 'http://images.example/avatar.png';
+  const bytes = new TextEncoder().encode(JSON.stringify(document));
+  const result = await repositoryFor({ value: pointerFor(bytes), chunks: [bytes] }).resolve(PROFILE_A);
+  assert.equal(result.status, PUBLISHED_PROFILE_STATUS.INVALID);
+  assert.equal(result.errorCode, 'INVALID_DOCUMENT');
+});
+
 test('the default reader requests the singleton key through mocked ERC725Y RPC', async () => {
   const bytes = new TextEncoder().encode(JSON.stringify(documentFor()));
   const pointer = pointerFor(bytes); let rpcBody;

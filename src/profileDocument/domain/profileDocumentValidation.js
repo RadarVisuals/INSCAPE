@@ -4,6 +4,7 @@ import { KNOWN_ENVIRONMENT_TYPES, KNOWN_KEEPER_IDS, KNOWN_SHADER_ENVIRONMENT_IDS
 import { migrateProfileDocument } from './profileDocumentMigration.js';
 import { CANVAS_OBJECT_PRESENTATION_ENUMS, getCanvasObjectDefinition } from '../../library/domain/canvasObjectRegistry.js';
 import { isValidCanvasObjectId } from '../../library/domain/canvasObjects.js';
+import { isValidPublishedAssetUrl } from './publishedAssetUrl.js';
 
 const ID = /^[A-Za-z0-9:_-]+$/;
 const SAFE_MODULE_IDS = new Set(['identity', 'signals']);
@@ -16,7 +17,7 @@ const validPosition = (value) => value === null || (exactKeys(value, ['column', 
 const validWindowGeometry = (value) => value === null || (exactKeys(value, ['column','row','columnSpan','rowSpan']) && Number.isInteger(value.column) && value.column >= -255 && value.column <= 255 && Number.isInteger(value.row) && value.row >= -255 && value.row <= 255 && Number.isInteger(value.columnSpan) && value.columnSpan >= 1 && value.columnSpan <= 64 && Number.isInteger(value.rowSpan) && value.rowSpan >= 1 && value.rowSpan <= 128);
 const ICON_KEYS = new Set(['profile','collection','signals','creations','folder','favorites','search','gallery','external','music']);
 const validAppearance = (value) => value === undefined || (exactKeys(value,['mode','iconKey','showLabel','columnSpan','rowSpan']) && ['label','icon','icon_label'].includes(value?.mode) && ICON_KEYS.has(value?.iconKey) && typeof value?.showLabel === 'boolean' && Number.isInteger(value?.columnSpan) && value.columnSpan >= 1 && value.columnSpan <= 12 && Number.isInteger(value?.rowSpan) && value.rowSpan >= 1 && value.rowSpan <= 8);
-const validUrl = (value) => typeof value === 'string' && value.length <= L.maxUrlLength && /^(https?:\/\/|ipfs:\/\/)/i.test(value) && !/[\u0000-\u001f\u007f]/.test(value);
+const validUrl = (value) => typeof value === 'string' && value.length <= L.maxUrlLength && isValidPublishedAssetUrl(value);
 const validAssetReference = (asset) => {
   if (!exactKeys(asset, ['stableAssetId', 'network', 'chainId', 'tokenStandard', 'contractAddress', 'tokenId', 'cachedName', 'cachedPreviewUrl'])) return false;
   const token = asset?.tokenId === null ? null : normalizeTokenId(asset?.tokenId);

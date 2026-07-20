@@ -14,6 +14,7 @@ const PROFILE = '0xf3C189819Fd5b042f692983bFbFD57ab607ee709';
 const CONTRACT_A = '0x1111111111111111111111111111111111111111';
 const CONTRACT_B = '0x2222222222222222222222222222222222222222';
 const PRIVATE_ASSET_ID = '42:0x4444444444444444444444444444444444444444:0x04';
+const CID = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw';
 const assetA = { id: `42:${CONTRACT_A}:0x01`, chainId: 42, contractAddress: CONTRACT_A, tokenId: '0x01', standard: 'LSP8', name: 'One', thumbnailUrl: 'ipfs://one' };
 const assetB = { id: `42:${CONTRACT_B}:contract`, chainId: 42, contractAddress: CONTRACT_B, tokenId: null, standard: 'LSP7', name: 'Two', imageUrl: 'https://example.test/two.png' };
 
@@ -104,6 +105,33 @@ test('strict validation rejects malformed JSON, wrong type, future versions, add
     { spaces: [{ ...build().spaces[0], assets: [{ ...build().spaces[0].assets[0], cachedPreviewUrl: 'javascript:alert(1)' }] }] }
   ];
   for (const change of cases) assert.equal(validateProfileDocument({ ...build(), ...change }).valid, false);
+});
+
+test('publication URL policy covers avatar, space assets, and canvas artwork without admitting fixture paths', () => {
+  const secure = build();
+  secure.profile.cachedIdentity.avatarUrl = 'https://images.example/avatar.png';
+  secure.spaces[0].assets[0].cachedPreviewUrl = `ipfs://${CID}/space.png`;
+  secure.canvasObjects[0].asset.cachedPreviewUrl = 'https://images.example/art.png';
+  assert.equal(validateProfileDocument(secure).valid, true);
+  for (const [surface, mutate] of [
+    ['avatar', (document, value) => { document.profile.cachedIdentity.avatarUrl = value; }],
+    ['space asset', (document, value) => { document.spaces[0].assets[0].cachedPreviewUrl = value; }],
+    ['canvas artwork', (document, value) => { document.canvasObjects[0].asset.cachedPreviewUrl = value; }]
+  ]) {
+    for (const value of ['http://images.example/insecure.png', '//images.example/relative.png', '/assets/fixture.png', 'data:image/png;base64,AA==', 'blob:https://example.test/id', 'javascript:alert(1)', 'file:///tmp/image.png', 'https://user:pass@images.example/art.png', 'not a URL']) {
+      const changed = structuredClone(secure); mutate(changed, value);
+      assert.equal(validateProfileDocument(changed).valid, false, `${surface}: ${value}`);
+    }
+  }
+});
+
+test('owner-local HTTP assets are omitted from snapshots without changing the owner asset record', () => {
+  const localAsset = { ...assetA, thumbnailUrl: 'http://owner-local.example/art.png' };
+  const document = build({ assets: [localAsset, assetB], profileIdentity: { name: 'Owner', avatarUrl: 'http://owner-local.example/avatar.png' } });
+  assert.equal(document.profile.cachedIdentity.avatarUrl, undefined);
+  assert.equal(document.spaces[0].assets[0].cachedPreviewUrl, undefined);
+  assert.equal(localAsset.thumbnailUrl, 'http://owner-local.example/art.png');
+  assert.equal(validateProfileDocument(document).valid, true);
 });
 
 test('validation enforces space, asset, total-size and canonical-reference limits', () => {

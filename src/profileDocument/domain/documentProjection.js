@@ -1,9 +1,9 @@
-import { resolveContentUrl } from '../../library/data/resolveContentUrl.js';
+import { resolvePublishedAssetUrl } from './publishedAssetUrl.js';
 
 export function projectDocumentAsset(reference, liveAssets = []) {
   const live = liveAssets.find((asset) => asset.id === reference.stableAssetId);
   if (live) return live;
-  const fallbackUrl = resolveContentUrl(reference.cachedPreviewUrl) || null;
+  const fallbackUrl = resolvePublishedAssetUrl(reference.cachedPreviewUrl) || null;
   return {
     id: reference.stableAssetId, chainId: reference.chainId, contractAddress: reference.contractAddress,
     tokenId: reference.tokenId, standard: reference.tokenStandard, name: reference.cachedName || 'Unavailable asset',

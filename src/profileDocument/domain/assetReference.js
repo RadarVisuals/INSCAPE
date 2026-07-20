@@ -1,4 +1,5 @@
 import { normalizeProfileAddress } from '../../library/config.js';
+import { parsePublishedAssetUrl } from './publishedAssetUrl.js';
 
 export function normalizeTokenId(value) {
   if (value === null || value === undefined || value === '') return null;
@@ -28,7 +29,7 @@ export function buildAssetReference(asset, stableId) {
   const cachedName = typeof asset?.name === 'string' && asset.name.trim() ? asset.name.trim().slice(0, 80) : undefined;
   const previewCandidate = typeof asset?.thumbnailUrl === 'string' && asset.thumbnailUrl.trim() ? asset.thumbnailUrl.trim()
     : typeof asset?.imageUrl === 'string' && asset.imageUrl.trim() ? asset.imageUrl.trim() : '';
-  const cachedPreviewUrl = /^(https?:\/\/|ipfs:\/\/)/i.test(previewCandidate) ? previewCandidate.slice(0, 2048) : undefined;
+  const cachedPreviewUrl = parsePublishedAssetUrl(previewCandidate.slice(0, 2048))?.value;
   return { stableAssetId, network: 'lukso-mainnet', chainId,
     tokenStandard: asset?.standard === 'LSP7' || asset?.standard === 'LSP8' ? asset.standard : 'UNKNOWN',
     contractAddress, tokenId, ...(cachedName ? { cachedName } : {}), ...(cachedPreviewUrl ? { cachedPreviewUrl } : {}) };

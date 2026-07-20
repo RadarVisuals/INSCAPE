@@ -1,11 +1,12 @@
 import { FolderPlus, Heart } from 'lucide-react';
 
-export default function AssetCard({ asset, favorite, folders, onOpen, onFavorite, onFolder, onCreateFolder, authoringEnabled = false }) {
+export default function AssetCard({ asset, favorite, folders, onOpen, onFavorite, onFolder, onCreateFolder, authoringEnabled = false, renderImage }) {
   return (
     <article className="asset-card" data-metadata={asset.metadataStatus}>
       <button className="asset-card__preview" type="button" onClick={onOpen} aria-label={`Preview ${asset.name}`}>
         {asset.thumbnailUrl
-          ? <img src={asset.thumbnailUrl} alt={asset.name} loading="lazy" onError={(event) => { event.currentTarget.hidden = true; event.currentTarget.parentElement.dataset.broken = 'true'; }} />
+          ? renderImage?.({ src: asset.thumbnailUrl, alt: asset.name, loading: 'lazy', fallback: <span className="asset-card__broken">Image unavailable</span> })
+            || <img src={asset.thumbnailUrl} alt={asset.name} loading="lazy" onError={(event) => { event.currentTarget.hidden = true; event.currentTarget.parentElement.dataset.broken = 'true'; }} />
           : <span className="asset-card__broken">Image unavailable</span>}
       </button>
       <div className="asset-card__info"><strong>{asset.name}</strong><span>{asset.collectionName || 'Uncatalogued'}</span></div>

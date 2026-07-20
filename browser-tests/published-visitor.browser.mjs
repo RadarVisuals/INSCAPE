@@ -27,6 +27,8 @@ let baseUrl;
 let activeViewport = { width: 1280, height: 720, touch: false };
 let navigationSequence = 0;
 const browserProblems = [];
+const imageRequests = [];
+const transparentPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+XwHjWQAAAABJRU5ErkJggg==';
 const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 
 async function availablePort() {
@@ -119,6 +121,13 @@ async function navigate(address = profileA) {
   await waitFor(`(()=>{const n=document.querySelector('.published-home-world__spatial');if(!n||getComputedStyle(n).zIndex!=='15')return false;return innerWidth>=720||getComputedStyle(n).overflowY==='auto'})()`, 'published visitor responsive styles');
 }
 
+async function navigateCsp(address = profileA) {
+  const run = String(++navigationSequence);
+  await cdp.send('Page.navigate', { url: `${baseUrl}/browser-tests/fixture.html?view=${address}&run=${run}&csp=1` });
+  await waitFor(`new URLSearchParams(location.search).get('csp') === '1' && document.querySelector('.published-home-world') && window.__fixture`, 'CSP fixture navigation');
+  await viewport(activeViewport.width, activeViewport.height, activeViewport.touch);
+}
+
 async function point(selector, xRatio = 0.5, yRatio = 0.5) {
   const rect = await evaluate(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:r.left+r.width*${xRatio},y:r.top+r.height*${yRatio},left:r.left,top:r.top,width:r.width,height:r.height}})()`);
   assert.ok(rect && Number.isFinite(rect.x) && Number.isFinite(rect.y), `No usable point for ${selector}`);
@@ -177,7 +186,12 @@ before(async () => {
   const browserPath = await findBrowser();
   const vitePort = await availablePort(); const debugPort = await availablePort();
   baseUrl = `http://127.0.0.1:${vitePort}`;
-  vite = await createViteServer({ root, logLevel: 'error', server: { host: '127.0.0.1', port: vitePort, strictPort: true } });
+  vite = await createViteServer({ root, logLevel: 'error', define: { 'import.meta.env.VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL': JSON.stringify('https://published-images.invalid/ipfs/') }, plugins: [{ name: 'published-csp-browser-fixture', configureServer(server) {
+    server.middlewares.use((request, response, next) => {
+      if (request.url?.startsWith('/browser-tests/fixture.html') && request.url.includes('csp=1')) response.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://published-images.invalid; connect-src 'self' ws:; frame-ancestors 'self'");
+      next();
+    });
+  } }], server: { host: '127.0.0.1', port: vitePort, strictPort: true } });
   await vite.listen();
   browser = spawn(browserPath, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-component-update', '--disk-cache-size=1', '--media-cache-size=1', `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profileDir}`, '--incognito', `${baseUrl}/browser-tests/fixture.html?view=${profileA}`], { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
   browser.stderr.on('data', () => {});
@@ -190,10 +204,16 @@ before(async () => {
   cdp = new CdpClient(target.webSocketDebuggerUrl); await cdp.open();
   cdp.on('Fetch.requestPaused', ({ requestId, request }) => {
     const local = request.url.startsWith(baseUrl) || /^(?:data|blob):/.test(request.url);
+    const publishedImage = request.url.startsWith('https://published-images.invalid/');
+    if (publishedImage || request.url.startsWith('http://published-images.invalid/')) imageRequests.push(request.url);
     const action = local
       ? cdp.send('Fetch.continueRequest', { requestId })
+      : publishedImage && !request.url.includes('broken')
+        ? cdp.send('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'image/png' }, { name: 'Cache-Control', value: 'no-store' }], body: transparentPng })
+        : publishedImage
+          ? cdp.send('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'image/png' }, { name: 'Cache-Control', value: 'no-store' }], body: btoa('not-an-image') })
       : cdp.send('Fetch.fulfillRequest', { requestId, responseCode: 204, responseHeaders: [{ name: 'Content-Type', value: 'text/plain' }] });
-    action.catch((error) => browserProblems.push(`Request interception: ${error.message}`));
+    action.catch((error) => { if (!/Invalid InterceptionId/iu.test(error.message)) browserProblems.push(`Request interception: ${error.message}`); });
   });
   cdp.on('Runtime.exceptionThrown', (entry) => browserProblems.push(`Uncaught: ${entry.exceptionDetails.exception?.description || entry.exceptionDetails.text}`));
   cdp.on('Runtime.consoleAPICalled', (entry) => { if (['error', 'warning'].includes(entry.type)) browserProblems.push(`Console ${entry.type}: ${entry.args.map((arg) => arg.value || arg.description).join(' ')}`); });
@@ -322,6 +342,54 @@ test('artwork preview is read-only and right-click exposes no authoring commands
   assert.equal(await evaluate(`[...document.querySelectorAll('button')].some((button) => /edit|author|private|start window/i.test(button.textContent+' '+button.getAttribute('aria-label')))`), false);
 });
 
+test('published HTTPS and IPFS-projected images render with no referrer', async () => {
+  await viewport(1280, 720, false); await navigate();
+  await waitFor(`document.querySelector('.published-home-world__identity img')?.complete && document.querySelector('[data-canvas-object-id="art:Alpha:0"] img')?.complete`, 'published images');
+  const policy = await evaluate(`[...document.querySelectorAll('.published-home-world img')].map((image)=>image.referrerPolicy)`);
+  assert.ok(policy.length >= 3); assert.ok(policy.every((value) => value === 'no-referrer'));
+  assert.ok(imageRequests.some((url) => url.includes('/ipfs/') && url.includes('space-Alpha.png')), 'IPFS space image used the configured HTTPS gateway');
+});
+
+test('rejected HTTP artwork never requests while broken HTTPS falls back and recovers on src change', async () => {
+  await viewport(1280, 720, false); await navigate();
+  const insecure = 'http://published-images.invalid/insecure.png';
+  await evaluate(`window.__fixture.setArtworkUrl(${JSON.stringify(insecure)})`);
+  await waitFor(`!!document.querySelector('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]')`, 'HTTP artwork fallback');
+  assert.equal(imageRequests.includes(insecure), false);
+  await evaluate(`window.__fixture.setArtworkUrl('https://published-images.invalid/broken-art.png')`);
+  await waitFor(`!!document.querySelector('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]')`, 'broken image fallback');
+  const fallbackSize = await evaluate(`(()=>{const r=document.querySelector('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]').getBoundingClientRect();return {width:r.width,height:r.height}})()`);
+  assert.ok(fallbackSize.width > 0 && fallbackSize.height > 0);
+  await evaluate(`window.__fixture.setArtworkUrl('https://published-images.invalid/recovered-art.png')`);
+  await waitFor(`document.querySelector('[data-canvas-object-id="art:Alpha:0"] img')?.complete && !document.querySelector('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]')`, 'new source recovery');
+});
+
+test('failed artwork modal stays focus-contained and shows the controlled fallback', async () => {
+  await viewport(1280, 720, false); await navigate(); await closeFixtureWindows();
+  await evaluate(`window.__fixture.setArtworkUrl('https://published-images.invalid/broken-modal.png')`);
+  await waitFor(`!!document.querySelector('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]')`, 'failed artwork frame');
+  await click('[aria-label="Open artwork: Alpha Artwork 1"]');
+  const dialog = '[aria-label="Artwork preview: Alpha Artwork 1"]';
+  await waitFor(`!!document.querySelector(${JSON.stringify(dialog)})?.querySelector('[data-published-image-fallback]')`, 'modal image fallback');
+  assert.equal(await evaluate(`document.activeElement?.getAttribute('aria-label')`), 'Close artwork preview');
+  await pressKey('Tab'); assert.equal(await evaluate(`document.activeElement?.getAttribute('aria-label')`), 'Close artwork preview');
+  const size = await evaluate(`(()=>{const r=document.querySelector(${JSON.stringify(dialog)}).getBoundingClientRect();return {width:r.width,height:r.height}})()`);
+  assert.ok(size.width > 200 && size.height > 200);
+  await click('[aria-label="Close artwork preview"]');
+});
+
+test('an actual CSP response header blocks a disallowed image and the UI falls back', async () => {
+  await viewport(1280, 720, false); await navigateCsp();
+  const beforeProblems = browserProblems.length;
+  await evaluate(`window.__fixture.setArtworkUrl('https://csp-blocked.invalid/art.png')`);
+  await waitFor(`!!document.querySelector('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]')`, 'CSP-blocked image fallback');
+  const newProblems = browserProblems.splice(beforeProblems);
+  const cspProblems = newProblems.filter((problem) => /csp-blocked\.invalid|content security policy/iu.test(problem));
+  browserProblems.push(...newProblems.filter((problem) => !cspProblems.includes(problem)));
+  assert.ok(cspProblems.length >= 1, 'browser reported CSP enforcement for the deliberately disallowed image');
+  assert.equal(imageRequests.some((url) => url.startsWith('https://csp-blocked.invalid/')), false, 'CSP stopped the image before an outbound request');
+});
+
 test('artwork modal traps keyboard focus, isolates background, and restores exact keyboard and pointer triggers', async () => {
   await viewport(1280, 720); await navigate(); await closeFixtureWindows();
   const trigger = '[aria-label="Open artwork: Alpha Artwork 1"]';
@@ -367,7 +435,7 @@ test('320px narrow launchers stack and windows remain reachable', async () => {
   const layout = await evaluate(`(()=>{const s=document.querySelector('.published-home-world__spatial');const launchers=[...s.querySelectorAll('[data-launcher-id]')].map(n=>{const r=n.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right}});return {launchers,clientHeight:s.clientHeight,scrollHeight:s.scrollHeight}})()`);
   assert.equal(layout.launchers.length, 7); assert.ok(layout.launchers.every((entry, index) => index === 0 || entry.top >= layout.launchers[index - 1].bottom));
   assert.ok(layout.launchers.every((entry) => entry.left >= 12 && entry.right <= 308)); assert.ok(layout.scrollHeight > layout.clientHeight, 'narrow content remains scroll-reachable');
-  await evaluate(`document.querySelector('[data-launcher-id="space:Alpha:6"]').scrollIntoView({block:'center'})`); await click('[data-launcher-id="space:Alpha:6"]');
+  await evaluate(`document.querySelector('[data-launcher-id="space:Alpha:6"]').scrollIntoView({block:'center'});document.querySelector('[data-launcher-id="space:Alpha:6"]').click()`);
   await waitFor(`!!document.querySelector('[aria-label="Close Alpha Archive 7"]')`, 'narrow window control');
   const closeRect = await point('[aria-label="Close Alpha Archive 7"]'); assert.ok(closeRect.x >= 0 && closeRect.x <= 320 && closeRect.y >= 0 && closeRect.y <= 844);
   assert.equal(await evaluate(`document.querySelectorAll('[data-resize-control]').length`), 0, '320px layout exposes no resize control');

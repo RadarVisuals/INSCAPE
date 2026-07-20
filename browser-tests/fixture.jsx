@@ -9,6 +9,7 @@ import '../src/public/canvasObjects.css';
 
 export const PROFILE_A = '0x1111111111111111111111111111111111111111';
 export const PROFILE_B = '0x2222222222222222222222222222222222222222';
+const CID = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw';
 
 function createDocument(address, suffix) {
   const spaces = Array.from({ length: 7 }, (_, index) => ({
@@ -20,11 +21,11 @@ function createDocument(address, suffix) {
     appearance: { mode: 'icon_label', iconKey: index === 1 ? 'favorites' : 'folder', showLabel: true, columnSpan: 4, rowSpan: 2 },
     startOpen: index < 2,
     windowGeometry: { column: -7 + index * 2, row: -2 + index, columnSpan: 11, rowSpan: 8 },
-    assets: []
+    assets: index === 0 ? [{ stableAssetId: `42:${address}:0x10`, network: 'lukso-mainnet', chainId: 42, tokenStandard: 'LSP8', contractAddress: address, tokenId: '0x10', cachedName: `${suffix} Space Artwork`, cachedPreviewUrl: `ipfs://${CID}/space-${suffix}.png` }] : []
   }));
   return {
     version: 4,
-    profile: { address, cachedIdentity: { name: `${suffix} Visitor Fixture`, avatarUrl: null } },
+    profile: { address, cachedIdentity: { name: `${suffix} Visitor Fixture`, avatarUrl: `https://published-images.invalid/avatar-${suffix}.png` } },
     presentation: { keeperId: 'skull_reaper', stageId: 'void', environment: null },
     spaces,
     canvasObjects: Array.from({ length: 3 }, (_, index) => ({
@@ -33,7 +34,7 @@ function createDocument(address, suffix) {
       placement: { column: 8 + index * 5, row: 3 },
       span: { columns: 4, rows: 4 },
       presentation: { frame: 'thin', mat: 'dark', background: 'dark', fit: 'contain' },
-      asset: { stableAssetId: `42:${address}:0x0${index + 1}`, cachedName: `${suffix} Artwork ${index + 1}` }
+      asset: { stableAssetId: `42:${address}:0x0${index + 1}`, cachedName: `${suffix} Artwork ${index + 1}`, cachedPreviewUrl: index === 0 ? `https://published-images.invalid/art-${suffix}.png` : undefined }
     }))
   };
 }
@@ -51,7 +52,12 @@ function currentAddress() {
 function Fixture() {
   const [address, setAddress] = useState(currentAddress);
   const [moves, setMoves] = useState([]);
-  const document = useMemo(() => DOCUMENTS[address], [address]);
+  const [artworkUrl, setArtworkUrl] = useState(null);
+  const document = useMemo(() => {
+    const next = structuredClone(DOCUMENTS[address]);
+    if (artworkUrl !== null) next.canvasObjects[0].asset.cachedPreviewUrl = artworkUrl;
+    return next;
+  }, [address, artworkUrl]);
   useEffect(() => {
     const updateRoute = () => setAddress(currentAddress());
     addEventListener('popstate', updateRoute);
@@ -62,6 +68,7 @@ function Fixture() {
       address,
       moves,
       resetMoves: () => setMoves([]),
+      setArtworkUrl,
       visit(nextAddress) {
         history.pushState({}, '', `/browser-tests/fixture.html?view=${nextAddress}`);
         dispatchEvent(new PopStateEvent('popstate'));
