@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { clampHomeWorldCamera, getZoomedHomeWorldCamera, HOME_WORLD_ZOOM_LEVELS } from '../../public/homeWorldCamera.js';
-import { exceedsSpatialPointerDragThreshold, panSpatialCamera, shouldActivateSpatialPointer } from '../../public/spatialWorldCamera.js';
+import { exceedsSpatialPointerDragThreshold, finalizeSpatialPointer, panSpatialCamera, shouldActivateSpatialPointer } from '../../public/spatialWorldCamera.js';
 import {
   clampVisitorWindowRect,
   createPublishedVisitorLayout,
@@ -178,6 +178,60 @@ test('empty-world click or tap activates Keeper movement while drag, explicit pa
   assert.equal(shouldActivateSpatialPointer({ moved: false, panning: false }, true), false);
 });
 
+test('desktop pointer completion clears drag state without narrow gesture bookkeeping', () => {
+  const click = { pointerId: 7, moved: false, panning: false };
+
+  assert.doesNotThrow(() => finalizeSpatialPointer({
+    pointerId: 7,
+    pointerType: undefined,
+    drag: click,
+    sharedGesture: false
+  }));
+  assert.deepEqual(finalizeSpatialPointer({
+    pointerId: 7,
+    pointerType: undefined,
+    drag: click,
+    sharedGesture: false
+  }), { drag: null, shouldActivate: true });
+  assert.deepEqual(finalizeSpatialPointer({
+    pointerId: 7,
+    pointerType: 'mouse',
+    drag: click,
+    sharedGesture: null,
+    cancelled: true
+  }), { drag: null, shouldActivate: false });
+});
+
+test('late lost pointer capture cannot reactivate a completed desktop click or retain a drag', () => {
+  const click = { pointerId: 11, moved: false, panning: false };
+  const released = finalizeSpatialPointer({ pointerId: 11, pointerType: 'mouse', drag: click });
+  const lostCapture = finalizeSpatialPointer({ pointerId: 11, pointerType: undefined, drag: released.drag, cancelled: true });
+
+  assert.equal(released.shouldActivate, true, 'pointerup activates the Keeper exactly once');
+  assert.deepEqual(lostCapture, { drag: null, shouldActivate: false });
+
+  const completedDrag = finalizeSpatialPointer({
+    pointerId: 12,
+    pointerType: 'mouse',
+    drag: { pointerId: 12, moved: true, panning: true }
+  });
+  assert.deepEqual(completedDrag, { drag: null, shouldActivate: false });
+});
+
+test('narrow pointer completion preserves multi-touch cancellation and gesture cleanup', () => {
+  const sharedGesture = { activePointers: new Set([21]), multiTouch: true };
+  const result = finalizeSpatialPointer({
+    pointerId: 21,
+    pointerType: 'touch',
+    drag: { pointerId: 21, moved: false, panning: false },
+    sharedGesture
+  });
+
+  assert.deepEqual(result, { drag: null, shouldActivate: false });
+  assert.equal(sharedGesture.activePointers.size, 0);
+  assert.equal(sharedGesture.multiTouch, false);
+});
+
 test('390px narrow empty-space taps activate but scrolling, cancellation, multi-touch, and child targets do not', () => {
   assert.equal(createPublishedVisitorLayout(documentFixture, 390, 800).geometry.narrow, true);
   const origin = { x: 180, y: 420 };
@@ -209,7 +263,8 @@ test('narrow published scrolling is explicitly bounded and leaves browser touch 
   assert.match(cameraSource, /if \(!surface \|\| narrow\) return undefined/);
   assert.match(cameraSource, /if \(narrow && event\.isPrimary === false\) return/);
   assert.match(cameraSource, /if \(narrow\) return;\s*event\.preventDefault\(\)/);
-  assert.match(cameraSource, /cancelled \|\| sharedMultiTouch/);
+  assert.match(cameraSource, /const sharedGesture = narrow \? narrowGestureRef\?\.current : null/);
+  assert.match(cameraSource, /finalizeSpatialPointer\(\{[\s\S]*sharedGesture,[\s\S]*cancelled[\s\S]*\}\)/);
 });
 
 test('published renderer import graph cannot reach owner stores, persistence, or ModuleGridShell', () => {

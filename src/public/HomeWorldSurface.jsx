@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { clampHomeWorldCamera, getZoomedHomeWorldCamera, HOME_WORLD_ZOOM_LEVELS } from './homeWorldCamera.js';
-import { exceedsSpatialPointerDragThreshold, shouldActivateSpatialPointer } from './spatialWorldCamera.js';
+import { exceedsSpatialPointerDragThreshold, finalizeSpatialPointer } from './spatialWorldCamera.js';
 import './homeWorld.css';
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
@@ -126,15 +126,17 @@ export default function HomeWorldSurface({ camera, geometry, world, locations = 
 
   const finishPointer = (event, cancelled = false) => {
     touchPointersRef.current.delete(event.pointerId);
-    const sharedGesture = narrow && narrowGestureRef?.current;
-    const sharedMultiTouch = Boolean(sharedGesture?.multiTouch);
-    if (event.pointerType !== 'mouse') sharedGesture?.activePointers.delete(event.pointerId);
-    if (sharedGesture?.activePointers.size === 0) sharedGesture.multiTouch = false;
+    const sharedGesture = narrow ? narrowGestureRef?.current : null;
     if (touchPointersRef.current.size < 2) pinchRef.current = null;
-    const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    dragRef.current = null;
-    if (shouldActivateSpatialPointer(drag, cancelled || sharedMultiTouch)) onMoveKeeper?.(event.clientX, event.clientY);
+    const result = finalizeSpatialPointer({
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+      drag: dragRef.current,
+      sharedGesture,
+      cancelled
+    });
+    dragRef.current = result.drag;
+    if (result.shouldActivate) onMoveKeeper?.(event.clientX, event.clientY);
   };
 
   const root = typeof document === 'undefined' ? null : document.querySelector('.application-root');

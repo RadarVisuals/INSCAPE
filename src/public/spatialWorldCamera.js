@@ -38,6 +38,23 @@ export function shouldActivateSpatialPointer(drag, cancelled = false) {
   return Boolean(drag && !cancelled && !drag.moved && !drag.panning && !drag.multiTouch);
 }
 
+export function finalizeSpatialPointer({ pointerId, pointerType, drag, sharedGesture, cancelled = false }) {
+  const gesture = sharedGesture && typeof sharedGesture === 'object' ? sharedGesture : null;
+  const sharedMultiTouch = Boolean(gesture?.multiTouch);
+
+  if (pointerType !== 'mouse') gesture?.activePointers?.delete(pointerId);
+  if (gesture?.activePointers?.size === 0) gesture.multiTouch = false;
+
+  if (!drag || drag.pointerId !== pointerId) {
+    return { drag, shouldActivate: false };
+  }
+
+  return {
+    drag: null,
+    shouldActivate: shouldActivateSpatialPointer(drag, cancelled || sharedMultiTouch)
+  };
+}
+
 export function screenToSpatialWorld(screenPoint, camera) {
   const screen = normalizeSpatialPoint(screenPoint);
   const view = normalizeSpatialPoint(camera);
