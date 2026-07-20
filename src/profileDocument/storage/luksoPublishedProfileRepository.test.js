@@ -9,6 +9,7 @@ import {
   createLuksoPublishedProfileRepository,
   OS_UNDERNEATH_PROFILE_DOCUMENT_KEY,
   OS_UNDERNEATH_PROFILE_DOCUMENT_KEY_NAME,
+  PublishedProfileAvailabilityError,
   PUBLISHED_PROFILE_STATUS
 } from './luksoPublishedProfileRepository.js';
 
@@ -107,9 +108,117 @@ test('invalid JSON, unsupported versions, validation failures, and profile misma
 
 test('gateway and RPC failures remain transient errors for the resolution layer', async () => {
   const bytes = new TextEncoder().encode(JSON.stringify(documentFor()));
-  await assert.rejects(() => repositoryFor({ value: pointerFor(bytes), fetchImpl: async () => { throw new Error('gateway offline'); } }).resolve(PROFILE_A), /offline/);
+  await assert.rejects(() => repositoryFor({ value: pointerFor(bytes), fetchImpl: async () => { throw new Error('gateway offline'); } }).resolve(PROFILE_A),
+    (error) => error instanceof PublishedProfileAvailabilityError && error.code === 'GATEWAY_UNAVAILABLE');
   const repository = createLuksoPublishedProfileRepository({ fetchImpl: async () => { throw new Error('rpc offline'); } });
-  await assert.rejects(() => repository.resolve(PROFILE_A), /rpc offline/);
+  await assert.rejects(() => repository.resolve(PROFILE_A),
+    (error) => error instanceof PublishedProfileAvailabilityError && error.code === 'RPC_UNAVAILABLE');
+});
+
+test('never-settling RPC times out, aborts, and falls back once per deduplicated endpoint', async () => {
+  const bytes = new TextEncoder().encode(JSON.stringify(documentFor())); const pointer = pointerFor(bytes);
+  const calls = []; let primaryAborted = false;
+  const repository = createLuksoPublishedProfileRepository({ rpcUrl: 'https://rpc-one.test/',
+    rpcFallbackUrls: ['https://rpc-one.test', 'https://rpc-two.test'], ipfsGateway: 'https://gateway.test/ipfs',
+    timeouts: { rpcResponseMs: 8 }, dataReader: (_address, { rpcUrl, signal }) => {
+      calls.push(rpcUrl);
+      if (rpcUrl === 'https://rpc-one.test') return new Promise(() => signal.addEventListener('abort', () => { primaryAborted = true; }, { once: true }));
+      return pointer;
+    }, fetchImpl: async () => streamResponse([bytes]) });
+  const result = await repository.resolve(PROFILE_A);
+  assert.equal(result.status, PUBLISHED_PROFILE_STATUS.RESOLVED); assert.equal(primaryAborted, true);
+  assert.deepEqual(calls, ['https://rpc-one.test', 'https://rpc-two.test']);
+});
+
+test('RPC rate-limit and server failures fall back while caller abort never does', async () => {
+  const bytes = new TextEncoder().encode(JSON.stringify(documentFor())); const pointer = pointerFor(bytes);
+  for (const status of [429, 503]) {
+    const calls = [];
+    const repository = createLuksoPublishedProfileRepository({ rpcUrl: 'https://rpc-one.test', rpcFallbackUrls: 'https://rpc-two.test',
+      ipfsGateway: 'https://gateway.test/ipfs', fetchImpl: async (url) => {
+        calls.push(url);
+        if (url === 'https://rpc-one.test') return new Response('', { status });
+        if (url === 'https://rpc-two.test') return new Response(JSON.stringify({ jsonrpc: '2.0', id: 1,
+          result: encodeFunctionResult({ abi: [{ type: 'function', name: 'getData', stateMutability: 'view', inputs: [{ type: 'bytes32' }], outputs: [{ type: 'bytes' }] }], functionName: 'getData', result: pointer }) }));
+        return streamResponse([bytes]);
+      } });
+    assert.equal((await repository.resolve(PROFILE_A)).status, PUBLISHED_PROFILE_STATUS.RESOLVED);
+    assert.deepEqual(calls.slice(0, 2), ['https://rpc-one.test', 'https://rpc-two.test']);
+  }
+  const controller = new AbortController(); const calls = [];
+  const repository = createLuksoPublishedProfileRepository({ rpcUrl: 'https://rpc-one.test', rpcFallbackUrls: 'https://rpc-two.test',
+    dataReader: (_address, { rpcUrl }) => { calls.push(rpcUrl); controller.abort(); return new Promise(() => {}); } });
+  await assert.rejects(() => repository.resolve(PROFILE_A, { signal: controller.signal }), { name: 'AbortError' });
+  assert.deepEqual(calls, ['https://rpc-one.test']);
+});
+
+test('RPC no-pointer requires every endpoint and conflicting pointers fail closed', async () => {
+  const endpoints = ['https://rpc-one.test', 'https://rpc-two.test']; let reads = 0;
+  const unavailable = createLuksoPublishedProfileRepository({ rpcUrl: endpoints[0], rpcFallbackUrls: endpoints[1],
+    dataReader: () => { reads += 1; return '0x'; } });
+  assert.equal((await unavailable.resolve(PROFILE_A)).status, PUBLISHED_PROFILE_STATUS.UNAVAILABLE); assert.equal(reads, 2);
+  const partial = createLuksoPublishedProfileRepository({ rpcUrl: endpoints[0], rpcFallbackUrls: endpoints[1],
+    dataReader: (_address, { rpcUrl }) => rpcUrl === endpoints[0] ? '0x' : Promise.reject(new Error('offline')) });
+  await assert.rejects(() => partial.resolve(PROFILE_A), (error) => error.code === 'RPC_UNAVAILABLE');
+  const one = pointerFor(new Uint8Array([1])); const two = pointerFor(new Uint8Array([2]));
+  const conflict = createLuksoPublishedProfileRepository({ rpcUrl: endpoints[0], rpcFallbackUrls: endpoints[1],
+    dataReader: (_address, { rpcUrl }) => rpcUrl === endpoints[0] ? one : two });
+  const result = await conflict.resolve(PROFILE_A);
+  assert.equal(result.status, PUBLISHED_PROFILE_STATUS.INVALID); assert.equal(result.errorCode, 'RPC_POINTER_CONFLICT');
+});
+
+test('gateway response and body timeouts abort or cancel before safe fallback', async () => {
+  const bytes = new TextEncoder().encode(JSON.stringify(documentFor())); const value = pointerFor(bytes);
+  let responseAbort = false; const urls = [];
+  const responseTimeout = createLuksoPublishedProfileRepository({ rpcUrl: 'https://rpc.test', dataReader: () => value,
+    ipfsGateway: 'https://gateway-one.test/ipfs', ipfsGatewayFallbackUrls: 'https://gateway-two.test/ipfs',
+    timeouts: { gatewayResponseMs: 8 }, fetchImpl: (url, { signal }) => {
+      urls.push(url);
+      if (url.startsWith('https://gateway-one.test')) return new Promise(() => signal.addEventListener('abort', () => { responseAbort = true; }, { once: true }));
+      return streamResponse([bytes]);
+    } });
+  assert.equal((await responseTimeout.resolve(PROFILE_A)).status, PUBLISHED_PROFILE_STATUS.RESOLVED);
+  assert.equal(responseAbort, true); assert.equal(urls.length, 2);
+
+  let cancelled = false;
+  const bodyTimeout = createLuksoPublishedProfileRepository({ rpcUrl: 'https://rpc.test', dataReader: () => value,
+    ipfsGateway: 'https://gateway-one.test/ipfs', ipfsGatewayFallbackUrls: 'https://gateway-two.test/ipfs',
+    timeouts: { documentReadMs: 8 }, fetchImpl: async (url) => url.startsWith('https://gateway-one.test')
+      ? new Response(new ReadableStream({ start(controller) { controller.enqueue(bytes.subarray(0, 10)); }, cancel() { cancelled = true; } }))
+      : streamResponse([bytes]) });
+  assert.equal((await bodyTimeout.resolve(PROFILE_A)).status, PUBLISHED_PROFILE_STATUS.RESOLVED); assert.equal(cancelled, true);
+});
+
+test('gateway HTTP availability failure falls back without weakening verification', async () => {
+  const bytes = new TextEncoder().encode(JSON.stringify(documentFor())); let calls = 0;
+  const repository = createLuksoPublishedProfileRepository({ rpcUrl: 'https://rpc.test', dataReader: () => pointerFor(bytes),
+    ipfsGateway: 'https://gateway-one.test/ipfs', ipfsGatewayFallbackUrls: 'https://gateway-two.test/ipfs',
+    fetchImpl: async () => { calls += 1; return calls === 1 ? new Response('', { status: 429 }) : streamResponse([bytes]); } });
+  assert.equal((await repository.resolve(PROFILE_A)).status, PUBLISHED_PROFILE_STATUS.RESOLVED); assert.equal(calls, 2);
+});
+
+test('gateway hash mismatch never parses bad bytes and a later exact response resolves', async () => {
+  const bytes = new TextEncoder().encode(JSON.stringify(documentFor())); const bad = new TextEncoder().encode('{"private":"bad"}');
+  const urls = [];
+  const repository = createLuksoPublishedProfileRepository({ rpcUrl: 'https://rpc.test', dataReader: () => pointerFor(bytes),
+    ipfsGateway: 'https://gateway-one.test/ipfs/', ipfsGatewayFallbackUrls: ['https://gateway-one.test/ipfs', 'https://gateway-two.test/ipfs/'],
+    fetchImpl: async (url) => { urls.push(url); return streamResponse([url.startsWith('https://gateway-one.test') ? bad : bytes]); } });
+  const result = await repository.resolve(PROFILE_A);
+  assert.equal(result.status, PUBLISHED_PROFILE_STATUS.RESOLVED); assert.deepEqual(urls, [
+    'https://gateway-one.test/ipfs/bafy-profile/document.json', 'https://gateway-two.test/ipfs/bafy-profile/document.json']);
+});
+
+test('successful attempts clear timers and exhausted timeout is bounded', async () => {
+  const bytes = new TextEncoder().encode(JSON.stringify(documentFor())); const value = pointerFor(bytes); const signals = [];
+  const repository = createLuksoPublishedProfileRepository({ rpcUrl: 'https://rpc.test', dataReader: (_address, { signal }) => { signals.push(signal); return value; },
+    ipfsGateway: 'https://gateway.test/ipfs', timeouts: { rpcResponseMs: 8, gatewayResponseMs: 8, documentReadMs: 8 },
+    fetchImpl: async (_url, { signal }) => { signals.push(signal); return streamResponse([bytes]); } });
+  assert.equal((await repository.resolve(PROFILE_A)).status, PUBLISHED_PROFILE_STATUS.RESOLVED);
+  await new Promise((resolve) => setTimeout(resolve, 15)); assert.equal(signals.every((signal) => !signal.aborted), true);
+  let aborted = false;
+  const exhausted = createLuksoPublishedProfileRepository({ rpcUrl: 'https://rpc.test', timeouts: { rpcResponseMs: 8 },
+    dataReader: (_address, { signal }) => new Promise(() => signal.addEventListener('abort', () => { aborted = true; }, { once: true })) });
+  await assert.rejects(() => exhausted.resolve(PROFILE_A), (error) => error.code === 'RPC_TIMEOUT'); assert.equal(aborted, true);
 });
 
 test('published rendering sources cannot access local workspace, signals, runtime windows, or persistence', () => {
@@ -122,4 +231,8 @@ test('published rendering sources cannot access local workspace, signals, runtim
     assert.equal(sources.includes(forbidden), false, forbidden);
   }
   assert.match(space, /projectDocumentSpace\(space\)/);
+  assert.match(boundary, /className="published-profile-retry"/);
+  assert.match(boundary, /aria-busy=\{state\?\.busy\}/);
+  assert.match(boundary, /state\?\.status !== PUBLISHED_PROFILE_STATUS\.LOADING/);
+  assert.doesNotMatch(boundary, /wallet|publish\(|useWalletStore|profileDocumentStorage/);
 });

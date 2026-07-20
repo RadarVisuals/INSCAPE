@@ -7,6 +7,8 @@ export const IPFS_GATEWAY_URL = import.meta.env?.VITE_IPFS_GATEWAY_URL
 export const PROFILE_DOCUMENT_IPFS_GATEWAY_URL = import.meta.env?.VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL
   || IPFS_GATEWAY_URL;
 export const LUKSO_RPC_URL = import.meta.env?.VITE_LUKSO_RPC_URL || 'https://rpc.mainnet.lukso.network';
+export const LUKSO_RPC_FALLBACK_URLS = import.meta.env?.VITE_LUKSO_RPC_FALLBACK_URLS || '';
+export const PROFILE_DOCUMENT_IPFS_GATEWAY_FALLBACK_URLS = import.meta.env?.VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_FALLBACK_URLS || '';
 export const LIBRARY_PAGE_SIZE = 24;
 
 export function normalizeProfileAddress(value) {
