@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { PROFILE_DOCUMENT_PUBLICATION_STATUS } from '../domain/profileDocumentPublication.js';
-import { createProfileDocumentPublisher } from '../storage/profileDocumentPublisher.js';
+import { createProfileDocumentPublisher, describePublicationError } from '../storage/profileDocumentPublisher.js';
 
 export function useProfileDocumentPublication(getContext) {
   const [state, setState] = useState({ status: PROFILE_DOCUMENT_PUBLICATION_STATUS.READY, error: null, verified: null, transactionHash: null, receiptConfirmed: false });
@@ -15,7 +15,7 @@ export function useProfileDocumentPublication(getContext) {
     setState({ status: PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_CID, error: null, verified: null, transactionHash: null, receiptConfirmed: false });
     try { return await publisher.verifyCid(snapshot, cid, options); }
     catch (error) {
-      setState({ status: PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR, error: error instanceof Error ? error.message : String(error), verified: null, transactionHash: null, receiptConfirmed: false });
+      setState({ status: PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR, error: describePublicationError(error), verified: null, transactionHash: null, receiptConfirmed: false });
       return null;
     }
   }, [publisher]);
@@ -28,7 +28,7 @@ export function useProfileDocumentPublication(getContext) {
     }
     catch (error) {
       setState((current) => ({ ...current, status: PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR,
-        error: error instanceof Error ? error.message : String(error) }));
+        error: describePublicationError(error) }));
       return null;
     }
   }, [publisher, state.receiptConfirmed, state.transactionHash, state.verified]);

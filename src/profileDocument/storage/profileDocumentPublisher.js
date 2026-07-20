@@ -2,10 +2,33 @@ import { canonicalSerializeProfileDocument } from '../domain/profileDocumentSeri
 import { assertPublicationContext, createCanonicalPublication, encodeProfileDocumentVerifiableUri, normalizeProfileDocumentCid } from '../domain/profileDocumentPublication.js';
 import { createLuksoPublishedProfileRepository, OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, PUBLISHED_PROFILE_STATUS } from './luksoPublishedProfileRepository.js';
 import { PROFILE_DOCUMENT_IPFS_GATEWAY_URL } from '../../library/config.js';
-import { keccak256 } from 'viem';
+import { decodeErrorResult, keccak256 } from 'viem';
 
-export const SET_PROFILE_DOCUMENT_ABI = [{ type: 'function', name: 'setData', stateMutability: 'payable',
-  inputs: [{ name: 'dataKey', type: 'bytes32' }, { name: 'dataValue', type: 'bytes' }], outputs: [] }];
+const PUBLICATION_ERROR_ABI = [
+  { type: 'error', name: 'NoPermissionsSet', inputs: [{ name: 'from', type: 'address' }] },
+  { type: 'error', name: 'NotAllowedERC725YDataKey', inputs: [{ name: 'from', type: 'address' }, { name: 'disallowedKey', type: 'bytes32' }] }
+];
+export const SET_PROFILE_DOCUMENT_ABI = [
+  { type: 'function', name: 'setData', stateMutability: 'payable', inputs: [{ name: 'dataKey', type: 'bytes32' }, { name: 'dataValue', type: 'bytes' }], outputs: [] },
+  ...PUBLICATION_ERROR_ABI
+];
+
+export function describePublicationError(error) {
+  let current = error; let rawData = null; let decoded = null;
+  for (let depth = 0; current && depth < 10; depth += 1, current = current.cause) {
+    if (current.code === 4001) return 'Wallet request rejected by the user';
+    if (current.data?.errorName) decoded = current.data;
+    if (typeof current.data === 'string' && /^0x[0-9a-f]+$/iu.test(current.data)) rawData = current.data;
+  }
+  if (!decoded && rawData) {
+    try { decoded = decodeErrorResult({ abi: PUBLICATION_ERROR_ABI, data: rawData }); } catch { /* Unknown contract error. */ }
+  }
+  if (decoded?.errorName === 'NoPermissionsSet') return `NoPermissionsSet: ${decoded.args?.[0] || 'the sender'} has no LSP6 permissions`;
+  if (decoded?.errorName === 'NotAllowedERC725YDataKey') {
+    return `NotAllowedERC725YDataKey: ${decoded.args?.[0] || 'the sender'} cannot set ${decoded.args?.[1] || 'this ERC725Y key'}`;
+  }
+  return error?.shortMessage || error?.message || String(error);
+}
 
 function matchesArtifact(document, artifact) {
   return keccak256(new TextEncoder().encode(canonicalSerializeProfileDocument(document))).toLowerCase() === artifact.hash.toLowerCase();
@@ -57,16 +80,18 @@ export function createProfileDocumentPublisher({ getContext, fetchImpl = globalT
     async publish(verified) {
       if (!verified?.artifact || !verified?.value) throw new Error('Verify the CID before requesting publication');
       const context = getContext(); const address = assertPublicationContext(context, verified.artifact, { requireClients: true });
-      onStatus('AWAITING_WALLET', verified);
       const call = { address, abi: SET_PROFILE_DOCUMENT_ABI, functionName: 'setData',
         args: [OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, verified.value], account: context.walletClient.account };
-      const simulation = await context.publicClient.simulateContract(call);
       const current = getContext();
       assertPublicationContext(current, verified.artifact, { requireClients: true });
       if (!sameConnectedContext(context, current)) {
         throw new Error('Wallet/provider context changed before transaction submission');
       }
-      const transactionHash = await current.walletClient.writeContract(simulation.request);
+      onStatus('AWAITING_WALLET', verified);
+      // UP Provider exposes the connected Universal Profile as the account and privately
+      // selects its authorised controller during eth_sendTransaction. A public RPC
+      // simulation with the UP as `from` bypasses that flow and is therefore invalid.
+      const transactionHash = await current.walletClient.writeContract(call);
       onStatus('CONFIRMING_TRANSACTION', verified, transactionHash);
       const receipt = await current.publicClient.waitForTransactionReceipt({ hash: transactionHash });
       if (receipt?.status !== 'success') throw new Error('The publication transaction reverted');
