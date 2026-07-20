@@ -1,37 +1,52 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PROFILE_DOCUMENT_PUBLICATION_STATUS } from '../domain/profileDocumentPublication.js';
 import { createProfileDocumentPublisher, describePublicationError } from '../storage/profileDocumentPublisher.js';
 
-export function useProfileDocumentPublication(getContext) {
-  const [state, setState] = useState({ status: PROFILE_DOCUMENT_PUBLICATION_STATUS.READY, error: null, verified: null, transactionHash: null, receiptConfirmed: false });
-  const publisher = useMemo(() => createProfileDocumentPublisher({ getContext,
+export function createProfileDocumentPublicationState() {
+  return { status: PROFILE_DOCUMENT_PUBLICATION_STATUS.READY, error: null,
+    verified: null, transactionHash: null, receiptConfirmed: false };
+}
+
+export function useProfileDocumentPublication(getContext, freshnessKey) {
+  const [state, setState] = useState(createProfileDocumentPublicationState);
+  const contextRef = useRef(getContext);
+  contextRef.current = getContext;
+  const publisher = useMemo(() => createProfileDocumentPublisher({ getContext: () => contextRef.current(),
     onStatus: (status, verified, transactionHash) => setState((current) => ({
       status, error: null, verified: verified || current.verified, transactionHash: transactionHash || current.transactionHash,
       receiptConfirmed: current.receiptConfirmed || status === PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_PUBLICATION || status === PROFILE_DOCUMENT_PUBLICATION_STATUS.PUBLISHED
     }))
-  }), [getContext]);
+  }), []);
+
+  const invalidate = useCallback((message = 'The snapshot, CID, or wallet context changed; re-verification is required') => {
+    setState((current) => {
+      if (!current.verified || current.transactionHash || [PROFILE_DOCUMENT_PUBLICATION_STATUS.AWAITING_WALLET,
+        PROFILE_DOCUMENT_PUBLICATION_STATUS.CONFIRMING_TRANSACTION, PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_PUBLICATION,
+        PROFILE_DOCUMENT_PUBLICATION_STATUS.PUBLISHED].includes(current.status)) return current;
+      return { ...current, status: PROFILE_DOCUMENT_PUBLICATION_STATUS.STALE, error: message, verified: null };
+    });
+  }, []);
+
+  const fresh = !state.verified || state.transactionHash || publisher.isFresh(state.verified);
+  useEffect(() => { if (!fresh) invalidate(); }, [fresh, freshnessKey, invalidate]);
 
   const verifyCid = useCallback(async (snapshot, cid, options) => {
-    setState({ status: PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_CID, error: null, verified: null, transactionHash: null, receiptConfirmed: false });
+    setState({ ...createProfileDocumentPublicationState(), status: PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_CID });
     try { return await publisher.verifyCid(snapshot, cid, options); }
     catch (error) {
-      setState({ status: PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR, error: describePublicationError(error), verified: null, transactionHash: null, receiptConfirmed: false });
+      setState({ ...createProfileDocumentPublicationState(), status: PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR, error: describePublicationError(error) });
       return null;
     }
   }, [publisher]);
 
-  const publish = useCallback(async () => {
-    if (!state.verified) return null;
-    try {
-      if (state.receiptConfirmed) return await publisher.verifyPublication(state.verified, state.transactionHash);
-      return await publisher.publish(state.verified);
-    }
-    catch (error) {
+  const publish = useCallback(() => {
+    if (!state.verified) return Promise.resolve(null);
+    return publisher.publish(state.verified).catch((error) => {
       setState((current) => ({ ...current, status: PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR,
         error: describePublicationError(error) }));
       return null;
-    }
-  }, [publisher, state.receiptConfirmed, state.transactionHash, state.verified]);
+    });
+  }, [publisher, state.verified]);
 
-  return { ...state, verifyCid, publish };
+  return { ...state, verified: fresh ? state.verified : null, verifyCid, publish, invalidate, fresh };
 }

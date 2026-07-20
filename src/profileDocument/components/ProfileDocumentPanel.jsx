@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { countProfileDocumentAssets } from '../domain/profileDocumentBuilder.js';
 import { canonicalSerializeProfileDocument, createProfileDocumentFilename, createProfileDocumentPublicationFilename, formatProfileDocumentJson } from '../domain/profileDocumentSerialization.js';
@@ -15,7 +15,10 @@ function downloadText(text, filename) {
 
 export default function ProfileDocumentPanel({ snapshot, imported, stale, error, activeProfileAddress, getPublicationContext, onBuild, onPreview, onImport, onRestore, onClose }) {
   const fileRef = useRef(null); const [message, setMessage] = useState(''); const [cid, setCid] = useState('');
-  const publication = useProfileDocumentPublication(getPublicationContext);
+  const cidRef = useRef(cid); const cidGenerationRef = useRef(0);
+  const livePublicationContext = useCallback(() => ({ ...getPublicationContext(), cidInput: cidRef.current,
+    cidGeneration: cidGenerationRef.current }), [getPublicationContext]);
+  const publication = useProfileDocumentPublication(livePublicationContext, `${cidGenerationRef.current}:${stale}`);
   const current = imported || snapshot;
   const exportSnapshot = () => {
     try {
@@ -47,10 +50,10 @@ export default function ProfileDocumentPanel({ snapshot, imported, stale, error,
       <p>Download the canonical file, upload it unchanged to Pinata Public IPFS, then paste the returned CID.</p>
       <button type="button" disabled={!snapshot || stale || publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_CID} onClick={downloadPublication}>Download canonical publication file</button>
       <label htmlFor="profile-publication-cid">Pinata CID</label>
-      <input id="profile-publication-cid" value={cid} onChange={(event) => setCid(event.target.value)} placeholder="CID or ipfs://CID" autoComplete="off" spellCheck="false" />
+      <input id="profile-publication-cid" value={cid} onChange={(event) => { cidGenerationRef.current += 1; cidRef.current = event.target.value; publication.invalidate('The CID changed; re-verification is required'); setCid(event.target.value); }} placeholder="CID or ipfs://CID" autoComplete="off" spellCheck="false" />
       <div className="profile-document-panel__actions">
         <button type="button" disabled={!snapshot || stale || !cid.trim() || ['VERIFYING_CID','AWAITING_WALLET','CONFIRMING_TRANSACTION','VERIFYING_PUBLICATION'].includes(publication.status)} onClick={() => publication.verifyCid(snapshot, cid, { stale })}>Verify CID</button>
-        <button type="button" disabled={(publication.status !== PROFILE_DOCUMENT_PUBLICATION_STATUS.CID_VERIFIED && publication.status !== PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR) || !publication.verified} onClick={publication.publish}>{publication.receiptConfirmed ? 'Retry publication verification' : 'Request wallet publication'}</button>
+        <button type="button" disabled={!publication.verified || (!publication.transactionHash && (publication.status !== PROFILE_DOCUMENT_PUBLICATION_STATUS.CID_VERIFIED && publication.status !== PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR)) || ['AWAITING_WALLET','CONFIRMING_TRANSACTION','VERIFYING_PUBLICATION'].includes(publication.status)} onClick={publication.publish}>{publication.transactionHash ? 'Retry publication confirmation' : 'Request wallet publication'}</button>
       </div>
       <p className="profile-document-panel__publication-state" data-state={publication.status}>Publication: {publication.status}</p>
       {publication.transactionHash && <p className="profile-document-panel__hash">Transaction: {publication.transactionHash}</p>}

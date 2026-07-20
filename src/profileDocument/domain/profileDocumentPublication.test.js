@@ -4,10 +4,11 @@ import test from 'node:test';
 import { decodeDataSourceWithHash } from '@erc725/erc725.js';
 import { buildProfileDocumentV3 } from './profileDocumentBuilder.js';
 import { canonicalSerializeProfileDocument, formatProfileDocumentJson } from './profileDocumentSerialization.js';
-import { createCanonicalPublication, encodeProfileDocumentVerifiableUri, normalizeProfileDocumentCid } from './profileDocumentPublication.js';
+import { canonicalPublicationHash, createCanonicalPublication, encodeProfileDocumentVerifiableUri, normalizeProfileDocumentCid, publicationContentFingerprint } from './profileDocumentPublication.js';
 import { createProfileDocumentPublisher, describePublicationError } from '../storage/profileDocumentPublisher.js';
 import { OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileRepository.js';
 import { PROFILE_DOCUMENT_LIMITS } from './constants.js';
+import { createProfileDocumentPublicationState } from '../state/useProfileDocumentPublication.js';
 
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
@@ -25,11 +26,22 @@ function responseFor(bytes, headers) {
   return new Response(new ReadableStream({ start(controller) { controller.enqueue(bytes); controller.close(); } }), { status: 200, headers });
 }
 
+function deferred() {
+  let resolve; let reject;
+  const promise = new Promise((accept, decline) => { resolve = accept; reject = decline; });
+  return { promise, resolve, reject };
+}
+
 function context(overrides = {}) {
+  const snapshot = documentFor();
   const walletClient = { account: '0x3333333333333333333333333333333333333333', writeContract: async () => '0xabc' };
   const publicClient = { simulateContract: async () => { throw new Error('Public RPC simulation must not be used'); }, waitForTransactionReceipt: async () => ({ status: 'success' }) };
   return { ownerAuthoringEnabled: true, isWalletConnected: true, isHostProfileOwner: true, chainId: '0x2a',
-    hostProfileAddress: PROFILE_A, workspaceProfileAddress: PROFILE_A, provider: {}, walletClient, publicClient, ...overrides };
+    hostProfileAddress: PROFILE_A, workspaceProfileAddress: PROFILE_A, viewedProfileAddress: PROFILE_A,
+    provider: {}, walletClient, publicClient, publicationContextGeneration: 1,
+    snapshotGeneration: 1, draftGeneration: 1, cidGeneration: 1, cidInput: CID,
+    snapshotArtifactHash: canonicalPublicationHash(snapshot), snapshotContentFingerprint: publicationContentFingerprint(snapshot),
+    draftFingerprint: publicationContentFingerprint(snapshot), snapshotStale: false, ...overrides };
 }
 
 test('canonical publication download is the exact serializer output and never the formatted export', () => {
@@ -38,6 +50,13 @@ test('canonical publication download is the exact serializer output and never th
   assert.notEqual(artifact.text, formatProfileDocumentJson(document));
   assert.equal(artifact.filename, 'os-underneath-published-profile-profile-v4-publication.json');
   assert.equal(Object.isFrozen(artifact.document), true); assert.equal(Object.isFrozen(artifact.document.profile), true);
+});
+
+test('closing and reopening publication creates a new unverified session', () => {
+  const closed = createProfileDocumentPublicationState(); closed.verified = { unsafe: true };
+  const reopened = createProfileDocumentPublicationState();
+  assert.notStrictEqual(closed, reopened); assert.equal(reopened.status, 'READY'); assert.equal(reopened.verified, null);
+  assert.equal(reopened.transactionHash, null);
 });
 
 test('bare and ipfs CID inputs normalize while URLs, paths, queries, schemes, and malformed CIDs fail', () => {
@@ -102,7 +121,7 @@ async function verifiedFixture({ mutateBeforeSubmission, walletError, receiptSta
   const publisher = createProfileDocumentPublisher({ getContext: () => {
     if (publishing) {
       publicationContextReads += 1;
-      if (publicationContextReads === 2 && mutateBeforeSubmission) live = mutateBeforeSubmission(live);
+      if (publicationContextReads === 1 && mutateBeforeSubmission) live = mutateBeforeSubmission(live);
     }
     return live;
   }, ipfsGateway: 'https://gateway.test/ipfs/', fetchImpl: async () => responseFor(artifact.bytes),
@@ -117,10 +136,10 @@ test('context changes immediately before provider submission block the wallet re
   await assert.rejects(() => fixture.publisher.publish(fixture.verified), /mainnet/); assert.equal(fixture.calls(), 0);
 });
 
-test('provider context changes during CID verification are rejected', async () => {
+test('provider generation changes during CID verification are rejected', async () => {
   const document = documentFor(); const artifact = createCanonicalPublication(document); let live = context(); let reads = 0;
   const publisher = createProfileDocumentPublisher({ getContext: () => live, ipfsGateway: 'https://gateway.test/ipfs/', fetchImpl: async () => {
-    reads += 1; live = { ...live, provider: {} }; return responseFor(artifact.bytes);
+    reads += 1; live = { ...live, provider: {}, publicationContextGeneration: live.publicationContextGeneration + 1 }; return responseFor(artifact.bytes);
   } });
   await assert.rejects(() => publisher.verifyCid(document, CID), /changed during CID verification/); assert.equal(reads, 1);
 });
@@ -144,6 +163,109 @@ test('a successful receipt still requires matching resolver read-back', async ()
   const result = await success.publisher.publish(success.verified);
   assert.equal(result.transactionHash, '0xabc'); assert.equal(result.receipt.status, 'success');
   assert.equal(success.calls(), 1); assert.equal(success.simulations(), 0); assert.equal(success.readBacks(), 1);
+});
+
+test('simultaneous mouse and keyboard activation shares one synchronous publication operation', async () => {
+  const document = documentFor(); const artifact = createCanonicalPublication(document); let live = context(); let calls = 0;
+  const wallet = deferred();
+  live.walletClient.writeContract = () => { calls += 1; return wallet.promise; };
+  const publisher = createProfileDocumentPublisher({ getContext: () => live, ipfsGateway: 'https://gateway.test/ipfs/',
+    fetchImpl: async () => responseFor(artifact.bytes),
+    resolvePublished: async () => ({ status: PUBLISHED_PROFILE_STATUS.RESOLVED, document }) });
+  const verified = await publisher.verifyCid(document, CID);
+  const mouseClick = publisher.publish(verified);
+  const mouseDoubleClick = publisher.publish(verified);
+  const keyboardActivation = publisher.publish(verified);
+  assert.strictEqual(mouseClick, mouseDoubleClick); assert.strictEqual(mouseClick, keyboardActivation);
+  assert.equal(calls, 1);
+  wallet.resolve('0xabc');
+  const [first, second, third] = await Promise.all([mouseClick, mouseDoubleClick, keyboardActivation]);
+  assert.strictEqual(first, second); assert.strictEqual(first, third); assert.equal(first.transactionHash, '0xabc');
+});
+
+test('a different verified context is rejected while another request owns the lock', async () => {
+  const document = documentFor(); const artifact = createCanonicalPublication(document); let live = context(); let calls = 0;
+  const wallet = deferred();
+  live.walletClient.writeContract = () => { calls += 1; return wallet.promise; };
+  const publisher = createProfileDocumentPublisher({ getContext: () => live, ipfsGateway: 'https://gateway.test/ipfs/',
+    fetchImpl: async () => responseFor(artifact.bytes), resolvePublished: async () => ({ status: PUBLISHED_PROFILE_STATUS.RESOLVED, document }) });
+  const firstVerified = await publisher.verifyCid(document, CID);
+  live = { ...live, publicationContextGeneration: 2 };
+  const secondVerified = await publisher.verifyCid(document, CID);
+  const active = publisher.publish(secondVerified);
+  await assert.rejects(() => publisher.publish(firstVerified), /already being published/);
+  assert.equal(calls, 1); wallet.resolve('0xabc'); await active;
+});
+
+test('wallet rejection and a pre-hash provider failure release the lock for one controlled retry', async () => {
+  for (const failure of [Object.assign(new Error('Rejected'), { code: 4001 }), new Error('Provider unavailable before hash')]) {
+    const document = documentFor(); const artifact = createCanonicalPublication(document); const live = context(); let calls = 0;
+    live.walletClient.writeContract = async () => { calls += 1; if (calls === 1) throw failure; return '0xretry'; };
+    const publisher = createProfileDocumentPublisher({ getContext: () => live, ipfsGateway: 'https://gateway.test/ipfs/',
+      fetchImpl: async () => responseFor(artifact.bytes), resolvePublished: async () => ({ status: PUBLISHED_PROFILE_STATUS.RESOLVED, document }) });
+    const verified = await publisher.verifyCid(document, CID);
+    await assert.rejects(() => publisher.publish(verified));
+    const result = await publisher.publish(verified);
+    assert.equal(result.transactionHash, '0xretry'); assert.equal(calls, 2);
+    if (failure.code === 4001) assert.equal(describePublicationError(failure), 'Wallet request rejected by the user');
+  }
+});
+
+test('receipt and resolver retry after a hash never submit another wallet request', async () => {
+  const document = documentFor(); const artifact = createCanonicalPublication(document); const live = context();
+  let writes = 0; let receipts = 0; let reads = 0;
+  live.walletClient.writeContract = async () => { writes += 1; return '0xsubmitted'; };
+  live.publicClient.waitForTransactionReceipt = async () => { receipts += 1; if (receipts === 1) throw new Error('receipt timeout'); return { status: 'success' }; };
+  const publisher = createProfileDocumentPublisher({ getContext: () => live, ipfsGateway: 'https://gateway.test/ipfs/',
+    fetchImpl: async () => responseFor(artifact.bytes), resolvePublished: async () => {
+      reads += 1; if (reads === 1) throw new Error('resolver unavailable');
+      return { status: PUBLISHED_PROFILE_STATUS.RESOLVED, document };
+    } });
+  const verified = await publisher.verifyCid(document, CID);
+  await assert.rejects(() => publisher.publish(verified), /receipt timeout/);
+  await assert.rejects(() => publisher.publish(verified), /resolver unavailable/);
+  const result = await publisher.publish(verified);
+  assert.equal(result.transactionHash, '0xsubmitted'); assert.equal(writes, 1); assert.equal(receipts, 2); assert.equal(reads, 2);
+});
+
+test('every publication identity binding invalidates a verified artifact before submission', async () => {
+  const cases = [
+    ['draft', (live) => ({ ...live, draftFingerprint: `${live.draftFingerprint}:edit`, draftGeneration: live.draftGeneration + 1, snapshotStale: true })],
+    ['snapshot rebuild', (live) => ({ ...live, snapshotGeneration: live.snapshotGeneration + 1 })],
+    ['snapshot replacement', (live) => ({ ...live, snapshotArtifactHash: `0x${'0'.repeat(64)}`, snapshotGeneration: live.snapshotGeneration + 1 })],
+    ['CID edit and edit back', (live) => ({ ...live, cidGeneration: live.cidGeneration + 2 })],
+    ['account', (live) => ({ ...live, walletClient: { ...live.walletClient, account: '0x4444444444444444444444444444444444444444' }, publicationContextGeneration: live.publicationContextGeneration + 1 })],
+    ['chain', (live) => ({ ...live, chainId: '0x1', publicationContextGeneration: live.publicationContextGeneration + 1 })],
+    ['provider/client generation', (live) => ({ ...live, provider: {}, walletClient: { ...live.walletClient }, publicClient: { ...live.publicClient }, publicationContextGeneration: live.publicationContextGeneration + 1 })],
+    ['host', (live) => ({ ...live, hostProfileAddress: PROFILE_B, publicationContextGeneration: live.publicationContextGeneration + 1 })],
+    ['workspace', (live) => ({ ...live, workspaceProfileAddress: PROFILE_B })],
+    ['viewed profile', (live) => ({ ...live, viewedProfileAddress: PROFILE_B })],
+    ['logout', (live) => ({ ...live, isWalletConnected: false, publicationContextGeneration: live.publicationContextGeneration + 1 })],
+    ['owner authority', (live) => ({ ...live, ownerAuthoringEnabled: false, isHostProfileOwner: false, publicationContextGeneration: live.publicationContextGeneration + 1 })]
+  ];
+  for (const [name, mutate] of cases) {
+    const document = documentFor(); const artifact = createCanonicalPublication(document); let live = context(); let writes = 0;
+    live.walletClient.writeContract = async () => { writes += 1; return '0xforbidden'; };
+    const publisher = createProfileDocumentPublisher({ getContext: () => live, ipfsGateway: 'https://gateway.test/ipfs/', fetchImpl: async () => responseFor(artifact.bytes) });
+    const verified = await publisher.verifyCid(document, CID); live = mutate(live);
+    assert.equal(publisher.isFresh(verified), false, name);
+    await assert.rejects(() => publisher.publish(verified), /changed|required|mainnet|match/);
+    assert.equal(writes, 0, name);
+  }
+});
+
+test('a draft change after provider invocation confirms only the frozen submitted artifact', async () => {
+  const document = documentFor(); const artifact = createCanonicalPublication(document); let live = context(); let writes = 0;
+  const wallet = deferred();
+  live.walletClient.writeContract = () => { writes += 1; return wallet.promise; };
+  const publisher = createProfileDocumentPublisher({ getContext: () => live, ipfsGateway: 'https://gateway.test/ipfs/',
+    fetchImpl: async () => responseFor(artifact.bytes), resolvePublished: async () => ({ status: PUBLISHED_PROFILE_STATUS.RESOLVED, document }) });
+  const verified = await publisher.verifyCid(document, CID); const pending = publisher.publish(verified);
+  live = { ...live, draftFingerprint: `${live.draftFingerprint}:newer`, draftGeneration: 2, snapshotStale: true };
+  wallet.resolve('0xold-artifact'); const result = await pending;
+  assert.equal(writes, 1); assert.equal(result.transactionHash, '0xold-artifact');
+  assert.equal(canonicalSerializeProfileDocument(result.result.document), artifact.text);
+  assert.equal(publisher.isFresh(verified), false);
 });
 
 test('provider and LSP6 failures are decoded accurately', () => {

@@ -1,7 +1,7 @@
 import { profileDocumentContentFingerprint } from '../domain/profileDocumentSerialization.js';
 
-export function createProfileDocumentState(snapshot = null) { return { snapshot, snapshotDraftFingerprint: null, imported: null, preview: null, previewSource: null, error: null }; }
-export function setSnapshot(state, snapshot, draftFingerprint) { return { ...state, snapshot: structuredClone(snapshot), snapshotDraftFingerprint: draftFingerprint, error: null }; }
+export function createProfileDocumentState(snapshot = null) { return { snapshot, snapshotDraftFingerprint: null, snapshotGeneration: 0, imported: null, preview: null, previewSource: null, error: null }; }
+export function setSnapshot(state, snapshot, draftFingerprint) { return { ...state, snapshot: structuredClone(snapshot), snapshotDraftFingerprint: draftFingerprint, snapshotGeneration: (state.snapshotGeneration || 0) + 1, error: null }; }
 export function setImportedDocument(state, imported) { return { ...state, imported: structuredClone(imported), error: null }; }
 export function enterDocumentPreview(state, source) {
   const document = source === 'imported' ? state.imported : state.snapshot;

@@ -1,12 +1,12 @@
 import { encodeDataSourceWithHash } from '@erc725/erc725.js';
 import { keccak256 } from 'viem';
 import { normalizeProfileAddress } from '../../library/config.js';
-import { canonicalSerializeProfileDocument, createProfileDocumentPublicationFilename } from './profileDocumentSerialization.js';
+import { canonicalSerializeProfileDocument, createProfileDocumentPublicationFilename, profileDocumentContentFingerprint } from './profileDocumentSerialization.js';
 
 export const PROFILE_DOCUMENT_PUBLICATION_STATUS = Object.freeze({
   READY: 'READY', VERIFYING_CID: 'VERIFYING_CID', CID_VERIFIED: 'CID_VERIFIED',
   AWAITING_WALLET: 'AWAITING_WALLET', CONFIRMING_TRANSACTION: 'CONFIRMING_TRANSACTION',
-  VERIFYING_PUBLICATION: 'VERIFYING_PUBLICATION', PUBLISHED: 'PUBLISHED', ERROR: 'ERROR'
+  VERIFYING_PUBLICATION: 'VERIFYING_PUBLICATION', PUBLISHED: 'PUBLISHED', STALE: 'STALE', ERROR: 'ERROR'
 });
 
 const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -85,6 +85,14 @@ export function createCanonicalPublication(snapshot) {
   const text = canonicalSerializeProfileDocument(document);
   const bytes = new TextEncoder().encode(text);
   return Object.freeze({ document, text, bytes, hash: keccak256(bytes), filename: createProfileDocumentPublicationFilename(document) });
+}
+
+export function canonicalPublicationHash(snapshot) {
+  return keccak256(new TextEncoder().encode(canonicalSerializeProfileDocument(snapshot)));
+}
+
+export function publicationContentFingerprint(document) {
+  return keccak256(new TextEncoder().encode(profileDocumentContentFingerprint(document)));
 }
 
 export function encodeProfileDocumentVerifiableUri(ipfsUri, hash) {

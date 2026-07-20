@@ -56,6 +56,7 @@ export const useWalletStore = create((set, get) => ({
   loggedInUserUPAddress: null,
   isWalletConnected: false,
   isHostProfileOwner: false,
+  publicationContextGeneration: 0,
   initializationError: null,
   
   // Profile Metadata State Variables
@@ -78,7 +79,7 @@ export const useWalletStore = create((set, get) => ({
       try {
         globalProviderInstance = createClientUPProvider();
         console.log("✅ [UP Wallet] Singleton provider instance created successfully:", globalProviderInstance);
-        set({ provider: globalProviderInstance });
+        set((state) => ({ provider: globalProviderInstance, publicationContextGeneration: state.publicationContextGeneration + 1 }));
       } catch (error) {
         console.error("❌ [UP Wallet] Client provider generation failed:", error);
         isInitializing = false;
@@ -164,7 +165,7 @@ export const useWalletStore = create((set, get) => ({
   },
 
   _handleAccountsChanged: (rawAccounts) => {
-    set({ accounts: (rawAccounts || []).map((address) => getAddress(address)) });
+    set((state) => ({ accounts: (rawAccounts || []).map((address) => getAddress(address)), publicationContextGeneration: state.publicationContextGeneration + 1 }));
     get()._recreateClients();
     return get()._updateConnectionStatus();
   },
@@ -172,15 +173,15 @@ export const useWalletStore = create((set, get) => ({
   _handleChainChanged: (rawChainId) => {
     const normalized = normalizeChainId(rawChainId);
     const isValid = Boolean(normalized && VIEM_CHAINS[normalized]);
-    set({ chainId: isValid ? normalized : null,
-      ...(isValid ? {} : { accounts: [], contextAccounts: [] }) });
+    set((state) => ({ chainId: isValid ? normalized : null, publicationContextGeneration: state.publicationContextGeneration + 1,
+      ...(isValid ? {} : { accounts: [], contextAccounts: [] }) }));
     if (!isValid) console.warn("⚠️ [UP Wallet] Context is connected to unsupported chain:", rawChainId);
     get()._recreateClients();
     return get()._updateConnectionStatus();
   },
 
   _handleContextAccountsChanged: (rawContext) => {
-    set({ contextAccounts: (rawContext || []).map((address) => getAddress(address)) });
+    set((state) => ({ contextAccounts: (rawContext || []).map((address) => getAddress(address)), publicationContextGeneration: state.publicationContextGeneration + 1 }));
     return get()._updateConnectionStatus();
   },
 
@@ -192,7 +193,7 @@ export const useWalletStore = create((set, get) => ({
     }
     const cleaned = getAddress(address);
     console.log("🛠️ [UP Wallet Override] Manually assigning profile address:", cleaned);
-    set({ hostProfileAddress: cleaned });
+    set((state) => ({ hostProfileAddress: cleaned, publicationContextGeneration: state.publicationContextGeneration + 1 }));
     get()._recreateClients();
     get()._checkPermissions();
     get().fetchProfileMetadata();
@@ -337,15 +338,16 @@ export const useWalletStore = create((set, get) => ({
 
     metadataRequestGeneration += 1;
     permissionRequestGeneration += 1;
-    set({
+    set((state) => ({
       isWalletConnected: isConnected,
       hostProfileAddress,
       isHostProfileOwner: false,
       loggedInUserUPAddress: null,
       profileMetadata: null,
       isProfileLoading: false,
-      lastFetchedAddress: null
-    });
+      lastFetchedAddress: null,
+      publicationContextGeneration: state.publicationContextGeneration + 1
+    }));
 
     await get()._checkPermissions();
     await get().fetchProfileMetadata(); // Initiate profile metadata updates
@@ -400,10 +402,11 @@ export const useWalletStore = create((set, get) => ({
     }
 
     if (requestIsCurrent()) {
-      set({
+      set((state) => ({
         isHostProfileOwner: isOwner,
-        loggedInUserUPAddress: isOwner ? hostProfileAddress : null
-      });
+        loggedInUserUPAddress: isOwner ? hostProfileAddress : null,
+        publicationContextGeneration: state.publicationContextGeneration + 1
+      }));
     }
   }
 }));
@@ -414,7 +417,7 @@ export function resetWalletStoreForTests() {
   useWalletStore.setState({
     provider: null, walletClient: null, publicClient: null, chainId: null,
     accounts: [], contextAccounts: [], hostProfileAddress: null, loggedInUserUPAddress: null,
-    isWalletConnected: false, isHostProfileOwner: false, initializationError: null,
+    isWalletConnected: false, isHostProfileOwner: false, publicationContextGeneration: 0, initializationError: null,
     profileMetadata: null, isProfileLoading: false, lastFetchedAddress: null
   });
 }

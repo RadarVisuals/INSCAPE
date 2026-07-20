@@ -16,6 +16,7 @@ import { buildProfileDocumentV3 } from '../profileDocument/domain/profileDocumen
 import { assertValidProfileDocument } from '../profileDocument/domain/profileDocumentValidation.js';
 import { createProfileDocumentRestorePlan } from '../profileDocument/domain/profileDocumentRestore.js';
 import { profileDocumentContentFingerprint } from '../profileDocument/domain/profileDocumentSerialization.js';
+import { canonicalPublicationHash, publicationContentFingerprint } from '../profileDocument/domain/profileDocumentPublication.js';
 import { loadProfileSnapshot, profilePresentationKey, saveProfileSnapshot } from '../profileDocument/storage/profileDocumentStorage.js';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { getPublicTheme } from './themeTokens.js';
@@ -257,6 +258,7 @@ export default function ModuleGridShell({
     [profileIdentity, visitorWalletConnected]
   );
   const snapshot = useProfileDocumentStore((state) => state.snapshot);
+  const snapshotGeneration = useProfileDocumentStore((state) => state.snapshotGeneration);
   const importedDocument = useProfileDocumentStore((state) => state.imported);
   const previewDocument = useProfileDocumentStore((state) => state.preview);
   const installSnapshot = useProfileDocumentStore((state) => state.installSnapshot);
@@ -364,14 +366,25 @@ export default function ModuleGridShell({
     signalSettings, profileIdentity, modulePositions: positions, systemPresentation, createdAt: 0, exportedAt: 0
   }), [activeActorId, environment, libraryAssets, positions, profileIdentity, signalSettings, stageId, systemPresentation, workspace]);
   const draftFingerprint = useMemo(() => profileDocumentContentFingerprint(draftDocument), [draftDocument]);
+  const draftGenerationRef = useRef({ fingerprint: draftFingerprint, generation: 0 });
+  if (draftGenerationRef.current.fingerprint !== draftFingerprint) {
+    draftGenerationRef.current = { fingerprint: draftFingerprint, generation: draftGenerationRef.current.generation + 1 };
+  }
   const snapshotStale = Boolean(snapshot && useProfileDocumentStore.getState().snapshotDraftFingerprint !== draftFingerprint);
   const getPublicationContext = useCallback(() => {
     const wallet = getWalletPublicationContext?.() || {};
+    const documentState = useProfileDocumentStore.getState();
+    const liveSnapshot = documentState.snapshot;
     const liveWorkspaceAddress = useLibraryStore.getState().workspace.profileAddress;
     const host = wallet.hostProfileAddress?.toLowerCase(); const workspaceAddress = liveWorkspaceAddress?.toLowerCase();
     return { ...wallet, workspaceProfileAddress: liveWorkspaceAddress,
+      viewedProfileAddress, snapshotGeneration: documentState.snapshotGeneration,
+      snapshotArtifactHash: liveSnapshot ? canonicalPublicationHash(liveSnapshot) : null,
+      snapshotContentFingerprint: liveSnapshot ? publicationContentFingerprint(liveSnapshot) : null,
+      draftFingerprint: publicationContentFingerprint(draftDocument), draftGeneration: draftGenerationRef.current.generation,
+      snapshotStale: Boolean(liveSnapshot && documentState.snapshotDraftFingerprint !== draftFingerprint),
       ownerAuthoringEnabled: Boolean(wallet.isHostProfileOwner && host && host === workspaceAddress && host === viewedProfileAddress?.toLowerCase()) };
-  }, [getWalletPublicationContext, viewedProfileAddress]);
+  }, [draftDocument, draftFingerprint, getWalletPublicationContext, snapshotGeneration, viewedProfileAddress]);
 
   useEffect(() => {
     if (snapshot) return;
