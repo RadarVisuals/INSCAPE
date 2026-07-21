@@ -115,13 +115,17 @@ test('authored window geometry is projected through the ephemeral visitor camera
   assert.deepEqual(documentFixture.spaces[0].windowGeometry, { column: -3, row: 2, columnSpan: 13, rowSpan: 9 });
 });
 
-test('published component exposes launcher/artwork activation and structural mouse/touch pointer handling', () => {
+test('published component exposes rack/artwork activation and structural mouse/touch pointer handling', () => {
   const source = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
+  const rackSource = readFileSync(resolve(here, 'PublishedInventoryRack.jsx'), 'utf8');
   const cameraSource = readFileSync(resolve(here, '../../public/HomeWorldSurface.jsx'), 'utf8');
-  assert.match(source, /onClick=\{\(\) => toggleSpace\(item\.space\)\}/);
+  assert.match(source, /projectPublishedInventoryRack\(document\)/);
+  assert.match(source, /<PublishedRackBoard/);
+  assert.doesNotMatch(source, /data-launcher-id|toggleSpace/);
+  assert.match(rackSource, /onClick=\{\(\) => !arranging && toggle\(id\)\}/);
   assert.match(source, /setOpenArtworkId\(object\.id\)/);
   assert.match(source, /event\.pointerType === 'mouse'/);
-  assert.match(source, /setPointerCapture/);
+  assert.match(rackSource, /setPointerCapture/);
   assert.match(cameraSource, /event\.pointerType !== 'mouse'/);
   assert.match(cameraSource, /touchPointersRef/);
   assert.match(cameraSource, /ArrowLeft/);
@@ -132,16 +136,13 @@ test('published component exposes launcher/artwork activation and structural mou
   assert.match(cameraSource, /event\.target\.closest\?\.\('button,\.spatial-index'\)/);
 });
 
-test('published controls are distinct, keyboard labelled, and cannot initiate window dragging', () => {
-  const worldSource = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
-  const windowSource = readFileSync(resolve(here, 'PublishedProfileDocumentSpaceWindow.jsx'), 'utf8');
-  assert.match(windowSource, /published-space-window__controls/);
-  assert.match(windowSource, /minimized \? 'Restore' : 'Minimize'/);
-  assert.match(windowSource, /aria-label=\{`Close \$\{space\.label\}`\}/);
-  assert.equal(windowSource.match(/onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/g)?.length, 2);
-  assert.match(worldSource, /type: entry\.minimized \? 'restore' : 'minimize'/);
-  assert.match(worldSource, /!layout\.geometry\.narrow && !entry\.minimized/);
-  assert.match(worldSource, /if \(layout\.geometry\.narrow/);
+test('published Inventory controls are distinct, keyboard labelled, and ephemeral', () => {
+  const rackSource = readFileSync(resolve(here, 'PublishedInventoryRack.jsx'), 'utf8');
+  assert.match(rackSource, /aria-label="Collapse all inventory modules"/);
+  assert.match(rackSource, /Finish arranging inventory modules/);
+  assert.match(rackSource, /aria-keyshortcuts=\{arranging \? 'Alt\+ArrowUp Alt\+ArrowDown'/);
+  assert.match(rackSource, /aria-label=\{`\$\{open \? 'Collapse' : 'Expand'\} \$\{module\.label\}`\}/);
+  assert.doesNotMatch(rackSource, /localStorage|sessionStorage|useLibraryStore|writeContract/);
 });
 
 test('published artwork fails closed for editing while the verified owner keeps the real edit callback', () => {

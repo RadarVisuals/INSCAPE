@@ -24,9 +24,19 @@ function createDocument(address, suffix) {
     assets: index === 0 ? [{ stableAssetId: `42:${address}:0x10`, network: 'lukso-mainnet', chainId: 42, tokenStandard: 'LSP8', contractAddress: address, tokenId: '0x10', cachedName: `${suffix} Space Artwork`, cachedPreviewUrl: `ipfs://${CID}/space-${suffix}.png` }] : []
   }));
   return {
-    version: 4,
-    profile: { address, cachedIdentity: { name: `${suffix} Visitor Fixture`, avatarUrl: `https://published-images.invalid/avatar-${suffix}.png` } },
-    presentation: { keeperId: 'skull_reaper', stageId: 'void', environment: null },
+    version: 5,
+    documentId: `profile:${address}`,
+    revision: 1,
+    profile: { address, cachedIdentity: {
+      address, name: `${suffix} Visitor Fixture`, avatarUrl: `https://published-images.invalid/avatar-${suffix}.png`,
+      description: `${suffix} public identity statement.`, tags: ['ART', 'MOTION'],
+      links: [{ label: 'PUBLIC ARCHIVE', url: 'https://published-links.invalid/archive' }]
+    } },
+    presentation: { keeperId: 'skull_reaper', stageId: 'void', environment: null, racks: [{ id: 'identity', order: 0, visible: true, modules: [
+      { id: 'profile', order: 0, visible: true, startOpen: false },
+      { id: 'bio', order: 1, visible: true, startOpen: false },
+      { id: 'links-tags', order: 2, visible: true, startOpen: false }
+    ] }] },
     spaces,
     canvasObjects: Array.from({ length: 3 }, (_, index) => ({
       id: `art:${suffix}:${index}`,
@@ -56,22 +66,7 @@ function Fixture() {
   const document = useMemo(() => {
     const next = structuredClone(DOCUMENTS[address]);
     if (artworkUrl !== null) next.canvasObjects[0].asset.cachedPreviewUrl = artworkUrl;
-    if (new URLSearchParams(location.search).get('rack') === 'identity') {
-      next.version = 5;
-      next.documentId = `profile:${address}`;
-      next.revision = 1;
-      Object.assign(next.profile.cachedIdentity, {
-        address,
-        description: `${address === PROFILE_A ? 'Alpha' : 'Beta'} public identity statement.`,
-        tags: ['ART', 'MOTION'],
-        links: [{ label: 'PUBLIC ARCHIVE', url: 'https://published-links.invalid/archive' }]
-      });
-      next.presentation.racks = [{ id: 'identity', order: 0, visible: true, modules: [
-        { id: 'profile', order: 0, visible: true, startOpen: true },
-        { id: 'bio', order: 1, visible: true, startOpen: false },
-        { id: 'links-tags', order: 2, visible: true, startOpen: false }
-      ] }];
-    }
+    if (new URLSearchParams(location.search).get('rack') === 'identity') next.presentation.racks[0].modules[0].startOpen = false;
     return next;
   }, [address, artworkUrl]);
   useEffect(() => {

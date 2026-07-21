@@ -45,6 +45,14 @@ function ExternalIcon() {
   return <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4h6v6M12 4 4 12" /></svg>;
 }
 
+function CollapseAllIcon() {
+  return <svg className="published-rack-master-control__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5h10M5 2l3 3 3-3M3 11h10M5 14l3-3 3 3" /></svg>;
+}
+
+function ArrangeIcon() {
+  return <svg className="published-rack-master-control__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2v12M2 5l3-3 3 3M11 14V2M8 11l3 3 3-3" /></svg>;
+}
+
 function BioBody({ rack }) {
   return <div className="published-identity-rack__bio">
     <span aria-hidden="true">“</span>
@@ -134,8 +142,8 @@ export default function PublishedIdentityRack({ rack }) {
         {avatarUrl ? <PublishedImage src={avatarUrl} alt="" fallback={<span>UP</span>} /> : <span>UP</span>}
       </div>
       <div className="published-identity-rack__brand"><strong>IDENTITY</strong><small>PUBLIC PROFILE</small></div>
-      <button type="button" onClick={() => { setOpenIds(new Set()); setProfileShowsAddress(false); }}>COLLAPSE ALL</button>
-      <button type="button" aria-pressed={arranging} onClick={() => setArranging((value) => !value)}>{arranging ? 'DONE' : 'ARRANGE'}</button>
+      <button className="published-rack-master-control" type="button" aria-label="Collapse all identity modules" onClick={() => { setOpenIds(new Set()); setProfileShowsAddress(false); }}><CollapseAllIcon /><span>COLLAPSE ALL</span></button>
+      <button className="published-rack-master-control" type="button" aria-label={arranging ? 'Finish arranging identity modules' : 'Arrange identity modules'} aria-pressed={arranging} onClick={() => setArranging((value) => !value)}><ArrangeIcon /><span>{arranging ? 'DONE' : 'ARRANGE'}</span></button>
     </header>
     <div className="published-identity-rack__list" ref={listRef}>
       {order.map((id, index) => {

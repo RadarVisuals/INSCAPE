@@ -57,6 +57,9 @@ test('production rack stays detached, ephemeral, accessible, and responsive', ()
   assert.doesNotMatch(component, /useLibraryStore|useWalletStore|localStorage|sessionStorage|indexedDB|fetch\(|writeContract/);
   assert.match(css, /width:clamp\(480px,31vw,720px\)/);
   assert.match(css, /@media\(max-width:719px\)/);
-  assert.match(css, /@media\(max-width:420px\)/);
+  assert.match(css, /grid-template-columns:34px minmax\(0,1fr\) 34px 34px/);
+  assert.match(css, /published-rack-master-control__icon\{display:block/);
+  assert.match(component, /aria-label="Collapse all identity modules"/);
+  assert.match(component, /Finish arranging identity modules/);
   assert.match(css, /@media\(prefers-reduced-motion:reduce\)/);
 });

@@ -188,12 +188,12 @@ async function accessibilityNode(selector) {
   return { role: target?.role?.value, name: target?.name?.value, description: target?.description?.value };
 }
 async function touch(type, points) { await pageCdp.send('Input.dispatchTouchEvent', { type, touchPoints: points.map((entry, index) => ({ x: entry.x, y: entry.y, id: entry.id ?? index + 1, radiusX: 2, radiusY: 2, force: 1 })) }); }
-function styleRect(selector) { return `(()=>{const n=document.querySelector(${JSON.stringify(selector)});return n&&['left','top','width','height','zIndex'].reduce((o,k)=>(o[k]=parseFloat(n.style[k])||0,o),{})})()`; }
-async function closeFixtureWindows() {
-  await evaluate(`[...document.querySelectorAll('[aria-label^="Close Alpha Archive"],[aria-label^="Close Beta Archive"]')].forEach((button) => button.click())`);
-  await waitFor(`document.querySelectorAll('.published-home-world__window').length === 0`, 'fixture windows close');
+async function collapseFixtureRacks() {
+  await waitFor(`!!document.querySelector('[aria-label="Public inventory rack"] [data-rack-module]')`, 'published rack board');
+  await evaluate(`[...document.querySelectorAll('[aria-label^="Collapse all "]')].forEach((button) => button.click())`);
+  await waitFor(`[...document.querySelectorAll('.published-rack-module')].every((module) => !module.hasAttribute('data-open'))`, 'fixture rack modules collapse');
   await settlePlaywrightAnimationFrames(page);
-  assert.equal(await evaluate(`document.querySelectorAll('.published-home-world__window').length`), 0, 'fixture windows remained closed after focus restoration settled');
+  assert.equal(await evaluate(`document.querySelectorAll('.published-rack-module[data-open]').length`), 0, 'fixture rack modules remained collapsed after settlement');
 }
 
 describe('published visitor world', { concurrency: false }, () => {
@@ -332,7 +332,7 @@ test('v5 Identity Rack replaces duplicate identity chrome and stays ephemeral, k
   await viewport(1280, 720); await navigate(profileA, { identityRack: true });
   await waitFor(`!!document.querySelector('.published-identity-rack')`, 'published Identity Rack');
   assert.equal(await evaluate(`!!document.querySelector('.published-home-world__header,.published-home-world__identity')`), false);
-  assert.deepEqual(await evaluate(`[...document.querySelectorAll('[data-rack-module]')].map((node)=>node.dataset.rackModule)`), ['profile', 'bio', 'links-tags']);
+  assert.deepEqual(await evaluate(`[...document.querySelectorAll('.published-identity-rack [data-rack-module]')].map((node)=>node.dataset.rackModule)`), ['profile', 'bio', 'links-tags']);
   assert.equal(await evaluate(`document.querySelector('[data-rack-module="profile"] .published-rack-module__name').textContent`), 'Alpha Visitor Fixture');
   assert.equal(await evaluate(`!!document.querySelector('[data-rack-module="profile"] .published-rack-module__body,[aria-label="Collapse PROFILE"],[aria-label="Expand PROFILE"]')`), false);
   await click('[data-rack-module="profile"] .published-rack-module__name');
@@ -345,7 +345,7 @@ test('v5 Identity Rack replaces duplicate identity chrome and stays ephemeral, k
   await click('.published-identity-rack__master button:last-child');
   await evaluate(`document.querySelector('[data-rack-module="bio"] .published-rack-module__name').focus()`);
   await pressKey('ArrowDown', 1);
-  assert.deepEqual(await evaluate(`[...document.querySelectorAll('[data-rack-module]')].map((node)=>node.dataset.rackModule)`), ['profile', 'links-tags', 'bio']);
+  assert.deepEqual(await evaluate(`[...document.querySelectorAll('.published-identity-rack [data-rack-module]')].map((node)=>node.dataset.rackModule)`), ['profile', 'links-tags', 'bio']);
   await viewport(390, 844, true);
   const bounds = await evaluate(`(()=>{const rack=document.querySelector('.published-identity-rack').getBoundingClientRect();return {left:rack.left,right:rack.right,top:rack.top,bottom:rack.bottom,viewport:innerHeight}})()`);
   assert.ok(bounds.left >= 0 && bounds.right <= 390 && bounds.top >= 0 && bounds.bottom <= bounds.viewport);
@@ -378,91 +378,48 @@ test('desktop drag, cancellation, lost capture, and wheel obey browser pointer s
   await waitFor(`document.querySelector('.home-world-surface__world').style.transform !== ${JSON.stringify(held)}`, 'wheel camera pan');
 });
 
-test('launcher open, minimize, restore, toggle-close, and explicit close controls stay distinct', async () => {
-  await viewport(1280, 720); await navigate(); await closeFixtureWindows();
-  const launcher = '[data-launcher-id="space:Alpha:6"]';
-  await click(launcher); await waitFor(`document.querySelector(${JSON.stringify(launcher)}).dataset.windowState === 'open'`, 'launcher opens');
-  await evaluate(`document.querySelector('[aria-label="Minimize Alpha Archive 7"]').click()`); await waitFor(`document.querySelector(${JSON.stringify(launcher)}).dataset.windowState === 'minimized'`, 'window minimizes');
-  await evaluate(`document.querySelector('[aria-label="Restore Alpha Archive 7"]').click()`); await waitFor(`document.querySelector(${JSON.stringify(launcher)}).dataset.windowState === 'open'`, 'window restores');
-  await click(launcher); await waitFor(`document.querySelector(${JSON.stringify(launcher)}).dataset.windowState === 'closed'`, 'launcher toggles closed');
-  await click(launcher); await evaluate(`document.querySelector('[aria-label="Close Alpha Archive 7"]').click()`);
-  await waitFor(`document.querySelector(${JSON.stringify(launcher)}).dataset.windowState === 'closed'`, 'distinct close control closes');
+test('published spaces render as inline Inventory modules that push following rails downward', async () => {
+  await viewport(1280, 720); await navigate(); await collapseFixtureRacks();
+  const module = '[aria-label="Public inventory rack"] [data-rack-module="space:Alpha:0"]';
+  const next = '[aria-label="Public inventory rack"] [data-rack-module="space:Alpha:1"]';
+  const before = await evaluate(`document.querySelector(${JSON.stringify(next)}).getBoundingClientRect().top`);
+  await click(`${module} .published-rack-module__name`);
+  await waitFor(`document.querySelector(${JSON.stringify(module)}).hasAttribute('data-open')`, 'Inventory module opens inline');
+  const after = await evaluate(`document.querySelector(${JSON.stringify(next)}).getBoundingClientRect().top`);
+  assert.ok(after > before, `opening a module did not push the next rail downward: ${before} -> ${after}`);
+  assert.equal(await evaluate(`document.querySelectorAll('[data-launcher-id],.published-home-world__window,[data-resize-control]').length`), 0, 'legacy launchers and floating windows are absent');
+  await click(`[aria-label="Collapse Alpha Archive 1"]`);
+  await waitFor(`!document.querySelector(${JSON.stringify(module)}).hasAttribute('data-open')`, 'Inventory module collapses');
 });
 
-test('window controls expose semantic actions and preserve focus across minimize, restore, and close', async () => {
-  await viewport(1280, 720); await navigate(); await closeFixtureWindows();
-  const launcher = '[data-launcher-id="space:Alpha:6"]';
-  const launcherLocator = page.locator(launcher);
-  await launcherLocator.focus();
-  const beforeKey = await launcherLocator.evaluate((node) => ({
-    active: document.activeElement === node,
-    activeLabel: document.activeElement?.getAttribute('aria-label'),
-    activeLauncherId: document.activeElement?.dataset?.launcherId,
-    state: node.dataset.windowState
-  }));
-  assert.equal(beforeKey.state, 'closed', `Archive 7 launcher was not closed before Enter: ${JSON.stringify(beforeKey)}`);
-  assert.equal(beforeKey.active, true, `Archive 7 launcher lost focus before Enter: ${JSON.stringify(beforeKey)}`);
-  await launcherLocator.press('Enter');
-  await waitFor(`document.querySelector(${JSON.stringify(launcher)}).dataset.windowState === 'open'`, 'keyboard-opened launcher state');
-  await waitFor(`!!document.querySelector('[aria-label="Minimize Alpha Archive 7"]')`, 'keyboard-opened window');
-  assert.deepEqual(await accessibilityNode('[aria-label="Minimize Alpha Archive 7"]'), { role: 'button', name: 'Minimize Alpha Archive 7', description: undefined });
-  await evaluate(`document.querySelector('[data-resize-control]').focus();document.querySelector('[aria-label="Minimize Alpha Archive 7"]').click()`);
-  await waitFor(`document.activeElement?.getAttribute('aria-label') === 'Restore Alpha Archive 7'`, 'visible restore control focus');
-  assert.equal(await evaluate(`!!document.querySelector('[aria-label="Published space: Alpha Archive 7"] [data-resize-control]')`), false, 'minimized content is not focusable');
-  await pressKey('Enter');
-  await waitFor(`!!document.querySelector('[aria-label="Published space: Alpha Archive 7"] [data-resize-control]')`, 'restored window content');
-  await evaluate(`document.querySelector('[aria-label="Close Alpha Archive 7"]').click()`);
-  await waitFor(`document.activeElement === document.querySelector(${JSON.stringify(launcher)})`, 'launcher focus after close');
-  assert.equal(await evaluate(`document.querySelector(${JSON.stringify(launcher)}).dataset.windowState`), 'closed');
-});
-
-test('visitor windows focus, drag, resize, and snap on desktop', async () => {
-  await viewport(1280, 720); await navigate();
-  const first = '[aria-label="Published space: Alpha Archive 1"]'; const second = '[aria-label="Published space: Alpha Archive 2"]';
-  const firstBefore = await evaluate(styleRect(first));
-  await evaluate(`document.querySelector(${JSON.stringify(first)}).dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:31,pointerType:'mouse',button:0}))`);
-  const z = await evaluate(`({first:parseInt(document.querySelector(${JSON.stringify(first)}).style.zIndex),second:parseInt(document.querySelector(${JSON.stringify(second)}).style.zIndex)})`);
-  assert.ok(z.first > z.second, `focused window is topmost: ${JSON.stringify(z)}`);
-  const handle = await reachablePoint(`${first} .published-space-window__drag-handle`, first);
-  await mouse('mousePressed', handle.x, handle.y); await mouse('mouseMoved', handle.x + 87, handle.y + 51, { buttons: 1 }); await mouse('mouseReleased', handle.x + 87, handle.y + 51);
-  await waitFor(`${styleRect(first)}.left !== ${firstBefore.left} || ${styleRect(first)}.top !== ${firstBefore.top}`, 'window drag result');
-  const moved = await evaluate(styleRect(first));
-  assert.equal(moved.width, firstBefore.width); assert.equal(moved.height, firstBefore.height); assert.equal(moved.left % 40, 0); assert.equal(moved.top % 40, 0);
-  const resizeHandle = await reachablePoint(`${first} [data-resize-control]`, first);
-  await mouse('mousePressed', resizeHandle.x, resizeHandle.y); await mouse('mouseMoved', resizeHandle.x + 83, resizeHandle.y + 77, { buttons: 1 }); await mouse('mouseReleased', resizeHandle.x + 83, resizeHandle.y + 77);
-  await waitFor(`${styleRect(first)}.width !== ${moved.width}`, 'window resize result');
-  const resized = await evaluate(styleRect(first));
-  assert.equal(resized.left, moved.left); assert.equal(resized.top, moved.top); assert.equal(resized.width % 40, 0); assert.equal(resized.height % 40, 0);
-});
-
-test('desktop resize button has a browser accessibility name and arrow-key grid behavior without world panning', async () => {
-  await viewport(1280, 720); await navigate();
-  const windowSelector = '[aria-label="Published space: Alpha Archive 1"]';
-  const resize = `${windowSelector} [data-resize-control]`;
-  const ax = await accessibilityNode(resize);
-  assert.deepEqual(ax, { role: 'button', name: 'Resize Alpha Archive 1 window', description: 'USE THE ARROW KEYS TO RESIZE IN 40 PIXEL STEPS.' });
-  await evaluate(`document.querySelector(${JSON.stringify(resize)}).focus()`);
-  const before = await evaluate(styleRect(windowSelector));
-  const cameraBefore = await evaluate(`document.querySelector('.home-world-surface__world').style.transform`);
-  await pressKey('ArrowRight'); await pressKey('ArrowDown');
-  const grown = await evaluate(styleRect(windowSelector));
-  assert.equal(grown.width - before.width, 40); assert.equal(grown.height - before.height, 40);
-  assert.equal(await evaluate(`document.querySelector('.home-world-surface__world').style.transform`), cameraBefore, 'resize arrows did not pan the world');
-  for (let index = 0; index < 30; index += 1) { await pressKey('ArrowLeft'); await pressKey('ArrowUp'); }
-  const minimum = await evaluate(styleRect(windowSelector));
-  assert.equal(minimum.width, 320); assert.equal(minimum.height, 260);
-  for (let index = 0; index < 40; index += 1) { await pressKey('ArrowRight'); await pressKey('ArrowDown'); }
-  const maximum = await evaluate(styleRect(windowSelector));
-  assert.ok(maximum.left >= 24 && maximum.top >= 64 && maximum.left + maximum.width <= 1256 && maximum.top + maximum.height <= 696, `keyboard resize escaped viewport: ${JSON.stringify(maximum)}`);
+test('Inventory module controls are keyboard operable and Arrange order is ephemeral', async () => {
+  await viewport(1280, 720); await navigate(); await collapseFixtureRacks();
+  const module = '[aria-label="Public inventory rack"] [data-rack-module="space:Alpha:6"]';
+  const name = `${module} .published-rack-module__name`;
+  const nameLocator = page.locator(name);
+  await nameLocator.focus();
+  await nameLocator.press('Enter');
+  await waitFor(`document.querySelector(${JSON.stringify(module)}).hasAttribute('data-open')`, 'keyboard-opened Inventory module');
+  assert.deepEqual(await accessibilityNode(`[aria-label="Collapse Alpha Archive 7"]`), { role: 'button', name: 'Collapse Alpha Archive 7', description: undefined });
+  await click('[aria-label="Arrange inventory modules"]');
+  await nameLocator.focus(); await pressKey('ArrowUp', 1);
+  const arranged = await evaluate(`[...document.querySelectorAll('[aria-label="Public inventory rack"] [data-rack-module]')].map((node)=>node.dataset.rackModule)`);
+  assert.equal(arranged.at(-2), 'space:Alpha:6');
+  await click('[aria-label="Finish arranging inventory modules"]');
+  await navigate();
+  await waitFor(`!!document.querySelector('[aria-label="Public inventory rack"] [data-rack-module="space:Alpha:6"]')`, 'reset Inventory rack');
+  const reset = await evaluate(`[...document.querySelectorAll('[aria-label="Public inventory rack"] [data-rack-module]')].map((node)=>node.dataset.rackModule)`);
+  assert.equal(reset.at(-1), 'space:Alpha:6', 'route navigation resets ephemeral rack order');
+  assert.equal(await evaluate(`document.querySelector('[data-rack-module="space:Alpha:6"]').hasAttribute('data-open')`), false, 'route navigation resets ephemeral open state');
 });
 
 test('artwork preview is read-only and right-click exposes no authoring commands', async () => {
-  await viewport(1280, 720); await navigate(); await closeFixtureWindows();
+  await viewport(1280, 720); await navigate(); await collapseFixtureRacks();
   assert.equal(await evaluate(`document.querySelectorAll('.canvas-artwork__edit,[aria-label^="Edit artwork"]').length`), 0);
   await click('[aria-label="Open artwork: Alpha Artwork 1"]'); await waitFor(`!!document.querySelector('[aria-label="Artwork preview: Alpha Artwork 1"]')`, 'read-only artwork preview');
   assert.equal(await evaluate(`document.querySelector('[aria-label="Artwork preview: Alpha Artwork 1"]').textContent.includes('Edit')`), false);
   await click('[aria-label="Close artwork preview"]'); await waitFor(`!document.querySelector('[aria-label^="Artwork preview:"]')`, 'artwork preview closes');
-  const target = await point('[data-launcher-id="space:Alpha:0"]');
+  const target = await point('[aria-label="Public inventory rack"] [data-rack-module="space:Alpha:0"]');
   await mouse('mousePressed', target.x, target.y, { button: 'right', buttons: 2 }); await mouse('mouseReleased', target.x, target.y, { button: 'right', buttons: 0 });
   assert.equal(await evaluate(`document.querySelectorAll('[role="menu"],.context-menu').length`), 0);
   assert.equal(await evaluate(`[...document.querySelectorAll('button')].some((button) => /edit|author|private|start window/i.test(button.textContent+' '+button.getAttribute('aria-label')))`), false);
@@ -470,8 +427,8 @@ test('artwork preview is read-only and right-click exposes no authoring commands
 
 test('published HTTPS and IPFS-projected images render with no referrer', async () => {
   await viewport(1280, 720, false); await navigate();
-  await waitFor(`document.querySelector('.published-home-world__identity img')?.complete && document.querySelector('[data-canvas-object-id="art:Alpha:0"] img')?.complete`, 'published images');
-  const policy = await evaluate(`[...document.querySelectorAll('.published-home-world img')].map((image)=>image.referrerPolicy)`);
+  await waitFor(`document.querySelector('.published-identity-rack__mark img')?.complete && document.querySelector('[data-rack-module="space:Alpha:0"] .asset-grid img')?.complete && document.querySelector('[data-canvas-object-id="art:Alpha:0"] img')?.complete`, 'published images');
+  const policy = await evaluate(`[...document.querySelectorAll('.published-home-world img[src^="https://"]')].map((image)=>image.referrerPolicy)`);
   assert.ok(policy.length >= 3); assert.ok(policy.every((value) => value === 'no-referrer'));
   assert.ok(imageRequests.some((url) => url.includes('/ipfs/') && url.includes('space-Alpha.png')), 'IPFS space image used the configured HTTPS gateway');
 });
@@ -491,7 +448,7 @@ test('rejected HTTP artwork never requests while broken HTTPS falls back and rec
 });
 
 test('failed artwork modal stays focus-contained and shows the controlled fallback', async () => {
-  await viewport(1280, 720, false); await navigate(); await closeFixtureWindows();
+  await viewport(1280, 720, false); await navigate(); await collapseFixtureRacks();
   await evaluate(`window.__fixture.setArtworkUrl('https://published-images.invalid/broken-modal.png')`);
   await waitFor(`!!document.querySelector('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]')`, 'failed artwork frame');
   await click('[aria-label="Open artwork: Alpha Artwork 1"]');
@@ -517,7 +474,7 @@ test('an actual CSP response header blocks a disallowed image and the UI falls b
 });
 
 test('artwork modal traps keyboard focus, isolates background, and restores exact keyboard and pointer triggers', async () => {
-  await viewport(1280, 720); await navigate(); await closeFixtureWindows();
+  await viewport(1280, 720); await navigate(); await collapseFixtureRacks();
   const trigger = '[aria-label="Open artwork: Alpha Artwork 1"]';
   await evaluate(`document.querySelector(${JSON.stringify(trigger)}).focus()`); await pressKey('Space');
   const dialog = '[aria-label="Artwork preview: Alpha Artwork 1"]';
@@ -528,7 +485,7 @@ test('artwork modal traps keyboard focus, isolates background, and restores exac
   assert.equal(await evaluate(`document.activeElement?.getAttribute('aria-label')`), 'Close artwork preview');
   await pressKey('Tab', 8);
   assert.equal(await evaluate(`document.activeElement?.getAttribute('aria-label')`), 'Close artwork preview');
-  await evaluate(`document.querySelector('[data-launcher-id="space:Alpha:6"]').focus()`);
+  await evaluate(`document.querySelector('[data-rack-module="space:Alpha:6"] .published-rack-module__name').focus()`);
   assert.equal(await evaluate(`document.activeElement?.getAttribute('aria-label')`), 'Close artwork preview', 'background focus was redirected into modal');
   await pressKey('Escape');
   await waitFor(`document.activeElement === document.querySelector(${JSON.stringify(trigger)})`, 'Escape trigger focus restoration');
@@ -541,30 +498,34 @@ test('artwork modal traps keyboard focus, isolates background, and restores exac
 });
 
 test('390x844 touch tap moves once while a vertical swipe remains native scrolling', async () => {
-  await viewport(390, 844, true); await navigate(); await closeFixtureWindows(); await evaluate(`window.__fixture.resetMoves()`);
-  const spatial = await evaluate(`(()=>{const s=document.querySelector('.published-home-world__spatial').getBoundingClientRect();const first=document.querySelector('[data-launcher-id]').getBoundingClientRect();return {x:s.left+2,y:first.bottom+4,centerX:s.left+s.width/2,swipeY:Math.min(700,s.bottom-24)}})()`);
+  await viewport(390, 844, true); await navigate(); await collapseFixtureRacks(); await evaluate(`window.__fixture.resetMoves()`);
+  const spatial = await evaluate(`(()=>{const s=document.querySelector('.published-home-world__spatial').getBoundingClientRect();return {x:s.right-3,y:s.bottom-24}})()`);
   await evaluate(`(()=>{const n=document.querySelector('.published-home-world__spatial');const init={bubbles:true,pointerId:21,pointerType:'touch',isPrimary:true,clientX:${spatial.x},clientY:${spatial.y}};n.dispatchEvent(new PointerEvent('pointerdown',init));n.dispatchEvent(new PointerEvent('pointerup',init))})()`);
   await waitFor(`window.__fixture.moves.length === 1`, 'narrow Keeper tap');
-  const count = await evaluate(`window.__fixture.moves.length`); const scrollBefore = await evaluate(`document.querySelector('.published-home-world__spatial').scrollTop`);
-  const swipe = await evaluate(`(()=>{const candidates=[...document.querySelectorAll('[data-launcher-id]')].map(n=>{const r=n.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}});return candidates.find(p=>p.y>350&&p.y<650)||candidates.find(p=>p.y>180&&p.y<700)})()`);
+  await evaluate(`document.querySelector('[aria-label="Expand Alpha Archive 1"]').click();document.querySelector('[aria-label="Expand Alpha Archive 2"]').click()`);
+  const count = await evaluate(`window.__fixture.moves.length`);
+  const swipe = await evaluate(`(()=>{const board=document.querySelector('.published-rack-board');board.scrollTop=0;const n=document.querySelector('[data-rack-module="space:Alpha:0"] .published-rack-module__body');const r=n.getBoundingClientRect();return {x:r.left+r.width/2,y:Math.max(r.top+12,Math.min(r.bottom-12,700))}})()`);
+  const scrollBefore = await evaluate(`document.querySelector('.published-rack-board').scrollTop`);
   await touch('touchStart', [{ x: swipe.x, y: swipe.y, id: 22 }]);
   for (let step = 1; step <= 8; step += 1) { await touch('touchMove', [{ x: swipe.x + 1, y: swipe.y - step * 28, id: 22 }]); await delay(20); }
   await touch('touchEnd', []);
   await delay(100);
-  const scrolled = await evaluate(`(()=>{const s=document.querySelector('.published-home-world__spatial');const n=document.elementFromPoint(${swipe.x},${swipe.y});return {top:s.scrollTop,scrollHeight:s.scrollHeight,clientHeight:s.clientHeight,target:n?.className,touchAction:n&&getComputedStyle(n).touchAction,overflow:getComputedStyle(s).overflowY}})()`);
+  const scrolled = await evaluate(`(()=>{const s=document.querySelector('.published-rack-board');const n=document.elementFromPoint(${swipe.x},${swipe.y});return {top:s.scrollTop,scrollHeight:s.scrollHeight,clientHeight:s.clientHeight,target:n?.className,touchAction:n&&getComputedStyle(n).touchAction,overflow:getComputedStyle(s).overflowY}})()`);
   assert.ok(scrolled.top > scrollBefore, `native vertical scroll did not advance: ${JSON.stringify(scrolled)}`);
   assert.equal(await evaluate(`window.__fixture.moves.length`), count, 'vertical swipe did not move Keeper');
 });
 
-test('320px narrow launchers stack and windows remain reachable', async () => {
-  await viewport(320, 844, true); await navigate(); await closeFixtureWindows();
-  const layout = await evaluate(`(()=>{const s=document.querySelector('.published-home-world__spatial');const launchers=[...s.querySelectorAll('[data-launcher-id]')].map(n=>{const r=n.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right}});return {launchers,clientHeight:s.clientHeight,scrollHeight:s.scrollHeight}})()`);
-  assert.equal(layout.launchers.length, 7); assert.ok(layout.launchers.every((entry, index) => index === 0 || entry.top >= layout.launchers[index - 1].bottom));
-  assert.ok(layout.launchers.every((entry) => entry.left >= 12 && entry.right <= 308)); assert.ok(layout.scrollHeight > layout.clientHeight, 'narrow content remains scroll-reachable');
-  await evaluate(`document.querySelector('[data-launcher-id="space:Alpha:6"]').scrollIntoView({block:'center'});document.querySelector('[data-launcher-id="space:Alpha:6"]').click()`);
-  await waitFor(`!!document.querySelector('[aria-label="Close Alpha Archive 7"]')`, 'narrow window control');
-  const closeRect = await point('[aria-label="Close Alpha Archive 7"]'); assert.ok(closeRect.x >= 0 && closeRect.x <= 320 && closeRect.y >= 0 && closeRect.y <= 844);
-  assert.equal(await evaluate(`document.querySelectorAll('[data-resize-control]').length`), 0, '320px layout exposes no resize control');
+test('320px racks stack, keep compact header controls, and remain scroll-reachable', async () => {
+  await viewport(320, 844, true); await navigate(); await collapseFixtureRacks();
+  const layout = await evaluate(`(()=>{const board=document.querySelector('.published-rack-board');const racks=[...board.querySelectorAll('.published-identity-rack,.published-inventory-rack')].map(n=>{const r=n.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right}});const masters=[...board.querySelectorAll('.published-identity-rack__master,.published-inventory-rack__master')].map(n=>n.getBoundingClientRect().height);return {racks,masters,clientHeight:board.clientHeight,scrollHeight:board.scrollHeight,controls:[...board.querySelectorAll('.published-rack-master-control')].map(n=>({width:n.getBoundingClientRect().width,text:n.textContent.trim()}))}})()`);
+  assert.equal(layout.racks.length, 2); assert.ok(layout.racks[1].top >= layout.racks[0].bottom);
+  assert.ok(layout.racks.every((entry) => entry.left >= 10 && entry.right <= 310));
+  assert.ok(layout.masters.every((height) => height === 60), `mobile rack masters diverged: ${layout.masters}`);
+  assert.ok(layout.controls.every((control) => control.width === 34), `mobile rack controls are not compact icons: ${JSON.stringify(layout.controls)}`);
+  await evaluate(`document.querySelector('[data-rack-module="space:Alpha:6"] .published-rack-module__name').scrollIntoView({block:'center'})`);
+  await click('[data-rack-module="space:Alpha:6"] .published-rack-module__name');
+  await waitFor(`document.querySelector('[data-rack-module="space:Alpha:6"]').hasAttribute('data-open')`, 'narrow Inventory module opens');
+  assert.equal(await evaluate(`document.querySelectorAll('[data-resize-control]').length`), 0, '320px layout exposes no legacy resize control');
 });
 
 test('390px narrow accessibility tree exposes no misleading resize control', async () => {
@@ -575,23 +536,23 @@ test('390px narrow accessibility tree exposes no misleading resize control', asy
 });
 
 test('profile transition and route reload discard ephemeral visitor state', async () => {
-  await viewport(1280, 720, false); await navigate(); await closeFixtureWindows(); await click('[aria-label="Open artwork: Alpha Artwork 1"]'); await evaluate(`document.querySelector('[data-launcher-id="space:Alpha:6"]').click()`);
+  await viewport(1280, 720, false); await navigate(); await collapseFixtureRacks(); await click('[aria-label="Open artwork: Alpha Artwork 1"]'); await evaluate(`document.querySelector('[data-rack-module="space:Alpha:6"] .published-rack-module__name').click()`);
   await evaluate(`window.__fixture.visit(${JSON.stringify(profileB)})`); await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileB)}`, 'profile transition');
-  await waitFor(`!!document.querySelector('[data-launcher-id="space:Beta:0"]')`, 'Beta document');
-  assert.equal(await evaluate(`document.querySelectorAll('[data-launcher-id^="space:Alpha:"]').length`), 0); assert.equal(await evaluate(`!!document.querySelector('[aria-label^="Artwork preview:"]')`), false);
-  assert.equal(await evaluate(`document.querySelectorAll('.published-home-world__window').length`), 2, 'only Beta start-open windows remain');
-  await evaluate(`document.querySelector('[data-launcher-id="space:Beta:6"]').click()`); const priorLoad = await evaluate(`performance.timeOrigin`); await page.reload({ waitUntil: 'domcontentloaded', timeout: 10_000 });
+  await waitFor(`!!document.querySelector('[data-rack-module="space:Beta:0"]')`, 'Beta document');
+  assert.equal(await evaluate(`document.querySelectorAll('[data-rack-module^="space:Alpha:"]').length`), 0); assert.equal(await evaluate(`!!document.querySelector('[aria-label^="Artwork preview:"]')`), false);
+  assert.equal(await evaluate(`document.querySelectorAll('[aria-label="Public inventory rack"] [data-open]').length`), 2, 'only Beta start-open modules remain');
+  await evaluate(`document.querySelector('[data-rack-module="space:Beta:6"] .published-rack-module__name').click()`); const priorLoad = await evaluate(`performance.timeOrigin`); await page.reload({ waitUntil: 'domcontentloaded', timeout: 10_000 });
   await waitFor(`performance.timeOrigin !== ${priorLoad}`, 'route reload navigation');
-  await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileB)}`, 'reloaded Beta route'); await waitFor(`document.querySelectorAll('.published-home-world__window').length === 2`, 'reload default window state');
-  assert.equal(await evaluate(`document.querySelector('[data-launcher-id="space:Beta:6"]').dataset.windowState`), 'closed');
+  await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileB)}`, 'reloaded Beta route'); await waitFor(`document.querySelectorAll('[aria-label="Public inventory rack"] [data-open]').length === 2`, 'reload default rack state');
+  assert.equal(await evaluate(`document.querySelector('[data-rack-module="space:Beta:6"]').hasAttribute('data-open')`), false);
 });
 
 test('profile transition while artwork modal is open removes isolation and uses the published fallback', async () => {
-  await viewport(1280, 720, false); await navigate(); await closeFixtureWindows();
+  await viewport(1280, 720, false); await navigate(); await collapseFixtureRacks();
   await evaluate(`document.querySelector('[aria-label="Open artwork: Alpha Artwork 1"]').click()`);
   await waitFor(`document.querySelectorAll('[inert]').length >= 3`, 'modal background isolation');
   await evaluate(`window.__fixture.visit(${JSON.stringify(profileB)})`);
-  await waitFor(`!!document.querySelector('[data-launcher-id="space:Beta:0"]') && !document.querySelector('[aria-label^="Artwork preview:"]')`, 'modal route cleanup');
+  await waitFor(`!!document.querySelector('[data-rack-module="space:Beta:0"]') && !document.querySelector('[aria-label^="Artwork preview:"]')`, 'modal route cleanup');
   assert.equal(await evaluate(`document.querySelectorAll('[inert]').length`), 0);
   assert.equal(await evaluate(`document.activeElement?.hasAttribute('data-published-focus-fallback')`), true);
 });
