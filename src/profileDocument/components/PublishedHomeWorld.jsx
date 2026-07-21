@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FramedArtwork from '../../public/FramedArtwork.jsx';
 import PublishedImage from './PublishedImage.jsx';
 import { resolvePublishedAssetUrl } from '../domain/publishedAssetUrl.js';
@@ -20,6 +20,9 @@ import {
   visitorWindowTransition
 } from '../domain/publishedVisitorWorld.js';
 import PublishedProfileDocumentSpaceWindow from './PublishedProfileDocumentSpaceWindow.jsx';
+import { projectPublishedIdentityRack } from '../domain/publishedIdentityRack.js';
+
+const PublishedIdentityRack = lazy(() => import('./PublishedIdentityRack.jsx'));
 
 const THEME = Object.freeze({ '--os-accent': '#e87945', '--module-accent': '#e87945', '--hu-text': '#eeebdf', '--hu-text-muted': '#a9a59c' });
 
@@ -44,6 +47,7 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
   const cached = document.profile.cachedIdentity;
   const avatarUrl = resolvePublishedAssetUrl(cached.avatarUrl);
   const displayName = cached.name || `${document.profile.address.slice(0, 8)}…${document.profile.address.slice(-6)}`;
+  const identityRack = useMemo(() => projectPublishedIdentityRack(document), [document]);
 
   useEffect(() => {
     const resize = () => setViewport(viewportSize());
@@ -177,8 +181,7 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
   const locations = useMemo(() => publishedNavigatorLocations(layout), [layout]);
   const transform = publishedWorldTransform(layout, camera);
   return <main ref={worldRef} className="public-shell published-home-world" data-interface-visible data-preview-mode="visitor" data-published-focus-fallback tabIndex="-1" aria-label="Published profile visitor world" style={THEME} onKeyDownCapture={(event) => { if (event.code === 'Space' && event.target.closest?.('button,a[href],[role="button"]')) event.stopPropagation(); }}>
-    <header className="public-shell__masthead published-home-world__header"><div className="system-hud__identity"><h1>[ <span className="system-hud__brand-accent">PUBLISHED WORLD</span> ]</h1><span className="system-hud__operator">{displayName}</span><span className="system-hud__live"><i aria-hidden="true" />Document v{document.version}</span></div></header>
-    <section className="published-home-world__identity" aria-label="Public profile identity">{avatarUrl ? <PublishedImage src={avatarUrl} alt="" fallback={<span aria-hidden="true">UP</span>} /> : <span aria-hidden="true">UP</span>}<div><strong>{displayName}</strong><small>{document.profile.address}</small></div></section>
+    {identityRack ? <Suspense fallback={null}><PublishedIdentityRack key={`${document.profile.address}:${document.documentId || ''}:${document.revision || ''}`} rack={identityRack} /></Suspense> : <><header className="public-shell__masthead published-home-world__header"><div className="system-hud__identity"><h1>[ <span className="system-hud__brand-accent">PUBLISHED WORLD</span> ]</h1><span className="system-hud__operator">{displayName}</span><span className="system-hud__live"><i aria-hidden="true" />Document v{document.version}</span></div></header><section className="published-home-world__identity" aria-label="Public profile identity">{avatarUrl ? <PublishedImage src={avatarUrl} alt="" fallback={<span aria-hidden="true">UP</span>} /> : <span aria-hidden="true">UP</span>}<div><strong>{displayName}</strong><small>{document.profile.address}</small></div></section></>}
     <HomeWorldSurface camera={camera} geometry={layout.geometry} world={layout.world} locations={locations} gridVisible theme={THEME} visible onCameraChange={setCamera} onMoveKeeper={onMoveKeeper} narrowGestureRef={compactTapRef} />
     <section className="published-home-world__spatial" aria-label="Published Canvas Spaces and artwork" style={{ width: layout.placementGeometry.usableWidth, height: layout.placementGeometry.usableHeight, transform, '--grid-cell-width': `${layout.geometry.cellWidth}px`, '--grid-cell-height': `${layout.geometry.cellHeight}px` }} onPointerDown={beginCompactTap} onPointerMove={moveCompactTap} onPointerUp={finishCompactTap} onPointerCancel={(event) => finishCompactTap(event, true)} onPointerLeave={(event) => { if (event.pointerType === 'mouse') finishCompactTap(event, true); }}>
       {layout.spaces.map((item) => { const entry = windowState.windows[item.id]; const launcherAction = !entry ? 'Open' : entry.minimized ? 'Restore' : 'Close'; return <button ref={(node) => { if (node) launcherRefs.current.set(item.id, node); else launcherRefs.current.delete(item.id); }} className="module-shell module-button module-button--folder" data-entry-state="ready" data-launcher-id={item.id} data-window-state={!entry ? 'closed' : entry.minimized ? 'minimized' : 'open'} data-active={entry ? true : undefined} key={item.id} type="button" style={publishedItemPixelRect(item, layout)} onClick={() => toggleSpace(item.space)} aria-expanded={Boolean(entry && !entry.minimized)} aria-label={`${launcherAction} ${item.space.label}, ${item.space.assets.length} assets`}>

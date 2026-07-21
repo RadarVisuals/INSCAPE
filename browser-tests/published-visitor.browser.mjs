@@ -104,9 +104,9 @@ async function viewport(width, height, touch = false) {
   await waitFor(`innerWidth === ${width} && innerHeight === ${height}`, `${width}x${height} viewport`);
 }
 
-async function navigate(address = profileA) {
+async function navigate(address = profileA, { identityRack = false } = {}) {
   const run = String(++navigationSequence);
-  const fixtureUrl = `${baseUrl}/browser-tests/fixture.html?view=${address}&run=${run}`;
+  const fixtureUrl = `${baseUrl}/browser-tests/fixture.html?view=${address}&run=${run}${identityRack ? '&rack=identity' : ''}`;
   try {
     assert.equal(interceptionInstalled, true, 'Playwright routing must exist before navigation');
     const response = await page.goto(fixtureUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 });
@@ -326,6 +326,34 @@ test('desktop empty-world click moves the Keeper exactly once', async () => {
   await mouse('mousePressed', surface.x, surface.y); await mouse('mouseReleased', surface.x, surface.y);
   await waitFor(`window.__fixture.moves.length === 1`, 'one Keeper move');
   assert.equal(await evaluate(`window.__fixture.moves.length`), 1);
+});
+
+test('v5 Identity Rack replaces duplicate identity chrome and stays ephemeral, keyboard operable, and mobile bounded', async () => {
+  await viewport(1280, 720); await navigate(profileA, { identityRack: true });
+  await waitFor(`!!document.querySelector('.published-identity-rack')`, 'published Identity Rack');
+  assert.equal(await evaluate(`!!document.querySelector('.published-home-world__header,.published-home-world__identity')`), false);
+  assert.deepEqual(await evaluate(`[...document.querySelectorAll('[data-rack-module]')].map((node)=>node.dataset.rackModule)`), ['profile', 'bio', 'links-tags']);
+  assert.equal(await evaluate(`document.querySelector('[data-rack-module="profile"] .published-rack-module__name').textContent`), 'Alpha Visitor Fixture');
+  assert.equal(await evaluate(`!!document.querySelector('[data-rack-module="profile"] .published-rack-module__body,[aria-label="Collapse PROFILE"],[aria-label="Expand PROFILE"]')`), false);
+  await click('[data-rack-module="profile"] .published-rack-module__name');
+  await waitFor(`document.querySelector('[data-rack-module="profile"] .published-rack-module__name').textContent.startsWith('0x111111')`, 'scrambled profile address');
+  await click('[data-rack-module="profile"] .published-rack-module__name');
+  await waitFor(`document.querySelector('[data-rack-module="profile"] .published-rack-module__name').textContent === 'Alpha Visitor Fixture'`, 'scrambled profile name');
+  assert.equal(await evaluate(`document.querySelector('[aria-label="Copy Alpha Visitor Fixture profile address"]')?.tagName`), 'BUTTON');
+  await click('[aria-label="Expand BIO"]');
+  assert.equal(await evaluate(`document.querySelector('[data-rack-module="bio"] .published-rack-module__body').hidden`), false);
+  await click('.published-identity-rack__master button:last-child');
+  await evaluate(`document.querySelector('[data-rack-module="bio"] .published-rack-module__name').focus()`);
+  await pressKey('ArrowDown', 1);
+  assert.deepEqual(await evaluate(`[...document.querySelectorAll('[data-rack-module]')].map((node)=>node.dataset.rackModule)`), ['profile', 'links-tags', 'bio']);
+  await viewport(390, 844, true);
+  const bounds = await evaluate(`(()=>{const rack=document.querySelector('.published-identity-rack').getBoundingClientRect();return {left:rack.left,right:rack.right,top:rack.top,bottom:rack.bottom,viewport:innerHeight}})()`);
+  assert.ok(bounds.left >= 0 && bounds.right <= 390 && bounds.top >= 0 && bounds.bottom <= bounds.viewport);
+  await viewport(320, 844, true);
+  const narrowBounds = await evaluate(`(()=>{const rack=document.querySelector('.published-identity-rack').getBoundingClientRect();return {left:rack.left,right:rack.right,top:rack.top,bottom:rack.bottom,viewport:innerHeight}})()`);
+  assert.ok(narrowBounds.left >= 0 && narrowBounds.right <= 320 && narrowBounds.top >= 0 && narrowBounds.bottom <= narrowBounds.viewport);
+  await viewport(1280, 720, false);
+  await navigate();
 });
 
 test('desktop drag, cancellation, lost capture, and wheel obey browser pointer semantics', async () => {

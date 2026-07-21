@@ -56,6 +56,22 @@ function Fixture() {
   const document = useMemo(() => {
     const next = structuredClone(DOCUMENTS[address]);
     if (artworkUrl !== null) next.canvasObjects[0].asset.cachedPreviewUrl = artworkUrl;
+    if (new URLSearchParams(location.search).get('rack') === 'identity') {
+      next.version = 5;
+      next.documentId = `profile:${address}`;
+      next.revision = 1;
+      Object.assign(next.profile.cachedIdentity, {
+        address,
+        description: `${address === PROFILE_A ? 'Alpha' : 'Beta'} public identity statement.`,
+        tags: ['ART', 'MOTION'],
+        links: [{ label: 'PUBLIC ARCHIVE', url: 'https://published-links.invalid/archive' }]
+      });
+      next.presentation.racks = [{ id: 'identity', order: 0, visible: true, modules: [
+        { id: 'profile', order: 0, visible: true, startOpen: true },
+        { id: 'bio', order: 1, visible: true, startOpen: false },
+        { id: 'links-tags', order: 2, visible: true, startOpen: false }
+      ] }];
+    }
     return next;
   }, [address, artworkUrl]);
   useEffect(() => {
