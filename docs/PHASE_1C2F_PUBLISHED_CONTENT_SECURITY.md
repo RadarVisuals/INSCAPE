@@ -2,7 +2,7 @@
 
 ## Boundary and URL inventory
 
-Version 4 remains the canonical document version. The detached visitor can receive URLs only from `profile.cachedIdentity.avatarUrl` and the `cachedPreviewUrl` on space and canvas-object asset references. A cached preview is projected to card thumbnails, space detail previews, framed artwork, and the artwork modal. There are no document-controlled CSS, background-image, font, iframe, script, RPC, gateway, component, or shader URLs.
+Version 5 is now the canonical document version. The detached visitor can receive media URLs only from `profile.cachedIdentity.avatarUrl` and the `cachedPreviewUrl` on space and canvas-object asset references. Version 5 additionally permits bounded canonical absolute HTTPS links inside the explicitly published `links-tags` Identity Rack module; these are navigation metadata, not media or executable resources. A cached preview is projected to card thumbnails, space detail previews, framed artwork, and the artwork modal. There are no document-controlled CSS, background-image, font, iframe, script, RPC, gateway, component, or shader URLs.
 
 This policy is publication-specific. Owner Library normalization and `resolveContentUrl` continue to support their existing HTTP and explicit fixture-relative behavior. The public document builder omits an owner-local URL that is not publishable and does not mutate the Library record. Canonical serialization, import, CID verification, and detached resolution validate the stricter policy. A rejected value is never treated as a local path or upgraded.
 

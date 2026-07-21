@@ -5,6 +5,8 @@ import { migrateProfileDocument } from './profileDocumentMigration.js';
 import { CANVAS_OBJECT_PRESENTATION_ENUMS, getCanvasObjectDefinition } from '../../library/domain/canvasObjectRegistry.js';
 import { isValidCanvasObjectId } from '../../library/domain/canvasObjects.js';
 import { isValidPublishedAssetUrl } from './publishedAssetUrl.js';
+import { isValidProfileDocumentIdentity } from './profileDocumentIdentity.js';
+import { PROFILE_DOCUMENT_RACK_IDS, PROFILE_DOCUMENT_RACK_MODULE_IDS } from './profileDocumentRacks.js';
 
 const ID = /^[A-Za-z0-9:_-]+$/;
 const SAFE_MODULE_IDS = new Set(['identity', 'signals']);
@@ -18,6 +20,26 @@ const validWindowGeometry = (value) => value === null || (exactKeys(value, ['col
 const ICON_KEYS = new Set(['profile','collection','signals','creations','folder','favorites','search','gallery','external','music']);
 const validAppearance = (value) => value === undefined || (exactKeys(value,['mode','iconKey','showLabel','columnSpan','rowSpan']) && ['label','icon','icon_label'].includes(value?.mode) && ICON_KEYS.has(value?.iconKey) && typeof value?.showLabel === 'boolean' && Number.isInteger(value?.columnSpan) && value.columnSpan >= 1 && value.columnSpan <= 12 && Number.isInteger(value?.rowSpan) && value.rowSpan >= 1 && value.rowSpan <= 8);
 const validUrl = (value) => typeof value === 'string' && value.length <= L.maxUrlLength && isValidPublishedAssetUrl(value);
+const validRacks = (racks) => {
+  if (!Array.isArray(racks) || racks.length > L.maxRacks || racks.length !== PROFILE_DOCUMENT_RACK_IDS.length) return false;
+  const rackIds = new Set(); const rackOrders = new Set();
+  for (const rack of racks) {
+    const knownModules = PROFILE_DOCUMENT_RACK_MODULE_IDS[rack?.id];
+    if (!exactKeys(rack, ['id', 'order', 'visible', 'modules']) || !PROFILE_DOCUMENT_RACK_IDS.includes(rack.id)
+      || rackIds.has(rack.id) || !Number.isInteger(rack.order) || rack.order < 0 || rack.order >= racks.length
+      || rackOrders.has(rack.order) || typeof rack.visible !== 'boolean' || !Array.isArray(rack.modules)
+      || rack.modules.length > L.maxRackModules || rack.modules.length !== knownModules?.length) return false;
+    rackIds.add(rack.id); rackOrders.add(rack.order);
+    const moduleIds = new Set(); const moduleOrders = new Set();
+    for (const module of rack.modules) {
+      if (!exactKeys(module, ['id', 'order', 'visible', 'startOpen']) || !knownModules.includes(module?.id)
+        || moduleIds.has(module.id) || !Number.isInteger(module.order) || module.order < 0 || module.order >= rack.modules.length
+        || moduleOrders.has(module.order) || typeof module.visible !== 'boolean' || typeof module.startOpen !== 'boolean') return false;
+      moduleIds.add(module.id); moduleOrders.add(module.order);
+    }
+  }
+  return true;
+};
 const validAssetReference = (asset) => {
   if (!exactKeys(asset, ['stableAssetId', 'network', 'chainId', 'tokenStandard', 'contractAddress', 'tokenId', 'cachedName', 'cachedPreviewUrl'])) return false;
   const token = asset?.tokenId === null ? null : normalizeTokenId(asset?.tokenId);
@@ -49,11 +71,12 @@ export function validateProfileDocument(input, { rawSize } = {}) {
   const address = normalizeProfileAddress(input?.profile?.address);
   if (!exactKeys(input?.profile, ['address', 'cachedIdentity']) || !address) fail('profile', 'invalid_profile', 'Invalid Universal Profile address');
   const identity = input?.profile?.cachedIdentity;
-  if (!exactKeys(identity, ['address', 'name', 'avatarUrl']) || normalizeProfileAddress(identity?.address) !== address || (identity?.name !== undefined && !validText(identity.name, L.maxNameLength)) || (identity?.avatarUrl !== undefined && !validUrl(identity.avatarUrl))) fail('profile.cachedIdentity', 'invalid_identity', 'Invalid cached public identity fallback');
   const presentation = input?.presentation;
-  if (!exactKeys(presentation, ['keeperId', 'stageId', 'environment', 'systemModules', 'signals']) || !KNOWN_KEEPER_IDS.includes(presentation?.keeperId) || !KNOWN_STAGE_IDS.includes(presentation?.stageId)) fail('presentation', 'invalid_presentation', 'Unknown Keeper, stage, or presentation fields');
+  if (!exactKeys(presentation, ['keeperId', 'stageId', 'environment', 'systemModules', 'racks', 'signals']) || !KNOWN_KEEPER_IDS.includes(presentation?.keeperId) || !KNOWN_STAGE_IDS.includes(presentation?.stageId)) fail('presentation', 'invalid_presentation', 'Unknown Keeper, stage, or presentation fields');
   if (!exactKeys(presentation?.environment, ['type', 'shaderId']) || !KNOWN_ENVIRONMENT_TYPES.includes(presentation?.environment?.type) || !KNOWN_SHADER_ENVIRONMENT_IDS.includes(presentation?.environment?.shaderId)) fail('presentation.environment', 'invalid_environment', 'Unknown environment type or controlled shader ID');
   if (!Array.isArray(presentation?.systemModules) || presentation.systemModules.length > 8 || new Set((presentation?.systemModules || []).map((module) => module.id)).size !== (presentation?.systemModules || []).length || presentation.systemModules.some((module) => !exactKeys(module, ['id', 'visible', 'placement', 'startOpen', 'windowGeometry']) || !SAFE_MODULE_IDS.has(module.id) || typeof module.visible !== 'boolean' || typeof module.startOpen !== 'boolean' || !validPosition(module.placement) || !validWindowGeometry(module.windowGeometry))) fail('presentation.systemModules', 'invalid_modules', 'Invalid public system module projection');
+  if (!validRacks(presentation?.racks)) fail('presentation.racks', 'invalid_racks', 'Invalid public rack projection');
+  if (!isValidProfileDocumentIdentity(identity, address, presentation?.racks)) fail('profile.cachedIdentity', 'invalid_identity', 'Invalid cached public identity fallback');
   if (!exactKeys(presentation?.signals, ['notifications', 'speech', 'visualEffects', 'audio']) || Object.values(presentation?.signals || {}).some((value) => typeof value !== 'boolean')) fail('presentation.signals', 'invalid_settings', 'Invalid visitor-facing Signals settings');
   if (!exactKeys(input?.metadata, [])) fail('metadata', 'unexpected_fields', 'Profile metadata must be empty');
   if (!Array.isArray(input?.spaces)) fail('spaces', 'invalid_spaces', 'Spaces must be an array');
@@ -109,6 +132,6 @@ export function parseProfileDocumentJson(raw) {
   const size = new TextEncoder().encode(raw).length;
   if (size > L.maxJsonBytes) throw new ProfileDocumentValidationError([{ path: '$', code: 'document_too_large', message: `Document exceeds ${L.maxJsonBytes} bytes` }]);
   let input; try { input = JSON.parse(raw); } catch { throw new ProfileDocumentValidationError([{ path: '$', code: 'invalid_json', message: 'Malformed JSON' }]); }
-  if ([1, 2, 3].includes(input?.version)) return migrateProfileDocument(input);
+  if ([1, 2, 3, 4].includes(input?.version)) return migrateProfileDocument(input);
   return assertValidProfileDocument(input, { rawSize: size });
 }

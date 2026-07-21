@@ -48,7 +48,7 @@ test('canonical publication download is the exact serializer output and never th
   const document = documentFor(); const artifact = createCanonicalPublication(document);
   assert.deepEqual(artifact.bytes, new TextEncoder().encode(canonicalSerializeProfileDocument(document)));
   assert.notEqual(artifact.text, formatProfileDocumentJson(document));
-  assert.equal(artifact.filename, 'os-underneath-published-profile-profile-v4-publication.json');
+  assert.equal(artifact.filename, 'os-underneath-published-profile-profile-v5-publication.json');
   assert.equal(Object.isFrozen(artifact.document), true); assert.equal(Object.isFrozen(artifact.document.profile), true);
 });
 

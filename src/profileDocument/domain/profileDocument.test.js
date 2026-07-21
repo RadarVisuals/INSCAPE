@@ -42,7 +42,7 @@ function build(overrides = {}) {
     documentId: 'profile:test', revision: 3, createdAt: 1000, exportedAt: 2000, ...overrides });
 }
 
-test('builder emits a valid allowlisted deterministic v4 public document', () => {
+test('builder emits a valid allowlisted deterministic v5 public document', () => {
   const first = build(); const second = build();
   assert.equal(validateProfileDocument(first).valid, true);
   assert.deepEqual(first, second);
@@ -50,7 +50,12 @@ test('builder emits a valid allowlisted deterministic v4 public document', () =>
   assert.deepEqual(first.spaces.map((space) => space.label), ['Public A', 'Public B']);
   assert.equal(first.spaces[0].assets[0].stableAssetId, assetA.id);
   assert.equal(first.spaces[1].assets[0].stableAssetId, assetA.id, 'multi-space membership is preserved');
-  assert.equal(first.version, 4); assert.equal(first.canvasObjects.length, 1); assert.equal(first.canvasObjects[0].asset.stableAssetId, assetA.id);
+  assert.equal(first.version, 5); assert.equal(first.canvasObjects.length, 1); assert.equal(first.canvasObjects[0].asset.stableAssetId, assetA.id);
+  assert.deepEqual(first.presentation.racks, [{ id: 'identity', order: 0, visible: true, modules: [
+    { id: 'profile', order: 0, visible: true, startOpen: false },
+    { id: 'bio', order: 1, visible: false, startOpen: false },
+    { id: 'links-tags', order: 2, visible: false, startOpen: false }
+  ] }]);
 });
 
 test('empty authored profiles are valid', () => {
@@ -98,7 +103,7 @@ test('formatted export/import round trip preserves semantic and canonical conten
 test('strict validation rejects malformed JSON, wrong type, future versions, addresses, duplicates, placement, fields and URLs', () => {
   assert.throws(() => parseProfileDocumentJson('{no'), ProfileDocumentValidationError);
   const cases = [
-    { documentType: 'OTHER' }, { version: 5 }, { profile: { address: 'bad', cachedIdentity: { address: 'bad' } } },
+    { documentType: 'OTHER' }, { version: 6 }, { profile: { address: 'bad', cachedIdentity: { address: 'bad' } } },
     { spaces: [build().spaces[0], build().spaces[0]] },
     { spaces: [{ ...build().spaces[0], placement: { column: -256, row: 0 } }] },
     { spaces: [{ ...build().spaces[0], privateState: true }] },
@@ -142,19 +147,112 @@ test('validation enforces space, asset, total-size and canonical-reference limit
   assert.equal(validateProfileDocument({ ...base, spaces: [{ ...space, assets: [{ ...space.assets[0], stableAssetId: `42:${CONTRACT_B}:0x01` }] }] }).valid, false);
 });
 
-test('migration defaults v1 and v2 documents to the illustrated environment', () => {
+test('migration defaults v1 and v2 documents to the illustrated environment and the closed v5 identity rack', () => {
   assert.deepEqual(migrateProfileDocument(build()), build());
   const legacy = structuredClone(build()); legacy.version = 1;
   delete legacy.presentation.environment;
   legacy.presentation.systemModules = legacy.presentation.systemModules.map(({ startOpen, windowGeometry, ...module }) => module);
   legacy.spaces = legacy.spaces.map(({ startOpen, windowGeometry, ...space }) => space);
   const migrated = migrateProfileDocument(legacy);
-  assert.equal(migrated.version, 4); assert.equal(migrated.spaces[0].startOpen, false); assert.equal(migrated.spaces[0].windowGeometry, null); assert.deepEqual(migrated.canvasObjects, []);
+  assert.equal(migrated.version, 5); assert.equal(migrated.spaces[0].startOpen, false); assert.equal(migrated.spaces[0].windowGeometry, null); assert.deepEqual(migrated.canvasObjects, []);
   assert.deepEqual(migrated.presentation.environment, { type: 'illustrated', shaderId: 'neural-field' });
+  assert.deepEqual(migrated.presentation.racks[0].modules.map(({ id, visible }) => ({ id, visible })), [
+    { id: 'profile', visible: true }, { id: 'bio', visible: false }, { id: 'links-tags', visible: false }
+  ]);
   const v2 = structuredClone(build()); v2.version = 2; delete v2.presentation.environment;
   assert.deepEqual(migrateProfileDocument(v2).presentation.environment, { type: 'illustrated', shaderId: 'neural-field' });
   assert.throws(() => migrateProfileDocument({ documentType: 'OTHER', version: 1 }), ProfileDocumentValidationError);
   assert.throws(() => migrateProfileDocument({ ...build(), version: 9 }), ProfileDocumentValidationError);
+});
+
+test('identity rack publication is privacy-aware and opt-in per public module', () => {
+  const identity = {
+    name: 'VXCTXR', avatarUrl: 'https://example.test/avatar.png',
+    description: 'A signal beneath the visible world.', tags: ['ARTIST', 'MUSIC'],
+    links: [{ title: 'Universal Profile', url: 'https://universalprofile.cloud/0x123' }]
+  };
+  const privateByDefault = build({ profileIdentity: identity });
+  assert.deepEqual(privateByDefault.profile.cachedIdentity, {
+    address: PROFILE.toLowerCase(), name: 'VXCTXR', avatarUrl: 'https://example.test/avatar.png'
+  });
+  assert.equal(canonicalSerializeProfileDocument(privateByDefault).includes(identity.description), false);
+  assert.equal(canonicalSerializeProfileDocument(privateByDefault).includes('Universal Profile'), false);
+
+  const publicIdentity = build({ profileIdentity: identity, rackPresentation: { identity: {
+    id: 'identity', visible: true, modules: [
+      { id: 'links-tags', order: 0, visible: true, startOpen: false },
+      { id: 'profile', order: 1, visible: true, startOpen: true },
+      { id: 'bio', order: 2, visible: true, startOpen: false }
+    ]
+  } } });
+  assert.equal(validateProfileDocument(publicIdentity).valid, true);
+  assert.deepEqual(publicIdentity.presentation.racks[0].modules.map(({ id }) => id), ['links-tags', 'profile', 'bio']);
+  assert.deepEqual(publicIdentity.profile.cachedIdentity, {
+    address: PROFILE.toLowerCase(), name: 'VXCTXR', avatarUrl: 'https://example.test/avatar.png',
+    description: identity.description, tags: ['ARTIST', 'MUSIC'],
+    links: [{ label: 'Universal Profile', url: 'https://universalprofile.cloud/0x123' }]
+  });
+});
+
+test('identity rack validation is closed and binds cached fields to visible modules', () => {
+  const source = build();
+  for (const mutate of [
+    (document) => { document.presentation.racks[0].id = 'inventory'; },
+    (document) => { document.presentation.racks[0].modules[0].id = 'unknown'; },
+    (document) => { document.presentation.racks[0].modules[1].order = 0; },
+    (document) => { document.presentation.racks[0].modules.pop(); },
+    (document) => { document.profile.cachedIdentity.description = 'Hidden biography'; },
+    (document) => { document.profile.cachedIdentity.tags = ['HIDDEN']; },
+    (document) => { document.profile.cachedIdentity.links = [{ label: 'Unsafe', url: 'http://example.test/' }]; }
+  ]) {
+    const changed = structuredClone(source); mutate(changed);
+    assert.equal(validateProfileDocument(changed).valid, false);
+  }
+});
+
+test('identity projection bounds public metadata and omits unsafe or duplicate links', () => {
+  const document = build({ rackPresentation: { identity: { id: 'identity', visible: true, modules: [
+    { id: 'profile', order: 0, visible: true, startOpen: false },
+    { id: 'bio', order: 1, visible: true, startOpen: false },
+    { id: 'links-tags', order: 2, visible: true, startOpen: false }
+  ] } }, profileIdentity: {
+    name: 'VXCTXR', description: `  ${'memory '.repeat(100)}  `,
+    tags: [' ART ', 'ART', 'MUSIC'],
+    links: [
+      { label: 'Secure', url: 'https://example.test/path' },
+      { label: 'Duplicate', url: 'https://example.test/path' },
+      { label: 'Insecure', url: 'http://example.test/' },
+      { label: 'Credentials', url: 'https://user:pass@example.test/' },
+      { label: 'Script', url: 'javascript:alert(1)' }
+    ]
+  } });
+  assert.equal(validateProfileDocument(document).valid, true);
+  assert.equal(document.profile.cachedIdentity.description.length, PROFILE_DOCUMENT_LIMITS.maxIdentityDescriptionLength);
+  assert.deepEqual(document.profile.cachedIdentity.tags, ['ART', 'MUSIC']);
+  assert.deepEqual(document.profile.cachedIdentity.links, [{ label: 'Secure', url: 'https://example.test/path' }]);
+});
+
+test('v4 migration is deterministic and never fabricates unpublished identity modules', () => {
+  const source = build();
+  const legacy = structuredClone(source);
+  legacy.version = 4;
+  delete legacy.presentation.racks;
+  legacy.presentation.systemModules.find((module) => module.id === 'identity').startOpen = true;
+  const first = migrateProfileDocument(legacy);
+  const second = migrateProfileDocument(legacy);
+  assert.deepEqual(first, second);
+  assert.deepEqual(parseProfileDocumentJson(JSON.stringify(legacy)), first);
+  assert.equal(first.version, 5);
+  assert.equal(first.presentation.racks[0].modules.find((module) => module.id === 'profile').startOpen, true);
+  assert.equal(first.presentation.racks[0].modules.find((module) => module.id === 'bio').visible, false);
+  assert.equal(first.presentation.racks[0].modules.find((module) => module.id === 'links-tags').visible, false);
+  assert.deepEqual(Object.keys(first.profile.cachedIdentity).sort(), ['address', 'avatarUrl', 'name']);
+
+  const hiddenLegacy = structuredClone(legacy);
+  hiddenLegacy.presentation.systemModules.find((module) => module.id === 'identity').visible = false;
+  const hidden = migrateProfileDocument(hiddenLegacy);
+  assert.equal(hidden.presentation.racks[0].visible, false);
+  assert.deepEqual(hidden.profile.cachedIdentity, { address: PROFILE.toLowerCase() });
 });
 
 test('profile documents round-trip a controlled shader environment and reject unknown shader IDs', () => {
