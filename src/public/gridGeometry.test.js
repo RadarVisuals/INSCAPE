@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { clientPointerToGridLocal, decodeGridRectRecord, encodeGridRectRecord, gridRectToPixelRect, launcherGeometryAvailable, movementCandidateFromPointer, normalizeGridRect, resizeCandidateFromPointer } from './gridGeometry.js';
+import { clientPointerToGridLocal, decodeGridRectRecord, directionalResizeCandidateFromPointer, encodeGridRectRecord, gridRectToPixelRect, launcherGeometryAvailable, movementCandidateFromPointer, normalizeGridRect, resizeCandidateFromPointer } from './gridGeometry.js';
 
 const geometry={columns:24,rows:13,cellWidth:50,cellHeight:50};
 const gridClientRect={left:100,top:60};
@@ -30,6 +30,17 @@ test('resize preserves top-left, corner offset, and symmetric boundary snapping'
   assert.deepEqual(grown,{column:2,row:3,columnSpan:6,rowSpan:3});
   const shrunk=resizeCandidateFromPointer({...input,pointer:{x:100+(2+2)*50-2+9,y:60+(3+1)*50-2+11}});
   assert.deepEqual(shrunk,{column:2,row:3,columnSpan:2,rowSpan:1});
+});
+
+test('directional resize keeps the opposite artwork corner anchored',()=>{
+  const originGeometry={column:2,row:3,columnSpan:4,rowSpan:3};
+  const geometry={columns:20,rows:20,minColumn:-5,minRow:-5,cellWidth:50,cellHeight:40};
+  const northWest=directionalResizeCandidateFromPointer({pointer:{x:50,y:40},startPointer:{x:100,y:80},originGeometry,geometry,minimumSpan:{columns:2,rows:2},edges:{horizontal:'start',vertical:'start'}});
+  assert.deepEqual(northWest,{column:1,row:2,columnSpan:5,rowSpan:4});
+  const clamped=directionalResizeCandidateFromPointer({pointer:{x:500,y:400},startPointer:{x:100,y:80},originGeometry,geometry,minimumSpan:{columns:2,rows:2},edges:{horizontal:'start',vertical:'start'}});
+  assert.deepEqual(clamped,{column:4,row:4,columnSpan:2,rowSpan:2});
+  const maximum=directionalResizeCandidateFromPointer({pointer:{x:-1000,y:-1000},startPointer:{x:100,y:80},originGeometry,geometry,minimumSpan:{columns:2,rows:2},maximumSpan:{columns:12,rows:12},edges:{horizontal:'start',vertical:'start'}});
+  assert.deepEqual(maximum,{column:-5,row:-5,columnSpan:12,rowSpan:12});
 });
 
 test('launcher collision rejects overlap while windows need no collision helper',()=>{

@@ -39,6 +39,36 @@ export function resizeCandidateFromPointer({ pointer, gridClientRect, pointerGra
   return normalizeGridRect({ ...originGeometry, columnSpan: Math.round((local.x - pointerGrabOffset.x + inset) / geometry.cellWidth) - originGeometry.column, rowSpan: Math.round((local.y - pointerGrabOffset.y + inset) / geometry.cellHeight) - originGeometry.row }, geometry, { fallback: originGeometry, minimumSpan });
 }
 
+export function directionalResizeCandidateFromPointer({ pointer, startPointer, originGeometry, geometry, minimumSpan = { columns: 1, rows: 1 }, maximumSpan = { columns: geometry.columns, rows: geometry.rows }, edges = { horizontal: 'end', vertical: 'end' } }) {
+  const deltaColumns = Math.round((pointer.x - startPointer.x) / geometry.cellWidth);
+  const deltaRows = Math.round((pointer.y - startPointer.y) / geometry.cellHeight);
+  const horizontalStart = edges.horizontal === 'start';
+  const verticalStart = edges.vertical === 'start';
+  const next = {
+    column: horizontalStart ? originGeometry.column + deltaColumns : originGeometry.column,
+    row: verticalStart ? originGeometry.row + deltaRows : originGeometry.row,
+    columnSpan: originGeometry.columnSpan + (horizontalStart ? -deltaColumns : deltaColumns),
+    rowSpan: originGeometry.rowSpan + (verticalStart ? -deltaRows : deltaRows)
+  };
+  if (next.columnSpan < minimumSpan.columns) {
+    if (horizontalStart) next.column = originGeometry.column + originGeometry.columnSpan - minimumSpan.columns;
+    next.columnSpan = minimumSpan.columns;
+  }
+  if (next.rowSpan < minimumSpan.rows) {
+    if (verticalStart) next.row = originGeometry.row + originGeometry.rowSpan - minimumSpan.rows;
+    next.rowSpan = minimumSpan.rows;
+  }
+  if (next.columnSpan > maximumSpan.columns) {
+    if (horizontalStart) next.column = originGeometry.column + originGeometry.columnSpan - maximumSpan.columns;
+    next.columnSpan = maximumSpan.columns;
+  }
+  if (next.rowSpan > maximumSpan.rows) {
+    if (verticalStart) next.row = originGeometry.row + originGeometry.rowSpan - maximumSpan.rows;
+    next.rowSpan = maximumSpan.rows;
+  }
+  return normalizeGridRect(next, geometry, { fallback: originGeometry, minimumSpan });
+}
+
 export function gridRectsOverlap(a, b) { return a.column < b.column + b.columnSpan && a.column + a.columnSpan > b.column && a.row < b.row + b.rowSpan && a.row + a.rowSpan > b.row; }
 export function launcherGeometryAvailable(id, candidate, items, bounds) { return isGridRectWithinBounds(candidate, bounds) && items.every((item) => item.id === id || !gridRectsOverlap(candidate, item.geometry)); }
 

@@ -86,7 +86,10 @@ export default function PublishedIdentityRack({ rack, onOrderChange }) {
   const [dropIndex, setDropIndex] = useState(null);
   const [announcement, setAnnouncement] = useState('');
   const listRef = useRef(null);
+  const dragStartRef = useRef(null);
+  const suppressClickRef = useRef(false);
   const rackId = useId();
+  const directAuthoring = typeof onOrderChange === 'function';
 
   useEffect(() => {
     if (!arranging) setOrder(initialOrder);
@@ -116,27 +119,39 @@ export default function PublishedIdentityRack({ rack, onOrderChange }) {
     if (from === to) return current;
     const next = [...current]; next.splice(from, 1); next.splice(to, 0, id);
     setAnnouncement(`${MODULES[id].label} moved to position ${to + 1}`);
+    if (directAuthoring) onOrderChange(next);
     return next;
   });
   const beginDrag = (event, id) => {
-    if (!arranging || event.button !== 0 || event.target.closest('.published-rack-module__signal-control,.published-rack-module__copy,.published-rack-module__official')) return;
-    event.preventDefault(); event.currentTarget.setPointerCapture?.(event.pointerId);
-    setDraggingId(id); setDropIndex(order.indexOf(id));
+    if ((!arranging && !directAuthoring) || event.button !== 0 || event.target.closest('.published-rack-module__signal-control,.published-rack-module__copy,.published-rack-module__official')) return;
+    dragStartRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, id, bar: event.currentTarget };
   };
   const trackDrag = (event) => {
-    if (!draggingId) return;
+    const start = dragStartRef.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+    if (!draggingId) {
+      if (Math.hypot(event.clientX - start.x, event.clientY - start.y) < 6) return;
+      event.preventDefault(); start.bar.setPointerCapture?.(event.pointerId);
+      suppressClickRef.current = true;
+      setDraggingId(start.id); setDropIndex(order.indexOf(start.id));
+    }
     const rows = [...listRef.current.querySelectorAll('[data-rack-module]')];
     const next = rows.findIndex((row) => event.clientY < row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2);
     setDropIndex(next < 0 ? rows.length - 1 : next);
   };
-  const finishDrag = () => {
+  const finishDrag = (event) => {
+    if (event?.pointerId !== undefined && dragStartRef.current?.pointerId !== event.pointerId) return;
     if (draggingId && Number.isInteger(dropIndex)) {
       setOrder((current) => {
         const from = current.indexOf(draggingId);
         if (from === dropIndex) return current;
-        const next = [...current]; next.splice(from, 1); next.splice(dropIndex, 0, draggingId); return next;
+        const next = [...current]; next.splice(from, 1); next.splice(dropIndex, 0, draggingId);
+        suppressClickRef.current = true;
+        if (directAuthoring) onOrderChange(next);
+        return next;
       });
     }
+    dragStartRef.current = null;
     setDraggingId(null); setDropIndex(null);
   };
   const toggleArranging = () => {
@@ -149,14 +164,14 @@ export default function PublishedIdentityRack({ rack, onOrderChange }) {
     setArranging(true);
   };
 
-  return <aside className="published-identity-rack" data-arranging={arranging || undefined} aria-label="Public identity rack" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()} onWheel={(event) => event.stopPropagation()}>
+  return <aside className="published-identity-rack" data-arranging={arranging || directAuthoring || undefined} aria-label={directAuthoring ? 'Owner identity rack' : 'Public identity rack'} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()} onWheel={(event) => event.stopPropagation()}>
     <header className="published-identity-rack__master">
       <div className="published-identity-rack__mark" aria-hidden="true">
         {avatarUrl ? <PublishedImage src={avatarUrl} alt="" fallback={<span>UP</span>} /> : <span>UP</span>}
       </div>
       <div className="published-identity-rack__brand"><strong>IDENTITY</strong><small>PUBLIC PROFILE</small></div>
       <button className="published-rack-master-control" type="button" aria-label="Collapse all identity modules" onClick={() => { setOpenIds(new Set()); setProfileShowsAddress(false); }}><CollapseAllIcon /><span>COLLAPSE ALL</span></button>
-      <button className="published-rack-master-control" type="button" aria-label={arranging ? 'Finish arranging identity modules' : 'Arrange identity modules'} aria-pressed={arranging} onClick={toggleArranging}><ArrangeIcon /><span>{arranging ? 'DONE' : 'ARRANGE'}</span></button>
+      {!directAuthoring && <button className="published-rack-master-control" type="button" aria-label={arranging ? 'Finish arranging identity modules' : 'Arrange identity modules'} aria-pressed={arranging} onClick={toggleArranging}><ArrangeIcon /><span>{arranging ? 'DONE' : 'ARRANGE'}</span></button>}
     </header>
     <div className="published-identity-rack__list" ref={listRef}>
       {order.map((id, index) => {
@@ -166,11 +181,12 @@ export default function PublishedIdentityRack({ rack, onOrderChange }) {
         const open = !fixedProfile && openIds.has(id); const contentId = `${rackId}-${id}`;
         return <section className="published-rack-module" data-rack-module={id} data-profile={fixedProfile || undefined} data-open={open || undefined} data-dragging={draggingId === id || undefined} data-drop-before={Boolean(draggingId && dropIndex === index) || undefined} key={id} onKeyDown={(event) => { if (!fixedProfile && event.key === 'Escape') { event.preventDefault(); collapse(id); } }}>
           <div className="published-rack-module__bar" onPointerDown={(event) => beginDrag(event, id)} onPointerMove={trackDrag} onPointerUp={finishDrag} onPointerCancel={finishDrag} onLostPointerCapture={finishDrag}>
-            <button className="published-rack-module__name" type="button" aria-expanded={fixedProfile ? undefined : open} aria-controls={fixedProfile ? undefined : contentId} aria-keyshortcuts={arranging ? 'Alt+ArrowUp Alt+ArrowDown' : undefined} aria-label={fixedProfile ? `${profileShowsAddress ? `Profile address ${rack.address}` : rack.displayName}. Show ${profileShowsAddress ? 'profile name' : 'profile address'}` : undefined} onClick={() => {
+            <button className="published-rack-module__name" type="button" aria-expanded={fixedProfile ? undefined : open} aria-controls={fixedProfile ? undefined : contentId} aria-keyshortcuts={arranging || directAuthoring ? 'Alt+ArrowUp Alt+ArrowDown' : undefined} aria-label={fixedProfile ? `${profileShowsAddress ? `Profile address ${rack.address}` : rack.displayName}. Show ${profileShowsAddress ? 'profile name' : 'profile address'}` : undefined} onClick={() => {
+              if (suppressClickRef.current) { suppressClickRef.current = false; return; }
               if (arranging) return;
               if (fixedProfile) setProfileShowsAddress((value) => !value); else toggle(id);
             }} onKeyDown={(event) => {
-              if (arranging && event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)) { event.preventDefault(); move(id, event.key === 'ArrowUp' ? -1 : 1); }
+              if ((arranging || directAuthoring) && event.altKey && ['ArrowUp', 'ArrowDown'].includes(event.key)) { event.preventDefault(); move(id, event.key === 'ArrowUp' ? -1 : 1); }
             }}><strong>{fixedProfile ? <ScrambledLabel value={profileShowsAddress ? rack.displayAddress : rack.displayName} /> : module.label}</strong>{arranging && <small>ALT + ↑↓</small>}</button>
             {fixedProfile ? <>
               <button className="published-rack-module__copy" type="button" onClick={copyProfileAddress} aria-label={`Copy ${rack.displayName} profile address`}><CopyIcon /></button>

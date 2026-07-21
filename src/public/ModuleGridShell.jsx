@@ -1,11 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import IdentityDossier from './IdentityDossier.jsx';
-import OwnerFolderRack from './OwnerFolderRack.jsx';
 import { CollectionWindow, flushLibraryWorkspace, FolderWindow, useLibraryStore } from '../library/index.js';
 import { CreationsWindow } from '../creations/index.js';
 import AssetPreview from '../library/components/AssetPreview.jsx';
-import FolderAssetPicker from '../library/components/FolderAssetPicker.jsx';
 import KeeperSignalsLayer from '../signals/components/KeeperSignalsLayer.jsx';
 import SignalSettings from '../signals/components/SignalSettings.jsx';
 import SignalsWindow from '../signals/components/SignalsWindow.jsx';
@@ -33,7 +31,7 @@ import {
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { getPublicTheme } from './themeTokens.js';
 import { findScenePlacement, findScenePlacementAtPointer, isScenePlacementAvailable, LAUNCHER_SIZE_PRESETS, normalizeSpan, packCompactCanvasObjects, packCompactScene } from './sceneGrid.js';
-import { gridRectToPixelRect, launcherGeometryAvailable, movementCandidateFromPointer, normalizeGridRect, resizeCandidateFromPointer } from './gridGeometry.js';
+import { directionalResizeCandidateFromPointer, gridRectToPixelRect, launcherGeometryAvailable, movementCandidateFromPointer, normalizeGridRect, resizeCandidateFromPointer } from './gridGeometry.js';
 import { activateInteraction, createInteraction, effectiveGeometry, INTERACTION_KIND } from './gridInteraction.js';
 import { iconGlyph, normalizeIconKey, SCENE_ICONS } from './sceneIcons.js';
 import { decodeWindowGridGeometry, defaultFolderWindowGridRect, defaultWindowGridRect, windowMinimumSpan } from './windowGeometry.js';
@@ -42,7 +40,6 @@ import { contextMenuCommands, resolveContextTarget } from './menus/contextMenuMo
 import DesktopMenu from './menus/DesktopMenu.jsx';
 import FramedArtwork from './FramedArtwork.jsx';
 import ArtworkChooser from './ArtworkChooser.jsx';
-import ArtworkInspector from './ArtworkInspector.jsx';
 import GalleryWorld from './GalleryWorld.jsx';
 import HomeWorldSurface from './HomeWorldSurface.jsx';
 import KeeperDock from './KeeperDock.jsx';
@@ -75,6 +72,9 @@ const MODULES = Object.freeze([
 ]);
 
 const OwnerRackBoard = lazy(() => import('./OwnerRackBoard.jsx'));
+const OwnerHomeWorld = lazy(() => import('./OwnerHomeWorld.jsx'));
+const FolderAssetPicker = lazy(() => import('./OwnerFolderAssetPicker.jsx'));
+const ArtworkInspector = lazy(() => import('./ArtworkInspector.jsx'));
 
 const MODULE_ENTRY_ORDER = Object.freeze({
   identity: 0,
@@ -94,7 +94,7 @@ const SYSTEM_ICONS = Object.freeze({ identity: 'profile', collection: 'collectio
 const AUTHORING_CONTEXT_COMMANDS = new Set([
   'toggle-edit', 'menu-create', 'create-folder', 'create-framed-artwork', 'edit-launcher',
   'toggle-visibility', 'unpin', 'edit-artwork', 'replace-artwork',
-  'toggle-object-visibility', 'menu-layer', 'object-forward', 'object-backward',
+  'toggle-object-visibility', 'menu-layer',
   'object-front', 'object-back', 'remove-artwork', 'toggle-start-open'
 ]);
 
@@ -256,6 +256,7 @@ export default function ModuleGridShell({
   const libraryStatus = useLibraryStore((state) => state.status);
   const libraryError = useLibraryStore((state) => state.error || state.liveError);
   const loadLibrary = useLibraryStore((state) => state.load);
+  useEffect(() => { if (ownerAuthoringEnabled && !ownerWorkspaceOpen && libraryStatus === 'idle') loadLibrary(); }, [libraryStatus, loadLibrary, ownerAuthoringEnabled, ownerWorkspaceOpen]);
   const replaceWorkspace = useLibraryStore((state) => state.replaceWorkspace);
   const signalSettings = useSignalStore((state) => state.settings);
   const replaceSignalSettings = useSignalStore((state) => state.replaceSettings);
@@ -768,17 +769,19 @@ export default function ModuleGridShell({
     return true;
   },[]);
 
-  const beginInteraction = useCallback((event,{kind,targetId,rect,element,minimumSpan})=>{
-    const authoredKind=[INTERACTION_KIND.MOVE_LAUNCHER,INTERACTION_KIND.RESIZE_LAUNCHER,INTERACTION_KIND.MOVE_CANVAS_OBJECT,INTERACTION_KIND.RESIZE_CANVAS_OBJECT].includes(kind);
-    if(geometry.narrow||(authoredKind&&(!ownerAuthoringEnabled||!editMode))||!rect||!element||event.pointerType==='mouse'&&event.button!==0)return;
+  const beginInteraction = useCallback((event,{kind,targetId,rect,element,minimumSpan,maximumSpan,resizeEdges})=>{
+    const launcherKind=[INTERACTION_KIND.MOVE_LAUNCHER,INTERACTION_KIND.RESIZE_LAUNCHER].includes(kind);
+    const canvasKind=[INTERACTION_KIND.MOVE_CANVAS_OBJECT,INTERACTION_KIND.RESIZE_CANVAS_OBJECT].includes(kind);
+    if(geometry.narrow||((launcherKind||canvasKind)&&(!ownerAuthoringEnabled||launcherKind&&!editMode))||!rect||!element||event.pointerType==='mouse'&&event.button!==0)return;
     if(kind===INTERACTION_KIND.MOVE_WINDOW&&event.target.closest('button,a,input,select,textarea,[data-resize-control]'))return;
     event.preventDefault();
     if(kind.includes('RESIZE'))event.stopPropagation();
     const rendered=element.getBoundingClientRect();
     const resize=kind.includes('RESIZE');
-    const next=createInteraction({kind,targetId,pointerId:event.pointerId,originGeometry:rect,gridBounds:{columns:placementGeometry.columns,rows:placementGeometry.rows,minColumn:placementGeometry.minColumn,minRow:placementGeometry.minRow},cellWidth:geometry.cellWidth,cellHeight:geometry.cellHeight,pointerGrabOffset:resize?{x:event.clientX-rendered.right,y:event.clientY-rendered.bottom}:{x:event.clientX-rendered.left,y:event.clientY-rendered.top},startPointer:{x:event.clientX,y:event.clientY},captureElement:event.target});
+    const next=createInteraction({kind,targetId,pointerId:event.pointerId,originGeometry:rect,gridBounds:{columns:placementGeometry.columns,rows:placementGeometry.rows,minColumn:placementGeometry.minColumn,minRow:placementGeometry.minRow},cellWidth:geometry.cellWidth,cellHeight:geometry.cellHeight,pointerGrabOffset:resize?{x:event.clientX-rendered.right,y:event.clientY-rendered.bottom}:{x:event.clientX-rendered.left,y:event.clientY-rendered.top},startPointer:{x:event.clientX,y:event.clientY},captureElement:event.target,resizeEdges});
     next.gridClientRect=gridRef.current.getBoundingClientRect();
     next.minimumSpan=minimumSpan;
+    next.maximumSpan=maximumSpan;
     installInteraction(next,event);
   },[editMode,geometry,installInteraction,ownerAuthoringEnabled,placementGeometry]);
 
@@ -788,7 +791,7 @@ export default function ModuleGridShell({
     if(!current.activated&&Math.hypot(event.clientX-current.startPointer.x,event.clientY-current.startPointer.y)<6)return;
     const interactionGeometry=geometry.narrow?geometry:{...placementGeometry,cellWidth:geometry.cellWidth*homeZoom,cellHeight:geometry.cellHeight*homeZoom};
     const input={pointer:{x:event.clientX,y:event.clientY},gridClientRect:current.gridClientRect,pointerGrabOffset:current.pointerGrabOffset,originGeometry:current.originGeometry,geometry:interactionGeometry,inset:2};
-    const proposed=current.kind.includes('RESIZE')?resizeCandidateFromPointer({...input,minimumSpan:current.minimumSpan}):movementCandidateFromPointer(input);
+    const proposed=current.kind.includes('RESIZE')?(current.resizeEdges?directionalResizeCandidateFromPointer({...input,startPointer:current.startPointer,minimumSpan:current.minimumSpan,maximumSpan:current.maximumSpan,edges:current.resizeEdges}):resizeCandidateFromPointer({...input,minimumSpan:current.minimumSpan})):movementCandidateFromPointer(input);
     const launcher=current.kind===INTERACTION_KIND.MOVE_LAUNCHER||current.kind===INTERACTION_KIND.RESIZE_LAUNCHER;
     const valid=!launcher||launcherGeometryAvailable(current.targetId,proposed,spatialSceneItems,placementGeometry);
     const next=activateInteraction(current,proposed,valid);interactionRef.current=next;setInteraction(next);
@@ -808,7 +811,7 @@ export default function ModuleGridShell({
   const startDrag=useCallback((event,id,unused,enabled=true)=>{if(enabled)beginInteraction(event,{kind:INTERACTION_KIND.MOVE_LAUNCHER,targetId:id,rect:sceneById[id]?.geometry,element:moduleRefs.current.get(id)});},[beginInteraction,sceneById]);
   const startResize=useCallback((event,id)=>beginInteraction(event,{kind:INTERACTION_KIND.RESIZE_LAUNCHER,targetId:id,rect:sceneById[id]?.geometry,element:moduleRefs.current.get(id),minimumSpan:{columns:sceneById[id]?.appearanceMode==='icon'?1:2,rows:1}}),[beginInteraction,sceneById]);
   const startObjectDrag=useCallback((event,id)=>beginInteraction(event,{kind:INTERACTION_KIND.MOVE_CANVAS_OBJECT,targetId:id,rect:canvasObjectScenes[id]?.geometry,element:canvasObjectRefs.current.get(id)}),[beginInteraction,canvasObjectScenes]);
-  const startObjectResize=useCallback((event,id)=>{const definition=getCanvasObjectDefinition(canvasObjectById[id]?.kind);beginInteraction(event,{kind:INTERACTION_KIND.RESIZE_CANVAS_OBJECT,targetId:id,rect:canvasObjectScenes[id]?.geometry,element:canvasObjectRefs.current.get(id),minimumSpan:definition.minimumSpan});},[beginInteraction,canvasObjectById,canvasObjectScenes]);
+  const startObjectResize=useCallback((event,id)=>{const definition=getCanvasObjectDefinition(canvasObjectById[id]?.kind);const [vertical,horizontal]=(event.currentTarget.dataset.corner||'south-east').split('-');beginInteraction(event,{kind:INTERACTION_KIND.RESIZE_CANVAS_OBJECT,targetId:id,rect:canvasObjectScenes[id]?.geometry,element:canvasObjectRefs.current.get(id),minimumSpan:definition.minimumSpan,maximumSpan:definition.maximumSpan,resizeEdges:{horizontal:horizontal==='west'?'start':'end',vertical:vertical==='north'?'start':'end'}});},[beginInteraction,canvasObjectById,canvasObjectScenes]);
   const startExpandedPanelDrag=useCallback((event,id,rect,panelRef,enabled)=>{if(enabled)beginInteraction(event,{kind:INTERACTION_KIND.MOVE_WINDOW,targetId:id,rect,element:panelRef.current});},[beginInteraction]);
   const startWindowResize=useCallback((event,id,rect,panelRef)=>beginInteraction(event,{kind:INTERACTION_KIND.RESIZE_WINDOW,targetId:id,rect,element:panelRef.current,minimumSpan:windowMinimumSpan(id,geometry)}),[beginInteraction,geometry]);
   lifecycleHandlersRef.current={move:moveInteraction,finish:finishInteraction};
@@ -1073,8 +1076,6 @@ export default function ModuleGridShell({
     else if (command === 'edit-artwork') openArtworkInspector(target.id);
     else if (command === 'replace-artwork') { beginArtworkChoice('replace',target.id); return; }
     else if (command === 'toggle-object-visibility' && canvasObjectById[target.id]) setCanvasObjectVisitorVisibility(target.id,!canvasObjectById[target.id].visitorVisible);
-    else if (command === 'object-forward') reorderCanvasObject(target.id,CANVAS_OBJECT_ORDER_COMMAND.FORWARD);
-    else if (command === 'object-backward') reorderCanvasObject(target.id,CANVAS_OBJECT_ORDER_COMMAND.BACKWARD);
     else if (command === 'object-front') reorderCanvasObject(target.id,CANVAS_OBJECT_ORDER_COMMAND.FRONT);
     else if (command === 'object-back') reorderCanvasObject(target.id,CANVAS_OBJECT_ORDER_COMMAND.BACK);
     else if (command === 'remove-artwork' && window.confirm('Remove this framed artwork from the canvas? The owned asset will remain in your library.')) { removeCanvasObject(target.id); setArtworkInspector(null); setSelectedCanvasObjectId(null); }
@@ -1167,19 +1168,22 @@ export default function ModuleGridShell({
     onClose={() => setActiveHudCommand(null)}
   /> : null;
 
+  const artworkInspectorPanel = ownerAuthoringEnabled && artworkInspector && canvasObjectById[artworkInspector.id] && (()=>{const object=canvasObjectById[artworkInspector.id];const scene=canvasObjectScenes[object.id];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId);const definition=getCanvasObjectDefinition(object.kind);return <ArtworkInspector object={object} assetName={asset?.name||'Unavailable artwork'} anchor={artworkInspector.anchor} onClose={()=>{setArtworkInspector(null);setSelectedCanvasObjectId(null);canvasObjectRefs.current.get(object.id)?.querySelector('button')?.focus();}} onPresentation={(patch)=>setCanvasObjectPresentation(object.id,patch)} onGeometry={(span)=>{const columns=Math.max(definition.minimumSpan.columns,Math.min(definition.maximumSpan.columns,Math.round(span.columns)||object.span.columns));const rows=Math.max(definition.minimumSpan.rows,Math.min(definition.maximumSpan.rows,Math.round(span.rows)||object.span.rows));const rect=normalizeGridRect({...scene.geometry,columnSpan:columns,rowSpan:rows},placementGeometry,{minimumSpan:definition.minimumSpan});setCanvasObjectGeometry(object.id,rect);}} onVisibility={()=>setCanvasObjectVisitorVisibility(object.id,!object.visitorVisible)} onReplace={()=>beginArtworkChoice('replace',object.id)} onReorder={(command)=>reorderCanvasObject(object.id,command)} onRemove={()=>{if(window.confirm('Remove this framed artwork from the canvas? The owned asset will remain in your library.')){removeCanvasObject(object.id);setArtworkInspector(null);setSelectedCanvasObjectId(null);}}} />;})();
+  const contextMenuPanel = contextMenu && (()=>{const runtimeId=contextMenu.target.id?.startsWith?.('folder-panel:')?contextMenu.target.id.slice(13):contextMenu.target.id?.replace?.('-panel',''); const launcher=pinnedLaunchers.find((entry)=>entry.id===(contextMenu.target.type==='window'?runtimeId:contextMenu.target.id)); const canvasObject=canvasObjectById[contextMenu.target.id]; const startOpen=launcher?.startOpen||systemPresentation[runtimeId]?.startOpen; return <DesktopMenu key={`${contextMenu.target.type}:${contextMenu.menu}`} anchor={contextMenu.anchor} label={`${contextMenu.target.type} commands`} commands={contextMenuCommands({target:contextMenu.target,editMode,launcher,canvasObject,startOpen,menu:contextMenu.menu,keeperVisible,stageVisible,stageAvailable:false,ownerAuthoringEnabled})} onCommand={executeContextCommand} onClose={()=>setContextMenu(null)} returnFocus={contextMenu.returnFocus}/>;})();
+  const artworkChooserPanel = ownerAuthoringEnabled && artworkChooser ? <ArtworkChooser assets={libraryAssets} status={libraryStatus} error={libraryError} title={artworkChooser.mode==='replace'?'Replace artwork':'Choose artwork'} onSelect={chooseArtwork} onCancel={()=>{artworkChoicePendingRef.current=false;setArtworkChooser(null);}} /> : null;
+  const artworkPreviewPanel = previewObjectId && canvasObjectById[previewObjectId] && (()=>{const object=canvasObjectById[previewObjectId];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId)||{id:object.stableAssetId,name:'Unavailable artwork',standard:'UNKNOWN',contractAddress:'Unavailable',tokenId:null,imageUrl:null};return <div className="canvas-artwork-preview" role="dialog" aria-modal="true" aria-label={`Artwork preview: ${asset.name}`}><AssetPreview asset={asset} workspace={workspace} authoringEnabled={false} onClose={closeArtworkPreview} /></div>;})();
+
   if (previewDocument) return <ProfileDocumentPreview document={previewDocument} onExit={stopPreview} onMoveKeeper={moveKeeperFromHome} />;
 
   if (ownerAuthoringEnabled && !ownerWorkspaceOpen) return <div className="owner-rack-home" style={shellTheme} data-interface-visible={interfaceVisible || undefined}>
-    <PublishedHomeWorld document={draftDocument} onMoveKeeper={moveKeeperFromHome} rackBoard={<Suspense fallback={null}><OwnerRackBoard identityRack={ownerIdentityRack} folders={ownerFolders} assets={libraryAssets} assetStatus={libraryStatus} assetError={libraryError} AssetPicker={FolderAssetPicker} Menu={DesktopMenu} onIdentityModuleOrderChange={updateIdentityModuleOrder} onCreateFolder={createFolder} onDeleteFolder={deleteFolder} onRequestAssets={() => { if (libraryStatus === 'idle') loadLibrary(); }} onRenameFolder={renameFolder} onFolderVisibilityChange={setFolderVisitorVisibility} onSetFolderAsset={setFolderAsset} /></Suspense>} />
-    <nav className="owner-rack-home__controls" aria-label="Owner profile controls">
-      <output className="owner-rack-home__save-status" data-state={draftSaveStatus} aria-live="polite">{draftSaveStatus === 'saved' ? 'SAVED DRAFT' : draftSaveStatus === 'error' ? 'SAVE FAILED' : 'SAVING…'}</output>
-      <button type="button" onClick={() => { setActiveHudCommand(null); setOwnerFoldersOpen(false); setOwnerWorkspaceOpen(true); }}>[ Workspace ]</button>
-      <button type="button" aria-expanded={ownerFoldersOpen} onClick={() => { setActiveHudCommand(null); setOwnerFoldersOpen((current) => !current); }}>[ Folders ]</button>
-      <button type="button" aria-expanded={activeHudCommand === 'share'} onClick={() => { setOwnerFoldersOpen(false); setActiveHudCommand((current) => current === 'share' ? null : 'share'); }}>[ Share ]</button>
-      <button type="button" onClick={onRequestAtelier}>[ Atelier ]</button>
-    </nav>
-    {ownerFoldersOpen && <OwnerFolderRack folders={ownerFolders} onCreate={createFolder} onRename={renameFolder} onVisibilityChange={setFolderVisitorVisibility} onClose={() => setOwnerFoldersOpen(false)} />}
+    <Suspense fallback={null}>
+    <OwnerHomeWorld document={draftDocument} objects={canvasObjects.map((object) => { const scene = canvasObjectScenes[object.id]; return scene ? { ...object, placement: { ...scene.position }, span: { ...scene.span } } : object; })} assets={libraryAssets} camera={homeCamera} theme={shellTheme} rackBoard={<OwnerRackBoard identityRack={ownerIdentityRack} folders={ownerFolders} assets={libraryAssets} assetStatus={libraryStatus} assetError={libraryError} AssetPicker={FolderAssetPicker} Menu={DesktopMenu} onIdentityModuleOrderChange={updateIdentityModuleOrder} onCreateFolder={createFolder} onDeleteFolder={deleteFolder} onRequestAssets={() => { if (libraryStatus === 'idle') loadLibrary(); }} onRenameFolder={renameFolder} onFolderVisibilityChange={setFolderVisitorVisibility} onSetFolderAsset={setFolderAsset} />} arranging={editMode} selectedId={selectedCanvasObjectId} spatialRef={gridRef} setObjectRef={(id, node) => { if (node) canvasObjectRefs.current.set(id, node); else canvasObjectRefs.current.delete(id); }} interactionProps={(id) => ({ onPointerDown: (event) => { setSelectedCanvasObjectId(id); startObjectDrag(event, id); }, onPointerMove: moveInteraction, onPointerUp: finishInteraction, onPointerCancel: (event) => finishInteraction(event, true), onLostPointerCapture: (event) => finishInteraction(event, true) })} resizeProps={(id) => ({ onPointerDown: (event) => startObjectResize(event, id), onPointerMove: moveInteraction, onPointerUp: finishInteraction, onPointerCancel: (event) => finishInteraction(event, true), onLostPointerCapture: (event) => finishInteraction(event, true) })} onCameraChange={setHomeCameraImmediately} onMoveKeeper={moveKeeperFromHome} onOpenWorldContextMenu={openWorldContextMenu} onOpenObjectContextMenu={(event, id) => setContextMenu({ target: { type: 'canvas-object', id }, menu: 'root', anchor: { x: event.clientX, y: event.clientY }, returnFocus: event.currentTarget.querySelector?.('button') || null })} onEdit={openArtworkInspector} onActivate={(id) => { if (suppressLauncherClickRef.current) { suppressLauncherClickRef.current = false; return; } if (editMode) { setSelectedCanvasObjectId(id); return; } openArtworkPreview(id); }} controls={{save:draftSaveStatus,workspace:()=>{setActiveHudCommand(null);setOwnerFoldersOpen(false);setOwnerWorkspaceOpen(true);},done:()=>{setEditMode(false);setSelectedCanvasObjectId(null);},folders:ownerFoldersOpen,toggleFolders:()=>{setActiveHudCommand(null);setOwnerFoldersOpen((current)=>!current);},share:activeHudCommand==='share',toggleShare:()=>{setOwnerFoldersOpen(false);setActiveHudCommand((current)=>current==='share'?null:'share');},atelier:onRequestAtelier}} folderPanel={{folders:ownerFolders,onCreate:createFolder,onRename:renameFolder,onVisibilityChange:setFolderVisitorVisibility,onClose:()=>setOwnerFoldersOpen(false)}} />
+    </Suspense>
     {sharePanel}
+    <Suspense fallback={null}>{artworkInspectorPanel}</Suspense>
+    {contextMenuPanel}
+    {artworkChooserPanel}
+    {artworkPreviewPanel}
   </div>;
 
   const spatialLayerTarget = typeof document === 'undefined' ? null : document.querySelector('.application-root');
@@ -1575,9 +1579,9 @@ export default function ModuleGridShell({
         {launcher && !folder && <button type="button" aria-pressed={launcher.visitorVisible} onClick={()=>setLauncherVisitorVisibility(launcher.id,!launcher.visitorVisible)}>{launcher.visitorVisible?'Make private':'Show to visitors'}</button>}
         <button type="button" onClick={toggleGrid}>Grid {gridVisible?'off':'on'}</button>
       </aside>; })()}
-      {artworkInspector && canvasObjectById[artworkInspector.id] && (()=>{const object=canvasObjectById[artworkInspector.id];const scene=canvasObjectScenes[object.id];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId);const definition=getCanvasObjectDefinition(object.kind);return <ArtworkInspector object={object} assetName={asset?.name||'Unavailable artwork'} anchor={artworkInspector.anchor} onClose={()=>{setArtworkInspector(null);setSelectedCanvasObjectId(null);canvasObjectRefs.current.get(object.id)?.querySelector('button')?.focus();}} onPresentation={(patch)=>setCanvasObjectPresentation(object.id,patch)} onGeometry={(span)=>{const columns=Math.max(definition.minimumSpan.columns,Math.min(definition.maximumSpan.columns,Math.round(span.columns)||object.span.columns));const rows=Math.max(definition.minimumSpan.rows,Math.min(definition.maximumSpan.rows,Math.round(span.rows)||object.span.rows));const rect=normalizeGridRect({...scene.geometry,columnSpan:columns,rowSpan:rows},placementGeometry,{minimumSpan:definition.minimumSpan});setCanvasObjectGeometry(object.id,rect);}} onVisibility={()=>setCanvasObjectVisitorVisibility(object.id,!object.visitorVisible)} onReplace={()=>beginArtworkChoice('replace',object.id)} onReorder={(command)=>reorderCanvasObject(object.id,command)} onRemove={()=>{if(window.confirm('Remove this framed artwork from the canvas? The owned asset will remain in your library.')){removeCanvasObject(object.id);setArtworkInspector(null);setSelectedCanvasObjectId(null);}}} />;})()}
+      <Suspense fallback={null}>{artworkInspectorPanel}</Suspense>
       </>}
-      {contextMenu && (()=>{const runtimeId=contextMenu.target.id?.startsWith?.('folder-panel:')?contextMenu.target.id.slice(13):contextMenu.target.id?.replace?.('-panel',''); const launcher=pinnedLaunchers.find((entry)=>entry.id===(contextMenu.target.type==='window'?runtimeId:contextMenu.target.id)); const canvasObject=canvasObjectById[contextMenu.target.id]; const startOpen=launcher?.startOpen||systemPresentation[runtimeId]?.startOpen; return <DesktopMenu key={`${contextMenu.target.type}:${contextMenu.menu}`} anchor={contextMenu.anchor} label={`${contextMenu.target.type} commands`} commands={contextMenuCommands({target:contextMenu.target,editMode,launcher,canvasObject,startOpen,menu:contextMenu.menu,keeperVisible,stageVisible,stageAvailable:false,ownerAuthoringEnabled})} onCommand={executeContextCommand} onClose={()=>setContextMenu(null)} returnFocus={contextMenu.returnFocus}/>;})()}
+      {contextMenuPanel}
       {activeHudCommand === 'system' && <DesktopMenu anchor={{x:18,y:68}} label="OS Underneath system menu" commands={[
         {id:'about',label:'About OS_UNDERNEATH'}, {id:'status',label:`Profile / ${workspace.profileAddress.slice(0,8)}…`},
         ...(ownerAuthoringEnabled ? [{id:'atelier',label:'Open Atelier'}, {id:'edit',label:editMode?'Finish Arranging':'Arrange Desktop'}, {id:'settings',label:'Settings'}] : []),
@@ -1592,8 +1596,8 @@ export default function ModuleGridShell({
       />}
       {ownerAuthoringEnabled && activeHudCommand === 'settings' && <SignalSettings />}
       {sharePanel}
-      {ownerAuthoringEnabled && artworkChooser && <ArtworkChooser assets={libraryAssets} status={libraryStatus} error={libraryError} title={artworkChooser.mode==='replace'?'Replace artwork':'Choose artwork'} onSelect={chooseArtwork} onCancel={()=>{artworkChoicePendingRef.current=false;setArtworkChooser(null);}} />}
-      {previewObjectId && canvasObjectById[previewObjectId] && (()=>{const object=canvasObjectById[previewObjectId];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId)||{id:object.stableAssetId,name:'Unavailable artwork',standard:'UNKNOWN',contractAddress:'Unavailable',tokenId:null,imageUrl:null};return <div className="canvas-artwork-preview" role="dialog" aria-modal="true" aria-label={`Artwork preview: ${asset.name}`}><AssetPreview asset={asset} workspace={workspace} authoringEnabled={false} onClose={closeArtworkPreview} /></div>;})()}
+      {artworkChooserPanel}
+      {artworkPreviewPanel}
       {profileDiscoveryOpen && <ProfileDiscovery
         onClose={() => { setProfileDiscoveryOpen(false); setActiveHudCommand((current) => current === 'search' ? null : current); }}
         onSelect={(result) => {

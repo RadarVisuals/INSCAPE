@@ -6,6 +6,7 @@ const panelSource = readFileSync(new URL('./ProfileDocumentPanel.jsx', import.me
 const previewSource = readFileSync(new URL('./ProfileDocumentPreview.jsx', import.meta.url), 'utf8');
 const previewCss = readFileSync(new URL('./profileDocumentPreview.css', import.meta.url), 'utf8');
 const ownerSource = readFileSync(new URL('../../public/ModuleGridShell.jsx', import.meta.url), 'utf8');
+const ownerWorldSource = readFileSync(new URL('../../public/OwnerHomeWorld.jsx', import.meta.url), 'utf8');
 const ownerRackCss = readFileSync(new URL('../../public/ownerRackHome.css', import.meta.url), 'utf8');
 
 test('owner Share exposes explicit semantic disclosure controls', () => {
@@ -42,10 +43,10 @@ test('owner preview uses the same detached published world as a real visitor', (
 test('verified owners enter the rack world by default and retain an explicit authoring workspace', () => {
   assert.match(ownerSource, /const \[ownerWorkspaceOpen, setOwnerWorkspaceOpen\] = useState\(false\)/);
   assert.match(ownerSource, /if \(ownerAuthoringEnabled && !ownerWorkspaceOpen\)/);
-  assert.match(ownerSource, /<PublishedHomeWorld document=\{draftDocument\} onMoveKeeper=\{moveKeeperFromHome\} rackBoard=\{<Suspense fallback=\{null\}><OwnerRackBoard/);
+  assert.match(ownerSource, /<OwnerHomeWorld document=\{draftDocument\}/);
   assert.match(ownerSource, /onIdentityModuleOrderChange=\{updateIdentityModuleOrder\}/);
   assert.match(ownerSource, /\[ Rack View \]/);
-  assert.match(ownerSource, /aria-label="Owner profile controls"/);
+  assert.match(ownerWorldSource, /aria-label="Owner profile controls"/);
   assert.match(ownerRackCss, /\.owner-rack-home \.profile-document-panel/);
   assert.equal(ownerRackCss.match(/pointer-events:\s*auto/g)?.length, 2);
   assert.match(ownerRackCss, /padding-bottom:\s*52px/);
@@ -58,9 +59,9 @@ test('owner draft status is based on successful source flushes and flushes again
   assert.match(ownerSource, /saveRestoredPresentation\(window\.localStorage, workspace\.profileAddress/);
   assert.match(ownerSource, /window\.addEventListener\('pagehide', flush\)/);
   assert.match(ownerSource, /window\.addEventListener\('beforeunload', flush\)/);
-  assert.match(ownerSource, /draftSaveStatus=\{draftSaveStatus\}/);
+  assert.match(ownerSource, /controls=\{\{save:draftSaveStatus/);
   assert.match(ownerRackCss, /owner-rack-home__controls :is\(button, output\)/);
-  assert.match(ownerSource, /owner-rack-home__save-status" data-state=\{draftSaveStatus\}/);
+  assert.match(ownerWorldSource, /owner-rack-home__save-status" data-state=\{controls\.save\}/);
   assert.match(panelSource, /'SAVE FAILED'/);
 });
 

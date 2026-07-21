@@ -126,7 +126,7 @@ export function runBoundedCommand(command, args, options = {}) {
 
 export async function removeBrowserRuntime({ runtimePath, workspaceRoot, timeoutMs = BROWSER_LIFECYCLE_TIMEOUTS.runtimeRemovalMs, run = runBoundedCommand }) {
   const exactRuntime = validateBrowserRuntimePath(runtimePath, workspaceRoot);
-  const script = "const {rmSync}=require('node:fs');try{rmSync(process.argv[1],{recursive:true,force:true,maxRetries:0})}catch(e){console.error(e.code||'ERROR');process.exitCode=1}";
+  const script = "const {rmSync}=require('node:fs');try{rmSync(process.argv[1],{recursive:true,force:true,maxRetries:12,retryDelay:200})}catch(e){console.error(e.code||'ERROR');process.exitCode=1}";
   const result = await run(process.execPath, ['-e', script, exactRuntime], { stdio: ['ignore', 'pipe', 'pipe'], timeoutMs });
   if (result.code !== 0) throw Object.assign(new Error(`Browser runtime removal failed: ${result.stderr.trim() || `exit ${result.code}`}`), { code: 'RUNTIME_REMOVE_FAILED' });
   return { runtimePath: exactRuntime };

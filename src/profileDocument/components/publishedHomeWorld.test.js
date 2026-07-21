@@ -150,12 +150,14 @@ test('published artwork fails closed for editing while the verified owner keeps 
   const worldSource = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
   const previewSource = readFileSync(resolve(here, 'ProfileDocumentSurface.jsx'), 'utf8');
   const ownerSource = readFileSync(resolve(here, '../../public/ModuleGridShell.jsx'), 'utf8');
+  const ownerWorldSource = readFileSync(resolve(here, '../../public/OwnerHomeWorld.jsx'), 'utf8');
   assert.match(artworkSource, /editable = false/);
-  assert.match(artworkSource, /editable && \(\(compact && !arranging\)/);
+  assert.match(artworkSource, /editable && \(compact \|\| selected\)/);
   assert.doesNotMatch(worldSource + previewSource, /onEdit=\{\(\) => \{\}\}/);
   assert.doesNotMatch(worldSource + previewSource, /editable=\{/);
-  assert.match(ownerSource, /editable=\{ownerAuthoringEnabled\}/);
-  assert.match(ownerSource, /onEdit=\{\(\)=>openArtworkInspector\(object\.id\)\}/);
+  assert.match(ownerSource, /onEdit=\{openArtworkInspector\}/);
+  assert.match(ownerWorldSource, /compact=\{layout\.geometry\.narrow\} editable selected=/);
+  assert.match(ownerWorldSource, /onEdit=\{\(\) => onEdit\?\.\(object\.id\)\}/);
 });
 
 test('framed artwork stays below racks, the Keeper stays above the world, and the opened artwork modal becomes the top layer', () => {

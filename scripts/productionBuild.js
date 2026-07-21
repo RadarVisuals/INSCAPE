@@ -91,7 +91,8 @@ function entryKey(manifest) {
 
 function ownerKey(manifest) {
   const key = Object.keys(manifest).find((candidate) => normalize(candidate).endsWith('/src/public/ModuleGridShell.jsx')
-    || normalize(candidate) === 'src/public/ModuleGridShell.jsx');
+    || normalize(candidate) === 'src/public/ModuleGridShell.jsx')
+    || Object.keys(manifest).find((candidate) => manifest[candidate].isDynamicEntry && manifest[candidate].name === 'ModuleGridShell');
   if (!key) throw new Error('Vite manifest is missing the owner ModuleGridShell dynamic entry');
   return key;
 }

@@ -53,6 +53,7 @@ describe('Playwright browser lifecycle', () => {
     const calls = [];
     await removeBrowserRuntime({ runtimePath, workspaceRoot, run: async (...args) => { calls.push(args); return { code: 0, stdout: '', stderr: '' }; } });
     assert.equal(calls.length, 1); assert.equal(calls[0][0], process.execPath); assert.equal(calls[0][2].timeoutMs, BROWSER_LIFECYCLE_TIMEOUTS.runtimeRemovalMs);
+    assert.match(calls[0][1][1], /maxRetries:12,retryDelay:200/);
   });
 
   test('owned descendants exclude unrelated processes and force only the owned root', async () => {

@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import AssetGrid from '../library/components/AssetGrid.jsx';
 import { ownerInventoryFolderCommands } from './ownerInventoryMenu.js';
 import './ownerInventoryRack.css';
+
+const EMPTY_WORKSPACE = Object.freeze({ favorites: [], folders: [] });
 
 function CollapseAllIcon() {
   return <svg className="published-rack-master-control__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5h10M5 2l3 3 3-3M3 11h10M5 14l3-3 3 3" /></svg>;
@@ -12,6 +15,21 @@ function NewFolderIcon() {
 
 function MoreIcon() {
   return <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1" /><circle cx="8" cy="8" r="1" /><circle cx="13" cy="8" r="1" /></svg>;
+}
+
+function OwnerInventoryModuleBody({ folder, assets, assetStatus, assetError }) {
+  const assetById = new Map(assets.map((asset) => [asset.id, asset]));
+  const folderAssets = folder.assetIds.map((id) => assetById.get(id)).filter(Boolean);
+  const emptyMessage = assetStatus === 'loading'
+    ? 'Loading folder assets…'
+    : assetError
+      ? 'Folder assets are currently unavailable.'
+      : folder.assetIds.length
+        ? 'The saved assets could not be loaded.'
+        : `${folder.name} is empty.`;
+  return <div className="published-inventory-rack__space owner-inventory-rack__space">
+    <AssetGrid assets={folderAssets} workspace={EMPTY_WORKSPACE} emptyMessage={emptyMessage} />
+  </div>;
 }
 
 function reconcileOrder(current, folders) {
@@ -162,7 +180,10 @@ export default function OwnerInventoryRack({ folders, assets, assetStatus, asset
             <button className="published-rack-module__copy owner-inventory-rack__more" type="button" aria-haspopup="menu" aria-expanded={menu?.folderId === folder.id} aria-label={`Manage ${folder.name}`} onClick={(event) => openButtonMenu(event, folder.id)}><MoreIcon /></button>
             <button className="published-rack-module__signal-control" type="button" aria-expanded={open} aria-controls={contentId} aria-label={`${open ? 'Collapse' : 'Expand'} ${folder.name}`} onClick={() => toggle(id)}><span className="published-rack-module__signal" aria-hidden="true" /></button>
           </div>
-          <div className="published-rack-module__body owner-inventory-rack__body" id={contentId} hidden={!open}><strong>{folder.visitorVisible ? 'PUBLIC SPACE' : 'PRIVATE FOLDER'}</strong><p>{folder.assetCount} {folder.assetCount === 1 ? 'asset' : 'assets'}. {folder.visitorVisible ? 'Included in the current public Preview.' : 'Visible only in your owner workspace.'}</p></div>
+          <div className="published-rack-module__body owner-inventory-rack__body" id={contentId} hidden={!open}>
+            <div className="owner-inventory-rack__summary"><strong>{folder.visitorVisible ? 'PUBLIC SPACE' : 'PRIVATE FOLDER'}</strong><p>{folder.assetCount} {folder.assetCount === 1 ? 'asset' : 'assets'}. {folder.visitorVisible ? 'Included in the current public Preview.' : 'Visible only in your owner workspace.'}</p></div>
+            <OwnerInventoryModuleBody folder={folder} assets={assets} assetStatus={assetStatus} assetError={assetError} />
+          </div>
         </section>;
       })}
       {!folders.length && <p>No folders yet. Use New Folder to create your first private folder.</p>}

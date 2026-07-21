@@ -48,8 +48,7 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
     ] : [])
   ];
   if (target?.type === 'canvas-object' && menu === 'layer') return [
-    { id: 'menu-root', label: '< Back' }, { id: 'object-forward', label: 'Bring Forward' }, { id: 'object-backward', label: 'Send Backward' },
-    { id: 'object-front', label: 'Bring to Front' }, { id: 'object-back', label: 'Send to Back' }
+    { id: 'menu-root', label: '< Back' }, { id: 'object-front', label: 'Bring to Front' }, { id: 'object-back', label: 'Send to Back' }
   ];
   if (target?.type === 'canvas-object') return [
     { id: 'open-artwork', label: 'Open Artwork' }, { id: 'edit-artwork', label: 'Edit Artwork' }, { id: 'replace-artwork', label: 'Replace Artwork' },

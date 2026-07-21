@@ -17,7 +17,7 @@ const FRAMED_ARTWORK = Object.freeze({
   allowedAssetMediaKinds: Object.freeze(['image']),
   defaultSpan: Object.freeze({ columns: 4, rows: 4 }),
   minimumSpan: Object.freeze({ columns: 2, rows: 2 }),
-  maximumSpan: Object.freeze({ columns: 12, rows: 12 }),
+  maximumSpan: Object.freeze({ columns: 48, rows: 48 }),
   defaultPresentation: FRAMED_ARTWORK_PRESENTATION
 });
 

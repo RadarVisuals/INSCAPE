@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-export default function FolderAssetPicker({ assets, folder, emptyMessage = 'No Library assets match this search.', onCancel, onSave }) {
+export default function FolderAssetPicker({ assets, folder, emptyMessage = 'No Library assets match this search.', onCancel, onSave, windowProps = {} }) {
   const [query, setQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState(() => new Set(folder.assetIds));
 
@@ -24,9 +24,9 @@ export default function FolderAssetPicker({ assets, folder, emptyMessage = 'No L
   };
 
   return (
-    <div className="folder-asset-picker" role="dialog" aria-modal="true" aria-labelledby="folder-asset-picker-title">
-      <form onSubmit={(event) => { event.preventDefault(); onSave(selectedIds); }}>
-        <header>
+    <div className={`folder-asset-picker${windowProps.titlebarProps ? ' folder-asset-picker--owner-window' : ''}`} role="dialog" aria-modal="true" aria-labelledby="folder-asset-picker-title" {...windowProps.backdropProps}>
+      <form ref={windowProps.formRef} style={windowProps.style} onSubmit={(event) => { event.preventDefault(); onSave(selectedIds); }}>
+        <header className={windowProps.titlebarProps ? 'folder-asset-picker__titlebar' : undefined} {...windowProps.titlebarProps}>
           <div><span>Library / Folder</span><h3 id="folder-asset-picker-title">Add assets to {folder.name}</h3></div>
           <p>{selectedIds.size} selected</p>
         </header>

@@ -25,6 +25,7 @@ export function createInteraction(input) {
     cellWidth: input.cellWidth,
     cellHeight: input.cellHeight,
     pointerGrabOffset: { ...input.pointerGrabOffset },
+    resizeEdges: input.resizeEdges ? { ...input.resizeEdges } : null,
     valid: true,
     activated: false,
     startPointer: { ...input.startPointer },

@@ -20,7 +20,7 @@ test('canvas creation and framed-artwork commands stay controlled and keyboard-m
   const object = contextMenuCommands({ target: { type: 'canvas-object', id: 'canvas:artwork:one' }, canvasObject: { visitorVisible: true }, ownerAuthoringEnabled: true });
   assert.deepEqual(object.map((command) => command.id), ['open-artwork', 'edit-artwork', 'replace-artwork', 'toggle-object-visibility', 'menu-layer', 'remove-artwork']);
   const layer = contextMenuCommands({ target: { type: 'canvas-object', id: 'canvas:artwork:one' }, menu: 'layer', ownerAuthoringEnabled: true });
-  assert.deepEqual(layer.map((command) => command.id), ['menu-root', 'object-forward', 'object-backward', 'object-front', 'object-back']);
+  assert.deepEqual(layer.map((command) => command.id), ['menu-root', 'object-front', 'object-back']);
 });
 
 test('visitor menus expose runtime viewing commands but no authoring commands', () => {

@@ -407,6 +407,18 @@ test('canvas artwork validates strict controlled fields and rejects remote rende
   ]) assert.equal(validateProfileDocument({ ...source, canvasObjects: [changed] }).valid, false);
 });
 
+test('large framed artwork remains a controlled portable document value', () => {
+  const local = workspace();
+  local.canvas.objects[0].span = { columns: 48, rows: 48 };
+  const document = build({ workspace: local });
+  assert.deepEqual(document.canvasObjects[0].span, { columns: 48, rows: 48 });
+  assert.equal(validateProfileDocument(document).valid, true);
+  assert.deepEqual(parseProfileDocumentJson(formatProfileDocumentJson(document)).canvasObjects[0].span, { columns: 48, rows: 48 });
+  const tooLarge = structuredClone(document);
+  tooLarge.canvasObjects[0].span.columns = 49;
+  assert.equal(validateProfileDocument(tooLarge).valid, false);
+});
+
 test('builder deterministically bounds the public canvas-object projection', () => {
   const crowded = workspace(); const template = crowded.canvas.objects[0];
   crowded.canvas.objects = Array.from({ length: PROFILE_DOCUMENT_LIMITS.maxCanvasObjects + 4 }, (_, index) => ({
