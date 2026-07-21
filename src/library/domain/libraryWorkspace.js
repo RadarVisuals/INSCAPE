@@ -80,6 +80,19 @@ export function setLauncherVisitorVisibility(workspace, launcherId, visitorVisib
   )) } };
 }
 
+export function setFolderVisitorVisibility(workspace, folderIdValue, visitorVisible) {
+  if (typeof visitorVisible !== 'boolean' || !workspace.folders.some((folder) => folder.id === folderIdValue)) return workspace;
+  const view = { type: LIBRARY_VIEW_TYPES.FOLDER, id: folderIdValue };
+  let next = workspace;
+  let launcher = getPinnedLauncher(next, view);
+  if (!launcher) {
+    if (!visitorVisible) return workspace;
+    next = pinLibraryView(next, view);
+    launcher = getPinnedLauncher(next, view);
+  }
+  return setLauncherVisitorVisibility(next, launcher.id, visitorVisible);
+}
+
 export function setLauncherStartOpen(workspace, launcherId, startOpen, windowGeometry = null) {
   if (typeof startOpen !== 'boolean' || !workspace.canvas.launchers.some((launcher) => launcher.id === launcherId)) return workspace;
   const valid = windowGeometry

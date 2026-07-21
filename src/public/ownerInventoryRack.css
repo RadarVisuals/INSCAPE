@@ -1,0 +1,1 @@
+.owner-inventory-rack__body{display:grid;gap:8px}.owner-inventory-rack__body[hidden]{display:none}.owner-inventory-rack__body p{margin:0;color:var(--rack-muted);font-size:.66rem}.owner-inventory-rack__more svg{fill:currentColor;stroke:none}.published-inventory-rack>.folder-asset-picker,.published-inventory-rack>.collection-folder-dialog{position:fixed;z-index:140;inset:0}

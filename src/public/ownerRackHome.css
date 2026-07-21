@@ -1,0 +1,52 @@
+.owner-rack-home {
+  position: fixed;
+  inset: 0;
+}
+
+.owner-rack-home__controls {
+  position: fixed;
+  left: max(22px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 110;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(238, 235, 223, .2);
+  background: #070909f0;
+  pointer-events: auto;
+}
+
+.owner-rack-home__controls :is(button, output) {
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid rgba(238, 235, 223, .16);
+  background: transparent;
+  color: rgba(238, 235, 223, .68);
+  font: 650 .65rem/1 Oxanium, var(--font-interface);
+  text-transform: uppercase;
+}
+
+.owner-rack-home__controls button:hover,
+.owner-rack-home__controls button:focus-visible,
+.owner-rack-home__controls button[aria-expanded='true'] {
+  border-color: rgba(232, 121, 69, .5);
+  color: #e87945;
+}
+
+.owner-rack-home .profile-document-panel {
+  z-index: 130;
+  pointer-events: auto;
+}
+
+@media (max-width: 719px) {
+  .owner-rack-home__controls {
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(10px, env(safe-area-inset-bottom));
+    left: max(10px, env(safe-area-inset-left));
+    justify-content: flex-end;
+  }
+
+  .owner-rack-home .published-rack-board {
+    padding-bottom: 52px;
+  }
+}

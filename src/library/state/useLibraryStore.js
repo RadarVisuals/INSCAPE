@@ -9,6 +9,7 @@ import {
   renameFolder,
   resetCanvasLayout,
   setFolderAsset,
+  setFolderVisitorVisibility,
   setLauncherPosition,
   setLauncherGeometry,
   setLauncherVisitorVisibility,
@@ -126,6 +127,9 @@ export const useLibraryStore = create((set, get) => ({
   setLauncherVisitorVisibility(launcherId, visitorVisible) {
     const workspace = setLauncherVisitorVisibility(get().workspace, launcherId, visitorVisible); set({ workspace }); scheduleSave(workspace);
   },
+  setFolderVisitorVisibility(folderId, visitorVisible) {
+    const workspace = setFolderVisitorVisibility(get().workspace, folderId, visitorVisible); set({ workspace }); scheduleSave(workspace);
+  },
   setLauncherStartOpen(launcherId, startOpen, windowGeometry) {
     const workspace = setLauncherStartOpen(get().workspace, launcherId, startOpen, windowGeometry); set({ workspace }); scheduleSave(workspace);
   },
@@ -176,8 +180,10 @@ export function resetLibraryStoreForTests(nextProfileAddress, nextStorage) {
     progress: { resolved: 0, total: 0, failures: 0 }, searchQuery: '', activeView: { type: 'all', id: null }, selectedAssetId: null });
 }
 
-export function flushLibraryWorkspaceForTests() {
+export function flushLibraryWorkspace() {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = null;
   return saveLibraryWorkspace(workspaceStorage, useLibraryStore.getState().workspace);
 }
+
+export const flushLibraryWorkspaceForTests = flushLibraryWorkspace;

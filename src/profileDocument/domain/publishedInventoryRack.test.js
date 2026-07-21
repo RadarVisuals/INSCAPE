@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { projectPublishedInventoryRack } from './publishedInventoryRack.js';
+import { projectPublishedInventoryRack, reconcilePublishedInventoryOrder } from './publishedInventoryRack.js';
 
 const spaces = Object.freeze([
   Object.freeze({ id: 'space:b', order: 1, label: 'B', startOpen: false, assets: [] }),
@@ -25,11 +25,26 @@ test('an empty or missing public space collection produces no Inventory Rack', (
   assert.equal(projectPublishedInventoryRack({}), null);
 });
 
+test('live Inventory order keeps existing arrangement while adding and removing public spaces', () => {
+  const current = ['space:b', 'space:a'];
+  const withNewSpace = reconcilePublishedInventoryOrder(current, [
+    { id: 'space:a' }, { id: 'space:b' }, { id: 'space:c' }, { id: 'space:d' }
+  ]);
+  assert.deepEqual(withNewSpace, ['space:b', 'space:a', 'space:c', 'space:d']);
+  assert.deepEqual(reconcilePublishedInventoryOrder(withNewSpace, [
+    { id: 'space:a' }, { id: 'space:c' }, { id: 'space:d' }
+  ]), ['space:a', 'space:c', 'space:d']);
+  assert.equal(reconcilePublishedInventoryOrder(withNewSpace, [
+    { id: 'space:b' }, { id: 'space:a' }, { id: 'space:c' }, { id: 'space:d' }
+  ]), withNewSpace, 'unchanged order preserves the current state reference');
+});
+
 test('production rack board stays detached and renders no fixture-only Grid rack', () => {
   const component = readFileSync(new URL('../components/PublishedInventoryRack.jsx', import.meta.url), 'utf8');
   const board = readFileSync(new URL('../components/PublishedRackBoard.jsx', import.meta.url), 'utf8');
   const world = readFileSync(new URL('../components/PublishedHomeWorld.jsx', import.meta.url), 'utf8');
   assert.match(component, /projectDocumentSpace\(module\.space\)/);
+  assert.match(component, /reconcilePublishedInventoryOrder\(current, rack\.modules\)/);
   assert.match(component, /aria-label="Public inventory rack"/);
   assert.match(component, /aria-live="polite"/);
   assert.match(board, /PublishedIdentityRack/);

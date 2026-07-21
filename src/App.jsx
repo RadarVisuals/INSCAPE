@@ -12,7 +12,7 @@ import { Startveil } from './startveil/index.js';
 import { useStore } from './store/useStore.js';
 import { useWalletStore } from './store/useWalletStore.js';
 import { resolveLibraryProfile } from './library/config.js';
-import { loadRestoredPresentation } from './profileDocument/storage/profileDocumentStorage.js';
+import { loadRestoredPresentation, saveRestoredPresentation } from './profileDocument/storage/profileDocumentStorage.js';
 import { createViewedProfileUrl, resolveViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
 import PublishedProfileBoundary from './profileDocument/components/PublishedProfileBoundary.jsx';
 import { resolveOwnerAuthoringEnabled, selectPublicProfileRoute } from './public/publicAccess.js';
@@ -40,6 +40,7 @@ function App() {
   const [keeperUserVisible, setKeeperUserVisible] = useState(true);
   const [stageUserVisible, setStageUserVisible] = useState(true);
   const [galleryActive, setGalleryActive] = useState(false);
+  const [restoredPresentationProfile, setRestoredPresentationProfile] = useState(null);
   const activeActorId = useStore((state) => state.renderConfig.actor.id);
   const activeStageId = useStore((state) => state.renderConfig.scene.background.backdropId);
   const activeEnvironment = useStore((state) => state.renderConfig.scene.environment);
@@ -94,7 +95,17 @@ function App() {
     loadActorPresets();
     const restored = loadRestoredPresentation(window.localStorage, connectedWorkspaceProfileAddress);
     if (restored) applyPublicPresentation(restored);
+    setRestoredPresentationProfile(connectedWorkspaceProfileAddress);
   }, [applyPublicPresentation, connectedWorkspaceProfileAddress, loadActorPresets, ownerAuthoringEnabled]);
+
+  useEffect(() => {
+    if (!ownerAuthoringEnabled || restoredPresentationProfile !== connectedWorkspaceProfileAddress) return;
+    saveRestoredPresentation(window.localStorage, connectedWorkspaceProfileAddress, {
+      keeperId: activeActorId,
+      stageId: activeStageId,
+      environment: activeEnvironment
+    });
+  }, [activeActorId, activeEnvironment, activeStageId, connectedWorkspaceProfileAddress, ownerAuthoringEnabled, restoredPresentationProfile]);
 
   const changeApplicationMode = useCallback((mode) => {
     const nextUrl = createApplicationModeUrl(window.location, mode);

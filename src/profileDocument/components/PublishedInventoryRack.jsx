@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import AssetGrid from '../../library/components/AssetGrid.jsx';
 import AssetPreview from '../../library/components/AssetPreview.jsx';
 import { projectDocumentSpace } from '../domain/documentProjection.js';
+import { reconcilePublishedInventoryOrder } from '../domain/publishedInventoryRack.js';
 import PublishedImage from './PublishedImage.jsx';
 
 const EMPTY_WORKSPACE = Object.freeze({ favorites: [], folders: [] });
@@ -33,6 +34,10 @@ export default function PublishedInventoryRack({ rack }) {
   const [announcement, setAnnouncement] = useState('');
   const rackId = useId();
   const listRef = useRef(null);
+
+  useEffect(() => {
+    setOrder((current) => reconcilePublishedInventoryOrder(current, rack.modules));
+  }, [rack.modules]);
 
   const toggle = (id) => setOpenIds((current) => {
     const next = new Set(current);

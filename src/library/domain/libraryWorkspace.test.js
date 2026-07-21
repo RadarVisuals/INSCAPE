@@ -10,6 +10,7 @@ import {
   renameFolder,
   resetCanvasLayout,
   setFolderAsset,
+  setFolderVisitorVisibility,
   setLauncherPosition,
   setLauncherStartOpen,
   setLauncherVisitorVisibility,
@@ -97,6 +98,25 @@ test('visitor visibility toggles only pinned presentation state', () => {
   assert.equal(setLauncherVisitorVisibility(workspace, 'not-pinned', true), workspace);
   workspace = unpinLibraryView(workspace, { type: 'folder', id: folderId });
   assert.equal(workspace.canvas.launchers.length, 0);
+});
+
+test('folder visibility atomically creates and reuses its public launcher without changing organization', () => {
+  let workspace = createFolder(createEmptyWorkspace('0xprofile'), 'Unpinned archive', 10);
+  const folderId = workspace.folders[0].id;
+  workspace = setFolderAsset(workspace, folderId, 'asset-a', true, 20);
+  const organization = structuredClone(workspace.folders);
+
+  workspace = setFolderVisitorVisibility(workspace, folderId, true);
+  const launcher = getPinnedLauncher(workspace, { type: 'folder', id: folderId });
+  assert.ok(launcher);
+  assert.equal(launcher.visitorVisible, true);
+  assert.deepEqual(workspace.folders, organization);
+
+  workspace = setFolderVisitorVisibility(workspace, folderId, false);
+  assert.equal(getPinnedLauncher(workspace, { type: 'folder', id: folderId }).id, launcher.id);
+  assert.equal(getPinnedLauncher(workspace, { type: 'folder', id: folderId }).visitorVisible, false);
+  assert.deepEqual(workspace.folders, organization);
+  assert.equal(setFolderVisitorVisibility(workspace, 'missing', true), workspace);
 });
 
 test('visitor start-open is authored independently from runtime and organization', () => {

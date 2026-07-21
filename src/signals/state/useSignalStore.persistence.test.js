@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSignalDocument } from '../storage/signalStorage.js';
-import { resetSignalStoreForTests, useSignalStore } from './useSignalStore.js';
+import { flushSignalDocument, resetSignalStoreForTests, useSignalStore } from './useSignalStore.js';
 
 const PROFILE = '0xf3c189819fd5b042f692983bfbfd57ab607ee709';
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -31,5 +31,17 @@ test('failed immediate Signals persistence preserves current settings', () => {
   const before = useSignalStore.getState().settings;
   assert.equal(useSignalStore.getState().replaceSettings({ ...before, audio: true }), false);
   assert.deepEqual(useSignalStore.getState().settings, before);
+  resetSignalStoreForTests(PROFILE, memoryStorage());
+});
+
+test('Signals draft flushing persists the latest settings immediately and reports failure', () => {
+  const storage = memoryStorage();
+  resetSignalStoreForTests(PROFILE, storage);
+  useSignalStore.getState().updateSetting('audio', true);
+  assert.equal(flushSignalDocument(), true);
+  assert.equal(loadSignalDocument(storage, PROFILE).settings.audio, true);
+
+  resetSignalStoreForTests(PROFILE, { getItem: () => null, setItem: () => { throw new Error('quota'); } });
+  assert.equal(flushSignalDocument(), false);
   resetSignalStoreForTests(PROFILE, memoryStorage());
 });

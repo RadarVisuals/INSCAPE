@@ -158,6 +158,17 @@ test('published artwork fails closed for editing while the verified owner keeps 
   assert.match(ownerSource, /onEdit=\{\(\)=>openArtworkInspector\(object\.id\)\}/);
 });
 
+test('framed artwork stays below racks, the Keeper stays above the world, and the opened artwork modal becomes the top layer', () => {
+  const profileCss = readFileSync(resolve(here, '../profileDocument.css'), 'utf8');
+  const rackCss = readFileSync(resolve(here, 'publishedRackBoard.css'), 'utf8');
+  const applicationCss = readFileSync(resolve(here, '../../index.css'), 'utf8');
+  assert.match(rackCss, /published-rack-board\{position:fixed;z-index:94/);
+  assert.match(profileCss, /published-home-world__spatial\{z-index:93\}/);
+  assert.match(profileCss, /profile-document-preview__artwork\{z-index:220\}/);
+  assert.match(applicationCss, /data-application-mode="public"\] \.application-world \{[\s\S]*z-index: 200/);
+  assert.match(applicationCss, /data-application-mode="public"\] \.application-world \{[\s\S]*pointer-events: none/);
+});
+
 test('compact published content clears masthead and identity through 719px, with 720px spatial mode', () => {
   const css = readFileSync(resolve(here, '../profileDocument.css'), 'utf8');
   for (const width of [320, 390, 719]) assert.equal(createPublishedVisitorLayout(documentFixture, width, 800).geometry.narrow, true);

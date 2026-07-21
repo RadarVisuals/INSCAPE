@@ -12,3 +12,12 @@ export function projectPublishedInventoryRack(document) {
   if (!modules.length) return null;
   return { id: 'inventory', label: 'INVENTORY', subtitle: 'PUBLIC COLLECTION', modules };
 }
+
+export function reconcilePublishedInventoryOrder(currentOrder, modules) {
+  const incoming = modules.map(({ id }) => id);
+  const available = new Set(incoming);
+  const retained = currentOrder.filter((id) => available.has(id));
+  const retainedIds = new Set(retained);
+  const next = [...retained, ...incoming.filter((id) => !retainedIds.has(id))];
+  return next.length === currentOrder.length && next.every((id, index) => id === currentOrder[index]) ? currentOrder : next;
+}

@@ -75,7 +75,7 @@ function ModuleBody({ id, rack }) {
   return <LinksTagsBody rack={rack} />;
 }
 
-export default function PublishedIdentityRack({ rack }) {
+export default function PublishedIdentityRack({ rack, onOrderChange }) {
   const avatarUrl = resolvePublishedAssetUrl(rack.identity.avatarUrl);
   const initialOrder = useMemo(() => rack.modules.map(({ id }) => id), [rack]);
   const [order, setOrder] = useState(initialOrder);
@@ -87,6 +87,10 @@ export default function PublishedIdentityRack({ rack }) {
   const [announcement, setAnnouncement] = useState('');
   const listRef = useRef(null);
   const rackId = useId();
+
+  useEffect(() => {
+    if (!arranging) setOrder(initialOrder);
+  }, [arranging, initialOrder]);
 
   const copyProfileAddress = async () => {
     try {
@@ -135,6 +139,15 @@ export default function PublishedIdentityRack({ rack }) {
     }
     setDraggingId(null); setDropIndex(null);
   };
+  const toggleArranging = () => {
+    if (arranging) {
+      setArranging(false);
+      onOrderChange?.([...order]);
+      return;
+    }
+    setOrder(initialOrder);
+    setArranging(true);
+  };
 
   return <aside className="published-identity-rack" data-arranging={arranging || undefined} aria-label="Public identity rack" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()} onWheel={(event) => event.stopPropagation()}>
     <header className="published-identity-rack__master">
@@ -143,7 +156,7 @@ export default function PublishedIdentityRack({ rack }) {
       </div>
       <div className="published-identity-rack__brand"><strong>IDENTITY</strong><small>PUBLIC PROFILE</small></div>
       <button className="published-rack-master-control" type="button" aria-label="Collapse all identity modules" onClick={() => { setOpenIds(new Set()); setProfileShowsAddress(false); }}><CollapseAllIcon /><span>COLLAPSE ALL</span></button>
-      <button className="published-rack-master-control" type="button" aria-label={arranging ? 'Finish arranging identity modules' : 'Arrange identity modules'} aria-pressed={arranging} onClick={() => setArranging((value) => !value)}><ArrangeIcon /><span>{arranging ? 'DONE' : 'ARRANGE'}</span></button>
+      <button className="published-rack-master-control" type="button" aria-label={arranging ? 'Finish arranging identity modules' : 'Arrange identity modules'} aria-pressed={arranging} onClick={toggleArranging}><ArrangeIcon /><span>{arranging ? 'DONE' : 'ARRANGE'}</span></button>
     </header>
     <div className="published-identity-rack__list" ref={listRef}>
       {order.map((id, index) => {

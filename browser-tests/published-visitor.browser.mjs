@@ -52,6 +52,12 @@ const transparentPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4
 const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 const lifecycleDiagnostic = createLifecycleDiagnostics();
 
+function recordBrowserProblem(problem) {
+  const expectedNavigationAbort = problem === 'Request failed: loopback net::ERR_ABORTED';
+  const expectedFixtureImageAbort = problem === 'Request failed: https://published-images.invalid net::ERR_ABORTED';
+  if (!expectedNavigationAbort && !expectedFixtureImageAbort) browserProblems.push(problem);
+}
+
 async function availablePort() {
   const socket = createServer();
   return withinDeadline(new Promise((resolvePort, reject) => {
@@ -120,7 +126,7 @@ async function navigate(address = profileA, { identityRack = false } = {}) {
     await collectBootstrapDiagnostics(error, fixtureUrl);
     throw error;
   }
-  await waitFor(`(()=>{const n=document.querySelector('.published-home-world__spatial');if(!n||getComputedStyle(n).zIndex!=='15')return false;return innerWidth>=720||getComputedStyle(n).overflowY==='auto'})()`, 'published visitor responsive styles');
+  await waitFor(`(()=>{const n=document.querySelector('.published-home-world__spatial');if(!n||getComputedStyle(n).zIndex!=='93')return false;return innerWidth>=720||getComputedStyle(n).overflowY==='auto'})()`, 'published visitor responsive styles');
 }
 
 async function collectBootstrapDiagnostics(error, fixtureUrl) {
@@ -250,7 +256,7 @@ before(async () => runBrowserSetupWithCleanup(async () => {
       return { action: 'fulfill', options: { status: 204, contentType: 'text/plain', body: '' } };
     } });
   await launchPlaywrightEdge({ edgePath: browserPath, runtimePath: runtimeDir, workspaceRoot: root, loopbackOrigin: baseUrl,
-    routeController, resources, diagnostic: lifecycleDiagnostic, onBrowserProblem: (problem) => browserProblems.push(problem),
+    routeController, resources, diagnostic: lifecycleDiagnostic, onBrowserProblem: recordBrowserProblem,
     onOwnedProcess: ({ rootPid, processTree }) => {
       browserTree = processTree;
       cleanupBrowserTest = createBrowserTestCleanup({ rootPid, processTree, runtimePath: runtimeDir, workspaceRoot: root, diagnostic: lifecycleDiagnostic });

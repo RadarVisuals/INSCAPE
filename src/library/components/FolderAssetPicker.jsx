@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-export default function FolderAssetPicker({ assets, folder, onCancel, onSave }) {
+export default function FolderAssetPicker({ assets, folder, emptyMessage = 'No Library assets match this search.', onCancel, onSave }) {
   const [query, setQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState(() => new Set(folder.assetIds));
 
@@ -44,7 +44,7 @@ export default function FolderAssetPicker({ assets, folder, onCancel, onSave }) 
               <small>{asset.collectionName || 'Uncatalogued'}</small>
             </label>;
           })}
-          {!visibleAssets.length && <p className="folder-asset-picker__empty">No Library assets match this search.</p>}
+          {!visibleAssets.length && <p className="folder-asset-picker__empty">{query.trim() ? 'No Library assets match this search.' : emptyMessage}</p>}
         </div>
         <footer>
           <button type="button" onClick={onCancel}>Cancel</button>

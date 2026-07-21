@@ -1,0 +1,24 @@
+.profile-document-owner-preview {
+  display: contents;
+}
+
+.profile-document-owner-preview__exit {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 150;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid rgba(232, 121, 69, .45);
+  background: rgba(7, 9, 9, .92);
+  color: #eeebdf;
+  font: 600 .66rem/1 Oxanium, sans-serif;
+  pointer-events: auto;
+}
+
+@media (max-width: 719px) {
+  .profile-document-owner-preview__exit {
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+  }
+}
