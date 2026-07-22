@@ -13,13 +13,14 @@ function downloadText(text, filename) {
   link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url);
 }
 
-export default function ProfileDocumentPanel({ snapshot, imported, stale, error, activeProfileAddress, getPublicationContext, onBuild, onPreview, onImport, onRestore, onClose }) {
+export default function ProfileDocumentPanel({ draft, snapshot, imported, stale, error, activeProfileAddress, getPublicationContext,
+  draftSaveStatus = 'saving', onBuild, onPreview, onImport, onRestore, onClose }) {
   const fileRef = useRef(null); const [message, setMessage] = useState(''); const [cid, setCid] = useState('');
   const cidRef = useRef(cid); const cidGenerationRef = useRef(0);
   const livePublicationContext = useCallback(() => ({ ...getPublicationContext(), cidInput: cidRef.current,
     cidGeneration: cidGenerationRef.current }), [getPublicationContext]);
   const publication = useProfileDocumentPublication(livePublicationContext, `${cidGenerationRef.current}:${stale}`);
-  const current = imported || snapshot;
+  const current = imported || draft || snapshot;
   const exportSnapshot = () => {
     try {
       if (!snapshot) throw new Error('Build a snapshot before export');
@@ -41,10 +42,10 @@ export default function ProfileDocumentPanel({ snapshot, imported, stale, error,
   };
   return <aside className="profile-document-panel" role="dialog" aria-modal="false" aria-labelledby="profile-document-title">
     <header><div><span>Portable profile document</span><h2 id="profile-document-title">Share profile</h2></div><button type="button" onClick={onClose} aria-label="Close Share"><X aria-hidden="true" /></button></header>
-    <div className="profile-document-panel__status"><span>{current ? 'DOCUMENT VALID' : 'LOCAL SNAPSHOT EMPTY'}</span><span>VERSION {current?.version || PROFILE_DOCUMENT_VERSION}</span>{stale && <span>DRAFT CHANGED</span>}{imported && <span>IMPORTED DOCUMENT</span>}</div>
-    {current ? <dl><div><dt>Profile</dt><dd>{current.profile.cachedIdentity.name || current.profile.address}</dd></div><div><dt>Revision</dt><dd>{current.revision}</dd></div><div><dt>Public spaces</dt><dd>{current.spaces.length}</dd></div><div><dt>Public asset references</dt><dd>{countProfileDocumentAssets(current)}</dd></div><div><dt>Keeper</dt><dd>{current.presentation.keeperId}</dd></div></dl> : <p>No public snapshot has been generated.</p>}
+    <div className="profile-document-panel__status"><span data-state={draftSaveStatus}>{draftSaveStatus === 'saved' ? 'SAVED DRAFT' : draftSaveStatus === 'error' ? 'SAVE FAILED' : 'SAVING DRAFT'}</span><span>VERSION {current?.version || PROFILE_DOCUMENT_VERSION}</span>{stale && <span>UNPUBLISHED CHANGES</span>}{snapshot && !stale && <span>PUBLICATION SNAPSHOT READY</span>}{!snapshot && <span>NOT YET PREPARED</span>}{imported && <span>IMPORTED DOCUMENT</span>}</div>
+    {current ? <dl><div><dt>Profile</dt><dd>{current.profile.cachedIdentity.name || current.profile.address}</dd></div><div><dt>Revision</dt><dd>{current.revision}</dd></div><div><dt>Public spaces</dt><dd>{current.spaces.length}</dd></div><div><dt>Public asset references</dt><dd>{countProfileDocumentAssets(current)}</dd></div><div><dt>Keeper</dt><dd>{current.presentation.keeperId}</dd></div></dl> : <p>No saved draft is available.</p>}
     <p className="profile-document-panel__hint">Private spaces and canvas artwork are excluded.</p>
-    <div className="profile-document-panel__actions"><button type="button" onClick={onBuild}>{snapshot ? 'Rebuild snapshot' : 'Build snapshot'}</button><button type="button" disabled={!snapshot} onClick={() => onPreview('snapshot')}>Preview profile</button><button type="button" disabled={!snapshot || stale} onClick={exportSnapshot}>Export profile</button><button type="button" onClick={() => fileRef.current?.click()}>Import profile</button>{imported && <><button type="button" onClick={() => onPreview('imported')}>Preview import</button><button type="button" onClick={onRestore}>Restore presentation</button></>}</div>
+    <div className="profile-document-panel__actions"><button type="button" onClick={() => onPreview('draft')}>Preview current draft</button><button type="button" onClick={onBuild}>{snapshot ? 'Update publication snapshot' : 'Prepare publication snapshot'}</button><button type="button" disabled={!snapshot || stale} onClick={exportSnapshot}>Export profile</button><button type="button" onClick={() => fileRef.current?.click()}>Import profile</button>{imported && <><button type="button" onClick={() => onPreview('imported')}>Preview import</button><button type="button" onClick={onRestore}>Restore presentation</button></>}</div>
     <section className="profile-document-panel__publication" aria-labelledby="profile-publication-title">
       <h3 id="profile-publication-title">Public IPFS publication</h3>
       <p>Download the canonical file, upload it unchanged to Pinata Public IPFS, then paste the returned CID.</p>

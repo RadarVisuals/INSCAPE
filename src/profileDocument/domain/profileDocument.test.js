@@ -6,7 +6,7 @@ import { migrateProfileDocument } from './profileDocumentMigration.js';
 import { parseProfileDocumentJson, ProfileDocumentValidationError, validateProfileDocument } from './profileDocumentValidation.js';
 import { createProfileDocumentRestorePlan, executeAtomicRestore } from './profileDocumentRestore.js';
 import { createProfileDocumentState, enterDocumentPreview, exitDocumentPreview, isSnapshotStale, setImportedDocument, setSnapshot } from '../state/profileDocumentState.js';
-import { loadRestoredPresentation, profilePresentationKey } from '../storage/profileDocumentStorage.js';
+import { loadRestoredPresentation, profilePresentationKey, saveRestoredPresentation } from '../storage/profileDocumentStorage.js';
 import { projectDocumentAsset } from './documentProjection.js';
 import { PROFILE_DOCUMENT_LIMITS } from './constants.js';
 
@@ -201,6 +201,19 @@ test('import preview is isolated and exit preserves draft state', () => {
   state = exitDocumentPreview(state); assert.deepEqual(workspace(), draft); assert.equal(state.imported.spaces[0].label, 'Public A');
 });
 
+test('draft preview clones the current public projection without replacing the publication snapshot', () => {
+  const snapshot = build({ revision: 1 });
+  const draft = build({ revision: 2, profileIdentity: { name: 'Current draft' } });
+  let state = setSnapshot(createProfileDocumentState(), snapshot, profileDocumentContentFingerprint(snapshot));
+
+  state = enterDocumentPreview(state, 'draft', draft);
+  assert.equal(state.previewSource, 'draft');
+  assert.equal(state.preview.profile.cachedIdentity.name, 'Current draft');
+  assert.equal(state.snapshot.revision, 1);
+  state.preview.profile.cachedIdentity.name = 'Preview mutation';
+  assert.equal(draft.profile.cachedIdentity.name, 'Current draft');
+});
+
 test('restored-presentation records preserve controlled environments and migrate legacy records', () => {
   const records = new Map(); const storage = { getItem: (key) => records.get(key) ?? null };
   const key = profilePresentationKey(PROFILE);
@@ -210,6 +223,17 @@ test('restored-presentation records preserve controlled environments and migrate
   assert.equal(loadRestoredPresentation(storage, PROFILE).environment.type, 'illustrated');
   records.set(key, JSON.stringify({ version: 2, keeperId: 'skull_reaper', stageId: 'black', environment: { type: 'shader', shaderId: 'remote' } }));
   assert.equal(loadRestoredPresentation(storage, PROFILE), null);
+});
+
+test('owner Keeper and world presentation save through the existing profile-scoped record', () => {
+  const records = new Map();
+  const storage = { getItem: (key) => records.get(key) ?? null, setItem: (key, value) => records.set(key, value) };
+  const presentation = { keeperId: 'skull_reaper', stageId: 'black', environment: { type: 'shader', shaderId: 'neural-field' } };
+  assert.equal(saveRestoredPresentation(storage, PROFILE, presentation), true);
+  assert.deepEqual(loadRestoredPresentation(storage, PROFILE), { version: 2, ...presentation });
+  assert.equal(saveRestoredPresentation(storage, PROFILE, { ...presentation, environment: { type: 'shader', shaderId: 'remote' } }), false);
+  assert.equal(saveRestoredPresentation(null, PROFILE, presentation), false);
+  assert.equal(saveRestoredPresentation({ setItem: () => { throw new Error('quota'); } }, PROFILE, presentation), false);
 });
 
 test('restore plan replaces only public presentation and preserves private Favorites/folders', () => {

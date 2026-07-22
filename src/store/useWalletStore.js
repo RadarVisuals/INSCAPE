@@ -4,7 +4,7 @@ import { createClientUPProvider } from "@lukso/up-provider";
 import { createWalletClient, createPublicClient, custom, http, numberToHex, getAddress } from "viem";
 import { lukso } from "viem/chains";
 import { ERC725 } from '@erc725/erc725.js';
-import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' assert { type: 'json' };
+import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' with { type: 'json' };
 import { createWalletProviderLifecycle } from './walletProviderLifecycle.js';
 import { developmentLog, installDevelopmentGlobal, reportControlledError } from '../diagnostics.js';
 

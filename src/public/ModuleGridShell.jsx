@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import IdentityDossier from './IdentityDossier.jsx';
-import { CollectionWindow, FolderWindow, useLibraryStore } from '../library/index.js';
+import { CollectionWindow, flushLibraryWorkspace, FolderWindow, useLibraryStore } from '../library/index.js';
 import { CreationsWindow } from '../creations/index.js';
 import AssetPreview from '../library/components/AssetPreview.jsx';
 import KeeperSignalsLayer from '../signals/components/KeeperSignalsLayer.jsx';
 import SignalSettings from '../signals/components/SignalSettings.jsx';
 import SignalsWindow from '../signals/components/SignalsWindow.jsx';
-import { useSignalStore } from '../signals/state/useSignalStore.js';
+import { flushSignalDocument, useSignalStore } from '../signals/state/useSignalStore.js';
 import { useProfileIdentity } from '../profileIdentity/index.js';
 import ProfileDocumentPanel from '../profileDocument/components/ProfileDocumentPanel.jsx';
 import ProfileDocumentPreview from '../profileDocument/components/ProfileDocumentPreview.jsx';
@@ -18,7 +18,7 @@ import { assertValidProfileDocument } from '../profileDocument/domain/profileDoc
 import { createProfileDocumentRestorePlan } from '../profileDocument/domain/profileDocumentRestore.js';
 import { profileDocumentContentFingerprint } from '../profileDocument/domain/profileDocumentSerialization.js';
 import { canonicalPublicationHash, publicationContentFingerprint } from '../profileDocument/domain/profileDocumentPublication.js';
-import { loadProfileSnapshot, profilePresentationKey, saveProfileSnapshot } from '../profileDocument/storage/profileDocumentStorage.js';
+import { loadProfileSnapshot, profilePresentationKey, saveProfileSnapshot, saveRestoredPresentation } from '../profileDocument/storage/profileDocumentStorage.js';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { getPublicTheme } from './themeTokens.js';
 import { findScenePlacement, findScenePlacementAtPointer, isScenePlacementAvailable, LAUNCHER_SIZE_PRESETS, normalizeSpan, packCompactCanvasObjects, packCompactScene } from './sceneGrid.js';
@@ -36,10 +36,11 @@ import GalleryWorld from './GalleryWorld.jsx';
 import HomeWorldSurface from './HomeWorldSurface.jsx';
 import KeeperDock from './KeeperDock.jsx';
 import ProfileDiscovery from '../profileDiscovery/ProfileDiscovery.jsx';
-import { clampHomeWorldCamera, getWindowRevealCamera, getZoomedHomeWorldCamera, HOME_WORLD_ZOOM_LEVELS, loadHomeWorldCamera, saveHomeWorldCamera } from './homeWorldCamera.js';
+import { clampVerticalHomeWorldCamera, getWindowRevealCamera, loadHomeWorldCamera, saveHomeWorldCamera } from './homeWorldCamera.js';
 import { CANVAS_OBJECT_KIND, getCanvasObjectDefinition } from '../library/domain/canvasObjectRegistry.js';
 import { CANVAS_OBJECT_ORDER_COMMAND } from '../library/domain/canvasObjects.js';
 import { runOwnerAuthoringMutation, selectLiveCanvasContent } from './publicAccess.js';
+import { createVerticalHomePlacementGeometry, createVerticalHomeWorld } from './verticalHomeWorld.js';
 import {
   MODULE_LAYOUT_STORAGE_KEY,
   LEGACY_MODULE_LAYOUT_STORAGE_KEY,
@@ -89,20 +90,7 @@ const AUTHORING_CONTEXT_COMMANDS = new Set([
   'object-front', 'object-back', 'remove-artwork', 'toggle-start-open'
 ]);
 
-function createHomePlacementGeometry(geometry) {
-  if (geometry.narrow) return geometry;
-  const worldContentX = Math.round((geometry.width + geometry.left) / 40) * 40;
-  const worldContentY = Math.round((geometry.height + geometry.top) / 40) * 40;
-  return {
-    ...geometry,
-    minColumn: -Math.floor(worldContentX / geometry.cellWidth),
-    minRow: -Math.floor(worldContentY / geometry.cellHeight),
-    columns: Math.floor((geometry.width * 3) / geometry.cellWidth),
-    rows: Math.floor((geometry.height * 3) / geometry.cellHeight),
-    usableWidth: geometry.width * 3,
-    usableHeight: geometry.height * 3
-  };
-}
+const createHomePlacementGeometry = createVerticalHomePlacementGeometry;
 
 function defaultSystemPresentation(id, order) { return { appearanceMode: 'label', iconKey: SYSTEM_ICONS[id], span: { columns: 3, rows: 1 }, presentationOrder: order, startOpen: false, windowGeometry: null }; }
 function readSystemPresentation() { try { const value = JSON.parse(window.localStorage.getItem(SYSTEM_SCENE_KEY)); return Object.fromEntries(MODULES.map((module, index) => { const item=value?.[module.id]; return [module.id,{ ...defaultSystemPresentation(module.id,index), ...(item || {}), label:module.label, iconKey:normalizeIconKey(item?.iconKey,SYSTEM_ICONS[module.id]), span:normalizeSpan(item?.span,item?.appearanceMode) }]; })); } catch { return Object.fromEntries(MODULES.map((module,index)=>[module.id,{...defaultSystemPresentation(module.id,index),label:module.label}])); } }
@@ -166,6 +154,7 @@ export default function ModuleGridShell({
   const [folderEntryLauncherId, setFolderEntryLauncherId] = useState(null);
   const [activeModuleId, setActiveModuleId] = useState(null);
   const [activeHudCommand, setActiveHudCommand] = useState(null);
+  const [draftSaveState, setDraftSaveState] = useState(() => ({ profileAddress: workspace.profileAddress, status: 'saving' }));
   const [contextMenu, setContextMenu] = useState(null);
   const [inspectorAnchor, setInspectorAnchor] = useState(null);
   const [artworkInspector, setArtworkInspector] = useState(null);
@@ -202,7 +191,6 @@ export default function ModuleGridShell({
   const cameraTransitionFrameRef = useRef(0);
   const homeCameraRef = useRef(homeCameraState.camera);
   const pendingWindowRevealRef = useRef(null);
-  const spatialZoomWheelRef = useRef(0);
 
   const openWorldContextMenu = useCallback((event) => {
     if (!interfaceVisible) return;
@@ -290,13 +278,13 @@ export default function ModuleGridShell({
   );
   const pinnedLaunchers = liveCanvasContent.launchers;
   const canvasObjects = liveCanvasContent.objects;
-  const homeWorld = useMemo(() => ({ width:geometry.width*3, height:geometry.height*3, viewportWidth:geometry.width, viewportHeight:geometry.height }), [geometry.height,geometry.width]);
+  const homeWorld = useMemo(() => createVerticalHomeWorld(geometry), [geometry]);
   const homeOrigin = useMemo(() => ({ x:geometry.width, y:geometry.height, zoom:1 }), [geometry.height,geometry.width]);
   const homeCamera = geometry.narrow || homeCameraState.profileAddress !== workspace.profileAddress
     ? homeOrigin
-    : homeCameraState.camera;
+    : clampVerticalHomeWorldCamera(homeCameraState.camera, homeWorld, homeOrigin.x);
   homeCameraRef.current = homeCamera;
-  const homeZoom = geometry.narrow ? 1 : homeCamera.zoom;
+  const homeZoom = 1;
   const worldContentX = Math.round((geometry.width + geometry.left) / 40) * 40;
   const worldContentY = Math.round((geometry.height + geometry.top) / 40) * 40;
   const placementGeometry = useMemo(() => createHomePlacementGeometry(geometry), [geometry]);
@@ -346,14 +334,6 @@ export default function ModuleGridShell({
       '--folder-entry-origin-y': `${(launcherRect.row + launcherRect.rowSpan / 2 - openFolderPosition.row) * geometry.cellHeight}px`
     };
   }, [folderEntryLauncherId, geometry.cellHeight, geometry.cellWidth, geometry.narrow, openFolderLauncher, openFolderPosition, sceneById]);
-  const homeLocations = useMemo(() => {
-    const centerOf=(rect)=>({x:worldContentX+(rect.column+rect.columnSpan/2)*geometry.cellWidth,y:worldContentY+(rect.row+rect.rowSpan/2)*geometry.cellHeight});
-    const locations=spatialSceneItems.map((item)=>({...centerOf(item.geometry),id:item.id,label:item.label||item.id,kind:'launcher'}));
-    canvasObjects.forEach((object)=>{const scene=canvasObjectScenes[object.id];if(scene)locations.push({...centerOf(scene.geometry),id:object.id,label:'Artwork',kind:'artwork'});});
-    const windows=[['collection',collectionPanelPosition,collectionOpen],['creations',creationsPanelPosition,creationsOpen],['signals',signalsPanelPosition,signalsOpen],[openFolderLauncher?.id,openFolderPosition,Boolean(openFolderLauncher)]];
-    windows.forEach(([id,rect,open])=>{if(id&&rect&&open)locations.push({...centerOf(rect),id:`window:${id}`,label:`${id} window`,kind:'window'});});
-    return locations;
-  },[canvasObjectScenes,canvasObjects,collectionOpen,collectionPanelPosition,creationsOpen,creationsPanelPosition,geometry.cellHeight,geometry.cellWidth,openFolderLauncher,openFolderPosition,signalsOpen,signalsPanelPosition,spatialSceneItems,worldContentX,worldContentY]);
   const authoredWindowDefaults = useMemo(() => {
     const openIds = MODULES.filter(({ id }) => systemPresentation[id]?.startOpen).map(({ id }) => id);
     const rects = {};
@@ -372,6 +352,44 @@ export default function ModuleGridShell({
     draftGenerationRef.current = { fingerprint: draftFingerprint, generation: draftGenerationRef.current.generation + 1 };
   }
   const snapshotStale = Boolean(snapshot && useProfileDocumentStore.getState().snapshotDraftFingerprint !== draftFingerprint);
+  const draftSaveStatus = draftSaveState.profileAddress === workspace.profileAddress ? draftSaveState.status : 'saving';
+  const persistOwnerDraft = useCallback(() => {
+    const librarySaved = flushLibraryWorkspace();
+    const signalsSaved = flushSignalDocument();
+    const presentationSaved = saveRestoredPresentation(window.localStorage, workspace.profileAddress, {
+      keeperId: activeActorId, stageId, environment
+    });
+    let layoutSaved = true;
+    if (!geometry.narrow) {
+      try { window.localStorage.setItem(MODULE_LAYOUT_STORAGE_KEY, encodeModuleLayout(positions)); }
+      catch (error) { layoutSaved = false; reportControlledError('module-grid-layout-persist', error); }
+    }
+    let systemPresentationSaved = true;
+    try { window.localStorage.setItem(SYSTEM_SCENE_KEY, JSON.stringify(systemPresentation)); }
+    catch (error) { systemPresentationSaved = false; reportControlledError('system-presentation-persist', error); }
+    const saved = librarySaved && signalsSaved && presentationSaved && layoutSaved && systemPresentationSaved;
+    if (!saved) reportControlledError('owner-draft-persist', new Error('Could not save every owner draft source'));
+    setDraftSaveState({ profileAddress: workspace.profileAddress, status: saved ? 'saved' : 'error' });
+    return saved;
+  }, [activeActorId, environment, geometry.narrow, positions, stageId, systemPresentation, workspace.profileAddress]);
+
+  useEffect(() => {
+    if (!ownerAuthoringEnabled) return undefined;
+    setDraftSaveState({ profileAddress: workspace.profileAddress, status: 'saving' });
+    const timeout = window.setTimeout(persistOwnerDraft, 240);
+    return () => window.clearTimeout(timeout);
+  }, [draftFingerprint, ownerAuthoringEnabled, persistOwnerDraft, signalSettings, workspace]);
+
+  useEffect(() => {
+    if (!ownerAuthoringEnabled) return undefined;
+    const flush = () => persistOwnerDraft();
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', flush);
+    };
+  }, [ownerAuthoringEnabled, persistOwnerDraft]);
   const getPublicationContext = useCallback(() => {
     const wallet = getWalletPublicationContext?.() || {};
     const documentState = useProfileDocumentStore.getState();
@@ -398,7 +416,7 @@ export default function ModuleGridShell({
     cameraTransitionFrameRef.current = 0;
     setHomeCameraState({
       profileAddress: workspace.profileAddress,
-      camera: clampHomeWorldCamera(loadHomeWorldCamera(window.localStorage, workspace.profileAddress, homeOrigin), homeWorld)
+      camera: clampVerticalHomeWorldCamera(loadHomeWorldCamera(window.localStorage, workspace.profileAddress, homeOrigin), homeWorld, homeOrigin.x)
     });
   }, [homeOrigin, homeWorld, workspace.profileAddress]);
 
@@ -443,7 +461,10 @@ export default function ModuleGridShell({
     } catch (error) { setDocumentError(error.message); }
   }, [activeActorId, environment, installSnapshot, libraryAssets, ownerAuthoringEnabled, positions, profileIdentity, setDocumentError, signalSettings, snapshot, stageId, systemPresentation, workspace]);
 
-  const startPreview = useCallback((source) => { enterPreview(source); setActiveHudCommand(null); }, [enterPreview]);
+  const startPreview = useCallback((source) => {
+    enterPreview(source, source === 'draft' ? draftDocument : undefined);
+    setActiveHudCommand(null);
+  }, [draftDocument, enterPreview]);
   const stopPreview = useCallback(() => { exitPreview(); onPreviewDocumentChange?.(null); }, [exitPreview, onPreviewDocumentChange]);
   useEffect(() => { onPreviewDocumentChange?.(previewDocument); }, [onPreviewDocumentChange, previewDocument]);
 
@@ -796,23 +817,20 @@ export default function ModuleGridShell({
 
   const setHomeCameraImmediately = useCallback((camera) => {
     cancelCameraTransition();
-    homeCameraRef.current = camera;
-    setHomeCameraState({ profileAddress: workspace.profileAddress, camera });
-  }, [cancelCameraTransition, workspace.profileAddress]);
+    const verticalCamera = clampVerticalHomeWorldCamera(camera, homeWorld, homeOrigin.x);
+    homeCameraRef.current = verticalCamera;
+    setHomeCameraState({ profileAddress: workspace.profileAddress, camera: verticalCamera });
+  }, [cancelCameraTransition, homeOrigin.x, homeWorld, workspace.profileAddress]);
 
-  const handleWorldWindowWheel = useCallback((event) => {
-    if (geometry.narrow || !event.ctrlKey) return;
+  const handleWorldWheel = useCallback((event) => {
+    if (geometry.narrow) return;
+    if (event.target.closest?.('.module-shell--expanded,.artwork-inspector,.canvas-artwork-preview,.desktop-menu')) return;
     event.preventDefault();
     event.stopPropagation();
-    const now = performance.now();
-    if (now - spatialZoomWheelRef.current < 80) return;
-    spatialZoomWheelRef.current = now;
+    if (event.ctrlKey || event.deltaY === 0) return;
     const camera = homeCameraRef.current;
-    const index = HOME_WORLD_ZOOM_LEVELS.indexOf(camera.zoom);
-    const nextIndex = Math.max(0, Math.min(HOME_WORLD_ZOOM_LEVELS.length - 1, index + (event.deltaY < 0 ? 1 : -1)));
-    if (nextIndex === index) return;
-    setHomeCameraImmediately(getZoomedHomeWorldCamera(camera, HOME_WORLD_ZOOM_LEVELS[nextIndex], { x: event.clientX, y: event.clientY }, homeWorld));
-  }, [geometry.narrow, homeWorld, setHomeCameraImmediately]);
+    setHomeCameraImmediately({ ...camera, y: camera.y + event.deltaY });
+  }, [geometry.narrow, setHomeCameraImmediately]);
 
   const transitionHomeCamera = useCallback((target) => {
     if (!target) return;
@@ -828,9 +846,9 @@ export default function ModuleGridShell({
       const progress = Math.min(1, (now - startedAt) / duration);
       const eased = 1 - Math.pow(1 - progress, 3);
       const camera = {
-        x: start.x + (target.x - start.x) * eased,
+        x: homeOrigin.x,
         y: start.y + (target.y - start.y) * eased,
-        zoom: target.zoom
+        zoom: 1
       };
       homeCameraRef.current = camera;
       setHomeCameraState({ profileAddress: workspace.profileAddress, camera });
@@ -838,7 +856,7 @@ export default function ModuleGridShell({
       else cameraTransitionFrameRef.current = 0;
     };
     cameraTransitionFrameRef.current = window.requestAnimationFrame(step);
-  }, [cancelCameraTransition, geometry.narrow, revealPresentation.reducedMotion, setHomeCameraImmediately, workspace.profileAddress]);
+  }, [cancelCameraTransition, geometry.narrow, homeOrigin.x, revealPresentation.reducedMotion, setHomeCameraImmediately, workspace.profileAddress]);
 
   const focusWorldWindow = useCallback((id,rect) => {
     updateRuntime({type:'focus',id});
@@ -1118,7 +1136,6 @@ export default function ModuleGridShell({
         camera={homeCamera}
         geometry={geometry}
         world={homeWorld}
-        locations={homeLocations}
         gridVisible={gridVisible}
         theme={shellTheme}
         visible={interfaceVisible}
@@ -1144,7 +1161,7 @@ export default function ModuleGridShell({
           '--grid-left': `${geometry.left}px`,
           '--grid-top': `${geometry.top}px`
         }}
-        onWheel={handleWorldWindowWheel}
+        onWheel={handleWorldWheel}
       >
         {!galleryOpen && spatialLayerTarget && createPortal(<div
           ref={spatialLayerRef}
@@ -1460,6 +1477,8 @@ export default function ModuleGridShell({
       />}
       {ownerAuthoringEnabled && activeHudCommand === 'settings' && <SignalSettings />}
       {ownerAuthoringEnabled && activeHudCommand === 'share' && <ProfileDocumentPanel
+        draft={draftDocument}
+        draftSaveStatus={draftSaveStatus}
         snapshot={snapshot}
         imported={importedDocument}
         stale={snapshotStale}

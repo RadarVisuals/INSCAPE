@@ -35,6 +35,14 @@ export function clampHomeWorldCamera(camera, world) {
   return { ...normalized, ...clampSpatialCamera(normalized, { minX: 0, maxX, minY: 0, maxY }) };
 }
 
+export function clampVerticalHomeWorldCamera(camera, world, fixedX) {
+  return clampHomeWorldCamera({
+    ...camera,
+    x: Number.isFinite(fixedX) ? fixedX : 0,
+    zoom: 1
+  }, world);
+}
+
 export function getZoomedHomeWorldCamera(camera, nextZoom, anchor, world) {
   const current = normalizeHomeWorldCamera(camera);
   const zoomed = normalizeHomeWorldCamera({ ...current, zoom: nextZoom });

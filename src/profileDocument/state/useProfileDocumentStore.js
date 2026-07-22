@@ -5,7 +5,7 @@ export const useProfileDocumentStore = create((set) => ({
   ...createProfileDocumentState(),
   installSnapshot: (document, fingerprint) => set((state) => setSnapshot(state, document, fingerprint)),
   installImported: (document) => set((state) => setImportedDocument(state, document)),
-  enterPreview: (source) => set((state) => enterDocumentPreview(state, source)),
+  enterPreview: (source, document) => set((state) => enterDocumentPreview(state, source, document)),
   exitPreview: () => set((state) => exitDocumentPreview(state)),
   setError: (error) => set({ error: error ? String(error) : null })
 }));

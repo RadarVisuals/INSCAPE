@@ -1,29 +1,21 @@
-import { clampHomeWorldCamera } from '../../public/homeWorldCamera.js';
 import { gridRectToPixelRect, normalizeGridRect } from '../../public/gridGeometry.js';
 import { createModuleGridGeometry } from '../../public/moduleLayout.js';
 import { normalizeSpan, packCompactCanvasObjects, packCompactScene } from '../../public/sceneGrid.js';
+import { createVerticalHomeLayout } from '../../public/verticalHomeWorld.js';
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 export const VISITOR_WINDOW_GRID_SIZE = 40;
 
 export function createPublishedVisitorLayout(document, width, height) {
   const geometry = createModuleGridGeometry(width, height);
-  const originX = Math.round((geometry.width + geometry.left) / 40) * 40;
-  const originY = Math.round((geometry.height + geometry.top) / 40) * 40;
-  const world = { width: geometry.width * 3, height: geometry.height * 3, viewportWidth: geometry.width, viewportHeight: geometry.height };
-  const placementGeometry = geometry.narrow ? geometry : {
-    ...geometry,
-    minColumn: -Math.floor(originX / geometry.cellWidth),
-    minRow: -Math.floor(originY / geometry.cellHeight),
-    columns: Math.floor(world.width / geometry.cellWidth),
-    rows: Math.floor(world.height / geometry.cellHeight),
-    usableWidth: world.width,
-    usableHeight: world.height
-  };
+  const verticalLayout = createVerticalHomeLayout(geometry);
+  const { world, placementGeometry, camera } = verticalLayout;
+  const { x: originX, y: originY } = verticalLayout.origin;
   const authoredSpaces = [...document.spaces].sort((a, b) => a.order - b.order).map((space) => {
     const appearance = space.appearance || { mode: 'label', iconKey: space.kind === 'favorites' ? 'favorites' : 'folder', showLabel: true, columnSpan: 3, rowSpan: 1 };
     const span = normalizeSpan({ columns: appearance.columnSpan, rows: appearance.rowSpan }, appearance.mode, placementGeometry);
-    return { id: space.id, space, appearance, span, position: { ...space.placement }, presentationOrder: space.order };
+    const rect = normalizeGridRect({ column:space.placement.column, row:space.placement.row, columnSpan:span.columns, rowSpan:span.rows }, placementGeometry);
+    return { id: space.id, space, appearance, span:{ columns:rect.columnSpan, rows:rect.rowSpan }, position:{ column:rect.column, row:rect.row }, presentationOrder:space.order };
   });
   const spaces = geometry.narrow ? packCompactScene(authoredSpaces, geometry) : authoredSpaces;
   const authoredObjects = [...document.canvasObjects].sort((a, b) => a.order - b.order).map((object) => ({
@@ -34,7 +26,6 @@ export function createPublishedVisitorLayout(document, width, height) {
     geometry: normalizeGridRect({ column: object.placement.column, row: object.placement.row, columnSpan: object.span.columns, rowSpan: object.span.rows }, placementGeometry)
   }));
   const objects = geometry.narrow ? packCompactCanvasObjects(authoredObjects, geometry) : authoredObjects;
-  const camera = geometry.narrow ? { x: 0, y: 0, zoom: 1 } : clampHomeWorldCamera({ x: geometry.width, y: geometry.height, zoom: 1 }, world);
   return { geometry, placementGeometry, world, originX, originY, camera, spaces, objects };
 }
 
@@ -45,17 +36,6 @@ export function publishedWorldTransform(layout, camera) {
 
 export function publishedItemPixelRect(item, layout) {
   return gridRectToPixelRect({ column: item.position.column, row: item.position.row, columnSpan: item.span.columns, rowSpan: item.span.rows }, layout.geometry, 2);
-}
-
-export function publishedNavigatorLocations(layout) {
-  const center = (item) => ({
-    x: layout.originX + (item.position.column + item.span.columns / 2) * layout.geometry.cellWidth,
-    y: layout.originY + (item.position.row + item.span.rows / 2) * layout.geometry.cellHeight
-  });
-  return [
-    ...layout.spaces.map((item) => ({ id: item.id, label: item.space.label, kind: 'launcher', ...center(item) })),
-    ...layout.objects.map((item) => ({ id: item.id, label: item.asset.cachedName || 'Artwork', kind: 'artwork', ...center(item) }))
-  ];
 }
 
 export function clampVisitorWindowRect(rect, viewport) {

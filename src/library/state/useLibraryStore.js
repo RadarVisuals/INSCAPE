@@ -176,8 +176,10 @@ export function resetLibraryStoreForTests(nextProfileAddress, nextStorage) {
     progress: { resolved: 0, total: 0, failures: 0 }, searchQuery: '', activeView: { type: 'all', id: null }, selectedAssetId: null });
 }
 
-export function flushLibraryWorkspaceForTests() {
+export function flushLibraryWorkspace() {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = null;
   return saveLibraryWorkspace(workspaceStorage, useLibraryStore.getState().workspace);
 }
+
+export const flushLibraryWorkspaceForTests = flushLibraryWorkspace;

@@ -3,15 +3,14 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { clampHomeWorldCamera, getZoomedHomeWorldCamera, HOME_WORLD_ZOOM_LEVELS } from '../../public/homeWorldCamera.js';
-import { exceedsSpatialPointerDragThreshold, finalizeSpatialPointer, panSpatialCamera, shouldActivateSpatialPointer } from '../../public/spatialWorldCamera.js';
+import { clampVerticalHomeWorldCamera } from '../../public/homeWorldCamera.js';
+import { exceedsSpatialPointerDragThreshold, finalizeSpatialPointer, shouldActivateSpatialPointer } from '../../public/spatialWorldCamera.js';
 import {
   clampVisitorWindowRect,
   createPublishedVisitorLayout,
   createVisitorWindowState,
   initialVisitorWindowRect,
   publishedItemPixelRect,
-  publishedNavigatorLocations,
   resizeVisitorWindowByKey,
   snapVisitorWindowRect,
   visitorWindowTransition
@@ -28,23 +27,19 @@ const documentFixture = Object.freeze({
   canvasObjects: [{ id: 'art:one', order: 0, placement: { column: -2, row: -3 }, span: { columns: 5, rows: 4 }, presentation: { frame: 'thin', mat: 'dark', background: 'dark', fit: 'contain' }, asset: { stableAssetId: '42:0x2222222222222222222222222222222222222222:0x01', cachedName: 'A work' } }]
 });
 
-test('published desktop layout preserves authored signed-grid launcher and artwork placements without mutation', () => {
+test('published desktop layout projects authored content into the reachable vertical lane without mutating its document', () => {
   const source = structuredClone(documentFixture);
   const layout = createPublishedVisitorLayout(source, 1280, 720);
-  assert.deepEqual(layout.spaces.map((item) => item.position), [{ column: -7, row: 4 }, { column: 12, row: -5 }]);
+  assert.deepEqual(layout.spaces.map((item) => item.position), [{ column: -4, row: 4 }, { column: 12, row: -5 }]);
   assert.deepEqual(layout.objects[0].position, { column: -2, row: -3 });
-  assert.equal(publishedItemPixelRect(layout.spaces[0], layout).left, -278);
-  assert.deepEqual(publishedNavigatorLocations(layout)[0], { id: 'space:west', label: 'West archive', kind: 'launcher', x: 1240, y: 1000 });
+  assert.equal(publishedItemPixelRect(layout.spaces[0], layout).left, -158);
   assert.deepEqual(source, documentFixture, 'visitor projection cannot mutate the authored document');
 });
 
-test('camera mouse-pan math and anchored zoom remain clamped to the published world', () => {
+test('published camera stays on the fixed horizontal axis and fixed scale', () => {
   const layout = createPublishedVisitorLayout(documentFixture, 1280, 720);
-  const panned = panSpatialCamera(layout.camera, { x: 300, y: 300 }, { x: 180, y: 220 });
-  assert.deepEqual(clampHomeWorldCamera({ ...panned, zoom: 1 }, layout.world), { x: 1400, y: 800, zoom: 1 });
-  const maximum = HOME_WORLD_ZOOM_LEVELS.at(-1);
-  assert.equal(getZoomedHomeWorldCamera(layout.camera, 99, { x: 200, y: 100 }, layout.world).zoom, maximum);
-  assert.equal(clampHomeWorldCamera({ x: -9999, y: 999999, zoom: -20 }, layout.world).x, 0);
+  assert.deepEqual(clampVerticalHomeWorldCamera({ x: -9999, y: 800, zoom: 1.25 }, layout.world, layout.camera.x), { x: 1280, y: 800, zoom: 1 });
+  assert.deepEqual(clampVerticalHomeWorldCamera({ x: 9999, y: 999999, zoom: 0.5 }, layout.world, layout.camera.x), { x: 1280, y: 1440, zoom: 1 });
 });
 
 test('launcher toggles open, close, and restore while minimize remains an explicit ephemeral state', () => {
@@ -123,13 +118,13 @@ test('published component exposes launcher/artwork activation and structural mou
   assert.match(source, /event\.pointerType === 'mouse'/);
   assert.match(source, /setPointerCapture/);
   assert.match(cameraSource, /event\.pointerType !== 'mouse'/);
-  assert.match(cameraSource, /touchPointersRef/);
-  assert.match(cameraSource, /ArrowLeft/);
+  assert.match(cameraSource, /pointerRef/);
+  assert.doesNotMatch(cameraSource, /ArrowLeft|touchPointersRef|data-pannable|spatial-index/);
   assert.match(cameraSource, /onPointerCancel/);
   assert.match(cameraSource, /addEventListener\('wheel', handleWheel, \{ passive: false \}\)/);
   assert.match(cameraSource, /removeEventListener\('wheel', handleWheel\)/);
   assert.doesNotMatch(cameraSource, /onWheel=\{handleWheel\}/);
-  assert.match(cameraSource, /event\.target\.closest\?\.\('button,\.spatial-index'\)/);
+  assert.match(cameraSource, /event\.target\.closest\?\.\('button'\)/);
 });
 
 test('published controls are distinct, keyboard labelled, and cannot initiate window dragging', () => {
@@ -283,10 +278,10 @@ test('narrow published scrolling is explicitly bounded and leaves browser touch 
   assert.match(css, /touch-action:pan-y/);
   assert.match(css, /-webkit-overflow-scrolling:touch/);
   assert.match(cameraSource, /if \(!surface \|\| narrow\) return undefined/);
-  assert.match(cameraSource, /if \(narrow && event\.isPrimary === false\) return/);
+  assert.match(cameraSource, /event\.isPrimary === false/);
   assert.match(cameraSource, /if \(narrow\) return;\s*event\.preventDefault\(\)/);
-  assert.match(cameraSource, /const sharedGesture = narrow \? narrowGestureRef\?\.current : null/);
-  assert.match(cameraSource, /finalizeSpatialPointer\(\{[\s\S]*sharedGesture,[\s\S]*cancelled[\s\S]*\}\)/);
+  assert.match(cameraSource, /sharedGesture: narrow \? narrowGestureRef\?\.current : null/);
+  assert.match(cameraSource, /finalizeSpatialPointer\(\{[\s\S]*sharedGesture:[\s\S]*cancelled[\s\S]*\}\)/);
 });
 
 test('published renderer import graph cannot reach owner stores, persistence, or ModuleGridShell', () => {

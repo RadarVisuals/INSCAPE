@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createEmptyWorkspace } from '../domain/libraryWorkspace.js';
 import { loadLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
-import { resetLibraryStoreForTests, useLibraryStore } from './useLibraryStore.js';
+import { flushLibraryWorkspace, resetLibraryStoreForTests, useLibraryStore } from './useLibraryStore.js';
 
 const PROFILE = '0xf3c189819fd5b042f692983bfbfd57ab607ee709';
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -33,5 +33,17 @@ test('failed immediate Library persistence preserves current state', () => {
   const replacement = { ...before, favorites: ['not-committed'] };
   assert.equal(useLibraryStore.getState().replaceWorkspace(replacement), false);
   assert.deepEqual(useLibraryStore.getState().workspace, before);
+  resetLibraryStoreForTests(PROFILE, memoryStorage());
+});
+
+test('Library draft flushing persists the latest workspace immediately and reports failure', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  useLibraryStore.getState().createFolder('Flush me');
+  assert.equal(flushLibraryWorkspace(), true);
+  assert.equal(loadLibraryWorkspace(storage, PROFILE).folders.some((folder) => folder.name === 'Flush me'), true);
+
+  resetLibraryStoreForTests(PROFILE, { getItem: () => null, setItem: () => { throw new Error('quota'); } });
+  assert.equal(flushLibraryWorkspace(), false);
   resetLibraryStoreForTests(PROFILE, memoryStorage());
 });

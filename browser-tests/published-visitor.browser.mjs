@@ -328,26 +328,34 @@ test('desktop empty-world click moves the Keeper exactly once', async () => {
   assert.equal(await evaluate(`window.__fixture.moves.length`), 1);
 });
 
-test('desktop drag, cancellation, lost capture, and wheel obey browser pointer semantics', async () => {
+test('desktop drag stays inert while wheel navigation remains vertical-only', async () => {
+  await evaluate(`window.__fixture.resetMoves()`);
   const surface = await point('.home-world-surface', 0.45, 0.82);
   const before = await evaluate(`document.querySelector('.home-world-surface__world').style.transform`);
   await mouse('mousePressed', surface.x, surface.y); await mouse('mouseMoved', surface.x - 90, surface.y - 55, { buttons: 1 });
-  await waitFor(`document.querySelector('.home-world-surface__world').style.transform !== ${JSON.stringify(before)}`, 'camera pan while held');
-  const held = await evaluate(`document.querySelector('.home-world-surface__world').style.transform`);
+  assert.equal(await evaluate(`document.querySelector('.home-world-surface__world').style.transform`), before, 'drag did not pan the world');
   await mouse('mouseReleased', surface.x - 90, surface.y - 55); await mouse('mouseMoved', surface.x - 180, surface.y - 100, { buttons: 0 });
-  assert.equal(await evaluate(`document.querySelector('.home-world-surface__world').style.transform`), held, 'camera stopped after release');
+  assert.equal(await evaluate(`document.querySelector('.home-world-surface__world').style.transform`), before, 'release did not change the camera');
+  assert.equal(await evaluate(`window.__fixture.moves.length`), 0, 'drag did not activate an empty-world click');
   await mouse('mousePressed', surface.x, surface.y);
   await evaluate(`document.querySelector('.home-world-surface').dispatchEvent(new PointerEvent('pointercancel',{bubbles:true,pointerId:1,pointerType:'mouse',clientX:${surface.x},clientY:${surface.y}}))`);
   await mouse('mouseMoved', surface.x + 80, surface.y + 80, { buttons: 1 });
-  assert.equal(await evaluate(`document.querySelector('.home-world-surface__world').style.transform`), held, 'pointercancel cleared dragging');
+  assert.equal(await evaluate(`document.querySelector('.home-world-surface__world').style.transform`), before, 'pointercancel left the camera unchanged');
   await mouse('mouseReleased', surface.x + 80, surface.y + 80);
   await mouse('mousePressed', surface.x, surface.y);
   await evaluate(`document.querySelector('.home-world-surface').dispatchEvent(new PointerEvent('lostpointercapture',{bubbles:true,pointerId:1,pointerType:'mouse',clientX:${surface.x},clientY:${surface.y}}))`);
   await mouse('mouseMoved', surface.x + 120, surface.y + 80, { buttons: 1 });
-  assert.equal(await evaluate(`document.querySelector('.home-world-surface__world').style.transform`), held, 'lostpointercapture cleared dragging');
+  assert.equal(await evaluate(`document.querySelector('.home-world-surface__world').style.transform`), before, 'lostpointercapture left the camera unchanged');
   await mouse('mouseReleased', surface.x + 120, surface.y + 80);
+  await mouse('mouseWheel', surface.x, surface.y, { buttons: 0, deltaX: 42, deltaY: 0 });
+  await settlePlaywrightAnimationFrames(page);
+  assert.equal(await evaluate(`document.querySelector('.home-world-surface__world').style.transform`), before, 'horizontal wheel input was ignored');
+  const beforeMatrix = await evaluate(`(()=>{const m=new DOMMatrix(getComputedStyle(document.querySelector('.home-world-surface__world')).transform);return {x:m.m41,y:m.m42}})()`);
   await mouse('mouseWheel', surface.x, surface.y, { buttons: 0, deltaX: 42, deltaY: 68 });
-  await waitFor(`document.querySelector('.home-world-surface__world').style.transform !== ${JSON.stringify(held)}`, 'wheel camera pan');
+  await waitFor(`document.querySelector('.home-world-surface__world').style.transform !== ${JSON.stringify(before)}`, 'vertical wheel camera movement');
+  const afterMatrix = await evaluate(`(()=>{const m=new DOMMatrix(getComputedStyle(document.querySelector('.home-world-surface__world')).transform);return {x:m.m41,y:m.m42}})()`);
+  assert.equal(afterMatrix.x, beforeMatrix.x, 'vertical wheel preserved the fixed horizontal camera');
+  assert.notEqual(afterMatrix.y, beforeMatrix.y, 'vertical wheel moved the camera');
 });
 
 test('launcher open, minimize, restore, toggle-close, and explicit close controls stay distinct', async () => {

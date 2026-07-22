@@ -26,3 +26,17 @@ export function loadRestoredPresentation(storage, address) {
     return input;
   } catch { return null; }
 }
+
+export function saveRestoredPresentation(storage, address, presentation) {
+  const profileAddress = normalizeProfileAddress(address);
+  const value = {
+    version: 2,
+    keeperId: presentation?.keeperId,
+    stageId: presentation?.stageId,
+    environment: presentation?.environment
+  };
+  if (!profileAddress || !['abyssal_eye', 'skull_reaper'].includes(value.keeperId) || typeof value.stageId !== 'string'
+    || !['illustrated', 'shader'].includes(value.environment?.type) || value.environment?.shaderId !== 'neural-field') return false;
+  if (!storage?.setItem) return false;
+  try { storage.setItem(profilePresentationKey(profileAddress), JSON.stringify(value)); return true; } catch { return false; }
+}

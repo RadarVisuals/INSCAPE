@@ -1,5 +1,5 @@
 import { ERC725 } from '@erc725/erc725.js';
-import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' assert { type: 'json' };
+import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' with { type: 'json' };
 import { IPFS_GATEWAY_URL, LUKSO_RPC_URL, normalizeProfileAddress } from '../../library/config.js';
 import { createErrorIdentity, createUnavailableIdentity, normalizeLsp3Identity } from '../domain/profileIdentity.js';
 function throwIfAborted(signal) { if (signal?.aborted) throw signal.reason || new DOMException('Aborted', 'AbortError'); }

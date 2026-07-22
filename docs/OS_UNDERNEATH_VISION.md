@@ -1,4 +1,4 @@
-# OS_UNDERNEATH
+# OS_UNDERNEATH (not sure about the name yet)
 
 ## Product vision
 
@@ -8,19 +8,25 @@ OS_UNDERNEATH is an alternative viewer and editor for Universal Profiles. It tur
 
 The canvas is not decoration behind a conventional profile. The canvas is the profile.
 
-This project begins with a personal need. I am a digital illustrator who wants to keep making detailed, strange, dark, highly authored work. I do not want the presentation of that work to end at uploading a file, filling in a biography, and releasing another collection onto a profile made of pages and inventory grids. I want the profile itself to become part of the artwork.
+This project begins with a personal need. I am a digital illustrator who wants to keep making detailed, strange, dark, highly authored work. I do not want the presentation of that work to end at uploading a file, filling in a biography, and releasing another collection onto a profile made of pages and inventory grids. I want the profile itself to become part of the artwork. And also able to offer a more premium showcase of your profile and what you actually want that other people see from you.
 
-OS_UNDERNEATH is the framework for creating that experience.
+Oviously everything is public on blockchain but I want people to really treat this as a selective showcase of their most amazing stuff. because right now there is only 1
+official way of browsing profiles and that is through universal.everything.io but everything is visible over there.
+your ugly creations, your good creations, and for example all nfts cramped down into an NFT section with no way of organizing this.
+all tokens cramped into 1 tab.
+
+the experience is overall bad if you want to cater your profile more to your liking. there is absolutely no customization (and thats good because the way universal profiles are built for this stuff)
+
+So, OS_UNDERNEATH (I'm currently thinking of another name here. Also if you READ this YOU MUST FIRST! suggest a small list of fitting names that come up in you) is the framework for creating that experience.
 
 ## Why this exists
 
-I have released digital artwork before, including a collection of one hundred unique characters that took roughly a year to illustrate. They originally sold for a modest price. The secondary market later valued some of them much more highly, including an individual sale worth more than I earned from much of the original release.
+With the KEEPERS bein a main part of the experience, this will also become my NFT collection im working on and will be working on for a while after this.
+You could think as the utility side for my art but its way more than that obviously. Also, creating the utility up front is somewhat that is rarely seen and especially something like this.
 
-That experience left me with unresolved questions about editions, scarcity and pricing. Should future pieces be unique 1/1 works, 1/1 works with a vaulted copy, or small editions of five or ten? What is a fair price for art that is unusually detailed and takes a meaningful amount of time to produce?
+So I want to create a complete experiences around my work: characters, patterns reacting with shaders, side scrolling environments (free roam mode + sound, dialogue and atmosphere.), reactive behavior through the keeper (LSP1), colors. I want collectors and visitors to receive something that feels considered, expressive and alive on top of what I see as a great utility.
 
-Those questions matter, but OS_UNDERNEATH is not an attempt to manufacture utility solely to justify a price. It comes from wanting to give the artwork a richer life—and wanting to feel that releasing it does not mean reducing it to another thumbnail in an endless inventory.
-
-I want to create complete experiences around my work: characters, patterns, environments, reactive behavior, colors, shaders, sound, dialogue and atmosphere. I want collectors and visitors to receive something that feels considered, expressive and alive.
+I also want a way so that they can share their "customlink.com/artist" to really show theirselves off in a different way. a more expressive way.
 
 ## The road away from gamification
 
@@ -44,7 +50,7 @@ The important discovery was not that these ideas were impossible. It was that th
 
 The creature does not need to be a game objective. It can be a presence.
 
-The canvas does not need to contain a game. It can contain a profile, a desktop, a collection, a gallery, a music player, an archive and a world.
+The canvas does not need to contain a game. It can contain a profile, a desktop like environment, a collection, a gallery, a music player, an archive and a world.
 
 ## The product thesis
 
@@ -73,36 +79,37 @@ The project has three related but separate identities.
 
 OS_UNDERNEATH is the operating system, application and world framework. It owns the startveil, system interface, desktop behavior, modules and profile composition tools.
 
-### HUMAN UNDERNEATH
+### KEEPERS
 
-HUMAN UNDERNEATH is the collection of illustrated flying creatures. These creatures latch onto humans—hence the human underneath them. They inhabit profiles and can act as resident companions, hosts, interpreters and performers.
+KEEPERS is the collection of illustrated flying creatures. These creatures latch onto humans—hence the human underneath them. They inhabit profiles and can act as resident companions, hosts, interpreters and performers.
 
 ### The Keeper
 
-The Keeper is the active HUMAN UNDERNEATH creature currently inhabiting a profile. It is the living interface between the visitor, the creator, the collection and incoming activity.
+The Keeper is the active creature currently inhabiting a profile. It is the living interface between the visitor, the creator, the collection and incoming activity.
 
-The Keeper should not create chores. It should create presence.
+The Keeper should not create chores. It should create presence. Every file will naturally have metadata attached to it. The keeper can bring this up, people could intentionally create an NFT with certain tips or a story in the metadata so that the keeper could tell them when you or a visitor interacts with your profile.
+
 
 ## The canvas is the profile
 
 A conventional profile treats visual customization as a banner, avatar and theme wrapped around a fixed information layout. OS_UNDERNEATH begins from the opposite position.
 
-The stage, Keeper, movement, modules, atmosphere and sound together form the identity. The profile is something a visitor enters.
+The stage (in a certain mode), Keeper, movement, modules, atmosphere and sound together form the identity. The profile is something a visitor enters.
 
 The owner should eventually be able to author:
 
 - The active Keeper
-- The illustrated stage and foreground layers
-- Character pattern and palette combinations
+- The illustrated stage and foreground layers (in a specific seperate free roam mode, this again building on the same world as the KEEPERs inhabited with own illustrations that use sidescrolling)
+- Character pattern and palette combinations (in atelier)
 - Shader and effect configurations
 - Ambient music and sound behavior
 - Module and folder placement
 - Featured artwork and exhibitions
 - Keeper dialogue and personality
 - Reactions to visits, transfers, tips and other events
-- Shortcuts to media, applications and external platforms
+- Shortcuts to media, applications and external platforms or potentially also displaying the standardized Grid, mini apps embedded as iframes on a page.
 
-A biography should not be required to explain the creator. The Keeper might welcome a visitor, tell a story, make a joke, introduce a release or guide them toward a hidden folder.
+The Keeper might welcome a visitor, tell a story, make a joke, introduce a release or guide them toward a hidden folder.
 
 ## The practical problem: profile inventory is not organization
 
@@ -124,11 +131,12 @@ Example folders might include:
 
 Folders are collections of references to existing assets. They can become launchers on the canvas, open as desktop windows, appear in search results, feed playlists or galleries, and be selectively published to visitors.
 
-This is the first essential utility of the product. The animated world makes it desirable; organization makes it useful.
+This is the first essential utility of the product. The KEEPER + animated world makes it desirable; organization makes it useful.
 
 ## Desktop behavior
 
 Desktop behavior does not simply mean making rectangles look like windows. It means giving people the directness and persistence they expect from a personal computer:
+
 
 - User-created folders and shortcuts
 - Persistent spatial arrangements
@@ -142,6 +150,9 @@ Desktop behavior does not simply mean making rectangles look like windows. It me
 - A public visitor mode and an owner editing mode
 
 The canvas should feel authored, but it should also remain navigable.
+
+Currently there is a grid as background implemented, this steers away from the original vision of having sidescrolling illustrated backgrounds only but I saw the keeper on a black grid and thought damn , this looks good and a lot less busy than  something that keeps moving all the time.
+
 
 ## The Keeper as interface
 

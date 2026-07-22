@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   HOME_WORLD_CAMERA_LIMIT,
   clampHomeWorldCamera,
+  clampVerticalHomeWorldCamera,
   getWindowRevealCamera,
   getZoomedHomeWorldCamera,
   homeWorldCameraKey,
@@ -16,7 +17,7 @@ function memoryStorage() {
   return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
 }
 
-test('home camera persistence is profile scoped and round-trips two axes', () => {
+test('home camera persistence remains profile scoped and backward-compatible with stored coordinates', () => {
   const storage = memoryStorage();
   assert.equal(saveHomeWorldCamera(storage, '0xABCD', { x: -420, y: 815 }), true);
   assert.deepEqual(loadHomeWorldCamera(storage, '0xabcd'), { x: -420, y: 815, zoom: 1 });
@@ -48,4 +49,12 @@ test('large-to-small world resize clamps only cameras outside the reachable worl
   const previouslyReachable = clampHomeWorldCamera({ x: 2200, y: 1500, zoom: 1 }, largeWorld);
   assert.deepEqual(clampHomeWorldCamera(previouslyReachable, smallWorld), { x: 1200, y: 800, zoom: 1 });
   assert.deepEqual(clampHomeWorldCamera({ x: 500, y: 300, zoom: 1 }, smallWorld), { x: 500, y: 300, zoom: 1 });
+});
+
+test('vertical home camera fixes horizontal position and disables zoom', () => {
+  const world = { width: 3000, height: 1800, viewportWidth: 1000, viewportHeight: 600 };
+  assert.deepEqual(
+    clampVerticalHomeWorldCamera({ x: 2400, y: 900, zoom: 1.25 }, world, 1000),
+    { x: 1000, y: 900, zoom: 1 }
+  );
 });

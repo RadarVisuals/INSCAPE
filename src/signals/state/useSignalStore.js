@@ -93,3 +93,9 @@ export function resetSignalStoreForTests(nextProfileAddress, nextStorage) {
   useSignalStore.setState({ profileAddress: nextProfileAddress, document, history: document.history, settings: document.settings,
     status: 'idle', sourceMode: null, error: null, partialError: null, queue: [], currentReaction: null, cooldownUntil: 0 });
 }
+
+export function flushSignalDocument() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = null;
+  return saveSignalDocument(signalStorage, useSignalStore.getState().document);
+}
