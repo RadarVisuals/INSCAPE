@@ -646,9 +646,10 @@ export default function ModuleGridShell({
   }, [activeModuleId, identityOpen]);
 
   useEffect(() => {
+    if (previewDocument) return undefined;
     residentHandoff?.trackActorPosition?.([gridRef.current, shellRef.current]);
     return () => residentHandoff?.trackActorPosition?.(null);
-  }, [residentHandoff]);
+  }, [previewDocument, residentHandoff]);
 
   useEffect(() => {
     if (!identityOpen) return undefined;
@@ -1173,7 +1174,7 @@ export default function ModuleGridShell({
   const artworkChooserPanel = ownerAuthoringEnabled && artworkChooser ? <ArtworkChooser assets={libraryAssets} status={libraryStatus} error={libraryError} title={artworkChooser.mode==='replace'?'Replace artwork':'Choose artwork'} onSelect={chooseArtwork} onCancel={()=>{artworkChoicePendingRef.current=false;setArtworkChooser(null);}} /> : null;
   const artworkPreviewPanel = previewObjectId && canvasObjectById[previewObjectId] && (()=>{const object=canvasObjectById[previewObjectId];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId)||{id:object.stableAssetId,name:'Unavailable artwork',standard:'UNKNOWN',contractAddress:'Unavailable',tokenId:null,imageUrl:null};return <div className="canvas-artwork-preview" role="dialog" aria-modal="true" aria-label={`Artwork preview: ${asset.name}`}><AssetPreview asset={asset} workspace={workspace} authoringEnabled={false} onClose={closeArtworkPreview} /></div>;})();
 
-  if (previewDocument) return <ProfileDocumentPreview document={previewDocument} onExit={stopPreview} onMoveKeeper={moveKeeperFromHome} />;
+  if (previewDocument) return <ProfileDocumentPreview document={previewDocument} onExit={stopPreview} onMoveKeeper={moveKeeperFromHome} reactionBridge={keeperReactions} positionTracker={residentHandoff} reducedMotion={revealPresentation.reducedMotion} />;
 
   if (ownerAuthoringEnabled && !ownerWorkspaceOpen) return <div className="owner-rack-home" style={shellTheme} data-interface-visible={interfaceVisible || undefined}>
     <Suspense fallback={null}>

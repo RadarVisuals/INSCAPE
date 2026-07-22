@@ -8,6 +8,8 @@ const previewCss = readFileSync(new URL('./profileDocumentPreview.css', import.m
 const ownerSource = readFileSync(new URL('../../public/ModuleGridShell.jsx', import.meta.url), 'utf8');
 const ownerWorldSource = readFileSync(new URL('../../public/OwnerHomeWorld.jsx', import.meta.url), 'utf8');
 const ownerRackCss = readFileSync(new URL('../../public/ownerRackHome.css', import.meta.url), 'utf8');
+const keeperPresentationSource = readFileSync(new URL('./KeeperPresentationLayer.jsx', import.meta.url), 'utf8');
+const keeperPresentationCss = readFileSync(new URL('./keeperPresentation.css', import.meta.url), 'utf8');
 
 test('owner Share exposes explicit semantic disclosure controls', () => {
   assert.match(panelSource, /Public identity/);
@@ -38,6 +40,28 @@ test('owner preview uses the same detached published world as a real visitor', (
   assert.match(previewCss, /z-index:\s*150/);
   assert.match(previewCss, /bottom:\s*max\(18px, env\(safe-area-inset-bottom\)\)/);
   assert.match(previewCss, /pointer-events:\s*auto/);
+});
+
+test('Keeper presentation is Preview-only, accessible, and receives only bounded runtime adapters', () => {
+  assert.match(previewSource, /<KeeperPresentationLayer reactionBridge=\{reactionBridge\} positionTracker=\{positionTracker\} reducedMotion=\{reducedMotion\}/);
+  assert.match(ownerSource, /reactionBridge=\{keeperReactions\} positionTracker=\{residentHandoff\} reducedMotion=\{revealPresentation\.reducedMotion\}/);
+  assert.match(ownerSource, /if \(previewDocument\) return undefined;[\s\S]*trackActorPosition/);
+  assert.match(keeperPresentationSource, /positionTracker\?\.trackActorPosition\?\.\(presentationRef\.current\)/);
+  assert.match(keeperPresentationSource, /resolveKeeperBubblePlacement/);
+  assert.match(keeperPresentationCss, /--keeper-bubble-left/);
+  assert.doesNotMatch(keeperPresentationCss, /keeper-presentation__line::before/);
+  assert.doesNotMatch(keeperPresentationCss, /border-left/);
+  assert.match(keeperPresentationSource, /onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/);
+  assert.match(keeperPresentationCss, /keeper-presentation__line \{[\s\S]*pointer-events:\s*none/);
+  assert.match(keeperPresentationCss, /keeper-presentation__line button \{[\s\S]*pointer-events:\s*auto/);
+  assert.match(keeperPresentationSource, /document\.addEventListener\('visibilitychange', syncVisibility\)/);
+  assert.match(keeperPresentationSource, /aria-label="Keeper presentation controls"/);
+  assert.match(keeperPresentationSource, /aria-live="polite"/);
+  assert.match(keeperPresentationSource, /director\.stop\(\)/);
+  assert.doesNotMatch(keeperPresentationSource, /useLibraryStore|useSignalStore|localStorage|profileDocumentBuilder|wallet/i);
+  assert.match(keeperPresentationCss, /pointer-events:\s*none/);
+  assert.match(keeperPresentationCss, /@media \(max-width:\s*719px\)/);
+  assert.match(keeperPresentationCss, /@media \(prefers-reduced-motion:\s*reduce\)/);
 });
 
 test('verified owners enter the rack world by default and retain an explicit authoring workspace', () => {

@@ -9,6 +9,17 @@ This file applies to the entire repository. User instructions for a specific tas
 - Do not spawn subagents or parallel writers unless the user explicitly requests delegation. All agents share the same worktree, so use one writer per overlapping area.
 - Keep the main conversation focused on decisions and concise results. Summarize logs rather than pasting large raw outputs.
 
+## Conversation and Action Authorization
+
+- Conversation is the default mode. Questions, ideas, screenshots, observations, brainstorming, enthusiasm, and art-direction feedback do not by themselves authorize file edits, commands, tests, commits, or other state changes.
+- Begin implementation only after a clear action instruction such as `doe maar`, `implementeer`, `fix`, `pas het aan`, `run de tests`, or an equally explicit request. When intent remains ambiguous, continue the discussion or ask whether the user wants action.
+- `Stop ff`, `stop`, or an equivalent interruption means stop immediately. Do not finish one more edit, command, test, or inferred follow-up before yielding.
+- During visual discussion, collect feedback into a short proposed batch and repeat the intended changes before implementation. The user may revise that batch before authorizing it.
+- If a requested local adjustment reveals a larger architectural, security, data, schema, or product-scope decision, report it first. Do not silently widen the task.
+- Prefer manual art-director review before expensive full verification. Run the heavy ladder only at the agreed review/approval/commit gate unless a focused behavioral risk requires an earlier targeted check.
+- Positive reactions such as `ziet er goed uit`, `perfect`, or `approved` approve the reviewed result but do not authorize a Git commit. Commit only after an explicit commit instruction such as `commit maar`.
+- Translate technical decisions into their practical effect for the artist and product. Do not make the user reconstruct product consequences from engineering terminology.
+
 ## Start Every Task Safely
 
 1. Run `git status --short --branch` and inspect relevant existing diffs before editing.
@@ -84,6 +95,10 @@ Also verify the final worktree, production owner-runtime isolation, budget outpu
 
 - Build visual changes as small, reviewable slices.
 - Leave visual prototypes uncommitted until the user explicitly says they are approved.
+- Batch small art-direction notes into one review slice. Spacing, color, typography, icon, border, opacity, and similarly local adjustments should not each trigger the full verification ladder.
+- While a visual batch is open, collect the user's notes, implement them together, and use only the smallest checks needed to catch syntax, structural, or directly affected interaction regressions. Keep the application available for visual review.
+- Treat `review`, `test the slice`, `approved`, and `commit` as explicit gates. Run the relevant browser/build checks once at the review gate, and the complete required ladder once at the commit gate. Do not repeatedly rerun an unchanged full suite between adjacent micro-adjustments.
+- A visual note that changes hit testing, focus, responsive scrolling, stacking, persistence, data projection, or another behavior is no longer purely cosmetic. Run the focused behavioral check when that boundary is crossed, explain why, then continue batching the remaining cosmetic notes.
 - Review at least desktop `1280x720`, mobile `390x844`, and narrow `320x844` when the affected surface is responsive.
 - Preserve interaction and geometry while exploring appearance unless the user explicitly authorizes behavior changes.
 - Accept art-direction feedback in visual language such as hierarchy, atmosphere, weight, contrast, spacing, and dominance; translate it into scoped implementation changes.
@@ -109,5 +124,7 @@ Lead with the outcome and include:
 - final branch/worktree state;
 - commit hash only if a commit was authorized and created;
 - confirmation that no wallet, publication, upload, deployment, permission, or remote action occurred when relevant.
+
+End substantial completion reports with one clearly recommended next action. Explain briefly why it is the best next step, what acceptance gate completes it, and which tempting later features should remain deferred. The user should not need to already know the engineering roadmap or repeatedly ask what phase comes next.
 
 Never claim completion, cleanliness, or passing verification without checking it.

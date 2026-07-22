@@ -129,6 +129,14 @@ async function navigate(address = profileA, { identityRack = false } = {}) {
   await waitFor(`(()=>{const n=document.querySelector('.published-home-world__spatial');if(!n||getComputedStyle(n).zIndex!=='93')return false;return innerWidth>=720||getComputedStyle(n).overflowY==='auto'})()`, 'published visitor responsive styles');
 }
 
+async function navigateKeeperPreview() {
+  const run = String(++navigationSequence);
+  const fixtureUrl = `${baseUrl}/browser-tests/fixture.html?view=${profileA}&preview=keeper&run=${run}`;
+  const response = await page.goto(fixtureUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 });
+  assert.ok(response?.ok(), `Keeper Preview fixture returned HTTP ${response?.status() ?? 'unknown'}`);
+  await waitFor(`document.querySelector('.keeper-presentation') && window.__fixture`, 'Keeper Preview presentation');
+}
+
 async function collectBootstrapDiagnostics(error, fixtureUrl) {
   let state = {}; let viteReachable = false;
   try { state = await evaluate(`(()=>{const root=document.querySelector('[data-browser-fixture]');return {href:location.href,readyState:document.readyState,root:Boolean(root),rootChildren:Math.min(root?.childElementCount||0,100),published:Boolean(document.querySelector('.published-home-world')&&window.__fixture)}})()`); } catch { state = { evaluation: 'unavailable' }; }
@@ -332,6 +340,50 @@ test('desktop empty-world click moves the Keeper exactly once', async () => {
   await mouse('mousePressed', surface.x, surface.y); await mouse('mouseReleased', surface.x, surface.y);
   await waitFor(`window.__fixture.moves.length === 1`, 'one Keeper move');
   assert.equal(await evaluate(`window.__fixture.moves.length`), 1);
+});
+
+test('Keeper presentation stays operable, cleans up on exit, and remains bounded at all review sizes', async () => {
+  await viewport(1280, 720, false); await navigateKeeperPreview();
+  await waitFor(`document.querySelector('.keeper-presentation__line')?.textContent.includes('This is not a page.')`, 'first Keeper line');
+  await waitFor(`document.querySelector('.keeper-presentation')?.dataset.bubbleSide === 'right'`, 'right-side Keeper bubble');
+  const anchored = await evaluate(`(()=>{const r=document.querySelector('.keeper-presentation__line').getBoundingClientRect();return {left:r.left,top:r.top}})()`);
+  assert.deepEqual(anchored, { left: 352, top: 196 });
+  await evaluate(`window.__fixture.moveTrackedKeeper(225,325)`);
+  await waitFor(`Math.round(document.querySelector('.keeper-presentation__line').getBoundingClientRect().left) === 377`, 'Keeper bubble follow frame');
+  const followed = await evaluate(`(()=>{const r=document.querySelector('.keeper-presentation__line').getBoundingClientRect();return {left:r.left,top:r.top}})()`);
+  assert.deepEqual(followed, { left: 377, top: 221 });
+  await evaluate(`window.__fixture.moveTrackedKeeper(1100,325)`);
+  await waitFor(`document.querySelector('.keeper-presentation')?.dataset.bubbleSide === 'left'`, 'left-side Keeper bubble flip');
+  const flipped = await evaluate(`(()=>{const r=document.querySelector('.keeper-presentation__line').getBoundingClientRect();return {left:r.left,top:r.top}})()`);
+  assert.deepEqual(flipped, { left: 632, top: 221 });
+  const hitTesting = await evaluate(`(()=>{const line=document.querySelector('.keeper-presentation__line'),button=line.querySelector('button'),lineRect=line.getBoundingClientRect(),buttonRect=button.getBoundingClientRect();const body=document.elementFromPoint(lineRect.left+20,lineRect.top+lineRect.height/2),dismiss=document.elementFromPoint(buttonRect.left+buttonRect.width/2,buttonRect.top+buttonRect.height/2);return {linePointer:getComputedStyle(line).pointerEvents,bodyIsBubble:Boolean(body?.closest?.('.keeper-presentation__line')),dismissIsButton:dismiss===button}})()`);
+  assert.deepEqual(hitTesting, { linePointer: 'none', bodyIsBubble: false, dismissIsButton: true });
+  await evaluate(`document.querySelector('.keeper-presentation__controls button:first-child').focus()`);
+  await pressKey('Enter');
+  await waitFor(`document.querySelector('.keeper-presentation')?.dataset.status === 'paused'`, 'paused Keeper presentation');
+  await delay(1_300);
+  assert.equal(await evaluate(`document.querySelector('.keeper-presentation__line p')?.textContent`), 'This is not a page.');
+  assert.deepEqual(await evaluate(`(()=>{const button=document.querySelector('.keeper-presentation__controls button:last-child');return {disabled:button.disabled,label:button.textContent,pressed:button.getAttribute('aria-pressed')}})()`), { disabled: true, label: '[ NO OST ]', pressed: 'false' });
+  const movesBeforeDismiss = await evaluate(`window.__fixture.moves.length`);
+  await click('.keeper-presentation__line button');
+  assert.equal(await evaluate(`!!document.querySelector('.keeper-presentation__line')`), false);
+  assert.equal(await evaluate(`window.__fixture.moves.length`), movesBeforeDismiss);
+  await click('.keeper-presentation__controls button:nth-child(2)');
+  await waitFor(`document.querySelector('.keeper-presentation')?.dataset.status === 'stopped'`, 'stopped Keeper presentation');
+  assert.equal(await evaluate(`document.querySelector('.keeper-presentation__controls button:first-child').textContent`), '[ REPLAY ]');
+  await click('.profile-document-owner-preview__exit');
+  await waitFor(`window.__fixture.previewActive === false && !document.querySelector('.keeper-presentation')`, 'Keeper Preview cleanup');
+
+  for (const [width, height, touch] of [[1280, 720, false], [390, 844, true], [320, 844, true]]) {
+    await viewport(width, height, touch); await navigateKeeperPreview();
+    await waitFor(`!!document.querySelector('.keeper-presentation__line')`, `${width}px Keeper line`);
+    const bounds = await evaluate(`(()=>{const rect=(selector)=>{const r=document.querySelector(selector).getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom}};const line=rect('.keeper-presentation__line'),controls=rect('.keeper-presentation__controls'),exit=rect('.profile-document-owner-preview__exit');const overlap=!(controls.right<=exit.left||controls.left>=exit.right||controls.bottom<=exit.top||controls.top>=exit.bottom);return {line,controls,exit,overlap,width:innerWidth,height:innerHeight}})()`);
+    for (const rectangle of [bounds.line, bounds.controls, bounds.exit]) {
+      assert.ok(rectangle.left >= 0 && rectangle.right <= bounds.width && rectangle.top >= 0 && rectangle.bottom <= bounds.height, `${width}px presentation control escaped viewport: ${JSON.stringify(rectangle)}`);
+    }
+    assert.equal(bounds.overlap, false, `${width}px presentation controls overlap Exit Preview`);
+  }
+  await viewport(1280, 720, false); await navigate();
 });
 
 test('v5 Identity Rack replaces duplicate identity chrome and stays ephemeral, keyboard operable, and mobile bounded', async () => {

@@ -1,0 +1,110 @@
+.keeper-presentation {
+  position: fixed;
+  inset: 0;
+  z-index: 145;
+  color: #eeebdf;
+  font-family: Oxanium, sans-serif;
+  pointer-events: none;
+}
+
+.keeper-presentation__line {
+  position: absolute;
+  left: var(--keeper-bubble-left, clamp(18px, calc(var(--actor-screen-x, 50vw) + 152px), calc(100vw - 358px)));
+  top: clamp(78px, calc(var(--actor-screen-y, 50vh) - 104px), calc(100dvh - 190px));
+  width: min(316px, calc(100vw - 36px));
+  box-sizing: border-box;
+  padding: 13px 42px 14px 15px;
+  border: 1px solid rgba(238, 235, 223, .28);
+  background: rgba(7, 9, 9, .94);
+  box-shadow: 9px 10px 0 rgba(0, 0, 0, .22);
+  pointer-events: none;
+}
+
+.keeper-presentation__line span {
+  color: #e87945;
+  font-size: .52rem;
+  font-weight: 650;
+  letter-spacing: .15em;
+}
+
+.keeper-presentation__line p {
+  margin: 6px 0 0;
+  font-size: .74rem;
+  line-height: 1.5;
+}
+
+.keeper-presentation__line button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  color: rgba(238, 235, 223, .62);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.keeper-presentation__controls {
+  position: fixed;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  display: flex;
+  gap: 5px;
+  pointer-events: auto;
+}
+
+.keeper-presentation__controls button {
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid rgba(232, 121, 69, .35);
+  background: rgba(7, 9, 9, .9);
+  color: rgba(238, 235, 223, .74);
+  font: 600 .58rem/1 Oxanium, sans-serif;
+  cursor: pointer;
+}
+
+.keeper-presentation__controls button:disabled {
+  border-color: rgba(238, 235, 223, .14);
+  color: rgba(238, 235, 223, .36);
+  cursor: default;
+}
+
+.keeper-presentation button:hover {
+  border-color: #e87945;
+  color: #eeebdf;
+}
+
+.keeper-presentation button:focus-visible {
+  outline: 2px solid #fff0a5;
+  outline-offset: 2px;
+}
+
+@media (max-width: 719px) {
+  .keeper-presentation__line {
+    right: max(10px, env(safe-area-inset-right));
+    bottom: calc(66px + env(safe-area-inset-bottom));
+    left: max(10px, env(safe-area-inset-left));
+    top: auto;
+    width: auto;
+  }
+
+  .keeper-presentation__controls {
+    left: max(8px, env(safe-area-inset-left));
+    bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .keeper-presentation__controls button {
+    min-height: 38px;
+    padding-inline: 7px;
+    font-size: .54rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .keeper-presentation__line,
+  .keeper-presentation__controls { transition: none; }
+}

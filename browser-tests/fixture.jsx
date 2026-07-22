@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import PublishedHomeWorld from '../src/profileDocument/components/PublishedHomeWorld.jsx';
+import ProfileDocumentPreview from '../src/profileDocument/components/ProfileDocumentPreview.jsx';
 import '../src/index.css';
 import '../src/public/moduleGrid.css';
 import '../src/library/collection.css';
@@ -62,7 +63,22 @@ function currentAddress() {
 function Fixture() {
   const [address, setAddress] = useState(currentAddress);
   const [moves, setMoves] = useState([]);
+  const [keeperCues, setKeeperCues] = useState([]);
+  const [previewActive, setPreviewActive] = useState(true);
   const [artworkUrl, setArtworkUrl] = useState(null);
+  const keeperPositionTarget = useRef(null);
+  const keeperPreview = new URLSearchParams(location.search).get('preview') === 'keeper';
+  const reactionBridge = useMemo(() => ({
+    getAvailability: () => ({ ready: true, residentHandoff: false, actorMoving: false }),
+    trigger: (cue) => { setKeeperCues((current) => [...current, cue]); return true; }
+  }), []);
+  const positionTracker = useMemo(() => ({
+    trackActorPosition(target) {
+      keeperPositionTarget.current = target;
+      target?.style.setProperty('--actor-screen-x', '200px');
+      target?.style.setProperty('--actor-screen-y', '300px');
+    }
+  }), []);
   const document = useMemo(() => {
     const next = structuredClone(DOCUMENTS[address]);
     if (artworkUrl !== null) next.canvasObjects[0].asset.cachedPreviewUrl = artworkUrl;
@@ -78,6 +94,12 @@ function Fixture() {
     window.__fixture = {
       address,
       moves,
+      keeperCues,
+      previewActive,
+      moveTrackedKeeper(x, y) {
+        keeperPositionTarget.current?.style.setProperty('--actor-screen-x', `${x}px`);
+        keeperPositionTarget.current?.style.setProperty('--actor-screen-y', `${y}px`);
+      },
       resetMoves: () => setMoves([]),
       setArtworkUrl,
       visit(nextAddress) {
@@ -85,12 +107,16 @@ function Fixture() {
         dispatchEvent(new PopStateEvent('popstate'));
       }
     };
-  }, [address, moves]);
+  }, [address, keeperCues, moves, previewActive]);
   return <div className="application-root" data-browser-fixture data-profile-address={address} data-application-mode="public">
     <div className="application-world" data-visible />
     <div className="application-interface" data-visible>
       <output data-testid="keeper-moves" data-count={moves.length}>{JSON.stringify(moves)}</output>
-      <PublishedHomeWorld document={document} onMoveKeeper={(x, y) => setMoves((current) => [...current, { x, y }])} />
+      {keeperPreview
+        ? previewActive
+          ? <ProfileDocumentPreview document={document} onExit={() => setPreviewActive(false)} onMoveKeeper={(x, y) => setMoves((current) => [...current, { x, y }])} reactionBridge={reactionBridge} positionTracker={positionTracker} />
+          : <output data-preview-exited>Keeper Preview exited</output>
+        : <PublishedHomeWorld document={document} onMoveKeeper={(x, y) => setMoves((current) => [...current, { x, y }])} />}
     </div>
   </div>;
 }
