@@ -437,9 +437,8 @@
 }
 
 .system-sigil { position:absolute; left:50%; top:calc(50% + 10px); width:48px; height:48px; display:grid; place-items:center; padding:0; border:0; background:transparent; box-shadow:none; transform:translate(-50%,-50%); cursor:pointer; pointer-events:auto; }
-.system-sigil img { display:block; width:40px; height:40px; object-fit:contain; opacity:.82; filter:grayscale(1) brightness(1.8) drop-shadow(0 0 5px rgba(238,235,223,.16)); transition:filter 120ms linear,opacity 120ms linear,transform 120ms ease-out; }
-.system-sigil:hover img,.system-sigil:focus-visible img,.system-sigil[aria-expanded="true"] img { transform:scale(1.06); }
-.system-sigil:hover img,.system-sigil:focus-visible img,.system-sigil[aria-expanded="true"] img { opacity:1; filter:sepia(1) saturate(4) hue-rotate(330deg) brightness(1.15); }
+.system-sigil__mark { display:grid; place-items:center; width:38px; height:38px; border:1px solid rgba(238,235,223,.62); color:rgba(238,235,223,.82); font:500 1rem/1 'PP Monument Extended','Oxanium',sans-serif; transition:border-color 120ms linear,color 120ms linear,transform 120ms ease-out; }
+.system-sigil:hover .system-sigil__mark,.system-sigil:focus-visible .system-sigil__mark,.system-sigil[aria-expanded="true"] .system-sigil__mark { border-color:var(--os-accent); color:var(--os-accent); transform:scale(1.04); }
 
 /* Viewport shell: stable OS navigation above the authored spatial world. */
 .public-shell__masthead {
@@ -470,25 +469,15 @@
   flex: 0 0 58px;
   width: 58px;
   height: 58px;
-  border: 1px solid rgba(238,235,223,.25);
-  border-radius: 50%;
-  background: #070909;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   transform: none;
   margin: 0 8px 0 -8px;
   z-index: 3;
 }
 
-.system-sigil::after {
-  content: '';
-  position: absolute;
-  inset: 4px;
-  border: 1px solid rgba(238,235,223,.12);
-  border-radius: inherit;
-  transition: border-color 120ms linear;
-}
-
-.system-sigil img { width: 48px; height: 48px; }
-.system-sigil:hover::after,.system-sigil:focus-visible::after,.system-sigil[aria-expanded="true"]::after { border-color: var(--os-accent); }
+.system-sigil__mark { width:42px; height:42px; }
 
 .system-identity {
   min-width: 140px;
@@ -1640,7 +1629,7 @@
 @media (max-width:719px) {
   .public-shell__masthead { top:8px; left:8px; right:8px; height:40px; gap:4px; padding-right:5px; }
   .system-sigil { flex-basis:50px; width:50px; height:50px; margin-left:-6px; }
-  .system-sigil img { width:42px; height:42px; }
+  .system-sigil__mark { width:38px; height:38px; }
   .system-identity { min-width:0; width:38px; padding:0 5px; border-right:0; }
   .system-identity > img { width:26px; height:26px; flex-basis:26px; }
   .system-identity > span { display:none; }

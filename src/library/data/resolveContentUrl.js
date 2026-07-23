@@ -31,7 +31,13 @@ export function selectImageUrls(images, options) {
   const byWidth = [...valid].sort((a, b) => (Number(a.width) || Infinity) - (Number(b.width) || Infinity));
   const thumbnail = byWidth.find((image) => (Number(image.width) || 0) >= 320) || byWidth[0];
   const largest = byWidth.at(-1);
-  return { thumbnailUrl: thumbnail.resolved, imageUrl: largest.resolved, originalImageUrl: largest.url || largest.src || null };
+  return {
+    thumbnailUrl: thumbnail.resolved,
+    imageUrl: largest.resolved,
+    originalImageUrl: largest.url || largest.src || null,
+    width: Number(largest.width) || null,
+    height: Number(largest.height) || null
+  };
 }
 
 export function selectImageGroups(images, options) {

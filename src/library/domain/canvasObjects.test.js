@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createEmptyWorkspace } from './libraryWorkspace.js';
 import { CANVAS_OBJECT_KIND, getCanvasObjectDefinition, normalizeCanvasObjectPresentation } from './canvasObjectRegistry.js';
-import { CANVAS_OBJECT_ORDER_COMMAND, createCanvasObject, isValidCanvasObjectId, MAX_CANVAS_OBJECT_ID_LENGTH, normalizeCanvasObject, removeCanvasObject, reorderCanvasObject, replaceCanvasObjectAsset, setCanvasObjectGeometry, setCanvasObjectPresentation } from './canvasObjects.js';
+import { CANVAS_OBJECT_ORDER_COMMAND, createCanvasObject, isValidCanvasObjectId, MAX_CANVAS_OBJECT_ID_LENGTH, normalizeCanvasObject, removeCanvasObject, reorderCanvasObject, replaceCanvasObjectAsset, setCanvasObjectGeometry, setCanvasObjectLocked, setCanvasObjectPresentation } from './canvasObjects.js';
 
 const ASSET_A = '42:0x1111111111111111111111111111111111111111:0x01';
 const ASSET_B = '42:0x2222222222222222222222222222222222222222:contract';
@@ -11,6 +11,7 @@ const input = (id, asset = ASSET_A) => ({ id, kind: CANVAS_OBJECT_KIND.FRAMED_AR
 test('controlled registry normalizes only framed-artwork presentation values', () => {
   assert.equal(getCanvasObjectDefinition('remote-component'), null);
   assert.deepEqual(normalizeCanvasObjectPresentation('framed-artwork', { fit: 'cover', frame: 'javascript', mat: 'light', background: 'neutral' }), { fit: 'cover', frame: 'thin', mat: 'light', background: 'neutral' });
+  assert.equal(normalizeCanvasObjectPresentation('framed-artwork', { background: 'transparent' }).background, 'transparent');
   assert.equal(normalizeCanvasObjectPresentation('remote-component', {}), null);
 });
 
@@ -46,4 +47,15 @@ test('geometry, replacement, presentation, removal, and bounded stacking never m
   workspace = reorderCanvasObject(workspace, 'canvas:artwork:a', CANVAS_OBJECT_ORDER_COMMAND.FORWARD); assert.deepEqual(workspace.canvas.objects.map((object) => object.presentationOrder), [0, 1, 2], 'front order cannot grow');
   const ownership = structuredClone({ favorites: workspace.favorites, folders: workspace.folders }); workspace = removeCanvasObject(workspace, 'canvas:artwork:a');
   assert.deepEqual({ favorites: workspace.favorites, folders: workspace.folders }, ownership); assert.equal(workspace.canvas.objects.length, 2);
+});
+
+test('gallery lock state and an authored native-ratio span survive normalization', () => {
+  let workspace = createEmptyWorkspace('0xprofile');
+  workspace = createCanvasObject(workspace, { ...input('canvas:artwork:locked'), locked: true, span: { columns: 7, rows: 4 } });
+  assert.equal(workspace.canvas.objects[0].locked, true);
+  assert.deepEqual(workspace.canvas.objects[0].span, { columns: 7, rows: 4 });
+  const presentation = workspace.canvas.objects[0].presentation;
+  workspace = setCanvasObjectLocked(workspace, 'canvas:artwork:locked', false);
+  assert.equal(workspace.canvas.objects[0].locked, false);
+  assert.deepEqual(workspace.canvas.objects[0].presentation, presentation);
 });

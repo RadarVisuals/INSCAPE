@@ -110,11 +110,12 @@ test('authored window geometry is projected through the ephemeral visitor camera
   assert.deepEqual(documentFixture.spaces[0].windowGeometry, { column: -3, row: 2, columnSpan: 13, rowSpan: 9 });
 });
 
-test('published component exposes launcher/artwork activation and structural mouse/touch pointer handling', () => {
+test('published component exposes launcher/gallery activation and structural mouse/touch pointer handling', () => {
   const source = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
   const cameraSource = readFileSync(resolve(here, '../../public/HomeWorldSurface.jsx'), 'utf8');
   assert.match(source, /onClick=\{\(\) => toggleSpace\(item\.space\)\}/);
-  assert.match(source, /setOpenArtworkId\(object\.id\)/);
+  assert.match(source, /<GalleryWorld/);
+  assert.match(source, /onOpenArtwork=\{setOpenArtworkId\}/);
   assert.match(source, /event\.pointerType === 'mouse'/);
   assert.match(source, /setPointerCapture/);
   assert.match(cameraSource, /event\.pointerType !== 'mouse'/);
@@ -144,12 +145,14 @@ test('published artwork fails closed for editing while the verified owner keeps 
   const worldSource = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
   const previewSource = readFileSync(resolve(here, 'ProfileDocumentSurface.jsx'), 'utf8');
   const ownerSource = readFileSync(resolve(here, '../../public/ModuleGridShell.jsx'), 'utf8');
+  const gallerySource = readFileSync(resolve(here, '../../public/GalleryWorld.jsx'), 'utf8');
   assert.match(artworkSource, /editable = false/);
   assert.match(artworkSource, /editable && \(\(compact && !arranging\)/);
   assert.doesNotMatch(worldSource + previewSource, /onEdit=\{\(\) => \{\}\}/);
   assert.doesNotMatch(worldSource + previewSource, /editable=\{/);
-  assert.match(ownerSource, /editable=\{ownerAuthoringEnabled\}/);
-  assert.match(ownerSource, /onEdit=\{\(\)=>openArtworkInspector\(object\.id\)\}/);
+  assert.match(ownerSource, /ownerAuthoringEnabled=\{ownerAuthoringEnabled\}/);
+  assert.match(gallerySource, /ownerAuthoringEnabled && !object\.locked/);
+  assert.doesNotMatch(worldSource, /ownerAuthoringEnabled/);
 });
 
 test('compact published content clears masthead and identity through 719px, with 720px spatial mode', () => {
@@ -303,4 +306,13 @@ test('published renderer import graph cannot reach owner stores, persistence, or
   visit(resolve(here, 'PublishedProfileBoundary.jsx'));
   assert.ok([...visited].some((file) => file.endsWith('PublishedHomeWorld.jsx')));
   assert.ok([...visited].some((file) => file.endsWith('HomeWorldSurface.jsx')));
+});
+
+test('published visitor level navigation uses the shared controller contract', () => {
+  const worldSource = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
+  assert.match(worldSource, /<SpatialLevelNavigation[\s\S]*level=\{galleryOpen \? SPATIAL_WORLD_LEVEL\.GALLERY : SPATIAL_WORLD_LEVEL\.HOME\}/);
+  assert.match(worldSource, /disabled=\{galleryOpen && galleryTransitionPhase !== 'gallery'\}/);
+  assert.match(worldSource, /onDown=\{galleryOpen \? undefined : enterGallery\}/);
+  assert.match(worldSource, /onUp=\{galleryOpen \? exitGallery : undefined\}/);
+  assert.doesNotMatch(worldSource, /currentLevel=|transitioning=|onMoveDown=|onMoveUp=/);
 });

@@ -38,6 +38,7 @@ export function normalizeCanvasObject(candidate) {
     kind: definition.kind,
     stableAssetId: candidate.stableAssetId,
     visitorVisible: candidate.visitorVisible === true,
+    locked: candidate.locked === true,
     placement: { column, row },
     span: { columns, rows },
     presentationOrder: Math.max(0, integer(candidate.presentationOrder, 0)),
@@ -54,12 +55,12 @@ export function normalizeCanvasObjects(candidates) {
   }));
 }
 
-export function createCanvasObject(workspace, { kind, stableAssetId, placement, id } = {}) {
+export function createCanvasObject(workspace, { kind, stableAssetId, placement, span, locked = false, id } = {}) {
   const definition = getCanvasObjectDefinition(kind);
   const objectId = id || generatedId();
   if (!definition || !isValidCanvasObjectId(objectId) || !parseCanonicalAssetId(stableAssetId) || workspace.canvas.objects.some((object) => object.id === objectId)) return workspace;
-  const object = normalizeCanvasObject({ id: objectId, kind, stableAssetId, visitorVisible: false, placement,
-    span: definition.defaultSpan, presentationOrder: workspace.canvas.objects.length, presentation: definition.defaultPresentation });
+  const object = normalizeCanvasObject({ id: objectId, kind, stableAssetId, visitorVisible: false, locked, placement,
+    span: span || definition.defaultSpan, presentationOrder: workspace.canvas.objects.length, presentation: definition.defaultPresentation });
   return { ...workspace, canvas: { ...workspace.canvas, objects: normalizeCanvasObjectOrder([...workspace.canvas.objects, object]) } };
 }
 
@@ -85,6 +86,11 @@ export function replaceCanvasObjectAsset(workspace, id, stableAssetId) {
 export function setCanvasObjectVisitorVisibility(workspace, id, visitorVisible) {
   if (typeof visitorVisible !== 'boolean') return workspace;
   return updateObject(workspace, id, (object) => ({ ...object, visitorVisible }));
+}
+
+export function setCanvasObjectLocked(workspace, id, locked) {
+  if (typeof locked !== 'boolean') return workspace;
+  return updateObject(workspace, id, (object) => ({ ...object, locked }));
 }
 
 export function removeCanvasObject(workspace, id) {

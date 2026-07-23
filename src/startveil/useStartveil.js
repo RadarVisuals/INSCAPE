@@ -9,7 +9,7 @@ function readReducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 }
 
-export function useStartveil({ ready, onUserGesture, onPresentationMode, onRevealWorld, onRevealActor, onRevealInterface, onComplete }) {
+export function useStartveil({ ready, entryReady = true, onUserGesture, onPresentationMode, onRevealWorld, onRevealActor, onRevealInterface, onComplete }) {
   const [state, setState] = useState(() => createStartveilState(ready));
   const [sessionSeen] = useState(readSessionSeen);
   const [reducedMotion] = useState(readReducedMotion);
@@ -45,12 +45,12 @@ export function useStartveil({ ready, onUserGesture, onPresentationMode, onRevea
   }, [state]);
 
   const enter = useCallback(() => {
-    if (state !== STARTVEIL_STATES.DORMANT || activationRef.current) return;
+    if (state !== STARTVEIL_STATES.DORMANT || !entryReady || activationRef.current) return;
     activationRef.current = true;
     callbacksRef.current.onUserGesture?.();
     try { window.sessionStorage.setItem(STARTVEIL_SESSION_KEY, 'true'); } catch { /* entry remains available */ }
     setState(transitionStartveil(state, 'ENTER'));
-  }, [state]);
+  }, [entryReady, state]);
 
   useEffect(() => {
     if (state !== STARTVEIL_STATES.DORMANT) return undefined;
@@ -63,5 +63,5 @@ export function useStartveil({ ready, onUserGesture, onPresentationMode, onRevea
     return () => window.removeEventListener('keydown', handleEntryKey);
   }, [enter, state]);
 
-  return { state, enter, reducedMotion, shortened, canEnter: state === STARTVEIL_STATES.DORMANT };
+  return { state, enter, reducedMotion, shortened, canEnter: state === STARTVEIL_STATES.DORMANT && entryReady };
 }

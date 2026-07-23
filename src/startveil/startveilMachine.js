@@ -1,4 +1,4 @@
-export const STARTVEIL_SESSION_KEY = 'os-underneath.startveil.seen.v1';
+export const STARTVEIL_SESSION_KEY = 'inscape.startveil.seen.v1';
 
 export const STARTVEIL_STATES = Object.freeze({
   LOADING: 'loading', DORMANT: 'dormant', ENTERING: 'entering', BOOTING: 'booting',

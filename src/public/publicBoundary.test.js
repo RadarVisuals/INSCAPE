@@ -66,16 +66,21 @@ test('framed artwork keeps form controls interactive and presentation layers ind
   const shellStyles = readFileSync(new URL('./moduleGrid.css', import.meta.url), 'utf8');
   const artworkSource = readFileSync(new URL('./FramedArtwork.jsx', import.meta.url), 'utf8');
   const artworkStyles = readFileSync(new URL('./canvasObjects.css', import.meta.url), 'utf8');
-  const documentPreviewSource = readFileSync(new URL('../profileDocument/components/ProfileDocumentSurface.jsx', import.meta.url), 'utf8');
+  const galleryStyles = readFileSync(new URL('./galleryWorld.css', import.meta.url), 'utf8');
+  const documentPreviewSource = readFileSync(new URL('../profileDocument/components/PublishedHomeWorld.jsx', import.meta.url), 'utf8');
 
   assert.match(shellStyles, /\.public-shell input,[\s\S]*\.public-shell select,[\s\S]*pointer-events:\s*auto/);
   assert.match(artworkSource, /canvas-artwork__mat/);
   assert.match(artworkSource, /canvas-artwork__image-bed/);
+  assert.match(artworkSource, /data-transparent/);
+  assert.match(artworkSource, /transparentPresentation \? asset\?\.imageUrl/);
+  assert.match(artworkSource, /object\.presentation\.background === 'transparent'/);
   assert.match(artworkStyles, /data-mat="light"[^}]*\.canvas-artwork__mat/);
   assert.match(artworkStyles, /data-background="light"[^}]*\.canvas-artwork__image-bed/);
+  assert.match(galleryStyles, /data-transparent[^}]*background:transparent/);
   assert.doesNotMatch(artworkStyles, /data-private[^}]*content:\s*["']PRIVATE/);
   assert.match(artworkSource, /arranging && selected/);
-  assert.match(documentPreviewSource, /<FramedArtwork/);
+  assert.match(documentPreviewSource, /<GalleryWorld/);
 });
 
 test('Gallery remains spatial while Creations is an independent dock workspace', () => {
@@ -96,6 +101,20 @@ test('Gallery remains spatial while Creations is an independent dock workspace',
   assert.match(gallerySource, /createPortal\(<>{backdrop}{gallery}<\/>/);
   assert.match(gallerySource, /onMoveKeeperHorizontally/);
   assert.doesNotMatch(gallerySource, /if \(direction\) onMoveKeeper\?\./);
+});
+
+test('owner inventory hydrates independently of opening Index or Categories', () => {
+  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
+  assert.match(shellSource, /if \(!ownerAuthoringEnabled \|\| libraryStatus !== 'idle'\) return;\s*void loadLibrary\(\);/);
+  assert.match(shellSource, /galleryAssetsMissing[\s\S]*libraryStatus !== 'loading'\) void loadLibrary\(\);/);
+});
+
+test('published visitors enter the same Gallery projection without owner authoring controls', () => {
+  const worldSource = readFileSync(new URL('../profileDocument/components/PublishedHomeWorld.jsx', import.meta.url), 'utf8');
+  assert.match(worldSource, /gallery=\{\{ open: galleryOpen/);
+  assert.match(worldSource, /<GalleryWorld/);
+  assert.match(worldSource, /objects=\{galleryObjects\}/);
+  assert.doesNotMatch(worldSource, /ownerAuthoringEnabled=\{true\}/);
 });
 
 test('Gallery is routed through the profile dock without legacy destination controls', () => {

@@ -1,6 +1,5 @@
-import ProfileDocumentSurface from './ProfileDocumentSurface.jsx';
-import ProfileDocumentSpaceWindow from './ProfileDocumentSpaceWindow.jsx';
+import PublishedHomeWorld from './PublishedHomeWorld.jsx';
 
 export default function ProfileDocumentPreview({ document, onExit }) {
-  return <ProfileDocumentSurface document={document} heading="VISITOR PREVIEW" onExit={onExit} SpaceWindow={ProfileDocumentSpaceWindow} />;
+  return <PublishedHomeWorld document={document} onExit={onExit} />;
 }

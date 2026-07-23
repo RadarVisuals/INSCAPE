@@ -133,6 +133,6 @@ export function resetCanvasLayout(workspace) {
   return { ...workspace, canvas: {
     ...workspace.canvas,
     launchers: workspace.canvas.launchers.map((launcher) => ({ ...launcher, position: null, windowPosition: null, windowGeometry: null })),
-    objects: workspace.canvas.objects.map((object) => ({ ...object, placement: { column: 0, row: object.presentationOrder * object.span.rows } }))
+    objects: workspace.canvas.objects
   } };
 }

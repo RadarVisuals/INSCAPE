@@ -38,7 +38,9 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
   const assets = useLibraryStore((state) => state.assets);
   const workspace = useLibraryStore((state) => state.workspace);
   const status = useLibraryStore((state) => state.status);
-  const error = useLibraryStore((state) => state.error);
+  const sourceMode = useLibraryStore((state) => state.sourceMode);
+  const progress = useLibraryStore((state) => state.progress);
+  const error = useLibraryStore((state) => state.error || state.liveError);
   const load = useLibraryStore((state) => state.load);
   const createFolder = useLibraryStore((state) => state.createFolder);
   const deleteFolder = useLibraryStore((state) => state.deleteFolder);
@@ -183,8 +185,8 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
         <div className="asset-index-workspace__filters"><span>FILTER</span>{FILTERS.map((kind) => <button type="button" key={kind} data-active={filter === kind || undefined} onClick={() => setFilter(kind)}>{kind}</button>)}<label><span>SORT</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="RECENT">RECENT</option><option value="A-Z">A–Z</option><option value="COLLECTION">COLLECTION</option></select></label></div>
         <header><strong>{viewLabel}</strong><span>{filteredAssets.length} RESULTS</span></header>
         <div className="asset-index-workspace__assets">
-          {(status === 'idle' || status === 'loading') && !filteredAssets.length && <p>LOADING ASSET INDEX</p>}
-          {status === 'error' && !filteredAssets.length && <div className="asset-index-workspace__error" role="alert"><p>{error || 'ASSET INDEX UNAVAILABLE'}</p><button type="button" onClick={() => load({ forceLive: true })}>RETRY</button></div>}
+          {(status === 'idle' || status === 'loading') && !filteredAssets.length && <p>LOADING ASSET INDEX{sourceMode === 'RPC' ? ' / DIRECT RPC' : ''}{progress.total ? ` ${progress.resolved}/${progress.total}` : ''}</p>}
+          {status === 'error' && !filteredAssets.length && <div className="asset-index-workspace__error" role="alert"><strong>ASSET SOURCE OFFLINE</strong><p>{error || 'ASSET INDEX UNAVAILABLE'}</p><button type="button" onClick={() => load({ forceLive: true })}>RETRY</button></div>}
           {status !== 'idle' && status !== 'loading' && status !== 'error' && !filteredAssets.length && <p>NO ASSETS MATCH THIS VIEW</p>}
           {filteredAssets.map((asset) => <button type="button" key={asset.id} data-selected={selectedIds.includes(asset.id) || undefined} onClick={(event) => activateAsset(event, asset)} aria-label={`${organizing ? 'Select' : 'Inspect'} ${asset.name || 'untitled asset'}`}>
             <span className="asset-index-workspace__thumb"><IndexThumbnail asset={asset} /></span>

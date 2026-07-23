@@ -290,12 +290,15 @@ test('private canvas objects never enter documents or fingerprints while public 
   const state = setSnapshot(createProfileDocumentState(), source, profileDocumentContentFingerprint(source));
   const privateEdit = workspace(); privateEdit.canvas.objects.find((object) => !object.visitorVisible).presentation.frame = 'none';
   assert.equal(isSnapshotStale(state, build({ workspace: privateEdit })), false);
+  const lockEdit = workspace(); lockEdit.canvas.objects.find((object) => object.visitorVisible).locked = true;
+  assert.equal(isSnapshotStale(state, build({ workspace: lockEdit })), false, 'local Gallery locks do not alter the published document');
   const publicEdit = workspace(); publicEdit.canvas.objects.find((object) => object.visitorVisible).presentation.fit = 'cover';
   assert.equal(isSnapshotStale(state, build({ workspace: publicEdit })), true);
 });
 
 test('canvas artwork validates strict controlled fields and rejects remote renderer escape hatches', () => {
   const source = build(); const object = source.canvasObjects[0];
+  assert.equal(validateProfileDocument({ ...source, canvasObjects: [{ ...object, presentation: { ...object.presentation, background: 'transparent' } }] }).valid, true);
   for (const changed of [
     { ...object, kind: 'remote-widget' }, { ...object, span: { columns: 0, rows: 4 } },
     { ...object, presentation: { ...object.presentation, fit: 'crop-script' } }, { ...object, stableAssetId: 'bad' },

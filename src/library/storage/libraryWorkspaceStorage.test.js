@@ -82,9 +82,9 @@ test('v5 workspaces migrate purely to an empty canvas-object collection and v6 o
   const migrated = normalizeWorkspace(v5, profile);
   assert.equal(migrated.version, 6); assert.deepEqual(migrated.favorites, ['kept']); assert.deepEqual(migrated.canvas.objects, []);
   const current = normalizeWorkspace({ ...v5, version: 6, canvas: { launchers: [], objects: [{
-    id: 'canvas:artwork:one', kind: 'framed-artwork', stableAssetId: '42:0x1111111111111111111111111111111111111111:0x01', visitorVisible: true,
+    id: 'canvas:artwork:one', kind: 'framed-artwork', stableAssetId: '42:0x1111111111111111111111111111111111111111:0x01', visitorVisible: true, locked: true,
     placement: { column: 4, row: 5 }, span: { columns: 4, rows: 4 }, presentationOrder: 99,
     presentation: { fit: 'cover', frame: 'heavy', mat: 'light', background: 'neutral' }
   }] } }, profile);
-  assert.equal(current.canvas.objects.length, 1); assert.equal(current.canvas.objects[0].presentationOrder, 0);
+  assert.equal(current.canvas.objects.length, 1); assert.equal(current.canvas.objects[0].presentationOrder, 0); assert.equal(current.canvas.objects[0].locked, true);
 });

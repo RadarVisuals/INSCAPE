@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import FramedArtwork from './FramedArtwork.jsx';
-import { clampGalleryCamera, createGalleryLayout } from './galleryLayout.js';
+import { clampGalleryCamera, createGalleryLayout, galleryPlacementFromPoint, moveGalleryGeometry, resizeGalleryGeometry } from './galleryLayout.js';
 import { getCenteredHorizontalGridOffset, panSpatialCamera } from './spatialWorldCamera.js';
+import { detectImageTransparency } from './imageTransparency.js';
 import './galleryWorld.css';
 
 const EMPTY_VIEWPORT = Object.freeze({ width: 1280, height: 720 });
@@ -29,16 +30,36 @@ function GalleryFloorGrid({ width, height, offset, spacing }) {
   </svg>;
 }
 
-export default function GalleryWorld({ objects, assets, theme, transitionPhase = 'gallery', gridPhaseX = 0, gridOffsetY = 0, onOpenArtwork, onExit, onCameraXChange, onMoveKeeper, onMoveKeeperHorizontally }) {
+export default function GalleryWorld({ objects, assets, assetStatus = 'ready', theme, ownerAuthoringEnabled = false, selectedArtworkId = null, transitionPhase = 'gallery', gridPhaseX = 0, gridOffsetY = 0, renderImage, onOpenArtwork, onSelectArtwork, onOpenContextMenu, onChangeArtworkGeometry, onRegisterArtworkElement, onExit, onCameraXChange, onMoveKeeper, onMoveKeeperHorizontally }) {
   const viewportRef = useRef(null);
   const dragRef = useRef(null);
+  const artworkInteractionRef = useRef(null);
+  const suppressArtworkActivationRef = useRef(false);
   const [viewport, setViewport] = useState(() => ({
     width: typeof window === 'undefined' ? EMPTY_VIEWPORT.width : window.innerWidth,
     height: typeof window === 'undefined' ? EMPTY_VIEWPORT.height : window.innerHeight
   }));
   const [cameraX, setCameraX] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const layout = useMemo(() => createGalleryLayout(objects, viewport), [objects, viewport]);
+  const [artworkInteraction, setArtworkInteraction] = useState(null);
+  const [transparentAssetIds, setTransparentAssetIds] = useState(() => new Set());
+  const effectiveObjects = useMemo(() => objects.map((object) => artworkInteraction?.id === object.id ? {
+    ...object,
+    placement: { column: artworkInteraction.geometry.column, row: artworkInteraction.geometry.row },
+    span: { columns: artworkInteraction.geometry.columnSpan, rows: artworkInteraction.geometry.rowSpan }
+  } : object), [artworkInteraction, objects]);
+  const layout = useMemo(() => createGalleryLayout(effectiveObjects, viewport), [effectiveObjects, viewport]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all(assets.map(async (asset) => ({
+      id: asset.id,
+      transparent: await detectImageTransparency(asset.imageUrl || asset.thumbnailUrl)
+    }))).then((results) => {
+      if (active) setTransparentAssetIds(new Set(results.filter((result) => result.transparent).map((result) => result.id)));
+    });
+    return () => { active = false; };
+  }, [assets]);
 
   const moveCamera = useCallback((nextOrUpdater, direction = 0) => {
     setCameraX((current) => clampGalleryCamera(
@@ -113,8 +134,61 @@ export default function GalleryWorld({ objects, assets, theme, transitionPhase =
     dragRef.current = null;
     setDragging(false);
     if (!drag.moved) {
+      onSelectArtwork?.(null);
       onMoveKeeper?.(event.clientX, Math.min(event.clientY, layout.horizon - 32));
     }
+  };
+
+  const beginArtworkInteraction = (event, object, kind) => {
+    if (!ownerAuthoringEnabled || object.locked || event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    onSelectArtwork?.(object.id);
+    artworkInteractionRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, object, kind, moved: false };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const moveArtworkInteraction = (event) => {
+    const active = artworkInteractionRef.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const delta = { x: event.clientX - active.startX, y: event.clientY - active.startY };
+    active.moved ||= Math.hypot(delta.x, delta.y) > 4;
+    if (!active.moved) return;
+    const geometry = active.kind === 'resize'
+      ? resizeGalleryGeometry(active.object, delta)
+      : moveGalleryGeometry(active.object, delta, layout);
+    active.geometry = geometry;
+    setArtworkInteraction({ id: active.object.id, geometry });
+  };
+
+  const finishArtworkInteraction = (event) => {
+    const active = artworkInteractionRef.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    artworkInteractionRef.current = null;
+    if (active.moved && active.geometry) {
+      suppressArtworkActivationRef.current = true;
+      onChangeArtworkGeometry?.(active.object.id, active.geometry);
+    }
+    setArtworkInteraction(null);
+  };
+
+  const openWallContextMenu = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!ownerAuthoringEnabled) return;
+    const bounds = viewportRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    const placement = galleryPlacementFromPoint({
+      worldX: event.clientX - bounds.left + cameraX,
+      viewportY: event.clientY - bounds.top,
+      span: { columns: 4, rows: 4 }
+    }, layout);
+    onSelectArtwork?.(null);
+    onOpenContextMenu?.(event, { type: 'gallery-canvas', id: 'gallery-canvas', placement });
   };
 
   const gridSpacing = viewport.width < 720 ? 56 : 80;
@@ -143,19 +217,49 @@ export default function GalleryWorld({ objects, assets, theme, transitionPhase =
     onPointerUp={finishPointer}
     onPointerCancel={finishPointer}
     onLostPointerCapture={finishPointer}
-    onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); }}
+    onContextMenu={openWallContextMenu}
   >
     <div className="gallery-world__track" style={{ width: layout.worldWidth, transform: `translate3d(${-cameraX}px,0,0)` }}>
       {layout.items.map(({ object, left, top, width, height }) => {
         const asset = assets.find((entry) => entry.id === object.stableAssetId) || null;
-        return <FramedArtwork key={object.id} object={object} asset={asset} arranging={false} selected={false}
+        const arranging = ownerAuthoringEnabled && !object.locked && selectedArtworkId === object.id;
+        return <FramedArtwork key={object.id} object={object} asset={asset} arranging={arranging} selected={selectedArtworkId === object.id && !object.locked}
           style={{ left, top, width, height, zIndex: 12 + object.presentationOrder }}
-          onActivate={() => onOpenArtwork(object.id)} />;
+          resolving={!asset && ['idle', 'loading'].includes(assetStatus)}
+          transparent={transparentAssetIds.has(object.stableAssetId)}
+          renderImage={renderImage}
+          containerRef={(node) => onRegisterArtworkElement?.(object.id, node)}
+          interactionProps={{
+            onPointerDown: (event) => beginArtworkInteraction(event, object, 'move'),
+            onPointerMove: moveArtworkInteraction,
+            onPointerUp: finishArtworkInteraction,
+            onPointerCancel: finishArtworkInteraction,
+            onLostPointerCapture: finishArtworkInteraction
+          }}
+          resizeProps={{
+            onPointerDown: (event) => beginArtworkInteraction(event, object, 'resize'),
+            onPointerMove: moveArtworkInteraction,
+            onPointerUp: finishArtworkInteraction,
+            onPointerCancel: finishArtworkInteraction,
+            onLostPointerCapture: finishArtworkInteraction
+          }}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!ownerAuthoringEnabled) return;
+            onSelectArtwork?.(object.locked ? null : object.id);
+            onOpenContextMenu?.(event, { type: 'gallery-object', id: object.id });
+          }}
+          onActivate={() => {
+            if (suppressArtworkActivationRef.current) { suppressArtworkActivationRef.current = false; return; }
+            if (ownerAuthoringEnabled && !object.locked) { onSelectArtwork?.(object.id); return; }
+            onOpenArtwork(object.id);
+          }} />;
       })}
       <span className="gallery-world__origin" aria-hidden="true">GALLERY / 00</span>
       <span className="gallery-world__terminus" aria-hidden="true" style={{ left: layout.worldWidth - 220 }}>END OF EXHIBITION</span>
     </div>
-    {!layout.items.length && <div className="gallery-world__empty"><strong>Gallery awaiting works</strong><span>Add framed artwork to the desktop to populate this wall.</span></div>}
+    {!layout.items.length && <div className="gallery-world__empty"><strong>Gallery awaiting works</strong><span>{ownerAuthoringEnabled ? 'Right-click the wall to add artwork.' : 'No public works have been installed.'}</span></div>}
     <nav className="gallery-world__controls" aria-label="Gallery movement">
       <button type="button" onClick={() => moveCamera((current) => current - viewport.width * 0.7, -1)} aria-label="Move gallery left">←</button>
       <span>Drag · Scroll · Arrow keys</span>

@@ -66,7 +66,7 @@ test('Favorites can be pinned but protected system views cannot be renamed, dele
   assert.equal(deleteFolder(workspace, 'favorites'), workspace);
 });
 
-test('Reset Layout clears placement without deleting library organization or pins', () => {
+test('Reset Layout clears Home placement without deleting organization, pins, or Gallery objects', () => {
   let workspace = createFolder(createEmptyWorkspace('0xprofile'), 'Exhibition', 10);
   const folderId = workspace.folders[0].id;
   workspace = toggleFavorite(setFolderAsset(workspace, folderId, 'asset-a', true, 20), 'asset-b');
@@ -74,6 +74,7 @@ test('Reset Layout clears placement without deleting library organization or pin
   const launcherId = workspace.canvas.launchers[0].id;
   workspace = setLauncherPosition(workspace, launcherId, { column: 4, row: 5 });
   workspace = setLauncherVisitorVisibility(workspace, launcherId, true);
+  workspace = { ...workspace, canvas: { ...workspace.canvas, objects: [{ id: 'gallery-object', placement: { column: 9, row: 2 } }] } };
   const organization = structuredClone({ favorites: workspace.favorites, folders: workspace.folders });
 
   const reset = resetCanvasLayout(workspace);
@@ -81,6 +82,7 @@ test('Reset Layout clears placement without deleting library organization or pin
   assert.equal(reset.canvas.launchers.length, 1);
   assert.equal(reset.canvas.launchers[0].position, null);
   assert.equal(reset.canvas.launchers[0].visitorVisible, true);
+  assert.deepEqual(reset.canvas.objects, workspace.canvas.objects);
 });
 
 test('visitor visibility toggles only pinned presentation state', () => {

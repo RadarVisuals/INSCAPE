@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import FramedArtwork from '../../public/FramedArtwork.jsx';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PublishedImage from './PublishedImage.jsx';
 import { resolvePublishedAssetUrl } from '../domain/publishedAssetUrl.js';
 import HomeWorldSurface from '../../public/HomeWorldSurface.jsx';
@@ -20,14 +19,19 @@ import {
 } from '../domain/publishedVisitorWorld.js';
 import PublishedProfileDocumentSpaceWindow from './PublishedProfileDocumentSpaceWindow.jsx';
 import ProfileNavigationDock from '../../public/ProfileNavigationDock.jsx';
+import { SPATIAL_WORLD_LEVEL } from '../../public/spatialWorldLevels.js';
 
 const THEME = Object.freeze({ '--os-accent': '#e87945', '--module-accent': '#e87945', '--hu-text': '#eeebdf', '--hu-text-muted': '#a9a59c' });
+const GALLERY_TRANSITION_MS = 720;
+const GALLERY_DOCK_COLLAPSE_MS = 170;
+const GalleryWorld = lazy(() => import('../../public/GalleryWorld.jsx'));
+const SpatialLevelNavigation = lazy(() => import('../../public/SpatialLevelNavigation.jsx'));
 
 function viewportSize() {
   return { width: globalThis.innerWidth || 1280, height: globalThis.innerHeight || 720 };
 }
 
-export default function PublishedHomeWorld({ document, onMoveKeeper }) {
+export default function PublishedHomeWorld({ document, onMoveKeeper, onExit }) {
   const [viewport, setViewport] = useState(viewportSize);
   const layout = useMemo(() => createPublishedVisitorLayout(document, viewport.width, viewport.height), [document, viewport]);
   const [camera, setCamera] = useState(layout.camera);
@@ -35,11 +39,14 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
     document.spaces.filter((space) => space.startOpen).map((space) => ({ id: space.id, rect: initialVisitorWindowRect(space, layout, layout.camera) }))
   ));
   const [openArtworkId, setOpenArtworkId] = useState(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryTransitionPhase, setGalleryTransitionPhase] = useState('home');
   const worldRef = useRef(null);
   const artworkDialogRef = useRef(null);
   const artworkTriggerRef = useRef(null);
   const launcherRefs = useRef(new Map());
   const interactionRef = useRef(null);
+  const galleryTransitionTimerRef = useRef(0);
   const compactTapRef = useRef({ activePointers: new Set(), candidate: null, multiTouch: false });
   const cached = document.profile.cachedIdentity;
   const avatarUrl = resolvePublishedAssetUrl(cached.avatarUrl);
@@ -57,6 +64,14 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
     label: space.label,
     assets: space.assets.map((asset) => projectDocumentAsset(asset))
   })), [document.spaces]);
+  const galleryObjects = useMemo(() => document.canvasObjects.map((object) => ({
+    ...object,
+    stableAssetId: object.asset.stableAssetId,
+    visitorVisible: true,
+    locked: true,
+    presentationOrder: object.order
+  })), [document.canvasObjects]);
+  const galleryAssets = useMemo(() => document.canvasObjects.map((object) => projectDocumentAsset(object.asset)), [document.canvasObjects]);
 
   useEffect(() => {
     const resize = () => setViewport(viewportSize());
@@ -68,7 +83,39 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
     setCamera(layout.camera);
     setWindowState(createVisitorWindowState(document.spaces.filter((space) => space.startOpen).map((space) => ({ id: space.id, rect: initialVisitorWindowRect(space, layout, layout.camera) }))));
     setOpenArtworkId(null);
+    setGalleryOpen(false);
+    setGalleryTransitionPhase('home');
   }, [document]);
+
+  useEffect(() => () => {
+    if (galleryTransitionTimerRef.current) window.clearTimeout(galleryTransitionTimerRef.current);
+  }, []);
+
+  const enterGallery = useCallback(() => {
+    if (galleryOpen) return;
+    if (galleryTransitionTimerRef.current) window.clearTimeout(galleryTransitionTimerRef.current);
+    setWindowState(createVisitorWindowState([]));
+    setGalleryOpen(true);
+    setGalleryTransitionPhase('preparing');
+    galleryTransitionTimerRef.current = window.setTimeout(() => {
+      setGalleryTransitionPhase('entering');
+      galleryTransitionTimerRef.current = window.setTimeout(() => {
+        galleryTransitionTimerRef.current = 0;
+        setGalleryTransitionPhase('gallery');
+      }, GALLERY_TRANSITION_MS);
+    }, GALLERY_DOCK_COLLAPSE_MS);
+  }, [galleryOpen]);
+
+  const exitGallery = useCallback(() => {
+    if (!galleryOpen || galleryTransitionPhase !== 'gallery') return;
+    if (galleryTransitionTimerRef.current) window.clearTimeout(galleryTransitionTimerRef.current);
+    setGalleryTransitionPhase('exiting');
+    galleryTransitionTimerRef.current = window.setTimeout(() => {
+      galleryTransitionTimerRef.current = 0;
+      setGalleryOpen(false);
+      setGalleryTransitionPhase('home');
+    }, GALLERY_TRANSITION_MS);
+  }, [galleryOpen, galleryTransitionPhase]);
 
   useEffect(() => {
     setCamera((current) => layout.geometry.narrow ? layout.camera : clampVerticalHomeWorldCamera(current, layout.world, layout.camera.x));
@@ -201,19 +248,36 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
       categories={navigationCategories}
       creations={{ profileAddress: document.profile.address }}
       activity={{ profileAddress: document.profile.address }}
+      gallery={{ open: galleryOpen, onOpenChange: (open) => open ? enterGallery() : exitGallery() }}
+      spatialWorldActive={galleryOpen}
     />
-    <header className="public-shell__masthead published-home-world__header"><div className="system-hud__identity"><h1>[ <span className="system-hud__brand-accent">PUBLISHED WORLD</span> ]</h1><span className="system-hud__operator">{displayName}</span><span className="system-hud__live"><i aria-hidden="true" />Document v{document.version}</span></div></header>
-    <HomeWorldSurface camera={camera} geometry={layout.geometry} world={layout.world} gridVisible theme={THEME} visible onCameraChange={setCamera} onMoveKeeper={onMoveKeeper} narrowGestureRef={compactTapRef} />
-    <section className="published-home-world__spatial" aria-label="Published Canvas Spaces and artwork" style={{ width: layout.placementGeometry.usableWidth, height: layout.placementGeometry.usableHeight, transform, '--grid-cell-width': `${layout.geometry.cellWidth}px`, '--grid-cell-height': `${layout.geometry.cellHeight}px` }} onWheel={handleWorldWheel} onPointerDown={beginCompactTap} onPointerMove={moveCompactTap} onPointerUp={finishCompactTap} onPointerCancel={(event) => finishCompactTap(event, true)} onPointerLeave={(event) => { if (event.pointerType === 'mouse') finishCompactTap(event, true); }}>
+    <header className="public-shell__masthead published-home-world__header"><div className="system-hud__identity"><h1>[ <span className="system-hud__brand-accent">{onExit ? 'VISITOR PREVIEW' : 'PUBLISHED WORLD'}</span> ]</h1><span className="system-hud__operator">{displayName}</span><span className="system-hud__live"><i aria-hidden="true" />Document v{document.version}</span></div>{onExit && <nav className="system-hud__commands"><button type="button" onClick={onExit}>[ Exit Preview ]</button></nav>}</header>
+    {(!galleryOpen || ['preparing', 'entering', 'exiting'].includes(galleryTransitionPhase)) && <HomeWorldSurface camera={camera} geometry={layout.geometry} world={layout.world} gridVisible theme={THEME} visible onCameraChange={setCamera} onMoveKeeper={onMoveKeeper} narrowGestureRef={compactTapRef} transitionPhase={galleryTransitionPhase} />}
+    {!galleryOpen && <section className="published-home-world__spatial" aria-label="Published Canvas Spaces" style={{ width: layout.placementGeometry.usableWidth, height: layout.placementGeometry.usableHeight, transform, '--grid-cell-width': `${layout.geometry.cellWidth}px`, '--grid-cell-height': `${layout.geometry.cellHeight}px` }} onWheel={handleWorldWheel} onPointerDown={beginCompactTap} onPointerMove={moveCompactTap} onPointerUp={finishCompactTap} onPointerCancel={(event) => finishCompactTap(event, true)} onPointerLeave={(event) => { if (event.pointerType === 'mouse') finishCompactTap(event, true); }}>
       {layout.spaces.map((item) => { const entry = windowState.windows[item.id]; const launcherAction = !entry ? 'Open' : entry.minimized ? 'Restore' : 'Close'; return <button ref={(node) => { if (node) launcherRefs.current.set(item.id, node); else launcherRefs.current.delete(item.id); }} className="module-shell module-button module-button--folder" data-entry-state="ready" data-launcher-id={item.id} data-window-state={!entry ? 'closed' : entry.minimized ? 'minimized' : 'open'} data-active={entry ? true : undefined} key={item.id} type="button" style={publishedItemPixelRect(item, layout)} onClick={() => toggleSpace(item.space)} aria-expanded={Boolean(entry && !entry.minimized)} aria-label={`${launcherAction} ${item.space.label}, ${item.space.assets.length} assets`}>
         {item.appearance.mode !== 'label' && <b className="module-button__icon" aria-hidden="true">{iconGlyph(item.appearance.iconKey)}</b>}{item.appearance.showLabel !== false && item.appearance.mode !== 'icon' && <span className="module-button__label">{item.space.label}</span>}{item.appearance.mode !== 'icon' && <small>{item.space.assets.length}</small>}
       </button>; })}
-      {layout.objects.map((object) => <FramedArtwork key={object.id} object={{ ...object, stableAssetId: object.asset.stableAssetId, visitorVisible: true }} asset={projectDocumentAsset(object.asset)} arranging={false} compact={layout.geometry.narrow} selected={false} style={{ ...publishedItemPixelRect(object, layout), zIndex: 10 + object.order }} renderImage={(props) => <PublishedImage {...props} />} onActivate={(event) => { artworkTriggerRef.current = event.currentTarget; setOpenArtworkId(object.id); }} />)}
-    </section>
-    {windowState.zOrder.map((id, index) => { const entry = windowState.windows[id]; const space = document.spaces.find((candidate) => candidate.id === id); if (!entry || !space) return null; return <section key={id} className="module-shell module-shell--expanded module-shell--collection module-shell--folder published-home-world__window" data-minimized={entry.minimized || undefined} style={{ ...entry.rect, zIndex: 60 + index }} role="dialog" aria-modal="false" aria-label={`Published space: ${space.label}`} onPointerDownCapture={() => transitionWindow({ type: 'focus', id })}>
+    </section>}
+    {!galleryOpen && windowState.zOrder.map((id, index) => { const entry = windowState.windows[id]; const space = document.spaces.find((candidate) => candidate.id === id); if (!entry || !space) return null; return <section key={id} className="module-shell module-shell--expanded module-shell--collection module-shell--folder published-home-world__window" data-minimized={entry.minimized || undefined} style={{ ...entry.rect, zIndex: 60 + index }} role="dialog" aria-modal="false" aria-label={`Published space: ${space.label}`} onPointerDownCapture={() => transitionWindow({ type: 'focus', id })}>
       <PublishedProfileDocumentSpaceWindow space={space} minimized={entry.minimized} dragHandleProps={{ onPointerDown: (event) => beginWindowInteraction(event, id, 'move'), onPointerMove: moveWindowInteraction, onPointerUp: finishWindowInteraction, onPointerCancel: finishWindowInteraction, onLostPointerCapture: finishWindowInteraction }} onMinimize={() => transitionWindow({ type: entry.minimized ? 'restore' : 'minimize', id })} onClose={() => closeSpace(id)} />
       {!layout.geometry.narrow && !entry.minimized && <><button type="button" className="module-window__resize" data-resize-control aria-label={`Resize ${space.label} window`} aria-describedby={`published-resize-help-${id}`} onKeyDown={(event) => resizeWindowByKeyboard(event, id)} onPointerDown={(event) => beginWindowInteraction(event, id, 'resize')} onPointerMove={moveWindowInteraction} onPointerUp={finishWindowInteraction} onPointerCancel={finishWindowInteraction} onLostPointerCapture={finishWindowInteraction} /><span className="sr-only" id={`published-resize-help-${id}`}>Use the arrow keys to resize in 40 pixel steps.</span></>}
     </section>; })}
+    {galleryOpen && galleryTransitionPhase !== 'preparing' && <Suspense fallback={null}><GalleryWorld
+      objects={galleryObjects}
+      assets={galleryAssets}
+      theme={THEME}
+      transitionPhase={galleryTransitionPhase}
+      renderImage={(props) => <PublishedImage {...props} />}
+      onOpenArtwork={setOpenArtworkId}
+      onExit={exitGallery}
+      onMoveKeeper={onMoveKeeper}
+    /></Suspense>}
+    <Suspense fallback={null}><SpatialLevelNavigation
+      level={galleryOpen ? SPATIAL_WORLD_LEVEL.GALLERY : SPATIAL_WORLD_LEVEL.HOME}
+      disabled={galleryOpen && galleryTransitionPhase !== 'gallery'}
+      onDown={galleryOpen ? undefined : enterGallery}
+      onUp={galleryOpen ? exitGallery : undefined}
+    /></Suspense>
     {openArtwork && (() => { const asset = projectDocumentAsset(openArtwork.asset); return <section ref={artworkDialogRef} className="profile-document-preview__artwork" role="dialog" aria-modal="true" aria-label={`Artwork preview: ${asset.name}`}><header><strong>{asset.name}</strong><button type="button" onClick={() => setOpenArtworkId(null)} aria-label="Close artwork preview">×</button></header>{asset.imageUrl ? <PublishedImage src={asset.imageUrl} alt={asset.name} fallback="Artwork unavailable" /> : <p>Artwork unavailable</p>}</section>; })()}
   </main>;
 }

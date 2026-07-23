@@ -52,7 +52,7 @@ The menu model deliberately accepts target types rather than component names. A 
 
 ## System sigil
 
-`public/assets/logo/underneath_os.webp` is rendered as a 40 px image inside a 48 px control at the exact 50% point of the system bar. It is neutral by default and gains restrained orange emphasis on hover, focus, or open state. The sigil menu provides functional About/profile status, Open Atelier, Arrange Desktop, Reset Windows, Close All Windows, and Settings actions. The information panel reports the active profile and read-only LUKSO status. At widths where HUD groups could collide, the sigil is hidden.
+The system control renders the INSCAPE `N` as a code-native boxed mark, without retaining a legacy OS Underneath image asset. It is neutral by default and gains restrained accent emphasis on hover, focus, or open state. The system menu provides functional About/profile status, Open Atelier, Arrange Desktop, Reset Windows, Close All Windows, and Settings actions. The information panel reports the active profile and read-only LUKSO status. At widths where HUD groups could collide, the control is hidden.
 
 ## Mobile behavior
 

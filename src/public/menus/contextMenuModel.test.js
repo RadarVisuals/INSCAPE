@@ -14,13 +14,20 @@ test('launcher editing and visitor-start commands are directly available', () =>
   assert.equal(contextMenuCommands({ target: { type: 'window' }, editMode: false, launcher: { id: 'library:folder:one', viewType: 'folder' } }).some((item) => item.id === 'toggle-start-open'), false);
 });
 
-test('canvas creation and framed-artwork commands stay controlled and keyboard-menu compatible', () => {
+test('home and gallery creation commands stay room-specific and keyboard-menu compatible', () => {
   const create = contextMenuCommands({ target: { type: 'canvas', id: 'canvas' }, menu: 'create', ownerAuthoringEnabled: true });
-  assert.deepEqual(create.map((command) => command.id), ['menu-root', 'create-folder', 'create-framed-artwork']);
+  assert.deepEqual(create.map((command) => command.id), ['menu-root', 'create-folder']);
+  const gallery = contextMenuCommands({ target: { type: 'gallery-canvas', id: 'gallery-canvas' }, ownerAuthoringEnabled: true });
+  assert.deepEqual(gallery.map((command) => command.id), ['add-gallery-artwork']);
   const object = contextMenuCommands({ target: { type: 'canvas-object', id: 'canvas:artwork:one' }, canvasObject: { visitorVisible: true }, ownerAuthoringEnabled: true });
   assert.deepEqual(object.map((command) => command.id), ['open-artwork', 'edit-artwork', 'replace-artwork', 'toggle-object-visibility', 'menu-layer', 'remove-artwork']);
   const layer = contextMenuCommands({ target: { type: 'canvas-object', id: 'canvas:artwork:one' }, menu: 'layer', ownerAuthoringEnabled: true });
   assert.deepEqual(layer.map((command) => command.id), ['menu-root', 'object-forward', 'object-backward', 'object-front', 'object-back']);
+  const galleryObject = contextMenuCommands({ target: { type: 'gallery-object', id: 'canvas:artwork:one' }, canvasObject: { visitorVisible: true, locked: true }, ownerAuthoringEnabled: true });
+  assert.equal(galleryObject.find((command) => command.id === 'toggle-artwork-lock').label, 'Unlock Placement');
+  assert.equal(galleryObject.find((command) => command.id === 'toggle-transparent-presentation').label, 'Use Transparent Presentation');
+  const transparentObject = contextMenuCommands({ target: { type: 'gallery-object', id: 'canvas:artwork:one' }, canvasObject: { presentation: { background: 'transparent' } }, ownerAuthoringEnabled: true });
+  assert.equal(transparentObject.find((command) => command.id === 'toggle-transparent-presentation').label, 'Use Framed Presentation');
 });
 
 test('visitor menus expose runtime viewing commands but no authoring commands', () => {

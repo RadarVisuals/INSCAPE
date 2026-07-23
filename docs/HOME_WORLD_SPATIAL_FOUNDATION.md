@@ -14,8 +14,8 @@ Implemented foundations:
 - `homeWorldCamera.js` retains bounded, profile-scoped camera persistence and provides the vertical camera clamp used by owner and visitor worlds.
 - `spatialWorldCamera.js` remains the framework-neutral shared primitive for drag-threshold/click routing and for the separately horizontal gallery camera.
 - `HomeWorldSurface.jsx` portals the near-black grid below the transparent Keeper canvas, suppresses click activation after a drag gesture, and handles passive-safe vertical wheel navigation.
-- `ModuleGridShell.jsx` and `PublishedHomeWorld.jsx` project authored launchers and artwork through the same vertical camera contract.
-- Runtime windows remain viewport-fixed while the authored grid, launchers, and canvas artwork move vertically behind them.
+- `ModuleGridShell.jsx` and `PublishedHomeWorld.jsx` project authored launchers through the same vertical Home camera contract and framed artwork through the shared Gallery wall contract.
+- Runtime windows remain viewport-fixed while the authored Home grid and launchers move vertically behind them. Framed artwork belongs exclusively to Gallery and is not duplicated on Home.
 - The former home navigator, drag-panning, keyboard panning, pinch zoom, and zoom controls are not part of the current home interaction.
 
 ## Intended compositor
@@ -56,7 +56,7 @@ Camera position is runtime navigation state. It is profile-scoped local state an
 
 Desktop placement uses one signed, bounded grid contract. Positions are integer `{ column, row }` origins in the range `-255` through `255`; spans are positive integer grid-cell counts. Negative columns and rows are intentional: they identify cells left of or above the world origin. They are not corrupt values and they are not camera coordinates.
 
-- Launchers and canvas artwork are world-anchored. They move vertically on screen when the camera moves.
+- Launchers are Home-world anchored. Framed artwork uses the same bounded authored cells as Gallery-wall coordinates and moves horizontally with the Gallery camera.
 - Desktop authoring restricts placement to the columns intersecting the fixed horizontal viewport while retaining the existing signed grid vocabulary.
 - Runtime windows persist rectangles in the same grid vocabulary, but remain viewport-fixed while the camera moves.
 - Portable profile documents validate the same signed placement bounds. A builder drops malformed local geometry, and an imported document outside the bounds is rejected.
@@ -82,6 +82,9 @@ The current runtime-window model remains untouched until that choice is reviewed
 ## Gallery stabilization captured by this foundation
 
 - Gallery architecture and framed artwork are portaled below the transparent resident canvas.
+- Owner authoring happens directly on the Gallery wall: right-click empty wall to choose a real owned image, drag an unlocked work to move it, resize proportionally from its selected corner, and right-click to lock, unlock, replace, publish, reorder, or remove it.
+- Gallery geometry and lock state autosave only after completed interactions. Lock state is local authoring state and does not enter the public profile document.
+- Published visitors enter the same Gallery layout and transition but receive no authoring callbacks or controls.
 - The fixed public interface remains above the resident.
 - Horizontal gallery navigation changes only the Keeper's local X target and preserves the existing local Y target exactly.
 - Clicking any empty gallery area only moves the Keeper; it never triggers camera scrolling.

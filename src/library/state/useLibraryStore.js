@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { normalizeProfileAddress, resolveWorkspaceProfile } from '../config.js';
 import { luksoProfileRepository } from '../data/luksoProfileRepository.js';
+import { luksoRpcProfileRepository } from '../data/luksoRpcProfileRepository.js';
 import { useWalletStore } from '../../store/useWalletStore.js';
+import { developmentLog, reportControlledError } from '../../diagnostics.js';
 import {
   createFolder,
   deleteFolder,
@@ -19,7 +21,7 @@ import {
 } from '../domain/libraryWorkspace.js';
 import {
   createCanvasObject, removeCanvasObject, reorderCanvasObject, replaceCanvasObjectAsset,
-  setCanvasObjectGeometry, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility
+  setCanvasObjectGeometry, setCanvasObjectLocked, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility
 } from '../domain/canvasObjects.js';
 import { loadLibraryWorkspace, saveLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
 
@@ -28,6 +30,7 @@ let workspaceStorage = typeof window === 'undefined' ? null : window.localStorag
 let saveTimer = null;
 let activeLoadController = null;
 const LIVE_SOURCE_TIMEOUT_MS = 15000;
+const RPC_SOURCE_TIMEOUT_MS = 240000;
 
 function scheduleSave(workspace) {
   if (saveTimer) clearTimeout(saveTimer);
@@ -58,6 +61,10 @@ export const useLibraryStore = create((set, get) => ({
     const profile = normalizeProfileAddress(nextProfileAddress);
     if (!profile) return false;
     if (profile === get().profileAddress) return true;
+    developmentLog('[asset-index] profile changed', {
+      previousProfileAddress: get().profileAddress,
+      profileAddress: profile
+    });
     activeLoadController?.abort();
     activeLoadController = null;
     if (saveTimer) {
@@ -73,36 +80,116 @@ export const useLibraryStore = create((set, get) => ({
   },
 
   async load({ forceLive = false } = {}) {
-    if (get().status === 'loading' && !forceLive) return;
+    if (get().status === 'loading' && !forceLive) {
+      developmentLog('[asset-index] duplicate load ignored', {
+        profileAddress: get().profileAddress,
+        generation: get().loadGeneration
+      });
+      return;
+    }
     activeLoadController?.abort();
     const controller = new AbortController();
     activeLoadController = controller;
-    let timedOut = false;
-    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, LIVE_SOURCE_TIMEOUT_MS);
+    const requestedProfileAddress = get().profileAddress;
     const generation = get().loadGeneration + 1;
+    developmentLog('[asset-index] load started', {
+      endpoint: luksoProfileRepository.endpoint,
+      forceLive,
+      generation,
+      profileAddress: requestedProfileAddress,
+      timeoutMs: LIVE_SOURCE_TIMEOUT_MS
+    });
     set({ loadGeneration: generation, assets: forceLive ? [] : get().assets, sourceMode: 'LIVE', status: 'loading',
       error: null, liveError: null, progress: { resolved: 0, total: 0, failures: 0 } });
-    const consume = async (repository) => {
-      for await (const batch of repository.loadProfileAssets(get().profileAddress, { signal: controller.signal })) {
-        if (get().loadGeneration !== generation) return;
+    const consume = async (repository, signal) => {
+      for await (const batch of repository.loadProfileAssets(requestedProfileAddress, { signal })) {
+        if (get().loadGeneration !== generation) {
+          developmentLog('[asset-index] stale batch discarded', { generation, profileAddress: requestedProfileAddress });
+          return;
+        }
+        developmentLog('[asset-index] batch received', {
+          assets: batch.assets.length,
+          complete: batch.complete,
+          failures: batch.failures,
+          generation,
+          profileAddress: requestedProfileAddress,
+          resolved: batch.resolved,
+          total: batch.total
+        });
         set((state) => ({ assets: uniqueAssets(state.assets, batch.assets), sourceMode: repository.source,
           status: batch.complete ? 'ready' : 'loading',
           progress: { resolved: batch.resolved, total: batch.total, failures: (state.progress.failures || 0) + batch.failures } }));
       }
     };
+    const consumeWithTimeout = async (repository, timeoutMs) => {
+      const sourceController = new AbortController(); let timedOut = false;
+      const abortSource = () => sourceController.abort(controller.signal.reason);
+      controller.signal.addEventListener('abort', abortSource, { once: true });
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        developmentLog('[asset-index] source timeout reached', {
+          generation, profileAddress: requestedProfileAddress, source: repository.source, timeoutMs
+        });
+        sourceController.abort();
+      }, timeoutMs);
+      try {
+        await consume(repository, sourceController.signal);
+      } catch (error) {
+        if (controller.signal.aborted) throw error;
+        if (timedOut) {
+          const timeoutError = new Error(`${repository.source} ASSET SOURCE DID NOT RESPOND`);
+          timeoutError.name = 'SourceTimeoutError';
+          throw timeoutError;
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+        controller.signal.removeEventListener('abort', abortSource);
+      }
+    };
     try {
-      await consume(luksoProfileRepository);
+      try {
+        await consumeWithTimeout(luksoProfileRepository, LIVE_SOURCE_TIMEOUT_MS);
+      } catch (liveSourceError) {
+        if (controller.signal.aborted || get().loadGeneration !== generation) throw liveSourceError;
+        const liveMessage = liveSourceError instanceof Error ? liveSourceError.message : String(liveSourceError);
+        developmentLog('[asset-index] switching to RPC fallback', {
+          generation, message: liveMessage, profileAddress: requestedProfileAddress,
+          rpcEndpoint: luksoRpcProfileRepository.endpoint
+        });
+        set({ sourceMode: 'RPC', status: 'loading', error: null, liveError: liveMessage,
+          progress: { resolved: 0, total: 0, failures: 0 } });
+        await consumeWithTimeout(luksoRpcProfileRepository, RPC_SOURCE_TIMEOUT_MS);
+      }
       if (get().loadGeneration === generation && get().status === 'loading') set({ status: 'ready' });
+      if (get().loadGeneration === generation) {
+        developmentLog('[asset-index] load completed', {
+          assets: get().assets.length,
+          generation,
+          profileAddress: requestedProfileAddress,
+          status: get().status
+        });
+      }
     } catch (error) {
-      if (get().loadGeneration !== generation) return;
-      const message = timedOut ? 'ASSET INDEX SOURCE DID NOT RESPOND' : (error instanceof Error ? error.message : String(error));
-      if (get().assets.length > 0) {
-        set({ liveError: message, status: 'partial', sourceMode: 'LIVE' });
+      if (get().loadGeneration !== generation) {
+        developmentLog('[asset-index] superseded load cancelled', { generation, profileAddress: requestedProfileAddress });
         return;
       }
-      set({ liveError: message, status: 'error', sourceMode: 'LIVE', error: message, assets: [], progress: { resolved: 0, total: 0, failures: 0 } });
+      const message = error instanceof Error ? error.message : String(error);
+      reportControlledError('asset-index-load', new Error(message));
+      developmentLog('[asset-index] load failed', {
+        errorName: error instanceof Error ? error.name : typeof error,
+        generation,
+        message,
+        profileAddress: requestedProfileAddress,
+        sourceMode: get().sourceMode
+      });
+      if (get().assets.length > 0) {
+        set({ liveError: message, status: 'partial' });
+        return;
+      }
+      set({ liveError: message, status: 'error', error: message, assets: [], progress: { resolved: 0, total: 0, failures: 0 } });
     } finally {
-      clearTimeout(timeout);
       if (activeLoadController === controller) activeLoadController = null;
     }
   },
@@ -170,6 +257,9 @@ export const useLibraryStore = create((set, get) => ({
   },
   setCanvasObjectVisitorVisibility(id, visitorVisible) {
     const workspace = setCanvasObjectVisitorVisibility(get().workspace, id, visitorVisible); set({ workspace }); scheduleSave(workspace);
+  },
+  setCanvasObjectLocked(id, locked) {
+    const workspace = setCanvasObjectLocked(get().workspace, id, locked); set({ workspace }); scheduleSave(workspace);
   },
   reorderCanvasObject(id, command) {
     const workspace = reorderCanvasObject(get().workspace, id, command); set({ workspace }); scheduleSave(workspace);

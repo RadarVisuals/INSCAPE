@@ -33,6 +33,7 @@ export function normalizeProfileAsset(holding, ownerAddress, options = {}) {
     standard: token ? 'LSP8' : contractMetadata?.isLSP7 ? 'LSP7' : 'unknown',
     name, description: metadata.description || contractMetadata?.description || '', collectionName,
     imageUrl: urls.imageUrl, thumbnailUrl: urls.thumbnailUrl, originalImageUrl: urls.originalImageUrl,
+    imageWidth: urls.width, imageHeight: urls.height,
     creators, attributes: (metadata.attributes || []).map(({ key, value, attributeType }) => ({ key, value, type: attributeType })),
     metadataStatus,
     rawMetadata: { indexerHoldingId: holding?.id || null, indexerMetadataError: metadata.error || null,

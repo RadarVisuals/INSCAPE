@@ -24,8 +24,12 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
   if (!ownerAuthoringEnabled && target?.type === 'launcher') return [{ id: 'open', label: 'Open' }];
   if (!ownerAuthoringEnabled && target?.type === 'canvas-object') return [{ id: 'open-artwork', label: 'Open Artwork' }];
   if (target?.type === 'canvas' && menu === 'create') return [
-    { id: 'menu-root', label: '< Back' }, { id: 'create-folder', label: 'Folder' }, { id: 'create-framed-artwork', label: 'Framed Artwork' }
+    { id: 'menu-root', label: '< Back' }, { id: 'create-folder', label: 'Folder' }
   ];
+  if (target?.type === 'gallery-canvas') return ownerAuthoringEnabled
+    ? [{ id: 'add-gallery-artwork', label: 'Add Artwork' }]
+    : [];
+  if (target?.type === 'gallery-object' && !ownerAuthoringEnabled) return [{ id: 'open-artwork', label: 'Open Artwork' }];
   if (target?.type === 'canvas' && menu === 'view') return [
     { id: 'menu-root', label: '< Back' },
     { id: 'toggle-keeper', label: keeperVisible ? 'Hide Keeper' : 'Show Keeper' },
@@ -46,7 +50,7 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
       { id: 'unpin', label: 'Unpin from Canvas' }
     ] : [])
   ];
-  if (target?.type === 'canvas-object' && menu === 'layer') return [
+  if (['canvas-object', 'gallery-object'].includes(target?.type) && menu === 'layer') return [
     { id: 'menu-root', label: '< Back' }, { id: 'object-forward', label: 'Bring Forward' }, { id: 'object-backward', label: 'Send Backward' },
     { id: 'object-front', label: 'Bring to Front' }, { id: 'object-back', label: 'Send to Back' }
   ];
@@ -54,6 +58,16 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
     { id: 'open-artwork', label: 'Open Artwork' }, { id: 'edit-artwork', label: 'Edit Artwork' }, { id: 'replace-artwork', label: 'Replace Artwork' },
     { id: 'toggle-object-visibility', label: canvasObject?.visitorVisible ? 'Make Private' : 'Show to Visitors' },
     { id: 'menu-layer', label: 'Layer >' }, { id: 'remove-artwork', label: 'Remove from Canvas' }
+  ];
+  if (target?.type === 'gallery-object') return [
+    { id: 'open-artwork', label: 'Open Artwork' },
+    { id: 'toggle-artwork-lock', label: canvasObject?.locked ? 'Unlock Placement' : 'Lock Placement' },
+    { id: 'toggle-transparent-presentation', label: canvasObject?.presentation?.background === 'transparent' ? 'Use Framed Presentation' : 'Use Transparent Presentation' },
+    { id: 'edit-artwork', label: 'Frame & Presentation' },
+    { id: 'replace-artwork', label: 'Replace Artwork' },
+    { id: 'toggle-object-visibility', label: canvasObject?.visitorVisible ? 'Make Private' : 'Show to Visitors' },
+    { id: 'menu-layer', label: 'Layer >' },
+    { id: 'remove-artwork', label: 'Remove from Gallery' }
   ];
   if (target?.type === 'window') return [
     { id: 'close', label: 'Close' }, { id: 'reset-window', label: launcher ? 'Reset Near Folder' : 'Reset Position and Size' },
