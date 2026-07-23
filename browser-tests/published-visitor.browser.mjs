@@ -310,7 +310,7 @@ test('shared visitor profile card preserves its anchor through avatar, compact, 
   await waitFor(`document.querySelector(${JSON.stringify(categories)}).getAttribute('aria-hidden') === 'true'`, 'categories control hides with avatar profile');
 });
 
-test('categories card uses published spaces, keeps numeric labels, and opens the selected space', async () => {
+test('categories card opens the detached native-ratio asset browser without opening legacy space windows', async () => {
   await viewport(1280, 720, false); await navigate(); await closeFixtureWindows();
   await click('.profile-identity-card__avatar');
   await waitFor(`document.querySelector('.category-navigation-card').hasAttribute('data-visible')`, 'categories control visible');
@@ -326,8 +326,24 @@ test('categories card uses published spaces, keeps numeric labels, and opens the
   assert.equal(rows.length, 7);
   assert.deepEqual(rows.map((row) => row.code), ['01', '02', '03', '04', '05', '06', '07']);
   assert.equal(await evaluate(`(()=>{const nav=document.querySelector('.category-navigation-card nav');return nav.scrollHeight===nav.clientHeight})()`), true, 'complete category list does not create a false scrollbar');
+  assert.equal(await evaluate(`document.querySelector('.category-asset-browser')?.hasAttribute('data-visible') || false`), false, 'opening categories does not choose a folder implicitly');
+  await click('.category-navigation-card nav button:first-of-type');
+  await waitFor(`document.querySelector('.category-asset-browser')?.hasAttribute('data-visible')`, 'detached asset browser opens with categories');
+  await waitFor(`document.querySelector('.category-asset-card img')?.complete && document.querySelector('.category-asset-card img')?.naturalWidth > 0`, 'category asset preview');
+  const browser = await evaluate(`(()=>{const windowNode=document.querySelector('.category-asset-browser');const media=windowNode.querySelector('.category-asset-card__media');const image=media.querySelector('img');const mediaRect=media.getBoundingClientRect();return {label:windowNode.getAttribute('aria-label'),left:parseFloat(windowNode.style.left),top:parseFloat(windowNode.style.top),cards:windowNode.querySelectorAll('.category-asset-card').length,nativeRatio:image.naturalWidth/image.naturalHeight,renderedRatio:mediaRect.width/mediaRect.height,mediaHeight:mediaRect.height}})()`);
+  assert.equal(browser.label, 'Alpha Archive 1 NFT browser');
+  assert.equal(browser.left, 244); assert.equal(browser.top, 20); assert.equal(browser.cards, 1);
+  assert.ok(Math.abs(browser.nativeRatio - browser.renderedRatio) < .02, `category preview changed native ratio: ${JSON.stringify(browser)}`);
+  await evaluate(`(()=>{const input=document.querySelector('[aria-label="Thumbnail size"]');const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;setter.call(input,'250');input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+  await waitFor(`document.querySelector('.category-asset-card__media').getBoundingClientRect().height > ${browser.mediaHeight + 30}`, 'thumbnail density slider');
+  const resizeBefore = await evaluate(`document.querySelector('.category-asset-browser').getBoundingClientRect().width`);
+  await evaluate(`document.querySelector('.category-asset-browser__resize').focus()`); await pressKey('ArrowLeft');
+  await waitFor(`document.querySelector('.category-asset-browser').getBoundingClientRect().width < ${resizeBefore}`, 'keyboard browser resize');
+  assert.equal((await evaluate(`parseFloat(document.querySelector('.category-asset-browser').style.width)`)) % 40, 0, 'browser resize snaps to forty pixel grid');
   await click('.category-navigation-card nav button:last-of-type');
-  await waitFor(`document.querySelector('[data-launcher-id="space:Alpha:6"]').dataset.windowState === 'open'`, 'category opens selected published space');
+  await waitFor(`document.querySelector('.category-asset-browser').getAttribute('aria-label') === 'Alpha Archive 7 NFT browser'`, 'category switches detached browser content');
+  assert.equal(await evaluate(`document.querySelectorAll('.category-asset-card').length`), 0);
+  assert.equal(await evaluate(`document.querySelector('[data-launcher-id="space:Alpha:6"]').dataset.windowState`), 'closed', 'category selection does not open a legacy space window');
 });
 
 test('React StrictMode reuses one factory provider while cleanup, replacement, and recovery stay safe', async () => {

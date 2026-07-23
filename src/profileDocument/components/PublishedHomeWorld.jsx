@@ -54,7 +54,8 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
   }), [avatarUrl, displayName, document.profile.address]);
   const navigationCategories = useMemo(() => document.spaces.map((space) => ({
     id: space.id,
-    label: space.label
+    label: space.label,
+    assets: space.assets.map((asset) => projectDocumentAsset(asset))
   })), [document.spaces]);
 
   useEffect(() => {
@@ -198,11 +199,6 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
     <ProfileNavigationDock
       profile={publicProfile}
       categories={navigationCategories}
-      activeCategoryId={windowState.zOrder.at(-1) || null}
-      onCategorySelect={(category) => {
-        const space = document.spaces.find((candidate) => candidate.id === category.id);
-        if (space) toggleSpace(space);
-      }}
     />
     <header className="public-shell__masthead published-home-world__header"><div className="system-hud__identity"><h1>[ <span className="system-hud__brand-accent">PUBLISHED WORLD</span> ]</h1><span className="system-hud__operator">{displayName}</span><span className="system-hud__live"><i aria-hidden="true" />Document v{document.version}</span></div></header>
     <HomeWorldSurface camera={camera} geometry={layout.geometry} world={layout.world} gridVisible theme={THEME} visible onCameraChange={setCamera} onMoveKeeper={onMoveKeeper} narrowGestureRef={compactTapRef} />

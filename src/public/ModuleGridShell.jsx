@@ -276,15 +276,18 @@ export default function ModuleGridShell({
   );
   const pinnedLaunchers = liveCanvasContent.launchers;
   const canvasObjects = liveCanvasContent.objects;
+  const libraryAssetById = useMemo(() => new Map(libraryAssets.map((asset) => [asset.id, asset])), [libraryAssets]);
   const navigationCategories = useMemo(() => pinnedLaunchers
     .filter((launcher) => launcher.visitorVisible === true)
     .map((launcher) => {
       const folder = workspace.folders.find((entry) => entry.id === launcher.folderId);
+      const assetIds = launcher.viewType === 'favorites' ? workspace.favorites : folder?.assetIds || [];
       return {
         id: launcher.id,
-        label: launcher.viewType === 'favorites' ? launcher.label || 'Favorites' : folder?.name || 'Unavailable category'
+        label: launcher.viewType === 'favorites' ? launcher.label || 'Favorites' : folder?.name || 'Unavailable category',
+        assets: assetIds.map((id) => libraryAssetById.get(id)).filter(Boolean)
       };
-    }), [pinnedLaunchers, workspace.folders]);
+    }), [libraryAssetById, pinnedLaunchers, workspace.favorites, workspace.folders]);
   const homeWorld = useMemo(() => createVerticalHomeWorld(geometry), [geometry]);
   const homeOrigin = useMemo(() => ({ x:geometry.width, y:geometry.height, zoom:1 }), [geometry.height,geometry.width]);
   const homeCamera = geometry.narrow || homeCameraState.profileAddress !== workspace.profileAddress
@@ -1085,8 +1088,10 @@ export default function ModuleGridShell({
           updateRuntime({ type: expanded ? 'open' : 'close', id: 'identity' });
         }}
         categories={navigationCategories}
-        activeCategoryId={openFolderLauncherId}
-        onCategorySelect={(category) => activateLauncher(category.id)}
+        assetStatus={libraryStatus}
+        onCategoriesOpenChange={(expanded) => {
+          if (expanded && libraryStatus === 'idle') loadLibrary();
+        }}
       />}
       <header className="public-shell__masthead">
         <div className="system-hud__primary">
