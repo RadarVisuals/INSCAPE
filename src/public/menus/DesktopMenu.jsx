@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { clampMenuPosition } from './contextMenuModel.js';
 
-export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus }) {
+export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus, className = '' }) {
   const ref = useRef(null);
   const [position, setPosition] = useState(anchor);
   useLayoutEffect(() => {
@@ -21,7 +21,7 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
     const offset = event.key === 'ArrowDown' ? 1 : -1; const index = buttons.indexOf(document.activeElement);
     buttons[(index + offset + buttons.length) % buttons.length]?.focus();
   };
-  return <div ref={ref} className="desktop-menu" role="menu" aria-label={label} style={{ left: position.x, top: position.y }} onKeyDown={onKeyDown}>
+  return <div ref={ref} className={`desktop-menu${className ? ` ${className}` : ''}`} role="menu" aria-label={label} style={{ left: position.x, top: position.y }} onKeyDown={onKeyDown}>
     {commands.map((command) => <button key={command.id} type="button" role="menuitem" disabled={command.disabled} onClick={() => onCommand(command.id)}><i aria-hidden="true" />{command.label}</button>)}
   </div>;
 }

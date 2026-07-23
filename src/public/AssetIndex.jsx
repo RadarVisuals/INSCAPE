@@ -2,6 +2,7 @@ import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { selectLibraryViewAssets } from '../library/domain/selectLibraryViewAssets.js';
 import { useLibraryStore } from '../library/state/useLibraryStore.js';
+import DesktopMenu from './menus/DesktopMenu.jsx';
 import NftFlipViewer from './NftFlipViewer.jsx';
 import {
   initialCategoryBrowserRect,
@@ -39,6 +40,7 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
   const status = useLibraryStore((state) => state.status);
   const load = useLibraryStore((state) => state.load);
   const createFolder = useLibraryStore((state) => state.createFolder);
+  const deleteFolder = useLibraryStore((state) => state.deleteFolder);
   const setFolderAsset = useLibraryStore((state) => state.setFolderAsset);
   const toggleFavorite = useLibraryStore((state) => state.toggleFavorite);
   const [view, setView] = useState({ type: 'all', id: null });
@@ -50,6 +52,8 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
   const [viewerAsset, setViewerAsset] = useState(null);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [folderContext, setFolderContext] = useState(null);
+  const [folderPendingDelete, setFolderPendingDelete] = useState(null);
   const viewerTriggerRef = useRef(null);
   const resizeRef = useRef(null);
   const [viewport, setViewport] = useState(viewportSize);
@@ -72,8 +76,19 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
       setSelectedIds([]);
       setViewerAsset(null);
       setNewFolderOpen(false);
+      setFolderContext(null);
+      setFolderPendingDelete(null);
     }
   }, [load, open, status]);
+
+  useEffect(() => {
+    if (!folderPendingDelete) return undefined;
+    const close = (event) => {
+      if (event.key === 'Escape') setFolderPendingDelete(null);
+    };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [folderPendingDelete]);
 
   const filteredAssets = useMemo(() => {
     const scoped = selectLibraryViewAssets(assets, workspace, view, query)
@@ -109,6 +124,13 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
     if (id) setView({ type: 'folder', id });
     setNewFolderName('');
     setNewFolderOpen(false);
+  };
+
+  const confirmFolderDelete = () => {
+    if (!folderPendingDelete) return;
+    deleteFolder(folderPendingDelete.id);
+    if (view.type === 'folder' && view.id === folderPendingDelete.id) setView({ type: 'all', id: null });
+    setFolderPendingDelete(null);
   };
 
   const addSelectionToFolder = () => {
@@ -148,7 +170,7 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
           <button type="button" data-active={view.type === 'all' || undefined} onClick={() => setView({ type: 'all', id: null })}><span>ALL OWNED</span><i>{assets.length}</i></button>
           <button type="button" data-active={view.type === 'favorites' || undefined} onClick={() => setView({ type: 'favorites', id: null })}><span>FAVORITES</span><i>{workspace.favorites.length}</i></button>
           <p>FOLDERS</p>
-          {workspace.folders.map((folder) => <button type="button" key={folder.id} data-folder data-active={view.type === 'folder' && view.id === folder.id || undefined} onClick={() => setView({ type: 'folder', id: folder.id })}><span>{folder.name}</span><i>{folder.assetIds.length}</i></button>)}
+          {workspace.folders.map((folder) => <button type="button" key={folder.id} data-folder data-active={view.type === 'folder' && view.id === folder.id || undefined} onClick={() => setView({ type: 'folder', id: folder.id })} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setFolderContext({ folder, anchor: { x: event.clientX, y: event.clientY }, returnFocus: event.currentTarget }); }}><span>{folder.name}</span><i>{folder.assetIds.length}</i></button>)}
         </nav>
         <button className="asset-index-workspace__new" type="button" onClick={() => setNewFolderOpen(true)}>+ CREATE FOLDER</button>
       </aside>
@@ -172,7 +194,9 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
       </main>
       <button className="asset-index-workspace__resize" type="button" aria-label="Resize asset index" onKeyDown={resizeByKey} onPointerDown={beginResize} onPointerMove={moveResize} onPointerUp={finishResize} onPointerCancel={finishResize} onLostPointerCapture={finishResize}><i aria-hidden="true">›</i></button>
       {newFolderOpen && <div className="asset-index-folder-dialog" role="dialog" aria-modal="true" aria-labelledby="asset-index-folder-title"><form onSubmit={submitFolder}><span>INDEX / NEW DIRECTORY</span><h2 id="asset-index-folder-title">CREATE FOLDER</h2><label htmlFor="asset-index-folder-name">FOLDER NAME</label><input id="asset-index-folder-name" autoFocus maxLength="80" value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} /><div><button type="button" onClick={() => setNewFolderOpen(false)}>CANCEL</button><button type="submit" disabled={!newFolderName.trim()}>CREATE</button></div></form></div>}
+      {folderPendingDelete && <div className="asset-index-folder-dialog" role="alertdialog" aria-modal="true" aria-labelledby="asset-index-delete-title" aria-describedby="asset-index-delete-copy"><div className="asset-index-folder-dialog__panel"><span>INDEX / REMOVE DIRECTORY</span><h2 id="asset-index-delete-title">DELETE {folderPendingDelete.name}</h2><p id="asset-index-delete-copy">THE FOLDER WILL BE REMOVED. ITS {folderPendingDelete.assetIds.length} {folderPendingDelete.assetIds.length === 1 ? 'ASSET REMAINS' : 'ASSETS REMAIN'} IN YOUR INDEX.</p><div><button type="button" autoFocus onClick={() => setFolderPendingDelete(null)}>CANCEL</button><button type="button" data-danger onClick={confirmFolderDelete}>DELETE FOLDER</button></div></div></div>}
     </section>
+    {folderContext && <DesktopMenu className="asset-index-context-menu" anchor={folderContext.anchor} label={`${folderContext.folder.name} commands`} commands={[{ id: 'delete-folder', label: 'Delete Folder' }]} onCommand={() => { setFolderPendingDelete(folderContext.folder); setFolderContext(null); }} onClose={() => setFolderContext(null)} returnFocus={folderContext.returnFocus} />}
     {viewerAsset && <NftFlipViewer asset={viewerAsset} onClose={() => setViewerAsset(null)} returnFocus={viewerTriggerRef.current} />}
   </>, document.body) : null;
 

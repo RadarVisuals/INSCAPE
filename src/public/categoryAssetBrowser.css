@@ -71,18 +71,21 @@
 
 .category-asset-browser__rows {
   min-height: 0;
-  margin-right: 8px;
+  margin: 0 8px 8px 0;
   padding: 6px 10px 26px 18px;
   overflow-x: hidden;
   overflow-y: scroll;
   scrollbar-gutter: stable;
-  scrollbar-width: thin;
-  scrollbar-color: rgb(235 236 231 / .18) transparent;
 }
 
-.category-asset-browser__rows::-webkit-scrollbar { width: 6px; }
-.category-asset-browser__rows::-webkit-scrollbar-track { background: transparent; }
-.category-asset-browser__rows::-webkit-scrollbar-thumb { background: rgb(235 236 231 / .18); border-radius: 0; }
+.category-asset-browser__rows::-webkit-scrollbar { width: 6px; border-radius: 0; background: rgb(235 236 231 / .035); }
+.category-asset-browser__rows::-webkit-scrollbar-track { border-radius: 0; background: rgb(235 236 231 / .035); }
+.category-asset-browser__rows::-webkit-scrollbar-thumb { border: 0; border-radius: 0; background: rgb(235 236 231 / .18); }
+.category-asset-browser__rows::-webkit-scrollbar-button { width: 0; height: 0; display: none; }
+
+@supports not selector(::-webkit-scrollbar) {
+  .category-asset-browser__rows { scrollbar-width: thin; scrollbar-color: rgb(235 236 231 / .18) rgb(235 236 231 / .035); }
+}
 
 .category-asset-browser__status { margin: 22px 0; color: rgb(235 236 231 / .38); font: 500 .58rem/1 var(--font-interface, "Oxanium", monospace); letter-spacing: .13em; }
 

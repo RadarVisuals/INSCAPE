@@ -22,9 +22,13 @@ export default function ProfileNavigationDock({
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [indexOpen, setIndexOpen] = useState(false);
   const onCategoriesOpenChangeRef = useRef(onCategoriesOpenChange);
+  const onIndexOpenChangeRef = useRef(ownerIndex?.onOpenChange);
   onCategoriesOpenChangeRef.current = onCategoriesOpenChange;
+  onIndexOpenChangeRef.current = ownerIndex?.onOpenChange;
   const navigationVisible = profileState !== PROFILE_IDENTITY_CARD_STATE.AVATAR;
   const effectiveIndexOpen = ownerIndex?.open ?? indexOpen;
+  const effectiveIndexOpenRef = useRef(effectiveIndexOpen);
+  effectiveIndexOpenRef.current = effectiveIndexOpen;
   const selectedCategory = categories.find((category) => category.id === selectedCategoryId) || null;
 
   useEffect(() => {
@@ -33,20 +37,21 @@ export default function ProfileNavigationDock({
       : null);
   }, [categories]);
 
-  const handleCategoriesExpandedChange = useCallback((expanded) => {
-    setCategoriesExpanded(expanded);
-    if (!expanded) setSelectedCategoryId(null);
-    onCategoriesOpenChangeRef.current?.(expanded);
-  }, []);
-
   const handleIndexOpenChange = useCallback((expanded) => {
     setIndexOpen(expanded);
     if (expanded) {
       setCategoriesExpanded(false);
       setSelectedCategoryId(null);
     }
-    ownerIndex?.onOpenChange?.(expanded);
-  }, [ownerIndex]);
+    onIndexOpenChangeRef.current?.(expanded);
+  }, []);
+
+  const handleCategoriesExpandedChange = useCallback((expanded) => {
+    setCategoriesExpanded(expanded);
+    if (!expanded) setSelectedCategoryId(null);
+    if (expanded && effectiveIndexOpenRef.current) handleIndexOpenChange(false);
+    onCategoriesOpenChangeRef.current?.(expanded);
+  }, [handleIndexOpenChange]);
 
   useEffect(() => {
     if (!navigationVisible && effectiveIndexOpen) handleIndexOpenChange(false);
