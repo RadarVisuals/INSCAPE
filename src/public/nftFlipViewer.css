@@ -74,7 +74,7 @@
   height: 100%;
   display: block;
   object-fit: contain;
-  box-shadow: 24px 30px 70px rgb(0 0 0 / .54);
+  filter: drop-shadow(24px 30px 35px rgb(0 0 0 / .54));
 }
 
 .nft-flip-viewer__unavailable {

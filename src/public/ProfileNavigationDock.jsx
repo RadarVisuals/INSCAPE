@@ -5,6 +5,7 @@ import { PROFILE_IDENTITY_CARD_STATE } from './profileIdentityCardModel.js';
 import './profileNavigationDock.css';
 
 const CategoryAssetBrowser = lazy(() => import('./CategoryAssetBrowser.jsx'));
+const AssetIndex = lazy(() => import('./AssetIndex.jsx'));
 
 export default function ProfileNavigationDock({
   profile,
@@ -12,15 +13,18 @@ export default function ProfileNavigationDock({
   onProfileExpandedChange,
   categories = [],
   assetStatus = 'ready',
-  onCategoriesOpenChange
+  onCategoriesOpenChange,
+  ownerIndex = null
 }) {
   const [profileState, setProfileState] = useState(PROFILE_IDENTITY_CARD_STATE.AVATAR);
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const [browserActivated, setBrowserActivated] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [indexOpen, setIndexOpen] = useState(false);
   const onCategoriesOpenChangeRef = useRef(onCategoriesOpenChange);
   onCategoriesOpenChangeRef.current = onCategoriesOpenChange;
   const navigationVisible = profileState !== PROFILE_IDENTITY_CARD_STATE.AVATAR;
+  const effectiveIndexOpen = ownerIndex?.open ?? indexOpen;
   const selectedCategory = categories.find((category) => category.id === selectedCategoryId) || null;
 
   useEffect(() => {
@@ -35,8 +39,21 @@ export default function ProfileNavigationDock({
     onCategoriesOpenChangeRef.current?.(expanded);
   }, []);
 
+  const handleIndexOpenChange = useCallback((expanded) => {
+    setIndexOpen(expanded);
+    if (expanded) {
+      setCategoriesExpanded(false);
+      setSelectedCategoryId(null);
+    }
+    ownerIndex?.onOpenChange?.(expanded);
+  }, [ownerIndex]);
+
+  useEffect(() => {
+    if (!navigationVisible && effectiveIndexOpen) handleIndexOpenChange(false);
+  }, [effectiveIndexOpen, handleIndexOpenChange, navigationVisible]);
+
   const selectCategory = useCallback((category) => {
-    setSelectedCategoryId(category.id);
+    setSelectedCategoryId((current) => current === category.id ? null : category.id);
     setBrowserActivated(true);
   }, []);
 
@@ -57,7 +74,14 @@ export default function ProfileNavigationDock({
       visible={navigationVisible}
       onSelect={selectCategory}
       onExpandedChange={handleCategoriesExpandedChange}
+      collapseRequested={effectiveIndexOpen}
     />
+    {ownerIndex && <Suspense fallback={null}><AssetIndex
+      visible={navigationVisible}
+      open={effectiveIndexOpen}
+      onOpenChange={handleIndexOpenChange}
+      profileName={profile?.name}
+    /></Suspense>}
     {browserActivated && <Suspense fallback={null}>
       <CategoryAssetBrowser
         open={navigationVisible && categoriesExpanded && Boolean(selectedCategory)}

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ProfileNavigationDock from './ProfileNavigationDock.jsx';
-import { CollectionWindow, flushLibraryWorkspace, FolderWindow, useLibraryStore } from '../library/index.js';
+import { flushLibraryWorkspace, FolderWindow, useLibraryStore } from '../library/index.js';
 import { CreationsWindow } from '../creations/index.js';
 import AssetPreview from '../library/components/AssetPreview.jsx';
 import KeeperSignalsLayer from '../signals/components/KeeperSignalsLayer.jsx';
@@ -169,7 +169,6 @@ export default function ModuleGridShell({
   const [keeperDockActive, setKeeperDockActive] = useState(false);
   const [availableModuleIds, setAvailableModuleIds] = useState(() => new Set());
   const moduleRefs = useRef(new Map());
-  const collectionPanelRef = useRef(null);
   const creationsPanelRef = useRef(null);
   const signalsPanelRef = useRef(null);
   const folderPanelRef = useRef(null);
@@ -328,7 +327,6 @@ export default function ModuleGridShell({
   const canvasObjectById = useMemo(() => Object.fromEntries(canvasObjects.map((object)=>[object.id,object])),[canvasObjects]);
   const openFolderLauncher = pinnedLaunchers.find((launcher) => launcher.id === openFolderLauncherId) || null;
   const windowGeometryFor = useCallback((key, anchor) => effectiveGeometry(runtimeWindows.rects[key] || defaultWindowGridRect(key,placementGeometry,anchor),interaction,['identity','collection','creations','signals'].includes(key)?`${key}-panel`:`folder-panel:${key}`),[interaction,placementGeometry,runtimeWindows.rects]);
-  const collectionPanelPosition = windowGeometryFor('collection',canvasPositions.collection);
   const creationsPanelPosition = windowGeometryFor('creations',canvasPositions.creations);
   const signalsPanelPosition = windowGeometryFor('signals',canvasPositions.signals);
   const openFolderPosition = openFolderLauncher
@@ -869,19 +867,16 @@ export default function ModuleGridShell({
   const activateSystemDestination = useCallback((id) => {
     cancelCameraTransition();
     if (galleryOpen) setGalleryOpen(false);
-    if(id==='collection'&&collectionOpen){focusWorldWindow(id,collectionPanelPosition);return;}
+    if(id==='collection'){openModule(id);return;}
     if(id==='creations'&&creationsOpen){focusWorldWindow(id,creationsPanelPosition);return;}
     if(id==='signals'&&signalsOpen){focusWorldWindow(id,signalsPanelPosition);return;}
     pendingWindowRevealRef.current=id;
     openModule(id);
-  },[cancelCameraTransition,collectionOpen,collectionPanelPosition,creationsOpen,creationsPanelPosition,focusWorldWindow,galleryOpen,openModule,signalsOpen,signalsPanelPosition]);
+  },[cancelCameraTransition,creationsOpen,creationsPanelPosition,focusWorldWindow,galleryOpen,openModule,signalsOpen,signalsPanelPosition]);
 
   useLayoutEffect(() => {
     const id = pendingWindowRevealRef.current;
-    if (id === 'collection' && collectionOpen) {
-      pendingWindowRevealRef.current = null;
-      focusWorldWindow(id, collectionPanelPosition);
-    } else if (id === 'creations' && creationsOpen) {
+    if (id === 'creations' && creationsOpen) {
       pendingWindowRevealRef.current = null;
       focusWorldWindow(id, creationsPanelPosition);
     } else if (id === 'signals' && signalsOpen) {
@@ -891,7 +886,7 @@ export default function ModuleGridShell({
       pendingWindowRevealRef.current = null;
       focusWorldWindow(id, openFolderPosition);
     }
-  }, [collectionOpen, collectionPanelPosition, creationsOpen, creationsPanelPosition, focusWorldWindow, openFolderLauncher, openFolderPosition, signalsOpen, signalsPanelPosition]);
+  }, [creationsOpen, creationsPanelPosition, focusWorldWindow, openFolderLauncher, openFolderPosition, signalsOpen, signalsPanelPosition]);
 
   useEffect(() => {
     if (!folderEntryLauncherId) return undefined;
@@ -1024,14 +1019,6 @@ export default function ModuleGridShell({
     return () => { window.removeEventListener('keydown', close); window.removeEventListener('pointerdown', outside, true); };
   }, [inspectorAnchor, selectedSceneId]);
 
-  const collectionDragProps = {
-    onPointerDown: (event) => startExpandedPanelDrag(event, 'collection-panel', collectionPanelPosition, collectionPanelRef, true),
-    onPointerMove: moveInteraction,
-    onPointerUp: finishInteraction,
-    onPointerCancel: (event) => finishInteraction(event,true),
-    onLostPointerCapture: (event) => finishInteraction(event,true)
-  };
-
   const creationsDragProps = {
     onPointerDown: (event) => startExpandedPanelDrag(event, 'creations-panel', creationsPanelPosition, creationsPanelRef, true),
     onPointerMove: moveInteraction,
@@ -1092,6 +1079,15 @@ export default function ModuleGridShell({
         onCategoriesOpenChange={(expanded) => {
           if (expanded && libraryStatus === 'idle') loadLibrary();
         }}
+        ownerIndex={ownerAuthoringEnabled ? {
+          open: collectionOpen,
+          onOpenChange: (expanded) => {
+            if (expanded && libraryStatus === 'idle') loadLibrary();
+            setCollectionOpen(expanded);
+            setActiveModuleId(expanded ? 'collection' : null);
+            updateRuntime({ type: expanded ? 'open' : 'close', id: 'collection' });
+          }
+        } : null}
       />}
       <header className="public-shell__masthead">
         <div className="system-hud__primary">
@@ -1100,7 +1096,7 @@ export default function ModuleGridShell({
             {ownerAuthoringEnabled && <button type="button" data-active={signalsOpen || undefined} ref={(node)=>{if(node)moduleRefs.current.set('signals',node);else moduleRefs.current.delete('signals');}} onClick={()=>activateSystemDestination('signals')}>[ Activity ]</button>}
             <button type="button" data-active={galleryOpen || undefined} aria-pressed={galleryOpen} ref={(node)=>{if(node)moduleRefs.current.set('gallery',node);else moduleRefs.current.delete('gallery');}} onClick={()=>{if(!galleryOpen)enterGallery();}}>[ Gallery ]</button>
             <button type="button" data-active={creationsOpen || undefined} aria-expanded={creationsOpen} ref={(node)=>{if(node)moduleRefs.current.set('creations',node);else moduleRefs.current.delete('creations');}} onClick={()=>activateSystemDestination('creations')}>[ Creations ]</button>
-            {ownerAuthoringEnabled && <button type="button" data-active={collectionOpen || undefined} ref={(node)=>{if(node)moduleRefs.current.set('collection',node);else moduleRefs.current.delete('collection');}} onClick={()=>activateSystemDestination('collection')}>[ Library ]</button>}
+            {ownerAuthoringEnabled && <button type="button" data-active={collectionOpen || undefined} ref={(node)=>{if(node)moduleRefs.current.set('collection',node);else moduleRefs.current.delete('collection');}} onClick={()=>activateSystemDestination('collection')}>[ Index ]</button>}
           </nav>
         </div>
 
@@ -1285,35 +1281,6 @@ export default function ModuleGridShell({
             interactionProps={interactionProps} resizeProps={resizeProps} onEdit={()=>openArtworkInspector(object.id)} onActivate={()=>{if(suppressLauncherClickRef.current){suppressLauncherClickRef.current=false;return;}if(editMode){setSelectedCanvasObjectId(object.id);return;}openArtworkPreview(object.id);}} />;
         })}
         </div>, spatialLayerTarget)}
-
-        {ownerAuthoringEnabled && collectionOpen && collectionPanelPosition && (
-          <section
-            className="module-shell module-shell--expanded module-shell--collection"
-            data-module-shell
-            data-module-id="collection-panel"
-            ref={collectionPanelRef}
-            data-interacting={interaction?.targetId === 'collection-panel' || undefined}
-            style={{...windowStyle(collectionPanelPosition),zIndex:windowZIndex(runtimeWindows,'collection')}}
-            role="dialog"
-            aria-modal="false"
-            aria-labelledby="collection-title"
-            onPointerDownCapture={() => { setActiveModuleId('collection'); updateRuntime({type:'focus',id:'collection'}); }}
-          >
-            <CollectionWindow
-              dragHandleProps={collectionDragProps}
-              dragEnabled={!geometry.narrow}
-              canAuthorLibrary={ownerAuthoringEnabled}
-              escapeEnabled={activeModuleId === 'collection'}
-              onClose={() => {
-                setCollectionOpen(false); updateRuntime({type:'close',id:'collection'});
-                setActiveModuleId(identityOpen ? 'identity' : null);
-                setActiveHudCommand((current) => current === 'search' ? null : current);
-                window.requestAnimationFrame(() => moduleRefs.current.get('collection')?.focus());
-              }}
-            />
-            {!geometry.narrow && <i className="module-window__resize" data-resize-control tabIndex="0" aria-label="Resize Library" onPointerDown={(event)=>startWindowResize(event,'collection-panel',collectionPanelPosition,collectionPanelRef)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
-          </section>
-        )}
 
         {creationsOpen && creationsPanelPosition && (
           <section

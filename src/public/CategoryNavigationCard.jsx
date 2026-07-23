@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import './categoryNavigationCard.css';
 
-export default function CategoryNavigationCard({ items = [], activeId = null, visible = false, onSelect, onExpandedChange }) {
+export default function CategoryNavigationCard({ items = [], activeId = null, visible = false, onSelect, onExpandedChange, collapseRequested = false }) {
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
@@ -11,6 +11,10 @@ export default function CategoryNavigationCard({ items = [], activeId = null, vi
   useEffect(() => {
     if (!visible) setExpanded(false);
   }, [visible]);
+
+  useEffect(() => {
+    if (collapseRequested) setExpanded(false);
+  }, [collapseRequested]);
 
   useEffect(() => {
     if (!expanded) return undefined;
