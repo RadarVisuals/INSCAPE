@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import IdentityDossier from './IdentityDossier.jsx';
+import ProfileIdentityCard from './ProfileIdentityCard.jsx';
 import { CollectionWindow, flushLibraryWorkspace, FolderWindow, useLibraryStore } from '../library/index.js';
 import { CreationsWindow } from '../creations/index.js';
 import AssetPreview from '../library/components/AssetPreview.jsx';
@@ -169,8 +169,6 @@ export default function ModuleGridShell({
   const [keeperDockActive, setKeeperDockActive] = useState(false);
   const [availableModuleIds, setAvailableModuleIds] = useState(() => new Set());
   const moduleRefs = useRef(new Map());
-  const identityRef = useRef(null);
-  const identityPanelRef = useRef(null);
   const collectionPanelRef = useRef(null);
   const creationsPanelRef = useRef(null);
   const signalsPanelRef = useRef(null);
@@ -318,7 +316,6 @@ export default function ModuleGridShell({
   const canvasObjectById = useMemo(() => Object.fromEntries(canvasObjects.map((object)=>[object.id,object])),[canvasObjects]);
   const openFolderLauncher = pinnedLaunchers.find((launcher) => launcher.id === openFolderLauncherId) || null;
   const windowGeometryFor = useCallback((key, anchor) => effectiveGeometry(runtimeWindows.rects[key] || defaultWindowGridRect(key,placementGeometry,anchor),interaction,['identity','collection','creations','signals'].includes(key)?`${key}-panel`:`folder-panel:${key}`),[interaction,placementGeometry,runtimeWindows.rects]);
-  const identityPanelPosition = windowGeometryFor('identity',canvasPositions.identity);
   const collectionPanelPosition = windowGeometryFor('collection',canvasPositions.collection);
   const creationsPanelPosition = windowGeometryFor('creations',canvasPositions.creations);
   const signalsPanelPosition = windowGeometryFor('signals',canvasPositions.signals);
@@ -555,23 +552,9 @@ export default function ModuleGridShell({
   }, []);
 
   useEffect(() => {
-    const closeIdentity = (event) => {
-      if (event.key === 'Escape' && identityOpen && activeModuleId === 'identity') identityRef.current?.requestClose();
-    };
-    window.addEventListener('keydown', closeIdentity);
-    return () => window.removeEventListener('keydown', closeIdentity);
-  }, [activeModuleId, identityOpen]);
-
-  useEffect(() => {
     residentHandoff?.trackActorPosition?.([gridRef.current, shellRef.current]);
     return () => residentHandoff?.trackActorPosition?.(null);
   }, [residentHandoff]);
-
-  useEffect(() => {
-    if (!identityOpen) return undefined;
-    const frame = window.requestAnimationFrame(() => identityRef.current?.updateEntryBounds?.());
-    return () => window.cancelAnimationFrame(frame);
-  }, [geometry, identityOpen, identityPanelPosition]);
 
   const persistPositions = useCallback((nextPositions) => {
     if (geometry.narrow) return;
@@ -637,7 +620,9 @@ export default function ModuleGridShell({
       return;
     }
     if (id === 'identity' && identityOpen) {
-      identityRef.current?.requestClose();
+      setIdentityOpen(false);
+      setIdentityPhase('closed');
+      updateRuntime({ type: 'close', id });
       return;
     }
     if (id === 'collection' && collectionOpen) {
@@ -676,7 +661,7 @@ export default function ModuleGridShell({
       return;
     }
     if (id !== 'identity') return;
-    setIdentityPhase('approaching');
+    setIdentityPhase('open');
     setIdentityOpen(true);
   }, [collectionOpen, creationsOpen, identityOpen, openFolderLauncherId, pinnedLaunchers, placementGeometry, runtimeWindows.rects, sceneById, signalsOpen, updateRuntime]);
 
@@ -1027,14 +1012,6 @@ export default function ModuleGridShell({
     return () => { window.removeEventListener('keydown', close); window.removeEventListener('pointerdown', outside, true); };
   }, [inspectorAnchor, selectedSceneId]);
 
-  const identityDragProps = {
-    onPointerDown: (event) => startExpandedPanelDrag(event, 'identity-panel', identityPanelPosition, identityPanelRef, identityPhase === 'open'),
-    onPointerMove: moveInteraction,
-    onPointerUp: finishInteraction,
-    onPointerCancel: (event) => finishInteraction(event,true),
-    onLostPointerCapture: (event) => finishInteraction(event,true)
-  };
-
   const collectionDragProps = {
     onPointerDown: (event) => startExpandedPanelDrag(event, 'collection-panel', collectionPanelPosition, collectionPanelRef, true),
     onPointerMove: moveInteraction,
@@ -1089,15 +1066,19 @@ export default function ModuleGridShell({
       ref={shellRef}
       onContextMenu={(event) => openTargetContextMenu(event, shellRef.current)}
     >
+      {interfaceVisible && <ProfileIdentityCard
+        profile={viewedProfile}
+        expanded={identityOpen}
+        onExpandedChange={(expanded) => {
+          setIdentityOpen(expanded);
+          setIdentityPhase(expanded ? 'open' : 'closed');
+          setActiveModuleId(expanded ? 'identity' : null);
+          updateRuntime({ type: expanded ? 'open' : 'close', id: 'identity' });
+        }}
+      />}
       <header className="public-shell__masthead">
         <div className="system-hud__primary">
           <button className="system-sigil" type="button" aria-label="Open OS Underneath system menu" aria-expanded={activeHudCommand === 'system'} onClick={() => { setActiveHudCommand((current)=>current==='system'?null:'system'); setContextMenu(null); }}><img src="/assets/logo/underneath_os.webp" alt="" /></button>
-          <button className="system-identity" type="button" title={viewedProfileAddress} aria-expanded={identityOpen} aria-label={`Open ${viewedProfile.name} profile card`} ref={(node)=>{if(node)moduleRefs.current.set('identity',node);else moduleRefs.current.delete('identity');}} onClick={()=>openModule('identity')}>
-            {viewedProfile.avatarUrl
-              ? <img src={viewedProfile.avatarUrl} alt="" />
-              : <div className="system-identity__avatar-fallback" aria-hidden="true">UP</div>}
-            <span><strong>{viewedProfile.name}</strong><small><i aria-hidden="true" />{viewedProfile.metadataStatusLabel}</small></span>
-          </button>
           <nav className="system-hud__destinations" aria-label="Profile destinations">
             {ownerAuthoringEnabled && <button type="button" data-active={signalsOpen || undefined} ref={(node)=>{if(node)moduleRefs.current.set('signals',node);else moduleRefs.current.delete('signals');}} onClick={()=>activateSystemDestination('signals')}>[ Activity ]</button>}
             <button type="button" data-active={galleryOpen || undefined} aria-pressed={galleryOpen} ref={(node)=>{if(node)moduleRefs.current.set('gallery',node);else moduleRefs.current.delete('gallery');}} onClick={()=>{if(!galleryOpen)enterGallery();}}>[ Gallery ]</button>
@@ -1287,40 +1268,6 @@ export default function ModuleGridShell({
             interactionProps={interactionProps} resizeProps={resizeProps} onEdit={()=>openArtworkInspector(object.id)} onActivate={()=>{if(suppressLauncherClickRef.current){suppressLauncherClickRef.current=false;return;}if(editMode){setSelectedCanvasObjectId(object.id);return;}openArtworkPreview(object.id);}} />;
         })}
         </div>, spatialLayerTarget)}
-
-        {identityOpen && identityPanelPosition && spatialLayerTarget && createPortal(
-          <section
-            className="module-shell module-shell--expanded profile-card-popover"
-            data-module-shell
-            data-module-id="identity-panel"
-            data-transition-state={identityPhase}
-            data-interacting={interaction?.targetId === 'identity-panel' || undefined}
-            ref={identityPanelRef}
-            style={{...shellTheme,zIndex:windowZIndex(runtimeWindows,'identity',90)}}
-            role="dialog"
-            aria-modal="false"
-            aria-labelledby="identity-title"
-            onPointerDownCapture={() => { setActiveModuleId('identity'); updateRuntime({type:'focus',id:'identity'}); }}
-          >
-            <IdentityDossier
-              ref={identityRef}
-              actorId={activeActorId}
-              profileIdentity={profileIdentity}
-              profileAddress={viewedProfileAddress}
-              walletConnected={visitorWalletConnected}
-              residentHandoff={null}
-              dragHandleProps={{}}
-              dragEnabled={false}
-              onTransitionStateChange={setIdentityPhase}
-              onClose={() => {
-                setIdentityOpen(false); updateRuntime({type:'close',id:'identity'});
-                setIdentityPhase('closed');
-                setActiveModuleId(collectionOpen ? 'collection' : null);
-                window.requestAnimationFrame(() => moduleRefs.current.get('identity')?.focus());
-              }}
-            />
-          </section>
-        , spatialLayerTarget)}
 
         {ownerAuthoringEnabled && collectionOpen && collectionPanelPosition && (
           <section

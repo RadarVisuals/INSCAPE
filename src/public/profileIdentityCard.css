@@ -1,0 +1,188 @@
+.profile-identity-card {
+  --profile-card-speed: 380ms;
+  --profile-card-width: 340px;
+  position: fixed;
+  z-index: 150;
+  top: 20px;
+  left: 18px;
+  width: 68px;
+  min-height: 68px;
+  height: auto;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid transparent;
+  background: transparent;
+  box-shadow: none;
+  color: #ebece7;
+  pointer-events: auto;
+  font-family: var(--font-interface, "Oxanium", monospace);
+  font-stretch: normal;
+  font-variant-caps: normal;
+  text-transform: none;
+  transform: translate3d(0, 0, 0);
+  transform-origin: left top;
+  transition: width var(--profile-card-speed) cubic-bezier(.2,.78,.14,1) 80ms, background-color 180ms linear 80ms, box-shadow 260ms linear 80ms, border-color 120ms linear 80ms;
+}
+
+.profile-identity-card *,
+.profile-identity-card *::before,
+.profile-identity-card *::after { box-sizing: border-box; }
+
+.profile-identity-card[data-compact] {
+  width: 218px;
+  border-color: rgb(235 236 231 / .17);
+  background: #070808;
+  box-shadow: 8px 9px 0 rgb(0 0 0 / .18);
+  transition-delay: 0s;
+}
+
+.profile-identity-card[data-expanded] {
+  width: min(var(--profile-card-width), calc(100vw - 36px));
+  border-color: rgb(235 236 231 / .24);
+  box-shadow: 18px 22px 50px rgb(0 0 0 / .42);
+}
+
+.profile-identity-card > header {
+  position: relative;
+  height: 66px;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 4px 38px 4px 4px;
+}
+
+.profile-identity-card__avatar {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgb(235 236 231 / .24);
+  border-radius: 0;
+  background: #090a0a;
+  color: rgb(235 236 231 / .55);
+  cursor: pointer;
+}
+
+.profile-identity-card__avatar img,
+.profile-identity-card__avatar-fallback { width: 100%; height: 100%; }
+.profile-identity-card__avatar img { display: block; object-fit: cover; }
+.profile-identity-card__avatar-fallback { display: grid; place-items: center; font-size: .62rem; letter-spacing: .12em; }
+.profile-identity-card__avatar:hover,
+.profile-identity-card__avatar:focus-visible { outline: 0; border-color: rgb(235 236 231 / .62); }
+
+.profile-identity-card__copy {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms linear, visibility 0s linear var(--profile-card-speed);
+}
+
+.profile-identity-card__copy strong {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  overflow: hidden;
+  color: #ebece7;
+  font: 500 .72rem/1 var(--font-interface, "Oxanium", monospace);
+  letter-spacing: .18em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-identity-card__copy strong i {
+  color: rgb(235 236 231 / .48);
+  font: inherit;
+  font-size: .72em;
+  font-style: normal;
+  letter-spacing: .08em;
+}
+
+.profile-identity-card__copy small {
+  color: rgb(235 236 231 / .35);
+  font-size: .56rem;
+  letter-spacing: .13em;
+}
+
+.profile-identity-card__toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: rgb(235 236 231 / .4);
+  font-size: 1rem;
+  line-height: 1;
+  opacity: 0;
+  visibility: hidden;
+  cursor: pointer;
+  transition: opacity 120ms linear, visibility 0s linear var(--profile-card-speed), top 260ms cubic-bezier(.2,.78,.14,1), right 260ms cubic-bezier(.2,.78,.14,1), color 120ms linear, transform 260ms cubic-bezier(.2,.78,.14,1);
+}
+
+.profile-identity-card[data-compact] .profile-identity-card__copy,
+.profile-identity-card[data-compact] .profile-identity-card__toggle {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 120ms, 0s, 0s, 0s, 0s, 0s;
+}
+
+.profile-identity-card[data-expanded] .profile-identity-card__toggle { top: 7px; right: 7px; transform: none; }
+.profile-identity-card__toggle:hover,
+.profile-identity-card__toggle:focus-visible { outline: 0; color: #fff; }
+
+.profile-identity-card__details {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(0, -8px, 0);
+  transition: max-height var(--profile-card-speed) cubic-bezier(.2,.78,.14,1) 75ms, opacity 65ms linear, transform 180ms cubic-bezier(.2,.78,.14,1), visibility 0s linear 75ms;
+}
+
+.profile-identity-card[data-expanded] .profile-identity-card__details {
+  max-height: 480px;
+  opacity: 1;
+  visibility: visible;
+  transform: translate3d(0, 0, 0);
+  transition-delay: 100ms, 150ms, 100ms, 0s;
+}
+
+.profile-identity-card__details > p {
+  margin: 0;
+  padding: 15px 18px 13px;
+  color: rgb(235 236 231 / .72);
+  font: 400 .76rem/1.6 var(--font-interface, "Oxanium", monospace);
+  letter-spacing: .04em;
+}
+
+.profile-identity-card__tags { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 18px 15px; }
+.profile-identity-card__tags span { padding: 5px 8px; border: 1px solid rgb(235 236 231 / .2); color: rgb(235 236 231 / .55); font-size: .5rem; letter-spacing: .12em; }
+.profile-identity-card__details dl { margin: 0; }
+.profile-identity-card__details dl > div { display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; min-height: 36px; padding: 0 18px; }
+.profile-identity-card__details dt,
+.profile-identity-card__details dt { color: rgb(235 236 231 / .34); font-size: .55rem; letter-spacing: .13em; }
+.profile-identity-card__details dd { min-width: 0; margin: 0; overflow: hidden; color: rgb(235 236 231 / .68); font-size: .6rem; letter-spacing: .1em; text-overflow: ellipsis; white-space: nowrap; }
+.profile-identity-card__details dd a { color: inherit; text-decoration: none; }
+.profile-identity-card__details dd a:hover,
+.profile-identity-card__details dd a:focus-visible { outline: 0; color: #fff; }
+.profile-identity-card__link-group { display: flex; align-items: center; gap: 14px; }
+
+@media (max-width: 719px) {
+  .profile-identity-card { top: 14px; left: 14px; }
+  .profile-identity-card[data-expanded] { width: calc(100vw - 28px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-identity-card,
+  .profile-identity-card__copy,
+  .profile-identity-card__toggle,
+  .profile-identity-card__details { transition-duration: 1ms; }
+}

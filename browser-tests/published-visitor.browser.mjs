@@ -285,6 +285,26 @@ after(async () => {
   if (failures.length) throw new AggregateError(failures, 'Published visitor browser after-hook failed');
 });
 
+test('shared visitor profile card preserves its anchor through avatar, compact, expanded, avatar states', async () => {
+  await viewport(1280, 720, false); await navigate();
+  const card = '.profile-identity-card';
+  const avatar = `${card} .profile-identity-card__avatar`;
+  const initial = await evaluate(`(()=>{const c=document.querySelector(${JSON.stringify(card)}).getBoundingClientRect();const a=document.querySelector(${JSON.stringify(avatar)}).getBoundingClientRect();return {state:document.querySelector(${JSON.stringify(card)}).dataset.state,left:c.left,top:c.top,width:c.width,height:c.height,avatarLeft:a.left,avatarTop:a.top,avatarWidth:a.width,avatarHeight:a.height}})()`);
+  assert.deepEqual(initial, { state: 'avatar', left: 18, top: 20, width: 68, height: 68, avatarLeft: 23, avatarTop: 25, avatarWidth: 58, avatarHeight: 58 });
+  await click(avatar); await waitFor(`document.querySelector(${JSON.stringify(card)}).dataset.state === 'compact' && document.querySelector(${JSON.stringify(card)}).getBoundingClientRect().width >= 217.9`, 'compact profile identity');
+  assert.deepEqual(await evaluate(`(()=>{const c=document.querySelector(${JSON.stringify(card)}).getBoundingClientRect();const a=document.querySelector(${JSON.stringify(avatar)}).getBoundingClientRect();return {width:Math.round(c.width),height:Math.round(c.height),avatarLeft:a.left,avatarTop:a.top,avatarWidth:a.width,avatarHeight:a.height}})()`), { width: 218, height: 68, avatarLeft: 23, avatarTop: 25, avatarWidth: 58, avatarHeight: 58 });
+  await click(avatar); await waitFor(`(()=>{const c=document.querySelector(${JSON.stringify(card)});const d=c?.querySelector('.profile-identity-card__details');return c?.dataset.state === 'expanded' && c.getBoundingClientRect().width >= 339.9 && c.getBoundingClientRect().height >= 67 + d.scrollHeight})()`, 'expanded profile identity');
+  const expanded = await evaluate(`(()=>{const c=document.querySelector(${JSON.stringify(card)}).getBoundingClientRect();const a=document.querySelector(${JSON.stringify(avatar)}).getBoundingClientRect();const d=document.querySelector('.profile-identity-card__details').getBoundingClientRect();return {width:Math.round(c.width),contentAligned:Math.abs(c.bottom-d.bottom)<=1,avatarLeft:a.left,avatarTop:a.top}})()`);
+  assert.deepEqual(expanded, { width: 340, contentAligned: true, avatarLeft: 23, avatarTop: 25 });
+  const typography = await evaluate(`(()=>{const cardStyle=getComputedStyle(document.querySelector(${JSON.stringify(card)}));const bioStyle=getComputedStyle(document.querySelector('.profile-identity-card__details > p'));return {textTransform:cardStyle.textTransform,fontVariantCaps:cardStyle.fontVariantCaps,fontStretch:cardStyle.fontStretch,bioFontSize:parseFloat(bioStyle.fontSize)}})()`);
+  assert.deepEqual(typography, { textTransform: 'none', fontVariantCaps: 'normal', fontStretch: '100%', bioFontSize: 12.16 });
+  await evaluate(`window.__fixture.resetMoves()`); await click('.profile-identity-card__details p');
+  assert.equal(await evaluate(`window.__fixture.moves.length`), 0, 'card surface blocks click-through world movement');
+  await click(avatar);
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(card)})).transitionDelay.split(',')[0].trim()`), '0.08s', 'card width waits for the detail fade on close');
+  await waitFor(`document.querySelector(${JSON.stringify(card)}).dataset.state === 'avatar' && document.querySelector(${JSON.stringify(card)}).getBoundingClientRect().width <= 68.1 && parseFloat(getComputedStyle(document.querySelector('.profile-identity-card__details')).opacity) === 0`, 'collapsed profile identity');
+});
+
 test('React StrictMode reuses one factory provider while cleanup, replacement, and recovery stay safe', async () => {
   await navigateProviderFixture();
   await waitFor(`document.querySelector('[data-owner-route="true"]') && window.__providerFixture.factoryCalls() === 1`, 'Strict Mode owner route');
@@ -450,7 +470,7 @@ test('artwork preview is read-only and right-click exposes no authoring commands
 
 test('published HTTPS and IPFS-projected images render with no referrer', async () => {
   await viewport(1280, 720, false); await navigate();
-  await waitFor(`document.querySelector('.published-home-world__identity img')?.complete && document.querySelector('[data-canvas-object-id="art:Alpha:0"] img')?.complete`, 'published images');
+  await waitFor(`document.querySelector('.profile-identity-card img')?.complete && document.querySelector('[data-canvas-object-id="art:Alpha:0"] img')?.complete`, 'published images');
   const policy = await evaluate(`[...document.querySelectorAll('.published-home-world img')].map((image)=>image.referrerPolicy)`);
   assert.ok(policy.length >= 3); assert.ok(policy.every((value) => value === 'no-referrer'));
   assert.ok(imageRequests.some((url) => url.includes('/ipfs/') && url.includes('space-Alpha.png')), 'IPFS space image used the configured HTTPS gateway');
