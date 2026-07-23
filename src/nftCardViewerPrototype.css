@@ -1,0 +1,573 @@
+.nft-menu-browser {
+  position: fixed;
+  z-index: 27;
+  top: 20px;
+  left: calc(236px + var(--card-gap));
+  width: min(1180px, calc(100vw - 274px - var(--card-gap)));
+  height: min(760px, calc(100vh - 40px));
+  min-width: min(620px, calc(100vw - 274px - var(--card-gap)));
+  min-height: min(480px, calc(100vh - 40px));
+  max-width: calc(100vw - 274px - var(--card-gap));
+  max-height: calc(100vh - 40px);
+  display: grid;
+  grid-template-rows: 52px minmax(0, 1fr) 34px;
+  border: 1px solid rgb(235 236 231 / .23);
+  background:
+    linear-gradient(135deg, transparent 0 48%, rgb(235 236 231 / .16) 49% 53%, transparent 54% 67%, rgb(235 236 231 / .28) 68% 72%, transparent 73%) right bottom / 14px 14px no-repeat,
+    #070808;
+  box-shadow: 18px 22px 50px rgb(0 0 0 / .46);
+  color: #ebece7;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+  resize: both;
+  transform: translate3d(-12px, 8px, 0) scale(.985);
+  transform-origin: left top;
+  clip-path: inset(0 8% 0 0);
+  transition: opacity 180ms linear, transform var(--wall-speed) cubic-bezier(.2,.78,.14,1), clip-path var(--wall-speed) cubic-bezier(.2,.78,.14,1), visibility 0s linear var(--wall-speed);
+}
+
+.nft-menu-browser[data-visible] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+  clip-path: inset(0);
+  transition-delay: 100ms, 80ms, 80ms, 0s;
+}
+
+.nft-menu-browser > header,
+.nft-menu-browser > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+}
+
+.nft-menu-browser > header div {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.nft-menu-browser__density {
+  display: grid;
+  grid-template-columns: auto 132px 28px;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+  margin-right: 18px;
+  color: rgb(235 236 231 / .34);
+  font: 500 .5rem/1 var(--font-interface);
+  letter-spacing: .11em;
+}
+
+.nft-menu-browser__density input {
+  width: 100%;
+  height: 2px;
+  appearance: none;
+  background: rgb(235 236 231 / .16);
+}
+
+.nft-menu-browser__density input::-webkit-slider-thumb {
+  width: 8px;
+  height: 14px;
+  appearance: none;
+  border: 1px solid #d9dad4;
+  background: #0b0c0c;
+  cursor: ew-resize;
+}
+
+.nft-menu-browser__density output {
+  color: rgb(235 236 231 / .55);
+  font: inherit;
+  text-align: right;
+}
+
+.nft-menu-browser > header strong {
+  font: 500 .72rem/1 var(--font-interface);
+  letter-spacing: .17em;
+}
+
+.nft-menu-browser > header span,
+.nft-menu-browser > header small,
+.nft-menu-browser > footer {
+  color: rgb(235 236 231 / .3);
+  font: 500 .52rem/1 var(--font-interface);
+  letter-spacing: .11em;
+}
+
+.nft-menu-browser__rows {
+  min-height: 0;
+  padding: 6px 18px 18px;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(235 236 231 / .18) transparent;
+}
+
+.nft-menu-browser__scanning {
+  display: grid;
+  gap: 8px;
+  margin: 22px 0;
+  color: rgb(235 236 231 / .46);
+  font: 500 .6rem/1 var(--font-interface);
+  letter-spacing: .13em;
+}
+
+.nft-menu-browser__scanning span {
+  color: rgb(235 236 231 / .24);
+  font-size: .5rem;
+}
+
+.nft-justified-row {
+  height: calc(var(--row-height) + 38px);
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.nft-justified-row[data-incomplete] {
+  justify-content: flex-start;
+}
+
+.nft-thumbnail {
+  min-width: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: var(--row-height) 38px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgb(235 236 231 / .13);
+  background: #090a0a;
+  color: #ebece7;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms linear, transform 180ms cubic-bezier(.2,.78,.14,1), box-shadow 180ms linear;
+}
+
+.nft-thumbnail:hover,
+.nft-thumbnail:focus-visible {
+  outline: 0;
+  border-color: rgb(235 236 231 / .62);
+  box-shadow: 0 8px 20px rgb(0 0 0 / .28);
+  transform: translateY(-2px);
+}
+
+.nft-thumbnail[data-dragging] {
+  opacity: .34;
+  cursor: grabbing;
+}
+
+.nft-thumbnail[data-drop-target] {
+  border-color: #fff;
+  box-shadow: inset 3px 0 #fff;
+}
+
+.nft-thumbnail__media {
+  min-width: 0;
+  min-height: 0;
+  display: block;
+  overflow: hidden;
+  background: #030404;
+}
+
+.nft-thumbnail__media > img,
+.artifact-viewer__face > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.nft-thumbnail__rail {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16px;
+  align-content: center;
+  gap: 4px;
+  padding: 0 8px;
+}
+
+.nft-thumbnail__rail strong,
+.nft-thumbnail__rail small {
+  grid-column: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nft-thumbnail__rail i {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+  justify-self: end;
+  color: rgb(235 236 231 / .2);
+  font: normal .72rem/1 var(--font-interface);
+  cursor: grab;
+}
+
+.nft-thumbnail:hover .nft-thumbnail__rail i,
+.nft-thumbnail:focus-visible .nft-thumbnail__rail i {
+  color: rgb(235 236 231 / .65);
+}
+
+.nft-thumbnail__rail strong {
+  font: 500 .58rem/1 var(--font-interface);
+  letter-spacing: .1em;
+}
+
+.nft-thumbnail__rail small {
+  color: rgb(235 236 231 / .3);
+  font: 500 .46rem/1 var(--font-interface);
+  letter-spacing: .08em;
+}
+
+.nft-artwork-synthetic {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: hidden;
+  background: radial-gradient(circle at 64% 35%, color-mix(in srgb, var(--synthetic-hue), white 28%), transparent 2px), linear-gradient(145deg, color-mix(in srgb, var(--synthetic-hue), transparent 36%), #030404 74%);
+}
+
+.nft-artwork-synthetic::before,
+.nft-artwork-synthetic::after {
+  content: '';
+  position: absolute;
+  inset: 18% -24%;
+  border: 1px solid color-mix(in srgb, var(--synthetic-hue), white 26%);
+  transform: rotate(-13deg);
+  opacity: .5;
+}
+
+.nft-artwork-synthetic::after {
+  inset: 48% -24%;
+  transform: rotate(11deg);
+  opacity: .28;
+}
+
+.nft-artwork-synthetic i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22%;
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--synthetic-hue), white 42%);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.nft-artwork-synthetic b {
+  position: absolute;
+  right: 8px;
+  bottom: 7px;
+  color: rgb(255 255 255 / .25);
+  font: 500 .5rem/1 var(--font-interface);
+  letter-spacing: .12em;
+}
+
+.artifact-viewer {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(1 2 2 / .82);
+  backdrop-filter: blur(7px);
+  perspective: 1500px;
+  animation: artifact-veil-in 220ms linear both;
+}
+
+.artifact-viewer__close {
+  position: fixed;
+  z-index: 4;
+  top: 18px;
+  right: 20px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: rgb(235 236 231 / .55);
+  font: 300 1.35rem/1 var(--font-interface);
+  cursor: pointer;
+}
+
+.artifact-viewer__close:hover,
+.artifact-viewer__close:focus-visible {
+  outline: 0;
+  color: #fff;
+}
+
+.artifact-viewer__object {
+  position: relative;
+  width: min(78vw, calc(74vh * var(--media-ratio)), 1080px);
+  aspect-ratio: var(--media-ratio);
+  transform-style: preserve-3d;
+  transition: width 250ms cubic-bezier(.2,.78,.14,1), aspect-ratio 250ms cubic-bezier(.2,.78,.14,1);
+}
+
+.artifact-viewer__object[data-shape='dossier'] {
+  width: min(74vmin, 720px);
+  aspect-ratio: 1;
+}
+
+.artifact-viewer__turntable {
+  width: 100%;
+  height: 100%;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  transform: rotateY(var(--artifact-turn));
+  transform-style: preserve-3d;
+  transition: transform 540ms cubic-bezier(.46,.05,.22,.98);
+  cursor: pointer;
+}
+
+.artifact-viewer__turntable:focus-visible {
+  outline: 1px solid rgb(235 236 231 / .75);
+  outline-offset: 8px;
+}
+
+.artifact-viewer__face {
+  width: 100%;
+  height: 100%;
+  display: block;
+  transform: rotateY(var(--face-correction));
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+.artifact-viewer__face > .nft-artwork-synthetic {
+  box-shadow: 24px 30px 70px rgb(0 0 0 / .52);
+}
+
+.artifact-viewer__face > img {
+  box-shadow: 24px 30px 70px rgb(0 0 0 / .52);
+}
+
+.artifact-dossier {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 22px;
+  padding: clamp(24px, 4.4vmin, 54px);
+  overflow: auto;
+  border: 1px solid rgb(235 236 231 / .26);
+  background: #070808;
+  box-shadow: 24px 30px 70px rgb(0 0 0 / .52);
+  color: #ebece7;
+  text-align: left;
+  cursor: pointer;
+}
+
+.artifact-dossier header {
+  display: grid;
+  gap: 10px;
+}
+
+.artifact-dossier header span,
+.artifact-dossier small,
+.artifact-dossier dt {
+  color: rgb(235 236 231 / .35);
+  font: 500 .58rem/1 var(--font-interface);
+  letter-spacing: .14em;
+}
+
+.artifact-dossier header strong {
+  font: 500 clamp(1rem, 2.2vmin, 1.45rem)/1.2 var(--font-interface);
+  letter-spacing: .09em;
+}
+
+.artifact-dossier > p {
+  max-width: 54ch;
+  margin: 0;
+  color: rgb(235 236 231 / .72);
+  font: 400 clamp(.75rem, 1.45vmin, .96rem)/1.75 var(--font-interface);
+  letter-spacing: .025em;
+}
+
+.artifact-dossier__people {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.artifact-dossier__people div {
+  display: grid;
+  gap: 8px;
+}
+
+.artifact-dossier__people b {
+  font: 500 .72rem/1 var(--font-interface);
+  letter-spacing: .08em;
+}
+
+.artifact-dossier__people i {
+  color: rgb(235 236 231 / .4);
+  font-style: normal;
+}
+
+.artifact-dossier footer,
+.artifact-dossier__attachments > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.artifact-dossier button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgb(235 236 231 / .18);
+  background: transparent;
+  color: rgb(235 236 231 / .58);
+  font: 500 .58rem/1 var(--font-interface);
+  letter-spacing: .1em;
+  cursor: pointer;
+}
+
+.artifact-dossier button:hover,
+.artifact-dossier button:focus-visible {
+  outline: 0;
+  border-color: rgb(235 236 231 / .55);
+  color: #fff;
+}
+
+.artifact-dossier__traits {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 8px;
+}
+
+.artifact-dossier__traits div {
+  min-height: 74px;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgb(235 236 231 / .14);
+}
+
+.artifact-dossier__traits b {
+  font: 500 .68rem/1.25 var(--font-interface);
+  letter-spacing: .08em;
+}
+
+.artifact-dossier__attachments {
+  display: grid;
+  align-content: end;
+  gap: 10px;
+}
+
+.artifact-dossier dl {
+  align-self: start;
+  margin: 0;
+}
+
+.artifact-dossier dl > div {
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  align-items: center;
+}
+
+.artifact-dossier dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: rgb(235 236 231 / .72);
+  font: 500 .68rem/1.4 var(--font-interface);
+  letter-spacing: .055em;
+}
+
+.artifact-dossier dd button {
+  min-height: 24px;
+  margin-left: 8px;
+}
+
+.artifact-viewer__progress {
+  position: fixed;
+  right: 50%;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: rgb(235 236 231 / .4);
+  font: 500 .56rem/1 var(--font-interface);
+  letter-spacing: .12em;
+  transform: translateX(50%);
+}
+
+.artifact-viewer__progress strong {
+  color: rgb(235 236 231 / .74);
+}
+
+.artifact-viewer__progress button {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgb(235 236 231 / .18);
+  background: #070808;
+  color: rgb(235 236 231 / .6);
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+@keyframes artifact-veil-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 719px) {
+  .nft-menu-browser {
+    top: 14px;
+    left: 14px;
+    width: calc(100vw - 28px);
+    height: calc(100vh - 28px);
+    min-width: 0;
+    min-height: 0;
+    max-width: none;
+    max-height: none;
+    resize: none;
+  }
+
+  .nft-menu-browser > header small {
+    display: none;
+  }
+
+  .nft-menu-browser__density {
+    grid-template-columns: auto 88px 24px;
+    margin-right: 0;
+  }
+
+  .artifact-viewer__object,
+  .artifact-viewer__object[data-shape='dossier'] {
+    max-width: calc(100vw - 28px);
+    max-height: calc(100vh - 104px);
+  }
+
+  .artifact-dossier {
+    gap: 14px;
+    padding: 22px;
+  }
+
+  .artifact-dossier__traits {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nft-menu-browser,
+  .artifact-viewer__object,
+  .artifact-viewer__turntable,
+  .nft-thumbnail {
+    transition-duration: 1ms;
+  }
+
+  .artifact-viewer {
+    animation: none;
+  }
+}
