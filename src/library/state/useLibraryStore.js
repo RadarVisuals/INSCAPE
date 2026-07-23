@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { resolveLibraryProfile } from '../config.js';
-import { fixtureProfileRepository } from '../data/fixtureProfileRepository.js';
+import { normalizeProfileAddress, resolveWorkspaceProfile } from '../config.js';
 import { luksoProfileRepository } from '../data/luksoProfileRepository.js';
+import { useWalletStore } from '../../store/useWalletStore.js';
 import {
   createFolder,
   deleteFolder,
@@ -23,9 +23,11 @@ import {
 } from '../domain/canvasObjects.js';
 import { loadLibraryWorkspace, saveLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
 
-const profileAddress = resolveLibraryProfile();
+const profileAddress = resolveWorkspaceProfile(useWalletStore.getState().hostProfileAddress);
 let workspaceStorage = typeof window === 'undefined' ? null : window.localStorage;
 let saveTimer = null;
+let activeLoadController = null;
+const LIVE_SOURCE_TIMEOUT_MS = 15000;
 
 function scheduleSave(workspace) {
   if (saveTimer) clearTimeout(saveTimer);
@@ -52,13 +54,36 @@ export const useLibraryStore = create((set, get) => ({
   workspace: loadLibraryWorkspace(workspaceStorage, profileAddress),
   loadGeneration: 0,
 
+  setProfileAddress(nextProfileAddress) {
+    const profile = normalizeProfileAddress(nextProfileAddress);
+    if (!profile) return false;
+    if (profile === get().profileAddress) return true;
+    activeLoadController?.abort();
+    activeLoadController = null;
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      if (get().workspace?.profileAddress) saveLibraryWorkspace(workspaceStorage, get().workspace);
+    }
+    const workspace = loadLibraryWorkspace(workspaceStorage, profile);
+    set({ profileAddress: profile, workspace, assets: [], sourceMode: null, status: 'idle', error: null, liveError: null,
+      progress: { resolved: 0, total: 0, failures: 0 }, searchQuery: '', activeView: { type: 'all', id: null }, selectedAssetId: null,
+      loadGeneration: get().loadGeneration + 1 });
+    return true;
+  },
+
   async load({ forceLive = false } = {}) {
     if (get().status === 'loading' && !forceLive) return;
+    activeLoadController?.abort();
+    const controller = new AbortController();
+    activeLoadController = controller;
+    let timedOut = false;
+    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, LIVE_SOURCE_TIMEOUT_MS);
     const generation = get().loadGeneration + 1;
     set({ loadGeneration: generation, assets: forceLive ? [] : get().assets, sourceMode: 'LIVE', status: 'loading',
       error: null, liveError: null, progress: { resolved: 0, total: 0, failures: 0 } });
     const consume = async (repository) => {
-      for await (const batch of repository.loadProfileAssets(get().profileAddress)) {
+      for await (const batch of repository.loadProfileAssets(get().profileAddress, { signal: controller.signal })) {
         if (get().loadGeneration !== generation) return;
         set((state) => ({ assets: uniqueAssets(state.assets, batch.assets), sourceMode: repository.source,
           status: batch.complete ? 'ready' : 'loading',
@@ -70,18 +95,15 @@ export const useLibraryStore = create((set, get) => ({
       if (get().loadGeneration === generation && get().status === 'loading') set({ status: 'ready' });
     } catch (error) {
       if (get().loadGeneration !== generation) return;
-      const message = error instanceof Error ? error.message : String(error);
+      const message = timedOut ? 'ASSET INDEX SOURCE DID NOT RESPOND' : (error instanceof Error ? error.message : String(error));
       if (get().assets.length > 0) {
         set({ liveError: message, status: 'partial', sourceMode: 'LIVE' });
         return;
       }
-      set({ liveError: message, status: 'fallback', assets: [], progress: { resolved: 0, total: 0, failures: 0 } });
-      try {
-        await consume(fixtureProfileRepository);
-        if (get().loadGeneration === generation) set({ status: 'ready', sourceMode: 'FIXTURE' });
-      } catch (fixtureError) {
-        if (get().loadGeneration === generation) set({ status: 'error', error: fixtureError instanceof Error ? fixtureError.message : String(fixtureError) });
-      }
+      set({ liveError: message, status: 'error', sourceMode: 'LIVE', error: message, assets: [], progress: { resolved: 0, total: 0, failures: 0 } });
+    } finally {
+      clearTimeout(timeout);
+      if (activeLoadController === controller) activeLoadController = null;
     }
   },
   setSearchQuery: (searchQuery) => set({ searchQuery }),
@@ -169,6 +191,8 @@ export const useLibraryStore = create((set, get) => ({
 
 export function resetLibraryStoreForTests(nextProfileAddress, nextStorage) {
   workspaceStorage = nextStorage;
+  activeLoadController?.abort();
+  activeLoadController = null;
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = null;
   const workspace = loadLibraryWorkspace(nextStorage, nextProfileAddress);

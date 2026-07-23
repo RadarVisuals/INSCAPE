@@ -1,5 +1,5 @@
 import { LUKSO_INDEXER_URL, normalizeProfileAddress } from '../../library/config.js';
-import { normalizeLyxSignal, normalizeTransferSignal, sortSignalsNewestFirst } from '../domain/keeperSignal.js';
+import { normalizeFollowSignal, normalizeLyxSignal, normalizeTransferSignal, sortSignalsNewestFirst } from '../domain/keeperSignal.js';
 
 const ACTIVITY_QUERY = `
 query KeeperActivity($profile: String!, $limit: Int!, $offset: Int!) {
@@ -24,10 +24,14 @@ query KeeperActivity($profile: String!, $limit: Int!, $offset: Int!) {
     }
   }
   Transfer_aggregate(where: { _or: [{ from_id: { _eq: $profile } }, { to_id: { _eq: $profile } }] }) { aggregate { count } }
-  Transaction(where: { to: { _eq: $profile }, value: { _gt: "0" } }, limit: $limit, offset: $offset, order_by: [{ timestamp: desc }, { id: desc }]) {
+  Transaction(where: { _or: [{ from: { _eq: $profile } }, { to: { _eq: $profile } }], value: { _gt: "0" } }, limit: $limit, offset: $offset, order_by: [{ timestamp: desc }, { id: desc }]) {
     id from to value timestamp
   }
-  Transaction_aggregate(where: { to: { _eq: $profile }, value: { _gt: "0" } }) { aggregate { count } }
+  Transaction_aggregate(where: { _or: [{ from: { _eq: $profile } }, { to: { _eq: $profile } }], value: { _gt: "0" } }) { aggregate { count } }
+  Follow(where: { _or: [{ follower_id: { _eq: $profile } }, { followee_id: { _eq: $profile } }] }, limit: $limit, offset: $offset, order_by: [{ createdTimestamp: desc }, { id: desc }]) {
+    id follower_id followee_id createdTimestamp
+  }
+  Follow_aggregate(where: { _or: [{ follower_id: { _eq: $profile } }, { followee_id: { _eq: $profile } }] }) { aggregate { count } }
 }`;
 
 async function requestActivity({ endpoint, fetchImpl, profile, limit, offset, signal }) {
@@ -50,13 +54,15 @@ export function createLuksoActivityRepository({ endpoint = LUKSO_INDEXER_URL, fe
       const { data, partialError } = await requestActivity({ endpoint, fetchImpl, profile, limit, offset, signal });
       const normalized = [
         ...(Array.isArray(data.Transfer) ? data.Transfer.map((entry) => normalizeTransferSignal(entry, profile)) : []),
-        ...(Array.isArray(data.Transaction) ? data.Transaction.map((entry) => normalizeLyxSignal(entry, profile)) : [])
+        ...(Array.isArray(data.Transaction) ? data.Transaction.map((entry) => normalizeLyxSignal(entry, profile)) : []),
+        ...(Array.isArray(data.Follow) ? data.Follow.map((entry) => normalizeFollowSignal(entry, profile)) : [])
       ].filter(Boolean);
       const signals = sortSignalsNewestFirst([...new Map(normalized.map((entry) => [entry.id, entry])).values()]);
       const transferTotal = Number(data.Transfer_aggregate?.aggregate?.count) || 0;
       const transactionTotal = Number(data.Transaction_aggregate?.aggregate?.count) || 0;
-      return { signals, offset, nextOffset: offset + limit, complete: offset + limit >= Math.max(transferTotal, transactionTotal),
-        totals: { transfers: transferTotal, lyxReceived: transactionTotal }, partialError };
+      const followTotal = Number(data.Follow_aggregate?.aggregate?.count) || 0;
+      return { signals, offset, nextOffset: offset + limit, complete: offset + limit >= Math.max(transferTotal, transactionTotal, followTotal),
+        totals: { transfers: transferTotal, lyxTransfers: transactionTotal, follows: followTotal }, partialError };
     }
   };
 }

@@ -38,6 +38,7 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
   const assets = useLibraryStore((state) => state.assets);
   const workspace = useLibraryStore((state) => state.workspace);
   const status = useLibraryStore((state) => state.status);
+  const error = useLibraryStore((state) => state.error);
   const load = useLibraryStore((state) => state.load);
   const createFolder = useLibraryStore((state) => state.createFolder);
   const deleteFolder = useLibraryStore((state) => state.deleteFolder);
@@ -183,7 +184,8 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
         <header><strong>{viewLabel}</strong><span>{filteredAssets.length} RESULTS</span></header>
         <div className="asset-index-workspace__assets">
           {(status === 'idle' || status === 'loading') && !filteredAssets.length && <p>LOADING ASSET INDEX</p>}
-          {status !== 'idle' && status !== 'loading' && !filteredAssets.length && <p>NO ASSETS MATCH THIS VIEW</p>}
+          {status === 'error' && !filteredAssets.length && <div className="asset-index-workspace__error" role="alert"><p>{error || 'ASSET INDEX UNAVAILABLE'}</p><button type="button" onClick={() => load({ forceLive: true })}>RETRY</button></div>}
+          {status !== 'idle' && status !== 'loading' && status !== 'error' && !filteredAssets.length && <p>NO ASSETS MATCH THIS VIEW</p>}
           {filteredAssets.map((asset) => <button type="button" key={asset.id} data-selected={selectedIds.includes(asset.id) || undefined} onClick={(event) => activateAsset(event, asset)} aria-label={`${organizing ? 'Select' : 'Inspect'} ${asset.name || 'untitled asset'}`}>
             <span className="asset-index-workspace__thumb"><IndexThumbnail asset={asset} /></span>
             <strong>{asset.name || 'Untitled asset'}</strong>

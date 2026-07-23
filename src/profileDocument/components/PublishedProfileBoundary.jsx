@@ -8,6 +8,7 @@ import '../profileDocument.css';
 import '../../public/canvasObjects.css';
 
 const STATUS_COPY = Object.freeze({
+  CONTEXT_REQUIRED: ['PROFILE CONTEXT REQUIRED', 'Open the installed app from a Universal Profile, or provide an explicit profile address while developing locally.'],
   LOADING: ['RESOLVING PUBLISHED PROFILE', 'Reading and verifying the profile document.'],
   UNAVAILABLE: ['PROFILE UNAVAILABLE', 'This Universal Profile has not published an OS_UNDERNEATH profile document.'],
   INVALID: ['INVALID PUBLISHED PROFILE', 'The published pointer or document could not be verified.'],
@@ -23,7 +24,7 @@ function PublishedStatusSurface({ state, onRetry }) {
   const [title, message] = STATUS_COPY[state?.status] || STATUS_COPY.ERROR;
   return <main className="public-shell published-profile-status" aria-label="Published profile status">
     <section className="profile-document-preview__identity" role="status" aria-busy={state?.busy}><div><strong>{title}</strong><small>{message}</small><small>{state?.address}</small>
-      {state?.status !== PUBLISHED_PROFILE_STATUS.LOADING && <RetryButton state={state} onRetry={onRetry} />}</div></section>
+      {state?.status !== PUBLISHED_PROFILE_STATUS.LOADING && state?.status !== 'CONTEXT_REQUIRED' && <RetryButton state={state} onRetry={onRetry} />}</div></section>
   </main>;
 }
 

@@ -1,7 +1,7 @@
 import { normalizeProfileAsset } from '../../library/domain/normalizeProfileAsset.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 
-export const SIGNAL_TYPES = Object.freeze({ ASSET_RECEIVED: 'ASSET_RECEIVED', ASSET_SENT: 'ASSET_SENT', LYX_RECEIVED: 'LYX_RECEIVED', LYX_SENT: 'LYX_SENT', UNKNOWN_ACTIVITY: 'UNKNOWN_ACTIVITY' });
+export const SIGNAL_TYPES = Object.freeze({ ASSET_RECEIVED: 'ASSET_RECEIVED', ASSET_SENT: 'ASSET_SENT', LYX_RECEIVED: 'LYX_RECEIVED', LYX_SENT: 'LYX_SENT', FOLLOWER_GAINED: 'FOLLOWER_GAINED', PROFILE_FOLLOWED: 'PROFILE_FOLLOWED', UNKNOWN_ACTIVITY: 'UNKNOWN_ACTIVITY' });
 export const SIGNAL_DIRECTIONS = Object.freeze({ INCOMING: 'INCOMING', OUTGOING: 'OUTGOING', UNKNOWN: 'UNKNOWN' });
 export const SIGNAL_SOURCE_MODES = Object.freeze({ LIVE: 'LIVE', FIXTURE: 'FIXTURE' });
 const normalizeHex = (value) => /^0x[\da-f]+$/i.test(String(value || '')) ? String(value).toLowerCase() : null;
@@ -48,12 +48,32 @@ export function normalizeTransferSignal(transfer, profileAddress, { sourceMode =
 export function normalizeLyxSignal(transaction, profileAddress, { sourceMode = SIGNAL_SOURCE_MODES.LIVE } = {}) {
   const profile = normalizeProfileAddress(profileAddress); const direction = classifyDirection(profile, transaction?.from, transaction?.to);
   let positive = false; try { positive = BigInt(String(transaction?.value || '0')) > 0n; } catch { /* invalid value */ }
-  if (!profile || direction !== SIGNAL_DIRECTIONS.INCOMING || !positive) return null;
-  const type = SIGNAL_TYPES.LYX_RECEIVED; const transactionHash = normalizeHex(transaction?.id);
+  if (!profile || direction === SIGNAL_DIRECTIONS.UNKNOWN || !positive) return null;
+  const type = direction === SIGNAL_DIRECTIONS.INCOMING ? SIGNAL_TYPES.LYX_RECEIVED : SIGNAL_TYPES.LYX_SENT; const transactionHash = normalizeHex(transaction?.id);
   return { id: createSignalId({ transactionHash, sourceReference: transaction?.id, type, direction }), type, direction,
     timestamp: timestampMs(transaction?.timestamp), transactionHash, sourceReference: transaction?.id, profileAddress: profile,
-    counterparty: normalizeProfileAddress(transaction?.from), assetContract: null, tokenId: null, assetReference: null, amount: null,
+    counterparty: normalizeProfileAddress(direction === SIGNAL_DIRECTIONS.INCOMING ? transaction?.from : transaction?.to), assetContract: null, tokenId: null, assetReference: null, amount: null,
     value: String(transaction.value), title: signalTitle(type), messageData: {}, sourceMode, seen: false, read: false };
+}
+
+export function normalizeFollowSignal(follow, profileAddress, { sourceMode = SIGNAL_SOURCE_MODES.LIVE } = {}) {
+  const profile = normalizeProfileAddress(profileAddress);
+  const follower = normalizeProfileAddress(follow?.follower_id);
+  const followee = normalizeProfileAddress(follow?.followee_id);
+  if (!profile || !follower || !followee || follower === followee) return null;
+  const incoming = followee === profile;
+  const outgoing = follower === profile;
+  if (!incoming && !outgoing) return null;
+  const type = incoming ? SIGNAL_TYPES.FOLLOWER_GAINED : SIGNAL_TYPES.PROFILE_FOLLOWED;
+  const direction = incoming ? SIGNAL_DIRECTIONS.INCOMING : SIGNAL_DIRECTIONS.OUTGOING;
+  const sourceReference = String(follow?.id || `${follower}:${followee}`);
+  return {
+    id: createSignalId({ sourceReference, type, direction }), type, direction,
+    timestamp: timestampMs(follow?.createdTimestamp), transactionHash: null, sourceReference,
+    profileAddress: profile, counterparty: incoming ? follower : followee,
+    assetContract: null, tokenId: null, assetReference: null, amount: null, value: null,
+    title: incoming ? 'New follower' : 'Profile followed', messageData: {}, sourceMode, seen: false, read: false
+  };
 }
 
 export function createFixtureSignal(candidate, profileAddress) {

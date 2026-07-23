@@ -199,6 +199,8 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
     <ProfileNavigationDock
       profile={publicProfile}
       categories={navigationCategories}
+      creations={{ profileAddress: document.profile.address }}
+      activity={{ profileAddress: document.profile.address }}
     />
     <header className="public-shell__masthead published-home-world__header"><div className="system-hud__identity"><h1>[ <span className="system-hud__brand-accent">PUBLISHED WORLD</span> ]</h1><span className="system-hud__operator">{displayName}</span><span className="system-hud__live"><i aria-hidden="true" />Document v{document.version}</span></div></header>
     <HomeWorldSurface camera={camera} geometry={layout.geometry} world={layout.world} gridVisible theme={THEME} visible onCameraChange={setCamera} onMoveKeeper={onMoveKeeper} narrowGestureRef={compactTapRef} />

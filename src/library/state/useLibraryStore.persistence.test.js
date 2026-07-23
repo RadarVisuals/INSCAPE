@@ -5,6 +5,7 @@ import { loadLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
 import { flushLibraryWorkspace, resetLibraryStoreForTests, useLibraryStore } from './useLibraryStore.js';
 
 const PROFILE = '0xf3c189819fd5b042f692983bfbfd57ab607ee709';
+const OTHER_PROFILE = '0x2222222222222222222222222222222222222222';
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const memoryStorage = () => {
   const values = new Map();
@@ -46,4 +47,20 @@ test('Library draft flushing persists the latest workspace immediately and repor
   resetLibraryStoreForTests(PROFILE, { getItem: () => null, setItem: () => { throw new Error('quota'); } });
   assert.equal(flushLibraryWorkspace(), false);
   resetLibraryStoreForTests(PROFILE, memoryStorage());
+});
+
+test('switching installed profiles isolates each Library workspace', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  useLibraryStore.getState().createFolder('First profile only');
+  useLibraryStore.getState().selectAsset('first-profile-asset');
+
+  assert.equal(useLibraryStore.getState().setProfileAddress(OTHER_PROFILE), true);
+  assert.equal(useLibraryStore.getState().profileAddress, OTHER_PROFILE);
+  assert.equal(useLibraryStore.getState().workspace.profileAddress, OTHER_PROFILE);
+  assert.deepEqual(useLibraryStore.getState().workspace.folders, []);
+  assert.equal(useLibraryStore.getState().selectedAssetId, null);
+
+  assert.equal(useLibraryStore.getState().setProfileAddress(PROFILE), true);
+  assert.equal(useLibraryStore.getState().workspace.folders[0].name, 'First profile only');
 });

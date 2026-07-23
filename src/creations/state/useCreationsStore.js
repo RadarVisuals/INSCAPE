@@ -1,10 +1,9 @@
 import { create } from 'zustand';
 import { normalizeProfileAddress } from '../../library/config.js';
-import { fixtureCreationsRepository } from '../data/fixtureCreationsRepository.js';
 import { luksoCreationsRepository } from '../data/luksoCreationsRepository.js';
 import { deduplicateCreations } from '../domain/normalizeCreation.js';
 
-export function createCreationsStore({ liveRepository = luksoCreationsRepository, fixtureRepository = fixtureCreationsRepository } = {}) {
+export function createCreationsStore({ liveRepository = luksoCreationsRepository, fixtureRepository = null } = {}) {
   let activeController = null;
   return create((set, get) => ({
     profileAddress: null, assets: [], sourceMode: null, status: 'idle',
@@ -43,10 +42,14 @@ export function createCreationsStore({ liveRepository = luksoCreationsRepository
         if (!current() || error?.name === 'AbortError') return;
         const message = error instanceof Error ? error.message : String(error);
         if (get().assets.length) { set({ liveError: message, status: 'partial', sourceMode: 'LIVE' }); return; }
-        set({ liveError: message, status: 'fallback', assets: [], progress: { resolved: 0, total: 0, failures: 0 } });
+        if (!fixtureRepository) {
+          set({ liveError: message, status: 'error', sourceMode: 'LIVE', error: message, assets: [], progress: { resolved: 0, total: 0, failures: 0 } });
+          return;
+        }
+        set({ liveError: message, status: 'fallback', sourceMode: 'LIVE', assets: [], progress: { resolved: 0, total: 0, failures: 0 } });
         try {
           await consume(fixtureRepository);
-          if (current()) set({ status: 'ready', sourceMode: 'FIXTURE' });
+          if (current()) set({ status: 'ready', sourceMode: fixtureRepository.source || 'FIXTURE' });
         } catch (fixtureError) {
           if (current()) set({ status: 'error', error: fixtureError instanceof Error ? fixtureError.message : String(fixtureError) });
         }

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { resolveLibraryProfile } from '../../library/config.js';
+import { normalizeProfileAddress, resolveWorkspaceProfile } from '../../library/config.js';
+import { useWalletStore } from '../../store/useWalletStore.js';
 import { fixtureActivityRepository } from '../data/fixtureActivityRepository.js';
 import { luksoActivityRepository } from '../data/luksoActivityRepository.js';
 import { completeReaction, enqueueManualReplay, getCompletionCooldown } from '../domain/reactionDirector.js';
@@ -7,7 +8,7 @@ import { addReactionsToQueue, mergeSignalSnapshot } from './signalState.js';
 import { loadSignalDocument, saveSignalDocument } from '../storage/signalStorage.js';
 import { getProfileIdentityCache, primeProfileIdentities } from '../../profileIdentity/state/profileIdentityService.js';
 
-const profileAddress = resolveLibraryProfile();
+const profileAddress = resolveWorkspaceProfile(useWalletStore.getState().hostProfileAddress);
 export const REACTION_IDENTITY_WAIT_MS = 450;
 let signalStorage = typeof window === 'undefined' ? null : window.localStorage;
 let saveTimer = null;
@@ -23,6 +24,22 @@ export const useSignalStore = create((set, get) => {
     profileAddress, document, history: document.history, settings: document.settings,
     status: 'idle', sourceMode: null, error: null, partialError: null, syncGeneration: 0,
     queue: [], currentReaction: null, cooldownUntil: 0,
+
+    setProfileAddress(nextProfileAddress) {
+      const profile = normalizeProfileAddress(nextProfileAddress);
+      if (!profile) return false;
+      if (profile === get().profileAddress) return true;
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        if (get().document?.profileAddress) saveSignalDocument(signalStorage, get().document);
+      }
+      const document = loadSignalDocument(signalStorage, profile);
+      set({ profileAddress: profile, document, history: document.history, settings: document.settings,
+        status: 'idle', sourceMode: null, error: null, partialError: null, syncGeneration: get().syncGeneration + 1,
+        queue: [], currentReaction: null, cooldownUntil: 0 });
+      return true;
+    },
 
     async synchronize({ mode = 'LIVE', explicitReplay = false } = {}) {
       if (get().status === 'loading') return;

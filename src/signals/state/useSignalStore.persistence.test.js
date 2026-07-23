@@ -4,6 +4,7 @@ import { loadSignalDocument } from '../storage/signalStorage.js';
 import { flushSignalDocument, resetSignalStoreForTests, useSignalStore } from './useSignalStore.js';
 
 const PROFILE = '0xf3c189819fd5b042f692983bfbfd57ab607ee709';
+const OTHER_PROFILE = '0x2222222222222222222222222222222222222222';
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const memoryStorage = () => {
   const values = new Map();
@@ -44,4 +45,21 @@ test('Signals draft flushing persists the latest settings immediately and report
   resetSignalStoreForTests(PROFILE, { getItem: () => null, setItem: () => { throw new Error('quota'); } });
   assert.equal(flushSignalDocument(), false);
   resetSignalStoreForTests(PROFILE, memoryStorage());
+});
+
+test('switching installed profiles isolates activity settings and runtime state', () => {
+  const storage = memoryStorage();
+  resetSignalStoreForTests(PROFILE, storage);
+  useSignalStore.getState().updateSetting('audio', true);
+  useSignalStore.setState({ queue: [{ id: 'profile-a-event' }], currentReaction: { id: 'profile-a-event' } });
+
+  assert.equal(useSignalStore.getState().setProfileAddress(OTHER_PROFILE), true);
+  assert.equal(useSignalStore.getState().profileAddress, OTHER_PROFILE);
+  assert.equal(useSignalStore.getState().document.profileAddress, OTHER_PROFILE);
+  assert.equal(useSignalStore.getState().settings.audio, false);
+  assert.deepEqual(useSignalStore.getState().queue, []);
+  assert.equal(useSignalStore.getState().currentReaction, null);
+
+  assert.equal(useSignalStore.getState().setProfileAddress(PROFILE), true);
+  assert.equal(useSignalStore.getState().settings.audio, true);
 });

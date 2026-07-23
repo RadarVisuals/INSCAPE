@@ -45,9 +45,11 @@ const LSP8_RECEIVED_DATA_ABI = parseAbiParameters(
 export const EVENT_TYPE_MAP = {
   // Map to the official standard keccak256("LSP0ValueReceived") identifier for UP value drops
   lyx_received: "0x9c4705229491d365fb5434052e12a386d6771d976bea61070a8c694e8affea3d", 
-  follower_gained: "0x71e02f9f05bcd5816ec4f3134aa2e5a916669537ec6c77fe66ea595fabc2d51a", 
-  follower_lost: "0x9d3c0b4012b69658977b099bdaa51eff0f0460f421fba96d15669506c00d1c4f",  
+  follower_gained: "0x8c6d5eb7e02ce4593cfc9d38d86efc080dc07fa95b82e0f8baaebad315bd2724",
+  follower_lost: "0x7a01f86c5b3c32e70e61951aa00e7ece6dcc720c5e591d3b0e514d0de8357df6",
+  lsp7_sent: "0x429ac7a06903dbc9c13dfcb3c9d11df8194581fa047c96d7a4171fc7402958ea",
   lsp7_received: "0x20804611b3e2ea21c480dc465142210acf4a2485947541770ec1fb87dee4a55c", 
+  lsp8_sent: "0xb23eae7e6d1564b295b4c3e3be402d9a2f0776c57bdf365903496f6fa481ab00",
   lsp8_received: "0x0b084a55ebf70fd3c06fd755269dac2212c4d3f0f4d09079780bfa50c1b2984d", 
 };
 
@@ -276,15 +278,16 @@ export default class LSP1EventService {
 
     // Standard LSP7/LSP8 sender decoding
     if (
-      (eventTypeName === "lsp7_received" || eventTypeName === "lsp8_received") &&
+      (["lsp7_received", "lsp7_sent", "lsp8_received", "lsp8_sent"].includes(eventTypeName)) &&
       typeof receivedData === "string" &&
       receivedData !== "0x"
     ) {
-      const abiToUse = eventTypeName === "lsp7_received" ? LSP7_RECEIVED_DATA_ABI : LSP8_RECEIVED_DATA_ABI;
+      const abiToUse = eventTypeName.startsWith("lsp7_") ? LSP7_RECEIVED_DATA_ABI : LSP8_RECEIVED_DATA_ABI;
       try {
         const decodedDataArray = decodeAbiParameters(abiToUse, receivedData);
-        if (decodedDataArray && decodedDataArray.length > 1 && isAddress(decodedDataArray[1])) {
-          actualSender = getAddress(decodedDataArray[1]);
+        const counterpartyIndex = eventTypeName.endsWith("_sent") ? 2 : 1;
+        if (decodedDataArray && decodedDataArray.length > counterpartyIndex && isAddress(decodedDataArray[counterpartyIndex])) {
+          actualSender = getAddress(decodedDataArray[counterpartyIndex]);
         }
       } catch (decodeError) {
         if (DEV_DIAGNOSTICS) reportControlledError('lsp1-received-data-decode', decodeError);

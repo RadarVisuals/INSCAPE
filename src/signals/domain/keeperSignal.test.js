@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { classifyDirection, createSignalId, normalizeLyxSignal, normalizeTransferSignal, SIGNAL_DIRECTIONS, SIGNAL_TYPES, sortSignalsNewestFirst } from './keeperSignal.js';
+import { classifyDirection, createSignalId, normalizeFollowSignal, normalizeLyxSignal, normalizeTransferSignal, SIGNAL_DIRECTIONS, SIGNAL_TYPES, sortSignalsNewestFirst } from './keeperSignal.js';
 
 const PROFILE = '0xf3c189819fd5b042f692983bfbfd57ab607ee709';
 const OTHER = '0x1234567890abcdef1234567890abcdef12345678';
@@ -26,9 +26,20 @@ test('LSP8 transfer normalization reuses the Phase 1 asset model', () => {
   assert.equal(signal.assetReference.standard, 'LSP8'); assert.equal(signal.counterparty, OTHER);
 });
 
-test('only positive direct incoming LYX transactions normalize live', () => {
+test('positive incoming and outgoing LYX transactions normalize live', () => {
   assert.equal(normalizeLyxSignal({ id: '0x123', from: OTHER, to: PROFILE, value: '10', timestamp: 2 }, PROFILE).type, SIGNAL_TYPES.LYX_RECEIVED);
-  assert.equal(normalizeLyxSignal({ id: '0x124', from: PROFILE, to: OTHER, value: '10', timestamp: 2 }, PROFILE), null);
+  const outgoing = normalizeLyxSignal({ id: '0x124', from: PROFILE, to: OTHER, value: '10', timestamp: 2 }, PROFILE);
+  assert.equal(outgoing.type, SIGNAL_TYPES.LYX_SENT);
+  assert.equal(outgoing.counterparty, OTHER);
+});
+
+test('follow relationships normalize relative to the viewed profile', () => {
+  const incoming = normalizeFollowSignal({ id: 'follow-1', follower_id: OTHER, followee_id: PROFILE, createdTimestamp: 3 }, PROFILE);
+  const outgoing = normalizeFollowSignal({ id: 'follow-2', follower_id: PROFILE, followee_id: OTHER, createdTimestamp: 4 }, PROFILE);
+  assert.equal(incoming.type, SIGNAL_TYPES.FOLLOWER_GAINED);
+  assert.equal(incoming.counterparty, OTHER);
+  assert.equal(outgoing.type, SIGNAL_TYPES.PROFILE_FOLLOWED);
+  assert.equal(outgoing.counterparty, OTHER);
 });
 
 test('signal history ordering is deterministic and newest-first', () => {

@@ -78,13 +78,15 @@ test('framed artwork keeps form controls interactive and presentation layers ind
   assert.match(documentPreviewSource, /<FramedArtwork/);
 });
 
-test('Gallery remains spatial while Creations is an independent system window', () => {
+test('Gallery remains spatial while Creations is an independent dock workspace', () => {
   const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
+  const dockSource = readFileSync(new URL('./ProfileNavigationDock.jsx', import.meta.url), 'utf8');
   const gallerySource = readFileSync(new URL('./GalleryWorld.jsx', import.meta.url), 'utf8');
 
   assert.match(shellSource, /moduleRefs\.current\.set\('gallery'/);
   assert.match(shellSource, /moduleRefs\.current\.set\('creations'/);
-  assert.match(shellSource, /<CreationsWindow/);
+  assert.match(dockSource, /CreationsBrowser/);
+  assert.doesNotMatch(shellSource, /<CreationsWindow/);
   assert.match(shellSource, /<GalleryWorld/);
   assert.doesNotMatch(shellSource, /id === 'creations'\) enterGallery\(\)/);
   assert.doesNotMatch(shellSource, /setActiveModuleId\('creations'\);\s*\n\s*}, \[closeAllWindows\]\)/);
@@ -96,13 +98,13 @@ test('Gallery remains spatial while Creations is an independent system window', 
   assert.doesNotMatch(gallerySource, /if \(direction\) onMoveKeeper\?\./);
 });
 
-test('system destination order is Activity, Gallery, Creations, Library', () => {
+test('system destination order is Activity, Gallery, Creations, Index', () => {
   const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
   const activity = shellSource.indexOf('>[ Activity ]</button>');
   const gallery = shellSource.indexOf('>[ Gallery ]</button>');
   const creations = shellSource.indexOf('>[ Creations ]</button>');
-  const library = shellSource.indexOf('>[ Library ]</button>');
-  assert.ok(activity >= 0 && activity < gallery && gallery < creations && creations < library);
+  const index = shellSource.indexOf('>[ Index ]</button>');
+  assert.ok(activity >= 0 && activity < gallery && gallery < creations && creations < index);
 });
 
 test('all non-owner routes mount the published boundary instead of the local workspace shell', () => {

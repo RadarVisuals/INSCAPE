@@ -2,11 +2,10 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from 'react-dom';
 import ProfileNavigationDock from './ProfileNavigationDock.jsx';
 import { flushLibraryWorkspace, FolderWindow, useLibraryStore } from '../library/index.js';
-import { CreationsWindow } from '../creations/index.js';
+import { normalizeProfileAddress } from '../library/config.js';
 import AssetPreview from '../library/components/AssetPreview.jsx';
 import KeeperSignalsLayer from '../signals/components/KeeperSignalsLayer.jsx';
 import SignalSettings from '../signals/components/SignalSettings.jsx';
-import SignalsWindow from '../signals/components/SignalsWindow.jsx';
 import { flushSignalDocument, useSignalStore } from '../signals/state/useSignalStore.js';
 import { useProfileIdentity } from '../profileIdentity/index.js';
 import ProfileDocumentPanel from '../profileDocument/components/ProfileDocumentPanel.jsx';
@@ -54,7 +53,6 @@ import {
 } from './moduleLayout.js';
 import './moduleGrid.css';
 import '../library/collection.css';
-import '../creations/creations.css';
 import '../signals/signals.css';
 import '../profileDocument/profileDocument.css';
 import './scenePreview.css';
@@ -130,6 +128,7 @@ export default function ModuleGridShell({
   onGalleryOpenChange,
   interfaceVisible = true,
   ownerAuthoringEnabled = false,
+  workspaceProfileAddress,
   getWalletPublicationContext,
   visitorWalletConnected = false,
   viewedProfileAddress: requestedViewedProfileAddress,
@@ -137,6 +136,14 @@ export default function ModuleGridShell({
   revealPresentation = { sequence: 'short', reducedMotion: false }
 }) {
   const workspace = useLibraryStore((state) => state.workspace);
+  const setLibraryProfileAddress = useLibraryStore((state) => state.setProfileAddress);
+  const setSignalProfileAddress = useSignalStore((state) => state.setProfileAddress);
+  useLayoutEffect(() => {
+    const profile = normalizeProfileAddress(workspaceProfileAddress);
+    if (!profile) return;
+    setLibraryProfileAddress(profile);
+    setSignalProfileAddress(profile);
+  }, [setLibraryProfileAddress, setSignalProfileAddress, workspaceProfileAddress]);
   const [geometry, setGeometry] = useState(getInitialGeometry);
   const [positions, setPositions] = useState(() => readStoredPositions(createHomePlacementGeometry(getInitialGeometry())));
   const [systemPresentation, setSystemPresentation] = useState(readSystemPresentation);
@@ -169,8 +176,6 @@ export default function ModuleGridShell({
   const [keeperDockActive, setKeeperDockActive] = useState(false);
   const [availableModuleIds, setAvailableModuleIds] = useState(() => new Set());
   const moduleRefs = useRef(new Map());
-  const creationsPanelRef = useRef(null);
-  const signalsPanelRef = useRef(null);
   const folderPanelRef = useRef(null);
   const launcherInspectorRef = useRef(null);
   const canvasObjectRefs = useRef(new Map());
@@ -327,8 +332,6 @@ export default function ModuleGridShell({
   const canvasObjectById = useMemo(() => Object.fromEntries(canvasObjects.map((object)=>[object.id,object])),[canvasObjects]);
   const openFolderLauncher = pinnedLaunchers.find((launcher) => launcher.id === openFolderLauncherId) || null;
   const windowGeometryFor = useCallback((key, anchor) => effectiveGeometry(runtimeWindows.rects[key] || defaultWindowGridRect(key,placementGeometry,anchor),interaction,['identity','collection','creations','signals'].includes(key)?`${key}-panel`:`folder-panel:${key}`),[interaction,placementGeometry,runtimeWindows.rects]);
-  const creationsPanelPosition = windowGeometryFor('creations',canvasPositions.creations);
-  const signalsPanelPosition = windowGeometryFor('signals',canvasPositions.signals);
   const openFolderPosition = openFolderLauncher
     ? effectiveGeometry(runtimeWindows.rects[openFolderLauncher.id] || defaultFolderWindowGridRect(placementGeometry,sceneById[openFolderLauncher.id]?.geometry),interaction,`folder-panel:${openFolderLauncher.id}`)
     : null;
@@ -867,26 +870,18 @@ export default function ModuleGridShell({
   const activateSystemDestination = useCallback((id) => {
     cancelCameraTransition();
     if (galleryOpen) setGalleryOpen(false);
-    if(id==='collection'){openModule(id);return;}
-    if(id==='creations'&&creationsOpen){focusWorldWindow(id,creationsPanelPosition);return;}
-    if(id==='signals'&&signalsOpen){focusWorldWindow(id,signalsPanelPosition);return;}
+    if(id==='collection'||id==='creations'||id==='signals'){openModule(id);return;}
     pendingWindowRevealRef.current=id;
     openModule(id);
-  },[cancelCameraTransition,creationsOpen,creationsPanelPosition,focusWorldWindow,galleryOpen,openModule,signalsOpen,signalsPanelPosition]);
+  },[cancelCameraTransition,galleryOpen,openModule]);
 
   useLayoutEffect(() => {
     const id = pendingWindowRevealRef.current;
-    if (id === 'creations' && creationsOpen) {
-      pendingWindowRevealRef.current = null;
-      focusWorldWindow(id, creationsPanelPosition);
-    } else if (id === 'signals' && signalsOpen) {
-      pendingWindowRevealRef.current = null;
-      focusWorldWindow(id, signalsPanelPosition);
-    } else if (id && id === openFolderLauncher?.id && openFolderPosition) {
+    if (id && id === openFolderLauncher?.id && openFolderPosition) {
       pendingWindowRevealRef.current = null;
       focusWorldWindow(id, openFolderPosition);
     }
-  }, [creationsOpen, creationsPanelPosition, focusWorldWindow, openFolderLauncher, openFolderPosition, signalsOpen, signalsPanelPosition]);
+  }, [focusWorldWindow, openFolderLauncher, openFolderPosition]);
 
   useEffect(() => {
     if (!folderEntryLauncherId) return undefined;
@@ -1019,22 +1014,6 @@ export default function ModuleGridShell({
     return () => { window.removeEventListener('keydown', close); window.removeEventListener('pointerdown', outside, true); };
   }, [inspectorAnchor, selectedSceneId]);
 
-  const creationsDragProps = {
-    onPointerDown: (event) => startExpandedPanelDrag(event, 'creations-panel', creationsPanelPosition, creationsPanelRef, true),
-    onPointerMove: moveInteraction,
-    onPointerUp: finishInteraction,
-    onPointerCancel: (event) => finishInteraction(event,true),
-    onLostPointerCapture: (event) => finishInteraction(event,true)
-  };
-
-  const signalsDragProps = {
-    onPointerDown: (event) => startExpandedPanelDrag(event, 'signals-panel', signalsPanelPosition, signalsPanelRef, true),
-    onPointerMove: moveInteraction,
-    onPointerUp: finishInteraction,
-    onPointerCancel: (event) => finishInteraction(event,true),
-    onLostPointerCapture: (event) => finishInteraction(event,true)
-  };
-
   const folderDragProps = openFolderLauncher ? {
     onPointerDown: (event) => startExpandedPanelDrag(event, `folder-panel:${openFolderLauncher.id}`, openFolderPosition, folderPanelRef, true),
     onPointerMove: moveInteraction,
@@ -1078,6 +1057,24 @@ export default function ModuleGridShell({
         assetStatus={libraryStatus}
         onCategoriesOpenChange={(expanded) => {
           if (expanded && libraryStatus === 'idle') loadLibrary();
+        }}
+        creations={{
+          profileAddress: viewedProfileAddress,
+          open: creationsOpen,
+          onOpenChange: (expanded) => {
+            setCreationsOpen(expanded);
+            setActiveModuleId(expanded ? 'creations' : null);
+            updateRuntime({ type: expanded ? 'open' : 'close', id: 'creations' });
+          }
+        }}
+        activity={{
+          profileAddress: viewedProfileAddress,
+          open: signalsOpen,
+          onOpenChange: (expanded) => {
+            setSignalsOpen(expanded);
+            setActiveModuleId(expanded ? 'signals' : null);
+            updateRuntime({ type: expanded ? 'open' : 'close', id: 'signals' });
+          }
         }}
         ownerIndex={ownerAuthoringEnabled ? {
           open: collectionOpen,
@@ -1281,62 +1278,6 @@ export default function ModuleGridShell({
             interactionProps={interactionProps} resizeProps={resizeProps} onEdit={()=>openArtworkInspector(object.id)} onActivate={()=>{if(suppressLauncherClickRef.current){suppressLauncherClickRef.current=false;return;}if(editMode){setSelectedCanvasObjectId(object.id);return;}openArtworkPreview(object.id);}} />;
         })}
         </div>, spatialLayerTarget)}
-
-        {creationsOpen && creationsPanelPosition && (
-          <section
-            className="module-shell module-shell--expanded module-shell--collection module-shell--creations"
-            data-module-shell
-            data-module-id="creations-panel"
-            ref={creationsPanelRef}
-            data-interacting={interaction?.targetId === 'creations-panel' || undefined}
-            style={{...windowStyle(creationsPanelPosition),zIndex:windowZIndex(runtimeWindows,'creations')}}
-            role="dialog"
-            aria-modal="false"
-            aria-labelledby="creations-title"
-            onPointerDownCapture={() => { setActiveModuleId('creations'); updateRuntime({type:'focus',id:'creations'}); }}
-          >
-            <CreationsWindow
-              viewedProfileAddress={viewedProfileAddress}
-              dragHandleProps={creationsDragProps}
-              dragEnabled={!geometry.narrow}
-              escapeEnabled={activeModuleId === 'creations'}
-              onClose={() => {
-                setCreationsOpen(false); updateRuntime({type:'close',id:'creations'});
-                setActiveModuleId(identityOpen ? 'identity' : collectionOpen ? 'collection' : signalsOpen ? 'signals' : null);
-                window.requestAnimationFrame(() => moduleRefs.current.get('creations')?.focus());
-              }}
-            />
-            {!geometry.narrow && <i className="module-window__resize" data-resize-control tabIndex="0" aria-label="Resize Creations" onPointerDown={(event)=>startWindowResize(event,'creations-panel',creationsPanelPosition,creationsPanelRef)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
-          </section>
-        )}
-
-        {ownerAuthoringEnabled && signalsOpen && signalsPanelPosition && (
-          <section
-            className="module-shell module-shell--expanded module-shell--collection module-shell--signals"
-            data-module-shell
-            data-module-id="signals-panel"
-            ref={signalsPanelRef}
-            data-interacting={interaction?.targetId === 'signals-panel' || undefined}
-            style={{...windowStyle(signalsPanelPosition),zIndex:windowZIndex(runtimeWindows,'signals')}}
-            role="dialog"
-            aria-modal="false"
-            aria-labelledby="signals-title"
-            onPointerDownCapture={() => { setActiveModuleId('signals'); updateRuntime({type:'focus',id:'signals'}); }}
-          >
-            <SignalsWindow
-              dragHandleProps={signalsDragProps}
-              dragEnabled={!geometry.narrow}
-              editMode={ownerAuthoringEnabled && editMode}
-              escapeEnabled={activeModuleId === 'signals'}
-              onClose={() => {
-                setSignalsOpen(false); updateRuntime({type:'close',id:'signals'});
-                setActiveModuleId(identityOpen ? 'identity' : collectionOpen ? 'collection' : creationsOpen ? 'creations' : null);
-                window.requestAnimationFrame(() => moduleRefs.current.get('signals')?.focus());
-              }}
-            />
-            {!geometry.narrow && <i className="module-window__resize" data-resize-control tabIndex="0" aria-label="Resize Activity" onPointerDown={(event)=>startWindowResize(event,'signals-panel',signalsPanelPosition,signalsPanelRef)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
-          </section>
-        )}
 
         {openFolderLauncher && openFolderPosition && (
           <section

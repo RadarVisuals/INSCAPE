@@ -11,7 +11,7 @@ import { AssetResolver } from './engine/assets/AssetResolver.js';
 import { Startveil } from './startveil/index.js';
 import { useStore } from './store/useStore.js';
 import { useWalletStore } from './store/useWalletStore.js';
-import { resolveLibraryProfile } from './library/config.js';
+import { resolveLibraryProfile, resolveWorkspaceProfile } from './library/config.js';
 import { loadRestoredPresentation } from './profileDocument/storage/profileDocumentStorage.js';
 import { createViewedProfileUrl, resolveViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
 import PublishedProfileBoundary from './profileDocument/components/PublishedProfileBoundary.jsx';
@@ -27,8 +27,8 @@ function App() {
   const canvasRef = useRef(null);
   const desktopContextMenuRef = useRef(null);
   const [applicationMode, setApplicationMode] = useState(() => resolveApplicationMode(window.location));
-  const connectedWorkspaceProfileAddress = useMemo(() => resolveLibraryProfile(window.location), []);
-  const [viewedProfileAddress, setViewedProfileAddress] = useState(() => resolveViewedProfile(window.location, connectedWorkspaceProfileAddress));
+  const routeWorkspaceProfileAddress = useMemo(() => resolveLibraryProfile(window.location), []);
+  const [viewedProfileAddress, setViewedProfileAddress] = useState(() => resolveViewedProfile(window.location, routeWorkspaceProfileAddress));
   const [worldReady, setWorldReady] = useState(false);
   const [revealStage, setRevealStage] = useState('sealed');
   const [revealPresentation, setRevealPresentation] = useState({
@@ -50,6 +50,9 @@ function App() {
   const scheduleWalletRelease = useWalletStore((state) => state.scheduleWalletRelease);
   const applyRenderConfig = useStore((state) => state.applyRenderConfig);
   const loadActorPresets = useStore((state) => state.loadActorPresets);
+  const connectedWorkspaceProfileAddress = resolveWorkspaceProfile(verifiedOwnerProfileAddress, {
+    search: routeWorkspaceProfileAddress ? `?profile=${routeWorkspaceProfileAddress}` : ''
+  });
   const worldVisible = ['world', 'resident', 'interface', 'complete'].includes(revealStage);
   const actorVisible = ['resident', 'interface', 'complete'].includes(revealStage);
   const interfaceVisible = ['interface', 'complete'].includes(revealStage);
@@ -77,6 +80,7 @@ function App() {
       setApplicationMode(resolveApplicationMode(window.location));
       setViewedProfileAddress(resolveViewedProfile(window.location, connectedWorkspaceProfileAddress));
     };
+    syncModeFromUrl();
     window.addEventListener('popstate', syncModeFromUrl);
     return () => window.removeEventListener('popstate', syncModeFromUrl);
   }, [connectedWorkspaceProfileAddress]);
@@ -179,6 +183,7 @@ function App() {
         ) : (
           localOwnerRoute ? <OwnerRuntimeBoundary
             ownerAuthoringEnabled={ownerAuthoringEnabled}
+            workspaceProfileAddress={connectedWorkspaceProfileAddress}
             getWalletPublicationContext={getWalletPublicationContext}
             visitorWalletConnected={visitorWalletConnected}
             viewedProfileAddress={viewedProfileAddress}

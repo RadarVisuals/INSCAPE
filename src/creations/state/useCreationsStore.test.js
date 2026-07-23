@@ -45,3 +45,13 @@ test('live failure is explicit when fixture fallback is shown', async () => {
   assert.equal(store.getState().liveError, 'indexer offline');
   assert.equal(store.getState().status, 'ready');
 });
+
+test('production store never invents creations when the live source fails', async () => {
+  const liveRepository = { source: 'LIVE', async *loadCreations() { throw new Error('indexer offline'); } };
+  const store = createCreationsStore({ liveRepository });
+  await store.getState().load(PROFILE_A);
+  assert.equal(store.getState().sourceMode, 'LIVE');
+  assert.equal(store.getState().status, 'error');
+  assert.equal(store.getState().error, 'indexer offline');
+  assert.deepEqual(store.getState().assets, []);
+});
