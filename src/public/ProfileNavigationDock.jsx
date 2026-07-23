@@ -8,6 +8,7 @@ const CategoryAssetBrowser = lazy(() => import('./CategoryAssetBrowser.jsx'));
 const CreationsBrowser = lazy(() => import('./CreationsBrowser.jsx'));
 const ActivityBrowser = lazy(() => import('./ActivityBrowser.jsx'));
 const AssetIndex = lazy(() => import('./AssetIndex.jsx'));
+const SettingsBrowser = lazy(() => import('./SettingsBrowser.jsx'));
 
 export default function ProfileNavigationDock({
   profile,
@@ -27,6 +28,7 @@ export default function ProfileNavigationDock({
   const [creationsOpen, setCreationsOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [indexOpen, setIndexOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const onCategoriesOpenChangeRef = useRef(onCategoriesOpenChange);
   const onCreationsOpenChangeRef = useRef(creations?.onOpenChange);
   const onActivityOpenChangeRef = useRef(activity?.onOpenChange);
@@ -42,9 +44,11 @@ export default function ProfileNavigationDock({
   const effectiveCreationsOpenRef = useRef(effectiveCreationsOpen);
   const effectiveActivityOpenRef = useRef(effectiveActivityOpen);
   const effectiveIndexOpenRef = useRef(effectiveIndexOpen);
+  const settingsOpenRef = useRef(settingsOpen);
   effectiveCreationsOpenRef.current = effectiveCreationsOpen;
   effectiveActivityOpenRef.current = effectiveActivityOpen;
   effectiveIndexOpenRef.current = effectiveIndexOpen;
+  settingsOpenRef.current = settingsOpen;
   const selectedCategory = categories.find((category) => category.id === selectedCategoryId) || null;
 
   useEffect(() => {
@@ -66,6 +70,7 @@ export default function ProfileNavigationDock({
         setActivityOpen(false);
         onActivityOpenChangeRef.current?.(false);
       }
+      if (settingsOpenRef.current) setSettingsOpen(false);
     }
     onIndexOpenChangeRef.current?.(expanded);
   }, []);
@@ -80,6 +85,7 @@ export default function ProfileNavigationDock({
         setActivityOpen(false);
         onActivityOpenChangeRef.current?.(false);
       }
+      if (settingsOpenRef.current) setSettingsOpen(false);
     }
     onCreationsOpenChangeRef.current?.(expanded);
   }, [handleIndexOpenChange]);
@@ -91,6 +97,7 @@ export default function ProfileNavigationDock({
       setSelectedCategoryId(null);
       if (effectiveCreationsOpenRef.current) handleCreationsOpenChange(false);
       if (effectiveIndexOpenRef.current) handleIndexOpenChange(false);
+      if (settingsOpenRef.current) setSettingsOpen(false);
     }
     onActivityOpenChangeRef.current?.(expanded);
   }, [handleCreationsOpenChange, handleIndexOpenChange]);
@@ -101,6 +108,7 @@ export default function ProfileNavigationDock({
     if (expanded && effectiveIndexOpenRef.current) handleIndexOpenChange(false);
     if (expanded && effectiveCreationsOpenRef.current) handleCreationsOpenChange(false);
     if (expanded && effectiveActivityOpenRef.current) handleActivityOpenChange(false);
+    if (expanded && settingsOpenRef.current) setSettingsOpen(false);
     onCategoriesOpenChangeRef.current?.(expanded);
   }, [handleActivityOpenChange, handleCreationsOpenChange, handleIndexOpenChange]);
 
@@ -115,6 +123,20 @@ export default function ProfileNavigationDock({
   useEffect(() => {
     if (!navigationVisible && effectiveActivityOpen) handleActivityOpenChange(false);
   }, [effectiveActivityOpen, handleActivityOpenChange, navigationVisible]);
+
+  useEffect(() => {
+    if (!navigationVisible && settingsOpen) setSettingsOpen(false);
+  }, [navigationVisible, settingsOpen]);
+
+  const handleSettingsOpenChange = useCallback((expanded) => {
+    setSettingsOpen(expanded);
+    if (!expanded) return;
+    setCategoriesExpanded(false);
+    setSelectedCategoryId(null);
+    if (effectiveCreationsOpenRef.current) handleCreationsOpenChange(false);
+    if (effectiveActivityOpenRef.current) handleActivityOpenChange(false);
+    if (effectiveIndexOpenRef.current) handleIndexOpenChange(false);
+  }, [handleActivityOpenChange, handleCreationsOpenChange, handleIndexOpenChange]);
 
   const selectCategory = useCallback((category) => {
     setSelectedCategoryId((current) => current === category.id ? null : category.id);
@@ -138,7 +160,7 @@ export default function ProfileNavigationDock({
       visible={navigationVisible}
       onSelect={selectCategory}
       onExpandedChange={handleCategoriesExpandedChange}
-      collapseRequested={effectiveIndexOpen || effectiveCreationsOpen || effectiveActivityOpen}
+      collapseRequested={effectiveIndexOpen || effectiveCreationsOpen || effectiveActivityOpen || settingsOpen}
     />
     {creations?.profileAddress && <Suspense fallback={null}><CreationsBrowser
       visible={navigationVisible}
@@ -157,6 +179,11 @@ export default function ProfileNavigationDock({
       open={effectiveIndexOpen}
       onOpenChange={handleIndexOpenChange}
       profileName={profile?.name}
+    /></Suspense>}
+    {ownerIndex && <Suspense fallback={null}><SettingsBrowser
+      visible={navigationVisible}
+      open={settingsOpen}
+      onOpenChange={handleSettingsOpenChange}
     /></Suspense>}
     {browserActivated && <Suspense fallback={null}>
       <CategoryAssetBrowser

@@ -36,8 +36,7 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
   if (target?.type === 'canvas') return [
     ...(ownerAuthoringEnabled ? [{ id: 'toggle-edit', label: editMode ? 'Finish Arranging' : 'Arrange Desktop' }, { id: 'menu-create', label: 'Create >' }] : []),
     { id: 'menu-view', label: 'View >' },
-    { id: 'reset-windows', label: 'Reset Windows' }, { id: 'close-all', label: 'Close All Windows' },
-    ...(ownerAuthoringEnabled ? [{ id: 'settings', label: 'Settings' }] : [])
+    { id: 'reset-windows', label: 'Reset Windows' }, { id: 'close-all', label: 'Close All Windows' }
   ];
   if (target?.type === 'launcher') return [
     { id: 'open', label: 'Open' },

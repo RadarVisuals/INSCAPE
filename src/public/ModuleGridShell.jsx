@@ -5,7 +5,6 @@ import { flushLibraryWorkspace, FolderWindow, useLibraryStore } from '../library
 import { normalizeProfileAddress } from '../library/config.js';
 import AssetPreview from '../library/components/AssetPreview.jsx';
 import KeeperSignalsLayer from '../signals/components/KeeperSignalsLayer.jsx';
-import SignalSettings from '../signals/components/SignalSettings.jsx';
 import { flushSignalDocument, useSignalStore } from '../signals/state/useSignalStore.js';
 import { useProfileIdentity } from '../profileIdentity/index.js';
 import ProfileDocumentPanel from '../profileDocument/components/ProfileDocumentPanel.jsx';
@@ -53,7 +52,7 @@ import {
 } from './moduleLayout.js';
 import './moduleGrid.css';
 import '../library/collection.css';
-import '../signals/signals.css';
+import '../signals/keeperSignals.css';
 import '../profileDocument/profileDocument.css';
 import './scenePreview.css';
 import './canvasObjects.css';
@@ -313,7 +312,7 @@ export default function ModuleGridShell({
     setArtworkInspector(null);
     setArtworkChooser(null);
     setContextMenu(null);
-    setActiveHudCommand((command) => ['share', 'settings'].includes(command) ? null : command);
+    setActiveHudCommand((command) => command === 'share' ? null : command);
   }, [ownerAuthoringEnabled]);
   const sceneItems = useMemo(() => {
     const items=[];
@@ -970,7 +969,6 @@ export default function ModuleGridShell({
     else if (command === 'reset-home-camera') setHomeCameraImmediately(homeOrigin);
     else if (command === 'reset-windows') resetWindows();
     else if (command === 'close-all') closeAllWindows();
-    else if (command === 'settings') setActiveHudCommand('settings');
     else if (command === 'open') openModule(target.id);
     else if (command === 'edit-launcher') openLauncherInspector(target.id);
     else if (command === 'toggle-visibility' && launcher) setLauncherVisitorVisibility(launcher.id, !launcher.visitorVisible);
@@ -1110,13 +1108,6 @@ export default function ModuleGridShell({
             ? <button type="button" onClick={exitGallery}>[ Exit Gallery ]</button>
             : ownerAuthoringEnabled && <button type="button" onClick={() => setEditMode((current) => !current)} aria-pressed={editMode}>[ {editMode ? 'Done Arranging' : 'Arrange Desktop'} ]</button>}
           {ownerAuthoringEnabled && editMode && !galleryOpen && <button type="button" onClick={() => { if(window.confirm('Reset the authored desktop layout? Folders, owned assets, visibility, and runtime windows will be preserved.')) resetLayout(); }}>[ Reset Authored Canvas ]</button>}
-          {ownerAuthoringEnabled && <button
-            type="button"
-            aria-pressed={activeHudCommand === 'settings'}
-            onClick={() => setActiveHudCommand((current) => current === 'settings' ? null : 'settings')}
-          >
-            [ Settings ]
-          </button>}
         </nav>
       </header>
 
@@ -1337,9 +1328,9 @@ export default function ModuleGridShell({
       {contextMenu && (()=>{const runtimeId=contextMenu.target.id?.startsWith?.('folder-panel:')?contextMenu.target.id.slice(13):contextMenu.target.id?.replace?.('-panel',''); const launcher=pinnedLaunchers.find((entry)=>entry.id===(contextMenu.target.type==='window'?runtimeId:contextMenu.target.id)); const canvasObject=canvasObjectById[contextMenu.target.id]; const startOpen=launcher?.startOpen||systemPresentation[runtimeId]?.startOpen; return <DesktopMenu key={`${contextMenu.target.type}:${contextMenu.menu}`} anchor={contextMenu.anchor} label={`${contextMenu.target.type} commands`} commands={contextMenuCommands({target:contextMenu.target,editMode,launcher,canvasObject,startOpen,menu:contextMenu.menu,keeperVisible,stageVisible,stageAvailable:false,ownerAuthoringEnabled})} onCommand={executeContextCommand} onClose={()=>setContextMenu(null)} returnFocus={contextMenu.returnFocus}/>;})()}
       {activeHudCommand === 'system' && <DesktopMenu anchor={{x:18,y:68}} label="OS Underneath system menu" commands={[
         {id:'about',label:'About OS_UNDERNEATH'}, {id:'status',label:`Profile / ${workspace.profileAddress.slice(0,8)}…`},
-        ...(ownerAuthoringEnabled ? [{id:'atelier',label:'Open Atelier'}, {id:'edit',label:editMode?'Finish Arranging':'Arrange Desktop'}, {id:'settings',label:'Settings'}] : []),
+        ...(ownerAuthoringEnabled ? [{id:'atelier',label:'Open Atelier'}, {id:'edit',label:editMode?'Finish Arranging':'Arrange Desktop'}] : []),
         {id:'home',label:'Return World to Origin'}, {id:'reset',label:'Reset Windows'}, {id:'close-all',label:'Close All Windows'}
-      ]} onCommand={(command)=>{if(command==='about'||command==='status')setActiveHudCommand('about');else if(command==='atelier'&&ownerAuthoringEnabled){setActiveHudCommand(null);onRequestAtelier?.();}else if(command==='home'){setHomeCameraImmediately(homeOrigin);setActiveHudCommand(null);}else if(command==='edit'&&ownerAuthoringEnabled){setEditMode((value)=>!value);setActiveHudCommand(null);}else if(command==='reset'){resetWindows();setActiveHudCommand(null);}else if(command==='close-all'){closeAllWindows();setActiveHudCommand(null);}else if(command==='settings'&&ownerAuthoringEnabled)setActiveHudCommand('settings');}} onClose={()=>setActiveHudCommand(null)}/>}
+      ]} onCommand={(command)=>{if(command==='about'||command==='status')setActiveHudCommand('about');else if(command==='atelier'&&ownerAuthoringEnabled){setActiveHudCommand(null);onRequestAtelier?.();}else if(command==='home'){setHomeCameraImmediately(homeOrigin);setActiveHudCommand(null);}else if(command==='edit'&&ownerAuthoringEnabled){setEditMode((value)=>!value);setActiveHudCommand(null);}else if(command==='reset'){resetWindows();setActiveHudCommand(null);}else if(command==='close-all'){closeAllWindows();setActiveHudCommand(null);}}} onClose={()=>setActiveHudCommand(null)}/>}
       {activeHudCommand === 'about' && <aside className="system-about" role="dialog" aria-label="About OS Underneath"><strong>OS_UNDERNEATH</strong><p>Your profile is not a page. It is a place.</p><small>{workspace.profileAddress}<br/>LUKSO MAINNET / READ-ONLY</small><button type="button" onClick={()=>setActiveHudCommand(null)}>[ Close ]</button></aside>}
       {ownerAuthoringEnabled && <KeeperSignalsLayer
         interfaceReady={interfaceVisible}
@@ -1347,7 +1338,6 @@ export default function ModuleGridShell({
         reducedMotion={revealPresentation.reducedMotion}
         reactionBridge={keeperReactions}
       />}
-      {ownerAuthoringEnabled && activeHudCommand === 'settings' && <SignalSettings />}
       {ownerAuthoringEnabled && activeHudCommand === 'share' && <ProfileDocumentPanel
         draft={draftDocument}
         draftSaveStatus={draftSaveStatus}
