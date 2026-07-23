@@ -6,6 +6,7 @@ import {
   resizeCategoryBrowserByKey,
   resizeCategoryBrowserRect
 } from './categoryAssetBrowserModel.js';
+import NftFlipViewer from './NftFlipViewer.jsx';
 import './categoryAssetBrowser.css';
 
 const viewportSize = () => ({ width: globalThis.innerWidth || 1280, height: globalThis.innerHeight || 720 });
@@ -31,12 +32,18 @@ function BrowserAssetImage({ asset, onRatio }) {
 export default function CategoryAssetBrowser({ open = false, category = null, status = 'ready' }) {
   const rowsRef = useRef(null);
   const resizeRef = useRef(null);
+  const viewerTriggerRef = useRef(null);
   const [viewport, setViewport] = useState(viewportSize);
   const [rect, setRect] = useState(() => initialCategoryBrowserRect(viewportSize()));
   const [contentWidth, setContentWidth] = useState(0);
   const [thumbnailSize, setThumbnailSize] = useState(190);
   const [ratios, setRatios] = useState({});
+  const [selectedAsset, setSelectedAsset] = useState(null);
   const assets = Array.isArray(category?.assets) ? category.assets : [];
+
+  useEffect(() => {
+    if (!open || (selectedAsset && !assets.some((asset) => asset.id === selectedAsset.id))) setSelectedAsset(null);
+  }, [assets, open, selectedAsset]);
 
   useEffect(() => {
     const resize = () => {
@@ -99,8 +106,13 @@ export default function CategoryAssetBrowser({ open = false, category = null, st
     setRect(next);
   };
 
+  const closeViewer = useCallback(() => {
+    setSelectedAsset(null);
+  }, []);
+
   const loading = status === 'idle' || status === 'loading';
-  return <section
+  return <>
+  <section
     className="category-asset-browser"
     data-visible={open || undefined}
     aria-hidden={!open}
@@ -126,17 +138,24 @@ export default function CategoryAssetBrowser({ open = false, category = null, st
         key={`${rowIndex}-${row.assets.map((asset) => asset.id).join('-')}`}
         style={{ '--asset-row-height': `${row.height}px` }}
       >
-        {row.assets.map((asset) => <article
+        {row.assets.map((asset) => <button
           className="category-asset-card"
+          type="button"
           key={asset.id}
+          tabIndex={open ? 0 : -1}
+          aria-label={`Open NFT viewer for ${asset.name || 'untitled asset'}`}
           style={{ width: `${row.height * asset.ratio}px` }}
+          onClick={(event) => {
+            viewerTriggerRef.current = event.currentTarget;
+            setSelectedAsset(asset);
+          }}
         >
           <span className="category-asset-card__media"><BrowserAssetImage asset={asset} onRatio={registerRatio} /></span>
           <span className="category-asset-card__rail">
             <strong>{asset.name || 'Untitled asset'}</strong>
             <small>#{String(asset.displayIndex).padStart(2, '0')} · {asset.standard || 'NFT'}</small>
           </span>
-        </article>)}
+        </button>)}
       </div>)}
     </div>
     <button
@@ -153,5 +172,7 @@ export default function CategoryAssetBrowser({ open = false, category = null, st
       onLostPointerCapture={finishResize}
     ><i aria-hidden="true">›</i></button>
     <span className="sr-only" id="category-asset-browser-resize-help">Use the arrow keys to resize in 40 pixel steps.</span>
-  </section>;
+  </section>
+  {selectedAsset && <NftFlipViewer asset={selectedAsset} onClose={closeViewer} returnFocus={viewerTriggerRef.current} />}
+  </>;
 }
