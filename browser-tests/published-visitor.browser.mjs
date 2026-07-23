@@ -319,6 +319,9 @@ test('categories card uses published spaces, keeps numeric labels, and opens the
   assert.equal(await evaluate(`document.querySelector('.category-navigation-card > footer')`), null, 'expanded card has no legacy navigation footer');
   await click('.category-navigation-card > header > button');
   await waitFor(`document.querySelector('.category-navigation-card').hasAttribute('data-expanded')`, 'categories card expanded');
+  await waitFor(`(()=>{const matrix=new DOMMatrix(getComputedStyle(document.querySelector('.category-navigation-card > header i')).transform);return Math.abs(matrix.a) < 0.001 && matrix.b < -0.999})()`, 'categories collapse chevron rotation');
+  const collapseIndicator = await evaluate(`(()=>{const indicator=document.querySelector('.category-navigation-card > header i');const matrix=new DOMMatrix(getComputedStyle(indicator).transform);return {glyph:indicator.textContent,rotation:Math.round(Math.atan2(matrix.b,matrix.a)*180/Math.PI)}})()`);
+  assert.deepEqual(collapseIndicator, { glyph: '›', rotation: -90 }, 'expanded categories control rotates its chevron toward collapse');
   const rows = await evaluate(`[...document.querySelectorAll('.category-navigation-card nav button')].map((button)=>({code:button.querySelector('small').textContent,label:button.querySelector('span').textContent}))`);
   assert.equal(rows.length, 7);
   assert.deepEqual(rows.map((row) => row.code), ['01', '02', '03', '04', '05', '06', '07']);

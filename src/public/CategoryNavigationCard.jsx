@@ -38,7 +38,7 @@ export default function CategoryNavigationCard({ items = [], activeId = null, vi
         onClick={() => setExpanded((current) => !current)}
       >
         <strong>CATEGORIES</strong>
-        <i aria-hidden="true">{expanded ? '×' : '›'}</i>
+        <i aria-hidden="true">›</i>
       </button>
     </header>
     <nav aria-label="Published categories">
