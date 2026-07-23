@@ -2,13 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import FramedArtwork from './FramedArtwork.jsx';
 import { clampGalleryCamera, createGalleryLayout } from './galleryLayout.js';
-import { getSpatialGridOffset, panSpatialCamera } from './spatialWorldCamera.js';
+import { getCenteredHorizontalGridOffset, panSpatialCamera } from './spatialWorldCamera.js';
 import './galleryWorld.css';
 
 const EMPTY_VIEWPORT = Object.freeze({ width: 1280, height: 720 });
 
-function GalleryFloorGrid({ width, height, offset }) {
-  const spacing = 80;
+function GalleryFloorGrid({ width, height, offset, spacing }) {
   const columnCount = Math.ceil(width / spacing) + 6;
   const horizontalCount = 8;
   const shiftedOffset = ((offset % spacing) + spacing) % spacing;
@@ -30,7 +29,7 @@ function GalleryFloorGrid({ width, height, offset }) {
   </svg>;
 }
 
-export default function GalleryWorld({ objects, assets, theme, onOpenArtwork, onExit, onMoveKeeper, onMoveKeeperHorizontally }) {
+export default function GalleryWorld({ objects, assets, theme, transitionPhase = 'gallery', gridPhaseX = 0, gridOffsetY = 0, onOpenArtwork, onExit, onCameraXChange, onMoveKeeper, onMoveKeeperHorizontally }) {
   const viewportRef = useRef(null);
   const dragRef = useRef(null);
   const [viewport, setViewport] = useState(() => ({
@@ -61,6 +60,8 @@ export default function GalleryWorld({ objects, assets, theme, onOpenArtwork, on
   }, []);
 
   useEffect(() => setCameraX((current) => clampGalleryCamera(current, layout.maxCameraX)), [layout.maxCameraX]);
+
+  useEffect(() => onCameraXChange?.(cameraX), [cameraX, onCameraXChange]);
 
   useEffect(() => {
     const keydown = (event) => {
@@ -116,21 +117,23 @@ export default function GalleryWorld({ objects, assets, theme, onOpenArtwork, on
     }
   };
 
-  const gridOffset = getSpatialGridOffset({ x: cameraX, y: 0 }, 80).x;
+  const gridSpacing = viewport.width < 720 ? 56 : 80;
+  const gridOffset = getCenteredHorizontalGridOffset(cameraX - gridPhaseX, viewport.width, gridSpacing);
   const progress = layout.maxCameraX ? cameraX / layout.maxCameraX : 0;
   const portalTarget = typeof document === 'undefined' ? null : document.querySelector('.application-root');
   const worldTheme = { ...theme, '--module-accent': theme?.['--hu-accent-primary'] || '#e87945' };
-  const backdrop = <div className="gallery-world-backdrop" aria-hidden="true" style={{ ...worldTheme, '--gallery-grid-offset': `${gridOffset}px`, '--gallery-horizon': `${layout.horizon}px` }}>
+  const backdrop = <div className="gallery-world-backdrop" aria-hidden="true" data-transition-phase={transitionPhase} style={{ ...worldTheme, '--gallery-grid-offset': `${gridOffset}px`, '--gallery-grid-offset-y': `${gridOffsetY}px`, '--gallery-horizon': `${layout.horizon}px` }}>
     <div className="gallery-world__shader-glass" />
     <div className="gallery-world__wall" />
     <div className="gallery-world__horizon" />
-    <div className="gallery-world__floor"><GalleryFloorGrid width={viewport.width} height={Math.max(1, viewport.height - layout.horizon)} offset={gridOffset} /></div>
+    <div className="gallery-world__floor"><GalleryFloorGrid width={viewport.width} height={Math.max(1, viewport.height - layout.horizon)} offset={gridOffset} spacing={gridSpacing} /></div>
   </div>;
 
   const gallery = <section
     ref={viewportRef}
     className="gallery-world"
     data-dragging={dragging || undefined}
+    data-transition-phase={transitionPhase}
     aria-label="Side-scrolling creations gallery"
     tabIndex="-1"
     style={{ ...worldTheme, '--gallery-horizon': `${layout.horizon}px` }}

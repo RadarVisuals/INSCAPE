@@ -49,7 +49,8 @@
   z-index: 70;
 }
 
-.public-shell[data-gallery-open] .module-grid {
+.public-shell[data-gallery-open] .module-grid,
+.public-shell[data-upper-open] .module-grid {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -511,9 +512,6 @@
 .system-identity small i { width: 5px; height: 5px; background: var(--hu-success); }
 .system-identity:hover,.system-identity:focus-visible,.system-identity[aria-expanded="true"] { outline: 0; color: var(--os-accent); background: rgba(238,235,223,.025); }
 
-.system-hud__destinations { height: 100%; display: flex; align-items: center; gap: 12px; padding: 0 13px; }
-.system-hud__destinations button { padding: 5px 0; border: 0; background: transparent; color: var(--hu-text); font: 620 .52rem/1 'Oxanium',var(--font-interface); letter-spacing: .055em; text-transform: uppercase; cursor: pointer; }
-.system-hud__destinations button:hover,.system-hud__destinations button:focus-visible,.system-hud__destinations button[data-active] { outline: 0; color: var(--os-accent); }
 
 .system-hud__commands { margin-left: auto; border: 0; background: transparent; }
 .system-hud__commands button:hover,.system-hud__commands button[aria-pressed="true"],.system-hud__commands button[aria-expanded="true"] { color: var(--os-accent); }
@@ -767,7 +765,7 @@
   letter-spacing: 0.035em;
 }
 @media (max-width:719px){.launcher-inspector{left:12px!important;right:12px;top:auto!important;bottom:12px;width:auto;max-height:42vh}.module-button{padding:4px 7px}.module-button span{font-size:.58rem}.module-button--folder small{display:none}.module-window__resize{display:none}}
-@media (max-width:900px){.system-hud__destinations{gap:6px;padding:0 7px}.system-hud__destinations button{font-size:.45rem}.system-identity{min-width:108px;padding-right:7px}.system-identity small{display:none}}
+@media (max-width:900px){.system-identity{min-width:108px;padding-right:7px}.system-identity small{display:none}}
 
 .module-button--folder {
   min-width: 0;
@@ -1508,7 +1506,7 @@
   font: 650 .48rem/1.2 'Oxanium', var(--font-interface);
   letter-spacing: .06em;
 }
-.system-hud__destinations button,.system-hud__commands button { font-size:.6rem; }
+.system-hud__commands button { font-size:.6rem; }
 .launcher-inspector>span,.launcher-inspector label,.desktop-menu button { font-size:.58rem; }
 .profile-card-popover .identity-dossier__eyebrow,
 .profile-card-popover .identity-dossier__address,
@@ -1646,8 +1644,6 @@
   .system-identity { min-width:0; width:38px; padding:0 5px; border-right:0; }
   .system-identity > img { width:26px; height:26px; flex-basis:26px; }
   .system-identity > span { display:none; }
-  .system-hud__destinations { gap:5px; padding:0 5px; }
-  .system-hud__destinations button { font-size:.4rem; }
   .system-hud__commands { gap:4px; padding:0 4px; }
   .system-hud__commands button:nth-child(2) { display:none; }
   .profile-card-popover { left:8px; top:58px; width:calc(100vw - 16px); height:calc(100vh - 70px); }
@@ -1896,7 +1892,7 @@
 }
 
 .system-identity small { font-size:.54rem; }
-.system-hud__destinations button,.system-hud__commands button { font-size:.6rem; }
+.system-hud__commands button { font-size:.6rem; }
 .launcher-inspector>span,.launcher-inspector label,.desktop-menu button { font-size:.58rem; }
 .profile-card-popover .identity-dossier__eyebrow,
 .profile-card-popover .identity-dossier__address,

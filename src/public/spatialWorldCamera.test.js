@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   clampSpatialCamera,
+  getCenteredHorizontalGridOffset,
   getSpatialGridOffset,
   panSpatialCamera,
   screenToSpatialWorld,
@@ -37,4 +38,12 @@ test('screen and world coordinates round-trip through the camera', () => {
 test('wireframe grid offset wraps cleanly in both directions', () => {
   assert.deepEqual(getSpatialGridOffset({ x: 85, y: -15 }, 80), { x: 75, y: 15 });
   assert.deepEqual(getSpatialGridOffset({ x: -160, y: 160 }, 80), { x: 0, y: 0 });
+});
+
+test('viewport-centered grids share their initial horizontal origin', () => {
+  assert.equal(getCenteredHorizontalGridOffset(0, 1440, 80), 0);
+  assert.equal(getCenteredHorizontalGridOffset(1440, 1440, 80), 0);
+  assert.equal(getCenteredHorizontalGridOffset(16, 1440, 80), 64);
+  assert.equal(getCenteredHorizontalGridOffset(0, 1366, 80), 43);
+  assert.equal(getCenteredHorizontalGridOffset(-1366, 1366, 80), 49);
 });

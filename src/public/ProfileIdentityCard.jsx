@@ -16,10 +16,14 @@ function Avatar({ src }) {
   return <img src={src} alt="" referrerPolicy="no-referrer" onError={() => setFailed(true)} />;
 }
 
-export default function ProfileIdentityCard({ profile, expanded: controlledExpanded, initialExpanded = false, onExpandedChange, onStateChange }) {
+export default function ProfileIdentityCard({ profile, expanded: controlledExpanded, initialExpanded = false, collapseToAvatar = false, onExpandedChange, onStateChange }) {
   const [state, setState] = useState((controlledExpanded ?? initialExpanded) ? PROFILE_IDENTITY_CARD_STATE.EXPANDED : PROFILE_IDENTITY_CARD_STATE.AVATAR);
+  const stateRef = useRef(state);
   const onStateChangeRef = useRef(onStateChange);
+  const onExpandedChangeRef = useRef(onExpandedChange);
   onStateChangeRef.current = onStateChange;
+  onExpandedChangeRef.current = onExpandedChange;
+  stateRef.current = state;
   const code = identityCode(profile?.address);
   const name = profile?.name || 'Unnamed profile';
   const links = useMemo(() => selectProfileCardLinks(profile?.links), [profile?.links]);
@@ -45,6 +49,12 @@ export default function ProfileIdentityCard({ profile, expanded: controlledExpan
       return current === PROFILE_IDENTITY_CARD_STATE.EXPANDED ? PROFILE_IDENTITY_CARD_STATE.AVATAR : current;
     });
   }, [controlledExpanded]);
+
+  useEffect(() => {
+    if (!collapseToAvatar) return;
+    if (stateRef.current === PROFILE_IDENTITY_CARD_STATE.EXPANDED) onExpandedChangeRef.current?.(false);
+    setState(PROFILE_IDENTITY_CARD_STATE.AVATAR);
+  }, [collapseToAvatar]);
 
   const transition = (action) => {
     setState((current) => {

@@ -32,9 +32,13 @@ import ArtworkChooser from './ArtworkChooser.jsx';
 import ArtworkInspector from './ArtworkInspector.jsx';
 import GalleryWorld from './GalleryWorld.jsx';
 import HomeWorldSurface from './HomeWorldSurface.jsx';
+import UpperWorldSurface from './UpperWorldSurface.jsx';
+import SpatialLevelNavigation from './SpatialLevelNavigation.jsx';
+import { SPATIAL_WORLD_LEVEL } from './spatialWorldLevels.js';
 import KeeperDock from './KeeperDock.jsx';
 import ProfileDiscovery from '../profileDiscovery/ProfileDiscovery.jsx';
 import { clampVerticalHomeWorldCamera, getWindowRevealCamera, loadHomeWorldCamera, saveHomeWorldCamera } from './homeWorldCamera.js';
+import { getSpatialGridOffset } from './spatialWorldCamera.js';
 import { CANVAS_OBJECT_KIND, getCanvasObjectDefinition } from '../library/domain/canvasObjectRegistry.js';
 import { CANVAS_OBJECT_ORDER_COMMAND } from '../library/domain/canvasObjects.js';
 import { runOwnerAuthoringMutation, selectLiveCanvasContent } from './publicAccess.js';
@@ -74,6 +78,8 @@ const MODULE_ENTRY_ORDER = Object.freeze({
 const FULL_MODULE_ENTRY_BASE_MS = 240;
 const FULL_MODULE_ENTRY_STAGGER_MS = 220;
 const GROUPED_MODULE_ENTRY_MS = 70;
+const SPATIAL_DOCK_COLLAPSE_MS = 170;
+const SPATIAL_WORLD_TRANSITION_MS = 720;
 const SYSTEM_SCENE_KEY = 'os-underneath.system-launchers.v1';
 // The stage-free home makes the grid a primary world surface. A new preference
 // version prevents an old edit-mode-only "off" choice from booting into a void.
@@ -168,6 +174,10 @@ export default function ModuleGridShell({
   const [artworkChooser, setArtworkChooser] = useState(null);
   const [previewObjectId, setPreviewObjectId] = useState(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryTransitionPhase, setGalleryTransitionPhase] = useState('home');
+  const [upperOpen, setUpperOpen] = useState(false);
+  const [upperTransitionPhase, setUpperTransitionPhase] = useState('home');
+  const [homeGridPhaseX, setHomeGridPhaseX] = useState(0);
   const [homeCameraState, setHomeCameraState] = useState(() => ({
     profileAddress: workspace.profileAddress,
     camera: loadHomeWorldCamera(window.localStorage, workspace.profileAddress, { x: geometry.width, y: geometry.height, zoom: 1 })
@@ -190,6 +200,10 @@ export default function ModuleGridShell({
   const artworkChoicePendingRef = useRef(false);
   const resizeFrameRef = useRef(0);
   const cameraTransitionFrameRef = useRef(0);
+  const galleryTransitionTimerRef = useRef(0);
+  const upperTransitionTimerRef = useRef(0);
+  const galleryCameraXRef = useRef(0);
+  const galleryGridBasePhaseXRef = useRef(0);
   const homeCameraRef = useRef(homeCameraState.camera);
   const pendingWindowRevealRef = useRef(null);
 
@@ -297,6 +311,23 @@ export default function ModuleGridShell({
     ? homeOrigin
     : clampVerticalHomeWorldCamera(homeCameraState.camera, homeWorld, homeOrigin.x);
   homeCameraRef.current = homeCamera;
+  const spatialGridSpacing = geometry.narrow ? 56 : 80;
+  const homeGridScreenOffsetY = getSpatialGridOffset(homeCamera, spatialGridSpacing).y;
+  const galleryGridOffsetY = ((homeGridScreenOffsetY - geometry.height) % spatialGridSpacing + spatialGridSpacing) % spatialGridSpacing;
+  const upperGridOffsetY = ((homeGridScreenOffsetY + geometry.height) % spatialGridSpacing + spatialGridSpacing) % spatialGridSpacing;
+  const homeWorldMounted = (!galleryOpen && !upperOpen)
+    || ['preparing', 'entering', 'exiting'].includes(galleryTransitionPhase)
+    || ['preparing', 'entering', 'exiting'].includes(upperTransitionPhase);
+  const galleryWorldMounted = galleryOpen && galleryTransitionPhase !== 'preparing';
+  const upperWorldMounted = upperOpen && upperTransitionPhase !== 'preparing';
+  const homeWorldTransitionPhase = upperOpen
+    ? upperTransitionPhase === 'entering' ? 'entering-upper' : upperTransitionPhase === 'exiting' ? 'exiting-upper' : 'home'
+    : galleryTransitionPhase;
+  const spatialLevel = upperOpen
+    ? SPATIAL_WORLD_LEVEL.UPPER
+    : galleryOpen ? SPATIAL_WORLD_LEVEL.GALLERY : SPATIAL_WORLD_LEVEL.HOME;
+  const spatialLevelTransitioning = (galleryOpen && galleryTransitionPhase !== 'gallery')
+    || (upperOpen && upperTransitionPhase !== 'upper');
   const homeZoom = 1;
   const worldContentX = Math.round((geometry.width + geometry.left) / 40) * 40;
   const worldContentY = Math.round((geometry.height + geometry.top) / 40) * 40;
@@ -767,13 +798,48 @@ export default function ModuleGridShell({
     updateRuntime({ type: 'close-all' }); setIdentityOpen(false); setIdentityPhase('closed'); setCollectionOpen(false); setCreationsOpen(false); setSignalsOpen(false); setOpenFolderLauncherId(null); setActiveModuleId(null);
   }, [updateRuntime]);
 
-  const exitGallery = useCallback(() => {
-    setGalleryOpen(false);
-    setActiveModuleId(null);
-    window.requestAnimationFrame(() => moduleRefs.current.get('gallery')?.focus());
+  const clearGalleryTransitionTimer = useCallback(() => {
+    if (!galleryTransitionTimerRef.current) return;
+    window.clearTimeout(galleryTransitionTimerRef.current);
+    galleryTransitionTimerRef.current = 0;
   }, []);
 
+  const clearUpperTransitionTimer = useCallback(() => {
+    if (!upperTransitionTimerRef.current) return;
+    window.clearTimeout(upperTransitionTimerRef.current);
+    upperTransitionTimerRef.current = 0;
+  }, []);
+
+  useEffect(() => () => {
+    clearGalleryTransitionTimer();
+    clearUpperTransitionTimer();
+  }, [clearGalleryTransitionTimer, clearUpperTransitionTimer]);
+
+  const exitGallery = useCallback(() => {
+    if (!galleryOpen || galleryTransitionPhase !== 'gallery') return;
+    clearGalleryTransitionTimer();
+    const spacing = geometry.narrow ? 56 : 80;
+    const inheritedPhase = getSpatialGridOffset({ x: galleryCameraXRef.current - galleryGridBasePhaseXRef.current, y: 0 }, spacing).x;
+    setHomeGridPhaseX(inheritedPhase);
+    setGalleryTransitionPhase('exiting');
+    const duration = revealPresentation.reducedMotion ? 1 : SPATIAL_WORLD_TRANSITION_MS;
+    galleryTransitionTimerRef.current = window.setTimeout(() => {
+      galleryTransitionTimerRef.current = 0;
+      setGalleryOpen(false);
+      setGalleryTransitionPhase('home');
+      setActiveModuleId(null);
+      window.requestAnimationFrame(() => {
+        const galleryButton = document.querySelector('.gallery-navigation-card[data-visible] > button');
+        (galleryButton || document.querySelector('.profile-identity-card__avatar'))?.focus();
+      });
+    }, duration);
+  }, [clearGalleryTransitionTimer, galleryOpen, galleryTransitionPhase, geometry.narrow, revealPresentation.reducedMotion]);
+
   const enterGallery = useCallback(() => {
+    if (galleryOpen || upperOpen) return;
+    clearGalleryTransitionTimer();
+    galleryCameraXRef.current = 0;
+    galleryGridBasePhaseXRef.current = homeGridPhaseX;
     closeAllWindows();
     setEditMode(false);
     setSelectedSceneId(null);
@@ -783,8 +849,56 @@ export default function ModuleGridShell({
     setContextMenu(null);
     setActiveHudCommand(null);
     setGalleryOpen(true);
+    setGalleryTransitionPhase(revealPresentation.reducedMotion ? 'entering' : 'preparing');
     setActiveModuleId('gallery');
-  }, [closeAllWindows]);
+    const preparation = revealPresentation.reducedMotion ? 0 : SPATIAL_DOCK_COLLAPSE_MS;
+    const duration = revealPresentation.reducedMotion ? 1 : SPATIAL_WORLD_TRANSITION_MS;
+    galleryTransitionTimerRef.current = window.setTimeout(() => {
+      setGalleryTransitionPhase('entering');
+      galleryTransitionTimerRef.current = window.setTimeout(() => {
+        galleryTransitionTimerRef.current = 0;
+        setGalleryTransitionPhase('gallery');
+      }, duration);
+    }, preparation);
+  }, [clearGalleryTransitionTimer, closeAllWindows, galleryOpen, homeGridPhaseX, revealPresentation.reducedMotion, upperOpen]);
+
+  const exitUpper = useCallback(() => {
+    if (!upperOpen || upperTransitionPhase !== 'upper') return;
+    clearUpperTransitionTimer();
+    setUpperTransitionPhase('exiting');
+    const duration = revealPresentation.reducedMotion ? 1 : SPATIAL_WORLD_TRANSITION_MS;
+    upperTransitionTimerRef.current = window.setTimeout(() => {
+      upperTransitionTimerRef.current = 0;
+      setUpperOpen(false);
+      setUpperTransitionPhase('home');
+      setActiveModuleId(null);
+    }, duration);
+  }, [clearUpperTransitionTimer, revealPresentation.reducedMotion, upperOpen, upperTransitionPhase]);
+
+  const enterUpper = useCallback(() => {
+    if (upperOpen || galleryOpen) return;
+    clearUpperTransitionTimer();
+    closeAllWindows();
+    setEditMode(false);
+    setSelectedSceneId(null);
+    setSelectedCanvasObjectId(null);
+    setInspectorAnchor(null);
+    setArtworkInspector(null);
+    setContextMenu(null);
+    setActiveHudCommand(null);
+    setUpperOpen(true);
+    setUpperTransitionPhase(revealPresentation.reducedMotion ? 'entering' : 'preparing');
+    setActiveModuleId('upper');
+    const preparation = revealPresentation.reducedMotion ? 0 : SPATIAL_DOCK_COLLAPSE_MS;
+    const duration = revealPresentation.reducedMotion ? 1 : SPATIAL_WORLD_TRANSITION_MS;
+    upperTransitionTimerRef.current = window.setTimeout(() => {
+      setUpperTransitionPhase('entering');
+      upperTransitionTimerRef.current = window.setTimeout(() => {
+        upperTransitionTimerRef.current = 0;
+        setUpperTransitionPhase('upper');
+      }, duration);
+    }, preparation);
+  }, [clearUpperTransitionTimer, closeAllWindows, galleryOpen, revealPresentation.reducedMotion, upperOpen]);
 
   useEffect(() => {
     onGalleryOpenChange?.(galleryOpen);
@@ -865,14 +979,6 @@ export default function ModuleGridShell({
     });
     transitionHomeCamera(target);
   },[geometry,homeWorld,transitionHomeCamera,updateRuntime,worldContentX,worldContentY]);
-
-  const activateSystemDestination = useCallback((id) => {
-    cancelCameraTransition();
-    if (galleryOpen) setGalleryOpen(false);
-    if(id==='collection'||id==='creations'||id==='signals'){openModule(id);return;}
-    pendingWindowRevealRef.current=id;
-    openModule(id);
-  },[cancelCameraTransition,galleryOpen,openModule]);
 
   useLayoutEffect(() => {
     const id = pendingWindowRevealRef.current;
@@ -1036,6 +1142,7 @@ export default function ModuleGridShell({
       data-reduced-motion={revealPresentation.reducedMotion || undefined}
       data-edit-mode={editMode || undefined}
       data-gallery-open={galleryOpen || undefined}
+      data-upper-open={upperOpen || undefined}
       data-dragging={interaction?.activated ? interaction.targetId : undefined}
       style={shellTheme}
       aria-label="OS Underneath public world"
@@ -1074,6 +1181,11 @@ export default function ModuleGridShell({
             updateRuntime({ type: expanded ? 'open' : 'close', id: 'signals' });
           }
         }}
+        gallery={upperOpen ? null : {
+          open: galleryOpen,
+          onOpenChange: (expanded) => expanded ? enterGallery() : exitGallery()
+        }}
+        spatialWorldActive={upperOpen}
         ownerIndex={ownerAuthoringEnabled ? {
           open: collectionOpen,
           onOpenChange: (expanded) => {
@@ -1084,15 +1196,15 @@ export default function ModuleGridShell({
           }
         } : null}
       />}
+      {interfaceVisible && <SpatialLevelNavigation
+        level={spatialLevel}
+        disabled={spatialLevelTransitioning}
+        onUp={spatialLevel === SPATIAL_WORLD_LEVEL.GALLERY ? exitGallery : enterUpper}
+        onDown={spatialLevel === SPATIAL_WORLD_LEVEL.UPPER ? exitUpper : enterGallery}
+      />}
       <header className="public-shell__masthead">
         <div className="system-hud__primary">
           <button className="system-sigil" type="button" aria-label="Open OS Underneath system menu" aria-expanded={activeHudCommand === 'system'} onClick={() => { setActiveHudCommand((current)=>current==='system'?null:'system'); setContextMenu(null); }}><img src="/assets/logo/underneath_os.webp" alt="" /></button>
-          <nav className="system-hud__destinations" aria-label="Profile destinations">
-            {ownerAuthoringEnabled && <button type="button" data-active={signalsOpen || undefined} ref={(node)=>{if(node)moduleRefs.current.set('signals',node);else moduleRefs.current.delete('signals');}} onClick={()=>activateSystemDestination('signals')}>[ Activity ]</button>}
-            <button type="button" data-active={galleryOpen || undefined} aria-pressed={galleryOpen} ref={(node)=>{if(node)moduleRefs.current.set('gallery',node);else moduleRefs.current.delete('gallery');}} onClick={()=>{if(!galleryOpen)enterGallery();}}>[ Gallery ]</button>
-            <button type="button" data-active={creationsOpen || undefined} aria-expanded={creationsOpen} ref={(node)=>{if(node)moduleRefs.current.set('creations',node);else moduleRefs.current.delete('creations');}} onClick={()=>activateSystemDestination('creations')}>[ Creations ]</button>
-            {ownerAuthoringEnabled && <button type="button" data-active={collectionOpen || undefined} ref={(node)=>{if(node)moduleRefs.current.set('collection',node);else moduleRefs.current.delete('collection');}} onClick={()=>activateSystemDestination('collection')}>[ Index ]</button>}
-          </nav>
         </div>
 
         <nav className="system-hud__commands" aria-label="OS Underneath controls">
@@ -1104,17 +1216,15 @@ export default function ModuleGridShell({
             [ Search ]
           </button>
           {ownerAuthoringEnabled && <button type="button" onClick={() => setActiveHudCommand((current) => current === 'share' ? null : 'share')} aria-expanded={activeHudCommand === 'share'}>[ Share ]</button>}
-          {galleryOpen
-            ? <button type="button" onClick={exitGallery}>[ Exit Gallery ]</button>
-            : ownerAuthoringEnabled && <button type="button" onClick={() => setEditMode((current) => !current)} aria-pressed={editMode}>[ {editMode ? 'Done Arranging' : 'Arrange Desktop'} ]</button>}
-          {ownerAuthoringEnabled && editMode && !galleryOpen && <button type="button" onClick={() => { if(window.confirm('Reset the authored desktop layout? Folders, owned assets, visibility, and runtime windows will be preserved.')) resetLayout(); }}>[ Reset Authored Canvas ]</button>}
+          {ownerAuthoringEnabled && !galleryOpen && !upperOpen && <button type="button" onClick={() => setEditMode((current) => !current)} aria-pressed={editMode}>[ {editMode ? 'Done Arranging' : 'Arrange Desktop'} ]</button>}
+          {ownerAuthoringEnabled && editMode && !galleryOpen && !upperOpen && <button type="button" onClick={() => { if(window.confirm('Reset the authored desktop layout? Folders, owned assets, visibility, and runtime windows will be preserved.')) resetLayout(); }}>[ Reset Authored Canvas ]</button>}
         </nav>
       </header>
 
       <div className="system-signature" aria-hidden="true"><strong>OS_UNDERNEATH</strong><span>LUKSO MAINNET</span><i /> <span>LIVE</span></div>
-      {!galleryOpen && keeperVisible && <KeeperDock ref={keeperDockRef} actorId={activeActorId} residentHandoff={residentHandoff} reducedMotion={revealPresentation.reducedMotion} onDockStateChange={setKeeperDockActive} />}
+      {!galleryOpen && !upperOpen && keeperVisible && <KeeperDock ref={keeperDockRef} actorId={activeActorId} residentHandoff={residentHandoff} reducedMotion={revealPresentation.reducedMotion} onDockStateChange={setKeeperDockActive} />}
 
-      {!galleryOpen && <HomeWorldSurface
+      {homeWorldMounted && <HomeWorldSurface
         camera={homeCamera}
         geometry={geometry}
         world={homeWorld}
@@ -1124,6 +1234,8 @@ export default function ModuleGridShell({
         onCameraChange={setHomeCameraImmediately}
         onMoveKeeper={moveKeeperFromHome}
         onOpenContextMenu={openWorldContextMenu}
+        transitionPhase={homeWorldTransitionPhase}
+        gridPhaseX={homeGridPhaseX}
       />}
 
       <section
@@ -1145,7 +1257,7 @@ export default function ModuleGridShell({
         }}
         onWheel={handleWorldWheel}
       >
-        {!galleryOpen && spatialLayerTarget && createPortal(<div
+        {!galleryOpen && !upperOpen && spatialLayerTarget && createPortal(<div
           ref={spatialLayerRef}
           className="module-grid__spatial-layer"
           data-desktop-canvas
@@ -1302,14 +1414,25 @@ export default function ModuleGridShell({
           </section>
         )}
       </section>
-      {galleryOpen && <GalleryWorld
+      {galleryWorldMounted && <GalleryWorld
         objects={canvasObjects}
         assets={libraryAssets}
         theme={shellTheme}
         onOpenArtwork={openArtworkPreview}
         onExit={exitGallery}
+        transitionPhase={galleryTransitionPhase}
+        gridPhaseX={galleryGridBasePhaseXRef.current}
+        gridOffsetY={galleryGridOffsetY}
+        onCameraXChange={(cameraX) => { galleryCameraXRef.current = cameraX; }}
         onMoveKeeper={(clientX, clientY) => residentHandoff?.moveToScreenPosition?.(clientX, clientY)}
         onMoveKeeperHorizontally={(clientX) => residentHandoff?.moveHorizontallyToScreenPosition?.(clientX)}
+      />}
+      {upperWorldMounted && <UpperWorldSurface
+        theme={shellTheme}
+        gridPhaseX={homeGridPhaseX}
+        gridOffsetY={upperGridOffsetY}
+        transitionPhase={upperTransitionPhase}
+        onMoveKeeper={(clientX, clientY) => residentHandoff?.moveToScreenPosition?.(clientX, clientY)}
       />}
       {ownerAuthoringEnabled && <>
       {inspectorAnchor && selectedSceneId && sceneById[selectedSceneId] && (()=>{ const scene=sceneById[selectedSceneId]; const launcher=pinnedLaunchers.find((entry)=>entry.id===selectedSceneId); const folder=launcher?.folderId?workspace.folders.find((entry)=>entry.id===launcher.folderId):null; const fixedName=Object.hasOwn(MODULE_ENTRY_ORDER,selectedSceneId)||Boolean(folder); const currentName=folder?.name||launcher?.label||scene.label||MODULES.find((entry)=>entry.id===selectedSceneId)?.label||'Launcher'; const saveName=(value)=>{if(fixedName)return;const name=value.trim();if(!name)return;if(launcher)setLauncherPresentation(launcher.id,{label:name});}; return <aside key={selectedSceneId} ref={launcherInspectorRef} className="launcher-inspector" aria-label="Launcher appearance" style={{left:inspectorAnchor.x,top:inspectorAnchor.y}}>

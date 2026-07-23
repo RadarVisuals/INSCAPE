@@ -1,0 +1,10 @@
+.spatial-level-navigation{position:fixed;z-index:145;right:18px;top:50%;display:grid;grid-template-rows:28px 30px 28px;gap:5px;transform:translateY(-50%);pointer-events:auto}
+.spatial-level-navigation button{width:28px;height:28px;display:grid;place-items:center;padding:0;border:1px solid rgba(235,236,231,.14);background:rgba(7,8,8,.58);color:rgba(235,236,231,.46);box-shadow:5px 6px 0 rgba(0,0,0,.12);cursor:pointer;transition:color 120ms linear,border-color 120ms linear,opacity 120ms linear,transform 120ms ease-out}
+.spatial-level-navigation button:hover,.spatial-level-navigation button:focus-visible{outline:0;border-color:rgba(235,236,231,.38);color:#fff;transform:translateX(-2px)}
+.spatial-level-navigation button:disabled{cursor:default;opacity:.18;transform:none}
+.spatial-level-navigation button:not([data-available]){visibility:hidden;pointer-events:none}
+.spatial-level-navigation i{width:7px;height:7px;border-left:1px solid currentColor;border-top:1px solid currentColor}
+.spatial-level-navigation i[data-direction="up"]{transform:translateY(2px) rotate(45deg)}.spatial-level-navigation i[data-direction="down"]{transform:translateY(-2px) rotate(225deg)}
+.spatial-level-navigation__indicator{display:grid;place-content:center;gap:4px;width:28px;height:30px;color:rgba(235,236,231,.2)}.spatial-level-navigation__indicator i{display:block;width:10px;height:1px;border:0;background:currentColor;transition:width 150ms ease-out,background-color 150ms linear,box-shadow 150ms linear}.spatial-level-navigation__indicator i[data-active]{width:16px;background:rgba(235,236,231,.7);box-shadow:0 0 7px rgba(235,236,231,.18)}
+@media(max-width:719px){.spatial-level-navigation{right:10px;grid-template-rows:32px 30px 32px}.spatial-level-navigation button{width:32px;height:32px;background:rgba(7,8,8,.74)}.spatial-level-navigation__indicator{width:32px}}
+@media(prefers-reduced-motion:reduce){.spatial-level-navigation button{transition-duration:1ms}}

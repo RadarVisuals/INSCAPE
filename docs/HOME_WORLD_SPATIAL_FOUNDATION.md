@@ -29,6 +29,8 @@ world architecture / spatial grid
 
 The home and gallery follow the same root compositor boundary. The public stage is not part of this stack. Atelier retains the stage system for authoring and future free-roam work.
 
+The vertical architecture now reserves three explicit spatial levels: an unassigned Upper world at `-1`, Home at `0`, and Gallery at `+1`. `UpperWorldSurface.jsx` contains the empty architectural surface and inverse transition primitives. Subtle spatial arrows connect the three levels, but the Upper world deliberately has no product label, content, or dock destination until its role is defined.
+
 ## Home interaction contract
 
 - Empty-space click moves the Keeper and does not move the camera.

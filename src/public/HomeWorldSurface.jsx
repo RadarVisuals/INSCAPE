@@ -1,13 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { clampVerticalHomeWorldCamera } from './homeWorldCamera.js';
-import { exceedsSpatialPointerDragThreshold, finalizeSpatialPointer } from './spatialWorldCamera.js';
+import { exceedsSpatialPointerDragThreshold, finalizeSpatialPointer, getCenteredHorizontalGridOffset } from './spatialWorldCamera.js';
 import './homeWorld.css';
 
-export default function HomeWorldSurface({ camera, geometry, world, gridVisible, theme, visible, onCameraChange, onMoveKeeper, onOpenContextMenu, narrowGestureRef }) {
+export default function HomeWorldSurface({ camera, geometry, world, gridVisible, theme, visible, transitionPhase = 'home', gridPhaseX = 0, onCameraChange, onMoveKeeper, onOpenContextMenu, narrowGestureRef }) {
   const surfaceRef = useRef(null);
   const pointerRef = useRef(null);
   const narrow = geometry.narrow;
+  const gridSpacing = narrow ? 56 : 80;
+  // The grid lives inside the camera-transformed world, so compensate for
+  // that parent translation before placing its center line in screen space.
+  const gridOffset = getCenteredHorizontalGridOffset(-(camera.x + gridPhaseX), geometry.width, gridSpacing);
   const worldTheme = { ...theme, '--module-accent': theme?.['--os-accent'] || '#e87945' };
 
   const handlePointerDown = (event) => {
@@ -62,6 +66,7 @@ export default function HomeWorldSurface({ camera, geometry, world, gridVisible,
     className="home-world-surface"
     data-desktop-canvas
     data-visible={visible || undefined}
+    data-gallery-transition={transitionPhase}
     aria-label="Vertically scrolling home world"
     style={worldTheme}
     onPointerDown={handlePointerDown}
@@ -72,9 +77,7 @@ export default function HomeWorldSurface({ camera, geometry, world, gridVisible,
     onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); onOpenContextMenu?.(event); }}
   >
     <div className="home-world-surface__world" style={{width:world.width,height:world.height,transform:`translate3d(${-camera.x}px,${-camera.y}px,0)`}}>
-      {gridVisible && <div className="home-world-surface__grid" aria-hidden="true" />}
-      <div className="home-world-surface__sectors" aria-hidden="true">{Array.from({length:9},(_,index)=>{const column=index%3;const row=Math.floor(index/3);return <span key={index} style={{left:(column+.5)*world.viewportWidth,top:(row+.5)*world.viewportHeight}}>{String.fromCharCode(65+column)}{row+1}</span>;})}</div>
-      <i className="home-world-surface__origin" aria-hidden="true" style={{left:world.viewportWidth,top:world.viewportHeight}}/>
+      {gridVisible && <div className="home-world-surface__grid" aria-hidden="true" style={{ '--home-grid-offset': `${gridOffset}px` }} />}
     </div>
   </section>;
 

@@ -73,3 +73,9 @@ export function getSpatialGridOffset(camera, spacing = 80) {
   const wrap = (value) => ((-value % size) + size) % size;
   return { x: wrap(view.x), y: wrap(view.y) };
 }
+
+export function getCenteredHorizontalGridOffset(cameraX, viewportWidth, spacing = 80) {
+  const size = Math.max(1, Math.abs(finiteOr(spacing, 80)));
+  const center = finiteOr(viewportWidth) / 2;
+  return (((center - finiteOr(cameraX)) % size) + size) % size;
+}

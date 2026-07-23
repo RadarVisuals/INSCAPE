@@ -83,8 +83,8 @@ test('Gallery remains spatial while Creations is an independent dock workspace',
   const dockSource = readFileSync(new URL('./ProfileNavigationDock.jsx', import.meta.url), 'utf8');
   const gallerySource = readFileSync(new URL('./GalleryWorld.jsx', import.meta.url), 'utf8');
 
-  assert.match(shellSource, /moduleRefs\.current\.set\('gallery'/);
-  assert.match(shellSource, /moduleRefs\.current\.set\('creations'/);
+  assert.match(shellSource, /gallery=\{upperOpen \? null : \{/);
+  assert.match(dockSource, /GalleryNavigationCard/);
   assert.match(dockSource, /CreationsBrowser/);
   assert.doesNotMatch(shellSource, /<CreationsWindow/);
   assert.match(shellSource, /<GalleryWorld/);
@@ -98,13 +98,47 @@ test('Gallery remains spatial while Creations is an independent dock workspace',
   assert.doesNotMatch(gallerySource, /if \(direction\) onMoveKeeper\?\./);
 });
 
-test('system destination order is Activity, Gallery, Creations, Index', () => {
+test('Gallery is routed through the profile dock without legacy destination controls', () => {
   const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
-  const activity = shellSource.indexOf('>[ Activity ]</button>');
-  const gallery = shellSource.indexOf('>[ Gallery ]</button>');
-  const creations = shellSource.indexOf('>[ Creations ]</button>');
-  const index = shellSource.indexOf('>[ Index ]</button>');
-  assert.ok(activity >= 0 && activity < gallery && gallery < creations && creations < index);
+  const dockSource = readFileSync(new URL('./ProfileNavigationDock.jsx', import.meta.url), 'utf8');
+  assert.match(shellSource, /gallery=\{upperOpen \? null : \{/);
+  assert.match(dockSource, /<GalleryNavigationCard/);
+  assert.doesNotMatch(shellSource, />\[ Gallery \]<\/button>/);
+  assert.doesNotMatch(shellSource, /className="system-hud__destinations"/);
+});
+
+test('Gallery transition keeps both spatial worlds mounted through a reversible vertical handoff', () => {
+  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
+  const homeSource = readFileSync(new URL('./HomeWorldSurface.jsx', import.meta.url), 'utf8');
+  const gallerySource = readFileSync(new URL('./GalleryWorld.jsx', import.meta.url), 'utf8');
+  const homeStyles = readFileSync(new URL('./homeWorld.css', import.meta.url), 'utf8');
+  const galleryStyles = readFileSync(new URL('./galleryWorld.css', import.meta.url), 'utf8');
+  const dockSource = readFileSync(new URL('./ProfileNavigationDock.jsx', import.meta.url), 'utf8');
+
+  assert.match(shellSource, /galleryTransitionPhase/);
+  assert.match(shellSource, /\['preparing', 'entering', 'exiting'\]/);
+  assert.match(shellSource, /setGalleryTransitionPhase\('exiting'\)/);
+  assert.match(homeSource, /data-gallery-transition=\{transitionPhase\}/);
+  assert.match(gallerySource, /cameraX - gridPhaseX/);
+  assert.match(shellSource, /setHomeGridPhaseX\(inheritedPhase\)/);
+  assert.match(dockSource, /collapseToAvatar=\{effectiveGalleryOpen \|\| spatialWorldActive\}/);
+  assert.match(homeStyles, /@keyframes home-world-descend/);
+  assert.match(galleryStyles, /@keyframes gallery-world-arrive/);
+  assert.match(galleryStyles, /@keyframes gallery-floor-unfold/);
+});
+
+test('Upper world is connected above Home through spatial level navigation', () => {
+  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
+  const upperSource = readFileSync(new URL('./UpperWorldSurface.jsx', import.meta.url), 'utf8');
+  const upperStyles = readFileSync(new URL('./upperWorld.css', import.meta.url), 'utf8');
+  const galleryStyles = readFileSync(new URL('./galleryWorld.css', import.meta.url), 'utf8');
+
+  assert.match(upperSource, /className="upper-world"/);
+  assert.match(upperStyles, /@keyframes upper-world-arrive/);
+  assert.match(upperStyles, /@keyframes upper-ceiling-unfold/);
+  assert.match(shellSource, /<UpperWorldSurface/);
+  assert.match(shellSource, /<SpatialLevelNavigation/);
+  assert.doesNotMatch(galleryStyles, /gallery-world__ceiling/);
 });
 
 test('all non-owner routes mount the published boundary instead of the local workspace shell', () => {
