@@ -1,10 +1,8 @@
 .profile-identity-card {
   --profile-card-speed: 380ms;
   --profile-card-width: 340px;
-  position: fixed;
-  z-index: 150;
-  top: 20px;
-  left: 18px;
+  position: relative;
+  z-index: 1;
   width: 68px;
   min-height: 68px;
   height: auto;
@@ -176,7 +174,6 @@
 .profile-identity-card__link-group { display: flex; align-items: center; gap: 14px; }
 
 @media (max-width: 719px) {
-  .profile-identity-card { top: 14px; left: 14px; }
   .profile-identity-card[data-expanded] { width: calc(100vw - 28px); }
 }
 

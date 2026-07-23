@@ -289,10 +289,14 @@ test('shared visitor profile card preserves its anchor through avatar, compact, 
   await viewport(1280, 720, false); await navigate();
   const card = '.profile-identity-card';
   const avatar = `${card} .profile-identity-card__avatar`;
+  const categories = '.category-navigation-card';
   const initial = await evaluate(`(()=>{const c=document.querySelector(${JSON.stringify(card)}).getBoundingClientRect();const a=document.querySelector(${JSON.stringify(avatar)}).getBoundingClientRect();return {state:document.querySelector(${JSON.stringify(card)}).dataset.state,left:c.left,top:c.top,width:c.width,height:c.height,avatarLeft:a.left,avatarTop:a.top,avatarWidth:a.width,avatarHeight:a.height}})()`);
   assert.deepEqual(initial, { state: 'avatar', left: 18, top: 20, width: 68, height: 68, avatarLeft: 23, avatarTop: 25, avatarWidth: 58, avatarHeight: 58 });
+  assert.equal(await evaluate(`document.querySelector(${JSON.stringify(categories)}).getAttribute('aria-hidden')`), 'true');
   await click(avatar); await waitFor(`document.querySelector(${JSON.stringify(card)}).dataset.state === 'compact' && document.querySelector(${JSON.stringify(card)}).getBoundingClientRect().width >= 217.9`, 'compact profile identity');
   assert.deepEqual(await evaluate(`(()=>{const c=document.querySelector(${JSON.stringify(card)}).getBoundingClientRect();const a=document.querySelector(${JSON.stringify(avatar)}).getBoundingClientRect();return {width:Math.round(c.width),height:Math.round(c.height),avatarLeft:a.left,avatarTop:a.top,avatarWidth:a.width,avatarHeight:a.height}})()`), { width: 218, height: 68, avatarLeft: 23, avatarTop: 25, avatarWidth: 58, avatarHeight: 58 });
+  await waitFor(`document.querySelector(${JSON.stringify(categories)}).hasAttribute('data-visible')`, 'categories control follows compact profile');
+  assert.equal(await evaluate(`(()=>{const c=document.querySelector(${JSON.stringify(card)}).getBoundingClientRect();const n=document.querySelector(${JSON.stringify(categories)}).getBoundingClientRect();return Math.round(n.top-c.bottom)})()`), 8);
   await click(avatar); await waitFor(`(()=>{const c=document.querySelector(${JSON.stringify(card)});const d=c?.querySelector('.profile-identity-card__details');return c?.dataset.state === 'expanded' && c.getBoundingClientRect().width >= 339.9 && c.getBoundingClientRect().height >= 67 + d.scrollHeight})()`, 'expanded profile identity');
   const expanded = await evaluate(`(()=>{const c=document.querySelector(${JSON.stringify(card)}).getBoundingClientRect();const a=document.querySelector(${JSON.stringify(avatar)}).getBoundingClientRect();const d=document.querySelector('.profile-identity-card__details').getBoundingClientRect();return {width:Math.round(c.width),contentAligned:Math.abs(c.bottom-d.bottom)<=1,avatarLeft:a.left,avatarTop:a.top}})()`);
   assert.deepEqual(expanded, { width: 340, contentAligned: true, avatarLeft: 23, avatarTop: 25 });
@@ -303,6 +307,24 @@ test('shared visitor profile card preserves its anchor through avatar, compact, 
   await click(avatar);
   assert.equal(await evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(card)})).transitionDelay.split(',')[0].trim()`), '0.08s', 'card width waits for the detail fade on close');
   await waitFor(`document.querySelector(${JSON.stringify(card)}).dataset.state === 'avatar' && document.querySelector(${JSON.stringify(card)}).getBoundingClientRect().width <= 68.1 && parseFloat(getComputedStyle(document.querySelector('.profile-identity-card__details')).opacity) === 0`, 'collapsed profile identity');
+  await waitFor(`document.querySelector(${JSON.stringify(categories)}).getAttribute('aria-hidden') === 'true'`, 'categories control hides with avatar profile');
+});
+
+test('categories card uses published spaces, keeps numeric labels, and opens the selected space', async () => {
+  await viewport(1280, 720, false); await navigate(); await closeFixtureWindows();
+  await click('.profile-identity-card__avatar');
+  await waitFor(`document.querySelector('.category-navigation-card').hasAttribute('data-visible')`, 'categories control visible');
+  assert.equal(await evaluate(`document.querySelector('.category-navigation-card > header strong').textContent`), 'CATEGORIES');
+  assert.equal(await evaluate(`document.querySelector('.category-navigation-card > header small')`), null, 'closed control has no subtitle');
+  assert.equal(await evaluate(`document.querySelector('.category-navigation-card > footer')`), null, 'expanded card has no legacy navigation footer');
+  await click('.category-navigation-card > header > button');
+  await waitFor(`document.querySelector('.category-navigation-card').hasAttribute('data-expanded')`, 'categories card expanded');
+  const rows = await evaluate(`[...document.querySelectorAll('.category-navigation-card nav button')].map((button)=>({code:button.querySelector('small').textContent,label:button.querySelector('span').textContent}))`);
+  assert.equal(rows.length, 7);
+  assert.deepEqual(rows.map((row) => row.code), ['01', '02', '03', '04', '05', '06', '07']);
+  assert.equal(await evaluate(`(()=>{const nav=document.querySelector('.category-navigation-card nav');return nav.scrollHeight===nav.clientHeight})()`), true, 'complete category list does not create a false scrollbar');
+  await click('.category-navigation-card nav button:last-of-type');
+  await waitFor(`document.querySelector('[data-launcher-id="space:Alpha:6"]').dataset.windowState === 'open'`, 'category opens selected published space');
 });
 
 test('React StrictMode reuses one factory provider while cleanup, replacement, and recovery stay safe', async () => {

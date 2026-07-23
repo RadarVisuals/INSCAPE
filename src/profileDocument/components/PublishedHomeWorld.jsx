@@ -19,7 +19,7 @@ import {
   visitorWindowTransition
 } from '../domain/publishedVisitorWorld.js';
 import PublishedProfileDocumentSpaceWindow from './PublishedProfileDocumentSpaceWindow.jsx';
-import ProfileIdentityCard from '../../public/ProfileIdentityCard.jsx';
+import ProfileNavigationDock from '../../public/ProfileNavigationDock.jsx';
 
 const THEME = Object.freeze({ '--os-accent': '#e87945', '--module-accent': '#e87945', '--hu-text': '#eeebdf', '--hu-text-muted': '#a9a59c' });
 
@@ -52,6 +52,10 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
     tags: [],
     links: []
   }), [avatarUrl, displayName, document.profile.address]);
+  const navigationCategories = useMemo(() => document.spaces.map((space) => ({
+    id: space.id,
+    label: space.label
+  })), [document.spaces]);
 
   useEffect(() => {
     const resize = () => setViewport(viewportSize());
@@ -191,7 +195,15 @@ export default function PublishedHomeWorld({ document, onMoveKeeper }) {
 
   const transform = publishedWorldTransform(layout, camera);
   return <main ref={worldRef} className="public-shell published-home-world" data-interface-visible data-preview-mode="visitor" data-published-focus-fallback tabIndex="-1" aria-label="Published profile visitor world" style={THEME} onKeyDownCapture={(event) => { if (event.code === 'Space' && event.target.closest?.('button,a[href],[role="button"]')) event.stopPropagation(); }}>
-    <ProfileIdentityCard profile={publicProfile} />
+    <ProfileNavigationDock
+      profile={publicProfile}
+      categories={navigationCategories}
+      activeCategoryId={windowState.zOrder.at(-1) || null}
+      onCategorySelect={(category) => {
+        const space = document.spaces.find((candidate) => candidate.id === category.id);
+        if (space) toggleSpace(space);
+      }}
+    />
     <header className="public-shell__masthead published-home-world__header"><div className="system-hud__identity"><h1>[ <span className="system-hud__brand-accent">PUBLISHED WORLD</span> ]</h1><span className="system-hud__operator">{displayName}</span><span className="system-hud__live"><i aria-hidden="true" />Document v{document.version}</span></div></header>
     <HomeWorldSurface camera={camera} geometry={layout.geometry} world={layout.world} gridVisible theme={THEME} visible onCameraChange={setCamera} onMoveKeeper={onMoveKeeper} narrowGestureRef={compactTapRef} />
     <section className="published-home-world__spatial" aria-label="Published Canvas Spaces and artwork" style={{ width: layout.placementGeometry.usableWidth, height: layout.placementGeometry.usableHeight, transform, '--grid-cell-width': `${layout.geometry.cellWidth}px`, '--grid-cell-height': `${layout.geometry.cellHeight}px` }} onWheel={handleWorldWheel} onPointerDown={beginCompactTap} onPointerMove={moveCompactTap} onPointerUp={finishCompactTap} onPointerCancel={(event) => finishCompactTap(event, true)} onPointerLeave={(event) => { if (event.pointerType === 'mouse') finishCompactTap(event, true); }}>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   identityCode,
   PROFILE_IDENTITY_CARD_STATE,
@@ -16,8 +16,10 @@ function Avatar({ src }) {
   return <img src={src} alt="" referrerPolicy="no-referrer" onError={() => setFailed(true)} />;
 }
 
-export default function ProfileIdentityCard({ profile, expanded: controlledExpanded, initialExpanded = false, onExpandedChange }) {
+export default function ProfileIdentityCard({ profile, expanded: controlledExpanded, initialExpanded = false, onExpandedChange, onStateChange }) {
   const [state, setState] = useState((controlledExpanded ?? initialExpanded) ? PROFILE_IDENTITY_CARD_STATE.EXPANDED : PROFILE_IDENTITY_CARD_STATE.AVATAR);
+  const onStateChangeRef = useRef(onStateChange);
+  onStateChangeRef.current = onStateChange;
   const code = identityCode(profile?.address);
   const name = profile?.name || 'Unnamed profile';
   const links = useMemo(() => selectProfileCardLinks(profile?.links), [profile?.links]);
@@ -31,6 +33,10 @@ export default function ProfileIdentityCard({ profile, expanded: controlledExpan
     : state === PROFILE_IDENTITY_CARD_STATE.COMPACT
       ? 'Expand profile details'
       : 'Collapse profile to avatar';
+
+  useEffect(() => {
+    onStateChangeRef.current?.(state);
+  }, [state]);
 
   useEffect(() => {
     if (typeof controlledExpanded !== 'boolean') return;

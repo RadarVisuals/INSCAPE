@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import ProfileIdentityCard from './ProfileIdentityCard.jsx';
+import ProfileNavigationDock from './ProfileNavigationDock.jsx';
 import { CollectionWindow, flushLibraryWorkspace, FolderWindow, useLibraryStore } from '../library/index.js';
 import { CreationsWindow } from '../creations/index.js';
 import AssetPreview from '../library/components/AssetPreview.jsx';
@@ -276,6 +276,15 @@ export default function ModuleGridShell({
   );
   const pinnedLaunchers = liveCanvasContent.launchers;
   const canvasObjects = liveCanvasContent.objects;
+  const navigationCategories = useMemo(() => pinnedLaunchers
+    .filter((launcher) => launcher.visitorVisible === true)
+    .map((launcher) => {
+      const folder = workspace.folders.find((entry) => entry.id === launcher.folderId);
+      return {
+        id: launcher.id,
+        label: launcher.viewType === 'favorites' ? launcher.label || 'Favorites' : folder?.name || 'Unavailable category'
+      };
+    }), [pinnedLaunchers, workspace.folders]);
   const homeWorld = useMemo(() => createVerticalHomeWorld(geometry), [geometry]);
   const homeOrigin = useMemo(() => ({ x:geometry.width, y:geometry.height, zoom:1 }), [geometry.height,geometry.width]);
   const homeCamera = geometry.narrow || homeCameraState.profileAddress !== workspace.profileAddress
@@ -1066,15 +1075,18 @@ export default function ModuleGridShell({
       ref={shellRef}
       onContextMenu={(event) => openTargetContextMenu(event, shellRef.current)}
     >
-      {interfaceVisible && <ProfileIdentityCard
+      {interfaceVisible && <ProfileNavigationDock
         profile={viewedProfile}
-        expanded={identityOpen}
-        onExpandedChange={(expanded) => {
+        profileExpanded={identityOpen}
+        onProfileExpandedChange={(expanded) => {
           setIdentityOpen(expanded);
           setIdentityPhase(expanded ? 'open' : 'closed');
           setActiveModuleId(expanded ? 'identity' : null);
           updateRuntime({ type: expanded ? 'open' : 'close', id: 'identity' });
         }}
+        categories={navigationCategories}
+        activeCategoryId={openFolderLauncherId}
+        onCategorySelect={(category) => activateLauncher(category.id)}
       />}
       <header className="public-shell__masthead">
         <div className="system-hud__primary">
