@@ -42,6 +42,7 @@ import { getSpatialGridOffset } from './spatialWorldCamera.js';
 import { CANVAS_OBJECT_KIND, getCanvasObjectDefinition } from '../library/domain/canvasObjectRegistry.js';
 import { CANVAS_OBJECT_ORDER_COMMAND } from '../library/domain/canvasObjects.js';
 import { runOwnerAuthoringMutation, selectLiveCanvasContent } from './publicAccess.js';
+import { readOwnerProfileValue, removeOwnerProfileValue, writeOwnerProfileValue } from './ownerProfileStorage.js';
 import { createVerticalHomePlacementGeometry, createVerticalHomeWorld } from './verticalHomeWorld.js';
 import {
   MODULE_LAYOUT_STORAGE_KEY,
@@ -95,20 +96,22 @@ const AUTHORING_CONTEXT_COMMANDS = new Set([
 const createHomePlacementGeometry = createVerticalHomePlacementGeometry;
 
 function defaultSystemPresentation(id, order) { return { appearanceMode: 'label', iconKey: SYSTEM_ICONS[id], span: { columns: 3, rows: 1 }, presentationOrder: order, startOpen: false, windowGeometry: null }; }
-function readSystemPresentation() { try { const value = JSON.parse(window.localStorage.getItem(SYSTEM_SCENE_KEY)); return Object.fromEntries(MODULES.map((module, index) => { const item=value?.[module.id]; return [module.id,{ ...defaultSystemPresentation(module.id,index), ...(item || {}), label:module.label, iconKey:normalizeIconKey(item?.iconKey,SYSTEM_ICONS[module.id]), span:normalizeSpan(item?.span,item?.appearanceMode) }]; })); } catch { return Object.fromEntries(MODULES.map((module,index)=>[module.id,{...defaultSystemPresentation(module.id,index),label:module.label}])); } }
+function readSystemPresentation(profileAddress) { try { const value = JSON.parse(readOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,profileAddress) || 'null'); return Object.fromEntries(MODULES.map((module, index) => { const item=value?.[module.id]; return [module.id,{ ...defaultSystemPresentation(module.id,index), ...(item || {}), label:module.label, iconKey:normalizeIconKey(item?.iconKey,SYSTEM_ICONS[module.id]), span:normalizeSpan(item?.span,item?.appearanceMode) }]; })); } catch { return Object.fromEntries(MODULES.map((module,index)=>[module.id,{...defaultSystemPresentation(module.id,index),label:module.label}])); } }
 function readGridPreference(){try{return JSON.parse(window.localStorage.getItem(GRID_PREFERENCE_KEY))?.visible!==false}catch{return true}}
-function readLegacyWindowGeometry(geometry){return decodeWindowGridGeometry(window.localStorage.getItem(LEGACY_WINDOW_GEOMETRY_KEY),geometry,readStoredPositions(geometry))}
+function readLegacyWindowGeometry(geometry,profileAddress){return decodeWindowGridGeometry(readOwnerProfileValue(window.localStorage,LEGACY_WINDOW_GEOMETRY_KEY,profileAddress),geometry,readStoredPositions(geometry,profileAddress))}
 
 function getInitialGeometry() {
   return createModuleGridGeometry(window.innerWidth, window.innerHeight);
 }
 
-function readStoredPositions(geometry) {
+function readStoredPositions(geometry, profileAddress) {
   try {
-    const current=window.localStorage.getItem(MODULE_LAYOUT_STORAGE_KEY);
-    if(current)return decodeModuleLayout(current, geometry);
-    const legacy=JSON.parse(window.localStorage.getItem(LEGACY_MODULE_LAYOUT_STORAGE_KEY));
-    return legacy?.version===3?normalizeModulePositions(legacy.positions,geometry):getDefaultModulePositions(geometry);
+    const current=readOwnerProfileValue(window.localStorage,MODULE_LAYOUT_STORAGE_KEY,profileAddress,[MODULE_LAYOUT_STORAGE_KEY,LEGACY_MODULE_LAYOUT_STORAGE_KEY]);
+    if(!current)return getDefaultModulePositions(geometry);
+    const record=JSON.parse(current);
+    const positions=record?.version===3?normalizeModulePositions(record.positions,geometry):decodeModuleLayout(record,geometry);
+    if(record?.version===3)writeOwnerProfileValue(window.localStorage,MODULE_LAYOUT_STORAGE_KEY,profileAddress,encodeModuleLayout(positions));
+    return positions;
   } catch {
     return getDefaultModulePositions(geometry);
   }
@@ -142,18 +145,20 @@ export default function ModuleGridShell({
   const workspace = useLibraryStore((state) => state.workspace);
   const setLibraryProfileAddress = useLibraryStore((state) => state.setProfileAddress);
   const setSignalProfileAddress = useSignalStore((state) => state.setProfileAddress);
+  const activateDocumentProfile = useProfileDocumentStore((state) => state.activateProfile);
   useLayoutEffect(() => {
     const profile = normalizeProfileAddress(workspaceProfileAddress);
     if (!profile) return;
+    activateDocumentProfile(profile);
     setLibraryProfileAddress(profile);
     setSignalProfileAddress(profile);
-  }, [setLibraryProfileAddress, setSignalProfileAddress, workspaceProfileAddress]);
+  }, [activateDocumentProfile, setLibraryProfileAddress, setSignalProfileAddress, workspaceProfileAddress]);
   const [geometry, setGeometry] = useState(getInitialGeometry);
-  const [positions, setPositions] = useState(() => readStoredPositions(createHomePlacementGeometry(getInitialGeometry())));
-  const [systemPresentation, setSystemPresentation] = useState(readSystemPresentation);
+  const [positions, setPositions] = useState(() => readStoredPositions(createHomePlacementGeometry(getInitialGeometry()),workspace.profileAddress));
+  const [systemPresentation, setSystemPresentation] = useState(() => readSystemPresentation(workspace.profileAddress));
   const [gridVisible, setGridVisible] = useState(readGridPreference);
   const [selectedSceneId, setSelectedSceneId] = useState(null);
-  const [runtimeWindows,setRuntimeWindows]=useState(() => loadRuntimeWindowState(window.localStorage, workspace.profileAddress, { rects: readLegacyWindowGeometry(createHomePlacementGeometry(geometry)) }));
+  const [runtimeWindows,setRuntimeWindows]=useState(() => loadRuntimeWindowState(window.localStorage, workspace.profileAddress, { rects: readLegacyWindowGeometry(createHomePlacementGeometry(geometry),workspace.profileAddress) }));
   const [identityOpen, setIdentityOpen] = useState(() => runtimeWindows.openIds.includes('identity'));
   const [identityPhase, setIdentityPhase] = useState('closed');
   const [collectionOpen, setCollectionOpen] = useState(() => runtimeWindows.openIds.includes('collection'));
@@ -183,6 +188,12 @@ export default function ModuleGridShell({
   }));
   const [keeperDockActive, setKeeperDockActive] = useState(false);
   const [availableModuleIds, setAvailableModuleIds] = useState(() => new Set());
+  useLayoutEffect(() => {
+    const profile = normalizeProfileAddress(workspace.profileAddress);
+    if (!profile) return;
+    setPositions(readStoredPositions(createHomePlacementGeometry(geometry), profile));
+    setSystemPresentation(readSystemPresentation(profile));
+  }, [geometry, workspace.profileAddress]);
   const moduleRefs = useRef(new Map());
   const folderPanelRef = useRef(null);
   const launcherInspectorRef = useRef(null);
@@ -264,16 +275,17 @@ export default function ModuleGridShell({
     () => getIdentityProfileViewModel(profileIdentity, { walletConnected: visitorWalletConnected }),
     [profileIdentity, visitorWalletConnected]
   );
-  const snapshot = useProfileDocumentStore((state) => state.snapshot);
-  const snapshotGeneration = useProfileDocumentStore((state) => state.snapshotGeneration);
-  const importedDocument = useProfileDocumentStore((state) => state.imported);
-  const previewDocument = useProfileDocumentStore((state) => state.preview);
+  const documentProfileAddress = normalizeProfileAddress(workspace.profileAddress);
+  const snapshot = useProfileDocumentStore((state) => state.profileAddress === documentProfileAddress ? state.snapshot : null);
+  const snapshotGeneration = useProfileDocumentStore((state) => state.profileAddress === documentProfileAddress ? state.snapshotGeneration : 0);
+  const importedDocument = useProfileDocumentStore((state) => state.profileAddress === documentProfileAddress ? state.imported : null);
+  const previewDocument = useProfileDocumentStore((state) => state.profileAddress === documentProfileAddress ? state.preview : null);
   const installSnapshot = useProfileDocumentStore((state) => state.installSnapshot);
   const installImported = useProfileDocumentStore((state) => state.installImported);
   const enterPreview = useProfileDocumentStore((state) => state.enterPreview);
   const exitPreview = useProfileDocumentStore((state) => state.exitPreview);
   const setDocumentError = useProfileDocumentStore((state) => state.setError);
-  const documentError = useProfileDocumentStore((state) => state.error);
+  const documentError = useProfileDocumentStore((state) => state.profileAddress === documentProfileAddress ? state.error : null);
   const setLauncherPosition = useLibraryStore((state) => state.setLauncherPosition);
   const setLauncherGeometry = useLibraryStore((state) => state.setLauncherGeometry);
   const setLauncherPresentation = useLibraryStore((state) => state.setLauncherPresentation);
@@ -395,7 +407,8 @@ export default function ModuleGridShell({
   if (draftGenerationRef.current.fingerprint !== draftFingerprint) {
     draftGenerationRef.current = { fingerprint: draftFingerprint, generation: draftGenerationRef.current.generation + 1 };
   }
-  const snapshotStale = Boolean(snapshot && useProfileDocumentStore.getState().snapshotDraftFingerprint !== draftFingerprint);
+  const snapshotStale = Boolean(snapshot && useProfileDocumentStore.getState().profileAddress === documentProfileAddress
+    && useProfileDocumentStore.getState().snapshotDraftFingerprint !== draftFingerprint);
   const draftSaveStatus = draftSaveState.profileAddress === workspace.profileAddress ? draftSaveState.status : 'saving';
   const persistOwnerDraft = useCallback(() => {
     const librarySaved = flushLibraryWorkspace();
@@ -405,12 +418,11 @@ export default function ModuleGridShell({
     });
     let layoutSaved = true;
     if (!geometry.narrow) {
-      try { window.localStorage.setItem(MODULE_LAYOUT_STORAGE_KEY, encodeModuleLayout(positions)); }
-      catch (error) { layoutSaved = false; reportControlledError('module-grid-layout-persist', error); }
+      layoutSaved = writeOwnerProfileValue(window.localStorage,MODULE_LAYOUT_STORAGE_KEY,workspace.profileAddress,encodeModuleLayout(positions));
+      if (!layoutSaved) reportControlledError('module-grid-layout-persist', new Error('Could not save the profile-scoped module layout'));
     }
-    let systemPresentationSaved = true;
-    try { window.localStorage.setItem(SYSTEM_SCENE_KEY, JSON.stringify(systemPresentation)); }
-    catch (error) { systemPresentationSaved = false; reportControlledError('system-presentation-persist', error); }
+    const systemPresentationSaved = writeOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,workspace.profileAddress,JSON.stringify(systemPresentation));
+    if (!systemPresentationSaved) reportControlledError('system-presentation-persist', new Error('Could not save the profile-scoped system presentation'));
     const saved = librarySaved && signalsSaved && presentationSaved && layoutSaved && systemPresentationSaved;
     if (!saved) reportControlledError('owner-draft-persist', new Error('Could not save every owner draft source'));
     setDraftSaveState({ profileAddress: workspace.profileAddress, status: saved ? 'saved' : 'error' });
@@ -437,11 +449,12 @@ export default function ModuleGridShell({
   const getPublicationContext = useCallback(() => {
     const wallet = getWalletPublicationContext?.() || {};
     const documentState = useProfileDocumentStore.getState();
-    const liveSnapshot = documentState.snapshot;
     const liveWorkspaceAddress = useLibraryStore.getState().workspace.profileAddress;
+    const documentContextMatches = documentState.profileAddress === normalizeProfileAddress(liveWorkspaceAddress);
+    const liveSnapshot = documentContextMatches ? documentState.snapshot : null;
     const host = wallet.hostProfileAddress?.toLowerCase(); const workspaceAddress = liveWorkspaceAddress?.toLowerCase();
     return { ...wallet, workspaceProfileAddress: liveWorkspaceAddress,
-      viewedProfileAddress, snapshotGeneration: documentState.snapshotGeneration,
+      viewedProfileAddress, snapshotGeneration: documentContextMatches ? documentState.snapshotGeneration : 0,
       snapshotArtifactHash: liveSnapshot ? canonicalPublicationHash(liveSnapshot) : null,
       snapshotContentFingerprint: liveSnapshot ? publicationContentFingerprint(liveSnapshot) : null,
       draftFingerprint: publicationContentFingerprint(draftDocument), draftGeneration: draftGenerationRef.current.generation,
@@ -475,7 +488,7 @@ export default function ModuleGridShell({
   useEffect(() => {
     let keyExists = false;
     try { keyExists = window.localStorage.getItem(`os-underneath.runtime-windows.v1:${workspace.profileAddress}`) !== null; } catch { /* Storage is optional. */ }
-    const loaded = loadRuntimeWindowState(window.localStorage, workspace.profileAddress, { rects: readLegacyWindowGeometry(createHomePlacementGeometry(geometry)) });
+    const loaded = loadRuntimeWindowState(window.localStorage, workspace.profileAddress, { rects: readLegacyWindowGeometry(createHomePlacementGeometry(geometry),workspace.profileAddress) });
     const next = normalizeRuntimeWindowGeometry(keyExists || Object.keys(loaded.rects).length ? loaded : authoredWindowDefaults, placementGeometry);
     loadedRuntimeProfileRef.current = workspace.profileAddress;
     setRuntimeWindows(next);
@@ -586,7 +599,6 @@ export default function ModuleGridShell({
         interactionRef.current = null;
         setInteraction(null);
         setGeometry(nextGeometry);
-        setPositions(readStoredPositions(createHomePlacementGeometry(nextGeometry)));
       });
     };
     window.addEventListener('resize', resize);
@@ -605,12 +617,9 @@ export default function ModuleGridShell({
 
   const persistPositions = useCallback((nextPositions) => {
     if (geometry.narrow) return;
-    try {
-      window.localStorage.setItem(MODULE_LAYOUT_STORAGE_KEY, encodeModuleLayout(nextPositions));
-    } catch (error) {
-      reportControlledError('module-grid-layout-persist', error);
-    }
-  }, [geometry.narrow]);
+    if (!writeOwnerProfileValue(window.localStorage,MODULE_LAYOUT_STORAGE_KEY,workspace.profileAddress,encodeModuleLayout(nextPositions)))
+      reportControlledError('module-grid-layout-persist', new Error('Could not save the profile-scoped module layout'));
+  }, [geometry.narrow, workspace.profileAddress]);
 
   const updatePresentation = useCallback((id, patch) => {
     if (!ownerAuthoringEnabled) return;
@@ -622,9 +631,9 @@ export default function ModuleGridShell({
       if(!launcherGeometryAvailable(id,candidate,spatialSceneItems,placementGeometry))return;
       patch={...patch,span};
     }
-    if (Object.hasOwn(MODULE_ENTRY_ORDER,id)) setSystemPresentation((current)=>{ const next={...current,[id]:{...current[id],...patch}}; try{window.localStorage.setItem(SYSTEM_SCENE_KEY,JSON.stringify(next));}catch{} return next; });
+    if (Object.hasOwn(MODULE_ENTRY_ORDER,id)) setSystemPresentation((current)=>{ const next={...current,[id]:{...current[id],...patch}}; writeOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,workspace.profileAddress,JSON.stringify(next)); return next; });
     else setLauncherPresentation(id,patch);
-  },[geometry,ownerAuthoringEnabled,placementGeometry,sceneById,setLauncherPresentation,spatialSceneItems]);
+  },[geometry,ownerAuthoringEnabled,placementGeometry,sceneById,setLauncherPresentation,spatialSceneItems,workspace.profileAddress]);
   const updateRuntime = useCallback((action) => setRuntimeWindows((current) => updateRuntimeWindowState(current, action)), []);
   const commitWindowGeometry=useCallback((id,rect)=>{const key=id.startsWith('folder-panel:')?id.slice('folder-panel:'.length):id.replace('-panel','');updateRuntime({ type: 'geometry', id: key, rect });},[updateRuntime]);
 
@@ -632,8 +641,8 @@ export default function ModuleGridShell({
     if (!ownerAuthoringEnabled) return;
     if (!Object.hasOwn(MODULE_ENTRY_ORDER,id)) { setLauncherGeometry(id,rect); return; }
     const nextPositions={...positions,[id]:{column:rect.column,row:rect.row}};setPositions(nextPositions);persistPositions(nextPositions);
-    const nextPresentation={...systemPresentation,[id]:{...systemPresentation[id],span:{columns:rect.columnSpan,rows:rect.rowSpan}}};setSystemPresentation(nextPresentation);try{window.localStorage.setItem(SYSTEM_SCENE_KEY,JSON.stringify(nextPresentation))}catch{}
-  },[ownerAuthoringEnabled,persistPositions,positions,setLauncherGeometry,systemPresentation]);
+    const nextPresentation={...systemPresentation,[id]:{...systemPresentation[id],span:{columns:rect.columnSpan,rows:rect.rowSpan}}};setSystemPresentation(nextPresentation);writeOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,workspace.profileAddress,JSON.stringify(nextPresentation));
+  },[ownerAuthoringEnabled,persistPositions,positions,setLauncherGeometry,systemPresentation,workspace.profileAddress]);
   const commitCanvasObjectGeometry = useCallback((id,rect) => runOwnerAuthoringMutation(ownerAuthoringEnabled, () => setCanvasObjectGeometry(id,rect)),[ownerAuthoringEnabled,setCanvasObjectGeometry]);
 
   const commitPosition = useCallback((id, position) => {
@@ -785,7 +794,7 @@ export default function ModuleGridShell({
     setPositions(defaults);
     resetWorkspaceCanvasLayout();
     if (geometry.narrow) {
-      try { window.localStorage.removeItem(MODULE_LAYOUT_STORAGE_KEY); } catch { /* Storage is optional. */ }
+      removeOwnerProfileValue(window.localStorage,MODULE_LAYOUT_STORAGE_KEY,workspace.profileAddress);
     } else persistPositions(defaults);
   };
 
@@ -1139,7 +1148,7 @@ export default function ModuleGridShell({
     else if (command === 'toggle-start-open') {
       const rect = runtimeWindows.rects[runtimeId] || defaultWindowGridRect(runtimeId, geometry, canvasPositions[runtimeId]);
       if (launcher) setLauncherStartOpen(launcher.id, !launcher.startOpen, rect);
-      else setSystemPresentation((current) => { const next={...current,[runtimeId]:{...current[runtimeId],startOpen:!current[runtimeId]?.startOpen,windowGeometry:rect}}; try{window.localStorage.setItem(SYSTEM_SCENE_KEY,JSON.stringify(next));}catch{} return next; });
+      else setSystemPresentation((current) => { const next={...current,[runtimeId]:{...current[runtimeId],startOpen:!current[runtimeId]?.startOpen,windowGeometry:rect}}; writeOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,workspace.profileAddress,JSON.stringify(next)); return next; });
     }
     setContextMenu(null);
   }, [authoredWindowDefaults, beginArtworkChoice, beginGalleryArtworkChoice, canvasObjectById, canvasPositions, closeAllWindows, contextMenu, createFolderAtContext, geometry, homeOrigin, keeperVisible, onKeeperVisibilityChange, onStageVisibilityChange, openArtworkInspector, openArtworkPreview, openLauncherInspector, openModule, ownerAuthoringEnabled, pinnedLaunchers, placementGeometry, removeCanvasObject, reorderCanvasObject, resetWindows, runtimeWindows.rects, sceneById, setCanvasObjectLocked, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility, setHomeCameraImmediately, setLauncherStartOpen, setLauncherVisitorVisibility, stageVisible, toggleGrid, unpinView, updateRuntime, workspace.profileAddress]);

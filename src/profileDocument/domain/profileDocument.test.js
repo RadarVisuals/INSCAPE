@@ -5,7 +5,7 @@ import { canonicalSerializeProfileDocument, formatProfileDocumentJson, profileDo
 import { migrateProfileDocument } from './profileDocumentMigration.js';
 import { parseProfileDocumentJson, ProfileDocumentValidationError, validateProfileDocument } from './profileDocumentValidation.js';
 import { createProfileDocumentRestorePlan, executeAtomicRestore } from './profileDocumentRestore.js';
-import { createProfileDocumentState, enterDocumentPreview, exitDocumentPreview, isSnapshotStale, setImportedDocument, setSnapshot } from '../state/profileDocumentState.js';
+import { activateProfileDocumentState, createProfileDocumentState, enterDocumentPreview, exitDocumentPreview, isSnapshotStale, setImportedDocument, setSnapshot } from '../state/profileDocumentState.js';
 import { loadRestoredPresentation, profilePresentationKey, saveRestoredPresentation } from '../storage/profileDocumentStorage.js';
 import { projectDocumentAsset } from './documentProjection.js';
 import { PROFILE_DOCUMENT_LIMITS } from './constants.js';
@@ -199,6 +199,23 @@ test('import preview is isolated and exit preserves draft state', () => {
   state = enterDocumentPreview(state, 'imported'); state.preview.spaces[0].label = 'Visitor mutation';
   assert.deepEqual(state.preview.presentation.environment, { type: 'shader', shaderId: 'neural-field' });
   state = exitDocumentPreview(state); assert.deepEqual(workspace(), draft); assert.equal(state.imported.spaces[0].label, 'Public A');
+});
+
+test('switching the active profile clears snapshot, import, preview, lineage, and errors', () => {
+  const source = build();
+  let state = createProfileDocumentState(null, PROFILE.toLowerCase());
+  state = setSnapshot(state, source, profileDocumentContentFingerprint(source));
+  state = setImportedDocument(state, source);
+  state = enterDocumentPreview(state, 'imported');
+  state = { ...state, error: 'old profile error' };
+  const next = activateProfileDocumentState(state, CONTRACT_A);
+  assert.equal(next.profileAddress, CONTRACT_A);
+  assert.equal(next.snapshot, null);
+  assert.equal(next.imported, null);
+  assert.equal(next.preview, null);
+  assert.equal(next.snapshotGeneration, 0);
+  assert.equal(next.error, null);
+  assert.equal(activateProfileDocumentState(next, CONTRACT_A), next);
 });
 
 test('draft preview clones the current public projection without replacing the publication snapshot', () => {
