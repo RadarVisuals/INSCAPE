@@ -98,12 +98,19 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
     return () => window.removeEventListener('keydown', keydown);
   }, [layout.maxCameraX, moveCamera, onExit, viewport.width]);
 
-  const handleWheel = (event) => {
+  const handleWheel = useCallback((event) => {
     event.preventDefault();
     const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
     if (!delta) return;
     moveCamera((current) => current + delta, Math.sign(delta));
-  };
+  }, [moveCamera]);
+
+  useEffect(() => {
+    const node = viewportRef.current;
+    if (!node) return undefined;
+    node.addEventListener('wheel', handleWheel, { passive: false });
+    return () => node.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
 
   const handlePointerDown = (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
@@ -211,7 +218,6 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
     aria-label="Side-scrolling creations gallery"
     tabIndex="-1"
     style={{ ...worldTheme, '--gallery-horizon': `${layout.horizon}px` }}
-    onWheel={handleWheel}
     onPointerDown={handlePointerDown}
     onPointerMove={handlePointerMove}
     onPointerUp={finishPointer}

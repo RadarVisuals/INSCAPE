@@ -100,6 +100,8 @@ test('Gallery remains spatial while Creations is an independent dock workspace',
   assert.match(gallerySource, /GalleryFloorGrid/);
   assert.match(gallerySource, /createPortal\(<>{backdrop}{gallery}<\/>/);
   assert.match(gallerySource, /onMoveKeeperHorizontally/);
+  assert.match(gallerySource, /addEventListener\('wheel', handleWheel, \{ passive: false \}\)/);
+  assert.doesNotMatch(gallerySource, /onWheel=\{handleWheel\}/);
   assert.doesNotMatch(gallerySource, /if \(direction\) onMoveKeeper\?\./);
 });
 
