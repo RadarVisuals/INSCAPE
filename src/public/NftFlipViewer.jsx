@@ -119,7 +119,7 @@ export default function NftFlipViewer({ asset, onClose, returnFocus }) {
   }, [returnFocus]);
 
   const handleKeyDown = (event) => {
-    if (event.key === 'Escape') { event.preventDefault(); onClose(); return; }
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); return; }
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || (event.key === ' ' && event.target === turntableRef.current)) {
       event.preventDefault();
       if (!event.repeat) turnPage(event.key === 'ArrowLeft' ? -1 : 1);

@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { selectLibraryViewAssets } from '../library/domain/selectLibraryViewAssets.js';
+import { ASSET_FILING_FILTER, filterAssetsByFiling } from '../library/domain/filterAssetsByFiling.js';
 import { useLibraryStore } from '../library/state/useLibraryStore.js';
 import DesktopMenu from './menus/DesktopMenu.jsx';
 import NftFlipViewer from './NftFlipViewer.jsx';
@@ -48,6 +49,7 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
   const [view, setView] = useState({ type: 'all', id: null });
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('ALL');
+  const [filing, setFiling] = useState(ASSET_FILING_FILTER.ALL);
   const [sort, setSort] = useState('RECENT');
   const [viewerAsset, setViewerAsset] = useState(null);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
@@ -91,16 +93,18 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
   }, [folderPendingDelete]);
 
   const filteredAssets = useMemo(() => {
-    const scoped = selectLibraryViewAssets(assets, workspace, view, query)
+    const scoped = filterAssetsByFiling(
+      selectLibraryViewAssets(assets, workspace, view, query),
+      workspace.folders,
+      view.type === 'all' ? filing : ASSET_FILING_FILTER.ALL
+    )
       .filter((asset) => filter === 'ALL' || assetKind(asset) === filter);
     if (sort === 'A-Z') return [...scoped].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
     if (sort === 'COLLECTION') return [...scoped].sort((a, b) => String(a.collectionName || '').localeCompare(String(b.collectionName || '')));
     return [...scoped].reverse();
-  }, [assets, filter, query, sort, view, workspace]);
+  }, [assets, filing, filter, query, sort, view, workspace]);
 
-  const viewLabel = view.type === 'favorites'
-    ? 'FAVORITES'
-    : view.type === 'folder'
+  const viewLabel = view.type === 'folder'
       ? workspace.folders.find((folder) => folder.id === view.id)?.name || 'FOLDER'
       : 'ALL OWNED';
   const ownerLabel = profileName || workspace.profileAddress || '';
@@ -156,7 +160,6 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
         <div className="asset-index-workspace__owner"><span>{ownerLabel}</span><i>PRIVATE</i></div>
         <nav aria-label="Asset index views">
           <button type="button" data-active={view.type === 'all' || undefined} onClick={() => setView({ type: 'all', id: null })}><span>ALL OWNED</span><i>{assets.length}</i></button>
-          <button type="button" data-active={view.type === 'favorites' || undefined} onClick={() => setView({ type: 'favorites', id: null })}><span>FAVORITES</span><i>{workspace.favorites.length}</i></button>
           <p>FOLDERS</p>
           {workspace.folders.map((folder) => <button type="button" key={folder.id} data-folder data-active={view.type === 'folder' && view.id === folder.id || undefined} onClick={() => setView({ type: 'folder', id: folder.id })} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setFolderContext({ folder, anchor: { x: event.clientX, y: event.clientY }, returnFocus: event.currentTarget }); }}><span>{folder.name}</span><i>{folder.assetIds.length}</i></button>)}
         </nav>
@@ -166,7 +169,7 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
         <div className="asset-index-workspace__tools">
           <label><span aria-hidden="true">⌕</span><span className="sr-only">Search asset pool</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="SEARCH ASSET POOL" /></label>
         </div>
-        <div className="asset-index-workspace__filters"><span>FILTER</span>{FILTERS.map((kind) => <button type="button" key={kind} data-active={filter === kind || undefined} onClick={() => setFilter(kind)}>{kind}</button>)}<label><span>SORT</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="RECENT">RECENT</option><option value="A-Z">A–Z</option><option value="COLLECTION">COLLECTION</option></select></label></div>
+        <div className="asset-index-workspace__filters"><span>FILTER</span>{FILTERS.map((kind) => <button type="button" key={kind} data-active={filter === kind || undefined} onClick={() => setFilter(kind)}>{kind}</button>)}{view.type === 'all' && <label><span>FILING</span><select value={filing} onChange={(event) => setFiling(event.target.value)}>{Object.values(ASSET_FILING_FILTER).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>}<label><span>SORT</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="RECENT">RECENT</option><option value="A-Z">A–Z</option><option value="COLLECTION">COLLECTION</option></select></label></div>
         <header><strong>{viewLabel}</strong><span>{filteredAssets.length} RESULTS</span></header>
         <div className="asset-index-workspace__assets">
           {(status === 'idle' || status === 'loading') && !filteredAssets.length && <p>LOADING ASSET INDEX{sourceMode === 'RPC' ? ' / DIRECT RPC' : ''}{progress.total ? ` ${progress.resolved}/${progress.total}` : ''}</p>}

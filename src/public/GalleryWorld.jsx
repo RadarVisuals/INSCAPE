@@ -86,6 +86,7 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
 
   useEffect(() => {
     const keydown = (event) => {
+      if (event.defaultPrevented) return;
       if (event.target.closest?.('input,select,textarea')) return;
       if (event.key === 'Escape') { event.preventDefault(); onExit(); return; }
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
