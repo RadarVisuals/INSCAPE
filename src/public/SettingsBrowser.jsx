@@ -29,6 +29,12 @@ export default function SettingsBrowser({ visible = false, open = false, onOpenC
           </label>)}
         </div>
         {!settings.notifications && <p>HISTORY AND REFRESH REMAIN ACTIVE.</p>}
+        {actions?.onGridPaletteChange && <section className="settings-browser__appearance" aria-label="Grid appearance">
+          <strong>GRID APPEARANCE</strong>
+          <div>
+            {['dark', 'light'].map((palette) => <button type="button" key={palette} data-active={actions.gridPalette === palette || undefined} onClick={() => actions.onGridPaletteChange(palette)}>{palette.toUpperCase()}</button>)}
+          </div>
+        </section>}
         {actions && <section className="settings-browser__workspace" aria-label="Workspace actions">
           <strong>WORKSPACE</strong>
           <div>

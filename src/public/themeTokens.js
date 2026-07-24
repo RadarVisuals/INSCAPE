@@ -15,7 +15,12 @@ export const DEFAULT_PUBLIC_THEME = Object.freeze({
   '--hu-success': '#8ebf94',
   '--hu-warning': '#e7c66d',
   '--hu-destructive': '#ff765f',
-  '--hu-signal': '#dc6847'
+  '--hu-signal': '#dc6847',
+  '--spatial-background': '#030405',
+  '--spatial-grid-line': 'rgba(224, 226, 218, 0.19)',
+  '--spatial-vignette': 'radial-gradient(ellipse at 50% 48%, transparent 0 46%, rgba(0, 0, 0, 0.2) 76%, rgba(0, 0, 0, 0.58) 100%)',
+  '--spatial-floor': 'linear-gradient(180deg, rgba(4, 5, 5, 0.9), rgba(0, 0, 0, 0.98))',
+  '--spatial-ceiling': 'linear-gradient(180deg, #010202, rgba(5, 6, 6, 0.9))'
 });
 
 const ACTOR_ACCENTS = Object.freeze({

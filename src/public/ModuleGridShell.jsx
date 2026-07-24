@@ -170,6 +170,7 @@ export default function ModuleGridShell({
   const [folderEntryLauncherId, setFolderEntryLauncherId] = useState(null);
   const [activeModuleId, setActiveModuleId] = useState(null);
   const [activeHudCommand, setActiveHudCommand] = useState(null);
+  const [gridPalette, setGridPalette] = useState('dark');
   const [draftSaveState, setDraftSaveState] = useState(() => ({ profileAddress: workspace.profileAddress, status: 'saving' }));
   const [contextMenu, setContextMenu] = useState(null);
   const [inspectorAnchor, setInspectorAnchor] = useState(null);
@@ -248,8 +249,15 @@ export default function ModuleGridShell({
     '--hu-focus': '#f3a078',
     '--hu-signal': '#e87945',
     '--module-accent': '#e87945',
-    '--os-accent': '#e87945'
-  }), [theme]);
+    '--os-accent': '#e87945',
+    '--spatial-background': gridPalette === 'light' ? '#e7e4dc' : '#030405',
+    '--spatial-grid-line': gridPalette === 'light' ? 'rgba(12,14,14,.28)' : 'rgba(224,226,218,.19)',
+    '--spatial-vignette': gridPalette === 'light'
+      ? 'radial-gradient(ellipse at 50% 48%,transparent 0 52%,rgba(20,20,18,.04) 82%,rgba(20,20,18,.11) 100%)'
+      : 'radial-gradient(ellipse at 50% 48%,transparent 0 46%,rgba(0,0,0,.2) 76%,rgba(0,0,0,.58) 100%)',
+    '--spatial-floor': gridPalette === 'light' ? 'linear-gradient(180deg,#dedbd3,#c9c5bb)' : 'linear-gradient(180deg,rgba(4,5,5,.9),rgba(0,0,0,.98))',
+    '--spatial-ceiling': gridPalette === 'light' ? 'linear-gradient(180deg,#d3d0c8,#e7e4dc)' : 'linear-gradient(180deg,#010202,rgba(5,6,6,.9))'
+  }), [gridPalette, theme]);
 
   const moveKeeperFromHome = useCallback((clientX, clientY) => {
     if (keeperDockActive && keeperDockRef.current) {
@@ -1248,7 +1256,9 @@ export default function ModuleGridShell({
         onDiscover={openCollectionSearch}
         ownerTools={ownerAuthoringEnabled ? {
           onPublish: () => setActiveHudCommand('share'),
-          onAtelier: () => onRequestAtelier?.()
+          onAtelier: () => onRequestAtelier?.(),
+          gridPalette,
+          onGridPaletteChange: setGridPalette
         } : null}
       />}
       {interfaceVisible && <SpatialLevelNavigation
