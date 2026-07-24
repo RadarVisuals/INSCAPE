@@ -24,7 +24,7 @@ test('malformed and wrong-profile storage recovers to an empty workspace', () =>
   assert.deepEqual(wrong.favorites, []);
 });
 
-test('Phase 1 data migrates to v6 without changing favorites, folder names, or multi-folder memberships', () => {
+test('Phase 1 data migrates to v7 without changing favorites, folder names, or multi-folder memberships', () => {
   const phaseOne = { version: 1, profileAddress: profile, favorites: ['asset-a', 'asset-b'], folders: [
     { id: 'one', name: 'One / Ones', assetIds: ['asset-a', 'asset-c'], createdAt: 1, updatedAt: 2 },
     { id: 'friends', name: 'Works by Friends', assetIds: ['asset-a', 'asset-d'], createdAt: 3, updatedAt: 4 }
@@ -32,9 +32,9 @@ test('Phase 1 data migrates to v6 without changing favorites, folder names, or m
   const storage = memoryStorage({ [libraryWorkspaceKey(profile, 1)]: JSON.stringify(phaseOne) });
   const migrated = loadLibraryWorkspace(storage, profile);
 
-  assert.equal(migrated.version, 6);
+  assert.equal(migrated.version, 7);
   assert.deepEqual(migrated.favorites, phaseOne.favorites);
-  assert.deepEqual(migrated.folders, phaseOne.folders);
+  assert.deepEqual(migrated.folders, phaseOne.folders.map((folder) => ({ ...folder, public: false })));
   assert.deepEqual(migrated.canvas.launchers, []);
   assert.deepEqual(migrated.canvas.objects, []);
   assert.ok(storage.values.has(libraryWorkspaceKey(profile)));
@@ -58,7 +58,8 @@ test('v2 pinned spaces migrate public while malformed v3 visibility recovers pri
   ], canvas: { launchers: [{ id: 'ignored', viewType: 'folder', folderId: 'existing', position: { column: 3, row: 4 }, windowPosition: null }] } };
   const storage = memoryStorage({ [libraryWorkspaceKey(profile, 2)]: JSON.stringify(phaseTwo) });
   const migrated = loadLibraryWorkspace(storage, profile);
-  assert.equal(migrated.version, 6);
+  assert.equal(migrated.version, 7);
+  assert.equal(migrated.folders[0].public, true);
   assert.equal(migrated.canvas.launchers[0].visitorVisible, true);
   assert.ok(storage.values.has(libraryWorkspaceKey(profile)));
   const contradictory = normalizeWorkspace({ ...migrated, canvas: { launchers: [{ ...migrated.canvas.launchers[0], visitorVisible: 'yes' }] } }, profile);
@@ -77,10 +78,10 @@ test('v4 launchers migrate with visitor start-open disabled and v5 geometry reco
   assert.equal(zeroSpan.canvas.launchers[0].windowGeometry, null);
 });
 
-test('v5 workspaces migrate purely to an empty canvas-object collection and v6 objects normalize', () => {
+test('v5 workspaces migrate purely to an empty canvas-object collection and v6 objects normalize into v7', () => {
   const v5 = { version: 5, profileAddress: profile, favorites: ['kept'], folders: [], canvas: { launchers: [] } };
   const migrated = normalizeWorkspace(v5, profile);
-  assert.equal(migrated.version, 6); assert.deepEqual(migrated.favorites, ['kept']); assert.deepEqual(migrated.canvas.objects, []);
+  assert.equal(migrated.version, 7); assert.deepEqual(migrated.favorites, ['kept']); assert.deepEqual(migrated.canvas.objects, []);
   const current = normalizeWorkspace({ ...v5, version: 6, canvas: { launchers: [], objects: [{
     id: 'canvas:artwork:one', kind: 'framed-artwork', stableAssetId: '42:0x1111111111111111111111111111111111111111:0x01', visitorVisible: true, locked: true,
     placement: { column: 4, row: 5 }, span: { columns: 4, rows: 4 }, presentationOrder: 99,

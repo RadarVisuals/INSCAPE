@@ -10,6 +10,7 @@ import {
   renameFolder,
   resetCanvasLayout,
   setFolderAsset,
+  setFolderPublic,
   setLauncherPosition,
   setLauncherStartOpen,
   setLauncherVisitorVisibility,
@@ -83,6 +84,18 @@ test('Reset Layout clears Home placement without deleting organization, pins, or
   assert.equal(reset.canvas.launchers[0].position, null);
   assert.equal(reset.canvas.launchers[0].visitorVisible, true);
   assert.deepEqual(reset.canvas.objects, workspace.canvas.objects);
+});
+
+test('folder publication is independent from Home shortcuts and asset membership', () => {
+  let workspace = createFolder(createEmptyWorkspace('0xprofile'), 'Public archive', 10);
+  const id = workspace.folders[0].id;
+  workspace = setFolderAsset(workspace, id, 'asset-a', true, 20);
+  workspace = setFolderPublic(workspace, id, true, 30);
+  assert.equal(workspace.folders[0].public, true);
+  assert.deepEqual(workspace.folders[0].assetIds, ['asset-a']);
+  assert.equal(workspace.canvas.launchers.length, 0);
+  workspace = setFolderPublic(workspace, id, false, 40);
+  assert.equal(workspace.folders[0].public, false);
 });
 
 test('visitor visibility toggles only pinned presentation state', () => {

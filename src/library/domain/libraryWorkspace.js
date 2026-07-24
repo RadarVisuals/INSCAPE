@@ -1,4 +1,4 @@
-export const LIBRARY_WORKSPACE_VERSION = 6;
+export const LIBRARY_WORKSPACE_VERSION = 7;
 
 export const LIBRARY_VIEW_TYPES = Object.freeze({ ALL: 'all', FAVORITES: 'favorites', FOLDER: 'folder' });
 
@@ -12,7 +12,7 @@ export function createEmptyWorkspace(profileAddress) {
 
 export function createFolder(workspace, name, now = Date.now()) {
   const trimmed = String(name || '').trim();
-  return !trimmed ? workspace : { ...workspace, folders: [...workspace.folders, { id: folderId(), name: trimmed, assetIds: [], createdAt: now, updatedAt: now }] };
+  return !trimmed ? workspace : { ...workspace, folders: [...workspace.folders, { id: folderId(), name: trimmed, assetIds: [], public: false, createdAt: now, updatedAt: now }] };
 }
 
 export function renameFolder(workspace, id, name, now = Date.now()) {
@@ -135,4 +135,11 @@ export function resetCanvasLayout(workspace) {
     launchers: workspace.canvas.launchers.map((launcher) => ({ ...launcher, position: null, windowPosition: null, windowGeometry: null })),
     objects: workspace.canvas.objects
   } };
+}
+
+export function setFolderPublic(workspace, folderIdValue, isPublic, now = Date.now()) {
+  if (typeof isPublic !== 'boolean' || !workspace.folders.some((folder) => folder.id === folderIdValue)) return workspace;
+  return { ...workspace, folders: workspace.folders.map((folder) => (
+    folder.id === folderIdValue ? { ...folder, public: isPublic, updatedAt: now } : folder
+  )) };
 }

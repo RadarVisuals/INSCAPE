@@ -60,7 +60,7 @@ export default function CategoryNavigationCard({ items = [], emptyLabel = 'NO PU
         onContextMenu={onContext ? (event) => onContext(event, item) : undefined}
       >
         <small>{String(index + 1).padStart(2, '0')}</small>
-        <span>{item.label}</span>
+        <span>{item.label}{typeof item.public === 'boolean' && <small> / {item.public ? 'PUBLIC' : 'PRIVATE'}</small>}</span>
         <i aria-hidden="true">↗</i>
       </button>) : <p>{emptyLabel}</p>}
     </nav>

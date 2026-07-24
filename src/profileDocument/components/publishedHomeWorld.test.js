@@ -156,6 +156,12 @@ test('published artwork fails closed for editing while the verified owner keeps 
   assert.doesNotMatch(worldSource, /ownerAuthoringEnabled/);
 });
 
+test('navigation-only public categories do not create Home launchers', () => {
+  const navigationOnly = { ...documentFixture.spaces[0], id: 'space:navigation-only', order: 2, homeShortcut: false };
+  const layout = createPublishedVisitorLayout({ ...documentFixture, spaces: [...documentFixture.spaces, navigationOnly] }, 1280, 720);
+  assert.equal(layout.spaces.some((item) => item.id === navigationOnly.id), false);
+});
+
 test('compact published content clears masthead and identity through 719px, with 720px spatial mode', () => {
   const css = readFileSync(resolve(here, '../profileDocument.css'), 'utf8');
   for (const width of [320, 390, 719]) assert.equal(createPublishedVisitorLayout(documentFixture, width, 800).geometry.narrow, true);

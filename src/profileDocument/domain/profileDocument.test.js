@@ -42,7 +42,7 @@ function build(overrides = {}) {
     documentId: 'profile:test', revision: 3, createdAt: 1000, exportedAt: 2000, ...overrides });
 }
 
-test('builder emits a valid allowlisted deterministic v4 public document', () => {
+test('builder emits a valid allowlisted deterministic v5 public document', () => {
   const first = build(); const second = build();
   assert.equal(validateProfileDocument(first).valid, true);
   assert.deepEqual(first, second);
@@ -50,7 +50,7 @@ test('builder emits a valid allowlisted deterministic v4 public document', () =>
   assert.deepEqual(first.spaces.map((space) => space.label), ['Public A', 'Public B']);
   assert.equal(first.spaces[0].assets[0].stableAssetId, assetA.id);
   assert.equal(first.spaces[1].assets[0].stableAssetId, assetA.id, 'multi-space membership is preserved');
-  assert.equal(first.version, 4); assert.equal(first.canvasObjects.length, 1); assert.equal(first.canvasObjects[0].asset.stableAssetId, assetA.id);
+  assert.equal(first.version, 5); assert.equal(first.canvasObjects.length, 1); assert.equal(first.canvasObjects[0].asset.stableAssetId, assetA.id);
 });
 
 test('empty authored profiles are valid', () => {
@@ -98,7 +98,7 @@ test('formatted export/import round trip preserves semantic and canonical conten
 test('strict validation rejects malformed JSON, wrong type, future versions, addresses, duplicates, placement, fields and URLs', () => {
   assert.throws(() => parseProfileDocumentJson('{no'), ProfileDocumentValidationError);
   const cases = [
-    { documentType: 'OTHER' }, { version: 5 }, { profile: { address: 'bad', cachedIdentity: { address: 'bad' } } },
+    { documentType: 'OTHER' }, { version: 6 }, { profile: { address: 'bad', cachedIdentity: { address: 'bad' } } },
     { spaces: [build().spaces[0], build().spaces[0]] },
     { spaces: [{ ...build().spaces[0], placement: { column: -256, row: 0 } }] },
     { spaces: [{ ...build().spaces[0], privateState: true }] },
@@ -149,7 +149,7 @@ test('migration defaults v1 and v2 documents to the illustrated environment', ()
   legacy.presentation.systemModules = legacy.presentation.systemModules.map(({ startOpen, windowGeometry, ...module }) => module);
   legacy.spaces = legacy.spaces.map(({ startOpen, windowGeometry, ...space }) => space);
   const migrated = migrateProfileDocument(legacy);
-  assert.equal(migrated.version, 4); assert.equal(migrated.spaces[0].startOpen, false); assert.equal(migrated.spaces[0].windowGeometry, null); assert.deepEqual(migrated.canvasObjects, []);
+  assert.equal(migrated.version, 5); assert.equal(migrated.spaces[0].startOpen, false); assert.equal(migrated.spaces[0].windowGeometry, null); assert.equal(migrated.spaces[0].homeShortcut, true); assert.deepEqual(migrated.canvasObjects, []);
   assert.deepEqual(migrated.presentation.environment, { type: 'illustrated', shaderId: 'neural-field' });
   const v2 = structuredClone(build()); v2.version = 2; delete v2.presentation.environment;
   assert.deepEqual(migrateProfileDocument(v2).presentation.environment, { type: 'illustrated', shaderId: 'neural-field' });
@@ -199,6 +199,16 @@ test('import preview is isolated and exit preserves draft state', () => {
   state = enterDocumentPreview(state, 'imported'); state.preview.spaces[0].label = 'Visitor mutation';
   assert.deepEqual(state.preview.presentation.environment, { type: 'shader', shaderId: 'neural-field' });
   state = exitDocumentPreview(state); assert.deepEqual(workspace(), draft); assert.equal(state.imported.spaces[0].label, 'Public A');
+});
+
+test('public folders publish as categories without requiring a Home shortcut', () => {
+  const source = workspace();
+  source.folders.push({ id: 'navigation-only', name: 'Navigation only', assetIds: [assetA.id], public: true, createdAt: 7, updatedAt: 8 });
+  const document = build({ workspace: source });
+  const category = document.spaces.find((space) => space.id === 'library:folder:navigation-only');
+  assert.equal(category.homeShortcut, false);
+  assert.equal(category.label, 'Navigation only');
+  assert.equal(validateProfileDocument(document).valid, true);
 });
 
 test('switching the active profile clears snapshot, import, preview, lineage, and errors', () => {

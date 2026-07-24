@@ -1,12 +1,14 @@
 import { PROFILE_DOCUMENT_TYPE, PROFILE_DOCUMENT_VERSION } from './constants.js';
 import { assertValidProfileDocument, ProfileDocumentValidationError } from './profileDocumentValidation.js';
 
+const addHomeShortcut = (spaces) => (Array.isArray(spaces) ? spaces : []).map((space) => ({ ...space, homeShortcut: true }));
+
 export function migrateProfileDocument(input) {
   if (!input || input.documentType !== PROFILE_DOCUMENT_TYPE) throw new ProfileDocumentValidationError([{ path: 'documentType', code: 'wrong_document_type', message: 'Not an OS_UNDERNEATH profile document' }]);
   if (input.version === 1) {
     const migrated = structuredClone(input); migrated.version = 2;
     migrated.presentation.systemModules = migrated.presentation.systemModules.map((module) => ({ ...module, startOpen: false, windowGeometry: null }));
-    migrated.spaces = migrated.spaces.map((space) => ({ ...space, startOpen: false, windowGeometry: null }));
+    migrated.spaces = migrated.spaces.map((space) => ({ ...space, startOpen: false, windowGeometry: null, homeShortcut: true }));
     migrated.presentation.environment = { type: 'illustrated', shaderId: 'neural-field' };
     migrated.canvasObjects = [];
     migrated.version = PROFILE_DOCUMENT_VERSION;
@@ -16,10 +18,17 @@ export function migrateProfileDocument(input) {
     const migrated = structuredClone(input); migrated.version = PROFILE_DOCUMENT_VERSION;
     migrated.presentation.environment = { type: 'illustrated', shaderId: 'neural-field' };
     migrated.canvasObjects = [];
+    migrated.spaces = addHomeShortcut(migrated.spaces);
     return assertValidProfileDocument(migrated);
   }
   if (input.version === 3) {
     const migrated = structuredClone(input); migrated.version = PROFILE_DOCUMENT_VERSION; migrated.canvasObjects = [];
+    migrated.spaces = addHomeShortcut(migrated.spaces);
+    return assertValidProfileDocument(migrated);
+  }
+  if (input.version === 4) {
+    const migrated = structuredClone(input); migrated.version = PROFILE_DOCUMENT_VERSION;
+    migrated.spaces = addHomeShortcut(migrated.spaces);
     return assertValidProfileDocument(migrated);
   }
   if (input.version !== PROFILE_DOCUMENT_VERSION) throw new ProfileDocumentValidationError([{ path: 'version', code: 'unsupported_version', message: `Unsupported profile document version: ${String(input.version)}` }]);

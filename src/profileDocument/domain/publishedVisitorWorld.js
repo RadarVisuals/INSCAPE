@@ -11,7 +11,7 @@ export function createPublishedVisitorLayout(document, width, height) {
   const verticalLayout = createVerticalHomeLayout(geometry);
   const { world, placementGeometry, camera } = verticalLayout;
   const { x: originX, y: originY } = verticalLayout.origin;
-  const authoredSpaces = [...document.spaces].sort((a, b) => a.order - b.order).map((space) => {
+  const authoredSpaces = [...document.spaces].filter((space) => space.homeShortcut !== false).sort((a, b) => a.order - b.order).map((space) => {
     const appearance = space.appearance || { mode: 'label', iconKey: space.kind === 'favorites' ? 'favorites' : 'folder', showLabel: true, columnSpan: 3, rowSpan: 1 };
     const span = normalizeSpan({ columns: appearance.columnSpan, rows: appearance.rowSpan }, appearance.mode, placementGeometry);
     const rect = normalizeGridRect({ column:space.placement.column, row:space.placement.row, columnSpan:span.columns, rowSpan:span.rows }, placementGeometry);

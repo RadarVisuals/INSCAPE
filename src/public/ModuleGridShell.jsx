@@ -301,6 +301,7 @@ export default function ModuleGridShell({
   const setLauncherStartOpen = useLibraryStore((state) => state.setLauncherStartOpen);
   const unpinView = useLibraryStore((state) => state.unpinView);
   const createFolder = useLibraryStore((state) => state.createFolder);
+  const setFolderPublic = useLibraryStore((state) => state.setFolderPublic);
   const pinView = useLibraryStore((state) => state.pinView);
   const createCanvasObject = useLibraryStore((state) => state.createCanvasObject);
   const setCanvasObjectGeometry = useLibraryStore((state) => state.setCanvasObjectGeometry);
@@ -328,6 +329,7 @@ export default function ModuleGridShell({
     const folders = workspace.folders.map((folder) => ({
       id: `library:folder:${folder.id}`,
       label: folder.name,
+      public: folder.public === true,
       homeShortcut: pinnedLaunchers.some((launcher) => launcher.id === `library:folder:${folder.id}`),
       assets: folder.assetIds.map((id) => libraryAssetById.get(id)).filter(Boolean)
     }));
@@ -1244,7 +1246,14 @@ export default function ModuleGridShell({
             if (!folderId) return;
             const view = { type: 'folder', id: folderId };
             if (category.homeShortcut) unpinView(view);
-            else pinView(view);
+            else {
+              pinView(view);
+              if (!geometry.narrow) setEditMode(true);
+            }
+          },
+          onToggleCategoryPublic: (category) => {
+            const folderId = category.id.startsWith('library:folder:') ? category.id.slice('library:folder:'.length) : null;
+            if (folderId) setFolderPublic(folderId, !category.public);
           },
           onOpenChange: (expanded) => {
             if (expanded && libraryStatus === 'idle') loadLibrary();
@@ -1264,8 +1273,14 @@ export default function ModuleGridShell({
       {interfaceVisible && <SpatialLevelNavigation
         level={spatialLevel}
         disabled={spatialLevelTransitioning}
+        arranging={ownerAuthoringEnabled && editMode && spatialLevel === SPATIAL_WORLD_LEVEL.HOME}
         onUp={spatialLevel === SPATIAL_WORLD_LEVEL.GALLERY ? exitGallery : enterUpper}
         onDown={spatialLevel === SPATIAL_WORLD_LEVEL.UPPER ? exitUpper : enterGallery}
+        onFinishArranging={() => {
+          setEditMode(false);
+          setSelectedSceneId(null);
+          setInspectorAnchor(null);
+        }}
       />}
       <div className="system-signature" aria-hidden="true"><strong>INSCAPE</strong><span>LUKSO MAINNET</span><i /> <span>LIVE</span></div>
       {!galleryOpen && !upperOpen && keeperVisible && <KeeperDock ref={keeperDockRef} actorId={activeActorId} residentHandoff={residentHandoff} reducedMotion={revealPresentation.reducedMotion} onDockStateChange={setKeeperDockActive} />}

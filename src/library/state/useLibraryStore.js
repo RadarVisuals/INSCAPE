@@ -11,6 +11,7 @@ import {
   renameFolder,
   resetCanvasLayout,
   setFolderAsset,
+  setFolderPublic,
   setLauncherPosition,
   setLauncherGeometry,
   setLauncherVisitorVisibility,
@@ -257,6 +258,9 @@ export const useLibraryStore = create((set, get) => ({
   },
   setCanvasObjectVisitorVisibility(id, visitorVisible) {
     const workspace = setCanvasObjectVisitorVisibility(get().workspace, id, visitorVisible); set({ workspace }); scheduleSave(workspace);
+  },
+  setFolderPublic(folderId, isPublic) {
+    const workspace = setFolderPublic(get().workspace, folderId, isPublic); set({ workspace }); scheduleSave(workspace);
   },
   setCanvasObjectLocked(id, locked) {
     const workspace = setCanvasObjectLocked(get().workspace, id, locked); set({ workspace }); scheduleSave(workspace);

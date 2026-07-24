@@ -206,7 +206,7 @@ export default function ProfileNavigationDock({
       activeId={selectedCategoryId}
       visible={navigationVisible}
       onSelect={selectCategory}
-      onContext={ownerIndex?.onToggleHomeShortcut ? (event, category) => {
+      onContext={ownerIndex?.onToggleHomeShortcut || ownerIndex?.onToggleCategoryPublic ? (event, category) => {
         event.preventDefault();
         event.stopPropagation();
         setCategoryContext({ category, anchor: { x: event.clientX, y: event.clientY }, returnFocus: event.currentTarget });
@@ -218,8 +218,8 @@ export default function ProfileNavigationDock({
       className="category-navigation-context-menu"
       anchor={categoryContext.anchor}
       label={`${categoryContext.category.label} commands`}
-      commands={[{ id: 'toggle-home-shortcut', label: categoryContext.category.homeShortcut ? 'Remove Home Shortcut' : 'Add Shortcut to Home' }]}
-      onCommand={() => { ownerIndex?.onToggleHomeShortcut?.(categoryContext.category); setCategoryContext(null); }}
+      commands={[{ id: 'toggle-public', label: categoryContext.category.public ? 'Make Private' : 'Publish Category' }, { id: 'toggle-home-shortcut', label: categoryContext.category.homeShortcut ? 'Remove Home Shortcut' : 'Add Shortcut to Home' }]}
+      onCommand={(command) => { if (command === 'toggle-public') ownerIndex?.onToggleCategoryPublic?.(categoryContext.category); else if (command === 'toggle-home-shortcut') ownerIndex?.onToggleHomeShortcut?.(categoryContext.category); setCategoryContext(null); }}
       onClose={() => setCategoryContext(null)}
       returnFocus={categoryContext.returnFocus}
     />}

@@ -38,7 +38,7 @@ export default function PublishedHomeWorld({ document, onMoveKeeper, onExit, onO
   const layout = useMemo(() => createPublishedVisitorLayout(document, viewport.width, viewport.height), [document, viewport]);
   const [camera, setCamera] = useState(layout.camera);
   const [windowState, setWindowState] = useState(() => createVisitorWindowState(
-    document.spaces.filter((space) => space.startOpen).map((space) => ({ id: space.id, rect: initialVisitorWindowRect(space, layout, layout.camera) }))
+    document.spaces.filter((space) => space.homeShortcut && space.startOpen).map((space) => ({ id: space.id, rect: initialVisitorWindowRect(space, layout, layout.camera) }))
   ));
   const [openArtworkId, setOpenArtworkId] = useState(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -87,7 +87,7 @@ export default function PublishedHomeWorld({ document, onMoveKeeper, onExit, onO
 
   useEffect(() => {
     setCamera(layout.camera);
-    setWindowState(createVisitorWindowState(document.spaces.filter((space) => space.startOpen).map((space) => ({ id: space.id, rect: initialVisitorWindowRect(space, layout, layout.camera) }))));
+    setWindowState(createVisitorWindowState(document.spaces.filter((space) => space.homeShortcut && space.startOpen).map((space) => ({ id: space.id, rect: initialVisitorWindowRect(space, layout, layout.camera) }))));
     setOpenArtworkId(null);
     setGalleryOpen(false);
     setGalleryTransitionPhase('home');
