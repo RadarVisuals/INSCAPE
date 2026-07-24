@@ -10,7 +10,7 @@ export default function AtelierExperience({ onRequestPublic }) {
         className="mode-switch mode-switch--atelier"
         type="button"
         onClick={onRequestPublic}
-        aria-label="Leave Atelier and open the public UNDERNEATH.OS experience"
+        aria-label="Leave Atelier and open the public INSCAPE experience"
       >
         <span aria-hidden="true">←</span> Public world
       </button>

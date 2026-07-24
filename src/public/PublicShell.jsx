@@ -60,12 +60,12 @@ export default function PublicShell({ onRequestAtelier, onResidentHabitatChange 
       data-application-mode="public"
       data-identity-open={windowState.openIds.includes('identity') || undefined}
       style={DEFAULT_PUBLIC_THEME}
-      aria-label="UNDERNEATH.OS public world"
+      aria-label="INSCAPE public world"
     >
       <header className="public-shell__masthead">
         <div>
           <p>Living profile world</p>
-          <h1>UNDERNEATH<span>.OS</span></h1>
+          <h1>INSCAPE</h1>
         </div>
         <button className="mode-switch" type="button" onClick={onRequestAtelier}>
           Open Atelier <span aria-hidden="true">↗</span>

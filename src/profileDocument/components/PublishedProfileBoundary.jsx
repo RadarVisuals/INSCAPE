@@ -10,7 +10,7 @@ import '../../public/canvasObjects.css';
 const STATUS_COPY = Object.freeze({
   CONTEXT_REQUIRED: ['PROFILE CONTEXT REQUIRED', 'Open the installed app from a Universal Profile, or provide an explicit profile address while developing locally.'],
   LOADING: ['RESOLVING PUBLISHED PROFILE', 'Reading and verifying the profile document.'],
-  UNAVAILABLE: ['PROFILE UNAVAILABLE', 'This Universal Profile has not published an OS_UNDERNEATH profile document.'],
+  UNAVAILABLE: ['PROFILE UNAVAILABLE', 'This Universal Profile has not published an INSCAPE profile document.'],
   INVALID: ['INVALID PUBLISHED PROFILE', 'The published pointer or document could not be verified.'],
   ERROR: ['PROFILE TEMPORARILY UNAVAILABLE', 'The public network or content gateway could not be reached.']
 });

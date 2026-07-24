@@ -105,7 +105,7 @@ export default function ProfileIdentityCard({ profile, expanded: controlledExpan
       >{expanded ? '×' : '›'}</button>
     </header>
     <div className="profile-identity-card__details" aria-hidden={!expanded}>
-      <p>{profile?.bio || 'A world assembled beneath the surface.'}</p>
+      {profile?.bio && <p>{profile.bio}</p>}
       {tags.length > 0 && <div className="profile-identity-card__tags" aria-label="Profile tags">
         {tags.map((tag) => <span key={tag}>{String(tag).toUpperCase()}</span>)}
       </div>}

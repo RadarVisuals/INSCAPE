@@ -1185,7 +1185,7 @@ export default function ModuleGridShell({
       data-upper-open={upperOpen || undefined}
       data-dragging={interaction?.activated ? interaction.targetId : undefined}
       style={shellTheme}
-      aria-label="OS Underneath public world"
+      aria-label="INSCAPE public world"
       ref={shellRef}
       onContextMenu={(event) => openTargetContextMenu(event, shellRef.current)}
     >
@@ -1261,7 +1261,7 @@ export default function ModuleGridShell({
         </nav>
       </header>
 
-      <div className="system-signature" aria-hidden="true"><strong>OS_UNDERNEATH</strong><span>LUKSO MAINNET</span><i /> <span>LIVE</span></div>
+      <div className="system-signature" aria-hidden="true"><strong>INSCAPE</strong><span>LUKSO MAINNET</span><i /> <span>LIVE</span></div>
       {!galleryOpen && !upperOpen && keeperVisible && <KeeperDock ref={keeperDockRef} actorId={activeActorId} residentHandoff={residentHandoff} reducedMotion={revealPresentation.reducedMotion} onDockStateChange={setKeeperDockActive} />}
 
       {homeWorldMounted && <HomeWorldSurface
@@ -1488,12 +1488,12 @@ export default function ModuleGridShell({
       {artworkInspector && canvasObjectById[artworkInspector.id] && (()=>{const object=canvasObjectById[artworkInspector.id];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId);const definition=getCanvasObjectDefinition(object.kind);return <ArtworkInspector object={object} assetName={asset?.name||'Unavailable artwork'} anchor={artworkInspector.anchor} onClose={()=>{setArtworkInspector(null);setSelectedCanvasObjectId(null);canvasObjectRefs.current.get(object.id)?.querySelector('button')?.focus();}} onPresentation={(patch)=>setCanvasObjectPresentation(object.id,patch)} onGeometry={(span)=>{const columns=Math.max(definition.minimumSpan.columns,Math.min(definition.maximumSpan.columns,Math.round(span.columns)||object.span.columns));const rows=Math.max(definition.minimumSpan.rows,Math.min(definition.maximumSpan.rows,Math.round(span.rows)||object.span.rows));setCanvasObjectGeometry(object.id,{column:object.placement.column,row:object.placement.row,columnSpan:columns,rowSpan:rows});}} onVisibility={()=>setCanvasObjectVisitorVisibility(object.id,!object.visitorVisible)} onReplace={()=>beginArtworkChoice('replace',object.id)} onReorder={(command)=>reorderCanvasObject(object.id,command)} onRemove={()=>{if(window.confirm('Remove this artwork from the gallery? The owned asset will remain in your library.')){removeCanvasObject(object.id);setArtworkInspector(null);setSelectedCanvasObjectId(null);}}} />;})()}
       </>}
       {contextMenu && (()=>{const runtimeId=contextMenu.target.id?.startsWith?.('folder-panel:')?contextMenu.target.id.slice(13):contextMenu.target.id?.replace?.('-panel',''); const launcher=pinnedLaunchers.find((entry)=>entry.id===(contextMenu.target.type==='window'?runtimeId:contextMenu.target.id)); const canvasObject=canvasObjectById[contextMenu.target.id]; const startOpen=launcher?.startOpen||systemPresentation[runtimeId]?.startOpen; return <DesktopMenu key={`${contextMenu.target.type}:${contextMenu.menu}`} anchor={contextMenu.anchor} label={`${contextMenu.target.type} commands`} commands={contextMenuCommands({target:contextMenu.target,editMode,launcher,canvasObject,startOpen,menu:contextMenu.menu,keeperVisible,stageVisible,stageAvailable:false,ownerAuthoringEnabled})} onCommand={executeContextCommand} onClose={()=>setContextMenu(null)} returnFocus={contextMenu.returnFocus}/>;})()}
-      {activeHudCommand === 'system' && <DesktopMenu anchor={{x:18,y:68}} label="OS Underneath system menu" commands={[
-        {id:'about',label:'About OS_UNDERNEATH'}, {id:'status',label:`Profile / ${workspace.profileAddress.slice(0,8)}…`},
+      {activeHudCommand === 'system' && <DesktopMenu anchor={{x:18,y:68}} label="INSCAPE system menu" commands={[
+        {id:'about',label:'About INSCAPE'}, {id:'status',label:`Profile / ${workspace.profileAddress.slice(0,8)}…`},
         ...(ownerAuthoringEnabled ? [{id:'atelier',label:'Open Atelier'}, {id:'edit',label:editMode?'Finish Arranging':'Arrange Desktop'}] : []),
         {id:'home',label:'Return World to Origin'}, {id:'reset',label:'Reset Windows'}, {id:'close-all',label:'Close All Windows'}
       ]} onCommand={(command)=>{if(command==='about'||command==='status')setActiveHudCommand('about');else if(command==='atelier'&&ownerAuthoringEnabled){setActiveHudCommand(null);onRequestAtelier?.();}else if(command==='home'){setHomeCameraImmediately(homeOrigin);setActiveHudCommand(null);}else if(command==='edit'&&ownerAuthoringEnabled){setEditMode((value)=>!value);setActiveHudCommand(null);}else if(command==='reset'){resetWindows();setActiveHudCommand(null);}else if(command==='close-all'){closeAllWindows();setActiveHudCommand(null);}}} onClose={()=>setActiveHudCommand(null)}/>}
-      {activeHudCommand === 'about' && <aside className="system-about" role="dialog" aria-label="About OS Underneath"><strong>OS_UNDERNEATH</strong><p>Your profile is not a page. It is a place.</p><small>{workspace.profileAddress}<br/>LUKSO MAINNET / READ-ONLY</small><button type="button" onClick={()=>setActiveHudCommand(null)}>[ Close ]</button></aside>}
+      {activeHudCommand === 'about' && <aside className="system-about" role="dialog" aria-label="About INSCAPE"><strong>INSCAPE</strong><p>Your profile is not a page. It is a place.</p><small>{workspace.profileAddress}<br/>LUKSO MAINNET / READ-ONLY</small><button type="button" onClick={()=>setActiveHudCommand(null)}>[ Close ]</button></aside>}
       {ownerAuthoringEnabled && <KeeperSignalsLayer
         interfaceReady={interfaceVisible}
         residentHandoffActive={identityPhase !== 'closed' || keeperDockActive}

@@ -17,7 +17,7 @@ export default function ProfilePreview({ viewedProfileAddress, connectedProfileA
     <header><p>Read-only profile preview</p><button ref={returnRef} type="button" onClick={onReturn} aria-label="Return to connected profile">×</button></header>
     <section className="profile-preview__identity"><span className="profile-discovery__avatar">{profile.avatarUrl ? <img src={profile.avatarUrl} alt="" /> : <span aria-hidden="true">UP</span>}</span>
       <div><h2 id="profile-preview-title">{profile.name}</h2><code>{viewedProfileAddress}</code><small>{profile.metadataStatusLabel} · LUKSO RPC + LSP3</small></div></section>
-    <p className="profile-preview__notice">This profile’s OS_UNDERNEATH world is not published here yet. Library, Activity, Creations, and authored presentation remain sealed to avoid showing or changing the connected profile’s private workspace.</p>
+    <p className="profile-preview__notice">This profile’s INSCAPE world is not published here yet. Library, Activity, Creations, and authored presentation remain sealed to avoid showing or changing the connected profile’s private workspace.</p>
     <dl><div><dt>Profile being visited</dt><dd>{viewedProfileAddress}</dd></div><div><dt>Connected visitor</dt><dd>{connectedVisitorProfileAddress || 'No Universal Profile connected'}</dd></div><div><dt>Authored workspace owner</dt><dd>{connectedProfileAddress}</dd></div><div><dt>Permission</dt><dd>Public metadata only · no authoring</dd></div></dl>
     <footer><button type="button" onClick={onSearch}>[ Search profiles ]</button><button type="button" onClick={onReturn}>[ Return to connected profile ]</button></footer>
   </article></div>;

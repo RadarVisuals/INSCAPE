@@ -316,3 +316,14 @@ test('published visitor level navigation uses the shared controller contract', (
   assert.match(worldSource, /onUp=\{galleryOpen \? exitGallery : undefined\}/);
   assert.doesNotMatch(worldSource, /currentLevel=|transitioning=|onMoveDown=|onMoveUp=/);
 });
+
+test('published profile cards resolve public LSP3 metadata without invented biography fallback', () => {
+  const worldSource = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
+  const cardSource = readFileSync(resolve(here, '../../public/ProfileIdentityCard.jsx'), 'utf8');
+  assert.match(worldSource, /useProfileIdentity\(document\.profile\.address\)/);
+  assert.match(worldSource, /bio: liveProfile\.metadataResolved \? liveProfile\.bio : null/);
+  assert.match(worldSource, /tags: liveProfile\.metadataResolved \? liveProfile\.tags : \[\]/);
+  assert.match(worldSource, /links: liveProfile\.metadataResolved \? liveProfile\.links : \[\]/);
+  assert.match(cardSource, /profile\?\.bio && <p>\{profile\.bio\}<\/p>/);
+  assert.doesNotMatch(cardSource, /A world assembled beneath the surface/);
+});

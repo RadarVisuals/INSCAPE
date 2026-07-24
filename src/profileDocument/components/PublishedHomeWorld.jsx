@@ -20,6 +20,8 @@ import {
 import PublishedProfileDocumentSpaceWindow from './PublishedProfileDocumentSpaceWindow.jsx';
 import ProfileNavigationDock from '../../public/ProfileNavigationDock.jsx';
 import { SPATIAL_WORLD_LEVEL } from '../../public/spatialWorldLevels.js';
+import { useProfileIdentity } from '../../profileIdentity/index.js';
+import { getIdentityProfileViewModel } from '../../public/identity/profileViewModel.js';
 
 const THEME = Object.freeze({ '--os-accent': '#e87945', '--module-accent': '#e87945', '--hu-text': '#eeebdf', '--hu-text-muted': '#a9a59c' });
 const GALLERY_TRANSITION_MS = 720;
@@ -49,16 +51,20 @@ export default function PublishedHomeWorld({ document, onMoveKeeper, onExit }) {
   const galleryTransitionTimerRef = useRef(0);
   const compactTapRef = useRef({ activePointers: new Set(), candidate: null, multiTouch: false });
   const cached = document.profile.cachedIdentity;
-  const avatarUrl = resolvePublishedAssetUrl(cached.avatarUrl);
+  const liveIdentity = useProfileIdentity(document.profile.address);
+  const liveProfile = useMemo(() => getIdentityProfileViewModel(liveIdentity), [liveIdentity]);
+  const cachedAvatarUrl = resolvePublishedAssetUrl(cached.avatarUrl);
+  const avatarUrl = liveProfile.metadataResolved ? liveProfile.avatarUrl || cachedAvatarUrl : cachedAvatarUrl;
   const displayName = cached.name || `${document.profile.address.slice(0, 8)}…${document.profile.address.slice(-6)}`;
+  const resolvedDisplayName = liveProfile.metadataResolved && liveProfile.name !== 'Unnamed profile' ? liveProfile.name : displayName;
   const publicProfile = useMemo(() => ({
     address: document.profile.address,
-    name: displayName,
+    name: resolvedDisplayName,
     avatarUrl,
-    bio: null,
-    tags: [],
-    links: []
-  }), [avatarUrl, displayName, document.profile.address]);
+    bio: liveProfile.metadataResolved ? liveProfile.bio : null,
+    tags: liveProfile.metadataResolved ? liveProfile.tags : [],
+    links: liveProfile.metadataResolved ? liveProfile.links : []
+  }), [avatarUrl, document.profile.address, liveProfile, resolvedDisplayName]);
   const navigationCategories = useMemo(() => document.spaces.map((space) => ({
     id: space.id,
     label: space.label,
