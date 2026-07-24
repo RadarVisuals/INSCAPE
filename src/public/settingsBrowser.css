@@ -25,5 +25,10 @@
 .settings-browser__options input:checked + i::after { content:''; width:6px; height:6px; background:#ebece7; }
 .settings-browser__options input:focus-visible + i { outline:1px solid #fff; outline-offset:3px; }
 .settings-browser > main > p { margin:14px 0 0; color:rgb(235 236 231 / .3); font-size:.48rem; letter-spacing:.11em; }
+.settings-browser__workspace { margin-top:22px; }
+.settings-browser__workspace > strong { display:block; margin-bottom:12px; color:rgb(235 236 231 / .76); font-size:.62rem; letter-spacing:.15em; }
+.settings-browser__workspace > div { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.settings-browser__workspace button { min-height:38px; padding:0 12px; border:1px solid rgb(235 236 231 / .22); background:transparent; color:rgb(235 236 231 / .62); font:500 .54rem/1 var(--font-interface,"Oxanium",monospace); letter-spacing:.12em; cursor:pointer; }
+.settings-browser__workspace button:hover,.settings-browser__workspace button:focus-visible { outline:0; border-color:rgb(235 236 231 / .5); color:#fff; }
 @media(max-width:719px) { .settings-browser { inset:14px!important; width:auto!important; min-width:0; } }
 @media(prefers-reduced-motion:reduce) { .settings-navigation-card,.settings-navigation-card i { transition-duration:1ms; } .settings-browser { animation-duration:1ms; } }

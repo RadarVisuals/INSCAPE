@@ -9,7 +9,7 @@ const OPTIONS = Object.freeze([
   ['audio', 'AUDIO NOTIFICATIONS']
 ]);
 
-export default function SettingsBrowser({ visible = false, open = false, onOpenChange }) {
+export default function SettingsBrowser({ visible = false, open = false, onOpenChange, actions = null }) {
   const settings = useSignalStore((state) => state.settings);
   const updateSetting = useSignalStore((state) => state.updateSetting);
 
@@ -29,6 +29,13 @@ export default function SettingsBrowser({ visible = false, open = false, onOpenC
           </label>)}
         </div>
         {!settings.notifications && <p>HISTORY AND REFRESH REMAIN ACTIVE.</p>}
+        {actions && <section className="settings-browser__workspace" aria-label="Workspace actions">
+          <strong>WORKSPACE</strong>
+          <div>
+            {actions.onPublish && <button type="button" onClick={() => { onOpenChange?.(false); actions.onPublish(); }}>PUBLISH PROFILE</button>}
+            {actions.onAtelier && <button type="button" onClick={() => { onOpenChange?.(false); actions.onAtelier(); }}>OPEN ATELIER</button>}
+          </div>
+        </section>}
       </main>
     </section>,
     document.body

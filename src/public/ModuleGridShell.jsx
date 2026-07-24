@@ -41,7 +41,7 @@ import { getSpatialGridOffset } from './spatialWorldCamera.js';
 import { CANVAS_OBJECT_KIND, getCanvasObjectDefinition } from '../library/domain/canvasObjectRegistry.js';
 import { CANVAS_OBJECT_ORDER_COMMAND } from '../library/domain/canvasObjects.js';
 import { runOwnerAuthoringMutation, selectLiveCanvasContent } from './publicAccess.js';
-import { readOwnerProfileValue, removeOwnerProfileValue, writeOwnerProfileValue } from './ownerProfileStorage.js';
+import { readOwnerProfileValue, writeOwnerProfileValue } from './ownerProfileStorage.js';
 import ProfileDiscoveryBoundary from '../profileDiscovery/ProfileDiscoveryBoundary.jsx';
 import { createVerticalHomePlacementGeometry, createVerticalHomeWorld } from './verticalHomeWorld.js';
 import {
@@ -289,7 +289,6 @@ export default function ModuleGridShell({
   const setLauncherPosition = useLibraryStore((state) => state.setLauncherPosition);
   const setLauncherGeometry = useLibraryStore((state) => state.setLauncherGeometry);
   const setLauncherPresentation = useLibraryStore((state) => state.setLauncherPresentation);
-  const resetWorkspaceCanvasLayout = useLibraryStore((state) => state.resetCanvasLayout);
   const setLauncherVisitorVisibility = useLibraryStore((state) => state.setLauncherVisitorVisibility);
   const setLauncherStartOpen = useLibraryStore((state) => state.setLauncherStartOpen);
   const unpinView = useLibraryStore((state) => state.unpinView);
@@ -793,16 +792,6 @@ export default function ModuleGridShell({
     if (cameraTransitionFrameRef.current) window.cancelAnimationFrame(cameraTransitionFrameRef.current);
   },[]);
 
-  const resetLayout = () => {
-    if (!ownerAuthoringEnabled) return;
-    const defaults = getDefaultModulePositions(geometry);
-    setPositions(defaults);
-    resetWorkspaceCanvasLayout();
-    if (geometry.narrow) {
-      removeOwnerProfileValue(window.localStorage,MODULE_LAYOUT_STORAGE_KEY,workspace.profileAddress);
-    } else persistPositions(defaults);
-  };
-
   const resetWindows = useCallback(() => {
     setRuntimeWindows((current) => updateRuntimeWindowState(current, { type: 'reset', initial: authoredWindowDefaults }));
     setIdentityOpen(authoredWindowDefaults.openIds.includes('identity'));
@@ -1256,6 +1245,11 @@ export default function ModuleGridShell({
             updateRuntime({ type: expanded ? 'open' : 'close', id: 'collection' });
           }
         } : null}
+        onDiscover={openCollectionSearch}
+        ownerTools={ownerAuthoringEnabled ? {
+          onPublish: () => setActiveHudCommand('share'),
+          onAtelier: () => onRequestAtelier?.()
+        } : null}
       />}
       {interfaceVisible && <SpatialLevelNavigation
         level={spatialLevel}
@@ -1263,25 +1257,6 @@ export default function ModuleGridShell({
         onUp={spatialLevel === SPATIAL_WORLD_LEVEL.GALLERY ? exitGallery : enterUpper}
         onDown={spatialLevel === SPATIAL_WORLD_LEVEL.UPPER ? exitUpper : enterGallery}
       />}
-      <header className="public-shell__masthead">
-        <div className="system-hud__primary">
-          <button className="system-sigil" type="button" aria-label="Open system menu" aria-expanded={activeHudCommand === 'system'} onClick={() => { setActiveHudCommand((current)=>current==='system'?null:'system'); setContextMenu(null); }}><span className="system-sigil__mark" aria-hidden="true">N</span></button>
-        </div>
-
-        <nav className="system-hud__commands" aria-label="INSCAPE controls">
-          <button
-            type="button"
-            aria-pressed={activeHudCommand === 'search'}
-            onClick={openCollectionSearch}
-          >
-            [ Search ]
-          </button>
-          {ownerAuthoringEnabled && <button type="button" onClick={() => setActiveHudCommand((current) => current === 'share' ? null : 'share')} aria-expanded={activeHudCommand === 'share'}>[ Share ]</button>}
-          {ownerAuthoringEnabled && !galleryOpen && !upperOpen && <button type="button" onClick={() => setEditMode((current) => !current)} aria-pressed={editMode}>[ {editMode ? 'Done Arranging' : 'Arrange Desktop'} ]</button>}
-          {ownerAuthoringEnabled && editMode && !galleryOpen && !upperOpen && <button type="button" onClick={() => { if(window.confirm('Reset the authored desktop layout? Folders, owned assets, visibility, and runtime windows will be preserved.')) resetLayout(); }}>[ Reset Authored Canvas ]</button>}
-        </nav>
-      </header>
-
       <div className="system-signature" aria-hidden="true"><strong>INSCAPE</strong><span>LUKSO MAINNET</span><i /> <span>LIVE</span></div>
       {!galleryOpen && !upperOpen && keeperVisible && <KeeperDock ref={keeperDockRef} actorId={activeActorId} residentHandoff={residentHandoff} reducedMotion={revealPresentation.reducedMotion} onDockStateChange={setKeeperDockActive} />}
 
@@ -1509,12 +1484,6 @@ export default function ModuleGridShell({
       {artworkInspector && canvasObjectById[artworkInspector.id] && (()=>{const object=canvasObjectById[artworkInspector.id];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId);const definition=getCanvasObjectDefinition(object.kind);return <ArtworkInspector object={object} assetName={asset?.name||'Unavailable artwork'} anchor={artworkInspector.anchor} onClose={()=>{setArtworkInspector(null);setSelectedCanvasObjectId(null);canvasObjectRefs.current.get(object.id)?.querySelector('button')?.focus();}} onPresentation={(patch)=>setCanvasObjectPresentation(object.id,patch)} onGeometry={(span)=>{const columns=Math.max(definition.minimumSpan.columns,Math.min(definition.maximumSpan.columns,Math.round(span.columns)||object.span.columns));const rows=Math.max(definition.minimumSpan.rows,Math.min(definition.maximumSpan.rows,Math.round(span.rows)||object.span.rows));setCanvasObjectGeometry(object.id,{column:object.placement.column,row:object.placement.row,columnSpan:columns,rowSpan:rows});}} onVisibility={()=>setCanvasObjectVisitorVisibility(object.id,!object.visitorVisible)} onReplace={()=>beginArtworkChoice('replace',object.id)} onReorder={(command)=>reorderCanvasObject(object.id,command)} onRemove={()=>{if(window.confirm('Remove this artwork from the gallery? The owned asset will remain in your library.')){removeCanvasObject(object.id);setArtworkInspector(null);setSelectedCanvasObjectId(null);}}} />;})()}
       </>}
       {contextMenu && (()=>{const runtimeId=contextMenu.target.id?.startsWith?.('folder-panel:')?contextMenu.target.id.slice(13):contextMenu.target.id?.replace?.('-panel',''); const launcher=pinnedLaunchers.find((entry)=>entry.id===(contextMenu.target.type==='window'?runtimeId:contextMenu.target.id)); const canvasObject=canvasObjectById[contextMenu.target.id]; const startOpen=launcher?.startOpen||systemPresentation[runtimeId]?.startOpen; return <DesktopMenu key={`${contextMenu.target.type}:${contextMenu.menu}`} anchor={contextMenu.anchor} label={`${contextMenu.target.type} commands`} commands={contextMenuCommands({target:contextMenu.target,editMode,launcher,canvasObject,startOpen,menu:contextMenu.menu,keeperVisible,stageVisible,stageAvailable:false,ownerAuthoringEnabled})} onCommand={executeContextCommand} onClose={()=>setContextMenu(null)} returnFocus={contextMenu.returnFocus}/>;})()}
-      {activeHudCommand === 'system' && <DesktopMenu anchor={{x:18,y:68}} label="INSCAPE system menu" commands={[
-        {id:'about',label:'About INSCAPE'}, {id:'status',label:`Profile / ${workspace.profileAddress.slice(0,8)}…`},
-        ...(ownerAuthoringEnabled ? [{id:'atelier',label:'Open Atelier'}, {id:'edit',label:editMode?'Finish Arranging':'Arrange Desktop'}] : []),
-        {id:'home',label:'Return World to Origin'}, {id:'reset',label:'Reset Windows'}, {id:'close-all',label:'Close All Windows'}
-      ]} onCommand={(command)=>{if(command==='about'||command==='status')setActiveHudCommand('about');else if(command==='atelier'&&ownerAuthoringEnabled){setActiveHudCommand(null);onRequestAtelier?.();}else if(command==='home'){setHomeCameraImmediately(homeOrigin);setActiveHudCommand(null);}else if(command==='edit'&&ownerAuthoringEnabled){setEditMode((value)=>!value);setActiveHudCommand(null);}else if(command==='reset'){resetWindows();setActiveHudCommand(null);}else if(command==='close-all'){closeAllWindows();setActiveHudCommand(null);}}} onClose={()=>setActiveHudCommand(null)}/>}
-      {activeHudCommand === 'about' && <aside className="system-about" role="dialog" aria-label="About INSCAPE"><strong>INSCAPE</strong><p>Your profile is not a page. It is a place.</p><small>{workspace.profileAddress}<br/>LUKSO MAINNET / READ-ONLY</small><button type="button" onClick={()=>setActiveHudCommand(null)}>[ Close ]</button></aside>}
       {ownerAuthoringEnabled && <KeeperSignalsLayer
         interfaceReady={interfaceVisible}
         residentHandoffActive={identityPhase !== 'closed' || keeperDockActive}

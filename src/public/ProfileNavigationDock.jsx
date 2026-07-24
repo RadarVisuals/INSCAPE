@@ -23,7 +23,9 @@ export default function ProfileNavigationDock({
   activity = null,
   gallery = null,
   spatialWorldActive = false,
-  ownerIndex = null
+  ownerIndex = null,
+  onDiscover = null,
+  ownerTools = null
 }) {
   const [profileState, setProfileState] = useState(PROFILE_IDENTITY_CARD_STATE.AVATAR);
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
@@ -233,6 +235,11 @@ export default function ProfileNavigationDock({
       onOpenChange={handleActivityOpenChange}
       profileAddress={activity.profileAddress}
     /></Suspense>}
+    {onDiscover && <section className="gallery-navigation-card" aria-hidden={!navigationVisible} data-visible={navigationVisible || undefined}>
+      <button type="button" tabIndex={navigationVisible ? 0 : -1} onClick={onDiscover}>
+        <strong>DISCOVER</strong><i aria-hidden="true">›</i>
+      </button>
+    </section>}
     {ownerIndex && <Suspense fallback={null}><AssetIndex
       visible={navigationVisible}
       open={effectiveIndexOpen}
@@ -248,6 +255,7 @@ export default function ProfileNavigationDock({
       visible={navigationVisible}
       open={settingsOpen}
       onOpenChange={handleSettingsOpenChange}
+      actions={ownerTools}
     /></Suspense>}
     {browserActivated && <Suspense fallback={null}>
       <CategoryAssetBrowser
