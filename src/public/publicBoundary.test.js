@@ -101,6 +101,7 @@ test('Gallery remains spatial while Creations is an independent dock workspace',
   assert.match(gallerySource, /createPortal\(<>{backdrop}{gallery}<\/>/);
   assert.match(gallerySource, /onMoveKeeperHorizontally/);
   assert.match(gallerySource, /addEventListener\('wheel', handleWheel, \{ passive: false \}\)/);
+  assert.match(gallerySource, /onOpenArtwork\(object\.id, event\.currentTarget\)/);
   assert.doesNotMatch(gallerySource, /onWheel=\{handleWheel\}/);
   assert.doesNotMatch(gallerySource, /if \(direction\) onMoveKeeper\?\./);
 });
@@ -109,6 +110,25 @@ test('owner inventory hydrates independently of opening Index or Categories', ()
   const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
   assert.match(shellSource, /if \(!ownerAuthoringEnabled \|\| libraryStatus !== 'idle'\) return;\s*void loadLibrary\(\);/);
   assert.match(shellSource, /galleryAssetsMissing[\s\S]*libraryStatus !== 'loading'\) void loadLibrary\(\);/);
+});
+
+test('owner folders are direct categories and Index assigns assets through contextual folder commands', () => {
+  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
+  const indexSource = readFileSync(new URL('./AssetIndex.jsx', import.meta.url), 'utf8');
+  const categorySource = readFileSync(new URL('./CategoryNavigationCard.jsx', import.meta.url), 'utf8');
+  const categoryStyles = readFileSync(new URL('./categoryNavigationCard.css', import.meta.url), 'utf8');
+
+  assert.match(shellSource, /workspace\.folders\.map\(\(folder\) => \(\{/);
+  assert.match(shellSource, /homeShortcut: pinnedLaunchers\.some/);
+  assert.match(shellSource, /onToggleHomeShortcut: \(category\) =>/);
+  assert.match(indexSource, /onContextMenu=\{\(event\) => \{ event\.preventDefault\(\); event\.stopPropagation\(\); setAssetContext/);
+  assert.match(indexSource, /folder\.assetIds\.includes\(assetContext\.asset\.id\) \? 'Remove from' : 'Add to'/);
+  assert.match(indexSource, /setFolderAsset\(folder\.id, assetContext\.asset\.id, !folder\.assetIds\.includes\(assetContext\.asset\.id\)\)/);
+  assert.doesNotMatch(indexSource, /ORGANIZE|ADD TO FOLDER/);
+  assert.match(categorySource, /onContextMenu=\{onContext \?/);
+  assert.match(categorySource, /data-empty=\{!items\.length \|\| undefined\}/);
+  assert.match(categorySource, /style=\{!items\.length \? \{ overflowY: 'hidden' \} : undefined\}/);
+  assert.doesNotMatch(categoryStyles, /\[data-empty\] nav/);
 });
 
 test('published visitors enter the same Gallery projection without owner authoring controls', () => {

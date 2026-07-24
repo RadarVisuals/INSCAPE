@@ -61,7 +61,7 @@
 .asset-index-workspace nav button[data-active] { background: rgb(255 255 255 / .05); box-shadow: inset 2px 0 rgb(235 236 231 / .82); color: #fff; }
 .asset-index-workspace__new { position: absolute; right: 14px; bottom: 15px; left: 14px; width: auto; min-height: 24px; justify-content: flex-start; color: rgb(235 236 231 / .35); font-size: .5rem; }
 .asset-index-workspace > main { position: relative; min-width: 0; padding: 18px 18px 44px; overflow: hidden; }
-.asset-index-workspace__tools { display: grid; grid-template-columns: minmax(160px, 1fr) auto; gap: 8px; }
+.asset-index-workspace__tools { display: grid; grid-template-columns: minmax(160px, 1fr); gap: 8px; }
 .asset-index-workspace__tools label { height: 32px; display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: center; border: 1px solid rgb(235 236 231 / .16); }
 .asset-index-workspace__tools label > span:first-child { justify-self: center; color: rgb(235 236 231 / .38); font-size: .8rem; }
 .asset-index-workspace__tools input { min-width: 0; height: 100%; padding: 0 8px 0 0; border: 0; outline: 0; background: transparent; color: #fff; font: 500 .6rem/1 var(--font-interface, "Oxanium", monospace); letter-spacing: .12em; }

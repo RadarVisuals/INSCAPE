@@ -107,8 +107,16 @@ export default function CategoryAssetBrowser({ open = false, category = null, st
   };
 
   const closeViewer = useCallback(() => {
+    const trigger = viewerTriggerRef.current;
+    const assetId = selectedAsset?.id;
     setSelectedAsset(null);
-  }, []);
+    window.requestAnimationFrame(() => {
+      const fallback = assetId
+        ? [...(rowsRef.current?.querySelectorAll('.category-asset-card') || [])].find((node) => node.dataset.assetId === String(assetId))
+        : null;
+      (trigger?.isConnected ? trigger : fallback)?.focus?.();
+    });
+  }, [selectedAsset]);
 
   const loading = status === 'idle' || status === 'loading';
   return <>
@@ -142,6 +150,7 @@ export default function CategoryAssetBrowser({ open = false, category = null, st
           className="category-asset-card"
           type="button"
           key={asset.id}
+          data-asset-id={asset.id}
           tabIndex={open ? 0 : -1}
           aria-label={`Open NFT viewer for ${asset.name || 'untitled asset'}`}
           style={{ width: `${row.height * asset.ratio}px` }}

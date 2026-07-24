@@ -115,7 +115,8 @@ test('published component exposes launcher/gallery activation and structural mou
   const cameraSource = readFileSync(resolve(here, '../../public/HomeWorldSurface.jsx'), 'utf8');
   assert.match(source, /onClick=\{\(\) => toggleSpace\(item\.space\)\}/);
   assert.match(source, /<GalleryWorld/);
-  assert.match(source, /onOpenArtwork=\{setOpenArtworkId\}/);
+  assert.match(source, /onOpenArtwork=\{openArtworkPreview\}/);
+  assert.match(source, /artworkTriggerRef\.current = trigger\?\.isConnected \? trigger : null/);
   assert.match(source, /event\.pointerType === 'mouse'/);
   assert.match(source, /setPointerCapture/);
   assert.match(cameraSource, /event\.pointerType !== 'mouse'/);
@@ -263,7 +264,7 @@ test('390px narrow empty-space taps activate but scrolling, cancellation, multi-
   assert.equal(shouldActivateSpatialPointer({ ...stationaryTap, multiTouch: true }), false);
 
   const source = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
-  const recognizer = source.slice(source.indexOf('const beginCompactTap'), source.indexOf('const openArtwork'));
+  const recognizer = source.slice(source.indexOf('const beginCompactTap'), source.indexOf('const openArtwork ='));
   assert.match(recognizer, /event\.target !== event\.currentTarget/);
   assert.match(recognizer, /activePointers\.size > 1/);
   assert.match(recognizer, /tracking\.multiTouch = true/);

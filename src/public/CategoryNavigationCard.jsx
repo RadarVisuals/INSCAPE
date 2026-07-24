@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import './categoryNavigationCard.css';
 
-export default function CategoryNavigationCard({ items = [], activeId = null, visible = false, onSelect, onExpandedChange, collapseRequested = false }) {
+export default function CategoryNavigationCard({ items = [], emptyLabel = 'NO PUBLIC CATEGORIES', activeId = null, visible = false, onSelect, onContext, onExpandedChange, collapseRequested = false }) {
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function CategoryNavigationCard({ items = [], activeId = null, vi
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [expanded]);
 
-  const expandedHeight = 50 + Math.max(1, items.length) * 44;
+  const expandedHeight = items.length ? 50 + items.length * 44 : 88;
 
   return <section
     className="category-navigation-card"
@@ -33,6 +33,7 @@ export default function CategoryNavigationCard({ items = [], activeId = null, vi
     aria-hidden={!visible}
     data-visible={visible || undefined}
     data-expanded={expanded || undefined}
+    data-empty={!items.length || undefined}
     style={{ '--category-expanded-height': `${expandedHeight}px` }}
     onPointerDown={(event) => event.stopPropagation()}
     onClick={(event) => event.stopPropagation()}
@@ -49,18 +50,19 @@ export default function CategoryNavigationCard({ items = [], activeId = null, vi
         <i aria-hidden="true">›</i>
       </button>
     </header>
-    <nav aria-label="Published categories">
+    <nav aria-label="Published categories" style={!items.length ? { overflowY: 'hidden' } : undefined}>
       {items.length > 0 ? items.map((item, index) => <button
         key={item.id}
         type="button"
         data-active={activeId === item.id || undefined}
         tabIndex={expanded ? 0 : -1}
         onClick={() => onSelect?.(item)}
+        onContextMenu={onContext ? (event) => onContext(event, item) : undefined}
       >
         <small>{String(index + 1).padStart(2, '0')}</small>
         <span>{item.label}</span>
         <i aria-hidden="true">↗</i>
-      </button>) : <p>NO PUBLIC CATEGORIES</p>}
+      </button>) : <p>{emptyLabel}</p>}
     </nav>
   </section>;
 }

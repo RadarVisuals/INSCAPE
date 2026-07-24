@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import CategoryNavigationCard from './CategoryNavigationCard.jsx';
+import DesktopMenu from './menus/DesktopMenu.jsx';
 import GalleryNavigationCard from './GalleryNavigationCard.jsx';
 import ProfileIdentityCard from './ProfileIdentityCard.jsx';
 import { PROFILE_IDENTITY_CARD_STATE } from './profileIdentityCardModel.js';
@@ -28,6 +29,7 @@ export default function ProfileNavigationDock({
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const [browserActivated, setBrowserActivated] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [categoryContext, setCategoryContext] = useState(null);
   const [creationsOpen, setCreationsOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [indexOpen, setIndexOpen] = useState(false);
@@ -64,6 +66,7 @@ export default function ProfileNavigationDock({
     setSelectedCategoryId((current) => categories.some((category) => category.id === current)
       ? current
       : null);
+    setCategoryContext((current) => current && !categories.some((category) => category.id === current.category.id) ? null : current);
   }, [categories]);
 
   const handleIndexOpenChange = useCallback((expanded) => {
@@ -163,6 +166,10 @@ export default function ProfileNavigationDock({
     if (!navigationVisible && settingsOpen) setSettingsOpen(false);
   }, [navigationVisible, settingsOpen]);
 
+  useEffect(() => {
+    if (!navigationVisible) setCategoryContext(null);
+  }, [navigationVisible]);
+
   const handleSettingsOpenChange = useCallback((expanded) => {
     setSettingsOpen(expanded);
     if (!expanded) return;
@@ -193,12 +200,27 @@ export default function ProfileNavigationDock({
     />
     <CategoryNavigationCard
       items={categories}
+      emptyLabel={ownerIndex ? 'NO CATEGORIES' : 'NO PUBLIC CATEGORIES'}
       activeId={selectedCategoryId}
       visible={navigationVisible}
       onSelect={selectCategory}
+      onContext={ownerIndex?.onToggleHomeShortcut ? (event, category) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setCategoryContext({ category, anchor: { x: event.clientX, y: event.clientY }, returnFocus: event.currentTarget });
+      } : undefined}
       onExpandedChange={handleCategoriesExpandedChange}
       collapseRequested={effectiveIndexOpen || effectiveCreationsOpen || effectiveActivityOpen || effectiveGalleryOpen || settingsOpen}
     />
+    {categoryContext && <DesktopMenu
+      className="category-navigation-context-menu"
+      anchor={categoryContext.anchor}
+      label={`${categoryContext.category.label} commands`}
+      commands={[{ id: 'toggle-home-shortcut', label: categoryContext.category.homeShortcut ? 'Remove Home Shortcut' : 'Add Shortcut to Home' }]}
+      onCommand={() => { ownerIndex?.onToggleHomeShortcut?.(categoryContext.category); setCategoryContext(null); }}
+      onClose={() => setCategoryContext(null)}
+      returnFocus={categoryContext.returnFocus}
+    />}
     {creations?.profileAddress && <Suspense fallback={null}><CreationsBrowser
       visible={navigationVisible}
       open={effectiveCreationsOpen}

@@ -256,10 +256,10 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
             onSelectArtwork?.(object.locked ? null : object.id);
             onOpenContextMenu?.(event, { type: 'gallery-object', id: object.id });
           }}
-          onActivate={() => {
+          onActivate={(event) => {
             if (suppressArtworkActivationRef.current) { suppressArtworkActivationRef.current = false; return; }
             if (ownerAuthoringEnabled && !object.locked) { onSelectArtwork?.(object.id); return; }
-            onOpenArtwork(object.id);
+            onOpenArtwork(object.id, event.currentTarget);
           }} />;
       })}
       <span className="gallery-world__origin" aria-hidden="true">GALLERY / 00</span>

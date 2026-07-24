@@ -310,17 +310,22 @@ export default function ModuleGridShell({
   const pinnedLaunchers = liveCanvasContent.launchers;
   const canvasObjects = liveCanvasContent.objects;
   const libraryAssetById = useMemo(() => new Map(libraryAssets.map((asset) => [asset.id, asset])), [libraryAssets]);
-  const navigationCategories = useMemo(() => pinnedLaunchers
-    .filter((launcher) => launcher.visitorVisible === true)
-    .map((launcher) => {
-      const folder = workspace.folders.find((entry) => entry.id === launcher.folderId);
-      const assetIds = launcher.viewType === 'favorites' ? workspace.favorites : folder?.assetIds || [];
-      return {
+  const navigationCategories = useMemo(() => {
+    const favorites = pinnedLaunchers
+      .filter((launcher) => launcher.viewType === 'favorites' && launcher.visitorVisible === true)
+      .map((launcher) => ({
         id: launcher.id,
-        label: launcher.viewType === 'favorites' ? launcher.label || 'Favorites' : folder?.name || 'Unavailable category',
-        assets: assetIds.map((id) => libraryAssetById.get(id)).filter(Boolean)
-      };
-    }), [libraryAssetById, pinnedLaunchers, workspace.favorites, workspace.folders]);
+        label: launcher.label || 'Favorites',
+        assets: workspace.favorites.map((id) => libraryAssetById.get(id)).filter(Boolean)
+      }));
+    const folders = workspace.folders.map((folder) => ({
+      id: `library:folder:${folder.id}`,
+      label: folder.name,
+      homeShortcut: pinnedLaunchers.some((launcher) => launcher.id === `library:folder:${folder.id}`),
+      assets: folder.assetIds.map((id) => libraryAssetById.get(id)).filter(Boolean)
+    }));
+    return [...favorites, ...folders];
+  }, [libraryAssetById, pinnedLaunchers, workspace.favorites, workspace.folders]);
   const homeWorld = useMemo(() => createVerticalHomeWorld(geometry), [geometry]);
   const homeOrigin = useMemo(() => ({ x:geometry.width, y:geometry.height, zoom:1 }), [geometry.height,geometry.width]);
   const homeCamera = geometry.narrow || homeCameraState.profileAddress !== workspace.profileAddress
@@ -1237,6 +1242,13 @@ export default function ModuleGridShell({
         spatialWorldActive={upperOpen}
         ownerIndex={ownerAuthoringEnabled ? {
           open: collectionOpen,
+          onToggleHomeShortcut: (category) => {
+            const folderId = category.id.startsWith('library:folder:') ? category.id.slice('library:folder:'.length) : null;
+            if (!folderId) return;
+            const view = { type: 'folder', id: folderId };
+            if (category.homeShortcut) unpinView(view);
+            else pinView(view);
+          },
           onOpenChange: (expanded) => {
             if (expanded && libraryStatus === 'idle') loadLibrary();
             setCollectionOpen(expanded);

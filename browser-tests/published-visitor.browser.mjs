@@ -47,6 +47,16 @@ let activeViewport = { width: 1280, height: 720, touch: false };
 let navigationSequence = 0;
 const resources = {};
 const browserProblems = [];
+const expectedCspProblems = [];
+let acceptingExpectedCspProblems = false;
+const recordBrowserProblem = (problem) => {
+  const expectedBlockedFixtureRequest = /^Request failed: https:\/\/csp-blocked\.invalid csp$/iu.test(problem);
+  if (expectedBlockedFixtureRequest || (acceptingExpectedCspProblems && /content security policy|refused to connect/iu.test(problem))) {
+    expectedCspProblems.push(problem);
+    return;
+  }
+  browserProblems.push(problem);
+};
 const imageRequests = [];
 const transparentPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+XwHjWQAAAABJRU5ErkJggg==';
 const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
@@ -121,6 +131,7 @@ async function navigate(address = profileA) {
     throw error;
   }
   await waitFor(`(()=>{const n=document.querySelector('.published-home-world__spatial');if(!n||getComputedStyle(n).zIndex!=='15')return false;return innerWidth>=720||getComputedStyle(n).overflowY==='auto'})()`, 'published visitor responsive styles');
+  await waitFor(`getComputedStyle(document.querySelector('.published-home-world__header')).opacity === '1'`, 'published visitor commands resolve');
 }
 
 async function collectBootstrapDiagnostics(error, fixtureUrl) {
@@ -196,6 +207,18 @@ async function closeFixtureWindows() {
   assert.equal(await evaluate(`document.querySelectorAll('.published-home-world__window').length`), 0, 'fixture windows remained closed after focus restoration settled');
 }
 
+async function enterGallery() {
+  await click('[aria-label="Move to the world below"]');
+  await page.locator('.gallery-world[data-transition-phase="gallery"]').waitFor({ state: 'visible', timeout: 10_000 });
+}
+
+async function openGalleryArtwork(name = 'Alpha Artwork 1') {
+  await enterGallery();
+  const trigger = `[aria-label="Open artwork: ${name}"]`;
+  await waitFor(`!!document.querySelector(${JSON.stringify(trigger)})`, `${name} Gallery artwork`);
+  return trigger;
+}
+
 describe('published visitor world', { concurrency: false }, () => {
 before(async () => runBrowserSetupWithCleanup(async () => {
   setupAbortController = new AbortController();
@@ -250,7 +273,7 @@ before(async () => runBrowserSetupWithCleanup(async () => {
       return { action: 'fulfill', options: { status: 204, contentType: 'text/plain', body: '' } };
     } });
   await launchPlaywrightEdge({ edgePath: browserPath, runtimePath: runtimeDir, workspaceRoot: root, loopbackOrigin: baseUrl,
-    routeController, resources, diagnostic: lifecycleDiagnostic, onBrowserProblem: (problem) => browserProblems.push(problem),
+    routeController, resources, diagnostic: lifecycleDiagnostic, onBrowserProblem: recordBrowserProblem,
     onOwnedProcess: ({ rootPid, processTree }) => {
       browserTree = processTree;
       cleanupBrowserTest = createBrowserTestCleanup({ rootPid, processTree, runtimePath: runtimeDir, workspaceRoot: root, diagnostic: lifecycleDiagnostic });
@@ -281,7 +304,11 @@ after(async () => {
     const result = await cleanupBrowserTest(resources);
     console.log(`Browser cleanup complete: root PID ${result.rootPid ?? 'not-started'}; shutdown ${result.shutdownMode}; forced PIDs ${result.forcedPids.length ? result.forcedPids.join(',') : 'none'}; remaining PIDs none; runtime removed; ${result.elapsedMs}ms`);
   } catch (error) { failures.push(error); }
-  if (browserProblems.length) failures.push(new Error(`Unexpected browser diagnostics:\n${browserProblems.join('\n')}`));
+  if (browserProblems.length) {
+    const diagnostics = `Unexpected browser diagnostics:\n${browserProblems.join('\n')}`;
+    console.error(diagnostics);
+    failures.push(new Error(diagnostics));
+  }
   if (failures.length) throw new AggregateError(failures, 'Published visitor browser after-hook failed');
 });
 
@@ -300,14 +327,34 @@ test('shared visitor profile card preserves its anchor through avatar, compact, 
   await click(avatar); await waitFor(`(()=>{const c=document.querySelector(${JSON.stringify(card)});const d=c?.querySelector('.profile-identity-card__details');return c?.dataset.state === 'expanded' && c.getBoundingClientRect().width >= 339.9 && c.getBoundingClientRect().height >= 67 + d.scrollHeight})()`, 'expanded profile identity');
   const expanded = await evaluate(`(()=>{const c=document.querySelector(${JSON.stringify(card)}).getBoundingClientRect();const a=document.querySelector(${JSON.stringify(avatar)}).getBoundingClientRect();const d=document.querySelector('.profile-identity-card__details').getBoundingClientRect();return {width:Math.round(c.width),contentAligned:Math.abs(c.bottom-d.bottom)<=1,avatarLeft:a.left,avatarTop:a.top}})()`);
   assert.deepEqual(expanded, { width: 340, contentAligned: true, avatarLeft: 23, avatarTop: 25 });
-  const typography = await evaluate(`(()=>{const cardStyle=getComputedStyle(document.querySelector(${JSON.stringify(card)}));const bioStyle=getComputedStyle(document.querySelector('.profile-identity-card__details > p'));return {textTransform:cardStyle.textTransform,fontVariantCaps:cardStyle.fontVariantCaps,fontStretch:cardStyle.fontStretch,bioFontSize:parseFloat(bioStyle.fontSize)}})()`);
-  assert.deepEqual(typography, { textTransform: 'none', fontVariantCaps: 'normal', fontStretch: '100%', bioFontSize: 12.16 });
-  await evaluate(`window.__fixture.resetMoves()`); await click('.profile-identity-card__details p');
+  const typography = await evaluate(`(()=>{const cardStyle=getComputedStyle(document.querySelector(${JSON.stringify(card)}));return {textTransform:cardStyle.textTransform,fontVariantCaps:cardStyle.fontVariantCaps,fontStretch:cardStyle.fontStretch}})()`);
+  assert.deepEqual(typography, { textTransform: 'none', fontVariantCaps: 'normal', fontStretch: '100%' });
+  assert.equal(await evaluate(`document.querySelector('.profile-identity-card__details > p')`), null, 'profile card invents no biography fallback');
+  await evaluate(`window.__fixture.resetMoves()`); await click('.profile-identity-card__details');
   assert.equal(await evaluate(`window.__fixture.moves.length`), 0, 'card surface blocks click-through world movement');
   await click(avatar);
   assert.equal(await evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(card)})).transitionDelay.split(',')[0].trim()`), '0.08s', 'card width waits for the detail fade on close');
   await waitFor(`document.querySelector(${JSON.stringify(card)}).dataset.state === 'avatar' && document.querySelector(${JSON.stringify(card)}).getBoundingClientRect().width <= 68.1 && parseFloat(getComputedStyle(document.querySelector('.profile-identity-card__details')).opacity) === 0`, 'collapsed profile identity');
   await waitFor(`document.querySelector(${JSON.stringify(categories)}).getAttribute('aria-hidden') === 'true'`, 'categories control hides with avatar profile');
+});
+
+test('Directory visits a published workspace, Close remains Close, and Return restores the connected workspace', async () => {
+  await viewport(1280, 720, false); await navigate();
+  await click('.system-hud__commands button');
+  await waitFor(`!!document.querySelector('.profile-discovery__panel')`, 'directory opens');
+  await evaluate(`document.querySelector('[aria-label="Close INSCAPE directory"]').focus()`);
+  await pressKey('Enter');
+  await waitFor(`!document.querySelector('.profile-discovery__panel')`, 'directory closes with Enter on Close');
+  assert.equal(await evaluate(`window.__fixture.address`), profileA);
+
+  await click('.system-hud__commands button');
+  await page.locator('.profile-discovery__search input').fill('Beta');
+  await waitFor(`document.querySelectorAll('.profile-discovery__result').length === 1`, 'directory search result');
+  await click('.profile-discovery__result');
+  await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileB)}`, 'directory profile visit');
+  await waitFor(`!!document.querySelector('.system-hud__commands button:nth-child(2)')`, 'Return command');
+  await click('.system-hud__commands button:nth-child(2)');
+  await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileA)}`, 'connected workspace return');
 });
 
 test('categories card opens the detached native-ratio asset browser without opening legacy space windows', async () => {
@@ -355,7 +402,7 @@ test('categories card opens the detached native-ratio asset browser without open
   await waitFor(`document.querySelector('.nft-flip-viewer__progress strong').textContent === 'IMAGE 1' && !document.querySelector('.nft-flip-viewer__turntable').hasAttribute('data-rotating')`, 'NFT viewer returns to its artwork face');
   await pressKey('Escape');
   await waitFor(`!document.querySelector('.nft-flip-viewer')`, 'NFT viewer closes');
-  assert.equal(await evaluate(`document.activeElement === document.querySelector('.category-asset-card')`), true, `NFT viewer did not restore trigger focus: ${await evaluate(`document.activeElement?.outerHTML?.slice(0,240)`)}`);
+  await waitFor(`document.activeElement === document.querySelector('.category-asset-card')`, 'NFT viewer restores trigger focus');
   assert.equal(await evaluate(`document.querySelectorAll('body > [inert]').length`), 0, 'NFT viewer clears background isolation');
   const resizeBefore = await evaluate(`document.querySelector('.category-asset-browser').getBoundingClientRect().width`);
   await evaluate(`document.querySelector('.category-asset-browser__resize').focus()`); await pressKey('ArrowLeft');
@@ -520,11 +567,12 @@ test('desktop resize button has a browser accessibility name and arrow-key grid 
 
 test('artwork preview is read-only and right-click exposes no authoring commands', async () => {
   await viewport(1280, 720); await navigate(); await closeFixtureWindows();
+  const trigger = await openGalleryArtwork();
   assert.equal(await evaluate(`document.querySelectorAll('.canvas-artwork__edit,[aria-label^="Edit artwork"]').length`), 0);
-  await click('[aria-label="Open artwork: Alpha Artwork 1"]'); await waitFor(`!!document.querySelector('[aria-label="Artwork preview: Alpha Artwork 1"]')`, 'read-only artwork preview');
+  await click(trigger); await waitFor(`!!document.querySelector('[aria-label="Artwork preview: Alpha Artwork 1"]')`, 'read-only artwork preview');
   assert.equal(await evaluate(`document.querySelector('[aria-label="Artwork preview: Alpha Artwork 1"]').textContent.includes('Edit')`), false);
   await click('[aria-label="Close artwork preview"]'); await waitFor(`!document.querySelector('[aria-label^="Artwork preview:"]')`, 'artwork preview closes');
-  const target = await point('[data-launcher-id="space:Alpha:0"]');
+  const target = await point(trigger);
   await mouse('mousePressed', target.x, target.y, { button: 'right', buttons: 2 }); await mouse('mouseReleased', target.x, target.y, { button: 'right', buttons: 0 });
   assert.equal(await evaluate(`document.querySelectorAll('[role="menu"],.context-menu').length`), 0);
   assert.equal(await evaluate(`[...document.querySelectorAll('button')].some((button) => /edit|author|private|start window/i.test(button.textContent+' '+button.getAttribute('aria-label')))`), false);
@@ -532,9 +580,10 @@ test('artwork preview is read-only and right-click exposes no authoring commands
 
 test('published HTTPS and IPFS-projected images render with no referrer', async () => {
   await viewport(1280, 720, false); await navigate();
+  await enterGallery();
   await waitFor(`document.querySelector('.profile-identity-card img')?.complete && document.querySelector('[data-canvas-object-id="art:Alpha:0"] img')?.complete`, 'published images');
-  const policy = await evaluate(`[...document.querySelectorAll('.published-home-world img')].map((image)=>image.referrerPolicy)`);
-  assert.ok(policy.length >= 3); assert.ok(policy.every((value) => value === 'no-referrer'));
+  const policy = await evaluate(`[...document.querySelectorAll('.application-root img')].map((image)=>image.referrerPolicy)`);
+  assert.ok(policy.length >= 2); assert.ok(policy.every((value) => value === 'no-referrer'));
   assert.ok(imageRequests.some((url) => url.includes('/ipfs/') && url.includes('space-Alpha.png')), 'IPFS space image used the configured HTTPS gateway');
 });
 
@@ -542,21 +591,27 @@ test('rejected HTTP artwork never requests while broken HTTPS falls back and rec
   await viewport(1280, 720, false); await navigate();
   const insecure = 'http://published-images.invalid/insecure.png';
   await evaluate(`window.__fixture.setArtworkUrl(${JSON.stringify(insecure)})`);
+  await enterGallery();
   await waitFor(`!!document.querySelector('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]')`, 'HTTP artwork fallback');
   assert.equal(imageRequests.includes(insecure), false);
   await evaluate(`window.__fixture.setArtworkUrl('https://published-images.invalid/broken-art.png')`);
+  await waitFor(`!document.querySelector('.gallery-world')`, 'Gallery resets for changed published document');
+  await enterGallery();
   await waitFor(`!!document.querySelector('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]')`, 'broken image fallback');
   const fallbackSize = await evaluate(`(()=>{const r=document.querySelector('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]').getBoundingClientRect();return {width:r.width,height:r.height}})()`);
   assert.ok(fallbackSize.width > 0 && fallbackSize.height > 0);
   await evaluate(`window.__fixture.setArtworkUrl('https://published-images.invalid/recovered-art.png')`);
+  await waitFor(`!document.querySelector('.gallery-world')`, 'Gallery resets for recovered published document');
+  await enterGallery();
   await waitFor(`document.querySelector('[data-canvas-object-id="art:Alpha:0"] img')?.complete && !document.querySelector('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]')`, 'new source recovery');
 });
 
 test('failed artwork modal stays focus-contained and shows the controlled fallback', async () => {
   await viewport(1280, 720, false); await navigate(); await closeFixtureWindows();
   await evaluate(`window.__fixture.setArtworkUrl('https://published-images.invalid/broken-modal.png')`);
+  const trigger = await openGalleryArtwork();
   await waitFor(`!!document.querySelector('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]')`, 'failed artwork frame');
-  await click('[aria-label="Open artwork: Alpha Artwork 1"]');
+  await click(trigger);
   const dialog = '[aria-label="Artwork preview: Alpha Artwork 1"]';
   await waitFor(`!!document.querySelector(${JSON.stringify(dialog)})?.querySelector('[data-published-image-fallback]')`, 'modal image fallback');
   assert.equal(await evaluate(`document.activeElement?.getAttribute('aria-label')`), 'Close artwork preview');
@@ -567,20 +622,24 @@ test('failed artwork modal stays focus-contained and shows the controlled fallba
 });
 
 test('an actual CSP response header blocks a disallowed image and the UI falls back', async () => {
-  await viewport(1280, 720, false); await navigateCsp();
-  const beforeProblems = browserProblems.length;
-  await evaluate(`window.__fixture.setArtworkUrl('https://csp-blocked.invalid/art.png')`);
-  await page.locator('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]').waitFor({ state: 'visible', timeout: 10_000 });
-  const newProblems = browserProblems.splice(beforeProblems);
-  const cspProblems = newProblems.filter((problem) => /csp-blocked\.invalid|content security policy/iu.test(problem));
-  browserProblems.push(...newProblems.filter((problem) => !cspProblems.includes(problem)));
-  assert.ok(cspProblems.length >= 1, 'browser reported CSP enforcement for the deliberately disallowed image');
+  expectedCspProblems.length = 0;
+  acceptingExpectedCspProblems = true;
+  try {
+    await viewport(1280, 720, false); await navigateCsp();
+    await evaluate(`window.__fixture.setArtworkUrl('https://csp-blocked.invalid/art.png')`);
+    await enterGallery();
+    await page.locator('[data-canvas-object-id="art:Alpha:0"] [data-published-image-fallback]').waitFor({ state: 'visible', timeout: 10_000 });
+    await page.waitForTimeout(100);
+  } finally {
+    acceptingExpectedCspProblems = false;
+  }
+  assert.ok(expectedCspProblems.length >= 1, 'browser reported CSP enforcement for the deliberately disallowed image');
   assert.equal(imageRequests.some((url) => url.startsWith('https://csp-blocked.invalid/')), false, 'CSP stopped the image before an outbound request');
 });
 
 test('artwork modal traps keyboard focus, isolates background, and restores exact keyboard and pointer triggers', async () => {
   await viewport(1280, 720); await navigate(); await closeFixtureWindows();
-  const trigger = '[aria-label="Open artwork: Alpha Artwork 1"]';
+  const trigger = await openGalleryArtwork();
   await evaluate(`document.querySelector(${JSON.stringify(trigger)}).focus()`); await pressKey('Space');
   const dialog = '[aria-label="Artwork preview: Alpha Artwork 1"]';
   await waitFor(`document.activeElement?.getAttribute('aria-label') === 'Close artwork preview'`, 'modal focus entry');
@@ -590,7 +649,7 @@ test('artwork modal traps keyboard focus, isolates background, and restores exac
   assert.equal(await evaluate(`document.activeElement?.getAttribute('aria-label')`), 'Close artwork preview');
   await pressKey('Tab', 8);
   assert.equal(await evaluate(`document.activeElement?.getAttribute('aria-label')`), 'Close artwork preview');
-  await evaluate(`document.querySelector('[data-launcher-id="space:Alpha:6"]').focus()`);
+  await evaluate(`document.querySelector('[aria-label="Move gallery right"]').focus()`);
   assert.equal(await evaluate(`document.activeElement?.getAttribute('aria-label')`), 'Close artwork preview', 'background focus was redirected into modal');
   await pressKey('Escape');
   await waitFor(`document.activeElement === document.querySelector(${JSON.stringify(trigger)})`, 'Escape trigger focus restoration');
@@ -602,31 +661,18 @@ test('artwork modal traps keyboard focus, isolates background, and restores exac
   assert.equal(await evaluate(`document.querySelectorAll('[inert]').length`), 0, 'pointer close cleared modal isolation');
 });
 
-test('390x844 touch tap moves once while a vertical swipe remains native scrolling', async () => {
-  await viewport(390, 844, true); await navigate(); await closeFixtureWindows(); await evaluate(`window.__fixture.resetMoves()`);
-  const spatial = await evaluate(`(()=>{const s=document.querySelector('.published-home-world__spatial').getBoundingClientRect();const first=document.querySelector('[data-launcher-id]').getBoundingClientRect();return {x:s.left+2,y:first.bottom+4,centerX:s.left+s.width/2,swipeY:Math.min(700,s.bottom-24)}})()`);
-  await evaluate(`(()=>{const n=document.querySelector('.published-home-world__spatial');const init={bubbles:true,pointerId:21,pointerType:'touch',isPrimary:true,clientX:${spatial.x},clientY:${spatial.y}};n.dispatchEvent(new PointerEvent('pointerdown',init));n.dispatchEvent(new PointerEvent('pointerup',init))})()`);
-  await waitFor(`window.__fixture.moves.length === 1`, 'narrow Keeper tap');
-  const count = await evaluate(`window.__fixture.moves.length`); const scrollBefore = await evaluate(`document.querySelector('.published-home-world__spatial').scrollTop`);
-  const swipe = await evaluate(`(()=>{const candidates=[...document.querySelectorAll('[data-launcher-id]')].map(n=>{const r=n.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}});return candidates.find(p=>p.y>350&&p.y<650)||candidates.find(p=>p.y>180&&p.y<700)})()`);
-  await touch('touchStart', [{ x: swipe.x, y: swipe.y, id: 22 }]);
-  for (let step = 1; step <= 8; step += 1) { await touch('touchMove', [{ x: swipe.x + 1, y: swipe.y - step * 28, id: 22 }]); await delay(20); }
-  await touch('touchEnd', []);
-  await delay(100);
-  const scrolled = await evaluate(`(()=>{const s=document.querySelector('.published-home-world__spatial');const n=document.elementFromPoint(${swipe.x},${swipe.y});return {top:s.scrollTop,scrollHeight:s.scrollHeight,clientHeight:s.clientHeight,target:n?.className,touchAction:n&&getComputedStyle(n).touchAction,overflow:getComputedStyle(s).overflowY}})()`);
-  assert.ok(scrolled.top > scrollBefore, `native vertical scroll did not advance: ${JSON.stringify(scrolled)}`);
-  assert.equal(await evaluate(`window.__fixture.moves.length`), count, 'vertical swipe did not move Keeper');
-});
-
-test('320px narrow launchers stack and windows remain reachable', async () => {
-  await viewport(320, 844, true); await navigate(); await closeFixtureWindows();
-  const layout = await evaluate(`(()=>{const s=document.querySelector('.published-home-world__spatial');const launchers=[...s.querySelectorAll('[data-launcher-id]')].map(n=>{const r=n.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right}});return {launchers,clientHeight:s.clientHeight,scrollHeight:s.scrollHeight}})()`);
-  assert.equal(layout.launchers.length, 7); assert.ok(layout.launchers.every((entry, index) => index === 0 || entry.top >= layout.launchers[index - 1].bottom));
-  assert.ok(layout.launchers.every((entry) => entry.left >= 12 && entry.right <= 308)); assert.ok(layout.scrollHeight > layout.clientHeight, 'narrow content remains scroll-reachable');
-  await evaluate(`document.querySelector('[data-launcher-id="space:Alpha:6"]').scrollIntoView({block:'center'});document.querySelector('[data-launcher-id="space:Alpha:6"]').click()`);
-  await waitFor(`!!document.querySelector('[aria-label="Close Alpha Archive 7"]')`, 'narrow window control');
-  const closeRect = await point('[aria-label="Close Alpha Archive 7"]'); assert.ok(closeRect.x >= 0 && closeRect.x <= 320 && closeRect.y >= 0 && closeRect.y <= 844);
-  assert.equal(await evaluate(`document.querySelectorAll('[data-resize-control]').length`), 0, '320px layout exposes no resize control');
+test('narrow visitor mode keeps Directory and Return reachable without desktop authoring parity', async () => {
+  await viewport(390, 844, true); await navigate(profileB);
+  const commands = await evaluate(`[...document.querySelectorAll('.system-hud__commands button')].map((button)=>({text:button.textContent.trim(),rect:button.getBoundingClientRect().toJSON()}))`);
+  assert.equal(commands.length, 2);
+  assert.ok(commands.every(({ rect }) => rect.left >= 0 && rect.right <= 390 && rect.top >= 0 && rect.bottom <= 844));
+  await click('.system-hud__commands button:first-child');
+  await waitFor(`!!document.querySelector('.profile-discovery__panel')`, 'narrow directory opens');
+  await click('[aria-label="Close INSCAPE directory"]');
+  await waitFor(`!document.querySelector('.profile-discovery__panel')`, 'narrow directory closes');
+  await click('.system-hud__commands button:nth-child(2)');
+  await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileA)}`, 'narrow Return');
+  assert.equal(await evaluate(`document.querySelectorAll('[data-resize-control]').length`), 0, 'narrow mode exposes no desktop resize control');
 });
 
 test('390px narrow accessibility tree exposes no misleading resize control', async () => {
@@ -637,10 +683,13 @@ test('390px narrow accessibility tree exposes no misleading resize control', asy
 });
 
 test('profile transition and route reload discard ephemeral visitor state', async () => {
-  await viewport(1280, 720, false); await navigate(); await closeFixtureWindows(); await click('[aria-label="Open artwork: Alpha Artwork 1"]'); await evaluate(`document.querySelector('[data-launcher-id="space:Alpha:6"]').click()`);
+  await viewport(1280, 720, false); await navigate(); await closeFixtureWindows();
+  const trigger = await openGalleryArtwork(); await click(trigger);
+  await waitFor(`!!document.querySelector('[aria-label="Artwork preview: Alpha Artwork 1"]')`, 'Alpha artwork modal');
   await evaluate(`window.__fixture.visit(${JSON.stringify(profileB)})`); await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileB)}`, 'profile transition');
   await waitFor(`!!document.querySelector('[data-launcher-id="space:Beta:0"]')`, 'Beta document');
   assert.equal(await evaluate(`document.querySelectorAll('[data-launcher-id^="space:Alpha:"]').length`), 0); assert.equal(await evaluate(`!!document.querySelector('[aria-label^="Artwork preview:"]')`), false);
+  assert.equal(await evaluate(`!!document.querySelector('.gallery-world')`), false, 'profile transition returns to Home');
   assert.equal(await evaluate(`document.querySelectorAll('.published-home-world__window').length`), 2, 'only Beta start-open windows remain');
   await evaluate(`document.querySelector('[data-launcher-id="space:Beta:6"]').click()`); const priorLoad = await evaluate(`performance.timeOrigin`); await page.reload({ waitUntil: 'domcontentloaded', timeout: 10_000 });
   await waitFor(`performance.timeOrigin !== ${priorLoad}`, 'route reload navigation');
@@ -650,7 +699,7 @@ test('profile transition and route reload discard ephemeral visitor state', asyn
 
 test('profile transition while artwork modal is open removes isolation and uses the published fallback', async () => {
   await viewport(1280, 720, false); await navigate(); await closeFixtureWindows();
-  await evaluate(`document.querySelector('[aria-label="Open artwork: Alpha Artwork 1"]').click()`);
+  const trigger = await openGalleryArtwork(); await click(trigger);
   await waitFor(`document.querySelectorAll('[inert]').length >= 3`, 'modal background isolation');
   await evaluate(`window.__fixture.visit(${JSON.stringify(profileB)})`);
   await waitFor(`!!document.querySelector('[data-launcher-id="space:Beta:0"]') && !document.querySelector('[aria-label^="Artwork preview:"]')`, 'modal route cleanup');

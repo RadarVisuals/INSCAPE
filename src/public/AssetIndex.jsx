@@ -45,17 +45,15 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
   const createFolder = useLibraryStore((state) => state.createFolder);
   const deleteFolder = useLibraryStore((state) => state.deleteFolder);
   const setFolderAsset = useLibraryStore((state) => state.setFolderAsset);
-  const toggleFavorite = useLibraryStore((state) => state.toggleFavorite);
   const [view, setView] = useState({ type: 'all', id: null });
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('ALL');
   const [sort, setSort] = useState('RECENT');
-  const [organizing, setOrganizing] = useState(false);
-  const [selectedIds, setSelectedIds] = useState([]);
   const [viewerAsset, setViewerAsset] = useState(null);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [folderContext, setFolderContext] = useState(null);
+  const [assetContext, setAssetContext] = useState(null);
   const [folderPendingDelete, setFolderPendingDelete] = useState(null);
   const viewerTriggerRef = useRef(null);
   const resizeRef = useRef(null);
@@ -75,11 +73,10 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
   useEffect(() => {
     if (open && status === 'idle') load();
     if (!open) {
-      setOrganizing(false);
-      setSelectedIds([]);
       setViewerAsset(null);
       setNewFolderOpen(false);
       setFolderContext(null);
+      setAssetContext(null);
       setFolderPendingDelete(null);
     }
   }, [load, open, status]);
@@ -109,12 +106,6 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
   const ownerLabel = profileName || workspace.profileAddress || '';
 
   const activateAsset = (event, asset) => {
-    if (organizing) {
-      setSelectedIds((current) => current.includes(asset.id)
-        ? current.filter((id) => id !== asset.id)
-        : [...current, asset.id]);
-      return;
-    }
     viewerTriggerRef.current = event.currentTarget;
     setViewerAsset(asset);
   };
@@ -134,12 +125,6 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
     deleteFolder(folderPendingDelete.id);
     if (view.type === 'folder' && view.id === folderPendingDelete.id) setView({ type: 'all', id: null });
     setFolderPendingDelete(null);
-  };
-
-  const addSelectionToFolder = () => {
-    if (view.type !== 'folder') return;
-    selectedIds.forEach((assetId) => setFolderAsset(view.id, assetId, true));
-    setSelectedIds([]);
   };
 
   const beginResize = (event) => {
@@ -180,7 +165,6 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
       <main>
         <div className="asset-index-workspace__tools">
           <label><span aria-hidden="true">⌕</span><span className="sr-only">Search asset pool</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="SEARCH ASSET POOL" /></label>
-          <button type="button" data-active={organizing || undefined} onClick={() => { setOrganizing((current) => !current); setSelectedIds([]); }}>{organizing ? 'DONE' : 'ORGANIZE'}</button>
         </div>
         <div className="asset-index-workspace__filters"><span>FILTER</span>{FILTERS.map((kind) => <button type="button" key={kind} data-active={filter === kind || undefined} onClick={() => setFilter(kind)}>{kind}</button>)}<label><span>SORT</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option value="RECENT">RECENT</option><option value="A-Z">A–Z</option><option value="COLLECTION">COLLECTION</option></select></label></div>
         <header><strong>{viewLabel}</strong><span>{filteredAssets.length} RESULTS</span></header>
@@ -188,19 +172,20 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
           {(status === 'idle' || status === 'loading') && !filteredAssets.length && <p>LOADING ASSET INDEX{sourceMode === 'RPC' ? ' / DIRECT RPC' : ''}{progress.total ? ` ${progress.resolved}/${progress.total}` : ''}</p>}
           {status === 'error' && !filteredAssets.length && <div className="asset-index-workspace__error" role="alert"><strong>ASSET SOURCE OFFLINE</strong><p>{error || 'ASSET INDEX UNAVAILABLE'}</p><button type="button" onClick={() => load({ forceLive: true })}>RETRY</button></div>}
           {status !== 'idle' && status !== 'loading' && status !== 'error' && !filteredAssets.length && <p>NO ASSETS MATCH THIS VIEW</p>}
-          {filteredAssets.map((asset) => <button type="button" key={asset.id} data-selected={selectedIds.includes(asset.id) || undefined} onClick={(event) => activateAsset(event, asset)} aria-label={`${organizing ? 'Select' : 'Inspect'} ${asset.name || 'untitled asset'}`}>
+          {filteredAssets.map((asset) => <button type="button" key={asset.id} onClick={(event) => activateAsset(event, asset)} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setAssetContext({ asset, anchor: { x: event.clientX, y: event.clientY }, returnFocus: event.currentTarget }); }} aria-label={`Inspect ${asset.name || 'untitled asset'}`}>
             <span className="asset-index-workspace__thumb"><IndexThumbnail asset={asset} /></span>
             <strong>{asset.name || 'Untitled asset'}</strong>
             {(asset.collectionName || assetKind(asset)) && <small>{[assetKind(asset), asset.collectionName].filter(Boolean).join(' · ')}</small>}
           </button>)}
         </div>
-        <footer><span>{organizing ? `${selectedIds.length} SELECTED` : ''}</span>{organizing && <button type="button" disabled={!selectedIds.length || view.type !== 'folder'} onClick={addSelectionToFolder}>ADD TO FOLDER</button>}</footer>
+        <footer />
       </main>
       <button className="asset-index-workspace__resize" type="button" aria-label="Resize asset index" onKeyDown={resizeByKey} onPointerDown={beginResize} onPointerMove={moveResize} onPointerUp={finishResize} onPointerCancel={finishResize} onLostPointerCapture={finishResize}><i aria-hidden="true">›</i></button>
       {newFolderOpen && <div className="asset-index-folder-dialog" role="dialog" aria-modal="true" aria-labelledby="asset-index-folder-title"><form onSubmit={submitFolder}><span>INDEX / NEW DIRECTORY</span><h2 id="asset-index-folder-title">CREATE FOLDER</h2><label htmlFor="asset-index-folder-name">FOLDER NAME</label><input id="asset-index-folder-name" autoFocus maxLength="80" value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} /><div><button type="button" onClick={() => setNewFolderOpen(false)}>CANCEL</button><button type="submit" disabled={!newFolderName.trim()}>CREATE</button></div></form></div>}
       {folderPendingDelete && <div className="asset-index-folder-dialog" role="alertdialog" aria-modal="true" aria-labelledby="asset-index-delete-title" aria-describedby="asset-index-delete-copy"><div className="asset-index-folder-dialog__panel"><span>INDEX / REMOVE DIRECTORY</span><h2 id="asset-index-delete-title">DELETE {folderPendingDelete.name}</h2><p id="asset-index-delete-copy">THE FOLDER WILL BE REMOVED. ITS {folderPendingDelete.assetIds.length} {folderPendingDelete.assetIds.length === 1 ? 'ASSET REMAINS' : 'ASSETS REMAIN'} IN YOUR INDEX.</p><div><button type="button" autoFocus onClick={() => setFolderPendingDelete(null)}>CANCEL</button><button type="button" data-danger onClick={confirmFolderDelete}>DELETE FOLDER</button></div></div></div>}
     </section>
     {folderContext && <DesktopMenu className="asset-index-context-menu" anchor={folderContext.anchor} label={`${folderContext.folder.name} commands`} commands={[{ id: 'delete-folder', label: 'Delete Folder' }]} onCommand={() => { setFolderPendingDelete(folderContext.folder); setFolderContext(null); }} onClose={() => setFolderContext(null)} returnFocus={folderContext.returnFocus} />}
+    {assetContext && <DesktopMenu className="asset-index-context-menu" anchor={assetContext.anchor} label={`${assetContext.asset.name || 'Asset'} categories`} commands={workspace.folders.length ? workspace.folders.map((folder) => ({ id: folder.id, label: `${folder.assetIds.includes(assetContext.asset.id) ? 'Remove from' : 'Add to'} ${folder.name}` })) : [{ id: 'no-categories', label: 'No categories yet', disabled: true }]} onCommand={(folderId) => { const folder = workspace.folders.find((entry) => entry.id === folderId); if (folder) setFolderAsset(folder.id, assetContext.asset.id, !folder.assetIds.includes(assetContext.asset.id)); setAssetContext(null); }} onClose={() => setAssetContext(null)} returnFocus={assetContext.returnFocus} />}
     {viewerAsset && <NftFlipViewer asset={viewerAsset} onClose={() => setViewerAsset(null)} returnFocus={viewerTriggerRef.current} />}
   </>, document.body) : null;
 

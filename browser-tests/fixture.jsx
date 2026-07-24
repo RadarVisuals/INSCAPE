@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import PublishedHomeWorld from '../src/profileDocument/components/PublishedHomeWorld.jsx';
+import ProfileDiscoveryBoundary from '../src/profileDiscovery/ProfileDiscoveryBoundary.jsx';
 import '../src/index.css';
 import '../src/public/moduleGrid.css';
 import '../src/library/collection.css';
@@ -53,6 +54,13 @@ function Fixture() {
   const [address, setAddress] = useState(currentAddress);
   const [moves, setMoves] = useState([]);
   const [artworkUrl, setArtworkUrl] = useState(null);
+  const [directoryOpen, setDirectoryOpen] = useState(false);
+  const directoryRepository = useMemo(() => ({ list: async () => Object.values(DOCUMENTS).map((entry) => ({
+    address: entry.profile.address,
+    name: entry.profile.cachedIdentity.name,
+    avatarUrl: entry.profile.cachedIdentity.avatarUrl,
+    status: 'PUBLISHED'
+  })) }), []);
   const document = useMemo(() => {
     const next = structuredClone(DOCUMENTS[address]);
     if (artworkUrl !== null) next.canvasObjects[0].asset.cachedPreviewUrl = artworkUrl;
@@ -63,23 +71,28 @@ function Fixture() {
     addEventListener('popstate', updateRoute);
     return () => removeEventListener('popstate', updateRoute);
   }, []);
+  const visit = (nextAddress) => {
+    history.pushState({}, '', `/browser-tests/fixture.html?view=${nextAddress}`);
+    setAddress(currentAddress());
+    setDirectoryOpen(false);
+  };
   useEffect(() => {
     window.__fixture = {
       address,
       moves,
       resetMoves: () => setMoves([]),
       setArtworkUrl,
-      visit(nextAddress) {
-        history.pushState({}, '', `/browser-tests/fixture.html?view=${nextAddress}`);
-        dispatchEvent(new PopStateEvent('popstate'));
-      }
+      visit
     };
   }, [address, moves]);
   return <div className="application-root" data-browser-fixture data-profile-address={address} data-application-mode="public">
     <div className="application-world" data-visible />
     <div className="application-interface" data-visible>
       <output data-testid="keeper-moves" data-count={moves.length}>{JSON.stringify(moves)}</output>
-      <PublishedHomeWorld document={document} onMoveKeeper={(x, y) => setMoves((current) => [...current, { x, y }])} />
+      <PublishedHomeWorld document={document} onMoveKeeper={(x, y) => setMoves((current) => [...current, { x, y }])}
+        onOpenDirectory={() => setDirectoryOpen(true)} onReturn={address === PROFILE_A ? undefined : () => visit(PROFILE_A)} />
+      {directoryOpen && <ProfileDiscoveryBoundary repository={directoryRepository} onClose={() => setDirectoryOpen(false)}
+        onSelect={(profile) => visit(profile.address)} />}
     </div>
   </div>;
 }

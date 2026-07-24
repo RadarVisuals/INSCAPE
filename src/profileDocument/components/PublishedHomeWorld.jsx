@@ -132,6 +132,10 @@ export default function PublishedHomeWorld({ document, onMoveKeeper, onExit, onO
   }, [layout.geometry.narrow, layout.world, viewport]);
 
   const transitionWindow = useCallback((action) => setWindowState((state) => visitorWindowTransition(state, action)), []);
+  const openArtworkPreview = useCallback((id, trigger) => {
+    artworkTriggerRef.current = trigger?.isConnected ? trigger : null;
+    setOpenArtworkId(id);
+  }, []);
   const handleWorldWheel = useCallback((event) => {
     if (layout.geometry.narrow) return;
     event.preventDefault();
@@ -274,7 +278,7 @@ export default function PublishedHomeWorld({ document, onMoveKeeper, onExit, onO
       theme={THEME}
       transitionPhase={galleryTransitionPhase}
       renderImage={(props) => <PublishedImage {...props} />}
-      onOpenArtwork={setOpenArtworkId}
+      onOpenArtwork={openArtworkPreview}
       onExit={exitGallery}
       onMoveKeeper={onMoveKeeper}
     /></Suspense>}
