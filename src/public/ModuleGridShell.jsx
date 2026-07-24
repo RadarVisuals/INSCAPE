@@ -36,13 +36,13 @@ import UpperWorldSurface from './UpperWorldSurface.jsx';
 import SpatialLevelNavigation from './SpatialLevelNavigation.jsx';
 import { SPATIAL_WORLD_LEVEL } from './spatialWorldLevels.js';
 import KeeperDock from './KeeperDock.jsx';
-import ProfileDiscovery from '../profileDiscovery/ProfileDiscovery.jsx';
 import { clampVerticalHomeWorldCamera, getWindowRevealCamera, loadHomeWorldCamera, saveHomeWorldCamera } from './homeWorldCamera.js';
 import { getSpatialGridOffset } from './spatialWorldCamera.js';
 import { CANVAS_OBJECT_KIND, getCanvasObjectDefinition } from '../library/domain/canvasObjectRegistry.js';
 import { CANVAS_OBJECT_ORDER_COMMAND } from '../library/domain/canvasObjects.js';
 import { runOwnerAuthoringMutation, selectLiveCanvasContent } from './publicAccess.js';
 import { readOwnerProfileValue, removeOwnerProfileValue, writeOwnerProfileValue } from './ownerProfileStorage.js';
+import ProfileDiscoveryBoundary from '../profileDiscovery/ProfileDiscoveryBoundary.jsx';
 import { createVerticalHomePlacementGeometry, createVerticalHomeWorld } from './verticalHomeWorld.js';
 import {
   MODULE_LAYOUT_STORAGE_KEY,
@@ -1526,7 +1526,7 @@ export default function ModuleGridShell({
       />}
       {ownerAuthoringEnabled && artworkChooser && <ArtworkChooser assets={libraryAssets} status={libraryStatus} error={libraryError} title={artworkChooser.mode==='replace'?'Replace artwork':artworkChooser.mode==='gallery-create'?'Add artwork to gallery':'Choose artwork'} onSelect={chooseArtwork} onCancel={()=>{artworkChoicePendingRef.current=false;setArtworkChooser(null);}} />}
       {previewObjectId && canvasObjectById[previewObjectId] && (()=>{const object=canvasObjectById[previewObjectId];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId)||{id:object.stableAssetId,name:'Unavailable artwork',standard:'UNKNOWN',contractAddress:'Unavailable',tokenId:null,imageUrl:null};return <div className="canvas-artwork-preview" role="dialog" aria-modal="true" aria-label={`Artwork preview: ${asset.name}`}><AssetPreview asset={asset} workspace={workspace} authoringEnabled={false} onClose={closeArtworkPreview} /></div>;})()}
-      {profileDiscoveryOpen && <ProfileDiscovery
+      {profileDiscoveryOpen && <ProfileDiscoveryBoundary
         onClose={() => { setProfileDiscoveryOpen(false); setActiveHudCommand((current) => current === 'search' ? null : current); }}
         onSelect={(result) => {
           onVisitProfile?.(result.address);

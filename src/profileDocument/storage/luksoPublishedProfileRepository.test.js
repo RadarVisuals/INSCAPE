@@ -15,6 +15,7 @@ import {
 
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
+const CID = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw';
 
 function documentFor(address = PROFILE_A) {
   return buildProfileDocumentV3({ profileAddress: address,
@@ -28,7 +29,7 @@ const streamResponse = (chunks, options = {}) => new Response(new ReadableStream
   for (const chunk of chunks) controller.enqueue(chunk); controller.close();
 } }), { status: 200, headers: options.headers });
 
-function pointerFor(bytes, uri = 'ipfs://bafy-profile/document.json') {
+function pointerFor(bytes, uri = `ipfs://${CID}`) {
   return encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: keccak256(bytes) }, uri);
 }
 
@@ -85,10 +86,13 @@ test('the default reader requests the singleton key through mocked ERC725Y RPC',
 
 test('hash mismatch, malformed pointers, and unsafe URI schemes are invalid', async () => {
   const bytes = new TextEncoder().encode(JSON.stringify(documentFor()));
-  const wrongHash = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: `0x${'00'.repeat(32)}` }, 'ipfs://bafy-profile');
+  const wrongHash = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: `0x${'00'.repeat(32)}` }, `ipfs://${CID}`);
   assert.equal((await repositoryFor({ value: wrongHash, chunks: [bytes] }).resolve(PROFILE_A)).errorCode, 'HASH_MISMATCH');
   assert.equal((await repositoryFor({ value: '0x1234', chunks: [bytes] }).resolve(PROFILE_A)).status, PUBLISHED_PROFILE_STATUS.INVALID);
   assert.equal((await repositoryFor({ value: pointerFor(bytes, 'https://example.test/profile.json'), chunks: [bytes] }).resolve(PROFILE_A)).errorCode, 'UNSAFE_URI');
+  for (const uri of ['ipfs://not-a-cid', 'ipfs://bafy-profile', 'ipfs://bafkreiabc/profile.json']) {
+    assert.equal((await repositoryFor({ value: pointerFor(bytes, uri), chunks: [bytes] }).resolve(PROFILE_A)).errorCode, 'UNSAFE_URI');
+  }
 });
 
 test('oversized content is rejected during streaming and cancels before later chunks', async () => {
@@ -96,7 +100,7 @@ test('oversized content is rejected during streaming and cancels before later ch
   const response = new Response(new ReadableStream({ pull(controller) {
     pulls += 1; controller.enqueue(new Uint8Array(limit / 2 + 1));
   }, cancel() { cancelled = true; } }));
-  const value = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: `0x${'11'.repeat(32)}` }, 'ipfs://bafy-large');
+  const value = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: `0x${'11'.repeat(32)}` }, `ipfs://${CID}`);
   const result = await repositoryFor({ value, fetchImpl: async () => response }).resolve(PROFILE_A);
   assert.equal(result.errorCode, 'OVERSIZED_DOCUMENT'); assert.equal(cancelled, true); assert.ok(pulls >= 2);
 });
@@ -213,7 +217,7 @@ test('gateway hash mismatch never parses bad bytes and a later exact response re
     fetchImpl: async (url) => { urls.push(url); return streamResponse([url.startsWith('https://gateway-one.test') ? bad : bytes]); } });
   const result = await repository.resolve(PROFILE_A);
   assert.equal(result.status, PUBLISHED_PROFILE_STATUS.RESOLVED); assert.deepEqual(urls, [
-    'https://gateway-one.test/ipfs/bafy-profile/document.json', 'https://gateway-two.test/ipfs/bafy-profile/document.json']);
+    `https://gateway-one.test/ipfs/${CID}`, `https://gateway-two.test/ipfs/${CID}`]);
 });
 
 test('successful attempts clear timers and exhausted timeout is bounded', async () => {

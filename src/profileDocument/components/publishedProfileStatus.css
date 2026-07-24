@@ -1,0 +1,75 @@
+.published-profile-status {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+  pointer-events: auto;
+  background-color: #050606;
+  background-image:
+    linear-gradient(rgba(238, 235, 223, .11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(238, 235, 223, .11) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+.published-profile-status__card {
+  width: min(560px, calc(100vw - 40px));
+  box-sizing: border-box;
+  padding: 30px;
+  border: 1px solid rgba(238, 235, 223, .24);
+  background: rgba(4, 5, 5, .97);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .58);
+}
+.published-profile-status__card > span {
+  color: rgba(238, 235, 223, .42);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .11em;
+}
+.published-profile-status__card h1 {
+  margin: 14px 0 10px;
+  color: #eeebdf;
+  font: 650 22px/1.15 var(--font-interface, 'PP Monument Extended', sans-serif);
+  letter-spacing: .04em;
+}
+.published-profile-status__card p {
+  max-width: 440px;
+  margin: 0 0 15px;
+  color: rgba(238, 235, 223, .62);
+  font-size: 11px;
+  line-height: 1.65;
+  text-transform: none;
+}
+.published-profile-status__card code {
+  display: block;
+  overflow: hidden;
+  color: rgba(238, 235, 223, .38);
+  font: 10px/1.4 monospace;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+.published-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+}
+.published-profile-actions button,
+.published-profile-actions .published-profile-retry {
+  min-height: 36px;
+  margin: 0;
+  padding: 0 14px;
+  border: 1px solid rgba(238, 235, 223, .24);
+  background: transparent;
+  color: rgba(238, 235, 223, .82);
+  font: 650 9px/1 var(--font-interface, 'PP Monument Extended', sans-serif);
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+.published-profile-actions button:hover { border-color: rgba(238, 235, 223, .58); color: #fff; }
+
+@media (max-width: 560px) {
+  .published-profile-status { padding: 12px; background-size: 56px 56px; }
+  .published-profile-status__card { width: 100%; padding: 22px; }
+  .published-profile-status__card h1 { font-size: 18px; }
+}

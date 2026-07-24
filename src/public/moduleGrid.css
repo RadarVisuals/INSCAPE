@@ -1634,7 +1634,7 @@
   .system-identity > img { width:26px; height:26px; flex-basis:26px; }
   .system-identity > span { display:none; }
   .system-hud__commands { gap:4px; padding:0 4px; }
-  .system-hud__commands button:nth-child(2) { display:none; }
+  .public-shell:not(.published-home-world) .system-hud__commands button:nth-child(2) { display:none; }
   .profile-card-popover { left:8px; top:58px; width:calc(100vw - 16px); height:calc(100vh - 70px); }
   .system-signature { left:10px; bottom:9px; }
 }

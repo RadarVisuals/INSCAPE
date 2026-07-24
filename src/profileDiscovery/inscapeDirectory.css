@@ -1,0 +1,180 @@
+.profile-discovery {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  box-sizing: border-box;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, .72);
+  backdrop-filter: blur(9px);
+}
+
+.profile-discovery__panel {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(780px, calc(100dvh - 32px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--hu-text, #eeebdf);
+  border-color: rgba(238, 235, 223, .24);
+  background: rgba(4, 5, 5, .985);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, .72);
+  font-family: var(--font-interface, 'PP Monument Extended', sans-serif);
+  text-transform: uppercase;
+}
+
+.profile-discovery__panel > header {
+  position: relative;
+  min-height: 78px;
+  box-sizing: border-box;
+  align-items: center;
+  padding: 17px 22px;
+  border-bottom: 0;
+  display: flex;
+  justify-content: space-between;
+}
+.profile-discovery__panel header p {
+  margin: 0;
+  color: rgba(238, 235, 223, .42);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .1em;
+}
+.profile-discovery__panel h2 {
+  margin: 7px 0 0;
+  color: #eeebdf;
+  font: 650 18px/1 var(--font-interface, 'PP Monument Extended', sans-serif);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.profile-discovery__panel > header button {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  color: rgba(238, 235, 223, .58);
+  font: 500 17px/1 sans-serif;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.profile-discovery__search { display: block; padding: 0 20px 13px; }
+.profile-discovery__search input {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 0 13px;
+  border-color: rgba(238, 235, 223, .18);
+  background: #070808;
+  font: 650 10px/1 var(--font-interface, 'PP Monument Extended', sans-serif);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #eeebdf;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 0;
+  outline: 0;
+}
+.profile-discovery__search input:focus { border-color: rgba(238, 235, 223, .54); box-shadow: none; }
+.profile-discovery__search input::placeholder { color: rgba(238, 235, 223, .28); }
+
+.profile-discovery__context {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 22px 12px;
+  color: rgba(238, 235, 223, .42);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .1em;
+}
+.profile-discovery__context strong { color: rgba(238, 235, 223, .76); }
+.profile-discovery__status { min-height: 0; padding: 0 22px; color: rgba(238, 235, 223, .5); font-size: 10px; }
+.profile-discovery__status p { margin: 0 0 14px; }
+.profile-discovery__status div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.profile-discovery__status button {
+  border-color: rgba(238, 235, 223, .25);
+  background: transparent;
+  color: #eeebdf;
+}
+
+.profile-discovery__results {
+  min-height: 0;
+  overflow-y: auto;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: rgba(238, 235, 223, .14);
+  scrollbar-color: rgba(238, 235, 223, .28) transparent;
+  scrollbar-width: thin;
+}
+.profile-discovery__result {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr);
+  gap: 15px;
+  padding: 13px 20px;
+  border-bottom-color: rgba(238, 235, 223, .12);
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+  background: transparent;
+  color: #eeebdf;
+  text-align: left;
+  cursor: pointer;
+}
+.profile-discovery__result:hover,
+.profile-discovery__result[aria-selected="true"] { background: rgba(238, 235, 223, .06); }
+.profile-discovery__result[aria-selected="true"] { box-shadow: inset 2px 0 rgba(238, 235, 223, .78); }
+.profile-discovery__avatar {
+  width: 64px;
+  height: 64px;
+  flex-basis: 64px;
+  border-color: rgba(238, 235, 223, .24);
+  background: #090a0a;
+  color: rgba(238, 235, 223, .7);
+  font: 650 12px/1 var(--font-interface, 'PP Monument Extended', sans-serif);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  box-sizing: border-box;
+  border-style: solid;
+  border-width: 1px;
+}
+.profile-discovery__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-discovery__result-copy { min-width: 0; display: grid; gap: 5px; }
+.profile-discovery__result-copy strong {
+  overflow: hidden;
+  font: 650 13px/1.2 var(--font-interface, 'PP Monument Extended', sans-serif);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-discovery__result-copy code { color: rgba(238, 235, 223, .58); font-size: 10px; }
+.profile-discovery__result-copy small { color: rgba(238, 235, 223, .33); font-size: 8px; letter-spacing: .08em; }
+.profile-discovery__panel > footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 20px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: rgba(238, 235, 223, .14);
+  color: rgba(238, 235, 223, .42);
+  font-size: 8px;
+}
+
+@media (max-width: 560px) {
+  .profile-discovery { padding: 8px; }
+  .profile-discovery__panel { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .profile-discovery__panel > header { min-height: 68px; padding-inline: 16px; }
+  .profile-discovery__search { padding-inline: 14px; }
+  .profile-discovery__context, .profile-discovery__status { padding-inline: 16px; }
+  .profile-discovery__result { grid-template-columns: 54px minmax(0, 1fr); padding-inline: 14px; }
+  .profile-discovery__avatar { width: 52px; height: 52px; flex-basis: 52px; }
+  .profile-discovery__panel > footer { display: none; }
+}

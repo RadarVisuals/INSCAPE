@@ -1,10 +1,27 @@
 import { LUKSO_INDEXER_URL, normalizeProfileAddress } from '../../library/config.js';
-import { lsp3ProfileIdentityRepository } from '../../profileIdentity/data/lsp3ProfileIdentityRepository.js';
 import { selectProfileAvatar } from '../../profileIdentity/domain/profileIdentity.js';
+import { isPublishedProfilePointerValue, OS_UNDERNEATH_PROFILE_DOCUMENT_KEY } from '../../profileDocument/storage/luksoPublishedProfileRepository.js';
 
-// Documented by LUKSO: https://docs.lukso.tech/tools/apis/indexer-api/
-export const PROFILE_DISCOVERY_QUERY = `query SearchProfiles($search: String!) {
-  search_profiles(args: { search: $search }) {
+// DataChanged is the indexed ERC725Y publication event. The emitter address is
+// the Universal Profile; custom keys are not populated in the profile_id field.
+export const PROFILE_DIRECTORY_QUERY = `query InscapeDirectory($key: String!, $limit: Int!, $offset: Int!) {
+  DataChanged(
+    distinct_on: address
+    where: { key: { _eq: $key } }
+    order_by: [{ address: asc }, { blockNumber: desc }, { logIndex: desc }]
+    limit: $limit
+    offset: $offset
+  ) {
+    address
+    value
+    blockNumber
+    logIndex
+    transactionHash
+  }
+}`;
+
+export const PROFILE_DIRECTORY_IDENTITIES_QUERY = `query InscapeDirectoryProfiles($addresses: [String!]!) {
+  Profile(where: { id: { _in: $addresses } }) {
     id
     name
     fullName
@@ -26,29 +43,47 @@ function normalizeIndexerProfile(profile) {
   if (!address) return null;
   return { address, name: clean(profile.name) || clean(profile.fullName) || null,
     avatarUrl: selectProfileAvatar(profile.profileImages), isUniversalProfile: true,
-    status: 'INDEXED', source: 'LUKSO Envio Indexer' };
+    status: 'PUBLISHED', source: 'LUKSO Envio Indexer' };
 }
 
 export function createLuksoProfileDiscoveryRepository({ endpoint = LUKSO_INDEXER_URL, fetchImpl = globalThis.fetch,
-  exactRepository = lsp3ProfileIdentityRepository } = {}) {
-  return { source: 'LUKSO Envio Indexer', async search(rawQuery, { signal } = {}) {
-    const query = clean(rawQuery, 120); if (!query) return [];
-    const exactAddress = normalizeProfileAddress(query);
-    if (exactAddress) {
-      const identity = await exactRepository.resolve(exactAddress, { signal });
-      if (signal?.aborted) throw signal.reason || new DOMException('Aborted', 'AbortError');
-      if (identity.status === 'ERROR') throw new Error('Direct LUKSO profile verification is unavailable');
-      return [{ address: exactAddress, name: identity.name, avatarUrl: identity.avatarUrl,
-        isUniversalProfile: identity.isUniversalProfile, status: identity.status, errorCode: identity.errorCode,
-        source: identity.isUniversalProfile ? 'LUKSO RPC + LSP3' : 'LUKSO RPC' }];
-    }
+  directoryPageSize = 200, maximumDirectoryPages = 50 } = {}) {
+  const request = async (query, variables, signal) => {
     const response = await fetchImpl(endpoint, { method: 'POST', signal, headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ query: PROFILE_DISCOVERY_QUERY, variables: { search: query } }) });
+      body: JSON.stringify({ query, variables }) });
     if (!response.ok) throw new Error(`LUKSO indexer responded ${response.status}`);
     const payload = await response.json();
-    if (payload.errors?.length) throw new Error(payload.errors[0]?.message || 'Profile discovery failed');
-    if (!Array.isArray(payload.data?.search_profiles)) throw new Error('Invalid LUKSO indexer response');
-    return payload.data.search_profiles.map(normalizeIndexerProfile).filter(Boolean).slice(0, 24);
+    if (payload.errors?.length) throw new Error(payload.errors[0]?.message || 'INSCAPE directory failed');
+    return payload.data;
+  };
+  return { source: 'LUKSO Envio Indexer', async list({ signal } = {}) {
+    const indexedPublications = [];
+    for (let page = 0; page < maximumDirectoryPages; page += 1) {
+      const directory = await request(PROFILE_DIRECTORY_QUERY,
+        { key: OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, limit: directoryPageSize, offset: page * directoryPageSize }, signal);
+      if (!Array.isArray(directory?.DataChanged)) throw new Error('Invalid INSCAPE directory response');
+      indexedPublications.push(...directory.DataChanged);
+      if (directory.DataChanged.length < directoryPageSize) break;
+      if (page === maximumDirectoryPages - 1) throw new Error('INSCAPE directory exceeds its safe retrieval bound');
+    }
+    const publications = indexedPublications.filter((event) => normalizeProfileAddress(event?.address)
+      && isPublishedProfilePointerValue(event?.value));
+    const addresses = publications.map((event) => normalizeProfileAddress(event.address));
+    if (!addresses.length) return [];
+    const indexedProfiles = [];
+    for (let offset = 0; offset < addresses.length; offset += directoryPageSize) {
+      const identities = await request(PROFILE_DIRECTORY_IDENTITIES_QUERY,
+        { addresses: addresses.slice(offset, offset + directoryPageSize) }, signal);
+      if (!Array.isArray(identities?.Profile)) throw new Error('Invalid INSCAPE identity response');
+      indexedProfiles.push(...identities.Profile);
+    }
+    const byAddress = new Map(indexedProfiles.map(normalizeIndexerProfile).filter(Boolean)
+      .map((profile) => [profile.address, profile]));
+    return publications.map((event) => {
+      const address = normalizeProfileAddress(event.address); const profile = byAddress.get(address);
+      return profile ? { ...profile, publicationBlock: Number(event.blockNumber) || null,
+        publicationTransactionHash: clean(event.transactionHash, 66) || null } : null;
+    }).filter(Boolean).sort((a, b) => (b.publicationBlock || 0) - (a.publicationBlock || 0));
   } };
 }
 

@@ -3,6 +3,7 @@ import { decodeFunctionResult, encodeFunctionData, keccak256 } from 'viem';
 import { LUKSO_RPC_FALLBACK_URLS, LUKSO_RPC_URL, normalizeProfileAddress,
   PROFILE_DOCUMENT_IPFS_GATEWAY_FALLBACK_URLS, PROFILE_DOCUMENT_IPFS_GATEWAY_URL } from '../../library/config.js';
 import { PROFILE_DOCUMENT_LIMITS } from '../domain/constants.js';
+import { isValidCid } from '../domain/cidValidation.js';
 import { parseProfileDocumentJson } from '../domain/profileDocumentValidation.js';
 
 export const OS_UNDERNEATH_PROFILE_DOCUMENT_KEY_NAME = 'OSUnderneathProfileDocument';
@@ -92,9 +93,11 @@ function resolvePublishedContentUrl(uri, gateway) {
   if (typeof uri !== 'string' || uri.length > 2048 || !/^ipfs:\/\//i.test(uri) || /[\u0000-\u001f\u007f\\]/u.test(uri)) {
     invalid('UNSAFE_URI', 'Published profile pointer must use a safe IPFS URI');
   }
-  const path = uri.replace(/^ipfs:\/\/(ipfs\/)?/i, '').replace(/^\/+/, '');
-  if (!path || path.split('/').some((part) => !part || part === '.' || part === '..')) invalid('UNSAFE_URI', 'Published profile IPFS path is invalid');
-  const target = new URL(gateway); target.pathname = `${target.pathname.replace(/\/+$/u, '')}/${path}`;
+  const cid = uri.replace(/^ipfs:\/\//i, '');
+  if (!cid || /[\s/?#]/u.test(cid) || !isValidCid(cid)) {
+    invalid('UNSAFE_URI', 'Published profile pointer must contain one valid IPFS CID');
+  }
+  const target = new URL(gateway); target.pathname = `${target.pathname.replace(/\/+$/u, '')}/${cid}`;
   return target.toString();
 }
 
@@ -136,6 +139,15 @@ function decodePointer(value) {
   }
 }
 
+export function isPublishedProfilePointerValue(value) {
+  try {
+    const pointer = decodePointer(value);
+    resolvePublishedContentUrl(pointer.url, 'https://directory.invalid/ipfs/');
+    return true;
+  }
+  catch { return false; }
+}
+
 function availabilityCode(error, fallback) {
   return error instanceof PublishedProfileAvailabilityError ? error.code : fallback;
 }
@@ -147,7 +159,7 @@ export function createLuksoPublishedProfileRepository({ rpcUrl = LUKSO_RPC_URL, 
   const timeoutPolicy = { ...PUBLISHED_PROFILE_TIMEOUTS, ...timeouts };
   const rpcEndpoints = endpointList(rpcUrl, rpcFallbackUrls, 'RPC');
   const gatewayEndpoints = endpointList(ipfsGateway, ipfsGatewayFallbackUrls, 'GATEWAY');
-  return { source: 'LUKSO_MAINNET', async resolve(address, { signal } = {}) {
+  const readPublishedPointer = async (address, signal) => {
     const requestedAddress = normalizeProfileAddress(address);
     if (!requestedAddress) throw new TypeError('A valid Universal Profile address is required');
     throwIfAborted(signal);
@@ -165,15 +177,26 @@ export function createLuksoPublishedProfileRepository({ rpcUrl = LUKSO_RPC_URL, 
       }
     }
     const distinctValues = [...new Set(values)];
-    if (distinctValues.length > 1) return { status: PUBLISHED_PROFILE_STATUS.INVALID, address: requestedAddress,
-      document: null, errorCode: 'RPC_POINTER_CONFLICT' };
+    if (distinctValues.length > 1) return { address: requestedAddress, available: false, errorCode: 'RPC_POINTER_CONFLICT' };
     if (!distinctValues.length) {
-      if (successfulRpcReads === rpcEndpoints.length) return { status: PUBLISHED_PROFILE_STATUS.UNAVAILABLE, address: requestedAddress, document: null };
+      if (successfulRpcReads === rpcEndpoints.length) return { address: requestedAddress, available: false, errorCode: null };
       throw new PublishedProfileAvailabilityError(rpcFailureCode, 'RPC');
     }
     const value = distinctValues[0];
     let pointer;
-    try { pointer = decodePointer(value); } catch (error) { return { status: PUBLISHED_PROFILE_STATUS.INVALID, address: requestedAddress, document: null, errorCode: error.code }; }
+    try { pointer = decodePointer(value); } catch (error) { return { address: requestedAddress, available: false, errorCode: error.code }; }
+    return { address: requestedAddress, available: true, errorCode: null, pointer };
+  };
+  return { source: 'LUKSO_MAINNET',
+    async hasPublishedWorkspace(address, { signal } = {}) {
+      return (await readPublishedPointer(address, signal)).available;
+    },
+    async resolve(address, { signal } = {}) {
+    const publication = await readPublishedPointer(address, signal);
+    const requestedAddress = publication.address;
+    if (!publication.available) return { status: publication.errorCode ? PUBLISHED_PROFILE_STATUS.INVALID : PUBLISHED_PROFILE_STATUS.UNAVAILABLE,
+      address: requestedAddress, document: null, errorCode: publication.errorCode || undefined };
+    const pointer = publication.pointer;
     let bytes; let gatewayFailureCode = 'GATEWAY_UNAVAILABLE'; let integrityFailureCode = null;
     for (const gateway of gatewayEndpoints) {
       try {
