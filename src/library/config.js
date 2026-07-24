@@ -1,6 +1,8 @@
 export const LUKSO_CHAIN_ID = 42;
 export const LUKSO_INDEXER_URL = import.meta.env?.VITE_LUKSO_INDEXER_URL
   || 'https://envio.lukso-mainnet.universal.tech/v1/graphql';
+export const CHILLWHALES_INDEXER_URL = import.meta.env?.VITE_CHILLWHALES_INDEXER_URL
+  || 'https://indexer.chillwhales.dev/v1/graphql';
 export const IPFS_GATEWAY_URL = import.meta.env?.VITE_IPFS_GATEWAY_URL
   || 'https://api.universalprofile.cloud/ipfs/';
 export const PROFILE_DOCUMENT_IPFS_GATEWAY_URL = import.meta.env?.VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL

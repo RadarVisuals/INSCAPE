@@ -64,3 +64,21 @@ test('switching installed profiles isolates each Library workspace', () => {
   assert.equal(useLibraryStore.getState().setProfileAddress(PROFILE), true);
   assert.equal(useLibraryStore.getState().workspace.folders[0].name, 'First profile only');
 });
+
+test('discarding a broken visual asset removes only its transient index record', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  const stableAssetId = '42:0x1111111111111111111111111111111111111111:contract';
+  const workspace = { ...createEmptyWorkspace(PROFILE), favorites: [stableAssetId] };
+  useLibraryStore.setState({
+    assets: [{ id: stableAssetId, ownerAddress: PROFILE,
+      contractAddress: '0x1111111111111111111111111111111111111111', imageUrl: 'https://broken.example/image.webp' }],
+    selectedAssetId: stableAssetId,
+    workspace
+  });
+
+  assert.equal(useLibraryStore.getState().discardUnavailableAsset(stableAssetId), true);
+  assert.deepEqual(useLibraryStore.getState().assets, []);
+  assert.equal(useLibraryStore.getState().selectedAssetId, null);
+  assert.deepEqual(useLibraryStore.getState().workspace, workspace);
+});

@@ -28,6 +28,7 @@ const GALLERY_TRANSITION_MS = 720;
 const GALLERY_DOCK_COLLAPSE_MS = 170;
 const GalleryWorld = lazy(() => import('../../public/GalleryWorld.jsx'));
 const SpatialLevelNavigation = lazy(() => import('../../public/SpatialLevelNavigation.jsx'));
+const NftFlipViewer = lazy(() => import('../../public/NftFlipViewer.jsx'));
 
 function viewportSize() {
   return { width: globalThis.innerWidth || 1280, height: globalThis.innerHeight || 720 };
@@ -44,7 +45,6 @@ export default function PublishedHomeWorld({ document, onMoveKeeper, onExit, onO
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryTransitionPhase, setGalleryTransitionPhase] = useState('home');
   const worldRef = useRef(null);
-  const artworkDialogRef = useRef(null);
   const artworkTriggerRef = useRef(null);
   const launcherRefs = useRef(new Map());
   const interactionRef = useRef(null);
@@ -206,50 +206,6 @@ export default function PublishedHomeWorld({ document, onMoveKeeper, onExit, onO
   }, [onMoveKeeper]);
 
   const openArtwork = document.canvasObjects.find((object) => object.id === openArtworkId) || null;
-  useEffect(() => {
-    if (!openArtwork) return undefined;
-    const dialog = artworkDialogRef.current;
-    const isolated = [];
-    let branch = dialog;
-    while (branch?.parentElement) {
-      const parent = branch.parentElement;
-      for (const sibling of parent.children) {
-        if (sibling === branch) continue;
-        isolated.push({ node: sibling, hadAttribute: sibling.hasAttribute('inert'), value: sibling.inert });
-        sibling.inert = true;
-      }
-      if (parent.matches('.application-root')) break;
-      branch = parent;
-    }
-    const focusable = () => [...dialog.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
-      .filter((node) => !node.closest('[inert]') && node.getClientRects().length > 0);
-    const focusDialog = () => (focusable()[0] || dialog).focus();
-    const frame = window.requestAnimationFrame(focusDialog);
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setOpenArtworkId(null); return; }
-      if (event.key !== 'Tab') return;
-      const controls = focusable();
-      if (!controls.length) { event.preventDefault(); dialog.focus(); return; }
-      const first = controls[0]; const last = controls.at(-1);
-      if (event.shiftKey && globalThis.document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && globalThis.document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    const containFocus = (event) => { if (!dialog.contains(event.target)) focusDialog(); };
-    globalThis.document.addEventListener('keydown', handleKeyDown, true);
-    globalThis.document.addEventListener('focusin', containFocus, true);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      globalThis.document.removeEventListener('keydown', handleKeyDown, true);
-      globalThis.document.removeEventListener('focusin', containFocus, true);
-      for (const { node, hadAttribute, value } of isolated) {
-        if (hadAttribute) node.inert = value;
-        else node.removeAttribute('inert');
-      }
-      const trigger = artworkTriggerRef.current;
-      (trigger?.isConnected ? trigger : worldRef.current)?.focus?.();
-      artworkTriggerRef.current = null;
-    };
-  }, [openArtwork]);
 
   const transform = publishedWorldTransform(layout, camera);
   return <main ref={worldRef} className="public-shell published-home-world" data-interface-visible data-preview-mode="visitor" data-published-focus-fallback tabIndex="-1" aria-label="Published profile visitor world" style={THEME} onKeyDownCapture={(event) => { if (event.code === 'Space' && event.target.closest?.('button,a[href],[role="button"]')) event.stopPropagation(); }}>
@@ -288,6 +244,6 @@ export default function PublishedHomeWorld({ document, onMoveKeeper, onExit, onO
       onDown={galleryOpen ? undefined : enterGallery}
       onUp={galleryOpen ? exitGallery : undefined}
     /></Suspense>
-    {openArtwork && (() => { const asset = projectDocumentAsset(openArtwork.asset); return <section ref={artworkDialogRef} className="profile-document-preview__artwork" role="dialog" aria-modal="true" aria-label={`Artwork preview: ${asset.name}`}><header><strong>{asset.name}</strong><button type="button" onClick={() => setOpenArtworkId(null)} aria-label="Close artwork preview">×</button></header>{asset.imageUrl ? <PublishedImage src={asset.imageUrl} alt={asset.name} fallback="Artwork unavailable" /> : <p>Artwork unavailable</p>}</section>; })()}
+    {openArtwork && <Suspense fallback={null}><NftFlipViewer asset={projectDocumentAsset(openArtwork.asset)} onClose={() => setOpenArtworkId(null)} returnFocus={artworkTriggerRef.current} /></Suspense>}
   </main>;
 }

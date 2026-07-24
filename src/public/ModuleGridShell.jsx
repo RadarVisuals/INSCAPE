@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ProfileNavigationDock from './ProfileNavigationDock.jsx';
 import { flushLibraryWorkspace, FolderWindow, useLibraryStore } from '../library/index.js';
 import { normalizeProfileAddress } from '../library/config.js';
-import AssetPreview from '../library/components/AssetPreview.jsx';
 import KeeperSignalsLayer from '../signals/components/KeeperSignalsLayer.jsx';
 import { flushSignalDocument, useSignalStore } from '../signals/state/useSignalStore.js';
 import { useProfileIdentity } from '../profileIdentity/index.js';
@@ -25,9 +24,8 @@ import { activateInteraction, createInteraction, effectiveGeometry, INTERACTION_
 import { iconGlyph, normalizeIconKey, SCENE_ICONS } from './sceneIcons.js';
 import { decodeWindowGridGeometry, defaultFolderWindowGridRect, defaultWindowGridRect, windowMinimumSpan } from './windowGeometry.js';
 import { createRuntimeWindowState, loadRuntimeWindowState, normalizeRuntimeWindowGeometry, saveRuntimeWindowState, updateRuntimeWindowState, windowZIndex } from './windows/runtimeWindowState.js';
-import { contextMenuCommands, resolveContextTarget } from './menus/contextMenuModel.js';
+import { contextMenuCommands, presentationPatchForCommand, resolveContextTarget } from './menus/contextMenuModel.js';
 import DesktopMenu from './menus/DesktopMenu.jsx';
-import ArtworkChooser from './ArtworkChooser.jsx';
 import ArtworkInspector from './ArtworkInspector.jsx';
 import GalleryWorld from './GalleryWorld.jsx';
 import { gallerySpanForAspectRatio } from './galleryLayout.js';
@@ -55,11 +53,15 @@ import {
   getDefaultModulePositions,
   normalizeModulePositions
 } from './moduleLayout.js';
+
 import './moduleGrid.css';
 import '../library/collection.css';
 import '../signals/keeperSignals.css';
 import '../profileDocument/profileDocument.css';
 import './canvasObjects.css';
+
+const NftFlipViewer = lazy(() => import('./NftFlipViewer.jsx'));
+const ArtworkChooser = lazy(() => import('./ArtworkChooser.jsx'));
 
 const MODULES = Object.freeze([
   { id: 'identity', label: 'Profile Card' },
@@ -87,10 +89,14 @@ const GRID_PREFERENCE_KEY = 'os-underneath.grid-preference.v2';
 const LEGACY_WINDOW_GEOMETRY_KEY = 'os-underneath.window-geometry.v1';
 const SYSTEM_ICONS = Object.freeze({ identity: 'profile', collection: 'collection', creations: 'creations', signals: 'signals' });
 const AUTHORING_CONTEXT_COMMANDS = new Set([
-  'toggle-edit', 'menu-create', 'create-folder', 'create-framed-artwork', 'add-gallery-artwork', 'toggle-artwork-lock', 'toggle-transparent-presentation', 'edit-launcher',
+  'toggle-edit', 'menu-create', 'create-folder', 'create-framed-artwork', 'add-gallery-artwork', 'toggle-artwork-lock', 'lock-all-artwork', 'unlock-all-artwork', 'edit-launcher',
   'toggle-visibility', 'unpin', 'edit-artwork', 'replace-artwork',
   'toggle-object-visibility', 'menu-layer', 'object-forward', 'object-backward',
-  'object-front', 'object-back', 'remove-artwork', 'toggle-start-open'
+  'object-front', 'object-back', 'remove-artwork', 'toggle-start-open',
+  'menu-appearance', 'menu-presentation', 'menu-image-fit', 'menu-frame', 'menu-mat', 'menu-background',
+  'presentation-transparent', 'presentation-framed', 'image-fit-contain', 'image-fit-cover',
+  'frame-none', 'frame-thin', 'frame-heavy', 'mat-none', 'mat-light', 'mat-dark',
+  'background-dark', 'background-light', 'background-neutral'
 ]);
 
 const createHomePlacementGeometry = createVerticalHomePlacementGeometry;
@@ -173,9 +179,11 @@ export default function ModuleGridShell({
   const [gridPalette, setGridPalette] = useState('dark');
   const [draftSaveState, setDraftSaveState] = useState(() => ({ profileAddress: workspace.profileAddress, status: 'saving' }));
   const [contextMenu, setContextMenu] = useState(null);
+  const [galleryPresentationPreview, setGalleryPresentationPreview] = useState(null);
   const [inspectorAnchor, setInspectorAnchor] = useState(null);
   const [artworkInspector, setArtworkInspector] = useState(null);
   const [selectedCanvasObjectId, setSelectedCanvasObjectId] = useState(null);
+  const [galleryRemovalPending, setGalleryRemovalPending] = useState(null);
   const [artworkChooser, setArtworkChooser] = useState(null);
   const [previewObjectId, setPreviewObjectId] = useState(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -306,6 +314,7 @@ export default function ModuleGridShell({
   const createCanvasObject = useLibraryStore((state) => state.createCanvasObject);
   const setCanvasObjectGeometry = useLibraryStore((state) => state.setCanvasObjectGeometry);
   const setCanvasObjectLocked = useLibraryStore((state) => state.setCanvasObjectLocked);
+  const setAllCanvasObjectsLocked = useLibraryStore((state) => state.setAllCanvasObjectsLocked);
   const setCanvasObjectPresentation = useLibraryStore((state) => state.setCanvasObjectPresentation);
   const replaceCanvasObjectAsset = useLibraryStore((state) => state.replaceCanvasObjectAsset);
   const setCanvasObjectVisitorVisibility = useLibraryStore((state) => state.setCanvasObjectVisitorVisibility);
@@ -1078,7 +1087,7 @@ export default function ModuleGridShell({
   const chooseArtwork = useCallback((asset) => {
     if (!ownerAuthoringEnabled) return;
     if(!artworkChooser||artworkChoicePendingRef.current)return; artworkChoicePendingRef.current=true;
-    if(artworkChooser.mode==='replace'&&artworkChooser.targetId){replaceCanvasObjectAsset(artworkChooser.targetId,asset.id);setArtworkChooser(null);openArtworkInspector(artworkChooser.targetId,artworkChooser.anchor);return;}
+    if(artworkChooser.mode==='replace'&&artworkChooser.targetId){replaceCanvasObjectAsset(artworkChooser.targetId,asset.id);setArtworkChooser(null);setSelectedCanvasObjectId(artworkChooser.targetId);return;}
     const ratio = asset.imageWidth && asset.imageHeight ? asset.imageWidth / asset.imageHeight : null;
     const span = artworkChooser.mode === 'gallery-create' ? gallerySpanForAspectRatio(ratio) : undefined;
     const id=createCanvasObject({kind:CANVAS_OBJECT_KIND.FRAMED_ARTWORK,stableAssetId:asset.id,placement:artworkChooser.placement,span,locked:false});
@@ -1089,6 +1098,20 @@ export default function ModuleGridShell({
 
   const openArtworkPreview = useCallback((id)=>{setPreviewObjectId(id);setArtworkInspector(null);setSelectedCanvasObjectId(null);},[]);
   const closeArtworkPreview = useCallback(()=>{const id=previewObjectId;setPreviewObjectId(null);window.requestAnimationFrame(()=>canvasObjectRefs.current.get(id)?.querySelector('button')?.focus());},[previewObjectId]);
+  const requestGalleryArtworkRemoval = useCallback((id) => {
+    const object = canvasObjectById[id];
+    if (!object) return;
+    const asset = libraryAssets.find((entry) => entry.id === object.stableAssetId);
+    setContextMenu(null);
+    setArtworkInspector(null);
+    setSelectedCanvasObjectId(null);
+    setGalleryRemovalPending({ id, name: asset?.name || 'Untitled artwork' });
+  }, [canvasObjectById, libraryAssets]);
+  const confirmGalleryArtworkRemoval = useCallback(() => {
+    if (!galleryRemovalPending) return;
+    removeCanvasObject(galleryRemovalPending.id);
+    setGalleryRemovalPending(null);
+  }, [galleryRemovalPending, removeCanvasObject]);
 
   useEffect(()=>{
     if(!previewObjectId)return undefined;
@@ -1105,9 +1128,16 @@ export default function ModuleGridShell({
     }
     const runtimeId = target.id?.endsWith('-panel') ? target.id.replace('-panel','') : target.id?.startsWith('folder-panel:') ? target.id.slice(13) : target.id;
     const launcher = pinnedLaunchers.find((entry) => entry.id === (target.type === 'window' ? runtimeId : target.id));
+    const presentationPatch = presentationPatchForCommand(command, canvasObjectById[target.id]?.presentation);
     if (command === 'menu-create') { setContextMenu((current) => ({ ...current, menu: 'create' })); return; }
     if (command === 'menu-view') { setContextMenu((current) => ({ ...current, menu: 'view' })); return; }
     if (command === 'menu-layer') { setContextMenu((current) => ({ ...current, menu: 'layer' })); return; }
+    if (command === 'menu-appearance') { setContextMenu((current) => ({ ...current, menu: 'appearance' })); return; }
+    if (command === 'menu-presentation') { setContextMenu((current) => ({ ...current, menu: 'presentation' })); return; }
+    if (command === 'menu-image-fit') { setContextMenu((current) => ({ ...current, menu: 'image-fit' })); return; }
+    if (command === 'menu-frame') { setContextMenu((current) => ({ ...current, menu: 'frame' })); return; }
+    if (command === 'menu-mat') { setContextMenu((current) => ({ ...current, menu: 'mat' })); return; }
+    if (command === 'menu-background') { setContextMenu((current) => ({ ...current, menu: 'background' })); return; }
     if (command === 'menu-root') { setContextMenu((current) => ({ ...current, menu: 'root' })); return; }
     if (command === 'create-folder') createFolderAtContext();
     else if (command === 'create-framed-artwork') { beginArtworkChoice('create'); return; }
@@ -1129,10 +1159,9 @@ export default function ModuleGridShell({
       setCanvasObjectLocked(target.id, locked);
       setSelectedCanvasObjectId(locked ? null : target.id);
     }
-    else if (command === 'toggle-transparent-presentation' && canvasObjectById[target.id]) {
-      const transparent = canvasObjectById[target.id].presentation.background === 'transparent';
-      setCanvasObjectPresentation(target.id, { background: transparent ? 'dark' : 'transparent' });
-    }
+    else if (command === 'lock-all-artwork') { setAllCanvasObjectsLocked(true); setSelectedCanvasObjectId(null); setArtworkInspector(null); }
+    else if (command === 'unlock-all-artwork') setAllCanvasObjectsLocked(false);
+    else if (presentationPatch) setCanvasObjectPresentation(target.id, presentationPatch);
     else if (command === 'edit-artwork') openArtworkInspector(target.id);
     else if (command === 'replace-artwork') { beginArtworkChoice('replace',target.id); return; }
     else if (command === 'toggle-object-visibility' && canvasObjectById[target.id]) setCanvasObjectVisitorVisibility(target.id,!canvasObjectById[target.id].visitorVisible);
@@ -1140,7 +1169,8 @@ export default function ModuleGridShell({
     else if (command === 'object-backward') reorderCanvasObject(target.id,CANVAS_OBJECT_ORDER_COMMAND.BACKWARD);
     else if (command === 'object-front') reorderCanvasObject(target.id,CANVAS_OBJECT_ORDER_COMMAND.FRONT);
     else if (command === 'object-back') reorderCanvasObject(target.id,CANVAS_OBJECT_ORDER_COMMAND.BACK);
-    else if (command === 'remove-artwork' && window.confirm(`Remove this artwork from the ${target.type === 'gallery-object' ? 'gallery' : 'canvas'}? The owned asset will remain in your library.`)) { removeCanvasObject(target.id); setArtworkInspector(null); setSelectedCanvasObjectId(null); }
+    else if (command === 'remove-artwork' && target.type === 'gallery-object') { requestGalleryArtworkRemoval(target.id); return; }
+    else if (command === 'remove-artwork' && window.confirm('Remove this artwork from the canvas? The owned asset will remain in your library.')) { removeCanvasObject(target.id); setArtworkInspector(null); setSelectedCanvasObjectId(null); }
     else if (command === 'close') openModule(runtimeId);
     else if (command === 'reset-window') updateRuntime({
       type: 'reset-window',
@@ -1155,7 +1185,7 @@ export default function ModuleGridShell({
       else setSystemPresentation((current) => { const next={...current,[runtimeId]:{...current[runtimeId],startOpen:!current[runtimeId]?.startOpen,windowGeometry:rect}}; writeOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,workspace.profileAddress,JSON.stringify(next)); return next; });
     }
     setContextMenu(null);
-  }, [authoredWindowDefaults, beginArtworkChoice, beginGalleryArtworkChoice, canvasObjectById, canvasPositions, closeAllWindows, contextMenu, createFolderAtContext, geometry, homeOrigin, keeperVisible, onKeeperVisibilityChange, onStageVisibilityChange, openArtworkInspector, openArtworkPreview, openLauncherInspector, openModule, ownerAuthoringEnabled, pinnedLaunchers, placementGeometry, removeCanvasObject, reorderCanvasObject, resetWindows, runtimeWindows.rects, sceneById, setCanvasObjectLocked, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility, setHomeCameraImmediately, setLauncherStartOpen, setLauncherVisitorVisibility, stageVisible, toggleGrid, unpinView, updateRuntime, workspace.profileAddress]);
+  }, [authoredWindowDefaults, beginArtworkChoice, beginGalleryArtworkChoice, canvasObjectById, canvasPositions, closeAllWindows, contextMenu, createFolderAtContext, geometry, homeOrigin, keeperVisible, onKeeperVisibilityChange, onStageVisibilityChange, openArtworkInspector, openArtworkPreview, openLauncherInspector, openModule, ownerAuthoringEnabled, pinnedLaunchers, placementGeometry, removeCanvasObject, reorderCanvasObject, requestGalleryArtworkRemoval, resetWindows, runtimeWindows.rects, sceneById, setAllCanvasObjectsLocked, setCanvasObjectLocked, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility, setHomeCameraImmediately, setLauncherStartOpen, setLauncherVisitorVisibility, stageVisible, toggleGrid, unpinView, updateRuntime, workspace.profileAddress]);
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -1474,10 +1504,12 @@ export default function ModuleGridShell({
         theme={shellTheme}
         ownerAuthoringEnabled={ownerAuthoringEnabled}
         selectedArtworkId={selectedCanvasObjectId}
+        presentationPreview={contextMenu?.target?.type === 'gallery-object' ? galleryPresentationPreview : null}
         onOpenArtwork={openArtworkPreview}
         onSelectArtwork={setSelectedCanvasObjectId}
         onOpenContextMenu={openGalleryContextMenu}
         onChangeArtworkGeometry={(id, rect) => runOwnerAuthoringMutation(ownerAuthoringEnabled, () => setCanvasObjectGeometry(id, rect))}
+        onRemoveArtwork={requestGalleryArtworkRemoval}
         onRegisterArtworkElement={(id, node) => { if (node) canvasObjectRefs.current.set(id, node); else canvasObjectRefs.current.delete(id); }}
         onExit={exitGallery}
         transitionPhase={galleryTransitionPhase}
@@ -1485,7 +1517,7 @@ export default function ModuleGridShell({
         gridOffsetY={galleryGridOffsetY}
         onCameraXChange={(cameraX) => { galleryCameraXRef.current = cameraX; }}
         onMoveKeeper={(clientX, clientY) => residentHandoff?.moveToScreenPosition?.(clientX, clientY)}
-        onMoveKeeperHorizontally={(clientX) => residentHandoff?.moveHorizontallyToScreenPosition?.(clientX)}
+        onMoveKeeperHorizontally={(clientX, direction) => residentHandoff?.moveHorizontallyToScreenPosition?.(clientX, direction)}
       />}
       {upperWorldMounted && <UpperWorldSurface
         theme={shellTheme}
@@ -1506,9 +1538,17 @@ export default function ModuleGridShell({
         {launcher && !folder && <button type="button" aria-pressed={launcher.visitorVisible} onClick={()=>setLauncherVisitorVisibility(launcher.id,!launcher.visitorVisible)}>{launcher.visitorVisible?'Make private':'Show to visitors'}</button>}
         <button type="button" onClick={toggleGrid}>Grid {gridVisible?'off':'on'}</button>
       </aside>; })()}
-      {artworkInspector && canvasObjectById[artworkInspector.id] && (()=>{const object=canvasObjectById[artworkInspector.id];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId);const definition=getCanvasObjectDefinition(object.kind);return <ArtworkInspector object={object} assetName={asset?.name||'Unavailable artwork'} anchor={artworkInspector.anchor} onClose={()=>{setArtworkInspector(null);setSelectedCanvasObjectId(null);canvasObjectRefs.current.get(object.id)?.querySelector('button')?.focus();}} onPresentation={(patch)=>setCanvasObjectPresentation(object.id,patch)} onGeometry={(span)=>{const columns=Math.max(definition.minimumSpan.columns,Math.min(definition.maximumSpan.columns,Math.round(span.columns)||object.span.columns));const rows=Math.max(definition.minimumSpan.rows,Math.min(definition.maximumSpan.rows,Math.round(span.rows)||object.span.rows));setCanvasObjectGeometry(object.id,{column:object.placement.column,row:object.placement.row,columnSpan:columns,rowSpan:rows});}} onVisibility={()=>setCanvasObjectVisitorVisibility(object.id,!object.visitorVisible)} onReplace={()=>beginArtworkChoice('replace',object.id)} onReorder={(command)=>reorderCanvasObject(object.id,command)} onRemove={()=>{if(window.confirm('Remove this artwork from the gallery? The owned asset will remain in your library.')){removeCanvasObject(object.id);setArtworkInspector(null);setSelectedCanvasObjectId(null);}}} />;})()}
+      {artworkInspector && canvasObjectById[artworkInspector.id] && (()=>{const object=canvasObjectById[artworkInspector.id];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId);const definition=getCanvasObjectDefinition(object.kind);return <ArtworkInspector object={object} assetName={asset?.name||'Unavailable artwork'} anchor={artworkInspector.anchor} onClose={()=>{setArtworkInspector(null);setSelectedCanvasObjectId(null);canvasObjectRefs.current.get(object.id)?.querySelector('button')?.focus();}} onPresentation={(patch)=>setCanvasObjectPresentation(object.id,patch)} onGeometry={(span)=>{const columns=Math.max(definition.minimumSpan.columns,Math.min(definition.maximumSpan.columns,Math.round(span.columns)||object.span.columns));const rows=Math.max(definition.minimumSpan.rows,Math.min(definition.maximumSpan.rows,Math.round(span.rows)||object.span.rows));setCanvasObjectGeometry(object.id,{column:object.placement.column,row:object.placement.row,columnSpan:columns,rowSpan:rows});}} onVisibility={()=>setCanvasObjectVisitorVisibility(object.id,!object.visitorVisible)} onReplace={()=>beginArtworkChoice('replace',object.id)} onReorder={(command)=>reorderCanvasObject(object.id,command)} onRemove={()=>requestGalleryArtworkRemoval(object.id)} />;})()}
       </>}
-      {contextMenu && (()=>{const runtimeId=contextMenu.target.id?.startsWith?.('folder-panel:')?contextMenu.target.id.slice(13):contextMenu.target.id?.replace?.('-panel',''); const launcher=pinnedLaunchers.find((entry)=>entry.id===(contextMenu.target.type==='window'?runtimeId:contextMenu.target.id)); const canvasObject=canvasObjectById[contextMenu.target.id]; const startOpen=launcher?.startOpen||systemPresentation[runtimeId]?.startOpen; return <DesktopMenu key={`${contextMenu.target.type}:${contextMenu.menu}`} anchor={contextMenu.anchor} label={`${contextMenu.target.type} commands`} commands={contextMenuCommands({target:contextMenu.target,editMode,launcher,canvasObject,startOpen,menu:contextMenu.menu,keeperVisible,stageVisible,stageAvailable:false,ownerAuthoringEnabled})} onCommand={executeContextCommand} onClose={()=>setContextMenu(null)} returnFocus={contextMenu.returnFocus}/>;})()}
+      {contextMenu && (()=>{const runtimeId=contextMenu.target.id?.startsWith?.('folder-panel:')?contextMenu.target.id.slice(13):contextMenu.target.id?.replace?.('-panel',''); const launcher=pinnedLaunchers.find((entry)=>entry.id===(contextMenu.target.type==='window'?runtimeId:contextMenu.target.id)); const canvasObject=canvasObjectById[contextMenu.target.id]; const startOpen=launcher?.startOpen||systemPresentation[runtimeId]?.startOpen; const commandContext={target:contextMenu.target,editMode,launcher,canvasObject,canvasObjects,startOpen,keeperVisible,stageVisible,stageAvailable:false,ownerAuthoringEnabled}; const galleryCascade=contextMenu.target.type==='gallery-object'; const galleryMenu=contextMenu.target.type==='gallery-object'||contextMenu.target.type==='gallery-canvas'; return <DesktopMenu key={`${contextMenu.target.type}:${contextMenu.menu}`} className={galleryMenu?'gallery-context-menu':''} anchor={contextMenu.anchor} label={`${contextMenu.target.type} commands`} commands={contextMenuCommands({...commandContext,menu:contextMenu.menu})} getSubmenuCommands={galleryMenu?(command)=>galleryCascade&&command.startsWith('menu-')?contextMenuCommands({...commandContext,menu:command.slice(5)}):[]:undefined} onPreviewCommand={galleryCascade?(command)=>{const patch=command?presentationPatchForCommand(command,canvasObject?.presentation):null;setGalleryPresentationPreview(patch?{id:contextMenu.target.id,patch}:null);}:undefined} onCommand={(command)=>{setGalleryPresentationPreview(null);executeContextCommand(command);}} onClose={()=>{setGalleryPresentationPreview(null);setContextMenu(null);}} returnFocus={contextMenu.returnFocus}/>;})()}
+      {galleryRemovalPending && <div className="gallery-remove-dialog" role="alertdialog" aria-modal="true" aria-labelledby="gallery-remove-title" aria-describedby="gallery-remove-copy" onPointerDown={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setGalleryRemovalPending(null); } }}>
+        <div className="gallery-remove-dialog__panel">
+          <span>GALLERY / REMOVE ARTWORK</span>
+          <h2 id="gallery-remove-title">REMOVE {galleryRemovalPending.name}</h2>
+          <p id="gallery-remove-copy">THE ARTWORK WILL BE REMOVED FROM THIS GALLERY. THE OWNED ASSET REMAINS IN YOUR INDEX.</p>
+          <div><button type="button" autoFocus onClick={() => setGalleryRemovalPending(null)}>CANCEL</button><button type="button" data-danger onClick={confirmGalleryArtworkRemoval}>REMOVE ARTWORK</button></div>
+        </div>
+      </div>}
       {ownerAuthoringEnabled && <KeeperSignalsLayer
         interfaceReady={interfaceVisible}
         residentHandoffActive={identityPhase !== 'closed' || keeperDockActive}
@@ -1530,8 +1570,8 @@ export default function ModuleGridShell({
         onRestore={restoreImportedPresentation}
         onClose={() => setActiveHudCommand(null)}
       />}
-      {ownerAuthoringEnabled && artworkChooser && <ArtworkChooser assets={libraryAssets} status={libraryStatus} error={libraryError} title={artworkChooser.mode==='replace'?'Replace artwork':artworkChooser.mode==='gallery-create'?'Add artwork to gallery':'Choose artwork'} onSelect={chooseArtwork} onCancel={()=>{artworkChoicePendingRef.current=false;setArtworkChooser(null);}} />}
-      {previewObjectId && canvasObjectById[previewObjectId] && (()=>{const object=canvasObjectById[previewObjectId];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId)||{id:object.stableAssetId,name:'Unavailable artwork',standard:'UNKNOWN',contractAddress:'Unavailable',tokenId:null,imageUrl:null};return <div className="canvas-artwork-preview" role="dialog" aria-modal="true" aria-label={`Artwork preview: ${asset.name}`}><AssetPreview asset={asset} workspace={workspace} authoringEnabled={false} onClose={closeArtworkPreview} /></div>;})()}
+      {ownerAuthoringEnabled && artworkChooser && <Suspense fallback={null}><ArtworkChooser assets={libraryAssets} folders={workspace.folders} status={libraryStatus} error={libraryError} title={artworkChooser.mode==='replace'?'Replace artwork':artworkChooser.mode==='gallery-create'?'Add artwork to gallery':'Choose artwork'} onSelect={chooseArtwork} onCancel={()=>{artworkChoicePendingRef.current=false;setArtworkChooser(null);}} /></Suspense>}
+      {previewObjectId && canvasObjectById[previewObjectId] && (()=>{const object=canvasObjectById[previewObjectId];const asset=libraryAssets.find((entry)=>entry.id===object.stableAssetId);if(!asset)return null;return <Suspense fallback={null}><NftFlipViewer asset={asset} onClose={closeArtworkPreview} returnFocus={canvasObjectRefs.current.get(previewObjectId)?.querySelector('button')} /></Suspense>;})()}
       {profileDiscoveryOpen && <ProfileDiscoveryBoundary
         onClose={() => { setProfileDiscoveryOpen(false); setActiveHudCommand((current) => current === 'search' ? null : current); }}
         onSelect={(result) => {

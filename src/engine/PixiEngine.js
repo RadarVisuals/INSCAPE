@@ -166,6 +166,9 @@ export class PixiEngine {
     
     // Convert global screen pixel coordinates into master relative coordinates
     const localTarget = this.masterContainer.toLocal({ x: clientX, y: clientY });
+    if (this.residentHandoff && localTarget.x !== this.actor.baselinePosition.x) {
+      this.residentHandoff.residentFacing = localTarget.x > this.actor.baselinePosition.x ? 1 : -1;
+    }
     this.actor.moveTo(localTarget.x, localTarget.y);
   }
 
@@ -174,11 +177,26 @@ export class PixiEngine {
    * presented height. Spatial worlds use this while their camera pans so a
    * horizontal navigation gesture cannot pull the resident toward a horizon.
    * @param {number} clientX - Absolute canvas horizontal position.
+   * @param {number} direction - Intended spatial travel direction.
    */
-  updateHorizontalMove(clientX) {
+  updateHorizontalMove(clientX, direction = 0) {
     if (!this.masterContainer || !this.actor) return;
     const actorGlobal = this.masterContainer.toGlobal(this.actor.container.position);
-    const localTarget = this.masterContainer.toLocal({ x: clientX, y: actorGlobal.y });
+    const baselineGlobal = this.masterContainer.toGlobal(this.actor.baselinePosition);
+    const intendedDirection = direction === -1 || direction === 1 ? direction : 0;
+    const distanceInDirection = intendedDirection
+      ? (clientX - baselineGlobal.x) * intendedDirection
+      : 0;
+    const directedAdvance = intendedDirection
+      ? Math.min(72, Math.max(24, distanceInDirection))
+      : 0;
+    const directedClientX = intendedDirection
+      ? baselineGlobal.x + intendedDirection * directedAdvance
+      : clientX;
+    const localTarget = this.masterContainer.toLocal({ x: directedClientX, y: actorGlobal.y });
+    if (this.residentHandoff && intendedDirection) {
+      this.residentHandoff.residentFacing = intendedDirection;
+    }
     // Keep the already-authored local Y target verbatim. Repeated global/local
     // round-trips accumulate transform drift while the actor is animating.
     this.actor.moveTo(localTarget.x, this.actor.targetPosition.y);

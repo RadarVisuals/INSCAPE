@@ -73,7 +73,7 @@ test('framed artwork keeps form controls interactive and presentation layers ind
   assert.match(artworkSource, /canvas-artwork__mat/);
   assert.match(artworkSource, /canvas-artwork__image-bed/);
   assert.match(artworkSource, /data-transparent/);
-  assert.match(artworkSource, /transparentPresentation \? asset\?\.imageUrl/);
+  assert.match(artworkSource, /asset\?\.thumbnailUrl \|\| asset\?\.imageUrl/);
   assert.match(artworkSource, /object\.presentation\.background === 'transparent'/);
   assert.match(artworkStyles, /data-mat="light"[^}]*\.canvas-artwork__mat/);
   assert.match(artworkStyles, /data-background="light"[^}]*\.canvas-artwork__image-bed/);

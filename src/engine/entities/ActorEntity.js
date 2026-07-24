@@ -319,7 +319,10 @@ export class ActorEntity {
     this.veinPulseSystem?.update(runtime.elapsed, phenomena.veins, runtime.reactionModifiers);
     this.captiveWeatherSystem?.update(runtime.elapsed, phenomena.weather, runtime.reactionModifiers);
     if (this.eyeSystem) {
-      this.eyeSystem.update(deltaTime, actorConfig.eyes, runtime);
+      this.eyeSystem.update(deltaTime, actorConfig.eyes, {
+        ...runtime,
+        horizontalFlip: this.currentFlipScale < 0 ? -1 : 1
+      });
     }
     this.renderAuthoredMutationSource();
   }

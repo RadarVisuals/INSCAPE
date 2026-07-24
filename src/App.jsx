@@ -131,8 +131,8 @@ function App() {
     moveToScreenPosition(clientX, clientY) {
       canvasRef.current?.moveActorToScreenPosition(clientX, clientY);
     },
-    moveHorizontallyToScreenPosition(clientX) {
-      canvasRef.current?.moveActorHorizontallyToScreenPosition(clientX);
+    moveHorizontallyToScreenPosition(clientX, direction) {
+      canvasRef.current?.moveActorHorizontallyToScreenPosition(clientX, direction);
     }
   }), []);
 

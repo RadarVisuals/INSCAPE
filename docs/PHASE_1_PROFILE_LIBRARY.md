@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Phase 1 adds one useful path to OS_UNDERNEATH: open Collection, progressively load image assets held by a Universal Profile, search them locally, preview them, and organize stable asset references into persistent favorites and personal folders.
+Phase 1 adds one useful path to INSCAPE: open Index, progressively load image assets held by a Universal Profile, search them locally, preview them, and organize stable asset references into persistent personal folders.
 
 The integration is read-only. It does not connect a wallet, request a signature, submit a transaction, transfer an asset, or write organization data to a Universal Profile.
 
@@ -10,11 +10,16 @@ The integration is read-only. It does not connect a wallet, request a signature,
 
 ```text
 Profile address
-  -> LUKSO indexer repository (paged Hold records)
+  -> Chillwhales LSP indexer (owned assets and owned tokens)
   -> LSP7 contract records / LSP8 identifiable token records
   -> normalized internal asset records
   -> Zustand library state
-  -> Collection search, views, grid, and preview
+  -> Index search, views, grid, and preview
+
+Indexer unavailable
+  -> direct LUKSO RPC ownership verification
+  -> LSP4 metadata resolution
+  -> the same normalized internal asset records
 
 Folder and favorite actions
   -> versioned workspace model
@@ -23,21 +28,21 @@ Folder and favorite actions
 
 UI components do not decode ERC725Y values or depend on GraphQL response shapes. The live and fixture repositories expose the same progressive batch interface. Search runs only over normalized records already in memory and therefore makes no request per keystroke.
 
-## LUKSO data source
+## LUKSO data sources
 
-The live repository uses the documented LUKSO Envio Indexer GraphQL endpoint:
+The primary repository uses the public Chillwhales LSP Indexer GraphQL endpoint:
 
 ```text
-https://envio.lukso-mainnet.universal.tech/v1/graphql
+https://indexer.chillwhales.dev/v1/graphql
 ```
 
-The endpoint is isolated in `src/library/data/luksoProfileRepository.js`. It was chosen over issuing hundreds of browser RPC and IPFS requests because the target profile has a large mixed inventory and the indexer exposes current `Hold` records together with resolved LSP4 metadata. The repository pages holdings in batches of 24 and appends image records after each page.
+The endpoint is isolated in `src/library/data/chillwhalesProfileRepository.js`. It exposes current contract ownership, individual LSP8 token ownership, and resolved LSP4 metadata. Collection-level ownership rows are not rendered when their individual owned tokens are available, avoiding duplicate collection wrappers in the Index.
 
-`Hold.asset` represents contract-level holdings such as LSP7 assets. `Hold.token` represents identifiable LSP8 token IDs; its related asset supplies collection/contract metadata. Records without a resolvable image are counted as incomplete rather than crashing the inventory. If a later page fails, prior live batches remain available and the UI exposes Retry. If the initial live request fails, the repository switches explicitly to the fixture.
+The public service has no application-controlled availability guarantee. If it does not respond within eight seconds, `luksoRpcProfileRepository.js` verifies ownership directly through the profile's LSP5 received-assets array and LSP7/LSP8 contracts. Previously cached normalized records remain visible while either source refreshes. Records without a resolvable image are counted as incomplete rather than crashing the inventory.
 
 References:
 
-- LUKSO Indexer API: https://docs.lukso.tech/tools/apis/indexer-api/
+- Chillwhales LSP Indexer: https://github.com/chillwhales/lsp-indexer
 - LUKSO mainnet parameters: https://docs.lukso.tech/networks/mainnet/parameters/
 - LSP4 digital asset metadata: https://docs.lukso.tech/standards/tokens/LSP4-Digital-Asset-Metadata
 
@@ -51,10 +56,11 @@ The default prototype profile is declared once in `src/library/config.js`:
 
 Use `?profile=0x...` to load another valid 20-byte profile address. Invalid overrides fall back to the prototype profile.
 
-Optional Vite environment variables:
+Optional Vite environment variables for the Index:
 
 ```text
-VITE_LUKSO_INDEXER_URL=https://envio.lukso-mainnet.universal.tech/v1/graphql
+VITE_CHILLWHALES_INDEXER_URL=https://indexer.chillwhales.dev/v1/graphql
+VITE_LUKSO_RPC_URL=https://rpc.mainnet.lukso.network
 VITE_IPFS_GATEWAY_URL=https://api.universalprofile.cloud/ipfs/
 ```
 
@@ -112,7 +118,7 @@ The value is:
 }
 ```
 
-Only organization and stable references are persisted. Blockchain metadata and images are not duplicated into localStorage. Reads validate the version, profile, folders, IDs, timestamps, and strings. Malformed JSON recovers to an empty workspace. Unknown asset IDs remain harmless references and do not corrupt the live inventory.
+Organization and stable references are persisted in the workspace record. A separate profile-scoped, expiring cache stores validated normalized asset metadata so an already visited Index and Gallery can render while fresh blockchain data is loading. Reads validate the version, profile, asset IDs, and URLs. Malformed JSON recovers safely. Unknown asset IDs remain harmless references and do not corrupt the live inventory.
 
 ## Fixture behavior
 
@@ -122,7 +128,7 @@ The status bar always labels the active source as `LIVE` or `FIXTURE`. Fixture m
 
 ## Known limitations
 
-- The browser depends on the availability and schema stability of the documented Envio indexer.
+- The primary public Chillwhales endpoint has no INSCAPE-controlled SLA; direct RPC remains the slower fallback.
 - The default IPFS gateway is intended for development and has no guaranteed SLA.
 - Phase 1 handles images only. Non-image holdings contribute to progress/incomplete counts but are not shown as playable media.
 - No virtualization is used. The stable responsive grid and lazy images are expected to be sufficient for the current 163-holding profile; incremental presentation can be added if measured rendering cost requires it.

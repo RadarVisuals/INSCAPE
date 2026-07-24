@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createEmptyWorkspace } from './libraryWorkspace.js';
 import { CANVAS_OBJECT_KIND, getCanvasObjectDefinition, normalizeCanvasObjectPresentation } from './canvasObjectRegistry.js';
-import { CANVAS_OBJECT_ORDER_COMMAND, createCanvasObject, isValidCanvasObjectId, MAX_CANVAS_OBJECT_ID_LENGTH, normalizeCanvasObject, removeCanvasObject, reorderCanvasObject, replaceCanvasObjectAsset, setCanvasObjectGeometry, setCanvasObjectLocked, setCanvasObjectPresentation } from './canvasObjects.js';
+import { CANVAS_OBJECT_ORDER_COMMAND, createCanvasObject, isValidCanvasObjectId, MAX_CANVAS_OBJECT_ID_LENGTH, normalizeCanvasObject, removeCanvasObject, reorderCanvasObject, replaceCanvasObjectAsset, setAllCanvasObjectsLocked, setCanvasObjectGeometry, setCanvasObjectLocked, setCanvasObjectPresentation } from './canvasObjects.js';
 
 const ASSET_A = '42:0x1111111111111111111111111111111111111111:0x01';
 const ASSET_B = '42:0x2222222222222222222222222222222222222222:contract';
@@ -58,4 +58,13 @@ test('gallery lock state and an authored native-ratio span survive normalization
   workspace = setCanvasObjectLocked(workspace, 'canvas:artwork:locked', false);
   assert.equal(workspace.canvas.objects[0].locked, false);
   assert.deepEqual(workspace.canvas.objects[0].presentation, presentation);
+});
+
+test('all gallery artwork can be locked or unlocked in one immutable update', () => {
+  let workspace = createCanvasObject(createEmptyWorkspace('0xprofile'), input('canvas:artwork:one'));
+  workspace = createCanvasObject(workspace, { ...input('canvas:artwork:two'), locked: true });
+  const locked = setAllCanvasObjectsLocked(workspace, true);
+  assert.deepEqual(locked.canvas.objects.map((object) => object.locked), [true, true]);
+  assert.equal(setAllCanvasObjectsLocked(locked, true), locked);
+  assert.deepEqual(setAllCanvasObjectsLocked(locked, false).canvas.objects.map((object) => object.locked), [false, false]);
 });

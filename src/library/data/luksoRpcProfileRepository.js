@@ -3,7 +3,7 @@ import { createPublicClient, fallback, getAddress, http } from 'viem';
 import { lukso } from 'viem/chains';
 import { IPFS_GATEWAY_URL, LIBRARY_PAGE_SIZE, LUKSO_RPC_FALLBACK_URLS, LUKSO_RPC_URL,
   normalizeProfileAddress } from '../config.js';
-import { normalizeProfileAsset } from '../domain/normalizeProfileAsset.js';
+import { createStableAssetId, normalizeProfileAsset } from '../domain/normalizeProfileAsset.js';
 import { resolveContentUrl } from './resolveContentUrl.js';
 
 const LSP5_RECEIVED_ASSETS_SCHEMA = [{
@@ -15,7 +15,8 @@ const LSP4_METADATA_KEY = '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f4
 const LSP8_METADATA_BASE_URI_KEY = '0x1a7628600c3bac7101f53697f48df381ddc36b9015e7d7c9c5633d1252aa2843';
 const LSP7_INTERFACE_ID = '0xc52d6008';
 const LSP8_INTERFACE_ID = '0x3a271706';
-const METADATA_CONCURRENCY = 6;
+const METADATA_CONCURRENCY = 8;
+const METADATA_RESPONSE_TIMEOUT_MS = 10_000;
 
 const ERC725Y_ABI = [
   { type: 'function', name: 'supportsInterface', stateMutability: 'view',
@@ -103,6 +104,19 @@ async function discoverOwnedTokens(profileAddress, contracts, client, signal) {
   return holdings;
 }
 
+function prioritizeHoldings(holdings, priorityAssetIds) {
+  const priorities = new Map((Array.isArray(priorityAssetIds) ? priorityAssetIds : [])
+    .map((id, index) => [String(id || '').toLowerCase(), index]));
+  if (!priorities.size) return holdings;
+  return holdings.map((holding, index) => ({ holding, index,
+    priority: priorities.get(createStableAssetId({ contractAddress: holding.address, tokenId: holding.tokenId })) }))
+    .sort((first, second) => {
+      const firstPriority = first.priority ?? Number.POSITIVE_INFINITY;
+      const secondPriority = second.priority ?? Number.POSITIVE_INFINITY;
+      return firstPriority - secondPriority || first.index - second.index;
+    }).map((entry) => entry.holding);
+}
+
 function decodeMetadataUri(value) {
   if (!value || value === '0x') return null;
   try { return decodeDataSourceWithHash(value)?.url || null; } catch { return null; }
@@ -143,14 +157,25 @@ function metadataCreators(document) {
   }).filter(Boolean);
 }
 
-async function fetchMetadataDocument(uri, { fetchImpl, ipfsGateway, signal }) {
+async function fetchMetadataDocument(uri, { fetchImpl, ipfsGateway, signal, metadataResponseMs = METADATA_RESPONSE_TIMEOUT_MS }) {
   const url = resolveContentUrl(uri, { ipfsGateway });
   if (!url) return null;
-  const response = await fetchImpl(url, { signal, headers: { accept: 'application/json,image/*;q=0.8,*/*;q=0.2' } });
-  if (!response.ok) throw new Error(`ASSET METADATA RESPONDED ${response.status}`);
-  const contentType = response.headers?.get?.('content-type') || '';
-  if (contentType.startsWith('image/')) return { image: [{ url: uri, fileType: contentType }] };
-  return response.json();
+  throwIfAborted(signal);
+  const requestController = new AbortController();
+  const abortRequest = () => requestController.abort(signal?.reason);
+  signal?.addEventListener('abort', abortRequest, { once: true });
+  const timeout = setTimeout(() => requestController.abort(), metadataResponseMs);
+  try {
+    const response = await fetchImpl(url, { signal: requestController.signal,
+      headers: { accept: 'application/json,image/*;q=0.8,*/*;q=0.2' } });
+    if (!response.ok) throw new Error(`ASSET METADATA RESPONDED ${response.status}`);
+    const contentType = response.headers?.get?.('content-type') || '';
+    if (contentType.startsWith('image/')) return { image: [{ url: uri, fileType: contentType }] };
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener('abort', abortRequest);
+  }
 }
 
 async function readCollectionMetadata(address, client, context) {
@@ -208,34 +233,40 @@ async function mapConcurrent(items, concurrency, mapper) {
 export function createLuksoRpcProfileRepository({
   rpcUrl = LUKSO_RPC_URL, rpcFallbackUrls = LUKSO_RPC_FALLBACK_URLS,
   ipfsGateway = IPFS_GATEWAY_URL, fetchImpl = globalThis.fetch, pageSize = LIBRARY_PAGE_SIZE,
-  client, discoverContracts = discoverReceivedAssetContracts
+  client, discoverContracts = discoverReceivedAssetContracts, metadataResponseMs = METADATA_RESPONSE_TIMEOUT_MS
 } = {}) {
   if (typeof fetchImpl !== 'function') throw new TypeError('fetch is required');
   const rpcUrls = endpointList(rpcUrl, rpcFallbackUrls);
   const publicClient = client || createRpcClient(rpcUrls);
   return {
     source: 'RPC', endpoint: rpcUrls.join(', '),
-    async *loadProfileAssets(profileAddress, { signal } = {}) {
+    async *loadProfileAssets(profileAddress, { signal, priorityAssetIds = [], requestedAssetIds = null } = {}) {
       const profile = normalizeProfileAddress(profileAddress);
       if (!profile) throw new TypeError('A valid Universal Profile address is required');
       const contracts = await discoverContracts(profile, { rpcUrls, signal });
       throwIfAborted(signal);
-      const holdings = await discoverOwnedTokens(profile, contracts, publicClient, signal);
+      const discoveredHoldings = await discoverOwnedTokens(profile, contracts, publicClient, signal);
+      const requested = Array.isArray(requestedAssetIds) && requestedAssetIds.length
+        ? new Set(requestedAssetIds.map((id) => String(id).toLowerCase())) : null;
+      const selectedHoldings = requested ? discoveredHoldings.filter((holding) => requested.has(
+        createStableAssetId({ contractAddress: holding.address, tokenId: holding.tokenId }))) : discoveredHoldings;
+      const holdings = prioritizeHoldings(selectedHoldings, priorityAssetIds);
       const collectionMetadata = new Map(); let resolved = 0;
-      for (let offset = 0; offset < holdings.length; offset += pageSize) {
+      const streamBatchSize = Math.min(pageSize, METADATA_CONCURRENCY);
+      for (let offset = 0; offset < holdings.length; offset += streamBatchSize) {
         throwIfAborted(signal);
-        const page = holdings.slice(offset, offset + pageSize);
+        const page = holdings.slice(offset, offset + streamBatchSize);
         const outcomes = await mapConcurrent(page, METADATA_CONCURRENCY, async (holding) => {
           throwIfAborted(signal);
           let collectionRequest = collectionMetadata.get(holding.address);
           if (!collectionRequest) {
             collectionRequest = readCollectionMetadata(holding.address, publicClient,
-              { fetchImpl, ipfsGateway, signal }).catch(() => null);
+              { fetchImpl, ipfsGateway, signal, metadataResponseMs }).catch(() => null);
             collectionMetadata.set(holding.address, collectionRequest);
           }
           const collectionDocument = await collectionRequest;
           const tokenDocument = await readTokenMetadata(holding, publicClient,
-            { fetchImpl, ipfsGateway, signal }).catch(() => null);
+            { fetchImpl, ipfsGateway, signal, metadataResponseMs }).catch(() => null);
           return toNormalizedAsset(holding, profile, tokenDocument, collectionDocument, { ipfsGateway });
         });
         const assets = []; let batchFailures = 0;

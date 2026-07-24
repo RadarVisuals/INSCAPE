@@ -34,8 +34,8 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisi
     moveActorToScreenPosition(clientX, clientY) {
       engineRef.current?.updateMouseClick(clientX, clientY);
     },
-    moveActorHorizontallyToScreenPosition(clientX) {
-      engineRef.current?.updateHorizontalMove(clientX);
+    moveActorHorizontallyToScreenPosition(clientX, direction) {
+      engineRef.current?.updateHorizontalMove(clientX, direction);
     },
     acknowledgeUserGesture() {
       engineRef.current?.acknowledgeUserGesture();
@@ -109,11 +109,17 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisi
 
   useEffect(() => { engineRef.current?.setStageVisible(stageVisible); }, [stageVisible]);
 
-  const handleMouseMove = (e) => {
-    if (engineRef.current) {
-      engineRef.current.updateMousePos(e.clientX, e.clientY);
-    }
-  };
+  useEffect(() => {
+    const handlePointerMove = (event) => {
+      engineRef.current?.updateMousePos(event.clientX, event.clientY);
+    };
+
+    // Public spatial surfaces are rendered above Pixi and therefore receive
+    // pointer events instead of the canvas. Track at the window boundary so
+    // resident eyes, warp, and searchlight remain responsive in every mode.
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    return () => window.removeEventListener('pointermove', handlePointerMove);
+  }, []);
 
   const handleMouseClick = (e) => {
     if (engineRef.current) {
@@ -127,7 +133,6 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisi
       {/* PixiJS Canvas Layer */}
       <div
         ref={containerRef}
-        onMouseMove={handleMouseMove}
         onClick={handleMouseClick}
         style={{
           width: '100%',

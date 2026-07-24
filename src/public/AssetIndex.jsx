@@ -23,16 +23,21 @@ function assetKind(asset) {
   return 'IMAGE';
 }
 
-function assetImage(asset) {
-  return asset?.thumbnailUrl || asset?.imageUrl || asset?.originalImageUrl || null;
+function assetImages(asset) {
+  return [...new Set([asset?.thumbnailUrl, asset?.imageUrl, asset?.originalImageUrl].filter(Boolean))];
 }
 
-function IndexThumbnail({ asset }) {
-  const [failed, setFailed] = useState(false);
-  const source = assetImage(asset);
-  useEffect(() => setFailed(false), [source]);
-  if (!source || failed) return <span>IMAGE UNAVAILABLE</span>;
-  return <img src={source} alt="" loading="lazy" decoding="async" draggable="false" referrerPolicy="no-referrer" onError={() => setFailed(true)} />;
+function IndexThumbnail({ asset, onUnavailable }) {
+  const sources = assetImages(asset);
+  const sourceSignature = sources.join('|');
+  const [sourceIndex, setSourceIndex] = useState(0);
+  useEffect(() => setSourceIndex(0), [sourceSignature]);
+  const source = sources[sourceIndex];
+  if (!source) return null;
+  return <img src={source} alt="" loading="lazy" decoding="async" draggable="false" referrerPolicy="no-referrer" onError={() => {
+    if (sourceIndex < sources.length - 1) setSourceIndex(sourceIndex + 1);
+    else onUnavailable?.();
+  }} />;
 }
 
 export default function AssetIndex({ visible = false, open = false, onOpenChange, profileName = '' }) {
@@ -47,6 +52,7 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
   const deleteFolder = useLibraryStore((state) => state.deleteFolder);
   const setFolderAsset = useLibraryStore((state) => state.setFolderAsset);
   const setFolderPublic = useLibraryStore((state) => state.setFolderPublic);
+  const discardUnavailableAsset = useLibraryStore((state) => state.discardUnavailableAsset);
   const [view, setView] = useState({ type: 'all', id: null });
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('ALL');
@@ -177,7 +183,7 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
           {status === 'error' && !filteredAssets.length && <div className="asset-index-workspace__error" role="alert"><strong>ASSET SOURCE OFFLINE</strong><p>{error || 'ASSET INDEX UNAVAILABLE'}</p><button type="button" onClick={() => load({ forceLive: true })}>RETRY</button></div>}
           {status !== 'idle' && status !== 'loading' && status !== 'error' && !filteredAssets.length && <p>NO ASSETS MATCH THIS VIEW</p>}
           {filteredAssets.map((asset) => <button type="button" key={asset.id} onClick={(event) => activateAsset(event, asset)} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setAssetContext({ asset, anchor: { x: event.clientX, y: event.clientY }, returnFocus: event.currentTarget }); }} aria-label={`Inspect ${asset.name || 'untitled asset'}`}>
-            <span className="asset-index-workspace__thumb"><IndexThumbnail asset={asset} /></span>
+            <span className="asset-index-workspace__thumb"><IndexThumbnail asset={asset} onUnavailable={() => discardUnavailableAsset(asset.id)} /></span>
             <strong>{asset.name || 'Untitled asset'}</strong>
             {(asset.collectionName || assetKind(asset)) && <small>{[assetKind(asset), asset.collectionName].filter(Boolean).join(' · ')}</small>}
           </button>)}

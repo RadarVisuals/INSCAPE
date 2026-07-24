@@ -20,14 +20,26 @@ export function resolveContextTarget(target, desktop) {
   return null;
 }
 
-export function contextMenuCommands({ target, editMode, launcher, canvasObject, startOpen = false, menu = 'root', keeperVisible = true, stageVisible = true, stageAvailable = true, ownerAuthoringEnabled = false }) {
+export function presentationPatchForCommand(command, presentation = {}) {
+  if (command === 'presentation-transparent') return { background: 'transparent' };
+  if (command === 'presentation-framed') return { background: presentation.background === 'transparent' ? 'dark' : presentation.background || 'dark' };
+  if (command.startsWith('image-fit-')) return { fit: command.slice(10) };
+  if (command.startsWith('frame-')) return { frame: command.slice(6) };
+  if (command.startsWith('mat-')) return { mat: command.slice(4) };
+  if (command.startsWith('background-')) return { background: command.slice(11) };
+  return null;
+}
+
+export function contextMenuCommands({ target, editMode, launcher, canvasObject, canvasObjects = [], startOpen = false, menu = 'root', keeperVisible = true, stageVisible = true, stageAvailable = true, ownerAuthoringEnabled = false }) {
   if (!ownerAuthoringEnabled && target?.type === 'launcher') return [{ id: 'open', label: 'Open' }];
   if (!ownerAuthoringEnabled && target?.type === 'canvas-object') return [{ id: 'open-artwork', label: 'Open Artwork' }];
   if (target?.type === 'canvas' && menu === 'create') return [
     { id: 'menu-root', label: '< Back' }, { id: 'create-folder', label: 'Folder' }
   ];
   if (target?.type === 'gallery-canvas') return ownerAuthoringEnabled
-    ? [{ id: 'add-gallery-artwork', label: 'Add Artwork' }]
+    ? [{ id: 'add-gallery-artwork', label: 'Add Artwork' },
+      ...(canvasObjects.some((object) => !object.locked) ? [{ id: 'lock-all-artwork', label: 'Lock All Artwork' }] : []),
+      ...(canvasObjects.some((object) => object.locked) ? [{ id: 'unlock-all-artwork', label: 'Unlock All Artwork' }] : [])]
     : [];
   if (target?.type === 'gallery-object' && !ownerAuthoringEnabled) return [{ id: 'open-artwork', label: 'Open Artwork' }];
   if (target?.type === 'canvas' && menu === 'view') return [
@@ -54,6 +66,36 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
     { id: 'menu-root', label: '< Back' }, { id: 'object-forward', label: 'Bring Forward' }, { id: 'object-backward', label: 'Send Backward' },
     { id: 'object-front', label: 'Bring to Front' }, { id: 'object-back', label: 'Send to Back' }
   ];
+  if (target?.type === 'gallery-object' && menu === 'appearance') return [
+    { id: 'menu-root', label: '< Back' },
+    { id: 'menu-presentation', label: 'Presentation >' },
+    { id: 'menu-image-fit', label: 'Image Fit >' },
+    { id: 'menu-frame', label: 'Frame >' },
+    { id: 'menu-mat', label: 'Mat >' },
+    { id: 'menu-background', label: 'Background >' }
+  ];
+  if (target?.type === 'gallery-object' && menu === 'presentation') return [
+    { id: 'menu-appearance', label: '< Back' },
+    { id: 'presentation-transparent', label: `${canvasObject?.presentation?.background === 'transparent' ? '✓ ' : ''}Transparent` },
+    { id: 'presentation-framed', label: `${canvasObject?.presentation?.background !== 'transparent' ? '✓ ' : ''}Framed` }
+  ];
+  if (target?.type === 'gallery-object' && menu === 'image-fit') return [
+    { id: 'menu-appearance', label: '< Back' },
+    { id: 'image-fit-contain', label: `${canvasObject?.presentation?.fit === 'contain' ? '✓ ' : ''}Contain` },
+    { id: 'image-fit-cover', label: `${canvasObject?.presentation?.fit === 'cover' ? '✓ ' : ''}Cover` }
+  ];
+  if (target?.type === 'gallery-object' && menu === 'frame') return [
+    { id: 'menu-appearance', label: '< Back' },
+    ...['none', 'thin', 'heavy'].map((value) => ({ id: `frame-${value}`, label: `${canvasObject?.presentation?.frame === value ? '✓ ' : ''}${value[0].toUpperCase()}${value.slice(1)}` }))
+  ];
+  if (target?.type === 'gallery-object' && menu === 'mat') return [
+    { id: 'menu-appearance', label: '< Back' },
+    ...['none', 'light', 'dark'].map((value) => ({ id: `mat-${value}`, label: `${canvasObject?.presentation?.mat === value ? '✓ ' : ''}${value[0].toUpperCase()}${value.slice(1)}` }))
+  ];
+  if (target?.type === 'gallery-object' && menu === 'background') return [
+    { id: 'menu-appearance', label: '< Back' },
+    ...['dark', 'light', 'neutral'].map((value) => ({ id: `background-${value}`, label: `${canvasObject?.presentation?.background === value ? '✓ ' : ''}${value[0].toUpperCase()}${value.slice(1)}` }))
+  ];
   if (target?.type === 'canvas-object') return [
     { id: 'open-artwork', label: 'Open Artwork' }, { id: 'edit-artwork', label: 'Edit Artwork' }, { id: 'replace-artwork', label: 'Replace Artwork' },
     { id: 'toggle-object-visibility', label: canvasObject?.visitorVisible ? 'Make Private' : 'Show to Visitors' },
@@ -61,13 +103,12 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
   ];
   if (target?.type === 'gallery-object') return [
     { id: 'open-artwork', label: 'Open Artwork' },
-    { id: 'toggle-artwork-lock', label: canvasObject?.locked ? 'Unlock Placement' : 'Lock Placement' },
-    { id: 'toggle-transparent-presentation', label: canvasObject?.presentation?.background === 'transparent' ? 'Use Framed Presentation' : 'Use Transparent Presentation' },
-    { id: 'edit-artwork', label: 'Frame & Presentation' },
+    { id: 'menu-appearance', label: 'Appearance >' },
     { id: 'replace-artwork', label: 'Replace Artwork' },
-    { id: 'toggle-object-visibility', label: canvasObject?.visitorVisible ? 'Make Private' : 'Show to Visitors' },
+    { id: 'remove-artwork', label: 'Remove from Gallery' },
     { id: 'menu-layer', label: 'Layer >' },
-    { id: 'remove-artwork', label: 'Remove from Gallery' }
+    { id: 'toggle-object-visibility', label: canvasObject?.visitorVisible ? 'Make Private' : 'Make Public' },
+    { id: 'toggle-artwork-lock', label: canvasObject?.locked ? 'Unlock' : 'Lock' }
   ];
   if (target?.type === 'window') return [
     { id: 'close', label: 'Close' }, { id: 'reset-window', label: launcher ? 'Reset Near Folder' : 'Reset Position and Size' },

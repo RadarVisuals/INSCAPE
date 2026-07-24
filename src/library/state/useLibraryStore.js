@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { normalizeProfileAddress, resolveWorkspaceProfile } from '../config.js';
-import { luksoProfileRepository } from '../data/luksoProfileRepository.js';
+import { chillwhalesProfileRepository } from '../data/chillwhalesProfileRepository.js';
 import { luksoRpcProfileRepository } from '../data/luksoRpcProfileRepository.js';
 import { useWalletStore } from '../../store/useWalletStore.js';
 import { developmentLog, reportControlledError } from '../../diagnostics.js';
@@ -22,15 +22,17 @@ import {
 } from '../domain/libraryWorkspace.js';
 import {
   createCanvasObject, removeCanvasObject, reorderCanvasObject, replaceCanvasObjectAsset,
-  setCanvasObjectGeometry, setCanvasObjectLocked, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility
+  setAllCanvasObjectsLocked, setCanvasObjectGeometry, setCanvasObjectLocked, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility
 } from '../domain/canvasObjects.js';
 import { loadLibraryWorkspace, saveLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
+import { loadLibraryAssetCache, saveLibraryAssetCache } from '../storage/libraryAssetCache.js';
 
 const profileAddress = resolveWorkspaceProfile(useWalletStore.getState().hostProfileAddress);
 let workspaceStorage = typeof window === 'undefined' ? null : window.localStorage;
 let saveTimer = null;
 let activeLoadController = null;
-const LIVE_SOURCE_TIMEOUT_MS = 15000;
+const INDEXER_SOURCE_TIMEOUT_MS = 8000;
+const RPC_REPAIR_TIMEOUT_MS = 60000;
 const RPC_SOURCE_TIMEOUT_MS = 240000;
 
 function scheduleSave(workspace) {
@@ -46,7 +48,7 @@ function uniqueAssets(existing, incoming) {
 
 export const useLibraryStore = create((set, get) => ({
   profileAddress,
-  assets: [],
+  assets: loadLibraryAssetCache(workspaceStorage, profileAddress),
   sourceMode: null,
   status: 'idle',
   progress: { resolved: 0, total: 0, failures: 0 },
@@ -74,7 +76,7 @@ export const useLibraryStore = create((set, get) => ({
       if (get().workspace?.profileAddress) saveLibraryWorkspace(workspaceStorage, get().workspace);
     }
     const workspace = loadLibraryWorkspace(workspaceStorage, profile);
-    set({ profileAddress: profile, workspace, assets: [], sourceMode: null, status: 'idle', error: null, liveError: null,
+    set({ profileAddress: profile, workspace, assets: loadLibraryAssetCache(workspaceStorage, profile), sourceMode: null, status: 'idle', error: null, liveError: null,
       progress: { resolved: 0, total: 0, failures: 0 }, searchQuery: '', activeView: { type: 'all', id: null }, selectedAssetId: null,
       loadGeneration: get().loadGeneration + 1 });
     return true;
@@ -94,16 +96,21 @@ export const useLibraryStore = create((set, get) => ({
     const requestedProfileAddress = get().profileAddress;
     const generation = get().loadGeneration + 1;
     developmentLog('[asset-index] load started', {
-      endpoint: luksoProfileRepository.endpoint,
+      endpoint: chillwhalesProfileRepository.endpoint,
       forceLive,
       generation,
       profileAddress: requestedProfileAddress,
-      timeoutMs: LIVE_SOURCE_TIMEOUT_MS
+      timeoutMs: INDEXER_SOURCE_TIMEOUT_MS
     });
-    set({ loadGeneration: generation, assets: forceLive ? [] : get().assets, sourceMode: 'LIVE', status: 'loading',
+    set({ loadGeneration: generation, assets: forceLive ? [] : get().assets, sourceMode: 'INDEXER', status: 'loading',
       error: null, liveError: null, progress: { resolved: 0, total: 0, failures: 0 } });
-    const consume = async (repository, signal) => {
-      for await (const batch of repository.loadProfileAssets(requestedProfileAddress, { signal })) {
+    const priorityAssetIds = [...new Set((get().workspace?.canvas?.objects || [])
+      .map((object) => object?.stableAssetId).filter(Boolean))];
+    const consume = async (repository, signal, options = {}) => {
+      const unresolvedAssetIds = []; let sourceAssets = []; let sourceFailures = 0;
+      const replaceOnComplete = options.replaceOnComplete ?? !options.preserveProgress;
+      for await (const batch of repository.loadProfileAssets(requestedProfileAddress,
+        { signal, priorityAssetIds, requestedAssetIds: options.requestedAssetIds })) {
         if (get().loadGeneration !== generation) {
           developmentLog('[asset-index] stale batch discarded', { generation, profileAddress: requestedProfileAddress });
           return;
@@ -115,14 +122,23 @@ export const useLibraryStore = create((set, get) => ({
           generation,
           profileAddress: requestedProfileAddress,
           resolved: batch.resolved,
+          source: options.sourceMode || repository.source,
           total: batch.total
         });
-        set((state) => ({ assets: uniqueAssets(state.assets, batch.assets), sourceMode: repository.source,
-          status: batch.complete ? 'ready' : 'loading',
-          progress: { resolved: batch.resolved, total: batch.total, failures: (state.progress.failures || 0) + batch.failures } }));
+        unresolvedAssetIds.push(...(Array.isArray(batch.unresolvedAssetIds) ? batch.unresolvedAssetIds : []));
+        sourceAssets = uniqueAssets(sourceAssets, batch.assets);
+        sourceFailures += batch.failures;
+        set((state) => ({
+          assets: batch.complete && replaceOnComplete ? sourceAssets : uniqueAssets(state.assets, batch.assets),
+          sourceMode: options.sourceMode || repository.source,
+          status: options.preserveProgress ? state.status : batch.complete ? 'ready' : 'loading',
+          progress: options.preserveProgress ? { ...state.progress, failures: sourceFailures }
+            : { resolved: batch.resolved, total: batch.total, failures: (state.progress.failures || 0) + batch.failures } }));
+        saveLibraryAssetCache(workspaceStorage, requestedProfileAddress, get().assets);
       }
+      return [...new Set(unresolvedAssetIds)];
     };
-    const consumeWithTimeout = async (repository, timeoutMs) => {
+    const consumeWithTimeout = async (repository, timeoutMs, options = {}) => {
       const sourceController = new AbortController(); let timedOut = false;
       const abortSource = () => sourceController.abort(controller.signal.reason);
       controller.signal.addEventListener('abort', abortSource, { once: true });
@@ -134,7 +150,7 @@ export const useLibraryStore = create((set, get) => ({
         sourceController.abort();
       }, timeoutMs);
       try {
-        await consume(repository, sourceController.signal);
+        return await consume(repository, sourceController.signal, options);
       } catch (error) {
         if (controller.signal.aborted) throw error;
         if (timedOut) {
@@ -150,10 +166,25 @@ export const useLibraryStore = create((set, get) => ({
     };
     try {
       try {
-        await consumeWithTimeout(luksoProfileRepository, LIVE_SOURCE_TIMEOUT_MS);
-      } catch (liveSourceError) {
-        if (controller.signal.aborted || get().loadGeneration !== generation) throw liveSourceError;
-        const liveMessage = liveSourceError instanceof Error ? liveSourceError.message : String(liveSourceError);
+        const unresolvedAssetIds = await consumeWithTimeout(chillwhalesProfileRepository, INDEXER_SOURCE_TIMEOUT_MS);
+        if (unresolvedAssetIds.length) {
+          developmentLog('[asset-index] repairing unresolved metadata through RPC', {
+            assets: unresolvedAssetIds.length, generation, profileAddress: requestedProfileAddress
+          });
+          try {
+            await consumeWithTimeout(luksoRpcProfileRepository, RPC_REPAIR_TIMEOUT_MS,
+              { requestedAssetIds: unresolvedAssetIds, sourceMode: 'INDEXER+RPC', preserveProgress: true });
+          } catch (repairError) {
+            if (controller.signal.aborted || get().loadGeneration !== generation) throw repairError;
+            developmentLog('[asset-index] RPC metadata repair incomplete', {
+              generation, message: repairError instanceof Error ? repairError.message : String(repairError),
+              profileAddress: requestedProfileAddress
+            });
+          }
+        }
+      } catch (indexerSourceError) {
+        if (controller.signal.aborted || get().loadGeneration !== generation) throw indexerSourceError;
+        const liveMessage = indexerSourceError instanceof Error ? indexerSourceError.message : String(indexerSourceError);
         developmentLog('[asset-index] switching to RPC fallback', {
           generation, message: liveMessage, profileAddress: requestedProfileAddress,
           rpcEndpoint: luksoRpcProfileRepository.endpoint
@@ -197,6 +228,13 @@ export const useLibraryStore = create((set, get) => ({
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setActiveView: (activeView) => set({ activeView, selectedAssetId: null }),
   selectAsset: (selectedAssetId) => set({ selectedAssetId }),
+  discardUnavailableAsset(assetId) {
+    const assets = get().assets.filter((asset) => asset.id !== assetId);
+    if (assets.length === get().assets.length) return false;
+    set({ assets, selectedAssetId: get().selectedAssetId === assetId ? null : get().selectedAssetId });
+    saveLibraryAssetCache(workspaceStorage, get().profileAddress, assets);
+    return true;
+  },
   createFolder(name) {
     const workspace = createFolder(get().workspace, name);
     const created = workspace.folders.length > get().workspace.folders.length ? workspace.folders.at(-1) : null;
@@ -264,6 +302,9 @@ export const useLibraryStore = create((set, get) => ({
   },
   setCanvasObjectLocked(id, locked) {
     const workspace = setCanvasObjectLocked(get().workspace, id, locked); set({ workspace }); scheduleSave(workspace);
+  },
+  setAllCanvasObjectsLocked(locked) {
+    const workspace = setAllCanvasObjectsLocked(get().workspace, locked); set({ workspace }); scheduleSave(workspace);
   },
   reorderCanvasObject(id, command) {
     const workspace = reorderCanvasObject(get().workspace, id, command); set({ workspace }); scheduleSave(workspace);

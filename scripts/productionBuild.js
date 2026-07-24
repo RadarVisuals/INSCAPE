@@ -17,13 +17,14 @@ export const UNUSED_PUBLIC_PATHS = Object.freeze([
   'assets/actors/skull_reaper/position.afdesign'
 ]);
 
-// Phase 1C2H baseline plus 5-9% headroom. Keep these byte limits deterministic.
+// Phase 1C2H baseline, recalibrated for the approved Gallery and hybrid Index runtime.
+// Keep these byte limits deterministic and deliberately close to the measured build.
 export const PRODUCTION_BUDGETS = Object.freeze({
   initialJavaScript: Object.freeze({ raw: 1_250_000, gzip: 365_000 }),
   ownerJavaScript: Object.freeze({ raw: 220_000, gzip: 63_000 }),
-  initialCss: Object.freeze({ raw: 115_000, gzip: 20_000 }),
+  initialCss: Object.freeze({ raw: 117_000, gzip: 20_000 }),
   ownerCss: Object.freeze({ raw: 31_000, gzip: 6_300 }),
-  totalJavaScript: Object.freeze({ raw: 1_820_000, gzip: 530_000 }),
+  totalJavaScript: Object.freeze({ raw: 1_820_000, gzip: 533_000 }),
   publicAssets: Object.freeze({ raw: 15_000_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });

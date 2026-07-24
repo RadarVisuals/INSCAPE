@@ -82,3 +82,60 @@ test('emits a complete empty batch when LSP5 contains no currently owned assets'
   for await (const batch of repository.loadProfileAssets(profile)) batches.push(batch);
   assert.deepEqual(batches, [{ assets: [], resolved: 0, total: 0, failures: 0, complete: true }]);
 });
+
+test('hydrates gallery-referenced assets before the remaining RPC inventory', async () => {
+  const secondTokenId = `0x${'0'.repeat(63)}2`;
+  const client = {
+    async multicall({ contracts }) {
+      if (contracts[0]?.functionName === 'supportsInterface') {
+        return [{ status: 'success', result: true }, { status: 'success', result: false }];
+      }
+      return [{ status: 'success', result: [tokenId, secondTokenId] }];
+    },
+    async readContract({ functionName, args }) {
+      if (functionName === 'getDataForTokenId') return uri(args[0] === secondTokenId ? 'token-two' : 'token-one');
+      if (functionName === 'getData') return uri('collection8');
+      return '0x';
+    }
+  };
+  const documents = {
+    'token-one': { LSP4Metadata: { name: 'Token One', images: [{ url: 'ipfs://one' }] } },
+    'token-two': { LSP4Metadata: { name: 'Token Two', images: [{ url: 'ipfs://two' }] } },
+    collection8: { LSP4Metadata: { name: 'Collection' } }
+  };
+  const repository = createLuksoRpcProfileRepository({ client, rpcUrl: 'https://rpc.example', pageSize: 1,
+    discoverContracts: async () => [lsp8], fetchImpl: async (url) => response(documents[url.split('/').at(-1)]) });
+  const priorityId = `42:${lsp8}:${secondTokenId}`;
+  const batches = [];
+  for await (const batch of repository.loadProfileAssets(profile, { priorityAssetIds: [priorityId] })) batches.push(batch);
+  assert.equal(batches[0].assets[0].id, priorityId);
+  assert.equal(batches[1].assets[0].id, `42:${lsp8}:${tokenId}`);
+
+  const requestedBatches = [];
+  for await (const batch of repository.loadProfileAssets(profile,
+    { requestedAssetIds: [`42:${lsp8}:${tokenId}`] })) requestedBatches.push(batch);
+  assert.equal(requestedBatches.length, 1);
+  assert.equal(requestedBatches[0].total, 1);
+  assert.equal(requestedBatches[0].assets[0].id, `42:${lsp8}:${tokenId}`);
+});
+
+test('a stalled metadata host cannot block completion of the RPC inventory', async () => {
+  const client = {
+    async multicall({ contracts }) {
+      if (contracts[0]?.functionName === 'supportsInterface') {
+        return [{ status: 'success', result: false }, { status: 'success', result: true }];
+      }
+      return [{ status: 'success', result: 1n }];
+    },
+    async readContract() { return uri('stalled'); }
+  };
+  const repository = createLuksoRpcProfileRepository({ client, rpcUrl: 'https://rpc.example', metadataResponseMs: 5,
+    discoverContracts: async () => [lsp7], fetchImpl: async (_url, { signal }) => new Promise((_resolve, reject) => {
+      signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+    }) });
+  const batches = [];
+  for await (const batch of repository.loadProfileAssets(profile)) batches.push(batch);
+  assert.equal(batches.length, 1);
+  assert.equal(batches[0].complete, true);
+  assert.equal(batches[0].failures, 1);
+});

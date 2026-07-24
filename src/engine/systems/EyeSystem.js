@@ -121,7 +121,10 @@ export class EyeSystem {
     const driftX = Math.sin(elapsed * driftSpeed) * 6 * config.pupilWander;
     const driftY = Math.cos(elapsed * driftSpeed * 0.65) * 4 * config.pupilWander;
 
-    const mouseX = mousePosition.x * 24 * config.pupilMouseInfluence;
+    // The entire resident is mirrored when its facing direction changes.
+    // Counter-mirror the local pupil offset so it still travels toward the
+    // pointer in screen space on both the left- and right-facing sprites.
+    const mouseX = mousePosition.x * 24 * config.pupilMouseInfluence * (runtime.horizontalFlip ?? 1);
     const mouseY = mousePosition.y * 14 * config.pupilMouseInfluence;
 
     const sharedTargetX = mouseX + driftX;

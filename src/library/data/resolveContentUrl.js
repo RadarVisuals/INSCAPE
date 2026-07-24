@@ -24,19 +24,14 @@ export function resolveContentUrl(value, { ipfsGateway = IPFS_GATEWAY_URL, allow
 }
 
 export function selectImageUrls(images, options) {
-  const valid = (Array.isArray(images) ? images : [])
-    .map((image) => ({ ...image, resolved: resolveContentUrl(image?.src || image?.url, options) }))
-    .filter((image) => image.resolved);
-  if (!valid.length) return { imageUrl: null, thumbnailUrl: null, originalImageUrl: null };
-  const byWidth = [...valid].sort((a, b) => (Number(a.width) || Infinity) - (Number(b.width) || Infinity));
-  const thumbnail = byWidth.find((image) => (Number(image.width) || 0) >= 320) || byWidth[0];
-  const largest = byWidth.at(-1);
+  const primary = selectImageGroups(images, options)[0];
+  if (!primary) return { imageUrl: null, thumbnailUrl: null, originalImageUrl: null };
   return {
-    thumbnailUrl: thumbnail.resolved,
-    imageUrl: largest.resolved,
-    originalImageUrl: largest.url || largest.src || null,
-    width: Number(largest.width) || null,
-    height: Number(largest.height) || null
+    thumbnailUrl: primary.thumbnailUrl,
+    imageUrl: primary.imageUrl,
+    originalImageUrl: primary.originalImageUrl,
+    width: primary.width,
+    height: primary.height
   };
 }
 

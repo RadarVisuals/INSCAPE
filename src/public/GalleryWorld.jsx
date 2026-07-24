@@ -3,10 +3,10 @@ import { createPortal } from 'react-dom';
 import FramedArtwork from './FramedArtwork.jsx';
 import { clampGalleryCamera, createGalleryLayout, galleryPlacementFromPoint, moveGalleryGeometry, resizeGalleryGeometry } from './galleryLayout.js';
 import { getCenteredHorizontalGridOffset, panSpatialCamera } from './spatialWorldCamera.js';
-import { detectImageTransparency } from './imageTransparency.js';
 import './galleryWorld.css';
 
 const EMPTY_VIEWPORT = Object.freeze({ width: 1280, height: 720 });
+const KEEPER_DIRECTION_REVERSAL_THRESHOLD = 12;
 
 function GalleryFloorGrid({ width, height, offset, spacing }) {
   const columnCount = Math.ceil(width / spacing) + 6;
@@ -30,11 +30,15 @@ function GalleryFloorGrid({ width, height, offset, spacing }) {
   </svg>;
 }
 
-export default function GalleryWorld({ objects, assets, assetStatus = 'ready', theme, ownerAuthoringEnabled = false, selectedArtworkId = null, transitionPhase = 'gallery', gridPhaseX = 0, gridOffsetY = 0, renderImage, onOpenArtwork, onSelectArtwork, onOpenContextMenu, onChangeArtworkGeometry, onRegisterArtworkElement, onExit, onCameraXChange, onMoveKeeper, onMoveKeeperHorizontally }) {
+export default function GalleryWorld({ objects, assets, assetStatus = 'ready', theme, ownerAuthoringEnabled = false, selectedArtworkId = null, presentationPreview = null, transitionPhase = 'gallery', gridPhaseX = 0, gridOffsetY = 0, renderImage, onOpenArtwork, onSelectArtwork, onOpenContextMenu, onChangeArtworkGeometry, onRemoveArtwork, onRegisterArtworkElement, onExit, onCameraXChange, onMoveKeeper, onMoveKeeperHorizontally }) {
   const viewportRef = useRef(null);
   const dragRef = useRef(null);
   const artworkInteractionRef = useRef(null);
   const suppressArtworkActivationRef = useRef(false);
+  const previousCameraXRef = useRef(0);
+  const keeperDirectionRef = useRef(0);
+  const pendingKeeperDirectionRef = useRef(0);
+  const pendingKeeperDistanceRef = useRef(0);
   const [viewport, setViewport] = useState(() => ({
     width: typeof window === 'undefined' ? EMPTY_VIEWPORT.width : window.innerWidth,
     height: typeof window === 'undefined' ? EMPTY_VIEWPORT.height : window.innerHeight
@@ -42,32 +46,23 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
   const [cameraX, setCameraX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [artworkInteraction, setArtworkInteraction] = useState(null);
-  const [transparentAssetIds, setTransparentAssetIds] = useState(() => new Set());
-  const effectiveObjects = useMemo(() => objects.map((object) => artworkInteraction?.id === object.id ? {
-    ...object,
-    placement: { column: artworkInteraction.geometry.column, row: artworkInteraction.geometry.row },
-    span: { columns: artworkInteraction.geometry.columnSpan, rows: artworkInteraction.geometry.rowSpan }
-  } : object), [artworkInteraction, objects]);
+  const effectiveObjects = useMemo(() => objects.map((object) => {
+    let effective = presentationPreview?.id === object.id ? { ...object, presentation: { ...object.presentation, ...presentationPreview.patch } } : object;
+    if (artworkInteraction?.id === object.id) effective = {
+      ...effective,
+      placement: { column: artworkInteraction.geometry.column, row: artworkInteraction.geometry.row },
+      span: { columns: artworkInteraction.geometry.columnSpan, rows: artworkInteraction.geometry.rowSpan }
+    };
+    return effective;
+  }), [artworkInteraction, objects, presentationPreview]);
   const layout = useMemo(() => createGalleryLayout(effectiveObjects, viewport), [effectiveObjects, viewport]);
 
-  useEffect(() => {
-    let active = true;
-    Promise.all(assets.map(async (asset) => ({
-      id: asset.id,
-      transparent: await detectImageTransparency(asset.imageUrl || asset.thumbnailUrl)
-    }))).then((results) => {
-      if (active) setTransparentAssetIds(new Set(results.filter((result) => result.transparent).map((result) => result.id)));
-    });
-    return () => { active = false; };
-  }, [assets]);
-
-  const moveCamera = useCallback((nextOrUpdater, direction = 0) => {
+  const moveCamera = useCallback((nextOrUpdater) => {
     setCameraX((current) => clampGalleryCamera(
       typeof nextOrUpdater === 'function' ? nextOrUpdater(current) : nextOrUpdater,
       layout.maxCameraX
     ));
-    if (direction) onMoveKeeperHorizontally?.(direction > 0 ? viewport.width * 0.66 : viewport.width * 0.34);
-  }, [layout.maxCameraX, onMoveKeeperHorizontally, viewport.width]);
+  }, [layout.maxCameraX]);
 
   useEffect(() => {
     const node = viewportRef.current;
@@ -80,30 +75,64 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
     return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
   }, []);
 
+  useEffect(() => () => dragRef.current?.cleanup?.(), []);
+
   useEffect(() => setCameraX((current) => clampGalleryCamera(current, layout.maxCameraX)), [layout.maxCameraX]);
 
-  useEffect(() => onCameraXChange?.(cameraX), [cameraX, onCameraXChange]);
+  useEffect(() => {
+    const cameraDelta = cameraX - previousCameraXRef.current;
+    const direction = Math.sign(cameraDelta);
+    previousCameraXRef.current = cameraX;
+    onCameraXChange?.(cameraX);
+    if (!direction) return;
+
+    const reversingDuringPointerDrag = Boolean(dragRef.current)
+      && keeperDirectionRef.current
+      && direction !== keeperDirectionRef.current;
+
+    if (!reversingDuringPointerDrag) {
+      keeperDirectionRef.current = direction;
+      pendingKeeperDirectionRef.current = 0;
+      pendingKeeperDistanceRef.current = 0;
+    } else {
+      if (pendingKeeperDirectionRef.current !== direction) {
+        pendingKeeperDirectionRef.current = direction;
+        pendingKeeperDistanceRef.current = 0;
+      }
+      pendingKeeperDistanceRef.current += Math.abs(cameraDelta);
+      if (pendingKeeperDistanceRef.current < KEEPER_DIRECTION_REVERSAL_THRESHOLD) return;
+      keeperDirectionRef.current = direction;
+      pendingKeeperDirectionRef.current = 0;
+      pendingKeeperDistanceRef.current = 0;
+    }
+
+    onMoveKeeperHorizontally?.(
+      direction > 0 ? viewport.width * 0.66 : viewport.width * 0.34,
+      direction
+    );
+  }, [cameraX, onCameraXChange, onMoveKeeperHorizontally, viewport.width]);
 
   useEffect(() => {
     const keydown = (event) => {
       if (event.defaultPrevented) return;
       if (event.target.closest?.('input,select,textarea')) return;
       if (event.key === 'Escape') { event.preventDefault(); onExit(); return; }
+      if (event.key === 'Delete' && ownerAuthoringEnabled && selectedArtworkId) { event.preventDefault(); onRemoveArtwork?.(selectedArtworkId); return; }
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
-      if (event.key === 'Home') moveCamera(0, -1);
-      else if (event.key === 'End') moveCamera(layout.maxCameraX, 1);
-      else { const direction = event.key === 'ArrowRight' ? 1 : -1; moveCamera((current) => current + direction * Math.max(180, viewport.width * 0.22), direction); }
+      if (event.key === 'Home') moveCamera(0);
+      else if (event.key === 'End') moveCamera(layout.maxCameraX);
+      else { const direction = event.key === 'ArrowRight' ? 1 : -1; moveCamera((current) => current + direction * Math.max(180, viewport.width * 0.22)); }
     };
     window.addEventListener('keydown', keydown);
     return () => window.removeEventListener('keydown', keydown);
-  }, [layout.maxCameraX, moveCamera, onExit, viewport.width]);
+  }, [layout.maxCameraX, moveCamera, onExit, onRemoveArtwork, ownerAuthoringEnabled, selectedArtworkId, viewport.width]);
 
   const handleWheel = useCallback((event) => {
     event.preventDefault();
     const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
     if (!delta) return;
-    moveCamera((current) => current + delta, Math.sign(delta));
+    moveCamera((current) => current + delta);
   }, [moveCamera]);
 
   useEffect(() => {
@@ -115,9 +144,23 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
 
   const handlePointerDown = (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
-    if (event.target.closest?.('button,a,.canvas-artwork')) return;
-    dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, cameraX, moved: false };
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    const artwork = event.target.closest?.('.canvas-artwork');
+    if (event.target.closest?.('a') || artwork && artwork.dataset.locked !== 'true' || !artwork && event.target.closest?.('button')) return;
+    const captureTarget = artwork?.querySelector?.('.canvas-artwork__surface') || event.currentTarget;
+    const move = (pointerEvent) => handlePointerMove(pointerEvent);
+    const finish = (pointerEvent) => finishPointer(pointerEvent);
+    const cleanup = () => {
+      window.removeEventListener('pointermove', move, true);
+      window.removeEventListener('pointerup', finish, true);
+      window.removeEventListener('pointercancel', finish, true);
+      captureTarget.removeEventListener('lostpointercapture', finish);
+    };
+    dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, cameraX, moved: false, artworkId: artwork?.dataset.canvasObjectId || null, cleanup };
+    window.addEventListener('pointermove', move, true);
+    window.addEventListener('pointerup', finish, true);
+    window.addEventListener('pointercancel', finish, true);
+    captureTarget.addEventListener('lostpointercapture', finish);
+    captureTarget.setPointerCapture?.(event.pointerId);
     setDragging(true);
   };
 
@@ -133,15 +176,17 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
       { x: event.clientX, y: event.clientY },
       { minX: 0, maxX: layout.maxCameraX, minY: 0, maxY: 0 }
     );
-    moveCamera(nextCamera.x, -Math.sign(distance));
+    moveCamera(nextCamera.x);
   };
 
   const finishPointer = (event) => {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
+    drag.cleanup?.();
     dragRef.current = null;
     setDragging(false);
-    if (!drag.moved) {
+    if (drag.moved && drag.artworkId) suppressArtworkActivationRef.current = true;
+    if (!drag.moved && !drag.artworkId) {
       onSelectArtwork?.(null);
       onMoveKeeper?.(event.clientX, Math.min(event.clientY, layout.horizon - 32));
     }
@@ -152,7 +197,7 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
     event.preventDefault();
     event.stopPropagation();
     onSelectArtwork?.(object.id);
-    artworkInteractionRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, object, kind, moved: false };
+    artworkInteractionRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, object, kind, corner: event.currentTarget.dataset.resizeCorner || null, moved: false };
     event.currentTarget.setPointerCapture?.(event.pointerId);
   };
 
@@ -165,7 +210,7 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
     active.moved ||= Math.hypot(delta.x, delta.y) > 4;
     if (!active.moved) return;
     const geometry = active.kind === 'resize'
-      ? resizeGalleryGeometry(active.object, delta)
+      ? resizeGalleryGeometry(active.object, delta, layout, active.corner)
       : moveGalleryGeometry(active.object, delta, layout);
     active.geometry = geometry;
     setArtworkInteraction({ id: active.object.id, geometry });
@@ -203,7 +248,7 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
   const gridOffset = getCenteredHorizontalGridOffset(cameraX - gridPhaseX, viewport.width, gridSpacing);
   const progress = layout.maxCameraX ? cameraX / layout.maxCameraX : 0;
   const portalTarget = typeof document === 'undefined' ? null : document.querySelector('.application-root');
-  const worldTheme = { ...theme, '--module-accent': theme?.['--hu-accent-primary'] || '#e87945' };
+  const worldTheme = { ...theme, '--module-accent': '#ebece7' };
   const backdrop = <div className="gallery-world-backdrop" aria-hidden="true" data-transition-phase={transitionPhase} style={{ ...worldTheme, '--gallery-grid-offset': `${gridOffset}px`, '--gallery-grid-offset-y': `${gridOffsetY}px`, '--gallery-horizon': `${layout.horizon}px` }}>
     <div className="gallery-world__shader-glass" />
     <div className="gallery-world__wall" />
@@ -220,10 +265,6 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
     tabIndex="-1"
     style={{ ...worldTheme, '--gallery-horizon': `${layout.horizon}px` }}
     onPointerDown={handlePointerDown}
-    onPointerMove={handlePointerMove}
-    onPointerUp={finishPointer}
-    onPointerCancel={finishPointer}
-    onLostPointerCapture={finishPointer}
     onContextMenu={openWallContextMenu}
   >
     <div className="gallery-world__track" style={{ width: layout.worldWidth, transform: `translate3d(${-cameraX}px,0,0)` }}>
@@ -233,7 +274,7 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
         return <FramedArtwork key={object.id} object={object} asset={asset} arranging={arranging} selected={selectedArtworkId === object.id && !object.locked}
           style={{ left, top, width, height, zIndex: 12 + object.presentationOrder }}
           resolving={!asset && ['idle', 'loading'].includes(assetStatus)}
-          transparent={transparentAssetIds.has(object.stableAssetId)}
+          showVisibility={ownerAuthoringEnabled}
           renderImage={renderImage}
           containerRef={(node) => onRegisterArtworkElement?.(object.id, node)}
           interactionProps={{
@@ -267,10 +308,11 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
       <span className="gallery-world__terminus" aria-hidden="true" style={{ left: layout.worldWidth - 220 }}>END OF EXHIBITION</span>
     </div>
     {!layout.items.length && <div className="gallery-world__empty"><strong>Gallery awaiting works</strong><span>{ownerAuthoringEnabled ? 'Right-click the wall to add artwork.' : 'No public works have been installed.'}</span></div>}
+    <button className="gallery-world__exit" type="button" onClick={onExit} aria-label="Exit gallery">EXIT</button>
     <nav className="gallery-world__controls" aria-label="Gallery movement">
-      <button type="button" onClick={() => moveCamera((current) => current - viewport.width * 0.7, -1)} aria-label="Move gallery left">←</button>
+      <button type="button" onClick={() => moveCamera((current) => current - viewport.width * 0.7)} aria-label="Move gallery left">‹</button>
       <span>Drag · Scroll · Arrow keys</span>
-      <button type="button" onClick={() => moveCamera((current) => current + viewport.width * 0.7, 1)} aria-label="Move gallery right">→</button>
+      <button type="button" onClick={() => moveCamera((current) => current + viewport.width * 0.7)} aria-label="Move gallery right">›</button>
     </nav>
     <div className="gallery-world__progress" aria-hidden="true"><i style={{ transform: `scaleX(${Math.max(0.025, progress)})` }} /></div>
   </section>;

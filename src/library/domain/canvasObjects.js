@@ -93,6 +93,13 @@ export function setCanvasObjectLocked(workspace, id, locked) {
   return updateObject(workspace, id, (object) => ({ ...object, locked }));
 }
 
+export function setAllCanvasObjectsLocked(workspace, locked) {
+  if (typeof locked !== 'boolean' || !workspace.canvas.objects.some((object) => object.locked !== locked)) return workspace;
+  return { ...workspace, canvas: { ...workspace.canvas,
+    objects: workspace.canvas.objects.map((object) => ({ ...object, locked }))
+  } };
+}
+
 export function removeCanvasObject(workspace, id) {
   if (!workspace.canvas.objects.some((object) => object.id === id)) return workspace;
   return { ...workspace, canvas: { ...workspace.canvas, objects: normalizeCanvasObjectOrder(workspace.canvas.objects.filter((object) => object.id !== id)) } };

@@ -19,6 +19,16 @@ test('selects a modest thumbnail and the largest preview', () => {
   assert.equal(urls.imageUrl, 'https://example.test/large.png');
 });
 
+test('keeps thumbnail and preview inside the first authored image group', () => {
+  const urls = selectImageUrls([
+    { index: 0, src: 'https://example.test/first-small.png', width: 180 },
+    { index: 1, src: 'https://example.test/second-large.png', width: 2000 },
+    { index: 0, src: 'https://example.test/first-large.png', width: 1200 }
+  ]);
+  assert.equal(urls.thumbnailUrl, 'https://example.test/first-large.png');
+  assert.equal(urls.imageUrl, 'https://example.test/first-large.png');
+});
+
 test('root-relative content is accepted only for explicit trusted fixture use', () => {
   assert.equal(resolveContentUrl('/fixtures/avatar.svg'), null);
   assert.equal(resolveContentUrl('/fixtures/avatar.svg', { allowRelative: true }), '/fixtures/avatar.svg');

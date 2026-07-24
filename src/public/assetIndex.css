@@ -114,6 +114,10 @@
 .asset-index-folder-dialog button { min-width: 76px; min-height: 32px; padding: 0 12px; border: 1px solid rgb(235 236 231 / .18); background: transparent; color: inherit; font: 500 .52rem/1 var(--font-interface, "Oxanium", monospace); letter-spacing: .09em; white-space: nowrap; cursor: pointer; }
 .asset-index-folder-dialog button[data-danger] { border-color: rgb(210 91 91 / .38); color: rgb(255 184 184 / .8); }
 .asset-index-context-menu.desktop-menu { --module-accent: #ebece7; --os-accent: #ebece7; z-index: 1200; border-left: 1px solid rgb(235 236 231 / .35); }
+.gallery-asset-chooser { top:5vh; left:5vw; width:90vw; height:90dvh; min-width:min(560px,90vw); min-height:min(440px,90dvh); max-width:90vw; max-height:90dvh; z-index:180; }
+.gallery-asset-chooser__close { position:absolute;z-index:4;right:8px;top:7px;width:30px;height:30px;padding:0;border:0;background:transparent;color:rgb(235 236 231 / .5);font:300 1.15rem/1 var(--font-interface,"Oxanium",monospace);cursor:pointer; }
+.gallery-asset-chooser__close:hover,.gallery-asset-chooser__close:focus-visible { outline:0;color:#fff; }
+.gallery-asset-chooser .asset-index-workspace__tools { padding-right:30px; }
 
 @media (max-width: 719px) {
   .asset-index-workspace { top: 14px !important; left: 14px !important; width: calc(100vw - 28px) !important; height: calc(100dvh - 28px) !important; min-width: 0; min-height: 0; max-width: none; max-height: none; grid-template-columns: 150px minmax(0, 1fr); }
