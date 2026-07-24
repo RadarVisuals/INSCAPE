@@ -8,7 +8,8 @@ const entry = readFileSync(new URL('./main.jsx', import.meta.url), 'utf8');
 
 test('grid-to-world study is an isolated lazy prototype using the transparent mountain asset', () => {
   assert.match(entry, /\/prototype\/grid-to-world/);
-  assert.match(entry, /React\.lazy\(\(\) => import\('\.\/GridToWorldPrototype\.jsx'\)\)/);
+  assert.match(entry, /import\.meta\.env\.DEV && prototypePath === '\/prototype\/grid-to-world'/);
+  assert.match(entry, /import\.meta\.env\.DEV\s*\? React\.lazy\(\(\) => import\('\.\/GridToWorldPrototype\.jsx'\)\)/);
   assert.match(source, /\/assets\/prototype\/gridmountains\.webp/);
   assert.match(source, /extractSkyline/);
   assert.match(source, /pixels\[\(y\*size\+x\)\*4\+3\]/);

@@ -8,7 +8,8 @@ const entry = readFileSync(new URL('./main.jsx', import.meta.url), 'utf8');
 
 test('navigation wall prototype is an isolated lazy route with dummy navigation only', () => {
   assert.match(entry, /\/prototype\/navigation-wall/);
-  assert.match(entry, /React\.lazy\(\(\) => import\('\.\/NavigationWallPrototype\.jsx'\)\)/);
+  assert.match(entry, /import\.meta\.env\.DEV && prototypePath === '\/prototype\/navigation-wall'/);
+  assert.match(entry, /import\.meta\.env\.DEV\s*\? React\.lazy\(\(\) => import\('\.\/NavigationWallPrototype\.jsx'\)\)/);
   for (const label of ['FAVORITES','ART','KEEPERS','MUSIC','AUDIO','VIDEO','ANIMATION']) assert.match(source, new RegExp(label));
   assert.doesNotMatch(source, /useStore|useWalletStore|useLibraryStore|AssetResolver|profileDocument|residentHandoff/);
 });

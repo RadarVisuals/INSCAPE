@@ -5,18 +5,22 @@ import App from './App.jsx';
 import './index.css';
 
 const prototypePath = window.location.pathname.replace(/\/+$/, '');
-const prototypeRoute = prototypePath === '/prototype/navigation-wall';
-const worldTransitionRoute = prototypePath === '/prototype/grid-to-world';
+const prototypeRoute = import.meta.env.DEV && prototypePath === '/prototype/navigation-wall';
+const worldTransitionRoute = import.meta.env.DEV && prototypePath === '/prototype/grid-to-world';
 const inscapeScrambleRoute = import.meta.env.DEV && prototypePath === '/prototype/inscape-scramble';
-const NavigationWallPrototype = React.lazy(() => import('./NavigationWallPrototype.jsx'));
-const GridToWorldPrototype = React.lazy(() => import('./GridToWorldPrototype.jsx'));
+const NavigationWallPrototype = import.meta.env.DEV
+  ? React.lazy(() => import('./NavigationWallPrototype.jsx'))
+  : null;
+const GridToWorldPrototype = import.meta.env.DEV
+  ? React.lazy(() => import('./GridToWorldPrototype.jsx'))
+  : null;
 const InscapeScramblePrototype = import.meta.env.DEV
   ? React.lazy(() => import('./InscapeScramblePrototype.jsx'))
   : null;
 
-const prototype = prototypeRoute
+const prototype = prototypeRoute && NavigationWallPrototype
   ? <NavigationWallPrototype />
-  : worldTransitionRoute
+  : worldTransitionRoute && GridToWorldPrototype
     ? <GridToWorldPrototype />
     : inscapeScrambleRoute && InscapeScramblePrototype
       ? <InscapeScramblePrototype />

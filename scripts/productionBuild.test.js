@@ -4,7 +4,7 @@ import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { analyzeProductionBuild, assertSafeOutputDirectory, checkProductionBudgets, pruneProductionAuthoringAssets,
-  diagnosticsEnvironmentPlugin, productionBuildHygienePlugin, PRODUCTION_BUDGETS } from './productionBuild.js';
+  diagnosticsEnvironmentPlugin, productionBuildHygienePlugin, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
 import { ownerRuntimeIsolationPlugin } from './ownerRuntimeIsolation.js';
 
 const graph = (leaks = []) => ({ ownerModules: ['/src/public/ModuleGridShell.jsx'], entries: [{ file: 'assets/app-a.js' }],
@@ -77,6 +77,10 @@ test('authoring pruning touches only the active verified output directory', asyn
     await assert.rejects(() => readFile(resolve(active, 'assets/patterns/stale.txt')));
     assert.equal(await readFile(resolve(normal, 'assets/patterns/sentinel.txt'), 'utf8'), 'normal');
   } finally { await rm(base, { recursive: true, force: true }); }
+});
+
+test('production pruning excludes development-only prototype assets', () => {
+  for (const path of ['assets/PFP', 'assets/prototype', 'assets/ratio']) assert.ok(UNUSED_PUBLIC_PATHS.includes(path), path);
 });
 
 test('an alternate-outDir production build writes reports there and strips diagnostics', async () => {

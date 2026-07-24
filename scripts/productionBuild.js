@@ -7,8 +7,11 @@ import { assertOwnerRuntimeGraph } from './ownerRuntimeIsolation.js';
 export const BUILD_REPORT_FILE = 'bundle-report.json';
 export const GENERATED_BUILD_FILES = Object.freeze([BUILD_REPORT_FILE, 'owner-runtime-graph.json']);
 export const UNUSED_PUBLIC_PATHS = Object.freeze([
+  'assets/PFP',
   'assets/patterns',
   'assets/palettes',
+  'assets/prototype',
+  'assets/ratio',
   'assets/manifest.json',
   'assets/actors/abyssal_eye/full multi eye purple.afdesign',
   'assets/actors/skull_reaper/position.afdesign'
