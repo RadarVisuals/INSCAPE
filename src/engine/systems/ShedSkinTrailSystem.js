@@ -1,5 +1,6 @@
 import { Assets, Container, Matrix, RenderTexture, Sprite, Texture } from 'pixi.js';
 import { createShedSkinTrailFilter } from '../filters/ShedSkinTrailFilterFactory.js';
+import { getShedSkinSnapshotScale } from './shedSkinRuntime.js';
 
 const MAX_SNAPSHOTS = 8;
 const CAPTURE_SCALE = 0.5;
@@ -66,7 +67,7 @@ export class ShedSkinTrailSystem {
     }
   }
 
-  capture(headState, count) {
+  capture(headState, count, scaleMultiplier = 1) {
     if (!this.renderer || !this.actor?.visualContainer || count <= 0) return;
     const slotIndex = this.cursor % count;
     this.cursor = (this.cursor + 1) % count;
@@ -87,7 +88,7 @@ export class ShedSkinTrailSystem {
     snapshot.direction.x = this.velocity.x / directionLength;
     snapshot.direction.y = this.velocity.y / directionLength;
     snapshot.bornAt = this.time;
-    snapshot.baseScale = headState.scale;
+    snapshot.baseScale = getShedSkinSnapshotScale(headState.scale, scaleMultiplier);
     snapshot.active = true;
     snapshot.sprite.visible = true;
     snapshot.sprite.alpha = 0;
@@ -97,7 +98,7 @@ export class ShedSkinTrailSystem {
     snapshot.sprite.rotation = 0;
   }
 
-  update(deltaTime, headState, config) {
+  update(deltaTime, headState, config, { scaleMultiplier = 1 } = {}) {
     const dt = Math.min(0.05, deltaTime / 60);
     this.time += dt;
     this.frameAccumulator += deltaTime;
@@ -129,7 +130,7 @@ export class ShedSkinTrailSystem {
 
     if (enabled && motion > 0.01 && this.frameAccumulator >= spacing) {
       this.frameAccumulator %= spacing;
-      this.capture(headState, count);
+      this.capture(headState, count, scaleMultiplier);
     }
 
     if (!enabled) {

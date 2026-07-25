@@ -1205,7 +1205,12 @@ export class PixiEngine {
       const actorIsAvatar = this.isResidentRepresentedByAvatar();
       if (this.shedSkinTrailSystem?.container) this.shedSkinTrailSystem.container.visible = this.residentRevealVisible && !actorIsAvatar;
       if (this.residentRevealVisible && !actorIsAvatar) {
-        this.shedSkinTrailSystem?.update(deltaTime, this.actor.headState, renderConfig.phenomena.shedSkin);
+        this.shedSkinTrailSystem?.update(
+          deltaTime,
+          this.actor.headState,
+          renderConfig.phenomena.shedSkin,
+          { scaleMultiplier: this.residentHandoff?.scaleMultiplier ?? 1 }
+        );
       }
     }
     this.updateActorScreenPositionPresentation();
