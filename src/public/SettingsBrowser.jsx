@@ -43,6 +43,17 @@ export default function SettingsBrowser({ visible = false, open = false, onOpenC
             {['square', 'round'].map((shape) => <button type="button" key={shape} aria-pressed={actions.avatarShape === shape} data-active={actions.avatarShape === shape || undefined} onClick={() => actions.onAvatarShapeChange(shape)}>{shape.toUpperCase()}</button>)}
           </div>
         </section>}
+        {actions?.onVisitorNavigationChange && <section className="settings-browser__visitor" aria-label="Visitor presentation">
+          <strong>VISITOR PRESENTATION</strong>
+          <div className="settings-browser__options">
+            {[['showCategories', 'SHOW CATEGORIES'], ['showCreations', 'SHOW CREATIONS']].map(([key, label]) => <label key={key}>
+              <span>{label}</span>
+              <input type="checkbox" checked={actions.visitorNavigation?.[key] === true} onChange={(event) => actions.onVisitorNavigationChange(key, event.target.checked)} />
+              <i aria-hidden="true" />
+            </label>)}
+          </div>
+          <p>CHANGES BECOME PUBLIC WITH YOUR NEXT PUBLICATION.</p>
+        </section>}
         {actions && <section className="settings-browser__workspace" aria-label="Workspace actions">
           <strong>WORKSPACE</strong>
           <div>

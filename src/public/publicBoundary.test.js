@@ -132,7 +132,7 @@ test('owner folders are direct categories and Index assigns assets through conte
 
 test('published visitors enter the same Gallery projection without owner authoring controls', () => {
   const worldSource = readFileSync(new URL('../profileDocument/components/PublishedHomeWorld.jsx', import.meta.url), 'utf8');
-  assert.match(worldSource, /gallery=\{\{ open: galleryOpen/);
+  assert.match(worldSource, /gallery=\{upperOpen \? null : \{ open: galleryOpen/);
   assert.match(worldSource, /<GalleryWorld/);
   assert.match(worldSource, /objects=\{galleryObjects\}/);
   assert.doesNotMatch(worldSource, /ownerAuthoringEnabled=\{true\}/);

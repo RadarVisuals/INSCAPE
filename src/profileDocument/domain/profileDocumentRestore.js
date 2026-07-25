@@ -56,6 +56,7 @@ export function createProfileDocumentRestorePlan(document, currentWorkspace) {
   workspace.canvas = { ...workspace.canvas, launchers: [], objects: [...privateObjects, ...restoredObjects] };
   return { workspace, keeperId: value.presentation.keeperId, stageId: value.presentation.stageId,
     avatarShape: value.presentation.avatarShape || 'square',
+    visitorNavigation: { ...value.presentation.visitorNavigation },
     environment: { ...value.presentation.environment },
     signalSettings: { ...value.presentation.signals }, restoredFolderIds: [...restoredFolderIds] };
 }

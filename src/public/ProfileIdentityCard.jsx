@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   identityCode,
   PROFILE_IDENTITY_CARD_STATE,
@@ -16,7 +16,7 @@ function Avatar({ src }) {
   return <img src={src} alt="" referrerPolicy="no-referrer" onError={() => setFailed(true)} />;
 }
 
-export default function ProfileIdentityCard({ profile, avatarShape = 'square', expanded: controlledExpanded, initialExpanded = false, collapseToAvatar = false, onExpandedChange, onStateChange }) {
+export default function ProfileIdentityCard({ profile, avatarShape = 'square', compactSubtitle = 'VIEW PROFILE', expanded: controlledExpanded, initialExpanded = false, collapseToAvatar = false, onExpandedChange, onStateChange }) {
   const [state, setState] = useState((controlledExpanded ?? initialExpanded) ? PROFILE_IDENTITY_CARD_STATE.EXPANDED : PROFILE_IDENTITY_CARD_STATE.AVATAR);
   const stateRef = useRef(state);
   const onStateChangeRef = useRef(onStateChange);
@@ -56,15 +56,17 @@ export default function ProfileIdentityCard({ profile, avatarShape = 'square', e
     setState(PROFILE_IDENTITY_CARD_STATE.AVATAR);
   }, [collapseToAvatar]);
 
-  const transition = (action) => {
-    setState((current) => {
-      const next = transitionProfileIdentityCard(current, action);
-      if ((current === PROFILE_IDENTITY_CARD_STATE.EXPANDED) !== (next === PROFILE_IDENTITY_CARD_STATE.EXPANDED)) {
-        onExpandedChange?.(next === PROFILE_IDENTITY_CARD_STATE.EXPANDED);
-      }
-      return next;
-    });
-  };
+  const transition = useCallback((action) => {
+    const current = stateRef.current;
+    const next = transitionProfileIdentityCard(current, action);
+    if (next === current) return;
+
+    stateRef.current = next;
+    setState(next);
+    if ((current === PROFILE_IDENTITY_CARD_STATE.EXPANDED) !== (next === PROFILE_IDENTITY_CARD_STATE.EXPANDED)) {
+      onExpandedChangeRef.current?.(next === PROFILE_IDENTITY_CARD_STATE.EXPANDED);
+    }
+  }, []);
 
   useEffect(() => {
     const closeOnEscape = (event) => {
@@ -72,7 +74,7 @@ export default function ProfileIdentityCard({ profile, avatarShape = 'square', e
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [state]);
+  }, [state, transition]);
 
   return <section
     className="profile-identity-card"
@@ -94,7 +96,7 @@ export default function ProfileIdentityCard({ profile, avatarShape = 'square', e
       ><Avatar src={profile?.avatarUrl} /></button>
       <span className="profile-identity-card__copy">
         <strong>{name} <i>{code}</i></strong>
-        <small>{expanded ? 'UNIVERSAL PROFILE' : 'VIEW PROFILE'}</small>
+        <small>{expanded ? 'UNIVERSAL PROFILE' : compactSubtitle}</small>
       </span>
       <button
         className="profile-identity-card__toggle"
@@ -106,21 +108,23 @@ export default function ProfileIdentityCard({ profile, avatarShape = 'square', e
       >{expanded ? '×' : '›'}</button>
     </header>
     <div className="profile-identity-card__details" aria-hidden={!expanded}>
-      {profile?.bio && <p>{profile.bio}</p>}
-      {tags.length > 0 && <div className="profile-identity-card__tags" aria-label="Profile tags">
-        {tags.map((tag) => <span key={tag}>{String(tag).toUpperCase()}</span>)}
-      </div>}
-      <dl>
-        {socialLinks.length > 0 && <div>
-          <dt>SOCIAL</dt>
-          <dd className="profile-identity-card__link-group">{socialLinks.map((link) => <a key={link.id || link.url} href={link.url} target="_blank" rel="noreferrer">{link.label.toUpperCase()} ↗</a>)}</dd>
+      <div className="profile-identity-card__details-inner">
+        {profile?.bio && <p>{profile.bio}</p>}
+        {tags.length > 0 && <div className="profile-identity-card__tags" aria-label="Profile tags">
+          {tags.map((tag) => <span key={tag}>{String(tag).toUpperCase()}</span>)}
         </div>}
-        {linkedLinks.length > 0 && <div>
-          <dt>LINKED</dt>
-          <dd className="profile-identity-card__link-group">{linkedLinks.map((link) => <a key={link.id || link.url} href={link.url} target="_blank" rel="noreferrer">{link.label.toUpperCase()} ↗</a>)}</dd>
-        </div>}
-        <div><dt>NETWORK</dt><dd>{SAFE_NETWORK_LABEL}</dd></div>
-      </dl>
+        <dl>
+          {socialLinks.length > 0 && <div>
+            <dt>SOCIAL</dt>
+            <dd className="profile-identity-card__link-group">{socialLinks.map((link) => <a key={link.id || link.url} href={link.url} target="_blank" rel="noreferrer">{link.label.toUpperCase()} ↗</a>)}</dd>
+          </div>}
+          {linkedLinks.length > 0 && <div>
+            <dt>LINKED</dt>
+            <dd className="profile-identity-card__link-group">{linkedLinks.map((link) => <a key={link.id || link.url} href={link.url} target="_blank" rel="noreferrer">{link.label.toUpperCase()} ↗</a>)}</dd>
+          </div>}
+          <div><dt>NETWORK</dt><dd>{SAFE_NETWORK_LABEL}</dd></div>
+        </dl>
+      </div>
     </div>
   </section>;
 }

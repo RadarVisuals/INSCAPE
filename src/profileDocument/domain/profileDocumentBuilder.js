@@ -56,6 +56,10 @@ export function buildProfileDocumentV3({ profileAddress, workspace, assets = [],
     network: { ...PROFILE_DOCUMENT_NETWORK }, profile: { address, cachedIdentity: cleanIdentity(profileIdentity, address) },
     presentation: { keeperId: publicPresentation?.keeperId || 'abyssal_eye', stageId: publicPresentation?.stageId || 'moonpurple',
       avatarShape: publicPresentation?.avatarShape === 'round' ? 'round' : 'square',
+      visitorNavigation: {
+        showCategories: publicPresentation?.visitorNavigation?.showCategories !== false,
+        showCreations: publicPresentation?.visitorNavigation?.showCreations === true
+      },
       environment: {
         type: publicPresentation?.environment?.type === 'shader' ? 'shader' : 'illustrated',
         shaderId: 'neural-field'

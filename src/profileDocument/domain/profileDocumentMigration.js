@@ -6,6 +6,15 @@ const addAvatarShape = (document) => {
   document.presentation.avatarShape = 'square';
   return document;
 };
+const addVisitorNavigation = (document) => {
+  document.presentation.visitorNavigation = { showCategories: true, showCreations: false };
+  return document;
+};
+const finishLegacyMigration = (document, { avatarShape = false } = {}) => {
+  if (avatarShape) addAvatarShape(document);
+  addVisitorNavigation(document);
+  return assertValidProfileDocument(document);
+};
 
 export function migrateProfileDocument(input) {
   if (!input || input.documentType !== PROFILE_DOCUMENT_TYPE) throw new ProfileDocumentValidationError([{ path: 'documentType', code: 'wrong_document_type', message: 'Not an OS_UNDERNEATH profile document' }]);
@@ -16,28 +25,32 @@ export function migrateProfileDocument(input) {
     migrated.presentation.environment = { type: 'illustrated', shaderId: 'neural-field' };
     migrated.canvasObjects = [];
     migrated.version = PROFILE_DOCUMENT_VERSION;
-    return assertValidProfileDocument(addAvatarShape(migrated));
+    return finishLegacyMigration(migrated, { avatarShape: true });
   }
   if (input.version === 2) {
     const migrated = structuredClone(input); migrated.version = PROFILE_DOCUMENT_VERSION;
     migrated.presentation.environment = { type: 'illustrated', shaderId: 'neural-field' };
     migrated.canvasObjects = [];
     migrated.spaces = addHomeShortcut(migrated.spaces);
-    return assertValidProfileDocument(addAvatarShape(migrated));
+    return finishLegacyMigration(migrated, { avatarShape: true });
   }
   if (input.version === 3) {
     const migrated = structuredClone(input); migrated.version = PROFILE_DOCUMENT_VERSION; migrated.canvasObjects = [];
     migrated.spaces = addHomeShortcut(migrated.spaces);
-    return assertValidProfileDocument(addAvatarShape(migrated));
+    return finishLegacyMigration(migrated, { avatarShape: true });
   }
   if (input.version === 4) {
     const migrated = structuredClone(input); migrated.version = PROFILE_DOCUMENT_VERSION;
     migrated.spaces = addHomeShortcut(migrated.spaces);
-    return assertValidProfileDocument(addAvatarShape(migrated));
+    return finishLegacyMigration(migrated, { avatarShape: true });
   }
   if (input.version === 5) {
     const migrated = structuredClone(input); migrated.version = PROFILE_DOCUMENT_VERSION;
-    return assertValidProfileDocument(addAvatarShape(migrated));
+    return finishLegacyMigration(migrated, { avatarShape: true });
+  }
+  if (input.version === 6) {
+    const migrated = structuredClone(input); migrated.version = PROFILE_DOCUMENT_VERSION;
+    return finishLegacyMigration(migrated);
   }
   if (input.version !== PROFILE_DOCUMENT_VERSION) throw new ProfileDocumentValidationError([{ path: 'version', code: 'unsupported_version', message: `Unsupported profile document version: ${String(input.version)}` }]);
   return assertValidProfileDocument(input);

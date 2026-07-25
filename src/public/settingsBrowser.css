@@ -25,8 +25,9 @@
 .settings-browser__options input:checked + i::after { content:''; width:6px; height:6px; background:var(--color-text-primary); }
 .settings-browser__options input:focus-visible + i { outline:1px solid var(--color-text-bright); outline-offset:3px; }
 .settings-browser > main > p { margin:14px 0 0; color:var(--color-text-disabled); font-size:.48rem; letter-spacing:.11em; }
-.settings-browser__appearance,.settings-browser__workspace { margin-top:22px; }
-.settings-browser__appearance > strong,.settings-browser__workspace > strong { display:block; margin-bottom:12px; color:rgb(235 236 231 / .76); font-size:.62rem; letter-spacing:.15em; }
+.settings-browser__appearance,.settings-browser__visitor,.settings-browser__workspace { margin-top:22px; }
+.settings-browser__appearance > strong,.settings-browser__visitor > strong,.settings-browser__workspace > strong { display:block; margin-bottom:12px; color:rgb(235 236 231 / .76); font-size:.62rem; letter-spacing:.15em; }
+.settings-browser__visitor > p { margin:10px 0 0; color:var(--color-text-disabled); font-size:.48rem; letter-spacing:.11em; }
 .settings-browser__appearance > div,.settings-browser__workspace > div { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .settings-browser__appearance button,.settings-browser__workspace button { min-height:38px; padding:0 12px; border:1px solid rgb(235 236 231 / .22); background:transparent; color:var(--color-text-soft); font:500 .54rem/1 var(--font-interface); letter-spacing:.12em; cursor:pointer; }
 .settings-browser__appearance button[data-active] { border-color:var(--color-text-dim); background:rgb(235 236 231 / .07); color:var(--color-text-bright); }

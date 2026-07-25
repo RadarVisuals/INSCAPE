@@ -18,6 +18,7 @@ export default function ProfileNavigationDock({
   profileExpanded,
   onProfileExpandedChange,
   categories = [],
+  showCategories = true,
   assetStatus = 'ready',
   onCategoriesOpenChange,
   creations = null,
@@ -26,7 +27,8 @@ export default function ProfileNavigationDock({
   spatialWorldActive = false,
   ownerIndex = null,
   onDiscover = null,
-  ownerTools = null
+  ownerTools = null,
+  compactProfileSubtitle = 'VIEW PROFILE'
 }) {
   const [profileState, setProfileState] = useState(PROFILE_IDENTITY_CARD_STATE.AVATAR);
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
@@ -203,12 +205,13 @@ export default function ProfileNavigationDock({
     <ProfileIdentityCard
       profile={profile}
       avatarShape={avatarShape}
+      compactSubtitle={compactProfileSubtitle}
       expanded={profileExpanded}
       collapseToAvatar={effectiveGalleryOpen || spatialWorldActive}
       onExpandedChange={onProfileExpandedChange}
       onStateChange={setProfileState}
     />
-    <CategoryNavigationCard
+    {showCategories && <CategoryNavigationCard
       items={categories}
       emptyLabel={ownerIndex ? 'NO CATEGORIES' : 'NO PUBLIC CATEGORIES'}
       activeId={selectedCategoryId}
@@ -221,7 +224,7 @@ export default function ProfileNavigationDock({
       } : undefined}
       onExpandedChange={handleCategoriesExpandedChange}
       collapseRequested={effectiveIndexOpen || effectiveCreationsOpen || effectiveActivityOpen || effectiveGalleryOpen || settingsOpen}
-    />
+    />}
     {categoryContext && <DesktopMenu
       className="category-navigation-context-menu desktop-menu--cascade"
       anchor={categoryContext.anchor}

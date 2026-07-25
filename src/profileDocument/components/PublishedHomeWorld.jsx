@@ -69,6 +69,7 @@ export default function PublishedHomeWorld({ document, onMoveKeeper, onMoveKeepe
     presentationOrder: object.order
   })), [document.canvasObjects]);
   const galleryAssets = useMemo(() => document.canvasObjects.map((object) => projectDocumentAsset(object.asset)), [document.canvasObjects]);
+  const visitorNavigation = document.presentation.visitorNavigation || { showCategories: true, showCreations: false };
 
   useEffect(() => {
     const resize = () => setViewport(viewportSize());
@@ -207,13 +208,18 @@ export default function PublishedHomeWorld({ document, onMoveKeeper, onMoveKeepe
     <ProfileNavigationDock
       profile={publicProfile}
       avatarShape={document.presentation.avatarShape || 'square'}
+      compactProfileSubtitle="VISITING INSCAPE"
       categories={navigationCategories}
-      creations={{ profileAddress: document.profile.address }}
-      activity={{ profileAddress: document.profile.address }}
+      showCategories={visitorNavigation.showCategories}
+      creations={visitorNavigation.showCreations ? { profileAddress: document.profile.address } : null}
       gallery={upperOpen ? null : { open: galleryOpen, onOpenChange: (open) => open ? enterGallery() : exitGallery() }}
       spatialWorldActive={galleryOpen || upperOpen}
     />
-    <header className="public-shell__masthead published-home-world__header"><div className="system-hud__identity"><h1>[ <span className="system-hud__brand-accent">{onExit ? 'VISITOR PREVIEW' : 'PUBLISHED WORLD'}</span> ]</h1><span className="system-hud__operator">{displayName}</span><span className="system-hud__live"><i aria-hidden="true" />Document v{document.version}</span></div>{(onExit || onOpenDirectory || onReturn) && <nav className="system-hud__commands">{onOpenDirectory && <button type="button" onClick={onOpenDirectory}>[ Directory ]</button>}{onReturn && <button type="button" onClick={onReturn}>[ Return ]</button>}{onExit && <button type="button" onClick={onExit}>[ Exit Preview ]</button>}</nav>}</header>
+    {(onExit || onOpenDirectory || onReturn) && <nav className="published-visitor-navigation" aria-label="Visitor navigation">
+      {onOpenDirectory && <button type="button" onClick={onOpenDirectory}>DIRECTORY</button>}
+      {onReturn && <button type="button" onClick={onReturn}>MY INSCAPE</button>}
+      {onExit && <button type="button" onClick={onExit}>EXIT PREVIEW</button>}
+    </nav>}
     {homeWorldMounted && <HomeWorldSurface camera={camera} geometry={layout.geometry} world={layout.world} gridVisible theme={theme} visible onCameraChange={setCamera} onMoveKeeper={onMoveKeeper} narrowGestureRef={compactTapRef} transitionPhase={homeTransitionPhase} />}
     {!galleryOpen && !upperOpen && <section className="published-home-world__spatial" aria-label="Published home canvas" style={{ width: layout.placementGeometry.usableWidth, height: layout.placementGeometry.usableHeight, transform, '--grid-cell-width': `${layout.geometry.cellWidth}px`, '--grid-cell-height': `${layout.geometry.cellHeight}px` }} onWheel={handleWorldWheel} onPointerDown={beginCompactTap} onPointerMove={moveCompactTap} onPointerUp={finishCompactTap} onPointerCancel={(event) => finishCompactTap(event, true)} onPointerLeave={(event) => { if (event.pointerType === 'mouse') finishCompactTap(event, true); }} />}
     {galleryOpen && galleryTransitionPhase !== 'preparing' && <Suspense fallback={null}><GalleryWorld
