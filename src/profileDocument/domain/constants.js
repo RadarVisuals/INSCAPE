@@ -1,5 +1,5 @@
 export const PROFILE_DOCUMENT_TYPE = 'OS_UNDERNEATH_PROFILE';
-export const PROFILE_DOCUMENT_VERSION = 5;
+export const PROFILE_DOCUMENT_VERSION = 6;
 export const PROFILE_DOCUMENT_LIMITS = Object.freeze({
   maxJsonBytes: 512 * 1024, maxDepth: 10, maxSpaces: 24, maxAssetsPerSpace: 200,
   maxTotalAssetReferences: 1000, maxLabelLength: 80, maxNameLength: 80,

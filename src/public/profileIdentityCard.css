@@ -68,6 +68,10 @@
 .profile-identity-card__avatar-fallback { width: 100%; height: 100%; }
 .profile-identity-card__avatar img { display: block; object-fit: cover; }
 .profile-identity-card__avatar-fallback { display: grid; place-items: center; font-size: .62rem; letter-spacing: .12em; }
+.profile-identity-card[data-avatar-shape="round"] .profile-identity-card__avatar {
+  border-width: 2px;
+  border-radius: 50%;
+}
 .profile-identity-card__avatar:hover,
 .profile-identity-card__avatar:focus-visible { outline: 0; border-color: var(--color-text-soft); }
 

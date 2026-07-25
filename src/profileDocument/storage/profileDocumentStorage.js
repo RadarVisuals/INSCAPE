@@ -21,22 +21,25 @@ export function loadRestoredPresentation(storage, address) {
   try {
     const input = JSON.parse(storage?.getItem(profilePresentationKey(address)) || 'null');
     if (!['abyssal_eye', 'skull_reaper'].includes(input?.keeperId) || typeof input?.stageId !== 'string') return null;
-    if (input.version === 1) return { ...input, environment: { type: 'illustrated', shaderId: 'neural-field' } };
-    if (input.version !== 2 || !['illustrated', 'shader'].includes(input.environment?.type) || input.environment?.shaderId !== 'neural-field') return null;
-    return input;
+    if (input.version === 1) return { ...input, version: 3, environment: { type: 'illustrated', shaderId: 'neural-field' }, avatarShape: 'square' };
+    if (![2, 3].includes(input.version) || !['illustrated', 'shader'].includes(input.environment?.type) || input.environment?.shaderId !== 'neural-field') return null;
+    if (input.version === 3 && !['square', 'round'].includes(input.avatarShape)) return null;
+    return { ...input, version: 3, avatarShape: input.avatarShape || 'square' };
   } catch { return null; }
 }
 
 export function saveRestoredPresentation(storage, address, presentation) {
   const profileAddress = normalizeProfileAddress(address);
   const value = {
-    version: 2,
+    version: 3,
     keeperId: presentation?.keeperId,
     stageId: presentation?.stageId,
-    environment: presentation?.environment
+    environment: presentation?.environment,
+    avatarShape: presentation?.avatarShape || 'square'
   };
   if (!profileAddress || !['abyssal_eye', 'skull_reaper'].includes(value.keeperId) || typeof value.stageId !== 'string'
-    || !['illustrated', 'shader'].includes(value.environment?.type) || value.environment?.shaderId !== 'neural-field') return false;
+    || !['illustrated', 'shader'].includes(value.environment?.type) || value.environment?.shaderId !== 'neural-field'
+    || !['square', 'round'].includes(value.avatarShape)) return false;
   if (!storage?.setItem) return false;
   try { storage.setItem(profilePresentationKey(profileAddress), JSON.stringify(value)); return true; } catch { return false; }
 }

@@ -37,6 +37,12 @@ export default function SettingsBrowser({ visible = false, open = false, onOpenC
             {['dark', 'light'].map((palette) => <button type="button" key={palette} data-active={actions.gridPalette === palette || undefined} onClick={() => actions.onGridPaletteChange(palette)}>{palette.toUpperCase()}</button>)}
           </div>
         </section>}
+        {actions?.onAvatarShapeChange && <section className="settings-browser__appearance" aria-label="Avatar shape">
+          <strong>AVATAR SHAPE</strong>
+          <div>
+            {['square', 'round'].map((shape) => <button type="button" key={shape} aria-pressed={actions.avatarShape === shape} data-active={actions.avatarShape === shape || undefined} onClick={() => actions.onAvatarShapeChange(shape)}>{shape.toUpperCase()}</button>)}
+          </div>
+        </section>}
         {actions && <section className="settings-browser__workspace" aria-label="Workspace actions">
           <strong>WORKSPACE</strong>
           <div>

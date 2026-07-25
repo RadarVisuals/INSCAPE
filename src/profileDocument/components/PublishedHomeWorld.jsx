@@ -160,6 +160,7 @@ export default function PublishedHomeWorld({ document, onMoveKeeper, onExit, onO
   return <main ref={worldRef} className="public-shell published-home-world" data-interface-visible data-spatial-theme="dark" data-preview-mode="visitor" data-published-focus-fallback tabIndex="-1" aria-label="Published profile visitor world" style={theme} onKeyDownCapture={(event) => { if (event.code === 'Space' && event.target.closest?.('button,a[href],[role="button"]')) event.stopPropagation(); }}>
     <ProfileNavigationDock
       profile={publicProfile}
+      avatarShape={document.presentation.avatarShape || 'square'}
       categories={navigationCategories}
       creations={{ profileAddress: document.profile.address }}
       activity={{ profileAddress: document.profile.address }}

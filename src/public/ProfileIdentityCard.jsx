@@ -16,7 +16,7 @@ function Avatar({ src }) {
   return <img src={src} alt="" referrerPolicy="no-referrer" onError={() => setFailed(true)} />;
 }
 
-export default function ProfileIdentityCard({ profile, expanded: controlledExpanded, initialExpanded = false, collapseToAvatar = false, onExpandedChange, onStateChange }) {
+export default function ProfileIdentityCard({ profile, avatarShape = 'square', expanded: controlledExpanded, initialExpanded = false, collapseToAvatar = false, onExpandedChange, onStateChange }) {
   const [state, setState] = useState((controlledExpanded ?? initialExpanded) ? PROFILE_IDENTITY_CARD_STATE.EXPANDED : PROFILE_IDENTITY_CARD_STATE.AVATAR);
   const stateRef = useRef(state);
   const onStateChangeRef = useRef(onStateChange);
@@ -80,6 +80,7 @@ export default function ProfileIdentityCard({ profile, expanded: controlledExpan
     data-state={state}
     data-compact={compact || undefined}
     data-expanded={expanded || undefined}
+    data-avatar-shape={avatarShape === 'round' ? 'round' : 'square'}
     onPointerDown={(event) => event.stopPropagation()}
     onClick={(event) => event.stopPropagation()}
   >

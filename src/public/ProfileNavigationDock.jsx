@@ -14,6 +14,7 @@ const SettingsBrowser = lazy(() => import('./SettingsBrowser.jsx'));
 
 export default function ProfileNavigationDock({
   profile,
+  avatarShape = 'square',
   profileExpanded,
   onProfileExpandedChange,
   categories = [],
@@ -201,6 +202,7 @@ export default function ProfileNavigationDock({
   >
     <ProfileIdentityCard
       profile={profile}
+      avatarShape={avatarShape}
       expanded={profileExpanded}
       collapseToAvatar={effectiveGalleryOpen || spatialWorldActive}
       onExpandedChange={onProfileExpandedChange}

@@ -42,7 +42,7 @@ function build(overrides = {}) {
     documentId: 'profile:test', revision: 3, createdAt: 1000, exportedAt: 2000, ...overrides });
 }
 
-test('builder emits a valid allowlisted deterministic v5 public document', () => {
+test('builder emits a valid allowlisted deterministic v6 public document', () => {
   const first = build(); const second = build();
   assert.equal(validateProfileDocument(first).valid, true);
   assert.deepEqual(first, second);
@@ -50,7 +50,8 @@ test('builder emits a valid allowlisted deterministic v5 public document', () =>
   assert.deepEqual(first.spaces.map((space) => space.label), ['Public A', 'Public B']);
   assert.equal(first.spaces[0].assets[0].stableAssetId, assetA.id);
   assert.equal(first.spaces[1].assets[0].stableAssetId, assetA.id, 'multi-space membership is preserved');
-  assert.equal(first.version, 5); assert.equal(first.canvasObjects.length, 1); assert.equal(first.canvasObjects[0].asset.stableAssetId, assetA.id);
+  assert.equal(first.version, 6); assert.equal(first.canvasObjects.length, 1); assert.equal(first.canvasObjects[0].asset.stableAssetId, assetA.id);
+  assert.equal(first.presentation.avatarShape, 'square');
 });
 
 test('empty authored profiles are valid', () => {
@@ -98,7 +99,7 @@ test('formatted export/import round trip preserves semantic and canonical conten
 test('strict validation rejects malformed JSON, wrong type, future versions, addresses, duplicates, placement, fields and URLs', () => {
   assert.throws(() => parseProfileDocumentJson('{no'), ProfileDocumentValidationError);
   const cases = [
-    { documentType: 'OTHER' }, { version: 6 }, { profile: { address: 'bad', cachedIdentity: { address: 'bad' } } },
+    { documentType: 'OTHER' }, { version: 7 }, { profile: { address: 'bad', cachedIdentity: { address: 'bad' } } },
     { spaces: [build().spaces[0], build().spaces[0]] },
     { spaces: [{ ...build().spaces[0], placement: { column: -256, row: 0 } }] },
     { spaces: [{ ...build().spaces[0], privateState: true }] },
@@ -149,10 +150,12 @@ test('migration defaults v1 and v2 documents to the illustrated environment', ()
   legacy.presentation.systemModules = legacy.presentation.systemModules.map(({ startOpen, windowGeometry, ...module }) => module);
   legacy.spaces = legacy.spaces.map(({ startOpen, windowGeometry, ...space }) => space);
   const migrated = migrateProfileDocument(legacy);
-  assert.equal(migrated.version, 5); assert.equal(migrated.spaces[0].startOpen, false); assert.equal(migrated.spaces[0].windowGeometry, null); assert.equal(migrated.spaces[0].homeShortcut, true); assert.deepEqual(migrated.canvasObjects, []);
+  assert.equal(migrated.version, 6); assert.equal(migrated.spaces[0].startOpen, false); assert.equal(migrated.spaces[0].windowGeometry, null); assert.equal(migrated.spaces[0].homeShortcut, true); assert.deepEqual(migrated.canvasObjects, []);
   assert.deepEqual(migrated.presentation.environment, { type: 'illustrated', shaderId: 'neural-field' });
   const v2 = structuredClone(build()); v2.version = 2; delete v2.presentation.environment;
   assert.deepEqual(migrateProfileDocument(v2).presentation.environment, { type: 'illustrated', shaderId: 'neural-field' });
+  const v5 = structuredClone(build()); v5.version = 5; delete v5.presentation.avatarShape;
+  assert.equal(migrateProfileDocument(v5).presentation.avatarShape, 'square');
   assert.throws(() => migrateProfileDocument({ documentType: 'OTHER', version: 1 }), ProfileDocumentValidationError);
   assert.throws(() => migrateProfileDocument({ ...build(), version: 9 }), ProfileDocumentValidationError);
 });
@@ -201,6 +204,13 @@ test('import preview is isolated and exit preserves draft state', () => {
   state = exitDocumentPreview(state); assert.deepEqual(workspace(), draft); assert.equal(state.imported.spaces[0].label, 'Public A');
 });
 
+test('profile documents publish and validate a controlled avatar shape', () => {
+  const round = build({ publicPresentation: { keeperId: 'skull_reaper', stageId: 'black', avatarShape: 'round' } });
+  assert.equal(round.presentation.avatarShape, 'round');
+  const invalid = structuredClone(round); invalid.presentation.avatarShape = 'hexagon';
+  assert.equal(validateProfileDocument(invalid).valid, false);
+});
+
 test('public folders publish as categories without requiring a Home shortcut', () => {
   const source = workspace();
   source.folders.push({ id: 'navigation-only', name: 'Navigation only', assetIds: [assetA.id], public: true, createdAt: 7, updatedAt: 8 });
@@ -246,6 +256,7 @@ test('restored-presentation records preserve controlled environments and migrate
   const key = profilePresentationKey(PROFILE);
   records.set(key, JSON.stringify({ version: 2, keeperId: 'skull_reaper', stageId: 'black', environment: { type: 'shader', shaderId: 'neural-field' } }));
   assert.equal(loadRestoredPresentation(storage, PROFILE).environment.type, 'shader');
+  assert.equal(loadRestoredPresentation(storage, PROFILE).avatarShape, 'square');
   records.set(key, JSON.stringify({ version: 1, keeperId: 'skull_reaper', stageId: 'black' }));
   assert.equal(loadRestoredPresentation(storage, PROFILE).environment.type, 'illustrated');
   records.set(key, JSON.stringify({ version: 2, keeperId: 'skull_reaper', stageId: 'black', environment: { type: 'shader', shaderId: 'remote' } }));
@@ -255,9 +266,9 @@ test('restored-presentation records preserve controlled environments and migrate
 test('owner Keeper and world presentation save through the existing profile-scoped record', () => {
   const records = new Map();
   const storage = { getItem: (key) => records.get(key) ?? null, setItem: (key, value) => records.set(key, value) };
-  const presentation = { keeperId: 'skull_reaper', stageId: 'black', environment: { type: 'shader', shaderId: 'neural-field' } };
+  const presentation = { keeperId: 'skull_reaper', stageId: 'black', environment: { type: 'shader', shaderId: 'neural-field' }, avatarShape: 'round' };
   assert.equal(saveRestoredPresentation(storage, PROFILE, presentation), true);
-  assert.deepEqual(loadRestoredPresentation(storage, PROFILE), { version: 2, ...presentation });
+  assert.deepEqual(loadRestoredPresentation(storage, PROFILE), { version: 3, ...presentation });
   assert.equal(saveRestoredPresentation(storage, PROFILE, { ...presentation, environment: { type: 'shader', shaderId: 'remote' } }), false);
   assert.equal(saveRestoredPresentation(null, PROFILE, presentation), false);
   assert.equal(saveRestoredPresentation({ setItem: () => { throw new Error('quota'); } }, PROFILE, presentation), false);

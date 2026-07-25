@@ -15,7 +15,7 @@ import { assertValidProfileDocument } from '../profileDocument/domain/profileDoc
 import { createProfileDocumentRestorePlan } from '../profileDocument/domain/profileDocumentRestore.js';
 import { profileDocumentContentFingerprint } from '../profileDocument/domain/profileDocumentSerialization.js';
 import { canonicalPublicationHash, publicationContentFingerprint } from '../profileDocument/domain/profileDocumentPublication.js';
-import { loadProfileSnapshot, profilePresentationKey, saveProfileSnapshot, saveRestoredPresentation } from '../profileDocument/storage/profileDocumentStorage.js';
+import { loadProfileSnapshot, loadRestoredPresentation, profilePresentationKey, saveProfileSnapshot, saveRestoredPresentation } from '../profileDocument/storage/profileDocumentStorage.js';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { getPublicTheme } from './themeTokens.js';
 import { findScenePlacement, findScenePlacementAtPointer, isScenePlacementAvailable, normalizeSpan, packCompactCanvasObjects, packCompactScene } from './sceneGrid.js';
@@ -176,6 +176,7 @@ export default function ModuleGridShell({
   const [activeModuleId, setActiveModuleId] = useState(null);
   const [activeHudCommand, setActiveHudCommand] = useState(null);
   const [gridPalette, setGridPalette] = useState('dark');
+  const [avatarShape, setAvatarShape] = useState(() => loadRestoredPresentation(window.localStorage, workspace.profileAddress)?.avatarShape || 'square');
   const [draftSaveState, setDraftSaveState] = useState(() => ({ profileAddress: workspace.profileAddress, status: 'saving' }));
   const [contextMenu, setContextMenu] = useState(null);
   const [galleryPresentationPreview, setGalleryPresentationPreview] = useState(null);
@@ -202,6 +203,10 @@ export default function ModuleGridShell({
     setPositions(readStoredPositions(createHomePlacementGeometry(geometry), profile));
     setSystemPresentation(readSystemPresentation(profile));
   }, [geometry, workspace.profileAddress]);
+  useLayoutEffect(() => {
+    const profile = normalizeProfileAddress(workspace.profileAddress);
+    if (profile) setAvatarShape(loadRestoredPresentation(window.localStorage, profile)?.avatarShape || 'square');
+  }, [workspace.profileAddress]);
   const moduleRefs = useRef(new Map());
   const canvasObjectRefs = useRef(new Map());
   const spatialLayerRef = useRef(null);
@@ -369,9 +374,9 @@ export default function ModuleGridShell({
   }, [systemPresentation]);
   const draftDocument = useMemo(() => buildProfileDocumentV3({
     profileAddress: workspace.profileAddress, workspace, assets: libraryAssets,
-    publicPresentation: { keeperId: activeActorId, stageId, environment },
+    publicPresentation: { keeperId: activeActorId, stageId, environment, avatarShape },
     signalSettings, profileIdentity, modulePositions: positions, systemPresentation, createdAt: 0, exportedAt: 0
-  }), [activeActorId, environment, libraryAssets, positions, profileIdentity, signalSettings, stageId, systemPresentation, workspace]);
+  }), [activeActorId, avatarShape, environment, libraryAssets, positions, profileIdentity, signalSettings, stageId, systemPresentation, workspace]);
   const draftFingerprint = useMemo(() => profileDocumentContentFingerprint(draftDocument), [draftDocument]);
   const draftGenerationRef = useRef({ fingerprint: draftFingerprint, generation: 0 });
   if (draftGenerationRef.current.fingerprint !== draftFingerprint) {
@@ -384,7 +389,7 @@ export default function ModuleGridShell({
     const librarySaved = flushLibraryWorkspace();
     const signalsSaved = flushSignalDocument();
     const presentationSaved = saveRestoredPresentation(window.localStorage, workspace.profileAddress, {
-      keeperId: activeActorId, stageId, environment
+      keeperId: activeActorId, stageId, environment, avatarShape
     });
     let layoutSaved = true;
     if (!geometry.narrow) {
@@ -397,7 +402,7 @@ export default function ModuleGridShell({
     if (!saved) reportControlledError('owner-draft-persist', new Error('Could not save every owner draft source'));
     setDraftSaveState({ profileAddress: workspace.profileAddress, status: saved ? 'saved' : 'error' });
     return saved;
-  }, [activeActorId, environment, geometry.narrow, positions, stageId, systemPresentation, workspace.profileAddress]);
+  }, [activeActorId, avatarShape, environment, geometry.narrow, positions, stageId, systemPresentation, workspace.profileAddress]);
 
   useEffect(() => {
     if (!ownerAuthoringEnabled) return undefined;
@@ -486,12 +491,12 @@ export default function ModuleGridShell({
     try {
       const now = Date.now();
       const document = buildProfileDocumentV3({ profileAddress: workspace.profileAddress, workspace, assets: libraryAssets,
-        publicPresentation: { keeperId: activeActorId, stageId, environment }, signalSettings, profileIdentity,
+        publicPresentation: { keeperId: activeActorId, stageId, environment, avatarShape }, signalSettings, profileIdentity,
         modulePositions: positions, systemPresentation, revision: (snapshot?.revision || 0) + 1, createdAt: snapshot?.createdAt || now, exportedAt: now });
       const valid = assertValidProfileDocument(document); installSnapshot(valid, profileDocumentContentFingerprint(valid));
       saveProfileSnapshot(window.localStorage, valid); setDocumentError(null);
     } catch (error) { setDocumentError(error.message); }
-  }, [activeActorId, environment, installSnapshot, libraryAssets, ownerAuthoringEnabled, positions, profileIdentity, setDocumentError, signalSettings, snapshot, stageId, systemPresentation, workspace]);
+  }, [activeActorId, avatarShape, environment, installSnapshot, libraryAssets, ownerAuthoringEnabled, positions, profileIdentity, setDocumentError, signalSettings, snapshot, stageId, systemPresentation, workspace]);
 
   const startPreview = useCallback((source) => {
     enterPreview(source, source === 'draft' ? draftDocument : undefined);
@@ -504,7 +509,7 @@ export default function ModuleGridShell({
     if (!ownerAuthoringEnabled) return;
     if (!importedDocument || !window.confirm('Restore this document’s public presentation? Private Favorites, unpinned folders, Activity history, and caches will be preserved.')) return;
     const previousWorkspace = structuredClone(workspace); const previousSettings = { ...signalSettings };
-    const previousPresentation = { keeperId: activeActorId, stageId, environment }; const key = profilePresentationKey(workspace.profileAddress);
+    const previousPresentation = { keeperId: activeActorId, stageId, environment, avatarShape }; const key = profilePresentationKey(workspace.profileAddress);
     let previousStoredPresentation; let previousPresentationRead = false; let restoreStarted = false;
     try {
       previousStoredPresentation = window.localStorage.getItem(key);
@@ -513,7 +518,8 @@ export default function ModuleGridShell({
       restoreStarted = true;
       if (!replaceWorkspace(plan.workspace)) throw new Error('Could not persist restored Canvas Spaces');
       if (!replaceSignalSettings(plan.signalSettings)) throw new Error('Could not persist restored Activity settings');
-      window.localStorage.setItem(key, JSON.stringify({ version: 2, keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment }));
+      if (!saveRestoredPresentation(window.localStorage, workspace.profileAddress, { keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment, avatarShape: plan.avatarShape })) throw new Error('Could not persist restored profile presentation');
+      setAvatarShape(plan.avatarShape);
       onApplyRestoredPresentation?.({ keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment }); setDocumentError(null);
     } catch (error) {
       if (restoreStarted) {
@@ -522,11 +528,12 @@ export default function ModuleGridShell({
         if (previousPresentationRead) {
           try { if (previousStoredPresentation == null) window.localStorage.removeItem(key); else window.localStorage.setItem(key, previousStoredPresentation); } catch { /* Best-effort rollback. */ }
         }
+        setAvatarShape(previousPresentation.avatarShape);
         try { onApplyRestoredPresentation?.(previousPresentation); } catch { /* Best-effort rollback. */ }
       }
       setDocumentError(error instanceof Error ? error.message : String(error));
     }
-  }, [activeActorId, environment, importedDocument, onApplyRestoredPresentation, ownerAuthoringEnabled, replaceSignalSettings, replaceWorkspace, setDocumentError, signalSettings, stageId, workspace]);
+  }, [activeActorId, avatarShape, environment, importedDocument, onApplyRestoredPresentation, ownerAuthoringEnabled, replaceSignalSettings, replaceWorkspace, setDocumentError, signalSettings, stageId, workspace]);
 
   useEffect(() => {
     if (!interfaceVisible) {
@@ -1016,6 +1023,7 @@ export default function ModuleGridShell({
     >
       {interfaceVisible && <ProfileNavigationDock
         profile={viewedProfile}
+        avatarShape={avatarShape}
         profileExpanded={identityOpen}
         onProfileExpandedChange={(expanded) => {
           setIdentityOpen(expanded);
@@ -1074,7 +1082,9 @@ export default function ModuleGridShell({
           onPublish: () => setActiveHudCommand('share'),
           onAtelier: () => onRequestAtelier?.(),
           gridPalette,
-          onGridPaletteChange: setGridPalette
+          onGridPaletteChange: setGridPalette,
+          avatarShape,
+          onAvatarShapeChange: setAvatarShape
         } : null}
       />}
       {interfaceVisible && <SpatialLevelNavigation
