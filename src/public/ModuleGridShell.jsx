@@ -210,7 +210,6 @@ export default function ModuleGridShell({
   const moduleRefs = useRef(new Map());
   const canvasObjectRefs = useRef(new Map());
   const spatialLayerRef = useRef(null);
-  const keeperDockRef = useRef(null);
   const shellRef = useRef(null);
   const gridRef = useRef(null);
   const [interaction, setInteraction] = useState(null);
@@ -254,10 +253,7 @@ export default function ModuleGridShell({
   const shellTheme = theme;
 
   const moveKeeperFromHome = useCallback((clientX, clientY) => {
-    if (keeperDockActive && keeperDockRef.current) {
-      keeperDockRef.current.release({ screenTarget: { clientX, clientY } });
-      return;
-    }
+    if (keeperDockActive) return;
     residentHandoff?.moveToScreenPosition?.(clientX, clientY);
   }, [keeperDockActive, residentHandoff]);
   const libraryAssets = useLibraryStore((state) => state.assets);
@@ -1099,7 +1095,7 @@ export default function ModuleGridShell({
         }}
       />}
       <div className="system-signature" aria-hidden="true"><strong>INSCAPE</strong><span>LUKSO MAINNET</span><i /> <span>LIVE</span></div>
-      {!galleryOpen && !upperOpen && keeperVisible && <KeeperDock ref={keeperDockRef} actorId={activeActorId} residentHandoff={residentHandoff} reducedMotion={revealPresentation.reducedMotion} onDockStateChange={setKeeperDockActive} />}
+      {!galleryOpen && !upperOpen && keeperVisible && <KeeperDock actorId={activeActorId} residentHandoff={residentHandoff} reducedMotion={revealPresentation.reducedMotion} spatialTheme={gridPalette} onDockStateChange={setKeeperDockActive} />}
 
       {homeWorldMounted && <HomeWorldSurface
         camera={homeCamera}

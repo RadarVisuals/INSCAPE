@@ -254,28 +254,25 @@
 .system-signature { position: fixed; left: 18px; bottom: 15px; z-index: 19; display: flex; align-items: center; gap: 7px; color: rgba(238,235,223,.34); font: 600 .44rem/1 var(--font-interface); letter-spacing: .08em; text-transform: uppercase; pointer-events: none; }
 .system-signature strong { color: rgba(238,235,223,.5); font-weight: 650; }
 .system-signature i { width: 4px; height: 4px; background: var(--hu-success); opacity: .7; }
-.keeper-dock { position:fixed; top:66px; right:18px; z-index:76; width:190px; height:170px; border:1px solid var(--color-line-hairline); background:rgba(5,7,7,.22); pointer-events:auto; transition:border-color var(--duration-fast) linear,background-color var(--duration-fast) linear; }
-.keeper-dock::before,.keeper-dock::after { content:''; position:absolute; pointer-events:none; }
-.keeper-dock::before { inset:-1px; border-left:1px solid transparent; border-bottom:1px solid transparent; }
-.keeper-dock::after { left:7px; top:7px; width:7px; height:7px; border-left:1px solid var(--color-border); border-top:1px solid var(--color-border); }
-.keeper-dock:hover,.keeper-dock[data-phase]:not([data-phase="empty"]) { border-color:var(--color-border-strong); background:rgba(5,7,7,.72); }
-.keeper-dock[data-phase="docked"]::before { border-left-color:var(--os-accent); border-bottom-color:var(--color-selected); }
-.keeper-dock__label { position:absolute; z-index:3; left:7px; bottom:6px; color:var(--color-border-emphasis); font:600 .39rem/1 var(--font-interface); letter-spacing:.09em; text-transform:uppercase; pointer-events:none; }
-.keeper-dock__empty,.keeper-dock__resident { position:absolute; inset:0; width:100%; height:100%; padding:14px 8px 18px; border:0; background:transparent; color:var(--hu-text-muted); cursor:pointer; }
-.keeper-dock__empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; opacity:.28; }
-.keeper-dock__empty span { font:650 .52rem/1 var(--font-interface); letter-spacing:.08em; text-transform:uppercase; }
-.keeper-dock__empty small { font:500 .36rem/1 var(--font-interface); letter-spacing:.06em; text-transform:uppercase; }
-.keeper-dock:hover .keeper-dock__empty { opacity:.72; color:var(--os-accent); }
-.keeper-dock__resident img { width:100%; height:100%; display:block; object-fit:contain; opacity:0; transform:scale(.82); filter:saturate(.92) contrast(1.08); transition:opacity 150ms linear,transform 220ms ease-out; }
-.keeper-dock[data-phase="entering"] .keeper-dock__resident img,.keeper-dock[data-phase="docked"] .keeper-dock__resident img { opacity:1; transform:scale(1); }
-.keeper-dock__menu-button { position:absolute; z-index:5; right:3px; top:1px; padding:3px 4px; border:0; background:transparent; color:rgba(238,235,223,.46); font:700 .52rem/1 monospace; letter-spacing:-.12em; cursor:pointer; }
-.keeper-dock__menu-button:hover,.keeper-dock__menu-button[aria-expanded="true"] { color:var(--os-accent); }
-.keeper-dock__menu { position:absolute; right:0; top:calc(100% + 7px); width:210px; display:grid; padding:6px; border:1px solid var(--color-border-strong); border-left:2px solid var(--os-accent); background:var(--color-surface-overlay); box-shadow:8px 9px 0 rgba(0,0,0,.24); }
-.keeper-dock__menu strong { padding:7px 8px 9px; color:var(--hu-text); font:650 .52rem/1 var(--font-interface); letter-spacing:.07em; text-transform:uppercase; }
-.keeper-dock__menu button { min-height:29px; display:flex; align-items:center; justify-content:space-between; padding:5px 8px; border:0; border-top:1px solid var(--color-selected); background:transparent; color:var(--hu-text); font:600 .48rem/1.2 var(--font-interface); letter-spacing:.05em; text-align:left; text-transform:uppercase; cursor:pointer; }
-.keeper-dock__menu button:hover { color:var(--os-accent); background:rgba(238,235,223,.035); }
-.keeper-dock__menu button:disabled { color:rgba(238,235,223,.3); cursor:default; }
-.keeper-dock__menu button span { color:var(--color-border-strong); font-size:.4rem; }
+.keeper-dock { --keeper-dock-size:112px; position:fixed; z-index:76; right:48px; bottom:30px; width:var(--keeper-dock-size); height:var(--keeper-dock-size); border:0; background:transparent; pointer-events:auto; }
+.keeper-dock__socket { position:absolute; inset:0; width:100%; height:100%; }
+.keeper-dock__ghost { --keeper-dock-size:112px; position:fixed; z-index:0; right:48px; bottom:30px; width:var(--keeper-dock-size); height:var(--keeper-dock-size); pointer-events:none; }
+.keeper-dock__ghost::before { content:''; position:absolute; inset:9%; background:var(--color-text-primary); -webkit-mask:var(--keeper-dock-mask) center / 180% auto no-repeat; mask:var(--keeper-dock-mask) center / 180% auto no-repeat; opacity:.26; animation:keeper-dock-breathe 3.2s ease-in-out infinite; transition:opacity 80ms linear; }
+.keeper-dock__ghost[data-phase="entering"]::before,.keeper-dock__ghost[data-phase="docked"]::before { opacity:0; transition-duration:220ms; }
+.keeper-dock__socket { z-index:2; padding:0; overflow:hidden; border:0; background:transparent; color:transparent; cursor:pointer; }
+.keeper-dock__socket:disabled { cursor:default; }
+.keeper-dock__options { position:absolute; z-index:3; top:-30px; left:50%; width:22px; height:22px; display:grid; place-items:center; padding:0; border:0; background:transparent; color:var(--color-text-secondary); cursor:pointer; opacity:.42; transform:translateX(-50%); transition:color var(--duration-fast) linear,opacity var(--duration-fast) linear,transform var(--duration-fast) ease; }
+.keeper-dock__options svg { width:13px; height:13px; stroke-width:1.35; }
+.keeper-dock:hover .keeper-dock__options,.keeper-dock__options:focus-visible,.keeper-dock__options[aria-expanded="true"] { opacity:.92; }
+.keeper-dock__options:hover { color:var(--color-text-primary); transform:translate(-50%,-1px); }
+.keeper-dock__menu { position:absolute; z-index:4; right:calc(100% + 14px); bottom:0; width:190px; display:grid; padding:4px; border:1px solid var(--color-border-emphasis); background:var(--color-surface-overlay); box-shadow:var(--shadow-dialog); }
+.keeper-dock__menu strong { padding:8px; color:var(--color-text-primary); font:650 .58rem/1 var(--font-interface); letter-spacing:.07em; text-transform:uppercase; }
+.keeper-dock__menu button { min-height:29px; display:flex; align-items:center; justify-content:space-between; padding:5px 8px; border:0; border-top:1px solid var(--color-border-subtle); background:transparent; color:var(--color-text-secondary); font:600 .54rem/1.2 var(--font-interface); letter-spacing:.05em; text-align:left; text-transform:uppercase; }
+.keeper-dock__menu button:disabled { cursor:default; opacity:.54; }
+.keeper-dock__menu button span { color:var(--color-text-muted); font-size:.48rem; }
+@keyframes keeper-dock-breathe { 0%,100% { transform:scale(-.985,.985); } 50% { transform:scale(-1.015,1.015); } }
+@media (max-width:760px) { .keeper-dock,.keeper-dock__ghost { right:22px; bottom:22px; } }
+@media (prefers-reduced-motion:reduce) { .keeper-dock__ghost::before { animation:none; } }
 .system-about { left:18px; top:72px; width:min(460px,calc(100vw - 36px)); min-height:170px; padding:20px 22px; border:1px solid var(--color-border-strong); border-left:2px solid var(--os-accent); background:rgba(8,10,10,.97); transform:none; box-shadow:10px 12px 0 rgba(0,0,0,.22); }
 .system-about strong { color:var(--hu-text); font:700 .68rem/1 var(--font-interface); letter-spacing:.055em; }
 .system-about p { margin:18px 0 13px; color:var(--hu-text); font-size:.64rem; }
@@ -1160,10 +1157,7 @@
 .profile-card-popover .identity-dossier__links-label,
 .profile-card-popover .identity-dossier__links a { font-size:.56rem; }
 
-.public-shell .keeper-dock[data-phase]:not([data-phase="empty"]) { background:transparent; }
-.public-shell .keeper-dock[data-phase]:not([data-phase="empty"]) .keeper-dock__resident { background:transparent; }
-
-/* Shared fixed-window shell. The Keeper dock intentionally opts out. */
+/* Shared fixed-window shell. */
 .module-shell--collection {
   border: 1px solid var(--color-border-strong);
   border-left: 2px solid var(--os-accent);

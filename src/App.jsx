@@ -160,15 +160,18 @@ function App() {
         data-visible={worldVisible || undefined}
         onContextMenu={(event) => desktopContextMenuRef.current?.(event)}
       >
-        <ArtCanvas
-          ref={canvasRef}
-          actorVisible={actorVisible && keeperUserVisible && (effectiveApplicationMode === APPLICATION_MODES.ATELIER || localOwnerRoute || Boolean(publishedDocument))}
-          stageVisible={effectiveApplicationMode === APPLICATION_MODES.ATELIER && stageUserVisible}
-          foregroundOnly={effectiveApplicationMode === APPLICATION_MODES.PUBLIC}
-          reducedMotion={revealPresentation.reducedMotion}
-          presentationOverride={canvasDocument?.presentation || null}
-          onReady={() => setWorldReady(true)}
-        />
+        <div id="keeper-dock-underlay" className="application-resident-underlay" />
+        <div className="application-resident-canvas">
+          <ArtCanvas
+            ref={canvasRef}
+            actorVisible={actorVisible && keeperUserVisible && (effectiveApplicationMode === APPLICATION_MODES.ATELIER || localOwnerRoute || Boolean(publishedDocument))}
+            stageVisible={effectiveApplicationMode === APPLICATION_MODES.ATELIER && stageUserVisible}
+            foregroundOnly={effectiveApplicationMode === APPLICATION_MODES.PUBLIC}
+            reducedMotion={revealPresentation.reducedMotion}
+            presentationOverride={canvasDocument?.presentation || null}
+            onReady={() => setWorldReady(true)}
+          />
+        </div>
       </div>
       <div
         className="application-interface"

@@ -1,53 +1,75 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { MoreHorizontal } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-const KeeperDock = forwardRef(function KeeperDock({ actorId, residentHandoff, reducedMotion = false, onDockStateChange }, ref) {
-  const rootRef = useRef(null);
+const RESIDENT_PHASES = new Set(['approaching', 'entering', 'docked']);
+
+export default function KeeperDock({ actorId, residentHandoff, reducedMotion = false, spatialTheme = 'dark', onDockStateChange }) {
+  const socketRef = useRef(null);
+  const phaseRef = useRef('empty');
   const startedRef = useRef(false);
   const [phase, setPhase] = useState('empty');
   const [menuOpen, setMenuOpen] = useState(false);
-  const docked = phase !== 'empty' && phase !== 'releasing';
+  const [underlayRoot, setUnderlayRoot] = useState(null);
+  const resident = RESIDENT_PHASES.has(phase);
+  const actorLabel = actorId.replaceAll('_', ' ');
+  const maskUrl = `/assets/actors/${actorId}/mask.webp`;
 
-  const dock = () => {
-    if (phase !== 'empty') return;
-    const bounds = rootRef.current?.getBoundingClientRect();
+  const changePhase = useCallback((nextPhase) => {
+    phaseRef.current = nextPhase;
+    setPhase(nextPhase);
+  }, []);
+
+  const dock = useCallback(() => {
+    if (phaseRef.current !== 'empty') return;
+    const bounds = socketRef.current?.getBoundingClientRect();
     if (!bounds) return;
     startedRef.current = true;
-    setPhase('approaching');
+    setMenuOpen(false);
+    changePhase('approaching');
     onDockStateChange?.(true);
     residentHandoff?.start?.(bounds, {
       reducedMotion,
       targetMode: 'center',
       keepVisible: true,
-      residentScale: 0.8,
+      residentScale: 0.72,
       residentFacing: -1,
-      onEntering: () => setPhase('entering'),
-      onEntered: () => setPhase('docked')
+      duration: 0.62,
+      onEntering: () => changePhase('entering'),
+      onEntered: () => changePhase('docked')
     });
-  };
+  }, [changePhase, onDockStateChange, reducedMotion, residentHandoff]);
 
-  const release = (options = {}) => {
-    if (!startedRef.current || phase === 'releasing') return;
-    const releaseOptions = typeof options === 'function' ? { onReleased: options } : (options || {});
+  const release = useCallback(() => {
+    if (!startedRef.current || phaseRef.current === 'releasing') return;
+    const bounds = socketRef.current?.getBoundingClientRect();
     setMenuOpen(false);
-    setPhase('releasing');
-    const bounds = rootRef.current?.getBoundingClientRect();
+    changePhase('releasing');
     residentHandoff?.exit?.(bounds, {
       reducedMotion,
-      screenTarget: releaseOptions.screenTarget,
+      duration: 0.62,
       onComplete: () => {
         startedRef.current = false;
-        setPhase('empty');
+        changePhase('empty');
         onDockStateChange?.(false);
-        releaseOptions.onReleased?.();
       }
     });
-  };
+  }, [changePhase, onDockStateChange, reducedMotion, residentHandoff]);
 
-  useImperativeHandle(ref, () => ({ release }));
+  const toggleResident = useCallback(() => {
+    if (phaseRef.current === 'empty') dock();
+    else if (RESIDENT_PHASES.has(phaseRef.current)) release();
+  }, [dock, release]);
+
+  useEffect(() => {
+    setUnderlayRoot(document.getElementById('keeper-dock-underlay'));
+  }, []);
 
   useEffect(() => {
     const resize = () => {
-      if (startedRef.current) residentHandoff?.updateBounds?.(rootRef.current?.getBoundingClientRect());
+      if (phaseRef.current === 'approaching' || phaseRef.current === 'entering') {
+        residentHandoff?.updateBounds?.(socketRef.current?.getBoundingClientRect());
+      }
     };
     window.addEventListener('resize', resize);
     return () => {
@@ -57,23 +79,42 @@ const KeeperDock = forwardRef(function KeeperDock({ actorId, residentHandoff, re
         onDockStateChange?.(false);
       }
     };
-  }, [onDockStateChange,residentHandoff]);
+  }, [onDockStateChange, residentHandoff]);
 
-  return <aside ref={rootRef} className="keeper-dock" data-phase={phase} aria-label="Keeper Dock">
-    <span className="keeper-dock__label">Keeper Dock</span>
-    {phase === 'empty'
-      ? <button className="keeper-dock__empty" type="button" onClick={dock}><span>Dock</span><small>{actorId.replaceAll('_',' ')}</small></button>
-      : <button className="keeper-dock__resident" type="button" onClick={() => release()} aria-label="Release Keeper from dock" />}
-    <button className="keeper-dock__menu-button" type="button" aria-label="Keeper options" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>•••</button>
-    {menuOpen && <div className="keeper-dock__menu" role="dialog" aria-label="Keeper options">
-      <strong>Keeper</strong>
-      <button type="button" onClick={docked ? () => release() : dock}>{docked ? 'Release from Dock' : 'Dock Keeper'}</button>
-      <button type="button" disabled>Size <span>Later</span></button>
-      <button type="button" disabled>Voice / Audio <span>Later</span></button>
-      <button type="button" disabled>Speech Scale <span>Later</span></button>
-      <button type="button" disabled>Swap Keeper <span>Later</span></button>
-    </div>}
-  </aside>;
-});
-
-export default KeeperDock;
+  return <>
+    {underlayRoot && createPortal(<div
+      className="keeper-dock__ghost"
+      data-phase={phase}
+      data-spatial-theme={spatialTheme}
+      style={{ '--keeper-dock-mask': `url("${maskUrl}")` }}
+      aria-hidden="true"
+    />, underlayRoot)}
+    <aside
+      className="keeper-dock"
+      data-phase={phase}
+      data-resident={resident || undefined}
+      style={{ '--keeper-dock-mask': `url("${maskUrl}")` }}
+      aria-label="Keeper Dock"
+    >
+      <button
+        ref={socketRef}
+        className="keeper-dock__socket"
+        type="button"
+        onClick={toggleResident}
+        disabled={phase === 'releasing'}
+        aria-label={resident ? `Release ${actorLabel} from dock` : `Recall ${actorLabel} to dock`}
+      />
+      <button
+        className="keeper-dock__options"
+        type="button"
+        aria-label="Toggle Keeper options"
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen((value) => !value)}
+      ><MoreHorizontal aria-hidden="true" /></button>
+      {menuOpen && <div className="keeper-dock__menu" role="dialog" aria-label="Keeper options">
+        <strong>{actorLabel}</strong>
+        <button type="button" disabled>Swap Keeper <span>Later</span></button>
+      </div>}
+    </aside>
+  </>;
+}

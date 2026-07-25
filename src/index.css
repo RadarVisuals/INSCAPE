@@ -42,6 +42,20 @@ html, body {
 
 .application-world[data-visible] { opacity: 1; }
 
+.application-resident-underlay,
+.application-resident-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.application-resident-underlay {
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.application-resident-canvas { z-index: 1; }
+
 .application-root[data-application-mode="public"] .application-world {
   /* Public spatial architecture is portaled below this transparent resident
      canvas; fixed OS chrome and runtime windows remain above it. */
