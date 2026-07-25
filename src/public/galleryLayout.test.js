@@ -23,16 +23,29 @@ test('gallery frames remain on the wall above the floor horizon', () => {
   assert.ok(item.top + item.height <= layout.horizon - 28);
 });
 
-test('gallery rendering keeps one desktop spatial scale without changing authored geometry', () => {
-  const object = artwork('responsive', 0, { column: 3, row: 1 }, { columns: 6, rows: 4 });
-  const embedded = createGalleryLayout([object], { width: 860, height: 900 });
-  const fullscreen = createGalleryLayout([object], { width: 1920, height: 1080 });
-  assert.equal(embedded.cellSize, fullscreen.cellSize);
-  assert.deepEqual(embedded.items[0].object.placement, fullscreen.items[0].object.placement);
-  assert.deepEqual(embedded.items[0].object.span, fullscreen.items[0].object.span);
-  const embeddedProgress = (embedded.items[0].top - embedded.wallTop) / (embedded.wallHeight - embedded.items[0].height);
-  const fullscreenProgress = (fullscreen.items[0].top - fullscreen.wallTop) / (fullscreen.wallHeight - fullscreen.items[0].height);
-  assert.ok(Math.abs(embeddedProgress - fullscreenProgress) < 0.01);
+test('gallery rendering scales the complete authored composition uniformly', () => {
+  const objects = [
+    artwork('responsive-a', 0, { column: 3, row: 1 }, { columns: 6, rows: 4 }),
+    artwork('responsive-b', 1, { column: 11, row: 16 }, { columns: 3, rows: 6 })
+  ];
+  const embedded = createGalleryLayout(objects, { width: 860, height: 900 });
+  const fullscreen = createGalleryLayout(objects, { width: 1920, height: 1080 });
+  const normalize = (item, layout) => ({
+    left: item.left / layout.sceneScale,
+    top: (item.top - layout.wallTop) / layout.sceneScale,
+    width: item.width / layout.sceneScale,
+    height: item.height / layout.sceneScale
+  });
+
+  assert.notEqual(embedded.cellSize, fullscreen.cellSize);
+  assert.ok(Math.abs(embedded.gridSpacing / embedded.cellSize - fullscreen.gridSpacing / fullscreen.cellSize) < 0.001);
+  embedded.items.forEach((item, index) => {
+    const embeddedGeometry = normalize(item, embedded);
+    const fullscreenGeometry = normalize(fullscreen.items[index], fullscreen);
+    Object.keys(embeddedGeometry).forEach((key) => {
+      assert.ok(Math.abs(embeddedGeometry[key] - fullscreenGeometry[key]) < 1.1, `${item.object.id} ${key} changed across viewports`);
+    });
+  });
 });
 
 test('gallery camera is clamped to the authored world', () => {
@@ -43,15 +56,15 @@ test('gallery camera is clamped to the authored world', () => {
 
 test('gallery placement translates wall pointers into stable authored cells', () => {
   const layout = createGalleryLayout([], { width: 1200, height: 800 });
-  const placement = galleryPlacementFromPoint({ worldX: layout.originX + 8 * layout.cellSize, viewportY: layout.wallTop + 4 * layout.cellSize, span: { columns: 4, rows: 4 } }, layout);
-  assert.deepEqual(placement, { column: 6, row: 10 });
+  const placement = galleryPlacementFromPoint({ worldX: layout.originX + 8 * layout.cellSize, viewportY: layout.wallTop + layout.wallHeight / 2, span: { columns: 4, rows: 4 } }, layout);
+  assert.deepEqual(placement, { column: 6, row: 12 });
 });
 
 test('gallery movement clamps to the wall and proportional resize keeps both axes moving', () => {
   const layout = createGalleryLayout([], { width: 1200, height: 800 });
   const object = artwork('move', 0, { column: 4, row: 1 }, { columns: 6, rows: 4 });
   assert.deepEqual(moveGalleryGeometry(object, { x: layout.cellSize * 2, y: -999 }, layout), { column: 6, row: 0, columnSpan: 6, rowSpan: 4 });
-  assert.deepEqual(resizeGalleryGeometry(object, { x: layout.cellSize * 3, y: 0 }, layout), { column: 4, row: 2, columnSpan: 9, rowSpan: 6 });
+  assert.deepEqual(resizeGalleryGeometry(object, { x: layout.cellSize * 3, y: 0 }, layout), { column: 4, row: 1, columnSpan: 9, rowSpan: 6 });
 });
 
 test('gallery resize supports all four corners while anchoring the opposite side', () => {

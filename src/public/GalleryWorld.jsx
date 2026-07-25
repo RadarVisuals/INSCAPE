@@ -36,6 +36,7 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
   const artworkInteractionRef = useRef(null);
   const suppressArtworkActivationRef = useRef(false);
   const previousCameraXRef = useRef(0);
+  const previousSceneScaleRef = useRef(1);
   const keeperDirectionRef = useRef(0);
   const pendingKeeperDirectionRef = useRef(0);
   const pendingKeeperDistanceRef = useRef(0);
@@ -77,7 +78,17 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
 
   useEffect(() => () => dragRef.current?.cleanup?.(), []);
 
-  useEffect(() => setCameraX((current) => clampGalleryCamera(current, layout.maxCameraX)), [layout.maxCameraX]);
+  useEffect(() => {
+    const previousScale = previousSceneScaleRef.current || 1;
+    const nextScale = layout.sceneScale || 1;
+    previousSceneScaleRef.current = nextScale;
+    setCameraX((current) => {
+      const nextCamera = clampGalleryCamera(current * nextScale / previousScale, layout.maxCameraX);
+      // Resizing the viewport must not look like navigation to the Keeper.
+      previousCameraXRef.current = nextCamera;
+      return nextCamera;
+    });
+  }, [layout.maxCameraX, layout.sceneScale]);
 
   useEffect(() => {
     const cameraDelta = cameraX - previousCameraXRef.current;
@@ -244,12 +255,12 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
     onOpenContextMenu?.(event, { type: 'gallery-canvas', id: 'gallery-canvas', placement });
   };
 
-  const gridSpacing = viewport.width < 720 ? 56 : 80;
+  const gridSpacing = layout.gridSpacing;
   const gridOffset = getCenteredHorizontalGridOffset(cameraX - gridPhaseX, viewport.width, gridSpacing);
   const progress = layout.maxCameraX ? cameraX / layout.maxCameraX : 0;
   const portalTarget = typeof document === 'undefined' ? null : document.querySelector('.application-root');
   const worldTheme = { ...theme, '--module-accent': 'var(--color-text-primary)' };
-  const backdrop = <div className="gallery-world-backdrop" aria-hidden="true" data-spatial-theme={spatialTheme} data-transition-phase={transitionPhase} style={{ ...worldTheme, '--gallery-grid-offset': `${gridOffset}px`, '--gallery-grid-offset-y': `${gridOffsetY}px`, '--gallery-horizon': `${layout.horizon}px` }}>
+  const backdrop = <div className="gallery-world-backdrop" aria-hidden="true" data-spatial-theme={spatialTheme} data-transition-phase={transitionPhase} style={{ ...worldTheme, '--gallery-grid-offset': `${gridOffset}px`, '--gallery-grid-offset-y': `${gridOffsetY}px`, '--gallery-grid-size': `${gridSpacing}px`, '--gallery-horizon': `${layout.horizon}px` }}>
     <div className="gallery-world__shader-glass" />
     <div className="gallery-world__wall" />
     <div className="gallery-world__horizon" />
