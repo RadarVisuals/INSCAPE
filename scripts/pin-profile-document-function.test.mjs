@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildProfileDocumentV3 } from '../../src/profileDocument/domain/profileDocumentBuilder.js';
-import { canonicalSerializeProfileDocument } from '../../src/profileDocument/domain/profileDocumentSerialization.js';
-import { createPinProfileDocumentHandler } from './pin-profile-document.mjs';
+import { buildProfileDocumentV3 } from '../src/profileDocument/domain/profileDocumentBuilder.js';
+import { canonicalSerializeProfileDocument } from '../src/profileDocument/domain/profileDocumentSerialization.js';
+import { createPinProfileDocumentHandler } from '../netlify/functions/pin-profile-document.mjs';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const CID = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw';
@@ -55,4 +55,3 @@ test('Netlify publication upload rejects cross-origin, noncanonical, and unconfi
   assert.equal(unconfigured.status, 503);
   assert.equal(calls, 0);
 });
-
