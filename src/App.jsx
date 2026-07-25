@@ -212,7 +212,8 @@ function App() {
             returnProfileAddress={connectedWorkspaceProfileAddress}
             onVisitProfile={visitProfile}
             onDocumentChange={setPublishedDocument}
-            onMoveKeeper={residentHandoff.moveToScreenPosition} />
+            onMoveKeeper={residentHandoff.moveToScreenPosition}
+            onMoveKeeperHorizontally={residentHandoff.moveHorizontallyToScreenPosition} />
         )}
       </div>
       <Startveil

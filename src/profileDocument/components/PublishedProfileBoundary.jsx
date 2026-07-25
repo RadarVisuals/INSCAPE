@@ -34,7 +34,7 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
   </main>;
 }
 
-export default function PublishedProfileBoundary({ address, returnProfileAddress, onVisitProfile, onDocumentChange, onMoveKeeper }) {
+export default function PublishedProfileBoundary({ address, returnProfileAddress, onVisitProfile, onDocumentChange, onMoveKeeper, onMoveKeeperHorizontally }) {
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const [resolution, retry] = usePublishedProfile(address);
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
@@ -43,7 +43,7 @@ export default function PublishedProfileBoundary({ address, returnProfileAddress
   useEffect(() => { onDocumentChange?.(visibleDocument); return () => onDocumentChange?.(null); }, [onDocumentChange, visibleDocument]);
   const content = !visibleDocument
     ? <PublishedStatusSurface state={resolution} onRetry={retry} onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
-    : <><PublishedProfileDocumentPreview document={visibleDocument} onMoveKeeper={onMoveKeeper}
+    : <><PublishedProfileDocumentPreview document={visibleDocument} onMoveKeeper={onMoveKeeper} onMoveKeeperHorizontally={onMoveKeeperHorizontally}
       onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={retry} /></div>}
     </>;

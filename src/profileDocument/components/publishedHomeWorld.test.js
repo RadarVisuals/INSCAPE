@@ -89,9 +89,13 @@ test('published Keeper movement callback is wired without passing the owner hand
   const previewSource = readFileSync(resolve(here, 'PublishedProfileDocumentPreview.jsx'), 'utf8');
   const worldSource = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
   assert.match(appSource, /<PublishedProfileBoundary[^>]*onMoveKeeper=\{residentHandoff\.moveToScreenPosition\}/);
+  assert.match(appSource, /onMoveKeeperHorizontally=\{residentHandoff\.moveHorizontallyToScreenPosition\}/);
   assert.match(boundarySource, /<PublishedProfileDocumentPreview document=\{visibleDocument\} onMoveKeeper=\{onMoveKeeper\}/);
+  assert.match(boundarySource, /onMoveKeeperHorizontally=\{onMoveKeeperHorizontally\}/);
   assert.match(previewSource, /<PublishedHomeWorld document=\{document\} onMoveKeeper=\{onMoveKeeper\}/);
+  assert.match(previewSource, /onMoveKeeperHorizontally=\{onMoveKeeperHorizontally\}/);
   assert.match(worldSource, /<HomeWorldSurface[^>]*onMoveKeeper=\{onMoveKeeper\}/);
+  assert.match(worldSource, /<GalleryWorld[\s\S]*onMoveKeeperHorizontally=\{onMoveKeeperHorizontally\}/);
   assert.doesNotMatch(boundarySource + previewSource + worldSource, /residentHandoff/);
 });
 
@@ -218,10 +222,12 @@ test('published renderer import graph cannot reach owner stores, persistence, or
 
 test('published visitor level navigation uses the shared controller contract', () => {
   const worldSource = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
-  assert.match(worldSource, /<SpatialLevelNavigation[\s\S]*level=\{galleryOpen \? SPATIAL_WORLD_LEVEL\.GALLERY : SPATIAL_WORLD_LEVEL\.HOME\}/);
-  assert.match(worldSource, /disabled=\{galleryOpen && galleryTransitionPhase !== 'gallery'\}/);
-  assert.match(worldSource, /onDown=\{galleryOpen \? undefined : enterGallery\}/);
-  assert.match(worldSource, /onUp=\{galleryOpen \? exitGallery : undefined\}/);
+  assert.match(worldSource, /<UpperWorldSurface/);
+  assert.match(worldSource, /const spatialLevel = upperOpen[\s\S]*SPATIAL_WORLD_LEVEL\.UPPER[\s\S]*SPATIAL_WORLD_LEVEL\.GALLERY[\s\S]*SPATIAL_WORLD_LEVEL\.HOME/);
+  assert.match(worldSource, /<SpatialLevelNavigation[\s\S]*level=\{spatialLevel\}/);
+  assert.match(worldSource, /disabled=\{spatialTransitioning\}/);
+  assert.match(worldSource, /onDown=\{upperOpen \? exitUpper : enterGallery\}/);
+  assert.match(worldSource, /onUp=\{galleryOpen \? exitGallery : enterUpper\}/);
   assert.doesNotMatch(worldSource, /currentLevel=|transitioning=|onMoveDown=|onMoveUp=/);
 });
 

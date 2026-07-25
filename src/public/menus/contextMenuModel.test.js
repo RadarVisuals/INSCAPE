@@ -17,6 +17,7 @@ test('launcher commands keep editing direct and remove the legacy inspector', ()
 test('gallery creation commands stay room-specific and Home has no folder shortcuts', () => {
   const home = contextMenuCommands({ target: { type: 'canvas', id: 'canvas' }, ownerAuthoringEnabled: true });
   assert.equal(home.some((command) => ['menu-create', 'create-folder'].includes(command.id)), false);
+  assert.equal(home.find((command) => command.id === 'preview-as-visitor')?.label, 'Preview as Visitor');
   const gallery = contextMenuCommands({ target: { type: 'gallery-canvas', id: 'gallery-canvas' }, canvasObjects: [{ locked: false }, { locked: true }], ownerAuthoringEnabled: true });
   assert.deepEqual(gallery.map((command) => command.id), ['add-gallery-artwork', 'lock-all-artwork', 'unlock-all-artwork']);
   const object = contextMenuCommands({ target: { type: 'canvas-object', id: 'canvas:artwork:one' }, canvasObject: { visitorVisible: true }, ownerAuthoringEnabled: true });

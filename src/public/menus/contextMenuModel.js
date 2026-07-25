@@ -47,6 +47,7 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
     { id: 'reset-home-camera', label: 'Return to Origin' }
   ];
   if (target?.type === 'canvas') return [
+    ...(ownerAuthoringEnabled ? [{ id: 'preview-as-visitor', label: 'Preview as Visitor' }] : []),
     ...(ownerAuthoringEnabled ? [{ id: 'toggle-edit', label: editMode ? 'Finish Arranging' : 'Arrange Desktop' }] : []),
     { id: 'menu-view', label: 'View >' },
     { id: 'reset-windows', label: 'Reset Windows' }, { id: 'close-all', label: 'Close All Windows' }

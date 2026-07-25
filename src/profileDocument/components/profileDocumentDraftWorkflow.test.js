@@ -11,6 +11,8 @@ test('Share previews the current draft without preparing a publication snapshot'
   assert.doesNotMatch(panelSource, /disabled=\{!snapshot\} onClick=\{\(\) => onPreview\('snapshot'\)\}/);
   assert.match(ownerSource, /enterPreview\(source, source === 'draft' \? draftDocument : undefined\)/);
   assert.match(ownerSource, /draft=\{draftDocument\}/);
+  assert.match(ownerSource, /<ProfileDocumentPreview[^>]*onMoveKeeper=\{residentHandoff\?\.moveToScreenPosition\}/);
+  assert.match(ownerSource, /<ProfileDocumentPreview[^>]*onMoveKeeperHorizontally=\{residentHandoff\?\.moveHorizontallyToScreenPosition\}/);
 });
 
 test('owner autosave reports source failures and flushes again when the page exits', () => {

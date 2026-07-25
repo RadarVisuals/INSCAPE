@@ -946,6 +946,7 @@ export default function ModuleGridShell({
     if (command === 'menu-mat') { setContextMenu((current) => ({ ...current, menu: 'mat' })); return; }
     if (command === 'menu-background') { setContextMenu((current) => ({ ...current, menu: 'background' })); return; }
     if (command === 'menu-root') { setContextMenu((current) => ({ ...current, menu: 'root' })); return; }
+    if (command === 'preview-as-visitor') { setContextMenu(null); startPreview('draft'); return; }
     if (command === 'create-framed-artwork') { beginArtworkChoice('create'); return; }
     else if (command === 'add-gallery-artwork') { beginGalleryArtworkChoice(); return; }
     else if (command === 'toggle-keeper') onKeeperVisibilityChange?.(!keeperVisible);
@@ -985,7 +986,7 @@ export default function ModuleGridShell({
       setSystemPresentation((current) => { const next={...current,[runtimeId]:{...current[runtimeId],startOpen:!current[runtimeId]?.startOpen,windowGeometry:rect}}; writeOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,workspace.profileAddress,JSON.stringify(next)); return next; });
     }
     setContextMenu(null);
-  }, [authoredWindowDefaults, beginArtworkChoice, beginGalleryArtworkChoice, canvasObjectById, canvasPositions, closeAllWindows, contextMenu, geometry, homeOrigin, keeperVisible, onKeeperVisibilityChange, onStageVisibilityChange, openArtworkInspector, openArtworkPreview, openModule, ownerAuthoringEnabled, removeCanvasObject, reorderCanvasObject, requestGalleryArtworkRemoval, resetWindows, runtimeWindows.rects, setAllCanvasObjectsLocked, setCanvasObjectLocked, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility, setHomeCameraImmediately, stageVisible, toggleGrid, updateRuntime, workspace.profileAddress]);
+  }, [authoredWindowDefaults, beginArtworkChoice, beginGalleryArtworkChoice, canvasObjectById, canvasPositions, closeAllWindows, contextMenu, geometry, homeOrigin, keeperVisible, onKeeperVisibilityChange, onStageVisibilityChange, openArtworkInspector, openArtworkPreview, openModule, ownerAuthoringEnabled, removeCanvasObject, reorderCanvasObject, requestGalleryArtworkRemoval, resetWindows, runtimeWindows.rects, setAllCanvasObjectsLocked, setCanvasObjectLocked, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility, setHomeCameraImmediately, stageVisible, startPreview, toggleGrid, updateRuntime, workspace.profileAddress]);
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -993,7 +994,7 @@ export default function ModuleGridShell({
     if (!exists) setContextMenu(null);
   }, [canvasObjectById, contextMenu, runtimeWindows.openIds, sceneById]);
 
-  if (previewDocument) return <ProfileDocumentPreview document={previewDocument} onExit={stopPreview} />;
+  if (previewDocument) return <ProfileDocumentPreview document={previewDocument} onExit={stopPreview} onMoveKeeper={residentHandoff?.moveToScreenPosition} onMoveKeeperHorizontally={residentHandoff?.moveHorizontallyToScreenPosition} />;
 
   const spatialLayerTarget = typeof document === 'undefined' ? null : document.querySelector('.application-root');
 
