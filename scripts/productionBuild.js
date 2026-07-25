@@ -20,11 +20,12 @@ export const UNUSED_PUBLIC_PATHS = Object.freeze([
 // Phase 1C2H baseline, recalibrated for the approved Gallery and hybrid Index runtime.
 // Keep these byte limits deterministic and deliberately close to the measured build.
 export const PRODUCTION_BUDGETS = Object.freeze({
-  initialJavaScript: Object.freeze({ raw: 1_250_000, gzip: 365_000 }),
+  initialJavaScript: Object.freeze({ raw: 1_265_000, gzip: 370_000 }),
   ownerJavaScript: Object.freeze({ raw: 220_000, gzip: 63_000 }),
+  standaloneWalletJavaScript: Object.freeze({ raw: 3_970_000, gzip: 1_055_000 }),
   initialCss: Object.freeze({ raw: 117_000, gzip: 20_000 }),
   ownerCss: Object.freeze({ raw: 31_000, gzip: 6_300 }),
-  totalJavaScript: Object.freeze({ raw: 1_820_000, gzip: 533_000 }),
+  coreJavaScript: Object.freeze({ raw: 1_820_000, gzip: 533_000 }),
   publicAssets: Object.freeze({ raw: 15_000_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });
@@ -64,14 +65,15 @@ async function walk(directory, root = directory) {
   return values.flat().sort();
 }
 
-function manifestClosure(manifest, entryKey) {
+function manifestClosure(manifest, entryKey, { includeDynamic = false, excludeKeys = new Set() } = {}) {
   const keys = new Set();
   const visit = (key) => {
-    if (keys.has(key)) return;
+    if (keys.has(key) || excludeKeys.has(key)) return;
     const record = manifest[key];
     if (!record) throw new Error(`Vite manifest references missing entry: ${key}`);
     keys.add(key);
     for (const imported of record.imports || []) visit(imported);
+    if (includeDynamic) for (const imported of record.dynamicImports || []) visit(imported);
   };
   visit(entryKey);
   return keys;
@@ -98,6 +100,12 @@ function ownerKey(manifest) {
     || normalize(candidate) === 'src/public/ModuleGridShell.jsx');
   if (!key) throw new Error('Vite manifest is missing the owner ModuleGridShell dynamic entry');
   return key;
+}
+
+function standaloneWalletKey(manifest) {
+  return Object.keys(manifest).find((candidate) => normalize(candidate).endsWith('/src/wallet/standaloneWalletSession.js')
+    || normalize(candidate) === 'src/wallet/standaloneWalletSession.js'
+    || manifest[candidate].name === 'standaloneWalletSession');
 }
 
 function cssFiles(manifest, keys) {
@@ -142,29 +150,40 @@ export async function analyzeProductionBuild(outputDirectory, { budgets = PRODUC
 
   const initialKeys = manifestClosure(manifest, entryKey(manifest));
   const ownerKeys = manifestClosure(manifest, ownerKey(manifest));
+  const walletEntryKey = standaloneWalletKey(manifest);
+  const walletKeys = walletEntryKey
+    ? manifestClosure(manifest, walletEntryKey, { includeDynamic: true, excludeKeys: initialKeys })
+    : new Set();
   const initialFiles = new Set([...initialKeys].map((key) => manifest[key].file));
   const ownerFiles = [...ownerKeys].map((key) => manifest[key].file).filter((file) => !initialFiles.has(file));
+  const walletFiles = [...new Set([...walletKeys].map((key) => manifest[key].file))]
+    .filter((file) => !initialFiles.has(file));
   const initialJs = await Promise.all([...initialFiles].sort().map((file) => measure(outputDirectory, file)));
   const ownerJs = await Promise.all(ownerFiles.sort().map((file) => measure(outputDirectory, file)));
+  const walletJs = await Promise.all(walletFiles.sort().map((file) => measure(outputDirectory, file)));
   const initialCssNames = cssFiles(manifest, initialKeys);
   const ownerCssNames = cssFiles(manifest, ownerKeys).filter((file) => !initialCssNames.includes(file));
   const initialCss = await Promise.all(initialCssNames.map((file) => measure(outputDirectory, file)));
   const ownerCss = await Promise.all(ownerCssNames.map((file) => measure(outputDirectory, file)));
   const files = await walk(outputDirectory);
   const allJavaScript = await Promise.all(files.filter((file) => file.endsWith('.js')).map((file) => measure(outputDirectory, file)));
+  const coreJavaScript = allJavaScript.filter(({ file }) => !walletFiles.includes(file));
   const publicFiles = files.filter(publicAssetFile);
   const publicAssets = await Promise.all(publicFiles.map(async (file) => ({ file, raw: (await stat(resolve(outputDirectory, file))).size })));
   publicAssets.sort((left, right) => right.raw - left.raw || left.file.localeCompare(right.file));
-  const lazyJavaScript = allJavaScript.filter(({ file }) => !initialFiles.has(file) && !ownerFiles.includes(file))
+  const lazyJavaScript = allJavaScript.filter(({ file }) => !initialFiles.has(file) && !ownerFiles.includes(file)
+      && !walletFiles.includes(file))
     .sort((left, right) => right.raw - left.raw || left.file.localeCompare(right.file));
   const totals = {
-    initialJavaScript: sum(initialJs), ownerJavaScript: sum(ownerJs), initialCss: sum(initialCss), ownerCss: sum(ownerCss),
+    initialJavaScript: sum(initialJs), ownerJavaScript: sum(ownerJs), standaloneWalletJavaScript: sum(walletJs),
+    initialCss: sum(initialCss), ownerCss: sum(ownerCss), coreJavaScript: sum(coreJavaScript),
     totalJavaScript: sum(allJavaScript), publicAssets: { raw: publicAssets.reduce((total, item) => total + item.raw, 0) },
     largestPublicAsset: { raw: publicAssets[0]?.raw || 0 }
   };
   return {
-    version: 1, budgets, utilizationPercent: utilization(totals, budgets), totals,
-    initialJavaScript: initialJs, ownerJavaScript: ownerJs, lazyJavaScript, initialCss, ownerCss,
+    version: 2, budgets, utilizationPercent: utilization(totals, budgets), totals,
+    initialJavaScript: initialJs, ownerJavaScript: ownerJs, standaloneWalletJavaScript: walletJs,
+    lazyJavaScript, initialCss, ownerCss,
     publicAssetCount: publicAssets.length, largestPublicAssets: publicAssets.slice(0, 10),
     chunkModuleGroups: chunkGroups, ownerRuntimeGraph
   };
@@ -205,7 +224,7 @@ export function productionBuildHygienePlugin() {
       const report = await analyzeProductionBuild(outputDirectory, { chunkGroups });
       await writeFile(resolve(outputDirectory, BUILD_REPORT_FILE), `${JSON.stringify(report, null, 2)}\n`);
       checkProductionBudgets(report);
-      console.log('Production budgets passed; owner runtime remains outside the initial entry.');
+      console.log('Production budgets passed; owner and standalone wallet runtimes remain outside the initial entry.');
     }
   };
 }

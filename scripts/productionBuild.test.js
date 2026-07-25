@@ -15,11 +15,15 @@ async function fixture(root, suffix = 'a') {
   const manifest = {
     'index.html': { file: `assets/app-${suffix}.js`, isEntry: true, imports: ['_shared.js'], css: [`assets/app-${suffix}.css`] },
     '_shared.js': { file: `assets/shared-${suffix}.js` },
+    '_standalone-wallet.js': { file: `assets/wallet-${suffix}.js`, name: 'standaloneWalletSession', isDynamicEntry: true,
+      imports: ['_shared.js'], dynamicImports: ['_wallet-icon.js'] },
+    '_wallet-icon.js': { file: `assets/wallet-icon-${suffix}.js` },
     'src/public/ModuleGridShell.jsx': { file: `assets/owner-${suffix}.js`, isDynamicEntry: true, imports: ['_shared.js'], css: [`assets/owner-${suffix}.css`] }
   };
   await writeFile(resolve(root, '.vite/manifest.json'), JSON.stringify(manifest));
   await writeFile(resolve(root, 'owner-runtime-graph.json'), JSON.stringify(graph()));
-  for (const file of [`app-${suffix}.js`, `shared-${suffix}.js`, `owner-${suffix}.js`, `app-${suffix}.css`, `owner-${suffix}.css`])
+  for (const file of [`app-${suffix}.js`, `shared-${suffix}.js`, `wallet-${suffix}.js`, `wallet-icon-${suffix}.js`,
+    `owner-${suffix}.js`, `app-${suffix}.css`, `owner-${suffix}.css`])
     await writeFile(resolve(root, 'assets', file), file.repeat(3));
   await writeFile(resolve(root, 'assets/public.webp'), 'asset');
 }
@@ -30,6 +34,8 @@ test('manifest classification survives hashed filename changes and current synth
     await fixture(roots[0], 'hash-one'); await fixture(roots[1], 'hash-two');
     const first = await analyzeProductionBuild(roots[0]); const second = await analyzeProductionBuild(roots[1]);
     assert.equal(first.initialJavaScript.length, 2); assert.equal(first.ownerJavaScript.length, 1);
+    assert.equal(first.standaloneWalletJavaScript.length, 2);
+    assert.ok(first.standaloneWalletJavaScript.every(({ file }) => file.includes('wallet')));
     assert.deepEqual(first.totals, second.totals); assert.equal(checkProductionBudgets(first), true);
   } finally { await Promise.all(roots.map((root) => rm(root, { recursive: true, force: true }))); }
 });

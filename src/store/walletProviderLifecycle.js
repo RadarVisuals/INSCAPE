@@ -44,14 +44,20 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
     set({ provider: lifecycle.provider });
     const timeout = boundedTimeout(lifecycle.handshakeTimeoutMs);
     try {
-      const requests = Promise.all([
-        lifecycle.provider.request({ method: 'eth_accounts' }),
-        lifecycle.provider.request({ method: 'eth_chainId' }),
-        queryContextAccounts(lifecycle.provider)
-      ]);
-      const [accounts, rawChainId, contextAccounts] = await Promise.race([requests, timeout.promise]);
+      const requests = (async () => {
+        const [accounts, rawChainId] = await Promise.all([
+          lifecycle.provider.request({ method: 'eth_accounts' }),
+          lifecycle.provider.request({ method: 'eth_chainId' })
+        ]);
+        const chainId = normalizeChainId(rawChainId);
+        if (chainId !== supportedChainId) return { accounts, chainId, contextAccounts: [] };
+        const contextAccounts = lifecycle.resolveContextAccounts
+          ? await lifecycle.resolveContextAccounts({ provider: lifecycle.provider, accounts, chainId })
+          : await queryContextAccounts(lifecycle.provider);
+        return { accounts, chainId, contextAccounts };
+      })();
+      const { accounts, chainId, contextAccounts } = await Promise.race([requests, timeout.promise]);
       if (!isCurrent(lifecycle, recoveryGeneration)) return false;
-      const chainId = normalizeChainId(rawChainId);
       if (chainId !== supportedChainId) {
         get()._failClosedProviderContext(Object.assign(new Error('UP Provider is not connected to LUKSO mainnet'), {
           code: 'UNSUPPORTED_CHAIN', reason
@@ -109,8 +115,10 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
     function handleContextAccountsChanged() {
       if (isCurrent(attachment.lifecycle)) recover('contextAccountsChanged');
     }
-    attachment.listeners = { accountsChanged: handleAccountsChanged, chainChanged: handleChainChanged,
-      contextAccountsChanged: handleContextAccountsChanged };
+    attachment.listeners = { accountsChanged: handleAccountsChanged, chainChanged: handleChainChanged };
+    if (!lifecycle.resolveContextAccounts) {
+      attachment.listeners.contextAccountsChanged = handleContextAccountsChanged;
+    }
     for (const [event, listener] of Object.entries(attachment.listeners)) provider.on(event, listener);
     attachments.set(provider, attachment);
     lifecycle.attachment = attachment;
@@ -174,6 +182,9 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
     const lifecycle = {
       provider, disposed: false, providerGeneration: ++providerGeneration, recoveryGeneration: 0,
       handshakeTimeoutMs: options.handshakeTimeoutMs ?? DEFAULT_HANDSHAKE_TIMEOUT_MS,
+      resolveContextAccounts: typeof options.resolveContextAccounts === 'function'
+        ? options.resolveContextAccounts
+        : null,
       readyPromise: null, disposalReport: null, attachment: null
     };
     active = lifecycle;

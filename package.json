@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "@erc725/erc725.js": "^0.28.2",
+    "@lukso/up-modal": "^0.21.11",
     "@lukso/up-provider": "^0.3.7",
+    "@wagmi/core": "^3.0.0",
     "buffer": "^6.0.3",
     "lucide-react": "^0.370.0",
     "pixi-filters": "^6.1.5",

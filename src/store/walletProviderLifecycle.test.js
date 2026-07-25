@@ -111,6 +111,43 @@ test('initialization is idempotent, disposal owns all listeners, and remount ins
   }
 });
 
+test('standalone context is accepted only through its explicit resolver and never queries iframe context', async () => {
+  ERC725.prototype.fetchData = async () => profileResult('Standalone profile');
+  const provider = providerFixture({ accounts: [PROFILE_A], contextAccounts: [PROFILE_B] });
+  const resolverCalls = [];
+  const resolved = await useWalletStore.getState().initWallet({
+    provider,
+    resolveContextAccounts: async (context) => {
+      resolverCalls.push(context);
+      return [context.accounts[0]];
+    }
+  });
+
+  assert.equal(resolved, true);
+  assert.equal(resolverCalls.length, 1);
+  assert.equal(provider.requests.includes('up_contextAccounts'), false);
+  assert.equal(provider.attachmentCalls.has('contextAccountsChanged'), false);
+  assert.equal(useWalletStore.getState().hostProfileAddress.toLowerCase(), PROFILE_A);
+  assert.equal(useWalletStore.getState().isHostProfileOwner, true);
+});
+
+test('standalone resolver rejection leaves all workspace authority closed', async () => {
+  const provider = providerFixture({ accounts: [PROFILE_A] });
+  const resolved = await useWalletStore.getState().initWallet({
+    provider,
+    resolveContextAccounts: async () => {
+      throw Object.assign(new Error('Not a Universal Profile'), { code: 'NOT_A_UNIVERSAL_PROFILE' });
+    }
+  });
+
+  assert.equal(resolved, false);
+  assert.equal(provider.requests.includes('up_contextAccounts'), false);
+  assert.equal(useWalletStore.getState().hostProfileAddress, null);
+  assert.equal(useWalletStore.getState().isWalletConnected, false);
+  assert.equal(useWalletStore.getState().isHostProfileOwner, false);
+  assert.equal(useWalletStore.getState().initializationError.code, 'NOT_A_UNIVERSAL_PROFILE');
+});
+
 test('provider replacement and disposal make captured old callbacks generation-inert', async () => {
   ERC725.prototype.fetchData = async () => profileResult();
   const oldProvider = providerFixture(); const nextProvider = providerFixture({ accounts: [PROFILE_B], contextAccounts: [PROFILE_B] });

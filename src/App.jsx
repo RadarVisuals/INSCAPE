@@ -16,6 +16,7 @@ import { loadRestoredPresentation } from './profileDocument/storage/profileDocum
 import { createViewedProfileUrl, resolveViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
 import PublishedProfileBoundary from './profileDocument/components/PublishedProfileBoundary.jsx';
 import { resolveOwnerAuthoringEnabled, selectPublicProfileRoute } from './public/publicAccess.js';
+import { reportControlledError } from './diagnostics.js';
 
 const AtelierExperience = lazy(() => import('./app/AtelierExperience.jsx'));
 
@@ -26,6 +27,7 @@ function AtelierLoadingFallback() {
 function App() {
   const canvasRef = useRef(null);
   const desktopContextMenuRef = useRef(null);
+  const standaloneWalletSessionRef = useRef(null);
   const [applicationMode, setApplicationMode] = useState(() => resolveApplicationMode(window.location));
   const routeWorkspaceProfileAddress = useMemo(() => resolveLibraryProfile(window.location), []);
   const [viewedProfileAddress, setViewedProfileAddress] = useState(() => resolveViewedProfile(window.location, routeWorkspaceProfileAddress));
@@ -71,8 +73,40 @@ function App() {
   const canvasDocument = localOwnerRoute ? previewDocument : publishedDocument;
 
   useEffect(() => {
-    initWallet();
-    return () => scheduleWalletRelease();
+    if (window.parent !== window) {
+      initWallet();
+      return () => scheduleWalletRelease();
+    }
+
+    let acquisition = null;
+    let cancelled = false;
+    const setup = import('./wallet/standaloneWalletSession.js')
+      .then(({ acquireStandaloneWalletSession }) => {
+        acquisition = acquireStandaloneWalletSession({
+          initializeWallet: initWallet,
+          disposeWallet: () => useWalletStore.getState().disposeWallet(),
+          onError: (error) => reportControlledError('standalone-wallet-session', error)
+        });
+        if (cancelled) {
+          acquisition.release();
+          return null;
+        }
+        standaloneWalletSessionRef.current = acquisition.session;
+        return acquisition.session;
+      })
+      .catch((error) => {
+        reportControlledError('standalone-wallet-setup', error);
+        return null;
+      });
+    standaloneWalletSessionRef.current = setup;
+
+    return () => {
+      cancelled = true;
+      if (standaloneWalletSessionRef.current === setup || standaloneWalletSessionRef.current === acquisition?.session) {
+        standaloneWalletSessionRef.current = null;
+      }
+      acquisition?.release();
+    };
   }, [initWallet, scheduleWalletRelease]);
 
   useEffect(() => {
@@ -147,6 +181,9 @@ function App() {
 
   const handleUserGesture = useCallback(() => {
     canvasRef.current?.acknowledgeUserGesture();
+    if (window.parent === window && !useWalletStore.getState().isWalletConnected) {
+      void standaloneWalletSessionRef.current?.then((session) => session?.showSignIn());
+    }
   }, []);
 
   const registerDesktopContextMenu = useCallback((handler) => {
