@@ -5,18 +5,18 @@ test('menu position is clamped on every viewport edge', () => {
   assert.deepEqual(clampMenuPosition({ x: 990, y: 790 }, { width: 220, height: 260 }, { width: 1000, height: 800 }), { x: 772, y: 532 });
   assert.deepEqual(clampMenuPosition({ x: -20, y: -4 }, { width: 220, height: 260 }, { width: 1000, height: 800 }), { x: 8, y: 8 });
 });
-test('launcher editing and visitor-start commands are directly available', () => {
-  assert.deepEqual(contextMenuCommands({ target: { type: 'launcher' }, editMode: false, ownerAuthoringEnabled: true }).map((item) => item.id), ['open', 'edit-launcher']);
+test('launcher commands keep editing direct and remove the legacy inspector', () => {
+  assert.deepEqual(contextMenuCommands({ target: { type: 'launcher' }, editMode: false, ownerAuthoringEnabled: true }).map((item) => item.id), ['open']);
   assert.ok(contextMenuCommands({ target: { type: 'launcher' }, editMode: false, launcher: { visitorVisible: false }, ownerAuthoringEnabled: true }).some((item) => item.id === 'toggle-visibility'));
-  assert.deepEqual(contextMenuCommands({ target: { type: 'launcher' }, editMode: false, launcher: { viewType: 'folder', visitorVisible: false }, ownerAuthoringEnabled: true }).map((item) => item.id), ['open', 'edit-launcher']);
+  assert.deepEqual(contextMenuCommands({ target: { type: 'launcher' }, editMode: false, launcher: { viewType: 'folder', visitorVisible: false }, ownerAuthoringEnabled: true }).map((item) => item.id), ['open', 'rename-category', 'unpin']);
+  assert.equal(contextMenuCommands({ target: { type: 'launcher' }, editMode: false, launcher: { viewType: 'folder' }, ownerAuthoringEnabled: true }).find((item) => item.id === 'unpin').label, 'Remove Home Shortcut');
   assert.ok(contextMenuCommands({ target: { type: 'window' }, editMode: false, ownerAuthoringEnabled: true }).some((item) => item.id === 'toggle-start-open'));
-  assert.equal(contextMenuCommands({ target: { type: 'window' }, editMode: false, launcher: { id: 'library:folder:one' } }).find((item) => item.id === 'reset-window').label, 'Reset Near Folder');
-  assert.equal(contextMenuCommands({ target: { type: 'window' }, editMode: false, launcher: { id: 'library:folder:one', viewType: 'folder' } }).some((item) => item.id === 'toggle-start-open'), false);
+  assert.equal(contextMenuCommands({ target: { type: 'window' }, editMode: false }).find((item) => item.id === 'reset-window').label, 'Reset Position and Size');
 });
 
-test('home and gallery creation commands stay room-specific and keyboard-menu compatible', () => {
-  const create = contextMenuCommands({ target: { type: 'canvas', id: 'canvas' }, menu: 'create', ownerAuthoringEnabled: true });
-  assert.deepEqual(create.map((command) => command.id), ['menu-root', 'create-folder']);
+test('gallery creation commands stay room-specific and Home has no folder shortcuts', () => {
+  const home = contextMenuCommands({ target: { type: 'canvas', id: 'canvas' }, ownerAuthoringEnabled: true });
+  assert.equal(home.some((command) => ['menu-create', 'create-folder'].includes(command.id)), false);
   const gallery = contextMenuCommands({ target: { type: 'gallery-canvas', id: 'gallery-canvas' }, canvasObjects: [{ locked: false }, { locked: true }], ownerAuthoringEnabled: true });
   assert.deepEqual(gallery.map((command) => command.id), ['add-gallery-artwork', 'lock-all-artwork', 'unlock-all-artwork']);
   const object = contextMenuCommands({ target: { type: 'canvas-object', id: 'canvas:artwork:one' }, canvasObject: { visitorVisible: true }, ownerAuthoringEnabled: true });

@@ -7,18 +7,11 @@ import { developmentLog, reportControlledError } from '../../diagnostics.js';
 import {
   createFolder,
   deleteFolder,
-  pinLibraryView,
   renameFolder,
   resetCanvasLayout,
   setFolderAsset,
   setFolderPublic,
-  setLauncherPosition,
-  setLauncherGeometry,
-  setLauncherVisitorVisibility,
-  setLauncherStartOpen,
-  setLauncherWindowPosition, setLauncherPresentation,
-  toggleFavorite,
-  unpinLibraryView
+  toggleFavorite
 } from '../domain/libraryWorkspace.js';
 import {
   createCanvasObject, removeCanvasObject, reorderCanvasObject, replaceCanvasObjectAsset,
@@ -255,30 +248,6 @@ export const useLibraryStore = create((set, get) => ({
   },
   toggleFavorite(assetId) {
     const workspace = toggleFavorite(get().workspace, assetId); set({ workspace }); scheduleSave(workspace);
-  },
-  pinView(view) {
-    const workspace = pinLibraryView(get().workspace, view); set({ workspace }); scheduleSave(workspace);
-  },
-  unpinView(view) {
-    const workspace = unpinLibraryView(get().workspace, view); set({ workspace }); scheduleSave(workspace);
-  },
-  setLauncherPosition(launcherId, position) {
-    const workspace = setLauncherPosition(get().workspace, launcherId, position); set({ workspace }); scheduleSave(workspace);
-  },
-  setLauncherGeometry(launcherId, geometry) {
-    const workspace = setLauncherGeometry(get().workspace, launcherId, geometry); set({ workspace }); scheduleSave(workspace);
-  },
-  setLauncherWindowPosition(launcherId, position) {
-    const workspace = setLauncherWindowPosition(get().workspace, launcherId, position); set({ workspace }); scheduleSave(workspace);
-  },
-  setLauncherVisitorVisibility(launcherId, visitorVisible) {
-    const workspace = setLauncherVisitorVisibility(get().workspace, launcherId, visitorVisible); set({ workspace }); scheduleSave(workspace);
-  },
-  setLauncherStartOpen(launcherId, startOpen, windowGeometry) {
-    const workspace = setLauncherStartOpen(get().workspace, launcherId, startOpen, windowGeometry); set({ workspace }); scheduleSave(workspace);
-  },
-  setLauncherPresentation(launcherId, presentation) {
-    const workspace = setLauncherPresentation(get().workspace, launcherId, presentation); set({ workspace }); scheduleSave(workspace);
   },
   createCanvasObject(input) {
     const previous = get().workspace;

@@ -18,13 +18,8 @@ export function selectPublicProfileRoute(ownerAuthoringEnabled) {
 }
 
 export function selectLiveCanvasContent(workspace, ownerAuthoringEnabled) {
-  const launchers = Array.isArray(workspace?.canvas?.launchers) ? workspace.canvas.launchers : [];
   const objects = Array.isArray(workspace?.canvas?.objects) ? workspace.canvas.objects : [];
-  if (ownerAuthoringEnabled) return { launchers, objects };
-  return {
-    launchers: launchers.filter((launcher) => launcher.visitorVisible === true),
-    objects: objects.filter((object) => object.visitorVisible === true)
-  };
+  return { objects: ownerAuthoringEnabled ? objects : objects.filter((object) => object.visitorVisible === true) };
 }
 
 export function runOwnerAuthoringMutation(ownerAuthoringEnabled, mutation) {

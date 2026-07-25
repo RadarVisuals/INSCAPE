@@ -42,7 +42,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  padding: 0 18px;
+  padding: 0 44px 0 18px;
 }
 
 .category-asset-browser > header strong {
@@ -74,8 +74,7 @@
   margin: 0 8px 8px 0;
   padding: 6px 10px 26px 18px;
   overflow-x: hidden;
-  overflow-y: scroll;
-  scrollbar-gutter: stable;
+  overflow-y: auto;
 }
 
 .category-asset-browser__rows::-webkit-scrollbar { width: 6px; border-radius: 0; background: rgb(235 236 231 / .035); }
@@ -157,7 +156,7 @@
 .category-asset-browser__resize:focus-visible { outline: 1px solid rgb(235 236 231 / .7); outline-offset: -3px; }
 
 @container (max-width: 560px) {
-  .category-asset-browser > header { padding-inline: 12px; }
+  .category-asset-browser > header { padding: 0 42px 0 12px; }
   .category-asset-browser__density { grid-template-columns: 94px 24px; margin-left: 12px; }
   .category-asset-browser__density > span { display: none; }
   .category-asset-browser__rows { padding-left: 12px; padding-right: 4px; }

@@ -10,9 +10,9 @@
 
 .settings-browser { position:fixed; z-index:170; top:20px; left:244px; width:min(420px,calc(100vw - 262px)); min-width:320px; overflow:hidden; border:1px solid rgb(235 236 231 / .23); background:#070808; box-shadow:18px 22px 50px rgb(0 0 0 / .46); color:#ebece7; font-family:var(--font-interface,"Oxanium",monospace); animation:settings-browser-enter 340ms cubic-bezier(.2,.78,.14,1) both; }
 @keyframes settings-browser-enter { from { opacity:0; transform:translate3d(-12px,8px,0) scale(.985); clip-path:inset(0 10% 0 0); } to { opacity:1; transform:none; clip-path:inset(0); } }
-.settings-browser > header { height:52px; display:flex; align-items:center; padding:0 18px; }
+.settings-browser > header { height:52px; display:flex; align-items:center; padding:0 46px 0 18px; }
 .settings-browser > header strong { font:500 .72rem/1 var(--font-interface,"Oxanium",monospace); letter-spacing:.17em; }
-.settings-browser > main { padding:18px; }
+.settings-browser > main { max-height:calc(100dvh - 92px); padding:18px; overflow-y:auto; }
 .settings-browser > main > header { display:flex; justify-content:space-between; align-items:center; padding-bottom:13px; color:rgb(235 236 231 / .3); }
 .settings-browser > main > header strong { color:rgb(235 236 231 / .76); font-size:.62rem; letter-spacing:.15em; }
 .settings-browser > main > header span { font-size:.48rem; letter-spacing:.12em; }

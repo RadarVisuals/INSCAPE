@@ -33,9 +33,6 @@ export function presentationPatchForCommand(command, presentation = {}) {
 export function contextMenuCommands({ target, editMode, launcher, canvasObject, canvasObjects = [], startOpen = false, menu = 'root', keeperVisible = true, stageVisible = true, stageAvailable = true, ownerAuthoringEnabled = false }) {
   if (!ownerAuthoringEnabled && target?.type === 'launcher') return [{ id: 'open', label: 'Open' }];
   if (!ownerAuthoringEnabled && target?.type === 'canvas-object') return [{ id: 'open-artwork', label: 'Open Artwork' }];
-  if (target?.type === 'canvas' && menu === 'create') return [
-    { id: 'menu-root', label: '< Back' }, { id: 'create-folder', label: 'Folder' }
-  ];
   if (target?.type === 'gallery-canvas') return ownerAuthoringEnabled
     ? [{ id: 'add-gallery-artwork', label: 'Add Artwork' },
       ...(canvasObjects.some((object) => !object.locked) ? [{ id: 'lock-all-artwork', label: 'Lock All Artwork' }] : []),
@@ -50,17 +47,15 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
     { id: 'reset-home-camera', label: 'Return to Origin' }
   ];
   if (target?.type === 'canvas') return [
-    ...(ownerAuthoringEnabled ? [{ id: 'toggle-edit', label: editMode ? 'Finish Arranging' : 'Arrange Desktop' }, { id: 'menu-create', label: 'Create >' }] : []),
+    ...(ownerAuthoringEnabled ? [{ id: 'toggle-edit', label: editMode ? 'Finish Arranging' : 'Arrange Desktop' }] : []),
     { id: 'menu-view', label: 'View >' },
     { id: 'reset-windows', label: 'Reset Windows' }, { id: 'close-all', label: 'Close All Windows' }
   ];
   if (target?.type === 'launcher') return [
     { id: 'open', label: 'Open' },
-    { id: 'edit-launcher', label: 'Edit Launcher' },
-    ...(launcher && launcher.viewType !== 'folder' ? [
-      { id: 'toggle-visibility', label: launcher.visitorVisible ? 'Make Private' : 'Show to Visitors' },
-      { id: 'unpin', label: 'Unpin from Canvas' }
-    ] : [])
+    ...(launcher?.viewType === 'folder' ? [{ id: 'rename-category', label: 'Rename Category' }] : []),
+    ...(launcher && launcher.viewType !== 'folder' ? [{ id: 'toggle-visibility', label: launcher.visitorVisible ? 'Make Private' : 'Show to Visitors' }] : []),
+    ...(launcher ? [{ id: 'unpin', label: launcher.viewType === 'folder' ? 'Remove Home Shortcut' : 'Unpin from Home' }] : [])
   ];
   if (['canvas-object', 'gallery-object'].includes(target?.type) && menu === 'layer') return [
     { id: 'menu-root', label: '< Back' }, { id: 'object-forward', label: 'Bring Forward' }, { id: 'object-backward', label: 'Send Backward' },
@@ -111,8 +106,8 @@ export function contextMenuCommands({ target, editMode, launcher, canvasObject, 
     { id: 'toggle-artwork-lock', label: canvasObject?.locked ? 'Unlock' : 'Lock' }
   ];
   if (target?.type === 'window') return [
-    { id: 'close', label: 'Close' }, { id: 'reset-window', label: launcher ? 'Reset Near Folder' : 'Reset Position and Size' },
-    ...(ownerAuthoringEnabled && launcher?.viewType !== 'folder' ? [{ id: 'toggle-start-open', label: startOpen ? 'Remove from Visitor Start Layout' : 'Set as Visitor Start Window' }] : [])
+    { id: 'close', label: 'Close' }, { id: 'reset-window', label: 'Reset Position and Size' },
+    ...(ownerAuthoringEnabled ? [{ id: 'toggle-start-open', label: startOpen ? 'Remove from Visitor Start Layout' : 'Set as Visitor Start Window' }] : [])
   ];
   return [];
 }

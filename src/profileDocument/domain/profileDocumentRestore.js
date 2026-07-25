@@ -10,16 +10,8 @@ export function createProfileDocumentRestorePlan(document, currentWorkspace) {
   const value = assertValidProfileDocument(document);
   const workspace = structuredClone(currentWorkspace);
   const existing = new Map(workspace.folders.map((folder) => [folder.id, folder]));
-  const currentLaunchers = workspace.canvas?.launchers || [];
-  const publicFolderIds = new Set(workspace.folders.filter((folder) => folder.public === true || (
-    folder.public === undefined && currentLaunchers.some((launcher) => launcher.viewType === 'folder' && launcher.folderId === folder.id && launcher.visitorVisible === true)
-  )).map((folder) => folder.id));
-  const privateLaunchers = currentLaunchers.filter((launcher) => launcher.viewType === 'folder'
-    ? !publicFolderIds.has(launcher.folderId)
-    : launcher.visitorVisible !== true);
-  const privateFavorites = privateLaunchers.some((launcher) => launcher.viewType === 'favorites');
+  const publicFolderIds = new Set(workspace.folders.filter((folder) => folder.public === true).map((folder) => folder.id));
   const restoredFolderIds = new Set();
-  const launchers = structuredClone(privateLaunchers);
   const uniqueFolderId = (requested) => {
     if (!existing.has(requested) || publicFolderIds.has(requested)) return requested;
     let suffix = 2; while (existing.has(`${requested}-${suffix}`)) suffix += 1;
@@ -32,17 +24,10 @@ export function createProfileDocumentRestorePlan(document, currentWorkspace) {
       createdAt: prior?.createdAt || 0, updatedAt: Math.max(prior?.updatedAt || 0, Date.parse(value.exportedAt) || 0) };
     if (prior) workspace.folders = workspace.folders.map((item) => item.id === id ? folder : item); else workspace.folders.push(folder);
     existing.set(id, folder); restoredFolderIds.add(id);
-    if (space.homeShortcut) launchers.push({ id: `library:folder:${id}`, viewType: 'folder', folderId: id, visitorVisible: true, startOpen: space.startOpen,
-      position: space.placement, windowPosition: space.windowPlacement, windowGeometry: space.windowGeometry, appearanceMode: space.appearance?.mode || 'label', iconKey: space.appearance?.iconKey || 'folder', span: { columns: space.appearance?.columnSpan || 3, rows: space.appearance?.rowSpan || 1 }, presentationOrder: space.order + 4 });
   };
   for (const space of [...value.spaces].sort((a, b) => a.order - b.order)) {
     if (space.kind === 'favorites') {
-      if (privateFavorites) restoreAsFolder(space, 'restored-favorites');
-      else {
-        workspace.favorites = [...new Set([...workspace.favorites, ...space.assets.map((asset) => asset.stableAssetId)])];
-        if (space.homeShortcut) launchers.push({ id: 'library:favorites', viewType: 'favorites', folderId: null, visitorVisible: true, startOpen: space.startOpen,
-          position: space.placement, windowPosition: space.windowPlacement, windowGeometry: space.windowGeometry, appearanceMode: space.appearance?.mode || 'label', iconKey: space.appearance?.iconKey || 'favorites', span: { columns: space.appearance?.columnSpan || 3, rows: space.appearance?.rowSpan || 1 }, presentationOrder: space.order + 4 });
-      }
+      workspace.favorites = [...new Set([...workspace.favorites, ...space.assets.map((asset) => asset.stableAssetId)])];
       continue;
     }
     const requested = folderIdFromSpace(space) || `restored-${space.id}`;
@@ -68,7 +53,7 @@ export function createProfileDocumentRestorePlan(document, currentWorkspace) {
     placement: { ...object.placement }, span: { ...object.span }, presentationOrder: privateObjects.length + index,
     presentation: { ...object.presentation }
   }));
-  workspace.canvas = { ...workspace.canvas, launchers, objects: [...privateObjects, ...restoredObjects] };
+  workspace.canvas = { ...workspace.canvas, launchers: [], objects: [...privateObjects, ...restoredObjects] };
   return { workspace, keeperId: value.presentation.keeperId, stageId: value.presentation.stageId,
     environment: { ...value.presentation.environment },
     signalSettings: { ...value.presentation.signals }, restoredFolderIds: [...restoredFolderIds] };

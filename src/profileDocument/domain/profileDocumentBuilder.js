@@ -24,29 +24,17 @@ export function buildProfileDocumentV3({ profileAddress, workspace, assets = [],
   const address = normalizeProfileAddress(profileAddress);
   if (!address) throw new TypeError('A valid Universal Profile address is required');
   const assetById = new Map(assets.map((asset) => [asset.id, asset]));
-  const folders = new Map((workspace?.folders || []).map((folder) => [folder.id, folder]));
-  const launchers = Array.isArray(workspace?.canvas?.launchers) ? workspace.canvas.launchers : [];
-  const favoriteCandidates = launchers.filter((launcher) => launcher.viewType === 'favorites' && launcher.visitorVisible === true)
-    .map((launcher) => ({ kind: 'favorites', launcher, folder: null, sortOrder: launcher.presentationOrder ?? 0 }));
-  const folderCandidates = [...folders.values()].map((folder, index) => {
-    const launcher = launchers.find((candidate) => candidate.viewType === 'folder' && candidate.folderId === folder.id) || null;
-    const isPublic = folder.public === true || (folder.public === undefined && launcher?.visitorVisible === true);
-    if (!isPublic) return null;
-    return { kind: 'folder', launcher, folder, sortOrder: launcher?.presentationOrder ?? 1000 + index };
-  }).filter(Boolean);
-  const spaces = [...favoriteCandidates, ...folderCandidates]
-    .sort((a, b) => a.sortOrder - b.sortOrder)
+  const spaces = (workspace?.folders || [])
+    .filter((folder) => folder.public === true)
     .slice(0, PROFILE_DOCUMENT_LIMITS.maxSpaces)
-    .map(({ kind, launcher, folder }, order) => {
-      const id = launcher?.id || `library:folder:${folder.id}`;
-      const assetIds = kind === 'favorites' ? workspace?.favorites || [] : folder.assetIds;
-      const appearanceMode = ['label','icon','icon_label'].includes(launcher?.appearanceMode) ? launcher.appearanceMode : 'label';
-      return { id, launcherId: id, kind,
-        label: kind === 'favorites' ? String(launcher?.label || 'Favorites').trim().slice(0, 80) : folder.name, order,
-        placement: cleanPosition(launcher?.position), windowPlacement: cleanPosition(launcher?.windowPosition),
-        startOpen: launcher?.startOpen === true, windowGeometry: cleanWindowGeometry(launcher?.windowGeometry), homeShortcut: Boolean(launcher),
-        appearance: { mode: appearanceMode, iconKey: typeof launcher?.iconKey === 'string' ? launcher.iconKey : kind === 'favorites' ? 'favorites' : 'folder', showLabel: appearanceMode !== 'icon', columnSpan: Math.max(1, Math.min(12, launcher?.span?.columns || 3)), rowSpan: Math.max(1, Math.min(8, launcher?.span?.rows || 1)) },
-        assets: [...new Set(assetIds)].map((assetId) => buildAssetReference(assetById.get(assetId), assetId)).filter(Boolean) };
+    .map((folder, order) => {
+      const id = `library:folder:${folder.id}`;
+      return { id, launcherId: id, kind: 'folder',
+        label: folder.name, order,
+        placement: null, windowPlacement: null,
+        startOpen: false, windowGeometry: null, homeShortcut: false,
+        appearance: { mode: 'label', iconKey: 'folder', showLabel: true, columnSpan: 3, rowSpan: 1 },
+        assets: [...new Set(folder.assetIds)].map((assetId) => buildAssetReference(assetById.get(assetId), assetId)).filter(Boolean) };
     });
   const canvasObjects = (Array.isArray(workspace?.canvas?.objects) ? workspace.canvas.objects : [])
     .filter((object) => object.visitorVisible === true)

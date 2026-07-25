@@ -40,19 +40,17 @@ test('Phase 1 data migrates to v7 without changing favorites, folder names, or m
   assert.ok(storage.values.has(libraryWorkspaceKey(profile)));
 });
 
-test('pinned launcher identity and placement persist across a reload', () => {
+test('retired launcher records are discarded across a reload', () => {
   const storage = memoryStorage();
   const workspace = normalizeWorkspace({ version: 3, profileAddress: profile, favorites: [], folders: [
     { id: 'archive', name: 'Archive', assetIds: ['asset-a'], createdAt: 1, updatedAt: 2 }
   ], canvas: { launchers: [{ id: 'ignored-input-id', viewType: 'folder', folderId: 'archive', visitorVisible: false, position: { column: 3, row: 4 }, windowPosition: { column: 1, row: 2 } }] } }, profile);
 
   saveLibraryWorkspace(storage, workspace);
-  assert.deepEqual(loadLibraryWorkspace(storage, profile).canvas.launchers, [{
-    id: 'library:folder:archive', viewType: 'folder', folderId: 'archive', visitorVisible: false, startOpen: false, label: null, position: { column: 3, row: 4 }, windowPosition: { column: 1, row: 2 }, windowGeometry: null, appearanceMode: 'label', iconKey: 'folder', span: { columns: 3, rows: 1 }, presentationOrder: 4
-  }]);
+  assert.deepEqual(loadLibraryWorkspace(storage, profile).canvas.launchers, []);
 });
 
-test('v2 pinned spaces migrate public while malformed v3 visibility recovers private', () => {
+test('v2 pinned spaces migrate folder publication before launcher records are discarded', () => {
   const phaseTwo = { version: 2, profileAddress: profile, favorites: [], folders: [
     { id: 'existing', name: 'Existing', assetIds: ['asset-a'], createdAt: 1, updatedAt: 2 }
   ], canvas: { launchers: [{ id: 'ignored', viewType: 'folder', folderId: 'existing', position: { column: 3, row: 4 }, windowPosition: null }] } };
@@ -60,22 +58,16 @@ test('v2 pinned spaces migrate public while malformed v3 visibility recovers pri
   const migrated = loadLibraryWorkspace(storage, profile);
   assert.equal(migrated.version, 7);
   assert.equal(migrated.folders[0].public, true);
-  assert.equal(migrated.canvas.launchers[0].visitorVisible, true);
+  assert.deepEqual(migrated.canvas.launchers, []);
   assert.ok(storage.values.has(libraryWorkspaceKey(profile)));
-  const contradictory = normalizeWorkspace({ ...migrated, canvas: { launchers: [{ ...migrated.canvas.launchers[0], visitorVisible: 'yes' }] } }, profile);
-  assert.equal(contradictory.canvas.launchers[0].visitorVisible, false);
 });
 
-test('v4 launchers migrate with visitor start-open disabled and v5 geometry recovers safely', () => {
+test('v4 and v5 launcher presentation is retired without affecting folders', () => {
   const base = normalizeWorkspace({ version: 4, profileAddress: profile, favorites: [], folders: [{ id: 'a', name: 'A', assetIds: [], createdAt: 0, updatedAt: 0 }], canvas: { launchers: [{ viewType: 'folder', folderId: 'a', visitorVisible: true }] } }, profile);
-  assert.equal(base.canvas.launchers[0].startOpen, false);
-  const current = normalizeWorkspace({ ...base, version: 5, canvas: { launchers: [{ ...base.canvas.launchers[0], startOpen: true, windowGeometry: { column: 2, row: 3, columnSpan: 10, rowSpan: 8 } }] } }, profile);
-  assert.equal(current.canvas.launchers[0].startOpen, true);
-  assert.deepEqual(current.canvas.launchers[0].windowGeometry, { column: 2, row: 3, columnSpan: 10, rowSpan: 8 });
-  const corrupt = normalizeWorkspace({ ...current, canvas: { launchers: [{ ...current.canvas.launchers[0], windowGeometry: { column: -1 } }] } }, profile);
-  assert.equal(corrupt.canvas.launchers[0].windowGeometry, null);
-  const zeroSpan = normalizeWorkspace({ ...current, canvas: { launchers: [{ ...current.canvas.launchers[0], windowGeometry: { column: 1, row: 1, columnSpan: 0, rowSpan: 4 } }] } }, profile);
-  assert.equal(zeroSpan.canvas.launchers[0].windowGeometry, null);
+  assert.equal(base.folders[0].public, true);
+  assert.deepEqual(base.canvas.launchers, []);
+  const current = normalizeWorkspace({ ...base, version: 5, canvas: { launchers: [{ viewType: 'folder', folderId: 'a', startOpen: true }] } }, profile);
+  assert.deepEqual(current.canvas.launchers, []);
 });
 
 test('v5 workspaces migrate purely to an empty canvas-object collection and v6 objects normalize into v7', () => {

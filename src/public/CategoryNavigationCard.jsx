@@ -1,29 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import './categoryNavigationCard.css';
 
 export default function CategoryNavigationCard({ items = [], emptyLabel = 'NO PUBLIC CATEGORIES', activeId = null, visible = false, onSelect, onContext, onExpandedChange, collapseRequested = false }) {
   const [expanded, setExpanded] = useState(false);
+  const onExpandedChangeRef = useRef(onExpandedChange);
+  onExpandedChangeRef.current = onExpandedChange;
+
+  const changeExpanded = useCallback((value) => {
+    if (value === expanded) return;
+    setExpanded(value);
+    onExpandedChangeRef.current?.(value);
+  }, [expanded]);
 
   useEffect(() => {
-    onExpandedChange?.(expanded);
-  }, [expanded, onExpandedChange]);
+    if (!visible) changeExpanded(false);
+  }, [changeExpanded, visible]);
 
   useEffect(() => {
-    if (!visible) setExpanded(false);
-  }, [visible]);
-
-  useEffect(() => {
-    if (collapseRequested) setExpanded(false);
-  }, [collapseRequested]);
+    if (collapseRequested) changeExpanded(false);
+  }, [changeExpanded, collapseRequested]);
 
   useEffect(() => {
     if (!expanded) return undefined;
     const closeOnEscape = (event) => {
-      if (event.key === 'Escape') setExpanded(false);
+      if (event.key === 'Escape') changeExpanded(false);
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [expanded]);
+  }, [changeExpanded, expanded]);
 
   const expandedHeight = items.length ? 50 + items.length * 44 : 88;
 
@@ -44,7 +48,7 @@ export default function CategoryNavigationCard({ items = [], emptyLabel = 'NO PU
         tabIndex={visible ? 0 : -1}
         aria-expanded={expanded}
         aria-label={expanded ? 'Close profile categories' : 'Open profile categories'}
-        onClick={() => setExpanded((current) => !current)}
+        onClick={() => changeExpanded(!expanded)}
       >
         <strong>CATEGORIES</strong>
         <i aria-hidden="true">›</i>

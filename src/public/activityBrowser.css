@@ -10,7 +10,7 @@
 .activity-browser,.activity-browser * { box-sizing:border-box; }
 .activity-browser { position:fixed; z-index:170; min-width:320px; min-height:260px; display:grid; grid-template-rows:52px minmax(0,1fr); overflow:hidden; border:1px solid rgb(235 236 231 / .23); background:#070808; box-shadow:18px 22px 50px rgb(0 0 0 / .46); color:#ebece7; font-family:var(--font-interface,"Oxanium",monospace); animation:activity-browser-enter 380ms cubic-bezier(.2,.78,.14,1) both; }
 @keyframes activity-browser-enter { from { opacity:0; transform:translate3d(-12px,8px,0) scale(.985); clip-path:inset(0 8% 0 0); } to { opacity:1; transform:none; clip-path:inset(0); } }
-.activity-browser > header { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:18px; align-items:center; padding:0 18px; }
+.activity-browser > header { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:18px; align-items:center; padding:0 48px 0 18px; }
 .activity-browser > header strong { font:500 .72rem/1 var(--font-interface,"Oxanium",monospace); letter-spacing:.17em; }
 .activity-browser > header span { color:rgb(235 236 231 / .28); font-size:.5rem; letter-spacing:.12em; }
 .activity-browser > header button,.activity-browser__error button { min-height:28px; padding:0 11px; border:1px solid rgb(235 236 231 / .15); background:transparent; color:rgb(235 236 231 / .52); font:500 .52rem/1 var(--font-interface,"Oxanium",monospace); letter-spacing:.1em; cursor:pointer; }
@@ -21,7 +21,7 @@
 .activity-browser__feedback:empty { display:none; }
 .activity-browser__status,.activity-browser__error { margin:24px 18px; color:rgb(235 236 231 / .38); font:500 .58rem/1.5 var(--font-interface,"Oxanium",monospace); letter-spacing:.13em; }
 .activity-browser__error button { margin-top:10px; }
-.activity-browser__body > ol { min-height:0; margin:0 8px 8px 0; padding:0 10px 24px 18px; overflow-x:hidden; overflow-y:scroll; list-style:none; scrollbar-gutter:stable; }
+.activity-browser__body > ol { min-height:0; margin:0 8px 8px 0; padding:0 10px 24px 18px; overflow-x:hidden; overflow-y:auto; list-style:none; }
 .activity-browser__body > ol::-webkit-scrollbar { width:6px; border-radius:0; background:rgb(235 236 231 / .035); }
 .activity-browser__body > ol::-webkit-scrollbar-track { border-radius:0; background:rgb(235 236 231 / .035); }
 .activity-browser__body > ol::-webkit-scrollbar-thumb { border:0; border-radius:0; background:rgb(235 236 231 / .18); }

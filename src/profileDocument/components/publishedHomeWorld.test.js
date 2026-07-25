@@ -5,16 +5,7 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { clampVerticalHomeWorldCamera } from '../../public/homeWorldCamera.js';
 import { exceedsSpatialPointerDragThreshold, finalizeSpatialPointer, shouldActivateSpatialPointer } from '../../public/spatialWorldCamera.js';
-import {
-  clampVisitorWindowRect,
-  createPublishedVisitorLayout,
-  createVisitorWindowState,
-  initialVisitorWindowRect,
-  publishedItemPixelRect,
-  resizeVisitorWindowByKey,
-  snapVisitorWindowRect,
-  visitorWindowTransition
-} from '../domain/publishedVisitorWorld.js';
+import { createPublishedVisitorLayout } from '../domain/publishedVisitorWorld.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const documentFixture = Object.freeze({
@@ -27,12 +18,11 @@ const documentFixture = Object.freeze({
   canvasObjects: [{ id: 'art:one', order: 0, placement: { column: -2, row: -3 }, span: { columns: 5, rows: 4 }, presentation: { frame: 'thin', mat: 'dark', background: 'dark', fit: 'contain' }, asset: { stableAssetId: '42:0x2222222222222222222222222222222222222222:0x01', cachedName: 'A work' } }]
 });
 
-test('published desktop layout projects authored content into the reachable vertical lane without mutating its document', () => {
+test('published desktop layout keeps categories in navigation and projects artwork without mutating its document', () => {
   const source = structuredClone(documentFixture);
   const layout = createPublishedVisitorLayout(source, 1280, 720);
-  assert.deepEqual(layout.spaces.map((item) => item.position), [{ column: -4, row: 4 }, { column: 12, row: -5 }]);
+  assert.deepEqual(layout.spaces, []);
   assert.deepEqual(layout.objects[0].position, { column: -2, row: -3 });
-  assert.equal(publishedItemPixelRect(layout.spaces[0], layout).left, -158);
   assert.deepEqual(source, documentFixture, 'visitor projection cannot mutate the authored document');
 });
 
@@ -42,83 +32,14 @@ test('published camera stays on the fixed horizontal axis and fixed scale', () =
   assert.deepEqual(clampVerticalHomeWorldCamera({ x: 9999, y: 999999, zoom: 0.5 }, layout.world, layout.camera.x), { x: 1280, y: 1440, zoom: 1 });
 });
 
-test('launcher toggles open, close, and restore while minimize remains an explicit ephemeral state', () => {
-  const rect = { left: 40, top: 80, width: 700, height: 480 };
-  let state = createVisitorWindowState();
-  state = visitorWindowTransition(state, { type: 'toggle', id: 'space:west', rect });
-  assert.deepEqual(state.windows['space:west'], { rect, minimized: false });
-  state = visitorWindowTransition(state, { type: 'toggle', id: 'space:west', rect });
-  assert.equal(state.windows['space:west'], undefined, 'an open launcher closes its runtime window');
-  state = visitorWindowTransition(state, { type: 'toggle', id: 'space:west', rect });
-  state = visitorWindowTransition(state, { type: 'open', id: 'space:east', rect: { ...rect, left: 90 } });
-  state = visitorWindowTransition(state, { type: 'focus', id: 'space:west' });
-  assert.deepEqual(state.zOrder, ['space:east', 'space:west']);
-  state = visitorWindowTransition(state, { type: 'geometry', id: 'space:west', rect: clampVisitorWindowRect({ ...rect, left: 150, width: 820 }, { width: 1280, height: 720 }) });
-  state = visitorWindowTransition(state, { type: 'minimize', id: 'space:west' });
-  assert.equal(state.windows['space:west'].minimized, true);
-  assert.equal(state.windows['space:west'].rect.left, 150);
-  state = visitorWindowTransition(state, { type: 'minimize', id: 'space:west' });
-  assert.equal(state.windows['space:west'].minimized, true, 'minimize cannot accidentally restore');
-  state = visitorWindowTransition(state, { type: 'toggle', id: 'space:west', rect });
-  assert.equal(state.windows['space:west'].minimized, false, 'a minimized launcher restores its prior geometry');
-  assert.equal(state.windows['space:west'].rect.left, 150);
-  assert.equal(state.zOrder.at(-1), 'space:west', 'restore also focuses the runtime window');
-  assert.equal(documentFixture.spaces[0].windowGeometry.column, -3, 'runtime geometry never writes authored geometry');
-  state = visitorWindowTransition(state, { type: 'close', id: 'space:west' });
-  assert.equal(state.windows['space:west'], undefined);
-});
-
-test('desktop visitor drag and resize snap every viewport dimension to 40px before clamping', () => {
-  assert.deepEqual(
-    snapVisitorWindowRect({ left: 113, top: 131, width: 707, height: 493 }, { width: 1280, height: 720 }),
-    { left: 120, top: 120, width: 720, height: 480 }
-  );
-  assert.deepEqual(
-    snapVisitorWindowRect({ left: 1261, top: -20, width: 709, height: 501 }, { width: 1280, height: 720 }),
-    { left: 536, top: 64, width: 720, height: 520 },
-    'the snapped rectangle is finally clamped with its controls reachable'
-  );
-  const cameraAndZoomIndependent = snapVisitorWindowRect({ left: 203, top: 197, width: 641, height: 399 }, { width: 1280, height: 720 });
-  assert.deepEqual(cameraAndZoomIndependent, { left: 200, top: 200, width: 640, height: 400 });
-});
-
-test('published keyboard resizing uses arrow-key grid steps with the existing minimums and viewport bounds', () => {
-  const viewport = { width: 1280, height: 720 };
-  const rect = { left: 120, top: 120, width: 720, height: 480 };
-  assert.deepEqual(resizeVisitorWindowByKey(rect, 'ArrowRight', viewport), { ...rect, width: 760 });
-  assert.deepEqual(resizeVisitorWindowByKey(rect, 'ArrowDown', viewport), { ...rect, height: 520 });
-  assert.deepEqual(resizeVisitorWindowByKey(rect, 'ArrowLeft', viewport), { ...rect, width: 680 });
-  assert.deepEqual(resizeVisitorWindowByKey(rect, 'ArrowUp', viewport), { ...rect, height: 440 });
-  assert.equal(resizeVisitorWindowByKey(rect, 'Enter', viewport), null);
-
-  let minimum = { left: 24, top: 64, width: 320, height: 260 };
-  for (let index = 0; index < 20; index += 1) {
-    minimum = resizeVisitorWindowByKey(minimum, 'ArrowLeft', viewport);
-    minimum = resizeVisitorWindowByKey(minimum, 'ArrowUp', viewport);
-  }
-  assert.deepEqual(minimum, { left: 24, top: 64, width: 320, height: 260 });
-
-  const bounded = resizeVisitorWindowByKey({ left: 536, top: 64, width: 720, height: 520 }, 'ArrowRight', viewport);
-  assert.deepEqual(bounded, { left: 496, top: 64, width: 760, height: 520 });
-});
-
-test('authored window geometry is projected through the ephemeral visitor camera zoom', () => {
-  const layout = createPublishedVisitorLayout(documentFixture, 1280, 720);
-  const camera = { x: 1140, y: 630, zoom: 1.25 };
-  const rect = initialVisitorWindowRect(documentFixture.spaces[0], layout, camera);
-  assert.deepEqual(rect, { left: 225, top: 246, width: 650, height: 450 });
-  assert.deepEqual(documentFixture.spaces[0].windowGeometry, { column: -3, row: 2, columnSpan: 13, rowSpan: 9 });
-});
-
-test('published component exposes launcher/gallery activation and structural mouse/touch pointer handling', () => {
+test('published component exposes gallery activation and structural mouse/touch pointer handling', () => {
   const source = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
   const cameraSource = readFileSync(resolve(here, '../../public/HomeWorldSurface.jsx'), 'utf8');
-  assert.match(source, /onClick=\{\(\) => toggleSpace\(item\.space\)\}/);
+  assert.doesNotMatch(source, /toggleSpace|PublishedProfileDocumentSpaceWindow|data-launcher-id/);
   assert.match(source, /<GalleryWorld/);
   assert.match(source, /onOpenArtwork=\{openArtworkPreview\}/);
   assert.match(source, /artworkTriggerRef\.current = trigger\?\.isConnected \? trigger : null/);
   assert.match(source, /event\.pointerType === 'mouse'/);
-  assert.match(source, /setPointerCapture/);
   assert.match(cameraSource, /event\.pointerType !== 'mouse'/);
   assert.match(cameraSource, /pointerRef/);
   assert.doesNotMatch(cameraSource, /ArrowLeft|touchPointersRef|data-pannable|spatial-index/);
@@ -127,18 +48,6 @@ test('published component exposes launcher/gallery activation and structural mou
   assert.match(cameraSource, /removeEventListener\('wheel', handleWheel\)/);
   assert.doesNotMatch(cameraSource, /onWheel=\{handleWheel\}/);
   assert.match(cameraSource, /event\.target\.closest\?\.\('button'\)/);
-});
-
-test('published controls are distinct, keyboard labelled, and cannot initiate window dragging', () => {
-  const worldSource = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
-  const windowSource = readFileSync(resolve(here, 'PublishedProfileDocumentSpaceWindow.jsx'), 'utf8');
-  assert.match(windowSource, /published-space-window__controls/);
-  assert.match(windowSource, /minimized \? 'Restore' : 'Minimize'/);
-  assert.match(windowSource, /aria-label=\{`Close \$\{space\.label\}`\}/);
-  assert.equal(windowSource.match(/onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/g)?.length, 2);
-  assert.match(worldSource, /type: entry\.minimized \? 'restore' : 'minimize'/);
-  assert.match(worldSource, /!layout\.geometry\.narrow && !entry\.minimized/);
-  assert.match(worldSource, /if \(layout\.geometry\.narrow/);
 });
 
 test('published artwork fails closed for editing while the verified owner keeps the real edit callback', () => {
@@ -172,14 +81,6 @@ test('compact published content clears masthead and identity through 719px, with
   assert.match(css, /overflow-y:auto/);
   assert.match(css, /touch-action:pan-y/);
   assert.match(css, /published-home-world__spatial>\.module-button\{touch-action:pan-y\}/);
-});
-
-test('minimized published bars use the closed header height without dashed borders or enlarged mobile controls', () => {
-  const css = readFileSync(resolve(here, '../profileDocument.css'), 'utf8');
-  assert.match(css, /published-home-world__window\[data-minimized\]\{height:36px!important/);
-  assert.match(css, /profile-document-space-window\{grid-template-rows:34px\}/);
-  assert.doesNotMatch(css, /border-style:dashed/);
-  assert.doesNotMatch(css, /44px/);
 });
 
 test('published Keeper movement callback is wired without passing the owner handoff object into the published graph', () => {

@@ -8,6 +8,7 @@ import {
   resizeCategoryBrowserByKey,
   resizeCategoryBrowserRect
 } from './categoryAssetBrowserModel.js';
+import FloatingWindowCloseButton from './FloatingWindowCloseButton.jsx';
 import './activityBrowser.css';
 
 const LABELS = Object.freeze({
@@ -124,6 +125,7 @@ export default function ActivityBrowser({ visible = false, open = false, onOpenC
 
   const workspace = open && typeof document !== 'undefined' ? createPortal(<section className="activity-browser" style={rect} aria-label="Profile activity" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
     <header><strong>ACTIVITY</strong><span>NEWEST FIRST</span><button type="button" disabled={status === 'loading'} onClick={load}>{status === 'loading' ? 'LOADING' : 'REFRESH'}</button></header>
+    <FloatingWindowCloseButton onClose={() => onOpenChange?.(false)} label="Close activity browser" />
     <div className="activity-browser__body">
       <div className="activity-browser__feedback">
         {partialError && <p className="activity-browser__notice" role="status">PARTIAL ON-CHAIN DATA</p>}

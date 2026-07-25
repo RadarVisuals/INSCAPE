@@ -5,6 +5,8 @@ import { ASSET_FILING_FILTER, filterAssetsByFiling } from '../library/domain/fil
 import { useLibraryStore } from '../library/state/useLibraryStore.js';
 import DesktopMenu from './menus/DesktopMenu.jsx';
 import NftFlipViewer from './NftFlipViewer.jsx';
+import FloatingWindowCloseButton from './FloatingWindowCloseButton.jsx';
+import CategoryRenameDialog from './CategoryRenameDialog.jsx';
 import {
   initialCategoryBrowserRect,
   resizeCategoryBrowserByKey,
@@ -50,6 +52,7 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
   const load = useLibraryStore((state) => state.load);
   const createFolder = useLibraryStore((state) => state.createFolder);
   const deleteFolder = useLibraryStore((state) => state.deleteFolder);
+  const renameFolder = useLibraryStore((state) => state.renameFolder);
   const setFolderAsset = useLibraryStore((state) => state.setFolderAsset);
   const setFolderPublic = useLibraryStore((state) => state.setFolderPublic);
   const discardUnavailableAsset = useLibraryStore((state) => state.discardUnavailableAsset);
@@ -64,6 +67,7 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
   const [folderContext, setFolderContext] = useState(null);
   const [assetContext, setAssetContext] = useState(null);
   const [folderPendingDelete, setFolderPendingDelete] = useState(null);
+  const [folderPendingRename, setFolderPendingRename] = useState(null);
   const viewerTriggerRef = useRef(null);
   const resizeRef = useRef(null);
   const [viewport, setViewport] = useState(viewportSize);
@@ -87,6 +91,7 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
       setFolderContext(null);
       setAssetContext(null);
       setFolderPendingDelete(null);
+      setFolderPendingRename(null);
     }
   }, [load, open, status]);
 
@@ -167,10 +172,9 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
         <div className="asset-index-workspace__owner"><span>{ownerLabel}</span><i>PRIVATE</i></div>
         <nav aria-label="Asset index views">
           <button type="button" data-active={view.type === 'all' || undefined} onClick={() => setView({ type: 'all', id: null })}><span>ALL OWNED</span><i>{assets.length}</i></button>
-          <p>FOLDERS</p>
+          <div className="asset-index-workspace__folder-heading"><span>FOLDERS</span><button type="button" aria-label="Create category" onClick={() => setNewFolderOpen(true)}>+</button></div>
           {workspace.folders.map((folder) => <button type="button" key={folder.id} data-folder data-public={folder.public || undefined} data-active={view.type === 'folder' && view.id === folder.id || undefined} onClick={() => setView({ type: 'folder', id: folder.id })} onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setFolderContext({ folder, anchor: { x: event.clientX, y: event.clientY }, returnFocus: event.currentTarget }); }}><span>{folder.name}</span><i>{folder.public ? 'PUBLIC' : 'PRIVATE'} · {folder.assetIds.length}</i></button>)}
         </nav>
-        <button className="asset-index-workspace__new" type="button" onClick={() => setNewFolderOpen(true)}>+ CREATE FOLDER</button>
       </aside>
       <main>
         <div className="asset-index-workspace__tools">
@@ -190,13 +194,15 @@ export default function AssetIndex({ visible = false, open = false, onOpenChange
         </div>
         <footer />
       </main>
+      <FloatingWindowCloseButton onClose={() => onOpenChange?.(false)} label="Close asset index" />
       <button className="asset-index-workspace__resize" type="button" aria-label="Resize asset index" onKeyDown={resizeByKey} onPointerDown={beginResize} onPointerMove={moveResize} onPointerUp={finishResize} onPointerCancel={finishResize} onLostPointerCapture={finishResize}><i aria-hidden="true">›</i></button>
       {newFolderOpen && <div className="asset-index-folder-dialog" role="dialog" aria-modal="true" aria-labelledby="asset-index-folder-title"><form onSubmit={submitFolder}><span>INDEX / NEW DIRECTORY</span><h2 id="asset-index-folder-title">CREATE FOLDER</h2><label htmlFor="asset-index-folder-name">FOLDER NAME</label><input id="asset-index-folder-name" autoFocus maxLength="80" value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} /><div><button type="button" onClick={() => setNewFolderOpen(false)}>CANCEL</button><button type="submit" disabled={!newFolderName.trim()}>CREATE</button></div></form></div>}
       {folderPendingDelete && <div className="asset-index-folder-dialog" role="alertdialog" aria-modal="true" aria-labelledby="asset-index-delete-title" aria-describedby="asset-index-delete-copy"><div className="asset-index-folder-dialog__panel"><span>INDEX / REMOVE DIRECTORY</span><h2 id="asset-index-delete-title">DELETE {folderPendingDelete.name}</h2><p id="asset-index-delete-copy">THE FOLDER WILL BE REMOVED. ITS {folderPendingDelete.assetIds.length} {folderPendingDelete.assetIds.length === 1 ? 'ASSET REMAINS' : 'ASSETS REMAIN'} IN YOUR INDEX.</p><div><button type="button" autoFocus onClick={() => setFolderPendingDelete(null)}>CANCEL</button><button type="button" data-danger onClick={confirmFolderDelete}>DELETE FOLDER</button></div></div></div>}
     </section>
-    {folderContext && <DesktopMenu className="asset-index-context-menu" anchor={folderContext.anchor} label={`${folderContext.folder.name} commands`} commands={[{ id: 'toggle-public', label: folderContext.folder.public ? 'Make Private' : 'Publish Category' }, { id: 'delete-folder', label: 'Delete Folder' }]} onCommand={(command) => { if (command === 'toggle-public') setFolderPublic(folderContext.folder.id, !folderContext.folder.public); else if (command === 'delete-folder') setFolderPendingDelete(folderContext.folder); setFolderContext(null); }} onClose={() => setFolderContext(null)} returnFocus={folderContext.returnFocus} />}
-    {assetContext && <DesktopMenu className="asset-index-context-menu" anchor={assetContext.anchor} label={`${assetContext.asset.name || 'Asset'} categories`} commands={workspace.folders.length ? workspace.folders.map((folder) => ({ id: folder.id, label: `${folder.assetIds.includes(assetContext.asset.id) ? 'Remove from' : 'Add to'} ${folder.name}` })) : [{ id: 'no-categories', label: 'No categories yet', disabled: true }]} onCommand={(folderId) => { const folder = workspace.folders.find((entry) => entry.id === folderId); if (folder) setFolderAsset(folder.id, assetContext.asset.id, !folder.assetIds.includes(assetContext.asset.id)); setAssetContext(null); }} onClose={() => setAssetContext(null)} returnFocus={assetContext.returnFocus} />}
+    {folderContext && <DesktopMenu className="asset-index-context-menu desktop-menu--cascade" anchor={folderContext.anchor} label={`${folderContext.folder.name} commands`} commands={[{ id: 'rename-folder', label: 'Rename Category' }, { id: 'toggle-public', label: folderContext.folder.public ? 'Make Private' : 'Publish Category' }, { id: 'delete-folder', label: 'Delete Folder' }]} onCommand={(command) => { if (command === 'rename-folder') setFolderPendingRename(folderContext.folder); else if (command === 'toggle-public') setFolderPublic(folderContext.folder.id, !folderContext.folder.public); else if (command === 'delete-folder') setFolderPendingDelete(folderContext.folder); setFolderContext(null); }} onClose={() => setFolderContext(null)} returnFocus={folderContext.returnFocus} />}
+    {assetContext && <DesktopMenu className="asset-index-context-menu desktop-menu--cascade" anchor={assetContext.anchor} label={`${assetContext.asset.name || 'Asset'} categories`} commands={workspace.folders.length ? workspace.folders.map((folder) => ({ id: folder.id, label: `${folder.assetIds.includes(assetContext.asset.id) ? 'Remove from' : 'Add to'} ${folder.name}` })) : [{ id: 'no-categories', label: 'No categories yet', disabled: true }]} onCommand={(folderId) => { const folder = workspace.folders.find((entry) => entry.id === folderId); if (folder) setFolderAsset(folder.id, assetContext.asset.id, !folder.assetIds.includes(assetContext.asset.id)); setAssetContext(null); }} onClose={() => setAssetContext(null)} returnFocus={assetContext.returnFocus} />}
     {viewerAsset && <NftFlipViewer asset={viewerAsset} onClose={() => setViewerAsset(null)} returnFocus={viewerTriggerRef.current} />}
+    <CategoryRenameDialog category={folderPendingRename} onClose={() => setFolderPendingRename(null)} onRename={(name) => { renameFolder(folderPendingRename.id, name); setFolderPendingRename(null); }} />
   </>, document.body) : null;
 
   return <>

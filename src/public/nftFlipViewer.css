@@ -92,12 +92,12 @@
 .nft-dossier {
   --nft-dossier-inset: clamp(24px, 4.4vmin, 54px);
   --nft-dossier-scroll-right: clamp(14px, 2vmin, 24px);
-  --nft-dossier-header-space: clamp(74px, 7vmin, 82px);
   position: relative;
   width: 100%;
   height: 100%;
-  display: block;
-  padding: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: var(--nft-dossier-inset) var(--nft-dossier-scroll-right) var(--nft-dossier-inset) var(--nft-dossier-inset);
   overflow: hidden;
   border: 1px solid rgb(235 236 231 / .26);
   background: #070808;
@@ -112,14 +112,14 @@
 .nft-flip-viewer__turntable[data-content-hidden] .nft-dossier > header,
 .nft-flip-viewer__turntable[data-content-hidden] .nft-dossier__body { opacity: 0; }
 
-.nft-dossier header { position: absolute; z-index: 1; top: var(--nft-dossier-inset); right: var(--nft-dossier-inset); left: var(--nft-dossier-inset); display: grid; gap: 10px; pointer-events: none; }
+.nft-dossier header { position: relative; z-index: 1; min-width: 0; display: grid; gap: 10px; padding: 0 calc(var(--nft-dossier-inset) - var(--nft-dossier-scroll-right)) clamp(20px, 2.8vmin, 30px) 0; pointer-events: none; }
 .nft-dossier header small,
 .nft-dossier small,
 .nft-dossier dt { color: rgb(235 236 231 / .36); font: 500 .58rem/1 var(--font-interface, "Oxanium", monospace); letter-spacing: .14em; }
 .nft-dossier header small { color: rgb(235 236 231 / .68); font-size: .7rem; letter-spacing: .17em; }
-.nft-dossier header strong { color: #f0f1ec; font: 500 clamp(1.12rem, 2.5vmin, 1.6rem)/1.2 var(--font-interface, "Oxanium", monospace); letter-spacing: .09em; }
+.nft-dossier header strong { min-width: 0; overflow-wrap: anywhere; color: #f0f1ec; font: 500 clamp(1.12rem, 2.5vmin, 1.6rem)/1.2 var(--font-interface, "Oxanium", monospace); letter-spacing: .09em; }
 
-.nft-dossier__body { position: absolute; top: var(--nft-dossier-inset); right: var(--nft-dossier-scroll-right); bottom: var(--nft-dossier-inset); left: var(--nft-dossier-inset); min-height: 0; padding: var(--nft-dossier-header-space) calc(var(--nft-dossier-inset) - var(--nft-dossier-scroll-right)) 2px 0; overflow-x: hidden; overflow-y: auto; }
+.nft-dossier__body { position: relative; min-width: 0; min-height: 0; padding: 0 calc(var(--nft-dossier-inset) - var(--nft-dossier-scroll-right)) 2px 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .nft-dossier__body::-webkit-scrollbar { width: 6px; border-radius: 0; background: rgb(235 236 231 / .035); }
 .nft-dossier__body::-webkit-scrollbar-track { border-radius: 0; background: rgb(235 236 231 / .035); }
 .nft-dossier__body::-webkit-scrollbar-thumb { border: 0; border-radius: 0; background: rgb(235 236 231 / .18); }
@@ -169,7 +169,7 @@
 @media (max-width: 719px) {
   .nft-flip-viewer__object,
   .nft-flip-viewer__object[data-shape='dossier'] { max-width: calc(100vw - 28px); max-height: calc(100vh - 104px); }
-  .nft-dossier { --nft-dossier-inset: 22px; --nft-dossier-scroll-right: 12px; --nft-dossier-header-space: 70px; }
+  .nft-dossier { --nft-dossier-inset: 22px; --nft-dossier-scroll-right: 12px; }
   .nft-dossier__traits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .nft-dossier dl > div { grid-template-columns: 88px minmax(0, 1fr); }
 }

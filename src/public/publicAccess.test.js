@@ -19,17 +19,13 @@ test('only verified matching owners route to the local shell', () => {
   assert.equal(selectPublicProfileRoute(undefined), 'PUBLISHED_VISITOR');
 });
 
-test('visitors see public launchers and artwork but never private canvas records', () => {
+test('visitors see public artwork but never private canvas records', () => {
   const workspace = { canvas: {
     launchers: [{ id: 'public-folder', visitorVisible: true }, { id: 'private-folder', visitorVisible: false }],
     objects: [{ id: 'public-art', visitorVisible: true }, { id: 'private-art', visitorVisible: false }]
   } };
-  assert.deepEqual(selectLiveCanvasContent(workspace, false), {
-    launchers: [workspace.canvas.launchers[0]], objects: [workspace.canvas.objects[0]]
-  });
-  assert.deepEqual(selectLiveCanvasContent(workspace, true), {
-    launchers: workspace.canvas.launchers, objects: workspace.canvas.objects
-  });
+  assert.deepEqual(selectLiveCanvasContent(workspace, false), { objects: [workspace.canvas.objects[0]] });
+  assert.deepEqual(selectLiveCanvasContent(workspace, true), { objects: workspace.canvas.objects });
 });
 
 test('visitor commands cannot execute workspace mutations', () => {

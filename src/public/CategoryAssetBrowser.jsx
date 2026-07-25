@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   initialCategoryBrowserRect,
   makeJustifiedAssetRows,
@@ -7,6 +7,7 @@ import {
   resizeCategoryBrowserRect
 } from './categoryAssetBrowserModel.js';
 import NftFlipViewer from './NftFlipViewer.jsx';
+import FloatingWindowCloseButton from './FloatingWindowCloseButton.jsx';
 import './categoryAssetBrowser.css';
 
 const viewportSize = () => ({ width: globalThis.innerWidth || 1280, height: globalThis.innerHeight || 720 });
@@ -29,7 +30,8 @@ function BrowserAssetImage({ asset, onRatio }) {
   />;
 }
 
-export default function CategoryAssetBrowser({ open = false, category = null, status = 'ready' }) {
+export default function CategoryAssetBrowser({ open = false, category = null, status = 'ready', onClose }) {
+  const resizeHelpId = useId();
   const rowsRef = useRef(null);
   const resizeRef = useRef(null);
   const viewerTriggerRef = useRef(null);
@@ -137,6 +139,7 @@ export default function CategoryAssetBrowser({ open = false, category = null, st
         <output>{thumbnailSize}</output>
       </label>
     </header>
+    <FloatingWindowCloseButton onClose={onClose} label="Close category browser" />
     <div className="category-asset-browser__rows" ref={rowsRef}>
       {loading && !assets.length && <p className="category-asset-browser__status">LOADING PUBLISHED WORKS</p>}
       {!loading && !assets.length && <p className="category-asset-browser__status">NO WORKS IN THIS CATEGORY</p>}
@@ -172,7 +175,7 @@ export default function CategoryAssetBrowser({ open = false, category = null, st
       type="button"
       tabIndex={open && viewport.width >= 720 ? 0 : -1}
       aria-label="Resize NFT browser"
-      aria-describedby="category-asset-browser-resize-help"
+      aria-describedby={resizeHelpId}
       onKeyDown={resizeByKey}
       onPointerDown={beginResize}
       onPointerMove={moveResize}
@@ -180,7 +183,7 @@ export default function CategoryAssetBrowser({ open = false, category = null, st
       onPointerCancel={finishResize}
       onLostPointerCapture={finishResize}
     ><i aria-hidden="true">›</i></button>
-    <span className="sr-only" id="category-asset-browser-resize-help">Use the arrow keys to resize in 40 pixel steps.</span>
+    <span className="sr-only" id={resizeHelpId}>Use the arrow keys to resize in 40 pixel steps.</span>
   </section>
   {selectedAsset && <NftFlipViewer asset={selectedAsset} onClose={closeViewer} returnFocus={viewerTriggerRef.current} />}
   </>;

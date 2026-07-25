@@ -74,6 +74,7 @@ export default function ProfileNavigationDock({
   const handleIndexOpenChange = useCallback((expanded) => {
     setIndexOpen(expanded);
     if (expanded) {
+      onProfileExpandedChange?.(false);
       setCategoriesExpanded(false);
       setSelectedCategoryId(null);
       if (effectiveCreationsOpenRef.current) {
@@ -91,11 +92,12 @@ export default function ProfileNavigationDock({
       }
     }
     onIndexOpenChangeRef.current?.(expanded);
-  }, []);
+  }, [onProfileExpandedChange]);
 
   const handleCreationsOpenChange = useCallback((expanded) => {
     setCreationsOpen(expanded);
     if (expanded) {
+      onProfileExpandedChange?.(false);
       setCategoriesExpanded(false);
       setSelectedCategoryId(null);
       if (effectiveIndexOpenRef.current) handleIndexOpenChange(false);
@@ -110,11 +112,12 @@ export default function ProfileNavigationDock({
       }
     }
     onCreationsOpenChangeRef.current?.(expanded);
-  }, [handleIndexOpenChange]);
+  }, [handleIndexOpenChange, onProfileExpandedChange]);
 
   const handleActivityOpenChange = useCallback((expanded) => {
     setActivityOpen(expanded);
     if (expanded) {
+      onProfileExpandedChange?.(false);
       setCategoriesExpanded(false);
       setSelectedCategoryId(null);
       if (effectiveCreationsOpenRef.current) handleCreationsOpenChange(false);
@@ -126,7 +129,7 @@ export default function ProfileNavigationDock({
       }
     }
     onActivityOpenChangeRef.current?.(expanded);
-  }, [handleCreationsOpenChange, handleIndexOpenChange]);
+  }, [handleCreationsOpenChange, handleIndexOpenChange, onProfileExpandedChange]);
 
   const handleGalleryOpenChange = useCallback((expanded) => {
     setGalleryOpen(expanded);
@@ -144,13 +147,14 @@ export default function ProfileNavigationDock({
   const handleCategoriesExpandedChange = useCallback((expanded) => {
     setCategoriesExpanded(expanded);
     if (!expanded) setSelectedCategoryId(null);
+    if (expanded) onProfileExpandedChange?.(false);
     if (expanded && effectiveIndexOpenRef.current) handleIndexOpenChange(false);
     if (expanded && effectiveCreationsOpenRef.current) handleCreationsOpenChange(false);
     if (expanded && effectiveActivityOpenRef.current) handleActivityOpenChange(false);
     if (expanded && settingsOpenRef.current) setSettingsOpen(false);
     if (expanded && effectiveGalleryOpenRef.current) handleGalleryOpenChange(false);
     onCategoriesOpenChangeRef.current?.(expanded);
-  }, [handleActivityOpenChange, handleCreationsOpenChange, handleGalleryOpenChange, handleIndexOpenChange]);
+  }, [handleActivityOpenChange, handleCreationsOpenChange, handleGalleryOpenChange, handleIndexOpenChange, onProfileExpandedChange]);
 
   useEffect(() => {
     if (!navigationVisible && effectiveIndexOpen) handleIndexOpenChange(false);
@@ -175,18 +179,20 @@ export default function ProfileNavigationDock({
   const handleSettingsOpenChange = useCallback((expanded) => {
     setSettingsOpen(expanded);
     if (!expanded) return;
+    onProfileExpandedChange?.(false);
     setCategoriesExpanded(false);
     setSelectedCategoryId(null);
     if (effectiveCreationsOpenRef.current) handleCreationsOpenChange(false);
     if (effectiveActivityOpenRef.current) handleActivityOpenChange(false);
     if (effectiveIndexOpenRef.current) handleIndexOpenChange(false);
     if (effectiveGalleryOpenRef.current) handleGalleryOpenChange(false);
-  }, [handleActivityOpenChange, handleCreationsOpenChange, handleGalleryOpenChange, handleIndexOpenChange]);
+  }, [handleActivityOpenChange, handleCreationsOpenChange, handleGalleryOpenChange, handleIndexOpenChange, onProfileExpandedChange]);
 
   const selectCategory = useCallback((category) => {
+    onProfileExpandedChange?.(false);
     setSelectedCategoryId((current) => current === category.id ? null : category.id);
     setBrowserActivated(true);
-  }, []);
+  }, [onProfileExpandedChange]);
 
   return <aside
     className="profile-navigation-dock"
@@ -206,7 +212,7 @@ export default function ProfileNavigationDock({
       activeId={selectedCategoryId}
       visible={navigationVisible}
       onSelect={selectCategory}
-      onContext={ownerIndex?.onToggleHomeShortcut || ownerIndex?.onToggleCategoryPublic ? (event, category) => {
+      onContext={ownerIndex?.onToggleCategoryPublic || ownerIndex?.onRenameCategory ? (event, category) => {
         event.preventDefault();
         event.stopPropagation();
         setCategoryContext({ category, anchor: { x: event.clientX, y: event.clientY }, returnFocus: event.currentTarget });
@@ -215,11 +221,11 @@ export default function ProfileNavigationDock({
       collapseRequested={effectiveIndexOpen || effectiveCreationsOpen || effectiveActivityOpen || effectiveGalleryOpen || settingsOpen}
     />
     {categoryContext && <DesktopMenu
-      className="category-navigation-context-menu"
+      className="category-navigation-context-menu desktop-menu--cascade"
       anchor={categoryContext.anchor}
       label={`${categoryContext.category.label} commands`}
-      commands={[{ id: 'toggle-public', label: categoryContext.category.public ? 'Make Private' : 'Publish Category' }, { id: 'toggle-home-shortcut', label: categoryContext.category.homeShortcut ? 'Remove Home Shortcut' : 'Add Shortcut to Home' }]}
-      onCommand={(command) => { if (command === 'toggle-public') ownerIndex?.onToggleCategoryPublic?.(categoryContext.category); else if (command === 'toggle-home-shortcut') ownerIndex?.onToggleHomeShortcut?.(categoryContext.category); setCategoryContext(null); }}
+      commands={[{ id: 'rename-category', label: 'Rename Category' }, { id: 'toggle-public', label: categoryContext.category.public ? 'Make Private' : 'Publish Category' }]}
+      onCommand={(command) => { if (command === 'rename-category') ownerIndex?.onRenameCategory?.(categoryContext.category); else if (command === 'toggle-public') ownerIndex?.onToggleCategoryPublic?.(categoryContext.category); setCategoryContext(null); }}
       onClose={() => setCategoryContext(null)}
       returnFocus={categoryContext.returnFocus}
     />}
@@ -262,6 +268,7 @@ export default function ProfileNavigationDock({
         open={navigationVisible && categoriesExpanded && Boolean(selectedCategory)}
         category={selectedCategory}
         status={assetStatus}
+        onClose={() => setSelectedCategoryId(null)}
       />
     </Suspense>}
   </aside>;

@@ -21,9 +21,9 @@ const assetB = { id: `42:${CONTRACT_B}:contract`, chainId: 42, contractAddress: 
 function workspace() {
   return { version: 3, profileAddress: PROFILE.toLowerCase(), favorites: [assetB.id, 'private-favorite'],
     folders: [
-      { id: 'public-a', name: 'Public A', assetIds: [assetA.id, assetB.id], createdAt: 1, updatedAt: 2 },
-      { id: 'public-b', name: 'Public B', assetIds: [assetA.id], createdAt: 3, updatedAt: 4 },
-      { id: 'private-folder', name: 'Private', assetIds: [PRIVATE_ASSET_ID], createdAt: 5, updatedAt: 6 }
+      { id: 'public-a', name: 'Public A', assetIds: [assetA.id, assetB.id], public: true, createdAt: 1, updatedAt: 2 },
+      { id: 'public-b', name: 'Public B', assetIds: [assetA.id], public: true, createdAt: 3, updatedAt: 4 },
+      { id: 'private-folder', name: 'Private', assetIds: [PRIVATE_ASSET_ID], public: false, createdAt: 5, updatedAt: 6 }
     ], canvas: { launchers: [
       { id: 'library:folder:public-a', viewType: 'folder', folderId: 'public-a', visitorVisible: true, position: { column: 2, row: 3 }, windowPosition: { column: 1, row: 2 } },
       { id: 'library:folder:public-b', viewType: 'folder', folderId: 'public-b', visitorVisible: true, position: null, windowPosition: null },
@@ -68,21 +68,21 @@ test('private subsystem and local persistence fields cannot leak through builder
   assert.equal(serialized.includes(PRIVATE_ASSET_ID), false);
 });
 
-test('builder omits private pinned spaces and produces a valid empty projection when all are private', () => {
+test('builder omits private categories and produces a valid empty projection when all are private', () => {
   const mixed = build();
   assert.deepEqual(mixed.spaces.map((space) => space.label), ['Public A', 'Public B']);
   assert.equal(formatProfileDocumentJson(mixed).includes('Private'), false);
   const privateOnlyWorkspace = workspace();
-  privateOnlyWorkspace.canvas.launchers = privateOnlyWorkspace.canvas.launchers.map((launcher) => ({ ...launcher, visitorVisible: false }));
+  privateOnlyWorkspace.folders = privateOnlyWorkspace.folders.map((folder) => ({ ...folder, public: false }));
   const empty = build({ workspace: privateOnlyWorkspace });
   assert.equal(validateProfileDocument(empty).valid, true);
   assert.deepEqual(empty.spaces, []);
 });
 
-test('builder drops malformed local window geometry instead of exporting invalid presentation', () => {
-  const malformed = workspace();
-  malformed.canvas.launchers[0].windowGeometry = { column: 2, row: 2, columnSpan: 0, rowSpan: 8 };
-  const document = build({ workspace: malformed, systemPresentation: {
+test('builder ignores retired category window geometry and drops malformed system geometry', () => {
+  const retired = workspace();
+  retired.canvas.launchers[0].windowGeometry = { column: 2, row: 2, columnSpan: 0, rowSpan: 8 };
+  const document = build({ workspace: retired, systemPresentation: {
     identity: { startOpen: true, windowGeometry: { column: -256, row: 2, columnSpan: 8, rowSpan: 8 } }
   } });
   assert.equal(document.spaces[0].windowGeometry, null);
@@ -170,13 +170,13 @@ test('snapshot stale detection ignores revision timestamps but detects authored 
   const changed = structuredClone(source); changed.spaces[0].label = 'Changed'; assert.equal(isSnapshotStale(state, changed), true);
 });
 
-test('runtime desktop state is excluded while authored start-open presentation stales snapshots', () => {
+test('runtime desktop and retired category launcher presentation do not stale snapshots', () => {
   const source = build();
   const runtimeOnly = workspace(); runtimeOnly.runtimeDesktop = { openIds: ['private'], rects: { private: { column: 1 } } };
   assert.equal(profileDocumentContentFingerprint(build({ workspace: runtimeOnly })), profileDocumentContentFingerprint(source));
   const authored = workspace(); authored.canvas.launchers.find((launcher) => launcher.folderId === 'public-a').startOpen = true;
   authored.canvas.launchers.find((launcher) => launcher.folderId === 'public-a').windowGeometry = { column: 2, row: 2, columnSpan: 10, rowSpan: 8 };
-  assert.notEqual(profileDocumentContentFingerprint(build({ workspace: authored })), profileDocumentContentFingerprint(source));
+  assert.equal(profileDocumentContentFingerprint(build({ workspace: authored })), profileDocumentContentFingerprint(source));
 });
 
 test('private content edits do not stale public content, while either visibility transition does', () => {
@@ -184,11 +184,11 @@ test('private content edits do not stale public content, while either visibility
   let state = setSnapshot(createProfileDocumentState(), source, profileDocumentContentFingerprint(source));
   const privateEdit = workspace(); privateEdit.folders.find((folder) => folder.id === 'private-folder').name = 'Private renamed'; privateEdit.folders.find((folder) => folder.id === 'private-folder').assetIds.push(assetA.id);
   assert.equal(isSnapshotStale(state, build({ workspace: privateEdit })), false);
-  privateEdit.canvas.launchers.find((launcher) => launcher.folderId === 'private-folder').visitorVisible = true;
+  privateEdit.folders.find((folder) => folder.id === 'private-folder').public = true;
   const madePublic = build({ workspace: privateEdit });
   assert.equal(isSnapshotStale(state, madePublic), true);
   assert.equal(madePublic.spaces.some((space) => space.label === 'Private renamed' && space.assets.some((asset) => asset.stableAssetId === assetA.id)), true);
-  const madePrivate = workspace(); madePrivate.canvas.launchers.find((launcher) => launcher.folderId === 'public-a').visitorVisible = false;
+  const madePrivate = workspace(); madePrivate.folders.find((folder) => folder.id === 'public-a').public = false;
   assert.equal(isSnapshotStale(state, build({ workspace: madePrivate })), true);
   assert.equal(build({ workspace: madePrivate }).spaces.some((space) => space.id === 'library:folder:public-a'), false);
 });
@@ -267,32 +267,29 @@ test('restore plan replaces only public presentation and preserves private Favor
   const current = workspace(); const plan = createProfileDocumentRestorePlan(build(), current);
   assert.deepEqual(plan.workspace.favorites, current.favorites);
   assert.deepEqual(plan.workspace.folders.find((folder) => folder.id === 'private-folder'), current.folders[2]);
-  assert.equal(plan.workspace.canvas.launchers.find((launcher) => launcher.folderId === 'private-folder').visitorVisible, false);
-  assert.equal(plan.workspace.canvas.launchers.filter((launcher) => launcher.visitorVisible).length, 2);
+  assert.deepEqual(plan.workspace.canvas.launchers, []);
   assert.deepEqual(plan.workspace.folders.find((folder) => folder.id === 'public-a').assetIds, [assetA.id, assetB.id]);
   assert.equal(plan.keeperId, 'skull_reaper'); assert.equal(plan.stageId, 'black');
   assert.deepEqual(plan.environment, { type: 'illustrated', shaderId: 'neural-field' });
 });
 
 test('restore collisions preserve an unpinned private folder deterministically', () => {
-  const current = workspace(); current.canvas.launchers = current.canvas.launchers.filter((launcher) => launcher.folderId !== 'public-a');
+  const current = workspace(); current.folders.find((folder) => folder.id === 'public-a').public = false;
   current.folders[0].assetIds = ['private-collision-membership'];
   const plan = createProfileDocumentRestorePlan(build(), current);
   assert.deepEqual(plan.workspace.folders.find((folder) => folder.id === 'public-a').assetIds, current.folders[0].assetIds);
   assert.ok(plan.workspace.folders.some((folder) => folder.id === 'public-a-2'));
 });
 
-test('restore never overwrites a colliding private pinned space', () => {
+test('restore never overwrites a colliding private folder after launcher retirement', () => {
   const current = workspace();
   const importedSource = workspace();
-  importedSource.canvas.launchers = [importedSource.canvas.launchers.find((launcher) => launcher.folderId === 'private-folder')];
-  importedSource.canvas.launchers[0].visitorVisible = true;
+  importedSource.folders = importedSource.folders.map((folder) => ({ ...folder, public: folder.id === 'private-folder' }));
   importedSource.folders.find((folder) => folder.id === 'private-folder').name = 'Imported public collision';
   const plan = createProfileDocumentRestorePlan(build({ workspace: importedSource }), current);
   assert.equal(plan.workspace.folders.find((folder) => folder.id === 'private-folder').name, 'Private');
-  assert.equal(plan.workspace.canvas.launchers.find((launcher) => launcher.folderId === 'private-folder').visitorVisible, false);
   assert.equal(plan.workspace.folders.find((folder) => folder.id === 'private-folder-2').name, 'Imported public collision');
-  assert.equal(plan.workspace.canvas.launchers.find((launcher) => launcher.folderId === 'private-folder-2').visitorVisible, true);
+  assert.deepEqual(plan.workspace.canvas.launchers, []);
 });
 
 test('atomic restore succeeds or rolls all state back after persistence failure', async () => {

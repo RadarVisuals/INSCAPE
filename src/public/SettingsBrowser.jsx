@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom';
 import { useSignalStore } from '../signals/state/useSignalStore.js';
+import FloatingWindowCloseButton from './FloatingWindowCloseButton.jsx';
 import './settingsBrowser.css';
 
 const OPTIONS = Object.freeze([
@@ -19,6 +20,7 @@ export default function SettingsBrowser({ visible = false, open = false, onOpenC
       <header>
         <strong id="settings-browser-title">SETTINGS</strong>
       </header>
+      <FloatingWindowCloseButton onClose={() => onOpenChange?.(false)} label="Close settings" />
       <main>
         <header><strong>ACTIVITY</strong><span>KEEPER SIGNALS</span></header>
         <div className="settings-browser__options">

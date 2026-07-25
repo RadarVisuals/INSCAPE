@@ -10,6 +10,7 @@ import {
   resizeCategoryBrowserRect
 } from './categoryAssetBrowserModel.js';
 import NftFlipViewer from './NftFlipViewer.jsx';
+import FloatingWindowCloseButton from './FloatingWindowCloseButton.jsx';
 import './creationsBrowser.css';
 
 const viewportSize = () => ({ width: globalThis.innerWidth || 1280, height: globalThis.innerHeight || 720 });
@@ -128,6 +129,7 @@ export default function CreationsBrowser({ visible = false, open = false, onOpen
         <label className="creations-browser__search"><span className="sr-only">Search creations</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="SEARCH CREATIONS" /></label>
         <label className="creations-browser__density"><span>THUMBNAIL SIZE</span><input aria-label="Thumbnail size" type="range" min="110" max="300" step="10" value={thumbnailSize} onChange={(event) => setThumbnailSize(Number(event.target.value))} /><output>{thumbnailSize}</output></label>
       </header>
+      <FloatingWindowCloseButton onClose={() => onOpenChange?.(false)} label="Close creations browser" />
       <div className="creations-browser__rows" ref={rowsRef}>
         {(status === 'idle' || status === 'loading') && !assets.length && !sourceSlow && <p className="creations-browser__status">LOADING CREATOR-ATTRIBUTED WORKS{progress.total ? ` ${progress.resolved}/${progress.total}` : ''}</p>}
         {status === 'loading' && !assets.length && sourceSlow && <div className="creations-browser__error" role="status"><p>CREATIONS SOURCE IS NOT RESPONDING</p><button type="button" onClick={retry}>RETRY</button></div>}

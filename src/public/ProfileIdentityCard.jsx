@@ -46,7 +46,7 @@ export default function ProfileIdentityCard({ profile, expanded: controlledExpan
     if (typeof controlledExpanded !== 'boolean') return;
     setState((current) => {
       if (controlledExpanded) return PROFILE_IDENTITY_CARD_STATE.EXPANDED;
-      return current === PROFILE_IDENTITY_CARD_STATE.EXPANDED ? PROFILE_IDENTITY_CARD_STATE.AVATAR : current;
+      return current === PROFILE_IDENTITY_CARD_STATE.EXPANDED ? PROFILE_IDENTITY_CARD_STATE.COMPACT : current;
     });
   }, [controlledExpanded]);
 

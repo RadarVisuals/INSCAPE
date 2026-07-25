@@ -40,7 +40,7 @@
   animation: creations-browser-enter 380ms cubic-bezier(.2,.78,.14,1) both;
 }
 @keyframes creations-browser-enter { from { opacity: 0; transform: translate3d(-12px, 8px, 0) scale(.985); clip-path: inset(0 8% 0 0); } to { opacity: 1; transform: none; clip-path: inset(0); } }
-.creations-browser > header { display: grid; grid-template-columns: minmax(100px, auto) minmax(150px, 1fr) auto; gap: 16px; align-items: center; padding: 0 18px; }
+.creations-browser > header { display: grid; grid-template-columns: minmax(100px, auto) minmax(150px, 1fr) auto; gap: 16px; align-items: center; padding: 0 44px 0 18px; }
 .creations-browser > header > strong { font: 500 .72rem/1 var(--font-interface, "Oxanium", monospace); letter-spacing: .17em; }
 .creations-browser__search { height: 30px; border: 1px solid rgb(235 236 231 / .14); }
 .creations-browser__search input { width: 100%; height: 100%; padding: 0 10px; border: 0; outline: 0; background: transparent; color: #fff; font: 500 .52rem/1 var(--font-interface, "Oxanium", monospace); letter-spacing: .11em; }
@@ -49,7 +49,7 @@
 .creations-browser__density input { width: 100%; height: 2px; appearance: none; background: rgb(235 236 231 / .16); }
 .creations-browser__density input::-webkit-slider-thumb { width: 8px; height: 14px; appearance: none; border: 1px solid #d9dad4; background: #0b0c0c; cursor: ew-resize; }
 .creations-browser__density output { color: rgb(235 236 231 / .55); font: inherit; text-align: right; }
-.creations-browser__rows { min-height: 0; margin: 0 8px 8px 0; padding: 8px 10px 26px 18px; overflow-x: hidden; overflow-y: scroll; scrollbar-gutter: stable; }
+.creations-browser__rows { min-height: 0; margin: 0 8px 8px 0; padding: 8px 10px 26px 18px; overflow-x: hidden; overflow-y: auto; }
 .creations-browser__rows::-webkit-scrollbar { width: 6px; border-radius: 0; background: rgb(235 236 231 / .035); }
 .creations-browser__rows::-webkit-scrollbar-track { border-radius: 0; background: rgb(235 236 231 / .035); }
 .creations-browser__rows::-webkit-scrollbar-thumb { border: 0; border-radius: 0; background: rgb(235 236 231 / .18); }

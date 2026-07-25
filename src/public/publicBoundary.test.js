@@ -119,8 +119,7 @@ test('owner folders are direct categories and Index assigns assets through conte
   const categoryStyles = readFileSync(new URL('./categoryNavigationCard.css', import.meta.url), 'utf8');
 
   assert.match(shellSource, /workspace\.folders\.map\(\(folder\) => \(\{/);
-  assert.match(shellSource, /homeShortcut: pinnedLaunchers\.some/);
-  assert.match(shellSource, /onToggleHomeShortcut: \(category\) =>/);
+  assert.doesNotMatch(shellSource, /homeShortcut|pinnedLaunchers|onToggleHomeShortcut/);
   assert.match(indexSource, /onContextMenu=\{\(event\) => \{ event\.preventDefault\(\); event\.stopPropagation\(\); setAssetContext/);
   assert.match(indexSource, /folder\.assetIds\.includes\(assetContext\.asset\.id\) \? 'Remove from' : 'Add to'/);
   assert.match(indexSource, /setFolderAsset\(folder\.id, assetContext\.asset\.id, !folder\.assetIds\.includes\(assetContext\.asset\.id\)\)/);

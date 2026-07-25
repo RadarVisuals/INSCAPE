@@ -12,6 +12,10 @@
   pointer-events: none;
 }
 
+.category-navigation-context-menu.desktop-menu {
+  z-index: 1300;
+}
+
 @media (max-width: 719px) {
   .profile-navigation-dock {
     top: 14px;

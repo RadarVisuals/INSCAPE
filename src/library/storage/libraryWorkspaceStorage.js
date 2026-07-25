@@ -1,5 +1,5 @@
 import { normalizeProfileAddress } from '../config.js';
-import { LIBRARY_WORKSPACE_VERSION, createEmptyWorkspace, launcherIdForView } from '../domain/libraryWorkspace.js';
+import { LIBRARY_WORKSPACE_VERSION, createEmptyWorkspace } from '../domain/libraryWorkspace.js';
 import { normalizeCanvasObjects } from '../domain/canvasObjects.js';
 
 export const LIBRARY_WORKSPACE_KEY_PREFIX = 'os-underneath.library-workspace.v3:';
@@ -16,12 +16,6 @@ export function libraryWorkspaceKey(profileAddress, version = LIBRARY_WORKSPACE_
   const prefix = version === 1 ? LEGACY_LIBRARY_WORKSPACE_KEY_PREFIX
     : version === 2 ? LEGACY_V2_LIBRARY_WORKSPACE_KEY_PREFIX : version === 3 ? LIBRARY_WORKSPACE_KEY_PREFIX : version === 4 ? LIBRARY_WORKSPACE_V4_KEY_PREFIX : version === 5 ? LIBRARY_WORKSPACE_V5_KEY_PREFIX : version === 6 ? LIBRARY_WORKSPACE_V6_KEY_PREFIX : LIBRARY_WORKSPACE_V7_KEY_PREFIX;
   return `${prefix}${normalized}`;
-}
-
-function normalizePosition(position) {
-  return position && Number.isInteger(position.column) && Number.isInteger(position.row) && position.column >= -255 && position.column <= 255 && position.row >= -255 && position.row <= 255
-    ? { column: position.column, row: position.row }
-    : null;
 }
 
 export function normalizeWorkspace(candidate, profileAddress) {
@@ -41,32 +35,8 @@ export function normalizeWorkspace(candidate, profileAddress) {
     return [{ id: folder.id, name, assetIds: [...new Set((Array.isArray(folder.assetIds) ? folder.assetIds : []).filter((id) => typeof id === 'string' && id.length <= 300))], public: candidate.version >= 7 ? folder.public === true : legacyPublicFolderIds.has(folder.id),
       createdAt: Number.isFinite(folder.createdAt) ? folder.createdAt : 0, updatedAt: Number.isFinite(folder.updatedAt) ? folder.updatedAt : 0 }];
   });
-  const folderIds = new Set(folders.map((folder) => folder.id));
-  const launcherIds = new Set();
-  const launchers = (candidate.version >= 2 && Array.isArray(candidate.canvas?.launchers) ? candidate.canvas.launchers : []).flatMap((launcher) => {
-    const view = launcher?.viewType === 'favorites'
-      ? { type: 'favorites', id: null }
-      : launcher?.viewType === 'folder' && folderIds.has(launcher.folderId) ? { type: 'folder', id: launcher.folderId } : null;
-    const id = launcherIdForView(view);
-    if (!id || launcherIds.has(id)) return [];
-    launcherIds.add(id);
-    return [{ id, viewType: view.type, folderId: view.type === 'folder' ? view.id : null,
-      visitorVisible: candidate.version === 2 ? true : launcher.visitorVisible === true, startOpen: candidate.version >= 5 && launcher.startOpen === true,
-      label: candidate.version >= 5 && typeof launcher.label === 'string' && launcher.label.trim() ? launcher.label.trim().slice(0, 80) : null,
-      position: normalizePosition(launcher.position), windowPosition: normalizePosition(launcher.windowPosition),
-      windowGeometry: candidate.version >= 5 && launcher.windowGeometry
-        && Number.isInteger(launcher.windowGeometry.column) && launcher.windowGeometry.column >= -255 && launcher.windowGeometry.column <= 255
-        && Number.isInteger(launcher.windowGeometry.row) && launcher.windowGeometry.row >= -255 && launcher.windowGeometry.row <= 255
-        && Number.isInteger(launcher.windowGeometry.columnSpan) && launcher.windowGeometry.columnSpan >= 1
-        && Number.isInteger(launcher.windowGeometry.rowSpan) && launcher.windowGeometry.rowSpan >= 1
-        ? { ...launcher.windowGeometry } : null,
-      appearanceMode: ['label','icon','icon_label'].includes(launcher.appearanceMode) ? launcher.appearanceMode : 'label',
-      iconKey: typeof launcher.iconKey === 'string' && launcher.iconKey.length <= 40 ? launcher.iconKey : view.type === 'favorites' ? 'favorites' : 'folder',
-      span: { columns: Math.max(1, Math.min(12, Math.round(Number(launcher.span?.columns) || 3))), rows: Math.max(1, Math.min(8, Math.round(Number(launcher.span?.rows) || 1))) },
-      presentationOrder: Number.isInteger(launcher.presentationOrder) ? launcher.presentationOrder : launcherIds.size + 3 }];
-  });
   const objects = candidate.version >= 6 ? normalizeCanvasObjects(candidate.canvas?.objects) : [];
-  return { version: LIBRARY_WORKSPACE_VERSION, profileAddress: profile, favorites, folders, canvas: { launchers, objects } };
+  return { version: LIBRARY_WORKSPACE_VERSION, profileAddress: profile, favorites, folders, canvas: { launchers: [], objects } };
 }
 
 export function loadLibraryWorkspace(storage, profileAddress) {

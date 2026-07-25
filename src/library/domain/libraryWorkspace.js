@@ -25,8 +25,7 @@ export function deleteFolder(workspace, id) {
   if (!workspace.folders.some((folder) => folder.id === id)) return workspace;
   return {
     ...workspace,
-    folders: workspace.folders.filter((folder) => folder.id !== id),
-    canvas: { ...workspace.canvas, launchers: workspace.canvas.launchers.filter((launcher) => launcher.folderId !== id) }
+    folders: workspace.folders.filter((folder) => folder.id !== id)
   };
 }
 
@@ -47,92 +46,10 @@ export function isProtectedLibraryView(view) {
   return view?.type === LIBRARY_VIEW_TYPES.ALL || view?.type === LIBRARY_VIEW_TYPES.FAVORITES;
 }
 
-export function launcherIdForView(view) {
-  if (view?.type === LIBRARY_VIEW_TYPES.FAVORITES) return 'library:favorites';
-  if (view?.type === LIBRARY_VIEW_TYPES.FOLDER && typeof view.id === 'string' && view.id) return `library:folder:${view.id}`;
-  return null;
-}
-
-export function getPinnedLauncher(workspace, view) {
-  const id = launcherIdForView(view);
-  return id ? workspace.canvas.launchers.find((launcher) => launcher.id === id) || null : null;
-}
-
-export function pinLibraryView(workspace, view) {
-  const id = launcherIdForView(view);
-  if (!id || getPinnedLauncher(workspace, view)) return workspace;
-  if (view.type === LIBRARY_VIEW_TYPES.FOLDER && !workspace.folders.some((folder) => folder.id === view.id)) return workspace;
-  const launcher = { id, viewType: view.type, folderId: view.type === LIBRARY_VIEW_TYPES.FOLDER ? view.id : null,
-    visitorVisible: false, startOpen: false, label: null, position: null, windowPosition: null, windowGeometry: null, appearanceMode: 'label', iconKey: view.type === LIBRARY_VIEW_TYPES.FAVORITES ? 'favorites' : 'folder', span: { columns: 3, rows: 1 }, presentationOrder: workspace.canvas.launchers.length + 4 };
-  return { ...workspace, canvas: { ...workspace.canvas, launchers: [...workspace.canvas.launchers, launcher] } };
-}
-
-export function unpinLibraryView(workspace, view) {
-  const id = launcherIdForView(view);
-  if (!id || !getPinnedLauncher(workspace, view)) return workspace;
-  return { ...workspace, canvas: { ...workspace.canvas, launchers: workspace.canvas.launchers.filter((launcher) => launcher.id !== id) } };
-}
-
-export function setLauncherVisitorVisibility(workspace, launcherId, visitorVisible) {
-  if (typeof visitorVisible !== 'boolean' || !workspace.canvas.launchers.some((launcher) => launcher.id === launcherId)) return workspace;
-  return { ...workspace, canvas: { ...workspace.canvas, launchers: workspace.canvas.launchers.map((launcher) => (
-    launcher.id === launcherId ? { ...launcher, visitorVisible } : launcher
-  )) } };
-}
-
-export function setLauncherStartOpen(workspace, launcherId, startOpen, windowGeometry = null) {
-  if (typeof startOpen !== 'boolean' || !workspace.canvas.launchers.some((launcher) => launcher.id === launcherId)) return workspace;
-  const valid = windowGeometry
-    && Number.isInteger(windowGeometry.column)
-    && Number.isInteger(windowGeometry.row)
-    && Number.isInteger(windowGeometry.columnSpan) && windowGeometry.columnSpan >= 1
-    && Number.isInteger(windowGeometry.rowSpan) && windowGeometry.rowSpan >= 1
-    ? { ...windowGeometry } : null;
-  return { ...workspace, canvas: { ...workspace.canvas, launchers: workspace.canvas.launchers.map((launcher) => launcher.id === launcherId ? { ...launcher, startOpen, ...(valid ? { windowGeometry: valid, windowPosition: { column: valid.column, row: valid.row } } : {}) } : launcher) } };
-}
-
-function setLauncherPlacement(workspace, launcherId, field, position) {
-  const normalized = position && Number.isInteger(position.column) && Number.isInteger(position.row) ? { column: position.column, row: position.row } : null;
-  if (!workspace.canvas.launchers.some((launcher) => launcher.id === launcherId)) return workspace;
-  return { ...workspace, canvas: { ...workspace.canvas, launchers: workspace.canvas.launchers.map((launcher) => launcher.id === launcherId ? { ...launcher, [field]: normalized } : launcher) } };
-}
-
-export function setLauncherPosition(workspace, launcherId, position) {
-  return setLauncherPlacement(workspace, launcherId, 'position', position);
-}
-
-export function setLauncherGeometry(workspace, launcherId, geometry) {
-  if (!workspace.canvas.launchers.some((launcher) => launcher.id === launcherId)) return workspace;
-  if (!geometry || !['column','row','columnSpan','rowSpan'].every((key) => Number.isInteger(geometry[key])) || geometry.columnSpan < 1 || geometry.rowSpan < 1) return workspace;
-  return { ...workspace, canvas: { ...workspace.canvas, launchers: workspace.canvas.launchers.map((launcher) => launcher.id === launcherId ? {
-    ...launcher,
-    position: { column: geometry.column, row: geometry.row },
-    span: { columns: geometry.columnSpan, rows: geometry.rowSpan }
-  } : launcher) } };
-}
-
-export function setLauncherWindowPosition(workspace, launcherId, position) {
-  return setLauncherPlacement(workspace, launcherId, 'windowPosition', position);
-}
-
-export function setLauncherPresentation(workspace, launcherId, patch) {
-  const modes = new Set(['label', 'icon', 'icon_label']);
-  if (!workspace.canvas.launchers.some((launcher) => launcher.id === launcherId)) return workspace;
-  return { ...workspace, canvas: { ...workspace.canvas, launchers: workspace.canvas.launchers.map((launcher) => {
-    if (launcher.id !== launcherId) return launcher;
-    const appearanceMode = modes.has(patch?.appearanceMode) ? patch.appearanceMode : launcher.appearanceMode;
-    const minimum = appearanceMode === 'icon' ? 1 : 2;
-    const span = patch?.span ? { columns: Math.max(minimum, Math.min(12, Math.round(Number(patch.span.columns) || launcher.span.columns))), rows: Math.max(1, Math.min(8, Math.round(Number(patch.span.rows) || launcher.span.rows))) } : launcher.span;
-    const iconKey = typeof patch?.iconKey === 'string' && patch.iconKey.length <= 40 ? patch.iconKey : launcher.iconKey;
-    const label = typeof patch?.label === 'string' && patch.label.trim() ? patch.label.trim().slice(0, 80) : launcher.label;
-    return { ...launcher, appearanceMode, iconKey, label, span };
-  }) } };
-}
-
 export function resetCanvasLayout(workspace) {
   return { ...workspace, canvas: {
     ...workspace.canvas,
-    launchers: workspace.canvas.launchers.map((launcher) => ({ ...launcher, position: null, windowPosition: null, windowGeometry: null })),
+    launchers: [],
     objects: workspace.canvas.objects
   } };
 }
