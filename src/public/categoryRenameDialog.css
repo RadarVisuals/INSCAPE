@@ -1,6 +1,6 @@
 .category-rename-dialog {
   position: fixed;
-  z-index: 1400;
+  z-index: var(--layer-dialog);
   inset: 0;
   display: grid;
   place-items: center;
@@ -11,22 +11,22 @@
 .category-rename-dialog form {
   width: min(360px, calc(100vw - 40px));
   padding: 22px;
-  border: 1px solid rgb(235 236 231 / .24);
-  background: #070808;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
   box-shadow: 18px 22px 50px rgb(0 0 0 / .58);
-  color: #ebece7;
-  font-family: var(--font-interface, "Oxanium", monospace);
+  color: var(--color-text-primary);
+  font-family: var(--font-interface);
 }
 
 .category-rename-dialog form > span,
-.category-rename-dialog label { color: rgb(235 236 231 / .34); font-size: .52rem; letter-spacing: .13em; }
+.category-rename-dialog label { color: var(--color-border-active); font-size: .52rem; letter-spacing: .13em; }
 .category-rename-dialog h2 { margin: 14px 0 24px; font-size: .8rem; letter-spacing: .16em; }
 .category-rename-dialog label,
 .category-rename-dialog input { display: block; width: 100%; }
-.category-rename-dialog input { height: 34px; margin-top: 7px; padding: 0 9px; border: 1px solid rgb(235 236 231 / .2); outline: 0; background: transparent; color: #fff; font: inherit; }
+.category-rename-dialog input { height: 34px; margin-top: 7px; padding: 0 9px; border: 1px solid rgb(235 236 231 / .2); outline: 0; background: transparent; color: var(--color-text-bright); font: inherit; }
 .category-rename-dialog input:focus { border-color: rgb(235 236 231 / .52); }
 .category-rename-dialog form > div { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 22px; }
-.category-rename-dialog button { min-width: 76px; min-height: 32px; padding: 0 12px; border: 1px solid rgb(235 236 231 / .18); background: transparent; color: inherit; font: 500 .52rem/1 var(--font-interface, "Oxanium", monospace); letter-spacing: .09em; cursor: pointer; }
+.category-rename-dialog button { min-width: 76px; min-height: 32px; padding: 0 12px; border: 1px solid var(--color-border-soft); background: transparent; color: inherit; font: 500 .52rem/1 var(--font-interface); letter-spacing: .09em; cursor: pointer; }
 .category-rename-dialog button:hover,
-.category-rename-dialog button:focus-visible { outline: 0; border-color: rgb(235 236 231 / .5); color: #fff; }
+.category-rename-dialog button:focus-visible { outline: 0; border-color: rgb(235 236 231 / .5); color: var(--color-text-bright); }
 .category-rename-dialog button:disabled { opacity: .3; cursor: default; }

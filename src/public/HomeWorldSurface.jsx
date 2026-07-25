@@ -4,7 +4,7 @@ import { clampVerticalHomeWorldCamera } from './homeWorldCamera.js';
 import { exceedsSpatialPointerDragThreshold, finalizeSpatialPointer, getCenteredHorizontalGridOffset } from './spatialWorldCamera.js';
 import './homeWorld.css';
 
-export default function HomeWorldSurface({ camera, geometry, world, gridVisible, theme, visible, transitionPhase = 'home', gridPhaseX = 0, onCameraChange, onMoveKeeper, onOpenContextMenu, narrowGestureRef }) {
+export default function HomeWorldSurface({ camera, geometry, world, gridVisible, theme, spatialTheme = 'dark', visible, transitionPhase = 'home', gridPhaseX = 0, onCameraChange, onMoveKeeper, onOpenContextMenu, narrowGestureRef }) {
   const surfaceRef = useRef(null);
   const pointerRef = useRef(null);
   const narrow = geometry.narrow;
@@ -67,6 +67,7 @@ export default function HomeWorldSurface({ camera, geometry, world, gridVisible,
     data-desktop-canvas
     data-visible={visible || undefined}
     data-gallery-transition={transitionPhase}
+    data-spatial-theme={spatialTheme}
     aria-label="Vertically scrolling home world"
     style={worldTheme}
     onPointerDown={handlePointerDown}

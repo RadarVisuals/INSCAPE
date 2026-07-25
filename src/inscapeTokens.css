@@ -1,0 +1,128 @@
+@font-face {
+  font-family: "PP Monument Extended";
+  src: url("/assets/fonts/PPMonumentExtended-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  --font-brand: "PP Monument Extended", "Arial Wide", "Helvetica Neue", Arial, sans-serif;
+  --font-interface: "Bahnschrift Condensed", "Arial Narrow", "Aptos Narrow", sans-serif;
+  --font-body: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-size-subtitle: .6875rem;
+  --font-weight-regular: 400;
+  --line-height-body: 1.6;
+
+  --color-world: #030405;
+  --color-surface: #070808;
+  --color-surface-deep: #030404;
+  --color-surface-raised: #090a0a;
+  --color-surface-elevated: #101212;
+  --color-surface-subtle: #191b1b;
+  --color-surface-overlay: rgb(7 8 8 / .96);
+  --color-control-surface: #151718;
+  --color-text-bright: #fff;
+  --color-text-warm: #eeebdf;
+  --color-text-primary: #ebece7;
+  --color-text-strong: rgb(235 236 231 / .82);
+  --color-text-secondary: rgb(235 236 231 / .72);
+  --color-text-soft: rgb(235 236 231 / .62);
+  --color-text-dim: rgb(235 236 231 / .58);
+  --color-text-muted: rgb(235 236 231 / .47);
+  --color-text-faint: rgb(235 236 231 / .38);
+  --color-text-disabled: rgb(235 236 231 / .3);
+  --color-line-hairline: rgb(235 236 231 / .1);
+  --color-border-subtle: rgb(235 236 231 / .13);
+  --color-border: rgb(235 236 231 / .17);
+  --color-border-soft: rgb(235 236 231 / .18);
+  --color-border-strong: rgb(235 236 231 / .24);
+  --color-border-emphasis: rgb(235 236 231 / .28);
+  --color-border-active: rgb(235 236 231 / .34);
+  --color-surface-hover: rgb(235 236 231 / .035);
+  --color-hover: rgb(235 236 231 / .06);
+  --color-selected: rgb(235 236 231 / .1);
+  --color-focus: #f3a078;
+  --color-success: #8ebf94;
+  --color-destructive: #ef8d78;
+  --color-accent-interface: #e87945;
+  --color-backdrop: rgb(0 0 0 / .78);
+
+  --bg-color: var(--color-world);
+  --panel-bg: var(--color-surface-elevated);
+  --border-color: var(--color-border);
+  --text-main: var(--color-text-primary);
+  --text-muted: var(--color-text-muted);
+  --font-sans: var(--font-body);
+  --hu-border: var(--color-border-strong);
+  --hu-text: var(--color-text-primary);
+  --hu-text-muted: var(--color-text-muted);
+  --hu-focus: var(--color-focus);
+  --hu-success: var(--color-success);
+  --hu-destructive: var(--color-destructive);
+  --hu-accent-primary: var(--color-accent-interface);
+  --module-accent: var(--color-accent-interface);
+  --os-accent: var(--color-accent-interface);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --control-height-sm: 28px;
+  --control-height-md: 34px;
+  --control-height-lg: 38px;
+  --window-padding: 18px;
+  --menu-row-height: 30px;
+  --shadow-anchored: 8px 9px 0 rgb(0 0 0 / .18);
+  --shadow-window: 18px 22px 50px rgb(0 0 0 / .46);
+  --shadow-dialog: 10px 12px 0 rgb(0 0 0 / .24);
+  --duration-fast: 120ms;
+  --duration-ui: 180ms;
+  --duration-slow: 340ms;
+  --ease-standard: cubic-bezier(.2, .78, .14, 1);
+  --layer-world: 5;
+  --layer-interface: 20;
+  --layer-hud: 70;
+  --layer-window: 170;
+  --layer-menu: 310;
+  --layer-dialog: 320;
+  --layer-startveil: 1000;
+
+  --spatial-background: #030405;
+  --spatial-grid-line: rgb(224 226 218 / .19);
+  --spatial-vignette: radial-gradient(ellipse at 50% 48%, transparent 0 46%, rgb(0 0 0 / .2) 76%, rgb(0 0 0 / .58) 100%);
+  --spatial-floor: linear-gradient(180deg, rgb(4 5 5 / .9), rgb(0 0 0 / .98));
+  --spatial-ceiling: linear-gradient(180deg, #010202, rgb(5 6 6 / .9));
+}
+
+[data-spatial-theme="light"] {
+  color-scheme: light;
+  --spatial-background: #e7e4dc;
+  --spatial-grid-line: rgb(12 14 14 / .28);
+  --spatial-vignette: radial-gradient(ellipse at 50% 48%, transparent 0 52%, rgb(20 20 18 / .04) 82%, rgb(20 20 18 / .11) 100%);
+  --spatial-floor: linear-gradient(180deg, #dedbd3, #c9c5bb);
+  --spatial-ceiling: linear-gradient(180deg, #d3d0c8, #e7e4dc);
+}
+
+:where(.public-shell, .profile-discovery, .startveil) :where(button, a[href], input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+:where(.public-shell, .profile-discovery) :where(button, input, select, textarea) { font-family: var(--font-interface); }
+.nft-dossier__body > p, .profile-identity-card__details > p { font-family: var(--font-body); line-height: var(--line-height-body); }
+:where(.public-shell, .profile-discovery) :where(code, pre, [data-technical], .technical-value) { font-family: var(--font-mono); font-variant-caps: normal; text-transform: none; }
+
+* { scrollbar-color: var(--color-border-emphasis) transparent; scrollbar-width: thin; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { border-radius: 0; background: var(--color-border-emphasis); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --duration-fast: 1ms; --duration-ui: 1ms; --duration-slow: 1ms; }
+}

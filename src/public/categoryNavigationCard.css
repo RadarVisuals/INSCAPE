@@ -7,11 +7,11 @@
   min-height: 38px;
   flex: 0 1 38px;
   overflow: hidden;
-  border: 1px solid rgb(235 236 231 / .17);
-  background: #070808;
-  box-shadow: 8px 9px 0 rgb(0 0 0 / .18);
-  color: #ebece7;
-  font-family: var(--font-interface, "Oxanium", monospace);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-anchored);
+  color: var(--color-text-primary);
+  font-family: var(--font-interface);
   font-stretch: normal;
   font-variant-caps: normal;
   text-transform: none;
@@ -19,7 +19,7 @@
   visibility: hidden;
   pointer-events: none;
   transform: translate3d(0, -6px, 0);
-  transition: height 380ms cubic-bezier(.2,.78,.14,1), opacity 140ms linear, transform 220ms cubic-bezier(.2,.78,.14,1), visibility 0s linear 380ms, box-shadow 260ms linear, border-color 120ms linear;
+  transition: height 380ms var(--ease-standard), opacity 140ms linear, transform 220ms var(--ease-standard), visibility 0s linear 380ms, box-shadow 260ms linear, border-color var(--duration-fast) linear;
 }
 
 .category-navigation-card *,
@@ -37,7 +37,7 @@
 .category-navigation-card[data-expanded] {
   height: var(--category-expanded-height);
   flex-basis: var(--category-expanded-height);
-  border-color: rgb(235 236 231 / .24);
+  border-color: var(--color-border-strong);
   box-shadow: 18px 22px 50px rgb(0 0 0 / .42);
 }
 
@@ -58,7 +58,7 @@
 }
 
 .category-navigation-card > header strong {
-  font: 500 .68rem/1 var(--font-interface, "Oxanium", monospace);
+  font: 500 .68rem/1 var(--font-interface);
   letter-spacing: .18em;
 }
 
@@ -67,7 +67,7 @@
   font-size: 1rem;
   font-style: normal;
   transform: rotate(0deg);
-  transition: transform 220ms cubic-bezier(.2,.78,.14,1);
+  transition: transform 220ms var(--ease-standard);
 }
 
 .category-navigation-card[data-expanded] > header i { transform: rotate(-90deg); }
@@ -75,7 +75,7 @@
 .category-navigation-card > header > button:hover,
 .category-navigation-card > header > button:focus-visible {
   outline: 0;
-  color: #fff;
+  color: var(--color-text-bright);
 }
 
 .category-navigation-card nav {
@@ -88,7 +88,7 @@
   opacity: 0;
   visibility: hidden;
   transform: translate3d(0, -8px, 0);
-  transition: opacity 150ms linear, transform 260ms cubic-bezier(.2,.78,.14,1), visibility 0s linear 380ms;
+  transition: opacity 150ms linear, transform 260ms var(--ease-standard), visibility 0s linear 380ms;
 }
 
 .category-navigation-card[data-expanded] nav {
@@ -109,7 +109,7 @@
   color: rgb(235 236 231 / .52);
   text-align: left;
   cursor: pointer;
-  transition: color 120ms linear, background 120ms linear, padding 120ms linear;
+  transition: color var(--duration-fast) linear, background var(--duration-fast) linear, padding var(--duration-fast) linear;
 }
 
 .category-navigation-card nav button small {
@@ -119,7 +119,7 @@
 
 .category-navigation-card nav button span {
   overflow: hidden;
-  font: 500 .74rem/1 var(--font-interface, "Oxanium", monospace);
+  font: 500 .74rem/1 var(--font-interface);
   letter-spacing: .15em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -135,13 +135,13 @@
   outline: 0;
   padding-left: 24px;
   background: rgb(255 255 255 / .025);
-  color: #fff;
+  color: var(--color-text-bright);
 }
 
 .category-navigation-card nav button[data-active] {
   background: rgb(255 255 255 / .04);
   box-shadow: inset 2px 0 rgb(235 236 231 / .8);
-  color: #fff;
+  color: var(--color-text-bright);
 }
 
 .category-navigation-card nav button[data-active] i { opacity: .65; }
@@ -149,7 +149,7 @@
 .category-navigation-card nav > p {
   margin: 0;
   padding: 18px;
-  color: rgb(235 236 231 / .28);
+  color: var(--color-border-emphasis);
   font-size: .54rem;
   letter-spacing: .12em;
 }

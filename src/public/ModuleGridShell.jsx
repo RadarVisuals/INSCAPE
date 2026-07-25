@@ -246,22 +246,7 @@ export default function ModuleGridShell({
   }, [openWorldContextMenu, registerWorldContextMenu]);
 
   const theme = useMemo(() => getPublicTheme(activeActorId), [activeActorId]);
-  const shellTheme = useMemo(() => ({
-    ...theme,
-    '--hu-accent-primary': '#e87945',
-    '--hu-accent-secondary': '#e7a36f',
-    '--hu-focus': '#f3a078',
-    '--hu-signal': '#e87945',
-    '--module-accent': '#e87945',
-    '--os-accent': '#e87945',
-    '--spatial-background': gridPalette === 'light' ? '#e7e4dc' : '#030405',
-    '--spatial-grid-line': gridPalette === 'light' ? 'rgba(12,14,14,.28)' : 'rgba(224,226,218,.19)',
-    '--spatial-vignette': gridPalette === 'light'
-      ? 'radial-gradient(ellipse at 50% 48%,transparent 0 52%,rgba(20,20,18,.04) 82%,rgba(20,20,18,.11) 100%)'
-      : 'radial-gradient(ellipse at 50% 48%,transparent 0 46%,rgba(0,0,0,.2) 76%,rgba(0,0,0,.58) 100%)',
-    '--spatial-floor': gridPalette === 'light' ? 'linear-gradient(180deg,#dedbd3,#c9c5bb)' : 'linear-gradient(180deg,rgba(4,5,5,.9),rgba(0,0,0,.98))',
-    '--spatial-ceiling': gridPalette === 'light' ? 'linear-gradient(180deg,#d3d0c8,#e7e4dc)' : 'linear-gradient(180deg,#010202,rgba(5,6,6,.9))'
-  }), [gridPalette, theme]);
+  const shellTheme = theme;
 
   const moveKeeperFromHome = useCallback((clientX, clientY) => {
     if (keeperDockActive && keeperDockRef.current) {
@@ -1015,6 +1000,7 @@ export default function ModuleGridShell({
       data-application-mode="public"
       data-identity-open={identityOpen || undefined}
       data-actor-id={activeActorId}
+      data-spatial-theme={gridPalette}
       data-layout-mode={geometry.narrow ? 'narrow' : 'desktop'}
       data-interface-visible={interfaceVisible || undefined}
       data-entry-sequence={revealPresentation.sequence}
@@ -1111,6 +1097,7 @@ export default function ModuleGridShell({
         world={homeWorld}
         gridVisible={gridVisible}
         theme={shellTheme}
+        spatialTheme={gridPalette}
         visible={interfaceVisible}
         onCameraChange={setHomeCameraImmediately}
         onMoveKeeper={moveKeeperFromHome}
@@ -1145,6 +1132,7 @@ export default function ModuleGridShell({
           data-edit-mode={editMode || undefined}
           data-entry-sequence={revealPresentation.sequence}
           data-visible={interfaceVisible || undefined}
+          data-spatial-theme={gridPalette}
           style={{
             ...shellTheme,
             left: 0,
@@ -1213,6 +1201,7 @@ export default function ModuleGridShell({
         assets={libraryAssets}
         assetStatus={libraryStatus}
         theme={shellTheme}
+        spatialTheme={gridPalette}
         ownerAuthoringEnabled={ownerAuthoringEnabled}
         selectedArtworkId={selectedCanvasObjectId}
         presentationPreview={contextMenu?.target?.type === 'gallery-object' ? galleryPresentationPreview : null}
@@ -1232,6 +1221,7 @@ export default function ModuleGridShell({
       />}
       {upperWorldMounted && <UpperWorldSurface
         theme={shellTheme}
+        spatialTheme={gridPalette}
         gridPhaseX={homeGridPhaseX}
         gridOffsetY={upperGridOffsetY}
         transitionPhase={upperTransitionPhase}

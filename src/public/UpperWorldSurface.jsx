@@ -24,7 +24,7 @@ function UpperPerspectiveGrid({ width, height, offset, spacing }) {
   </svg>;
 }
 
-export default function UpperWorldSurface({ theme, cameraX = 0, gridPhaseX = 0, gridOffsetY = 0, transitionPhase = 'upper', onMoveKeeper }) {
+export default function UpperWorldSurface({ theme, spatialTheme = 'dark', cameraX = 0, gridPhaseX = 0, gridOffsetY = 0, transitionPhase = 'upper', onMoveKeeper }) {
   const surfaceRef = useRef(null);
   const pointerRef = useRef(null);
   const [viewport, setViewport] = useState(() => ({
@@ -64,6 +64,7 @@ export default function UpperWorldSurface({ theme, cameraX = 0, gridPhaseX = 0, 
     ref={surfaceRef}
     className="upper-world"
     data-transition-phase={transitionPhase}
+    data-spatial-theme={spatialTheme}
     aria-label="Upper spatial world"
     style={{ ...theme, '--upper-grid-offset': `${gridOffset}px`, '--upper-grid-offset-y': `${wallGridOffsetY}px`, '--upper-ceiling-height': `${ceilingHeight}px` }}
     onPointerDown={(event) => {

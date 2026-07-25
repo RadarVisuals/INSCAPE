@@ -36,7 +36,7 @@ function AttributesFace({ asset }) {
 
 function RecordFace({ asset, onCopyContract }) {
   const balance = asset.rawMetadata?.balance;
-  return <article className="nft-dossier">
+  return <article className="nft-dossier nft-dossier--technical">
     <header><small>03 / RECORD</small><strong>ON-CHAIN INFORMATION</strong></header>
     <div className="nft-dossier__body">
       <dl>

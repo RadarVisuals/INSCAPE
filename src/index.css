@@ -1,17 +1,4 @@
-/* src/index.css */
-:root {
-  --bg-color: #050505;
-  --panel-bg: #121212;
-  --border-color: #2a2a2a;
-  --text-main: #e0e0e0;
-  --text-muted: #666666;
-  --accent-color: #8b0000;
-  --accent-hover: #a50000;
-  
-  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  --font-interface: "Bahnschrift Condensed", "Arial Narrow", "Aptos Narrow", sans-serif;
-}
+@import './inscapeTokens.css';
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -96,19 +83,4 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .application-world,
   .application-interface { transition-duration: 160ms; }
-}
-
-/* Brutalist Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-color);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 0;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
 }

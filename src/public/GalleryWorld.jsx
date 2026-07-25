@@ -30,7 +30,7 @@ function GalleryFloorGrid({ width, height, offset, spacing }) {
   </svg>;
 }
 
-export default function GalleryWorld({ objects, assets, assetStatus = 'ready', theme, ownerAuthoringEnabled = false, selectedArtworkId = null, presentationPreview = null, transitionPhase = 'gallery', gridPhaseX = 0, gridOffsetY = 0, renderImage, onOpenArtwork, onSelectArtwork, onOpenContextMenu, onChangeArtworkGeometry, onRemoveArtwork, onRegisterArtworkElement, onExit, onCameraXChange, onMoveKeeper, onMoveKeeperHorizontally }) {
+export default function GalleryWorld({ objects, assets, assetStatus = 'ready', theme, spatialTheme = 'dark', ownerAuthoringEnabled = false, selectedArtworkId = null, presentationPreview = null, transitionPhase = 'gallery', gridPhaseX = 0, gridOffsetY = 0, renderImage, onOpenArtwork, onSelectArtwork, onOpenContextMenu, onChangeArtworkGeometry, onRemoveArtwork, onRegisterArtworkElement, onExit, onCameraXChange, onMoveKeeper, onMoveKeeperHorizontally }) {
   const viewportRef = useRef(null);
   const dragRef = useRef(null);
   const artworkInteractionRef = useRef(null);
@@ -248,8 +248,8 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
   const gridOffset = getCenteredHorizontalGridOffset(cameraX - gridPhaseX, viewport.width, gridSpacing);
   const progress = layout.maxCameraX ? cameraX / layout.maxCameraX : 0;
   const portalTarget = typeof document === 'undefined' ? null : document.querySelector('.application-root');
-  const worldTheme = { ...theme, '--module-accent': '#ebece7' };
-  const backdrop = <div className="gallery-world-backdrop" aria-hidden="true" data-transition-phase={transitionPhase} style={{ ...worldTheme, '--gallery-grid-offset': `${gridOffset}px`, '--gallery-grid-offset-y': `${gridOffsetY}px`, '--gallery-horizon': `${layout.horizon}px` }}>
+  const worldTheme = { ...theme, '--module-accent': 'var(--color-text-primary)' };
+  const backdrop = <div className="gallery-world-backdrop" aria-hidden="true" data-spatial-theme={spatialTheme} data-transition-phase={transitionPhase} style={{ ...worldTheme, '--gallery-grid-offset': `${gridOffset}px`, '--gallery-grid-offset-y': `${gridOffsetY}px`, '--gallery-horizon': `${layout.horizon}px` }}>
     <div className="gallery-world__shader-glass" />
     <div className="gallery-world__wall" />
     <div className="gallery-world__horizon" />
@@ -261,6 +261,7 @@ export default function GalleryWorld({ objects, assets, assetStatus = 'ready', t
     className="gallery-world"
     data-dragging={dragging || undefined}
     data-transition-phase={transitionPhase}
+    data-spatial-theme={spatialTheme}
     aria-label="Side-scrolling creations gallery"
     tabIndex="-1"
     style={{ ...worldTheme, '--gallery-horizon': `${layout.horizon}px` }}

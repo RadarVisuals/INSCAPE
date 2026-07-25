@@ -15,7 +15,7 @@
   width: min(560px, calc(100vw - 40px));
   box-sizing: border-box;
   padding: 30px;
-  border: 1px solid rgba(238, 235, 223, .24);
+  border: 1px solid var(--color-border-strong);
   background: rgba(4, 5, 5, .97);
   box-shadow: 0 24px 80px rgba(0, 0, 0, .58);
 }
@@ -27,8 +27,8 @@
 }
 .published-profile-status__card h1 {
   margin: 14px 0 10px;
-  color: #eeebdf;
-  font: 650 22px/1.15 var(--font-interface, 'PP Monument Extended', sans-serif);
+  color: var(--color-text-warm);
+  font: 650 22px/1.15 var(--font-interface);
   letter-spacing: .04em;
 }
 .published-profile-status__card p {
@@ -59,14 +59,14 @@
   min-height: 36px;
   margin: 0;
   padding: 0 14px;
-  border: 1px solid rgba(238, 235, 223, .24);
+  border: 1px solid var(--color-border-strong);
   background: transparent;
   color: rgba(238, 235, 223, .82);
-  font: 650 9px/1 var(--font-interface, 'PP Monument Extended', sans-serif);
+  font: 650 9px/1 var(--font-interface);
   letter-spacing: .08em;
   cursor: pointer;
 }
-.published-profile-actions button:hover { border-color: rgba(238, 235, 223, .58); color: #fff; }
+.published-profile-actions button:hover { border-color: rgba(238, 235, 223, .58); color: var(--color-text-bright); }
 
 @media (max-width: 560px) {
   .published-profile-status { padding: 12px; background-size: 56px 56px; }

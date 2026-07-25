@@ -1,8 +1,8 @@
 .keeper-signal-layer { position:fixed; inset:0; z-index:70; pointer-events:none; }
 .keeper-speech { position:absolute; left:clamp(12px,calc(var(--actor-screen-x,50vw) + 70px),calc(100vw - 322px)); top:clamp(74px,calc(var(--actor-screen-y,50vh) - 92px),calc(100vh - 150px)); width:min(280px,calc(100vw - 24px)); padding:11px 38px 11px 13px; border:1px solid rgb(238 235 223 / .24); border-left:2px solid var(--module-accent); background:rgb(8 10 10 / .96); box-shadow:8px 9px 0 rgb(0 0 0 / .2); pointer-events:auto; }
 .keeper-speech::before { content:''; position:absolute; left:-9px; bottom:18px; width:15px; height:15px; border-left:1px solid rgb(238 235 223 / .24); border-bottom:1px solid rgb(238 235 223 / .24); background:#080a0a; transform:rotate(45deg); }
-.keeper-speech__label { color:var(--module-accent); font:600 .48rem/1 'Oxanium',sans-serif; letter-spacing:.1em; }
-.keeper-speech p { margin:5px 0 0; color:var(--hu-text); font:.66rem/1.4 'Oxanium',sans-serif; }
+.keeper-speech__label { color:var(--module-accent); font:600 .48rem/1 var(--font-interface); letter-spacing:.1em; }
+.keeper-speech p { margin:5px 0 0; color:var(--hu-text); font:.66rem/1.4 var(--font-interface); }
 .keeper-speech button { position:absolute; z-index:2; right:5px; top:5px; width:28px; height:28px; display:grid; place-items:center; border:0; border-left:1px solid rgb(238 235 223 / .1); background:transparent; color:var(--hu-text-muted); cursor:pointer; pointer-events:auto; }
 .keeper-speech button:hover,.keeper-speech button:focus-visible { outline:0; color:var(--module-accent); }
 .keeper-speech svg { width:15px; }
