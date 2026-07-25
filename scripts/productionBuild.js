@@ -22,7 +22,10 @@ export const UNUSED_PUBLIC_PATHS = Object.freeze([
 export const PRODUCTION_BUDGETS = Object.freeze({
   initialJavaScript: Object.freeze({ raw: 1_265_000, gzip: 370_000 }),
   ownerJavaScript: Object.freeze({ raw: 220_000, gzip: 63_000 }),
-  standaloneWalletJavaScript: Object.freeze({ raw: 3_970_000, gzip: 1_055_000 }),
+  // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
+  // than in the local Windows build. Keep a small measured cross-platform margin
+  // while continuing to budget this lazy runtime independently from the core app.
+  standaloneWalletJavaScript: Object.freeze({ raw: 4_400_000, gzip: 1_200_000 }),
   initialCss: Object.freeze({ raw: 117_000, gzip: 20_000 }),
   ownerCss: Object.freeze({ raw: 31_000, gzip: 6_300 }),
   coreJavaScript: Object.freeze({ raw: 1_820_000, gzip: 533_000 }),

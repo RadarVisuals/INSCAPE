@@ -85,7 +85,7 @@ function App() {
         acquisition = acquireStandaloneWalletSession({
           initializeWallet: initWallet,
           disposeWallet: () => useWalletStore.getState().disposeWallet(),
-          onError: (error) => reportControlledError('standalone-wallet-session', error)
+          onError: (error) => reportControlledError('standalone-wallet-connect', error)
         });
         if (cancelled) {
           acquisition.release();
