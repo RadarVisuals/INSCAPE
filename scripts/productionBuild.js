@@ -28,7 +28,9 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   standaloneWalletJavaScript: Object.freeze({ raw: 4_400_000, gzip: 1_200_000 }),
   initialCss: Object.freeze({ raw: 117_000, gzip: 20_000 }),
   ownerCss: Object.freeze({ raw: 31_000, gzip: 6_300 }),
-  coreJavaScript: Object.freeze({ raw: 1_820_000, gzip: 533_000 }),
+  // Owner/publication reconciliation adds the deterministic IPFS hydration and
+  // three-way baseline guard to production. Keep the accepted growth bounded.
+  coreJavaScript: Object.freeze({ raw: 1_830_000, gzip: 535_000 }),
   publicAssets: Object.freeze({ raw: 15_000_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });

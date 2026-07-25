@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import PublishedProfileDocumentPreview from './PublishedProfileDocumentPreview.jsx';
 import ProfileDiscoveryBoundary from '../../profileDiscovery/ProfileDiscoveryBoundary.jsx';
 import { PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileRepository.js';
-import { usePublishedProfile } from '../state/usePublishedProfile.js';
 import '../../public/moduleGrid.css';
 import '../../library/collection.css';
 import '../profileDocument.css';
@@ -34,18 +33,16 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
   </main>;
 }
 
-export default function PublishedProfileBoundary({ address, returnProfileAddress, onVisitProfile, onDocumentChange, onMoveKeeper, onMoveKeeperHorizontally }) {
+export default function PublishedProfileBoundary({ address, resolution, onRetry, returnProfileAddress, onVisitProfile, onMoveKeeper, onMoveKeeperHorizontally }) {
   const [directoryOpen, setDirectoryOpen] = useState(false);
-  const [resolution, retry] = usePublishedProfile(address);
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
   const canReturn = Boolean(returnProfileAddress && returnProfileAddress.toLowerCase() !== String(address || '').toLowerCase());
   const returnHome = canReturn ? () => onVisitProfile?.(returnProfileAddress) : null;
-  useEffect(() => { onDocumentChange?.(visibleDocument); return () => onDocumentChange?.(null); }, [onDocumentChange, visibleDocument]);
   const content = !visibleDocument
-    ? <PublishedStatusSurface state={resolution} onRetry={retry} onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
+    ? <PublishedStatusSurface state={resolution} onRetry={onRetry} onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
     : <><PublishedProfileDocumentPreview document={visibleDocument} onMoveKeeper={onMoveKeeper} onMoveKeeperHorizontally={onMoveKeeperHorizontally}
       onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
-    {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={retry} /></div>}
+    {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={onRetry} /></div>}
     </>;
   return <>{content}{directoryOpen && <ProfileDiscoveryBoundary onClose={() => setDirectoryOpen(false)} onSelect={(profile) => {
     onVisitProfile?.(profile.address); setDirectoryOpen(false);

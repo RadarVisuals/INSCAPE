@@ -14,8 +14,12 @@ import { reportControlledError } from '../diagnostics.js';
 import { assertValidProfileDocument } from '../profileDocument/domain/profileDocumentValidation.js';
 import { createProfileDocumentRestorePlan } from '../profileDocument/domain/profileDocumentRestore.js';
 import { profileDocumentContentFingerprint } from '../profileDocument/domain/profileDocumentSerialization.js';
+import { profileDocumentReconciliationFingerprint } from '../profileDocument/domain/profileDocumentSerialization.js';
+import { decideOwnerPublicationReconciliation, isWorkspacePublicProjectionEmpty, OWNER_RECONCILIATION_ACTION } from '../profileDocument/domain/ownerPublicationReconciliation.js';
 import { canonicalPublicationHash, publicationContentFingerprint } from '../profileDocument/domain/profileDocumentPublication.js';
 import { loadProfileSnapshot, loadRestoredPresentation, profilePresentationKey, saveProfileSnapshot, saveRestoredPresentation } from '../profileDocument/storage/profileDocumentStorage.js';
+import { loadOwnerPublicationBaseline, publicationPointerMetadata, saveOwnerPublicationBaseline } from '../profileDocument/storage/ownerPublicationBaselineStorage.js';
+import { inspectLibraryWorkspaceRecord } from '../library/storage/libraryWorkspaceStorage.js';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { getPublicTheme } from './themeTokens.js';
 import { findScenePlacement, findScenePlacementAtPointer, isScenePlacementAvailable, normalizeSpan, packCompactCanvasObjects, packCompactScene } from './sceneGrid.js';
@@ -140,6 +144,8 @@ export default function ModuleGridShell({
   onStageVisibilityChange,
   registerWorldContextMenu,
   onGalleryOpenChange,
+  publishedResolution,
+  onPublicationConfirmed,
   interfaceVisible = true,
   ownerAuthoringEnabled = false,
   workspaceProfileAddress,
@@ -153,9 +159,17 @@ export default function ModuleGridShell({
   const setLibraryProfileAddress = useLibraryStore((state) => state.setProfileAddress);
   const setSignalProfileAddress = useSignalStore((state) => state.setProfileAddress);
   const activateDocumentProfile = useProfileDocumentStore((state) => state.activateProfile);
+  const workspaceRecordRef = useRef(new Map());
+  const [publicationReconciliation, setPublicationReconciliation] = useState({ profileAddress: null, publishedFingerprint: null, status: 'pending' });
+  const [confirmedPublication, setConfirmedPublication] = useState(null);
   useLayoutEffect(() => {
     const profile = normalizeProfileAddress(workspaceProfileAddress);
     if (!profile) return;
+    if (!workspaceRecordRef.current.has(profile)) {
+      workspaceRecordRef.current.set(profile, inspectLibraryWorkspaceRecord(window.localStorage, profile));
+    }
+    setPublicationReconciliation({ profileAddress: profile, publishedFingerprint: null, status: 'pending' });
+    setConfirmedPublication(null);
     activateDocumentProfile(profile);
     setLibraryProfileAddress(profile);
     setSignalProfileAddress(profile);
@@ -379,6 +393,7 @@ export default function ModuleGridShell({
     signalSettings, profileIdentity, modulePositions: positions, systemPresentation, createdAt: 0, exportedAt: 0
   }), [activeActorId, avatarShape, environment, libraryAssets, positions, profileIdentity, signalSettings, stageId, systemPresentation, visitorNavigation, workspace]);
   const draftFingerprint = useMemo(() => profileDocumentContentFingerprint(draftDocument), [draftDocument]);
+  const reconciliationFingerprint = useMemo(() => profileDocumentReconciliationFingerprint(draftDocument), [draftDocument]);
   const draftGenerationRef = useRef({ fingerprint: draftFingerprint, generation: 0 });
   if (draftGenerationRef.current.fingerprint !== draftFingerprint) {
     draftGenerationRef.current = { fingerprint: draftFingerprint, generation: draftGenerationRef.current.generation + 1 };
@@ -386,6 +401,9 @@ export default function ModuleGridShell({
   const snapshotStale = Boolean(snapshot && useProfileDocumentStore.getState().profileAddress === documentProfileAddress
     && useProfileDocumentStore.getState().snapshotDraftFingerprint !== draftFingerprint);
   const draftSaveStatus = draftSaveState.profileAddress === workspace.profileAddress ? draftSaveState.status : 'saving';
+  const effectivePublishedResolution = confirmedPublication?.profileAddress === workspace.profileAddress
+    ? confirmedPublication.resolution
+    : publishedResolution;
   const persistOwnerDraft = useCallback(() => {
     const librarySaved = flushLibraryWorkspace();
     const signalsSaved = flushSignalDocument();
@@ -406,14 +424,85 @@ export default function ModuleGridShell({
   }, [activeActorId, avatarShape, environment, geometry.narrow, positions, stageId, systemPresentation, visitorNavigation, workspace.profileAddress]);
 
   useEffect(() => {
-    if (!ownerAuthoringEnabled) return undefined;
+    if (!ownerAuthoringEnabled || normalizeProfileAddress(workspaceProfileAddress) !== workspace.profileAddress) return;
+    const status = effectivePublishedResolution?.status;
+    if (status === 'LOADING' || status === 'STALE' && effectivePublishedResolution?.busy) return;
+    const publication = ['RESOLVED', 'STALE'].includes(status) ? effectivePublishedResolution?.document : null;
+    const record = workspaceRecordRef.current.get(workspace.profileAddress) || { presence: 'unavailable' };
+    if (!publication) {
+      setPublicationReconciliation({ profileAddress: workspace.profileAddress, publishedFingerprint: null,
+        status: status === 'UNAVAILABLE' || record.presence !== 'absent' ? 'ready' : 'blocked' });
+      return;
+    }
+    const publishedFingerprint = profileDocumentReconciliationFingerprint(publication);
+    if (publicationReconciliation.profileAddress === workspace.profileAddress
+      && publicationReconciliation.publishedFingerprint === publishedFingerprint
+      && publicationReconciliation.status === 'ready') return;
+    const baseline = loadOwnerPublicationBaseline(window.localStorage, workspace.profileAddress);
+    let action = decideOwnerPublicationReconciliation({
+      localRecordPresence: record.presence,
+      localFingerprint: reconciliationFingerprint,
+      localPublicProjectionEmpty: isWorkspacePublicProjectionEmpty(workspace),
+      baseline,
+      publishedFingerprint
+    });
+    if (action === OWNER_RECONCILIATION_ACTION.CONFLICT) {
+      const restorePublished = window.confirm('This browser contains a local INSCAPE draft that differs from the latest publication. Load the published public presentation? Private folders and private gallery artwork will be preserved. Select Cancel to keep this local draft.');
+      action = restorePublished ? OWNER_RECONCILIATION_ACTION.HYDRATE_PUBLICATION : OWNER_RECONCILIATION_ACTION.KEEP_LOCAL;
+    }
+    if (action === OWNER_RECONCILIATION_ACTION.WAIT) return;
+    const pointer = publicationPointerMetadata(effectivePublishedResolution?.pointer);
+    if (action === OWNER_RECONCILIATION_ACTION.HYDRATE_PUBLICATION) {
+      try {
+        const plan = createProfileDocumentRestorePlan(publication, workspace);
+        if (!replaceWorkspace(plan.workspace)) throw new Error('Could not persist the hydrated public workspace');
+        if (!replaceSignalSettings(plan.signalSettings)) throw new Error('Could not persist hydrated Activity settings');
+        if (!saveRestoredPresentation(window.localStorage, workspace.profileAddress, {
+          keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment,
+          avatarShape: plan.avatarShape, visitorNavigation: plan.visitorNavigation
+        })) throw new Error('Could not persist hydrated profile presentation');
+        const nextPositions = { ...positions };
+        const nextSystemPresentation = { ...systemPresentation };
+        Object.entries(plan.systemModules).forEach(([id, module]) => {
+          if (module.placement) nextPositions[id] = module.placement;
+          if (nextSystemPresentation[id]) nextSystemPresentation[id] = { ...nextSystemPresentation[id], ...module };
+        });
+        setPositions(nextPositions);
+        setSystemPresentation(nextSystemPresentation);
+        writeOwnerProfileValue(window.localStorage, MODULE_LAYOUT_STORAGE_KEY, workspace.profileAddress, encodeModuleLayout(nextPositions));
+        writeOwnerProfileValue(window.localStorage, SYSTEM_SCENE_KEY, workspace.profileAddress, JSON.stringify(nextSystemPresentation));
+        setAvatarShape(plan.avatarShape);
+        setVisitorNavigation(plan.visitorNavigation);
+        onApplyRestoredPresentation?.({ keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment });
+        saveOwnerPublicationBaseline(window.localStorage, workspace.profileAddress, {
+          ...pointer, publishedFingerprint, localFingerprint: publishedFingerprint, hydratedAt: Date.now()
+        });
+        workspaceRecordRef.current.set(workspace.profileAddress, { presence: 'current', profileAddress: workspace.profileAddress });
+      } catch (error) {
+        reportControlledError('owner-publication-hydration', error);
+        setPublicationReconciliation({ profileAddress: workspace.profileAddress, publishedFingerprint, status: 'blocked' });
+        return;
+      }
+    } else {
+      saveOwnerPublicationBaseline(window.localStorage, workspace.profileAddress, {
+        ...pointer, publishedFingerprint, localFingerprint: reconciliationFingerprint, hydratedAt: Date.now()
+      });
+    }
+    setPublicationReconciliation({ profileAddress: workspace.profileAddress, publishedFingerprint, status: 'ready' });
+  }, [effectivePublishedResolution, onApplyRestoredPresentation, ownerAuthoringEnabled, positions, publicationReconciliation,
+    reconciliationFingerprint, replaceSignalSettings, replaceWorkspace, systemPresentation, workspace, workspaceProfileAddress]);
+
+  useEffect(() => {
+    if (!ownerAuthoringEnabled || publicationReconciliation.status !== 'ready'
+      || publicationReconciliation.profileAddress !== workspace.profileAddress) return undefined;
     setDraftSaveState({ profileAddress: workspace.profileAddress, status: 'saving' });
     const timeout = window.setTimeout(persistOwnerDraft, 240);
     return () => window.clearTimeout(timeout);
-  }, [draftFingerprint, ownerAuthoringEnabled, persistOwnerDraft, signalSettings, workspace]);
+  }, [draftFingerprint, ownerAuthoringEnabled, persistOwnerDraft, publicationReconciliation, signalSettings, workspace]);
 
   useEffect(() => {
-    if (!ownerAuthoringEnabled) return undefined;
+    if (!ownerAuthoringEnabled || publicationReconciliation.status !== 'ready'
+      || publicationReconciliation.profileAddress !== workspace.profileAddress) return undefined;
     const flush = () => persistOwnerDraft();
     window.addEventListener('pagehide', flush);
     window.addEventListener('beforeunload', flush);
@@ -421,7 +510,7 @@ export default function ModuleGridShell({
       window.removeEventListener('pagehide', flush);
       window.removeEventListener('beforeunload', flush);
     };
-  }, [ownerAuthoringEnabled, persistOwnerDraft]);
+  }, [ownerAuthoringEnabled, persistOwnerDraft, publicationReconciliation, workspace.profileAddress]);
   const getPublicationContext = useCallback(() => {
     const wallet = getWalletPublicationContext?.() || {};
     const documentState = useProfileDocumentStore.getState();
@@ -437,6 +526,21 @@ export default function ModuleGridShell({
       snapshotStale: Boolean(liveSnapshot && documentState.snapshotDraftFingerprint !== draftFingerprint),
       ownerAuthoringEnabled: Boolean(wallet.isHostProfileOwner && host && host === workspaceAddress && host === viewedProfileAddress?.toLowerCase()) };
   }, [draftDocument, draftFingerprint, getWalletPublicationContext, snapshotGeneration, viewedProfileAddress]);
+
+  const handlePublicationConfirmed = useCallback((resolution) => {
+    const profileAddress = normalizeProfileAddress(resolution?.document?.profile?.address);
+    if (!profileAddress || profileAddress !== workspace.profileAddress) return;
+    const fingerprint = profileDocumentReconciliationFingerprint(resolution.document);
+    saveOwnerPublicationBaseline(window.localStorage, profileAddress, {
+      ...publicationPointerMetadata(resolution.pointer),
+      publishedFingerprint: fingerprint,
+      localFingerprint: fingerprint,
+      hydratedAt: Date.now()
+    });
+    setConfirmedPublication({ profileAddress, resolution: { ...resolution, status: 'RESOLVED', busy: false } });
+    setPublicationReconciliation({ profileAddress, publishedFingerprint: fingerprint, status: 'ready' });
+    onPublicationConfirmed?.();
+  }, [onPublicationConfirmed, workspace.profileAddress]);
 
   useEffect(() => {
     if (snapshot) return;
@@ -1282,6 +1386,7 @@ export default function ModuleGridShell({
         onPreview={startPreview}
         onImport={installImported}
         onRestore={restoreImportedPresentation}
+        onPublished={handlePublicationConfirmed}
         onClose={() => setActiveHudCommand(null)}
       />}
       {ownerAuthoringEnabled && artworkChooser && <Suspense fallback={null}><ArtworkChooser assets={libraryAssets} folders={workspace.folders} status={libraryStatus} error={libraryError} title={artworkChooser.mode==='replace'?'Replace artwork':artworkChooser.mode==='gallery-create'?'Add artwork to gallery':'Choose artwork'} onSelect={chooseArtwork} onCancel={()=>{artworkChoicePendingRef.current=false;setArtworkChooser(null);}} /></Suspense>}

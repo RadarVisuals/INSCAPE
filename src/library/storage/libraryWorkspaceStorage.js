@@ -61,6 +61,28 @@ export function loadLibraryWorkspace(storage, profileAddress) {
   } catch { return createEmptyWorkspace(normalizeProfileAddress(profileAddress)); }
 }
 
+export function inspectLibraryWorkspaceRecord(storage, profileAddress) {
+  const profile = normalizeProfileAddress(profileAddress);
+  if (!profile || !storage?.getItem) return { presence: 'unavailable', profileAddress: profile };
+  try {
+    const current = storage.getItem(libraryWorkspaceKey(profile));
+    if (current !== null) {
+      try {
+        const parsed = JSON.parse(current);
+        const valid = normalizeProfileAddress(parsed?.profileAddress) === profile
+          && [1, 2, 3, 4, 5, 6, LIBRARY_WORKSPACE_VERSION].includes(parsed?.version);
+        return { presence: valid ? 'current' : 'invalid', profileAddress: profile };
+      } catch { return { presence: 'invalid', profileAddress: profile }; }
+    }
+    for (const version of [6, 5, 4, 3, 2, 1]) {
+      if (storage.getItem(libraryWorkspaceKey(profile, version)) !== null) {
+        return { presence: 'legacy', profileAddress: profile, version };
+      }
+    }
+    return { presence: 'absent', profileAddress: profile };
+  } catch { return { presence: 'unavailable', profileAddress: profile }; }
+}
+
 export function saveLibraryWorkspace(storage, workspace) {
   if (!storage?.setItem) return false;
   try {

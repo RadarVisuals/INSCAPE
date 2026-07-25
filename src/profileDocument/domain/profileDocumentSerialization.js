@@ -12,6 +12,11 @@ export function profileDocumentContentFingerprint(document) {
   const { revision: _revision, createdAt: _createdAt, exportedAt: _exportedAt, ...content } = value;
   return JSON.stringify(canonicalize(content));
 }
+export function profileDocumentReconciliationFingerprint(document) {
+  const value = structuredClone(assertValidProfileDocument(document));
+  value.profile.cachedIdentity = { address: value.profile.address };
+  return profileDocumentContentFingerprint(value);
+}
 export function createProfileDocumentFilename(document) {
   assertValidProfileDocument(document);
   const name = document.profile.cachedIdentity?.name || 'profile';

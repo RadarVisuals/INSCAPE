@@ -9,11 +9,13 @@ function folderIdFromSpace(space) {
 export function createProfileDocumentRestorePlan(document, currentWorkspace) {
   const value = assertValidProfileDocument(document);
   const workspace = structuredClone(currentWorkspace);
+  // A publication is an exact replacement for the prior public projection.
+  // Private folders remain local and are never removed by public hydration.
+  workspace.folders = workspace.folders.filter((folder) => folder.public !== true);
   const existing = new Map(workspace.folders.map((folder) => [folder.id, folder]));
-  const publicFolderIds = new Set(workspace.folders.filter((folder) => folder.public === true).map((folder) => folder.id));
   const restoredFolderIds = new Set();
   const uniqueFolderId = (requested) => {
-    if (!existing.has(requested) || publicFolderIds.has(requested)) return requested;
+    if (!existing.has(requested)) return requested;
     let suffix = 2; while (existing.has(`${requested}-${suffix}`)) suffix += 1;
     return `${requested}-${suffix}`;
   };
@@ -54,11 +56,16 @@ export function createProfileDocumentRestorePlan(document, currentWorkspace) {
     presentation: { ...object.presentation }
   }));
   workspace.canvas = { ...workspace.canvas, launchers: [], objects: [...privateObjects, ...restoredObjects] };
+  const systemModules = Object.fromEntries(value.presentation.systemModules.map((module) => [module.id, {
+    placement: module.placement ? { ...module.placement } : null,
+    startOpen: module.startOpen === true,
+    windowGeometry: module.windowGeometry ? { ...module.windowGeometry } : null
+  }]));
   return { workspace, keeperId: value.presentation.keeperId, stageId: value.presentation.stageId,
     avatarShape: value.presentation.avatarShape || 'square',
     visitorNavigation: { ...value.presentation.visitorNavigation },
     environment: { ...value.presentation.environment },
-    signalSettings: { ...value.presentation.signals }, restoredFolderIds: [...restoredFolderIds] };
+    signalSettings: { ...value.presentation.signals }, systemModules, restoredFolderIds: [...restoredFolderIds] };
 }
 
 export async function executeAtomicRestore(plan, adapters) {

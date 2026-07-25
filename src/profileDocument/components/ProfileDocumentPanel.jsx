@@ -15,7 +15,7 @@ function downloadText(text, filename) {
 }
 
 export default function ProfileDocumentPanel({ draft, snapshot, imported, stale, error, activeProfileAddress, getPublicationContext,
-  draftSaveStatus = 'saving', onBuild, onPreview, onImport, onRestore, onClose }) {
+  draftSaveStatus = 'saving', onBuild, onPreview, onImport, onRestore, onPublished, onClose }) {
   const fileRef = useRef(null); const [message, setMessage] = useState(''); const [cid, setCid] = useState('');
   const [uploading, setUploading] = useState(false);
   const cidRef = useRef(cid); const cidGenerationRef = useRef(0);
@@ -51,6 +51,12 @@ export default function ProfileDocumentPanel({ draft, snapshot, imported, stale,
     } catch (error) { setMessage(error.message); }
     finally { setUploading(false); }
   };
+  const publishPublication = async () => {
+    const confirmed = await publication.publish();
+    if (!confirmed?.result?.document) return;
+    onPublished?.(confirmed.result);
+    setMessage('Publication confirmed and restored as this profile\'s canonical owner baseline.');
+  };
   const readImport = async (event) => {
     const file = event.target.files?.[0]; event.target.value = ''; if (!file) return;
     try { if (file.size > PROFILE_DOCUMENT_LIMITS.maxJsonBytes) throw new Error(`Document exceeds ${PROFILE_DOCUMENT_LIMITS.maxJsonBytes} bytes`); const value = parseProfileDocumentJson(await file.text()); onImport(value); setMessage(value.profile.address === activeProfileAddress ? 'Document valid.' : 'Document valid — belongs to another profile.'); }
@@ -71,7 +77,7 @@ export default function ProfileDocumentPanel({ draft, snapshot, imported, stale,
       <input id="profile-publication-cid" value={cid} onChange={(event) => { cidGenerationRef.current += 1; cidRef.current = event.target.value; publication.invalidate('The CID changed; re-verification is required'); setCid(event.target.value); }} placeholder="CID or ipfs://CID" autoComplete="off" spellCheck="false" />
       <div className="profile-document-panel__actions">
         <button type="button" disabled={!snapshot || stale || !cid.trim() || uploading || publicationBusy} onClick={() => publication.verifyCid(snapshot, cid, { stale })}>Verify CID</button>
-        <button type="button" disabled={!publication.verified || (!publication.transactionHash && (publication.status !== PROFILE_DOCUMENT_PUBLICATION_STATUS.CID_VERIFIED && publication.status !== PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR)) || ['AWAITING_WALLET','CONFIRMING_TRANSACTION','VERIFYING_PUBLICATION'].includes(publication.status)} onClick={publication.publish}>{publication.transactionHash ? 'Retry publication confirmation' : 'Request wallet publication'}</button>
+        <button type="button" disabled={!publication.verified || (!publication.transactionHash && (publication.status !== PROFILE_DOCUMENT_PUBLICATION_STATUS.CID_VERIFIED && publication.status !== PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR)) || ['AWAITING_WALLET','CONFIRMING_TRANSACTION','VERIFYING_PUBLICATION'].includes(publication.status)} onClick={publishPublication}>{publication.transactionHash ? 'Retry publication confirmation' : 'Request wallet publication'}</button>
       </div>
       <p className="profile-document-panel__publication-state" data-state={publication.status}>Publication: {publication.status}</p>
       {publication.transactionHash && <p className="profile-document-panel__hash">Transaction: {publication.transactionHash}</p>}

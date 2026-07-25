@@ -7,7 +7,7 @@ import { canonicalSerializeProfileDocument, formatProfileDocumentJson } from './
 import { canonicalPublicationHash, createCanonicalPublication, encodeProfileDocumentVerifiableUri, normalizeProfileDocumentCid, publicationContentFingerprint } from './profileDocumentPublication.js';
 import { createProfileDocumentPublisher, describePublicationError } from '../storage/profileDocumentPublisher.js';
 import { OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileRepository.js';
-import { PROFILE_DOCUMENT_LIMITS } from './constants.js';
+import { PROFILE_DOCUMENT_LIMITS, PROFILE_DOCUMENT_VERSION } from './constants.js';
 import { createProfileDocumentPublicationState } from '../state/useProfileDocumentPublication.js';
 
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
@@ -48,7 +48,7 @@ test('canonical publication download is the exact serializer output and never th
   const document = documentFor(); const artifact = createCanonicalPublication(document);
   assert.deepEqual(artifact.bytes, new TextEncoder().encode(canonicalSerializeProfileDocument(document)));
   assert.notEqual(artifact.text, formatProfileDocumentJson(document));
-  assert.equal(artifact.filename, 'os-underneath-published-profile-profile-v6-publication.json');
+  assert.equal(artifact.filename, `os-underneath-published-profile-profile-v${PROFILE_DOCUMENT_VERSION}-publication.json`);
   assert.equal(Object.isFrozen(artifact.document), true); assert.equal(Object.isFrozen(artifact.document.profile), true);
 });
 

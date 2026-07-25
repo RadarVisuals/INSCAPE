@@ -15,6 +15,8 @@ import { resolveLibraryProfile, resolveWorkspaceProfile } from './library/config
 import { loadRestoredPresentation } from './profileDocument/storage/profileDocumentStorage.js';
 import { createViewedProfileUrl, resolveViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
 import PublishedProfileBoundary from './profileDocument/components/PublishedProfileBoundary.jsx';
+import { usePublishedProfile } from './profileDocument/state/usePublishedProfile.js';
+import { PUBLISHED_PROFILE_STATUS } from './profileDocument/storage/luksoPublishedProfileRepository.js';
 import { resolveOwnerAuthoringEnabled, selectPublicProfileRoute } from './public/publicAccess.js';
 import { reportControlledError } from './diagnostics.js';
 
@@ -38,7 +40,6 @@ function App() {
     reducedMotion: false
   });
   const [previewDocument, setPreviewDocument] = useState(null);
-  const [publishedDocument, setPublishedDocument] = useState(null);
   const [keeperUserVisible, setKeeperUserVisible] = useState(true);
   const [stageUserVisible, setStageUserVisible] = useState(true);
   const [galleryActive, setGalleryActive] = useState(false);
@@ -70,7 +71,11 @@ function App() {
     : APPLICATION_MODES.PUBLIC;
   const publicProfileRoute = selectPublicProfileRoute(ownerAuthoringEnabled);
   const localOwnerRoute = publicProfileRoute === 'LOCAL_OWNER';
-  const canvasDocument = localOwnerRoute ? previewDocument : publishedDocument;
+  const [publishedResolution, retryPublishedProfile] = usePublishedProfile(viewedProfileAddress);
+  const publishedDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(publishedResolution?.status)
+    ? publishedResolution.document
+    : null;
+  const canvasDocument = previewDocument || publishedDocument;
 
   useEffect(() => {
     if (window.parent !== window) {
@@ -112,12 +117,18 @@ function App() {
   useEffect(() => {
     const syncModeFromUrl = () => {
       setApplicationMode(resolveApplicationMode(window.location));
-      setViewedProfileAddress(resolveViewedProfile(window.location, connectedWorkspaceProfileAddress));
+      setViewedProfileAddress(resolveViewedProfile(window.location, routeWorkspaceProfileAddress));
     };
     syncModeFromUrl();
     window.addEventListener('popstate', syncModeFromUrl);
     return () => window.removeEventListener('popstate', syncModeFromUrl);
-  }, [connectedWorkspaceProfileAddress]);
+  }, [routeWorkspaceProfileAddress]);
+
+  useEffect(() => {
+    if (!viewedProfileAddress && connectedWorkspaceProfileAddress) {
+      setViewedProfileAddress(connectedWorkspaceProfileAddress);
+    }
+  }, [connectedWorkspaceProfileAddress, viewedProfileAddress]);
 
   const applyPublicPresentation = useCallback(({ keeperId, stageId, environment }) => {
     const current = useStore.getState().renderConfig;
@@ -141,10 +152,10 @@ function App() {
   }, []);
 
   const visitProfile = useCallback((address) => {
-    const nextUrl = createViewedProfileUrl(window.location, address, connectedWorkspaceProfileAddress);
+    const nextUrl = createViewedProfileUrl(window.location, address, routeWorkspaceProfileAddress || connectedWorkspaceProfileAddress);
     window.history.pushState({ viewedProfileAddress: address }, '', nextUrl);
-    setViewedProfileAddress(resolveViewedProfile(window.location, connectedWorkspaceProfileAddress));
-  }, [connectedWorkspaceProfileAddress]);
+    setViewedProfileAddress(resolveViewedProfile(window.location, routeWorkspaceProfileAddress || connectedWorkspaceProfileAddress));
+  }, [connectedWorkspaceProfileAddress, routeWorkspaceProfileAddress]);
 
   const residentHandoff = useMemo(() => ({
     start(bounds, options) {
@@ -245,10 +256,13 @@ function App() {
             onStageVisibilityChange={setStageUserVisible}
             registerWorldContextMenu={registerDesktopContextMenu}
             onGalleryOpenChange={setGalleryActive}
+            publishedResolution={publishedResolution}
+            onPublicationConfirmed={retryPublishedProfile}
           /> : <PublishedProfileBoundary address={viewedProfileAddress}
+            resolution={publishedResolution}
+            onRetry={retryPublishedProfile}
             returnProfileAddress={connectedWorkspaceProfileAddress}
             onVisitProfile={visitProfile}
-            onDocumentChange={setPublishedDocument}
             onMoveKeeper={residentHandoff.moveToScreenPosition}
             onMoveKeeperHorizontally={residentHandoff.moveHorizontallyToScreenPosition} />
         )}

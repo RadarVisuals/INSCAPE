@@ -19,3 +19,8 @@ test('returning to the connected profile removes only the view parameter', () =>
   assert.match(url, new RegExp(`profile=${CONNECTED}`));
   assert.doesNotMatch(url, /[?&]view=/);
 });
+
+test('an explicit navigation target is not replaced by a later wallet identity', () => {
+  const location = { search: `?profile=${CONNECTED}&view=${VIEWED}` };
+  assert.equal(resolveViewedProfile(location, '0x3333333333333333333333333333333333333333'), VIEWED);
+});
