@@ -130,11 +130,10 @@
   cursor: pointer;
 }
 
-.nft-archive-card__dossier-trigger {
+.nft-archive-card__side-trigger {
   position: absolute;
   z-index: 4;
   top: var(--card-header-height);
-  right: 0;
   bottom: var(--card-footer-height);
   width: 50%;
   padding: 0;
@@ -144,8 +143,11 @@
   cursor: pointer;
 }
 
-.nft-archive-card__dossier-trigger:hover { background: rgb(255 255 255 / .018); }
-.nft-archive-card__dossier-trigger:focus-visible { outline: 2px solid #f4f2e9; outline-offset: -6px; }
+.nft-archive-card__side-trigger--left { left: 0; }
+.nft-archive-card__side-trigger--right { right: 0; }
+.nft-archive-card__side-trigger:hover,
+.nft-archive-card__side-trigger:active { background: transparent; }
+.nft-archive-card__side-trigger:focus-visible { outline: 2px solid #f4f2e9; outline-offset: -6px; }
 
 .nft-archive-card[data-selected] .nft-archive-card__hit-area { cursor: default; }
 .nft-archive-card:not([data-selected]) .nft-archive-card__hit-area:hover {
@@ -234,7 +236,8 @@
   cursor: default;
 }
 
-.nft-technical-dossier {
+.nft-technical-dossier,
+.nft-story-dossier {
   position: fixed;
   z-index: 29;
   display: grid;
@@ -253,7 +256,10 @@
   will-change: transform;
 }
 
-.nft-technical-dossier[data-open="true"] {
+.nft-story-dossier { transform: translateX(calc(100% - 12px)); }
+
+.nft-technical-dossier[data-open="true"],
+.nft-story-dossier[data-open="true"] {
   transform: translateX(0);
   transition-delay: 0s;
   visibility: visible;
@@ -261,7 +267,9 @@
 }
 
 .nft-technical-dossier__header,
-.nft-technical-dossier__footer {
+.nft-technical-dossier__footer,
+.nft-story-dossier__header,
+.nft-story-dossier__footer {
   padding: 0 14px;
   display: flex;
   align-items: center;
@@ -274,10 +282,13 @@
   white-space: nowrap;
 }
 
-.nft-technical-dossier__header b { color: var(--viewer-ink); font: inherit; }
-.nft-technical-dossier__footer { border-top: 1px solid var(--viewer-line); border-bottom: 0; }
+.nft-technical-dossier__header b,
+.nft-story-dossier__header b { color: var(--viewer-ink); font: inherit; }
+.nft-technical-dossier__footer,
+.nft-story-dossier__footer { border-top: 1px solid var(--viewer-line); border-bottom: 0; }
 
-.nft-technical-dossier__body {
+.nft-technical-dossier__body,
+.nft-story-dossier__body {
   min-height: 0;
   overflow: auto;
   padding: 28px;
@@ -285,14 +296,16 @@
   line-height: 1.55;
 }
 
-.nft-technical-dossier__eyebrow {
+.nft-technical-dossier__eyebrow,
+.nft-story-dossier__eyebrow {
   margin: 0 0 6px;
   color: var(--viewer-muted);
   font: 500 8px/1 "Inscape IBM Plex Mono", monospace;
   letter-spacing: .14em;
 }
 
-.nft-technical-dossier__body h2 {
+.nft-technical-dossier__body h2,
+.nft-story-dossier__body h2 {
   margin: 0 0 20px;
   overflow-wrap: anywhere;
   font-size: 24px;
@@ -305,6 +318,24 @@
 .nft-technical-dossier__body dl div { min-width: 0; padding: 12px; border-right: 1px solid var(--viewer-line); border-bottom: 1px solid var(--viewer-line); }
 .nft-technical-dossier__body dt { margin-bottom: 6px; color: var(--viewer-muted); font: 500 7px/1 "Inscape IBM Plex Mono", monospace; letter-spacing: .12em; }
 .nft-technical-dossier__body dd { margin: 0; overflow-wrap: anywhere; font: 500 9px/1.35 "Inscape IBM Plex Mono", monospace; letter-spacing: .04em; }
+
+.nft-story-dossier__body > p:not(.nft-story-dossier__eyebrow) { margin: 0 0 30px; }
+.nft-story-dossier__traits { border-top: 1px solid var(--viewer-line); }
+.nft-story-dossier__traits h3 {
+  margin: 0;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--viewer-line);
+  color: var(--viewer-muted);
+  font: 500 7px/1 "Inscape IBM Plex Mono", monospace;
+  letter-spacing: .12em;
+}
+.nft-story-dossier__traits p {
+  margin: 0;
+  padding: 16px 0;
+  color: var(--viewer-muted);
+  font: 500 9px/1.35 "Inscape IBM Plex Mono", monospace;
+  letter-spacing: .06em;
+}
 
 @media (max-width: 900px) {
   .nft-table-viewer { overflow: auto; }
@@ -319,5 +350,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .nft-archive-card[data-selected] { transition-duration: 1ms; }
-  .nft-technical-dossier { transition-duration: 1ms; }
+  .nft-technical-dossier,
+  .nft-story-dossier { transition-duration: 1ms; }
 }

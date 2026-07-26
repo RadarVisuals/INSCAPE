@@ -43,6 +43,7 @@ function transformBetween(source, destination) {
 function useNftViewerTransition(dimensions) {
   const [viewerState, setViewerState] = useState('table');
   const [selectedId, setSelectedId] = useState(null);
+  const [storyOpen, setStoryOpen] = useState(false);
   const [dossierOpen, setDossierOpen] = useState(false);
   const [motionTransform, setMotionTransform] = useState('none');
   const [motionEnabled, setMotionEnabled] = useState(false);
@@ -50,6 +51,7 @@ function useNftViewerTransition(dimensions) {
   const slotRefs = useRef(new Map());
   const triggerRefs = useRef(new Map());
   const closeRef = useRef(null);
+  const closeTimerRef = useRef(null);
   const selectedAsset = ASSETS.find((asset) => asset.id === selectedId) || null;
   const selectedDimensions = selectedId ? dimensions[selectedId] : null;
   const selectedRatio = selectedDimensions ? selectedDimensions.width / selectedDimensions.height : 1;
@@ -70,6 +72,7 @@ function useNftViewerTransition(dimensions) {
     if (!sourceRect) return;
     const ratio = dimensions[assetId].width / dimensions[assetId].height;
     const destination = getFocusedRect(ratio);
+    setStoryOpen(false);
     setDossierOpen(false);
     setMotionEnabled(false);
     setSelectedId(assetId);
@@ -90,19 +93,42 @@ function useNftViewerTransition(dimensions) {
     };
   }, [viewerState, selectedId]);
 
-  const close = useCallback(() => {
+  const beginReturn = useCallback(() => {
     if (!selectedId || viewerState === 'returning' || !focusedRect) return;
     const sourceRect = slotRefs.current.get(selectedId)?.getBoundingClientRect();
     if (!sourceRect) return;
-    setDossierOpen(false);
     setMotionEnabled(true);
     setViewerState('returning');
     setMotionTransform(transformBetween(sourceRect, focusedRect));
   }, [focusedRect, selectedId, viewerState]);
 
+  const close = useCallback(() => {
+    if (viewerState === 'closing-panels' || viewerState === 'returning') return;
+    if (storyOpen || dossierOpen) {
+      setStoryOpen(false);
+      setDossierOpen(false);
+      setViewerState('closing-panels');
+      closeTimerRef.current = window.setTimeout(() => {
+        closeTimerRef.current = null;
+        beginReturn();
+      }, 430);
+      return;
+    }
+    beginReturn();
+  }, [beginReturn, dossierOpen, storyOpen, viewerState]);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+  }, []);
+
   const toggleDossier = useCallback(() => {
     if (viewerState !== 'focused') return;
     setDossierOpen((openState) => !openState);
+  }, [viewerState]);
+
+  const toggleStory = useCallback(() => {
+    if (viewerState !== 'focused') return;
+    setStoryOpen((openState) => !openState);
   }, [viewerState]);
 
   useEffect(() => {
@@ -110,13 +136,17 @@ function useNftViewerTransition(dimensions) {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        if (dossierOpen) setDossierOpen(false);
+        if (viewerState === 'closing-panels' || viewerState === 'returning') return;
+        if (dossierOpen || storyOpen) {
+          setDossierOpen(false);
+          setStoryOpen(false);
+        }
         else close();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [close, dossierOpen, viewerState]);
+  }, [close, dossierOpen, storyOpen, viewerState]);
 
   const handleTransitionEnd = useCallback((event) => {
     if (event.propertyName !== 'transform') return;
@@ -147,10 +177,50 @@ function useNftViewerTransition(dimensions) {
     selectedAsset,
     selectedId,
     slotRefs,
+    storyOpen,
     triggerRefs,
     toggleDossier,
+    toggleStory,
     viewerState,
   };
+}
+
+function StoryDossier({ asset, focusedRect, open }) {
+  if (!asset || !focusedRect) return null;
+  const availableWidth = Math.max(220, (window.innerWidth - focusedRect.width) / 2 - 32);
+  const width = Math.min(360, availableWidth);
+  const height = Math.max(240, focusedRect.height * 0.88);
+  const style = {
+    left: `${focusedRect.left - width + 12}px`,
+    top: `${focusedRect.top + ((focusedRect.height - height) / 2)}px`,
+    width: `${width}px`,
+    height: `${height}px`,
+  };
+
+  return <aside
+    className="nft-story-dossier"
+    data-open={open ? 'true' : 'false'}
+    style={style}
+    aria-hidden={!open}
+  >
+    <header className="nft-story-dossier__header">
+      <span>INSCAPE / ASSET NARRATIVE</span>
+      <b>LOCAL / {asset.record}</b>
+    </header>
+    <div className="nft-story-dossier__body">
+      <p className="nft-story-dossier__eyebrow">DESCRIPTION</p>
+      <h2>NOT RESOLVED</h2>
+      <p>No NFT description is attached to this local prototype artwork.</p>
+      <section className="nft-story-dossier__traits" aria-label="NFT traits">
+        <h3>TRAITS</h3>
+        <p>NO TRAITS RESOLVED</p>
+      </section>
+    </div>
+    <footer className="nft-story-dossier__footer">
+      <span>INSCAPE PROTOCOL</span>
+      <span>LEFT SIDE / DESCRIPTION</span>
+    </footer>
+  </aside>;
 }
 
 function TechnicalDossier({ asset, dimensions, focusedRect, open }) {
@@ -208,6 +278,7 @@ function NftArchiveCard({
   onOpen,
   onTransitionEnd,
   onToggleDossier,
+  onToggleStory,
   setCloseRef,
   setSlotRef,
   setTriggerRef,
@@ -258,7 +329,13 @@ function NftArchiveCard({
       />}
       {isSelected && <button
         type="button"
-        className="nft-archive-card__dossier-trigger"
+        className="nft-archive-card__side-trigger nft-archive-card__side-trigger--left"
+        aria-label="Toggle artwork description and traits"
+        onClick={onToggleStory}
+      />}
+      {isSelected && <button
+        type="button"
+        className="nft-archive-card__side-trigger nft-archive-card__side-trigger--right"
         aria-label="Toggle technical artwork record"
         onClick={onToggleDossier}
       />}
@@ -319,6 +396,7 @@ function NftTable({ dimensions, transition, onImageLoad }) {
         onOpen={transition.open}
         onTransitionEnd={transition.handleTransitionEnd}
         onToggleDossier={transition.toggleDossier}
+        onToggleStory={transition.toggleStory}
         setCloseRef={transition.closeRef}
         setSlotRef={setSlotRef}
         setTriggerRef={setTriggerRef}
@@ -348,6 +426,11 @@ function FocusedNftViewer({ transition }) {
       dimensions={transition.selectedId ? transition.dimensions?.[transition.selectedId] : null}
       focusedRect={transition.focusedRect}
       open={transition.dossierOpen}
+    />
+    <StoryDossier
+      asset={transition.selectedAsset}
+      focusedRect={transition.focusedRect}
+      open={transition.storyOpen}
     />
   </>;
 }
