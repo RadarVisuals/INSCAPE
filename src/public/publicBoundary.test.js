@@ -108,8 +108,9 @@ test('Gallery remains spatial while Creations is an independent dock workspace',
 
 test('owner inventory hydrates independently of opening Index or Categories', () => {
   const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
+  const spatialSource = readFileSync(new URL('./useSpatialWorldNavigation.js', import.meta.url), 'utf8');
   assert.match(shellSource, /if \(!ownerAuthoringEnabled \|\| libraryStatus !== 'idle'\) return;\s*void loadLibrary\(\);/);
-  assert.match(shellSource, /galleryAssetsMissing[\s\S]*libraryStatus !== 'loading'\) void loadLibrary\(\);/);
+  assert.match(spatialSource, /galleryAssetsMissing[\s\S]*libraryStatus !== 'loading'\) void loadLibrary\(\);/);
 });
 
 test('owner folders are direct categories and Index assigns assets through contextual folder commands', () => {
@@ -149,6 +150,7 @@ test('Gallery is routed through the profile dock without legacy destination cont
 
 test('Gallery transition keeps both spatial worlds mounted through a reversible vertical handoff', () => {
   const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
+  const spatialSource = readFileSync(new URL('./useSpatialWorldNavigation.js', import.meta.url), 'utf8');
   const homeSource = readFileSync(new URL('./HomeWorldSurface.jsx', import.meta.url), 'utf8');
   const gallerySource = readFileSync(new URL('./GalleryWorld.jsx', import.meta.url), 'utf8');
   const homeStyles = readFileSync(new URL('./homeWorld.css', import.meta.url), 'utf8');
@@ -156,11 +158,11 @@ test('Gallery transition keeps both spatial worlds mounted through a reversible 
   const dockSource = readFileSync(new URL('./ProfileNavigationDock.jsx', import.meta.url), 'utf8');
 
   assert.match(shellSource, /galleryTransitionPhase/);
-  assert.match(shellSource, /\['preparing', 'entering', 'exiting'\]/);
-  assert.match(shellSource, /setGalleryTransitionPhase\('exiting'\)/);
+  assert.match(spatialSource, /\['preparing', 'entering', 'exiting'\]/);
+  assert.match(spatialSource, /setGalleryTransitionPhase\('exiting'\)/);
   assert.match(homeSource, /data-gallery-transition=\{transitionPhase\}/);
   assert.match(gallerySource, /cameraX - gridPhaseX/);
-  assert.match(shellSource, /setHomeGridPhaseX\(inheritedPhase\)/);
+  assert.match(spatialSource, /setHomeGridPhaseX\(inheritedPhase\)/);
   assert.match(dockSource, /collapseToAvatar=\{effectiveGalleryOpen \|\| spatialWorldActive\}/);
   assert.match(homeStyles, /@keyframes home-world-descend/);
   assert.match(galleryStyles, /@keyframes gallery-world-arrive/);

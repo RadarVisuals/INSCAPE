@@ -1,31 +1,25 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ProfileNavigationDock from './ProfileNavigationDock.jsx';
-import { flushLibraryWorkspace, useLibraryStore } from '../library/index.js';
+import { useLibraryStore } from '../library/index.js';
 import { normalizeProfileAddress } from '../library/config.js';
 import KeeperSignalsLayer from '../signals/components/KeeperSignalsLayer.jsx';
-import { flushSignalDocument, useSignalStore } from '../signals/state/useSignalStore.js';
+import { useSignalStore } from '../signals/state/useSignalStore.js';
 import { useProfileIdentity } from '../profileIdentity/index.js';
 import ProfileDocumentPanel from '../profileDocument/components/ProfileDocumentPanel.jsx';
 import ProfileDocumentPreview from '../profileDocument/components/ProfileDocumentPreview.jsx';
 import { useProfileDocumentStore } from '../profileDocument/state/useProfileDocumentStore.js';
 import { buildProfileDocumentV3 } from '../profileDocument/domain/profileDocumentBuilder.js';
-import { reportControlledError } from '../diagnostics.js';
 import { assertValidProfileDocument } from '../profileDocument/domain/profileDocumentValidation.js';
 import { createProfileDocumentRestorePlan } from '../profileDocument/domain/profileDocumentRestore.js';
 import { profileDocumentContentFingerprint } from '../profileDocument/domain/profileDocumentSerialization.js';
-import { profileDocumentReconciliationFingerprint } from '../profileDocument/domain/profileDocumentSerialization.js';
-import { decideOwnerPublicationReconciliation, isWorkspacePublicProjectionEmpty, OWNER_RECONCILIATION_ACTION } from '../profileDocument/domain/ownerPublicationReconciliation.js';
-import { canonicalPublicationHash, publicationContentFingerprint } from '../profileDocument/domain/profileDocumentPublication.js';
 import { loadProfileSnapshot, loadRestoredPresentation, profilePresentationKey, saveProfileSnapshot, saveRestoredPresentation } from '../profileDocument/storage/profileDocumentStorage.js';
-import { loadOwnerPublicationBaseline, publicationPointerMetadata, saveOwnerPublicationBaseline } from '../profileDocument/storage/ownerPublicationBaselineStorage.js';
 import { inspectLibraryWorkspaceRecord } from '../library/storage/libraryWorkspaceStorage.js';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { getPublicTheme } from './themeTokens.js';
 import { findScenePlacement, findScenePlacementAtPointer, isScenePlacementAvailable, normalizeSpan, packCompactCanvasObjects, packCompactScene } from './sceneGrid.js';
-import { gridRectToPixelRect, launcherGeometryAvailable, movementCandidateFromPointer, normalizeGridRect, resizeCandidateFromPointer } from './gridGeometry.js';
-import { activateInteraction, createInteraction, effectiveGeometry, INTERACTION_KIND } from './gridInteraction.js';
-import { iconGlyph, normalizeIconKey } from './sceneIcons.js';
+import { normalizeGridRect } from './gridGeometry.js';
+import { normalizeIconKey } from './sceneIcons.js';
 import { decodeWindowGridGeometry, defaultWindowGridRect } from './windowGeometry.js';
 import { createRuntimeWindowState, loadRuntimeWindowState, normalizeRuntimeWindowGeometry, saveRuntimeWindowState, updateRuntimeWindowState } from './windows/runtimeWindowState.js';
 import { contextMenuCommands, presentationPatchForCommand, resolveContextTarget } from './menus/contextMenuModel.js';
@@ -39,14 +33,14 @@ import UpperWorldSurface from './UpperWorldSurface.jsx';
 import SpatialLevelNavigation from './SpatialLevelNavigation.jsx';
 import { SPATIAL_WORLD_LEVEL } from './spatialWorldLevels.js';
 import KeeperDock from './KeeperDock.jsx';
-import { clampVerticalHomeWorldCamera, loadHomeWorldCamera, saveHomeWorldCamera } from './homeWorldCamera.js';
-import { getSpatialGridOffset } from './spatialWorldCamera.js';
 import { CANVAS_OBJECT_KIND, getCanvasObjectDefinition } from '../library/domain/canvasObjectRegistry.js';
 import { CANVAS_OBJECT_ORDER_COMMAND } from '../library/domain/canvasObjects.js';
 import { runOwnerAuthoringMutation, selectLiveCanvasContent } from './publicAccess.js';
 import { readOwnerProfileValue, writeOwnerProfileValue } from './ownerProfileStorage.js';
 import ProfileDiscoveryBoundary from '../profileDiscovery/ProfileDiscoveryBoundary.jsx';
 import { createVerticalHomePlacementGeometry, createVerticalHomeWorld } from './verticalHomeWorld.js';
+import { useOwnerPublicationSync } from './useOwnerPublicationSync.js';
+import { useSpatialWorldNavigation } from './useSpatialWorldNavigation.js';
 import {
   MODULE_LAYOUT_STORAGE_KEY,
   LEGACY_MODULE_LAYOUT_STORAGE_KEY,
@@ -82,11 +76,6 @@ const MODULE_ENTRY_ORDER = Object.freeze({
   creations: 3
 });
 
-const FULL_MODULE_ENTRY_BASE_MS = 240;
-const FULL_MODULE_ENTRY_STAGGER_MS = 220;
-const GROUPED_MODULE_ENTRY_MS = 70;
-const SPATIAL_DOCK_COLLAPSE_MS = 170;
-const SPATIAL_WORLD_TRANSITION_MS = 720;
 const SYSTEM_SCENE_KEY = 'os-underneath.system-launchers.v1';
 // The stage-free home makes the grid a primary world surface. A new preference
 // version prevents an old edit-mode-only "off" choice from booting into a void.
@@ -108,6 +97,7 @@ const createHomePlacementGeometry = createVerticalHomePlacementGeometry;
 
 function defaultSystemPresentation(id, order) { return { appearanceMode: 'label', iconKey: SYSTEM_ICONS[id], span: { columns: 3, rows: 1 }, presentationOrder: order, startOpen: false, windowGeometry: null }; }
 function readSystemPresentation(profileAddress) { try { const value = JSON.parse(readOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,profileAddress) || 'null'); return Object.fromEntries(MODULES.map((module, index) => { const item=value?.[module.id]; return [module.id,{ ...defaultSystemPresentation(module.id,index), ...(item || {}), label:module.label, iconKey:normalizeIconKey(item?.iconKey,SYSTEM_ICONS[module.id]), span:normalizeSpan(item?.span,item?.appearanceMode) }]; })); } catch { return Object.fromEntries(MODULES.map((module,index)=>[module.id,{...defaultSystemPresentation(module.id,index),label:module.label}])); } }
+function saveSystemPresentation(profileAddress, presentation) { return writeOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,profileAddress,JSON.stringify(presentation)); }
 function readGridPreference(){try{return JSON.parse(window.localStorage.getItem(GRID_PREFERENCE_KEY))?.visible!==false}catch{return true}}
 function readLegacyWindowGeometry(geometry,profileAddress){return decodeWindowGridGeometry(readOwnerProfileValue(window.localStorage,LEGACY_WINDOW_GEOMETRY_KEY,profileAddress),geometry,readStoredPositions(geometry,profileAddress))}
 
@@ -160,16 +150,12 @@ export default function ModuleGridShell({
   const setSignalProfileAddress = useSignalStore((state) => state.setProfileAddress);
   const activateDocumentProfile = useProfileDocumentStore((state) => state.activateProfile);
   const workspaceRecordRef = useRef(new Map());
-  const [publicationReconciliation, setPublicationReconciliation] = useState({ profileAddress: null, publishedFingerprint: null, status: 'pending' });
-  const [confirmedPublication, setConfirmedPublication] = useState(null);
   useLayoutEffect(() => {
     const profile = normalizeProfileAddress(workspaceProfileAddress);
     if (!profile) return;
     if (!workspaceRecordRef.current.has(profile)) {
       workspaceRecordRef.current.set(profile, inspectLibraryWorkspaceRecord(window.localStorage, profile));
     }
-    setPublicationReconciliation({ profileAddress: profile, publishedFingerprint: null, status: 'pending' });
-    setConfirmedPublication(null);
     activateDocumentProfile(profile);
     setLibraryProfileAddress(profile);
     setSignalProfileAddress(profile);
@@ -192,7 +178,6 @@ export default function ModuleGridShell({
   const [gridPalette, setGridPalette] = useState('dark');
   const [avatarShape, setAvatarShape] = useState(() => loadRestoredPresentation(window.localStorage, workspace.profileAddress)?.avatarShape || 'square');
   const [visitorNavigation, setVisitorNavigation] = useState(() => loadRestoredPresentation(window.localStorage, workspace.profileAddress)?.visitorNavigation || { showCategories: true, showCreations: false });
-  const [draftSaveState, setDraftSaveState] = useState(() => ({ profileAddress: workspace.profileAddress, status: 'saving' }));
   const [contextMenu, setContextMenu] = useState(null);
   const [galleryPresentationPreview, setGalleryPresentationPreview] = useState(null);
   const [artworkInspector, setArtworkInspector] = useState(null);
@@ -201,17 +186,7 @@ export default function ModuleGridShell({
   const [categoryPendingRename, setCategoryPendingRename] = useState(null);
   const [artworkChooser, setArtworkChooser] = useState(null);
   const [previewObjectId, setPreviewObjectId] = useState(null);
-  const [galleryOpen, setGalleryOpen] = useState(false);
-  const [galleryTransitionPhase, setGalleryTransitionPhase] = useState('home');
-  const [upperOpen, setUpperOpen] = useState(false);
-  const [upperTransitionPhase, setUpperTransitionPhase] = useState('home');
-  const [homeGridPhaseX, setHomeGridPhaseX] = useState(0);
-  const [homeCameraState, setHomeCameraState] = useState(() => ({
-    profileAddress: workspace.profileAddress,
-    camera: loadHomeWorldCamera(window.localStorage, workspace.profileAddress, { x: geometry.width, y: geometry.height, zoom: 1 })
-  }));
   const [keeperDockActive, setKeeperDockActive] = useState(false);
-  const [availableModuleIds, setAvailableModuleIds] = useState(() => new Set());
   useLayoutEffect(() => {
     const profile = normalizeProfileAddress(workspace.profileAddress);
     if (!profile) return;
@@ -231,19 +206,9 @@ export default function ModuleGridShell({
   const spatialLayerRef = useRef(null);
   const shellRef = useRef(null);
   const gridRef = useRef(null);
-  const [interaction, setInteraction] = useState(null);
-  const interactionRef = useRef(null);
-  const lifecycleHandlersRef = useRef({move:null,finish:null});
   const loadedRuntimeProfileRef = useRef(workspace.profileAddress);
-  const suppressLauncherClickRef = useRef(false);
   const artworkChoicePendingRef = useRef(false);
   const resizeFrameRef = useRef(0);
-  const cameraTransitionFrameRef = useRef(0);
-  const galleryTransitionTimerRef = useRef(0);
-  const upperTransitionTimerRef = useRef(0);
-  const galleryCameraXRef = useRef(0);
-  const galleryGridBasePhaseXRef = useRef(0);
-  const homeCameraRef = useRef(homeCameraState.camera);
 
   const openWorldContextMenu = useCallback((event) => {
     if (!interfaceVisible) return;
@@ -294,7 +259,6 @@ export default function ModuleGridShell({
   );
   const documentProfileAddress = normalizeProfileAddress(workspace.profileAddress);
   const snapshot = useProfileDocumentStore((state) => state.profileAddress === documentProfileAddress ? state.snapshot : null);
-  const snapshotGeneration = useProfileDocumentStore((state) => state.profileAddress === documentProfileAddress ? state.snapshotGeneration : 0);
   const importedDocument = useProfileDocumentStore((state) => state.profileAddress === documentProfileAddress ? state.imported : null);
   const previewDocument = useProfileDocumentStore((state) => state.profileAddress === documentProfileAddress ? state.preview : null);
   const installSnapshot = useProfileDocumentStore((state) => state.installSnapshot);
@@ -329,29 +293,43 @@ export default function ModuleGridShell({
     }));
     return folders;
   }, [libraryAssetById, workspace.folders]);
+  const updateRuntime = useCallback((action) => setRuntimeWindows((current) => updateRuntimeWindowState(current, action)), []);
+  const closeAllWindows = useCallback(() => {
+    updateRuntime({ type: 'close-all' }); setIdentityOpen(false); setIdentityPhase('closed'); setCollectionOpen(false); setCreationsOpen(false); setSignalsOpen(false); setActiveModuleId(null);
+  }, [updateRuntime]);
+  const prepareSpatialLevel = useCallback((level) => {
+    closeAllWindows();
+    setEditMode(false);
+    setSelectedSceneId(null);
+    setSelectedCanvasObjectId(null);
+    setArtworkInspector(null);
+    setContextMenu(null);
+    setActiveHudCommand(null);
+    setActiveModuleId(level);
+  }, [closeAllWindows]);
   const homeWorld = useMemo(() => createVerticalHomeWorld(geometry), [geometry]);
   const homeOrigin = useMemo(() => ({ x:geometry.width, y:geometry.height, zoom:1 }), [geometry.height,geometry.width]);
-  const homeCamera = geometry.narrow || homeCameraState.profileAddress !== workspace.profileAddress
-    ? homeOrigin
-    : clampVerticalHomeWorldCamera(homeCameraState.camera, homeWorld, homeOrigin.x);
-  homeCameraRef.current = homeCamera;
-  const spatialGridSpacing = geometry.narrow ? 56 : 80;
-  const homeGridScreenOffsetY = getSpatialGridOffset(homeCamera, spatialGridSpacing).y;
-  const galleryGridOffsetY = ((homeGridScreenOffsetY - geometry.height) % spatialGridSpacing + spatialGridSpacing) % spatialGridSpacing;
-  const upperGridOffsetY = ((homeGridScreenOffsetY + geometry.height) % spatialGridSpacing + spatialGridSpacing) % spatialGridSpacing;
-  const homeWorldMounted = (!galleryOpen && !upperOpen)
-    || ['preparing', 'entering', 'exiting'].includes(galleryTransitionPhase)
-    || ['preparing', 'entering', 'exiting'].includes(upperTransitionPhase);
-  const galleryWorldMounted = galleryOpen && galleryTransitionPhase !== 'preparing';
-  const upperWorldMounted = upperOpen && upperTransitionPhase !== 'preparing';
-  const homeWorldTransitionPhase = upperOpen
-    ? upperTransitionPhase === 'entering' ? 'entering-upper' : upperTransitionPhase === 'exiting' ? 'exiting-upper' : 'home'
-    : galleryTransitionPhase;
-  const spatialLevel = upperOpen
-    ? SPATIAL_WORLD_LEVEL.UPPER
-    : galleryOpen ? SPATIAL_WORLD_LEVEL.GALLERY : SPATIAL_WORLD_LEVEL.HOME;
-  const spatialLevelTransitioning = (galleryOpen && galleryTransitionPhase !== 'gallery')
-    || (upperOpen && upperTransitionPhase !== 'upper');
+  const {
+    enterGallery, enterUpper, exitGallery, exitUpper,
+    galleryGridBasePhaseX, galleryGridOffsetY, galleryOpen, galleryTransitionPhase, galleryWorldMounted,
+    homeCamera, homeCameraRef, homeGridPhaseX, homeWorldMounted, homeWorldTransitionPhase,
+    setGalleryCameraX, setHomeCameraImmediately, spatialLevel, spatialLevelTransitioning,
+    upperGridOffsetY, upperOpen, upperTransitionPhase, upperWorldMounted
+  } = useSpatialWorldNavigation({
+    canvasObjects,
+    geometry,
+    homeOrigin,
+    homeWorld,
+    libraryAssetById,
+    libraryStatus,
+    loadLibrary,
+    onGalleryOpenChange,
+    ownerAuthoringEnabled,
+    prepareSpatialLevel,
+    profileAddress: workspace.profileAddress,
+    reducedMotion: revealPresentation.reducedMotion,
+    setActiveModuleId
+  });
   const homeZoom = 1;
   const worldContentX = Math.round((geometry.width + geometry.left) / 40) * 40;
   const worldContentY = Math.round((geometry.height + geometry.top) / 40) * 40;
@@ -374,12 +352,12 @@ export default function ModuleGridShell({
   },[geometry,placementGeometry,positions,systemPresentation]);
   const spatialSceneItems = useMemo(() => sceneItems.filter((item) => !Object.hasOwn(MODULE_ENTRY_ORDER,item.id)), [sceneItems]);
   const canvasPositions = useMemo(() => Object.fromEntries(sceneItems.map((item)=>[item.id,item.position])),[sceneItems]);
-  const sceneById = useMemo(() => Object.fromEntries(sceneItems.map((item)=>{const effective=effectiveGeometry(item.geometry,interaction,item.id);return [item.id,{...item,geometry:effective,position:{column:effective.column,row:effective.row},span:{columns:effective.columnSpan,rows:effective.rowSpan}}]})),[interaction,sceneItems]);
+  const sceneById = useMemo(() => Object.fromEntries(sceneItems.map((item) => [item.id, item])), [sceneItems]);
   const canvasObjectScenes = useMemo(() => {
     const items=canvasObjects.map((object)=>{const definition=getCanvasObjectDefinition(object.kind);const rect=normalizeGridRect({column:object.placement.column,row:object.placement.row,columnSpan:object.span.columns,rowSpan:object.span.rows},placementGeometry,{minimumSpan:definition.minimumSpan});return {...object,geometry:rect,position:{column:rect.column,row:rect.row},span:{columns:rect.columnSpan,rows:rect.rowSpan}};});
     const responsive=geometry.narrow?packCompactCanvasObjects(items,geometry):items;
-    return Object.fromEntries(responsive.map((item)=>{const effective=effectiveGeometry(item.geometry,interaction,item.id);return [item.id,{...item,geometry:effective,position:{column:effective.column,row:effective.row},span:{columns:effective.columnSpan,rows:effective.rowSpan}}]}));
-  },[canvasObjects,geometry,interaction,placementGeometry]);
+    return Object.fromEntries(responsive.map((item) => [item.id, item]));
+  },[canvasObjects,geometry,placementGeometry]);
   const canvasObjectById = useMemo(() => Object.fromEntries(canvasObjects.map((object)=>[object.id,object])),[canvasObjects]);
   const authoredWindowDefaults = useMemo(() => {
     const openIds = MODULES.filter(({ id }) => systemPresentation[id]?.startOpen).map(({ id }) => id);
@@ -392,178 +370,47 @@ export default function ModuleGridShell({
     publicPresentation: { keeperId: activeActorId, stageId, environment, avatarShape, visitorNavigation },
     signalSettings, profileIdentity, modulePositions: positions, systemPresentation, createdAt: 0, exportedAt: 0
   }), [activeActorId, avatarShape, environment, libraryAssets, positions, profileIdentity, signalSettings, stageId, systemPresentation, visitorNavigation, workspace]);
-  const draftFingerprint = useMemo(() => profileDocumentContentFingerprint(draftDocument), [draftDocument]);
-  const reconciliationFingerprint = useMemo(() => profileDocumentReconciliationFingerprint(draftDocument), [draftDocument]);
-  const draftGenerationRef = useRef({ fingerprint: draftFingerprint, generation: 0 });
-  if (draftGenerationRef.current.fingerprint !== draftFingerprint) {
-    draftGenerationRef.current = { fingerprint: draftFingerprint, generation: draftGenerationRef.current.generation + 1 };
-  }
+  const {
+    draftFingerprint,
+    draftSaveStatus,
+    getPublicationContext,
+    handlePublicationConfirmed
+  } = useOwnerPublicationSync({
+    activeActorId,
+    avatarShape,
+    draftDocument,
+    effectivePublishedResolution: publishedResolution,
+    environment,
+    geometry,
+    getWalletPublicationContext,
+    onApplyRestoredPresentation,
+    onPublicationConfirmed,
+    ownerAuthoringEnabled,
+    positions,
+    publicationProfileAddress: workspaceProfileAddress,
+    replaceSignalSettings,
+    replaceWorkspace,
+    saveSystemPresentation,
+    setAvatarShape,
+    setPositions,
+    setSystemPresentation,
+    setVisitorNavigation,
+    signalSettings,
+    stageId,
+    systemPresentation,
+    visitorNavigation,
+    viewedProfileAddress,
+    workspace,
+    workspaceRecordRef
+  });
   const snapshotStale = Boolean(snapshot && useProfileDocumentStore.getState().profileAddress === documentProfileAddress
     && useProfileDocumentStore.getState().snapshotDraftFingerprint !== draftFingerprint);
-  const draftSaveStatus = draftSaveState.profileAddress === workspace.profileAddress ? draftSaveState.status : 'saving';
-  const effectivePublishedResolution = confirmedPublication?.profileAddress === workspace.profileAddress
-    ? confirmedPublication.resolution
-    : publishedResolution;
-  const persistOwnerDraft = useCallback(() => {
-    const librarySaved = flushLibraryWorkspace();
-    const signalsSaved = flushSignalDocument();
-    const presentationSaved = saveRestoredPresentation(window.localStorage, workspace.profileAddress, {
-      keeperId: activeActorId, stageId, environment, avatarShape, visitorNavigation
-    });
-    let layoutSaved = true;
-    if (!geometry.narrow) {
-      layoutSaved = writeOwnerProfileValue(window.localStorage,MODULE_LAYOUT_STORAGE_KEY,workspace.profileAddress,encodeModuleLayout(positions));
-      if (!layoutSaved) reportControlledError('module-grid-layout-persist', new Error('Could not save the profile-scoped module layout'));
-    }
-    const systemPresentationSaved = writeOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,workspace.profileAddress,JSON.stringify(systemPresentation));
-    if (!systemPresentationSaved) reportControlledError('system-presentation-persist', new Error('Could not save the profile-scoped system presentation'));
-    const saved = librarySaved && signalsSaved && presentationSaved && layoutSaved && systemPresentationSaved;
-    if (!saved) reportControlledError('owner-draft-persist', new Error('Could not save every owner draft source'));
-    setDraftSaveState({ profileAddress: workspace.profileAddress, status: saved ? 'saved' : 'error' });
-    return saved;
-  }, [activeActorId, avatarShape, environment, geometry.narrow, positions, stageId, systemPresentation, visitorNavigation, workspace.profileAddress]);
-
-  useEffect(() => {
-    if (!ownerAuthoringEnabled || normalizeProfileAddress(workspaceProfileAddress) !== workspace.profileAddress) return;
-    const status = effectivePublishedResolution?.status;
-    if (status === 'LOADING' || status === 'STALE' && effectivePublishedResolution?.busy) return;
-    const publication = ['RESOLVED', 'STALE'].includes(status) ? effectivePublishedResolution?.document : null;
-    const record = workspaceRecordRef.current.get(workspace.profileAddress) || { presence: 'unavailable' };
-    if (!publication) {
-      setPublicationReconciliation({ profileAddress: workspace.profileAddress, publishedFingerprint: null,
-        status: status === 'UNAVAILABLE' || record.presence !== 'absent' ? 'ready' : 'blocked' });
-      return;
-    }
-    const publishedFingerprint = profileDocumentReconciliationFingerprint(publication);
-    if (publicationReconciliation.profileAddress === workspace.profileAddress
-      && publicationReconciliation.publishedFingerprint === publishedFingerprint
-      && publicationReconciliation.status === 'ready') return;
-    const baseline = loadOwnerPublicationBaseline(window.localStorage, workspace.profileAddress);
-    let action = decideOwnerPublicationReconciliation({
-      localRecordPresence: record.presence,
-      localFingerprint: reconciliationFingerprint,
-      localPublicProjectionEmpty: isWorkspacePublicProjectionEmpty(workspace),
-      baseline,
-      publishedFingerprint
-    });
-    if (action === OWNER_RECONCILIATION_ACTION.CONFLICT) {
-      const restorePublished = window.confirm('This browser contains a local INSCAPE draft that differs from the latest publication. Load the published public presentation? Private folders and private gallery artwork will be preserved. Select Cancel to keep this local draft.');
-      action = restorePublished ? OWNER_RECONCILIATION_ACTION.HYDRATE_PUBLICATION : OWNER_RECONCILIATION_ACTION.KEEP_LOCAL;
-    }
-    if (action === OWNER_RECONCILIATION_ACTION.WAIT) return;
-    const pointer = publicationPointerMetadata(effectivePublishedResolution?.pointer);
-    if (action === OWNER_RECONCILIATION_ACTION.HYDRATE_PUBLICATION) {
-      try {
-        const plan = createProfileDocumentRestorePlan(publication, workspace);
-        if (!replaceWorkspace(plan.workspace)) throw new Error('Could not persist the hydrated public workspace');
-        if (!replaceSignalSettings(plan.signalSettings)) throw new Error('Could not persist hydrated Activity settings');
-        if (!saveRestoredPresentation(window.localStorage, workspace.profileAddress, {
-          keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment,
-          avatarShape: plan.avatarShape, visitorNavigation: plan.visitorNavigation
-        })) throw new Error('Could not persist hydrated profile presentation');
-        const nextPositions = { ...positions };
-        const nextSystemPresentation = { ...systemPresentation };
-        Object.entries(plan.systemModules).forEach(([id, module]) => {
-          if (module.placement) nextPositions[id] = module.placement;
-          if (nextSystemPresentation[id]) nextSystemPresentation[id] = { ...nextSystemPresentation[id], ...module };
-        });
-        setPositions(nextPositions);
-        setSystemPresentation(nextSystemPresentation);
-        writeOwnerProfileValue(window.localStorage, MODULE_LAYOUT_STORAGE_KEY, workspace.profileAddress, encodeModuleLayout(nextPositions));
-        writeOwnerProfileValue(window.localStorage, SYSTEM_SCENE_KEY, workspace.profileAddress, JSON.stringify(nextSystemPresentation));
-        setAvatarShape(plan.avatarShape);
-        setVisitorNavigation(plan.visitorNavigation);
-        onApplyRestoredPresentation?.({ keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment });
-        saveOwnerPublicationBaseline(window.localStorage, workspace.profileAddress, {
-          ...pointer, publishedFingerprint, localFingerprint: publishedFingerprint, hydratedAt: Date.now()
-        });
-        workspaceRecordRef.current.set(workspace.profileAddress, { presence: 'current', profileAddress: workspace.profileAddress });
-      } catch (error) {
-        reportControlledError('owner-publication-hydration', error);
-        setPublicationReconciliation({ profileAddress: workspace.profileAddress, publishedFingerprint, status: 'blocked' });
-        return;
-      }
-    } else {
-      saveOwnerPublicationBaseline(window.localStorage, workspace.profileAddress, {
-        ...pointer, publishedFingerprint, localFingerprint: reconciliationFingerprint, hydratedAt: Date.now()
-      });
-    }
-    setPublicationReconciliation({ profileAddress: workspace.profileAddress, publishedFingerprint, status: 'ready' });
-  }, [effectivePublishedResolution, onApplyRestoredPresentation, ownerAuthoringEnabled, positions, publicationReconciliation,
-    reconciliationFingerprint, replaceSignalSettings, replaceWorkspace, systemPresentation, workspace, workspaceProfileAddress]);
-
-  useEffect(() => {
-    if (!ownerAuthoringEnabled || publicationReconciliation.status !== 'ready'
-      || publicationReconciliation.profileAddress !== workspace.profileAddress) return undefined;
-    setDraftSaveState({ profileAddress: workspace.profileAddress, status: 'saving' });
-    const timeout = window.setTimeout(persistOwnerDraft, 240);
-    return () => window.clearTimeout(timeout);
-  }, [draftFingerprint, ownerAuthoringEnabled, persistOwnerDraft, publicationReconciliation, signalSettings, workspace]);
-
-  useEffect(() => {
-    if (!ownerAuthoringEnabled || publicationReconciliation.status !== 'ready'
-      || publicationReconciliation.profileAddress !== workspace.profileAddress) return undefined;
-    const flush = () => persistOwnerDraft();
-    window.addEventListener('pagehide', flush);
-    window.addEventListener('beforeunload', flush);
-    return () => {
-      window.removeEventListener('pagehide', flush);
-      window.removeEventListener('beforeunload', flush);
-    };
-  }, [ownerAuthoringEnabled, persistOwnerDraft, publicationReconciliation, workspace.profileAddress]);
-  const getPublicationContext = useCallback(() => {
-    const wallet = getWalletPublicationContext?.() || {};
-    const documentState = useProfileDocumentStore.getState();
-    const liveWorkspaceAddress = useLibraryStore.getState().workspace.profileAddress;
-    const documentContextMatches = documentState.profileAddress === normalizeProfileAddress(liveWorkspaceAddress);
-    const liveSnapshot = documentContextMatches ? documentState.snapshot : null;
-    const host = wallet.hostProfileAddress?.toLowerCase(); const workspaceAddress = liveWorkspaceAddress?.toLowerCase();
-    return { ...wallet, workspaceProfileAddress: liveWorkspaceAddress,
-      viewedProfileAddress, snapshotGeneration: documentContextMatches ? documentState.snapshotGeneration : 0,
-      snapshotArtifactHash: liveSnapshot ? canonicalPublicationHash(liveSnapshot) : null,
-      snapshotContentFingerprint: liveSnapshot ? publicationContentFingerprint(liveSnapshot) : null,
-      draftFingerprint: publicationContentFingerprint(draftDocument), draftGeneration: draftGenerationRef.current.generation,
-      snapshotStale: Boolean(liveSnapshot && documentState.snapshotDraftFingerprint !== draftFingerprint),
-      ownerAuthoringEnabled: Boolean(wallet.isHostProfileOwner && host && host === workspaceAddress && host === viewedProfileAddress?.toLowerCase()) };
-  }, [draftDocument, draftFingerprint, getWalletPublicationContext, snapshotGeneration, viewedProfileAddress]);
-
-  const handlePublicationConfirmed = useCallback((resolution) => {
-    const profileAddress = normalizeProfileAddress(resolution?.document?.profile?.address);
-    if (!profileAddress || profileAddress !== workspace.profileAddress) return;
-    const fingerprint = profileDocumentReconciliationFingerprint(resolution.document);
-    saveOwnerPublicationBaseline(window.localStorage, profileAddress, {
-      ...publicationPointerMetadata(resolution.pointer),
-      publishedFingerprint: fingerprint,
-      localFingerprint: fingerprint,
-      hydratedAt: Date.now()
-    });
-    setConfirmedPublication({ profileAddress, resolution: { ...resolution, status: 'RESOLVED', busy: false } });
-    setPublicationReconciliation({ profileAddress, publishedFingerprint: fingerprint, status: 'ready' });
-    onPublicationConfirmed?.();
-  }, [onPublicationConfirmed, workspace.profileAddress]);
 
   useEffect(() => {
     if (snapshot) return;
     const stored = loadProfileSnapshot(window.localStorage, workspace.profileAddress);
     if (stored) installSnapshot(stored, profileDocumentContentFingerprint(stored));
   }, [installSnapshot, snapshot, workspace.profileAddress]);
-
-  useEffect(() => {
-    if (cameraTransitionFrameRef.current) window.cancelAnimationFrame(cameraTransitionFrameRef.current);
-    cameraTransitionFrameRef.current = 0;
-    setHomeCameraState({
-      profileAddress: workspace.profileAddress,
-      camera: clampVerticalHomeWorldCamera(loadHomeWorldCamera(window.localStorage, workspace.profileAddress, homeOrigin), homeWorld, homeOrigin.x)
-    });
-  }, [homeOrigin, homeWorld, workspace.profileAddress]);
-
-  useEffect(() => {
-    if (homeCameraState.profileAddress !== workspace.profileAddress) return;
-    const timeout = window.setTimeout(() => {
-      saveHomeWorldCamera(window.localStorage, workspace.profileAddress, homeCameraState.camera);
-    }, 140);
-    return () => window.clearTimeout(timeout);
-  }, [homeCameraState, workspace.profileAddress]);
 
   useEffect(() => {
     let keyExists = false;
@@ -643,36 +490,11 @@ export default function ModuleGridShell({
   }, [activeActorId, avatarShape, environment, importedDocument, onApplyRestoredPresentation, ownerAuthoringEnabled, replaceSignalSettings, replaceWorkspace, setDocumentError, signalSettings, stageId, visitorNavigation, workspace]);
 
   useEffect(() => {
-    if (!interfaceVisible) {
-      setAvailableModuleIds(new Set());
-      return undefined;
-    }
-
-    const groupedEntry = revealPresentation.sequence !== 'full' || revealPresentation.reducedMotion;
-    const timers = MODULES.map(({ id }, index) => {
-      const delay = groupedEntry
-        ? GROUPED_MODULE_ENTRY_MS
-        : FULL_MODULE_ENTRY_BASE_MS + (MODULE_ENTRY_ORDER[id] ?? index) * FULL_MODULE_ENTRY_STAGGER_MS;
-      return window.setTimeout(() => {
-        setAvailableModuleIds((current) => {
-          const next = new Set(current);
-          next.add(id);
-          return next;
-        });
-      }, delay);
-    });
-
-    return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [interfaceVisible, revealPresentation.reducedMotion, revealPresentation.sequence]);
-
-  useEffect(() => {
     const resize = () => {
       if (resizeFrameRef.current) return;
       resizeFrameRef.current = window.requestAnimationFrame(() => {
         resizeFrameRef.current = 0;
         const nextGeometry = createModuleGridGeometry(window.innerWidth, window.innerHeight);
-        interactionRef.current = null;
-        setInteraction(null);
         setGeometry(nextGeometry);
       });
     };
@@ -690,19 +512,6 @@ export default function ModuleGridShell({
     return () => residentHandoff?.trackActorPosition?.(null);
   }, [residentHandoff]);
 
-  const persistPositions = useCallback((nextPositions) => {
-    if (geometry.narrow) return;
-    if (!writeOwnerProfileValue(window.localStorage,MODULE_LAYOUT_STORAGE_KEY,workspace.profileAddress,encodeModuleLayout(nextPositions)))
-      reportControlledError('module-grid-layout-persist', new Error('Could not save the profile-scoped module layout'));
-  }, [geometry.narrow, workspace.profileAddress]);
-
-  const updateRuntime = useCallback((action) => setRuntimeWindows((current) => updateRuntimeWindowState(current, action)), []);
-  const commitLauncherGeometry = useCallback((id,rect) => {
-    if (!ownerAuthoringEnabled) return;
-    const nextPositions={...positions,[id]:{column:rect.column,row:rect.row}};setPositions(nextPositions);persistPositions(nextPositions);
-    const nextPresentation={...systemPresentation,[id]:{...systemPresentation[id],appearanceMode:rect.columnSpan===1?'icon':'label',span:{columns:rect.columnSpan,rows:rect.rowSpan}}};setSystemPresentation(nextPresentation);writeOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,workspace.profileAddress,JSON.stringify(nextPresentation));
-  },[ownerAuthoringEnabled,persistPositions,positions,systemPresentation,workspace.profileAddress]);
-  const commitCanvasObjectGeometry = useCallback((id,rect) => runOwnerAuthoringMutation(ownerAuthoringEnabled, () => setCanvasObjectGeometry(id,rect)),[ownerAuthoringEnabled,setCanvasObjectGeometry]);
 
   const openModule = useCallback((id) => {
     if (id === 'identity' && identityOpen) {
@@ -751,68 +560,6 @@ export default function ModuleGridShell({
     setIdentityOpen(true);
   }, [collectionOpen, creationsOpen, identityOpen, signalsOpen, updateRuntime]);
 
-  const moduleStyle = useCallback((id) => gridRectToPixelRect(sceneById[id].geometry,geometry,2), [geometry,sceneById]);
-  const installInteraction = useCallback((next,event) => {
-    if (interactionRef.current || !next) return false;
-    interactionRef.current = next; setInteraction(next);
-    next.captureElement.setPointerCapture?.(event.pointerId);
-    return true;
-  },[]);
-
-  const beginInteraction = useCallback((event,{kind,targetId,rect,element,minimumSpan})=>{
-    const authoredKind=[INTERACTION_KIND.MOVE_LAUNCHER,INTERACTION_KIND.RESIZE_LAUNCHER,INTERACTION_KIND.MOVE_CANVAS_OBJECT,INTERACTION_KIND.RESIZE_CANVAS_OBJECT].includes(kind);
-    if(geometry.narrow||(authoredKind&&(!ownerAuthoringEnabled||!editMode))||!rect||!element||event.pointerType==='mouse'&&event.button!==0)return;
-    if(kind===INTERACTION_KIND.MOVE_WINDOW&&event.target.closest('button,a,input,select,textarea,[data-resize-control]'))return;
-    event.preventDefault();
-    if(kind.includes('RESIZE'))event.stopPropagation();
-    const rendered=element.getBoundingClientRect();
-    const resize=kind.includes('RESIZE');
-    const next=createInteraction({kind,targetId,pointerId:event.pointerId,originGeometry:rect,gridBounds:{columns:placementGeometry.columns,rows:placementGeometry.rows,minColumn:placementGeometry.minColumn,minRow:placementGeometry.minRow},cellWidth:geometry.cellWidth,cellHeight:geometry.cellHeight,pointerGrabOffset:resize?{x:event.clientX-rendered.right,y:event.clientY-rendered.bottom}:{x:event.clientX-rendered.left,y:event.clientY-rendered.top},startPointer:{x:event.clientX,y:event.clientY},captureElement:event.target});
-    next.gridClientRect=gridRef.current.getBoundingClientRect();
-    next.minimumSpan=minimumSpan;
-    installInteraction(next,event);
-  },[editMode,geometry,installInteraction,ownerAuthoringEnabled,placementGeometry]);
-
-  const moveInteraction = useCallback((event)=>{
-    const current=interactionRef.current;if(!current||event.pointerId!==current.pointerId)return;
-    if(current.kind.includes('RESIZE'))event.stopPropagation();
-    if(!current.activated&&Math.hypot(event.clientX-current.startPointer.x,event.clientY-current.startPointer.y)<6)return;
-    const interactionGeometry=geometry.narrow?geometry:{...placementGeometry,cellWidth:geometry.cellWidth*homeZoom,cellHeight:geometry.cellHeight*homeZoom};
-    const input={pointer:{x:event.clientX,y:event.clientY},gridClientRect:current.gridClientRect,pointerGrabOffset:current.pointerGrabOffset,originGeometry:current.originGeometry,geometry:interactionGeometry,inset:2};
-    const proposed=current.kind.includes('RESIZE')?resizeCandidateFromPointer({...input,minimumSpan:current.minimumSpan}):movementCandidateFromPointer(input);
-    const launcher=current.kind===INTERACTION_KIND.MOVE_LAUNCHER||current.kind===INTERACTION_KIND.RESIZE_LAUNCHER;
-    const valid=!launcher||launcherGeometryAvailable(current.targetId,proposed,spatialSceneItems,placementGeometry);
-    const next=activateInteraction(current,proposed,valid);interactionRef.current=next;setInteraction(next);
-  },[geometry,homeZoom,placementGeometry,spatialSceneItems]);
-
-  const finishInteraction = useCallback((event,cancel=false)=>{
-    const current=interactionRef.current;
-    if(!current||current.pointerId!==event.pointerId)return;
-    if(event.type==='lostpointercapture'&&event.currentTarget.hasPointerCapture?.(event.pointerId))return;
-    interactionRef.current=null;setInteraction(null);
-    if(cancel||!current.activated)return;
-    if(current.kind===INTERACTION_KIND.MOVE_LAUNCHER||current.kind===INTERACTION_KIND.RESIZE_LAUNCHER){suppressLauncherClickRef.current=true;commitLauncherGeometry(current.targetId,current.candidateGeometry);}
-    else if(current.kind===INTERACTION_KIND.MOVE_CANVAS_OBJECT||current.kind===INTERACTION_KIND.RESIZE_CANVAS_OBJECT){suppressLauncherClickRef.current=true;commitCanvasObjectGeometry(current.targetId,current.candidateGeometry);}
-  },[commitCanvasObjectGeometry,commitLauncherGeometry]);
-
-  const startDrag=useCallback((event,id,unused,enabled=true)=>{if(enabled)beginInteraction(event,{kind:INTERACTION_KIND.MOVE_LAUNCHER,targetId:id,rect:sceneById[id]?.geometry,element:moduleRefs.current.get(id)});},[beginInteraction,sceneById]);
-  const startResize=useCallback((event,id)=>beginInteraction(event,{kind:INTERACTION_KIND.RESIZE_LAUNCHER,targetId:id,rect:sceneById[id]?.geometry,element:moduleRefs.current.get(id),minimumSpan:{columns:1,rows:1}}),[beginInteraction,sceneById]);
-  const startObjectDrag=useCallback((event,id)=>beginInteraction(event,{kind:INTERACTION_KIND.MOVE_CANVAS_OBJECT,targetId:id,rect:canvasObjectScenes[id]?.geometry,element:canvasObjectRefs.current.get(id)}),[beginInteraction,canvasObjectScenes]);
-  const startObjectResize=useCallback((event,id)=>{const definition=getCanvasObjectDefinition(canvasObjectById[id]?.kind);beginInteraction(event,{kind:INTERACTION_KIND.RESIZE_CANVAS_OBJECT,targetId:id,rect:canvasObjectScenes[id]?.geometry,element:canvasObjectRefs.current.get(id),minimumSpan:definition.minimumSpan});},[beginInteraction,canvasObjectById,canvasObjectScenes]);
-  lifecycleHandlersRef.current={move:moveInteraction,finish:finishInteraction};
-  useEffect(() => {
-    if (!interaction) return undefined;
-    const move = (event) => lifecycleHandlersRef.current.move?.(event);
-    const up = (event) => lifecycleHandlersRef.current.finish?.(event, false);
-    const cancel = (event) => lifecycleHandlersRef.current.finish?.(event, true);
-    window.addEventListener('pointermove', move, true); window.addEventListener('pointerup', up, true); window.addEventListener('pointercancel', cancel, true);
-    return () => { window.removeEventListener('pointermove', move, true); window.removeEventListener('pointerup', up, true); window.removeEventListener('pointercancel', cancel, true); };
-  }, [interaction?.interactionId]);
-  useEffect(()=>()=>{
-    interactionRef.current=null;
-    if (cameraTransitionFrameRef.current) window.cancelAnimationFrame(cameraTransitionFrameRef.current);
-  },[]);
-
   const resetWindows = useCallback(() => {
     setRuntimeWindows((current) => updateRuntimeWindowState(current, { type: 'reset', initial: authoredWindowDefaults }));
     setIdentityOpen(authoredWindowDefaults.openIds.includes('identity'));
@@ -820,16 +567,6 @@ export default function ModuleGridShell({
     setCreationsOpen(authoredWindowDefaults.openIds.includes('creations'));
     setSignalsOpen(authoredWindowDefaults.openIds.includes('signals'));
   }, [authoredWindowDefaults]);
-
-  const closeAllWindows = useCallback(() => {
-    updateRuntime({ type: 'close-all' }); setIdentityOpen(false); setIdentityPhase('closed'); setCollectionOpen(false); setCreationsOpen(false); setSignalsOpen(false); setActiveModuleId(null);
-  }, [updateRuntime]);
-
-  const clearGalleryTransitionTimer = useCallback(() => {
-    if (!galleryTransitionTimerRef.current) return;
-    window.clearTimeout(galleryTransitionTimerRef.current);
-    galleryTransitionTimerRef.current = 0;
-  }, []);
 
   const openGalleryContextMenu = useCallback((event, target) => {
     if (!ownerAuthoringEnabled || !target) return;
@@ -843,126 +580,7 @@ export default function ModuleGridShell({
     });
   }, [ownerAuthoringEnabled]);
 
-  const clearUpperTransitionTimer = useCallback(() => {
-    if (!upperTransitionTimerRef.current) return;
-    window.clearTimeout(upperTransitionTimerRef.current);
-    upperTransitionTimerRef.current = 0;
-  }, []);
-
-  useEffect(() => () => {
-    clearGalleryTransitionTimer();
-    clearUpperTransitionTimer();
-  }, [clearGalleryTransitionTimer, clearUpperTransitionTimer]);
-
-  const exitGallery = useCallback(() => {
-    if (!galleryOpen || galleryTransitionPhase !== 'gallery') return;
-    clearGalleryTransitionTimer();
-    const spacing = geometry.narrow ? 56 : 80;
-    const inheritedPhase = getSpatialGridOffset({ x: galleryCameraXRef.current - galleryGridBasePhaseXRef.current, y: 0 }, spacing).x;
-    setHomeGridPhaseX(inheritedPhase);
-    setGalleryTransitionPhase('exiting');
-    const duration = revealPresentation.reducedMotion ? 1 : SPATIAL_WORLD_TRANSITION_MS;
-    galleryTransitionTimerRef.current = window.setTimeout(() => {
-      galleryTransitionTimerRef.current = 0;
-      setGalleryOpen(false);
-      setGalleryTransitionPhase('home');
-      setActiveModuleId(null);
-      window.requestAnimationFrame(() => {
-        const galleryButton = document.querySelector('.gallery-navigation-card[data-visible] > button');
-        (galleryButton || document.querySelector('.profile-identity-card__avatar'))?.focus();
-      });
-    }, duration);
-  }, [clearGalleryTransitionTimer, galleryOpen, galleryTransitionPhase, geometry.narrow, revealPresentation.reducedMotion]);
-
-  const enterGallery = useCallback(() => {
-    if (galleryOpen || upperOpen) return;
-    const galleryAssetsMissing = canvasObjects.some((object) => !libraryAssetById.has(object.stableAssetId));
-    if (ownerAuthoringEnabled && galleryAssetsMissing && libraryStatus !== 'loading') void loadLibrary();
-    clearGalleryTransitionTimer();
-    galleryCameraXRef.current = 0;
-    galleryGridBasePhaseXRef.current = homeGridPhaseX;
-    closeAllWindows();
-    setEditMode(false);
-    setSelectedSceneId(null);
-    setSelectedCanvasObjectId(null);
-    setArtworkInspector(null);
-    setContextMenu(null);
-    setActiveHudCommand(null);
-    setGalleryOpen(true);
-    setGalleryTransitionPhase(revealPresentation.reducedMotion ? 'entering' : 'preparing');
-    setActiveModuleId('gallery');
-    const preparation = revealPresentation.reducedMotion ? 0 : SPATIAL_DOCK_COLLAPSE_MS;
-    const duration = revealPresentation.reducedMotion ? 1 : SPATIAL_WORLD_TRANSITION_MS;
-    galleryTransitionTimerRef.current = window.setTimeout(() => {
-      setGalleryTransitionPhase('entering');
-      galleryTransitionTimerRef.current = window.setTimeout(() => {
-        galleryTransitionTimerRef.current = 0;
-        setGalleryTransitionPhase('gallery');
-      }, duration);
-    }, preparation);
-  }, [canvasObjects, clearGalleryTransitionTimer, closeAllWindows, galleryOpen, homeGridPhaseX, libraryAssetById, libraryStatus, loadLibrary, ownerAuthoringEnabled, revealPresentation.reducedMotion, upperOpen]);
-
-  const exitUpper = useCallback(() => {
-    if (!upperOpen || upperTransitionPhase !== 'upper') return;
-    clearUpperTransitionTimer();
-    setUpperTransitionPhase('exiting');
-    const duration = revealPresentation.reducedMotion ? 1 : SPATIAL_WORLD_TRANSITION_MS;
-    upperTransitionTimerRef.current = window.setTimeout(() => {
-      upperTransitionTimerRef.current = 0;
-      setUpperOpen(false);
-      setUpperTransitionPhase('home');
-      setActiveModuleId(null);
-    }, duration);
-  }, [clearUpperTransitionTimer, revealPresentation.reducedMotion, upperOpen, upperTransitionPhase]);
-
-  const enterUpper = useCallback(() => {
-    if (upperOpen || galleryOpen) return;
-    clearUpperTransitionTimer();
-    closeAllWindows();
-    setEditMode(false);
-    setSelectedSceneId(null);
-    setSelectedCanvasObjectId(null);
-    setArtworkInspector(null);
-    setContextMenu(null);
-    setActiveHudCommand(null);
-    setUpperOpen(true);
-    setUpperTransitionPhase(revealPresentation.reducedMotion ? 'entering' : 'preparing');
-    setActiveModuleId('upper');
-    const preparation = revealPresentation.reducedMotion ? 0 : SPATIAL_DOCK_COLLAPSE_MS;
-    const duration = revealPresentation.reducedMotion ? 1 : SPATIAL_WORLD_TRANSITION_MS;
-    upperTransitionTimerRef.current = window.setTimeout(() => {
-      setUpperTransitionPhase('entering');
-      upperTransitionTimerRef.current = window.setTimeout(() => {
-        upperTransitionTimerRef.current = 0;
-        setUpperTransitionPhase('upper');
-      }, duration);
-    }, preparation);
-  }, [clearUpperTransitionTimer, closeAllWindows, galleryOpen, revealPresentation.reducedMotion, upperOpen]);
-
-  useEffect(() => {
-    onGalleryOpenChange?.(galleryOpen);
-    return () => { if (galleryOpen) onGalleryOpenChange?.(false); };
-  }, [galleryOpen, onGalleryOpenChange]);
-
   const toggleGrid = useCallback(() => setGridVisible((value) => { const next=!value; try { window.localStorage.setItem(GRID_PREFERENCE_KEY,JSON.stringify({version:1,visible:next})); } catch {} return next; }), []);
-
-  const activateLauncher = useCallback((id) => {
-    if (suppressLauncherClickRef.current) { suppressLauncherClickRef.current = false; return; }
-    if (!editMode) openModule(id);
-  }, [editMode, openModule]);
-
-  const cancelCameraTransition = useCallback(() => {
-    if (!cameraTransitionFrameRef.current) return;
-    window.cancelAnimationFrame(cameraTransitionFrameRef.current);
-    cameraTransitionFrameRef.current = 0;
-  }, []);
-
-  const setHomeCameraImmediately = useCallback((camera) => {
-    cancelCameraTransition();
-    const verticalCamera = clampVerticalHomeWorldCamera(camera, homeWorld, homeOrigin.x);
-    homeCameraRef.current = verticalCamera;
-    setHomeCameraState({ profileAddress: workspace.profileAddress, camera: verticalCamera });
-  }, [cancelCameraTransition, homeOrigin.x, homeWorld, workspace.profileAddress]);
 
   const handleWorldWheel = useCallback((event) => {
     if (geometry.narrow) return;
@@ -1094,7 +712,7 @@ export default function ModuleGridShell({
     });
     else if (command === 'toggle-start-open') {
       const rect = runtimeWindows.rects[runtimeId] || defaultWindowGridRect(runtimeId, geometry, canvasPositions[runtimeId]);
-      setSystemPresentation((current) => { const next={...current,[runtimeId]:{...current[runtimeId],startOpen:!current[runtimeId]?.startOpen,windowGeometry:rect}}; writeOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,workspace.profileAddress,JSON.stringify(next)); return next; });
+      setSystemPresentation((current) => { const next={...current,[runtimeId]:{...current[runtimeId],startOpen:!current[runtimeId]?.startOpen,windowGeometry:rect}}; saveSystemPresentation(workspace.profileAddress,next); return next; });
     }
     setContextMenu(null);
   }, [authoredWindowDefaults, beginArtworkChoice, beginGalleryArtworkChoice, canvasObjectById, canvasPositions, closeAllWindows, contextMenu, geometry, homeOrigin, keeperVisible, onKeeperVisibilityChange, onStageVisibilityChange, openArtworkInspector, openArtworkPreview, openModule, ownerAuthoringEnabled, removeCanvasObject, reorderCanvasObject, requestGalleryArtworkRemoval, resetWindows, runtimeWindows.rects, setAllCanvasObjectsLocked, setCanvasObjectLocked, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility, setHomeCameraImmediately, stageVisible, startPreview, toggleGrid, updateRuntime, workspace.profileAddress]);
@@ -1123,7 +741,6 @@ export default function ModuleGridShell({
       data-edit-mode={editMode || undefined}
       data-gallery-open={galleryOpen || undefined}
       data-upper-open={upperOpen || undefined}
-      data-dragging={interaction?.activated ? interaction.targetId : undefined}
       style={shellTheme}
       aria-label="INSCAPE public world"
       ref={shellRef}
@@ -1264,53 +881,6 @@ export default function ModuleGridShell({
           }}
           onContextMenu={(event) => openTargetContextMenu(event, spatialLayerRef.current)}
         >
-        {false && MODULES.map(({ id, label }) => {
-          const scene = sceneById[id];
-          const displayLabel = scene?.label || label;
-          const isActive = activeModuleId === id || (id === 'identity' && identityOpen) || (id === 'collection' && collectionOpen) || (id === 'creations' && creationsOpen) || (id === 'signals' && signalsOpen);
-          const entryAvailable = availableModuleIds.has(id);
-          const entryIndex = MODULE_ENTRY_ORDER[id];
-          return (
-            <button
-              className="module-shell module-button"
-              data-module-shell
-              data-module-id={id}
-              data-launcher-id={id}
-              data-module-entry-index={entryIndex}
-              data-entry-state={entryAvailable ? 'ready' : 'pending'}
-              data-active={isActive || undefined}
-              data-selected={editMode && selectedSceneId === id || undefined}
-              data-interacting={interaction?.targetId === id || undefined}
-              data-invalid-geometry={interaction?.targetId === id && !interaction.valid || undefined}
-              key={id}
-              type="button"
-              disabled={!entryAvailable}
-              aria-hidden={!entryAvailable || undefined}
-              aria-expanded={id === 'identity' ? identityOpen : id === 'collection' ? collectionOpen : id === 'creations' ? creationsOpen : id === 'signals' ? signalsOpen : undefined}
-              aria-pressed={id === 'identity' ? undefined : isActive}
-              aria-label={`Open ${displayLabel} module`}
-              style={{
-                ...moduleStyle(id, scene?.span, 2),
-                '--module-entry-index': entryIndex
-              }}
-              ref={(node) => {
-                if (node) moduleRefs.current.set(id, node);
-                else moduleRefs.current.delete(id);
-              }}
-              onPointerDown={(event) => { if(editMode)setSelectedSceneId(id); startDrag(event, id, scene?.span, editMode); }}
-              onPointerMove={moveInteraction}
-              onPointerUp={finishInteraction}
-              onPointerCancel={(event)=>finishInteraction(event,true)}
-              onLostPointerCapture={(event)=>finishInteraction(event,true)}
-              onClick={() => activateLauncher(id)}
-            >
-              {scene?.appearanceMode !== 'label' && <b className="module-button__icon" aria-hidden="true">{iconGlyph(scene.iconKey)}</b>}
-              {scene?.appearanceMode !== 'icon' && <span>{displayLabel}</span>}
-              {editMode && <i className="module-button__resize" data-resize-control aria-label={`Resize ${displayLabel}`} onPointerDown={(event)=>startResize(event,id)} onPointerMove={moveInteraction} onPointerUp={finishInteraction} onPointerCancel={(event)=>finishInteraction(event,true)} onLostPointerCapture={(event)=>finishInteraction(event,true)} />}
-            </button>
-          );
-        })}
-
         {/* Framed artwork now belongs to the Gallery wall. Keeping it out of the
             Home layer prevents one authored object from appearing in two rooms. */}
         </div>, spatialLayerTarget)}
@@ -1333,9 +903,9 @@ export default function ModuleGridShell({
         onRegisterArtworkElement={(id, node) => { if (node) canvasObjectRefs.current.set(id, node); else canvasObjectRefs.current.delete(id); }}
         onExit={exitGallery}
         transitionPhase={galleryTransitionPhase}
-        gridPhaseX={galleryGridBasePhaseXRef.current}
+        gridPhaseX={galleryGridBasePhaseX}
         gridOffsetY={galleryGridOffsetY}
-        onCameraXChange={(cameraX) => { galleryCameraXRef.current = cameraX; }}
+        onCameraXChange={setGalleryCameraX}
         onMoveKeeper={(clientX, clientY) => residentHandoff?.moveToScreenPosition?.(clientX, clientY)}
         onMoveKeeperHorizontally={(clientX, direction) => residentHandoff?.moveHorizontallyToScreenPosition?.(clientX, direction)}
       />}
