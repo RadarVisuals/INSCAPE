@@ -64,6 +64,59 @@
 .workspace-rail-study__lattice-stage { position: absolute; inset: 0; will-change: transform; transition: transform 680ms cubic-bezier(.2, .72, .2, 1); }
 .workspace-rail-study__lattice-viewport[data-dragging] .workspace-rail-study__lattice-stage { transition: none; }
 .workspace-rail-study__lattice-canvas { position: absolute; inset: 0; overflow: hidden; background: transparent; }
+.workspace-rail-study__placement-layer { position: absolute; z-index: 4; inset: 0; pointer-events: none; }
+.workspace-rail-study__placement-layer > div { display: contents; }
+.workspace-rail-study__placed-asset { position: absolute; translate: -50% -50%; display: grid; grid-template-rows: 24px minmax(0, 1fr) 26px; overflow: visible; border: 1px solid rgb(22 24 24 / .45); outline: 4px solid rgb(238 237 231 / .18); background: #efeee8; color: #171919; box-shadow: 0 12px 34px rgb(0 0 0 / .3); cursor: grab; pointer-events: auto; touch-action: none; user-select: none; }
+.workspace-rail-study__placed-asset:active { cursor: grabbing; }
+.workspace-rail-study__placed-asset[data-selected] { outline-color: rgb(239 238 232 / .72); box-shadow: 0 16px 42px rgb(0 0 0 / .38); }
+.workspace-rail-study__placed-asset > :is(header, footer) { min-width: 0; padding: 0 7px; display: flex; align-items: center; justify-content: space-between; gap: 5px; background: #efeee8; font: 500 5.5px "Inscape IBM Plex Mono", monospace; letter-spacing: .1em; white-space: nowrap; }
+.workspace-rail-study__placed-asset > header { border-bottom: 1px solid rgb(22 24 24 / .26); }
+.workspace-rail-study__placed-asset > footer { border-top: 1px solid rgb(22 24 24 / .26); color: rgb(22 24 24 / .58); }
+.workspace-rail-study__placed-asset > div { min-height: 0; overflow: hidden; background: #070808; }
+.workspace-rail-study__placed-asset img { width: 100%; height: 100%; display: block; object-fit: cover; pointer-events: none; }
+.workspace-rail-study__placed-resize { position: absolute; right: -7px; bottom: -7px; width: 13px; height: 13px; padding: 0; border: 1px solid rgb(239 238 232 / .7); background: #171919; cursor: nwse-resize; }
+.workspace-rail-study__placed-resize::before { content: ""; position: absolute; right: 2px; bottom: 2px; width: 5px; height: 5px; border-right: 1px solid #efeee8; border-bottom: 1px solid #efeee8; }
+.workspace-rail-study__placement-cursor { position: fixed; z-index: 18; left: 50%; bottom: 27px; translate: -50% 0; padding: 8px 12px; border: 1px solid var(--study-line-strong); background: var(--study-panel); color: var(--study-ink); box-shadow: 8px 10px 24px rgb(0 0 0 / .22); font: 500 8px var(--study-font-label); letter-spacing: .12em; cursor: pointer; }
+.workspace-rail-study__placement-cursor:hover,
+.workspace-rail-study__placement-cursor:focus-visible { background: var(--study-selected); outline: 1px solid var(--study-ink); outline-offset: 2px; }
+.workspace-rail-study__placed-viewer { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.workspace-rail-study__placed-composition { position: relative; width: min(560px, calc(100vw - 96px)); height: min(760px, calc(100vh - 70px)); pointer-events: none; }
+.workspace-rail-study__placed-focus { position: relative; z-index: 2; width: 100%; height: 100%; display: grid; grid-template-rows: 36px minmax(0, 1fr) 34px; border: 1px solid rgb(22 24 24 / .52); outline: 7px solid rgb(239 238 232 / .24); background: #efeee8; color: #171919; box-shadow: 0 28px 90px rgb(0 0 0 / .48); pointer-events: auto; animation: workspace-window-in 320ms cubic-bezier(.2, .72, .2, 1); }
+.workspace-rail-study__placed-focus header,
+.workspace-rail-study__placed-focus footer,
+.workspace-rail-study__placed-dossier header,
+.workspace-rail-study__placed-dossier footer { padding: 0 12px; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 16px; font: 500 7px "Inscape IBM Plex Mono", monospace; letter-spacing: .12em; }
+.workspace-rail-study__placed-focus header,
+.workspace-rail-study__placed-dossier header { border-bottom: 1px solid rgb(22 24 24 / .28); }
+.workspace-rail-study__placed-focus footer { grid-template-columns: 34px 1fr 34px; padding: 0; border-top: 1px solid rgb(22 24 24 / .28); color: rgb(22 24 24 / .58); }
+.workspace-rail-study__placed-focus footer span { text-align: center; }
+.workspace-rail-study__placed-focus footer button { align-self: stretch; display: grid; place-items: center; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.workspace-rail-study__placed-focus footer button:hover,
+.workspace-rail-study__placed-focus footer button:focus-visible { background: rgb(22 24 24 / .07); color: #171919; outline: none; }
+.workspace-rail-study__placed-focus header button { width: 28px; height: 28px; display: grid; place-items: center; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.workspace-rail-study__placed-focus-artwork { position: relative; min-height: 0; display: grid; place-items: center; overflow: hidden; background: #070808; touch-action: pan-y; user-select: none; }
+.workspace-rail-study__placed-focus img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.workspace-rail-study__placed-side { position: absolute; z-index: 3; top: 0; bottom: 0; width: 50%; border: 0; background: transparent; cursor: pointer; }
+.workspace-rail-study__placed-side--left { left: 0; }
+.workspace-rail-study__placed-side--right { right: 0; }
+.workspace-rail-study__placed-side:focus-visible { outline: 1px solid #efeee8; outline-offset: -7px; }
+.workspace-rail-study__placed-dossier { position: absolute; z-index: 1; top: 6%; width: min(330px, 34vw); height: 88%; display: grid; grid-template-rows: 36px minmax(0, 1fr) 34px; border: 1px solid rgb(22 24 24 / .48); background: #efeee8; color: #171919; box-shadow: 0 22px 70px rgb(0 0 0 / .34); opacity: 0; pointer-events: none; transition: transform 420ms cubic-bezier(.2, .72, .2, 1), opacity 180ms ease; }
+.workspace-rail-study__placed-dossier--story { left: 0; transform: translateX(0); }
+.workspace-rail-study__placed-dossier--technical { right: 0; transform: translateX(0); }
+.workspace-rail-study__placed-dossier--story[data-open] { transform: translateX(calc(-100% + 12px)); }
+.workspace-rail-study__placed-dossier--technical[data-open] { transform: translateX(calc(100% - 12px)); }
+.workspace-rail-study__placed-dossier[data-open] { opacity: 1; pointer-events: auto; }
+.workspace-rail-study__placed-dossier > div { min-height: 0; padding: 28px; overflow: auto; font: 400 13px/1.55 "Inscape Geist", sans-serif; }
+.workspace-rail-study__placed-dossier small,
+.workspace-rail-study__placed-dossier dt { color: rgb(22 24 24 / .55); font: 500 7px/1.2 "Inscape IBM Plex Mono", monospace; letter-spacing: .12em; }
+.workspace-rail-study__placed-dossier h2 { margin: 10px 0 22px; font: 400 27px/1 "Inscape Geist", sans-serif; letter-spacing: .03em; }
+.workspace-rail-study__placed-dossier p { margin: 0 0 28px; }
+.workspace-rail-study__placed-dossier section { padding-top: 22px; border-top: 1px solid rgb(22 24 24 / .25); }
+.workspace-rail-study__placed-dossier section p { margin-top: 14px; font-family: "Inscape IBM Plex Mono", monospace; font-size: 9px; }
+.workspace-rail-study__placed-dossier footer { grid-template-columns: 1fr auto; border-top: 1px solid rgb(22 24 24 / .28); color: rgb(22 24 24 / .58); }
+.workspace-rail-study__placed-dossier dl { margin: 20px 0 0; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid rgb(22 24 24 / .25); border-left: 1px solid rgb(22 24 24 / .25); }
+.workspace-rail-study__placed-dossier dl div { padding: 11px; border-right: 1px solid rgb(22 24 24 / .25); border-bottom: 1px solid rgb(22 24 24 / .25); }
+.workspace-rail-study__placed-dossier dd { margin: 6px 0 0; overflow-wrap: anywhere; font: 500 9px/1.35 "Inscape IBM Plex Mono", monospace; }
 .workspace-rail-study__lattice-canvas > header { position: absolute; z-index: 1; left: 50%; top: 88px; translate: -50% 0; width: min(460px, calc(100vw - 420px)); display: flex; justify-content: space-between; color: var(--study-faint); font: 500 7px var(--study-font-label); letter-spacing: .14em; pointer-events: none; }
 .workspace-rail-study__lattice-canvas > header b { color: var(--study-muted); font: inherit; }
 .workspace-rail-study__canvas-template { position: absolute; z-index: 1; left: 50%; top: 50%; width: min(560px, 54vw); height: min(350px, 44vh); translate: -50% -50%; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 42px 1fr; border: 1px solid var(--study-line-strong); background: color-mix(in srgb, var(--spatial-background) 92%, transparent); box-shadow: 0 24px 70px rgb(0 0 0 / .16); pointer-events: none; }
@@ -162,7 +215,10 @@
 .workspace-rail-study__asset-field > header small { color: var(--study-faint); font: 8px var(--study-font-label); }
 .workspace-rail-study__asset-field > div { display: grid; grid-template-columns: repeat(3, minmax(100px, 1fr)); gap: 8px; }
 .workspace-rail-study__asset-field > div button { padding: 0; border: 1px solid var(--study-line); background: transparent; color: var(--study-ink); text-align: left; cursor: pointer; }
-.workspace-rail-study__asset-field i { display: block; aspect-ratio: 16 / 10; background: linear-gradient(160deg, rgb(108 69 123 / .24), transparent 55%), linear-gradient(15deg, transparent 48%, var(--color-border-emphasis) 49% 50%, transparent 51%); }
+.workspace-rail-study__asset-field > div button:hover,
+.workspace-rail-study__asset-field > div button[data-selected] { border-color: var(--study-ink); background: var(--study-selected); }
+.workspace-rail-study__asset-field i { display: block; aspect-ratio: 16 / 10; overflow: hidden; background: linear-gradient(160deg, rgb(108 69 123 / .24), transparent 55%), linear-gradient(15deg, transparent 48%, var(--color-border-emphasis) 49% 50%, transparent 51%); }
+.workspace-rail-study__asset-field i img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .workspace-rail-study__asset-field span { display: block; padding: 8px; font: 8px var(--study-font-label); letter-spacing: .08em; }
 .workspace-rail-study__browser-footer { padding: 0 10px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--study-line); color: var(--study-faint); font: 7px var(--study-font-label); letter-spacing: .1em; }
 

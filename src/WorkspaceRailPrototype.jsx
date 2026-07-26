@@ -66,6 +66,152 @@ const CURATED_LOCAL_ASSETS = [
   { id: '03', src: '/assets/ratio/3.webp', dimensions: '2000 × 2829', shape: 'poster' },
   { id: '07', src: '/assets/ratio/7.webp', dimensions: '2000 × 2000', shape: 'square' },
 ];
+const PLACEMENT_ASSETS = [
+  { id: 'local-01', src: '/assets/ratio/1.webp', file: '1.webp', ratio: 1 },
+  { id: 'local-02', src: '/assets/ratio/2.webp', file: '2.webp', ratio: 1 },
+  { id: 'local-03', src: '/assets/ratio/3.webp', file: '3.webp', ratio: 2000 / 2829 },
+  { id: 'local-04', src: '/assets/ratio/4.webp', file: '4.webp', ratio: 2000 / 2829 },
+  { id: 'local-05', src: '/assets/ratio/5.webp', file: '5.webp', ratio: 1 },
+  { id: 'local-06', src: '/assets/ratio/6.webp', file: '6.webp', ratio: 2000 / 2829 },
+  { id: 'local-07', src: '/assets/ratio/7.webp', file: '7.webp', ratio: 1 },
+];
+
+const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
+
+function PlacedAssetCard({ asset, placement, selected, onPointerDown, onResizePointerDown }) {
+  return <article
+    className="workspace-rail-study__placed-asset"
+    data-selected={selected || undefined}
+    style={{
+      left: `${placement.x}%`,
+      top: `${placement.y}%`,
+      width: `${placement.width}px`,
+      height: `${(placement.width / asset.ratio) + 50}px`,
+    }}
+    onPointerDown={(event) => onPointerDown(event, placement)}
+  >
+    <header><span>INSCAPE / ASSET</span><b>{asset.file}</b></header>
+    <div><img src={asset.src} alt={`Placed prototype artwork ${asset.file}`} draggable="false" /></div>
+    <footer><span>LOCAL / {asset.id.slice(-2)}</span><span>CLICK / OPEN</span></footer>
+    {selected && <button
+      type="button"
+      className="workspace-rail-study__placed-resize"
+      aria-label={`Resize ${asset.file}`}
+      onPointerDown={(event) => onResizePointerDown(event, placement)}
+    />}
+  </article>;
+}
+
+function PlacedAssetViewer({ asset, index, onClose, onNavigate, total }) {
+  const [openPanel, setOpenPanel] = useState(null);
+  const swipeRef = useRef(null);
+  const suppressSideClickRef = useRef(false);
+  const wheelCooldownRef = useRef(false);
+
+  useEffect(() => {
+    setOpenPanel(null);
+  }, [asset.id]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        if (openPanel) setOpenPanel(null);
+        else onClose();
+        return;
+      }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        onNavigate(-1);
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        onNavigate(1);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, onNavigate, openPanel]);
+
+  const togglePanel = (panel) => {
+    if (suppressSideClickRef.current) return;
+    setOpenPanel((current) => current === panel ? null : panel);
+  };
+
+  const handleWheel = (event) => {
+    if (openPanel || wheelCooldownRef.current) return;
+    const movement = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    if (Math.abs(movement) < 18) return;
+    event.preventDefault();
+    wheelCooldownRef.current = true;
+    onNavigate(movement > 0 ? 1 : -1);
+    window.setTimeout(() => { wheelCooldownRef.current = false; }, 320);
+  };
+
+  const beginSwipe = (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    swipeRef.current = {
+      id: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      captureTarget: event.currentTarget,
+      captured: false,
+    };
+  };
+
+  const updateSwipe = (event) => {
+    const swipe = swipeRef.current;
+    if (!swipe || swipe.id !== event.pointerId || swipe.captured) return;
+    const deltaX = event.clientX - swipe.x;
+    const deltaY = event.clientY - swipe.y;
+    if (Math.abs(deltaX) < 8 || Math.abs(deltaX) < Math.abs(deltaY) * 1.15) return;
+    swipe.captureTarget?.setPointerCapture?.(event.pointerId);
+    swipe.captured = true;
+    suppressSideClickRef.current = true;
+  };
+
+  const finishSwipe = (event) => {
+    const swipe = swipeRef.current;
+    if (!swipe || swipe.id !== event.pointerId) return;
+    swipeRef.current = null;
+    if (swipe.captureTarget?.hasPointerCapture?.(event.pointerId)) {
+      swipe.captureTarget.releasePointerCapture(event.pointerId);
+    }
+    const deltaX = event.clientX - swipe.x;
+    const deltaY = event.clientY - swipe.y;
+    if (swipe.captured && Math.abs(deltaX) >= 48 && Math.abs(deltaX) >= Math.abs(deltaY) * 1.25) {
+      onNavigate(deltaX < 0 ? 1 : -1);
+    }
+    window.setTimeout(() => { suppressSideClickRef.current = false; }, 0);
+  };
+
+  return <section className="workspace-rail-study__placed-viewer" role="dialog" aria-modal="true" aria-label={`Preview ${asset.file}`}>
+    <div className="workspace-rail-study__placed-composition" onWheel={handleWheel}>
+      <aside className="workspace-rail-study__placed-dossier workspace-rail-study__placed-dossier--story" data-open={openPanel === 'story' || undefined} aria-hidden={openPanel !== 'story'}>
+        <header><span>INSCAPE / ASSET NARRATIVE</span><b>{asset.file}</b></header>
+        <div><small>DESCRIPTION</small><h2>NOT RESOLVED</h2><p>No NFT description is attached to this local prototype artwork.</p><section><small>TRAITS</small><p>NO TRAITS RESOLVED</p></section></div>
+        <footer><span>INSCAPE PROTOCOL</span><span>LEFT SIDE / DESCRIPTION</span></footer>
+      </aside>
+      <article className="workspace-rail-study__placed-focus" style={{ '--placed-ratio': asset.ratio }}>
+        <header><span>INSCAPE / LOCAL ARCHIVE</span><b>{asset.file}</b><button type="button" onClick={onClose} aria-label="Return artwork to table"><X size={15} /></button></header>
+        <div className="workspace-rail-study__placed-focus-artwork" onPointerDown={beginSwipe} onPointerMove={updateSwipe} onPointerUp={finishSwipe} onPointerCancel={() => { swipeRef.current = null; suppressSideClickRef.current = false; }}>
+          <button type="button" className="workspace-rail-study__placed-side workspace-rail-study__placed-side--left" aria-label="Toggle description and traits" aria-pressed={openPanel === 'story'} onClick={() => togglePanel('story')} />
+          <button type="button" className="workspace-rail-study__placed-side workspace-rail-study__placed-side--right" aria-label="Toggle technical record" aria-pressed={openPanel === 'technical'} onClick={() => togglePanel('technical')} />
+          <img src={asset.src} alt={`Focused prototype artwork ${asset.file}`} />
+        </div>
+        <footer>
+          <button type="button" aria-label="Previous artwork" onClick={() => onNavigate(-1)}><ChevronLeft size={13} /></button>
+          <span>{String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span>
+          <button type="button" aria-label="Next artwork" onClick={() => onNavigate(1)}><ChevronRight size={13} /></button>
+        </footer>
+      </article>
+      <aside className="workspace-rail-study__placed-dossier workspace-rail-study__placed-dossier--technical" data-open={openPanel === 'technical' || undefined} aria-hidden={openPanel !== 'technical'}>
+        <header><span>INSCAPE / TECHNICAL RECORD</span><b>{asset.file}</b></header>
+        <div><small>FILE RECORD</small><h2>{asset.file}</h2><p>Original artwork preserved at its native ratio. Token metadata has not been attached to this local prototype record.</p><dl><div><dt>ASPECT RATIO</dt><dd>{asset.ratio.toFixed(3)}</dd></div><div><dt>SOURCE</dt><dd>LOCAL ARTWORK</dd></div><div><dt>METADATA</dt><dd>NOT RESOLVED</dd></div><div><dt>NETWORK</dt><dd>NOT RESOLVED</dd></div></dl></div>
+        <footer><span>INSCAPE PROTOCOL</span><span>RIGHT SIDE / RECORD</span></footer>
+      </aside>
+    </div>
+  </section>;
+}
 const COMPOSITION_LAYERS = [
   { id: 'CHARACTER / 01', src: '/assets/characters/01/lineart.webp', position: 'left' },
   { id: 'SKULL REAPER', src: '/assets/actors/skull_reaper/lineart.webp', position: 'center' },
@@ -199,8 +345,13 @@ export default function WorkspaceRailPrototype() {
   const [activeCanvas, setActiveCanvas] = useState({ x: 0, y: 0 });
   const [latticeDrag, setLatticeDrag] = useState({ x: 0, y: 0 });
   const [latticeDragging, setLatticeDragging] = useState(false);
+  const [placementAssetId, setPlacementAssetId] = useState(null);
+  const [placements, setPlacements] = useState([]);
+  const [selectedPlacementId, setSelectedPlacementId] = useState(null);
+  const [viewerPlacementId, setViewerPlacementId] = useState(null);
   const [viewport, setViewport] = useState({ width: 1, height: 1 });
   const latticePointerRef = useRef(null);
+  const placementPointerRef = useRef(null);
   const wheelCooldownRef = useRef(false);
   const activeSurface = SURFACE_SYSTEMS.find((system) => system.id === surface) || SURFACE_SYSTEMS[0];
   const activeCanvasRecord = LATTICE_CANVASES.find(({ x, y }) => x === activeCanvas.x && y === activeCanvas.y) || LATTICE_CANVASES[2];
@@ -220,6 +371,84 @@ export default function WorkspaceRailPrototype() {
     if (!LATTICE_COORDINATES.has(`${x}:${y}`)) return;
     setLatticeDrag({ x: 0, y: 0 });
     setActiveCanvas({ x, y });
+  };
+
+  const commitSelectedAssetPlacement = (canvasId, x, y) => {
+    if (!placementAssetId) return;
+    const asset = PLACEMENT_ASSETS.find(({ id }) => id === placementAssetId);
+    if (!asset) return;
+    const id = `placement-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setPlacements((current) => [...current, {
+      id,
+      assetId: asset.id,
+      canvasId,
+      x: clamp(x, 8, 92),
+      y: clamp(y, 12, 88),
+      width: asset.ratio < .85 ? 142 : 180,
+    }]);
+    setSelectedPlacementId(id);
+    setPlacementAssetId(null);
+  };
+
+  const placeSelectedAsset = (event, canvasId) => {
+    if (!placementAssetId || event.target.closest('button, [data-placement-card]')) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    commitSelectedAssetPlacement(
+      canvasId,
+      ((event.clientX - rect.left) / rect.width) * 100,
+      ((event.clientY - rect.top) / rect.height) * 100,
+    );
+  };
+
+  const beginPlacementGesture = (event, placement, mode = 'move') => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    placementPointerRef.current = {
+      id: event.pointerId,
+      placementId: placement.id,
+      mode,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: placement.x,
+      originY: placement.y,
+      originWidth: placement.width,
+      captureTarget: event.currentTarget,
+      moved: false,
+    };
+    setSelectedPlacementId(placement.id);
+  };
+
+  const updatePlacementGesture = (event) => {
+    const gesture = placementPointerRef.current;
+    if (!gesture || gesture.id !== event.pointerId) return;
+    const deltaX = event.clientX - gesture.startX;
+    const deltaY = event.clientY - gesture.startY;
+    if (Math.hypot(deltaX, deltaY) > 3) gesture.moved = true;
+    setPlacements((current) => current.map((placement) => {
+      if (placement.id !== gesture.placementId) return placement;
+      if (gesture.mode === 'resize') {
+        return { ...placement, width: clamp(gesture.originWidth + deltaX, 96, 420) };
+      }
+      return {
+        ...placement,
+        x: clamp(gesture.originX + ((deltaX / viewport.width) * 100), 2, 98),
+        y: clamp(gesture.originY + ((deltaY / viewport.height) * 100), 4, 96),
+      };
+    }));
+  };
+
+  const finishPlacementGesture = (event) => {
+    const gesture = placementPointerRef.current;
+    if (!gesture || gesture.id !== event.pointerId) return;
+    if (gesture.captureTarget?.hasPointerCapture?.(event.pointerId)) {
+      gesture.captureTarget.releasePointerCapture(event.pointerId);
+    }
+    if (!gesture.moved && gesture.mode === 'move') {
+      setViewerPlacementId(gesture.placementId);
+    }
+    placementPointerRef.current = null;
   };
 
   const finishLatticeGesture = (event) => {
@@ -360,6 +589,10 @@ export default function WorkspaceRailPrototype() {
           data-active={canvas.id === activeCanvasRecord.id || undefined}
           style={{ transform: `translate3d(${canvas.x * 100}vw, ${canvas.y * 100}vh, 0)` }}
           aria-hidden={canvas.id !== activeCanvasRecord.id}
+          onClick={(event) => placeSelectedAsset(event, canvas.id)}
+          onPointerMove={updatePlacementGesture}
+          onPointerUp={finishPlacementGesture}
+          onPointerCancel={finishPlacementGesture}
         >
           <header><span>{String(index + 1).padStart(2, '0')} / {canvas.label}</span><b>{canvas.note}</b></header>
           {canvas.id === 'collections' && <CuratedTableStudy />}
@@ -370,6 +603,21 @@ export default function WorkspaceRailPrototype() {
             <i />
             <i />
           </div>}
+          <div className="workspace-rail-study__placement-layer">
+            {placements.filter(({ canvasId }) => canvasId === canvas.id).map((placement) => {
+              const asset = PLACEMENT_ASSETS.find(({ id }) => id === placement.assetId);
+              if (!asset) return null;
+              return <div key={placement.id} data-placement-card>
+                <PlacedAssetCard
+                  asset={asset}
+                  placement={placement}
+                  selected={selectedPlacementId === placement.id}
+                  onPointerDown={(event, target) => beginPlacementGesture(event, target)}
+                  onResizePointerDown={(event, target) => beginPlacementGesture(event, target, 'resize')}
+                />
+              </div>;
+            })}
+          </div>
         </article>)}
       </div>
     </section>
@@ -439,10 +687,19 @@ export default function WorkspaceRailPrototype() {
         </aside>
         <div className="workspace-rail-study__asset-field">
           <header><strong>{browserMode === 'index' ? 'ALL OWNED' : 'ART'}</strong><small>12 RESULTS</small></header>
-          <div>{Array.from({ length: 6 }, (_, index) => <button type="button" key={index} aria-label={`Dummy asset ${index + 1}`}><i /><span>ASSET {String(index + 1).padStart(2, '0')}</span></button>)}</div>
+          <div>{PLACEMENT_ASSETS.map((asset) => <button
+            type="button"
+            key={asset.id}
+            data-selected={placementAssetId === asset.id || undefined}
+            aria-label={`Place ${asset.file} on ${activeCanvasRecord.label}`}
+            onClick={() => {
+              setPlacementAssetId((current) => current === asset.id ? null : asset.id);
+              setActiveTool(null);
+            }}
+          ><i><img src={asset.src} alt="" /></i><span>{asset.file}</span></button>)}</div>
         </div>
       </div>
-      <footer className="workspace-rail-study__browser-footer"><span>LOCAL DRAFT</span><span>SELECT / ORGANIZE / PUBLISH</span><span>INSCAPE SYSTEM</span></footer>
+      <footer className="workspace-rail-study__browser-footer"><span>LOCAL DRAFT</span><span>SELECT ASSET / CLICK ACTIVE TABLE</span><span>INSCAPE SYSTEM</span></footer>
     </section>}
 
     {activeTool === 'more' && owner && <section className="workspace-rail-study__more">
@@ -451,6 +708,29 @@ export default function WorkspaceRailPrototype() {
     </section>}
 
     {activeTool === 'preview' && <ShareableProfileCard onClose={() => setActiveTool(null)} />}
+    {placementAssetId && <button
+      type="button"
+      className="workspace-rail-study__placement-cursor"
+      onClick={() => commitSelectedAssetPlacement(activeCanvasRecord.id, 50, 50)}
+    >PLACE / {PLACEMENT_ASSETS.find(({ id }) => id === placementAssetId)?.file} / {activeCanvasRecord.label}</button>}
+    {viewerPlacementId && (() => {
+      const tablePlacements = placements.filter(({ canvasId }) => canvasId === activeCanvasRecord.id);
+      const index = tablePlacements.findIndex(({ id }) => id === viewerPlacementId);
+      const placement = tablePlacements[index];
+      const asset = placement && PLACEMENT_ASSETS.find(({ id }) => id === placement.assetId);
+      const navigate = (direction) => {
+        if (tablePlacements.length < 2) return;
+        const nextIndex = (index + direction + tablePlacements.length) % tablePlacements.length;
+        setViewerPlacementId(tablePlacements[nextIndex].id);
+      };
+      return asset ? <PlacedAssetViewer
+        asset={asset}
+        index={index}
+        total={tablePlacements.length}
+        onNavigate={navigate}
+        onClose={() => setViewerPlacementId(null)}
+      /> : null;
+    })()}
 
     <nav className="workspace-rail-study__lattice-map" aria-label="Canvas position">
       {LATTICE_CANVASES.map((canvas) => <button
@@ -488,7 +768,7 @@ export default function WorkspaceRailPrototype() {
       <span aria-hidden="true" />
     </button>
 
-    <section className="workspace-rail-study__preview-controls" aria-label="Prototype controls">
+    {!placementAssetId && <section className="workspace-rail-study__preview-controls" aria-label="Prototype controls">
       <button type="button" aria-pressed={owner} onClick={() => { setOwner((value) => !value); setActiveTool(null); }}>{owner ? 'OWNER' : 'VISITOR'}</button>
       <button type="button" onClick={() => setCollapsed((value) => !value)}>{collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />} RAIL</button>
       <button type="button" onClick={() => setSurface((current) => {
@@ -503,6 +783,6 @@ export default function WorkspaceRailPrototype() {
         const index = TYPE_SYSTEMS.findIndex((system) => system.id === current);
         return TYPE_SYSTEMS[(index + 1) % TYPE_SYSTEMS.length].id;
       })}>LABEL / {TYPE_SYSTEMS.find((system) => system.id === typeSystem)?.label}</button>
-    </section>
+    </section>}
   </main>;
 }
