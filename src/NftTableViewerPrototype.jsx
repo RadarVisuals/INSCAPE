@@ -43,6 +43,7 @@ function transformBetween(source, destination) {
 function useNftViewerTransition(dimensions) {
   const [viewerState, setViewerState] = useState('table');
   const [selectedId, setSelectedId] = useState(null);
+  const [dossierOpen, setDossierOpen] = useState(false);
   const [motionTransform, setMotionTransform] = useState('none');
   const [motionEnabled, setMotionEnabled] = useState(false);
   const [viewportVersion, setViewportVersion] = useState(0);
@@ -69,6 +70,7 @@ function useNftViewerTransition(dimensions) {
     if (!sourceRect) return;
     const ratio = dimensions[assetId].width / dimensions[assetId].height;
     const destination = getFocusedRect(ratio);
+    setDossierOpen(false);
     setMotionEnabled(false);
     setSelectedId(assetId);
     setMotionTransform(transformBetween(sourceRect, destination));
@@ -92,22 +94,29 @@ function useNftViewerTransition(dimensions) {
     if (!selectedId || viewerState === 'returning' || !focusedRect) return;
     const sourceRect = slotRefs.current.get(selectedId)?.getBoundingClientRect();
     if (!sourceRect) return;
+    setDossierOpen(false);
     setMotionEnabled(true);
     setViewerState('returning');
     setMotionTransform(transformBetween(sourceRect, focusedRect));
   }, [focusedRect, selectedId, viewerState]);
+
+  const toggleDossier = useCallback(() => {
+    if (viewerState !== 'focused') return;
+    setDossierOpen((openState) => !openState);
+  }, [viewerState]);
 
   useEffect(() => {
     if (viewerState === 'table') return undefined;
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        close();
+        if (dossierOpen) setDossierOpen(false);
+        else close();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [close, viewerState]);
+  }, [close, dossierOpen, viewerState]);
 
   const handleTransitionEnd = useCallback((event) => {
     if (event.propertyName !== 'transform') return;
@@ -129,6 +138,7 @@ function useNftViewerTransition(dimensions) {
   return {
     close,
     closeRef,
+    dossierOpen,
     focusedRect,
     handleTransitionEnd,
     motionTransform,
@@ -138,8 +148,52 @@ function useNftViewerTransition(dimensions) {
     selectedId,
     slotRefs,
     triggerRefs,
+    toggleDossier,
     viewerState,
   };
+}
+
+function TechnicalDossier({ asset, dimensions, focusedRect, open }) {
+  if (!asset || !focusedRect) return null;
+  const ratio = dimensions ? dimensions.width / dimensions.height : null;
+  const availableWidth = Math.max(220, (window.innerWidth - focusedRect.width) / 2 - 32);
+  const width = Math.min(360, availableWidth);
+  const height = Math.max(240, focusedRect.height * 0.88);
+  const style = {
+    left: `${focusedRect.left + focusedRect.width - 12}px`,
+    top: `${focusedRect.top + ((focusedRect.height - height) / 2)}px`,
+    width: `${width}px`,
+    height: `${height}px`,
+  };
+
+  return <aside
+    className="nft-technical-dossier"
+    data-open={open ? 'true' : 'false'}
+    style={style}
+    aria-hidden={!open}
+  >
+    <header className="nft-technical-dossier__header">
+      <span>INSCAPE / TECHNICAL RECORD</span>
+      <b>LOCAL / {asset.record}</b>
+    </header>
+    <div className="nft-technical-dossier__body">
+      <p className="nft-technical-dossier__eyebrow">FILE RECORD</p>
+      <h2>{asset.file}</h2>
+      <p>Original artwork preserved at its native ratio. Token metadata has not been attached to this local prototype record.</p>
+      <dl>
+        <div><dt>DIMENSIONS</dt><dd>{dimensions ? `${dimensions.width} × ${dimensions.height}` : 'RESOLVING'}</dd></div>
+        <div><dt>ASPECT RATIO</dt><dd>{ratio ? ratio.toFixed(3) : 'RESOLVING'}</dd></div>
+        <div><dt>SOURCE</dt><dd>LOCAL ARTWORK</dd></div>
+        <div><dt>METADATA</dt><dd>NOT RESOLVED</dd></div>
+        <div><dt>TOKEN ID</dt><dd>NOT RESOLVED</dd></div>
+        <div><dt>NETWORK</dt><dd>NOT RESOLVED</dd></div>
+      </dl>
+    </div>
+    <footer className="nft-technical-dossier__footer">
+      <span>INSCAPE PROTOCOL</span>
+      <span>RIGHT SIDE / RECORD</span>
+    </footer>
+  </aside>;
 }
 
 function NftArchiveCard({
@@ -153,6 +207,7 @@ function NftArchiveCard({
   onImageLoad,
   onOpen,
   onTransitionEnd,
+  onToggleDossier,
   setCloseRef,
   setSlotRef,
   setTriggerRef,
@@ -194,13 +249,19 @@ function NftArchiveCard({
       onTransitionEnd={isSelected ? onTransitionEnd : undefined}
       aria-label={`Local artwork record ${asset.record}`}
     >
-      <button
+      {!isSelected && <button
         type="button"
         className="nft-archive-card__hit-area"
         ref={(node) => setTriggerRef(asset.id, node)}
         aria-label={isSelected ? `Focused local artwork record ${asset.record}` : `Focus local artwork record ${asset.record}`}
         onClick={() => onOpen(asset.id)}
-      />
+      />}
+      {isSelected && <button
+        type="button"
+        className="nft-archive-card__dossier-trigger"
+        aria-label="Toggle technical artwork record"
+        onClick={onToggleDossier}
+      />}
       <header className="nft-archive-card__header">
         <span>INSCAPE / LOCAL ARCHIVE</span>
         <b>RECORD {asset.record}</b>
@@ -257,6 +318,7 @@ function NftTable({ dimensions, transition, onImageLoad }) {
         onImageLoad={onImageLoad}
         onOpen={transition.open}
         onTransitionEnd={transition.handleTransitionEnd}
+        onToggleDossier={transition.toggleDossier}
         setCloseRef={transition.closeRef}
         setSlotRef={setSlotRef}
         setTriggerRef={setTriggerRef}
@@ -272,14 +334,22 @@ function NftTable({ dimensions, transition, onImageLoad }) {
 
 function FocusedNftViewer({ transition }) {
   if (!transition.selectedAsset) return null;
-  return <button
-    type="button"
-    className="nft-table-viewer__focus-layer"
-    data-state={transition.viewerState}
-    tabIndex={-1}
-    aria-label="Return focused artwork to table"
-    onPointerDown={transition.close}
-  />;
+  return <>
+    <button
+      type="button"
+      className="nft-table-viewer__focus-layer"
+      data-state={transition.viewerState}
+      tabIndex={-1}
+      aria-label="Return focused artwork to table"
+      onPointerDown={transition.close}
+    />
+    <TechnicalDossier
+      asset={transition.selectedAsset}
+      dimensions={transition.selectedId ? transition.dimensions?.[transition.selectedId] : null}
+      focusedRect={transition.focusedRect}
+      open={transition.dossierOpen}
+    />
+  </>;
 }
 
 export default function NftTableViewerPrototype() {
@@ -299,7 +369,7 @@ export default function NftTableViewerPrototype() {
       <b>PROTOTYPE / PHASE 01</b>
     </header>
     <NftTable dimensions={dimensions} transition={transition} onImageLoad={handleImageLoad} />
-    <FocusedNftViewer transition={transition} />
+    <FocusedNftViewer transition={{ ...transition, dimensions }} />
     <footer className="nft-table-viewer__status" aria-live="polite">
       <span>STATE / {transition.viewerState.toUpperCase()}</span>
       <span>{transition.selectedAsset ? `ACTIVE / RECORD ${transition.selectedAsset.record}` : 'SELECT AN ARCHIVAL CARD'}</span>
