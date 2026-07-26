@@ -1,0 +1,233 @@
+@font-face { font-family: "Inscape Geist Sans"; src: url("/assets/fonts/geist-sans-latin-400-normal.woff2") format("woff2"); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: "Inscape Geist Sans"; src: url("/assets/fonts/geist-sans-latin-600-normal.woff2") format("woff2"); font-style: normal; font-weight: 600; font-display: swap; }
+@font-face { font-family: "Inscape IBM Plex Mono"; src: url("/assets/fonts/IBMPlexMono-Regular.ttf") format("truetype"); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: "Inscape IBM Plex Mono"; src: url("/assets/fonts/IBMPlexMono-Medium.ttf") format("truetype"); font-style: normal; font-weight: 500; font-display: swap; }
+
+.nft-table-viewer {
+  --viewer-paper: #eeede7;
+  --viewer-ink: #171919;
+  --viewer-muted: rgb(23 25 25 / .58);
+  --viewer-line: rgb(23 25 25 / .28);
+  --viewer-grid: rgb(23 25 25 / .055);
+  min-height: 100vh;
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  background: #252727;
+  color: #e6e5df;
+  font-family: "Inscape Geist Sans", sans-serif;
+}
+
+.nft-table-viewer__fixed-grid {
+  position: fixed;
+  z-index: -2;
+  inset: 0;
+  background-image: linear-gradient(rgb(225 225 219 / .13) 1px, transparent 1px), linear-gradient(90deg, rgb(225 225 219 / .13) 1px, transparent 1px);
+  background-size: 56px 56px;
+  pointer-events: none;
+}
+
+.nft-table-viewer__hud,
+.nft-table-viewer__status {
+  position: fixed;
+  z-index: 40;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  justify-content: space-between;
+  color: rgb(231 230 224 / .58);
+  font: 500 8px "Inscape IBM Plex Mono", monospace;
+  letter-spacing: .14em;
+  pointer-events: none;
+}
+
+.nft-table-viewer__hud { top: 20px; }
+.nft-table-viewer__status { bottom: 20px; }
+.nft-table-viewer__hud b { color: rgb(231 230 224 / .82); font: inherit; }
+
+.nft-table-viewer__table {
+  position: relative;
+  width: min(1040px, calc(100vw - 112px));
+  min-height: min(620px, calc(100vh - 112px));
+  display: grid;
+  grid-template-rows: 38px minmax(0, 1fr) 28px;
+  border: 1px solid var(--viewer-line);
+  outline: 7px solid rgb(238 237 231 / .1);
+  background-color: var(--viewer-paper);
+  background-image: linear-gradient(var(--viewer-grid) 1px, transparent 1px), linear-gradient(90deg, var(--viewer-grid) 1px, transparent 1px);
+  background-size: 34px 34px;
+  color: var(--viewer-ink);
+  box-shadow: 0 20px 52px rgb(0 0 0 / .22);
+}
+
+.nft-table-viewer__table-header,
+.nft-table-viewer__table-footer {
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--viewer-line);
+  color: var(--viewer-muted);
+  font: 500 7px "Inscape IBM Plex Mono", monospace;
+  letter-spacing: .14em;
+}
+
+.nft-table-viewer__table-header b { color: var(--viewer-ink); font: inherit; }
+.nft-table-viewer__table-footer { border-top: 1px solid var(--viewer-line); border-bottom: 0; }
+
+.nft-table-viewer__field {
+  min-height: 0;
+  padding: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 3vw, 42px);
+}
+
+.nft-table-viewer__slot {
+  flex: 0 0 auto;
+  position: relative;
+}
+
+.nft-archive-card {
+  --card-line: rgb(225 225 219 / .25);
+  --card-muted: rgb(236 235 229 / .54);
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-rows: var(--card-header-height) minmax(0, 1fr) var(--card-footer-height);
+  overflow: hidden;
+  border: 1px solid rgb(225 225 219 / .32);
+  background: #111212;
+  color: #efeee8;
+  box-shadow: 0 8px 18px rgb(0 0 0 / .16);
+  transform-origin: center;
+}
+
+.nft-archive-card[data-selected] {
+  position: fixed;
+  z-index: 30;
+  will-change: transform;
+  box-shadow: 0 18px 38px rgb(0 0 0 / .25);
+}
+
+.nft-archive-card[data-selected][data-motion-enabled="true"] {
+  transition: transform 460ms cubic-bezier(.22, .74, .18, 1), box-shadow 460ms ease;
+}
+
+.nft-archive-card__hit-area {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.nft-archive-card[data-selected] .nft-archive-card__hit-area { cursor: default; }
+.nft-archive-card:not([data-selected]) .nft-archive-card__hit-area:hover {
+  background: rgb(255 255 255 / .025);
+}
+.nft-archive-card[data-selected] .nft-archive-card__hit-area {
+  background: transparent;
+}
+.nft-archive-card__hit-area:focus-visible { outline: 2px solid #f4f2e9; outline-offset: 4px; }
+
+.nft-archive-card__header,
+.nft-archive-card__footer {
+  min-width: 0;
+  padding: 0 var(--card-inline-padding);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--card-inline-padding) * .6);
+  border-bottom: 1px solid var(--card-line);
+  color: var(--card-muted);
+  font: 500 var(--card-header-font)/1 "Inscape IBM Plex Mono", monospace;
+  letter-spacing: .1em;
+  white-space: nowrap;
+}
+
+.nft-archive-card__header b { color: #efeee8; font: inherit; }
+.nft-archive-card[data-selected] .nft-archive-card__header {
+  padding-right: calc(var(--card-close-size) + (var(--card-close-inset) * 2.5));
+}
+.nft-archive-card__footer {
+  padding-inline: calc(var(--card-inline-padding) * .74);
+  border-top: 1px solid var(--card-line);
+  border-bottom: 0;
+  font-size: var(--card-footer-font);
+  letter-spacing: .06em;
+}
+.nft-archive-card__footer span:nth-child(2) { color: rgb(236 235 229 / .38); }
+
+.nft-archive-card__artwork {
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #080909;
+}
+
+.nft-archive-card__artwork img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+}
+
+.nft-archive-card__close {
+  position: absolute;
+  z-index: 5;
+  top: var(--card-close-inset);
+  right: var(--card-close-inset);
+  width: var(--card-close-size);
+  height: var(--card-close-size);
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--card-line);
+  border-radius: 0;
+  background: #111212;
+  color: var(--card-muted);
+  cursor: pointer;
+}
+
+.nft-archive-card__close svg { width: 56%; height: 56%; stroke-width: 1.35; }
+.nft-archive-card__close:hover { color: #fff; background: #202222; }
+.nft-archive-card__close:focus-visible { outline: 2px solid #f4f2e9; outline-offset: 3px; }
+
+.nft-table-viewer__focus-layer {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: default;
+}
+
+@media (max-width: 900px) {
+  .nft-table-viewer { overflow: auto; }
+  .nft-table-viewer__table {
+    position: relative;
+    width: calc(100% - 40px);
+    min-height: 0;
+    margin: 70px auto;
+  }
+  .nft-table-viewer__field { padding: 24px; flex-wrap: wrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nft-archive-card[data-selected] { transition-duration: 1ms; }
+}
