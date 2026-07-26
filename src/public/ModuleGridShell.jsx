@@ -20,8 +20,7 @@ import { getPublicTheme } from './themeTokens.js';
 import { findScenePlacement, findScenePlacementAtPointer, isScenePlacementAvailable, normalizeSpan, packCompactCanvasObjects, packCompactScene } from './sceneGrid.js';
 import { normalizeGridRect } from './gridGeometry.js';
 import { normalizeIconKey } from './sceneIcons.js';
-import { decodeWindowGridGeometry, defaultWindowGridRect } from './windowGeometry.js';
-import { createRuntimeWindowState, loadRuntimeWindowState, normalizeRuntimeWindowGeometry, saveRuntimeWindowState, updateRuntimeWindowState } from './windows/runtimeWindowState.js';
+import { defaultWindowGridRect } from './windowGeometry.js';
 import { contextMenuCommands, presentationPatchForCommand, resolveContextTarget } from './menus/contextMenuModel.js';
 import DesktopMenu from './menus/DesktopMenu.jsx';
 import CategoryRenameDialog from './CategoryRenameDialog.jsx';
@@ -40,6 +39,7 @@ import { readOwnerProfileValue, writeOwnerProfileValue } from './ownerProfileSto
 import ProfileDiscoveryBoundary from '../profileDiscovery/ProfileDiscoveryBoundary.jsx';
 import { createVerticalHomePlacementGeometry, createVerticalHomeWorld } from './verticalHomeWorld.js';
 import { useOwnerPublicationSync } from './useOwnerPublicationSync.js';
+import { useRuntimeWindowOrchestration } from './useRuntimeWindowOrchestration.js';
 import { useSpatialWorldNavigation } from './useSpatialWorldNavigation.js';
 import {
   MODULE_LAYOUT_STORAGE_KEY,
@@ -80,7 +80,6 @@ const SYSTEM_SCENE_KEY = 'os-underneath.system-launchers.v1';
 // The stage-free home makes the grid a primary world surface. A new preference
 // version prevents an old edit-mode-only "off" choice from booting into a void.
 const GRID_PREFERENCE_KEY = 'os-underneath.grid-preference.v2';
-const LEGACY_WINDOW_GEOMETRY_KEY = 'os-underneath.window-geometry.v1';
 const SYSTEM_ICONS = Object.freeze({ identity: 'profile', collection: 'collection', creations: 'creations', signals: 'signals' });
 const AUTHORING_CONTEXT_COMMANDS = new Set([
   'toggle-edit', 'rename-category', 'create-framed-artwork', 'add-gallery-artwork', 'toggle-artwork-lock', 'lock-all-artwork', 'unlock-all-artwork',
@@ -99,8 +98,6 @@ function defaultSystemPresentation(id, order) { return { appearanceMode: 'label'
 function readSystemPresentation(profileAddress) { try { const value = JSON.parse(readOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,profileAddress) || 'null'); return Object.fromEntries(MODULES.map((module, index) => { const item=value?.[module.id]; return [module.id,{ ...defaultSystemPresentation(module.id,index), ...(item || {}), label:module.label, iconKey:normalizeIconKey(item?.iconKey,SYSTEM_ICONS[module.id]), span:normalizeSpan(item?.span,item?.appearanceMode) }]; })); } catch { return Object.fromEntries(MODULES.map((module,index)=>[module.id,{...defaultSystemPresentation(module.id,index),label:module.label}])); } }
 function saveSystemPresentation(profileAddress, presentation) { return writeOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,profileAddress,JSON.stringify(presentation)); }
 function readGridPreference(){try{return JSON.parse(window.localStorage.getItem(GRID_PREFERENCE_KEY))?.visible!==false}catch{return true}}
-function readLegacyWindowGeometry(geometry,profileAddress){return decodeWindowGridGeometry(readOwnerProfileValue(window.localStorage,LEGACY_WINDOW_GEOMETRY_KEY,profileAddress),geometry,readStoredPositions(geometry,profileAddress))}
-
 function getInitialGeometry() {
   return createModuleGridGeometry(window.innerWidth, window.innerHeight);
 }
@@ -165,15 +162,8 @@ export default function ModuleGridShell({
   const [systemPresentation, setSystemPresentation] = useState(() => readSystemPresentation(workspace.profileAddress));
   const [gridVisible, setGridVisible] = useState(readGridPreference);
   const [selectedSceneId, setSelectedSceneId] = useState(null);
-  const [runtimeWindows,setRuntimeWindows]=useState(() => loadRuntimeWindowState(window.localStorage, workspace.profileAddress, { rects: readLegacyWindowGeometry(createHomePlacementGeometry(geometry),workspace.profileAddress) }));
-  const [identityOpen, setIdentityOpen] = useState(() => runtimeWindows.openIds.includes('identity'));
-  const [identityPhase, setIdentityPhase] = useState('closed');
-  const [collectionOpen, setCollectionOpen] = useState(() => runtimeWindows.openIds.includes('collection'));
   const [profileDiscoveryOpen, setProfileDiscoveryOpen] = useState(false);
-  const [creationsOpen, setCreationsOpen] = useState(() => runtimeWindows.openIds.includes('creations'));
-  const [signalsOpen, setSignalsOpen] = useState(() => runtimeWindows.openIds.includes('signals'));
   const [editMode, setEditMode] = useState(false);
-  const [activeModuleId, setActiveModuleId] = useState(null);
   const [activeHudCommand, setActiveHudCommand] = useState(null);
   const [gridPalette, setGridPalette] = useState('dark');
   const [avatarShape, setAvatarShape] = useState(() => loadRestoredPresentation(window.localStorage, workspace.profileAddress)?.avatarShape || 'square');
@@ -201,12 +191,10 @@ export default function ModuleGridShell({
       setVisitorNavigation(restored?.visitorNavigation || { showCategories: true, showCreations: false });
     }
   }, [workspace.profileAddress]);
-  const moduleRefs = useRef(new Map());
   const canvasObjectRefs = useRef(new Map());
   const spatialLayerRef = useRef(null);
   const shellRef = useRef(null);
   const gridRef = useRef(null);
-  const loadedRuntimeProfileRef = useRef(workspace.profileAddress);
   const artworkChoicePendingRef = useRef(false);
   const resizeFrameRef = useRef(0);
 
@@ -293,11 +281,26 @@ export default function ModuleGridShell({
     }));
     return folders;
   }, [libraryAssetById, workspace.folders]);
-  const updateRuntime = useCallback((action) => setRuntimeWindows((current) => updateRuntimeWindowState(current, action)), []);
-  const closeAllWindows = useCallback(() => {
-    updateRuntime({ type: 'close-all' }); setIdentityOpen(false); setIdentityPhase('closed'); setCollectionOpen(false); setCreationsOpen(false); setSignalsOpen(false); setActiveModuleId(null);
-  }, [updateRuntime]);
-  const prepareSpatialLevel = useCallback((level) => {
+  const placementGeometry = useMemo(() => createHomePlacementGeometry(geometry), [geometry]);
+  const {
+    actions: runtimeWindowActions,
+    identityPhase,
+    open: runtimeWindowOpen,
+    runtimeWindows
+  } = useRuntimeWindowOrchestration({
+    loadSystemPresentation: readSystemPresentation,
+    placementGeometry,
+    profileAddress: workspace.profileAddress,
+    saveSystemPresentation,
+    setSystemPresentation,
+    systemPresentation
+  });
+  const identityOpen = runtimeWindowOpen.identity;
+  const collectionOpen = runtimeWindowOpen.collection;
+  const creationsOpen = runtimeWindowOpen.creations;
+  const signalsOpen = runtimeWindowOpen.signals;
+  const closeAllWindows = runtimeWindowActions.closeAllWindows;
+  const prepareSpatialLevel = useCallback(() => {
     closeAllWindows();
     setEditMode(false);
     setSelectedSceneId(null);
@@ -305,7 +308,6 @@ export default function ModuleGridShell({
     setArtworkInspector(null);
     setContextMenu(null);
     setActiveHudCommand(null);
-    setActiveModuleId(level);
   }, [closeAllWindows]);
   const homeWorld = useMemo(() => createVerticalHomeWorld(geometry), [geometry]);
   const homeOrigin = useMemo(() => ({ x:geometry.width, y:geometry.height, zoom:1 }), [geometry.height,geometry.width]);
@@ -327,13 +329,11 @@ export default function ModuleGridShell({
     ownerAuthoringEnabled,
     prepareSpatialLevel,
     profileAddress: workspace.profileAddress,
-    reducedMotion: revealPresentation.reducedMotion,
-    setActiveModuleId
+    reducedMotion: revealPresentation.reducedMotion
   });
   const homeZoom = 1;
   const worldContentX = Math.round((geometry.width + geometry.left) / 40) * 40;
   const worldContentY = Math.round((geometry.height + geometry.top) / 40) * 40;
-  const placementGeometry = useMemo(() => createHomePlacementGeometry(geometry), [geometry]);
   const homeWorldTransform = geometry.narrow ? 'none' : `translate3d(${(worldContentX-homeCamera.x)*homeZoom}px,${(worldContentY-homeCamera.y)*homeZoom}px,0) scale(${homeZoom})`;
   useEffect(() => {
     if (ownerAuthoringEnabled) return;
@@ -359,12 +359,6 @@ export default function ModuleGridShell({
     return Object.fromEntries(responsive.map((item) => [item.id, item]));
   },[canvasObjects,geometry,placementGeometry]);
   const canvasObjectById = useMemo(() => Object.fromEntries(canvasObjects.map((object)=>[object.id,object])),[canvasObjects]);
-  const authoredWindowDefaults = useMemo(() => {
-    const openIds = MODULES.filter(({ id }) => systemPresentation[id]?.startOpen).map(({ id }) => id);
-    const rects = {};
-    MODULES.forEach(({ id }) => { if (systemPresentation[id]?.windowGeometry) rects[id] = systemPresentation[id].windowGeometry; });
-    return createRuntimeWindowState({ openIds, zOrder: openIds, rects });
-  }, [systemPresentation]);
   const draftDocument = useMemo(() => buildProfileDocumentV3({
     profileAddress: workspace.profileAddress, workspace, assets: libraryAssets,
     publicPresentation: { keeperId: activeActorId, stageId, environment, avatarShape, visitorNavigation },
@@ -411,32 +405,6 @@ export default function ModuleGridShell({
     const stored = loadProfileSnapshot(window.localStorage, workspace.profileAddress);
     if (stored) installSnapshot(stored, profileDocumentContentFingerprint(stored));
   }, [installSnapshot, snapshot, workspace.profileAddress]);
-
-  useEffect(() => {
-    let keyExists = false;
-    try { keyExists = window.localStorage.getItem(`os-underneath.runtime-windows.v1:${workspace.profileAddress}`) !== null; } catch { /* Storage is optional. */ }
-    const loaded = loadRuntimeWindowState(window.localStorage, workspace.profileAddress, { rects: readLegacyWindowGeometry(createHomePlacementGeometry(geometry),workspace.profileAddress) });
-    const restored = normalizeRuntimeWindowGeometry(keyExists || Object.keys(loaded.rects).length ? loaded : authoredWindowDefaults, placementGeometry);
-    const allowedWindowIds = new Set(MODULES.map(({ id }) => id));
-    const next = createRuntimeWindowState({
-      openIds: restored.openIds.filter((id) => allowedWindowIds.has(id)),
-      zOrder: restored.zOrder.filter((id) => allowedWindowIds.has(id)),
-      rects: Object.fromEntries(Object.entries(restored.rects).filter(([id]) => allowedWindowIds.has(id)))
-    });
-    loadedRuntimeProfileRef.current = workspace.profileAddress;
-    setRuntimeWindows(next);
-    setIdentityOpen(next.openIds.includes('identity')); setCollectionOpen(next.openIds.includes('collection')); setCreationsOpen(next.openIds.includes('creations')); setSignalsOpen(next.openIds.includes('signals'));
-  // Runtime records load only when the active profile changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspace.profileAddress]);
-
-  useEffect(() => {
-    setRuntimeWindows((current) => normalizeRuntimeWindowGeometry(current, placementGeometry));
-  }, [placementGeometry]);
-
-  useEffect(() => {
-    if (loadedRuntimeProfileRef.current === workspace.profileAddress) saveRuntimeWindowState(window.localStorage, workspace.profileAddress, runtimeWindows);
-  }, [runtimeWindows, workspace.profileAddress]);
 
   const buildSnapshot = useCallback(() => {
     if (!ownerAuthoringEnabled) return;
@@ -511,62 +479,6 @@ export default function ModuleGridShell({
     residentHandoff?.trackActorPosition?.([gridRef.current, shellRef.current]);
     return () => residentHandoff?.trackActorPosition?.(null);
   }, [residentHandoff]);
-
-
-  const openModule = useCallback((id) => {
-    if (id === 'identity' && identityOpen) {
-      setIdentityOpen(false);
-      setIdentityPhase('closed');
-      updateRuntime({ type: 'close', id });
-      return;
-    }
-    if (id === 'collection' && collectionOpen) {
-      setCollectionOpen(false);
-      updateRuntime({ type: 'close', id });
-      setActiveModuleId(null);
-      window.requestAnimationFrame(() => moduleRefs.current.get('collection')?.focus());
-      return;
-    }
-    if (id === 'creations' && creationsOpen) {
-      setCreationsOpen(false);
-      updateRuntime({ type: 'close', id });
-      setActiveModuleId(null);
-      window.requestAnimationFrame(() => moduleRefs.current.get('creations')?.focus());
-      return;
-    }
-    if (id === 'signals' && signalsOpen) {
-      setSignalsOpen(false);
-      updateRuntime({ type: 'close', id });
-      setActiveModuleId(null);
-      window.requestAnimationFrame(() => moduleRefs.current.get('signals')?.focus());
-      return;
-    }
-    setActiveModuleId(id);
-    updateRuntime({ type: 'open', id });
-    if (id === 'collection') {
-      setCollectionOpen(true);
-      return;
-    }
-    if (id === 'creations') {
-      setCreationsOpen(true);
-      return;
-    }
-    if (id === 'signals') {
-      setSignalsOpen(true);
-      return;
-    }
-    if (id !== 'identity') return;
-    setIdentityPhase('open');
-    setIdentityOpen(true);
-  }, [collectionOpen, creationsOpen, identityOpen, signalsOpen, updateRuntime]);
-
-  const resetWindows = useCallback(() => {
-    setRuntimeWindows((current) => updateRuntimeWindowState(current, { type: 'reset', initial: authoredWindowDefaults }));
-    setIdentityOpen(authoredWindowDefaults.openIds.includes('identity'));
-    setCollectionOpen(authoredWindowDefaults.openIds.includes('collection'));
-    setCreationsOpen(authoredWindowDefaults.openIds.includes('creations'));
-    setSignalsOpen(authoredWindowDefaults.openIds.includes('signals'));
-  }, [authoredWindowDefaults]);
 
   const openGalleryContextMenu = useCallback((event, target) => {
     if (!ownerAuthoringEnabled || !target) return;
@@ -683,9 +595,9 @@ export default function ModuleGridShell({
     else if (command === 'toggle-edit') setEditMode((value) => !value);
     else if (command === 'toggle-grid') toggleGrid();
     else if (command === 'reset-home-camera') setHomeCameraImmediately(homeOrigin);
-    else if (command === 'reset-windows') resetWindows();
+    else if (command === 'reset-windows') runtimeWindowActions.resetWindows();
     else if (command === 'close-all') closeAllWindows();
-    else if (command === 'open') openModule(target.id);
+    else if (command === 'open') runtimeWindowActions.toggleWindow(target.id);
     else if (command === 'open-artwork') openArtworkPreview(target.id);
     else if (command === 'toggle-artwork-lock' && canvasObjectById[target.id]) {
       const locked = !canvasObjectById[target.id].locked;
@@ -704,18 +616,13 @@ export default function ModuleGridShell({
     else if (command === 'object-back') reorderCanvasObject(target.id,CANVAS_OBJECT_ORDER_COMMAND.BACK);
     else if (command === 'remove-artwork' && target.type === 'gallery-object') { requestGalleryArtworkRemoval(target.id); return; }
     else if (command === 'remove-artwork' && window.confirm('Remove this artwork from the canvas? The owned asset will remain in your library.')) { removeCanvasObject(target.id); setArtworkInspector(null); setSelectedCanvasObjectId(null); }
-    else if (command === 'close') openModule(runtimeId);
-    else if (command === 'reset-window') updateRuntime({
-      type: 'reset-window',
-      id: runtimeId,
-      rect: authoredWindowDefaults.rects[runtimeId] || null
-    });
+    else if (command === 'close') runtimeWindowActions.toggleWindow(runtimeId);
+    else if (command === 'reset-window') runtimeWindowActions.resetWindow(runtimeId);
     else if (command === 'toggle-start-open') {
-      const rect = runtimeWindows.rects[runtimeId] || defaultWindowGridRect(runtimeId, geometry, canvasPositions[runtimeId]);
-      setSystemPresentation((current) => { const next={...current,[runtimeId]:{...current[runtimeId],startOpen:!current[runtimeId]?.startOpen,windowGeometry:rect}}; saveSystemPresentation(workspace.profileAddress,next); return next; });
+      runtimeWindowActions.toggleStartOpen(runtimeId, defaultWindowGridRect(runtimeId, geometry, canvasPositions[runtimeId]));
     }
     setContextMenu(null);
-  }, [authoredWindowDefaults, beginArtworkChoice, beginGalleryArtworkChoice, canvasObjectById, canvasPositions, closeAllWindows, contextMenu, geometry, homeOrigin, keeperVisible, onKeeperVisibilityChange, onStageVisibilityChange, openArtworkInspector, openArtworkPreview, openModule, ownerAuthoringEnabled, removeCanvasObject, reorderCanvasObject, requestGalleryArtworkRemoval, resetWindows, runtimeWindows.rects, setAllCanvasObjectsLocked, setCanvasObjectLocked, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility, setHomeCameraImmediately, stageVisible, startPreview, toggleGrid, updateRuntime, workspace.profileAddress]);
+  }, [beginArtworkChoice, beginGalleryArtworkChoice, canvasObjectById, canvasPositions, closeAllWindows, contextMenu, geometry, homeOrigin, keeperVisible, onKeeperVisibilityChange, onStageVisibilityChange, openArtworkInspector, openArtworkPreview, ownerAuthoringEnabled, removeCanvasObject, reorderCanvasObject, requestGalleryArtworkRemoval, runtimeWindowActions, setAllCanvasObjectsLocked, setCanvasObjectLocked, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility, setHomeCameraImmediately, stageVisible, startPreview, toggleGrid]);
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -750,12 +657,7 @@ export default function ModuleGridShell({
         profile={viewedProfile}
         avatarShape={avatarShape}
         profileExpanded={identityOpen}
-        onProfileExpandedChange={(expanded) => {
-          setIdentityOpen(expanded);
-          setIdentityPhase(expanded ? 'open' : 'closed');
-          setActiveModuleId(expanded ? 'identity' : null);
-          updateRuntime({ type: expanded ? 'open' : 'close', id: 'identity' });
-        }}
+        onProfileExpandedChange={(expanded) => runtimeWindowActions.setWindowOpen('identity', expanded)}
         categories={navigationCategories}
         assetStatus={libraryStatus}
         onCategoriesOpenChange={(expanded) => {
@@ -764,20 +666,12 @@ export default function ModuleGridShell({
         creations={{
           profileAddress: viewedProfileAddress,
           open: creationsOpen,
-          onOpenChange: (expanded) => {
-            setCreationsOpen(expanded);
-            setActiveModuleId(expanded ? 'creations' : null);
-            updateRuntime({ type: expanded ? 'open' : 'close', id: 'creations' });
-          }
+          onOpenChange: (expanded) => runtimeWindowActions.setWindowOpen('creations', expanded)
         }}
         activity={{
           profileAddress: viewedProfileAddress,
           open: signalsOpen,
-          onOpenChange: (expanded) => {
-            setSignalsOpen(expanded);
-            setActiveModuleId(expanded ? 'signals' : null);
-            updateRuntime({ type: expanded ? 'open' : 'close', id: 'signals' });
-          }
+          onOpenChange: (expanded) => runtimeWindowActions.setWindowOpen('signals', expanded)
         }}
         gallery={upperOpen ? null : {
           open: galleryOpen,
@@ -797,9 +691,7 @@ export default function ModuleGridShell({
           },
           onOpenChange: (expanded) => {
             if (expanded && libraryStatus === 'idle') loadLibrary();
-            setCollectionOpen(expanded);
-            setActiveModuleId(expanded ? 'collection' : null);
-            updateRuntime({ type: expanded ? 'open' : 'close', id: 'collection' });
+            runtimeWindowActions.setWindowOpen('collection', expanded);
           }
         } : null}
         onDiscover={openCollectionSearch}

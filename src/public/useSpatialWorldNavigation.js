@@ -24,8 +24,7 @@ export function useSpatialWorldNavigation({
   ownerAuthoringEnabled,
   prepareSpatialLevel,
   profileAddress,
-  reducedMotion,
-  setActiveModuleId
+  reducedMotion
 }) {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryTransitionPhase, setGalleryTransitionPhase] = useState('home');
@@ -98,13 +97,12 @@ export function useSpatialWorldNavigation({
       galleryTransitionTimerRef.current = 0;
       setGalleryOpen(false);
       setGalleryTransitionPhase('home');
-      setActiveModuleId(null);
       window.requestAnimationFrame(() => {
         const galleryButton = document.querySelector('.gallery-navigation-card[data-visible] > button');
         (galleryButton || document.querySelector('.profile-identity-card__avatar'))?.focus();
       });
     }, reducedMotion ? 1 : WORLD_TRANSITION_MS);
-  }, [galleryOpen, galleryTransitionPhase, gridSpacing, reducedMotion, setActiveModuleId]);
+  }, [galleryOpen, galleryTransitionPhase, gridSpacing, reducedMotion]);
 
   const enterGallery = useCallback(() => {
     if (galleryOpen || upperOpen) return;
@@ -135,9 +133,8 @@ export function useSpatialWorldNavigation({
       upperTransitionTimerRef.current = 0;
       setUpperOpen(false);
       setUpperTransitionPhase('home');
-      setActiveModuleId(null);
     }, reducedMotion ? 1 : WORLD_TRANSITION_MS);
-  }, [reducedMotion, setActiveModuleId, upperOpen, upperTransitionPhase]);
+  }, [reducedMotion, upperOpen, upperTransitionPhase]);
 
   const enterUpper = useCallback(() => {
     if (upperOpen || galleryOpen) return;
