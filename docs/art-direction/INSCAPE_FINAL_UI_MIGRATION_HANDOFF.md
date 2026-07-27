@@ -130,6 +130,7 @@ The implementation agent must report:
 5. The exact pointer, keyboard, focus, Escape, and responsive behavior.
 6. Which state is runtime-only, local draft, or published profile data.
 7. What legacy code will remain, be bypassed, or eventually be removed.
+8. Whether previous iterations have made the relevant implementation more complex than the product behavior requires, and whether a smaller or cleaner implementation boundary is available.
 
 The agent must then ask the owner whether anything should be corrected or added before implementation.
 
@@ -141,12 +142,30 @@ The agent must then ask the owner whether anything should be corrected or added 
 - Do not introduce hardcoded profile data.
 - Do not fabricate fallback metadata.
 - Do not commit or push unless explicitly authorized.
+- If accumulated iterations are making a simple interaction disproportionately complex, stop and report that complexity before adding another patch.
+- Always compare the proposed implementation with the simplest clean implementation that satisfies the confirmed behavior. Prefer replacing accidental prototype complexity over preserving it merely because it already exists.
 
 ### After implementation
 
 Report a short manual test script before running an excessive test suite. The owner visually and behaviorally approves the slice. Only then perform proportionate automated verification, cleanup, and an optional checkpoint commit/push.
 
 ## 8. Stable interface architecture
+
+### Production-to-final UI mapping
+
+The existing production interface largely presents its utilities as one vertical stack of similarly weighted buttons and separate windows. Public navigation, owner organization, spatial movement, publishing, and settings can therefore appear to belong to one undifferentiated menu.
+
+The final interface deliberately separates those responsibilities:
+
+- **Profile/navigation rail:** identity and public-facing profile navigation. This includes the public presentation of Categories, Creations, Activity, and Discover according to visibility rules.
+- **Owner workspace toolbar:** authoring and workspace operations. This includes Browser, Arrange, Preview, Theme, Publish, and secondary owner actions under More.
+- **Browser window:** one owner tool containing `INDEX` and `CATEGORIES` as two tabs in the same window. They are grouped because both participate in composing tables.
+  - `INDEX` is the searchable and filterable owned-asset pool.
+  - `CATEGORIES` is the authoring view for organizing and publishing selections from that pool.
+- **Public Categories view:** the Categories entry in the profile rail presents the public result. It is not the owner editing interface, even though it reads the same underlying category data.
+- **Lattice navigation:** replaces Gallery/Upper World buttons as the alpha presentation-space model. The fixed rail and toolbar remain stationary while the tables move and snap beneath them.
+
+This is not only a visual rearrangement. It establishes clearer ownership, visibility, and state boundaries. Migration must not reproduce the old single-menu hierarchy using new styling.
 
 These elements remain fixed above the moving lattice:
 
@@ -856,6 +875,8 @@ After the production lattice is stable:
 - Keep prototypes isolated; do not import production stores into a visual study without intent.
 - Reuse stable production asset, wallet, publication, and profile-resolution systems.
 - Do not copy prototype hardcoding into production.
+- Report when repeated design iterations have created more implementation complexity than the behavior warrants.
+- Before extending a complicated path, consider and explain whether deleting or replacing it with a smaller cohesive implementation would be safer and clearer.
 - Keep focus, Escape, pointer cancellation, reduced motion, and iframe behavior first-class.
 - Test the same published document across accounts, sessions, direct visits, and iframe sizes.
 
