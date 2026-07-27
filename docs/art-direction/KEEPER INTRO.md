@@ -9,7 +9,9 @@ The idea behind this is to have an alternative way of presenting your profile. O
 
 After this you will not only be able to share an official profile link but also an enterinscape.com/username link to your personalized portfolio.
 
-How I like to think of it is showing off your nicest possession, that is one thing but also really thinking about HOW you want to present it.
+How I like to think of it is showing off your nicest possession, that is one thing but also really thinking about HOW you want to present it. To really create an experience. Your universal profile is where your assets live. The official token generator is now a very easy and accessible way to get your stuff in here. Forever moments is a way to get stuff in here and also music, groovonline. You should pay a visit.
+
+then you can organize it the way you want inside INSCAPE. Ofcourse within the boundaries.
 
 
 I'm a KEEPER so please, don't get rid of me.

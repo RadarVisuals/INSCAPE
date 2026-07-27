@@ -1,4 +1,6 @@
-# OS_UNDERNEATH (not sure about the name yet)
+# OS_UNDERNEATH (historical vision)
+
+> This document captures the project's earlier spatial-desktop direction. It is retained as design history. The current canonical product and art-direction north star is [INSCAPE: Product Vision and Art Direction](./INSCAPE_VISION_AND_ART_DIRECTION.md), supported by the [INSCAPE Canvas Lattice](./INSCAPE_CANVAS_LATTICE.md) interaction contract.
 
 ## Product vision
 
