@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Inscape H Variant";
+  src: url("/assets/fonts/HVariant.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 .lattice-engine-shell {
   position: fixed;
   inset: 0;
@@ -287,7 +295,7 @@
 
 .lattice-engine-readout {
   left: 18px;
-  bottom: 18px;
+  bottom: 78px;
   min-width: 190px;
   padding: 9px 11px;
   pointer-events: none;
@@ -295,6 +303,30 @@
 
 .lattice-engine-readout p {
   margin: 0;
+}
+
+.lattice-inscape-signature {
+  position: fixed;
+  z-index: 6;
+  left: 24px;
+  bottom: 24px;
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  color: rgba(216, 213, 204, 0.66);
+  pointer-events: none;
+  user-select: none;
+}
+
+.lattice-inscape-signature strong {
+  font: 400 clamp(18px, 1.4vw, 21px)/0.82 "Inscape H Variant", sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.lattice-inscape-signature span {
+  color: rgba(216, 213, 204, 0.42);
+  font: 7px/1 "IBM Plex Mono", "Courier New", monospace;
+  letter-spacing: 0.12em;
 }
 
 .lattice-engine-controls {
@@ -410,14 +442,39 @@
   }
 
   .lattice-engine-readout {
-    left: 10px;
-    bottom: 10px;
+    left: 12px;
+    bottom: 50px;
+  }
+
+  .lattice-inscape-signature {
+    left: 12px;
+    bottom: 12px;
+  }
+
+  .lattice-inscape-signature span {
+    display: none;
   }
 
   .lattice-insertion-chooser > div {
     grid-template-columns: 1fr;
     max-height: 58vh;
     overflow: auto;
+  }
+}
+
+@media (max-height: 520px) {
+  .lattice-engine-readout {
+    left: 12px;
+    bottom: 50px;
+  }
+
+  .lattice-inscape-signature {
+    left: 12px;
+    bottom: 12px;
+  }
+
+  .lattice-inscape-signature span {
+    display: none;
   }
 }
 

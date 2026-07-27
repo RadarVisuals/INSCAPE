@@ -1203,8 +1203,13 @@ export default function LatticeEnginePrototype() {
         />
       )}
 
+      <div className="lattice-inscape-signature" aria-label="INSCAPE">
+        <strong>INSCAPE</strong>
+        <span>SPATIAL PROFILE SYSTEM / ACTIVE</span>
+      </div>
+
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE NAVIGATION / PHASE 6 / SLICE 4A + 4B</p>
+        <p>FIXED CHROME / PHASE 6 / SLICE 4C</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
         <p>{viewerSession ? 'VIEWING' : snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>

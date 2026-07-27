@@ -20,10 +20,19 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 6 \/ SLICE 4A \+ 4B/);
+  assert.match(source, /PHASE 6 \/ SLICE 4C/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
+});
+
+test('Phase 6 INSCAPE signature stays fixed, pointer-inert, and presentation-only', () => {
+  assert.match(source, /className="lattice-inscape-signature" aria-label="INSCAPE"/);
+  assert.match(source, /SPATIAL PROFILE SYSTEM \/ ACTIVE/);
+  assert.match(prototypeStyles, /@font-face\s*\{[^}]*font-family: "Inscape H Variant";[^}]*HVariant\.otf/s);
+  assert.match(prototypeStyles, /\.lattice-inscape-signature\s*\{[^}]*position: fixed;[^}]*left: 24px;[^}]*bottom: 24px;[^}]*pointer-events: none;/s);
+  assert.match(prototypeStyles, /\.lattice-engine-readout\s*\{[^}]*bottom: 78px;/s);
+  assert.doesNotMatch(source, /signature.*(?:localStorage|sessionStorage|wallet|publish)/iu);
 });
 
 test('Phase 6 navigation controls share the canonical topology without introducing a boxed map', () => {
