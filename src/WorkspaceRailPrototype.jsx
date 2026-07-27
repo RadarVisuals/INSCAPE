@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   Archive,
@@ -21,6 +21,12 @@ import {
   X,
 } from 'lucide-react';
 import './workspaceRailPrototype.css';
+import { useLibraryStore } from './library/state/useLibraryStore.js';
+import { isImageCompatibleAsset } from './library/domain/canvasObjectRegistry.js';
+import { searchProfileAssets } from './library/domain/searchProfileAssets.js';
+import { useWalletStore } from './store/useWalletStore.js';
+import { acquireStandaloneWalletSession } from './wallet/standaloneWalletSession.js';
+import { reportControlledError } from './diagnostics.js';
 
 const PROFILE_ITEMS = [
   { id: 'categories', label: 'Categories', icon: FolderTree, meta: '03 PUBLIC' },
@@ -66,33 +72,41 @@ const CURATED_LOCAL_ASSETS = [
   { id: '03', src: '/assets/ratio/3.webp', dimensions: '2000 × 2829', shape: 'poster' },
   { id: '07', src: '/assets/ratio/7.webp', dimensions: '2000 × 2000', shape: 'square' },
 ];
-const PLACEMENT_ASSETS = [
-  { id: 'local-01', src: '/assets/ratio/1.webp', file: '1.webp', ratio: 1 },
-  { id: 'local-02', src: '/assets/ratio/2.webp', file: '2.webp', ratio: 1 },
-  { id: 'local-03', src: '/assets/ratio/3.webp', file: '3.webp', ratio: 2000 / 2829 },
-  { id: 'local-04', src: '/assets/ratio/4.webp', file: '4.webp', ratio: 2000 / 2829 },
-  { id: 'local-05', src: '/assets/ratio/5.webp', file: '5.webp', ratio: 1 },
-  { id: 'local-06', src: '/assets/ratio/6.webp', file: '6.webp', ratio: 2000 / 2829 },
-  { id: 'local-07', src: '/assets/ratio/7.webp', file: '7.webp', ratio: 1 },
-];
-
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
+
+function indexedAssetView(asset) {
+  const width = Number(asset.imageWidth) || 1;
+  const height = Number(asset.imageHeight) || 1;
+  return {
+    ...asset,
+    src: asset.thumbnailUrl || asset.imageUrl || asset.originalImageUrl,
+    file: asset.name || 'UNTITLED ASSET',
+    ratio: clamp(width / height, .25, 4)
+  };
+}
+
+function assetValue(value, fallback = 'NOT RESOLVED') {
+  if (value === null || value === undefined || value === '') return fallback;
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
 
 function PlacedAssetCard({ asset, placement, selected, onPointerDown, onResizePointerDown }) {
   return <article
     className="workspace-rail-study__placed-asset"
     data-selected={selected || undefined}
     style={{
-      left: `${placement.x}%`,
-      top: `${placement.y}%`,
-      width: `${placement.width}px`,
-      height: `${(placement.width / asset.ratio) + 50}px`,
+      left: `${placement.rect.x * 100}%`,
+      top: `${placement.rect.y * 100}%`,
+      width: `${placement.rect.width * 100}%`,
+      height: `${placement.rect.height * 100}%`,
+      zIndex: placement.layer + 1,
     }}
     onPointerDown={(event) => onPointerDown(event, placement)}
   >
     <header><span>INSCAPE / ASSET</span><b>{asset.file}</b></header>
-    <div><img src={asset.src} alt={`Placed prototype artwork ${asset.file}`} draggable="false" /></div>
-    <footer><span>LOCAL / {asset.id.slice(-2)}</span><span>CLICK / OPEN</span></footer>
+    <div><img src={asset.src} alt={`Placed artwork ${asset.file}`} draggable="false" style={{ objectPosition: `${placement.crop.x * 100}% ${placement.crop.y * 100}%`, scale: placement.crop.zoom }} /></div>
+    <footer><span>{asset.standard || 'ASSET'} / {asset.id.slice(-4)}</span><span>CLICK / OPEN</span></footer>
     {selected && <button
       type="button"
       className="workspace-rail-study__placed-resize"
@@ -184,11 +198,15 @@ function PlacedAssetViewer({ asset, index, onClose, onNavigate, total }) {
     window.setTimeout(() => { suppressSideClickRef.current = false; }, 0);
   };
 
+  const creator = asset.creators?.[0];
+  const attributes = Array.isArray(asset.attributes) ? asset.attributes : [];
   return <section className="workspace-rail-study__placed-viewer" role="dialog" aria-modal="true" aria-label={`Preview ${asset.file}`}>
     <div className="workspace-rail-study__placed-composition" onWheel={handleWheel}>
       <aside className="workspace-rail-study__placed-dossier workspace-rail-study__placed-dossier--story" data-open={openPanel === 'story' || undefined} aria-hidden={openPanel !== 'story'}>
         <header><span>INSCAPE / ASSET NARRATIVE</span><b>{asset.file}</b></header>
-        <div><small>DESCRIPTION</small><h2>NOT RESOLVED</h2><p>No NFT description is attached to this local prototype artwork.</p><section><small>TRAITS</small><p>NO TRAITS RESOLVED</p></section></div>
+        <div><small>DESCRIPTION</small><h2>{asset.file}</h2><p>{assetValue(asset.description, 'NO DESCRIPTION PUBLISHED')}</p><section><small>TRAITS</small>{attributes.length
+          ? <dl>{attributes.map((attribute, attributeIndex) => <div key={`${attribute.key || 'trait'}:${attributeIndex}`}><dt>{assetValue(attribute.key, 'TRAIT')}</dt><dd>{assetValue(attribute.value)}</dd></div>)}</dl>
+          : <p>NO TRAITS RESOLVED</p>}</section></div>
         <footer><span>INSCAPE PROTOCOL</span><span>LEFT SIDE / DESCRIPTION</span></footer>
       </aside>
       <article className="workspace-rail-study__placed-focus" style={{ '--placed-ratio': asset.ratio }}>
@@ -206,7 +224,12 @@ function PlacedAssetViewer({ asset, index, onClose, onNavigate, total }) {
       </article>
       <aside className="workspace-rail-study__placed-dossier workspace-rail-study__placed-dossier--technical" data-open={openPanel === 'technical' || undefined} aria-hidden={openPanel !== 'technical'}>
         <header><span>INSCAPE / TECHNICAL RECORD</span><b>{asset.file}</b></header>
-        <div><small>FILE RECORD</small><h2>{asset.file}</h2><p>Original artwork preserved at its native ratio. Token metadata has not been attached to this local prototype record.</p><dl><div><dt>ASPECT RATIO</dt><dd>{asset.ratio.toFixed(3)}</dd></div><div><dt>SOURCE</dt><dd>LOCAL ARTWORK</dd></div><div><dt>METADATA</dt><dd>NOT RESOLVED</dd></div><div><dt>NETWORK</dt><dd>NOT RESOLVED</dd></div></dl></div>
+        <div><small>FILE RECORD</small><h2>{asset.file}</h2><p>{assetValue(asset.collectionName, 'COLLECTION NOT RESOLVED')}</p><dl>
+          <div><dt>STANDARD</dt><dd>{assetValue(asset.standard)}</dd></div>
+          <div><dt>TOKEN ID</dt><dd>{assetValue(asset.tokenId)}</dd></div>
+          <div><dt>CREATOR</dt><dd>{assetValue(creator?.name || creator?.address)}</dd></div>
+          <div><dt>CONTRACT</dt><dd>{assetValue(asset.contractAddress)}</dd></div>
+        </dl></div>
         <footer><span>INSCAPE PROTOCOL</span><span>RIGHT SIDE / RECORD</span></footer>
       </aside>
     </div>
@@ -333,6 +356,11 @@ function ShareableProfileCard({ onClose }) {
 }
 
 export default function WorkspaceRailPrototype() {
+  const library = useLibraryStore();
+  const hostProfileAddress = useWalletStore((state) => state.hostProfileAddress);
+  const initWallet = useWalletStore((state) => state.initWallet);
+  const scheduleWalletRelease = useWalletStore((state) => state.scheduleWalletRelease);
+  const [showProfileConnection, setShowProfileConnection] = useState(null);
   const [owner, setOwner] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const [activeProfile, setActiveProfile] = useState('categories');
@@ -346,13 +374,19 @@ export default function WorkspaceRailPrototype() {
   const [latticeDrag, setLatticeDrag] = useState({ x: 0, y: 0 });
   const [latticeDragging, setLatticeDragging] = useState(false);
   const [placementAssetId, setPlacementAssetId] = useState(null);
-  const [placements, setPlacements] = useState([]);
+  const [assetQuery, setAssetQuery] = useState('');
   const [selectedPlacementId, setSelectedPlacementId] = useState(null);
   const [viewerPlacementId, setViewerPlacementId] = useState(null);
   const [viewport, setViewport] = useState({ width: 1, height: 1 });
   const latticePointerRef = useRef(null);
   const placementPointerRef = useRef(null);
   const wheelCooldownRef = useRef(false);
+  const placements = library.workspace?.tables?.placements || [];
+  const compatibleAssets = useMemo(() => library.assets
+    .filter(isImageCompatibleAsset)
+    .map(indexedAssetView), [library.assets]);
+  const indexedAssets = useMemo(() => searchProfileAssets(compatibleAssets, assetQuery), [assetQuery, compatibleAssets]);
+  const indexedAssetMap = useMemo(() => new Map(compatibleAssets.map((asset) => [asset.id, asset])), [compatibleAssets]);
   const activeSurface = SURFACE_SYSTEMS.find((system) => system.id === surface) || SURFACE_SYSTEMS[0];
   const activeCanvasRecord = LATTICE_CANVASES.find(({ x, y }) => x === activeCanvas.x && y === activeCanvas.y) || LATTICE_CANVASES[2];
   const latticeOffset = {
@@ -367,6 +401,38 @@ export default function WorkspaceRailPrototype() {
     return () => window.removeEventListener('resize', measure);
   }, []);
 
+  useEffect(() => {
+    if (window.parent !== window) {
+      void initWallet();
+      return () => scheduleWalletRelease();
+    }
+
+    const acquisition = acquireStandaloneWalletSession({
+      initializeWallet: initWallet,
+      disposeWallet: () => useWalletStore.getState().disposeWallet(),
+      onError: (error) => reportControlledError('workspace-prototype-wallet', error),
+    });
+    let active = true;
+    void acquisition.session.then((session) => {
+      if (active) setShowProfileConnection(() => session.showSignIn);
+    }).catch((error) => reportControlledError('workspace-prototype-wallet', error));
+
+    return () => {
+      active = false;
+      acquisition.release();
+    };
+  }, [initWallet, scheduleWalletRelease]);
+
+  useEffect(() => {
+    if (hostProfileAddress && hostProfileAddress !== library.profileAddress) {
+      library.setProfileAddress(hostProfileAddress);
+    }
+  }, [hostProfileAddress, library.profileAddress, library.setProfileAddress]);
+
+  useEffect(() => {
+    if (library.profileAddress && library.status === 'idle') library.load();
+  }, [library.profileAddress, library.status]);
+
   const moveToCanvas = (x, y) => {
     if (!LATTICE_COORDINATES.has(`${x}:${y}`)) return;
     setLatticeDrag({ x: 0, y: 0 });
@@ -375,17 +441,22 @@ export default function WorkspaceRailPrototype() {
 
   const commitSelectedAssetPlacement = (canvasId, x, y) => {
     if (!placementAssetId) return;
-    const asset = PLACEMENT_ASSETS.find(({ id }) => id === placementAssetId);
+    const asset = indexedAssetMap.get(placementAssetId);
     if (!asset) return;
-    const id = `placement-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    setPlacements((current) => [...current, {
-      id,
-      assetId: asset.id,
-      canvasId,
-      x: clamp(x, 8, 92),
-      y: clamp(y, 12, 88),
-      width: asset.ratio < .85 ? 142 : 180,
-    }]);
+    const width = asset.ratio < .85 ? .14 : .18;
+    const height = clamp(((width * viewport.width) / asset.ratio + 50) / viewport.height, .12, .72);
+    const id = library.createTablePlacement({
+      tableId: canvasId,
+      stableAssetId: asset.id,
+      rect: {
+        x: clamp((x / 100) - (width / 2), .02, .98 - width),
+        y: clamp((y / 100) - (height / 2), .04, .96 - height),
+        width,
+        height
+      },
+      crop: { x: .5, y: .5, zoom: 1 }
+    });
+    if (!id) return;
     setSelectedPlacementId(id);
     setPlacementAssetId(null);
   };
@@ -411,12 +482,11 @@ export default function WorkspaceRailPrototype() {
       mode,
       startX: event.clientX,
       startY: event.clientY,
-      originX: placement.x,
-      originY: placement.y,
-      originWidth: placement.width,
+      originRect: placement.rect,
       captureTarget: event.currentTarget,
       moved: false,
     };
+    library.reorderTablePlacement(placement.id, 'front');
     setSelectedPlacementId(placement.id);
   };
 
@@ -426,17 +496,14 @@ export default function WorkspaceRailPrototype() {
     const deltaX = event.clientX - gesture.startX;
     const deltaY = event.clientY - gesture.startY;
     if (Math.hypot(deltaX, deltaY) > 3) gesture.moved = true;
-    setPlacements((current) => current.map((placement) => {
-      if (placement.id !== gesture.placementId) return placement;
-      if (gesture.mode === 'resize') {
-        return { ...placement, width: clamp(gesture.originWidth + deltaX, 96, 420) };
-      }
-      return {
-        ...placement,
-        x: clamp(gesture.originX + ((deltaX / viewport.width) * 100), 2, 98),
-        y: clamp(gesture.originY + ((deltaY / viewport.height) * 100), 4, 96),
-      };
-    }));
+    const rect = gesture.mode === 'resize' ? {
+      width: clamp(gesture.originRect.width + (deltaX / viewport.width), .06, .98 - gesture.originRect.x),
+      height: clamp(gesture.originRect.height + (deltaY / viewport.height), .08, .96 - gesture.originRect.y)
+    } : {
+      x: clamp(gesture.originRect.x + (deltaX / viewport.width), .02, .98 - gesture.originRect.width),
+      y: clamp(gesture.originRect.y + (deltaY / viewport.height), .04, .96 - gesture.originRect.height)
+    };
+    library.updateTablePlacement(gesture.placementId, { rect });
   };
 
   const finishPlacementGesture = (event) => {
@@ -604,8 +671,8 @@ export default function WorkspaceRailPrototype() {
             <i />
           </div>}
           <div className="workspace-rail-study__placement-layer">
-            {placements.filter(({ canvasId }) => canvasId === canvas.id).map((placement) => {
-              const asset = PLACEMENT_ASSETS.find(({ id }) => id === placement.assetId);
+            {placements.filter(({ tableId }) => tableId === canvas.id).map((placement) => {
+              const asset = indexedAssetMap.get(placement.stableAssetId);
               if (!asset) return null;
               return <div key={placement.id} data-placement-card>
                 <PlacedAssetCard
@@ -677,7 +744,7 @@ export default function WorkspaceRailPrototype() {
       </div>
       <label className="workspace-rail-study__search">
         <span>SEARCH ASSET POOL</span>
-        <input aria-label="Search asset pool" />
+        <input aria-label="Search asset pool" value={assetQuery} onChange={(event) => setAssetQuery(event.target.value)} />
       </label>
       <div className="workspace-rail-study__browser-content">
         <aside>
@@ -686,8 +753,17 @@ export default function WorkspaceRailPrototype() {
           {browserMode === 'categories' && <button type="button" className="workspace-rail-study__create">+ CREATE CATEGORY</button>}
         </aside>
         <div className="workspace-rail-study__asset-field">
-          <header><strong>{browserMode === 'index' ? 'ALL OWNED' : 'ART'}</strong><small>12 RESULTS</small></header>
-          <div>{PLACEMENT_ASSETS.map((asset) => <button
+          <header><strong>{browserMode === 'index' ? 'ALL OWNED' : 'ART'}</strong><small>{indexedAssets.length} RESULTS</small></header>
+          {!library.profileAddress && <button
+            type="button"
+            className="workspace-rail-study__asset-status"
+            onClick={() => showProfileConnection?.()}
+            disabled={!showProfileConnection}
+          >CONNECT UNIVERSAL PROFILE</button>}
+          {library.profileAddress && library.status === 'loading' && !compatibleAssets.length && <p className="workspace-rail-study__asset-status">RESOLVING PROFILE ASSETS</p>}
+          {library.status === 'error' && !compatibleAssets.length && <p className="workspace-rail-study__asset-status">ASSET INDEX UNAVAILABLE</p>}
+          {library.profileAddress && library.status !== 'loading' && !indexedAssets.length && <p className="workspace-rail-study__asset-status">NO MATCHING IMAGE ASSETS</p>}
+          <div>{indexedAssets.map((asset) => <button
             type="button"
             key={asset.id}
             data-selected={placementAssetId === asset.id || undefined}
@@ -712,12 +788,12 @@ export default function WorkspaceRailPrototype() {
       type="button"
       className="workspace-rail-study__placement-cursor"
       onClick={() => commitSelectedAssetPlacement(activeCanvasRecord.id, 50, 50)}
-    >PLACE / {PLACEMENT_ASSETS.find(({ id }) => id === placementAssetId)?.file} / {activeCanvasRecord.label}</button>}
+    >PLACE / {indexedAssetMap.get(placementAssetId)?.file} / {activeCanvasRecord.label}</button>}
     {viewerPlacementId && (() => {
-      const tablePlacements = placements.filter(({ canvasId }) => canvasId === activeCanvasRecord.id);
+      const tablePlacements = placements.filter(({ tableId }) => tableId === activeCanvasRecord.id);
       const index = tablePlacements.findIndex(({ id }) => id === viewerPlacementId);
       const placement = tablePlacements[index];
-      const asset = placement && PLACEMENT_ASSETS.find(({ id }) => id === placement.assetId);
+      const asset = placement && indexedAssetMap.get(placement.stableAssetId);
       const navigate = (direction) => {
         if (tablePlacements.length < 2) return;
         const nextIndex = (index + direction + tablePlacements.length) % tablePlacements.length;

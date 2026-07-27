@@ -1,4 +1,4 @@
-export const LIBRARY_WORKSPACE_VERSION = 7;
+export const LIBRARY_WORKSPACE_VERSION = 8;
 
 export const LIBRARY_VIEW_TYPES = Object.freeze({ ALL: 'all', FAVORITES: 'favorites', FOLDER: 'folder' });
 
@@ -7,7 +7,7 @@ function folderId() {
 }
 
 export function createEmptyWorkspace(profileAddress) {
-  return { version: LIBRARY_WORKSPACE_VERSION, profileAddress, favorites: [], folders: [], canvas: { launchers: [], objects: [] } };
+  return { version: LIBRARY_WORKSPACE_VERSION, profileAddress, favorites: [], folders: [], canvas: { launchers: [], objects: [] }, tables: { placements: [] } };
 }
 
 export function createFolder(workspace, name, now = Date.now()) {

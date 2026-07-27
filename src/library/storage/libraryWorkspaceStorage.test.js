@@ -24,7 +24,31 @@ test('malformed and wrong-profile storage recovers to an empty workspace', () =>
   assert.deepEqual(wrong.favorites, []);
 });
 
-test('Phase 1 data migrates to v7 without changing favorites, folder names, or multi-folder memberships', () => {
+test('v8 table placements persist while v7 migration starts with empty tables', () => {
+  const storage = memoryStorage();
+  const current = normalizeWorkspace({
+    version: 8,
+    profileAddress: profile,
+    favorites: [],
+    folders: [],
+    canvas: { launchers: [], objects: [] },
+    tables: { placements: [{
+      id: 'table:one', tableId: 'archive', stableAssetId: 'asset:one',
+      rect: { x: .2, y: .3, width: .25, height: .4 }, crop: { x: .5, y: .4, zoom: 1.5 }, layer: 0
+    }] }
+  }, profile);
+  assert.equal(saveLibraryWorkspace(storage, current), true);
+  assert.deepEqual(loadLibraryWorkspace(storage, profile).tables, current.tables);
+
+  const legacyStorage = memoryStorage({
+    [libraryWorkspaceKey(profile, 7)]: JSON.stringify({
+      version: 7, profileAddress: profile, favorites: [], folders: [], canvas: { launchers: [], objects: [] }
+    })
+  });
+  assert.deepEqual(loadLibraryWorkspace(legacyStorage, profile).tables, { placements: [] });
+});
+
+test('Phase 1 data migrates to v8 without changing favorites, folder names, or multi-folder memberships', () => {
   const phaseOne = { version: 1, profileAddress: profile, favorites: ['asset-a', 'asset-b'], folders: [
     { id: 'one', name: 'One / Ones', assetIds: ['asset-a', 'asset-c'], createdAt: 1, updatedAt: 2 },
     { id: 'friends', name: 'Works by Friends', assetIds: ['asset-a', 'asset-d'], createdAt: 3, updatedAt: 4 }
@@ -32,11 +56,12 @@ test('Phase 1 data migrates to v7 without changing favorites, folder names, or m
   const storage = memoryStorage({ [libraryWorkspaceKey(profile, 1)]: JSON.stringify(phaseOne) });
   const migrated = loadLibraryWorkspace(storage, profile);
 
-  assert.equal(migrated.version, 7);
+  assert.equal(migrated.version, 8);
   assert.deepEqual(migrated.favorites, phaseOne.favorites);
   assert.deepEqual(migrated.folders, phaseOne.folders.map((folder) => ({ ...folder, public: false })));
   assert.deepEqual(migrated.canvas.launchers, []);
   assert.deepEqual(migrated.canvas.objects, []);
+  assert.deepEqual(migrated.tables.placements, []);
   assert.ok(storage.values.has(libraryWorkspaceKey(profile)));
 });
 
@@ -56,7 +81,7 @@ test('v2 pinned spaces migrate folder publication before launcher records are di
   ], canvas: { launchers: [{ id: 'ignored', viewType: 'folder', folderId: 'existing', position: { column: 3, row: 4 }, windowPosition: null }] } };
   const storage = memoryStorage({ [libraryWorkspaceKey(profile, 2)]: JSON.stringify(phaseTwo) });
   const migrated = loadLibraryWorkspace(storage, profile);
-  assert.equal(migrated.version, 7);
+  assert.equal(migrated.version, 8);
   assert.equal(migrated.folders[0].public, true);
   assert.deepEqual(migrated.canvas.launchers, []);
   assert.ok(storage.values.has(libraryWorkspaceKey(profile)));
@@ -70,10 +95,10 @@ test('v4 and v5 launcher presentation is retired without affecting folders', () 
   assert.deepEqual(current.canvas.launchers, []);
 });
 
-test('v5 workspaces migrate purely to an empty canvas-object collection and v6 objects normalize into v7', () => {
+test('v5 workspaces migrate purely to an empty canvas-object collection and v6 objects normalize into v8', () => {
   const v5 = { version: 5, profileAddress: profile, favorites: ['kept'], folders: [], canvas: { launchers: [] } };
   const migrated = normalizeWorkspace(v5, profile);
-  assert.equal(migrated.version, 7); assert.deepEqual(migrated.favorites, ['kept']); assert.deepEqual(migrated.canvas.objects, []);
+  assert.equal(migrated.version, 8); assert.deepEqual(migrated.favorites, ['kept']); assert.deepEqual(migrated.canvas.objects, []);
   const current = normalizeWorkspace({ ...v5, version: 6, canvas: { launchers: [], objects: [{
     id: 'canvas:artwork:one', kind: 'framed-artwork', stableAssetId: '42:0x1111111111111111111111111111111111111111:0x01', visitorVisible: true, locked: true,
     placement: { column: 4, row: 5 }, span: { columns: 4, rows: 4 }, presentationOrder: 99,

@@ -12,6 +12,7 @@ export const UNUSED_PUBLIC_PATHS = Object.freeze([
   'assets/palettes',
   'assets/prototype',
   'assets/ratio',
+  'assets/fonts/moon.webp',
   'assets/manifest.json',
   'assets/actors/abyssal_eye/full multi eye purple.afdesign',
   'assets/actors/skull_reaper/position.afdesign'

@@ -19,9 +19,11 @@ import {
 } from '../domain/canvasObjects.js';
 import { loadLibraryWorkspace, saveLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
 import { loadLibraryAssetCache, saveLibraryAssetCache } from '../storage/libraryAssetCache.js';
+import { createTablePlacement, removeTablePlacement, reorderTablePlacement, updateTablePlacement } from '../domain/tablePlacements.js';
 
 const profileAddress = resolveWorkspaceProfile(useWalletStore.getState().hostProfileAddress);
 let workspaceStorage = typeof window === 'undefined' ? null : window.localStorage;
+const tableAuthoringEnabled = import.meta.env?.DEV ?? true;
 let saveTimer = null;
 let activeLoadController = null;
 const INDEXER_SOURCE_TIMEOUT_MS = 8000;
@@ -281,6 +283,22 @@ export const useLibraryStore = create((set, get) => ({
   removeCanvasObject(id) {
     const workspace = removeCanvasObject(get().workspace, id); set({ workspace }); scheduleSave(workspace);
   },
+  ...(tableAuthoringEnabled ? {
+    createTablePlacement(input) {
+      const previous = get().workspace;
+      const workspace = createTablePlacement(previous, input); set({ workspace }); scheduleSave(workspace);
+      return workspace === previous ? null : workspace.tables.placements.find((placement) => !previous.tables.placements.some((prior) => prior.id === placement.id))?.id || null;
+    },
+    updateTablePlacement(id, patch) {
+      const workspace = updateTablePlacement(get().workspace, id, patch); set({ workspace }); scheduleSave(workspace);
+    },
+    reorderTablePlacement(id, command) {
+      const workspace = reorderTablePlacement(get().workspace, id, command); set({ workspace }); scheduleSave(workspace);
+    },
+    removeTablePlacement(id) {
+      const workspace = removeTablePlacement(get().workspace, id); set({ workspace }); scheduleSave(workspace);
+    }
+  } : {}),
   resetCanvasLayout() {
     const workspace = resetCanvasLayout(get().workspace); set({ workspace }); scheduleSave(workspace);
   },

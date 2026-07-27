@@ -213,6 +213,7 @@
 .workspace-rail-study__asset-field > header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .workspace-rail-study__asset-field > header strong { font: 600 12px var(--study-font-text); letter-spacing: .1em; }
 .workspace-rail-study__asset-field > header small { color: var(--study-faint); font: 8px var(--study-font-label); }
+.workspace-rail-study__asset-status { margin: 8px 0 16px; color: var(--study-muted); font: 9px var(--study-font-label); letter-spacing: .08em; }
 .workspace-rail-study__asset-field > div { display: grid; grid-template-columns: repeat(3, minmax(100px, 1fr)); gap: 8px; }
 .workspace-rail-study__asset-field > div button { padding: 0; border: 1px solid var(--study-line); background: transparent; color: var(--study-ink); text-align: left; cursor: pointer; }
 .workspace-rail-study__asset-field > div button:hover,

@@ -1,4 +1,4 @@
-import { getConnection, watchConnection } from '@wagmi/core';
+import { getConnection, reconnect, watchConnection } from '@wagmi/core';
 import { setupLuksoConnector } from '@lukso/up-modal';
 import { resolveStandaloneUniversalProfile } from '../store/universalProfileValidation.js';
 
@@ -44,6 +44,17 @@ export async function createStandaloneWalletSession({ initializeWallet, disposeW
       return false;
     }
   };
+
+  // `setupLuksoConnector` restores Wagmi's persisted connector metadata, but
+  // does not activate that connection by itself. Reconnect before subscribing
+  // so a standalone page refresh keeps the verified Universal Profile session.
+  // A stale or revoked authorization must remain a normal disconnected state:
+  // the sign-in modal is still available for an explicit reconnect.
+  try {
+    await reconnect(connector.wagmiConfig);
+  } catch (error) {
+    onError?.(error);
+  }
 
   const stopWatching = watchConnection(connector.wagmiConfig, {
     onChange: (connection) => { void syncConnection(connection); }
