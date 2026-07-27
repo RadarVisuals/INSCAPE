@@ -32,6 +32,13 @@ import {
   updatePlacementResizeGesture,
 } from './lattice/controller/latticePlacementResize.js';
 import {
+  PLACEMENT_LAYER_DIRECTIONS,
+  movePlacementLayer,
+  placementLayerAvailability,
+  removePlacement,
+  replacePlacementAsset,
+} from './lattice/controller/latticePlacementLifecycle.js';
+import {
   createCropFocusGesture,
   finishCropFocusGesture,
   nudgeCropFocus,
@@ -115,7 +122,7 @@ const FIXTURE_MEDIA = Object.freeze({
   }),
 });
 
-function createFixturePlacements(transparencyMode, layersSwapped) {
+function createFixturePlacements(transparencyMode) {
   const common = {
     crop: null,
     frameId: FRAME_IDS.NONE,
@@ -127,7 +134,7 @@ function createFixturePlacements(transparencyMode, layersSwapped) {
       id: 'phase-2-landscape',
       stableAssetId: FIXTURE_ASSET_IDS.landscape,
       x: 0.46, y: 0.13, width: 0.4, height: 0.4 * (16 / 9) * (2000 / 4636),
-      layer: layersSwapped ? 2 : 0,
+      layer: 0,
       navigationOrder: 2,
       transparencyMode: TRANSPARENCY_MODES.AUTO,
     },
@@ -145,7 +152,7 @@ function createFixturePlacements(transparencyMode, layersSwapped) {
       id: 'phase-2-transparent',
       stableAssetId: FIXTURE_ASSET_IDS.transparent,
       x: 0.35, y: 0.42, width: 0.27, height: 0.27 * (16 / 9),
-      layer: layersSwapped ? 0 : 2,
+      layer: 2,
       navigationOrder: 1,
       transparencyMode,
     },
@@ -155,28 +162,33 @@ function createFixturePlacements(transparencyMode, layersSwapped) {
 const boundsFromPlacement = ({ x, y, width, height }) => ({ x, y, width, height });
 
 const createDefaultPlacementBounds = () => Object.fromEntries(
-  createFixturePlacements(TRANSPARENCY_MODES.AUTO, false)
+  createFixturePlacements(TRANSPARENCY_MODES.AUTO)
     .map((placement) => [placement.id, boundsFromPlacement(placement)]),
 );
 
 const createDefaultPlacementCrops = () => Object.fromEntries(
-  createFixturePlacements(TRANSPARENCY_MODES.AUTO, false)
+  createFixturePlacements(TRANSPARENCY_MODES.AUTO)
     .map((placement) => [placement.id, placement.crop]),
 );
 
 const createDefaultArtworkMats = () => Object.fromEntries(
-  createFixturePlacements(TRANSPARENCY_MODES.AUTO, false)
+  createFixturePlacements(TRANSPARENCY_MODES.AUTO)
     .map((placement) => [placement.id, resolveArtworkMatPreset(ARTWORK_MAT_PRESET_IDS.NONE)]),
 );
 
 const createDefaultArtworkBackings = () => Object.fromEntries(
-  createFixturePlacements(TRANSPARENCY_MODES.AUTO, false)
+  createFixturePlacements(TRANSPARENCY_MODES.AUTO)
     .map((placement) => [placement.id, normalizeArtworkBacking(DEFAULT_ARTWORK_BACKING)]),
 );
 
 const createDefaultMatPresetIds = () => Object.fromEntries(
-  createFixturePlacements(TRANSPARENCY_MODES.AUTO, false)
+  createFixturePlacements(TRANSPARENCY_MODES.AUTO)
     .map((placement) => [placement.id, ARTWORK_MAT_PRESET_IDS.NONE]),
+);
+
+const createDefaultPlacementDefinitions = () => createFixturePlacements(TRANSPARENCY_MODES.AUTO);
+const withoutRecordKey = (record, key) => Object.fromEntries(
+  Object.entries(record).filter(([candidate]) => candidate !== key),
 );
 
 function applyPlacementAuthoring(placements, placementBounds, placementCrops, preview, cropPreview) {
@@ -199,7 +211,6 @@ const createDefaultRenderPreview = () => ({
   labelAnchor: 'top-left',
   labelOffset: { column: 0, row: 0 },
   transparencyMode: TRANSPARENCY_MODES.AUTO,
-  layersSwapped: false,
 });
 
 export default function LatticeEnginePrototype() {
@@ -226,6 +237,7 @@ export default function LatticeEnginePrototype() {
   const [selectedPlacementId, setSelectedPlacementId] = useState(null);
   const [placementDragging, setPlacementDragging] = useState(false);
   const [placementResizing, setPlacementResizing] = useState(false);
+  const [placementDefinitions, setPlacementDefinitions] = useState(createDefaultPlacementDefinitions);
   const [placementBounds, setPlacementBounds] = useState(createDefaultPlacementBounds);
   const [placementCrops, setPlacementCrops] = useState(createDefaultPlacementCrops);
   const [artworkMats, setArtworkMats] = useState(createDefaultArtworkMats);
@@ -262,7 +274,9 @@ export default function LatticeEnginePrototype() {
     framing,
   );
   const centerPlacements = applyPlacementAuthoring(
-    createFixturePlacements(renderPreview.transparencyMode, renderPreview.layersSwapped),
+    placementDefinitions.map((placement) => placement.id === 'phase-2-transparent'
+      ? { ...placement, transparencyMode: renderPreview.transparencyMode }
+      : placement),
     placementBounds,
     placementCrops,
     placementPreview,
@@ -272,6 +286,9 @@ export default function LatticeEnginePrototype() {
   const selectedMedia = selectedPlacement ? FIXTURE_MEDIA[selectedPlacement.stableAssetId] : null;
   const selectedMat = selectedPlacement ? artworkMats[selectedPlacement.id] || DEFAULT_ARTWORK_MAT : DEFAULT_ARTWORK_MAT;
   const selectedBacking = selectedPlacement ? artworkBackings[selectedPlacement.id] || DEFAULT_ARTWORK_BACKING : DEFAULT_ARTWORK_BACKING;
+  const selectedLayerAvailability = selectedPlacement
+    ? placementLayerAvailability(placementDefinitions, selectedPlacement.id)
+    : { backward: false, forward: false };
   const selectedMaskRectangle = selectedPlacement
     ? projectArtworkMat(
       projectPlacementRectangle(selectedPlacement, CANONICAL_LATTICE_ARTBOARD, dimensions, framing),
@@ -778,6 +795,38 @@ export default function LatticeEnginePrototype() {
     });
   };
 
+  const replaceSelectedArtwork = (stableAssetId) => {
+    if (!selectedPlacement || selectedPlacement.stableAssetId === stableAssetId) return;
+    setPlacementDefinitions((current) => replacePlacementAsset(current, selectedPlacement.id, stableAssetId));
+    setPlacementCrops((current) => ({ ...current, [selectedPlacement.id]: null }));
+    setCropPreview(null);
+    setCropEditPlacementId(null);
+    setAlignmentGuides([]);
+  };
+
+  const moveSelectedArtworkLayer = (direction) => {
+    if (!selectedPlacement) return;
+    setPlacementDefinitions((current) => movePlacementLayer(current, selectedPlacement.id, direction));
+    setAlignmentGuides([]);
+  };
+
+  const removeSelectedArtwork = () => {
+    if (!selectedPlacement) return;
+    const placementId = selectedPlacement.id;
+    setPlacementDefinitions((current) => removePlacement(current, placementId));
+    setPlacementBounds((current) => withoutRecordKey(current, placementId));
+    setPlacementCrops((current) => withoutRecordKey(current, placementId));
+    setArtworkMats((current) => withoutRecordKey(current, placementId));
+    setArtworkBackings((current) => withoutRecordKey(current, placementId));
+    setMatPresetIds((current) => withoutRecordKey(current, placementId));
+    setPlacementPreview(null);
+    setCropPreview(null);
+    setCropEditPlacementId(null);
+    setAlignmentGuides([]);
+    setSelectedPlacementId(null);
+    viewportRef.current?.focus({ preventScroll: true });
+  };
+
   return (
     <main className="lattice-engine-shell">
       <section
@@ -860,7 +909,7 @@ export default function LatticeEnginePrototype() {
       </section>
 
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2G</p>
+        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2H</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
         <p>{snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
@@ -928,7 +977,13 @@ export default function LatticeEnginePrototype() {
               setArtworkBackings((current) => ({ ...current, [selectedPlacement.id]: nextBacking }));
             }} /></label>
             {['top', 'right', 'bottom', 'left'].map((edge) => <label key={edge}><span>Mat {edge}</span><input type="number" min="0" max={ARTWORK_MAT_INSET_MAX} step="0.01" disabled={!selectedPlacement || !selectedMat.enabled} value={selectedMat.inset[edge]} onChange={(event) => updateSelectedMatInset(edge, Number(event.target.value))} /></label>)}
-            <label className="is-check"><span>Swap layers</span><input type="checkbox" checked={renderPreview.layersSwapped} onChange={(event) => setRenderPreview((current) => ({ ...current, layersSwapped: event.target.checked }))} /></label>
+            <label><span>Replace with</span><select disabled={!selectedPlacement} value={selectedPlacement?.stableAssetId || ''} onChange={(event) => replaceSelectedArtwork(event.target.value)}>
+              {!selectedPlacement && <option value="">SELECT ARTWORK</option>}
+              {Object.entries(FIXTURE_MEDIA).map(([stableAssetId, media]) => <option value={stableAssetId} key={stableAssetId}>{media.accessibleLabel.replace(' rendering fixture', '').toUpperCase()}</option>)}
+            </select></label>
+            <button type="button" disabled={!selectedLayerAvailability.backward} onClick={() => moveSelectedArtworkLayer(PLACEMENT_LAYER_DIRECTIONS.BACKWARD)}>SEND BACKWARD</button>
+            <button type="button" disabled={!selectedLayerAvailability.forward} onClick={() => moveSelectedArtworkLayer(PLACEMENT_LAYER_DIRECTIONS.FORWARD)}>BRING FORWARD</button>
+            <button type="button" disabled={!selectedPlacement} onClick={removeSelectedArtwork}>REMOVE PLACEMENT</button>
             <button type="button" disabled={!selectedPlacement || Boolean(selectedPlacement.crop)} onClick={applySquareCrop}>SQUARE CROP</button>
             <button type="button" disabled={!selectedPlacement?.crop} onClick={() => setCropEditPlacementId((current) => current === selectedPlacementId ? null : selectedPlacementId)}>{cropEditPlacementId === selectedPlacementId ? 'DONE CROP' : 'EDIT CROP'}</button>
             <label><span>CROP ZOOM {selectedPlacement?.crop?.zoom?.toFixed(2) || '1.00'}×</span><input type="range" min="1" max="4" step="0.05" disabled={!selectedPlacement?.crop} value={selectedPlacement?.crop?.zoom || 1} onChange={(event) => updateSelectedCropZoom(Number(event.target.value))} /></label>
@@ -949,6 +1004,7 @@ export default function LatticeEnginePrototype() {
             <label className="is-check"><span>Label visible</span><input type="checkbox" checked={renderPreview.labelVisible} onChange={(event) => setRenderPreview((current) => ({ ...current, labelVisible: event.target.checked }))} /></label>
             <button type="button" onClick={() => {
               setRenderPreview(createDefaultRenderPreview());
+              setPlacementDefinitions(createDefaultPlacementDefinitions());
               setPlacementBounds(createDefaultPlacementBounds());
               setPlacementCrops(createDefaultPlacementCrops());
               setArtworkMats(createDefaultArtworkMats());

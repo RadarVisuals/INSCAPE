@@ -7,6 +7,7 @@ const source = readFileSync(new URL('./LatticeEnginePrototype.jsx', import.meta.
 const controller = readFileSync(new URL('./lattice/controller/latticeNavigation.js', import.meta.url), 'utf8');
 const placementController = readFileSync(new URL('./lattice/controller/latticePlacementAuthoring.js', import.meta.url), 'utf8');
 const resizeController = readFileSync(new URL('./lattice/controller/latticePlacementResize.js', import.meta.url), 'utf8');
+const lifecycleController = readFileSync(new URL('./lattice/controller/latticePlacementLifecycle.js', import.meta.url), 'utf8');
 
 test('lattice engine harness is a development-only lazy route backed by the Slice 1A topology', () => {
   assert.match(entry, /import\.meta\.env\.DEV && prototypePath === '\/prototype\/lattice-engine'/);
@@ -15,7 +16,7 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 4 \/ SLICE 2G/);
+  assert.match(source, /PHASE 4 \/ SLICE 2H/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
@@ -125,13 +126,22 @@ test('transparent artwork backing stays independent from mat color and session-o
   assert.doesNotMatch(source, /persistArtworkBacking|publishArtworkBacking/);
 });
 
-test('Swap layers reverses the complete fixture stack without touching navigation order', () => {
-  assert.match(source, /layer: layersSwapped \? 2 : 0/);
+test('selected placement lifecycle replaces global fixture swapping without touching navigation order', () => {
+  assert.match(source, /createDefaultPlacementDefinitions/);
+  assert.match(source, /replaceSelectedArtwork/);
+  assert.match(source, /moveSelectedArtworkLayer/);
+  assert.match(source, /removeSelectedArtwork/);
+  assert.match(source, /SEND BACKWARD/);
+  assert.match(source, /BRING FORWARD/);
+  assert.match(source, /REMOVE PLACEMENT/);
+  assert.doesNotMatch(source, /Swap layers|layersSwapped/);
+  assert.match(source, /layer: 0/);
   assert.match(source, /layer: 1/);
-  assert.match(source, /layer: layersSwapped \? 0 : 2/);
+  assert.match(source, /layer: 2/);
   assert.match(source, /navigationOrder: 2/);
   assert.match(source, /navigationOrder: 0/);
   assert.match(source, /navigationOrder: 1/);
+  assert.doesNotMatch(lifecycleController, /localStorage|sessionStorage|indexedDB|wallet|publish/iu);
 });
 
 test('empty-space and placement gestures remain separate while Escape restores or clears', () => {
