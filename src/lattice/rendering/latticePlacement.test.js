@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 
-import { TRANSPARENCY_MODES } from '../domain/latticeProfile.js';
+import { CANONICAL_LATTICE_ARTBOARD, TRANSPARENCY_MODES } from '../domain/latticeProfile.js';
 import {
   projectTableMediaPlacements,
   resolvedTransparencyMode,
@@ -16,7 +16,7 @@ const media = {
 };
 const placement = (overrides) => ({
   id: 'placement-a', stableAssetId: ASSET_A,
-  column: 0, row: 0, columnSpan: 4, rowSpan: 4,
+  x: 0, y: 0, width: 0.5, height: 0.5,
   navigationOrder: 0, layer: 0,
   transparencyMode: TRANSPARENCY_MODES.AUTO,
   ...overrides,
@@ -28,7 +28,7 @@ test('each render projection contains only placements owned by its authored tabl
   const second = table('table-06', { x: 1, y: 0 }, [placement({
     id: 'placement-b', stableAssetId: ASSET_B,
   })]);
-  const input = { assetsByStableId: media, geometry: { columns: 8, rows: 8 }, viewport: { width: 800, height: 800 } };
+  const input = { artboard: CANONICAL_LATTICE_ARTBOARD, assetsByStableId: media, viewport: { width: 1600, height: 900 } };
   assert.deepEqual(projectTableMediaPlacements({ ...input, table: first }).map(({ placement: item, tableId }) => [item.id, tableId]), [
     ['placement-a', 'table-05'],
   ]);
@@ -50,9 +50,9 @@ test('navigationOrder alone controls DOM projection order while layer remains in
   ];
   const input = {
     assetsByStableId: media,
-    geometry: { columns: 8, rows: 8 },
+    artboard: CANONICAL_LATTICE_ARTBOARD,
     table: table('table-05', { x: 0, y: 0 }, placements),
-    viewport: { width: 800, height: 800 },
+    viewport: { width: 1600, height: 900 },
   };
   const before = projectTableMediaPlacements(input);
   assert.deepEqual(before.map(({ placement: item }) => item.id), ['earlier', 'later']);
@@ -69,11 +69,11 @@ test('OPAQUE background is bounded by the fitted native-media rectangle, never t
   const styles = readFileSync(new URL('./latticePlacementRenderer.css', import.meta.url), 'utf8');
   const [entry] = projectTableMediaPlacements({
     assetsByStableId: media,
-    geometry: { columns: 8, rows: 8 },
+    artboard: CANONICAL_LATTICE_ARTBOARD,
     table: table('table-05', { x: 0, y: 0 }, [placement({ transparencyMode: TRANSPARENCY_MODES.OPAQUE })]),
-    viewport: { width: 800, height: 800 },
+    viewport: { width: 1600, height: 900 },
   });
-  assert.deepEqual(entry.mediaRectangle, { left: 0, top: 100, width: 400, height: 200 });
+  assert.deepEqual(entry.mediaRectangle, { left: 0, top: 25, width: 800, height: 400 });
   assert.match(source, /left: mediaRectangle\.left/);
   assert.match(source, /width: mediaRectangle\.width/);
   assert.match(styles, /\.lattice-placement-media\.is-opaque\s*\{[^}]*background:/s);

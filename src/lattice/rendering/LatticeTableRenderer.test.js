@@ -9,7 +9,7 @@ const styles = readFileSync(new URL('./latticeTableRenderer.css', import.meta.ur
 test('shared table renderer uses the lattice contract without owner or persistence dependencies', () => {
   assert.match(source, /tableDisplayTitle/);
   assert.match(source, /TABLE_VISIBILITY\.PRIVATE/);
-  assert.match(source, /projectAuthoredLatticeField/);
+  assert.match(source, /projectCanonicalLatticeArtboard/);
   assert.match(source, /projectTableLabelPosition/);
   assert.doesNotMatch(source, /useWalletStore|useLibraryStore|localStorage|sessionStorage|indexedDB|profileDocument|onPointer/);
 });

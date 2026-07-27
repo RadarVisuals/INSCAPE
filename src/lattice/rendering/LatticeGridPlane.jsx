@@ -4,6 +4,7 @@ import { normalizeLatticeSurface, semanticGridVariables } from './latticeGeometr
 import './latticeTableRenderer.css';
 
 export default function LatticeGridPlane({
+  artboard,
   children,
   className = '',
   geometry,
@@ -16,7 +17,7 @@ export default function LatticeGridPlane({
     <div
       className={`lattice-grid-plane ${className}`.trim()}
       data-surface={normalizeLatticeSurface(surfaceId)}
-      style={{ ...style, ...semanticGridVariables(geometry, viewport, stageOrigin) }}
+      style={{ ...style, ...semanticGridVariables(geometry, viewport, stageOrigin, artboard) }}
     >
       {children}
     </div>

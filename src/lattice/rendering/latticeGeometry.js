@@ -1,11 +1,13 @@
-import { MAX_TABLE_LABEL_OFFSET_CELLS, TABLE_LABEL_ANCHORS } from '../domain/latticeProfile.js';
+import {
+  CANONICAL_LATTICE_ARTBOARD,
+  MAX_TABLE_LABEL_OFFSET_CELLS,
+  TABLE_LABEL_ANCHORS,
+} from '../domain/latticeProfile.js';
 
 export const LATTICE_GEOMETRY_PRESETS = Object.freeze([
-  Object.freeze({ id: '20x20', label: '20 × 20 / SQUARE', geometry: Object.freeze({ columns: 20, rows: 20 }) }),
-  Object.freeze({ id: '24x18', label: '24 × 18 / WIDE', geometry: Object.freeze({ columns: 24, rows: 18 }) }),
-  Object.freeze({ id: '24x16', label: '24 × 16 / CINEMA', geometry: Object.freeze({ columns: 24, rows: 16 }) }),
+  Object.freeze({ id: '32x18', label: '32 × 18 / 16:9 STUDY', geometry: Object.freeze({ columns: 32, rows: 18 }) }),
 ]);
-export const PROTOTYPE_START_GEOMETRY = LATTICE_GEOMETRY_PRESETS[2].geometry;
+export const PROTOTYPE_START_GEOMETRY = LATTICE_GEOMETRY_PRESETS[0].geometry;
 
 export const LATTICE_SURFACES = Object.freeze([
   Object.freeze({ id: 'carbon', label: 'CARBON 02' }),
@@ -38,17 +40,18 @@ function boundedOffset(value, dimension) {
   return clamp(Number.isSafeInteger(value) ? value : 0, -semanticMaximum, semanticMaximum);
 }
 
-export function projectTableLabelPosition(table, geometry, viewport) {
+export function projectTableLabelPosition(table, geometry, viewport, artboard = CANONICAL_LATTICE_ARTBOARD) {
   assertRenderGeometry(geometry);
-  const field = projectAuthoredLatticeField(geometry, viewport);
+  const field = projectCanonicalLatticeArtboard(artboard, viewport);
+  const cellSize = Math.min(field.width / geometry.columns, field.height / geometry.rows);
   const anchor = ANCHORS.has(table?.labelAnchor) ? table.labelAnchor : 'top-left';
   const [vertical, horizontal] = anchor.split('-');
   const columnOffset = boundedOffset(table?.labelOffset?.column, geometry.columns);
   const rowOffset = boundedOffset(table?.labelOffset?.row, geometry.rows);
-  const baseX = horizontal === 'left' ? field.cellSize : horizontal === 'right' ? viewport.width - field.cellSize : viewport.width / 2;
-  const baseY = vertical === 'top' ? field.cellSize : viewport.height - field.cellSize;
-  const x = clamp(baseX + (columnOffset * field.cellSize), 0, viewport.width);
-  const y = clamp(baseY + (rowOffset * field.cellSize), 0, viewport.height);
+  const baseX = horizontal === 'left' ? field.left + cellSize : horizontal === 'right' ? field.left + field.width - cellSize : viewport.width / 2;
+  const baseY = vertical === 'top' ? field.top + cellSize : field.top + field.height - cellSize;
+  const x = clamp(baseX + (columnOffset * cellSize), 0, viewport.width);
+  const y = clamp(baseY + (rowOffset * cellSize), 0, viewport.height);
   const translateX = horizontal === 'left' ? '0%' : horizontal === 'right' ? '-100%' : '-50%';
   const translateY = vertical === 'top' ? '0%' : '-100%';
 
@@ -59,39 +62,35 @@ export function projectTableLabelPosition(table, geometry, viewport) {
   };
 }
 
-export function projectAuthoredLatticeField(geometry, viewport, coordinate = { x: 0, y: 0 }) {
-  assertRenderGeometry(geometry);
+export function projectCanonicalLatticeArtboard(artboard, viewport) {
+  if (!artboard
+    || !Number.isFinite(artboard.aspectWidth) || artboard.aspectWidth <= 0
+    || !Number.isFinite(artboard.aspectHeight) || artboard.aspectHeight <= 0) {
+    throw new TypeError('Lattice rendering requires a positive artboard aspect ratio');
+  }
   if (!viewport
     || !Number.isFinite(viewport.width) || viewport.width <= 0
     || !Number.isFinite(viewport.height) || viewport.height <= 0) {
     throw new TypeError('Lattice rendering requires a positive viewport');
   }
-  const cellSize = Math.min(viewport.width / geometry.columns, viewport.height / geometry.rows);
-  const width = cellSize * geometry.columns;
-  const height = cellSize * geometry.rows;
-  const centeredLeft = (viewport.width - width) / 2;
-  const centeredTop = (viewport.height - height) / 2;
-  const alignToSharedPhase = (centered, coordinateValue, viewportSize, maximum) => {
-    const phase = centered - (coordinateValue * viewportSize);
-    const aligned = phase + (Math.round((centered - phase) / cellSize) * cellSize);
-    return clamp(aligned, 0, maximum);
-  };
+  const scale = Math.min(viewport.width / artboard.aspectWidth, viewport.height / artboard.aspectHeight);
+  const width = artboard.aspectWidth * scale;
+  const height = artboard.aspectHeight * scale;
   return {
-    cellSize,
     width,
     height,
-    left: alignToSharedPhase(centeredLeft, coordinate?.x || 0, viewport.width, viewport.width - width),
-    top: alignToSharedPhase(centeredTop, coordinate?.y || 0, viewport.height, viewport.height - height),
+    left: (viewport.width - width) / 2,
+    top: (viewport.height - height) / 2,
   };
 }
 
-export function projectPlacementRectangle(placement, geometry, viewport, coordinate = { x: 0, y: 0 }) {
-  const field = projectAuthoredLatticeField(geometry, viewport, coordinate);
+export function projectPlacementRectangle(placement, artboard, viewport) {
+  const field = projectCanonicalLatticeArtboard(artboard, viewport);
   return {
-    left: field.left + (placement.column * field.cellSize),
-    top: field.top + (placement.row * field.cellSize),
-    width: placement.columnSpan * field.cellSize,
-    height: placement.rowSpan * field.cellSize,
+    left: field.left + (placement.x * field.width),
+    top: field.top + (placement.y * field.height),
+    width: placement.width * field.width,
+    height: placement.height * field.height,
   };
 }
 
@@ -116,12 +115,14 @@ export function fitNativeMediaRectangle(rectangle, media) {
   };
 }
 
-export function semanticGridVariables(geometry, viewport, stageOrigin = { x: 0, y: 0 }) {
-  const field = projectAuthoredLatticeField(geometry, viewport);
+export function semanticGridVariables(geometry, viewport, stageOrigin = { x: 0, y: 0 }, artboard = CANONICAL_LATTICE_ARTBOARD) {
+  assertRenderGeometry(geometry);
+  const field = projectCanonicalLatticeArtboard(artboard, viewport);
+  const cellSize = Math.min(field.width / geometry.columns, field.height / geometry.rows);
   return {
     '--lattice-grid-columns': geometry.columns,
     '--lattice-grid-rows': geometry.rows,
-    '--lattice-grid-cell-size': `${field.cellSize}px`,
+    '--lattice-grid-cell-size': `${cellSize}px`,
     '--lattice-grid-origin-x': `${(stageOrigin?.x || 0) + field.left}px`,
     '--lattice-grid-origin-y': `${(stageOrigin?.y || 0) + field.top}px`,
   };

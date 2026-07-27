@@ -4,8 +4,8 @@ import { TRANSPARENCY_MODES } from '../domain/latticeProfile.js';
 import { projectTableMediaPlacements } from './latticePlacement.js';
 import './latticePlacementRenderer.css';
 
-export default function LatticePlacementRenderer({ assetsByStableId, geometry, table, viewport }) {
-  const renderEntries = projectTableMediaPlacements({ assetsByStableId, geometry, table, viewport });
+export default function LatticePlacementRenderer({ artboard, assetsByStableId, table, viewport }) {
+  const renderEntries = projectTableMediaPlacements({ artboard, assetsByStableId, table, viewport });
 
   return (
     <div className="lattice-placement-layer" data-table-id={table.id}>

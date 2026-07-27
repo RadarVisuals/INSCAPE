@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  CANONICAL_LATTICE_ARTBOARD,
   FRAME_IDS,
   LATTICE_COORDINATES,
   TABLE_LABEL_ANCHORS,
@@ -67,14 +68,7 @@ const FIXTURE_MEDIA = Object.freeze({
   }),
 });
 
-const scaledFixturePlacement = (geometry, values) => ({
-  column: Math.floor(geometry.columns * values.column),
-  row: Math.floor(geometry.rows * values.row),
-  columnSpan: Math.max(1, Math.floor(geometry.columns * values.columnSpan)),
-  rowSpan: Math.max(1, Math.floor(geometry.rows * values.rowSpan)),
-});
-
-function createFixturePlacements(geometry, transparencyMode, layersSwapped) {
+function createFixturePlacements(transparencyMode, layersSwapped) {
   const common = {
     crop: null,
     frameId: FRAME_IDS.NONE,
@@ -85,7 +79,7 @@ function createFixturePlacements(geometry, transparencyMode, layersSwapped) {
       ...common,
       id: 'phase-2-landscape',
       stableAssetId: FIXTURE_ASSET_IDS.landscape,
-      ...scaledFixturePlacement(geometry, { column: 0.42, row: 0.17, columnSpan: 0.42, rowSpan: 0.28 }),
+      x: 0.46, y: 0.13, width: 0.4, height: 0.4 * (16 / 9) * (2000 / 4636),
       layer: 0,
       navigationOrder: 2,
       transparencyMode: TRANSPARENCY_MODES.AUTO,
@@ -94,7 +88,7 @@ function createFixturePlacements(geometry, transparencyMode, layersSwapped) {
       ...common,
       id: 'phase-2-portrait',
       stableAssetId: FIXTURE_ASSET_IDS.portrait,
-      ...scaledFixturePlacement(geometry, { column: 0.17, row: 0.17, columnSpan: 0.3, rowSpan: 0.62 }),
+      x: 0.14, y: 0.16, width: 0.22, height: 0.22 * (16 / 9) * (2829 / 2000),
       layer: layersSwapped ? 2 : 1,
       navigationOrder: 0,
       transparencyMode: TRANSPARENCY_MODES.PRESERVE_ALPHA,
@@ -103,7 +97,7 @@ function createFixturePlacements(geometry, transparencyMode, layersSwapped) {
       ...common,
       id: 'phase-2-transparent',
       stableAssetId: FIXTURE_ASSET_IDS.transparent,
-      ...scaledFixturePlacement(geometry, { column: 0.18, row: 0.32, columnSpan: 0.38, rowSpan: 0.42 }),
+      x: 0.35, y: 0.42, width: 0.27, height: 0.27 * (16 / 9),
       layer: layersSwapped ? 1 : 2,
       navigationOrder: 1,
       transparencyMode,
@@ -296,6 +290,7 @@ export default function LatticeEnginePrototype() {
         onKeyDown={handleKeyDown}
       >
         <LatticeGridPlane
+          artboard={CANONICAL_LATTICE_ARTBOARD}
           className={`lattice-engine-stage${snapping ? ' is-snapping' : ''}`}
           geometry={renderPreview.geometry}
           stageOrigin={{ x: dimensions.width, y: dimensions.height }}
@@ -324,7 +319,6 @@ export default function LatticeEnginePrototype() {
               visibility: TABLE_VISIBILITY.PUBLIC,
               placements: isAuthoredTable
                 ? createFixturePlacements(
-                    renderPreview.geometry,
                     renderPreview.transparencyMode,
                     renderPreview.layersSwapped,
                   )
@@ -333,6 +327,7 @@ export default function LatticeEnginePrototype() {
             return (
               <LatticeTableRenderer
                 active={isActive}
+                artboard={CANONICAL_LATTICE_ARTBOARD}
                 assetsByStableId={FIXTURE_MEDIA}
                 geometry={renderPreview.geometry}
                 hidden={!isActive}
@@ -352,7 +347,7 @@ export default function LatticeEnginePrototype() {
       </section>
 
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE RENDERER / PHASE 2 / SLICE 1D</p>
+        <p>LATTICE RENDERER / FREE-ARTBOARD FOUNDATION</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
         <p>{snapping ? 'SETTLING' : gestureActive ? 'DIRECT MANIPULATION' : 'READY'}</p>
@@ -370,14 +365,6 @@ export default function LatticeEnginePrototype() {
               {LATTICE_GEOMETRY_PRESETS.map((preset) => <option value={preset.id} key={preset.id}>{preset.label}</option>)}
               <option value="custom" disabled>CUSTOM</option>
             </select></label>
-            <label><span>Columns</span><input type="number" min="8" max="40" step="1" value={renderPreview.geometry.columns} onChange={(event) => {
-              const columns = Math.min(40, Math.max(8, Number(event.target.value)));
-              if (Number.isSafeInteger(columns)) setRenderPreview((current) => ({ ...current, geometry: { ...current.geometry, columns } }));
-            }} /></label>
-            <label><span>Rows</span><input type="number" min="8" max="32" step="1" value={renderPreview.geometry.rows} onChange={(event) => {
-              const rows = Math.min(32, Math.max(8, Number(event.target.value)));
-              if (Number.isSafeInteger(rows)) setRenderPreview((current) => ({ ...current, geometry: { ...current.geometry, rows } }));
-            }} /></label>
             <label><span>Surface</span><select value={renderPreview.surfaceId} onChange={(event) => setRenderPreview((current) => ({ ...current, surfaceId: event.target.value }))}>
               {LATTICE_SURFACES.map((surface) => <option value={surface.id} key={surface.id}>{surface.label}</option>)}
             </select></label>

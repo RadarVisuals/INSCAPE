@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  CANONICAL_LATTICE_ARTBOARD,
   FRAME_IDS,
   LATTICE_COORDINATES,
   LATTICE_ENTRY_COORDINATE,
@@ -24,10 +25,10 @@ function placement(overrides = {}) {
   return {
     id: 'placement-a',
     stableAssetId: '42:0x2222222222222222222222222222222222222222:0x01',
-    column: 0,
-    row: 0,
-    columnSpan: 2,
-    rowSpan: 2,
+    x: 0,
+    y: 0,
+    width: 0.25,
+    height: 0.25,
     layer: 0,
     navigationOrder: 0,
     crop: null,
@@ -42,6 +43,7 @@ test('empty profiles always contain the complete 3 x 3 topology with a session-o
   const profile = createEmptyLatticeProfile({ profileAddress: PROFILE, columns: 12, rows: 8 });
   assert.deepEqual(LATTICE_ENTRY_COORDINATE, { x: 0, y: 0 });
   assert.equal(profile.tables.length, 9);
+  assert.deepEqual(profile.artboard, CANONICAL_LATTICE_ARTBOARD);
   assert.deepEqual(
     profile.tables.map((table) => latticeCoordinateKey(table.coordinate)),
     LATTICE_COORDINATES.map(latticeCoordinateKey)
@@ -63,15 +65,33 @@ test('TABLE 01 through TABLE 09 are display fallbacks and are never persisted as
   assert.equal(latticeTableFallbackTitle({ x: 4, y: 4 }), '');
 });
 
-test('geometry dimensions are supplied by the caller and placement validation uses that configuration', () => {
+test('visual grid dimensions remain caller-configurable while placement bounds belong to the canonical artboard', () => {
   const compact = createEmptyLatticeProfile({ profileAddress: PROFILE, columns: 4, rows: 3 });
   const expansive = createEmptyLatticeProfile({ profileAddress: PROFILE, columns: 37, rows: 19 });
-  compact.tables[4].placements.push(placement({ column: 2, row: 1 }));
-  expansive.tables[4].placements.push(placement({ column: 35, row: 17 }));
+  compact.tables[4].placements.push(placement({ x: 0.7, y: 0.7 }));
+  expansive.tables[4].placements.push(placement({ x: 0.7, y: 0.7 }));
   assert.equal(validateLatticeProfile(compact).valid, true);
   assert.equal(validateLatticeProfile(expansive).valid, true);
-  compact.tables[4].placements[0].column = 3;
+  compact.tables[4].placements[0].x = 0.76;
   assert.ok(validateLatticeProfile(compact).errors.some((error) => error.code === 'invalid_placement_geometry'));
+});
+
+test('placement bounds are strict normalized free-artboard coordinates and the artboard is canonical 16:9', () => {
+  const profile = createEmptyLatticeProfile({ profileAddress: PROFILE, columns: 32, rows: 18 });
+  profile.tables[4].placements.push(placement({ x: 0.125, y: 0.25, width: 0.5, height: 0.5 }));
+  assert.equal(validateLatticeProfile(profile).valid, true);
+
+  for (const bounds of [
+    { x: -0.01 }, { y: -0.01 }, { width: 0 }, { height: 0 },
+    { x: 0.8, width: 0.21 }, { y: 0.8, height: 0.21 },
+  ]) {
+    profile.tables[4].placements[0] = placement(bounds);
+    assert.ok(validateLatticeProfile(profile).errors.some((error) => error.code === 'invalid_placement_geometry'));
+  }
+
+  profile.tables[4].placements[0] = placement();
+  profile.artboard = { aspectWidth: 4, aspectHeight: 3 };
+  assert.ok(validateLatticeProfile(profile).errors.some((error) => error.code === 'invalid_artboard'));
 });
 
 test('stableAssetId must be canonical and crop values use the existing bounded crop model', () => {

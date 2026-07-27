@@ -13,7 +13,7 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 2 \/ SLICE 1D/);
+  assert.match(source, /FREE-ARTBOARD FOUNDATION/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
@@ -40,6 +40,12 @@ test('renderer controls exercise geometry and label contract values without pers
     'RESET RENDER',
   ]) assert.match(source, new RegExp(token));
   assert.doesNotMatch(source, /IDENTITY|COLLECTIONS|ARCHIVE|DROPS|CURATED/);
+});
+
+test('prototype uses the canonical artboard and normalized free-placement bounds', () => {
+  assert.match(source, /CANONICAL_LATTICE_ARTBOARD/);
+  assert.match(source, /x: 0\.46, y: 0\.13, width: 0\.4, height: 0\.4 \* \(16 \/ 9\) \* \(2000 \/ 4636\)/);
+  assert.doesNotMatch(source, /scaledFixturePlacement|columnSpan|rowSpan/);
 });
 
 test('all tunable interaction behavior lives in one transient configuration object', () => {

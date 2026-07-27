@@ -14,15 +14,15 @@ export function resolvedTransparencyMode(mode) {
 }
 
 export function projectTableMediaPlacements({
+  artboard,
   assetsByStableId,
-  geometry,
   table,
   viewport,
 }) {
   return orderedTablePlacements(table).flatMap((placement) => {
     const media = assetsByStableId?.[placement.stableAssetId];
     if (!media) return [];
-    const footprint = projectPlacementRectangle(placement, geometry, viewport, table.coordinate);
+    const footprint = projectPlacementRectangle(placement, artboard, viewport);
     return [{
       media,
       mediaRectangle: fitNativeMediaRectangle(footprint, media),

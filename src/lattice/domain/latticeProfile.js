@@ -2,6 +2,7 @@ import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReferen
 
 export const LATTICE_CONTRACT_VERSION = 1;
 export const LATTICE_ENTRY_COORDINATE = Object.freeze({ x: 0, y: 0 });
+export const CANONICAL_LATTICE_ARTBOARD = Object.freeze({ aspectWidth: 16, aspectHeight: 9 });
 export const MAX_TABLE_LABEL_OFFSET_CELLS = 2;
 export const LATTICE_COORDINATES = Object.freeze(
   [-1, 0, 1].flatMap((y) => [-1, 0, 1].map((x) => Object.freeze({ x, y })))
@@ -15,9 +16,9 @@ export const TRANSPARENCY_MODES = Object.freeze({
   AUTO: 'AUTO', PRESERVE_ALPHA: 'PRESERVE_ALPHA', OPAQUE: 'OPAQUE'
 });
 
-const PROFILE_KEYS = ['contractVersion', 'profileAddress', 'geometry', 'identityPresentation', 'tables'];
+const PROFILE_KEYS = ['contractVersion', 'profileAddress', 'artboard', 'geometry', 'identityPresentation', 'tables'];
 const TABLE_KEYS = ['id', 'coordinate', 'title', 'subtitle', 'labelVisible', 'labelAnchor', 'labelOffset', 'visibility', 'placements'];
-const PLACEMENT_KEYS = ['id', 'stableAssetId', 'column', 'row', 'columnSpan', 'rowSpan', 'layer', 'navigationOrder', 'crop', 'frameId', 'transparencyMode', 'visitorVisible'];
+const PLACEMENT_KEYS = ['id', 'stableAssetId', 'x', 'y', 'width', 'height', 'layer', 'navigationOrder', 'crop', 'frameId', 'transparencyMode', 'visitorVisible'];
 const IDENTITY_KEYS = ['alias', 'avatar', 'bio', 'tags', 'dossierSurface', 'visibility'];
 const PROFILE_ADDRESS = /^0x[0-9a-f]{40}$/iu;
 const FRAME_ID_VALUES = new Set(Object.values(FRAME_IDS));
@@ -66,6 +67,7 @@ export function createEmptyLatticeProfile({ profileAddress, columns, rows }) {
   return {
     contractVersion: LATTICE_CONTRACT_VERSION,
     profileAddress: String(profileAddress || '').toLowerCase(),
+    artboard: { ...CANONICAL_LATTICE_ARTBOARD },
     geometry: { columns, rows },
     identityPresentation: createEmptyIdentityPresentation(),
     tables: LATTICE_COORDINATES.map((coordinate) => ({
@@ -108,7 +110,7 @@ function validateIdentityPresentation(value, fail) {
   }
 }
 
-function validatePlacement(placement, tableIndex, geometry, placementIndex, fail) {
+function validatePlacement(placement, tableIndex, placementIndex, fail) {
   const path = `tables[${tableIndex}].placements[${placementIndex}]`;
   if (!exactKeys(placement, PLACEMENT_KEYS)) {
     fail(path, 'invalid_placement_structure', 'Placement has an invalid structure');
@@ -116,12 +118,13 @@ function validatePlacement(placement, tableIndex, geometry, placementIndex, fail
   }
   if (!nonEmptyString(placement.id)) fail(`${path}.id`, 'invalid_placement_id', 'Placement ID is required');
   if (!parseCanonicalAssetId(placement.stableAssetId)) fail(`${path}.stableAssetId`, 'invalid_asset_reference', 'A canonical stable asset ID is required');
-  if (!nonNegativeInteger(placement.column) || !nonNegativeInteger(placement.row)
-    || !integer(placement.columnSpan) || placement.columnSpan < 1
-    || !integer(placement.rowSpan) || placement.rowSpan < 1
-    || placement.column + placement.columnSpan > geometry.columns
-    || placement.row + placement.rowSpan > geometry.rows) {
-    fail(path, 'invalid_placement_geometry', 'Placement must fit within the configured table geometry');
+  if (!Number.isFinite(placement.x) || placement.x < 0 || placement.x > 1
+    || !Number.isFinite(placement.y) || placement.y < 0 || placement.y > 1
+    || !Number.isFinite(placement.width) || placement.width <= 0 || placement.width > 1
+    || !Number.isFinite(placement.height) || placement.height <= 0 || placement.height > 1
+    || placement.x + placement.width > 1
+    || placement.y + placement.height > 1) {
+    fail(path, 'invalid_placement_geometry', 'Placement bounds must fit within the canonical artboard');
   }
   if (!nonNegativeInteger(placement.layer)) fail(`${path}.layer`, 'invalid_layer', 'Layer must be a non-negative integer');
   if (!nonNegativeInteger(placement.navigationOrder)) fail(`${path}.navigationOrder`, 'invalid_navigation_order', 'Navigation order must be a non-negative integer');
@@ -145,6 +148,11 @@ export function validateLatticeProfile(input) {
   }
   if (input.contractVersion !== LATTICE_CONTRACT_VERSION) fail('contractVersion', 'unsupported_contract_version', 'Unsupported lattice contract version');
   if (!PROFILE_ADDRESS.test(input.profileAddress)) fail('profileAddress', 'invalid_profile_address', 'A canonical Universal Profile address is required');
+  if (!exactKeys(input.artboard, ['aspectWidth', 'aspectHeight'])
+    || input.artboard.aspectWidth !== CANONICAL_LATTICE_ARTBOARD.aspectWidth
+    || input.artboard.aspectHeight !== CANONICAL_LATTICE_ARTBOARD.aspectHeight) {
+    fail('artboard', 'invalid_artboard', 'The lattice artboard must use the canonical 16:9 aspect ratio');
+  }
   const geometryValid = exactKeys(input.geometry, ['columns', 'rows'])
     && integer(input.geometry.columns) && input.geometry.columns >= 1
     && integer(input.geometry.rows) && input.geometry.rows >= 1;
@@ -187,7 +195,7 @@ export function validateLatticeProfile(input) {
       }
       const navigationOrders = new Set();
       table.placements.forEach((placement, placementIndex) => {
-        if (geometryValid) validatePlacement(placement, tableIndex, input.geometry, placementIndex, fail);
+        validatePlacement(placement, tableIndex, placementIndex, fail);
         if (nonEmptyString(placement?.id)) {
           if (seenPlacementIds.has(placement.id)) fail(`${path}.placements[${placementIndex}].id`, 'duplicate_placement_id', 'Placement IDs must be globally unique');
           seenPlacementIds.add(placement.id);

@@ -5,7 +5,7 @@ import {
   tableDisplayTitle,
 } from '../domain/latticeProfile.js';
 import {
-  projectAuthoredLatticeField,
+  projectCanonicalLatticeArtboard,
   projectTableLabelPosition,
 } from './latticeGeometry.js';
 import LatticePlacementRenderer from './LatticePlacementRenderer.jsx';
@@ -13,6 +13,7 @@ import './latticeTableRenderer.css';
 
 export default function LatticeTableRenderer({
   active = false,
+  artboard,
   assetsByStableId = {},
   geometry,
   hidden = false,
@@ -24,7 +25,7 @@ export default function LatticeTableRenderer({
   const title = tableDisplayTitle(table);
   const subtitle = privateTable || typeof table?.subtitle !== 'string' ? '' : table.subtitle.trim();
   const labelVisible = !privateTable && table?.labelVisible !== false && Boolean(title || subtitle);
-  const field = projectAuthoredLatticeField(geometry, viewport, table?.coordinate);
+  const field = projectCanonicalLatticeArtboard(artboard, viewport);
 
   return (
     <article
@@ -38,8 +39,8 @@ export default function LatticeTableRenderer({
       >
       </div>
       <LatticePlacementRenderer
+        artboard={artboard}
         assetsByStableId={assetsByStableId}
-        geometry={geometry}
         table={table}
         viewport={viewport}
       />
