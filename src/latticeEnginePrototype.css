@@ -35,41 +35,10 @@
   left: 0;
   top: 0;
   will-change: transform;
-  background-color: #0b0c0c;
-  background-image:
-    linear-gradient(rgba(216, 213, 204, 0.075) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(216, 213, 204, 0.075) 1px, transparent 1px),
-    linear-gradient(rgba(216, 213, 204, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(216, 213, 204, 0.035) 1px, transparent 1px);
-  background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
 }
 
 .lattice-engine-stage.is-snapping {
   transition: transform var(--lattice-snap-duration) cubic-bezier(0.2, 0.72, 0.22, 1);
-}
-
-.lattice-engine-table {
-  position: absolute;
-  box-sizing: border-box;
-  border: 1px solid rgba(216, 213, 204, 0.28);
-  background: rgba(4, 5, 5, 0.08);
-}
-
-.lattice-engine-table.is-active {
-  border-color: rgba(216, 213, 204, 0.66);
-}
-
-.lattice-engine-table-label {
-  position: absolute;
-  top: 22px;
-  left: 24px;
-  padding: 4px 7px;
-  border: 1px solid rgba(216, 213, 204, 0.28);
-  background: rgba(9, 10, 10, 0.88);
-  color: rgba(216, 213, 204, 0.82);
-  font-size: 10px;
-  line-height: 1;
-  letter-spacing: 0.14em;
 }
 
 .lattice-engine-readout,
@@ -99,7 +68,9 @@
 .lattice-engine-controls {
   top: 18px;
   right: 18px;
-  width: 226px;
+  width: 246px;
+  max-height: calc(100vh - 36px);
+  overflow: auto;
 }
 
 .lattice-engine-controls summary {
@@ -123,19 +94,49 @@
 
 .lattice-engine-control-list {
   display: grid;
-  gap: 8px;
+  gap: 12px;
   padding: 5px 11px 11px;
   border-top: 1px solid rgba(216, 213, 204, 0.18);
 }
 
+.lattice-engine-control-list fieldset {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 0 0;
+  border: 0;
+  border-top: 1px solid rgba(216, 213, 204, 0.14);
+}
+
+.lattice-engine-control-list fieldset:first-child {
+  border-top: 0;
+}
+
+.lattice-engine-control-list legend {
+  padding: 0 7px 0 0;
+  color: rgba(216, 213, 204, 0.5);
+  font: inherit;
+  letter-spacing: 0.14em;
+}
+
 .lattice-engine-control-list label {
   display: grid;
-  grid-template-columns: 1fr 62px;
+  grid-template-columns: minmax(0, 1fr) 94px;
   align-items: center;
   gap: 8px;
 }
 
+.lattice-engine-control-list label.is-wide {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.lattice-engine-control-list label.is-check {
+  grid-template-columns: 1fr auto;
+}
+
 .lattice-engine-control-list input,
+.lattice-engine-control-list select,
 .lattice-engine-control-list button {
   box-sizing: border-box;
   min-height: 25px;
@@ -146,9 +147,20 @@
   font: inherit;
 }
 
-.lattice-engine-control-list input {
-  width: 62px;
+.lattice-engine-control-list input,
+.lattice-engine-control-list select {
+  width: 94px;
   padding: 3px 5px;
+}
+
+.lattice-engine-control-list label.is-wide input {
+  width: 100%;
+}
+
+.lattice-engine-control-list input[type="checkbox"] {
+  width: 15px;
+  min-height: 15px;
+  accent-color: #d8d5cc;
 }
 
 .lattice-engine-control-list button {
@@ -161,17 +173,13 @@
   .lattice-engine-controls {
     top: 10px;
     right: 10px;
-    width: 205px;
+    width: 218px;
+    max-height: calc(100vh - 20px);
   }
 
   .lattice-engine-readout {
     left: 10px;
     bottom: 10px;
-  }
-
-  .lattice-engine-table-label {
-    top: 14px;
-    left: 14px;
   }
 }
 

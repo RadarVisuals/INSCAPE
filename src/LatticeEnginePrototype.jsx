@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   LATTICE_COORDINATES,
+  TABLE_LABEL_ANCHORS,
+  TABLE_VISIBILITY,
   latticeTableFallbackTitle,
 } from './lattice/domain/latticeProfile.js';
 import {
@@ -14,6 +16,13 @@ import {
   resolveWheelDestination,
   updatePointerGesture,
 } from './lattice/controller/latticeNavigation.js';
+import LatticeTableRenderer from './lattice/rendering/LatticeTableRenderer.jsx';
+import LatticeGridPlane from './lattice/rendering/LatticeGridPlane.jsx';
+import {
+  LATTICE_GEOMETRY_PRESETS,
+  LATTICE_SURFACES,
+  PROTOTYPE_START_GEOMETRY,
+} from './lattice/rendering/latticeGeometry.js';
 import './latticeEnginePrototype.css';
 
 const CONTROL_FIELDS = [
@@ -27,6 +36,16 @@ const CONTROL_FIELDS = [
 ];
 
 const interactiveChrome = (target) => target.closest('[data-lattice-chrome]');
+
+const createDefaultRenderPreview = () => ({
+  geometry: { ...PROTOTYPE_START_GEOMETRY },
+  surfaceId: LATTICE_SURFACES[0].id,
+  title: '',
+  subtitle: '',
+  labelVisible: true,
+  labelAnchor: 'top-left',
+  labelOffset: { column: 0, row: 0 },
+});
 
 export default function LatticeEnginePrototype() {
   const viewportRef = useRef(null);
@@ -45,6 +64,7 @@ export default function LatticeEnginePrototype() {
   const [snapping, setSnapping] = useState(false);
   const [gestureActive, setGestureActive] = useState(false);
   const [config, setConfig] = useState(configRef.current);
+  const [renderPreview, setRenderPreview] = useState(createDefaultRenderPreview);
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -199,8 +219,10 @@ export default function LatticeEnginePrototype() {
         onWheel={handleWheel}
         onKeyDown={handleKeyDown}
       >
-        <div
+        <LatticeGridPlane
           className={`lattice-engine-stage${snapping ? ' is-snapping' : ''}`}
+          geometry={renderPreview.geometry}
+          stageOrigin={{ x: dimensions.width, y: dimensions.height }}
           style={{
             width: dimensions.width * 3,
             height: dimensions.height * 3,
@@ -209,54 +231,106 @@ export default function LatticeEnginePrototype() {
             '--lattice-cell-width': `${dimensions.width}px`,
             '--lattice-cell-height': `${dimensions.height}px`,
           }}
+          surfaceId={renderPreview.surfaceId}
+          viewport={dimensions}
         >
-          {LATTICE_COORDINATES.map((coordinate) => (
-            <article
-              className={`lattice-engine-table${coordinate.x === active.x && coordinate.y === active.y ? ' is-active' : ''}`}
-              key={`${coordinate.x}:${coordinate.y}`}
-              style={{
-                left: (coordinate.x + 1) * dimensions.width,
-                top: (coordinate.y + 1) * dimensions.height,
-                width: dimensions.width,
-                height: dimensions.height,
-              }}
-            >
-              <span className="lattice-engine-table-label">
-                {latticeTableFallbackTitle(coordinate)}
-              </span>
-            </article>
-          ))}
-        </div>
+          {LATTICE_COORDINATES.map((coordinate) => {
+            const isActive = coordinate.x === active.x && coordinate.y === active.y;
+            const table = {
+              coordinate,
+              title: isActive ? renderPreview.title : '',
+              subtitle: isActive ? renderPreview.subtitle : '',
+              labelVisible: isActive ? renderPreview.labelVisible : true,
+              labelAnchor: isActive ? renderPreview.labelAnchor : 'top-left',
+              labelOffset: isActive ? renderPreview.labelOffset : { column: 0, row: 0 },
+              visibility: TABLE_VISIBILITY.PUBLIC,
+            };
+            return (
+              <LatticeTableRenderer
+                active={isActive}
+                geometry={renderPreview.geometry}
+                hidden={!isActive}
+                key={`${coordinate.x}:${coordinate.y}`}
+                positionStyle={{
+                  left: (coordinate.x + 1) * dimensions.width,
+                  top: (coordinate.y + 1) * dimensions.height,
+                  width: dimensions.width,
+                  height: dimensions.height,
+                }}
+                table={table}
+                viewport={dimensions}
+              />
+            );
+          })}
+        </LatticeGridPlane>
       </section>
 
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE ENGINE / SLICE 1B</p>
-        <p>ACTIVE {active.x}:{active.y} · {latticeTableFallbackTitle(active)}</p>
+        <p>LATTICE RENDERER / SLICE 1C</p>
+        <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
+        <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
         <p>{snapping ? 'SETTLING' : gestureActive ? 'DIRECT MANIPULATION' : 'READY'}</p>
       </aside>
 
       <details className="lattice-engine-controls" data-lattice-chrome>
-        <summary>FEEL / DEV</summary>
+        <summary>ENGINE / DEV</summary>
         <div className="lattice-engine-control-list">
-          {CONTROL_FIELDS.map(([key, label, min, max, step]) => (
-            <label key={key}>
-              <span>{label}</span>
-              <input
-                type="number"
-                min={min}
-                max={max}
-                step={step}
-                value={config[key]}
-                onChange={(event) => {
-                  const nextValue = Math.min(max, Math.max(min, Number(event.target.value)));
-                  setConfig((current) => ({ ...current, [key]: Number.isFinite(nextValue) ? nextValue : current[key] }));
-                }}
-              />
-            </label>
-          ))}
-          <button type="button" onClick={() => setConfig({ ...DEFAULT_LATTICE_INTERACTION_CONFIG })}>
-            RESET VALUES
-          </button>
+          <fieldset>
+            <legend>RENDER</legend>
+            <label><span>Geometry</span><select value={LATTICE_GEOMETRY_PRESETS.find(({ geometry }) => geometry.columns === renderPreview.geometry.columns && geometry.rows === renderPreview.geometry.rows)?.id || 'custom'} onChange={(event) => {
+              const preset = LATTICE_GEOMETRY_PRESETS.find(({ id }) => id === event.target.value);
+              if (preset) setRenderPreview((current) => ({ ...current, geometry: { ...preset.geometry } }));
+            }}>
+              {LATTICE_GEOMETRY_PRESETS.map((preset) => <option value={preset.id} key={preset.id}>{preset.label}</option>)}
+              <option value="custom" disabled>CUSTOM</option>
+            </select></label>
+            <label><span>Columns</span><input type="number" min="8" max="40" step="1" value={renderPreview.geometry.columns} onChange={(event) => {
+              const columns = Math.min(40, Math.max(8, Number(event.target.value)));
+              if (Number.isSafeInteger(columns)) setRenderPreview((current) => ({ ...current, geometry: { ...current.geometry, columns } }));
+            }} /></label>
+            <label><span>Rows</span><input type="number" min="8" max="32" step="1" value={renderPreview.geometry.rows} onChange={(event) => {
+              const rows = Math.min(32, Math.max(8, Number(event.target.value)));
+              if (Number.isSafeInteger(rows)) setRenderPreview((current) => ({ ...current, geometry: { ...current.geometry, rows } }));
+            }} /></label>
+            <label><span>Surface</span><select value={renderPreview.surfaceId} onChange={(event) => setRenderPreview((current) => ({ ...current, surfaceId: event.target.value }))}>
+              {LATTICE_SURFACES.map((surface) => <option value={surface.id} key={surface.id}>{surface.label}</option>)}
+            </select></label>
+            <label className="is-wide"><span>Title</span><input type="text" maxLength="80" placeholder="EMPTY / FALLBACK" value={renderPreview.title} onChange={(event) => setRenderPreview((current) => ({ ...current, title: event.target.value }))} /></label>
+            <label className="is-wide"><span>Subtitle</span><input type="text" maxLength="120" placeholder="OPTIONAL" value={renderPreview.subtitle} onChange={(event) => setRenderPreview((current) => ({ ...current, subtitle: event.target.value }))} /></label>
+            <label><span>Anchor</span><select value={renderPreview.labelAnchor} onChange={(event) => setRenderPreview((current) => ({ ...current, labelAnchor: event.target.value }))}>
+              {TABLE_LABEL_ANCHORS.map((anchor) => <option value={anchor} key={anchor}>{anchor.toUpperCase()}</option>)}
+            </select></label>
+            <label><span>Offset X</span><input type="number" min="-2" max="2" step="1" value={renderPreview.labelOffset.column} onChange={(event) => {
+              const column = Math.min(2, Math.max(-2, Number(event.target.value)));
+              if (Number.isSafeInteger(column)) setRenderPreview((current) => ({ ...current, labelOffset: { ...current.labelOffset, column } }));
+            }} /></label>
+            <label><span>Offset Y</span><input type="number" min="-2" max="2" step="1" value={renderPreview.labelOffset.row} onChange={(event) => {
+              const row = Math.min(2, Math.max(-2, Number(event.target.value)));
+              if (Number.isSafeInteger(row)) setRenderPreview((current) => ({ ...current, labelOffset: { ...current.labelOffset, row } }));
+            }} /></label>
+            <label className="is-check"><span>Label visible</span><input type="checkbox" checked={renderPreview.labelVisible} onChange={(event) => setRenderPreview((current) => ({ ...current, labelVisible: event.target.checked }))} /></label>
+            <button type="button" onClick={() => setRenderPreview(createDefaultRenderPreview())}>RESET RENDER</button>
+          </fieldset>
+          <fieldset>
+            <legend>FEEL</legend>
+            {CONTROL_FIELDS.map(([key, label, min, max, step]) => (
+              <label key={key}>
+                <span>{label}</span>
+                <input
+                  type="number"
+                  min={min}
+                  max={max}
+                  step={step}
+                  value={config[key]}
+                  onChange={(event) => {
+                    const nextValue = Math.min(max, Math.max(min, Number(event.target.value)));
+                    setConfig((current) => ({ ...current, [key]: Number.isFinite(nextValue) ? nextValue : current[key] }));
+                  }}
+                />
+              </label>
+            ))}
+            <button type="button" onClick={() => setConfig({ ...DEFAULT_LATTICE_INTERACTION_CONFIG })}>RESET FEEL</button>
+          </fieldset>
         </div>
       </details>
     </main>
