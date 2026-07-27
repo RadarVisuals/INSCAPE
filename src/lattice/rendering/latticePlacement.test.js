@@ -167,7 +167,7 @@ test('renderer-owned aperture overlaps the artwork perimeter without owning inpu
   const mediaIndex = source.indexOf('className={`lattice-placement-media');
   const apertureIndex = source.indexOf('className="lattice-placement-aperture"');
   assert.ok(mediaIndex >= 0 && apertureIndex > mediaIndex);
-  assert.match(source, /className="lattice-placement-aperture"[\s\S]*left: mediaRectangle\.left - selectionRectangle\.left/);
+  assert.match(source, /className="lattice-placement-aperture"[\s\S]*percentage\(mediaRectangle\.left - selectionRectangle\.left, selectionRectangle\.width\)/);
   const apertureRuleStart = styles.lastIndexOf('.lattice-placement-aperture {');
   const apertureRule = styles.slice(apertureRuleStart, styles.indexOf('}', apertureRuleStart));
   assert.match(apertureRule, /z-index: 2/);
@@ -182,7 +182,7 @@ test('renderer-owned aperture overlaps the artwork perimeter without owning inpu
 test('optional artwork background colors only the media opening beneath alpha artwork', () => {
   const source = readFileSync(new URL('./LatticePlacementRenderer.jsx', import.meta.url), 'utf8');
   assert.match(source, /backgroundColor: backing\.enabled \? backing\.color : undefined/);
-  assert.match(source, /left: mediaRectangle\.left - selectionRectangle\.left/);
+  assert.match(source, /left: percentage\(mediaRectangle\.left - selectionRectangle\.left, selectionRectangle\.width\)/);
   assert.doesNotMatch(source, /backplate[^\n]*backing\.color/);
 });
 
@@ -210,7 +210,7 @@ test('crop masking is explicit, transparent by default, and hides resize handles
   assert.match(source, /cropped \? ' is-cropped'/);
   assert.match(source, /cropEditingPlacementId !== selectedEntry\.placement\.id/);
   assert.match(source, /data-crop-placement-id/);
-  assert.match(source, /left: imageRectangle\.left - mediaRectangle\.left/);
+  assert.match(source, /left: percentage\(imageRectangle\.left - mediaRectangle\.left, mediaRectangle\.width\)/);
   assert.match(styles, /\.lattice-placement-media\.is-cropped\s*\{[^}]*overflow: hidden/s);
   assert.doesNotMatch(styles, /\.lattice-placement-media\.is-cropped\s*\{[^}]*(background|border):/s);
   assert.match(styles, /\.lattice-placement-selection-overlay\.is-crop-editing\s*\{[^}]*pointer-events: auto/s);
@@ -226,8 +226,8 @@ test('OPAQUE background is bounded by the fitted native-media rectangle, never t
     viewport: { width: 1600, height: 900 },
   });
   assert.deepEqual(entry.mediaRectangle, { left: 0, top: 25, width: 800, height: 400 });
-  assert.match(source, /left: mediaRectangle\.left/);
-  assert.match(source, /width: mediaRectangle\.width/);
+  assert.match(source, /left: percentage\(mediaRectangle\.left/);
+  assert.match(source, /width: percentage\(mediaRectangle\.width/);
   assert.match(styles, /\.lattice-placement-media\.is-opaque\s*\{[^}]*background:/s);
   assert.doesNotMatch(styles, /\.lattice-placement-layer\s*\{[^}]*background:/s);
 });

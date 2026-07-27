@@ -19,7 +19,7 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 5 \/ SLICE 3A/);
+  assert.match(source, /PHASE 5 \/ SLICE 3B/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
@@ -30,6 +30,8 @@ test('Phase 5 focus viewer opens only from view mode and preserves the live latt
   assert.match(source, /event\.type === 'keydown' \|\| event\.button === 0/);
   assert.match(source, /if \(arrangeEnabled \|\| viewerSession/);
   assert.match(source, /originElement\.getBoundingClientRect\(\)/);
+  assert.match(focusViewer, /artworkRef\.current\?\.getBoundingClientRect\(\)/);
+  assert.doesNotMatch(focusViewer, /secondFrame/);
   assert.match(source, /onPlacementActivate=\{!arrangeEnabled && isActive && isAuthoredTable/);
   assert.match(source, /focusedPlacementId=\{viewerSession\?\.placementId \|\| null\}/);
   assert.match(source, /getReturnRectangle=\{\(\) => viewportRef\.current/);
@@ -42,10 +44,37 @@ test('focus viewer owns modal focus and Escape while leaving the lattice present
   assert.match(focusViewer, /aria-modal="true"/);
   assert.match(focusViewer, /event\.key === 'Escape'/);
   assert.match(focusViewer, /node\.inert = true/);
-  assert.match(focusViewer, /returnFocus\.focus/);
+  assert.match(focusViewer, /returnFocusRef\.current\.focus/);
   assert.match(focusViewer, /LatticeArtworkPresentation/);
   assert.match(focusViewerStyles, /\.lattice-focus-viewer\s*\{[^}]*background: transparent;/s);
   assert.doesNotMatch(focusViewer, /metadata|dossier|localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/iu);
+});
+
+test('viewer browsing follows explicit navigation order with wrapping and ratio-safe crossfades', () => {
+  for (const token of [
+    'orderedFocusViewerEntries',
+    'focusViewerDestination',
+    'navigatePlacementViewer',
+  ]) assert.match(source, new RegExp(token));
+  assert.match(focusViewer, /event\.key === 'ArrowLeft' \|\| event\.key === 'ArrowRight'/);
+  assert.match(focusViewer, /wheelAccumulationThreshold/);
+  assert.match(focusViewer, /swipeThreshold/);
+  assert.match(focusViewer, /Previous artwork/);
+  assert.match(focusViewer, /Next artwork/);
+  assert.match(focusViewer, /outgoingLayer/);
+  assert.match(focusViewer, /focusedViewerRectangle\(outgoingLayer\.originRectangle, viewport\)/);
+  assert.match(focusViewerStyles, /lattice-focus-viewer-browse-in/);
+  assert.match(focusViewerStyles, /lattice-focus-viewer-browse-out/);
+  assert.match(focusViewerStyles, /\.lattice-focus-viewer__navigation\s*\{[^}]*left: 50%;[^}]*bottom: 18px;/s);
+  assert.doesNotMatch(focusViewer, /controlsTop/);
+  assert.doesNotMatch(focusViewer, /navigationDirection|onNavigationSettled|setTimeout|metadata|dossier|localStorage|sessionStorage|indexedDB/iu);
+  assert.doesNotMatch(focusViewerStyles, /lattice-focus-viewer-(?:next|previous)|data-direction|navigation-duration/iu);
+  assert.match(focusViewerStyles, /transition: transform 420ms/);
+  assert.match(focusViewerStyles, /will-change: transform/);
+  assert.doesNotMatch(focusViewerStyles, /(?:left|top|width|height) 420ms/);
+  assert.match(focusViewerStyles, /@keyframes lattice-focus-viewer-browse-in\s*\{[^}]*transform: scale\(0\.995\)/s);
+  assert.match(focusViewerStyles, /@keyframes lattice-focus-viewer-browse-out\s*\{[^}]*transform: scale\(1\)/s);
+  assert.match(focusViewerStyles, /\[data-phase="open"\] \.lattice-focus-viewer__artwork\s*\{[^}]*transition: none;/s);
 });
 
 test('Arrange is session-only free placement with deterministic gesture ownership', () => {

@@ -1,6 +1,11 @@
 export const DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG = Object.freeze({
   horizontalMargin: 48,
   verticalMargin: 40,
+  browseDuration: 240,
+  swipeThreshold: 48,
+  swipeDominance: 1.25,
+  wheelAccumulationThreshold: 80,
+  wheelCooldown: 320,
 });
 
 function finitePositive(value, label) {
@@ -43,17 +48,24 @@ export function focusedViewerRectangle(originRectangle, viewport, config = DEFAU
   });
 }
 
-export function viewerTransform(originRectangle, destinationRectangle) {
-  const origin = normalizeViewerRectangle(originRectangle, 'originRectangle');
-  const destination = normalizeViewerRectangle(destinationRectangle, 'destinationRectangle');
-  const originCenterX = origin.left + (origin.width / 2);
-  const originCenterY = origin.top + (origin.height / 2);
-  const destinationCenterX = destination.left + (destination.width / 2);
-  const destinationCenterY = destination.top + (destination.height / 2);
-  const scale = destination.width / origin.width;
-  return Object.freeze({
-    x: destinationCenterX - originCenterX,
-    y: destinationCenterY - originCenterY,
-    scale,
+export function orderedFocusViewerEntries(entries) {
+  if (!Array.isArray(entries)) throw new TypeError('viewer entries must be an array');
+  return [...entries].sort((left, right) => {
+    const leftOrder = Number(left?.placement?.navigationOrder);
+    const rightOrder = Number(right?.placement?.navigationOrder);
+    if (!Number.isSafeInteger(leftOrder) || !Number.isSafeInteger(rightOrder)) {
+      throw new TypeError('viewer entry navigationOrder must be a safe integer');
+    }
+    return leftOrder - rightOrder
+      || String(left.placement.id).localeCompare(String(right.placement.id));
   });
+}
+
+export function focusViewerDestination(entries, currentPlacementId, direction) {
+  const ordered = orderedFocusViewerEntries(entries);
+  if (!ordered.length) return null;
+  if (direction !== -1 && direction !== 1) throw new TypeError('viewer navigation direction must be -1 or 1');
+  const currentIndex = ordered.findIndex(({ placement }) => placement.id === currentPlacementId);
+  if (currentIndex < 0) throw new RangeError('current viewer placement is not present');
+  return ordered[(currentIndex + direction + ordered.length) % ordered.length];
 }

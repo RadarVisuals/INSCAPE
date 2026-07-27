@@ -5,6 +5,8 @@ import { TRANSPARENCY_MODES } from '../domain/latticeProfile.js';
 import { projectTableMediaPlacements } from './latticePlacement.js';
 import './latticePlacementRenderer.css';
 
+const percentage = (value, total) => `${(value / total) * 100}%`;
+
 export function LatticeArtworkPresentation({ cropEditing = false, entry }) {
   const {
     backing,
@@ -30,10 +32,10 @@ export function LatticeArtworkPresentation({ cropEditing = false, entry }) {
       className={`lattice-placement-media${cropped ? ' is-cropped' : ''}${cropEditing ? ' is-crop-editing' : ''}${transparencyMode === TRANSPARENCY_MODES.OPAQUE ? ' is-opaque' : ''}`}
       style={{
         backgroundColor: backing.enabled ? backing.color : undefined,
-        left: mediaRectangle.left - selectionRectangle.left,
-        top: mediaRectangle.top - selectionRectangle.top,
-        width: mediaRectangle.width,
-        height: mediaRectangle.height,
+        left: percentage(mediaRectangle.left - selectionRectangle.left, selectionRectangle.width),
+        top: percentage(mediaRectangle.top - selectionRectangle.top, selectionRectangle.height),
+        width: percentage(mediaRectangle.width, selectionRectangle.width),
+        height: percentage(mediaRectangle.height, selectionRectangle.height),
       }}
     >
       <img
@@ -41,10 +43,10 @@ export function LatticeArtworkPresentation({ cropEditing = false, entry }) {
         draggable="false"
         src={media.src}
         style={{
-          left: imageRectangle.left - mediaRectangle.left,
-          top: imageRectangle.top - mediaRectangle.top,
-          width: imageRectangle.width,
-          height: imageRectangle.height,
+          left: percentage(imageRectangle.left - mediaRectangle.left, mediaRectangle.width),
+          top: percentage(imageRectangle.top - mediaRectangle.top, mediaRectangle.height),
+          width: percentage(imageRectangle.width, mediaRectangle.width),
+          height: percentage(imageRectangle.height, mediaRectangle.height),
         }}
       />
     </div>
@@ -53,10 +55,10 @@ export function LatticeArtworkPresentation({ cropEditing = false, entry }) {
         aria-hidden="true"
         className="lattice-placement-aperture"
         style={{
-          left: mediaRectangle.left - selectionRectangle.left,
-          top: mediaRectangle.top - selectionRectangle.top,
-          width: mediaRectangle.width,
-          height: mediaRectangle.height,
+          left: percentage(mediaRectangle.left - selectionRectangle.left, selectionRectangle.width),
+          top: percentage(mediaRectangle.top - selectionRectangle.top, selectionRectangle.height),
+          width: percentage(mediaRectangle.width, selectionRectangle.width),
+          height: percentage(mediaRectangle.height, selectionRectangle.height),
         }}
       />
     )}

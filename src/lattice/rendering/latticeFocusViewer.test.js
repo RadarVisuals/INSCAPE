@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  focusViewerDestination,
   focusedViewerRectangle,
   normalizeViewerRectangle,
-  viewerTransform,
+  orderedFocusViewerEntries,
 } from './latticeFocusViewer.js';
 
 test('focused viewer preserves native presentation ratio and centers within safe viewport margins', () => {
@@ -23,15 +24,33 @@ test('focused viewer refits deterministically for compact and iframe viewports',
   assert.deepEqual(compact, { left: 48, top: 64, width: 384, height: 192 });
 });
 
-test('viewer transform returns the origin representation to an exact live destination', () => {
-  const origin = { left: 100, top: 140, width: 200, height: 100 };
-  const destination = { left: 400, top: 300, width: 500, height: 250 };
-  assert.deepEqual(viewerTransform(origin, destination), { x: 450, y: 235, scale: 2.5 });
-  assert.deepEqual(viewerTransform(origin, origin), { x: 0, y: 0, scale: 1 });
-});
-
 test('viewer rectangle validation rejects missing, non-finite and zero-sized geometry', () => {
   assert.throws(() => normalizeViewerRectangle(null), /required/);
   assert.throws(() => normalizeViewerRectangle({ left: 0, top: 0, width: 0, height: 1 }), /positive/);
   assert.throws(() => normalizeViewerRectangle({ left: NaN, top: 0, width: 1, height: 1 }), /finite/);
+});
+
+const entry = (id, navigationOrder, layer, stableAssetId = `asset:${id}`) => ({
+  placement: { id, navigationOrder, layer, stableAssetId },
+});
+
+test('viewer sequence is controlled only by navigationOrder and never by visual layer', () => {
+  const entries = [entry('third', 2, 0), entry('first', 0, 99), entry('second', 1, 4)];
+  assert.deepEqual(orderedFocusViewerEntries(entries).map(({ placement }) => placement.id), ['first', 'second', 'third']);
+  entries[0].placement.layer = 200;
+  entries[1].placement.layer = -10;
+  assert.deepEqual(orderedFocusViewerEntries(entries).map(({ placement }) => placement.id), ['first', 'second', 'third']);
+});
+
+test('viewer navigation wraps in both directions and keeps repeated assets as distinct placements', () => {
+  const entries = [entry('first', 0, 0, 'same'), entry('second', 1, 1, 'same'), entry('third', 2, 2)];
+  assert.equal(focusViewerDestination(entries, 'first', -1).placement.id, 'third');
+  assert.equal(focusViewerDestination(entries, 'third', 1).placement.id, 'first');
+  assert.equal(focusViewerDestination(entries, 'first', 1).placement.id, 'second');
+});
+
+test('viewer navigation rejects ambiguous directions and missing current placements', () => {
+  const entries = [entry('first', 0, 0)];
+  assert.throws(() => focusViewerDestination(entries, 'first', 0), /direction/);
+  assert.throws(() => focusViewerDestination(entries, 'missing', 1), /not present/);
 });

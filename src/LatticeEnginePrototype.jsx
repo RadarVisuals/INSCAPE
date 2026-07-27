@@ -61,6 +61,11 @@ import {
 import LatticeTableRenderer from './lattice/rendering/LatticeTableRenderer.jsx';
 import LatticeGridPlane from './lattice/rendering/LatticeGridPlane.jsx';
 import LatticeFocusViewer from './lattice/rendering/LatticeFocusViewer.jsx';
+import { projectTableMediaPlacements } from './lattice/rendering/latticePlacement.js';
+import {
+  focusViewerDestination,
+  orderedFocusViewerEntries,
+} from './lattice/rendering/latticeFocusViewer.js';
 import {
   LATTICE_GEOMETRY_PRESETS,
   LATTICE_ARTBOARD_FITS,
@@ -298,6 +303,25 @@ export default function LatticeEnginePrototype() {
     placementPreview,
     cropPreview,
   );
+  const viewerEntries = orderedFocusViewerEntries(projectTableMediaPlacements({
+    artboard: CANONICAL_LATTICE_ARTBOARD,
+    artworkBackingsByPlacementId: artworkBackings,
+    artworkMatsByPlacementId: artworkMats,
+    assetsByStableId: FIXTURE_MEDIA,
+    framing,
+    table: {
+      id: latticeTableId({ x: 0, y: 0 }),
+      coordinate: { x: 0, y: 0 },
+      placements: centerPlacements,
+    },
+    viewport: dimensions,
+  }));
+  const viewerEntry = viewerSession
+    ? viewerEntries.find(({ placement }) => placement.id === viewerSession.placementId) || null
+    : null;
+  const viewerPosition = viewerEntry
+    ? viewerEntries.findIndex(({ placement }) => placement.id === viewerEntry.placement.id)
+    : -1;
   const selectedPlacement = centerPlacements.find(({ id }) => id === selectedPlacementId) || null;
   const selectedMedia = selectedPlacement ? FIXTURE_MEDIA[selectedPlacement.stableAssetId] : null;
   const selectedMat = selectedPlacement ? artworkMats[selectedPlacement.id] || DEFAULT_ARTWORK_MAT : DEFAULT_ARTWORK_MAT;
@@ -320,12 +344,24 @@ export default function LatticeEnginePrototype() {
     event.stopPropagation();
     const originElement = event.currentTarget;
     setViewerSession({
-      entry,
       originRectangle: originElement.getBoundingClientRect(),
       placementId: entry.placement.id,
       returnFocus: originElement,
     });
   }, [arrangeEnabled, viewerSession]);
+
+  const navigatePlacementViewer = useCallback((direction) => {
+    if (!viewerSession) return;
+    const destination = focusViewerDestination(viewerEntries, viewerSession.placementId, direction);
+    if (!destination || destination.placement.id === viewerSession.placementId) return;
+    const originElement = viewportRef.current?.querySelector(`[data-placement-id="${destination.placement.id}"]`);
+    if (!originElement) return;
+    setViewerSession({
+      originRectangle: originElement.getBoundingClientRect(),
+      placementId: destination.placement.id,
+      returnFocus: originElement,
+    });
+  }, [viewerEntries, viewerSession]);
 
   useEffect(() => {
     activeRef.current = active;
@@ -1057,20 +1093,23 @@ export default function LatticeEnginePrototype() {
         )}
       </section>
 
-      {viewerSession && (
+      {viewerSession && viewerEntry && (
         <LatticeFocusViewer
-          entry={viewerSession.entry}
+          entry={viewerEntry}
           getReturnRectangle={() => viewportRef.current
             ?.querySelector(`[data-placement-id="${viewerSession.placementId}"]`)
             ?.getBoundingClientRect()}
           onClosed={() => setViewerSession(null)}
+          onNavigate={navigatePlacementViewer}
           originRectangle={viewerSession.originRectangle}
+          position={viewerPosition}
           returnFocus={viewerSession.returnFocus}
+          total={viewerEntries.length}
         />
       )}
 
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE VIEWER / PHASE 5 / SLICE 3A</p>
+        <p>LATTICE VIEWER / PHASE 5 / SLICE 3B</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
         <p>{viewerSession ? 'VIEWING' : snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>

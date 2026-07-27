@@ -6,19 +6,113 @@
   background: transparent;
   color: #d8d5cc;
   isolation: isolate;
+  overscroll-behavior: contain;
 }
 
 .lattice-focus-viewer__artwork {
   position: fixed;
   z-index: 1;
-  transform-origin: center;
+  transform-origin: top left;
   will-change: transform;
 }
 
+.lattice-focus-viewer[data-phase="starting"] .lattice-focus-viewer__artwork,
+.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__artwork {
+  transform:
+    translate3d(
+      var(--lattice-viewer-collapse-x),
+      var(--lattice-viewer-collapse-y),
+      0
+    )
+    scale(
+      var(--lattice-viewer-collapse-scale-x),
+      var(--lattice-viewer-collapse-scale-y)
+    );
+}
+
 .lattice-focus-viewer[data-phase="opening"] .lattice-focus-viewer__artwork,
-.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__artwork,
-.lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__artwork {
+.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__artwork {
   transition: transform 420ms cubic-bezier(0.22, 0.76, 0.26, 1);
+}
+
+.lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__artwork {
+  transition: none;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.lattice-focus-viewer__browse-layer {
+  position: fixed;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.lattice-focus-viewer__artwork[data-browsing] {
+  z-index: 2;
+  animation: lattice-focus-viewer-browse-in var(--lattice-viewer-browse-duration) ease-out both;
+}
+
+.lattice-focus-viewer__browse-layer.is-outgoing {
+  animation: lattice-focus-viewer-browse-out var(--lattice-viewer-browse-duration) ease-out both;
+}
+
+@keyframes lattice-focus-viewer-browse-in {
+  from { opacity: 0; transform: scale(0.995); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes lattice-focus-viewer-browse-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.995); }
+}
+
+.lattice-focus-viewer__navigation {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 28px auto 28px;
+  align-items: center;
+  transform: translateX(-50%);
+  border: 1px solid rgba(216, 213, 204, 0.38);
+  background: rgba(9, 10, 10, 0.92);
+  opacity: 0;
+  transition: opacity 120ms linear;
+}
+
+.lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__navigation {
+  opacity: 1;
+}
+
+.lattice-focus-viewer__navigation button,
+.lattice-focus-viewer__close {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #d8d5cc;
+  cursor: pointer;
+}
+
+.lattice-focus-viewer__navigation button {
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  font: 300 17px/1 "IBM Plex Mono", "Courier New", monospace;
+}
+
+.lattice-focus-viewer__navigation span {
+  min-width: 54px;
+  padding: 0 8px;
+  border-right: 1px solid rgba(216, 213, 204, 0.22);
+  border-left: 1px solid rgba(216, 213, 204, 0.22);
+  font: 8px/22px "IBM Plex Mono", "Courier New", monospace;
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+
+.lattice-focus-viewer__navigation button[aria-disabled="true"] {
+  pointer-events: none;
+  opacity: 0.35;
 }
 
 .lattice-focus-viewer__close {
@@ -29,9 +123,7 @@
   width: 34px;
   height: 34px;
   border: 1px solid rgba(216, 213, 204, 0.48);
-  border-radius: 0;
   background: rgba(9, 10, 10, 0.92);
-  color: #d8d5cc;
   font: 300 21px/1 "IBM Plex Mono", "Courier New", monospace;
   cursor: pointer;
 }
@@ -41,12 +133,17 @@
   opacity: 0.45;
 }
 
+.lattice-focus-viewer__navigation button:focus-visible,
 .lattice-focus-viewer__close:focus-visible {
   outline: 1px solid #d8d5cc;
   outline-offset: 3px;
 }
 
 @media (max-width: 640px) {
+  .lattice-focus-viewer__navigation {
+    bottom: 10px;
+  }
+
   .lattice-focus-viewer__close {
     top: 10px;
     right: 10px;
@@ -56,5 +153,10 @@
 @media (prefers-reduced-motion: reduce) {
   .lattice-focus-viewer__artwork {
     transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+
+  .lattice-focus-viewer__browse-layer {
+    animation-duration: 1ms !important;
   }
 }
