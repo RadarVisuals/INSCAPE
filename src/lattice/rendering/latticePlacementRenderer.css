@@ -5,21 +5,44 @@
   pointer-events: none;
 }
 
-.lattice-placement-media {
+.lattice-placement {
   position: absolute;
   box-sizing: border-box;
-  overflow: visible;
-  background: transparent;
+  outline: none;
 }
 
-.lattice-placement-layer.is-arranging .lattice-placement-media {
+.lattice-placement-layer.is-arranging .lattice-placement {
   pointer-events: auto;
   cursor: move;
 }
 
-.lattice-placement-media:focus-visible {
+.lattice-placement:focus-visible {
   outline: 1px solid #d8d5cc;
   outline-offset: 4px;
+}
+
+.lattice-placement-backplate,
+.lattice-placement-media,
+.lattice-placement-aperture {
+  position: absolute;
+}
+
+.lattice-placement-backplate {
+  inset: 0;
+  background-color: var(--lattice-mat-color);
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--lattice-mat-color) 98.5%, white),
+    color-mix(in srgb, var(--lattice-mat-color) 98%, black)
+  );
+  pointer-events: none;
+}
+
+.lattice-placement-media {
+  box-sizing: border-box;
+  overflow: visible;
+  background: transparent;
+  z-index: 1;
 }
 
 .lattice-placement-media.is-opaque {
@@ -37,11 +60,21 @@
   max-height: none;
 }
 
+.lattice-placement-aperture {
+  box-sizing: border-box;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.46),
+    inset 3px 3px 7px rgba(0, 0, 0, 0.22),
+    inset -1px -1px 2px rgba(255, 255, 255, 0.1);
+}
+
 .lattice-placement-selection-overlay {
   position: absolute;
   box-sizing: border-box;
   outline: 1px solid rgba(216, 213, 204, 0.82);
-  outline-offset: 3px;
+  outline-offset: 0;
   pointer-events: none;
 }
 
@@ -63,13 +96,38 @@
 .lattice-placement-resize-handle::after {
   content: '';
   position: absolute;
-  left: 8.5px;
-  top: 8.5px;
   width: 7px;
   height: 7px;
   box-sizing: border-box;
-  border: 1px solid #d8d5cc;
-  background: #0b0d0c;
+  background: transparent;
+}
+
+.lattice-placement-resize-handle.is-nw::after {
+  right: 12px;
+  bottom: 12px;
+  border-right: 1px solid #d8d5cc;
+  border-bottom: 1px solid #d8d5cc;
+}
+
+.lattice-placement-resize-handle.is-ne::after {
+  left: 12px;
+  bottom: 12px;
+  border-left: 1px solid #d8d5cc;
+  border-bottom: 1px solid #d8d5cc;
+}
+
+.lattice-placement-resize-handle.is-se::after {
+  left: 12px;
+  top: 12px;
+  border-left: 1px solid #d8d5cc;
+  border-top: 1px solid #d8d5cc;
+}
+
+.lattice-placement-resize-handle.is-sw::after {
+  right: 12px;
+  top: 12px;
+  border-right: 1px solid #d8d5cc;
+  border-top: 1px solid #d8d5cc;
 }
 
 .lattice-placement-resize-handle.is-nw,

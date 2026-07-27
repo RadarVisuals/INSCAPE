@@ -17,6 +17,8 @@ export default function LatticeTableRenderer({
   alignmentGuides = [],
   arrangeEnabled = false,
   artboard,
+  artworkBackingsByPlacementId,
+  artworkMatsByPlacementId,
   assetsByStableId = {},
   cropEditingPlacementId,
   framing,
@@ -50,6 +52,8 @@ export default function LatticeTableRenderer({
       <LatticePlacementRenderer
         arrangeEnabled={arrangeEnabled}
         artboard={artboard}
+        artworkBackingsByPlacementId={artworkBackingsByPlacementId}
+        artworkMatsByPlacementId={artworkMatsByPlacementId}
         assetsByStableId={assetsByStableId}
         cropEditingPlacementId={cropEditingPlacementId}
         framing={framing}

@@ -40,6 +40,7 @@ import {
   squareCropPlacement,
   updateCropFocusGesture,
 } from './lattice/controller/latticePlacementCrop.js';
+import { reframePlacementForMat } from './lattice/controller/latticePlacementMat.js';
 import {
   createArtboardFramingGesture,
   finishArtboardFramingGesture,
@@ -57,6 +58,16 @@ import {
   projectCanonicalLatticeArtboard,
   projectPlacementRectangle,
 } from './lattice/rendering/latticeGeometry.js';
+import {
+  ARTWORK_MAT_INSET_MAX,
+  ARTWORK_MAT_PRESET_IDS,
+  DEFAULT_ARTWORK_BACKING,
+  DEFAULT_ARTWORK_MAT,
+  normalizeArtworkBacking,
+  normalizeArtworkMat,
+  projectArtworkMat,
+  resolveArtworkMatPreset,
+} from './lattice/rendering/latticeMat.js';
 import './latticeEnginePrototype.css';
 
 const CONTROL_FIELDS = [
@@ -71,6 +82,7 @@ const CONTROL_FIELDS = [
   ['guideReleaseThreshold', 'Guide release', 1, 50, 1],
   ['minimumArtworkPixels', 'Minimum artwork size', 16, 160, 1],
 ];
+const CUSTOM_MAT_PRESET_ID = 'CUSTOM';
 
 const interactiveChrome = (target) => target.closest('[data-lattice-chrome]');
 const unmodifiedPrimaryPointer = (event) => event.button === 0
@@ -152,6 +164,21 @@ const createDefaultPlacementCrops = () => Object.fromEntries(
     .map((placement) => [placement.id, placement.crop]),
 );
 
+const createDefaultArtworkMats = () => Object.fromEntries(
+  createFixturePlacements(TRANSPARENCY_MODES.AUTO, false)
+    .map((placement) => [placement.id, resolveArtworkMatPreset(ARTWORK_MAT_PRESET_IDS.NONE)]),
+);
+
+const createDefaultArtworkBackings = () => Object.fromEntries(
+  createFixturePlacements(TRANSPARENCY_MODES.AUTO, false)
+    .map((placement) => [placement.id, normalizeArtworkBacking(DEFAULT_ARTWORK_BACKING)]),
+);
+
+const createDefaultMatPresetIds = () => Object.fromEntries(
+  createFixturePlacements(TRANSPARENCY_MODES.AUTO, false)
+    .map((placement) => [placement.id, ARTWORK_MAT_PRESET_IDS.NONE]),
+);
+
 function applyPlacementAuthoring(placements, placementBounds, placementCrops, preview, cropPreview) {
   return placements.map((placement) => ({
     ...placement,
@@ -201,6 +228,9 @@ export default function LatticeEnginePrototype() {
   const [placementResizing, setPlacementResizing] = useState(false);
   const [placementBounds, setPlacementBounds] = useState(createDefaultPlacementBounds);
   const [placementCrops, setPlacementCrops] = useState(createDefaultPlacementCrops);
+  const [artworkMats, setArtworkMats] = useState(createDefaultArtworkMats);
+  const [artworkBackings, setArtworkBackings] = useState(createDefaultArtworkBackings);
+  const [matPresetIds, setMatPresetIds] = useState(createDefaultMatPresetIds);
   const [placementPreview, setPlacementPreview] = useState(null);
   const [cropPreview, setCropPreview] = useState(null);
   const [cropEditPlacementId, setCropEditPlacementId] = useState(null);
@@ -240,8 +270,13 @@ export default function LatticeEnginePrototype() {
   );
   const selectedPlacement = centerPlacements.find(({ id }) => id === selectedPlacementId) || null;
   const selectedMedia = selectedPlacement ? FIXTURE_MEDIA[selectedPlacement.stableAssetId] : null;
+  const selectedMat = selectedPlacement ? artworkMats[selectedPlacement.id] || DEFAULT_ARTWORK_MAT : DEFAULT_ARTWORK_MAT;
+  const selectedBacking = selectedPlacement ? artworkBackings[selectedPlacement.id] || DEFAULT_ARTWORK_BACKING : DEFAULT_ARTWORK_BACKING;
   const selectedMaskRectangle = selectedPlacement
-    ? projectPlacementRectangle(selectedPlacement, CANONICAL_LATTICE_ARTBOARD, dimensions, framing)
+    ? projectArtworkMat(
+      projectPlacementRectangle(selectedPlacement, CANONICAL_LATTICE_ARTBOARD, dimensions, framing),
+      selectedMat,
+    ).mediaOpeningRectangle
     : null;
 
   useEffect(() => {
@@ -419,6 +454,10 @@ export default function LatticeEnginePrototype() {
     event.currentTarget.focus({ preventScroll: true });
     setSelectedPlacementId(placement.id);
     if (cropEditPlacementId === placement.id && placement.crop && FIXTURE_MEDIA[placement.stableAssetId]) {
+      const cropMask = projectArtworkMat(
+        projectPlacementRectangle(placement, CANONICAL_LATTICE_ARTBOARD, dimensions, framing),
+        artworkMats[placement.id] || DEFAULT_ARTWORK_MAT,
+      ).mediaOpeningRectangle;
       gestureRef.current = {
         kind: 'crop',
         captureTarget: event.currentTarget,
@@ -426,7 +465,7 @@ export default function LatticeEnginePrototype() {
         gesture: createCropFocusGesture(
           placement,
           FIXTURE_MEDIA[placement.stableAssetId],
-          projectPlacementRectangle(placement, CANONICAL_LATTICE_ARTBOARD, dimensions, framing),
+          cropMask,
           { x: event.clientX, y: event.clientY },
         ),
       };
@@ -497,11 +536,21 @@ export default function LatticeEnginePrototype() {
         projectedArtboard,
         configRef.current.deadZone,
         configRef.current.minimumArtworkPixels,
+        {
+          smartGuides,
+          gridSnap,
+          bypass: event.altKey,
+          geometry: renderPreview.geometry,
+          otherPlacements: centerPlacements,
+          guideThreshold: configRef.current.guideThreshold,
+          guideReleaseThreshold: configRef.current.guideReleaseThreshold,
+        },
       );
       gestureRef.current = { ...gestureRef.current, gesture: next };
       if (next.activated) {
         setPlacementResizing(true);
         setPlacementPreview({ placementId: next.placementId, bounds: next.previewBounds });
+        setAlignmentGuides(next.guides);
       }
       return;
     }
@@ -641,10 +690,38 @@ export default function LatticeEnginePrototype() {
     setSelectedPlacementId(placementId);
   };
 
+  const normalizedBoundsFromRectangle = (rectangle) => ({
+    x: (rectangle.left - projectedArtboard.left) / projectedArtboard.width,
+    y: (rectangle.top - projectedArtboard.top) / projectedArtboard.height,
+    width: rectangle.width / projectedArtboard.width,
+    height: rectangle.height / projectedArtboard.height,
+  });
+
+  const wrapContentBoundsInMat = (placement, contentBounds, mat) => {
+    if (!mat.enabled) return contentBounds;
+    const contentPlacement = { ...placement, ...contentBounds };
+    return reframePlacementForMat(
+      projectPlacementRectangle(
+        contentPlacement,
+        CANONICAL_LATTICE_ARTBOARD,
+        dimensions,
+        framing,
+      ),
+      projectedArtboard,
+      DEFAULT_ARTWORK_MAT,
+      mat,
+    );
+  };
+
   const applySquareCrop = () => {
-    if (!selectedPlacement || !selectedMedia) return;
-    const result = squareCropPlacement(selectedPlacement, projectedArtboard);
-    setPlacementBounds((current) => ({ ...current, [selectedPlacement.id]: result.bounds }));
+    if (!selectedPlacement || !selectedMedia || !selectedMaskRectangle) return;
+    const contentPlacement = {
+      ...selectedPlacement,
+      ...normalizedBoundsFromRectangle(selectedMaskRectangle),
+    };
+    const result = squareCropPlacement(contentPlacement, projectedArtboard);
+    const bounds = wrapContentBoundsInMat(selectedPlacement, result.bounds, selectedMat);
+    setPlacementBounds((current) => ({ ...current, [selectedPlacement.id]: bounds }));
     setPlacementCrops((current) => ({ ...current, [selectedPlacement.id]: result.crop }));
     setCropEditPlacementId(selectedPlacement.id);
     setPlacementPreview(null);
@@ -652,8 +729,13 @@ export default function LatticeEnginePrototype() {
   };
 
   const removeSelectedCrop = () => {
-    if (!selectedPlacement?.crop || !selectedMedia) return;
-    const bounds = restoreNativePlacement(selectedPlacement, selectedMedia, projectedArtboard);
+    if (!selectedPlacement?.crop || !selectedMedia || !selectedMaskRectangle) return;
+    const contentPlacement = {
+      ...selectedPlacement,
+      ...normalizedBoundsFromRectangle(selectedMaskRectangle),
+    };
+    const nativeBounds = restoreNativePlacement(contentPlacement, selectedMedia, projectedArtboard);
+    const bounds = wrapContentBoundsInMat(selectedPlacement, nativeBounds, selectedMat);
     setPlacementBounds((current) => ({ ...current, [selectedPlacement.id]: bounds }));
     setPlacementCrops((current) => ({ ...current, [selectedPlacement.id]: null }));
     setCropEditPlacementId(null);
@@ -664,6 +746,36 @@ export default function LatticeEnginePrototype() {
     if (!selectedPlacement?.crop || !selectedMedia || !selectedMaskRectangle) return;
     const crop = setCropZoom(selectedPlacement.crop, selectedMedia, selectedMaskRectangle, zoom);
     setPlacementCrops((current) => ({ ...current, [selectedPlacement.id]: crop }));
+  };
+
+  const applySelectedMat = (nextValue, presetId = CUSTOM_MAT_PRESET_ID) => {
+    if (!selectedPlacement) return;
+    const nextMat = normalizeArtworkMat(nextValue);
+    const placementRectangle = projectPlacementRectangle(
+      selectedPlacement,
+      CANONICAL_LATTICE_ARTBOARD,
+      dimensions,
+      framing,
+    );
+    const bounds = reframePlacementForMat(
+      placementRectangle,
+      projectedArtboard,
+      selectedMat,
+      nextMat,
+    );
+    setPlacementBounds((current) => ({ ...current, [selectedPlacement.id]: bounds }));
+    setArtworkMats((current) => ({ ...current, [selectedPlacement.id]: nextMat }));
+    setMatPresetIds((current) => ({ ...current, [selectedPlacement.id]: presetId }));
+    setPlacementPreview(null);
+    setAlignmentGuides([]);
+  };
+
+  const updateSelectedMatInset = (edge, amount) => {
+    if (!selectedPlacement || !Number.isFinite(amount)) return;
+    applySelectedMat({
+      ...selectedMat,
+      inset: { ...selectedMat.inset, [edge]: amount },
+    });
   };
 
   return (
@@ -721,6 +833,8 @@ export default function LatticeEnginePrototype() {
                 alignmentGuides={isActive && isAuthoredTable ? alignmentGuides : []}
                 arrangeEnabled={arrangeEnabled && isActive && isAuthoredTable}
                 artboard={CANONICAL_LATTICE_ARTBOARD}
+                artworkBackingsByPlacementId={artworkBackings}
+                artworkMatsByPlacementId={artworkMats}
                 assetsByStableId={FIXTURE_MEDIA}
                 cropEditingPlacementId={isActive ? cropEditPlacementId : null}
                 geometry={renderPreview.geometry}
@@ -746,7 +860,7 @@ export default function LatticeEnginePrototype() {
       </section>
 
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2F</p>
+        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2G</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
         <p>{snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
@@ -787,6 +901,33 @@ export default function LatticeEnginePrototype() {
             <label><span>Transparency</span><select value={renderPreview.transparencyMode} onChange={(event) => setRenderPreview((current) => ({ ...current, transparencyMode: event.target.value }))}>
               {Object.values(TRANSPARENCY_MODES).map((mode) => <option value={mode} key={mode}>{mode}</option>)}
             </select></label>
+            <label><span>Mat preset</span><select disabled={!selectedPlacement} value={selectedPlacement ? matPresetIds[selectedPlacement.id] || ARTWORK_MAT_PRESET_IDS.NONE : ARTWORK_MAT_PRESET_IDS.NONE} onChange={(event) => {
+              if (!selectedPlacement) return;
+              applySelectedMat(resolveArtworkMatPreset(event.target.value), event.target.value);
+            }}>
+              <option value={ARTWORK_MAT_PRESET_IDS.NONE}>NONE</option>
+              <option value={ARTWORK_MAT_PRESET_IDS.DOSSIER}>DOSSIER</option>
+              <option value={ARTWORK_MAT_PRESET_IDS.CAPTION}>POLAROID / CAPTION</option>
+              <option value={CUSTOM_MAT_PRESET_ID} disabled>CUSTOM</option>
+            </select></label>
+            <label className="is-check"><span>Mat enabled</span><input type="checkbox" disabled={!selectedPlacement} checked={Boolean(selectedPlacement && selectedMat.enabled)} onChange={(event) => applySelectedMat({ ...selectedMat, enabled: event.target.checked })} /></label>
+            <label><span>Mat color</span><input type="color" disabled={!selectedPlacement || !selectedMat.enabled} value={selectedMat.color} onChange={(event) => {
+              if (!selectedPlacement) return;
+              const nextMat = normalizeArtworkMat({ ...selectedMat, color: event.target.value });
+              setArtworkMats((current) => ({ ...current, [selectedPlacement.id]: nextMat }));
+              setMatPresetIds((current) => ({ ...current, [selectedPlacement.id]: CUSTOM_MAT_PRESET_ID }));
+            }} /></label>
+            <label className="is-check"><span>Artwork background</span><input type="checkbox" disabled={!selectedPlacement} checked={Boolean(selectedPlacement && selectedBacking.enabled)} onChange={(event) => {
+              if (!selectedPlacement) return;
+              const nextBacking = normalizeArtworkBacking({ ...selectedBacking, enabled: event.target.checked });
+              setArtworkBackings((current) => ({ ...current, [selectedPlacement.id]: nextBacking }));
+            }} /></label>
+            <label><span>Background color</span><input type="color" disabled={!selectedPlacement || !selectedBacking.enabled} value={selectedBacking.color} onChange={(event) => {
+              if (!selectedPlacement) return;
+              const nextBacking = normalizeArtworkBacking({ ...selectedBacking, color: event.target.value });
+              setArtworkBackings((current) => ({ ...current, [selectedPlacement.id]: nextBacking }));
+            }} /></label>
+            {['top', 'right', 'bottom', 'left'].map((edge) => <label key={edge}><span>Mat {edge}</span><input type="number" min="0" max={ARTWORK_MAT_INSET_MAX} step="0.01" disabled={!selectedPlacement || !selectedMat.enabled} value={selectedMat.inset[edge]} onChange={(event) => updateSelectedMatInset(edge, Number(event.target.value))} /></label>)}
             <label className="is-check"><span>Swap layers</span><input type="checkbox" checked={renderPreview.layersSwapped} onChange={(event) => setRenderPreview((current) => ({ ...current, layersSwapped: event.target.checked }))} /></label>
             <button type="button" disabled={!selectedPlacement || Boolean(selectedPlacement.crop)} onClick={applySquareCrop}>SQUARE CROP</button>
             <button type="button" disabled={!selectedPlacement?.crop} onClick={() => setCropEditPlacementId((current) => current === selectedPlacementId ? null : selectedPlacementId)}>{cropEditPlacementId === selectedPlacementId ? 'DONE CROP' : 'EDIT CROP'}</button>
@@ -810,6 +951,9 @@ export default function LatticeEnginePrototype() {
               setRenderPreview(createDefaultRenderPreview());
               setPlacementBounds(createDefaultPlacementBounds());
               setPlacementCrops(createDefaultPlacementCrops());
+              setArtworkMats(createDefaultArtworkMats());
+              setArtworkBackings(createDefaultArtworkBackings());
+              setMatPresetIds(createDefaultMatPresetIds());
               setPlacementPreview(null);
               setCropPreview(null);
               setCropEditPlacementId(null);

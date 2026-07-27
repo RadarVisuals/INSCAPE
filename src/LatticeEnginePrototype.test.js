@@ -15,7 +15,7 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 4 \/ SLICE 2F/);
+  assert.match(source, /PHASE 4 \/ SLICE 2G/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
@@ -52,7 +52,7 @@ test('smart guides, independent grid controls, hysteresis and Alt bypass stay tr
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/);
 });
 
-test('native proportional resize is corner-anchored, transient, and independent from movement guides', () => {
+test('native proportional resize is corner-anchored and shares guide behavior without using movement state', () => {
   for (const token of [
     'handlePlacementResizePointerDown',
     'createPlacementResizeGesture',
@@ -63,8 +63,11 @@ test('native proportional resize is corner-anchored, transient, and independent 
   ]) assert.match(source, new RegExp(token));
   assert.match(resizeController, /PLACEMENT_RESIZE_CORNERS/);
   assert.match(resizeController, /projectedScale/);
+  assert.match(resizeController, /resolveResizeGuide/);
+  assert.match(resizeController, /guideReleaseThreshold/);
   assert.match(source, /event\.target\.closest\?\.\('\[data-resize-corner\]'\)/);
-  assert.doesNotMatch(resizeController, /smartGuides|gridSnap|crop|localStorage|sessionStorage|indexedDB/iu);
+  assert.match(source, /setAlignmentGuides\(next\.guides\)/);
+  assert.doesNotMatch(resizeController, /crop|localStorage|sessionStorage|indexedDB/iu);
 });
 
 test('bounded cover framing uses Space-drag without becoming free lattice camera state', () => {
@@ -83,7 +86,7 @@ test('bounded cover framing uses Space-drag without becoming free lattice camera
   assert.doesNotMatch(source, /persistFraming|framing.*localStorage|framing.*sessionStorage/iu);
 });
 
-test('square crop authoring is explicit, reversible, session-only and separate from frames', () => {
+test('square crop authoring remains explicit, reversible, and session-only with mats present', () => {
   for (const token of [
     'squareCropPlacement',
     'restoreNativePlacement',
@@ -98,8 +101,28 @@ test('square crop authoring is explicit, reversible, session-only and separate f
     'CROPPING',
   ]) assert.match(source, new RegExp(token));
   assert.match(source, /spaceHeldRef\.current \|\| !arrangeEnabled/);
-  assert.doesNotMatch(source, /FRAME_IDS\.(DOSSIER|CAPTION)/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/);
+});
+
+test('generic mats and optional presets remain per-placement and session-only', () => {
+  assert.match(source, /createDefaultArtworkMats/);
+  assert.match(source, /artworkMats\[placement\.id\]/);
+  assert.match(source, /ARTWORK_MAT_PRESET_IDS\.NONE/);
+  assert.match(source, /ARTWORK_MAT_PRESET_IDS\.DOSSIER/);
+  assert.match(source, /ARTWORK_MAT_PRESET_IDS\.CAPTION/);
+  assert.match(source, /\['top', 'right', 'bottom', 'left'\]\.map/);
+  assert.match(source, /updateSelectedMatInset/);
+  assert.match(source, /POLAROID \/ CAPTION/);
+  assert.doesNotMatch(source, /artist|edition|collection|tokenId|localStorage|sessionStorage|indexedDB/iu);
+});
+
+test('transparent artwork backing stays independent from mat color and session-only', () => {
+  assert.match(source, /createDefaultArtworkBackings/);
+  assert.match(source, /artworkBackings\[selectedPlacement\.id\]/);
+  assert.match(source, /artworkBackingsByPlacementId=\{artworkBackings\}/);
+  assert.match(source, /Artwork background/);
+  assert.match(source, /Background color/);
+  assert.doesNotMatch(source, /persistArtworkBacking|publishArtworkBacking/);
 });
 
 test('Swap layers reverses the complete fixture stack without touching navigation order', () => {

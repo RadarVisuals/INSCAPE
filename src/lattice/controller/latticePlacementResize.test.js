@@ -79,6 +79,44 @@ test('Escape-style cancellation restores exact starting bounds after activation'
   });
 });
 
+test('moving resize edge snaps to another artwork edge while opposite corner and ratio remain fixed', () => {
+  const target = { id: 'target', x: 0.8, y: 0.1, width: 0.1, height: 0.58 };
+  const gesture = createPlacementResizeGesture(placement, 'se', handles.se, artboard);
+  const snapped = updatePlacementResizeGesture(
+    gesture,
+    { x: 781, y: 608 },
+    artboard,
+    10,
+    40,
+    { smartGuides: true, otherPlacements: [placement, target], guideThreshold: 8, guideReleaseThreshold: 14 },
+  );
+  closeTo(snapped.previewBounds.y, placement.y);
+  closeTo(snapped.previewBounds.y + snapped.previewBounds.height, 0.68);
+  closeTo((snapped.previewBounds.width * artboard.width) / (snapped.previewBounds.height * artboard.height), 320 / 360);
+  assert.deepEqual(
+    snapped.guides.map(({ position, ...guide }) => guide),
+    [{ axis: 'y', kind: 'artwork', sourcePlacementId: 'target' }],
+  );
+  closeTo(snapped.guides[0].position, 0.68);
+});
+
+test('resize guide hysteresis retains the edge until release and Alt-style bypass stays continuous', () => {
+  const target = { id: 'target', x: 0.8, y: 0.1, width: 0.1, height: 0.58 };
+  const options = { smartGuides: true, otherPlacements: [target], guideThreshold: 8, guideReleaseThreshold: 14 };
+  const started = updatePlacementResizeGesture(
+    createPlacementResizeGesture(placement, 'se', handles.se, artboard),
+    { x: 781, y: 608 }, artboard, 10, 40, options,
+  );
+  const retained = updatePlacementResizeGesture(started, { x: 792, y: 621 }, artboard, 10, 40, options);
+  closeTo(retained.previewBounds.y + retained.previewBounds.height, 0.68);
+  const released = updatePlacementResizeGesture(retained, { x: 808, y: 639 }, artboard, 10, 40, options);
+  assert.equal(released.guides.length, 0);
+  assert.notEqual(released.previewBounds.y + released.previewBounds.height, 0.68);
+  const bypassed = updatePlacementResizeGesture(started, { x: 781, y: 608 }, artboard, 10, 40, { ...options, bypass: true });
+  assert.equal(bypassed.guides.length, 0);
+  assert.notEqual(bypassed.previewBounds.y + bypassed.previewBounds.height, 0.68);
+});
+
 test('resize rejects invalid corners and interaction limits', () => {
   assert.throws(
     () => createPlacementResizeGesture(placement, 'middle', { x: 0, y: 0 }, artboard),
