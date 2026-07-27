@@ -12,6 +12,7 @@ const insertionController = readFileSync(new URL('./lattice/controller/latticePl
 const focusViewer = readFileSync(new URL('./lattice/rendering/LatticeFocusViewer.jsx', import.meta.url), 'utf8');
 const focusViewerStyles = readFileSync(new URL('./lattice/rendering/latticeFocusViewer.css', import.meta.url), 'utf8');
 const prototypeStyles = readFileSync(new URL('./latticeEnginePrototype.css', import.meta.url), 'utf8');
+const keeperHarness = readFileSync(new URL('./lattice/prototype/LatticeKeeperDockHarness.jsx', import.meta.url), 'utf8');
 
 test('lattice engine harness is a development-only lazy route backed by the Slice 1A topology', () => {
   assert.match(entry, /import\.meta\.env\.DEV && prototypePath === '\/prototype\/lattice-engine'/);
@@ -20,7 +21,7 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 6 \/ SLICE 4C/);
+  assert.match(source, /PHASE 6 \/ SLICE 4D/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
@@ -33,6 +34,29 @@ test('Phase 6 INSCAPE signature stays fixed, pointer-inert, and presentation-onl
   assert.match(prototypeStyles, /\.lattice-inscape-signature\s*\{[^}]*position: fixed;[^}]*left: 24px;[^}]*bottom: 24px;[^}]*pointer-events: none;/s);
   assert.match(prototypeStyles, /\.lattice-engine-readout\s*\{[^}]*bottom: 78px;/s);
   assert.doesNotMatch(source, /signature.*(?:localStorage|sessionStorage|wallet|publish)/iu);
+});
+
+test('Phase 6 Keeper Dock reuses the real handoff contract inside the dev-only lattice harness', () => {
+  assert.match(source, /LatticeKeeperDockHarness/);
+  assert.match(source, /blocked=\{Boolean\(viewerSession\)\}/);
+  assert.match(keeperHarness, /import KeeperDock from '\.\.\/\.\.\/public\/KeeperDock\.jsx'/);
+  assert.match(keeperHarness, /import ArtCanvas from '\.\.\/\.\.\/components\/Canvas\/ArtCanvas\.jsx'/);
+  for (const method of [
+    'startResidentHandoff',
+    'updateResidentHandoffBounds',
+    'exitResidentHandoff',
+    'cancelResidentHandoff',
+  ]) assert.match(keeperHarness, new RegExp(method));
+  assert.match(keeperHarness, /KEEPER_ID = 'abyssal_eye'/);
+  assert.match(keeperHarness, /id="keeper-dock-underlay"/);
+  assert.match(keeperHarness, /inert=\{blocked \? '' : undefined\}/);
+  assert.match(keeperHarness, /TRANSITIONAL_PHASES = new Set\(\['approaching', 'entering', 'releasing'\]\)/);
+  assert.match(keeperHarness, /onClickCapture=\{blockTransitionActivation\}/);
+  assert.match(prototypeStyles, /--keeper-dock-size: clamp\(84px, 7\.8vw, 112px\)/);
+  assert.match(prototypeStyles, /\.lattice-keeper-dock-layer \.keeper-dock__options,[^}]*\.keeper-dock__menu\s*\{[^}]*display: none;/s);
+  assert.match(prototypeStyles, /\.lattice-keeper-world \*\s*\{[^}]*pointer-events: none !important;/s);
+  assert.match(prototypeStyles, /@media \(prefers-reduced-motion: reduce\)[^{]*\{[^}]*\.lattice-engine-stage/s);
+  assert.doesNotMatch(keeperHarness, /localStorage|sessionStorage|wallet|publish|\bDate\b|Math\.random/iu);
 });
 
 test('Phase 6 navigation controls share the canonical topology without introducing a boxed map', () => {

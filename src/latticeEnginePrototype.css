@@ -329,6 +329,111 @@
   letter-spacing: 0.12em;
 }
 
+.lattice-keeper-world,
+.lattice-keeper-dock-underlay,
+.lattice-keeper-dock-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.lattice-keeper-world {
+  z-index: 4;
+  overflow: hidden;
+}
+
+.lattice-keeper-world * {
+  pointer-events: none !important;
+}
+
+.lattice-keeper-dock-underlay {
+  z-index: 6;
+}
+
+.lattice-keeper-dock-layer {
+  z-index: 7;
+}
+
+.lattice-keeper-dock-layer .keeper-dock,
+.lattice-keeper-dock-underlay .keeper-dock__ghost {
+  --keeper-dock-size: clamp(84px, 7.8vw, 112px);
+  position: fixed;
+  right: 24px;
+  bottom: 18px;
+  width: var(--keeper-dock-size);
+  height: var(--keeper-dock-size);
+}
+
+.lattice-keeper-dock-layer .keeper-dock {
+  z-index: 7;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.lattice-keeper-dock-underlay .keeper-dock__ghost {
+  z-index: 6;
+  pointer-events: none;
+}
+
+.lattice-keeper-dock-underlay .keeper-dock__ghost::before {
+  content: "";
+  position: absolute;
+  inset: 9%;
+  background: #d8d5cc;
+  -webkit-mask: var(--keeper-dock-mask) center / 180% auto no-repeat;
+  mask: var(--keeper-dock-mask) center / 180% auto no-repeat;
+  opacity: 0.28;
+  animation: lattice-keeper-dock-breathe 3.2s ease-in-out infinite;
+  transition: opacity 80ms linear;
+}
+
+.lattice-keeper-dock-underlay .keeper-dock__ghost:is([data-phase="entering"], [data-phase="docked"])::before {
+  opacity: 0;
+  transition-duration: 220ms;
+}
+
+.lattice-keeper-dock-layer .keeper-dock__socket {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+}
+
+.lattice-keeper-dock-layer .keeper-dock__socket:disabled {
+  cursor: default;
+}
+
+.lattice-keeper-dock-layer .keeper-dock:is([data-phase="approaching"], [data-phase="entering"], [data-phase="releasing"]) .keeper-dock__socket {
+  cursor: default;
+}
+
+.lattice-keeper-dock-layer .keeper-dock__socket:focus-visible {
+  outline: 1px solid rgba(216, 213, 204, 0.72);
+  outline-offset: -9px;
+}
+
+.lattice-keeper-dock-layer .keeper-dock__options,
+.lattice-keeper-dock-layer .keeper-dock__menu {
+  display: none;
+}
+
+.lattice-keeper-dock-layer[data-blocked] .keeper-dock {
+  pointer-events: none;
+}
+
+@keyframes lattice-keeper-dock-breathe {
+  0%, 100% { transform: scale(-0.985, 0.985); }
+  50% { transform: scale(-1.015, 1.015); }
+}
+
 .lattice-engine-controls {
   top: 18px;
   right: 18px;
@@ -455,6 +560,12 @@
     display: none;
   }
 
+  .lattice-keeper-dock-layer .keeper-dock,
+  .lattice-keeper-dock-underlay .keeper-dock__ghost {
+    right: 12px;
+    bottom: 12px;
+  }
+
   .lattice-insertion-chooser > div {
     grid-template-columns: 1fr;
     max-height: 58vh;
@@ -476,10 +587,20 @@
   .lattice-inscape-signature span {
     display: none;
   }
+
+  .lattice-keeper-dock-layer .keeper-dock,
+  .lattice-keeper-dock-underlay .keeper-dock__ghost {
+    right: 12px;
+    bottom: 12px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .lattice-engine-stage.is-snapping {
     transition-timing-function: linear;
+  }
+
+  .lattice-keeper-dock-underlay .keeper-dock__ghost::before {
+    animation: none;
   }
 }

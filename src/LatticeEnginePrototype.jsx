@@ -63,6 +63,7 @@ import {
 import LatticeTableRenderer from './lattice/rendering/LatticeTableRenderer.jsx';
 import LatticeGridPlane from './lattice/rendering/LatticeGridPlane.jsx';
 import LatticeFocusViewer from './lattice/rendering/LatticeFocusViewer.jsx';
+import LatticeKeeperDockHarness from './lattice/prototype/LatticeKeeperDockHarness.jsx';
 import { projectTableMediaPlacements } from './lattice/rendering/latticePlacement.js';
 import {
   focusViewerDestination,
@@ -1208,8 +1209,10 @@ export default function LatticeEnginePrototype() {
         <span>SPATIAL PROFILE SYSTEM / ACTIVE</span>
       </div>
 
+      <LatticeKeeperDockHarness blocked={Boolean(viewerSession)} reducedMotion={reducedMotion} />
+
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>FIXED CHROME / PHASE 6 / SLICE 4C</p>
+        <p>FIXED CHROME / PHASE 6 / SLICE 4D</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
         <p>{viewerSession ? 'VIEWING' : snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
