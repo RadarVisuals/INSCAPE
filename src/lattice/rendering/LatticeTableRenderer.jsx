@@ -8,10 +8,12 @@ import {
   projectAuthoredLatticeField,
   projectTableLabelPosition,
 } from './latticeGeometry.js';
+import LatticePlacementRenderer from './LatticePlacementRenderer.jsx';
 import './latticeTableRenderer.css';
 
 export default function LatticeTableRenderer({
   active = false,
+  assetsByStableId = {},
   geometry,
   hidden = false,
   positionStyle,
@@ -35,6 +37,12 @@ export default function LatticeTableRenderer({
         style={{ left: field.left, top: field.top, width: field.width, height: field.height }}
       >
       </div>
+      <LatticePlacementRenderer
+        assetsByStableId={assetsByStableId}
+        geometry={geometry}
+        table={table}
+        viewport={viewport}
+      />
       {labelVisible && (
         <header
           className="lattice-table-renderer__label"

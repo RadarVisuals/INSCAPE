@@ -85,6 +85,37 @@ export function projectAuthoredLatticeField(geometry, viewport, coordinate = { x
   };
 }
 
+export function projectPlacementRectangle(placement, geometry, viewport, coordinate = { x: 0, y: 0 }) {
+  const field = projectAuthoredLatticeField(geometry, viewport, coordinate);
+  return {
+    left: field.left + (placement.column * field.cellSize),
+    top: field.top + (placement.row * field.cellSize),
+    width: placement.columnSpan * field.cellSize,
+    height: placement.rowSpan * field.cellSize,
+  };
+}
+
+export function fitNativeMediaRectangle(rectangle, media) {
+  if (!rectangle
+    || !Number.isFinite(rectangle.left) || !Number.isFinite(rectangle.top)
+    || !Number.isFinite(rectangle.width) || rectangle.width <= 0
+    || !Number.isFinite(rectangle.height) || rectangle.height <= 0
+    || !media
+    || !Number.isFinite(media.width) || media.width <= 0
+    || !Number.isFinite(media.height) || media.height <= 0) {
+    throw new TypeError('Native media fitting requires positive placement and media dimensions');
+  }
+  const scale = Math.min(rectangle.width / media.width, rectangle.height / media.height);
+  const width = media.width * scale;
+  const height = media.height * scale;
+  return {
+    left: rectangle.left + ((rectangle.width - width) / 2),
+    top: rectangle.top + ((rectangle.height - height) / 2),
+    width,
+    height,
+  };
+}
+
 export function semanticGridVariables(geometry, viewport, stageOrigin = { x: 0, y: 0 }) {
   const field = projectAuthoredLatticeField(geometry, viewport);
   return {

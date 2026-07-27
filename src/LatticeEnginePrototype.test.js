@@ -13,7 +13,20 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
+  assert.match(source, /PHASE 2 \/ SLICE 1D/);
+  assert.match(source, /createFixturePlacements/);
+  assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
+});
+
+test('Phase 2 fixture composition belongs permanently to the authored center table', () => {
+  assert.match(source, /isAuthoredTable = coordinate\.x === 0 && coordinate\.y === 0/);
+  assert.match(source, /placements: isAuthoredTable/);
+  assert.doesNotMatch(source, /placements: isActive/);
+  assert.match(source, /TRANSPARENCY_MODES\.AUTO/);
+  assert.match(source, /TRANSPARENCY_MODES\.PRESERVE_ALPHA/);
+  assert.match(source, /Object\.values\(TRANSPARENCY_MODES\)/);
+  assert.doesNotMatch(source, /crop:\s*\{/);
 });
 
 test('renderer controls exercise geometry and label contract values without persistence', () => {

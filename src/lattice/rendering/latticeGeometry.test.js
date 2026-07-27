@@ -7,7 +7,9 @@ import {
   LATTICE_SURFACES,
   assertRenderGeometry,
   normalizeLatticeSurface,
+  fitNativeMediaRectangle,
   projectAuthoredLatticeField,
+  projectPlacementRectangle,
   projectTableLabelPosition,
   semanticGridVariables,
 } from './latticeGeometry.js';
@@ -54,6 +56,20 @@ test('neighboring authored fields snap to one shared stage-grid phase', () => {
   const cellsBetweenOrigins = (viewport.height + below.top - center.top) / center.cellSize;
   assert.equal(Number.isInteger(cellsBetweenOrigins), true);
   assert.equal(below.left, center.left);
+});
+
+test('placement projection uses authored cells and native media is centered with contain semantics', () => {
+  const footprint = projectPlacementRectangle({
+    column: 2, row: 1, columnSpan: 4, rowSpan: 3,
+  }, { columns: 10, rows: 8 }, { width: 1000, height: 800 });
+  assert.deepEqual(footprint, { left: 200, top: 100, width: 400, height: 300 });
+  assert.deepEqual(fitNativeMediaRectangle(footprint, { width: 400, height: 200 }), {
+    left: 200, top: 150, width: 400, height: 200,
+  });
+  assert.deepEqual(fitNativeMediaRectangle(footprint, { width: 100, height: 200 }), {
+    left: 325, top: 100, width: 150, height: 300,
+  });
+  assert.throws(() => fitNativeMediaRectangle(footprint, { width: 0, height: 200 }), /positive placement and media/);
 });
 
 test('label anchors project onto semantic cells with global bounded offsets', () => {

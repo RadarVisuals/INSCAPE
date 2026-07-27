@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  FRAME_IDS,
   LATTICE_COORDINATES,
   TABLE_LABEL_ANCHORS,
   TABLE_VISIBILITY,
+  TRANSPARENCY_MODES,
+  latticeTableId,
   latticeTableFallbackTitle,
 } from './lattice/domain/latticeProfile.js';
 import {
@@ -37,6 +40,77 @@ const CONTROL_FIELDS = [
 
 const interactiveChrome = (target) => target.closest('[data-lattice-chrome]');
 
+const FIXTURE_ASSET_IDS = Object.freeze({
+  landscape: '42:0x1111111111111111111111111111111111111111:0x01',
+  portrait: '42:0x2222222222222222222222222222222222222222:0x02',
+  transparent: '42:0x3333333333333333333333333333333333333333:0x03',
+});
+
+const FIXTURE_MEDIA = Object.freeze({
+  [FIXTURE_ASSET_IDS.landscape]: Object.freeze({
+    src: '/assets/stage/backdrops/backdrop_moonpurple.webp',
+    width: 4636,
+    height: 2000,
+    accessibleLabel: 'Landscape rendering fixture',
+  }),
+  [FIXTURE_ASSET_IDS.portrait]: Object.freeze({
+    src: '/assets/ratio/3.webp',
+    width: 2000,
+    height: 2829,
+    accessibleLabel: 'Portrait rendering fixture',
+  }),
+  [FIXTURE_ASSET_IDS.transparent]: Object.freeze({
+    src: '/assets/actors/abyssal_eye/full.webp',
+    width: 2000,
+    height: 2000,
+    accessibleLabel: 'Transparent rendering fixture',
+  }),
+});
+
+const scaledFixturePlacement = (geometry, values) => ({
+  column: Math.floor(geometry.columns * values.column),
+  row: Math.floor(geometry.rows * values.row),
+  columnSpan: Math.max(1, Math.floor(geometry.columns * values.columnSpan)),
+  rowSpan: Math.max(1, Math.floor(geometry.rows * values.rowSpan)),
+});
+
+function createFixturePlacements(geometry, transparencyMode, layersSwapped) {
+  const common = {
+    crop: null,
+    frameId: FRAME_IDS.NONE,
+    visitorVisible: true,
+  };
+  return [
+    {
+      ...common,
+      id: 'phase-2-landscape',
+      stableAssetId: FIXTURE_ASSET_IDS.landscape,
+      ...scaledFixturePlacement(geometry, { column: 0.42, row: 0.17, columnSpan: 0.42, rowSpan: 0.28 }),
+      layer: 0,
+      navigationOrder: 2,
+      transparencyMode: TRANSPARENCY_MODES.AUTO,
+    },
+    {
+      ...common,
+      id: 'phase-2-portrait',
+      stableAssetId: FIXTURE_ASSET_IDS.portrait,
+      ...scaledFixturePlacement(geometry, { column: 0.17, row: 0.17, columnSpan: 0.3, rowSpan: 0.62 }),
+      layer: layersSwapped ? 2 : 1,
+      navigationOrder: 0,
+      transparencyMode: TRANSPARENCY_MODES.PRESERVE_ALPHA,
+    },
+    {
+      ...common,
+      id: 'phase-2-transparent',
+      stableAssetId: FIXTURE_ASSET_IDS.transparent,
+      ...scaledFixturePlacement(geometry, { column: 0.18, row: 0.32, columnSpan: 0.38, rowSpan: 0.42 }),
+      layer: layersSwapped ? 1 : 2,
+      navigationOrder: 1,
+      transparencyMode,
+    },
+  ];
+}
+
 const createDefaultRenderPreview = () => ({
   geometry: { ...PROTOTYPE_START_GEOMETRY },
   surfaceId: LATTICE_SURFACES[0].id,
@@ -45,6 +119,8 @@ const createDefaultRenderPreview = () => ({
   labelVisible: true,
   labelAnchor: 'top-left',
   labelOffset: { column: 0, row: 0 },
+  transparencyMode: TRANSPARENCY_MODES.AUTO,
+  layersSwapped: false,
 });
 
 export default function LatticeEnginePrototype() {
@@ -236,18 +312,28 @@ export default function LatticeEnginePrototype() {
         >
           {LATTICE_COORDINATES.map((coordinate) => {
             const isActive = coordinate.x === active.x && coordinate.y === active.y;
+            const isAuthoredTable = coordinate.x === 0 && coordinate.y === 0;
             const table = {
+              id: latticeTableId(coordinate),
               coordinate,
-              title: isActive ? renderPreview.title : '',
-              subtitle: isActive ? renderPreview.subtitle : '',
-              labelVisible: isActive ? renderPreview.labelVisible : true,
-              labelAnchor: isActive ? renderPreview.labelAnchor : 'top-left',
-              labelOffset: isActive ? renderPreview.labelOffset : { column: 0, row: 0 },
+              title: isAuthoredTable ? renderPreview.title : '',
+              subtitle: isAuthoredTable ? renderPreview.subtitle : '',
+              labelVisible: isAuthoredTable ? renderPreview.labelVisible : true,
+              labelAnchor: isAuthoredTable ? renderPreview.labelAnchor : 'top-left',
+              labelOffset: isAuthoredTable ? renderPreview.labelOffset : { column: 0, row: 0 },
               visibility: TABLE_VISIBILITY.PUBLIC,
+              placements: isAuthoredTable
+                ? createFixturePlacements(
+                    renderPreview.geometry,
+                    renderPreview.transparencyMode,
+                    renderPreview.layersSwapped,
+                  )
+                : [],
             };
             return (
               <LatticeTableRenderer
                 active={isActive}
+                assetsByStableId={FIXTURE_MEDIA}
                 geometry={renderPreview.geometry}
                 hidden={!isActive}
                 key={`${coordinate.x}:${coordinate.y}`}
@@ -266,7 +352,7 @@ export default function LatticeEnginePrototype() {
       </section>
 
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE RENDERER / SLICE 1C</p>
+        <p>LATTICE RENDERER / PHASE 2 / SLICE 1D</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
         <p>{snapping ? 'SETTLING' : gestureActive ? 'DIRECT MANIPULATION' : 'READY'}</p>
@@ -295,6 +381,10 @@ export default function LatticeEnginePrototype() {
             <label><span>Surface</span><select value={renderPreview.surfaceId} onChange={(event) => setRenderPreview((current) => ({ ...current, surfaceId: event.target.value }))}>
               {LATTICE_SURFACES.map((surface) => <option value={surface.id} key={surface.id}>{surface.label}</option>)}
             </select></label>
+            <label><span>Transparency</span><select value={renderPreview.transparencyMode} onChange={(event) => setRenderPreview((current) => ({ ...current, transparencyMode: event.target.value }))}>
+              {Object.values(TRANSPARENCY_MODES).map((mode) => <option value={mode} key={mode}>{mode}</option>)}
+            </select></label>
+            <label className="is-check"><span>Swap layers</span><input type="checkbox" checked={renderPreview.layersSwapped} onChange={(event) => setRenderPreview((current) => ({ ...current, layersSwapped: event.target.checked }))} /></label>
             <label className="is-wide"><span>Title</span><input type="text" maxLength="80" placeholder="EMPTY / FALLBACK" value={renderPreview.title} onChange={(event) => setRenderPreview((current) => ({ ...current, title: event.target.value }))} /></label>
             <label className="is-wide"><span>Subtitle</span><input type="text" maxLength="120" placeholder="OPTIONAL" value={renderPreview.subtitle} onChange={(event) => setRenderPreview((current) => ({ ...current, subtitle: event.target.value }))} /></label>
             <label><span>Anchor</span><select value={renderPreview.labelAnchor} onChange={(event) => setRenderPreview((current) => ({ ...current, labelAnchor: event.target.value }))}>
