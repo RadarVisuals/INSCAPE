@@ -29,6 +29,20 @@ export function latticeDestination(coordinate, direction) {
   return isLatticeCoordinate(candidate) ? candidate : null;
 }
 
+export function latticeCardinalDestinations(coordinate) {
+  return {
+    left: latticeDestination(coordinate, { x: -1, y: 0 }),
+    right: latticeDestination(coordinate, { x: 1, y: 0 }),
+    up: latticeDestination(coordinate, { x: 0, y: -1 }),
+    down: latticeDestination(coordinate, { x: 0, y: 1 }),
+  };
+}
+
+export function latticeMapFocusDestination(coordinate, key) {
+  const direction = keyboardDirection(key);
+  return direction ? latticeDestination(coordinate, direction) : null;
+}
+
 export function pointerDirection(delta, diagonalTolerance) {
   const horizontal = Math.abs(delta.x);
   const vertical = Math.abs(delta.y);

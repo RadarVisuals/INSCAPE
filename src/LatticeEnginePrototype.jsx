@@ -16,7 +16,9 @@ import {
   entryLatticeCoordinate,
   finishPointerGesture,
   keyboardDirection,
+  latticeCardinalDestinations,
   latticeDestination,
+  latticeMapFocusDestination,
   resolveWheelDestination,
   updatePointerGesture,
 } from './lattice/controller/latticeNavigation.js';
@@ -106,6 +108,71 @@ const clampValue = (value, minimum, maximum) => Math.min(maximum, Math.max(minim
 const interactiveChrome = (target) => target.closest('[data-lattice-chrome]');
 const unmodifiedPrimaryPointer = (event) => event.button === 0
   && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+
+const DIRECTION_CONTROL_LABELS = Object.freeze({
+  left: 'Navigate to table on the left',
+  right: 'Navigate to table on the right',
+  up: 'Navigate to table above',
+  down: 'Navigate to table below',
+});
+
+function LatticeNavigationOverlay({ active, onNavigate, onReturnFocus }) {
+  const mapRef = useRef(null);
+  const neighbors = latticeCardinalDestinations(active);
+
+  const focusMapCoordinate = (coordinate) => {
+    mapRef.current
+      ?.querySelector(`[data-coordinate="${coordinate.x}:${coordinate.y}"]`)
+      ?.focus({ preventScroll: true });
+  };
+
+  const handleMapKeyDown = (event, coordinate) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      onReturnFocus();
+      return;
+    }
+    const destination = latticeMapFocusDestination(coordinate, event.key);
+    if (!destination) return;
+    event.preventDefault();
+    event.stopPropagation();
+    focusMapCoordinate(destination);
+  };
+
+  return (
+    <div className="lattice-navigation-overlay" data-lattice-chrome>
+      {Object.entries(neighbors).map(([direction, destination]) => destination && (
+        <button
+          aria-label={DIRECTION_CONTROL_LABELS[direction]}
+          className={`lattice-direction-chevron is-${direction}`}
+          key={direction}
+          onClick={() => onNavigate(destination)}
+          onPointerDown={(event) => event.stopPropagation()}
+          type="button"
+        />
+      ))}
+      <div className="lattice-coordinate-map" ref={mapRef} role="group" aria-label="Lattice table navigator">
+        {LATTICE_COORDINATES.map((coordinate) => {
+          const isActive = coordinate.x === active.x && coordinate.y === active.y;
+          return (
+            <button
+              aria-current={isActive ? 'location' : undefined}
+              aria-label={isActive ? 'Current table' : `Navigate to table ${coordinate.x + 2}, ${coordinate.y + 2}`}
+              className={isActive ? 'is-active' : ''}
+              data-coordinate={`${coordinate.x}:${coordinate.y}`}
+              key={`${coordinate.x}:${coordinate.y}`}
+              onClick={() => onNavigate(coordinate)}
+              onKeyDown={(event) => handleMapKeyDown(event, coordinate)}
+              onPointerDown={(event) => event.stopPropagation()}
+              type="button"
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 const FIXTURE_ASSET_IDS = Object.freeze({
   landscape: '42:0x1111111111111111111111111111111111111111:0x01',
@@ -797,6 +864,12 @@ export default function LatticeEnginePrototype() {
     settle(destination, { x: 0, y: 0 });
   };
 
+  const navigateWithOverlay = useCallback((destination) => {
+    if (settlingRef.current || gestureRef.current) return;
+    if (destination.x === activeRef.current.x && destination.y === activeRef.current.y) return;
+    settle(destination, { x: 0, y: 0 });
+  }, [settle]);
+
   const stageX = -((active.x + 1) * dimensions.width) + dragOffset.x;
   const stageY = -((active.y + 1) * dimensions.height) + dragOffset.y;
   const snapDuration = reducedMotion ? 0 : config.snapDuration;
@@ -1105,6 +1178,13 @@ export default function LatticeEnginePrototype() {
             </section>
           </div>
         )}
+        {!arrangeEnabled && !viewerSession && (
+          <LatticeNavigationOverlay
+            active={active}
+            onNavigate={navigateWithOverlay}
+            onReturnFocus={() => viewportRef.current?.focus({ preventScroll: true })}
+          />
+        )}
       </section>
 
       {viewerSession && viewerEntry && (
@@ -1124,7 +1204,7 @@ export default function LatticeEnginePrototype() {
       )}
 
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE VIEWER / PHASE 5 / SLICE 3C</p>
+        <p>LATTICE NAVIGATION / PHASE 6 / SLICE 4A + 4B</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
         <p>{viewerSession ? 'VIEWING' : snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>

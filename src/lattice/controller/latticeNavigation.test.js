@@ -8,7 +8,9 @@ import {
   entryLatticeCoordinate,
   finishPointerGesture,
   keyboardDirection,
+  latticeCardinalDestinations,
   latticeDestination,
+  latticeMapFocusDestination,
   pointerDirection,
   resolveWheelDestination,
   updatePointerGesture,
@@ -90,4 +92,26 @@ test('keyboard directions and fresh entry coordinate are deterministic', () => {
   assert.deepEqual(keyboardDirection('ArrowDown'), { x: 0, y: 1 });
   assert.equal(keyboardDirection('Enter'), null);
   assert.deepEqual(entryLatticeCoordinate(), { x: 0, y: 0 });
+});
+
+test('cardinal controls expose only neighbors inside the permanent topology', () => {
+  assert.deepEqual(latticeCardinalDestinations({ x: 0, y: 0 }), {
+    left: { x: -1, y: 0 },
+    right: { x: 1, y: 0 },
+    up: { x: 0, y: -1 },
+    down: { x: 0, y: 1 },
+  });
+  assert.deepEqual(latticeCardinalDestinations({ x: -1, y: -1 }), {
+    left: null,
+    right: { x: 0, y: -1 },
+    up: null,
+    down: { x: -1, y: 0 },
+  });
+});
+
+test('map keyboard focus follows topology and stops at its edges', () => {
+  assert.deepEqual(latticeMapFocusDestination({ x: 0, y: 0 }, 'ArrowRight'), { x: 1, y: 0 });
+  assert.deepEqual(latticeMapFocusDestination({ x: 0, y: 0 }, 'ArrowUp'), { x: 0, y: -1 });
+  assert.equal(latticeMapFocusDestination({ x: 1, y: 0 }, 'ArrowRight'), null);
+  assert.equal(latticeMapFocusDestination({ x: 0, y: 0 }, 'Enter'), null);
 });

@@ -11,6 +11,7 @@ const lifecycleController = readFileSync(new URL('./lattice/controller/latticePl
 const insertionController = readFileSync(new URL('./lattice/controller/latticePlacementInsertion.js', import.meta.url), 'utf8');
 const focusViewer = readFileSync(new URL('./lattice/rendering/LatticeFocusViewer.jsx', import.meta.url), 'utf8');
 const focusViewerStyles = readFileSync(new URL('./lattice/rendering/latticeFocusViewer.css', import.meta.url), 'utf8');
+const prototypeStyles = readFileSync(new URL('./latticeEnginePrototype.css', import.meta.url), 'utf8');
 
 test('lattice engine harness is a development-only lazy route backed by the Slice 1A topology', () => {
   assert.match(entry, /import\.meta\.env\.DEV && prototypePath === '\/prototype\/lattice-engine'/);
@@ -19,10 +20,24 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 5 \/ SLICE 3C/);
+  assert.match(source, /PHASE 6 \/ SLICE 4A \+ 4B/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
+});
+
+test('Phase 6 navigation controls share the canonical topology without introducing a boxed map', () => {
+  assert.match(source, /latticeCardinalDestinations\(active\)/);
+  assert.match(source, /LATTICE_COORDINATES\.map\(\(coordinate\)/);
+  assert.match(source, /!arrangeEnabled && !viewerSession/);
+  assert.match(source, /aria-current=\{isActive \? 'location'/);
+  assert.match(source, /latticeMapFocusDestination/);
+  assert.match(source, /event\.key === 'Escape'/);
+  assert.match(source, /settlingRef\.current \|\| gestureRef\.current/);
+  assert.match(prototypeStyles, /\.lattice-coordinate-map\s*\{[^}]*grid-template-columns: repeat\(3, 22px\);/s);
+  assert.match(prototypeStyles, /\.lattice-direction-chevron\.is-down\s*\{[^}]*bottom: 104px;/s);
+  assert.doesNotMatch(prototypeStyles, /\.lattice-coordinate-map\s*\{[^}]*(?:background|border|box-shadow):/s);
+  assert.doesNotMatch(source, /table\.title|tableDisplayTitle/);
 });
 
 test('Phase 5 focus viewer opens only from view mode and preserves the live lattice origin', () => {

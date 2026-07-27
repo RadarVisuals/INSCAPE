@@ -68,6 +68,116 @@
   transition: transform var(--lattice-snap-duration) cubic-bezier(0.2, 0.72, 0.22, 1);
 }
 
+.lattice-navigation-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.lattice-direction-chevron,
+.lattice-coordinate-map button {
+  appearance: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #d8d5cc;
+  pointer-events: auto;
+}
+
+.lattice-direction-chevron {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  opacity: 0.72;
+  cursor: pointer;
+}
+
+.lattice-direction-chevron::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 11px;
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid currentColor;
+  border-right: 1px solid currentColor;
+}
+
+.lattice-direction-chevron.is-left { left: 12px; top: 50%; transform: translateY(-50%); }
+.lattice-direction-chevron.is-right { right: 12px; top: 50%; transform: translateY(-50%); }
+.lattice-direction-chevron.is-up { left: 50%; top: 12px; transform: translateX(-50%); }
+.lattice-direction-chevron.is-down { left: 50%; bottom: 104px; transform: translateX(-50%); }
+.lattice-direction-chevron.is-left::before { transform: rotate(-135deg); }
+.lattice-direction-chevron.is-right::before { transform: rotate(45deg); }
+.lattice-direction-chevron.is-up::before { transform: rotate(-45deg); }
+.lattice-direction-chevron.is-down::before { transform: rotate(135deg); }
+
+.lattice-direction-chevron:hover,
+.lattice-direction-chevron:focus-visible {
+  opacity: 1;
+  outline: 1px solid rgba(216, 213, 204, 0.58);
+  outline-offset: -5px;
+}
+
+.lattice-coordinate-map {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, 22px);
+  grid-template-rows: repeat(3, 22px);
+  gap: 3px;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.lattice-coordinate-map button {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.lattice-coordinate-map button::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(216, 213, 204, 0.68);
+}
+
+.lattice-coordinate-map button.is-active::before {
+  border-color: #d8d5cc;
+  background: #d8d5cc;
+}
+
+.lattice-coordinate-map button:hover::before,
+.lattice-coordinate-map button:focus-visible::before {
+  border-color: #fffdf4;
+  box-shadow: 0 0 0 1px rgba(255, 253, 244, 0.35);
+}
+
+.lattice-coordinate-map button:focus-visible {
+  outline: none;
+}
+
+@media (max-width: 640px), (max-height: 520px) {
+  .lattice-coordinate-map {
+    bottom: 10px;
+    transform: translateX(-50%) scale(0.86);
+  }
+
+  .lattice-direction-chevron.is-down {
+    bottom: 88px;
+  }
+}
+
 .lattice-insertion-menu {
   position: absolute;
   z-index: 10;
