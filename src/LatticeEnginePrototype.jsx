@@ -64,6 +64,7 @@ import LatticeTableRenderer from './lattice/rendering/LatticeTableRenderer.jsx';
 import LatticeGridPlane from './lattice/rendering/LatticeGridPlane.jsx';
 import LatticeFocusViewer from './lattice/rendering/LatticeFocusViewer.jsx';
 import LatticeKeeperDockHarness from './lattice/prototype/LatticeKeeperDockHarness.jsx';
+import LatticeProfileRail from './lattice/rendering/LatticeProfileRail.jsx';
 import { projectTableMediaPlacements } from './lattice/rendering/latticePlacement.js';
 import {
   focusViewerDestination,
@@ -116,6 +117,13 @@ const DIRECTION_CONTROL_LABELS = Object.freeze({
   up: 'Navigate to table above',
   down: 'Navigate to table below',
 });
+
+const PROFILE_RAIL_ENTRIES = Object.freeze([
+  { id: 'categories', label: 'CATEGORIES', note: 'PUBLIC STRUCTURE' },
+  { id: 'creations', label: 'CREATIONS', note: 'AUTHORED WORK' },
+  { id: 'activity', label: 'ACTIVITY', note: 'PROFILE SIGNALS' },
+  { id: 'discover', label: 'DISCOVER', note: 'PUBLIC PROFILES' },
+]);
 
 function LatticeNavigationOverlay({ active, onNavigate, onReturnFocus }) {
   const mapRef = useRef(null);
@@ -358,6 +366,8 @@ export default function LatticeEnginePrototype() {
   const [framingPreview, setFramingPreview] = useState(null);
   const [insertionFlow, setInsertionFlow] = useState(null);
   const [viewerSession, setViewerSession] = useState(null);
+  const [profileRailCollapsed, setProfileRailCollapsed] = useState(false);
+  const [activeProfileEntryId, setActiveProfileEntryId] = useState(null);
   const framingBounds = latticeArtboardFramingBounds(
     CANONICAL_LATTICE_ARTBOARD,
     dimensions,
@@ -1211,8 +1221,24 @@ export default function LatticeEnginePrototype() {
 
       <LatticeKeeperDockHarness blocked={Boolean(viewerSession)} reducedMotion={reducedMotion} />
 
+      <LatticeProfileRail
+        activeEntryId={activeProfileEntryId}
+        blocked={Boolean(viewerSession)}
+        collapsed={profileRailCollapsed}
+        compact={dimensions.width <= 640}
+        entries={PROFILE_RAIL_ENTRIES}
+        officialIdentity={null}
+        onCollapsedChange={setProfileRailCollapsed}
+        onEntryActivate={setActiveProfileEntryId}
+        onIdentityActivate={() => setActiveProfileEntryId('identity')}
+        onEscape={() => {
+          setActiveProfileEntryId(null);
+          viewportRef.current?.focus({ preventScroll: true });
+        }}
+      />
+
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>FIXED CHROME / PHASE 6 / SLICE 4D</p>
+        <p>FIXED CHROME / PHASE 6 / SLICE 4E</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
         <p>{viewerSession ? 'VIEWING' : snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>

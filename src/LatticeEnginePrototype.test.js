@@ -21,10 +21,23 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 6 \/ SLICE 4D/);
+  assert.match(source, /PHASE 6 \/ SLICE 4E/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
+});
+
+test('Phase 6 profile rail stays an unresolved session-only public-navigation probe', () => {
+  assert.match(source, /LatticeProfileRail/);
+  assert.match(source, /PROFILE_RAIL_ENTRIES/);
+  for (const label of ['CATEGORIES', 'CREATIONS', 'ACTIVITY', 'DISCOVER']) {
+    assert.match(source, new RegExp(`label: '${label}'`));
+  }
+  assert.match(source, /officialIdentity=\{null\}/);
+  assert.match(source, /compact=\{dimensions\.width <= 640\}/);
+  assert.match(source, /blocked=\{Boolean\(viewerSession\)\}/);
+  assert.match(source, /setActiveProfileEntryId\(null\)/);
+  assert.doesNotMatch(source, /profileRail.*(?:localStorage|sessionStorage|wallet|publish)/iu);
 });
 
 test('Phase 6 INSCAPE signature stays fixed, pointer-inert, and presentation-only', () => {
