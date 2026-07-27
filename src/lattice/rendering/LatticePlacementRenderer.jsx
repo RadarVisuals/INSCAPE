@@ -9,6 +9,7 @@ export default function LatticePlacementRenderer({
   arrangeEnabled = false,
   artboard,
   assetsByStableId,
+  cropEditingPlacementId = null,
   framing,
   onPlacementFocus,
   onPlacementPointerDown,
@@ -24,10 +25,10 @@ export default function LatticePlacementRenderer({
 
   return (
     <div className={`lattice-placement-layer${arrangeEnabled ? ' is-arranging' : ''}`} data-table-id={table.id}>
-      {renderEntries.map(({ media, mediaRectangle, placement, transparencyMode }) => (
+      {renderEntries.map(({ cropped, imageRectangle, media, mediaRectangle, placement, transparencyMode }) => (
         <div
           aria-label={typeof media.accessibleLabel === 'string' ? media.accessibleLabel : 'Artwork placement'}
-          className={`lattice-placement-media${transparencyMode === TRANSPARENCY_MODES.OPAQUE ? ' is-opaque' : ''}${selectedPlacementId === placement.id ? ' is-selected' : ''}`}
+          className={`lattice-placement-media${cropped ? ' is-cropped' : ''}${cropEditingPlacementId === placement.id ? ' is-crop-editing' : ''}${transparencyMode === TRANSPARENCY_MODES.OPAQUE ? ' is-opaque' : ''}${selectedPlacementId === placement.id ? ' is-selected' : ''}`}
           data-placement-id={placement.id}
           data-transparency-mode={transparencyMode}
           key={placement.id}
@@ -47,13 +48,25 @@ export default function LatticePlacementRenderer({
             alt={typeof media.accessibleLabel === 'string' ? media.accessibleLabel : ''}
             draggable="false"
             src={media.src}
+            style={{
+              left: imageRectangle.left - mediaRectangle.left,
+              top: imageRectangle.top - mediaRectangle.top,
+              width: imageRectangle.width,
+              height: imageRectangle.height,
+            }}
           />
         </div>
       ))}
       {selectedEntry && (
         <div
-          aria-hidden="true"
-          className="lattice-placement-selection-overlay"
+          aria-hidden={cropEditingPlacementId === selectedEntry.placement.id ? undefined : true}
+          aria-label={cropEditingPlacementId === selectedEntry.placement.id ? `Edit crop for ${typeof selectedEntry.media.accessibleLabel === 'string' ? selectedEntry.media.accessibleLabel : 'artwork'}` : undefined}
+          className={`lattice-placement-selection-overlay${cropEditingPlacementId === selectedEntry.placement.id ? ' is-crop-editing' : ''}`}
+          data-crop-placement-id={cropEditingPlacementId === selectedEntry.placement.id ? selectedEntry.placement.id : undefined}
+          onPointerDown={cropEditingPlacementId === selectedEntry.placement.id
+            ? (event) => onPlacementPointerDown?.(event, selectedEntry.placement)
+            : undefined}
+          role={cropEditingPlacementId === selectedEntry.placement.id ? 'button' : undefined}
           style={{
             left: selectedEntry.mediaRectangle.left,
             top: selectedEntry.mediaRectangle.top,
@@ -61,8 +74,9 @@ export default function LatticePlacementRenderer({
             height: selectedEntry.mediaRectangle.height,
             zIndex: Math.max(...renderEntries.map(({ placement }) => placement.layer)) + 1,
           }}
+          tabIndex={cropEditingPlacementId === selectedEntry.placement.id ? -1 : undefined}
         >
-          {PLACEMENT_RESIZE_CORNERS.map((corner) => (
+          {cropEditingPlacementId !== selectedEntry.placement.id && PLACEMENT_RESIZE_CORNERS.map((corner) => (
             <span
               className={`lattice-placement-resize-handle is-${corner}`}
               data-resize-corner={corner}

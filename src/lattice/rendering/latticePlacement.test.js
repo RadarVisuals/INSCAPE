@@ -55,6 +55,22 @@ test('cover framing offset projects the complete owned composition with the tabl
   assert.equal(entry.tableId, 'table-05');
 });
 
+test('explicit crop uses its placement as a mask and cover-projects native media beneath it', () => {
+  const [entry] = projectTableMediaPlacements({
+    artboard: CANONICAL_LATTICE_ARTBOARD,
+    assetsByStableId: media,
+    table: table('table-05', { x: 0, y: 0 }, [placement({
+      width: 0.25,
+      height: 4 / 9,
+      crop: { x: 0.5, y: 0.5, zoom: 1 },
+    })]),
+    viewport: { width: 1600, height: 900 },
+  });
+  assert.equal(entry.cropped, true);
+  assert.deepEqual(entry.mediaRectangle, { left: 0, top: 0, width: 400, height: 400 });
+  assert.deepEqual(entry.imageRectangle, { left: -200, top: 0, width: 800, height: 400 });
+});
+
 test('navigationOrder alone controls DOM projection order while layer remains independent', () => {
   const placements = [
     placement({ id: 'later', navigationOrder: 2, layer: 0 }),
@@ -96,6 +112,18 @@ test('only the selected arranged placement exposes four pointer-only corner resi
   assert.match(styles, /\.lattice-placement-selection-overlay\s*\{[^}]*pointer-events: none;/s);
   assert.match(styles, /\.lattice-placement-resize-handle\s*\{[^}]*width: 24px;[^}]*height: 24px;/s);
   assert.match(styles, /\.lattice-placement-resize-handle::after\s*\{[^}]*width: 7px;[^}]*height: 7px;/s);
+});
+
+test('crop masking is explicit, transparent by default, and hides resize handles while focus is edited', () => {
+  const source = readFileSync(new URL('./LatticePlacementRenderer.jsx', import.meta.url), 'utf8');
+  const styles = readFileSync(new URL('./latticePlacementRenderer.css', import.meta.url), 'utf8');
+  assert.match(source, /cropped \? ' is-cropped'/);
+  assert.match(source, /cropEditingPlacementId !== selectedEntry\.placement\.id/);
+  assert.match(source, /data-crop-placement-id/);
+  assert.match(source, /left: imageRectangle\.left - mediaRectangle\.left/);
+  assert.match(styles, /\.lattice-placement-media\.is-cropped\s*\{[^}]*overflow: hidden/s);
+  assert.doesNotMatch(styles, /\.lattice-placement-media\.is-cropped\s*\{[^}]*(background|border):/s);
+  assert.match(styles, /\.lattice-placement-selection-overlay\.is-crop-editing\s*\{[^}]*pointer-events: auto/s);
 });
 
 test('OPAQUE background is bounded by the fitted native-media rectangle, never the cell footprint', () => {

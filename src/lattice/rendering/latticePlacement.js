@@ -6,6 +6,7 @@ import {
   fitNativeMediaRectangle,
   projectPlacementRectangle,
 } from './latticeGeometry.js';
+import { projectCroppedMediaRectangle } from './latticeCrop.js';
 
 export function resolvedTransparencyMode(mode) {
   return mode === TRANSPARENCY_MODES.OPAQUE
@@ -24,9 +25,15 @@ export function projectTableMediaPlacements({
     const media = assetsByStableId?.[placement.stableAssetId];
     if (!media) return [];
     const footprint = projectPlacementRectangle(placement, artboard, viewport, framing);
+    const cropped = placement.crop != null;
+    const mediaRectangle = cropped ? footprint : fitNativeMediaRectangle(footprint, media);
     return [{
+      cropped,
+      imageRectangle: cropped
+        ? projectCroppedMediaRectangle(mediaRectangle, media, placement.crop)
+        : mediaRectangle,
       media,
-      mediaRectangle: fitNativeMediaRectangle(footprint, media),
+      mediaRectangle,
       placement,
       tableId: table.id,
       transparencyMode: resolvedTransparencyMode(placement.transparencyMode),

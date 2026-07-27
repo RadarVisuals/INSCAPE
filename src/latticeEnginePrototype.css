@@ -37,6 +37,15 @@
   cursor: move;
 }
 
+.lattice-engine-viewport .lattice-placement-media.is-crop-editing {
+  cursor: grab;
+}
+
+.lattice-engine-viewport.is-crop-dragging,
+.lattice-engine-viewport.is-crop-dragging .lattice-placement-media.is-crop-editing {
+  cursor: grabbing;
+}
+
 .lattice-engine-viewport:focus-visible::after {
   content: "";
   position: absolute;

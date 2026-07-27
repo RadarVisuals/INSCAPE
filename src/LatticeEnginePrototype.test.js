@@ -15,7 +15,7 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 4 \/ SLICE 2E/);
+  assert.match(source, /PHASE 4 \/ SLICE 2F/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
@@ -81,6 +81,25 @@ test('bounded cover framing uses Space-drag without becoming free lattice camera
   assert.match(source, /framing=\{framing\}/);
   assert.match(source, /projectedArtboard/);
   assert.doesNotMatch(source, /persistFraming|framing.*localStorage|framing.*sessionStorage/iu);
+});
+
+test('square crop authoring is explicit, reversible, session-only and separate from frames', () => {
+  for (const token of [
+    'squareCropPlacement',
+    'restoreNativePlacement',
+    'createCropFocusGesture',
+    "kind: 'crop'",
+    'nudgeCropFocus',
+    'setCropZoom',
+    'SQUARE CROP',
+    'EDIT CROP',
+    'DONE CROP',
+    'REMOVE CROP',
+    'CROPPING',
+  ]) assert.match(source, new RegExp(token));
+  assert.match(source, /spaceHeldRef\.current \|\| !arrangeEnabled/);
+  assert.doesNotMatch(source, /FRAME_IDS\.(DOSSIER|CAPTION)/);
+  assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/);
 });
 
 test('Swap layers reverses the complete fixture stack without touching navigation order', () => {

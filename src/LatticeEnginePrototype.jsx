@@ -32,6 +32,15 @@ import {
   updatePlacementResizeGesture,
 } from './lattice/controller/latticePlacementResize.js';
 import {
+  createCropFocusGesture,
+  finishCropFocusGesture,
+  nudgeCropFocus,
+  restoreNativePlacement,
+  setCropZoom,
+  squareCropPlacement,
+  updateCropFocusGesture,
+} from './lattice/controller/latticePlacementCrop.js';
+import {
   createArtboardFramingGesture,
   finishArtboardFramingGesture,
   updateArtboardFramingGesture,
@@ -46,6 +55,7 @@ import {
   clampLatticeArtboardOffset,
   latticeArtboardFramingBounds,
   projectCanonicalLatticeArtboard,
+  projectPlacementRectangle,
 } from './lattice/rendering/latticeGeometry.js';
 import './latticeEnginePrototype.css';
 
@@ -137,11 +147,19 @@ const createDefaultPlacementBounds = () => Object.fromEntries(
     .map((placement) => [placement.id, boundsFromPlacement(placement)]),
 );
 
-function applyPlacementBounds(placements, placementBounds, preview) {
+const createDefaultPlacementCrops = () => Object.fromEntries(
+  createFixturePlacements(TRANSPARENCY_MODES.AUTO, false)
+    .map((placement) => [placement.id, placement.crop]),
+);
+
+function applyPlacementAuthoring(placements, placementBounds, placementCrops, preview, cropPreview) {
   return placements.map((placement) => ({
     ...placement,
     ...(placementBounds[placement.id] || {}),
     ...(preview?.placementId === placement.id ? preview.bounds : {}),
+    crop: cropPreview?.placementId === placement.id
+      ? cropPreview.crop
+      : placementCrops[placement.id] ?? null,
   }));
 }
 
@@ -182,7 +200,11 @@ export default function LatticeEnginePrototype() {
   const [placementDragging, setPlacementDragging] = useState(false);
   const [placementResizing, setPlacementResizing] = useState(false);
   const [placementBounds, setPlacementBounds] = useState(createDefaultPlacementBounds);
+  const [placementCrops, setPlacementCrops] = useState(createDefaultPlacementCrops);
   const [placementPreview, setPlacementPreview] = useState(null);
+  const [cropPreview, setCropPreview] = useState(null);
+  const [cropEditPlacementId, setCropEditPlacementId] = useState(null);
+  const [cropDragging, setCropDragging] = useState(false);
   const [alignmentGuides, setAlignmentGuides] = useState([]);
   const [smartGuides, setSmartGuides] = useState(true);
   const [gridVisible, setGridVisible] = useState(true);
@@ -209,15 +231,25 @@ export default function LatticeEnginePrototype() {
     dimensions,
     framing,
   );
-  const centerPlacements = applyPlacementBounds(
+  const centerPlacements = applyPlacementAuthoring(
     createFixturePlacements(renderPreview.transparencyMode, renderPreview.layersSwapped),
     placementBounds,
+    placementCrops,
     placementPreview,
+    cropPreview,
   );
+  const selectedPlacement = centerPlacements.find(({ id }) => id === selectedPlacementId) || null;
+  const selectedMedia = selectedPlacement ? FIXTURE_MEDIA[selectedPlacement.stableAssetId] : null;
+  const selectedMaskRectangle = selectedPlacement
+    ? projectPlacementRectangle(selectedPlacement, CANONICAL_LATTICE_ARTBOARD, dimensions, framing)
+    : null;
 
   useEffect(() => {
     activeRef.current = active;
-    if (active.x !== 0 || active.y !== 0) setSelectedPlacementId(null);
+    if (active.x !== 0 || active.y !== 0) {
+      setSelectedPlacementId(null);
+      setCropEditPlacementId(null);
+    }
   }, [active]);
 
   useEffect(() => {
@@ -311,6 +343,19 @@ export default function LatticeEnginePrototype() {
       return;
     }
 
+    if (activeGesture.kind === 'crop') {
+      const result = finishCropFocusGesture(activeGesture.gesture, { cancelled });
+      if (result.committed) {
+        setPlacementCrops((current) => ({
+          ...current,
+          [activeGesture.gesture.placementId]: result.crop,
+        }));
+      }
+      setCropPreview(null);
+      setCropDragging(false);
+      return;
+    }
+
     if (activeGesture.kind === 'placement' || activeGesture.kind === 'resize') {
       const result = activeGesture.kind === 'resize'
         ? finishPlacementResizeGesture(activeGesture.gesture, { cancelled })
@@ -331,6 +376,7 @@ export default function LatticeEnginePrototype() {
     setGestureActive(false);
     if (!activeGesture.gesture.activated) {
       setSelectedPlacementId(null);
+      setCropEditPlacementId(null);
       return;
     }
     const destination = cancelled
@@ -372,6 +418,21 @@ export default function LatticeEnginePrototype() {
     event.currentTarget.setPointerCapture(event.pointerId);
     event.currentTarget.focus({ preventScroll: true });
     setSelectedPlacementId(placement.id);
+    if (cropEditPlacementId === placement.id && placement.crop && FIXTURE_MEDIA[placement.stableAssetId]) {
+      gestureRef.current = {
+        kind: 'crop',
+        captureTarget: event.currentTarget,
+        pointerId: event.pointerId,
+        gesture: createCropFocusGesture(
+          placement,
+          FIXTURE_MEDIA[placement.stableAssetId],
+          projectPlacementRectangle(placement, CANONICAL_LATTICE_ARTBOARD, dimensions, framing),
+          { x: event.clientX, y: event.clientY },
+        ),
+      };
+      return;
+    }
+    setCropEditPlacementId(null);
     gestureRef.current = {
       kind: 'placement',
       captureTarget: event.currentTarget,
@@ -413,6 +474,19 @@ export default function LatticeEnginePrototype() {
       if (next.activated) {
         setFramingDragging(true);
         setFramingPreview(next.previewOffset);
+      }
+      return;
+    }
+    if (gestureRef.current.kind === 'crop') {
+      const next = updateCropFocusGesture(
+        gestureRef.current.gesture,
+        { x: event.clientX, y: event.clientY },
+        configRef.current.deadZone,
+      );
+      gestureRef.current = { ...gestureRef.current, gesture: next };
+      if (next.activated) {
+        setCropDragging(true);
+        setCropPreview({ placementId: next.placementId, crop: next.previewCrop });
       }
       return;
     }
@@ -510,7 +584,22 @@ export default function LatticeEnginePrototype() {
     }
     if (settlingRef.current || gestureRef.current) return;
     const direction = keyboardDirection(event.key);
-    const focusedPlacementId = event.target.closest?.('[data-placement-id]')?.dataset.placementId;
+    const focusedPlacementId = event.target.closest?.('[data-placement-id]')?.dataset.placementId
+      || event.target.closest?.('[data-crop-placement-id]')?.dataset.cropPlacementId;
+    if (arrangeEnabled && direction && cropEditPlacementId === selectedPlacementId
+      && focusedPlacementId === selectedPlacementId && selectedPlacement?.crop
+      && selectedMedia && selectedMaskRectangle) {
+      event.preventDefault();
+      const distance = event.shiftKey ? 0.05 : 0.01;
+      const crop = nudgeCropFocus(
+        selectedPlacement.crop,
+        selectedMedia,
+        selectedMaskRectangle,
+        { x: direction.x * distance, y: direction.y * distance },
+      );
+      setPlacementCrops((current) => ({ ...current, [selectedPlacement.id]: crop }));
+      return;
+    }
     if (arrangeEnabled && direction && focusedPlacementId === selectedPlacementId) {
       const placement = centerPlacements.find(({ id }) => id === selectedPlacementId);
       if (!placement) return;
@@ -522,6 +611,11 @@ export default function LatticeEnginePrototype() {
         projectedArtboard,
       );
       setPlacementBounds((current) => ({ ...current, [placement.id]: bounds }));
+      return;
+    }
+    if (event.key === 'Escape' && cropEditPlacementId) {
+      event.preventDefault();
+      setCropEditPlacementId(null);
       return;
     }
     if (event.key === 'Escape' && selectedPlacementId) {
@@ -542,11 +636,41 @@ export default function LatticeEnginePrototype() {
   const stageY = -((active.y + 1) * dimensions.height) + dragOffset.y;
   const snapDuration = reducedMotion ? 0 : config.snapDuration;
 
+  const handlePlacementFocus = (placementId) => {
+    if (cropEditPlacementId && cropEditPlacementId !== placementId) setCropEditPlacementId(null);
+    setSelectedPlacementId(placementId);
+  };
+
+  const applySquareCrop = () => {
+    if (!selectedPlacement || !selectedMedia) return;
+    const result = squareCropPlacement(selectedPlacement, projectedArtboard);
+    setPlacementBounds((current) => ({ ...current, [selectedPlacement.id]: result.bounds }));
+    setPlacementCrops((current) => ({ ...current, [selectedPlacement.id]: result.crop }));
+    setCropEditPlacementId(selectedPlacement.id);
+    setPlacementPreview(null);
+    setCropPreview(null);
+  };
+
+  const removeSelectedCrop = () => {
+    if (!selectedPlacement?.crop || !selectedMedia) return;
+    const bounds = restoreNativePlacement(selectedPlacement, selectedMedia, projectedArtboard);
+    setPlacementBounds((current) => ({ ...current, [selectedPlacement.id]: bounds }));
+    setPlacementCrops((current) => ({ ...current, [selectedPlacement.id]: null }));
+    setCropEditPlacementId(null);
+    setCropPreview(null);
+  };
+
+  const updateSelectedCropZoom = (zoom) => {
+    if (!selectedPlacement?.crop || !selectedMedia || !selectedMaskRectangle) return;
+    const crop = setCropZoom(selectedPlacement.crop, selectedMedia, selectedMaskRectangle, zoom);
+    setPlacementCrops((current) => ({ ...current, [selectedPlacement.id]: crop }));
+  };
+
   return (
     <main className="lattice-engine-shell">
       <section
         ref={viewportRef}
-        className={`lattice-engine-viewport${gestureActive ? ' is-dragging' : ''}${arrangeEnabled ? ' is-arranging' : ''}${placementDragging ? ' is-placement-dragging' : ''}${placementResizing ? ' is-placement-resizing' : ''}${spaceHeld ? ' is-framing-ready' : ''}${framingDragging ? ' is-framing' : ''}`}
+        className={`lattice-engine-viewport${gestureActive ? ' is-dragging' : ''}${arrangeEnabled ? ' is-arranging' : ''}${placementDragging ? ' is-placement-dragging' : ''}${placementResizing ? ' is-placement-resizing' : ''}${cropDragging ? ' is-crop-dragging' : ''}${spaceHeld ? ' is-framing-ready' : ''}${framingDragging ? ' is-framing' : ''}`}
         tabIndex={0}
         aria-label="Lattice navigation engine prototype"
         onPointerDown={handlePointerDown}
@@ -598,6 +722,7 @@ export default function LatticeEnginePrototype() {
                 arrangeEnabled={arrangeEnabled && isActive && isAuthoredTable}
                 artboard={CANONICAL_LATTICE_ARTBOARD}
                 assetsByStableId={FIXTURE_MEDIA}
+                cropEditingPlacementId={isActive ? cropEditPlacementId : null}
                 geometry={renderPreview.geometry}
                 framing={framing}
                 hidden={!isActive}
@@ -608,7 +733,7 @@ export default function LatticeEnginePrototype() {
                   width: dimensions.width,
                   height: dimensions.height,
                 }}
-                onPlacementFocus={setSelectedPlacementId}
+                onPlacementFocus={handlePlacementFocus}
                 onPlacementPointerDown={handlePlacementPointerDown}
                 onPlacementResizePointerDown={handlePlacementResizePointerDown}
                 selectedPlacementId={isActive ? selectedPlacementId : null}
@@ -621,10 +746,10 @@ export default function LatticeEnginePrototype() {
       </section>
 
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2E</p>
+        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2F</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
-        <p>{snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
+        <p>{snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
       </aside>
 
       <details className="lattice-engine-controls" data-lattice-chrome>
@@ -637,6 +762,8 @@ export default function LatticeEnginePrototype() {
               setSelectedPlacementId(null);
               setPlacementPreview(null);
               setAlignmentGuides([]);
+              setCropEditPlacementId(null);
+              setCropPreview(null);
             }} /></label>
             <label className="is-check"><span>Smart guides</span><input type="checkbox" checked={smartGuides} onChange={(event) => {
               setSmartGuides(event.target.checked);
@@ -661,6 +788,10 @@ export default function LatticeEnginePrototype() {
               {Object.values(TRANSPARENCY_MODES).map((mode) => <option value={mode} key={mode}>{mode}</option>)}
             </select></label>
             <label className="is-check"><span>Swap layers</span><input type="checkbox" checked={renderPreview.layersSwapped} onChange={(event) => setRenderPreview((current) => ({ ...current, layersSwapped: event.target.checked }))} /></label>
+            <button type="button" disabled={!selectedPlacement || Boolean(selectedPlacement.crop)} onClick={applySquareCrop}>SQUARE CROP</button>
+            <button type="button" disabled={!selectedPlacement?.crop} onClick={() => setCropEditPlacementId((current) => current === selectedPlacementId ? null : selectedPlacementId)}>{cropEditPlacementId === selectedPlacementId ? 'DONE CROP' : 'EDIT CROP'}</button>
+            <label><span>CROP ZOOM {selectedPlacement?.crop?.zoom?.toFixed(2) || '1.00'}×</span><input type="range" min="1" max="4" step="0.05" disabled={!selectedPlacement?.crop} value={selectedPlacement?.crop?.zoom || 1} onChange={(event) => updateSelectedCropZoom(Number(event.target.value))} /></label>
+            <button type="button" disabled={!selectedPlacement?.crop} onClick={removeSelectedCrop}>REMOVE CROP</button>
             <label className="is-wide"><span>Title</span><input type="text" maxLength="80" placeholder="EMPTY / FALLBACK" value={renderPreview.title} onChange={(event) => setRenderPreview((current) => ({ ...current, title: event.target.value }))} /></label>
             <label className="is-wide"><span>Subtitle</span><input type="text" maxLength="120" placeholder="OPTIONAL" value={renderPreview.subtitle} onChange={(event) => setRenderPreview((current) => ({ ...current, subtitle: event.target.value }))} /></label>
             <label><span>Anchor</span><select value={renderPreview.labelAnchor} onChange={(event) => setRenderPreview((current) => ({ ...current, labelAnchor: event.target.value }))}>
@@ -678,7 +809,10 @@ export default function LatticeEnginePrototype() {
             <button type="button" onClick={() => {
               setRenderPreview(createDefaultRenderPreview());
               setPlacementBounds(createDefaultPlacementBounds());
+              setPlacementCrops(createDefaultPlacementCrops());
               setPlacementPreview(null);
+              setCropPreview(null);
+              setCropEditPlacementId(null);
               setAlignmentGuides([]);
               setSelectedPlacementId(null);
               setFramingOffset({ x: 0, y: 0 });
