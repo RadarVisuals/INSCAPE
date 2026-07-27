@@ -8,6 +8,7 @@ export default function LatticeGridPlane({
   children,
   className = '',
   geometry,
+  gridVisible = true,
   stageOrigin,
   style,
   surfaceId = 'carbon',
@@ -16,6 +17,7 @@ export default function LatticeGridPlane({
   return (
     <div
       className={`lattice-grid-plane ${className}`.trim()}
+      data-grid-visible={gridVisible}
       data-surface={normalizeLatticeSurface(surfaceId)}
       style={{ ...style, ...semanticGridVariables(geometry, viewport, stageOrigin, artboard) }}
     >

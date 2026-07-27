@@ -19,6 +19,10 @@
   color: var(--lattice-label-ink);
 }
 
+.lattice-grid-plane[data-grid-visible="false"] {
+  background-image: none;
+}
+
 .lattice-table-renderer {
   position: absolute;
   box-sizing: border-box;

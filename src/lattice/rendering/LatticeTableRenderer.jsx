@@ -9,10 +9,12 @@ import {
   projectTableLabelPosition,
 } from './latticeGeometry.js';
 import LatticePlacementRenderer from './LatticePlacementRenderer.jsx';
+import LatticeAlignmentGuides from './LatticeAlignmentGuides.jsx';
 import './latticeTableRenderer.css';
 
 export default function LatticeTableRenderer({
   active = false,
+  alignmentGuides = [],
   arrangeEnabled = false,
   artboard,
   assetsByStableId = {},
@@ -50,6 +52,11 @@ export default function LatticeTableRenderer({
         onPlacementPointerDown={onPlacementPointerDown}
         selectedPlacementId={selectedPlacementId}
         table={table}
+        viewport={viewport}
+      />
+      <LatticeAlignmentGuides
+        artboard={artboard}
+        guides={alignmentGuides}
         viewport={viewport}
       />
       {labelVisible && (

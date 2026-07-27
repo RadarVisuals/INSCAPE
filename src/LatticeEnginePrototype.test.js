@@ -14,7 +14,7 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 4 \/ SLICE 2B/);
+  assert.match(source, /PHASE 4 \/ SLICE 2C/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
@@ -33,8 +33,22 @@ test('Arrange is session-only free placement with deterministic gesture ownershi
   ]) assert.match(source, new RegExp(token));
   assert.match(source, /event\.button === 0/);
   assert.match(source, /!event\.altKey && !event\.ctrlKey && !event\.metaKey && !event\.shiftKey/);
-  assert.doesNotMatch(placementController, /layer|navigationOrder|grid|snap|timer|velocity|inertia/iu);
+  assert.doesNotMatch(placementController, /layer|navigationOrder|timer|velocity|inertia/iu);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
+});
+
+test('smart guides, independent grid controls, hysteresis and Alt bypass stay transient', () => {
+  for (const token of [
+    'smartGuides',
+    'gridVisible',
+    'gridSnap',
+    'alignmentGuides',
+    'guideThreshold',
+    'guideReleaseThreshold',
+    'bypass: event.altKey',
+    'otherPlacements: centerPlacements',
+  ]) assert.match(source, new RegExp(token));
+  assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/);
 });
 
 test('Swap layers reverses the complete fixture stack without touching navigation order', () => {
@@ -93,6 +107,8 @@ test('all tunable interaction behavior lives in one transient configuration obje
     'wheelAccumulationThreshold',
     'wheelCooldown',
     'snapDuration',
+    'guideThreshold',
+    'guideReleaseThreshold',
   ]) {
     assert.match(controller, new RegExp(`${field}:`));
     assert.match(source, new RegExp(`'${field}'`));

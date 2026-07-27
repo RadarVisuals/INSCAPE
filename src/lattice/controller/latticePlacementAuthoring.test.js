@@ -82,3 +82,107 @@ test('authoring rejects placement bounds that begin or end outside the artboard'
     /finite normalized bounds/,
   );
 });
+
+test('smart guides resolve artboard and artwork alignment independently per axis', () => {
+  const start = createPlacementGesture(placement, { x: 100, y: 100 });
+  const centered = updatePlacementGesture(start, { x: 376, y: 100 }, artboard, 10, {
+    smartGuides: true,
+    guideThreshold: 8,
+    guideReleaseThreshold: 14,
+  });
+  assert.equal(centered.previewBounds.x, 0.375);
+  assert.ok(centered.guides.some((guide) => guide.axis === 'x' && guide.kind === 'artboard' && guide.position === 0.5));
+
+  const adjacent = updatePlacementGesture(start, { x: 336, y: 55 }, artboard, 10, {
+    smartGuides: true,
+    guideThreshold: 8,
+    guideReleaseThreshold: 14,
+    otherPlacements: [{ id: 'placement-b', x: 0.6, y: 0.8, width: 0.2, height: 0.1 }],
+  });
+  assert.equal(adjacent.previewBounds.x, 0.35);
+  assert.equal(adjacent.previewBounds.y, 0.25);
+  assert.deepEqual(adjacent.guides, [{
+    axis: 'x', kind: 'artwork', position: 0.6, sourcePlacementId: 'placement-b',
+  }]);
+});
+
+test('an untouched axis never jumps merely because its starting position is near a guide', () => {
+  const moved = updatePlacementGesture(
+    createPlacementGesture(placement, { x: 100, y: 100 }),
+    { x: 176, y: 100 },
+    artboard,
+    10,
+    {
+      gridSnap: true,
+      geometry: { columns: 32, rows: 18 },
+      guideThreshold: 8,
+      guideReleaseThreshold: 14,
+    },
+  );
+  assert.equal(moved.previewBounds.y, placement.y);
+  assert.equal(moved.guides.some((guide) => guide.axis === 'y'), false);
+});
+
+test('artwork wins deterministic ties over artboard and grid candidates', () => {
+  const moved = updatePlacementGesture(
+    createPlacementGesture(placement, { x: 100, y: 100 }),
+    { x: 376, y: 55 },
+    artboard,
+    10,
+    {
+      smartGuides: true,
+      gridSnap: true,
+      geometry: { columns: 32, rows: 18 },
+      guideThreshold: 8,
+      guideReleaseThreshold: 14,
+      otherPlacements: [{ id: 'placement-b', x: 0.5, y: 0.8, width: 0.2, height: 0.1 }],
+    },
+  );
+  assert.deepEqual(moved.guides.filter((guide) => guide.axis === 'x'), [{
+    axis: 'x', kind: 'artwork', position: 0.5, sourcePlacementId: 'placement-b',
+  }]);
+});
+
+test('optional grid snapping is independent from smart guides', () => {
+  const moved = updatePlacementGesture(
+    createPlacementGesture(placement, { x: 100, y: 100 }),
+    { x: 175.2, y: 55 },
+    artboard,
+    10,
+    {
+      smartGuides: false,
+      gridSnap: true,
+      geometry: { columns: 32, rows: 18 },
+      guideThreshold: 8,
+      guideReleaseThreshold: 14,
+    },
+  );
+  assert.equal(moved.previewBounds.x, 0.25);
+  assert.deepEqual(moved.guides.filter((guide) => guide.axis === 'x'), [
+    { axis: 'x', kind: 'grid', position: 0.25, sourcePlacementId: null },
+  ]);
+});
+
+test('guide acquisition latches until the larger release threshold is crossed', () => {
+  const start = createPlacementGesture(placement, { x: 100, y: 100 });
+  const options = { smartGuides: true, guideThreshold: 8, guideReleaseThreshold: 14 };
+  const acquired = updatePlacementGesture(start, { x: 376, y: 55 }, artboard, 10, options);
+  const retained = updatePlacementGesture(acquired, { x: 393, y: 55 }, artboard, 10, options);
+  const released = updatePlacementGesture(retained, { x: 396, y: 55 }, artboard, 10, options);
+  assert.equal(acquired.previewBounds.x, 0.375);
+  assert.equal(retained.previewBounds.x, 0.375);
+  assert.equal(released.previewBounds.x, 0.385);
+  assert.equal(released.guides.some((guide) => guide.axis === 'x'), false);
+});
+
+test('Alt-style bypass returns raw clamped movement and suppresses every guide', () => {
+  const moved = updatePlacementGesture(
+    createPlacementGesture(placement, { x: 100, y: 100 }),
+    { x: 376, y: 55 },
+    artboard,
+    10,
+    { smartGuides: true, bypass: true, guideThreshold: 8, guideReleaseThreshold: 14 },
+  );
+  assert.equal(moved.previewBounds.x, 0.3725);
+  assert.deepEqual(moved.guides, []);
+});

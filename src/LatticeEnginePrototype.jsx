@@ -44,6 +44,8 @@ const CONTROL_FIELDS = [
   ['wheelAccumulationThreshold', 'Wheel threshold', 20, 240, 1],
   ['wheelCooldown', 'Wheel cooldown', 0, 1500, 10],
   ['snapDuration', 'Snap duration', 0, 1000, 10],
+  ['guideThreshold', 'Guide threshold', 1, 30, 1],
+  ['guideReleaseThreshold', 'Guide release', 1, 50, 1],
 ];
 
 const interactiveChrome = (target) => target.closest('[data-lattice-chrome]');
@@ -165,6 +167,10 @@ export default function LatticeEnginePrototype() {
   const [placementDragging, setPlacementDragging] = useState(false);
   const [placementBounds, setPlacementBounds] = useState(createDefaultPlacementBounds);
   const [placementPreview, setPlacementPreview] = useState(null);
+  const [alignmentGuides, setAlignmentGuides] = useState([]);
+  const [smartGuides, setSmartGuides] = useState(true);
+  const [gridVisible, setGridVisible] = useState(true);
+  const [gridSnap, setGridSnap] = useState(false);
   const centerPlacements = applyPlacementBounds(
     createFixturePlacements(renderPreview.transparencyMode, renderPreview.layersSwapped),
     placementBounds,
@@ -238,6 +244,7 @@ export default function LatticeEnginePrototype() {
         }));
       }
       setPlacementPreview(null);
+      setAlignmentGuides([]);
       setPlacementDragging(false);
       return;
     }
@@ -285,11 +292,21 @@ export default function LatticeEnginePrototype() {
         { x: event.clientX, y: event.clientY },
         projectCanonicalLatticeArtboard(CANONICAL_LATTICE_ARTBOARD, dimensions),
         configRef.current.deadZone,
+        {
+          smartGuides,
+          gridSnap,
+          bypass: event.altKey,
+          geometry: renderPreview.geometry,
+          otherPlacements: centerPlacements,
+          guideThreshold: configRef.current.guideThreshold,
+          guideReleaseThreshold: configRef.current.guideReleaseThreshold,
+        },
       );
       gestureRef.current = { ...gestureRef.current, gesture: next };
       if (next.activated) {
         setPlacementDragging(true);
         setPlacementPreview({ placementId: next.placementId, bounds: next.previewBounds });
+        setAlignmentGuides(next.guides);
       }
       return;
     }
@@ -399,6 +416,7 @@ export default function LatticeEnginePrototype() {
           artboard={CANONICAL_LATTICE_ARTBOARD}
           className={`lattice-engine-stage${snapping ? ' is-snapping' : ''}`}
           geometry={renderPreview.geometry}
+          gridVisible={gridVisible}
           stageOrigin={{ x: dimensions.width, y: dimensions.height }}
           style={{
             width: dimensions.width * 3,
@@ -430,6 +448,7 @@ export default function LatticeEnginePrototype() {
             return (
               <LatticeTableRenderer
                 active={isActive}
+                alignmentGuides={isActive && isAuthoredTable ? alignmentGuides : []}
                 arrangeEnabled={arrangeEnabled && isActive && isAuthoredTable}
                 artboard={CANONICAL_LATTICE_ARTBOARD}
                 assetsByStableId={FIXTURE_MEDIA}
@@ -454,7 +473,7 @@ export default function LatticeEnginePrototype() {
       </section>
 
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2B</p>
+        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2C</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
         <p>{snapping ? 'SETTLING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
@@ -469,6 +488,16 @@ export default function LatticeEnginePrototype() {
               setArrangeEnabled(event.target.checked);
               setSelectedPlacementId(null);
               setPlacementPreview(null);
+              setAlignmentGuides([]);
+            }} /></label>
+            <label className="is-check"><span>Smart guides</span><input type="checkbox" checked={smartGuides} onChange={(event) => {
+              setSmartGuides(event.target.checked);
+              setAlignmentGuides([]);
+            }} /></label>
+            <label className="is-check"><span>Grid visible</span><input type="checkbox" checked={gridVisible} onChange={(event) => setGridVisible(event.target.checked)} /></label>
+            <label className="is-check"><span>Grid snap</span><input type="checkbox" checked={gridSnap} onChange={(event) => {
+              setGridSnap(event.target.checked);
+              setAlignmentGuides([]);
             }} /></label>
             <label><span>Geometry</span><select value={LATTICE_GEOMETRY_PRESETS.find(({ geometry }) => geometry.columns === renderPreview.geometry.columns && geometry.rows === renderPreview.geometry.rows)?.id || 'custom'} onChange={(event) => {
               const preset = LATTICE_GEOMETRY_PRESETS.find(({ id }) => id === event.target.value);
@@ -502,6 +531,7 @@ export default function LatticeEnginePrototype() {
               setRenderPreview(createDefaultRenderPreview());
               setPlacementBounds(createDefaultPlacementBounds());
               setPlacementPreview(null);
+              setAlignmentGuides([]);
               setSelectedPlacementId(null);
             }}>RESET RENDER</button>
           </fieldset>
