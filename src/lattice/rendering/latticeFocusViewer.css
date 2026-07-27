@@ -9,9 +9,16 @@
   overscroll-behavior: contain;
 }
 
+.lattice-focus-viewer__content-spacer {
+  display: none;
+  width: 1px;
+  height: var(--lattice-viewer-content-height);
+  pointer-events: none;
+}
+
 .lattice-focus-viewer__artwork {
   position: fixed;
-  z-index: 1;
+  z-index: 2;
   transform-origin: top left;
   will-change: transform;
 }
@@ -42,12 +49,12 @@
 
 .lattice-focus-viewer__browse-layer {
   position: fixed;
-  z-index: 1;
+  z-index: 2;
   pointer-events: none;
 }
 
 .lattice-focus-viewer__artwork[data-browsing] {
-  z-index: 2;
+  z-index: 3;
   animation: lattice-focus-viewer-browse-in var(--lattice-viewer-browse-duration) ease-out both;
 }
 
@@ -78,6 +85,141 @@
   background: rgba(9, 10, 10, 0.92);
   opacity: 0;
   transition: opacity 120ms linear;
+}
+
+.lattice-focus-viewer__dossier {
+  position: fixed;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: 36px minmax(0, 1fr) 32px;
+  overflow: hidden;
+  border: 1px solid rgba(23, 25, 25, 0.48);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.16), transparent 42%),
+    #efeee8;
+  color: #171919;
+  box-shadow: 0 20px 64px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    left 360ms cubic-bezier(0.2, 0.72, 0.2, 1),
+    top 360ms cubic-bezier(0.2, 0.72, 0.2, 1),
+    transform 360ms cubic-bezier(0.2, 0.72, 0.2, 1),
+    opacity 150ms linear;
+}
+
+.lattice-focus-viewer__dossier.is-left { transform: translateX(100%); }
+.lattice-focus-viewer__dossier.is-right { transform: translateX(-100%); }
+
+.lattice-focus-viewer__dossier[data-open] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__dossier {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__dossier.is-left { transform: translateX(100%); }
+.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__dossier.is-right { transform: translateX(-100%); }
+
+.lattice-focus-viewer__dossier > header,
+.lattice-focus-viewer__dossier > footer {
+  min-width: 0;
+  padding: 0 11px;
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  font: 500 7px/1 "IBM Plex Mono", "Courier New", monospace;
+  letter-spacing: 0.11em;
+}
+
+.lattice-focus-viewer__dossier > header {
+  grid-template-columns: minmax(0, 1fr) 24px;
+  border-bottom: 1px solid rgba(23, 25, 25, 0.25);
+}
+
+.lattice-focus-viewer__dossier > header span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lattice-focus-viewer__dossier > header button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: 16px/1 "IBM Plex Mono", "Courier New", monospace;
+}
+
+.lattice-focus-viewer__dossier > footer {
+  grid-template-columns: 1fr auto;
+  border-top: 1px solid rgba(23, 25, 25, 0.25);
+  color: rgba(23, 25, 25, 0.56);
+}
+
+.lattice-focus-viewer__dossier-body {
+  min-height: 0;
+  padding: 24px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  font: 400 12px/1.55 "Geist", Arial, sans-serif;
+}
+
+.lattice-focus-viewer__dossier-body > small,
+.lattice-focus-viewer__dossier-body dt {
+  color: rgba(23, 25, 25, 0.55);
+  font: 500 7px/1.25 "IBM Plex Mono", "Courier New", monospace;
+  letter-spacing: 0.12em;
+}
+
+.lattice-focus-viewer__dossier-body h2 {
+  margin: 9px 0 20px;
+  font: 400 22px/1.08 "Geist", Arial, sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.lattice-focus-viewer__dossier-body p { margin: 0 0 22px; }
+
+.lattice-focus-viewer__dossier-body section {
+  padding-top: 19px;
+  border-top: 1px solid rgba(23, 25, 25, 0.22);
+}
+
+.lattice-focus-viewer__dossier-body section > p {
+  margin-top: 13px;
+  font: 500 8px/1.4 "IBM Plex Mono", "Courier New", monospace;
+  letter-spacing: 0.08em;
+}
+
+.lattice-focus-viewer__dossier-body dl {
+  margin: 18px 0 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  border-top: 1px solid rgba(23, 25, 25, 0.22);
+}
+
+.lattice-focus-viewer__dossier-body dl > div {
+  min-width: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(23, 25, 25, 0.22);
+}
+
+.lattice-focus-viewer__dossier-body dd {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+  font: 500 8px/1.4 "IBM Plex Mono", "Courier New", monospace;
+}
+
+.lattice-focus-viewer__dossier > header button:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 2px;
 }
 
 .lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__navigation {
@@ -117,20 +259,25 @@
 
 .lattice-focus-viewer__close {
   position: fixed;
-  top: 18px;
-  right: 18px;
-  z-index: 2;
-  width: 34px;
-  height: 34px;
+  z-index: 4;
+  width: 22px;
+  height: 18px;
   border: 1px solid rgba(216, 213, 204, 0.48);
   background: rgba(9, 10, 10, 0.92);
-  font: 300 21px/1 "IBM Plex Mono", "Courier New", monospace;
+  font: 300 14px/1 "IBM Plex Mono", "Courier New", monospace;
   cursor: pointer;
+  opacity: 0;
+  transition:
+    left 360ms cubic-bezier(0.2, 0.72, 0.2, 1),
+    top 360ms cubic-bezier(0.2, 0.72, 0.2, 1),
+    opacity 120ms linear;
 }
+
+.lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__close { opacity: 1; }
 
 .lattice-focus-viewer__close[data-disabled] {
   pointer-events: none;
-  opacity: 0.45;
+  opacity: 0;
 }
 
 .lattice-focus-viewer__navigation button:focus-visible,
@@ -145,10 +292,23 @@
   }
 
   .lattice-focus-viewer__close {
-    top: 10px;
-    right: 10px;
+    width: 20px;
   }
 }
+
+.lattice-focus-viewer[data-layout="compact"] {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.lattice-focus-viewer[data-layout="compact"] .lattice-focus-viewer__content-spacer { display: block; }
+
+.lattice-focus-viewer[data-layout="compact"] :is(
+  .lattice-focus-viewer__artwork,
+  .lattice-focus-viewer__browse-layer,
+  .lattice-focus-viewer__dossier,
+  .lattice-focus-viewer__close
+) { position: absolute; }
 
 @media (prefers-reduced-motion: reduce) {
   .lattice-focus-viewer__artwork {
@@ -158,5 +318,10 @@
 
   .lattice-focus-viewer__browse-layer {
     animation-duration: 1ms !important;
+  }
+
+  .lattice-focus-viewer__dossier,
+  .lattice-focus-viewer__close {
+    transition-duration: 1ms !important;
   }
 }

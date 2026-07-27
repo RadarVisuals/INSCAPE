@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { LatticeArtworkPresentation } from './LatticePlacementRenderer.jsx';
 import {
   DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG,
-  focusedViewerRectangle,
+  focusViewerLayout,
   normalizeViewerRectangle,
 } from './latticeFocusViewer.js';
 import './latticeFocusViewer.css';
@@ -16,7 +16,49 @@ const viewportSize = () => ({
   height: Math.max(1, window.innerHeight),
 });
 
+const unresolved = (value) => (typeof value === 'string' && value.trim() ? value : 'NOT RESOLVED');
+
+function ViewerDossier({ dossier, onClose, open, rectangle, side }) {
+  const isLeft = side === 'left';
+  return (
+    <aside
+      aria-hidden={!open}
+      aria-label={isLeft ? 'Artwork description dossier' : 'Artwork technical dossier'}
+      className={`lattice-focus-viewer__dossier is-${side}`}
+      data-open={open || undefined}
+      style={{
+        left: rectangle.left,
+        top: rectangle.top,
+        width: rectangle.width,
+        height: rectangle.height,
+      }}
+    >
+      <header>
+        <span>{isLeft ? 'INSCAPE / ASSET NARRATIVE' : 'INSCAPE / TECHNICAL RECORD'}</span>
+        <button aria-label="Close both artwork dossiers" disabled={!open} onClick={onClose} tabIndex={open ? 0 : -1} type="button">×</button>
+      </header>
+      <div className="lattice-focus-viewer__dossier-body" data-lattice-viewer-scroll>
+        <small>{isLeft ? 'DESCRIPTION' : 'MEDIA RECORD'}</small>
+        <h2>{unresolved(dossier?.title)}</h2>
+        {isLeft ? <>
+          <p>{unresolved(dossier?.description)}</p>
+          <section>
+            <small>TRAITS</small>
+            {dossier?.traits?.length
+              ? <dl>{dossier.traits.map(({ label, value }) => <div key={label}><dt>{label}</dt><dd>{unresolved(value)}</dd></div>)}</dl>
+              : <p>NO TRAITS RESOLVED</p>}
+          </section>
+        </> : (
+          <dl>{(dossier?.technical || []).map(({ label, value }) => <div key={label}><dt>{label}</dt><dd>{unresolved(value)}</dd></div>)}</dl>
+        )}
+      </div>
+      <footer><span>INSCAPE PROTOCOL</span><span>{isLeft ? 'LEFT / DESCRIPTION' : 'RIGHT / RECORD'}</span></footer>
+    </aside>
+  );
+}
+
 export default function LatticeFocusViewer({
+  dossier,
   entry,
   getReturnRectangle,
   onClosed,
@@ -31,16 +73,19 @@ export default function LatticeFocusViewer({
   const closeRef = useRef(null);
   const returnFocusRef = useRef(returnFocus);
   const previousLayerRef = useRef({ entry, originRectangle });
+  const suppressArtworkClickRef = useRef(false);
   const swipeRef = useRef(null);
   const wheelRef = useRef({ accumulated: 0, blockedUntil: 0 });
   const origin = useMemo(() => normalizeViewerRectangle(originRectangle, 'originRectangle'), [originRectangle]);
   const [phase, setPhase] = useState('starting');
   const [navigationLocked, setNavigationLocked] = useState(false);
+  const [dossiersOpen, setDossiersOpen] = useState(false);
   const [outgoingLayer, setOutgoingLayer] = useState(null);
   const [viewport, setViewport] = useState(viewportSize);
   const [returnRectangle, setReturnRectangle] = useState(origin);
   const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
-  const focusedRectangle = focusedViewerRectangle(origin, viewport);
+  const layout = focusViewerLayout(origin, viewport, dossiersOpen);
+  const focusedRectangle = layout.artwork;
   const collapsedRectangle = phase === 'closing' ? returnRectangle : origin;
   const collapsedTransform = {
     x: collapsedRectangle.left - focusedRectangle.left,
@@ -112,13 +157,32 @@ export default function LatticeFocusViewer({
     setPhase('closing');
   }, [getReturnRectangle, navigationLocked, onClosed, origin, phase, reducedMotion]);
 
-  const handleKeyDown = (event) => {
-    if (event.key === 'Escape') {
+  const cycleArtworkViewer = useCallback(() => {
+    if (suppressArtworkClickRef.current) {
+      suppressArtworkClickRef.current = false;
+      return;
+    }
+    if (phase !== 'open' || navigationLocked) return;
+    setDossiersOpen((current) => !current);
+  }, [navigationLocked, phase]);
+
+  const closeDossiers = useCallback(() => {
+    if (phase !== 'open' || navigationLocked || !dossiersOpen) return;
+    setDossiersOpen(false);
+  }, [dossiersOpen, navigationLocked, phase]);
+
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key !== 'Escape') return;
       event.preventDefault();
       event.stopPropagation();
       requestClose();
-      return;
-    }
+    };
+    window.addEventListener('keydown', closeOnEscape, true);
+    return () => window.removeEventListener('keydown', closeOnEscape, true);
+  }, [requestClose]);
+
+  const handleKeyDown = (event) => {
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault();
       if (!event.repeat) requestNavigation(event.key === 'ArrowLeft' ? -1 : 1);
@@ -176,6 +240,7 @@ export default function LatticeFocusViewer({
     const deltaY = event.clientY - swipe.y;
     if (Math.abs(deltaX) >= DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG.swipeThreshold
       && Math.abs(deltaX) >= Math.abs(deltaY) * DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG.swipeDominance) {
+      suppressArtworkClickRef.current = true;
       requestNavigation(deltaX < 0 ? 1 : -1);
     }
   };
@@ -185,7 +250,7 @@ export default function LatticeFocusViewer({
   };
 
   const outgoingRectangle = outgoingLayer
-    ? focusedViewerRectangle(outgoingLayer.originRectangle, viewport)
+    ? focusViewerLayout(outgoingLayer.originRectangle, viewport, dossiersOpen).artwork
     : null;
 
   return createPortal(
@@ -194,6 +259,7 @@ export default function LatticeFocusViewer({
       aria-modal="true"
       className="lattice-focus-viewer"
       data-lattice-focus-viewer
+      data-layout={layout.mode}
       data-phase={phase}
       onKeyDown={handleKeyDown}
       onPointerDown={(event) => {
@@ -202,8 +268,12 @@ export default function LatticeFocusViewer({
       onWheel={handleWheel}
       ref={rootRef}
       role="dialog"
-      style={{ '--lattice-viewer-browse-duration': `${DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG.browseDuration}ms` }}
+      style={{
+        '--lattice-viewer-browse-duration': `${DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG.browseDuration}ms`,
+        '--lattice-viewer-content-height': `${layout.contentHeight}px`,
+      }}
     >
+      <div aria-hidden="true" className="lattice-focus-viewer__content-spacer" />
       {outgoingLayer && outgoingRectangle && (
         <div
           aria-hidden="true"
@@ -226,6 +296,7 @@ export default function LatticeFocusViewer({
       <div
         className="lattice-focus-viewer__artwork"
         data-browsing={outgoingLayer ? true : undefined}
+        onClick={cycleArtworkViewer}
         onPointerCancel={cancelSwipe}
         onPointerDown={beginSwipe}
         onPointerUp={finishSwipe}
@@ -244,6 +315,20 @@ export default function LatticeFocusViewer({
       >
         <LatticeArtworkPresentation entry={entry} />
       </div>
+      <ViewerDossier
+        dossier={dossier}
+        onClose={closeDossiers}
+        open={dossiersOpen}
+        rectangle={layout.leftDossier}
+        side="left"
+      />
+      <ViewerDossier
+        dossier={dossier}
+        onClose={closeDossiers}
+        open={dossiersOpen}
+        rectangle={layout.rightDossier}
+        side="right"
+      />
       <nav
         aria-label="Artwork viewer navigation"
         className="lattice-focus-viewer__navigation"
@@ -259,6 +344,7 @@ export default function LatticeFocusViewer({
         data-disabled={phase !== 'open' || navigationLocked || undefined}
         onClick={requestClose}
         ref={closeRef}
+        style={{ left: focusedRectangle.left + focusedRectangle.width - 28, top: focusedRectangle.top + 6 }}
         type="button"
       >×</button>
     </section>,

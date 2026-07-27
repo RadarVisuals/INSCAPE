@@ -1,15 +1,26 @@
 export const DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG = Object.freeze({
   horizontalMargin: 48,
   verticalMargin: 40,
+  verticalArtworkScale: 0.85,
   browseDuration: 240,
   swipeThreshold: 48,
   swipeDominance: 1.25,
   wheelAccumulationThreshold: 80,
   wheelCooldown: 320,
+  dossierBreakpoint: 900,
+  dossierWidth: 320,
+  dossierGap: 0,
+  compactHorizontalMargin: 16,
+  compactDossierHeight: 420,
 });
 
 function finitePositive(value, label) {
   if (!Number.isFinite(value) || value <= 0) throw new TypeError(`${label} must be a positive finite number`);
+  return value;
+}
+
+function finiteNonNegative(value, label) {
+  if (!Number.isFinite(value) || value < 0) throw new TypeError(`${label} must be a non-negative finite number`);
   return value;
 }
 
@@ -32,10 +43,12 @@ export function focusedViewerRectangle(originRectangle, viewport, config = DEFAU
   const viewportHeight = finitePositive(Number(viewport?.height), 'viewport.height');
   const horizontalMargin = Math.max(0, Number(config?.horizontalMargin));
   const verticalMargin = Math.max(0, Number(config?.verticalMargin));
+  const verticalArtworkScale = Number(config?.verticalArtworkScale);
   if (!Number.isFinite(horizontalMargin) || !Number.isFinite(verticalMargin)) throw new TypeError('viewer margins must be finite');
+  if (!Number.isFinite(verticalArtworkScale) || verticalArtworkScale <= 0 || verticalArtworkScale > 1) throw new TypeError('verticalArtworkScale must be between zero and one');
 
   const availableWidth = Math.max(1, viewportWidth - (horizontalMargin * 2));
-  const availableHeight = Math.max(1, viewportHeight - (verticalMargin * 2));
+  const availableHeight = Math.max(1, viewportHeight - (verticalMargin * 2)) * verticalArtworkScale;
   const scale = Math.min(availableWidth / origin.width, availableHeight / origin.height);
   const width = origin.width * scale;
   const height = origin.height * scale;
@@ -45,6 +58,82 @@ export function focusedViewerRectangle(originRectangle, viewport, config = DEFAU
     top: (viewportHeight - height) / 2,
     width,
     height,
+  });
+}
+
+function viewerViewport(viewport) {
+  return {
+    width: finitePositive(Number(viewport?.width), 'viewport.width'),
+    height: finitePositive(Number(viewport?.height), 'viewport.height'),
+  };
+}
+
+function viewerDossierState(dossiersOpen) {
+  if (typeof dossiersOpen !== 'boolean') throw new TypeError('viewer dossier state must be boolean');
+  return dossiersOpen;
+}
+
+const rectangle = (left, top, width, height) => Object.freeze({ left, top, width, height });
+
+export function focusViewerLayout(originRectangle, viewport, dossiersOpen, config = DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG) {
+  const origin = normalizeViewerRectangle(originRectangle, 'originRectangle');
+  const size = viewerViewport(viewport);
+  const open = viewerDossierState(dossiersOpen);
+  const focused = focusedViewerRectangle(origin, size, config);
+  const breakpoint = finitePositive(Number(config?.dossierBreakpoint), 'dossierBreakpoint');
+  const dossierWidth = finitePositive(Number(config?.dossierWidth), 'dossierWidth');
+  const dossierGap = finiteNonNegative(Number(config?.dossierGap), 'dossierGap');
+  const horizontalMargin = Math.max(0, Number(config?.horizontalMargin));
+  const verticalMargin = Math.max(0, Number(config?.verticalMargin));
+  const verticalArtworkScale = Number(config?.verticalArtworkScale);
+
+  if (size.width < breakpoint) {
+    const horizontalMargin = Math.max(0, Number(config?.compactHorizontalMargin));
+    const dossierHeight = finitePositive(Number(config?.compactDossierHeight), 'compactDossierHeight');
+    if (!Number.isFinite(horizontalMargin)) throw new TypeError('compactHorizontalMargin must be finite');
+    const panelWidth = Math.max(1, size.width - (horizontalMargin * 2));
+    const firstPanelTop = focused.top + focused.height + dossierGap;
+    const leftTop = firstPanelTop;
+    const rightTop = firstPanelTop + (open ? dossierHeight + dossierGap : 0);
+    const finalPanelBottom = open ? rightTop + dossierHeight : focused.top + focused.height;
+    return Object.freeze({
+      mode: 'compact',
+      artwork: focused,
+      leftDossier: rectangle(horizontalMargin, leftTop, panelWidth, dossierHeight),
+      rightDossier: rectangle(horizontalMargin, rightTop, panelWidth, dossierHeight),
+      contentHeight: Math.max(size.height, finalPanelBottom + dossierGap),
+    });
+  }
+
+  const panelAllowance = 2 * (dossierWidth + dossierGap);
+  const availableWidth = Math.max(1, size.width - (horizontalMargin * 2) - panelAllowance);
+  const availableHeight = Math.max(1, size.height - (verticalMargin * 2)) * verticalArtworkScale;
+  const scale = Math.min(availableWidth / origin.width, availableHeight / origin.height);
+  const artworkWidth = origin.width * scale;
+  const artworkHeight = origin.height * scale;
+  const groupWidth = artworkWidth + panelAllowance;
+  const groupLeft = (size.width - groupWidth) / 2;
+  const artworkLeft = groupLeft + dossierWidth + dossierGap;
+  const artwork = rectangle(artworkLeft, (size.height - artworkHeight) / 2, artworkWidth, artworkHeight);
+  const dossierHeight = Math.max(1, artworkHeight * 0.98);
+  const dossierTop = (size.height - dossierHeight) / 2;
+
+  return Object.freeze({
+    mode: 'wide',
+    artwork,
+    leftDossier: rectangle(
+      groupLeft,
+      dossierTop,
+      dossierWidth,
+      dossierHeight,
+    ),
+    rightDossier: rectangle(
+      artwork.left + artwork.width + dossierGap,
+      dossierTop,
+      dossierWidth,
+      dossierHeight,
+    ),
+    contentHeight: size.height,
   });
 }
 

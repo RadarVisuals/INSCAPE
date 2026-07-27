@@ -139,6 +139,20 @@ const FIXTURE_ASSET_SOURCE = Object.freeze({
   resolveAsset: (stableAssetId) => FIXTURE_MEDIA[stableAssetId] || null,
 });
 
+const fixtureFocusDossier = (entry) => Object.freeze({
+  title: entry.media.accessibleLabel,
+  description: null,
+  traits: Object.freeze([]),
+  technical: Object.freeze([
+    Object.freeze({ label: 'STABLE ASSET ID', value: entry.placement.stableAssetId }),
+    Object.freeze({ label: 'SOURCE DIMENSIONS', value: `${entry.media.width} × ${entry.media.height}` }),
+    Object.freeze({ label: 'TRANSPARENCY', value: entry.transparencyMode }),
+    Object.freeze({ label: 'TOKEN STANDARD', value: null }),
+    Object.freeze({ label: 'CONTRACT', value: null }),
+    Object.freeze({ label: 'NETWORK', value: null }),
+  ]),
+});
+
 function createFixturePlacements(transparencyMode) {
   const common = {
     crop: null,
@@ -1095,6 +1109,7 @@ export default function LatticeEnginePrototype() {
 
       {viewerSession && viewerEntry && (
         <LatticeFocusViewer
+          dossier={fixtureFocusDossier(viewerEntry)}
           entry={viewerEntry}
           getReturnRectangle={() => viewportRef.current
             ?.querySelector(`[data-placement-id="${viewerSession.placementId}"]`)
@@ -1109,7 +1124,7 @@ export default function LatticeEnginePrototype() {
       )}
 
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE VIEWER / PHASE 5 / SLICE 3B</p>
+        <p>LATTICE VIEWER / PHASE 5 / SLICE 3C</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
         <p>{viewerSession ? 'VIEWING' : snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
