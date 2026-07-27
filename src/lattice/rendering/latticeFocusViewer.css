@@ -1,0 +1,60 @@
+.lattice-focus-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+  background: transparent;
+  color: #d8d5cc;
+  isolation: isolate;
+}
+
+.lattice-focus-viewer__artwork {
+  position: fixed;
+  z-index: 1;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.lattice-focus-viewer[data-phase="opening"] .lattice-focus-viewer__artwork,
+.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__artwork,
+.lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__artwork {
+  transition: transform 420ms cubic-bezier(0.22, 0.76, 0.26, 1);
+}
+
+.lattice-focus-viewer__close {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(216, 213, 204, 0.48);
+  border-radius: 0;
+  background: rgba(9, 10, 10, 0.92);
+  color: #d8d5cc;
+  font: 300 21px/1 "IBM Plex Mono", "Courier New", monospace;
+  cursor: pointer;
+}
+
+.lattice-focus-viewer__close[data-disabled] {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.lattice-focus-viewer__close:focus-visible {
+  outline: 1px solid #d8d5cc;
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .lattice-focus-viewer__close {
+    top: 10px;
+    right: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lattice-focus-viewer__artwork {
+    transition-duration: 1ms !important;
+  }
+}

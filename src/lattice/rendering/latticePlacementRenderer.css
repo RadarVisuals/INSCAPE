@@ -16,6 +16,15 @@
   cursor: move;
 }
 
+.lattice-placement-layer:not(.is-arranging) .lattice-placement[role="button"] {
+  pointer-events: auto;
+  cursor: zoom-in;
+}
+
+.lattice-placement.is-viewer-origin {
+  visibility: hidden;
+}
+
 .lattice-placement:focus-visible {
   outline: 1px solid #d8d5cc;
   outline-offset: 4px;

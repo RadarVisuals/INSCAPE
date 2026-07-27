@@ -60,6 +60,7 @@ import {
 } from './lattice/controller/latticeArtboardFraming.js';
 import LatticeTableRenderer from './lattice/rendering/LatticeTableRenderer.jsx';
 import LatticeGridPlane from './lattice/rendering/LatticeGridPlane.jsx';
+import LatticeFocusViewer from './lattice/rendering/LatticeFocusViewer.jsx';
 import {
   LATTICE_GEOMETRY_PRESETS,
   LATTICE_ARTBOARD_FITS,
@@ -269,6 +270,7 @@ export default function LatticeEnginePrototype() {
   const [framingOffset, setFramingOffset] = useState({ x: 0, y: 0 });
   const [framingPreview, setFramingPreview] = useState(null);
   const [insertionFlow, setInsertionFlow] = useState(null);
+  const [viewerSession, setViewerSession] = useState(null);
   const framingBounds = latticeArtboardFramingBounds(
     CANONICAL_LATTICE_ARTBOARD,
     dimensions,
@@ -310,6 +312,21 @@ export default function LatticeEnginePrototype() {
     ).mediaOpeningRectangle
     : null;
 
+  const openPlacementViewer = useCallback((event, entry) => {
+    const primaryActivation = event.type === 'keydown' || event.button === 0;
+    if (arrangeEnabled || viewerSession || !primaryActivation
+      || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const originElement = event.currentTarget;
+    setViewerSession({
+      entry,
+      originRectangle: originElement.getBoundingClientRect(),
+      placementId: entry.placement.id,
+      returnFocus: originElement,
+    });
+  }, [arrangeEnabled, viewerSession]);
+
   useEffect(() => {
     activeRef.current = active;
     if (active.x !== 0 || active.y !== 0) {
@@ -348,7 +365,8 @@ export default function LatticeEnginePrototype() {
   useEffect(() => {
     const editableTarget = (target) => target?.closest?.('input, textarea, select, [contenteditable="true"]');
     const pressSpace = (event) => {
-      if (event.code !== 'Space' || editableTarget(event.target)) return;
+      if (event.defaultPrevented || event.code !== 'Space' || editableTarget(event.target)
+        || event.target?.closest?.('[data-lattice-focus-viewer]')) return;
       event.preventDefault();
       spaceHeldRef.current = true;
       setSpaceHeld(true);
@@ -973,6 +991,7 @@ export default function LatticeEnginePrototype() {
                 cropEditingPlacementId={isActive ? cropEditPlacementId : null}
                 geometry={renderPreview.geometry}
                 framing={framing}
+                focusedPlacementId={viewerSession?.placementId || null}
                 hidden={!isActive}
                 key={`${coordinate.x}:${coordinate.y}`}
                 positionStyle={{
@@ -982,6 +1001,7 @@ export default function LatticeEnginePrototype() {
                   height: dimensions.height,
                 }}
                 onPlacementFocus={handlePlacementFocus}
+                onPlacementActivate={!arrangeEnabled && isActive && isAuthoredTable ? openPlacementViewer : undefined}
                 onPlacementPointerDown={handlePlacementPointerDown}
                 onPlacementResizePointerDown={handlePlacementResizePointerDown}
                 selectedPlacementId={isActive ? selectedPlacementId : null}
@@ -1037,11 +1057,23 @@ export default function LatticeEnginePrototype() {
         )}
       </section>
 
+      {viewerSession && (
+        <LatticeFocusViewer
+          entry={viewerSession.entry}
+          getReturnRectangle={() => viewportRef.current
+            ?.querySelector(`[data-placement-id="${viewerSession.placementId}"]`)
+            ?.getBoundingClientRect()}
+          onClosed={() => setViewerSession(null)}
+          originRectangle={viewerSession.originRectangle}
+          returnFocus={viewerSession.returnFocus}
+        />
+      )}
+
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2I</p>
+        <p>LATTICE VIEWER / PHASE 5 / SLICE 3A</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
-        <p>{snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
+        <p>{viewerSession ? 'VIEWING' : snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
       </aside>
 
       <details className="lattice-engine-controls" data-lattice-chrome>

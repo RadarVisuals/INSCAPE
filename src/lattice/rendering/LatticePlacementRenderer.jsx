@@ -5,6 +5,64 @@ import { TRANSPARENCY_MODES } from '../domain/latticeProfile.js';
 import { projectTableMediaPlacements } from './latticePlacement.js';
 import './latticePlacementRenderer.css';
 
+export function LatticeArtworkPresentation({ cropEditing = false, entry }) {
+  const {
+    backing,
+    backplateRectangle,
+    cropped,
+    imageRectangle,
+    mat,
+    media,
+    mediaRectangle,
+    selectionRectangle,
+    transparencyMode,
+  } = entry;
+
+  return <>
+    {backplateRectangle && (
+      <div
+        aria-hidden="true"
+        className="lattice-placement-backplate"
+        style={{ '--lattice-mat-color': mat.color }}
+      />
+    )}
+    <div
+      className={`lattice-placement-media${cropped ? ' is-cropped' : ''}${cropEditing ? ' is-crop-editing' : ''}${transparencyMode === TRANSPARENCY_MODES.OPAQUE ? ' is-opaque' : ''}`}
+      style={{
+        backgroundColor: backing.enabled ? backing.color : undefined,
+        left: mediaRectangle.left - selectionRectangle.left,
+        top: mediaRectangle.top - selectionRectangle.top,
+        width: mediaRectangle.width,
+        height: mediaRectangle.height,
+      }}
+    >
+      <img
+        alt={typeof media.accessibleLabel === 'string' ? media.accessibleLabel : ''}
+        draggable="false"
+        src={media.src}
+        style={{
+          left: imageRectangle.left - mediaRectangle.left,
+          top: imageRectangle.top - mediaRectangle.top,
+          width: imageRectangle.width,
+          height: imageRectangle.height,
+        }}
+      />
+    </div>
+    {backplateRectangle && (
+      <div
+        aria-hidden="true"
+        className="lattice-placement-aperture"
+        style={{
+          left: mediaRectangle.left - selectionRectangle.left,
+          top: mediaRectangle.top - selectionRectangle.top,
+          width: mediaRectangle.width,
+          height: mediaRectangle.height,
+        }}
+      />
+    )}
+  </>;
+}
+
 export default function LatticePlacementRenderer({
   arrangeEnabled = false,
   artboard,
@@ -13,6 +71,8 @@ export default function LatticePlacementRenderer({
   assetsByStableId,
   cropEditingPlacementId = null,
   framing,
+  focusedPlacementId = null,
+  onPlacementActivate,
   onPlacementFocus,
   onPlacementPointerDown,
   onPlacementResizePointerDown,
@@ -27,10 +87,13 @@ export default function LatticePlacementRenderer({
 
   return (
     <div className={`lattice-placement-layer${arrangeEnabled ? ' is-arranging' : ''}`} data-table-id={table.id}>
-      {renderEntries.map(({ backing, backplateRectangle, cropped, imageRectangle, mat, media, mediaRectangle, placement, selectionRectangle, transparencyMode }) => (
+      {renderEntries.map((entry) => {
+        const { mat, media, placement, selectionRectangle, transparencyMode } = entry;
+        const viewerEnabled = typeof onPlacementActivate === 'function' && !arrangeEnabled;
+        return (
         <div
           aria-label={typeof media.accessibleLabel === 'string' ? media.accessibleLabel : 'Artwork placement'}
-          className={`lattice-placement${mat.enabled ? ' has-mat' : ''}${selectedPlacementId === placement.id ? ' is-selected' : ''}`}
+          className={`lattice-placement${mat.enabled ? ' has-mat' : ''}${selectedPlacementId === placement.id ? ' is-selected' : ''}${focusedPlacementId === placement.id ? ' is-viewer-origin' : ''}`}
           data-mat-enabled={mat.enabled || undefined}
           data-placement-id={placement.id}
           data-transparency-mode={transparencyMode}
@@ -39,9 +102,18 @@ export default function LatticePlacementRenderer({
             event.preventDefault();
             event.stopPropagation();
           }}
+          onClick={viewerEnabled ? (event) => onPlacementActivate(event, entry) : undefined}
           onFocus={() => onPlacementFocus?.(placement.id)}
-          onPointerDown={(event) => onPlacementPointerDown?.(event, placement)}
-          role={arrangeEnabled ? 'button' : undefined}
+          onKeyDown={viewerEnabled ? (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            onPlacementActivate(event, entry);
+          } : undefined}
+          onPointerDown={(event) => {
+            if (viewerEnabled) event.stopPropagation();
+            onPlacementPointerDown?.(event, placement);
+          }}
+          role={arrangeEnabled || viewerEnabled ? 'button' : undefined}
           style={{
             left: selectionRectangle.left,
             top: selectionRectangle.top,
@@ -49,51 +121,12 @@ export default function LatticePlacementRenderer({
             height: selectionRectangle.height,
             zIndex: placement.layer,
           }}
-          tabIndex={arrangeEnabled ? 0 : undefined}
+          tabIndex={arrangeEnabled || viewerEnabled ? 0 : undefined}
         >
-          {backplateRectangle && (
-            <div
-              aria-hidden="true"
-              className="lattice-placement-backplate"
-              style={{ '--lattice-mat-color': mat.color }}
-            />
-          )}
-          <div
-            className={`lattice-placement-media${cropped ? ' is-cropped' : ''}${cropEditingPlacementId === placement.id ? ' is-crop-editing' : ''}${transparencyMode === TRANSPARENCY_MODES.OPAQUE ? ' is-opaque' : ''}`}
-            style={{
-              backgroundColor: backing.enabled ? backing.color : undefined,
-              left: mediaRectangle.left - selectionRectangle.left,
-              top: mediaRectangle.top - selectionRectangle.top,
-              width: mediaRectangle.width,
-              height: mediaRectangle.height,
-            }}
-          >
-            <img
-              alt={typeof media.accessibleLabel === 'string' ? media.accessibleLabel : ''}
-              draggable="false"
-              src={media.src}
-              style={{
-                left: imageRectangle.left - mediaRectangle.left,
-                top: imageRectangle.top - mediaRectangle.top,
-                width: imageRectangle.width,
-                height: imageRectangle.height,
-              }}
-            />
-          </div>
-          {backplateRectangle && (
-            <div
-              aria-hidden="true"
-              className="lattice-placement-aperture"
-              style={{
-                left: mediaRectangle.left - selectionRectangle.left,
-                top: mediaRectangle.top - selectionRectangle.top,
-                width: mediaRectangle.width,
-                height: mediaRectangle.height,
-              }}
-            />
-          )}
+          <LatticeArtworkPresentation cropEditing={cropEditingPlacementId === placement.id} entry={entry} />
         </div>
-      ))}
+        );
+      })}
       {selectedEntry && (
         <div
           aria-hidden={cropEditingPlacementId === selectedEntry.placement.id ? undefined : true}

@@ -22,6 +22,8 @@ export default function LatticeTableRenderer({
   assetsByStableId = {},
   cropEditingPlacementId,
   framing,
+  focusedPlacementId,
+  onPlacementActivate,
   geometry,
   hidden = false,
   onPlacementFocus,
@@ -57,6 +59,8 @@ export default function LatticeTableRenderer({
         assetsByStableId={assetsByStableId}
         cropEditingPlacementId={cropEditingPlacementId}
         framing={framing}
+        focusedPlacementId={focusedPlacementId}
+        onPlacementActivate={onPlacementActivate}
         onPlacementFocus={onPlacementFocus}
         onPlacementPointerDown={onPlacementPointerDown}
         onPlacementResizePointerDown={onPlacementResizePointerDown}

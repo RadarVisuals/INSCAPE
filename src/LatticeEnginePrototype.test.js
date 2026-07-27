@@ -9,6 +9,8 @@ const placementController = readFileSync(new URL('./lattice/controller/latticePl
 const resizeController = readFileSync(new URL('./lattice/controller/latticePlacementResize.js', import.meta.url), 'utf8');
 const lifecycleController = readFileSync(new URL('./lattice/controller/latticePlacementLifecycle.js', import.meta.url), 'utf8');
 const insertionController = readFileSync(new URL('./lattice/controller/latticePlacementInsertion.js', import.meta.url), 'utf8');
+const focusViewer = readFileSync(new URL('./lattice/rendering/LatticeFocusViewer.jsx', import.meta.url), 'utf8');
+const focusViewerStyles = readFileSync(new URL('./lattice/rendering/latticeFocusViewer.css', import.meta.url), 'utf8');
 
 test('lattice engine harness is a development-only lazy route backed by the Slice 1A topology', () => {
   assert.match(entry, /import\.meta\.env\.DEV && prototypePath === '\/prototype\/lattice-engine'/);
@@ -17,10 +19,33 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 4 \/ SLICE 2I/);
+  assert.match(source, /PHASE 5 \/ SLICE 3A/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
+});
+
+test('Phase 5 focus viewer opens only from view mode and preserves the live lattice origin', () => {
+  assert.match(source, /openPlacementViewer/);
+  assert.match(source, /event\.type === 'keydown' \|\| event\.button === 0/);
+  assert.match(source, /if \(arrangeEnabled \|\| viewerSession/);
+  assert.match(source, /originElement\.getBoundingClientRect\(\)/);
+  assert.match(source, /onPlacementActivate=\{!arrangeEnabled && isActive && isAuthoredTable/);
+  assert.match(source, /focusedPlacementId=\{viewerSession\?\.placementId \|\| null\}/);
+  assert.match(source, /getReturnRectangle=\{\(\) => viewportRef\.current/);
+  assert.match(source, /LatticeFocusViewer/);
+  assert.doesNotMatch(source, /NftFlipViewer|NftTableViewerPrototype/);
+});
+
+test('focus viewer owns modal focus and Escape while leaving the lattice presentation visible', () => {
+  assert.match(focusViewer, /createPortal/);
+  assert.match(focusViewer, /aria-modal="true"/);
+  assert.match(focusViewer, /event\.key === 'Escape'/);
+  assert.match(focusViewer, /node\.inert = true/);
+  assert.match(focusViewer, /returnFocus\.focus/);
+  assert.match(focusViewer, /LatticeArtworkPresentation/);
+  assert.match(focusViewerStyles, /\.lattice-focus-viewer\s*\{[^}]*background: transparent;/s);
+  assert.doesNotMatch(focusViewer, /metadata|dossier|localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/iu);
 });
 
 test('Arrange is session-only free placement with deterministic gesture ownership', () => {
