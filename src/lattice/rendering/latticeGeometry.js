@@ -22,6 +22,11 @@ const SURFACE_IDS = new Set(LATTICE_SURFACES.map(({ id }) => id));
 const ANCHORS = new Set(TABLE_LABEL_ANCHORS);
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
 
+export const LATTICE_ARTBOARD_FITS = Object.freeze({
+  CONTAIN: 'contain',
+  COVER: 'cover',
+});
+
 export function assertRenderGeometry(geometry) {
   if (!geometry
     || !Number.isSafeInteger(geometry.columns) || geometry.columns < 1
@@ -40,9 +45,9 @@ function boundedOffset(value, dimension) {
   return clamp(Number.isSafeInteger(value) ? value : 0, -semanticMaximum, semanticMaximum);
 }
 
-export function projectTableLabelPosition(table, geometry, viewport, artboard = CANONICAL_LATTICE_ARTBOARD) {
+export function projectTableLabelPosition(table, geometry, viewport, artboard = CANONICAL_LATTICE_ARTBOARD, framing) {
   assertRenderGeometry(geometry);
-  const field = projectCanonicalLatticeArtboard(artboard, viewport);
+  const field = projectCanonicalLatticeArtboard(artboard, viewport, framing);
   const cellSize = Math.min(field.width / geometry.columns, field.height / geometry.rows);
   const anchor = ANCHORS.has(table?.labelAnchor) ? table.labelAnchor : 'top-left';
   const [vertical, horizontal] = anchor.split('-');
@@ -62,7 +67,22 @@ export function projectTableLabelPosition(table, geometry, viewport, artboard = 
   };
 }
 
-export function projectCanonicalLatticeArtboard(artboard, viewport) {
+export function latticeArtboardFramingBounds(artboard, viewport, fit = LATTICE_ARTBOARD_FITS.CONTAIN) {
+  const centered = projectCanonicalLatticeArtboard(artboard, viewport, { fit, offset: { x: 0, y: 0 } });
+  return {
+    x: Math.max(0, (centered.width - viewport.width) / 2),
+    y: Math.max(0, (centered.height - viewport.height) / 2),
+  };
+}
+
+export function clampLatticeArtboardOffset(offset, bounds) {
+  return {
+    x: clamp(Number.isFinite(offset?.x) ? offset.x : 0, -bounds.x, bounds.x),
+    y: clamp(Number.isFinite(offset?.y) ? offset.y : 0, -bounds.y, bounds.y),
+  };
+}
+
+export function projectCanonicalLatticeArtboard(artboard, viewport, framing = {}) {
   if (!artboard
     || !Number.isFinite(artboard.aspectWidth) || artboard.aspectWidth <= 0
     || !Number.isFinite(artboard.aspectHeight) || artboard.aspectHeight <= 0) {
@@ -73,19 +93,27 @@ export function projectCanonicalLatticeArtboard(artboard, viewport) {
     || !Number.isFinite(viewport.height) || viewport.height <= 0) {
     throw new TypeError('Lattice rendering requires a positive viewport');
   }
-  const scale = Math.min(viewport.width / artboard.aspectWidth, viewport.height / artboard.aspectHeight);
+  const fit = framing.fit === LATTICE_ARTBOARD_FITS.COVER
+    ? LATTICE_ARTBOARD_FITS.COVER
+    : LATTICE_ARTBOARD_FITS.CONTAIN;
+  const scaleOperation = fit === LATTICE_ARTBOARD_FITS.COVER ? Math.max : Math.min;
+  const scale = scaleOperation(viewport.width / artboard.aspectWidth, viewport.height / artboard.aspectHeight);
   const width = artboard.aspectWidth * scale;
   const height = artboard.aspectHeight * scale;
+  const offset = clampLatticeArtboardOffset(framing.offset, {
+    x: Math.max(0, (width - viewport.width) / 2),
+    y: Math.max(0, (height - viewport.height) / 2),
+  });
   return {
     width,
     height,
-    left: (viewport.width - width) / 2,
-    top: (viewport.height - height) / 2,
+    left: ((viewport.width - width) / 2) + offset.x,
+    top: ((viewport.height - height) / 2) + offset.y,
   };
 }
 
-export function projectPlacementRectangle(placement, artboard, viewport) {
-  const field = projectCanonicalLatticeArtboard(artboard, viewport);
+export function projectPlacementRectangle(placement, artboard, viewport, framing) {
+  const field = projectCanonicalLatticeArtboard(artboard, viewport, framing);
   return {
     left: field.left + (placement.x * field.width),
     top: field.top + (placement.y * field.height),
@@ -115,9 +143,9 @@ export function fitNativeMediaRectangle(rectangle, media) {
   };
 }
 
-export function semanticGridVariables(geometry, viewport, stageOrigin = { x: 0, y: 0 }, artboard = CANONICAL_LATTICE_ARTBOARD) {
+export function semanticGridVariables(geometry, viewport, stageOrigin = { x: 0, y: 0 }, artboard = CANONICAL_LATTICE_ARTBOARD, framing) {
   assertRenderGeometry(geometry);
-  const field = projectCanonicalLatticeArtboard(artboard, viewport);
+  const field = projectCanonicalLatticeArtboard(artboard, viewport, framing);
   const cellSize = Math.min(field.width / geometry.columns, field.height / geometry.rows);
   return {
     '--lattice-grid-columns': geometry.columns,

@@ -43,6 +43,18 @@ test('AUTO and PRESERVE_ALPHA resolve to the exact same deterministic presentati
   assert.equal(resolvedTransparencyMode(TRANSPARENCY_MODES.OPAQUE), TRANSPARENCY_MODES.OPAQUE);
 });
 
+test('cover framing offset projects the complete owned composition with the table', () => {
+  const [entry] = projectTableMediaPlacements({
+    artboard: CANONICAL_LATTICE_ARTBOARD,
+    assetsByStableId: media,
+    framing: { fit: 'cover', offset: { x: 0, y: 40 } },
+    table: table('table-05', { x: 0, y: 0 }, [placement({})]),
+    viewport: { width: 1280, height: 600 },
+  });
+  assert.deepEqual(entry.mediaRectangle, { left: 0, top: 0, width: 640, height: 320 });
+  assert.equal(entry.tableId, 'table-05');
+});
+
 test('navigationOrder alone controls DOM projection order while layer remains independent', () => {
   const placements = [
     placement({ id: 'later', navigationOrder: 2, layer: 0 }),

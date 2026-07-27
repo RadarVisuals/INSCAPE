@@ -39,3 +39,10 @@ test('one shared grid plane replaces visible boundaries between transparent tabl
   assert.doesNotMatch(tableRule, /^\s*(border|outline|background|box-shadow)\s*:/mu);
   assert.doesNotMatch(styles, /outline|box-shadow/);
 });
+
+test('one framing projection feeds field, placements, guides and the continuous grid', () => {
+  assert.match(source, /projectCanonicalLatticeArtboard\(artboard, viewport, framing\)/);
+  assert.match(source, /framing=\{framing\}/);
+  assert.match(guideRenderer, /projectCanonicalLatticeArtboard\(artboard, viewport, framing\)/);
+  assert.match(gridPlane, /semanticGridVariables\(geometry, viewport, stageOrigin, artboard, framing\)/);
+});

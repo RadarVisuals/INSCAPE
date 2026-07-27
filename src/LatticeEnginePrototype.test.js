@@ -15,7 +15,7 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 4 \/ SLICE 2D/);
+  assert.match(source, /PHASE 4 \/ SLICE 2E/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
@@ -65,6 +65,22 @@ test('native proportional resize is corner-anchored, transient, and independent 
   assert.match(resizeController, /projectedScale/);
   assert.match(source, /event\.target\.closest\?\.\('\[data-resize-corner\]'\)/);
   assert.doesNotMatch(resizeController, /smartGuides|gridSnap|crop|localStorage|sessionStorage|indexedDB/iu);
+});
+
+test('bounded cover framing uses Space-drag without becoming free lattice camera state', () => {
+  for (const token of [
+    'LATTICE_ARTBOARD_FITS.COVER',
+    'latticeArtboardFramingBounds',
+    'createArtboardFramingGesture',
+    "kind: 'framing'",
+    "event.code !== 'Space'",
+    'framingPreview',
+    'FRAME READY',
+    'FRAMING',
+  ]) assert.match(source, new RegExp(token.replaceAll('.', '\\.')));
+  assert.match(source, /framing=\{framing\}/);
+  assert.match(source, /projectedArtboard/);
+  assert.doesNotMatch(source, /persistFraming|framing.*localStorage|framing.*sessionStorage/iu);
 });
 
 test('Swap layers reverses the complete fixture stack without touching navigation order', () => {

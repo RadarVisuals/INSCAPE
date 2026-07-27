@@ -9,6 +9,7 @@ export default function LatticePlacementRenderer({
   arrangeEnabled = false,
   artboard,
   assetsByStableId,
+  framing,
   onPlacementFocus,
   onPlacementPointerDown,
   onPlacementResizePointerDown,
@@ -16,7 +17,7 @@ export default function LatticePlacementRenderer({
   table,
   viewport,
 }) {
-  const renderEntries = projectTableMediaPlacements({ artboard, assetsByStableId, table, viewport });
+  const renderEntries = projectTableMediaPlacements({ artboard, assetsByStableId, framing, table, viewport });
   const selectedEntry = arrangeEnabled
     ? renderEntries.find(({ placement }) => placement.id === selectedPlacementId)
     : null;

@@ -3,11 +3,14 @@ import assert from 'node:assert/strict';
 
 import {
   LATTICE_GEOMETRY_PRESETS,
+  LATTICE_ARTBOARD_FITS,
   PROTOTYPE_START_GEOMETRY,
   LATTICE_SURFACES,
   assertRenderGeometry,
   normalizeLatticeSurface,
   fitNativeMediaRectangle,
+  clampLatticeArtboardOffset,
+  latticeArtboardFramingBounds,
   projectCanonicalLatticeArtboard,
   projectPlacementRectangle,
   projectTableLabelPosition,
@@ -44,6 +47,26 @@ test('canonical artboard fills 16:9 and remains centered inside mismatched conta
     { aspectWidth: 16, aspectHeight: 9 },
     { width: 0, height: 844 },
   ), /positive viewport/);
+});
+
+test('cover framing fills mismatched viewports and clamps bounded presentation offsets', () => {
+  const wideViewport = { width: 1280, height: 600 };
+  assert.deepEqual(latticeArtboardFramingBounds(
+    { aspectWidth: 16, aspectHeight: 9 },
+    wideViewport,
+    LATTICE_ARTBOARD_FITS.COVER,
+  ), { x: 0, y: 60 });
+  assert.deepEqual(projectCanonicalLatticeArtboard(
+    { aspectWidth: 16, aspectHeight: 9 },
+    wideViewport,
+    { fit: LATTICE_ARTBOARD_FITS.COVER, offset: { x: 200, y: 40 } },
+  ), { width: 1280, height: 720, left: 0, top: -20 });
+  assert.deepEqual(projectCanonicalLatticeArtboard(
+    { aspectWidth: 16, aspectHeight: 9 },
+    { width: 400, height: 800 },
+    { fit: LATTICE_ARTBOARD_FITS.COVER, offset: { x: -500, y: 100 } },
+  ), { width: 1422.2222222222222, height: 800, left: -1011.1111111111111, top: 0 });
+  assert.deepEqual(clampLatticeArtboardOffset({ x: 500, y: -500 }, { x: 20, y: 30 }), { x: 20, y: -30 });
 });
 
 test('placement projection uses normalized artboard bounds and native media remains contained', () => {

@@ -18,6 +18,7 @@ export default function LatticeTableRenderer({
   arrangeEnabled = false,
   artboard,
   assetsByStableId = {},
+  framing,
   geometry,
   hidden = false,
   onPlacementFocus,
@@ -32,7 +33,7 @@ export default function LatticeTableRenderer({
   const title = tableDisplayTitle(table);
   const subtitle = privateTable || typeof table?.subtitle !== 'string' ? '' : table.subtitle.trim();
   const labelVisible = !privateTable && table?.labelVisible !== false && Boolean(title || subtitle);
-  const field = projectCanonicalLatticeArtboard(artboard, viewport);
+  const field = projectCanonicalLatticeArtboard(artboard, viewport, framing);
 
   return (
     <article
@@ -49,6 +50,7 @@ export default function LatticeTableRenderer({
         arrangeEnabled={arrangeEnabled}
         artboard={artboard}
         assetsByStableId={assetsByStableId}
+        framing={framing}
         onPlacementFocus={onPlacementFocus}
         onPlacementPointerDown={onPlacementPointerDown}
         onPlacementResizePointerDown={onPlacementResizePointerDown}
@@ -58,13 +60,14 @@ export default function LatticeTableRenderer({
       />
       <LatticeAlignmentGuides
         artboard={artboard}
+        framing={framing}
         guides={alignmentGuides}
         viewport={viewport}
       />
       {labelVisible && (
         <header
           className="lattice-table-renderer__label"
-          style={projectTableLabelPosition(table, geometry, viewport)}
+          style={projectTableLabelPosition(table, geometry, viewport, artboard, { fit: framing?.fit })}
         >
           {title && <strong>{title}</strong>}
           {subtitle && <span>{subtitle}</span>}

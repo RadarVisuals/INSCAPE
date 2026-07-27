@@ -21,6 +21,18 @@
   cursor: grabbing;
 }
 
+.lattice-engine-viewport.is-framing-ready,
+.lattice-engine-viewport.is-framing-ready .lattice-placement-media,
+.lattice-engine-viewport.is-framing-ready .lattice-placement-resize-handle {
+  cursor: grab;
+}
+
+.lattice-engine-viewport.is-framing,
+.lattice-engine-viewport.is-framing .lattice-placement-media,
+.lattice-engine-viewport.is-framing .lattice-placement-resize-handle {
+  cursor: grabbing;
+}
+
 .lattice-engine-viewport.is-placement-dragging {
   cursor: move;
 }

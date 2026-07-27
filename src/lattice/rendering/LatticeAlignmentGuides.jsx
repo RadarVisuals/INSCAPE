@@ -3,9 +3,9 @@ import React from 'react';
 import { projectCanonicalLatticeArtboard } from './latticeGeometry.js';
 import './latticeAlignmentGuides.css';
 
-export default function LatticeAlignmentGuides({ artboard, guides = [], viewport }) {
+export default function LatticeAlignmentGuides({ artboard, framing, guides = [], viewport }) {
   if (!guides.length) return null;
-  const field = projectCanonicalLatticeArtboard(artboard, viewport);
+  const field = projectCanonicalLatticeArtboard(artboard, viewport, framing);
   return (
     <div className="lattice-alignment-guides" aria-hidden="true">
       {guides.map((guide) => guide.axis === 'x' ? (
@@ -26,4 +26,3 @@ export default function LatticeAlignmentGuides({ artboard, guides = [], viewport
     </div>
   );
 }
-
