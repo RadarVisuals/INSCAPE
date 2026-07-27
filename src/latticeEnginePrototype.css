@@ -68,6 +68,101 @@
   transition: transform var(--lattice-snap-duration) cubic-bezier(0.2, 0.72, 0.22, 1);
 }
 
+.lattice-insertion-menu {
+  position: absolute;
+  z-index: 10;
+  display: grid;
+  width: 160px;
+  border: 1px solid rgba(216, 213, 204, 0.46);
+  background: rgba(9, 10, 10, 0.97);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
+}
+
+.lattice-insertion-menu button,
+.lattice-insertion-chooser button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #d8d5cc;
+  font: 9px/1.4 "IBM Plex Mono", "Courier New", monospace;
+  letter-spacing: 0.12em;
+  text-align: left;
+}
+
+.lattice-insertion-menu button {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+}
+
+.lattice-insertion-menu button:hover,
+.lattice-insertion-menu button:focus-visible,
+.lattice-insertion-chooser button:hover,
+.lattice-insertion-chooser button:focus-visible {
+  outline: none;
+  background: rgba(216, 213, 204, 0.12);
+}
+
+.lattice-insertion-chooser-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.lattice-insertion-chooser {
+  box-sizing: border-box;
+  width: min(560px, 100%);
+  border: 1px solid rgba(216, 213, 204, 0.46);
+  background: #090a0a;
+  padding: 12px;
+}
+
+.lattice-insertion-chooser header span,
+.lattice-insertion-chooser header h2 {
+  margin: 0;
+  font: 9px/1.4 "IBM Plex Mono", "Courier New", monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lattice-insertion-chooser header h2 {
+  margin-top: 3px;
+  color: rgba(216, 213, 204, 0.58);
+}
+
+.lattice-insertion-chooser > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.lattice-insertion-chooser > div button {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid rgba(216, 213, 204, 0.22);
+}
+
+.lattice-insertion-chooser img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: #0d0f0e;
+}
+
+.lattice-insertion-chooser > button {
+  width: 100%;
+  padding: 7px;
+  border: 1px solid rgba(216, 213, 204, 0.22);
+  text-align: center;
+}
+
 .lattice-engine-readout,
 .lattice-engine-controls {
   position: fixed;
@@ -207,6 +302,12 @@
   .lattice-engine-readout {
     left: 10px;
     bottom: 10px;
+  }
+
+  .lattice-insertion-chooser > div {
+    grid-template-columns: 1fr;
+    max-height: 58vh;
+    overflow: auto;
   }
 }
 

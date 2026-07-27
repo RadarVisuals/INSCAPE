@@ -35,6 +35,10 @@ export default function LatticePlacementRenderer({
           data-placement-id={placement.id}
           data-transparency-mode={transparencyMode}
           key={placement.id}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
           onFocus={() => onPlacementFocus?.(placement.id)}
           onPointerDown={(event) => onPlacementPointerDown?.(event, placement)}
           role={arrangeEnabled ? 'button' : undefined}

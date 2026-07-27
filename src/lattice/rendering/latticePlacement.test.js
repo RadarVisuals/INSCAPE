@@ -100,6 +100,7 @@ test('Arrange exposes navigation-ordered focus while native hit testing uses vis
   assert.match(source, /tabIndex=\{arrangeEnabled \? 0 : undefined\}/);
   assert.match(source, /zIndex: placement\.layer/);
   assert.match(source, /onPointerDown=\{\(event\) => onPlacementPointerDown\?\.\(event, placement\)\}/);
+  assert.match(source, /onContextMenu=\{\(event\) => \{[\s\S]*event\.preventDefault\(\);[\s\S]*event\.stopPropagation\(\);/);
   assert.match(styles, /\.lattice-placement-layer\.is-arranging \.lattice-placement\s*\{[^}]*pointer-events: auto/s);
 });
 

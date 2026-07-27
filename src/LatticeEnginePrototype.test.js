@@ -8,6 +8,7 @@ const controller = readFileSync(new URL('./lattice/controller/latticeNavigation.
 const placementController = readFileSync(new URL('./lattice/controller/latticePlacementAuthoring.js', import.meta.url), 'utf8');
 const resizeController = readFileSync(new URL('./lattice/controller/latticePlacementResize.js', import.meta.url), 'utf8');
 const lifecycleController = readFileSync(new URL('./lattice/controller/latticePlacementLifecycle.js', import.meta.url), 'utf8');
+const insertionController = readFileSync(new URL('./lattice/controller/latticePlacementInsertion.js', import.meta.url), 'utf8');
 
 test('lattice engine harness is a development-only lazy route backed by the Slice 1A topology', () => {
   assert.match(entry, /import\.meta\.env\.DEV && prototypePath === '\/prototype\/lattice-engine'/);
@@ -16,7 +17,7 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 4 \/ SLICE 2H/);
+  assert.match(source, /PHASE 4 \/ SLICE 2I/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
@@ -142,6 +143,24 @@ test('selected placement lifecycle replaces global fixture swapping without touc
   assert.match(source, /navigationOrder: 0/);
   assert.match(source, /navigationOrder: 1/);
   assert.doesNotMatch(lifecycleController, /localStorage|sessionStorage|indexedDB|wallet|publish/iu);
+});
+
+test('fixture-backed right-click insertion stays normalized, replaceable and development-only', () => {
+  for (const token of [
+    'FIXTURE_ASSET_SOURCE',
+    'listAssets',
+    'resolveAsset',
+    'openInsertionMenu',
+    'normalizedInsertionAnchor',
+    'createPlacementAtAnchor',
+    'DEFAULT_LATTICE_INSERTION_CONFIG',
+    'ADD / ARTWORK',
+  ]) assert.match(source, new RegExp(token));
+  assert.match(source, /onContextMenu=\{openInsertionMenu\}/);
+  assert.match(source, /pendingPlacementFocusRef/);
+  assert.match(source, /phase-4-inserted-/);
+  assert.doesNotMatch(insertionController, /Date|Math\.random|innerWidth|innerHeight|localStorage|sessionStorage|indexedDB/);
+  assert.doesNotMatch(source, /useLibraryStore|AssetIndex|CategoryAssetBrowser|ProfileNavigationDock|useWalletStore/);
 });
 
 test('empty-space and placement gestures remain separate while Escape restores or clears', () => {

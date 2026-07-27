@@ -39,6 +39,11 @@ import {
   replacePlacementAsset,
 } from './lattice/controller/latticePlacementLifecycle.js';
 import {
+  DEFAULT_LATTICE_INSERTION_CONFIG,
+  createPlacementAtAnchor,
+  normalizedInsertionAnchor,
+} from './lattice/controller/latticePlacementInsertion.js';
+import {
   createCropFocusGesture,
   finishCropFocusGesture,
   nudgeCropFocus,
@@ -90,6 +95,7 @@ const CONTROL_FIELDS = [
   ['minimumArtworkPixels', 'Minimum artwork size', 16, 160, 1],
 ];
 const CUSTOM_MAT_PRESET_ID = 'CUSTOM';
+const clampValue = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
 
 const interactiveChrome = (target) => target.closest('[data-lattice-chrome]');
 const unmodifiedPrimaryPointer = (event) => event.button === 0
@@ -120,6 +126,11 @@ const FIXTURE_MEDIA = Object.freeze({
     height: 2000,
     accessibleLabel: 'Transparent rendering fixture',
   }),
+});
+
+const FIXTURE_ASSET_SOURCE = Object.freeze({
+  listAssets: () => Object.entries(FIXTURE_MEDIA).map(([stableAssetId, media]) => ({ stableAssetId, ...media })),
+  resolveAsset: (stableAssetId) => FIXTURE_MEDIA[stableAssetId] || null,
 });
 
 function createFixturePlacements(transparencyMode) {
@@ -224,6 +235,8 @@ export default function LatticeEnginePrototype() {
   const wheelBlockedUntilRef = useRef(0);
   const settlingRef = useRef(false);
   const spaceHeldRef = useRef(false);
+  const insertionCounterRef = useRef(0);
+  const pendingPlacementFocusRef = useRef(null);
 
   const [dimensions, setDimensions] = useState({ width: 1, height: 1 });
   const [active, setActive] = useState(activeRef.current);
@@ -255,6 +268,7 @@ export default function LatticeEnginePrototype() {
   const [framingDragging, setFramingDragging] = useState(false);
   const [framingOffset, setFramingOffset] = useState({ x: 0, y: 0 });
   const [framingPreview, setFramingPreview] = useState(null);
+  const [insertionFlow, setInsertionFlow] = useState(null);
   const framingBounds = latticeArtboardFramingBounds(
     CANONICAL_LATTICE_ARTBOARD,
     dimensions,
@@ -301,8 +315,18 @@ export default function LatticeEnginePrototype() {
     if (active.x !== 0 || active.y !== 0) {
       setSelectedPlacementId(null);
       setCropEditPlacementId(null);
+      setInsertionFlow(null);
     }
   }, [active]);
+
+  useEffect(() => {
+    const placementId = pendingPlacementFocusRef.current;
+    if (!placementId || placementId !== selectedPlacementId) return;
+    const placement = viewportRef.current?.querySelector(`[data-placement-id="${placementId}"]`);
+    if (!placement) return;
+    pendingPlacementFocusRef.current = null;
+    placement.focus({ preventScroll: true });
+  }, [placementDefinitions, selectedPlacementId]);
 
   useEffect(() => {
     configRef.current = config;
@@ -439,6 +463,7 @@ export default function LatticeEnginePrototype() {
 
   const handlePointerDown = (event) => {
     if (settlingRef.current || !unmodifiedPrimaryPointer(event) || interactiveChrome(event.target)) return;
+    if (insertionFlow) setInsertionFlow(null);
     if (spaceHeldRef.current) {
       event.preventDefault();
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -643,6 +668,12 @@ export default function LatticeEnginePrototype() {
   };
 
   const handleKeyDown = (event) => {
+    if (event.key === 'Escape' && insertionFlow) {
+      event.preventDefault();
+      setInsertionFlow(null);
+      viewportRef.current?.focus({ preventScroll: true });
+      return;
+    }
     if (event.key === 'Escape' && gestureRef.current && !settlingRef.current) {
       event.preventDefault();
       finishGesture(true);
@@ -827,6 +858,59 @@ export default function LatticeEnginePrototype() {
     viewportRef.current?.focus({ preventScroll: true });
   };
 
+  const openInsertionMenu = (event) => {
+    if (!arrangeEnabled || active.x !== 0 || active.y !== 0 || settlingRef.current
+      || interactiveChrome(event.target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.target.closest?.('.lattice-placement, .lattice-placement-selection-overlay')) return;
+    const viewportBounds = event.currentTarget.getBoundingClientRect();
+    setInsertionFlow({
+      anchor: normalizedInsertionAnchor({ x: event.clientX, y: event.clientY }, projectedArtboard),
+      screen: {
+        x: clampValue(event.clientX - viewportBounds.left, 8, Math.max(8, viewportBounds.width - 168)),
+        y: clampValue(event.clientY - viewportBounds.top, 8, Math.max(8, viewportBounds.height - 92)),
+      },
+      view: 'root',
+    });
+  };
+
+  const chooseInsertionArtwork = (stableAssetId) => {
+    const media = FIXTURE_ASSET_SOURCE.resolveAsset(stableAssetId);
+    if (!insertionFlow?.anchor || !media) return;
+    let placementId;
+    do {
+      insertionCounterRef.current += 1;
+      placementId = `phase-4-inserted-${insertionCounterRef.current}`;
+    } while (placementDefinitions.some(({ id }) => id === placementId));
+    const placement = createPlacementAtAnchor({
+      anchor: insertionFlow.anchor,
+      artboard: CANONICAL_LATTICE_ARTBOARD,
+      media,
+      placementId,
+      placements: placementDefinitions,
+      preferredWidth: DEFAULT_LATTICE_INSERTION_CONFIG.preferredWidth,
+      stableAssetId,
+    });
+    setPlacementDefinitions((current) => [...current, placement]);
+    setPlacementBounds((current) => ({ ...current, [placement.id]: boundsFromPlacement(placement) }));
+    setPlacementCrops((current) => ({ ...current, [placement.id]: null }));
+    setArtworkMats((current) => ({
+      ...current,
+      [placement.id]: resolveArtworkMatPreset(ARTWORK_MAT_PRESET_IDS.NONE),
+    }));
+    setArtworkBackings((current) => ({
+      ...current,
+      [placement.id]: normalizeArtworkBacking(DEFAULT_ARTWORK_BACKING),
+    }));
+    setMatPresetIds((current) => ({ ...current, [placement.id]: ARTWORK_MAT_PRESET_IDS.NONE }));
+    setCropEditPlacementId(null);
+    setAlignmentGuides([]);
+    pendingPlacementFocusRef.current = placement.id;
+    setSelectedPlacementId(placement.id);
+    setInsertionFlow(null);
+  };
+
   return (
     <main className="lattice-engine-shell">
       <section
@@ -841,6 +925,7 @@ export default function LatticeEnginePrototype() {
         onLostPointerCapture={() => finishGesture(true)}
         onWheel={handleWheel}
         onKeyDown={handleKeyDown}
+        onContextMenu={openInsertionMenu}
       >
         <LatticeGridPlane
           artboard={CANONICAL_LATTICE_ARTBOARD}
@@ -906,10 +991,54 @@ export default function LatticeEnginePrototype() {
             );
           })}
         </LatticeGridPlane>
+        {insertionFlow && insertionFlow.view !== 'chooser' && (
+          <div
+            className="lattice-insertion-menu"
+            data-lattice-chrome
+            role="menu"
+            aria-label="Table insertion commands"
+            style={{ left: insertionFlow.screen.x, top: insertionFlow.screen.y }}
+          >
+            {insertionFlow.view === 'root' ? (
+              <button type="button" role="menuitem" autoFocus onClick={() => setInsertionFlow((current) => ({ ...current, view: 'add' }))}>
+                <span>ADD</span><span aria-hidden="true">›</span>
+              </button>
+            ) : (
+              <>
+                <button type="button" role="menuitem" onClick={() => setInsertionFlow((current) => ({ ...current, view: 'root' }))}>‹ BACK</button>
+                <button type="button" role="menuitem" autoFocus onClick={() => setInsertionFlow((current) => ({ ...current, view: 'chooser' }))}>ARTWORK</button>
+              </>
+            )}
+          </div>
+        )}
+        {insertionFlow?.view === 'chooser' && (
+          <div className="lattice-insertion-chooser-backdrop" data-lattice-chrome onPointerDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setInsertionFlow(null);
+              viewportRef.current?.focus({ preventScroll: true });
+            }
+          }}>
+            <section className="lattice-insertion-chooser" role="dialog" aria-modal="true" aria-labelledby="lattice-insertion-title">
+              <header><span>ADD / ARTWORK</span><h2 id="lattice-insertion-title">Choose repository fixture</h2></header>
+              <div>
+                {FIXTURE_ASSET_SOURCE.listAssets().map(({ stableAssetId, ...media }, index) => (
+                  <button type="button" autoFocus={index === 0} key={stableAssetId} onClick={() => chooseInsertionArtwork(stableAssetId)}>
+                    <img src={media.src} alt="" draggable="false" />
+                    <span>{media.accessibleLabel.replace(' rendering fixture', '').toUpperCase()}</span>
+                  </button>
+                ))}
+              </div>
+              <button type="button" onClick={() => {
+                setInsertionFlow(null);
+                viewportRef.current?.focus({ preventScroll: true });
+              }}>CANCEL</button>
+            </section>
+          </div>
+        )}
       </section>
 
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2H</p>
+        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2I</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
         <p>{snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
@@ -922,6 +1051,7 @@ export default function LatticeEnginePrototype() {
             <legend>RENDER</legend>
             <label className="is-check"><span>Arrange</span><input type="checkbox" checked={arrangeEnabled} onChange={(event) => {
               setArrangeEnabled(event.target.checked);
+              setInsertionFlow(null);
               setSelectedPlacementId(null);
               setPlacementPreview(null);
               setAlignmentGuides([]);
@@ -1003,6 +1133,7 @@ export default function LatticeEnginePrototype() {
             }} /></label>
             <label className="is-check"><span>Label visible</span><input type="checkbox" checked={renderPreview.labelVisible} onChange={(event) => setRenderPreview((current) => ({ ...current, labelVisible: event.target.checked }))} /></label>
             <button type="button" onClick={() => {
+              insertionCounterRef.current = 0;
               setRenderPreview(createDefaultRenderPreview());
               setPlacementDefinitions(createDefaultPlacementDefinitions());
               setPlacementBounds(createDefaultPlacementBounds());
@@ -1015,6 +1146,7 @@ export default function LatticeEnginePrototype() {
               setCropEditPlacementId(null);
               setAlignmentGuides([]);
               setSelectedPlacementId(null);
+              setInsertionFlow(null);
               setFramingOffset({ x: 0, y: 0 });
             }}>RESET RENDER</button>
           </fieldset>
