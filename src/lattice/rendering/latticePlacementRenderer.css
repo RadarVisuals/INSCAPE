@@ -12,6 +12,21 @@
   background: transparent;
 }
 
+.lattice-placement-layer.is-arranging .lattice-placement-media {
+  pointer-events: auto;
+  cursor: move;
+}
+
+.lattice-placement-media.is-selected {
+  outline: 1px solid rgba(216, 213, 204, 0.82);
+  outline-offset: 3px;
+}
+
+.lattice-placement-media:focus-visible {
+  outline: 1px solid #d8d5cc;
+  outline-offset: 4px;
+}
+
 .lattice-placement-media.is-opaque {
   background: #d8d4ca;
 }

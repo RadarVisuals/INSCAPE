@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 const entry = readFileSync(new URL('./main.jsx', import.meta.url), 'utf8');
 const source = readFileSync(new URL('./LatticeEnginePrototype.jsx', import.meta.url), 'utf8');
 const controller = readFileSync(new URL('./lattice/controller/latticeNavigation.js', import.meta.url), 'utf8');
+const placementController = readFileSync(new URL('./lattice/controller/latticePlacementAuthoring.js', import.meta.url), 'utf8');
 
 test('lattice engine harness is a development-only lazy route backed by the Slice 1A topology', () => {
   assert.match(entry, /import\.meta\.env\.DEV && prototypePath === '\/prototype\/lattice-engine'/);
@@ -13,10 +14,45 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /FREE-ARTBOARD FOUNDATION/);
+  assert.match(source, /PHASE 4 \/ SLICE 2B/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
+});
+
+test('Arrange is session-only free placement with deterministic gesture ownership', () => {
+  for (const token of [
+    'arrangeEnabled',
+    'handlePlacementPointerDown',
+    'setPointerCapture',
+    'createPlacementGesture',
+    'updatePlacementGesture',
+    'finishPlacementGesture',
+    'nudgePlacementByPixels',
+    'placementDragging',
+  ]) assert.match(source, new RegExp(token));
+  assert.match(source, /event\.button === 0/);
+  assert.match(source, /!event\.altKey && !event\.ctrlKey && !event\.metaKey && !event\.shiftKey/);
+  assert.doesNotMatch(placementController, /layer|navigationOrder|grid|snap|timer|velocity|inertia/iu);
+  assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
+});
+
+test('Swap layers reverses the complete fixture stack without touching navigation order', () => {
+  assert.match(source, /layer: layersSwapped \? 2 : 0/);
+  assert.match(source, /layer: 1/);
+  assert.match(source, /layer: layersSwapped \? 0 : 2/);
+  assert.match(source, /navigationOrder: 2/);
+  assert.match(source, /navigationOrder: 0/);
+  assert.match(source, /navigationOrder: 1/);
+});
+
+test('empty-space and placement gestures remain separate while Escape restores or clears', () => {
+  assert.match(source, /kind: 'navigation'/);
+  assert.match(source, /kind: 'placement'/);
+  assert.match(source, /setSelectedPlacementId\(null\)/);
+  assert.match(source, /finishGesture\(true\)/);
+  assert.match(source, /focusedPlacementId === selectedPlacementId/);
+  assert.match(source, /event\.shiftKey \? 10 : 1/);
 });
 
 test('Phase 2 fixture composition belongs permanently to the authored center table', () => {

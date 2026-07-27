@@ -64,6 +64,15 @@ test('navigationOrder alone controls DOM projection order while layer remains in
   assert.deepEqual(after.map(({ placement: item }) => item.layer), [1, 20]);
 });
 
+test('Arrange exposes navigation-ordered focus while native hit testing uses visual layer', () => {
+  const source = readFileSync(new URL('./LatticePlacementRenderer.jsx', import.meta.url), 'utf8');
+  const styles = readFileSync(new URL('./latticePlacementRenderer.css', import.meta.url), 'utf8');
+  assert.match(source, /tabIndex=\{arrangeEnabled \? 0 : undefined\}/);
+  assert.match(source, /zIndex: placement\.layer/);
+  assert.match(source, /onPointerDown=\{\(event\) => onPlacementPointerDown\?\.\(event, placement\)\}/);
+  assert.match(styles, /\.lattice-placement-layer\.is-arranging \.lattice-placement-media\s*\{[^}]*pointer-events: auto/s);
+});
+
 test('OPAQUE background is bounded by the fitted native-media rectangle, never the cell footprint', () => {
   const source = readFileSync(new URL('./LatticePlacementRenderer.jsx', import.meta.url), 'utf8');
   const styles = readFileSync(new URL('./latticePlacementRenderer.css', import.meta.url), 'utf8');
@@ -80,7 +89,7 @@ test('OPAQUE background is bounded by the fitted native-media rectangle, never t
   assert.doesNotMatch(styles, /\.lattice-placement-layer\s*\{[^}]*background:/s);
 });
 
-test('isolated Phase 2 placement rendering has no resolution, authoring, persistence, or production dependencies', () => {
+test('isolated placement rendering has no resolution, persistence, or production dependencies', () => {
   const source = readFileSync(new URL('./LatticePlacementRenderer.jsx', import.meta.url), 'utf8');
-  assert.doesNotMatch(source, /canvas|getImageData|crossOrigin|mime|fetch|ipfs|useWalletStore|localStorage|sessionStorage|indexedDB|onPointer|onClick/iu);
+  assert.doesNotMatch(source, /canvas|getImageData|crossOrigin|mime|fetch|ipfs|useWalletStore|localStorage|sessionStorage|indexedDB|onClick/iu);
 });

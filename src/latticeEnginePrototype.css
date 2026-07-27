@@ -21,6 +21,10 @@
   cursor: grabbing;
 }
 
+.lattice-engine-viewport.is-placement-dragging {
+  cursor: move;
+}
+
 .lattice-engine-viewport:focus-visible::after {
   content: "";
   position: absolute;

@@ -13,11 +13,15 @@ import './latticeTableRenderer.css';
 
 export default function LatticeTableRenderer({
   active = false,
+  arrangeEnabled = false,
   artboard,
   assetsByStableId = {},
   geometry,
   hidden = false,
+  onPlacementFocus,
+  onPlacementPointerDown,
   positionStyle,
+  selectedPlacementId,
   table,
   viewport,
 }) {
@@ -39,8 +43,12 @@ export default function LatticeTableRenderer({
       >
       </div>
       <LatticePlacementRenderer
+        arrangeEnabled={arrangeEnabled}
         artboard={artboard}
         assetsByStableId={assetsByStableId}
+        onPlacementFocus={onPlacementFocus}
+        onPlacementPointerDown={onPlacementPointerDown}
+        selectedPlacementId={selectedPlacementId}
         table={table}
         viewport={viewport}
       />

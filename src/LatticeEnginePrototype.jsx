@@ -20,12 +20,19 @@ import {
   resolveWheelDestination,
   updatePointerGesture,
 } from './lattice/controller/latticeNavigation.js';
+import {
+  createPlacementGesture,
+  finishPlacementGesture,
+  nudgePlacementByPixels,
+  updatePlacementGesture,
+} from './lattice/controller/latticePlacementAuthoring.js';
 import LatticeTableRenderer from './lattice/rendering/LatticeTableRenderer.jsx';
 import LatticeGridPlane from './lattice/rendering/LatticeGridPlane.jsx';
 import {
   LATTICE_GEOMETRY_PRESETS,
   LATTICE_SURFACES,
   PROTOTYPE_START_GEOMETRY,
+  projectCanonicalLatticeArtboard,
 } from './lattice/rendering/latticeGeometry.js';
 import './latticeEnginePrototype.css';
 
@@ -40,6 +47,8 @@ const CONTROL_FIELDS = [
 ];
 
 const interactiveChrome = (target) => target.closest('[data-lattice-chrome]');
+const unmodifiedPrimaryPointer = (event) => event.button === 0
+  && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
 
 const FIXTURE_ASSET_IDS = Object.freeze({
   landscape: '42:0x1111111111111111111111111111111111111111:0x01',
@@ -80,7 +89,7 @@ function createFixturePlacements(transparencyMode, layersSwapped) {
       id: 'phase-2-landscape',
       stableAssetId: FIXTURE_ASSET_IDS.landscape,
       x: 0.46, y: 0.13, width: 0.4, height: 0.4 * (16 / 9) * (2000 / 4636),
-      layer: 0,
+      layer: layersSwapped ? 2 : 0,
       navigationOrder: 2,
       transparencyMode: TRANSPARENCY_MODES.AUTO,
     },
@@ -89,7 +98,7 @@ function createFixturePlacements(transparencyMode, layersSwapped) {
       id: 'phase-2-portrait',
       stableAssetId: FIXTURE_ASSET_IDS.portrait,
       x: 0.14, y: 0.16, width: 0.22, height: 0.22 * (16 / 9) * (2829 / 2000),
-      layer: layersSwapped ? 2 : 1,
+      layer: 1,
       navigationOrder: 0,
       transparencyMode: TRANSPARENCY_MODES.PRESERVE_ALPHA,
     },
@@ -98,11 +107,26 @@ function createFixturePlacements(transparencyMode, layersSwapped) {
       id: 'phase-2-transparent',
       stableAssetId: FIXTURE_ASSET_IDS.transparent,
       x: 0.35, y: 0.42, width: 0.27, height: 0.27 * (16 / 9),
-      layer: layersSwapped ? 1 : 2,
+      layer: layersSwapped ? 0 : 2,
       navigationOrder: 1,
       transparencyMode,
     },
   ];
+}
+
+const boundsFromPlacement = ({ x, y, width, height }) => ({ x, y, width, height });
+
+const createDefaultPlacementBounds = () => Object.fromEntries(
+  createFixturePlacements(TRANSPARENCY_MODES.AUTO, false)
+    .map((placement) => [placement.id, boundsFromPlacement(placement)]),
+);
+
+function applyPlacementBounds(placements, placementBounds, preview) {
+  return placements.map((placement) => ({
+    ...placement,
+    ...(placementBounds[placement.id] || {}),
+    ...(preview?.placementId === placement.id ? preview.bounds : {}),
+  }));
 }
 
 const createDefaultRenderPreview = () => ({
@@ -136,9 +160,20 @@ export default function LatticeEnginePrototype() {
   const [config, setConfig] = useState(configRef.current);
   const [renderPreview, setRenderPreview] = useState(createDefaultRenderPreview);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [arrangeEnabled, setArrangeEnabled] = useState(false);
+  const [selectedPlacementId, setSelectedPlacementId] = useState(null);
+  const [placementDragging, setPlacementDragging] = useState(false);
+  const [placementBounds, setPlacementBounds] = useState(createDefaultPlacementBounds);
+  const [placementPreview, setPlacementPreview] = useState(null);
+  const centerPlacements = applyPlacementBounds(
+    createFixturePlacements(renderPreview.transparencyMode, renderPreview.layersSwapped),
+    placementBounds,
+    placementPreview,
+  );
 
   useEffect(() => {
     activeRef.current = active;
+    if (active.x !== 0 || active.y !== 0) setSelectedPlacementId(null);
   }, [active]);
 
   useEffect(() => {
@@ -190,33 +225,83 @@ export default function LatticeEnginePrototype() {
   }, [dragOffset, reducedMotion]);
 
   const finishGesture = useCallback((cancelled = false) => {
-    const gesture = gestureRef.current;
-    if (!gesture || settlingRef.current) return;
+    const activeGesture = gestureRef.current;
+    if (!activeGesture || settlingRef.current) return;
     gestureRef.current = null;
+
+    if (activeGesture.kind === 'placement') {
+      const result = finishPlacementGesture(activeGesture.gesture, { cancelled });
+      if (result.committed) {
+        setPlacementBounds((current) => ({
+          ...current,
+          [activeGesture.gesture.placementId]: result.bounds,
+        }));
+      }
+      setPlacementPreview(null);
+      setPlacementDragging(false);
+      return;
+    }
+
     setGestureActive(false);
-    if (!gesture.activated) return;
+    if (!activeGesture.gesture.activated) {
+      setSelectedPlacementId(null);
+      return;
+    }
     const destination = cancelled
       ? { ...activeRef.current }
-      : finishPointerGesture(gesture, activeRef.current, configRef.current);
-    settle(destination, gesture.offset);
+      : finishPointerGesture(activeGesture.gesture, activeRef.current, configRef.current);
+    settle(destination, activeGesture.gesture.offset);
   }, [settle]);
 
   const handlePointerDown = (event) => {
-    if (settlingRef.current || event.button !== 0 || interactiveChrome(event.target)) return;
-    gestureRef.current = createPointerGesture({ x: event.clientX, y: event.clientY });
+    if (settlingRef.current || !unmodifiedPrimaryPointer(event) || interactiveChrome(event.target)) return;
+    gestureRef.current = {
+      kind: 'navigation',
+      gesture: createPointerGesture({ x: event.clientX, y: event.clientY }),
+    };
     viewportRef.current?.focus({ preventScroll: true });
+  };
+
+  const handlePlacementPointerDown = (event, placement) => {
+    if (!arrangeEnabled || settlingRef.current || !unmodifiedPrimaryPointer(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.currentTarget.focus({ preventScroll: true });
+    setSelectedPlacementId(placement.id);
+    gestureRef.current = {
+      kind: 'placement',
+      captureTarget: event.currentTarget,
+      pointerId: event.pointerId,
+      gesture: createPlacementGesture(placement, { x: event.clientX, y: event.clientY }),
+    };
   };
 
   const handlePointerMove = (event) => {
     if (!gestureRef.current || settlingRef.current) return;
-    const previousActivated = gestureRef.current.activated;
+    if (gestureRef.current.kind === 'placement') {
+      const next = updatePlacementGesture(
+        gestureRef.current.gesture,
+        { x: event.clientX, y: event.clientY },
+        projectCanonicalLatticeArtboard(CANONICAL_LATTICE_ARTBOARD, dimensions),
+        configRef.current.deadZone,
+      );
+      gestureRef.current = { ...gestureRef.current, gesture: next };
+      if (next.activated) {
+        setPlacementDragging(true);
+        setPlacementPreview({ placementId: next.placementId, bounds: next.previewBounds });
+      }
+      return;
+    }
+
+    const previousActivated = gestureRef.current.gesture.activated;
     const next = updatePointerGesture(
-      gestureRef.current,
+      gestureRef.current.gesture,
       { x: event.clientX, y: event.clientY },
       activeRef.current,
       configRef.current,
     );
-    gestureRef.current = next;
+    gestureRef.current = { ...gestureRef.current, gesture: next };
     if (next.activated && !previousActivated) {
       event.currentTarget.setPointerCapture(event.pointerId);
       setGestureActive(true);
@@ -226,9 +311,10 @@ export default function LatticeEnginePrototype() {
 
   const handlePointerUp = (event) => {
     if (!gestureRef.current) return;
+    const captureTarget = gestureRef.current.captureTarget || event.currentTarget;
     finishGesture(false);
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
+    if (captureTarget.hasPointerCapture?.(event.pointerId)) {
+      captureTarget.releasePointerCapture(event.pointerId);
     }
   };
 
@@ -262,6 +348,26 @@ export default function LatticeEnginePrototype() {
     }
     if (settlingRef.current || gestureRef.current) return;
     const direction = keyboardDirection(event.key);
+    const focusedPlacementId = event.target.closest?.('[data-placement-id]')?.dataset.placementId;
+    if (arrangeEnabled && direction && focusedPlacementId === selectedPlacementId) {
+      const placement = centerPlacements.find(({ id }) => id === selectedPlacementId);
+      if (!placement) return;
+      event.preventDefault();
+      const distance = event.shiftKey ? 10 : 1;
+      const bounds = nudgePlacementByPixels(
+        placement,
+        { x: direction.x * distance, y: direction.y * distance },
+        projectCanonicalLatticeArtboard(CANONICAL_LATTICE_ARTBOARD, dimensions),
+      );
+      setPlacementBounds((current) => ({ ...current, [placement.id]: bounds }));
+      return;
+    }
+    if (event.key === 'Escape' && selectedPlacementId) {
+      event.preventDefault();
+      setSelectedPlacementId(null);
+      viewportRef.current?.focus({ preventScroll: true });
+      return;
+    }
     const destination = event.key === 'Home'
       ? entryLatticeCoordinate()
       : direction && latticeDestination(activeRef.current, direction);
@@ -278,7 +384,7 @@ export default function LatticeEnginePrototype() {
     <main className="lattice-engine-shell">
       <section
         ref={viewportRef}
-        className={`lattice-engine-viewport${gestureActive ? ' is-dragging' : ''}`}
+        className={`lattice-engine-viewport${gestureActive ? ' is-dragging' : ''}${arrangeEnabled ? ' is-arranging' : ''}${placementDragging ? ' is-placement-dragging' : ''}`}
         tabIndex={0}
         aria-label="Lattice navigation engine prototype"
         onPointerDown={handlePointerDown}
@@ -318,15 +424,13 @@ export default function LatticeEnginePrototype() {
               labelOffset: isAuthoredTable ? renderPreview.labelOffset : { column: 0, row: 0 },
               visibility: TABLE_VISIBILITY.PUBLIC,
               placements: isAuthoredTable
-                ? createFixturePlacements(
-                    renderPreview.transparencyMode,
-                    renderPreview.layersSwapped,
-                  )
+                ? centerPlacements
                 : [],
             };
             return (
               <LatticeTableRenderer
                 active={isActive}
+                arrangeEnabled={arrangeEnabled && isActive && isAuthoredTable}
                 artboard={CANONICAL_LATTICE_ARTBOARD}
                 assetsByStableId={FIXTURE_MEDIA}
                 geometry={renderPreview.geometry}
@@ -338,6 +442,9 @@ export default function LatticeEnginePrototype() {
                   width: dimensions.width,
                   height: dimensions.height,
                 }}
+                onPlacementFocus={setSelectedPlacementId}
+                onPlacementPointerDown={handlePlacementPointerDown}
+                selectedPlacementId={isActive ? selectedPlacementId : null}
                 table={table}
                 viewport={dimensions}
               />
@@ -347,10 +454,10 @@ export default function LatticeEnginePrototype() {
       </section>
 
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE RENDERER / FREE-ARTBOARD FOUNDATION</p>
+        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2B</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
-        <p>{snapping ? 'SETTLING' : gestureActive ? 'DIRECT MANIPULATION' : 'READY'}</p>
+        <p>{snapping ? 'SETTLING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
       </aside>
 
       <details className="lattice-engine-controls" data-lattice-chrome>
@@ -358,6 +465,11 @@ export default function LatticeEnginePrototype() {
         <div className="lattice-engine-control-list">
           <fieldset>
             <legend>RENDER</legend>
+            <label className="is-check"><span>Arrange</span><input type="checkbox" checked={arrangeEnabled} onChange={(event) => {
+              setArrangeEnabled(event.target.checked);
+              setSelectedPlacementId(null);
+              setPlacementPreview(null);
+            }} /></label>
             <label><span>Geometry</span><select value={LATTICE_GEOMETRY_PRESETS.find(({ geometry }) => geometry.columns === renderPreview.geometry.columns && geometry.rows === renderPreview.geometry.rows)?.id || 'custom'} onChange={(event) => {
               const preset = LATTICE_GEOMETRY_PRESETS.find(({ id }) => id === event.target.value);
               if (preset) setRenderPreview((current) => ({ ...current, geometry: { ...preset.geometry } }));
@@ -386,7 +498,12 @@ export default function LatticeEnginePrototype() {
               if (Number.isSafeInteger(row)) setRenderPreview((current) => ({ ...current, labelOffset: { ...current.labelOffset, row } }));
             }} /></label>
             <label className="is-check"><span>Label visible</span><input type="checkbox" checked={renderPreview.labelVisible} onChange={(event) => setRenderPreview((current) => ({ ...current, labelVisible: event.target.checked }))} /></label>
-            <button type="button" onClick={() => setRenderPreview(createDefaultRenderPreview())}>RESET RENDER</button>
+            <button type="button" onClick={() => {
+              setRenderPreview(createDefaultRenderPreview());
+              setPlacementBounds(createDefaultPlacementBounds());
+              setPlacementPreview(null);
+              setSelectedPlacementId(null);
+            }}>RESET RENDER</button>
           </fieldset>
           <fieldset>
             <legend>FEEL</legend>
