@@ -14,6 +14,7 @@ export const DEFAULT_LATTICE_INTERACTION_CONFIG = Object.freeze({
   snapDuration: 360,
   guideThreshold: 8,
   guideReleaseThreshold: 14,
+  minimumArtworkPixels: 40,
 });
 
 const COORDINATE_KEYS = new Set(LATTICE_COORDINATES.map(latticeCoordinateKey));

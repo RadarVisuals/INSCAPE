@@ -6,6 +6,7 @@ const entry = readFileSync(new URL('./main.jsx', import.meta.url), 'utf8');
 const source = readFileSync(new URL('./LatticeEnginePrototype.jsx', import.meta.url), 'utf8');
 const controller = readFileSync(new URL('./lattice/controller/latticeNavigation.js', import.meta.url), 'utf8');
 const placementController = readFileSync(new URL('./lattice/controller/latticePlacementAuthoring.js', import.meta.url), 'utf8');
+const resizeController = readFileSync(new URL('./lattice/controller/latticePlacementResize.js', import.meta.url), 'utf8');
 
 test('lattice engine harness is a development-only lazy route backed by the Slice 1A topology', () => {
   assert.match(entry, /import\.meta\.env\.DEV && prototypePath === '\/prototype\/lattice-engine'/);
@@ -14,7 +15,7 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 4 \/ SLICE 2C/);
+  assert.match(source, /PHASE 4 \/ SLICE 2D/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
@@ -49,6 +50,21 @@ test('smart guides, independent grid controls, hysteresis and Alt bypass stay tr
     'otherPlacements: centerPlacements',
   ]) assert.match(source, new RegExp(token));
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/);
+});
+
+test('native proportional resize is corner-anchored, transient, and independent from movement guides', () => {
+  for (const token of [
+    'handlePlacementResizePointerDown',
+    'createPlacementResizeGesture',
+    'updatePlacementResizeGesture',
+    'finishPlacementResizeGesture',
+    'placementResizing',
+    'minimumArtworkPixels',
+  ]) assert.match(source, new RegExp(token));
+  assert.match(resizeController, /PLACEMENT_RESIZE_CORNERS/);
+  assert.match(resizeController, /projectedScale/);
+  assert.match(source, /event\.target\.closest\?\.\('\[data-resize-corner\]'\)/);
+  assert.doesNotMatch(resizeController, /smartGuides|gridSnap|crop|localStorage|sessionStorage|indexedDB/iu);
 });
 
 test('Swap layers reverses the complete fixture stack without touching navigation order', () => {
@@ -109,6 +125,7 @@ test('all tunable interaction behavior lives in one transient configuration obje
     'snapDuration',
     'guideThreshold',
     'guideReleaseThreshold',
+    'minimumArtworkPixels',
   ]) {
     assert.match(controller, new RegExp(`${field}:`));
     assert.match(source, new RegExp(`'${field}'`));

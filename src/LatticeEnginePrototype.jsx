@@ -26,6 +26,11 @@ import {
   nudgePlacementByPixels,
   updatePlacementGesture,
 } from './lattice/controller/latticePlacementAuthoring.js';
+import {
+  createPlacementResizeGesture,
+  finishPlacementResizeGesture,
+  updatePlacementResizeGesture,
+} from './lattice/controller/latticePlacementResize.js';
 import LatticeTableRenderer from './lattice/rendering/LatticeTableRenderer.jsx';
 import LatticeGridPlane from './lattice/rendering/LatticeGridPlane.jsx';
 import {
@@ -46,6 +51,7 @@ const CONTROL_FIELDS = [
   ['snapDuration', 'Snap duration', 0, 1000, 10],
   ['guideThreshold', 'Guide threshold', 1, 30, 1],
   ['guideReleaseThreshold', 'Guide release', 1, 50, 1],
+  ['minimumArtworkPixels', 'Minimum artwork size', 16, 160, 1],
 ];
 
 const interactiveChrome = (target) => target.closest('[data-lattice-chrome]');
@@ -165,6 +171,7 @@ export default function LatticeEnginePrototype() {
   const [arrangeEnabled, setArrangeEnabled] = useState(false);
   const [selectedPlacementId, setSelectedPlacementId] = useState(null);
   const [placementDragging, setPlacementDragging] = useState(false);
+  const [placementResizing, setPlacementResizing] = useState(false);
   const [placementBounds, setPlacementBounds] = useState(createDefaultPlacementBounds);
   const [placementPreview, setPlacementPreview] = useState(null);
   const [alignmentGuides, setAlignmentGuides] = useState([]);
@@ -235,8 +242,10 @@ export default function LatticeEnginePrototype() {
     if (!activeGesture || settlingRef.current) return;
     gestureRef.current = null;
 
-    if (activeGesture.kind === 'placement') {
-      const result = finishPlacementGesture(activeGesture.gesture, { cancelled });
+    if (activeGesture.kind === 'placement' || activeGesture.kind === 'resize') {
+      const result = activeGesture.kind === 'resize'
+        ? finishPlacementResizeGesture(activeGesture.gesture, { cancelled })
+        : finishPlacementGesture(activeGesture.gesture, { cancelled });
       if (result.committed) {
         setPlacementBounds((current) => ({
           ...current,
@@ -246,6 +255,7 @@ export default function LatticeEnginePrototype() {
       setPlacementPreview(null);
       setAlignmentGuides([]);
       setPlacementDragging(false);
+      setPlacementResizing(false);
       return;
     }
 
@@ -270,7 +280,8 @@ export default function LatticeEnginePrototype() {
   };
 
   const handlePlacementPointerDown = (event, placement) => {
-    if (!arrangeEnabled || settlingRef.current || !unmodifiedPrimaryPointer(event)) return;
+    if (event.target.closest?.('[data-resize-corner]')
+      || !arrangeEnabled || settlingRef.current || !unmodifiedPrimaryPointer(event)) return;
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -284,8 +295,43 @@ export default function LatticeEnginePrototype() {
     };
   };
 
+  const handlePlacementResizePointerDown = (event, placement, corner) => {
+    if (!arrangeEnabled || settlingRef.current || !unmodifiedPrimaryPointer(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setSelectedPlacementId(placement.id);
+    setAlignmentGuides([]);
+    gestureRef.current = {
+      kind: 'resize',
+      captureTarget: event.currentTarget,
+      pointerId: event.pointerId,
+      gesture: createPlacementResizeGesture(
+        placement,
+        corner,
+        { x: event.clientX, y: event.clientY },
+        projectCanonicalLatticeArtboard(CANONICAL_LATTICE_ARTBOARD, dimensions),
+      ),
+    };
+  };
+
   const handlePointerMove = (event) => {
     if (!gestureRef.current || settlingRef.current) return;
+    if (gestureRef.current.kind === 'resize') {
+      const next = updatePlacementResizeGesture(
+        gestureRef.current.gesture,
+        { x: event.clientX, y: event.clientY },
+        projectCanonicalLatticeArtboard(CANONICAL_LATTICE_ARTBOARD, dimensions),
+        configRef.current.deadZone,
+        configRef.current.minimumArtworkPixels,
+      );
+      gestureRef.current = { ...gestureRef.current, gesture: next };
+      if (next.activated) {
+        setPlacementResizing(true);
+        setPlacementPreview({ placementId: next.placementId, bounds: next.previewBounds });
+      }
+      return;
+    }
     if (gestureRef.current.kind === 'placement') {
       const next = updatePlacementGesture(
         gestureRef.current.gesture,
@@ -401,7 +447,7 @@ export default function LatticeEnginePrototype() {
     <main className="lattice-engine-shell">
       <section
         ref={viewportRef}
-        className={`lattice-engine-viewport${gestureActive ? ' is-dragging' : ''}${arrangeEnabled ? ' is-arranging' : ''}${placementDragging ? ' is-placement-dragging' : ''}`}
+        className={`lattice-engine-viewport${gestureActive ? ' is-dragging' : ''}${arrangeEnabled ? ' is-arranging' : ''}${placementDragging ? ' is-placement-dragging' : ''}${placementResizing ? ' is-placement-resizing' : ''}`}
         tabIndex={0}
         aria-label="Lattice navigation engine prototype"
         onPointerDown={handlePointerDown}
@@ -463,6 +509,7 @@ export default function LatticeEnginePrototype() {
                 }}
                 onPlacementFocus={setSelectedPlacementId}
                 onPlacementPointerDown={handlePlacementPointerDown}
+                onPlacementResizePointerDown={handlePlacementResizePointerDown}
                 selectedPlacementId={isActive ? selectedPlacementId : null}
                 table={table}
                 viewport={dimensions}
@@ -473,10 +520,10 @@ export default function LatticeEnginePrototype() {
       </section>
 
       <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2C</p>
+        <p>LATTICE AUTHORING / PHASE 4 / SLICE 2D</p>
         <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
         <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
-        <p>{snapping ? 'SETTLING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
+        <p>{snapping ? 'SETTLING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
       </aside>
 
       <details className="lattice-engine-controls" data-lattice-chrome>

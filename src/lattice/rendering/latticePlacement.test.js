@@ -73,6 +73,19 @@ test('Arrange exposes navigation-ordered focus while native hit testing uses vis
   assert.match(styles, /\.lattice-placement-layer\.is-arranging \.lattice-placement-media\s*\{[^}]*pointer-events: auto/s);
 });
 
+test('only the selected arranged placement exposes four pointer-only corner resize handles', () => {
+  const source = readFileSync(new URL('./LatticePlacementRenderer.jsx', import.meta.url), 'utf8');
+  const styles = readFileSync(new URL('./latticePlacementRenderer.css', import.meta.url), 'utf8');
+  assert.match(source, /renderEntries\.find\(\(\{ placement \}\) => placement\.id === selectedPlacementId\)/);
+  assert.match(source, /PLACEMENT_RESIZE_CORNERS\.map/);
+  assert.match(source, /data-resize-corner=\{corner\}/);
+  assert.doesNotMatch(source, /tabIndex[^\n]*resize/);
+  assert.match(source, /Math\.max\(\.\.\.renderEntries\.map/);
+  assert.match(styles, /\.lattice-placement-selection-overlay\s*\{[^}]*pointer-events: none;/s);
+  assert.match(styles, /\.lattice-placement-resize-handle\s*\{[^}]*width: 24px;[^}]*height: 24px;/s);
+  assert.match(styles, /\.lattice-placement-resize-handle::after\s*\{[^}]*width: 7px;[^}]*height: 7px;/s);
+});
+
 test('OPAQUE background is bounded by the fitted native-media rectangle, never the cell footprint', () => {
   const source = readFileSync(new URL('./LatticePlacementRenderer.jsx', import.meta.url), 'utf8');
   const styles = readFileSync(new URL('./latticePlacementRenderer.css', import.meta.url), 'utf8');

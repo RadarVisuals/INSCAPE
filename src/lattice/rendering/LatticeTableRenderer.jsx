@@ -22,6 +22,7 @@ export default function LatticeTableRenderer({
   hidden = false,
   onPlacementFocus,
   onPlacementPointerDown,
+  onPlacementResizePointerDown,
   positionStyle,
   selectedPlacementId,
   table,
@@ -50,6 +51,7 @@ export default function LatticeTableRenderer({
         assetsByStableId={assetsByStableId}
         onPlacementFocus={onPlacementFocus}
         onPlacementPointerDown={onPlacementPointerDown}
+        onPlacementResizePointerDown={onPlacementResizePointerDown}
         selectedPlacementId={selectedPlacementId}
         table={table}
         viewport={viewport}
