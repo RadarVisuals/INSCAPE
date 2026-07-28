@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import LatticeFocusInspection from './LatticeFocusInspection.jsx';
 import { LatticeArtworkPresentation } from './LatticePlacementRenderer.jsx';
 import {
   DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG,
   focusViewerLayout,
   normalizeViewerRectangle,
 } from './latticeFocusViewer.js';
+import './latticeMenuSurface.css';
 import './latticeFocusViewer.css';
 
 const FOCUSABLE_SELECTOR = 'button:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])';
@@ -16,57 +18,20 @@ const viewportSize = () => ({
   height: Math.max(1, window.innerHeight),
 });
 
-const unresolved = (value) => (typeof value === 'string' && value.trim() ? value : 'NOT RESOLVED');
-
-function ViewerDossier({ dossier, onClose, open, rectangle, side }) {
-  // Deferred visual defect: ISSUE-002 in docs/new-issues/LATTICE_VIEWER_VISUAL_ISSUES.md
-  const isLeft = side === 'left';
-  return (
-    <aside
-      aria-hidden={!open}
-      aria-label={isLeft ? 'Artwork description dossier' : 'Artwork technical dossier'}
-      className={`lattice-focus-viewer__dossier is-${side}`}
-      data-open={open || undefined}
-      style={{
-        left: rectangle.left,
-        top: rectangle.top,
-        width: rectangle.width,
-        height: rectangle.height,
-      }}
-    >
-      <header>
-        <span>{isLeft ? 'INSCAPE / ASSET NARRATIVE' : 'INSCAPE / TECHNICAL RECORD'}</span>
-        <button aria-label="Close both artwork dossiers" disabled={!open} onClick={onClose} tabIndex={open ? 0 : -1} type="button">×</button>
-      </header>
-      <div className="lattice-focus-viewer__dossier-body" data-lattice-viewer-scroll>
-        <small>{isLeft ? 'DESCRIPTION' : 'MEDIA RECORD'}</small>
-        <h2>{unresolved(dossier?.title)}</h2>
-        {isLeft ? <>
-          <p>{unresolved(dossier?.description)}</p>
-          <section>
-            <small>TRAITS</small>
-            {dossier?.traits?.length
-              ? <dl>{dossier.traits.map(({ label, value }) => <div key={label}><dt>{label}</dt><dd>{unresolved(value)}</dd></div>)}</dl>
-              : <p>NO TRAITS RESOLVED</p>}
-          </section>
-        </> : (
-          <dl>{(dossier?.technical || []).map(({ label, value }) => <div key={label}><dt>{label}</dt><dd>{unresolved(value)}</dd></div>)}</dl>
-        )}
-      </div>
-      <footer><span>INSCAPE PROTOCOL</span><span>{isLeft ? 'LEFT / DESCRIPTION' : 'RIGHT / RECORD'}</span></footer>
-    </aside>
-  );
-}
-
 export default function LatticeFocusViewer({
   dossier,
   entry,
   getReturnRectangle,
+  gridVariables,
+  gridVisible,
   onClosed,
   onNavigate,
   originRectangle,
+  menuSurfaceId,
+  overlayInk,
   position,
   returnFocus,
+  surfaceColor,
   total,
 }) {
   const rootRef = useRef(null);
@@ -261,6 +226,8 @@ export default function LatticeFocusViewer({
       className="lattice-focus-viewer"
       data-lattice-focus-viewer
       data-layout={layout.mode}
+      data-grid-visible={gridVisible}
+      data-menu-surface={menuSurfaceId}
       data-phase={phase}
       onKeyDown={handleKeyDown}
       onPointerDown={(event) => {
@@ -270,10 +237,14 @@ export default function LatticeFocusViewer({
       ref={rootRef}
       role="dialog"
       style={{
+        ...gridVariables,
         '--lattice-viewer-browse-duration': `${DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG.browseDuration}ms`,
         '--lattice-viewer-content-height': `${layout.contentHeight}px`,
+        '--lattice-overlay-ink': overlayInk,
+        '--lattice-inspection-surface': surfaceColor,
       }}
     >
+      <div aria-hidden="true" className="lattice-focus-viewer__surface" />
       <div aria-hidden="true" className="lattice-focus-viewer__content-spacer" />
       {outgoingLayer && outgoingRectangle && (
         <div
@@ -316,19 +287,11 @@ export default function LatticeFocusViewer({
       >
         <LatticeArtworkPresentation entry={entry} />
       </div>
-      <ViewerDossier
+      <LatticeFocusInspection
         dossier={dossier}
         onClose={closeDossiers}
         open={dossiersOpen}
-        rectangle={layout.leftDossier}
-        side="left"
-      />
-      <ViewerDossier
-        dossier={dossier}
-        onClose={closeDossiers}
-        open={dossiersOpen}
-        rectangle={layout.rightDossier}
-        side="right"
+        layout={layout}
       />
       <nav
         aria-label="Artwork viewer navigation"

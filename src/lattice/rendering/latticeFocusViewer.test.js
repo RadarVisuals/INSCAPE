@@ -26,30 +26,50 @@ test('focused viewer refits deterministically for compact and iframe viewports',
   assert.deepEqual(compact, { left: 48, top: 64, width: 384, height: 192 });
 });
 
-test('wide unified dossiers sit flush against the artwork and remain slightly shorter', () => {
+test('side inspection layout detaches dossiers from portrait artwork', () => {
   const origin = { left: 120, top: 80, width: 240, height: 360 };
   const viewport = { width: 1440, height: 900 };
   const closed = focusViewerLayout(origin, viewport, false);
   const open = focusViewerLayout(origin, viewport, true);
-  assert.equal(closed.mode, 'wide');
+  assert.equal(closed.mode, 'side');
   assert.deepEqual(closed.artwork, open.artwork);
-  assert.equal(open.leftDossier.left + open.leftDossier.width, open.artwork.left);
-  assert.equal(open.rightDossier.left, open.artwork.left + open.artwork.width);
+  assert.ok(open.leftDossier.left + open.leftDossier.width < open.inspectionFrame.left);
+  assert.ok(open.rightDossier.left > open.inspectionFrame.left + open.inspectionFrame.width);
+  assert.ok(open.inspectionFrame.left < open.artwork.left);
+  assert.ok(open.inspectionFrame.left + open.inspectionFrame.width > open.artwork.left + open.artwork.width);
+  assert.equal(open.connectors.length, 2);
   assert.ok(open.leftDossier.height < open.artwork.height);
   assert.ok(open.rightDossier.height < open.artwork.height);
   assert.ok(open.leftDossier.left >= 0);
   assert.ok(open.rightDossier.left + open.rightDossier.width <= viewport.width);
 });
 
-test('wide dossier joins share pixel-aligned edges without changing artwork ratio', () => {
+test('side inspection connectors occupy only the gaps outside portrait artwork', () => {
   const origin = { left: 13.25, top: 7.5, width: 333, height: 517 };
   const layout = focusViewerLayout(origin, { width: 1365, height: 767 }, true);
   const artworkRight = layout.artwork.left + layout.artwork.width;
   assert.equal(Number.isInteger(layout.artwork.left), true);
   assert.equal(Number.isInteger(artworkRight), true);
-  assert.equal(layout.leftDossier.left + layout.leftDossier.width, layout.artwork.left);
-  assert.equal(layout.rightDossier.left, artworkRight);
+  assert.ok(layout.leftDossier.left + layout.leftDossier.width < layout.inspectionFrame.left);
+  assert.ok(layout.rightDossier.left > layout.inspectionFrame.left + layout.inspectionFrame.width);
+  assert.equal(layout.connectors[0].left, layout.leftDossier.left + layout.leftDossier.width);
+  assert.equal(layout.connectors[0].left + layout.connectors[0].width, layout.inspectionFrame.left);
+  assert.equal(layout.connectors[1].left, layout.inspectionFrame.left + layout.inspectionFrame.width);
+  assert.equal(layout.connectors[1].left + layout.connectors[1].width, layout.rightDossier.left);
   assert.ok(Math.abs((layout.artwork.width / layout.artwork.height) - (origin.width / origin.height)) < Number.EPSILON);
+});
+
+test('panoramic inspection layout preserves artwork width and places dossiers below', () => {
+  const origin = { left: 20, top: 30, width: 1600, height: 450 };
+  const layout = focusViewerLayout(origin, { width: 1440, height: 900 }, true);
+  assert.equal(layout.mode, 'lower');
+  assert.ok(layout.leftDossier.top > layout.inspectionFrame.top + layout.inspectionFrame.height);
+  assert.equal(layout.leftDossier.top, layout.rightDossier.top);
+  assert.ok(layout.leftDossier.left + layout.leftDossier.width < layout.rightDossier.left);
+  assert.equal(layout.connectors.length, 4);
+  assert.ok(Math.abs((layout.artwork.width / layout.artwork.height) - (origin.width / origin.height)) < Number.EPSILON);
+  assert.ok(layout.inspectionFrame.left >= 0);
+  assert.ok(layout.inspectionFrame.left + layout.inspectionFrame.width <= 1440);
 });
 
 test('compact dossier layout preserves artwork ratio and stacks both panels below it', () => {
@@ -60,6 +80,7 @@ test('compact dossier layout preserves artwork ratio and stacks both panels belo
   assert.ok(layout.leftDossier.top >= layout.artwork.top + layout.artwork.height);
   assert.ok(layout.rightDossier.top >= layout.leftDossier.top + layout.leftDossier.height);
   assert.ok(layout.contentHeight > 720);
+  assert.deepEqual(layout.connectors, []);
 });
 
 test('dossier layout rejects ambiguous state and invalid configuration', () => {

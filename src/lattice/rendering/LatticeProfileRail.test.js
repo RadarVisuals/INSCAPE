@@ -33,6 +33,8 @@ test('rail is fixed, carbon, compactable and does not shift the lattice', () => 
   assert.match(styles, /\.lattice-profile-rail\s*\{[^}]*--rail-width: 244px;[^}]*position: fixed;[^}]*top: 24px;[^}]*left: 24px;/s);
   assert.match(styles, /\.lattice-profile-rail\[data-collapsed\]\s*\{ --rail-width: 48px; \}/);
   assert.match(styles, /background: var\(--lattice-menu-panel\)/);
+  assert.match(styles, /transition:[^;]*width 180ms[^;]*opacity 180ms linear;/s);
+  assert.match(styles, /\.lattice-profile-rail\[data-blocked\]\s*\{[^}]*opacity: 0;[^}]*pointer-events: none;/s);
   assert.match(styles, /@media \(max-width: 640px\)/);
   assert.doesNotMatch(styles, /margin-left|padding-left: 244px|translateX\(244px\)/);
 });

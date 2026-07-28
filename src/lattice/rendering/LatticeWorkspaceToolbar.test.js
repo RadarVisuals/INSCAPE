@@ -34,7 +34,8 @@ test('toolbar uses the approved desktop proportions and compact icon-only treatm
   assert.match(styles, /width: 48px;[^}]*min-width: 48px;/s);
   assert.match(styles, /right: 0;[^}]*left: 0;/s);
   assert.match(styles, /color: var\(--lattice-menu-ink\)/);
-  assert.match(styles, /\.lattice-workspace-toolbar\[data-blocked\][^{]*\{[^}]*pointer-events: none;/s);
+  assert.match(styles, /\.lattice-workspace-toolbar\s*\{[^}]*transition: opacity 180ms linear;/s);
+  assert.match(styles, /\.lattice-workspace-toolbar\[data-blocked\][^{]*\{[^}]*opacity: 0;[^}]*pointer-events: none;/s);
   assert.doesNotMatch(styles, /margin-right|padding-right: 244px|translateX\(-244px\)/);
 });
 

@@ -1,6 +1,6 @@
 # Lattice Viewer Visual Issues
 
-Status: deferred until the Phase 1 decomposition has been reviewed and approved.
+Status: ISSUE-001 remains deferred; ISSUE-002 is implemented and visually approved.
 
 This register records visual defects discovered during Phase 1 without changing or camouflaging the current rendering behavior. Add evidence to [`images/`](./images/README.md) using the simple numbered filename convention.
 
@@ -32,16 +32,19 @@ Diagnose the compositing or rasterization difference in isolation. Do not compen
 
 The metadata dossiers currently reveal from behind the artwork. This works when an opaque image, mat, or frame hides them, but transparent artwork exposes the panels through its negative space.
 
-Solution/mockup evidence filenames:
+Solution/mockup evidence:
 
-- [`issue002.png`](./images/issue%20002/issue002.png)
-- [`issue002.1.png`](./images/issue%20002/issue002.1.png)
+- [`transparentsolution.png`](./images/issue%20002/transparentsolution.png)
+- [`verticalsolution.png`](./images/issue%20002/verticalsolution.png)
+- [`horizontalsollution.png`](./images/issue%20002/horizontalsollution.png)
 
-### Proposed direction
+### Implemented resolution
 
 Use a dedicated inspection composition with freestanding transparent artwork in the center and detached narrative/technical panels on the left and right. Connector lines should terminate at the inspection frame rather than pass behind the asset.
 
-The proposed design should:
+Implementation status: completed and visually approved on `ui/issue-002-inspector`.
+
+The implementation:
 
 - preserve transparency instead of adding a mandatory backplate;
 - use the same inspection structure for opaque and transparent assets;
@@ -49,6 +52,8 @@ The proposed design should:
 - adapt the panels into non-obscuring drawers or another responsive arrangement on narrow viewports;
 - preserve focus order, keyboard controls, Escape behavior, page navigation, and reduced-motion behavior;
 - avoid changing the active artwork surface in a way that alters its perceived color or transparency.
+
+It also preserves the table grid cell size and origin inside the inspector, fades the inspection surface independently from the fully opaque moving artwork, and restores the profile rail and owner toolbar only after the artwork has returned to the table.
 
 ## Follow-up gate
 

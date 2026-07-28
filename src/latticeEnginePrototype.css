@@ -39,13 +39,6 @@
 }
 
 .lattice-engine-shell {
-  --lattice-menu-panel: rgb(16 17 17 / 0.98);
-  --lattice-menu-ink: #d8d7d2;
-  --lattice-menu-muted: rgb(216 215 210 / 0.55);
-  --lattice-menu-faint: rgb(216 215 210 / 0.32);
-  --lattice-menu-line: rgb(216 215 210 / 0.12);
-  --lattice-menu-line-strong: rgb(216 215 210 / 0.21);
-  --lattice-menu-selected: rgb(216 215 210 / 0.055);
   --lattice-overlay-ink: var(--lattice-menu-ink);
   --lattice-overlay-muted: color-mix(in srgb, var(--lattice-overlay-ink) 58%, transparent);
   --lattice-overlay-faint: color-mix(in srgb, var(--lattice-overlay-ink) 32%, transparent);
@@ -56,12 +49,6 @@
   color: #d8d5cc;
   font-family: "Inscape IBM Plex Mono", monospace;
 }
-
-.lattice-engine-shell[data-menu-surface="graphite"] { --lattice-menu-panel: rgb(48 50 50 / 0.98); --lattice-menu-ink: #e8e7e2; --lattice-menu-muted: rgb(232 231 226 / 0.64); --lattice-menu-faint: rgb(232 231 226 / 0.4); --lattice-menu-line: rgb(232 231 226 / 0.16); --lattice-menu-line-strong: rgb(232 231 226 / 0.27); --lattice-menu-selected: rgb(232 231 226 / 0.075); }
-.lattice-engine-shell[data-menu-surface="slate"] { --lattice-menu-panel: rgb(103 104 104 / 0.98); --lattice-menu-ink: #f3f2ed; --lattice-menu-muted: rgb(243 242 237 / 0.68); --lattice-menu-faint: rgb(243 242 237 / 0.46); --lattice-menu-line: rgb(243 242 237 / 0.18); --lattice-menu-line-strong: rgb(243 242 237 / 0.32); --lattice-menu-selected: rgb(243 242 237 / 0.1); }
-.lattice-engine-shell[data-menu-surface="ash"] { --lattice-menu-panel: rgb(221 220 214 / 0.98); --lattice-menu-ink: #111313; --lattice-menu-muted: rgb(17 19 19 / 0.58); --lattice-menu-faint: rgb(17 19 19 / 0.36); --lattice-menu-line: rgb(17 19 19 / 0.18); --lattice-menu-line-strong: rgb(17 19 19 / 0.3); --lattice-menu-selected: rgb(17 19 19 / 0.065); }
-.lattice-engine-shell[data-menu-surface="mist"] { --lattice-menu-panel: rgb(215 211 202 / 0.98); --lattice-menu-ink: #111313; --lattice-menu-muted: rgb(17 19 19 / 0.58); --lattice-menu-faint: rgb(17 19 19 / 0.36); --lattice-menu-line: rgb(17 19 19 / 0.18); --lattice-menu-line-strong: rgb(17 19 19 / 0.3); --lattice-menu-selected: rgb(17 19 19 / 0.065); }
-.lattice-engine-shell[data-menu-surface="paper"] { --lattice-menu-panel: rgb(239 237 230 / 0.98); --lattice-menu-ink: #111313; --lattice-menu-muted: rgb(17 19 19 / 0.58); --lattice-menu-faint: rgb(17 19 19 / 0.36); --lattice-menu-line: rgb(17 19 19 / 0.18); --lattice-menu-line-strong: rgb(17 19 19 / 0.3); --lattice-menu-selected: rgb(17 19 19 / 0.065); }
 
 .lattice-engine-viewport {
   position: absolute;

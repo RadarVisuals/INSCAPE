@@ -9,7 +9,13 @@ export const DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG = Object.freeze({
   wheelCooldown: 320,
   dossierBreakpoint: 900,
   dossierWidth: 320,
-  dossierGap: 0,
+  dossierGap: 88,
+  horizontalAspectRatio: 1.6,
+  inspectionPadding: 24,
+  lowerDossierGap: 28,
+  lowerDossierHeight: 260,
+  lowerPanelGap: 28,
+  navigationClearance: 72,
   compactHorizontalMargin: 16,
   compactDossierHeight: 420,
 });
@@ -83,6 +89,8 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
   const breakpoint = finitePositive(Number(config?.dossierBreakpoint), 'dossierBreakpoint');
   const dossierWidth = finitePositive(Number(config?.dossierWidth), 'dossierWidth');
   const dossierGap = finiteNonNegative(Number(config?.dossierGap), 'dossierGap');
+  const horizontalAspectRatio = finitePositive(Number(config?.horizontalAspectRatio), 'horizontalAspectRatio');
+  const inspectionPadding = finiteNonNegative(Number(config?.inspectionPadding), 'inspectionPadding');
   const horizontalMargin = Math.max(0, Number(config?.horizontalMargin));
   const verticalMargin = Math.max(0, Number(config?.verticalMargin));
   const verticalArtworkScale = Number(config?.verticalArtworkScale);
@@ -101,7 +109,63 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
       artwork: focused,
       leftDossier: rectangle(horizontalMargin, leftTop, panelWidth, dossierHeight),
       rightDossier: rectangle(horizontalMargin, rightTop, panelWidth, dossierHeight),
+      inspectionFrame: rectangle(
+        Math.max(0, focused.left - inspectionPadding),
+        Math.max(0, focused.top - inspectionPadding),
+        Math.min(size.width, focused.width + (inspectionPadding * 2)),
+        focused.height + (inspectionPadding * 2),
+      ),
+      connectors: Object.freeze([]),
       contentHeight: Math.max(size.height, finalPanelBottom + dossierGap),
+    });
+  }
+
+  if ((origin.width / origin.height) >= horizontalAspectRatio) {
+    const lowerDossierGap = finiteNonNegative(Number(config?.lowerDossierGap), 'lowerDossierGap');
+    const lowerDossierHeight = finitePositive(Number(config?.lowerDossierHeight), 'lowerDossierHeight');
+    const lowerPanelGap = finiteNonNegative(Number(config?.lowerPanelGap), 'lowerPanelGap');
+    const navigationClearance = finiteNonNegative(Number(config?.navigationClearance), 'navigationClearance');
+    const availableWidth = Math.max(1, size.width - (horizontalMargin * 2) - (inspectionPadding * 2));
+    const availableArtworkHeight = Math.max(
+      1,
+      size.height - (verticalMargin * 2) - (inspectionPadding * 2)
+        - lowerDossierGap - lowerDossierHeight - navigationClearance,
+    );
+    const scale = Math.min(availableWidth / origin.width, availableArtworkHeight / origin.height);
+    const artworkWidth = origin.width * scale;
+    const artworkHeight = origin.height * scale;
+    const frameWidth = artworkWidth + (inspectionPadding * 2);
+    const frameHeight = artworkHeight + (inspectionPadding * 2);
+    const groupHeight = frameHeight + lowerDossierGap + lowerDossierHeight;
+    const frameLeft = (size.width - frameWidth) / 2;
+    const frameTop = Math.max(verticalMargin, (size.height - navigationClearance - groupHeight) / 2);
+    const artwork = rectangle(
+      frameLeft + inspectionPadding,
+      frameTop + inspectionPadding,
+      artworkWidth,
+      artworkHeight,
+    );
+    const inspectionFrame = rectangle(frameLeft, frameTop, frameWidth, frameHeight);
+    const panelGroupWidth = Math.min(size.width - (horizontalMargin * 2), Math.max(frameWidth, dossierWidth * 2 + lowerPanelGap));
+    const panelWidth = (panelGroupWidth - lowerPanelGap) / 2;
+    const panelLeft = (size.width - panelGroupWidth) / 2;
+    const panelTop = frameTop + frameHeight + lowerDossierGap;
+    const branchY = frameTop + frameHeight + (lowerDossierGap / 2);
+    const centerX = size.width / 2;
+
+    return Object.freeze({
+      mode: 'lower',
+      artwork,
+      leftDossier: rectangle(panelLeft, panelTop, panelWidth, lowerDossierHeight),
+      rightDossier: rectangle(panelLeft + panelWidth + lowerPanelGap, panelTop, panelWidth, lowerDossierHeight),
+      inspectionFrame,
+      connectors: Object.freeze([
+        Object.freeze({ left: centerX, top: frameTop + frameHeight, width: 1, height: lowerDossierGap / 2 }),
+        Object.freeze({ left: panelLeft + panelWidth / 2, top: branchY, width: panelGroupWidth - panelWidth, height: 1 }),
+        Object.freeze({ left: panelLeft + panelWidth / 2, top: branchY, width: 1, height: lowerDossierGap / 2 }),
+        Object.freeze({ left: panelLeft + panelWidth + lowerPanelGap + panelWidth / 2, top: branchY, width: 1, height: lowerDossierGap / 2 }),
+      ]),
+      contentHeight: Math.max(size.height, panelTop + lowerDossierHeight + navigationClearance),
     });
   }
 
@@ -117,9 +181,16 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
   const artwork = rectangle(artworkLeft, (size.height - artworkHeight) / 2, artworkWidth, artworkHeight);
   const dossierHeight = Math.max(1, artworkHeight * 0.98);
   const dossierTop = (size.height - dossierHeight) / 2;
+  const inspectionFrame = rectangle(
+    artwork.left - inspectionPadding,
+    artwork.top - inspectionPadding,
+    artwork.width + (inspectionPadding * 2),
+    artwork.height + (inspectionPadding * 2),
+  );
+  const connectorTop = size.height / 2;
 
   return Object.freeze({
-    mode: 'wide',
+    mode: 'side',
     artwork,
     leftDossier: rectangle(
       groupLeft,
@@ -133,6 +204,21 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
       dossierWidth,
       dossierHeight,
     ),
+    inspectionFrame,
+    connectors: Object.freeze([
+      Object.freeze({
+        left: groupLeft + dossierWidth,
+        top: connectorTop,
+        width: inspectionFrame.left - (groupLeft + dossierWidth),
+        height: 1,
+      }),
+      Object.freeze({
+        left: inspectionFrame.left + inspectionFrame.width,
+        top: connectorTop,
+        width: artwork.left + artwork.width + dossierGap - (inspectionFrame.left + inspectionFrame.width),
+        height: 1,
+      }),
+    ]),
     contentHeight: size.height,
   });
 }

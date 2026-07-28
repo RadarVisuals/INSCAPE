@@ -11,6 +11,7 @@
   box-shadow: 10px 12px 30px rgba(0, 0, 0, 0.28);
   color: var(--lattice-menu-ink);
   font-family: "Inscape IBM Plex Mono", monospace;
+  transition: opacity 180ms linear;
 }
 
 .lattice-workspace-toolbar__label {
@@ -118,7 +119,7 @@
 }
 
 .lattice-workspace-toolbar[data-blocked] {
-  opacity: 0.28;
+  opacity: 0;
   pointer-events: none;
 }
 

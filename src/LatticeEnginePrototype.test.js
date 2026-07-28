@@ -10,7 +10,9 @@ const resizeController = readFileSync(new URL('./lattice/controller/latticePlace
 const lifecycleController = readFileSync(new URL('./lattice/controller/latticePlacementLifecycle.js', import.meta.url), 'utf8');
 const insertionController = readFileSync(new URL('./lattice/controller/latticePlacementInsertion.js', import.meta.url), 'utf8');
 const focusViewer = readFileSync(new URL('./lattice/rendering/LatticeFocusViewer.jsx', import.meta.url), 'utf8');
+const focusInspection = readFileSync(new URL('./lattice/rendering/LatticeFocusInspection.jsx', import.meta.url), 'utf8');
 const focusViewerStyles = readFileSync(new URL('./lattice/rendering/latticeFocusViewer.css', import.meta.url), 'utf8');
+const menuSurfaceStyles = readFileSync(new URL('./lattice/rendering/latticeMenuSurface.css', import.meta.url), 'utf8');
 const prototypeStyles = readFileSync(new URL('./latticeEnginePrototype.css', import.meta.url), 'utf8');
 const keeperHarness = readFileSync(new URL('./lattice/prototype/LatticeKeeperDockHarness.jsx', import.meta.url), 'utf8');
 const fixtureSource = readFileSync(new URL('./lattice/prototype/latticeEngineFixtures.js', import.meta.url), 'utf8');
@@ -79,7 +81,7 @@ test('Phase 6 owner workspace toolbar stays session-only and separate from publi
   assert.match(source, /LatticeEngineDevControls/);
   assert.match(devControls, /<span>Menu surface<\/span>/);
   assert.match(devControls, /setMenuSurfaceId\(event\.target\.value\)/);
-  assert.match(prototypeStyles, /data-menu-surface="paper"/);
+  assert.match(menuSurfaceStyles, /data-menu-surface="paper"/);
 });
 
 test('Phase 6 INSCAPE signature stays fixed, pointer-inert, and presentation-only', () => {
@@ -157,7 +159,7 @@ test('Phase 5 focus viewer opens only from view mode and preserves the live latt
   assert.doesNotMatch(source, /NftFlipViewer|NftTableViewerPrototype/);
 });
 
-test('focus viewer owns modal focus and Escape while leaving the lattice presentation visible', () => {
+test('focus viewer owns modal focus and Escape on the selected inspection surface', () => {
   assert.match(focusViewer, /createPortal/);
   assert.match(focusViewer, /aria-modal="true"/);
   assert.match(focusViewer, /event\.key !== 'Escape'/);
@@ -165,7 +167,12 @@ test('focus viewer owns modal focus and Escape while leaving the lattice present
   assert.match(focusViewer, /node\.inert = true/);
   assert.match(focusViewer, /returnFocusRef\.current\.focus/);
   assert.match(focusViewer, /LatticeArtworkPresentation/);
-  assert.match(focusViewerStyles, /\.lattice-focus-viewer\s*\{[^}]*background: transparent;/s);
+  assert.match(source, /surfaceColor=\{latticeSurfaceColor\(renderPreview\.surfaceId\)\}/);
+  assert.match(source, /semanticGridVariables\(/);
+  assert.match(source, /gridVariables=\{viewerGridVariables\}/);
+  assert.match(source, /gridVisible=\{gridVisible\}/);
+  assert.match(focusViewer, /--lattice-inspection-surface/);
+  assert.match(focusViewerStyles, /\.lattice-focus-viewer__surface\s*\{[^}]*background-color: var\(--lattice-inspection-surface, #090a0a\);/s);
   assert.doesNotMatch(focusViewer, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/iu);
 });
 
@@ -189,6 +196,10 @@ test('viewer browsing follows explicit navigation order with wrapping and ratio-
   assert.doesNotMatch(focusViewer, /navigationDirection|onNavigationSettled|setTimeout|localStorage|sessionStorage|indexedDB/iu);
   assert.doesNotMatch(focusViewerStyles, /lattice-focus-viewer-(?:next|previous)|data-direction|navigation-duration/iu);
   assert.match(focusViewerStyles, /transition: transform 420ms/);
+  assert.match(focusViewer, /className="lattice-focus-viewer__surface"/);
+  assert.match(focusViewerStyles, /\.lattice-focus-viewer\[data-phase="starting"\] \.lattice-focus-viewer__surface,[\s\S]*?\.lattice-focus-viewer\[data-phase="closing"\] \.lattice-focus-viewer__surface\s*\{[^}]*opacity: 0;/s);
+  assert.match(focusViewerStyles, /\.lattice-focus-viewer\[data-phase="opening"\] \.lattice-focus-viewer__surface,[\s\S]*?\.lattice-focus-viewer\[data-phase="closing"\] \.lattice-focus-viewer__surface\s*\{[^}]*transition: opacity 240ms/);
+  assert.doesNotMatch(focusViewerStyles, /\.lattice-focus-viewer\[data-phase="closing"\]\s*\{[^}]*opacity:/s);
   assert.match(focusViewerStyles, /will-change: transform/);
   assert.doesNotMatch(focusViewerStyles, /(?:left|top|width|height) 420ms/);
   assert.match(focusViewerStyles, /@keyframes lattice-focus-viewer-browse-in\s*\{[^}]*transform: scale\(0\.995\)/s);
@@ -196,15 +207,19 @@ test('viewer browsing follows explicit navigation order with wrapping and ratio-
   assert.match(focusViewerStyles, /\[data-phase="open"\] \.lattice-focus-viewer__artwork\s*\{[^}]*transition: none;/s);
 });
 
-test('Phase 5 dossiers open as one sticky pair from behind the artwork and remain fixture-only', () => {
+test('Phase 5 dossiers open as one detached inspection pair and remain fixture-only', () => {
   assert.match(focusViewer, /useState\(false\)/);
   assert.match(focusViewer, /cycleArtworkViewer/);
   assert.match(focusViewer, /setDossiersOpen\(\(current\) => !current\)/);
   assert.doesNotMatch(focusViewer, /dossierStage|setDossierStage|else\s*\{\s*requestClose/);
   assert.match(focusViewer, /focusViewerLayout\(outgoingLayer\.originRectangle, viewport, dossiersOpen\)/);
-  assert.match(focusViewer, /data-lattice-viewer-scroll/);
-  assert.match(focusViewer, /NO TRAITS RESOLVED/);
-  assert.match(focusViewer, /NOT RESOLVED/);
+  assert.match(focusViewer, /LatticeFocusInspection/);
+  assert.match(focusInspection, /data-lattice-viewer-scroll/);
+  assert.match(focusInspection, /NO TRAITS RESOLVED/);
+  assert.match(focusInspection, /NOT RESOLVED/);
+  assert.match(focusInspection, /lattice-focus-viewer__inspection-frame/);
+  assert.match(focusInspection, /lattice-focus-viewer__connectors/);
+  assert.match(focusInspection, /--lattice-inspection-frame-left/);
   assert.doesNotMatch(focusViewer, /openPanel/);
   assert.doesNotMatch(focusViewer, /toggleDossier|dossier-toggle/);
   assert.match(source, /fixtureFocusDossier/);
@@ -213,6 +228,11 @@ test('Phase 5 dossiers open as one sticky pair from behind the artwork and remai
   assert.doesNotMatch(prototypeSources, /marketplaceUrl|explorerUrl|creatorUrl/);
   assert.match(focusViewerStyles, /\[data-layout="compact"\]/);
   assert.match(focusViewerStyles, /\.lattice-focus-viewer__dossier-body\s*\{[^}]*overflow: auto;/s);
+  assert.match(focusViewerStyles, /\.lattice-focus-viewer__inspection-frame\s*\{[^}]*background-size: var\(--lattice-grid-cell-size\) var\(--lattice-grid-cell-size\);/s);
+  assert.doesNotMatch(focusViewerStyles, /background-size: 40px 40px/);
+  assert.match(focusViewerStyles, /\.lattice-focus-viewer__navigation\s*\{[^}]*color: var\(--lattice-overlay-ink\);/s);
+  assert.doesNotMatch(focusViewerStyles, /\.lattice-focus-viewer__dossier\.is-left\s*\{[^}]*translateX\(100%\)/s);
+  assert.doesNotMatch(focusViewerStyles, /\.lattice-focus-viewer__dossier\.is-right\s*\{[^}]*translateX\(-100%\)/s);
 });
 
 test('Arrange is session-only free placement with deterministic gesture ownership', () => {

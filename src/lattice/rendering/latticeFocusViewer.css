@@ -1,12 +1,53 @@
 .lattice-focus-viewer {
+  --lattice-overlay-ink: var(--lattice-menu-ink);
+  --lattice-overlay-muted: color-mix(in srgb, var(--lattice-overlay-ink) 58%, transparent);
+  --lattice-overlay-faint: color-mix(in srgb, var(--lattice-overlay-ink) 24%, transparent);
+  --lattice-overlay-grid: color-mix(in srgb, var(--lattice-overlay-ink) 11%, transparent);
   position: fixed;
   inset: 0;
   z-index: 40;
   overflow: hidden;
-  background: transparent;
   color: #d8d5cc;
   isolation: isolate;
   overscroll-behavior: contain;
+  font-family: "Inscape IBM Plex Mono", "IBM Plex Mono", "Courier New", monospace;
+}
+
+.lattice-focus-viewer[data-phase="starting"],
+.lattice-focus-viewer[data-phase="closing"] {
+  pointer-events: none;
+}
+
+.lattice-focus-viewer__surface {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--lattice-inspection-surface, #090a0a);
+  background-image:
+    linear-gradient(var(--lattice-overlay-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--lattice-overlay-grid) 1px, transparent 1px);
+  background-position:
+    var(--lattice-grid-origin-x) var(--lattice-grid-origin-y),
+    var(--lattice-grid-origin-x) var(--lattice-grid-origin-y);
+  background-size:
+    var(--lattice-grid-cell-size) var(--lattice-grid-cell-size),
+    var(--lattice-grid-cell-size) var(--lattice-grid-cell-size);
+}
+
+.lattice-focus-viewer[data-phase="starting"] .lattice-focus-viewer__surface,
+.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__surface {
+  opacity: 0;
+}
+
+.lattice-focus-viewer[data-phase="opening"] .lattice-focus-viewer__surface,
+.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__surface {
+  transition: opacity 240ms cubic-bezier(0.22, 0.76, 0.26, 1);
+}
+
+.lattice-focus-viewer[data-phase="opening"] .lattice-focus-viewer__surface,
+.lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__surface {
+  opacity: 1;
 }
 
 .lattice-focus-viewer__content-spacer {
@@ -76,28 +117,96 @@
   position: fixed;
   left: 50%;
   bottom: 18px;
-  z-index: 2;
+  z-index: 4;
   display: grid;
   grid-template-columns: 28px auto 28px;
   align-items: center;
   transform: translateX(-50%);
-  border: 1px solid rgba(216, 213, 204, 0.38);
-  background: rgba(9, 10, 10, 0.92);
+  border: 1px solid var(--lattice-overlay-muted);
+  background: color-mix(in srgb, var(--lattice-menu-panel) 92%, transparent);
+  color: var(--lattice-overlay-ink);
   opacity: 0;
   transition: opacity 120ms linear;
 }
 
-.lattice-focus-viewer__dossier {
+.lattice-focus-viewer__inspection-frame {
   position: fixed;
   z-index: 1;
+  pointer-events: none;
+  background-image: radial-gradient(circle, var(--lattice-overlay-faint) 1px, transparent 1.2px);
+  background-position:
+    calc(var(--lattice-grid-origin-x) - var(--lattice-inspection-frame-left))
+    calc(var(--lattice-grid-origin-y) - var(--lattice-inspection-frame-top));
+  background-size: var(--lattice-grid-cell-size) var(--lattice-grid-cell-size);
+  opacity: 0;
+  transition: opacity 180ms linear;
+}
+
+.lattice-focus-viewer__inspection-frame[data-open] { opacity: 1; }
+
+.lattice-focus-viewer[data-grid-visible="false"] .lattice-focus-viewer__surface { background-image: none; }
+.lattice-focus-viewer[data-grid-visible="false"] .lattice-focus-viewer__inspection-frame { background-image: none; }
+
+.lattice-focus-viewer[data-phase="closing"] :is(
+  .lattice-focus-viewer__inspection-frame,
+  .lattice-focus-viewer__connectors
+) { opacity: 0; }
+
+.lattice-focus-viewer__inspection-frame i {
+  position: absolute;
+  width: 25px;
+  height: 25px;
+  border-color: var(--lattice-overlay-ink);
+  border-style: solid;
+  opacity: 0.86;
+}
+
+.lattice-focus-viewer__inspection-frame .is-top-left { left: 0; top: 0; border-width: 1px 0 0 1px; }
+.lattice-focus-viewer__inspection-frame .is-top-right { right: 0; top: 0; border-width: 1px 1px 0 0; }
+.lattice-focus-viewer__inspection-frame .is-bottom-left { left: 0; bottom: 0; border-width: 0 0 1px 1px; }
+.lattice-focus-viewer__inspection-frame .is-bottom-right { right: 0; bottom: 0; border-width: 0 1px 1px 0; }
+
+.lattice-focus-viewer__connectors {
+  position: fixed;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms linear;
+}
+
+.lattice-focus-viewer__connectors[data-open] { opacity: 1; }
+
+.lattice-focus-viewer__connectors i {
+  position: fixed;
+  min-width: 1px;
+  min-height: 1px;
+  background: var(--lattice-overlay-muted);
+}
+
+.lattice-focus-viewer__connectors i::before,
+.lattice-focus-viewer__connectors i::after {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--lattice-overlay-ink);
+  background: var(--lattice-menu-panel);
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.lattice-focus-viewer__connectors i::before { left: 0; top: 0; }
+.lattice-focus-viewer__connectors i::after { right: -5px; bottom: -5px; }
+
+.lattice-focus-viewer__dossier {
+  position: fixed;
+  z-index: 3;
   display: grid;
   grid-template-rows: 36px minmax(0, 1fr) 32px;
   overflow: hidden;
-  border: 1px solid rgba(23, 25, 25, 0.48);
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.16), transparent 42%),
-    #efeee8;
-  color: #171919;
+  border: 1px solid var(--lattice-menu-line-strong);
+  background: var(--lattice-menu-panel);
+  color: var(--lattice-menu-ink);
   box-shadow: 0 20px 64px rgba(0, 0, 0, 0.28);
   opacity: 0;
   pointer-events: none;
@@ -108,8 +217,9 @@
     opacity 150ms linear;
 }
 
-.lattice-focus-viewer__dossier.is-left { transform: translateX(100%); }
-.lattice-focus-viewer__dossier.is-right { transform: translateX(-100%); }
+.lattice-focus-viewer__dossier[data-placement="left"] { transform: translateX(-18px); }
+.lattice-focus-viewer__dossier[data-placement="right"] { transform: translateX(18px); }
+.lattice-focus-viewer__dossier[data-placement="lower"] { transform: translateY(18px); }
 
 .lattice-focus-viewer__dossier[data-open] {
   opacity: 1;
@@ -122,8 +232,9 @@
   pointer-events: none;
 }
 
-.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__dossier.is-left { transform: translateX(100%); }
-.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__dossier.is-right { transform: translateX(-100%); }
+.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__dossier[data-placement="left"] { transform: translateX(-18px); }
+.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__dossier[data-placement="right"] { transform: translateX(18px); }
+.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__dossier[data-placement="lower"] { transform: translateY(18px); }
 
 .lattice-focus-viewer__dossier > header,
 .lattice-focus-viewer__dossier > footer {
@@ -138,7 +249,7 @@
 
 .lattice-focus-viewer__dossier > header {
   grid-template-columns: minmax(0, 1fr) 24px;
-  border-bottom: 1px solid rgba(23, 25, 25, 0.25);
+  border-bottom: 1px solid var(--lattice-menu-line-strong);
 }
 
 .lattice-focus-viewer__dossier > header span {
@@ -160,8 +271,8 @@
 
 .lattice-focus-viewer__dossier > footer {
   grid-template-columns: 1fr auto;
-  border-top: 1px solid rgba(23, 25, 25, 0.25);
-  color: rgba(23, 25, 25, 0.56);
+  border-top: 1px solid var(--lattice-menu-line-strong);
+  color: var(--lattice-menu-muted);
 }
 
 .lattice-focus-viewer__dossier-body {
@@ -174,7 +285,7 @@
 
 .lattice-focus-viewer__dossier-body > small,
 .lattice-focus-viewer__dossier-body dt {
-  color: rgba(23, 25, 25, 0.55);
+  color: var(--lattice-menu-muted);
   font: 500 7px/1.25 "IBM Plex Mono", "Courier New", monospace;
   letter-spacing: 0.12em;
 }
@@ -189,7 +300,7 @@
 
 .lattice-focus-viewer__dossier-body section {
   padding-top: 19px;
-  border-top: 1px solid rgba(23, 25, 25, 0.22);
+  border-top: 1px solid var(--lattice-menu-line-strong);
 }
 
 .lattice-focus-viewer__dossier-body section > p {
@@ -202,13 +313,13 @@
   margin: 18px 0 0;
   display: grid;
   grid-template-columns: 1fr;
-  border-top: 1px solid rgba(23, 25, 25, 0.22);
+  border-top: 1px solid var(--lattice-menu-line-strong);
 }
 
 .lattice-focus-viewer__dossier-body dl > div {
   min-width: 0;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(23, 25, 25, 0.22);
+  border-bottom: 1px solid var(--lattice-menu-line-strong);
 }
 
 .lattice-focus-viewer__dossier-body dd {
@@ -231,7 +342,7 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: #d8d5cc;
+  color: var(--lattice-overlay-ink);
   cursor: pointer;
 }
 
@@ -245,8 +356,8 @@
 .lattice-focus-viewer__navigation span {
   min-width: 54px;
   padding: 0 8px;
-  border-right: 1px solid rgba(216, 213, 204, 0.22);
-  border-left: 1px solid rgba(216, 213, 204, 0.22);
+  border-right: 1px solid var(--lattice-overlay-faint);
+  border-left: 1px solid var(--lattice-overlay-faint);
   font: 8px/22px "IBM Plex Mono", "Courier New", monospace;
   letter-spacing: 0.12em;
   text-align: center;
@@ -262,8 +373,9 @@
   z-index: 4;
   width: 22px;
   height: 18px;
-  border: 1px solid rgba(216, 213, 204, 0.48);
-  background: rgba(9, 10, 10, 0.92);
+  border: 1px solid var(--lattice-overlay-muted);
+  background: color-mix(in srgb, var(--lattice-menu-panel) 92%, transparent);
+  color: var(--lattice-overlay-ink);
   font: 300 14px/1 "IBM Plex Mono", "Courier New", monospace;
   cursor: pointer;
   opacity: 0;
@@ -282,7 +394,7 @@
 
 .lattice-focus-viewer__navigation button:focus-visible,
 .lattice-focus-viewer__close:focus-visible {
-  outline: 1px solid #d8d5cc;
+  outline: 1px solid var(--lattice-overlay-ink);
   outline-offset: 3px;
 }
 
@@ -306,6 +418,8 @@
 .lattice-focus-viewer[data-layout="compact"] :is(
   .lattice-focus-viewer__artwork,
   .lattice-focus-viewer__browse-layer,
+  .lattice-focus-viewer__inspection-frame,
+  .lattice-focus-viewer__connectors,
   .lattice-focus-viewer__dossier,
   .lattice-focus-viewer__close
 ) { position: absolute; }
@@ -321,6 +435,8 @@
   }
 
   .lattice-focus-viewer__dossier,
+  .lattice-focus-viewer__inspection-frame,
+  .lattice-focus-viewer__connectors,
   .lattice-focus-viewer__close {
     transition-duration: 1ms !important;
   }

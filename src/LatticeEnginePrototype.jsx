@@ -83,6 +83,7 @@ import {
   projectCanonicalLatticeArtboard,
   projectPlacementRectangle,
   latticeSurfaceColor,
+  semanticGridVariables,
 } from './lattice/rendering/latticeGeometry.js';
 import {
   ARTWORK_MAT_PRESET_IDS,
@@ -749,6 +750,18 @@ export default function LatticeEnginePrototype() {
 
   const stageX = -((active.x + 1) * dimensions.width) + dragOffset.x;
   const stageY = -((active.y + 1) * dimensions.height) + dragOffset.y;
+  const tableGridVariables = semanticGridVariables(
+    renderPreview.geometry,
+    dimensions,
+    { x: dimensions.width, y: dimensions.height },
+    CANONICAL_LATTICE_ARTBOARD,
+    framing,
+  );
+  const viewerGridVariables = {
+    '--lattice-grid-cell-size': tableGridVariables['--lattice-grid-cell-size'],
+    '--lattice-grid-origin-x': `${Number.parseFloat(tableGridVariables['--lattice-grid-origin-x']) + stageX}px`,
+    '--lattice-grid-origin-y': `${Number.parseFloat(tableGridVariables['--lattice-grid-origin-y']) + stageY}px`,
+  };
   const snapDuration = reducedMotion ? 0 : config.snapDuration;
 
   const handlePlacementFocus = (placementId) => {
@@ -1063,11 +1076,16 @@ export default function LatticeEnginePrototype() {
           getReturnRectangle={() => viewportRef.current
             ?.querySelector(`[data-placement-id="${viewerSession.placementId}"]`)
             ?.getBoundingClientRect()}
+          gridVariables={viewerGridVariables}
+          gridVisible={gridVisible}
           onClosed={() => setViewerSession(null)}
           onNavigate={navigatePlacementViewer}
           originRectangle={viewerSession.originRectangle}
+          menuSurfaceId={menuSurfaceId}
+          overlayInk={overlayInkSurfaceId === AUTO_LATTICE_OVERLAY_INK ? undefined : latticeSurfaceColor(overlayInkSurfaceId)}
           position={viewerPosition}
           returnFocus={viewerSession.returnFocus}
+          surfaceColor={latticeSurfaceColor(renderPreview.surfaceId)}
           total={viewerEntries.length}
         />
       )}
