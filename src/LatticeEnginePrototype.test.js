@@ -13,6 +13,11 @@ const focusViewer = readFileSync(new URL('./lattice/rendering/LatticeFocusViewer
 const focusViewerStyles = readFileSync(new URL('./lattice/rendering/latticeFocusViewer.css', import.meta.url), 'utf8');
 const prototypeStyles = readFileSync(new URL('./latticeEnginePrototype.css', import.meta.url), 'utf8');
 const keeperHarness = readFileSync(new URL('./lattice/prototype/LatticeKeeperDockHarness.jsx', import.meta.url), 'utf8');
+const fixtureSource = readFileSync(new URL('./lattice/prototype/latticeEngineFixtures.js', import.meta.url), 'utf8');
+const navigationOverlay = readFileSync(new URL('./lattice/rendering/LatticeNavigationOverlay.jsx', import.meta.url), 'utf8');
+const insertionOverlay = readFileSync(new URL('./lattice/prototype/LatticeArtworkInsertionOverlay.jsx', import.meta.url), 'utf8');
+const devControls = readFileSync(new URL('./lattice/prototype/LatticeEngineDevControls.jsx', import.meta.url), 'utf8');
+const prototypeSources = `${source}\n${fixtureSource}\n${navigationOverlay}\n${insertionOverlay}\n${devControls}`;
 
 test('lattice engine harness is a development-only lazy route backed by the Slice 1A topology', () => {
   assert.match(entry, /import\.meta\.env\.DEV && prototypePath === '\/prototype\/lattice-engine'/);
@@ -22,9 +27,10 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
   assert.doesNotMatch(source, /FIXED CHROME \/ PHASE 6 \/ SLICE 4F/);
-  assert.match(source, /createFixturePlacements/);
+  assert.match(source, /latticeEngineFixtures\.js/);
+  assert.match(fixtureSource, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
-  assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
+  assert.doesNotMatch(prototypeSources, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
 });
 
 test('Phase 6 profile rail stays an unresolved session-only public-navigation probe', () => {
@@ -44,7 +50,7 @@ test('Phase 6 profile rail stays an unresolved session-only public-navigation pr
 test('Phase 6 public profile dossier expands only from the identity control with injected public data', () => {
   assert.match(source, /LatticeProfileDossier/);
   assert.match(source, /PROFILE_DOSSIER_PRESENTATION/);
-  assert.match(source, /createUnresolvedPublicProfilePresentation/);
+  assert.match(fixtureSource, /createUnresolvedPublicProfilePresentation/);
   assert.match(source, /identityControlRef=\{profileIdentityControlRef\}/);
   assert.match(source, /identityExpanded=\{profileDossierOpen\}/);
   assert.match(source, /if \(profileDossierOpen\)/);
@@ -70,8 +76,9 @@ test('Phase 6 owner workspace toolbar stays session-only and separate from publi
   assert.doesNotMatch(source, /workspaceTool.*(?:localStorage|sessionStorage|wallet|publish)/iu);
   assert.match(source, /data-menu-surface=\{menuSurfaceId\}/);
   assert.match(source, /data-overlay-ink=\{overlayInkSurfaceId\}/);
-  assert.match(source, /<span>Menu surface<\/span>/);
-  assert.match(source, /setMenuSurfaceId\(event\.target\.value\)/);
+  assert.match(source, /LatticeEngineDevControls/);
+  assert.match(devControls, /<span>Menu surface<\/span>/);
+  assert.match(devControls, /setMenuSurfaceId\(event\.target\.value\)/);
   assert.match(prototypeStyles, /data-menu-surface="paper"/);
 });
 
@@ -84,10 +91,10 @@ test('Phase 6 INSCAPE signature stays fixed, pointer-inert, and presentation-onl
   assert.match(prototypeStyles, /\.lattice-inscape-signature small\s*\{[^}]*color: var\(--lattice-overlay-ink\);/s);
   assert.match(prototypeStyles, /\.lattice-inscape-signature span\s*\{[^}]*color: var\(--lattice-overlay-ink\);/s);
   assert.match(prototypeStyles, /font: 400 clamp\(15px, 1\.2vw, 18px\)\/0\.82 "Inscape H Variant"/);
-  assert.match(source, /labelVisible: false,/);
-  assert.match(source, /labelVisible: isAuthoredTable \? renderPreview\.labelVisible : false/);
+  assert.match(source, /labelVisible: false/);
+  assert.doesNotMatch(prototypeSources, /renderPreview\.label(?:Visible|Anchor|Offset)/);
   assert.match(source, /<small>\{activeTableName\}<\/small>/);
-  assert.match(source, /className="lattice-engine-diagnostics"/);
+  assert.match(devControls, /className="lattice-engine-diagnostics"/);
   assert.doesNotMatch(source, /className="lattice-engine-readout"/);
   assert.doesNotMatch(source, /signature.*(?:localStorage|sessionStorage|wallet|publish)/iu);
 });
@@ -119,17 +126,18 @@ test('Phase 6 Keeper Dock reuses the real handoff contract inside the dev-only l
 });
 
 test('Phase 6 navigation controls share the canonical topology without introducing a boxed map', () => {
-  assert.match(source, /latticeCardinalDestinations\(active\)/);
-  assert.match(source, /LATTICE_COORDINATES\.map\(\(coordinate\)/);
+  assert.match(source, /LatticeNavigationOverlay/);
+  assert.match(navigationOverlay, /latticeCardinalDestinations\(active\)/);
+  assert.match(navigationOverlay, /LATTICE_COORDINATES\.map\(\(coordinate\)/);
   assert.match(source, /!arrangeEnabled && !viewerSession/);
-  assert.match(source, /aria-current=\{isActive \? 'location'/);
-  assert.match(source, /latticeMapFocusDestination/);
-  assert.match(source, /event\.key === 'Escape'/);
+  assert.match(navigationOverlay, /aria-current=\{isActive \? 'location'/);
+  assert.match(navigationOverlay, /latticeMapFocusDestination/);
+  assert.match(navigationOverlay, /event\.key === 'Escape'/);
   assert.match(source, /settlingRef\.current \|\| gestureRef\.current/);
   assert.match(prototypeStyles, /\.lattice-coordinate-map\s*\{[^}]*bottom: calc\(12px \+ 34px \+ 8px\);[^}]*grid-template-columns: repeat\(3, 20px\);/s);
   assert.match(prototypeStyles, /\.lattice-direction-chevron\.is-down\s*\{[^}]*bottom: 12px;/s);
   assert.doesNotMatch(prototypeStyles, /\.lattice-coordinate-map\s*\{[^}]*(?:background|border|box-shadow):/s);
-  assert.doesNotMatch(source, /table\.title|tableDisplayTitle/);
+  assert.doesNotMatch(prototypeSources, /table\.title|tableDisplayTitle/);
   assert.doesNotMatch(prototypeStyles, /\.lattice-engine-viewport:focus-visible::after/);
   assert.match(prototypeStyles, /\.lattice-direction-chevron,[^{]*\.lattice-coordinate-map button\s*\{[^}]*color: var\(--lattice-overlay-ink\);/s);
   assert.match(prototypeStyles, /\.lattice-coordinate-map button\.is-active::before\s*\{[^}]*background: var\(--lattice-overlay-ink\);/s);
@@ -200,9 +208,9 @@ test('Phase 5 dossiers open as one sticky pair from behind the artwork and remai
   assert.doesNotMatch(focusViewer, /openPanel/);
   assert.doesNotMatch(focusViewer, /toggleDossier|dossier-toggle/);
   assert.match(source, /fixtureFocusDossier/);
-  assert.match(source, /STABLE ASSET ID/);
-  assert.match(source, /TOKEN STANDARD', value: null/);
-  assert.doesNotMatch(source, /marketplaceUrl|explorerUrl|creatorUrl/);
+  assert.match(fixtureSource, /STABLE ASSET ID/);
+  assert.match(fixtureSource, /TOKEN STANDARD', value: null/);
+  assert.doesNotMatch(prototypeSources, /marketplaceUrl|explorerUrl|creatorUrl/);
   assert.match(focusViewerStyles, /\[data-layout="compact"\]/);
   assert.match(focusViewerStyles, /\.lattice-focus-viewer__dossier-body\s*\{[^}]*overflow: auto;/s);
 });
@@ -280,66 +288,71 @@ test('square crop authoring remains explicit, reversible, and session-only with 
     "kind: 'crop'",
     'nudgeCropFocus',
     'setCropZoom',
-    'SQUARE CROP',
-    'EDIT CROP',
-    'DONE CROP',
-    'REMOVE CROP',
     'CROPPING',
   ]) assert.match(source, new RegExp(token));
+  for (const label of ['SQUARE CROP', 'EDIT CROP', 'DONE CROP', 'REMOVE CROP']) {
+    assert.match(devControls, new RegExp(label));
+  }
   assert.match(source, /spaceHeldRef\.current \|\| !arrangeEnabled/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/);
 });
 
 test('generic mats and optional presets remain per-placement and session-only', () => {
-  assert.match(source, /createDefaultArtworkMats/);
+  assert.match(fixtureSource, /createDefaultArtworkMats/);
   assert.match(source, /artworkMats\[placement\.id\]/);
   assert.match(source, /ARTWORK_MAT_PRESET_IDS\.NONE/);
-  assert.match(source, /ARTWORK_MAT_PRESET_IDS\.DOSSIER/);
-  assert.match(source, /ARTWORK_MAT_PRESET_IDS\.CAPTION/);
-  assert.match(source, /\['top', 'right', 'bottom', 'left'\]\.map/);
+  assert.match(devControls, /ARTWORK_MAT_PRESET_IDS\.DOSSIER/);
+  assert.match(devControls, /ARTWORK_MAT_PRESET_IDS\.CAPTION/);
+  assert.match(devControls, /\['top', 'right', 'bottom', 'left'\]\.map/);
   assert.match(source, /updateSelectedMatInset/);
-  assert.match(source, /POLAROID \/ CAPTION/);
+  assert.match(devControls, /POLAROID \/ CAPTION/);
   assert.doesNotMatch(source, /artist|edition|collection|tokenId|localStorage|sessionStorage|indexedDB/iu);
 });
 
 test('transparent artwork backing stays independent from mat color and session-only', () => {
-  assert.match(source, /createDefaultArtworkBackings/);
+  assert.match(fixtureSource, /createDefaultArtworkBackings/);
   assert.match(source, /artworkBackings\[selectedPlacement\.id\]/);
   assert.match(source, /artworkBackingsByPlacementId=\{artworkBackings\}/);
-  assert.match(source, /Artwork background/);
-  assert.match(source, /Background color/);
+  assert.match(devControls, /Artwork background/);
+  assert.match(devControls, /Background color/);
   assert.doesNotMatch(source, /persistArtworkBacking|publishArtworkBacking/);
 });
 
 test('selected placement lifecycle replaces global fixture swapping without touching navigation order', () => {
-  assert.match(source, /createDefaultPlacementDefinitions/);
+  assert.match(fixtureSource, /createDefaultPlacementDefinitions/);
   assert.match(source, /replaceSelectedArtwork/);
   assert.match(source, /moveSelectedArtworkLayer/);
   assert.match(source, /removeSelectedArtwork/);
-  assert.match(source, /SEND BACKWARD/);
-  assert.match(source, /BRING FORWARD/);
-  assert.match(source, /REMOVE PLACEMENT/);
+  assert.match(devControls, /SEND BACKWARD/);
+  assert.match(devControls, /BRING FORWARD/);
+  assert.match(devControls, /REMOVE PLACEMENT/);
   assert.doesNotMatch(source, /Swap layers|layersSwapped/);
-  assert.match(source, /layer: 0/);
-  assert.match(source, /layer: 1/);
-  assert.match(source, /layer: 2/);
-  assert.match(source, /navigationOrder: 2/);
-  assert.match(source, /navigationOrder: 0/);
-  assert.match(source, /navigationOrder: 1/);
+  assert.match(fixtureSource, /layer: 0/);
+  assert.match(fixtureSource, /layer: 1/);
+  assert.match(fixtureSource, /layer: 2/);
+  assert.match(fixtureSource, /navigationOrder: 2/);
+  assert.match(fixtureSource, /navigationOrder: 0/);
+  assert.match(fixtureSource, /navigationOrder: 1/);
   assert.doesNotMatch(lifecycleController, /localStorage|sessionStorage|indexedDB|wallet|publish/iu);
 });
 
 test('fixture-backed right-click insertion stays normalized, replaceable and development-only', () => {
   for (const token of [
     'FIXTURE_ASSET_SOURCE',
-    'listAssets',
     'resolveAsset',
     'openInsertionMenu',
     'normalizedInsertionAnchor',
     'createPlacementAtAnchor',
     'DEFAULT_LATTICE_INSERTION_CONFIG',
-    'ADD / ARTWORK',
   ]) assert.match(source, new RegExp(token));
+  assert.match(source, /LatticeArtworkInsertionOverlay/);
+  assert.match(source, /assetSource=\{FIXTURE_ASSET_SOURCE\}/);
+  assert.match(insertionOverlay, /ADD \/ ARTWORK/);
+  assert.match(insertionOverlay, /assetSource\.listAssets\(\)/);
+  assert.match(insertionOverlay, /role="menu"/);
+  assert.match(insertionOverlay, /aria-modal="true"/);
+  assert.match(insertionOverlay, /event\.target === event\.currentTarget/);
+  assert.match(insertionOverlay, /autoFocus=\{index === 0\}/);
   assert.match(source, /onContextMenu=\{openInsertionMenu\}/);
   assert.match(source, /pendingPlacementFocusRef/);
   assert.match(source, /phase-4-inserted-/);
@@ -367,29 +380,31 @@ test('Phase 2 fixture composition belongs permanently to the authored center tab
   assert.match(source, /isAuthoredTable = coordinate\.x === 0 && coordinate\.y === 0/);
   assert.match(source, /placements: isAuthoredTable/);
   assert.doesNotMatch(source, /placements: isActive/);
-  assert.match(source, /TRANSPARENCY_MODES\.AUTO/);
-  assert.match(source, /TRANSPARENCY_MODES\.PRESERVE_ALPHA/);
-  assert.match(source, /Object\.values\(TRANSPARENCY_MODES\)/);
+  assert.match(fixtureSource, /TRANSPARENCY_MODES\.AUTO/);
+  assert.match(fixtureSource, /TRANSPARENCY_MODES\.PRESERVE_ALPHA/);
+  assert.match(devControls, /Object\.values\(TRANSPARENCY_MODES\)/);
   assert.doesNotMatch(source, /crop:\s*\{/);
 });
 
-test('renderer controls exercise geometry and label contract values without persistence', () => {
+test('renderer controls exercise geometry and the wordmark title without restoring the removed canvas label controls', () => {
+  assert.match(source, /LatticeEngineDevControls/);
+  assert.match(fixtureSource, /PROTOTYPE_START_GEOMETRY/);
   for (const token of [
     'LATTICE_GEOMETRY_PRESETS',
-    'PROTOTYPE_START_GEOMETRY',
     'LATTICE_SURFACES',
-    'TABLE_LABEL_ANCHORS',
-    'labelVisible',
-    'labelOffset',
+    '<span>Title<\/span>',
     'RESET RENDER',
-  ]) assert.match(source, new RegExp(token));
-  assert.doesNotMatch(source, /IDENTITY|COLLECTIONS|ARCHIVE|DROPS|CURATED/);
+  ]) assert.match(devControls, new RegExp(token));
+  for (const token of ['Anchor', 'Offset X', 'Offset Y', 'Label visible']) {
+    assert.doesNotMatch(devControls, new RegExp(`<span>${token}<\\/span>`));
+  }
+  assert.doesNotMatch(prototypeSources, /IDENTITY|COLLECTIONS|ARCHIVE|DROPS|CURATED/);
 });
 
 test('prototype uses the canonical artboard and normalized free-placement bounds', () => {
   assert.match(source, /CANONICAL_LATTICE_ARTBOARD/);
-  assert.match(source, /x: 0\.46, y: 0\.13, width: 0\.4, height: 0\.4 \* \(16 \/ 9\) \* \(2000 \/ 4636\)/);
-  assert.doesNotMatch(source, /scaledFixturePlacement|columnSpan|rowSpan/);
+  assert.match(fixtureSource, /x: 0\.46, y: 0\.13, width: 0\.4, height: 0\.4 \* \(16 \/ 9\) \* \(2000 \/ 4636\)/);
+  assert.doesNotMatch(prototypeSources, /scaledFixturePlacement|columnSpan|rowSpan/);
 });
 
 test('all tunable interaction behavior lives in one transient configuration object', () => {
@@ -406,7 +421,7 @@ test('all tunable interaction behavior lives in one transient configuration obje
     'minimumArtworkPixels',
   ]) {
     assert.match(controller, new RegExp(`${field}:`));
-    assert.match(source, new RegExp(`'${field}'`));
+    assert.match(devControls, new RegExp(`'${field}'`));
   }
   assert.doesNotMatch(controller, /velocity|inertia|friction|spring/iu);
 });

@@ -19,6 +19,7 @@ const viewportSize = () => ({
 const unresolved = (value) => (typeof value === 'string' && value.trim() ? value : 'NOT RESOLVED');
 
 function ViewerDossier({ dossier, onClose, open, rectangle, side }) {
+  // Deferred visual defect: ISSUE-002 in docs/new-issues/LATTICE_VIEWER_VISUAL_ISSUES.md
   const isLeft = side === 'left';
   return (
     <aside

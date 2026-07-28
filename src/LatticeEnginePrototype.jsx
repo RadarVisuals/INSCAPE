@@ -1,11 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CANONICAL_LATTICE_ARTBOARD,
-  FRAME_IDS,
   LATTICE_COORDINATES,
-  TABLE_LABEL_ANCHORS,
   TABLE_VISIBILITY,
-  TRANSPARENCY_MODES,
   latticeTableId,
   latticeTableFallbackTitle,
 } from './lattice/domain/latticeProfile.js';
@@ -16,9 +13,7 @@ import {
   entryLatticeCoordinate,
   finishPointerGesture,
   keyboardDirection,
-  latticeCardinalDestinations,
   latticeDestination,
-  latticeMapFocusDestination,
   resolveWheelDestination,
   updatePointerGesture,
 } from './lattice/controller/latticeNavigation.js';
@@ -34,7 +29,6 @@ import {
   updatePlacementResizeGesture,
 } from './lattice/controller/latticePlacementResize.js';
 import {
-  PLACEMENT_LAYER_DIRECTIONS,
   movePlacementLayer,
   placementLayerAvailability,
   removePlacement,
@@ -62,15 +56,17 @@ import {
 } from './lattice/controller/latticeArtboardFraming.js';
 import LatticeTableRenderer from './lattice/rendering/LatticeTableRenderer.jsx';
 import LatticeGridPlane from './lattice/rendering/LatticeGridPlane.jsx';
+import LatticeNavigationOverlay from './lattice/rendering/LatticeNavigationOverlay.jsx';
 import LatticeFocusViewer from './lattice/rendering/LatticeFocusViewer.jsx';
 import LatticeKeeperDockHarness from './lattice/prototype/LatticeKeeperDockHarness.jsx';
+import LatticeArtworkInsertionOverlay from './lattice/prototype/LatticeArtworkInsertionOverlay.jsx';
+import LatticeEngineDevControls from './lattice/prototype/LatticeEngineDevControls.jsx';
 import LatticeProfileDossier from './lattice/rendering/LatticeProfileDossier.jsx';
 import LatticeProfileRail from './lattice/rendering/LatticeProfileRail.jsx';
 import LatticeWorkspaceToolbar from './lattice/rendering/LatticeWorkspaceToolbar.jsx';
 import LatticeChromeFixtureHost from './lattice/windows/LatticeChromeFixtureHost.jsx';
 import useLatticeChromeWindows, { LATTICE_CHROME_REGIONS } from './lattice/windows/useLatticeChromeWindows.js';
 import {
-  createUnresolvedPublicProfilePresentation,
   selectPublicProfilePresentation,
 } from './lattice/domain/latticePublicProfilePresentation.js';
 import { projectTableMediaPlacements } from './lattice/rendering/latticePlacement.js';
@@ -79,11 +75,9 @@ import {
   orderedFocusViewerEntries,
 } from './lattice/rendering/latticeFocusViewer.js';
 import {
-  LATTICE_GEOMETRY_PRESETS,
   LATTICE_ARTBOARD_FITS,
   LATTICE_SURFACES,
   AUTO_LATTICE_OVERLAY_INK,
-  PROTOTYPE_START_GEOMETRY,
   clampLatticeArtboardOffset,
   latticeArtboardFramingBounds,
   projectCanonicalLatticeArtboard,
@@ -91,7 +85,6 @@ import {
   latticeSurfaceColor,
 } from './lattice/rendering/latticeGeometry.js';
 import {
-  ARTWORK_MAT_INSET_MAX,
   ARTWORK_MAT_PRESET_IDS,
   DEFAULT_ARTWORK_BACKING,
   DEFAULT_ARTWORK_MAT,
@@ -100,33 +93,29 @@ import {
   projectArtworkMat,
   resolveArtworkMatPreset,
 } from './lattice/rendering/latticeMat.js';
+import {
+  FIXTURE_ASSET_SOURCE,
+  FIXTURE_MEDIA,
+  CUSTOM_MAT_PRESET_ID,
+  PROFILE_DOSSIER_PRESENTATION,
+  applyPlacementAuthoring,
+  boundsFromPlacement,
+  createDefaultArtworkBackings,
+  createDefaultArtworkMats,
+  createDefaultMatPresetIds,
+  createDefaultPlacementBounds,
+  createDefaultPlacementCrops,
+  createDefaultPlacementDefinitions,
+  createDefaultRenderPreview,
+  fixtureFocusDossier,
+} from './lattice/prototype/latticeEngineFixtures.js';
 import './latticeEnginePrototype.css';
 
-const CONTROL_FIELDS = [
-  ['deadZone', 'Dead zone', 0, 40, 1],
-  ['commitThreshold', 'Commit threshold', 20, 240, 1],
-  ['diagonalTolerance', 'Diagonal tolerance', 0, 1, 0.01],
-  ['edgeResistance', 'Edge resistance', 0, 0.5, 0.01],
-  ['wheelAccumulationThreshold', 'Wheel threshold', 20, 240, 1],
-  ['wheelCooldown', 'Wheel cooldown', 0, 1500, 10],
-  ['snapDuration', 'Snap duration', 0, 1000, 10],
-  ['guideThreshold', 'Guide threshold', 1, 30, 1],
-  ['guideReleaseThreshold', 'Guide release', 1, 50, 1],
-  ['minimumArtworkPixels', 'Minimum artwork size', 16, 160, 1],
-];
-const CUSTOM_MAT_PRESET_ID = 'CUSTOM';
 const clampValue = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
 
 const interactiveChrome = (target) => target.closest('[data-lattice-chrome]');
 const unmodifiedPrimaryPointer = (event) => event.button === 0
   && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
-
-const DIRECTION_CONTROL_LABELS = Object.freeze({
-  left: 'Navigate to table on the left',
-  right: 'Navigate to table on the right',
-  up: 'Navigate to table above',
-  down: 'Navigate to table below',
-});
 
 const PROFILE_RAIL_ENTRIES = Object.freeze([
   { id: 'categories', label: 'CATEGORIES', note: 'PUBLIC STRUCTURE' },
@@ -144,202 +133,9 @@ const WORKSPACE_TOOL_ENTRIES = Object.freeze([
   { id: 'more', label: 'MORE' },
 ]);
 
-const PROFILE_DOSSIER_PRESENTATION = Object.freeze(createUnresolvedPublicProfilePresentation());
-
-function LatticeNavigationOverlay({ active, onNavigate, onReturnFocus }) {
-  const mapRef = useRef(null);
-  const neighbors = latticeCardinalDestinations(active);
-
-  const focusMapCoordinate = (coordinate) => {
-    mapRef.current
-      ?.querySelector(`[data-coordinate="${coordinate.x}:${coordinate.y}"]`)
-      ?.focus({ preventScroll: true });
-  };
-
-  const handleMapKeyDown = (event, coordinate) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      event.stopPropagation();
-      onReturnFocus();
-      return;
-    }
-    const destination = latticeMapFocusDestination(coordinate, event.key);
-    if (!destination) return;
-    event.preventDefault();
-    event.stopPropagation();
-    focusMapCoordinate(destination);
-  };
-
-  return (
-    <div className="lattice-navigation-overlay" data-lattice-chrome>
-      {Object.entries(neighbors).map(([direction, destination]) => destination && (
-        <button
-          aria-label={DIRECTION_CONTROL_LABELS[direction]}
-          className={`lattice-direction-chevron is-${direction}`}
-          key={direction}
-          onClick={() => onNavigate(destination)}
-          onPointerDown={(event) => event.stopPropagation()}
-          type="button"
-        />
-      ))}
-      <div className="lattice-coordinate-map" ref={mapRef} role="group" aria-label="Lattice table navigator">
-        {LATTICE_COORDINATES.map((coordinate) => {
-          const isActive = coordinate.x === active.x && coordinate.y === active.y;
-          return (
-            <button
-              aria-current={isActive ? 'location' : undefined}
-              aria-label={isActive ? 'Current table' : `Navigate to table ${coordinate.x + 2}, ${coordinate.y + 2}`}
-              className={isActive ? 'is-active' : ''}
-              data-coordinate={`${coordinate.x}:${coordinate.y}`}
-              key={`${coordinate.x}:${coordinate.y}`}
-              onClick={() => onNavigate(coordinate)}
-              onKeyDown={(event) => handleMapKeyDown(event, coordinate)}
-              onPointerDown={(event) => event.stopPropagation()}
-              type="button"
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-const FIXTURE_ASSET_IDS = Object.freeze({
-  landscape: '42:0x1111111111111111111111111111111111111111:0x01',
-  portrait: '42:0x2222222222222222222222222222222222222222:0x02',
-  transparent: '42:0x3333333333333333333333333333333333333333:0x03',
-});
-
-const FIXTURE_MEDIA = Object.freeze({
-  [FIXTURE_ASSET_IDS.landscape]: Object.freeze({
-    src: '/assets/stage/backdrops/backdrop_moonpurple.webp',
-    width: 4636,
-    height: 2000,
-    accessibleLabel: 'Landscape rendering fixture',
-  }),
-  [FIXTURE_ASSET_IDS.portrait]: Object.freeze({
-    src: '/assets/ratio/3.webp',
-    width: 2000,
-    height: 2829,
-    accessibleLabel: 'Portrait rendering fixture',
-  }),
-  [FIXTURE_ASSET_IDS.transparent]: Object.freeze({
-    src: '/assets/actors/abyssal_eye/full.webp',
-    width: 2000,
-    height: 2000,
-    accessibleLabel: 'Transparent rendering fixture',
-  }),
-});
-
-const FIXTURE_ASSET_SOURCE = Object.freeze({
-  listAssets: () => Object.entries(FIXTURE_MEDIA).map(([stableAssetId, media]) => ({ stableAssetId, ...media })),
-  resolveAsset: (stableAssetId) => FIXTURE_MEDIA[stableAssetId] || null,
-});
-
-const fixtureFocusDossier = (entry) => Object.freeze({
-  title: entry.media.accessibleLabel,
-  description: null,
-  traits: Object.freeze([]),
-  technical: Object.freeze([
-    Object.freeze({ label: 'STABLE ASSET ID', value: entry.placement.stableAssetId }),
-    Object.freeze({ label: 'SOURCE DIMENSIONS', value: `${entry.media.width} × ${entry.media.height}` }),
-    Object.freeze({ label: 'TRANSPARENCY', value: entry.transparencyMode }),
-    Object.freeze({ label: 'TOKEN STANDARD', value: null }),
-    Object.freeze({ label: 'CONTRACT', value: null }),
-    Object.freeze({ label: 'NETWORK', value: null }),
-  ]),
-});
-
-function createFixturePlacements(transparencyMode) {
-  const common = {
-    crop: null,
-    frameId: FRAME_IDS.NONE,
-    visitorVisible: true,
-  };
-  return [
-    {
-      ...common,
-      id: 'phase-2-landscape',
-      stableAssetId: FIXTURE_ASSET_IDS.landscape,
-      x: 0.46, y: 0.13, width: 0.4, height: 0.4 * (16 / 9) * (2000 / 4636),
-      layer: 0,
-      navigationOrder: 2,
-      transparencyMode: TRANSPARENCY_MODES.AUTO,
-    },
-    {
-      ...common,
-      id: 'phase-2-portrait',
-      stableAssetId: FIXTURE_ASSET_IDS.portrait,
-      x: 0.14, y: 0.16, width: 0.22, height: 0.22 * (16 / 9) * (2829 / 2000),
-      layer: 1,
-      navigationOrder: 0,
-      transparencyMode: TRANSPARENCY_MODES.PRESERVE_ALPHA,
-    },
-    {
-      ...common,
-      id: 'phase-2-transparent',
-      stableAssetId: FIXTURE_ASSET_IDS.transparent,
-      x: 0.35, y: 0.42, width: 0.27, height: 0.27 * (16 / 9),
-      layer: 2,
-      navigationOrder: 1,
-      transparencyMode,
-    },
-  ];
-}
-
-const boundsFromPlacement = ({ x, y, width, height }) => ({ x, y, width, height });
-
-const createDefaultPlacementBounds = () => Object.fromEntries(
-  createFixturePlacements(TRANSPARENCY_MODES.AUTO)
-    .map((placement) => [placement.id, boundsFromPlacement(placement)]),
-);
-
-const createDefaultPlacementCrops = () => Object.fromEntries(
-  createFixturePlacements(TRANSPARENCY_MODES.AUTO)
-    .map((placement) => [placement.id, placement.crop]),
-);
-
-const createDefaultArtworkMats = () => Object.fromEntries(
-  createFixturePlacements(TRANSPARENCY_MODES.AUTO)
-    .map((placement) => [placement.id, resolveArtworkMatPreset(ARTWORK_MAT_PRESET_IDS.NONE)]),
-);
-
-const createDefaultArtworkBackings = () => Object.fromEntries(
-  createFixturePlacements(TRANSPARENCY_MODES.AUTO)
-    .map((placement) => [placement.id, normalizeArtworkBacking(DEFAULT_ARTWORK_BACKING)]),
-);
-
-const createDefaultMatPresetIds = () => Object.fromEntries(
-  createFixturePlacements(TRANSPARENCY_MODES.AUTO)
-    .map((placement) => [placement.id, ARTWORK_MAT_PRESET_IDS.NONE]),
-);
-
-const createDefaultPlacementDefinitions = () => createFixturePlacements(TRANSPARENCY_MODES.AUTO);
 const withoutRecordKey = (record, key) => Object.fromEntries(
   Object.entries(record).filter(([candidate]) => candidate !== key),
 );
-
-function applyPlacementAuthoring(placements, placementBounds, placementCrops, preview, cropPreview) {
-  return placements.map((placement) => ({
-    ...placement,
-    ...(placementBounds[placement.id] || {}),
-    ...(preview?.placementId === placement.id ? preview.bounds : {}),
-    crop: cropPreview?.placementId === placement.id
-      ? cropPreview.crop
-      : placementCrops[placement.id] ?? null,
-  }));
-}
-
-const createDefaultRenderPreview = () => ({
-  geometry: { ...PROTOTYPE_START_GEOMETRY },
-  surfaceId: LATTICE_SURFACES[0].id,
-  title: '',
-  subtitle: '',
-  labelVisible: false,
-  labelAnchor: 'top-left',
-  labelOffset: { column: 0, row: 0 },
-  transparencyMode: TRANSPARENCY_MODES.AUTO,
-});
 
 export default function LatticeEnginePrototype() {
   const viewportRef = useRef(null);
@@ -1138,6 +934,24 @@ export default function LatticeEnginePrototype() {
     setInsertionFlow(null);
   };
 
+  const resetRender = () => {
+    insertionCounterRef.current = 0;
+    setRenderPreview(createDefaultRenderPreview());
+    setPlacementDefinitions(createDefaultPlacementDefinitions());
+    setPlacementBounds(createDefaultPlacementBounds());
+    setPlacementCrops(createDefaultPlacementCrops());
+    setArtworkMats(createDefaultArtworkMats());
+    setArtworkBackings(createDefaultArtworkBackings());
+    setMatPresetIds(createDefaultMatPresetIds());
+    setPlacementPreview(null);
+    setCropPreview(null);
+    setCropEditPlacementId(null);
+    setAlignmentGuides([]);
+    setSelectedPlacementId(null);
+    setInsertionFlow(null);
+    setFramingOffset({ x: 0, y: 0 });
+  };
+
   const activeTableName = active.x === 0 && active.y === 0 && renderPreview.title.trim()
     ? renderPreview.title.trim()
     : latticeTableFallbackTitle(active);
@@ -1184,10 +998,8 @@ export default function LatticeEnginePrototype() {
               id: latticeTableId(coordinate),
               coordinate,
               title: isAuthoredTable ? renderPreview.title : '',
-              subtitle: isAuthoredTable ? renderPreview.subtitle : '',
-              labelVisible: isAuthoredTable ? renderPreview.labelVisible : false,
-              labelAnchor: isAuthoredTable ? renderPreview.labelAnchor : 'top-left',
-              labelOffset: isAuthoredTable ? renderPreview.labelOffset : { column: 0, row: 0 },
+              subtitle: '',
+              labelVisible: false,
               visibility: TABLE_VISIBILITY.PUBLIC,
               placements: isAuthoredTable
                 ? centerPlacements
@@ -1225,50 +1037,16 @@ export default function LatticeEnginePrototype() {
             );
           })}
         </LatticeGridPlane>
-        {insertionFlow && insertionFlow.view !== 'chooser' && (
-          <div
-            className="lattice-insertion-menu"
-            data-lattice-chrome
-            role="menu"
-            aria-label="Table insertion commands"
-            style={{ left: insertionFlow.screen.x, top: insertionFlow.screen.y }}
-          >
-            {insertionFlow.view === 'root' ? (
-              <button type="button" role="menuitem" autoFocus onClick={() => setInsertionFlow((current) => ({ ...current, view: 'add' }))}>
-                <span>ADD</span><span aria-hidden="true">›</span>
-              </button>
-            ) : (
-              <>
-                <button type="button" role="menuitem" onClick={() => setInsertionFlow((current) => ({ ...current, view: 'root' }))}>‹ BACK</button>
-                <button type="button" role="menuitem" autoFocus onClick={() => setInsertionFlow((current) => ({ ...current, view: 'chooser' }))}>ARTWORK</button>
-              </>
-            )}
-          </div>
-        )}
-        {insertionFlow?.view === 'chooser' && (
-          <div className="lattice-insertion-chooser-backdrop" data-lattice-chrome onPointerDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setInsertionFlow(null);
-              viewportRef.current?.focus({ preventScroll: true });
-            }
-          }}>
-            <section className="lattice-insertion-chooser" role="dialog" aria-modal="true" aria-labelledby="lattice-insertion-title">
-              <header><span>ADD / ARTWORK</span><h2 id="lattice-insertion-title">Choose repository fixture</h2></header>
-              <div>
-                {FIXTURE_ASSET_SOURCE.listAssets().map(({ stableAssetId, ...media }, index) => (
-                  <button type="button" autoFocus={index === 0} key={stableAssetId} onClick={() => chooseInsertionArtwork(stableAssetId)}>
-                    <img src={media.src} alt="" draggable="false" />
-                    <span>{media.accessibleLabel.replace(' rendering fixture', '').toUpperCase()}</span>
-                  </button>
-                ))}
-              </div>
-              <button type="button" onClick={() => {
-                setInsertionFlow(null);
-                viewportRef.current?.focus({ preventScroll: true });
-              }}>CANCEL</button>
-            </section>
-          </div>
-        )}
+        <LatticeArtworkInsertionOverlay
+          assetSource={FIXTURE_ASSET_SOURCE}
+          flow={insertionFlow}
+          onCancel={() => {
+            setInsertionFlow(null);
+            viewportRef.current?.focus({ preventScroll: true });
+          }}
+          onChoose={chooseInsertionArtwork}
+          onViewChange={(view) => setInsertionFlow((current) => ({ ...current, view }))}
+        />
         {!arrangeEnabled && !viewerSession && (
           <LatticeNavigationOverlay
             active={active}
@@ -1356,142 +1134,51 @@ export default function LatticeEnginePrototype() {
         themeState={{ gridVisible, menuSurfaceId, overlayInkSurfaceId, surfaceId: renderPreview.surfaceId, surfaces: LATTICE_SURFACES, commands: { setGridVisible, setMenuSurface: setMenuSurfaceId, setOverlayInkSurface: setOverlayInkSurfaceId, setSurface: (surfaceId) => setRenderPreview((current) => ({ ...current, surfaceId })) } }}
       />}
 
-      <details className="lattice-engine-controls" data-lattice-chrome>
-        <summary>ENGINE / DEV</summary>
-        <div className="lattice-engine-control-list">
-          <fieldset>
-            <legend>RENDER</legend>
-            <div className="lattice-engine-diagnostics" aria-label="Engine diagnostics">
-              <span>ACTIVE {active.x}:{active.y} / {activeTableName}</span>
-              <span>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</span>
-              <span>{engineStatus}</span>
-            </div>
-            <label className="is-check"><span>Owner chrome</span><input type="checkbox" checked={ownerChromeVisible} onChange={(event) => {
-              const visible = event.target.checked;
-              setOwnerChromeVisible(visible);
-              chromeWindows.closeAll(false);
-              if (!visible) setArrangeMode(false);
-            }} /></label>
-            <label className="is-check"><span>Arrange</span><input type="checkbox" checked={arrangeEnabled} onChange={(event) => {
-              setArrangeMode(event.target.checked);
-            }} /></label>
-            <label className="is-check"><span>Smart guides</span><input type="checkbox" checked={smartGuides} onChange={(event) => {
-              setSmartGuides(event.target.checked);
-              setAlignmentGuides([]);
-            }} /></label>
-            <label className="is-check"><span>Grid visible</span><input type="checkbox" checked={gridVisible} onChange={(event) => setGridVisible(event.target.checked)} /></label>
-            <label className="is-check"><span>Grid snap</span><input type="checkbox" checked={gridSnap} onChange={(event) => {
-              setGridSnap(event.target.checked);
-              setAlignmentGuides([]);
-            }} /></label>
-            <label><span>Geometry</span><select value={LATTICE_GEOMETRY_PRESETS.find(({ geometry }) => geometry.columns === renderPreview.geometry.columns && geometry.rows === renderPreview.geometry.rows)?.id || 'custom'} onChange={(event) => {
-              const preset = LATTICE_GEOMETRY_PRESETS.find(({ id }) => id === event.target.value);
-              if (preset) setRenderPreview((current) => ({ ...current, geometry: { ...preset.geometry } }));
-            }}>
-              {LATTICE_GEOMETRY_PRESETS.map((preset) => <option value={preset.id} key={preset.id}>{preset.label}</option>)}
-              <option value="custom" disabled>CUSTOM</option>
-            </select></label>
-            <label><span>Surface</span><select value={renderPreview.surfaceId} onChange={(event) => setRenderPreview((current) => ({ ...current, surfaceId: event.target.value }))}>
-              {LATTICE_SURFACES.map((surface) => <option value={surface.id} key={surface.id}>{surface.label}</option>)}
-            </select></label>
-            <label><span>Menu surface</span><select value={menuSurfaceId} onChange={(event) => setMenuSurfaceId(event.target.value)}>
-              {LATTICE_SURFACES.map((surface) => <option value={surface.id} key={surface.id}>{surface.label}</option>)}
-            </select></label>
-            <label><span>Transparency</span><select value={renderPreview.transparencyMode} onChange={(event) => setRenderPreview((current) => ({ ...current, transparencyMode: event.target.value }))}>
-              {Object.values(TRANSPARENCY_MODES).map((mode) => <option value={mode} key={mode}>{mode}</option>)}
-            </select></label>
-            <label><span>Mat preset</span><select disabled={!selectedPlacement} value={selectedPlacement ? matPresetIds[selectedPlacement.id] || ARTWORK_MAT_PRESET_IDS.NONE : ARTWORK_MAT_PRESET_IDS.NONE} onChange={(event) => {
-              if (!selectedPlacement) return;
-              applySelectedMat(resolveArtworkMatPreset(event.target.value), event.target.value);
-            }}>
-              <option value={ARTWORK_MAT_PRESET_IDS.NONE}>NONE</option>
-              <option value={ARTWORK_MAT_PRESET_IDS.DOSSIER}>DOSSIER</option>
-              <option value={ARTWORK_MAT_PRESET_IDS.CAPTION}>POLAROID / CAPTION</option>
-              <option value={CUSTOM_MAT_PRESET_ID} disabled>CUSTOM</option>
-            </select></label>
-            <label className="is-check"><span>Mat enabled</span><input type="checkbox" disabled={!selectedPlacement} checked={Boolean(selectedPlacement && selectedMat.enabled)} onChange={(event) => applySelectedMat({ ...selectedMat, enabled: event.target.checked })} /></label>
-            <label><span>Mat color</span><input type="color" disabled={!selectedPlacement || !selectedMat.enabled} value={selectedMat.color} onChange={(event) => {
-              if (!selectedPlacement) return;
-              const nextMat = normalizeArtworkMat({ ...selectedMat, color: event.target.value });
-              setArtworkMats((current) => ({ ...current, [selectedPlacement.id]: nextMat }));
-              setMatPresetIds((current) => ({ ...current, [selectedPlacement.id]: CUSTOM_MAT_PRESET_ID }));
-            }} /></label>
-            <label className="is-check"><span>Artwork background</span><input type="checkbox" disabled={!selectedPlacement} checked={Boolean(selectedPlacement && selectedBacking.enabled)} onChange={(event) => {
-              if (!selectedPlacement) return;
-              const nextBacking = normalizeArtworkBacking({ ...selectedBacking, enabled: event.target.checked });
-              setArtworkBackings((current) => ({ ...current, [selectedPlacement.id]: nextBacking }));
-            }} /></label>
-            <label><span>Background color</span><input type="color" disabled={!selectedPlacement || !selectedBacking.enabled} value={selectedBacking.color} onChange={(event) => {
-              if (!selectedPlacement) return;
-              const nextBacking = normalizeArtworkBacking({ ...selectedBacking, color: event.target.value });
-              setArtworkBackings((current) => ({ ...current, [selectedPlacement.id]: nextBacking }));
-            }} /></label>
-            {['top', 'right', 'bottom', 'left'].map((edge) => <label key={edge}><span>Mat {edge}</span><input type="number" min="0" max={ARTWORK_MAT_INSET_MAX} step="0.01" disabled={!selectedPlacement || !selectedMat.enabled} value={selectedMat.inset[edge]} onChange={(event) => updateSelectedMatInset(edge, Number(event.target.value))} /></label>)}
-            <label><span>Replace with</span><select disabled={!selectedPlacement} value={selectedPlacement?.stableAssetId || ''} onChange={(event) => replaceSelectedArtwork(event.target.value)}>
-              {!selectedPlacement && <option value="">SELECT ARTWORK</option>}
-              {Object.entries(FIXTURE_MEDIA).map(([stableAssetId, media]) => <option value={stableAssetId} key={stableAssetId}>{media.accessibleLabel.replace(' rendering fixture', '').toUpperCase()}</option>)}
-            </select></label>
-            <button type="button" disabled={!selectedLayerAvailability.backward} onClick={() => moveSelectedArtworkLayer(PLACEMENT_LAYER_DIRECTIONS.BACKWARD)}>SEND BACKWARD</button>
-            <button type="button" disabled={!selectedLayerAvailability.forward} onClick={() => moveSelectedArtworkLayer(PLACEMENT_LAYER_DIRECTIONS.FORWARD)}>BRING FORWARD</button>
-            <button type="button" disabled={!selectedPlacement} onClick={removeSelectedArtwork}>REMOVE PLACEMENT</button>
-            <button type="button" disabled={!selectedPlacement || Boolean(selectedPlacement.crop)} onClick={applySquareCrop}>SQUARE CROP</button>
-            <button type="button" disabled={!selectedPlacement?.crop} onClick={() => setCropEditPlacementId((current) => current === selectedPlacementId ? null : selectedPlacementId)}>{cropEditPlacementId === selectedPlacementId ? 'DONE CROP' : 'EDIT CROP'}</button>
-            <label><span>CROP ZOOM {selectedPlacement?.crop?.zoom?.toFixed(2) || '1.00'}×</span><input type="range" min="1" max="4" step="0.05" disabled={!selectedPlacement?.crop} value={selectedPlacement?.crop?.zoom || 1} onChange={(event) => updateSelectedCropZoom(Number(event.target.value))} /></label>
-            <button type="button" disabled={!selectedPlacement?.crop} onClick={removeSelectedCrop}>REMOVE CROP</button>
-            <label className="is-wide"><span>Title</span><input type="text" maxLength="80" placeholder="EMPTY / FALLBACK" value={renderPreview.title} onChange={(event) => setRenderPreview((current) => ({ ...current, title: event.target.value }))} /></label>
-            <label className="is-wide"><span>Subtitle</span><input type="text" maxLength="120" placeholder="OPTIONAL" value={renderPreview.subtitle} onChange={(event) => setRenderPreview((current) => ({ ...current, subtitle: event.target.value }))} /></label>
-            <label><span>Anchor</span><select value={renderPreview.labelAnchor} onChange={(event) => setRenderPreview((current) => ({ ...current, labelAnchor: event.target.value }))}>
-              {TABLE_LABEL_ANCHORS.map((anchor) => <option value={anchor} key={anchor}>{anchor.toUpperCase()}</option>)}
-            </select></label>
-            <label><span>Offset X</span><input type="number" min="-2" max="2" step="1" value={renderPreview.labelOffset.column} onChange={(event) => {
-              const column = Math.min(2, Math.max(-2, Number(event.target.value)));
-              if (Number.isSafeInteger(column)) setRenderPreview((current) => ({ ...current, labelOffset: { ...current.labelOffset, column } }));
-            }} /></label>
-            <label><span>Offset Y</span><input type="number" min="-2" max="2" step="1" value={renderPreview.labelOffset.row} onChange={(event) => {
-              const row = Math.min(2, Math.max(-2, Number(event.target.value)));
-              if (Number.isSafeInteger(row)) setRenderPreview((current) => ({ ...current, labelOffset: { ...current.labelOffset, row } }));
-            }} /></label>
-            <label className="is-check"><span>Label visible</span><input type="checkbox" checked={renderPreview.labelVisible} onChange={(event) => setRenderPreview((current) => ({ ...current, labelVisible: event.target.checked }))} /></label>
-            <button type="button" onClick={() => {
-              insertionCounterRef.current = 0;
-              setRenderPreview(createDefaultRenderPreview());
-              setPlacementDefinitions(createDefaultPlacementDefinitions());
-              setPlacementBounds(createDefaultPlacementBounds());
-              setPlacementCrops(createDefaultPlacementCrops());
-              setArtworkMats(createDefaultArtworkMats());
-              setArtworkBackings(createDefaultArtworkBackings());
-              setMatPresetIds(createDefaultMatPresetIds());
-              setPlacementPreview(null);
-              setCropPreview(null);
-              setCropEditPlacementId(null);
-              setAlignmentGuides([]);
-              setSelectedPlacementId(null);
-              setInsertionFlow(null);
-              setFramingOffset({ x: 0, y: 0 });
-            }}>RESET RENDER</button>
-          </fieldset>
-          <fieldset>
-            <legend>FEEL</legend>
-            {CONTROL_FIELDS.map(([key, label, min, max, step]) => (
-              <label key={key}>
-                <span>{label}</span>
-                <input
-                  type="number"
-                  min={min}
-                  max={max}
-                  step={step}
-                  value={config[key]}
-                  onChange={(event) => {
-                    const nextValue = Math.min(max, Math.max(min, Number(event.target.value)));
-                    setConfig((current) => ({ ...current, [key]: Number.isFinite(nextValue) ? nextValue : current[key] }));
-                  }}
-                />
-              </label>
-            ))}
-            <button type="button" onClick={() => setConfig({ ...DEFAULT_LATTICE_INTERACTION_CONFIG })}>RESET FEEL</button>
-          </fieldset>
-        </div>
-      </details>
+      <LatticeEngineDevControls
+        active={active}
+        activeTableName={activeTableName}
+        applySelectedMat={applySelectedMat}
+        applySquareCrop={applySquareCrop}
+        arrangeEnabled={arrangeEnabled}
+        config={config}
+        cropEditPlacementId={cropEditPlacementId}
+        engineStatus={engineStatus}
+        gridSnap={gridSnap}
+        gridVisible={gridVisible}
+        matPresetIds={matPresetIds}
+        menuSurfaceId={menuSurfaceId}
+        moveSelectedArtworkLayer={moveSelectedArtworkLayer}
+        onArrangeChange={setArrangeMode}
+        onGridSnapChange={(enabled) => { setGridSnap(enabled); setAlignmentGuides([]); }}
+        onOwnerChromeVisibleChange={(visible) => {
+          setOwnerChromeVisible(visible);
+          chromeWindows.closeAll(false);
+          if (!visible) setArrangeMode(false);
+        }}
+        onResetRender={resetRender}
+        onSmartGuidesChange={(enabled) => { setSmartGuides(enabled); setAlignmentGuides([]); }}
+        ownerChromeVisible={ownerChromeVisible}
+        removeSelectedArtwork={removeSelectedArtwork}
+        removeSelectedCrop={removeSelectedCrop}
+        renderPreview={renderPreview}
+        replaceSelectedArtwork={replaceSelectedArtwork}
+        selectedBacking={selectedBacking}
+        selectedLayerAvailability={selectedLayerAvailability}
+        selectedMat={selectedMat}
+        selectedPlacement={selectedPlacement}
+        selectedPlacementId={selectedPlacementId}
+        setArtworkBackings={setArtworkBackings}
+        setArtworkMats={setArtworkMats}
+        setConfig={setConfig}
+        setCropEditPlacementId={setCropEditPlacementId}
+        setGridVisible={setGridVisible}
+        setMatPresetIds={setMatPresetIds}
+        setMenuSurfaceId={setMenuSurfaceId}
+        setRenderPreview={setRenderPreview}
+        smartGuides={smartGuides}
+        updateSelectedCropZoom={updateSelectedCropZoom}
+        updateSelectedMatInset={updateSelectedMatInset}
+      />
     </main>
   );
 }
