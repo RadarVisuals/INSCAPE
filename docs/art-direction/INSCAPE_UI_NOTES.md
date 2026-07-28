@@ -1,7 +1,8 @@
+# INSCAPE UI Notes
 
+Status: historical prototype feedback retained as design evidence
 
-
-
+These notes record observations made while earlier prototypes were being evaluated. Current product direction is the permanent 3 x 3 lattice of nine freely authored tables defined by `docs/INSCAPE_CANVAS_LATTICE.md` and `INSCAPE_FINAL_UI_MIGRATION_HANDOFF.md`. References below to an “official gallery,” earlier table counts, or prototype-specific layouts are historical context, not current Alpha architecture. Historical persisted Gallery, Upper World, and five-table workspace-v8 data is **LEGACY COMPATIBILITY INPUT — NOT THE TARGET MODEL.**
 
 
 inside the /prototype/workspace-rail where we are building the final look of inscape there is couple things to add / fix:

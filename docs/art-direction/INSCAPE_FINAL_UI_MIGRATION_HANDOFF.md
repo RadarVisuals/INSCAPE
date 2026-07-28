@@ -2,12 +2,13 @@
 
 Status: canonical implementation handoff, pending per-slice visual approval
 Prepared: 2026-07-27
-Primary prototype: `/prototype/workspace-rail`
+Primary frozen prototype: `/prototype/lattice-engine`
+Historical visual precursor: `/prototype/workspace-rail`
 Primary product statement: **Your profile is not a page. It is a place.**
 
 ## 1. Purpose of this document
 
-This document transfers the complete product, visual, interaction, and migration context needed to turn the current INSCAPE workspace-rail prototype into the final production interface.
+This document transfers the complete product, visual, interaction, and migration context needed to turn the frozen INSCAPE lattice-engine prototype into the final production interface. The earlier workspace-rail and NFT-viewer prototypes remain design evidence, not the target runtime architecture.
 
 It is intentionally detailed. A future implementation agent must be able to continue without relying on the long design conversation that produced the prototype.
 
@@ -23,14 +24,15 @@ Read these files completely before proposing or changing production code:
 2. `docs/INSCAPE_CANVAS_LATTICE.md`
 3. `docs/art-direction/INSCAPE_UI_NOTES.md`
 4. This handoff
-5. `src/WorkspaceRailPrototype.jsx`
-6. `src/workspaceRailPrototype.css`
-7. `src/NftTableViewerPrototype.jsx`
-8. `src/nftTableViewerPrototype.css`
-9. The current production owner and published visitor entry points
-10. The current profile-document builders, validators, publication projection, and migrations
+5. `src/LatticeEnginePrototype.jsx`
+6. `src/latticeEnginePrototype.css`
+7. The dedicated modules under `src/lattice/`
+8. `src/WorkspaceRailPrototype.jsx` and `src/workspaceRailPrototype.css` as historical visual evidence
+9. `src/NftTableViewerPrototype.jsx` and `src/nftTableViewerPrototype.css` as historical viewer evidence
+10. The current production owner and published visitor entry points
+11. The current profile-document builders, validators, publication projection, and migrations
 
-The vision and lattice documents still describe an earlier five-canvas cross. The newer locked direction in this handoff is a bounded **3 x 3 lattice containing nine tables**. Update the older canonical documents only after the owner confirms the final contract during migration preparation.
+The vision and lattice documents now reflect the confirmed canonical direction: a permanent **3 x 3 lattice containing nine freely authored tables**. Any five-table workspace-v8 input encountered in production is **LEGACY COMPATIBILITY INPUT — NOT THE TARGET MODEL.** Preserve its readability without treating its table names, topology, or geometry as the new lattice schema.
 
 ## 3. Product identities
 
@@ -46,7 +48,7 @@ INSCAPE must be neutral enough to frame other creators while remaining visually 
 
 ## 4. What the current prototype looks and feels like
 
-The workspace-rail prototype is an archival instrument surrounding a movable spatial profile.
+The frozen lattice-engine prototype is an archival instrument surrounding a movable spatial profile. It incorporates and supersedes the relevant workspace-rail visual studies while preserving them as historical references.
 
 Its visual language combines:
 
@@ -110,7 +112,7 @@ Unless the owner explicitly changes them during an approval gate, the following 
 7. Authored placement uses grid cells rather than arbitrary persisted camera pixels.
 8. Native artwork proportions are respected.
 9. Transparent assets remain transparent unless the owner explicitly chooses a frame or background.
-10. The old public Gallery and Upper World are excluded from the visible alpha runtime. Preserve experimental code until deliberate cleanup; do not silently merge it into the lattice.
+10. The old public Gallery and Upper World are excluded from the visible Alpha runtime. Their historical persisted data must remain readable until a separately approved migration or retirement pass; do not delete, reinterpret, or silently merge it into the lattice.
 11. Surface, menu, and dossier palettes can match or invert independently.
 12. Owner and visitor render the same published tables. Owner utilities are additional fixed chrome, never part of the public presentation document.
 13. Missing metadata is never invented.

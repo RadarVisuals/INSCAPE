@@ -2,7 +2,11 @@
 
 ## Status
 
-The public home now runs as a stage-free, vertically navigated grid world. The horizontal camera position is fixed, zoom is fixed at 100%, and desktop wheel input moves only along the vertical axis. Empty-space dragging is deliberately inert so placed objects retain a stable directional frame.
+Historical production/runtime compatibility report. This document describes the legacy Home, Gallery, and Upper World implementation that predates the canonical Alpha table lattice. It is retained because its persisted data, document fields, and compatibility behavior must remain readable.
+
+The current Alpha direction is one permanent 3 x 3 lattice of nine freely authored tables with center session entry. Home/Gallery/Upper geometry and persisted five-table workspace-v8 records are **LEGACY COMPATIBILITY INPUT — NOT THE TARGET MODEL.** Gallery and Upper World are excluded from the Alpha experience, but their historical data and readers must not be deleted, reinterpreted, or silently remapped until a separately approved migration or retirement pass.
+
+At the time this foundation was recorded, the public home ran as a stage-free, vertically navigated grid world. The horizontal camera position was fixed, zoom was fixed at 100%, and desktop wheel input moved only along the vertical axis. Empty-space dragging was deliberately inert so placed objects retained a stable directional frame.
 
 The illustrated/shader stage, foreground layers, and screen treatment remain implemented and editable in Atelier, but public home and gallery presentation deliberately omit them. They are reserved for a future dedicated free-roam mode.
 

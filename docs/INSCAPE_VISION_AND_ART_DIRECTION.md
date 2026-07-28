@@ -2,7 +2,7 @@
 
 Status: canonical north star
 Date: 2026-07-26
-Related interaction contract: [INSCAPE Canvas Lattice](./INSCAPE_CANVAS_LATTICE.md)
+Related interaction contract: [INSCAPE Table Lattice](./INSCAPE_CANVAS_LATTICE.md)
 
 ## The statement
 
@@ -39,7 +39,7 @@ The project contains related identities that must remain distinct.
 
 ### INSCAPE
 
-INSCAPE is the application and presentation architecture. It owns the interface, grid, canvas lattice, templates, organization tools, publication flow, public profile renderer, and shareable profile identity.
+INSCAPE is the application and presentation architecture. It owns the interface, grid, table lattice, authored composition tools, organization tools, publication flow, public profile renderer, and shareable profile identity.
 
 INSCAPE should feel neutral enough to frame many creators, but authored enough that it is immediately recognizable.
 
@@ -79,60 +79,60 @@ The owner decides what the profile means. INSCAPE preserves the visual and inter
 
 ## The central product model
 
-INSCAPE consists of a fixed interface surrounding a movable canvas lattice.
+INSCAPE consists of a fixed interface surrounding a movable table lattice.
 
-The person using the application remains at one stable viewing position. The grid and the presentation canvases move underneath that position. The interface does not travel with the world.
+The person using the application remains at one stable viewing position. The grid and nine authored tables move underneath that position. The interface does not travel with the lattice.
 
-For alpha, the lattice contains five canvases arranged around one central entry canvas:
+For Alpha, the lattice is one permanent 3 x 3 topology containing nine authored tables:
 
 ```text
-              [ CANVAS ]
-
-[ CANVAS ]  [ CANVAS ]  [ CANVAS ]
-
-              [ CANVAS ]
+[ TABLE 01 ] [ TABLE 02 ] [ TABLE 03 ]
+[ TABLE 04 ] [ TABLE 05 ] [ TABLE 06 ]
+[ TABLE 07 ] [ TABLE 08 ] [ TABLE 09 ]
 ```
 
-The user may pull this lattice freely in any valid direction. During the gesture the movement is continuous and physical. On release the lattice resolves to the nearest valid canvas and locks into exact alignment.
+The center table at coordinate `{ x: 0, y: 0 }` is the session entry point. The active table is runtime navigation state, not published profile identity state.
 
-This is neither a carousel nor unrestricted camera navigation. It combines the tactile quality of a spatial canvas with the clarity of discrete destinations.
+The user may pull this lattice freely in any valid direction. During the gesture the movement is continuous and physical. On release the lattice resolves to the nearest valid table and locks into exact alignment.
+
+This is neither a carousel nor unrestricted camera navigation. It combines the tactile quality of a spatial field with the clarity of discrete destinations.
 
 The metaphor is a presentation table:
 
 - The viewer remains seated at one position.
 - The interface forms the instrument panel around that position.
-- A complete canvas is placed in front of the viewer.
-- The surrounding canvases remain spatially connected.
-- Pulling the table reveals the next composed surface.
+- A complete authored table is placed in front of the viewer.
+- The surrounding tables remain spatially connected.
+- Pulling the lattice reveals the next composed table.
 
 The movement should feel like handling something large, precise, and physical.
 
-## Authored templates, not compulsory design work
+## Assisted freeform authorship
 
-Free placement is powerful for artists who enjoy constructing compositions, but it cannot be the only way to create a good profile. Most people who want to showcase or sell an NFT should not first have to learn spatial layout, responsive composition, layering, and viewport management.
+Every Alpha table is a freely authored composition surface. Owners may place, move, resize, crop, overlap, layer, mat, backplate, replace, and remove work within deterministic normalized table geometry.
 
-Every alpha canvas therefore uses an authored template.
+Free placement should not force every owner to design from an empty surface. Strong starting arrangements and optional presets may provide a useful initial composition, but they do not turn tables into compulsory templates or responsive card grids. Owners remain free to detach from a starting arrangement and author the table.
 
 The owner controls:
 
 - Which assets appear.
-- Their order.
+- Their placement, size, crop, layer, mat, backplate, and navigation order.
 - Which information is visible.
-- Public or private presentation.
+- Public or private table and placement presentation.
+- Table labels and presentation.
 - Surface and interface palette.
-- Template-specific emphasis.
 
 INSCAPE controls:
 
-- Responsive layout.
-- Alignment and spacing.
-- Typographic hierarchy.
-- Native artwork proportions.
-- Safe minimum and maximum sizes.
+- The permanent 3 x 3 topology.
+- Normalized deterministic projection geometry.
+- Grid, guide, snapping, and safe-bound behavior.
+- Typographic hierarchy and fixed chrome.
+- Native artwork integrity.
 - Interaction behavior.
-- Visitor consistency.
+- Visitor consistency across direct visits and iframes.
 
-Templates may eventually include forms such as Hero, Archive, Collection, Pair, Identity, and Drop. These names and the exact five alpha assignments must be validated in the lattice prototype before they become part of the published schema.
+Optional future starting arrangements may include forms such as Hero, Archive, Collection, Pair, Identity, and Drop. They are authoring aids, not fixed table identities or compulsory published layouts.
 
 The principle is already fixed: a creator selects and directs; the system composes.
 
@@ -149,9 +149,9 @@ INSCAPE provides an owner-facing browser that can:
 - Create private organizational folders.
 - Publish selected folders as public categories.
 - Distinguish owned assets from authored creations.
-- Select assets for presentation canvases.
+- Select assets for authored tables.
 
-Folders organize the owner workspace. Categories communicate public structure. Canvases present selected work. These are related but not interchangeable concepts.
+Folders organize the owner workspace. Categories communicate public structure. Tables present selected work as spatial compositions. These are related but not interchangeable concepts.
 
 ## Owner and visitor experiences
 
@@ -159,7 +159,7 @@ The owner and visitor share the same published profile presentation, but they do
 
 ### Owner
 
-The owner can organize assets, configure categories, assign content to canvas templates, preview the public result, and publish a signed profile document.
+The owner can organize assets, configure categories, author nine tables, preview the public result, and publish a signed profile document.
 
 Owner tools should remain close at hand but visually secondary to the presentation itself.
 
@@ -197,7 +197,7 @@ The Keeper welcomes the visitor and establishes the character of the profile.
 
 ### Guide
 
-The Keeper may draw attention to a featured canvas, new release, category, or hidden detail.
+The Keeper may draw attention to a featured table, new release, category, or hidden detail.
 
 ### Interpreter
 
@@ -211,7 +211,7 @@ The Keeper responds through movement, orientation, trails, shaders, sound, dialo
 
 The Keeper must create presence rather than obligation. There is no feeding loop, punishment for absence, artificial mood maintenance, or progression treadmill.
 
-The Keeper Dock is part of the fixed interface. Docking provides a deliberate resting state and keeps the canvas available without removing the resident from the identity of the profile.
+The Keeper Dock is part of the fixed interface. Docking provides a deliberate resting state and keeps the active table available without removing the resident from the identity of the profile.
 
 ## Visual character
 
@@ -238,7 +238,7 @@ The visual system is built around polarity rather than one global dark-mode swit
 
 Three layers may use coordinated or contrasting palettes:
 
-- Surface: the spatial grid and canvas environment.
+- Surface: the spatial grid and table environment.
 - Menus: the profile rail, owner toolbar, browser, controls, and Keeper Dock.
 - Dossier: the shareable profile identity and related editorial cards.
 
@@ -265,8 +265,8 @@ The grid is the continuous architectural substrate of INSCAPE.
 
 It should:
 
-- Continue across canvas boundaries during movement.
-- Align exactly when a canvas reaches rest.
+- Continue across table boundaries during movement.
+- Align exactly when a table reaches rest.
 - Remain subordinate to artwork.
 - Change contrast with its surface palette.
 - Avoid decorative double lines and accidental mismatches.
@@ -333,7 +333,7 @@ It uses the same archival language as the application and can carry its own pale
 
 Motion explains structure.
 
-The primary movement is the canvas lattice travelling beneath a fixed interface. It must remain direct enough to preserve spatial continuity and restrained enough not to delay access.
+The primary movement is the table lattice travelling beneath a fixed interface. It must remain direct enough to preserve spatial continuity and restrained enough not to delay access.
 
 Motion principles:
 
@@ -341,7 +341,7 @@ Motion principles:
 - Release creates one confident snap.
 - Small gestures return to origin.
 - Edge resistance communicates a boundary.
-- Neighboring canvases remain physically connected.
+- Neighboring tables remain physically connected.
 - Text does not visibly compress during container animation.
 - Content changes happen near the visual midpoint of a flip, never while facing the viewer.
 - Focus and Escape behavior remain predictable.
@@ -362,7 +362,7 @@ The alpha proves one complete journey:
 1. Connect a Universal Profile.
 2. Resolve and search its assets.
 3. Organize assets into private folders and public categories.
-4. Select content for five templated canvases.
+4. Compose selected content across nine authored tables.
 5. Move through the lattice with free drag and exact snap.
 6. Preview the visitor presentation.
 7. Publish a validated profile document to IPFS.
@@ -375,12 +375,12 @@ The alpha should feel complete within this boundary.
 
 The alpha does not expose:
 
-- Freeform Gallery authoring.
+- The legacy Gallery room.
 - Upper World or vertical floors.
 - The illustrated Outside World.
 - The Underneath free-roam experience.
 - Social feeds or the Social Table.
-- Hidden diagonal canvases.
+- Hidden or unlockable tables.
 - Animated composition tools.
 - Collaborative authoring.
 - A marketplace.
@@ -390,7 +390,7 @@ These systems are not rejected. They are protected from being shipped before the
 
 ## Future extensions
 
-The canvas lattice is designed to expand without replacing its central interaction.
+The table lattice may expand in later product phases without replacing its central interaction.
 
 Possible future tables include:
 
@@ -400,7 +400,7 @@ Possible future tables include:
 - Archive: deeper collection and provenance exploration.
 - Media Table: music, video, playlists, and ambient presentation.
 - Collaborative Table: shared curation or exhibitions.
-- Hidden canvases: diagonal, unlocked, event-driven, or collectible spaces.
+- Hidden tables: diagonal, unlocked, event-driven, or collectible spaces.
 
 Beyond the lattice, the Underneath may eventually open as a deliberately separate free-roam world with illustrated side-scrolling environments, sound, dialogue, and Keeper-specific encounters.
 
@@ -437,9 +437,9 @@ If a feature is impressive but weakens those answers, it belongs in a prototype 
 
 INSCAPE should become a place where a creator can build a profile that could not belong to anyone else without having to invent an interface from nothing.
 
-A visitor passes through the startveil. The lattice resolves beneath a fixed instrument panel. A Keeper occupies the profile. One composed canvas rests in front of the visitor while other parts of the identity remain spatially connected around it.
+A visitor passes through the startveil. The lattice resolves beneath a fixed instrument panel. A Keeper occupies the profile. One composed table rests in front of the visitor while the other eight tables remain spatially connected around it.
 
-The visitor pulls another canvas into place. The grid aligns. Artwork appears at its intended proportion. The profile reveals itself through selection, sequence, contrast, and presence.
+The visitor pulls another table into place. The grid aligns. Artwork appears at its intended proportion. The profile reveals itself through selection, sequence, contrast, and presence.
 
 The software does not ask every owner to become a world builder. It gives them a strong architecture and lets their work determine what the architecture becomes.
 
