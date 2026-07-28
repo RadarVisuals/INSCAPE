@@ -10,13 +10,14 @@ export const LATTICE_GEOMETRY_PRESETS = Object.freeze([
 export const PROTOTYPE_START_GEOMETRY = LATTICE_GEOMETRY_PRESETS[0].geometry;
 
 export const LATTICE_SURFACES = Object.freeze([
-  Object.freeze({ id: 'carbon', label: 'CARBON 02' }),
-  Object.freeze({ id: 'graphite', label: 'GRAPHITE 02B' }),
-  Object.freeze({ id: 'slate', label: 'SLATE 03' }),
-  Object.freeze({ id: 'ash', label: 'ASH 04' }),
-  Object.freeze({ id: 'mist', label: 'MIST 05' }),
-  Object.freeze({ id: 'paper', label: 'PAPER' }),
+  Object.freeze({ color: '#0b0c0c', id: 'carbon', label: 'CARBON 02' }),
+  Object.freeze({ color: '#383a3a', id: 'graphite', label: 'GRAPHITE 02B' }),
+  Object.freeze({ color: '#7b7b7b', id: 'slate', label: 'SLATE 03' }),
+  Object.freeze({ color: '#b2b2b2', id: 'ash', label: 'ASH 04' }),
+  Object.freeze({ color: '#c9c6bd', id: 'mist', label: 'MIST 05' }),
+  Object.freeze({ color: '#d8d4ca', id: 'paper', label: 'PAPER' }),
 ]);
+export const AUTO_LATTICE_OVERLAY_INK = 'auto';
 
 const SURFACE_IDS = new Set(LATTICE_SURFACES.map(({ id }) => id));
 const ANCHORS = new Set(TABLE_LABEL_ANCHORS);
@@ -38,6 +39,10 @@ export function assertRenderGeometry(geometry) {
 
 export function normalizeLatticeSurface(surfaceId) {
   return SURFACE_IDS.has(surfaceId) ? surfaceId : LATTICE_SURFACES[0].id;
+}
+
+export function latticeSurfaceColor(surfaceId) {
+  return LATTICE_SURFACES.find(({ id }) => id === surfaceId)?.color || null;
 }
 
 function boundedOffset(value, dimension) {

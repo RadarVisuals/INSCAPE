@@ -1,0 +1,368 @@
+@font-face { font-family: "Inscape Dossier Geist Sans"; src: url("/assets/fonts/geist-sans-latin-400-normal.woff2") format("woff2"); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: "Inscape Dossier Geist Mono"; src: url("/assets/fonts/GeistMono-Regular.ttf") format("truetype"); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: "Inscape Dossier IBM Plex Mono"; src: url("/assets/fonts/IBMPlexMono-Medium.ttf") format("truetype"); font-style: normal; font-weight: 500; font-display: swap; }
+
+.lattice-profile-dossier-layer {
+  position: fixed;
+  z-index: 13;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 48px;
+  background: rgba(10, 11, 11, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 160ms linear, visibility 0s linear 320ms;
+}
+
+.lattice-profile-dossier-layer[data-open] {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.lattice-profile-archive {
+  --dossier-bg: #f0f1ee;
+  --dossier-ink: #171a1a;
+  --dossier-muted: rgba(21, 25, 25, 0.55);
+  --dossier-line: rgba(21, 25, 25, 0.42);
+  --dossier-line-soft: rgba(21, 25, 25, 0.28);
+  --dossier-grid: rgba(22, 27, 27, 0.055);
+  --dossier-outline: rgba(238, 239, 236, 0.82);
+  --dossier-field: rgba(255, 255, 255, 0.2);
+  position: relative;
+  width: min(1120px, calc(100vw - 96px), calc((100vh - 96px) * 16 / 9));
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 48px minmax(0, 1fr) 36px;
+  overflow: hidden;
+  border: 1px solid var(--dossier-line);
+  outline: 7px solid var(--dossier-outline);
+  background-color: var(--dossier-bg);
+  background-image:
+    linear-gradient(var(--dossier-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--dossier-grid) 1px, transparent 1px);
+  background-size: 42px 42px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+  color: var(--dossier-ink);
+  font-family: "Inscape Dossier Geist Sans", sans-serif;
+  pointer-events: auto;
+  transform: translateY(-7px) scale(0.992);
+  transform-origin: left top;
+  transition: transform 320ms cubic-bezier(0.2, 0.72, 0.22, 1);
+}
+
+.lattice-profile-dossier-layer[data-open] .lattice-profile-archive {
+  transform: translateY(0) scale(1);
+}
+
+.lattice-profile-archive *,
+.lattice-profile-archive *::before,
+.lattice-profile-archive *::after { box-sizing: border-box; }
+
+.lattice-profile-archive button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.lattice-profile-archive button:focus-visible {
+  outline: 1px solid var(--dossier-ink);
+  outline-offset: -4px;
+}
+
+.lattice-profile-archive button:disabled { cursor: default; opacity: 0.38; }
+
+.lattice-profile-archive__header,
+.lattice-profile-archive__footer {
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  border-bottom: 1px solid var(--dossier-line);
+  font: 500 9px "Inscape Dossier IBM Plex Mono", monospace;
+  letter-spacing: 0.16em;
+}
+
+.lattice-profile-archive__header > :last-child,
+.lattice-profile-archive__footer > :last-child { justify-self: end; }
+.lattice-profile-archive__header > :last-child { padding-right: 28px; }
+.lattice-profile-archive__header b { font-weight: 500; }
+
+.lattice-profile-archive__body {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 37% 63%;
+}
+
+.lattice-profile-archive__emblem {
+  min-width: 0;
+  padding: 24px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) 60px;
+  border-right: 1px solid var(--dossier-line);
+}
+
+.lattice-profile-archive__emblem > header {
+  display: grid;
+  gap: 4px;
+  font: 500 10px "Inscape Dossier IBM Plex Mono", monospace;
+  letter-spacing: 0.13em;
+}
+
+.lattice-profile-archive__emblem small,
+.lattice-profile-archive__profile small {
+  display: block;
+  color: var(--dossier-muted);
+  font: 500 8px "Inscape Dossier IBM Plex Mono", monospace;
+  letter-spacing: 0.14em;
+}
+
+.lattice-profile-archive__emblem > header strong {
+  font: 500 11px "Inscape Dossier IBM Plex Mono", monospace;
+  letter-spacing: 0.13em;
+}
+
+.lattice-profile-archive__portrait {
+  position: relative;
+  margin-top: 16px;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--dossier-line);
+  background: var(--dossier-field);
+}
+
+.lattice-profile-archive__portrait img,
+.lattice-profile-archive__portrait-fallback {
+  width: 72%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  object-fit: cover;
+  border: 1px solid var(--dossier-line-soft);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--dossier-muted);
+  font: 400 28px "Inscape Dossier Geist Mono", monospace;
+  filter: grayscale(1) contrast(1.3);
+  mix-blend-mode: multiply;
+}
+
+.lattice-profile-archive__portrait[data-shape="round"] img,
+.lattice-profile-archive__portrait[data-shape="round"] .lattice-profile-archive__portrait-fallback { border-radius: 50%; }
+
+.lattice-profile-archive__portrait > i {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font: normal 18px "Inscape Dossier IBM Plex Mono", monospace;
+}
+
+.lattice-profile-archive__portrait > i:nth-of-type(2) { right: 10px; left: auto; }
+
+.lattice-profile-archive__portrait > span {
+  position: absolute;
+  bottom: 12px;
+  left: 8px;
+  writing-mode: vertical-rl;
+  rotate: 180deg;
+  font: 500 7px "Inscape Dossier IBM Plex Mono", monospace;
+  letter-spacing: 0.15em;
+}
+
+.lattice-profile-archive__emblem > footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--dossier-line);
+  border-top: 0;
+}
+
+.lattice-profile-archive__emblem > footer span {
+  padding: 10px 12px;
+  display: grid;
+  gap: 5px;
+  border-right: 1px solid var(--dossier-line);
+  font: 500 10px "Inscape Dossier IBM Plex Mono", monospace;
+  letter-spacing: 0.13em;
+}
+
+.lattice-profile-archive__emblem > footer span:last-child { border-right: 0; }
+
+.lattice-profile-archive__profile {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) 78px;
+  padding: 40px 38px 0;
+}
+
+.lattice-profile-archive__title { position: relative; min-width: 0; }
+.lattice-profile-archive__title > small { position: absolute; top: -18px; right: 0; }
+
+.lattice-profile-archive__title h2 {
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font: 400 clamp(31px, 4vw, 58px)/0.95 "Inscape Dossier Geist Mono", monospace;
+  letter-spacing: 0.16em;
+}
+
+.lattice-profile-archive__title h2 span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lattice-profile-archive__title h2 em {
+  color: var(--dossier-muted);
+  font: 400 0.42em "Inscape Dossier Geist Mono", monospace;
+  font-style: normal;
+  letter-spacing: 0.04em;
+}
+
+.lattice-profile-archive__title p {
+  margin: 12px 0 0;
+  color: var(--dossier-muted);
+  font: 400 clamp(18px, 2vw, 28px)/1 "Inscape Dossier Geist Mono", monospace;
+  letter-spacing: 0.05em;
+}
+
+.lattice-profile-archive__classification {
+  margin-top: 25px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  font: 500 9px "Inscape Dossier IBM Plex Mono", monospace;
+  letter-spacing: 0.16em;
+}
+
+.lattice-profile-archive__classification i { width: 7px; height: 7px; flex: 0 0 7px; background: currentColor; }
+.lattice-profile-archive__classification span { height: 1px; flex: 1; background: var(--dossier-line); }
+
+.lattice-profile-archive__bio {
+  margin: 26px 0 0;
+  font: 400 clamp(13px, 1.35vw, 20px)/1.35 "Inscape Dossier Geist Mono", monospace;
+  letter-spacing: 0.025em;
+}
+
+.lattice-profile-archive__tags { margin-top: 22px; display: flex; flex-wrap: wrap; align-content: start; gap: 11px; }
+.lattice-profile-archive__tags span { min-width: 72px; padding: 8px 14px; border: 1px solid var(--dossier-line); text-align: center; font: 500 9px "Inscape Dossier IBM Plex Mono", monospace; letter-spacing: 0.14em; text-transform: uppercase; }
+
+.lattice-profile-archive__stats {
+  align-self: end;
+  margin-inline: -38px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.35fr;
+  border-top: 1px dotted var(--dossier-line);
+}
+
+.lattice-profile-archive__stats > span { min-height: 90px; padding: 21px 0 10px 38px; display: grid; align-content: start; gap: 9px; border-right: 1px solid var(--dossier-line-soft); }
+.lattice-profile-archive__stats > span:not(:first-child) { padding-left: 30px; }
+.lattice-profile-archive__stats > span:last-child { border-right: 0; }
+.lattice-profile-archive__stats strong { overflow: hidden; font: 400 24px "Inscape Dossier Geist Mono", monospace; letter-spacing: 0.08em; text-overflow: ellipsis; white-space: nowrap; }
+
+.lattice-profile-archive__profile > footer {
+  margin: 0 -38px;
+  display: grid;
+  grid-template-columns: 2fr 1.35fr;
+  border-top: 1px solid var(--dossier-line);
+}
+
+.lattice-profile-archive__profile > footer > span,
+.lattice-profile-archive__profile > footer > button {
+  min-width: 0;
+  padding: 12px 38px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  border-right: 1px solid var(--dossier-line);
+  font: 500 9px "Inscape Dossier IBM Plex Mono", monospace;
+  letter-spacing: 0.1em;
+}
+
+.lattice-profile-archive__profile > footer > span {
+  position: relative;
+  padding-right: 64px;
+}
+
+.lattice-profile-archive__profile > footer b,
+.lattice-profile-archive__profile > footer em { min-width: 0; overflow: hidden; font: inherit; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+.lattice-profile-archive__profile > footer em { color: var(--dossier-muted); font-size: 7px; }
+.lattice-profile-archive__profile > footer > span button { position: absolute; top: 50%; right: 20px; width: 28px; height: 28px; display: grid; place-items: center; translate: 0 -50%; cursor: pointer; }
+.lattice-profile-archive__profile > footer > button { display: flex; align-items: center; justify-content: space-between; border-right: 0; cursor: pointer; }
+
+.lattice-profile-archive__footer { border-top: 1px solid var(--dossier-line); border-bottom: 0; font-size: 7px; }
+
+.lattice-profile-archive__close {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  color: var(--dossier-muted);
+  cursor: pointer;
+}
+
+.lattice-profile-archive__close:hover { color: var(--dossier-ink); background: var(--dossier-field); }
+.lattice-profile-archive__close:focus-visible { outline: 0; background: var(--dossier-field); color: var(--dossier-ink); }
+
+@media (max-width: 900px) {
+  .lattice-profile-dossier-layer { padding: 70px 24px 24px; }
+  .lattice-profile-archive { width: min(100%, calc((100vh - 94px) * 16 / 9)); }
+}
+
+@media (max-width: 700px) {
+  .lattice-profile-dossier-layer { padding: 12px; align-items: start; padding-top: 70px; }
+  .lattice-profile-archive { width: calc(100vw - 24px); height: min(480px, calc(100vh - 86px)); aspect-ratio: auto; grid-template-rows: 36px minmax(0, 1fr) 28px; outline-width: 4px; background-size: 28px 28px; }
+  .lattice-profile-archive__header, .lattice-profile-archive__footer { padding: 0 12px; font-size: 6px; }
+  .lattice-profile-archive__header > :last-child { padding-right: 22px; }
+  .lattice-profile-archive__body { grid-template-columns: 36% 64%; }
+  .lattice-profile-archive__emblem { padding: 12px; grid-template-rows: auto minmax(0, 1fr) 44px; }
+  .lattice-profile-archive__emblem > header { font-size: 7px; }
+  .lattice-profile-archive__emblem small, .lattice-profile-archive__profile small { font-size: 6px; }
+  .lattice-profile-archive__emblem > header strong { font-size: 8px; }
+  .lattice-profile-archive__portrait { margin-top: 8px; }
+  .lattice-profile-archive__portrait > span { bottom: 8px; left: 5px; font-size: 5px; }
+  .lattice-profile-archive__emblem > footer span { padding: 7px; gap: 3px; font-size: 6px; }
+  .lattice-profile-archive__profile { grid-template-rows: auto auto auto auto minmax(0, 1fr) 62px; padding: 25px 16px 0; }
+  .lattice-profile-archive__title > small { top: -13px; }
+  .lattice-profile-archive__title h2 { gap: 6px; font-size: clamp(16px, 5vw, 28px); letter-spacing: 0.1em; }
+  .lattice-profile-archive__title p { margin-top: 6px; font-size: clamp(11px, 3vw, 16px); }
+  .lattice-profile-archive__classification { margin-top: 13px; gap: 7px; font-size: 6px; }
+  .lattice-profile-archive__bio { margin-top: 12px; font-size: 9px; }
+  .lattice-profile-archive__tags { margin-top: 10px; gap: 5px; }
+  .lattice-profile-archive__tags span { min-width: 40px; padding: 4px 6px; font-size: 6px; }
+  .lattice-profile-archive__stats { margin-inline: -16px; }
+  .lattice-profile-archive__stats > span { min-height: 62px; padding: 12px 4px 6px 16px; gap: 5px; }
+  .lattice-profile-archive__stats > span:not(:first-child) { padding-left: 10px; }
+  .lattice-profile-archive__stats strong { font-size: 12px; }
+  .lattice-profile-archive__profile > footer { margin-inline: -16px; }
+  .lattice-profile-archive__profile > footer > span, .lattice-profile-archive__profile > footer > button { padding: 8px 10px; font-size: 6px; }
+  .lattice-profile-archive__profile > footer > span { padding-right: 32px; }
+  .lattice-profile-archive__profile > footer em { font-size: 5px; }
+  .lattice-profile-archive__profile > footer > span button { right: 3px; }
+  .lattice-profile-archive__close { top: 4px; right: 4px; width: 26px; height: 26px; }
+}
+
+@media (max-width: 430px) {
+  .lattice-profile-archive__header > :nth-child(2), .lattice-profile-archive__footer > :nth-child(2) { display: none; }
+  .lattice-profile-archive__header, .lattice-profile-archive__footer { grid-template-columns: 1fr 1fr; }
+  .lattice-profile-archive__emblem { padding: 8px; }
+  .lattice-profile-archive__profile { padding-right: 10px; padding-left: 10px; }
+  .lattice-profile-archive__stats, .lattice-profile-archive__profile > footer { margin-inline: -10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lattice-profile-dossier-layer, .lattice-profile-archive { transition-duration: 1ms; }
+}

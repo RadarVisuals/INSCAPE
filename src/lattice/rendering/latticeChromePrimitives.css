@@ -1,0 +1,47 @@
+.lattice-engine-shell {
+  --lattice-chrome-surface: var(--lattice-menu-panel);
+  --lattice-chrome-ink: var(--lattice-menu-ink);
+  --lattice-chrome-muted: var(--lattice-menu-muted);
+  --lattice-chrome-faint: var(--lattice-menu-faint);
+  --lattice-chrome-line: var(--lattice-menu-line);
+  --lattice-chrome-line-strong: var(--lattice-menu-line-strong);
+  --lattice-chrome-selected: var(--lattice-menu-selected);
+  --lattice-chrome-hover: var(--lattice-menu-selected);
+  --lattice-chrome-header-height: 43px;
+  --lattice-chrome-footer-height: 28px;
+  --lattice-chrome-padding: 14px;
+  --lattice-chrome-row-height: 32px;
+  --lattice-chrome-technical-font: "Inscape IBM Plex Mono", monospace;
+  --lattice-chrome-technical-size: 7px;
+  --lattice-chrome-technical-weight: 500;
+  --lattice-chrome-technical-tracking: 0.1em;
+  --lattice-chrome-close-size: 24px;
+  --lattice-chrome-focus-outline: 1px solid var(--lattice-menu-ink);
+  --lattice-chrome-scrollbar: var(--lattice-menu-muted);
+  --lattice-chrome-shadow: 10px 12px 28px rgb(0 0 0 / 0.24);
+  --lattice-chrome-z-index: 24;
+  --lattice-chrome-motion-duration: 180ms;
+  --lattice-chrome-motion-easing: cubic-bezier(0.2, 0.72, 0.2, 1);
+  --lattice-chrome-content-duration: 130ms;
+}
+
+.lattice-chrome-close-control {
+  width: var(--lattice-chrome-close-size);
+  height: var(--lattice-chrome-close-size);
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--lattice-menu-ink);
+  cursor: pointer;
+}
+
+.lattice-chrome-scroll-region {
+  scrollbar-color: var(--lattice-chrome-scrollbar) transparent;
+  scrollbar-width: thin;
+}
+
+.lattice-chrome-scroll-region::-webkit-scrollbar { width: 7px; height: 7px; }
+.lattice-chrome-scroll-region::-webkit-scrollbar-thumb { background: var(--lattice-chrome-scrollbar); }

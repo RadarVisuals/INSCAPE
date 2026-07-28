@@ -4,7 +4,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 const RESIDENT_PHASES = new Set(['approaching', 'entering', 'docked']);
 
-export default function KeeperDock({ actorId, residentHandoff, reducedMotion = false, spatialTheme = 'dark', onDockStateChange }) {
+export default function KeeperDock({
+  actorId,
+  residentHandoff,
+  reducedMotion = false,
+  residentScale = 0.72,
+  spatialTheme = 'dark',
+  onDockStateChange,
+}) {
   const socketRef = useRef(null);
   const phaseRef = useRef('empty');
   const startedRef = useRef(false);
@@ -32,13 +39,13 @@ export default function KeeperDock({ actorId, residentHandoff, reducedMotion = f
       reducedMotion,
       targetMode: 'center',
       keepVisible: true,
-      residentScale: 0.72,
+      residentScale,
       residentFacing: -1,
       duration: 0.62,
       onEntering: () => changePhase('entering'),
       onEntered: () => changePhase('docked')
     });
-  }, [changePhase, onDockStateChange, reducedMotion, residentHandoff]);
+  }, [changePhase, onDockStateChange, reducedMotion, residentHandoff, residentScale]);
 
   const release = useCallback(() => {
     if (!startedRef.current || phaseRef.current === 'releasing') return;

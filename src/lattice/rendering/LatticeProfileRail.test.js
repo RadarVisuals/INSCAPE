@@ -20,6 +20,8 @@ test('rail collapse, selection, focus and Escape remain controlled by the caller
   assert.match(source, /aria-current=\{active \? 'page'/);
   assert.match(source, /aria-expanded=\{!collapsed\}/);
   assert.match(source, /onCollapsedChange\?\.\(!collapsed\)/);
+  assert.match(source, /aria-expanded=\{expanded\}/);
+  assert.match(source, /ref=\{identityControlRef\}/);
   assert.match(source, /event\.key !== 'Escape'/);
   assert.match(source, /onEscape\?\.\(\)/);
   assert.match(source, /inert=\{blocked \? '' : undefined\}/);
@@ -30,7 +32,18 @@ test('rail collapse, selection, focus and Escape remain controlled by the caller
 test('rail is fixed, carbon, compactable and does not shift the lattice', () => {
   assert.match(styles, /\.lattice-profile-rail\s*\{[^}]*--rail-width: 244px;[^}]*position: fixed;[^}]*top: 24px;[^}]*left: 24px;/s);
   assert.match(styles, /\.lattice-profile-rail\[data-collapsed\]\s*\{ --rail-width: 48px; \}/);
-  assert.match(styles, /background: #101111/);
+  assert.match(styles, /background: var\(--lattice-menu-panel\)/);
   assert.match(styles, /@media \(max-width: 640px\)/);
   assert.doesNotMatch(styles, /margin-left|padding-left: 244px|translateX\(244px\)/);
+});
+
+test('rail uses the approved type hierarchy, loaded aliases and clear Lucide chevrons', () => {
+  assert.match(source, /ChevronRight/);
+  assert.doesNotMatch(source, /<i[^>]*>›<\/i>/);
+  assert.match(styles, /font: 600 13px\/1 "Inscape Geist Sans"/);
+  assert.match(styles, /font-size: 10px; font-weight: 500; letter-spacing: 0\.105em/);
+  assert.match(styles, /font-family: "Inscape IBM Plex Mono"/);
+  assert.match(styles, /stroke-width: 2/);
+  assert.match(styles, /color: var\(--lattice-menu-ink\)/);
+  assert.doesNotMatch(styles, /"IBM Plex Mono"|"Courier New"/);
 });

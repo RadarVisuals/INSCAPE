@@ -64,7 +64,15 @@ import LatticeTableRenderer from './lattice/rendering/LatticeTableRenderer.jsx';
 import LatticeGridPlane from './lattice/rendering/LatticeGridPlane.jsx';
 import LatticeFocusViewer from './lattice/rendering/LatticeFocusViewer.jsx';
 import LatticeKeeperDockHarness from './lattice/prototype/LatticeKeeperDockHarness.jsx';
+import LatticeProfileDossier from './lattice/rendering/LatticeProfileDossier.jsx';
 import LatticeProfileRail from './lattice/rendering/LatticeProfileRail.jsx';
+import LatticeWorkspaceToolbar from './lattice/rendering/LatticeWorkspaceToolbar.jsx';
+import LatticeChromeFixtureHost from './lattice/windows/LatticeChromeFixtureHost.jsx';
+import useLatticeChromeWindows, { LATTICE_CHROME_REGIONS } from './lattice/windows/useLatticeChromeWindows.js';
+import {
+  createUnresolvedPublicProfilePresentation,
+  selectPublicProfilePresentation,
+} from './lattice/domain/latticePublicProfilePresentation.js';
 import { projectTableMediaPlacements } from './lattice/rendering/latticePlacement.js';
 import {
   focusViewerDestination,
@@ -74,11 +82,13 @@ import {
   LATTICE_GEOMETRY_PRESETS,
   LATTICE_ARTBOARD_FITS,
   LATTICE_SURFACES,
+  AUTO_LATTICE_OVERLAY_INK,
   PROTOTYPE_START_GEOMETRY,
   clampLatticeArtboardOffset,
   latticeArtboardFramingBounds,
   projectCanonicalLatticeArtboard,
   projectPlacementRectangle,
+  latticeSurfaceColor,
 } from './lattice/rendering/latticeGeometry.js';
 import {
   ARTWORK_MAT_INSET_MAX,
@@ -124,6 +134,17 @@ const PROFILE_RAIL_ENTRIES = Object.freeze([
   { id: 'activity', label: 'ACTIVITY', note: 'PROFILE SIGNALS' },
   { id: 'discover', label: 'DISCOVER', note: 'PUBLIC PROFILES' },
 ]);
+
+const WORKSPACE_TOOL_ENTRIES = Object.freeze([
+  { id: 'browser', label: 'BROWSER' },
+  { id: 'arrange', label: 'ARRANGE' },
+  { id: 'preview', label: 'PREVIEW' },
+  { id: 'theme', label: 'THEME' },
+  { id: 'publish', label: 'PUBLISH' },
+  { id: 'more', label: 'MORE' },
+]);
+
+const PROFILE_DOSSIER_PRESENTATION = Object.freeze(createUnresolvedPublicProfilePresentation());
 
 function LatticeNavigationOverlay({ active, onNavigate, onReturnFocus }) {
   const mapRef = useRef(null);
@@ -314,7 +335,7 @@ const createDefaultRenderPreview = () => ({
   surfaceId: LATTICE_SURFACES[0].id,
   title: '',
   subtitle: '',
-  labelVisible: true,
+  labelVisible: false,
   labelAnchor: 'top-left',
   labelOffset: { column: 0, row: 0 },
   transparencyMode: TRANSPARENCY_MODES.AUTO,
@@ -322,6 +343,9 @@ const createDefaultRenderPreview = () => ({
 
 export default function LatticeEnginePrototype() {
   const viewportRef = useRef(null);
+  const profileIdentityControlRef = useRef(null);
+  const browserToolRef = useRef(null);
+  const moreToolRef = useRef(null);
   const gestureRef = useRef(null);
   const activeRef = useRef(entryLatticeCoordinate());
   const configRef = useRef({ ...DEFAULT_LATTICE_INTERACTION_CONFIG });
@@ -341,6 +365,8 @@ export default function LatticeEnginePrototype() {
   const [gestureActive, setGestureActive] = useState(false);
   const [config, setConfig] = useState(configRef.current);
   const [renderPreview, setRenderPreview] = useState(createDefaultRenderPreview);
+  const [menuSurfaceId, setMenuSurfaceId] = useState(LATTICE_SURFACES[0].id);
+  const [overlayInkSurfaceId, setOverlayInkSurfaceId] = useState(AUTO_LATTICE_OVERLAY_INK);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [arrangeEnabled, setArrangeEnabled] = useState(false);
   const [selectedPlacementId, setSelectedPlacementId] = useState(null);
@@ -367,7 +393,9 @@ export default function LatticeEnginePrototype() {
   const [insertionFlow, setInsertionFlow] = useState(null);
   const [viewerSession, setViewerSession] = useState(null);
   const [profileRailCollapsed, setProfileRailCollapsed] = useState(false);
-  const [activeProfileEntryId, setActiveProfileEntryId] = useState(null);
+  const [profileDossierOpen, setProfileDossierOpen] = useState(false);
+  const [ownerChromeVisible, setOwnerChromeVisible] = useState(true);
+  const chromeWindows = useLatticeChromeWindows();
   const framingBounds = latticeArtboardFramingBounds(
     CANONICAL_LATTICE_ARTBOARD,
     dimensions,
@@ -381,6 +409,29 @@ export default function LatticeEnginePrototype() {
     fit: LATTICE_ARTBOARD_FITS.COVER,
     offset: visibleFramingOffset,
   };
+  const profileDossierPresentation = PROFILE_DOSSIER_PRESENTATION;
+  const profileDossierView = selectPublicProfilePresentation(profileDossierPresentation);
+  const profileRailIdentity = profileDossierView.resolved
+    ? {
+        avatarUrl: profileDossierView.avatarUrl,
+        displayName: profileDossierView.displayName || profileDossierView.official.handle,
+        hash: profileDossierView.residentCode,
+        secondaryLabel: profileDossierView.official.handle
+          ? `@${profileDossierView.official.handle.replace(/^@/u, '')}`
+          : 'UNIVERSAL PROFILE',
+      }
+    : null;
+  const closeProfileDossier = useCallback((restoreFocus = true) => {
+    setProfileDossierOpen(false);
+    if (restoreFocus) requestAnimationFrame(() => profileIdentityControlRef.current?.focus({ preventScroll: true }));
+  }, []);
+
+  useEffect(() => {
+    if (viewerSession) {
+      closeProfileDossier(false);
+      chromeWindows.closeAll(false);
+    }
+  }, [chromeWindows.closeAll, closeProfileDossier, viewerSession]);
   const projectedArtboard = projectCanonicalLatticeArtboard(
     CANONICAL_LATTICE_ARTBOARD,
     dimensions,
@@ -881,6 +932,25 @@ export default function LatticeEnginePrototype() {
     settle(destination, { x: 0, y: 0 });
   }, [settle]);
 
+  const setArrangeMode = (enabled) => {
+    setArrangeEnabled(enabled);
+    setInsertionFlow(null);
+    setSelectedPlacementId(null);
+    setPlacementPreview(null);
+    setAlignmentGuides([]);
+    setCropEditPlacementId(null);
+    setCropPreview(null);
+  };
+
+  const activateWorkspaceTool = (toolId, trigger, returnFocus) => {
+    if (toolId === 'arrange') {
+      chromeWindows.closeRegion(LATTICE_CHROME_REGIONS.TOOLBAR, false);
+      setArrangeMode(!arrangeEnabled);
+      return;
+    }
+    chromeWindows.activate(LATTICE_CHROME_REGIONS.TOOLBAR, toolId, trigger, returnFocus);
+  };
+
   const stageX = -((active.x + 1) * dimensions.width) + dragOffset.x;
   const stageY = -((active.y + 1) * dimensions.height) + dragOffset.y;
   const snapDuration = reducedMotion ? 0 : config.snapDuration;
@@ -1027,16 +1097,16 @@ export default function LatticeEnginePrototype() {
     });
   };
 
-  const chooseInsertionArtwork = (stableAssetId) => {
+  const insertFixtureArtwork = (stableAssetId, anchor) => {
     const media = FIXTURE_ASSET_SOURCE.resolveAsset(stableAssetId);
-    if (!insertionFlow?.anchor || !media) return;
+    if (!anchor || !media) return false;
     let placementId;
     do {
       insertionCounterRef.current += 1;
       placementId = `phase-4-inserted-${insertionCounterRef.current}`;
     } while (placementDefinitions.some(({ id }) => id === placementId));
     const placement = createPlacementAtAnchor({
-      anchor: insertionFlow.anchor,
+      anchor,
       artboard: CANONICAL_LATTICE_ARTBOARD,
       media,
       placementId,
@@ -1060,11 +1130,21 @@ export default function LatticeEnginePrototype() {
     setAlignmentGuides([]);
     pendingPlacementFocusRef.current = placement.id;
     setSelectedPlacementId(placement.id);
+    return true;
+  };
+
+  const chooseInsertionArtwork = (stableAssetId) => {
+    if (!insertFixtureArtwork(stableAssetId, insertionFlow?.anchor)) return;
     setInsertionFlow(null);
   };
 
+  const activeTableName = active.x === 0 && active.y === 0 && renderPreview.title.trim()
+    ? renderPreview.title.trim()
+    : latticeTableFallbackTitle(active);
+  const engineStatus = viewerSession ? 'VIEWING' : snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY';
+
   return (
-    <main className="lattice-engine-shell">
+    <main className="lattice-engine-shell" data-lattice-surface={renderPreview.surfaceId} data-menu-surface={menuSurfaceId} data-overlay-ink={overlayInkSurfaceId} style={overlayInkSurfaceId === AUTO_LATTICE_OVERLAY_INK ? undefined : { '--lattice-overlay-ink': latticeSurfaceColor(overlayInkSurfaceId) }}>
       <section
         ref={viewportRef}
         className={`lattice-engine-viewport${gestureActive ? ' is-dragging' : ''}${arrangeEnabled ? ' is-arranging' : ''}${placementDragging ? ' is-placement-dragging' : ''}${placementResizing ? ' is-placement-resizing' : ''}${cropDragging ? ' is-crop-dragging' : ''}${spaceHeld ? ' is-framing-ready' : ''}${framingDragging ? ' is-framing' : ''}`}
@@ -1105,7 +1185,7 @@ export default function LatticeEnginePrototype() {
               coordinate,
               title: isAuthoredTable ? renderPreview.title : '',
               subtitle: isAuthoredTable ? renderPreview.subtitle : '',
-              labelVisible: isAuthoredTable ? renderPreview.labelVisible : true,
+              labelVisible: isAuthoredTable ? renderPreview.labelVisible : false,
               labelAnchor: isAuthoredTable ? renderPreview.labelAnchor : 'top-left',
               labelOffset: isAuthoredTable ? renderPreview.labelOffset : { column: 0, row: 0 },
               visibility: TABLE_VISIBILITY.PUBLIC,
@@ -1215,6 +1295,7 @@ export default function LatticeEnginePrototype() {
       )}
 
       <div className="lattice-inscape-signature" aria-label="INSCAPE">
+        <small>{activeTableName}</small>
         <strong>INSCAPE</strong>
         <span>SPATIAL PROFILE SYSTEM / ACTIVE</span>
       </div>
@@ -1222,41 +1303,77 @@ export default function LatticeEnginePrototype() {
       <LatticeKeeperDockHarness blocked={Boolean(viewerSession)} reducedMotion={reducedMotion} />
 
       <LatticeProfileRail
-        activeEntryId={activeProfileEntryId}
+        activeEntryId={chromeWindows.railId}
         blocked={Boolean(viewerSession)}
         collapsed={profileRailCollapsed}
-        compact={dimensions.width <= 640}
+        compact={dimensions.width <= 900}
         entries={PROFILE_RAIL_ENTRIES}
-        officialIdentity={null}
+        identityControlRef={profileIdentityControlRef}
+        identityExpanded={profileDossierOpen}
+        officialIdentity={profileRailIdentity}
         onCollapsedChange={setProfileRailCollapsed}
-        onEntryActivate={setActiveProfileEntryId}
-        onIdentityActivate={() => setActiveProfileEntryId('identity')}
-        onEscape={() => {
-          setActiveProfileEntryId(null);
-          viewportRef.current?.focus({ preventScroll: true });
+        onEntryActivate={(entryId, trigger) => {
+          setProfileDossierOpen(false);
+          chromeWindows.activate(LATTICE_CHROME_REGIONS.RAIL, entryId, trigger);
         }}
+        onIdentityActivate={() => {
+          if (profileDossierOpen) {
+            closeProfileDossier();
+            return;
+          }
+          chromeWindows.closeRegion(LATTICE_CHROME_REGIONS.RAIL, false);
+          setProfileDossierOpen(true);
+        }}
+        onEscape={chromeWindows.closeDeepest}
       />
 
-      <aside className="lattice-engine-readout" data-lattice-chrome>
-        <p>FIXED CHROME / PHASE 6 / SLICE 4E</p>
-        <p>ACTIVE {active.x}:{active.y} / {latticeTableFallbackTitle(active)}</p>
-        <p>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</p>
-        <p>{viewerSession ? 'VIEWING' : snapping ? 'SETTLING' : framingDragging ? 'FRAMING' : cropDragging ? 'CROPPING' : placementResizing ? 'RESIZING' : placementDragging ? 'ARRANGING' : gestureActive ? 'DIRECT MANIPULATION' : spaceHeld ? 'FRAME READY' : cropEditPlacementId ? 'CROP EDIT' : arrangeEnabled ? 'ARRANGE READY' : 'READY'}</p>
-      </aside>
+      <LatticeProfileDossier
+        open={profileDossierOpen && !viewerSession}
+        presentation={profileDossierPresentation}
+        onCopyAddress={(address) => navigator.clipboard?.writeText(address)}
+        onRequestClose={closeProfileDossier}
+      />
+
+      <LatticeWorkspaceToolbar
+        activeToolId={chromeWindows.toolbarId}
+        arrangeEnabled={arrangeEnabled}
+        blocked={Boolean(viewerSession)}
+        compact={dimensions.width <= 980}
+        owner={ownerChromeVisible}
+        tools={WORKSPACE_TOOL_ENTRIES}
+        onEscape={chromeWindows.closeDeepest}
+        onToolActivate={activateWorkspaceTool}
+        toolButtonRefs={{ browser: browserToolRef, more: moreToolRef }}
+      />
+
+      {!viewerSession && <LatticeChromeFixtureHost
+        activeTable={{ label: activeTableName, placementAvailable: active.x === 0 && active.y === 0 }}
+        assetSource={FIXTURE_ASSET_SOURCE}
+        controller={chromeWindows}
+        interfaceState={{ gridSnap, reducedMotion, smartGuides, commands: { setGridSnap: (enabled) => { setGridSnap(enabled); setAlignmentGuides([]); }, setReducedMotion, setSmartGuides: (enabled) => { setSmartGuides(enabled); setAlignmentGuides([]); } } }}
+        railCollapsed={profileRailCollapsed || dimensions.width <= 900}
+        requestPlacement={(stableAssetId) => insertFixtureArtwork(stableAssetId, { x: 0.5, y: 0.5 })}
+        themeState={{ gridVisible, menuSurfaceId, overlayInkSurfaceId, surfaceId: renderPreview.surfaceId, surfaces: LATTICE_SURFACES, commands: { setGridVisible, setMenuSurface: setMenuSurfaceId, setOverlayInkSurface: setOverlayInkSurfaceId, setSurface: (surfaceId) => setRenderPreview((current) => ({ ...current, surfaceId })) } }}
+      />}
 
       <details className="lattice-engine-controls" data-lattice-chrome>
         <summary>ENGINE / DEV</summary>
         <div className="lattice-engine-control-list">
           <fieldset>
             <legend>RENDER</legend>
+            <div className="lattice-engine-diagnostics" aria-label="Engine diagnostics">
+              <span>ACTIVE {active.x}:{active.y} / {activeTableName}</span>
+              <span>GRID {renderPreview.geometry.columns} × {renderPreview.geometry.rows} / {renderPreview.surfaceId.toUpperCase()}</span>
+              <span>{engineStatus}</span>
+            </div>
+            <label className="is-check"><span>Owner chrome</span><input type="checkbox" checked={ownerChromeVisible} onChange={(event) => {
+              const visible = event.target.checked;
+              setOwnerChromeVisible(visible);
+              chromeWindows.closeAll(false);
+              if (!visible) setArrangeMode(false);
+            }} /></label>
             <label className="is-check"><span>Arrange</span><input type="checkbox" checked={arrangeEnabled} onChange={(event) => {
-              setArrangeEnabled(event.target.checked);
-              setInsertionFlow(null);
-              setSelectedPlacementId(null);
-              setPlacementPreview(null);
-              setAlignmentGuides([]);
-              setCropEditPlacementId(null);
-              setCropPreview(null);
+              setArrangeMode(event.target.checked);
             }} /></label>
             <label className="is-check"><span>Smart guides</span><input type="checkbox" checked={smartGuides} onChange={(event) => {
               setSmartGuides(event.target.checked);
@@ -1275,6 +1392,9 @@ export default function LatticeEnginePrototype() {
               <option value="custom" disabled>CUSTOM</option>
             </select></label>
             <label><span>Surface</span><select value={renderPreview.surfaceId} onChange={(event) => setRenderPreview((current) => ({ ...current, surfaceId: event.target.value }))}>
+              {LATTICE_SURFACES.map((surface) => <option value={surface.id} key={surface.id}>{surface.label}</option>)}
+            </select></label>
+            <label><span>Menu surface</span><select value={menuSurfaceId} onChange={(event) => setMenuSurfaceId(event.target.value)}>
               {LATTICE_SURFACES.map((surface) => <option value={surface.id} key={surface.id}>{surface.label}</option>)}
             </select></label>
             <label><span>Transparency</span><select value={renderPreview.transparencyMode} onChange={(event) => setRenderPreview((current) => ({ ...current, transparencyMode: event.target.value }))}>

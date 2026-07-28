@@ -6,6 +6,7 @@ import {
   LATTICE_ARTBOARD_FITS,
   PROTOTYPE_START_GEOMETRY,
   LATTICE_SURFACES,
+  latticeSurfaceColor,
   assertRenderGeometry,
   normalizeLatticeSurface,
   fitNativeMediaRectangle,
@@ -111,4 +112,10 @@ test('invalid rendering inputs fail closed to safe label and surface values', ()
   }, { columns: 3, rows: 3 }, { width: 300, height: 300 }), {
     left: '168.75px', top: '9.375px', transform: 'translate(0%, 0%)',
   });
+});
+
+test('surface palette exposes one reusable overlay ink color per approved surface', () => {
+  assert.equal(new Set(LATTICE_SURFACES.map(({ color }) => color)).size, LATTICE_SURFACES.length);
+  for (const surface of LATTICE_SURFACES) assert.equal(latticeSurfaceColor(surface.id), surface.color);
+  assert.equal(latticeSurfaceColor('invented'), null);
 });

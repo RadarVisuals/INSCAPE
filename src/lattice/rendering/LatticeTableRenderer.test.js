@@ -6,6 +6,7 @@ const source = readFileSync(new URL('./LatticeTableRenderer.jsx', import.meta.ur
 const gridPlane = readFileSync(new URL('./LatticeGridPlane.jsx', import.meta.url), 'utf8');
 const guideRenderer = readFileSync(new URL('./LatticeAlignmentGuides.jsx', import.meta.url), 'utf8');
 const guideStyles = readFileSync(new URL('./latticeAlignmentGuides.css', import.meta.url), 'utf8');
+const placementStyles = readFileSync(new URL('./latticePlacementRenderer.css', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./latticeTableRenderer.css', import.meta.url), 'utf8');
 
 test('shared table renderer uses the lattice contract without owner or persistence dependencies', () => {
@@ -23,7 +24,14 @@ test('alignment guides are transient full-artboard hairlines with no pointer own
   assert.match(guideStyles, /pointer-events: none/);
   assert.match(guideStyles, /width: 1px/);
   assert.match(guideStyles, /height: 1px/);
+  assert.match(guideStyles, /background: var\(--lattice-overlay-ink\)/);
   assert.doesNotMatch(guideRenderer, /localStorage|sessionStorage|indexedDB|onPointer/);
+});
+
+test('owner selection and resize chrome follows the chosen overlay ink', () => {
+  assert.match(placementStyles, /\.lattice-placement-selection-overlay\s*\{[^}]*outline: 1px solid var\(--lattice-overlay-ink\);/s);
+  assert.match(placementStyles, /\.lattice-placement-resize-handle\.is-nw::after\s*\{[^}]*var\(--lattice-overlay-ink\)/s);
+  assert.match(placementStyles, /\.lattice-placement-resize-handle\.is-se::after\s*\{[^}]*var\(--lattice-overlay-ink\)/s);
 });
 
 test('one shared grid plane replaces visible boundaries between transparent tables', () => {

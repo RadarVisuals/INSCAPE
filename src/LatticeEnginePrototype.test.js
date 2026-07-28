@@ -21,7 +21,7 @@ test('lattice engine harness is a development-only lazy route backed by the Slic
   assert.match(source, /latticeTableFallbackTitle/);
   assert.match(source, /LatticeTableRenderer/);
   assert.match(source, /LatticeGridPlane/);
-  assert.match(source, /PHASE 6 \/ SLICE 4E/);
+  assert.doesNotMatch(source, /FIXED CHROME \/ PHASE 6 \/ SLICE 4F/);
   assert.match(source, /createFixturePlacements/);
   assert.match(source, /assetsByStableId=\{FIXTURE_MEDIA\}/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/);
@@ -33,11 +33,46 @@ test('Phase 6 profile rail stays an unresolved session-only public-navigation pr
   for (const label of ['CATEGORIES', 'CREATIONS', 'ACTIVITY', 'DISCOVER']) {
     assert.match(source, new RegExp(`label: '${label}'`));
   }
-  assert.match(source, /officialIdentity=\{null\}/);
-  assert.match(source, /compact=\{dimensions\.width <= 640\}/);
+  assert.match(source, /officialIdentity=\{profileRailIdentity\}/);
+  assert.match(source, /compact=\{dimensions\.width <= 900\}/);
   assert.match(source, /blocked=\{Boolean\(viewerSession\)\}/);
-  assert.match(source, /setActiveProfileEntryId\(null\)/);
+  assert.match(source, /chromeWindows\.activate\(LATTICE_CHROME_REGIONS\.RAIL/);
+  assert.match(source, /chromeWindows\.closeRegion\(LATTICE_CHROME_REGIONS\.RAIL/);
   assert.doesNotMatch(source, /profileRail.*(?:localStorage|sessionStorage|wallet|publish)/iu);
+});
+
+test('Phase 6 public profile dossier expands only from the identity control with injected public data', () => {
+  assert.match(source, /LatticeProfileDossier/);
+  assert.match(source, /PROFILE_DOSSIER_PRESENTATION/);
+  assert.match(source, /createUnresolvedPublicProfilePresentation/);
+  assert.match(source, /identityControlRef=\{profileIdentityControlRef\}/);
+  assert.match(source, /identityExpanded=\{profileDossierOpen\}/);
+  assert.match(source, /if \(profileDossierOpen\)/);
+  assert.match(source, /closeProfileDossier/);
+  assert.match(source, /profileIdentityControlRef\.current\?\.focus/);
+  assert.match(source, /open=\{profileDossierOpen && !viewerSession\}/);
+  assert.doesNotMatch(source, /INSCAPE FIXTURE|RADAR|VXCTXR|RESIDENT ZERO|last seen|asset count|collection count/iu);
+});
+
+test('Phase 6 owner workspace toolbar stays session-only and separate from public navigation', () => {
+  assert.match(source, /LatticeWorkspaceToolbar/);
+  assert.match(source, /WORKSPACE_TOOL_ENTRIES/);
+  for (const label of ['BROWSER', 'ARRANGE', 'PREVIEW', 'THEME', 'PUBLISH', 'MORE']) {
+    assert.match(source, new RegExp(`label: '${label}'`));
+  }
+  assert.match(source, /owner=\{ownerChromeVisible\}/);
+  assert.match(source, /compact=\{dimensions\.width <= 980\}/);
+  assert.match(source, /blocked=\{Boolean\(viewerSession\)\}/);
+  assert.match(source, /if \(toolId === 'arrange'\)/);
+  assert.match(source, /setArrangeMode\(!arrangeEnabled\)/);
+  assert.match(source, /chromeWindows\.activate\(LATTICE_CHROME_REGIONS\.TOOLBAR/);
+  assert.match(source, /chromeWindows\.closeRegion\(LATTICE_CHROME_REGIONS\.TOOLBAR/);
+  assert.doesNotMatch(source, /workspaceTool.*(?:localStorage|sessionStorage|wallet|publish)/iu);
+  assert.match(source, /data-menu-surface=\{menuSurfaceId\}/);
+  assert.match(source, /data-overlay-ink=\{overlayInkSurfaceId\}/);
+  assert.match(source, /<span>Menu surface<\/span>/);
+  assert.match(source, /setMenuSurfaceId\(event\.target\.value\)/);
+  assert.match(prototypeStyles, /data-menu-surface="paper"/);
 });
 
 test('Phase 6 INSCAPE signature stays fixed, pointer-inert, and presentation-only', () => {
@@ -45,7 +80,15 @@ test('Phase 6 INSCAPE signature stays fixed, pointer-inert, and presentation-onl
   assert.match(source, /SPATIAL PROFILE SYSTEM \/ ACTIVE/);
   assert.match(prototypeStyles, /@font-face\s*\{[^}]*font-family: "Inscape H Variant";[^}]*HVariant\.otf/s);
   assert.match(prototypeStyles, /\.lattice-inscape-signature\s*\{[^}]*position: fixed;[^}]*left: 24px;[^}]*bottom: 24px;[^}]*pointer-events: none;/s);
-  assert.match(prototypeStyles, /\.lattice-engine-readout\s*\{[^}]*bottom: 78px;/s);
+  assert.match(prototypeStyles, /\.lattice-inscape-signature\s*\{[^}]*color: var\(--lattice-overlay-ink\);/s);
+  assert.match(prototypeStyles, /\.lattice-inscape-signature small\s*\{[^}]*color: var\(--lattice-overlay-ink\);/s);
+  assert.match(prototypeStyles, /\.lattice-inscape-signature span\s*\{[^}]*color: var\(--lattice-overlay-ink\);/s);
+  assert.match(prototypeStyles, /font: 400 clamp\(15px, 1\.2vw, 18px\)\/0\.82 "Inscape H Variant"/);
+  assert.match(source, /labelVisible: false,/);
+  assert.match(source, /labelVisible: isAuthoredTable \? renderPreview\.labelVisible : false/);
+  assert.match(source, /<small>\{activeTableName\}<\/small>/);
+  assert.match(source, /className="lattice-engine-diagnostics"/);
+  assert.doesNotMatch(source, /className="lattice-engine-readout"/);
   assert.doesNotMatch(source, /signature.*(?:localStorage|sessionStorage|wallet|publish)/iu);
 });
 
@@ -65,7 +108,10 @@ test('Phase 6 Keeper Dock reuses the real handoff contract inside the dev-only l
   assert.match(keeperHarness, /inert=\{blocked \? '' : undefined\}/);
   assert.match(keeperHarness, /TRANSITIONAL_PHASES = new Set\(\['approaching', 'entering', 'releasing'\]\)/);
   assert.match(keeperHarness, /onClickCapture=\{blockTransitionActivation\}/);
-  assert.match(prototypeStyles, /--keeper-dock-size: clamp\(84px, 7\.8vw, 112px\)/);
+  assert.match(prototypeStyles, /--keeper-dock-size: clamp\(60px, 5\.5vw, 78px\)/);
+  assert.match(keeperHarness, /LATTICE_DOCKED_KEEPER_SCALE = 0\.5/);
+  assert.match(keeperHarness, /residentScale=\{LATTICE_DOCKED_KEEPER_SCALE\}/);
+  assert.match(prototypeStyles, /\.lattice-keeper-dock-underlay \.keeper-dock__ghost::before\s*\{[^}]*background: var\(--lattice-overlay-ink\);/s);
   assert.match(prototypeStyles, /\.lattice-keeper-dock-layer \.keeper-dock__options,[^}]*\.keeper-dock__menu\s*\{[^}]*display: none;/s);
   assert.match(prototypeStyles, /\.lattice-keeper-world \*\s*\{[^}]*pointer-events: none !important;/s);
   assert.match(prototypeStyles, /@media \(prefers-reduced-motion: reduce\)[^{]*\{[^}]*\.lattice-engine-stage/s);
@@ -80,10 +126,13 @@ test('Phase 6 navigation controls share the canonical topology without introduci
   assert.match(source, /latticeMapFocusDestination/);
   assert.match(source, /event\.key === 'Escape'/);
   assert.match(source, /settlingRef\.current \|\| gestureRef\.current/);
-  assert.match(prototypeStyles, /\.lattice-coordinate-map\s*\{[^}]*grid-template-columns: repeat\(3, 22px\);/s);
-  assert.match(prototypeStyles, /\.lattice-direction-chevron\.is-down\s*\{[^}]*bottom: 104px;/s);
+  assert.match(prototypeStyles, /\.lattice-coordinate-map\s*\{[^}]*bottom: calc\(12px \+ 34px \+ 8px\);[^}]*grid-template-columns: repeat\(3, 20px\);/s);
+  assert.match(prototypeStyles, /\.lattice-direction-chevron\.is-down\s*\{[^}]*bottom: 12px;/s);
   assert.doesNotMatch(prototypeStyles, /\.lattice-coordinate-map\s*\{[^}]*(?:background|border|box-shadow):/s);
   assert.doesNotMatch(source, /table\.title|tableDisplayTitle/);
+  assert.doesNotMatch(prototypeStyles, /\.lattice-engine-viewport:focus-visible::after/);
+  assert.match(prototypeStyles, /\.lattice-direction-chevron,[^{]*\.lattice-coordinate-map button\s*\{[^}]*color: var\(--lattice-overlay-ink\);/s);
+  assert.match(prototypeStyles, /\.lattice-coordinate-map button\.is-active::before\s*\{[^}]*background: var\(--lattice-overlay-ink\);/s);
 });
 
 test('Phase 5 focus viewer opens only from view mode and preserves the live lattice origin', () => {
@@ -296,6 +345,13 @@ test('fixture-backed right-click insertion stays normalized, replaceable and dev
   assert.match(source, /phase-4-inserted-/);
   assert.doesNotMatch(insertionController, /Date|Math\.random|innerWidth|innerHeight|localStorage|sessionStorage|indexedDB/);
   assert.doesNotMatch(source, /useLibraryStore|AssetIndex|CategoryAssetBrowser|ProfileNavigationDock|useWalletStore/);
+});
+
+test('isolated owner Browser remains an adapter-driven composition dependency', () => {
+  assert.match(source, /LatticeChromeFixtureHost/);
+  assert.match(source, /requestPlacement=\{\(stableAssetId\) => insertFixtureArtwork\(stableAssetId, \{ x: 0\.5, y: 0\.5 \}\)\}/);
+  assert.match(source, /toolButtonRefs=\{\{ browser: browserToolRef, more: moreToolRef \}\}/);
+  assert.doesNotMatch(source, /BrowserIndexPanel|BrowserCategoriesPanel|filterBrowserAssets|createCategory\(|renameCategory\(|deleteCategory\(|resizeBrowserAroundCenter/);
 });
 
 test('empty-space and placement gestures remain separate while Escape restores or clears', () => {

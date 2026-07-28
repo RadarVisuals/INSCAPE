@@ -1,0 +1,132 @@
+.lattice-workspace-toolbar {
+  position: fixed;
+  z-index: 12;
+  top: 18px;
+  right: 18px;
+  height: 40px;
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--lattice-menu-line-strong);
+  background: var(--lattice-menu-panel);
+  box-shadow: 10px 12px 30px rgba(0, 0, 0, 0.28);
+  color: var(--lattice-menu-ink);
+  font-family: "Inscape IBM Plex Mono", monospace;
+}
+
+.lattice-workspace-toolbar__label {
+  padding: 0 13px;
+  display: grid;
+  place-items: center;
+  border-right: 1px solid var(--lattice-menu-line);
+  color: var(--lattice-menu-faint);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.lattice-workspace-toolbar__tool {
+  position: relative;
+  min-width: 76px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-right: 1px solid var(--lattice-menu-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--lattice-menu-ink);
+  cursor: pointer;
+  font: 500 9px/1 "Inscape IBM Plex Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lattice-workspace-toolbar__tool:last-child {
+  border-right: 0;
+}
+
+.lattice-workspace-toolbar__tool:hover,
+.lattice-workspace-toolbar__tool:focus-visible,
+.lattice-workspace-toolbar__tool[data-active] {
+  background: var(--lattice-menu-selected);
+  color: var(--lattice-menu-ink);
+}
+
+.lattice-workspace-toolbar__tool[data-active]::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--lattice-menu-ink);
+}
+
+.lattice-workspace-toolbar__tool:focus-visible {
+  outline: 1px solid var(--lattice-menu-muted);
+  outline-offset: -4px;
+}
+
+.lattice-workspace-toolbar[data-compact] {
+  height: 40px;
+}
+
+.lattice-workspace-toolbar[data-compact] .lattice-workspace-toolbar__tool {
+  width: 48px;
+  min-width: 48px;
+  padding: 0;
+}
+
+.lattice-workspace-toolbar__more {
+  position: fixed;
+  z-index: 13;
+  top: 62px;
+  right: 18px;
+  width: 150px;
+  display: grid;
+  border: 1px solid var(--lattice-menu-line-strong);
+  background: var(--lattice-menu-panel);
+  box-shadow: 10px 12px 30px rgba(0, 0, 0, 0.28);
+  color: var(--lattice-menu-ink);
+  font-family: "Inscape IBM Plex Mono", monospace;
+}
+
+.lattice-workspace-toolbar__more button {
+  height: 32px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-bottom: 1px solid var(--lattice-menu-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--lattice-menu-ink);
+  cursor: pointer;
+  font: 500 9px/1 "Inscape IBM Plex Mono", monospace;
+  letter-spacing: 0.1em;
+}
+
+.lattice-workspace-toolbar__more button:last-child { border-bottom: 0; }
+.lattice-workspace-toolbar__more button:hover,
+.lattice-workspace-toolbar__more button:focus-visible {
+  outline: none;
+  background: var(--lattice-menu-selected);
+  color: var(--lattice-menu-ink);
+}
+
+.lattice-workspace-toolbar[data-blocked] {
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .lattice-workspace-toolbar {
+    top: 10px;
+    right: 10px;
+  }
+
+  .lattice-workspace-toolbar__more { top: 54px; right: 10px; }
+}

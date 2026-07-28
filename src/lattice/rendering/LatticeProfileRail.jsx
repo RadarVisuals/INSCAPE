@@ -1,5 +1,6 @@
 import {
   Activity as ActivityIcon,
+  ChevronRight,
   Compass,
   FolderTree,
   Images,
@@ -16,7 +17,7 @@ const ENTRY_ICONS = Object.freeze({
   discover: Compass,
 });
 
-function OfficialIdentitySummary({ identity, active, collapsed, onActivate }) {
+function OfficialIdentitySummary({ identity, active, collapsed, expanded, identityControlRef, onActivate }) {
   const displayName = identity?.displayName || 'UNRESOLVED PROFILE';
   const secondaryLabel = identity?.secondaryLabel || 'UNIVERSAL PROFILE';
   return <button
@@ -24,7 +25,10 @@ function OfficialIdentitySummary({ identity, active, collapsed, onActivate }) {
     className="lattice-profile-rail__identity"
     data-active={active || undefined}
     aria-label={identity ? `Open ${displayName} identity dossier` : 'Open unresolved identity dossier entry'}
+    aria-controls="lattice-profile-dossier"
+    aria-expanded={expanded}
     onClick={onActivate}
+    ref={identityControlRef}
   >
     <span className="lattice-profile-rail__avatar" aria-hidden="true">
       {identity?.avatarUrl
@@ -32,7 +36,7 @@ function OfficialIdentitySummary({ identity, active, collapsed, onActivate }) {
         : <UserRound />}
     </span>
     {!collapsed && <span className="lattice-profile-rail__identity-copy">
-      <strong>{displayName}</strong>
+      <strong>{displayName}{identity?.hash && <small>{identity.hash}</small>}</strong>
       <small>{secondaryLabel}</small>
     </span>}
   </button>;
@@ -45,6 +49,8 @@ export default function LatticeProfileRail({
   collapsed = false,
   compact = false,
   blocked = false,
+  identityControlRef,
+  identityExpanded = false,
   onEntryActivate,
   onIdentityActivate,
   onCollapsedChange,
@@ -69,8 +75,10 @@ export default function LatticeProfileRail({
     {!visuallyCollapsed && <header><span>PROFILE / NAVIGATION</span><b>01</b></header>}
     <OfficialIdentitySummary
       identity={officialIdentity}
-      active={activeEntryId === 'identity'}
+      active={identityExpanded || activeEntryId === 'identity'}
       collapsed={visuallyCollapsed}
+      expanded={identityExpanded}
+      identityControlRef={identityControlRef}
       onActivate={onIdentityActivate}
     />
     <nav aria-label="Public profile areas">
@@ -83,10 +91,10 @@ export default function LatticeProfileRail({
           data-active={active || undefined}
           aria-current={active ? 'page' : undefined}
           aria-label={entry.label}
-          onClick={() => onEntryActivate?.(entry.id)}
+          onClick={(event) => onEntryActivate?.(entry.id, event.currentTarget)}
         >
           {Icon && <Icon aria-hidden="true" />}
-          {!visuallyCollapsed && <><strong>{entry.label}</strong><small>{entry.note}</small><i aria-hidden="true">›</i></>}
+          {!visuallyCollapsed && <><strong>{entry.label}</strong><small>{entry.note}</small><ChevronRight className="lattice-profile-rail__row-chevron" aria-hidden="true" /></>}
         </button>;
       })}
     </nav>

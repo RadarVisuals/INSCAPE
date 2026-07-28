@@ -8,7 +8,8 @@
 .lattice-alignment-guide {
   position: absolute;
   display: block;
-  background: rgba(216, 213, 204, 0.78);
+  background: var(--lattice-overlay-ink);
+  opacity: 0.78;
 }
 
 .lattice-alignment-guide.is-vertical {
@@ -20,4 +21,3 @@
   height: 1px;
   transform: translateY(-0.5px);
 }
-

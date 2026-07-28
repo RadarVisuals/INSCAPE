@@ -3,6 +3,7 @@ import ArtCanvas from '../../components/Canvas/ArtCanvas.jsx';
 import KeeperDock from '../../public/KeeperDock.jsx';
 
 const KEEPER_ID = 'abyssal_eye';
+const LATTICE_DOCKED_KEEPER_SCALE = 0.5;
 const PRESENTATION = Object.freeze({ keeperId: KEEPER_ID });
 const TRANSITIONAL_PHASES = new Set(['approaching', 'entering', 'releasing']);
 
@@ -55,6 +56,7 @@ export default function LatticeKeeperDockHarness({ blocked = false, reducedMotio
         actorId={KEEPER_ID}
         residentHandoff={residentHandoff}
         reducedMotion={reducedMotion}
+        residentScale={LATTICE_DOCKED_KEEPER_SCALE}
       />}
     </div>
   </>;

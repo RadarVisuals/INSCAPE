@@ -109,10 +109,10 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
   const availableWidth = Math.max(1, size.width - (horizontalMargin * 2) - panelAllowance);
   const availableHeight = Math.max(1, size.height - (verticalMargin * 2)) * verticalArtworkScale;
   const scale = Math.min(availableWidth / origin.width, availableHeight / origin.height);
-  const artworkWidth = origin.width * scale;
-  const artworkHeight = origin.height * scale;
+  const artworkWidth = Math.max(1, Math.floor(origin.width * scale));
+  const artworkHeight = artworkWidth * (origin.height / origin.width);
   const groupWidth = artworkWidth + panelAllowance;
-  const groupLeft = (size.width - groupWidth) / 2;
+  const groupLeft = Math.round((size.width - groupWidth) / 2);
   const artworkLeft = groupLeft + dossierWidth + dossierGap;
   const artwork = rectangle(artworkLeft, (size.height - artworkHeight) / 2, artworkWidth, artworkHeight);
   const dossierHeight = Math.max(1, artworkHeight * 0.98);

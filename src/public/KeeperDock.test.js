@@ -12,6 +12,8 @@ test('production Keeper Dock uses actor silhouettes and contains docked canvas m
   assert.match(dockSource, /createPortal/);
   assert.match(appSource, /id="keeper-dock-underlay"/);
   assert.match(dockSource, /MoreHorizontal/);
+  assert.match(dockSource, /residentScale = 0\.72/);
+  assert.match(dockSource, /residentScale,/);
   assert.doesNotMatch(dockSource, /\bLock\b|\bUnlock\b|keeper-dock__label|keeper-dock__empty|keeper-dock__resident|Voice \/ Audio|Speech Scale/);
   assert.match(shellSource, /if \(keeperDockActive\) return;/);
   assert.doesNotMatch(shellSource, /keeperDockRef\.current\.release/);

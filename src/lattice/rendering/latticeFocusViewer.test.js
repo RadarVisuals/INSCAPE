@@ -41,6 +41,17 @@ test('wide unified dossiers sit flush against the artwork and remain slightly sh
   assert.ok(open.rightDossier.left + open.rightDossier.width <= viewport.width);
 });
 
+test('wide dossier joins share pixel-aligned edges without changing artwork ratio', () => {
+  const origin = { left: 13.25, top: 7.5, width: 333, height: 517 };
+  const layout = focusViewerLayout(origin, { width: 1365, height: 767 }, true);
+  const artworkRight = layout.artwork.left + layout.artwork.width;
+  assert.equal(Number.isInteger(layout.artwork.left), true);
+  assert.equal(Number.isInteger(artworkRight), true);
+  assert.equal(layout.leftDossier.left + layout.leftDossier.width, layout.artwork.left);
+  assert.equal(layout.rightDossier.left, artworkRight);
+  assert.ok(Math.abs((layout.artwork.width / layout.artwork.height) - (origin.width / origin.height)) < Number.EPSILON);
+});
+
 test('compact dossier layout preserves artwork ratio and stacks both panels below it', () => {
   const origin = { left: 10, top: 20, width: 640, height: 320 };
   const layout = focusViewerLayout(origin, { width: 480, height: 720 }, true);
