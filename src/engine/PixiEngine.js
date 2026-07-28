@@ -697,7 +697,9 @@ export class PixiEngine {
         // The host element supplies the normal black backing. Keeping the renderer
         // transparent lets gallery architecture sit behind the resident canvas.
         backgroundAlpha: 0,
-        backgroundColor: 0x050505,
+        // Transparent pixels must clear to true black. A non-black RGB clear can
+        // leak through browser WebGL compositing even when its alpha is zero.
+        backgroundColor: 0x000000,
         resolution: getRenderResolution(),
         autoDensity: true,
         preference: 'webgl', 
