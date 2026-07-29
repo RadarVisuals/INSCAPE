@@ -5,6 +5,18 @@ import {
   projectLatticeProductionViewport,
 } from '../rendering/latticeProductionProjection.js';
 import {
+  LATTICE_PRODUCTION_CROP_MAX_ZOOM,
+  LATTICE_PRODUCTION_CROP_MIN_ZOOM,
+  LATTICE_PRODUCTION_CROP_ZOOM_STEP,
+  createLatticeProductionCropPanGesture,
+  createLatticeProductionCropSession,
+  finishLatticeProductionCropPanGesture,
+  latticeProductionCropMask,
+  nudgeLatticeProductionCrop,
+  setLatticeProductionCropZoom,
+  updateLatticeProductionCropPanGesture,
+} from './latticeProductionCrop.js';
+import {
   createLatticeProductionMovementGesture,
   finishLatticeProductionMovementGesture,
   nudgeLatticeProductionPlacementGeometry,
@@ -57,6 +69,8 @@ export default function LatticeProductionMovementLayer({
   onCommitMove,
   onCommitRemove,
   onCommitResize,
+  onCommitCrop,
+  onCropModeChange,
   onPreviewOperation,
   onReturnFocus,
   tableId,
@@ -67,6 +81,7 @@ export default function LatticeProductionMovementLayer({
   const fieldRef = useRef(null);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [selectedPlacementId, setSelectedPlacementId] = useState(null);
+  const [cropSession, setCropSession] = useState(null);
   const model = useMemo(() => createLatticeProductionTableRenderModel(lattice, tableId), [lattice, tableId]);
   const field = viewport.width > 0 && viewport.height > 0
     ? projectLatticeProductionViewport(model, viewport)
@@ -91,6 +106,28 @@ export default function LatticeProductionMovementLayer({
     if (selectedPlacementId && !acceptedById.has(selectedPlacementId)) setSelectedPlacementId(null);
   }, [acceptedById, selectedPlacementId]);
 
+  useEffect(() => () => onCropModeChange?.(false), [onCropModeChange]);
+
+  useEffect(() => {
+    if (!field?.cellSize) return;
+    setCropSession((current) => {
+      if (!current || current.cellSize === field.cellSize) return current;
+      const acceptedPlacement = acceptedById.get(current.placementId);
+      if (!acceptedPlacement) return current;
+      const mask = latticeProductionCropMask(acceptedPlacement);
+      return {
+        ...current,
+        cellSize: field.cellSize,
+        mask: {
+          left: mask.left * field.cellSize,
+          top: mask.top * field.cellSize,
+          width: mask.width * field.cellSize,
+          height: mask.height * field.cellSize,
+        },
+      };
+    });
+  }, [acceptedById, field?.cellSize]);
+
   const controlKey = (placementId, suffix = 'move') => `${placementId}:${suffix}`;
   const restoreFocus = (key) => queueMicrotask(() => {
     controlRefs.current.get(key)?.focus({ preventScroll: true });
@@ -105,16 +142,41 @@ export default function LatticeProductionMovementLayer({
     const active = gestureRef.current;
     if (!active) return false;
     gestureRef.current = null;
-    onPreviewOperation?.(null);
+    if (active.kind === 'crop') {
+      setCropSession(active.session);
+      onPreviewOperation?.({ kind: 'crop', request: active.session.request });
+    } else onPreviewOperation?.(null);
     releaseCapture(active.pointerId);
     restoreFocus(active.focusKey);
     return true;
   };
 
   const handlePointerDown = (event) => {
+    const cropSurface = event.target.closest?.('[data-lattice-crop-surface]');
+    if (cropSession && cropSurface && event.button === 0
+      && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      cropSurface.focus({ preventScroll: true });
+      try {
+        const gesture = createLatticeProductionCropPanGesture(
+          cropSession,
+          localPointerPoint(event, event.currentTarget),
+        );
+        event.currentTarget.setPointerCapture(event.pointerId);
+        gestureRef.current = {
+          focusKey: controlKey(cropSession.placementId, 'crop-surface'),
+          kind: 'crop',
+          pointerId: event.pointerId,
+          session: cropSession,
+          gesture,
+        };
+      } catch { /* Invalid runtime projection remains non-authoring. */ }
+      return;
+    }
     if (event.target.closest?.('[data-lattice-placement-action]')) return;
     const control = event.target.closest?.('[data-lattice-placement-control]');
-    if (!control || event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (cropSession || !control || event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     event.preventDefault();
     event.stopPropagation();
     const placementId = control.dataset.placementId;
@@ -157,10 +219,23 @@ export default function LatticeProductionMovementLayer({
     event.preventDefault();
     event.stopPropagation();
     const point = localPointerPoint(event, event.currentTarget);
-    const gesture = active.kind === 'resize'
+    const gesture = active.kind === 'crop'
+      ? updateLatticeProductionCropPanGesture(active.gesture, point)
+      : active.kind === 'resize'
       ? updateLatticeProductionResizeGesture(active.gesture, point, fieldRef.current)
       : updateLatticeProductionMovementGesture(active.gesture, point, fieldRef.current);
     gestureRef.current = { ...active, gesture };
+    if (active.kind === 'crop' && gesture.activated) {
+      const next = {
+        ...active.session,
+        dirty: true,
+        previewCrop: { ...gesture.previewCrop },
+      };
+      next.request = { ...next.request, crop: { ...next.previewCrop } };
+      setCropSession(next);
+      onPreviewOperation?.({ kind: 'crop', request: next.request });
+      return;
+    }
     if (gesture.activated) {
       const common = {
         tableId: active.tableId,
@@ -187,9 +262,17 @@ export default function LatticeProductionMovementLayer({
     event.preventDefault();
     event.stopPropagation();
     gestureRef.current = null;
-    const result = active.kind === 'resize'
+    const result = active.kind === 'crop'
+      ? finishLatticeProductionCropPanGesture(active.gesture)
+      : active.kind === 'resize'
       ? finishLatticeProductionResizeGesture(active.gesture)
       : finishLatticeProductionMovementGesture(active.gesture);
+    if (active.kind === 'crop' && result.changed) {
+      const next = { ...active.session, dirty: true, previewCrop: { ...result.crop } };
+      next.request = { ...next.request, crop: { ...next.previewCrop } };
+      setCropSession(next);
+      onPreviewOperation?.({ kind: 'crop', request: next.request });
+    }
     if (result.committed && active.kind === 'resize') onCommitResize?.({
       tableId: active.tableId,
       placementId: active.gesture.placementId,
@@ -203,9 +286,78 @@ export default function LatticeProductionMovementLayer({
       expectedStartGeometry: { ...active.gesture.startGeometry },
       destination: result.geometry,
     });
-    onPreviewOperation?.(null);
+    if (active.kind !== 'crop') onPreviewOperation?.(null);
     releaseCapture(event.pointerId);
     restoreFocus(active.focusKey);
+  };
+
+  const beginCrop = (placementId) => {
+    const acceptedPlacement = acceptedById.get(placementId);
+    const projectedPlacement = placements.find((placement) => placement.id === placementId);
+    const width = projectedPlacement?.asset?.media?.width;
+    const height = projectedPlacement?.asset?.media?.height;
+    if (!acceptedPlacement || acceptedPlacement.visibility !== 'PUBLIC' || acceptedPlacement.locked
+      || !Number.isSafeInteger(width) || width <= 0 || !Number.isSafeInteger(height) || height <= 0) return;
+    try {
+      const canonicalMask = latticeProductionCropMask(acceptedPlacement);
+      const session = createLatticeProductionCropSession(acceptedPlacement, {
+        stableAssetId: acceptedPlacement.stableAssetId,
+        width,
+        height,
+      }, {
+        left: canonicalMask.left * fieldRef.current.cellSize,
+        top: canonicalMask.top * fieldRef.current.cellSize,
+        width: canonicalMask.width * fieldRef.current.cellSize,
+        height: canonicalMask.height * fieldRef.current.cellSize,
+      });
+      const request = {
+        crop: { ...session.previewCrop },
+        expectedMedia: { ...session.media },
+        expectedPlacement: structuredClone(acceptedPlacement),
+        media: { ...session.media },
+        placementId,
+        tableId,
+      };
+      const next = { ...session, cellSize: fieldRef.current.cellSize, request };
+      setCropSession(next);
+      setSelectedPlacementId(placementId);
+      onCropModeChange?.(true);
+      onPreviewOperation?.({ kind: 'crop', request });
+      restoreFocus(controlKey(placementId, 'crop-surface'));
+    } catch { /* Missing canonical media remains non-authoring. */ }
+  };
+
+  const exitCrop = (options = {}) => {
+    const { commit = false } = options;
+    const session = cropSession;
+    if (!session) return;
+    const active = gestureRef.current;
+    if (active?.kind === 'crop') {
+      gestureRef.current = null;
+      releaseCapture(active.pointerId);
+    }
+    const crop = Object.hasOwn(options, 'crop')
+      ? options.crop
+      : session.dirty ? session.previewCrop : session.startCrop;
+    if (commit) onCommitCrop?.({
+      crop: crop === null ? null : { ...crop },
+      expectedMedia: { ...session.media },
+      expectedPlacement: structuredClone(session.request.expectedPlacement),
+      placementId: session.placementId,
+      tableId,
+    });
+    setCropSession(null);
+    onPreviewOperation?.(null);
+    onCropModeChange?.(false);
+    restoreFocus(controlKey(session.placementId, 'crop'));
+  };
+
+  const updateCrop = (crop) => {
+    if (!cropSession) return;
+    const next = { ...cropSession, dirty: true, previewCrop: { ...crop } };
+    next.request = { ...next.request, crop: { ...next.previewCrop } };
+    setCropSession(next);
+    onPreviewOperation?.({ kind: 'crop', request: next.request });
   };
 
   const removePlacement = (placementId) => {
@@ -231,7 +383,8 @@ export default function LatticeProductionMovementLayer({
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
-      if (!cancelGesture()) {
+      if (cropSession) exitCrop();
+      else if (!cancelGesture()) {
         const placementId = event.target.closest?.('[data-lattice-placement-control]')?.dataset.placementId;
         setSelectedPlacementId(null);
         if (placementId) restoreFocus(controlKey(placementId));
@@ -240,9 +393,25 @@ export default function LatticeProductionMovementLayer({
     }
     const delta = KEYBOARD_DELTAS[event.key];
     if (!delta) return;
+    if (cropSession && event.target.closest?.('input[type="range"]')) {
+      event.stopPropagation();
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     if (event.repeat) return;
+    if (cropSession) {
+      const cropSurface = event.target.closest?.('[data-lattice-crop-surface]');
+      if (!cropSurface) return;
+      const distance = event.shiftKey ? 0.05 : 0.01;
+      updateCrop(nudgeLatticeProductionCrop(
+        cropSession.previewCrop,
+        cropSession.media,
+        cropSession.mask,
+        { x: delta.column * distance, y: delta.row * distance },
+      ));
+      return;
+    }
     const control = event.target.closest?.('[data-lattice-placement-control]');
     if (!control || control.dataset.placementAction) return;
     const placementId = control.dataset.placementId;
@@ -289,6 +458,11 @@ export default function LatticeProductionMovementLayer({
     onPointerDown={handlePointerDown}
     onPointerMove={handlePointerMove}
     onPointerUp={handlePointerUp}
+    onWheel={(event) => {
+      if (!cropSession) return;
+      event.preventDefault();
+      event.stopPropagation();
+    }}
     ref={rootRef}
   >
     {field && placements.map((placement) => {
@@ -298,6 +472,7 @@ export default function LatticeProductionMovementLayer({
       const selected = selectedPlacementId === placement.id;
       const boundaries = latticeProductionPlacementBoundaries(acceptedPlacement);
       const removeDock = latticeProductionTopBoundaryRemoveDock(acceptedPlacement, field.cellSize);
+      const cropMask = latticeProductionCropMask(acceptedPlacement);
       const label = placement.asset?.name?.trim() || placement.asset?.stableAssetId || placement.id;
       return <div
         className="lattice-production-composition-control"
@@ -311,18 +486,19 @@ export default function LatticeProductionMovementLayer({
         style={{ ...rectangleStyle(projectLatticeProductionPlacement(placement, field)), zIndex: placement.layer }}
       >
         <button
-          aria-disabled={locked || undefined}
+          aria-disabled={locked || Boolean(cropSession) || undefined}
           aria-label={`${locked ? 'Locked placement' : 'Move placement'}: ${label}`}
           aria-pressed={selected}
           className="lattice-production-movement-control"
           data-lattice-placement-control
           data-locked={locked || undefined}
           data-placement-id={placement.id}
+          disabled={Boolean(cropSession)}
           onClick={() => setSelectedPlacementId(placement.id)}
           ref={(node) => { const key = controlKey(placement.id); if (node) controlRefs.current.set(key, node); else controlRefs.current.delete(key); }}
           type="button"
         ><span>{locked ? 'LOCKED' : 'MOVE'}</span></button>
-        {selected && !locked && <>
+        {selected && !locked && !cropSession && <>
           {LATTICE_PRODUCTION_RESIZE_CORNERS.map((corner) => <button
             aria-label={`Resize placement from ${CORNER_LABELS[corner]} corner: ${label}`}
             className={`lattice-production-resize-control is-${corner}`}
@@ -333,6 +509,16 @@ export default function LatticeProductionMovementLayer({
             ref={(node) => { const key = controlKey(placement.id, corner); if (node) controlRefs.current.set(key, node); else controlRefs.current.delete(key); }}
             type="button"
           />)}
+          <button
+            aria-label={`Crop placement: ${label}`}
+            className="lattice-production-crop-control"
+            data-lattice-placement-action="crop"
+            data-lattice-placement-control
+            data-placement-id={placement.id}
+            onClick={() => beginCrop(placement.id)}
+            ref={(node) => { const key = controlKey(placement.id, 'crop'); if (node) controlRefs.current.set(key, node); else controlRefs.current.delete(key); }}
+            type="button"
+          >CROP</button>
           <button
             aria-label={`Remove placement: ${label}`}
             className="lattice-production-remove-control"
@@ -345,6 +531,53 @@ export default function LatticeProductionMovementLayer({
             type="button"
           >REMOVE</button>
         </>}
+        {cropSession?.placementId === placement.id && <section
+          aria-label={`Crop placement: ${label}`}
+          className="lattice-production-crop-editor"
+          style={{
+            left: `${(cropMask.left / acceptedPlacement.columnSpan) * 100}%`,
+            top: `${(cropMask.top / acceptedPlacement.rowSpan) * 100}%`,
+            width: `${(cropMask.width / acceptedPlacement.columnSpan) * 100}%`,
+            height: `${(cropMask.height / acceptedPlacement.rowSpan) * 100}%`,
+          }}
+        >
+          <div
+            aria-describedby={`lattice-crop-instructions-${placement.id}`}
+            aria-label={`Pan crop for ${label}`}
+            className="lattice-production-crop-surface"
+            data-lattice-crop-surface
+            data-lattice-placement-control
+            data-placement-id={placement.id}
+            ref={(node) => { const key = controlKey(placement.id, 'crop-surface'); if (node) controlRefs.current.set(key, node); else controlRefs.current.delete(key); }}
+            role="group"
+            tabIndex={0}
+          />
+          <p className="lattice-production-crop-instructions" id={`lattice-crop-instructions-${placement.id}`}>
+            Drag to pan. Arrow keys pan; Shift plus Arrow pans farther. Space-drag moves the camera. Escape cancels.
+          </p>
+          <div className="lattice-production-crop-toolbar" data-lattice-placement-action="crop-toolbar">
+            <label>
+              <span>ZOOM {Math.round(cropSession.previewCrop.zoom * 100)}%</span>
+              <input
+                aria-label={`Crop zoom for ${label}`}
+                max={LATTICE_PRODUCTION_CROP_MAX_ZOOM}
+                min={LATTICE_PRODUCTION_CROP_MIN_ZOOM}
+                onChange={(event) => updateCrop(setLatticeProductionCropZoom(
+                  cropSession.previewCrop,
+                  cropSession.media,
+                  cropSession.mask,
+                  Number(event.currentTarget.value),
+                ))}
+                step={LATTICE_PRODUCTION_CROP_ZOOM_STEP}
+                type="range"
+                value={cropSession.previewCrop.zoom}
+              />
+            </label>
+            <button onClick={() => exitCrop({ commit: true, crop: null })} type="button">NATIVE FIT</button>
+            <button onClick={() => exitCrop()} type="button">CANCEL</button>
+            <button onClick={() => exitCrop({ commit: true })} type="button">DONE</button>
+          </div>
+        </section>}
       </div>;
     })}
   </div>;

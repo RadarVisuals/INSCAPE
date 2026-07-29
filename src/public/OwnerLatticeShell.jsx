@@ -11,6 +11,7 @@ import {
 import { projectLatticeProductionPublication } from '../lattice/domain/latticeProductionAdapter.js';
 import { assertValidLatticeProductionPublication } from '../lattice/domain/latticeProductionPublication.js';
 import LatticeProductionMovementLayer from '../lattice/authoring/LatticeProductionMovementLayer.jsx';
+import { createLatticeProductionCropCandidate } from '../lattice/authoring/latticeProductionCrop.js';
 import { createLatticeProductionMovementCandidate } from '../lattice/authoring/latticeProductionMovement.js';
 import { createLatticeProductionResizeCandidate } from '../lattice/authoring/latticeProductionResize.js';
 import {
@@ -134,6 +135,7 @@ function OwnerLatticeRuntime({
   const [browserOpen, setBrowserOpen] = useState(false);
   const [browserActivated, setBrowserActivated] = useState(false);
   const [compositionPreview, setCompositionPreview] = useState(null);
+  const [cropModeActive, setCropModeActive] = useState(false);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const profileIdentity = useProfileIdentity(profileAddress);
   const browserData = useOwnerLatticeBrowser(profileAddress, browserOpen);
@@ -154,7 +156,9 @@ function OwnerLatticeRuntime({
         ? createLatticeProductionMovementCandidate(authoring.draft, compositionPreview.request)
         : compositionPreview?.kind === 'resize'
           ? createLatticeProductionResizeCandidate(authoring.draft, compositionPreview.request)
-          : null;
+          : compositionPreview?.kind === 'crop'
+            ? createLatticeProductionCropCandidate(authoring.draft, compositionPreview.request)
+            : null;
       const renderDraft = structuredClone(previewDraft || authoring.draft);
       renderDraft.appearance.surfaceId = surfaceId;
       renderDraft.appearance.menuSurfaceId = menuSurfaceId;
@@ -283,7 +287,7 @@ function OwnerLatticeRuntime({
   };
 
   const handlePointerDown = (event) => {
-    if (spacePressedRef.current || settlingRef.current || event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
+    if (cropModeActive || spacePressedRef.current || settlingRef.current || event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
       || event.target.closest?.('[data-lattice-chrome],[data-lattice-placement-layer],button,a,input,select,textarea')) return;
     gestureRef.current = {
       pointerId: event.pointerId,
@@ -339,7 +343,7 @@ function OwnerLatticeRuntime({
 
   const handleWheel = (event) => {
     event.preventDefault();
-    if (settlingRef.current || gestureRef.current || performance.now() < wheelBlockedUntilRef.current) return;
+    if (cropModeActive || settlingRef.current || gestureRef.current || performance.now() < wheelBlockedUntilRef.current) return;
     wheelAccumulatorRef.current = addWheelDelta(wheelAccumulatorRef.current, { x: event.deltaX, y: event.deltaY });
     window.clearTimeout(wheelResetTimerRef.current);
     wheelResetTimerRef.current = window.setTimeout(() => {
@@ -365,6 +369,10 @@ function OwnerLatticeRuntime({
       }
       return;
     }
+    if (cropModeActive && keyboardDirection(event.key)) {
+      event.preventDefault();
+      return;
+    }
     if (settlingRef.current || gestureRef.current || event.target.closest?.('input,select,textarea,button')) return;
     const direction = keyboardDirection(event.key);
     const destination = direction && latticeDestination(activeRef.current, direction);
@@ -382,9 +390,9 @@ function OwnerLatticeRuntime({
   };
 
   const navigateDirectly = useCallback((destination) => {
-    if (settlingRef.current || gestureRef.current || sameCoordinate(destination, activeRef.current)) return;
+    if (cropModeActive || settlingRef.current || gestureRef.current || sameCoordinate(destination, activeRef.current)) return;
     settle(destination);
-  }, [settle]);
+  }, [cropModeActive, settle]);
 
   const stageTransform = `translate3d(${dragOffset.x - (active.x * plane.width)}px, ${dragOffset.y - (active.y * plane.height) + activeCameraY}px, 0)`;
   const activeDraftTable = authoring.draft?.tables.find((table) => table.id === activeTableId) || null;
@@ -461,9 +469,11 @@ function OwnerLatticeRuntime({
             {sameCoordinate(coordinate, active) && activeDraftTable?.id === table.id && <LatticeProductionMovementLayer
               acceptedTable={activeDraftTable}
               lattice={lattice}
+              onCommitCrop={authoring.cropPublicPlacement}
               onCommitMove={authoring.movePublicPlacement}
               onCommitRemove={authoring.removePublicPlacement}
               onCommitResize={authoring.resizePublicPlacement}
+              onCropModeChange={setCropModeActive}
               onPreviewOperation={setCompositionPreview}
               onReturnFocus={() => viewportRef.current?.focus({ preventScroll: true })}
               tableId={table.id}

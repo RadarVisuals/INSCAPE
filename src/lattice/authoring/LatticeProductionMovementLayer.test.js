@@ -29,7 +29,7 @@ test('visible hit testing uses public placements, canonical layers, and determin
   assert.match(source, /filter\(\(placement\) => placement\.visibility === 'PUBLIC'\)/);
   assert.match(source, /left\.navigationOrder - right\.navigationOrder \|\| left\.id\.localeCompare\(right\.id\)/);
   assert.match(source, /zIndex: placement\.layer/);
-  assert.match(source, /aria-disabled=\{locked \|\| undefined\}/);
+  assert.match(source, /aria-disabled=\{locked \|\| Boolean\(cropSession\) \|\| undefined\}/);
   assert.match(source, /Locked placement/);
   assert.match(styles, /pointer-events: none/);
   assert.match(styles, /\.lattice-production-movement-control[^}]*pointer-events: auto/su);
@@ -55,6 +55,36 @@ test('selected unlocked placements expose four accessible resize handles and exp
   assert.doesNotMatch(source, /event\.key === ['"](?:Delete|Backspace)['"]/);
   assert.match(source, /placements\[index \+ 1\] \|\| placements\[index - 1\]/);
   assert.match(source, /onReturnFocus/);
+});
+
+test('explicit crop mode owns pan and zoom with accessible DONE, CANCEL, and NATIVE FIT controls', () => {
+  assert.match(source, /Crop placement:/);
+  assert.match(source, /data-lattice-placement-action="crop"/);
+  assert.match(source, /data-lattice-crop-surface/);
+  assert.match(source, /aria-describedby=\{`lattice-crop-instructions-/);
+  assert.match(source, /type="range"/);
+  assert.match(source, /event\.target\.closest\?\.\('input\[type="range"\]'\)/);
+  assert.match(source, /LATTICE_PRODUCTION_CROP_MIN_ZOOM/);
+  assert.match(source, /LATTICE_PRODUCTION_CROP_MAX_ZOOM/);
+  assert.match(source, />NATIVE FIT<\/button>/);
+  assert.match(source, />CANCEL<\/button>/);
+  assert.match(source, />DONE<\/button>/);
+  assert.match(source, /if \(cropSession\) exitCrop\(\)/);
+  assert.match(source, /event\.shiftKey \? 0\.05 : 0\.01/);
+  assert.match(source, /onCropModeChange\?\.\(true\)/);
+  assert.match(source, /onCropModeChange\?\.\(false\)/);
+  assert.doesNotMatch(source, /event\.key === ['"](?:Delete|Backspace)['"]/);
+});
+
+test('active crop suppresses other composition owners while retaining pointer capture and preview-only cancellation', () => {
+  assert.match(source, /disabled=\{Boolean\(cropSession\)\}/);
+  assert.match(source, /selected && !locked && !cropSession/);
+  assert.match(source, /kind: 'crop'/);
+  assert.match(source, /createLatticeProductionCropPanGesture/);
+  assert.match(source, /updateLatticeProductionCropPanGesture/);
+  assert.match(source, /onPreviewOperation\?\.\(null\)/);
+  assert.match(source, /releaseCapture\(active\.pointerId\)/);
+  assert.match(styles, /\.lattice-production-crop-surface[^}]*touch-action:\s*none/su);
 });
 
 test('composition chrome remains usable and clipped within every authored boundary', () => {

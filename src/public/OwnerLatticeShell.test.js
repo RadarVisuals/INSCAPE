@@ -100,12 +100,25 @@ test('Phase 5B composition stays in an owner-only projection-derived layer and c
   assert.match(source, /LatticeProductionMovementLayer/);
   assert.match(source, /createLatticeProductionMovementCandidate/);
   assert.match(source, /createLatticeProductionResizeCandidate/);
+  assert.match(source, /createLatticeProductionCropCandidate/);
   assert.match(source, /compositionPreview/);
   assert.match(source, /onCommitMove=\{authoring\.movePublicPlacement\}/);
   assert.match(source, /onCommitResize=\{authoring\.resizePublicPlacement\}/);
   assert.match(source, /onCommitRemove=\{authoring\.removePublicPlacement\}/);
+  assert.match(source, /onCommitCrop=\{authoring\.cropPublicPlacement\}/);
+  assert.match(source, /onCropModeChange=\{setCropModeActive\}/);
   assert.match(source, /onPreviewOperation=\{setCompositionPreview\}/);
   assert.match(source, /data-lattice-placement-action/);
   assert.match(source, /\[data-lattice-placement-layer\]/);
   assert.doesNotMatch(source, /normalizedInsertionAnchor|createPlacementGesture|nudgePlacementByPixels/);
+});
+
+test('active crop suspends every table-navigation entry while Space camera capture remains first', () => {
+  assert.match(source, /const \[cropModeActive, setCropModeActive\] = useState\(false\)/);
+  assert.match(source, /if \(cropModeActive \|\| spacePressedRef\.current/);
+  assert.match(source, /if \(cropModeActive \|\| settlingRef\.current \|\| gestureRef\.current/);
+  assert.match(source, /if \(cropModeActive && keyboardDirection\(event\.key\)\)/);
+  assert.match(source, /if \(cropModeActive \|\| settlingRef\.current \|\| gestureRef\.current \|\| sameCoordinate/);
+  assert.ok(source.indexOf("if (event.code === 'Space')") < source.indexOf('if (cropModeActive && keyboardDirection(event.key))'));
+  assert.match(source, /onPointerDownCapture=\{handlePointerDownCapture\}/);
 });

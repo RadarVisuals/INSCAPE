@@ -76,7 +76,7 @@ The working tree was clean when this roadmap was created.
 - [x] Phase 4 fixed chrome is integrated and visually accepted; the production NFT viewer and identity dossier remain later-phase work.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
-Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 is `[~]` after accepted Phase 5A, Phase 5B.1, Phase 5B.2, and Phase 5B.3, while Phase 5B.4 onward remains unstarted.
+Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 is `[~]` after accepted Phase 5A, Phase 5B.1, Phase 5B.2, Phase 5B.3, and Phase 5B.4, while Phase 5B.5 onward remains unstarted.
 
 ### Locked production-integration constraints
 
@@ -381,7 +381,7 @@ Exit criterion: owner navigation is intuitive, deterministic, responsive, and do
 
 ## Phase 5 — production Browser and authoring geometry
 
-Status: `[~]` — **Phase 5A, Phase 5B.1, Phase 5B.2, and Phase 5B.3 accepted; Phase 5B.4 onward remains unstarted**
+Status: `[~]` — **Phase 5A, Phase 5B.1, Phase 5B.2, Phase 5B.3, and Phase 5B.4 accepted; Phase 5B.5 onward remains unstarted**
 
 Goal: wire the isolated Browser to real INDEX/CATEGORIES data and enable table authoring.
 
@@ -462,7 +462,22 @@ Boundary-control review correction (2026-07-30): placements touching an authored
 
 Allocator rollback constraint: after any deployed REMOVE has created a historical placement-ID gap, the UUID allocator must remain in place even if the rest of Phase 5B.3 is rolled back. A rollback may remove RESIZE/REMOVE UI while retaining the allocator, or temporarily disable PLACE; restoring the former first-unused `placement-N` allocator could reuse an identity still present in a publication baseline or reconciliation state. Existing UUID-bearing drafts need no schema migration and remain readable by the accepted validator and renderer.
 
-Phase 5B.4 onward status: `[ ]` — unstarted. Crop editing, explicit layer editing, mat/frame/backing editing, transparency, replace, visibility editing, lock editing, and Owner Preview remain outside Phase 5B.3.
+### Phase 5B.4 — crop authoring
+
+Status: `[x]` — **implemented, automatically verified, and visually accepted**
+
+- [x] Selected public unlocked placements expose an explicit accessible CROP mode. `crop: null` previews and DONE commits the canonical centered minimum-cover crop `{ x: 0.5, y: 0.5, zoom: 1 }`; existing crops retain their exact stored value until edited, while NATIVE FIT explicitly restores `null` without changing placement geometry.
+- [x] The existing canonical `null | { x, y, zoom }` representation remains unchanged. Pointer drag and one-percent/five-percent keyboard nudges pan the source beneath the fixed existing mat opening; the explicit range control clamps cover-relative zoom from one through four, and all focus values remain within aspect-dependent image-coverage bounds for portrait, landscape, square, transparent, and previously cropped media.
+- [x] Crop activation, pointer/keyboard/zoom preview, cancellation, Escape, and capture loss remain runtime-only. DONE and NATIVE FIT re-read the latest accepted draft; compare the complete expected placement snapshot; revalidate owner/profile authority, public table and placement identity, starting crop, geometry, visibility, lock, exact live Library asset identity and native dimensions, current mat opening, coverage bounds, and the complete candidate; and use exactly one completed-operation store commit only for a changed valid crop.
+- [x] Preview, cancellation, unchanged completion, stale state, invalid values, authority loss, unavailable or changed media, and storage failure write nothing and return to the accepted rendering. Successful, cancelled, no-op, and rejected sessions retain selection and restore CROP focus when available, otherwise owner-viewport focus; reload and profile switching remain deterministic and isolated.
+- [x] Active CROP exclusively owns its pan and zoom controls and suppresses MOVE, RESIZE, REMOVE, pointer/wheel/directional/minimap table navigation until explicit DONE or CANCEL. Space-drag retains vertical-camera capture priority. Outside CROP, the accepted PLACE → MOVE → RESIZE → REMOVE loop, anchored grid-native resize, explicit-button-only removal, overlap, focus, navigation, wheel, and camera contracts remain unchanged.
+- [x] Focused pure crop and owner/session/gesture/accessibility coverage passes 43 tests with 0 failures. The single completed full regression run passes 786 tests with 0 failures. `npm run build:check` passes once; a subsequent fresh production build compiles and independently passes the same production budgets and owner-runtime isolation with zero leaks. `git diff --check` passes. No long combined browser lifecycle or new browser suite was run.
+
+Accepted checkpoint (2026-07-30): interactive visual review accepted Phase 5B.4 after implementation and automated verification. Phase 5B.4 adds only schema-free crop authoring in the lazy owner runtime. The canonical draft/publication validators, version-1 storage key and store contract, shared production renderer contract, public projection/redaction, reconciliation, publication, visitor runtime, routing, wallet, IPFS, version defaults, and rollback readers remain unchanged. Final production totals are initial JavaScript 1,228,709 raw / 358,844 gzip; selected owner JavaScript 143,931 raw / 43,881 gzip; initial CSS 113,254 raw / 19,913 gzip; selected owner CSS 29,864 raw / 4,944 gzip; and core JavaScript 1,812,095 raw / 537,136 gzip. Explicit layer editing, smart guides, frame/mat/backing editing, transparency editing, replace, visibility or lock mutation, Owner Preview, publication or visitor cutover, Phase 6, and later work remain excluded.
+
+Crop rollback constraint: a code rollback may remove the Phase 5B.4 controls without migrating, deleting, or rewriting crop records. The accepted version-1 schema, public projection, renderer, publication, and reconciliation paths already read both `null` and canonical crop records deterministically. Storage failure retains the exact previous accepted draft and bytes; application rollback does not authorize republishing. The independent Phase 5B.3 UUID allocator rollback constraint remains in force.
+
+Phase 5B.5 onward status: `[ ]` — unstarted. Explicit layer editing, mat/frame/backing editing, transparency, replace, visibility editing, lock editing, and Owner Preview remain outside Phase 5B.4.
 
 User visual test:
 

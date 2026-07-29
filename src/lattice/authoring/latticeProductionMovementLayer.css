@@ -30,6 +30,7 @@
 }
 
 .lattice-production-movement-control:active { cursor: grabbing; }
+.lattice-production-movement-control:disabled { pointer-events: none; }
 .lattice-production-movement-control[aria-pressed="true"],
 .lattice-production-movement-control:focus-visible {
   border-color: currentColor;
@@ -119,3 +120,97 @@
   border-bottom: 1px solid currentColor;
 }
 .lattice-production-remove-control:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
+
+.lattice-production-crop-control {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 0;
+  height: 18px;
+  padding: 0 7px;
+  translate: -50% 0;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  background: var(--owner-lattice-surface);
+  color: var(--lattice-overlay-ink);
+  font: 7px/1 "Inscape IBM Plex Mono", monospace;
+  letter-spacing: .08em;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.lattice-production-crop-control:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
+
+.lattice-production-crop-editor {
+  position: absolute;
+  z-index: 5;
+  box-sizing: border-box;
+  border: 1px dashed var(--lattice-overlay-ink);
+  pointer-events: none;
+}
+
+.lattice-production-crop-surface {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+}
+.lattice-production-crop-surface:active { cursor: grabbing; }
+.lattice-production-crop-surface:focus-visible { outline: 2px solid var(--lattice-overlay-ink); outline-offset: -3px; }
+
+.lattice-production-crop-instructions {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.lattice-production-crop-toolbar {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 0;
+  display: flex;
+  box-sizing: border-box;
+  width: min(280px, calc(100vw - 24px));
+  min-height: 28px;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  transform: translateX(-50%);
+  border: 1px solid var(--lattice-overlay-ink);
+  background: var(--owner-lattice-surface);
+  color: var(--lattice-overlay-ink);
+  pointer-events: auto;
+}
+.lattice-production-composition-control[data-boundary-left] .lattice-production-crop-toolbar {
+  left: 0;
+  transform: none;
+}
+.lattice-production-composition-control[data-boundary-right] .lattice-production-crop-toolbar {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+.lattice-production-crop-toolbar label { display: grid; flex: 1 1 105px; min-width: 74px; gap: 2px; }
+.lattice-production-crop-toolbar label span {
+  font: 7px/1 "Inscape IBM Plex Mono", monospace;
+  letter-spacing: .06em;
+}
+.lattice-production-crop-toolbar input { width: 100%; margin: 0; accent-color: currentColor; }
+.lattice-production-crop-toolbar button {
+  min-height: 20px;
+  padding: 0 5px;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: 7px/1 "Inscape IBM Plex Mono", monospace;
+  letter-spacing: .05em;
+  cursor: pointer;
+}
+.lattice-production-crop-toolbar button:focus-visible,
+.lattice-production-crop-toolbar input:focus-visible { outline: 1px solid currentColor; outline-offset: 1px; }

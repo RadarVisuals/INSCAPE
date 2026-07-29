@@ -367,10 +367,84 @@ test('stale snapshot and failed-persistence REMOVE attempts retain exact accepte
   assert.deepEqual(session.getDraft(), draft);
 });
 
+test('completed CROP revalidates live media, writes once, reloads, and projects the canonical crop', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const expected = existingPlacement('placement-crop');
+  draft.tables[4].placements = [expected];
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: JSON.stringify(draft) });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const result = session.commitCrop({
+    assetRecord: asset(),
+    crop: { x: 0.5, y: 0.5, zoom: 1 },
+    expectedMedia: { stableAssetId: ASSET, width: 1600, height: 900 },
+    expectedPlacement: structuredClone(expected),
+    placementId: expected.id,
+    tableId: 'table-05',
+  });
+  assert.equal(result.ok, true);
+  assert.equal(storage.writes, 1);
+  assert.deepEqual(result.draft.tables[4].placements[0].crop, { x: 0.5, y: 0.5, zoom: 1 });
+  const reloaded = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  assert.deepEqual(reloaded.getDraft(), result.draft);
+  const publication = projectLatticeProductionPublication(result.draft, [asset({
+    creators: [], attributes: [], description: '', collectionName: null,
+  })], { lastPublished: '1970-01-01T00:00:00.000Z' });
+  assert.deepEqual(publication.tables[4].placements[0].crop, { x: 0.5, y: 0.5, zoom: 1 });
+});
+
+test('CROP cancellation stays outside the session and no-op, stale, media, authority, and storage failures write nothing', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const expected = existingPlacement('placement-crop', ASSET);
+  expected.crop = { x: 0.5, y: 0.5, zoom: 1 };
+  draft.tables[4].placements = [expected];
+  const raw = JSON.stringify(draft);
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const common = {
+    assetRecord: asset(), expectedMedia: { stableAssetId: ASSET, width: 1600, height: 900 },
+    expectedPlacement: structuredClone(expected), placementId: expected.id, tableId: 'table-05',
+  };
+  assert.equal(session.commitCrop({ ...common, crop: structuredClone(expected.crop) }).noOp, true);
+  assert.equal(session.commitCrop({ ...common, crop: { x: 0.5, y: 0.5, zoom: 2 },
+    expectedPlacement: { ...expected, row: 2 } }).ok, false);
+  assert.equal(session.commitCrop({ ...common, crop: { x: 0.5, y: 0.5, zoom: 2 },
+    assetRecord: asset({ imageWidth: 900 }) }).ok, false);
+  assert.equal(session.commitCrop({ ...common, crop: { x: 0.5, y: 0.5, zoom: 2 },
+    assetRecord: asset({ ownerAddress: OTHER }) }).ok, false);
+  storage.fail();
+  assert.equal(session.commitCrop({ ...common, crop: { x: 0.5, y: 0.5, zoom: 2 } }).ok, false);
+  assert.equal(storage.writes, 0);
+  assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), raw);
+  assert.deepEqual(session.getDraft(), draft);
+});
+
+test('CROP remains profile-isolated and NATIVE FIT commits null exactly once', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const expected = existingPlacement('placement-crop');
+  expected.crop = { x: 0.5, y: 0.5, zoom: 2 };
+  draft.tables[4].placements = [expected];
+  const otherDraft = createEmptyLatticeProductionDraft(OTHER);
+  const otherRaw = JSON.stringify(otherDraft);
+  const storage = memoryStorage({
+    [latticeProductionDraftKey(PROFILE)]: JSON.stringify(draft),
+    [latticeProductionDraftKey(OTHER)]: otherRaw,
+  });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  assert.equal(session.commitCrop({
+    assetRecord: asset(), crop: null,
+    expectedMedia: { stableAssetId: ASSET, width: 1600, height: 900 },
+    expectedPlacement: structuredClone(expected), placementId: expected.id, tableId: 'table-05',
+  }).ok, true);
+  assert.equal(storage.writes, 1);
+  assert.equal(session.getDraft().tables[4].placements[0].crop, null);
+  assert.equal(storage.values.get(latticeProductionDraftKey(OTHER)), otherRaw);
+});
+
 test('corrupt sessions block MOVE while preserving raw bytes', () => {
   const raw = '{corrupt';
   const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
   const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  assert.equal(session.commitCrop({}).ok, false);
   assert.equal(session.commitMovement({}).ok, false);
   assert.equal(session.commitResize({}).ok, false);
   assert.equal(session.commitRemoval({}).ok, false);
