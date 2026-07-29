@@ -1,0 +1,504 @@
+# INSCAPE Production Integration Inventory
+
+Status: canonical production-integration inventory
+
+Approved: 2026-07-29
+
+Execution source: [INSCAPE Alpha Execution Roadmap](./INSCAPE_ALPHA_EXECUTION_ROADMAP.md)
+
+## 1. Purpose
+
+This document records the approved Phase 1 audit of the production application and defines the integration boundary between the frozen lattice prototype and the production Alpha.
+
+It is an architecture and migration contract. It does not authorize implementation by itself. The live roadmap identifies the next approved executable slice and remains the source of truth for phase status.
+
+The frozen prototype is the visual and behavioral reference. It is not production architecture, fixture data is not production data, and new feature logic must not be added to `LatticeEnginePrototype.jsx`.
+
+## 2. Confirmed production boundary
+
+The active application separates verified owner authority from published visitor rendering:
+
+```text
+App
+├─ verified owner viewing the same owned profile
+│  └─ lazy OwnerRuntimeBoundary → ModuleGridShell
+│     ├─ profile-scoped Library workspace and asset cache
+│     ├─ owner draft, snapshot, preview, and reconciliation
+│     └─ IPFS upload, wallet publication, and read-back verification
+└─ every other authority state
+   └─ PublishedProfileBoundary
+      └─ validated published document → PublishedHomeWorld
+```
+
+The boundary has the following production guarantees:
+
+- Owner code is lazy-loaded only after verified matching authority.
+- An owner visiting another profile receives the published visitor runtime, not that owner's local workspace.
+- The visitor import graph cannot reach owner stores or persistence.
+- Owner storage is scoped by canonical Universal Profile address.
+- Owner draft, publication snapshot, and published visitor document are distinct states.
+- Publication freezes and hashes one canonical snapshot, verifies the pinned IPFS bytes, revalidates wallet/profile authority, writes the ERC725Y pointer, and reads the publication back.
+- Direct visits and iframes resolve through the same published-document boundary.
+- Embedded mode uses the Universal Profile wallet context without invoking standalone sign-in behavior.
+
+These guarantees must remain intact throughout the migration.
+
+## 3. Existing production sources of truth
+
+### 3.1 Owner asset and organization state
+
+The Library workspace is currently version 8 and stored under `inscape.library-workspace.v8:<profile-address>`. It owns:
+
+- the profile address;
+- Favorites;
+- private folders and public categories;
+- legacy Gallery canvas objects;
+- legacy five-table placements.
+
+The asset cache is a separate profile-scoped source of resolved real asset records. Stable asset identity is the canonical tuple:
+
+```text
+chainId:contractAddress:tokenId-or-contract
+```
+
+INDEX records and folders/categories remain production sources. Categories are organizational and publication structures; they are not lattice tables.
+
+### 3.2 Current profile document
+
+The published profile document is version 7. It contains:
+
+- document identity, revision, timestamps, network, and profile authority;
+- a cached official identity fallback;
+- Keeper, legacy stage/environment, visitor-navigation, system-module, and Signals presentation;
+- public folder/category spaces;
+- public legacy Gallery canvas objects;
+- an empty reserved metadata object.
+
+Version 7 does not publish `workspace.tables.placements`. The existing five-table placement record is local compatibility data and is not a public lattice schema.
+
+Versions 1 through 6 are migrated into the current validated legacy document shape. They must remain readable.
+
+### 3.3 Current owner reconciliation
+
+Owner reconciliation compares a profile-scoped local public projection, a stored publication baseline, and the latest resolved publication. It can adopt a baseline, keep the local draft, hydrate the publication, or stop for a conflict decision.
+
+The current restore path replaces published folders and public Gallery objects while preserving unrelated private local folders and objects. Canonical lattice reconciliation must extend this boundary transactionally; it must not be embedded as more incidental state inside `ModuleGridShell`.
+
+### 3.4 Current publication
+
+The production publication flow must be retained:
+
+1. Build and validate an owner snapshot.
+2. Canonically serialize and hash the frozen snapshot.
+3. Upload through the same-origin Netlify function; Pinata credentials remain server-side.
+4. Resolve and verify the exact IPFS bytes.
+5. Recheck snapshot, CID, wallet generation, connected account, chain, host profile, workspace profile, viewed profile, and owner authority.
+6. Request the wallet `setData` action.
+7. Wait for the transaction and read the on-chain publication back.
+8. Accept it only when the resolved document matches the frozen artifact.
+
+No lattice slice may weaken this sequence.
+
+## 4. Canonical lattice geometry
+
+The permanent topology is row-major 3 × 3, with the center coordinate `{ x: 0, y: 0 }` as the entry position for every session.
+
+The 32 × 18 lattice grid is the authored coordinate plane. It is not the browser viewport, iframe viewport, or device canvas.
+
+- Authored placement persists as integer `column`, `row`, `columnSpan`, and `rowSpan` values.
+- The 16:9 authored plane produces square cells.
+- Arbitrary browser and iframe sizes uniformly scale the complete authored composition to fit.
+- Projection may letterbox while the seamless atmospheric grid fills remaining space, but it may not stretch, crop the authored plane, reflow, or mutate cell geometry or its derived normalized placement data.
+- Additional visible grid beyond the authored plane is seamless atmosphere.
+- The authored boundary is normally invisible.
+- Native media proportions remain intact unless the owner explicitly authors a crop.
+- Active table, camera offset, gesture offset, selection, focus, and open-window state are runtime-only.
+- No active-table coordinate is stored. Every mount starts at the center table.
+
+Normalized values may be derived temporarily inside rendering and pointer controllers. They are not the authoritative persisted placement geometry.
+
+## 5. Canonical owner draft
+
+Canonical lattice persistence will use one profile-scoped owner draft source. It will contain:
+
+```text
+profileAddress
+draftVersion
+artboard: 16:9
+geometry: 32 × 18
+appearance:
+  surfaceId
+  menuSurfaceId
+  dossierSurfaceId
+identityPresentation
+tables[9]:
+  permanent id
+  permanent coordinate
+  title and subtitle
+  label visibility, anchor, and cell offset
+  PUBLIC or PRIVATE visibility
+  placements:
+    id
+    stableAssetId
+    column, row, columnSpan, rowSpan
+    layer
+    navigationOrder
+    crop
+    frameId
+    mat
+    backing
+    transparencyMode
+    PUBLIC or PRIVATE visibility
+    locked
+```
+
+It must not contain:
+
+- active table or arbitrary camera position;
+- drag, wheel, swipe, resize, crop, or snapping previews;
+- open Browser, viewer, dossier, or utility-window state;
+- selection, focus, or hover state;
+- copied official identity metadata;
+- copied NFT metadata beyond stable asset identity;
+- wallet, CID, transaction, or publication state.
+
+Once canonical lattice persistence is enabled, it becomes authoritative for lattice state. Legacy Home, Gallery, and five-table state remains readable only for compatibility, rollback, and a later explicit import workflow. It must not remain a second writable authority for canonical lattice content.
+
+## 6. Canonical public projection
+
+Owner Preview and published visitor rendering must receive the exact same pure public projection. Preview must never render the raw owner draft.
+
+The public projection:
+
+- preserves all nine permanent coordinate slots;
+- includes public table titles, subtitles, label configuration, and public placements;
+- replaces stable-ID-only placement references with validated public asset references built from real production asset records;
+- includes the selected public appearance and sanitized identity overlay;
+- omits locks and every owner callback or editing capability;
+- omits private organizational data, Favorites, caches, and inactive private settings;
+- uses the document publication timestamp as `LAST PUBLISHED`;
+- never publishes an active table.
+
+For a private table, the projection retains only its permanent ID, coordinate, and private visibility marker. It redacts:
+
+- title;
+- subtitle;
+- label visibility;
+- label anchor;
+- label offset;
+- placements.
+
+For private or inactive identity presentation values:
+
+- a non-INSCAPE avatar mode clears the inactive INSCAPE asset reference;
+- a non-INSCAPE bio mode clears the inactive custom bio;
+- private or inactive overlay values do not enter the public document;
+- official Universal Profile values remain external immutable facts, not copied owner-authored overlay data.
+
+Missing profile, NFT, activity, count, link, marketplace, or other facts remain honestly unresolved. `LAST ONLINE` is not part of Alpha. Fixture identity, NFT, marketplace, or metadata values must never enter production behavior.
+
+## 7. Version 8 document authority
+
+Version 8 will contain exactly one canonical lattice source of truth.
+
+The version 8 envelope may retain the version-7-shaped `presentation`, `spaces`, and `canvasObjects` fields as a compatibility fallback. Those fields are not lattice inputs and must never:
+
+- overwrite canonical lattice data;
+- merge into canonical tables on load;
+- silently regenerate canonical placements;
+- become a second lattice persistence authority.
+
+The validated `lattice` field is authoritative whenever a version 8 document is rendered as a lattice. Compatibility fallback fields exist only so a compatible application build can render the retained legacy presentation when lattice rendering is disabled or unavailable.
+
+Versions 1 through 7 continue to resolve as legacy documents. They do not automatically migrate into empty or inferred nine-table documents.
+
+The version 8 reader and legacy fallback must be deployed before version 8 publication is enabled. Once a version 8 publication exists, application-level rollback remains possible through the compatible legacy renderer. Returning the on-chain pointer to a version 7 document would require an explicit owner-authorized republish.
+
+## 8. Legacy-to-canonical mapping
+
+### 8.1 Library workspace
+
+| Existing field | Canonical treatment |
+| --- | --- |
+| `profileAddress` | Draft storage scope and document authority |
+| `favorites` | Private INDEX organization; never automatically published |
+| `folders` | Categories, not tables |
+| `folder.public` | Category publication visibility |
+| `folder.assetIds` | Category membership using unchanged stable asset IDs |
+| `canvas.objects` | Legacy Gallery compatibility only |
+| `tables.placements` | Legacy five-table compatibility only |
+| Profile-scoped asset cache | Runtime source for Browser, media rendering, and public asset references |
+
+### 8.2 Legacy five-table placements
+
+The historical IDs `identity`, `collections`, `archive`, `drops`, and `index` have no automatic mapping to the nine permanent coordinate slots. Canonical tables are owner-named presentation surfaces, not fixed feature pages.
+
+Legacy five-table import is a later explicit owner-guided workflow. There is no automatic coordinate conversion.
+
+If an owner later invokes an approved import, individual fields may be proposed as follows, but nothing runs on load:
+
+| Legacy field | Owner-guided import candidate |
+| --- | --- |
+| `stableAssetId` | Preserve unchanged after validation |
+| normalized `rect` | Quantize into 32 × 18 integer cell geometry only after the owner chooses a destination table |
+| `crop` | Preserve after validation |
+| `layer` | Normalize into canonical layer order |
+| missing navigation order | Derive deterministically from legacy layer and ID |
+| missing frame | `NONE` |
+| missing transparency | `AUTO` |
+| missing visibility | Private until the owner explicitly publishes it |
+| legacy table ID | No default coordinate; owner chooses the canonical table |
+
+### 8.3 Legacy Gallery objects
+
+- Stable asset identity may be reused during a later owner-guided import.
+- Presentation order may inform a proposed deterministic ordering.
+- Gallery coordinates belong to a different spatial model and are not automatically mapped.
+- Legacy frame, mat, background, and fit values may be translated only during an explicitly reviewed import.
+- Until then, Gallery data remains readable through compatibility code.
+
+### 8.4 Legacy Home and system state
+
+| Existing state | Canonical treatment |
+| --- | --- |
+| Module positions | No mapping; canonical chrome is fixed |
+| Utility-window geometry and start-open | Runtime owner utility state, not table identity |
+| Home camera | No mapping |
+| Gallery and Upper navigation | Legacy runtime only |
+| Grid visibility | Local interface preference |
+| Surface palette | Canonical appearance only when explicitly saved by the owner |
+| Visitor navigation | Fixed public-chrome visibility |
+| Keeper ID | Retained through the existing presentation boundary |
+| Stage and environment | Legacy compatibility; not reinterpreted as tables |
+| Signals settings | Retained by the existing Signals subsystem |
+
+### 8.5 Version 7 profile document
+
+| Version 7 field | Version 8 treatment |
+| --- | --- |
+| Document identity, revision, timestamps | Retain |
+| Network and profile authority | Retain |
+| Cached identity | Official fallback only; never an editable overlay |
+| Keeper | Retain |
+| Stage and environment | Retain for compatibility fallback |
+| Avatar shape | May seed the owner's canonical avatar presentation choice |
+| Visitor navigation | Retain for fixed public chrome |
+| System modules | Compatibility fallback only |
+| Signals | Retain |
+| Public `spaces` | Public categories |
+| Public `canvasObjects` | Legacy Gallery fallback |
+| Empty `metadata` | Remain reserved |
+| New `lattice` | Sole canonical published lattice source |
+
+### 8.6 Identity
+
+| Real source | Public identity use |
+| --- | --- |
+| LSP3 address | Immutable official address |
+| LSP3 name | Immutable official handle/name |
+| LSP3 image | Official avatar option |
+| LSP3 description | Official bio option |
+| LSP3 tags and links | Official values with retained provenance |
+| Owner alias | INSCAPE overlay |
+| Owner avatar selection | Official or INSCAPE overlay source |
+| Owner bio selection | Official, INSCAPE, or hidden |
+| Owner additional tags | INSCAPE overlay with retained provenance |
+| First three canonical address characters after `0x` | Resident code |
+| Document network | Resolved network |
+| Document `exportedAt` | `LAST PUBLISHED` |
+| Canonical address-based route | Shareable workspace URL |
+
+### 8.7 Production asset adapter
+
+| Production asset field | Lattice use |
+| --- | --- |
+| `id` | `stableAssetId` |
+| `name` | Browser title and accessible label |
+| resolved thumbnail/image URL | Safe media source |
+| resolved width and height | Native media ratio |
+| description | Viewer narrative when present |
+| collection name | Viewer record when present |
+| creators | Real creator facts when present |
+| attributes | Real traits when present |
+| contract, token, standard, chain | Technical dossier facts |
+| missing media type | Unresolved; do not infer unsupported facts |
+| missing metadata | Explicit absent or unresolved state |
+
+## 9. Parallel cutover
+
+Cutover must remain independently reversible for owner, visitor, and publication behavior.
+
+The intended eventual boundaries are:
+
+- owner lattice runtime enabled independently from the legacy owner shell;
+- visitor lattice rendering enabled independently from version 8 publication;
+- version 8 publication enabled only after the version 8 reader and visitor fallback are live.
+
+During parallel operation, the following remain active:
+
+- `App` authority routing;
+- `OwnerRuntimeBoundary` and the legacy `ModuleGridShell` fallback;
+- `PublishedProfileBoundary` and `PublishedHomeWorld` for legacy documents and rollback;
+- existing Library workspace and asset-cache storage;
+- all historical profile-document readers;
+- Home, Gallery, Upper, and five-table compatibility data;
+- existing profile identity and asset repositories;
+- current wallet/provider lifecycle;
+- current IPFS upload, canonical verification, wallet publication, and read-back flow;
+- current direct-visit and iframe routing;
+- the frozen prototype route as reference only.
+
+No legacy code is deleted before Phase 10.
+
+## 10. Approved implementation sequence
+
+### Phase 2A — pure canonical schemas and projection adapter
+
+Define separate production owner-draft and public-lattice schemas, integer grid geometry, strict validation, real asset-reference projection, private redaction, and deterministic ordering. Do not connect runtime, storage, profile documents, publication, feature flags, or the prototype shell.
+
+Expected isolated files:
+
+- `src/lattice/domain/latticeProductionDraft.js`;
+- `src/lattice/domain/latticeProductionPublication.js`;
+- `src/lattice/domain/latticeProductionAdapter.js`;
+- corresponding colocated unit tests.
+
+Rollback: remove the new unreferenced modules. No stored or published data exists.
+
+User visual test: none.
+
+### Phase 2B — profile-scoped canonical lattice persistence
+
+Introduce one new profile-scoped canonical lattice draft store. Autosave completed authoring operations only. Do not modify workspace-v8 records.
+
+Rollback: stop reading the new isolated key; legacy records remain intact. Once enabled, this store is the sole writable lattice authority.
+
+User visual test: none unless a deliberately approved development harness is added.
+
+### Phase 2C — version 8 reader, builder, validation, and reconciliation
+
+Add version 8 support while version 7 remains the publication default. Owner Preview uses the exact visitor projection. Versions 1 through 7 remain legacy documents.
+
+Rollback: keep the version 8 reader but return snapshot building to version 7. Version 8 publication remains disabled.
+
+User visual test: none unless a deliberately approved development harness is added.
+
+### Phase 3 — shared production table renderer
+
+Build a visitor-safe renderer and production media adapter. It must import no owner store or persistence module.
+
+Rollback: select the legacy visitor renderer.
+
+Manual test:
+
+1. Open the same table directly and in two differently sized iframes.
+2. Compare cell geometry, placement order, crop, media ratio, and transparency.
+3. Resize every viewport.
+4. Confirm there is no stretching, reflow, changed authored data, pixel gap, or transparency haze.
+
+### Phase 4 — owner navigation and fixed chrome
+
+Add a separate lazy owner lattice shell behind the existing verified authority gate. Do not extend `ModuleGridShell` into the new spatial model.
+
+Rollback: select `ModuleGridShell`.
+
+Manual test:
+
+1. Reload and confirm the center entry.
+2. Navigate all nine tables with drag, wheel/trackpad, keyboard, chevrons, and minimap.
+3. Confirm one gesture moves at most one table and small clicks do not navigate.
+4. Confirm invalid edge movement resists and returns.
+5. Confirm fixed chrome and Keeper do not move.
+6. Reload and confirm the active table was not persisted.
+
+### Phase 5 — Browser and authoring
+
+Adapt real INDEX assets and folders/categories into the isolated Browser contract. Authoring writes only to canonical lattice persistence.
+
+Rollback: select the legacy owner shell; existing INDEX, categories, Gallery, and legacy data remain intact.
+
+Manual test:
+
+1. Place real square, portrait, landscape, and transparent assets.
+2. Move and resize from every corner.
+3. Crop, layer, frame, mat, back, lock, hide, replace, and remove.
+4. Reload and verify the exact composition.
+5. Switch profiles and confirm isolation.
+6. Preview and confirm private tables and placements are absent.
+
+### Phase 6 — NFT focus viewer
+
+Adapt real asset records to the accepted viewer and provide independent left and right dossier state.
+
+Rollback: retain the legacy NFT viewer.
+
+Manual test:
+
+1. Open multiple ratios and both sparse and rich real metadata.
+2. Open left only, right only, both, and neither dossier.
+3. Navigate by button, keyboard, wheel, and swipe without changing dossier state.
+4. Scroll dossier content without moving the lattice.
+5. Confirm unresolved fields remain honest.
+6. Close and confirm focus and artwork return to the originating placement.
+
+### Phase 7 — identity dossier
+
+Combine live official identity with the public INSCAPE overlay. Use `LAST PUBLISHED` only.
+
+Rollback: retain the existing public identity representation.
+
+Manual test:
+
+1. Compare official facts with editable overlay fields.
+2. Change alias, avatar source, bio source, tags, and allowed visibility.
+3. Confirm the official handle and address never change.
+4. Confirm resident code, resolved network, complete address copy, canonical profile URL, and `LAST PUBLISHED`.
+5. Confirm inactive private values do not leak.
+
+### Phase 8A — version 8 visitor deployment
+
+Deploy the version 8 validator, resolver, canonical renderer, and legacy fallback before enabling version 8 publication.
+
+Rollback: select the legacy renderer; the compatible build can still read retained fallback fields.
+
+### Phase 8B — version 8 publication
+
+Enable version 8 snapshot publication through the unchanged IPFS, wallet, and read-back boundary.
+
+Rollback: disable new version 8 publication. Already published version 8 documents remain readable. An on-chain return to version 7 requires explicit owner authorization.
+
+Manual test:
+
+1. Publish from profile A.
+2. Visit from profile B, signed out, directly, and in logged-in and logged-out iframes.
+3. Compare all nine tables, public categories, identity, viewer facts, and Keeper behavior.
+4. Confirm visitors perform no owner storage operations and receive no authoring controls.
+5. Publish a second revision and confirm every route resolves it.
+6. Select compatibility rendering and confirm the document remains readable.
+7. Return to lattice rendering and confirm the canonical lattice returns unchanged.
+
+### Phase 9 — cutover and Alpha hardening
+
+Enable the production owner and visitor lattice paths while retaining the complete fallback. Verify isolation, accessibility, reduced motion, responsive behavior, performance budgets, deployment, and rollback.
+
+### Phase 10 — legacy cleanup
+
+Remove only code proven unreachable after live acceptance. Retain compatibility readers while published legacy documents exist.
+
+## 11. Complexity findings and simpler boundaries
+
+- `ModuleGridShell.jsx` already integrates legacy Home, Gallery, Upper, publication, Browser, and utility-window state. A separate lazy lattice owner shell is safer than adding another world model to it.
+- The isolated lattice profile currently uses normalized float bounds even though production authorship is grid-cell based. Production must persist cells and derive normalized values only during projection.
+- Prototype mat and backing data is held in parallel maps. Production should keep complete placement presentation in one canonical placement record.
+- The isolated profile model currently combines private draft and public state. Separate schemas make redaction deterministic and testable.
+- The Browser fixture shape differs from production asset records. A small pure adapter is safer than coupling the Browser to repository formats.
+- The isolated focus viewer currently represents dossier visibility too coarsely. Independent left/right state belongs in the dedicated viewer slice.
+- Exact document validation and canonical hashing mean version 8 requires a reader-before-writer rollout; it cannot be introduced as a silent optional field.
+- The current owner restore path already performs multi-source reconciliation. Canonical lattice reconciliation should join that transaction through an adapter rather than increase `ModuleGridShell` responsibility.
+- The dev-only five-table store is neither canonical nor published. It must remain compatibility input rather than being expanded.
+
+## 12. Phase 1 conclusion
+
+The first safe production slice is Phase 2A: pure canonical owner-draft and public-projection schemas plus a real-asset projection adapter.
+
+Phase 2A has no visual output, no storage write, no publication change, no feature flag, and no runtime import. It is reversible until its domain contract is accepted. Implementation requires a new explicit approval gate under the live execution roadmap.

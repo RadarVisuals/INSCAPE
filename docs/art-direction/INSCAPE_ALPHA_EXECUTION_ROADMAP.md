@@ -30,6 +30,10 @@ Detailed product and implementation contracts remain in the canonical documents 
 
 If these sources appear to conflict, stop and report the exact conflict before changing code.
 
+Approved production-integration inventory:
+
+- `docs/art-direction/INSCAPE_PRODUCTION_INTEGRATION_INVENTORY.md` — audited production boundaries, exact legacy mapping, canonical authority rules, cutover, rollback, and manual-test plan.
+
 ## Status legend
 
 - `[x]` complete, verified, committed, and pushed
@@ -47,6 +51,7 @@ Last verified sequence at the time this roadmap was created:
 - `ed67634` — decomposed the frozen lattice prototype
 - `ff64ccd` — resolved transparent artwork inspection
 - `c034935` — prevented transparent Keeper canvas haze
+- `0787912` — added the Alpha execution roadmap
 
 The working tree was clean when this roadmap was created.
 
@@ -71,7 +76,20 @@ The working tree was clean when this roadmap was created.
 - [ ] Production NFT viewer, identity dossier, and fixed chrome are not yet cut over to the frozen implementations.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
-The next work is therefore integration planning and incremental production wiring, not more broad prototype invention.
+Phase 1 production integration inventory is complete and approved. The next work is Phase 2A pure domain definition, not production wiring or more broad prototype invention.
+
+### Locked production-integration constraints
+
+- The 32 × 18 lattice is the authored coordinate plane, not the browser or iframe viewport. Cells remain square.
+- Arbitrary viewports uniformly scale the complete authored composition without stretching, cropping the authored plane, reflowing, or changing cell geometry or its derived normalized placement data.
+- Additional visible grid is seamless atmosphere; the authored boundary is normally invisible.
+- Version 8 has exactly one canonical lattice source of truth. Retained version-7-shaped fields are compatibility fallback only and never overwrite, merge into, or silently regenerate canonical lattice data.
+- Once canonical lattice persistence is enabled, it is authoritative for lattice state. Legacy state remains readable only for compatibility, rollback, and later owner-guided import.
+- Private projection preserves all nine permanent table slots while redacting private titles, subtitles, label configuration, placements, and inactive private identity overlay values.
+- Owner Preview uses the exact same public projection as visitor rendering.
+- Categories remain organizational/publication structures and are not tables.
+- Missing identity, NFT, activity, marketplace, count, link, and presence data remains honestly unresolved. Alpha uses `LAST PUBLISHED`, never `LAST ONLINE`.
+- Gallery and five-table import is a later explicit owner-guided workflow. There is no automatic coordinate conversion.
 
 ## Mandatory execution protocol for every slice
 
@@ -129,7 +147,7 @@ Exit criterion: frozen reference is reproducible, documented, decomposed enough 
 
 ## Phase 1 — production integration inventory and boundary
 
-Status: `[ ]` — **next phase**
+Status: `[x]`
 
 Goal: produce the exact adapter and migration map before production behavior changes.
 
@@ -155,13 +173,21 @@ Required output:
 - rollback path;
 - no visual or runtime mutation yet unless separately approved.
 
+Completed:
+
+- audited owner and published visitor entry points;
+- audited owner/visitor isolation, profile scoping, autosave, storage, reconciliation, wallet, IPFS, direct-visit, and iframe behavior;
+- audited canonical lattice modules and prototype-only state boundaries;
+- recorded the exact legacy-to-canonical mapping, owner-draft/public-projection split, parallel cutover, rollback rules, and eventual manual tests in `INSCAPE_PRODUCTION_INTEGRATION_INVENTORY.md`;
+- confirmed that the first safe production slice is a pure domain adapter with no runtime, schema-version, storage-version, publication-version, or feature-flag mutation.
+
 User visual test: none. This phase is an architecture/document review.
 
-Exit criterion: the user can read one plan and understand precisely what gets wired first, what remains live, and how old documents stay readable.
+Exit criterion: the user can read one plan and understand precisely what gets wired first, what remains live, and how old documents stay readable. Met and approved.
 
 ## Phase 2 — canonical production lattice schema
 
-Status: `[ ]`
+Status: `[ ]` — **next phase**
 
 Goal: introduce the nine-table production domain without replacing the current UI yet.
 
@@ -185,6 +211,37 @@ User visual test: none until a dev-only projection harness is deliberately expos
 
 Exit criterion: schema, projection, validation, migration, and storage tests pass without changing the visible production workspace.
 
+### Phase 2A — pure canonical schemas and public-projection adapter
+
+Status: `[ ]` — **next executable slice; approval required before implementation**
+
+Exact boundary:
+
+- add isolated production owner-draft and published-lattice domain modules plus tests;
+- expected modules are `src/lattice/domain/latticeProductionDraft.js`, `src/lattice/domain/latticeProductionPublication.js`, and `src/lattice/domain/latticeProductionAdapter.js`, with colocated tests;
+- define the permanent row-major 3 × 3 topology and fixed 32 × 18 square-cell authored plane;
+- persist placement geometry conceptually as integer `column`, `row`, `columnSpan`, and `rowSpan` values;
+- define deterministic layers, navigation order, crop, frame/mat/backing, transparency, visibility, label, appearance, and identity-overlay validation;
+- project real production stable asset records into validated public asset references;
+- preserve nine-table topology while redacting private table and placement content and inactive private identity values;
+- make the projection pure so Owner Preview and visitor rendering can later consume the exact same value.
+
+Explicitly excluded:
+
+- runtime imports or visible UI;
+- `LatticeEnginePrototype.jsx` behavior changes;
+- production store or autosave wiring;
+- storage keys or workspace versions;
+- profile-document or publication versions;
+- wallet, IPFS, route, iframe, or feature-flag changes;
+- automatic Gallery or five-table conversion.
+
+Rollback: remove the new unreferenced domain modules and tests. No stored or published data exists.
+
+User visual test: none. This is a pure domain and automated-verification slice.
+
+Exit criterion: the user approves the exact schemas and projection behavior, targeted and full relevant tests pass, the production build passes, and no runtime behavior changes.
+
 ## Phase 3 — shared production table renderer
 
 Status: `[ ]`
@@ -193,10 +250,12 @@ Goal: render one canonical table identically for owner preview, visitor view, di
 
 Required behavior:
 
-- normalized authored coordinates independent of viewport size;
-- square authored cells without allowing iframe aspect ratios to dictate the product model;
+- one fixed 32 × 18 authored coordinate plane projected uniformly and independently of viewport size;
+- square authored cells without allowing browser or iframe aspect ratios to dictate the product model;
 - continuous surrounding grid atmosphere;
 - deterministic projection on resize;
+- no stretching, reflow, or mutation of authored placement data;
+- a normally invisible authored boundary inside a seamless surrounding grid;
 - native/cropped media ratios and transparency remain correct;
 - no owner controls in visitor runtime.
 
@@ -304,7 +363,7 @@ Editable INSCAPE overlay:
 - official, custom, or hidden bio source;
 - additional public tags;
 - shareable workspace URL;
-- actual network and last-seen facts when available.
+- actual network and `LAST PUBLISHED` when available; never `LAST ONLINE`.
 
 User visual test:
 
@@ -419,6 +478,6 @@ Start with:
 
 ## Immediate next action
 
-Begin **Phase 1 — production integration inventory and boundary** in a fresh context window.
+Prepare **Phase 2A — pure canonical schemas and public-projection adapter** as the next executable slice.
 
-It must remain read-only until it has produced the adapter/schema/cutover plan and the user approves that plan. Do not wire production yet.
+Do not implement Phase 2A until the user approves its exact file and test boundary. Phase 2A must not wire production runtime, storage, profile-document versions, publication versions, or feature flags.
