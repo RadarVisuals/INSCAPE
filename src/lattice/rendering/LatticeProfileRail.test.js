@@ -27,6 +27,8 @@ test('rail collapse, selection, focus and Escape remain controlled by the caller
   assert.match(source, /inert=\{blocked \? '' : undefined\}/);
   assert.match(source, /visuallyCollapsed = collapsed \|\| compact/);
   assert.match(source, /!compact && <button/);
+  assert.match(source, /disabled=\{entry\.disabled === true\}/);
+  assert.match(source, /disabled=\{disabled\}/);
 });
 
 test('rail is fixed, carbon, compactable and does not shift the lattice', () => {
@@ -37,6 +39,7 @@ test('rail is fixed, carbon, compactable and does not shift the lattice', () => 
   assert.match(styles, /\.lattice-profile-rail\[data-blocked\]\s*\{[^}]*opacity: 0;[^}]*pointer-events: none;/s);
   assert.match(styles, /@media \(max-width: 640px\)/);
   assert.doesNotMatch(styles, /margin-left|padding-left: 244px|translateX\(244px\)/);
+  assert.match(styles, /button:disabled/);
 });
 
 test('rail uses the approved type hierarchy, loaded aliases and clear Lucide chevrons', () => {

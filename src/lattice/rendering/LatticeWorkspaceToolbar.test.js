@@ -24,6 +24,7 @@ test('selection, Arrange, compact mode, blocking and Escape stay caller-controll
   assert.match(source, /toolButtonRefs\[tool\.id\]/);
   assert.match(source, /inert=\{blocked \? '' : undefined\}/);
   assert.match(source, /!compact && <span/);
+  assert.match(source, /disabled=\{tool\.disabled === true\}/);
 });
 
 test('toolbar uses the approved desktop proportions and compact icon-only treatment', () => {
@@ -37,6 +38,7 @@ test('toolbar uses the approved desktop proportions and compact icon-only treatm
   assert.match(styles, /\.lattice-workspace-toolbar\s*\{[^}]*transition: opacity 180ms linear;/s);
   assert.match(styles, /\.lattice-workspace-toolbar\[data-blocked\][^{]*\{[^}]*opacity: 0;[^}]*pointer-events: none;/s);
   assert.doesNotMatch(styles, /margin-right|padding-right: 244px|translateX\(-244px\)/);
+  assert.match(styles, /tool:disabled/);
 });
 
 test('MORE exposes the reference prototype-only Settings and Interface menu', () => {

@@ -1,0 +1,109 @@
+@font-face { font-family: "Inscape Geist Sans"; src: url("/assets/fonts/geist-sans-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Inscape Geist Sans"; src: url("/assets/fonts/geist-sans-latin-600-normal.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Inscape IBM Plex Mono"; src: url("/assets/fonts/IBMPlexMono-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Inscape IBM Plex Mono"; src: url("/assets/fonts/IBMPlexMono-Medium.ttf") format("truetype"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Inscape H Variant"; src: url("/assets/fonts/HVariant.otf") format("opentype"); font-weight: 400; font-display: swap; }
+
+.owner-lattice-shell {
+  --lattice-overlay-ink: var(--lattice-menu-ink);
+  --lattice-overlay-muted: color-mix(in srgb, var(--lattice-overlay-ink) 58%, transparent);
+  --lattice-overlay-faint: color-mix(in srgb, var(--lattice-overlay-ink) 32%, transparent);
+  position: fixed;
+  inset: 0;
+  z-index: 21;
+  pointer-events: none;
+  color: var(--lattice-menu-ink);
+  font-family: "Inscape IBM Plex Mono", monospace;
+}
+
+.owner-lattice-shell > .lattice-profile-rail,
+.owner-lattice-shell > .lattice-workspace-toolbar,
+.owner-lattice-shell > .keeper-dock {
+  pointer-events: auto;
+}
+
+.owner-lattice-spatial-surface {
+  --owner-lattice-surface: #0b0c0c;
+  --owner-lattice-grid-line: rgb(216 213 204 / 0.085);
+  --lattice-overlay-ink: #d8d7d2;
+  --lattice-overlay-muted: rgb(216 215 210 / 0.58);
+  --lattice-overlay-faint: rgb(216 215 210 / 0.32);
+  position: absolute;
+  z-index: 14;
+  inset: 0;
+  overflow: hidden;
+  outline: none;
+  background: var(--owner-lattice-surface);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.owner-lattice-spatial-surface:not([data-interface-visible]) { opacity: 0; pointer-events: none; }
+.owner-lattice-spatial-surface[data-gesture-active] { cursor: grabbing; }
+.owner-lattice-spatial-surface[data-surface="graphite"] { --owner-lattice-surface: #383a3a; --owner-lattice-grid-line: rgb(232 231 226 / 0.115); }
+.owner-lattice-spatial-surface[data-surface="slate"] { --owner-lattice-surface: #7b7b7b; --owner-lattice-grid-line: rgb(243 242 237 / 0.14); }
+.owner-lattice-spatial-surface[data-surface="ash"] { --owner-lattice-surface: #b2b2b2; --owner-lattice-grid-line: rgb(255 255 255 / 0.22); --lattice-overlay-ink: #111313; --lattice-overlay-muted: rgb(17 19 19 / .58); --lattice-overlay-faint: rgb(17 19 19 / .32); }
+.owner-lattice-spatial-surface[data-surface="mist"] { --owner-lattice-surface: #c9c6bd; --owner-lattice-grid-line: rgb(18 20 20 / 0.11); --lattice-overlay-ink: #111313; --lattice-overlay-muted: rgb(17 19 19 / .58); --lattice-overlay-faint: rgb(17 19 19 / .32); }
+.owner-lattice-spatial-surface[data-surface="paper"] { --owner-lattice-surface: #d8d4ca; --owner-lattice-grid-line: rgb(34 31 27 / 0.095); --lattice-overlay-ink: #111313; --lattice-overlay-muted: rgb(17 19 19 / .58); --lattice-overlay-faint: rgb(17 19 19 / .32); }
+
+.owner-lattice-stage { position: absolute; inset: 0; will-change: transform; }
+.owner-lattice-stage[data-snapping] { transition: transform var(--owner-lattice-snap-duration) cubic-bezier(0.2, 0.72, 0.22, 1); }
+.owner-lattice-atmosphere {
+  position: absolute;
+  background-color: var(--owner-lattice-surface);
+  background-image: linear-gradient(var(--owner-lattice-grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--owner-lattice-grid-line) 1px, transparent 1px);
+  background-position: var(--owner-lattice-grid-origin-x) var(--owner-lattice-grid-origin-y), var(--owner-lattice-grid-origin-x) var(--owner-lattice-grid-origin-y);
+  background-size: var(--owner-lattice-cell-size) var(--owner-lattice-cell-size), var(--owner-lattice-cell-size) var(--owner-lattice-cell-size);
+}
+.owner-lattice-table { position: absolute; overflow: hidden; }
+.owner-lattice-table .lattice-production-table { background-color: transparent; }
+
+.owner-lattice-spatial-surface .lattice-navigation-overlay { position: absolute; z-index: 5; inset: 0; pointer-events: none; }
+.owner-lattice-spatial-surface .lattice-direction-chevron,
+.owner-lattice-spatial-surface .lattice-coordinate-map button { appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--lattice-overlay-ink); pointer-events: auto; }
+.owner-lattice-spatial-surface .lattice-direction-chevron { position: absolute; width: 34px; height: 34px; padding: 0; opacity: .72; cursor: pointer; }
+.owner-lattice-spatial-surface .lattice-direction-chevron::before { content: ""; position: absolute; left: 11px; top: 11px; width: 10px; height: 10px; border-top: 1px solid currentColor; border-right: 1px solid currentColor; }
+.owner-lattice-spatial-surface .lattice-direction-chevron.is-left { left: 12px; top: 50%; transform: translateY(-50%); }
+.owner-lattice-spatial-surface .lattice-direction-chevron.is-right { right: 12px; top: 50%; transform: translateY(-50%); }
+.owner-lattice-spatial-surface .lattice-direction-chevron.is-up { left: 50%; top: 12px; transform: translateX(-50%); }
+.owner-lattice-spatial-surface .lattice-direction-chevron.is-down { left: 50%; bottom: 12px; transform: translateX(-50%); }
+.owner-lattice-spatial-surface .lattice-direction-chevron.is-left::before { transform: rotate(-135deg); }
+.owner-lattice-spatial-surface .lattice-direction-chevron.is-right::before { transform: rotate(45deg); }
+.owner-lattice-spatial-surface .lattice-direction-chevron.is-up::before { transform: rotate(-45deg); }
+.owner-lattice-spatial-surface .lattice-direction-chevron.is-down::before { transform: rotate(135deg); }
+.owner-lattice-spatial-surface .lattice-direction-chevron:focus-visible { opacity: 1; outline: 1px solid var(--lattice-overlay-muted); outline-offset: -5px; }
+.owner-lattice-spatial-surface .lattice-coordinate-map { position: absolute; left: 50%; bottom: 54px; display: grid; grid-template: repeat(3, 20px) / repeat(3, 20px); gap: 2px; transform: translateX(-50%); pointer-events: auto; }
+.owner-lattice-spatial-surface .lattice-coordinate-map button { position: relative; width: 20px; height: 20px; padding: 0; cursor: pointer; }
+.owner-lattice-spatial-surface .lattice-coordinate-map button::before { content: ""; position: absolute; left: 4px; top: 4px; width: 12px; height: 12px; border: 1px solid var(--lattice-overlay-muted); }
+.owner-lattice-spatial-surface .lattice-coordinate-map button.is-active::before { border-color: var(--lattice-overlay-ink); background: var(--lattice-overlay-ink); }
+.owner-lattice-spatial-surface .lattice-coordinate-map button:focus-visible { outline: none; }
+.owner-lattice-spatial-surface .lattice-coordinate-map button:focus-visible::before { border-color: var(--lattice-overlay-ink); box-shadow: 0 0 0 1px var(--lattice-overlay-faint); }
+
+.owner-lattice-signature { position: fixed; z-index: 22; left: 24px; bottom: 24px; display: grid; justify-items: start; gap: 6px; color: var(--lattice-overlay-ink); pointer-events: none; }
+.owner-lattice-signature small { font: 500 8px/1 "Inscape IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
+.owner-lattice-signature strong { font: 400 clamp(15px, 1.2vw, 18px)/.82 "Inscape H Variant", sans-serif; letter-spacing: .08em; }
+.owner-lattice-signature span { font: 7px/1 "Inscape IBM Plex Mono", monospace; letter-spacing: .12em; }
+
+.owner-lattice-theme { position: fixed; z-index: 24; top: 62px; right: 18px; width: 244px; display: grid; border: 1px solid var(--lattice-menu-line-strong); background: var(--lattice-menu-panel); box-shadow: 10px 12px 30px rgb(0 0 0 / .28); color: var(--lattice-menu-ink); pointer-events: auto; }
+.owner-lattice-theme header { height: 35px; padding-left: 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--lattice-menu-line); font-size: 9px; letter-spacing: .12em; }
+.owner-lattice-theme header button { width: 35px; height: 35px; border: 0; border-left: 1px solid var(--lattice-menu-line); background: transparent; color: inherit; cursor: pointer; }
+.owner-lattice-theme label { min-height: 43px; padding: 7px 9px; display: grid; grid-template-columns: 1fr 104px; align-items: center; border-bottom: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-muted); font-size: 8px; letter-spacing: .09em; }
+.owner-lattice-theme select { height: 27px; border: 1px solid var(--lattice-menu-line); background: var(--lattice-menu-panel); color: var(--lattice-menu-ink); font: 8px "Inscape IBM Plex Mono", monospace; }
+.owner-lattice-theme footer { height: 25px; padding: 0 9px; display: flex; align-items: center; color: var(--lattice-menu-faint); font-size: 7px; letter-spacing: .1em; }
+
+.owner-lattice-shell > .keeper-dock { --keeper-dock-size: clamp(60px, 5.5vw, 78px); position: fixed; z-index: 23; right: 32px; bottom: 26px; width: var(--keeper-dock-size); height: var(--keeper-dock-size); border: 0; background: transparent; }
+.owner-lattice-shell .keeper-dock__socket { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; color: transparent; cursor: pointer; }
+.owner-lattice-shell .keeper-dock__options { display: none; }
+.owner-lattice-shell .keeper-dock__menu { display: none; }
+.application-resident-underlay .keeper-dock__ghost { --keeper-dock-size: clamp(60px, 5.5vw, 78px); position: fixed; right: 32px; bottom: 26px; width: var(--keeper-dock-size); height: var(--keeper-dock-size); pointer-events: none; }
+.application-resident-underlay .keeper-dock__ghost::before { content: ""; position: absolute; inset: 9%; background: currentColor; -webkit-mask: var(--keeper-dock-mask) center / 180% auto no-repeat; mask: var(--keeper-dock-mask) center / 180% auto no-repeat; opacity: .28; }
+
+@media (max-width: 640px) {
+  .owner-lattice-theme { top: 54px; right: 10px; }
+  .owner-lattice-signature { left: 12px; bottom: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .owner-lattice-stage[data-snapping] { transition-duration: 0ms; }
+}

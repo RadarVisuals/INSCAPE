@@ -1,7 +1,8 @@
 import { Component, lazy, Suspense } from 'react';
+import { normalizeProfileAddress } from '../library/config.js';
 import { loadOwnerRuntime } from './ownerRuntimeLoader.js';
 
-const ModuleGridShell = lazy(loadOwnerRuntime);
+const SelectedOwnerRuntime = lazy(loadOwnerRuntime);
 
 function OwnerRuntimeLoadingFallback() {
   return <div className="mode-loading" role="status">Opening owner workspace…</div>;
@@ -25,12 +26,27 @@ class OwnerRuntimeErrorBoundary extends Component {
   }
 }
 
+export function ownerRuntimeProfileKey(workspaceProfileAddress, viewedProfileAddress) {
+  const workspace = normalizeProfileAddress(workspaceProfileAddress);
+  const viewed = normalizeProfileAddress(viewedProfileAddress);
+  return workspace && workspace === viewed ? workspace : null;
+}
+
 export default function OwnerRuntimeBoundary({ ownerAuthoringEnabled, ...ownerProps }) {
   if (ownerAuthoringEnabled !== true) return null;
+  const profileKey = ownerRuntimeProfileKey(
+    ownerProps.workspaceProfileAddress,
+    ownerProps.viewedProfileAddress,
+  );
+  if (!profileKey) return null;
   return (
-    <OwnerRuntimeErrorBoundary>
+    <OwnerRuntimeErrorBoundary key={profileKey}>
       <Suspense fallback={<OwnerRuntimeLoadingFallback />}>
-        <ModuleGridShell ownerAuthoringEnabled={ownerAuthoringEnabled} {...ownerProps} />
+        <SelectedOwnerRuntime
+          key={profileKey}
+          ownerAuthoringEnabled={ownerAuthoringEnabled}
+          {...ownerProps}
+        />
       </Suspense>
     </OwnerRuntimeErrorBoundary>
   );

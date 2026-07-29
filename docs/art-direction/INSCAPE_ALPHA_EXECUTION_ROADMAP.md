@@ -69,14 +69,14 @@ The working tree was clean when this roadmap was created.
 
 ### Production track
 
-- [ ] The frozen lattice UI is not yet the production owner workspace.
+- [x] Phase 4 owner navigation and fixed chrome are integrated and visually accepted behind the verified owner gate.
 - [ ] The frozen lattice UI is not yet the published visitor renderer.
-- [ ] The production profile-document schema does not yet use the canonical nine-table model.
+- [x] Version 8 defines the canonical nine-table profile-document model; publication remains disabled and version 7 remains the default.
 - [ ] Production INDEX/CATEGORIES stores are not yet wired to the isolated Browser.
-- [ ] Production NFT viewer, identity dossier, and fixed chrome are not yet cut over to the frozen implementations.
+- [x] Phase 4 fixed chrome is integrated and visually accepted; the production NFT viewer and identity dossier remain later-phase work.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
-Phase 1 production integration inventory, Phase 2A pure domain definition, Phase 2B profile-scoped canonical lattice persistence, and Phase 2C version 8 reader, builder, validation, and reconciliation are complete and approved. Phase 2 remains incomplete because Phase 3 has not started.
+Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 and later remain unstarted.
 
 ### Locked production-integration constraints
 
@@ -348,26 +348,34 @@ Exit criterion: the same public table renders deterministically across owner pre
 
 ## Phase 4 — owner lattice navigation and fixed chrome
 
-Status: `[ ]`
+Status: `[x]` — **implemented, verified, and visually accepted**
 
 Goal: make the nine-table lattice the production owner workspace behind a controlled cutover.
 
 Includes:
 
-- table swipe/drag/chevron navigation with snap-to-position arrival;
-- Profile Rail and workspace toolbar;
-- lattice minimap and directional controls;
-- Keeper dock behavior;
-- palette/menu-surface coordination;
-- table identity and INSCAPE signature;
-- no camera-motion illusion when the table should move.
+- [x] table swipe/drag/chevron navigation with snap-to-position arrival;
+- [x] Profile Rail and workspace toolbar;
+- [x] lattice minimap and directional controls;
+- [x] Keeper dock behavior;
+- [x] palette/menu-surface coordination;
+- [x] table identity and INSCAPE signature;
+- [x] no camera-motion illusion when the table should move.
 
 User visual test:
 
-1. Navigate all nine tables using drag, wheel/swipe where supported, keyboard, chevrons, and minimap.
-2. Confirm arrival always locks to the same positions.
-3. Confirm fixed chrome and Keeper do not drift with tables.
-4. Confirm the current table is always legible.
+1. Enter the verified owner route and confirm the session starts at center `table-05`.
+2. Navigate all nine tables using drag, wheel/trackpad, keyboard arrows, chevrons, and direct minimap-cell activation.
+3. Confirm drag, wheel/trackpad, arrows, and chevrons move no more than one neighboring coordinate, while one minimap activation snaps directly to its exact selected table without intermediate arrivals.
+4. Confirm a small click does not navigate and an invalid edge gesture resists and returns to the same table.
+5. Confirm every successful arrival locks to the same deterministic position.
+6. Confirm Profile Rail, toolbar, minimap, directional controls, Keeper, Theme/menu surfaces, current table identity, and INSCAPE signature remain fixed while the lattice moves beneath them.
+7. Change the session Theme, reload, and confirm Theme and active-table state reset to carbon and `table-05`.
+8. Change the normalized owner/viewed profile under the existing authority inputs and confirm the new profile starts at carbon `table-05` with no open menu or retained drag/settling state.
+9. Confirm disabled future controls are identified as unavailable and perform no action.
+10. To test rollback, change `src/public/ownerRuntimeSelected.js` from `LATTICE` / `./OwnerLatticeShell.jsx` to `LEGACY` / `./ModuleGridShell.jsx`, rebuild, and repeat the owner authority/profile checks in a separate rebuilt session; there is no user-facing runtime switch.
+
+Accepted checkpoint (2026-07-29): interactive visual review accepted. The expected Startveil/application entry followed by My INSCAPE remains the current checkpoint behavior; default-application cutover is later work and is not a Phase 4 defect. The selected `LATTICE` runtime is a separate lazy owner chunk behind the unchanged verified authority decision. A hook-free validating shell gates the hooked runtime, and a normalized profile key remounts that subtree on same-authority profile changes, resetting active table, drag, settling, menus, and session Theme. The runtime constructs a detached empty value through the Phase 2A draft/projection/full-publication validator path and performs no Phase 2B storage, reconciliation, publication, visitor-route, wallet, IPFS, schema, or migration operation. The strengthened real-App browser check covers direct minimap navigation, activated and sub-commit pointer drags, resisted invalid-edge movement, accumulated wheel input and cooldown suppression, fixed chrome during and after movement, profile/reload reset, disabled controls, and storage isolation. The full regression suite passes 709 tests with 0 failures; the final focused LATTICE suite passes 40 tests; the Phase 3 and Phase 4 browser suites each pass 1 test; production build, budgets, owner import-graph isolation, and `git diff --check` pass. The exact temporary two-line `LEGACY` rollback passes 17 focused tests and production budgets; its rebuilt graph contains lazy `ModuleGridShell` outside the initial entry, no `OwnerLatticeShell`, and zero leaks. The final restored LATTICE totals are initial JavaScript 1,227,357 raw / 358,509 gzip; selected owner JavaScript 58,146 raw / 18,446 gzip; initial CSS 113,254 raw / 19,913 gzip; selected owner CSS 22,730 raw / 4,014 gzip; core JavaScript 1,744,717 raw / 518,210 gzip. Version 7 remains the publication default and version 8 publication remains disabled. `App.jsx`, the accepted Phase 3 renderer, authentication UI, ModuleGridShell, and all persistence/publication contracts remain unchanged.
 
 Exit criterion: owner navigation is intuitive, deterministic, responsive, and does not regress profile/session behavior.
 
@@ -557,4 +565,4 @@ Start with:
 
 ## Immediate next action
 
-Phase 3 is not started. Before any Phase 3 implementation, complete its own boundary review and obtain explicit user approval. Version 7 remains the publication default, version 8 publication remains disabled, versions 1 through 7 remain legacy documents, and no Phase 3 or later work is authorized yet.
+Phase 4 is complete and visually accepted. Phase 3 remains `[~]`, and Phase 5 is the next unstarted phase but requires its own boundary review and explicit approval before implementation. Phase 5 and later remain `[ ]`, version 7 remains the publication default, and version 8 publication remains disabled.

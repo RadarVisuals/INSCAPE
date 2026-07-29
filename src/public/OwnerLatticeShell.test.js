@@ -1,0 +1,67 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+import {
+  createEmptyLatticeProductionDraft,
+  validateLatticeProductionDraft,
+} from '../lattice/domain/latticeProductionDraft.js';
+import { projectLatticeProductionPublication } from '../lattice/domain/latticeProductionAdapter.js';
+import { validateLatticeProductionPublication } from '../lattice/domain/latticeProductionPublication.js';
+
+const source = readFileSync(new URL('./OwnerLatticeShell.jsx', import.meta.url), 'utf8');
+const styles = readFileSync(new URL('./ownerLatticeShell.css', import.meta.url), 'utf8');
+const PROFILE = '0x1111111111111111111111111111111111111111';
+
+test('temporary owner lattice value follows the complete Phase 2A contract and active profile scope', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const publication = projectLatticeProductionPublication(draft, [], {
+    lastPublished: '1970-01-01T00:00:00.000Z',
+  });
+  assert.equal(validateLatticeProductionPublication(publication).valid, true);
+  assert.equal(draft.profileAddress, PROFILE);
+  assert.equal(Object.hasOwn(publication, 'profileAddress'), false);
+  assert.equal(Object.hasOwn(publication, 'activeTable'), false);
+  assert.match(source, /normalizeProfileAddress\(profileAddress\)/);
+  assert.match(source, /createEmptyLatticeProductionDraft\(profile\)/);
+  assert.match(source, /projectLatticeProductionPublication\(draft, \[\]/);
+  assert.match(source, /assertValidLatticeProductionPublication\(publication\)/);
+});
+
+test('invalid profiles fail closed before a render value can be produced', () => {
+  assert.equal(validateLatticeProductionDraft(createEmptyLatticeProductionDraft('invalid profile')).valid, false);
+  assert.match(source, /if \(!profile\) throw new TypeError/);
+  assert.match(source, /profileAddress !== viewedAddress/);
+  assert.match(source, /function OwnerLatticeRuntime/);
+  assert.match(source, /export default function OwnerLatticeShell\(props\)/);
+  assert.match(source, /return <OwnerLatticeRuntime/);
+  const innerSource = source.slice(source.indexOf('function OwnerLatticeRuntime'), source.indexOf('export default function OwnerLatticeShell'));
+  assert.doesNotMatch(innerSource, /ownerAuthoringEnabled|return null/);
+});
+
+test('Phase 4 shell has no storage, reconciliation, publication writer, visitor, or prototype dependency', () => {
+  for (const forbidden of [
+    'localStorage', 'sessionStorage', 'indexedDB', 'latticeProductionDraftStore',
+    'Reconciliation', 'ProfileDocument', 'IPFS', 'PublishedProfile',
+    'LatticeEnginePrototype', 'latticeEngineFixtures', 'ModuleGridShell',
+  ]) assert.doesNotMatch(source, new RegExp(forbidden, 'iu'));
+  assert.match(source, /LatticeProductionTableRenderer/);
+  assert.match(source, /KeeperDock/);
+});
+
+test('navigation owns one runtime destination while minimap requests remain exact', () => {
+  assert.match(source, /finishPointerGesture/);
+  assert.match(source, /resolveWheelDestination/);
+  assert.match(source, /latticeDestination\(activeRef\.current, direction\)/);
+  assert.match(source, /onNavigate=\{navigateDirectly\}/);
+  assert.match(source, /settle\(destination\)/);
+  assert.doesNotMatch(source, /stepToward|intermediate|navigationQueue/iu);
+});
+
+test('fixed chrome stays outside the moving authored-plane stage', () => {
+  assert.match(source, /createPortal\(spatialSurface, spatialRoot\)/);
+  assert.match(styles, /\.owner-lattice-stage[^}]*will-change: transform/);
+  assert.match(styles, /\.owner-lattice-signature[^}]*position: fixed/);
+  assert.match(styles, /\.owner-lattice-theme[^}]*position: fixed/);
+  assert.match(source, /disabled: true/);
+  assert.match(source, /SESSION ONLY \/ NOT PERSISTED/);
+});

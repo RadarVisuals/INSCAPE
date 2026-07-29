@@ -10,6 +10,7 @@
     "test": "node --test",
     "test:browser": "node --test browser-tests/published-visitor.browser.mjs",
     "test:browser:phase3": "node --test browser-tests/lattice-production-table.browser.mjs",
+    "test:browser:phase4": "node --test browser-tests/owner-lattice-navigation.browser.mjs",
     "visual:phase3": "node browser-tests/lattice-production-table.browser.mjs --visual",
     "preview": "vite preview"
   },

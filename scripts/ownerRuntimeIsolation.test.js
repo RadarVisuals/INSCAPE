@@ -9,10 +9,10 @@ function chunk(fileName, { entry = false, imports = [], modules = {} } = {}) {
 test('production graph accepts owner modules reachable only through a dynamic chunk', () => {
   const graph = createOwnerRuntimeGraph({
     'entry.js': chunk('entry.js', { entry: true }),
-    'owner.js': chunk('owner.js', { modules: { 'C:\\repo\\src\\public\\ModuleGridShell.jsx': {} } })
+    'lattice.js': chunk('lattice.js', { modules: { 'C:\\repo\\src\\public\\OwnerLatticeShell.jsx': {} } })
   });
   assert.deepEqual(graph.leaks, []);
-  assert.equal(graph.ownerChunks[0].file, 'owner.js');
+  assert.equal(graph.ownerChunks[0].file, 'lattice.js');
   assert.doesNotThrow(() => assertOwnerRuntimeGraph(graph));
 });
 

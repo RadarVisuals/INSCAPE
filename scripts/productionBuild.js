@@ -102,9 +102,10 @@ function entryKey(manifest) {
 }
 
 function ownerKey(manifest) {
-  const key = Object.keys(manifest).find((candidate) => normalize(candidate).endsWith('/src/public/ModuleGridShell.jsx')
-    || normalize(candidate) === 'src/public/ModuleGridShell.jsx');
-  if (!key) throw new Error('Vite manifest is missing the owner ModuleGridShell dynamic entry');
+  const ownerPaths = ['src/public/OwnerLatticeShell.jsx', 'src/public/ModuleGridShell.jsx'];
+  const key = Object.keys(manifest).find((candidate) => ownerPaths.some((path) => normalize(candidate).endsWith(`/${path}`)
+    || normalize(candidate) === path));
+  if (!key) throw new Error('Vite manifest is missing the selected owner runtime dynamic entry');
   return key;
 }
 

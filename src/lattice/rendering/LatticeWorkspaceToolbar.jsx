@@ -61,9 +61,10 @@ export default function LatticeWorkspaceToolbar({
             className="lattice-workspace-toolbar__tool"
             data-active={active || undefined}
             key={tool.id}
+            disabled={tool.disabled === true}
             onClick={(event) => onToolActivate?.(tool.id, event.currentTarget, event.currentTarget)}
             ref={toolButtonRefs[tool.id]}
-            title={compact ? tool.label : undefined}
+            title={tool.disabledReason || (compact ? tool.label : undefined)}
             type="button"
           >
             <Icon aria-hidden="true" size={14} strokeWidth={2} />

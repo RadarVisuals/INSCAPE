@@ -1,9 +1,9 @@
 export const OWNER_RUNTIME_MODULES = [
+  '/src/public/OwnerLatticeShell.jsx',
   '/src/public/ModuleGridShell.jsx',
   '/src/library/state/useLibraryStore.js',
   '/src/signals/state/useSignalStore.js'
 ];
-
 const normalize = (id) => id.replaceAll('\\', '/');
 
 export function createOwnerRuntimeGraph(bundle) {
@@ -27,7 +27,6 @@ export function createOwnerRuntimeGraph(bundle) {
     return ownerChunks.filter((chunk) => initialFiles.has(chunk.fileName))
       .map((chunk) => ({ entry: entry.fileName, ownerChunk: chunk.fileName }));
   });
-
   return {
     ownerModules: OWNER_RUNTIME_MODULES,
     entries: entryChunks.map((entry) => ({

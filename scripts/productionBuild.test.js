@@ -7,8 +7,8 @@ import { analyzeProductionBuild, assertSafeOutputDirectory, checkProductionBudge
   diagnosticsEnvironmentPlugin, productionBuildHygienePlugin, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
 import { ownerRuntimeIsolationPlugin } from './ownerRuntimeIsolation.js';
 
-const graph = (leaks = []) => ({ ownerModules: ['/src/public/ModuleGridShell.jsx'], entries: [{ file: 'assets/app-a.js' }],
-  ownerChunks: [{ file: 'assets/owner-a.js', modules: ['/src/public/ModuleGridShell.jsx'] }], leaks });
+const graph = (leaks = []) => ({ ownerModules: ['/src/public/OwnerLatticeShell.jsx', '/src/public/ModuleGridShell.jsx'], entries: [{ file: 'assets/app-a.js' }],
+  ownerChunks: [{ file: 'assets/lattice-a.js', modules: ['/src/public/OwnerLatticeShell.jsx'] }], leaks });
 
 async function fixture(root, suffix = 'a') {
   await mkdir(resolve(root, '.vite'), { recursive: true }); await mkdir(resolve(root, 'assets'), { recursive: true });
@@ -18,12 +18,12 @@ async function fixture(root, suffix = 'a') {
     '_standalone-wallet.js': { file: `assets/wallet-${suffix}.js`, name: 'standaloneWalletSession', isDynamicEntry: true,
       imports: ['_shared.js'], dynamicImports: ['_wallet-icon.js'] },
     '_wallet-icon.js': { file: `assets/wallet-icon-${suffix}.js` },
-    'src/public/ModuleGridShell.jsx': { file: `assets/owner-${suffix}.js`, isDynamicEntry: true, imports: ['_shared.js'], css: [`assets/owner-${suffix}.css`] }
+    'src/public/OwnerLatticeShell.jsx': { file: `assets/lattice-${suffix}.js`, isDynamicEntry: true, imports: ['_shared.js'], css: [`assets/lattice-${suffix}.css`] },
   };
   await writeFile(resolve(root, '.vite/manifest.json'), JSON.stringify(manifest));
   await writeFile(resolve(root, 'owner-runtime-graph.json'), JSON.stringify(graph()));
   for (const file of [`app-${suffix}.js`, `shared-${suffix}.js`, `wallet-${suffix}.js`, `wallet-icon-${suffix}.js`,
-    `owner-${suffix}.js`, `app-${suffix}.css`, `owner-${suffix}.css`])
+    `lattice-${suffix}.js`, `app-${suffix}.css`, `lattice-${suffix}.css`])
     await writeFile(resolve(root, 'assets', file), file.repeat(3));
   await writeFile(resolve(root, 'assets/public.webp'), 'asset');
 }

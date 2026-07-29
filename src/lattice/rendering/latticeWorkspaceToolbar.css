@@ -48,6 +48,15 @@
   border-right: 0;
 }
 
+.lattice-workspace-toolbar__tool:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.lattice-workspace-toolbar__tool:disabled:hover {
+  background: transparent;
+}
+
 .lattice-workspace-toolbar__tool:hover,
 .lattice-workspace-toolbar__tool:focus-visible,
 .lattice-workspace-toolbar__tool[data-active] {
