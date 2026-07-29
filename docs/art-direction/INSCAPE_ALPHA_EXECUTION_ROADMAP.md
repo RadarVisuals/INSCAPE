@@ -76,7 +76,7 @@ The working tree was clean when this roadmap was created.
 - [ ] Production NFT viewer, identity dossier, and fixed chrome are not yet cut over to the frozen implementations.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
-Phase 1 production integration inventory is complete and approved. The next work is Phase 2A pure domain definition, not production wiring or more broad prototype invention.
+Phase 1 production integration inventory, Phase 2A pure domain definition, and Phase 2B profile-scoped canonical lattice persistence are complete and approved. Phase 2C version 8 reader, builder, validation, and reconciliation is the next executable slice.
 
 ### Locked production-integration constraints
 
@@ -187,7 +187,7 @@ Exit criterion: the user can read one plan and understand precisely what gets wi
 
 ## Phase 2 — canonical production lattice schema
 
-Status: `[ ]` — **next phase**
+Status: `[ ]` — **incomplete; Phase 2C is the next executable slice**
 
 Goal: introduce the nine-table production domain without replacing the current UI yet.
 
@@ -243,6 +243,66 @@ Rollback: remove the new unreferenced domain modules and tests. No stored or pub
 User visual test: none. This is a pure domain and automated-verification slice.
 
 Exit criterion: the user approves the exact schemas and projection behavior, targeted and full relevant tests pass, the production build passes, and no runtime behavior changes.
+
+### Phase 2B — profile-scoped canonical lattice persistence
+
+Status: `[x]` — **approved and production-complete**
+
+Exact boundary:
+
+- [x] add one isolated injected-storage canonical lattice draft store plus colocated focused tests;
+- [x] use `inscape.lattice-production-draft.v1:<canonical-lowercase-profile-address>` without reading or writing Library workspace v8 or any legacy source;
+- [x] use the approved Phase 2A owner-draft schema and validator, persisting only complete validated canonical drafts;
+- [x] autosave immediately only through explicitly committed completed authoring operations, never pointer-move previews or transient interaction state;
+- [x] validate and serialize the candidate, complete the storage write, and only then replace the last accepted in-memory draft;
+- [x] enforce canonical profile-address scoping, reject late cross-profile commits, and keep profile drafts deterministically isolated;
+- [x] recover absent, corrupt, unsupported-version, and wrong-profile records to an unwritten empty canonical draft without legacy migration;
+- [x] return deeply immutable detached snapshots so caller-held references cannot mutate accepted state;
+- [x] keep the store outside React, Zustand, owner runtime, visitor runtime, publication, reconciliation, routes, feature flags, and the production import graph.
+
+Completion checkpoint (2026-07-29): owner-approved; focused Phase 2B and Phase 2A draft-validation tests pass (11/11), the full regression suite passes (663/663), and the production build and budgets pass. No runtime imports or visible behavior changed.
+
+Explicitly excluded:
+
+- runtime integration, React hooks, Zustand state, debounce timers, or a development harness;
+- Library workspace v8, legacy Home/Gallery/Upper/canvas-object/five-table reads, writes, reinterpretation, import, or coordinate conversion;
+- profile-document or publication versions, public projection, reconciliation, wallet, IPFS, routes, iframes, feature flags, owner/visitor UI, or the frozen prototype;
+- Phase 2C, Phase 3, or later work.
+
+Rollback: stop reading or instantiating the isolated key. Legacy records remain intact and no canonical lattice store module is currently imported by a production runtime.
+
+User visual test: none. This slice has no runtime consumer or approved development harness.
+
+Exit criterion: the user approves the storage key, authority, validation, transactional completed-operation persistence, corruption recovery, immutable snapshots, profile isolation, and verification results. Met and approved.
+
+### Phase 2C — version 8 reader, builder, validation, and reconciliation
+
+Status: `[ ]` — **next executable slice; approval required before implementation**
+
+Exact boundary:
+
+- [ ] add version 8 profile-document reading, building, validation, and owner reconciliation while version 7 remains the publication default;
+- [ ] make the validated version 8 `lattice` field the sole canonical lattice source whenever lattice rendering is selected;
+- [ ] keep any retained version-7-shaped presentation, spaces, and canvas-object fields as compatibility fallback only, never lattice inputs or a second writable authority;
+- [ ] keep versions 1 through 7 readable as legacy documents without automatic migration into nine-table documents;
+- [ ] make Owner Preview consume the exact same pure public lattice projection as visitor rendering;
+- [ ] extend owner reconciliation transactionally rather than embedding additional incidental state in `ModuleGridShell`;
+- [ ] keep version 8 publication disabled and preserve the existing wallet, IPFS, canonical verification, and read-back sequence unchanged.
+
+Explicitly excluded:
+
+- enabling version 8 publication or changing the version 7 publication default;
+- automatic Home, Gallery, Upper, canvas-object, or five-table import, reinterpretation, merging, or coordinate conversion;
+- production owner or visitor renderer cutover, routes, iframes, feature flags, wallet behavior, IPFS behavior, or the frozen prototype;
+- Phase 3 or later work.
+
+Rollback: keep the version 8 reader but return snapshot building to version 7. Version 8 publication remains disabled.
+
+User visual test: none unless a deliberately approved development harness is added.
+
+Verification: focused version 8 reader, builder, validation, projection, reconciliation, compatibility, and rollback tests; the full relevant regression suite; the production build and budgets; and confirmation that visitor isolation and the runtime import graph remain unchanged.
+
+Exit criterion: the user approves the exact version 8 read/build/validation/reconciliation boundary, focused and regression tests pass, the production build and budgets pass, versions 1 through 7 remain readable, version 7 remains the publication default, and no visible production runtime changes.
 
 ## Phase 3 — shared production table renderer
 
@@ -480,6 +540,6 @@ Start with:
 
 ## Immediate next action
 
-Prepare **Phase 2A — pure canonical schemas and public-projection adapter** as the next executable slice.
+Prepare **Phase 2C — version 8 reader, builder, validation, and reconciliation** as the next executable slice.
 
-Do not implement Phase 2A until the user approves its exact file and test boundary. Phase 2A must not wire production runtime, storage, profile-document versions, publication versions, or feature flags.
+Do not implement Phase 2C until the user approves its exact file, runtime, compatibility, rollback, and test boundary. Phase 2C must keep version 7 as the publication default, leave version 8 publication disabled, preserve versions 1 through 7 as legacy documents, and stop before Phase 3.
