@@ -9,6 +9,8 @@
     "build:check": "node scripts/checkProductionBuild.js",
     "test": "node --test",
     "test:browser": "node --test browser-tests/published-visitor.browser.mjs",
+    "test:browser:phase3": "node --test browser-tests/lattice-production-table.browser.mjs",
+    "visual:phase3": "node browser-tests/lattice-production-table.browser.mjs --visual",
     "preview": "vite preview"
   },
   "dependencies": {

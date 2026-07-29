@@ -1,0 +1,12 @@
+* { box-sizing: border-box; }
+html, body, #root { width: 100%; height: 100%; margin: 0; }
+body { background: #161818; color: #d8d4ca; font-family: "IBM Plex Mono", monospace; }
+.phase3-comparison { display: grid; justify-items: center; gap: 24px; min-width: 100%; padding: 24px; }
+.phase3-comparison > header, .phase3-comparison > section { width: min(960px, 100%); }
+.phase3-comparison > header span, .phase3-comparison h2 { font-size: 10px; font-weight: 400; letter-spacing: .12em; }
+.phase3-comparison h1 { margin: 6px 0 0; font: 500 24px/1.1 Arial, sans-serif; }
+.phase3-comparison h2 { margin: 0 0 8px; }
+.phase3-direct-surface { width: 960px; max-width: 100%; height: 540px; }
+.phase3-comparison iframe { display: block; width: 640px; height: 360px; max-width: 100%; border: 1px solid #4c4d49; }
+.phase3-comparison iframe.is-tall { width: 390px; height: 600px; }
+body.phase3-embed { overflow: hidden; }

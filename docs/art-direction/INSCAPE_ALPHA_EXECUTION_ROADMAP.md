@@ -311,7 +311,7 @@ Exit criterion: the user approves the exact version 8 read/build/validation/reco
 
 ## Phase 3 — shared production table renderer
 
-Status: `[ ]`
+Status: `[~]` — **renderer-only sub-slice accepted; production cutover remains incomplete**
 
 Goal: render one canonical table identically for owner preview, visitor view, direct visits, and iframes.
 
@@ -326,11 +326,23 @@ Required behavior:
 - native/cropped media ratios and transparency remain correct;
 - no owner controls in visitor runtime.
 
+Renderer-only sub-slice checklist:
+
+- [x] add one presentation-only renderer that accepts a validated canonical public lattice and table ID;
+- [x] project the fixed 32 × 18 plane, placements, navigation order, crop, mat, backing, transparency, labels, and resize behavior without mutating authored data;
+- [x] preserve `frameId` semantically while rendering only contract-supported geometry, with no invented frame metadata or richer content relationship;
+- [x] add a fail-closed production media adapter for validated public HTTPS/IPFS references and honest unavailable/unsupported states;
+- [x] keep the renderer's transitive import graph free of owner stores, persistence, reconciliation, wallets/providers, publication writers, authoring callbacks, and prototype fixtures;
+- [x] keep one removable browser-test-only comparison fixture that mounts the exact same canonical public-table value directly and in 640 × 360 and 390 × 600 iframes;
+- [ ] connect the renderer to Owner Preview, visitor deployment, direct visits, or production iframe surfaces only in a later separately approved slice.
+
 User visual test:
 
-1. Open the same table directly and in two differently sized iframes.
-2. Confirm composition order and relative placement remain identical.
-3. Confirm no stretching, random reflow, pixel gaps, or transparency haze.
+1. Run `npm run visual:phase3` from the repository root.
+2. Review `http://127.0.0.1:4173/browser-tests/lattice-production-table-fixture.html` in the visible browser window, including the direct surface and both differently sized iframes.
+3. Press `Ctrl+C` in the launching terminal to stop the browser and local fixture server. The automated contract comparison remains `npm run test:browser:phase3`.
+
+Implementation checkpoint (2026-07-29, renderer-only sub-slice accepted): the focused renderer/media/projection/fixture/import-isolation set passes 11 tests; the dedicated browser comparison passes 1 test, including ready/loading/failure states, native and cropped media geometry, mat/backing/transparency behavior, a bounded deterministic alpha sample, labels, order, grid alignment, immutability, and storage isolation; the full regression suite passes 701 tests with 0 failures; the production build, production budgets (1,238,725 initial JavaScript bytes), owner-runtime isolation (4 tests), and `git diff --check` pass. The optional visible browser-test-only review uses the same canonical value and mocked media at a fixed loopback URL. The pre-existing published-visitor browser suite remains blocked before its assertions by the checkpoint's stale `.published-home-world__header` selector, which is absent from the production source; the Phase 3 slice does not modify that suite. No production route or renderer consumer was added, and version 7 publication remains the default while version 8 publication remains disabled.
 
 Exit criterion: the same public table renders deterministically across owner preview, visitor, direct, and iframe surfaces.
 

@@ -1,0 +1,90 @@
+.lattice-production-table {
+  --lattice-production-surface: #0b0c0c;
+  --lattice-production-grid-line: rgb(216 213 204 / 0.085);
+  --lattice-production-label-surface: rgb(9 10 10 / 0.88);
+  --lattice-production-label-ink: rgb(216 213 204 / 0.84);
+  --lattice-production-label-muted: rgb(216 213 204 / 0.56);
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 1px;
+  min-height: 1px;
+  overflow: hidden;
+  background-color: var(--lattice-production-surface);
+  background-image:
+    linear-gradient(var(--lattice-production-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--lattice-production-grid-line) 1px, transparent 1px);
+  background-position:
+    var(--lattice-production-grid-origin-x, 0) var(--lattice-production-grid-origin-y, 0),
+    var(--lattice-production-grid-origin-x, 0) var(--lattice-production-grid-origin-y, 0);
+  background-size:
+    var(--lattice-production-cell-size, 40px) var(--lattice-production-cell-size, 40px),
+    var(--lattice-production-cell-size, 40px) var(--lattice-production-cell-size, 40px);
+  color: var(--lattice-production-label-ink);
+  isolation: isolate;
+}
+
+.lattice-production-table[data-surface="graphite"] { --lattice-production-surface: #383a3a; --lattice-production-grid-line: rgb(232 231 226 / 0.115); }
+.lattice-production-table[data-surface="slate"] { --lattice-production-surface: #7b7b7b; --lattice-production-grid-line: rgb(243 242 237 / 0.14); }
+.lattice-production-table[data-surface="ash"] { --lattice-production-surface: #b2b2b2; --lattice-production-grid-line: rgb(255 255 255 / 0.22); --lattice-production-label-ink: rgb(21 24 24 / 0.88); --lattice-production-label-muted: rgb(21 24 24 / 0.58); --lattice-production-label-surface: rgb(213 212 207 / 0.91); }
+.lattice-production-table[data-surface="mist"] { --lattice-production-surface: #c9c6bd; --lattice-production-grid-line: rgb(18 20 20 / 0.11); --lattice-production-label-ink: rgb(24 26 26 / 0.9); --lattice-production-label-muted: rgb(24 26 26 / 0.58); --lattice-production-label-surface: rgb(215 211 202 / 0.92); }
+.lattice-production-table[data-surface="paper"] { --lattice-production-surface: #d8d4ca; --lattice-production-grid-line: rgb(34 31 27 / 0.095); --lattice-production-label-ink: rgb(31 29 26 / 0.9); --lattice-production-label-muted: rgb(31 29 26 / 0.58); --lattice-production-label-surface: rgb(232 228 218 / 0.93); }
+
+.lattice-production-table__authored-plane {
+  position: absolute;
+  pointer-events: none;
+}
+
+.lattice-production-placement {
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  pointer-events: none;
+}
+
+.lattice-production-placement__mat,
+.lattice-production-placement__opening,
+.lattice-production-placement__opening img {
+  position: absolute;
+  display: block;
+  box-sizing: border-box;
+}
+
+.lattice-production-placement__mat { inset: 0; }
+.lattice-production-placement__opening { overflow: hidden; }
+.lattice-production-placement__opening img { max-width: none; max-height: none; opacity: 0; }
+.lattice-production-placement__opening img.is-ready { opacity: 1; }
+
+.lattice-production-placement__status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  color: var(--lattice-production-label-muted);
+  font: 8px/1.25 "IBM Plex Mono", "Courier New", monospace;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.lattice-production-table__label {
+  position: absolute;
+  z-index: 2147483000;
+  display: grid;
+  min-width: 74px;
+  max-width: min(280px, 54%);
+  gap: 3px;
+  padding: 5px 7px;
+  border: 1px solid color-mix(in srgb, currentColor 34%, transparent);
+  background: var(--lattice-production-label-surface);
+  color: var(--lattice-production-label-ink);
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.lattice-production-table__label strong,
+.lattice-production-table__label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lattice-production-table__label strong { font-size: 10px; font-weight: 500; letter-spacing: 0.14em; }
+.lattice-production-table__label span { color: var(--lattice-production-label-muted); font-size: 8px; letter-spacing: 0.1em; }
