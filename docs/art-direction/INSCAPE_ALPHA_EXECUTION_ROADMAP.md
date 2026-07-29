@@ -213,18 +213,20 @@ Exit criterion: schema, projection, validation, migration, and storage tests pas
 
 ### Phase 2A — pure canonical schemas and public-projection adapter
 
-Status: `[ ]` — **next executable slice; approval required before implementation**
+Status: `[x]` — **approved and production-complete**
 
 Exact boundary:
 
-- add isolated production owner-draft and published-lattice domain modules plus tests;
-- expected modules are `src/lattice/domain/latticeProductionDraft.js`, `src/lattice/domain/latticeProductionPublication.js`, and `src/lattice/domain/latticeProductionAdapter.js`, with colocated tests;
-- define the permanent row-major 3 × 3 topology and fixed 32 × 18 square-cell authored plane;
-- persist placement geometry conceptually as integer `column`, `row`, `columnSpan`, and `rowSpan` values;
-- define deterministic layers, navigation order, crop, frame/mat/backing, transparency, visibility, label, appearance, and identity-overlay validation;
-- project real production stable asset records into validated public asset references;
-- preserve nine-table topology while redacting private table and placement content and inactive private identity values;
-- make the projection pure so Owner Preview and visitor rendering can later consume the exact same value.
+- [x] add isolated production owner-draft and published-lattice domain modules plus tests;
+- [x] expected modules are `src/lattice/domain/latticeProductionDraft.js`, `src/lattice/domain/latticeProductionPublication.js`, and `src/lattice/domain/latticeProductionAdapter.js`, with colocated tests;
+- [x] define the permanent row-major 3 × 3 topology and fixed 32 × 18 square-cell authored plane;
+- [x] persist placement geometry conceptually as integer `column`, `row`, `columnSpan`, and `rowSpan` values;
+- [x] define deterministic layers, navigation order, crop, frame/mat/backing, transparency, visibility, label, appearance, and identity-overlay validation;
+- [x] project real production stable asset records into validated public asset references;
+- [x] preserve nine-table topology while redacting private table and placement content and inactive private identity values;
+- [x] make the projection pure so Owner Preview and visitor rendering can later consume the exact same value.
+
+Completion checkpoint (2026-07-29): owner-approved; focused Phase 2A tests pass (10/10), the full regression suite passes (656/656), and the production build and budgets pass. No runtime imports or visible behavior changed.
 
 Explicitly excluded:
 
