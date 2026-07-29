@@ -18,6 +18,8 @@ The current production application is valuable, deployed, publishing to IPFS, re
 
 ## 2. Required reading before implementation
 
+- `docs/art-direction/INSCAPE_ALPHA_EXECUTION_ROADMAP.md` — live execution status, phase gates, checkpoints, and the next approved action.
+
 Read these files completely before proposing or changing production code:
 
 1. `docs/INSCAPE_VISION_AND_ART_DIRECTION.md`
