@@ -40,6 +40,21 @@ test('manifest classification survives hashed filename changes and current synth
   } finally { await Promise.all(roots.map((root) => rm(root, { recursive: true, force: true }))); }
 });
 
+test('manifest classification accepts Vite internal owner facade keys after a nested lazy split', async () => {
+  const root = resolve(tmpdir(), `underneath-budget-owner-facade-${process.pid}`);
+  try {
+    await fixture(root, 'facade');
+    const manifestPath = resolve(root, '.vite/manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+    manifest['_OwnerLatticeShell-facade.js'] = manifest['src/public/OwnerLatticeShell.jsx'];
+    delete manifest['src/public/OwnerLatticeShell.jsx'];
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    const report = await analyzeProductionBuild(root);
+    assert.equal(report.ownerJavaScript.length, 1);
+    assert.equal(report.ownerJavaScript[0].file, 'assets/lattice-facade.js');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test('each independent budget category reports an actionable overage', () => {
   for (const [name, limits] of Object.entries(PRODUCTION_BUDGETS)) {
     const totals = Object.fromEntries(Object.entries(PRODUCTION_BUDGETS).map(([key, value]) =>

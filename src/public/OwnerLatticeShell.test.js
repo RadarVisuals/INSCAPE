@@ -38,7 +38,7 @@ test('invalid profiles fail closed before a render value can be produced', () =>
   assert.doesNotMatch(innerSource, /ownerAuthoringEnabled|return null/);
 });
 
-test('Phase 4 shell has no storage, reconciliation, publication writer, visitor, or prototype dependency', () => {
+test('Phase 5A shell adds only the read-only owner Browser and no canonical storage or writable command surface', () => {
   for (const forbidden of [
     'localStorage', 'sessionStorage', 'indexedDB', 'latticeProductionDraftStore',
     'Reconciliation', 'ProfileDocument', 'IPFS', 'PublishedProfile',
@@ -46,6 +46,10 @@ test('Phase 4 shell has no storage, reconciliation, publication writer, visitor,
   ]) assert.doesNotMatch(source, new RegExp(forbidden, 'iu'));
   assert.match(source, /LatticeProductionTableRenderer/);
   assert.match(source, /KeeperDock/);
+  assert.match(source, /BrowserWorkspace/);
+  assert.match(source, /useOwnerLatticeBrowser/);
+  assert.match(source, /placementAvailable: false/);
+  assert.doesNotMatch(source, /commands=|requestPlacement|toggleFavorite|createCategory|setCategory/);
 });
 
 test('navigation owns one runtime destination while minimap requests remain exact', () => {
@@ -64,4 +68,12 @@ test('fixed chrome stays outside the moving authored-plane stage', () => {
   assert.match(styles, /\.owner-lattice-theme[^}]*position: fixed/);
   assert.match(source, /disabled: true/);
   assert.match(source, /SESSION ONLY \/ NOT PERSISTED/);
+});
+
+test('Browser open, close, and Escape state stays runtime-only with focus restoration', () => {
+  assert.match(source, /const \[browserOpen, setBrowserOpen\] = useState\(false\)/);
+  assert.match(source, /queueMicrotask\(\(\) => browserToolRef\.current\?\.focus/);
+  assert.match(source, /onRequestClose=\{closeBrowser\}/);
+  assert.match(source, /open=\{browserOpen\}/);
+  assert.match(source, /toolButtonRefs=\{\{ browser: browserToolRef \}\}/);
 });

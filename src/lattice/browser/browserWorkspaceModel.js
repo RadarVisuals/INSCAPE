@@ -1,5 +1,10 @@
 export const BROWSER_TABS = Object.freeze({ INDEX: 'index', CATEGORIES: 'categories' });
-export const BROWSER_FILING_FILTERS = Object.freeze({ ALL: 'all', SORTED: 'sorted', UNSORTED: 'unsorted' });
+export const BROWSER_FILING_FILTERS = Object.freeze({
+  ALL: 'all',
+  FAVORITES: 'favorites',
+  SORTED: 'sorted',
+  UNSORTED: 'unsorted',
+});
 export const BROWSER_RESIZE_STEP = 24;
 
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
@@ -49,13 +54,20 @@ export function resizeBrowserByKey(size, key, viewport, step = BROWSER_RESIZE_ST
   return delta ? resizeBrowserAroundCenter(size, delta, viewport) : null;
 }
 
-export function filterBrowserAssets(assets, categories, { filing = BROWSER_FILING_FILTERS.ALL, mediaType = 'all', query = '' } = {}) {
+export function filterBrowserAssets(assets, categories, {
+  favorites = [],
+  filing = BROWSER_FILING_FILTERS.ALL,
+  mediaType = 'all',
+  query = '',
+} = {}) {
   const source = Array.isArray(assets) ? assets : [];
+  const favoriteIds = new Set(Array.isArray(favorites) ? favorites : []);
   const filedIds = new Set((Array.isArray(categories) ? categories : [])
     .flatMap((category) => Array.isArray(category.assetIds) ? category.assetIds : []));
   const tokens = String(query || '').trim().toLocaleLowerCase().split(/\s+/u).filter(Boolean);
   return source.filter((asset) => {
     const id = asset?.stableAssetId || asset?.id;
+    if (filing === BROWSER_FILING_FILTERS.FAVORITES && !favoriteIds.has(id)) return false;
     if (filing === BROWSER_FILING_FILTERS.SORTED && !filedIds.has(id)) return false;
     if (filing === BROWSER_FILING_FILTERS.UNSORTED && filedIds.has(id)) return false;
     if (mediaType !== 'all' && String(asset?.mediaType || '').toLocaleLowerCase() !== mediaType) return false;

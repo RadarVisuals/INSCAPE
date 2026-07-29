@@ -26,7 +26,10 @@ export default function useBrowserWorkspace(data) {
 
   const assets = Array.isArray(data?.assets) ? data.assets : [];
   const categories = Array.isArray(data?.categories) ? data.categories : [];
-  const filteredAssets = useMemo(() => filterBrowserAssets(assets, categories, { filing, mediaType, query }), [assets, categories, filing, mediaType, query]);
+  const favorites = Array.isArray(data?.favorites) ? data.favorites : [];
+  const filteredAssets = useMemo(() => filterBrowserAssets(assets, categories, {
+    favorites, filing, mediaType, query,
+  }), [assets, categories, favorites, filing, mediaType, query]);
   const categoryAssets = useMemo(() => searchBrowserCategoryAssets(assets, query), [assets, query]);
   const mediaTypes = useMemo(() => [...new Set(assets.map((asset) => String(asset?.mediaType || '').toLocaleLowerCase()).filter(Boolean))], [assets]);
   const selectedAsset = assets.find((asset) => (asset.stableAssetId || asset.id) === selectedAssetId) || null;

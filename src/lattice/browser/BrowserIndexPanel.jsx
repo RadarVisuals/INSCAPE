@@ -3,6 +3,7 @@ import { BROWSER_FILING_FILTERS } from './browserWorkspaceModel.js';
 
 const FILTER_LABELS = Object.freeze({
   [BROWSER_FILING_FILTERS.ALL]: 'ALL OWNED',
+  [BROWSER_FILING_FILTERS.FAVORITES]: 'FAVORITES',
   [BROWSER_FILING_FILTERS.SORTED]: 'SORTED',
   [BROWSER_FILING_FILTERS.UNSORTED]: 'UNSORTED',
 });
@@ -34,6 +35,7 @@ export default function BrowserIndexPanel({ data, workspace }) {
         {loading && <p className="lattice-browser-notice">RESOLVING ASSET POOL{Number.isFinite(progress?.total) && progress.total > 0 ? ` / ${progress.resolved || 0} OF ${progress.total}` : ''}</p>}
         {partial && <p className="lattice-browser-notice">PARTIAL ASSET RECORDS / UNRESOLVED VALUES REMAIN ABSENT</p>}
         {failed && <p className="lattice-browser-notice" data-error>ASSET INDEX UNAVAILABLE{data.assetError ? ` / ${data.assetError}` : ''}</p>}
+        {data.rejectedAssetCount > 0 && <p className="lattice-browser-notice">{data.rejectedAssetCount} INVALID OR CROSS-PROFILE RECORDS REJECTED</p>}
         <BrowserAssetResults
           assets={workspace.filteredAssets}
           emptyLabel={loading ? 'WAITING FOR RESOLVED ASSETS' : failed ? 'NO CACHED ASSETS AVAILABLE' : 'NO ASSETS MATCH THIS VIEW'}

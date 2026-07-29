@@ -104,7 +104,12 @@ function entryKey(manifest) {
 function ownerKey(manifest) {
   const ownerPaths = ['src/public/OwnerLatticeShell.jsx', 'src/public/ModuleGridShell.jsx'];
   const key = Object.keys(manifest).find((candidate) => ownerPaths.some((path) => normalize(candidate).endsWith(`/${path}`)
-    || normalize(candidate) === path));
+    || normalize(candidate) === path)) || Object.keys(manifest).find((candidate) => {
+    const record = manifest[candidate];
+    return record.isDynamicEntry === true && record.file?.endsWith('.js')
+      && ownerPaths.some((path) => normalize(candidate).includes(path.split('/').at(-1).replace('.jsx', ''))
+        || normalize(record.file).includes(path.split('/').at(-1).replace('.jsx', '')));
+  });
   if (!key) throw new Error('Vite manifest is missing the selected owner runtime dynamic entry');
   return key;
 }

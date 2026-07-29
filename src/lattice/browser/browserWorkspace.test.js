@@ -7,24 +7,26 @@ const fixture = readFileSync(new URL('./BrowserFixtureHarness.jsx', import.meta.
 const categoryDialog = readFileSync(new URL('./BrowserCategoryDialog.jsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./browserWorkspace.css', import.meta.url), 'utf8');
 
-test('Browser owns its presentation and accepts grouped data and command adapters', () => {
-  assert.match(workspace, /function BrowserWorkspace\(\{ commands, data, onRequestClose, open = false \}\)/);
+test('Browser owns its presentation and accepts read-only grouped data without commands', () => {
+  assert.match(workspace, /function BrowserWorkspace\(\{ data, onRequestClose, open = false \}\)/);
   assert.match(workspace, /role="tablist"/);
   assert.match(workspace, /role="tab"/);
   assert.match(workspace, /role="tabpanel"/);
-  assert.match(workspace, /commands\.requestPlacement/);
+  assert.match(workspace, /<button disabled type="button">PLACE UNAVAILABLE/);
+  assert.doesNotMatch(workspace, /commands\.|requestPlacement|onClick=\{place/);
   assert.doesNotMatch(workspace, /useLibraryStore|localStorage|sessionStorage|wallet|IPFS|createPlacementAtAnchor|normalizedInsertionAnchor/iu);
 });
 
-test('fixture adapter is session-only and does not manufacture identity or persistence', () => {
+test('fixture adapter remains session-only prototype evidence and is not imported by the Browser', () => {
   assert.match(fixture, /ISOLATED|fixture/i);
   assert.match(fixture, /requestPlacement/);
   assert.doesNotMatch(fixture, /RADAR|VXCTXR|RESIDENT ZERO|localStorage|sessionStorage|Date\.|Math\.random|useLibraryStore/iu);
+  assert.doesNotMatch(workspace, /BrowserFixtureHarness|latticeEngineFixtures/);
 });
 
-test('dialog opening synchronizes its input and Categories consumes query-only assets', () => {
+test('Category dialogs remain isolated while the read-only Browser consumes query-only assets', () => {
   assert.match(categoryDialog, /setName\(categoryDialogInitialName\(dialog\)\)/);
-  assert.match(workspace, /workspace\.dialog && <BrowserCategoryDialog/);
+  assert.doesNotMatch(workspace, /BrowserCategoryDialog|createCategory|renameCategory|deleteCategory|setCategory/);
   assert.match(workspace, /assets: workspace\.categoryAssets/);
   assert.doesNotMatch(workspace, /BrowserCategoriesPanel[^\n]*workspace\.filteredAssets/);
 });

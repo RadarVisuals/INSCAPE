@@ -381,7 +381,7 @@ Exit criterion: owner navigation is intuitive, deterministic, responsive, and do
 
 ## Phase 5 — production Browser and authoring geometry
 
-Status: `[ ]`
+Status: `[~]` — **Phase 5A accepted; Phase 5B onward remains unstarted**
 
 Goal: wire the isolated Browser to real INDEX/CATEGORIES data and enable table authoring.
 
@@ -394,6 +394,16 @@ Includes:
 - explicit selection and focus restoration;
 - deterministic autosave without cross-profile leakage;
 - no automatic arrangement on load.
+
+### Phase 5A — read-only real Browser integration
+
+Status: `[x]` — implemented, verified, and visually accepted.
+
+The selected lazy owner graph exposes the Browser toolbar control and loads a nested Browser chunk only after first use. INDEX, Favorites, and Categories are derived from the validated active-profile Library workspace and asset cache. Organization is read-only, PLACE is natively disabled, and no canonical draft store or authoring callback is imported or invoked. Existing Library loading, cache refresh, profile transition, and legacy-workspace normalization behavior remains owned solely by the pre-existing Library lifecycle.
+
+Accepted checkpoint (2026-07-29): visual acceptance confirmed. The production owner Browser remains read-only and profile-scoped; Favorite and Category mutation commands are absent, PLACE is disabled without a callback, ordinary interaction leaves Library organization and canonical-authoring storage untouched, and stale asset batches remain generation-inert. The Browser stays inside the selected lazy owner graph, with no fixture harness or fixture data in production and no change to `App.jsx`, top-level routing, authentication, Startveil, publication, wallets, IPFS, visitor or iframe behavior. Version 7 remains the publication default and version 8 publication remains disabled.
+
+Phase 5B onward status: `[ ]` — unstarted and requires a separate boundary review. Placement, geometry, transactions, visibility, crop, presentation, and Owner Preview behavior are not approved by Phase 5A.
 
 User visual test:
 

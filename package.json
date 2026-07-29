@@ -11,6 +11,7 @@
     "test:browser": "node --test browser-tests/published-visitor.browser.mjs",
     "test:browser:phase3": "node --test browser-tests/lattice-production-table.browser.mjs",
     "test:browser:phase4": "node --test browser-tests/owner-lattice-navigation.browser.mjs",
+    "test:browser:phase5a": "node --test browser-tests/owner-lattice-browser.browser.mjs",
     "visual:phase3": "node browser-tests/lattice-production-table.browser.mjs --visual",
     "preview": "vite preview"
   },

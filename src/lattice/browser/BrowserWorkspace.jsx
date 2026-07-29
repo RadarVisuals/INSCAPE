@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Archive, FolderTree, Layers3, X } from 'lucide-react';
 import BrowserCategoriesPanel from './BrowserCategoriesPanel.jsx';
-import BrowserCategoryDialog from './BrowserCategoryDialog.jsx';
 import BrowserIndexPanel from './BrowserIndexPanel.jsx';
 import { BROWSER_TABS } from './browserWorkspaceModel.js';
 import useBrowserWorkspace from './useBrowserWorkspace.js';
@@ -14,7 +13,7 @@ const TABS = Object.freeze([
   { id: BROWSER_TABS.CATEGORIES, label: 'CATEGORIES', Icon: FolderTree },
 ]);
 
-export default function BrowserWorkspace({ commands, data, onRequestClose, open = false }) {
+export default function BrowserWorkspace({ data, onRequestClose, open = false }) {
   const workspace = useBrowserWorkspace(data);
   const presence = useLatticeChromePresence(open ? 'browser' : null);
   const tabRefs = useRef(new Map());
@@ -25,17 +24,11 @@ export default function BrowserWorkspace({ commands, data, onRequestClose, open 
 
   if (!presence.renderedValue) return null;
 
-  const closeDialog = () => {
-    const returnFocus = workspace.dialog?.returnFocus;
-    workspace.setDialog(null);
-    requestAnimationFrame(() => returnFocus?.focus({ preventScroll: true }));
-  };
   const handleEscape = (event) => {
     if (event.key !== 'Escape') return;
     event.preventDefault();
     event.stopPropagation();
-    if (workspace.dialog) closeDialog();
-    else onRequestClose?.('escape');
+    onRequestClose?.('escape');
   };
   const selectTab = (tabId, focus = false) => {
     workspace.setActiveTab(tabId);
@@ -51,21 +44,6 @@ export default function BrowserWorkspace({ commands, data, onRequestClose, open 
     event.stopPropagation();
     selectTab(destination.id, true);
   };
-  const confirmDialog = (name) => {
-    const dialog = workspace.dialog;
-    if (dialog.type === 'create') {
-      const id = commands.createCategory(name);
-      if (id) workspace.setSelectedCategoryId(id);
-    } else if (dialog.type === 'rename') commands.renameCategory(dialog.category.id, name);
-    else if (dialog.type === 'delete') commands.deleteCategory(dialog.category.id);
-    closeDialog();
-  };
-  const placeSelected = () => {
-    if (!workspace.selectedAsset) return;
-    commands.requestPlacement(workspace.selectedAsset.stableAssetId || workspace.selectedAsset.id);
-    onRequestClose?.('placement');
-  };
-
   return (
     <section
       aria-label="Owner asset Browser"
@@ -110,12 +88,12 @@ export default function BrowserWorkspace({ commands, data, onRequestClose, open 
       >
         {workspace.activeTab === BROWSER_TABS.INDEX
           ? <BrowserIndexPanel data={data} workspace={workspace} />
-          : <BrowserCategoriesPanel commands={commands} data={{ ...data, assets: workspace.categoryAssets }} workspace={workspace} />}
+          : <BrowserCategoriesPanel data={{ ...data, assets: workspace.categoryAssets }} workspace={workspace} />}
       </div>
       <footer className="lattice-browser-footer">
-        <span>{data.fixture ? 'ISOLATED FIXTURE SESSION' : 'LOCAL DRAFT'}</span>
+        <span>{data.fixture ? 'ISOLATED FIXTURE SESSION' : 'READ ONLY / PROFILE SCOPED'}</span>
         <span>{workspace.selectedAsset ? workspace.selectedAsset.title || 'ASSET SELECTED' : 'SELECT ASSET'}</span>
-        <button disabled={!workspace.selectedAsset || data.activeTable?.placementAvailable === false || typeof commands.requestPlacement !== 'function'} onClick={placeSelected} type="button">PLACE / {data.activeTable?.label || 'ACTIVE TABLE'}</button>
+        <button disabled type="button">PLACE UNAVAILABLE / {data.activeTable?.label || 'ACTIVE TABLE'}</button>
       </footer>
       <button
         aria-label="Resize Browser"
@@ -129,7 +107,6 @@ export default function BrowserWorkspace({ commands, data, onRequestClose, open 
         title="Drag to resize around center; arrow keys resize in steps"
         type="button"
       />
-      {workspace.dialog && <BrowserCategoryDialog dialog={workspace.dialog} onCancel={closeDialog} onConfirm={confirmDialog} />}
     </section>
   );
 }

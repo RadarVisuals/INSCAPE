@@ -20,6 +20,7 @@
   box-shadow: var(--lattice-chrome-shadow);
   color: var(--lattice-browser-ink);
   font-family: "Inscape IBM Plex Mono", monospace;
+  pointer-events: auto;
   user-select: none;
 }
 .lattice-browser-workspace[data-phase="entering"] { animation: lattice-browser-window-in var(--lattice-chrome-motion-duration) var(--lattice-chrome-motion-easing) both; }
@@ -99,10 +100,10 @@
 .lattice-browser-category-section + .lattice-browser-category-section { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--lattice-browser-line); }
 .lattice-browser-section-label { margin-bottom: 9px; display: flex; justify-content: space-between; color: var(--lattice-browser-faint); font-size: 7px; letter-spacing: 0.09em; }
 .lattice-browser-assignment-list { display: grid; border-top: 1px solid var(--lattice-browser-line); }
-.lattice-browser-assignment-list button { min-height: 31px; padding: 0 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 0; border-bottom: 1px solid var(--lattice-browser-line); background: transparent; color: var(--lattice-browser-muted); cursor: pointer; font: 500 8px "Inscape IBM Plex Mono", monospace; text-align: left; }
-.lattice-browser-assignment-list button[data-active] { background: var(--lattice-browser-selected); color: var(--lattice-browser-ink); }
-.lattice-browser-assignment-list button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lattice-browser-assignment-list button small { flex: 0 0 auto; color: var(--lattice-browser-faint); font-size: 6px; }
+.lattice-browser-assignment-list > div { min-height: 31px; padding: 0 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--lattice-browser-line); color: var(--lattice-browser-muted); font: 500 8px "Inscape IBM Plex Mono", monospace; text-align: left; }
+.lattice-browser-assignment-list > div[data-active] { background: var(--lattice-browser-selected); color: var(--lattice-browser-ink); }
+.lattice-browser-assignment-list > div span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lattice-browser-assignment-list > div small { flex: 0 0 auto; color: var(--lattice-browser-faint); font-size: 6px; }
 
 .lattice-browser-footer { min-width: 0; padding: 0 10px; display: grid; grid-template-columns: 1fr minmax(0, 1fr) auto; align-items: center; gap: 10px; border-top: 1px solid var(--lattice-menu-line); background: var(--lattice-menu-panel); color: var(--lattice-menu-faint); font-size: 7px; letter-spacing: 0.09em; }
 .lattice-browser-footer > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

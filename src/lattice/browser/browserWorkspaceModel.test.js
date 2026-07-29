@@ -30,7 +30,18 @@ test('index filtering keeps filing, media and tokenized search independent', () 
   const categories = [{ assetIds: ['asset:a'] }];
   assert.deepEqual(filterBrowserAssets(assets, categories, { filing: BROWSER_FILING_FILTERS.SORTED }).map((asset) => asset.stableAssetId), ['asset:a']);
   assert.deepEqual(filterBrowserAssets(assets, categories, { filing: BROWSER_FILING_FILTERS.UNSORTED }).map((asset) => asset.stableAssetId), ['asset:b', 'asset:c']);
+  assert.deepEqual(filterBrowserAssets(assets, categories, { favorites: ['asset:b'], filing: BROWSER_FILING_FILTERS.FAVORITES }).map((asset) => asset.stableAssetId), ['asset:b']);
   assert.deepEqual(filterBrowserAssets(assets, categories, { mediaType: 'image', query: 'portrait study' }).map((asset) => asset.stableAssetId), ['asset:a']);
+});
+
+test('read-only Favorite filtering never mutates the provided membership', () => {
+  const favorites = ['asset:a'];
+  const before = [...favorites];
+  filterBrowserAssets([{ stableAssetId: 'asset:a' }], [], {
+    favorites,
+    filing: BROWSER_FILING_FILTERS.FAVORITES,
+  });
+  assert.deepEqual(favorites, before);
 });
 
 test('category dialogs reset create text and always use the current rename target', () => {
