@@ -3,6 +3,8 @@ import { normalizeProfileAddress } from '../library/config.js';
 import { useLibraryStore } from '../library/state/useLibraryStore.js';
 import { createLatticeProductionPlacementCandidate } from '../lattice/authoring/latticeProductionPlacement.js';
 import { createLatticeProductionMovementCandidate } from '../lattice/authoring/latticeProductionMovement.js';
+import { createLatticeProductionRemovalCandidate } from '../lattice/authoring/latticeProductionRemoval.js';
+import { createLatticeProductionResizeCandidate } from '../lattice/authoring/latticeProductionResize.js';
 import { adaptLatticeProductionBrowserAsset } from '../lattice/browser/latticeProductionBrowserAdapter.js';
 import {
   LATTICE_PRODUCTION_RECORD_STATUS,
@@ -15,8 +17,6 @@ export const OWNER_LATTICE_AUTHORING_STATUS = Object.freeze({
   ERROR: 'error',
 });
 const EMPTY_ASSET_RECORDS = Object.freeze([]);
-const ADDITIONAL_PLACEMENT_UNAVAILABLE_REASON =
-  'PLACE UNAVAILABLE / ADDITIONAL PLACEMENT REQUIRES NEXT AUTHORING SLICE';
 
 export function resolveOwnerLatticeAuthoringStorage(options = {}, environment = globalThis) {
   if (Object.hasOwn(options, 'storage')) return options.storage;
@@ -30,13 +30,10 @@ export function ownerLatticePlacementUnavailableReason({ activeTable, authoringS
   }
   if (!activeTable) return 'CANONICAL DRAFT UNAVAILABLE';
   if (activeTable.visibility === 'PRIVATE') return 'PUBLIC PLACEMENT UNAVAILABLE / PRIVATE TABLE';
-  if (activeTable.placements.length > 0) {
-    return ADDITIONAL_PLACEMENT_UNAVAILABLE_REASON;
-  }
   return profileReady ? null : 'ASSET PROFILE RESOLVING';
 }
 
-export function createOwnerLatticeAuthoringSession({ profileAddress, storage } = {}) {
+export function createOwnerLatticeAuthoringSession({ generatePlacementId, profileAddress, storage } = {}) {
   const profile = normalizeProfileAddress(profileAddress);
   if (!profile) throw new TypeError('A valid owner authoring profile is required');
   const store = createLatticeProductionDraftStore({ profileAddress: profile, storage });
@@ -45,6 +42,8 @@ export function createOwnerLatticeAuthoringSession({ profileAddress, storage } =
     return Object.freeze({
       commitMovement: () => Object.freeze({ ok: false, reason: 'CORRUPT CANONICAL STORAGE' }),
       commitPlacement: () => Object.freeze({ ok: false, reason: 'CORRUPT CANONICAL STORAGE' }),
+      commitRemoval: () => Object.freeze({ ok: false, reason: 'CORRUPT CANONICAL STORAGE' }),
+      commitResize: () => Object.freeze({ ok: false, reason: 'CORRUPT CANONICAL STORAGE' }),
       getDraft: () => null,
       getProfileAddress: () => profile,
       status: OWNER_LATTICE_AUTHORING_STATUS.CORRUPT,
@@ -65,13 +64,10 @@ export function createOwnerLatticeAuthoringSession({ profileAddress, storage } =
         ok: false,
         reason: 'PUBLIC PLACEMENT UNAVAILABLE / PRIVATE TABLE',
       });
-      if (activeTable.placements.length > 0) return Object.freeze({
-        ok: false,
-        reason: ADDITIONAL_PLACEMENT_UNAVAILABLE_REASON,
-      });
       let candidate;
       try {
         candidate = createLatticeProductionPlacementCandidate(currentDraft, {
+          generatePlacementId,
           nativeHeight: asset.height,
           nativeWidth: asset.width,
           stableAssetId: asset.stableAssetId,
@@ -121,6 +117,66 @@ export function createOwnerLatticeAuthoringSession({ profileAddress, storage } =
         return Object.freeze({ ok: false, reason: error?.message || 'INVALID PLACEMENT MOVEMENT' });
       }
       if (!candidate) return Object.freeze({ ok: false, noOp: true, reason: 'PLACEMENT POSITION UNCHANGED' });
+      if (!store.commitCompletedOperation(candidate)) {
+        return Object.freeze({ ok: false, reason: 'CANONICAL STORAGE WRITE FAILED' });
+      }
+      return Object.freeze({ ok: true, draft: store.getDraft() });
+    },
+    commitResize({
+      assetRecord,
+      corner,
+      destination,
+      expectedPlacement,
+      placementId,
+      tableId,
+    } = {}) {
+      const currentDraft = store.getDraft();
+      const activeTable = currentDraft.tables.find((table) => table.id === tableId);
+      if (!activeTable) return Object.freeze({ ok: false, reason: 'CANONICAL DRAFT UNAVAILABLE' });
+      if (activeTable.visibility !== 'PUBLIC') return Object.freeze({
+        ok: false, reason: 'PLACEMENT RESIZE UNAVAILABLE / PRIVATE TABLE',
+      });
+      const placement = activeTable.placements.find((candidate) => candidate.id === placementId);
+      if (!placement) return Object.freeze({ ok: false, reason: 'CANONICAL PLACEMENT UNAVAILABLE' });
+      if (placement.visibility !== 'PUBLIC') return Object.freeze({
+        ok: false, reason: 'PRIVATE PLACEMENT UNAVAILABLE',
+      });
+      if (placement.locked) return Object.freeze({ ok: false, reason: 'PLACEMENT LOCKED' });
+      const asset = adaptLatticeProductionBrowserAsset(assetRecord, profile);
+      if (!asset?.placeable || asset.stableAssetId !== placement.stableAssetId) return Object.freeze({
+        ok: false,
+        reason: asset?.placementUnavailableReason || 'STALE OR UNAVAILABLE ASSET',
+      });
+      let candidate;
+      try {
+        candidate = createLatticeProductionResizeCandidate(currentDraft, {
+          corner,
+          destination,
+          expectedPlacement,
+          placementId,
+          tableId,
+        });
+      } catch (error) {
+        return Object.freeze({ ok: false, reason: error?.message || 'INVALID PLACEMENT RESIZE' });
+      }
+      if (!candidate) return Object.freeze({ ok: false, noOp: true, reason: 'PLACEMENT SIZE UNCHANGED' });
+      if (!store.commitCompletedOperation(candidate)) {
+        return Object.freeze({ ok: false, reason: 'CANONICAL STORAGE WRITE FAILED' });
+      }
+      return Object.freeze({ ok: true, draft: store.getDraft() });
+    },
+    commitRemoval({ expectedPlacement, placementId, tableId } = {}) {
+      const currentDraft = store.getDraft();
+      let candidate;
+      try {
+        candidate = createLatticeProductionRemovalCandidate(currentDraft, {
+          expectedPlacement,
+          placementId,
+          tableId,
+        });
+      } catch (error) {
+        return Object.freeze({ ok: false, reason: error?.message || 'INVALID PLACEMENT REMOVAL' });
+      }
       if (!store.commitCompletedOperation(candidate)) {
         return Object.freeze({ ok: false, reason: 'CANONICAL STORAGE WRITE FAILED' });
       }
@@ -229,6 +285,68 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
     return true;
   }, [profile, runtime.draft, session]);
 
+  const resizePublicPlacement = useCallback(({
+    corner,
+    destination,
+    expectedPlacement,
+    placementId,
+    tableId,
+  } = {}) => {
+    const generation = generationRef.current;
+    const liveLibrary = useLibraryStore.getState();
+    if (!session || session.status !== OWNER_LATTICE_AUTHORING_STATUS.READY
+      || session.getProfileAddress() !== profile
+      || liveLibrary.profileAddress !== profile
+      || normalizeProfileAddress(liveLibrary.workspace?.profileAddress) !== profile) {
+      const reason = 'STALE PROFILE OR CANONICAL STORAGE UNAVAILABLE';
+      setRuntime((current) => ({ ...current, error: reason }));
+      return false;
+    }
+    const runtimePlacement = runtime.draft?.tables.find((table) => table.id === tableId)
+      ?.placements.find((placement) => placement.id === placementId);
+    const assetRecord = liveLibrary.assets.find(({ id }) => id === runtimePlacement?.stableAssetId);
+    const result = session.commitResize({
+      assetRecord,
+      corner,
+      destination,
+      expectedPlacement,
+      placementId,
+      tableId,
+    });
+    if (generation !== generationRef.current || session.getProfileAddress() !== profile) return false;
+    if (!result.ok) {
+      if (!result.noOp) setRuntime((current) => ({ ...current, error: result.reason }));
+      return false;
+    }
+    setRuntime({ draft: result.draft, error: null, status: OWNER_LATTICE_AUTHORING_STATUS.READY });
+    return true;
+  }, [profile, runtime.draft, session]);
+
+  const removePublicPlacement = useCallback(({
+    expectedPlacement,
+    placementId,
+    tableId,
+  } = {}) => {
+    const generation = generationRef.current;
+    const liveLibrary = useLibraryStore.getState();
+    if (!session || session.status !== OWNER_LATTICE_AUTHORING_STATUS.READY
+      || session.getProfileAddress() !== profile
+      || liveLibrary.profileAddress !== profile
+      || normalizeProfileAddress(liveLibrary.workspace?.profileAddress) !== profile) {
+      const reason = 'STALE PROFILE OR CANONICAL STORAGE UNAVAILABLE';
+      setRuntime((current) => ({ ...current, error: reason }));
+      return false;
+    }
+    const result = session.commitRemoval({ expectedPlacement, placementId, tableId });
+    if (generation !== generationRef.current || session.getProfileAddress() !== profile) return false;
+    if (!result.ok) {
+      setRuntime((current) => ({ ...current, error: result.reason }));
+      return false;
+    }
+    setRuntime({ draft: result.draft, error: null, status: OWNER_LATTICE_AUTHORING_STATUS.READY });
+    return true;
+  }, [profile, session]);
+
   return {
     assetRecords: profileReady ? assets : EMPTY_ASSET_RECORDS,
     draft: runtime.draft,
@@ -237,6 +355,8 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
     movePublicPlacement,
     placePublicAsset,
     profileReady,
+    removePublicPlacement,
+    resizePublicPlacement,
     status: runtime.status,
   };
 }

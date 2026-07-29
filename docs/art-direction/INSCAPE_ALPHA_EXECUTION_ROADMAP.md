@@ -76,7 +76,7 @@ The working tree was clean when this roadmap was created.
 - [x] Phase 4 fixed chrome is integrated and visually accepted; the production NFT viewer and identity dossier remain later-phase work.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
-Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 is `[~]` after accepted Phase 5A, and Phase 5B onward remains unstarted.
+Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 is `[~]` after accepted Phase 5A, Phase 5B.1, Phase 5B.2, and Phase 5B.3, while Phase 5B.4 onward remains unstarted.
 
 ### Locked production-integration constraints
 
@@ -381,7 +381,7 @@ Exit criterion: owner navigation is intuitive, deterministic, responsive, and do
 
 ## Phase 5 — production Browser and authoring geometry
 
-Status: `[~]` — **Phase 5A, Phase 5B.1, and Phase 5B.2 accepted; Phase 5B.3 onward remains unstarted**
+Status: `[~]` — **Phase 5A, Phase 5B.1, Phase 5B.2, and Phase 5B.3 accepted; Phase 5B.4 onward remains unstarted**
 
 Goal: wire the isolated Browser to real INDEX/CATEGORIES data and enable table authoring.
 
@@ -443,7 +443,26 @@ Status: `[x]` — implemented, automatically verified, and visually accepted.
 
 Accepted checkpoint (2026-07-29): interactive review confirms placement selection, pointer and keyboard movement, snapping, clamping, cancellation, persistence, reload recovery, profile isolation, normal empty-space table navigation, full-width non-fullscreen geometry, consistent outer-topology grid intensity, bounded Space-drag, per-table camera memory, and exact post-camera artwork movement. During review the owner viewport's contained-plane side gutters were rejected because an adjacent table could occupy screen space unavailable to the active table and the table/atmosphere grid stacking produced dimmer strips beyond the outer topology. The accepted owner-only correction fits the canonical 32 columns to width, keeps cells square, centers and bounds vertical overflow, and gives each table an independent runtime-only Space-drag vertical camera. This is host presentation state only: the Phase 2B store, canonical geometry and key remain unchanged and sole-writable. The accepted shared renderer, visitor behavior, public projection/redaction contract, Library workspace v8, publication, reconciliation, routing, wallet, IPFS, `ModuleGridShell`, version-7 publication default, and disabled version-8 publication remain unchanged.
 
-Phase 5B.3 onward status: `[ ]` — unstarted. Additional placement, resize, crop editing, layer editing, mat/frame editing, replace, remove, visibility editing, lock editing, and Owner Preview remain outside Phase 5B.2.
+### Phase 5B.3 — core composition loop
+
+Status: `[x]` — **implemented, automatically verified, and visually accepted**
+
+- [x] The temporary one-placement-per-table gates are removed. Repeated eligible public assets can be placed on the active public table, including the same asset more than once, while private-table and profile-readiness gates remain unchanged.
+- [x] New placement identity uses `placement-<crypto.randomUUID()>`, generated only inside an explicit completed PLACE request. Existing IDs remain untouched; candidate syntax and global draft collisions are checked for at most 32 secure attempts, with an injected generator for deterministic tests and controlled zero-write failure for unavailable randomness, invalid output, collision exhaustion, validation failure, or persistence failure.
+- [x] New `layer` and `navigationOrder` values are independently assigned as table-local maximum plus one, making the placement topmost and last in keyboard traversal. Safe-integer exhaustion fails before mutation; REMOVE never renumbers survivors.
+- [x] Selected public unlocked placements resize from all four corners on the canonical integer grid. The opposite corner stays anchored, each span has a one-cell minimum, complete geometry remains within the 32 × 18 plane, overlap stays legal, pointer preview uses the accepted ten-pixel dead zone and nearest-cell snapping, arrow keys resize by one cell, and Escape/capture loss restores exact accepted geometry without a write.
+- [x] Completed RESIZE re-reads the accepted draft; revalidates profile authority, active public table, complete expected placement snapshot, starting geometry, visibility, lock state, matching live placeable Library asset, anchored bounds, and the complete candidate; and performs exactly one completed-operation store commit. Same-geometry completion is a zero-write no-op.
+- [x] REMOVE is available only through an explicit accessible button. It compares the complete expected placement snapshot, requires the exact current public unlocked placement, does not require a live Library asset, removes only that record through one completed-operation commit, preserves survivor order/layer/navigation values, and restores focus to the next navigation entry, then the previous entry, or the owner viewport when empty.
+- [x] MOVE, empty-space table navigation, wheel behavior, and bounded per-table Space-drag vertical camera behavior retain their Phase 5B.2 contracts. Placement bodies own MOVE, corner handles own RESIZE, the REMOVE button owns only activation, and Space capture retains camera priority everywhere except the removal action.
+- [x] Focused placement, movement, resize, removal, transaction, owner-session, shell, accessibility, and gesture-source coverage passes 48 tests with 0 failures. The single full regression run passes 772 tests with 0 failures. The production build, budgets, owner-runtime isolation, and `git diff --check` pass; the long combined Phase 5B browser lifecycle was neither changed nor run, and no replacement browser suite was added.
+
+Implementation checkpoint (2026-07-30): Phase 5B.3 supplies the usable public composition loop `PLACE → MOVE → RESIZE → REMOVE` without changing the canonical draft schema, version-1 storage key, Phase 2B store, shared Phase 3 renderer, public projection/redaction, reconciliation, publication, routing, wallet, IPFS, visitor runtime, or version defaults. Runtime previews, selection, focus, and pointer capture remain detached from canonical persistence. Final production totals are initial JavaScript 1,228,709 raw / 358,855 gzip; selected owner JavaScript 132,369 raw / 41,264 gzip; initial CSS 113,254 raw / 19,913 gzip; selected owner CSS 27,480 raw / 4,690 gzip; and core JavaScript 1,800,533 raw / 534,544 gzip. Crop, smart guides, explicit layer editing, frame/mat/backing, transparency, replace, visibility mutation, lock mutation, Owner Preview, publication cutover, Phase 6, and later work remain excluded.
+
+Boundary-control review correction (2026-07-30): placements touching an authored edge now mark their exact top/right/bottom/left boundary state. Only the clipped axis of each resize handle insets into the placement. At the top edge, REMOVE docks into available table-local space beside the placement, choosing the roomier side; a table-wide placement uses a width-bounded inside fallback. The movement layer retains table-local overflow clipping so controls cannot enter adjacent tables or fixed chrome. The affected focused set passes 12 tests with 0 failures across every edge and one-cell geometry; the rebuilt production budgets and owner-runtime isolation pass. Phase 5B.3 is visually accepted as `[x]`.
+
+Allocator rollback constraint: after any deployed REMOVE has created a historical placement-ID gap, the UUID allocator must remain in place even if the rest of Phase 5B.3 is rolled back. A rollback may remove RESIZE/REMOVE UI while retaining the allocator, or temporarily disable PLACE; restoring the former first-unused `placement-N` allocator could reuse an identity still present in a publication baseline or reconciliation state. Existing UUID-bearing drafts need no schema migration and remain readable by the accepted validator and renderer.
+
+Phase 5B.4 onward status: `[ ]` — unstarted. Crop editing, explicit layer editing, mat/frame/backing editing, transparency, replace, visibility editing, lock editing, and Owner Preview remain outside Phase 5B.3.
 
 User visual test:
 

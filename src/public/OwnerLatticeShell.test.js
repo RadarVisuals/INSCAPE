@@ -39,7 +39,7 @@ test('invalid profiles fail closed before a render value can be produced', () =>
   assert.doesNotMatch(innerSource, /ownerAuthoringEnabled|return null/);
 });
 
-test('Phase 5B.1 shell delegates one canonical PLACE action without expanding accepted boundaries', () => {
+test('Phase 5B shell delegates repeated canonical PLACE without expanding unrelated boundaries', () => {
   for (const forbidden of [
     'localStorage', 'sessionStorage', 'indexedDB', 'latticeProductionDraftStore',
     'Reconciliation', 'ProfileDocument', 'IPFS', 'PublishedProfile',
@@ -53,7 +53,8 @@ test('Phase 5B.1 shell delegates one canonical PLACE action without expanding ac
   assert.match(source, /placePublicAsset/);
   assert.match(source, /ownerLatticePlacementUnavailableReason/);
   assert.match(authoringSource, /PUBLIC PLACEMENT UNAVAILABLE \/ PRIVATE TABLE/);
-  assert.match(authoringSource, /ADDITIONAL PLACEMENT REQUIRES NEXT AUTHORING SLICE/);
+  assert.match(authoringSource, /generatePlacementId/);
+  assert.doesNotMatch(authoringSource, /ADDITIONAL PLACEMENT REQUIRES NEXT AUTHORING SLICE/);
   assert.match(source, /STORED RECORD PRESERVED \/ EXPLICIT RECOVERY REQUIRED/);
   assert.doesNotMatch(source, /commands=|requestPlacement|toggleFavorite|createCategory|setCategory/);
 });
@@ -95,12 +96,16 @@ test('Browser open, close, and Escape state stays runtime-only with focus restor
   assert.match(source, /toolButtonRefs=\{\{ browser: browserToolRef \}\}/);
 });
 
-test('Phase 5B.2 movement stays in an owner-only projection-derived layer and cannot start table navigation', () => {
+test('Phase 5B composition stays in an owner-only projection-derived layer and cannot start table navigation', () => {
   assert.match(source, /LatticeProductionMovementLayer/);
   assert.match(source, /createLatticeProductionMovementCandidate/);
-  assert.match(source, /movementPreview/);
+  assert.match(source, /createLatticeProductionResizeCandidate/);
+  assert.match(source, /compositionPreview/);
   assert.match(source, /onCommitMove=\{authoring\.movePublicPlacement\}/);
-  assert.match(source, /onPreviewMove=\{setMovementPreview\}/);
+  assert.match(source, /onCommitResize=\{authoring\.resizePublicPlacement\}/);
+  assert.match(source, /onCommitRemove=\{authoring\.removePublicPlacement\}/);
+  assert.match(source, /onPreviewOperation=\{setCompositionPreview\}/);
+  assert.match(source, /data-lattice-placement-action/);
   assert.match(source, /\[data-lattice-placement-layer\]/);
   assert.doesNotMatch(source, /normalizedInsertionAnchor|createPlacementGesture|nudgePlacementByPixels/);
 });

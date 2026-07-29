@@ -47,29 +47,56 @@ const existingPlacement = (id, stableAssetId = ASSET) => ({
 
 test('absent session mount exposes an unwritten validated draft and writes only on completed PLACE', () => {
   const storage = memoryStorage();
-  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const session = createOwnerLatticeAuthoringSession({
+    generatePlacementId: () => 'placement-uuid-one', profileAddress: PROFILE, storage,
+  });
   assert.equal(session.status, OWNER_LATTICE_AUTHORING_STATUS.READY);
   assert.equal(storage.writes, 0);
   assert.equal(storage.values.has(latticeProductionDraftKey(PROFILE)), false);
   assert.equal(session.commitPlacement({ assetRecord: asset(), tableId: 'table-05' }).ok, true);
   assert.equal(storage.writes, 1);
-  assert.equal(JSON.parse(storage.values.get(latticeProductionDraftKey(PROFILE))).tables[4].placements[0].id, 'placement-1');
+  assert.equal(JSON.parse(storage.values.get(latticeProductionDraftKey(PROFILE))).tables[4].placements[0].id, 'placement-uuid-one');
 });
 
-test('completed-operation gate rejects an immediate second PLACE without changing the first transaction', () => {
+test('repeated completed PLACE uses generated identities and max plus one order', () => {
   const storage = memoryStorage();
-  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  let id = 0;
+  const session = createOwnerLatticeAuthoringSession({
+    generatePlacementId: () => `placement-uuid-${++id}`, profileAddress: PROFILE, storage,
+  });
   const first = session.commitPlacement({ assetRecord: asset(), tableId: 'table-05' });
   assert.equal(first.ok, true);
-  const firstBytes = storage.values.get(latticeProductionDraftKey(PROFILE));
   const second = session.commitPlacement({ assetRecord: asset(), tableId: 'table-05' });
-  assert.equal(second.ok, false);
-  assert.match(second.reason, /ADDITIONAL PLACEMENT REQUIRES NEXT AUTHORING SLICE/u);
-  assert.equal(storage.writes, 1);
-  assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), firstBytes);
-  assert.equal(JSON.parse(firstBytes).tables[4].placements.length, 1);
-  assert.equal(session.getDraft().tables[4].placements.length, 1);
-  assert.deepEqual(session.getDraft(), first.draft);
+  assert.equal(second.ok, true);
+  assert.equal(storage.writes, 2);
+  assert.deepEqual(second.draft.tables[4].placements.map(({ id: placementId, layer, navigationOrder }) => ({
+    id: placementId, layer, navigationOrder,
+  })), [
+    { id: 'placement-uuid-1', layer: 0, navigationOrder: 0 },
+    { id: 'placement-uuid-2', layer: 1, navigationOrder: 1 },
+  ]);
+});
+
+test('ID generation failures and failed PLACE persistence retain accepted memory and exact bytes', () => {
+  const rawDraft = createEmptyLatticeProductionDraft(PROFILE);
+  const raw = JSON.stringify(rawDraft);
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
+  const failedGeneration = createOwnerLatticeAuthoringSession({
+    generatePlacementId: () => { throw new Error('secure randomness unavailable'); }, profileAddress: PROFILE, storage,
+  });
+  assert.equal(failedGeneration.commitPlacement({ assetRecord: asset(), tableId: 'table-05' }).ok, false);
+  assert.equal(storage.writes, 0);
+  assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), raw);
+  assert.deepEqual(failedGeneration.getDraft(), rawDraft);
+
+  const failedStorage = createOwnerLatticeAuthoringSession({
+    generatePlacementId: () => 'placement-uuid-valid', profileAddress: PROFILE, storage,
+  });
+  storage.fail();
+  assert.equal(failedStorage.commitPlacement({ assetRecord: asset(), tableId: 'table-05' }).ok, false);
+  assert.equal(storage.writes, 0);
+  assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), raw);
+  assert.deepEqual(failedStorage.getDraft(), rawDraft);
 });
 
 test('default storage resolution fails closed when acquisition throws and honors injected null', () => {
@@ -147,22 +174,24 @@ test('missing dimensions, stale profiles, private tables, and failed persistence
 
 test('successful placement survives a complete session remount', () => {
   const storage = memoryStorage();
-  const first = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const first = createOwnerLatticeAuthoringSession({
+    generatePlacementId: () => 'placement-uuid-remount', profileAddress: PROFILE, storage,
+  });
   assert.equal(first.commitPlacement({ assetRecord: asset(), tableId: 'table-05' }).ok, true);
   const remounted = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
   assert.deepEqual(remounted.getDraft(), first.getDraft());
   assert.equal(remounted.getDraft().tables[4].placements[0].stableAssetId, ASSET);
 });
 
-test('private and nonempty table restrictions remain temporary runtime capability gates', () => {
+test('only profile readiness and public-table state gate repeated placement', () => {
   const draft = createEmptyLatticeProductionDraft(PROFILE);
   assert.equal(ownerLatticePlacementUnavailableReason({
     activeTable: draft.tables[4], authoringStatus: OWNER_LATTICE_AUTHORING_STATUS.READY, profileReady: true,
   }), null);
   draft.tables[4].placements = [existingPlacement('placement-1')];
-  assert.match(ownerLatticePlacementUnavailableReason({
+  assert.equal(ownerLatticePlacementUnavailableReason({
     activeTable: draft.tables[4], authoringStatus: OWNER_LATTICE_AUTHORING_STATUS.READY, profileReady: true,
-  }), /NEXT AUTHORING SLICE/u);
+  }), null);
   draft.tables[4].visibility = 'PRIVATE';
   assert.match(ownerLatticePlacementUnavailableReason({
     activeTable: draft.tables[4], authoringStatus: OWNER_LATTICE_AUTHORING_STATUS.READY, profileReady: true,
@@ -262,11 +291,89 @@ test('failed MOVE persistence restores the exact previous accepted draft and byt
   assert.equal(storage.writes, 0);
 });
 
+test('completed RESIZE requires the MOVE asset policy and performs one canonical write', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const expected = existingPlacement('placement-resize');
+  draft.tables[4].placements = [expected];
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: JSON.stringify(draft) });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const result = session.commitResize({
+    assetRecord: asset(), corner: 'se',
+    destination: { column: 1, row: 1, columnSpan: 6, rowSpan: 5 },
+    expectedPlacement: structuredClone(expected), placementId: expected.id, tableId: 'table-05',
+  });
+  assert.equal(result.ok, true);
+  assert.equal(storage.writes, 1);
+  assert.deepEqual(result.draft.tables[4].placements[0], {
+    ...expected, columnSpan: 6, rowSpan: 5,
+  });
+});
+
+test('stale, unavailable-asset, no-op, and failed-persistence RESIZE attempts write nothing', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const expected = existingPlacement('placement-resize');
+  draft.tables[4].placements = [expected];
+  const raw = JSON.stringify(draft);
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const common = { corner: 'se', expectedPlacement: structuredClone(expected), placementId: expected.id, tableId: 'table-05' };
+  assert.equal(session.commitResize({ ...common, assetRecord: null,
+    destination: { column: 1, row: 1, columnSpan: 6, rowSpan: 5 } }).ok, false);
+  assert.equal(session.commitResize({ ...common, assetRecord: asset(),
+    destination: { column: 1, row: 1, columnSpan: 3, rowSpan: 3 } }).ok, false);
+  assert.equal(session.commitResize({ ...common, assetRecord: asset(),
+    expectedPlacement: { ...expected, row: 2 },
+    destination: { column: 1, row: 1, columnSpan: 6, rowSpan: 5 } }).ok, false);
+  storage.fail();
+  assert.equal(session.commitResize({ ...common, assetRecord: asset(),
+    destination: { column: 1, row: 1, columnSpan: 6, rowSpan: 5 } }).ok, false);
+  assert.equal(storage.writes, 0);
+  assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), raw);
+  assert.deepEqual(session.getDraft(), draft);
+});
+
+test('completed REMOVE needs no Library asset, preserves survivor order, and writes exactly once', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const first = existingPlacement('placement-first');
+  const removed = existingPlacement('placement-remove');
+  removed.layer = 4; removed.navigationOrder = 5;
+  const last = existingPlacement('placement-last');
+  last.layer = 8; last.navigationOrder = 9;
+  draft.tables[4].placements = [first, removed, last];
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: JSON.stringify(draft) });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const result = session.commitRemoval({
+    expectedPlacement: structuredClone(removed), placementId: removed.id, tableId: 'table-05',
+  });
+  assert.equal(result.ok, true);
+  assert.equal(storage.writes, 1);
+  assert.deepEqual(result.draft.tables[4].placements, [first, last]);
+});
+
+test('stale snapshot and failed-persistence REMOVE attempts retain exact accepted state and bytes', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const expected = existingPlacement('placement-remove');
+  draft.tables[4].placements = [expected];
+  const raw = JSON.stringify(draft);
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  assert.equal(session.commitRemoval({ expectedPlacement: { ...expected, column: 2 },
+    placementId: expected.id, tableId: 'table-05' }).ok, false);
+  storage.fail();
+  assert.equal(session.commitRemoval({ expectedPlacement: structuredClone(expected),
+    placementId: expected.id, tableId: 'table-05' }).ok, false);
+  assert.equal(storage.writes, 0);
+  assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), raw);
+  assert.deepEqual(session.getDraft(), draft);
+});
+
 test('corrupt sessions block MOVE while preserving raw bytes', () => {
   const raw = '{corrupt';
   const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
   const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
   assert.equal(session.commitMovement({}).ok, false);
+  assert.equal(session.commitResize({}).ok, false);
+  assert.equal(session.commitRemoval({}).ok, false);
   assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), raw);
   assert.equal(storage.writes, 0);
 });

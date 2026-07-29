@@ -12,6 +12,7 @@ import { projectLatticeProductionPublication } from '../lattice/domain/latticePr
 import { assertValidLatticeProductionPublication } from '../lattice/domain/latticeProductionPublication.js';
 import LatticeProductionMovementLayer from '../lattice/authoring/LatticeProductionMovementLayer.jsx';
 import { createLatticeProductionMovementCandidate } from '../lattice/authoring/latticeProductionMovement.js';
+import { createLatticeProductionResizeCandidate } from '../lattice/authoring/latticeProductionResize.js';
 import {
   DEFAULT_LATTICE_INTERACTION_CONFIG,
   addWheelDelta,
@@ -132,7 +133,7 @@ function OwnerLatticeRuntime({
   const [themeOpen, setThemeOpen] = useState(false);
   const [browserOpen, setBrowserOpen] = useState(false);
   const [browserActivated, setBrowserActivated] = useState(false);
-  const [movementPreview, setMovementPreview] = useState(null);
+  const [compositionPreview, setCompositionPreview] = useState(null);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const profileIdentity = useProfileIdentity(profileAddress);
   const browserData = useOwnerLatticeBrowser(profileAddress, browserOpen);
@@ -149,9 +150,11 @@ function OwnerLatticeRuntime({
   const latticeProjection = useMemo(() => {
     if (!authoring.draft) return { lattice: null, error: null };
     try {
-      const previewDraft = movementPreview
-        ? createLatticeProductionMovementCandidate(authoring.draft, movementPreview)
-        : null;
+      const previewDraft = compositionPreview?.kind === 'move'
+        ? createLatticeProductionMovementCandidate(authoring.draft, compositionPreview.request)
+        : compositionPreview?.kind === 'resize'
+          ? createLatticeProductionResizeCandidate(authoring.draft, compositionPreview.request)
+          : null;
       const renderDraft = structuredClone(previewDraft || authoring.draft);
       renderDraft.appearance.surfaceId = surfaceId;
       renderDraft.appearance.menuSurfaceId = menuSurfaceId;
@@ -166,7 +169,7 @@ function OwnerLatticeRuntime({
     } catch (error) {
       return { lattice: null, error: error?.message || 'Canonical assets are unresolved' };
     }
-  }, [authoring.assetRecords, authoring.draft, menuSurfaceId, movementPreview, surfaceId]);
+  }, [authoring.assetRecords, authoring.draft, compositionPreview, menuSurfaceId, surfaceId]);
   const lattice = latticeProjection.lattice;
 
   useEffect(() => {
@@ -214,7 +217,7 @@ function OwnerLatticeRuntime({
 
   const settle = useCallback((destination, offset = { x: 0, y: 0 }) => {
     if (settlingRef.current) return;
-    setMovementPreview(null);
+    setCompositionPreview(null);
     settlingRef.current = true;
     setDragOffset(offset);
     requestAnimationFrame(() => {
@@ -262,6 +265,7 @@ function OwnerLatticeRuntime({
   const handlePointerDownCapture = (event) => {
     if (!spacePressedRef.current || plane.maximumCameraY <= 0 || settlingRef.current || event.button !== 0
       || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.target.closest?.('[data-lattice-placement-action]')) return;
     const placementControl = event.target.closest?.('[data-lattice-placement-control]');
     const excludedControl = event.target.closest?.('[data-lattice-chrome],a,input,select,textarea,button');
     if (excludedControl && excludedControl !== placementControl) return;
@@ -350,6 +354,7 @@ function OwnerLatticeRuntime({
 
   const handleKeyDown = (event) => {
     if (event.code === 'Space') {
+      if (event.target.closest?.('[data-lattice-placement-action]')) return;
       const placementControl = event.target.closest?.('[data-lattice-placement-control]');
       const excludedControl = event.target.closest?.('a,input,select,textarea,button');
       if (excludedControl && excludedControl !== placementControl) return;
@@ -370,6 +375,7 @@ function OwnerLatticeRuntime({
 
   const handleKeyUp = (event) => {
     if (event.code !== 'Space') return;
+    if (event.target.closest?.('[data-lattice-placement-action]')) return;
     event.preventDefault();
     spacePressedRef.current = false;
     setSpacePanReady(false);
@@ -456,7 +462,10 @@ function OwnerLatticeRuntime({
               acceptedTable={activeDraftTable}
               lattice={lattice}
               onCommitMove={authoring.movePublicPlacement}
-              onPreviewMove={setMovementPreview}
+              onCommitRemove={authoring.removePublicPlacement}
+              onCommitResize={authoring.resizePublicPlacement}
+              onPreviewOperation={setCompositionPreview}
+              onReturnFocus={() => viewportRef.current?.focus({ preventScroll: true })}
               tableId={table.id}
             />}</>
           : <div className="owner-lattice-canonical-unavailable" role="status">CANONICAL TABLE UNAVAILABLE</div>}</div>;

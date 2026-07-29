@@ -9,6 +9,7 @@ export const INITIAL_LATTICE_PLACEMENT_ENVELOPE = Object.freeze({ columns: 12, r
 
 const PLACEMENT_ID = /^[A-Za-z0-9:_-]+$/u;
 const MAX_PLACEMENT_ID_LENGTH = 200;
+export const LATTICE_PLACEMENT_ID_MAXIMUM_ATTEMPTS = 32;
 
 function operationError(code, message) {
   return Object.assign(new TypeError(message), { code });
@@ -19,28 +20,48 @@ function validPlacementId(value) {
     && value.length <= MAX_PLACEMENT_ID_LENGTH && PLACEMENT_ID.test(value);
 }
 
-export function findFirstUnusedLatticeProductionPlacementId(usedIdsInput, {
-  candidateForIndex = (index) => `placement-${index}`,
-  maximumAttempts,
+function defaultPlacementIdCandidate() {
+  if (typeof globalThis.crypto?.randomUUID !== 'function') {
+    throw operationError('LATTICE_PLACEMENT_ID_GENERATOR_UNAVAILABLE', 'Secure placement ID generation is unavailable');
+  }
+  return `placement-${globalThis.crypto.randomUUID()}`;
+}
+
+export function createLatticeProductionPlacementId(usedIdsInput, {
+  generateCandidate = defaultPlacementIdCandidate,
+  maximumAttempts = LATTICE_PLACEMENT_ID_MAXIMUM_ATTEMPTS,
 } = {}) {
   const usedIds = usedIdsInput instanceof Set ? new Set(usedIdsInput) : new Set(usedIdsInput || []);
-  const limit = maximumAttempts ?? usedIds.size + 1;
-  if (!Number.isSafeInteger(limit) || limit < 1 || typeof candidateForIndex !== 'function') {
+  if (!Number.isSafeInteger(maximumAttempts) || maximumAttempts < 1 || typeof generateCandidate !== 'function') {
     throw operationError('LATTICE_PLACEMENT_ID_SEARCH_INVALID', 'Placement ID search inputs are invalid');
   }
-  for (let index = 1; index <= limit; index += 1) {
-    const candidate = candidateForIndex(index);
-    if (validPlacementId(candidate) && !usedIds.has(candidate)) return candidate;
+  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+    let candidate;
+    try { candidate = generateCandidate(attempt); }
+    catch (error) {
+      if (error?.code === 'LATTICE_PLACEMENT_ID_GENERATOR_UNAVAILABLE') throw error;
+      throw operationError('LATTICE_PLACEMENT_ID_GENERATION_FAILED', 'Secure placement ID generation failed');
+    }
+    if (!validPlacementId(candidate)) {
+      throw operationError('LATTICE_PLACEMENT_ID_CANDIDATE_INVALID', 'Placement ID generator returned an invalid candidate');
+    }
+    if (!usedIds.has(candidate)) return candidate;
   }
   throw operationError('LATTICE_PLACEMENT_ID_EXHAUSTED', 'No valid unused placement ID was found within the bounded search');
 }
 
-function firstUnusedNonNegative(values) {
-  const used = new Set(values);
-  for (let candidate = 0; candidate <= used.size; candidate += 1) {
-    if (!used.has(candidate)) return candidate;
+function nextPlacementOrder(values, field) {
+  let maximum = -1;
+  for (const value of values) {
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw operationError('LATTICE_PLACEMENT_ORDER_INVALID', `Placement ${field} contains an invalid value`);
+    }
+    if (value > maximum) maximum = value;
   }
-  throw operationError('LATTICE_PLACEMENT_ORDER_EXHAUSTED', 'No unused placement order was found');
+  if (maximum === Number.MAX_SAFE_INTEGER) {
+    throw operationError('LATTICE_PLACEMENT_ORDER_EXHAUSTED', `Placement ${field} is exhausted`);
+  }
+  return maximum + 1;
 }
 
 export function createInitialLatticeProductionPlacementGeometry(nativeWidth, nativeHeight) {
@@ -65,7 +86,11 @@ export function createInitialLatticeProductionPlacementGeometry(nativeWidth, nat
 }
 
 export function createLatticeProductionPlacementCandidate(draftInput, {
-  nativeHeight, nativeWidth, stableAssetId, tableId,
+  generatePlacementId,
+  nativeHeight,
+  nativeWidth,
+  stableAssetId,
+  tableId,
 } = {}) {
   const draft = assertValidLatticeProductionDraft(draftInput);
   if (!parseCanonicalAssetId(stableAssetId)) {
@@ -79,11 +104,16 @@ export function createLatticeProductionPlacementCandidate(draftInput, {
 
   const usedIds = new Set(draft.tables.flatMap((candidate) => candidate.placements.map(({ id }) => id)));
   const placement = {
-    id: findFirstUnusedLatticeProductionPlacementId(usedIds),
+    id: createLatticeProductionPlacementId(usedIds, generatePlacementId
+      ? { generateCandidate: generatePlacementId }
+      : undefined),
     stableAssetId,
     ...createInitialLatticeProductionPlacementGeometry(nativeWidth, nativeHeight),
-    layer: firstUnusedNonNegative(table.placements.map(({ layer }) => layer)),
-    navigationOrder: firstUnusedNonNegative(table.placements.map(({ navigationOrder }) => navigationOrder)),
+    layer: nextPlacementOrder(table.placements.map(({ layer }) => layer), 'layer'),
+    navigationOrder: nextPlacementOrder(
+      table.placements.map(({ navigationOrder }) => navigationOrder),
+      'navigation order',
+    ),
     crop: null,
     frameId: 'NONE',
     mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },

@@ -20,8 +20,8 @@ test('pointer ownership is captured at placement-originated pointer down and nev
   assert.match(source, /event\.stopPropagation\(\)/);
   assert.match(source, /onLostPointerCapture=\{cancelGesture\}/);
   assert.match(source, /event\.target\.closest\?\.\('\[data-lattice-placement-control\]'\)/);
-  assert.match(source, /data-movement-placement-id=\{placement\.id\}/);
-  assert.doesNotMatch(source, /data-placement-id=\{placement\.id\}/);
+  assert.match(source, /data-placement-id=\{placement\.id\}/);
+  assert.match(source, /data-resize-corner=\{corner\}/);
   assert.match(source, /<span>\{locked \? 'LOCKED' : 'MOVE'\}<\/span>/);
 });
 
@@ -42,5 +42,36 @@ test('keyboard movement is one-cell, non-repeating, bounded, and isolated from t
   assert.match(source, /ArrowUp/);
   assert.match(source, /if \(event\.repeat\) return/);
   assert.match(source, /nudgeLatticeProductionPlacementGeometry/);
+  assert.match(source, /nudgeLatticeProductionResizeGeometry/);
   assert.match(source, /event\.key === 'Escape'/);
+});
+
+test('selected unlocked placements expose four accessible resize handles and explicit-button-only removal', () => {
+  assert.match(source, /LATTICE_PRODUCTION_RESIZE_CORNERS\.map/);
+  assert.match(source, /Resize placement from/);
+  assert.match(source, /Remove placement:/);
+  assert.match(source, /data-lattice-placement-action="remove"/);
+  assert.match(source, /onClick=\{\(\) => removePlacement\(placement\.id\)\}/);
+  assert.doesNotMatch(source, /event\.key === ['"](?:Delete|Backspace)['"]/);
+  assert.match(source, /placements\[index \+ 1\] \|\| placements\[index - 1\]/);
+  assert.match(source, /onReturnFocus/);
+});
+
+test('composition chrome remains usable and clipped within every authored boundary', () => {
+  for (const boundary of ['top', 'right', 'bottom', 'left']) {
+    assert.match(source, new RegExp(`data-boundary-${boundary}=\\{boundaries\\.${boundary} \\|\\| undefined\\}`));
+    assert.match(styles, new RegExp(`\\[data-boundary-${boundary}\\]`));
+  }
+  assert.match(source, /latticeProductionPlacementBoundaries\(acceptedPlacement\)/);
+  assert.match(styles, /\.lattice-production-movement-layer[^}]*overflow:\s*hidden/su);
+  assert.match(source, /latticeProductionTopBoundaryRemoveDock\(acceptedPlacement, field\.cellSize\)/);
+  assert.match(source, /data-remove-dock=\{removeDock\.side \|\| undefined\}/);
+  assert.match(styles, /\[data-boundary-top\]\[data-remove-dock="inside"\] \.lattice-production-remove-control[^}]*translate:\s*-50% 0/su);
+  assert.match(styles, /\[data-remove-dock="right"\][^}]*left:\s*calc\(100% \+ 9px\)/su);
+  assert.match(styles, /\[data-remove-dock="left"\][^}]*right:\s*calc\(100% \+ 9px\)/su);
+  assert.match(styles, /\.lattice-production-remove-control[^}]*width:\s*min\(48px, var\(--lattice-remove-maximum-width, 100%\)\)/su);
+  assert.match(styles, /\[data-boundary-left\][^}]*--lattice-handle-x:\s*0%/su);
+  assert.match(styles, /\[data-boundary-right\][^}]*--lattice-handle-x:\s*0%/su);
+  assert.match(styles, /\[data-boundary-top\][^}]*--lattice-handle-y:\s*0%/su);
+  assert.match(styles, /\[data-boundary-bottom\][^}]*--lattice-handle-y:\s*0%/su);
 });

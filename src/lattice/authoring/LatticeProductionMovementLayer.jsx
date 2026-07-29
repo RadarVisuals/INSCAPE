@@ -10,6 +10,15 @@ import {
   nudgeLatticeProductionPlacementGeometry,
   updateLatticeProductionMovementGesture,
 } from './latticeProductionMovement.js';
+import {
+  LATTICE_PRODUCTION_RESIZE_CORNERS,
+  createLatticeProductionResizeGesture,
+  finishLatticeProductionResizeGesture,
+  latticeProductionPlacementBoundaries,
+  latticeProductionTopBoundaryRemoveDock,
+  nudgeLatticeProductionResizeGeometry,
+  updateLatticeProductionResizeGesture,
+} from './latticeProductionResize.js';
 import './latticeProductionMovementLayer.css';
 
 const KEYBOARD_DELTAS = Object.freeze({
@@ -17,6 +26,9 @@ const KEYBOARD_DELTAS = Object.freeze({
   ArrowLeft: Object.freeze({ column: -1, row: 0 }),
   ArrowRight: Object.freeze({ column: 1, row: 0 }),
   ArrowUp: Object.freeze({ column: 0, row: -1 }),
+});
+const CORNER_LABELS = Object.freeze({
+  nw: 'north-west', ne: 'north-east', se: 'south-east', sw: 'south-west',
 });
 
 function viewportOf(node) {
@@ -43,7 +55,10 @@ export default function LatticeProductionMovementLayer({
   acceptedTable,
   lattice,
   onCommitMove,
-  onPreviewMove,
+  onCommitRemove,
+  onCommitResize,
+  onPreviewOperation,
+  onReturnFocus,
   tableId,
 }) {
   const rootRef = useRef(null);
@@ -76,8 +91,9 @@ export default function LatticeProductionMovementLayer({
     if (selectedPlacementId && !acceptedById.has(selectedPlacementId)) setSelectedPlacementId(null);
   }, [acceptedById, selectedPlacementId]);
 
-  const restoreFocus = (placementId) => queueMicrotask(() => {
-    controlRefs.current.get(placementId)?.focus({ preventScroll: true });
+  const controlKey = (placementId, suffix = 'move') => `${placementId}:${suffix}`;
+  const restoreFocus = (key) => queueMicrotask(() => {
+    controlRefs.current.get(key)?.focus({ preventScroll: true });
   });
 
   const releaseCapture = (pointerId) => {
@@ -89,34 +105,50 @@ export default function LatticeProductionMovementLayer({
     const active = gestureRef.current;
     if (!active) return false;
     gestureRef.current = null;
-    onPreviewMove?.(null);
+    onPreviewOperation?.(null);
     releaseCapture(active.pointerId);
-    restoreFocus(active.gesture.placementId);
+    restoreFocus(active.focusKey);
     return true;
   };
 
   const handlePointerDown = (event) => {
+    if (event.target.closest?.('[data-lattice-placement-action]')) return;
     const control = event.target.closest?.('[data-lattice-placement-control]');
     if (!control || event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     event.preventDefault();
     event.stopPropagation();
-    const placementId = control.dataset.movementPlacementId;
+    const placementId = control.dataset.placementId;
     const acceptedPlacement = acceptedById.get(placementId);
+    const corner = control.dataset.resizeCorner || null;
     setSelectedPlacementId(placementId);
     control.focus({ preventScroll: true });
     if (!acceptedPlacement || acceptedPlacement.locked || !fieldRef.current) return;
     let gesture;
     try {
-      gesture = createLatticeProductionMovementGesture(
-        acceptedPlacement,
-        fieldRef.current,
-        localPointerPoint(event, event.currentTarget),
-      );
+      gesture = corner
+        ? createLatticeProductionResizeGesture(
+          acceptedPlacement,
+          corner,
+          fieldRef.current,
+          localPointerPoint(event, event.currentTarget),
+        )
+        : createLatticeProductionMovementGesture(
+          acceptedPlacement,
+          fieldRef.current,
+          localPointerPoint(event, event.currentTarget),
+        );
       event.currentTarget.setPointerCapture(event.pointerId);
     } catch {
       return;
     }
-    gestureRef.current = { pointerId: event.pointerId, tableId, gesture };
+    gestureRef.current = {
+      expectedPlacement: structuredClone(acceptedPlacement),
+      focusKey: controlKey(placementId, corner || 'move'),
+      kind: corner ? 'resize' : 'move',
+      pointerId: event.pointerId,
+      tableId,
+      gesture,
+    };
   };
 
   const handlePointerMove = (event) => {
@@ -124,18 +156,29 @@ export default function LatticeProductionMovementLayer({
     if (!active || active.pointerId !== event.pointerId || !fieldRef.current) return;
     event.preventDefault();
     event.stopPropagation();
-    const gesture = updateLatticeProductionMovementGesture(
-      active.gesture,
-      localPointerPoint(event, event.currentTarget),
-      fieldRef.current,
-    );
+    const point = localPointerPoint(event, event.currentTarget);
+    const gesture = active.kind === 'resize'
+      ? updateLatticeProductionResizeGesture(active.gesture, point, fieldRef.current)
+      : updateLatticeProductionMovementGesture(active.gesture, point, fieldRef.current);
     gestureRef.current = { ...active, gesture };
-    if (gesture.activated) onPreviewMove?.({
-      tableId: active.tableId,
-      placementId: gesture.placementId,
-      expectedStartGeometry: { ...gesture.startGeometry },
-      destination: { ...gesture.previewGeometry },
-    });
+    if (gesture.activated) {
+      const common = {
+        tableId: active.tableId,
+        placementId: gesture.placementId,
+        destination: { ...gesture.previewGeometry },
+      };
+      onPreviewOperation?.(active.kind === 'resize' ? {
+        kind: 'resize',
+        request: {
+          ...common,
+          corner: gesture.corner,
+          expectedPlacement: structuredClone(active.expectedPlacement),
+        },
+      } : {
+        kind: 'move',
+        request: { ...common, expectedStartGeometry: { ...gesture.startGeometry } },
+      });
+    }
   };
 
   const handlePointerUp = (event) => {
@@ -144,23 +187,55 @@ export default function LatticeProductionMovementLayer({
     event.preventDefault();
     event.stopPropagation();
     gestureRef.current = null;
-    const result = finishLatticeProductionMovementGesture(active.gesture);
-    if (result.committed) onCommitMove?.({
+    const result = active.kind === 'resize'
+      ? finishLatticeProductionResizeGesture(active.gesture)
+      : finishLatticeProductionMovementGesture(active.gesture);
+    if (result.committed && active.kind === 'resize') onCommitResize?.({
+      tableId: active.tableId,
+      placementId: active.gesture.placementId,
+      expectedPlacement: structuredClone(active.expectedPlacement),
+      corner: active.gesture.corner,
+      destination: result.geometry,
+    });
+    if (result.committed && active.kind === 'move') onCommitMove?.({
       tableId: active.tableId,
       placementId: active.gesture.placementId,
       expectedStartGeometry: { ...active.gesture.startGeometry },
       destination: result.geometry,
     });
-    onPreviewMove?.(null);
+    onPreviewOperation?.(null);
     releaseCapture(event.pointerId);
-    restoreFocus(active.gesture.placementId);
+    restoreFocus(active.focusKey);
+  };
+
+  const removePlacement = (placementId) => {
+    const acceptedPlacement = acceptedById.get(placementId);
+    if (!acceptedPlacement || acceptedPlacement.visibility !== 'PUBLIC' || acceptedPlacement.locked) return;
+    const index = placements.findIndex((placement) => placement.id === placementId);
+    const focusTarget = placements[index + 1] || placements[index - 1] || null;
+    const removed = onCommitRemove?.({
+      tableId,
+      placementId,
+      expectedPlacement: structuredClone(acceptedPlacement),
+    });
+    if (!removed) {
+      restoreFocus(controlKey(placementId, 'remove'));
+      return;
+    }
+    setSelectedPlacementId(focusTarget?.id || null);
+    if (focusTarget) restoreFocus(controlKey(focusTarget.id));
+    else queueMicrotask(() => onReturnFocus?.());
   };
 
   const handleKeyDown = (event) => {
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
-      if (!cancelGesture()) setSelectedPlacementId(null);
+      if (!cancelGesture()) {
+        const placementId = event.target.closest?.('[data-lattice-placement-control]')?.dataset.placementId;
+        setSelectedPlacementId(null);
+        if (placementId) restoreFocus(controlKey(placementId));
+      }
       return;
     }
     const delta = KEYBOARD_DELTAS[event.key];
@@ -169,10 +244,25 @@ export default function LatticeProductionMovementLayer({
     event.stopPropagation();
     if (event.repeat) return;
     const control = event.target.closest?.('[data-lattice-placement-control]');
-    const placementId = control?.dataset.movementPlacementId;
+    if (!control || control.dataset.placementAction) return;
+    const placementId = control.dataset.placementId;
     const acceptedPlacement = acceptedById.get(placementId);
+    const corner = control.dataset.resizeCorner || null;
     setSelectedPlacementId(placementId || null);
     if (!acceptedPlacement || acceptedPlacement.locked) return;
+    if (corner) {
+      const destination = nudgeLatticeProductionResizeGeometry(acceptedPlacement, corner, delta);
+      if (!destination) return;
+      onCommitResize?.({
+        tableId,
+        placementId,
+        expectedPlacement: structuredClone(acceptedPlacement),
+        corner,
+        destination,
+      });
+      restoreFocus(controlKey(placementId, corner));
+      return;
+    }
     const destination = nudgeLatticeProductionPlacementGeometry(acceptedPlacement, delta);
     if (!destination) return;
     onCommitMove?.({
@@ -186,11 +276,11 @@ export default function LatticeProductionMovementLayer({
       },
       destination,
     });
-    restoreFocus(placementId);
+    restoreFocus(controlKey(placementId));
   };
 
   return <div
-    aria-label="Placement movement controls"
+    aria-label="Placement composition controls"
     className="lattice-production-movement-layer"
     data-lattice-placement-layer
     onKeyDown={handleKeyDown}
@@ -205,20 +295,57 @@ export default function LatticeProductionMovementLayer({
       const acceptedPlacement = acceptedById.get(placement.id);
       if (!acceptedPlacement || acceptedPlacement.visibility !== 'PUBLIC') return null;
       const locked = acceptedPlacement.locked === true;
+      const selected = selectedPlacementId === placement.id;
+      const boundaries = latticeProductionPlacementBoundaries(acceptedPlacement);
+      const removeDock = latticeProductionTopBoundaryRemoveDock(acceptedPlacement, field.cellSize);
       const label = placement.asset?.name?.trim() || placement.asset?.stableAssetId || placement.id;
-      return <button
-        aria-disabled={locked || undefined}
-        aria-label={`${locked ? 'Locked placement' : 'Move placement'}: ${label}`}
-        aria-pressed={selectedPlacementId === placement.id}
-        className="lattice-production-movement-control"
-        data-lattice-placement-control
-        data-locked={locked || undefined}
-        data-movement-placement-id={placement.id}
+      return <div
+        className="lattice-production-composition-control"
+        data-boundary-bottom={boundaries.bottom || undefined}
+        data-boundary-left={boundaries.left || undefined}
+        data-boundary-right={boundaries.right || undefined}
+        data-boundary-top={boundaries.top || undefined}
+        data-remove-dock={removeDock.side || undefined}
+        data-selected={selected || undefined}
         key={placement.id}
-        ref={(node) => { if (node) controlRefs.current.set(placement.id, node); else controlRefs.current.delete(placement.id); }}
         style={{ ...rectangleStyle(projectLatticeProductionPlacement(placement, field)), zIndex: placement.layer }}
-        type="button"
-      ><span>{locked ? 'LOCKED' : 'MOVE'}</span></button>;
+      >
+        <button
+          aria-disabled={locked || undefined}
+          aria-label={`${locked ? 'Locked placement' : 'Move placement'}: ${label}`}
+          aria-pressed={selected}
+          className="lattice-production-movement-control"
+          data-lattice-placement-control
+          data-locked={locked || undefined}
+          data-placement-id={placement.id}
+          onClick={() => setSelectedPlacementId(placement.id)}
+          ref={(node) => { const key = controlKey(placement.id); if (node) controlRefs.current.set(key, node); else controlRefs.current.delete(key); }}
+          type="button"
+        ><span>{locked ? 'LOCKED' : 'MOVE'}</span></button>
+        {selected && !locked && <>
+          {LATTICE_PRODUCTION_RESIZE_CORNERS.map((corner) => <button
+            aria-label={`Resize placement from ${CORNER_LABELS[corner]} corner: ${label}`}
+            className={`lattice-production-resize-control is-${corner}`}
+            data-lattice-placement-control
+            data-placement-id={placement.id}
+            data-resize-corner={corner}
+            key={corner}
+            ref={(node) => { const key = controlKey(placement.id, corner); if (node) controlRefs.current.set(key, node); else controlRefs.current.delete(key); }}
+            type="button"
+          />)}
+          <button
+            aria-label={`Remove placement: ${label}`}
+            className="lattice-production-remove-control"
+            data-lattice-placement-action="remove"
+            data-lattice-placement-control
+            data-placement-id={placement.id}
+            onClick={() => removePlacement(placement.id)}
+            ref={(node) => { const key = controlKey(placement.id, 'remove'); if (node) controlRefs.current.set(key, node); else controlRefs.current.delete(key); }}
+            style={removeDock.maximumWidth ? { '--lattice-remove-maximum-width': `${removeDock.maximumWidth}px` } : undefined}
+            type="button"
+          >REMOVE</button>
+        </>}
+      </div>;
     })}
   </div>;
 }

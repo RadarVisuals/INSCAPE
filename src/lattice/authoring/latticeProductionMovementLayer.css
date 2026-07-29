@@ -6,9 +6,18 @@
   pointer-events: none;
 }
 
+.lattice-production-composition-control {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
 .lattice-production-movement-control {
   position: absolute;
   box-sizing: border-box;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   margin: 0;
   padding: 0;
   border: 1px solid transparent;
@@ -35,3 +44,78 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+.lattice-production-resize-control {
+  position: absolute;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--lattice-overlay-ink);
+  pointer-events: auto;
+  touch-action: none;
+}
+.lattice-production-resize-control::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 6px;
+  height: 6px;
+  border: 1px solid currentColor;
+  background: color-mix(in srgb, var(--owner-lattice-surface) 82%, transparent);
+}
+.lattice-production-resize-control { translate: var(--lattice-handle-x) var(--lattice-handle-y); }
+.lattice-production-resize-control.is-nw { --lattice-handle-x: -50%; --lattice-handle-y: -50%; left: 0; top: 0; cursor: nwse-resize; }
+.lattice-production-resize-control.is-ne { --lattice-handle-x: 50%; --lattice-handle-y: -50%; right: 0; top: 0; cursor: nesw-resize; }
+.lattice-production-resize-control.is-se { --lattice-handle-x: 50%; --lattice-handle-y: 50%; right: 0; bottom: 0; cursor: nwse-resize; }
+.lattice-production-resize-control.is-sw { --lattice-handle-x: -50%; --lattice-handle-y: 50%; left: 0; bottom: 0; cursor: nesw-resize; }
+.lattice-production-composition-control[data-boundary-left] .is-nw,
+.lattice-production-composition-control[data-boundary-left] .is-sw,
+.lattice-production-composition-control[data-boundary-right] .is-ne,
+.lattice-production-composition-control[data-boundary-right] .is-se { --lattice-handle-x: 0%; }
+.lattice-production-composition-control[data-boundary-top] .is-nw,
+.lattice-production-composition-control[data-boundary-top] .is-ne,
+.lattice-production-composition-control[data-boundary-bottom] .is-sw,
+.lattice-production-composition-control[data-boundary-bottom] .is-se { --lattice-handle-y: 0%; }
+.lattice-production-resize-control:focus-visible { outline: 1px solid currentColor; outline-offset: -2px; }
+
+.lattice-production-remove-control {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  left: 50%;
+  top: 0;
+  width: min(48px, var(--lattice-remove-maximum-width, 100%));
+  min-width: 0;
+  height: 18px;
+  padding: 0 5px;
+  translate: -50% -100%;
+  border: 1px solid currentColor;
+  border-bottom: 0;
+  border-radius: 0;
+  background: var(--owner-lattice-surface);
+  color: var(--lattice-overlay-ink);
+  font: 7px/1 "Inscape IBM Plex Mono", monospace;
+  letter-spacing: .08em;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.lattice-production-composition-control[data-boundary-top][data-remove-dock="inside"] .lattice-production-remove-control {
+  translate: -50% 0;
+  border-bottom: 1px solid currentColor;
+}
+.lattice-production-composition-control[data-boundary-top][data-remove-dock="right"] .lattice-production-remove-control {
+  left: calc(100% + 9px);
+  translate: 0 0;
+  border-bottom: 1px solid currentColor;
+}
+.lattice-production-composition-control[data-boundary-top][data-remove-dock="left"] .lattice-production-remove-control {
+  right: calc(100% + 9px);
+  left: auto;
+  translate: 0 0;
+  border-bottom: 1px solid currentColor;
+}
+.lattice-production-remove-control:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }

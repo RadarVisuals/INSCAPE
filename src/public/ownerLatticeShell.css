@@ -43,8 +43,8 @@
 .owner-lattice-spatial-surface[data-gesture-active] { cursor: grabbing; }
 .owner-lattice-spatial-surface[data-space-pan-ready] { cursor: ns-resize; }
 .owner-lattice-spatial-surface[data-camera-active] { cursor: grabbing; }
-.owner-lattice-spatial-surface[data-space-pan-ready] .lattice-production-movement-control { cursor: ns-resize; }
-.owner-lattice-spatial-surface[data-camera-active] .lattice-production-movement-control { cursor: grabbing; }
+.owner-lattice-spatial-surface[data-space-pan-ready] [data-lattice-placement-control]:not([data-lattice-placement-action]) { cursor: ns-resize; }
+.owner-lattice-spatial-surface[data-camera-active] [data-lattice-placement-control]:not([data-lattice-placement-action]) { cursor: grabbing; }
 .owner-lattice-spatial-surface[data-surface="graphite"] { --owner-lattice-surface: #383a3a; --owner-lattice-grid-line: rgb(232 231 226 / 0.115); }
 .owner-lattice-spatial-surface[data-surface="slate"] { --owner-lattice-surface: #7b7b7b; --owner-lattice-grid-line: rgb(243 242 237 / 0.14); }
 .owner-lattice-spatial-surface[data-surface="ash"] { --owner-lattice-surface: #b2b2b2; --owner-lattice-grid-line: rgb(255 255 255 / 0.22); --lattice-overlay-ink: #111313; --lattice-overlay-muted: rgb(17 19 19 / .58); --lattice-overlay-faint: rgb(17 19 19 / .32); }
