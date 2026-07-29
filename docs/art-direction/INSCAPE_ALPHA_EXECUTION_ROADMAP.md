@@ -76,7 +76,7 @@ The working tree was clean when this roadmap was created.
 - [x] Phase 4 fixed chrome is integrated and visually accepted; the production NFT viewer and identity dossier remain later-phase work.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
-Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 and later remain unstarted.
+Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 is `[~]` after accepted Phase 5A, and Phase 5B onward remains unstarted.
 
 ### Locked production-integration constraints
 
@@ -403,6 +403,8 @@ The selected lazy owner graph exposes the Browser toolbar control and loads a ne
 
 Accepted checkpoint (2026-07-29): visual acceptance confirmed. The production owner Browser remains read-only and profile-scoped; Favorite and Category mutation commands are absent, PLACE is disabled without a callback, ordinary interaction leaves Library organization and canonical-authoring storage untouched, and stale asset batches remain generation-inert. The Browser stays inside the selected lazy owner graph, with no fixture harness or fixture data in production and no change to `App.jsx`, top-level routing, authentication, Startveil, publication, wallets, IPFS, visitor or iframe behavior. Version 7 remains the publication default and version 8 publication remains disabled.
 
+Owner/viewed-profile routing correction checkpoint (2026-07-29): implemented, verified, and visually accepted as a separate correction after Phase 5A, without beginning Phase 5B. App routing now retains only explicit `view=` intent and derives implicit owner, development `profile=` fallback, pending, and settled signed-out targets from the current generation. Wallet lifecycle `pending`/`complete` is observational only; verified ownership and matching normalized addresses remain the sole authoring gate. Implicit pending authority resolves no publication, owner chunk, or owner storage, while explicit visitor targets remain available and RETURN removes only genuine explicit intent. Generation-gated recovery settles before optional LSP3 metadata, and superseded provider, permission, recovery, and metadata work cannot select or settle a later profile. Phase 3 remains `[~]`, Phase 4 `[x]`, Phase 5A `[x]`, overall Phase 5 `[~]`, and Phase 5B onward `[ ]`; version 7 remains the publication default and version 8 publication remains disabled.
+
 Phase 5B onward status: `[ ]` — unstarted and requires a separate boundary review. Placement, geometry, transactions, visibility, crop, presentation, and Owner Preview behavior are not approved by Phase 5A.
 
 User visual test:
@@ -575,4 +577,4 @@ Start with:
 
 ## Immediate next action
 
-Phase 4 is complete and visually accepted. Phase 3 remains `[~]`, and Phase 5 is the next unstarted phase but requires its own boundary review and explicit approval before implementation. Phase 5 and later remain `[ ]`, version 7 remains the publication default, and version 8 publication remains disabled.
+Phase 4 is complete and visually accepted. Phase 3 remains `[~]`; Phase 5 is `[~]` after accepted Phase 5A, and Phase 5B onward requires its own boundary review and explicit approval before implementation. Version 7 remains the publication default, and version 8 publication remains disabled.

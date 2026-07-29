@@ -13,7 +13,8 @@ import { useStore } from './store/useStore.js';
 import { useWalletStore } from './store/useWalletStore.js';
 import { resolveLibraryProfile, resolveWorkspaceProfile } from './library/config.js';
 import { loadRestoredPresentation } from './profileDocument/storage/profilePresentationStorage.js';
-import { createViewedProfileUrl, resolveViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
+import { createViewedProfileUrl, resolveExplicitViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
+import { PROFILE_TARGET_SOURCE, resolveProfileTarget } from './profileDiscovery/profileTarget.js';
 import PublishedProfileBoundary from './profileDocument/components/PublishedProfileBoundary.jsx';
 import { usePublishedProfile } from './profileDocument/state/usePublishedProfile.js';
 import { PUBLISHED_PROFILE_STATUS } from './profileDocument/storage/luksoPublishedProfileRepository.js';
@@ -32,7 +33,7 @@ function App() {
   const standaloneWalletSessionRef = useRef(null);
   const [applicationMode, setApplicationMode] = useState(() => resolveApplicationMode(window.location));
   const routeWorkspaceProfileAddress = useMemo(() => resolveLibraryProfile(window.location), []);
-  const [viewedProfileAddress, setViewedProfileAddress] = useState(() => resolveViewedProfile(window.location, routeWorkspaceProfileAddress));
+  const [explicitViewedProfileAddress, setExplicitViewedProfileAddress] = useState(() => resolveExplicitViewedProfile(window.location));
   const [worldReady, setWorldReady] = useState(false);
   const [revealStage, setRevealStage] = useState('sealed');
   const [revealPresentation, setRevealPresentation] = useState({
@@ -49,6 +50,7 @@ function App() {
   const visitorWalletConnected = useWalletStore((state) => state.isWalletConnected);
   const ownershipVerified = useWalletStore((state) => state.isHostProfileOwner);
   const verifiedOwnerProfileAddress = useWalletStore((state) => state.hostProfileAddress);
+  const authorityLifecycleStatus = useWalletStore((state) => state.authorityLifecycleStatus);
   const initWallet = useWalletStore((state) => state.initWallet);
   const scheduleWalletRelease = useWalletStore((state) => state.scheduleWalletRelease);
   const applyRenderConfig = useStore((state) => state.applyRenderConfig);
@@ -56,6 +58,13 @@ function App() {
   const connectedWorkspaceProfileAddress = resolveWorkspaceProfile(verifiedOwnerProfileAddress, {
     search: routeWorkspaceProfileAddress ? `?profile=${routeWorkspaceProfileAddress}` : ''
   });
+  const profileTarget = resolveProfileTarget({
+    explicitViewedProfileAddress,
+    connectedProfileAddress: verifiedOwnerProfileAddress,
+    workspaceFallbackAddress: routeWorkspaceProfileAddress,
+    authorityLifecycleStatus
+  });
+  const viewedProfileAddress = profileTarget.address;
   const worldVisible = ['world', 'resident', 'interface', 'complete'].includes(revealStage);
   const actorVisible = ['resident', 'interface', 'complete'].includes(revealStage);
   const interfaceVisible = ['interface', 'complete'].includes(revealStage);
@@ -117,18 +126,12 @@ function App() {
   useEffect(() => {
     const syncModeFromUrl = () => {
       setApplicationMode(resolveApplicationMode(window.location));
-      setViewedProfileAddress(resolveViewedProfile(window.location, routeWorkspaceProfileAddress));
+      setExplicitViewedProfileAddress(resolveExplicitViewedProfile(window.location));
     };
     syncModeFromUrl();
     window.addEventListener('popstate', syncModeFromUrl);
     return () => window.removeEventListener('popstate', syncModeFromUrl);
   }, [routeWorkspaceProfileAddress]);
-
-  useEffect(() => {
-    if (!viewedProfileAddress && connectedWorkspaceProfileAddress) {
-      setViewedProfileAddress(connectedWorkspaceProfileAddress);
-    }
-  }, [connectedWorkspaceProfileAddress, viewedProfileAddress]);
 
   const applyPublicPresentation = useCallback(({ keeperId, stageId, environment }) => {
     const current = useStore.getState().renderConfig;
@@ -152,10 +155,10 @@ function App() {
   }, []);
 
   const visitProfile = useCallback((address) => {
-    const nextUrl = createViewedProfileUrl(window.location, address, routeWorkspaceProfileAddress || connectedWorkspaceProfileAddress);
+    const nextUrl = createViewedProfileUrl(window.location, address, verifiedOwnerProfileAddress);
     window.history.pushState({ viewedProfileAddress: address }, '', nextUrl);
-    setViewedProfileAddress(resolveViewedProfile(window.location, routeWorkspaceProfileAddress || connectedWorkspaceProfileAddress));
-  }, [connectedWorkspaceProfileAddress, routeWorkspaceProfileAddress]);
+    setExplicitViewedProfileAddress(resolveExplicitViewedProfile(window.location));
+  }, [verifiedOwnerProfileAddress]);
 
   const residentHandoff = useMemo(() => ({
     start(bounds, options) {
@@ -232,7 +235,7 @@ function App() {
             <AtelierExperience onRequestPublic={() => changeApplicationMode(APPLICATION_MODES.PUBLIC)} />
           </Suspense>
         ) : (
-          localOwnerRoute ? <OwnerRuntimeBoundary
+          profileTarget.pending ? <div className="mode-loading" role="status">Resolving profile...</div> : localOwnerRoute ? <OwnerRuntimeBoundary
             ownerAuthoringEnabled={ownerAuthoringEnabled}
             workspaceProfileAddress={connectedWorkspaceProfileAddress}
             getWalletPublicationContext={getWalletPublicationContext}
@@ -261,7 +264,9 @@ function App() {
           /> : <PublishedProfileBoundary address={viewedProfileAddress}
             resolution={publishedResolution}
             onRetry={retryPublishedProfile}
-            returnProfileAddress={connectedWorkspaceProfileAddress}
+            returnProfileAddress={profileTarget.source === PROFILE_TARGET_SOURCE.EXPLICIT
+              ? verifiedOwnerProfileAddress
+              : null}
             onVisitProfile={visitProfile}
             onMoveKeeper={residentHandoff.moveToScreenPosition}
             onMoveKeeperHorizontally={residentHandoff.moveHorizontallyToScreenPosition} />

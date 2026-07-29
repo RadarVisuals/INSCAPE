@@ -36,10 +36,17 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
     && lifecycle.providerGeneration === providerGeneration
     && (recoveryGeneration === undefined || lifecycle.recoveryGeneration === recoveryGeneration);
 
+  const settleCurrent = (lifecycle, recoveryGeneration) => {
+    if (!isCurrent(lifecycle, recoveryGeneration)) return false;
+    set({ authorityLifecycleStatus: 'complete' });
+    return true;
+  };
+
   const recover = async (reason = 'event') => {
     const lifecycle = active;
     if (!isCurrent(lifecycle)) return false;
     const recoveryGeneration = ++lifecycle.recoveryGeneration;
+    set({ authorityLifecycleStatus: 'pending' });
     get()._failClosedProviderContext();
     set({ provider: lifecycle.provider });
     const timeout = boundedTimeout(lifecycle.handshakeTimeoutMs);
@@ -63,6 +70,7 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
           code: 'UNSUPPORTED_CHAIN', reason
         }));
         set({ provider: lifecycle.provider });
+        settleCurrent(lifecycle, recoveryGeneration);
         return false;
       }
       await get()._applyAuthoritativeProviderContext({
@@ -70,11 +78,13 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
         providerGeneration: lifecycle.providerGeneration, recoveryGeneration,
         isCurrent: () => isCurrent(lifecycle, recoveryGeneration)
       });
+      settleCurrent(lifecycle, recoveryGeneration);
       return isCurrent(lifecycle, recoveryGeneration);
     } catch (error) {
       if (isCurrent(lifecycle, recoveryGeneration)) {
         get()._failClosedProviderContext(error);
         set({ provider: lifecycle.provider });
+        settleCurrent(lifecycle, recoveryGeneration);
       }
       return false;
     } finally {
@@ -102,11 +112,12 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
       if (!supported) {
         // An unsupported payload can close authority, but it can never restore it. It
         // also invalidates a pending supported-chain recovery without querying or prompting.
+        set({ authorityLifecycleStatus: 'pending' });
         attachment.lifecycle.recoveryGeneration += 1;
         get()._failClosedProviderContext(Object.assign(new Error('UP Provider reported an unsupported chain'), {
           code: 'UNSUPPORTED_CHAIN', reason: 'chainChanged:unsupported'
         }));
-        set({ provider: attachment.lifecycle.provider });
+        set({ provider: attachment.lifecycle.provider, authorityLifecycleStatus: 'complete' });
         return;
       }
       // A supported payload grants nothing: recovery re-queries every authoritative field.
@@ -138,7 +149,11 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
   const dispose = () => {
     cancelPendingFinalRelease();
     const lifecycle = active;
-    if (!lifecycle) return { disposed: true, listenersRemoved: true, limitation: null };
+    if (!lifecycle) {
+      get()._failClosedProviderContext();
+      set({ provider: null, authorityLifecycleStatus: 'complete' });
+      return { disposed: true, listenersRemoved: true, limitation: null };
+    }
     if (lifecycle.disposed) return lifecycle.disposalReport;
     lifecycle.disposed = true;
     lifecycle.recoveryGeneration += 1;
@@ -153,7 +168,7 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
     lifecycle.disposalReport = { disposed: true, listenersRemoved, limitation };
     if (active === lifecycle) active = null;
     get()._failClosedProviderContext();
-    set((state) => ({ provider: null, providerCleanupLimitation: limitation,
+    set((state) => ({ provider: null, providerCleanupLimitation: limitation, authorityLifecycleStatus: 'complete',
       publicationContextGeneration: state.publicationContextGeneration + 1 }));
     return lifecycle.disposalReport;
   };
@@ -176,9 +191,14 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
     if (!options.provider && active && !active.disposed) return active.readyPromise;
     let provider;
     try { provider = options.provider || createProvider(); }
-    catch (error) { set({ initializationError: error }); return Promise.resolve(false); }
+    catch (error) {
+      get()._failClosedProviderContext(error);
+      set({ authorityLifecycleStatus: 'complete' });
+      return Promise.resolve(false);
+    }
     if (active && !active.disposed && active.provider === provider) return active.readyPromise;
     if (active) dispose();
+    set({ authorityLifecycleStatus: 'pending' });
     const lifecycle = {
       provider, disposed: false, providerGeneration: ++providerGeneration, recoveryGeneration: 0,
       handshakeTimeoutMs: options.handshakeTimeoutMs ?? DEFAULT_HANDSHAKE_TIMEOUT_MS,
@@ -191,7 +211,7 @@ export function createWalletProviderLifecycle({ get, set, createProvider, normal
     try { attach(provider, lifecycle); }
     catch (error) {
       lifecycle.disposed = true; providerGeneration += 1; active = null;
-      get()._failClosedProviderContext(error); set({ provider: null });
+      get()._failClosedProviderContext(error); set({ provider: null, authorityLifecycleStatus: 'complete' });
       return Promise.resolve(false);
     }
     set((state) => ({ provider, providerCleanupLimitation: null, initializationError: null,

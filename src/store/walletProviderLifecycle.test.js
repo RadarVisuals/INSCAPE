@@ -77,11 +77,13 @@ test('Strict Mode scheduled cleanup and immediate reacquire reuse one factory-cr
   assert.equal(factoryCalls, 1);
   assert.strictEqual(lifecycle.getActive().provider, created[0]);
   assert.strictEqual(secondReady, firstReady);
+  assert.equal(state.authorityLifecycleStatus, 'pending', 'reacquire preserves the in-flight lifecycle');
   await secondReady;
   for (const event of ['accountsChanged', 'chainChanged', 'contextAccountsChanged']) {
     assert.equal(created[0].attachmentCalls.get(event), 1); assert.equal(created[0].listeners(event).length, 1);
   }
   assert.equal(state.owner, true);
+  assert.equal(state.authorityLifecycleStatus, 'complete');
   lifecycle.scheduleRelease();
   await Promise.resolve();
   assert.equal(lifecycle.getActive(), null);
@@ -146,6 +148,42 @@ test('standalone resolver rejection leaves all workspace authority closed', asyn
   assert.equal(useWalletStore.getState().isWalletConnected, false);
   assert.equal(useWalletStore.getState().isHostProfileOwner, false);
   assert.equal(useWalletStore.getState().initializationError.code, 'NOT_A_UNIVERSAL_PROFILE');
+  assert.equal(useWalletStore.getState().authorityLifecycleStatus, 'complete');
+});
+
+test('disconnected, provider-failure, and no-active disposal paths settle signed out', async () => {
+  const disconnectedProvider = providerFixture({ accounts: [], contextAccounts: [] });
+  assert.equal(await useWalletStore.getState().initWallet({ provider: disconnectedProvider }), true);
+  assert.equal(useWalletStore.getState().authorityLifecycleStatus, 'complete');
+  assert.equal(useWalletStore.getState().hostProfileAddress, null);
+  assert.equal(useWalletStore.getState().isHostProfileOwner, false);
+
+  useWalletStore.getState().disposeWallet();
+  const failedProvider = providerFixture();
+  failedProvider.request = async () => { throw new Error('provider unavailable'); };
+  assert.equal(await useWalletStore.getState().initWallet({ provider: failedProvider }), false);
+  assert.equal(useWalletStore.getState().authorityLifecycleStatus, 'complete');
+  assert.equal(useWalletStore.getState().hostProfileAddress, null);
+
+  useWalletStore.getState().disposeWallet();
+  useWalletStore.getState().disposeWallet();
+  assert.equal(useWalletStore.getState().authorityLifecycleStatus, 'complete');
+  assert.equal(useWalletStore.getState().isWalletConnected, false);
+});
+
+test('authority completion does not wait for optional profile metadata', async () => {
+  const metadata = deferred();
+  ERC725.prototype.fetchData = () => metadata.promise;
+  const provider = providerFixture();
+
+  const initialized = await useWalletStore.getState().initWallet({ provider });
+  assert.equal(initialized, true);
+  assert.equal(useWalletStore.getState().authorityLifecycleStatus, 'complete');
+  assert.equal(useWalletStore.getState().isProfileLoading, true);
+
+  metadata.resolve(profileResult('Metadata arrived later'));
+  await settle();
+  assert.equal(useWalletStore.getState().profileMetadata.name, 'Metadata arrived later');
 });
 
 test('provider replacement and disposal make captured old callbacks generation-inert', async () => {
@@ -177,6 +215,7 @@ test('unsupported chain fails closed immediately and mainnet recovery re-queries
   const provider = providerFixture(); await useWalletStore.getState().initWallet({ provider });
   provider.chainId = '0x1'; provider.emit('chainChanged', '0x1');
   assert.equal(useWalletStore.getState().walletClient, null); assert.equal(useWalletStore.getState().isHostProfileOwner, false);
+  assert.equal(useWalletStore.getState().authorityLifecycleStatus, 'complete');
   await settle(); assert.equal(useWalletStore.getState().chainId, null);
   const before = provider.requests.length;
   provider.chainId = '0x2a'; provider.accounts = [PROFILE_B]; provider.contextAccounts = [PROFILE_B];
@@ -214,6 +253,7 @@ test('only the latest rapid recovery generation can commit', async () => {
   };
   provider.emit('chainChanged', '0x1'); provider.emit('chainChanged', '0x2a'); provider.emit('chainChanged', '0x1');
   assert.equal(rounds.length, 1);
+  assert.equal(useWalletStore.getState().authorityLifecycleStatus, 'complete');
   rounds[0].accounts.resolve([PROFILE_B]); rounds[0].chain.resolve('0x2a'); rounds[0].context.resolve([PROFILE_B]); await settle();
   assert.equal(useWalletStore.getState().chainId, null); assert.equal(useWalletStore.getState().isHostProfileOwner, false);
 });
@@ -225,6 +265,35 @@ test('disposal during pending verification prevents a late ownership grant', asy
   const initialization = useWalletStore.getState().initWallet({ provider }); await settle();
   useWalletStore.getState().disposeWallet(); permission.resolve({ SUPER_SETDATA: true }); await initialization;
   assert.equal(useWalletStore.getState().provider, null); assert.equal(useWalletStore.getState().isHostProfileOwner, false);
+  assert.equal(useWalletStore.getState().authorityLifecycleStatus, 'complete');
+});
+
+test('late A permission cannot settle the active B recovery generation', async () => {
+  const permissionA = deferred(); const permissionB = deferred();
+  ERC725.prototype.getPermissions = function (controller) {
+    return controller.toLowerCase() === CONTROLLER_A ? permissionA.promise : permissionB.promise;
+  };
+  ERC725.prototype.fetchData = async () => profileResult();
+  const provider = providerFixture({ accounts: [CONTROLLER_A], contextAccounts: [PROFILE_A] });
+  const initializationA = useWalletStore.getState().initWallet({ provider });
+  await settle();
+  assert.equal(useWalletStore.getState().authorityLifecycleStatus, 'pending');
+
+  provider.accounts = ['0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'];
+  provider.contextAccounts = [PROFILE_B];
+  provider.emit('accountsChanged', provider.accounts);
+  await settle();
+  permissionA.resolve({ SUPER_SETDATA: true });
+  await settle();
+  assert.equal(useWalletStore.getState().authorityLifecycleStatus, 'pending');
+  assert.equal(useWalletStore.getState().isHostProfileOwner, false);
+
+  permissionB.resolve({ SUPER_SETDATA: false });
+  await initializationA;
+  await settle();
+  assert.equal(useWalletStore.getState().authorityLifecycleStatus, 'complete');
+  assert.equal(useWalletStore.getState().hostProfileAddress.toLowerCase(), PROFILE_B);
+  assert.equal(useWalletStore.getState().isHostProfileOwner, false);
 });
 
 test('a provider without removal remains generation-safe, reports its limitation, and reuses attachments', async () => {
@@ -244,6 +313,7 @@ test('handshake timeout stays closed and later authoritative events recover with
   const provider = providerFixture(); const pending = deferred(); provider.request = () => pending.promise;
   assert.equal(await useWalletStore.getState().initWallet({ provider, handshakeTimeoutMs: 5 }), false);
   assert.equal(useWalletStore.getState().walletClient, null);
+  assert.equal(useWalletStore.getState().authorityLifecycleStatus, 'complete');
   provider.request = async ({ method }) => method === 'eth_accounts' ? [PROFILE_A]
     : method === 'eth_chainId' ? '0x2a' : [PROFILE_A];
   provider.emit('contextAccountsChanged', [PROFILE_A]); await settle();

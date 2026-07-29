@@ -12,6 +12,7 @@
     "test:browser:phase3": "node --test browser-tests/lattice-production-table.browser.mjs",
     "test:browser:phase4": "node --test browser-tests/owner-lattice-navigation.browser.mjs",
     "test:browser:phase5a": "node --test browser-tests/owner-lattice-browser.browser.mjs",
+    "test:browser:routing": "node --test browser-tests/owner-profile-routing.browser.mjs",
     "visual:phase3": "node browser-tests/lattice-production-table.browser.mjs --visual",
     "preview": "vite preview"
   },

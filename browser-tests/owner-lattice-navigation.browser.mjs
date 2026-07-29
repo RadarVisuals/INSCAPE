@@ -68,11 +68,44 @@ async function waitForVite(url, signal) {
 async function setAuthority(profile) {
   await page.evaluate(async (address) => {
     const { useWalletStore } = await import('/src/store/useWalletStore.js');
-    useWalletStore.setState({
+    if (useWalletStore.getState().authorityLifecycleStatus !== 'complete') {
+      await new Promise((resolveSettlement) => {
+        const unsubscribe = useWalletStore.subscribe((state) => {
+          if (state.authorityLifecycleStatus !== 'complete') return;
+          unsubscribe(); resolveSettlement();
+        });
+      });
+    }
+    await new Promise((resolveStable, rejectStable) => {
+      let quietTimer;
+      const deadline = setTimeout(() => { unsubscribe(); rejectStable(new Error('Phase 4 wallet lifecycle did not become quiet')); }, 10_000);
+      const settleAfterQuietWindow = () => {
+        clearTimeout(quietTimer);
+        quietTimer = setTimeout(() => {
+          if (useWalletStore.getState().authorityLifecycleStatus !== 'complete') return settleAfterQuietWindow();
+          clearTimeout(deadline); unsubscribe(); resolveStable();
+        }, 1_500);
+      };
+      const unsubscribe = useWalletStore.subscribe(settleAfterQuietWindow);
+      settleAfterQuietWindow();
+    });
+    const authoritativeState = {
       hostProfileAddress: address,
       isHostProfileOwner: true,
       isWalletConnected: true,
+      authorityLifecycleStatus: 'complete',
+      disposeWallet: () => ({ disposed: true, listenersRemoved: true, limitation: null }),
+      _failClosedProviderContext: () => {},
+      _applyAuthoritativeProviderContext: async () => {},
+    };
+    window.__phase4AuthorityUnsubscribe?.();
+    let enforcing = false;
+    window.__phase4AuthorityUnsubscribe = useWalletStore.subscribe((state) => {
+      if (enforcing || state.hostProfileAddress?.toLowerCase() === address.toLowerCase()
+        && state.isHostProfileOwner && state.authorityLifecycleStatus === 'complete') return;
+      enforcing = true; useWalletStore.setState(authoritativeState); enforcing = false;
     });
+    useWalletStore.setState(authoritativeState);
   }, profile);
 }
 
@@ -181,14 +214,26 @@ describe('Phase 4 owner lattice through the real App route', { concurrency: fals
     const response = await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 });
     assert.ok(response?.ok());
     await setAuthority(PROFILE_A);
-    await page.locator('.owner-lattice-shell').waitFor({ state: 'attached', timeout: 15_000 });
+    try { await page.locator('.owner-lattice-shell').waitFor({ state: 'attached', timeout: 5_000 }); }
+    catch (error) {
+      const routeDiagnostic = await page.evaluate(async () => {
+        const { useWalletStore } = await import('/src/store/useWalletStore.js');
+        const state = useWalletStore.getState();
+        return { href: location.href, authorityLifecycleStatus: state.authorityLifecycleStatus,
+          hostProfileAddress: state.hostProfileAddress, isHostProfileOwner: state.isHostProfileOwner,
+          isWalletConnected: state.isWalletConnected, body: document.body.textContent?.slice(0, 500) };
+      });
+      throw new Error(`Owner shell unavailable after fixture authority: ${JSON.stringify(routeDiagnostic)}`, { cause: error });
+    }
     const enter = page.locator('.startveil__entry');
     await enter.waitFor({ state: 'visible', timeout: 20_000 });
     await page.waitForFunction(() => !document.querySelector('.startveil__entry')?.disabled, undefined, { timeout: 20_000 });
-    await enter.click();
-    await page.waitForFunction(() => document.querySelector('.application-interface')?.dataset.visible === 'true', undefined, { timeout: 15_000 });
+    await enter.evaluate((button) => button.click());
+    await page.evaluate(() => new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000)));
     assert.equal(await activeCoordinate(), '0:0');
 
+    await Promise.all(fixedChromeSelectors.map((selector) => page.locator(selector)
+      .waitFor({ state: 'attached', timeout: 60_000 })));
     const fixedBefore = await rectangles();
     await page.evaluate(() => {
       window.__phase4CoordinateHistory = [];

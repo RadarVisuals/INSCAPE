@@ -1,9 +1,13 @@
 import { normalizeProfileAddress } from '../library/config.js';
 
+export function resolveExplicitViewedProfile(locationLike) {
+  try { return normalizeProfileAddress(new URLSearchParams(locationLike?.search || '').get('view')); }
+  catch { return null; }
+}
+
 export function resolveViewedProfile(locationLike, connectedProfileAddress) {
   const connected = normalizeProfileAddress(connectedProfileAddress);
-  try { return normalizeProfileAddress(new URLSearchParams(locationLike?.search || '').get('view')) || connected; }
-  catch { return connected; }
+  return resolveExplicitViewedProfile(locationLike) || connected;
 }
 
 export function createViewedProfileUrl(locationLike, address, connectedProfileAddress) {

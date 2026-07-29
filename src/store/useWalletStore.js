@@ -52,6 +52,7 @@ export const useWalletStore = create((set, get) => ({
   loggedInUserUPAddress: null,
   isWalletConnected: false,
   isHostProfileOwner: false,
+  authorityLifecycleStatus: 'pending',
   publicationContextGeneration: 0,
   providerCleanupLimitation: null,
   initializationError: null,
@@ -64,7 +65,7 @@ export const useWalletStore = create((set, get) => ({
 
   initWallet: (options = {}) => {
     if (typeof window === 'undefined' && !options.provider) {
-      set({ initializationError: new Error('Window environment not found.') });
+      set({ initializationError: new Error('Window environment not found.'), authorityLifecycleStatus: 'complete' });
       return Promise.resolve(false);
     }
     return lifecycleManager(set, get).initialize(options);
@@ -98,6 +99,8 @@ export const useWalletStore = create((set, get) => ({
     get()._recreateClients();
     if (!isCurrent()) return;
     await get()._updateConnectionStatus();
+    if (!isCurrent()) return;
+    void get().fetchProfileMetadata();
   },
 
   /**
@@ -251,7 +254,6 @@ export const useWalletStore = create((set, get) => ({
     }));
 
     await get()._checkPermissions();
-    await get().fetchProfileMetadata(); // Initiate profile metadata updates
   },
 
   _checkPermissions: async () => {
@@ -324,6 +326,7 @@ export function resetWalletStoreForTests() {
     provider: null, walletClient: null, publicClient: null, chainId: null,
     accounts: [], contextAccounts: [], hostProfileAddress: null, loggedInUserUPAddress: null,
     isWalletConnected: false, isHostProfileOwner: false, publicationContextGeneration: 0,
+    authorityLifecycleStatus: 'pending',
     providerCleanupLimitation: null, initializationError: null,
     profileMetadata: null, isProfileLoading: false, lastFetchedAddress: null
   });

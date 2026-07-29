@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createViewedProfileUrl, resolveViewedProfile } from './viewedProfileUrl.js';
+import { createViewedProfileUrl, resolveExplicitViewedProfile, resolveViewedProfile } from './viewedProfileUrl.js';
 
 const CONNECTED = '0x1111111111111111111111111111111111111111';
 const VIEWED = '0x2222222222222222222222222222222222222222';
@@ -23,4 +23,10 @@ test('returning to the connected profile removes only the view parameter', () =>
 test('an explicit navigation target is not replaced by a later wallet identity', () => {
   const location = { search: `?profile=${CONNECTED}&view=${VIEWED}` };
   assert.equal(resolveViewedProfile(location, '0x3333333333333333333333333333333333333333'), VIEWED);
+});
+
+test('explicit URL intent excludes profile and connected fallbacks', () => {
+  assert.equal(resolveExplicitViewedProfile({ search: `?profile=${CONNECTED}` }), null);
+  assert.equal(resolveExplicitViewedProfile({ search: `?view=${VIEWED}` }), VIEWED);
+  assert.equal(resolveExplicitViewedProfile({ search: '?view=invalid' }), null);
 });

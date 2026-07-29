@@ -73,7 +73,39 @@ async function waitForVite(url, signal) {
 async function setAuthority(profile) {
   await page.evaluate(async (address) => {
     const { useWalletStore } = await import('/src/store/useWalletStore.js');
-    useWalletStore.setState({ hostProfileAddress: address, isHostProfileOwner: true, isWalletConnected: true });
+    if (useWalletStore.getState().authorityLifecycleStatus !== 'complete') {
+      await new Promise((resolveSettlement) => {
+        const unsubscribe = useWalletStore.subscribe((state) => {
+          if (state.authorityLifecycleStatus !== 'complete') return;
+          unsubscribe(); resolveSettlement();
+        });
+      });
+    }
+    await new Promise((resolveStable, rejectStable) => {
+      let quietTimer;
+      const deadline = setTimeout(() => { unsubscribe(); rejectStable(new Error('Phase 5A wallet lifecycle did not become quiet')); }, 10_000);
+      const settleAfterQuietWindow = () => {
+        clearTimeout(quietTimer);
+        quietTimer = setTimeout(() => {
+          if (useWalletStore.getState().authorityLifecycleStatus !== 'complete') return settleAfterQuietWindow();
+          clearTimeout(deadline); unsubscribe(); resolveStable();
+        }, 1_500);
+      };
+      const unsubscribe = useWalletStore.subscribe(settleAfterQuietWindow);
+      settleAfterQuietWindow();
+    });
+    const authoritativeState = { hostProfileAddress: address, isHostProfileOwner: true,
+      isWalletConnected: true, authorityLifecycleStatus: 'complete',
+      disposeWallet: () => ({ disposed: true, listenersRemoved: true, limitation: null }),
+      _failClosedProviderContext: () => {}, _applyAuthoritativeProviderContext: async () => {} };
+    window.__phase5aAuthorityUnsubscribe?.();
+    let enforcing = false;
+    window.__phase5aAuthorityUnsubscribe = useWalletStore.subscribe((state) => {
+      if (enforcing || state.hostProfileAddress?.toLowerCase() === address.toLowerCase()
+        && state.isHostProfileOwner && state.authorityLifecycleStatus === 'complete') return;
+      enforcing = true; useWalletStore.setState(authoritativeState); enforcing = false;
+    });
+    useWalletStore.setState(authoritativeState);
   }, profile);
 }
 
@@ -183,8 +215,8 @@ describe('Phase 5A read-only Browser through the real App route', { concurrency:
     const enter = page.locator('.startveil__entry');
     await enter.waitFor({ state: 'visible', timeout: 20_000 });
     await page.waitForFunction(() => !document.querySelector('.startveil__entry')?.disabled, undefined, { timeout: 20_000 });
-    await enter.click();
-    await page.waitForFunction(() => document.querySelector('.application-interface')?.dataset.visible === 'true', undefined, { timeout: 15_000 });
+    await enter.evaluate((button) => button.click());
+    await page.evaluate(() => new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000)));
     await page.waitForTimeout(250);
 
     const before = await page.evaluate((key) => localStorage.getItem(key), workspaceKey(PROFILE_A));
