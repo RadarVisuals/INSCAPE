@@ -4,14 +4,32 @@ import { flushSignalDocument } from '../signals/state/useSignalStore.js';
 import { useProfileDocumentStore } from '../profileDocument/state/useProfileDocumentStore.js';
 import { reportControlledError } from '../diagnostics.js';
 import { createProfileDocumentRestorePlan } from '../profileDocument/domain/profileDocumentRestore.js';
-import { profileDocumentContentFingerprint, profileDocumentReconciliationFingerprint } from '../profileDocument/domain/profileDocumentSerialization.js';
-import { decideOwnerPublicationReconciliation, isWorkspacePublicProjectionEmpty, OWNER_RECONCILIATION_ACTION } from '../profileDocument/domain/ownerPublicationReconciliation.js';
+import { ownerProfileDocumentReconciliationFingerprint, profileDocumentContentFingerprint, profileDocumentReconciliationFingerprint } from '../profileDocument/domain/profileDocumentSerialization.js';
+import { decideOwnerPublicationReconciliation, executeOwnerPublicationReconciliationTransaction, isWorkspacePublicProjectionEmpty, OWNER_RECONCILIATION_ACTION } from '../profileDocument/domain/ownerPublicationReconciliation.js';
 import { canonicalPublicationHash, publicationContentFingerprint } from '../profileDocument/domain/profileDocumentPublication.js';
-import { saveRestoredPresentation } from '../profileDocument/storage/profileDocumentStorage.js';
-import { loadOwnerPublicationBaseline, publicationPointerMetadata, saveOwnerPublicationBaseline } from '../profileDocument/storage/ownerPublicationBaselineStorage.js';
+import { profilePresentationKey, saveRestoredPresentation } from '../profileDocument/storage/profilePresentationStorage.js';
+import { loadOwnerPublicationBaseline, ownerPublicationBaselineKey, publicationPointerMetadata, saveOwnerPublicationBaseline } from '../profileDocument/storage/ownerPublicationBaselineStorage.js';
 import { normalizeProfileAddress } from '../library/config.js';
-import { encodeModuleLayout, MODULE_LAYOUT_STORAGE_KEY } from './moduleLayout.js';
-import { writeOwnerProfileValue } from './ownerProfileStorage.js';
+import { encodeModuleLayout, MODULE_LAYOUT_STORAGE_KEY, SYSTEM_PRESENTATION_STORAGE_KEY } from './moduleLayout.js';
+import { ownerProfileStorageKey, writeOwnerProfileValue } from './ownerProfileStorage.js';
+import { libraryWorkspaceKey } from '../library/storage/libraryWorkspaceStorage.js';
+import { signalStorageKey } from '../signals/storage/signalStorage.js';
+import { PROFILE_DOCUMENT_VERSION_8 } from '../profileDocument/domain/constants.js';
+import { createLatticeProductionDraftStore } from '../lattice/storage/latticeProductionDraftStore.js';
+import { createOwnerReconciliationRuntimeOperations, reportOwnerPublicationReconciliationError } from './ownerPublicationReconciliationRuntime.js';
+
+function captureRawValue(storage, key) {
+  const value = storage.getItem(key);
+  return Object.freeze({ key, present: value !== null, value });
+}
+
+function restoreRawValue(storage, checkpoint) {
+  try {
+    if (checkpoint.present) storage.setItem(checkpoint.key, checkpoint.value);
+    else storage.removeItem(checkpoint.key);
+    return true;
+  } catch { return false; }
+}
 
 export function useOwnerPublicationSync({
   activeActorId,
@@ -51,6 +69,7 @@ export function useOwnerPublicationSync({
     profileAddress: workspace.profileAddress,
     status: 'saving'
   }));
+  const latticeStoreRef = useRef(null);
   const draftFingerprint = useMemo(() => profileDocumentContentFingerprint(draftDocument), [draftDocument]);
   const reconciliationFingerprint = useMemo(() => profileDocumentReconciliationFingerprint(draftDocument), [draftDocument]);
   const draftGenerationRef = useRef({ fingerprint: draftFingerprint, generation: 0 });
@@ -104,6 +123,36 @@ export function useOwnerPublicationSync({
       });
       return;
     }
+    let activeLatticeStore = null;
+    let localReconciliationFingerprint = reconciliationFingerprint;
+    if (publication.version === PROFILE_DOCUMENT_VERSION_8) {
+      try {
+        activeLatticeStore = latticeStoreRef.current;
+        if (!activeLatticeStore) {
+          activeLatticeStore = createLatticeProductionDraftStore({ storage: window.localStorage, profileAddress: workspace.profileAddress });
+          latticeStoreRef.current = activeLatticeStore;
+        } else if (!activeLatticeStore.setProfileAddress(workspace.profileAddress)) {
+          throw new Error('Could not activate the profile-scoped canonical lattice store');
+        }
+        if (activeLatticeStore.classifyForReconciliation().status === 'corrupt') {
+          throw Object.assign(new Error('The canonical lattice record is corrupt and requires explicit recovery'), {
+            code: 'OWNER_RECONCILIATION_CORRUPT_LATTICE',
+          });
+        }
+        localReconciliationFingerprint = ownerProfileDocumentReconciliationFingerprint(
+          draftDocument,
+          activeLatticeStore.getDraft(),
+        );
+      } catch (error) {
+        reportOwnerPublicationReconciliationError(error);
+        setPublicationReconciliation({
+          profileAddress: workspace.profileAddress,
+          publishedFingerprint: null,
+          status: 'blocked',
+        });
+        return;
+      }
+    }
     const publishedFingerprint = profileDocumentReconciliationFingerprint(publication);
     if (publicationReconciliation.profileAddress === workspace.profileAddress
       && publicationReconciliation.publishedFingerprint === publishedFingerprint
@@ -111,7 +160,7 @@ export function useOwnerPublicationSync({
     const baseline = loadOwnerPublicationBaseline(window.localStorage, workspace.profileAddress);
     let action = decideOwnerPublicationReconciliation({
       localRecordPresence: record.presence,
-      localFingerprint: reconciliationFingerprint,
+      localFingerprint: localReconciliationFingerprint,
       localPublicProjectionEmpty: isWorkspacePublicProjectionEmpty(workspace),
       baseline,
       publishedFingerprint
@@ -122,49 +171,141 @@ export function useOwnerPublicationSync({
     }
     if (action === OWNER_RECONCILIATION_ACTION.WAIT) return;
     const pointer = publicationPointerMetadata(publishedResolution?.pointer);
+    const reconciliationGeneration = draftGenerationRef.current.generation;
+    const getActiveProfileAddress = () => useLibraryStore.getState().workspace.profileAddress;
+    const isGenerationCurrent = () => draftGenerationRef.current.generation === reconciliationGeneration;
     if (action === OWNER_RECONCILIATION_ACTION.HYDRATE_PUBLICATION) {
       try {
-        const plan = createProfileDocumentRestorePlan(publication, workspace);
-        if (!replaceWorkspace(plan.workspace)) throw new Error('Could not persist the hydrated public workspace');
-        if (!replaceSignalSettings(plan.signalSettings)) throw new Error('Could not persist hydrated Activity settings');
-        if (!saveRestoredPresentation(window.localStorage, workspace.profileAddress, {
-          keeperId: plan.keeperId,
-          stageId: plan.stageId,
-          environment: plan.environment,
-          avatarShape: plan.avatarShape,
-          visitorNavigation: plan.visitorNavigation
-        })) throw new Error('Could not persist hydrated profile presentation');
+        const storage = window.localStorage;
+        const latticeStore = publication.version === PROFILE_DOCUMENT_VERSION_8 ? activeLatticeStore : null;
+        const plan = createProfileDocumentRestorePlan(publication, workspace, {
+          currentLatticeDraft: latticeStore?.getDraft(),
+        });
         const nextPositions = { ...positions };
         const nextSystemPresentation = { ...systemPresentation };
         Object.entries(plan.systemModules).forEach(([id, module]) => {
           if (module.placement) nextPositions[id] = module.placement;
           if (nextSystemPresentation[id]) nextSystemPresentation[id] = { ...nextSystemPresentation[id], ...module };
         });
-        setPositions(nextPositions);
-        setSystemPresentation(nextSystemPresentation);
-        writeOwnerProfileValue(window.localStorage, MODULE_LAYOUT_STORAGE_KEY, workspace.profileAddress, encodeModuleLayout(nextPositions));
-        saveSystemPresentation(workspace.profileAddress, nextSystemPresentation);
-        setAvatarShape(plan.avatarShape);
-        setVisitorNavigation(plan.visitorNavigation);
-        onApplyRestoredPresentation?.({ keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment });
-        saveOwnerPublicationBaseline(window.localStorage, workspace.profileAddress, {
-          ...pointer, publishedFingerprint, localFingerprint: publishedFingerprint, hydratedAt: Date.now()
+        const encodedLayout = encodeModuleLayout(nextPositions);
+        const baselineValue = {
+          ...pointer, publishedFingerprint, localFingerprint: publishedFingerprint, hydratedAt: Date.now(),
+        };
+        const rawCheckpoints = {
+          workspace: captureRawValue(storage, libraryWorkspaceKey(workspace.profileAddress)),
+          signals: captureRawValue(storage, signalStorageKey(workspace.profileAddress)),
+          presentation: captureRawValue(storage, profilePresentationKey(workspace.profileAddress)),
+          layout: captureRawValue(storage, ownerProfileStorageKey(MODULE_LAYOUT_STORAGE_KEY, workspace.profileAddress)),
+          systemPresentation: captureRawValue(storage, ownerProfileStorageKey(SYSTEM_PRESENTATION_STORAGE_KEY, workspace.profileAddress)),
+          baseline: captureRawValue(storage, ownerPublicationBaselineKey(workspace.profileAddress)),
+        };
+        const previousWorkspace = structuredClone(workspace);
+        const previousSignalSettings = { ...signalSettings };
+        const runtimeOperations = createOwnerReconciliationRuntimeOperations({
+          profileAddress: workspace.profileAddress,
+          plan,
+          nextPositions,
+          nextSystemPresentation,
+          current: {
+            positions, systemPresentation, avatarShape, visitorNavigation,
+            keeperId: activeActorId, stageId, environment,
+          },
+          adapters: {
+            setPositions, setSystemPresentation, setAvatarShape, setVisitorNavigation,
+            onApplyRestoredPresentation,
+          },
+          workspaceRecordRef,
         });
-        workspaceRecordRef.current.set(workspace.profileAddress, { presence: 'current', profileAddress: workspace.profileAddress });
+        executeOwnerPublicationReconciliationTransaction({
+          profileAddress: workspace.profileAddress,
+          getActiveProfileAddress,
+          isGenerationCurrent,
+          latticeStore,
+          latticeDraft: plan.latticeDraft,
+          compatibilityOperations: [
+            {
+              name: 'Library workspace',
+              validate: () => normalizeProfileAddress(plan.workspace.profileAddress) === workspace.profileAddress,
+              apply: () => replaceWorkspace(plan.workspace),
+              compensate: () => {
+                const persisted = restoreRawValue(storage, rawCheckpoints.workspace);
+                const applied = normalizeProfileAddress(getActiveProfileAddress()) === workspace.profileAddress
+                  && replaceWorkspace(previousWorkspace, { persist: false });
+                return persisted && applied;
+              },
+            },
+            {
+              name: 'Signal settings',
+              validate: () => plan.signalSettings && typeof plan.signalSettings === 'object',
+              apply: () => replaceSignalSettings(plan.signalSettings),
+              compensate: () => {
+                const persisted = restoreRawValue(storage, rawCheckpoints.signals);
+                const applied = normalizeProfileAddress(getActiveProfileAddress()) === workspace.profileAddress
+                  && replaceSignalSettings(previousSignalSettings, { persist: false });
+                return persisted && applied;
+              },
+            },
+            {
+              name: 'restored presentation',
+              validate: () => Boolean(plan.keeperId && plan.stageId && plan.environment),
+              apply: () => saveRestoredPresentation(storage, workspace.profileAddress, {
+                keeperId: plan.keeperId, stageId: plan.stageId, environment: plan.environment,
+                avatarShape: plan.avatarShape, visitorNavigation: plan.visitorNavigation,
+              }),
+              compensate: () => restoreRawValue(storage, rawCheckpoints.presentation),
+            },
+            {
+              name: 'module layout',
+              validate: () => typeof encodedLayout === 'string',
+              apply: () => writeOwnerProfileValue(storage, MODULE_LAYOUT_STORAGE_KEY, workspace.profileAddress, encodedLayout),
+              compensate: () => restoreRawValue(storage, rawCheckpoints.layout),
+            },
+            {
+              name: 'system presentation',
+              validate: () => nextSystemPresentation && typeof nextSystemPresentation === 'object',
+              apply: () => saveSystemPresentation(workspace.profileAddress, nextSystemPresentation),
+              compensate: () => restoreRawValue(storage, rawCheckpoints.systemPresentation),
+            },
+          ],
+          baselineOperation: {
+            validate: () => Boolean(baselineValue.publishedFingerprint && baselineValue.localFingerprint),
+            apply: () => saveOwnerPublicationBaseline(storage, workspace.profileAddress, baselineValue),
+            compensate: () => restoreRawValue(storage, rawCheckpoints.baseline),
+          },
+          runtimeOperations,
+        });
       } catch (error) {
-        reportControlledError('owner-publication-hydration', error);
+        reportOwnerPublicationReconciliationError(error);
         setPublicationReconciliation({ profileAddress: workspace.profileAddress, publishedFingerprint, status: 'blocked' });
         return;
       }
     } else {
-      saveOwnerPublicationBaseline(window.localStorage, workspace.profileAddress, {
-        ...pointer, publishedFingerprint, localFingerprint: reconciliationFingerprint, hydratedAt: Date.now()
-      });
+      try {
+        const storage = window.localStorage;
+        const checkpoint = captureRawValue(storage, ownerPublicationBaselineKey(workspace.profileAddress));
+        const baselineValue = {
+          ...pointer, publishedFingerprint, localFingerprint: localReconciliationFingerprint, hydratedAt: Date.now(),
+        };
+        executeOwnerPublicationReconciliationTransaction({
+          profileAddress: workspace.profileAddress,
+          getActiveProfileAddress,
+          isGenerationCurrent,
+          baselineOperation: {
+            validate: () => Boolean(baselineValue.publishedFingerprint && baselineValue.localFingerprint),
+            apply: () => saveOwnerPublicationBaseline(storage, workspace.profileAddress, baselineValue),
+            compensate: () => restoreRawValue(storage, checkpoint),
+          },
+        });
+      } catch (error) {
+        reportOwnerPublicationReconciliationError(error);
+        setPublicationReconciliation({ profileAddress: workspace.profileAddress, publishedFingerprint, status: 'blocked' });
+        return;
+      }
     }
     setPublicationReconciliation({ profileAddress: workspace.profileAddress, publishedFingerprint, status: 'ready' });
-  }, [onApplyRestoredPresentation, ownerAuthoringEnabled, positions, publicationProfileAddress, publicationReconciliation,
+  }, [activeActorId, avatarShape, draftDocument, environment, onApplyRestoredPresentation, ownerAuthoringEnabled, positions, publicationProfileAddress, publicationReconciliation,
     publishedResolution, reconciliationFingerprint, replaceSignalSettings, replaceWorkspace, saveSystemPresentation, setAvatarShape, setPositions,
-    setSystemPresentation, setVisitorNavigation, systemPresentation, workspace, workspaceRecordRef]);
+    setSystemPresentation, setVisitorNavigation, signalSettings, stageId, systemPresentation, visitorNavigation, workspace, workspaceRecordRef]);
 
   useEffect(() => {
     if (!ownerAuthoringEnabled || publicationReconciliation.status !== 'ready'

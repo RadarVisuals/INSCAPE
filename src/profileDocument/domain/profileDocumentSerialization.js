@@ -1,4 +1,6 @@
 import { assertValidProfileDocument } from './profileDocumentValidation.js';
+import { PROFILE_DOCUMENT_VERSION, PROFILE_DOCUMENT_VERSION_8 } from './constants.js';
+import { latticeProductionDraftReconciliationValue, latticeProductionPublicationReconciliationValue } from '../../lattice/domain/latticeProductionReconciliationFingerprint.js';
 
 function canonicalize(value) {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -15,7 +17,18 @@ export function profileDocumentContentFingerprint(document) {
 export function profileDocumentReconciliationFingerprint(document) {
   const value = structuredClone(assertValidProfileDocument(document));
   value.profile.cachedIdentity = { address: value.profile.address };
-  return profileDocumentContentFingerprint(value);
+  if (value.version === PROFILE_DOCUMENT_VERSION_8) value.lattice = latticeProductionPublicationReconciliationValue(value.lattice);
+  const { revision: _revision, createdAt: _createdAt, exportedAt: _exportedAt, ...content } = value;
+  return JSON.stringify(canonicalize(content));
+}
+export function ownerProfileDocumentReconciliationFingerprint(compatibilityDocument, latticeDraft) {
+  const value = structuredClone(assertValidProfileDocument(compatibilityDocument));
+  if (value.version !== PROFILE_DOCUMENT_VERSION) throw new TypeError('The owner compatibility projection must remain version 7');
+  value.version = PROFILE_DOCUMENT_VERSION_8;
+  value.profile.cachedIdentity = { address: value.profile.address };
+  value.lattice = latticeProductionDraftReconciliationValue(latticeDraft);
+  const { revision: _revision, createdAt: _createdAt, exportedAt: _exportedAt, ...content } = value;
+  return JSON.stringify(canonicalize(content));
 }
 export function createProfileDocumentFilename(document) {
   assertValidProfileDocument(document);

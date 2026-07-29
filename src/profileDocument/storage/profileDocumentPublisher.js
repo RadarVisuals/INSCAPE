@@ -4,6 +4,7 @@ import { createLuksoPublishedProfileRepository, OS_UNDERNEATH_PROFILE_DOCUMENT_K
 import { PROFILE_DOCUMENT_IPFS_GATEWAY_URL, normalizeProfileAddress } from '../../library/config.js';
 import { keccak256 } from 'viem';
 import { describePublicationError, PUBLICATION_ERROR_ABI } from './publicationError.js';
+import { assertProfileDocumentPublicationVersion } from '../domain/constants.js';
 
 export const SET_PROFILE_DOCUMENT_ABI = [
   { type: 'function', name: 'setData', stateMutability: 'payable', inputs: [{ name: 'dataKey', type: 'bytes32' }, { name: 'dataValue', type: 'bytes' }], outputs: [] },
@@ -121,6 +122,7 @@ export function createProfileDocumentPublisher({ getContext, fetchImpl = globalT
 
   return {
     async verifyCid(snapshot, cidInput, { stale = false } = {}) {
+      assertProfileDocumentPublicationVersion(snapshot);
       const artifact = createCanonicalPublication(snapshot);
       if (stale) throw new Error('Rebuild the stale snapshot before publication');
       const uri = normalizeProfileDocumentCid(cidInput);
@@ -154,6 +156,8 @@ export function createProfileDocumentPublisher({ getContext, fetchImpl = globalT
 
     publish(verified) {
       if (!verified?.artifact || !verified?.value || !verified?.identity) return Promise.reject(new Error('Verify the CID before requesting publication'));
+      try { assertProfileDocumentPublicationVersion(verified.artifact.document); }
+      catch (error) { return Promise.reject(error); }
       const identity = verified.identity;
       if (active) {
         if (active.identity === identity) return active.promise;

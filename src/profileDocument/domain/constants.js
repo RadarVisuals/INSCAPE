@@ -1,5 +1,13 @@
 export const PROFILE_DOCUMENT_TYPE = 'OS_UNDERNEATH_PROFILE';
-export const PROFILE_DOCUMENT_VERSION = 7;
+export const PROFILE_DOCUMENT_PUBLICATION_VERSION = 7;
+export const PROFILE_DOCUMENT_VERSION = PROFILE_DOCUMENT_PUBLICATION_VERSION;
+export const PROFILE_DOCUMENT_VERSION_8 = 8;
+export function assertProfileDocumentPublicationVersion(document) {
+  if (document?.version !== PROFILE_DOCUMENT_PUBLICATION_VERSION) {
+    throw new TypeError(`Profile document version ${String(document?.version)} is readable but not publishable`);
+  }
+  return document;
+}
 export const PROFILE_DOCUMENT_LIMITS = Object.freeze({
   maxJsonBytes: 512 * 1024, maxDepth: 10, maxSpaces: 24, maxAssetsPerSpace: 200,
   maxTotalAssetReferences: 1000, maxLabelLength: 80, maxNameLength: 80,

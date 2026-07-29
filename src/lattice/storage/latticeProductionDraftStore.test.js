@@ -22,6 +22,7 @@ function memoryStorage(initial = {}) {
       writeCount += 1;
       values.set(key, value);
     },
+    removeItem(key) { values.delete(key); },
     failWrites(error = new Error('quota exceeded')) { writeError = error; },
     get writeCount() { return writeCount; },
     values,
@@ -46,6 +47,70 @@ test('canonical storage keys use one versioned lowercase profile scope', () => {
   assert.equal(latticeProductionDraftKey(uppercase(PROFILE_A)), `${LATTICE_PRODUCTION_DRAFT_KEY_PREFIX}${PROFILE_A}`);
   assert.notEqual(latticeProductionDraftKey(PROFILE_A), latticeProductionDraftKey(PROFILE_B));
   assert.throws(() => latticeProductionDraftKey('not-a-profile'), /valid profile address/);
+});
+
+test('reconciliation classifies absent, valid, and corrupt records without rewriting corruption', () => {
+  const absentStorage = memoryStorage();
+  const absent = createLatticeProductionDraftStore({ storage: absentStorage, profileAddress: PROFILE_A });
+  assert.equal(absent.classifyForReconciliation().status, 'absent');
+
+  const validDraft = titledDraft(PROFILE_A, 'Valid checkpoint');
+  const validStorage = memoryStorage({ [latticeProductionDraftKey(PROFILE_A)]: JSON.stringify(validDraft) });
+  const valid = createLatticeProductionDraftStore({ storage: validStorage, profileAddress: PROFILE_A });
+  assert.equal(valid.classifyForReconciliation().status, 'valid');
+
+  const raw = '{corrupt';
+  const corruptStorage = memoryStorage({ [latticeProductionDraftKey(PROFILE_A)]: raw });
+  const corrupt = createLatticeProductionDraftStore({ storage: corruptStorage, profileAddress: PROFILE_A });
+  assert.equal(corrupt.classifyForReconciliation().status, 'corrupt');
+  assert.equal(corruptStorage.values.get(latticeProductionDraftKey(PROFILE_A)), raw);
+  assert.equal(corruptStorage.writeCount, 0);
+});
+
+test('reconciliation compensation restores only absence or a validated prior draft', () => {
+  const absentStorage = memoryStorage();
+  const absent = createLatticeProductionDraftStore({ storage: absentStorage, profileAddress: PROFILE_A });
+  const absentCheckpoint = absent.classifyForReconciliation().checkpoint;
+  assert.equal(absent.commitCompletedOperation(titledDraft(PROFILE_A, 'Created')), true);
+  assert.equal(absent.restoreReconciliationCheckpoint(absentCheckpoint), true);
+  assert.equal(absentStorage.values.has(latticeProductionDraftKey(PROFILE_A)), false);
+  assert.equal(absent.getDraft().tables[4].title, '');
+
+  const prior = titledDraft(PROFILE_A, 'Prior');
+  const validStorage = memoryStorage({ [latticeProductionDraftKey(PROFILE_A)]: JSON.stringify(prior) });
+  const valid = createLatticeProductionDraftStore({ storage: validStorage, profileAddress: PROFILE_A });
+  const validCheckpoint = valid.classifyForReconciliation().checkpoint;
+  assert.equal(valid.commitCompletedOperation(titledDraft(PROFILE_A, 'Hydrated')), true);
+  assert.equal(valid.restoreReconciliationCheckpoint(validCheckpoint), true);
+  assert.deepEqual(JSON.parse(validStorage.values.get(latticeProductionDraftKey(PROFILE_A))), prior);
+  assert.equal(valid.restoreReconciliationCheckpoint({ absent: true }), false, 'forged checkpoints fail closed');
+});
+
+test('absent reconciliation checkpoints cannot remove another profile record', () => {
+  const storage = memoryStorage();
+  const store = createLatticeProductionDraftStore({ storage, profileAddress: PROFILE_A });
+  const checkpoint = store.classifyForReconciliation().checkpoint;
+  const profileBDraft = titledDraft(PROFILE_B, 'Profile B');
+  storage.setItem(latticeProductionDraftKey(PROFILE_B), JSON.stringify(profileBDraft));
+  assert.equal(store.setProfileAddress(PROFILE_B), true);
+
+  assert.equal(store.restoreReconciliationCheckpoint(checkpoint), false);
+  assert.deepEqual(JSON.parse(storage.values.get(latticeProductionDraftKey(PROFILE_B))), profileBDraft);
+});
+
+test('validated-draft reconciliation checkpoints cannot restore across profiles', () => {
+  const priorA = titledDraft(PROFILE_A, 'Prior A');
+  const profileB = titledDraft(PROFILE_B, 'Profile B');
+  const storage = memoryStorage({
+    [latticeProductionDraftKey(PROFILE_A)]: JSON.stringify(priorA),
+    [latticeProductionDraftKey(PROFILE_B)]: JSON.stringify(profileB),
+  });
+  const store = createLatticeProductionDraftStore({ storage, profileAddress: PROFILE_A });
+  const checkpoint = store.classifyForReconciliation().checkpoint;
+  assert.equal(store.setProfileAddress(PROFILE_B), true);
+
+  assert.equal(store.restoreReconciliationCheckpoint(checkpoint), false);
+  assert.deepEqual(JSON.parse(storage.values.get(latticeProductionDraftKey(PROFILE_B))), profileB);
 });
 
 test('completed operations persist validated drafts immediately and reload them', () => {

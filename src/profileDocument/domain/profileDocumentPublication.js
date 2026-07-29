@@ -3,6 +3,7 @@ import { keccak256 } from 'viem';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { canonicalSerializeProfileDocument, createProfileDocumentPublicationFilename, profileDocumentContentFingerprint } from './profileDocumentSerialization.js';
 import { isValidCid } from './cidValidation.js';
+import { assertProfileDocumentPublicationVersion } from './constants.js';
 
 export const PROFILE_DOCUMENT_PUBLICATION_STATUS = Object.freeze({
   READY: 'READY', VERIFYING_CID: 'VERIFYING_CID', CID_VERIFIED: 'CID_VERIFIED',
@@ -27,6 +28,7 @@ function deepFreeze(value) {
 }
 
 export function createCanonicalPublication(snapshot) {
+  assertProfileDocumentPublicationVersion(snapshot);
   const document = deepFreeze(structuredClone(snapshot));
   const text = canonicalSerializeProfileDocument(document);
   const bytes = new TextEncoder().encode(text);

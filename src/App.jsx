@@ -12,7 +12,7 @@ import { Startveil } from './startveil/index.js';
 import { useStore } from './store/useStore.js';
 import { useWalletStore } from './store/useWalletStore.js';
 import { resolveLibraryProfile, resolveWorkspaceProfile } from './library/config.js';
-import { loadRestoredPresentation } from './profileDocument/storage/profileDocumentStorage.js';
+import { loadRestoredPresentation } from './profileDocument/storage/profilePresentationStorage.js';
 import { createViewedProfileUrl, resolveViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
 import PublishedProfileBoundary from './profileDocument/components/PublishedProfileBoundary.jsx';
 import { usePublishedProfile } from './profileDocument/state/usePublishedProfile.js';

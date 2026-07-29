@@ -1,4 +1,4 @@
-import { PROFILE_DOCUMENT_TYPE, PROFILE_DOCUMENT_VERSION } from './constants.js';
+import { PROFILE_DOCUMENT_TYPE, PROFILE_DOCUMENT_VERSION, PROFILE_DOCUMENT_VERSION_8 } from './constants.js';
 import { assertValidProfileDocument, ProfileDocumentValidationError } from './profileDocumentValidation.js';
 
 const addHomeShortcut = (spaces) => (Array.isArray(spaces) ? spaces : []).map((space) => ({ ...space, homeShortcut: true }));
@@ -52,6 +52,6 @@ export function migrateProfileDocument(input) {
     const migrated = structuredClone(input); migrated.version = PROFILE_DOCUMENT_VERSION;
     return finishLegacyMigration(migrated);
   }
-  if (input.version !== PROFILE_DOCUMENT_VERSION) throw new ProfileDocumentValidationError([{ path: 'version', code: 'unsupported_version', message: `Unsupported profile document version: ${String(input.version)}` }]);
+  if (![PROFILE_DOCUMENT_VERSION, PROFILE_DOCUMENT_VERSION_8].includes(input.version)) throw new ProfileDocumentValidationError([{ path: 'version', code: 'unsupported_version', message: `Unsupported profile document version: ${String(input.version)}` }]);
   return assertValidProfileDocument(input);
 }

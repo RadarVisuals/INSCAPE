@@ -7,6 +7,11 @@ import {
 export const LATTICE_PRODUCTION_DRAFT_STORAGE_VERSION = 1;
 export const LATTICE_PRODUCTION_DRAFT_KEY_PREFIX =
   `inscape.lattice-production-draft.v${LATTICE_PRODUCTION_DRAFT_STORAGE_VERSION}:`;
+export const LATTICE_PRODUCTION_RECORD_STATUS = Object.freeze({
+  ABSENT: 'absent',
+  VALID: 'valid',
+  CORRUPT: 'corrupt',
+});
 
 function requireProfileAddress(profileAddress) {
   const profile = normalizeProfileAddress(profileAddress);
@@ -59,6 +64,28 @@ function loadAcceptedDraft(storage, profileAddress) {
 export function createLatticeProductionDraftStore({ storage, profileAddress } = {}) {
   let activeProfileAddress = requireProfileAddress(profileAddress);
   let acceptedDraft = loadAcceptedDraft(storage, activeProfileAddress);
+  const issuedCheckpoints = new WeakMap();
+
+  function classifyForReconciliation() {
+    if (!storage?.getItem) return Object.freeze({ status: LATTICE_PRODUCTION_RECORD_STATUS.CORRUPT });
+    let raw;
+    try { raw = storage.getItem(latticeProductionDraftKey(activeProfileAddress)); }
+    catch { return Object.freeze({ status: LATTICE_PRODUCTION_RECORD_STATUS.CORRUPT }); }
+    if (raw === null) {
+      const checkpoint = Object.freeze({ absent: true });
+      issuedCheckpoints.set(checkpoint, activeProfileAddress);
+      return Object.freeze({ status: LATTICE_PRODUCTION_RECORD_STATUS.ABSENT, checkpoint });
+    }
+    try {
+      const draft = validatedDraftForProfile(JSON.parse(raw), activeProfileAddress);
+      if (!draft) return Object.freeze({ status: LATTICE_PRODUCTION_RECORD_STATUS.CORRUPT });
+      const checkpoint = immutableDetached(draft);
+      issuedCheckpoints.set(checkpoint, activeProfileAddress);
+      return Object.freeze({ status: LATTICE_PRODUCTION_RECORD_STATUS.VALID, checkpoint });
+    } catch {
+      return Object.freeze({ status: LATTICE_PRODUCTION_RECORD_STATUS.CORRUPT });
+    }
+  }
 
   return Object.freeze({
     getProfileAddress() {
@@ -67,6 +94,27 @@ export function createLatticeProductionDraftStore({ storage, profileAddress } = 
 
     getDraft() {
       return immutableDetached(acceptedDraft);
+    },
+
+    classifyForReconciliation,
+
+    restoreReconciliationCheckpoint(checkpoint) {
+      if (!checkpoint || typeof checkpoint !== 'object'
+        || issuedCheckpoints.get(checkpoint) !== activeProfileAddress) return false;
+      const key = latticeProductionDraftKey(activeProfileAddress);
+      if (checkpoint.absent === true && Object.keys(checkpoint).length === 1) {
+        if (!storage?.removeItem) return false;
+        try { storage.removeItem(key); }
+        catch { return false; }
+        acceptedDraft = emptyAcceptedDraft(activeProfileAddress);
+        return true;
+      }
+      const validated = validatedDraftForProfile(checkpoint, activeProfileAddress);
+      if (!validated || !storage?.setItem) return false;
+      try { storage.setItem(key, JSON.stringify(validated)); }
+      catch { return false; }
+      acceptedDraft = deepFreeze(validated);
+      return true;
     },
 
     setProfileAddress(nextProfileAddress) {

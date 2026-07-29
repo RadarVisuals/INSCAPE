@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildProfileDocumentV3 } from '../domain/profileDocumentBuilder.js';
+import { buildProfileDocumentV3, buildProfileDocumentV8 } from '../domain/profileDocumentBuilder.js';
 import { uploadProfileDocument } from './profileDocumentUploadClient.js';
+import { createEmptyLatticeProductionDraft } from '../../lattice/domain/latticeProductionDraft.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const CID = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw';
@@ -27,5 +28,18 @@ test('upload client sends canonical bytes and validates the returned CID', async
 
 test('upload client does not accept a successful response without a valid CID', async () => {
   await assert.rejects(() => uploadProfileDocument(document, { fetchImpl: async () => Response.json({ cid: 'bad' }, { status: 201 }) }), /invalid IPFS CID/i);
+});
+
+test('upload client rejects readable v8 before making a request', async () => {
+  const version8 = buildProfileDocumentV8({
+    profileAddress: PROFILE,
+    workspace: { version: 8, profileAddress: PROFILE, favorites: [], folders: [], canvas: { launchers: [], objects: [] } },
+    assets: [], publicPresentation: { keeperId: 'abyssal_eye', stageId: 'black' }, signalSettings: {},
+    profileIdentity: { name: 'Readable only' }, createdAt: 1, exportedAt: 2,
+    latticeDraft: createEmptyLatticeProductionDraft(PROFILE),
+  });
+  let calls = 0;
+  await assert.rejects(() => uploadProfileDocument(version8, { fetchImpl: async () => { calls += 1; } }), /not publishable/);
+  assert.equal(calls, 0);
 });
 

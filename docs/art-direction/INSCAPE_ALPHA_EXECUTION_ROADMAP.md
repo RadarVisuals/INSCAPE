@@ -76,7 +76,7 @@ The working tree was clean when this roadmap was created.
 - [ ] Production NFT viewer, identity dossier, and fixed chrome are not yet cut over to the frozen implementations.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
-Phase 1 production integration inventory, Phase 2A pure domain definition, and Phase 2B profile-scoped canonical lattice persistence are complete and approved. Phase 2C version 8 reader, builder, validation, and reconciliation is the next executable slice.
+Phase 1 production integration inventory, Phase 2A pure domain definition, Phase 2B profile-scoped canonical lattice persistence, and Phase 2C version 8 reader, builder, validation, and reconciliation are complete and approved. Phase 2 remains incomplete because Phase 3 has not started.
 
 ### Locked production-integration constraints
 
@@ -187,7 +187,7 @@ Exit criterion: the user can read one plan and understand precisely what gets wi
 
 ## Phase 2 — canonical production lattice schema
 
-Status: `[ ]` — **incomplete; Phase 2C is the next executable slice**
+Status: `[ ]` — **incomplete; Phase 2C is accepted and Phase 3 has not started**
 
 Goal: introduce the nine-table production domain without replacing the current UI yet.
 
@@ -277,17 +277,20 @@ Exit criterion: the user approves the storage key, authority, validation, transa
 
 ### Phase 2C — version 8 reader, builder, validation, and reconciliation
 
-Status: `[ ]` — **next executable slice; approval required before implementation**
+Status: `[x]` — **approved and production-complete**
 
 Exact boundary:
 
-- [ ] add version 8 profile-document reading, building, validation, and owner reconciliation while version 7 remains the publication default;
-- [ ] make the validated version 8 `lattice` field the sole canonical lattice source whenever lattice rendering is selected;
-- [ ] keep any retained version-7-shaped presentation, spaces, and canvas-object fields as compatibility fallback only, never lattice inputs or a second writable authority;
-- [ ] keep versions 1 through 7 readable as legacy documents without automatic migration into nine-table documents;
-- [ ] make Owner Preview consume the exact same pure public lattice projection as visitor rendering;
-- [ ] extend owner reconciliation transactionally rather than embedding additional incidental state in `ModuleGridShell`;
-- [ ] keep version 8 publication disabled and preserve the existing wallet, IPFS, canonical verification, and read-back sequence unchanged.
+- [x] add version 8 profile-document reading, building, validation, fingerprinting, and owner reconciliation while version 7 remains the publication default;
+- [x] make the validated version 8 `lattice` field the sole canonical lattice source whenever lattice rendering is selected;
+- [x] keep any retained version-7-shaped presentation, spaces, and canvas-object fields as compatibility fallback only, never lattice inputs or a second writable authority;
+- [x] keep versions 1 through 7 readable as legacy documents without automatic migration into nine-table documents;
+- [x] provide the exact pure public lattice projection shared by future Owner Preview and visitor rendering without cutting over either renderer in this phase;
+- [x] extend owner reconciliation through profile-scoped validated writes plus reverse-order compensation, with the required baseline save after the canonical lattice commit;
+- [x] classify the pre-reconciliation lattice record as absent, valid, or corrupt; block corrupt records before writes and restore only an issued absence marker or validated prior canonical draft;
+- [x] retain accepted published placement IDs and deterministically remap colliding preserved private IDs across all nine tables with a bounded suffix search;
+- [x] reject version 8 before every production writer boundary, including client upload, server-side Pinata upload, publication artifact creation, wallet publication, and local publication snapshots;
+- [x] keep version 8 publication disabled and preserve the existing version 7 wallet, IPFS, canonical verification, and read-back sequence unchanged.
 
 Explicitly excluded:
 
@@ -302,7 +305,9 @@ User visual test: none unless a deliberately approved development harness is add
 
 Verification: focused version 8 reader, builder, validation, projection, reconciliation, compatibility, and rollback tests; the full relevant regression suite; the production build and budgets; and confirmation that visitor isolation and the runtime import graph remain unchanged.
 
-Exit criterion: the user approves the exact version 8 read/build/validation/reconciliation boundary, focused and regression tests pass, the production build and budgets pass, versions 1 through 7 remain readable, version 7 remains the publication default, and no visible production runtime changes.
+Acceptance checkpoint (2026-07-29): owner-approved; the full suite passes 690 tests with 0 failures, and the production build, revised approved budgets, owner/runtime isolation, and `git diff --check` pass. Final measured totals are initial JavaScript 1,238,725 raw / 361,534 gzip; owner JavaScript 210,053 raw / 68,281 gzip; standalone wallet JavaScript 3,943,723 raw / 1,042,223 gzip; initial CSS 113,254 raw / 19,913 gzip; owner CSS 16,887 raw / 4,790 gzip; core JavaScript 1,829,400 raw / 544,982 gzip; public assets 14,821,539 raw; and largest public asset 2,574,306 raw. No visual test applies because this phase does not cut over a renderer or add a development harness.
+
+Exit criterion: the user approves the exact version 8 read/build/validation/reconciliation boundary, focused and regression tests pass, the production build and budgets pass, versions 1 through 7 remain readable, version 7 remains the publication default, and no visible production runtime changes. Met and approved.
 
 ## Phase 3 — shared production table renderer
 
@@ -540,6 +545,4 @@ Start with:
 
 ## Immediate next action
 
-Prepare **Phase 2C — version 8 reader, builder, validation, and reconciliation** as the next executable slice.
-
-Do not implement Phase 2C until the user approves its exact file, runtime, compatibility, rollback, and test boundary. Phase 2C must keep version 7 as the publication default, leave version 8 publication disabled, preserve versions 1 through 7 as legacy documents, and stop before Phase 3.
+Phase 3 is not started. Before any Phase 3 implementation, complete its own boundary review and obtain explicit user approval. Version 7 remains the publication default, version 8 publication remains disabled, versions 1 through 7 remain legacy documents, and no Phase 3 or later work is authorized yet.

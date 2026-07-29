@@ -1,6 +1,7 @@
 export const MODULE_IDS = Object.freeze(['identity', 'collection', 'creations', 'signals']);
 export const MODULE_LAYOUT_STORAGE_KEY = 'human-underneath.module-grid.prototype.v4';
 export const LEGACY_MODULE_LAYOUT_STORAGE_KEY = 'human-underneath.module-grid.prototype.v3';
+export const SYSTEM_PRESENTATION_STORAGE_KEY = 'os-underneath.system-launchers.v1';
 export const MODULE_LAYOUT_VERSION = 4;
 
 function clamp(value, minimum, maximum) {

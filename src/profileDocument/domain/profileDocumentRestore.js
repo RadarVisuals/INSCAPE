@@ -1,12 +1,14 @@
 import { assertValidProfileDocument } from './profileDocumentValidation.js';
 import { MAX_CANVAS_OBJECT_ID_LENGTH } from '../../library/domain/canvasObjects.js';
+import { PROFILE_DOCUMENT_VERSION_8 } from './constants.js';
+import { reconcileLatticeProductionDraft } from '../../lattice/domain/latticeProductionReconciliation.js';
 
 function folderIdFromSpace(space) {
   const prefix = 'library:folder:';
   return space.kind === 'folder' && space.launcherId.startsWith(prefix) ? space.launcherId.slice(prefix.length) : null;
 }
 /** Builds a detached presentation-only restore plan. No store is touched here. */
-export function createProfileDocumentRestorePlan(document, currentWorkspace) {
+export function createProfileDocumentRestorePlan(document, currentWorkspace, { currentLatticeDraft } = {}) {
   const value = assertValidProfileDocument(document);
   const workspace = structuredClone(currentWorkspace);
   // A publication is an exact replacement for the prior public projection.
@@ -61,11 +63,14 @@ export function createProfileDocumentRestorePlan(document, currentWorkspace) {
     startOpen: module.startOpen === true,
     windowGeometry: module.windowGeometry ? { ...module.windowGeometry } : null
   }]));
+  const latticeDraft = value.version === PROFILE_DOCUMENT_VERSION_8
+    ? reconcileLatticeProductionDraft(value.lattice, currentLatticeDraft, { profileAddress: value.profile.address })
+    : null;
   return { workspace, keeperId: value.presentation.keeperId, stageId: value.presentation.stageId,
     avatarShape: value.presentation.avatarShape || 'square',
     visitorNavigation: { ...value.presentation.visitorNavigation },
     environment: { ...value.presentation.environment },
-    signalSettings: { ...value.presentation.signals }, systemModules, restoredFolderIds: [...restoredFolderIds] };
+    signalSettings: { ...value.presentation.signals }, systemModules, restoredFolderIds: [...restoredFolderIds], latticeDraft };
 }
 
 export async function executeAtomicRestore(plan, adapters) {

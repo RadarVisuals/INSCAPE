@@ -41,6 +41,7 @@ import { useArtworkCommandController } from './useArtworkCommandController.js';
 import {
   MODULE_LAYOUT_STORAGE_KEY,
   LEGACY_MODULE_LAYOUT_STORAGE_KEY,
+  SYSTEM_PRESENTATION_STORAGE_KEY,
   clampModulePosition,
   createModuleGridGeometry,
   decodeModuleLayout,
@@ -73,7 +74,6 @@ const MODULE_ENTRY_ORDER = Object.freeze({
   creations: 3
 });
 
-const SYSTEM_SCENE_KEY = 'os-underneath.system-launchers.v1';
 // The stage-free home makes the grid a primary world surface. A new preference
 // version prevents an old edit-mode-only "off" choice from booting into a void.
 const GRID_PREFERENCE_KEY = 'os-underneath.grid-preference.v2';
@@ -81,8 +81,8 @@ const SYSTEM_ICONS = Object.freeze({ identity: 'profile', collection: 'collectio
 const createHomePlacementGeometry = createVerticalHomePlacementGeometry;
 
 function defaultSystemPresentation(id, order) { return { appearanceMode: 'label', iconKey: SYSTEM_ICONS[id], span: { columns: 3, rows: 1 }, presentationOrder: order, startOpen: false, windowGeometry: null }; }
-function readSystemPresentation(profileAddress) { try { const value = JSON.parse(readOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,profileAddress) || 'null'); return Object.fromEntries(MODULES.map((module, index) => { const item=value?.[module.id]; return [module.id,{ ...defaultSystemPresentation(module.id,index), ...(item || {}), label:module.label, iconKey:normalizeIconKey(item?.iconKey,SYSTEM_ICONS[module.id]), span:normalizeSpan(item?.span,item?.appearanceMode) }]; })); } catch { return Object.fromEntries(MODULES.map((module,index)=>[module.id,{...defaultSystemPresentation(module.id,index),label:module.label}])); } }
-function saveSystemPresentation(profileAddress, presentation) { return writeOwnerProfileValue(window.localStorage,SYSTEM_SCENE_KEY,profileAddress,JSON.stringify(presentation)); }
+function readSystemPresentation(profileAddress) { try { const value = JSON.parse(readOwnerProfileValue(window.localStorage,SYSTEM_PRESENTATION_STORAGE_KEY,profileAddress) || 'null'); return Object.fromEntries(MODULES.map((module, index) => { const item=value?.[module.id]; return [module.id,{ ...defaultSystemPresentation(module.id,index), ...(item || {}), label:module.label, iconKey:normalizeIconKey(item?.iconKey,SYSTEM_ICONS[module.id]), span:normalizeSpan(item?.span,item?.appearanceMode) }]; })); } catch { return Object.fromEntries(MODULES.map((module,index)=>[module.id,{...defaultSystemPresentation(module.id,index),label:module.label}])); } }
+function saveSystemPresentation(profileAddress, presentation) { return writeOwnerProfileValue(window.localStorage,SYSTEM_PRESENTATION_STORAGE_KEY,profileAddress,JSON.stringify(presentation)); }
 function readGridPreference(){try{return JSON.parse(window.localStorage.getItem(GRID_PREFERENCE_KEY))?.visible!==false}catch{return true}}
 function getInitialGeometry() {
   return createModuleGridGeometry(window.innerWidth, window.innerHeight);

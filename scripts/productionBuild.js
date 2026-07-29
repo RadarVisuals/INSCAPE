@@ -22,7 +22,7 @@ export const UNUSED_PUBLIC_PATHS = Object.freeze([
 // Keep these byte limits deterministic and deliberately close to the measured build.
 export const PRODUCTION_BUDGETS = Object.freeze({
   initialJavaScript: Object.freeze({ raw: 1_265_000, gzip: 370_000 }),
-  ownerJavaScript: Object.freeze({ raw: 220_000, gzip: 63_000 }),
+  ownerJavaScript: Object.freeze({ raw: 220_000, gzip: 69_000 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
@@ -31,7 +31,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   ownerCss: Object.freeze({ raw: 31_000, gzip: 6_300 }),
   // Owner/publication reconciliation adds the deterministic IPFS hydration and
   // three-way baseline guard to production. Keep the accepted growth bounded.
-  coreJavaScript: Object.freeze({ raw: 1_830_000, gzip: 535_000 }),
+  coreJavaScript: Object.freeze({ raw: 1_830_000, gzip: 546_000 }),
   publicAssets: Object.freeze({ raw: 15_000_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });

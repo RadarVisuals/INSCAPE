@@ -1,10 +1,11 @@
 import { normalizeProfileAddress } from '../../library/config.js';
 import { createCanonicalAssetId, normalizeTokenId } from './assetReference.js';
-import { KNOWN_ENVIRONMENT_TYPES, KNOWN_KEEPER_IDS, KNOWN_SHADER_ENVIRONMENT_IDS, KNOWN_STAGE_IDS, PROFILE_DOCUMENT_LIMITS as L, PROFILE_DOCUMENT_TYPE, PROFILE_DOCUMENT_VERSION } from './constants.js';
+import { KNOWN_ENVIRONMENT_TYPES, KNOWN_KEEPER_IDS, KNOWN_SHADER_ENVIRONMENT_IDS, KNOWN_STAGE_IDS, PROFILE_DOCUMENT_LIMITS as L, PROFILE_DOCUMENT_TYPE, PROFILE_DOCUMENT_VERSION, PROFILE_DOCUMENT_VERSION_8 } from './constants.js';
 import { migrateProfileDocument } from './profileDocumentMigration.js';
 import { CANVAS_OBJECT_PRESENTATION_ENUMS, getCanvasObjectDefinition } from '../../library/domain/canvasObjectRegistry.js';
 import { isValidCanvasObjectId } from '../../library/domain/canvasObjects.js';
 import { isValidPublishedAssetUrl } from './publishedAssetUrl.js';
+import { validateLatticeProductionPublication } from '../../lattice/domain/latticeProductionPublication.js';
 
 const ID = /^[A-Za-z0-9:_-]+$/;
 const SAFE_MODULE_IDS = new Set(['identity', 'signals']);
@@ -39,9 +40,12 @@ export function validateProfileDocument(input, { rawSize } = {}) {
   try { measuredSize ??= new TextEncoder().encode(JSON.stringify(input)).length; } catch { measuredSize = Infinity; }
   if (measuredSize > L.maxJsonBytes) fail('$', 'document_too_large', `Document exceeds ${L.maxJsonBytes} bytes`);
   if (depth(input) > L.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!exactKeys(input, ['documentType', 'version', 'documentId', 'revision', 'createdAt', 'exportedAt', 'network', 'profile', 'presentation', 'spaces', 'canvasObjects', 'metadata'])) fail('$', 'unexpected_fields', 'Document contains unexpected or missing object structure');
+  const version8 = input?.version === PROFILE_DOCUMENT_VERSION_8;
+  const envelopeKeys = ['documentType', 'version', 'documentId', 'revision', 'createdAt', 'exportedAt', 'network', 'profile', 'presentation', 'spaces', 'canvasObjects', 'metadata'];
+  if (version8) envelopeKeys.push('lattice');
+  if (!exactKeys(input, envelopeKeys)) fail('$', 'unexpected_fields', 'Document contains unexpected or missing object structure');
   if (input?.documentType !== PROFILE_DOCUMENT_TYPE) fail('documentType', 'wrong_document_type', 'Not an OS_UNDERNEATH profile document');
-  if (input?.version !== PROFILE_DOCUMENT_VERSION) fail('version', 'unsupported_version', `Unsupported profile document version: ${String(input?.version)}`);
+  if (![PROFILE_DOCUMENT_VERSION, PROFILE_DOCUMENT_VERSION_8].includes(input?.version)) fail('version', 'unsupported_version', `Unsupported profile document version: ${String(input?.version)}`);
   if (!validId(input?.documentId)) fail('documentId', 'invalid_id', 'Invalid document ID');
   if (!Number.isInteger(input?.revision) || input.revision < 1) fail('revision', 'invalid_revision', 'Revision must be a positive integer');
   if (!validTime(input?.createdAt) || !validTime(input?.exportedAt)) fail('timestamps', 'invalid_timestamp', 'Invalid document timestamp');
@@ -101,6 +105,14 @@ export function validateProfileDocument(input, { rawSize } = {}) {
       const presentationKeys = ['fit', 'frame', 'mat', 'background'];
       if (!exactKeys(object?.presentation, presentationKeys) || presentationKeys.some((key) => !CANVAS_OBJECT_PRESENTATION_ENUMS[key].includes(object?.presentation?.[key]))) fail(`${path}.presentation`, 'invalid_presentation', 'Invalid framed artwork presentation');
     });
+  }
+  if (version8) {
+    const lattice = validateLatticeProductionPublication(input?.lattice);
+    if (!lattice.valid) {
+      for (const error of lattice.errors) fail(`lattice${error.path === '$' ? '' : `.${error.path}`}`, error.code, error.message);
+    } else if (lattice.value.lastPublished !== input.exportedAt) {
+      fail('lattice.lastPublished', 'last_published_mismatch', 'Lattice Last Published must match the document export timestamp');
+    }
   }
   return { valid: errors.length === 0, errors, value: errors.length ? null : structuredClone(input), size: measuredSize };
 }

@@ -2,13 +2,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { decodeDataSourceWithHash } from '@erc725/erc725.js';
-import { buildProfileDocumentV3 } from './profileDocumentBuilder.js';
+import { buildProfileDocumentV3, buildProfileDocumentV8 } from './profileDocumentBuilder.js';
 import { canonicalSerializeProfileDocument, formatProfileDocumentJson } from './profileDocumentSerialization.js';
 import { canonicalPublicationHash, createCanonicalPublication, encodeProfileDocumentVerifiableUri, normalizeProfileDocumentCid, publicationContentFingerprint } from './profileDocumentPublication.js';
 import { createProfileDocumentPublisher, describePublicationError } from '../storage/profileDocumentPublisher.js';
 import { OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileRepository.js';
 import { PROFILE_DOCUMENT_LIMITS, PROFILE_DOCUMENT_VERSION } from './constants.js';
 import { createProfileDocumentPublicationState } from '../state/useProfileDocumentPublication.js';
+import { createEmptyLatticeProductionDraft } from '../../lattice/domain/latticeProductionDraft.js';
 
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
@@ -50,6 +51,25 @@ test('canonical publication download is the exact serializer output and never th
   assert.notEqual(artifact.text, formatProfileDocumentJson(document));
   assert.equal(artifact.filename, `os-underneath-published-profile-profile-v${PROFILE_DOCUMENT_VERSION}-publication.json`);
   assert.equal(Object.isFrozen(artifact.document), true); assert.equal(Object.isFrozen(artifact.document.profile), true);
+});
+
+test('readable v8 is rejected before publication context, CID fetch, or wallet access', async () => {
+  const document = buildProfileDocumentV8({
+    profileAddress: PROFILE_A,
+    workspace: { version: 8, profileAddress: PROFILE_A, favorites: [], folders: [], canvas: { launchers: [], objects: [] } },
+    assets: [], publicPresentation: { keeperId: 'abyssal_eye', stageId: 'black' }, signalSettings: {},
+    profileIdentity: { name: 'Readable only' }, createdAt: 1, exportedAt: 2,
+    latticeDraft: createEmptyLatticeProductionDraft(PROFILE_A),
+  });
+  let contextReads = 0;
+  let fetches = 0;
+  const publisher = createProfileDocumentPublisher({
+    getContext: () => { contextReads += 1; return context(); },
+    fetchImpl: async () => { fetches += 1; },
+  });
+  await assert.rejects(() => publisher.verifyCid(document, CID), /not publishable/);
+  assert.equal(contextReads, 0);
+  assert.equal(fetches, 0);
 });
 
 test('closing and reopening publication creates a new unverified session', () => {

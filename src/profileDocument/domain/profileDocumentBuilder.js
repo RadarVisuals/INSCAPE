@@ -3,6 +3,9 @@ import { buildAssetReference } from './assetReference.js';
 import { PROFILE_DOCUMENT_LIMITS, PROFILE_DOCUMENT_NETWORK, PROFILE_DOCUMENT_TYPE, PROFILE_DOCUMENT_VERSION } from './constants.js';
 import { getCanvasObjectDefinition, normalizeCanvasObjectPresentation } from '../../library/domain/canvasObjectRegistry.js';
 import { parsePublishedAssetUrl } from './publishedAssetUrl.js';
+import { projectLatticeProductionPublication } from '../../lattice/domain/latticeProductionAdapter.js';
+import { assertValidLatticeProductionDraft } from '../../lattice/domain/latticeProductionDraft.js';
+import { PROFILE_DOCUMENT_VERSION_8 } from './constants.js';
 
 const cleanPosition = (value) => value && Number.isInteger(value.column) && value.column >= -255 && value.column <= 255 && Number.isInteger(value.row) && value.row >= -255 && value.row <= 255 ? { column: value.column, row: value.row } : null;
 const cleanWindowGeometry = (value) => value
@@ -68,6 +71,22 @@ export function buildProfileDocumentV3({ profileAddress, workspace, assets = [],
       signals: { notifications: signalSettings?.notifications !== false, speech: signalSettings?.speech !== false,
         visualEffects: signalSettings?.visualEffects !== false, audio: signalSettings?.audio === true } },
     spaces, canvasObjects, metadata: {}
+  };
+}
+
+/** Builds the readable v8 envelope without changing the v7 publication default. */
+export function buildProfileDocumentV8({ latticeDraft, ...input }) {
+  const compatibility = buildProfileDocumentV3(input);
+  const draft = assertValidLatticeProductionDraft(latticeDraft);
+  if (draft.profileAddress !== compatibility.profile.address) {
+    throw new TypeError('The lattice draft profile must match the profile document authority');
+  }
+  return {
+    ...compatibility,
+    version: PROFILE_DOCUMENT_VERSION_8,
+    lattice: projectLatticeProductionPublication(draft, input.assets || [], {
+      lastPublished: compatibility.exportedAt,
+    }),
   };
 }
 // Compatibility export for Phase 4 callers; it now builds the current migrated schema.
