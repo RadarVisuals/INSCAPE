@@ -45,11 +45,32 @@ test('real Browser adaptation validates owner scope, canonical identity, media, 
   assert.deepEqual(result.favorites, [ASSET_ID]);
   assert.deepEqual(result.categories, [{ id: 'category-a', name: 'Category A', assetIds: [ASSET_ID], public: true }]);
   assert.equal(result.assets[0].stableAssetId, ASSET_ID);
-  assert.equal(result.assets[0].placeable, false);
+  assert.equal(result.assets[0].placeable, true);
+  assert.equal(result.assets[0].mediaType, 'image');
+  assert.equal(result.assets[0].placementUnavailableReason, null);
   assert.equal(result.assets[0].src, 'https://assets.example/thumbnail.webp');
   assert.equal(Object.isFrozen(result), true);
   assert.equal(Object.isFrozen(result.categories[0].assetIds), true);
   assert.deepEqual(workspace, before);
+});
+
+test('placement eligibility remains honest while media or native dimensions are unresolved', () => {
+  const workspace = createEmptyWorkspace(PROFILE);
+  const missingDimensions = adaptLatticeProductionBrowserData({
+    assets: [asset({ imageWidth: null })], profileAddress: PROFILE, workspace,
+  }).assets[0];
+  const missingMedia = adaptLatticeProductionBrowserData({
+    assets: [asset({ thumbnailUrl: null, imageUrl: null, originalImageUrl: null })], profileAddress: PROFILE, workspace,
+  }).assets[0];
+  const unsupportedMedia = adaptLatticeProductionBrowserData({
+    assets: [asset({ mediaType: 'video' })], profileAddress: PROFILE, workspace,
+  }).assets[0];
+  assert.equal(missingDimensions.placeable, false);
+  assert.equal(missingDimensions.placementUnavailableReason, 'DIMENSIONS RESOLVING');
+  assert.equal(missingMedia.placeable, false);
+  assert.equal(missingMedia.placementUnavailableReason, 'MEDIA UNAVAILABLE');
+  assert.equal(unsupportedMedia.placeable, false);
+  assert.equal(unsupportedMedia.placementUnavailableReason, 'MEDIA TYPE UNAVAILABLE');
 });
 
 test('missing, malformed, duplicate, and cross-profile records fail closed without changing memberships', () => {

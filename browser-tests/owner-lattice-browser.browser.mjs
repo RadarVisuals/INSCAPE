@@ -262,8 +262,8 @@ describe('Phase 5A read-only Browser through the real App route', { concurrency:
         readOnlyVisible, searchedCount, widthAfter, widthBefore,
       };
     });
-    assert.equal(interaction.placeDisabled, true);
-    assert.match(interaction.placeLabel, /PLACE UNAVAILABLE/u);
+    assert.equal(interaction.placeDisabled, false);
+    assert.match(interaction.placeLabel, /PLACE PUBLIC/u);
     assert.equal(interaction.favoritesCount, 1);
     assert.equal(interaction.searchedCount, 1);
     assert.equal(interaction.categoryVisible, true);
@@ -278,7 +278,7 @@ describe('Phase 5A read-only Browser through the real App route', { concurrency:
     const firstAllOperations = await page.evaluate(() => window.__phase5aStorageOperations);
     const firstOperations = relevantOperations(firstAllOperations);
     assert.equal(firstOperations.some(({ method, key }) => method !== 'getItem' && key === workspaceKey(PROFILE_A)), false);
-    assert.equal(firstOperations.some(({ key }) => key === canonicalKey(PROFILE_A)), false);
+    assert.equal(firstOperations.some(({ method, key }) => method !== 'getItem' && key === canonicalKey(PROFILE_A)), false);
 
     await page.evaluate(() => { window.__phase5aStorageOperations = []; });
     await visitOwnedProfile(PROFILE_B);
@@ -290,13 +290,16 @@ describe('Phase 5A read-only Browser through the real App route', { concurrency:
     const switchedOperations = relevantOperations(switchedAllOperations);
     assert.equal(switchedOperations.some(({ key }) => key.endsWith(PROFILE_A)), false,
       `old-profile storage accessed after generation change: ${JSON.stringify(switchedOperations)}`);
-    assert.equal(switchedOperations.some(({ key }) => key === canonicalKey(PROFILE_B)), false);
-    assert.equal(switchedOperations.every(({ key }) => key === workspaceKey(PROFILE_B) || key === cacheKey(PROFILE_B)), true);
+    assert.equal(switchedOperations.some(({ method, key }) => method !== 'getItem' && key === canonicalKey(PROFILE_B)), false);
+    assert.equal(switchedOperations.every(({ key }) => key === workspaceKey(PROFILE_B)
+      || key === cacheKey(PROFILE_B) || key === canonicalKey(PROFILE_B)), true);
 
     const classified = [...firstAllOperations, ...switchedAllOperations].map((operation) => ({
       ...operation,
       classification: operation.key.startsWith('inscape.library-assets.v1:')
         ? 'expected existing asset-cache lifecycle'
+        : operation.method === 'getItem' && operation.key.startsWith('inscape.lattice-production-draft.v1:')
+          ? 'expected Phase 5B.1 canonical draft read'
         : operation.method === 'getItem' && operation.key.startsWith('inscape.library-workspace.v8:')
           ? 'expected existing workspace read'
           : operation.key.startsWith('inscape.library-workspace.')

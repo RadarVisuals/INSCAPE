@@ -22,6 +22,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const runtimeDir = resolve(root, '.browser-test-runtime');
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
+const canonicalKey = (profile) => `inscape.lattice-production-draft.v1:${profile}`;
 const browserCandidates = [
   process.env.BROWSER_PATH,
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
@@ -35,6 +36,12 @@ let cleanupBrowserTest;
 let setupAbortController;
 let baseUrl;
 let page;
+
+function assertCanonicalReadIsolation(operations) {
+  const allowedKeys = new Set([canonicalKey(PROFILE_A), canonicalKey(PROFILE_B)]);
+  assert.equal(operations.every(({ method, key }) => method === 'getItem' && allowedKeys.has(key)), true,
+    `unexpected Phase 4 lattice storage operation: ${JSON.stringify(operations)}`);
+}
 
 async function availablePort() {
   const socket = createServer();
@@ -324,7 +331,7 @@ describe('Phase 4 owner lattice through the real App route', { concurrency: fals
     await page.locator('.owner-lattice-shell[data-surface="carbon"]').waitFor({ state: 'attached', timeout: 5_000 });
     assert.equal(await activeCoordinate(), '0:0');
     assert.equal(await page.locator('.owner-lattice-theme').count(), 0);
-    assert.deepEqual(await page.evaluate(() => window.__phase4LatticeStorageOperations), []);
+    assertCanonicalReadIsolation(await page.evaluate(() => window.__phase4LatticeStorageOperations));
 
     await page.locator('.lattice-coordinate-map [data-coordinate="1:-1"]').click();
     await waitForCoordinate('1:-1');
@@ -337,7 +344,7 @@ describe('Phase 4 owner lattice through the real App route', { concurrency: fals
     await page.locator('.owner-lattice-shell[data-surface="carbon"]').waitFor({ state: 'attached', timeout: 15_000 });
     assert.equal(await activeCoordinate(), '0:0');
     assert.equal(await page.locator('.owner-lattice-theme').count(), 0);
-    assert.deepEqual(await page.evaluate(() => window.__phase4LatticeStorageOperations), []);
+    assertCanonicalReadIsolation(await page.evaluate(() => window.__phase4LatticeStorageOperations));
     await settlePlaywrightAnimationFrames(page);
   });
 });

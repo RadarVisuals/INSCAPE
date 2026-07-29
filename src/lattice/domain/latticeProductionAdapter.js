@@ -26,6 +26,13 @@ function publicAssetReference(asset, expectedStableAssetId) {
     .find((value) => parsePublishedAssetUrl(value));
   const mediaUrl = parsePublishedAssetUrl(mediaCandidate)?.value;
   if (!mediaUrl) throw new TypeError(`Production asset has no publishable media: ${expectedStableAssetId}`);
+  const declaredMediaType = typeof asset?.mediaType === 'string' && asset.mediaType.trim()
+    ? asset.mediaType.trim().toLowerCase() : null;
+  // Production Library records originate from normalized metadata images but do
+  // not currently persist mediaType. Treat that established image record shape
+  // as an image; preserve fail-closed `unknown` for explicit unsupported types.
+  const mediaType = declaredMediaType === null ? 'image'
+    : ['image', 'animation'].includes(declaredMediaType) ? declaredMediaType : 'unknown';
   const creators = (Array.isArray(asset.creators) ? asset.creators : []).map((creator) => ({
     address: normalizeProfileAddress(creator?.address || creator?.profile_id),
     name: cleanText(creator?.name || creator?.profile?.name, 80, true),
@@ -49,7 +56,7 @@ function publicAssetReference(asset, expectedStableAssetId) {
       url: mediaUrl,
       width: Number.isSafeInteger(asset?.imageWidth) && asset.imageWidth > 0 ? asset.imageWidth : null,
       height: Number.isSafeInteger(asset?.imageHeight) && asset.imageHeight > 0 ? asset.imageHeight : null,
-      type: ['image', 'animation'].includes(asset?.mediaType) ? asset.mediaType : 'unknown',
+      type: mediaType,
     },
     creators,
     attributes,

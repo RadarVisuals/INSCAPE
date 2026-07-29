@@ -13,7 +13,7 @@ const TABS = Object.freeze([
   { id: BROWSER_TABS.CATEGORIES, label: 'CATEGORIES', Icon: FolderTree },
 ]);
 
-export default function BrowserWorkspace({ data, onRequestClose, open = false }) {
+export default function BrowserWorkspace({ data, onPlaceAsset, onRequestClose, open = false }) {
   const workspace = useBrowserWorkspace(data);
   const presence = useLatticeChromePresence(open ? 'browser' : null);
   const tabRefs = useRef(new Map());
@@ -34,6 +34,15 @@ export default function BrowserWorkspace({ data, onRequestClose, open = false })
     workspace.setActiveTab(tabId);
     if (focus) requestAnimationFrame(() => tabRefs.current.get(tabId)?.focus({ preventScroll: true }));
   };
+  const selectedPlacementReason = !workspace.selectedAsset ? 'SELECT ASSET'
+    : !workspace.selectedAsset.placeable
+      ? workspace.selectedAsset.placementUnavailableReason || 'ASSET UNAVAILABLE'
+      : null;
+  const placementUnavailableReason = data.activeTable?.placementUnavailableReason || selectedPlacementReason;
+  const placementEnabled = Boolean(!placementUnavailableReason && workspace.selectedAsset && onPlaceAsset);
+  const placementLabel = placementEnabled
+    ? `PLACE PUBLIC / ${data.activeTable?.label || 'ACTIVE TABLE'}`
+    : placementUnavailableReason || 'PLACE UNAVAILABLE';
   const handleTabKeyDown = (event, tabId) => {
     const index = TABS.findIndex(({ id }) => id === tabId);
     const destination = event.key === 'ArrowRight' ? TABS[(index + 1) % TABS.length]
@@ -91,9 +100,13 @@ export default function BrowserWorkspace({ data, onRequestClose, open = false })
           : <BrowserCategoriesPanel data={{ ...data, assets: workspace.categoryAssets }} workspace={workspace} />}
       </div>
       <footer className="lattice-browser-footer">
-        <span>{data.fixture ? 'ISOLATED FIXTURE SESSION' : 'READ ONLY / PROFILE SCOPED'}</span>
+        <span>{data.fixture ? 'ISOLATED FIXTURE SESSION' : 'ORGANIZATION READ ONLY / PROFILE SCOPED'}</span>
         <span>{workspace.selectedAsset ? workspace.selectedAsset.title || 'ASSET SELECTED' : 'SELECT ASSET'}</span>
-        <button disabled type="button">PLACE UNAVAILABLE / {data.activeTable?.label || 'ACTIVE TABLE'}</button>
+        <button
+          disabled={!placementEnabled}
+          onClick={() => onPlaceAsset?.(workspace.selectedAsset.stableAssetId)}
+          type="button"
+        >{placementLabel}</button>
       </footer>
       <button
         aria-label="Resize Browser"

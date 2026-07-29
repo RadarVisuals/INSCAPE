@@ -16,7 +16,7 @@ const record = (id = ASSET, overrides = {}) => ({
   standard: 'LSP8', name: 'Real work', description: '', collectionName: null,
   imageUrl: `https://cdn.example/${id.endsWith('0x02') ? 'two' : 'one'}.webp`,
   thumbnailUrl: null, originalImageUrl: null, imageWidth: 1600, imageHeight: 900,
-  mediaType: 'image', creators: [{ address: PROFILE, name: 'Real creator' }], attributes: [], ...overrides,
+  creators: [{ address: PROFILE, name: 'Real creator' }], attributes: [], ...overrides,
 });
 const placement = (id, stableAssetId, navigationOrder, overrides = {}) => ({
   id, stableAssetId, column: 0, row: 0, columnSpan: 8, rowSpan: 6,
@@ -36,6 +36,7 @@ test('pure projection resolves real assets, sorts navigation, omits locks, and d
   assert.equal(validateLatticeProductionPublication(publication).valid, true);
   assert.deepEqual(publication.tables[4].placements.map(({ id }) => id), ['first', 'later']);
   assert.deepEqual(publication.tables[4].placements.map(({ asset }) => asset.stableAssetId), [SECOND_ASSET, ASSET]);
+  assert.deepEqual(publication.tables[4].placements.map(({ asset }) => asset.media.type), ['image', 'image']);
   assert.ok(publication.tables[4].placements.every((entry) => !Object.hasOwn(entry, 'locked') && !Object.hasOwn(entry, 'stableAssetId')));
   assert.equal(Object.hasOwn(publication, 'profileAddress'), false);
   assert.equal(Object.hasOwn(publication, 'activeTable'), false);

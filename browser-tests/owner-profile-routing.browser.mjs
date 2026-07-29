@@ -195,7 +195,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     const enter = page.locator('.startveil__entry');
     await enter.waitFor({ state: 'visible', timeout: 20_000 });
     await page.waitForFunction(() => !document.querySelector('.startveil__entry')?.disabled, undefined, { timeout: 20_000 });
-    await enter.click();
+    await enter.evaluate((button) => button.click());
     await page.waitForFunction(() => document.querySelector('.application-interface')?.dataset.visible === 'true', undefined, { timeout: 15_000 });
 
     await setRoutingState({ authorityLifecycleStatus: 'pending', hostProfileAddress: PROFILE_A,

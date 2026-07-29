@@ -9,7 +9,7 @@ function deepFreeze(value, seen = new WeakSet()) {
   return Object.freeze(value);
 }
 
-function browserAsset(asset, profileAddress) {
+export function adaptLatticeProductionBrowserAsset(asset, profileAddress) {
   const ownerAddress = normalizeProfileAddress(asset?.ownerAddress);
   const identity = parseCanonicalAssetId(asset?.id);
   if (!identity || ownerAddress !== profileAddress
@@ -20,18 +20,28 @@ function browserAsset(asset, profileAddress) {
   const source = [asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl]
     .map((candidate) => resolvePublishedAssetUrl(candidate))
     .find(Boolean) || null;
+  const width = Number.isSafeInteger(asset.imageWidth) && asset.imageWidth > 0 ? asset.imageWidth : null;
+  const height = Number.isSafeInteger(asset.imageHeight) && asset.imageHeight > 0 ? asset.imageHeight : null;
+  const declaredMediaType = typeof asset.mediaType === 'string' && asset.mediaType.trim()
+    ? asset.mediaType.trim().toLowerCase() : null;
+  // Production Library records are normalized from metadata `images` and currently
+  // do not persist a separate mediaType field. A validated image source therefore
+  // supplies the honest legacy/default type; explicit unsupported types still fail.
+  const mediaType = declaredMediaType || (source ? 'image' : 'unknown');
   return {
     collection: typeof asset.collectionName === 'string' && asset.collectionName.trim()
       ? asset.collectionName.trim().slice(0, 80) : null,
-    height: Number.isSafeInteger(asset.imageHeight) && asset.imageHeight > 0 ? asset.imageHeight : null,
-    mediaType: typeof asset.mediaType === 'string' && asset.mediaType.trim()
-      ? asset.mediaType.trim().toLowerCase() : 'unknown',
-    placeable: false,
+    height,
+    mediaType,
+    placeable: Boolean(source && width && height && ['image', 'animation'].includes(mediaType)),
+    placementUnavailableReason: !source ? 'MEDIA UNAVAILABLE'
+      : !width || !height ? 'DIMENSIONS RESOLVING'
+        : !['image', 'animation'].includes(mediaType) ? 'MEDIA TYPE UNAVAILABLE' : null,
     src: source,
     stableAssetId: identity.stableAssetId,
     title: typeof asset.name === 'string' && asset.name.trim()
       ? asset.name.trim().slice(0, 80) : null,
-    width: Number.isSafeInteger(asset.imageWidth) && asset.imageWidth > 0 ? asset.imageWidth : null,
+    width,
   };
 }
 
@@ -62,7 +72,7 @@ export function adaptLatticeProductionBrowserData({
   let rejectedAssetCount = 0;
   const seen = new Set();
   for (const candidate of Array.isArray(assets) ? assets : []) {
-    const accepted = browserAsset(candidate, profile);
+    const accepted = adaptLatticeProductionBrowserAsset(candidate, profile);
     if (!accepted || seen.has(accepted.stableAssetId)) {
       rejectedAssetCount += 1;
       continue;

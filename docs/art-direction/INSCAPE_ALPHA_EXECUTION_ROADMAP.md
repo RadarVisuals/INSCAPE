@@ -72,7 +72,7 @@ The working tree was clean when this roadmap was created.
 - [x] Phase 4 owner navigation and fixed chrome are integrated and visually accepted behind the verified owner gate.
 - [ ] The frozen lattice UI is not yet the published visitor renderer.
 - [x] Version 8 defines the canonical nine-table profile-document model; publication remains disabled and version 7 remains the default.
-- [ ] Production INDEX/CATEGORIES stores are not yet wired to the isolated Browser.
+- [x] Production INDEX/CATEGORIES stores are wired read-only to the isolated Browser; canonical authoring remains separately bounded by the current Phase 5B capability.
 - [x] Phase 4 fixed chrome is integrated and visually accepted; the production NFT viewer and identity dossier remain later-phase work.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
@@ -187,7 +187,7 @@ Exit criterion: the user can read one plan and understand precisely what gets wi
 
 ## Phase 2 — canonical production lattice schema
 
-Status: `[ ]` — **incomplete; Phase 2C is accepted and Phase 3 has not started**
+Status: `[x]` — **complete; Phase 2A–2C are accepted**
 
 Goal: introduce the nine-table production domain without replacing the current UI yet.
 
@@ -381,7 +381,7 @@ Exit criterion: owner navigation is intuitive, deterministic, responsive, and do
 
 ## Phase 5 — production Browser and authoring geometry
 
-Status: `[~]` — **Phase 5A accepted; Phase 5B onward remains unstarted**
+Status: `[~]` — **Phase 5A and Phase 5B.1 accepted; Phase 5B.2 onward remains unstarted**
 
 Goal: wire the isolated Browser to real INDEX/CATEGORIES data and enable table authoring.
 
@@ -405,7 +405,25 @@ Accepted checkpoint (2026-07-29): visual acceptance confirmed. The production ow
 
 Owner/viewed-profile routing correction checkpoint (2026-07-29): implemented, verified, and visually accepted as a separate correction after Phase 5A, without beginning Phase 5B. App routing now retains only explicit `view=` intent and derives implicit owner, development `profile=` fallback, pending, and settled signed-out targets from the current generation. Wallet lifecycle `pending`/`complete` is observational only; verified ownership and matching normalized addresses remain the sole authoring gate. Implicit pending authority resolves no publication, owner chunk, or owner storage, while explicit visitor targets remain available and RETURN removes only genuine explicit intent. Generation-gated recovery settles before optional LSP3 metadata, and superseded provider, permission, recovery, and metadata work cannot select or settle a later profile. Phase 3 remains `[~]`, Phase 4 `[x]`, Phase 5A `[x]`, overall Phase 5 `[~]`, and Phase 5B onward `[ ]`; version 7 remains the publication default and version 8 publication remains disabled.
 
-Phase 5B onward status: `[ ]` — unstarted and requires a separate boundary review. Placement, geometry, transactions, visibility, crop, presentation, and Owner Preview behavior are not approved by Phase 5A.
+### Phase 5B.1 — one public placement transaction
+
+Status: `[x]` — implemented, automatically verified, and visually accepted.
+
+- [x] One explicitly public, eligible real Browser asset can be placed into an empty active public canonical table.
+- [x] Completed PLACE operations revalidate profile, asset identity, media, and native dimensions, then persist transactionally through the unchanged Phase 2B store.
+- [x] Placement identity is globally deterministic and bounded; initial geometry uses the provisional 12 × 10 integer-cell envelope with the approved ratio, rounding, and centering rules.
+- [x] First-unused table-local layer and navigation order plus the approved crop, frame, mat, backing, transparency, visibility, and lock defaults are canonicalized without renderer changes.
+- [x] The one-placement-per-table restriction exists only in the Phase 5B.1 UI and completed-operation session capability gates; direct or stale repeat callbacks cannot persist a second placement, while valid existing multi-placement drafts load without mutation.
+- [x] Private tables and placements remain untouched canonically and redacted through the accepted Phase 2A public projection.
+- [x] Absent-profile mount and ordinary load perform no canonical write; unavailable or throwing default storage acquisition and corrupt storage fail closed without a runtime crash or byte mutation; failed transactions retain the exact prior displayed, accepted, and persisted draft.
+- [x] Profile switching and stale selection are generation-safe, and disabled PLACE states remain honest for private/nonempty tables, missing dimensions, unavailable media, stale selection, and corrupt storage.
+- [x] Focused identity, geometry, eligibility, transaction, corruption, storage-acquisition, immutability, reload, multi-placement-load, private-redaction, and cross-profile coverage passes 27 tests; the full regression suite passes 741 tests with 0 failures.
+- [x] The real-App Phase 5B.1 Browser test passes a full document reload with exact canonical bytes, deep-equal draft recovery, identical rendered geometry, and the restored nonempty-table gate; existing Phase 3, Phase 4, Phase 5A, and routing browser tests pass; production build, the 1,228,709-byte initial-JavaScript budget, owner/visitor/initial-entry isolation, and `git diff --check` pass.
+- [x] Interactive visual acceptance confirms real Library placement, native-ratio rendering, full-reload recovery, and cross-profile isolation.
+
+Implementation checkpoint (2026-07-29): visual acceptance confirmed against real profile-scoped Library records. The Phase 2B key remains `inscape.lattice-production-draft.v1:<normalized-profile-address>` and its accepted store remains the sole writable canonical authority. The Phase 3 renderer is reused unchanged. The shared Phase 2A projection received one narrow production-record compatibility correction: normalized Library image records without a separate `mediaType` are projected as images, while explicit unsupported types remain fail-closed. No store, validator, renderer, reconciliation, publication-writer, routing, wallet-lifecycle, `ModuleGridShell`, version-7 publication, or version-8 publication contract changed. The known legacy published-visitor suite still stops in setup after fixture mount and published readiness because its stale `.published-home-world__header` selector is absent and is passed to `getComputedStyle`; its 12 child tests are consequently cancelled before assertions.
+
+Phase 5B.2 onward status: `[ ]` — unstarted. Move, resize, crop editing, layer editing, mat/frame editing, replace, remove, visibility editing, lock editing, and Owner Preview remain outside Phase 5B.1.
 
 User visual test:
 

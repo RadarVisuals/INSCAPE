@@ -7,13 +7,15 @@ const fixture = readFileSync(new URL('./BrowserFixtureHarness.jsx', import.meta.
 const categoryDialog = readFileSync(new URL('./BrowserCategoryDialog.jsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./browserWorkspace.css', import.meta.url), 'utf8');
 
-test('Browser owns its presentation and accepts read-only grouped data without commands', () => {
-  assert.match(workspace, /function BrowserWorkspace\(\{ data, onRequestClose, open = false \}\)/);
+test('Browser keeps organization read-only and exposes only the bounded owner PLACE callback', () => {
+  assert.match(workspace, /function BrowserWorkspace\(\{ data, onPlaceAsset, onRequestClose, open = false \}\)/);
   assert.match(workspace, /role="tablist"/);
   assert.match(workspace, /role="tab"/);
   assert.match(workspace, /role="tabpanel"/);
-  assert.match(workspace, /<button disabled type="button">PLACE UNAVAILABLE/);
-  assert.doesNotMatch(workspace, /commands\.|requestPlacement|onClick=\{place/);
+  assert.match(workspace, /PLACE PUBLIC/);
+  assert.match(workspace, /disabled=\{!placementEnabled\}/);
+  assert.match(workspace, /onPlaceAsset\?\.\(workspace\.selectedAsset\.stableAssetId\)/);
+  assert.doesNotMatch(workspace, /commands\.|requestPlacement|toggleFavorite|createCategory|setCategory/);
   assert.doesNotMatch(workspace, /useLibraryStore|localStorage|sessionStorage|wallet|IPFS|createPlacementAtAnchor|normalizedInsertionAnchor/iu);
 });
 

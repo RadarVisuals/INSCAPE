@@ -6,6 +6,7 @@ import {
   LATTICE_PRODUCTION_COORDINATES,
   LATTICE_PRODUCTION_SURFACE_IDS,
   createEmptyLatticeProductionDraft,
+  latticeProductionTableId,
 } from '../lattice/domain/latticeProductionDraft.js';
 import { projectLatticeProductionPublication } from '../lattice/domain/latticeProductionAdapter.js';
 import { assertValidLatticeProductionPublication } from '../lattice/domain/latticeProductionPublication.js';
@@ -27,6 +28,10 @@ import LatticeWorkspaceToolbar from '../lattice/rendering/LatticeWorkspaceToolba
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import KeeperDock from './KeeperDock.jsx';
 import useOwnerLatticeBrowser from './useOwnerLatticeBrowser.js';
+import useOwnerLatticeAuthoring, {
+  OWNER_LATTICE_AUTHORING_STATUS,
+  ownerLatticePlacementUnavailableReason,
+} from './useOwnerLatticeAuthoring.js';
 import '../lattice/rendering/latticeMenuSurface.css';
 import './ownerLatticeShell.css';
 
@@ -53,7 +58,7 @@ const SURFACE_LABELS = Object.freeze({
 });
 
 const sameCoordinate = (left, right) => left.x === right.x && left.y === right.y;
-const tableIdentity = (table) => table.title.trim() || table.id.replace('-', ' ').toUpperCase();
+const tableIdentity = (table) => table.title?.trim() || table.id.replace('-', ' ').toUpperCase();
 
 export function createEmptyOwnerLatticeRuntimeValue(profileAddress, {
   menuSurfaceId = 'carbon',
@@ -117,6 +122,7 @@ function OwnerLatticeRuntime({
   const [railCollapsed, setRailCollapsed] = useState(false);
   const profileIdentity = useProfileIdentity(profileAddress);
   const browserData = useOwnerLatticeBrowser(profileAddress, browserOpen);
+  const authoring = useOwnerLatticeAuthoring(profileAddress);
   const profile = useMemo(
     () => getIdentityProfileViewModel(profileIdentity, { walletConnected: visitorWalletConnected }),
     [profileIdentity, visitorWalletConnected],
@@ -126,10 +132,25 @@ function OwnerLatticeRuntime({
     displayName: profile.name || 'UNRESOLVED PROFILE',
     secondaryLabel: profile.displayAddress || 'UNIVERSAL PROFILE',
   }), [profile]);
-  const lattice = useMemo(
-    () => createEmptyOwnerLatticeRuntimeValue(profileAddress, { menuSurfaceId, surfaceId }),
-    [menuSurfaceId, profileAddress, surfaceId],
-  );
+  const latticeProjection = useMemo(() => {
+    if (!authoring.draft) return { lattice: null, error: null };
+    try {
+      const renderDraft = structuredClone(authoring.draft);
+      renderDraft.appearance.surfaceId = surfaceId;
+      renderDraft.appearance.menuSurfaceId = menuSurfaceId;
+      return {
+        lattice: assertValidLatticeProductionPublication(projectLatticeProductionPublication(
+          renderDraft,
+          authoring.assetRecords,
+          { lastPublished: RUNTIME_PROJECTION_TIMESTAMP },
+        )),
+        error: null,
+      };
+    } catch (error) {
+      return { lattice: null, error: error?.message || 'Canonical assets are unresolved' };
+    }
+  }, [authoring.assetRecords, authoring.draft, menuSurfaceId, surfaceId]);
+  const lattice = latticeProjection.lattice;
 
   useEffect(() => {
     setSpatialRoot(document.querySelector('.application-root'));
@@ -260,8 +281,18 @@ function OwnerLatticeRuntime({
   }, [settle]);
 
   const stageTransform = `translate3d(${dragOffset.x - (active.x * plane.width)}px, ${dragOffset.y - (active.y * plane.height)}px, 0)`;
-  const activeTable = lattice.tables.find((table) => table.coordinate.x === active.x && table.coordinate.y === active.y);
-  const activeTableName = tableIdentity(activeTable);
+  const activeTableId = latticeProductionTableId(active);
+  const activeDraftTable = authoring.draft?.tables.find((table) => table.id === activeTableId) || null;
+  const activeTable = lattice?.tables.find((table) => table.id === activeTableId) || activeDraftTable;
+  const activeTableName = activeTable ? tableIdentity(activeTable) : activeTableId.replace('-', ' ').toUpperCase();
+  const placementUnavailableReason = ownerLatticePlacementUnavailableReason({
+    activeTable: activeDraftTable,
+    authoringStatus: authoring.status,
+    profileReady: authoring.profileReady,
+  });
+  const canonicalNotice = authoring.status === OWNER_LATTICE_AUTHORING_STATUS.CORRUPT
+    ? 'CANONICAL DRAFT UNAVAILABLE / STORED RECORD PRESERVED / EXPLICIT RECOVERY REQUIRED'
+    : authoring.error || latticeProjection.error;
   const spatialTheme = ['carbon', 'graphite'].includes(surfaceId) ? 'dark' : 'light';
   const closeBrowser = useCallback(() => {
     setBrowserOpen(false);
@@ -303,7 +334,9 @@ function OwnerLatticeRuntime({
         height: 7 * dimensions.height,
       }} />
       {LATTICE_PRODUCTION_COORDINATES.map((coordinate, index) => {
-        const table = lattice.tables[index];
+        const table = lattice?.tables[index] || authoring.draft?.tables[index] || {
+          id: latticeProductionTableId(coordinate),
+        };
         return <div
           className="owner-lattice-table"
           data-active={sameCoordinate(coordinate, active) || undefined}
@@ -314,7 +347,9 @@ function OwnerLatticeRuntime({
             width: plane.width,
             height: plane.height,
           }}
-        ><LatticeProductionTableRenderer lattice={lattice} tableId={table.id} /></div>;
+        >{lattice
+          ? <LatticeProductionTableRenderer lattice={lattice} tableId={table.id} />
+          : <div className="owner-lattice-canonical-unavailable" role="status">CANONICAL TABLE UNAVAILABLE</div>}</div>;
       })}
     </div>
     <LatticeNavigationOverlay
@@ -366,8 +401,9 @@ function OwnerLatticeRuntime({
         <BrowserWorkspace
           data={{
             ...browserData,
-            activeTable: { label: activeTableName, placementAvailable: false },
+            activeTable: { label: activeTableName, placementUnavailableReason },
           }}
+          onPlaceAsset={(stableAssetId) => authoring.placePublicAsset({ stableAssetId, tableId: activeTableId })}
           onRequestClose={closeBrowser}
           open={browserOpen}
         />
@@ -379,6 +415,7 @@ function OwnerLatticeRuntime({
         onSurfaceChange={setSurfaceId}
         surfaceId={surfaceId}
       />}
+      {canonicalNotice && <div className="owner-lattice-authoring-notice" data-lattice-chrome role="alert">{canonicalNotice}</div>}
       <div className="owner-lattice-signature" aria-label="INSCAPE">
         <small>{activeTableName}</small>
         <strong>INSCAPE</strong>

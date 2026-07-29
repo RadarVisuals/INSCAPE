@@ -58,6 +58,8 @@
 }
 .owner-lattice-table { position: absolute; overflow: hidden; }
 .owner-lattice-table .lattice-production-table { background-color: transparent; }
+.owner-lattice-canonical-unavailable { position: absolute; inset: 0; display: grid; place-items: center; color: var(--lattice-overlay-muted); font: 8px/1.4 "Inscape IBM Plex Mono", monospace; letter-spacing: .12em; }
+.owner-lattice-authoring-notice { position: fixed; z-index: 26; left: 50%; bottom: 106px; max-width: min(560px, calc(100vw - 32px)); padding: 9px 12px; translate: -50% 0; border: 1px solid var(--lattice-menu-line-strong); background: var(--lattice-menu-panel); color: var(--lattice-menu-ink); font: 8px/1.45 "Inscape IBM Plex Mono", monospace; letter-spacing: .08em; text-align: center; }
 
 .owner-lattice-spatial-surface .lattice-navigation-overlay { position: absolute; z-index: 5; inset: 0; pointer-events: none; }
 .owner-lattice-spatial-surface .lattice-direction-chevron,

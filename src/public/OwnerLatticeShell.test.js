@@ -9,6 +9,7 @@ import { projectLatticeProductionPublication } from '../lattice/domain/latticePr
 import { validateLatticeProductionPublication } from '../lattice/domain/latticeProductionPublication.js';
 
 const source = readFileSync(new URL('./OwnerLatticeShell.jsx', import.meta.url), 'utf8');
+const authoringSource = readFileSync(new URL('./useOwnerLatticeAuthoring.js', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./ownerLatticeShell.css', import.meta.url), 'utf8');
 const PROFILE = '0x1111111111111111111111111111111111111111';
 
@@ -38,7 +39,7 @@ test('invalid profiles fail closed before a render value can be produced', () =>
   assert.doesNotMatch(innerSource, /ownerAuthoringEnabled|return null/);
 });
 
-test('Phase 5A shell adds only the read-only owner Browser and no canonical storage or writable command surface', () => {
+test('Phase 5B.1 shell delegates one canonical PLACE action without expanding accepted boundaries', () => {
   for (const forbidden of [
     'localStorage', 'sessionStorage', 'indexedDB', 'latticeProductionDraftStore',
     'Reconciliation', 'ProfileDocument', 'IPFS', 'PublishedProfile',
@@ -48,7 +49,12 @@ test('Phase 5A shell adds only the read-only owner Browser and no canonical stor
   assert.match(source, /KeeperDock/);
   assert.match(source, /BrowserWorkspace/);
   assert.match(source, /useOwnerLatticeBrowser/);
-  assert.match(source, /placementAvailable: false/);
+  assert.match(source, /useOwnerLatticeAuthoring/);
+  assert.match(source, /placePublicAsset/);
+  assert.match(source, /ownerLatticePlacementUnavailableReason/);
+  assert.match(authoringSource, /PUBLIC PLACEMENT UNAVAILABLE \/ PRIVATE TABLE/);
+  assert.match(authoringSource, /ADDITIONAL PLACEMENT REQUIRES NEXT AUTHORING SLICE/);
+  assert.match(source, /STORED RECORD PRESERVED \/ EXPLICIT RECOVERY REQUIRED/);
   assert.doesNotMatch(source, /commands=|requestPlacement|toggleFavorite|createCategory|setCategory/);
 });
 
