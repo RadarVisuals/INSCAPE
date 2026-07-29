@@ -171,3 +171,102 @@ test('private and nonempty table restrictions remain temporary runtime capabilit
     activeTable: null, authoringStatus: OWNER_LATTICE_AUTHORING_STATUS.CORRUPT, profileReady: true,
   }), /CORRUPT/u);
 });
+
+test('completed MOVE re-reads the accepted draft and performs exactly one canonical write', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  draft.tables[4].placements = [existingPlacement('placement-1')];
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: JSON.stringify(draft) });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const result = session.commitMovement({
+    assetRecord: asset(),
+    tableId: 'table-05',
+    placementId: 'placement-1',
+    expectedStartGeometry: { column: 1, row: 1, columnSpan: 3, rowSpan: 3 },
+    destination: { column: 9, row: 7, columnSpan: 3, rowSpan: 3 },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(storage.writes, 1);
+  assert.deepEqual(result.draft.tables[4].placements[0], {
+    ...existingPlacement('placement-1'), column: 9, row: 7,
+  });
+  assert.deepEqual(JSON.parse(storage.values.get(latticeProductionDraftKey(PROFILE))), result.draft);
+});
+
+test('same-cell, stale-start, locked, private, missing-asset and unavailable-media MOVE attempts write nothing', () => {
+  const cases = [
+    { name: 'same cell', mutate: () => {}, destination: { column: 1, row: 1, columnSpan: 3, rowSpan: 3 } },
+    { name: 'locked', mutate: (draft) => { draft.tables[4].placements[0].locked = true; } },
+    { name: 'private placement', mutate: (draft) => { draft.tables[4].placements[0].visibility = 'PRIVATE'; } },
+    { name: 'private table', mutate: (draft) => { draft.tables[4].visibility = 'PRIVATE'; } },
+  ];
+  for (const entry of cases) {
+    const draft = createEmptyLatticeProductionDraft(PROFILE);
+    draft.tables[4].placements = [existingPlacement('placement-1')];
+    entry.mutate(draft);
+    const raw = JSON.stringify(draft);
+    const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
+    const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+    const result = session.commitMovement({
+      assetRecord: asset(), tableId: 'table-05', placementId: 'placement-1',
+      expectedStartGeometry: { column: 1, row: 1, columnSpan: 3, rowSpan: 3 },
+      destination: entry.destination || { column: 2, row: 2, columnSpan: 3, rowSpan: 3 },
+    });
+    assert.equal(result.ok, false, entry.name);
+    assert.equal(storage.writes, 0, entry.name);
+    assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), raw, entry.name);
+  }
+
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  draft.tables[4].placements = [existingPlacement('placement-1')];
+  const raw = JSON.stringify(draft);
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const stale = session.commitMovement({
+    assetRecord: asset(), tableId: 'table-05', placementId: 'placement-1',
+    expectedStartGeometry: { column: 2, row: 1, columnSpan: 3, rowSpan: 3 },
+    destination: { column: 3, row: 3, columnSpan: 3, rowSpan: 3 },
+  });
+  const missing = session.commitMovement({
+    assetRecord: null, tableId: 'table-05', placementId: 'placement-1',
+    expectedStartGeometry: { column: 1, row: 1, columnSpan: 3, rowSpan: 3 },
+    destination: { column: 3, row: 3, columnSpan: 3, rowSpan: 3 },
+  });
+  const unsupported = session.commitMovement({
+    assetRecord: asset({ mediaType: 'video' }), tableId: 'table-05', placementId: 'placement-1',
+    expectedStartGeometry: { column: 1, row: 1, columnSpan: 3, rowSpan: 3 },
+    destination: { column: 3, row: 3, columnSpan: 3, rowSpan: 3 },
+  });
+  assert.equal(stale.ok, false);
+  assert.equal(missing.ok, false);
+  assert.equal(unsupported.ok, false);
+  assert.equal(storage.writes, 0);
+  assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), raw);
+});
+
+test('failed MOVE persistence restores the exact previous accepted draft and bytes', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  draft.tables[4].placements = [existingPlacement('placement-1')];
+  const raw = JSON.stringify(draft);
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const accepted = session.getDraft();
+  storage.fail();
+  const result = session.commitMovement({
+    assetRecord: asset(), tableId: 'table-05', placementId: 'placement-1',
+    expectedStartGeometry: { column: 1, row: 1, columnSpan: 3, rowSpan: 3 },
+    destination: { column: 8, row: 6, columnSpan: 3, rowSpan: 3 },
+  });
+  assert.equal(result.ok, false);
+  assert.deepEqual(session.getDraft(), accepted);
+  assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), raw);
+  assert.equal(storage.writes, 0);
+});
+
+test('corrupt sessions block MOVE while preserving raw bytes', () => {
+  const raw = '{corrupt';
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  assert.equal(session.commitMovement({}).ok, false);
+  assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), raw);
+  assert.equal(storage.writes, 0);
+});

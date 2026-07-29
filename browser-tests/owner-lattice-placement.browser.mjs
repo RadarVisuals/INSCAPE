@@ -157,6 +157,16 @@ describe('Phase 5B.1 canonical placement through the real App route', { concurre
             creators: [], attributes: [], metadataStatus: 'ready', rawMetadata: {} }] }));
       };
       seed(profileA, contractA, 'ALPHA'); seed(profileB, contractB, 'BETA');
+      window.__phase5bCanonicalStorageOperations = [];
+      for (const method of ['getItem', 'setItem', 'removeItem']) {
+        const original = Storage.prototype[method];
+        Storage.prototype[method] = function phase5bCanonicalStorageProbe(key, ...rest) {
+          if (String(key).startsWith('inscape.lattice-production-draft.v1:')) {
+            window.__phase5bCanonicalStorageOperations.push({ method, key: String(key) });
+          }
+          return original.call(this, key, ...rest);
+        };
+      }
     }, { profileA: PROFILE_A, profileB: PROFILE_B, contractA: CONTRACT_A, contractB: CONTRACT_B });
   }, async () => {
     cleanupBrowserTest ||= createBrowserTestCleanup({ runtimePath: runtimeDir, workspaceRoot: root, diagnostic });
@@ -218,6 +228,125 @@ describe('Phase 5B.1 canonical placement through the real App route', { concurre
     assert.match(await reloadedPlace.textContent(), /ADDITIONAL PLACEMENT REQUIRES NEXT AUTHORING SLICE/u);
     await page.getByRole('button', { name: 'Close Browser' }).evaluate((node) => node.click());
 
+    await page.evaluate(() => { window.__phase5bCanonicalStorageOperations = []; });
+    const movementControl = page.getByRole('button', { name: /Move placement: ALPHA PLACEABLE ASSET/u });
+    const movementBox = await movementControl.boundingBox();
+    assert.ok(movementBox?.width > 0 && movementBox?.height > 0);
+    const movementStart = {
+      x: movementBox.x + movementBox.width - 2,
+      y: movementBox.y + (movementBox.height / 2),
+    };
+    await page.mouse.move(movementStart.x, movementStart.y);
+    await page.mouse.down();
+    await page.mouse.move(movementStart.x + 5, movementStart.y);
+    assert.equal(await page.evaluate((key) => localStorage.getItem(key), canonicalKey(PROFILE_A)), persistedBytes,
+      'leaving the artwork before activation wrote canonical bytes');
+    await page.mouse.move(movementStart.x + 85, movementStart.y, { steps: 4 });
+    await page.waitForFunction(() => document.querySelector('[data-placement-id="placement-1"]')?.style.left === '480px');
+    assert.equal(await page.evaluate((key) => localStorage.getItem(key), canonicalKey(PROFILE_A)), persistedBytes,
+      'runtime movement preview wrote canonical bytes');
+    assert.equal((await page.evaluate(() => window.__phase5bCanonicalStorageOperations))
+      .filter(({ method }) => method === 'setItem').length, 0);
+    await page.mouse.up();
+    await page.waitForFunction((key) => JSON.parse(localStorage.getItem(key)).tables[4].placements[0].column === 12,
+      canonicalKey(PROFILE_A));
+    const movedBytes = await page.evaluate((key) => localStorage.getItem(key), canonicalKey(PROFILE_A));
+    const moved = JSON.parse(movedBytes);
+    assert.deepEqual(moved.tables[4].placements[0], {
+      ...persisted.tables[4].placements[0], column: 12,
+    });
+    assert.equal((await page.evaluate(() => window.__phase5bCanonicalStorageOperations))
+      .filter(({ method, key }) => method === 'setItem' && key === canonicalKey(PROFILE_A)).length, 1,
+    'completed MOVE did not perform exactly one canonical write');
+
+    await page.evaluate(() => { window.__phase5bCanonicalStorageOperations = []; });
+    const movedControlBox = await movementControl.boundingBox();
+    const cancelStart = { x: movedControlBox.x + (movedControlBox.width / 2), y: movedControlBox.y + (movedControlBox.height / 2) };
+    await page.mouse.move(cancelStart.x, cancelStart.y);
+    await page.mouse.down();
+    await page.mouse.move(cancelStart.x - 90, cancelStart.y, { steps: 3 });
+    await page.keyboard.press('Escape');
+    await page.mouse.up();
+    assert.equal(await page.evaluate((key) => localStorage.getItem(key), canonicalKey(PROFILE_A)), movedBytes,
+      'Escape changed accepted canonical bytes');
+    assert.equal((await page.evaluate(() => window.__phase5bCanonicalStorageOperations))
+      .filter(({ method }) => method === 'setItem').length, 0);
+    assert.equal(await page.locator('[data-placement-id="placement-1"]').getAttribute('style'),
+      await movementControl.getAttribute('style'), 'Escape did not restore the accepted projected rectangle');
+
+    await page.evaluate(() => { window.__phase5bCanonicalStorageOperations = []; });
+    const sameCellBox = await movementControl.boundingBox();
+    await page.mouse.move(sameCellBox.x + (sameCellBox.width / 2), sameCellBox.y + (sameCellBox.height / 2));
+    await page.mouse.down();
+    await page.mouse.move(sameCellBox.x + (sameCellBox.width / 2) + 10, sameCellBox.y + (sameCellBox.height / 2));
+    await page.mouse.up();
+    assert.equal(await page.evaluate((key) => localStorage.getItem(key), canonicalKey(PROFILE_A)), movedBytes,
+      'same-cell completed gesture changed canonical bytes');
+    assert.equal((await page.evaluate(() => window.__phase5bCanonicalStorageOperations))
+      .filter(({ method }) => method === 'setItem').length, 0);
+
+    const emptyStart = await page.evaluate(() => {
+      for (let y = 120; y <= innerHeight - 120; y += 60) {
+        for (let x = 200; x <= innerWidth - 200; x += 60) {
+          const target = document.elementFromPoint(x, y);
+          if (target && !target.closest('[data-lattice-chrome],[data-lattice-placement-control],button,a,input,select,textarea')) {
+            return { x, y };
+          }
+        }
+      }
+      throw new Error('No eligible empty table-navigation point was found');
+    });
+    await page.mouse.move(emptyStart.x, emptyStart.y);
+    await page.mouse.down();
+    await page.mouse.move(emptyStart.x + 110, emptyStart.y, { steps: 3 });
+    await page.mouse.up();
+    await page.waitForFunction(() => document.querySelector('.lattice-coordinate-map [aria-current="location"]')?.dataset.coordinate === '-1:0');
+    await page.locator('.lattice-coordinate-map [data-coordinate="0:0"]').click();
+    await page.waitForFunction(() => document.querySelector('.lattice-coordinate-map [aria-current="location"]')?.dataset.coordinate === '0:0');
+    assert.equal(await page.evaluate((key) => localStorage.getItem(key), canonicalKey(PROFILE_A)), movedBytes,
+      'empty-space table navigation changed canonical placement bytes');
+
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 10_000 });
+    await visitOwnedProfile(PROFILE_A);
+    await passStartveil();
+    await page.locator('[data-placement-id="placement-1"]').waitFor({ state: 'attached', timeout: 15_000 });
+    assert.equal(await page.evaluate((key) => localStorage.getItem(key), canonicalKey(PROFILE_A)), movedBytes,
+      'full reload changed completed MOVE bytes');
+    assert.deepEqual(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), canonicalKey(PROFILE_A)), moved);
+
+    await page.setViewportSize({ width: 1280, height: 640 });
+    await page.waitForFunction(() => {
+      const table = document.querySelector('.owner-lattice-table[data-active]');
+      const bounds = table?.getBoundingClientRect();
+      return bounds && Math.abs(bounds.left) < 0.25 && Math.abs(bounds.width - innerWidth) < 0.25
+        && Math.abs(bounds.height - 720) < 0.25 && Math.abs(bounds.top + 40) < 0.25;
+    });
+    assert.equal(await page.locator('.owner-lattice-table[data-active] .lattice-production-table')
+      .evaluate((node) => getComputedStyle(node).backgroundImage), 'none',
+    'owner table duplicated the continuous grid and changed its edge intensity');
+    const cameraStart = { x: 1120, y: 320 };
+    await page.locator('.owner-lattice-spatial-surface').focus();
+    await page.keyboard.down('Space');
+    await page.mouse.move(cameraStart.x, cameraStart.y);
+    await page.mouse.down();
+    await page.mouse.move(cameraStart.x, cameraStart.y + 100, { steps: 4 });
+    await page.mouse.up();
+    await page.keyboard.up('Space');
+    await page.waitForFunction(() => {
+      const top = document.querySelector('.owner-lattice-table[data-active]')?.getBoundingClientRect().top;
+      return Number.isFinite(top) && Math.abs(top) < 0.25;
+    });
+    assert.equal(await page.evaluate((key) => localStorage.getItem(key), canonicalKey(PROFILE_A)), movedBytes,
+      'runtime-only owner camera changed canonical placement bytes');
+    await page.locator('.lattice-coordinate-map [data-coordinate="-1:0"]').click();
+    await page.waitForFunction(() => document.querySelector('.lattice-coordinate-map [aria-current="location"]')?.dataset.coordinate === '-1:0');
+    assert.ok(Math.abs((await page.locator('.owner-lattice-table[data-active]').boundingBox()).y + 40) < 0.25,
+      'new table inherited another table camera offset');
+    await page.locator('.lattice-coordinate-map [data-coordinate="0:0"]').click();
+    await page.waitForFunction(() => document.querySelector('.lattice-coordinate-map [aria-current="location"]')?.dataset.coordinate === '0:0');
+    assert.ok(Math.abs((await page.locator('.owner-lattice-table[data-active]').boundingBox()).y) < 0.25,
+      'returning table did not restore its runtime camera offset');
+
     await visitOwnedProfile(PROFILE_B);
     assert.equal(await page.locator('[data-placement-id]').count(), 0);
     assert.equal(await page.evaluate((key) => localStorage.getItem(key), canonicalKey(PROFILE_B)), null);
@@ -229,6 +358,6 @@ describe('Phase 5B.1 canonical placement through the real App route', { concurre
 
     await visitOwnedProfile(PROFILE_A);
     await page.locator('[data-placement-id="placement-1"]').waitFor({ state: 'attached', timeout: 8_000 });
-    assert.deepEqual(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), canonicalKey(PROFILE_A)), persisted);
+    assert.deepEqual(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), canonicalKey(PROFILE_A)), moved);
   });
 });

@@ -76,10 +76,31 @@ test('fixed chrome stays outside the moving authored-plane stage', () => {
   assert.match(source, /SESSION ONLY \/ NOT PERSISTED/);
 });
 
+test('owner viewport fills all 32 columns and keeps bounded per-table Space-drag camera state runtime-only', () => {
+  assert.match(source, /createWidthFitLatticeOwnerViewport\(dimensions\)/);
+  assert.match(source, /updateLatticeOwnerCameraY/);
+  assert.match(source, /cameraOffsets\[activeTableId\]/);
+  assert.match(source, /event\.code === 'Space'/);
+  assert.match(source, /onPointerDownCapture=\{handlePointerDownCapture\}/);
+  assert.match(source, /active\.y \* plane\.height\) \+ activeCameraY/);
+  assert.match(styles, /\.owner-lattice-table \.lattice-production-table[^}]*background-image: none/);
+  assert.doesNotMatch(source, /Math\.min\(dimensions\.width \/ 32, dimensions\.height \/ 18\)/);
+});
+
 test('Browser open, close, and Escape state stays runtime-only with focus restoration', () => {
   assert.match(source, /const \[browserOpen, setBrowserOpen\] = useState\(false\)/);
   assert.match(source, /queueMicrotask\(\(\) => browserToolRef\.current\?\.focus/);
   assert.match(source, /onRequestClose=\{closeBrowser\}/);
   assert.match(source, /open=\{browserOpen\}/);
   assert.match(source, /toolButtonRefs=\{\{ browser: browserToolRef \}\}/);
+});
+
+test('Phase 5B.2 movement stays in an owner-only projection-derived layer and cannot start table navigation', () => {
+  assert.match(source, /LatticeProductionMovementLayer/);
+  assert.match(source, /createLatticeProductionMovementCandidate/);
+  assert.match(source, /movementPreview/);
+  assert.match(source, /onCommitMove=\{authoring\.movePublicPlacement\}/);
+  assert.match(source, /onPreviewMove=\{setMovementPreview\}/);
+  assert.match(source, /\[data-lattice-placement-layer\]/);
+  assert.doesNotMatch(source, /normalizedInsertionAnchor|createPlacementGesture|nudgePlacementByPixels/);
 });

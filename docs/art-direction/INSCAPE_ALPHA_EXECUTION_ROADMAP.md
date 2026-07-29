@@ -381,7 +381,7 @@ Exit criterion: owner navigation is intuitive, deterministic, responsive, and do
 
 ## Phase 5 — production Browser and authoring geometry
 
-Status: `[~]` — **Phase 5A and Phase 5B.1 accepted; Phase 5B.2 onward remains unstarted**
+Status: `[~]` — **Phase 5A, Phase 5B.1, and Phase 5B.2 accepted; Phase 5B.3 onward remains unstarted**
 
 Goal: wire the isolated Browser to real INDEX/CATEGORIES data and enable table authoring.
 
@@ -423,7 +423,27 @@ Status: `[x]` — implemented, automatically verified, and visually accepted.
 
 Implementation checkpoint (2026-07-29): visual acceptance confirmed against real profile-scoped Library records. The Phase 2B key remains `inscape.lattice-production-draft.v1:<normalized-profile-address>` and its accepted store remains the sole writable canonical authority. The Phase 3 renderer is reused unchanged. The shared Phase 2A projection received one narrow production-record compatibility correction: normalized Library image records without a separate `mediaType` are projected as images, while explicit unsupported types remain fail-closed. No store, validator, renderer, reconciliation, publication-writer, routing, wallet-lifecycle, `ModuleGridShell`, version-7 publication, or version-8 publication contract changed. The known legacy published-visitor suite still stops in setup after fixture mount and published readiness because its stale `.published-home-world__header` selector is absent and is passed to `getComputedStyle`; its 12 child tests are consequently cancelled before assertions.
 
-Phase 5B.2 onward status: `[ ]` — unstarted. Move, resize, crop editing, layer editing, mat/frame editing, replace, remove, visibility editing, lock editing, and Owner Preview remain outside Phase 5B.1.
+### Phase 5B.2 — deterministic public placement movement
+
+Status: `[x]` — implemented, automatically verified, and visually accepted.
+
+- [x] Existing public placements on the active public table move through one owner-only interaction layer derived from the accepted Phase 3 projection utilities; the shared renderer remains unchanged.
+- [x] Pointer ownership is deterministic from placement-originated pointer down, retains safe capture before the 10-pixel dead zone is crossed, preserves the fractional grab offset, previews integer-cell snapping, and never initializes table navigation.
+- [x] Completed movement changes only integer `column` and `row`, preserves span and every presentation field, clamps the complete placement to the 32 × 18 plane, and treats same-cell destinations as zero-write no-ops.
+- [x] Arrow keys provide one-cell completed movement in canonical navigation order while locked placements expose an honest accessible non-movable state.
+- [x] Completion re-reads the latest accepted Phase 2B draft and revalidates normalized profile authority, Library profile and asset identity, table, placement, starting geometry, public visibility, lock state, and the complete candidate before exactly one store commit.
+- [x] Preview, selection, focus, pointer capture, cancellation, and errors remain detached runtime-only state; cancellation, Escape, stale generations, authority loss, validation failure, and persistence failure retain the exact accepted display and bytes.
+- [x] Existing valid multi-placement drafts remain readable and unchanged, deliberate overlap remains legal, hit testing follows visible public projection plus canonical layer, and the Phase 5B.1 one-placement PLACE gate remains in force.
+- [x] The owner authoring viewport fits all 32 square columns to the available width; any resulting vertical overflow is centered and exposed through bounded, runtime-only, per-table Space-drag camera state without changing canonical placement geometry or normal table navigation.
+- [x] The owner runtime uses one continuous grid presentation across the complete topology, avoiding the previous doubled table grid and dimmer outer-topology strips; the accepted shared renderer and visitor behavior remain unchanged.
+- [x] Placement pointer coordinates are localized through the live projected table rectangle so movement remains exact after width-fit camera translation and responsive resizing.
+- [x] Focused movement, projection, dead-zone, grab-offset, bounds, keyboard, viewport-camera, stale/locked/private/unavailable, exact rollback, corruption, immutability, and transaction coverage passes 32 tests; the full regression suite passes 758 tests with 0 failures.
+- [x] The original reused real-App Phase 5B lifecycle passes PLACE/reload/profile assertions plus preview-without-write, leaving artwork before activation, exactly one MOVE write, Escape rollback, same-cell no-op, empty-space navigation, reload recovery, and profile isolation in 459.8 seconds with graceful cleanup. The responsive-camera amendment reached its new camera check after all preceding assertions, then timed out because the new assertion treated valid numeric zero as falsy; that assertion is corrected and was deliberately not rerun solely for the test bug.
+- [x] Existing Phase 3, Phase 4, Phase 5A, and owner/profile routing browser suites pass; the final production build and budgets, owner/visitor/initial-entry isolation, and `git diff --check` pass.
+
+Accepted checkpoint (2026-07-29): interactive review confirms placement selection, pointer and keyboard movement, snapping, clamping, cancellation, persistence, reload recovery, profile isolation, normal empty-space table navigation, full-width non-fullscreen geometry, consistent outer-topology grid intensity, bounded Space-drag, per-table camera memory, and exact post-camera artwork movement. During review the owner viewport's contained-plane side gutters were rejected because an adjacent table could occupy screen space unavailable to the active table and the table/atmosphere grid stacking produced dimmer strips beyond the outer topology. The accepted owner-only correction fits the canonical 32 columns to width, keeps cells square, centers and bounds vertical overflow, and gives each table an independent runtime-only Space-drag vertical camera. This is host presentation state only: the Phase 2B store, canonical geometry and key remain unchanged and sole-writable. The accepted shared renderer, visitor behavior, public projection/redaction contract, Library workspace v8, publication, reconciliation, routing, wallet, IPFS, `ModuleGridShell`, version-7 publication default, and disabled version-8 publication remain unchanged.
+
+Phase 5B.3 onward status: `[ ]` — unstarted. Additional placement, resize, crop editing, layer editing, mat/frame editing, replace, remove, visibility editing, lock editing, and Owner Preview remain outside Phase 5B.2.
 
 User visual test:
 

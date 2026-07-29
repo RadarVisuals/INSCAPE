@@ -10,6 +10,8 @@ import {
 } from '../lattice/domain/latticeProductionDraft.js';
 import { projectLatticeProductionPublication } from '../lattice/domain/latticeProductionAdapter.js';
 import { assertValidLatticeProductionPublication } from '../lattice/domain/latticeProductionPublication.js';
+import LatticeProductionMovementLayer from '../lattice/authoring/LatticeProductionMovementLayer.jsx';
+import { createLatticeProductionMovementCandidate } from '../lattice/authoring/latticeProductionMovement.js';
 import {
   DEFAULT_LATTICE_INTERACTION_CONFIG,
   addWheelDelta,
@@ -21,6 +23,11 @@ import {
   resolveWheelDestination,
   updatePointerGesture,
 } from '../lattice/controller/latticeNavigation.js';
+import {
+  clampLatticeOwnerCameraY,
+  createWidthFitLatticeOwnerViewport,
+  updateLatticeOwnerCameraY,
+} from '../lattice/controller/latticeOwnerViewport.js';
 import LatticeProductionTableRenderer from '../lattice/rendering/LatticeProductionTableRenderer.jsx';
 import LatticeNavigationOverlay from '../lattice/rendering/LatticeNavigationOverlay.jsx';
 import LatticeProfileRail from '../lattice/rendering/LatticeProfileRail.jsx';
@@ -102,6 +109,9 @@ function OwnerLatticeRuntime({
   const viewportRef = useRef(null);
   const activeRef = useRef(entryLatticeCoordinate());
   const gestureRef = useRef(null);
+  const cameraGestureRef = useRef(null);
+  const cameraOffsetsRef = useRef({});
+  const spacePressedRef = useRef(false);
   const settlingRef = useRef(false);
   const snapTimerRef = useRef(null);
   const wheelResetTimerRef = useRef(null);
@@ -114,11 +124,15 @@ function OwnerLatticeRuntime({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [snapping, setSnapping] = useState(false);
   const [gestureActive, setGestureActive] = useState(false);
+  const [cameraGestureActive, setCameraGestureActive] = useState(false);
+  const [cameraOffsets, setCameraOffsets] = useState({});
+  const [spacePanReady, setSpacePanReady] = useState(false);
   const [surfaceId, setSurfaceId] = useState('carbon');
   const [menuSurfaceId, setMenuSurfaceId] = useState('carbon');
   const [themeOpen, setThemeOpen] = useState(false);
   const [browserOpen, setBrowserOpen] = useState(false);
   const [browserActivated, setBrowserActivated] = useState(false);
+  const [movementPreview, setMovementPreview] = useState(null);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const profileIdentity = useProfileIdentity(profileAddress);
   const browserData = useOwnerLatticeBrowser(profileAddress, browserOpen);
@@ -135,7 +149,10 @@ function OwnerLatticeRuntime({
   const latticeProjection = useMemo(() => {
     if (!authoring.draft) return { lattice: null, error: null };
     try {
-      const renderDraft = structuredClone(authoring.draft);
+      const previewDraft = movementPreview
+        ? createLatticeProductionMovementCandidate(authoring.draft, movementPreview)
+        : null;
+      const renderDraft = structuredClone(previewDraft || authoring.draft);
       renderDraft.appearance.surfaceId = surfaceId;
       renderDraft.appearance.menuSurfaceId = menuSurfaceId;
       return {
@@ -149,7 +166,7 @@ function OwnerLatticeRuntime({
     } catch (error) {
       return { lattice: null, error: error?.message || 'Canonical assets are unresolved' };
     }
-  }, [authoring.assetRecords, authoring.draft, menuSurfaceId, surfaceId]);
+  }, [authoring.assetRecords, authoring.draft, menuSurfaceId, movementPreview, surfaceId]);
   const lattice = latticeProjection.lattice;
 
   useEffect(() => {
@@ -172,20 +189,32 @@ function OwnerLatticeRuntime({
   }, []);
 
   useEffect(() => {
+    const releaseSpace = (event) => {
+      if (event?.code && event.code !== 'Space') return;
+      spacePressedRef.current = false;
+      setSpacePanReady(false);
+    };
+    window.addEventListener('keyup', releaseSpace);
+    window.addEventListener('blur', releaseSpace);
+    return () => {
+      window.removeEventListener('keyup', releaseSpace);
+      window.removeEventListener('blur', releaseSpace);
+    };
+  }, []);
+
+  useEffect(() => {
     activeRef.current = active;
   }, [active]);
 
   const reducedMotion = revealPresentation.reducedMotion === true;
-  const cellSize = Math.min(dimensions.width / 32, dimensions.height / 18);
-  const plane = {
-    width: 32 * cellSize,
-    height: 18 * cellSize,
-    left: (dimensions.width - (32 * cellSize)) / 2,
-    top: (dimensions.height - (18 * cellSize)) / 2,
-  };
+  const plane = createWidthFitLatticeOwnerViewport(dimensions);
+  const cellSize = plane.cellSize;
+  const activeTableId = latticeProductionTableId(active);
+  const activeCameraY = clampLatticeOwnerCameraY(cameraOffsets[activeTableId] || 0, plane);
 
   const settle = useCallback((destination, offset = { x: 0, y: 0 }) => {
     if (settlingRef.current) return;
+    setMovementPreview(null);
     settlingRef.current = true;
     setDragOffset(offset);
     requestAnimationFrame(() => {
@@ -216,9 +245,42 @@ function OwnerLatticeRuntime({
     settle(destination, activeGesture.gesture.offset);
   }, [settle]);
 
+  const setTableCameraY = useCallback((tableId, cameraY) => {
+    cameraOffsetsRef.current = { ...cameraOffsetsRef.current, [tableId]: cameraY };
+    setCameraOffsets(cameraOffsetsRef.current);
+  }, []);
+
+  const finishCameraGesture = useCallback((cancelled = false) => {
+    const activeCameraGesture = cameraGestureRef.current;
+    if (!activeCameraGesture) return false;
+    cameraGestureRef.current = null;
+    if (cancelled) setTableCameraY(activeCameraGesture.tableId, activeCameraGesture.startCameraY);
+    setCameraGestureActive(false);
+    return true;
+  }, [setTableCameraY]);
+
+  const handlePointerDownCapture = (event) => {
+    if (!spacePressedRef.current || plane.maximumCameraY <= 0 || settlingRef.current || event.button !== 0
+      || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const placementControl = event.target.closest?.('[data-lattice-placement-control]');
+    const excludedControl = event.target.closest?.('[data-lattice-chrome],a,input,select,textarea,button');
+    if (excludedControl && excludedControl !== placementControl) return;
+    event.preventDefault();
+    event.stopPropagation();
+    cameraGestureRef.current = {
+      pointerId: event.pointerId,
+      tableId: activeTableId,
+      originY: event.clientY,
+      startCameraY: activeCameraY,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setCameraGestureActive(true);
+    viewportRef.current?.focus({ preventScroll: true });
+  };
+
   const handlePointerDown = (event) => {
-    if (settlingRef.current || event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
-      || event.target.closest?.('[data-lattice-chrome],button,a,input,select,textarea')) return;
+    if (spacePressedRef.current || settlingRef.current || event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
+      || event.target.closest?.('[data-lattice-chrome],[data-lattice-placement-layer],button,a,input,select,textarea')) return;
     gestureRef.current = {
       pointerId: event.pointerId,
       gesture: createPointerGesture({ x: event.clientX, y: event.clientY }),
@@ -227,6 +289,17 @@ function OwnerLatticeRuntime({
   };
 
   const handlePointerMove = (event) => {
+    const activeCameraGesture = cameraGestureRef.current;
+    if (activeCameraGesture?.pointerId === event.pointerId) {
+      event.preventDefault();
+      event.stopPropagation();
+      setTableCameraY(activeCameraGesture.tableId, updateLatticeOwnerCameraY({
+        originY: activeCameraGesture.originY,
+        pointerY: event.clientY,
+        startCameraY: activeCameraGesture.startCameraY,
+      }, plane));
+      return;
+    }
     const activeGesture = gestureRef.current;
     if (!activeGesture || activeGesture.pointerId !== event.pointerId || settlingRef.current) return;
     const wasActivated = activeGesture.gesture.activated;
@@ -244,6 +317,15 @@ function OwnerLatticeRuntime({
   };
 
   const handlePointerUp = (event) => {
+    if (cameraGestureRef.current?.pointerId === event.pointerId) {
+      event.preventDefault();
+      event.stopPropagation();
+      finishCameraGesture(false);
+      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+      return;
+    }
     if (gestureRef.current?.pointerId !== event.pointerId) return;
     finishGesture(false);
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
@@ -267,6 +349,17 @@ function OwnerLatticeRuntime({
   };
 
   const handleKeyDown = (event) => {
+    if (event.code === 'Space') {
+      const placementControl = event.target.closest?.('[data-lattice-placement-control]');
+      const excludedControl = event.target.closest?.('a,input,select,textarea,button');
+      if (excludedControl && excludedControl !== placementControl) return;
+      event.preventDefault();
+      if (!event.repeat) {
+        spacePressedRef.current = true;
+        setSpacePanReady(true);
+      }
+      return;
+    }
     if (settlingRef.current || gestureRef.current || event.target.closest?.('input,select,textarea,button')) return;
     const direction = keyboardDirection(event.key);
     const destination = direction && latticeDestination(activeRef.current, direction);
@@ -275,13 +368,19 @@ function OwnerLatticeRuntime({
     settle(destination);
   };
 
+  const handleKeyUp = (event) => {
+    if (event.code !== 'Space') return;
+    event.preventDefault();
+    spacePressedRef.current = false;
+    setSpacePanReady(false);
+  };
+
   const navigateDirectly = useCallback((destination) => {
     if (settlingRef.current || gestureRef.current || sameCoordinate(destination, activeRef.current)) return;
     settle(destination);
   }, [settle]);
 
-  const stageTransform = `translate3d(${dragOffset.x - (active.x * plane.width)}px, ${dragOffset.y - (active.y * plane.height)}px, 0)`;
-  const activeTableId = latticeProductionTableId(active);
+  const stageTransform = `translate3d(${dragOffset.x - (active.x * plane.width)}px, ${dragOffset.y - (active.y * plane.height) + activeCameraY}px, 0)`;
   const activeDraftTable = authoring.draft?.tables.find((table) => table.id === activeTableId) || null;
   const activeTable = lattice?.tables.find((table) => table.id === activeTableId) || activeDraftTable;
   const activeTableName = activeTable ? tableIdentity(activeTable) : activeTableId.replace('-', ' ').toUpperCase();
@@ -303,13 +402,17 @@ function OwnerLatticeRuntime({
     aria-label="Owner lattice navigation"
     aria-hidden={!interfaceVisible || undefined}
     className="owner-lattice-spatial-surface"
+    data-camera-active={cameraGestureActive || undefined}
     data-gesture-active={gestureActive || undefined}
     data-interface-visible={interfaceVisible || undefined}
+    data-space-pan-ready={(spacePanReady && plane.maximumCameraY > 0) || undefined}
     data-surface={surfaceId}
     onKeyDown={handleKeyDown}
-    onLostPointerCapture={() => finishGesture(true)}
-    onPointerCancel={() => finishGesture(true)}
+    onKeyUp={handleKeyUp}
+    onLostPointerCapture={() => { if (!finishCameraGesture(true)) finishGesture(true); }}
+    onPointerCancel={() => { if (!finishCameraGesture(true)) finishGesture(true); }}
     onPointerDown={handlePointerDown}
+    onPointerDownCapture={handlePointerDownCapture}
     onPointerMove={handlePointerMove}
     onPointerUp={handlePointerUp}
     onWheel={handleWheel}
@@ -321,17 +424,17 @@ function OwnerLatticeRuntime({
       data-snapping={snapping || undefined}
       style={{
         '--owner-lattice-cell-size': `${cellSize}px`,
-        '--owner-lattice-grid-origin-x': `${(3 * dimensions.width) + plane.left}px`,
-        '--owner-lattice-grid-origin-y': `${(3 * dimensions.height) + plane.top}px`,
+        '--owner-lattice-grid-origin-x': `${(3 * plane.width) + plane.left}px`,
+        '--owner-lattice-grid-origin-y': `${(3 * plane.height) + plane.top}px`,
         '--owner-lattice-snap-duration': `${reducedMotion ? 0 : DEFAULT_LATTICE_INTERACTION_CONFIG.snapDuration}ms`,
         transform: stageTransform,
       }}
     >
       <div className="owner-lattice-atmosphere" style={{
-        left: -3 * dimensions.width,
-        top: -3 * dimensions.height,
-        width: 7 * dimensions.width,
-        height: 7 * dimensions.height,
+        left: -3 * plane.width,
+        top: -3 * plane.height,
+        width: 7 * plane.width,
+        height: 7 * plane.height,
       }} />
       {LATTICE_PRODUCTION_COORDINATES.map((coordinate, index) => {
         const table = lattice?.tables[index] || authoring.draft?.tables[index] || {
@@ -348,7 +451,14 @@ function OwnerLatticeRuntime({
             height: plane.height,
           }}
         >{lattice
-          ? <LatticeProductionTableRenderer lattice={lattice} tableId={table.id} />
+          ? <><LatticeProductionTableRenderer lattice={lattice} tableId={table.id} />
+            {sameCoordinate(coordinate, active) && activeDraftTable?.id === table.id && <LatticeProductionMovementLayer
+              acceptedTable={activeDraftTable}
+              lattice={lattice}
+              onCommitMove={authoring.movePublicPlacement}
+              onPreviewMove={setMovementPreview}
+              tableId={table.id}
+            />}</>
           : <div className="owner-lattice-canonical-unavailable" role="status">CANONICAL TABLE UNAVAILABLE</div>}</div>;
       })}
     </div>

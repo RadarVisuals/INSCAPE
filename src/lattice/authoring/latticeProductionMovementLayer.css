@@ -1,0 +1,37 @@
+.lattice-production-movement-layer {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lattice-production-movement-control {
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--lattice-overlay-ink);
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.lattice-production-movement-control:active { cursor: grabbing; }
+.lattice-production-movement-control[aria-pressed="true"],
+.lattice-production-movement-control:focus-visible {
+  border-color: currentColor;
+  outline: none;
+}
+.lattice-production-movement-control[data-locked] { cursor: not-allowed; }
+.lattice-production-movement-control > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
