@@ -35,6 +35,11 @@ export function ownerLatticePlacementUnavailableReason({ activeTable, authoringS
   return profileReady ? null : 'ASSET PROFILE RESOLVING';
 }
 
+export function shouldLoadOwnerLatticeAssets({ libraryStatus, profileReady, referencedAssetCount } = {}) {
+  return Boolean(profileReady && libraryStatus === 'idle'
+    && Number.isSafeInteger(referencedAssetCount) && referencedAssetCount > 0);
+}
+
 export function createOwnerLatticeAuthoringSession({ generatePlacementId, profileAddress, storage } = {}) {
   const profile = normalizeProfileAddress(profileAddress);
   if (!profile) throw new TypeError('A valid owner authoring profile is required');
@@ -312,8 +317,8 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
   const missingReferencedAssets = [...referencedIds].some((id) => !currentIds.has(id));
 
   useEffect(() => {
-    if (profileReady && missingReferencedAssets && libraryStatus === 'idle') load();
-  }, [libraryStatus, load, missingReferencedAssets, profileReady]);
+    if (shouldLoadOwnerLatticeAssets({ libraryStatus, profileReady, referencedAssetCount: referencedIds.size })) load();
+  }, [libraryStatus, load, profileReady, referencedIds]);
 
   const placePublicAsset = useCallback(({ stableAssetId, tableId } = {}) => {
     const generation = generationRef.current;

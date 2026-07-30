@@ -3,6 +3,7 @@ import test from 'node:test';
 import { createEmptyWorkspace } from '../domain/libraryWorkspace.js';
 import { loadLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
 import { chillwhalesProfileRepository } from '../data/chillwhalesProfileRepository.js';
+import { luksoEnvioAttributeRepository } from '../data/luksoEnvioAttributeRepository.js';
 import { flushLibraryWorkspace, resetLibraryStoreForTests, useLibraryStore } from './useLibraryStore.js';
 
 const PROFILE = '0xf3c189819fd5b042f692983bfbfd57ab607ee709';
@@ -117,6 +118,42 @@ test('late asset batches cannot write the outgoing or incoming profile cache aft
       && key.startsWith('inscape.library-assets.v1:')), false);
   } finally {
     chillwhalesProfileRepository.loadProfileAssets = originalLoad;
+    resetLibraryStoreForTests(PROFILE, memoryStorage());
+  }
+});
+
+test('a successful library load enriches incomplete indexed token attributes through Envio', async () => {
+  const storage = memoryStorage();
+  const contract = '0x1111111111111111111111111111111111111111';
+  const tokenId = `0x${'0'.repeat(63)}1`;
+  const stableAssetId = `42:${contract}:${tokenId}`;
+  const originalLoad = chillwhalesProfileRepository.loadProfileAssets;
+  const originalEnrich = luksoEnvioAttributeRepository.enrich;
+  chillwhalesProfileRepository.loadProfileAssets = async function* indexedToken() {
+    yield { assets: [{ id: stableAssetId, chainId: 42, ownerAddress: PROFILE, contractAddress: contract,
+      tokenId, standard: 'LSP8', imageUrl: 'https://assets.example/token.webp',
+      attributes: [{ key: 'Performance Tier', value: 'Strike Unit', type: 'string' }],
+      fieldProvenance: { attributes: { scope: 'tokenId', source: 'Chillwhales' } }, rawMetadata: {} }],
+    unresolvedAssetIds: [], resolved: 1, total: 1, failures: 0, complete: true };
+  };
+  luksoEnvioAttributeRepository.enrich = async (ids) => {
+    assert.deepEqual(ids, [stableAssetId]);
+    return [{ id: stableAssetId, attributes: [
+      { key: 'Performance Tier', value: 'Strike Unit', type: 'string' },
+      { key: 'Rank', value: '281', type: 'number' }
+    ] }];
+  };
+  try {
+    resetLibraryStoreForTests(PROFILE, storage);
+    await useLibraryStore.getState().load({ forceLive: true });
+    assert.equal(useLibraryStore.getState().sourceMode, 'INDEXER+ENVIO');
+    assert.deepEqual(useLibraryStore.getState().assets[0].attributes, [
+      { key: 'Performance Tier', value: 'Strike Unit', type: 'string' },
+      { key: 'Rank', value: '281', type: 'number' }
+    ]);
+  } finally {
+    chillwhalesProfileRepository.loadProfileAssets = originalLoad;
+    luksoEnvioAttributeRepository.enrich = originalEnrich;
     resetLibraryStoreForTests(PROFILE, memoryStorage());
   }
 });

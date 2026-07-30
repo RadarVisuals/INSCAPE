@@ -92,11 +92,11 @@
 .owner-lattice-signature span { font: 7px/1 "Inscape IBM Plex Mono", monospace; letter-spacing: .12em; }
 
 .owner-lattice-theme { position: fixed; z-index: 24; top: 62px; right: 18px; width: 244px; display: grid; border: 1px solid var(--lattice-menu-line-strong); background: var(--lattice-menu-panel); box-shadow: 10px 12px 30px rgb(0 0 0 / .28); color: var(--lattice-menu-ink); pointer-events: auto; }
-.owner-lattice-theme header { height: 35px; padding-left: 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--lattice-menu-line); font-size: 9px; letter-spacing: .12em; }
+.owner-lattice-theme header { height: 35px; padding-left: 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--lattice-menu-line); font: var(--lattice-window-type-module); letter-spacing: .08em; }
 .owner-lattice-theme header button { width: 35px; height: 35px; border: 0; border-left: 1px solid var(--lattice-menu-line); background: transparent; color: inherit; cursor: pointer; }
-.owner-lattice-theme label { min-height: 43px; padding: 7px 9px; display: grid; grid-template-columns: 1fr 104px; align-items: center; border-bottom: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-muted); font-size: 8px; letter-spacing: .09em; }
-.owner-lattice-theme select { height: 27px; border: 1px solid var(--lattice-menu-line); background: var(--lattice-menu-panel); color: var(--lattice-menu-ink); font: 8px "Inscape IBM Plex Mono", monospace; }
-.owner-lattice-theme footer { height: 25px; padding: 0 9px; display: flex; align-items: center; color: var(--lattice-menu-faint); font-size: 7px; letter-spacing: .1em; }
+.owner-lattice-theme label { min-height: 43px; padding: 7px 9px; display: grid; grid-template-columns: 1fr 104px; align-items: center; border-bottom: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-muted); font: var(--lattice-window-type-label); letter-spacing: .07em; }
+.owner-lattice-theme select { height: 27px; border: 1px solid var(--lattice-menu-line); background: var(--lattice-menu-panel); color: var(--lattice-menu-ink); font: var(--lattice-window-type-value); }
+.owner-lattice-theme footer { height: 25px; padding: 0 9px; display: flex; align-items: center; color: var(--lattice-menu-faint); font: var(--lattice-window-type-label); letter-spacing: .08em; }
 
 .owner-lattice-shell > .keeper-dock { --keeper-dock-size: clamp(60px, 5.5vw, 78px); position: fixed; z-index: 23; right: 32px; bottom: 26px; width: var(--keeper-dock-size); height: var(--keeper-dock-size); border: 0; background: transparent; }
 .owner-lattice-shell .keeper-dock__socket { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; color: transparent; cursor: pointer; }

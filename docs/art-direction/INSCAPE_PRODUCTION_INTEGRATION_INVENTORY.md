@@ -324,6 +324,8 @@ If an owner later invokes an approved import, individual fields may be proposed 
 | missing media type | Unresolved; do not infer unsupported facts |
 | missing metadata | Explicit absent or unresolved state |
 
+Viewer attribute completeness uses a bounded, non-destructive source chain: Chillwhales supplies the owned-asset inventory and initial normalized metadata; the official LUKSO Envio `Token.attributes` relation enriches LSP8 attributes by stable contract/token identity; direct RPC remains the independent fallback and decodes `LSP8TokenIdFormat` before resolving metadata base URIs. Envio enrichment may update a matching trait key or append an omitted trait, but an empty, failed, or timed-out enrichment cannot discard existing metadata. Token-specific attributes retain precedence; contract-level LSP4 attributes are used only when the token publishes none.
+
 ## 9. Parallel cutover
 
 Cutover must remain independently reversible for owner, visitor, and publication behavior.
@@ -428,18 +430,19 @@ Manual test:
 
 ### Phase 6 — NFT focus viewer
 
-Adapt real asset records to the accepted viewer and provide independent left and right dossier state.
+Implement session-only global ARRANGE first, then adapt real asset records to the accepted production metadata rack. Narrative, Attribute, and Technical modules remain in a permanent order; one expands in place at a time, inactive faceplates slide around it, and the selected module persists while browsing. Production focus media is native and uncropped; authored placement presentation appears only at the exact opening and closing boundary. The rack inherits only the active owner-menu theme tokens, uses no NFT-derived color, and may expose only scoped, provenanced LUKSO facts or safe derived values. The default production surface and menu surface are Mist.
 
-Rollback: retain the legacy NFT viewer.
+Rollback: remove the optional viewer activation callbacks and restore ARRANGE ON as the authoring-layer gate; the unchanged canonical draft/publication and storage records remain readable.
 
 Manual test:
 
 1. Open multiple ratios and both sparse and rich real metadata.
-2. Open left only, right only, both, and neither dossier.
-3. Navigate by button, keyboard, wheel, and swipe without changing dossier state.
-4. Scroll dossier content without moving the lattice.
-5. Confirm unresolved fields remain honest.
-6. Close and confirm focus and artwork return to the originating placement.
+2. Expand each rack module and confirm faceplates slide without reordering or endpoint jitter.
+3. Toggle the complete rack open and closed from the artwork.
+4. Navigate by button, keyboard, wheel, and swipe without changing the active module.
+5. Scroll rack content without moving the lattice.
+6. Confirm unresolved fields remain honest.
+7. Close and confirm focus and artwork return to the originating placement.
 
 ### Phase 7 — identity dossier
 
@@ -492,7 +495,7 @@ Remove only code proven unreachable after live acceptance. Retain compatibility 
 - Prototype mat and backing data is held in parallel maps. Production should keep complete placement presentation in one canonical placement record.
 - The isolated profile model currently combines private draft and public state. Separate schemas make redaction deterministic and testable.
 - The Browser fixture shape differs from production asset records. A small pure adapter is safer than coupling the Browser to repository formats.
-- The isolated focus viewer currently represents dossier visibility too coarsely. Independent left/right state belongs in the dedicated viewer slice.
+- The accepted production viewer uses one ordered rack rather than independent left/right dossiers. The paired side/lower dossier path remains prototype-only compatibility until the later legacy-cleanup phase and must not shape new production modules.
 - Exact document validation and canonical hashing mean version 8 requires a reader-before-writer rollout; it cannot be introduced as a silent optional field.
 - The current owner restore path already performs multi-source reconciliation. Canonical lattice reconciliation should join that transaction through an adapter rather than increase `ModuleGridShell` responsibility.
 - The dev-only five-table store is neither canonical nor published. It must remain compatibility input rather than being expanded.

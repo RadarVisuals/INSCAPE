@@ -32,16 +32,6 @@ export default function BrowserCategoriesPanel({ data, workspace }) {
               selectedAssetId={workspace.selectedAssetId}
             />
           </div>
-          <div className="lattice-browser-category-section">
-            <div className="lattice-browser-section-label"><span>INDEX MEMBERSHIP</span><small>READ ONLY</small></div>
-            <div className="lattice-browser-assignment-list">
-              {data.assets.map((asset) => {
-                const id = assetId(asset);
-                const included = assignedIds.has(id);
-                return <div data-active={included || undefined} key={id}><span>{asset.title || 'UNRESOLVED ASSET'}</span><small>{included ? 'MEMBER' : 'NOT ASSIGNED'}</small></div>;
-              })}
-            </div>
-          </div>
         </> : <p className="lattice-browser-status">CREATE A CATEGORY TO ORGANIZE ASSETS</p>}
       </section>
     </div>

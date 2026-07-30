@@ -31,11 +31,17 @@ test('Category dialogs remain isolated while the read-only Browser consumes quer
   assert.doesNotMatch(workspace, /BrowserCategoryDialog|createCategory|renameCategory|deleteCategory|setCategory/);
   assert.match(workspace, /assets: workspace\.categoryAssets/);
   assert.doesNotMatch(workspace, /BrowserCategoriesPanel[^\n]*workspace\.filteredAssets/);
+  const categoriesPanel = readFileSync(new URL('./BrowserCategoriesPanel.jsx', import.meta.url), 'utf8');
+  assert.match(categoriesPanel, /ASSIGNED ASSETS/);
+  assert.doesNotMatch(categoriesPanel, /INDEX MEMBERSHIP|NOT ASSIGNED/);
 });
 
 test('Browser styling uses established lattice semantics and a centered nonmodal window', () => {
   assert.match(styles, /var\(--lattice-menu-panel\)/);
   assert.match(styles, /var\(--lattice-menu-ink\)/);
+  assert.match(styles, /--lattice-browser-surface: var\(--lattice-menu-panel\)/);
+  assert.match(styles, /--lattice-browser-ink: var\(--lattice-menu-ink\)/);
+  assert.doesNotMatch(styles, /data-lattice-surface/);
   assert.match(styles, /position: fixed/);
   assert.match(styles, /translate: -50% -50%/);
   assert.doesNotMatch(styles, /backdrop-filter|orange|border-radius:\s*(?:[1-9]|0\.[1-9])/iu);

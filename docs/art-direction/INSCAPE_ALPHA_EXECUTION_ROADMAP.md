@@ -510,7 +510,7 @@ Exit criterion: a user can build a table from real owned assets and recover the 
 
 ## Phase 6 — production NFT focus viewer
 
-Status: `[ ]`
+Status: `[x]` — implemented, owner-visually accepted, and verified
 
 Goal: wire the accepted focus-viewer interaction to real NFT facts.
 
@@ -518,19 +518,29 @@ Includes:
 
 - table card expands smoothly from its actual placement;
 - artwork remains visually primary;
-- independent left narrative/traits dossier and right technical/media dossier;
-- both may remain open;
+- one compact metadata rack with Narrative, Attribute, and Technical modules in a permanent order;
+- one expanded module at a time, expanding in place while adjacent faceplates slide without reordering;
+- internal scrolling for long narrative and technical content while the selected module persists during browsing;
 - honest unresolved states, never invented metadata;
 - browse next/previous while panel configuration remains stable;
-- real creator, contract, marketplace/explorer links only when resolved;
+- real creator and contract facts plus a derived official explorer link only when resolved;
 - Escape and close restore focus correctly.
+
+Phase 6 also introduces the single session-only global `ARRANGE` owner mode. It defaults OFF, gates PLACE and the existing authoring layer, preserves Space-drag ownership, and makes decoded placements activate the viewer by primary click or Enter while OFF. The viewer uses native NFT media only after expansion; authored crop, mat, backing, and authored transparency remain confined to the opening/closing placement presentation. The production metadata rack inherits only active owner-menu tokens across all six supported themes, uses no NFT-derived color, and defaults the production surface and menu surface to Mist. Desktop artwork is balanced against the rack height; narrow viewports stack the rack below native-ratio artwork.
+
+Accepted checkpoint (2026-07-30): baseline `12bc03a9a98dc9a0a8e11bc7a5ec83acd3b051b3`. Phase 6 changes no canonical draft/publication schema, version-1 storage key, publication writer, routing, wallet, IPFS, visitor cutover, or version default. Official LSP4/LSP7/LSP8/LSP5 facts retain token-versus-contract scope and source provenance; RPC token metadata preserves arbitrary bytes32 token IDs and reads authoritative LSP4 token type and creator-array addresses. Edition, supply, balance-as-edition, dates, collection semantics, marketplace/collection URLs, and transparency claims remain hidden. Owner visual review accepted ARRANGE, native-media handoff, exact source/return, the compact ordered rack, Mist defaults, responsive behavior, tonal hierarchy, 92% viewer veil, and stable rack motion. Focused Phase 6 checks pass 51 tests; corrected prototype-compatibility checks pass 26 tests; the dedicated real-owner-route browser check passes 1 test with graceful cleanup. The single full regression run completed 811 tests with 807 passes and exposed four checkpoint gates: three stale prototype assertions and the pre-Phase-6 bundle limits. The three assertions pass after correction, and the fourth is resolved by the separately passing production build and deliberately recalibrated Phase 6 budgets. Final post-polish totals are initial JavaScript 1,228,755 raw / 358,871 gzip; selected owner JavaScript 188,517 raw / 56,316 gzip; standalone wallet JavaScript 3,943,731 raw / 1,042,234 gzip; initial CSS 113,254 raw / 19,913 gzip; selected owner CSS 51,942 raw / 8,081 gzip; core JavaScript 1,856,228 raw / 549,553 gzip; public assets 14,821,539 raw; and largest public asset 2,574,306 raw. Owner-runtime graph isolation has zero leaks and `git diff --check` passes.
+
+Post-checkpoint metadata completeness correction (2026-07-30): UniversalEverything/Envio exposed an authored numeric `Rank` attribute that the primary Chillwhales response omitted for HALO tokens. The Library now non-destructively enriches owned LSP8 token attributes from the official LUKSO Envio token relation while retaining Chillwhales discovery and direct RPC fallback. RPC base-URI resolution now reads `LSP8TokenIdFormat`, resolves mixed per-token formats, and decodes Number, String, Address, Bytes, or Hash token IDs before URI concatenation. Contract-level attributes remain a fallback only when token-specific attributes are absent. An owner lattice containing placements now performs one live load from idle even when its local media cache already contains every referenced asset, preventing stale cached metadata from bypassing enrichment. The rack renderer is unchanged and continues rendering every normalized trait. The focused repository, normalization, merge, store, viewer-model, trigger, and authoring regression set passes 47 tests; no full regression suite was rerun for this correction.
+
+Final owner-polish correction (2026-07-30): Browser Index and Categories now inherit the same active owner-menu surface, ink, line, and selection tokens as their header rather than retaining a separate dark body palette. Categories shows only the selected category and its assigned assets; the duplicated all-index membership list is removed without changing category data. Metadata racks, Browser surfaces, Theme, and future owner windows share one centralized typography role set for module headers, labels, section titles, titles, body copy, and values. Viewer wheel events remain internal to the viewer at empty and exhausted dossier scroll boundaries. Multi-asset button and wheel browsing now normalize native `DOMRect` geometry before constructing the outgoing artwork layer, preventing inherited `left` and `top` properties from disappearing during transition layout. The focused Browser, viewer geometry, owner shell, scroll-boundary, and theme-contrast set passes 32 tests. Story Mode, spatial folders, and the proposed `RÄCK` product name remain future concepts and are not part of the Phase 6 implementation checkpoint.
 
 User visual test:
 
 1. Open square, portrait, landscape, transparent, sparse-metadata, and rich-metadata NFTs.
-2. Open either and both dossiers.
-3. Browse several NFTs by click, chevron, keyboard, wheel, and swipe.
-4. Close and confirm the card returns to its original table position without leftovers.
+2. Expand Narrative, Attribute, and Technical in turn; confirm each remains in its original position and long content scrolls internally.
+3. Toggle the complete rack open and closed from the artwork.
+4. Browse several NFTs by click, keyboard, wheel, and swipe while the selected module remains stable.
+5. Close and confirm the card returns to its original table position without leftovers.
 
 Exit criterion: the viewer respects artwork ratios, real metadata, motion, focus, and responsive constraints.
 

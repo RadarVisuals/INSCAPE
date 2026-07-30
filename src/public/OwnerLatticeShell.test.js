@@ -20,6 +20,8 @@ test('temporary owner lattice value follows the complete Phase 2A contract and a
   });
   assert.equal(validateLatticeProductionPublication(publication).valid, true);
   assert.equal(draft.profileAddress, PROFILE);
+  assert.equal(draft.appearance.surfaceId, 'mist');
+  assert.equal(draft.appearance.menuSurfaceId, 'mist');
   assert.equal(Object.hasOwn(publication, 'profileAddress'), false);
   assert.equal(Object.hasOwn(publication, 'activeTable'), false);
   assert.match(source, /normalizeProfileAddress\(profileAddress\)/);
@@ -122,4 +124,20 @@ test('active crop suspends every table-navigation entry while Space camera captu
   assert.match(source, /if \(cropModeActive \|\| settlingRef\.current \|\| gestureRef\.current \|\| sameCoordinate/);
   assert.ok(source.indexOf("if (event.code === 'Space')") < source.indexOf('if (cropModeActive && keyboardDirection(event.key))'));
   assert.match(source, /onPointerDownCapture=\{handlePointerDownCapture\}/);
+});
+
+test('Phase 6 ARRANGE is one session-only owner mode and viewer activation remains decoded and Enter-only', () => {
+  assert.match(source, /const \[surfaceId, setSurfaceId\] = useState\('mist'\)/);
+  assert.match(source, /const \[menuSurfaceId, setMenuSurfaceId\] = useState\('mist'\)/);
+  assert.match(source, /const \[arrangeEnabled, setArrangeEnabled\] = useState\(false\)/);
+  assert.match(source, /arrangeEnabled \? authoringPlacementUnavailableReason : 'PLACE REQUIRES ARRANGE'/);
+  assert.match(source, /if \(arrangeEnabled\) authoring\.placePublicAsset/);
+  assert.match(source, /arrangeEnabled && sameCoordinate\(coordinate, active\).*LatticeProductionMovementLayer/su);
+  assert.match(source, /!arrangeEnabled && sameCoordinate\(coordinate, active\) \? openPlacementViewer/);
+  assert.match(source, /if \(arrangeEnabled\) setCompositionPreview\(null\)/);
+  assert.match(source, /setArrangeEnabled\(!arrangeEnabled\)/);
+  assert.match(source, /mediaState\?\.status !== 'ready' \|\| !mediaState\.dimensions/);
+  assert.match(source, /<LatticeFocusViewer/);
+  assert.match(source, /surfaceColor="var\(--lattice-menu-panel\)"/);
+  assert.doesNotMatch(source, /transparencyMode.*dossier|collectionName.*dossier|marketplace/iu);
 });

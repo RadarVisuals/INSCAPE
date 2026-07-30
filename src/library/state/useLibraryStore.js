@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { normalizeProfileAddress, resolveWorkspaceProfile } from '../config.js';
 import { chillwhalesProfileRepository } from '../data/chillwhalesProfileRepository.js';
 import { luksoRpcProfileRepository } from '../data/luksoRpcProfileRepository.js';
+import { luksoEnvioAttributeRepository } from '../data/luksoEnvioAttributeRepository.js';
+import { mergeProfileAssetAttributeEnrichments } from '../domain/mergeProfileAssetAttributes.js';
 import { useWalletStore } from '../../store/useWalletStore.js';
 import { developmentLog, reportControlledError } from '../../diagnostics.js';
 import {
@@ -27,6 +29,7 @@ const tableAuthoringEnabled = import.meta.env?.DEV ?? true;
 let saveTimer = null;
 let activeLoadController = null;
 const INDEXER_SOURCE_TIMEOUT_MS = 8000;
+const ENVIO_ENRICHMENT_TIMEOUT_MS = 12000;
 const RPC_REPAIR_TIMEOUT_MS = 60000;
 const RPC_SOURCE_TIMEOUT_MS = 240000;
 
@@ -162,13 +165,46 @@ export const useLibraryStore = create((set, get) => ({
     try {
       try {
         const unresolvedAssetIds = await consumeWithTimeout(chillwhalesProfileRepository, INDEXER_SOURCE_TIMEOUT_MS);
+        const tokenAssetIds = get().assets.filter((asset) => asset.standard === 'LSP8' && asset.tokenId).map((asset) => asset.id);
+        if (tokenAssetIds.length) {
+          developmentLog('[asset-index] enriching indexed token attributes through Envio', {
+            assets: tokenAssetIds.length, generation, profileAddress: requestedProfileAddress
+          });
+          const enrichmentController = new AbortController(); let enrichmentTimedOut = false;
+          const abortEnrichment = () => enrichmentController.abort(controller.signal.reason);
+          controller.signal.addEventListener('abort', abortEnrichment, { once: true });
+          const enrichmentTimeout = setTimeout(() => {
+            enrichmentTimedOut = true;
+            enrichmentController.abort();
+          }, ENVIO_ENRICHMENT_TIMEOUT_MS);
+          try {
+            const enrichments = await luksoEnvioAttributeRepository.enrich(tokenAssetIds,
+              { signal: enrichmentController.signal });
+            if (get().loadGeneration === generation && enrichments.length) {
+              set((state) => ({ assets: mergeProfileAssetAttributeEnrichments(state.assets, enrichments),
+                sourceMode: 'INDEXER+ENVIO' }));
+              saveLibraryAssetCache(workspaceStorage, requestedProfileAddress, get().assets);
+            }
+          } catch (enrichmentError) {
+            if (controller.signal.aborted || get().loadGeneration !== generation) throw enrichmentError;
+            developmentLog('[asset-index] Envio attribute enrichment incomplete', {
+              generation, message: enrichmentTimedOut ? 'LUKSO ENVIO ATTRIBUTE ENRICHMENT DID NOT RESPOND'
+                : enrichmentError instanceof Error ? enrichmentError.message : String(enrichmentError),
+              profileAddress: requestedProfileAddress
+            });
+          } finally {
+            clearTimeout(enrichmentTimeout);
+            controller.signal.removeEventListener('abort', abortEnrichment);
+          }
+        }
         if (unresolvedAssetIds.length) {
           developmentLog('[asset-index] repairing unresolved metadata through RPC', {
             assets: unresolvedAssetIds.length, generation, profileAddress: requestedProfileAddress
           });
           try {
             await consumeWithTimeout(luksoRpcProfileRepository, RPC_REPAIR_TIMEOUT_MS,
-              { requestedAssetIds: unresolvedAssetIds, sourceMode: 'INDEXER+RPC', preserveProgress: true });
+              { requestedAssetIds: unresolvedAssetIds,
+                sourceMode: tokenAssetIds.length ? 'INDEXER+ENVIO+RPC' : 'INDEXER+RPC', preserveProgress: true });
           } catch (repairError) {
             if (controller.signal.aborted || get().loadGeneration !== generation) throw repairError;
             developmentLog('[asset-index] RPC metadata repair incomplete', {

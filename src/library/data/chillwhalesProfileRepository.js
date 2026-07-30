@@ -77,7 +77,8 @@ function metadataImages(metadata) {
     index: Number.isInteger(image?.image_index) ? image.image_index : 0,
     url: image?.url || null,
     width: Number(image?.width) || null,
-    height: Number(image?.height) || null
+    height: Number(image?.height) || null,
+    fileType: image?.file_type || null
   }));
 }
 
@@ -97,6 +98,7 @@ function creatorsFor(digitalAsset) {
 
 function contractMetadata(digitalAsset) {
   const metadata = digitalAsset?.lsp4Metadata || null;
+  const tokenType = digitalAsset?.lsp4TokenType?.value || null;
   return {
     id: digitalAsset?.address,
     name: digitalAsset?.lsp4TokenName?.value || null,
@@ -104,9 +106,11 @@ function contractMetadata(digitalAsset) {
     description: metadata?.description?.value || '',
     images: metadataImages(metadata),
     lsp4Creators: creatorsFor(digitalAsset),
+    lsp4TokenType: tokenType,
+    metadataSource: 'LSP4Metadata', tokenTypeSource: 'LSP4TokenType',
     attributes: metadataAttributes(metadata),
-    isLSP7: digitalAsset?.lsp4TokenType?.value !== 'COLLECTION',
-    isCollection: digitalAsset?.lsp4TokenType?.value === 'COLLECTION',
+    isLSP7: tokenType !== 'COLLECTION',
+    isCollection: tokenType === 'COLLECTION',
     error: metadataError(metadata)
   };
 }
@@ -136,6 +140,9 @@ function normalizeOwnedToken(row, ownerAddress, options) {
       images: metadataImages(metadata),
       lsp4Creators: contract.lsp4Creators,
       attributes: metadataAttributes(metadata),
+      metadataSource: row?.nft?.lsp4Metadata?.name?.value || row?.nft?.lsp4Metadata?.description?.value
+        || row?.nft?.lsp4Metadata?.images?.length || row?.nft?.lsp4Metadata?.attributes?.length
+        ? 'LSP4MetadataForTokenId' : 'LSP8MetadataBaseURI',
       asset: contract,
       error: metadataError(metadata)
     }

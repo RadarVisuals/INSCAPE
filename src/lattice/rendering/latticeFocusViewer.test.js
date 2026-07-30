@@ -3,12 +3,61 @@ import assert from 'node:assert/strict';
 
 import {
   DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG,
+  focusViewerEntryRectangle,
   focusViewerDestination,
   focusViewerLayout,
+  focusViewerRackLayout,
   focusedViewerRectangle,
   normalizeViewerRectangle,
   orderedFocusViewerEntries,
+  shouldContainViewerScroll,
 } from './latticeFocusViewer.js';
+
+test('browse layers preserve inherited DOMRect coordinates before applying decoded dimensions', () => {
+  const domRectangle = Object.create({ left: 120, top: 80, width: 240, height: 360 });
+  assert.deepEqual(focusViewerEntryRectangle(domRectangle, { width: 1200, height: 800 }), {
+    left: 120,
+    top: 80,
+    width: 1200,
+    height: 800,
+  });
+});
+
+test('viewer dossier scroll contains empty regions and both scroll-chain boundaries', () => {
+  assert.equal(shouldContainViewerScroll({ clientHeight: 300, scrollHeight: 300, scrollTop: 0 }, 0, 40), true);
+  assert.equal(shouldContainViewerScroll({ clientHeight: 300, scrollHeight: 900, scrollTop: 0 }, 0, -40), true);
+  assert.equal(shouldContainViewerScroll({ clientHeight: 300, scrollHeight: 900, scrollTop: 300 }, 0, 40), false);
+  assert.equal(shouldContainViewerScroll({ clientHeight: 300, scrollHeight: 900, scrollTop: 600 }, 0, 40), true);
+});
+
+test('production rack balances desktop artwork against one stable metadata frame', () => {
+  const origin = { left: 120, top: 80, width: 600, height: 900 };
+  const layout = focusViewerRackLayout(origin, { width: 1600, height: 1000 }, true);
+  assert.equal(layout.mode, 'rack');
+  assert.equal(layout.artwork.height, layout.inspectionRack.height);
+  assert.ok(layout.inspectionRack.height <= 680);
+  assert.ok(layout.artwork.left + layout.artwork.width < layout.inspectionRack.left);
+  assert.equal(layout.artwork.top, layout.inspectionRack.top);
+  assert.ok(Math.abs(layout.artwork.width / layout.artwork.height - origin.width / origin.height) < 1e-12);
+});
+
+test('production rack stacks below native-ratio artwork in narrow viewports', () => {
+  const origin = { left: 12, top: 18, width: 900, height: 600 };
+  const layout = focusViewerRackLayout(origin, { width: 390, height: 844 }, true);
+  assert.equal(layout.mode, 'rack-compact');
+  assert.equal(layout.inspectionRack.width, 358);
+  assert.ok(layout.inspectionRack.top > layout.artwork.top + layout.artwork.height);
+  assert.ok(layout.contentHeight > 844);
+  assert.ok(Math.abs(layout.artwork.width / layout.artwork.height - 1.5) < 1e-12);
+});
+
+test('production rack validates its open state', () => {
+  assert.throws(() => focusViewerRackLayout(
+    { left: 0, top: 0, width: 10, height: 10 },
+    { width: 1200, height: 800 },
+    'open',
+  ), /boolean/);
+});
 
 test('focused viewer preserves native presentation ratio and centers within safe viewport margins', () => {
   const origin = { left: 120, top: 80, width: 240, height: 360 };

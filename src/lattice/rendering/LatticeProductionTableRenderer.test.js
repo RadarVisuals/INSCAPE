@@ -27,7 +27,7 @@ function visitorGraph(start) {
   return [...visited].map((file) => file.replaceAll('\\', '/'));
 }
 
-test('renderer contains presentation only and preserves semantic frame, order, media safety and resize projection', () => {
+test('renderer preserves semantic frame, order, media safety, resize projection and optional decoded activation', () => {
   assert.match(source, /createLatticeProductionTableRenderModel/);
   assert.match(source, /createLatticeProductionLayerRanks/);
   assert.match(source, /ResizeObserver/);
@@ -37,7 +37,9 @@ test('renderer contains presentation only and preserves semantic frame, order, m
   assert.match(source, /referrerPolicy="no-referrer"/);
   assert.match(source, /loading="lazy"/);
   assert.match(source, /Artwork unavailable/);
-  assert.doesNotMatch(source, /onPlacement(?:Activate|Focus|Pointer|Resize)|onAuthor|wallet|localStorage|sessionStorage|indexedDB|fetch\(/iu);
+  assert.match(source, /event\.key !== 'Enter'/);
+  assert.match(source, /loaded && dimensions/);
+  assert.doesNotMatch(source, /onAuthor|wallet|localStorage|sessionStorage|indexedDB|fetch\(/iu);
 });
 
 test('authored boundary is invisible and the atmospheric grid shares its exact projected origin and cell size', () => {

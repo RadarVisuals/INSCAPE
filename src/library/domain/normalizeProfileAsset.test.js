@@ -23,3 +23,11 @@ test('normalizes an identifiable LSP8 holding into the internal asset model', ()
   assert.equal(asset.imageUrl, 'https://gateway.example/ipfs/QmAsset/image.png');
   assert.deepEqual(asset.creators[0], { address: owner, name: 'Creator' });
 });
+
+test('uses contract attributes when token-specific metadata does not publish attributes', () => {
+  const asset = normalizeProfileAsset({ token: { tokenId: '0xAB', name: 'Specimen', attributes: [],
+    asset: { id: contract, name: 'Collection', attributes: [{ key: 'Series', value: 'Genesis', attributeType: 'string' }] }
+  } }, owner);
+  assert.deepEqual(asset.attributes, [{ key: 'Series', value: 'Genesis', type: 'string' }]);
+  assert.deepEqual(asset.fieldProvenance.attributes, { scope: 'contract', source: 'LSP4Metadata' });
+});

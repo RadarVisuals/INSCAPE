@@ -22,6 +22,18 @@ export const DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG = Object.freeze({
   compactDossierHeight: 420,
 });
 
+export function shouldContainViewerScroll(scrollRegion, deltaX = 0, deltaY = 0) {
+  const maximumScrollTop = Math.max(0,
+    Number(scrollRegion?.scrollHeight) - Number(scrollRegion?.clientHeight));
+  const scrollTop = Number(scrollRegion?.scrollTop) || 0;
+  const horizontal = Number(deltaX) || 0;
+  const vertical = Number(deltaY) || 0;
+  const movement = Math.abs(vertical) >= Math.abs(horizontal) ? vertical : horizontal;
+  return maximumScrollTop <= 0
+    || (movement < 0 && scrollTop <= 0)
+    || (movement > 0 && scrollTop >= maximumScrollTop - 1);
+}
+
 function finitePositive(value, label) {
   if (!Number.isFinite(value) || value <= 0) throw new TypeError(`${label} must be a positive finite number`);
   return value;
@@ -43,6 +55,13 @@ export function normalizeViewerRectangle(rectangle, label = 'rectangle') {
     width: finitePositive(Number(rectangle.width), `${label}.width`),
     height: finitePositive(Number(rectangle.height), `${label}.height`),
   });
+}
+
+export function focusViewerEntryRectangle(originRectangle, focusDimensions) {
+  const origin = normalizeViewerRectangle(originRectangle, 'originRectangle');
+  return focusDimensions?.width > 0 && focusDimensions?.height > 0
+    ? Object.freeze({ ...origin, width: focusDimensions.width, height: focusDimensions.height })
+    : origin;
 }
 
 export function focusedViewerRectangle(originRectangle, viewport, config = DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG) {
@@ -97,9 +116,13 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
   const verticalMargin = Math.max(0, Number(config?.verticalMargin));
   const verticalArtworkScale = Number(config?.verticalArtworkScale);
 
-  if (size.width < breakpoint) {
+  const horizontal = (origin.width / origin.height) >= horizontalAspectRatio;
+  const sideArtworkAllowance = size.width - (Math.max(0, Number(config?.horizontalMargin)) * 2)
+    - (2 * (dossierWidth + dossierGap));
+  if (size.width < breakpoint || (!horizontal && sideArtworkAllowance < 280)) {
     const horizontalMargin = Math.max(0, Number(config?.compactHorizontalMargin));
-    const dossierHeight = finitePositive(Number(config?.compactDossierHeight), 'compactDossierHeight');
+    const maximumDossierHeight = finitePositive(Number(config?.compactDossierHeight), 'compactDossierHeight');
+    const dossierHeight = Math.min(maximumDossierHeight, Math.max(240, size.height * 0.46));
     if (!Number.isFinite(horizontalMargin)) throw new TypeError('compactHorizontalMargin must be finite');
     const panelWidth = Math.max(1, size.width - (horizontalMargin * 2));
     const firstPanelTop = focused.top + focused.height + dossierGap;
@@ -121,7 +144,7 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
     });
   }
 
-  if ((origin.width / origin.height) >= horizontalAspectRatio) {
+  if (horizontal) {
     const lowerDossierGap = finiteNonNegative(Number(config?.lowerDossierGap), 'lowerDossierGap');
     const lowerDossierHeight = finitePositive(Number(config?.lowerDossierHeight), 'lowerDossierHeight');
     const lowerPanelGap = finiteNonNegative(Number(config?.lowerPanelGap), 'lowerPanelGap');
@@ -216,6 +239,60 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
       dossierHeight,
     ),
     inspectionFrame,
+    contentHeight: size.height,
+  });
+}
+
+export function focusViewerRackLayout(originRectangle, viewport, rackOpen, config = DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG) {
+  const origin = normalizeViewerRectangle(originRectangle, 'originRectangle');
+  const size = viewerViewport(viewport);
+  viewerDossierState(rackOpen);
+  const compact = size.width < 1000;
+  const margin = compact ? 16 : Math.max(32, Number(config.horizontalMargin));
+  const verticalMargin = compact ? 28 : Math.max(32, Number(config.verticalMargin));
+  const gap = compact ? 64 : 56;
+  const rackWidth = compact ? Math.max(1, size.width - (margin * 2)) : Math.min(380, size.width * 0.3);
+  const navigationClearance = 84;
+
+  if (compact) {
+    const maximumArtworkWidth = Math.max(1, size.width - (margin * 2));
+    const maximumArtworkHeight = Math.max(1, Math.min(size.height * 0.58, 620));
+    const scale = Math.min(maximumArtworkWidth / origin.width, maximumArtworkHeight / origin.height);
+    const artwork = rectangle((size.width - (origin.width * scale)) / 2, verticalMargin,
+      origin.width * scale, origin.height * scale);
+    const rackTop = artwork.top + artwork.height + gap;
+    const rackHeight = Math.max(420, Math.min(680, size.height * 0.72));
+    return Object.freeze({
+      mode: 'rack-compact', artwork,
+      inspectionRack: rectangle(margin, rackTop, rackWidth, rackHeight),
+      inspectionFrame: rectangle(Math.max(0, artwork.left - 24), Math.max(0, artwork.top - 24),
+        Math.min(size.width, artwork.width + 48), artwork.height + 48),
+      contentHeight: rackTop + rackHeight + navigationClearance,
+    });
+  }
+
+  const maximumHeight = Math.max(1, Math.min(
+    size.height * 0.72,
+    size.height - (verticalMargin * 2) - navigationClearance,
+  ));
+  const rackHeight = Math.max(460, Math.min(680, maximumHeight));
+  const maximumArtworkWidth = Math.max(1, Math.min(
+    size.width * 0.58,
+    size.width - (margin * 2) - rackWidth - gap,
+  ));
+  const scale = Math.min(maximumArtworkWidth / origin.width, rackHeight / origin.height);
+  const artworkWidth = origin.width * scale;
+  const artworkHeight = origin.height * scale;
+  const groupWidth = artworkWidth + gap + rackWidth;
+  const groupLeft = (size.width - groupWidth) / 2;
+  const rackTop = Math.max(verticalMargin, (size.height - navigationClearance - rackHeight) / 2);
+  const artworkTop = rackTop + ((rackHeight - artworkHeight) / 2);
+  const artwork = rectangle(groupLeft, artworkTop, artworkWidth, artworkHeight);
+  return Object.freeze({
+    mode: 'rack', artwork,
+    inspectionRack: rectangle(groupLeft + artworkWidth + gap, rackTop, rackWidth, rackHeight),
+    inspectionFrame: rectangle(Math.max(0, artwork.left - 28), Math.max(0, artwork.top - 28),
+      artwork.width + 56, artwork.height + 56),
     contentHeight: size.height,
   });
 }

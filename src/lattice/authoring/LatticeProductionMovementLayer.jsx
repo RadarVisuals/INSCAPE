@@ -96,6 +96,7 @@ export default function LatticeProductionMovementLayer({
   const rootRef = useRef(null);
   const controlRefs = useRef(new Map());
   const gestureRef = useRef(null);
+  const emptyActivationBlockedUntilRef = useRef(0);
   const fieldRef = useRef(null);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [selectedPlacementId, setSelectedPlacementId] = useState(null);
@@ -161,6 +162,7 @@ export default function LatticeProductionMovementLayer({
     const active = gestureRef.current;
     if (!active) return false;
     gestureRef.current = null;
+    emptyActivationBlockedUntilRef.current = performance.now() + 250;
     if (active.kind === 'crop') {
       setCropSession(active.session);
       onPreviewOperation?.({ kind: 'crop', request: active.session.request });
@@ -281,6 +283,7 @@ export default function LatticeProductionMovementLayer({
     event.preventDefault();
     event.stopPropagation();
     gestureRef.current = null;
+    emptyActivationBlockedUntilRef.current = performance.now() + 250;
     const result = active.kind === 'crop'
       ? finishLatticeProductionCropPanGesture(active.gesture)
       : active.kind === 'resize'
@@ -484,6 +487,11 @@ export default function LatticeProductionMovementLayer({
     aria-label="Placement composition controls"
     className="lattice-production-movement-layer"
     data-lattice-placement-layer
+    onClick={(event) => {
+      if (event.target !== event.currentTarget || cropSession || gestureRef.current
+        || performance.now() < emptyActivationBlockedUntilRef.current) return;
+      setSelectedPlacementId(null);
+    }}
     onKeyDown={handleKeyDown}
     onLostPointerCapture={cancelGesture}
     onPointerCancel={cancelGesture}

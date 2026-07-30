@@ -1,29 +1,92 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
-const unresolved = (value) => (typeof value === 'string' && value.trim() ? value : 'NOT RESOLVED');
+const resolved = (value) => typeof value === 'string' && value.trim();
 
 const rectangleStyle = ({ height, left, top, width }) => ({ height, left, top, width });
 
 function NarrativeContent({ dossier }) {
   return <>
-    <small>DESCRIPTION</small>
-    <h2>{unresolved(dossier?.title)}</h2>
-    <p>{unresolved(dossier?.description)}</p>
-    <section>
+    {(resolved(dossier?.title) || resolved(dossier?.description)) && <>
+      <small>DESCRIPTION</small>
+      {resolved(dossier?.title) && <h2>{dossier.title}</h2>}
+      {resolved(dossier?.description) && <p>{dossier.description}</p>}
+    </>}
+    {dossier?.traits?.length > 0 && <section>
       <small>TRAITS</small>
       <ul className="lattice-focus-viewer__traits">
-        {dossier?.traits?.length
-          ? dossier.traits.map(({ label, value }) => <li key={label}>{label}: {unresolved(value)}</li>)
-          : <li>NO DATA</li>}
+        {dossier.traits.map(({ label, value }) => <li key={label}>{label}: {value}</li>)}
       </ul>
-    </section>
+    </section>}
   </>;
 }
 
 function RecordContent({ dossier }) {
-  return <dl>{(dossier?.technical || []).map(({ label, value }) => (
-    <div key={label}><dt>{label}</dt><dd>{unresolved(value)}</dd></div>
+  return <dl>{(dossier?.technical || []).filter(({ value }) => resolved(value)).map(({ href, label, value }) => (
+    <div key={label}><dt>{label}</dt><dd>{href ? <a href={href} rel="noreferrer" target="_blank">{value}</a> : value}</dd></div>
   ))}</dl>;
+}
+
+function RackNarrativeContent({ dossier }) {
+  return <>
+    {(resolved(dossier?.title) || resolved(dossier?.description)) && <small className="lattice-focus-viewer__rack-eyebrow">DESCRIPTION</small>}
+    {resolved(dossier?.title) && <h2>{dossier.title}</h2>}
+    {resolved(dossier?.description) && <p>{dossier.description}</p>}
+  </>;
+}
+
+function AttributeContent({ dossier }) {
+  return <ul className="lattice-focus-viewer__rack-attributes">
+    {(dossier?.traits || []).map(({ label, value }) => <li key={label}><span>{label}</span><strong>{value}</strong></li>)}
+  </ul>;
+}
+
+function LatticeFocusRack({ activeSection, dossier, layout, onSectionChange, open }) {
+  const sections = [
+    { id: 'narrative', label: 'NARRATIVE DOSSIER', available: resolved(dossier?.title) || resolved(dossier?.description),
+      content: <RackNarrativeContent dossier={dossier} /> },
+    { id: 'attributes', label: 'ATTRIBUTE DOSSIER', available: dossier?.traits?.length > 0,
+      content: <AttributeContent dossier={dossier} /> },
+    { id: 'technical', label: 'TECHNICAL DOSSIER', available: dossier?.technical?.some(({ value }) => resolved(value)),
+      content: <RecordContent dossier={dossier} /> },
+  ].filter(({ available }) => available);
+  const selected = sections.some(({ id }) => id === activeSection) ? activeSection : sections[0]?.id;
+  useEffect(() => {
+    if (selected && selected !== activeSection) onSectionChange?.(selected);
+  }, [activeSection, onSectionChange, selected]);
+  const collapsedRackHeight = Math.max(0, sections.length - 1) * 54 + Math.max(0, sections.length - 1) * 4;
+  const expandedModuleHeight = Math.round(Math.max(54, layout.inspectionRack.height - collapsedRackHeight));
+  let moduleTop = 0;
+  const moduleTracks = new Map(sections.map(({ id }) => {
+    const height = id === selected ? expandedModuleHeight : 54;
+    const track = { height, '--lattice-rack-module-y': `${Math.round(moduleTop)}px` };
+    moduleTop += height + 4;
+    return [id, track];
+  }));
+  return <aside
+    aria-hidden={!open}
+    aria-label="Artwork metadata rack"
+    className="lattice-focus-viewer__rack"
+    data-active-section={selected}
+    data-open={open || undefined}
+    inert={!open ? '' : undefined}
+    style={rectangleStyle(layout.inspectionRack)}
+  >
+    {sections.map((section) => {
+      const active = section.id === selected;
+      const panelId = `lattice-rack-${section.id}-panel`;
+      return <section className="lattice-focus-viewer__rack-module" data-active={active || undefined}
+        key={section.id} style={moduleTracks.get(section.id)}>
+        <button aria-controls={panelId} aria-expanded={active} onClick={() => onSectionChange?.(section.id)} type="button">
+          <i aria-hidden="true" />
+          <span>{section.label}</span>
+          <b aria-hidden="true">{active ? '−' : '+'}</b>
+        </button>
+        {active && <div className="lattice-focus-viewer__rack-panel" data-lattice-viewer-scroll id={panelId} role="region">
+          {section.content}
+        </div>}
+      </section>;
+    })}
+  </aside>;
 }
 
 function LatticeFocusDossier({ dossier, layoutMode, open, rectangle, side }) {
@@ -36,6 +99,7 @@ function LatticeFocusDossier({ dossier, layoutMode, open, rectangle, side }) {
       data-open={open || undefined}
       data-placement={layoutMode === 'side' ? side : 'lower'}
       data-side={side}
+      inert={!open ? '' : undefined}
       style={rectangleStyle(rectangle)}
     >
       <div className="lattice-focus-viewer__dossier-body" data-lattice-viewer-scroll>
@@ -52,6 +116,7 @@ function LatticeFocusCombinedDossier({ dossier, open, rectangle }) {
     className="lattice-focus-viewer__dossier is-combined"
     data-open={open || undefined}
     data-placement="lower"
+    inert={!open ? '' : undefined}
     style={rectangleStyle(rectangle)}
   >
     <div className="lattice-focus-viewer__dossier-body is-combined" data-lattice-viewer-scroll>
@@ -61,7 +126,7 @@ function LatticeFocusCombinedDossier({ dossier, open, rectangle }) {
   </aside>;
 }
 
-export default function LatticeFocusInspection({ dossier, layout, open }) {
+export default function LatticeFocusInspection({ activeSection, dossier, layout, onSectionChange, open, variant = 'paired' }) {
   return <>
     <div
       aria-hidden="true"
@@ -73,7 +138,8 @@ export default function LatticeFocusInspection({ dossier, layout, open }) {
         '--lattice-inspection-frame-top': `${layout.inspectionFrame.top}px`,
       }}
     />
-    {layout.mode === 'lower' ? (
+    {variant === 'rack' ? <LatticeFocusRack activeSection={activeSection} dossier={dossier} layout={layout}
+      onSectionChange={onSectionChange} open={open} /> : layout.mode === 'lower' ? (
       <LatticeFocusCombinedDossier dossier={dossier} open={open} rectangle={layout.leftDossier} />
     ) : <>
       <LatticeFocusDossier dossier={dossier} layoutMode={layout.mode} open={open} rectangle={layout.leftDossier} side="left" />

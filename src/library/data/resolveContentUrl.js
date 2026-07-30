@@ -31,7 +31,8 @@ export function selectImageUrls(images, options) {
     imageUrl: primary.imageUrl,
     originalImageUrl: primary.originalImageUrl,
     width: primary.width,
-    height: primary.height
+    height: primary.height,
+    fileType: primary.fileType,
   };
 }
 
@@ -56,6 +57,7 @@ export function selectImageGroups(images, options) {
       originalImageUrl: largest.resolved,
       width: Number(largest.width) || null,
       height: Number(largest.height) || null,
+      fileType: largest.fileType || null,
       variants: byWidth.map((variant) => ({
         url: variant.resolved,
         width: Number(variant.width) || null,

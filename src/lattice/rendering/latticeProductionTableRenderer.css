@@ -41,6 +41,9 @@
   margin: 0;
   pointer-events: none;
 }
+.lattice-production-placement[data-placement-activatable] { pointer-events: auto; cursor: zoom-in; }
+.lattice-production-placement[data-placement-activatable]:focus-visible { outline: 1px solid currentColor; outline-offset: 3px; }
+.lattice-production-placement[data-viewer-source-hidden] { opacity: 0; }
 
 .lattice-production-placement__mat,
 .lattice-production-placement__opening,

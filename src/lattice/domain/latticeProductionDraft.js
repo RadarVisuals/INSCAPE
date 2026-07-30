@@ -65,7 +65,7 @@ export function createEmptyLatticeProductionDraft(profileAddress) {
     draftVersion: LATTICE_PRODUCTION_DRAFT_VERSION,
     artboard: { ...LATTICE_PRODUCTION_ARTBOARD },
     geometry: { ...LATTICE_PRODUCTION_GEOMETRY },
-    appearance: { surfaceId: 'carbon', menuSurfaceId: 'carbon', dossierSurfaceId: 'paper' },
+    appearance: { surfaceId: 'mist', menuSurfaceId: 'mist', dossierSurfaceId: 'paper' },
     identityPresentation: createEmptyLatticeProductionIdentityPresentation(),
     tables: LATTICE_PRODUCTION_COORDINATES.map((coordinate) => ({
       id: latticeProductionTableId(coordinate),

@@ -172,7 +172,7 @@ test('focus viewer owns modal focus and Escape on the selected inspection surfac
   assert.match(source, /gridVariables=\{viewerGridVariables\}/);
   assert.match(source, /gridVisible=\{gridVisible\}/);
   assert.match(focusViewer, /--lattice-inspection-surface/);
-  assert.match(focusViewerStyles, /\.lattice-focus-viewer__surface\s*\{[^}]*background-color: var\(--lattice-inspection-surface, #090a0a\);/s);
+  assert.match(focusViewerStyles, /\.lattice-focus-viewer__surface\s*\{[^}]*background-color: color-mix\([\s\S]*?var\(--lattice-inspection-surface, #090a0a\) 92%/s);
   assert.doesNotMatch(focusViewer, /localStorage|sessionStorage|indexedDB|useWalletStore|profileDocument/iu);
 });
 
@@ -188,12 +188,12 @@ test('viewer browsing follows explicit navigation order with wrapping and ratio-
   assert.match(focusViewer, /Previous artwork/);
   assert.match(focusViewer, /Next artwork/);
   assert.match(focusViewer, /outgoingLayer/);
-  assert.match(focusViewer, /focusViewerLayout\(outgoingLayer\.originRectangle, viewport, dossiersOpen\)\.artwork/);
+  assert.match(focusViewer, /createLayout\(outgoingLayer\.entry\.focusDimensions/);
   assert.match(focusViewerStyles, /lattice-focus-viewer-browse-in/);
   assert.match(focusViewerStyles, /lattice-focus-viewer-browse-out/);
   assert.match(focusViewerStyles, /\.lattice-focus-viewer__navigation\s*\{[^}]*left: 50%;[^}]*bottom: 18px;/s);
   assert.doesNotMatch(focusViewer, /controlsTop/);
-  assert.doesNotMatch(focusViewer, /navigationDirection|onNavigationSettled|setTimeout|localStorage|sessionStorage|indexedDB/iu);
+  assert.doesNotMatch(focusViewer, /navigationDirection|onNavigationSettled|localStorage|sessionStorage|indexedDB/iu);
   assert.doesNotMatch(focusViewerStyles, /lattice-focus-viewer-(?:next|previous)|data-direction|navigation-duration/iu);
   assert.match(focusViewerStyles, /transition: transform 420ms/);
   assert.match(focusViewer, /className="lattice-focus-viewer__surface"/);
@@ -207,18 +207,18 @@ test('viewer browsing follows explicit navigation order with wrapping and ratio-
   assert.match(focusViewerStyles, /\[data-phase="open"\] \.lattice-focus-viewer__artwork\s*\{[^}]*transition: none;/s);
 });
 
-test('Phase 5 dossiers open as one detached inspection pair and remain fixture-only', () => {
-  assert.match(focusViewer, /useState\(false\)/);
+test('Phase 5 paired dossiers remain an explicit prototype compatibility variant', () => {
+  assert.match(focusViewer, /inspectionVariant = 'paired'/);
   assert.match(focusViewer, /cycleArtworkViewer/);
   assert.match(focusViewer, /setDossiersOpen\(\(current\) => !current\)/);
   assert.doesNotMatch(focusViewer, /dossierStage|setDossierStage|else\s*\{\s*requestClose/);
-  assert.match(focusViewer, /focusViewerLayout\(outgoingLayer\.originRectangle, viewport, dossiersOpen\)/);
+  assert.match(focusViewer, /rackInspection[\s\S]*focusViewerRackLayout[\s\S]*focusViewerLayout/);
   assert.match(focusViewer, /LatticeFocusInspection/);
   assert.match(focusInspection, /data-lattice-viewer-scroll/);
-  assert.match(focusInspection, /NO TRAITS RESOLVED/);
-  assert.match(focusInspection, /NOT RESOLVED/);
+  assert.match(focusInspection, /variant = 'paired'/);
+  assert.match(focusInspection, /variant === 'rack'/);
+  assert.doesNotMatch(focusInspection, /NO TRAITS RESOLVED|NOT RESOLVED/);
   assert.match(focusInspection, /lattice-focus-viewer__inspection-frame/);
-  assert.match(focusInspection, /lattice-focus-viewer__connectors/);
   assert.match(focusInspection, /--lattice-inspection-frame-left/);
   assert.doesNotMatch(focusViewer, /openPanel/);
   assert.doesNotMatch(focusViewer, /toggleDossier|dossier-toggle/);

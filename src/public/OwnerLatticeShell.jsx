@@ -31,6 +31,9 @@ import {
   updateLatticeOwnerCameraY,
 } from '../lattice/controller/latticeOwnerViewport.js';
 import LatticeProductionTableRenderer from '../lattice/rendering/LatticeProductionTableRenderer.jsx';
+import LatticeFocusViewer from '../lattice/rendering/LatticeFocusViewer.jsx';
+import LatticeProductionFocusArtwork from '../lattice/rendering/LatticeProductionFocusArtwork.jsx';
+import { createLatticeProductionFocusViewModel } from '../lattice/rendering/latticeProductionFocusViewModel.js';
 import LatticeNavigationOverlay from '../lattice/rendering/LatticeNavigationOverlay.jsx';
 import LatticeProfileRail from '../lattice/rendering/LatticeProfileRail.jsx';
 import LatticeWorkspaceToolbar from '../lattice/rendering/LatticeWorkspaceToolbar.jsx';
@@ -56,7 +59,7 @@ const PROFILE_RAIL_ENTRIES = Object.freeze([
 ]);
 const WORKSPACE_TOOLS = Object.freeze([
   { id: 'browser', label: 'BROWSER' },
-  { id: 'arrange', label: 'ARRANGE', disabled: true, disabledReason: 'Authoring is not available in Phase 4' },
+  { id: 'arrange', label: 'ARRANGE' },
   { id: 'preview', label: 'PREVIEW', disabled: true, disabledReason: 'Owner Preview integration is not available in Phase 4' },
   { id: 'theme', label: 'THEME' },
   { id: 'publish', label: 'PUBLISH', disabled: true, disabledReason: 'Version 8 publication is disabled' },
@@ -70,8 +73,8 @@ const sameCoordinate = (left, right) => left.x === right.x && left.y === right.y
 const tableIdentity = (table) => table.title?.trim() || table.id.replace('-', ' ').toUpperCase();
 
 export function createEmptyOwnerLatticeRuntimeValue(profileAddress, {
-  menuSurfaceId = 'carbon',
-  surfaceId = 'carbon',
+  menuSurfaceId = 'mist',
+  surfaceId = 'mist',
 } = {}) {
   const profile = normalizeProfileAddress(profileAddress);
   if (!profile) throw new TypeError('A valid owner lattice profile is required');
@@ -129,13 +132,16 @@ function OwnerLatticeRuntime({
   const [cameraGestureActive, setCameraGestureActive] = useState(false);
   const [cameraOffsets, setCameraOffsets] = useState({});
   const [spacePanReady, setSpacePanReady] = useState(false);
-  const [surfaceId, setSurfaceId] = useState('carbon');
-  const [menuSurfaceId, setMenuSurfaceId] = useState('carbon');
+  const [surfaceId, setSurfaceId] = useState('mist');
+  const [menuSurfaceId, setMenuSurfaceId] = useState('mist');
   const [themeOpen, setThemeOpen] = useState(false);
   const [browserOpen, setBrowserOpen] = useState(false);
   const [browserActivated, setBrowserActivated] = useState(false);
   const [compositionPreview, setCompositionPreview] = useState(null);
   const [cropModeActive, setCropModeActive] = useState(false);
+  const [arrangeEnabled, setArrangeEnabled] = useState(false);
+  const [placementMedia, setPlacementMedia] = useState({});
+  const [viewerSession, setViewerSession] = useState(null);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const profileIdentity = useProfileIdentity(profileAddress);
   const browserData = useOwnerLatticeBrowser(profileAddress, browserOpen);
@@ -175,6 +181,12 @@ function OwnerLatticeRuntime({
     }
   }, [authoring.assetRecords, authoring.draft, compositionPreview, menuSurfaceId, surfaceId]);
   const lattice = latticeProjection.lattice;
+  const assetRecordsById = useMemo(() => {
+    const records = authoring.assetRecords instanceof Map
+      ? [...authoring.assetRecords.values()]
+      : Array.isArray(authoring.assetRecords) ? authoring.assetRecords : [];
+    return new Map(records.map((asset) => [asset.id, asset]));
+  }, [authoring.assetRecords]);
 
   useEffect(() => {
     setSpatialRoot(document.querySelector('.application-root'));
@@ -398,11 +410,12 @@ function OwnerLatticeRuntime({
   const activeDraftTable = authoring.draft?.tables.find((table) => table.id === activeTableId) || null;
   const activeTable = lattice?.tables.find((table) => table.id === activeTableId) || activeDraftTable;
   const activeTableName = activeTable ? tableIdentity(activeTable) : activeTableId.replace('-', ' ').toUpperCase();
-  const placementUnavailableReason = ownerLatticePlacementUnavailableReason({
+  const authoringPlacementUnavailableReason = ownerLatticePlacementUnavailableReason({
     activeTable: activeDraftTable,
     authoringStatus: authoring.status,
     profileReady: authoring.profileReady,
   });
+  const placementUnavailableReason = arrangeEnabled ? authoringPlacementUnavailableReason : 'PLACE REQUIRES ARRANGE';
   const canonicalNotice = authoring.status === OWNER_LATTICE_AUTHORING_STATUS.CORRUPT
     ? 'CANONICAL DRAFT UNAVAILABLE / STORED RECORD PRESERVED / EXPLICIT RECOVERY REQUIRED'
     : authoring.error || latticeProjection.error;
@@ -411,6 +424,61 @@ function OwnerLatticeRuntime({
     setBrowserOpen(false);
     queueMicrotask(() => browserToolRef.current?.focus({ preventScroll: true }));
   }, []);
+  const toggleArrange = useCallback(() => {
+    if (arrangeEnabled) setCompositionPreview(null);
+    setArrangeEnabled(!arrangeEnabled);
+  }, [arrangeEnabled]);
+  const handlePlacementMediaState = useCallback((state) => {
+    const key = `${state.tableId}:${state.placementId}`;
+    setPlacementMedia((current) => {
+      const previous = current[key];
+      if (previous?.status === state.status && previous?.media?.src === state.media?.src
+        && previous?.dimensions?.width === state.dimensions?.width
+        && previous?.dimensions?.height === state.dimensions?.height) return current;
+      return { ...current, [key]: state };
+    });
+  }, []);
+  const openPlacementViewer = useCallback(async ({ element, placement, tableId }) => {
+    if (arrangeEnabled || tableId !== activeTableId) return;
+    const mediaState = placementMedia[`${tableId}:${placement.id}`];
+    if (mediaState?.status !== 'ready' || !mediaState.dimensions) return;
+    const originRectangle = element.getBoundingClientRect();
+    const nativeImage = new Image();
+    nativeImage.decoding = 'async';
+    nativeImage.referrerPolicy = 'no-referrer';
+    nativeImage.src = mediaState.media.src;
+    try { await nativeImage.decode(); } catch { /* The viewer retains its honest media-failure state. */ }
+    if (!element.isConnected) return;
+    setViewerSession({
+      originRectangle,
+      placementId: placement.id,
+      returnFocus: element,
+      tableId,
+    });
+  }, [activeTableId, arrangeEnabled, placementMedia]);
+
+  const viewerTable = viewerSession ? lattice?.tables.find(({ id }) => id === viewerSession.tableId) : null;
+  const viewerEntries = useMemo(() => (viewerTable?.placements || []).map((placement) => {
+    const decoded = placementMedia[`${viewerTable.id}:${placement.id}`];
+    const assetRecord = assetRecordsById.get(placement.asset.stableAssetId);
+    const model = createLatticeProductionFocusViewModel(placement, decoded?.dimensions && assetRecord
+      ? { ...assetRecord, imageWidth: decoded.dimensions.width, imageHeight: decoded.dimensions.height }
+      : assetRecord);
+    return model && decoded?.status === 'ready' && decoded.dimensions
+      ? { ...model, focusDimensions: decoded.dimensions, media: { ...model.media, src: decoded.media.src } } : null;
+  }).filter(Boolean), [assetRecordsById, placementMedia, viewerTable]);
+  const viewerPosition = viewerEntries.findIndex(({ placement }) => placement.id === viewerSession?.placementId);
+  const viewerEntry = viewerPosition >= 0 ? viewerEntries[viewerPosition] : null;
+  const findPlacementElement = useCallback((placementId) => [...(viewportRef.current
+    ?.querySelectorAll('.owner-lattice-table[data-active] [data-placement-id]') || [])]
+    .find((node) => node.dataset.placementId === placementId), []);
+  const navigateViewer = useCallback((direction) => {
+    if (!viewerEntries.length || viewerPosition < 0) return;
+    const destination = viewerEntries[(viewerPosition + direction + viewerEntries.length) % viewerEntries.length];
+    const element = findPlacementElement(destination.placement.id);
+    setViewerSession((current) => current && ({ ...current, placementId: destination.placement.id,
+      returnFocus: element || current.returnFocus }));
+  }, [findPlacementElement, viewerEntries, viewerPosition]);
 
   const spatialSurface = <section
     aria-label="Owner lattice navigation"
@@ -465,8 +533,14 @@ function OwnerLatticeRuntime({
             height: plane.height,
           }}
         >{lattice
-          ? <><LatticeProductionTableRenderer lattice={lattice} tableId={table.id} />
-            {sameCoordinate(coordinate, active) && activeDraftTable?.id === table.id && <LatticeProductionMovementLayer
+          ? <><LatticeProductionTableRenderer
+              lattice={lattice}
+              onMediaState={handlePlacementMediaState}
+              onPlacementActivate={!arrangeEnabled && sameCoordinate(coordinate, active) ? openPlacementViewer : undefined}
+              tableId={table.id}
+              viewerPlacementId={viewerSession?.tableId === table.id ? viewerSession.placementId : null}
+            />
+            {arrangeEnabled && sameCoordinate(coordinate, active) && activeDraftTable?.id === table.id && <LatticeProductionMovementLayer
               acceptedTable={activeDraftTable}
               lattice={lattice}
               onCommitCrop={authoring.cropPublicPlacement}
@@ -508,6 +582,7 @@ function OwnerLatticeRuntime({
       <LatticeWorkspaceToolbar
         activeToolId={browserOpen ? 'browser' : themeOpen ? 'theme' : null}
         compact={dimensions.width <= 980}
+        arrangeEnabled={arrangeEnabled}
         owner
         tools={WORKSPACE_TOOLS}
         onEscape={() => {
@@ -515,6 +590,9 @@ function OwnerLatticeRuntime({
           else setThemeOpen(false);
         }}
         onToolActivate={(toolId) => {
+          if (toolId === 'arrange') {
+            toggleArrange();
+          }
           if (toolId === 'browser') {
             setThemeOpen(false);
             setBrowserActivated(true);
@@ -533,7 +611,9 @@ function OwnerLatticeRuntime({
             ...browserData,
             activeTable: { label: activeTableName, placementUnavailableReason },
           }}
-          onPlaceAsset={(stableAssetId) => authoring.placePublicAsset({ stableAssetId, tableId: activeTableId })}
+          onPlaceAsset={(stableAssetId) => {
+            if (arrangeEnabled) authoring.placePublicAsset({ stableAssetId, tableId: activeTableId });
+          }}
           onRequestClose={closeBrowser}
           open={browserOpen}
         />
@@ -544,6 +624,31 @@ function OwnerLatticeRuntime({
         onMenuSurfaceChange={setMenuSurfaceId}
         onSurfaceChange={setSurfaceId}
         surfaceId={surfaceId}
+      />}
+      {viewerSession && viewerEntry && <LatticeFocusViewer
+        dossier={viewerEntry.dossier}
+        entry={viewerEntry}
+        getReturnRectangle={() => findPlacementElement(viewerSession.placementId)?.getBoundingClientRect()}
+        gridVariables={{
+          '--lattice-grid-cell-size': `${cellSize}px`,
+          '--lattice-grid-origin-x': `${plane.left}px`,
+          '--lattice-grid-origin-y': `${plane.top + activeCameraY}px`,
+        }}
+        gridVisible
+        inspectionVariant="rack"
+        menuSurfaceId={menuSurfaceId}
+        onClosed={() => setViewerSession(null)}
+        onNavigate={navigateViewer}
+        originRectangle={viewerSession.originRectangle}
+        position={viewerPosition}
+        renderArtwork={(focusEntry, context) => <LatticeProductionFocusArtwork
+          entry={focusEntry}
+          focused={context.phase === 'open' || context.phase === 'opening' || context.phase === 'outgoing'}
+          phase={context.phase}
+        />}
+        returnFocus={viewerSession.returnFocus}
+        surfaceColor="var(--lattice-menu-panel)"
+        total={viewerEntries.length}
       />}
       {canonicalNotice && <div className="owner-lattice-authoring-notice" data-lattice-chrome role="alert">{canonicalNotice}</div>}
       <div className="owner-lattice-signature" aria-label="INSCAPE">

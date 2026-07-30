@@ -12,7 +12,10 @@ const LSP5_RECEIVED_ASSETS_SCHEMA = [{
   keyType: 'Array', valueType: 'address', valueContent: 'Address'
 }];
 const LSP4_METADATA_KEY = '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e';
+const LSP4_TOKEN_TYPE_KEY = '0xe0261fa95db2eb3b5439bd033cda66d56b96f92f243a8228fd87550ed7bdfdb3';
+const LSP4_CREATORS_ARRAY_KEY = '0x114bd03b3a46d48759680d81ebb2b414fda7d030a7105a851867accf1c2352e7';
 const LSP8_METADATA_BASE_URI_KEY = '0x1a7628600c3bac7101f53697f48df381ddc36b9015e7d7c9c5633d1252aa2843';
+const LSP8_TOKEN_ID_FORMAT_KEY = '0xf675e9361af1c1664c1868cfa3eb97672d6b1a513aa5b81dec34c9ee330e818d';
 const LSP7_INTERFACE_ID = '0xc52d6008';
 const LSP8_INTERFACE_ID = '0x3a271706';
 const METADATA_CONCURRENCY = 8;
@@ -145,16 +148,70 @@ function metadataAttributes(document) {
   const attributes = metadataRoot(document)?.attributes;
   return (Array.isArray(attributes) ? attributes : []).map((entry) => ({
     key: entry?.key || entry?.trait_type || entry?.name || '',
-    value: entry?.value ?? '', attributeType: entry?.type || null
+    value: entry?.value ?? '', attributeType: entry?.type || entry?.display_type || null
   })).filter((entry) => entry.key || entry.value !== '');
 }
 
-function metadataCreators(document) {
-  const creators = metadataRoot(document)?.creators;
-  return (Array.isArray(creators) ? creators : []).map((entry) => {
-    const address = normalizeProfileAddress(typeof entry === 'string' ? entry : entry?.address);
-    return address ? { profile_id: address, profile: { name: entry?.name || null } } : null;
-  }).filter(Boolean);
+function decodeTokenType(value) {
+  if (typeof value !== 'string' || !/^0x[0-9a-f]+$/iu.test(value) || value.length > 66) return null;
+  try {
+    const type = Number(BigInt(value));
+    return ({ 0: 'TOKEN', 1: 'NFT', 2: 'COLLECTION' })[type] || `TYPE_${type}`;
+  } catch { return null; }
+}
+
+function decodeStoredNumber(value) {
+  if (typeof value !== 'string' || !/^0x[0-9a-f]+$/iu.test(value) || value.length > 66) return null;
+  try { return Number(BigInt(value)); } catch { return null; }
+}
+
+function decodeTokenIdForMetadata(tokenId, tokenIdFormat) {
+  if (typeof tokenId !== 'string' || !/^0x[0-9a-f]{64}$/iu.test(tokenId)) return null;
+  switch (tokenIdFormat) {
+    case 0: return BigInt(tokenId).toString(10);
+    case 1: {
+      const bytes = tokenId.slice(2).match(/.{2}/gu).map((byte) => Number.parseInt(byte, 16));
+      try { return new TextDecoder().decode(Uint8Array.from(bytes)).replace(/\0+$/u, ''); } catch { return null; }
+    }
+    case 2: return `0x${tokenId.slice(-40)}`;
+    case 3: return tokenId.replace(/0+$/u, '');
+    case 4: return tokenId;
+    default: return tokenId;
+  }
+}
+
+function arrayElementKey(arrayKey, index) {
+  return `${arrayKey.slice(0, 34)}${index.toString(16).padStart(32, '0')}`;
+}
+
+function decodeStoredAddress(value) {
+  if (typeof value !== 'string' || !/^0x[0-9a-f]+$/iu.test(value)) return null;
+  return normalizeProfileAddress(`0x${value.slice(-40)}`);
+}
+
+async function readContractFacts(address, client) {
+  const contractAddress = getAddress(address);
+  const [tokenTypeValue, creatorCountValue, tokenIdFormatValue] = await Promise.all([
+    client.readContract({ address: contractAddress, abi: ERC725Y_ABI,
+      functionName: 'getData', args: [LSP4_TOKEN_TYPE_KEY] }).catch(() => null),
+    client.readContract({ address: contractAddress, abi: ERC725Y_ABI,
+      functionName: 'getData', args: [LSP4_CREATORS_ARRAY_KEY] }).catch(() => null),
+    client.readContract({ address: contractAddress, abi: ERC725Y_ABI,
+      functionName: 'getData', args: [LSP8_TOKEN_ID_FORMAT_KEY] }).catch(() => null)
+  ]);
+  let creatorCount = 0;
+  if (typeof creatorCountValue === 'string' && creatorCountValue.length <= 66) {
+    try { creatorCount = Math.min(Number(BigInt(creatorCountValue)), 32); } catch { creatorCount = 0; }
+  }
+  const creatorValues = creatorCount ? await Promise.all(Array.from({ length: creatorCount }, (_entry, index) =>
+    client.readContract({ address: contractAddress, abi: ERC725Y_ABI, functionName: 'getData',
+      args: [arrayElementKey(LSP4_CREATORS_ARRAY_KEY, index)] }).catch(() => null))) : [];
+  return {
+    tokenType: decodeTokenType(tokenTypeValue),
+    tokenIdFormat: decodeStoredNumber(tokenIdFormatValue),
+    creators: creatorValues.map(decodeStoredAddress).filter(Boolean)
+      .map((profileId) => ({ profile_id: profileId, profile: { name: null } }))
+  };
 }
 
 async function fetchMetadataDocument(uri, { fetchImpl, ipfsGateway, signal, metadataResponseMs = METADATA_RESPONSE_TIMEOUT_MS }) {
@@ -185,36 +242,54 @@ async function readCollectionMetadata(address, client, context) {
   return uri ? fetchMetadataDocument(uri, context) : null;
 }
 
-async function readTokenMetadata(holding, client, context) {
+async function readTokenMetadata(holding, client, context, globalTokenIdFormat) {
   if (holding.standard === 'LSP7') return null;
   const directValue = await client.readContract({ address: getAddress(holding.address), abi: LSP8_ABI,
     functionName: 'getDataForTokenId', args: [holding.tokenId, LSP4_METADATA_KEY] }).catch(() => null);
   let uri = decodeMetadataUri(directValue);
+  let source = uri ? 'LSP4MetadataForTokenId' : null;
   if (!uri) {
-    const baseValue = await client.readContract({ address: getAddress(holding.address), abi: ERC725Y_ABI,
-      functionName: 'getData', args: [LSP8_METADATA_BASE_URI_KEY] }).catch(() => null);
+    let tokenIdFormat = globalTokenIdFormat;
+    if (tokenIdFormat != null && tokenIdFormat >= 100) {
+      const tokenFormatValue = await client.readContract({ address: getAddress(holding.address), abi: LSP8_ABI,
+        functionName: 'getDataForTokenId', args: [holding.tokenId, LSP8_TOKEN_ID_FORMAT_KEY] }).catch(() => null);
+      tokenIdFormat = decodeStoredNumber(tokenFormatValue) ?? tokenIdFormat - 100;
+    }
+    const tokenBaseValue = await client.readContract({ address: getAddress(holding.address), abi: LSP8_ABI,
+      functionName: 'getDataForTokenId', args: [holding.tokenId, LSP8_METADATA_BASE_URI_KEY] }).catch(() => null);
+    const globalBaseValue = tokenBaseValue && tokenBaseValue !== '0x' ? null
+      : await client.readContract({ address: getAddress(holding.address), abi: ERC725Y_ABI,
+        functionName: 'getData', args: [LSP8_METADATA_BASE_URI_KEY] }).catch(() => null);
+    const baseValue = tokenBaseValue && tokenBaseValue !== '0x' ? tokenBaseValue : globalBaseValue;
     const baseUri = decodeMetadataUri(baseValue);
-    if (baseUri) uri = `${baseUri.replace(/\/$/u, '')}/${BigInt(holding.tokenId).toString()}`;
+    if (baseUri) {
+      const decodedTokenId = decodeTokenIdForMetadata(String(holding.tokenId).toLowerCase(), tokenIdFormat);
+      uri = decodedTokenId == null ? null : `${baseUri}${decodedTokenId}`;
+      source = tokenBaseValue && tokenBaseValue !== '0x' ? 'LSP8TokenMetadataBaseURIForTokenId' : 'LSP8TokenMetadataBaseURI';
+    }
   }
-  return uri ? fetchMetadataDocument(uri, context) : null;
+  const document = uri ? await fetchMetadataDocument(uri, context) : null;
+  return document ? { document, source } : null;
 }
 
-function toNormalizedAsset(holding, ownerAddress, tokenDocument, collectionDocument, options) {
+function toNormalizedAsset(holding, ownerAddress, tokenDocument, collectionDocument, contractFacts, options) {
   const collection = metadataRoot(collectionDocument);
-  const token = metadataRoot(tokenDocument);
+  const token = metadataRoot(tokenDocument?.document);
   const contractMetadata = {
     id: holding.address, name: collection.name || collection.title || null,
     lsp4TokenName: collection.name || null, description: collection.description || '',
-    images: metadataImages(collectionDocument), lsp4Creators: metadataCreators(collectionDocument),
+    images: metadataImages(collectionDocument), lsp4Creators: contractFacts.creators,
     attributes: metadataAttributes(collectionDocument), isLSP7: holding.standard === 'LSP7',
-    isCollection: holding.standard === 'LSP8'
+    isCollection: contractFacts.tokenType === 'COLLECTION', lsp4TokenType: contractFacts.tokenType,
+    metadataSource: 'LSP4Metadata', tokenTypeSource: 'LSP4TokenType'
   };
   const rawHolding = holding.standard === 'LSP8' ? {
     id: `rpc:${holding.address}:${holding.tokenId}`, balance: '1', asset_id: holding.address,
     token: { tokenId: holding.tokenId, name: token.name || token.title || null,
       lsp4TokenName: token.name || null, description: token.description || '',
-      images: metadataImages(tokenDocument), lsp4Creators: metadataCreators(tokenDocument),
-      attributes: metadataAttributes(tokenDocument), asset: contractMetadata }
+      images: metadataImages(tokenDocument?.document), lsp4Creators: contractFacts.creators,
+      attributes: metadataAttributes(tokenDocument?.document), asset: contractMetadata,
+      metadataSource: tokenDocument?.source || 'LSP4MetadataForTokenId' }
   } : { id: `rpc:${holding.address}`, balance: holding.balance, asset_id: holding.address, asset: contractMetadata };
   return normalizeProfileAsset(rawHolding, ownerAddress, options);
 }
@@ -251,7 +326,7 @@ export function createLuksoRpcProfileRepository({
       const selectedHoldings = requested ? discoveredHoldings.filter((holding) => requested.has(
         createStableAssetId({ contractAddress: holding.address, tokenId: holding.tokenId }))) : discoveredHoldings;
       const holdings = prioritizeHoldings(selectedHoldings, priorityAssetIds);
-      const collectionMetadata = new Map(); let resolved = 0;
+      const collectionMetadata = new Map(); const contractFacts = new Map(); let resolved = 0;
       const streamBatchSize = Math.min(pageSize, METADATA_CONCURRENCY);
       for (let offset = 0; offset < holdings.length; offset += streamBatchSize) {
         throwIfAborted(signal);
@@ -265,9 +340,15 @@ export function createLuksoRpcProfileRepository({
             collectionMetadata.set(holding.address, collectionRequest);
           }
           const collectionDocument = await collectionRequest;
+          let factsRequest = contractFacts.get(holding.address);
+          if (!factsRequest) {
+            factsRequest = readContractFacts(holding.address, publicClient).catch(() => ({ tokenType: null, creators: [] }));
+            contractFacts.set(holding.address, factsRequest);
+          }
+          const facts = await factsRequest;
           const tokenDocument = await readTokenMetadata(holding, publicClient,
-            { fetchImpl, ipfsGateway, signal, metadataResponseMs }).catch(() => null);
-          return toNormalizedAsset(holding, profile, tokenDocument, collectionDocument, { ipfsGateway });
+            { fetchImpl, ipfsGateway, signal, metadataResponseMs }, facts.tokenIdFormat).catch(() => null);
+          return toNormalizedAsset(holding, profile, tokenDocument, collectionDocument, facts, { ipfsGateway });
         });
         const assets = []; let batchFailures = 0;
         outcomes.forEach((outcome) => {

@@ -3,7 +3,7 @@
   z-index: 4;
   inset: 0;
   overflow: hidden;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .lattice-production-composition-control {

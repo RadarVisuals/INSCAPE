@@ -23,6 +23,8 @@ test('pointer ownership is captured at placement-originated pointer down and nev
   assert.match(source, /data-placement-id=\{placement\.id\}/);
   assert.match(source, /data-resize-corner=\{corner\}/);
   assert.match(source, /<span>\{locked \? 'LOCKED' : 'MOVE'\}<\/span>/);
+  assert.match(source, /emptyActivationBlockedUntilRef\.current = performance\.now\(\) \+ 250/);
+  assert.match(source, /performance\.now\(\) < emptyActivationBlockedUntilRef\.current/);
 });
 
 test('visible hit testing uses public placements, canonical layers, and deterministic keyboard order', () => {

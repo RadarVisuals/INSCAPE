@@ -20,7 +20,7 @@ function viewportOf(node) {
   return { width: Math.max(0, node?.clientWidth || 0), height: Math.max(0, node?.clientHeight || 0) };
 }
 
-function ProductionPlacement({ field, layerRank, placement }) {
+function ProductionPlacement({ field, layerRank, onMediaState, onPlacementActivate, placement, tableId, viewerSourceHidden }) {
   const media = useMemo(() => adaptLatticeProductionMedia(placement.asset), [placement.asset]);
   const [loadState, setLoadState] = useState(() => ({ src: media.src, status: 'loading', dimensions: null }));
   useEffect(() => setLoadState({ src: media.src, status: 'loading', dimensions: null }), [media.src]);
@@ -32,6 +32,21 @@ function ProductionPlacement({ field, layerRank, placement }) {
   const ready = media.status === LATTICE_PRODUCTION_MEDIA_STATUS.READY;
   const loaded = ready && loadState.src === media.src && loadState.status === 'loaded';
   const failed = !ready || loadState.src === media.src && loadState.status === 'failed';
+  useEffect(() => {
+    onMediaState?.({
+      dimensions: loaded ? dimensions : null,
+      media,
+      placementId: placement.id,
+      status: failed ? 'failed' : loaded ? 'ready' : 'loading',
+      tableId,
+    });
+  }, [dimensions?.height, dimensions?.width, failed, loaded, media.src, onMediaState, placement.id, tableId]);
+  const activatable = Boolean(onPlacementActivate && loaded && dimensions);
+
+  const activate = (event) => {
+    if (!activatable) return;
+    onPlacementActivate({ element: event.currentTarget, placement, tableId });
+  };
 
   return (
     <figure
@@ -40,8 +55,17 @@ function ProductionPlacement({ field, layerRank, placement }) {
       data-frame-id={placement.frameId}
       data-media-state={failed ? media.status === 'ready' ? 'failed' : media.status : loaded ? 'ready' : 'loading'}
       data-placement-id={placement.id}
+      data-placement-activatable={activatable || undefined}
       data-transparency-mode={placement.transparencyMode}
+      data-viewer-source-hidden={viewerSourceHidden || undefined}
       style={{ ...rectangleStyle(artwork.footprint), zIndex: layerRank }}
+      onClick={activate}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        activate(event);
+      }}
+      tabIndex={activatable ? 0 : -1}
     >
       {artwork.backplateRectangle && <span aria-hidden="true" className="lattice-production-placement__mat" style={{ backgroundColor: artwork.mat.color }} />}
       <span
@@ -88,7 +112,9 @@ function ProductionPlacement({ field, layerRank, placement }) {
   );
 }
 
-export default function LatticeProductionTableRenderer({ lattice, tableId, className = '' }) {
+export default function LatticeProductionTableRenderer({
+  lattice, tableId, className = '', onMediaState, onPlacementActivate, viewerPlacementId = null,
+}) {
   const rootRef = useRef(null);
   const model = useMemo(() => createLatticeProductionTableRenderModel(lattice, tableId), [lattice, tableId]);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
@@ -136,7 +162,11 @@ export default function LatticeProductionTableRenderer({ lattice, tableId, class
             field={projected}
             key={placement.id}
             layerRank={layerRanks.get(placement.id)}
+            onMediaState={onMediaState}
+            onPlacementActivate={onPlacementActivate}
             placement={placement}
+            tableId={tableId}
+            viewerSourceHidden={placement.id === viewerPlacementId}
           />
         ))}
         {labelVisible && (

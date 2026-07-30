@@ -1,0 +1,29 @@
+.lattice-production-focus-artwork,
+.lattice-production-focus-artwork__authored,
+.lattice-production-focus-artwork__native { position: absolute; inset: 0; }
+.lattice-production-focus-artwork__authored,
+.lattice-production-focus-artwork__native { transition: opacity 120ms ease; }
+.lattice-production-focus-artwork__native { opacity: 0; }
+.lattice-production-focus-artwork[data-focused] .lattice-production-focus-artwork__authored { opacity: 0; }
+.lattice-production-focus-artwork[data-focused] .lattice-production-focus-artwork__native { opacity: 1; }
+.lattice-focus-viewer[data-phase="opening"] .lattice-production-focus-artwork__authored {
+  animation: lattice-production-authored-out 220ms ease 60ms both;
+}
+.lattice-focus-viewer[data-phase="opening"] .lattice-production-focus-artwork__native {
+  animation: lattice-production-native-in 220ms ease 60ms both;
+}
+@keyframes lattice-production-authored-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes lattice-production-native-in { from { opacity: 0; } to { opacity: 1; } }
+.lattice-production-focus-artwork__mat,
+.lattice-production-focus-artwork__opening,
+.lattice-production-focus-artwork__opening img { position: absolute; display: block; box-sizing: border-box; }
+.lattice-production-focus-artwork__mat { inset: 0; }
+.lattice-production-focus-artwork__opening { overflow: hidden; }
+.lattice-production-focus-artwork__opening img { max-width: none; max-height: none; }
+.lattice-production-focus-artwork__native img { width: 100%; height: 100%; object-fit: contain; }
+.lattice-production-focus-artwork__native > span { position: absolute; inset: 0; display: grid; place-items: center; color: var(--lattice-menu-ink); font: 8px/1.4 "IBM Plex Mono", monospace; letter-spacing: .12em; }
+@media (prefers-reduced-motion: reduce) {
+  .lattice-production-focus-artwork__authored,
+  .lattice-production-focus-artwork__native { transition: none; animation: none; }
+  .lattice-focus-viewer[data-phase="opening"] :is(.lattice-production-focus-artwork__authored, .lattice-production-focus-artwork__native) { animation: none; }
+}
