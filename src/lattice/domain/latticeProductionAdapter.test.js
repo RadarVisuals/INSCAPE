@@ -60,6 +60,20 @@ test('private tables retain only their permanent slot and private placements are
   assert.deepEqual(publication.tables[4].placements, []);
 });
 
+test('production publication prefers original media while retaining declared dimensions only as a pre-decode hint', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  draft.tables[4].placements = [placement('public-placement', ASSET, 0)];
+  const publication = projectLatticeProductionPublication(draft, [record(ASSET, {
+    originalImageUrl: 'https://cdn.example/original.webp',
+    imageUrl: 'https://cdn.example/indexed.webp',
+    thumbnailUrl: 'https://cdn.example/thumbnail.webp',
+  })], { lastPublished: '2026-07-29T12:00:00.000Z' });
+  assert.equal(publication.tables[4].placements[0].asset.media.url, 'https://cdn.example/original.webp');
+  assert.deepEqual(publication.tables[4].placements[0].asset.media, {
+    url: 'https://cdn.example/original.webp', width: 1600, height: 900, type: 'image'
+  });
+});
+
 test('inactive identity values are cleared while active INSCAPE avatar references resolve through real assets', () => {
   const draft = createEmptyLatticeProductionDraft(PROFILE);
   draft.identityPresentation.avatar = { mode: 'official', stableAssetId: ASSET, shape: 'round' };

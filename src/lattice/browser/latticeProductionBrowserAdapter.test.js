@@ -19,7 +19,7 @@ function asset(overrides = {}) {
     collectionName: 'Real collection',
     thumbnailUrl: 'https://assets.example/thumbnail.webp',
     imageUrl: 'https://assets.example/image.webp',
-    originalImageUrl: 'ipfs://bafybeigdyrzt/original.webp',
+    originalImageUrl: 'https://assets.example/original.webp',
     imageWidth: 1200,
     imageHeight: 800,
     ...overrides,
@@ -48,7 +48,8 @@ test('real Browser adaptation validates owner scope, canonical identity, media, 
   assert.equal(result.assets[0].placeable, true);
   assert.equal(result.assets[0].mediaType, 'image');
   assert.equal(result.assets[0].placementUnavailableReason, null);
-  assert.equal(result.assets[0].src, 'https://assets.example/thumbnail.webp');
+  assert.equal(result.assets[0].src, 'https://assets.example/original.webp');
+  assert.equal(result.assets[0].previewSrc, 'https://assets.example/thumbnail.webp');
   assert.equal(Object.isFrozen(result), true);
   assert.equal(Object.isFrozen(result.categories[0].assetIds), true);
   assert.deepEqual(workspace, before);

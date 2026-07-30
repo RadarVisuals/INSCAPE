@@ -22,7 +22,7 @@ function publicAssetReference(asset, expectedStableAssetId) {
   }
   const identity = buildAssetReference(asset, expectedStableAssetId);
   if (!identity || identity.stableAssetId !== expectedStableAssetId) throw new TypeError(`Missing or mismatched production asset: ${expectedStableAssetId}`);
-  const mediaCandidate = [asset?.imageUrl, asset?.originalImageUrl, asset?.thumbnailUrl]
+  const mediaCandidate = [asset?.originalImageUrl, asset?.imageUrl, asset?.thumbnailUrl]
     .find((value) => parsePublishedAssetUrl(value));
   const mediaUrl = parsePublishedAssetUrl(mediaCandidate)?.value;
   if (!mediaUrl) throw new TypeError(`Production asset has no publishable media: ${expectedStableAssetId}`);

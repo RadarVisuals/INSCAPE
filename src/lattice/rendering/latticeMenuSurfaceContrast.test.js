@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const menuStyles = readFileSync(new URL('./latticeMenuSurface.css', import.meta.url), 'utf8');
 const viewerStyles = readFileSync(new URL('./latticeFocusViewer.css', import.meta.url), 'utf8');
+const identityStyles = readFileSync(new URL('./latticeProductionIdentityDossier.css', import.meta.url), 'utf8');
 const themes = {
   carbon: [[216, 215, 210], [16, 17, 17]], graphite: [[232, 231, 226], [48, 50, 50]],
   slate: [[243, 242, 237], [103, 104, 104]], ash: [[17, 19, 19], [221, 220, 214]],
@@ -25,6 +26,10 @@ test('viewer rack and legacy dossier text inherit owner-menu ink with AA contras
   assert.match(viewerStyles, /rack-eyebrow[\s\S]*color: var\(--lattice-menu-ink\)/u);
   assert.match(viewerStyles, /rack-panel dt[\s\S]*color: var\(--lattice-menu-ink\)/u);
   assert.match(viewerStyles, /rack-attributes span[\s\S]*color: var\(--lattice-menu-ink\)/u);
+  assert.match(identityStyles, /background: var\(--lattice-menu-panel\)/u);
+  assert.match(identityStyles, /color: var\(--lattice-menu-ink\)/u);
+  assert.match(identityStyles, /identity-dossier__technical dt[^}]*color: var\(--lattice-menu-ink\)/u);
+  assert.match(identityStyles, /identity-dossier__links a small[^}]*color: var\(--lattice-menu-ink\)/u);
   for (const [theme, [ink, panel]] of Object.entries(themes)) {
     assert.ok(contrast(ink, panel) >= 4.5, `${theme} essential small-label contrast must be at least 4.5:1`);
   }

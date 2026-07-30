@@ -17,6 +17,17 @@ test('resolves and normalizes verified LSP3 profile metadata', async () => {
   assert.deepEqual(identity.tags, ['art']);
   assert.equal(identity.links[0].url, 'https://gw.test/ipfs/home');
   assert.equal(identity.isUniversalProfile, true);
+  assert.equal(identity.metadataIntegrity, 'VERIFIED');
+});
+
+test('classifies VerifiableURI integrity failures without exposing unverified metadata', async () => {
+  const identity = await makeRepository({
+    supportsInterface: async () => true,
+    fetchData: async () => { throw new Error('VerifiableURI hash verification failed'); }
+  }).resolve(ADDRESS);
+  assert.equal(identity.status, 'ERROR');
+  assert.equal(identity.errorCode, 'VERIFICATION_FAILED');
+  assert.equal(identity.description, null);
 });
 
 test('distinguishes non-profiles, missing metadata, malformed data, and network failure', async () => {

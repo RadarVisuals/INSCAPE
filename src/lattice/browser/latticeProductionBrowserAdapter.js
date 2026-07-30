@@ -17,7 +17,10 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress) {
     || normalizeProfileAddress(asset?.contractAddress) !== identity.contractAddress
     || (asset?.tokenId == null ? null : String(asset.tokenId).toLowerCase()) !== identity.tokenId) return null;
 
-  const source = [asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl]
+  const previewSource = [asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl]
+    .map((candidate) => resolvePublishedAssetUrl(candidate))
+    .find(Boolean) || null;
+  const source = [asset.originalImageUrl, asset.imageUrl, asset.thumbnailUrl]
     .map((candidate) => resolvePublishedAssetUrl(candidate))
     .find(Boolean) || null;
   const width = Number.isSafeInteger(asset.imageWidth) && asset.imageWidth > 0 ? asset.imageWidth : null;
@@ -37,6 +40,7 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress) {
     placementUnavailableReason: !source ? 'MEDIA UNAVAILABLE'
       : !width || !height ? 'DIMENSIONS RESOLVING'
         : !['image', 'animation'].includes(mediaType) ? 'MEDIA TYPE UNAVAILABLE' : null,
+    previewSrc: previewSource,
     src: source,
     stableAssetId: identity.stableAssetId,
     title: typeof asset.name === 'string' && asset.name.trim()

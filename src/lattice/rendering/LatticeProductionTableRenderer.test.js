@@ -39,6 +39,8 @@ test('renderer preserves semantic frame, order, media safety, resize projection 
   assert.match(source, /Artwork unavailable/);
   assert.match(source, /event\.key !== 'Enter'/);
   assert.match(source, /loaded && dimensions/);
+  assert.match(source, /const decodedDimensions = [^;]+loadState\.dimensions/);
+  assert.match(source, /const dimensions = decodedDimensions \|\| media\.dimensions/);
   assert.doesNotMatch(source, /onAuthor|wallet|localStorage|sessionStorage|indexedDB|fetch\(/iu);
 });
 

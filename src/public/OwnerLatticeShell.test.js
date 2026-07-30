@@ -141,3 +141,19 @@ test('Phase 6 ARRANGE is one session-only owner mode and viewer activation remai
   assert.match(source, /surfaceColor="var\(--lattice-menu-panel\)"/);
   assert.doesNotMatch(source, /transparencyMode.*dossier|collectionName.*dossier|marketplace/iu);
 });
+
+test('Phase 7 Identity Dossier has strict owner-runtime precedence and exact trigger focus restoration', () => {
+  assert.match(source, /useProfileContractFacts\(profileAddress, \{ enabled: Boolean\(identityDossierOpening \|\| identityDossierSession\) \}\)/);
+  assert.match(source, /createProductionIdentityDossierViewModel/);
+  assert.match(source, /const \[identityDossierSession, setIdentityDossierSession\] = useState\(null\)/);
+  assert.match(source, /viewerSession \|\| gestureRef\.current \|\| cameraGestureRef\.current \|\| cropModeActive \|\| compositionPreview/);
+  assert.match(source, /preloadIdentityProfileImage\(identityDossier\.profile\.avatarUrl\)/);
+  assert.match(source, /const originRectangle = frozenRectangle\(source\.getBoundingClientRect\(\)\)/);
+  assert.match(source, /identityDisabled=\{Boolean\(identityDossierOpening \|\| identityDossierSession/);
+  assert.match(source, /identitySourceHidden=\{Boolean\(identityDossierSession\)\}/);
+  assert.match(source, /onIdentityActivate=\{openIdentityDossier\}/);
+  assert.match(source, /getReturnRectangle=\{\(\) => identityDossierSession\.originRectangle\}/);
+  assert.match(source, /requestAnimationFrame\(\(\) => identityControlRef\.current\?\.focus\(\{ preventScroll: true \}\)\)/);
+  assert.match(source, /onClosed=\{closeIdentityDossier\}/);
+  assert.doesNotMatch(source, /setArrangeEnabled\(false\).*setIdentityDossierSession/s);
+});

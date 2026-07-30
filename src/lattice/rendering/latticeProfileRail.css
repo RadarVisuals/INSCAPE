@@ -85,6 +85,8 @@
   text-align: left;
 }
 
+.lattice-profile-rail__identity[data-viewer-source-hidden] { visibility: hidden; }
+
 .lattice-profile-rail__avatar {
   box-sizing: border-box;
   width: 48px;

@@ -157,3 +157,47 @@ test('a successful library load enriches incomplete indexed token attributes thr
     resetLibraryStoreForTests(PROFILE, memoryStorage());
   }
 });
+
+test('the first valid indexer batch paints before index completion and background Envio enrichment', async () => {
+  const storage = memoryStorage();
+  const contract = '0x1111111111111111111111111111111111111111';
+  const tokenId = `0x${'0'.repeat(63)}1`;
+  const stableAssetId = `42:${contract}:${tokenId}`;
+  const originalLoad = chillwhalesProfileRepository.loadProfileAssets;
+  const originalEnrich = luksoEnvioAttributeRepository.enrich;
+  let releaseIndexer; let releaseEnrichment; let enrichmentStarted = false;
+  const indexerGate = new Promise((resolve) => { releaseIndexer = resolve; });
+  const enrichmentGate = new Promise((resolve) => { releaseEnrichment = resolve; });
+  chillwhalesProfileRepository.loadProfileAssets = async function* progressiveToken() {
+    const asset = { id: stableAssetId, chainId: 42, ownerAddress: PROFILE, contractAddress: contract,
+      tokenId, standard: 'LSP8', imageUrl: 'https://assets.example/progressive.webp', attributes: [], rawMetadata: {} };
+    yield { assets: [asset], unresolvedAssetIds: [], resolved: 1, total: 2, failures: 0, complete: false };
+    await indexerGate;
+    yield { assets: [asset], unresolvedAssetIds: [], resolved: 1, total: 1, failures: 0, complete: true };
+  };
+  luksoEnvioAttributeRepository.enrich = async () => {
+    enrichmentStarted = true;
+    await enrichmentGate;
+    return [{ id: stableAssetId, attributes: [{ key: 'Rank', value: '281', type: 'number' }] }];
+  };
+  try {
+    resetLibraryStoreForTests(PROFILE, storage);
+    const pending = useLibraryStore.getState().load({ forceLive: true });
+    await delay(0);
+    assert.deepEqual(useLibraryStore.getState().assets.map(({ id }) => id), [stableAssetId]);
+    assert.equal(useLibraryStore.getState().status, 'loading');
+    assert.equal(enrichmentStarted, false);
+    releaseIndexer();
+    while (!enrichmentStarted) await delay(0);
+    assert.deepEqual(useLibraryStore.getState().assets.map(({ id }) => id), [stableAssetId]);
+    assert.deepEqual(useLibraryStore.getState().assets[0].attributes, []);
+    releaseEnrichment();
+    await pending;
+    assert.deepEqual(useLibraryStore.getState().assets[0].attributes, [{ key: 'Rank', value: '281', type: 'number' }]);
+  } finally {
+    releaseIndexer?.(); releaseEnrichment?.();
+    chillwhalesProfileRepository.loadProfileAssets = originalLoad;
+    luksoEnvioAttributeRepository.enrich = originalEnrich;
+    resetLibraryStoreForTests(PROFILE, memoryStorage());
+  }
+});

@@ -29,6 +29,8 @@ test('rail collapse, selection, focus and Escape remain controlled by the caller
   assert.match(source, /!compact && <button/);
   assert.match(source, /disabled=\{entry\.disabled === true\}/);
   assert.match(source, /disabled=\{disabled\}/);
+  assert.match(source, /temporarily unavailable/);
+  assert.doesNotMatch(source, /Identity dossier is not available in Phase 4/);
 });
 
 test('rail is fixed, carbon, compactable and does not shift the lattice', () => {

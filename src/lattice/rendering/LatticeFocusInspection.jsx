@@ -42,11 +42,11 @@ function AttributeContent({ dossier }) {
 
 function LatticeFocusRack({ activeSection, dossier, layout, onSectionChange, open }) {
   const sections = [
-    { id: 'narrative', label: 'NARRATIVE DOSSIER', available: resolved(dossier?.title) || resolved(dossier?.description),
+    { id: 'narrative', label: 'NARRATIVE MODULE', available: resolved(dossier?.title) || resolved(dossier?.description),
       content: <RackNarrativeContent dossier={dossier} /> },
-    { id: 'attributes', label: 'ATTRIBUTE DOSSIER', available: dossier?.traits?.length > 0,
+    { id: 'attributes', label: 'ATTRIBUTE MODULE', available: dossier?.traits?.length > 0,
       content: <AttributeContent dossier={dossier} /> },
-    { id: 'technical', label: 'TECHNICAL DOSSIER', available: dossier?.technical?.some(({ value }) => resolved(value)),
+    { id: 'technical', label: 'TECHNICAL MODULE', available: dossier?.technical?.some(({ value }) => resolved(value)),
       content: <RecordContent dossier={dossier} /> },
   ].filter(({ available }) => available);
   const selected = sections.some(({ id }) => id === activeSection) ? activeSection : sections[0]?.id;
@@ -94,7 +94,7 @@ function LatticeFocusDossier({ dossier, layoutMode, open, rectangle, side }) {
   return (
     <aside
       aria-hidden={!open}
-      aria-label={isLeft ? 'Artwork description dossier' : 'Artwork technical dossier'}
+      aria-label={isLeft ? 'Artwork description module' : 'Artwork technical module'}
       className={`lattice-focus-viewer__dossier is-${side}`}
       data-open={open || undefined}
       data-placement={layoutMode === 'side' ? side : 'lower'}
@@ -112,7 +112,7 @@ function LatticeFocusDossier({ dossier, layoutMode, open, rectangle, side }) {
 function LatticeFocusCombinedDossier({ dossier, open, rectangle }) {
   return <aside
     aria-hidden={!open}
-    aria-label="Artwork metadata dossier"
+    aria-label="Artwork metadata modules"
     className="lattice-focus-viewer__dossier is-combined"
     data-open={open || undefined}
     data-placement="lower"

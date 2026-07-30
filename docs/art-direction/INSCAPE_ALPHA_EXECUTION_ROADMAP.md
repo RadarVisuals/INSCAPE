@@ -73,10 +73,10 @@ The working tree was clean when this roadmap was created.
 - [ ] The frozen lattice UI is not yet the published visitor renderer.
 - [x] Version 8 defines the canonical nine-table profile-document model; publication remains disabled and version 7 remains the default.
 - [x] Production INDEX/CATEGORIES stores are wired read-only to the isolated Browser; canonical authoring remains separately bounded by the current Phase 5B capability.
-- [x] Phase 4 fixed chrome is integrated and visually accepted; the production NFT viewer and identity dossier remain later-phase work.
+- [x] Phase 4 fixed chrome, the Phase 6 production NFT viewer, and the Phase 7 production identity RÄCK are integrated and visually accepted.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
-Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 is `[~]` after accepted Phase 5A, Phase 5B.1, Phase 5B.2, Phase 5B.3, and Phase 5B.4, with Phase 5B.5 implemented and automatically verified as `[~]` pending visual acceptance while Phase 5B.6 onward remains unstarted.
+Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 is `[~]` after accepted Phase 5A, Phase 5B.1, Phase 5B.2, Phase 5B.3, and Phase 5B.4, with Phase 5B.5 implemented and automatically verified as `[~]` pending visual acceptance while Phase 5B.6 onward remains unstarted. Phase 6 and Phase 7 are implemented, verified, and interactively accepted as `[x]`; Phase 7.5 remains unstarted.
 
 ### Locked production-integration constraints
 
@@ -544,18 +544,18 @@ User visual test:
 
 Exit criterion: the viewer respects artwork ratios, real metadata, motion, focus, and responsive constraints.
 
-## Phase 7 — production identity dossier
+## Phase 7 — production identity RÄCK
 
-Status: `[ ]`
+Status: `[x]` — **implemented, interactively accepted, and verified**
 
-Goal: replace the small Profile Rail identity representation with the full accepted public identity dossier.
+Goal: retain the compact Profile Rail identity state and expand that same card directly into one centered, read-only owner identity RÄCK. The avatar belongs inside PROFILE MODULE; there is no detached profile image, banner, or split composition.
 
-Official immutable facts:
+Authoritative official facts:
 
-- Universal Profile name/handle;
-- stable resident suffix derived from the first three canonical address characters;
-- full shortened address shown separately;
-- official address and verified identity facts remain immutable.
+- canonical Universal Profile address;
+- full LSP3 name, paragraph-preserving description, profile/background image candidates, tags, and authored links;
+- direct-RPC active chain, LSP0 classification, and exact LSP5/LSP12 register lengths with independent statuses;
+- metadata content-integrity status remains distinct from identity or social verification.
 
 Editable INSCAPE overlay:
 
@@ -563,17 +563,32 @@ Editable INSCAPE overlay:
 - official or internal avatar source;
 - official, custom, or hidden bio source;
 - additional public tags;
-- shareable workspace URL;
-- actual network and `LAST PUBLISHED` when available; never `LAST ONLINE`.
+- canonical INSCAPE profile URL;
+- verified LUKSO chain 42 and verified publication `exportedAt` when available; never the runtime epoch placeholder and never `LAST ONLINE`.
 
 User visual test:
 
-1. Compare owner and visitor projection.
+1. Open from the owner Profile Rail at 1280×720, 900px, 640px, and 390×844.
 2. Change only allowed overlay fields.
-3. Reload and publish.
-4. Confirm official identity remains unchanged and private/inactive values do not leak.
+3. Confirm Browser and Theme close, ARRANGE persists, viewer/gesture/CROP precedence holds, and Escape restores exact trigger focus.
+4. Confirm official identity remains unchanged, long descriptions scroll naturally, and private/inactive values do not leak.
 
-Exit criterion: the dossier is visually faithful to the frozen paper design and has a strict, honest data contract.
+Exit criterion: the contained identity RÄCK is visually accepted across six menu themes and responsive boundaries and has a strict, honest direct-data contract.
+
+Accepted checkpoint (2026-07-30): interactive review accepted the direct compact-card-to-RÄCK transition, the PROFILE / LINK / TECHNICAL module hierarchy and switching, long-form profile content, exact close/return behavior, real LSP3 media, landscape NFT rendering, progressive asset painting, responsive layouts, and the shared six-theme token system. The native-dialog implementation is replaced by a body portal with reversible inert ownership, explicit close fallbacks, exact post-close trigger focus, and the Phase 6 source-to-viewer transition grammar. Runtime projection isolates unresolved asset references as placement-local placeholders so valid indexer batches paint before enrichment completes. Shared LSP3 normalization and independently lazy profile contract facts remain separate in responsibility. The final focused Phase 7 set passes 72 tests. The production build and existing-build check pass at owner CSS 64,311 raw / 9,483 gzip and core JavaScript 1,881,375 raw / 556,604 gzip. The full suite and dedicated browser lifecycle were not rerun for this closing checkpoint; the earlier dedicated Edge route reached the owner and identity RÄCK and exposed the now-corrected focus timing issue, while its final post-fix run exceeded the local 150-second harness deadline without a reported application assertion. No canonical draft/publication schema, storage, writer, wallet, visitor, prototype identity viewer, Keeper movement, or category/PORTALS behavior changes are part of Phase 7.
+
+### Future identity boundary — PERSONA / ALTER PERSONA (documentation only)
+
+The future public-facing presentations are named exactly **PERSONA** and **ALTER PERSONA**. Do not call them “Persona Mode” or “Incognito”.
+
+- **PERSONA** is the standard light/Mist presentation, based on the official Universal Profile and LSP3-authored profile data. Provenance: `SOURCE / UNIVERSAL PROFILE`.
+- **ALTER PERSONA** is the alternate dark/Carbon presentation, optionally layering INSCAPE-authored identity over the official profile. Provenance: `SOURCE / INSCAPE`.
+
+Alter Persona is a presentation layer, not technical anonymity, privacy, verification, or a second on-chain account. Editing or activating it never mutates the Universal Profile or changes external LUKSO/application profiles. Required explanatory copy: “Your Alter Persona changes only how you appear inside INSCAPE. Your Universal Profile and external profiles remain unchanged.”
+
+Future fields may include display name, resident code or call sign, alternate profile and background images, one-line tagline, long bio, metadata tags, optional location, optional external handles, links, per-field visibility, and per-field inheritance. Untouched fields inherit from PERSONA; overrides are explicitly INSCAPE-authored, may be selective, and never require duplicating the full profile. External handles are optional because they may connect the presentations. Location is never inferred and is hidden by default. No checkmark implies verification.
+
+The future compact-card interaction may use the approved square-grid mask icon, the current light/Mist surface for PERSONA, existing Carbon tokens for ALTER PERSONA, a lattice-cell image dissolve, and the same reversible compact-card-to-image-plus-RÄCK transition. Carbon must reuse existing tokens and contrast rules. No editor, schema, persistence, publication, inheritance, provenance, rollback logic, toggle, or production interaction is approved by this boundary.
 
 ## Phase 7.5 — production Keeper resident movement
 
@@ -583,7 +598,8 @@ Goal: connect the existing full X/Y Keeper movement engine to the production lat
 
 Includes:
 
-- ARRANGE OFF empty-table activation moves the released Keeper to the activated lattice position;
+- pointer-follow is the requested primary desktop direction; its sampling, resting, activation, and touch/keyboard equivalents require a read-only ownership audit before implementation;
+- the currently non-functional click-to-move path is evidence, not accepted interaction authority, and must not be preserved by accident;
 - ARRANGE ON empty-table activation retains authoring deselection and never causes incidental Keeper movement;
 - placement activation, authoring gestures, table drag/swipe navigation, bounded Space-drag camera movement, and Keeper movement have deterministic ownership;
 - screen, active-table, and camera coordinates resolve to stable Keeper targets without jumps during table arrival or responsive resizing;
@@ -592,8 +608,8 @@ Includes:
 
 User visual test:
 
-1. With ARRANGE OFF, release the Keeper and activate several empty positions across the active table.
-2. Confirm the Keeper flies smoothly to each two-dimensional target while artwork activation and table navigation remain unchanged.
+1. With ARRANGE OFF, release the Keeper and exercise the approved pointer-follow behavior across the active table.
+2. Confirm the Keeper follows smoothly within the approved resting and sampling rules while artwork activation and table navigation remain unchanged.
 3. Turn ARRANGE ON and confirm empty activation deselects only, without moving the Keeper.
 4. Navigate and Space-drag between tables, resize the viewport, dock/release, and switch profiles; confirm movement remains bounded, stable, and conflict-free.
 5. Enable reduced motion and confirm target placement and dock transitions remain usable without unintended animation.

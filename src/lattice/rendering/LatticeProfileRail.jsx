@@ -17,20 +17,22 @@ const ENTRY_ICONS = Object.freeze({
   discover: Compass,
 });
 
-function OfficialIdentitySummary({ identity, active, collapsed, disabled, expanded, identityControlRef, onActivate }) {
+function OfficialIdentitySummary({ identity, active, collapsed, disabled, expanded, identityControlRef, onActivate, sourceHidden }) {
   const displayName = identity?.displayName || 'UNRESOLVED PROFILE';
   const secondaryLabel = identity?.secondaryLabel || 'UNIVERSAL PROFILE';
   return <button
     type="button"
     className="lattice-profile-rail__identity"
     data-active={active || undefined}
+    data-identity-dossier-source="true"
+    data-viewer-source-hidden={sourceHidden || undefined}
     aria-label={disabled
-      ? `${displayName} identity dossier unavailable in this phase`
-      : identity ? `Open ${displayName} identity dossier` : 'Open unresolved identity dossier entry'}
+      ? `${displayName} identity rack unavailable in this phase`
+      : identity ? `Open ${displayName} identity rack` : 'Open unresolved identity rack entry'}
     aria-controls="lattice-profile-dossier"
     aria-expanded={expanded}
     disabled={disabled}
-    title={disabled ? 'Identity dossier is not available in Phase 4' : undefined}
+    title={disabled ? 'Identity rack is temporarily unavailable' : undefined}
     onClick={onActivate}
     ref={identityControlRef}
   >
@@ -56,6 +58,7 @@ export default function LatticeProfileRail({
   identityControlRef,
   identityDisabled = false,
   identityExpanded = false,
+  identitySourceHidden = false,
   onEntryActivate,
   onIdentityActivate,
   onCollapsedChange,
@@ -85,6 +88,7 @@ export default function LatticeProfileRail({
       disabled={identityDisabled}
       expanded={identityExpanded}
       identityControlRef={identityControlRef}
+      sourceHidden={identitySourceHidden}
       onActivate={onIdentityActivate}
     />
     <nav aria-label="Public profile areas">

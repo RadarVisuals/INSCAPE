@@ -17,7 +17,7 @@ export default function BrowserAssetResults({ actionLabel = null, assets, emptyL
             type="button"
           >
             <span className="lattice-browser-asset__media" style={{ aspectRatio: ratio }}>
-              {asset.src ? <img alt="" draggable="false" src={asset.src} /> : <span>MEDIA UNRESOLVED</span>}
+              {asset.previewSrc || asset.src ? <img alt="" draggable="false" src={asset.previewSrc || asset.src} /> : <span>MEDIA UNRESOLVED</span>}
             </span>
             <span className="lattice-browser-asset__record">
               <strong>{asset.title || 'UNRESOLVED ASSET'}</strong>

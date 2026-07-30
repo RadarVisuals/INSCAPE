@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { normalizeProfileAddress } from '../library/config.js';
-import { useProfileIdentity } from '../profileIdentity/index.js';
+import { useProfileContractFacts, useProfileIdentity } from '../profileIdentity/index.js';
 import {
   LATTICE_PRODUCTION_COORDINATES,
   LATTICE_PRODUCTION_SURFACE_IDS,
@@ -36,8 +36,12 @@ import LatticeProductionFocusArtwork from '../lattice/rendering/LatticeProductio
 import { createLatticeProductionFocusViewModel } from '../lattice/rendering/latticeProductionFocusViewModel.js';
 import LatticeNavigationOverlay from '../lattice/rendering/LatticeNavigationOverlay.jsx';
 import LatticeProfileRail from '../lattice/rendering/LatticeProfileRail.jsx';
+import LatticeProductionIdentityDossier from '../lattice/rendering/LatticeProductionIdentityDossier.jsx';
 import LatticeWorkspaceToolbar from '../lattice/rendering/LatticeWorkspaceToolbar.jsx';
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
+import { createProductionIdentityDossierViewModel } from './identity/productionIdentityDossierViewModel.js';
+import { preloadIdentityProfileImage } from './identity/preloadIdentityProfileImage.js';
+import { prepareOwnerLatticeRuntimeDraft } from './ownerLatticeRuntimeProjection.js';
 import KeeperDock from './KeeperDock.jsx';
 import useOwnerLatticeBrowser from './useOwnerLatticeBrowser.js';
 import useOwnerLatticeAuthoring, {
@@ -71,6 +75,24 @@ const SURFACE_LABELS = Object.freeze({
 
 const sameCoordinate = (left, right) => left.x === right.x && left.y === right.y;
 const tableIdentity = (table) => table.title?.trim() || table.id.replace('-', ' ').toUpperCase();
+const frozenRectangle = (rectangle) => Object.freeze({
+  left: rectangle.left, top: rectangle.top, width: rectangle.width, height: rectangle.height,
+});
+
+function UnresolvedRuntimePlacements({ placements }) {
+  return placements.map((placement) => <div
+    aria-label="Artwork resolving"
+    className="owner-lattice-runtime-placeholder"
+    data-placement-id={placement.id}
+    key={placement.id}
+    role="status"
+    style={{
+      left: `${placement.column / 32 * 100}%`, top: `${placement.row / 18 * 100}%`,
+      width: `${placement.columnSpan / 32 * 100}%`, height: `${placement.rowSpan / 18 * 100}%`,
+      zIndex: placement.layer + 1,
+    }}
+  ><span>ASSET RESOLVING</span></div>);
+}
 
 export function createEmptyOwnerLatticeRuntimeValue(profileAddress, {
   menuSurfaceId = 'mist',
@@ -104,6 +126,7 @@ function OwnerLatticeRuntime({
   activeActorId,
   interfaceVisible = true,
   keeperVisible = true,
+  publishedResolution,
   residentHandoff,
   revealPresentation = { reducedMotion: false },
   visitorWalletConnected = false,
@@ -123,6 +146,8 @@ function OwnerLatticeRuntime({
   const wheelAccumulatorRef = useRef({ x: 0, y: 0 });
   const wheelBlockedUntilRef = useRef(0);
   const browserToolRef = useRef(null);
+  const identityControlRef = useRef(null);
+  const identityOpenRequestRef = useRef(0);
   const [spatialRoot, setSpatialRoot] = useState(null);
   const [dimensions, setDimensions] = useState({ width: 1, height: 1 });
   const [active, setActive] = useState(() => entryLatticeCoordinate());
@@ -142,8 +167,11 @@ function OwnerLatticeRuntime({
   const [arrangeEnabled, setArrangeEnabled] = useState(false);
   const [placementMedia, setPlacementMedia] = useState({});
   const [viewerSession, setViewerSession] = useState(null);
+  const [identityDossierSession, setIdentityDossierSession] = useState(null);
+  const [identityDossierOpening, setIdentityDossierOpening] = useState(false);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const profileIdentity = useProfileIdentity(profileAddress);
+  const profileContractFacts = useProfileContractFacts(profileAddress, { enabled: Boolean(identityDossierOpening || identityDossierSession) });
   const browserData = useOwnerLatticeBrowser(profileAddress, browserOpen);
   const authoring = useOwnerLatticeAuthoring(profileAddress);
   const profile = useMemo(
@@ -156,7 +184,7 @@ function OwnerLatticeRuntime({
     secondaryLabel: profile.displayAddress || 'UNIVERSAL PROFILE',
   }), [profile]);
   const latticeProjection = useMemo(() => {
-    if (!authoring.draft) return { lattice: null, error: null };
+    if (!authoring.draft) return { lattice: null, error: null, unresolvedPlacements: [] };
     try {
       const previewDraft = compositionPreview?.kind === 'move'
         ? createLatticeProductionMovementCandidate(authoring.draft, compositionPreview.request)
@@ -168,29 +196,51 @@ function OwnerLatticeRuntime({
       const renderDraft = structuredClone(previewDraft || authoring.draft);
       renderDraft.appearance.surfaceId = surfaceId;
       renderDraft.appearance.menuSurfaceId = menuSurfaceId;
+      const runtime = prepareOwnerLatticeRuntimeDraft(renderDraft, authoring.assetRecords);
       return {
         lattice: assertValidLatticeProductionPublication(projectLatticeProductionPublication(
-          renderDraft,
+          runtime.draft,
           authoring.assetRecords,
           { lastPublished: RUNTIME_PROJECTION_TIMESTAMP },
         )),
         error: null,
+        unresolvedPlacements: runtime.unresolvedPlacements,
       };
     } catch (error) {
-      return { lattice: null, error: error?.message || 'Canonical assets are unresolved' };
+      return { lattice: null, error: error?.message || 'Canonical assets are unresolved', unresolvedPlacements: [] };
     }
   }, [authoring.assetRecords, authoring.draft, compositionPreview, menuSurfaceId, surfaceId]);
   const lattice = latticeProjection.lattice;
+  const unresolvedPlacementsByTable = useMemo(() => {
+    const grouped = new Map();
+    for (const placement of latticeProjection.unresolvedPlacements || []) {
+      grouped.set(placement.tableId, [...(grouped.get(placement.tableId) || []), placement]);
+    }
+    return grouped;
+  }, [latticeProjection.unresolvedPlacements]);
   const assetRecordsById = useMemo(() => {
     const records = authoring.assetRecords instanceof Map
       ? [...authoring.assetRecords.values()]
       : Array.isArray(authoring.assetRecords) ? authoring.assetRecords : [];
     return new Map(records.map((asset) => [asset.id, asset]));
   }, [authoring.assetRecords]);
+  const identityDossier = useMemo(() => createProductionIdentityDossierViewModel({
+    identity: profileIdentity,
+    contractFacts: profileContractFacts,
+    identityPresentation: authoring.draft?.identityPresentation,
+    assetRecords: assetRecordsById,
+    publishedResolution,
+  }), [assetRecordsById, authoring.draft?.identityPresentation, profileContractFacts, profileIdentity, publishedResolution]);
 
   useEffect(() => {
     setSpatialRoot(document.querySelector('.application-root'));
   }, []);
+
+  useEffect(() => {
+    identityOpenRequestRef.current += 1;
+    setIdentityDossierOpening(false);
+    setIdentityDossierSession(null);
+  }, [profileAddress]);
 
   useEffect(() => {
     const resize = () => setDimensions({
@@ -424,6 +474,30 @@ function OwnerLatticeRuntime({
     setBrowserOpen(false);
     queueMicrotask(() => browserToolRef.current?.focus({ preventScroll: true }));
   }, []);
+  const openIdentityDossier = useCallback(async () => {
+    if (viewerSession || gestureRef.current || cameraGestureRef.current || cropModeActive || compositionPreview) return;
+    const source = identityControlRef.current;
+    if (!source || !identityDossier) return;
+    const requestId = identityOpenRequestRef.current + 1;
+    identityOpenRequestRef.current = requestId;
+    const originRectangle = frozenRectangle(source.getBoundingClientRect());
+    const viewport = Object.freeze({ width: window.innerWidth, height: window.innerHeight });
+    setBrowserOpen(false);
+    setThemeOpen(false);
+    setIdentityDossierOpening(true);
+    const profileImageUrl = await preloadIdentityProfileImage(identityDossier.profile.avatarUrl);
+    if (identityOpenRequestRef.current !== requestId || !source.isConnected) return;
+    setIdentityDossierSession({
+      originRectangle,
+      preloadedProfileImageUrl: profileImageUrl,
+      viewport,
+    });
+    setIdentityDossierOpening(false);
+  }, [compositionPreview, cropModeActive, identityDossier, viewerSession]);
+  const closeIdentityDossier = useCallback(() => {
+    setIdentityDossierSession(null);
+    requestAnimationFrame(() => identityControlRef.current?.focus({ preventScroll: true }));
+  }, []);
   const toggleArrange = useCallback(() => {
     if (arrangeEnabled) setCompositionPreview(null);
     setArrangeEnabled(!arrangeEnabled);
@@ -449,6 +523,7 @@ function OwnerLatticeRuntime({
     nativeImage.src = mediaState.media.src;
     try { await nativeImage.decode(); } catch { /* The viewer retains its honest media-failure state. */ }
     if (!element.isConnected) return;
+    setIdentityDossierSession(null);
     setViewerSession({
       originRectangle,
       placementId: placement.id,
@@ -552,7 +627,8 @@ function OwnerLatticeRuntime({
               onPreviewOperation={setCompositionPreview}
               onReturnFocus={() => viewportRef.current?.focus({ preventScroll: true })}
               tableId={table.id}
-            />}</>
+            />}
+            <UnresolvedRuntimePlacements placements={unresolvedPlacementsByTable.get(table.id) || []} /></>
           : <div className="owner-lattice-canonical-unavailable" role="status">CANONICAL TABLE UNAVAILABLE</div>}</div>;
       })}
     </div>
@@ -571,13 +647,17 @@ function OwnerLatticeRuntime({
     {spatialRoot && createPortal(spatialSurface, spatialRoot)}
     {interfaceVisible && <>
       <LatticeProfileRail
+        blocked={Boolean(viewerSession)}
         collapsed={railCollapsed}
         compact={dimensions.width <= 900}
         entries={PROFILE_RAIL_ENTRIES}
-        identityDisabled
-        identityExpanded={false}
+        identityControlRef={identityControlRef}
+        identityDisabled={Boolean(identityDossierOpening || identityDossierSession || viewerSession || gestureActive || cameraGestureActive || cropModeActive || compositionPreview)}
+        identityExpanded={Boolean(identityDossierOpening || identityDossierSession)}
+        identitySourceHidden={Boolean(identityDossierSession)}
         officialIdentity={officialIdentity}
         onCollapsedChange={setRailCollapsed}
+        onIdentityActivate={openIdentityDossier}
       />
       <LatticeWorkspaceToolbar
         activeToolId={browserOpen ? 'browser' : themeOpen ? 'theme' : null}
@@ -624,6 +704,23 @@ function OwnerLatticeRuntime({
         onMenuSurfaceChange={setMenuSurfaceId}
         onSurfaceChange={setSurfaceId}
         surfaceId={surfaceId}
+      />}
+      {identityDossierSession && identityDossier && !viewerSession && <LatticeProductionIdentityDossier
+        getReturnRectangle={() => identityDossierSession.originRectangle}
+        gridVariables={{
+          '--lattice-grid-cell-size': `${cellSize}px`,
+          '--lattice-grid-origin-x': `${plane.left}px`,
+          '--lattice-grid-origin-y': `${plane.top + activeCameraY}px`,
+        }}
+        menuSurfaceId={menuSurfaceId}
+        model={identityDossier}
+        onClosed={closeIdentityDossier}
+        originRectangle={identityDossierSession.originRectangle}
+        preloadedProfileImageUrl={identityDossierSession.preloadedProfileImageUrl}
+        reducedMotion={revealPresentation.reducedMotion}
+        returnFocus={identityControlRef.current}
+        sourceIdentity={officialIdentity}
+        viewport={identityDossierSession.viewport}
       />}
       {viewerSession && viewerEntry && <LatticeFocusViewer
         dossier={viewerEntry.dossier}

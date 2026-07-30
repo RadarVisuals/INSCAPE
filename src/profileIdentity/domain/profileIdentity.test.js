@@ -29,6 +29,33 @@ test('keeps a profile when optional LSP3 fields are missing', () => {
   assert.deepEqual(identity.links, []);
 });
 
+test('preserves long multiline descriptions and normalizes paragraph structure safely', () => {
+  const description = `First paragraph.\r\n\r\nSecond paragraph with ${'detail '.repeat(120)}\n\n\nThird paragraph.`;
+  const identity = normalizeLsp3Identity(ADDRESS, { description });
+  assert.match(identity.description, /^First paragraph\.\n\nSecond paragraph/);
+  assert.match(identity.description, /\n\nThird paragraph\.$/);
+  assert.ok(identity.description.length > 480);
+  assert.equal(identity.description.includes('\r'), false);
+});
+
+test('retains profile and background candidates, verification provenance, and token references', () => {
+  const identity = normalizeLsp3Identity(ADDRESS, {
+    profileImage: [
+      { address: ADDRESS, tokenId: '0x2a', width: 512, height: 512 },
+      { url: 'ipfs://avatar', width: 96, verification: { method: 'keccak256(bytes)', data: '0xfeed' } }
+    ],
+    backgroundImage: [{ url: 'ipfs://background', width: 1600, height: 900 }]
+  }, { ipfsGateway: 'https://gw.test/ipfs/', source: 'LIVE' });
+  assert.equal(identity.avatarUrl, 'https://gw.test/ipfs/avatar');
+  assert.deepEqual(identity.profileImageCandidates[0], {
+    id: 'lsp3_profile_image-token-1', kind: 'TOKEN_REFERENCE', address: ADDRESS, tokenId: '0x2a',
+    width: 512, height: 512, verification: null, source: 'LSP3_PROFILE_IMAGE'
+  });
+  assert.equal(identity.profileImageCandidates[1].verification.status, 'DECLARED');
+  assert.equal(identity.backgroundImageCandidates[0].url, 'https://gw.test/ipfs/background');
+  assert.equal(identity.metadataIntegrity, 'VERIFIED');
+});
+
 test('ignores malformed tags and links individually and rejects unsafe URL protocols', () => {
   const identity = normalizeLsp3Identity(ADDRESS, {
     tags: [null, '', 'valid', { label: 'bad' }, 'also valid'],
@@ -48,7 +75,7 @@ test('ignores malformed tags and links individually and rejects unsafe URL proto
 test('bounds long LSP3 strings and list sizes', () => {
   const identity = normalizeLsp3Identity(ADDRESS, {
     name: 'n'.repeat(500),
-    description: 'd'.repeat(1000),
+    description: 'd'.repeat(LSP3_METADATA_LIMITS.description + 1000),
     tags: Array.from({ length: 30 }, (_, index) => `${index}-${'t'.repeat(100)}`),
     links: Array.from({ length: 20 }, (_, index) => ({ title: `Link ${index}`, url: `https://example.com/${index}` }))
   });

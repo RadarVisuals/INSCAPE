@@ -24,7 +24,8 @@ function ProductionPlacement({ field, layerRank, onMediaState, onPlacementActiva
   const media = useMemo(() => adaptLatticeProductionMedia(placement.asset), [placement.asset]);
   const [loadState, setLoadState] = useState(() => ({ src: media.src, status: 'loading', dimensions: null }));
   useEffect(() => setLoadState({ src: media.src, status: 'loading', dimensions: null }), [media.src]);
-  const dimensions = media.dimensions || (loadState.src === media.src ? loadState.dimensions : null);
+  const decodedDimensions = loadState.src === media.src && loadState.status === 'loaded' ? loadState.dimensions : null;
+  const dimensions = decodedDimensions || media.dimensions;
   const artwork = projectLatticeProductionArtwork(placement, field, dimensions);
   const effectiveBackground = placement.backing.enabled
     ? placement.backing.color

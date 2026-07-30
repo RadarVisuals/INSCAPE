@@ -299,14 +299,18 @@ If an owner later invokes an approved import, individual fields may be proposed 
 | LSP3 image | Official avatar option |
 | LSP3 description | Official bio option |
 | LSP3 tags and links | Official values with retained provenance |
+| Direct RPC `eth_chainId` | Active network fact; visible only when verified as LUKSO chain 42 |
+| Direct LSP0 interface detection | Universal Profile classification after successful detection |
+| Direct LSP5 `ReceivedAssets[]` length | Exact received asset-contract register length |
+| Direct LSP12 `IssuedAssets[]` length | Exact issued asset-contract register length |
 | Owner alias | INSCAPE overlay |
 | Owner avatar selection | Official or INSCAPE overlay source |
 | Owner bio selection | Official, INSCAPE, or hidden |
 | Owner additional tags | INSCAPE overlay with retained provenance |
-| First three canonical address characters after `0x` | Resident code |
-| Document network | Resolved network |
-| Document `exportedAt` | `LAST PUBLISHED` |
+| Verified publication resolution document `exportedAt` | `LAST PUBLISHED`; epoch runtime projection excluded |
 | Canonical address-based route | Shareable workspace URL |
+
+The owner dossier data path is independent of Envio and indexed event history. Unresolved register reads are omitted rather than rendered as zero. LSP3 authored links and VerifiableURI content integrity never become social verification, verified badges, or truth claims. Visible Phase 7 technical identity excludes NFT/collection totals, controllers, permissions, activity, online/deployment dates, followers, handle semantics, and metadata-derived network values.
 
 ### 8.7 Production asset adapter
 
@@ -444,19 +448,31 @@ Manual test:
 6. Confirm unresolved fields remain honest.
 7. Close and confirm focus and artwork return to the originating placement.
 
-### Phase 7 — identity dossier
+### Phase 7 — identity RÄCK
 
-Combine live official identity with the public INSCAPE overlay. Use `LAST PUBLISHED` only.
+Combine shared live LSP3 identity, profile-scoped direct contract facts, the current owner draft identity projection, verified publication `exportedAt`, and canonical address-derived URLs in one pure adapter. The complete compact Profile Rail card expands directly through a body-portal transition into one centered RÄCK; its avatar resolves inside PROFILE MODULE, with no detached image, banner, or split composition. The legacy visitor card and prototype identity viewer remain unchanged. Use `LAST PUBLISHED` only.
 
-Rollback: retain the existing public identity representation.
+Rollback: remove the optional rail activation, dossier render, and contract-facts hook. The unchanged Profile Rail summary, canonical draft/publication schemas, and persisted records remain readable.
 
 Manual test:
 
-1. Compare official facts with editable overlay fields.
+1. Compare official facts with active editable overlay fields and verify inactive values are absent from the rendered model.
 2. Change alias, avatar source, bio source, tags, and allowed visibility.
 3. Confirm the official handle and address never change.
-4. Confirm resident code, resolved network, complete address copy, canonical profile URL, and `LAST PUBLISHED`.
+4. Confirm verified LUKSO chain 42, complete address, canonical explorer/Universal Everything/INSCAPE URLs, exact LSP5/LSP12 contract-register labels, and verified `LAST PUBLISHED`.
 5. Confirm inactive private values do not leak.
+6. Confirm Browser/Theme close, ARRANGE persists, viewer/gesture/CROP block opening, backdrop does not close, Escape restores trigger focus, and internal scroll never moves the lattice.
+7. Check Carbon, Graphite, Slate, Ash, Mist, and Paper at 1280×720, 900px, 640px, and 390×844.
+
+Accepted checkpoint (2026-07-30): the direct card-to-RÄCK transition, PROFILE / LINK / TECHNICAL module hierarchy, real media, progressive asset projection, responsive behavior, focus return, and shared theme-token contrast were interactively accepted. The final focused set passes 72 tests; production build and budget checks pass. Keeper control behavior and category/PORTALS work remain outside this checkpoint.
+
+### Future identity boundary — PERSONA / ALTER PERSONA (documentation only)
+
+The future public-facing presentations are named exactly **PERSONA** and **ALTER PERSONA**; never “Persona Mode” or “Incognito”. PERSONA is the standard light/Mist presentation sourced from the official Universal Profile and LSP3 (`SOURCE / UNIVERSAL PROFILE`). ALTER PERSONA is an alternate dark/Carbon INSCAPE presentation layered selectively over it (`SOURCE / INSCAPE`).
+
+Alter Persona is presentation, not anonymity, privacy, verification, or a second account, and cannot mutate the Universal Profile or external profile appearance. Required copy: “Your Alter Persona changes only how you appear inside INSCAPE. Your Universal Profile and external profiles remain unchanged.”
+
+Future candidate fields are display name, resident code/call sign, alternate profile/background images, tagline, long bio, tags, optional location, optional external handles, links, per-field visibility, and per-field inheritance. Untouched fields inherit PERSONA; selected overrides are labelled INSCAPE-authored. Handles remain optional, location is never inferred and defaults hidden, and no checkmark implies verification. A future compact card may use the approved square-grid mask, Mist/Carbon tokens, lattice-cell dissolve, and the reversible card-to-image-plus-RÄCK transition. Do not add editor UI, schemas, persistence, publication behavior, inheritance/provenance/rollback logic, a dead toggle, or production interaction without explicit approval.
 
 ### Phase 8A — version 8 visitor deployment
 
@@ -496,6 +512,7 @@ Remove only code proven unreachable after live acceptance. Retain compatibility 
 - The isolated profile model currently combines private draft and public state. Separate schemas make redaction deterministic and testable.
 - The Browser fixture shape differs from production asset records. A small pure adapter is safer than coupling the Browser to repository formats.
 - The accepted production viewer uses one ordered rack rather than independent left/right dossiers. The paired side/lower dossier path remains prototype-only compatibility until the later legacy-cleanup phase and must not shape new production modules.
+- The Library RPC repository and the Phase 7 contract-facts repository both read LSP5 today for different bounded outcomes: the former discovers asset contracts for inventory loading, while the latter exposes only an independently statused exact register length. Consolidation is deferred until it can preserve those separate failure and loading contracts.
 - Exact document validation and canonical hashing mean version 8 requires a reader-before-writer rollout; it cannot be introduced as a silent optional field.
 - The current owner restore path already performs multi-source reconciliation. Canonical lattice reconciliation should join that transaction through an adapter rather than increase `ModuleGridShell` responsibility.
 - The dev-only five-table store is neither canonical nor published. It must remain compatibility input rather than being expanded.
