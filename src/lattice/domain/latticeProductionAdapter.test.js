@@ -28,13 +28,17 @@ const placement = (id, stableAssetId, navigationOrder, overrides = {}) => ({
 
 test('pure projection resolves real assets, sorts navigation, omits locks, and does not mutate the draft', () => {
   const draft = createEmptyLatticeProductionDraft(PROFILE);
-  draft.tables[4].placements = [placement('later', ASSET, 1), placement('first', SECOND_ASSET, 0)];
+  draft.tables[4].placements = [
+    placement('later', ASSET, 1, { layer: 0 }),
+    placement('first', SECOND_ASSET, 0, { layer: Number.MAX_SAFE_INTEGER }),
+  ];
   const before = structuredClone(draft);
   const publication = projectLatticeProductionPublication(draft, [record(), record(SECOND_ASSET)], {
     lastPublished: '2026-07-29T12:00:00.000Z',
   });
   assert.equal(validateLatticeProductionPublication(publication).valid, true);
   assert.deepEqual(publication.tables[4].placements.map(({ id }) => id), ['first', 'later']);
+  assert.deepEqual(publication.tables[4].placements.map(({ layer }) => layer), [Number.MAX_SAFE_INTEGER, 0]);
   assert.deepEqual(publication.tables[4].placements.map(({ asset }) => asset.stableAssetId), [SECOND_ASSET, ASSET]);
   assert.deepEqual(publication.tables[4].placements.map(({ asset }) => asset.media.type), ['image', 'image']);
   assert.ok(publication.tables[4].placements.every((entry) => !Object.hasOwn(entry, 'locked') && !Object.hasOwn(entry, 'stableAssetId')));

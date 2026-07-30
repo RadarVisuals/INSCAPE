@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createEmptyLatticeProductionDraft } from '../lattice/domain/latticeProductionDraft.js';
 import { projectLatticeProductionPublication } from '../lattice/domain/latticeProductionAdapter.js';
+import {
+  LATTICE_PRODUCTION_LAYER_OPERATIONS,
+  latticeProductionLayerTopologySnapshot,
+} from '../lattice/authoring/latticeProductionLayer.js';
 import { latticeProductionDraftKey } from '../lattice/storage/latticeProductionDraftStore.js';
 import {
   OWNER_LATTICE_AUTHORING_STATUS,
@@ -440,11 +444,119 @@ test('CROP remains profile-isolated and NATIVE FIT commits null exactly once', (
   assert.equal(storage.values.get(latticeProductionDraftKey(OTHER)), otherRaw);
 });
 
+test('completed LAYER stably permutes sparse values in one transaction and survives reload and publication', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const first = existingPlacement('placement-a');
+  const second = existingPlacement('placement-b');
+  second.layer = 7; second.navigationOrder = 1;
+  const last = existingPlacement('placement-c');
+  last.layer = Number.MAX_SAFE_INTEGER; last.navigationOrder = 2;
+  draft.tables[4].placements = [first, second, last];
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: JSON.stringify(draft) });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const result = session.commitLayer({
+    assetRecords: [asset()],
+    expectedPlacement: structuredClone(first),
+    expectedPlacements: latticeProductionLayerTopologySnapshot(draft.tables[4]),
+    operation: LATTICE_PRODUCTION_LAYER_OPERATIONS.FRONT,
+    placementId: first.id,
+    tableId: 'table-05',
+  });
+  assert.equal(result.ok, true);
+  assert.equal(storage.writes, 1);
+  assert.deepEqual(result.draft.tables[4].placements.map(({ id, layer, navigationOrder }) => ({ id, layer, navigationOrder })), [
+    { id: 'placement-a', layer: Number.MAX_SAFE_INTEGER, navigationOrder: 0 },
+    { id: 'placement-b', layer: 0, navigationOrder: 1 },
+    { id: 'placement-c', layer: 7, navigationOrder: 2 },
+  ]);
+  assert.deepEqual(createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage }).getDraft(), result.draft);
+  const publication = projectLatticeProductionPublication(result.draft, [asset({ creators: [], attributes: [], description: '' })], {
+    lastPublished: '1970-01-01T00:00:00.000Z',
+  });
+  assert.deepEqual(publication.tables[4].placements.map(({ id, layer, navigationOrder }) => ({ id, layer, navigationOrder })), [
+    { id: 'placement-a', layer: Number.MAX_SAFE_INTEGER, navigationOrder: 0 },
+    { id: 'placement-b', layer: 0, navigationOrder: 1 },
+    { id: 'placement-c', layer: 7, navigationOrder: 2 },
+  ]);
+});
+
+test('LAYER boundary, barrier, stale topology, unavailable media, and storage failure write nothing', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const first = existingPlacement('placement-a');
+  const locked = existingPlacement('placement-locked');
+  locked.layer = 4; locked.navigationOrder = 1; locked.locked = true;
+  const last = existingPlacement('placement-c');
+  last.layer = 9; last.navigationOrder = 2;
+  draft.tables[4].placements = [first, locked, last];
+  const raw = JSON.stringify(draft);
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const common = {
+    assetRecords: [asset()], expectedPlacement: structuredClone(first),
+    expectedPlacements: latticeProductionLayerTopologySnapshot(draft.tables[4]),
+    placementId: first.id, tableId: 'table-05',
+  };
+  assert.equal(session.commitLayer({ ...common, operation: 'BACK' }).noOp, true);
+  assert.equal(session.commitLayer({ ...common, operation: 'FORWARD' }).noOp, true);
+  assert.equal(session.commitLayer({ ...common, operation: 'FRONT' }).noOp, true);
+  assert.equal(session.commitLayer({ ...common, operation: 'SIDEWAYS' }).ok, false);
+  assert.equal(session.commitLayer({ ...common, operation: 'FORWARD', expectedPlacements: [first] }).ok, false);
+
+  const openDraft = structuredClone(draft);
+  openDraft.tables[4].placements[1].locked = false;
+  const openRaw = JSON.stringify(openDraft);
+  const openStorage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: openRaw });
+  const openSession = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage: openStorage });
+  const openCommon = {
+    ...common,
+    expectedPlacements: latticeProductionLayerTopologySnapshot(openDraft.tables[4]),
+  };
+  assert.equal(openSession.commitLayer({ ...openCommon, assetRecords: [], operation: 'FORWARD' }).ok, false);
+  openStorage.fail();
+  assert.equal(openSession.commitLayer({ ...openCommon, operation: 'FORWARD' }).ok, false);
+  assert.equal(openStorage.writes, 0);
+  assert.equal(openStorage.values.get(latticeProductionDraftKey(PROFILE)), openRaw);
+  assert.deepEqual(openSession.getDraft(), openDraft);
+  assert.equal(storage.writes, 0);
+  assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), raw);
+});
+
+test('LAYER remains profile isolated and corrupt duplicate topology makes zero storage calls', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const first = existingPlacement('placement-a');
+  const second = existingPlacement('placement-b');
+  second.layer = 4; second.navigationOrder = 1;
+  draft.tables[4].placements = [first, second];
+  const otherDraft = createEmptyLatticeProductionDraft(OTHER);
+  const otherRaw = JSON.stringify(otherDraft);
+  const storage = memoryStorage({
+    [latticeProductionDraftKey(PROFILE)]: JSON.stringify(draft),
+    [latticeProductionDraftKey(OTHER)]: otherRaw,
+  });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  assert.equal(session.commitLayer({
+    assetRecords: [asset()], expectedPlacement: first,
+    expectedPlacements: latticeProductionLayerTopologySnapshot(draft.tables[4]),
+    operation: 'FORWARD', placementId: first.id, tableId: 'table-05',
+  }).ok, true);
+  assert.equal(storage.values.get(latticeProductionDraftKey(OTHER)), otherRaw);
+
+  const duplicate = structuredClone(draft);
+  duplicate.tables[4].placements[1].layer = 0;
+  const duplicateRaw = JSON.stringify(duplicate);
+  const duplicateStorage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: duplicateRaw });
+  const corrupt = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage: duplicateStorage });
+  assert.equal(corrupt.commitLayer({}).ok, false);
+  assert.equal(duplicateStorage.writes, 0);
+  assert.equal(duplicateStorage.values.get(latticeProductionDraftKey(PROFILE)), duplicateRaw);
+});
+
 test('corrupt sessions block MOVE while preserving raw bytes', () => {
   const raw = '{corrupt';
   const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
   const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
   assert.equal(session.commitCrop({}).ok, false);
+  assert.equal(session.commitLayer({}).ok, false);
   assert.equal(session.commitMovement({}).ok, false);
   assert.equal(session.commitResize({}).ok, false);
   assert.equal(session.commitRemoval({}).ok, false);

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createLatticeProductionLayerRanks } from './latticeProductionLayerOrder.js';
 import { adaptLatticeProductionMedia, LATTICE_PRODUCTION_MEDIA_STATUS } from './latticeProductionMedia.js';
 import {
   createLatticeProductionTableRenderModel,
@@ -19,7 +20,7 @@ function viewportOf(node) {
   return { width: Math.max(0, node?.clientWidth || 0), height: Math.max(0, node?.clientHeight || 0) };
 }
 
-function ProductionPlacement({ field, placement }) {
+function ProductionPlacement({ field, layerRank, placement }) {
   const media = useMemo(() => adaptLatticeProductionMedia(placement.asset), [placement.asset]);
   const [loadState, setLoadState] = useState(() => ({ src: media.src, status: 'loading', dimensions: null }));
   useEffect(() => setLoadState({ src: media.src, status: 'loading', dimensions: null }), [media.src]);
@@ -40,7 +41,7 @@ function ProductionPlacement({ field, placement }) {
       data-media-state={failed ? media.status === 'ready' ? 'failed' : media.status : loaded ? 'ready' : 'loading'}
       data-placement-id={placement.id}
       data-transparency-mode={placement.transparencyMode}
-      style={{ ...rectangleStyle(artwork.footprint), zIndex: placement.layer }}
+      style={{ ...rectangleStyle(artwork.footprint), zIndex: layerRank }}
     >
       {artwork.backplateRectangle && <span aria-hidden="true" className="lattice-production-placement__mat" style={{ backgroundColor: artwork.mat.color }} />}
       <span
@@ -104,6 +105,7 @@ export default function LatticeProductionTableRenderer({ lattice, tableId, class
     ? projectLatticeProductionViewport(model, viewport)
     : null;
   const table = model.table;
+  const layerRanks = useMemo(() => createLatticeProductionLayerRanks(table.placements), [table.placements]);
   const privateTable = table.visibility === 'PRIVATE';
   const title = privateTable ? '' : table.title.trim();
   const subtitle = privateTable ? '' : table.subtitle.trim();
@@ -130,7 +132,12 @@ export default function LatticeProductionTableRenderer({ lattice, tableId, class
           style={rectangleStyle(projected)}
         />
         {!privateTable && table.placements.map((placement) => (
-          <ProductionPlacement field={projected} key={placement.id} placement={placement} />
+          <ProductionPlacement
+            field={projected}
+            key={placement.id}
+            layerRank={layerRanks.get(placement.id)}
+            placement={placement}
+          />
         ))}
         {labelVisible && (
           <header className="lattice-production-table__label" style={projectLatticeProductionLabel(table, projected)}>

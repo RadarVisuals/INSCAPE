@@ -470,6 +470,7 @@ function OwnerLatticeRuntime({
               acceptedTable={activeDraftTable}
               lattice={lattice}
               onCommitCrop={authoring.cropPublicPlacement}
+              onCommitLayer={authoring.layerPublicPlacement}
               onCommitMove={authoring.movePublicPlacement}
               onCommitRemove={authoring.removePublicPlacement}
               onCommitResize={authoring.resizePublicPlacement}

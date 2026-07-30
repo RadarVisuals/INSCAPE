@@ -83,62 +83,61 @@
 .lattice-production-composition-control[data-boundary-bottom] .is-se { --lattice-handle-y: 0%; }
 .lattice-production-resize-control:focus-visible { outline: 1px solid currentColor; outline-offset: -2px; }
 
-.lattice-production-remove-control {
+.lattice-production-placement-toolbar {
   position: absolute;
   z-index: 3;
-  box-sizing: border-box;
-  left: 50%;
-  top: 0;
-  width: min(48px, var(--lattice-remove-maximum-width, 100%));
-  min-width: 0;
-  height: 18px;
-  padding: 0 5px;
-  translate: -50% -100%;
-  border: 1px solid currentColor;
-  border-bottom: 0;
-  border-radius: 0;
-  background: var(--owner-lattice-surface);
+  display: flex;
+  height: 30px;
   color: var(--lattice-overlay-ink);
-  font: 7px/1 "Inscape IBM Plex Mono", monospace;
-  letter-spacing: .08em;
-  cursor: pointer;
   pointer-events: auto;
 }
-.lattice-production-composition-control[data-boundary-top][data-remove-dock="inside"] .lattice-production-remove-control {
-  translate: -50% 0;
-  border-bottom: 1px solid currentColor;
+.lattice-production-placement-toolbar button {
+  position: relative;
+  display: grid;
+  min-width: 28px;
+  height: 28px;
+  flex: 1 1 30px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
 }
-.lattice-production-composition-control[data-boundary-top][data-remove-dock="right"] .lattice-production-remove-control {
-  left: calc(100% + 9px);
-  translate: 0 0;
-  border-bottom: 1px solid currentColor;
-}
-.lattice-production-composition-control[data-boundary-top][data-remove-dock="left"] .lattice-production-remove-control {
-  right: calc(100% + 9px);
-  left: auto;
-  translate: 0 0;
-  border-bottom: 1px solid currentColor;
-}
-.lattice-production-remove-control:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
-
-.lattice-production-crop-control {
+.lattice-production-placement-toolbar button[aria-disabled="true"] { opacity: .42; cursor: default; }
+.lattice-production-placement-toolbar button.is-remove { color: var(--color-destructive); }
+.lattice-production-placement-toolbar button:focus-visible { z-index: 1; outline: 0; }
+.lattice-production-placement-toolbar svg { width: 16px; height: 16px; }
+.lattice-production-placement-toolbar button:not([aria-disabled="true"]):hover svg,
+.lattice-production-placement-toolbar button:focus-visible svg { filter: drop-shadow(0 0 4px currentColor); }
+.lattice-production-placement-tooltip {
   position: absolute;
-  z-index: 3;
-  left: 50%;
-  bottom: 0;
-  height: 18px;
-  padding: 0 7px;
-  translate: -50% 0;
-  border: 1px solid currentColor;
-  border-radius: 0;
-  background: var(--owner-lattice-surface);
-  color: var(--lattice-overlay-ink);
-  font: 7px/1 "Inscape IBM Plex Mono", monospace;
-  letter-spacing: .08em;
-  cursor: pointer;
-  pointer-events: auto;
+  left: var(--lattice-tooltip-left, 0);
+  width: 600%;
+  color: inherit;
+  font: 8px/1.25 "Inscape IBM Plex Mono", monospace;
+  opacity: 0;
+  pointer-events: none;
+  text-align: center;
+  text-shadow: 0 0 3px var(--owner-lattice-surface);
+  visibility: hidden;
+  white-space: nowrap;
 }
-.lattice-production-crop-control:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
+.lattice-production-placement-toolbar button:nth-child(2) { --lattice-tooltip-left: -100%; }
+.lattice-production-placement-toolbar button:nth-child(3) { --lattice-tooltip-left: -200%; }
+.lattice-production-placement-toolbar button:nth-child(4) { --lattice-tooltip-left: -300%; }
+.lattice-production-placement-toolbar button:nth-child(5) { --lattice-tooltip-left: -400%; }
+.lattice-production-placement-toolbar button:nth-child(6) { --lattice-tooltip-left: -500%; }
+.lattice-production-placement-toolbar button:hover .lattice-production-placement-tooltip,
+.lattice-production-placement-toolbar button:focus-visible .lattice-production-placement-tooltip { opacity: 1; visibility: visible; }
+.lattice-production-placement-toolbar[data-placement-toolbar-dock="below"] { top: calc(100% + 10px); }
+.lattice-production-placement-toolbar[data-placement-toolbar-dock="above"] { bottom: calc(100% + 10px); }
+.lattice-production-placement-toolbar[data-placement-toolbar-dock="inside-top"] { top: 10px; }
+.lattice-production-placement-toolbar[data-placement-toolbar-dock="inside-bottom"] { bottom: 10px; }
+.lattice-production-placement-toolbar[data-placement-toolbar-dock="below"] .lattice-production-placement-tooltip,
+.lattice-production-placement-toolbar[data-placement-toolbar-dock="inside-top"] .lattice-production-placement-tooltip { top: calc(100% + 4px); }
+.lattice-production-placement-toolbar[data-placement-toolbar-dock="above"] .lattice-production-placement-tooltip,
+.lattice-production-placement-toolbar[data-placement-toolbar-dock="inside-bottom"] .lattice-production-placement-tooltip { bottom: calc(100% + 4px); }
 
 .lattice-production-crop-editor {
   position: absolute;

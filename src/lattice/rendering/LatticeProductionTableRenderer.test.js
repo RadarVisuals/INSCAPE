@@ -29,9 +29,10 @@ function visitorGraph(start) {
 
 test('renderer contains presentation only and preserves semantic frame, order, media safety and resize projection', () => {
   assert.match(source, /createLatticeProductionTableRenderModel/);
+  assert.match(source, /createLatticeProductionLayerRanks/);
   assert.match(source, /ResizeObserver/);
   assert.match(source, /table\.placements\.map/);
-  assert.match(source, /zIndex: placement\.layer/);
+  assert.match(source, /zIndex: layerRank/);
   assert.match(source, /data-frame-id=\{placement\.frameId\}/);
   assert.match(source, /referrerPolicy="no-referrer"/);
   assert.match(source, /loading="lazy"/);

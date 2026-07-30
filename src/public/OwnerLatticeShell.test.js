@@ -106,6 +106,7 @@ test('Phase 5B composition stays in an owner-only projection-derived layer and c
   assert.match(source, /onCommitResize=\{authoring\.resizePublicPlacement\}/);
   assert.match(source, /onCommitRemove=\{authoring\.removePublicPlacement\}/);
   assert.match(source, /onCommitCrop=\{authoring\.cropPublicPlacement\}/);
+  assert.match(source, /onCommitLayer=\{authoring\.layerPublicPlacement\}/);
   assert.match(source, /onCropModeChange=\{setCropModeActive\}/);
   assert.match(source, /onPreviewOperation=\{setCompositionPreview\}/);
   assert.match(source, /data-lattice-placement-action/);

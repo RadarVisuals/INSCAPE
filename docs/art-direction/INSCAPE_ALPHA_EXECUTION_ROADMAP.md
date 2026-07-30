@@ -76,7 +76,7 @@ The working tree was clean when this roadmap was created.
 - [x] Phase 4 fixed chrome is integrated and visually accepted; the production NFT viewer and identity dossier remain later-phase work.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
-Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 is `[~]` after accepted Phase 5A, Phase 5B.1, Phase 5B.2, Phase 5B.3, and Phase 5B.4, while Phase 5B.5 onward remains unstarted.
+Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 is `[~]` after accepted Phase 5A, Phase 5B.1, Phase 5B.2, Phase 5B.3, and Phase 5B.4, with Phase 5B.5 implemented and automatically verified as `[~]` pending visual acceptance while Phase 5B.6 onward remains unstarted.
 
 ### Locked production-integration constraints
 
@@ -381,7 +381,7 @@ Exit criterion: owner navigation is intuitive, deterministic, responsive, and do
 
 ## Phase 5 — production Browser and authoring geometry
 
-Status: `[~]` — **Phase 5A, Phase 5B.1, Phase 5B.2, Phase 5B.3, and Phase 5B.4 accepted; Phase 5B.5 onward remains unstarted**
+Status: `[~]` — **Phase 5A, Phase 5B.1, Phase 5B.2, Phase 5B.3, and Phase 5B.4 accepted; Phase 5B.5 implemented and automatically verified pending visual acceptance; Phase 5B.6 onward remains unstarted**
 
 Goal: wire the isolated Browser to real INDEX/CATEGORIES data and enable table authoring.
 
@@ -477,7 +477,27 @@ Accepted checkpoint (2026-07-30): interactive visual review accepted Phase 5B.4 
 
 Crop rollback constraint: a code rollback may remove the Phase 5B.4 controls without migrating, deleting, or rewriting crop records. The accepted version-1 schema, public projection, renderer, publication, and reconciliation paths already read both `null` and canonical crop records deterministically. Storage failure retains the exact previous accepted draft and bytes; application rollback does not authorize republishing. The independent Phase 5B.3 UUID allocator rollback constraint remains in force.
 
-Phase 5B.5 onward status: `[ ]` — unstarted. Explicit layer editing, mat/frame/backing editing, transparency, replace, visibility editing, lock editing, and Owner Preview remain outside Phase 5B.4.
+### Phase 5B.5 — explicit layer authoring
+
+Status: `[~]` — **implemented and automatically verified; interactive visual acceptance pending**
+
+- [~] Selected public unlocked placements expose explicit accessible FORWARD, BACKWARD, FRONT, and BACK buttons. Boundary controls remain focusable with `aria-disabled`; native button activation is the only layer command and no keyboard shortcut is added.
+- [~] FORWARD and BACKWARD exchange existing sparse layer values with the immediately adjacent visible placement. FRONT and BACK stably rotate only the existing visible layer values, preserve every crossed placement's relative order, and never allocate, increment, decrement, normalize, compact, or renumber a canonical layer.
+- [~] Locked visible placements are hard barriers. FRONT and BACK perform a complete no-op rather than a partial move when a barrier is present. Private placements are excluded from visible adjacency and retain their exact complete records and layers.
+- [~] Every completion re-reads and validates the latest accepted draft, compares the complete selected placement and active-table placement topology, revalidates owner/profile authority, public table and placement identity, visibility, lock state, live public assets, current layer topology, and the complete candidate, then performs exactly one completed-operation store commit. Boundary, barrier, stale, authority, media, validation, duplicate/invalid layer, and persistence failures retain the exact accepted draft and perform zero successful writes.
+- [~] Layer operations preserve placement-array order and every `navigationOrder`. The public projection and publication continue sorting keyboard navigation independently while carrying canonical layers unchanged. Production rendering and the owner overlay share a public-safe dense runtime rank derived from canonical `(layer, placementId)` order; ranks are never persisted, projected, published, or used for navigation.
+- [~] Selection and layer-button focus survive success, no-op, and controlled rejection. Layer buttons cannot start MOVE, RESIZE, REMOVE, CROP, table-drag, or Space-camera gestures; active CROP hides them. Existing PLACE, MOVE, RESIZE, REMOVE, CROP, overlap, table navigation, wheel, minimap, and Space-drag behavior remains unchanged.
+- [~] Focused ordering, barrier, rank, transaction, stale-state, profile, accessibility, focus, gesture, and import-isolation coverage passes 66 tests with 0 failures. The single full regression run passes 797 tests with 0 failures. One fresh production build and one `npm run build:check` pass; `git diff --check` passes. No long combined browser lifecycle or new browser suite was run.
+
+Pending visual checkpoint (2026-07-30): Phase 5B.5 changes only layer values already accepted by the version-1 draft and publication schemas. It adds no schema, storage-key/store, adapter implementation, reconciliation, publication, routing, wallet, IPFS, or version-default change. Production totals after the unified contextual-toolbar correction are initial JavaScript 1,228,709 raw / 358,842 gzip; selected owner JavaScript 152,526 raw / 45,574 gzip; initial CSS 113,254 raw / 19,913 gzip; selected owner CSS 30,997 raw / 5,137 gzip; and core JavaScript 1,820,690 raw / 538,839 gzip. The owner runtime remains outside the initial entry with zero graph leaks. Owner CSS passes its 31,000-byte raw budget with 3 bytes of remaining headroom and must not grow without a deliberate budget review.
+
+Contextual-toolbar correction pending renewed visual acceptance (2026-07-30): CROP, BACK, BACKWARD, FORWARD, FRONT, and REMOVE now share one ordered icon-only toolbar and one deterministic table-local dock. It prefers centered-below placement, moves above when required, clamps horizontally to the authored field, and uses a deterministic inside fallback when neither outside edge fits, including every corner, 1 × 1, full-width, and top-plus-bottom placements. The toolbar, buttons, and tooltip labels have no boxed panels; enabled icons glow on hover, keyboard focus glows every icon, and tooltip text uses only a readability halo. Active CROP replaces the contextual toolbar with the existing crop editor; REMOVE and all four resize handles remain operable. The affected focused set passes 19 tests with 0 failures. A fresh passing production build and the single completed `npm run build:check` pass, with owner import isolation retaining zero leaks; `git diff --check` passes. The full suite and browser lifecycle were not rerun. Phase 5B.5 and its checklist remain `[~]` pending renewed interactive visual acceptance.
+
+The current layer controls are temporary and must later be replaced by a dedicated right-click/context-menu system once the complete action inventory is known; that replacement is not part of Phase 5B.5.
+
+Layer rollback constraint: a code rollback may remove the Phase 5B.5 controls and runtime rank helper without migrating, deleting, normalizing, or rewriting stored layer values. Existing version-1 draft, public projection, renderer, publication, and reconciliation readers remain compatible because Phase 5B.5 only permutes already-valid canonical values. Storage failure retains the exact previous accepted draft and bytes; application rollback does not authorize republishing. The Phase 5B.3 UUID allocator and Phase 5B.4 crop rollback constraints remain independently in force.
+
+Phase 5B.6 onward status: `[ ]` — unstarted. Mat/frame/backing editing, transparency, replace, visibility editing, lock editing, Owner Preview, publication or visitor cutover, Phase 6, and later work remain excluded.
 
 User visual test:
 
