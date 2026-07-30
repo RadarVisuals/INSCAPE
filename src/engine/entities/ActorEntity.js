@@ -38,6 +38,8 @@ export class ActorEntity {
 
     this.baselinePosition = { x: 0, y: 0 };
     this.targetPosition = { x: 0, y: 0 };
+    this.targetMovementSpeedMultiplier = 1;
+    this.targetMovementContinuous = false;
     this.isMovingToTarget = false;
     this.movementBounds = null;
     this.preBoundPosition = null;
@@ -176,8 +178,8 @@ export class ActorEntity {
     });
   }
 
-  moveTo(localX, localY) {
-    moveActorTo(this, localX, localY);
+  moveTo(localX, localY, options = {}) {
+    moveActorTo(this, localX, localY, options);
   }
 
   setMovementBounds(bounds, options = {}) {

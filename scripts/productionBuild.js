@@ -28,10 +28,10 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // while continuing to budget this lazy runtime independently from the core app.
   standaloneWalletJavaScript: Object.freeze({ raw: 4_400_000, gzip: 1_200_000 }),
   initialCss: Object.freeze({ raw: 117_000, gzip: 20_000 }),
-  // Phase 7 adds the lazy owner-only Identity Dossier and its responsive,
-  // reduced-motion, shared-theme styles. Keep that growth isolated from
-  // initial CSS and deliberately close to the measured Phase 7 output.
-  ownerCss: Object.freeze({ raw: 65_000, gzip: 9_700 }),
+  // Phase 7 adds the lazy owner-only Identity RÄCK; Phase 7.5 adds its compact,
+  // shared-theme Keeper context controls. Keep both isolated from initial CSS
+  // and deliberately close to the measured owner-only output.
+  ownerCss: Object.freeze({ raw: 67_000, gzip: 10_000 }),
   // Owner/publication reconciliation adds the deterministic IPFS hydration and
   // three-way baseline guard to production. Keep the accepted growth bounded.
   // Phase 7 adds paragraph-preserving LSP3 normalization, independently

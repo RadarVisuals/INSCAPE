@@ -176,8 +176,8 @@ function App() {
     trackActorPosition(target) {
       canvasRef.current?.setActorScreenPositionTarget(target);
     },
-    moveToScreenPosition(clientX, clientY) {
-      canvasRef.current?.moveActorToScreenPosition(clientX, clientY);
+    moveToScreenPosition(clientX, clientY, options) {
+      canvasRef.current?.moveActorToScreenPosition(clientX, clientY, options);
     },
     moveHorizontallyToScreenPosition(clientX, direction) {
       canvasRef.current?.moveActorHorizontallyToScreenPosition(clientX, direction);

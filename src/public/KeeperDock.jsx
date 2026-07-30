@@ -6,12 +6,17 @@ const RESIDENT_PHASES = new Set(['approaching', 'entering', 'docked']);
 
 export default function KeeperDock({
   actorId,
+  followCursor = true,
+  movementSpeed = 'normal',
   residentHandoff,
   reducedMotion = false,
   residentScale = 0.72,
   spatialTheme = 'dark',
   onDockStateChange,
+  onFollowCursorChange,
+  onMovementSpeedChange,
 }) {
+  const dockRef = useRef(null);
   const socketRef = useRef(null);
   const phaseRef = useRef('empty');
   const startedRef = useRef(false);
@@ -19,6 +24,7 @@ export default function KeeperDock({
   const [menuOpen, setMenuOpen] = useState(false);
   const [underlayRoot, setUnderlayRoot] = useState(null);
   const resident = RESIDENT_PHASES.has(phase);
+  const pointerControlsAvailable = typeof onFollowCursorChange === 'function' || typeof onMovementSpeedChange === 'function';
   const actorLabel = actorId.replaceAll('_', ' ');
   const maskUrl = `/assets/actors/${actorId}/mask.webp`;
 
@@ -73,6 +79,22 @@ export default function KeeperDock({
   }, []);
 
   useEffect(() => {
+    if (!menuOpen) return undefined;
+    const closeOutside = (event) => {
+      if (!dockRef.current?.contains(event.target)) setMenuOpen(false);
+    };
+    const closeEscape = (event) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('pointerdown', closeOutside, true);
+    window.addEventListener('keydown', closeEscape);
+    return () => {
+      window.removeEventListener('pointerdown', closeOutside, true);
+      window.removeEventListener('keydown', closeEscape);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
     const resize = () => {
       if (phaseRef.current === 'approaching' || phaseRef.current === 'entering') {
         residentHandoff?.updateBounds?.(socketRef.current?.getBoundingClientRect());
@@ -97,11 +119,18 @@ export default function KeeperDock({
       aria-hidden="true"
     />, underlayRoot)}
     <aside
+      ref={dockRef}
       className="keeper-dock"
       data-phase={phase}
       data-resident={resident || undefined}
       style={{ '--keeper-dock-mask': `url("${maskUrl}")` }}
       aria-label="Keeper Dock"
+      onContextMenu={(event) => {
+        if (!pointerControlsAvailable) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setMenuOpen(true);
+      }}
     >
       <button
         ref={socketRef}
@@ -118,9 +147,27 @@ export default function KeeperDock({
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((value) => !value)}
       ><MoreHorizontal aria-hidden="true" /></button>
-      {menuOpen && <div className="keeper-dock__menu" role="dialog" aria-label="Keeper options">
+      {menuOpen && <div className="keeper-dock__menu" role="menu" aria-label="Keeper options">
         <strong>{actorLabel}</strong>
-        <button type="button" disabled>Swap Keeper <span>Later</span></button>
+        {pointerControlsAvailable ? <>
+          <button
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={followCursor}
+            data-checked={followCursor || undefined}
+            onClick={() => onFollowCursorChange?.(!followCursor)}
+          >Follow cursor <span aria-hidden="true">{followCursor ? '✓' : ''}</span></button>
+          <small>MOVEMENT SPEED</small>
+          <div className="keeper-dock__speed" role="group" aria-label="Keeper movement speed">
+            {['slow', 'normal', 'fast'].map((speed) => <button
+              aria-pressed={movementSpeed === speed}
+              data-checked={movementSpeed === speed || undefined}
+              key={speed}
+              onClick={() => onMovementSpeedChange?.(speed)}
+              type="button"
+            >{speed}</button>)}
+          </div>
+        </> : <button type="button" disabled>Swap Keeper <span>Later</span></button>}
       </div>}
     </aside>
   </>;

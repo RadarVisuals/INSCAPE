@@ -161,7 +161,7 @@ export class PixiEngine {
    * @param {number} clientX - Absolute canvas click horizontal position.
    * @param {number} clientY - Absolute canvas click vertical position.
    */
-  updateMouseClick(clientX, clientY) {
+  updateMouseClick(clientX, clientY, options = {}) {
     if (!this.masterContainer || !this.actor) return;
     
     // Convert global screen pixel coordinates into master relative coordinates
@@ -169,7 +169,15 @@ export class PixiEngine {
     if (this.residentHandoff && localTarget.x !== this.actor.baselinePosition.x) {
       this.residentHandoff.residentFacing = localTarget.x > this.actor.baselinePosition.x ? 1 : -1;
     }
-    this.actor.moveTo(localTarget.x, localTarget.y);
+    this.actor.moveTo(localTarget.x, localTarget.y, {
+      continuous: options.continuous,
+      speedMultiplier: options.speedMultiplier,
+    });
+    if (options.reducedMotion === true) {
+      this.actor.baselinePosition.x = this.actor.targetPosition.x;
+      this.actor.baselinePosition.y = this.actor.targetPosition.y;
+      this.actor.isMovingToTarget = false;
+    }
   }
 
   /**

@@ -1,10 +1,12 @@
-export function moveActorTo(actor, localX, localY) {
+export function moveActorTo(actor, localX, localY, options = {}) {
   if (actor.movementBounds && actor.areMovementBoundsActive) {
     localX = Math.max(actor.movementBounds.left, Math.min(actor.movementBounds.right, localX));
     localY = Math.max(actor.movementBounds.top, Math.min(actor.movementBounds.bottom, localY));
   }
   actor.targetPosition.x = localX;
   actor.targetPosition.y = localY;
+  actor.targetMovementSpeedMultiplier = Math.max(0.25, Math.min(3, Number(options.speedMultiplier) || 1));
+  actor.targetMovementContinuous = options.continuous === true;
   actor.isMovingToTarget = true;
 }
 
@@ -82,12 +84,12 @@ export function updateActorTargetMovement(actor, deltaTime) {
   const dy = actor.targetPosition.y - actor.baselinePosition.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
-  const safeDeltaTime = Math.max(0, deltaTime);
+  const safeDeltaTime = Math.max(0, deltaTime) * Math.max(0.25, Math.min(3, actor.targetMovementSpeedMultiplier || 1));
   const easedStep = dist * 0.02 * safeDeltaTime;
   // Keep the eased arrival from lingering at an almost imperceptible speed.
   // Three pixels per frame is small enough to avoid the old 15px snap while
   // letting the continuously running idle motion take over promptly.
-  const finishingStep = 3 * safeDeltaTime;
+  const finishingStep = (actor.targetMovementContinuous ? 0.55 : 3) * safeDeltaTime;
   const stepDistance = Math.min(dist, Math.max(easedStep, finishingStep));
 
   if (dist === 0 || stepDistance >= dist) {

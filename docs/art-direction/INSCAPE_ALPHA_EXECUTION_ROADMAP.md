@@ -76,7 +76,7 @@ The working tree was clean when this roadmap was created.
 - [x] Phase 4 fixed chrome, the Phase 6 production NFT viewer, and the Phase 7 production identity RÄCK are integrated and visually accepted.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
-Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 is `[~]` after accepted Phase 5A, Phase 5B.1, Phase 5B.2, Phase 5B.3, and Phase 5B.4, with Phase 5B.5 implemented and automatically verified as `[~]` pending visual acceptance while Phase 5B.6 onward remains unstarted. Phase 6 and Phase 7 are implemented, verified, and interactively accepted as `[x]`; Phase 7.5 remains unstarted.
+Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 is `[~]` after accepted Phase 5A, Phase 5B.1, Phase 5B.2, Phase 5B.3, and Phase 5B.4, with Phase 5B.5 implemented and automatically verified as `[~]` pending visual acceptance while Phase 5B.6 onward remains unstarted. Phase 6, Phase 7, and Phase 7.5 are implemented, verified, and interactively accepted as `[x]`.
 
 ### Locked production-integration constraints
 
@@ -592,19 +592,21 @@ The future compact-card interaction may use the approved square-grid mask icon, 
 
 ## Phase 7.5 — production Keeper resident movement
 
-Status: `[ ]`
+Status: `[x]` — **implemented, interactively accepted, and verified**
 
 Goal: connect the existing full X/Y Keeper movement engine to the production lattice before publication and visitor cutover.
 
 Includes:
 
-- pointer-follow is the requested primary desktop direction; its sampling, resting, activation, and touch/keyboard equivalents require a read-only ownership audit before implementation;
-- the currently non-functional click-to-move path is evidence, not accepted interaction authority, and must not be preserved by accident;
+- pointer-follow is the primary mouse/pen direction, enabled by default and coalesced to the latest target once per animation frame;
+- right-clicking the dock exposes session-only `FOLLOW CURSOR` and `SLOW / NORMAL / FAST` controls; left-click remains exclusively dock/release;
+- continuous follow retains engine easing but uses a 0.55px finishing cadence instead of the ordinary click-to-move 3px floor;
+- touch and click-to-move are explicitly excluded; no fallback activation is invented;
 - ARRANGE ON empty-table activation retains authoring deselection and never causes incidental Keeper movement;
 - placement activation, authoring gestures, table drag/swipe navigation, bounded Space-drag camera movement, and Keeper movement have deterministic ownership;
 - screen, active-table, and camera coordinates resolve to stable Keeper targets without jumps during table arrival or responsive resizing;
 - dock/release containment, reduced motion, profile switching, Keeper visibility, and existing engine movement bounds remain intact;
-- owner and visitor runtimes share the same production movement bridge so Phase 8 publishes behavior rather than inventing it during cutover.
+- the owner controller delegates to the existing shared resident engine; Phase 8 visitor wiring must reuse the accepted controller and engine contract rather than invent movement during cutover.
 
 User visual test:
 
@@ -617,6 +619,8 @@ User visual test:
 Exit criterion: the production lattice has deterministic full two-dimensional resident Keeper movement that is ready to be reused unchanged by the published visitor runtime.
 
 Excluded: autonomous roaming, AI or personality behavior, dialogue authoring, event-reaction authoring, sound, scenes, and the later side-scrolling/free-roam world.
+
+Accepted checkpoint (2026-07-30): interactive review accepted smooth released-Keeper cursor follow, the refined continuous arrival, session-only follow toggle and three speed presets, dock/release, ARRANGE and Space-drag ownership, and the absence of click-to-move. Pointer input is latest-target-only per animation frame; touch is ignored. Browser, Theme, NFT viewer, identity RÄCK, ARRANGE, CROP, placement gestures, table navigation, Space-camera movement, docking, and active transitions cancel or suppress follow deterministically. Reduced motion places targets without a flight. The focused closing set passes 47 tests. The production build and direct existing-build budget check pass at initial JavaScript 1,235,727 raw / 360,878 gzip, owner JavaScript 210,675 raw / 62,714 gzip, owner CSS 66,171 raw / 9,667 gzip, and core JavaScript 1,885,126 raw / 557,885 gzip. The owner-only CSS budget is deliberately recalibrated to 67,000 raw / 10,000 gzip for the shared-theme dock controls; every other budget remains unchanged. The full suite and browser lifecycle were not rerun. No schema, persistence, publication, wallet, visitor, category/PORTALS, Keeper personality, or sound behavior changes.
 
 ## Phase 8 — publication and visitor integration
 

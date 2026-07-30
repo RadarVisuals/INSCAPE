@@ -41,6 +41,12 @@ import LatticeWorkspaceToolbar from '../lattice/rendering/LatticeWorkspaceToolba
 import { getIdentityProfileViewModel } from './identity/profileViewModel.js';
 import { createProductionIdentityDossierViewModel } from './identity/productionIdentityDossierViewModel.js';
 import { preloadIdentityProfileImage } from './identity/preloadIdentityProfileImage.js';
+import {
+  createKeeperPointerFollowScheduler,
+  keeperPointerFollowAllowed,
+  keeperPointerFollowSpeedMultiplier,
+  keeperPointerTarget,
+} from './keeperPointerFollow.js';
 import { prepareOwnerLatticeRuntimeDraft } from './ownerLatticeRuntimeProjection.js';
 import KeeperDock from './KeeperDock.jsx';
 import useOwnerLatticeBrowser from './useOwnerLatticeBrowser.js';
@@ -148,6 +154,8 @@ function OwnerLatticeRuntime({
   const browserToolRef = useRef(null);
   const identityControlRef = useRef(null);
   const identityOpenRequestRef = useRef(0);
+  const keeperPointerFollowRef = useRef(null);
+  const keeperPointerTargetRef = useRef(null);
   const [spatialRoot, setSpatialRoot] = useState(null);
   const [dimensions, setDimensions] = useState({ width: 1, height: 1 });
   const [active, setActive] = useState(() => entryLatticeCoordinate());
@@ -170,6 +178,9 @@ function OwnerLatticeRuntime({
   const [identityDossierSession, setIdentityDossierSession] = useState(null);
   const [identityDossierOpening, setIdentityDossierOpening] = useState(false);
   const [railCollapsed, setRailCollapsed] = useState(false);
+  const [keeperDockActive, setKeeperDockActive] = useState(false);
+  const [keeperFollowCursor, setKeeperFollowCursor] = useState(true);
+  const [keeperMovementSpeed, setKeeperMovementSpeed] = useState('normal');
   const profileIdentity = useProfileIdentity(profileAddress);
   const profileContractFacts = useProfileContractFacts(profileAddress, { enabled: Boolean(identityDossierOpening || identityDossierSession) });
   const browserData = useOwnerLatticeBrowser(profileAddress, browserOpen);
@@ -237,6 +248,21 @@ function OwnerLatticeRuntime({
   }, []);
 
   useEffect(() => {
+    const scheduler = createKeeperPointerFollowScheduler((clientX, clientY) => {
+      residentHandoff?.moveToScreenPosition?.(clientX, clientY, {
+        continuous: true,
+        reducedMotion: revealPresentation.reducedMotion === true,
+        speedMultiplier: keeperPointerFollowSpeedMultiplier(keeperMovementSpeed),
+      });
+    });
+    keeperPointerFollowRef.current = scheduler;
+    return () => {
+      scheduler.cancel();
+      if (keeperPointerFollowRef.current === scheduler) keeperPointerFollowRef.current = null;
+    };
+  }, [keeperMovementSpeed, residentHandoff, revealPresentation.reducedMotion]);
+
+  useEffect(() => {
     identityOpenRequestRef.current += 1;
     setIdentityDossierOpening(false);
     setIdentityDossierSession(null);
@@ -280,6 +306,32 @@ function OwnerLatticeRuntime({
   const cellSize = plane.cellSize;
   const activeTableId = latticeProductionTableId(active);
   const activeCameraY = clampLatticeOwnerCameraY(cameraOffsets[activeTableId] || 0, plane);
+  const keeperPointerFollowEnabled = keeperPointerFollowAllowed({
+    arrangeEnabled,
+    browserOpen,
+    cameraGestureActive,
+    compositionPreview,
+    cropModeActive,
+    gestureActive,
+    identityActive: Boolean(identityDossierOpening || identityDossierSession),
+    interfaceVisible,
+    keeperDockActive,
+    followCursor: keeperFollowCursor,
+    settling: snapping,
+    themeOpen,
+    viewerActive: Boolean(viewerSession),
+  });
+
+  useEffect(() => {
+    if (keeperPointerFollowEnabled) return;
+    keeperPointerTargetRef.current = null;
+    keeperPointerFollowRef.current?.cancel();
+  }, [keeperPointerFollowEnabled]);
+
+  useEffect(() => {
+    if (!keeperPointerFollowEnabled || !keeperPointerTargetRef.current) return;
+    keeperPointerFollowRef.current?.push(keeperPointerTargetRef.current);
+  }, [dimensions.height, dimensions.width, keeperPointerFollowEnabled]);
 
   const settle = useCallback((destination, offset = { x: 0, y: 0 }) => {
     if (settlingRef.current) return;
@@ -371,7 +423,14 @@ function OwnerLatticeRuntime({
       return;
     }
     const activeGesture = gestureRef.current;
-    if (!activeGesture || activeGesture.pointerId !== event.pointerId || settlingRef.current) return;
+    if (!activeGesture || activeGesture.pointerId !== event.pointerId || settlingRef.current) {
+      if (!keeperPointerFollowEnabled) return;
+      const target = keeperPointerTarget(event, event.currentTarget.getBoundingClientRect());
+      if (!target) return;
+      keeperPointerTargetRef.current = target;
+      keeperPointerFollowRef.current?.push(target);
+      return;
+    }
     const wasActivated = activeGesture.gesture.activated;
     const gesture = updatePointerGesture(
       activeGesture.gesture,
@@ -755,6 +814,11 @@ function OwnerLatticeRuntime({
       </div>
       {keeperVisible && <KeeperDock
         actorId={activeActorId}
+        followCursor={keeperFollowCursor}
+        movementSpeed={keeperMovementSpeed}
+        onDockStateChange={setKeeperDockActive}
+        onFollowCursorChange={setKeeperFollowCursor}
+        onMovementSpeedChange={setKeeperMovementSpeed}
         reducedMotion={reducedMotion}
         residentHandoff={residentHandoff}
         residentScale={0.5}

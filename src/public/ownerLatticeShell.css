@@ -118,7 +118,20 @@
 .owner-lattice-shell > .keeper-dock { --keeper-dock-size: clamp(60px, 5.5vw, 78px); position: fixed; z-index: 23; right: 32px; bottom: 26px; width: var(--keeper-dock-size); height: var(--keeper-dock-size); border: 0; background: transparent; }
 .owner-lattice-shell .keeper-dock__socket { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; color: transparent; cursor: pointer; }
 .owner-lattice-shell .keeper-dock__options { display: none; }
-.owner-lattice-shell .keeper-dock__menu { display: none; }
+.owner-lattice-shell .keeper-dock__menu { right: calc(100% + 9px); bottom: 0; width: 188px; padding: 0; border: 1px solid var(--lattice-menu-line-strong); background: var(--lattice-menu-panel); box-shadow: 8px 10px 24px rgb(0 0 0 / .22); color: var(--lattice-menu-ink); }
+.owner-lattice-shell .keeper-dock__menu > strong,
+.owner-lattice-shell .keeper-dock__menu > small { padding: 9px 10px; color: var(--lattice-menu-muted); font: var(--lattice-window-type-label); letter-spacing: .1em; text-transform: uppercase; }
+.owner-lattice-shell .keeper-dock__menu > button { min-height: 35px; padding: 7px 10px; border: 0; border-top: 1px solid var(--lattice-menu-line); background: transparent; color: var(--lattice-menu-ink); font: var(--lattice-window-type-value); letter-spacing: .04em; cursor: pointer; }
+.owner-lattice-shell .keeper-dock__menu > button:hover,
+.owner-lattice-shell .keeper-dock__menu > button:focus-visible { outline: none; background: var(--lattice-menu-selected); }
+.owner-lattice-shell .keeper-dock__menu > button span { color: var(--lattice-menu-ink); font-size: 11px; }
+.owner-lattice-shell .keeper-dock__menu > small { display: block; border-top: 1px solid var(--lattice-menu-line); }
+.owner-lattice-shell .keeper-dock__speed { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--lattice-menu-line); }
+.owner-lattice-shell .keeper-dock__speed button { min-width: 0; min-height: 34px; padding: 0; border: 0; border-right: 1px solid var(--lattice-menu-line); background: transparent; color: var(--lattice-menu-muted); font: var(--lattice-window-type-label); letter-spacing: .05em; text-transform: uppercase; cursor: pointer; }
+.owner-lattice-shell .keeper-dock__speed button:last-child { border-right: 0; }
+.owner-lattice-shell .keeper-dock__speed button[data-checked] { background: var(--lattice-menu-selected); color: var(--lattice-menu-ink); }
+.owner-lattice-shell .keeper-dock__speed button:hover,
+.owner-lattice-shell .keeper-dock__speed button:focus-visible { outline: none; color: var(--lattice-menu-ink); }
 .application-resident-underlay .keeper-dock__ghost { --keeper-dock-size: clamp(60px, 5.5vw, 78px); position: fixed; right: 32px; bottom: 26px; width: var(--keeper-dock-size); height: var(--keeper-dock-size); pointer-events: none; }
 .application-resident-underlay .keeper-dock__ghost::before { content: ""; position: absolute; inset: 9%; background: currentColor; -webkit-mask: var(--keeper-dock-mask) center / 180% auto no-repeat; mask: var(--keeper-dock-mask) center / 180% auto no-repeat; opacity: .28; }
 

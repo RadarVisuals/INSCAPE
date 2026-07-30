@@ -21,7 +21,7 @@ function createMovementActor(position = { x: 20, y: 30 }) {
   actor.isEnteringMovementBounds = false;
   actor.areMovementBoundsActive = false;
   actor.facingDirection = 1;
-  actor.moveTo = (x, y) => moveActorTo(actor, x, y);
+  actor.moveTo = (x, y, options) => moveActorTo(actor, x, y, options);
   actor.setMovementBounds = (bounds, options) => setActorMovementBounds(actor, bounds, options);
   actor.clearMovementBounds = (options) => clearActorMovementBounds(actor, options);
   actor.updateTargetMovement = (deltaTime) => updateActorTargetMovement(actor, deltaTime);
@@ -112,6 +112,22 @@ test('movement hands off promptly to idle near the target', () => {
 
   assert.equal(actor.baselinePosition.x, 15);
   assert.ok(finishingFrames <= 5, `arrival should finish within 5 frames, received ${finishingFrames}`);
+});
+
+test('continuous cursor movement uses a subpixel-scale finishing cadence', () => {
+  const actor = createMovementActor({ x: 0, y: 0 });
+  actor.moveTo(15, 0, { continuous: true });
+  let previousX = actor.baselinePosition.x;
+  let finalStep = Infinity;
+
+  while (actor.isMovingToTarget) {
+    actor.updateTargetMovement(1);
+    finalStep = actor.baselinePosition.x - previousX;
+    previousX = actor.baselinePosition.x;
+  }
+
+  assert.equal(actor.baselinePosition.x, 15);
+  assert.ok(finalStep <= 0.55, `continuous final step should be at most 0.55px, received ${finalStep}`);
 });
 
 test('reduced motion places and restores the actor immediately', () => {

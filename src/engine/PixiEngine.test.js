@@ -52,6 +52,27 @@ test('Identity handoff uses only the existing Pixi application renderer and canv
   assert.doesNotMatch(engineSource, /setResidentHabitat|syncResidentHabitat/);
 });
 
+test('screen-position movement preserves smooth defaults and supports reduced-motion placement', () => {
+  const { engine } = createTestEngine();
+  engine.masterContainer = { toLocal: ({ x, y }) => ({ x: x / 2, y: y / 2 }) };
+  engine.actor = {
+    baselinePosition: { x: 1, y: 2 },
+    targetPosition: { x: 1, y: 2 },
+    isMovingToTarget: false,
+    moveTo(x, y) { this.targetPosition = { x, y }; this.isMovingToTarget = true; },
+  };
+  engine.updateMouseClick(100, 80);
+  assert.deepEqual(engine.actor.targetPosition, { x: 50, y: 40 });
+  assert.deepEqual(engine.actor.baselinePosition, { x: 1, y: 2 });
+  assert.equal(engine.actor.isMovingToTarget, true);
+  engine.updateMouseClick(110, 90, { continuous: true, speedMultiplier: 1.55 });
+  assert.deepEqual(engine.actor.targetPosition, { x: 55, y: 45 });
+  engine.updateMouseClick(120, 100, { reducedMotion: true });
+  assert.deepEqual(engine.actor.targetPosition, { x: 60, y: 50 });
+  assert.deepEqual(engine.actor.baselinePosition, { x: 60, y: 50 });
+  assert.equal(engine.actor.isMovingToTarget, false);
+});
+
 test('destroy during asynchronous initialization releases Pixi and prevents scene installation', async () => {
   globalThis.window = { innerWidth: 1200, innerHeight: 800 };
   const loading = deferred();

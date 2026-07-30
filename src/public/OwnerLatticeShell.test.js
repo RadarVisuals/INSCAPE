@@ -157,3 +157,19 @@ test('Phase 7 Identity Dossier has strict owner-runtime precedence and exact tri
   assert.match(source, /onClosed=\{closeIdentityDossier\}/);
   assert.doesNotMatch(source, /setArrangeEnabled\(false\).*setIdentityDossierSession/s);
 });
+
+test('Phase 7.5 delegates idle cursor following to the existing resident engine without stealing interaction ownership', () => {
+  assert.match(source, /createKeeperPointerFollowScheduler/);
+  assert.match(source, /keeperPointerFollowAllowed/);
+  assert.match(source, /keeperPointerTarget/);
+  assert.match(source, /residentHandoff\?\.moveToScreenPosition\?\.\(clientX, clientY, \{[\s\S]*reducedMotion: revealPresentation\.reducedMotion === true/);
+  assert.match(source, /continuous: true/);
+  assert.match(source, /onDockStateChange=\{setKeeperDockActive\}/);
+  assert.match(source, /followCursor=\{keeperFollowCursor\}/);
+  assert.match(source, /movementSpeed=\{keeperMovementSpeed\}/);
+  assert.match(source, /onFollowCursorChange=\{setKeeperFollowCursor\}/);
+  assert.match(source, /onMovementSpeedChange=\{setKeeperMovementSpeed\}/);
+  assert.match(source, /arrangeEnabled,[\s\S]*cropModeActive,[\s\S]*gestureActive,[\s\S]*keeperDockActive,[\s\S]*viewerActive/);
+  assert.ok(source.indexOf('const activeCameraGesture = cameraGestureRef.current') < source.indexOf('keeperPointerTarget(event'));
+  assert.ok(source.indexOf('const activeGesture = gestureRef.current') < source.indexOf('keeperPointerTarget(event'));
+});

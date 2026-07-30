@@ -474,6 +474,16 @@ Alter Persona is presentation, not anonymity, privacy, verification, or a second
 
 Future candidate fields are display name, resident code/call sign, alternate profile/background images, tagline, long bio, tags, optional location, optional external handles, links, per-field visibility, and per-field inheritance. Untouched fields inherit PERSONA; selected overrides are labelled INSCAPE-authored. Handles remain optional, location is never inferred and defaults hidden, and no checkmark implies verification. A future compact card may use the approved square-grid mask, Mist/Carbon tokens, lattice-cell dissolve, and the reversible card-to-image-plus-RÄCK transition. Do not add editor UI, schemas, persistence, publication behavior, inheritance/provenance/rollback logic, a dead toggle, or production interaction without explicit approval.
 
+### Phase 7.5 — Keeper cursor follow
+
+The owner lattice delegates released-Keeper mouse/pen hover targets to the existing shared resident engine. One animation-frame scheduler retains only the newest target. Follow is enabled by default and is suspended by docking, ARRANGE, Browser, Theme, NFT or identity inspection, CROP, placement operations, table drag/swipe, Space-camera ownership, settling, and hidden interface state. Touch and click-to-move remain unavailable.
+
+Right-clicking the dock opens shared-theme, session-only controls for `FOLLOW CURSOR` and `SLOW / NORMAL / FAST`; left-click remains dock/release. Continuous follow uses the ordinary engine easing with a subpixel-scale finishing cadence, while other engine movement retains its prior arrival behavior. Reduced motion places the target without flight.
+
+Rollback: remove the owner pointer scheduler and optional dock control props. The unchanged shared engine, dock/release handoff, owner lattice, schemas, persistence, and visitor runtime remain valid.
+
+Accepted checkpoint (2026-07-30): interactive review accepted follow smoothness, speeds, follow toggle, dock/release, and interaction ownership. The focused set passes 47 tests; production build and budget checks pass. Visitor reuse is deferred to Phase 8 cutover and must preserve this accepted controller contract.
+
 ### Phase 8A — version 8 visitor deployment
 
 Deploy the version 8 validator, resolver, canonical renderer, and legacy fallback before enabling version 8 publication.

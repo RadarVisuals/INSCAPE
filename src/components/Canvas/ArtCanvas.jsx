@@ -31,8 +31,8 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisi
     setActorScreenPositionTarget(target) {
       engineRef.current?.setActorScreenPositionTarget(target);
     },
-    moveActorToScreenPosition(clientX, clientY) {
-      engineRef.current?.updateMouseClick(clientX, clientY);
+    moveActorToScreenPosition(clientX, clientY, options = {}) {
+      engineRef.current?.updateMouseClick(clientX, clientY, options);
     },
     moveActorHorizontallyToScreenPosition(clientX, direction) {
       engineRef.current?.updateHorizontalMove(clientX, direction);
