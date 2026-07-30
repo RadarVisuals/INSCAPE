@@ -565,6 +565,33 @@ User visual test:
 
 Exit criterion: the dossier is visually faithful to the frozen paper design and has a strict, honest data contract.
 
+## Phase 7.5 — production Keeper resident movement
+
+Status: `[ ]`
+
+Goal: connect the existing full X/Y Keeper movement engine to the production lattice before publication and visitor cutover.
+
+Includes:
+
+- ARRANGE OFF empty-table activation moves the released Keeper to the activated lattice position;
+- ARRANGE ON empty-table activation retains authoring deselection and never causes incidental Keeper movement;
+- placement activation, authoring gestures, table drag/swipe navigation, bounded Space-drag camera movement, and Keeper movement have deterministic ownership;
+- screen, active-table, and camera coordinates resolve to stable Keeper targets without jumps during table arrival or responsive resizing;
+- dock/release containment, reduced motion, profile switching, Keeper visibility, and existing engine movement bounds remain intact;
+- owner and visitor runtimes share the same production movement bridge so Phase 8 publishes behavior rather than inventing it during cutover.
+
+User visual test:
+
+1. With ARRANGE OFF, release the Keeper and activate several empty positions across the active table.
+2. Confirm the Keeper flies smoothly to each two-dimensional target while artwork activation and table navigation remain unchanged.
+3. Turn ARRANGE ON and confirm empty activation deselects only, without moving the Keeper.
+4. Navigate and Space-drag between tables, resize the viewport, dock/release, and switch profiles; confirm movement remains bounded, stable, and conflict-free.
+5. Enable reduced motion and confirm target placement and dock transitions remain usable without unintended animation.
+
+Exit criterion: the production lattice has deterministic full two-dimensional resident Keeper movement that is ready to be reused unchanged by the published visitor runtime.
+
+Excluded: autonomous roaming, AI or personality behavior, dialogue authoring, event-reaction authoring, sound, scenes, and the later side-scrolling/free-roam world.
+
 ## Phase 8 — publication and visitor integration
 
 Status: `[ ]`
