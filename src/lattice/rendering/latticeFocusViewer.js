@@ -1,7 +1,8 @@
 export const DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG = Object.freeze({
   horizontalMargin: 48,
   verticalMargin: 40,
-  verticalArtworkScale: 0.85,
+  verticalArtworkScale: 0.72,
+  squareArtworkScale: 0.85,
   browseDuration: 240,
   swipeThreshold: 48,
   swipeDominance: 1.25,
@@ -11,9 +12,10 @@ export const DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG = Object.freeze({
   dossierWidth: 320,
   dossierGap: 88,
   horizontalAspectRatio: 1.6,
-  inspectionPadding: 24,
-  lowerDossierGap: 28,
-  lowerDossierHeight: 260,
+  inspectionPadding: 36,
+  horizontalArtworkMaxWidthScale: 0.72,
+  lowerDossierGap: 52,
+  lowerDossierHeight: 280,
   lowerPanelGap: 28,
   navigationClearance: 72,
   compactHorizontalMargin: 16,
@@ -115,7 +117,6 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
         Math.min(size.width, focused.width + (inspectionPadding * 2)),
         focused.height + (inspectionPadding * 2),
       ),
-      connectors: Object.freeze([]),
       contentHeight: Math.max(size.height, finalPanelBottom + dossierGap),
     });
   }
@@ -125,7 +126,15 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
     const lowerDossierHeight = finitePositive(Number(config?.lowerDossierHeight), 'lowerDossierHeight');
     const lowerPanelGap = finiteNonNegative(Number(config?.lowerPanelGap), 'lowerPanelGap');
     const navigationClearance = finiteNonNegative(Number(config?.navigationClearance), 'navigationClearance');
-    const availableWidth = Math.max(1, size.width - (horizontalMargin * 2) - (inspectionPadding * 2));
+    const horizontalArtworkMaxWidthScale = Number(config?.horizontalArtworkMaxWidthScale);
+    if (!Number.isFinite(horizontalArtworkMaxWidthScale)
+      || horizontalArtworkMaxWidthScale <= 0 || horizontalArtworkMaxWidthScale > 1) {
+      throw new TypeError('horizontalArtworkMaxWidthScale must be between zero and one');
+    }
+    const availableWidth = Math.max(1, Math.min(
+      size.width - (horizontalMargin * 2) - (inspectionPadding * 2),
+      size.width * horizontalArtworkMaxWidthScale,
+    ));
     const availableArtworkHeight = Math.max(
       1,
       size.height - (verticalMargin * 2) - (inspectionPadding * 2)
@@ -134,37 +143,34 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
     const scale = Math.min(availableWidth / origin.width, availableArtworkHeight / origin.height);
     const artworkWidth = origin.width * scale;
     const artworkHeight = origin.height * scale;
-    const frameWidth = artworkWidth + (inspectionPadding * 2);
+    const frameWidth = Math.max(1, size.width - (horizontalMargin * 2));
     const frameHeight = artworkHeight + (inspectionPadding * 2);
     const groupHeight = frameHeight + lowerDossierGap + lowerDossierHeight;
-    const frameLeft = (size.width - frameWidth) / 2;
-    const frameTop = Math.max(verticalMargin, (size.height - navigationClearance - groupHeight) / 2);
+    const frameLeft = horizontalMargin;
+    const centeredFrameTop = (size.height - navigationClearance - groupHeight) / 2;
+    const latestFrameTop = size.height - navigationClearance - groupHeight;
+    const frameTop = Math.max(verticalMargin, centeredFrameTop, Math.min(112, latestFrameTop));
     const artwork = rectangle(
-      frameLeft + inspectionPadding,
+      (size.width - artworkWidth) / 2,
       frameTop + inspectionPadding,
       artworkWidth,
       artworkHeight,
     );
     const inspectionFrame = rectangle(frameLeft, frameTop, frameWidth, frameHeight);
-    const panelGroupWidth = Math.min(size.width - (horizontalMargin * 2), Math.max(frameWidth, dossierWidth * 2 + lowerPanelGap));
+    const panelGroupWidth = Math.min(
+      size.width - (horizontalMargin * 2),
+      Math.max(artworkWidth, dossierWidth * 2 + lowerPanelGap),
+    );
     const panelWidth = (panelGroupWidth - lowerPanelGap) / 2;
     const panelLeft = (size.width - panelGroupWidth) / 2;
     const panelTop = frameTop + frameHeight + lowerDossierGap;
-    const branchY = frameTop + frameHeight + (lowerDossierGap / 2);
-    const centerX = size.width / 2;
 
     return Object.freeze({
       mode: 'lower',
       artwork,
-      leftDossier: rectangle(panelLeft, panelTop, panelWidth, lowerDossierHeight),
-      rightDossier: rectangle(panelLeft + panelWidth + lowerPanelGap, panelTop, panelWidth, lowerDossierHeight),
+      leftDossier: rectangle(panelLeft, panelTop, panelGroupWidth, lowerDossierHeight),
+      rightDossier: rectangle(panelLeft, panelTop, panelGroupWidth, lowerDossierHeight),
       inspectionFrame,
-      connectors: Object.freeze([
-        Object.freeze({ left: centerX, top: frameTop + frameHeight, width: 1, height: lowerDossierGap / 2 }),
-        Object.freeze({ left: panelLeft + panelWidth / 2, top: branchY, width: panelGroupWidth - panelWidth, height: 1 }),
-        Object.freeze({ left: panelLeft + panelWidth / 2, top: branchY, width: 1, height: lowerDossierGap / 2 }),
-        Object.freeze({ left: panelLeft + panelWidth + lowerPanelGap + panelWidth / 2, top: branchY, width: 1, height: lowerDossierGap / 2 }),
-      ]),
       contentHeight: Math.max(size.height, panelTop + lowerDossierHeight + navigationClearance),
     });
   }
@@ -172,7 +178,13 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
   const panelAllowance = 2 * (dossierWidth + dossierGap);
   const availableWidth = Math.max(1, size.width - (horizontalMargin * 2) - panelAllowance);
   const availableHeight = Math.max(1, size.height - (verticalMargin * 2)) * verticalArtworkScale;
-  const scale = Math.min(availableWidth / origin.width, availableHeight / origin.height);
+  const squareArtworkScale = Number(config?.squareArtworkScale);
+  if (!Number.isFinite(squareArtworkScale) || squareArtworkScale <= 0 || squareArtworkScale > 1) {
+    throw new TypeError('squareArtworkScale must be between zero and one');
+  }
+  const aspectRatio = origin.width / origin.height;
+  const artworkScale = aspectRatio >= 0.9 && aspectRatio <= 1.1 ? squareArtworkScale : 1;
+  const scale = Math.min(availableWidth / origin.width, availableHeight / origin.height) * artworkScale;
   const artworkWidth = Math.max(1, Math.floor(origin.width * scale));
   const artworkHeight = artworkWidth * (origin.height / origin.width);
   const groupWidth = artworkWidth + panelAllowance;
@@ -187,7 +199,6 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
     artwork.width + (inspectionPadding * 2),
     artwork.height + (inspectionPadding * 2),
   );
-  const connectorTop = size.height / 2;
 
   return Object.freeze({
     mode: 'side',
@@ -205,20 +216,6 @@ export function focusViewerLayout(originRectangle, viewport, dossiersOpen, confi
       dossierHeight,
     ),
     inspectionFrame,
-    connectors: Object.freeze([
-      Object.freeze({
-        left: groupLeft + dossierWidth,
-        top: connectorTop,
-        width: inspectionFrame.left - (groupLeft + dossierWidth),
-        height: 1,
-      }),
-      Object.freeze({
-        left: inspectionFrame.left + inspectionFrame.width,
-        top: connectorTop,
-        width: artwork.left + artwork.width + dossierGap - (inspectionFrame.left + inspectionFrame.width),
-        height: 1,
-      }),
-    ]),
     contentHeight: size.height,
   });
 }

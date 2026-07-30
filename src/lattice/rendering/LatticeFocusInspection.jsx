@@ -4,7 +4,29 @@ const unresolved = (value) => (typeof value === 'string' && value.trim() ? value
 
 const rectangleStyle = ({ height, left, top, width }) => ({ height, left, top, width });
 
-function LatticeFocusDossier({ dossier, layoutMode, onClose, open, rectangle, side }) {
+function NarrativeContent({ dossier }) {
+  return <>
+    <small>DESCRIPTION</small>
+    <h2>{unresolved(dossier?.title)}</h2>
+    <p>{unresolved(dossier?.description)}</p>
+    <section>
+      <small>TRAITS</small>
+      <ul className="lattice-focus-viewer__traits">
+        {dossier?.traits?.length
+          ? dossier.traits.map(({ label, value }) => <li key={label}>{label}: {unresolved(value)}</li>)
+          : <li>NO DATA</li>}
+      </ul>
+    </section>
+  </>;
+}
+
+function RecordContent({ dossier }) {
+  return <dl>{(dossier?.technical || []).map(({ label, value }) => (
+    <div key={label}><dt>{label}</dt><dd>{unresolved(value)}</dd></div>
+  ))}</dl>;
+}
+
+function LatticeFocusDossier({ dossier, layoutMode, open, rectangle, side }) {
   const isLeft = side === 'left';
   return (
     <aside
@@ -13,33 +35,33 @@ function LatticeFocusDossier({ dossier, layoutMode, onClose, open, rectangle, si
       className={`lattice-focus-viewer__dossier is-${side}`}
       data-open={open || undefined}
       data-placement={layoutMode === 'side' ? side : 'lower'}
+      data-side={side}
       style={rectangleStyle(rectangle)}
     >
-      <header>
-        <span>{isLeft ? 'INSCAPE / ASSET NARRATIVE' : 'INSCAPE / TECHNICAL RECORD'}</span>
-        <button aria-label="Close both artwork dossiers" disabled={!open} onClick={onClose} tabIndex={open ? 0 : -1} type="button">×</button>
-      </header>
       <div className="lattice-focus-viewer__dossier-body" data-lattice-viewer-scroll>
-        <small>{isLeft ? 'DESCRIPTION' : 'MEDIA RECORD'}</small>
-        <h2>{unresolved(dossier?.title)}</h2>
-        {isLeft ? <>
-          <p>{unresolved(dossier?.description)}</p>
-          <section>
-            <small>TRAITS</small>
-            {dossier?.traits?.length
-              ? <dl>{dossier.traits.map(({ label, value }) => <div key={label}><dt>{label}</dt><dd>{unresolved(value)}</dd></div>)}</dl>
-              : <p>NO TRAITS RESOLVED</p>}
-          </section>
-        </> : (
-          <dl>{(dossier?.technical || []).map(({ label, value }) => <div key={label}><dt>{label}</dt><dd>{unresolved(value)}</dd></div>)}</dl>
-        )}
+        {isLeft ? <NarrativeContent dossier={dossier} /> : <RecordContent dossier={dossier} />}
       </div>
-      <footer><span>INSCAPE PROTOCOL</span><span>{isLeft ? 'LEFT / DESCRIPTION' : 'RIGHT / RECORD'}</span></footer>
     </aside>
   );
 }
 
-export default function LatticeFocusInspection({ dossier, layout, onClose, open }) {
+function LatticeFocusCombinedDossier({ dossier, open, rectangle }) {
+  return <aside
+    aria-hidden={!open}
+    aria-label="Artwork metadata dossier"
+    className="lattice-focus-viewer__dossier is-combined"
+    data-open={open || undefined}
+    data-placement="lower"
+    style={rectangleStyle(rectangle)}
+  >
+    <div className="lattice-focus-viewer__dossier-body is-combined" data-lattice-viewer-scroll>
+      <div className="lattice-focus-viewer__dossier-column"><NarrativeContent dossier={dossier} /></div>
+      <div className="lattice-focus-viewer__dossier-column"><RecordContent dossier={dossier} /></div>
+    </div>
+  </aside>;
+}
+
+export default function LatticeFocusInspection({ dossier, layout, open }) {
   return <>
     <div
       aria-hidden="true"
@@ -50,36 +72,12 @@ export default function LatticeFocusInspection({ dossier, layout, onClose, open 
         '--lattice-inspection-frame-left': `${layout.inspectionFrame.left}px`,
         '--lattice-inspection-frame-top': `${layout.inspectionFrame.top}px`,
       }}
-    >
-      <i className="is-top-left" />
-      <i className="is-top-right" />
-      <i className="is-bottom-left" />
-      <i className="is-bottom-right" />
-    </div>
-    <div
-      aria-hidden="true"
-      className="lattice-focus-viewer__connectors"
-      data-open={open || undefined}
-    >
-      {layout.connectors.map((connector, index) => (
-        <i key={`${connector.left}:${connector.top}:${index}`} style={rectangleStyle(connector)} />
-      ))}
-    </div>
-    <LatticeFocusDossier
-      dossier={dossier}
-      layoutMode={layout.mode}
-      onClose={onClose}
-      open={open}
-      rectangle={layout.leftDossier}
-      side="left"
     />
-    <LatticeFocusDossier
-      dossier={dossier}
-      layoutMode={layout.mode}
-      onClose={onClose}
-      open={open}
-      rectangle={layout.rightDossier}
-      side="right"
-    />
+    {layout.mode === 'lower' ? (
+      <LatticeFocusCombinedDossier dossier={dossier} open={open} rectangle={layout.leftDossier} />
+    ) : <>
+      <LatticeFocusDossier dossier={dossier} layoutMode={layout.mode} open={open} rectangle={layout.leftDossier} side="left" />
+      <LatticeFocusDossier dossier={dossier} layoutMode={layout.mode} open={open} rectangle={layout.rightDossier} side="right" />
+    </>}
   </>;
 }

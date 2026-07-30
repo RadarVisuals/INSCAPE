@@ -23,7 +23,10 @@ test('focused viewer preserves native presentation ratio and centers within safe
 test('focused viewer refits deterministically for compact and iframe viewports', () => {
   const origin = { left: 10, top: 20, width: 640, height: 320 };
   const compact = focusedViewerRectangle(origin, { width: 480, height: 320 });
-  assert.deepEqual(compact, { left: 48, top: 64, width: 384, height: 192 });
+  assert.equal(compact.left + compact.width / 2, 240);
+  assert.equal(compact.top + compact.height / 2, 160);
+  assert.ok(Math.abs(compact.width - 345.6) < 1e-9);
+  assert.ok(Math.abs(compact.width / compact.height - 2) < 1e-12);
 });
 
 test('side inspection layout detaches dossiers from portrait artwork', () => {
@@ -37,14 +40,26 @@ test('side inspection layout detaches dossiers from portrait artwork', () => {
   assert.ok(open.rightDossier.left > open.inspectionFrame.left + open.inspectionFrame.width);
   assert.ok(open.inspectionFrame.left < open.artwork.left);
   assert.ok(open.inspectionFrame.left + open.inspectionFrame.width > open.artwork.left + open.artwork.width);
-  assert.equal(open.connectors.length, 2);
   assert.ok(open.leftDossier.height < open.artwork.height);
   assert.ok(open.rightDossier.height < open.artwork.height);
   assert.ok(open.leftDossier.left >= 0);
   assert.ok(open.rightDossier.left + open.rightDossier.width <= viewport.width);
 });
 
-test('side inspection connectors occupy only the gaps outside portrait artwork', () => {
+test('square inspection artwork is reduced by fifteen percent without changing its ratio', () => {
+  const origin = { left: 120, top: 80, width: 400, height: 400 };
+  const viewport = { width: 1440, height: 900 };
+  const reduced = focusViewerLayout(origin, viewport, true);
+  const fullScale = focusViewerLayout(origin, viewport, true, {
+    ...DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG,
+    squareArtworkScale: 1,
+  });
+  assert.equal(reduced.mode, 'side');
+  assert.ok(Math.abs(reduced.artwork.width - fullScale.artwork.width * 0.85) < 1);
+  assert.equal(reduced.artwork.width, reduced.artwork.height);
+});
+
+test('side inspection leaves clear gaps between dossiers and portrait artwork', () => {
   const origin = { left: 13.25, top: 7.5, width: 333, height: 517 };
   const layout = focusViewerLayout(origin, { width: 1365, height: 767 }, true);
   const artworkRight = layout.artwork.left + layout.artwork.width;
@@ -52,22 +67,20 @@ test('side inspection connectors occupy only the gaps outside portrait artwork',
   assert.equal(Number.isInteger(artworkRight), true);
   assert.ok(layout.leftDossier.left + layout.leftDossier.width < layout.inspectionFrame.left);
   assert.ok(layout.rightDossier.left > layout.inspectionFrame.left + layout.inspectionFrame.width);
-  assert.equal(layout.connectors[0].left, layout.leftDossier.left + layout.leftDossier.width);
-  assert.equal(layout.connectors[0].left + layout.connectors[0].width, layout.inspectionFrame.left);
-  assert.equal(layout.connectors[1].left, layout.inspectionFrame.left + layout.inspectionFrame.width);
-  assert.equal(layout.connectors[1].left + layout.connectors[1].width, layout.rightDossier.left);
-  assert.ok(Math.abs((layout.artwork.width / layout.artwork.height) - (origin.width / origin.height)) < Number.EPSILON);
+  assert.ok(Math.abs((layout.artwork.width / layout.artwork.height) - (origin.width / origin.height)) < 1e-12);
 });
 
-test('panoramic inspection layout preserves artwork width and places dossiers below', () => {
+test('panoramic inspection layout preserves artwork width and places one wide dossier below', () => {
   const origin = { left: 20, top: 30, width: 1600, height: 450 };
   const layout = focusViewerLayout(origin, { width: 1440, height: 900 }, true);
   assert.equal(layout.mode, 'lower');
   assert.ok(layout.leftDossier.top > layout.inspectionFrame.top + layout.inspectionFrame.height);
-  assert.equal(layout.leftDossier.top, layout.rightDossier.top);
-  assert.ok(layout.leftDossier.left + layout.leftDossier.width < layout.rightDossier.left);
-  assert.equal(layout.connectors.length, 4);
-  assert.ok(Math.abs((layout.artwork.width / layout.artwork.height) - (origin.width / origin.height)) < Number.EPSILON);
+  assert.deepEqual(layout.leftDossier, layout.rightDossier);
+  assert.ok(layout.leftDossier.width >= layout.artwork.width);
+  assert.ok(layout.leftDossier.width < layout.inspectionFrame.width);
+  assert.equal(layout.leftDossier.left + layout.leftDossier.width / 2, 720);
+  assert.ok(layout.artwork.width <= 1440 * DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG.horizontalArtworkMaxWidthScale);
+  assert.ok(Math.abs((layout.artwork.width / layout.artwork.height) - (origin.width / origin.height)) < 1e-12);
   assert.ok(layout.inspectionFrame.left >= 0);
   assert.ok(layout.inspectionFrame.left + layout.inspectionFrame.width <= 1440);
 });
@@ -80,7 +93,6 @@ test('compact dossier layout preserves artwork ratio and stacks both panels belo
   assert.ok(layout.leftDossier.top >= layout.artwork.top + layout.artwork.height);
   assert.ok(layout.rightDossier.top >= layout.leftDossier.top + layout.leftDossier.height);
   assert.ok(layout.contentHeight > 720);
-  assert.deepEqual(layout.connectors, []);
 });
 
 test('dossier layout rejects ambiguous state and invalid configuration', () => {

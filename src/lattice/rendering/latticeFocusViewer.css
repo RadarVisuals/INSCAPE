@@ -3,6 +3,7 @@
   --lattice-overlay-muted: color-mix(in srgb, var(--lattice-overlay-ink) 58%, transparent);
   --lattice-overlay-faint: color-mix(in srgb, var(--lattice-overlay-ink) 24%, transparent);
   --lattice-overlay-grid: color-mix(in srgb, var(--lattice-overlay-ink) 11%, transparent);
+  --lattice-dossier-border: color-mix(in srgb, var(--lattice-menu-ink) 28%, transparent);
   position: fixed;
   inset: 0;
   z-index: 40;
@@ -23,7 +24,11 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-color: var(--lattice-inspection-surface, #090a0a);
+  background-color: color-mix(
+    in srgb,
+    var(--lattice-inspection-surface, #090a0a) 72%,
+    transparent
+  );
   background-image:
     linear-gradient(var(--lattice-overlay-grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--lattice-overlay-grid) 1px, transparent 1px);
@@ -148,66 +153,21 @@
 .lattice-focus-viewer[data-grid-visible="false"] .lattice-focus-viewer__inspection-frame { background-image: none; }
 
 .lattice-focus-viewer[data-phase="closing"] :is(
-  .lattice-focus-viewer__inspection-frame,
-  .lattice-focus-viewer__connectors
+  .lattice-focus-viewer__inspection-frame
 ) { opacity: 0; }
-
-.lattice-focus-viewer__inspection-frame i {
-  position: absolute;
-  width: 25px;
-  height: 25px;
-  border-color: var(--lattice-overlay-ink);
-  border-style: solid;
-  opacity: 0.86;
-}
-
-.lattice-focus-viewer__inspection-frame .is-top-left { left: 0; top: 0; border-width: 1px 0 0 1px; }
-.lattice-focus-viewer__inspection-frame .is-top-right { right: 0; top: 0; border-width: 1px 1px 0 0; }
-.lattice-focus-viewer__inspection-frame .is-bottom-left { left: 0; bottom: 0; border-width: 0 0 1px 1px; }
-.lattice-focus-viewer__inspection-frame .is-bottom-right { right: 0; bottom: 0; border-width: 0 1px 1px 0; }
-
-.lattice-focus-viewer__connectors {
-  position: fixed;
-  z-index: 1;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 180ms linear;
-}
-
-.lattice-focus-viewer__connectors[data-open] { opacity: 1; }
-
-.lattice-focus-viewer__connectors i {
-  position: fixed;
-  min-width: 1px;
-  min-height: 1px;
-  background: var(--lattice-overlay-muted);
-}
-
-.lattice-focus-viewer__connectors i::before,
-.lattice-focus-viewer__connectors i::after {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border: 1px solid var(--lattice-overlay-ink);
-  background: var(--lattice-menu-panel);
-  content: "";
-  transform: translate(-50%, -50%);
-}
-
-.lattice-focus-viewer__connectors i::before { left: 0; top: 0; }
-.lattice-focus-viewer__connectors i::after { right: -5px; bottom: -5px; }
 
 .lattice-focus-viewer__dossier {
   position: fixed;
   z-index: 3;
   display: grid;
-  grid-template-rows: 36px minmax(0, 1fr) 32px;
+  grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
-  border: 1px solid var(--lattice-menu-line-strong);
-  background: var(--lattice-menu-panel);
+  border: 1px solid var(--lattice-dossier-border);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--lattice-menu-ink) 3%, transparent), transparent 52%),
+    color-mix(in srgb, var(--lattice-menu-panel) 96%, transparent);
   color: var(--lattice-menu-ink);
-  box-shadow: 0 20px 64px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 24px 68px rgba(0, 0, 0, 0.34), inset 0 0 28px rgba(255, 255, 255, 0.012);
   opacity: 0;
   pointer-events: none;
   transition:
@@ -236,70 +196,31 @@
 .lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__dossier[data-placement="right"] { transform: translateX(18px); }
 .lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__dossier[data-placement="lower"] { transform: translateY(18px); }
 
-.lattice-focus-viewer__dossier > header,
-.lattice-focus-viewer__dossier > footer {
-  min-width: 0;
-  padding: 0 11px;
-  display: grid;
-  align-items: center;
-  gap: 10px;
-  font: 500 7px/1 "IBM Plex Mono", "Courier New", monospace;
-  letter-spacing: 0.11em;
-}
-
-.lattice-focus-viewer__dossier > header {
-  grid-template-columns: minmax(0, 1fr) 24px;
-  border-bottom: 1px solid var(--lattice-menu-line-strong);
-}
-
-.lattice-focus-viewer__dossier > header span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.lattice-focus-viewer__dossier > header button {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font: 16px/1 "IBM Plex Mono", "Courier New", monospace;
-}
-
-.lattice-focus-viewer__dossier > footer {
-  grid-template-columns: 1fr auto;
-  border-top: 1px solid var(--lattice-menu-line-strong);
-  color: var(--lattice-menu-muted);
-}
-
 .lattice-focus-viewer__dossier-body {
   min-height: 0;
-  padding: 24px;
+  padding: 18px 20px 25px;
   overflow: auto;
   overscroll-behavior: contain;
-  font: 400 12px/1.55 "Geist", Arial, sans-serif;
+  font: 400 12px/1.58 "Geist", Arial, sans-serif;
 }
 
-.lattice-focus-viewer__dossier-body > small,
+.lattice-focus-viewer__dossier-body small,
 .lattice-focus-viewer__dossier-body dt {
   color: var(--lattice-menu-muted);
   font: 500 7px/1.25 "IBM Plex Mono", "Courier New", monospace;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
 }
 
 .lattice-focus-viewer__dossier-body h2 {
-  margin: 9px 0 20px;
-  font: 400 22px/1.08 "Geist", Arial, sans-serif;
+  margin: 10px 0 18px;
+  font: 400 19px/1.18 "Geist", Arial, sans-serif;
   letter-spacing: 0.02em;
 }
 
 .lattice-focus-viewer__dossier-body p { margin: 0 0 22px; }
 
 .lattice-focus-viewer__dossier-body section {
-  padding-top: 19px;
+  padding-top: 18px;
   border-top: 1px solid var(--lattice-menu-line-strong);
 }
 
@@ -310,27 +231,58 @@
 }
 
 .lattice-focus-viewer__dossier-body dl {
-  margin: 18px 0 0;
+  margin: 0;
   display: grid;
   grid-template-columns: 1fr;
-  border-top: 1px solid var(--lattice-menu-line-strong);
 }
 
 .lattice-focus-viewer__dossier-body dl > div {
   min-width: 0;
-  padding: 10px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--lattice-menu-line-strong);
 }
 
 .lattice-focus-viewer__dossier-body dd {
-  margin: 5px 0 0;
+  margin: 6px 0 0;
   overflow-wrap: anywhere;
   font: 500 8px/1.4 "IBM Plex Mono", "Courier New", monospace;
 }
 
-.lattice-focus-viewer__dossier > header button:focus-visible {
-  outline: 1px solid currentColor;
-  outline-offset: 2px;
+.lattice-focus-viewer__traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 13px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lattice-focus-viewer__traits li {
+  padding: 5px 10px;
+  border: 1px solid var(--lattice-menu-line-strong);
+  color: var(--lattice-menu-muted);
+  font: 500 8px/1 "IBM Plex Mono", "Courier New", monospace;
+  letter-spacing: 0.08em;
+}
+
+.lattice-focus-viewer__dossier-body.is-combined {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+}
+
+.lattice-focus-viewer__dossier-column {
+  min-width: 0;
+}
+
+.lattice-focus-viewer__dossier-column + .lattice-focus-viewer__dossier-column {
+  padding-left: 32px;
+  border-left: 1px solid var(--lattice-menu-line-strong);
+}
+
+.lattice-focus-viewer__dossier-column:last-child dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
 }
 
 .lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__navigation {
@@ -368,16 +320,14 @@
   opacity: 0.35;
 }
 
-.lattice-focus-viewer__close {
+.lattice-focus-viewer__close-control {
   position: fixed;
   z-index: 4;
-  width: 22px;
-  height: 18px;
-  border: 1px solid var(--lattice-overlay-muted);
-  background: color-mix(in srgb, var(--lattice-menu-panel) 92%, transparent);
+  display: grid;
+  justify-items: center;
+  width: 140px;
+  transform: translateX(-50%);
   color: var(--lattice-overlay-ink);
-  font: 300 14px/1 "IBM Plex Mono", "Courier New", monospace;
-  cursor: pointer;
   opacity: 0;
   transition:
     left 360ms cubic-bezier(0.2, 0.72, 0.2, 1),
@@ -385,11 +335,29 @@
     opacity 120ms linear;
 }
 
-.lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__close { opacity: 1; }
+.lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__close-control { opacity: 1; }
 
-.lattice-focus-viewer__close[data-disabled] {
+.lattice-focus-viewer__close-control[data-disabled] {
   pointer-events: none;
   opacity: 0;
+}
+
+.lattice-focus-viewer__close {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--lattice-dossier-border);
+  background: color-mix(in srgb, var(--lattice-menu-panel) 94%, transparent);
+  color: var(--lattice-overlay-ink);
+  font: 300 20px/1 "IBM Plex Mono", "Courier New", monospace;
+  cursor: pointer;
+}
+
+.lattice-focus-viewer__close-control > span {
+  margin-top: 10px;
+  color: var(--lattice-overlay-muted);
+  font: 500 8px/1 "IBM Plex Mono", "Courier New", monospace;
+  letter-spacing: 0.12em;
 }
 
 .lattice-focus-viewer__navigation button:focus-visible,
@@ -403,9 +371,7 @@
     bottom: 10px;
   }
 
-  .lattice-focus-viewer__close {
-    width: 20px;
-  }
+  .lattice-focus-viewer__close { width: 32px; height: 32px; }
 }
 
 .lattice-focus-viewer[data-layout="compact"] {
@@ -419,9 +385,8 @@
   .lattice-focus-viewer__artwork,
   .lattice-focus-viewer__browse-layer,
   .lattice-focus-viewer__inspection-frame,
-  .lattice-focus-viewer__connectors,
   .lattice-focus-viewer__dossier,
-  .lattice-focus-viewer__close
+  .lattice-focus-viewer__close-control
 ) { position: absolute; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -436,8 +401,7 @@
 
   .lattice-focus-viewer__dossier,
   .lattice-focus-viewer__inspection-frame,
-  .lattice-focus-viewer__connectors,
-  .lattice-focus-viewer__close {
+  .lattice-focus-viewer__close-control {
     transition-duration: 1ms !important;
   }
 }

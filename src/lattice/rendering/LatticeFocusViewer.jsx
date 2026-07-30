@@ -45,7 +45,7 @@ export default function LatticeFocusViewer({
   const origin = useMemo(() => normalizeViewerRectangle(originRectangle, 'originRectangle'), [originRectangle]);
   const [phase, setPhase] = useState('starting');
   const [navigationLocked, setNavigationLocked] = useState(false);
-  const [dossiersOpen, setDossiersOpen] = useState(false);
+  const [dossiersOpen, setDossiersOpen] = useState(true);
   const [outgoingLayer, setOutgoingLayer] = useState(null);
   const [viewport, setViewport] = useState(viewportSize);
   const [returnRectangle, setReturnRectangle] = useState(origin);
@@ -131,11 +131,6 @@ export default function LatticeFocusViewer({
     if (phase !== 'open' || navigationLocked) return;
     setDossiersOpen((current) => !current);
   }, [navigationLocked, phase]);
-
-  const closeDossiers = useCallback(() => {
-    if (phase !== 'open' || navigationLocked || !dossiersOpen) return;
-    setDossiersOpen(false);
-  }, [dossiersOpen, navigationLocked, phase]);
 
   useEffect(() => {
     const closeOnEscape = (event) => {
@@ -289,7 +284,6 @@ export default function LatticeFocusViewer({
       </div>
       <LatticeFocusInspection
         dossier={dossier}
-        onClose={closeDossiers}
         open={dossiersOpen}
         layout={layout}
       />
@@ -301,16 +295,24 @@ export default function LatticeFocusViewer({
         <span>{String(position + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span>
         <button aria-disabled={navigationLocked || total < 2} aria-label="Next artwork" onClick={() => requestNavigation(1)} type="button">›</button>
       </nav>
-      <button
-        aria-label="Close artwork viewer"
-        aria-disabled={phase !== 'open' || navigationLocked}
-        className="lattice-focus-viewer__close"
+      <div
+        className="lattice-focus-viewer__close-control"
         data-disabled={phase !== 'open' || navigationLocked || undefined}
-        onClick={requestClose}
-        ref={closeRef}
-        style={{ left: focusedRectangle.left + focusedRectangle.width - 28, top: focusedRectangle.top + 6 }}
-        type="button"
-      >×</button>
+        style={{
+          left: layout.inspectionFrame.left + (layout.inspectionFrame.width / 2),
+          top: Math.max(16, layout.inspectionFrame.top - 118),
+        }}
+      >
+        <button
+          aria-label="Close artwork viewer"
+          aria-disabled={phase !== 'open' || navigationLocked}
+          className="lattice-focus-viewer__close"
+          onClick={requestClose}
+          ref={closeRef}
+          type="button"
+        >×</button>
+        <span>CLOSE INSPECTION</span>
+      </div>
     </section>,
     document.body,
   );
