@@ -3,6 +3,9 @@ import test from 'node:test';
 import { createEmptyLatticeProductionDraft } from '../domain/latticeProductionDraft.js';
 import { projectLatticeProductionViewport } from '../rendering/latticeProductionProjection.js';
 import {
+  clampLatticeProductionGroupDelta,
+  createLatticeProductionGroupMovementCandidate,
+  createLatticeProductionGroupMovementRequest,
   createLatticeProductionMovementCandidate,
   createLatticeProductionMovementGesture,
   finishLatticeProductionMovementGesture,
@@ -18,7 +21,8 @@ const placement = (overrides = {}) => ({
   layer: 0, navigationOrder: 0, crop: null, frameId: 'NONE',
   mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
   backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO',
-  visibility: 'PUBLIC', locked: false, ...overrides,
+  visibility: 'PUBLIC', locked: false,
+  transform: { quarterTurns: 0, mirrorX: false, mirrorY: false }, ...overrides,
 });
 
 const model = { geometry: { columns: 32, rows: 18 } };
@@ -76,6 +80,54 @@ test('keyboard nudges use one bounded integer cell and edge no-ops return null',
   });
   assert.equal(nudgeLatticeProductionPlacementGeometry(placement({ column: 0 }), { column: -1, row: 0 }), null);
   assert.equal(nudgeLatticeProductionPlacementGeometry(placement({ row: 11 }), { column: 0, row: 1 }), null);
+});
+
+test('group movement clamps one shared delta and preserves relative placement geometry', () => {
+  const group = [
+    placement({ id: 'placement-1', column: 1, row: 2, columnSpan: 4, rowSpan: 3 }),
+    placement({ id: 'placement-2', column: 25, row: 12, columnSpan: 5, rowSpan: 4, layer: 1, navigationOrder: 1 }),
+  ];
+  assert.deepEqual(clampLatticeProductionGroupDelta(group, { column: 20, row: -20 }), { column: 2, row: -2 });
+  const request = createLatticeProductionGroupMovementRequest(group, { column: 20, row: -20 }, 'table-05');
+  assert.deepEqual(request.moves.map(({ destination }) => destination), [
+    { column: 3, row: 0, columnSpan: 4, rowSpan: 3 },
+    { column: 27, row: 10, columnSpan: 5, rowSpan: 4 },
+  ]);
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  draft.tables[4].placements = group;
+  const candidate = createLatticeProductionGroupMovementCandidate(draft, request);
+  assert.deepEqual(candidate.tables[4].placements.map(({ column, row }) => ({ column, row })), [
+    { column: 3, row: 0 }, { column: 27, row: 10 },
+  ]);
+});
+
+test('group movement is atomic for stale, locked, duplicate, mismatched, and no-op requests', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  draft.tables[4].placements = [placement(), placement({
+    id: 'placement-2', column: 2, row: 2, columnSpan: 3, rowSpan: 3, layer: 1, navigationOrder: 1,
+  })];
+  const request = createLatticeProductionGroupMovementRequest(draft.tables[4].placements, { column: 1, row: 1 }, 'table-05');
+  assert.throws(() => createLatticeProductionGroupMovementCandidate(draft, {
+    ...request,
+    moves: request.moves.map((move, index) => index ? move : {
+      ...move, expectedStartGeometry: { ...move.expectedStartGeometry, column: 9 },
+    }),
+  }), { code: 'LATTICE_MOVEMENT_START_STALE' });
+  const locked = structuredClone(draft);
+  locked.tables[4].placements[1].locked = true;
+  assert.throws(() => createLatticeProductionGroupMovementCandidate(locked, request), {
+    code: 'LATTICE_MOVEMENT_PLACEMENT_LOCKED',
+  });
+  assert.throws(() => createLatticeProductionGroupMovementCandidate(draft, {
+    ...request, moves: [request.moves[0], request.moves[0]],
+  }), { code: 'LATTICE_MOVEMENT_GROUP_DUPLICATE' });
+  assert.throws(() => createLatticeProductionGroupMovementCandidate(draft, {
+    ...request,
+    moves: request.moves.map((move, index) => index ? {
+      ...move, destination: { ...move.destination, column: move.destination.column + 1 },
+    } : move),
+  }), { code: 'LATTICE_MOVEMENT_GROUP_DELTA_MISMATCH' });
+  assert.equal(createLatticeProductionGroupMovementRequest(draft.tables[4].placements, { column: 0, row: 0 }, 'table-05'), null);
 });
 
 test('complete candidates change only integer position and reject stale, locked, private, resize, and no-op input', () => {

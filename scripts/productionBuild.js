@@ -12,6 +12,10 @@ export const UNUSED_PUBLIC_PATHS = Object.freeze([
   'assets/palettes',
   'assets/prototype',
   'assets/ratio',
+  'assets/inscape-table-grid-arena-banner.png',
+  'assets/inscape-table-grid-banner.png',
+  'assets/inscape-table-grid-grunge-banner.png',
+  'assets/inscape-table-grid-grunge-lit-banner.png',
   'assets/fonts/moon.webp',
   'assets/manifest.json',
   'assets/actors/abyssal_eye/full multi eye purple.afdesign',
@@ -22,7 +26,10 @@ export const UNUSED_PUBLIC_PATHS = Object.freeze([
 // Keep these byte limits deterministic and deliberately close to the measured build.
 export const PRODUCTION_BUDGETS = Object.freeze({
   initialJavaScript: Object.freeze({ raw: 1_265_000, gzip: 370_000 }),
-  ownerJavaScript: Object.freeze({ raw: 220_000, gzip: 69_000 }),
+  // The universal owner RÄCK adds grouped authoring transactions, Layers,
+  // reversible compact chrome, and runtime-only module controls. Keep the lazy
+  // owner boundary close to the measured Windows build with modest CI margin.
+  ownerJavaScript: Object.freeze({ raw: 260_000, gzip: 74_000 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
@@ -38,8 +45,16 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // statused direct contract facts, and the pure owner dossier projection.
   // The unified owner Browser adds category authoring, multi-selection,
   // drag/drop, and continuous display controls without changing initial entry.
-  coreJavaScript: Object.freeze({ raw: 1_908_000, gzip: 565_000 }),
-  publicAssets: Object.freeze({ raw: 15_000_000 }),
+  // Its first universal RÄCK shell adds bounded move/collapse geometry while
+  // retaining Browser state and the existing lazy owner-runtime boundary.
+  // Canonical rotate, mirror, and duplicate operations remain owner-lazy and
+  // add strict migration/validation at both draft and publication boundaries.
+  // Atomic grouped MOVE, DUPLICATE, and REMOVE, authoring-only marquee selection,
+  // group RESIZE/ROTATE/MIRROR, Layers, and the reversible compact/module RÄCK
+  // controls remain within the same lazy owner boundary and receive only
+  // measured production margin.
+  coreJavaScript: Object.freeze({ raw: 1_970_000, gzip: 580_000 }),
+  publicAssets: Object.freeze({ raw: 15_200_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });
 

@@ -1,9 +1,13 @@
 import {
   Archive,
   Eye,
+  FlipHorizontal2,
+  FlipVertical2,
   Grid2X2,
   MoreHorizontal,
   Palette,
+  Copy,
+  RotateCw,
   Settings,
   SlidersHorizontal,
   Upload,
@@ -13,10 +17,14 @@ import './latticeWorkspaceToolbar.css';
 const TOOL_ICONS = Object.freeze({
   browser: Archive,
   arrange: Grid2X2,
+  duplicate: Copy,
+  mirrorHorizontal: FlipHorizontal2,
+  mirrorVertical: FlipVertical2,
   preview: Eye,
   theme: Palette,
   publish: Upload,
   more: MoreHorizontal,
+  rotate: RotateCw,
 });
 
 export default function LatticeWorkspaceToolbar({
@@ -25,6 +33,8 @@ export default function LatticeWorkspaceToolbar({
   arrangeEnabled = false,
   blocked = false,
   compact = false,
+  embedded = false,
+  faceplate = false,
   owner = false,
   tools = [],
   onEscape,
@@ -47,6 +57,8 @@ export default function LatticeWorkspaceToolbar({
       className="lattice-workspace-toolbar"
       data-blocked={blocked || undefined}
       data-compact={compact || undefined}
+      data-embedded={embedded || undefined}
+      data-faceplate={faceplate || undefined}
       data-lattice-chrome
       inert={blocked ? '' : undefined}
       onKeyDown={handleKeyDown}
@@ -70,7 +82,7 @@ export default function LatticeWorkspaceToolbar({
             type="button"
           >
             <Icon aria-hidden="true" size={14} strokeWidth={2} />
-            {!compact && <span>{tool.label}</span>}
+            {(!compact || (faceplate && tool.id === 'arrange')) && <span>{tool.label}</span>}
           </button>
         );
       })}

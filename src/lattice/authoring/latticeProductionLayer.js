@@ -110,3 +110,34 @@ export function createLatticeProductionLayerCandidate(draftInput, {
   else rotateBackward(visible, selectedIndex, destinationIndex);
   return assertValidLatticeProductionDraft(draft);
 }
+
+export function createLatticeProductionLayerReorderCandidate(draftInput, {
+  expectedPlacements,
+  orderedPlacementIds,
+  tableId,
+} = {}) {
+  const draft = assertValidLatticeProductionDraft(draftInput);
+  const table = draft.tables.find((candidate) => candidate.id === tableId);
+  if (!table) throw layerError('LATTICE_LAYER_TABLE_UNKNOWN', 'The active canonical table does not exist');
+  if (table.visibility !== LATTICE_PRODUCTION_VISIBILITY.PUBLIC) {
+    throw layerError('LATTICE_LAYER_TABLE_PRIVATE', 'Layer editing is unavailable on a private table');
+  }
+  if (!sameLatticeProductionLayerTopology(table, expectedPlacements)) {
+    throw layerError('LATTICE_LAYER_TOPOLOGY_STALE', 'The canonical layer topology changed before layer editing completed');
+  }
+  const visible = table.placements.filter(({ visibility }) => visibility === LATTICE_PRODUCTION_VISIBILITY.PUBLIC);
+  if (!Array.isArray(orderedPlacementIds) || orderedPlacementIds.length !== visible.length
+    || new Set(orderedPlacementIds).size !== visible.length
+    || orderedPlacementIds.some((id) => !visible.some((placement) => placement.id === id))) {
+    throw layerError('LATTICE_LAYER_ORDER_INVALID', 'Layer order must contain every public placement exactly once');
+  }
+  const current = orderedLatticeProductionLayers(visible);
+  if (current.some((placement) => placement.locked)) {
+    throw layerError('LATTICE_LAYER_PLACEMENT_LOCKED', 'Locked placements prevent arbitrary layer reordering');
+  }
+  if (current.every((placement, index) => placement.id === orderedPlacementIds[index])) return null;
+  const layers = current.map(({ layer }) => layer);
+  const byId = new Map(visible.map((placement) => [placement.id, placement]));
+  orderedPlacementIds.forEach((id, index) => { byId.get(id).layer = layers[index]; });
+  return assertValidLatticeProductionDraft(draft);
+}

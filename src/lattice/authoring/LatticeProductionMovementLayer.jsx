@@ -20,6 +20,8 @@ import {
   updateLatticeProductionCropPanGesture,
 } from './latticeProductionCrop.js';
 import {
+  clampLatticeProductionGroupDelta,
+  createLatticeProductionGroupMovementRequest,
   createLatticeProductionMovementGesture,
   finishLatticeProductionMovementGesture,
   nudgeLatticeProductionPlacementGeometry,
@@ -27,10 +29,15 @@ import {
 } from './latticeProductionMovement.js';
 import {
   LATTICE_PRODUCTION_RESIZE_CORNERS,
+  createLatticeProductionGroupResizeGesture,
   createLatticeProductionResizeGesture,
+  finishLatticeProductionGroupResizeGesture,
   finishLatticeProductionResizeGesture,
+  latticeProductionGroupBounds,
   latticeProductionPlacementBoundaries,
+  nudgeLatticeProductionGroupResizeGeometries,
   nudgeLatticeProductionResizeGeometry,
+  updateLatticeProductionGroupResizeGesture,
   updateLatticeProductionResizeGesture,
 } from './latticeProductionResize.js';
 import {
@@ -38,6 +45,12 @@ import {
   latticeProductionLayerOperationAvailability,
   latticeProductionLayerTopologySnapshot,
 } from './latticeProductionLayer.js';
+import {
+  LATTICE_MARQUEE_SELECTION_MODES,
+  latticeMarqueeIntersects,
+  latticeMarqueeRectangle,
+  resolveLatticeMarqueeSelection,
+} from './latticeProductionMarqueeSelection.js';
 import './latticeProductionMovementLayer.css';
 
 const KEYBOARD_DELTAS = Object.freeze({
@@ -49,6 +62,7 @@ const KEYBOARD_DELTAS = Object.freeze({
 const CORNER_LABELS = Object.freeze({
   nw: 'north-west', ne: 'north-east', se: 'south-east', sw: 'south-west',
 });
+const MARQUEE_ACTIVATION_DISTANCE = 4;
 const LAYER_ACTIONS = Object.freeze([
   Object.freeze({ id: LATTICE_PRODUCTION_LAYER_OPERATIONS.BACK, label: 'Layer / Send to back' }),
   Object.freeze({ id: LATTICE_PRODUCTION_LAYER_OPERATIONS.BACKWARD, label: 'Layer / Move backward' }),
@@ -80,13 +94,20 @@ export default function LatticeProductionMovementLayer({
   acceptedTable,
   lattice,
   onCommitMove,
+  onCommitMoveGroup,
   onCommitRemove,
+  onCommitRemoveGroup,
   onCommitResize,
+  onCommitResizeGroup,
   onCommitCrop,
   onCommitLayer,
   onCropModeChange,
   onPreviewOperation,
   onReturnFocus,
+  onSelectedPlacementChange,
+  onSelectedPlacementsChange,
+  selectedPlacementId: controlledSelectedPlacementId,
+  selectedPlacementIds = [],
   tableId,
 }) {
   const rootRef = useRef(null);
@@ -95,7 +116,17 @@ export default function LatticeProductionMovementLayer({
   const emptyActivationBlockedUntilRef = useRef(0);
   const fieldRef = useRef(null);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
-  const [selectedPlacementId, setSelectedPlacementId] = useState(null);
+  const [internalSelectedPlacementId, setInternalSelectedPlacementId] = useState(null);
+  const [marqueeSession, setMarqueeSession] = useState(null);
+  const selectedPlacementId = controlledSelectedPlacementId === undefined
+    ? internalSelectedPlacementId : controlledSelectedPlacementId;
+  const setSelectedPlacementId = (placementId, options) => {
+    setInternalSelectedPlacementId(placementId);
+    onSelectedPlacementChange?.(placementId, options);
+  };
+  const selectedPlacementSet = new Set(selectedPlacementIds.length
+    ? selectedPlacementIds : selectedPlacementId ? [selectedPlacementId] : []);
+  const renderedSelectedPlacementSet = new Set(marqueeSession?.previewIds || selectedPlacementSet);
   const [cropSession, setCropSession] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const model = useMemo(() => createLatticeProductionTableRenderModel(lattice, tableId), [lattice, tableId]);
@@ -108,6 +139,14 @@ export default function LatticeProductionMovementLayer({
   ), [acceptedTable]);
   const placements = useMemo(() => orderedVisibleMovementPlacements(model.table), [model.table]);
   const layerRanks = useMemo(() => createLatticeProductionLayerRanks(placements), [placements]);
+  const selectedProjectedPlacements = placements.filter(({ id }) => selectedPlacementSet.has(id));
+  const groupResizeGeometry = selectedProjectedPlacements.length > 1
+    ? latticeProductionGroupBounds(selectedProjectedPlacements) : null;
+  const groupResizeRectangle = field && groupResizeGeometry
+    ? projectLatticeProductionPlacement(groupResizeGeometry, field) : null;
+  const groupResizeBoundaries = groupResizeGeometry
+    ? latticeProductionPlacementBoundaries(groupResizeGeometry) : null;
+  const groupResizeLocked = selectedProjectedPlacements.some(({ id }) => acceptedById.get(id)?.locked === true);
 
   useEffect(() => {
     const node = rootRef.current;
@@ -161,12 +200,15 @@ export default function LatticeProductionMovementLayer({
     if (!active) return false;
     gestureRef.current = null;
     emptyActivationBlockedUntilRef.current = performance.now() + 250;
-    if (active.kind === 'crop') {
+    if (active.kind === 'marquee') {
+      setMarqueeSession(null);
+      onReturnFocus?.();
+    } else if (active.kind === 'crop') {
       setCropSession(active.session);
       onPreviewOperation?.({ kind: 'crop', request: active.session.request });
     } else onPreviewOperation?.(null);
     releaseCapture(active.pointerId);
-    restoreFocus(active.focusKey);
+    if (active.focusKey) restoreFocus(active.focusKey);
     return true;
   };
 
@@ -193,6 +235,54 @@ export default function LatticeProductionMovementLayer({
       } catch { /* Invalid runtime projection remains non-authoring. */ }
       return;
     }
+    const groupResizeControl = event.target.closest?.('[data-group-resize-corner]');
+    if (!cropSession && groupResizeControl && event.button === 0
+      && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      const corner = groupResizeControl.dataset.groupResizeCorner;
+      const groupPlacements = [...selectedPlacementSet].map((id) => acceptedById.get(id)).filter(Boolean);
+      if (groupPlacements.length < 2 || groupPlacements.some((placement) => placement.visibility !== 'PUBLIC' || placement.locked)
+        || !fieldRef.current) return;
+      try {
+        const gesture = createLatticeProductionGroupResizeGesture(
+          groupPlacements, corner, fieldRef.current, localPointerPoint(event, event.currentTarget),
+        );
+        event.currentTarget.setPointerCapture(event.pointerId);
+        groupResizeControl.focus({ preventScroll: true });
+        gestureRef.current = {
+          focusKey: `group-resize:${corner}`,
+          kind: 'group-resize',
+          pointerId: event.pointerId,
+          tableId,
+          gesture,
+        };
+      } catch { /* Invalid runtime projection remains non-authoring. */ }
+      return;
+    }
+    if (!cropSession && event.target === event.currentTarget && event.button === 0 && !event.altKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      const start = localPointerPoint(event, event.currentTarget);
+      if (!start) return;
+      const mode = event.ctrlKey || event.metaKey
+        ? LATTICE_MARQUEE_SELECTION_MODES.TOGGLE
+        : event.shiftKey ? LATTICE_MARQUEE_SELECTION_MODES.ADD : LATTICE_MARQUEE_SELECTION_MODES.REPLACE;
+      const session = {
+        activated: false,
+        baseIds: [...selectedPlacementSet],
+        end: start,
+        mode,
+        previewIds: [...selectedPlacementSet],
+        rectangle: latticeMarqueeRectangle(start, start),
+        start,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      gestureRef.current = { kind: 'marquee', pointerId: event.pointerId, session };
+      setMarqueeSession(session);
+      onReturnFocus?.();
+      return;
+    }
     if (event.target.closest?.('[data-lattice-placement-action]')) return;
     const control = event.target.closest?.('[data-lattice-placement-control]');
     if (cropSession || !control || event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
@@ -201,9 +291,13 @@ export default function LatticeProductionMovementLayer({
     const placementId = control.dataset.placementId;
     const acceptedPlacement = acceptedById.get(placementId);
     const corner = control.dataset.resizeCorner || null;
-    setSelectedPlacementId(placementId);
+    if (corner || !selectedPlacementSet.has(placementId)) setSelectedPlacementId(placementId);
     control.focus({ preventScroll: true });
     if (!acceptedPlacement || acceptedPlacement.locked || !fieldRef.current) return;
+    const groupPlacements = !corner && selectedPlacementSet.has(placementId) && selectedPlacementSet.size > 1
+      ? [...selectedPlacementSet].map((id) => acceptedById.get(id)).filter(Boolean)
+      : [acceptedPlacement];
+    if (groupPlacements.some((placement) => placement.visibility !== 'PUBLIC' || placement.locked)) return;
     let gesture;
     try {
       gesture = corner
@@ -225,6 +319,7 @@ export default function LatticeProductionMovementLayer({
     gestureRef.current = {
       expectedPlacement: structuredClone(acceptedPlacement),
       focusKey: controlKey(placementId, corner || 'move'),
+      groupPlacements: groupPlacements.map((placement) => structuredClone(placement)),
       kind: corner ? 'resize' : 'move',
       pointerId: event.pointerId,
       tableId,
@@ -238,11 +333,56 @@ export default function LatticeProductionMovementLayer({
     event.preventDefault();
     event.stopPropagation();
     const point = localPointerPoint(event, event.currentTarget);
-    const gesture = active.kind === 'crop'
+    if (active.kind === 'marquee') {
+      const rectangle = latticeMarqueeRectangle(active.session.start, point);
+      const activated = active.session.activated
+        || Math.hypot(point.x - active.session.start.x, point.y - active.session.start.y) >= MARQUEE_ACTIVATION_DISTANCE;
+      const hitIds = activated ? placements
+        .filter((placement) => acceptedById.has(placement.id)
+          && latticeMarqueeIntersects(rectangle, projectLatticeProductionPlacement(placement, fieldRef.current)))
+        .map((placement) => placement.id) : [];
+      const previewIds = activated
+        ? resolveLatticeMarqueeSelection(active.session.baseIds, hitIds, active.session.mode)
+        : active.session.baseIds;
+      const session = { ...active.session, activated, end: point, previewIds, rectangle };
+      gestureRef.current = { ...active, session };
+      setMarqueeSession(session);
+      return;
+    }
+    if (active.kind === 'group-resize') {
+      const gesture = updateLatticeProductionGroupResizeGesture(active.gesture, point, fieldRef.current);
+      gestureRef.current = { ...active, gesture };
+      if (gesture.activated) onPreviewOperation?.({
+        kind: 'group-resize',
+        request: {
+          corner: gesture.corner,
+          destinations: gesture.previewDestinations,
+          expectedPlacements: gesture.expectedPlacements,
+          placementIds: gesture.placementIds,
+          tableId: active.tableId,
+        },
+      });
+      return;
+    }
+    let gesture = active.kind === 'crop'
       ? updateLatticeProductionCropPanGesture(active.gesture, point)
       : active.kind === 'resize'
       ? updateLatticeProductionResizeGesture(active.gesture, point, fieldRef.current)
       : updateLatticeProductionMovementGesture(active.gesture, point, fieldRef.current);
+    if (active.kind === 'move' && active.groupPlacements.length > 1 && gesture.activated) {
+      const delta = clampLatticeProductionGroupDelta(active.groupPlacements, {
+        column: gesture.previewGeometry.column - gesture.startGeometry.column,
+        row: gesture.previewGeometry.row - gesture.startGeometry.row,
+      });
+      gesture = {
+        ...gesture,
+        previewGeometry: {
+          ...gesture.startGeometry,
+          column: gesture.startGeometry.column + delta.column,
+          row: gesture.startGeometry.row + delta.row,
+        },
+      };
+    }
     gestureRef.current = { ...active, gesture };
     if (active.kind === 'crop' && gesture.activated) {
       const next = {
@@ -261,6 +401,12 @@ export default function LatticeProductionMovementLayer({
         placementId: gesture.placementId,
         destination: { ...gesture.previewGeometry },
       };
+      const groupRequest = active.kind === 'move' && active.groupPlacements.length > 1
+        ? createLatticeProductionGroupMovementRequest(active.groupPlacements, {
+          column: gesture.previewGeometry.column - gesture.startGeometry.column,
+          row: gesture.previewGeometry.row - gesture.startGeometry.row,
+        }, active.tableId)
+        : null;
       onPreviewOperation?.(active.kind === 'resize' ? {
         kind: 'resize',
         request: {
@@ -268,6 +414,9 @@ export default function LatticeProductionMovementLayer({
           corner: gesture.corner,
           expectedPlacement: structuredClone(active.expectedPlacement),
         },
+      } : groupRequest ? {
+        kind: 'group-move',
+        request: groupRequest,
       } : {
         kind: 'move',
         request: { ...common, expectedStartGeometry: { ...gesture.startGeometry } },
@@ -282,6 +431,29 @@ export default function LatticeProductionMovementLayer({
     event.stopPropagation();
     gestureRef.current = null;
     emptyActivationBlockedUntilRef.current = performance.now() + 250;
+    if (active.kind === 'marquee') {
+      setMarqueeSession(null);
+      onSelectedPlacementsChange?.(active.session.activated
+        ? active.session.previewIds
+        : active.session.mode === LATTICE_MARQUEE_SELECTION_MODES.REPLACE ? [] : active.session.baseIds);
+      releaseCapture(event.pointerId);
+      onReturnFocus?.();
+      return;
+    }
+    if (active.kind === 'group-resize') {
+      const result = finishLatticeProductionGroupResizeGesture(active.gesture);
+      if (result.committed) onCommitResizeGroup?.({
+        corner: active.gesture.corner,
+        destinations: result.destinations,
+        expectedPlacements: active.gesture.expectedPlacements,
+        placementIds: active.gesture.placementIds,
+        tableId: active.tableId,
+      });
+      onPreviewOperation?.(null);
+      releaseCapture(event.pointerId);
+      restoreFocus(active.focusKey);
+      return;
+    }
     const result = active.kind === 'crop'
       ? finishLatticeProductionCropPanGesture(active.gesture)
       : active.kind === 'resize'
@@ -300,12 +472,22 @@ export default function LatticeProductionMovementLayer({
       corner: active.gesture.corner,
       destination: result.geometry,
     });
-    if (result.committed && active.kind === 'move') onCommitMove?.({
-      tableId: active.tableId,
-      placementId: active.gesture.placementId,
-      expectedStartGeometry: { ...active.gesture.startGeometry },
-      destination: result.geometry,
-    });
+    if (result.committed && active.kind === 'move') {
+      const delta = {
+        column: result.geometry.column - active.gesture.startGeometry.column,
+        row: result.geometry.row - active.gesture.startGeometry.row,
+      };
+      const groupRequest = active.groupPlacements.length > 1
+        ? createLatticeProductionGroupMovementRequest(active.groupPlacements, delta, active.tableId)
+        : null;
+      if (groupRequest) onCommitMoveGroup?.(groupRequest);
+      else onCommitMove?.({
+        tableId: active.tableId,
+        placementId: active.gesture.placementId,
+        expectedStartGeometry: { ...active.gesture.startGeometry },
+        destination: result.geometry,
+      });
+    }
     if (active.kind !== 'crop') onPreviewOperation?.(null);
     releaseCapture(event.pointerId);
     restoreFocus(active.focusKey);
@@ -383,13 +565,23 @@ export default function LatticeProductionMovementLayer({
   const removePlacement = (placementId) => {
     const acceptedPlacement = acceptedById.get(placementId);
     if (!acceptedPlacement || acceptedPlacement.visibility !== 'PUBLIC' || acceptedPlacement.locked) return;
-    const index = placements.findIndex((placement) => placement.id === placementId);
-    const focusTarget = placements[index + 1] || placements[index - 1] || null;
-    const removed = onCommitRemove?.({
-      tableId,
-      placementId,
-      expectedPlacement: structuredClone(acceptedPlacement),
-    });
+    const removalIds = selectedPlacementSet.has(placementId) && selectedPlacementSet.size > 1
+      ? [...selectedPlacementSet] : [placementId];
+    const removalPlacements = removalIds.map((id) => acceptedById.get(id)).filter(Boolean);
+    if (removalPlacements.length !== removalIds.length
+      || removalPlacements.some((placement) => placement.visibility !== 'PUBLIC' || placement.locked)) return;
+    const focusTarget = placements.find((placement) => !removalIds.includes(placement.id)) || null;
+    const removed = removalIds.length > 1
+      ? onCommitRemoveGroup?.({
+        expectedPlacements: removalPlacements.map((placement) => structuredClone(placement)),
+        placementIds: removalIds,
+        tableId,
+      })
+      : onCommitRemove?.({
+        tableId,
+        placementId,
+        expectedPlacement: structuredClone(acceptedPlacement),
+      });
     if (!removed) {
       restoreFocus(controlKey(placementId));
       return;
@@ -420,7 +612,7 @@ export default function LatticeProductionMovementLayer({
       || acceptedPlacement.visibility !== 'PUBLIC') return;
     const bounds = control?.getBoundingClientRect?.();
     const pointerAnchor = event.clientX || event.clientY;
-    setSelectedPlacementId(placementId);
+    if (!selectedPlacementSet.has(placementId)) setSelectedPlacementId(placementId);
     setContextMenu({
       anchor: pointerAnchor
         ? { x: event.clientX, y: event.clientY }
@@ -472,10 +664,27 @@ export default function LatticeProductionMovementLayer({
     }
     const control = event.target.closest?.('[data-lattice-placement-control]');
     if (!control || control.dataset.placementAction) return;
+    const groupCorner = control.dataset.groupResizeCorner || null;
+    if (groupCorner) {
+      const groupPlacements = [...selectedPlacementSet].map((id) => acceptedById.get(id)).filter(Boolean);
+      if (groupPlacements.length < 2
+        || groupPlacements.some((placement) => placement.visibility !== 'PUBLIC' || placement.locked)) return;
+      const destinations = nudgeLatticeProductionGroupResizeGeometries(groupPlacements, groupCorner, delta);
+      if (!destinations) return;
+      onCommitResizeGroup?.({
+        corner: groupCorner,
+        destinations,
+        expectedPlacements: groupPlacements.map((placement) => structuredClone(placement)),
+        placementIds: groupPlacements.map(({ id }) => id),
+        tableId,
+      });
+      restoreFocus(`group-resize:${groupCorner}`);
+      return;
+    }
     const placementId = control.dataset.placementId;
     const acceptedPlacement = acceptedById.get(placementId);
     const corner = control.dataset.resizeCorner || null;
-    setSelectedPlacementId(placementId || null);
+    if (corner || !selectedPlacementSet.has(placementId)) setSelectedPlacementId(placementId || null);
     if (!acceptedPlacement || acceptedPlacement.locked) return;
     if (corner) {
       const destination = nudgeLatticeProductionResizeGeometry(acceptedPlacement, corner, delta);
@@ -488,6 +697,16 @@ export default function LatticeProductionMovementLayer({
         destination,
       });
       restoreFocus(controlKey(placementId, corner));
+      return;
+    }
+    const groupPlacements = selectedPlacementSet.has(placementId) && selectedPlacementSet.size > 1
+      ? [...selectedPlacementSet].map((id) => acceptedById.get(id)).filter(Boolean)
+      : [acceptedPlacement];
+    if (groupPlacements.some((placement) => placement.visibility !== 'PUBLIC' || placement.locked)) return;
+    if (groupPlacements.length > 1) {
+      const request = createLatticeProductionGroupMovementRequest(groupPlacements, delta, tableId);
+      if (request) onCommitMoveGroup?.(request);
+      restoreFocus(controlKey(placementId));
       return;
     }
     const destination = nudgeLatticeProductionPlacementGeometry(acceptedPlacement, delta);
@@ -532,7 +751,8 @@ export default function LatticeProductionMovementLayer({
       const acceptedPlacement = acceptedById.get(placement.id);
       if (!acceptedPlacement || acceptedPlacement.visibility !== 'PUBLIC') return null;
       const locked = acceptedPlacement.locked === true;
-      const selected = selectedPlacementId === placement.id;
+      const selected = renderedSelectedPlacementSet.has(placement.id);
+      const primary = selected && selectedPlacementId === placement.id;
       const boundaries = latticeProductionPlacementBoundaries(acceptedPlacement);
       const cropMask = latticeProductionCropMask(acceptedPlacement);
       const label = placement.asset?.name?.trim() || placement.asset?.stableAssetId || placement.id;
@@ -560,11 +780,17 @@ export default function LatticeProductionMovementLayer({
           data-locked={locked || undefined}
           data-placement-id={placement.id}
           disabled={Boolean(cropSession)}
-          onClick={() => setSelectedPlacementId(placement.id)}
+          onClick={(event) => {
+            if (performance.now() < emptyActivationBlockedUntilRef.current) return;
+            setSelectedPlacementId(placement.id, {
+              additive: event.ctrlKey || event.metaKey,
+              range: event.shiftKey,
+            });
+          }}
           ref={(node) => { const key = controlKey(placement.id); if (node) controlRefs.current.set(key, node); else controlRefs.current.delete(key); }}
           type="button"
         ><span>{locked ? 'LOCKED' : 'MOVE'}</span></button>
-        {selected && !locked && !cropSession && <>
+        {primary && selectedPlacementSet.size === 1 && !locked && !cropSession && <>
           {LATTICE_PRODUCTION_RESIZE_CORNERS.map((corner) => <button
             aria-label={`Resize placement from ${CORNER_LABELS[corner]} corner: ${label}`}
             className={`lattice-production-resize-control is-${corner}`}
@@ -625,6 +851,32 @@ export default function LatticeProductionMovementLayer({
         </section>}
       </div>;
     })}
+    {groupResizeRectangle && !cropSession && <div
+      aria-label={`Resize ${selectedProjectedPlacements.length} selected placements`}
+      className="lattice-production-group-resize-control"
+      data-boundary-bottom={groupResizeBoundaries.bottom || undefined}
+      data-boundary-left={groupResizeBoundaries.left || undefined}
+      data-boundary-right={groupResizeBoundaries.right || undefined}
+      data-boundary-top={groupResizeBoundaries.top || undefined}
+      style={rectangleStyle(groupResizeRectangle)}
+    >
+      {LATTICE_PRODUCTION_RESIZE_CORNERS.map((corner) => <button
+        aria-disabled={groupResizeLocked || undefined}
+        aria-label={`Resize selected placements from ${CORNER_LABELS[corner]} corner`}
+        className={`lattice-production-resize-control is-${corner}`}
+        data-group-resize-corner={corner}
+        data-lattice-placement-control
+        disabled={groupResizeLocked}
+        key={corner}
+        ref={(node) => { const key = `group-resize:${corner}`; if (node) controlRefs.current.set(key, node); else controlRefs.current.delete(key); }}
+        type="button"
+      />)}
+    </div>}
+    {marqueeSession?.activated && <div
+      aria-hidden="true"
+      className="lattice-production-selection-marquee"
+      style={rectangleStyle(marqueeSession.rectangle)}
+    />}
     {contextMenu && rootRef.current && createPortal((() => {
       const placement = acceptedById.get(contextMenu.placementId);
       const availability = latticeProductionLayerOperationAvailability(acceptedTable, contextMenu.placementId);

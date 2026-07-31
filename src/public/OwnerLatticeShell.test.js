@@ -111,19 +111,31 @@ test('Browser open, close, and Escape state stays runtime-only with focus restor
   assert.match(source, /activeToolIds=\{\[browserOpen \? 'browser' : null, themeOpen \? 'theme' : null\]\.filter\(Boolean\)\}/);
   assert.match(source, /activeWorkspaceWindowRef\.current = 'browser'/);
   assert.match(source, /activeWorkspaceWindowRef\.current = 'theme'/);
-  assert.match(source, /if \(toolId === 'browser'\) \{\s*browserReturnFocusRef\.current = browserToolRef\.current;\s*activeWorkspaceWindowRef\.current = 'browser';\s*setBrowserActivated\(true\);\s*setBrowserOpen\(\(open\) => !open\);\s*\}/);
-  assert.match(source, /if \(toolId === 'theme'\) \{\s*activeWorkspaceWindowRef\.current = 'theme';\s*setThemeOpen\(\(open\) => !open\);\s*\}/);
+  assert.match(source, /const activateWorkspaceTool = useCallback\(\(toolId, trigger\) =>/);
+  assert.match(source, /if \(toolId === 'browser'\) \{\s*browserReturnFocusRef\.current = trigger \|\| browserToolRef\.current;\s*activeWorkspaceWindowRef\.current = 'browser';\s*setBrowserActivated\(true\);\s*setBrowserOpen\(\(open\) => !open\);\s*\}/);
+  assert.match(source, /if \(toolId === 'theme'\) \{\s*activeWorkspaceWindowRef\.current = 'theme';\s*if \(trigger\) setThemeAnchor\(frozenRectangle\(trigger\.getBoundingClientRect\(\)\)\);\s*setThemeOpen\(\(open\) => !open\);\s*\}/);
   assert.match(source, /toolButtonRefs=\{\{ browser: browserToolRef \}\}/);
+  assert.match(source, /workspaceTools=\{RACK_AUTHORING_TOOLS\.map/);
+  assert.match(source, /systemTools=\{RACK_SYSTEM_TOOLS\}/);
+  assert.match(source, /onWorkspaceToolActivate=\{activateWorkspaceTool\}/);
 });
 
 test('Phase 5B composition stays in an owner-only projection-derived layer and cannot start table navigation', () => {
   assert.match(source, /LatticeProductionMovementLayer/);
   assert.match(source, /createLatticeProductionMovementCandidate/);
   assert.match(source, /createLatticeProductionResizeCandidate/);
+  assert.match(source, /createLatticeProductionGroupResizeCandidate/);
   assert.match(source, /createLatticeProductionCropCandidate/);
   assert.match(source, /compositionPreview/);
   assert.match(source, /onCommitMove=\{authoring\.movePublicPlacement\}/);
+  assert.match(source, /onCommitMoveGroup=\{authoring\.movePublicPlacements\}/);
+  assert.match(source, /onCommitRemoveGroup=\{authoring\.removePublicPlacements\}/);
+  assert.match(source, /onSelectedPlacementsChange=\{\(placementIds\) => setSelectedPlacementIds/);
+  assert.match(source, /createLatticeProductionGroupMovementCandidate\(authoring\.draft, compositionPreview\.request\)/);
+  assert.match(source, /authoring\.duplicatePublicPlacements/);
+  assert.match(source, /authoring\.transformPublicPlacements/);
   assert.match(source, /onCommitResize=\{authoring\.resizePublicPlacement\}/);
+  assert.match(source, /onCommitResizeGroup=\{authoring\.resizePublicPlacements\}/);
   assert.match(source, /onCommitRemove=\{authoring\.removePublicPlacement\}/);
   assert.match(source, /onCommitCrop=\{authoring\.cropPublicPlacement\}/);
   assert.match(source, /onCommitLayer=\{authoring\.layerPublicPlacement\}/);
@@ -149,10 +161,10 @@ test('Phase 6 ARRANGE is one session-only owner mode and viewer activation remai
   assert.match(source, /const \[menuSurfaceId, setMenuSurfaceId\] = useState\('mist'\)/);
   assert.match(source, /const \[arrangeEnabled, setArrangeEnabled\] = useState\(false\)/);
   assert.match(source, /arrangeEnabled \? authoringPlacementUnavailableReason : 'PLACE REQUIRES ARRANGE'/);
-  assert.match(source, /if \(arrangeEnabled\) authoring\.placePublicAsset/);
+  assert.match(source, /if \(destination\) authoring\.placePublicAsset/);
   assert.match(source, /arrangeEnabled && sameCoordinate\(coordinate, active\).*LatticeProductionMovementLayer/su);
   assert.match(source, /!arrangeEnabled && sameCoordinate\(coordinate, active\) \? openPlacementViewer/);
-  assert.match(source, /if \(arrangeEnabled\) setCompositionPreview\(null\)/);
+  assert.match(source, /if \(arrangeEnabled\) \{\s*setCompositionPreview\(null\);\s*setSelectedPlacementId\(null\);\s*\}/);
   assert.match(source, /setArrangeEnabled\(!arrangeEnabled\)/);
   assert.match(source, /mediaState\?\.status !== 'ready' \|\| !mediaState\.dimensions/);
   assert.match(source, /<LatticeFocusViewer/);

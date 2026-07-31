@@ -27,9 +27,43 @@ function canonicalPlacementSnapshot(placement) {
     } : null,
     backing: placement.backing ? { ...placement.backing } : null,
     transparencyMode: placement.transparencyMode,
+    transform: placement.transform ? { ...placement.transform } : null,
     visibility: placement.visibility,
     locked: placement.locked,
   };
+}
+
+export function createLatticeProductionGroupRemovalCandidate(draftInput, {
+  expectedPlacements,
+  placementIds,
+  tableId,
+} = {}) {
+  const draft = assertValidLatticeProductionDraft(draftInput);
+  const table = draft.tables.find((candidate) => candidate.id === tableId);
+  if (!table) throw removalError('LATTICE_REMOVAL_TABLE_UNKNOWN', 'The active canonical table does not exist');
+  if (table.visibility !== LATTICE_PRODUCTION_VISIBILITY.PUBLIC) {
+    throw removalError('LATTICE_REMOVAL_TABLE_PRIVATE', 'Placement removal is unavailable on a private table');
+  }
+  if (!Array.isArray(placementIds) || placementIds.length < 1
+    || new Set(placementIds).size !== placementIds.length
+    || !Array.isArray(expectedPlacements) || expectedPlacements.length !== placementIds.length) {
+    throw removalError('LATTICE_REMOVAL_GROUP_INVALID', 'Group removal requires unique placement snapshots');
+  }
+  const expectedById = new Map(expectedPlacements.map((placement) => [placement?.id, placement]));
+  const removalIds = new Set(placementIds);
+  for (const placementId of placementIds) {
+    const placement = table.placements.find((candidate) => candidate.id === placementId);
+    if (!placement) throw removalError('LATTICE_REMOVAL_PLACEMENT_UNKNOWN', 'The canonical placement does not exist');
+    if (!sameLatticeProductionPlacementSnapshot(placement, expectedById.get(placementId))) {
+      throw removalError('LATTICE_REMOVAL_PLACEMENT_STALE', 'The canonical placement changed before removal completed');
+    }
+    if (placement.visibility !== LATTICE_PRODUCTION_VISIBILITY.PUBLIC) {
+      throw removalError('LATTICE_REMOVAL_PLACEMENT_PRIVATE', 'Private placements cannot be removed through the public owner projection');
+    }
+    if (placement.locked) throw removalError('LATTICE_REMOVAL_PLACEMENT_LOCKED', 'The canonical placement is locked');
+  }
+  table.placements = table.placements.filter(({ id }) => !removalIds.has(id));
+  return assertValidLatticeProductionDraft(draft);
 }
 
 export function sameLatticeProductionPlacementSnapshot(left, right) {

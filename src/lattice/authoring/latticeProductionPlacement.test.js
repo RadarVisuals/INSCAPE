@@ -15,7 +15,8 @@ const placement = (id, overrides = {}) => ({
   layer: 0, navigationOrder: 0, crop: null, frameId: 'NONE',
   mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
   backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO',
-  visibility: 'PUBLIC', locked: false, ...overrides,
+  visibility: 'PUBLIC', locked: false,
+  transform: { quarterTurns: 0, mirrorX: false, mirrorY: false }, ...overrides,
 });
 
 test('drop geometry preserves native fitted span, snaps around pointer, and clamps to the 32 by 18 plane', () => {
@@ -90,6 +91,7 @@ test('complete candidates use generated global IDs, max plus one orders, and exa
     layer: 2, navigationOrder: 3, crop: null, frameId: 'NONE',
     mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
     backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO', visibility: 'PUBLIC', locked: false,
+    transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
   });
 });
 

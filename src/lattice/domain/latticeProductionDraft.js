@@ -1,7 +1,7 @@
 import { normalizeProfileAddress } from '../../library/config.js';
 import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
 
-export const LATTICE_PRODUCTION_DRAFT_VERSION = 1;
+export const LATTICE_PRODUCTION_DRAFT_VERSION = 2;
 export const LATTICE_PRODUCTION_ARTBOARD = Object.freeze({ aspectWidth: 16, aspectHeight: 9 });
 export const LATTICE_PRODUCTION_GEOMETRY = Object.freeze({ columns: 32, rows: 18 });
 export const LATTICE_PRODUCTION_ENTRY_COORDINATE = Object.freeze({ x: 0, y: 0 });
@@ -20,7 +20,8 @@ export const LATTICE_PRODUCTION_TRANSPARENCY_MODES = Object.freeze(['AUTO', 'PRE
 
 const DRAFT_KEYS = ['profileAddress', 'draftVersion', 'artboard', 'geometry', 'appearance', 'identityPresentation', 'tables'];
 const TABLE_KEYS = ['id', 'coordinate', 'title', 'subtitle', 'labelVisible', 'labelAnchor', 'labelOffset', 'visibility', 'placements'];
-const PLACEMENT_KEYS = ['id', 'stableAssetId', 'column', 'row', 'columnSpan', 'rowSpan', 'layer', 'navigationOrder', 'crop', 'frameId', 'mat', 'backing', 'transparencyMode', 'visibility', 'locked'];
+const PLACEMENT_KEYS_V1 = ['id', 'stableAssetId', 'column', 'row', 'columnSpan', 'rowSpan', 'layer', 'navigationOrder', 'crop', 'frameId', 'mat', 'backing', 'transparencyMode', 'visibility', 'locked'];
+const PLACEMENT_KEYS = [...PLACEMENT_KEYS_V1, 'transform'];
 const IDENTITY_KEYS = ['alias', 'avatar', 'bio', 'tags', 'dossierSurface', 'visibility'];
 const ID = /^[A-Za-z0-9:_-]+$/u;
 const HEX_COLOR = /^#[0-9a-f]{6}$/iu;
@@ -101,6 +102,25 @@ function validateBacking(value) {
     && typeof value.enabled === 'boolean' && HEX_COLOR.test(value.color);
 }
 
+const validTransform = (value) => exactKeys(value, ['quarterTurns', 'mirrorX', 'mirrorY'])
+  && Number.isSafeInteger(value.quarterTurns) && value.quarterTurns >= 0 && value.quarterTurns <= 3
+  && typeof value.mirrorX === 'boolean' && typeof value.mirrorY === 'boolean';
+
+export function migrateLatticeProductionDraft(input) {
+  if (!record(input) || input.draftVersion !== 1) return structuredClone(input);
+  const migrated = structuredClone(input);
+  migrated.draftVersion = LATTICE_PRODUCTION_DRAFT_VERSION;
+  if (Array.isArray(migrated.tables)) migrated.tables.forEach((table) => {
+    if (!Array.isArray(table?.placements)) return;
+    table.placements.forEach((placement) => {
+      if (exactKeys(placement, PLACEMENT_KEYS_V1)) {
+        placement.transform = { quarterTurns: 0, mirrorX: false, mirrorY: false };
+      }
+    });
+  });
+  return migrated;
+}
+
 function validateIdentity(value, fail) {
   if (!exactKeys(value, IDENTITY_KEYS)) return fail('identityPresentation', 'invalid_identity_structure', 'Identity presentation has an invalid structure');
   if (!text(value.alias, 80)) fail('identityPresentation.alias', 'invalid_alias', 'Alias must be safe text');
@@ -142,11 +162,13 @@ function validatePlacement(value, path, fail) {
   if (!validateMat(value.mat)) fail(`${path}.mat`, 'invalid_mat', 'Mat is invalid');
   if (!validateBacking(value.backing)) fail(`${path}.backing`, 'invalid_backing', 'Backing is invalid');
   if (!sets.transparency.has(value.transparencyMode)) fail(`${path}.transparencyMode`, 'invalid_transparency', 'Unknown transparency mode');
+  if (!validTransform(value.transform)) fail(`${path}.transform`, 'invalid_transform', 'Placement transform is invalid');
   if (!sets.visibility.has(value.visibility)) fail(`${path}.visibility`, 'invalid_visibility', 'Unknown placement visibility');
   if (typeof value.locked !== 'boolean') fail(`${path}.locked`, 'invalid_lock', 'Locked must be boolean');
 }
 
 export function validateLatticeProductionDraft(input) {
+  input = migrateLatticeProductionDraft(input);
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
   if (!exactKeys(input, DRAFT_KEYS)) {

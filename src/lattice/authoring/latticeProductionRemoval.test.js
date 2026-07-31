@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createEmptyLatticeProductionDraft } from '../domain/latticeProductionDraft.js';
 import {
+  createLatticeProductionGroupRemovalCandidate,
   createLatticeProductionRemovalCandidate,
   sameLatticeProductionPlacementSnapshot,
 } from './latticeProductionRemoval.js';
@@ -13,7 +14,8 @@ const placement = (id, overrides = {}) => ({
   layer: 0, navigationOrder: 0, crop: null, frameId: 'NONE',
   mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
   backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO',
-  visibility: 'PUBLIC', locked: false, ...overrides,
+  visibility: 'PUBLIC', locked: false,
+  transform: { quarterTurns: 0, mirrorX: false, mirrorY: false }, ...overrides,
 });
 
 test('removal requires the complete expected snapshot and preserves every survivor field and order', () => {
@@ -61,4 +63,39 @@ test('snapshot comparison includes nested presentation state', () => {
   changed.mat.inset.left = 0.2;
   assert.equal(sameLatticeProductionPlacementSnapshot(original, structuredClone(original)), true);
   assert.equal(sameLatticeProductionPlacementSnapshot(original, changed), false);
+  const transformed = structuredClone(original);
+  transformed.transform.quarterTurns = 1;
+  assert.equal(sameLatticeProductionPlacementSnapshot(original, transformed), false);
+});
+
+test('group removal removes every selected placement atomically and preserves survivors', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const placements = [
+    placement('placement-a'),
+    placement('placement-b', { layer: 1, navigationOrder: 1 }),
+    placement('placement-c', { layer: 2, navigationOrder: 2 }),
+  ];
+  draft.tables[4].placements = placements;
+  const candidate = createLatticeProductionGroupRemovalCandidate(draft, {
+    expectedPlacements: structuredClone([placements[0], placements[2]]),
+    placementIds: ['placement-a', 'placement-c'],
+    tableId: 'table-05',
+  });
+  assert.deepEqual(candidate.tables[4].placements, [placements[1]]);
+  assert.equal(draft.tables[4].placements.length, 3);
+});
+
+test('group removal rejects the whole operation when any selected placement is stale or locked', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const placements = [placement('placement-a'), placement('placement-b', { layer: 1, navigationOrder: 1 })];
+  draft.tables[4].placements = placements;
+  const input = {
+    expectedPlacements: structuredClone(placements), placementIds: placements.map(({ id }) => id), tableId: 'table-05',
+  };
+  draft.tables[4].placements[1].locked = true;
+  assert.throws(() => createLatticeProductionGroupRemovalCandidate(draft, {
+    ...input, expectedPlacements: structuredClone(draft.tables[4].placements),
+  }), {
+    code: 'LATTICE_REMOVAL_PLACEMENT_LOCKED',
+  });
 });

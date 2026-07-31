@@ -25,7 +25,7 @@ test('selection, Arrange, compact mode, blocking and Escape stay caller-controll
   assert.match(source, /onEscape\?\.\(\)/);
   assert.match(source, /toolButtonRefs\[tool\.id\]/);
   assert.match(source, /inert=\{blocked \? '' : undefined\}/);
-  assert.match(source, /!compact && <span/);
+  assert.match(source, /faceplate && tool\.id === 'arrange'/);
   assert.match(source, /disabled=\{tool\.disabled === true\}/);
 });
 
@@ -41,6 +41,13 @@ test('toolbar uses the approved desktop proportions and compact icon-only treatm
   assert.match(styles, /\.lattice-workspace-toolbar\[data-blocked\][^{]*\{[^}]*opacity: 0;[^}]*pointer-events: none;/s);
   assert.doesNotMatch(styles, /margin-right|padding-right: 244px|translateX\(-244px\)/);
   assert.match(styles, /tool:disabled/);
+});
+
+test('embedded toolbar reuses the same actions without fixed-window ownership', () => {
+  assert.match(source, /embedded = false/);
+  assert.match(source, /data-embedded=\{embedded \|\| undefined\}/);
+  assert.match(styles, /\.lattice-workspace-toolbar\[data-embedded\][^{]*\{[^}]*position: static;[^}]*width: 100%;[^}]*box-shadow: none;/s);
+  assert.match(styles, /\.lattice-workspace-toolbar\[data-embedded\] \.lattice-workspace-toolbar__tool[^}]*flex: 1 1 0;/s);
 });
 
 test('MORE exposes the reference prototype-only Settings and Interface menu', () => {

@@ -60,6 +60,56 @@ function geometryOf(placement) {
   return geometry;
 }
 
+export function latticeProductionGroupBounds(placementsInput) {
+  const placements = Array.isArray(placementsInput) ? placementsInput : [];
+  if (!placements.length) throw resizeError('LATTICE_RESIZE_GROUP_EMPTY', 'Group resize requires placements');
+  const geometries = placements.map(geometryOf);
+  const west = Math.min(...geometries.map(({ column }) => column));
+  const north = Math.min(...geometries.map(({ row }) => row));
+  const east = Math.max(...geometries.map(({ column, columnSpan }) => column + columnSpan));
+  const south = Math.max(...geometries.map(({ row, rowSpan }) => row + rowSpan));
+  return Object.freeze({ column: west, row: north, columnSpan: east - west, rowSpan: south - north });
+}
+
+function scaleGroupAxis(start, destination, position, span, axis, spanAxis) {
+  const startEnd = start[axis] + start[spanAxis];
+  const destinationEnd = destination[axis] + destination[spanAxis];
+  let nextStart = destination[axis] + Math.round(
+    ((position - start[axis]) / start[spanAxis]) * destination[spanAxis],
+  );
+  let nextEnd = destination[axis] + Math.round(
+    (((position + span) - start[axis]) / start[spanAxis]) * destination[spanAxis],
+  );
+  if (position === start[axis]) nextStart = destination[axis];
+  if (position + span === startEnd) nextEnd = destinationEnd;
+  nextStart = clamp(nextStart, destination[axis], destinationEnd - 1);
+  nextEnd = clamp(nextEnd, nextStart + 1, destinationEnd);
+  return { position: nextStart, span: nextEnd - nextStart };
+}
+
+export function resizeLatticeProductionGroupGeometries(placementsInput, destinationInput) {
+  const placements = Array.isArray(placementsInput) ? placementsInput : [];
+  if (!placements.length) throw resizeError('LATTICE_RESIZE_GROUP_EMPTY', 'Group resize requires placements');
+  const destination = geometryOf(destinationInput);
+  const start = latticeProductionGroupBounds(placements);
+  return placements.map((placement) => {
+    const geometry = geometryOf(placement);
+    const horizontal = scaleGroupAxis(
+      start, destination, geometry.column, geometry.columnSpan, 'column', 'columnSpan',
+    );
+    const vertical = scaleGroupAxis(start, destination, geometry.row, geometry.rowSpan, 'row', 'rowSpan');
+    return Object.freeze({
+      placementId: placement.id,
+      destination: Object.freeze({
+        column: horizontal.position,
+        row: vertical.position,
+        columnSpan: horizontal.span,
+        rowSpan: vertical.span,
+      }),
+    });
+  });
+}
+
 export function latticeProductionPlacementBoundaries(placement) {
   const geometry = geometryOf(placement);
   return Object.freeze({
@@ -126,6 +176,27 @@ export function createLatticeProductionResizeGesture(placement, cornerInput, fie
   };
 }
 
+export function createLatticeProductionGroupResizeGesture(placementsInput, cornerInput, fieldInput, pointInput) {
+  const placements = Array.isArray(placementsInput) ? placementsInput : [];
+  if (placements.length < 2) throw resizeError('LATTICE_RESIZE_GROUP_TOO_SMALL', 'Group resize requires multiple placements');
+  const ids = placements.map(({ id }) => id);
+  if (ids.some((id) => typeof id !== 'string' || !id) || new Set(ids).size !== ids.length) {
+    throw resizeError('LATTICE_RESIZE_GROUP_INVALID', 'Group resize requires unique canonical placement ids');
+  }
+  const expectedPlacements = placements.map((placement) => structuredClone(placement));
+  const frameGesture = createLatticeProductionResizeGesture(
+    { id: ids.at(-1), ...latticeProductionGroupBounds(placements) }, cornerInput, fieldInput, pointInput,
+  );
+  return {
+    activated: false,
+    corner: frameGesture.corner,
+    expectedPlacements,
+    frameGesture,
+    placementIds: ids,
+    previewDestinations: resizeLatticeProductionGroupGeometries(placements, frameGesture.startGeometry),
+  };
+}
+
 export function updateLatticeProductionResizeGesture(
   gesture,
   pointInput,
@@ -152,12 +223,39 @@ export function updateLatticeProductionResizeGesture(
   };
 }
 
+export function updateLatticeProductionGroupResizeGesture(gesture, pointInput, fieldInput, deadZone) {
+  const frameGesture = updateLatticeProductionResizeGesture(gesture.frameGesture, pointInput, fieldInput, deadZone);
+  return {
+    ...gesture,
+    activated: frameGesture.activated,
+    frameGesture,
+    previewDestinations: resizeLatticeProductionGroupGeometries(
+      gesture.expectedPlacements,
+      frameGesture.previewGeometry,
+    ),
+  };
+}
+
 export function finishLatticeProductionResizeGesture(gesture, { cancelled = false } = {}) {
   const geometry = cancelled ? gesture?.startGeometry : gesture?.previewGeometry;
   return {
     committed: Boolean(gesture?.activated && !cancelled
       && !sameLatticeProductionPlacementGeometry(gesture.startGeometry, geometry)),
     geometry: geometry ? { ...geometry } : null,
+  };
+}
+
+export function finishLatticeProductionGroupResizeGesture(gesture, { cancelled = false } = {}) {
+  const destinations = cancelled
+    ? resizeLatticeProductionGroupGeometries(gesture.expectedPlacements, gesture.frameGesture.startGeometry)
+    : gesture.previewDestinations;
+  return {
+    committed: Boolean(gesture?.activated && !cancelled
+      && destinations.some(({ placementId, destination }) => {
+        const start = gesture.expectedPlacements.find(({ id }) => id === placementId);
+        return start && !sameLatticeProductionPlacementGeometry(start, destination);
+      })),
+    destinations: destinations.map(({ placementId, destination }) => ({ placementId, destination: { ...destination } })),
   };
 }
 
@@ -169,6 +267,17 @@ export function nudgeLatticeProductionResizeGeometry(placement, cornerInput, del
   }
   const geometry = resizedGeometry(start, corner, delta.column, delta.row);
   return sameLatticeProductionPlacementGeometry(start, geometry) ? null : geometry;
+}
+
+export function nudgeLatticeProductionGroupResizeGeometries(placements, cornerInput, delta) {
+  const corner = requireCorner(cornerInput);
+  if (!delta || !Number.isSafeInteger(delta.column) || !Number.isSafeInteger(delta.row)) {
+    throw resizeError('LATTICE_RESIZE_DELTA_INVALID', 'Group resize requires an integer cell delta');
+  }
+  const start = latticeProductionGroupBounds(placements);
+  const destination = resizedGeometry(start, corner, delta.column, delta.row);
+  if (sameLatticeProductionPlacementGeometry(start, destination)) return null;
+  return resizeLatticeProductionGroupGeometries(placements, destination);
 }
 
 function oppositeAnchor(geometry, corner) {
@@ -209,5 +318,65 @@ export function createLatticeProductionResizeCandidate(draftInput, {
   }
   if (sameLatticeProductionPlacementGeometry(start, next)) return null;
   Object.assign(placement, next);
+  return assertValidLatticeProductionDraft(draft);
+}
+
+
+export function createLatticeProductionGroupResizeCandidate(draftInput, {
+  corner,
+  destinations,
+  expectedPlacements,
+  placementIds,
+  tableId,
+} = {}) {
+  const draft = assertValidLatticeProductionDraft(draftInput);
+  requireCorner(corner);
+  const table = draft.tables.find((candidate) => candidate.id === tableId);
+  if (!table) throw resizeError('LATTICE_RESIZE_TABLE_UNKNOWN', 'The active canonical table does not exist');
+  if (table.visibility !== LATTICE_PRODUCTION_VISIBILITY.PUBLIC) {
+    throw resizeError('LATTICE_RESIZE_TABLE_PRIVATE', 'Group resize is unavailable on a private table');
+  }
+  const ids = Array.isArray(placementIds) ? placementIds : [];
+  if (ids.length < 2 || new Set(ids).size !== ids.length
+    || !Array.isArray(expectedPlacements) || expectedPlacements.length !== ids.length
+    || !Array.isArray(destinations) || destinations.length !== ids.length) {
+    throw resizeError('LATTICE_RESIZE_GROUP_INVALID', 'Group resize requires matching unique placement snapshots and destinations');
+  }
+  const placements = ids.map((id, index) => {
+    const placement = table.placements.find((candidate) => candidate.id === id);
+    if (!placement) throw resizeError('LATTICE_RESIZE_PLACEMENT_UNKNOWN', 'A canonical group placement does not exist');
+    if (!sameLatticeProductionPlacementSnapshot(placement, expectedPlacements[index])) {
+      throw resizeError('LATTICE_RESIZE_PLACEMENT_STALE', 'A canonical group placement changed before resize completed');
+    }
+    if (placement.visibility !== LATTICE_PRODUCTION_VISIBILITY.PUBLIC) {
+      throw resizeError('LATTICE_RESIZE_PLACEMENT_PRIVATE', 'Private placements cannot be group resized');
+    }
+    if (placement.locked) throw resizeError('LATTICE_RESIZE_PLACEMENT_LOCKED', 'A canonical group placement is locked');
+    return placement;
+  });
+  const destinationById = new Map(destinations.map((entry) => [entry?.placementId, entry?.destination]));
+  if (destinationById.size !== ids.length || ids.some((id) => !destinationById.has(id))) {
+    throw resizeError('LATTICE_RESIZE_GROUP_INVALID', 'Group resize destinations must match the complete selection');
+  }
+  const nextGeometries = ids.map((id) => ({ placementId: id, destination: geometryOf(destinationById.get(id)) }));
+  const startBounds = latticeProductionGroupBounds(placements);
+  const destinationBounds = latticeProductionGroupBounds(nextGeometries.map(({ placementId, destination }) => ({
+    id: placementId, ...destination,
+  })));
+  if (oppositeAnchor(startBounds, corner).column !== oppositeAnchor(destinationBounds, corner).column
+    || oppositeAnchor(startBounds, corner).row !== oppositeAnchor(destinationBounds, corner).row) {
+    throw resizeError('LATTICE_RESIZE_ANCHOR_CHANGED', 'Group resize must preserve the opposite corner');
+  }
+  const canonical = resizeLatticeProductionGroupGeometries(placements, destinationBounds);
+  if (canonical.some((entry, index) => entry.placementId !== nextGeometries[index].placementId
+    || !sameLatticeProductionPlacementGeometry(entry.destination, nextGeometries[index].destination))) {
+    throw resizeError('LATTICE_RESIZE_GROUP_INVALID', 'Group resize destinations must share one canonical transform');
+  }
+  if (canonical.every(({ placementId, destination }) => sameLatticeProductionPlacementGeometry(
+    placements.find(({ id }) => id === placementId), destination,
+  ))) return null;
+  for (const { placementId, destination } of canonical) {
+    Object.assign(placements.find(({ id }) => id === placementId), destination);
+  }
   return assertValidLatticeProductionDraft(draft);
 }

@@ -76,7 +76,7 @@ The working tree was clean when this roadmap was created.
 - [x] Phase 4 fixed chrome, the Phase 6 production NFT viewer, and the Phase 7 production identity RÄCK are integrated and visually accepted.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
-Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 is `[~]` after accepted Phase 5A and Phase 5B.1–5B.5, with production category authoring implemented and automatically verified but awaiting interactive acceptance, while Phase 5B.6 onward remains unstarted. Phase 6, Phase 7, and Phase 7.5 are implemented, verified, and interactively accepted as `[x]`.
+Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 remains `[~]` after accepted Phase 5A, Phase 5B.1–5B.5, production category authoring, Unified Browser, multi-select authoring, drag-to-place, and the universal owner RÄCK, while Phase 5B.6 onward remains unstarted. Phase 6 and Phase 7 are implemented, verified, and interactively accepted as `[x]`. Phase 7.5 is `[~]`: cursor follow is accepted and retained, while the approved follow-disabled click-to-move correction remains unimplemented.
 
 ### Locked production-integration constraints
 
@@ -381,7 +381,7 @@ Exit criterion: owner navigation is intuitive, deterministic, responsive, and do
 
 ## Phase 5 — production Browser and authoring geometry
 
-Status: `[~]` — **Phase 5A and Phase 5B.1–5B.5 accepted; Unified Browser, multi-select organization, and drag-to-place are implemented and automatically verified but await interactive acceptance; Phase 5B.6 onward remains unstarted**
+Status: `[~]` — **Phase 5A, Phase 5B.1–5B.5, category authoring, Unified Browser, multi-select organization, drag-to-place, and the universal owner RÄCK are accepted; Phase 5B.6 onward remains unstarted**
 
 Goal: wire the isolated Browser to real INDEX/CATEGORIES data and enable table authoring.
 
@@ -501,9 +501,9 @@ Shared RÄCK-menu consolidation accepted for production-reachable callers (2026-
 
 Layer rollback constraint: a code rollback may remove the Phase 5B.5 controls and runtime rank helper without migrating, deleting, normalizing, or rewriting stored layer values. Existing version-1 draft, public projection, renderer, publication, and reconciliation readers remain compatible because Phase 5B.5 only permutes already-valid canonical values. Storage failure retains the exact previous accepted draft and bytes; application rollback does not authorize republishing. The Phase 5B.3 UUID allocator and Phase 5B.4 crop rollback constraints remain independently in force.
 
-### Production category authoring — implemented, awaiting interactive acceptance
+### Production category authoring — implemented and interactively accepted
 
-Status: `[~]` — automated implementation complete on 2026-07-31; **not visually accepted**.
+Status: `[x]` — implemented, automatically verified, and interactively accepted on 2026-07-31.
 
 The current production owner `BrowserWorkspace` now exposes a visible `+ NEW CATEGORY` faceplate, compact create/rename/delete dialogs, category `RackMenu` commands for rename, private/public state, and deletion, plus NFT membership menus in both INDEX and CATEGORIES. Browser menus are portalled to the owner shell so their viewport coordinates are not offset by the centered/transformed Browser window. NFT membership uses compact `ADD TO > category` and `REMOVE FROM > category` cascades instead of category names in oversized root rows. Pointer context menus and the Context Menu key / `Shift+F10` preserve normal left-click selection and PLACE behavior; Escape, outside click, and completed commands close the shared viewport-clamped menu and restore the exact trigger when it remains available. Creation trims and rejects empty names, defaults private, and selects the new category. Deletion confirms explicitly and removes only the Library folder and membership list. Membership uses the unchanged stable asset ID, is idempotent, and immediately removes an asset from the currently viewed category.
 
@@ -530,6 +530,14 @@ Organization usability correction (2026-07-31): an asset context menu opened ins
 Media-navigation deferral (2026-07-31): the user-facing MEDIA section, generic audio/video/3D icon vocabulary, media view state, and TYPE toolbar filter are removed until the Library can consistently discover and normalize those formats. The adapter retains its internal `mediaType` validation solely to classify accepted records and fail unsupported placement honestly; it is not exposed as an organization promise.
 
 Renderable-result policy checkpoint (2026-07-31, awaiting interactive acceptance): accepted stable-ID records remain presentation-inert until one supported normalized preview candidate decodes. The Browser tries thumbnail, display image, then safe original in established order without rendering attempts; the first decoded candidate reveals one card, while complete failure or unsupported media contributes only to the compact `N UNAVAILABLE` count. Decoded records paint progressively and repaired records retry when their accepted Library record or candidate set changes. Result filtering never mutates the asset cache, Favorites compatibility, category membership, canonical placements, or publication. Categories report visible and unresolved membership separately. A later media failure removes the card and selection, cancels Browser-category and canvas placement drags, and live-revalidates PLACE and category commands before permitting a write. Existing persisted placements remain governed by the lattice runtime and retain `ASSET RESOLVING`. The focused fallback/Browser/adapter/persistence/placement/owner set passes 70/70; the final live-revalidation set passes 29/29; production build and budgets pass.
+
+Universal owner RÄCK implementation checkpoint (2026-07-31, interactively accepted): the freely positioned Browser is the fill module inside `THE RACK`. The final faceplate order is TOOLS, BROWSER, LAYERS; preview, publish, and theme commands live directly on the master faceplate instead of a separate SYSTEM module. Master collapse preserves every module's own expanded state, horizontal rack resize is independent from Browser height resize, and the master options menu can hide or restore available modules without persistence. Reversible COMPACT MODE retains Browser data, selection, filters, module state, and window geometry while reducing the navigation column to its icon grammar and compressing nonessential Browser chrome. Narrow viewports remain bounded inside the viewport; reduced motion removes rack content animation.
+
+ARRANGE empty-plane marquee selection supports replace, Shift-add, and Ctrl/Cmd-toggle while Space-drag retains camera ownership. Multi-selected public placements MOVE, RESIZE, ROTATE, MIRROR, DUPLICATE, REMOVE, and layer-reorder as atomic canonical transactions; a stale, locked, private, invalid, or failed-persistence member rejects the complete group with zero partial writes. CROP remains intentionally primary-placement-only. The final changed/new focused set passes 172/172; `git diff --check` passes. The production build and budgets pass at initial JavaScript 1,236,097 raw / 361,053 gzip, owner JavaScript 253,857 raw / 72,661 gzip, owner CSS 65,750 raw / 9,715 gzip, and core JavaScript 1,956,247 raw / 575,924 gzip. Interactive review accepted free movement, horizontal and vertical resizing, compact layout, master/module collapse, faceplate ownership, THE RACK styling, Browser progressive results, multi-selection, grouped transforms, and direct layer movement. No PWA/service-worker or extension-auth change is included because standalone wallet compatibility requires a separate product and integration decision.
+
+Compact Browser correction (2026-07-31, interactively accepted): Browser width drives one named-container layout instead of competing viewport/mobile variants. At 520px and below the navigation is the accessible icon rail; labels remain available through titles and accessible names. The redundant results heading, fixed Browser footer, and empty vertical gutters are removed. Thumbnail size, Search, and the hover-described unavailable count live on the Browser faceplate and remain available while its content is collapsed. TOOLS is a command faceplate; BROWSER and LAYERS retain genuine expandable content. Module numbers and visible `+ / −` glyphs are absent; aligned grips and labels own module expansion, while the complete master faceplate owns master collapse without interfering with drag. The master exposes bold `THE RACK`, system commands, options, and the flush close control, with no profile address. Three Browser-RÄCK-scoped signal rails distinguish Browser, Tools, and Layers without entering the shared shell or any NFT/identity/metadata colour authority.
+
+Final Phase 5 checkpoint note (2026-07-31): interactive acceptance covers category authoring, rail activation, Unified Browser, renderable-result fallback, drag-to-category, drag-to-canvas, multi-select authoring, and the universal owner RÄCK. This final checkpoint supersedes acceptance-open wording retained in the chronological implementation notes above; Phase 5 remains `[~]` only because Phase 5B.6 onward is unstarted.
 
 Explicit exclusions: PORTALS or lattice launchers, AI categorization, category artwork, favorites editing, legacy `AssetIndex` routing or cleanup, category publication/visitor navigation, wallet or IPFS writes, canonical schema/publication/viewer changes, and Phase 5B.6 presentation tools.
 
@@ -641,7 +649,7 @@ The future compact-card interaction may use the approved square-grid mask icon, 
 
 ## Phase 7.5 — production Keeper resident movement
 
-Status: `[x]` — **implemented, interactively accepted, and verified**
+Status: `[~]` — **cursor follow implemented, interactively accepted, and verified; follow-disabled click-to-move approved but unimplemented**
 
 Goal: connect the existing full X/Y Keeper movement engine to the production lattice before publication and visitor cutover.
 
@@ -650,7 +658,7 @@ Includes:
 - pointer-follow is the primary mouse/pen direction, enabled by default and coalesced to the latest target once per animation frame;
 - right-clicking the dock exposes session-only `FOLLOW CURSOR` and `SLOW / NORMAL / FAST` controls; left-click remains exclusively dock/release;
 - continuous follow retains engine easing but uses a 0.55px finishing cadence instead of the ordinary click-to-move 3px floor;
-- touch and click-to-move are explicitly excluded; no fallback activation is invented;
+- touch remains excluded; when `FOLLOW CURSOR` is off, primary activation on eligible empty canvas requests one click-to-move target without enabling continuous follow;
 - ARRANGE ON empty-table activation retains authoring deselection and never causes incidental Keeper movement;
 - placement activation, authoring gestures, table drag/swipe navigation, bounded Space-drag camera movement, and Keeper movement have deterministic ownership;
 - screen, active-table, and camera coordinates resolve to stable Keeper targets without jumps during table arrival or responsive resizing;
@@ -670,6 +678,8 @@ Exit criterion: the production lattice has deterministic full two-dimensional re
 Excluded: autonomous roaming, AI or personality behavior, dialogue authoring, event-reaction authoring, sound, scenes, and the later side-scrolling/free-roam world.
 
 Accepted checkpoint (2026-07-30): interactive review accepted smooth released-Keeper cursor follow, the refined continuous arrival, session-only follow toggle and three speed presets, dock/release, ARRANGE and Space-drag ownership, and the absence of click-to-move. Pointer input is latest-target-only per animation frame; touch is ignored. Browser, Theme, NFT viewer, identity RÄCK, ARRANGE, CROP, placement gestures, table navigation, Space-camera movement, docking, and active transitions cancel or suppress follow deterministically. Reduced motion places targets without a flight. The focused closing set passes 47 tests. The production build and direct existing-build budget check pass at initial JavaScript 1,235,727 raw / 360,878 gzip, owner JavaScript 210,675 raw / 62,714 gzip, owner CSS 66,171 raw / 9,667 gzip, and core JavaScript 1,885,126 raw / 557,885 gzip. The owner-only CSS budget is deliberately recalibrated to 67,000 raw / 10,000 gzip for the shared-theme dock controls; every other budget remains unchanged. The full suite and browser lifecycle were not rerun. No schema, persistence, publication, wallet, visitor, category/PORTALS, Keeper personality, or sound behavior changes.
+
+Approved correction boundary (2026-07-31): retain cursor follow, its session toggle, and its speed controls unchanged. When follow is disabled and the Keeper is released, primary activation on otherwise unowned empty canvas must request one bounded target through the existing resident engine. It must not steal activation from ARRANGE, placements, NFT/identity inspection, Browser/Theme/RÄCK, CROP, composition gestures, table navigation, Space-camera ownership, or the Keeper dock. This correction is not implemented in the current checkpoint.
 
 ## Phase 8 — publication and visitor integration
 
@@ -775,4 +785,4 @@ Start with:
 
 ## Immediate next action
 
-Phase 4 is complete and visually accepted. Phase 3 remains `[~]`; Phase 5 is `[~]` after accepted Phase 5A, and Phase 5B onward requires its own boundary review and explicit approval before implementation. Version 7 remains the publication default, and version 8 publication remains disabled.
+Checkpoint the accepted universal owner RÄCK and Unified Browser. Then implement and verify the approved Phase 7.5 follow-disabled click-to-move correction. After that, revise the Phase 5B.6 boundary before presentation-tool implementation, followed by Phase 8 visitor deployment/publication. Phase 3 and overall Phase 5 remain `[~]`; version 7 remains the publication default and version 8 publication remains disabled.

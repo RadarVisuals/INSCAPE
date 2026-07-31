@@ -60,17 +60,20 @@ test('public categories expose no management controls and fixture windows stay i
   assert.match(toolbar, /PRIVATE EDITOR ERGONOMICS/);
 });
 
-test('shared chrome derives from menu semantics without duplicating a window palette', async () => {
-  const [tokens, browser, windowStyles] = await Promise.all([
+test('shared chrome and RÄCK shell derive from menu semantics without duplicating a window palette', async () => {
+  const [tokens, browser, rackStyles, windowStyles] = await Promise.all([
     readFile(new URL('../rendering/latticeChromePrimitives.css', import.meta.url), 'utf8'),
     readFile(new URL('../browser/browserWorkspace.css', import.meta.url), 'utf8'),
+    readFile(new URL('./latticeRackShell.css', import.meta.url), 'utf8'),
     readFile(new URL('./latticeChromeWindow.css', import.meta.url), 'utf8'),
   ]);
   for (const semantic of ['panel', 'ink', 'muted', 'faint', 'line', 'line-strong', 'selected']) {
     assert.match(tokens, new RegExp(`var\\(--lattice-menu-${semantic}\\)`));
   }
-  assert.match(browser, /var\(--lattice-chrome-header-height\)/);
-  assert.match(browser, /var\(--lattice-chrome-close-size\)/);
+  assert.match(browser, /var\(--lattice-chrome-motion-duration\)/);
+  assert.match(rackStyles, /var\(--lattice-menu-panel\)/);
+  assert.match(rackStyles, /var\(--lattice-menu-ink\)/);
+  assert.doesNotMatch(rackStyles, /#[\da-f]{3,8}|rgb\(/i);
   assert.match(windowStyles, /var\(--lattice-chrome-surface\)/);
   assert.doesNotMatch(windowStyles, /#[\da-f]{3,8}|rgb\(/i);
 });

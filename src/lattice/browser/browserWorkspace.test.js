@@ -7,9 +7,11 @@ const fixture = readFileSync(new URL('./BrowserFixtureHarness.jsx', import.meta.
 const categoryDialog = readFileSync(new URL('./BrowserCategoryDialog.jsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./browserWorkspace.css', import.meta.url), 'utf8');
 const unifiedPanel = readFileSync(new URL('./BrowserUnifiedPanel.jsx', import.meta.url), 'utf8');
+const rackShell = readFileSync(new URL('../windows/LatticeRackShell.jsx', import.meta.url), 'utf8');
+const rackStyles = readFileSync(new URL('../windows/latticeRackShell.css', import.meta.url), 'utf8');
 import { BROWSER_VIEW_KINDS, browserViewAssets, categoryMembershipState, filterAndSortBrowserAssets, updateBrowserSelection } from './browserWorkspaceModel.js';
 
-test('Browser is one unified navigation, toolbar, results, and footer surface', () => {
+test('Browser is one unified navigation, toolbar, and results surface', () => {
   assert.match(workspace, /categoryCommands = null,[\s\S]*onActiveTabChange,[\s\S]*tabRequest = null/);
   assert.match(workspace, /BrowserUnifiedPanel/);
   assert.doesNotMatch(workspace, /role="tablist"|BrowserIndexPanel|BrowserCategoriesPanel/);
@@ -18,12 +20,14 @@ test('Browser is one unified navigation, toolbar, results, and footer surface', 
   assert.match(unifiedPanel, /Used on Canvas/);
   assert.doesNotMatch(unifiedPanel, /Favorites/);
   assert.doesNotMatch(unifiedPanel, /MEDIA_ICONS|<small>MEDIA<\/small>|Filter media type|AudioLines|Video|Box/);
-  assert.match(unifiedPanel, /HIDE LABELS/);
-  assert.match(unifiedPanel, /aria-label="Asset preview size"/);
+  assert.match(unifiedPanel, />LABELS<\/span>/);
+  assert.doesNotMatch(unifiedPanel, /HIDE LABELS|>INDEX<|>CATEGORIES</);
+  assert.match(unifiedPanel, /<option disabled>COLLECTIONS<\/option>/);
+  assert.match(unifiedPanel, /data-display="SORT"/);
+  assert.match(workspace, /aria-label="Asset thumbnail size"/);
   assert.doesNotMatch(unifiedPanel, /aria-label="Grid view"|aria-label="List view"|lattice-browser-view-controls/);
-  assert.match(workspace, /PLACE PUBLIC/);
-  assert.match(workspace, /disabled=\{!placementEnabled\}/);
-  assert.match(workspace, /onPlaceAsset\?\.\(workspace\.selectedAsset\.stableAssetId\)/);
+  assert.doesNotMatch(workspace, /lattice-browser-footer|PLACE PUBLIC|placementEnabled|onPlaceAsset/);
+  assert.doesNotMatch(unifiedPanel, /lattice-browser-results > header|categoryUnresolved/);
   assert.match(workspace, /categoryCommands\.createCategory/);
   assert.match(workspace, /categoryCommands\.setCategoryAssets/);
   assert.doesNotMatch(workspace, /requestPlacement|toggleFavorite|useLibraryStore/);
@@ -45,7 +49,7 @@ test('Category dialogs reject empty input and categories use the shared result s
   assert.match(unifiedPanel, /workspace\.filteredAssets/);
   assert.match(unifiedPanel, /NO ASSETS IN THIS VIEW/);
   assert.match(unifiedPanel, /NONE MATCH THE ACTIVE SEARCH OR FILTERS/);
-  assert.match(unifiedPanel, /CLEAR SEARCH \/ FILTERS/);
+  assert.match(unifiedPanel, /CLEAR FILTERS/);
 });
 
 test('category and multi-asset menus use shared RackMenu with mixed membership and focus restoration', () => {
@@ -78,7 +82,8 @@ test('category creation stays outside the scrolling category rows and internal s
   assert.match(unifiedPanel, /lattice-browser-category-list/);
   assert.doesNotMatch(unifiedPanel, /lattice-browser-sidebar__rule/);
   assert.match(styles, /\.lattice-browser-category-list \{[^}]*flex: 1;[^}]*overflow: auto;/s);
-  assert.match(styles, /\.lattice-browser-sidebar > small \{[^}]*border-bottom: 1px solid var\(--lattice-browser-line-strong\)/s);
+  assert.doesNotMatch(styles, /\.lattice-browser-sidebar > small/);
+  assert.match(styles, /\.lattice-browser-sidebar__category-heading \{[^}]*align-items: stretch;/s);
   assert.doesNotMatch(workspace, /OWNER TOOL \/ 01|ORGANIZATION WRITABLE \/ PROFILE SCOPED/);
   assert.match(styles, /button\[data-active\]::before \{ background: var\(--lattice-browser-ink\); \}/);
 });
@@ -96,7 +101,7 @@ test('derived views, deterministic sorting, and session selection are pure and p
   assert.equal(categoryMembershipState({ assetIds: ['a'] }, ['a', 'c']), 'mixed');
 });
 
-test('Browser styling uses established lattice semantics and a centered nonmodal window', () => {
+test('Browser styling uses established lattice semantics and a freely positioned RÄCK window', () => {
   assert.match(styles, /var\(--lattice-menu-panel\)/);
   assert.match(styles, /var\(--lattice-menu-ink\)/);
   assert.match(styles, /--lattice-browser-frame: rgb\(from var\(--lattice-menu-panel\) r g b\)/);
@@ -109,10 +114,66 @@ test('Browser styling uses established lattice semantics and a centered nonmodal
   assert.match(styles, /box-shadow: inset 3px 0 var\(--lattice-browser-ink\)/);
   assert.match(styles, /\.lattice-browser-asset\[data-multi-selected\]/);
   assert.match(styles, /\.lattice-browser-asset:focus-visible/);
-  assert.match(styles, /\.lattice-browser-footer button \{[^}]*background: var\(--lattice-browser-ink\);[^}]*color: var\(--lattice-browser-frame\)/s);
+  assert.doesNotMatch(styles, /\.lattice-browser-footer/);
+  assert.match(styles, /\.lattice-browser-faceplate-size \{[^}]*display: grid;/s);
+  assert.match(styles, /\.lattice-browser-faceplate-unavailable \{[^}]*cursor: help;/s);
   assert.doesNotMatch(styles, /data-lattice-surface/);
   assert.match(styles, /position: fixed/);
-  assert.match(styles, /translate: -50% -50%/);
+  assert.match(styles, /container: lattice-browser-workspace \/ inline-size/);
+  assert.match(styles, /@container lattice-browser-workspace \(max-width: 520px\)/);
+  assert.doesNotMatch(styles, /\.lattice-browser-workspace \{[^}]*translate:/s);
+  assert.match(workspace, /<LatticeRackShell/);
+  assert.match(workspace, /windowPosition\.left/);
+  assert.match(workspace, /move=\{workspace\.move\}/);
+  assert.match(workspace, /style=\{\{ bottom: rackTailHeight \+ 1 \}\}/);
+  assert.match(rackShell, /label = 'THE RACK'/);
+  assert.match(rackShell, /export function LatticeRackModule/);
+  assert.match(rackShell, /faceplateAccessory = null/);
+  assert.match(rackShell, /masterAccessory = null/);
+  assert.match(rackShell, /expandable = true/);
+  assert.match(rackShell, /data-static=\{!expandable \|\| undefined\}/);
+  assert.match(rackShell, /lattice-rack-module__accessory/);
+  assert.match(workspace, /expandable=\{false\} faceplateAccessory/);
+  assert.match(workspace, /compact faceplate owner tools=\{workspaceTools\}/);
+  assert.match(workspace, /compact faceplate owner tools=\{systemTools\}/);
+  assert.match(workspace, /masterAccessory=\{systemTools\.length/);
+  assert.doesNotMatch(workspace, /label="SYSTEM" signal="system"/);
+  assert.doesNotMatch(rackShell, /index =|<b>\{index\}<\/b>/);
+  assert.match(workspace, /<LatticeRackModule/);
+  assert.match(workspace, /\{rackExpanded && <>/);
+  assert.match(workspace, /rackExpanded \? compactRackHeight : 38/);
+  assert.match(workspace, /rack:toggle/);
+  assert.doesNotMatch(workspace, /if \(expanded\) setBrowserModuleExpanded\(true\)/);
+  assert.match(workspace, /reorderDisabled=\{!workspaceArrangeEnabled\}/);
+  assert.match(workspace, /aria-label="Resize The Rack width"/);
+  assert.match(workspace, /workspace\.rackWidthResize\.begin/);
+  assert.match(styles, /\.lattice-rack-width-resize[^}]*cursor: ew-resize/);
+  assert.match(workspace, /label="LAYERS" signal="layers"/);
+  assert.match(rackShell, /onPointerDown=\{beginMasterPointer\}/);
+  assert.match(rackShell, /onMenuRequest/);
+  assert.match(workspace, /COMPACT MODE/);
+  assert.match(workspace, /data-compact=\{compactMode \|\| undefined\}/);
+  assert.match(workspace, /SHOW ALL MODULES/);
+  assert.match(workspace, /module:browser/);
+  assert.match(styles, /data-compact/);
+  assert.match(rackStyles, /\.lattice-rack-masterbar__rail \{[^}]*inset: 0 auto 0 0;[^}]*width: 6px;/s);
+  assert.match(rackStyles, /\.lattice-rack-module__content\[hidden\] \{ display: none; \}/);
+  assert.match(rackStyles, /\.lattice-rack-masterbar \{[^}]*flex: 0 0 38px;/s);
+  assert.match(rackStyles, /\.lattice-rack-module \{[^}]*flex: 0 0 38px;[^}]*grid-template-rows: 38px 0;/s);
+  assert.match(rackStyles, /\.lattice-rack-module\[data-fill\] \{[^}]*flex: 1 1 38px;/s);
+  assert.match(rackStyles, /\.lattice-rack-module\[data-fill\]\[data-expanded\] > \.lattice-rack-module__content \{[^}]*box-shadow: inset 0 -1px var\(--lattice-menu-line-strong\);/s);
+  assert.doesNotMatch(rackShell, /ToggleGlyph|Collapse \$\{label\}|Expand \$\{label\}/);
+  for (const signal of ['browser', 'tools', 'layers']) {
+    assert.match(rackStyles, new RegExp(`data-signal="${signal}"`));
+    assert.match(styles, new RegExp(`--lattice-rack-signal-${signal}: #[\\da-f]{6}`, 'i'));
+  }
+  assert.doesNotMatch(rackStyles, /translate: 0 -4px/);
+  assert.match(styles, /transition: height var\(--lattice-chrome-motion-duration\)/);
+  assert.match(styles, /\.lattice-browser-workspace\[data-resizing\] \{ transition: none; \}/);
+  assert.match(rackStyles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(rackShell, /onClick=\{expandable \? \(\) => onExpandedChange\?\.\(!expanded\)/);
+  assert.match(workspace, /aria-label="Move selected layer forward"/);
+  assert.match(workspace, /aria-label="Move selected layer backward"/);
   assert.doesNotMatch(styles, /backdrop-filter|orange|border-radius:\s*(?:[1-9]|0\.[1-9])/iu);
 });
 
@@ -130,6 +191,12 @@ test('Browser preview sizing and optional labels share one session-only visual c
   assert.match(hook, /assetSizeBounds: BROWSER_ASSET_SIZE, setAssetSize/);
   assert.match(hook, /sidebarWidth, sidebarResize:/);
   assert.match(hook, /hideLabels, setHideLabels/);
+  assert.match(workspace, /faceplateAccessory/);
+  assert.match(workspace, /aria-label="Search assets"/);
+  assert.match(workspace, /className="lattice-browser-faceplate-search"/);
+  assert.doesNotMatch(workspace, /className="lattice-browser-search"/);
+  assert.match(workspace, /workspace\.unavailableCount > 0/);
+  assert.match(workspace, /title=\{`\$\{workspace\.unavailableCount\} unavailable assets`\}/);
   assert.match(assets, /data-size=\{resolvedAssetSize\}/);
   assert.match(assets, /--lattice-browser-asset-min/);
   assert.match(assets, /data-labels=\{hideLabels \? 'hidden' : 'visible'\}/);
@@ -138,6 +205,8 @@ test('Browser preview sizing and optional labels share one session-only visual c
   assert.match(styles, /data-size="list"/);
   assert.match(styles, /grid-template-columns: var\(--lattice-browser-sidebar-width, 174px\) 7px/);
   assert.match(styles, /@container \(max-width: 76px\)/);
+  assert.match(styles, /@container lattice-browser-workspace \(max-width: 520px\)[\s\S]*grid-template-columns: 48px minmax\(0, 1fr\)/);
+  assert.match(styles, /@container lattice-browser-workspace \(max-width: 520px\)[\s\S]*button > span > b,[\s\S]*button > i \{ display: none; \}/);
   for (const obsoleteSize of ['small', 'big', 'bigger']) assert.doesNotMatch(styles, new RegExp(`data-size="${obsoleteSize}"`));
   assert.match(styles, /--lattice-browser-section-tone: color-mix\(in srgb, var\(--lattice-browser-frame\) 82%/);
   assert.match(styles, /button\[data-active\] \{ background: var\(--lattice-browser-selected-tone\)/);
@@ -156,9 +225,8 @@ test('Browser reveals decoded backgrounds only and never renders placeholder or 
   assert.match(hook, /status: 'unavailable'/);
   assert.match(hook, /isAssetRenderable/);
   assert.match(workspace, /workspace\.areAssetsRenderable\(contextMenu\.assetIds\)/);
-  assert.match(workspace, /workspace\.isAssetRenderable\(workspace\.selectedAsset\?\.stableAssetId\)/);
-  assert.match(unifiedPanel, /UNAVAILABLE/);
-  assert.match(unifiedPanel, /UNRESOLVED/);
+  assert.match(workspace, /workspace\.areAssetsRenderable\(contextMenu\.assetIds\)/);
+  assert.match(workspace, /unavailable assets/);
 });
 
 const browserThemes = {

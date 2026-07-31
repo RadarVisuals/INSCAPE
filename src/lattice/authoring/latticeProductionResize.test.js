@@ -4,12 +4,18 @@ import { createEmptyLatticeProductionDraft } from '../domain/latticeProductionDr
 import { projectLatticeProductionViewport } from '../rendering/latticeProductionProjection.js';
 import {
   LATTICE_PRODUCTION_RESIZE_CORNERS,
+  createLatticeProductionGroupResizeCandidate,
+  createLatticeProductionGroupResizeGesture,
   createLatticeProductionResizeCandidate,
   createLatticeProductionResizeGesture,
   finishLatticeProductionResizeGesture,
   latticeProductionPlacementBoundaries,
+  latticeProductionGroupBounds,
   latticeProductionTopBoundaryRemoveDock,
   nudgeLatticeProductionResizeGeometry,
+  resizeLatticeProductionGroupGeometries,
+  finishLatticeProductionGroupResizeGesture,
+  updateLatticeProductionGroupResizeGesture,
   updateLatticeProductionResizeGesture,
 } from './latticeProductionResize.js';
 
@@ -20,7 +26,8 @@ const placement = (overrides = {}) => ({
   layer: 0, navigationOrder: 0, crop: null, frameId: 'NONE',
   mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
   backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO',
-  visibility: 'PUBLIC', locked: false, ...overrides,
+  visibility: 'PUBLIC', locked: false,
+  transform: { quarterTurns: 0, mirrorX: false, mirrorY: false }, ...overrides,
 });
 const field = projectLatticeProductionViewport({ geometry: { columns: 32, rows: 18 } }, { width: 1280, height: 720 });
 const cornerPoint = {
@@ -118,4 +125,57 @@ test('completed resize changes geometry only and rejects stale snapshots, invali
   assert.throws(() => createLatticeProductionResizeCandidate(locked, {
     ...request, expectedPlacement: structuredClone(locked.tables[4].placements[0]),
   }), { code: 'LATTICE_RESIZE_PLACEMENT_LOCKED' });
+});
+
+test('group resize scales placement geometry and spacing through one shared grid frame', () => {
+  const placements = [
+    placement({ id: 'a', column: 2, row: 2, columnSpan: 4, rowSpan: 4 }),
+    placement({ id: 'b', column: 8, row: 6, columnSpan: 2, rowSpan: 2, layer: 1, navigationOrder: 1 }),
+  ];
+  assert.deepEqual(latticeProductionGroupBounds(placements), {
+    column: 2, row: 2, columnSpan: 8, rowSpan: 6,
+  });
+  assert.deepEqual(resizeLatticeProductionGroupGeometries(placements, {
+    column: 0, row: 0, columnSpan: 16, rowSpan: 12,
+  }), [
+    { placementId: 'a', destination: { column: 0, row: 0, columnSpan: 8, rowSpan: 8 } },
+    { placementId: 'b', destination: { column: 12, row: 8, columnSpan: 4, rowSpan: 4 } },
+  ]);
+  const gesture = createLatticeProductionGroupResizeGesture(placements, 'se', field, { x: 400, y: 320 });
+  const updated = updateLatticeProductionGroupResizeGesture(gesture, { x: 480, y: 360 }, field);
+  assert.equal(updated.activated, true);
+  assert.deepEqual(updated.frameGesture.previewGeometry, { column: 2, row: 2, columnSpan: 10, rowSpan: 7 });
+  assert.equal(finishLatticeProductionGroupResizeGesture(updated).committed, true);
+  assert.deepEqual(finishLatticeProductionGroupResizeGesture(updated, { cancelled: true }).destinations, [
+    { placementId: 'a', destination: { column: 2, row: 2, columnSpan: 4, rowSpan: 4 } },
+    { placementId: 'b', destination: { column: 8, row: 6, columnSpan: 2, rowSpan: 2 } },
+  ]);
+});
+
+test('group resize candidate is atomic, snapshot guarded, and rejects a locked member', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const expected = [
+    placement({ id: 'a', column: 2, row: 2, columnSpan: 4, rowSpan: 4 }),
+    placement({ id: 'b', column: 8, row: 6, columnSpan: 2, rowSpan: 2, layer: 1, navigationOrder: 1 }),
+  ];
+  draft.tables[4].placements = expected;
+  const destinations = resizeLatticeProductionGroupGeometries(expected, {
+    column: 0, row: 0, columnSpan: 10, rowSpan: 8,
+  });
+  const request = {
+    corner: 'nw', destinations, expectedPlacements: structuredClone(expected),
+    placementIds: ['a', 'b'], tableId: 'table-05',
+  };
+  const before = structuredClone(draft);
+  const candidate = createLatticeProductionGroupResizeCandidate(draft, request);
+  assert.deepEqual(candidate.tables[4].placements.map(({ column, row, columnSpan, rowSpan }) => ({
+    column, row, columnSpan, rowSpan,
+  })), destinations.map(({ destination }) => destination));
+  assert.deepEqual(draft, before);
+  const locked = structuredClone(draft);
+  locked.tables[4].placements[1].locked = true;
+  assert.throws(() => createLatticeProductionGroupResizeCandidate(locked, {
+    ...request, expectedPlacements: structuredClone(locked.tables[4].placements),
+  }), { code: 'LATTICE_RESIZE_PLACEMENT_LOCKED' });
+  assert.deepEqual(locked.tables[4].placements[0], before.tables[4].placements[0]);
 });

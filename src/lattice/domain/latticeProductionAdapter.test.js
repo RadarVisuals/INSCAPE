@@ -23,7 +23,8 @@ const placement = (id, stableAssetId, navigationOrder, overrides = {}) => ({
   layer: navigationOrder, navigationOrder, crop: null, frameId: 'NONE',
   mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
   backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO',
-  visibility: LATTICE_PRODUCTION_VISIBILITY.PUBLIC, locked: true, ...overrides,
+  visibility: LATTICE_PRODUCTION_VISIBILITY.PUBLIC, locked: true,
+  transform: { quarterTurns: 0, mirrorX: false, mirrorY: false }, ...overrides,
 });
 
 test('pure projection resolves real assets, sorts navigation, omits locks, and does not mutate the draft', () => {

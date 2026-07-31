@@ -132,6 +132,87 @@ export function nudgeLatticeProductionPlacementGeometry(placement, delta) {
   return sameLatticeProductionPlacementGeometry(start, geometry) ? null : geometry;
 }
 
+export function clampLatticeProductionGroupDelta(placements, delta) {
+  if (!Array.isArray(placements) || placements.length < 1
+    || !delta || !Number.isSafeInteger(delta.column) || !Number.isSafeInteger(delta.row)) {
+    throw movementError('LATTICE_MOVEMENT_GROUP_INVALID', 'Group movement requires placements and an integer cell delta');
+  }
+  const geometries = placements.map(placementGeometry);
+  const minimumColumn = Math.min(...geometries.map(({ column }) => column));
+  const minimumRow = Math.min(...geometries.map(({ row }) => row));
+  const maximumColumn = Math.max(...geometries.map(({ column, columnSpan }) => column + columnSpan));
+  const maximumRow = Math.max(...geometries.map(({ row, rowSpan }) => row + rowSpan));
+  return {
+    column: clamp(delta.column, -minimumColumn, LATTICE_PRODUCTION_GEOMETRY.columns - maximumColumn),
+    row: clamp(delta.row, -minimumRow, LATTICE_PRODUCTION_GEOMETRY.rows - maximumRow),
+  };
+}
+
+export function createLatticeProductionGroupMovementRequest(placements, delta, tableId) {
+  const bounded = clampLatticeProductionGroupDelta(placements, delta);
+  if (bounded.column === 0 && bounded.row === 0) return null;
+  return {
+    tableId,
+    moves: placements.map((placement) => {
+      const expectedStartGeometry = placementGeometry(placement);
+      return {
+        placementId: placement.id,
+        expectedStartGeometry,
+        destination: {
+          ...expectedStartGeometry,
+          column: expectedStartGeometry.column + bounded.column,
+          row: expectedStartGeometry.row + bounded.row,
+        },
+      };
+    }),
+  };
+}
+
+export function createLatticeProductionGroupMovementCandidate(draftInput, { moves, tableId } = {}) {
+  const draft = assertValidLatticeProductionDraft(draftInput);
+  const table = draft.tables.find((candidate) => candidate.id === tableId);
+  if (!table) throw movementError('LATTICE_MOVEMENT_TABLE_UNKNOWN', 'The active canonical table does not exist');
+  if (table.visibility !== LATTICE_PRODUCTION_VISIBILITY.PUBLIC) {
+    throw movementError('LATTICE_MOVEMENT_TABLE_PRIVATE', 'Placement movement is unavailable on a private table');
+  }
+  if (!Array.isArray(moves) || moves.length < 1) {
+    throw movementError('LATTICE_MOVEMENT_GROUP_INVALID', 'Group movement requires at least one placement');
+  }
+  const ids = new Set();
+  let delta = null;
+  for (const move of moves) {
+    if (!move?.placementId || ids.has(move.placementId)) {
+      throw movementError('LATTICE_MOVEMENT_GROUP_DUPLICATE', 'Group movement placement IDs must be unique');
+    }
+    ids.add(move.placementId);
+    const placement = table.placements.find((candidate) => candidate.id === move.placementId);
+    if (!placement) throw movementError('LATTICE_MOVEMENT_PLACEMENT_UNKNOWN', 'The canonical placement does not exist');
+    if (placement.visibility !== LATTICE_PRODUCTION_VISIBILITY.PUBLIC) {
+      throw movementError('LATTICE_MOVEMENT_PLACEMENT_PRIVATE', 'Private placements cannot be moved through the public owner projection');
+    }
+    if (placement.locked) throw movementError('LATTICE_MOVEMENT_PLACEMENT_LOCKED', 'The canonical placement is locked');
+    const latest = placementGeometry(placement);
+    if (!sameLatticeProductionPlacementGeometry(latest, move.expectedStartGeometry)) {
+      throw movementError('LATTICE_MOVEMENT_START_STALE', 'The canonical placement changed before movement completed');
+    }
+    const destination = placementGeometry(move.destination);
+    if (destination.columnSpan !== latest.columnSpan || destination.rowSpan !== latest.rowSpan) {
+      throw movementError('LATTICE_MOVEMENT_SPAN_CHANGED', 'Placement movement cannot resize the canonical placement');
+    }
+    const nextDelta = { column: destination.column - latest.column, row: destination.row - latest.row };
+    if (!delta) delta = nextDelta;
+    else if (delta.column !== nextDelta.column || delta.row !== nextDelta.row) {
+      throw movementError('LATTICE_MOVEMENT_GROUP_DELTA_MISMATCH', 'Every grouped placement must move by the same cell delta');
+    }
+  }
+  if (!delta?.column && !delta?.row) return null;
+  for (const move of moves) {
+    const placement = table.placements.find((candidate) => candidate.id === move.placementId);
+    Object.assign(placement, placementGeometry(move.destination));
+  }
+  return assertValidLatticeProductionDraft(draft);
+}
+
 export function createLatticeProductionMovementCandidate(draftInput, {
   destination,
   expectedStartGeometry,

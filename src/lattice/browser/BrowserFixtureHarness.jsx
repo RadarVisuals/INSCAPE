@@ -47,6 +47,6 @@ export default function BrowserFixtureHarness({ activeTable, assetSource, onRequ
     },
     setCategoryPublic(id, isPublic) { setCategories((current) => current.map((category) => category.id === id ? { ...category, public: isPublic } : category)); },
   };
-  return <BrowserWorkspace categoryCommands={commands} data={data} onPlaceAsset={requestPlacement}
+  return <BrowserWorkspace categoryCommands={commands} data={data}
     onRequestClose={onRequestClose} open={open} />;
 }

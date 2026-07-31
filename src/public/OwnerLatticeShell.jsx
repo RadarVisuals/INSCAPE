@@ -12,9 +12,16 @@ import { projectLatticeProductionPublication } from '../lattice/domain/latticePr
 import { assertValidLatticeProductionPublication } from '../lattice/domain/latticeProductionPublication.js';
 import LatticeProductionMovementLayer from '../lattice/authoring/LatticeProductionMovementLayer.jsx';
 import { createLatticeProductionCropCandidate } from '../lattice/authoring/latticeProductionCrop.js';
-import { createLatticeProductionMovementCandidate } from '../lattice/authoring/latticeProductionMovement.js';
-import { createLatticeProductionResizeCandidate } from '../lattice/authoring/latticeProductionResize.js';
+import {
+  createLatticeProductionGroupMovementCandidate,
+  createLatticeProductionMovementCandidate,
+} from '../lattice/authoring/latticeProductionMovement.js';
+import {
+  createLatticeProductionGroupResizeCandidate,
+  createLatticeProductionResizeCandidate,
+} from '../lattice/authoring/latticeProductionResize.js';
 import { createLatticeProductionDropGeometry } from '../lattice/authoring/latticeProductionPlacement.js';
+import { LATTICE_PRODUCTION_TRANSFORM_OPERATIONS } from '../lattice/authoring/latticeProductionTransform.js';
 import {
   DEFAULT_LATTICE_INTERACTION_CONFIG,
   addWheelDelta,
@@ -76,6 +83,18 @@ const WORKSPACE_TOOLS = Object.freeze([
   { id: 'publish', label: 'PUBLISH', disabled: true, disabledReason: 'Version 8 publication is disabled' },
   { id: 'more', label: 'MORE', disabled: true, disabledReason: 'Additional owner tools are not available in Phase 4' },
 ]);
+const RACK_AUTHORING_TOOLS = Object.freeze(
+  [
+    WORKSPACE_TOOLS.find(({ id }) => id === 'arrange'),
+    { id: 'rotate', label: 'ROTATE' },
+    { id: 'mirrorHorizontal', label: 'MIRROR H' },
+    { id: 'mirrorVertical', label: 'MIRROR V' },
+    { id: 'duplicate', label: 'DUPLICATE' },
+  ],
+);
+const RACK_SYSTEM_TOOLS = Object.freeze(
+  ['preview', 'publish', 'theme'].map((id) => WORKSPACE_TOOLS.find((tool) => tool.id === id)),
+);
 const SURFACE_LABELS = Object.freeze({
   carbon: 'CARBON', graphite: 'GRAPHITE', slate: 'SLATE', ash: 'ASH', mist: 'MIST', paper: 'PAPER',
 });
@@ -116,8 +135,14 @@ export function createEmptyOwnerLatticeRuntimeValue(profileAddress, {
   return assertValidLatticeProductionPublication(publication);
 }
 
-function ThemeSurface({ menuSurfaceId, onClose, onMenuSurfaceChange, onSurfaceChange, surfaceId }) {
-  return <section className="owner-lattice-theme" data-lattice-chrome aria-label="Phase 4 session Theme">
+function ThemeSurface({ anchor, menuSurfaceId, onClose, onMenuSurfaceChange, onSurfaceChange, surfaceId }) {
+  const width = 244;
+  const anchoredStyle = anchor ? {
+    left: Math.max(8, Math.min(anchor.left + anchor.width - width, globalThis.innerWidth - width - 8)),
+    right: 'auto',
+    top: Math.max(8, Math.min(anchor.top + anchor.height + 1, globalThis.innerHeight - 150)),
+  } : undefined;
+  return <section className="owner-lattice-theme" data-lattice-chrome aria-label="Phase 4 session Theme" style={anchoredStyle}>
     <header><strong>THEME</strong><button type="button" onClick={onClose} aria-label="Close Theme">×</button></header>
     <label><span>SURFACE</span><select value={surfaceId} onChange={(event) => onSurfaceChange(event.target.value)}>
       {LATTICE_PRODUCTION_SURFACE_IDS.map((id) => <option key={id} value={id}>{SURFACE_LABELS[id]}</option>)}
@@ -173,6 +198,7 @@ function OwnerLatticeRuntime({
   const [surfaceId, setSurfaceId] = useState('mist');
   const [menuSurfaceId, setMenuSurfaceId] = useState('mist');
   const [themeOpen, setThemeOpen] = useState(false);
+  const [themeAnchor, setThemeAnchor] = useState(null);
   const [browserOpen, setBrowserOpen] = useState(false);
   const [browserActivated, setBrowserActivated] = useState(false);
   const [browserActiveTab, setBrowserActiveTab] = useState('index');
@@ -181,6 +207,16 @@ function OwnerLatticeRuntime({
   const [compositionPreview, setCompositionPreview] = useState(null);
   const [cropModeActive, setCropModeActive] = useState(false);
   const [arrangeEnabled, setArrangeEnabled] = useState(false);
+  const [selectedPlacementIds, setSelectedPlacementIds] = useState([]);
+  const selectedPlacementId = selectedPlacementIds.at(-1) || null;
+  const setSelectedPlacementId = useCallback((placementId, options = {}) => {
+    setSelectedPlacementIds((current) => {
+      if (!placementId) return [];
+      if (options.additive) return current.includes(placementId)
+        ? current.filter((id) => id !== placementId) : [...current, placementId];
+      return [placementId];
+    });
+  }, []);
   const [placementMedia, setPlacementMedia] = useState({});
   const [viewerSession, setViewerSession] = useState(null);
   const [identityDossierSession, setIdentityDossierSession] = useState(null);
@@ -208,11 +244,15 @@ function OwnerLatticeRuntime({
     try {
       const previewDraft = compositionPreview?.kind === 'move'
         ? createLatticeProductionMovementCandidate(authoring.draft, compositionPreview.request)
-        : compositionPreview?.kind === 'resize'
-          ? createLatticeProductionResizeCandidate(authoring.draft, compositionPreview.request)
-          : compositionPreview?.kind === 'crop'
-            ? createLatticeProductionCropCandidate(authoring.draft, compositionPreview.request)
-            : null;
+        : compositionPreview?.kind === 'group-move'
+          ? createLatticeProductionGroupMovementCandidate(authoring.draft, compositionPreview.request)
+          : compositionPreview?.kind === 'resize'
+            ? createLatticeProductionResizeCandidate(authoring.draft, compositionPreview.request)
+            : compositionPreview?.kind === 'group-resize'
+              ? createLatticeProductionGroupResizeCandidate(authoring.draft, compositionPreview.request)
+            : compositionPreview?.kind === 'crop'
+              ? createLatticeProductionCropCandidate(authoring.draft, compositionPreview.request)
+              : null;
       const renderDraft = structuredClone(previewDraft || authoring.draft);
       renderDraft.appearance.surfaceId = surfaceId;
       renderDraft.appearance.menuSurfaceId = menuSurfaceId;
@@ -314,6 +354,7 @@ function OwnerLatticeRuntime({
   const plane = createWidthFitLatticeOwnerViewport(dimensions);
   const cellSize = plane.cellSize;
   const activeTableId = latticeProductionTableId(active);
+  useEffect(() => setSelectedPlacementIds([]), [activeTableId, profileAddress]);
   const activeCameraY = clampLatticeOwnerCameraY(cameraOffsets[activeTableId] || 0, plane);
   const keeperPointerFollowEnabled = keeperPointerFollowAllowed({
     arrangeEnabled,
@@ -526,7 +567,28 @@ function OwnerLatticeRuntime({
 
   const stageTransform = `translate3d(${dragOffset.x - (active.x * plane.width)}px, ${dragOffset.y - (active.y * plane.height) + activeCameraY}px, 0)`;
   const activeDraftTable = authoring.draft?.tables.find((table) => table.id === activeTableId) || null;
+  const selectedPlacements = (activeDraftTable?.placements || [])
+    .filter(({ id }) => selectedPlacementIds.includes(id));
+  const selectedPlacement = activeDraftTable?.placements.find(({ id }) => id === selectedPlacementId) || null;
   const activeTable = lattice?.tables.find((table) => table.id === activeTableId) || activeDraftTable;
+  const layerEntries = useMemo(() => {
+    const publishedById = new Map((lattice?.tables.find(({ id }) => id === activeTableId)?.placements || [])
+      .map((placement) => [placement.id, placement]));
+    return [...(activeDraftTable?.placements || [])]
+      .filter(({ visibility }) => visibility === 'PUBLIC')
+      .sort((left, right) => right.layer - left.layer || left.id.localeCompare(right.id))
+      .map((placement) => {
+        const published = publishedById.get(placement.id);
+        const media = placementMedia[`${activeTableId}:${placement.id}`];
+        return {
+          id: placement.id,
+          layer: placement.layer,
+          locked: placement.locked,
+          name: published?.asset?.name || placement.stableAssetId,
+          previewSrc: media?.status === 'ready' ? media.media?.src : null,
+        };
+      });
+  }, [activeDraftTable, activeTableId, lattice, placementMedia]);
   const activeTableName = activeTable ? tableIdentity(activeTable) : activeTableId.replace('-', ' ').toUpperCase();
   const cancelBrowserAssetDrag = useCallback(() => {
     const gesture = browserDragGestureRef.current;
@@ -652,9 +714,78 @@ function OwnerLatticeRuntime({
     requestAnimationFrame(() => identityControlRef.current?.focus({ preventScroll: true }));
   }, []);
   const toggleArrange = useCallback(() => {
-    if (arrangeEnabled) setCompositionPreview(null);
+    if (arrangeEnabled) {
+      setCompositionPreview(null);
+      setSelectedPlacementId(null);
+    }
     setArrangeEnabled(!arrangeEnabled);
   }, [arrangeEnabled]);
+  const selectPlacement = useCallback((placementId, options = {}) => {
+    if (!options.range) {
+      setSelectedPlacementId(placementId, options);
+      return;
+    }
+    const anchorIndex = layerEntries.findIndex(({ id }) => id === selectedPlacementId);
+    const targetIndex = layerEntries.findIndex(({ id }) => id === placementId);
+    if (anchorIndex < 0 || targetIndex < 0) {
+      setSelectedPlacementId(placementId);
+      return;
+    }
+    const [start, end] = [anchorIndex, targetIndex].sort((left, right) => left - right);
+    const rangeIds = layerEntries.slice(start, end + 1).map(({ id }) => id);
+    setSelectedPlacementIds((current) => [...new Set([...current, ...rangeIds])]);
+  }, [layerEntries, selectedPlacementId, setSelectedPlacementId]);
+  const reorderLayers = useCallback((frontToBackIds) => {
+    if (!arrangeEnabled || !activeDraftTable || !Array.isArray(frontToBackIds)) return false;
+    return authoring.reorderPublicPlacements({
+      expectedPlacements: activeDraftTable.placements.map((placement) => structuredClone(placement)),
+      orderedPlacementIds: [...frontToBackIds].reverse(),
+      tableId: activeTableId,
+    });
+  }, [activeDraftTable, activeTableId, arrangeEnabled, authoring]);
+  const activateWorkspaceTool = useCallback((toolId, trigger) => {
+    if (toolId === 'arrange') toggleArrange();
+    if (['rotate', 'mirrorHorizontal', 'mirrorVertical'].includes(toolId) && arrangeEnabled && selectedPlacement) {
+      const operation = toolId === 'rotate' ? LATTICE_PRODUCTION_TRANSFORM_OPERATIONS.ROTATE
+        : toolId === 'mirrorHorizontal' ? LATTICE_PRODUCTION_TRANSFORM_OPERATIONS.MIRROR_HORIZONTAL
+          : LATTICE_PRODUCTION_TRANSFORM_OPERATIONS.MIRROR_VERTICAL;
+      if (selectedPlacements.length > 1) authoring.transformPublicPlacements({
+        expectedPlacements: selectedPlacements.map((placement) => structuredClone(placement)), operation,
+        placementIds: selectedPlacements.map(({ id }) => id), tableId: activeTableId,
+      });
+      else authoring.transformPublicPlacement({
+        expectedPlacement: structuredClone(selectedPlacement), operation,
+        placementId: selectedPlacement.id, tableId: activeTableId,
+      });
+    }
+    if (toolId === 'duplicate' && arrangeEnabled && selectedPlacement) {
+      if (selectedPlacements.length > 1) {
+        const duplicateIds = authoring.duplicatePublicPlacements({
+          expectedPlacements: selectedPlacements.map((placement) => structuredClone(placement)),
+          placementIds: selectedPlacements.map(({ id }) => id),
+          tableId: activeTableId,
+        });
+        if (duplicateIds.length) setSelectedPlacementIds(duplicateIds);
+      } else {
+        const duplicateId = authoring.duplicatePublicPlacement({
+          expectedPlacement: structuredClone(selectedPlacement),
+          placementId: selectedPlacement.id, tableId: activeTableId,
+        });
+        if (duplicateId) setSelectedPlacementId(duplicateId);
+      }
+    }
+    if (toolId === 'browser') {
+      browserReturnFocusRef.current = trigger || browserToolRef.current;
+      activeWorkspaceWindowRef.current = 'browser';
+      setBrowserActivated(true);
+      setBrowserOpen((open) => !open);
+    }
+    if (toolId === 'theme') {
+      activeWorkspaceWindowRef.current = 'theme';
+      if (trigger) setThemeAnchor(frozenRectangle(trigger.getBoundingClientRect()));
+      setThemeOpen((open) => !open);
+    }
+  }, [activeTableId, arrangeEnabled, authoring, selectedPlacement, selectedPlacements, toggleArrange]);
   const handlePlacementMediaState = useCallback((state) => {
     const key = `${state.tableId}:${state.placementId}`;
     setPlacementMedia((current) => {
@@ -775,11 +906,18 @@ function OwnerLatticeRuntime({
               onCommitCrop={authoring.cropPublicPlacement}
               onCommitLayer={authoring.layerPublicPlacement}
               onCommitMove={authoring.movePublicPlacement}
+              onCommitMoveGroup={authoring.movePublicPlacements}
               onCommitRemove={authoring.removePublicPlacement}
+              onCommitRemoveGroup={authoring.removePublicPlacements}
               onCommitResize={authoring.resizePublicPlacement}
+              onCommitResizeGroup={authoring.resizePublicPlacements}
               onCropModeChange={setCropModeActive}
               onPreviewOperation={setCompositionPreview}
               onReturnFocus={() => viewportRef.current?.focus({ preventScroll: true })}
+              onSelectedPlacementChange={selectPlacement}
+              onSelectedPlacementsChange={(placementIds) => setSelectedPlacementIds([...new Set(placementIds)])}
+              selectedPlacementId={selectedPlacementId}
+              selectedPlacementIds={selectedPlacementIds}
               tableId={table.id}
             />}
             <UnresolvedRuntimePlacements placements={unresolvedPlacementsByTable.get(table.id) || []} />
@@ -842,21 +980,7 @@ function OwnerLatticeRuntime({
           else if (themeOpen) setThemeOpen(false);
           else if (browserOpen) closeBrowser();
         }}
-        onToolActivate={(toolId) => {
-          if (toolId === 'arrange') {
-            toggleArrange();
-          }
-          if (toolId === 'browser') {
-            browserReturnFocusRef.current = browserToolRef.current;
-            activeWorkspaceWindowRef.current = 'browser';
-            setBrowserActivated(true);
-            setBrowserOpen((open) => !open);
-          }
-          if (toolId === 'theme') {
-            activeWorkspaceWindowRef.current = 'theme';
-            setThemeOpen((open) => !open);
-          }
-        }}
+        onToolActivate={activateWorkspaceTool}
         toolButtonRefs={{ browser: browserToolRef }}
       />
       {browserActivated && <Suspense fallback={null}>
@@ -869,21 +993,34 @@ function OwnerLatticeRuntime({
           }}
           onActiveTabChange={setBrowserActiveTab}
           onAssetPointerDown={beginBrowserAssetDrag}
-          onPlaceAsset={(stableAssetId) => {
-            if (arrangeEnabled) authoring.placePublicAsset({ stableAssetId, tableId: activeTableId });
-          }}
+          layers={layerEntries}
+          onLayerReorder={reorderLayers}
+          onLayerSelectionChange={selectPlacement}
           onRenderableAssetsChange={(assetIds) => {
             const draggedAssetId = browserDragGestureRef.current?.assetId;
             if (draggedAssetId && !assetIds.includes(draggedAssetId)) cancelBrowserAssetDrag();
           }}
           onRequestClose={closeBrowser}
+          onWorkspaceToolActivate={activateWorkspaceTool}
           open={browserOpen}
+          selectedLayerIds={selectedPlacementIds}
+          systemTools={RACK_SYSTEM_TOOLS}
           tabRequest={browserTabRequest}
+          workspaceActiveToolIds={[themeOpen ? 'theme' : null].filter(Boolean)}
+          workspaceArrangeEnabled={arrangeEnabled}
+          workspaceTools={RACK_AUTHORING_TOOLS.map((tool) => tool.id === 'arrange' ? tool : ({
+            ...tool,
+            disabled: !arrangeEnabled || !selectedPlacement || selectedPlacements.some(({ locked }) => locked),
+            disabledReason: !arrangeEnabled ? 'ENABLE ARRANGE' : !selectedPlacement
+              ? 'SELECT AN ASSET ON THE CANVAS' : selectedPlacements.some(({ locked }) => locked)
+                ? 'SELECTION CONTAINS A LOCKED PLACEMENT' : undefined,
+          }))}
         />
       </Suspense>}
       {themeOpen && <ThemeSurface
+        anchor={themeAnchor}
         menuSurfaceId={menuSurfaceId}
-        onClose={() => setThemeOpen(false)}
+        onClose={() => { setThemeOpen(false); setThemeAnchor(null); }}
         onMenuSurfaceChange={setMenuSurfaceId}
         onSurfaceChange={setSurfaceId}
         surfaceId={surfaceId}

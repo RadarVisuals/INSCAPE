@@ -93,14 +93,44 @@ test('keyboard movement is one-cell, non-repeating, bounded, and isolated from t
   assert.match(source, /event\.key === 'Escape'/);
 });
 
+test('multi-selection moves and resizes as one bounded atomic group while crop remains primary-only', () => {
+  assert.match(source, /selectedPlacementSet\.has\(placementId\) && selectedPlacementSet\.size > 1/);
+  assert.match(source, /createLatticeProductionGroupMovementRequest/);
+  assert.match(source, /clampLatticeProductionGroupDelta/);
+  assert.match(source, /kind: 'group-move'/);
+  assert.match(source, /onCommitMoveGroup\?\.\(groupRequest\)/);
+  assert.match(source, /if \(corner \|\| !selectedPlacementSet\.has\(placementId\)\) setSelectedPlacementId/);
+  assert.match(source, /createLatticeProductionGroupResizeGesture/);
+  assert.match(source, /kind: 'group-resize'/);
+  assert.match(source, /onCommitResizeGroup\?\.\(/);
+  assert.match(source, /Resize selected placements from/);
+  assert.match(styles, /\.lattice-production-group-resize-control[^}]*pointer-events:\s*none/su);
+});
+
+test('empty ARRANGE canvas owns marquee selection without stealing placement, crop, or Space-pan gestures', () => {
+  assert.match(source, /event\.target === event\.currentTarget && event\.button === 0 && !event\.altKey/);
+  assert.match(source, /kind: 'marquee'/);
+  assert.match(source, /MARQUEE_ACTIVATION_DISTANCE/);
+  assert.match(source, /latticeMarqueeRectangle/);
+  assert.match(source, /latticeMarqueeIntersects/);
+  assert.match(source, /LATTICE_MARQUEE_SELECTION_MODES\.TOGGLE/);
+  assert.match(source, /LATTICE_MARQUEE_SELECTION_MODES\.ADD/);
+  assert.match(source, /onSelectedPlacementsChange\?\.\(/);
+  assert.match(source, /marqueeSession\?\.activated/);
+  assert.match(source, /const primary = selected && selectedPlacementId === placement\.id/);
+  assert.match(styles, /\.lattice-production-selection-marquee[^}]*pointer-events:\s*none/su);
+});
+
 test('selected unlocked placements expose four accessible resize handles and context-command-only removal', () => {
   assert.match(source, /LATTICE_PRODUCTION_RESIZE_CORNERS\.map/);
   assert.match(source, /Resize placement from/);
   assert.match(source, /\{ id: 'remove', label: 'Remove' \}/);
   assert.match(source, /command === 'remove'/);
   assert.doesNotMatch(source, /event\.key === ['"](?:Delete|Backspace)['"]/);
-  assert.match(source, /placements\[index \+ 1\] \|\| placements\[index - 1\]/);
+  assert.match(source, /placements\.find\(\(placement\) => !removalIds\.includes\(placement\.id\)\)/);
   assert.match(source, /onReturnFocus/);
+  assert.match(source, /onCommitRemoveGroup\?\.\(/);
+  assert.match(source, /selectedPlacementSet\.has\(placementId\) && selectedPlacementSet\.size > 1/);
 });
 
 test('explicit crop mode owns pan and zoom with accessible DONE, CANCEL, and NATIVE FIT controls', () => {
@@ -125,7 +155,8 @@ test('explicit crop mode owns pan and zoom with accessible DONE, CANCEL, and NAT
 
 test('active crop suppresses other composition owners while retaining pointer capture and preview-only cancellation', () => {
   assert.match(source, /disabled=\{Boolean\(cropSession\)\}/);
-  assert.match(source, /selected && !locked && !cropSession/);
+  assert.match(source, /primary && selectedPlacementSet\.size === 1 && !locked && !cropSession/);
+  assert.match(source, /groupResizeRectangle && !cropSession/);
   assert.match(source, /setContextMenu\(null\)/);
   assert.match(source, /kind: 'crop'/);
   assert.match(source, /createLatticeProductionCropPanGesture/);

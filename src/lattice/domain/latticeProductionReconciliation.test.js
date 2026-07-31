@@ -18,6 +18,7 @@ const placement = (id, stableAssetId, visibility = LATTICE_PRODUCTION_VISIBILITY
   navigationOrder: 0, crop: null, frameId: 'NONE',
   mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
   backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO', visibility, locked: true,
+  transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
 });
 
 function publicationWith(id = 'accepted-public') {

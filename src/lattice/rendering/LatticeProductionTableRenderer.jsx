@@ -99,12 +99,16 @@ function ProductionPlacement({ field, layerRank, onMediaState, onPlacementActiva
             })}
             referrerPolicy="no-referrer"
             src={media.src}
-            style={artwork.imageRectangle ? rectangleStyle({
-              left: artwork.imageRectangle.left - artwork.mediaOpeningRectangle.left,
-              top: artwork.imageRectangle.top - artwork.mediaOpeningRectangle.top,
-              width: artwork.imageRectangle.width,
-              height: artwork.imageRectangle.height,
-            }) : undefined}
+            style={artwork.imageRenderRectangle ? {
+              ...rectangleStyle({
+                left: artwork.imageRenderRectangle.left - artwork.mediaOpeningRectangle.left,
+                top: artwork.imageRenderRectangle.top - artwork.mediaOpeningRectangle.top,
+                width: artwork.imageRenderRectangle.width,
+                height: artwork.imageRenderRectangle.height,
+              }),
+              transform: artwork.imageTransform,
+              transformOrigin: 'center',
+            } : undefined}
           />
         )}
         {!loaded && <span className="lattice-production-placement__status">{failed ? 'Artwork unavailable' : 'Loading artwork'}</span>}

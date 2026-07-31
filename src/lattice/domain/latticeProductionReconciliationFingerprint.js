@@ -9,6 +9,7 @@ const placementValue = (placement, stableAssetId) => ({
   crop: structuredClone(placement.crop), frameId: placement.frameId,
   mat: structuredClone(placement.mat), backing: structuredClone(placement.backing),
   transparencyMode: placement.transparencyMode, visibility: placement.visibility,
+  transform: structuredClone(placement.transform),
 });
 
 function tableValue(table, placements) {

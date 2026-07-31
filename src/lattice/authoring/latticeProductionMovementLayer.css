@@ -12,6 +12,24 @@
   pointer-events: none;
 }
 
+.lattice-production-group-resize-control {
+  position: absolute;
+  z-index: 2147483646;
+  box-sizing: border-box;
+  border: 1px solid var(--lattice-overlay-ink);
+  pointer-events: none;
+}
+
+.lattice-production-selection-marquee {
+  position: absolute;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  border: 1px solid var(--lattice-overlay-ink);
+  background: color-mix(in srgb, var(--lattice-overlay-ink) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--owner-lattice-surface) 34%, transparent);
+  pointer-events: none;
+}
+
 .lattice-production-movement-control {
   position: absolute;
   box-sizing: border-box;

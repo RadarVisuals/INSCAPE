@@ -9,15 +9,21 @@ export const BROWSER_RESIZE_STEP = 24;
 
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
 
+export function browserWindowMargin(viewport) {
+  const width = Math.max(320, Number(viewport?.width) || 1280);
+  const height = Math.max(320, Number(viewport?.height) || 720);
+  return width < 760 || height < 600 ? 10 : 48;
+}
+
 export function browserViewportBounds(viewport) {
   const width = Math.max(320, Number(viewport?.width) || 1280);
   const height = Math.max(320, Number(viewport?.height) || 720);
-  const margin = width < 760 || height < 600 ? 10 : 48;
+  const margin = browserWindowMargin({ height, width });
   return {
     maximumHeight: Math.max(300, height - (margin * 2)),
     maximumWidth: Math.max(300, width - (margin * 2)),
     minimumHeight: Math.min(440, Math.max(300, height - (margin * 2))),
-    minimumWidth: Math.min(680, Math.max(300, width - (margin * 2))),
+    minimumWidth: Math.min(360, Math.max(300, width - (margin * 2))),
   };
 }
 
@@ -86,6 +92,27 @@ export function searchBrowserCategoryAssets(assets, query = '') {
 
 export function categoryDialogInitialName(dialog) {
   return dialog?.type === 'rename' ? String(dialog?.category?.name || '') : '';
+}
+
+export function clampBrowserPosition(position, size, viewport) {
+  const width = Math.max(320, Number(viewport?.width) || 1280);
+  const height = Math.max(320, Number(viewport?.height) || 720);
+  const margin = browserWindowMargin({ height, width });
+  const windowWidth = Math.max(1, Number(size?.width) || 1);
+  const windowHeight = Math.max(1, Number(size?.height) || 1);
+  return {
+    left: clamp(Number(position?.left) || margin, margin, Math.max(margin, width - windowWidth - margin)),
+    top: clamp(Number(position?.top) || margin, margin, Math.max(margin, height - windowHeight - margin)),
+  };
+}
+
+export function initialBrowserPosition(size, viewport) {
+  const width = Math.max(320, Number(viewport?.width) || 1280);
+  const height = Math.max(320, Number(viewport?.height) || 720);
+  return clampBrowserPosition({
+    left: (width - Number(size?.width || 0)) / 2,
+    top: (height - Number(size?.height || 0)) / 2,
+  }, size, { height, width });
 }
 
 export const BROWSER_VIEW_KINDS = Object.freeze({

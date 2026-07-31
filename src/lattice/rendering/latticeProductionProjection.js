@@ -1,6 +1,7 @@
 import { assertValidLatticeProductionPublication } from '../domain/latticeProductionPublication.js';
 import { projectCroppedMediaRectangle } from './latticeCrop.js';
 import { projectArtworkMat } from './latticeMat.js';
+import { projectLatticeProductionTransform } from '../authoring/latticeProductionTransform.js';
 
 const positiveViewport = (viewport) => Boolean(viewport
   && Number.isFinite(viewport.width) && viewport.width > 0
@@ -98,15 +99,26 @@ export function projectLatticeProductionArtwork(placement, field, mediaDimension
     backplateRectangle: mat.backplateRectangle,
     mediaOpeningRectangle: mat.mediaOpeningRectangle,
     imageRectangle: null,
+    imageRenderRectangle: null,
+    imageTransform: 'none',
   });
-  const imageRectangle = placement.crop
-    ? projectCroppedMediaRectangle(mat.mediaOpeningRectangle, mediaDimensions, placement.crop)
-    : fitNativeMediaRectangle(mat.mediaOpeningRectangle, mediaDimensions);
+  const transformed = projectLatticeProductionTransform(placement.transform, mediaDimensions, placement.crop);
+  const imageRectangle = transformed.crop
+    ? projectCroppedMediaRectangle(mat.mediaOpeningRectangle, transformed.dimensions, transformed.crop)
+    : fitNativeMediaRectangle(mat.mediaOpeningRectangle, transformed.dimensions);
+  const imageRenderRectangle = transformed.swapped ? {
+    left: imageRectangle.left + ((imageRectangle.width - imageRectangle.height) / 2),
+    top: imageRectangle.top + ((imageRectangle.height - imageRectangle.width) / 2),
+    width: imageRectangle.height,
+    height: imageRectangle.width,
+  } : imageRectangle;
   return Object.freeze({
     footprint,
     mat: mat.mat,
     backplateRectangle: mat.backplateRectangle,
     mediaOpeningRectangle: mat.mediaOpeningRectangle,
     imageRectangle: Object.freeze(imageRectangle),
+    imageRenderRectangle: Object.freeze(imageRenderRectangle),
+    imageTransform: transformed.css,
   });
 }

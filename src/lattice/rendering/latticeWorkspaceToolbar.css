@@ -83,10 +83,56 @@
   height: 40px;
 }
 
+.lattice-workspace-toolbar[data-embedded] {
+  position: static;
+  width: 100%;
+  height: 40px;
+  border: 0;
+  border-bottom: 1px solid var(--lattice-menu-line-strong);
+  box-shadow: none;
+}
+
+.lattice-workspace-toolbar[data-embedded] .lattice-workspace-toolbar__tool {
+  flex: 1 1 0;
+  width: auto;
+}
+
+.lattice-workspace-toolbar[data-faceplate] {
+  position: static;
+  width: auto;
+  height: 100%;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.lattice-workspace-toolbar[data-faceplate] .lattice-workspace-toolbar__tool {
+  width: 32px;
+  min-width: 32px;
+  height: 100%;
+  padding: 0;
+}
+
 .lattice-workspace-toolbar[data-compact] .lattice-workspace-toolbar__tool {
   width: 48px;
   min-width: 48px;
   padding: 0;
+}
+
+.lattice-workspace-toolbar[data-compact][data-faceplate] .lattice-workspace-toolbar__tool {
+  width: clamp(34px, 5cqi, 58px);
+  min-width: 34px;
+}
+
+.lattice-workspace-toolbar[data-compact][data-faceplate] .lattice-workspace-toolbar__tool[aria-label="ARRANGE"] {
+  width: auto;
+  min-width: 88px;
+  padding-inline: 10px;
+  gap: 7px;
+}
+
+.lattice-workspace-toolbar[data-compact][data-faceplate] .lattice-workspace-toolbar__tool[aria-label="ARRANGE"] > span {
+  order: -1;
 }
 
 .lattice-workspace-toolbar__more {

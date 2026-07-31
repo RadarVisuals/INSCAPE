@@ -16,7 +16,8 @@ const placement = (overrides = {}) => ({
   layer: 0, navigationOrder: 0, crop: null, frameId: 'NONE',
   mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
   backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO',
-  visibility: LATTICE_PRODUCTION_VISIBILITY.PUBLIC, locked: false, ...overrides,
+  visibility: LATTICE_PRODUCTION_VISIBILITY.PUBLIC, locked: false,
+  transform: { quarterTurns: 0, mirrorX: false, mirrorY: false }, ...overrides,
 });
 
 test('production drafts fix the 32 by 18 authored plane and permanent row-major topology', () => {

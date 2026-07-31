@@ -23,7 +23,11 @@ export default function LatticeProductionFocusArtwork({ entry, focused, phase })
       <span className="lattice-production-focus-artwork__opening" style={{
         ...percentRectangle(artwork.mediaOpeningRectangle, artwork.footprint), backgroundColor: background,
       }}>
-        <img alt="" draggable="false" src={entry.media.src} style={percentRectangle(artwork.imageRectangle, artwork.mediaOpeningRectangle)} />
+        <img alt="" draggable="false" src={entry.media.src} style={{
+          ...percentRectangle(artwork.imageRenderRectangle, artwork.mediaOpeningRectangle),
+          transform: artwork.imageTransform,
+          transformOrigin: 'center',
+        }} />
       </span>
     </div>
     <div className="lattice-production-focus-artwork__native">

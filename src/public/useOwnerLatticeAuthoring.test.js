@@ -6,6 +6,7 @@ import {
   LATTICE_PRODUCTION_LAYER_OPERATIONS,
   latticeProductionLayerTopologySnapshot,
 } from '../lattice/authoring/latticeProductionLayer.js';
+import { resizeLatticeProductionGroupGeometries } from '../lattice/authoring/latticeProductionResize.js';
 import { latticeProductionDraftKey } from '../lattice/storage/latticeProductionDraftStore.js';
 import {
   OWNER_LATTICE_AUTHORING_STATUS,
@@ -48,6 +49,7 @@ const existingPlacement = (id, stableAssetId = ASSET) => ({
   layer: 0, navigationOrder: 0, crop: null, frameId: 'NONE',
   mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
   backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO', visibility: 'PUBLIC', locked: false,
+  transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
 });
 
 test('cached placed assets still trigger one idle live load for metadata enrichment', () => {
@@ -237,6 +239,66 @@ test('completed MOVE re-reads the accepted draft and performs exactly one canoni
   assert.deepEqual(JSON.parse(storage.values.get(latticeProductionDraftKey(PROFILE))), result.draft);
 });
 
+test('completed group MOVE persists every selected placement atomically in one canonical write', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  draft.tables[4].placements = [
+    existingPlacement('placement-1'),
+    { ...existingPlacement('placement-2'), column: 8, row: 4, layer: 1, navigationOrder: 1 },
+  ];
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: JSON.stringify(draft) });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const result = session.commitGroupMovement({
+    assetRecords: [asset()],
+    tableId: 'table-05',
+    moves: draft.tables[4].placements.map((placement) => ({
+      placementId: placement.id,
+      expectedStartGeometry: {
+        column: placement.column, row: placement.row,
+        columnSpan: placement.columnSpan, rowSpan: placement.rowSpan,
+      },
+      destination: {
+        column: placement.column + 2, row: placement.row + 1,
+        columnSpan: placement.columnSpan, rowSpan: placement.rowSpan,
+      },
+    })),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(storage.writes, 1);
+  assert.deepEqual(result.draft.tables[4].placements.map(({ column, row }) => ({ column, row })), [
+    { column: 3, row: 2 }, { column: 10, row: 5 },
+  ]);
+});
+
+test('group DUPLICATE and REMOVE each use one canonical write and return the new selection', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  draft.tables[4].placements = [
+    existingPlacement('placement-1'),
+    { ...existingPlacement('placement-2'), column: 8, row: 4, layer: 1, navigationOrder: 1 },
+  ];
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: JSON.stringify(draft) });
+  const ids = ['placement-copy-1', 'placement-copy-2'];
+  const session = createOwnerLatticeAuthoringSession({
+    generatePlacementId: () => ids.shift(), profileAddress: PROFILE, storage,
+  });
+  const duplicated = session.commitGroupDuplicate({
+    expectedPlacements: structuredClone(draft.tables[4].placements),
+    placementIds: ['placement-1', 'placement-2'],
+    tableId: 'table-05',
+  });
+  assert.equal(duplicated.ok, true);
+  assert.deepEqual(duplicated.placementIds, ['placement-copy-1', 'placement-copy-2']);
+  assert.equal(storage.writes, 1);
+  const copies = duplicated.draft.tables[4].placements.filter(({ id }) => duplicated.placementIds.includes(id));
+  const removed = session.commitGroupRemoval({
+    expectedPlacements: structuredClone(copies),
+    placementIds: duplicated.placementIds,
+    tableId: 'table-05',
+  });
+  assert.equal(removed.ok, true);
+  assert.equal(storage.writes, 2);
+  assert.deepEqual(removed.draft.tables[4].placements.map(({ id }) => id), ['placement-1', 'placement-2']);
+});
+
 test('same-cell, stale-start, locked, private, missing-asset and unavailable-media MOVE attempts write nothing', () => {
   const cases = [
     { name: 'same cell', mutate: () => {}, destination: { column: 1, row: 1, columnSpan: 3, rowSpan: 3 } },
@@ -323,6 +385,46 @@ test('completed RESIZE requires the MOVE asset policy and performs one canonical
   assert.deepEqual(result.draft.tables[4].placements[0], {
     ...expected, columnSpan: 6, rowSpan: 5,
   });
+});
+
+test('completed group RESIZE scales every selected placement in one canonical write', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const first = existingPlacement('placement-resize-a');
+  const second = existingPlacement('placement-resize-b');
+  second.column = 6; second.row = 5; second.layer = 1; second.navigationOrder = 1;
+  draft.tables[4].placements = [first, second];
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: JSON.stringify(draft) });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const destinations = resizeLatticeProductionGroupGeometries([first, second], {
+    column: 1, row: 1, columnSpan: 12, rowSpan: 9,
+  });
+  const result = session.commitGroupResize({
+    assetRecords: [asset()], corner: 'se', destinations,
+    expectedPlacements: structuredClone([first, second]),
+    placementIds: [first.id, second.id], tableId: 'table-05',
+  });
+  assert.equal(result.ok, true);
+  assert.equal(storage.writes, 1);
+  assert.deepEqual(result.draft.tables[4].placements.map(({ column, row, columnSpan, rowSpan }) => ({
+    column, row, columnSpan, rowSpan,
+  })), destinations.map(({ destination }) => destination));
+});
+
+test('completed group TRANSFORM updates the complete selection in one canonical write', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const first = existingPlacement('placement-transform-a');
+  const second = existingPlacement('placement-transform-b');
+  second.layer = 1; second.navigationOrder = 1;
+  draft.tables[4].placements = [first, second];
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: JSON.stringify(draft) });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const result = session.commitGroupTransform({
+    expectedPlacements: structuredClone([first, second]), operation: 'MIRROR_HORIZONTAL',
+    placementIds: [first.id, second.id], tableId: 'table-05',
+  });
+  assert.equal(result.ok, true);
+  assert.equal(storage.writes, 1);
+  assert.deepEqual(result.draft.tables[4].placements.map(({ transform }) => transform.mirrorX), [true, true]);
 });
 
 test('stale, unavailable-asset, no-op, and failed-persistence RESIZE attempts write nothing', () => {
@@ -568,8 +670,13 @@ test('corrupt sessions block MOVE while preserving raw bytes', () => {
   const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
   const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
   assert.equal(session.commitCrop({}).ok, false);
+  assert.equal(session.commitGroupDuplicate({}).ok, false);
   assert.equal(session.commitLayer({}).ok, false);
+  assert.equal(session.commitGroupMovement({}).ok, false);
   assert.equal(session.commitMovement({}).ok, false);
+  assert.equal(session.commitGroupRemoval({}).ok, false);
+  assert.equal(session.commitGroupResize({}).ok, false);
+  assert.equal(session.commitGroupTransform({}).ok, false);
   assert.equal(session.commitResize({}).ok, false);
   assert.equal(session.commitRemoval({}).ok, false);
   assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), raw);

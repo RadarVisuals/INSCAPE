@@ -163,7 +163,7 @@ test('invalid completed operations fail closed without overwriting accepted stat
 test('malformed, unsupported, and wrong-profile records recover to an unwritten empty draft', () => {
   const corruptRecords = [
     '{broken',
-    JSON.stringify({ ...titledDraft(PROFILE_A, 'Future'), draftVersion: 2 }),
+    JSON.stringify({ ...titledDraft(PROFILE_A, 'Future'), draftVersion: 3 }),
     JSON.stringify(titledDraft(PROFILE_B, 'Other profile')),
   ];
 

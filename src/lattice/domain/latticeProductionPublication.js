@@ -12,12 +12,13 @@ import {
   latticeProductionTableId,
 } from './latticeProductionDraft.js';
 
-export const LATTICE_PRODUCTION_SCHEMA_VERSION = 1;
+export const LATTICE_PRODUCTION_SCHEMA_VERSION = 2;
 
 const PUBLICATION_KEYS = ['latticeVersion', 'artboard', 'geometry', 'appearance', 'identityPresentation', 'lastPublished', 'tables'];
 const PUBLIC_TABLE_KEYS = ['id', 'coordinate', 'title', 'subtitle', 'labelVisible', 'labelAnchor', 'labelOffset', 'visibility', 'placements'];
 const PRIVATE_TABLE_KEYS = ['id', 'coordinate', 'visibility'];
-const PLACEMENT_KEYS = ['id', 'asset', 'column', 'row', 'columnSpan', 'rowSpan', 'layer', 'navigationOrder', 'crop', 'frameId', 'mat', 'backing', 'transparencyMode', 'visibility'];
+const PLACEMENT_KEYS = ['id', 'asset', 'column', 'row', 'columnSpan', 'rowSpan', 'layer', 'navigationOrder', 'crop', 'frameId', 'mat', 'backing', 'transparencyMode', 'visibility', 'transform'];
+const LEGACY_PLACEMENT_KEYS = PLACEMENT_KEYS.filter((key) => key !== 'transform');
 const ASSET_KEYS = ['stableAssetId', 'network', 'chainId', 'tokenStandard', 'contractAddress', 'tokenId', 'name', 'description', 'collectionName', 'media', 'creators', 'attributes'];
 const record = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 const exactKeys = (value, keys) => record(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
@@ -32,6 +33,21 @@ const frameIds = new Set(LATTICE_PRODUCTION_FRAME_IDS);
 const transparencyModes = new Set(LATTICE_PRODUCTION_TRANSPARENCY_MODES);
 const HEX_COLOR = /^#[0-9a-f]{6}$/iu;
 
+export function migrateLatticeProductionPublication(input) {
+  if (!record(input) || input.latticeVersion !== 1 || !Array.isArray(input.tables)) return input;
+  const publication = structuredClone(input);
+  publication.latticeVersion = LATTICE_PRODUCTION_SCHEMA_VERSION;
+  publication.tables.forEach((table) => {
+    if (!Array.isArray(table?.placements)) return;
+    table.placements.forEach((placement) => {
+      if (exactKeys(placement, LEGACY_PLACEMENT_KEYS)) {
+        placement.transform = { quarterTurns: 0, mirrorX: false, mirrorY: false };
+      }
+    });
+  });
+  return publication;
+}
+
 const validCrop = (value) => value === null || exactKeys(value, ['x', 'y', 'zoom'])
   && Number.isFinite(value.x) && value.x >= 0 && value.x <= 1
   && Number.isFinite(value.y) && value.y >= 0 && value.y <= 1
@@ -43,6 +59,9 @@ const validMat = (value) => exactKeys(value, ['enabled', 'color', 'inset'])
   && value.inset.left + value.inset.right < 1 && value.inset.top + value.inset.bottom < 1;
 const validBacking = (value) => exactKeys(value, ['enabled', 'color'])
   && typeof value.enabled === 'boolean' && HEX_COLOR.test(value.color);
+const validTransform = (value) => exactKeys(value, ['quarterTurns', 'mirrorX', 'mirrorY'])
+  && Number.isSafeInteger(value.quarterTurns) && value.quarterTurns >= 0 && value.quarterTurns <= 3
+  && typeof value.mirrorX === 'boolean' && typeof value.mirrorY === 'boolean';
 
 export function validateLatticeProductionPublicAssetReference(asset) {
   if (!exactKeys(asset, ASSET_KEYS)) return false;
@@ -63,6 +82,7 @@ export function validateLatticeProductionPublicAssetReference(asset) {
 }
 
 export function validateLatticeProductionPublication(input) {
+  input = migrateLatticeProductionPublication(input);
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
   if (!exactKeys(input, PUBLICATION_KEYS)) {
@@ -113,7 +133,8 @@ export function validateLatticeProductionPublication(input) {
         || placement.column + placement.columnSpan > 32 || placement.row + placement.rowSpan > 18
         || !Number.isSafeInteger(placement.layer) || placement.layer < 0 || !Number.isSafeInteger(placement.navigationOrder) || placement.navigationOrder < 0
         || !validCrop(placement.crop) || !frameIds.has(placement.frameId) || !validMat(placement.mat)
-        || !validBacking(placement.backing) || !transparencyModes.has(placement.transparencyMode)) fail(placementPath, 'invalid_public_placement', 'Published placement is invalid');
+        || !validBacking(placement.backing) || !transparencyModes.has(placement.transparencyMode)
+        || !validTransform(placement.transform)) fail(placementPath, 'invalid_public_placement', 'Published placement is invalid');
       if (globalPlacementIds.has(placement.id)) fail(`${placementPath}.id`, 'duplicate_placement_id', 'Published placement IDs must be globally unique');
       globalPlacementIds.add(placement.id);
       if (layers.has(placement.layer)) fail(`${placementPath}.layer`, 'duplicate_layer', 'Published layers must be unique within a table');

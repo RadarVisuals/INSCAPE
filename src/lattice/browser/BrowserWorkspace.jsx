@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Archive, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 import BrowserCategoryDialog from './BrowserCategoryDialog.jsx';
 import BrowserUnifiedPanel from './BrowserUnifiedPanel.jsx';
 import RackMenu from '../../public/menus/RackMenu.jsx';
+import LatticeRackShell, { LatticeRackModule } from '../windows/LatticeRackShell.jsx';
+import LatticeWorkspaceToolbar from '../rendering/LatticeWorkspaceToolbar.jsx';
+import LatticeLayersModule from '../rendering/LatticeLayersModule.jsx';
+import { moveLatticeLayerEntries } from '../rendering/latticeLayersModel.js';
 import { BROWSER_VIEW_KINDS, categoryMembershipState } from './browserWorkspaceModel.js';
 import useBrowserWorkspace from './useBrowserWorkspace.js';
 import useLatticeChromePresence from '../windows/useLatticeChromePresence.js';
@@ -21,11 +25,19 @@ export default function BrowserWorkspace({
   data,
   onActiveTabChange,
   onAssetPointerDown,
-  onPlaceAsset,
+  onLayerReorder,
+  onLayerSelectionChange,
   onRenderableAssetsChange,
   onRequestClose,
+  onWorkspaceToolActivate,
   open = false,
+  layers = [],
+  selectedLayerIds = [],
+  systemTools = [],
   tabRequest = null,
+  workspaceActiveToolIds = [],
+  workspaceArrangeEnabled = false,
+  workspaceTools = [],
 }) {
   const workspace = useBrowserWorkspace(data);
   const presence = useLatticeChromePresence(open ? 'browser' : null);
@@ -33,7 +45,13 @@ export default function BrowserWorkspace({
   const organizationGestureRef = useRef(null);
   const suppressSelectionRef = useRef(false);
   const [contextMenu, setContextMenu] = useState(null);
+  const [rackMenu, setRackMenu] = useState(null);
   const [organizationDrag, setOrganizationDrag] = useState(null);
+  const [compactMode, setCompactMode] = useState(false);
+  const [moduleVisibility, setModuleVisibility] = useState({ browser: true, layers: true, tools: true });
+  const [rackExpanded, setRackExpanded] = useState(true);
+  const [browserModuleExpanded, setBrowserModuleExpanded] = useState(true);
+  const [layersModuleExpanded, setLayersModuleExpanded] = useState(false);
 
   useEffect(() => () => organizationGestureRef.current?.cancel?.(), []);
   const renderableAssetKey = workspace.renderableAssetIds.join('\n');
@@ -65,6 +83,11 @@ export default function BrowserWorkspace({
     setContextMenu(null);
     if (restore) restoreFocus(trigger);
   };
+  const closeRackMenu = (restore = true) => {
+    const trigger = rackMenu?.trigger;
+    setRackMenu(null);
+    if (restore) restoreFocus(trigger);
+  };
   const closeDialog = () => {
     const trigger = workspace.dialog?.trigger;
     workspace.setDialog(null);
@@ -75,24 +98,17 @@ export default function BrowserWorkspace({
     event.preventDefault();
     event.stopPropagation();
     if (workspace.dialog) { closeDialog(); return; }
+    if (rackMenu) { closeRackMenu(); return; }
     if (contextMenu) { closeContextMenu(); return; }
     if (workspace.selectedAssetIds.length) { workspace.clearSelection(); return; }
     onRequestClose?.('escape');
   };
-  const selectedPlacementReason = workspace.selectedAssetIds.length > 1 ? 'PLACE ONE ASSET AT A TIME'
-    : !workspace.selectedAsset ? 'SELECT ASSET'
-    : !workspace.selectedAsset.placeable
-      ? workspace.selectedAsset.placementUnavailableReason || 'ASSET UNAVAILABLE'
-      : null;
-  const placementUnavailableReason = data.activeTable?.placementUnavailableReason || selectedPlacementReason;
-  const placementEnabled = Boolean(!placementUnavailableReason && workspace.selectedAsset && onPlaceAsset);
-  const placementLabel = placementEnabled
-    ? `PLACE PUBLIC / ${data.activeTable?.label || 'ACTIVE TABLE'}`
-    : placementUnavailableReason || 'PLACE UNAVAILABLE';
   const openCategoryContext = categoryCommands ? (event, category) => {
+    setRackMenu(null);
     setContextMenu({ anchor: contextAnchor(event), categoryId: category.id, kind: 'category', trigger: event.currentTarget });
   } : null;
   const openAssetContext = categoryCommands ? (event, asset) => {
+    setRackMenu(null);
     const assetId = asset.stableAssetId || asset.id;
     const assetIds = workspace.selectForContext(assetId);
     setContextMenu({ anchor: contextAnchor(event), assetIds, kind: 'membership', trigger: event.currentTarget });
@@ -200,10 +216,59 @@ export default function BrowserWorkspace({
     if (dialog.type === 'create') workspace.selectView({ kind: BROWSER_VIEW_KINDS.CATEGORY, id: result });
     closeDialog();
   };
+  const availableModules = {
+    browser: true,
+    layers: true,
+    tools: workspaceTools.length > 0,
+  };
+  const hasBrowserModule = moduleVisibility.browser;
+  const hasToolsModule = availableModules.tools && moduleVisibility.tools;
+  const hasLayersModule = moduleVisibility.layers;
+  const browserExpanded = rackExpanded && hasBrowserModule && browserModuleExpanded;
+  const layersExpanded = rackExpanded && layersModuleExpanded;
+  const moduleFaceplateCount = Number(hasBrowserModule) + Number(hasToolsModule) + Number(hasLayersModule);
+  const rackTailHeight = hasLayersModule ? 38 + (layersExpanded ? 220 : 0) : 0;
+  const compactRackHeight = 38 + (moduleFaceplateCount * 38)
+    + (layersExpanded ? 220 : 0);
+  const rackCommands = [
+    { id: 'rack:toggle', label: rackExpanded ? 'COLLAPSE THE RACK' : 'EXPAND THE RACK' },
+    { checkable: true, id: 'compact', label: 'COMPACT MODE', selected: compactMode },
+    { checkable: true, id: 'module:browser', label: 'BROWSER MODULE', selected: hasBrowserModule },
+    ...(availableModules.tools ? [{ checkable: true, id: 'module:tools', label: 'TOOLS MODULE', selected: hasToolsModule }] : []),
+    { checkable: true, id: 'module:layers', label: 'LAYERS MODULE', selected: hasLayersModule },
+    { id: 'modules:show-all', label: 'SHOW ALL MODULES' },
+  ];
+  const handleRackCommand = (commandId) => {
+    if (commandId === 'rack:toggle') setRackExpanded((current) => !current);
+    else if (commandId === 'compact') setCompactMode((current) => !current);
+    else if (commandId === 'modules:show-all') setModuleVisibility({ browser: true, layers: true, tools: true });
+    else if (commandId.startsWith('module:')) {
+      const moduleId = commandId.slice('module:'.length);
+      setModuleVisibility((current) => ({ ...current, [moduleId]: !current[moduleId] }));
+    }
+    closeRackMenu();
+  };
+  const selectedLayerSet = new Set(selectedLayerIds);
+  const selectedLayerIndexes = layers.map(({ id }, index) => selectedLayerSet.has(id) ? index : -1)
+    .filter((index) => index >= 0);
+  const layerOrderingBlocked = !workspaceArrangeEnabled || !selectedLayerIndexes.length
+    || layers.some(({ locked }) => locked);
+  const layerStepTarget = (direction) => {
+    if (layerOrderingBlocked) return null;
+    const edge = direction === 'up' ? Math.min(...selectedLayerIndexes) : Math.max(...selectedLayerIndexes);
+    return layers[edge + (direction === 'up' ? -1 : 1)] || null;
+  };
+  const stepSelectedLayers = (direction) => {
+    const target = layerStepTarget(direction);
+    if (!target) return;
+    const next = moveLatticeLayerEntries(layers, selectedLayerIds, target.id);
+    if (next) onLayerReorder?.(next.map(({ id }) => id));
+  };
   return (
     <section
       aria-label="Owner asset Browser"
       className="lattice-browser-workspace"
+      data-compact={compactMode || undefined}
       data-lattice-chrome
       data-phase={presence.phase}
       aria-hidden={presence.phase === 'exiting' || undefined}
@@ -211,38 +276,84 @@ export default function BrowserWorkspace({
       onAnimationEnd={(event) => { if (event.target === event.currentTarget) presence.completeAnimation(); }}
       onKeyDown={handleEscape}
       onPointerDown={(event) => event.stopPropagation()}
-      style={{ height: workspace.windowSize.height, width: workspace.windowSize.width }}
+      style={{
+        height: browserExpanded ? workspace.windowSize.height : rackExpanded ? compactRackHeight : 38,
+        left: workspace.windowPosition.left,
+        top: workspace.windowPosition.top,
+        width: workspace.windowSize.width,
+      }}
     >
-      <header className="lattice-browser-header">
-        <div><Archive aria-hidden="true" size={15} strokeWidth={2} /><strong>BROWSER</strong></div>
-        {data.ownerContext && <span>{data.ownerContext}</span>}
-        <button aria-label="Close Browser" className="lattice-chrome-close-control" onClick={() => onRequestClose?.('close-control')} type="button"><X aria-hidden="true" size={15} strokeWidth={2} /></button>
-      </header>
-      <label className="lattice-browser-search">
-        <span>SEARCH ASSET POOL</span>
-        <input aria-label="Search asset pool" onChange={(event) => workspace.setQuery(event.target.value)} placeholder=" " type="search" value={workspace.query} />
-      </label>
-      <div className="lattice-browser-body">
-        <BrowserUnifiedPanel categoryDropTargetId={organizationDrag?.categoryId} categorySectionRef={categorySectionRef}
-          data={data} onAssetContext={openAssetContext} onAssetPointerDown={beginOrganizationDrag}
-          onCategoryContext={openCategoryContext}
-          onCreateCategory={categoryCommands ? (trigger) => workspace.setDialog({ trigger, type: 'create' }) : null}
-          workspace={panelWorkspace} />
-      </div>
-      <footer className="lattice-browser-footer">
-        <button className="lattice-browser-footer__category" disabled={!workspace.selectedAssetIds.length || !data.categories.length || !categoryCommands}
-          onClick={(event) => setContextMenu({ anchor: contextAnchor(event), assetIds: [...workspace.selectedAssetIds], kind: 'membership', trigger: event.currentTarget })} type="button">ADD TO CATEGORY / {workspace.selectedAssetIds.length} SELECTED</button>
-        <button
-          disabled={!placementEnabled}
-          onClick={() => {
-            if (workspace.isAssetRenderable(workspace.selectedAsset?.stableAssetId)) {
-              onPlaceAsset?.(workspace.selectedAsset.stableAssetId);
-            }
-          }}
-          type="button"
-        >{placementLabel}</button>
-      </footer>
-      <button
+      <LatticeRackShell expanded={rackExpanded} masterAccessory={systemTools.length ?
+        <LatticeWorkspaceToolbar activeToolIds={workspaceActiveToolIds}
+          compact faceplate owner tools={systemTools} onToolActivate={onWorkspaceToolActivate} /> : null}
+        move={workspace.move} onClose={() => onRequestClose?.('close-control')}
+        onExpandedChange={setRackExpanded}
+        onMenuRequest={(event) => {
+          setContextMenu(null);
+          setRackMenu({ anchor: contextAnchor(event), trigger: event.currentTarget });
+        }}>
+        {rackExpanded && <>{hasToolsModule && <LatticeRackModule expandable={false} faceplateAccessory={
+          <LatticeWorkspaceToolbar activeToolIds={workspaceActiveToolIds} arrangeEnabled={workspaceArrangeEnabled}
+            compact faceplate owner tools={workspaceTools} onToolActivate={onWorkspaceToolActivate} />
+        } label="TOOLS" signal="tools" />}
+        {hasBrowserModule && <LatticeRackModule contentClassName="lattice-browser-module-content" expanded={browserExpanded}
+          faceplateAccessory={<>
+            <label className="lattice-browser-faceplate-size" onClick={(event) => event.stopPropagation()} title="Asset thumbnail size">
+              <span>SIZE</span>
+              <input aria-label="Asset thumbnail size" aria-valuetext={workspace.assetSize === workspace.assetSizeBounds.LIST ? 'LIST' : `${workspace.assetSize} PIXELS`}
+                max={workspace.assetSizeBounds.MAXIMUM} min={workspace.assetSizeBounds.MINIMUM}
+                onChange={(event) => workspace.setAssetSize(Number(event.target.value))} step="1" type="range" value={workspace.assetSize} />
+              <output>{workspace.assetSize === workspace.assetSizeBounds.LIST ? 'LIST' : workspace.assetSize}</output>
+            </label>
+            <label className="lattice-browser-faceplate-search" onClick={(event) => event.stopPropagation()} title="Search assets">
+              <Search aria-hidden="true" size={13} strokeWidth={2} />
+              <input aria-label="Search assets" onChange={(event) => workspace.setQuery(event.target.value)}
+                onFocus={() => { setRackExpanded(true); setBrowserModuleExpanded(true); }} placeholder="SEARCH"
+                type="search" value={workspace.query} />
+            </label>
+            {workspace.unavailableCount > 0 && <output className="lattice-browser-faceplate-unavailable"
+              title={`${workspace.unavailableCount} unavailable assets`}>{workspace.unavailableCount}</output>}
+          </>} fill label="BROWSER" signal="browser"
+          onExpandedChange={(expanded) => { setBrowserModuleExpanded(expanded); if (expanded) setRackExpanded(true); }}>
+          <div className="lattice-browser-body">
+            <BrowserUnifiedPanel categoryDropTargetId={organizationDrag?.categoryId} categorySectionRef={categorySectionRef}
+              data={data} onAssetContext={openAssetContext} onAssetPointerDown={beginOrganizationDrag}
+              onCategoryContext={openCategoryContext}
+              onCreateCategory={categoryCommands ? (trigger) => workspace.setDialog({ trigger, type: 'create' }) : null}
+              workspace={panelWorkspace} />
+          </div>
+        </LatticeRackModule>}
+        {hasLayersModule && <LatticeRackModule contentHeight={220} expanded={layersExpanded} faceplateAccessory={
+          <div className="lattice-browser-layer-steps" onClick={(event) => event.stopPropagation()}>
+            <button aria-label="Move selected layer forward" disabled={!layerStepTarget('up')}
+              onClick={() => stepSelectedLayers('up')} title="Move selected layer one position forward" type="button">
+              <ChevronUp aria-hidden="true" size={21} strokeWidth={2.4} />
+            </button>
+            <button aria-label="Move selected layer backward" disabled={!layerStepTarget('down')}
+              onClick={() => stepSelectedLayers('down')} title="Move selected layer one position backward" type="button">
+              <ChevronDown aria-hidden="true" size={21} strokeWidth={2.4} />
+            </button>
+          </div>
+        } label="LAYERS" signal="layers"
+          onExpandedChange={(expanded) => { setLayersModuleExpanded(expanded); if (expanded) setRackExpanded(true); }}>
+          <LatticeLayersModule layers={layers} onReorder={onLayerReorder}
+            onSelectionChange={onLayerSelectionChange} reorderDisabled={!workspaceArrangeEnabled}
+            selectedIds={selectedLayerIds} />
+        </LatticeRackModule>}</>}
+      </LatticeRackShell>
+      {rackExpanded && <button
+        aria-label="Resize The Rack width"
+        className="lattice-rack-width-resize"
+        onKeyDown={workspace.rackWidthResize.keyDown}
+        onLostPointerCapture={workspace.rackWidthResize.finish}
+        onPointerCancel={workspace.rackWidthResize.finish}
+        onPointerDown={workspace.rackWidthResize.begin}
+        onPointerMove={workspace.rackWidthResize.update}
+        onPointerUp={workspace.rackWidthResize.finish}
+        title="Drag to resize The Rack horizontally; Left and Right arrows resize in steps"
+        type="button"
+      />}
+      {browserExpanded && <button
         aria-label="Resize Browser"
         className="lattice-browser-resize"
         onKeyDown={workspace.resize.keyDown}
@@ -251,9 +362,10 @@ export default function BrowserWorkspace({
         onPointerDown={workspace.resize.begin}
         onPointerMove={workspace.resize.update}
         onPointerUp={workspace.resize.finish}
+        style={{ bottom: rackTailHeight + 1 }}
         title="Drag to resize around center; arrow keys resize in steps"
         type="button"
-      />
+      />}
       {contextMenu && createPortal(<RackMenu
         anchor={contextMenu.anchor}
         commands={contextMenu.kind === 'category' ? categoryMenuCommands : membershipCommands}
@@ -261,6 +373,14 @@ export default function BrowserWorkspace({
         onClose={() => closeContextMenu()}
         onCommand={handleContextCommand}
         returnFocus={contextMenu.trigger}
+      />, document.querySelector('.owner-lattice-shell') || document.body)}
+      {rackMenu && createPortal(<RackMenu
+        anchor={rackMenu.anchor}
+        commands={rackCommands}
+        label="The Rack options"
+        onClose={() => closeRackMenu()}
+        onCommand={handleRackCommand}
+        returnFocus={rackMenu.trigger}
       />, document.querySelector('.owner-lattice-shell') || document.body)}
       {organizationDrag && createPortal(<div aria-hidden="true" className="lattice-browser-organization-ghost"
         data-valid={organizationDrag.categoryId ? true : undefined}

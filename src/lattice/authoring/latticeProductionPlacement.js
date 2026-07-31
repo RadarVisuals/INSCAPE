@@ -156,6 +156,7 @@ export function createLatticeProductionPlacementCandidate(draftInput, {
     transparencyMode: 'AUTO',
     visibility: LATTICE_PRODUCTION_VISIBILITY.PUBLIC,
     locked: false,
+    transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
   };
   table.placements.push(placement);
   return assertValidLatticeProductionDraft(draft);

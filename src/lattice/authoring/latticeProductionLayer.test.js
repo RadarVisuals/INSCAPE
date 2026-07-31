@@ -15,7 +15,8 @@ const placement = (id, layer, overrides = {}) => ({
   crop: null, frameId: 'NONE',
   mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
   backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO',
-  visibility: 'PUBLIC', locked: false, ...overrides,
+  visibility: 'PUBLIC', locked: false,
+  transform: { quarterTurns: 0, mirrorX: false, mirrorY: false }, ...overrides,
 });
 
 function candidateFor(draft, placementId, operation) {
