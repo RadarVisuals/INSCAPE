@@ -38,6 +38,41 @@ export function keeperPointerFollowAllowed({
     && settling !== true;
 }
 
+export function keeperClickToMoveAllowed({
+  arrangeEnabled = false,
+  browserOpen = false,
+  cameraGestureActive = false,
+  compositionPreview = null,
+  cropModeActive = false,
+  followCursor = true,
+  identityActive = false,
+  interfaceVisible = true,
+  keeperDockActive = false,
+  settling = false,
+  themeOpen = false,
+  viewerActive = false,
+} = {}) {
+  return interfaceVisible === true
+    && followCursor === false
+    && arrangeEnabled !== true
+    && keeperDockActive !== true
+    && browserOpen !== true
+    && themeOpen !== true
+    && identityActive !== true
+    && viewerActive !== true
+    && cameraGestureActive !== true
+    && cropModeActive !== true
+    && !compositionPreview
+    && settling !== true;
+}
+
+const KEEPER_CLICK_TO_MOVE_BLOCKED_TARGETS = '[data-placement-id],[data-lattice-placement-layer],[data-lattice-chrome],button,a,input,select,textarea';
+
+export function keeperClickToMoveTargetAllowed(target) {
+  return Boolean(target && typeof target.closest === 'function'
+    && !target.closest(KEEPER_CLICK_TO_MOVE_BLOCKED_TARGETS));
+}
+
 export function keeperPointerTarget(event, bounds) {
   if (!event || event.pointerType === 'touch' || event.isPrimary === false || Number(event.buttons || 0) !== 0) return null;
   const clientX = Number(event.clientX);

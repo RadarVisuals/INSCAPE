@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   createKeeperPointerFollowScheduler,
+  keeperClickToMoveAllowed,
+  keeperClickToMoveTargetAllowed,
   keeperPointerFollowAllowed,
   keeperPointerFollowSpeedMultiplier,
   keeperPointerTarget,
@@ -16,6 +18,28 @@ test('cursor follow is available only while the released owner surface owns idle
   assert.equal(keeperPointerFollowAllowed({ compositionPreview: { kind: 'move' } }), false);
   assert.equal(keeperPointerFollowAllowed({ interfaceVisible: false }), false);
   assert.equal(keeperPointerFollowAllowed({ followCursor: false }), false);
+});
+
+test('click-to-move is available only on the released idle surface while cursor follow is off', () => {
+  assert.equal(keeperClickToMoveAllowed({ followCursor: false }), true);
+  assert.equal(keeperClickToMoveAllowed({ followCursor: true }), false);
+  for (const blocker of [
+    'arrangeEnabled', 'browserOpen', 'cameraGestureActive', 'cropModeActive',
+    'identityActive', 'keeperDockActive', 'settling', 'themeOpen', 'viewerActive',
+  ]) assert.equal(keeperClickToMoveAllowed({ followCursor: false, [blocker]: true }), false, blocker);
+  assert.equal(keeperClickToMoveAllowed({ followCursor: false, compositionPreview: { kind: 'move' } }), false);
+  assert.equal(keeperClickToMoveAllowed({ followCursor: false, interfaceVisible: false }), false);
+});
+
+test('click-to-move accepts empty canvas targets and rejects placements and controls', () => {
+  const target = (matchedSelector) => ({
+    closest: (selector) => matchedSelector && selector.includes(matchedSelector) ? {} : null,
+  });
+  assert.equal(keeperClickToMoveTargetAllowed(target(null)), true);
+  assert.equal(keeperClickToMoveTargetAllowed(target('[data-placement-id]')), false);
+  assert.equal(keeperClickToMoveTargetAllowed(target('[data-lattice-placement-layer]')), false);
+  assert.equal(keeperClickToMoveTargetAllowed(target('button')), false);
+  assert.equal(keeperClickToMoveTargetAllowed(null), false);
 });
 
 test('cursor speed presets remain bounded and unknown values fail to normal', () => {

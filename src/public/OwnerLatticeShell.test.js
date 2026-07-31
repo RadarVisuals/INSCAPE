@@ -142,7 +142,7 @@ test('Phase 5B composition stays in an owner-only projection-derived layer and c
   assert.match(source, /onCropModeChange=\{setCropModeActive\}/);
   assert.match(source, /onPreviewOperation=\{setCompositionPreview\}/);
   assert.match(source, /data-lattice-placement-action/);
-  assert.match(source, /\[data-lattice-placement-layer\]/);
+  assert.match(source, /!keeperClickToMoveTargetAllowed\(event\.target\)/);
   assert.doesNotMatch(source, /normalizedInsertionAnchor|createPlacementGesture|nudgePlacementByPixels/);
 });
 
@@ -188,9 +188,11 @@ test('Phase 7 Identity Dossier has strict owner-runtime precedence and exact tri
   assert.doesNotMatch(source, /setArrangeEnabled\(false\).*setIdentityDossierSession/s);
 });
 
-test('Phase 7.5 delegates idle cursor following to the existing resident engine without stealing interaction ownership', () => {
+test('Phase 7.5 delegates cursor follow and follow-disabled click-to-move without stealing interaction ownership', () => {
   assert.match(source, /createKeeperPointerFollowScheduler/);
   assert.match(source, /keeperPointerFollowAllowed/);
+    assert.match(source, /keeperClickToMoveAllowed/);
+    assert.match(source, /keeperClickToMoveTargetAllowed/);
   assert.match(source, /keeperPointerTarget/);
   assert.match(source, /residentHandoff\?\.moveToScreenPosition\?\.\(clientX, clientY, \{[\s\S]*reducedMotion: revealPresentation\.reducedMotion === true/);
   assert.match(source, /continuous: true/);
@@ -201,6 +203,7 @@ test('Phase 7.5 delegates idle cursor following to the existing resident engine 
   assert.match(source, /onMovementSpeedChange=\{setKeeperMovementSpeed\}/);
   assert.match(source, /arrangeEnabled,[\s\S]*cropModeActive,[\s\S]*gestureActive,[\s\S]*keeperDockActive,[\s\S]*viewerActive/);
   assert.match(source, /const target = keeperPointerTarget\(event, event\.currentTarget\.getBoundingClientRect\(\)\);[\s\S]*keeperPointerTargetRef\.current = target;[\s\S]*if \(!keeperPointerFollowEnabled\) return;[\s\S]*keeperPointerFollowRef\.current\?\.push\(target\);/);
+    assert.match(source, /const wasClick = !gestureRef\.current\.gesture\.activated;[\s\S]*finishGesture\(false\);[\s\S]*if \(wasClick && keeperClickToMoveEnabled && keeperClickToMoveTargetAllowed\(event\.target\)\)[\s\S]*continuous: false/);
   assert.ok(source.indexOf('const activeCameraGesture = cameraGestureRef.current') < source.indexOf('keeperPointerTarget(event'));
   assert.ok(source.indexOf('const activeGesture = gestureRef.current') < source.indexOf('keeperPointerTarget(event'));
 });

@@ -51,6 +51,8 @@ import { createProductionIdentityDossierViewModel } from './identity/productionI
 import { preloadIdentityProfileImage } from './identity/preloadIdentityProfileImage.js';
 import {
   createKeeperPointerFollowScheduler,
+  keeperClickToMoveAllowed,
+  keeperClickToMoveTargetAllowed,
   keeperPointerFollowAllowed,
   keeperPointerFollowSpeedMultiplier,
   keeperPointerTarget,
@@ -371,6 +373,20 @@ function OwnerLatticeRuntime({
     themeOpen,
     viewerActive: Boolean(viewerSession),
   });
+  const keeperClickToMoveEnabled = keeperClickToMoveAllowed({
+    arrangeEnabled,
+    browserOpen,
+    cameraGestureActive,
+    compositionPreview,
+    cropModeActive,
+    followCursor: keeperFollowCursor,
+    identityActive: Boolean(identityDossierOpening || identityDossierSession),
+    interfaceVisible,
+    keeperDockActive,
+    settling: snapping,
+    themeOpen,
+    viewerActive: Boolean(viewerSession),
+  });
 
   useEffect(() => {
     if (keeperPointerFollowEnabled) return;
@@ -452,7 +468,7 @@ function OwnerLatticeRuntime({
 
   const handlePointerDown = (event) => {
     if (cropModeActive || spacePressedRef.current || settlingRef.current || event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
-      || event.target.closest?.('[data-lattice-chrome],[data-lattice-placement-layer],button,a,input,select,textarea')) return;
+      || !keeperClickToMoveTargetAllowed(event.target)) return;
     gestureRef.current = {
       pointerId: event.pointerId,
       gesture: createPointerGesture({ x: event.clientX, y: event.clientY }),
@@ -506,7 +522,16 @@ function OwnerLatticeRuntime({
       return;
     }
     if (gestureRef.current?.pointerId !== event.pointerId) return;
+    const wasClick = !gestureRef.current.gesture.activated;
     finishGesture(false);
+    if (wasClick && keeperClickToMoveEnabled && keeperClickToMoveTargetAllowed(event.target)) {
+      const target = keeperPointerTarget(event, event.currentTarget.getBoundingClientRect());
+      if (target) residentHandoff?.moveToScreenPosition?.(target.clientX, target.clientY, {
+        continuous: false,
+        reducedMotion,
+        speedMultiplier: keeperPointerFollowSpeedMultiplier(keeperMovementSpeed),
+      });
+    }
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }

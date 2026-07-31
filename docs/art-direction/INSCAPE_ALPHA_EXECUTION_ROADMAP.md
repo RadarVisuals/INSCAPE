@@ -80,7 +80,7 @@ The working tree was clean when this roadmap was created.
 - [x] Phase 4 fixed chrome, the Phase 6 production NFT viewer, and the Phase 7 production identity RÄCK are integrated and visually accepted.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
-Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 remains `[~]` after accepted Phase 5A, Phase 5B.1–5B.5, production category authoring, Unified Browser, multi-select authoring, drag-to-place, and the universal owner RÄCK, while Phase 5B.6 onward remains unstarted. Phase 6 and Phase 7 are implemented, verified, and interactively accepted as `[x]`. Phase 7.5 is `[~]`: cursor follow is accepted and retained, while the approved follow-disabled click-to-move correction remains unimplemented.
+Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 remains `[~]` after accepted Phase 5A, Phase 5B.1–5B.5, production category authoring, Unified Browser, multi-select authoring, drag-to-place, and the universal owner RÄCK, while Phase 5B.6 onward remains unstarted. Phase 6, Phase 7, and Phase 7.5 are implemented, verified, and interactively accepted as `[x]`.
 
 ### Locked production-integration constraints
 
@@ -653,7 +653,7 @@ The future compact-card interaction may use the approved square-grid mask icon, 
 
 ## Phase 7.5 — production Keeper resident movement
 
-Status: `[~]` — **cursor follow implemented, interactively accepted, and verified; follow-disabled click-to-move approved but unimplemented**
+Status: `[x]` — **cursor follow and follow-disabled click-to-move implemented, verified, and interactively accepted**
 
 Goal: connect the existing full X/Y Keeper movement engine to the production lattice before publication and visitor cutover.
 
@@ -681,9 +681,11 @@ Exit criterion: the production lattice has deterministic full two-dimensional re
 
 Excluded: autonomous roaming, AI or personality behavior, dialogue authoring, event-reaction authoring, sound, scenes, and the later side-scrolling/free-roam world.
 
+Accepted checkpoint (2026-07-31): interactive review accepted cursor follow, the session-only follow toggle and speed controls, follow-disabled empty-canvas click-to-move, and deterministic interaction ownership. A production placement activation initially leaked into click-to-move because the production renderer used `data-placement-id` rather than the older placement-layer marker; the accepted correction now rejects placements and controls at both pointer-down and pointer-up. The focused owner/follow/engine set passes 33 tests with 0 failures; the production build, budgets, and `git diff --check` pass. Phase 8 visitor reuse must preserve this controller contract.
+
 Accepted checkpoint (2026-07-30): interactive review accepted smooth released-Keeper cursor follow, the refined continuous arrival, session-only follow toggle and three speed presets, dock/release, ARRANGE and Space-drag ownership, and the absence of click-to-move. Pointer input is latest-target-only per animation frame; touch is ignored. Browser, Theme, NFT viewer, identity RÄCK, ARRANGE, CROP, placement gestures, table navigation, Space-camera movement, docking, and active transitions cancel or suppress follow deterministically. Reduced motion places targets without a flight. The focused closing set passes 47 tests. The production build and direct existing-build budget check pass at initial JavaScript 1,235,727 raw / 360,878 gzip, owner JavaScript 210,675 raw / 62,714 gzip, owner CSS 66,171 raw / 9,667 gzip, and core JavaScript 1,885,126 raw / 557,885 gzip. The owner-only CSS budget is deliberately recalibrated to 67,000 raw / 10,000 gzip for the shared-theme dock controls; every other budget remains unchanged. The full suite and browser lifecycle were not rerun. No schema, persistence, publication, wallet, visitor, category/PORTALS, Keeper personality, or sound behavior changes.
 
-Approved correction boundary (2026-07-31): retain cursor follow, its session toggle, and its speed controls unchanged. When follow is disabled and the Keeper is released, primary activation on otherwise unowned empty canvas must request one bounded target through the existing resident engine. It must not steal activation from ARRANGE, placements, NFT/identity inspection, Browser/Theme/RÄCK, CROP, composition gestures, table navigation, Space-camera ownership, or the Keeper dock. This correction is not implemented in the current checkpoint.
+Click-to-move correction checkpoint (2026-07-31, awaiting interactive acceptance): cursor follow, its session toggle, and its speed controls remain unchanged. When follow is disabled and the Keeper is released, a sub-threshold primary activation on otherwise unowned empty canvas requests one bounded, non-continuous target through the existing resident engine. ARRANGE, placements, NFT/identity inspection, Browser/Theme/RÄCK, CROP, composition gestures, table navigation, Space-camera ownership, touch, and the Keeper dock retain priority. Movement speed and reduced-motion behavior reuse the accepted engine options. The focused owner/follow/engine set passes 32/32.
 
 ## Phase 8 — publication and visitor integration
 
@@ -789,4 +791,4 @@ Start with:
 
 ## Immediate next action
 
-Checkpoint the accepted universal owner RÄCK and Unified Browser. Then implement and verify the approved Phase 7.5 follow-disabled click-to-move correction. After that, revise the Phase 5B.6 boundary before presentation-tool implementation, followed by Phase 8 visitor deployment/publication. Phase 3 and overall Phase 5 remain `[~]`; version 7 remains the publication default and version 8 publication remains disabled.
+Revise the Phase 5B.6 boundary into a lean Alpha presentation-tools slice before implementation, followed by Phase 8 visitor deployment/publication. Phase 3 and overall Phase 5 remain `[~]`; Phase 7.5 is accepted as `[x]`; version 7 remains the publication default and version 8 publication remains disabled.

@@ -512,7 +512,7 @@ Rollback: remove the owner pointer scheduler and optional dock control props. Th
 
 Accepted checkpoint (2026-07-30): interactive review accepted follow smoothness, speeds, follow toggle, dock/release, and interaction ownership. The focused set passes 47 tests; production build and budget checks pass. Visitor reuse is deferred to Phase 8 cutover and must preserve this accepted controller contract.
 
-Current status (2026-07-31): cursor follow remains accepted and implemented. Follow-disabled click-to-move is approved but not implemented, so Phase 7.5 is reopened as `[~]` until that correction is verified and interactively accepted.
+Accepted correction (2026-07-31): cursor follow remains accepted and implemented. Follow-disabled empty-canvas click-to-move uses the same resident engine and is interactively accepted. Production placements and controls are rejected at pointer-down and pointer-up so NFT activation cannot also move the Keeper. The focused owner/follow/engine set passes 33/33; the production build and budgets pass. Phase 7.5 is `[x]`.
 
 ### Phase 8A — version 8 visitor deployment
 
