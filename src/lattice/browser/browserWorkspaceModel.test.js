@@ -21,7 +21,7 @@ test('browser sizing is centered, clamped, responsive and keyboard adjustable', 
   assert.equal(resizeBrowserByKey({ width: 800, height: 500 }, 'Enter', { width: 1200, height: 800 }), null);
 });
 
-test('index filtering keeps filing, media and tokenized search independent', () => {
+test('legacy index filtering keeps filing and tokenized search independent', () => {
   const assets = [
     { stableAssetId: 'asset:a', title: 'Portrait Study', mediaType: 'image' },
     { stableAssetId: 'asset:b', title: 'Quiet Motion', mediaType: 'video' },
@@ -31,7 +31,7 @@ test('index filtering keeps filing, media and tokenized search independent', () 
   assert.deepEqual(filterBrowserAssets(assets, categories, { filing: BROWSER_FILING_FILTERS.SORTED }).map((asset) => asset.stableAssetId), ['asset:a']);
   assert.deepEqual(filterBrowserAssets(assets, categories, { filing: BROWSER_FILING_FILTERS.UNSORTED }).map((asset) => asset.stableAssetId), ['asset:b', 'asset:c']);
   assert.deepEqual(filterBrowserAssets(assets, categories, { favorites: ['asset:b'], filing: BROWSER_FILING_FILTERS.FAVORITES }).map((asset) => asset.stableAssetId), ['asset:b']);
-  assert.deepEqual(filterBrowserAssets(assets, categories, { mediaType: 'image', query: 'portrait study' }).map((asset) => asset.stableAssetId), ['asset:a']);
+  assert.deepEqual(filterBrowserAssets(assets, categories, { query: 'portrait study' }).map((asset) => asset.stableAssetId), ['asset:a']);
 });
 
 test('read-only Favorite filtering never mutates the provided membership', () => {
@@ -53,7 +53,7 @@ test('category dialogs reset create text and always use the current rename targe
   assert.equal(categoryDialogInitialName({ category: categoryB, type: 'rename' }), 'Category B');
 });
 
-test('Categories asset search never inherits Index-only filing or media filters', () => {
+test('Categories asset search never inherits legacy Index-only filing', () => {
   const assets = [
     { stableAssetId: 'asset:a', title: 'Filed Image', mediaType: 'image' },
     { stableAssetId: 'asset:b', title: 'Unfiled Video', mediaType: 'video' },

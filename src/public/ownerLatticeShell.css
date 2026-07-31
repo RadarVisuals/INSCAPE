@@ -144,3 +144,16 @@
 @media (prefers-reduced-motion: reduce) {
   .owner-lattice-stage[data-snapping] { transition-duration: 0ms; }
 }
+.owner-lattice-browser-drag-ghost {
+  position: fixed; z-index: calc(var(--lattice-chrome-z-index) + 12); width: 92px; height: 92px;
+  translate: -50% -50%; display: grid; place-items: center; overflow: hidden;
+  border: 1px solid var(--lattice-menu-line-strong); background: var(--lattice-menu-panel);
+  box-shadow: var(--lattice-chrome-shadow); color: var(--lattice-menu-ink); pointer-events: none;
+}
+.owner-lattice-browser-drag-ghost[data-valid] { border: 3px solid var(--lattice-menu-ink); }
+.owner-lattice-browser-drag-ghost img { width: 100%; height: 100%; object-fit: contain; }
+.owner-lattice-browser-drop-preview {
+  position: absolute; z-index: 10000; border: 3px solid var(--lattice-menu-ink);
+  background: color-mix(in srgb, var(--lattice-menu-panel) 72%, var(--lattice-menu-ink));
+  box-shadow: inset 0 0 0 1px var(--lattice-menu-panel); pointer-events: none;
+}

@@ -16,7 +16,9 @@ test('workspace toolbar is an owner-only injected tool shell', () => {
 });
 
 test('selection, Arrange, compact mode, blocking and Escape stay caller-controlled', () => {
-  assert.match(source, /tool\.id === 'arrange' \? arrangeEnabled : activeToolId === tool\.id/);
+  assert.match(source, /activeToolIds = \[\]/);
+  assert.match(source, /activeToolId === toolId \|\| activeToolIds\.includes\(toolId\)/);
+  assert.match(source, /tool\.id === 'arrange' \? arrangeEnabled : isToolActive\(tool\.id\)/);
   assert.match(source, /aria-pressed=\{active\}/);
   assert.match(source, /onToolActivate\?\.\(tool\.id, event\.currentTarget, event\.currentTarget\)/);
   assert.match(source, /event\.key !== 'Escape'/);
@@ -42,7 +44,7 @@ test('toolbar uses the approved desktop proportions and compact icon-only treatm
 });
 
 test('MORE exposes the reference prototype-only Settings and Interface menu', () => {
-  assert.match(source, /activeToolId === 'more' && !blocked/);
+  assert.match(source, /isToolActive\('more'\) && !blocked/);
   assert.match(source, />SETTINGS<\/button>/);
   assert.match(source, />INTERFACE<\/button>/);
   assert.match(source, /Settings/);

@@ -93,6 +93,8 @@ test('owner viewport fills all 32 columns and keeps bounded per-table Space-drag
 
 test('Browser open, close, and Escape state stays runtime-only with focus restoration', () => {
   assert.match(source, /const \[browserOpen, setBrowserOpen\] = useState\(false\)/);
+  assert.match(source, /const \[railCollapsed, setRailCollapsed\] = useState\(true\)/);
+  assert.match(source, /useEffect\(\(\) => setRailCollapsed\(true\), \[profileAddress\]\)/);
   assert.match(source, /const \[browserActiveTab, setBrowserActiveTab\] = useState\('index'\)/);
   assert.match(source, /id: 'categories', label: 'CATEGORIES', note: 'ORGANIZE \/ PROFILE SCOPED'/);
   assert.doesNotMatch(source, /id: 'categories'[^\n]*disabled: true/);
@@ -106,6 +108,11 @@ test('Browser open, close, and Escape state stays runtime-only with focus restor
   assert.match(source, /onActiveTabChange=\{setBrowserActiveTab\}/);
   assert.match(source, /open=\{browserOpen\}/);
   assert.match(source, /tabRequest=\{browserTabRequest\}/);
+  assert.match(source, /activeToolIds=\{\[browserOpen \? 'browser' : null, themeOpen \? 'theme' : null\]\.filter\(Boolean\)\}/);
+  assert.match(source, /activeWorkspaceWindowRef\.current = 'browser'/);
+  assert.match(source, /activeWorkspaceWindowRef\.current = 'theme'/);
+  assert.match(source, /if \(toolId === 'browser'\) \{\s*browserReturnFocusRef\.current = browserToolRef\.current;\s*activeWorkspaceWindowRef\.current = 'browser';\s*setBrowserActivated\(true\);\s*setBrowserOpen\(\(open\) => !open\);\s*\}/);
+  assert.match(source, /if \(toolId === 'theme'\) \{\s*activeWorkspaceWindowRef\.current = 'theme';\s*setThemeOpen\(\(open\) => !open\);\s*\}/);
   assert.match(source, /toolButtonRefs=\{\{ browser: browserToolRef \}\}/);
 });
 

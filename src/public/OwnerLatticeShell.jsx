@@ -14,6 +14,7 @@ import LatticeProductionMovementLayer from '../lattice/authoring/LatticeProducti
 import { createLatticeProductionCropCandidate } from '../lattice/authoring/latticeProductionCrop.js';
 import { createLatticeProductionMovementCandidate } from '../lattice/authoring/latticeProductionMovement.js';
 import { createLatticeProductionResizeCandidate } from '../lattice/authoring/latticeProductionResize.js';
+import { createLatticeProductionDropGeometry } from '../lattice/authoring/latticeProductionPlacement.js';
 import {
   DEFAULT_LATTICE_INTERACTION_CONFIG,
   addWheelDelta,
@@ -153,10 +154,13 @@ function OwnerLatticeRuntime({
   const wheelBlockedUntilRef = useRef(0);
   const browserToolRef = useRef(null);
   const browserReturnFocusRef = useRef(null);
+  const activeWorkspaceWindowRef = useRef('browser');
   const identityControlRef = useRef(null);
   const identityOpenRequestRef = useRef(0);
   const keeperPointerFollowRef = useRef(null);
   const keeperPointerTargetRef = useRef(null);
+  const browserDragGestureRef = useRef(null);
+  const tableElementsRef = useRef(new Map());
   const [spatialRoot, setSpatialRoot] = useState(null);
   const [dimensions, setDimensions] = useState({ width: 1, height: 1 });
   const [active, setActive] = useState(() => entryLatticeCoordinate());
@@ -173,6 +177,7 @@ function OwnerLatticeRuntime({
   const [browserActivated, setBrowserActivated] = useState(false);
   const [browserActiveTab, setBrowserActiveTab] = useState('index');
   const [browserTabRequest, setBrowserTabRequest] = useState(null);
+  const [browserAssetDrag, setBrowserAssetDrag] = useState(null);
   const [compositionPreview, setCompositionPreview] = useState(null);
   const [cropModeActive, setCropModeActive] = useState(false);
   const [arrangeEnabled, setArrangeEnabled] = useState(false);
@@ -180,10 +185,11 @@ function OwnerLatticeRuntime({
   const [viewerSession, setViewerSession] = useState(null);
   const [identityDossierSession, setIdentityDossierSession] = useState(null);
   const [identityDossierOpening, setIdentityDossierOpening] = useState(false);
-  const [railCollapsed, setRailCollapsed] = useState(false);
+  const [railCollapsed, setRailCollapsed] = useState(true);
   const [keeperDockActive, setKeeperDockActive] = useState(false);
   const [keeperFollowCursor, setKeeperFollowCursor] = useState(true);
   const [keeperMovementSpeed, setKeeperMovementSpeed] = useState('normal');
+  useEffect(() => setRailCollapsed(true), [profileAddress]);
   const profileIdentity = useProfileIdentity(profileAddress);
   const profileContractFacts = useProfileContractFacts(profileAddress, { enabled: Boolean(identityDossierOpening || identityDossierSession) });
   const { commands: browserCategoryCommands, data: browserData } = useOwnerLatticeBrowser(profileAddress, browserOpen);
@@ -522,6 +528,83 @@ function OwnerLatticeRuntime({
   const activeDraftTable = authoring.draft?.tables.find((table) => table.id === activeTableId) || null;
   const activeTable = lattice?.tables.find((table) => table.id === activeTableId) || activeDraftTable;
   const activeTableName = activeTable ? tableIdentity(activeTable) : activeTableId.replace('-', ' ').toUpperCase();
+  const cancelBrowserAssetDrag = useCallback(() => {
+    const gesture = browserDragGestureRef.current;
+    if (gesture) {
+      gesture.element.removeEventListener('pointermove', gesture.move);
+      gesture.element.removeEventListener('pointerup', gesture.finish);
+      gesture.element.removeEventListener('pointercancel', gesture.cancel);
+      if (gesture.element.hasPointerCapture?.(gesture.pointerId)) gesture.element.releasePointerCapture(gesture.pointerId);
+    }
+    browserDragGestureRef.current = null;
+    setBrowserAssetDrag(null);
+  }, []);
+  const beginBrowserAssetDrag = useCallback((event, asset, workspace) => {
+    const id = asset?.stableAssetId || asset?.id;
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || !arrangeEnabled
+      || !asset?.placeable || workspace.selectedAssetIds.length > 1) return;
+    const element = event.currentTarget; const pointerId = event.pointerId;
+    const start = { x: event.clientX, y: event.clientY };
+    const update = (pointerEvent) => {
+      const distance = Math.hypot(pointerEvent.clientX - start.x, pointerEvent.clientY - start.y);
+      const gesture = browserDragGestureRef.current;
+      if (!gesture || (!gesture.started && distance < 6)) return;
+      gesture.started = true;
+      const target = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY);
+      const tableElement = tableElementsRef.current.get(activeTableId);
+      const rectangle = tableElement?.getBoundingClientRect();
+      let destination = null;
+      const overChrome = target?.closest?.('[data-lattice-chrome]');
+      const inside = rectangle && pointerEvent.clientX >= rectangle.left && pointerEvent.clientX <= rectangle.right
+        && pointerEvent.clientY >= rectangle.top && pointerEvent.clientY <= rectangle.bottom;
+      if (!overChrome && inside && activeDraftTable?.visibility === 'PUBLIC') {
+        try {
+          destination = createLatticeProductionDropGeometry(asset.width, asset.height,
+            { x: pointerEvent.clientX, y: pointerEvent.clientY }, rectangle);
+        } catch { destination = null; }
+      }
+      setBrowserAssetDrag({ asset, destination, point: { x: pointerEvent.clientX, y: pointerEvent.clientY }, tableId: destination ? activeTableId : null });
+    };
+    const cleanup = () => {
+      element.removeEventListener('pointermove', update);
+      element.removeEventListener('pointerup', finish);
+      element.removeEventListener('pointercancel', cancel);
+      if (element.hasPointerCapture?.(pointerId)) element.releasePointerCapture(pointerId);
+      browserDragGestureRef.current = null;
+    };
+    const finish = (pointerEvent) => {
+      const gesture = browserDragGestureRef.current; update(pointerEvent);
+      const target = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY);
+      const tableElement = tableElementsRef.current.get(activeTableId); const rectangle = tableElement?.getBoundingClientRect();
+      let destination = null;
+      const inside = rectangle && pointerEvent.clientX >= rectangle.left && pointerEvent.clientX <= rectangle.right
+        && pointerEvent.clientY >= rectangle.top && pointerEvent.clientY <= rectangle.bottom;
+      if (gesture?.started && !target?.closest?.('[data-lattice-chrome]') && inside
+        && browserOpen && arrangeEnabled && activeDraftTable?.visibility === 'PUBLIC'
+        && workspace.isAssetRenderable(id)) {
+        try { destination = createLatticeProductionDropGeometry(asset.width, asset.height,
+          { x: pointerEvent.clientX, y: pointerEvent.clientY }, rectangle); } catch { destination = null; }
+      }
+      cleanup(); setBrowserAssetDrag(null);
+      if (destination) authoring.placePublicAsset({ destination, stableAssetId: id, tableId: activeTableId });
+    };
+    const cancel = () => { cleanup(); setBrowserAssetDrag(null); };
+    browserDragGestureRef.current = { assetId: id, cancel, element, finish, move: update, pointerId, started: false };
+    element.setPointerCapture?.(pointerId);
+    element.addEventListener('pointermove', update);
+    element.addEventListener('pointerup', finish);
+    element.addEventListener('pointercancel', cancel);
+  }, [activeDraftTable?.visibility, activeTableId, arrangeEnabled, authoring.placePublicAsset, browserOpen]);
+
+  useEffect(() => {
+    if (!browserOpen || !arrangeEnabled) cancelBrowserAssetDrag();
+  }, [arrangeEnabled, browserOpen, cancelBrowserAssetDrag, profileAddress]);
+  useEffect(() => {
+    if (!browserAssetDrag) return undefined;
+    const cancelOnEscape = (event) => { if (event.key === 'Escape') cancelBrowserAssetDrag(); };
+    window.addEventListener('keydown', cancelOnEscape, true);
+    return () => window.removeEventListener('keydown', cancelOnEscape, true);
+  }, [browserAssetDrag, cancelBrowserAssetDrag]);
   const authoringPlacementUnavailableReason = ownerLatticePlacementUnavailableReason({
     activeTable: activeDraftTable,
     authoringStatus: authoring.status,
@@ -539,7 +622,7 @@ function OwnerLatticeRuntime({
   }, []);
   const openCategories = useCallback((trigger) => {
     browserReturnFocusRef.current = trigger || null;
-    setThemeOpen(false);
+    activeWorkspaceWindowRef.current = 'browser';
     setBrowserActivated(true);
     setBrowserTabRequest((current) => ({ id: 'categories', requestId: (current?.requestId || 0) + 1 }));
     setBrowserOpen(true);
@@ -671,6 +754,7 @@ function OwnerLatticeRuntime({
           className="owner-lattice-table"
           data-active={sameCoordinate(coordinate, active) || undefined}
           key={table.id}
+          ref={(node) => { if (node) tableElementsRef.current.set(table.id, node); else tableElementsRef.current.delete(table.id); }}
           style={{
             left: plane.left + (coordinate.x * plane.width),
             top: plane.top + (coordinate.y * plane.height),
@@ -698,7 +782,14 @@ function OwnerLatticeRuntime({
               onReturnFocus={() => viewportRef.current?.focus({ preventScroll: true })}
               tableId={table.id}
             />}
-            <UnresolvedRuntimePlacements placements={unresolvedPlacementsByTable.get(table.id) || []} /></>
+            <UnresolvedRuntimePlacements placements={unresolvedPlacementsByTable.get(table.id) || []} />
+            {browserAssetDrag?.destination && browserAssetDrag.tableId === table.id && <div
+              aria-hidden="true" className="owner-lattice-browser-drop-preview" style={{
+                left: `${browserAssetDrag.destination.column / 32 * 100}%`,
+                top: `${browserAssetDrag.destination.row / 18 * 100}%`,
+                width: `${browserAssetDrag.destination.columnSpan / 32 * 100}%`,
+                height: `${browserAssetDrag.destination.rowSpan / 18 * 100}%`,
+              }} />}</>
           : <div className="owner-lattice-canonical-unavailable" role="status">CANONICAL TABLE UNAVAILABLE</div>}</div>;
       })}
     </div>
@@ -714,6 +805,12 @@ function OwnerLatticeRuntime({
     data-menu-surface={menuSurfaceId}
     data-surface={surfaceId}
   >
+    {browserAssetDrag && createPortal(<div aria-hidden="true" className="owner-lattice-browser-drag-ghost"
+      data-valid={browserAssetDrag.destination ? true : undefined}
+      style={{ left: browserAssetDrag.point.x, top: browserAssetDrag.point.y }}>
+      {browserAssetDrag.asset.previewSrc || browserAssetDrag.asset.src
+        ? <img alt="" src={browserAssetDrag.asset.previewSrc || browserAssetDrag.asset.src} /> : <span>MEDIA</span>}
+    </div>, document.body)}
     {spatialRoot && createPortal(spatialSurface, spatialRoot)}
     {interfaceVisible && <>
       <LatticeProfileRail
@@ -734,14 +831,16 @@ function OwnerLatticeRuntime({
         onIdentityActivate={openIdentityDossier}
       />
       <LatticeWorkspaceToolbar
-        activeToolId={browserOpen ? 'browser' : themeOpen ? 'theme' : null}
+        activeToolIds={[browserOpen ? 'browser' : null, themeOpen ? 'theme' : null].filter(Boolean)}
         compact={dimensions.width <= 980}
         arrangeEnabled={arrangeEnabled}
         owner
         tools={WORKSPACE_TOOLS}
         onEscape={() => {
-          if (browserOpen) closeBrowser();
-          else setThemeOpen(false);
+          if (activeWorkspaceWindowRef.current === 'theme' && themeOpen) setThemeOpen(false);
+          else if (activeWorkspaceWindowRef.current === 'browser' && browserOpen) closeBrowser();
+          else if (themeOpen) setThemeOpen(false);
+          else if (browserOpen) closeBrowser();
         }}
         onToolActivate={(toolId) => {
           if (toolId === 'arrange') {
@@ -749,12 +848,12 @@ function OwnerLatticeRuntime({
           }
           if (toolId === 'browser') {
             browserReturnFocusRef.current = browserToolRef.current;
-            setThemeOpen(false);
+            activeWorkspaceWindowRef.current = 'browser';
             setBrowserActivated(true);
             setBrowserOpen((open) => !open);
           }
           if (toolId === 'theme') {
-            setBrowserOpen(false);
+            activeWorkspaceWindowRef.current = 'theme';
             setThemeOpen((open) => !open);
           }
         }}
@@ -766,10 +865,16 @@ function OwnerLatticeRuntime({
           data={{
             ...browserData,
             activeTable: { label: activeTableName, placementUnavailableReason },
+            usedAssetIds: [...new Set((authoring.draft?.tables || []).flatMap((table) => table.placements.map(({ stableAssetId }) => stableAssetId)))],
           }}
           onActiveTabChange={setBrowserActiveTab}
+          onAssetPointerDown={beginBrowserAssetDrag}
           onPlaceAsset={(stableAssetId) => {
             if (arrangeEnabled) authoring.placePublicAsset({ stableAssetId, tableId: activeTableId });
+          }}
+          onRenderableAssetsChange={(assetIds) => {
+            const draggedAssetId = browserDragGestureRef.current?.assetId;
+            if (draggedAssetId && !assetIds.includes(draggedAssetId)) cancelBrowserAssetDrag();
           }}
           onRequestClose={closeBrowser}
           open={browserOpen}

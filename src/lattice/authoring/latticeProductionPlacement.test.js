@@ -3,6 +3,7 @@ import test from 'node:test';
 import { createEmptyLatticeProductionDraft } from '../domain/latticeProductionDraft.js';
 import {
   createInitialLatticeProductionPlacementGeometry,
+  createLatticeProductionDropGeometry,
   createLatticeProductionPlacementId,
   createLatticeProductionPlacementCandidate,
 } from './latticeProductionPlacement.js';
@@ -15,6 +16,35 @@ const placement = (id, overrides = {}) => ({
   mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
   backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO',
   visibility: 'PUBLIC', locked: false, ...overrides,
+});
+
+test('drop geometry preserves native fitted span, snaps around pointer, and clamps to the 32 by 18 plane', () => {
+  const rectangle = { left: 100, top: 50, width: 320, height: 180 };
+  assert.deepEqual(createLatticeProductionDropGeometry(3, 2, { x: 260, y: 140 }, rectangle),
+    { column: 10, row: 5, columnSpan: 12, rowSpan: 8 });
+  assert.deepEqual(createLatticeProductionDropGeometry(3, 2, { x: 101, y: 51 }, rectangle),
+    { column: 0, row: 0, columnSpan: 12, rowSpan: 8 });
+  assert.deepEqual(createLatticeProductionDropGeometry(3, 2, { x: 419, y: 229 }, rectangle),
+    { column: 20, row: 10, columnSpan: 12, rowSpan: 8 });
+  assert.throws(() => createLatticeProductionDropGeometry(3, 2, { x: 1, y: 1 }, { width: 0, height: 1 }),
+    { code: 'LATTICE_PLACEMENT_DROP_TARGET_INVALID' });
+});
+
+test('placement candidate accepts explicit drop geometry in the original atomic PLACE operation', () => {
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  const candidate = createLatticeProductionPlacementCandidate(draft, {
+    destination: { column: 20, row: 10, columnSpan: 12, rowSpan: 8 },
+    generatePlacementId: () => 'placement-drop', nativeHeight: 2, nativeWidth: 3,
+    stableAssetId: ASSET, tableId: 'table-05',
+  });
+  assert.deepEqual(candidate.tables[4].placements[0], {
+    ...candidate.tables[4].placements[0], column: 20, row: 10, columnSpan: 12, rowSpan: 8,
+  });
+  assert.throws(() => createLatticeProductionPlacementCandidate(draft, {
+    destination: { column: 31, row: 17, columnSpan: 2, rowSpan: 2 },
+    generatePlacementId: () => 'placement-drop', nativeHeight: 2, nativeWidth: 3,
+    stableAssetId: ASSET, tableId: 'table-05',
+  }), { code: 'LATTICE_PLACEMENT_DROP_GEOMETRY_INVALID' });
 });
 
 test('initial geometry uses the approved provisional 12 by 10 integer envelope', () => {

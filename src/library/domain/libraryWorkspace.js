@@ -40,6 +40,21 @@ export function setFolderAsset(workspace, folderIdValue, assetId, included, now 
   }) };
 }
 
+export function setFolderAssets(workspace, folderIdValue, assetIdsValue, included, now = Date.now()) {
+  if (typeof included !== 'boolean' || !Array.isArray(assetIdsValue)) return workspace;
+  const assetIds = [...new Set(assetIdsValue.filter((id) => typeof id === 'string' && id))];
+  if (!assetIds.length) return workspace;
+  const folder = workspace.folders.find(({ id }) => id === folderIdValue);
+  if (!folder) return workspace;
+  const requested = new Set(assetIds);
+  const nextAssetIds = included ? [...new Set([...folder.assetIds, ...assetIds])]
+    : folder.assetIds.filter((id) => !requested.has(id));
+  if (nextAssetIds.length === folder.assetIds.length
+    && nextAssetIds.every((id, index) => id === folder.assetIds[index])) return workspace;
+  return { ...workspace, folders: workspace.folders.map((candidate) => candidate.id === folderIdValue
+    ? { ...candidate, assetIds: nextAssetIds, updatedAt: now } : candidate) };
+}
+
 export function toggleFavorite(workspace, assetId) {
   return { ...workspace, favorites: workspace.favorites.includes(assetId)
     ? workspace.favorites.filter((id) => id !== assetId) : [...workspace.favorites, assetId] };

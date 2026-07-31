@@ -36,7 +36,17 @@ export default function BrowserFixtureHarness({ activeTable, assetSource, onRequ
         assetIds: included ? [...new Set([...category.assetIds, stableAssetId])] : category.assetIds.filter((id) => id !== stableAssetId),
       } : category));
     },
+    setCategoryAssets(categoryId, stableAssetIds, included) {
+      const requested = new Set(stableAssetIds);
+      setCategories((current) => current.map((category) => category.id === categoryId ? {
+        ...category,
+        assetIds: included ? [...new Set([...category.assetIds, ...stableAssetIds])]
+          : category.assetIds.filter((id) => !requested.has(id)),
+      } : category));
+      return true;
+    },
     setCategoryPublic(id, isPublic) { setCategories((current) => current.map((category) => category.id === id ? { ...category, public: isPublic } : category)); },
   };
-  return <BrowserWorkspace commands={commands} data={data} onRequestClose={onRequestClose} open={open} />;
+  return <BrowserWorkspace categoryCommands={commands} data={data} onPlaceAsset={requestPlacement}
+    onRequestClose={onRequestClose} open={open} />;
 }

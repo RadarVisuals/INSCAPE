@@ -59,3 +59,5 @@ Een fotograaf kan een stille contact-sheetwereld bouwen. Een illustrator kan eno
 
 
 ---- 003 startveil. black grid full > one by one they turn white and reveals you shit
+
+startveil grid idea animation in background > chat gpt image creation animation but with gridcells

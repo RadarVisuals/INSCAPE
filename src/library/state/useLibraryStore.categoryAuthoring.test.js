@@ -8,6 +8,7 @@ import { flushLibraryWorkspace, resetLibraryStoreForTests, useLibraryStore } fro
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const OTHER_PROFILE = '0x2222222222222222222222222222222222222222';
 const ASSET_ID = '42:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:contract';
+const SECOND_ASSET_ID = '42:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:contract';
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const memoryStorage = () => {
   const values = new Map(); const writes = [];
@@ -83,4 +84,22 @@ test('invalid input, cancellation, and stale captured callbacks produce zero wri
   assert.deepEqual(storage.writes, []);
   assert.deepEqual(useLibraryStore.getState().workspace.folders, []);
   assert.deepEqual(loadLibraryWorkspace(storage, PROFILE).folders, []);
+});
+
+test('bulk category membership validates the canonical asset set and schedules one idempotent save', async () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  useLibraryStore.setState({ assets: [{ id: ASSET_ID }, { id: SECOND_ASSET_ID }] });
+  const commands = createOwnerLatticeCategoryCommands(PROFILE);
+  const categoryId = commands.createCategory('Bulk');
+  flushLibraryWorkspace(); storage.writes.length = 0;
+  assert.equal(commands.setCategoryAssets(categoryId, [ASSET_ID, SECOND_ASSET_ID, ASSET_ID], true), true);
+  await delay(220);
+  assert.equal(storage.writes.length, 1);
+  assert.deepEqual(useLibraryStore.getState().workspace.folders[0].assetIds, [ASSET_ID, SECOND_ASSET_ID]);
+  storage.writes.length = 0;
+  assert.equal(commands.setCategoryAssets(categoryId, [ASSET_ID, SECOND_ASSET_ID], true), false);
+  assert.equal(commands.setCategoryAssets(categoryId, [ASSET_ID, 'missing'], false), false);
+  await delay(220);
+  assert.deepEqual(storage.writes, []);
 });

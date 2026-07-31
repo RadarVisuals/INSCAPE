@@ -143,7 +143,7 @@ export function createOwnerLatticeAuthoringSession({ generatePlacementId, profil
       }
       return Object.freeze({ ok: true, draft: store.getDraft() });
     },
-    commitPlacement({ assetRecord, tableId } = {}) {
+    commitPlacement({ assetRecord, destination, tableId } = {}) {
       const asset = adaptLatticeProductionBrowserAsset(assetRecord, profile);
       if (!asset?.placeable) return Object.freeze({
         ok: false,
@@ -160,6 +160,7 @@ export function createOwnerLatticeAuthoringSession({ generatePlacementId, profil
       try {
         candidate = createLatticeProductionPlacementCandidate(currentDraft, {
           generatePlacementId,
+          destination,
           nativeHeight: asset.height,
           nativeWidth: asset.width,
           stableAssetId: asset.stableAssetId,
@@ -320,7 +321,7 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
     if (shouldLoadOwnerLatticeAssets({ libraryStatus, profileReady, referencedAssetCount: referencedIds.size })) load();
   }, [libraryStatus, load, profileReady, referencedIds]);
 
-  const placePublicAsset = useCallback(({ stableAssetId, tableId } = {}) => {
+  const placePublicAsset = useCallback(({ destination, stableAssetId, tableId } = {}) => {
     const generation = generationRef.current;
     const liveLibrary = useLibraryStore.getState();
     if (!session || session.status !== OWNER_LATTICE_AUTHORING_STATUS.READY
@@ -332,7 +333,7 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
       return false;
     }
     const assetRecord = liveLibrary.assets.find(({ id }) => id === stableAssetId);
-    const result = session.commitPlacement({ assetRecord, tableId });
+    const result = session.commitPlacement({ assetRecord, destination, tableId });
     if (generation !== generationRef.current || session.getProfileAddress() !== profile) return false;
     if (!result.ok) {
       setRuntime((current) => ({ ...current, error: result.reason }));

@@ -57,7 +57,6 @@ export function resizeBrowserByKey(size, key, viewport, step = BROWSER_RESIZE_ST
 export function filterBrowserAssets(assets, categories, {
   favorites = [],
   filing = BROWSER_FILING_FILTERS.ALL,
-  mediaType = 'all',
   query = '',
 } = {}) {
   const source = Array.isArray(assets) ? assets : [];
@@ -70,7 +69,6 @@ export function filterBrowserAssets(assets, categories, {
     if (filing === BROWSER_FILING_FILTERS.FAVORITES && !favoriteIds.has(id)) return false;
     if (filing === BROWSER_FILING_FILTERS.SORTED && !filedIds.has(id)) return false;
     if (filing === BROWSER_FILING_FILTERS.UNSORTED && filedIds.has(id)) return false;
-    if (mediaType !== 'all' && String(asset?.mediaType || '').toLocaleLowerCase() !== mediaType) return false;
     const searchable = [asset?.title, asset?.collection, asset?.stableAssetId, asset?.mediaType]
       .filter(Boolean).join(' ').toLocaleLowerCase();
     return tokens.every((token) => searchable.includes(token));
@@ -88,4 +86,88 @@ export function searchBrowserCategoryAssets(assets, query = '') {
 
 export function categoryDialogInitialName(dialog) {
   return dialog?.type === 'rename' ? String(dialog?.category?.name || '') : '';
+}
+
+export const BROWSER_VIEW_KINDS = Object.freeze({
+  ALL: 'all', CATEGORY: 'category', UNSORTED: 'unsorted', USED: 'used',
+});
+export const BROWSER_SORTS = Object.freeze({ TITLE_ASC: 'title-asc', TITLE_DESC: 'title-desc', COLLECTION: 'collection' });
+export const BROWSER_DISPLAY_MODES = Object.freeze({ GRID: 'grid', LIST: 'list' });
+export const BROWSER_ASSET_SIZE = Object.freeze({
+  DEFAULT: 150,
+  LIST: 68,
+  MAXIMUM: 420,
+  MINIMUM: 68,
+});
+export const browserAssetId = (asset) => asset?.stableAssetId || asset?.id || null;
+
+export function categoryAssetIds(categories) {
+  return new Set((Array.isArray(categories) ? categories : [])
+    .flatMap((category) => Array.isArray(category?.assetIds) ? category.assetIds : []));
+}
+
+export function browserViewAssets(assets, categories, view, usedAssetIds = []) {
+  const source = Array.isArray(assets) ? assets : [];
+  if (view?.kind === BROWSER_VIEW_KINDS.CATEGORY) {
+    const category = (Array.isArray(categories) ? categories : []).find(({ id }) => id === view.id);
+    const ids = new Set(category?.assetIds || []);
+    return source.filter((asset) => ids.has(browserAssetId(asset)));
+  }
+  if (view?.kind === BROWSER_VIEW_KINDS.UNSORTED) {
+    const filed = categoryAssetIds(categories);
+    return source.filter((asset) => !filed.has(browserAssetId(asset)));
+  }
+  if (view?.kind === BROWSER_VIEW_KINDS.USED) {
+    const used = new Set(Array.isArray(usedAssetIds) ? usedAssetIds : []);
+    return source.filter((asset) => used.has(browserAssetId(asset)));
+  }
+  return source;
+}
+
+export function filterAndSortBrowserAssets(assets, {
+  collection = 'all', query = '', sort = BROWSER_SORTS.TITLE_ASC,
+} = {}) {
+  const tokens = String(query || '').trim().toLocaleLowerCase().split(/\s+/u).filter(Boolean);
+  const filtered = (Array.isArray(assets) ? assets : []).filter((asset) => {
+    if (collection !== 'all' && String(asset?.collection || '') !== collection) return false;
+    const searchable = [asset?.title, asset?.collection, browserAssetId(asset), asset?.mediaType]
+      .filter(Boolean).join(' ').toLocaleLowerCase();
+    return tokens.every((token) => searchable.includes(token));
+  });
+  const compare = (left, right) => String(left || '').localeCompare(String(right || ''), undefined,
+    { numeric: true, sensitivity: 'base' });
+  return [...filtered].sort((left, right) => {
+    const title = compare(left?.title || browserAssetId(left), right?.title || browserAssetId(right));
+    if (sort === BROWSER_SORTS.TITLE_DESC) return -title;
+    if (sort === BROWSER_SORTS.COLLECTION) return compare(left?.collection, right?.collection) || title;
+    return title;
+  });
+}
+
+export function reconcileBrowserSelection(selectedIds, assets) {
+  const available = new Set((Array.isArray(assets) ? assets : []).map(browserAssetId));
+  return (Array.isArray(selectedIds) ? selectedIds : []).filter((id) => available.has(id));
+}
+
+export function updateBrowserSelection(selectedIds, visibleAssets, targetId, {
+  additive = false, range = false, anchorId = null,
+} = {}) {
+  const visibleIds = visibleAssets.map(browserAssetId).filter(Boolean);
+  if (!visibleIds.includes(targetId)) return { anchorId, selectedIds };
+  if (range && anchorId && visibleIds.includes(anchorId)) {
+    const start = visibleIds.indexOf(anchorId); const end = visibleIds.indexOf(targetId);
+    const ids = visibleIds.slice(Math.min(start, end), Math.max(start, end) + 1);
+    return { anchorId, selectedIds: additive ? [...new Set([...selectedIds, ...ids])] : ids };
+  }
+  if (additive) return {
+    anchorId: targetId,
+    selectedIds: selectedIds.includes(targetId) ? selectedIds.filter((id) => id !== targetId) : [...selectedIds, targetId],
+  };
+  return { anchorId: targetId, selectedIds: [targetId] };
+}
+
+export function categoryMembershipState(category, selectedIds) {
+  const members = new Set(category?.assetIds || []); const ids = Array.isArray(selectedIds) ? selectedIds : [];
+  const included = ids.filter((id) => members.has(id)).length;
+  return included === 0 ? 'none' : included === ids.length ? 'all' : 'mixed';
 }

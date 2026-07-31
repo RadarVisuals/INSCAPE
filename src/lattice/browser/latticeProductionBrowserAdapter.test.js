@@ -50,6 +50,11 @@ test('real Browser adaptation validates owner scope, canonical identity, media, 
   assert.equal(result.assets[0].placementUnavailableReason, null);
   assert.equal(result.assets[0].src, 'https://assets.example/original.webp');
   assert.equal(result.assets[0].previewSrc, 'https://assets.example/thumbnail.webp');
+  assert.deepEqual(result.assets[0].previewCandidates, [
+    'https://assets.example/thumbnail.webp',
+    'https://assets.example/image.webp',
+    'https://assets.example/original.webp',
+  ]);
   assert.equal(Object.isFrozen(result), true);
   assert.equal(Object.isFrozen(result.categories[0].assetIds), true);
   assert.deepEqual(workspace, before);

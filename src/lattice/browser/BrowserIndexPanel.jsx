@@ -22,10 +22,6 @@ export default function BrowserIndexPanel({ data, onAssetContext, workspace }) {
             <span>{FILTER_LABELS[filter]}</span>
           </button>
         ))}
-        <div className="lattice-browser-sidebar__rule" />
-        <small>MEDIA</small>
-        <button data-active={workspace.mediaType === 'all' || undefined} onClick={() => workspace.setMediaType('all')} type="button"><span>ALL MEDIA</span></button>
-        {workspace.mediaTypes.map((type) => <button data-active={workspace.mediaType === type || undefined} key={type} onClick={() => workspace.setMediaType(type)} type="button"><span>{type.toUpperCase()}</span></button>)}
       </aside>
       <section className="lattice-browser-results lattice-chrome-scroll-region" aria-label="Indexed assets">
         <header>

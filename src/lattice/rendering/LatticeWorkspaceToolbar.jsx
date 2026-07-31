@@ -21,6 +21,7 @@ const TOOL_ICONS = Object.freeze({
 
 export default function LatticeWorkspaceToolbar({
   activeToolId = null,
+  activeToolIds = [],
   arrangeEnabled = false,
   blocked = false,
   compact = false,
@@ -31,6 +32,7 @@ export default function LatticeWorkspaceToolbar({
   toolButtonRefs = {},
 }) {
   if (!owner) return null;
+  const isToolActive = (toolId) => activeToolId === toolId || activeToolIds.includes(toolId);
 
   const handleKeyDown = (event) => {
     if (event.key !== 'Escape') return;
@@ -53,7 +55,7 @@ export default function LatticeWorkspaceToolbar({
       {tools.map((tool) => {
         const Icon = TOOL_ICONS[tool.id];
         if (!Icon) return null;
-        const active = tool.id === 'arrange' ? arrangeEnabled : activeToolId === tool.id;
+        const active = tool.id === 'arrange' ? arrangeEnabled : isToolActive(tool.id);
         return (
           <button
             aria-label={tool.label}
@@ -73,7 +75,7 @@ export default function LatticeWorkspaceToolbar({
         );
       })}
     </nav>
-    {activeToolId === 'more' && !blocked && <section className="lattice-workspace-toolbar__more" data-lattice-chrome aria-label="More workspace tools" onKeyDown={handleKeyDown}>
+    {isToolActive('more') && !blocked && <section className="lattice-workspace-toolbar__more" data-lattice-chrome aria-label="More workspace tools" onKeyDown={handleKeyDown}>
       <button type="button" onClick={(event) => onToolActivate?.('settings', event.currentTarget, toolButtonRefs.more?.current || event.currentTarget)} title="Prototype-only affordance"><Settings aria-hidden="true" size={14} strokeWidth={2} />SETTINGS</button>
       <button type="button" onClick={(event) => onToolActivate?.('interface', event.currentTarget, toolButtonRefs.more?.current || event.currentTarget)} title="Prototype-only affordance"><SlidersHorizontal aria-hidden="true" size={14} strokeWidth={2} />INTERFACE</button>
     </section>}

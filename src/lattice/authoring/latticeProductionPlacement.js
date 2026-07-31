@@ -85,8 +85,42 @@ export function createInitialLatticeProductionPlacementGeometry(nativeWidth, nat
   return Object.freeze({ column, row, columnSpan, rowSpan });
 }
 
+export function assertLatticeProductionDropGeometry(destination) {
+  const geometry = {
+    column: destination?.column, row: destination?.row,
+    columnSpan: destination?.columnSpan, rowSpan: destination?.rowSpan,
+  };
+  if (!Object.values(geometry).every(Number.isSafeInteger)
+    || geometry.column < 0 || geometry.row < 0 || geometry.columnSpan < 1 || geometry.rowSpan < 1
+    || geometry.column + geometry.columnSpan > LATTICE_PRODUCTION_GEOMETRY.columns
+    || geometry.row + geometry.rowSpan > LATTICE_PRODUCTION_GEOMETRY.rows) {
+    throw operationError('LATTICE_PLACEMENT_DROP_GEOMETRY_INVALID', 'Drop geometry exceeds the canonical authored plane');
+  }
+  return Object.freeze(geometry);
+}
+
+export function createLatticeProductionDropGeometry(nativeWidth, nativeHeight, pointer, rectangle) {
+  const initial = createInitialLatticeProductionPlacementGeometry(nativeWidth, nativeHeight);
+  if (!Number.isFinite(pointer?.x) || !Number.isFinite(pointer?.y)
+    || !Number.isFinite(rectangle?.left) || !Number.isFinite(rectangle?.top)
+    || !Number.isFinite(rectangle?.width) || rectangle.width <= 0
+    || !Number.isFinite(rectangle?.height) || rectangle.height <= 0) {
+    throw operationError('LATTICE_PLACEMENT_DROP_TARGET_INVALID', 'A measurable active table drop target is required');
+  }
+  const centerColumn = Math.floor(((pointer.x - rectangle.left) / rectangle.width) * LATTICE_PRODUCTION_GEOMETRY.columns);
+  const centerRow = Math.floor(((pointer.y - rectangle.top) / rectangle.height) * LATTICE_PRODUCTION_GEOMETRY.rows);
+  return assertLatticeProductionDropGeometry({
+    column: Math.max(0, Math.min(LATTICE_PRODUCTION_GEOMETRY.columns - initial.columnSpan,
+      centerColumn - Math.floor(initial.columnSpan / 2))),
+    row: Math.max(0, Math.min(LATTICE_PRODUCTION_GEOMETRY.rows - initial.rowSpan,
+      centerRow - Math.floor(initial.rowSpan / 2))),
+    columnSpan: initial.columnSpan, rowSpan: initial.rowSpan,
+  });
+}
+
 export function createLatticeProductionPlacementCandidate(draftInput, {
   generatePlacementId,
+  destination,
   nativeHeight,
   nativeWidth,
   stableAssetId,
@@ -108,7 +142,8 @@ export function createLatticeProductionPlacementCandidate(draftInput, {
       ? { generateCandidate: generatePlacementId }
       : undefined),
     stableAssetId,
-    ...createInitialLatticeProductionPlacementGeometry(nativeWidth, nativeHeight),
+    ...(destination ? assertLatticeProductionDropGeometry(destination)
+      : createInitialLatticeProductionPlacementGeometry(nativeWidth, nativeHeight)),
     layer: nextPlacementOrder(table.placements.map(({ layer }) => layer), 'layer'),
     navigationOrder: nextPlacementOrder(
       table.placements.map(({ navigationOrder }) => navigationOrder),

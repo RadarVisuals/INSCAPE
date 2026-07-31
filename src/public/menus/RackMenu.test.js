@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const source = readFileSync(new URL('./RackMenu.jsx', import.meta.url), 'utf8');
+const desktopMenu = readFileSync(new URL('./DesktopMenu.jsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./rackMenu.css', import.meta.url), 'utf8');
 const assetIndex = readFileSync(new URL('../AssetIndex.jsx', import.meta.url), 'utf8');
 const moduleGrid = readFileSync(new URL('../ModuleGridShell.jsx', import.meta.url), 'utf8');
@@ -17,6 +18,13 @@ test('RackMenu retains DesktopMenu interaction ownership behind one shared visua
   assert.match(source, /rack-menu-command-surface/);
   assert.match(source, /panelClassName="rack-menu-surface rack-menu-command-surface"/);
   assert.match(source, /import '.\/rackMenu\.css'/);
+});
+
+test('explicit checked and mixed commands preserve their complete visible labels', () => {
+  assert.match(desktopMenu, /const legacySelected = command\.label\.startsWith\('✓ '\)/);
+  assert.match(desktopMenu, /legacySelected \? command\.label\.slice\(2\) : command\.label/);
+  assert.doesNotMatch(desktopMenu, /selected \? command\.label\.slice\(2\)/);
+  assert.match(desktopMenu, /aria-checked=\{command\.checkable \? mixed \? 'mixed' : selected : undefined\}/);
 });
 
 test('active production context-menu callers use RackMenu instead of styling DesktopMenu directly', () => {

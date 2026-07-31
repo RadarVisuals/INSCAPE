@@ -12,6 +12,7 @@ import {
   renameFolder,
   resetCanvasLayout,
   setFolderAsset,
+  setFolderAssets,
   setFolderPublic,
   toggleFavorite
 } from '../domain/libraryWorkspace.js';
@@ -331,6 +332,12 @@ export const useLibraryStore = create((set, get) => ({
       if (command?.type === 'delete') return deleteFolder(current, command.categoryId);
       if (command?.type === 'public') return setFolderPublic(current, command.categoryId, command.value);
       if (command?.type === 'asset') return setFolderAsset(current, command.categoryId, command.assetId, command.value);
+      if (command?.type === 'assets') {
+        const acceptedIds = new Set(get().assets.map(({ id }) => id));
+        const assetIds = Array.isArray(command.assetIds) ? [...new Set(command.assetIds)] : [];
+        if (!assetIds.length || assetIds.some((id) => typeof id !== 'string' || !acceptedIds.has(id))) return current;
+        return setFolderAssets(current, command.categoryId, assetIds, command.value);
+      }
       return current;
     });
     return beforeIds ? workspace?.folders.find(({ id }) => !beforeIds.has(id))?.id || null : Boolean(workspace);

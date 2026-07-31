@@ -8,6 +8,7 @@ import {
   renameFolder,
   resetCanvasLayout,
   setFolderAsset,
+  setFolderAssets,
   setFolderPublic,
   toggleFavorite
 } from './libraryWorkspace.js';
@@ -28,6 +29,17 @@ test('folders create, rename, add/remove references, and delete without touching
   workspace = deleteFolder(workspace, id);
   assert.deepEqual(workspace.folders, []);
   assert.deepEqual(workspace.favorites, ['asset-b']);
+});
+
+test('bulk folder membership is atomic, deduplicated, and idempotent', () => {
+  let workspace = createFolder(createEmptyWorkspace('0xprofile'), 'Bulk', 10);
+  const id = workspace.folders[0].id;
+  workspace = setFolderAssets(workspace, id, ['a', 'b', 'a'], true, 20);
+  assert.deepEqual(workspace.folders[0].assetIds, ['a', 'b']);
+  const stable = workspace;
+  assert.equal(setFolderAssets(workspace, id, ['a', 'b'], true, 30), stable);
+  workspace = setFolderAssets(workspace, id, ['a'], false, 40);
+  assert.deepEqual(workspace.folders[0].assetIds, ['b']);
 });
 
 test('protected system views cannot be renamed or deleted', () => {
