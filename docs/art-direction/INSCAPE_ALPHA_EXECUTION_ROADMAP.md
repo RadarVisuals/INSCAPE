@@ -80,7 +80,7 @@ The working tree was clean when this roadmap was created.
 - [x] Phase 4 fixed chrome, the Phase 6 production NFT viewer, and the Phase 7 production identity RÄCK are integrated and visually accepted.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
 
-Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until later cross-surface integration. Phase 4 is implemented, verified, and visually accepted as `[x]`; Phase 5 remains `[~]` after accepted Phase 5A, Phase 5B.1–5B.5, production category authoring, Unified Browser, multi-select authoring, drag-to-place, and the universal owner RÄCK, while Phase 5B.6 onward remains unstarted. Phase 6, Phase 7, and Phase 7.5 are implemented, verified, and interactively accepted as `[x]`.
+Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until Phase 8 cross-surface integration. Phases 4–7.5 are implemented, verified, and interactively accepted as `[x]`. Phase 5 is `[x]`: the Alpha authoring loop is complete, and the Phase 5B.6 boundary review deliberately defers nonessential presentation editors rather than keeping Phase 5 artificially open.
 
 ### Locked production-integration constraints
 
@@ -385,7 +385,7 @@ Exit criterion: owner navigation is intuitive, deterministic, responsive, and do
 
 ## Phase 5 — production Browser and authoring geometry
 
-Status: `[~]` — **Phase 5A, Phase 5B.1–5B.5, category authoring, Unified Browser, multi-select organization, drag-to-place, and the universal owner RÄCK are accepted; Phase 5B.6 onward remains unstarted**
+Status: `[x]` — **the Alpha Browser, organization, placement, composition, and universal owner RÄCK workflow is implemented, verified, and interactively accepted**
 
 Goal: wire the isolated Browser to real INDEX/CATEGORIES data and enable table authoring.
 
@@ -541,7 +541,7 @@ ARRANGE empty-plane marquee selection supports replace, Shift-add, and Ctrl/Cmd-
 
 Compact Browser correction (2026-07-31, interactively accepted): Browser width drives one named-container layout instead of competing viewport/mobile variants. At 520px and below the navigation is the accessible icon rail; labels remain available through titles and accessible names. The redundant results heading, fixed Browser footer, and empty vertical gutters are removed. Thumbnail size, Search, and the hover-described unavailable count live on the Browser faceplate and remain available while its content is collapsed. TOOLS is a command faceplate; BROWSER and LAYERS retain genuine expandable content. Module numbers and visible `+ / −` glyphs are absent; aligned grips and labels own module expansion, while the complete master faceplate owns master collapse without interfering with drag. The master exposes bold `THE RACK`, system commands, options, and the flush close control, with no profile address. Three Browser-RÄCK-scoped signal rails distinguish Browser, Tools, and Layers without entering the shared shell or any NFT/identity/metadata colour authority.
 
-Final Phase 5 checkpoint note (2026-07-31): interactive acceptance covers category authoring, rail activation, Unified Browser, renderable-result fallback, drag-to-category, drag-to-canvas, multi-select authoring, and the universal owner RÄCK. This final checkpoint supersedes acceptance-open wording retained in the chronological implementation notes above; Phase 5 remains `[~]` only because Phase 5B.6 onward is unstarted.
+Final Phase 5 checkpoint note (2026-07-31): interactive acceptance covers category authoring, rail activation, Unified Browser, renderable-result fallback, drag-to-category, drag-to-canvas, multi-select authoring, and the universal owner RÄCK. This final checkpoint supersedes acceptance-open wording retained in the chronological implementation notes above.
 
 Explicit exclusions: PORTALS or lattice launchers, AI categorization, category artwork, favorites editing, legacy `AssetIndex` routing or cleanup, category publication/visitor navigation, wallet or IPFS writes, canonical schema/publication/viewer changes, and Phase 5B.6 presentation tools.
 
@@ -558,14 +558,22 @@ Manual acceptance checklist:
 7. Open a category dialog or menu on profile A, then switch to profile B. Confirm the old surface disappears and cannot be completed. Reload both profiles and confirm no cross-profile category appears. The lower-level “stale callback” security case is automated coverage, not a manual action a user must somehow invoke.
 8. Reload and verify successful category changes persist. Confirm no wallet prompt, IPFS request, publication update, visitor control, or category launcher appears.
 
-Phase 5B.6 onward status: `[ ]` — unstarted. Mat/frame/backing editing, transparency, replace, visibility editing, lock editing, Owner Preview, publication or visitor cutover, Phase 6, and later work remain excluded.
+### Phase 5B.6 — lean Alpha boundary decision
+
+Status: `[x]` — **boundary resolved; no additional Phase 5 implementation is required for Alpha**
+
+The accepted schema and renderer already preserve frame, mat, backing, transparency, visibility, and lock values, but schema support is not authority to expose incomplete editors. Alpha deliberately defers frame/mat/backing editing, manual transparency modes, replace-in-place, placement visibility editing, and lock editing. REMOVE plus PLACE is the safe Alpha substitute for replace. `AUTO` remains the authoring default for transparency; authored placement settings must never be inferred from NFT metadata, and NFT transparency must never be inferred from placement state. Imported or reconciled valid canonical values remain readable and render deterministically.
+
+Owner Preview moves to Phase 8A. It must be the first owner-facing consumer of the actual version-8 visitor runtime and exact pure public projection, not a second preview imitation inside the owner authoring shell. Preview must exclude private draft content, session Theme overrides, authoring chrome, callbacks, selections, open windows, and incomplete gestures. This keeps one runtime contract for Owner Preview, direct visits, logged-in and logged-out iframes, and visitor search.
+
+Categories remain profile-scoped owner organization for Alpha. Category publication, visitor category navigation, PORTALS, favorites editing, AI categorization, category artwork, and legacy Browser cleanup remain later product work.
 
 User visual test:
 
 1. Place square, portrait, landscape, and transparent assets.
-2. Move, resize, crop, layer, mat, lock, reload, and switch profiles.
+2. Move, resize, crop, layer, rotate, mirror, duplicate, remove, reload, and switch profiles.
 3. Confirm owner changes persist only for the correct profile.
-4. Confirm private assets never appear in visitor preview.
+4. Confirm no owner-only category, selection, window, or authoring state enters the canonical public projection.
 
 Exit criterion: a user can build a table from real owned assets and recover the exact authored composition after reload.
 
@@ -695,6 +703,8 @@ Goal: publish and resolve the canonical nine-table workspace through the existin
 
 Includes:
 
+- Phase 8A first deploys one visitor-safe version-8 runtime and uses it for Owner Preview before publication is enabled;
+- Owner Preview receives the exact pure public projection and provides no authoring controls or writes;
 - deterministic public-document projection;
 - Pinata credentials remain server-side;
 - wallet signs only the correct profile publication;
@@ -702,13 +712,15 @@ Includes:
 - owner draft and public projection remain distinct;
 - direct visit, logged-in iframe, logged-out iframe, and visitor search resolve the same publication;
 - visitor navigation works without owner authoring controls.
+- owner-only categories remain excluded from publication and visitor navigation.
 
 User visual test:
 
-1. Publish from profile A.
-2. Visit from profile B, logged out, direct URL, and iframe.
-3. Compare all nine tables, public categories, identity, viewer data, and Keeper navigation.
-4. Publish a second revision and confirm all visitor paths resolve the latest valid document.
+1. Preview profile A before publication and confirm it matches the later visitor runtime exactly.
+2. Publish from profile A.
+3. Visit from profile B, logged out, direct URL, and iframe.
+4. Compare all nine tables, public identity, viewer data, and Keeper navigation; confirm owner categories and authoring state are absent.
+5. Publish a second revision and confirm all visitor paths resolve the latest valid document.
 
 Exit criterion: publication, directory discovery, and visitor rendering are deterministic across accounts and embedding contexts.
 
@@ -791,4 +803,4 @@ Start with:
 
 ## Immediate next action
 
-Revise the Phase 5B.6 boundary into a lean Alpha presentation-tools slice before implementation, followed by Phase 8 visitor deployment/publication. Phase 3 and overall Phase 5 remain `[~]`; Phase 7.5 is accepted as `[x]`; version 7 remains the publication default and version 8 publication remains disabled.
+Begin Phase 8A with a read-only implementation audit of the existing published visitor boundary, version-8 validation/resolution path, owner projection, routes, iframe consumers, Keeper handoff, and rollback selector. Then deploy Owner Preview as the first consumer of the one visitor-safe version-8 runtime before enabling publication. Phase 3 remains `[~]` until that shared runtime is connected; Phase 5 and Phase 7.5 are `[x]`; version 7 remains the publication default and version 8 publication remains disabled.

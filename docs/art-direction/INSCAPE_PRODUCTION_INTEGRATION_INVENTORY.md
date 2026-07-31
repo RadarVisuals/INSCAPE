@@ -423,7 +423,7 @@ Adapt real INDEX assets and folders/categories into the isolated Browser contrac
 
 Accepted production closure boundary (2026-07-31): placement right-click uses the shared `RackMenu` visual boundary over the existing `DesktopMenu` interaction engine and exposes only actions that already have complete canonical mutation transactions: CROP, BACK, BACKWARD, FORWARD, FRONT, and REMOVE. The menu is rendered outside the transformed stage and inside the active owner shell so it inherits the owner-menu theme and typography tokens. Keyboard access is the Context Menu key or `Shift+F10`. The replaced toolbar-docking implementation is deleted. Interactive review accepted the reachable placement commands and shared RÄCK presentation. `LatticeProductionMovementLayer.jsx`, its focused test and CSS, the shared menu primitive, and the layer domain/test are the complete implementation file set; owner storage, schemas, adapters, renderers, publication, visitor code, prototype code, PORTALS/categories, and Keeper behavior are excluded.
 
-Frame/mat/backing, transparency, replace, visibility, lock, Owner Preview, and visitor/publication cutover remain Phase 5B.6-or-later product work. Their presence in the version-1 placement schema is not authority to expose partial editors: each still needs an explicit candidate builder, stale snapshot checks, authority/repository validation, atomic commit behavior, UI semantics, rollback, and acceptance boundary.
+The Phase 5B.6 Alpha boundary review closes Phase 5 without exposing frame/mat/backing, manual transparency, replace-in-place, placement visibility, or lock editors. Their presence in the version-1 placement schema is not authority to expose partial editors; valid imported or reconciled values remain readable. Owner Preview belongs to Phase 8A because it must consume the actual visitor-safe version-8 runtime and exact pure public projection rather than an owner-shell imitation.
 
 Rollback: select the legacy owner shell; existing INDEX, categories, Gallery, and legacy data remain intact.
 
@@ -516,7 +516,7 @@ Accepted correction (2026-07-31): cursor follow remains accepted and implemented
 
 ### Phase 8A — version 8 visitor deployment
 
-Deploy the version 8 validator, resolver, canonical renderer, and legacy fallback before enabling version 8 publication.
+Deploy the version 8 validator, resolver, canonical renderer, and legacy fallback before enabling version 8 publication. Owner Preview is the first consumer of this same visitor-safe runtime. It receives only the pure public projection, performs no owner write, excludes owner categories and session state, and must match later direct and iframe visitor rendering.
 
 Rollback: select the legacy renderer; the compatible build can still read retained fallback fields.
 
@@ -530,7 +530,7 @@ Manual test:
 
 1. Publish from profile A.
 2. Visit from profile B, signed out, directly, and in logged-in and logged-out iframes.
-3. Compare all nine tables, public categories, identity, viewer facts, and Keeper behavior.
+3. Compare all nine tables, public identity, viewer facts, and Keeper behavior; confirm owner categories and authoring state are absent.
 4. Confirm visitors perform no owner storage operations and receive no authoring controls.
 5. Publish a second revision and confirm every route resolves it.
 6. Select compatibility rendering and confirm the document remains readable.
