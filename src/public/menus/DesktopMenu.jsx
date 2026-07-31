@@ -4,7 +4,7 @@ import { clampMenuPosition } from './contextMenuModel.js';
 const PANEL_WIDTH = 224;
 const ROW_HEIGHT = 27;
 
-export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus, className = '', getSubmenuCommands, onPreviewCommand }) {
+export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand }) {
   const ref = useRef(null);
   const hoverTimerRef = useRef(0);
   const [position, setPosition] = useState(anchor);
@@ -58,7 +58,7 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
           onPointerEnter={() => openSubmenu(depth, command)} onFocus={() => openSubmenu(depth, command, true)}
           onClick={() => { if (hasSubmenu) { openSubmenu(depth, command, true); return; } onPreviewCommand?.(null); onCommand(command.id); }}><i aria-hidden="true" /><span>{displayLabel}</span><b aria-hidden="true">{hasSubmenu ? '›' : selected ? '·' : ''}</b></button>;
       })}
-      {submenu.length > 0 && <div className="desktop-menu desktop-menu--flyout" role="menu" aria-label={`${openCommand.label} options`} style={{ position: 'absolute', top: childTop, left: opensLeft ? 'auto' : `calc(100% + 4px)`, right: opensLeft ? `calc(100% + 4px)` : 'auto' }}>
+      {submenu.length > 0 && <div className={`desktop-menu desktop-menu--flyout${panelClassName ? ` ${panelClassName}` : ''}`} role="menu" aria-label={`${openCommand.label} options`} style={{ position: 'absolute', top: childTop, left: opensLeft ? 'auto' : `calc(100% + 4px)`, right: opensLeft ? `calc(100% + 4px)` : 'auto' }}>
         {renderPanel(submenu, depth + 1, childViewportTop)}
       </div>}
     </>;

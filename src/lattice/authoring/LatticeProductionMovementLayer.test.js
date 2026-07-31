@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const source = readFileSync(new URL('./LatticeProductionMovementLayer.jsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./latticeProductionMovementLayer.css', import.meta.url), 'utf8');
+const rackStyles = readFileSync(new URL('../../public/menus/rackMenu.css', import.meta.url), 'utf8');
 
 test('owner movement controls derive every rectangle from the accepted Phase 3 projection path', () => {
   assert.match(source, /createLatticeProductionTableRenderModel/);
@@ -38,55 +39,47 @@ test('visible hit testing uses public placements, canonical layers, and determin
   assert.match(styles, /\.lattice-production-movement-control[^}]*pointer-events: auto/su);
 });
 
-test('selected public unlocked placements expose one ordered icon-only contextual toolbar without shortcuts', () => {
+test('public unlocked placements expose one ordered production context menu without layer shortcuts', () => {
   assert.match(source, /latticeProductionLayerOperationAvailability/);
   assert.match(source, /latticeProductionLayerTopologySnapshot\(acceptedTable\)/);
-  const layerActions = source.slice(source.indexOf('const LAYER_ACTIONS'), source.indexOf('function PlacementActionIcon'));
-  ["OPERATIONS.BACK, accessible: 'Send placement to back'", "OPERATIONS.BACKWARD, accessible: 'Move placement backward'",
-    "OPERATIONS.FORWARD, accessible: 'Move placement forward'", "OPERATIONS.FRONT, accessible: 'Bring placement to front'"]
+  const layerActions = source.slice(source.indexOf('const LAYER_ACTIONS'), source.indexOf('function viewportOf'));
+  ["OPERATIONS.BACK, label: 'Layer / Send to back'", "OPERATIONS.BACKWARD, label: 'Layer / Move backward'",
+    "OPERATIONS.FORWARD, label: 'Layer / Move forward'", "OPERATIONS.FRONT, label: 'Layer / Bring to front'"]
     .reduce((offset, value) => {
       const next = layerActions.indexOf(value, offset);
       assert.ok(next >= offset, `${value} must retain layer-action order`);
       return next + value.length;
     }, 0);
-  assert.ok(source.indexOf('aria-label="Crop placement"') < source.indexOf('{LAYER_ACTIONS.map'));
-  assert.ok(source.indexOf('{LAYER_ACTIONS.map') < source.indexOf('aria-label="Remove placement"'));
-  assert.match(source, /Crop, Trash2/);
-  assert.match(source, /ChevronDown, ChevronUp, ChevronsDown, ChevronsUp/);
-  assert.match(source, /role="toolbar"/);
-  assert.match(source, /aria-disabled=\{!layerAvailability\[action\.id\]\}/);
-  assert.match(source, /data-lattice-placement-action="layer"/);
-  assert.match(source, /restoreFocus\(controlKey\(placementId, `layer-/);
+  assert.match(source, /onContextMenu=\{\(event\) => openPlacementContextMenu/);
+  assert.match(source, /event\.key === 'ContextMenu'/);
+  assert.match(source, /event\.shiftKey && event\.key === 'F10'/);
+  assert.match(source, /createPortal/);
+  assert.match(source, /<RackMenu/);
+  assert.match(source, /disabled: !availability\[action\.id\]/);
+  assert.match(source, /command\.startsWith\('layer:'\)/);
+  assert.match(source, /restoreFocus\(controlKey\(placementId\)\)/);
   assert.doesNotMatch(source, /event\.key\s*===\s*['"](?:PageUp|PageDown|Home|End|\[|\])['"]/u);
-  assert.doesNotMatch(source, />\s*(?:CROP|BACK|BACKWARD|FORWARD|FRONT|REMOVE)\s*<\/button>/u);
-  assert.match(styles, /\.lattice-production-placement-toolbar[^}]*pointer-events:\s*auto/su);
-  assert.match(styles, /min-width:\s*28px/u);
-  assert.match(styles, /\.lattice-production-placement-toolbar svg[^}]*width:\s*16px[^}]*height:\s*16px/su);
-  assert.match(styles, /button\[aria-disabled="true"\]/u);
+  assert.doesNotMatch(source, /role="toolbar"/u);
+  assert.match(source, /className="lattice-production-placement-context-menu"/);
+  assert.match(rackStyles, /position:\s*fixed/);
+  assert.match(rackStyles, /pointer-events:\s*auto/);
+  assert.match(rackStyles, /width:\s*min\(238px, calc\(100vw - 16px\)\)/);
+  assert.match(rackStyles, /grid-template-columns:\s*12px minmax\(0, 1fr\) 10px/);
+  assert.match(rackStyles, /box-shadow:\s*inset 3px 0 var\(--rack-menu-ink\)/);
+  assert.match(rackStyles, /width:\s*3px;[^}]*height:\s*3px;/s);
+  assert.match(rackStyles, /var\(--lattice-menu-panel,/);
+  assert.match(rackStyles, /var\(--lattice-menu-ink,/);
+  assert.doesNotMatch(rackStyles, /color-destructive/);
+  assert.doesNotMatch(rackStyles, /height:\s*0/);
 });
 
-test('custom tooltips appear on hover and keyboard focus and stay aligned to the unified toolbar', () => {
-  assert.match(source, /role="tooltip"/);
-  assert.match(source, /aria-describedby=/);
-  assert.doesNotMatch(source, /title=/u);
-  assert.match(styles, /button:hover \.lattice-production-placement-tooltip/);
-  assert.match(styles, /button:focus-visible \.lattice-production-placement-tooltip[^}]*opacity:\s*1[^}]*visibility:\s*visible/su);
-  assert.match(styles, /width:\s*600%/u);
-  assert.match(styles, /button:not\(\[aria-disabled="true"\]\):hover svg[^}]*drop-shadow/su);
-  assert.match(styles, /button:focus-visible svg[^}]*drop-shadow/su);
-  assert.doesNotMatch(styles, /\.lattice-production-placement-toolbar\s*\{[^}]*(?:border|background):/su);
-  assert.doesNotMatch(styles, /\.lattice-production-placement-tooltip\s*\{[^}]*(?:border|background):/su);
-});
-
-test('one shared contextual-toolbar dock keeps every action and resize handle non-overlapping and table-local', () => {
-  assert.match(source, /latticeProductionPlacementToolbarDock\(acceptedPlacement, field\.cellSize\)/);
-  assert.match(source, /data-placement-toolbar-dock=\{placementToolbarDock\.vertical\}/);
-  assert.match(source, /style=\{\{ left: placementToolbarDock\.left, width: placementToolbarDock\.width \}\}/);
-  assert.match(styles, /\[data-placement-toolbar-dock="below"\][^}]*top:\s*calc\(100% \+ 10px\)/su);
-  assert.match(styles, /\[data-placement-toolbar-dock="above"\][^}]*bottom:\s*calc\(100% \+ 10px\)/su);
-  assert.match(styles, /\[data-placement-toolbar-dock="inside-top"\][^}]*top:\s*10px/su);
-  assert.match(styles, /\[data-placement-toolbar-dock="inside-bottom"\][^}]*bottom:\s*10px/su);
-  assert.doesNotMatch(styles, /lattice-production-(?:crop-control|remove-control|layer-toolbar)/u);
+test('context menu remains viewport anchored outside the transformed stage and restores placement focus', () => {
+  assert.match(source, /event\.clientX/);
+  assert.match(source, /control\?\.getBoundingClientRect/);
+  assert.match(source, /document\.querySelector\('\.owner-lattice-shell'\) \|\| document\.body/);
+  assert.match(source, /returnFocus=\{contextMenu\.returnFocus\}/);
+  assert.doesNotMatch(source, /latticeProductionPlacementToolbarDock/);
+  assert.doesNotMatch(styles, /lattice-production-placement-toolbar/u);
 });
 
 test('keyboard movement is one-cell, non-repeating, bounded, and isolated from table navigation', () => {
@@ -100,12 +93,11 @@ test('keyboard movement is one-cell, non-repeating, bounded, and isolated from t
   assert.match(source, /event\.key === 'Escape'/);
 });
 
-test('selected unlocked placements expose four accessible resize handles and explicit-button-only removal', () => {
+test('selected unlocked placements expose four accessible resize handles and context-command-only removal', () => {
   assert.match(source, /LATTICE_PRODUCTION_RESIZE_CORNERS\.map/);
   assert.match(source, /Resize placement from/);
-  assert.match(source, /aria-label="Remove placement"/);
-  assert.match(source, /data-lattice-placement-action="remove"/);
-  assert.match(source, /onClick=\{\(\) => removePlacement\(placement\.id\)\}/);
+  assert.match(source, /\{ id: 'remove', label: 'Remove' \}/);
+  assert.match(source, /command === 'remove'/);
   assert.doesNotMatch(source, /event\.key === ['"](?:Delete|Backspace)['"]/);
   assert.match(source, /placements\[index \+ 1\] \|\| placements\[index - 1\]/);
   assert.match(source, /onReturnFocus/);
@@ -113,7 +105,7 @@ test('selected unlocked placements expose four accessible resize handles and exp
 
 test('explicit crop mode owns pan and zoom with accessible DONE, CANCEL, and NATIVE FIT controls', () => {
   assert.match(source, /Crop placement:/);
-  assert.match(source, /data-lattice-placement-action="crop"/);
+  assert.match(source, /\{ id: 'crop', label: 'Crop' \}/);
   assert.match(source, /data-lattice-crop-surface/);
   assert.match(source, /aria-describedby=\{`lattice-crop-instructions-/);
   assert.match(source, /type="range"/);
@@ -127,14 +119,14 @@ test('explicit crop mode owns pan and zoom with accessible DONE, CANCEL, and NAT
   assert.match(source, /event\.shiftKey \? 0\.05 : 0\.01/);
   assert.match(source, /onCropModeChange\?\.\(true\)/);
   assert.match(source, /onCropModeChange\?\.\(false\)/);
-  assert.match(source, /restoreFocus\(controlKey\(session\.placementId, 'crop'\)\)/);
+  assert.match(source, /restoreFocus\(controlKey\(session\.placementId\)\)/);
   assert.doesNotMatch(source, /event\.key === ['"](?:Delete|Backspace)['"]/);
 });
 
 test('active crop suppresses other composition owners while retaining pointer capture and preview-only cancellation', () => {
   assert.match(source, /disabled=\{Boolean\(cropSession\)\}/);
   assert.match(source, /selected && !locked && !cropSession/);
-  assert.match(source, /lattice-production-placement-toolbar/);
+  assert.match(source, /setContextMenu\(null\)/);
   assert.match(source, /kind: 'crop'/);
   assert.match(source, /createLatticeProductionCropPanGesture/);
   assert.match(source, /updateLatticeProductionCropPanGesture/);

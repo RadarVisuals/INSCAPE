@@ -62,7 +62,7 @@ const BrowserWorkspace = lazy(() => import('../lattice/browser/BrowserWorkspace.
 const RUNTIME_PROJECTION_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 const CENTER_TABLE_ID = 'table-05';
 const PROFILE_RAIL_ENTRIES = Object.freeze([
-  { id: 'categories', label: 'CATEGORIES', note: 'UNAVAILABLE / PHASE 5', disabled: true, disabledReason: 'Categories integration is not available in Phase 4' },
+  { id: 'categories', label: 'CATEGORIES', note: 'ORGANIZE / PROFILE SCOPED' },
   { id: 'creations', label: 'CREATIONS', note: 'UNAVAILABLE / LATER PHASE', disabled: true, disabledReason: 'Creations integration is not available in Phase 4' },
   { id: 'activity', label: 'ACTIVITY', note: 'UNAVAILABLE / LATER PHASE', disabled: true, disabledReason: 'Activity integration is not available in Phase 4' },
   { id: 'discover', label: 'DISCOVER', note: 'UNAVAILABLE / LATER PHASE', disabled: true, disabledReason: 'Discovery integration is not available in Phase 4' },
@@ -152,6 +152,7 @@ function OwnerLatticeRuntime({
   const wheelAccumulatorRef = useRef({ x: 0, y: 0 });
   const wheelBlockedUntilRef = useRef(0);
   const browserToolRef = useRef(null);
+  const browserReturnFocusRef = useRef(null);
   const identityControlRef = useRef(null);
   const identityOpenRequestRef = useRef(0);
   const keeperPointerFollowRef = useRef(null);
@@ -170,6 +171,8 @@ function OwnerLatticeRuntime({
   const [themeOpen, setThemeOpen] = useState(false);
   const [browserOpen, setBrowserOpen] = useState(false);
   const [browserActivated, setBrowserActivated] = useState(false);
+  const [browserActiveTab, setBrowserActiveTab] = useState('index');
+  const [browserTabRequest, setBrowserTabRequest] = useState(null);
   const [compositionPreview, setCompositionPreview] = useState(null);
   const [cropModeActive, setCropModeActive] = useState(false);
   const [arrangeEnabled, setArrangeEnabled] = useState(false);
@@ -183,7 +186,7 @@ function OwnerLatticeRuntime({
   const [keeperMovementSpeed, setKeeperMovementSpeed] = useState('normal');
   const profileIdentity = useProfileIdentity(profileAddress);
   const profileContractFacts = useProfileContractFacts(profileAddress, { enabled: Boolean(identityDossierOpening || identityDossierSession) });
-  const browserData = useOwnerLatticeBrowser(profileAddress, browserOpen);
+  const { commands: browserCategoryCommands, data: browserData } = useOwnerLatticeBrowser(profileAddress, browserOpen);
   const authoring = useOwnerLatticeAuthoring(profileAddress);
   const profile = useMemo(
     () => getIdentityProfileViewModel(profileIdentity, { walletConnected: visitorWalletConnected }),
@@ -424,10 +427,10 @@ function OwnerLatticeRuntime({
     }
     const activeGesture = gestureRef.current;
     if (!activeGesture || activeGesture.pointerId !== event.pointerId || settlingRef.current) {
-      if (!keeperPointerFollowEnabled) return;
       const target = keeperPointerTarget(event, event.currentTarget.getBoundingClientRect());
       if (!target) return;
       keeperPointerTargetRef.current = target;
+      if (!keeperPointerFollowEnabled) return;
       keeperPointerFollowRef.current?.push(target);
       return;
     }
@@ -531,7 +534,15 @@ function OwnerLatticeRuntime({
   const spatialTheme = ['carbon', 'graphite'].includes(surfaceId) ? 'dark' : 'light';
   const closeBrowser = useCallback(() => {
     setBrowserOpen(false);
-    queueMicrotask(() => browserToolRef.current?.focus({ preventScroll: true }));
+    const returnFocus = browserReturnFocusRef.current || browserToolRef.current;
+    queueMicrotask(() => returnFocus?.isConnected && returnFocus.focus({ preventScroll: true }));
+  }, []);
+  const openCategories = useCallback((trigger) => {
+    browserReturnFocusRef.current = trigger || null;
+    setThemeOpen(false);
+    setBrowserActivated(true);
+    setBrowserTabRequest((current) => ({ id: 'categories', requestId: (current?.requestId || 0) + 1 }));
+    setBrowserOpen(true);
   }, []);
   const openIdentityDossier = useCallback(async () => {
     if (viewerSession || gestureRef.current || cameraGestureRef.current || cropModeActive || compositionPreview) return;
@@ -706,6 +717,7 @@ function OwnerLatticeRuntime({
     {spatialRoot && createPortal(spatialSurface, spatialRoot)}
     {interfaceVisible && <>
       <LatticeProfileRail
+        activeEntryId={browserOpen && browserActiveTab === 'categories' ? 'categories' : null}
         blocked={Boolean(viewerSession)}
         collapsed={railCollapsed}
         compact={dimensions.width <= 900}
@@ -716,6 +728,9 @@ function OwnerLatticeRuntime({
         identitySourceHidden={Boolean(identityDossierSession)}
         officialIdentity={officialIdentity}
         onCollapsedChange={setRailCollapsed}
+        onEntryActivate={(entryId, trigger) => {
+          if (entryId === 'categories') openCategories(trigger);
+        }}
         onIdentityActivate={openIdentityDossier}
       />
       <LatticeWorkspaceToolbar
@@ -733,6 +748,7 @@ function OwnerLatticeRuntime({
             toggleArrange();
           }
           if (toolId === 'browser') {
+            browserReturnFocusRef.current = browserToolRef.current;
             setThemeOpen(false);
             setBrowserActivated(true);
             setBrowserOpen((open) => !open);
@@ -746,15 +762,18 @@ function OwnerLatticeRuntime({
       />
       {browserActivated && <Suspense fallback={null}>
         <BrowserWorkspace
+          categoryCommands={browserCategoryCommands}
           data={{
             ...browserData,
             activeTable: { label: activeTableName, placementUnavailableReason },
           }}
+          onActiveTabChange={setBrowserActiveTab}
           onPlaceAsset={(stableAssetId) => {
             if (arrangeEnabled) authoring.placePublicAsset({ stableAssetId, tableId: activeTableId });
           }}
           onRequestClose={closeBrowser}
           open={browserOpen}
+          tabRequest={browserTabRequest}
         />
       </Suspense>}
       {themeOpen && <ThemeSurface

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, Crop, Trash2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import RackMenu from '../../public/menus/RackMenu.jsx';
 import {
   createLatticeProductionTableRenderModel,
   projectLatticeProductionPlacement,
@@ -35,7 +36,6 @@ import {
 import {
   LATTICE_PRODUCTION_LAYER_OPERATIONS,
   latticeProductionLayerOperationAvailability,
-  latticeProductionPlacementToolbarDock,
   latticeProductionLayerTopologySnapshot,
 } from './latticeProductionLayer.js';
 import './latticeProductionMovementLayer.css';
@@ -50,15 +50,11 @@ const CORNER_LABELS = Object.freeze({
   nw: 'north-west', ne: 'north-east', se: 'south-east', sw: 'south-west',
 });
 const LAYER_ACTIONS = Object.freeze([
-  Object.freeze({ id: LATTICE_PRODUCTION_LAYER_OPERATIONS.BACK, accessible: 'Send placement to back', Icon: ChevronsDown }),
-  Object.freeze({ id: LATTICE_PRODUCTION_LAYER_OPERATIONS.BACKWARD, accessible: 'Move placement backward', Icon: ChevronDown }),
-  Object.freeze({ id: LATTICE_PRODUCTION_LAYER_OPERATIONS.FORWARD, accessible: 'Move placement forward', Icon: ChevronUp }),
-  Object.freeze({ id: LATTICE_PRODUCTION_LAYER_OPERATIONS.FRONT, accessible: 'Bring placement to front', Icon: ChevronsUp }),
+  Object.freeze({ id: LATTICE_PRODUCTION_LAYER_OPERATIONS.BACK, label: 'Layer / Send to back' }),
+  Object.freeze({ id: LATTICE_PRODUCTION_LAYER_OPERATIONS.BACKWARD, label: 'Layer / Move backward' }),
+  Object.freeze({ id: LATTICE_PRODUCTION_LAYER_OPERATIONS.FORWARD, label: 'Layer / Move forward' }),
+  Object.freeze({ id: LATTICE_PRODUCTION_LAYER_OPERATIONS.FRONT, label: 'Layer / Bring to front' }),
 ]);
-
-function PlacementActionIcon({ Icon, tooltipId, tooltip }) {
-  return <><Icon aria-hidden="true" /><span className="lattice-production-placement-tooltip" id={tooltipId} role="tooltip">{tooltip}</span></>;
-}
 
 function viewportOf(node) {
   return { width: Math.max(0, node?.clientWidth || 0), height: Math.max(0, node?.clientHeight || 0) };
@@ -101,6 +97,7 @@ export default function LatticeProductionMovementLayer({
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [selectedPlacementId, setSelectedPlacementId] = useState(null);
   const [cropSession, setCropSession] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
   const model = useMemo(() => createLatticeProductionTableRenderModel(lattice, tableId), [lattice, tableId]);
   const field = viewport.width > 0 && viewport.height > 0
     ? projectLatticeProductionViewport(model, viewport)
@@ -124,7 +121,8 @@ export default function LatticeProductionMovementLayer({
 
   useEffect(() => {
     if (selectedPlacementId && !acceptedById.has(selectedPlacementId)) setSelectedPlacementId(null);
-  }, [acceptedById, selectedPlacementId]);
+    if (contextMenu && !acceptedById.has(contextMenu.placementId)) setContextMenu(null);
+  }, [acceptedById, contextMenu, selectedPlacementId]);
 
   useEffect(() => () => onCropModeChange?.(false), [onCropModeChange]);
 
@@ -371,7 +369,7 @@ export default function LatticeProductionMovementLayer({
     setCropSession(null);
     onPreviewOperation?.(null);
     onCropModeChange?.(false);
-    restoreFocus(controlKey(session.placementId, 'crop'));
+    restoreFocus(controlKey(session.placementId));
   };
 
   const updateCrop = (crop) => {
@@ -393,7 +391,7 @@ export default function LatticeProductionMovementLayer({
       expectedPlacement: structuredClone(acceptedPlacement),
     });
     if (!removed) {
-      restoreFocus(controlKey(placementId, 'remove'));
+      restoreFocus(controlKey(placementId));
       return;
     }
     setSelectedPlacementId(focusTarget?.id || null);
@@ -411,16 +409,41 @@ export default function LatticeProductionMovementLayer({
       placementId,
       tableId,
     });
-    restoreFocus(controlKey(placementId, `layer-${operation.toLowerCase()}`));
+    restoreFocus(controlKey(placementId));
+  };
+
+  const openPlacementContextMenu = (event, placementId, control) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const acceptedPlacement = acceptedById.get(placementId);
+    if (cropSession || gestureRef.current || !acceptedPlacement || acceptedPlacement.locked
+      || acceptedPlacement.visibility !== 'PUBLIC') return;
+    const bounds = control?.getBoundingClientRect?.();
+    const pointerAnchor = event.clientX || event.clientY;
+    setSelectedPlacementId(placementId);
+    setContextMenu({
+      anchor: pointerAnchor
+        ? { x: event.clientX, y: event.clientY }
+        : { x: (bounds?.left || 0) + ((bounds?.width || 0) / 2), y: (bounds?.top || 0) + ((bounds?.height || 0) / 2) },
+      placementId,
+      returnFocus: control,
+    });
   };
 
   const handleKeyDown = (event) => {
+    if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+      const control = event.target.closest?.('[data-lattice-placement-control]');
+      const placementId = control?.dataset.placementId;
+      if (control && placementId) openPlacementContextMenu(event, placementId, control);
+      return;
+    }
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
       if (cropSession) exitCrop();
       else if (!cancelGesture()) {
         const placementId = event.target.closest?.('[data-lattice-placement-control]')?.dataset.placementId;
+        setContextMenu(null);
         setSelectedPlacementId(null);
         if (placementId) restoreFocus(controlKey(placementId));
       }
@@ -512,8 +535,6 @@ export default function LatticeProductionMovementLayer({
       const selected = selectedPlacementId === placement.id;
       const boundaries = latticeProductionPlacementBoundaries(acceptedPlacement);
       const cropMask = latticeProductionCropMask(acceptedPlacement);
-      const layerAvailability = latticeProductionLayerOperationAvailability(acceptedTable, placement.id);
-      const placementToolbarDock = latticeProductionPlacementToolbarDock(acceptedPlacement, field.cellSize);
       const label = placement.asset?.name?.trim() || placement.asset?.stableAssetId || placement.id;
       return <div
         className="lattice-production-composition-control"
@@ -523,6 +544,11 @@ export default function LatticeProductionMovementLayer({
         data-boundary-top={boundaries.top || undefined}
         data-selected={selected || undefined}
         key={placement.id}
+        onContextMenu={(event) => openPlacementContextMenu(
+          event,
+          placement.id,
+          controlRefs.current.get(controlKey(placement.id)),
+        )}
         style={{ ...rectangleStyle(projectLatticeProductionPlacement(placement, field)), zIndex: layerRanks.get(placement.id) }}
       >
         <button
@@ -549,55 +575,6 @@ export default function LatticeProductionMovementLayer({
             ref={(node) => { const key = controlKey(placement.id, corner); if (node) controlRefs.current.set(key, node); else controlRefs.current.delete(key); }}
             type="button"
           />)}
-          <div
-            aria-label={`Placement actions: ${label}`}
-            className="lattice-production-placement-toolbar"
-            data-placement-toolbar-dock={placementToolbarDock.vertical}
-            role="toolbar"
-            style={{ left: placementToolbarDock.left, width: placementToolbarDock.width }}
-          >
-            <button
-              aria-describedby={`lattice-placement-tooltip-${placement.id}-crop`}
-              aria-label="Crop placement"
-              data-lattice-placement-action="crop"
-              data-lattice-placement-control
-              data-placement-id={placement.id}
-              onClick={() => beginCrop(placement.id)}
-              ref={(node) => { const key = controlKey(placement.id, 'crop'); if (node) controlRefs.current.set(key, node); else controlRefs.current.delete(key); }}
-              type="button"
-            ><PlacementActionIcon Icon={Crop} tooltip="Crop placement" tooltipId={`lattice-placement-tooltip-${placement.id}-crop`} /></button>
-            {LAYER_ACTIONS.map((action) => <button
-              aria-describedby={`lattice-placement-tooltip-${placement.id}-${action.id.toLowerCase()}`}
-              aria-disabled={!layerAvailability[action.id]}
-              aria-label={action.accessible}
-              data-lattice-placement-action="layer"
-              data-lattice-placement-control
-              data-layer-operation={action.id}
-              data-placement-id={placement.id}
-              key={action.id}
-              onClick={() => layerPlacement(placement.id, action.id)}
-              ref={(node) => {
-                const key = controlKey(placement.id, `layer-${action.id.toLowerCase()}`);
-                if (node) controlRefs.current.set(key, node); else controlRefs.current.delete(key);
-              }}
-              type="button"
-            ><PlacementActionIcon
-              Icon={action.Icon}
-              tooltip={action.accessible}
-              tooltipId={`lattice-placement-tooltip-${placement.id}-${action.id.toLowerCase()}`}
-            /></button>)}
-            <button
-              aria-describedby={`lattice-placement-tooltip-${placement.id}-remove`}
-              aria-label="Remove placement"
-              className="is-remove"
-              data-lattice-placement-action="remove"
-              data-lattice-placement-control
-              data-placement-id={placement.id}
-              onClick={() => removePlacement(placement.id)}
-              ref={(node) => { const key = controlKey(placement.id, 'remove'); if (node) controlRefs.current.set(key, node); else controlRefs.current.delete(key); }}
-              type="button"
-            ><PlacementActionIcon Icon={Trash2} tooltip="Remove placement" tooltipId={`lattice-placement-tooltip-${placement.id}-remove`} /></button>
-          </div>
         </>}
         {cropSession?.placementId === placement.id && <section
           aria-label={`Crop placement: ${label}`}
@@ -648,5 +625,33 @@ export default function LatticeProductionMovementLayer({
         </section>}
       </div>;
     })}
+    {contextMenu && rootRef.current && createPortal((() => {
+      const placement = acceptedById.get(contextMenu.placementId);
+      const availability = latticeProductionLayerOperationAvailability(acceptedTable, contextMenu.placementId);
+      const commands = [
+        { id: 'crop', label: 'Crop' },
+        ...LAYER_ACTIONS.map((action) => ({
+          id: `layer:${action.id}`,
+          label: action.label,
+          disabled: !availability[action.id],
+        })),
+        { id: 'remove', label: 'Remove' },
+      ];
+      return <RackMenu
+        anchor={contextMenu.anchor}
+        className="lattice-production-placement-context-menu"
+        commands={commands}
+        label={`Placement actions: ${placement?.id || contextMenu.placementId}`}
+        onClose={() => setContextMenu(null)}
+        onCommand={(command) => {
+          const placementId = contextMenu.placementId;
+          setContextMenu(null);
+          if (command === 'crop') beginCrop(placementId);
+          else if (command === 'remove') removePlacement(placementId);
+          else if (command.startsWith('layer:')) layerPlacement(placementId, command.slice(6));
+        }}
+        returnFocus={contextMenu.returnFocus}
+      />;
+    })(), document.querySelector('.owner-lattice-shell') || document.body)}
   </div>;
 }

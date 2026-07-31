@@ -68,7 +68,7 @@ export function adaptLatticeProductionBrowserData({
       favorites: [],
       ownerContext: profile,
       rejectedAssetCount: 0,
-      readOnly: true,
+      readOnly: false,
     });
   }
 
@@ -104,6 +104,6 @@ export function adaptLatticeProductionBrowserData({
     favorites: [...workspace.favorites],
     ownerContext: profile,
     rejectedAssetCount,
-    readOnly: true,
+    readOnly: false,
   });
 }

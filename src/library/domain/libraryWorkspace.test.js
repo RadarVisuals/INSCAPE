@@ -17,7 +17,9 @@ test('folders create, rename, add/remove references, and delete without touching
   workspace = createFolder(workspace, '1/1 Art', 10);
   const id = workspace.folders[0].id;
   workspace = setFolderAsset(workspace, id, 'asset-a', true, 20);
+  const afterAdd = workspace;
   workspace = setFolderAsset(workspace, id, 'asset-a', true, 30);
+  assert.equal(workspace, afterAdd);
   assert.deepEqual(workspace.folders[0].assetIds, ['asset-a']);
   workspace = renameFolder(workspace, id, 'Collected Art', 40);
   assert.equal(workspace.folders[0].name, 'Collected Art');

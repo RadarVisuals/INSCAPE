@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import CategoryNavigationCard from './CategoryNavigationCard.jsx';
-import DesktopMenu from './menus/DesktopMenu.jsx';
+import RackMenu from './menus/RackMenu.jsx';
 import GalleryNavigationCard from './GalleryNavigationCard.jsx';
 import ProfileIdentityCard from './ProfileIdentityCard.jsx';
 import { PROFILE_IDENTITY_CARD_STATE } from './profileIdentityCardModel.js';
@@ -225,8 +225,8 @@ export default function ProfileNavigationDock({
       onExpandedChange={handleCategoriesExpandedChange}
       collapseRequested={effectiveIndexOpen || effectiveCreationsOpen || effectiveActivityOpen || effectiveGalleryOpen || settingsOpen}
     />}
-    {categoryContext && <DesktopMenu
-      className="category-navigation-context-menu desktop-menu--cascade"
+    {categoryContext && <RackMenu
+      className="category-navigation-context-menu"
       anchor={categoryContext.anchor}
       label={`${categoryContext.category.label} commands`}
       commands={[{ id: 'rename-category', label: 'Rename Category' }, { id: 'toggle-public', label: categoryContext.category.public ? 'Make Private' : 'Publish Category' }]}

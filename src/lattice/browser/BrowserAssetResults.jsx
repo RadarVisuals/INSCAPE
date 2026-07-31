@@ -1,6 +1,6 @@
 const assetId = (asset) => asset?.stableAssetId || asset?.id;
 
-export default function BrowserAssetResults({ actionLabel = null, assets, emptyLabel, onSelect, selectedAssetId }) {
+export default function BrowserAssetResults({ actionLabel = null, assets, emptyLabel, onContext, onSelect, selectedAssetId }) {
   if (!assets.length) return <p className="lattice-browser-status">{emptyLabel}</p>;
   return (
     <div className="lattice-browser-assets">
@@ -14,6 +14,17 @@ export default function BrowserAssetResults({ actionLabel = null, assets, emptyL
             data-selected={selectedAssetId === id || undefined}
             key={id}
             onClick={() => onSelect(id)}
+            onContextMenu={onContext ? (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onContext(event, asset);
+            } : undefined}
+            onKeyDown={onContext ? (event) => {
+              if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return;
+              event.preventDefault();
+              event.stopPropagation();
+              onContext(event, asset);
+            } : undefined}
             type="button"
           >
             <span className="lattice-browser-asset__media" style={{ aspectRatio: ratio }}>

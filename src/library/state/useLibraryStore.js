@@ -44,6 +44,21 @@ function uniqueAssets(existing, incoming) {
   return [...byId.values()];
 }
 
+function commitProfileScopedCategory(set, get, expectedProfileAddress, update) {
+  const expectedProfile = normalizeProfileAddress(expectedProfileAddress);
+  const before = get();
+  if (!expectedProfile || before.profileAddress !== expectedProfile
+    || normalizeProfileAddress(before.workspace?.profileAddress) !== expectedProfile) return null;
+  const workspace = update(before.workspace);
+  if (workspace === before.workspace) return null;
+  const current = get();
+  if (current.profileAddress !== expectedProfile || current.workspace !== before.workspace
+    || normalizeProfileAddress(current.workspace?.profileAddress) !== expectedProfile) return null;
+  set({ workspace });
+  scheduleSave(workspace);
+  return workspace;
+}
+
 export const useLibraryStore = create((set, get) => ({
   profileAddress,
   assets: loadLibraryAssetCache(workspaceStorage, profileAddress),
@@ -306,6 +321,19 @@ export const useLibraryStore = create((set, get) => ({
   },
   setFolderPublic(folderId, isPublic) {
     const workspace = setFolderPublic(get().workspace, folderId, isPublic); set({ workspace }); scheduleSave(workspace);
+  },
+  commitCategoryForProfile(expectedProfileAddress, command) {
+    const beforeIds = command?.type === 'create'
+      ? new Set(get().workspace?.folders?.map(({ id }) => id) || []) : null;
+    const workspace = commitProfileScopedCategory(set, get, expectedProfileAddress, (current) => {
+      if (command?.type === 'create') return createFolder(current, command.name);
+      if (command?.type === 'rename') return renameFolder(current, command.categoryId, command.name);
+      if (command?.type === 'delete') return deleteFolder(current, command.categoryId);
+      if (command?.type === 'public') return setFolderPublic(current, command.categoryId, command.value);
+      if (command?.type === 'asset') return setFolderAsset(current, command.categoryId, command.assetId, command.value);
+      return current;
+    });
+    return beforeIds ? workspace?.folders.find(({ id }) => !beforeIds.has(id))?.id || null : Boolean(workspace);
   },
   setCanvasObjectLocked(id, locked) {
     const workspace = setCanvasObjectLocked(get().workspace, id, locked); set({ workspace }); scheduleSave(workspace);

@@ -8,7 +8,7 @@ const FILTER_LABELS = Object.freeze({
   [BROWSER_FILING_FILTERS.UNSORTED]: 'UNSORTED',
 });
 
-export default function BrowserIndexPanel({ data, workspace }) {
+export default function BrowserIndexPanel({ data, onAssetContext, workspace }) {
   const loading = data.assetLoadState === 'loading';
   const partial = data.assetLoadState === 'partial';
   const failed = data.assetLoadState === 'error';
@@ -39,6 +39,7 @@ export default function BrowserIndexPanel({ data, workspace }) {
         <BrowserAssetResults
           assets={workspace.filteredAssets}
           emptyLabel={loading ? 'WAITING FOR RESOLVED ASSETS' : failed ? 'NO CACHED ASSETS AVAILABLE' : 'NO ASSETS MATCH THIS VIEW'}
+          onContext={onAssetContext}
           onSelect={(id) => workspace.setSelectedAssetId(workspace.selectedAssetId === id ? null : id)}
           selectedAssetId={workspace.selectedAssetId}
         />

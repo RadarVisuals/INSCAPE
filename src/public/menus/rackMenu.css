@@ -1,0 +1,67 @@
+.rack-menu-surface {
+  --rack-menu-panel: var(--lattice-menu-panel, var(--color-surface-overlay));
+  --rack-menu-ink: var(--lattice-menu-ink, var(--color-text-primary));
+  --rack-menu-muted: var(--lattice-menu-muted, var(--color-text-secondary));
+  --rack-menu-faint: var(--lattice-menu-faint, var(--color-text-faint));
+  --rack-menu-line: var(--lattice-menu-line, var(--color-border));
+  --rack-menu-line-strong: var(--lattice-menu-line-strong, var(--color-border-strong));
+  --rack-menu-selected: var(--lattice-menu-selected, var(--color-hover));
+  --rack-menu-module-type: var(--lattice-window-type-module, 600 10px/1 var(--font-mono));
+  display: grid;
+  border: 1px solid var(--rack-menu-line-strong);
+  background: var(--rack-menu-panel);
+  color: var(--rack-menu-ink);
+}
+
+.rack-menu-command-surface.desktop-menu {
+  position: fixed;
+  z-index: var(--layer-menu, 90);
+  width: min(238px, calc(100vw - 16px));
+  pointer-events: auto;
+}
+
+.rack-menu-command-surface.desktop-menu button {
+  min-height: 43px;
+  border: 0;
+  border-bottom: 1px solid var(--rack-menu-line-strong);
+  background: transparent;
+  color: inherit;
+  font: var(--rack-menu-module-type);
+  letter-spacing: .08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.rack-menu-command-surface.desktop-menu button {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) 10px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.rack-menu-command-surface.desktop-menu button:last-of-type { border-bottom: 0; }
+
+.rack-menu-command-surface.desktop-menu button i {
+  width: 3px;
+  height: 3px;
+  background: var(--rack-menu-faint);
+}
+
+.rack-menu-command-surface.desktop-menu button:hover,
+.rack-menu-command-surface.desktop-menu button:focus-visible,
+.rack-menu-command-surface.desktop-menu button[data-selected] {
+  outline: 0;
+  background: var(--rack-menu-selected);
+  color: var(--rack-menu-ink);
+  box-shadow: inset 3px 0 var(--rack-menu-ink);
+}
+
+.rack-menu-command-surface.desktop-menu button:hover i,
+.rack-menu-command-surface.desktop-menu button:focus-visible i,
+.rack-menu-command-surface.desktop-menu button[data-selected] i { background: var(--rack-menu-ink); }
+
+.rack-menu-command-surface.desktop-menu button:disabled { opacity: .42; cursor: default; }
+.rack-menu-command-surface.desktop-menu button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rack-menu-command-surface.desktop-menu button b { justify-self: end; color: var(--rack-menu-muted); }

@@ -36,7 +36,9 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // three-way baseline guard to production. Keep the accepted growth bounded.
   // Phase 7 adds paragraph-preserving LSP3 normalization, independently
   // statused direct contract facts, and the pure owner dossier projection.
-  coreJavaScript: Object.freeze({ raw: 1_886_000, gzip: 558_000 }),
+  // Production category authoring adds the lazy owner Browser command/dialog
+  // boundary while leaving the initial-entry and visitor graphs unchanged.
+  coreJavaScript: Object.freeze({ raw: 1_890_000, gzip: 561_000 }),
   publicAssets: Object.freeze({ raw: 15_000_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });

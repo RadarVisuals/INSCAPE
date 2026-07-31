@@ -1,6 +1,7 @@
 import { MoreHorizontal } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import './menus/rackMenu.css';
 
 const RESIDENT_PHASES = new Set(['approaching', 'entering', 'docked']);
 
@@ -147,27 +148,29 @@ export default function KeeperDock({
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((value) => !value)}
       ><MoreHorizontal aria-hidden="true" /></button>
-      {menuOpen && <div className="keeper-dock__menu" role="menu" aria-label="Keeper options">
-        <strong>{actorLabel}</strong>
+      {menuOpen && <div className="keeper-dock__menu rack-menu-surface" role="menu" aria-label="Keeper options">
+        <strong className="rack-menu-faceplate">{actorLabel}</strong>
         {pointerControlsAvailable ? <>
           <button
             type="button"
             role="menuitemcheckbox"
             aria-checked={followCursor}
-            data-checked={followCursor || undefined}
+            className="rack-menu-faceplate"
+            data-rack-active={followCursor || undefined}
             onClick={() => onFollowCursorChange?.(!followCursor)}
           >Follow cursor <span aria-hidden="true">{followCursor ? '✓' : ''}</span></button>
-          <small>MOVEMENT SPEED</small>
-          <div className="keeper-dock__speed" role="group" aria-label="Keeper movement speed">
+          <small className="rack-menu-faceplate">MOVEMENT SPEED</small>
+          <div className="keeper-dock__speed rack-menu-segments" role="group" aria-label="Keeper movement speed">
             {['slow', 'normal', 'fast'].map((speed) => <button
               aria-pressed={movementSpeed === speed}
-              data-checked={movementSpeed === speed || undefined}
+              className="rack-menu-segment"
+              data-rack-active={movementSpeed === speed || undefined}
               key={speed}
               onClick={() => onMovementSpeedChange?.(speed)}
               type="button"
             >{speed}</button>)}
           </div>
-        </> : <button type="button" disabled>Swap Keeper <span>Later</span></button>}
+        </> : <button className="rack-menu-faceplate" type="button" disabled>Swap Keeper <span>Later</span></button>}
       </div>}
     </aside>
   </>;

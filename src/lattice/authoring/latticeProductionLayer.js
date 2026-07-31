@@ -1,8 +1,4 @@
-import {
-  LATTICE_PRODUCTION_GEOMETRY,
-  LATTICE_PRODUCTION_VISIBILITY,
-  assertValidLatticeProductionDraft,
-} from '../domain/latticeProductionDraft.js';
+import { LATTICE_PRODUCTION_VISIBILITY, assertValidLatticeProductionDraft } from '../domain/latticeProductionDraft.js';
 import { orderedLatticeProductionLayers } from '../rendering/latticeProductionLayerOrder.js';
 import { sameLatticeProductionPlacementSnapshot } from './latticeProductionRemoval.js';
 
@@ -14,13 +10,6 @@ export const LATTICE_PRODUCTION_LAYER_OPERATIONS = Object.freeze({
 });
 
 const OPERATIONS = new Set(Object.values(LATTICE_PRODUCTION_LAYER_OPERATIONS));
-const PLACEMENT_TOOLBAR_GAP = 10;
-const PLACEMENT_TOOLBAR_HEIGHT = 30;
-const PLACEMENT_TOOLBAR_INSET = 8;
-const PLACEMENT_TOOLBAR_TOOLTIP_CLEARANCE = 28;
-const PLACEMENT_TOOLBAR_WIDTH = 180;
-const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
-
 function layerError(code, message) {
   return Object.assign(new TypeError(message), { code });
 }
@@ -39,29 +28,6 @@ export function sameLatticeProductionLayerTopology(table, expectedPlacements) {
       placement,
       expectedById.get(placement.id),
     ));
-}
-
-export function latticeProductionPlacementToolbarDock(placement, cellSize) {
-  if (!Number.isFinite(cellSize) || cellSize <= 0) {
-    throw layerError('LATTICE_LAYER_PROJECTION_INVALID', 'Layer controls require a positive projected cell size');
-  }
-  const tableWidth = LATTICE_PRODUCTION_GEOMETRY.columns * cellSize;
-  const width = Math.min(PLACEMENT_TOOLBAR_WIDTH, Math.max(0, tableWidth - (PLACEMENT_TOOLBAR_INSET * 2)));
-  const placementWidth = placement.columnSpan * cellSize;
-  const minimumLeft = PLACEMENT_TOOLBAR_INSET - (placement.column * cellSize);
-  const maximumLeft = tableWidth - PLACEMENT_TOOLBAR_INSET - (placement.column * cellSize) - width;
-  const clampedLeft = clamp((placementWidth - width) / 2, minimumLeft, maximumLeft);
-  const clearance = PLACEMENT_TOOLBAR_HEIGHT + PLACEMENT_TOOLBAR_GAP
-    + PLACEMENT_TOOLBAR_TOOLTIP_CLEARANCE + PLACEMENT_TOOLBAR_INSET;
-  const below = (LATTICE_PRODUCTION_GEOMETRY.rows - placement.row - placement.rowSpan) * cellSize;
-  const above = placement.row * cellSize;
-  return Object.freeze({
-    left: Object.is(clampedLeft, -0) ? 0 : clampedLeft,
-    vertical: below >= clearance ? 'below'
-      : above >= clearance ? 'above'
-        : above > below ? 'inside-top' : 'inside-bottom',
-    width,
-  });
 }
 
 function rotateForward(visible, selectedIndex, destinationIndex) {

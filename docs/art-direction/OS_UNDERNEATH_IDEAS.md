@@ -55,3 +55,7 @@ Keeper, dialoog en gedrag.
 Welke werelden/niveaus gebruikt worden.
 Welke werken verborgen, archived, featured of exhibited zijn.
 Een fotograaf kan een stille contact-sheetwereld bouwen. Een illustrator kan enorme transparante figuren laten zweven. Een muzikant kan covers, releases en een blijvende player combineren. Een collector kan kamers samenstellen rond andere artiesten. Een modeontwerper kan een horizontale lookbook-sequence bouwen.
+
+
+
+---- 003 startveil. black grid full > one by one they turn white and reveals you shit

@@ -30,6 +30,9 @@ export function deleteFolder(workspace, id) {
 }
 
 export function setFolderAsset(workspace, folderIdValue, assetId, included, now = Date.now()) {
+  if (typeof included !== 'boolean' || typeof assetId !== 'string' || !assetId) return workspace;
+  const folder = workspace.folders.find(({ id }) => id === folderIdValue);
+  if (!folder || folder.assetIds.includes(assetId) === included) return workspace;
   return { ...workspace, folders: workspace.folders.map((folder) => {
     if (folder.id !== folderIdValue) return folder;
     const assetIds = included ? [...new Set([...folder.assetIds, assetId])] : folder.assetIds.filter((id) => id !== assetId);
@@ -55,7 +58,7 @@ export function resetCanvasLayout(workspace) {
 }
 
 export function setFolderPublic(workspace, folderIdValue, isPublic, now = Date.now()) {
-  if (typeof isPublic !== 'boolean' || !workspace.folders.some((folder) => folder.id === folderIdValue)) return workspace;
+  if (typeof isPublic !== 'boolean' || !workspace.folders.some((folder) => folder.id === folderIdValue && folder.public !== isPublic)) return workspace;
   return { ...workspace, folders: workspace.folders.map((folder) => (
     folder.id === folderIdValue ? { ...folder, public: isPublic, updatedAt: now } : folder
   )) };

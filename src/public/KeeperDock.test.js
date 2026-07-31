@@ -5,6 +5,7 @@ import test from 'node:test';
 const dockSource = readFileSync(new URL('./KeeperDock.jsx', import.meta.url), 'utf8');
 const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./moduleGrid.css', import.meta.url), 'utf8');
+const ownerStyles = readFileSync(new URL('./ownerLatticeShell.css', import.meta.url), 'utf8');
 const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
 
 test('production Keeper Dock uses actor silhouettes and contains docked canvas movement', () => {
@@ -23,5 +24,13 @@ test('production Keeper Dock uses actor silhouettes and contains docked canvas m
   assert.match(shellSource, /if \(keeperDockActive\) return;/);
   assert.doesNotMatch(shellSource, /keeperDockRef\.current\.release/);
   assert.match(styles, /\.keeper-dock__ghost/);
+  assert.match(dockSource, /keeper-dock__menu rack-menu-surface/);
+  assert.match(dockSource, /className="rack-menu-faceplate"/);
+  assert.match(dockSource, /data-rack-active=/);
+  assert.match(ownerStyles, /\.owner-lattice-shell \.keeper-dock__menu \{[^}]*width: 210px;/s);
+  assert.match(ownerStyles, /\.owner-lattice-shell \.keeper-dock__menu \{[^}]*position: absolute;/s);
+  assert.match(ownerStyles, /\.rack-menu-faceplate::before \{[^}]*width: 3px;[^}]*height: 3px;/s);
+  assert.match(ownerStyles, /\.rack-menu-faceplate\[data-rack-active\][^}]*box-shadow: inset 3px 0 var\(--rack-menu-ink\)/s);
+  assert.match(ownerStyles, /\.rack-menu-segment \{[^}]*display: grid;[^}]*place-items: center;/s);
   assert.doesNotMatch(styles, /\.keeper-dock__label|\.keeper-dock__empty|\.keeper-dock__resident/);
 });

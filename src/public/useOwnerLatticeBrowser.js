@@ -3,6 +3,18 @@ import { normalizeProfileAddress } from '../library/config.js';
 import { useLibraryStore } from '../library/state/useLibraryStore.js';
 import { adaptLatticeProductionBrowserData } from '../lattice/browser/latticeProductionBrowserAdapter.js';
 
+export function createOwnerLatticeCategoryCommands(profileAddress, getStore = useLibraryStore.getState) {
+  const profile = normalizeProfileAddress(profileAddress);
+  const commit = (command) => getStore().commitCategoryForProfile(profile, command);
+  return Object.freeze({
+    createCategory: (name) => commit({ name, type: 'create' }),
+    deleteCategory: (categoryId) => commit({ categoryId, type: 'delete' }),
+    renameCategory: (categoryId, name) => commit({ categoryId, name, type: 'rename' }),
+    setCategoryAsset: (categoryId, assetId, value) => commit({ assetId, categoryId, type: 'asset', value }),
+    setCategoryPublic: (categoryId, value) => commit({ categoryId, type: 'public', value }),
+  });
+}
+
 export default function useOwnerLatticeBrowser(profileAddress, open) {
   const profile = normalizeProfileAddress(profileAddress);
   const storeProfileAddress = useLibraryStore((state) => state.profileAddress);
@@ -25,7 +37,7 @@ export default function useOwnerLatticeBrowser(profileAddress, open) {
     if (open && profileReady && status === 'idle') load();
   }, [load, open, profileReady, status]);
 
-  return useMemo(() => adaptLatticeProductionBrowserData({
+  const data = useMemo(() => adaptLatticeProductionBrowserData({
     assets: profileReady ? assets : [],
     error: profileReady ? error : null,
     profileAddress: profile,
@@ -33,4 +45,6 @@ export default function useOwnerLatticeBrowser(profileAddress, open) {
     status: profileReady ? status : 'idle',
     workspace: profileReady ? workspace : null,
   }), [assets, error, profile, profileReady, progress, status, workspace]);
+  const commands = useMemo(() => createOwnerLatticeCategoryCommands(profile), [profile]);
+  return { commands: profileReady ? commands : null, data };
 }

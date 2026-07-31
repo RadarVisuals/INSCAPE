@@ -40,7 +40,7 @@ test('real Browser adaptation validates owner scope, canonical identity, media, 
     assets: [asset()], profileAddress: PROFILE, progress: { resolved: 1, total: 1 }, status: 'ready', workspace,
   });
 
-  assert.equal(result.readOnly, true);
+  assert.equal(result.readOnly, false);
   assert.equal(result.assets.length, 1);
   assert.deepEqual(result.favorites, [ASSET_ID]);
   assert.deepEqual(result.categories, [{ id: 'category-a', name: 'Category A', assetIds: [ASSET_ID], public: true }]);

@@ -4,7 +4,6 @@ import { createEmptyLatticeProductionDraft } from '../domain/latticeProductionDr
 import {
   LATTICE_PRODUCTION_LAYER_OPERATIONS,
   createLatticeProductionLayerCandidate,
-  latticeProductionPlacementToolbarDock,
   latticeProductionLayerTopologySnapshot,
 } from './latticeProductionLayer.js';
 
@@ -94,51 +93,4 @@ test('invalid and duplicate canonical layer topology is rejected before mutation
     draft.tables[4].placements = [placement('a', layers[0]), placement('b', layers[1], { navigationOrder: 1 })];
     assert.throws(() => candidateFor(draft, 'a', LATTICE_PRODUCTION_LAYER_OPERATIONS.FORWARD));
   }
-});
-
-test('unified toolbar docking keeps bottom-edge and 1 by 1 corner controls table-local', () => {
-  assert.deepEqual(latticeProductionPlacementToolbarDock(placement('bottom-left', 0, {
-    column: 0, row: 17, columnSpan: 1, rowSpan: 1,
-  }), 40), { left: 8, vertical: 'above', width: 180 });
-  assert.deepEqual(latticeProductionPlacementToolbarDock(placement('bottom-right', 0, {
-    column: 31, row: 17, columnSpan: 1, rowSpan: 1,
-  }), 40), { left: -148, vertical: 'above', width: 180 });
-  const centered = latticeProductionPlacementToolbarDock(placement('bottom-middle', 0, {
-    column: 15, row: 17, columnSpan: 1, rowSpan: 1,
-  }), 40);
-  assert.equal((15 * 40) + centered.left >= 8, true);
-  assert.equal((15 * 40) + centered.left + centered.width <= (32 * 40) - 8, true);
-  assert.equal(centered.vertical, 'above');
-});
-
-test('unified toolbar prefers below and clamps every top, side, and corner case to the safe inset', () => {
-  const cases = [
-    ['top-left', { column: 0, row: 0 }, { left: 8, vertical: 'below' }],
-    ['top-right', { column: 31, row: 0 }, { left: -148, vertical: 'below' }],
-    ['left', { column: 0, row: 8 }, { left: 8, vertical: 'below' }],
-    ['right', { column: 31, row: 8 }, { left: -148, vertical: 'below' }],
-    ['bottom-left', { column: 0, row: 17 }, { left: 8, vertical: 'above' }],
-    ['bottom-right', { column: 31, row: 17 }, { left: -148, vertical: 'above' }],
-  ];
-  for (const [id, geometry, expected] of cases) {
-    const dock = latticeProductionPlacementToolbarDock(placement(id, 0, {
-      ...geometry, columnSpan: 1, rowSpan: 1,
-    }), 40);
-    assert.deepEqual({ left: dock.left, vertical: dock.vertical }, expected, id);
-    const tableLeft = (geometry.column * 40) + dock.left;
-    assert.ok(tableLeft >= 8, id);
-    assert.ok(tableLeft + dock.width <= (32 * 40) - 8, id);
-  }
-});
-
-test('top plus bottom and full-width placements use deterministic inside and centered docks', () => {
-  assert.deepEqual(latticeProductionPlacementToolbarDock(placement('full-height', 0, {
-    column: 0, row: 0, columnSpan: 1, rowSpan: 18,
-  }), 40), { left: 8, vertical: 'inside-bottom', width: 180 });
-  assert.deepEqual(latticeProductionPlacementToolbarDock(placement('full-width', 0, {
-    column: 0, row: 0, columnSpan: 32, rowSpan: 1,
-  }), 40), { left: 550, vertical: 'below', width: 180 });
-  assert.deepEqual(latticeProductionPlacementToolbarDock(placement('inside-top', 0, {
-    column: 31, row: 1, columnSpan: 1, rowSpan: 17,
-  }), 40), { left: -148, vertical: 'inside-top', width: 180 });
 });

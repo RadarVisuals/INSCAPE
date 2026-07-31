@@ -58,7 +58,8 @@ test('Phase 5B shell delegates repeated canonical PLACE without expanding unrela
   assert.match(authoringSource, /generatePlacementId/);
   assert.doesNotMatch(authoringSource, /ADDITIONAL PLACEMENT REQUIRES NEXT AUTHORING SLICE/);
   assert.match(source, /STORED RECORD PRESERVED \/ EXPLICIT RECOVERY REQUIRED/);
-  assert.doesNotMatch(source, /commands=|requestPlacement|toggleFavorite|createCategory|setCategory/);
+  assert.match(source, /categoryCommands=\{browserCategoryCommands\}/);
+  assert.doesNotMatch(source, /requestPlacement|toggleFavorite|commitCategoryForProfile/);
 });
 
 test('navigation owns one runtime destination while minimap requests remain exact', () => {
@@ -92,9 +93,19 @@ test('owner viewport fills all 32 columns and keeps bounded per-table Space-drag
 
 test('Browser open, close, and Escape state stays runtime-only with focus restoration', () => {
   assert.match(source, /const \[browserOpen, setBrowserOpen\] = useState\(false\)/);
-  assert.match(source, /queueMicrotask\(\(\) => browserToolRef\.current\?\.focus/);
+  assert.match(source, /const \[browserActiveTab, setBrowserActiveTab\] = useState\('index'\)/);
+  assert.match(source, /id: 'categories', label: 'CATEGORIES', note: 'ORGANIZE \/ PROFILE SCOPED'/);
+  assert.doesNotMatch(source, /id: 'categories'[^\n]*disabled: true/);
+  assert.match(source, /setBrowserTabRequest\(\(current\) => \(\{ id: 'categories', requestId:/);
+  assert.match(source, /onEntryActivate=\{\(entryId, trigger\) =>/);
+  assert.match(source, /if \(entryId === 'categories'\) openCategories\(trigger\)/);
+  assert.match(source, /activeEntryId=\{browserOpen && browserActiveTab === 'categories' \? 'categories' : null\}/);
+  assert.match(source, /const returnFocus = browserReturnFocusRef\.current \|\| browserToolRef\.current/);
+  assert.match(source, /returnFocus\?\.isConnected && returnFocus\.focus/);
   assert.match(source, /onRequestClose=\{closeBrowser\}/);
+  assert.match(source, /onActiveTabChange=\{setBrowserActiveTab\}/);
   assert.match(source, /open=\{browserOpen\}/);
+  assert.match(source, /tabRequest=\{browserTabRequest\}/);
   assert.match(source, /toolButtonRefs=\{\{ browser: browserToolRef \}\}/);
 });
 
@@ -170,6 +181,7 @@ test('Phase 7.5 delegates idle cursor following to the existing resident engine 
   assert.match(source, /onFollowCursorChange=\{setKeeperFollowCursor\}/);
   assert.match(source, /onMovementSpeedChange=\{setKeeperMovementSpeed\}/);
   assert.match(source, /arrangeEnabled,[\s\S]*cropModeActive,[\s\S]*gestureActive,[\s\S]*keeperDockActive,[\s\S]*viewerActive/);
+  assert.match(source, /const target = keeperPointerTarget\(event, event\.currentTarget\.getBoundingClientRect\(\)\);[\s\S]*keeperPointerTargetRef\.current = target;[\s\S]*if \(!keeperPointerFollowEnabled\) return;[\s\S]*keeperPointerFollowRef\.current\?\.push\(target\);/);
   assert.ok(source.indexOf('const activeCameraGesture = cameraGestureRef.current') < source.indexOf('keeperPointerTarget(event'));
   assert.ok(source.indexOf('const activeGesture = gestureRef.current') < source.indexOf('keeperPointerTarget(event'));
 });

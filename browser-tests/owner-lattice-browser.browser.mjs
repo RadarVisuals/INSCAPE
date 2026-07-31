@@ -122,7 +122,7 @@ function relevantOperations(operations) {
   return operations.filter(({ key }) => /^(?:inscape\.library-(?:workspace\.v8|assets\.v1)|inscape\.lattice-production-draft\.v1):/u.test(key));
 }
 
-describe('Phase 5A read-only Browser through the real App route', { concurrency: false }, () => {
+describe('production owner Browser category authoring through the real App route', { concurrency: false }, () => {
   before(async () => runBrowserSetupWithCleanup(async () => {
     setupAbortController = new AbortController();
     const browserPath = await findBrowser();
@@ -208,7 +208,7 @@ describe('Phase 5A read-only Browser through the real App route', { concurrency:
     if (failures.length) throw new AggregateError(failures, 'Phase 5A browser cleanup failed');
   });
 
-  test('real INDEX, Favorites, and Categories remain read-only and profile isolated', async () => {
+  test('category commands and NFT membership remain profile-scoped without changing PLACE or lattice data', async () => {
     const response = await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 });
     assert.ok(response?.ok());
     await visitOwnedProfile(PROFILE_A);
@@ -219,65 +219,94 @@ describe('Phase 5A read-only Browser through the real App route', { concurrency:
     await page.evaluate(() => new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000)));
     await page.waitForTimeout(250);
 
-    const before = await page.evaluate((key) => localStorage.getItem(key), workspaceKey(PROFILE_A));
+    const beforeWorkspace = JSON.parse(await page.evaluate((key) => localStorage.getItem(key), workspaceKey(PROFILE_A)));
+    const beforeCanonical = await page.evaluate((key) => localStorage.getItem(key), canonicalKey(PROFILE_A));
     const browserTool = page.getByRole('button', { name: 'BROWSER' });
     await browserTool.waitFor({ state: 'visible', timeout: 8_000 });
     await browserTool.evaluate((node) => node.click());
     const browser = page.locator('.lattice-browser-workspace');
     await browser.waitFor({ state: 'visible', timeout: 15_000 });
-    const interaction = await page.evaluate(async () => {
-      const nextTask = () => new Promise((resolveTask) => setTimeout(resolveTask, 0));
-      const root = document.querySelector('.lattice-browser-workspace');
-      const byText = (selector, value) => [...root.querySelectorAll(selector)]
-        .find((node) => node.textContent.trim() === value);
-      byText('.lattice-browser-asset strong', 'ALPHA REAL ASSET').closest('button').click();
-      const place = root.querySelector('footer button');
-      byText('.lattice-browser-sidebar button span', 'FAVORITES').closest('button').click();
-      await nextTask();
-      const favoritesCount = root.querySelectorAll('.lattice-browser-asset').length;
-      const search = root.querySelector('input[type="search"]');
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(search, 'ALPHA');
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-      await nextTask();
-      const searchedCount = root.querySelectorAll('.lattice-browser-asset').length;
-      root.querySelector('#lattice-browser-tab-categories').click();
-      await nextTask();
-      const categoryVisible = root.textContent.includes('ALPHA CATEGORY');
-      const readOnlyVisible = root.textContent.includes('ORGANIZATION COMMANDS UNAVAILABLE');
-      const forbiddenLabels = [...root.querySelectorAll('button')].some((button) => /^(CREATE|RENAME|DELETE|PUBLISH|UNPUBLISH)/u.test(button.textContent.trim()));
-      root.querySelector('#lattice-browser-tab-index').click();
-      await nextTask();
-      const widthBefore = root.getBoundingClientRect().width;
-      const resize = root.querySelector('.lattice-browser-resize');
-      resize.focus();
-      resize.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowLeft' }));
-      await nextTask();
-      const widthAfter = root.getBoundingClientRect().width;
-      resize.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
-      await nextTask();
-      root.dispatchEvent(new AnimationEvent('animationend', { bubbles: true }));
-      return {
-        categoryVisible, favoritesCount, forbiddenLabels,
-        placeDisabled: place.disabled, placeLabel: place.textContent,
-        readOnlyVisible, searchedCount, widthAfter, widthBefore,
-      };
-    });
-    assert.equal(interaction.placeDisabled, false);
-    assert.match(interaction.placeLabel, /PLACE PUBLIC/u);
-    assert.equal(interaction.favoritesCount, 1);
-    assert.equal(interaction.searchedCount, 1);
-    assert.equal(interaction.categoryVisible, true);
-    assert.equal(interaction.readOnlyVisible, true);
-    assert.equal(interaction.forbiddenLabels, false);
-    assert.ok(interaction.widthAfter < interaction.widthBefore);
+    const assetButton = page.getByRole('button', { name: /ALPHA REAL ASSET/u });
+    await assetButton.click();
+    const place = browser.locator('footer button');
+    assert.equal(await place.isDisabled(), false);
+    assert.match(await place.textContent(), /PLACE PUBLIC/u);
+
+    await browser.locator('#lattice-browser-tab-categories').click();
+    await page.getByRole('button', { name: /NEW CATEGORY/u }).click();
+    const createDialog = page.getByRole('dialog', { name: 'CREATE CATEGORY' });
+    await createDialog.getByRole('textbox', { name: 'CATEGORY NAME' }).fill('  SESSION STUDY  ');
+    await createDialog.getByRole('button', { name: 'CONFIRM' }).click();
+    let categoryButton = browser.getByRole('button', { name: /SESSION STUDY.*PRIVATE/u });
+    await categoryButton.waitFor({ state: 'visible' });
+
+    await categoryButton.focus();
+    await categoryButton.press('Shift+F10');
+    await page.getByRole('menu', { name: 'Category commands' }).waitFor({ state: 'visible' });
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(20);
+    assert.equal(await categoryButton.evaluate((node) => document.activeElement === node), true);
+
+    await categoryButton.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'RENAME' }).click();
+    const renameDialog = page.getByRole('dialog', { name: 'RENAME CATEGORY' });
+    await renameDialog.getByRole('textbox', { name: 'CATEGORY NAME' }).fill('CURATED ALPHA');
+    await renameDialog.getByRole('button', { name: 'CONFIRM' }).click();
+    categoryButton = browser.getByRole('button', { name: /CURATED ALPHA.*PRIVATE/u });
+    await categoryButton.waitFor({ state: 'visible' });
+
+    await categoryButton.click({ button: 'right' });
+    await browser.getByRole('searchbox').click();
+    await page.waitForTimeout(20);
+    assert.equal(await categoryButton.evaluate((node) => document.activeElement === node), true);
+    await categoryButton.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'MAKE PUBLIC' }).click();
+    categoryButton = browser.getByRole('button', { name: /CURATED ALPHA.*PUBLIC/u });
+    await categoryButton.waitFor({ state: 'visible' });
+
+    await browser.locator('#lattice-browser-tab-index').click();
+    await assetButton.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'ADD TO' }).click();
+    await page.locator('.desktop-menu--flyout').getByRole('menuitem', { name: 'CURATED ALPHA' }).click();
+    await browser.locator('#lattice-browser-tab-categories').click();
+    await categoryButton.click();
+    const assignedAsset = browser.getByRole('button', { name: /ALPHA REAL ASSET/u });
+    await assignedAsset.waitFor({ state: 'visible' });
+    await assignedAsset.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'REMOVE FROM' }).click();
+    await page.locator('.desktop-menu--flyout').getByRole('menuitem', { name: 'CURATED ALPHA' }).click();
+    await assignedAsset.waitFor({ state: 'detached' });
+
+    await browser.locator('#lattice-browser-tab-index').click();
+    await assetButton.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'ADD TO' }).click();
+    await page.locator('.desktop-menu--flyout').getByRole('menuitem', { name: 'CURATED ALPHA' }).click();
+    await browser.locator('#lattice-browser-tab-categories').click();
+    await categoryButton.click();
+    await categoryButton.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'DELETE' }).click();
+    const deleteDialog = page.getByRole('dialog', { name: 'DELETE CATEGORY' });
+    assert.equal(await categoryButton.isVisible(), true, 'delete happened before explicit confirmation');
+    await deleteDialog.getByRole('button', { name: 'DELETE' }).click();
+    await categoryButton.waitFor({ state: 'detached' });
+    await browser.locator('#lattice-browser-tab-index').click();
+    assert.equal(await assetButton.isVisible(), true, 'category deletion removed the asset');
+    assert.equal(await place.isDisabled(), false, 'category commands changed ordinary Browser selection/PLACE');
+
+    await page.waitForTimeout(250);
+    const authoredWorkspace = JSON.parse(await page.evaluate((key) => localStorage.getItem(key), workspaceKey(PROFILE_A)));
+    assert.deepEqual(authoredWorkspace.folders, beforeWorkspace.folders);
+    assert.deepEqual(authoredWorkspace.canvas, beforeWorkspace.canvas);
+    assert.deepEqual(authoredWorkspace.tables, beforeWorkspace.tables);
+    assert.equal(await page.evaluate((key) => localStorage.getItem(key), canonicalKey(PROFILE_A)), beforeCanonical);
+
+    await browser.locator('.lattice-browser-resize').press('Escape');
+    await browser.evaluate((root) => root.dispatchEvent(new AnimationEvent('animationend', { bubbles: true })));
     await browser.waitFor({ state: 'detached', timeout: 5_000 });
     assert.equal(await page.getByRole('button', { name: 'BROWSER' }).evaluate((node) => document.activeElement === node), true);
-
-    const after = await page.evaluate((key) => localStorage.getItem(key), workspaceKey(PROFILE_A));
-    assert.equal(after, before, 'ordinary Browser interaction changed Library organization bytes');
     const firstAllOperations = await page.evaluate(() => window.__phase5aStorageOperations);
     const firstOperations = relevantOperations(firstAllOperations);
-    assert.equal(firstOperations.some(({ method, key }) => method !== 'getItem' && key === workspaceKey(PROFILE_A)), false);
+    assert.equal(firstOperations.some(({ method, key }) => method === 'setItem' && key === workspaceKey(PROFILE_A)), true);
     assert.equal(firstOperations.some(({ method, key }) => method !== 'getItem' && key === canonicalKey(PROFILE_A)), false);
 
     await page.evaluate(() => { window.__phase5aStorageOperations = []; });
@@ -302,14 +331,16 @@ describe('Phase 5A read-only Browser through the real App route', { concurrency:
           ? 'expected Phase 5B.1 canonical draft read'
         : operation.method === 'getItem' && operation.key.startsWith('inscape.library-workspace.v8:')
           ? 'expected existing workspace read'
+          : operation.key === workspaceKey(PROFILE_A) && operation.method === 'setItem'
+            ? 'expected profile-scoped category workspace persistence'
           : operation.key.startsWith('inscape.library-workspace.')
             || operation.key.startsWith('inscape.lattice-production-draft.')
-            ? 'forbidden Phase 5A organization or canonical-authoring access'
+            ? 'forbidden cross-boundary or canonical-authoring access'
             : 'expected existing non-Phase 5A application lifecycle',
     }));
     assert.equal(classified.some(({ classification }) => classification.startsWith('forbidden')), false,
       `forbidden storage operation: ${JSON.stringify(classified)}`);
-    process.stdout.write(`\nPhase 5A storage operations: ${JSON.stringify(classified)}\n`);
+    process.stdout.write(`\nCategory-authoring storage operations: ${JSON.stringify(classified)}\n`);
     await page.waitForTimeout(100);
   });
 });

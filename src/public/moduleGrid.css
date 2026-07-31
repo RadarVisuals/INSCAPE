@@ -265,11 +265,6 @@
 .keeper-dock__options svg { width:13px; height:13px; stroke-width:1.35; }
 .keeper-dock:hover .keeper-dock__options,.keeper-dock__options:focus-visible,.keeper-dock__options[aria-expanded="true"] { opacity:.92; }
 .keeper-dock__options:hover { color:var(--color-text-primary); transform:translate(-50%,-1px); }
-.keeper-dock__menu { position:absolute; z-index:4; right:calc(100% + 14px); bottom:0; width:190px; display:grid; padding:4px; border:1px solid var(--color-border-emphasis); background:var(--color-surface-overlay); box-shadow:var(--shadow-dialog); }
-.keeper-dock__menu strong { padding:8px; color:var(--color-text-primary); font:650 .58rem/1 var(--font-interface); letter-spacing:.07em; text-transform:uppercase; }
-.keeper-dock__menu button { min-height:29px; display:flex; align-items:center; justify-content:space-between; padding:5px 8px; border:0; border-top:1px solid var(--color-border-subtle); background:transparent; color:var(--color-text-secondary); font:600 .54rem/1.2 var(--font-interface); letter-spacing:.05em; text-align:left; text-transform:uppercase; }
-.keeper-dock__menu button:disabled { cursor:default; opacity:.54; }
-.keeper-dock__menu button span { color:var(--color-text-muted); font-size:.48rem; }
 @keyframes keeper-dock-breathe { 0%,100% { transform:scale(-.985,.985); } 50% { transform:scale(-1.015,1.015); } }
 @media (max-width:760px) { .keeper-dock,.keeper-dock__ghost { right:22px; bottom:22px; } }
 @media (prefers-reduced-motion:reduce) { .keeper-dock__ghost::before { animation:none; } }
@@ -281,12 +276,6 @@
 .system-about button:hover,.system-about button:focus-visible { outline:0; color:var(--os-accent); }
 
 @keyframes profile-card-deploy { from { opacity: 0; transform: translateY(-10px) scaleY(.96); clip-path: inset(0 0 100% 0); } to { opacity: 1; transform: none; clip-path: inset(0); } }
-.desktop-menu { --module-accent:var(--color-text-primary); --os-accent:var(--color-text-primary); position:fixed; z-index:var(--layer-menu); width:min(224px,calc(100vw - 16px)); padding:4px; border:1px solid var(--color-border-emphasis); border-left:2px solid var(--module-accent); background:var(--color-surface-overlay); color:var(--hu-text); box-shadow:var(--shadow-dialog); pointer-events:auto; }
-.desktop-menu button { width:100%; min-height:29px; display:grid; grid-template-columns:8px 1fr; align-items:center; gap:7px; padding:5px 8px; border:0; border-bottom:1px solid var(--color-selected); border-radius:0; background:transparent; color:inherit; font:600 .56rem/1.2 var(--font-interface); letter-spacing:.055em; text-align:left; text-transform:uppercase; cursor:pointer; }
-.desktop-menu button:last-child { border-bottom:0; }
-.desktop-menu button i { width:2px; height:0; background:var(--module-accent); transition:height 80ms linear; }
-.desktop-menu button:hover,.desktop-menu button:focus-visible { outline:0; background:var(--color-hover); color:var(--module-accent); }
-.desktop-menu button:hover i,.desktop-menu button:focus-visible i { height:100%; }
 .system-about { position:fixed; z-index:105; left:50%; top:62px; width:min(340px,calc(100vw - 24px)); padding:14px; border:1px solid rgba(238,235,223,.32); border-left:2px solid var(--module-accent); background:rgba(12,14,14,.97); color:var(--hu-text); transform:translateX(-50%); font:600 .58rem/1.5 var(--font-interface); text-transform:uppercase; }
 .system-about p,.system-about small { display:block; margin:8px 0; color:var(--hu-text-muted); overflow-wrap:anywhere; }
 .system-about button { border:0; background:transparent; color:var(--hu-text); font:inherit; cursor:pointer; }
@@ -1148,7 +1137,6 @@
   letter-spacing: .06em;
 }
 .system-hud__commands button { font-size:.6rem; }
-.desktop-menu button { font-size:.58rem; }
 .profile-card-popover .identity-dossier__eyebrow,
 .profile-card-popover .identity-dossier__address,
 .profile-card-popover .identity-dossier__connection,
@@ -1164,15 +1152,6 @@
   background: rgba(8,10,10,.97);
   box-shadow: 10px 12px 0 rgba(0,0,0,.22);
 }
-.desktop-menu {
-  border: 1px solid var(--color-border-strong);
-  border-left: 2px solid var(--os-accent);
-  background: var(--color-surface-overlay);
-  box-shadow: 8px 9px 0 rgba(0,0,0,.24);
-}
-.desktop-menu { padding:4px; }
-.desktop-menu button { min-height:27px; border-bottom-color:rgba(238,235,223,.07); font-size:.49rem; }
-
 @media (max-height: 500px) and (min-width: 720px) {
   .public-shell__masthead {
     top: 8px;
@@ -1489,7 +1468,6 @@
 
 .system-identity small { font-size:.54rem; }
 .system-hud__commands button { font-size:.6rem; }
-.desktop-menu button { font-size:.58rem; }
 .profile-card-popover .identity-dossier__eyebrow,
 .profile-card-popover .identity-dossier__address,
 .profile-card-popover .identity-dossier__connection,

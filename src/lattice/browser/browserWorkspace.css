@@ -108,6 +108,7 @@
 .lattice-browser-dialog-layer form > header strong { font: 550 19px/1.18 "Geist", Arial, sans-serif; letter-spacing: 0; }
 .lattice-browser-dialog-layer form > label,
 .lattice-browser-dialog-layer form > p { margin: 0; padding: 16px; display: grid; gap: 8px; color: var(--lattice-menu-muted); font: 400 12px/1.58 "Geist", Arial, sans-serif; letter-spacing: 0; }
+.lattice-browser-dialog-layer form > .lattice-browser-dialog-error { padding-top: 0; color: var(--lattice-menu-ink); font: var(--lattice-window-type-label); letter-spacing: 0.06em; }
 .lattice-browser-dialog-layer label span { color: var(--lattice-menu-faint); font: 600 9px/1.2 "IBM Plex Mono", "Courier New", monospace; letter-spacing: 0.07em; }
 .lattice-browser-dialog-layer input { height: 32px; padding: 0 9px; border: 1px solid var(--lattice-menu-line); border-radius: 0; outline: 0; background: transparent; color: var(--lattice-menu-ink); font: 400 12px/1.5 "Geist", Arial, sans-serif; }
 .lattice-browser-dialog-layer input:focus { border-color: var(--lattice-menu-ink); }
