@@ -78,7 +78,8 @@ test('fixed chrome stays outside the moving authored-plane stage', () => {
   assert.match(styles, /\.owner-lattice-stage[^}]*will-change: transform/);
   assert.match(styles, /\.owner-lattice-signature[^}]*position: fixed/);
   assert.match(styles, /\.owner-lattice-theme[^}]*position: fixed/);
-  assert.match(source, /disabled: true/);
+  assert.match(source, /const PROFILE_RAIL_ENTRIES = Object\.freeze/);
+  assert.match(source, /<LatticeWorkspaceToolbar[\s\S]*?owner/);
   assert.match(source, /SESSION ONLY \/ NOT PERSISTED/);
 });
 
@@ -103,23 +104,56 @@ test('Browser open, close, and Escape state stays runtime-only with focus restor
   assert.match(source, /setBrowserTabRequest\(\(current\) => \(\{ id: 'categories', requestId:/);
   assert.match(source, /onEntryActivate=\{\(entryId, trigger\) =>/);
   assert.match(source, /if \(entryId === 'categories'\) openCategories\(trigger\)/);
-  assert.match(source, /activeEntryId=\{browserOpen && browserActiveTab === 'categories' \? 'categories' : null\}/);
+  assert.match(source, /activeEntryId=\{creationsOpen \? 'creations' : activityOpen \? 'activity' : discoveryOpen \? 'discover' : browserOpen && browserActiveTab === 'categories' \? 'categories' : null\}/);
   assert.match(source, /const returnFocus = browserReturnFocusRef\.current \|\| browserToolRef\.current/);
   assert.match(source, /returnFocus\?\.isConnected && returnFocus\.focus/);
   assert.match(source, /onRequestClose=\{closeBrowser\}/);
   assert.match(source, /onActiveTabChange=\{setBrowserActiveTab\}/);
   assert.match(source, /open=\{browserOpen\}/);
   assert.match(source, /tabRequest=\{browserTabRequest\}/);
-  assert.match(source, /activeToolIds=\{\[browserOpen \? 'browser' : null, publicationOpen \? 'publish' : null, themeOpen \? 'theme' : null\]\.filter\(Boolean\)\}/);
+  assert.match(source, /activeToolIds=\{\[browserOpen \? 'browser' : null, publicationOpen \? 'publish' : null, themeOpen \? 'theme' : null, moreOpen \? 'more' : null\]\.filter\(Boolean\)\}/);
   assert.match(source, /activeWorkspaceWindowRef\.current = 'browser'/);
   assert.match(source, /activeWorkspaceWindowRef\.current = 'theme'/);
   assert.match(source, /const activateWorkspaceTool = useCallback\(\(toolId, trigger\) =>/);
-  assert.match(source, /if \(toolId === 'browser'\) \{\s*browserReturnFocusRef\.current = trigger \|\| browserToolRef\.current;\s*activeWorkspaceWindowRef\.current = 'browser';\s*setBrowserActivated\(true\);\s*setBrowserOpen\(\(open\) => !open\);\s*\}/);
+  assert.match(source, /if \(toolId === 'browser'\) \{[\s\S]*?browserReturnFocusRef\.current = trigger \|\| browserToolRef\.current;[\s\S]*?setBrowserActivated\(true\);[\s\S]*?setBrowserOpen\(\(open\) => !open\);\s*\}/);
   assert.match(source, /if \(toolId === 'theme'\) \{\s*activeWorkspaceWindowRef\.current = 'theme';\s*if \(trigger\) setThemeAnchor\(frozenRectangle\(trigger\.getBoundingClientRect\(\)\)\);\s*setThemeOpen\(\(open\) => !open\);\s*\}/);
-  assert.match(source, /toolButtonRefs=\{\{ browser: browserToolRef, preview: previewToolRef, publish: publishToolRef \}\}/);
+  assert.match(source, /toolButtonRefs=\{\{ browser: browserToolRef, more: moreToolRef, preview: previewToolRef, publish: publishToolRef \}\}/);
   assert.match(source, /workspaceTools=\{RACK_AUTHORING_TOOLS\.map/);
   assert.match(source, /systemTools=\{RACK_SYSTEM_TOOLS\}/);
   assert.match(source, /onWorkspaceToolActivate=\{activateWorkspaceTool\}/);
+});
+
+test('Discover opens the public INSCAPE directory without reviving the legacy Gallery room', () => {
+  assert.match(source, /id: 'discover', label: 'DISCOVER', note: 'PUBLIC INSCAPE DIRECTORY'/);
+  assert.doesNotMatch(source, /id: 'discover'[^\n]*disabled: true/);
+  assert.match(source, /<ProfileDiscoveryBoundary/);
+  assert.match(source, /if \(entryId === 'discover'\) openDiscovery\(trigger\)/);
+  assert.match(source, /onVisitProfile\?\.\(result\.address\)/);
+  assert.match(source, /discoveryTriggerRef\.current\.focus\(\{ preventScroll: true \}\)/);
+  assert.doesNotMatch(source, /GalleryWorld|enterGallery|galleryOpen/);
+});
+
+test('Activity opens indexed event history as a reversible profile window', () => {
+  assert.match(source, /id: 'activity', label: 'ACTIVITY', note: 'INDEXED EVENT HISTORY'/);
+  assert.doesNotMatch(source, /id: 'activity'[^\n]*disabled: true/);
+  assert.match(source, /<ActivityBrowser/);
+  assert.match(source, /if \(entryId === 'activity'\) setActivityWindowOpen\(true, trigger\)/);
+  assert.match(source, /activityTriggerRef\.current\.focus\(\{ preventScroll: true \}\)/);
+});
+
+test('Creations reuses creator-attributed data without restoring the rejected flip viewer', () => {
+  assert.match(source, /id: 'creations', label: 'CREATIONS', note: 'CREATOR-ATTRIBUTED WORKS'/);
+  assert.doesNotMatch(source, /id: 'creations'[^\n]*disabled: true/);
+  assert.match(source, /<CreationsBrowser/);
+  assert.match(source, /if \(entryId === 'creations'\) setCreationsWindowOpen\(true, trigger\)/);
+  assert.match(source, /creationsTriggerRef\.current\.focus\(\{ preventScroll: true \}\)/);
+});
+
+test('MORE exposes the supported Settings surface and keeps undefined Interface hidden', () => {
+  assert.match(source, /\{ id: 'more', label: 'MORE' \}/);
+  assert.match(source, /if \(toolId === 'settings'\)/);
+  assert.match(source, /<SettingsBrowser/);
+  assert.doesNotMatch(source, /toolId === 'interface'/);
 });
 
 test('Phase 8B publication stays lazy, owner-only, and explicit at every irreversible action', () => {

@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom';
+import { useEffect } from 'react';
 import { useSignalStore } from '../signals/state/useSignalStore.js';
 import FloatingWindowCloseButton from './FloatingWindowCloseButton.jsx';
 import './settingsBrowser.css';
@@ -13,6 +14,18 @@ const OPTIONS = Object.freeze([
 export default function SettingsBrowser({ visible = false, open = false, onOpenChange, actions = null }) {
   const settings = useSignalStore((state) => state.settings);
   const updateSetting = useSignalStore((state) => state.updateSetting);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      onOpenChange?.(false);
+    };
+    window.addEventListener('keydown', closeOnEscape, true);
+    return () => window.removeEventListener('keydown', closeOnEscape, true);
+  }, [onOpenChange, open]);
 
   const workspace = open && typeof document !== 'undefined' ? createPortal(
     <section className="settings-browser" role="dialog" aria-modal="false" aria-labelledby="settings-browser-title"

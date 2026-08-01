@@ -50,12 +50,11 @@ test('embedded toolbar reuses the same actions without fixed-window ownership', 
   assert.match(styles, /\.lattice-workspace-toolbar\[data-embedded\] \.lattice-workspace-toolbar__tool[^}]*flex: 1 1 0;/s);
 });
 
-test('MORE exposes the reference prototype-only Settings and Interface menu', () => {
+test('MORE exposes only the supported Settings action', () => {
   assert.match(source, /isToolActive\('more'\) && !blocked/);
   assert.match(source, />SETTINGS<\/button>/);
-  assert.match(source, />INTERFACE<\/button>/);
+  assert.doesNotMatch(source, />INTERFACE<\/button>|Prototype-only affordance/);
   assert.match(source, /Settings/);
-  assert.match(source, /SlidersHorizontal/);
   assert.match(styles, /width: 150px/);
   assert.match(styles, /height: 32px/);
   assert.match(styles, /gap: 8px/);

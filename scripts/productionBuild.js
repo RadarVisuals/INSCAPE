@@ -37,7 +37,10 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // the measured gzip-boundary shift caused by that shared chunk.
   // Phase 8B adds only the lazy-module activation and explicit snapshot inputs
   // to the owner graph; the writer implementation remains in its own lazy chunk.
-  ownerJavaScript: Object.freeze({ raw: 261_000, gzip: 78_000 }),
+  // Phase 9 activates the already isolated Creations, Activity, Discovery, and
+  // Settings boundaries. The measured owner graph grows only at the activation
+  // seam; each substantial surface remains independently lazy.
+  ownerJavaScript: Object.freeze({ raw: 263_000, gzip: 80_000 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
@@ -50,7 +53,9 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // and the visitor runtime; keep the raw ceiling while measuring the split CSS.
   // Visitor Identity reuses the existing MODULE RACK and theme-token CSS. The
   // raw ceiling remains unchanged; this allowance measures the shared split.
-  ownerCss: Object.freeze({ raw: 67_000, gzip: 12_000 }),
+  // Phase 9 exposes the already-existing owner-only Creations, Activity, and
+  // Settings styles without moving them into initial CSS.
+  ownerCss: Object.freeze({ raw: 67_000, gzip: 12_500 }),
   // Owner/publication reconciliation adds the deterministic IPFS hydration and
   // three-way baseline guard to production. Keep the accepted growth bounded.
   // Phase 7 adds paragraph-preserving LSP3 normalization, independently

@@ -564,6 +564,8 @@ Manual test:
 
 Enable the production owner and visitor lattice paths while retaining the complete fallback. Verify isolation, accessibility, reduced motion, responsive behavior, performance budgets, deployment, and rollback.
 
+Owner profile-navigation activation (2026-08-01, awaiting interactive acceptance): `OwnerLatticeShell.jsx` now owns mutually bounded CREATIONS, ACTIVITY, and DISCOVER session windows with exact rail-trigger focus return. `CreationsBrowser.jsx` retains the creator-attribution repository and progressive source states but replaces its old `NftFlipViewer` activation with the accepted `LatticeFocusViewer` RÄCK, decoded native dimensions, previous/next navigation, current menu-surface tokens, and explicit indexed, metadata, or derived technical labels. `ActivityBrowser.jsx` continues to consume `luksoActivityRepository` event history and now closes through Escape. `ProfileDiscoveryBoundary.jsx` remains the current public directory and no Gallery import is introduced. `LatticeWorkspaceToolbar.jsx` and `SettingsBrowser.jsx` activate MORE → SETTINGS only; unsupported INTERFACE remains absent. These are lazy owner-only surfaces and do not alter canonical documents, Library ownership, publication, routing, wallet/IPFS, or visitor capabilities.
+
 ### Phase 10 — legacy cleanup
 
 Remove only code proven unreachable after live acceptance. Retain compatibility readers while published legacy documents exist.

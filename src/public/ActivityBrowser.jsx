@@ -93,6 +93,18 @@ export default function ActivityBrowser({ visible = false, open = false, onOpenC
   }, [load, open]);
 
   useEffect(() => {
+    if (!open) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      onOpenChange?.(false);
+    };
+    window.addEventListener('keydown', closeOnEscape, true);
+    return () => window.removeEventListener('keydown', closeOnEscape, true);
+  }, [onOpenChange, open]);
+
+  useEffect(() => {
     const resize = () => {
       const nextViewport = viewportSize();
       setViewport(nextViewport);

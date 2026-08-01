@@ -9,7 +9,6 @@ import {
   Copy,
   RotateCw,
   Settings,
-  SlidersHorizontal,
   Upload,
 } from 'lucide-react';
 import './latticeWorkspaceToolbar.css';
@@ -88,8 +87,7 @@ export default function LatticeWorkspaceToolbar({
       })}
     </nav>
     {isToolActive('more') && !blocked && <section className="lattice-workspace-toolbar__more" data-lattice-chrome aria-label="More workspace tools" onKeyDown={handleKeyDown}>
-      <button type="button" onClick={(event) => onToolActivate?.('settings', event.currentTarget, toolButtonRefs.more?.current || event.currentTarget)} title="Prototype-only affordance"><Settings aria-hidden="true" size={14} strokeWidth={2} />SETTINGS</button>
-      <button type="button" onClick={(event) => onToolActivate?.('interface', event.currentTarget, toolButtonRefs.more?.current || event.currentTarget)} title="Prototype-only affordance"><SlidersHorizontal aria-hidden="true" size={14} strokeWidth={2} />INTERFACE</button>
+      <button type="button" onClick={(event) => onToolActivate?.('settings', event.currentTarget, toolButtonRefs.more?.current || event.currentTarget)}><Settings aria-hidden="true" size={14} strokeWidth={2} />SETTINGS</button>
     </section>}
   </>;
 }

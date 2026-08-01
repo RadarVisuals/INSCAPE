@@ -59,6 +59,7 @@ import {
 } from './keeperPointerFollow.js';
 import { prepareOwnerLatticeRuntimeDraft } from './ownerLatticeRuntimeProjection.js';
 import KeeperDock from './KeeperDock.jsx';
+import ProfileDiscoveryBoundary from '../profileDiscovery/ProfileDiscoveryBoundary.jsx';
 import useOwnerLatticeBrowser from './useOwnerLatticeBrowser.js';
 import useOwnerLatticeAuthoring, {
   OWNER_LATTICE_AUTHORING_STATUS,
@@ -68,6 +69,9 @@ import '../lattice/rendering/latticeMenuSurface.css';
 import './ownerLatticeShell.css';
 
 const BrowserWorkspace = lazy(() => import('../lattice/browser/BrowserWorkspace.jsx'));
+const ActivityBrowser = lazy(() => import('./ActivityBrowser.jsx'));
+const CreationsBrowser = lazy(() => import('./CreationsBrowser.jsx'));
+const SettingsBrowser = lazy(() => import('./SettingsBrowser.jsx'));
 const ProfileDocumentPreview = lazy(() => import('../profileDocument/components/ProfileDocumentPreview.jsx'));
 const OwnerLatticePublicationRack = lazy(() => import('./OwnerLatticePublicationRack.jsx'));
 
@@ -75,9 +79,9 @@ const RUNTIME_PROJECTION_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 const CENTER_TABLE_ID = 'table-05';
 const PROFILE_RAIL_ENTRIES = Object.freeze([
   { id: 'categories', label: 'CATEGORIES', note: 'ORGANIZE / PROFILE SCOPED' },
-  { id: 'creations', label: 'CREATIONS', note: 'UNAVAILABLE / LATER PHASE', disabled: true, disabledReason: 'Creations integration is not available in Phase 4' },
-  { id: 'activity', label: 'ACTIVITY', note: 'UNAVAILABLE / LATER PHASE', disabled: true, disabledReason: 'Activity integration is not available in Phase 4' },
-  { id: 'discover', label: 'DISCOVER', note: 'UNAVAILABLE / LATER PHASE', disabled: true, disabledReason: 'Discovery integration is not available in Phase 4' },
+  { id: 'creations', label: 'CREATIONS', note: 'CREATOR-ATTRIBUTED WORKS' },
+  { id: 'activity', label: 'ACTIVITY', note: 'INDEXED EVENT HISTORY' },
+  { id: 'discover', label: 'DISCOVER', note: 'PUBLIC INSCAPE DIRECTORY' },
 ]);
 const WORKSPACE_TOOLS = Object.freeze([
   { id: 'browser', label: 'BROWSER' },
@@ -85,7 +89,7 @@ const WORKSPACE_TOOLS = Object.freeze([
   { id: 'preview', label: 'PREVIEW' },
   { id: 'theme', label: 'THEME' },
   { id: 'publish', label: 'PUBLISH' },
-  { id: 'more', label: 'MORE', disabled: true, disabledReason: 'Additional owner tools are not available in Phase 4' },
+  { id: 'more', label: 'MORE' },
 ]);
 const RACK_AUTHORING_TOOLS = Object.freeze(
   [
@@ -167,6 +171,7 @@ function OwnerLatticeRuntime({
   interfaceVisible = true,
   keeperVisible = true,
   onPublicationConfirmed,
+  onVisitProfile,
   publishedResolution,
   residentHandoff,
   revealPresentation = { reducedMotion: false },
@@ -190,11 +195,15 @@ function OwnerLatticeRuntime({
   const browserToolRef = useRef(null);
   const previewToolRef = useRef(null);
   const publishToolRef = useRef(null);
+  const moreToolRef = useRef(null);
   const previewReturnFocusRef = useRef(null);
   const previewRequestRef = useRef(0);
   const browserReturnFocusRef = useRef(null);
   const activeWorkspaceWindowRef = useRef('browser');
   const identityControlRef = useRef(null);
+  const activityTriggerRef = useRef(null);
+  const creationsTriggerRef = useRef(null);
+  const discoveryTriggerRef = useRef(null);
   const identityOpenRequestRef = useRef(0);
   const keeperPointerFollowRef = useRef(null);
   const keeperPointerTargetRef = useRef(null);
@@ -242,6 +251,11 @@ function OwnerLatticeRuntime({
   const [previewDocument, setPreviewDocument] = useState(null);
   const [previewError, setPreviewError] = useState(null);
   const [publicationOpen, setPublicationOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [creationsOpen, setCreationsOpen] = useState(false);
+  const [discoveryOpen, setDiscoveryOpen] = useState(false);
   useEffect(() => setRailCollapsed(true), [profileAddress]);
   useEffect(() => setPublicationOpen(false), [profileAddress]);
   const profileIdentity = useProfileIdentity(profileAddress);
@@ -730,9 +744,58 @@ function OwnerLatticeRuntime({
   const openCategories = useCallback((trigger) => {
     browserReturnFocusRef.current = trigger || null;
     activeWorkspaceWindowRef.current = 'browser';
+    setActivityOpen(false);
+    setCreationsOpen(false);
+    setDiscoveryOpen(false);
     setBrowserActivated(true);
     setBrowserTabRequest((current) => ({ id: 'categories', requestId: (current?.requestId || 0) + 1 }));
     setBrowserOpen(true);
+  }, []);
+  const setActivityWindowOpen = useCallback((open, trigger = null) => {
+    if (open) {
+      activityTriggerRef.current = trigger || activityTriggerRef.current;
+      activeWorkspaceWindowRef.current = 'activity';
+      setBrowserOpen(false);
+      setCreationsOpen(false);
+      setDiscoveryOpen(false);
+      setThemeOpen(false);
+      setThemeAnchor(null);
+      setPublicationOpen(false);
+    }
+    setActivityOpen(open);
+    if (!open) requestAnimationFrame(() => activityTriggerRef.current?.isConnected
+      && activityTriggerRef.current.focus({ preventScroll: true }));
+  }, []);
+  const setCreationsWindowOpen = useCallback((open, trigger = null) => {
+    if (open) {
+      creationsTriggerRef.current = trigger || creationsTriggerRef.current;
+      activeWorkspaceWindowRef.current = 'creations';
+      setActivityOpen(false);
+      setBrowserOpen(false);
+      setDiscoveryOpen(false);
+      setThemeOpen(false);
+      setThemeAnchor(null);
+      setPublicationOpen(false);
+    }
+    setCreationsOpen(open);
+    if (!open) requestAnimationFrame(() => creationsTriggerRef.current?.isConnected
+      && creationsTriggerRef.current.focus({ preventScroll: true }));
+  }, []);
+  const openDiscovery = useCallback((trigger) => {
+    discoveryTriggerRef.current = trigger || null;
+    activeWorkspaceWindowRef.current = 'discover';
+    setBrowserOpen(false);
+    setActivityOpen(false);
+    setCreationsOpen(false);
+    setThemeOpen(false);
+    setThemeAnchor(null);
+    setPublicationOpen(false);
+    setDiscoveryOpen(true);
+  }, []);
+  const closeDiscovery = useCallback(() => {
+    setDiscoveryOpen(false);
+    requestAnimationFrame(() => discoveryTriggerRef.current?.isConnected
+      && discoveryTriggerRef.current.focus({ preventScroll: true }));
   }, []);
   const openIdentityDossier = useCallback(async () => {
     if (viewerSession || gestureRef.current || cameraGestureRef.current || cropModeActive || compositionPreview) return;
@@ -867,6 +930,9 @@ function OwnerLatticeRuntime({
     if (toolId === 'browser') {
       browserReturnFocusRef.current = trigger || browserToolRef.current;
       activeWorkspaceWindowRef.current = 'browser';
+      setActivityOpen(false);
+      setCreationsOpen(false);
+      setDiscoveryOpen(false);
       setBrowserActivated(true);
       setBrowserOpen((open) => !open);
     }
@@ -874,6 +940,15 @@ function OwnerLatticeRuntime({
       activeWorkspaceWindowRef.current = 'theme';
       if (trigger) setThemeAnchor(frozenRectangle(trigger.getBoundingClientRect()));
       setThemeOpen((open) => !open);
+    }
+    if (toolId === 'more') {
+      activeWorkspaceWindowRef.current = 'more';
+      setMoreOpen((open) => !open);
+    }
+    if (toolId === 'settings') {
+      activeWorkspaceWindowRef.current = 'settings';
+      setMoreOpen(false);
+      setSettingsOpen(true);
     }
     if (toolId === 'preview') startOwnerPreview(trigger);
     if (toolId === 'publish') {
@@ -1051,8 +1126,8 @@ function OwnerLatticeRuntime({
     {spatialRoot && createPortal(spatialSurface, spatialRoot)}
     {interfaceVisible && <>
       <LatticeProfileRail
-        activeEntryId={browserOpen && browserActiveTab === 'categories' ? 'categories' : null}
-        blocked={Boolean(viewerSession)}
+        activeEntryId={creationsOpen ? 'creations' : activityOpen ? 'activity' : discoveryOpen ? 'discover' : browserOpen && browserActiveTab === 'categories' ? 'categories' : null}
+        blocked={Boolean(viewerSession || discoveryOpen)}
         collapsed={railCollapsed}
         compact={dimensions.width <= 900}
         entries={PROFILE_RAIL_ENTRIES}
@@ -1064,11 +1139,14 @@ function OwnerLatticeRuntime({
         onCollapsedChange={setRailCollapsed}
         onEntryActivate={(entryId, trigger) => {
           if (entryId === 'categories') openCategories(trigger);
+          if (entryId === 'creations') setCreationsWindowOpen(true, trigger);
+          if (entryId === 'activity') setActivityWindowOpen(true, trigger);
+          if (entryId === 'discover') openDiscovery(trigger);
         }}
         onIdentityActivate={openIdentityDossier}
       />
       <LatticeWorkspaceToolbar
-        activeToolIds={[browserOpen ? 'browser' : null, publicationOpen ? 'publish' : null, themeOpen ? 'theme' : null].filter(Boolean)}
+        activeToolIds={[browserOpen ? 'browser' : null, publicationOpen ? 'publish' : null, themeOpen ? 'theme' : null, moreOpen ? 'more' : null].filter(Boolean)}
         compact={dimensions.width <= 980}
         arrangeEnabled={arrangeEnabled}
         owner
@@ -1076,12 +1154,17 @@ function OwnerLatticeRuntime({
         onEscape={() => {
           if (activeWorkspaceWindowRef.current === 'publish' && publicationOpen) setPublicationOpen(false);
           else if (activeWorkspaceWindowRef.current === 'theme' && themeOpen) setThemeOpen(false);
+          else if (activeWorkspaceWindowRef.current === 'settings' && settingsOpen) setSettingsOpen(false);
+          else if (activeWorkspaceWindowRef.current === 'more' && moreOpen) setMoreOpen(false);
+          else if (activeWorkspaceWindowRef.current === 'creations' && creationsOpen) setCreationsWindowOpen(false);
+          else if (activeWorkspaceWindowRef.current === 'activity' && activityOpen) setActivityWindowOpen(false);
+          else if (activeWorkspaceWindowRef.current === 'discover' && discoveryOpen) closeDiscovery();
           else if (activeWorkspaceWindowRef.current === 'browser' && browserOpen) closeBrowser();
           else if (themeOpen) setThemeOpen(false);
           else if (browserOpen) closeBrowser();
         }}
         onToolActivate={activateWorkspaceTool}
-          toolButtonRefs={{ browser: browserToolRef, preview: previewToolRef, publish: publishToolRef }}
+          toolButtonRefs={{ browser: browserToolRef, more: moreToolRef, preview: previewToolRef, publish: publishToolRef }}
       />
       {browserActivated && <Suspense fallback={null}>
         <BrowserWorkspace
@@ -1146,6 +1229,33 @@ function OwnerLatticeRuntime({
           visitorNavigation={PUBLICATION_VISITOR_NAVIGATION}
         />
       </Suspense>}
+      <Suspense fallback={null}>
+        <SettingsBrowser
+          open={settingsOpen}
+          onOpenChange={(open) => {
+            setSettingsOpen(open);
+            if (!open) requestAnimationFrame(() => moreToolRef.current?.focus({ preventScroll: true }));
+          }}
+        />
+        <CreationsBrowser
+          menuSurfaceId={menuSurfaceId}
+          open={creationsOpen}
+          onOpenChange={(open) => setCreationsWindowOpen(open)}
+          profileAddress={profileAddress}
+        />
+        <ActivityBrowser
+          open={activityOpen}
+          onOpenChange={(open) => setActivityWindowOpen(open)}
+          profileAddress={profileAddress}
+        />
+      </Suspense>
+      {discoveryOpen && <ProfileDiscoveryBoundary
+        onClose={closeDiscovery}
+        onSelect={(result) => {
+          setDiscoveryOpen(false);
+          onVisitProfile?.(result.address);
+        }}
+      />}
       {identityDossierSession && identityDossier && !viewerSession && <LatticeProductionIdentityDossier
         getReturnRectangle={() => identityDossierSession.originRectangle}
         gridVariables={{
