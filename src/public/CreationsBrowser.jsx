@@ -201,7 +201,7 @@ export default function CreationsBrowser({ visible = false, open = false, onOpen
   };
 
   const workspace = open && typeof document !== 'undefined' ? createPortal(<>
-    <section className="creations-browser" style={rect} aria-label="Profile creations" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
+    <section className="creations-browser" data-lattice-menu-surface data-menu-surface={menuSurfaceId} style={rect} aria-label="Profile creations" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
       <header>
         <strong>CREATIONS</strong>
         <label className="creations-browser__search"><span className="sr-only">Search creations</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="SEARCH CREATIONS" /></label>

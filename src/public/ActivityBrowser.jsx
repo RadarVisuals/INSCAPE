@@ -47,7 +47,7 @@ function ActivityIdentity({ address }) {
   </span>;
 }
 
-export default function ActivityBrowser({ visible = false, open = false, onOpenChange, profileAddress }) {
+export default function ActivityBrowser({ visible = false, open = false, onOpenChange, profileAddress, menuSurfaceId = 'mist' }) {
   const abortRef = useRef(null);
   const generationRef = useRef(0);
   const resizeRef = useRef(null);
@@ -135,7 +135,7 @@ export default function ActivityBrowser({ visible = false, open = false, onOpenC
     setRect(next);
   };
 
-  const workspace = open && typeof document !== 'undefined' ? createPortal(<section className="activity-browser" style={rect} aria-label="Profile activity" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
+  const workspace = open && typeof document !== 'undefined' ? createPortal(<section className="activity-browser" data-lattice-menu-surface data-menu-surface={menuSurfaceId} style={rect} aria-label="Profile activity" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
     <header><strong>ACTIVITY</strong><span>NEWEST FIRST</span><button type="button" disabled={status === 'loading'} onClick={load}>{status === 'loading' ? 'LOADING' : 'REFRESH'}</button></header>
     <FloatingWindowCloseButton onClose={() => onOpenChange?.(false)} label="Close activity browser" />
     <div className="activity-browser__body">

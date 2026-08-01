@@ -1244,6 +1244,7 @@ function OwnerLatticeRuntime({
           profileAddress={profileAddress}
         />
         <ActivityBrowser
+          menuSurfaceId={menuSurfaceId}
           open={activityOpen}
           onOpenChange={(open) => setActivityWindowOpen(open)}
           profileAddress={profileAddress}

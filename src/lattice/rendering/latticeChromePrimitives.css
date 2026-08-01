@@ -46,3 +46,4 @@
 
 .lattice-chrome-scroll-region::-webkit-scrollbar { width: 7px; height: 7px; }
 .lattice-chrome-scroll-region::-webkit-scrollbar-thumb { background: var(--lattice-chrome-scrollbar); }
+.lattice-chrome-scroll-region::-webkit-scrollbar-button { display: none; width: 0; height: 0; }

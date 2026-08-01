@@ -157,7 +157,10 @@
 .lattice-browser-organization-ghost { position: fixed; z-index: calc(var(--lattice-chrome-z-index) + 12); min-width: 92px; height: 34px; padding: 0 10px; translate: -50% -50%; display: grid; place-items: center; border: 1px solid var(--lattice-menu-line-strong); background: var(--lattice-menu-panel); box-shadow: var(--lattice-chrome-shadow); color: var(--lattice-menu-ink); font: var(--lattice-window-type-module); letter-spacing: .08em; pointer-events: none; }
 .lattice-browser-organization-ghost[data-valid] { border: 3px solid var(--lattice-menu-ink); }
 
-.lattice-browser-resize { position: absolute; z-index: 3; right: 1px; bottom: 1px; width: 15px; height: 15px; padding: 0; border: 0; background: linear-gradient(135deg, transparent 0 56%, var(--lattice-menu-faint) 57% 62%, transparent 63% 70%, var(--lattice-menu-muted) 71% 76%, transparent 77%); cursor: nwse-resize; }
+.lattice-browser-resize { position: absolute; z-index: 3; right: 0; bottom: 0; width: 24px; height: 24px; padding: 0; border: 0; background: transparent; color: var(--lattice-menu-muted); cursor: nwse-resize; }
+.lattice-browser-resize::after { content: ""; position: absolute; right: 3px; bottom: 3px; width: 9px; height: 9px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; }
+.lattice-browser-resize:hover,
+.lattice-browser-resize:focus-visible { outline: 0; color: var(--lattice-menu-ink); }
 .lattice-browser-resize:focus-visible { outline: 1px solid var(--lattice-menu-ink); outline-offset: -1px; }
 .lattice-rack-width-resize { position: absolute; z-index: 4; top: 38px; right: -4px; bottom: 0; width: 9px; padding: 0; border: 0; background: transparent; cursor: ew-resize; touch-action: none; }
 .lattice-rack-width-resize::after { content: ""; position: absolute; top: 0; right: 4px; bottom: 0; width: 1px; background: transparent; }
