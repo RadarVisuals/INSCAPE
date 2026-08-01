@@ -15,6 +15,7 @@ test('uses a body portal with reversible inert ownership, reliable closing, and 
   assert.match(source, /setPhase\('opening'\)/);
   assert.match(source, /setPhase\('closing'\)/);
   assert.match(source, /phase === 'open' && event\.target === event\.currentTarget/);
+  assert.match(source, /if \(phase === 'closing'\) return;\s*onClosing\?\.\(\);/);
   assert.match(source, /data-identity-dossier-scroll/);
   assert.match(source, /closeRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(source, /event\.key !== 'Tab'/);

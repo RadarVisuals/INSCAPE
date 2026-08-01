@@ -10,9 +10,7 @@ export const BROWSER_RESIZE_STEP = 24;
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
 
 export function browserWindowMargin(viewport) {
-  const width = Math.max(320, Number(viewport?.width) || 1280);
-  const height = Math.max(320, Number(viewport?.height) || 720);
-  return width < 760 || height < 600 ? 10 : 48;
+  return 10;
 }
 
 export function browserViewportBounds(viewport) {

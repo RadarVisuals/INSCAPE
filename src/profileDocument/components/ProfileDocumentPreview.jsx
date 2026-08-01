@@ -1,7 +1,10 @@
 import { useEffect } from 'react';
-import PublishedHomeWorld from './PublishedHomeWorld.jsx';
+import PublishedProfileDocumentPreview from './PublishedProfileDocumentPreview.jsx';
 
-export default function ProfileDocumentPreview({ document, onExit, onMoveKeeper, onMoveKeeperHorizontally }) {
+export default function ProfileDocumentPreview({
+  document, keeperVisible, onCancelKeeperDock, onDockKeeper, onExit, onMoveKeeper, onMoveKeeperHorizontally,
+  onReleaseKeeper, onUpdateKeeperDock,
+}) {
   useEffect(() => {
     const exitOnEscape = (event) => {
       if (event.key !== 'Escape') return;
@@ -12,5 +15,8 @@ export default function ProfileDocumentPreview({ document, onExit, onMoveKeeper,
     return () => window.removeEventListener('keydown', exitOnEscape);
   }, [onExit]);
 
-  return <PublishedHomeWorld document={document} onExit={onExit} onMoveKeeper={onMoveKeeper} onMoveKeeperHorizontally={onMoveKeeperHorizontally} />;
+  return <PublishedProfileDocumentPreview document={document} keeperVisible={keeperVisible}
+    onCancelKeeperDock={onCancelKeeperDock} onDockKeeper={onDockKeeper} onExit={onExit} onMoveKeeper={onMoveKeeper}
+    onMoveKeeperHorizontally={onMoveKeeperHorizontally} onReleaseKeeper={onReleaseKeeper}
+    onUpdateKeeperDock={onUpdateKeeperDock} />;
 }

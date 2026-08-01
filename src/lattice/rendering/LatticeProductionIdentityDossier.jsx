@@ -91,6 +91,7 @@ export default function LatticeProductionIdentityDossier({
   gridVariables = null,
   menuSurfaceId,
   model,
+  onClosing,
   onClosed,
   originRectangle,
   preloadedProfileImageUrl = null,
@@ -149,11 +150,12 @@ export default function LatticeProductionIdentityDossier({
   const finishClose = useCallback(() => onClosed?.(), [onClosed]);
   const requestClose = useCallback(() => {
     if (phase === 'closing') return;
+    onClosing?.();
     const liveRectangle = getReturnRectangle?.();
     if (liveRectangle) setReturnRectangle(liveRectangle);
     if (reducedMotion) { finishClose(); return; }
     setPhase('closing');
-  }, [finishClose, getReturnRectangle, phase, reducedMotion]);
+  }, [finishClose, getReturnRectangle, onClosing, phase, reducedMotion]);
   useEffect(() => {
     if (phase !== 'closing') return undefined;
     phaseTimerRef.current = window.setTimeout(finishClose, IDENTITY_TRANSITION_MS);

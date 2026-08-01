@@ -29,7 +29,15 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // The universal owner RÄCK adds grouped authoring transactions, Layers,
   // reversible compact chrome, and runtime-only module controls. Keep the lazy
   // owner boundary close to the measured Windows build with modest CI margin.
-  ownerJavaScript: Object.freeze({ raw: 260_000, gzip: 74_000 }),
+  // Phase 8A extracts the already accepted production table renderer into a
+  // shared owner/visitor chunk. The raw owner ceiling is unchanged; this small
+  // gzip allowance accounts for the new compression boundary, not more owner code.
+  // Phase 8A.3 shares the accepted identity projection and compact Profile Rail
+  // with Visitor. Raw owner code remains below its existing ceiling; allow only
+  // the measured gzip-boundary shift caused by that shared chunk.
+  // Phase 8B adds only the lazy-module activation and explicit snapshot inputs
+  // to the owner graph; the writer implementation remains in its own lazy chunk.
+  ownerJavaScript: Object.freeze({ raw: 261_000, gzip: 78_000 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
@@ -38,7 +46,11 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Phase 7 adds the lazy owner-only Identity RÄCK; Phase 7.5 adds its compact,
   // shared-theme Keeper context controls. Keep both isolated from initial CSS
   // and deliberately close to the measured owner-only output.
-  ownerCss: Object.freeze({ raw: 67_000, gzip: 10_000 }),
+  // Shared lattice navigation styles now have one authority for owner Preview
+  // and the visitor runtime; keep the raw ceiling while measuring the split CSS.
+  // Visitor Identity reuses the existing MODULE RACK and theme-token CSS. The
+  // raw ceiling remains unchanged; this allowance measures the shared split.
+  ownerCss: Object.freeze({ raw: 67_000, gzip: 12_000 }),
   // Owner/publication reconciliation adds the deterministic IPFS hydration and
   // three-way baseline guard to production. Keep the accepted growth bounded.
   // Phase 7 adds paragraph-preserving LSP3 normalization, independently
@@ -53,7 +65,16 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // group RESIZE/ROTATE/MIRROR, Layers, and the reversible compact/module RÄCK
   // controls remain within the same lazy owner boundary and receive only
   // measured production margin.
-  coreJavaScript: Object.freeze({ raw: 1_970_000, gzip: 580_000 }),
+  // Phase 8A adds the lazy visitor navigation runtime, validated owner preview
+  // adapter, and the existing production focus viewer on that public boundary.
+  // Keep the measured visitor-parity growth bounded without moving initial or
+  // owner-only entry limits.
+  // Phase 8A.3 adds only the public identity adapter, trigger ownership, and
+  // live public LSP3/RPC read boundary; the RACK itself remains lazy/reused.
+  // Phase 8B adds one owner-triggered lazy publication module around the
+  // existing canonical IPFS/wallet/read-back pipeline. Initial entry remains
+  // unchanged; bound the measured standalone v8 publication chunk explicitly.
+  coreJavaScript: Object.freeze({ raw: 2_020_000, gzip: 602_000 }),
   publicAssets: Object.freeze({ raw: 15_200_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });

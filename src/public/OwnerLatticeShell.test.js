@@ -10,6 +10,8 @@ import { validateLatticeProductionPublication } from '../lattice/domain/latticeP
 
 const source = readFileSync(new URL('./OwnerLatticeShell.jsx', import.meta.url), 'utf8');
 const authoringSource = readFileSync(new URL('./useOwnerLatticeAuthoring.js', import.meta.url), 'utf8');
+const previewBuilderSource = readFileSync(new URL('./ownerLatticePreviewDocument.js', import.meta.url), 'utf8');
+const publicationRackSource = readFileSync(new URL('./OwnerLatticePublicationRack.jsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./ownerLatticeShell.css', import.meta.url), 'utf8');
 const PROFILE = '0x1111111111111111111111111111111111111111';
 
@@ -44,7 +46,7 @@ test('invalid profiles fail closed before a render value can be produced', () =>
 test('Phase 5B shell delegates repeated canonical PLACE without expanding unrelated boundaries', () => {
   for (const forbidden of [
     'localStorage', 'sessionStorage', 'indexedDB', 'latticeProductionDraftStore',
-    'Reconciliation', 'ProfileDocument', 'IPFS', 'PublishedProfile',
+    'Reconciliation', 'IPFS', 'PublishedProfile',
     'LatticeEnginePrototype', 'latticeEngineFixtures', 'ModuleGridShell',
   ]) assert.doesNotMatch(source, new RegExp(forbidden, 'iu'));
   assert.match(source, /LatticeProductionTableRenderer/);
@@ -108,16 +110,31 @@ test('Browser open, close, and Escape state stays runtime-only with focus restor
   assert.match(source, /onActiveTabChange=\{setBrowserActiveTab\}/);
   assert.match(source, /open=\{browserOpen\}/);
   assert.match(source, /tabRequest=\{browserTabRequest\}/);
-  assert.match(source, /activeToolIds=\{\[browserOpen \? 'browser' : null, themeOpen \? 'theme' : null\]\.filter\(Boolean\)\}/);
+  assert.match(source, /activeToolIds=\{\[browserOpen \? 'browser' : null, publicationOpen \? 'publish' : null, themeOpen \? 'theme' : null\]\.filter\(Boolean\)\}/);
   assert.match(source, /activeWorkspaceWindowRef\.current = 'browser'/);
   assert.match(source, /activeWorkspaceWindowRef\.current = 'theme'/);
   assert.match(source, /const activateWorkspaceTool = useCallback\(\(toolId, trigger\) =>/);
   assert.match(source, /if \(toolId === 'browser'\) \{\s*browserReturnFocusRef\.current = trigger \|\| browserToolRef\.current;\s*activeWorkspaceWindowRef\.current = 'browser';\s*setBrowserActivated\(true\);\s*setBrowserOpen\(\(open\) => !open\);\s*\}/);
   assert.match(source, /if \(toolId === 'theme'\) \{\s*activeWorkspaceWindowRef\.current = 'theme';\s*if \(trigger\) setThemeAnchor\(frozenRectangle\(trigger\.getBoundingClientRect\(\)\)\);\s*setThemeOpen\(\(open\) => !open\);\s*\}/);
-  assert.match(source, /toolButtonRefs=\{\{ browser: browserToolRef \}\}/);
+  assert.match(source, /toolButtonRefs=\{\{ browser: browserToolRef, preview: previewToolRef, publish: publishToolRef \}\}/);
   assert.match(source, /workspaceTools=\{RACK_AUTHORING_TOOLS\.map/);
   assert.match(source, /systemTools=\{RACK_SYSTEM_TOOLS\}/);
   assert.match(source, /onWorkspaceToolActivate=\{activateWorkspaceTool\}/);
+});
+
+test('Phase 8B publication stays lazy, owner-only, and explicit at every irreversible action', () => {
+  assert.match(source, /\{ id: 'publish', label: 'PUBLISH' \}/);
+  assert.match(source, /lazy\(\(\) => import\('\.\/OwnerLatticePublicationRack\.jsx'\)\)/);
+  assert.match(source, /if \(toolId === 'publish'\) \{[\s\S]*setPublicationOpen\(\(open\) => !open\)/);
+  assert.match(source, /getWalletPublicationContext=\{getWalletPublicationContext\}/);
+  assert.match(source, /latticeDraft=\{authoring\.draft\}/);
+  assert.match(source, /onPublished=\{\(\) => onPublicationConfirmed\?\.\(\)\}/);
+  assert.doesNotMatch(source, /uploadProfileDocument|createProfileDocumentPublisher|createCanonicalPublication|walletClient|publicClient/);
+  assert.match(publicationRackSource, /PREPARE SNAPSHOT/);
+  assert.match(publicationRackSource, /UPLOAD \+ VERIFY/);
+  assert.match(publicationRackSource, /PUBLISH VERSION 8/);
+  assert.match(publicationRackSource, /publication\.publish\(\)/);
+  assert.doesNotMatch(publicationRackSource, /localStorage|sessionStorage|Pinata|PINATA_JWT/);
 });
 
 test('Phase 5B composition stays in an owner-only projection-derived layer and cannot start table navigation', () => {
@@ -185,7 +202,27 @@ test('Phase 7 Identity Dossier has strict owner-runtime precedence and exact tri
   assert.match(source, /getReturnRectangle=\{\(\) => identityDossierSession\.originRectangle\}/);
   assert.match(source, /requestAnimationFrame\(\(\) => identityControlRef\.current\?\.focus\(\{ preventScroll: true \}\)\)/);
   assert.match(source, /onClosed=\{closeIdentityDossier\}/);
-  assert.doesNotMatch(source, /setArrangeEnabled\(false\).*setIdentityDossierSession/s);
+  const identityOpenSource = source.slice(source.indexOf('const openIdentityDossier'), source.indexOf('const closeIdentityDossier'));
+  assert.doesNotMatch(identityOpenSource, /setArrangeEnabled\(false\)/);
+});
+
+test('Phase 8A Owner Preview builds and validates v8 before entering the shared visitor boundary', () => {
+  assert.match(source, /\{ id: 'preview', label: 'PREVIEW' \}/);
+  assert.match(source, /import\('\.\/ownerLatticePreviewDocument\.js'\)/);
+  assert.match(previewBuilderSource, /version: PROFILE_DOCUMENT_VERSION_8/);
+  assert.match(previewBuilderSource, /lattice: projectLatticeProductionPublication/);
+  assert.match(previewBuilderSource, /return assertValidProfileDocument/);
+  assert.match(source, /latticeDraft: authoring\.draft/);
+  assert.match(source, /await preloadOwnerLatticePreviewEntryMedia\(preview\)/);
+  assert.match(source, /authoring\.missingReferencedAssets/);
+  assert.match(source, /if \(toolId === 'preview'\) startOwnerPreview\(trigger\)/);
+  assert.match(source, /<ProfileDocumentPreview document=\{previewDocument\} onExit=\{stopOwnerPreview\}/);
+  assert.match(source, /finishCameraGesture\(true\)/);
+  assert.doesNotMatch(source, /\bfinishCamera\(/);
+  assert.match(source, /setCompositionPreview\(null\)/);
+  assert.match(source, /setArrangeEnabled\(false\)/);
+  assert.match(source, /returnFocus\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.doesNotMatch(source + previewBuilderSource, /saveProfileSnapshot|uploadProfileDocument|createCanonicalPublication/);
 });
 
 test('Phase 7.5 delegates cursor follow and follow-disabled click-to-move without stealing interaction ownership', () => {

@@ -47,6 +47,8 @@ export function createProductionIdentityDossierViewModel({
   contractFacts,
   identityPresentation,
   assetRecords,
+  cachedIdentity = null,
+  presentationScope = 'owner',
   publishedResolution,
   locationLike = globalThis.location
 } = {}) {
@@ -55,26 +57,31 @@ export function createProductionIdentityDossierViewModel({
   const metadataResolved = identity?.status === PROFILE_IDENTITY_STATUS.RESOLVED;
   const presentation = identityPresentation && typeof identityPresentation === 'object' ? identityPresentation : {};
   const alias = cleanOverlayText(presentation.alias, 80);
-  const officialName = metadataResolved ? identity?.name || null : null;
+  const cachedName = cleanOverlayText(cachedIdentity?.name, 80) || null;
+  const officialName = metadataResolved ? identity?.name || cachedName : cachedName;
   const displayName = alias || officialName || 'UNNAMED PROFILE';
-  const nameProvenance = alias ? 'INSCAPE_DRAFT_ALIAS' : officialName ? 'LSP3_NAME' : 'FALLBACK';
+  const nameProvenance = alias ? presentationScope === 'published' ? 'INSCAPE_PUBLISHED_ALIAS' : 'INSCAPE_DRAFT_ALIAS'
+    : metadataResolved && identity?.name ? 'LSP3_NAME' : cachedName ? 'PUBLISHED_IDENTITY_CACHE' : 'FALLBACK';
 
   const avatarMode = presentation.avatar?.mode === 'inscape' ? 'inscape' : 'official';
   const officialProfileImage = selectUrlCandidate(identity?.profileImageCandidates, 64);
   const draftAvatarAsset = avatarMode === 'inscape'
     ? resolveAsset(assetRecords, presentation.avatar?.stableAssetId) : null;
+  const cachedAvatarUrl = cleanOverlayText(cachedIdentity?.avatarUrl, 2048) || null;
   const avatarUrl = avatarMode === 'inscape'
     ? draftAvatarAsset?.imageUrl || draftAvatarAsset?.originalImageUrl || draftAvatarAsset?.thumbnailUrl || null
-    : metadataResolved ? officialProfileImage?.url || identity?.avatarUrl || null : null;
-  const avatarProvenance = avatarMode === 'inscape' && avatarUrl ? 'INSCAPE_DRAFT_ASSET'
-    : avatarUrl ? 'LSP3_PROFILE_IMAGE' : 'UNRESOLVED';
+    : metadataResolved ? officialProfileImage?.url || identity?.avatarUrl || cachedAvatarUrl : cachedAvatarUrl;
+  const avatarProvenance = avatarMode === 'inscape' && avatarUrl
+    ? presentationScope === 'published' ? 'INSCAPE_PUBLISHED_ASSET' : 'INSCAPE_DRAFT_ASSET'
+    : metadataResolved && avatarUrl ? 'LSP3_PROFILE_IMAGE' : avatarUrl ? 'PUBLISHED_IDENTITY_CACHE' : 'UNRESOLVED';
 
   const bioMode = ['official', 'inscape', 'hidden'].includes(presentation.bio?.mode) ? presentation.bio.mode : 'official';
   const officialDescription = metadataResolved ? identity?.description || null : null;
   const description = bioMode === 'hidden' ? null
     : bioMode === 'inscape' ? cleanOverlayText(presentation.bio?.customText, 480) || null : officialDescription;
   const descriptionProvenance = description
-    ? bioMode === 'inscape' ? 'INSCAPE_DRAFT_BIO' : 'LSP3_DESCRIPTION' : 'UNRESOLVED';
+    ? bioMode === 'inscape' ? presentationScope === 'published' ? 'INSCAPE_PUBLISHED_BIO' : 'INSCAPE_DRAFT_BIO'
+      : 'LSP3_DESCRIPTION' : 'UNRESOLVED';
 
   const officialTags = metadataResolved && presentation.tags?.includeOfficial !== false && Array.isArray(identity?.tags)
     ? identity.tags : [];

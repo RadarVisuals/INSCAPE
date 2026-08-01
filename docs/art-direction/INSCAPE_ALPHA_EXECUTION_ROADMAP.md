@@ -74,8 +74,8 @@ The working tree was clean when this roadmap was created.
 ### Production track
 
 - [x] Phase 4 owner navigation and fixed chrome are integrated and visually accepted behind the verified owner gate.
-- [ ] The frozen lattice UI is not yet the published visitor renderer.
-- [x] Version 8 defines the canonical nine-table profile-document model; publication remains disabled and version 7 remains the default.
+- [x] The version-8 lattice Visitor runtime, Owner Preview, NFT viewer, Identity RÄCK, and Keeper parity are integrated and interactively accepted.
+- [~] Version 8 defines the canonical nine-table profile-document model and now shares the production publication pipeline with version 7; surface and real-publication acceptance remain open.
 - [x] Production INDEX/CATEGORIES stores are wired read-only to the isolated Browser; canonical authoring remains separately bounded by the current Phase 5B capability.
 - [x] Phase 4 fixed chrome, the Phase 6 production NFT viewer, and the Phase 7 production identity RÄCK are integrated and visually accepted.
 - [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
@@ -697,7 +697,7 @@ Click-to-move correction checkpoint (2026-07-31, awaiting interactive acceptance
 
 ## Phase 8 — publication and visitor integration
 
-Status: `[ ]`
+Status: `[~]`
 
 Goal: publish and resolve the canonical nine-table workspace through the existing wallet/IPFS flow.
 
@@ -714,6 +714,66 @@ Includes:
 - visitor navigation works without owner authoring controls.
 - owner-only categories remain excluded from publication and visitor navigation.
 
+### Phase 8A.1 — shared version-8 visitor runtime and Owner Preview
+
+Status: `[x]` — implemented, automatically verified, and interactively accepted on 2026-08-01.
+
+Current seam: `PublishedProfileBoundary` already resolves and validates version 7 and version 8 documents, and version 8 already carries a validated canonical `lattice`. `PublishedProfileDocumentPreview` nevertheless sends every resolved document into the legacy `PublishedHomeWorld`; owner `ProfileDocumentPreview` bypasses even that selector and calls the same legacy world directly. The accepted `LatticeProductionTableRenderer`, lattice navigation controller, production media adapter, and public projection are already presentation-only and visitor-safe.
+
+Implement one version-aware preview boundary. Versions 1–7 continue to render through the unchanged legacy world. Version 8 renders through one new visitor-safe lattice world used by resolved public visits and Owner Preview. The lattice world starts at the deterministic center table, supports the accepted nine-table pointer, wheel, keyboard, chevron, and minimap navigation, retains bounded responsive camera behavior, and persists no active table or camera state. It consumes only `document.lattice`; canonical appearance comes from that projection and must not inherit the owner's session-only Theme override.
+
+Owner Preview builds a validated version-8 document from the accepted canonical draft and current accepted production asset records, then passes that document through the same version-aware published-preview boundary. Entry must fail closed while any required public placement cannot produce a valid public asset reference. Entering Preview cancels incomplete gestures and closes authoring surfaces with zero persistence; preview exposes one explicit exit plus Escape and restores exact trigger focus. It performs no publication, wallet, IPFS, directory, baseline, reconciliation, Library, canonical-draft, or profile-metadata write.
+
+The first slice includes shared lattice navigation and rendering only. NFT viewer, public identity module, and the accepted Keeper movement controller remain required Phase 8A follow-up slices before the visitor runtime is accepted. Category publication/navigation, PORTALS, presentation editors, mobile authoring, and version-8 publication remain excluded.
+
+Implementation checkpoint (2026-07-31): the published preview boundary now selects the lattice world only for a readable version-8 document with a canonical lattice; versions 1–7 retain `PublishedHomeWorld`. Owner PREVIEW constructs and validates a public-only version-8 projection from the canonical draft and accepted asset records, fails closed for unresolved referenced assets, cancels incomplete owner sessions with zero persistence, and restores the Preview trigger on exit. The shared visitor-safe world renders all nine tables and supports pointer, wheel, keyboard, chevrons, minimap, responsive width-fit, bounded per-table Space-drag camera state, and reduced motion. No publication writer, wallet, IPFS, directory, owner store, or schema default changed. Focused tests pass 45/45 and the production build/budgets pass. Interactive inspection remains required before this slice is accepted.
+
+Acceptance correction (2026-08-01): interactive Owner Preview review exposed and accepted corrections for a stale camera-cancel callback, eager loading on the transformed active table, same-frame snap activation, and pointer/focus ownership above the inert owner interface. Pointer drag, wheel, arrows, chevrons, minimap, Space-camera movement, Escape, and the explicit mouse exit are now accepted for the shared version-8 lattice world.
+
+Rollback: select `PublishedHomeWorld` for all documents and disable the owner PREVIEW command. Version-8 validation, reading, canonical drafts, and retained compatibility fields remain valid; no data migration or rewrite is authorized.
+
+First-slice implementation set: `PublishedProfileDocumentPreview.jsx`, `ProfileDocumentPreview.jsx`, one new visitor-safe lattice world plus focused styles/tests, `OwnerLatticeShell.jsx`, and only the narrow preview-document builder/integration helpers required to produce a validated version-8 document. `PublishedProfileBoundary`, publication repositories/writers, wallet/IPFS code, version defaults, owner storage, schemas, adapters, reconciliation, and the frozen prototype remain unchanged unless the audit exposes a correctness defect requiring a separately recorded correction.
+
+### Phase 8A.2 — production NFT viewer in Visitor
+
+Status: `[x]` — implemented, automatically verified, and interactively accepted on 2026-08-01.
+
+Decoded placements on the active Visitor table now activate the accepted Phase 6 `LatticeFocusViewer` and `LatticeProductionFocusArtwork`. Opening freezes the real published placement rectangle, hides only that source while the modal owns it, decodes the native media before handoff, and closes to the current exact source with focus restoration. Previous/next wraps over ready placements on the same table and retains the accepted pointer, wheel, swipe, arrow-key, focus-trap, inert-background, Escape, reduced-motion, responsive RÄCK, and 92% veil behavior.
+
+The Visitor adapter consumes only the already validated public asset projection. An explicit published-metadata trust boundary exposes its safe name, description, attributes, creators, media, contract, token ID, standard, network, dimensions, and derived explorer route without importing Library state or Chillwhales, Envio, RPC, wallet, persistence, authoring, or publication writers. The RÄCK inherits the publication's active `menuSurfaceId` and existing menu tokens; NFT metadata never controls its colours. The owner viewer's stricter normalized/provenance behavior remains unchanged.
+
+Focused Phase 8 rendering, media, visitor isolation, preview, and owner regression tests pass 51/51. The production build and budgets pass at initial JavaScript 1,236,878 raw / 361,366 gzip, owner JavaScript 257,179 raw / 75,502 gzip, owner CSS 65,236 raw / 10,857 gzip, and core JavaScript 1,971,037 raw / 583,606 gzip. The measured Phase 8A.2 visitor-parity growth receives a bounded core budget adjustment while initial and owner-JavaScript ceilings remain unchanged. No schema, storage, version default, publication, wallet, IPFS, category, identity, Keeper, or legacy-runtime behavior changes.
+
+Rollback: remove Visitor's optional renderer activation/media callbacks and viewer portal, and disable the published-metadata viewmodel option. The accepted Phase 8A.1 lattice world, owner viewer, canonical publication, and versions 1–7 fallback remain readable and unchanged.
+
+Short visual test: in Owner PREVIEW, click or press Enter on a decoded NFT; confirm it expands from that exact placement, switches from authored crop to native artwork without a flash, uses the active theme RÄCK, browses with buttons/arrows/wheel/swipe, blocks the background, and closes by X/veil/Escape to the exact current NFT with focus restored. Repeat with square/transparent, landscape, portrait, a long description, one-item and multi-item tables, narrow viewport, and reduced motion.
+
+Post-implementation input-ownership correction (2026-08-01): interactive review found that NFT activation could also prime the underlying Visitor table drag gesture, leaving movement apparently held after closing inspection. Placements are now explicit non-navigation pointer targets, and viewer close releases any retained table/camera pointer capture and resets transient drag, wheel, Space, and gesture state before returning control. This changes no viewer, publication, or owner interaction contract.
+
+Preview asset-readiness correction (2026-08-01): interactive review found two consecutive mount/profile/cache timing paths that made artwork appear to depend on first opening Browser. The owner runtime now starts the existing profile-scoped Library load whenever the accepted profile is ready and the store is idle; Browser open/closed state is presentation-only. Because entering Preview unmounts the owner runtime and can interrupt its in-flight image elements, the validated version-8 entry table's unique exact published media URLs are also decoded before that handoff, with an eight-second maximum wait. This readiness gate does not substitute thumbnails, alter the public projection, mutate metadata, persist state, or preload non-entry tables. The existing generation guards, progressive cached paint, duplicate-load suppression, authoring projection, repositories, and zero-write Preview boundary remain unchanged.
+
+Preview media-settlement correction (2026-08-01): repeated interactive Host/Visitor switching proved that a small subset of exact media requests could stall until a later request populated the browser cache. The shared production renderer now gives only eager active-table media up to three bounded attempts, recreating the image request after each four-second stall. Lazy offscreen tables receive no retry traffic. Every active placement therefore settles as decoded artwork or an honest unavailable state instead of retaining `LOADING ARTWORK` indefinitely; URLs, public data, repositories, and publication remain unchanged.
+
+Interactive acceptance (2026-08-01): Owner Preview navigation, production NFT activation/viewer return, input release, Browser-independent cold entry, and bounded media settlement are accepted. Cold remote artwork can still require a few seconds of honest network/decode time; repeated Host/Visitor switching is no longer required and no placement remains indefinitely in `LOADING ARTWORK`.
+
+### Phase 8A.3 — public identity RÄCK in Visitor
+
+Status: `[x]` — implemented, automatically verified, and interactively accepted on 2026-08-01.
+
+Visitor now exposes one compact, fixed public identity card that expands directly into the accepted PROFILE, LINK, and TECHNICAL MODULE RÄCK. The adapter reads the validated version-8 `profile.cachedIdentity` and `lattice.identityPresentation`, including the embedded public avatar asset, published alias/bio/tags/visibility, and canonical menu surface. Live official LSP3 identity remains a public read and enriches the safe cached first paint; direct contract facts are enabled only while the identity RÄCK is opening or open.
+
+The RÄCK retains the accepted body portal, 92% veil, source-to-rack transition, one-open-module ownership, focus trap, Escape/veil/X close, exact source return, responsive layout, reduced motion, and shared theme-token contrast. NFT inspection and identity inspection remain mutually exclusive. No owner draft, Persona/Alter Persona editor, private field, Library record/store, category, wallet, persistence, publication writer, schema, or version default enters Visitor.
+
+Post-implementation input-ownership correction (2026-08-01): interactive review found that closing the Identity RÄCK by pointer could leave the underlying Visitor table behaving as though its primary pointer remained held. Identity close now releases table and camera pointer capture and clears drag, wheel, Space, and gesture state when closing starts, then repeats the release at the completed return handoff. The NFT viewer uses the same Visitor-owned release boundary. Focused Visitor and Identity RÄCK contracts pass 13/13; publication and Owner behavior are unchanged.
+
+Interactive acceptance (2026-08-01): the compact public profile card, direct Identity RÄCK activation, module interaction, exact return, and corrected pointer release are accepted in Owner Preview. Closing identity no longer leaves the Visitor table grabbed.
+
+Focused identity, Visitor, renderer, rail, theme-contrast, and isolation tests pass 26/26. The production build and bounded budgets pass at measured core JavaScript 1,977,561 raw / 587,257 gzip, owner JavaScript 77,259 gzip, and owner CSS 11,642 gzip. The small Phase 8A.3 allowance records the shared public identity adapter and existing RÄCK/theme compression boundary; initial entry and raw owner ceilings remain unchanged.
+
+Rollback: remove the compact Visitor `LatticeProfileRail`, published identity adapter, and lazy identity RÄCK activation. Version-8 validation, public identity fields, Owner Identity RÄCK, Visitor lattice/viewer, and versions 1–7 remain readable and unchanged.
+
+Short visual test: enter Owner PREVIEW without opening Browser; activate the compact profile image at the upper left. Confirm one direct card-to-RÄCK transition, PROFILE/LINK/TECHNICAL switching, authored and system links, active theme colours, background inertness, long-description scrolling, and close by X/veil/Escape to the exact compact card with focus restored. Repeat at 390×844 and with reduced motion; confirm clicking an NFT and opening identity never own the interface simultaneously.
+
 User visual test:
 
 1. Preview profile A before publication and confirm it matches the later visitor runtime exactly.
@@ -723,6 +783,85 @@ User visual test:
 5. Publish a second revision and confirm all visitor paths resolve the latest valid document.
 
 Exit criterion: publication, directory discovery, and visitor rendering are deterministic across accounts and embedding contexts.
+
+### Phase 8A.4 — Keeper parity in Visitor
+
+Status: `[x]` — implemented, automatically verified, and interactively accepted on 2026-08-01.
+
+The version-8 Visitor now reuses the accepted Phase 7.5 resident movement controller and shared `KeeperDock`. Mouse and pen cursor-follow remain enabled by default and coalesce to the latest target once per animation frame. The dock retains session-only `FOLLOW CURSOR` and `SLOW / NORMAL / FAST` controls; when follow is disabled, one sub-threshold primary activation on eligible empty table space requests click-to-move through the same resident engine.
+
+The public component graph receives only explicit movement and dock capabilities. It never receives the owner `residentHandoff` object, owner stores, authoring state, persistence, wallet, or publication writers. NFT placements, identity/profile controls, fixed chrome, active viewer or Identity RÄCK, table drag/swipe, Space-camera movement, docking, and table settling retain priority and cancel or suppress pending follow work. Touch remains excluded. Dock/release and reduced-motion options use the existing engine contract; no second movement implementation exists.
+
+Focused Visitor, legacy-public, preview, dock, pointer-controller, and isolation tests pass 37/37. The production build passes, and the independent production budget checker passes at 1,237,517 initial JavaScript bytes. `git diff --check` passes. An ordinary unactivated Visitor click now also bypasses redundant same-table snapping, matching the accepted Owner gesture boundary. No schema, canonical projection, storage, publication version, wallet/IPFS, category, Keeper personality, reaction, dialogue, or sound behavior changes.
+
+Rollback: remove the version-8 Visitor `KeeperDock`, pointer scheduler, and explicit dock-capability props. The shared resident engine, accepted Owner Keeper controller, Visitor lattice/viewer/identity runtime, and versions 1–7 legacy callbacks remain unchanged and readable.
+
+Short visual test: enter Owner PREVIEW with the Keeper released. Confirm it follows idle mouse movement smoothly, does not move while hovering or activating an NFT/profile/chrome control, and remains suppressed during table drag, Space-camera movement, snapping, NFT inspection, and Identity RÄCK inspection. Right-click the dock, disable `FOLLOW CURSOR`, click empty table space once, and confirm one bounded move; confirm dragging the table does not move it. Exercise SLOW/NORMAL/FAST, dock/release, reduced motion, and a 390×844 viewport.
+
+Phase 8A completion audit (2026-08-01): the version-aware boundary routes readable version 8 through one shared Visitor lattice used by Owner Preview and resolved visits, while versions 1–7 retain the legacy renderer. The v8 Preview builder remains a pure validated public projection; renderer, viewer, identity, and Keeper import graphs exclude owner stores, persistence, reconciliation, wallet, publication writers, categories, and prototype fixtures. The combined Phase 8A/runtime/rollback/publication-guard set passes 79/79. Production build, budgets, and `git diff --check` pass. Interactive review accepted Keeper cursor-follow, follow-disabled click-to-move, dock/release, speeds, suppression boundaries, and reduced-motion behavior; Phase 8A is complete.
+
+## Phase 8B — version 8 publication
+
+Status: `[~]` — implementation, automatic verification, and publication-surface inspection accepted on 2026-08-01; awaiting one real revision-one/revision-two publication acceptance cycle.
+
+Goal: publish one frozen, canonical version-8 owner lattice snapshot through the unchanged public-IPFS, wallet, ERC725Y-pointer, and exact read-back sequence. The already deployed version-aware resolver remains the reader authority, and versions 1–7 remain readable through the legacy renderer.
+
+Authoritative implementation boundary:
+
+- build the production snapshot with the existing pure `buildProfileDocumentV8`; do not publish the Preview document unchanged, because its fixed revision and epoch timestamps exist only for deterministic session Preview;
+- derive the v8 compatibility envelope and public lattice from the same canonical owner draft, exact profile authority, and accepted asset-record generation used by Preview;
+- fail closed before snapshot installation when any public placement reference is unresolved, mismatched, unsupported, or belongs to another profile;
+- set `exportedAt` once per snapshot, preserve the first valid `createdAt`, increment the last installed/published revision, and require `lattice.lastPublished === exportedAt` through ordinary v8 validation;
+- freeze/install that exact validated snapshot before CID work; later draft, asset, wallet, profile, or CID changes must make it stale and require a rebuild/re-verification;
+- reuse `uploadProfileDocument`, `createProfileDocumentPublisher`, canonical hashing, verifiable-URI encoding, wallet freshness binding, transaction confirmation, and repository read-back without creating a lattice-specific writer;
+- pass explicit owner publication capabilities through the existing App boundary. Do not pass wallet clients/providers into Visitor or the canonical renderer;
+- keep `OwnerLatticeShell.jsx` free of direct local-storage, IPFS, canonical-publication, wallet, provider, or repository imports. Its PUBLISH control may lazy-load a bounded production publication surface which receives only the exact snapshot inputs and explicit publication capabilities it needs;
+- keep session Theme overrides, Browser categories, private tables/placements, selection, ARRANGE/CROP state, RÄCK geometry, Keeper dock/follow settings, camera position, viewer state, and all other owner/session state out of the publication;
+- retain the version-7 builder, reader, renderer, import/restore compatibility, and existing on-chain documents. Do not silently rewrite or republish a version-7 pointer.
+
+Safest wiring order:
+
+1. Add production snapshot-builder tests covering real timestamps/revisions, exact authority, public-only projection, unresolved-asset failure, stable canonical bytes, and `lastPublished` equality.
+2. Extend the publication-version policy coherently across canonical artifact creation, client upload, Netlify upload validation, CID verification, wallet submission, read-back, and the bounded snapshot state used by the lattice publisher. No boundary may accept v8 in isolation.
+3. Add the lazy owner publication surface and connect PUBLISH only after its imports remain outside the initial and Visitor graphs.
+4. Bind the frozen snapshot to the live profile/draft/asset/wallet generations and preserve the existing stale-context rejection immediately before the irreversible provider write.
+5. Verify the exact pinned bytes through the already deployed v8 reader before enabling wallet publication, then require the post-transaction resolution to match the frozen artifact hash.
+6. Run focused guards, production build/budgets, owner/Visitor import-isolation checks, and the manual cross-account/direct/iframe matrix before marking Phase 8B accepted.
+
+Expected implementation files:
+
+- `src/profileDocument/domain/constants.js` and publication-version-policy tests;
+- `src/profileDocument/domain/profileDocumentBuilder.js` plus focused v8 snapshot-builder tests;
+- `src/profileDocument/domain/profileDocumentPublication.js` and its tests;
+- `src/profileDocument/storage/profileDocumentUploadClient.js`, `src/profileDocument/storage/profileDocumentPublisher.js`, and focused tests;
+- `netlify/functions/pin-profile-document.mjs` and its function tests;
+- one new lazy lattice publication surface/controller under `src/public/`, with focused tests and only the minimum shared RÄCK/theme CSS;
+- `src/public/OwnerLatticeShell.jsx`, `src/App.jsx`, and their isolation/integration tests for explicit capability wiring;
+- this roadmap and `INSCAPE_PRODUCTION_INTEGRATION_INVENTORY.md`.
+
+Snapshot persistence decision: do not overload the legacy `os-underneath.profile-snapshot.v1:` record or broaden `profileDocumentStorage.js` merely to make the new UI convenient. The first Phase 8B slice keeps the frozen v8 snapshot in profile-scoped runtime state. Durable v8 draft/snapshot recovery is a separate migration only if Alpha testing proves it necessary. This preserves the established version-7 import/restore and rollback contract.
+
+Explicit exclusions: schema version 9; draft-store migration; category/PORTAL publication; private data; Persona/Alter Persona; marketplace behavior; a second IPFS or wallet implementation; server-side signing; automatic republish; destructive rollback; publication from Visitor/iframe; prototype changes; legacy cleanup.
+
+Rollback: disable the PUBLISH control and restore the publication-version allowlist to version 7 for new writes. Keep the v8 reader and renderer deployed so already published v8 documents remain readable. Returning an on-chain profile pointer to version 7 is a new irreversible owner-authorized publication and is never an automatic rollback action.
+
+Lean verification plan:
+
+- focused builder/validator/serialization/publication/upload/server/publisher tests, including v7 and v8 positive cases and unsupported-version negative cases;
+- stale snapshot, changed asset generation, changed profile, changed wallet/provider generation, changed CID, duplicate submission, failed receipt, and hash-mismatched read-back tests;
+- owner and Visitor transitive import-isolation checks;
+- one production build, bounded budget check, and `git diff --check` before interactive publication;
+- manual publish profile A, then visit from profile B, signed out, direct URL, and logged-in/logged-out iframe; compare all nine tables, public identity, viewer facts, Keeper behavior, exact revision, and absence of owner controls/private state; publish revision two and repeat.
+
+Exit criterion: the user accepts one real v8 publication and its second revision across every visitor route; the resolved document matches the frozen canonical bytes, v7 remains readable, and rollback requires no data deletion.
+
+Pre-writer implementation checkpoint (2026-08-01): `ownerLatticePublicationDocument.js` now provides the pure production snapshot boundary without being imported by Owner UI or any writer. It reuses `buildProfileDocumentV8`, validates exact lattice/profile authority, preserves the first creation time, increments the prior validated publication revision, advances the export time monotonically, and lets ordinary validation enforce exact `lattice.lastPublished` equality. The compatibility spaces/canvas remain empty; private placements remain excluded; unresolved or mismatched public asset references fail closed. Frozen identical inputs serialize to identical canonical bytes. The focused v8 builder/Preview/production-snapshot set passes 12/12 and `git diff --check` passes. Publication version 7 remains the only accepted writer version; no upload, server, CID, wallet, provider, storage, or UI boundary imports or enables this builder yet.
+
+Implementation checkpoint (2026-08-01): publication versions 7 and 8 now share one coherent canonical-artifact, upload, server-validation, CID-verification, wallet-submission, receipt, and resolver-read-back policy; unsupported versions remain rejected. The legacy local snapshot key remains deliberately version-7-only. Owner `PUBLISH` lazy-loads a profile-scoped RÄCK surface which explicitly separates PREPARE SNAPSHOT, UPLOAD + VERIFY (or manual CID verification/download), and PUBLISH VERSION 8. Its frozen context binds canonical bytes, draft and asset generations, CID generation, profile authority, wallet/provider state, and exact read-back; changing public content makes the artifact stale before an irreversible provider call. Session Theme, categories, private placements, owner UI state, and fallback display identity remain excluded. Closing resets the publication session and restores exact trigger focus.
+
+Automatic verification passes 56/56 focused builder, validator, canonical-publication, upload, Netlify boundary, publisher, Owner-shell, Preview, and context tests. `git diff --check` passes. The production build and bounded budgets pass; the publication surface remains a separate lazy chunk at 29.04 kB raw / 9.90 kB gzip, Owner shell is 120.48 kB raw / 32.34 kB gzip, and the initial entry remains 1,237.75 kB raw / 362.45 kB gzip. Phase 8B remains open only for interactive surface checks and an explicit real publication/read-back matrix; no automatic wallet action was performed.
+
+Interactive surface acceptance (2026-08-01): the owner accepted the PUBLISH RÄCK presentation, explicit snapshot preparation, FROZEN/STALE refresh behavior, and close/focus-return boundary. No upload, wallet signature, transaction, or on-chain pointer change was performed. Phase 8B remains open only for the explicit revision-one/revision-two publication and cross-route read-back matrix.
 
 ## Phase 9 — parallel cutover and Alpha hardening
 
@@ -803,4 +942,4 @@ Start with:
 
 ## Immediate next action
 
-Begin Phase 8A with a read-only implementation audit of the existing published visitor boundary, version-8 validation/resolution path, owner projection, routes, iframe consumers, Keeper handoff, and rollback selector. Then deploy Owner Preview as the first consumer of the one visitor-safe version-8 runtime before enabling publication. Phase 3 remains `[~]` until that shared runtime is connected; Phase 5 and Phase 7.5 are `[x]`; version 7 remains the publication default and version 8 publication remains disabled.
+Perform one explicit revision-one publication and one revision-two publication, then execute the recorded cross-account/direct/iframe read-back matrix. Confirm the resolved canonical bytes, latest revision, all nine public tables, Viewer, Identity RÄCK, Keeper behavior, and absence of owner/private state. Do not begin Phase 9 until that acceptance boundary is complete.

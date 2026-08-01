@@ -42,3 +42,16 @@ test('focus view model hides synthetic or unprovenanced metadata text', () => {
   assert.equal(model.dossier.description, null);
   assert.deepEqual(model.dossier.traits, []);
 });
+
+test('visitor focus view model may consume only the validated public projection', () => {
+  const publicPlacement = { ...placement, asset: {
+    ...placement.asset,
+    creators: [{ address: contract, name: 'Published creator' }],
+    attributes: [{ key: 'Signal', value: 'Public', type: 'string' }],
+  } };
+  const model = createLatticeProductionFocusViewModel(publicPlacement, null, { trustPublishedMetadata: true });
+  assert.equal(model.dossier.title, 'Published name');
+  assert.equal(model.dossier.description, 'Published description');
+  assert.deepEqual(model.dossier.traits, [{ label: 'Signal', value: 'Public' }]);
+  assert.match(model.dossier.technical.find(({ label }) => label === 'CREATORS / CONTRACT').value, /Published creator/);
+});

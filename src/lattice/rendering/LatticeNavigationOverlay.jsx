@@ -5,6 +5,7 @@ import {
   latticeCardinalDestinations,
   latticeMapFocusDestination,
 } from '../controller/latticeNavigation.js';
+import './latticeNavigationOverlay.css';
 
 const DIRECTION_CONTROL_LABELS = Object.freeze({
   left: 'Navigate to table on the left',

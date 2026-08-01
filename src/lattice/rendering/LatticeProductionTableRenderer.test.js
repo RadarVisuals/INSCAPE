@@ -35,13 +35,22 @@ test('renderer preserves semantic frame, order, media safety, resize projection 
   assert.match(source, /zIndex: layerRank/);
   assert.match(source, /data-frame-id=\{placement\.frameId\}/);
   assert.match(source, /referrerPolicy="no-referrer"/);
-  assert.match(source, /loading="lazy"/);
+  assert.match(source, /imageLoading = 'lazy'/);
+  assert.match(source, /loading=\{imageLoading\}/);
   assert.match(source, /Artwork unavailable/);
   assert.match(source, /event\.key !== 'Enter'/);
   assert.match(source, /loaded && dimensions/);
   assert.match(source, /const decodedDimensions = [^;]+loadState\.dimensions/);
   assert.match(source, /const dimensions = decodedDimensions \|\| media\.dimensions/);
   assert.doesNotMatch(source, /onAuthor|wallet|localStorage|sessionStorage|indexedDB|fetch\(/iu);
+});
+
+test('only eager media receives bounded automatic retries and cannot remain loading forever', () => {
+  assert.match(source, /LATTICE_PRODUCTION_EAGER_MEDIA_ATTEMPTS = 3/);
+  assert.match(source, /imageLoading !== 'eager'/);
+  assert.match(source, /current\.attempt \+ 1 < LATTICE_PRODUCTION_EAGER_MEDIA_ATTEMPTS/);
+  assert.match(source, /\{ \.\.\.current, status: 'failed', dimensions: null \}/);
+  assert.match(source, /key=\{`\$\{media\.src\}:\$\{loadState\.attempt\}`\}/);
 });
 
 test('authored boundary is invisible and the atmospheric grid shares its exact projected origin and cell size', () => {

@@ -3,7 +3,7 @@ import { adaptLatticeProductionMedia, LATTICE_PRODUCTION_MEDIA_STATUS } from './
 const clean = (value) => typeof value === 'string' && value.trim() ? value.trim() : null;
 const shortAddress = (value) => value ? `${value.slice(0, 8)}…${value.slice(-6)}` : null;
 
-export function createLatticeProductionFocusViewModel(placement, assetRecord) {
+export function createLatticeProductionFocusViewModel(placement, assetRecord, { trustPublishedMetadata = false } = {}) {
   const published = placement?.asset;
   const normalized = assetRecord?.id === published?.stableAssetId ? assetRecord : null;
   const media = adaptLatticeProductionMedia(published);
@@ -11,9 +11,9 @@ export function createLatticeProductionFocusViewModel(placement, assetRecord) {
   const dimensions = normalized?.imageWidth > 0 && normalized?.imageHeight > 0
     ? { width: normalized.imageWidth, height: normalized.imageHeight } : media.dimensions;
   const creators = normalized?.fieldProvenance?.creators && Array.isArray(normalized.creators)
-    ? normalized.creators : [];
+    ? normalized.creators : trustPublishedMetadata && Array.isArray(published.creators) ? published.creators : [];
   const attributes = normalized?.fieldProvenance?.attributes && Array.isArray(normalized.attributes)
-    ? normalized.attributes : [];
+    ? normalized.attributes : trustPublishedMetadata && Array.isArray(published.attributes) ? published.attributes : [];
   const standard = ['LSP7', 'LSP8'].includes(normalized?.standard) ? normalized.standard : published.tokenStandard;
   const technical = [
     creators.length ? { label: 'CREATORS / CONTRACT', value: creators.map((creator) =>
@@ -34,8 +34,10 @@ export function createLatticeProductionFocusViewModel(placement, assetRecord) {
   ].filter(Boolean);
   return Object.freeze({
     dossier: {
-      title: normalized?.fieldProvenance?.name ? clean(normalized.name) : null,
-      description: normalized?.fieldProvenance?.description ? clean(normalized.description) : null,
+      title: normalized?.fieldProvenance?.name ? clean(normalized.name)
+        : trustPublishedMetadata ? clean(published.name) : null,
+      description: normalized?.fieldProvenance?.description ? clean(normalized.description)
+        : trustPublishedMetadata ? clean(published.description) : null,
       traits: attributes.map((attribute) => ({ label: clean(attribute.key), value: String(attribute.value ?? '') }))
         .filter((attribute) => attribute.label),
       technical,

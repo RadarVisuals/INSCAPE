@@ -33,8 +33,7 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-function context(overrides = {}) {
-  const snapshot = documentFor();
+function context(overrides = {}, snapshot = documentFor()) {
   const walletClient = { account: '0x3333333333333333333333333333333333333333', writeContract: async () => '0xabc' };
   const publicClient = { simulateContract: async () => { throw new Error('Public RPC simulation must not be used'); }, waitForTransactionReceipt: async () => ({ status: 'success' }) };
   return { ownerAuthoringEnabled: true, isWalletConnected: true, isHostProfileOwner: true, chainId: '0x2a',
@@ -53,7 +52,7 @@ test('canonical publication download is the exact serializer output and never th
   assert.equal(Object.isFrozen(artifact.document), true); assert.equal(Object.isFrozen(artifact.document.profile), true);
 });
 
-test('readable v8 is rejected before publication context, CID fetch, or wallet access', async () => {
+test('v8 uses the same canonical CID verification and freshness boundary as v7', async () => {
   const document = buildProfileDocumentV8({
     profileAddress: PROFILE_A,
     workspace: { version: 8, profileAddress: PROFILE_A, favorites: [], folders: [], canvas: { launchers: [], objects: [] } },
@@ -64,12 +63,17 @@ test('readable v8 is rejected before publication context, CID fetch, or wallet a
   let contextReads = 0;
   let fetches = 0;
   const publisher = createProfileDocumentPublisher({
-    getContext: () => { contextReads += 1; return context(); },
-    fetchImpl: async () => { fetches += 1; },
+    getContext: () => { contextReads += 1; return context({}, document); },
+    fetchImpl: async () => {
+      fetches += 1;
+      return responseFor(new TextEncoder().encode(canonicalSerializeProfileDocument(document)));
+    },
   });
-  await assert.rejects(() => publisher.verifyCid(document, CID), /not publishable/);
-  assert.equal(contextReads, 0);
-  assert.equal(fetches, 0);
+  const verified = await publisher.verifyCid(document, CID);
+  assert.equal(verified.artifact.document.version, 8);
+  assert.equal(verified.artifact.text, canonicalSerializeProfileDocument(document));
+  assert.ok(contextReads >= 2);
+  assert.equal(fetches, 1);
 });
 
 test('closing and reopening publication creates a new unverified session', () => {

@@ -68,6 +68,8 @@ import '../lattice/rendering/latticeMenuSurface.css';
 import './ownerLatticeShell.css';
 
 const BrowserWorkspace = lazy(() => import('../lattice/browser/BrowserWorkspace.jsx'));
+const ProfileDocumentPreview = lazy(() => import('../profileDocument/components/ProfileDocumentPreview.jsx'));
+const OwnerLatticePublicationRack = lazy(() => import('./OwnerLatticePublicationRack.jsx'));
 
 const RUNTIME_PROJECTION_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 const CENTER_TABLE_ID = 'table-05';
@@ -80,9 +82,9 @@ const PROFILE_RAIL_ENTRIES = Object.freeze([
 const WORKSPACE_TOOLS = Object.freeze([
   { id: 'browser', label: 'BROWSER' },
   { id: 'arrange', label: 'ARRANGE' },
-  { id: 'preview', label: 'PREVIEW', disabled: true, disabledReason: 'Owner Preview integration is not available in Phase 4' },
+  { id: 'preview', label: 'PREVIEW' },
   { id: 'theme', label: 'THEME' },
-  { id: 'publish', label: 'PUBLISH', disabled: true, disabledReason: 'Version 8 publication is disabled' },
+  { id: 'publish', label: 'PUBLISH' },
   { id: 'more', label: 'MORE', disabled: true, disabledReason: 'Additional owner tools are not available in Phase 4' },
 ]);
 const RACK_AUTHORING_TOOLS = Object.freeze(
@@ -100,6 +102,9 @@ const RACK_SYSTEM_TOOLS = Object.freeze(
 const SURFACE_LABELS = Object.freeze({
   carbon: 'CARBON', graphite: 'GRAPHITE', slate: 'SLATE', ash: 'ASH', mist: 'MIST', paper: 'PAPER',
 });
+const PUBLICATION_ENVIRONMENT = Object.freeze({ type: 'illustrated', shaderId: 'neural-field' });
+const PUBLICATION_SIGNALS = Object.freeze({ notifications: true, speech: true, visualEffects: true, audio: false });
+const PUBLICATION_VISITOR_NAVIGATION = Object.freeze({ showCategories: false, showCreations: false });
 
 const sameCoordinate = (left, right) => left.x === right.x && left.y === right.y;
 const tableIdentity = (table) => table.title?.trim() || table.id.replace('-', ' ').toUpperCase();
@@ -158,11 +163,14 @@ function ThemeSurface({ anchor, menuSurfaceId, onClose, onMenuSurfaceChange, onS
 
 function OwnerLatticeRuntime({
   activeActorId,
+  getWalletPublicationContext,
   interfaceVisible = true,
   keeperVisible = true,
+  onPublicationConfirmed,
   publishedResolution,
   residentHandoff,
   revealPresentation = { reducedMotion: false },
+  stageId = 'moonpurple',
   visitorWalletConnected = false,
   workspaceProfileAddress,
 }) {
@@ -180,6 +188,10 @@ function OwnerLatticeRuntime({
   const wheelAccumulatorRef = useRef({ x: 0, y: 0 });
   const wheelBlockedUntilRef = useRef(0);
   const browserToolRef = useRef(null);
+  const previewToolRef = useRef(null);
+  const publishToolRef = useRef(null);
+  const previewReturnFocusRef = useRef(null);
+  const previewRequestRef = useRef(0);
   const browserReturnFocusRef = useRef(null);
   const activeWorkspaceWindowRef = useRef('browser');
   const identityControlRef = useRef(null);
@@ -227,10 +239,14 @@ function OwnerLatticeRuntime({
   const [keeperDockActive, setKeeperDockActive] = useState(false);
   const [keeperFollowCursor, setKeeperFollowCursor] = useState(true);
   const [keeperMovementSpeed, setKeeperMovementSpeed] = useState('normal');
+  const [previewDocument, setPreviewDocument] = useState(null);
+  const [previewError, setPreviewError] = useState(null);
+  const [publicationOpen, setPublicationOpen] = useState(false);
   useEffect(() => setRailCollapsed(true), [profileAddress]);
+  useEffect(() => setPublicationOpen(false), [profileAddress]);
   const profileIdentity = useProfileIdentity(profileAddress);
   const profileContractFacts = useProfileContractFacts(profileAddress, { enabled: Boolean(identityDossierOpening || identityDossierSession) });
-  const { commands: browserCategoryCommands, data: browserData } = useOwnerLatticeBrowser(profileAddress, browserOpen);
+  const { commands: browserCategoryCommands, data: browserData } = useOwnerLatticeBrowser(profileAddress);
   const authoring = useOwnerLatticeAuthoring(profileAddress);
   const profile = useMemo(
     () => getIdentityProfileViewModel(profileIdentity, { walletConnected: visitorWalletConnected }),
@@ -286,6 +302,10 @@ function OwnerLatticeRuntime({
       : Array.isArray(authoring.assetRecords) ? authoring.assetRecords : [];
     return new Map(records.map((asset) => [asset.id, asset]));
   }, [authoring.assetRecords]);
+  const publicationAssetRecords = useMemo(() => [...assetRecordsById.values()], [assetRecordsById]);
+  const publicationProfile = useMemo(() => profileIdentity?.status === 'RESOLVED'
+    ? { name: profileIdentity.name, avatarUrl: profileIdentity.avatarUrl }
+    : {}, [profileIdentity?.avatarUrl, profileIdentity?.name, profileIdentity?.status]);
   const identityDossier = useMemo(() => createProductionIdentityDossierViewModel({
     identity: profileIdentity,
     contractFacts: profileContractFacts,
@@ -370,7 +390,7 @@ function OwnerLatticeRuntime({
     keeperDockActive,
     followCursor: keeperFollowCursor,
     settling: snapping,
-    themeOpen,
+    themeOpen: themeOpen || publicationOpen,
     viewerActive: Boolean(viewerSession),
   });
   const keeperClickToMoveEnabled = keeperClickToMoveAllowed({
@@ -384,7 +404,7 @@ function OwnerLatticeRuntime({
     interfaceVisible,
     keeperDockActive,
     settling: snapping,
-    themeOpen,
+    themeOpen: themeOpen || publicationOpen,
     viewerActive: Boolean(viewerSession),
   });
 
@@ -700,7 +720,7 @@ function OwnerLatticeRuntime({
   const placementUnavailableReason = arrangeEnabled ? authoringPlacementUnavailableReason : 'PLACE REQUIRES ARRANGE';
   const canonicalNotice = authoring.status === OWNER_LATTICE_AUTHORING_STATUS.CORRUPT
     ? 'CANONICAL DRAFT UNAVAILABLE / STORED RECORD PRESERVED / EXPLICIT RECOVERY REQUIRED'
-    : authoring.error || latticeProjection.error;
+    : previewError || authoring.error || latticeProjection.error;
   const spatialTheme = ['carbon', 'graphite'].includes(surfaceId) ? 'dark' : 'light';
   const closeBrowser = useCallback(() => {
     setBrowserOpen(false);
@@ -768,6 +788,51 @@ function OwnerLatticeRuntime({
       tableId: activeTableId,
     });
   }, [activeDraftTable, activeTableId, arrangeEnabled, authoring]);
+  const startOwnerPreview = useCallback(async (trigger) => {
+    previewReturnFocusRef.current = trigger || previewToolRef.current;
+    const requestId = previewRequestRef.current + 1;
+    previewRequestRef.current = requestId;
+    try {
+      if (!authoring.draft || authoring.status !== OWNER_LATTICE_AUTHORING_STATUS.READY) {
+        throw new TypeError('CANONICAL DRAFT UNAVAILABLE');
+      }
+      if (!authoring.profileReady || authoring.missingReferencedAssets) {
+        throw new TypeError('PREVIEW REQUIRES ALL REFERENCED PUBLIC ASSETS');
+      }
+      const { buildOwnerLatticePreviewDocument, preloadOwnerLatticePreviewEntryMedia } = await import('./ownerLatticePreviewDocument.js');
+      const preview = buildOwnerLatticePreviewDocument({
+        activeActorId, assetRecords: authoring.assetRecords, latticeDraft: authoring.draft,
+        profile: publicationProfile, profileAddress, stageId,
+      });
+      await preloadOwnerLatticePreviewEntryMedia(preview);
+      if (previewRequestRef.current !== requestId) return;
+      finishGesture(true);
+      finishCameraGesture(true);
+      cancelBrowserAssetDrag();
+      setCompositionPreview(null);
+      setCropModeActive(false);
+      setArrangeEnabled(false);
+      setBrowserOpen(false);
+      setThemeOpen(false);
+      setThemeAnchor(null);
+      setIdentityDossierSession(null);
+      setViewerSession(null);
+      setPreviewError(null);
+      setPreviewDocument(preview);
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : String(error));
+    }
+  }, [activeActorId, authoring, cancelBrowserAssetDrag, finishCameraGesture, finishGesture, profileAddress, publicationProfile, stageId]);
+  const stopOwnerPreview = useCallback(() => {
+    previewRequestRef.current += 1;
+    setPreviewDocument(null);
+    requestAnimationFrame(() => {
+      const returnFocus = previewReturnFocusRef.current?.isConnected
+        ? previewReturnFocusRef.current
+        : previewToolRef.current;
+      returnFocus?.focus({ preventScroll: true });
+    });
+  }, []);
   const activateWorkspaceTool = useCallback((toolId, trigger) => {
     if (toolId === 'arrange') toggleArrange();
     if (['rotate', 'mirrorHorizontal', 'mirrorVertical'].includes(toolId) && arrangeEnabled && selectedPlacement) {
@@ -810,7 +875,12 @@ function OwnerLatticeRuntime({
       if (trigger) setThemeAnchor(frozenRectangle(trigger.getBoundingClientRect()));
       setThemeOpen((open) => !open);
     }
-  }, [activeTableId, arrangeEnabled, authoring, selectedPlacement, selectedPlacements, toggleArrange]);
+    if (toolId === 'preview') startOwnerPreview(trigger);
+    if (toolId === 'publish') {
+      activeWorkspaceWindowRef.current = 'publish';
+      setPublicationOpen((open) => !open);
+    }
+  }, [activeTableId, arrangeEnabled, authoring, selectedPlacement, selectedPlacements, startOwnerPreview, toggleArrange]);
   const handlePlacementMediaState = useCallback((state) => {
     const key = `${state.tableId}:${state.placementId}`;
     setPlacementMedia((current) => {
@@ -863,6 +933,10 @@ function OwnerLatticeRuntime({
     setViewerSession((current) => current && ({ ...current, placementId: destination.placement.id,
       returnFocus: element || current.returnFocus }));
   }, [findPlacementElement, viewerEntries, viewerPosition]);
+
+  if (previewDocument) return <Suspense fallback={null}>
+    <ProfileDocumentPreview document={previewDocument} onExit={stopOwnerPreview} />
+  </Suspense>;
 
   const spatialSurface = <section
     aria-label="Owner lattice navigation"
@@ -994,19 +1068,20 @@ function OwnerLatticeRuntime({
         onIdentityActivate={openIdentityDossier}
       />
       <LatticeWorkspaceToolbar
-        activeToolIds={[browserOpen ? 'browser' : null, themeOpen ? 'theme' : null].filter(Boolean)}
+        activeToolIds={[browserOpen ? 'browser' : null, publicationOpen ? 'publish' : null, themeOpen ? 'theme' : null].filter(Boolean)}
         compact={dimensions.width <= 980}
         arrangeEnabled={arrangeEnabled}
         owner
         tools={WORKSPACE_TOOLS}
         onEscape={() => {
-          if (activeWorkspaceWindowRef.current === 'theme' && themeOpen) setThemeOpen(false);
+          if (activeWorkspaceWindowRef.current === 'publish' && publicationOpen) setPublicationOpen(false);
+          else if (activeWorkspaceWindowRef.current === 'theme' && themeOpen) setThemeOpen(false);
           else if (activeWorkspaceWindowRef.current === 'browser' && browserOpen) closeBrowser();
           else if (themeOpen) setThemeOpen(false);
           else if (browserOpen) closeBrowser();
         }}
         onToolActivate={activateWorkspaceTool}
-        toolButtonRefs={{ browser: browserToolRef }}
+          toolButtonRefs={{ browser: browserToolRef, preview: previewToolRef, publish: publishToolRef }}
       />
       {browserActivated && <Suspense fallback={null}>
         <BrowserWorkspace
@@ -1031,7 +1106,7 @@ function OwnerLatticeRuntime({
           selectedLayerIds={selectedPlacementIds}
           systemTools={RACK_SYSTEM_TOOLS}
           tabRequest={browserTabRequest}
-          workspaceActiveToolIds={[themeOpen ? 'theme' : null].filter(Boolean)}
+          workspaceActiveToolIds={[publicationOpen ? 'publish' : null, themeOpen ? 'theme' : null].filter(Boolean)}
           workspaceArrangeEnabled={arrangeEnabled}
           workspaceTools={RACK_AUTHORING_TOOLS.map((tool) => tool.id === 'arrange' ? tool : ({
             ...tool,
@@ -1050,6 +1125,27 @@ function OwnerLatticeRuntime({
         onSurfaceChange={setSurfaceId}
         surfaceId={surfaceId}
       />}
+      {publicationOpen && <Suspense fallback={null}>
+        <OwnerLatticePublicationRack
+          activeActorId={activeActorId}
+          assetRecords={publicationAssetRecords}
+          avatarShape="square"
+          environment={PUBLICATION_ENVIRONMENT}
+          getWalletPublicationContext={getWalletPublicationContext}
+          latticeDraft={authoring.draft}
+          onClose={() => {
+            setPublicationOpen(false);
+            requestAnimationFrame(() => publishToolRef.current?.focus({ preventScroll: true }));
+          }}
+          onPublished={() => onPublicationConfirmed?.()}
+          profile={publicationProfile}
+          profileAddress={profileAddress}
+          publishedResolution={publishedResolution}
+          signalSettings={PUBLICATION_SIGNALS}
+          stageId={stageId}
+          visitorNavigation={PUBLICATION_VISITOR_NAVIGATION}
+        />
+      </Suspense>}
       {identityDossierSession && identityDossier && !viewerSession && <LatticeProductionIdentityDossier
         getReturnRectangle={() => identityDossierSession.originRectangle}
         gridVariables={{

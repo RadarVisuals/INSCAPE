@@ -23,6 +23,7 @@
 }
 
 .owner-lattice-spatial-surface {
+  --lattice-navigation-map-bottom: 54px;
   --owner-lattice-surface: #0b0c0c;
   --owner-lattice-grid-line: rgb(216 213 204 / 0.085);
   --lattice-overlay-ink: #d8d7d2;
@@ -81,27 +82,6 @@
 }
 .owner-lattice-canonical-unavailable { position: absolute; inset: 0; display: grid; place-items: center; color: var(--lattice-overlay-muted); font: 8px/1.4 "Inscape IBM Plex Mono", monospace; letter-spacing: .12em; }
 .owner-lattice-authoring-notice { position: fixed; z-index: 26; left: 50%; bottom: 106px; max-width: min(560px, calc(100vw - 32px)); padding: 9px 12px; translate: -50% 0; border: 1px solid var(--lattice-menu-line-strong); background: var(--lattice-menu-panel); color: var(--lattice-menu-ink); font: 8px/1.45 "Inscape IBM Plex Mono", monospace; letter-spacing: .08em; text-align: center; }
-
-.owner-lattice-spatial-surface .lattice-navigation-overlay { position: absolute; z-index: 5; inset: 0; pointer-events: none; }
-.owner-lattice-spatial-surface .lattice-direction-chevron,
-.owner-lattice-spatial-surface .lattice-coordinate-map button { appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--lattice-overlay-ink); pointer-events: auto; }
-.owner-lattice-spatial-surface .lattice-direction-chevron { position: absolute; width: 34px; height: 34px; padding: 0; opacity: .72; cursor: pointer; }
-.owner-lattice-spatial-surface .lattice-direction-chevron::before { content: ""; position: absolute; left: 11px; top: 11px; width: 10px; height: 10px; border-top: 1px solid currentColor; border-right: 1px solid currentColor; }
-.owner-lattice-spatial-surface .lattice-direction-chevron.is-left { left: 12px; top: 50%; transform: translateY(-50%); }
-.owner-lattice-spatial-surface .lattice-direction-chevron.is-right { right: 12px; top: 50%; transform: translateY(-50%); }
-.owner-lattice-spatial-surface .lattice-direction-chevron.is-up { left: 50%; top: 12px; transform: translateX(-50%); }
-.owner-lattice-spatial-surface .lattice-direction-chevron.is-down { left: 50%; bottom: 12px; transform: translateX(-50%); }
-.owner-lattice-spatial-surface .lattice-direction-chevron.is-left::before { transform: rotate(-135deg); }
-.owner-lattice-spatial-surface .lattice-direction-chevron.is-right::before { transform: rotate(45deg); }
-.owner-lattice-spatial-surface .lattice-direction-chevron.is-up::before { transform: rotate(-45deg); }
-.owner-lattice-spatial-surface .lattice-direction-chevron.is-down::before { transform: rotate(135deg); }
-.owner-lattice-spatial-surface .lattice-direction-chevron:focus-visible { opacity: 1; outline: 1px solid var(--lattice-overlay-muted); outline-offset: -5px; }
-.owner-lattice-spatial-surface .lattice-coordinate-map { position: absolute; left: 50%; bottom: 54px; display: grid; grid-template: repeat(3, 20px) / repeat(3, 20px); gap: 2px; transform: translateX(-50%); pointer-events: auto; }
-.owner-lattice-spatial-surface .lattice-coordinate-map button { position: relative; width: 20px; height: 20px; padding: 0; cursor: pointer; }
-.owner-lattice-spatial-surface .lattice-coordinate-map button::before { content: ""; position: absolute; left: 4px; top: 4px; width: 12px; height: 12px; border: 1px solid var(--lattice-overlay-muted); }
-.owner-lattice-spatial-surface .lattice-coordinate-map button.is-active::before { border-color: var(--lattice-overlay-ink); background: var(--lattice-overlay-ink); }
-.owner-lattice-spatial-surface .lattice-coordinate-map button:focus-visible { outline: none; }
-.owner-lattice-spatial-surface .lattice-coordinate-map button:focus-visible::before { border-color: var(--lattice-overlay-ink); box-shadow: 0 0 0 1px var(--lattice-overlay-faint); }
 
 .owner-lattice-signature { position: fixed; z-index: 22; left: 24px; bottom: 24px; display: grid; justify-items: start; gap: 6px; color: var(--lattice-overlay-ink); pointer-events: none; }
 .owner-lattice-signature small { font: 500 8px/1 "Inscape IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }

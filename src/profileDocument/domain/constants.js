@@ -2,8 +2,12 @@ export const PROFILE_DOCUMENT_TYPE = 'OS_UNDERNEATH_PROFILE';
 export const PROFILE_DOCUMENT_PUBLICATION_VERSION = 7;
 export const PROFILE_DOCUMENT_VERSION = PROFILE_DOCUMENT_PUBLICATION_VERSION;
 export const PROFILE_DOCUMENT_VERSION_8 = 8;
+export const PROFILE_DOCUMENT_PUBLICATION_VERSIONS = Object.freeze([
+  PROFILE_DOCUMENT_PUBLICATION_VERSION,
+  PROFILE_DOCUMENT_VERSION_8,
+]);
 export function assertProfileDocumentPublicationVersion(document) {
-  if (document?.version !== PROFILE_DOCUMENT_PUBLICATION_VERSION) {
+  if (!PROFILE_DOCUMENT_PUBLICATION_VERSIONS.includes(document?.version)) {
     throw new TypeError(`Profile document version ${String(document?.version)} is readable but not publishable`);
   }
   return document;

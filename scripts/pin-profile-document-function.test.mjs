@@ -57,7 +57,7 @@ test('Netlify publication upload rejects cross-origin, noncanonical, and unconfi
   assert.equal(calls, 0);
 });
 
-test('Netlify publication upload rejects canonical readable v8 before credentials or Pinata', async () => {
+test('Netlify publication upload accepts canonical v8 through the same server boundary', async () => {
   let credentialReads = 0;
   let pinataCalls = 0;
   const version8 = buildProfileDocumentV8({
@@ -69,12 +69,12 @@ test('Netlify publication upload rejects canonical readable v8 before credential
   });
   const body = canonicalSerializeProfileDocument(version8);
   const handler = createPinProfileDocumentHandler({
-    getJwt: () => { credentialReads += 1; return 'must-not-be-read'; },
-    fetchImpl: async () => { pinataCalls += 1; },
+    getJwt: () => { credentialReads += 1; return 'server-only-jwt'; },
+    fetchImpl: async () => { pinataCalls += 1; return Response.json({ data: { cid: CID } }); },
   });
   const response = await handler(requestFor(body));
-  assert.equal(response.status, 422);
-  assert.equal((await response.json()).error.code, 'UNSUPPORTED_PUBLICATION_VERSION');
-  assert.equal(credentialReads, 0);
-  assert.equal(pinataCalls, 0);
+  assert.equal(response.status, 201);
+  assert.deepEqual(await response.json(), { cid: CID });
+  assert.equal(credentialReads, 1);
+  assert.equal(pinataCalls, 1);
 });

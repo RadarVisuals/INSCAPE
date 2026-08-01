@@ -30,7 +30,7 @@ test('upload client does not accept a successful response without a valid CID', 
   await assert.rejects(() => uploadProfileDocument(document, { fetchImpl: async () => Response.json({ cid: 'bad' }, { status: 201 }) }), /invalid IPFS CID/i);
 });
 
-test('upload client rejects readable v8 before making a request', async () => {
+test('upload client sends canonical v8 through the same publication endpoint', async () => {
   const version8 = buildProfileDocumentV8({
     profileAddress: PROFILE,
     workspace: { version: 8, profileAddress: PROFILE, favorites: [], folders: [], canvas: { launchers: [], objects: [] } },
@@ -39,7 +39,14 @@ test('upload client rejects readable v8 before making a request', async () => {
     latticeDraft: createEmptyLatticeProductionDraft(PROFILE),
   });
   let calls = 0;
-  await assert.rejects(() => uploadProfileDocument(version8, { fetchImpl: async () => { calls += 1; } }), /not publishable/);
-  assert.equal(calls, 0);
+  let body;
+  const result = await uploadProfileDocument(version8, { fetchImpl: async (_url, init) => {
+    calls += 1;
+    body = init.body;
+    return Response.json({ cid: CID }, { status: 201 });
+  } });
+  assert.equal(calls, 1);
+  assert.equal(body, result.artifact.text);
+  assert.equal(result.artifact.document.version, 8);
 });
 

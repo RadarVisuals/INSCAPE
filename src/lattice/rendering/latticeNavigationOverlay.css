@@ -1,0 +1,20 @@
+.lattice-navigation-overlay { position: absolute; z-index: var(--lattice-navigation-z, 5); inset: 0; pointer-events: none; }
+.lattice-direction-chevron,
+.lattice-coordinate-map button { appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--lattice-overlay-ink); pointer-events: auto; }
+.lattice-direction-chevron { position: absolute; width: 34px; height: 34px; padding: 0; opacity: .72; cursor: pointer; }
+.lattice-direction-chevron::before { content: ""; position: absolute; left: 11px; top: 11px; width: 10px; height: 10px; border-top: 1px solid currentColor; border-right: 1px solid currentColor; }
+.lattice-direction-chevron.is-left { left: 12px; top: 50%; transform: translateY(-50%); }
+.lattice-direction-chevron.is-right { right: 12px; top: 50%; transform: translateY(-50%); }
+.lattice-direction-chevron.is-up { left: 50%; top: 12px; transform: translateX(-50%); }
+.lattice-direction-chevron.is-down { left: 50%; bottom: 12px; transform: translateX(-50%); }
+.lattice-direction-chevron.is-left::before { transform: rotate(-135deg); }
+.lattice-direction-chevron.is-right::before { transform: rotate(45deg); }
+.lattice-direction-chevron.is-up::before { transform: rotate(-45deg); }
+.lattice-direction-chevron.is-down::before { transform: rotate(135deg); }
+.lattice-direction-chevron:focus-visible { opacity: 1; outline: 1px solid var(--lattice-overlay-muted); outline-offset: -5px; }
+.lattice-coordinate-map { position: absolute; left: 50%; bottom: var(--lattice-navigation-map-bottom, 54px); display: grid; grid-template: repeat(3,20px) / repeat(3,20px); gap: 2px; transform: translateX(-50%); pointer-events: auto; }
+.lattice-coordinate-map button { position: relative; width: 20px; height: 20px; padding: 0; cursor: pointer; }
+.lattice-coordinate-map button::before { content: ""; position: absolute; left: 4px; top: 4px; width: 12px; height: 12px; border: 1px solid var(--lattice-overlay-muted); }
+.lattice-coordinate-map button.is-active::before { border-color: var(--lattice-overlay-ink); background: var(--lattice-overlay-ink); }
+.lattice-coordinate-map button:focus-visible { outline: none; }
+.lattice-coordinate-map button:focus-visible::before { border-color: var(--lattice-overlay-ink); box-shadow: 0 0 0 1px var(--lattice-overlay-faint); }

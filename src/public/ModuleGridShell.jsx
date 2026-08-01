@@ -507,7 +507,10 @@ export default function ModuleGridShell({
   } = artworkController;
   artworkNavigationClearRef.current = artworkActions.clearForSpatialNavigation;
 
-  if (previewDocument) return <ProfileDocumentPreview document={previewDocument} onExit={stopPreview} onMoveKeeper={residentHandoff?.moveToScreenPosition} onMoveKeeperHorizontally={residentHandoff?.moveHorizontallyToScreenPosition} />;
+  if (previewDocument) return <ProfileDocumentPreview document={previewDocument} keeperVisible={keeperVisible}
+    onCancelKeeperDock={residentHandoff?.cancel} onDockKeeper={residentHandoff?.start} onExit={stopPreview}
+    onMoveKeeper={residentHandoff?.moveToScreenPosition} onMoveKeeperHorizontally={residentHandoff?.moveHorizontallyToScreenPosition}
+    onReleaseKeeper={residentHandoff?.exit} onUpdateKeeperDock={residentHandoff?.updateBounds} />;
 
   const spatialLayerTarget = typeof document === 'undefined' ? null : document.querySelector('.application-root');
 

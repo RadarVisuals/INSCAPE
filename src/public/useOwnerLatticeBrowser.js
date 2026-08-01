@@ -16,7 +16,7 @@ export function createOwnerLatticeCategoryCommands(profileAddress, getStore = us
   });
 }
 
-export default function useOwnerLatticeBrowser(profileAddress, open) {
+export default function useOwnerLatticeBrowser(profileAddress) {
   const profile = normalizeProfileAddress(profileAddress);
   const storeProfileAddress = useLibraryStore((state) => state.profileAddress);
   const workspace = useLibraryStore((state) => state.workspace);
@@ -35,8 +35,8 @@ export default function useOwnerLatticeBrowser(profileAddress, open) {
   }, [profile, setProfileAddress]);
 
   useEffect(() => {
-    if (open && profileReady && status === 'idle') load();
-  }, [load, open, profileReady, status]);
+    if (profileReady && status === 'idle') load();
+  }, [load, profileReady, status]);
 
   const data = useMemo(() => adaptLatticeProductionBrowserData({
     assets: profileReady ? assets : [],

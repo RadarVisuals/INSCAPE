@@ -262,6 +262,9 @@ function App() {
             publishedResolution={publishedResolution}
             onPublicationConfirmed={retryPublishedProfile}
           /> : <PublishedProfileBoundary address={viewedProfileAddress}
+            keeperVisible={keeperUserVisible}
+            onCancelKeeperDock={residentHandoff.cancel}
+            onDockKeeper={residentHandoff.start}
             resolution={publishedResolution}
             onRetry={retryPublishedProfile}
             returnProfileAddress={profileTarget.source === PROFILE_TARGET_SOURCE.EXPLICIT
@@ -269,7 +272,9 @@ function App() {
               : null}
             onVisitProfile={visitProfile}
             onMoveKeeper={residentHandoff.moveToScreenPosition}
-            onMoveKeeperHorizontally={residentHandoff.moveHorizontallyToScreenPosition} />
+            onMoveKeeperHorizontally={residentHandoff.moveHorizontallyToScreenPosition}
+            onReleaseKeeper={residentHandoff.exit}
+            onUpdateKeeperDock={residentHandoff.updateBounds} />
         )}
       </div>
       <Startveil

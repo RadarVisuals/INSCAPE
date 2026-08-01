@@ -90,9 +90,9 @@ test('published Keeper movement callback is wired without passing the owner hand
   const worldSource = readFileSync(resolve(here, 'PublishedHomeWorld.jsx'), 'utf8');
   assert.match(appSource, /<PublishedProfileBoundary[^>]*onMoveKeeper=\{residentHandoff\.moveToScreenPosition\}/);
   assert.match(appSource, /onMoveKeeperHorizontally=\{residentHandoff\.moveHorizontallyToScreenPosition\}/);
-  assert.match(boundarySource, /<PublishedProfileDocumentPreview document=\{visibleDocument\} onMoveKeeper=\{onMoveKeeper\}/);
+  assert.match(boundarySource, /<PublishedProfileDocumentPreview document=\{visibleDocument\}[\s\S]*onMoveKeeper=\{onMoveKeeper\}/);
   assert.match(boundarySource, /onMoveKeeperHorizontally=\{onMoveKeeperHorizontally\}/);
-  assert.match(previewSource, /<PublishedHomeWorld document=\{document\} onMoveKeeper=\{onMoveKeeper\}/);
+  assert.match(previewSource, /<PublishedHomeWorld document=\{document\} onExit=\{onExit\} onMoveKeeper=\{onMoveKeeper\}/);
   assert.match(previewSource, /onMoveKeeperHorizontally=\{onMoveKeeperHorizontally\}/);
   assert.match(worldSource, /<HomeWorldSurface[^>]*onMoveKeeper=\{onMoveKeeper\}/);
   assert.match(worldSource, /<GalleryWorld[\s\S]*onMoveKeeperHorizontally=\{onMoveKeeperHorizontally\}/);

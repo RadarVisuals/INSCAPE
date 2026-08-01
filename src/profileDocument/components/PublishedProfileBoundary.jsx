@@ -33,15 +33,20 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
   </main>;
 }
 
-export default function PublishedProfileBoundary({ address, resolution, onRetry, returnProfileAddress, onVisitProfile, onMoveKeeper, onMoveKeeperHorizontally }) {
+export default function PublishedProfileBoundary({
+  address, keeperVisible, onCancelKeeperDock, onDockKeeper, resolution, onRetry, returnProfileAddress, onVisitProfile,
+  onMoveKeeper, onMoveKeeperHorizontally, onReleaseKeeper, onUpdateKeeperDock,
+}) {
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
   const canReturn = Boolean(returnProfileAddress && returnProfileAddress.toLowerCase() !== String(address || '').toLowerCase());
   const returnHome = canReturn ? () => onVisitProfile?.(returnProfileAddress) : null;
   const content = !visibleDocument
     ? <PublishedStatusSurface state={resolution} onRetry={onRetry} onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
-    : <><PublishedProfileDocumentPreview document={visibleDocument} onMoveKeeper={onMoveKeeper} onMoveKeeperHorizontally={onMoveKeeperHorizontally}
-      onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
+    : <><PublishedProfileDocumentPreview document={visibleDocument} keeperVisible={keeperVisible}
+      onCancelKeeperDock={onCancelKeeperDock} onDockKeeper={onDockKeeper} onMoveKeeper={onMoveKeeper}
+      onMoveKeeperHorizontally={onMoveKeeperHorizontally} onOpenDirectory={() => setDirectoryOpen(true)}
+      onReleaseKeeper={onReleaseKeeper} onReturn={returnHome} onUpdateKeeperDock={onUpdateKeeperDock} />
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={onRetry} /></div>}
     </>;
   return <>{content}{directoryOpen && <ProfileDiscoveryBoundary onClose={() => setDirectoryOpen(false)} onSelect={(profile) => {

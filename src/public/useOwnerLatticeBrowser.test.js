@@ -7,12 +7,19 @@ const source = readFileSync(new URL('./useOwnerLatticeBrowser.js', import.meta.u
 test('owner Browser hook exposes adapted data and a narrow guarded category boundary', () => {
   assert.match(source, /useLibraryStore/);
   assert.match(source, /setProfileAddress\(profile\)/);
-  assert.match(source, /open && profileReady && status === 'idle'/);
+  assert.match(source, /profileReady && status === 'idle'/);
+  assert.doesNotMatch(source, /open && profileReady/);
   assert.match(source, /adaptLatticeProductionBrowserData/);
   assert.match(source, /commitCategoryForProfile/);
   assert.doesNotMatch(source, /toggleFavorite|createFolder\(|renameFolder\(|deleteFolder\(|replaceWorkspace/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|latticeProductionDraftStore|commitCompletedOperation/);
   assert.doesNotMatch(source, /loadLibraryWorkspace|saveLibraryWorkspace|normalizeWorkspace|libraryWorkspaceKey/);
+});
+
+test('owner asset loading is profile-runtime owned and never depends on opening Browser', () => {
+  const loadEffect = source.slice(source.indexOf("if (profileReady && status === 'idle')"), source.indexOf('const data = useMemo'));
+  assert.match(loadEffect, /load\(\)/);
+  assert.doesNotMatch(loadEffect, /\bopen\b/);
 });
 
 test('owner Browser data is gated by both active store and workspace profile', () => {
