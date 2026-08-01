@@ -42,8 +42,18 @@ test('keeps three ordered modules in place with exactly one controlled expanded 
   assert.match(source, /aria-expanded=\{active\}/);
   assert.match(source, /inert=\{!active \? '' : undefined\}/);
   assert.match(source, /--lattice-identity-module-y/);
+  assert.match(source, /--lattice-identity-module-clip-bottom/);
   assert.match(styles, /transform: translate3d\(0, var\(--lattice-identity-module-y\), 0\)/);
-  assert.match(styles, /will-change: transform, height/);
+  assert.match(styles, /clip-path: inset\(0 0 var\(--lattice-identity-module-clip-bottom\) 0\)/);
+  assert.match(styles, /will-change: transform, clip-path/);
+  assert.doesNotMatch(styles, /__module\s*\{[^}]*transition:[^;}]*height 300ms/);
+});
+
+test('reveals fixed panel geometry without relaying out link content on every animation frame', () => {
+  assert.match(source, /--lattice-identity-panel-height/);
+  assert.match(styles, /height: var\(--lattice-identity-panel-height\)/);
+  assert.match(styles, /contain: layout paint style/);
+  assert.doesNotMatch(styles, /__panel\s*\{[^}]*flex:\s*1/);
 });
 
 test('inherits shared theme and typography roles with scrollable long-form content and reduced motion', () => {

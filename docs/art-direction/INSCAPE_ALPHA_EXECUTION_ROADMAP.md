@@ -697,7 +697,7 @@ Click-to-move correction checkpoint (2026-07-31, awaiting interactive acceptance
 
 ## Phase 8 — publication and visitor integration
 
-Status: `[~]`
+Status: `[x]`
 
 Goal: publish and resolve the canonical nine-table workspace through the existing wallet/IPFS flow.
 
@@ -802,7 +802,7 @@ Phase 8A completion audit (2026-08-01): the version-aware boundary routes readab
 
 ## Phase 8B — version 8 publication
 
-Status: `[~]` — implementation, automatic verification, and publication-surface inspection accepted on 2026-08-01; awaiting one real revision-one/revision-two publication acceptance cycle.
+Status: `[x]` — implementation, automatic verification, publication-surface inspection, and the real revision-one/revision-two publication cycle were interactively accepted on 2026-08-01.
 
 Goal: publish one frozen, canonical version-8 owner lattice snapshot through the unchanged public-IPFS, wallet, ERC725Y-pointer, and exact read-back sequence. The already deployed version-aware resolver remains the reader authority, and versions 1–7 remain readable through the legacy renderer.
 
@@ -863,6 +863,8 @@ Automatic verification passes 56/56 focused builder, validator, canonical-public
 
 Interactive surface acceptance (2026-08-01): the owner accepted the PUBLISH RÄCK presentation, explicit snapshot preparation, FROZEN/STALE refresh behavior, and close/focus-return boundary. No upload, wallet signature, transaction, or on-chain pointer change was performed. Phase 8B remains open only for the explicit revision-one/revision-two publication and cross-route read-back matrix.
 
+Final Phase 8B acceptance (2026-08-01): the owner published a real version-8 revision one from the verified production deployment, opened that published workspace through the direct `?view=0x…` route while authenticated as a different Universal Profile, then made one public owner-workspace change and published revision two. The second visitor read-back exposed the updated workspace correctly. This interactively confirms the public-IPFS upload, canonical CID verification, owner wallet transaction, on-chain pointer, latest-revision resolver, cross-account isolation, and direct visitor route. Phase 8 is complete; no rollback or data repair is required.
+
 ## Phase 9 — parallel cutover and Alpha hardening
 
 Status: `[ ]`
@@ -879,6 +881,8 @@ Includes:
 - CSS/JS budget and build checks;
 - live Netlify/domain smoke test;
 - no Gallery room, Upper room, social room, marketplace execution, mobile authoring, or Keeper dialogue system in Alpha unless separately approved.
+
+Signed-out direct-visit correction (2026-08-01, awaiting live acceptance): an explicit public `?view=0x…` target already resolves independently of wallet authority, but the Startveil gesture still opened the standalone sign-in modal whenever no wallet was connected. Entry now suppresses that connector request only for an explicit public profile target. The ordinary homepage retains sign-in, embedded visits remain host-owned, connected owner routing is unchanged, and the public boundary still receives no wallet or authoring capabilities. Focused routing, URL, owner-access, and visitor-isolation checks pass 14/14. The required visual test is a fresh private browser with no extension: open a published direct URL, enter through Startveil, and confirm the workspace is immediately viewable without a login modal.
 
 User visual test: complete Alpha acceptance checklist on localhost, deploy preview, `enterinscape.com`, direct visit, and Universal Profile iframe.
 
@@ -942,4 +946,4 @@ Start with:
 
 ## Immediate next action
 
-Perform one explicit revision-one publication and one revision-two publication, then execute the recorded cross-account/direct/iframe read-back matrix. Confirm the resolved canonical bytes, latest revision, all nine public tables, Viewer, Identity RÄCK, Keeper behavior, and absence of owner/private state. Do not begin Phase 9 until that acceptance boundary is complete.
+Begin Phase 9 with a read-only production-cutover and Alpha-hardening audit against the accepted `cef32fb` runtime and the live version-8 revision-two publication. Preserve the version-7 fallback and current rollback point; do not begin legacy deletion until the Phase 9 audit has classified routing, deployment, mobile/accessibility, failure recovery, observability, and remaining manual coverage.

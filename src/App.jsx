@@ -14,11 +14,19 @@ import { useWalletStore } from './store/useWalletStore.js';
 import { resolveLibraryProfile, resolveWorkspaceProfile } from './library/config.js';
 import { loadRestoredPresentation } from './profileDocument/storage/profilePresentationStorage.js';
 import { createViewedProfileUrl, resolveExplicitViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
-import { PROFILE_TARGET_SOURCE, resolveProfileTarget } from './profileDiscovery/profileTarget.js';
+import {
+  PROFILE_TARGET_SOURCE,
+  resolveProfileTarget,
+  shouldRequestStandaloneSignIn
+} from './profileDiscovery/profileTarget.js';
 import PublishedProfileBoundary from './profileDocument/components/PublishedProfileBoundary.jsx';
 import { usePublishedProfile } from './profileDocument/state/usePublishedProfile.js';
 import { PUBLISHED_PROFILE_STATUS } from './profileDocument/storage/luksoPublishedProfileRepository.js';
-import { resolveOwnerAuthoringEnabled, selectPublicProfileRoute } from './public/publicAccess.js';
+import {
+  resolveOwnerAuthoringEnabled,
+  selectPublicProfileRoute,
+  selectResidentActorVisible
+} from './public/publicAccess.js';
 import { reportControlledError } from './diagnostics.js';
 
 const AtelierExperience = lazy(() => import('./app/AtelierExperience.jsx'));
@@ -85,6 +93,12 @@ function App() {
     ? publishedResolution.document
     : null;
   const canvasDocument = previewDocument || publishedDocument;
+  const residentActorVisible = selectResidentActorVisible({
+    actorRevealVisible: actorVisible,
+    keeperVisible: keeperUserVisible,
+    ownerRuntime: effectiveApplicationMode === APPLICATION_MODES.ATELIER || localOwnerRoute,
+    publishedVisitorReady: interfaceVisible && Boolean(publishedDocument)
+  });
 
   useEffect(() => {
     if (window.parent !== window) {
@@ -195,10 +209,14 @@ function App() {
 
   const handleUserGesture = useCallback(() => {
     canvasRef.current?.acknowledgeUserGesture();
-    if (window.parent === window && !useWalletStore.getState().isWalletConnected) {
+    if (shouldRequestStandaloneSignIn({
+      embedded: window.parent !== window,
+      walletConnected: useWalletStore.getState().isWalletConnected,
+      targetSource: profileTarget.source
+    })) {
       void standaloneWalletSessionRef.current?.then((session) => session?.showSignIn());
     }
-  }, []);
+  }, [profileTarget.source]);
 
   const registerDesktopContextMenu = useCallback((handler) => {
     desktopContextMenuRef.current = handler;
@@ -215,7 +233,7 @@ function App() {
         <div className="application-resident-canvas">
           <ArtCanvas
             ref={canvasRef}
-            actorVisible={actorVisible && keeperUserVisible && (effectiveApplicationMode === APPLICATION_MODES.ATELIER || localOwnerRoute || Boolean(publishedDocument))}
+            actorVisible={residentActorVisible}
             stageVisible={effectiveApplicationMode === APPLICATION_MODES.ATELIER && stageUserVisible}
             foregroundOnly={effectiveApplicationMode === APPLICATION_MODES.PUBLIC}
             reducedMotion={revealPresentation.reducedMotion}

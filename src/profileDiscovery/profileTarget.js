@@ -31,3 +31,9 @@ export function resolveProfileTarget({
 
   return { address: null, source: PROFILE_TARGET_SOURCE.NONE, pending: false };
 }
+
+export function shouldRequestStandaloneSignIn({ embedded, walletConnected, targetSource }) {
+  return !embedded
+    && !walletConnected
+    && targetSource !== PROFILE_TARGET_SOURCE.EXPLICIT;
+}

@@ -179,11 +179,17 @@ export default function LatticeProductionIdentityDossier({
   };
   const collapsedRackHeight = (SECTIONS.length - 1) * 53 + (SECTIONS.length - 1) * 5;
   const expandedModuleHeight = Math.round(Math.max(53, layout.rack.height - collapsedRackHeight));
+  const expandedPanelHeight = Math.max(0, expandedModuleHeight - 53);
   let moduleTop = 0;
   const moduleTracks = new Map(SECTIONS.map(({ id }) => {
-    const height = id === activeSection ? expandedModuleHeight : 53;
-    const track = { height, '--lattice-identity-module-y': `${Math.round(moduleTop)}px` };
-    moduleTop += height + 5;
+    const active = id === activeSection;
+    const track = {
+      height: expandedModuleHeight,
+      '--lattice-identity-module-y': `${Math.round(moduleTop)}px`,
+      '--lattice-identity-panel-height': `${expandedPanelHeight}px`,
+      '--lattice-identity-module-clip-bottom': active ? '0px' : `${expandedPanelHeight}px`
+    };
+    moduleTop += (active ? expandedModuleHeight : 53) + 5;
     return [id, track];
   }));
   return createPortal(<section

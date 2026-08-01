@@ -17,6 +17,17 @@ export function selectPublicProfileRoute(ownerAuthoringEnabled) {
   return ownerAuthoringEnabled === true ? 'LOCAL_OWNER' : 'PUBLISHED_VISITOR';
 }
 
+export function selectResidentActorVisible({
+  actorRevealVisible,
+  keeperVisible,
+  ownerRuntime,
+  publishedVisitorReady
+}) {
+  return actorRevealVisible === true
+    && keeperVisible === true
+    && (ownerRuntime === true || publishedVisitorReady === true);
+}
+
 export function selectLiveCanvasContent(workspace, ownerAuthoringEnabled) {
   const objects = Array.isArray(workspace?.canvas?.objects) ? workspace.canvas.objects : [];
   return { objects: ownerAuthoringEnabled ? objects : objects.filter((object) => object.visitorVisible === true) };
