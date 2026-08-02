@@ -1,6 +1,6 @@
 # INSCAPE MODUL-8R Roadmap and Boundary
 
-Status: accepted prototype authority and production boundary; Tasks 1–8 are implemented and interactively accepted. Task 9 remains unstarted.
+Status: accepted prototype authority and production boundary; Tasks 1–9 are implemented, automatically verified, and interactively accepted.
 
 ## Purpose
 
@@ -270,11 +270,17 @@ Implementation checkpoint (2026-08-02): production now selects the production-na
 
 ### Task 9 — post-acceptance cleanup
 
-Status: `[ ]`
+Status: `[x]`
 
 After live Task 8 acceptance, perform a fresh reachability inventory and delete only presentation code proven unreachable. Candidate deletions include the old Rack presentation, old Browser window composition, unreachable tab panels/exports, and superseded launcher wiring. Retain repositories, stores, canonical commands, compatibility readers, published-document support, user assets, and the accepted rollback checkpoint.
 
 Delete in small reviewable slices with full behavior, build, budget, isolation, route, publication, and live smoke verification after each slice. Cleanup must not change visible behavior.
+
+Implementation checkpoint (2026-08-02): a fresh selected-production, exact-LATTICE-rollback, shared-authority, visitor/direct/iframe, and test/development reachability audit proved only the superseded `BrowserIndexPanel.jsx`, `BrowserCategoriesPanel.jsx`, and their exclusive tab/category-section CSS genuinely unreachable. Those two panels and only the obsolete `.lattice-browser-tabs`, `.lattice-browser-category-actions`, `.lattice-browser-category-section`, and `.lattice-browser-section-label` rules are removed. `BrowserWorkspace`, `LatticeRackShell`, standalone Activity/Creations/Settings/Theme/Profile Discovery presentation, visitor compatibility surfaces, repositories, stores, controllers, canonical commands, publication, wallet/IPFS, profile routing, fixtures, prototypes, and the development wrapper remain because they are reachable through the exact rollback, visitor compatibility, shared authority, or test/development boundaries.
+
+Focused production-shell/Browser/selector/isolation checks pass 110/113, with three unchanged stale development-wrapper source assertions; the wider Library/Activity/People/Layers/Settings/routing/storage/Preview/Publish/publication matrix passes 211/211, build utilities pass 10/10, and the real Edge MODUL-8R shell matrix passes 1/1. The exact two-line LATTICE rollback and restored MODUL-8R production selector both build within budgets, `build:check` passes, selected production reports zero owner leaks and zero old Browser/Rack, deleted-panel, development-route, fixture, or structure-only markers. The sequential full suite completes 1,009/1,015: the three documented stale Phase 3/viewer/frozen-prototype failures remain, plus the same three stale development-wrapper assertions; no failure reaches the Task 9 diff. The ordinary owner-navigation and Browser harnesses exceeded their deadlines, profile routing passed 1/3 before its known navigation timing/cleanup instability, and the legacy published-visitor harness again failed before fixture mount. Live localhost, deploy-preview/domain, direct-route, iframe, and rollback acceptance remains required before `[x]`.
+
+Interactive acceptance (2026-08-02): the owner approved the complete Task 9 cleanup and live acceptance checklist. Task 9 is `[x]`; no later or post-Alpha work is authorized by this acceptance.
 
 ## Explicit Alpha exclusions
 
