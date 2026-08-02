@@ -216,6 +216,59 @@ Status: `[ ]`
 
 Verify the complete owner workflow, progressive data, failure states, context-menu ownership, keyboard/focus, reduced motion, responsive and compact layouts, six themes, creator/non-owner presentation, Layers usage navigation, build budgets, owner/visitor import isolation, direct visits, publication rollback, and live deployment. Delete only code proven unreachable after this gate.
 
+## Executable production integration tasks
+
+These tasks are the approved execution order. A fresh Codex may be told `execute Task N` only after reading this entire boundary, the Alpha execution roadmap, and the accepted prototype authority at `/prototype/modul-8r`. Completing one task does not authorize starting the next. Every task ends with focused verification, interactive acceptance, a roadmap update, and a reversible checkpoint commit. Prototype source must never be imported into production.
+
+### Task 1 — master shell cutover
+
+Implement M1 only. Reproduce the accepted MODUL-8R master faceplate and its open/close transition in the existing production owner window while preserving the current Browser content, tools, Layers behavior, free movement, horizontal rack resizing, Browser-height resizing, Escape, close, focus restoration, narrow-viewport containment, reduced motion, and all six themes.
+
+Primary production boundary:
+
+- `src/lattice/windows/LatticeRackShell.jsx`;
+- `src/lattice/windows/latticeRackShell.css`;
+- `src/lattice/browser/BrowserWorkspace.jsx`;
+- `src/lattice/browser/browserWorkspace.css`;
+- their focused tests;
+- this boundary and the Alpha execution roadmap after acceptance.
+
+Do not add Activity or People, merge repositories, change Library navigation, remove compatibility windows, alter `OwnerLatticeShell` routing, or change storage, publication, wallet, visitor, schema, metadata, Keeper, NFT viewer, or Identity RÄCK behavior. Remove production compact-mode UI/state only where it belongs exclusively to the universal owner rack and its removal is covered by focused tests. Rollback is the immediately preceding production `THE RACK` shell checkpoint.
+
+Acceptance: the production surface matches the accepted master faceplate rather than copying prototype implementation code; existing Browser and authoring behavior is unchanged; there are no prototype imports in the production graph.
+
+### Task 2 — shared exclusive module chassis
+
+Implement M2 presentation/state ownership only. Add stable LIBRARY, ACTIVITY, PEOPLE, and LAYERS faceplates in accepted order and one shared animated content chassis. Exactly one module is open; activation anywhere on a faceplate opens it and closes the previous module; repeated activation closes it without label movement, transient scrollbars, reversed animation, gaps, or duplicate borders. Preserve keyboard activation, focus, responsive controls, right-edge resizing, and theme contrast.
+
+Use bounded placeholder/adapters if necessary, but do not migrate or merge repositories and do not retire standalone windows. Rollback is Task 1 plus the existing Browser/Layers composition.
+
+### Task 3 — Library production adapter
+
+Implement M3. Mount the existing Library workspace in the LIBRARY chassis, add honest OWNED and CREATED smart views through a bounded deduplicating adapter, retain ALL ASSETS, UNSORTED, custom categories, search, sort, labels, size, multi-select, drag-to-category, and drag-to-canvas. Do not remove USED ON CANVAS until Task 6 supplies equivalent all-table discovery. Preserve provenance; never convert creator attribution into ownership.
+
+Rollback retains the pre-Task-3 Browser adapter and all Library/category storage unchanged.
+
+### Task 4 — Activity adapter
+
+Implement M4. Mount indexed event history in ACTIVITY with loading, partial, failure, retry, refresh, search, density/size behavior, honest event-history labelling, and accepted target routing. Do not invent unread state or treat events as metadata. Keep the standalone Activity window as rollback until interactive acceptance, then remove only its active launcher wiring.
+
+### Task 5 — People adapter
+
+Implement M5. Mount public profile discovery in PEOPLE with search, size/density behavior, public-profile routing, loading/failure states, and no private owner imports. Do not add follows, favorites, lists, recents, or persistence. Keep standalone Discover as rollback until interactive acceptance; Gallery remains retired.
+
+### Task 6 — Layers and usage consolidation
+
+Implement M6. Preserve active-table thumbnails, exact z-order, selection, multi-select, and canonical reorder operations. Add non-reorderable all-table placement discovery sufficient to replace USED ON CANVAS. Only after equivalence is interactively accepted may the redundant Library row be removed.
+
+### Task 7 — Settings and launcher consolidation
+
+Implement M7. Move Theme into Settings with equivalent six-theme access, contrast, Escape, close, and trigger-focus restoration. Add the approved empty-grid contextual launcher without PREVIEW or PUBLISH. Retire compatibility CREATIONS, ACTIVITY, and DISCOVER launcher paths only where Tasks 3–5 provide accepted parity.
+
+### Task 8 — cleanup and Alpha gate
+
+Implement M8. Run the complete focused and full verification matrix, production build/budgets, owner/visitor import isolation, direct visitor routes, publication rollback, responsive layouts, reduced motion, keyboard/focus, and live deployment checks. Delete only code proven unreachable by the accepted production routes and rollback decision. Record exact removed files, retained compatibility boundaries, final budgets, test totals, commit, deployment, and genuine unresolved Alpha decisions.
+
 ## Explicit Alpha exclusions
 
 The following concepts are documented but excluded from the MODUL-8R Alpha consolidation:
