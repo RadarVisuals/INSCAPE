@@ -1,6 +1,6 @@
 # INSCAPE MODUL-8R Roadmap and Boundary
 
-Status: accepted prototype authority and production boundary; Tasks 1–6 are implemented and interactively accepted behind the development-only boundary below. Task 7 remains unstarted.
+Status: accepted prototype authority and production boundary; Tasks 1–7 are implemented and interactively accepted behind the development-only boundary below. Task 8 remains unstarted.
 
 ## Purpose
 
@@ -250,11 +250,13 @@ Accepted checkpoint (2026-08-02): the development-only live-owner MODUL-8R now m
 
 ### Task 7 — full development parity and bundle gate
 
-Status: `[ ]`
+Status: `[x]`
 
 Certify the complete development-only MODUL-8R against the accepted prototype and all existing production workflows. Verify pointer, keyboard, focus, Escape, context menus, queries, selections, module state, responsive layouts, reduced motion, no transient scrollbars/gaps, all repository failure states, owner/visitor isolation, and production budgets. Prove the development entrance and incomplete MODUL-8R graph are absent from production output.
 
 No live owner route changes. Failure returns to the relevant prior task while production continues using the old Rack and standalone windows.
+
+Accepted certification checkpoint (2026-08-02): automatic certification and the complete visual confirmation are interactively approved. No Task 1–6 product-code regression or parity gap was found, so Task 7 adds no corrective product scope. The complete focused MODUL-8R/controller/repository/owner-isolation matrix passes 176/176, and the real Edge shell matrix passes 1/1 across the accepted six viewports, all six themes, reduced motion, drag, resize, module lifecycle, collapse-state retention, close, Escape, and focus restoration. The sequential full suite completes 1,006/1,009: its three failures are pre-existing stale assertions outside the Task 7 change boundary—the Phase 3 visual-fixture graph whitelist predates later canonical authoring dependencies, the legacy viewer source test expects a now multiline `createLayout` call, and the frozen MODUL-8R prototype contrast parser accepts only hex while checkpoint `0f1136d` uses valid `rgb(...)` tokens. The forbidden frozen prototype and unrelated legacy fixture/viewer assertions remain untouched. The production build, budget gate, and 18/18 explicit production/owner-isolation checks pass; initial JavaScript is 1,238,211 raw bytes, the owner graph reports zero leaks, and production output contains zero `MODUL-8R`, `Modul8r`, development-route, or structure-only markers. `git diff --check` passes. Production continues using the old Rack and standalone windows; Task 8 remains unstarted.
 
 ### Task 8 — atomic production cutover
 
