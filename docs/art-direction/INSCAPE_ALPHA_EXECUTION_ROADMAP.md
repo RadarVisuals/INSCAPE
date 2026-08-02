@@ -61,7 +61,7 @@ Latest accepted MODUL-8R production-integration architecture checkpoint:
 
 Latest accepted MODUL-8R implementation checkpoint:
 
-- `16abf9b` — Task 4 Activity and People headless adapters in the development-only live-owner shell
+- `61b8775` — Task 5 honest OWNED/CREATED Library union in the development-only live-owner shell
 
 Last verified sequence at the time this roadmap was created:
 
@@ -924,6 +924,10 @@ MODUL-8R Task 4 status (2026-08-02): `[x]` — Activity and People headless cont
 
 MODUL-8R Task 4 accepted checkpoint (2026-08-02): checkpoint `16abf9b` makes the standalone Activity and Profile Discovery surfaces delegate request/query/selection state to DOM-free injected controllers while retaining their existing window, modal, focus, Escape, resize, and restoration ownership. Development-only Activity and People adapters consume those controllers through an explicit stable active lifecycle; switching modules, collapsing the master, closing MODUL-8R, or unmounting aborts active work without discarding accepted rows, results, query, or selection state. People selection still calls the existing owner `onVisitProfile` authority, and Activity retains indexed-event and official-profile-link provenance. The focused controller/repository/standalone/MODUL-8R/owner-isolation set passes 68/68, production-build utility tests pass 9/9, the six-theme/six-viewport shell browser matrix passes 1/1, the production build and budgets pass, and production output/manifest/owner-graph searches contain zero development MODUL-8R markers. The interactively approved limited aggregate core ceiling is 2,025,000 raw / 605,000 gzip; actual core is 2,021,273 raw / 603,175 gzip while initial entry remains 1,238,211 raw / 361,786 gzip. The pre-existing real-App owner-routing browser harness passed two cases but its owner A-to-B case failed twice during Startveil/navigation timing, and the published-visitor fixture failed before mounting; neither failure is claimed as a Task 4 pass. Task 5 remains not started.
 
+MODUL-8R Task 5 status (2026-08-02): `[x]` — the honest OWNED/CREATED Library union is implemented, automatically verified, and interactively accepted at implementation checkpoint `61b8775`.
+
+MODUL-8R Task 5 accepted checkpoint (2026-08-02): checkpoint `61b8775` projects independently progressive owned and strongly creator-attributed records into one canonical stable-ID union. Owned records remain authoritative on overlap; created-only records use the adapter's explicit strong-created path without manufactured ownership, remain visibly `CREATED · NOT OWNED`, and retain actual or null current-owner facts. Accepted created records remain available to canonical placement and editing when MODUL-8R closes, while active CREATED network work is cancelled; profile changes and unmount clear the supplemental authority. Focused correction tests pass 53/53, the expanded Task 3–5/creator/category/viewer/placement/owner-isolation set passes 185/185, the MODUL-8R browser matrix passes 1/1, `npm run build`, `npm run build:check`, and `git diff --check` pass, and production budgets remain within the accepted ceiling. Initial JavaScript is 1,238,211 raw / 361,798 gzip, owner JavaScript is 262,968 raw / 79,544 gzip, and aggregate core JavaScript is 2,021,889 raw / 603,402 gzip. Task 6 remains unstarted and requires a separate explicit instruction.
+
 User visual test: complete Alpha acceptance checklist on localhost, deploy preview, `enterinscape.com`, direct visit, and Universal Profile iframe.
 
 Exit criterion: the user approves the complete live Alpha experience and rollback remains available.
@@ -986,4 +990,4 @@ Start with:
 
 ## Immediate next action
 
-Stop at the accepted MODUL-8R Task 4 checkpoint `16abf9b`. Keep the current `THE RACK`, Browser, standalone CREATIONS/ACTIVITY/DISCOVER/Theme surfaces, production routes, and prototype untouched. Do not begin Task 5 CREATED, Task 6 Layers/Settings/Theme parity, broad deletion, embedded mode, Atelier/control cells, MEDI-8R, persistence, schema, publication, wallet, or visitor work without separate approval.
+MODUL-8R Task 5 is `[x]` at implementation checkpoint `61b8775` and is interactively accepted. Task 6 Layers/Settings/Theme parity remains `[ ]` and has not started. Keep the current `THE RACK`, Browser, standalone CREATIONS/ACTIVITY/DISCOVER/Theme surfaces, production routes, and prototype untouched. Do not begin Task 6, broad deletion, embedded mode, Atelier/control cells, MEDI-8R, persistence, schema, publication, wallet, or visitor work without separate approval.

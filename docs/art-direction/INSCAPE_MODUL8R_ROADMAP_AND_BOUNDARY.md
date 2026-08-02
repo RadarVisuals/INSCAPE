@@ -1,6 +1,6 @@
 # INSCAPE MODUL-8R Roadmap and Boundary
 
-Status: accepted prototype authority and production boundary; Tasks 1–4 are implemented and interactively accepted behind the development-only boundary below. Task 5 is not started.
+Status: accepted prototype authority and production boundary; Tasks 1–5 are implemented and interactively accepted behind the development-only boundary below. Task 6 remains unstarted.
 
 ## Purpose
 
@@ -228,11 +228,13 @@ Accepted checkpoint (2026-08-02): checkpoint `16abf9b` makes Activity and People
 
 ### Task 5 — honest OWNED/CREATED Library union
 
-Status: `[ ]`
+Status: `[x]`
 
 Add CREATED through the existing creator-attribution repository/store and deduplicate it with the owned projection in `ALL ASSETS`. Preserve stable IDs, ownership, creator provenance, categories, unresolved states, and NFT-viewer facts. Created-but-not-owned work remains explicitly creator-attributed and must never be presented as owned.
 
 Do not rewrite Library storage, NFT metadata, category membership, canonical placements, or publication. Metadata-only authored attribution remains excluded unless separately approved with an explicit unverified label.
+
+Accepted checkpoint (2026-08-02): implementation checkpoint `61b8775` makes the development-only Library project a stable-ID union over independently progressive owned and strong indexed creator-attribution sources. Owned records remain authoritative on overlap; creator provenance is merged without downgrading ownership, and created-only records pass the adapter's explicit strong-created path without manufactured `ownerAddress`, remain explicitly labelled `CREATED · NOT OWNED`, and retain actual or null current-owner facts. Closing MODUL-8R cancels active CREATED network work without clearing accepted supplemental records, so created-only placements remain resolvable through move, resize, crop, layer, duplicate, and remove; reopening reuses accepted results, while profile changes and unmount clear the supplemental authority. The existing workspace-v8 category IDs, production rack viewer, decoded media path, selection controller, and canonical placement session remain the only corresponding authorities. Focused correction tests pass 53/53, the expanded Task 3–5/creator/category/viewer/placement/owner-isolation set passes 185/185, the browser-shell matrix passes 1/1, the production build and budget check pass, and `git diff --check` passes. Initial JavaScript is 1,238,211 raw / 361,798 gzip, owner JavaScript is 262,968 raw / 79,544 gzip, and aggregate core JavaScript is 2,021,889 raw / 603,402 gzip. Task 5 is interactively accepted. Task 6 remains `[ ]` and unstarted pending a separate explicit instruction.
 
 ### Task 6 — Layers usage and Settings/Theme parity
 
