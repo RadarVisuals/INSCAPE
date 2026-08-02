@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { luksoActivityRepository } from '../signals/data/luksoActivityRepository.js';
+import { useEffect, useRef, useState } from 'react';
 import { abbreviateAddress } from '../signals/domain/signalMessages.js';
+import useActivityController from '../signals/state/useActivityController.js';
 import { getOfficialProfileUrl, PROFILE_IDENTITY_STATUS, useProfileIdentity } from '../profileIdentity/index.js';
 import {
   initialCategoryBrowserRect,
@@ -47,50 +47,16 @@ function ActivityIdentity({ address }) {
   </span>;
 }
 
-export default function ActivityBrowser({ visible = false, open = false, onOpenChange, profileAddress, menuSurfaceId = 'mist' }) {
-  const abortRef = useRef(null);
-  const generationRef = useRef(0);
+export default function ActivityBrowser({ visible = false, open = false, onOpenChange, profileAddress, menuSurfaceId = 'mist', repository }) {
   const resizeRef = useRef(null);
   const [viewport, setViewport] = useState(viewportSize);
   const [rect, setRect] = useState(() => initialCategoryBrowserRect(viewportSize()));
-  const [activity, setActivity] = useState([]);
-  const [status, setStatus] = useState('idle');
-  const [error, setError] = useState(null);
-  const [partialError, setPartialError] = useState(null);
-
-  const load = useCallback(async () => {
-    if (!profileAddress) return;
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    const generation = ++generationRef.current;
-    let timedOut = false;
-    const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 15000);
-    setStatus('loading');
-    setError(null);
-    setPartialError(null);
-    try {
-      const result = await luksoActivityRepository.loadRecentActivity(profileAddress, { signal: controller.signal });
-      if (generation !== generationRef.current || controller.signal.aborted) return;
-      setActivity(result.signals);
-      setPartialError(result.partialError || null);
-      setStatus(result.partialError ? 'partial' : 'ready');
-    } catch (loadError) {
-      if (generation !== generationRef.current) return;
-      if (controller.signal.aborted && !timedOut) return;
-      setStatus('error');
-      setError(timedOut ? 'ACTIVITY SOURCE DID NOT RESPOND' : (loadError instanceof Error ? loadError.message : String(loadError)));
-    } finally {
-      window.clearTimeout(timeout);
-      if (abortRef.current === controller) abortRef.current = null;
-    }
-  }, [profileAddress]);
-
-  useEffect(() => {
-    if (open) load();
-    else abortRef.current?.abort();
-    return () => abortRef.current?.abort();
-  }, [load, open]);
+  const { error, partialError, refresh, retry, signals: activity, status } = useActivityController({
+    active: open,
+    profileAddress,
+    repository,
+  });
+  const displayStatus = status === 'idle' && open ? 'loading' : status;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -136,14 +102,14 @@ export default function ActivityBrowser({ visible = false, open = false, onOpenC
   };
 
   const workspace = open && typeof document !== 'undefined' ? createPortal(<section className="activity-browser" data-lattice-menu-surface data-menu-surface={menuSurfaceId} style={rect} aria-label="Profile activity" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
-    <header><strong>ACTIVITY</strong><span>NEWEST FIRST</span><button type="button" disabled={status === 'loading'} onClick={load}>{status === 'loading' ? 'LOADING' : 'REFRESH'}</button></header>
+    <header><strong>ACTIVITY</strong><span>NEWEST FIRST</span><button type="button" disabled={displayStatus === 'loading'} onClick={refresh}>{displayStatus === 'loading' ? 'LOADING' : 'REFRESH'}</button></header>
     <FloatingWindowCloseButton onClose={() => onOpenChange?.(false)} label="Close activity browser" />
     <div className="activity-browser__body">
       <div className="activity-browser__feedback">
         {partialError && <p className="activity-browser__notice" role="status">PARTIAL ON-CHAIN DATA</p>}
-        {status === 'loading' && !activity.length && <p className="activity-browser__status">LOADING PROFILE ACTIVITY</p>}
-        {status === 'error' && !activity.length && <div className="activity-browser__error" role="alert"><p>{error || 'ACTIVITY UNAVAILABLE'}</p><button type="button" onClick={load}>RETRY</button></div>}
-        {status !== 'idle' && status !== 'loading' && status !== 'error' && !activity.length && <p className="activity-browser__status">NO RECENT PROFILE ACTIVITY</p>}
+        {displayStatus === 'loading' && !activity.length && <p className="activity-browser__status">LOADING PROFILE ACTIVITY</p>}
+        {displayStatus === 'error' && !activity.length && <div className="activity-browser__error" role="alert"><p>{error || 'ACTIVITY UNAVAILABLE'}</p><button type="button" onClick={retry}>RETRY</button></div>}
+        {displayStatus !== 'idle' && displayStatus !== 'loading' && displayStatus !== 'error' && !activity.length && <p className="activity-browser__status">NO RECENT PROFILE ACTIVITY</p>}
       </div>
       <ol>
         {activity.map((signal, index) => <li key={signal.id}>

@@ -15,7 +15,7 @@ import './modul8rShell.css';
 const TRANSITION_FALLBACK_MS = 260;
 const INITIAL_SHELL_SIZE = Object.freeze({ height: 630, width: 980 });
 
-function Modul8rModule({ children, expanded, faceplateAccessoryRef, id, onToggle }) {
+function Modul8rModule({ active, children, expanded, faceplateAccessoryRef, id, onToggle }) {
   const [transitioning, setTransitioning] = useState(false);
   const previousExpandedRef = useRef(expanded);
 
@@ -60,7 +60,9 @@ function Modul8rModule({ children, expanded, faceplateAccessoryRef, id, onToggle
       }}
     >
       <div className="modul8r-module__body">
-        <div className="modul8r-module__content" id={`modul8r-${id}-content`}>{children}</div>
+        <div className="modul8r-module__content" id={`modul8r-${id}-content`}>
+          {typeof children === 'function' ? children({ active }) : children}
+        </div>
       </div>
     </div>
   </section>;
@@ -193,6 +195,7 @@ export default function Modul8rShell({
     >
       <div className="modul8r-modules">
         {MODUL8R_MODULE_ORDER.map((id) => <Modul8rModule
+          active={shellState.masterExpanded && shellState.openModule === id}
           expanded={shellState.openModule === id}
           faceplateAccessoryRef={moduleFaceplateAccessoryRefs[id]}
           id={id}

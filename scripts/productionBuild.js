@@ -77,9 +77,11 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Phase 8A.3 adds only the public identity adapter, trigger ownership, and
   // live public LSP3/RPC read boundary; the RACK itself remains lazy/reused.
   // Phase 8B adds one owner-triggered lazy publication module around the
-  // existing canonical IPFS/wallet/read-back pipeline. Initial entry remains
-  // unchanged; bound the measured standalone v8 publication chunk explicitly.
-  coreJavaScript: Object.freeze({ raw: 2_020_000, gzip: 602_000 }),
+  // existing canonical IPFS/wallet/read-back pipeline. MODUL-8R Task 4 adds
+  // shared headless controllers to the existing lazy Activity and Discovery
+  // surfaces while its adapters remain development-only. Initial entry stays
+  // unchanged; bound the measured aggregate production graph explicitly.
+  coreJavaScript: Object.freeze({ raw: 2_025_000, gzip: 605_000 }),
   publicAssets: Object.freeze({ raw: 15_200_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });

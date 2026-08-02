@@ -141,6 +141,13 @@ test('Activity opens indexed event history as a reversible profile window', () =
   assert.match(source, /activityTriggerRef\.current\.focus\(\{ preventScroll: true \}\)/);
 });
 
+test('development-only MODUL-8R reuses exact owner profile and public-profile routing authorities', () => {
+  assert.match(source, /<Modul8rOwnerLibraryDevelopment/);
+  assert.match(source, /profileAddress=\{profileAddress\}/);
+  assert.match(source, /onVisitProfile=\{onVisitProfile\}/);
+  assert.doesNotMatch(source, /Modul8rOwnerLibraryDevelopment[\s\S]*createViewedProfileUrl/);
+});
+
 test('Creations reuses creator-attributed data without restoring the rejected flip viewer', () => {
   assert.match(source, /id: 'creations', label: 'CREATIONS', note: 'CREATOR-ATTRIBUTED WORKS'/);
   assert.doesNotMatch(source, /id: 'creations'[^\n]*disabled: true/);

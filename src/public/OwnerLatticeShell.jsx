@@ -1222,6 +1222,8 @@ function OwnerLatticeRuntime({
             const draggedAssetId = browserDragGestureRef.current?.assetId;
             if (draggedAssetId && !assetIds.includes(draggedAssetId)) cancelBrowserAssetDrag();
           }}
+          onVisitProfile={onVisitProfile}
+          profileAddress={profileAddress}
         />
       </Suspense>}
       {themeOpen && <ThemeSurface

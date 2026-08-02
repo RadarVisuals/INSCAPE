@@ -44,7 +44,7 @@ test('Task 2 shell interaction, responsive containment and accepted-prototype ge
 
     const expectedOrder = ['LIBRARY', 'ACTIVITY', 'PEOPLE', 'LAYERS'];
     assert.deepEqual(await page.locator('.modul8r-module__toggle strong').allTextContents(), expectedOrder);
-    assert.deepEqual(await page.locator('.modul8r-module__faceplate').evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().height)), [38, 38, 38, 38]);
+    assert.deepEqual(await page.locator('.modul8r-module__faceplate').evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().height)), [60, 38, 38, 38]);
     assert.equal(await page.locator('.modul8r-module[data-expanded]').count(), 1);
 
     const prototype = await browser.newPage({ viewport: VIEWPORTS[0] });

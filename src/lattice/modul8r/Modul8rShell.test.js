@@ -14,6 +14,8 @@ test('component uses the Task 1 controller and exposes only real shell controls'
   assert.match(source, /aria-controls={`modul8r-\$\{id\}-content`}/);
   assert.match(source, /aria-expanded=\{expanded\}/);
   assert.match(source, /inert=\{!expanded \? '' : undefined\}/);
+  assert.match(source, /active=\{shellState\.masterExpanded && shellState\.openModule === id\}/);
+  assert.match(source, /typeof children === 'function' \? children\(\{ active \}\) : children/);
   assert.match(source, /floatingWindow\.rackWidthResize\.keyDown/);
   assert.match(source, /floatingWindow\.move\.begin\(event, \{ allowInteractiveTarget: true \}\)/);
   assert.match(source, /floatingWindow\.move\.consumeClickSuppression\(\)/);
