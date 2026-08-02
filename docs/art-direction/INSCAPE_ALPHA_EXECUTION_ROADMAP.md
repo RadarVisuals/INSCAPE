@@ -51,6 +51,10 @@ Latest accepted production checkpoint:
 
 - `bb17f9c` — universal owner RÄCK, Unified Browser, multi-select authoring, and grouped composition tools
 
+Latest accepted MODUL-8R design-authority checkpoint:
+
+- `0f1136d` — isolated development prototype, accepted visual and interaction authority; not yet imported into production
+
 Last verified sequence at the time this roadmap was created:
 
 - `350995f` — frozen lattice UI prototype
