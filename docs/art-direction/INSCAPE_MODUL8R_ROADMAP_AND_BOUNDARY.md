@@ -1,6 +1,6 @@
 # INSCAPE MODUL-8R Roadmap and Boundary
 
-Status: proposed product and implementation boundary; no runtime implementation is authorized by this document alone.
+Status: accepted prototype authority and production boundary; production runtime implementation still requires the staged boundary below.
 
 ## Purpose
 
@@ -16,21 +16,20 @@ The underlying interaction grammar remains a modular rack with faceplates and ex
 
 The current standalone CREATIONS, ACTIVITY, and DISCOVER owner windows are useful production bridges, but they are not the intended final information architecture. The direction to freeze through an isolated prototype is one freely positioned MODUL-8R with:
 
-1. one higher master faceplate;
+1. one 38px master faceplate aligned to the accepted owner RACK grammar;
 2. global authoring tools on that master faceplate;
 3. separate `LIBRARY`, `ACTIVITY`, and `PEOPLE` modules hosted by one shared content chassis and belonging to one exclusive-open group;
 4. Search and Size accessories rendered only where the active expanded module gives them honest behavior;
-5. one separate `LAYERS` module for the active composition and placement order;
+5. one separate `LAYERS` module for the active composition and placement order, participating in the same exclusive-open accordion;
 6. Theme inside Settings rather than as a separate top-level owner window;
 7. the current navigation rail and top-right owner chrome retained until a later embedded mode has complete, accessible replacements.
 
-The master can collapse all modules while keeping its direct tools reachable. Opening Library, Activity, or People collapses the previously open content module without swapping its faceplate position. Layers remains independently expandable because it is useful alongside Library and placement workflows. All expansion state remains session-only unless a later persistence boundary is approved.
+The master can collapse all modules while keeping its direct tools reachable. Opening Library, Activity, People, or Layers collapses the previously open module without swapping its faceplate position. All expansion state remains session-only unless a later persistence boundary is approved. The discarded compact mode is not part of the accepted Alpha interaction.
 
 ## Alpha visual anatomy
 
 ```text
-MODUL-8R                       ARRANGE  ROTATE  MIRROR  DUPLICATE  CLOSE
-                               truthful status indicators only
+MODUL-8R                       ARRANGE  ROTATE  MIRROR  DUPLICATE  MENU  CLOSE
 LIBRARY                        SEARCH                     SIZE
 expanded Library content
 ACTIVITY                       contextual accessories when expanded
@@ -38,9 +37,9 @@ PEOPLE                         contextual accessories when expanded
 LAYERS                                                   MOVE UP / DOWN
 ```
 
-The exact final measurements require visual acceptance, but the master faceplate may be moderately taller than the current 38px module faceplates so the instrument reads as a master device rather than another module row. Expanded content, controls, focus, hover, lines, text, and status indications inherit the existing active owner interface/theme tokens. NFT, profile, creator, owner, media, or other metadata never controls MODUL-8R colours.
+The accepted master and module faceplates are 38px high. Expanded content, controls, focus, hover, lines, and text inherit the existing active owner interface/theme tokens. NFT, profile, creator, owner, media, or other metadata never controls MODUL-8R colours.
 
-Status lights must report real state. They are not decorative facts. Red is reserved for an actual error or blocking condition; an inactive mode uses a neutral/off treatment rather than an error colour. If `LAYERS`, `TOOLS`, or `COMPACT MODE` indicators are interactive, the complete labelled target must be operable by pointer and keyboard.
+The accepted Alpha prototype contains no decorative status lights. Any future status indicator must report real state. Red remains reserved for an actual error or blocking condition.
 
 ## Information architecture
 
@@ -141,21 +140,29 @@ The audit confirmed that a narrow shell cutover is viable without rewriting `use
 
 ### M0.5 — isolated full-fidelity MODUL-8R prototype
 
-Status: `[ ]`
+Status: `[x]` — visually and interactionally accepted on 2026-08-02
 
-Build a development-only, fixture-driven prototype that imports no production owner stores, repositories, persistence, wallet, publication, or visitor code. It must settle the master geometry, separate Library/Activity/People module faceplates, exclusive-open content group, independently expandable Layers, contextual accessory placement, collapse/return behavior, compact and narrow layouts, keyboard/focus behavior, reduced motion, and all six theme-token treatments. It may demonstrate patches as non-persistent factory configurations only; no dead controls or implied storage are allowed.
+Build a development-only, fixture-driven prototype that imports no production owner stores, repositories, persistence, wallet, publication, or visitor code. It settles the master geometry, separate Library/Activity/People/Layers module faceplates, one exclusive-open accordion, contextual accessory placement, collapse/return behavior, narrow layouts, keyboard/focus behavior, reduced motion, and all six theme-token treatments. It may demonstrate patches as non-persistent factory configurations only; no dead controls or implied storage are allowed.
+
+Accepted authority:
+
+- development route: `/prototype/modul-8r`;
+- component and interaction authority: `src/prototypes/modul8r/Modul8rPrototype.jsx`;
+- consolidated visual authority: `src/prototypes/modul8r/modul8rPrototype.css`;
+- fixture and state coverage: `modul8rFixtures.js`, `modul8rModel.js`, and `Modul8rPrototype.test.js`;
+- prototype sources remain development-only and must never be imported by the production owner or visitor graph.
 
 ### M0.6 — prototype acceptance and production mapping freeze
 
-Status: `[ ]`
+Status: `[x]` — prototype mapping frozen on 2026-08-02
 
-Record the accepted measurements, states, interaction ownership, responsive rules, reusable production components, adapter seams, exact M1 file boundary, rollback, and focused verification. Prototype source remains isolated reference material and is never imported into production.
+Record the accepted measurements, states, interaction ownership, responsive rules, reusable production components, adapter seams, exact M1 file boundary, rollback, and focused verification. Prototype source remains isolated reference material and is never imported into production. The accepted checkpoint has one consolidated stylesheet with no duplicate exact selectors or obsolete compact/status selectors.
 
 ### M1 — MODUL-8R shell and master-faceplate cutover
 
 Status: `[ ]`
 
-Rename only the owner universal `THE RACK` surface to `MODUL-8R`; retain NFT and Identity RÄCK terminology. Establish the higher master faceplate, move the existing authoring controls onto it, preserve free movement/resizing/compact mode, and retain module expansion state. Add only truthful status/mode indicators backed by current state.
+Rename only the owner universal `THE RACK` surface to `MODUL-8R`; retain NFT and Identity RÄCK terminology. Establish the accepted 38px master faceplate, move the existing authoring controls onto it, preserve free movement and resizing, and retain session-only module expansion state. Do not reintroduce compact mode or decorative status indicators.
 
 Do not yet merge repositories or remove standalone profile windows. Rollback is the existing `THE RACK` label and faceplate composition.
 
@@ -163,7 +170,7 @@ Do not yet merge repositories or remove standalone profile windows. Rollback is 
 
 Status: `[ ]`
 
-Replace the BROWSER-only composition with stable LIBRARY, ACTIVITY, and PEOPLE module faceplates hosted by one shared content chassis. Exactly one of these content modules may be expanded at a time; opening another animates the existing faceplates to their retained order rather than swapping labels or content in place. Layers remains independently expandable. Activation is fully keyboard accessible, preserves focus predictably, does not leak queries or selection across modules, and remains responsive in compact width.
+Replace the BROWSER-only composition with stable LIBRARY, ACTIVITY, PEOPLE, and LAYERS module faceplates hosted by one shared content chassis. Exactly one module may be expanded at a time; opening another animates the existing faceplates to their retained order rather than swapping labels or content in place. Activation is fully keyboard accessible, preserves focus predictably, does not leak queries or selection across modules, and remains responsive at narrow rack widths.
 
 Initially each module may adapt its existing repository through a bounded adapter. Do not combine repository state or category schemas.
 

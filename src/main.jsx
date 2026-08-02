@@ -11,6 +11,7 @@ const keeperDockRoute = import.meta.env.DEV && prototypePath === '/prototype/kee
 const workspaceRailRoute = import.meta.env.DEV && prototypePath === '/prototype/workspace-rail';
 const nftTableViewerRoute = import.meta.env.DEV && prototypePath === '/prototype/nft-table-viewer';
 const latticeEngineRoute = import.meta.env.DEV && prototypePath === '/prototype/lattice-engine';
+const modul8rRoute = import.meta.env.DEV && prototypePath === '/prototype/modul-8r';
 const NavigationWallPrototype = import.meta.env.DEV
   ? React.lazy(() => import('./NavigationWallPrototype.jsx'))
   : null;
@@ -29,6 +30,9 @@ const NftTableViewerPrototype = import.meta.env.DEV
 const LatticeEnginePrototype = import.meta.env.DEV
   ? React.lazy(() => import('./LatticeEnginePrototype.jsx'))
   : null;
+const Modul8rPrototype = import.meta.env.DEV
+  ? React.lazy(() => import('./prototypes/modul8r/Modul8rPrototype.jsx'))
+  : null;
 
 const prototype = prototypeRoute && NavigationWallPrototype
   ? <NavigationWallPrototype />
@@ -42,6 +46,8 @@ const prototype = prototypeRoute && NavigationWallPrototype
           ? <NftTableViewerPrototype />
           : latticeEngineRoute && LatticeEnginePrototype
             ? <LatticeEnginePrototype />
+          : modul8rRoute && Modul8rPrototype
+            ? <Modul8rPrototype />
         : null;
 
 ReactDOM.createRoot(document.getElementById('root')).render(

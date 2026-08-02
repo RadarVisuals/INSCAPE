@@ -34,9 +34,9 @@ Approved production-integration inventory:
 
 - `docs/art-direction/INSCAPE_PRODUCTION_INTEGRATION_INVENTORY.md` — audited production boundaries, exact legacy mapping, canonical authority rules, cutover, rollback, and manual-test plan.
 
-Approved design-boundary candidate awaiting implementation approval:
+Accepted development-only visual and interaction authority awaiting staged production implementation:
 
-- `docs/art-direction/INSCAPE_MODUL8R_ROADMAP_AND_BOUNDARY.md` — MODUL-8R naming, Library/Activity/People/Layers consolidation, Settings/Theme ownership, staged Alpha cutover, rollback, and the explicitly post-Alpha Atelier, control-cell, embedded-mode, and MEDI-8R boundaries.
+- `docs/art-direction/INSCAPE_MODUL8R_ROADMAP_AND_BOUNDARY.md` — accepted MODUL-8R naming, geometry, Library/Activity/People/Layers accordion, Settings/Theme ownership, staged Alpha cutover, rollback, and the explicitly post-Alpha Atelier, control-cell, embedded-mode, and MEDI-8R boundaries.
 
 ## Status legend
 
@@ -74,6 +74,8 @@ The working tree was clean when this roadmap was created.
 - [x] Prototype design through canonical Phase 6 frozen.
 - [x] Browser combines INDEX and CATEGORIES in one isolated workspace.
 - [x] Frozen lattice prototype decomposed into focused modules without changing its behavior.
+- [x] Development-only MODUL-8R prototype visually and interactionally accepted at `/prototype/modul-8r`.
+- [x] MODUL-8R prototype stylesheet consolidated to one exact-selector authority; compact mode and decorative status concepts rejected.
 
 ### Production track
 
@@ -956,4 +958,4 @@ Start with:
 
 ## Immediate next action
 
-Close and commit the current owner-window styling checkpoint, then perform MODUL-8R M0.5 as an isolated full-fidelity development prototype. Resolve the master geometry, stable separate LIBRARY/ACTIVITY/PEOPLE faceplates, exclusive-open content group, independently expandable LAYERS, contextual Search/Size accessories, compact and responsive behavior, keyboard/focus, reduced motion, and six-theme treatment before any production cutover. Preserve the accepted standalone CREATIONS, ACTIVITY, and DISCOVER surfaces as rollback bridges; do not begin broad deletion, embedded mode, Atelier/control cells, MEDI-8R, persistence, schema, publication, wallet, or visitor work.
+Commit the visually accepted development-only MODUL-8R authority, then begin M1 through a separately approved production boundary. Preserve the accepted standalone CREATIONS, ACTIVITY, DISCOVER, Theme, and current owner RACK surfaces as rollback bridges. Do not begin broad deletion, embedded mode, Atelier/control cells, MEDI-8R, persistence, schema, publication, wallet, or visitor work.
