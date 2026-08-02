@@ -17,6 +17,8 @@ export const readLatticeFloatingWindowViewport = () => ({
   width: globalThis.innerWidth || 1280,
 });
 
+export const LATTICE_FLOATING_WINDOW_MOVE_CLICK_THRESHOLD = 3;
+
 export function captureLatticeFloatingWindowPointer(event) {
   event.currentTarget.setPointerCapture(event.pointerId);
 }
@@ -35,16 +37,27 @@ export function markLatticeFloatingWindowResizing(element, resizing) {
 
 export default function useLatticeFloatingWindow({
   getViewportSize = readLatticeFloatingWindowViewport,
+  initialSize = null,
 } = {}) {
-  const [viewport, setViewport] = useState(getViewportSize);
-  const [windowSize, setWindowSize] = useState(() => initialLatticeFloatingWindowSize(getViewportSize()));
-  const [windowPosition, setWindowPosition] = useState(() => {
+  const initialStateRef = useRef(null);
+  if (!initialStateRef.current) {
     const initialViewport = getViewportSize();
-    const initialSize = initialLatticeFloatingWindowSize(initialViewport);
-    return initialLatticeFloatingWindowPosition(initialSize, initialViewport);
-  });
+    const resolvedInitialSize = initialSize
+      ? clampLatticeFloatingWindowSize(initialSize, initialViewport)
+      : initialLatticeFloatingWindowSize(initialViewport);
+    initialStateRef.current = {
+      position: initialLatticeFloatingWindowPosition(resolvedInitialSize, initialViewport),
+      size: resolvedInitialSize,
+      viewport: initialViewport,
+    };
+  }
+  const [viewport, setViewport] = useState(initialStateRef.current.viewport);
+  const [windowSize, setWindowSize] = useState(initialStateRef.current.size);
+  const [windowPosition, setWindowPosition] = useState(initialStateRef.current.position);
   const resizeGestureRef = useRef(null);
   const moveGestureRef = useRef(null);
+  const suppressMoveClickRef = useRef(false);
+  const suppressMoveClickTimeoutRef = useRef(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -59,6 +72,8 @@ export default function useLatticeFloatingWindow({
     globalThis.addEventListener?.('resize', handleResize);
     return () => globalThis.removeEventListener?.('resize', handleResize);
   }, [getViewportSize]);
+
+  useEffect(() => () => globalThis.clearTimeout(suppressMoveClickTimeoutRef.current), []);
 
   const beginResize = (event) => {
     if (event.button !== 0) return;
@@ -138,12 +153,16 @@ export default function useLatticeFloatingWindow({
     ));
   };
 
-  const beginMove = (event) => {
-    if (event.button !== 0 || event.target.closest('button')) return;
+  const beginMove = (event, { allowInteractiveTarget = false } = {}) => {
+    if (event.button !== 0 || (!allowInteractiveTarget && event.target.closest('button'))) return;
     event.preventDefault();
     event.stopPropagation();
+    globalThis.clearTimeout(suppressMoveClickTimeoutRef.current);
+    suppressMoveClickRef.current = false;
     const rectangle = event.currentTarget.closest('[data-lattice-chrome]')?.getBoundingClientRect();
     moveGestureRef.current = {
+      allowInteractiveTarget,
+      moved: false,
       point: { x: event.clientX, y: event.clientY },
       pointerId: event.pointerId,
       position: windowPosition,
@@ -154,20 +173,57 @@ export default function useLatticeFloatingWindow({
   const updateMove = (event) => {
     const gesture = moveGestureRef.current;
     if (!gesture || gesture.pointerId !== event.pointerId) return;
-    setWindowPosition(moveLatticeFloatingWindow(gesture.position, {
+    const delta = {
       x: event.clientX - gesture.point.x,
       y: event.clientY - gesture.point.y,
+    };
+    if (Math.abs(delta.x) + Math.abs(delta.y) > LATTICE_FLOATING_WINDOW_MOVE_CLICK_THRESHOLD) {
+      gesture.moved = true;
+    }
+    setWindowPosition(moveLatticeFloatingWindow(gesture.position, {
+      x: delta.x,
+      y: delta.y,
     }, gesture.size, viewport));
   };
   const finishMove = (event) => {
     const gesture = moveGestureRef.current;
     if (!gesture || gesture.pointerId !== event.pointerId) return;
-    releaseLatticeFloatingWindowPointer(event);
     moveGestureRef.current = null;
+    suppressMoveClickRef.current = event.type === 'pointerup'
+      && gesture.allowInteractiveTarget && gesture.moved;
+    if (suppressMoveClickRef.current) {
+      suppressMoveClickTimeoutRef.current = globalThis.setTimeout(() => {
+        suppressMoveClickRef.current = false;
+        suppressMoveClickTimeoutRef.current = null;
+      }, 0);
+    }
+    releaseLatticeFloatingWindowPointer(event);
+  };
+  const cancelMove = (event) => {
+    const gesture = moveGestureRef.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    moveGestureRef.current = null;
+    globalThis.clearTimeout(suppressMoveClickTimeoutRef.current);
+    suppressMoveClickTimeoutRef.current = null;
+    suppressMoveClickRef.current = false;
+    releaseLatticeFloatingWindowPointer(event);
+  };
+  const consumeMoveClickSuppression = () => {
+    const suppressed = suppressMoveClickRef.current;
+    globalThis.clearTimeout(suppressMoveClickTimeoutRef.current);
+    suppressMoveClickTimeoutRef.current = null;
+    suppressMoveClickRef.current = false;
+    return suppressed;
   };
 
   return {
-    move: { begin: beginMove, finish: finishMove, update: updateMove },
+    move: {
+      begin: beginMove,
+      cancel: cancelMove,
+      consumeClickSuppression: consumeMoveClickSuppression,
+      finish: finishMove,
+      update: updateMove,
+    },
     rackWidthResize: {
       begin: beginWidthResize, finish: finishResize, keyDown: resizeWidthByKey, update: updateWidthResize,
     },

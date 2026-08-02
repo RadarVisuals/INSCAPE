@@ -50,13 +50,20 @@ test('headless hook owns viewport clamping, cancellation paths and the stable pu
   assert.match(source, /clampLatticeFloatingWindowSize\(current, nextViewport\)/);
   assert.match(source, /clampLatticeFloatingWindowPosition\(position, nextSize, nextViewport\)/);
   assert.match(source, /pointerId !== event\.pointerId/);
+  assert.match(source, /allowInteractiveTarget = false/);
+  assert.match(source, /LATTICE_FLOATING_WINDOW_MOVE_CLICK_THRESHOLD/);
+  assert.match(source, /event\.type === 'pointerup'/);
+  assert.match(source, /suppressMoveClickRef\.current = false/);
   assert.match(source, /releaseLatticeFloatingWindowPointer\(event\)/);
   assert.match(source, /markLatticeFloatingWindowResizing\(resizeGestureRef\.current\?\.rack, false\)/);
-  assert.match(source, /move: \{ begin: beginMove, finish: finishMove, update: updateMove \}/);
+  assert.match(source, /consumeClickSuppression: consumeMoveClickSuppression/);
+  assert.match(source, /cancel: cancelMove/);
   assert.match(source, /rackWidthResize:/);
   assert.match(source, /resize: \{ begin: beginResize, finish: finishResize, keyDown: resizeByKey, update: updateResize \}/);
   assert.match(source, /windowPosition,/);
   assert.match(source, /windowSize,/);
+  assert.match(source, /initialSize = null/);
+  assert.match(source, /initialSize\s*\? clampLatticeFloatingWindowSize\(initialSize, initialViewport\)/);
 });
 
 test('Browser workspace delegates only floating-window behavior to the extracted hook', async () => {

@@ -12,6 +12,8 @@ const workspaceRailRoute = import.meta.env.DEV && prototypePath === '/prototype/
 const nftTableViewerRoute = import.meta.env.DEV && prototypePath === '/prototype/nft-table-viewer';
 const latticeEngineRoute = import.meta.env.DEV && prototypePath === '/prototype/lattice-engine';
 const modul8rRoute = import.meta.env.DEV && prototypePath === '/prototype/modul-8r';
+const modul8rDevelopmentRoute = import.meta.env.DEV
+  && prototypePath === '/development/owner/modul-8r';
 const NavigationWallPrototype = import.meta.env.DEV
   ? React.lazy(() => import('./NavigationWallPrototype.jsx'))
   : null;
@@ -33,6 +35,9 @@ const LatticeEnginePrototype = import.meta.env.DEV
 const Modul8rPrototype = import.meta.env.DEV
   ? React.lazy(() => import('./prototypes/modul8r/Modul8rPrototype.jsx'))
   : null;
+const Modul8rDevelopmentEntrance = import.meta.env.DEV
+  ? React.lazy(() => import('./lattice/modul8r/Modul8rDevelopmentEntrance.jsx'))
+  : null;
 
 const prototype = prototypeRoute && NavigationWallPrototype
   ? <NavigationWallPrototype />
@@ -48,6 +53,8 @@ const prototype = prototypeRoute && NavigationWallPrototype
             ? <LatticeEnginePrototype />
           : modul8rRoute && Modul8rPrototype
             ? <Modul8rPrototype />
+          : modul8rDevelopmentRoute && Modul8rDevelopmentEntrance
+            ? <Modul8rDevelopmentEntrance />
         : null;
 
 ReactDOM.createRoot(document.getElementById('root')).render(
