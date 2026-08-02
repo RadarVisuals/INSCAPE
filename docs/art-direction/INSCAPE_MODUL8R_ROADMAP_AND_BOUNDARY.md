@@ -196,13 +196,15 @@ Acceptance checkpoint (2026-08-02): floating-window sizing, viewport containment
 
 ### Task 2 — clean MODUL-8R shell behind a development-only owner entrance
 
-Status: `[ ]`
+Status: `[x]` — implemented, automatically verified, and interactively accepted on 2026-08-02 at checkpoint `ea23eb7`
 
 Create a production-grade `Modul8rShell`, shell model, fresh `.modul8r-*` stylesheet, and focused tests. Reproduce the accepted master/module geometry, stable LIBRARY/ACTIVITY/PEOPLE/LAYERS order, exclusive-open state, retained faceplates, transition overflow suppression, complete-faceplate activation, master collapse state retention, right-edge resize, responsive layouts, focus behavior, and reduced motion using production theme/type/motion tokens and the Task 1 controller.
 
 The shell must not import prototype code, reuse `lattice-rack-*` structural classes, or consume Browser-owned visual variables. It contains no fake repository facts or dead controls. The old live Rack remains unchanged. A narrowly gated development-only owner entrance may be added to `OwnerLatticeShell` only if production build and import-graph checks prove the new shell is absent from production output.
 
 Manual acceptance compares the development shell directly with `/prototype/modul-8r` in all six themes and accepted viewport widths. This task does not cut over the live owner route.
+
+Acceptance checkpoint (2026-08-02): the production-grade `Modul8rShell`, separate shell model, and fresh `.modul8r-*` presentation are available only at the development entrance `/development/owner/modul-8r`. The shell preserves the accepted master and module geometry, fixed LIBRARY/ACTIVITY/PEOPLE/LAYERS order, exclusive-open accordion, stable closed faceplates, collapse state, right-edge resize, containment, keyboard/focus/Escape behavior, reduced motion, and all six production themes. The master title is both the collapse/restore control and an explicit drag surface: movement beyond the three-pixel threshold suppresses exactly the resulting click, while ordinary clicks still toggle; close and future interactive controls remain non-draggable, and pointer cancel/lost capture clear the gesture without stale suppression. The title text shares the module-label alignment column. Focused model, component, controller, Browser-regression, and real Edge interaction checks pass; `git diff --check`, the production build, budgets, and output/manifest/owner-graph isolation checks pass with zero MODUL-8R development markers. The live Rack, Browser, standalone windows, production routes, repositories, storage, publication, wallet, visitor behavior, schemas, prototype source, and Task 3 remain unchanged.
 
 ### Task 3 — real Library parity inside the development shell
 
