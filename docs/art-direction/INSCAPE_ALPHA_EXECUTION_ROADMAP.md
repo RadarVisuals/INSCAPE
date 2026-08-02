@@ -938,6 +938,8 @@ MODUL-8R Task 9 status (2026-08-02): `[~]` — a fresh reachability inventory re
 
 MODUL-8R Task 9 acceptance (2026-08-02): the owner approved the complete cleanup and live acceptance checklist. Task 9 and Phase 9 are `[x]`. This acceptance does not authorize Task 10, broader cleanup, or post-Alpha work.
 
+Post-Task-9 placement-presentation parity repair addendum (2026-08-03): `[x]` — the production owner placement menu and a LATTICE-native inspector restore authoring access to the existing canonical frame, mat, backing, and transparency fields through one stale-safe atomic operation and the existing profile-scoped draft store. The change adds no schema, key, publication or visitor contract, LEGACY/prototype dependency, Task 10 work, or cleanup. Focused verification passes 112/112, wider renderer/domain/visitor isolation passes 82/82, direct/iframe/public-access coverage passes 64/64, both MODUL8R and exact LATTICE rollback builds pass, and the selected graph has zero leaks. The sequential suite remains at its six documented stale failures (1,018/1,024); stale owner browser harnesses fail before reaching this repair. A live pointer-boundary defect found during acceptance was corrected with an explicit interactive portal boundary and a focused 21/21 regression matrix; the production build remains green. The owner accepted the repaired Frame & mat flow on 2026-08-03. This acceptance does not authorize Task 10 or broader work.
+
 User visual test: complete Alpha acceptance checklist on localhost, deploy preview, `enterinscape.com`, direct visit, and Universal Profile iframe.
 
 Exit criterion: the user approves the complete live Alpha experience and rollback remains available.

@@ -732,3 +732,51 @@ test('corrupt sessions block MOVE while preserving raw bytes', () => {
   assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE)), raw);
   assert.equal(storage.writes, 0);
 });
+
+test('completed PRESENTATION writes once, reloads exactly, remains profile isolated, and rejects unavailable or corrupt storage', () => {
+  const initial = createEmptyLatticeProductionDraft(PROFILE);
+  initial.tables[4].placements = [existingPlacement('presentation-placement')];
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: JSON.stringify(initial) });
+  const session = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  const expectedPlacement = structuredClone(initial.tables[4].placements[0]);
+  const presentation = {
+    frameId: 'DOSSIER',
+    mat: { enabled: true, color: '#a1b2c3', inset: { top: 0.11, right: 0.12, bottom: 0.13, left: 0.14 } },
+    backing: { enabled: true, color: '#c9c6bd' },
+    transparencyMode: 'OPAQUE',
+  };
+  const result = session.commitPresentation({
+    assetRecord: asset(), expectedPlacement, placementId: expectedPlacement.id, presentation, tableId: 'table-05',
+  });
+  assert.equal(result.ok, true);
+  assert.equal(storage.writes, 1);
+  assert.deepEqual(result.draft.tables[4].placements[0], { ...expectedPlacement, ...presentation });
+  const publication = projectLatticeProductionPublication(result.draft, [asset({
+    creators: [], attributes: [], description: '', collectionName: null,
+  })], { lastPublished: '2026-08-03T00:00:00.000Z' });
+  assert.deepEqual({
+    frameId: publication.tables[4].placements[0].frameId,
+    mat: publication.tables[4].placements[0].mat,
+    backing: publication.tables[4].placements[0].backing,
+    transparencyMode: publication.tables[4].placements[0].transparencyMode,
+  }, presentation);
+  const reloaded = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage });
+  assert.deepEqual(reloaded.getDraft().tables[4].placements[0], { ...expectedPlacement, ...presentation });
+  assert.equal(reloaded.commitPresentation({
+    assetRecord: asset(), expectedPlacement: reloaded.getDraft().tables[4].placements[0],
+    placementId: expectedPlacement.id, presentation, tableId: 'table-05',
+  }).noOp, true);
+  assert.equal(storage.writes, 1);
+
+  const other = createOwnerLatticeAuthoringSession({ profileAddress: OTHER, storage });
+  assert.equal(other.getDraft().tables[4].placements.length, 0);
+  assert.equal(session.commitPresentation({
+    assetRecord: null, expectedPlacement, placementId: expectedPlacement.id, presentation, tableId: 'table-05',
+  }).ok, false);
+  assert.equal(storage.writes, 1);
+
+  const corruptStorage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: '{broken' });
+  const corrupt = createOwnerLatticeAuthoringSession({ profileAddress: PROFILE, storage: corruptStorage });
+  assert.equal(corrupt.commitPresentation({}).ok, false);
+  assert.equal(corruptStorage.writes, 0);
+});

@@ -12,6 +12,7 @@ import { projectLatticeProductionPublication } from '../lattice/domain/latticePr
 import { assertValidLatticeProductionPublication } from '../lattice/domain/latticeProductionPublication.js';
 import LatticeProductionMovementLayer from '../lattice/authoring/LatticeProductionMovementLayer.jsx';
 import { createLatticeProductionCropCandidate } from '../lattice/authoring/latticeProductionCrop.js';
+import { createLatticeProductionPresentationCandidate } from '../lattice/authoring/latticeProductionPresentation.js';
 import {
   createLatticeProductionGroupMovementCandidate,
   createLatticeProductionMovementCandidate,
@@ -303,6 +304,8 @@ function OwnerLatticeRuntime({
               ? createLatticeProductionGroupResizeCandidate(authoring.draft, compositionPreview.request)
             : compositionPreview?.kind === 'crop'
               ? createLatticeProductionCropCandidate(authoring.draft, compositionPreview.request)
+              : compositionPreview?.kind === 'presentation'
+                ? createLatticeProductionPresentationCandidate(authoring.draft, compositionPreview.request)
               : null;
       const renderDraft = structuredClone(previewDraft || authoring.draft);
       renderDraft.appearance.surfaceId = surfaceId;
@@ -1158,6 +1161,7 @@ function OwnerLatticeRuntime({
               onCommitLayer={authoring.layerPublicPlacement}
               onCommitMove={authoring.movePublicPlacement}
               onCommitMoveGroup={authoring.movePublicPlacements}
+              onCommitPresentation={authoring.presentPublicPlacement}
               onCommitRemove={authoring.removePublicPlacement}
               onCommitRemoveGroup={authoring.removePublicPlacements}
               onCommitResize={authoring.resizePublicPlacement}

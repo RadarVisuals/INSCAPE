@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import RackMenu from '../../public/menus/RackMenu.jsx';
+import LatticeProductionPresentationInspector from './LatticeProductionPresentationInspector.jsx';
 import {
   createLatticeProductionTableRenderModel,
   projectLatticeProductionPlacement,
@@ -51,6 +52,7 @@ import {
   latticeMarqueeRectangle,
   resolveLatticeMarqueeSelection,
 } from './latticeProductionMarqueeSelection.js';
+import { sameLatticeProductionPlacementSnapshot } from './latticeProductionRemoval.js';
 import './latticeProductionMovementLayer.css';
 
 const KEYBOARD_DELTAS = Object.freeze({
@@ -95,6 +97,7 @@ export default function LatticeProductionMovementLayer({
   lattice,
   onCommitMove,
   onCommitMoveGroup,
+  onCommitPresentation,
   onCommitRemove,
   onCommitRemoveGroup,
   onCommitResize,
@@ -129,6 +132,7 @@ export default function LatticeProductionMovementLayer({
   const renderedSelectedPlacementSet = new Set(marqueeSession?.previewIds || selectedPlacementSet);
   const [cropSession, setCropSession] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
+  const [presentationInspector, setPresentationInspector] = useState(null);
   const model = useMemo(() => createLatticeProductionTableRenderModel(lattice, tableId), [lattice, tableId]);
   const field = viewport.width > 0 && viewport.height > 0
     ? projectLatticeProductionViewport(model, viewport)
@@ -161,7 +165,15 @@ export default function LatticeProductionMovementLayer({
   useEffect(() => {
     if (selectedPlacementId && !acceptedById.has(selectedPlacementId)) setSelectedPlacementId(null);
     if (contextMenu && !acceptedById.has(contextMenu.placementId)) setContextMenu(null);
-  }, [acceptedById, contextMenu, selectedPlacementId]);
+    if (presentationInspector && (!acceptedById.has(presentationInspector.placementId)
+      || !sameLatticeProductionPlacementSnapshot(
+        acceptedById.get(presentationInspector.placementId),
+        presentationInspector.expectedPlacement,
+      ))) {
+      setPresentationInspector(null);
+      onPreviewOperation?.(null);
+    }
+  }, [acceptedById, contextMenu, presentationInspector, selectedPlacementId]);
 
   useEffect(() => () => onCropModeChange?.(false), [onCropModeChange]);
 
@@ -604,11 +616,25 @@ export default function LatticeProductionMovementLayer({
     restoreFocus(controlKey(placementId));
   };
 
+  const openPresentationInspector = (placementId, anchor, returnFocus) => {
+    const acceptedPlacement = acceptedById.get(placementId);
+    const projectedPlacement = placements.find((placement) => placement.id === placementId);
+    if (!acceptedPlacement || acceptedPlacement.visibility !== 'PUBLIC' || acceptedPlacement.locked) return;
+    setContextMenu(null);
+    setPresentationInspector({
+      anchor,
+      artworkName: projectedPlacement?.asset?.name?.trim() || acceptedPlacement.stableAssetId,
+      expectedPlacement: structuredClone(acceptedPlacement),
+      placementId,
+      returnFocus,
+    });
+  };
+
   const openPlacementContextMenu = (event, placementId, control) => {
     event.preventDefault();
     event.stopPropagation();
     const acceptedPlacement = acceptedById.get(placementId);
-    if (cropSession || gestureRef.current || !acceptedPlacement || acceptedPlacement.locked
+    if (cropSession || gestureRef.current || presentationInspector || !acceptedPlacement || acceptedPlacement.locked
       || acceptedPlacement.visibility !== 'PUBLIC') return;
     const bounds = control?.getBoundingClientRect?.();
     const pointerAnchor = event.clientX || event.clientY;
@@ -882,6 +908,7 @@ export default function LatticeProductionMovementLayer({
       const availability = latticeProductionLayerOperationAvailability(acceptedTable, contextMenu.placementId);
       const commands = [
         { id: 'crop', label: 'Crop' },
+        { id: 'presentation', label: 'Frame & mat…' },
         ...LAYER_ACTIONS.map((action) => ({
           id: `layer:${action.id}`,
           label: action.label,
@@ -897,13 +924,42 @@ export default function LatticeProductionMovementLayer({
         onClose={() => setContextMenu(null)}
         onCommand={(command) => {
           const placementId = contextMenu.placementId;
+          const { anchor, returnFocus } = contextMenu;
           setContextMenu(null);
           if (command === 'crop') beginCrop(placementId);
+          else if (command === 'presentation') openPresentationInspector(placementId, anchor, returnFocus);
           else if (command === 'remove') removePlacement(placementId);
           else if (command.startsWith('layer:')) layerPlacement(placementId, command.slice(6));
         }}
         returnFocus={contextMenu.returnFocus}
       />;
     })(), document.querySelector('.owner-lattice-shell') || document.body)}
+    {presentationInspector && rootRef.current && createPortal(<LatticeProductionPresentationInspector
+      anchor={presentationInspector.anchor}
+      artworkName={presentationInspector.artworkName}
+      onApply={(presentation) => {
+        const committed = onCommitPresentation?.({
+          expectedPlacement: structuredClone(presentationInspector.expectedPlacement),
+          placementId: presentationInspector.placementId,
+          presentation,
+          tableId,
+        });
+        if (!committed) return false;
+        setPresentationInspector(null);
+        return true;
+      }}
+      onCancel={() => setPresentationInspector(null)}
+      onPreview={(presentation) => onPreviewOperation?.(presentation ? {
+        kind: 'presentation',
+        request: {
+          expectedPlacement: structuredClone(presentationInspector.expectedPlacement),
+          placementId: presentationInspector.placementId,
+          presentation,
+          tableId,
+        },
+      } : null)}
+      placement={presentationInspector.expectedPlacement}
+      returnFocus={presentationInspector.returnFocus}
+    />, document.querySelector('.owner-lattice-shell') || document.body)}
   </div>;
 }

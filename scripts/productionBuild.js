@@ -44,7 +44,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // MODUL-8R Task 8 replaces the selected owner presentation and keeps its
   // production entry wrapper within a measured allowance. The extra rollback
   // margin keeps the retained two-line LATTICE selector buildable through Task 8.
-  ownerJavaScript: Object.freeze({ raw: 265_000, gzip: 80_000 }),
+  ownerJavaScript: Object.freeze({ raw: 276_000, gzip: 83_500 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
@@ -59,7 +59,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // raw ceiling remains unchanged; this allowance measures the shared split.
   // Phase 9 exposes the already-existing owner-only Creations, Activity, and
   // Settings styles without moving them into initial CSS.
-  ownerCss: Object.freeze({ raw: 67_000, gzip: 12_500 }),
+  ownerCss: Object.freeze({ raw: 70_000, gzip: 13_200 }),
   // Owner/publication reconciliation adds the deterministic IPFS hydration and
   // three-way baseline guard to production. Keep the accepted growth bounded.
   // Phase 7 adds paragraph-preserving LSP3 normalization, independently
@@ -89,7 +89,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // The remaining measured growth is the accepted complete MODUL-8R
   // Activity/People/Layers/Settings presentation; legacy visitor chunks stay
   // readable and are not owner-hybrid reachability.
-  coreJavaScript: Object.freeze({ raw: 2_045_000, gzip: 612_000 }),
+  coreJavaScript: Object.freeze({ raw: 2_057_000, gzip: 615_000 }),
   publicAssets: Object.freeze({ raw: 15_200_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });

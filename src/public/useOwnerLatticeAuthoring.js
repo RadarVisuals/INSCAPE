@@ -7,6 +7,7 @@ import {
   createLatticeProductionGroupDuplicateCandidate,
 } from '../lattice/authoring/latticeProductionDuplicate.js';
 import { createLatticeProductionLayerCandidate, createLatticeProductionLayerReorderCandidate } from '../lattice/authoring/latticeProductionLayer.js';
+import { createLatticeProductionPresentationCandidate } from '../lattice/authoring/latticeProductionPresentation.js';
 import { createLatticeProductionPlacementCandidate } from '../lattice/authoring/latticeProductionPlacement.js';
 import {
   createLatticeProductionGroupMovementCandidate,
@@ -72,6 +73,7 @@ export function createOwnerLatticeAuthoringSession({ generatePlacementId, profil
       commitGroupMovement: () => Object.freeze({ ok: false, reason: 'CORRUPT CANONICAL STORAGE' }),
       commitMovement: () => Object.freeze({ ok: false, reason: 'CORRUPT CANONICAL STORAGE' }),
       commitPlacement: () => Object.freeze({ ok: false, reason: 'CORRUPT CANONICAL STORAGE' }),
+      commitPresentation: () => Object.freeze({ ok: false, reason: 'CORRUPT CANONICAL STORAGE' }),
       commitGroupRemoval: () => Object.freeze({ ok: false, reason: 'CORRUPT CANONICAL STORAGE' }),
       commitGroupResize: () => Object.freeze({ ok: false, reason: 'CORRUPT CANONICAL STORAGE' }),
       commitRemoval: () => Object.freeze({ ok: false, reason: 'CORRUPT CANONICAL STORAGE' }),
@@ -265,6 +267,31 @@ export function createOwnerLatticeAuthoringSession({ generatePlacementId, profil
       } catch (error) {
         return Object.freeze({ ok: false, reason: error?.message || 'INVALID PLACEMENT' });
       }
+      if (!store.commitCompletedOperation(candidate)) {
+        return Object.freeze({ ok: false, reason: 'CANONICAL STORAGE WRITE FAILED' });
+      }
+      return Object.freeze({ ok: true, draft: store.getDraft() });
+    },
+    commitPresentation({ assetRecord, expectedPlacement, placementId, presentation, tableId } = {}) {
+      const currentDraft = store.getDraft();
+      const activeTable = currentDraft.tables.find((table) => table.id === tableId);
+      if (!activeTable) return Object.freeze({ ok: false, reason: 'CANONICAL DRAFT UNAVAILABLE' });
+      const placement = activeTable.placements.find((candidate) => candidate.id === placementId);
+      if (!placement) return Object.freeze({ ok: false, reason: 'CANONICAL PLACEMENT UNAVAILABLE' });
+      const asset = adaptLatticeProductionBrowserAsset(assetRecord, profile, true);
+      if (!asset?.placeable || asset.stableAssetId !== placement.stableAssetId) return Object.freeze({
+        ok: false,
+        reason: asset?.placementUnavailableReason || 'STALE OR UNAVAILABLE ASSET',
+      });
+      let candidate;
+      try {
+        candidate = createLatticeProductionPresentationCandidate(currentDraft, {
+          expectedPlacement, placementId, presentation, tableId,
+        });
+      } catch (error) {
+        return Object.freeze({ ok: false, reason: error?.message || 'INVALID PLACEMENT PRESENTATION' });
+      }
+      if (!candidate) return Object.freeze({ ok: false, noOp: true, reason: 'PLACEMENT PRESENTATION UNCHANGED' });
       if (!store.commitCompletedOperation(candidate)) {
         return Object.freeze({ ok: false, reason: 'CANONICAL STORAGE WRITE FAILED' });
       }
@@ -637,6 +664,36 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
     return true;
   }, [profile, runtime.draft, session]);
 
+  const presentPublicPlacement = useCallback(({
+    expectedPlacement,
+    placementId,
+    presentation,
+    tableId,
+  } = {}) => {
+    const generation = generationRef.current;
+    const liveLibrary = useLibraryStore.getState();
+    if (!session || session.status !== OWNER_LATTICE_AUTHORING_STATUS.READY
+      || session.getProfileAddress() !== profile
+      || liveLibrary.profileAddress !== profile
+      || normalizeProfileAddress(liveLibrary.workspace?.profileAddress) !== profile) {
+      setRuntime((current) => ({ ...current, error: 'STALE PROFILE OR CANONICAL STORAGE UNAVAILABLE' }));
+      return false;
+    }
+    const runtimePlacement = runtime.draft?.tables.find((table) => table.id === tableId)
+      ?.placements.find((placement) => placement.id === placementId);
+    const assetRecord = acceptedAssetRecordsRef.current.find(({ id }) => id === runtimePlacement?.stableAssetId);
+    const result = session.commitPresentation({
+      assetRecord, expectedPlacement, placementId, presentation, tableId,
+    });
+    if (generation !== generationRef.current || session.getProfileAddress() !== profile) return false;
+    if (!result.ok) {
+      if (!result.noOp) setRuntime((current) => ({ ...current, error: result.reason }));
+      return Boolean(result.noOp);
+    }
+    setRuntime({ draft: result.draft, error: null, status: OWNER_LATTICE_AUTHORING_STATUS.READY });
+    return true;
+  }, [profile, runtime.draft, session]);
+
   const movePublicPlacements = useCallback(({ moves, tableId } = {}) => {
     const generation = generationRef.current;
     const liveLibrary = useLibraryStore.getState();
@@ -875,6 +932,7 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
     movePublicPlacement,
     movePublicPlacements,
     placePublicAsset,
+    presentPublicPlacement,
     profileReady,
     reorderPublicPlacements,
     removePublicPlacement,

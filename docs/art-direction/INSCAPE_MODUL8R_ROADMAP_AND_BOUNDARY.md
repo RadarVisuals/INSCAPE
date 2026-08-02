@@ -282,6 +282,16 @@ Focused production-shell/Browser/selector/isolation checks pass 110/113, with th
 
 Interactive acceptance (2026-08-02): the owner approved the complete Task 9 cleanup and live acceptance checklist. Task 9 is `[x]`; no later or post-Alpha work is authorized by this acceptance.
 
+### Post-Task-9 placement-presentation parity repair addendum
+
+Status: `[x]` — implementation, automated verification, and live owner acceptance complete.
+
+This bounded repair restores owner access to the already-canonical placement `frameId`, `mat`, `backing`, and `transparencyMode` fields through the production LATTICE placement menu and a LATTICE-native inspector. It adds no schema, storage key, publication contract, visitor control, LEGACY dependency, prototype dependency, Task 10 work, or unrelated cleanup. Final `[x]` status requires explicit owner acceptance of the focused live checklist.
+
+Implementation checkpoint (2026-08-03): the final focused authoring/shell/storage/publication matrix passes 112/112, the wider renderer/domain/visitor-isolation matrix passes 82/82, and the direct/iframe/public-access matrix passes 64/64. The sequential full suite completes 1,018/1,024 with only the same six documented stale Phase 3, legacy-viewer, development-wrapper, and frozen-prototype assertions. The stale owner-placement browser harness again fails on `.lattice-browser-workspace`; the owner-navigation harness exceeds its outer deadline without TAP output. Both the exact LATTICE rollback and restored MODUL8R production builds pass, `build:check` and `git diff --check` pass, and the selected graph reports zero leaks. Final totals are initial JavaScript 1,240,851 raw / 362,760 gzip, selected owner JavaScript 274,107 / 82,283, and aggregate core JavaScript 2,054,796 / 613,823.
+
+Interactive acceptance (2026-08-03): live testing exposed an inert portal because the inspector was mounted beneath the owner shell's `pointer-events: none` boundary. The inspector now explicitly restores pointer interaction, the focused regression matrix passes 21/21, and the production build remains green. The owner accepted the repaired Frame & mat flow. The addendum is `[x]`; Task 10 and broader work remain unauthorized.
+
 ## Explicit Alpha exclusions
 
 The following concepts are documented but excluded from the MODUL-8R Alpha consolidation:
