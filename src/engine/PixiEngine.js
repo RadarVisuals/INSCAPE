@@ -56,6 +56,8 @@ export class PixiEngine {
     this.isReady = false;
     this.isDestroyed = false;
     this.isInitializing = false;
+    this.documentVisible = true;
+    this.lastBackgroundTextureRelease = 0;
     this.hasUserGesture = false;
     this.residentRevealVisible = true;
     this.residentRevealAlpha = 1;
@@ -254,6 +256,86 @@ export class PixiEngine {
     this.stagePresentationVisible = visible !== false;
     if (this.stage?.bgContainer) this.stage.bgContainer.visible = this.stagePresentationVisible;
     if (this.stage?.fgContainer) this.stage.fgContainer.visible = this.stagePresentationVisible;
+  }
+
+  setDocumentVisible(visible) {
+    this.documentVisible = visible !== false;
+    this.syncTickerLifecycle();
+  }
+
+  syncTickerLifecycle() {
+    const ticker = this.app?.ticker;
+    if (!ticker || this.isDestroyed) return;
+    if (this.documentVisible) {
+      if (this.appInitialized) ticker.start?.();
+      return;
+    }
+    ticker.stop?.();
+    if (this.appInitialized) this.releaseBackgroundTextureMemory();
+  }
+
+  releaseBackgroundTextureMemory() {
+    const textureSources = Array.from(this.app?.renderer?.texture?.managedTextures ?? []);
+    let released = 0;
+    textureSources.forEach((source) => {
+      // Image and canvas sources retain a CPU-side resource and can therefore
+      // be uploaded again on the first foreground render. RenderTexture
+      // sources are deliberately retained because unloading them loses their
+      // authored contents rather than merely evicting a recoverable upload.
+      if (source?.uploadMethodId !== 'image' || typeof source.unload !== 'function') return;
+      source.unload();
+      released += 1;
+    });
+    this.lastBackgroundTextureRelease = released;
+    return released;
+  }
+
+  getDevelopmentDiagnostics() {
+    const textureSources = Array.from(this.app?.renderer?.texture?.managedTextures ?? []);
+    const estimatedTextureBytes = textureSources.reduce((total, source) => {
+      const width = Number(source?.pixelWidth ?? source?.width) || 0;
+      const height = Number(source?.pixelHeight ?? source?.height) || 0;
+      return total + (width * height * 4);
+    }, 0);
+    let displayObjects = 0;
+    let visibleDisplayObjects = 0;
+    const pending = this.app?.stage ? [this.app.stage] : [];
+    const visited = new Set();
+    while (pending.length) {
+      const item = pending.pop();
+      if (!item || visited.has(item)) continue;
+      visited.add(item);
+      displayObjects += 1;
+      if (item.visible !== false) visibleDisplayObjects += 1;
+      if (Array.isArray(item.children)) pending.push(...item.children);
+    }
+    const heap = globalThis.performance?.memory;
+    return {
+      lifecycle: {
+        ready: this.isReady,
+        documentVisible: this.documentVisible,
+        tickerRunning: this.app?.ticker?.started === true,
+        stageVisible: this.stagePresentationVisible !== false,
+        residentVisible: this.residentRevealVisible
+      },
+      scene: { displayObjects, visibleDisplayObjects },
+      textures: {
+        managedSources: textureSources.length,
+        estimatedBytes: estimatedTextureBytes,
+        releasedOnLastBackground: this.lastBackgroundTextureRelease
+      },
+      javascriptHeap: heap ? {
+        usedBytes: heap.usedJSHeapSize,
+        totalBytes: heap.totalJSHeapSize,
+        limitBytes: heap.jsHeapSizeLimit
+      } : null,
+      frames: {
+        samples: this.performanceStats.sampleCount,
+        averageMs: this.performanceStats.averageFrameMs,
+        slowerThan16Ms: this.performanceStats.slowFrames16,
+        slowerThan33Ms: this.performanceStats.slowFrames33
+      }
+    };
   }
 
   applyResidentRevealPresentation() {
@@ -714,6 +796,10 @@ export class PixiEngine {
       });
       this.appInitialized = true;
 
+      // Application.init starts Pixi's shared ticker. Stop it immediately when
+      // the browser document is backgrounded, including during asset loading.
+      this.syncTickerLifecycle();
+
       if (this.isDestroyed) {
         this.destroyApplication();
         return false;
@@ -733,6 +819,7 @@ export class PixiEngine {
       this.buildSceneGraph();
       if (this.isDestroyed) return false;
       this.app.ticker.add((ticker) => this.update(ticker.deltaTime, ticker.elapsedMS));
+      this.syncTickerLifecycle();
       this.resize();
       
       this.isReady = true;
@@ -1176,7 +1263,7 @@ export class PixiEngine {
     const isGlitchActive = (isGlitched || currentSplit > (effectsConfig.chromaticAberration.amount * 1.15));
     
     // 1. Update Environment Stage (parallax backgrounds, fogs, particles)
-    if (this.stage) {
+    if (this.stage && this.stagePresentationVisible) {
       this.stage.update(deltaTime, renderConfig.scene, actorConfig.aura.color, {
         elapsed: runtime.elapsed,
         actorPosition: this.actor ? {
@@ -1269,7 +1356,7 @@ export class PixiEngine {
         this.app.renderer,
         this.actor?.warpPointer || null,
         runtime.reaction.modifiers,
-        { background: renderConfig.scene.environment.type === 'illustrated' }
+        { background: this.stagePresentationVisible && renderConfig.scene.environment.type === 'illustrated' }
       );
     }
 

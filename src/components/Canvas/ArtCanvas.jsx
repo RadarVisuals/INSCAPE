@@ -84,15 +84,21 @@ const ArtCanvas = forwardRef(function ArtCanvas({ actorVisible = true, stageVisi
 
     engineRef.current.setResidentRevealVisible(actorVisible, { reducedMotion });
     engineRef.current.setStageVisible(stageVisible);
+    engineRef.current.setDocumentVisible(document.visibilityState !== 'hidden');
     engineRef.current.init().then((ready) => {
       if (ready) onReady?.();
     }).catch((error) => reportControlledError('pixi-boot', error));
 
     const handleResize = () => { if (engineRef.current) engineRef.current.resize(); };
+    const handleVisibilityChange = () => {
+      engineRef.current?.setDocumentVisible(document.visibilityState !== 'hidden');
+    };
     window.addEventListener('resize', handleResize);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (engineRef.current) {
         if (DEV_DIAGNOSTICS) removeDevelopmentGlobal('__UNDERNEATH_ENGINE__', engineRef.current);
         engineRef.current.destroy();

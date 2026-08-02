@@ -17,7 +17,12 @@ function fakeApplication(init = async () => {}) {
     canvas: {},
     destroyCalls: 0,
     init,
-    ticker: { add() {} },
+    ticker: {
+      started: true,
+      add() {},
+      start() { this.started = true; },
+      stop() { this.started = false; }
+    },
     destroy() { this.destroyCalls += 1; }
   };
 }
@@ -120,6 +125,59 @@ test('destroy is idempotent after initialization', async () => {
   setup.engine.destroy();
   setup.engine.destroy();
   assert.equal(setup.app.destroyCalls, 1);
+});
+
+test('document visibility suspends and resumes the Pixi ticker across initialization', async () => {
+  globalThis.window = { innerWidth: 1200, innerHeight: 800 };
+  const setup = createTestEngine();
+  setup.engine.loadAssets = async () => {};
+  setup.engine.buildSceneGraph = () => {};
+
+  setup.engine.setDocumentVisible(false);
+  assert.equal(setup.app.ticker.started, false);
+  assert.equal(await setup.engine.init(), true);
+  assert.equal(setup.app.ticker.started, false);
+
+  setup.engine.setDocumentVisible(true);
+  assert.equal(setup.app.ticker.started, true);
+  setup.engine.destroy();
+});
+
+test('background suspension evicts recoverable image uploads but retains render textures', () => {
+  const setup = createTestEngine();
+  const imageSource = { uploadMethodId: 'image', unloadCalls: 0, unload() { this.unloadCalls += 1; } };
+  const renderSource = { uploadMethodId: 'unknown', unloadCalls: 0, unload() { this.unloadCalls += 1; } };
+  setup.app.renderer = { texture: { managedTextures: [imageSource, renderSource] } };
+  setup.engine.appInitialized = true;
+
+  setup.engine.setDocumentVisible(false);
+
+  assert.equal(imageSource.unloadCalls, 1);
+  assert.equal(renderSource.unloadCalls, 0);
+  assert.equal(setup.engine.lastBackgroundTextureRelease, 1);
+  assert.equal(setup.app.ticker.started, false);
+});
+
+test('development diagnostics expose bounded lifecycle and renderer resource counts', () => {
+  const setup = createTestEngine();
+  setup.app.renderer = {
+    texture: {
+      managedTextures: [
+        { width: 10, height: 20 },
+        { pixelWidth: 5, pixelHeight: 4 }
+      ]
+    }
+  };
+  setup.app.stage = { visible: true, children: [{ visible: false, children: [] }] };
+
+  const diagnostics = setup.engine.getDevelopmentDiagnostics();
+  assert.deepEqual(diagnostics.scene, { displayObjects: 2, visibleDisplayObjects: 1 });
+  assert.deepEqual(diagnostics.textures, {
+    managedSources: 2,
+    estimatedBytes: 880,
+    releasedOnLastBackground: 0
+  });
+  assert.equal(diagnostics.lifecycle.tickerRunning, true);
 });
 
 test('configuration updates during initialization stay serial and install the latest configuration', async () => {
