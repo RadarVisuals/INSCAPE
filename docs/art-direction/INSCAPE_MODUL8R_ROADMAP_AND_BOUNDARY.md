@@ -1,6 +1,6 @@
 # INSCAPE MODUL-8R Roadmap and Boundary
 
-Status: accepted prototype authority and production boundary; Tasks 1–5 are implemented and interactively accepted behind the development-only boundary below. Task 6 remains unstarted.
+Status: accepted prototype authority and production boundary; Tasks 1–6 are implemented and interactively accepted behind the development-only boundary below. Task 7 remains unstarted.
 
 ## Purpose
 
@@ -238,11 +238,15 @@ Accepted checkpoint (2026-08-02): implementation checkpoint `61b8775` makes the 
 
 ### Task 6 — Layers usage and Settings/Theme parity
 
-Status: `[ ]`
+Status: `[x]`
+
+Accepted implementation commit: `71282fa`.
 
 Preserve active-table thumbnails, exact placement identity, z-order, selection, multi-select, locks, and canonical atomic reorder. Add the cheapest honest non-reorderable all-table usage navigation needed to replace USED ON CANVAS. Move Theme into Settings only after equivalent six-theme access, contrast, Escape, close, and trigger-focus restoration exist in the development integration.
 
 Do not create a second placement authority or persist Theme. Keep old USED ON CANVAS and Theme access available until equivalence is accepted.
+
+Accepted checkpoint (2026-08-02): the development-only live-owner MODUL-8R now mounts the existing `LatticeLayersModule` over the owner runtime's exact active-table layer projection, decoded placement-media state, selection controller, and single atomic `reorderPublicPlacements` command. A read-only row-major nine-table usage list derives exact placement counts directly from the current canonical draft and delegates table changes to the existing direct navigation authority; it exposes no reorder or cross-table movement control. USED ON CANVAS is removed only from MODUL-8R Library, while the old production Browser and its all-table derivation remain unchanged. The master overflow opens a non-modal Settings surface whose four working signal controls use the existing signal store and whose separate workspace/surface and menu/interface selectors use the owner runtime's existing session-only six-theme callbacks. Escape, explicit close, and exact overflow-trigger focus restoration are bounded inside MODUL-8R; standalone Settings and top-level Theme remain operational rollback surfaces. Focused Layers/authoring/Library/Settings/Theme/shell tests pass 102/102 across two targeted sets, the real Edge six-viewport shell matrix passes 1/1, production build and budgets pass with unchanged Task 5 production totals, `npm run build:check` and `git diff --check` pass, and production output contains zero MODUL-8R markers. No route, schema, storage, publication, wallet, visitor, prototype, or live owner destination changed. Task 7 remains unstarted.
 
 ### Task 7 — full development parity and bundle gate
 
