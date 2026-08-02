@@ -177,7 +177,7 @@ This is the sole approved execution order. A fresh Codex may be told `execute Ta
 
 ### Task 1 — extract reusable floating-window behavior
 
-Status: `[ ]`
+Status: `[x]` — implemented, automatically verified, and interactively accepted on 2026-08-02 at checkpoint `40f4137`
 
 Extract positioning, viewport containment, free movement, independent right-edge Rack-width resizing, centered Browser/content resizing, keyboard resize, pointer capture/cancellation, resize-state marking, and viewport-resize clamping from `useBrowserWorkspace` into generic headless window modules.
 
@@ -191,6 +191,8 @@ Create:
 Allowed existing files are `useBrowserWorkspace.js`, `browserWorkspaceModel.js`, their focused tests, and focused Browser tests only where imports follow the extraction. Keep the returned `move`, `rackWidthResize`, `resize`, `windowPosition`, and `windowSize` interface compatible so `BrowserWorkspace.jsx` requires no change.
 
 No JSX, CSS, label, compact-mode, module, repository, routing, storage, publication, wallet, visitor, schema, or prototype change is allowed. Manual acceptance is that the current production `THE RACK` moves, resizes, clamps, closes/reopens, and behaves under reduced motion exactly as before at desktop, 640px, and 390×844.
+
+Acceptance checkpoint (2026-08-02): floating-window sizing, viewport containment, free movement, independent right-edge Rack-width resizing, centered content resizing, keyboard resizing, pointer capture/cancellation, resize-state marking, and viewport-resize clamping now live in `latticeFloatingWindowModel.js` and `useLatticeFloatingWindow.js`. `useBrowserWorkspace.js` delegates through the unchanged `move`, `rackWidthResize`, `resize`, `windowPosition`, and `windowSize` interface, so `BrowserWorkspace.jsx` and all JSX/CSS presentation remain unchanged. The focused floating-window and Browser regression set passes 24/24 and `git diff --check` passes. Interactive review accepted the existing production RÄCK behavior. No production MODUL-8R entrance, shell, prototype import, schema, storage, publication, wallet, visitor, route, label, style, or visual change was introduced. Task 2 remains unstarted pending a separate explicit instruction.
 
 ### Task 2 — clean MODUL-8R shell behind a development-only owner entrance
 

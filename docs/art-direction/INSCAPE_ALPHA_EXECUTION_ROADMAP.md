@@ -59,6 +59,10 @@ Latest accepted MODUL-8R production-integration architecture checkpoint:
 
 - `3e2ba91` — headless controller extraction, development-only parity shell, and atomic production cutover plan
 
+Latest accepted MODUL-8R implementation checkpoint:
+
+- `40f4137` — Task 1 reusable floating-window model and headless controller extraction
+
 Last verified sequence at the time this roadmap was created:
 
 - `350995f` — frozen lattice UI prototype
@@ -910,6 +914,8 @@ Owner-window styling checkpoint (2026-08-01): the standalone CREATIONS and ACTIV
 
 MODUL-8R production-integration architecture checkpoint (2026-08-02, read-only and accepted): do not evolve `LatticeRackShell` into MODUL-8R in place. Browser currently owns Rack state and geometry, Rack CSS consumes Browser variables, Browser CSS reaches into Rack selectors, and the accepted accordion requires a different structure and transition model. The accepted sequence extracts reusable headless window/controllers first, builds a fresh `.modul8r-*` presentation behind a development-only owner entrance, connects real repositories through bounded adapters, certifies complete visual/functional/isolation/budget parity, and only then switches one owner import/wiring boundary atomically. The current `THE RACK`, Browser, standalone windows, routes, and production bundle remain unchanged through the parity gate. Old presentation source is retained as rollback until live cutover acceptance and a fresh reachability audit. The rejected uncommitted hybrid Task 1 was restored before this audit and contributes no checkpoint code. The sole detailed execution authority is `INSCAPE_MODUL8R_ROADMAP_AND_BOUNDARY.md` Task 1–9.
 
+MODUL-8R Task 1 checkpoint (2026-08-02, implemented and interactively accepted): checkpoint `40f4137` extracts generic floating-window geometry and controllers into `src/lattice/windows/` while preserving the Browser workspace's exact `move`, `rackWidthResize`, `resize`, `windowPosition`, and `windowSize` interface. The production `THE RACK`, Browser JSX/CSS, standalone windows, routes, prototype, owner/visitor boundaries, schemas, storage, publication, and wallet behavior remain unchanged. The focused floating-window and Browser set passes 24/24 and `git diff --check` passes. Interactive review accepted movement, both resize paths, viewport containment, close/reopen, reduced motion, and the existing focus, Escape, inert, and stacking behavior. Task 2 is not started.
+
 User visual test: complete Alpha acceptance checklist on localhost, deploy preview, `enterinscape.com`, direct visit, and Universal Profile iframe.
 
 Exit criterion: the user approves the complete live Alpha experience and rollback remains available.
@@ -972,4 +978,4 @@ Start with:
 
 ## Immediate next action
 
-Execute only MODUL-8R Task 1 from `INSCAPE_MODUL8R_ROADMAP_AND_BOUNDARY.md`: extract generic floating-window geometry/controllers from `useBrowserWorkspace` while preserving its public interface and producing zero JSX, CSS, label, route, or visible behavior change. Keep the current `THE RACK`, Browser, standalone CREATIONS/ACTIVITY/DISCOVER/Theme surfaces, production routes, and prototype untouched. Do not begin the clean MODUL-8R shell, broad deletion, embedded mode, Atelier/control cells, MEDI-8R, persistence, schema, publication, wallet, or visitor work until Task 1 is verified and interactively accepted.
+Stop after the accepted MODUL-8R Task 1 checkpoint and await a separate explicit instruction before beginning Task 2. Keep the current `THE RACK`, Browser, standalone CREATIONS/ACTIVITY/DISCOVER/Theme surfaces, production routes, and prototype untouched. Do not begin the clean MODUL-8R shell, broad deletion, embedded mode, Atelier/control cells, MEDI-8R, persistence, schema, publication, wallet, or visitor work without that approval.
