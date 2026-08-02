@@ -26,7 +26,8 @@ test('Task 5 uses an independent creator store, pure union, honest viewer and ex
   assert.match(integration, /projectLibraryAssetUnion/);
   assert.match(integration, /LatticeFocusViewer/);
   assert.match(integration, /onRelatedAssetRecordsChange/);
-  assert.match(panel, /All Assets[\s\S]*Owned[\s\S]*Created[\s\S]*Unsorted[\s\S]*Used on Canvas/);
+  assert.match(panel, /All Assets[\s\S]*Owned[\s\S]*Created[\s\S]*Unsorted/);
+  assert.doesNotMatch(panel, /Used on Canvas|BROWSER_VIEW_KINDS\.USED/);
   assert.match(panel, /NOT OWNED/);
   assert.match(panel, /onDoubleClick/);
   assert.match(panel, /CREATED SOURCE UNAVAILABLE[\s\S]*RETRY/);
@@ -34,6 +35,14 @@ test('Task 5 uses an independent creator store, pure union, honest viewer and ex
   assert.match(owner, /onAssetPointerDown=\{beginBrowserAssetDrag\}/);
   assert.match(authoring, /supplementalAssetRecords/);
   assert.doesNotMatch(integration, /\buseCreationsStore\(/);
+});
+
+test('Task 6 removes USED ON CANVAS only from MODUL-8R Library and keeps the old Browser authority', async () => {
+  const [panel, oldPanel] = await Promise.all([
+    read('./Modul8rLibraryPanel.jsx'), read('../browser/BrowserUnifiedPanel.jsx'),
+  ]);
+  assert.doesNotMatch(panel, /Used on Canvas|BROWSER_VIEW_KINDS\.USED/);
+  assert.match(oldPanel, /Used on Canvas[\s\S]*BROWSER_VIEW_KINDS\.USED/);
 });
 
 test('closing retains accepted creator authority while profile change and unmount clear it without progressive gaps', async () => {

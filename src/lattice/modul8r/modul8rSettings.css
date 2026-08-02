@@ -1,0 +1,17 @@
+.modul8r-settings,.modul8r-settings * { box-sizing:border-box; }
+.modul8r-settings { position:fixed; z-index:36; top:58px; left:50%; width:min(440px,calc(100vw - 28px)); max-height:calc(100dvh - 82px); overflow:hidden; translate:-50% 0; border:1px solid var(--lattice-menu-line-strong); background:var(--lattice-menu-panel); box-shadow:10px 14px 34px rgb(0 0 0 / .28); color:var(--lattice-menu-ink); font-family:"Inscape IBM Plex Mono",monospace; }
+.modul8r-settings > header { height:38px; padding-left:14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--lattice-menu-line-strong); font:var(--lattice-window-type-module); letter-spacing:.1em; }
+.modul8r-settings > header button { width:38px; height:38px; padding:0; border:0; border-left:1px solid var(--lattice-menu-line); background:transparent; color:inherit; cursor:pointer; }
+.modul8r-settings > header button:is(:hover,:focus-visible) { outline:0; background:var(--lattice-menu-selected); }
+.modul8r-settings > main { max-height:calc(100dvh - 122px); padding:14px; overflow:auto; color:var(--lattice-menu-ink); }
+.modul8r-settings > main > header { display:flex; justify-content:space-between; padding-bottom:10px; color:var(--lattice-menu-muted); font:var(--lattice-window-type-label); letter-spacing:.08em; }
+.modul8r-settings__options label { min-height:44px; display:grid; grid-template-columns:minmax(0,1fr) 28px; align-items:center; gap:10px; font:var(--lattice-window-type-label); letter-spacing:.08em; }
+.modul8r-settings__options label > span { display:flex; align-items:center; gap:8px; }
+.modul8r-settings__options small,.modul8r-settings > main > p,.modul8r-settings__theme > p { color:var(--lattice-menu-muted); font:var(--lattice-window-type-label); }
+.modul8r-settings__options input { accent-color:var(--lattice-menu-ink); }
+.modul8r-settings__theme { margin-top:20px; padding-top:14px; border-top:1px solid var(--lattice-menu-line-strong); }
+.modul8r-settings__theme > strong { display:block; margin-bottom:8px; font:var(--lattice-window-type-module); letter-spacing:.1em; }
+.modul8r-settings__theme label { min-height:44px; display:grid; grid-template-columns:minmax(0,1fr) minmax(120px,160px); align-items:center; gap:12px; font:var(--lattice-window-type-label); letter-spacing:.08em; }
+.modul8r-settings__theme select { min-height:32px; border:1px solid var(--lattice-menu-line-strong); background:var(--lattice-menu-panel); color:var(--lattice-menu-ink); font:inherit; }
+@media(max-width:520px) { .modul8r-settings { top:14px; max-height:calc(100dvh - 28px); } .modul8r-settings > main { max-height:calc(100dvh - 68px); } }
+@media(prefers-reduced-motion:reduce) { .modul8r-settings { animation:none; } }

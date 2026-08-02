@@ -81,15 +81,19 @@ export default function Modul8rShell({
   menuSurfaceId = 'carbon',
   moduleContent = {},
   moduleFaceplateAccessoryRefs = {},
+  onEscape,
   onRequestClose,
+  onSettingsRequest,
   returnFocusRef,
 }) {
   const [shellState, setShellState] = useState(() => createModul8rShellState({
     openModule: initialOpenModule,
   }));
   const [masterTransitioning, setMasterTransitioning] = useState(false);
+  const [masterMenuOpen, setMasterMenuOpen] = useState(false);
   const rootRef = useRef(null);
   const masterToggleRef = useRef(null);
+  const masterMenuButtonRef = useRef(null);
   const floatingWindow = useLatticeFloatingWindow({ initialSize: INITIAL_SHELL_SIZE });
 
   const requestClose = useCallback(() => {
@@ -100,13 +104,35 @@ export default function Modul8rShell({
   useEffect(() => {
     const onKeyDown = (event) => {
       if (event.key !== 'Escape') return;
+      if (onEscape?.()) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (masterMenuOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        setMasterMenuOpen(false);
+        globalThis.requestAnimationFrame?.(() => masterMenuButtonRef.current?.focus({ preventScroll: true }));
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       requestClose();
     };
     globalThis.addEventListener?.('keydown', onKeyDown, true);
     return () => globalThis.removeEventListener?.('keydown', onKeyDown, true);
-  }, [requestClose]);
+  }, [masterMenuOpen, onEscape, requestClose]);
+
+  useEffect(() => {
+    if (!masterMenuOpen) return undefined;
+    const close = (event) => {
+      if (event.target.closest?.('.modul8r-master-menu,.modul8r-master__menu-button')) return;
+      setMasterMenuOpen(false);
+    };
+    globalThis.addEventListener?.('pointerdown', close, true);
+    return () => globalThis.removeEventListener?.('pointerdown', close, true);
+  }, [masterMenuOpen]);
 
   useEffect(() => {
     if (!masterTransitioning) return undefined;
@@ -179,9 +205,18 @@ export default function Modul8rShell({
         type="button"
       ><span>MODUL-8R</span></button>
       {masterAccessory && <div className="modul8r-master__accessory">{masterAccessory}</div>}
+      {onSettingsRequest && <button aria-expanded={masterMenuOpen} aria-haspopup="menu" aria-label="Modulator options"
+        className="modul8r-master__menu-button" onClick={() => setMasterMenuOpen((open) => !open)} ref={masterMenuButtonRef} type="button">
+        <MoreVertical aria-hidden="true" size={14} strokeWidth={2} />
+      </button>}
       <button aria-label="Close Modulator" className="modul8r-master__close" onClick={requestClose} type="button">
         <X aria-hidden="true" size={16} strokeWidth={2} />
       </button>
+      {masterMenuOpen && <div aria-label="Modulator options" className="modul8r-master-menu" role="menu">
+        <button onClick={() => { setMasterMenuOpen(false); onSettingsRequest?.(masterMenuButtonRef.current); }} role="menuitem" type="button">
+          <i aria-hidden="true" />SETTINGS
+        </button>
+      </div>}
     </header>
     <div
       aria-hidden={!shellState.masterExpanded}

@@ -1,4 +1,4 @@
-import { Folder, Grid3X3, Layers3, Plus, SquareStack, UserRound, WandSparkles } from 'lucide-react';
+import { Folder, Layers3, Plus, SquareStack, UserRound, WandSparkles } from 'lucide-react';
 import { BROWSER_ASSET_SIZE, BROWSER_VIEW_KINDS, categoryAssetIds } from '../browser/browserWorkspaceModel.js';
 
 const assetId = (asset) => asset?.stableAssetId || asset?.id;
@@ -47,7 +47,6 @@ export default function Modul8rLibraryPanel({ categoryDropTargetId, categorySect
   selectRelationshipView, workspace }) {
   const assets = workspace.renderableAssets; const categories = data.categories || [];
   const renderableIds = new Set(workspace.renderableAssetIds); const filed = categoryAssetIds(categories);
-  const used = new Set(data.usedAssetIds || []);
   const related = relationshipView === 'owned' ? workspace.filteredAssets.filter((asset) => asset.owned)
     : relationshipView === 'created' ? workspace.filteredAssets.filter((asset) => asset.created) : workspace.filteredAssets;
   const emptyLabel = workspace.hasActiveFilters && workspace.viewAssetCount
@@ -61,7 +60,6 @@ export default function Modul8rLibraryPanel({ categoryDropTargetId, categorySect
       <NavButton active={relationshipView === 'owned'} count={assets.filter((asset) => asset.owned).length} Icon={UserRound} label="Owned" onClick={() => { selectRelationshipView('owned'); workspace.selectView({ kind: BROWSER_VIEW_KINDS.ALL, id: null }); }} />
       <NavButton active={relationshipView === 'created'} count={assets.filter((asset) => asset.created).length} Icon={WandSparkles} label="Created" onClick={() => { selectRelationshipView('created'); workspace.selectView({ kind: BROWSER_VIEW_KINDS.ALL, id: null }); }} />
       <NavButton active={relationshipView === 'all' && workspace.view.kind === BROWSER_VIEW_KINDS.UNSORTED} count={assets.filter((asset) => !filed.has(assetId(asset))).length} Icon={SquareStack} label="Unsorted" onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.UNSORTED, id: null })} />
-      <NavButton active={relationshipView === 'all' && workspace.view.kind === BROWSER_VIEW_KINDS.USED} count={assets.filter((asset) => used.has(assetId(asset))).length} Icon={Grid3X3} label="Used on Canvas" onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.USED, id: null })} />
       <div className="lattice-browser-sidebar__category-heading" ref={categorySectionRef} tabIndex={-1}>{onCreateCategory && <button
         aria-label="Create category" className="lattice-browser-sidebar__create" onClick={(event) => onCreateCategory(event.currentTarget)} type="button"><Plus aria-hidden="true" size={14} /><span>CREATE</span></button>}</div>
       <div className="lattice-browser-category-list">{categories.map((category) => <NavButton

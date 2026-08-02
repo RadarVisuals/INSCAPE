@@ -7,22 +7,36 @@ import { createCreationsStore } from '../../creations/state/useCreationsStore.js
 import { createCreationFocusEntry } from '../../creations/domain/creationFocusViewModel.js';
 import { projectLibraryAssetUnion } from '../browser/libraryAssetUnion.js';
 import LatticeFocusViewer from '../rendering/LatticeFocusViewer.jsx';
+import Modul8rLayersAdapter from './Modul8rLayersAdapter.jsx';
+import Modul8rSettingsSurface from './Modul8rSettingsSurface.jsx';
 
 export default function Modul8rOwnerLibraryDevelopment({
   arrangeEnabled,
   categoryCommands,
   data,
+  activeTableId,
+  layers,
   menuSurfaceId,
   onArrangeToggle,
   onAssetPointerDown,
   onRelatedAssetRecordsChange,
   onRenderableAssetsChange,
+  onLayerReorder,
+  onLayerSelectionChange,
+  onNavigateTable,
+  onMenuSurfaceChange,
+  onSurfaceChange,
   onVisitProfile,
   profileAddress,
+  reorderDisabled,
+  selectedLayerIds,
+  surfaceId,
+  tables,
   ownedAssetRecords = [],
 }) {
   const [open, setOpen] = useState(true);
   const [viewerSession, setViewerSession] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [useRelatedCreationsStore] = useState(() => createCreationsStore({ retainOnRetry: true }));
   const createdAssets = useRelatedCreationsStore((state) => state.assets);
   const createdProfileAddress = useRelatedCreationsStore((state) => state.profileAddress);
@@ -36,6 +50,12 @@ export default function Modul8rOwnerLibraryDevelopment({
   const relatedRecordsCallbackRef = useRef(onRelatedAssetRecordsChange);
   const libraryFaceplateAccessoryRef = useRef(null);
   const peopleFaceplateAccessoryRef = useRef(null);
+  const settingsReturnFocusRef = useRef(null);
+  const closeSettings = () => {
+    setSettingsOpen(false);
+    requestAnimationFrame(() => settingsReturnFocusRef.current?.isConnected
+      && settingsReturnFocusRef.current.focus({ preventScroll: true }));
+  };
   useEffect(() => { relatedRecordsCallbackRef.current = onRelatedAssetRecordsChange; }, [onRelatedAssetRecordsChange]);
   useEffect(() => {
     if (!open) { cancelCreated(); return; }
@@ -79,12 +99,22 @@ export default function Modul8rOwnerLibraryDevelopment({
     activity: ({ active }) => <Modul8rActivityAdapter active={active} profileAddress={profileAddress} />,
     people: ({ active }) => <Modul8rPeopleAdapter active={active} faceplateTargetRef={peopleFaceplateAccessoryRef}
       onVisitProfile={onVisitProfile} />,
+    layers: <Modul8rLayersAdapter activeTableId={activeTableId} layers={layers} onNavigateTable={onNavigateTable}
+      onReorder={onLayerReorder} onSelectionChange={onLayerSelectionChange} reorderDisabled={reorderDisabled}
+      selectedIds={selectedLayerIds} tables={tables} />,
   };
   return open ? <><Modul8rShell masterAccessory={<button aria-pressed={arrangeEnabled}
     onClick={onArrangeToggle} type="button">ARRANGE</button>}
-    menuSurfaceId={menuSurfaceId} moduleContent={moduleContent}
+    menuSurfaceId={menuSurfaceId} moduleContent={moduleContent} onEscape={() => {
+      if (!settingsOpen) return false;
+      closeSettings();
+      return true;
+    }}
     moduleFaceplateAccessoryRefs={{ library: libraryFaceplateAccessoryRef, people: peopleFaceplateAccessoryRef }}
-    onRequestClose={() => { setViewerSession(null); setOpen(false); }} returnFocusRef={reopenRef} />
+    onRequestClose={() => { setViewerSession(null); setSettingsOpen(false); setOpen(false); }}
+    onSettingsRequest={(trigger) => { settingsReturnFocusRef.current = trigger; setSettingsOpen(true); }} returnFocusRef={reopenRef} />
+    {settingsOpen && <Modul8rSettingsSurface menuSurfaceId={menuSurfaceId} onClose={closeSettings}
+      onMenuSurfaceChange={onMenuSurfaceChange} onSurfaceChange={onSurfaceChange} surfaceId={surfaceId} />}
     {viewerSession && <LatticeFocusViewer dossier={viewerSession.entry.dossier} entry={viewerSession.entry}
       getReturnRectangle={() => viewerSession.returnFocus?.getBoundingClientRect?.()} gridVisible inspectionVariant="rack"
       menuSurfaceId={menuSurfaceId} onClosed={() => setViewerSession(null)} originRectangle={viewerSession.originRectangle}

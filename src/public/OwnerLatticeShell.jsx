@@ -1211,6 +1211,7 @@ function OwnerLatticeRuntime({
       </Suspense>}
       {developmentModul8rActive && Modul8rOwnerLibraryDevelopment && <Suspense fallback={null}>
         <Modul8rOwnerLibraryDevelopment
+          activeTableId={activeTableId}
           arrangeEnabled={arrangeEnabled}
           categoryCommands={browserCategoryCommands}
           data={{
@@ -1219,9 +1220,17 @@ function OwnerLatticeRuntime({
             usedAssetIds: [...new Set((authoring.draft?.tables || []).flatMap((table) => table.placements.map(({ stableAssetId }) => stableAssetId)))],
           }}
           menuSurfaceId={menuSurfaceId}
+          layers={layerEntries}
           onArrangeToggle={() => activateWorkspaceTool('arrange')}
           onAssetPointerDown={beginBrowserAssetDrag}
           onRelatedAssetRecordsChange={setModul8rRelatedAssetRecords}
+          onLayerReorder={reorderLayers}
+          onLayerSelectionChange={selectPlacement}
+          onMenuSurfaceChange={setMenuSurfaceId}
+          onNavigateTable={(tableId) => {
+            const table = authoring.draft?.tables.find(({ id }) => id === tableId);
+            if (table) navigateDirectly(table.coordinate);
+          }}
           onRenderableAssetsChange={(assetIds) => {
             const draggedAssetId = browserDragGestureRef.current?.assetId;
             if (draggedAssetId && !assetIds.includes(draggedAssetId)) cancelBrowserAssetDrag();
@@ -1229,6 +1238,11 @@ function OwnerLatticeRuntime({
           onVisitProfile={onVisitProfile}
           ownedAssetRecords={publicationAssetRecords.filter((record) => normalizeProfileAddress(record.ownerAddress) === profileAddress)}
           profileAddress={profileAddress}
+          reorderDisabled={!arrangeEnabled}
+          selectedLayerIds={selectedPlacementIds}
+          surfaceId={surfaceId}
+          tables={authoring.draft?.tables || []}
+          onSurfaceChange={setSurfaceId}
         />
       </Suspense>}
       {themeOpen && <ThemeSurface
