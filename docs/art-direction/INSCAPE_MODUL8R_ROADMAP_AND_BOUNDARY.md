@@ -1,6 +1,6 @@
 # INSCAPE MODUL-8R Roadmap and Boundary
 
-Status: accepted prototype authority and production boundary; production runtime implementation still requires the staged boundary below.
+Status: accepted prototype authority and production boundary; Tasks 1–4 are implemented and interactively accepted behind the development-only boundary below. Task 5 is not started.
 
 ## Purpose
 
@@ -208,19 +208,23 @@ Acceptance checkpoint (2026-08-02): the production-grade `Modul8rShell`, separat
 
 ### Task 3 — real Library parity inside the development shell
 
-Status: `[ ]`
+Status: `[x]` — implemented, automatically verified, and interactively accepted on 2026-08-02 at checkpoint `bbf03d8`
 
 Mount the existing production Library/Browser behavior through a bounded MODUL-8R Library adapter. Preserve categories, ALL ASSETS, UNSORTED, USED ON CANVAS, filters, search, sort, labels, size, progressive decoded media, unavailable counts, selection, multi-select, asset/category menus, drag-to-category, and ARRANGE-gated drag-to-canvas. Split reusable Browser-content presentation from old Rack/window presentation without changing repository, workspace-v8, category, or canonical placement authority.
 
 CREATED is excluded until Task 5. Activity and People repositories are excluded. The old Browser remains the live owner destination and rollback.
 
+Acceptance checkpoint (2026-08-02): the real profile-scoped Library is mounted at `/development/owner/modul-8r?live=1` through a bounded adapter over the accepted Browser content, workspace-v8, category-command, progressive-media, selection, and canonical placement authorities. Search, Size, filters, labels, unavailable results, category operations, drag-to-category, and ARRANGE-gated drag-to-canvas remain functional. The adapter imports neither the old Browser window nor `LatticeRackShell`, and the production Browser and `THE RACK` remain live rollback. Focused tests, production build and budgets, and production output/manifest/owner-runtime isolation checks passed with the development-only integration absent from production output.
+
 ### Task 4 — Activity and People headless adapters
 
-Status: `[ ]`
+Status: `[x]` — implemented, automatically verified, and interactively accepted on 2026-08-02 at checkpoint `16abf9b`
 
 Extract reusable loading/query/abort/generation/retry controllers from the accepted standalone Activity and public discovery surfaces and mount their real repositories in the development shell. Preserve Activity complete, partial, failed, retry, refresh, empty, timeout, stale-generation, unresolved-target, and indexed-event-history semantics. Preserve People search, loading/failure, public-profile routing, and owner/visitor isolation.
 
 Do not invent unread state, notifications, follows, favorites, lists, recents, or persistence. Standalone ACTIVITY and DISCOVER remain the live owner destinations and rollback.
+
+Accepted checkpoint (2026-08-02): checkpoint `16abf9b` makes Activity and People use injected DOM-free controllers shared by the unchanged standalone presentations and development-only MODUL-8R adapters. The stable shell lifecycle keeps adapters mounted but activates only the expanded module while the master is expanded; switching, collapse, close, and unmount abort in-flight work without allowing stale updates or discarding accepted session state. Activity retains real indexed rows during refresh and exposes honest retained-row failure in MODUL-8R. People Search occupies only its expanded contextual faceplate, keyboard/listbox DOM focus remains presentation-owned, and normalized activation delegates to the existing owner `onVisitProfile` callback. No repository, route, schema, storage, publication, wallet, IPFS, Library behavior, prototype, or production destination changed. Focused tests pass 68/68, production-build tests pass 9/9, the shell browser matrix passes 1/1, production build/budgets pass, and production markers remain zero. Aggregate core measures 2,021,273 raw / 603,175 gzip under the interactively approved bounded 2,025,000 / 605,000 ceiling; initial entry remains 1,238,211 raw / 361,786 gzip. The separate owner-routing harness still has a repeatable pre-assertion Startveil/navigation timing failure in one of three cases, and the legacy published-visitor fixture still fails before mount. Interactive acceptance includes the limited core-budget recalibration. Task 5 remains not started.
 
 ### Task 5 — honest OWNED/CREATED Library union
 

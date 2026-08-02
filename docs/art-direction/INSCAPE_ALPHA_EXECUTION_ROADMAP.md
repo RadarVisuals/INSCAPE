@@ -61,7 +61,7 @@ Latest accepted MODUL-8R production-integration architecture checkpoint:
 
 Latest accepted MODUL-8R implementation checkpoint:
 
-- `40f4137` — Task 1 reusable floating-window model and headless controller extraction
+- `16abf9b` — Task 4 Activity and People headless adapters in the development-only live-owner shell
 
 Last verified sequence at the time this roadmap was created:
 
@@ -918,6 +918,12 @@ MODUL-8R Task 1 checkpoint (2026-08-02, implemented and interactively accepted):
 
 MODUL-8R Task 2 checkpoint (2026-08-02, implemented and interactively accepted): checkpoint `ea23eb7` adds a clean production-grade `Modul8rShell`, separate shell model, fresh `.modul8r-*` stylesheet, focused tests, and the strictly development-only `/development/owner/modul-8r` entrance. The accepted master/module geometry, fixed order, exclusive-open behavior, collapse state retention, right-edge resize, responsive containment, focus/Escape behavior, reduced motion, six themes, and title click-versus-drag semantics are preserved; the title is visible and aligned with the module labels. The final focused shell/controller set passes 9/9, the real Edge browser matrix passes 1/1, the previously verified Task 1 Browser regression set passes 24/24, `git diff --check` and the production build pass, and output, manifest, and owner-runtime-graph searches contain zero MODUL-8R development markers. The live owner graph and Task 3 remain untouched.
 
+MODUL-8R Task 3 checkpoint (2026-08-02, implemented and interactively accepted): checkpoint `bbf03d8` mounts the real profile-scoped Library inside the development-only live-owner shell at `/development/owner/modul-8r?live=1` through a bounded adapter over the accepted Browser content, workspace-v8, category-command, progressive-media, selection, and canonical placement authorities. Search, Size, filters, labels, unavailable results, category operations, drag-to-category, and ARRANGE-gated drag-to-canvas remain functional without importing the old Browser window or `THE RACK` presentation. Focused Task 3 tests, the production build and budgets, and production output/manifest/owner-runtime isolation checks passed. The old production Browser and `THE RACK` remain live and are the rollback; no production route was cut over.
+
+MODUL-8R Task 4 status (2026-08-02): `[x]` — Activity and People headless controllers and development-shell adapters are implemented, automatically verified, and interactively accepted at checkpoint `16abf9b`, including the limited core-budget recalibration.
+
+MODUL-8R Task 4 accepted checkpoint (2026-08-02): checkpoint `16abf9b` makes the standalone Activity and Profile Discovery surfaces delegate request/query/selection state to DOM-free injected controllers while retaining their existing window, modal, focus, Escape, resize, and restoration ownership. Development-only Activity and People adapters consume those controllers through an explicit stable active lifecycle; switching modules, collapsing the master, closing MODUL-8R, or unmounting aborts active work without discarding accepted rows, results, query, or selection state. People selection still calls the existing owner `onVisitProfile` authority, and Activity retains indexed-event and official-profile-link provenance. The focused controller/repository/standalone/MODUL-8R/owner-isolation set passes 68/68, production-build utility tests pass 9/9, the six-theme/six-viewport shell browser matrix passes 1/1, the production build and budgets pass, and production output/manifest/owner-graph searches contain zero development MODUL-8R markers. The interactively approved limited aggregate core ceiling is 2,025,000 raw / 605,000 gzip; actual core is 2,021,273 raw / 603,175 gzip while initial entry remains 1,238,211 raw / 361,786 gzip. The pre-existing real-App owner-routing browser harness passed two cases but its owner A-to-B case failed twice during Startveil/navigation timing, and the published-visitor fixture failed before mounting; neither failure is claimed as a Task 4 pass. Task 5 remains not started.
+
 User visual test: complete Alpha acceptance checklist on localhost, deploy preview, `enterinscape.com`, direct visit, and Universal Profile iframe.
 
 Exit criterion: the user approves the complete live Alpha experience and rollback remains available.
@@ -980,4 +986,4 @@ Start with:
 
 ## Immediate next action
 
-Stop after the accepted MODUL-8R Task 2 checkpoint and await a separate explicit instruction before beginning Task 3. Keep the current `THE RACK`, Browser, standalone CREATIONS/ACTIVITY/DISCOVER/Theme surfaces, production routes, and prototype untouched. Do not begin real Library integration, broad deletion, embedded mode, Atelier/control cells, MEDI-8R, persistence, schema, publication, wallet, or visitor work without that approval.
+Stop at the accepted MODUL-8R Task 4 checkpoint `16abf9b`. Keep the current `THE RACK`, Browser, standalone CREATIONS/ACTIVITY/DISCOVER/Theme surfaces, production routes, and prototype untouched. Do not begin Task 5 CREATED, Task 6 Layers/Settings/Theme parity, broad deletion, embedded mode, Atelier/control cells, MEDI-8R, persistence, schema, publication, wallet, or visitor work without separate approval.
