@@ -55,6 +55,10 @@ Latest accepted MODUL-8R design-authority checkpoint:
 
 - `0f1136d` — isolated development prototype, accepted visual and interaction authority; not yet imported into production
 
+Latest accepted MODUL-8R production-integration architecture checkpoint:
+
+- `3e2ba91` — headless controller extraction, development-only parity shell, and atomic production cutover plan
+
 Last verified sequence at the time this roadmap was created:
 
 - `350995f` — frozen lattice UI prototype
