@@ -16,12 +16,13 @@ export default function Modul8rDevelopmentEntrance() {
     data-reduced-motion={reducedMotion || undefined}
   >
     <aside aria-label="MODUL-8R development review controls" className="modul8r-development-controls">
-      <strong>TASK 2 / OWNER REVIEW</strong>
+      <strong>TASK 3 / SHELL REVIEW</strong>
       <label>THEME<select onChange={(event) => setMenuSurfaceId(event.target.value)} value={menuSurfaceId}>
         {THEMES.map((theme) => <option key={theme} value={theme}>{theme.toUpperCase()}</option>)}
       </select></label>
       <label>REDUCED MOTION<input checked={reducedMotion} onChange={(event) => setReducedMotion(event.target.checked)} type="checkbox" /></label>
       <a href="/prototype/modul-8r">OPEN ACCEPTED PROTOTYPE</a>
+      <a href="/development/owner/modul-8r?live=1">OPEN LIVE OWNER LIBRARY</a>
     </aside>
     {open ? <Modul8rShell
       menuSurfaceId={menuSurfaceId}

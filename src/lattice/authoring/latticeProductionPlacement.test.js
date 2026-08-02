@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createEmptyLatticeProductionDraft } from '../domain/latticeProductionDraft.js';
 import {
+  createCompactLatticeProductionPlacementGeometry,
   createInitialLatticeProductionPlacementGeometry,
   createLatticeProductionDropGeometry,
   createLatticeProductionPlacementId,
@@ -59,6 +60,31 @@ test('initial geometry uses the approved provisional 12 by 10 integer envelope',
   for (const dimensions of [[0, 10], [10, 0], [NaN, 1], [1, Infinity]]) {
     assert.throws(() => createInitialLatticeProductionPlacementGeometry(...dimensions), { code: 'LATTICE_PLACEMENT_DIMENSIONS_UNAVAILABLE' });
   }
+});
+
+test('compact MODUL-8R placement starts square media at 2 by 2 and preserves portrait or landscape shape', () => {
+  assert.deepEqual(createCompactLatticeProductionPlacementGeometry(1, 1),
+    { column: 15, row: 8, columnSpan: 2, rowSpan: 2 });
+  assert.deepEqual(createCompactLatticeProductionPlacementGeometry(3, 2),
+    { column: 14, row: 8, columnSpan: 3, rowSpan: 2 });
+  assert.deepEqual(createCompactLatticeProductionPlacementGeometry(2, 3),
+    { column: 15, row: 7, columnSpan: 2, rowSpan: 3 });
+  assert.deepEqual(createCompactLatticeProductionPlacementGeometry(16, 9),
+    { column: 14, row: 8, columnSpan: 4, rowSpan: 2 });
+  assert.deepEqual(createCompactLatticeProductionPlacementGeometry(9, 16),
+    { column: 15, row: 7, columnSpan: 2, rowSpan: 4 });
+  assert.deepEqual(createCompactLatticeProductionPlacementGeometry(1, 4),
+    { column: 15, row: 7, columnSpan: 1, rowSpan: 4 });
+});
+
+test('compact drop geometry stays opt-in while the production Browser default remains unchanged', () => {
+  const rectangle = { left: 100, top: 50, width: 320, height: 180 };
+  assert.deepEqual(createLatticeProductionDropGeometry(1, 1, { x: 260, y: 140 }, rectangle),
+    { column: 11, row: 4, columnSpan: 10, rowSpan: 10 });
+  assert.deepEqual(createLatticeProductionDropGeometry(1, 1, { x: 260, y: 140 }, rectangle,
+    { placementPreset: 'compact' }), { column: 15, row: 8, columnSpan: 2, rowSpan: 2 });
+  assert.throws(() => createLatticeProductionDropGeometry(1, 1, { x: 260, y: 140 }, rectangle,
+    { placementPreset: 'unknown' }), { code: 'LATTICE_PLACEMENT_PRESET_INVALID' });
 });
 
 test('placement IDs use injected collision-resistant candidates with bounded collision checking', () => {

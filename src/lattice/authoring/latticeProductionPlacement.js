@@ -6,6 +6,7 @@ import {
 } from '../domain/latticeProductionDraft.js';
 
 export const INITIAL_LATTICE_PLACEMENT_ENVELOPE = Object.freeze({ columns: 12, rows: 10 });
+export const LATTICE_PLACEMENT_PRESETS = Object.freeze({ COMPACT: 'compact', DEFAULT: 'default' });
 
 const PLACEMENT_ID = /^[A-Za-z0-9:_-]+$/u;
 const MAX_PLACEMENT_ID_LENGTH = 200;
@@ -85,6 +86,25 @@ export function createInitialLatticeProductionPlacementGeometry(nativeWidth, nat
   return Object.freeze({ column, row, columnSpan, rowSpan });
 }
 
+export function createCompactLatticeProductionPlacementGeometry(nativeWidth, nativeHeight) {
+  if (!Number.isFinite(nativeWidth) || nativeWidth <= 0
+    || !Number.isFinite(nativeHeight) || nativeHeight <= 0) {
+    throw operationError('LATTICE_PLACEMENT_DIMENSIONS_UNAVAILABLE', 'Positive native media dimensions are required');
+  }
+  const ratio = nativeWidth / nativeHeight;
+  let columnSpan; let rowSpan;
+  if (ratio >= 1) {
+    columnSpan = Math.min(4, Math.max(2, Math.round(2 * ratio)));
+    rowSpan = Math.min(4, Math.max(1, Math.round(columnSpan / ratio)));
+  } else {
+    rowSpan = Math.min(4, Math.max(2, Math.round(2 / ratio)));
+    columnSpan = Math.min(4, Math.max(1, Math.round(rowSpan * ratio)));
+  }
+  const column = Math.floor((LATTICE_PRODUCTION_GEOMETRY.columns - columnSpan) / 2);
+  const row = Math.floor((LATTICE_PRODUCTION_GEOMETRY.rows - rowSpan) / 2);
+  return Object.freeze({ column, row, columnSpan, rowSpan });
+}
+
 export function assertLatticeProductionDropGeometry(destination) {
   const geometry = {
     column: destination?.column, row: destination?.row,
@@ -99,8 +119,15 @@ export function assertLatticeProductionDropGeometry(destination) {
   return Object.freeze(geometry);
 }
 
-export function createLatticeProductionDropGeometry(nativeWidth, nativeHeight, pointer, rectangle) {
-  const initial = createInitialLatticeProductionPlacementGeometry(nativeWidth, nativeHeight);
+export function createLatticeProductionDropGeometry(nativeWidth, nativeHeight, pointer, rectangle, {
+  placementPreset = LATTICE_PLACEMENT_PRESETS.DEFAULT,
+} = {}) {
+  if (!Object.values(LATTICE_PLACEMENT_PRESETS).includes(placementPreset)) {
+    throw operationError('LATTICE_PLACEMENT_PRESET_INVALID', 'Unknown initial placement preset');
+  }
+  const initial = placementPreset === LATTICE_PLACEMENT_PRESETS.COMPACT
+    ? createCompactLatticeProductionPlacementGeometry(nativeWidth, nativeHeight)
+    : createInitialLatticeProductionPlacementGeometry(nativeWidth, nativeHeight);
   if (!Number.isFinite(pointer?.x) || !Number.isFinite(pointer?.y)
     || !Number.isFinite(rectangle?.left) || !Number.isFinite(rectangle?.top)
     || !Number.isFinite(rectangle?.width) || rectangle.width <= 0

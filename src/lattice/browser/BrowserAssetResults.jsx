@@ -15,7 +15,9 @@ export default function BrowserAssetResults({ assetSize = BROWSER_ASSET_SIZE.DEF
   if (selectedAssetId) selectedIds.add(selectedAssetId);
   const numericAssetSize = Math.min(BROWSER_ASSET_SIZE.MAXIMUM,
     Math.max(BROWSER_ASSET_SIZE.MINIMUM, Number(assetSize) || BROWSER_ASSET_SIZE.DEFAULT));
-  const resolvedAssetSize = displayMode === 'list' || numericAssetSize === BROWSER_ASSET_SIZE.LIST ? 'list' : 'grid';
+  const resolvedAssetSize = displayMode === 'list' ? 'list'
+    : displayMode === 'grid' ? 'grid'
+      : numericAssetSize === BROWSER_ASSET_SIZE.LIST ? 'list' : 'grid';
   const assetGridStyle = resolvedAssetSize === 'list' ? undefined : {
     '--lattice-browser-asset-media-max': `${Math.round(numericAssetSize * 1.15)}px`,
     '--lattice-browser-asset-min': `${numericAssetSize}px`,

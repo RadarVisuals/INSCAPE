@@ -74,6 +74,9 @@ const CreationsBrowser = lazy(() => import('./CreationsBrowser.jsx'));
 const SettingsBrowser = lazy(() => import('./SettingsBrowser.jsx'));
 const ProfileDocumentPreview = lazy(() => import('../profileDocument/components/ProfileDocumentPreview.jsx'));
 const OwnerLatticePublicationRack = lazy(() => import('./OwnerLatticePublicationRack.jsx'));
+const Modul8rOwnerLibraryDevelopment = import.meta.env.DEV
+  ? lazy(() => import('../lattice/modul8r/Modul8rOwnerLibraryDevelopment.jsx'))
+  : null;
 
 const RUNTIME_PROJECTION_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 const CENTER_TABLE_ID = 'table-05';
@@ -179,6 +182,9 @@ function OwnerLatticeRuntime({
   visitorWalletConnected = false,
   workspaceProfileAddress,
 }) {
+  const developmentModul8rActive = import.meta.env.DEV
+    && window.location.pathname.replace(/\/+$/, '') === '/development/owner/modul-8r'
+    && new URLSearchParams(window.location.search).get('live') === '1';
   const profileAddress = workspaceProfileAddress;
 
   const viewportRef = useRef(null);
@@ -660,7 +666,7 @@ function OwnerLatticeRuntime({
     browserDragGestureRef.current = null;
     setBrowserAssetDrag(null);
   }, []);
-  const beginBrowserAssetDrag = useCallback((event, asset, workspace) => {
+  const beginBrowserAssetDrag = useCallback((event, asset, workspace, { placementPreset = 'default' } = {}) => {
     const id = asset?.stableAssetId || asset?.id;
     if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || !arrangeEnabled
       || !asset?.placeable || workspace.selectedAssetIds.length > 1) return;
@@ -681,7 +687,7 @@ function OwnerLatticeRuntime({
       if (!overChrome && inside && activeDraftTable?.visibility === 'PUBLIC') {
         try {
           destination = createLatticeProductionDropGeometry(asset.width, asset.height,
-            { x: pointerEvent.clientX, y: pointerEvent.clientY }, rectangle);
+            { x: pointerEvent.clientX, y: pointerEvent.clientY }, rectangle, { placementPreset });
         } catch { destination = null; }
       }
       setBrowserAssetDrag({ asset, destination, point: { x: pointerEvent.clientX, y: pointerEvent.clientY }, tableId: destination ? activeTableId : null });
@@ -701,10 +707,10 @@ function OwnerLatticeRuntime({
       const inside = rectangle && pointerEvent.clientX >= rectangle.left && pointerEvent.clientX <= rectangle.right
         && pointerEvent.clientY >= rectangle.top && pointerEvent.clientY <= rectangle.bottom;
       if (gesture?.started && !target?.closest?.('[data-lattice-chrome]') && inside
-        && browserOpen && arrangeEnabled && activeDraftTable?.visibility === 'PUBLIC'
+        && (browserOpen || developmentModul8rActive) && arrangeEnabled && activeDraftTable?.visibility === 'PUBLIC'
         && workspace.isAssetRenderable(id)) {
         try { destination = createLatticeProductionDropGeometry(asset.width, asset.height,
-          { x: pointerEvent.clientX, y: pointerEvent.clientY }, rectangle); } catch { destination = null; }
+          { x: pointerEvent.clientX, y: pointerEvent.clientY }, rectangle, { placementPreset }); } catch { destination = null; }
       }
       cleanup(); setBrowserAssetDrag(null);
       if (destination) authoring.placePublicAsset({ destination, stableAssetId: id, tableId: activeTableId });
@@ -715,11 +721,11 @@ function OwnerLatticeRuntime({
     element.addEventListener('pointermove', update);
     element.addEventListener('pointerup', finish);
     element.addEventListener('pointercancel', cancel);
-  }, [activeDraftTable?.visibility, activeTableId, arrangeEnabled, authoring.placePublicAsset, browserOpen]);
+  }, [activeDraftTable?.visibility, activeTableId, arrangeEnabled, authoring.placePublicAsset, browserOpen, developmentModul8rActive]);
 
   useEffect(() => {
-    if (!browserOpen || !arrangeEnabled) cancelBrowserAssetDrag();
-  }, [arrangeEnabled, browserOpen, cancelBrowserAssetDrag, profileAddress]);
+    if ((!browserOpen && !developmentModul8rActive) || !arrangeEnabled) cancelBrowserAssetDrag();
+  }, [arrangeEnabled, browserOpen, cancelBrowserAssetDrag, developmentModul8rActive, profileAddress]);
   useEffect(() => {
     if (!browserAssetDrag) return undefined;
     const cancelOnEscape = (event) => { if (event.key === 'Escape') cancelBrowserAssetDrag(); };
@@ -1198,6 +1204,24 @@ function OwnerLatticeRuntime({
               ? 'SELECT AN ASSET ON THE CANVAS' : selectedPlacements.some(({ locked }) => locked)
                 ? 'SELECTION CONTAINS A LOCKED PLACEMENT' : undefined,
           }))}
+        />
+      </Suspense>}
+      {developmentModul8rActive && Modul8rOwnerLibraryDevelopment && <Suspense fallback={null}>
+        <Modul8rOwnerLibraryDevelopment
+          arrangeEnabled={arrangeEnabled}
+          categoryCommands={browserCategoryCommands}
+          data={{
+            ...browserData,
+            activeTable: { label: activeTableName, placementUnavailableReason },
+            usedAssetIds: [...new Set((authoring.draft?.tables || []).flatMap((table) => table.placements.map(({ stableAssetId }) => stableAssetId)))],
+          }}
+          menuSurfaceId={menuSurfaceId}
+          onArrangeToggle={() => activateWorkspaceTool('arrange')}
+          onAssetPointerDown={beginBrowserAssetDrag}
+          onRenderableAssetsChange={(assetIds) => {
+            const draggedAssetId = browserDragGestureRef.current?.assetId;
+            if (draggedAssetId && !assetIds.includes(draggedAssetId)) cancelBrowserAssetDrag();
+          }}
         />
       </Suspense>}
       {themeOpen && <ThemeSurface

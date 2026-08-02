@@ -14,6 +14,8 @@ const latticeEngineRoute = import.meta.env.DEV && prototypePath === '/prototype/
 const modul8rRoute = import.meta.env.DEV && prototypePath === '/prototype/modul-8r';
 const modul8rDevelopmentRoute = import.meta.env.DEV
   && prototypePath === '/development/owner/modul-8r';
+const modul8rLiveOwnerRoute = modul8rDevelopmentRoute
+  && new URLSearchParams(window.location.search).get('live') === '1';
 const NavigationWallPrototype = import.meta.env.DEV
   ? React.lazy(() => import('./NavigationWallPrototype.jsx'))
   : null;
@@ -53,7 +55,7 @@ const prototype = prototypeRoute && NavigationWallPrototype
             ? <LatticeEnginePrototype />
           : modul8rRoute && Modul8rPrototype
             ? <Modul8rPrototype />
-          : modul8rDevelopmentRoute && Modul8rDevelopmentEntrance
+          : modul8rDevelopmentRoute && !modul8rLiveOwnerRoute && Modul8rDevelopmentEntrance
             ? <Modul8rDevelopmentEntrance />
         : null;
 

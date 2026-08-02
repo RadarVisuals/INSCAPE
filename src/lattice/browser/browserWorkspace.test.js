@@ -198,6 +198,7 @@ test('Browser preview sizing and optional labels share one session-only visual c
   assert.match(workspace, /workspace\.unavailableCount > 0/);
   assert.match(workspace, /title=\{`\$\{workspace\.unavailableCount\} unavailable assets`\}/);
   assert.match(assets, /data-size=\{resolvedAssetSize\}/);
+  assert.match(assets, /displayMode === 'grid' \? 'grid'/);
   assert.match(assets, /--lattice-browser-asset-min/);
   assert.match(assets, /data-labels=\{hideLabels \? 'hidden' : 'visible'\}/);
   assert.match(assets, /\{!hideLabels && <span className="lattice-browser-asset__record">/);

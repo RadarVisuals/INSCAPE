@@ -15,7 +15,7 @@ import './modul8rShell.css';
 const TRANSITION_FALLBACK_MS = 260;
 const INITIAL_SHELL_SIZE = Object.freeze({ height: 630, width: 980 });
 
-function Modul8rModule({ children, expanded, id, onToggle }) {
+function Modul8rModule({ children, expanded, faceplateAccessoryRef, id, onToggle }) {
   const [transitioning, setTransitioning] = useState(false);
   const previousExpandedRef = useRef(expanded);
 
@@ -47,6 +47,7 @@ function Modul8rModule({ children, expanded, id, onToggle }) {
           {expanded ? <ChevronUp size={13} strokeWidth={2} /> : <ChevronDown size={13} strokeWidth={2} />}
         </span>
       </button>
+      {faceplateAccessoryRef && <div className="modul8r-module__faceplate-accessory" ref={faceplateAccessoryRef} />}
     </header>
     <div
       aria-hidden={!expanded}
@@ -68,14 +69,16 @@ function Modul8rModule({ children, expanded, id, onToggle }) {
 function StructureOnlyModule({ id }) {
   return <div className="modul8r-structure-only" role="status">
     <strong>{MODUL8R_MODULE_LABELS[id]} MODULE</strong>
-    <span>STRUCTURE ONLY / CONTENT IS NOT CONNECTED IN TASK 2</span>
+    <span>STRUCTURE ONLY / CONTENT IS NOT CONNECTED</span>
   </div>;
 }
 
 export default function Modul8rShell({
   initialOpenModule = DEFAULT_MODUL8R_OPEN_MODULE,
+  masterAccessory = null,
   menuSurfaceId = 'carbon',
   moduleContent = {},
+  moduleFaceplateAccessoryRefs = {},
   onRequestClose,
   returnFocusRef,
 }) {
@@ -173,6 +176,7 @@ export default function Modul8rShell({
         ref={masterToggleRef}
         type="button"
       ><span>MODUL-8R</span></button>
+      {masterAccessory && <div className="modul8r-master__accessory">{masterAccessory}</div>}
       <button aria-label="Close Modulator" className="modul8r-master__close" onClick={requestClose} type="button">
         <X aria-hidden="true" size={16} strokeWidth={2} />
       </button>
@@ -190,6 +194,7 @@ export default function Modul8rShell({
       <div className="modul8r-modules">
         {MODUL8R_MODULE_ORDER.map((id) => <Modul8rModule
           expanded={shellState.openModule === id}
+          faceplateAccessoryRef={moduleFaceplateAccessoryRefs[id]}
           id={id}
           key={id}
           onToggle={toggleModule}

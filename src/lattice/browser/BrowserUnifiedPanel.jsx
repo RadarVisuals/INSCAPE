@@ -10,7 +10,30 @@ function NavButton({ active, categoryId, count, dropTarget, Icon = Folder, label
   </button>;
 }
 
-export default function BrowserUnifiedPanel({ categoryDropTargetId, categorySectionRef, data, onAssetContext, onAssetPointerDown, onCategoryContext, onCreateCategory, workspace }) {
+export function BrowserFilterControls({ className = 'lattice-browser-toolbar', labelsControlMode = 'hide', workspace }) {
+  const labelsChecked = labelsControlMode === 'show' ? !workspace.hideLabels : workspace.hideLabels;
+  return <div className={className}>
+    <label className="lattice-browser-toolbar-select" data-display={workspace.collection === 'all' ? 'ALL' : workspace.collection}>
+      <select aria-label="Filter collection" onChange={(event) => workspace.setCollection(event.target.value)} value={workspace.collection}>
+        <option disabled>COLLECTIONS</option><option disabled>────────────</option>
+        <option value="all">ALL</option><option disabled>────────────</option>
+        {workspace.collections.map((name) => <option key={name} value={name}>{name}</option>)}
+      </select>
+    </label>
+    <label className="lattice-browser-toolbar-select" data-display="SORT" title={`Sort: ${workspace.sort}`}>
+      <select aria-label="Sort assets" onChange={(event) => workspace.setSort(event.target.value)} value={workspace.sort}>
+        <option disabled>SORT</option><option disabled>────────────</option>
+        <option value={BROWSER_SORTS.TITLE_ASC}>TITLE A–Z</option><option value={BROWSER_SORTS.TITLE_DESC}>TITLE Z–A</option><option value={BROWSER_SORTS.COLLECTION}>COLLECTION</option>
+      </select>
+    </label>
+    <label className="lattice-browser-label-toggle"><input checked={labelsChecked}
+      onChange={(event) => workspace.setHideLabels(labelsControlMode === 'show' ? !event.target.checked : event.target.checked)}
+      type="checkbox" /><span>LABELS</span></label>
+    {workspace.hasActiveFilters && <button className="lattice-browser-clear-filters" onClick={workspace.clearFilters} type="button">CLEAR FILTERS</button>}
+  </div>;
+}
+
+export default function BrowserUnifiedPanel({ assetDisplayMode = null, categoryDropTargetId, categorySectionRef, data, onAssetContext, onAssetPointerDown, onCategoryContext, onCreateCategory, showToolbar = true, workspace }) {
   const assets = workspace.renderableAssets; const categories = data.categories || [];
   const renderableIds = new Set(workspace.renderableAssetIds);
   const filed = categoryAssetIds(categories); const used = new Set(data.usedAssetIds || []);
@@ -37,25 +60,9 @@ export default function BrowserUnifiedPanel({ categoryDropTargetId, categorySect
       onPointerDown={workspace.sidebarResize.begin} onPointerMove={workspace.sidebarResize.update}
       onPointerUp={workspace.sidebarResize.finish} title="Resize Browser navigation" type="button" />
     <main className="lattice-browser-results">
-      <div className="lattice-browser-toolbar">
-        <label className="lattice-browser-toolbar-select" data-display={workspace.collection === 'all' ? 'ALL' : workspace.collection}>
-          <select aria-label="Filter collection" onChange={(event) => workspace.setCollection(event.target.value)} value={workspace.collection}>
-            <option disabled>COLLECTIONS</option><option disabled>────────────</option>
-            <option value="all">ALL</option><option disabled>────────────</option>
-            {workspace.collections.map((name) => <option key={name} value={name}>{name}</option>)}
-          </select>
-        </label>
-        <label className="lattice-browser-toolbar-select" data-display="SORT" title={`Sort: ${workspace.sort}`}>
-          <select aria-label="Sort assets" onChange={(event) => workspace.setSort(event.target.value)} value={workspace.sort}>
-            <option disabled>SORT</option><option disabled>────────────</option>
-            <option value={BROWSER_SORTS.TITLE_ASC}>TITLE A–Z</option><option value={BROWSER_SORTS.TITLE_DESC}>TITLE Z–A</option><option value={BROWSER_SORTS.COLLECTION}>COLLECTION</option>
-          </select>
-        </label>
-        <label className="lattice-browser-label-toggle"><input checked={workspace.hideLabels} onChange={(event) => workspace.setHideLabels(event.target.checked)} type="checkbox" /><span>LABELS</span></label>
-        {workspace.hasActiveFilters && <button className="lattice-browser-clear-filters" onClick={workspace.clearFilters} type="button">CLEAR FILTERS</button>}
-      </div>
+      {showToolbar && <BrowserFilterControls workspace={workspace} />}
       {data.error && <p className="lattice-browser-notice" data-error>{data.error}</p>}
-      <BrowserAssetResults assetSize={workspace.assetSize} assets={workspace.filteredAssets} hideLabels={workspace.hideLabels}
+      <BrowserAssetResults assetSize={workspace.assetSize} assets={workspace.filteredAssets} displayMode={assetDisplayMode} hideLabels={workspace.hideLabels}
         emptyLabel={workspace.hasActiveFilters && workspace.viewAssetCount
           ? `${workspace.viewAssetCount} ASSETS ARE IN THIS VIEW / NONE MATCH THE ACTIVE SEARCH OR FILTERS`
           : 'NO ASSETS IN THIS VIEW'}
