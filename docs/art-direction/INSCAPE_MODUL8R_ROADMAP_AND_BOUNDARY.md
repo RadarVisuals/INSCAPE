@@ -126,148 +126,137 @@ PREVIEW and PUBLISH are explicitly excluded from the empty-grid context menu. Pl
 
 After MODUL-8R modes are accepted, the compatibility CREATIONS, ACTIVITY, and DISCOVER launchers can be removed from the context menu rather than kept as duplicate destinations.
 
-## Alpha implementation roadmap
+## Accepted audit history and production integration sequence
 
-### M0 — read-only repository and behavior audit
+### M0 — initial read-only repository and behavior audit
 
-Status: `[x]` — completed read-only on 2026-08-01; no runtime files changed by the audit
+Status: `[x]` — completed read-only on 2026-08-01
 
-Audit the current Rack shell, Browser mode/state, Library adapter and category commands, creator-attribution repository, activity repository, public discovery boundary, Layers projection, Theme/Settings ownership, keyboard/focus behavior, responsive geometry, bundle boundaries, and currently uncommitted owner-window styling corrections.
-
-Output exact reusable files, duplicated logic, repository gaps, storage implications, deletion exclusions, and focused verification targets. No visual or runtime mutation.
-
-The audit confirmed that a narrow shell cutover is viable without rewriting `useBrowserWorkspace`, Library storage, canonical lattice state, publication, wallets, or visitor rendering. The current owned Browser is not yet an owned-plus-created union; created-only records require a bounded adapter and honest indexed creator provenance. Activity has real indexed event history but no honest unread lifecycle. People can reuse the public discovery repository but requires a separate future list schema. Layers already owns active-table order and can later add non-reorderable all-table usage. Standalone CREATIONS, ACTIVITY, DISCOVER, Theme access, and the legacy owner/document readers remain rollback or compatibility boundaries until their replacements are accepted. Production budget headroom is too small for speculative parallel UI systems.
+The first audit correctly identified reusable repositories, storage authorities, canonical authoring commands, Layers projection, and standalone rollback windows. Its proposed narrow in-place shell cutover is superseded by M0.7 because later inspection proved that Browser and Rack presentation/state/CSS ownership are too entangled for a clean visual migration.
 
 ### M0.5 — isolated full-fidelity MODUL-8R prototype
 
 Status: `[x]` — visually and interactionally accepted on 2026-08-02
 
-Build a development-only, fixture-driven prototype that imports no production owner stores, repositories, persistence, wallet, publication, or visitor code. It settles the master geometry, separate Library/Activity/People/Layers module faceplates, one exclusive-open accordion, contextual accessory placement, collapse/return behavior, narrow layouts, keyboard/focus behavior, reduced motion, and all six theme-token treatments. It may demonstrate patches as non-persistent factory configurations only; no dead controls or implied storage are allowed.
-
 Accepted authority:
 
 - development route: `/prototype/modul-8r`;
+- checkpoint: `0f1136d`;
 - component and interaction authority: `src/prototypes/modul8r/Modul8rPrototype.jsx`;
 - consolidated visual authority: `src/prototypes/modul8r/modul8rPrototype.css`;
-- fixture and state coverage: `modul8rFixtures.js`, `modul8rModel.js`, and `Modul8rPrototype.test.js`;
-- prototype sources remain development-only and must never be imported by the production owner or visitor graph.
+- fixture and state coverage: `modul8rFixtures.js`, `modul8rModel.js`, and `Modul8rPrototype.test.js`.
 
-### M0.6 — prototype acceptance and production mapping freeze
+The current live route and these checked-in files are the only visual and interaction authority. Historical screenshots and rejected full-colour module iterations are not authority. Prototype sources remain development-only reference material and must never be imported by a production owner or visitor graph.
 
-Status: `[x]` — prototype mapping frozen on 2026-08-02
+### M0.6 — prototype acceptance freeze
 
-Record the accepted measurements, states, interaction ownership, responsive rules, reusable production components, adapter seams, exact M1 file boundary, rollback, and focused verification. Prototype source remains isolated reference material and is never imported into production. The accepted checkpoint has one consolidated stylesheet with no duplicate exact selectors or obsolete compact/status selectors.
+Status: `[x]` — accepted authority frozen on 2026-08-02
 
-### M1 — MODUL-8R shell and master-faceplate cutover
+The accepted measurements, module order, 38px master and faceplates, exclusive-open accordion, retained faceplate positions, transition behavior, narrow layouts, keyboard/focus rules, reduced motion, six-theme treatment, lack of compact mode, and lack of decorative status indicators are frozen. The consolidated prototype stylesheet has no duplicate exact selectors or obsolete compact/status selectors.
 
-Status: `[ ]`
+### M0.7 — production-integration architecture audit
 
-Rename only the owner universal `THE RACK` surface to `MODUL-8R`; retain NFT and Identity RÄCK terminology. Establish the accepted 38px master faceplate, move the existing authoring controls onto it, preserve free movement and resizing, and retain session-only module expansion state. Do not reintroduce compact mode or decorative status indicators.
+Status: `[x]` — accepted read-only on 2026-08-02
 
-Do not yet merge repositories or remove standalone profile windows. Rollback is the existing `THE RACK` label and faceplate composition.
+The audit rejects in-place evolution of `LatticeRackShell` into MODUL-8R. Production behavior is reusable, but Browser owns Rack state and geometry, Rack CSS consumes Browser variables, Browser CSS reaches into Rack selectors, resize ownership crosses stylesheet boundaries, and the accepted accordion requires a different structure and transition model. Restyling the old Rack would create a hybrid and accumulate override debt.
 
-### M2 — shared module host and exclusive-open content group
+The accepted target is:
 
-Status: `[ ]`
+1. extract reusable headless window and mode controllers without visual change;
+2. build a clean production `Modul8rShell` with fresh `.modul8r-*` presentation selectors;
+3. expose the incomplete shell only through a development-only owner entrance that is absent from production output;
+4. retain the existing live `THE RACK`, Browser, and standalone windows unchanged while parity is built;
+5. switch the owner integration atomically only after complete functional, visual, isolation, and budget acceptance;
+6. delete old presentation only after the cutover has its own accepted rollback checkpoint.
 
-Replace the BROWSER-only composition with stable LIBRARY, ACTIVITY, PEOPLE, and LAYERS module faceplates hosted by one shared content chassis. Exactly one module may be expanded at a time; opening another animates the existing faceplates to their retained order rather than swapping labels or content in place. Activation is fully keyboard accessible, preserves focus predictably, does not leak queries or selection across modules, and remains responsive at narrow rack widths.
+Production budget headroom is too small to ship both complete presentations. The development-only comparison entrance must be provably tree-shaken from production.
 
-Initially each module may adapt its existing repository through a bounded adapter. Do not combine repository state or category schemas.
+## Approved executable production tasks
 
-### M3 — Library relationship consolidation
+This is the sole approved execution order. A fresh Codex may be told `execute Task N` only after reading this complete boundary and the Alpha execution roadmap. Completing one task does not authorize starting the next. Every task ends with proportional automated verification, the stated manual acceptance, a roadmap update, and a reversible checkpoint commit. No task may import prototype source into production.
 
-Status: `[ ]`
-
-Introduce the OWNED and CREATED smart-view derivations, deduplicate `ALL ASSETS`, preserve UNSORTED and custom categories, and keep honest ownership/creator provenance in the accepted NFT viewer. Remove the USED ON CANVAS navigation row only when Layers exposes equivalent placement discovery.
-
-No NFT record, contract metadata, wallet balance, category membership, canonical placement, or publication is rewritten merely to classify a smart view.
-
-### M4 — Activity mode migration
+### Task 1 — extract reusable floating-window behavior
 
 Status: `[ ]`
 
-Render current indexed history within the content shell, preserving loading, partial, retry, refresh, unresolved, and event-history labelling. Add contextual search and genuine density behavior. Route accepted targets without importing owner-only data into visitor code.
+Extract positioning, viewport containment, free movement, independent right-edge Rack-width resizing, centered Browser/content resizing, keyboard resize, pointer capture/cancellation, resize-state marking, and viewport-resize clamping from `useBrowserWorkspace` into generic headless window modules.
 
-After interactive acceptance, retire the standalone Activity window from active owner routing but retain reusable repository and presentation primitives.
+Create:
 
-### M5 — People mode migration
+- `src/lattice/windows/latticeFloatingWindowModel.js`;
+- `src/lattice/windows/latticeFloatingWindowModel.test.js`;
+- `src/lattice/windows/useLatticeFloatingWindow.js`;
+- `src/lattice/windows/useLatticeFloatingWindow.test.js`.
 
-Status: `[ ]`
+Allowed existing files are `useBrowserWorkspace.js`, `browserWorkspaceModel.js`, their focused tests, and focused Browser tests only where imports follow the extraction. Keep the returned `move`, `rackWidthResize`, `resize`, `windowPosition`, and `windowSize` interface compatible so `BrowserWorkspace.jsx` requires no change.
 
-Render current public discovery within the content shell and preserve public-profile routing. Alpha does not add following mutations, favorites, recently viewed persistence, or custom People lists unless a separate storage/privacy boundary is approved.
+No JSX, CSS, label, compact-mode, module, repository, routing, storage, publication, wallet, visitor, schema, or prototype change is allowed. Manual acceptance is that the current production `THE RACK` moves, resizes, clamps, closes/reopens, and behaves under reduced motion exactly as before at desktop, 640px, and 390×844.
 
-After interactive acceptance, retire the standalone Discover window from active owner routing. Gallery is never revived as People or Discover authority.
-
-### M6 — Layers usage consolidation
-
-Status: `[ ]`
-
-Retain current active-table z-order and authoring commands, then add the minimum all-table usage navigation needed to replace USED ON CANVAS. Preserve exact placement identity and canonical transactions. Remove the redundant Library smart-view row only after this is accepted.
-
-### M7 — Settings/Theme and launcher cleanup
+### Task 2 — clean MODUL-8R shell behind a development-only owner entrance
 
 Status: `[ ]`
 
-Move Theme into Settings with full six-theme contrast and exact trigger focus return. Add the bounded empty-grid context launcher without PREVIEW or PUBLISH. Remove compatibility CREATIONS, ACTIVITY, and DISCOVER routes only after their MODUL-8R modes have equivalent accepted behavior.
+Create a production-grade `Modul8rShell`, shell model, fresh `.modul8r-*` stylesheet, and focused tests. Reproduce the accepted master/module geometry, stable LIBRARY/ACTIVITY/PEOPLE/LAYERS order, exclusive-open state, retained faceplates, transition overflow suppression, complete-faceplate activation, master collapse state retention, right-edge resize, responsive layouts, focus behavior, and reduced motion using production theme/type/motion tokens and the Task 1 controller.
 
-### M8 — Alpha verification and cleanup gate
+The shell must not import prototype code, reuse `lattice-rack-*` structural classes, or consume Browser-owned visual variables. It contains no fake repository facts or dead controls. The old live Rack remains unchanged. A narrowly gated development-only owner entrance may be added to `OwnerLatticeShell` only if production build and import-graph checks prove the new shell is absent from production output.
+
+Manual acceptance compares the development shell directly with `/prototype/modul-8r` in all six themes and accepted viewport widths. This task does not cut over the live owner route.
+
+### Task 3 — real Library parity inside the development shell
 
 Status: `[ ]`
 
-Verify the complete owner workflow, progressive data, failure states, context-menu ownership, keyboard/focus, reduced motion, responsive and compact layouts, six themes, creator/non-owner presentation, Layers usage navigation, build budgets, owner/visitor import isolation, direct visits, publication rollback, and live deployment. Delete only code proven unreachable after this gate.
+Mount the existing production Library/Browser behavior through a bounded MODUL-8R Library adapter. Preserve categories, ALL ASSETS, UNSORTED, USED ON CANVAS, filters, search, sort, labels, size, progressive decoded media, unavailable counts, selection, multi-select, asset/category menus, drag-to-category, and ARRANGE-gated drag-to-canvas. Split reusable Browser-content presentation from old Rack/window presentation without changing repository, workspace-v8, category, or canonical placement authority.
 
-## Executable production integration tasks
+CREATED is excluded until Task 5. Activity and People repositories are excluded. The old Browser remains the live owner destination and rollback.
 
-These tasks are the approved execution order. A fresh Codex may be told `execute Task N` only after reading this entire boundary, the Alpha execution roadmap, and the accepted prototype authority at `/prototype/modul-8r`. Completing one task does not authorize starting the next. Every task ends with focused verification, interactive acceptance, a roadmap update, and a reversible checkpoint commit. Prototype source must never be imported into production.
+### Task 4 — Activity and People headless adapters
 
-### Task 1 — master shell cutover
+Status: `[ ]`
 
-Implement M1 only. Reproduce the accepted MODUL-8R master faceplate and its open/close transition in the existing production owner window while preserving the current Browser content, tools, Layers behavior, free movement, horizontal rack resizing, Browser-height resizing, Escape, close, focus restoration, narrow-viewport containment, reduced motion, and all six themes.
+Extract reusable loading/query/abort/generation/retry controllers from the accepted standalone Activity and public discovery surfaces and mount their real repositories in the development shell. Preserve Activity complete, partial, failed, retry, refresh, empty, timeout, stale-generation, unresolved-target, and indexed-event-history semantics. Preserve People search, loading/failure, public-profile routing, and owner/visitor isolation.
 
-Primary production boundary:
+Do not invent unread state, notifications, follows, favorites, lists, recents, or persistence. Standalone ACTIVITY and DISCOVER remain the live owner destinations and rollback.
 
-- `src/lattice/windows/LatticeRackShell.jsx`;
-- `src/lattice/windows/latticeRackShell.css`;
-- `src/lattice/browser/BrowserWorkspace.jsx`;
-- `src/lattice/browser/browserWorkspace.css`;
-- their focused tests;
-- this boundary and the Alpha execution roadmap after acceptance.
+### Task 5 — honest OWNED/CREATED Library union
 
-Do not add Activity or People, merge repositories, change Library navigation, remove compatibility windows, alter `OwnerLatticeShell` routing, or change storage, publication, wallet, visitor, schema, metadata, Keeper, NFT viewer, or Identity RÄCK behavior. Remove production compact-mode UI/state only where it belongs exclusively to the universal owner rack and its removal is covered by focused tests. Rollback is the immediately preceding production `THE RACK` shell checkpoint.
+Status: `[ ]`
 
-Acceptance: the production surface matches the accepted master faceplate rather than copying prototype implementation code; existing Browser and authoring behavior is unchanged; there are no prototype imports in the production graph.
+Add CREATED through the existing creator-attribution repository/store and deduplicate it with the owned projection in `ALL ASSETS`. Preserve stable IDs, ownership, creator provenance, categories, unresolved states, and NFT-viewer facts. Created-but-not-owned work remains explicitly creator-attributed and must never be presented as owned.
 
-### Task 2 — shared exclusive module chassis
+Do not rewrite Library storage, NFT metadata, category membership, canonical placements, or publication. Metadata-only authored attribution remains excluded unless separately approved with an explicit unverified label.
 
-Implement M2 presentation/state ownership only. Add stable LIBRARY, ACTIVITY, PEOPLE, and LAYERS faceplates in accepted order and one shared animated content chassis. Exactly one module is open; activation anywhere on a faceplate opens it and closes the previous module; repeated activation closes it without label movement, transient scrollbars, reversed animation, gaps, or duplicate borders. Preserve keyboard activation, focus, responsive controls, right-edge resizing, and theme contrast.
+### Task 6 — Layers usage and Settings/Theme parity
 
-Use bounded placeholder/adapters if necessary, but do not migrate or merge repositories and do not retire standalone windows. Rollback is Task 1 plus the existing Browser/Layers composition.
+Status: `[ ]`
 
-### Task 3 — Library production adapter
+Preserve active-table thumbnails, exact placement identity, z-order, selection, multi-select, locks, and canonical atomic reorder. Add the cheapest honest non-reorderable all-table usage navigation needed to replace USED ON CANVAS. Move Theme into Settings only after equivalent six-theme access, contrast, Escape, close, and trigger-focus restoration exist in the development integration.
 
-Implement M3. Mount the existing Library workspace in the LIBRARY chassis, add honest OWNED and CREATED smart views through a bounded deduplicating adapter, retain ALL ASSETS, UNSORTED, custom categories, search, sort, labels, size, multi-select, drag-to-category, and drag-to-canvas. Do not remove USED ON CANVAS until Task 6 supplies equivalent all-table discovery. Preserve provenance; never convert creator attribution into ownership.
+Do not create a second placement authority or persist Theme. Keep old USED ON CANVAS and Theme access available until equivalence is accepted.
 
-Rollback retains the pre-Task-3 Browser adapter and all Library/category storage unchanged.
+### Task 7 — full development parity and bundle gate
 
-### Task 4 — Activity adapter
+Status: `[ ]`
 
-Implement M4. Mount indexed event history in ACTIVITY with loading, partial, failure, retry, refresh, search, density/size behavior, honest event-history labelling, and accepted target routing. Do not invent unread state or treat events as metadata. Keep the standalone Activity window as rollback until interactive acceptance, then remove only its active launcher wiring.
+Certify the complete development-only MODUL-8R against the accepted prototype and all existing production workflows. Verify pointer, keyboard, focus, Escape, context menus, queries, selections, module state, responsive layouts, reduced motion, no transient scrollbars/gaps, all repository failure states, owner/visitor isolation, and production budgets. Prove the development entrance and incomplete MODUL-8R graph are absent from production output.
 
-### Task 5 — People adapter
+No live owner route changes. Failure returns to the relevant prior task while production continues using the old Rack and standalone windows.
 
-Implement M5. Mount public profile discovery in PEOPLE with search, size/density behavior, public-profile routing, loading/failure states, and no private owner imports. Do not add follows, favorites, lists, recents, or persistence. Keep standalone Discover as rollback until interactive acceptance; Gallery remains retired.
+### Task 8 — atomic production cutover
 
-### Task 6 — Layers and usage consolidation
+Status: `[ ]`
 
-Implement M6. Preserve active-table thumbnails, exact z-order, selection, multi-select, and canonical reorder operations. Add non-reorderable all-table placement discovery sufficient to replace USED ON CANVAS. Only after equivalence is interactively accepted may the redundant Library row be removed.
+Switch one bounded owner import/wiring boundary from the old Browser/Rack and compatibility destinations to the complete accepted `Modul8rShell`. Preserve authoring callbacks, canonical state, publication, wallet, IPFS, owner/visitor gates, focus refs, direct visits, iframes, and profile-remount session reset. Users must see the complete old Rack before deployment or the complete MODUL-8R after deployment, never a hybrid.
 
-### Task 7 — Settings and launcher consolidation
+Run the complete focused and full regression matrix, production build/budgets, import isolation, direct/iframe checks, publication rollback, and live smoke test. Rollback restores the previous owner import/wiring checkpoint and requires no data migration.
 
-Implement M7. Move Theme into Settings with equivalent six-theme access, contrast, Escape, close, and trigger-focus restoration. Add the approved empty-grid contextual launcher without PREVIEW or PUBLISH. Retire compatibility CREATIONS, ACTIVITY, and DISCOVER launcher paths only where Tasks 3–5 provide accepted parity.
+### Task 9 — post-acceptance cleanup
 
-### Task 8 — cleanup and Alpha gate
+Status: `[ ]`
 
-Implement M8. Run the complete focused and full verification matrix, production build/budgets, owner/visitor import isolation, direct visitor routes, publication rollback, responsive layouts, reduced motion, keyboard/focus, and live deployment checks. Delete only code proven unreachable by the accepted production routes and rollback decision. Record exact removed files, retained compatibility boundaries, final budgets, test totals, commit, deployment, and genuine unresolved Alpha decisions.
+After live Task 8 acceptance, perform a fresh reachability inventory and delete only presentation code proven unreachable. Candidate deletions include the old Rack presentation, old Browser window composition, unreachable tab panels/exports, and superseded launcher wiring. Retain repositories, stores, canonical commands, compatibility readers, published-document support, user assets, and the accepted rollback checkpoint.
+
+Delete in small reviewable slices with full behavior, build, budget, isolation, route, publication, and live smoke verification after each slice. Cleanup must not change visible behavior.
 
 ## Explicit Alpha exclusions
 
@@ -337,36 +326,46 @@ The Alpha MODUL-8R consolidation is initially a view/controller refactor over ex
 
 Any later People lists, device layouts, control bindings, parameter values, modulation routes, or visitor-interactive controls require their own schema and migration boundary before implementation.
 
-## Likely production implementation surface
+## Audited production implementation surface
 
-The M0 audit must confirm the exact list before coding. Likely reusable or affected areas include:
+Keep unchanged as authorities:
 
-- `src/public/OwnerLatticeShell.jsx`;
-- `src/lattice/windows/LatticeRackShell.jsx` and `latticeRackShell.css`;
-- `src/lattice/browser/BrowserWorkspace.jsx` and focused Browser components/styles;
-- `src/public/useOwnerLatticeBrowser.js`;
-- the existing Library workspace/domain/store boundaries;
-- `src/public/CreationsBrowser.jsx` and its creator-attribution repository/adapter;
-- `src/public/ActivityBrowser.jsx` and `luksoActivityRepository`;
-- `src/profileDiscovery/ProfileDiscoveryBoundary.jsx` and its public directory repository;
-- current Layers projection and canonical layer operations;
-- `src/public/SettingsBrowser.jsx`;
-- `src/lattice/rendering/LatticeProfileRail.jsx`;
-- `src/lattice/rendering/LatticeWorkspaceToolbar.jsx`;
-- shared owner menu/theme tokens and focused accessibility/contrast tests;
-- this boundary, the Alpha execution roadmap, and the production integration inventory at accepted checkpoints.
+- Library workspace-v8/store, asset cache, category commands, and owned-asset repositories;
+- `browserRenderableAssets.js`, the owned production Browser adapter, and pure Browser view/selection models;
+- `useOwnerLatticeBrowser.js` and owner drag-to-canvas/canonical authoring callbacks;
+- activity, creations, and profile-discovery repositories and their generation/abort semantics;
+- current Layers projection, exact placement identity, canonical reorder helpers, and owner transaction boundary;
+- `useLatticeChromePresence`, parent close/Escape/focus-return ownership, owner-runtime gating, visitor isolation, wallet, IPFS, publication, and direct/iframe routing;
+- six-theme roles in `latticeMenuSurface.css` and shared chrome semantics in `latticeChromePrimitives.css`.
 
-Frozen prototypes, NFT/Identity RÄCK behavior, canonical draft/publication schemas, wallet/IPFS code, visitor rendering, legacy document readers, and user artwork are excluded unless a later approved slice explicitly proves they must change.
+Extract or adapt through explicit controllers/props:
+
+- floating-window geometry currently coupled to `useBrowserWorkspace.js`;
+- Browser query/filter/sort/selection/media behavior for the Library module;
+- drag-to-category gesture ownership;
+- `LatticeWorkspaceToolbar` for the new master faceplate;
+- `LatticeLayersModule` presentation so it consumes menu/module tokens rather than Browser tones;
+- Activity and Profile Discovery presentation controllers;
+- Settings/Theme callbacks and compatibility launchers only at their approved tasks.
+
+Retain as source-level rollback until Task 8 is accepted:
+
+- `LatticeRackShell.jsx` and `latticeRackShell.css`;
+- `BrowserWorkspace.jsx` and its old window/Rack presentation rules;
+- standalone CREATIONS, ACTIVITY, DISCOVER, and Theme surfaces;
+- USED ON CANVAS and current owner launcher wiring.
+
+New production presentation belongs under `src/lattice/modul8r/` with fresh `.modul8r-*` selectors. Frozen prototype files are reference-only. NFT/Identity RÄCK behavior, canonical draft/publication schemas, wallet/IPFS code, visitor rendering, legacy document readers, and user artwork are excluded unless a later approved slice explicitly proves they must change.
 
 ## Rollback strategy
 
 1. Keep current repositories and storage authorities intact throughout the mode migration.
-2. Preserve the accepted standalone CREATIONS, ACTIVITY, and DISCOVER components until their corresponding modes pass interactive acceptance.
-3. Cut over one destination at a time; a failed mode returns routing to its standalone window.
-4. Retain current `THE RACK` shell composition until M1 is visually accepted; its state is session-only and needs no data migration.
-5. Do not delete USED ON CANVAS derivation when hiding its Browser row.
-6. Theme remains reachable through its current launcher until Settings equivalence is accepted.
-7. Do not begin Phase 10 deletion during MODUL-8R migration.
+2. Preserve the current live `THE RACK`, Browser, CREATIONS, ACTIVITY, DISCOVER, Theme, and USED ON CANVAS destinations through Tasks 1–7.
+3. Keep incomplete MODUL-8R work behind a development-only entrance that is absent from production output.
+4. Do not perform incremental live destination cutovers. Task 8 switches one bounded owner import/wiring boundary only after complete parity acceptance.
+5. A failed Task 8 restores the preceding owner import/wiring checkpoint; no stored or published data changes.
+6. Retain old presentation source through Task 8 live acceptance and a fresh reachability inventory.
+7. Begin deletion only in Task 9, in small verified slices.
 
 Because the Alpha consolidation changes no approved stored or published schema, rollback is code/routing-only. Already published version-8 documents remain readable and unchanged.
 
@@ -381,8 +380,9 @@ Each slice receives focused unit/component tests and a short manual acceptance b
 - People discovery, search, public-profile opening, and no unauthorized social persistence;
 - Layers current-table order, multiple instances, all-table usage navigation, locked/private placements, and atomic reorder;
 - Carbon, Graphite, Slate, Ash, Mist, and Paper contrast;
-- ordinary, compact, minimum-width, 900px, 640px, and 390×844 layouts;
+- ordinary, minimum-width, 900px, 760px, 640px, 520px, and 390×844 layouts;
 - reduced motion and no layout jitter during module switching/collapse;
+- proof that the development-only entrance and incomplete MODUL-8R graph are absent from production output;
 - owner/visitor import isolation and no change to direct/iframe publication rendering;
 - production build, budget checks, `git diff --check`, and live smoke test at the accepted deployment gate.
 
@@ -392,10 +392,8 @@ These decisions remain open and must not be guessed during implementation:
 
 1. Whether authored-but-unverified creator attribution appears inside CREATED with an explicit label or remains excluded until verified.
 2. The exact meaning and lifecycle of any Activity unread count.
-3. Whether Size values are remembered per mode for the session only or later persisted as private preferences.
-4. The first useful all-table Layers representation: grouped tables, placement search, or a selected-asset usage detail.
-5. Whether the master status labels are diagnostic indicators, clickable module-visibility toggles, or both.
-6. The future private/public model for People lists and following/favorites.
-7. The later persistence and publication model for Atelier parameters, grid controls, and device layouts.
+3. Any future persistence of per-module Size values beyond the accepted session-only behavior.
+4. The post-Alpha private/public model for People lists and following/favorites.
+5. The later persistence and publication model for Atelier parameters, grid controls, and device layouts.
 
-None of these blocks M0. M0 must report the cheapest honest option for each decision before M1 implementation is approved.
+No unresolved decision blocks Task 1. Activity unread state remains hidden until a real lifecycle exists. Size is session-only per module for Alpha. The first all-table Layers implementation is read-only groups by table with distinct placement rows and navigation to the selected placement. Decorative master status labels/lights remain rejected.

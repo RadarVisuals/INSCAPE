@@ -875,15 +875,19 @@ Interactive surface acceptance (2026-08-01): the owner accepted the PUBLISH RÄC
 
 Final Phase 8B acceptance (2026-08-01): the owner published a real version-8 revision one from the verified production deployment, opened that published workspace through the direct `?view=0x…` route while authenticated as a different Universal Profile, then made one public owner-workspace change and published revision two. The second visitor read-back exposed the updated workspace correctly. This interactively confirms the public-IPFS upload, canonical CID verification, owner wallet transaction, on-chain pointer, latest-revision resolver, cross-account isolation, and direct visitor route. Phase 8 is complete; no rollback or data repair is required.
 
-## Phase 9 — parallel cutover and Alpha hardening
+## Phase 9 — MODUL-8R staged parity, atomic cutover, and Alpha hardening
 
 Status: `[ ]`
 
-Goal: make the new workspace the Alpha runtime without deleting the fallback prematurely.
+Goal: build complete MODUL-8R parity outside the live production route, then switch one bounded owner integration atomically without deleting the fallback prematurely.
 
 Includes:
 
-- feature-flagged or explicitly reversible cutover;
+- behavior-preserving extraction of reusable floating-window controllers before any visual work;
+- a clean `.modul8r-*` production presentation that does not inherit old Rack/Browser structural CSS;
+- a development-only owner comparison entrance proven absent from production output;
+- real Library, Activity, People, Layers, Settings, and Theme parity through bounded adapters over existing authorities;
+- one explicitly reversible atomic owner cutover only after complete parity acceptance;
 - production error/loading/empty states;
 - keyboard, focus, reduced-motion, and responsive checks;
 - owner/visitor isolation audit;
@@ -896,9 +900,11 @@ Signed-out direct-visit correction (2026-08-01, awaiting live acceptance): an ex
 
 Owner navigation completion checkpoint (2026-08-01, awaiting interactive acceptance): the stale Phase-4 disables are removed from CREATIONS, ACTIVITY, DISCOVER, and MORE. DISCOVER opens the current public INSCAPE profile directory and never revives Gallery. ACTIVITY opens indexed event history with explicit loading, partial, retry, refresh, close, Escape, and focus-return behavior; it remains distinct from metadata. CREATIONS reuses the isolated creator-attribution repository and opens decoded works through the accepted production NFT RÄCK, never the rejected flip/card viewer. MORE exposes only the existing functional SETTINGS surface; the undefined INTERFACE affordance stays hidden. The owner-only boundaries remain lazy and no schema, storage, publication, route, wallet, IPFS, visitor capability, Gallery, Upper, marketplace, or Keeper-dialogue behavior changes. The focused functional set passes 37/37, production-budget tests pass 9/9, and the production build passes at 1,238,211 initial JavaScript raw / 361,775 gzip, 261,694 owner JavaScript raw / 79,206 gzip, 65,581 owner CSS raw / 12,430 gzip, and 2,016,189 core JavaScript raw / 601,296 gzip. The owner JavaScript ceiling is deliberately recalibrated to 263,000 raw / 80,000 gzip and owner CSS gzip to 12,500 for this measured activation; initial limits remain unchanged.
 
-MODUL-8R direction checkpoint (2026-08-01, documentation only): the accepted standalone CREATIONS, ACTIVITY, and DISCOVER surfaces are now classified as reversible production bridges rather than the intended final owner information architecture. The proposed Phase 9 consolidation renames only the universal owner `THE RACK` to `MODUL-8R`, places global authoring tools on its master faceplate, and introduces separate LIBRARY, ACTIVITY, and PEOPLE modules hosted by one exclusive-open content chassis. Their faceplates retain stable order instead of swapping content in place; Search and Size appear only as contextual accessories with honest module behavior. LAYERS remains independently expandable as the canonical-composition projection and will absorb all-table placement discovery before the redundant USED ON CANVAS Library row is removed. Theme moves into Settings only after equivalent access and focus behavior exists. NFT and Identity RÄCK terminology and behavior remain unchanged. The exact staged boundary, repositories, rollback, exclusions, verification matrix, and unresolved decisions are recorded in `INSCAPE_MODUL8R_ROADMAP_AND_BOUNDARY.md`. No runtime, schema, storage, publication, wallet, visitor, route, or prototype behavior is changed by this checkpoint.
+Superseded MODUL-8R direction checkpoint (2026-08-01, documentation only): this checkpoint correctly selected the universal owner `MODUL-8R` name, LIBRARY/ACTIVITY/PEOPLE/LAYERS information architecture, exclusive-open content chassis, contextual Search/Size, Layers usage consolidation, Settings/Theme direction, and unchanged NFT/Identity RÄCK terminology. Its proposed narrow in-place shell cutover is superseded by the accepted 2026-08-02 architecture audit below. No runtime behavior changed at this checkpoint.
 
 Owner-window styling checkpoint (2026-08-01): the standalone CREATIONS and ACTIVITY rollback surfaces now inherit the active owner menu/theme tokens and IBM Plex Mono interface grammar instead of fixed legacy colours. Their clean L-corner resize handles, the Browser resize handle, hidden native scrollbar buttons, and the seven-pixel expanded rack-content inset share the accepted owner-window treatment. The focused Browser, owner-shell, Creations, theme-window, and shared RÄCK-menu set passes 37/37; `git diff --check`, the production build, and the explicit production budget check pass at 1,238,211 initial JavaScript bytes. No repository, data, routing, persistence, publication, wallet, visitor, or prototype behavior changes.
+
+MODUL-8R production-integration architecture checkpoint (2026-08-02, read-only and accepted): do not evolve `LatticeRackShell` into MODUL-8R in place. Browser currently owns Rack state and geometry, Rack CSS consumes Browser variables, Browser CSS reaches into Rack selectors, and the accepted accordion requires a different structure and transition model. The accepted sequence extracts reusable headless window/controllers first, builds a fresh `.modul8r-*` presentation behind a development-only owner entrance, connects real repositories through bounded adapters, certifies complete visual/functional/isolation/budget parity, and only then switches one owner import/wiring boundary atomically. The current `THE RACK`, Browser, standalone windows, routes, and production bundle remain unchanged through the parity gate. Old presentation source is retained as rollback until live cutover acceptance and a fresh reachability audit. The rejected uncommitted hybrid Task 1 was restored before this audit and contributes no checkpoint code. The sole detailed execution authority is `INSCAPE_MODUL8R_ROADMAP_AND_BOUNDARY.md` Task 1–9.
 
 User visual test: complete Alpha acceptance checklist on localhost, deploy preview, `enterinscape.com`, direct visit, and Universal Profile iframe.
 
@@ -962,4 +968,4 @@ Start with:
 
 ## Immediate next action
 
-Commit the visually accepted development-only MODUL-8R authority, then begin M1 through a separately approved production boundary. Preserve the accepted standalone CREATIONS, ACTIVITY, DISCOVER, Theme, and current owner RACK surfaces as rollback bridges. Do not begin broad deletion, embedded mode, Atelier/control cells, MEDI-8R, persistence, schema, publication, wallet, or visitor work.
+Execute only MODUL-8R Task 1 from `INSCAPE_MODUL8R_ROADMAP_AND_BOUNDARY.md`: extract generic floating-window geometry/controllers from `useBrowserWorkspace` while preserving its public interface and producing zero JSX, CSS, label, route, or visible behavior change. Keep the current `THE RACK`, Browser, standalone CREATIONS/ACTIVITY/DISCOVER/Theme surfaces, production routes, and prototype untouched. Do not begin the clean MODUL-8R shell, broad deletion, embedded mode, Atelier/control cells, MEDI-8R, persistence, schema, publication, wallet, or visitor work until Task 1 is verified and interactively accepted.
