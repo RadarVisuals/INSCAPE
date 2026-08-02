@@ -4,6 +4,7 @@ import {
 } from './ownerRuntimeSelected.js';
 
 export const OWNER_RUNTIME = Object.freeze({
+  MODUL8R: 'MODUL8R',
   LATTICE: 'LATTICE',
   LEGACY: 'LEGACY',
 });
@@ -11,12 +12,14 @@ export const OWNER_RUNTIME = Object.freeze({
 export { OWNER_RUNTIME_SELECTION };
 
 export function selectOwnerRuntimeImporter(selection, {
+  importModul8r,
   importLattice,
   importLegacy,
 }) {
-  if (typeof importLattice !== 'function' || typeof importLegacy !== 'function') {
-    throw new TypeError('Both owner runtime importers are required');
+  if (typeof importModul8r !== 'function' || typeof importLattice !== 'function' || typeof importLegacy !== 'function') {
+    throw new TypeError('All owner runtime importers are required');
   }
+  if (selection === OWNER_RUNTIME.MODUL8R) return importModul8r;
   if (selection === OWNER_RUNTIME.LATTICE) return importLattice;
   if (selection === OWNER_RUNTIME.LEGACY) return importLegacy;
   throw new TypeError(`Unsupported owner runtime selection: ${String(selection)}`);

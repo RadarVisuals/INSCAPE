@@ -156,7 +156,7 @@ async function stageTranslation() {
   });
 }
 
-describe('Phase 4 owner lattice through the real App route', { concurrency: false }, () => {
+describe('Task 8 production MODUL-8R through the real App route', { concurrency: false }, () => {
   before(async () => runBrowserSetupWithCleanup(async () => {
     setupAbortController = new AbortController();
     const browserPath = await findBrowser();
@@ -238,6 +238,12 @@ describe('Phase 4 owner lattice through the real App route', { concurrency: fals
     await enter.evaluate((button) => button.click());
     await page.evaluate(() => new Promise((resolveDelay) => setTimeout(resolveDelay, 2_000)));
     assert.equal(await activeCoordinate(), '0:0');
+    await page.locator('.modul8r-shell').waitFor({ state: 'visible', timeout: 20_000 });
+    assert.equal(await page.locator('.lattice-rack-shell,.lattice-browser-workspace').count(), 0);
+    assert.deepEqual(await page.locator('.modul8r-module__toggle strong').allTextContents(),
+      ['LIBRARY', 'ACTIVITY', 'PEOPLE', 'LAYERS']);
+    await page.getByRole('button', { name: 'Close Modulator' }).click();
+    await page.locator('.modul8r-shell').waitFor({ state: 'detached' });
 
     await Promise.all(fixedChromeSelectors.map((selector) => page.locator(selector)
       .waitFor({ state: 'attached', timeout: 60_000 })));
@@ -265,13 +271,14 @@ describe('Phase 4 owner lattice through the real App route', { concurrency: fals
     assert.equal(await activeCoordinate(), '-1:1');
 
     const surfaceBox = await page.locator('.owner-lattice-spatial-surface').boundingBox();
-    await page.mouse.click(surfaceBox.x + (surfaceBox.width / 2), surfaceBox.y + (surfaceBox.height / 2));
+    const neutralSurfacePoint = { x: surfaceBox.x + (surfaceBox.width * 0.72), y: surfaceBox.y + (surfaceBox.height * 0.64) };
+    await page.mouse.click(neutralSurfacePoint.x, neutralSurfacePoint.y);
     assert.equal(await activeCoordinate(), '-1:1');
     assertRectanglesEqual(await rectangles(), fixedBefore, 'fixed chrome after keyboard and chevron navigation');
 
     await page.locator('.lattice-coordinate-map [data-coordinate="0:0"]').click();
     await waitForCoordinate('0:0');
-    const dragStart = { x: surfaceBox.x + (surfaceBox.width / 2), y: surfaceBox.y + (surfaceBox.height / 2) };
+    const dragStart = neutralSurfacePoint;
     const baselineTransform = await stageTranslation();
     await page.mouse.move(dragStart.x, dragStart.y);
     await page.mouse.down();
@@ -316,32 +323,54 @@ describe('Phase 4 owner lattice through the real App route', { concurrency: fals
     assert.equal(await activeCoordinate(), '0:0');
     assertRectanglesEqual(await rectangles(), fixedBefore, 'fixed chrome after accumulated wheel navigation');
 
-    const disabled = page.locator('.owner-lattice-shell button:disabled');
-    assert.ok(await disabled.count() >= 5);
     assert.equal(await page.locator('.owner-lattice-theme').count(), 0);
     await page.getByRole('button', { name: 'THEME' }).click();
-    await page.locator('.owner-lattice-theme select').first().selectOption('paper');
+    const disabledAuthoringTools = page.locator('.modul8r-master__accessory button:disabled[aria-disabled="true"][title]');
+    assert.ok(await disabledAuthoringTools.count() >= 4);
+    await page.getByLabel('WORKSPACE / SURFACE').selectOption('paper');
     assert.equal(await page.locator('.owner-lattice-shell').getAttribute('data-surface'), 'paper');
+    const themes = ['carbon', 'graphite', 'slate', 'ash', 'mist', 'paper'];
+    for (const theme of themes) {
+      await page.getByLabel('WORKSPACE / SURFACE').selectOption(theme);
+      await page.getByLabel('MENU / INTERFACE').selectOption(theme);
+      assert.equal(await page.locator('.owner-lattice-shell').getAttribute('data-surface'), theme);
+      assert.equal(await page.locator('.modul8r-shell').getAttribute('data-menu-surface'), theme);
+    }
+    await page.getByRole('button', { name: 'Close Modulator settings' }).click();
+    for (const viewport of [{ width: 1280, height: 720 }, { width: 900, height: 720 }, { width: 760, height: 720 },
+      { width: 640, height: 720 }, { width: 520, height: 720 }, { width: 390, height: 844 }]) {
+      await page.setViewportSize(viewport);
+      const shell = await page.locator('.modul8r-shell').boundingBox();
+      assert.ok(shell.x >= 9.5 && shell.y >= 9.5);
+      assert.ok(shell.x + shell.width <= viewport.width - 9.5);
+      assert.ok(shell.y + shell.height <= viewport.height - 9.5);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth === innerWidth), true);
+    }
+    await page.setViewportSize({ width: 1280, height: 720 });
 
     await setAuthority(PROFILE_B);
     await page.evaluate((address) => {
       history.pushState({ viewedProfileAddress: address }, '', `?view=${address}`);
       dispatchEvent(new PopStateEvent('popstate'));
     }, PROFILE_B);
-    await page.locator('.owner-lattice-shell[data-surface="carbon"]').waitFor({ state: 'attached', timeout: 5_000 });
+    await page.locator('.owner-lattice-shell[data-surface="mist"]').waitFor({ state: 'attached', timeout: 5_000 });
     assert.equal(await activeCoordinate(), '0:0');
     assert.equal(await page.locator('.owner-lattice-theme').count(), 0);
     assertCanonicalReadIsolation(await page.evaluate(() => window.__phase4LatticeStorageOperations));
 
+    if (await page.locator('.modul8r-shell').count()) {
+      await page.getByRole('button', { name: 'Close Modulator' }).click();
+      await page.locator('.modul8r-shell').waitFor({ state: 'detached' });
+    }
     await page.locator('.lattice-coordinate-map [data-coordinate="1:-1"]').click();
     await waitForCoordinate('1:-1');
     await page.getByRole('button', { name: 'THEME' }).click();
-    await page.locator('.owner-lattice-theme select').first().selectOption('paper');
+    await page.getByLabel('WORKSPACE / SURFACE').selectOption('paper');
     assert.equal(await page.locator('.owner-lattice-shell').getAttribute('data-surface'), 'paper');
-    assert.equal(await page.locator('.owner-lattice-theme').count(), 1);
+    assert.equal(await page.locator('.modul8r-settings').count(), 1);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await setAuthority(PROFILE_B);
-    await page.locator('.owner-lattice-shell[data-surface="carbon"]').waitFor({ state: 'attached', timeout: 15_000 });
+    await page.locator('.owner-lattice-shell[data-surface="mist"]').waitFor({ state: 'attached', timeout: 15_000 });
     assert.equal(await activeCoordinate(), '0:0');
     assert.equal(await page.locator('.owner-lattice-theme').count(), 0);
     assertCanonicalReadIsolation(await page.evaluate(() => window.__phase4LatticeStorageOperations));

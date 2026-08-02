@@ -18,7 +18,7 @@ test('Task 3 adapter reuses real Browser content authorities without importing w
 
 test('Task 5 uses an independent creator store, pure union, honest viewer and existing placement callback', async () => {
   const [integration, panel, union, owner, authoring] = await Promise.all([
-    read('./Modul8rOwnerLibraryDevelopment.jsx'), read('./Modul8rLibraryPanel.jsx'),
+    read('./Modul8rOwnerWorkspace.jsx'), read('./Modul8rLibraryPanel.jsx'),
     read('../browser/libraryAssetUnion.js'), read('../../public/OwnerLatticeShell.jsx'),
     read('../../public/useOwnerLatticeAuthoring.js'),
   ]);
@@ -46,7 +46,7 @@ test('Task 6 removes USED ON CANVAS only from MODUL-8R Library and keeps the old
 });
 
 test('closing retains accepted creator authority while profile change and unmount clear it without progressive gaps', async () => {
-  const integration = await read('./Modul8rOwnerLibraryDevelopment.jsx');
+  const integration = await read('./Modul8rOwnerWorkspace.jsx');
   assert.match(integration, /if \(!open\) \{ cancelCreated\(\); return; \}/);
   assert.match(integration, /createdProfileAddress !== profileAddress \|\| createdStatus === 'idle'/);
   assert.match(integration, /onRelatedAssetRecordsChange\?\.\(acceptedRelatedRecords\)/);
@@ -70,16 +70,16 @@ test('Task 3 adapter exposes real query, size, unavailable, progressive, selecti
   assert.match(source, /if \(!categoryId\) \{[\s\S]*setOrganizationDrag\(null\)/);
 });
 
-test('live-owner integration stays DEV-only and delegates canvas placement to the existing owner callback', async () => {
+test('production owner integration delegates canvas placement to the existing owner callback', async () => {
   const [main, owner, integration] = await Promise.all([
     read('../../main.jsx'),
     read('../../public/OwnerLatticeShell.jsx'),
-    read('./Modul8rOwnerLibraryDevelopment.jsx'),
+    read('./Modul8rOwnerWorkspace.jsx'),
   ]);
   assert.match(main, /modul8rLiveOwnerRoute/);
-  assert.match(owner, /import\.meta\.env\.DEV[\s\S]*Modul8rOwnerLibraryDevelopment/);
+  assert.match(owner, /Modul8rOwnerWorkspace/);
   assert.match(owner, /onAssetPointerDown=\{beginBrowserAssetDrag\}/);
-  assert.match(owner, /browserOpen \|\| developmentModul8rActive/);
+  assert.match(owner, /browserOpen \|\| modul8rActive/);
   assert.match(integration, /Modul8rLibraryAdapter/);
   assert.match(integration, /aria-pressed=\{arrangeEnabled\}/);
   assert.match(owner, /onArrangeToggle=\{\(\) => activateWorkspaceTool\('arrange'\)\}/);

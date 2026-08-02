@@ -37,7 +37,7 @@ test('fresh shell presentation owns exact faceplate geometry, containment and mo
   assert.match(styles, /prefers-reduced-motion: reduce/);
   assert.match(styles, /width: min\(var\(--modul8r-width\), calc\(100vw - 20px\)\)/);
   assert.match(styles, /\.modul8r-shell \{[\s\S]*pointer-events: auto;/);
-  assert.match(styles, /\.modul8r-development-reopen \{[\s\S]*pointer-events: auto;/);
+  assert.match(styles, /\.modul8r-development-reopen,[\s\S]*\.modul8r-owner-reopen \{[\s\S]*pointer-events: auto;/);
   assert.doesNotMatch(styles, /lattice-rack-|lattice-browser-|--lattice-browser-/);
   for (const className of [...styles.matchAll(/\.([a-z][\w-]*)/g)].map((match) => match[1])) {
     assert.match(className, /^modul8r-/, `unexpected non-MODUL-8R class: ${className}`);

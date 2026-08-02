@@ -81,7 +81,9 @@ export default function Modul8rShell({
   menuSurfaceId = 'carbon',
   moduleContent = {},
   moduleFaceplateAccessoryRefs = {},
+  moduleRequest = null,
   onEscape,
+  onModuleStateChange,
   onRequestClose,
   onSettingsRequest,
   returnFocusRef,
@@ -95,6 +97,16 @@ export default function Modul8rShell({
   const masterToggleRef = useRef(null);
   const masterMenuButtonRef = useRef(null);
   const floatingWindow = useLatticeFloatingWindow({ initialSize: INITIAL_SHELL_SIZE });
+
+  useEffect(() => {
+    if (!moduleRequest?.requestId || !MODUL8R_MODULE_ORDER.includes(moduleRequest.moduleId)) return;
+    setMasterTransitioning(true);
+    setShellState(createModul8rShellState({ masterExpanded: true, openModule: moduleRequest.moduleId }));
+  }, [moduleRequest]);
+
+  useEffect(() => {
+    onModuleStateChange?.(shellState);
+  }, [onModuleStateChange, shellState]);
 
   const requestClose = useCallback(() => {
     onRequestClose?.();
@@ -236,7 +248,7 @@ export default function Modul8rShell({
           id={id}
           key={id}
           onToggle={toggleModule}
-        >{moduleContent[id] ?? <StructureOnlyModule id={id} />}</Modul8rModule>)}
+        >{moduleContent[id] ?? (import.meta.env.DEV ? <StructureOnlyModule id={id} /> : null)}</Modul8rModule>)}
       </div>
     </div>
     {shellState.masterExpanded && <button

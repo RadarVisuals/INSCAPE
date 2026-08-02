@@ -1,6 +1,6 @@
 # INSCAPE MODUL-8R Roadmap and Boundary
 
-Status: accepted prototype authority and production boundary; Tasks 1–7 are implemented and interactively accepted behind the development-only boundary below. Task 8 remains unstarted.
+Status: accepted prototype authority and production boundary; Tasks 1–8 are implemented and interactively accepted. Task 9 remains unstarted.
 
 ## Purpose
 
@@ -260,11 +260,13 @@ Accepted certification checkpoint (2026-08-02): automatic certification and the 
 
 ### Task 8 — atomic production cutover
 
-Status: `[ ]`
+Status: `[x]`
 
 Switch one bounded owner import/wiring boundary from the old Browser/Rack and compatibility destinations to the complete accepted `Modul8rShell`. Preserve authoring callbacks, canonical state, publication, wallet, IPFS, owner/visitor gates, focus refs, direct visits, iframes, and profile-remount session reset. Users must see the complete old Rack before deployment or the complete MODUL-8R after deployment, never a hybrid.
 
 Run the complete focused and full regression matrix, production build/budgets, import isolation, direct/iframe checks, publication rollback, and live smoke test. Rollback restores the previous owner import/wiring checkpoint and requires no data migration.
+
+Implementation checkpoint (2026-08-02): production now selects the production-named `OwnerModul8rShell` at one two-line owner-runtime seam. The accepted Library, Activity, People, Layers, Settings/Theme, Preview, Publish, authoring, focus, profile-routing, canonical storage, and publication authorities remain delegated through the existing owner shell; old Rack/Browser/standalone presentation imports are build-selected out of the production owner graph. The focused Task 8/build/isolation matrix passes 50/50 and the wider focused matrix passes 463/463. The required sequential full-suite run completed 1,005/1,012: four Task 8 source-contract assertions were corrected and pass in the later focused matrices; the remaining three failures are the already-recorded stale Phase 3 fixture whitelist, multiline legacy-viewer source assertion, and frozen prototype RGB parser. The dedicated real Edge MODUL-8R matrix passes 1/1 across all six widths/themes, reduced motion, movement, resizing, module lifecycle, collapse, close, Escape, and focus. The ordinary-route Edge harness exercised production mounting, spatial navigation, pointer ownership, storage isolation, and reached its late presentation-count assertion; that stale Rack-era disabled-button count is corrected to semantic MODUL-8R disabled controls but has not been rerun. Both MODUL-8R and the exact two-line LATTICE rollback selector build successfully within budgets. Final MODUL-8R totals are 1,240,851 raw / 362,737 gzip initial JavaScript, 263,459 / 79,743 owner JavaScript, and 2,043,467 / 611,060 aggregate core JavaScript, with zero owner leaks and no old `BrowserWorkspace` in the selected production output. The user accepted the production preview on 2026-08-02. Task 8 is `[x]`; Task 9 remains separately unauthorized.
 
 ### Task 9 — post-acceptance cleanup
 

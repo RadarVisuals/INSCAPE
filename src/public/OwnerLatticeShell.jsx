@@ -59,24 +59,25 @@ import {
 } from './keeperPointerFollow.js';
 import { prepareOwnerLatticeRuntimeDraft } from './ownerLatticeRuntimeProjection.js';
 import KeeperDock from './KeeperDock.jsx';
-import ProfileDiscoveryBoundary from '../profileDiscovery/ProfileDiscoveryBoundary.jsx';
 import useOwnerLatticeBrowser from './useOwnerLatticeBrowser.js';
 import useOwnerLatticeAuthoring, {
   OWNER_LATTICE_AUTHORING_STATUS,
   ownerLatticePlacementUnavailableReason,
 } from './useOwnerLatticeAuthoring.js';
+import {
+  ActivityBrowser,
+  BrowserWorkspace,
+  CreationsBrowser,
+  Modul8rOwnerWorkspace,
+  ProfileDiscoveryBoundary,
+  SettingsBrowser,
+  productionModul8rSelected,
+} from '#owner-workspace-presentation';
 import '../lattice/rendering/latticeMenuSurface.css';
 import './ownerLatticeShell.css';
 
-const BrowserWorkspace = lazy(() => import('../lattice/browser/BrowserWorkspace.jsx'));
-const ActivityBrowser = lazy(() => import('./ActivityBrowser.jsx'));
-const CreationsBrowser = lazy(() => import('./CreationsBrowser.jsx'));
-const SettingsBrowser = lazy(() => import('./SettingsBrowser.jsx'));
 const ProfileDocumentPreview = lazy(() => import('../profileDocument/components/ProfileDocumentPreview.jsx'));
 const OwnerLatticePublicationRack = lazy(() => import('./OwnerLatticePublicationRack.jsx'));
-const Modul8rOwnerLibraryDevelopment = import.meta.env.DEV
-  ? lazy(() => import('../lattice/modul8r/Modul8rOwnerLibraryDevelopment.jsx'))
-  : null;
 
 const RUNTIME_PROJECTION_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 const CENTER_TABLE_ID = 'table-05';
@@ -175,6 +176,7 @@ function OwnerLatticeRuntime({
   keeperVisible = true,
   onPublicationConfirmed,
   onVisitProfile,
+  ownerWorkspacePresentation = 'rack',
   publishedResolution,
   residentHandoff,
   revealPresentation = { reducedMotion: false },
@@ -185,6 +187,7 @@ function OwnerLatticeRuntime({
   const developmentModul8rActive = import.meta.env.DEV
     && window.location.pathname.replace(/\/+$/, '') === '/development/owner/modul-8r'
     && new URLSearchParams(window.location.search).get('live') === '1';
+  const modul8rActive = ownerWorkspacePresentation === 'modul8r' || developmentModul8rActive;
   const profileAddress = workspaceProfileAddress;
 
   const viewportRef = useRef(null);
@@ -205,6 +208,7 @@ function OwnerLatticeRuntime({
   const previewReturnFocusRef = useRef(null);
   const previewRequestRef = useRef(0);
   const browserReturnFocusRef = useRef(null);
+  const modul8rReturnFocusRef = useRef(null);
   const activeWorkspaceWindowRef = useRef('browser');
   const identityControlRef = useRef(null);
   const activityTriggerRef = useRef(null);
@@ -263,13 +267,19 @@ function OwnerLatticeRuntime({
   const [creationsOpen, setCreationsOpen] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [modul8rRelatedAssetRecords, setModul8rRelatedAssetRecords] = useState([]);
+  const [modul8rOpenRequestId, setModul8rOpenRequestId] = useState(0);
+  const [modul8rCloseRequestId, setModul8rCloseRequestId] = useState(0);
+  const [modul8rModuleRequest, setModul8rModuleRequest] = useState(null);
+  const [modul8rPresentationState, setModul8rPresentationState] = useState({
+    masterExpanded: true, open: true, openModule: 'library', settingsOpen: false,
+  });
   useEffect(() => setRailCollapsed(true), [profileAddress]);
   useEffect(() => setPublicationOpen(false), [profileAddress]);
   const profileIdentity = useProfileIdentity(profileAddress);
   const profileContractFacts = useProfileContractFacts(profileAddress, { enabled: Boolean(identityDossierOpening || identityDossierSession) });
   const { commands: browserCategoryCommands, data: browserData } = useOwnerLatticeBrowser(profileAddress);
   const authoring = useOwnerLatticeAuthoring(profileAddress, {
-    supplementalAssetRecords: developmentModul8rActive ? modul8rRelatedAssetRecords : [],
+    supplementalAssetRecords: modul8rActive ? modul8rRelatedAssetRecords : [],
   });
   const profile = useMemo(
     () => getIdentityProfileViewModel(profileIdentity, { walletConnected: visitorWalletConnected }),
@@ -710,7 +720,7 @@ function OwnerLatticeRuntime({
       const inside = rectangle && pointerEvent.clientX >= rectangle.left && pointerEvent.clientX <= rectangle.right
         && pointerEvent.clientY >= rectangle.top && pointerEvent.clientY <= rectangle.bottom;
       if (gesture?.started && !target?.closest?.('[data-lattice-chrome]') && inside
-        && (browserOpen || developmentModul8rActive) && arrangeEnabled && activeDraftTable?.visibility === 'PUBLIC'
+        && (browserOpen || modul8rActive) && arrangeEnabled && activeDraftTable?.visibility === 'PUBLIC'
         && workspace.isAssetRenderable(id)) {
         try { destination = createLatticeProductionDropGeometry(asset.width, asset.height,
           { x: pointerEvent.clientX, y: pointerEvent.clientY }, rectangle, { placementPreset }); } catch { destination = null; }
@@ -724,11 +734,11 @@ function OwnerLatticeRuntime({
     element.addEventListener('pointermove', update);
     element.addEventListener('pointerup', finish);
     element.addEventListener('pointercancel', cancel);
-  }, [activeDraftTable?.visibility, activeTableId, arrangeEnabled, authoring.placePublicAsset, browserOpen, developmentModul8rActive]);
+  }, [activeDraftTable?.visibility, activeTableId, arrangeEnabled, authoring.placePublicAsset, browserOpen, modul8rActive]);
 
   useEffect(() => {
-    if ((!browserOpen && !developmentModul8rActive) || !arrangeEnabled) cancelBrowserAssetDrag();
-  }, [arrangeEnabled, browserOpen, cancelBrowserAssetDrag, developmentModul8rActive, profileAddress]);
+    if ((!browserOpen && !modul8rActive) || !arrangeEnabled) cancelBrowserAssetDrag();
+  }, [arrangeEnabled, browserOpen, cancelBrowserAssetDrag, modul8rActive, profileAddress]);
   useEffect(() => {
     if (!browserAssetDrag) return undefined;
     const cancelOnEscape = (event) => { if (event.key === 'Escape') cancelBrowserAssetDrag(); };
@@ -750,7 +760,33 @@ function OwnerLatticeRuntime({
     const returnFocus = browserReturnFocusRef.current || browserToolRef.current;
     queueMicrotask(() => returnFocus?.isConnected && returnFocus.focus({ preventScroll: true }));
   }, []);
+  const requestModul8r = useCallback((moduleId, trigger = null, options = {}) => {
+    modul8rReturnFocusRef.current = trigger || modul8rReturnFocusRef.current || browserToolRef.current;
+    if (options.toggle && modul8rPresentationState.open && modul8rPresentationState.openModule === moduleId) {
+      setModul8rCloseRequestId((current) => current + 1);
+      return;
+    }
+    setBrowserOpen(false);
+    setActivityOpen(false);
+    setCreationsOpen(false);
+    setDiscoveryOpen(false);
+    setThemeOpen(false);
+    setThemeAnchor(null);
+    setSettingsOpen(false);
+    setMoreOpen(false);
+    setModul8rOpenRequestId((current) => current + 1);
+    setModul8rModuleRequest((current) => ({
+      moduleId,
+      requestId: (current?.requestId || 0) + 1,
+      settings: options.settings === true,
+      trigger,
+    }));
+  }, [modul8rPresentationState.open, modul8rPresentationState.openModule]);
   const openCategories = useCallback((trigger) => {
+    if (modul8rActive) {
+      requestModul8r('library', trigger);
+      return;
+    }
     browserReturnFocusRef.current = trigger || null;
     activeWorkspaceWindowRef.current = 'browser';
     setActivityOpen(false);
@@ -759,8 +795,12 @@ function OwnerLatticeRuntime({
     setBrowserActivated(true);
     setBrowserTabRequest((current) => ({ id: 'categories', requestId: (current?.requestId || 0) + 1 }));
     setBrowserOpen(true);
-  }, []);
+  }, [modul8rActive, requestModul8r]);
   const setActivityWindowOpen = useCallback((open, trigger = null) => {
+    if (open && modul8rActive) {
+      requestModul8r('activity', trigger);
+      return;
+    }
     if (open) {
       activityTriggerRef.current = trigger || activityTriggerRef.current;
       activeWorkspaceWindowRef.current = 'activity';
@@ -774,8 +814,12 @@ function OwnerLatticeRuntime({
     setActivityOpen(open);
     if (!open) requestAnimationFrame(() => activityTriggerRef.current?.isConnected
       && activityTriggerRef.current.focus({ preventScroll: true }));
-  }, []);
+  }, [modul8rActive, requestModul8r]);
   const setCreationsWindowOpen = useCallback((open, trigger = null) => {
+    if (open && modul8rActive) {
+      requestModul8r('library', trigger);
+      return;
+    }
     if (open) {
       creationsTriggerRef.current = trigger || creationsTriggerRef.current;
       activeWorkspaceWindowRef.current = 'creations';
@@ -789,8 +833,12 @@ function OwnerLatticeRuntime({
     setCreationsOpen(open);
     if (!open) requestAnimationFrame(() => creationsTriggerRef.current?.isConnected
       && creationsTriggerRef.current.focus({ preventScroll: true }));
-  }, []);
+  }, [modul8rActive, requestModul8r]);
   const openDiscovery = useCallback((trigger) => {
+    if (modul8rActive) {
+      requestModul8r('people', trigger);
+      return;
+    }
     discoveryTriggerRef.current = trigger || null;
     activeWorkspaceWindowRef.current = 'discover';
     setBrowserOpen(false);
@@ -800,7 +848,7 @@ function OwnerLatticeRuntime({
     setThemeAnchor(null);
     setPublicationOpen(false);
     setDiscoveryOpen(true);
-  }, []);
+  }, [modul8rActive, requestModul8r]);
   const closeDiscovery = useCallback(() => {
     setDiscoveryOpen(false);
     requestAnimationFrame(() => discoveryTriggerRef.current?.isConnected
@@ -815,6 +863,7 @@ function OwnerLatticeRuntime({
     const originRectangle = frozenRectangle(source.getBoundingClientRect());
     const viewport = Object.freeze({ width: window.innerWidth, height: window.innerHeight });
     setBrowserOpen(false);
+    if (modul8rActive) setModul8rCloseRequestId((current) => current + 1);
     setThemeOpen(false);
     setIdentityDossierOpening(true);
     const profileImageUrl = await preloadIdentityProfileImage(identityDossier.profile.avatarUrl);
@@ -825,7 +874,7 @@ function OwnerLatticeRuntime({
       viewport,
     });
     setIdentityDossierOpening(false);
-  }, [compositionPreview, cropModeActive, identityDossier, viewerSession]);
+  }, [compositionPreview, cropModeActive, identityDossier, modul8rActive, viewerSession]);
   const closeIdentityDossier = useCallback(() => {
     setIdentityDossierSession(null);
     requestAnimationFrame(() => identityControlRef.current?.focus({ preventScroll: true }));
@@ -885,6 +934,7 @@ function OwnerLatticeRuntime({
       setCropModeActive(false);
       setArrangeEnabled(false);
       setBrowserOpen(false);
+      if (modul8rActive) setModul8rCloseRequestId((current) => current + 1);
       setThemeOpen(false);
       setThemeAnchor(null);
       setIdentityDossierSession(null);
@@ -894,7 +944,8 @@ function OwnerLatticeRuntime({
     } catch (error) {
       setPreviewError(error instanceof Error ? error.message : String(error));
     }
-  }, [activeActorId, authoring, cancelBrowserAssetDrag, finishCameraGesture, finishGesture, profileAddress, publicationProfile, stageId]);
+  }, [activeActorId, authoring, cancelBrowserAssetDrag, finishCameraGesture, finishGesture, modul8rActive,
+    profileAddress, publicationProfile, stageId]);
   const stopOwnerPreview = useCallback(() => {
     previewRequestRef.current += 1;
     setPreviewDocument(null);
@@ -937,6 +988,10 @@ function OwnerLatticeRuntime({
       }
     }
     if (toolId === 'browser') {
+      if (modul8rActive) {
+        requestModul8r('library', trigger, { toggle: true });
+        return;
+      }
       browserReturnFocusRef.current = trigger || browserToolRef.current;
       activeWorkspaceWindowRef.current = 'browser';
       setActivityOpen(false);
@@ -946,15 +1001,27 @@ function OwnerLatticeRuntime({
       setBrowserOpen((open) => !open);
     }
     if (toolId === 'theme') {
+      if (modul8rActive) {
+        requestModul8r(modul8rPresentationState.openModule || 'library', trigger, { settings: true });
+        return;
+      }
       activeWorkspaceWindowRef.current = 'theme';
       if (trigger) setThemeAnchor(frozenRectangle(trigger.getBoundingClientRect()));
       setThemeOpen((open) => !open);
     }
     if (toolId === 'more') {
+      if (modul8rActive) {
+        requestModul8r(modul8rPresentationState.openModule || 'library', trigger, { settings: true });
+        return;
+      }
       activeWorkspaceWindowRef.current = 'more';
       setMoreOpen((open) => !open);
     }
     if (toolId === 'settings') {
+      if (modul8rActive) {
+        requestModul8r(modul8rPresentationState.openModule || 'library', trigger, { settings: true });
+        return;
+      }
       activeWorkspaceWindowRef.current = 'settings';
       setMoreOpen(false);
       setSettingsOpen(true);
@@ -964,7 +1031,8 @@ function OwnerLatticeRuntime({
       activeWorkspaceWindowRef.current = 'publish';
       setPublicationOpen((open) => !open);
     }
-  }, [activeTableId, arrangeEnabled, authoring, selectedPlacement, selectedPlacements, startOwnerPreview, toggleArrange]);
+  }, [activeTableId, arrangeEnabled, authoring, modul8rActive, modul8rPresentationState.openModule,
+    requestModul8r, selectedPlacement, selectedPlacements, startOwnerPreview, toggleArrange]);
   const handlePlacementMediaState = useCallback((state) => {
     const key = `${state.tableId}:${state.placementId}`;
     setPlacementMedia((current) => {
@@ -1135,7 +1203,12 @@ function OwnerLatticeRuntime({
     {spatialRoot && createPortal(spatialSurface, spatialRoot)}
     {interfaceVisible && <>
       <LatticeProfileRail
-        activeEntryId={creationsOpen ? 'creations' : activityOpen ? 'activity' : discoveryOpen ? 'discover' : browserOpen && browserActiveTab === 'categories' ? 'categories' : null}
+        activeEntryId={modul8rActive && modul8rPresentationState.open
+          ? modul8rPresentationState.openModule === 'activity' ? 'activity'
+            : modul8rPresentationState.openModule === 'people' ? 'discover'
+              : modul8rPresentationState.openModule === 'library' ? 'categories' : null
+          : creationsOpen ? 'creations' : activityOpen ? 'activity' : discoveryOpen ? 'discover'
+            : browserOpen && browserActiveTab === 'categories' ? 'categories' : null}
         blocked={Boolean(viewerSession || discoveryOpen)}
         collapsed={railCollapsed}
         compact={dimensions.width <= 900}
@@ -1155,7 +1228,10 @@ function OwnerLatticeRuntime({
         onIdentityActivate={openIdentityDossier}
       />
       <LatticeWorkspaceToolbar
-        activeToolIds={[browserOpen ? 'browser' : null, publicationOpen ? 'publish' : null, themeOpen ? 'theme' : null, moreOpen ? 'more' : null].filter(Boolean)}
+        activeToolIds={[(modul8rActive ? modul8rPresentationState.open : browserOpen) ? 'browser' : null,
+          publicationOpen ? 'publish' : null,
+          (modul8rActive ? modul8rPresentationState.settingsOpen : themeOpen) ? 'theme' : null,
+          (modul8rActive ? modul8rPresentationState.settingsOpen : moreOpen) ? 'more' : null].filter(Boolean)}
         compact={dimensions.width <= 980}
         arrangeEnabled={arrangeEnabled}
         owner
@@ -1175,7 +1251,7 @@ function OwnerLatticeRuntime({
         onToolActivate={activateWorkspaceTool}
           toolButtonRefs={{ browser: browserToolRef, more: moreToolRef, preview: previewToolRef, publish: publishToolRef }}
       />
-      {browserActivated && <Suspense fallback={null}>
+      {!modul8rActive && browserActivated && BrowserWorkspace && <Suspense fallback={null}>
         <BrowserWorkspace
           categoryCommands={browserCategoryCommands}
           data={{
@@ -1209,8 +1285,8 @@ function OwnerLatticeRuntime({
           }))}
         />
       </Suspense>}
-      {developmentModul8rActive && Modul8rOwnerLibraryDevelopment && <Suspense fallback={null}>
-        <Modul8rOwnerLibraryDevelopment
+      {modul8rActive && Modul8rOwnerWorkspace && <Suspense fallback={null}>
+        <Modul8rOwnerWorkspace
           activeTableId={activeTableId}
           arrangeEnabled={arrangeEnabled}
           categoryCommands={browserCategoryCommands}
@@ -1220,10 +1296,26 @@ function OwnerLatticeRuntime({
             usedAssetIds: [...new Set((authoring.draft?.tables || []).flatMap((table) => table.placements.map(({ stableAssetId }) => stableAssetId)))],
           }}
           menuSurfaceId={menuSurfaceId}
+          authoringTools={RACK_AUTHORING_TOOLS.filter(({ id }) => id !== 'arrange').map((tool) => ({
+            ...tool,
+            disabled: !arrangeEnabled || !selectedPlacement || selectedPlacements.some(({ locked }) => locked),
+            disabledReason: !arrangeEnabled ? 'ENABLE ARRANGE' : !selectedPlacement
+              ? 'SELECT AN ASSET ON THE CANVAS' : selectedPlacements.some(({ locked }) => locked)
+                ? 'SELECTION CONTAINS A LOCKED PLACEMENT' : undefined,
+          }))}
+          closeRequestId={modul8rCloseRequestId}
+          initialOpen={modul8rPresentationState.open}
           layers={layerEntries}
+          moduleRequest={modul8rModuleRequest}
           onArrangeToggle={() => activateWorkspaceTool('arrange')}
           onAssetPointerDown={beginBrowserAssetDrag}
           onRelatedAssetRecordsChange={setModul8rRelatedAssetRecords}
+          onAuthoringToolActivate={(toolId) => activateWorkspaceTool(toolId)}
+          onEscape={() => {
+            if (publicationOpen) { setPublicationOpen(false); return true; }
+            return false;
+          }}
+          onOpenStateChange={setModul8rPresentationState}
           onLayerReorder={reorderLayers}
           onLayerSelectionChange={selectPlacement}
           onMenuSurfaceChange={setMenuSurfaceId}
@@ -1237,15 +1329,17 @@ function OwnerLatticeRuntime({
           }}
           onVisitProfile={onVisitProfile}
           ownedAssetRecords={publicationAssetRecords.filter((record) => normalizeProfileAddress(record.ownerAddress) === profileAddress)}
+          openRequestId={modul8rOpenRequestId}
           profileAddress={profileAddress}
           reorderDisabled={!arrangeEnabled}
+          returnFocusRef={modul8rReturnFocusRef}
           selectedLayerIds={selectedPlacementIds}
           surfaceId={surfaceId}
           tables={authoring.draft?.tables || []}
           onSurfaceChange={setSurfaceId}
         />
       </Suspense>}
-      {themeOpen && <ThemeSurface
+      {!modul8rActive && themeOpen && <ThemeSurface
         anchor={themeAnchor}
         menuSurfaceId={menuSurfaceId}
         onClose={() => { setThemeOpen(false); setThemeAnchor(null); }}
@@ -1274,7 +1368,7 @@ function OwnerLatticeRuntime({
           visitorNavigation={PUBLICATION_VISITOR_NAVIGATION}
         />
       </Suspense>}
-      <Suspense fallback={null}>
+      {!modul8rActive && SettingsBrowser && CreationsBrowser && ActivityBrowser && <Suspense fallback={null}>
         <SettingsBrowser
           open={settingsOpen}
           onOpenChange={(open) => {
@@ -1294,8 +1388,8 @@ function OwnerLatticeRuntime({
           onOpenChange={(open) => setActivityWindowOpen(open)}
           profileAddress={profileAddress}
         />
-      </Suspense>
-      {discoveryOpen && <ProfileDiscoveryBoundary
+      </Suspense>}
+      {!modul8rActive && ProfileDiscoveryBoundary && discoveryOpen && <ProfileDiscoveryBoundary
         onClose={closeDiscovery}
         onSelect={(result) => {
           setDiscoveryOpen(false);

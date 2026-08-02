@@ -94,7 +94,7 @@ test('owner viewport fills all 32 columns and keeps bounded per-table Space-drag
   assert.doesNotMatch(source, /Math\.min\(dimensions\.width \/ 32, dimensions\.height \/ 18\)/);
 });
 
-test('Browser open, close, and Escape state stays runtime-only with focus restoration', () => {
+test('owner workspace launch, close, and Escape state stays runtime-only with focus restoration', () => {
   assert.match(source, /const \[browserOpen, setBrowserOpen\] = useState\(false\)/);
   assert.match(source, /const \[railCollapsed, setRailCollapsed\] = useState\(true\)/);
   assert.match(source, /useEffect\(\(\) => setRailCollapsed\(true\), \[profileAddress\]\)/);
@@ -104,19 +104,23 @@ test('Browser open, close, and Escape state stays runtime-only with focus restor
   assert.match(source, /setBrowserTabRequest\(\(current\) => \(\{ id: 'categories', requestId:/);
   assert.match(source, /onEntryActivate=\{\(entryId, trigger\) =>/);
   assert.match(source, /if \(entryId === 'categories'\) openCategories\(trigger\)/);
-  assert.match(source, /activeEntryId=\{creationsOpen \? 'creations' : activityOpen \? 'activity' : discoveryOpen \? 'discover' : browserOpen && browserActiveTab === 'categories' \? 'categories' : null\}/);
+  assert.match(source, /activeEntryId=\{modul8rActive && modul8rPresentationState\.open/);
+  assert.match(source, /modul8rPresentationState\.openModule === 'activity' \? 'activity'/);
+  assert.match(source, /modul8rPresentationState\.openModule === 'people' \? 'discover'/);
+  assert.match(source, /modul8rPresentationState\.openModule === 'library' \? 'categories'/);
   assert.match(source, /const returnFocus = browserReturnFocusRef\.current \|\| browserToolRef\.current/);
   assert.match(source, /returnFocus\?\.isConnected && returnFocus\.focus/);
   assert.match(source, /onRequestClose=\{closeBrowser\}/);
   assert.match(source, /onActiveTabChange=\{setBrowserActiveTab\}/);
   assert.match(source, /open=\{browserOpen\}/);
   assert.match(source, /tabRequest=\{browserTabRequest\}/);
-  assert.match(source, /activeToolIds=\{\[browserOpen \? 'browser' : null, publicationOpen \? 'publish' : null, themeOpen \? 'theme' : null, moreOpen \? 'more' : null\]\.filter\(Boolean\)\}/);
+  assert.match(source, /activeToolIds=\{\[\(modul8rActive \? modul8rPresentationState\.open : browserOpen\) \? 'browser' : null/);
   assert.match(source, /activeWorkspaceWindowRef\.current = 'browser'/);
   assert.match(source, /activeWorkspaceWindowRef\.current = 'theme'/);
   assert.match(source, /const activateWorkspaceTool = useCallback\(\(toolId, trigger\) =>/);
   assert.match(source, /if \(toolId === 'browser'\) \{[\s\S]*?browserReturnFocusRef\.current = trigger \|\| browserToolRef\.current;[\s\S]*?setBrowserActivated\(true\);[\s\S]*?setBrowserOpen\(\(open\) => !open\);\s*\}/);
-  assert.match(source, /if \(toolId === 'theme'\) \{\s*activeWorkspaceWindowRef\.current = 'theme';\s*if \(trigger\) setThemeAnchor\(frozenRectangle\(trigger\.getBoundingClientRect\(\)\)\);\s*setThemeOpen\(\(open\) => !open\);\s*\}/);
+  assert.match(source, /if \(toolId === 'theme'\) \{[\s\S]*?if \(modul8rActive\) \{[\s\S]*?requestModul8r\([\s\S]*?\{ settings: true \}/);
+  assert.match(source, /activeWorkspaceWindowRef\.current = 'theme';\s*if \(trigger\) setThemeAnchor\(frozenRectangle\(trigger\.getBoundingClientRect\(\)\)\);\s*setThemeOpen\(\(open\) => !open\)/);
   assert.match(source, /toolButtonRefs=\{\{ browser: browserToolRef, more: moreToolRef, preview: previewToolRef, publish: publishToolRef \}\}/);
   assert.match(source, /workspaceTools=\{RACK_AUTHORING_TOOLS\.map/);
   assert.match(source, /systemTools=\{RACK_SYSTEM_TOOLS\}/);
@@ -141,11 +145,11 @@ test('Activity opens indexed event history as a reversible profile window', () =
   assert.match(source, /activityTriggerRef\.current\.focus\(\{ preventScroll: true \}\)/);
 });
 
-test('development-only MODUL-8R reuses exact owner profile and public-profile routing authorities', () => {
-  assert.match(source, /<Modul8rOwnerLibraryDevelopment/);
+test('production MODUL-8R reuses exact owner profile and public-profile routing authorities', () => {
+  assert.match(source, /<Modul8rOwnerWorkspace/);
   assert.match(source, /profileAddress=\{profileAddress\}/);
   assert.match(source, /onVisitProfile=\{onVisitProfile\}/);
-  assert.doesNotMatch(source, /Modul8rOwnerLibraryDevelopment[\s\S]*createViewedProfileUrl/);
+  assert.doesNotMatch(source, /Modul8rOwnerWorkspace[\s\S]*createViewedProfileUrl/);
 });
 
 test('Creations reuses creator-attributed data without restoring the rejected flip viewer', () => {

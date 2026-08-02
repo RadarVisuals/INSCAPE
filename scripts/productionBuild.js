@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, isAbsolute, parse, relative, resolve, sep } from 'node:path';
@@ -40,7 +41,10 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Phase 9 activates the already isolated Creations, Activity, Discovery, and
   // Settings boundaries. The measured owner graph grows only at the activation
   // seam; each substantial surface remains independently lazy.
-  ownerJavaScript: Object.freeze({ raw: 263_000, gzip: 80_000 }),
+  // MODUL-8R Task 8 replaces the selected owner presentation and keeps its
+  // production entry wrapper within a measured allowance. The extra rollback
+  // margin keeps the retained two-line LATTICE selector buildable through Task 8.
+  ownerJavaScript: Object.freeze({ raw: 265_000, gzip: 80_000 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
@@ -81,7 +85,11 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // shared headless controllers to the existing lazy Activity and Discovery
   // surfaces while its adapters remain development-only. Initial entry stays
   // unchanged; bound the measured aggregate production graph explicitly.
-  coreJavaScript: Object.freeze({ raw: 2_025_000, gzip: 605_000 }),
+  // Task 8 prunes the old Browser/Rack owner branch at build selection time.
+  // The remaining measured growth is the accepted complete MODUL-8R
+  // Activity/People/Layers/Settings presentation; legacy visitor chunks stay
+  // readable and are not owner-hybrid reachability.
+  coreJavaScript: Object.freeze({ raw: 2_045_000, gzip: 612_000 }),
   publicAssets: Object.freeze({ raw: 15_200_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });
@@ -152,7 +160,7 @@ function entryKey(manifest) {
 }
 
 function ownerKey(manifest) {
-  const ownerPaths = ['src/public/OwnerLatticeShell.jsx', 'src/public/ModuleGridShell.jsx'];
+  const ownerPaths = ['src/public/OwnerModul8rShell.jsx', 'src/public/OwnerLatticeShell.jsx', 'src/public/ModuleGridShell.jsx'];
   const key = Object.keys(manifest).find((candidate) => ownerPaths.some((path) => normalize(candidate).endsWith(`/${path}`)
     || normalize(candidate) === path)) || Object.keys(manifest).find((candidate) => {
     const record = manifest[candidate];
@@ -292,10 +300,23 @@ export function productionBuildHygienePlugin() {
 }
 
 export function diagnosticsEnvironmentPlugin() {
+  const selectedSource = readFileSync(resolve(process.cwd(), 'src/public/ownerRuntimeSelected.js'), 'utf8');
+  const ownerRuntimeSelection = selectedSource.match(/OWNER_RUNTIME_SELECTION\s*=\s*'([^']+)'/u)?.[1];
+  if (!['MODUL8R', 'LATTICE', 'LEGACY'].includes(ownerRuntimeSelection)) {
+    throw new TypeError(`Unsupported owner runtime build selection: ${String(ownerRuntimeSelection)}`);
+  }
   return {
     name: 'diagnostics-environment',
     config(_config, { command }) {
-      return { define: { __DEVELOPMENT_DIAGNOSTICS__: JSON.stringify(command === 'serve') } };
+      const presentationFile = ownerRuntimeSelection === 'MODUL8R'
+        ? 'ownerWorkspacePresentation.modul8r.js' : 'ownerWorkspacePresentation.lattice.js';
+      return {
+        resolve: { alias: { '#owner-workspace-presentation': resolve(process.cwd(), 'src/public', presentationFile) } },
+        define: {
+        __DEVELOPMENT_DIAGNOSTICS__: JSON.stringify(command === 'serve'),
+        __OWNER_RUNTIME_SELECTION__: JSON.stringify(ownerRuntimeSelection),
+        },
+      };
     }
   };
 }
