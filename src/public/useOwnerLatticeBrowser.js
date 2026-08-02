@@ -10,8 +10,8 @@ export function createOwnerLatticeCategoryCommands(profileAddress, getStore = us
     createCategory: (name) => commit({ name, type: 'create' }),
     deleteCategory: (categoryId) => commit({ categoryId, type: 'delete' }),
     renameCategory: (categoryId, name) => commit({ categoryId, name, type: 'rename' }),
-    setCategoryAsset: (categoryId, assetId, value) => commit({ assetId, categoryId, type: 'asset', value }),
-    setCategoryAssets: (categoryId, assetIds, value) => commit({ assetIds, categoryId, type: 'assets', value }),
+    setCategoryAsset: (categoryId, assetId, value, acceptedAssetIds) => commit({ acceptedAssetIds, assetId, categoryId, type: 'asset', value }),
+    setCategoryAssets: (categoryId, assetIds, value, acceptedAssetIds) => commit({ acceptedAssetIds, assetIds, categoryId, type: 'assets', value }),
     setCategoryPublic: (categoryId, value) => commit({ categoryId, type: 'public', value }),
   });
 }

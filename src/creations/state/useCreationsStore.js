@@ -3,7 +3,7 @@ import { normalizeProfileAddress } from '../../library/config.js';
 import { luksoCreationsRepository } from '../data/luksoCreationsRepository.js';
 import { deduplicateCreations } from '../domain/normalizeCreation.js';
 
-export function createCreationsStore({ liveRepository = luksoCreationsRepository, fixtureRepository = null } = {}) {
+export function createCreationsStore({ liveRepository = luksoCreationsRepository, fixtureRepository = null, retainOnRetry = false } = {}) {
   let activeController = null;
   return create((set, get) => ({
     profileAddress: null, assets: [], sourceMode: null, status: 'idle',
@@ -21,7 +21,7 @@ export function createCreationsStore({ liveRepository = luksoCreationsRepository
       const profileChanged = get().profileAddress !== profile;
       set({
         profileAddress: profile, loadGeneration: generation,
-        assets: profileChanged || forceLive ? [] : get().assets,
+        assets: profileChanged || (forceLive && !retainOnRetry) ? [] : get().assets,
         sourceMode: 'LIVE', status: 'loading', error: null, liveError: null,
         selectedAssetId: profileChanged ? null : get().selectedAssetId,
         searchQuery: profileChanged ? '' : get().searchQuery,
@@ -60,7 +60,10 @@ export function createCreationsStore({ liveRepository = luksoCreationsRepository
     retry: () => get().load(get().profileAddress, { forceLive: true }),
     setSearchQuery: (searchQuery) => set({ searchQuery }),
     selectAsset: (selectedAssetId) => set({ selectedAssetId }),
-    cancel() { activeController?.abort(); activeController = null; }
+    cancel() {
+      activeController?.abort(); activeController = null;
+      if (get().status === 'loading') set({ status: get().assets.length ? 'ready' : 'idle' });
+    }
   }));
 }
 

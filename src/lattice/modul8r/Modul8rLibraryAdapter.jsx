@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Search } from 'lucide-react';
 import BrowserCategoryDialog from '../browser/BrowserCategoryDialog.jsx';
-import BrowserUnifiedPanel, { BrowserFilterControls } from '../browser/BrowserUnifiedPanel.jsx';
+import { BrowserFilterControls } from '../browser/BrowserUnifiedPanel.jsx';
+import Modul8rLibraryPanel from './Modul8rLibraryPanel.jsx';
 import { BROWSER_VIEW_KINDS, categoryMembershipState } from '../browser/browserWorkspaceModel.js';
 import useBrowserWorkspace from '../browser/useBrowserWorkspace.js';
 import RackMenu from '../../public/menus/RackMenu.jsx';
@@ -20,7 +21,9 @@ export default function Modul8rLibraryAdapter({
   data,
   faceplateTargetRef,
   onAssetPointerDown,
+  onAssetActivate,
   onRenderableAssetsChange,
+  onRetryCreated,
 }) {
   const workspace = useBrowserWorkspace(data);
   const categorySectionRef = useRef(null);
@@ -29,6 +32,7 @@ export default function Modul8rLibraryAdapter({
   const [contextMenu, setContextMenu] = useState(null);
   const [faceplateTarget, setFaceplateTarget] = useState(null);
   const [organizationDrag, setOrganizationDrag] = useState(null);
+  const [relationshipView, setRelationshipView] = useState('all');
 
   useEffect(() => () => organizationGestureRef.current?.cancel?.(), []);
   useEffect(() => {
@@ -195,11 +199,12 @@ export default function Modul8rLibraryAdapter({
     else if (workspace.selectedAssetIds.length) { event.stopPropagation(); workspace.clearSelection(); }
   }}>
     {faceplateTarget && createPortal(faceplateControls, faceplateTarget)}
-    <BrowserUnifiedPanel categoryDropTargetId={organizationDrag?.categoryId} categorySectionRef={categorySectionRef}
-      assetDisplayMode="grid" data={data} onAssetContext={openAssetContext} onAssetPointerDown={beginOrganizationDrag}
+    <Modul8rLibraryPanel categoryDropTargetId={organizationDrag?.categoryId} categorySectionRef={categorySectionRef}
+      data={data} onAssetActivate={onAssetActivate} onAssetContext={openAssetContext} onAssetPointerDown={beginOrganizationDrag}
       onCategoryContext={openCategoryContext}
       onCreateCategory={categoryCommands ? (trigger) => workspace.setDialog({ trigger, type: 'create' }) : null}
-      showToolbar={false} workspace={panelWorkspace} />
+      onRetryCreated={onRetryCreated} relationshipView={relationshipView} selectRelationshipView={setRelationshipView}
+      workspace={panelWorkspace} />
     {contextMenu && createPortal(<RackMenu anchor={contextMenu.anchor}
       commands={contextMenu.kind === 'category' ? categoryMenuCommands : membershipCommands}
       label={contextMenu.kind === 'category' ? 'Category commands' : 'NFT category membership'}

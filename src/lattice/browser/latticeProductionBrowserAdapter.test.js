@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createEmptyWorkspace } from '../../library/domain/libraryWorkspace.js';
-import { adaptLatticeProductionBrowserData } from './latticeProductionBrowserAdapter.js';
+import { adaptLatticeProductionBrowserAsset, adaptLatticeProductionBrowserData } from './latticeProductionBrowserAdapter.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const OTHER_PROFILE = '0x2222222222222222222222222222222222222222';
@@ -112,4 +112,13 @@ test('wrong-profile workspace rejects its complete data boundary', () => {
   assert.deepEqual(result.assets, []);
   assert.deepEqual(result.categories, []);
   assert.deepEqual(result.favorites, []);
+});
+
+test('created-only acceptance is explicit and requires strong profile-address provenance', () => {
+  const created = asset({ ownerAddress: null, viewedProfileIsCreator: true, creatorAttributionLevel: 'contract',
+    creators: [{ address: PROFILE }], ownershipKnown: true, isOwnedByViewedProfile: false });
+  assert.equal(adaptLatticeProductionBrowserAsset(created, PROFILE), null);
+  assert.equal(adaptLatticeProductionBrowserAsset(created, PROFILE, true).stableAssetId, ASSET_ID);
+  assert.equal(adaptLatticeProductionBrowserAsset({ ...created, creatorAttributionLevel: 'authored' }, PROFILE, true), null);
+  assert.equal(adaptLatticeProductionBrowserAsset({ ...created, creators: [{ address: OTHER_PROFILE }] }, PROFILE, true), null);
 });

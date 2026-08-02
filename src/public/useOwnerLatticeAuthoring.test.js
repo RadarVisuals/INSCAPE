@@ -76,6 +76,56 @@ test('absent session mount exposes an unwritten validated draft and writes only 
   assert.equal(JSON.parse(storage.values.get(latticeProductionDraftKey(PROFILE))).tables[4].placements[0].id, 'placement-uuid-one');
 });
 
+test('canonical PLACE accepts strong created-only provenance without inventing owner authority', () => {
+  const storage = memoryStorage();
+  const session = createOwnerLatticeAuthoringSession({ generatePlacementId: () => 'created-placement', profileAddress: PROFILE, storage });
+  const createdOnly = asset({ ownerAddress: null, viewedProfileIsCreator: true, creatorAttributionLevel: 'token',
+    creators: [{ address: PROFILE }], ownershipKnown: true, isOwnedByViewedProfile: false });
+  const result = session.commitPlacement({ assetRecord: createdOnly, tableId: 'table-05' });
+  assert.equal(result.ok, true);
+  assert.equal(result.draft.tables[4].placements[0].stableAssetId, ASSET);
+  assert.equal(createdOnly.ownerAddress, null);
+});
+
+test('created-only record remains resolvable through move, resize, crop, layer, duplicate and remove', () => {
+  const storage = memoryStorage(); let nextId = 0;
+  const session = createOwnerLatticeAuthoringSession({ generatePlacementId: () => `created-${++nextId}`,
+    profileAddress: PROFILE, storage });
+  const createdOnly = asset({ ownerAddress: null, viewedProfileIsCreator: true, creatorAttributionLevel: 'contract',
+    creators: [{ address: PROFILE }], ownershipKnown: true, isOwnedByViewedProfile: false });
+  let result = session.commitPlacement({ assetRecord: createdOnly, tableId: 'table-05' });
+  assert.equal(result.ok, true);
+  let placement = result.draft.tables[4].placements[0];
+  result = session.commitMovement({ assetRecord: createdOnly,
+    destination: { column: 8, row: 5, columnSpan: placement.columnSpan, rowSpan: placement.rowSpan },
+    expectedStartGeometry: { column: placement.column, row: placement.row, columnSpan: placement.columnSpan, rowSpan: placement.rowSpan },
+    placementId: placement.id, tableId: 'table-05' });
+  assert.equal(result.ok, true); placement = result.draft.tables[4].placements[0];
+  result = session.commitResize({ assetRecord: createdOnly, corner: 'se',
+    destination: { column: placement.column, row: placement.row, columnSpan: placement.columnSpan + 2, rowSpan: placement.rowSpan + 2 },
+    expectedPlacement: structuredClone(placement), placementId: placement.id, tableId: 'table-05' });
+  assert.equal(result.ok, true); placement = result.draft.tables[4].placements[0];
+  result = session.commitCrop({ assetRecord: createdOnly, crop: { x: 0.5, y: 0.5, zoom: 1 },
+    expectedMedia: { stableAssetId: ASSET, width: 1600, height: 900 }, expectedPlacement: structuredClone(placement),
+    placementId: placement.id, tableId: 'table-05' });
+  assert.equal(result.ok, true); placement = result.draft.tables[4].placements[0];
+  result = session.commitDuplicate({ expectedPlacement: structuredClone(placement), placementId: placement.id, tableId: 'table-05' });
+  assert.equal(result.ok, true);
+  const duplicateId = result.placementId;
+  result = session.commitLayer({ assetRecords: [createdOnly], expectedPlacement: structuredClone(placement),
+    expectedPlacements: latticeProductionLayerTopologySnapshot(result.draft.tables[4]),
+    operation: LATTICE_PRODUCTION_LAYER_OPERATIONS.FRONT, placementId: placement.id, tableId: 'table-05' });
+  assert.equal(result.ok, true);
+  const duplicate = result.draft.tables[4].placements.find(({ id }) => id === duplicateId);
+  result = session.commitRemoval({ expectedPlacement: structuredClone(duplicate), placementId: duplicateId, tableId: 'table-05' });
+  assert.equal(result.ok, true);
+  placement = result.draft.tables[4].placements.find(({ id }) => id === placement.id);
+  result = session.commitRemoval({ expectedPlacement: structuredClone(placement), placementId: placement.id, tableId: 'table-05' });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.draft.tables[4].placements, []);
+  assert.equal(createdOnly.ownerAddress, null);
+});
+
 test('repeated completed PLACE uses generated identities and max plus one order', () => {
   const storage = memoryStorage();
   let id = 0;

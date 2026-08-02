@@ -23,6 +23,11 @@
   overflow: hidden;
 }
 
+.modul8r-library__focus-artwork, .modul8r-library__focus-artwork img { width: 100%; height: 100%; }
+.modul8r-library__focus-artwork img { display: block; object-fit: contain; }
+.modul8r-library .lattice-browser-asset__relationships { font-weight: 700; letter-spacing: .04em; }
+.modul8r-library .lattice-browser-notice button { margin-left: 8px; border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; }
+
 .modul8r-library__controls {
   width: 100%;
   height: 38px;

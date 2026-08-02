@@ -262,12 +262,15 @@ function OwnerLatticeRuntime({
   const [activityOpen, setActivityOpen] = useState(false);
   const [creationsOpen, setCreationsOpen] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
+  const [modul8rRelatedAssetRecords, setModul8rRelatedAssetRecords] = useState([]);
   useEffect(() => setRailCollapsed(true), [profileAddress]);
   useEffect(() => setPublicationOpen(false), [profileAddress]);
   const profileIdentity = useProfileIdentity(profileAddress);
   const profileContractFacts = useProfileContractFacts(profileAddress, { enabled: Boolean(identityDossierOpening || identityDossierSession) });
   const { commands: browserCategoryCommands, data: browserData } = useOwnerLatticeBrowser(profileAddress);
-  const authoring = useOwnerLatticeAuthoring(profileAddress);
+  const authoring = useOwnerLatticeAuthoring(profileAddress, {
+    supplementalAssetRecords: developmentModul8rActive ? modul8rRelatedAssetRecords : [],
+  });
   const profile = useMemo(
     () => getIdentityProfileViewModel(profileIdentity, { walletConnected: visitorWalletConnected }),
     [profileIdentity, visitorWalletConnected],
@@ -1218,11 +1221,13 @@ function OwnerLatticeRuntime({
           menuSurfaceId={menuSurfaceId}
           onArrangeToggle={() => activateWorkspaceTool('arrange')}
           onAssetPointerDown={beginBrowserAssetDrag}
+          onRelatedAssetRecordsChange={setModul8rRelatedAssetRecords}
           onRenderableAssetsChange={(assetIds) => {
             const draggedAssetId = browserDragGestureRef.current?.assetId;
             if (draggedAssetId && !assetIds.includes(draggedAssetId)) cancelBrowserAssetDrag();
           }}
           onVisitProfile={onVisitProfile}
+          ownedAssetRecords={publicationAssetRecords.filter((record) => normalizeProfileAddress(record.ownerAddress) === profileAddress)}
           profileAddress={profileAddress}
         />
       </Suspense>}

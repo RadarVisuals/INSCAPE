@@ -7,13 +7,44 @@ const read = (name) => readFile(new URL(name, import.meta.url), 'utf8');
 test('Task 3 adapter reuses real Browser content authorities without importing window or Rack composition', async () => {
   const source = await read('./Modul8rLibraryAdapter.jsx');
   assert.match(source, /useBrowserWorkspace/);
-  assert.match(source, /BrowserUnifiedPanel/);
+  assert.match(source, /Modul8rLibraryPanel/);
   assert.match(source, /BrowserFilterControls/);
   assert.match(source, /BrowserCategoryDialog/);
   assert.match(source, /RackMenu/);
   assert.match(source, /categoryMembershipState/);
   assert.doesNotMatch(source, /<BrowserWorkspace|from ['"][^'"]*\/BrowserWorkspace|LatticeRackShell|lattice-rack-/);
-  assert.doesNotMatch(source, /prototypes\/modul8r|modul8rFixtures|CREATED/);
+  assert.doesNotMatch(source, /prototypes\/modul8r|modul8rFixtures/);
+});
+
+test('Task 5 uses an independent creator store, pure union, honest viewer and existing placement callback', async () => {
+  const [integration, panel, union, owner, authoring] = await Promise.all([
+    read('./Modul8rOwnerLibraryDevelopment.jsx'), read('./Modul8rLibraryPanel.jsx'),
+    read('../browser/libraryAssetUnion.js'), read('../../public/OwnerLatticeShell.jsx'),
+    read('../../public/useOwnerLatticeAuthoring.js'),
+  ]);
+  assert.match(integration, /createCreationsStore\(\{ retainOnRetry: true \}\)/);
+  assert.match(integration, /projectLibraryAssetUnion/);
+  assert.match(integration, /LatticeFocusViewer/);
+  assert.match(integration, /onRelatedAssetRecordsChange/);
+  assert.match(panel, /All Assets[\s\S]*Owned[\s\S]*Created[\s\S]*Unsorted[\s\S]*Used on Canvas/);
+  assert.match(panel, /NOT OWNED/);
+  assert.match(panel, /onDoubleClick/);
+  assert.match(panel, /CREATED SOURCE UNAVAILABLE[\s\S]*RETRY/);
+  assert.match(union, /isStrongCreatedAsset/);
+  assert.match(owner, /onAssetPointerDown=\{beginBrowserAssetDrag\}/);
+  assert.match(authoring, /supplementalAssetRecords/);
+  assert.doesNotMatch(integration, /\buseCreationsStore\(/);
+});
+
+test('closing retains accepted creator authority while profile change and unmount clear it without progressive gaps', async () => {
+  const integration = await read('./Modul8rOwnerLibraryDevelopment.jsx');
+  assert.match(integration, /if \(!open\) \{ cancelCreated\(\); return; \}/);
+  assert.match(integration, /createdProfileAddress !== profileAddress \|\| createdStatus === 'idle'/);
+  assert.match(integration, /onRelatedAssetRecordsChange\?\.\(acceptedRelatedRecords\)/);
+  assert.doesNotMatch(integration, /open \? union\.records/);
+  assert.match(integration, /useEffect\(\(\) => \(\) => relatedRecordsCallbackRef\.current\?\.\(\[\]\), \[profileAddress\]\)/);
+  assert.doesNotMatch(integration, /relatedRecordsCallbackRef\.current\?\.\(\[\]\), \[onRelatedAssetRecordsChange/);
+  assert.doesNotMatch(integration, /union\.records[\s\S]{0,180}return \(\) => onRelatedAssetRecordsChange/);
 });
 
 test('Task 3 adapter exposes real query, size, unavailable, progressive, selection and category interaction seams', async () => {
@@ -82,9 +113,8 @@ test('Library presentation stylesheet owns no old Rack selectors or Browser wind
   assert.match(css, /\.modul8r-library__unavailable \{ flex: 0 0 22px;[\s\S]*justify-content: center/);
   assert.match(source, /aria-label=\{`\$\{workspace\.unavailableCount\} unavailable assets`\}/);
   assert.doesNotMatch(source, />\{workspace\.unavailableCount\} UNAVAILABLE</);
-  assert.match(source, /showToolbar=\{false\}/);
   assert.match(source, /labelsControlMode="show"/);
-  assert.match(source, /assetDisplayMode="grid"/);
+  assert.match(source, /<Modul8rLibraryPanel/);
   assert.match(source, /<output>\{workspace\.assetSize\}<\/output>/);
   assert.doesNotMatch(source, /\? 'LIST'/);
 });

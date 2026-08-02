@@ -55,3 +55,34 @@ test('production store never invents creations when the live source fails', asyn
   assert.equal(store.getState().error, 'indexer offline');
   assert.deepEqual(store.getState().assets, []);
 });
+
+test('retry retains accepted progressive results when refresh fails', async () => {
+  let attempt = 0;
+  const liveRepository = { source: 'LIVE', async *loadCreations(profile) {
+    attempt += 1;
+    if (attempt === 1) yield { assets: [asset('retained', profile)], resolved: 1, total: 2, failures: 0, complete: false };
+    else throw new Error('refresh offline');
+  } };
+  const store = createCreationsStore({ liveRepository, retainOnRetry: true });
+  await store.getState().load(PROFILE_A);
+  await store.getState().retry();
+  assert.equal(store.getState().status, 'partial');
+  assert.equal(store.getState().liveError, 'refresh offline');
+  assert.deepEqual(store.getState().assets.map(({ id: assetId }) => assetId), ['retained']);
+});
+
+test('explicit cancellation retains accepted results and leaves no loading state', async () => {
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const liveRepository = { source: 'LIVE', async *loadCreations(profile, { signal }) {
+    yield { assets: [asset('progressive', profile)], resolved: 1, total: 2, failures: 0, complete: false };
+    await gate;
+    if (signal.aborted) { const error = new Error('aborted'); error.name = 'AbortError'; throw error; }
+  } };
+  const store = createCreationsStore({ liveRepository });
+  const loading = store.getState().load(PROFILE_A);
+  await new Promise((resolve) => setImmediate(resolve));
+  store.getState().cancel(); release(); await loading;
+  assert.equal(store.getState().status, 'ready');
+  assert.deepEqual(store.getState().assets.map(({ id: assetId }) => assetId), ['progressive']);
+});

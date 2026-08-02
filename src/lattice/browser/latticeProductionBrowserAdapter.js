@@ -9,10 +9,13 @@ function deepFreeze(value, seen = new WeakSet()) {
   return Object.freeze(value);
 }
 
-export function adaptLatticeProductionBrowserAsset(asset, profileAddress) {
+export function adaptLatticeProductionBrowserAsset(asset, profileAddress, acceptCreated = false) {
   const ownerAddress = normalizeProfileAddress(asset?.ownerAddress);
   const identity = parseCanonicalAssetId(asset?.id);
-  if (!identity || ownerAddress !== profileAddress
+  const createdForProfile = (import.meta.env?.DEV ?? true) && acceptCreated && asset?.viewedProfileIsCreator === true
+    && ['contract', 'token', 'contract-and-token'].includes(asset?.creatorAttributionLevel)
+    && (asset?.creators || []).some((creator) => normalizeProfileAddress(creator?.address) === profileAddress);
+  if (!identity || (ownerAddress !== profileAddress && !createdForProfile)
     || Number(asset?.chainId) !== identity.chainId
     || normalizeProfileAddress(asset?.contractAddress) !== identity.contractAddress
     || (asset?.tokenId == null ? null : String(asset.tokenId).toLowerCase()) !== identity.tokenId) return null;

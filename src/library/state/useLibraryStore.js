@@ -333,7 +333,8 @@ export const useLibraryStore = create((set, get) => ({
       if (command?.type === 'public') return setFolderPublic(current, command.categoryId, command.value);
       if (command?.type === 'asset') return setFolderAsset(current, command.categoryId, command.assetId, command.value);
       if (command?.type === 'assets') {
-        const acceptedIds = new Set(get().assets.map(({ id }) => id));
+        const acceptedIds = new Set([...get().assets.map(({ id }) => id),
+          ...(command.acceptedAssetIds || [])]);
         const assetIds = Array.isArray(command.assetIds) ? [...new Set(command.assetIds)] : [];
         if (!assetIds.length || assetIds.some((id) => typeof id !== 'string' || !acceptedIds.has(id))) return current;
         return setFolderAssets(current, command.categoryId, assetIds, command.value);

@@ -43,6 +43,8 @@ export function normalizeCreatorAttribution(record, viewedProfileAddress, option
     name, description: metadata.description || asset?.description || '', collectionName,
     imageUrl: primaryImage.imageUrl, thumbnailUrl: primaryImage.thumbnailUrl, originalImageUrl: primaryImage.originalImageUrl,
     imageGroups,
+    imageWidth: primaryImage.width || null, imageHeight: primaryImage.height || null,
+    mediaFileType: primaryImage.fileType || null,
     creators, viewedProfileIsCreator: true, creatorAttributionLevel: token ? 'token' : 'contract',
     currentOwnerAddress: isOwnedByViewedProfile ? viewedProfile : null,
     isOwnedByViewedProfile, ownershipKnown: true,

@@ -103,3 +103,14 @@ test('bulk category membership validates the canonical asset set and schedules o
   await delay(220);
   assert.deepEqual(storage.writes, []);
 });
+
+test('bulk category membership accepts a created-only stable ID explicitly supplied by the relationship projection', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  useLibraryStore.setState({ assets: [{ id: ASSET_ID }] });
+  const commands = createOwnerLatticeCategoryCommands(PROFILE);
+  const categoryId = commands.createCategory('Created works');
+  assert.equal(commands.setCategoryAssets(categoryId, [SECOND_ASSET_ID], true, [SECOND_ASSET_ID]), true);
+  assert.deepEqual(useLibraryStore.getState().workspace.folders[0].assetIds, [SECOND_ASSET_ID]);
+  assert.equal(commands.setCategoryAssets(categoryId, ['not-canonical'], true, [SECOND_ASSET_ID]), false);
+});

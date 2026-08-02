@@ -114,7 +114,7 @@ export function createOwnerLatticeAuthoringSession({ generatePlacementId, profil
       const records = new Map((Array.isArray(assetRecords) ? assetRecords : []).map((record) => [record?.id, record]));
       for (const move of moves) {
         const placement = activeTable.placements.find(({ id }) => id === move.placementId);
-        const asset = adaptLatticeProductionBrowserAsset(records.get(placement?.stableAssetId), profile);
+        const asset = adaptLatticeProductionBrowserAsset(records.get(placement?.stableAssetId), profile, true);
         if (!asset?.placeable || asset.stableAssetId !== placement?.stableAssetId) return Object.freeze({
           ok: false,
           reason: asset?.placementUnavailableReason || 'STALE OR UNAVAILABLE ASSET',
@@ -153,7 +153,7 @@ export function createOwnerLatticeAuthoringSession({ generatePlacementId, profil
       if (!activeTable) return Object.freeze({ ok: false, reason: 'CANONICAL DRAFT UNAVAILABLE' });
       const placement = activeTable.placements.find((candidate) => candidate.id === placementId);
       if (!placement) return Object.freeze({ ok: false, reason: 'CANONICAL PLACEMENT UNAVAILABLE' });
-      const asset = adaptLatticeProductionBrowserAsset(assetRecord, profile);
+      const asset = adaptLatticeProductionBrowserAsset(assetRecord, profile, true);
       if (!asset?.placeable) return Object.freeze({
         ok: false,
         reason: asset?.placementUnavailableReason || 'STALE OR UNAVAILABLE ASSET',
@@ -212,7 +212,7 @@ export function createOwnerLatticeAuthoringSession({ generatePlacementId, profil
       if (!candidate) return Object.freeze({ ok: false, noOp: true, reason: 'PLACEMENT LAYER UNCHANGED' });
       const records = new Map((Array.isArray(assetRecords) ? assetRecords : []).map((record) => [record?.id, record]));
       for (const publicPlacement of activeTable.placements.filter(({ visibility }) => visibility === 'PUBLIC')) {
-        const asset = adaptLatticeProductionBrowserAsset(records.get(publicPlacement.stableAssetId), profile);
+        const asset = adaptLatticeProductionBrowserAsset(records.get(publicPlacement.stableAssetId), profile, true);
         if (!asset?.placeable || asset.stableAssetId !== publicPlacement.stableAssetId) return Object.freeze({
           ok: false,
           reason: asset?.placementUnavailableReason || 'STALE OR UNAVAILABLE ASSET',
@@ -240,7 +240,7 @@ export function createOwnerLatticeAuthoringSession({ generatePlacementId, profil
       return Object.freeze({ ok: true, draft: store.getDraft() });
     },
     commitPlacement({ assetRecord, destination, tableId } = {}) {
-      const asset = adaptLatticeProductionBrowserAsset(assetRecord, profile);
+      const asset = adaptLatticeProductionBrowserAsset(assetRecord, profile, true);
       if (!asset?.placeable) return Object.freeze({
         ok: false,
         reason: asset?.placementUnavailableReason || 'STALE OR UNAVAILABLE ASSET',
@@ -289,7 +289,7 @@ export function createOwnerLatticeAuthoringSession({ generatePlacementId, profil
         ok: false, reason: 'PRIVATE PLACEMENT UNAVAILABLE',
       });
       if (placement.locked) return Object.freeze({ ok: false, reason: 'PLACEMENT LOCKED' });
-      const asset = adaptLatticeProductionBrowserAsset(assetRecord, profile);
+      const asset = adaptLatticeProductionBrowserAsset(assetRecord, profile, true);
       if (!asset?.placeable || asset.stableAssetId !== placement.stableAssetId) return Object.freeze({
         ok: false,
         reason: asset?.placementUnavailableReason || 'STALE OR UNAVAILABLE ASSET',
@@ -331,7 +331,7 @@ export function createOwnerLatticeAuthoringSession({ generatePlacementId, profil
         ok: false, reason: 'PRIVATE PLACEMENT UNAVAILABLE',
       });
       if (placement.locked) return Object.freeze({ ok: false, reason: 'PLACEMENT LOCKED' });
-      const asset = adaptLatticeProductionBrowserAsset(assetRecord, profile);
+      const asset = adaptLatticeProductionBrowserAsset(assetRecord, profile, true);
       if (!asset?.placeable || asset.stableAssetId !== placement.stableAssetId) return Object.freeze({
         ok: false,
         reason: asset?.placementUnavailableReason || 'STALE OR UNAVAILABLE ASSET',
@@ -377,7 +377,7 @@ export function createOwnerLatticeAuthoringSession({ generatePlacementId, profil
       const records = new Map((Array.isArray(assetRecords) ? assetRecords : []).map((record) => [record?.id, record]));
       for (const placementId of placementIds) {
         const placement = activeTable.placements.find(({ id }) => id === placementId);
-        const asset = adaptLatticeProductionBrowserAsset(records.get(placement?.stableAssetId), profile);
+        const asset = adaptLatticeProductionBrowserAsset(records.get(placement?.stableAssetId), profile, true);
         if (!asset?.placeable || asset.stableAssetId !== placement?.stableAssetId) return Object.freeze({
           ok: false,
           reason: asset?.placementUnavailableReason || 'STALE OR UNAVAILABLE ASSET',
@@ -462,6 +462,15 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
   const libraryProfileAddress = useLibraryStore((state) => state.profileAddress);
   const workspaceProfileAddress = useLibraryStore((state) => state.workspace?.profileAddress);
   const assets = useLibraryStore((state) => state.assets);
+  const supplementalAssetRecords = options.supplementalAssetRecords || EMPTY_ASSET_RECORDS;
+  const acceptedAssetRecords = useMemo(() => {
+    const byId = new Map(supplementalAssetRecords.filter((record) => record?.viewedProfileIsCreator === true)
+      .map((record) => [record.id, record]));
+    assets.forEach((record) => byId.set(record.id, record));
+    return [...byId.values()];
+  }, [assets, supplementalAssetRecords]);
+  const acceptedAssetRecordsRef = useRef(acceptedAssetRecords);
+  acceptedAssetRecordsRef.current = acceptedAssetRecords;
   const libraryStatus = useLibraryStore((state) => state.status);
   const load = useLibraryStore((state) => state.load);
   const generationRef = useRef(0);
@@ -489,7 +498,7 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
   const referencedIds = useMemo(() => new Set(
     (runtime.draft?.tables || []).flatMap((table) => table.placements.map(({ stableAssetId }) => stableAssetId)),
   ), [runtime.draft]);
-  const currentIds = useMemo(() => new Set(assets.map(({ id }) => id)), [assets]);
+  const currentIds = useMemo(() => new Set(acceptedAssetRecords.map(({ id }) => id)), [acceptedAssetRecords]);
   const missingReferencedAssets = [...referencedIds].some((id) => !currentIds.has(id));
 
   useEffect(() => {
@@ -507,7 +516,7 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
       setRuntime((current) => ({ ...current, error: reason }));
       return false;
     }
-    const assetRecord = liveLibrary.assets.find(({ id }) => id === stableAssetId);
+    const assetRecord = acceptedAssetRecordsRef.current.find(({ id }) => id === stableAssetId);
     const result = session.commitPlacement({ assetRecord, destination, tableId });
     if (generation !== generationRef.current || session.getProfileAddress() !== profile) return false;
     if (!result.ok) {
@@ -537,7 +546,7 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
     }
     const runtimePlacement = runtime.draft?.tables.find((table) => table.id === tableId)
       ?.placements.find((placement) => placement.id === placementId);
-    const assetRecord = liveLibrary.assets.find(({ id }) => id === runtimePlacement?.stableAssetId);
+    const assetRecord = acceptedAssetRecordsRef.current.find(({ id }) => id === runtimePlacement?.stableAssetId);
     const result = session.commitCrop({
       assetRecord,
       crop,
@@ -611,7 +620,7 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
     }
     const runtimePlacement = runtime.draft?.tables.find((table) => table.id === tableId)
       ?.placements.find((placement) => placement.id === placementId);
-    const assetRecord = liveLibrary.assets.find(({ id }) => id === runtimePlacement?.stableAssetId);
+    const assetRecord = acceptedAssetRecordsRef.current.find(({ id }) => id === runtimePlacement?.stableAssetId);
     const result = session.commitMovement({
       assetRecord,
       destination,
@@ -638,7 +647,7 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
       setRuntime((current) => ({ ...current, error: 'STALE PROFILE OR CANONICAL STORAGE UNAVAILABLE' }));
       return false;
     }
-    const result = session.commitGroupMovement({ assetRecords: liveLibrary.assets, moves, tableId });
+    const result = session.commitGroupMovement({ assetRecords: acceptedAssetRecordsRef.current, moves, tableId });
     if (generation !== generationRef.current || session.getProfileAddress() !== profile) return false;
     if (!result.ok) {
       if (!result.noOp) setRuntime((current) => ({ ...current, error: result.reason }));
@@ -666,7 +675,7 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
       return false;
     }
     const result = session.commitLayer({
-      assetRecords: liveLibrary.assets,
+      assetRecords: acceptedAssetRecordsRef.current,
       expectedPlacement,
       expectedPlacements,
       operation,
@@ -720,7 +729,7 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
     }
     const runtimePlacement = runtime.draft?.tables.find((table) => table.id === tableId)
       ?.placements.find((placement) => placement.id === placementId);
-    const assetRecord = liveLibrary.assets.find(({ id }) => id === runtimePlacement?.stableAssetId);
+    const assetRecord = acceptedAssetRecordsRef.current.find(({ id }) => id === runtimePlacement?.stableAssetId);
     const result = session.commitResize({
       assetRecord,
       corner,
@@ -755,7 +764,7 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
       return false;
     }
     const result = session.commitGroupResize({
-      assetRecords: liveLibrary.assets,
+      assetRecords: acceptedAssetRecordsRef.current,
       corner,
       destinations,
       expectedPlacements,
@@ -855,7 +864,7 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
   }, [profile, session]);
 
   return {
-    assetRecords: profileReady ? assets : EMPTY_ASSET_RECORDS,
+    assetRecords: profileReady ? acceptedAssetRecords : EMPTY_ASSET_RECORDS,
     cropPublicPlacement,
     duplicatePublicPlacement,
     duplicatePublicPlacements,
