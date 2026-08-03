@@ -3,7 +3,7 @@ import test from 'node:test';
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { analyzeProductionBuild, assertSafeOutputDirectory, checkProductionBudgets, pruneProductionAuthoringAssets,
+import { analyzeProductionBuild, assertNoProhibitedProductionArtifacts, assertSafeOutputDirectory, checkProductionBudgets, pruneProductionAuthoringAssets,
   diagnosticsEnvironmentPlugin, productionBuildHygienePlugin, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
 import { ownerRuntimeIsolationPlugin } from './ownerRuntimeIsolation.js';
 
@@ -98,6 +98,58 @@ test('authoring pruning touches only the active verified output directory', asyn
     await assert.rejects(() => readFile(resolve(active, 'assets/patterns/stale.txt')));
     assert.equal(await readFile(resolve(normal, 'assets/patterns/sentinel.txt'), 'utf8'), 'normal');
   } finally { await rm(base, { recursive: true, force: true }); }
+});
+
+test('artifact hygiene rejects representative lock and temporary files with actionable paths', async () => {
+  const root = resolve(tmpdir(), `underneath-hygiene-rejected-${process.pid}`);
+  try {
+    await mkdir(resolve(root, 'assets'), { recursive: true });
+    await writeFile(resolve(root, 'assets/example.afdesign~lock~'), 'synthetic lock fixture');
+    await writeFile(resolve(root, 'assets/render.webp.tmp'), 'synthetic temporary fixture');
+    await assert.rejects(() => assertNoProhibitedProductionArtifacts(root), (error) => {
+      assert.match(error.message, /Production artifact hygiene failed/);
+      assert.match(error.message, /assets\/example\.afdesign~lock~: editor lock file/);
+      assert.match(error.message, /assets\/render\.webp\.tmp: editor swap, backup, or temporary file/);
+      return true;
+    });
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('artifact hygiene accepts ordinary intended production assets', async () => {
+  const root = resolve(tmpdir(), `underneath-hygiene-accepted-${process.pid}`);
+  try {
+    await mkdir(resolve(root, 'assets'), { recursive: true });
+    await writeFile(resolve(root, 'assets/public.webp'), 'ordinary intended asset');
+    assert.equal(await assertNoProhibitedProductionArtifacts(root), true);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('authoring pruning rejects a path that escapes the verified output directory', async () => {
+  const root = resolve(tmpdir(), `underneath-prune-escape-${process.pid}`);
+  try {
+    await mkdir(resolve(root, 'active'), { recursive: true });
+    await assert.rejects(() => pruneProductionAuthoringAssets(resolve(root, 'active'), {
+      projectRoot: process.cwd(), paths: ['../outside.txt']
+    }), /outside verified output directory/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('the two historical public lock paths cannot survive artifact hygiene', async () => {
+  const root = resolve(tmpdir(), `underneath-hygiene-historical-${process.pid}`);
+  const historicalPaths = [
+    'assets/actors/abyssal_eye/full multi eye purple.afdesign~lock~',
+    'assets/actors/skull_reaper/position.afdesign~lock~'
+  ];
+  try {
+    for (const path of historicalPaths) {
+      await mkdir(resolve(root, path, '..'), { recursive: true });
+      await writeFile(resolve(root, path), 'synthetic historical-path fixture');
+    }
+    await assert.rejects(() => assertNoProhibitedProductionArtifacts(root), (error) => {
+      for (const path of historicalPaths) assert.match(error.message, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      return true;
+    });
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test('production pruning excludes development-only prototype assets', () => {

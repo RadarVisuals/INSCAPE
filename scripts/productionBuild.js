@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, isAbsolute, parse, relative, resolve, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -21,6 +22,20 @@ export const UNUSED_PUBLIC_PATHS = Object.freeze([
   'assets/manifest.json',
   'assets/actors/abyssal_eye/full multi eye purple.afdesign',
   'assets/actors/skull_reaper/position.afdesign'
+]);
+
+const PROHIBITED_ARTIFACT_RULES = Object.freeze([
+  Object.freeze({ label: 'editor lock file', pattern: /~lock~/iu }),
+  Object.freeze({ label: 'editor swap, backup, or temporary file', pattern: /(?:\.sw[ponx]|\.bak|\.backup|\.tmp|\.temp|\.orig|\.rej|~)$/iu }),
+  Object.freeze({ label: 'platform metadata file', pattern: /(?:^|\/)(?:\.DS_Store|Thumbs\.db|desktop\.ini|\.directory|\._[^/]+)$/iu }),
+  Object.freeze({ label: 'credential-looking file', pattern: /(?:^|\/)(?:\.env(?:\.[^/]*)?|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?|credentials?(?:\.[^/]*)?|secrets?(?:\.[^/]*)?|passwords?(?:\.[^/]*)?|tokens?(?:\.[^/]*)?|[^/]+\.(?:pem|p12|pfx|key))$/iu })
+]);
+
+// Content fingerprints keep the two historical leaks detectable even if they
+// are renamed. Never log or retain their workstation/editor metadata.
+const PROHIBITED_ARTIFACT_SHA256 = new Set([
+  '8a9b66f1e88c45f3bad9026061cb368090bf0e28b7a51a5ec815e961d2c65b50',
+  '8e52629cdf832579ffddf6809aa4520fce75149cb6b20b329e822e6f28fe01e8'
 ]);
 
 // Phase 1C2H baseline, recalibrated for the approved Gallery and hybrid Index runtime.
@@ -117,8 +132,16 @@ export function resolveBuildOutputDirectory(config) {
   return assertSafeOutputDirectory(config.root, resolve(config.root, config.build.outDir));
 }
 
-export async function pruneProductionAuthoringAssets(outputDirectory) {
-  await Promise.all(UNUSED_PUBLIC_PATHS.map((path) => rm(resolve(outputDirectory, path), { recursive: true, force: true })));
+export async function pruneProductionAuthoringAssets(outputDirectory, {
+  projectRoot = process.cwd(), paths = UNUSED_PUBLIC_PATHS
+} = {}) {
+  const verifiedOutput = assertSafeOutputDirectory(projectRoot, outputDirectory);
+  const targets = paths.map((path) => {
+    const target = resolve(verifiedOutput, path);
+    if (!isWithin(verifiedOutput, target)) throw new Error(`Refusing build-output prune path outside verified output directory: ${path}`);
+    return target;
+  });
+  await Promise.all(targets.map((target) => rm(target, { recursive: true, force: true })));
 }
 
 async function walk(directory, root = directory) {
@@ -127,6 +150,27 @@ async function walk(directory, root = directory) {
     ? walk(resolve(directory, entry.name), root)
     : normalize(relative(root, resolve(directory, entry.name)))));
   return values.flat().sort();
+}
+
+export async function findProhibitedProductionArtifacts(outputDirectory) {
+  const files = await walk(outputDirectory);
+  const findings = [];
+  for (const file of files) {
+    const filenameRule = PROHIBITED_ARTIFACT_RULES.find(({ pattern }) => pattern.test(file));
+    if (filenameRule) findings.push({ file, reason: filenameRule.label });
+    const bytes = await readFile(resolve(outputDirectory, file));
+    const fingerprint = createHash('sha256').update(bytes).digest('hex');
+    if (PROHIBITED_ARTIFACT_SHA256.has(fingerprint)) findings.push({ file, reason: 'historical leaked lock-file content' });
+  }
+  return findings;
+}
+
+export async function assertNoProhibitedProductionArtifacts(outputDirectory) {
+  const findings = await findProhibitedProductionArtifacts(outputDirectory);
+  if (findings.length) {
+    throw new Error(`Production artifact hygiene failed:\n${findings.map(({ file, reason }) => `- ${file}: ${reason}`).join('\n')}`);
+  }
+  return true;
 }
 
 function manifestClosure(manifest, entryKey, { includeDynamic = false, excludeKeys = new Set() } = {}) {
@@ -290,7 +334,9 @@ export function productionBuildHygienePlugin() {
     configResolved(config) { outputDirectory = resolveBuildOutputDirectory(config); },
     generateBundle(_options, bundle) { chunkGroups = collectChunkModuleGroups(bundle); },
     async closeBundle() {
+      await assertNoProhibitedProductionArtifacts(outputDirectory);
       await pruneProductionAuthoringAssets(outputDirectory);
+      await assertNoProhibitedProductionArtifacts(outputDirectory);
       const report = await analyzeProductionBuild(outputDirectory, { chunkGroups });
       await writeFile(resolve(outputDirectory, BUILD_REPORT_FILE), `${JSON.stringify(report, null, 2)}\n`);
       checkProductionBudgets(report);

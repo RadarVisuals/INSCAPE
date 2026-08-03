@@ -193,7 +193,7 @@ Identify the exact stable product checkpoint from which hardening will proceed, 
 
 ## 8. Task 1 - Remove public editor leakage and add permanent artifact hygiene guards
 
-Status: `[ ]`
+Status: `[~]`
 
 Depends on: Task 0 release-base decision.
 
@@ -244,7 +244,14 @@ Do not modify unrelated assets or raise public-asset budgets to make the task pa
 
 ### Task 1 checkpoint
 
-Record dated evidence here when authorized and completed.
+2026-08-04 implementation checkpoint (`[~]`):
+
+- Root cause and source decision: two tracked Affinity lock companions under `public/assets/actors/` exposed editor/workstation metadata because the production build copied them without a generic artifact-hygiene gate. Both lock companions were removed. No editable design source is intentionally shipped in the final artifact: the corresponding `full multi eye purple.afdesign` and `position.afdesign` source-artwork files remain intentionally retained in the repository and on the existing exact-path production prune list; no unrelated public asset was modified and public-asset budgets were not raised.
+- Repository, history-filename, and non-ignored worktree scans covered `*~lock~*`, common swap/backup/temp suffixes, platform metadata, design-lock companions, and credential-looking filenames without printing candidate contents. The only classified matches were the two removed lock files and the safe `.env.example` configuration-name template. No non-ignored untracked match was present.
+- `scripts/productionBuild.js` now fails the production build with artifact paths and actionable classifications for prohibited editor lock, swap, backup, temporary, platform-metadata, and credential-looking filenames. It also rejects the exact SHA-256 content fingerprints of both historical leaks even after renaming, without retaining or logging their contents. The guard runs before and after authoring-asset pruning. Prune targets are resolved beneath the already validated build output and fail before deletion if a path escapes it.
+- Focused verification: `node --test scripts/productionBuild.test.js` passed 13/13 with zero failures, cancellations, skips, or todos, including representative rejection, ordinary intended-asset acceptance, output-escape rejection, both historical paths, and the alternate-output production build. A separate historical-blob check reconstructed both HEAD blobs only in a temporary directory and proved 2/2 were rejected under neutral `.bin` names by content fingerprint.
+- Production verification: `npm run build` passed after transforming 6,364 modules and the new pre/post-prune guard passed. `npm run build:check` passed (`1,240,851` initial JavaScript bytes); its first sandboxed attempt was blocked by a Windows user-profile `EPERM`, then the unchanged read-only check passed with the required filesystem permission. Final totals remained within the accepted budgets: total JavaScript `5,998,541` raw / `1,656,039` gzip; public assets `14,821,307` raw; largest public asset `2,574,306` raw. Final artifact inspection reported zero prohibited filename or content-fingerprint findings, all four historical source/output path checks were absent, both intended design sources were present, and `git diff --check` passed.
+- External acceptance remains pending: no deploy preview or production deploy was authorized, so the two historical URLs have not been requested against preview or live. Task 1 remains `[~]` until both deployed-response checks prove the original bytes and editor/workstation metadata are not served. No commit, push, deploy, IPFS upload, publication, wallet action, environment change, or Task 2 work occurred.
 
 ## 9. Task 2 - Install route-aware production response security
 
