@@ -5,9 +5,10 @@ import { homedir, tmpdir } from 'node:os';
 import { dirname, isAbsolute, parse, relative, resolve, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { assertOwnerRuntimeGraph } from './ownerRuntimeIsolation.js';
+import { NETLIFY_HEADERS_FILE, writeNetlifyHeaders } from './productionSecurityPolicy.js';
 
 export const BUILD_REPORT_FILE = 'bundle-report.json';
-export const GENERATED_BUILD_FILES = Object.freeze([BUILD_REPORT_FILE, 'owner-runtime-graph.json']);
+export const GENERATED_BUILD_FILES = Object.freeze([BUILD_REPORT_FILE, 'owner-runtime-graph.json', NETLIFY_HEADERS_FILE]);
 export const UNUSED_PUBLIC_PATHS = Object.freeze([
   'assets/PFP',
   'assets/patterns',
@@ -328,14 +329,18 @@ export function collectChunkModuleGroups(bundle) {
 }
 
 export function productionBuildHygienePlugin() {
-  let outputDirectory; let chunkGroups = {};
+  let outputDirectory; let productionEnvironment = {}; let chunkGroups = {};
   return {
     name: 'production-build-hygiene', apply: 'build',
-    configResolved(config) { outputDirectory = resolveBuildOutputDirectory(config); },
+    configResolved(config) {
+      outputDirectory = resolveBuildOutputDirectory(config);
+      productionEnvironment = config.env;
+    },
     generateBundle(_options, bundle) { chunkGroups = collectChunkModuleGroups(bundle); },
     async closeBundle() {
       await assertNoProhibitedProductionArtifacts(outputDirectory);
       await pruneProductionAuthoringAssets(outputDirectory);
+      await writeNetlifyHeaders(outputDirectory, { env: productionEnvironment });
       await assertNoProhibitedProductionArtifacts(outputDirectory);
       const report = await analyzeProductionBuild(outputDirectory, { chunkGroups });
       await writeFile(resolve(outputDirectory, BUILD_REPORT_FILE), `${JSON.stringify(report, null, 2)}\n`);

@@ -166,7 +166,10 @@ test('an alternate-outDir production build writes reports there and strips diagn
     await build({ configFile: false, root: project, logLevel: 'silent', plugins: [diagnosticsEnvironmentPlugin(), react(), ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
       build: { outDir: alternate, emptyOutDir: true, manifest: true } });
     const report = JSON.parse(await readFile(resolve(alternate, 'bundle-report.json'), 'utf8'));
+    const netlifyHeaders = await readFile(resolve(alternate, '_headers'), 'utf8');
     assert.equal(report.ownerRuntimeGraph.leaks.length, 0); assert.ok(report.initialJavaScript.length);
+    assert.match(netlifyHeaders, /Content-Security-Policy: default-src 'self'/u);
+    assert.match(netlifyHeaders, /frame-ancestors 'self' https:\/\/universaleverything\.io/u);
     await assert.rejects(() => readFile(resolve(alternate, 'assets/patterns')));
     const javascriptNames = (await readdir(resolve(alternate, 'assets'))).filter((name) => name.endsWith('.js'));
     for (const name of javascriptNames) {
