@@ -17,8 +17,8 @@ test('People adapter owns listbox focus and delegates normalized selection to th
   assert.doesNotMatch(styles, /\.profile-discovery|position:\s*fixed|lattice-rack-/);
 });
 
-test('live-owner composition keeps all adapters mounted and supplies stable active lifecycle functions', async () => {
-  const integration = await read('./Modul8rOwnerLibraryDevelopment.jsx');
+test('production owner workspace keeps all adapters mounted and supplies stable active lifecycle functions', async () => {
+  const integration = await read('./Modul8rOwnerWorkspace.jsx');
   assert.match(integration, /library: <Modul8rLibraryAdapter/);
   assert.match(integration, /activity: \(\{ active \}\) => <Modul8rActivityAdapter active=\{active\}/);
   assert.match(integration, /people: \(\{ active \}\) => <Modul8rPeopleAdapter active=\{active\}/);

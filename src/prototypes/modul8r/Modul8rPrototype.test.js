@@ -93,15 +93,22 @@ test('all six themes define conceptual roles and reduced motion removes spatial 
 });
 
 test('theme ink, muted text, and focus colors meet readable contrast against every panel', () => {
-  const luminance = (hex) => {
-    const channels = hex.slice(1).match(/../g).map((part) => parseInt(part, 16) / 255).map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  const color = (value) => {
+    if (value.startsWith('#')) return [...value.slice(1).matchAll(/../g)].map(([part]) => parseInt(part, 16));
+    const match = value.match(/^rgb\(\s*(\d+)\s+(\d+)\s+(\d+)(?:\s*\/\s*[\d.]+)?\s*\)$/i);
+    assert.ok(match, `unsupported color token ${value}`);
+    return match.slice(1, 4).map(Number);
+  };
+  const luminance = (value) => {
+    const channels = color(value).map((channel) => channel / 255)
+      .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
     return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
   };
   const ratio = (one, two) => { const values = [luminance(one), luminance(two)].sort((a, b) => b - a); return (values[0] + 0.05) / (values[1] + 0.05); };
   for (const theme of MODUL8R_THEMES) {
     const selector = theme === 'carbon' ? '\\.m8-prototype \\{' : `data-theme="${theme}"\\] \\{`;
     const body = styles.match(new RegExp(`${selector}([^}]+)`))[1];
-    const token = (name) => body.match(new RegExp(`${name}:\\s*(#[0-9a-f]{6})`, 'i'))[1];
+    const token = (name) => body.match(new RegExp(`${name}:\\s*(#[0-9a-f]{6}|rgb\\([^)]*\\))`, 'i'))[1];
     assert.ok(ratio(token('--ink'), token('--panel')) >= 4.5, `${theme} ink contrast`);
     assert.ok(ratio(token('--muted'), token('--panel')) >= 4.5, `${theme} muted contrast`);
     assert.ok(ratio(token('--focus'), token('--panel')) >= 3, `${theme} focus contrast`);

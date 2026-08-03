@@ -6,7 +6,7 @@ const read = (file) => readFile(new URL(file, import.meta.url), 'utf8');
 
 test('Task 6 Settings uses the master overflow and shared production Settings controller', async () => {
   const [shell, integration, surface, settings, owner] = await Promise.all([
-    read('./Modul8rShell.jsx'), read('./Modul8rOwnerLibraryDevelopment.jsx'),
+    read('./Modul8rShell.jsx'), read('./Modul8rOwnerWorkspace.jsx'),
     read('./Modul8rSettingsSurface.jsx'), read('../../public/SettingsBrowser.jsx'),
     read('../../public/OwnerLatticeShell.jsx'),
   ]);

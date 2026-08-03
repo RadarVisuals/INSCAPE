@@ -292,6 +292,8 @@ Implementation checkpoint (2026-08-03): the final focused authoring/shell/storag
 
 Interactive acceptance (2026-08-03): live testing exposed an inert portal because the inspector was mounted beneath the owner shell's `pointer-events: none` boundary. The inspector now explicitly restores pointer interaction, the focused regression matrix passes 21/21, and the production build remains green. The owner accepted the repaired Frame & mat flow. The addendum is `[x]`; Task 10 and broader work remain unauthorized.
 
+Test-maintenance checkpoint (2026-08-03): the six historical source-level assertions were updated to follow the accepted canonical graph without changing production code. The Phase 3 fixture whitelist remains narrow, the viewer check is multiline-safe, MODUL-8R composition checks now inspect `Modul8rOwnerWorkspace` instead of its DEV-only forwarding wrapper, and the frozen prototype contrast check accepts both hex and modern `rgb(...)` tokens. The focused maintenance matrix passes 46/46 and the complete sequential suite passes 1,025/1,025 with zero failures. Tasks 1–9 and the placement-presentation parity addendum remain `[x]`; Task 10 remains separately unauthorized.
+
 ## Explicit Alpha exclusions
 
 The following concepts are documented but excluded from the MODUL-8R Alpha consolidation:

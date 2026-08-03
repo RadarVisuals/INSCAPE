@@ -49,7 +49,7 @@ Accepted development-only visual and interaction authority awaiting staged produ
 
 Latest accepted production checkpoint:
 
-- `bb17f9c` — universal owner RÄCK, Unified Browser, multi-select authoring, and grouped composition tools
+- `20f071b` — accepted post-Task-9 placement-presentation parity repair
 
 Latest accepted MODUL-8R design-authority checkpoint:
 
@@ -57,11 +57,11 @@ Latest accepted MODUL-8R design-authority checkpoint:
 
 Latest accepted MODUL-8R production-integration architecture checkpoint:
 
-- `3e2ba91` — headless controller extraction, development-only parity shell, and atomic production cutover plan
+- `0abb94c` — atomic production owner-runtime cutover to MODUL-8R
 
 Latest accepted MODUL-8R implementation checkpoint:
 
-- `61b8775` — Task 5 honest OWNED/CREATED Library union in the development-only live-owner shell
+- `20f071b` — Tasks 1–9 complete plus accepted Frame & mat authoring parity
 
 Last verified sequence at the time this roadmap was created:
 
@@ -93,12 +93,12 @@ The working tree was clean when this roadmap was created.
 
 - [x] Phase 4 owner navigation and fixed chrome are integrated and visually accepted behind the verified owner gate.
 - [x] The version-8 lattice Visitor runtime, Owner Preview, NFT viewer, Identity RÄCK, and Keeper parity are integrated and interactively accepted.
-- [~] Version 8 defines the canonical nine-table profile-document model and now shares the production publication pipeline with version 7; surface and real-publication acceptance remain open.
+- [x] Version 8 is the canonical nine-table profile-document model, shares the production publication pipeline with version 7, and is accepted across owner, visitor, direct, iframe, Preview, and real-publication surfaces.
 - [x] Production INDEX/CATEGORIES stores are wired read-only to the isolated Browser; canonical authoring remains separately bounded by the current Phase 5B capability.
 - [x] Phase 4 fixed chrome, the Phase 6 production NFT viewer, and the Phase 7 production identity RÄCK are integrated and visually accepted.
-- [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
+- [x] Legacy Home/Gallery/Upper/five-table behavior is retained only as compatibility data and is not the Alpha destination.
 
-Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until Phase 8 cross-surface integration. Phases 4–7.5 are implemented, verified, and interactively accepted as `[x]`. Phase 5 is `[x]`: the Alpha authoring loop is complete, and the Phase 5B.6 boundary review deliberately defers nonessential presentation editors rather than keeping Phase 5 artificially open.
+Phases 1–9 are complete, verified, and interactively accepted. Phase 3 became `[x]` when its canonical renderer completed the Phase 8 cross-surface cutover. Phase 5 is `[x]`: the Alpha authoring loop is complete, including the accepted post-Task-9 frame, mat, backing, and transparency parity repair. Phase 10 legacy cleanup remains separately unauthorized and unstarted.
 
 ### Locked production-integration constraints
 
@@ -333,7 +333,7 @@ Exit criterion: the user approves the exact version 8 read/build/validation/reco
 
 ## Phase 3 — shared production table renderer
 
-Status: `[~]` — **renderer-only sub-slice accepted; production cutover remains incomplete**
+Status: `[x]` — **canonical renderer integrated, verified, and accepted across all production surfaces**
 
 Goal: render one canonical table identically for owner preview, visitor view, direct visits, and iframes.
 
@@ -356,7 +356,7 @@ Renderer-only sub-slice checklist:
 - [x] add a fail-closed production media adapter for validated public HTTPS/IPFS references and honest unavailable/unsupported states;
 - [x] keep the renderer's transitive import graph free of owner stores, persistence, reconciliation, wallets/providers, publication writers, authoring callbacks, and prototype fixtures;
 - [x] keep one removable browser-test-only comparison fixture that mounts the exact same canonical public-table value directly and in 640 × 360 and 390 × 600 iframes;
-- [ ] connect the renderer to Owner Preview, visitor deployment, direct visits, or production iframe surfaces only in a later separately approved slice.
+- [x] connect the renderer to Owner Preview, visitor deployment, direct visits, and production iframe surfaces through the later accepted Phase 8 cutover.
 
 User visual test:
 
@@ -934,11 +934,13 @@ MODUL-8R Task 7 status (2026-08-02): `[x]` — full development parity, the prod
 
 MODUL-8R Task 8 status (2026-08-02): `[x]` — the atomic production owner cutover is implemented at the two-line selected-runtime seam, with a production-named MODUL-8R wrapper and build-selected presentation graph. The old Rack, Browser workspace, and standalone owner windows cannot co-render in the selected owner runtime; all existing canonical authoring, Library, Activity, People, Layers, Settings/Theme, Preview, Publish, focus, profile, storage, wallet, IPFS, and visitor authorities remain in place. Focused Task 8/build/isolation tests pass 50/50, the wider focused matrix passes 463/463, the dedicated real Edge shell matrix passes 1/1, production build and `build:check` pass, and both the MODUL-8R selector and exact two-line LATTICE rollback selector build within budgets. The required full-suite run completed 1,005/1,012; the four Task 8 source-contract failures from that run are corrected and green in later focused matrices, leaving only the same three known stale failures. Final production totals are 1,240,851 raw / 362,737 gzip initial JavaScript, 263,459 / 79,743 owner JavaScript, and 2,043,467 / 611,060 aggregate core JavaScript, with zero owner leaks and no old `BrowserWorkspace` in the selected output. The ordinary-route Edge test reached its late stale Rack-era disabled-control cardinality check after exercising production mounting, navigation, pointer ownership, and storage isolation; the assertion is corrected semantically but not rerun. The user accepted the production preview on 2026-08-02, completing Task 8. Task 9 remains unstarted and unauthorized.
 
-MODUL-8R Task 9 status (2026-08-02): `[~]` — a fresh reachability inventory removed only two superseded presentation panels, `BrowserIndexPanel.jsx` and `BrowserCategoriesPanel.jsx`, plus their exclusive tab/category-section CSS. Every old Rack/Browser/standalone surface required by the exact two-line LATTICE rollback remains, as do shared authorities, visitor/direct/iframe compatibility, tests, fixtures, prototypes, and user assets. The focused production-shell/Browser/selector/isolation set passes 110/113 with three unchanged stale development-wrapper source assertions; a wider authority/workflow set passes 211/211; build utilities pass 10/10; and the real Edge MODUL-8R shell matrix passes 1/1. Both exact LATTICE rollback and restored MODUL-8R builds pass budgets, `build:check` passes, the selected graph has zero owner leaks, and selected output has zero old Browser/Rack, deleted-panel, development-route, fixture, or structure-only markers. The sequential suite completes 1,009/1,015: its failures are the three already documented stale Phase 3/viewer/frozen-prototype checks plus the same three stale wrapper-source assertions, with no Task 9 regression. The ordinary owner-navigation and Browser harnesses timed out, profile routing passed 1/3 before its known timing/cleanup instability, and the legacy published-visitor fixture again failed before mount. Task 9 remains `[~]` pending the required live localhost/deploy/domain/direct/iframe/rollback acceptance; no later work is authorized.
+MODUL-8R Task 9 pre-acceptance implementation checkpoint (2026-08-02): `[~]` at that checkpoint — a fresh reachability inventory removed only two superseded presentation panels, `BrowserIndexPanel.jsx` and `BrowserCategoriesPanel.jsx`, plus their exclusive tab/category-section CSS. Every old Rack/Browser/standalone surface required by the exact two-line LATTICE rollback remains, as do shared authorities, visitor/direct/iframe compatibility, tests, fixtures, prototypes, and user assets. The focused production-shell/Browser/selector/isolation set passed 110/113 with three stale development-wrapper source assertions; a wider authority/workflow set passed 211/211; build utilities passed 10/10; and the real Edge MODUL-8R shell matrix passed 1/1. Both exact LATTICE rollback and restored MODUL-8R builds passed budgets, `build:check` passed, the selected graph had zero owner leaks, and selected output had zero old Browser/Rack, deleted-panel, development-route, fixture, or structure-only markers. The sequential suite completed 1,009/1,015 with the six later-corrected stale assertions. This paragraph records the historical pre-acceptance state; the acceptance and current green-suite checkpoints below supersede its status.
 
 MODUL-8R Task 9 acceptance (2026-08-02): the owner approved the complete cleanup and live acceptance checklist. Task 9 and Phase 9 are `[x]`. This acceptance does not authorize Task 10, broader cleanup, or post-Alpha work.
 
 Post-Task-9 placement-presentation parity repair addendum (2026-08-03): `[x]` — the production owner placement menu and a LATTICE-native inspector restore authoring access to the existing canonical frame, mat, backing, and transparency fields through one stale-safe atomic operation and the existing profile-scoped draft store. The change adds no schema, key, publication or visitor contract, LEGACY/prototype dependency, Task 10 work, or cleanup. Focused verification passes 112/112, wider renderer/domain/visitor isolation passes 82/82, direct/iframe/public-access coverage passes 64/64, both MODUL8R and exact LATTICE rollback builds pass, and the selected graph has zero leaks. The sequential suite remains at its six documented stale failures (1,018/1,024); stale owner browser harnesses fail before reaching this repair. A live pointer-boundary defect found during acceptance was corrected with an explicit interactive portal boundary and a focused 21/21 regression matrix; the production build remains green. The owner accepted the repaired Frame & mat flow on 2026-08-03. This acceptance does not authorize Task 10 or broader work.
+
+Test and roadmap maintenance checkpoint (2026-08-03): `[x]` — the six historical source-level assertions were aligned with the already accepted architecture without changing production code. The Phase 3 fixture graph now admits only the two exact canonical presentation helpers it transitively uses; the viewer assertion accepts the current multiline ratio-safe layout composition; the three MODUL-8R composition checks read the canonical production workspace instead of its DEV-only forwarding wrapper; and the frozen prototype contrast parser accepts both hexadecimal and modern `rgb(...)` tokens. The focused maintenance matrix passes 46/46 and the complete sequential suite passes 1,025/1,025 with zero failures. Phase 3, Version 8, Phase 9, MODUL-8R Tasks 1–9, and the placement-presentation parity repair are current `[x]` checkpoints. Phase 10 remains `[ ]` and separately unauthorized.
 
 User visual test: complete Alpha acceptance checklist on localhost, deploy preview, `enterinscape.com`, direct visit, and Universal Profile iframe.
 

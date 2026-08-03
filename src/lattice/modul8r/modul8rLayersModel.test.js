@@ -22,7 +22,7 @@ test('all-table usage preserves row-major table identity and exact placement cou
 
 test('Task 6 Layers delegates selection and reorder to canonical owner callbacks and keeps usage read-only', async () => {
   const [adapter, integration, owner, canonical] = await Promise.all([
-    read('./Modul8rLayersAdapter.jsx'), read('./Modul8rOwnerLibraryDevelopment.jsx'),
+    read('./Modul8rLayersAdapter.jsx'), read('./Modul8rOwnerWorkspace.jsx'),
     read('../../public/OwnerLatticeShell.jsx'), read('../rendering/LatticeLayersModule.jsx'),
   ]);
   assert.match(adapter, /<LatticeLayersModule[\s\S]*onReorder=\{onReorder\}[\s\S]*onSelectionChange=\{onSelectionChange\}/);

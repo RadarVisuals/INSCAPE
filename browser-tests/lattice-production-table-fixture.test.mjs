@@ -50,7 +50,10 @@ test('Phase 3 visual fixture remains browser-test-only and free of owner/runtime
     'profileDocumentUploadClient', 'LatticeEnginePrototype', '/src/lattice/prototype/',
     '/src/lattice/controller/',
   ]) assert.doesNotMatch(joined, new RegExp(forbidden.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'iu'));
-  assert.ok(graph.every((file) => file.includes('/browser-tests/') || file.includes('/src/lattice/domain/')
+  const unexpectedGraphEntries = graph.filter((file) => !(file.includes('/browser-tests/') || file.includes('/src/lattice/domain/')
     || file.includes('/src/lattice/rendering/') || file.includes('/src/profileDocument/domain/')
+    || file.endsWith('/src/lattice/authoring/latticeProductionTransform.js')
+    || file.endsWith('/src/lattice/authoring/latticeProductionRemoval.js')
     || file.endsWith('/src/library/config.js')));
+  assert.deepEqual(unexpectedGraphEntries, []);
 });

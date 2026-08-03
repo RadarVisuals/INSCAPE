@@ -188,7 +188,7 @@ test('viewer browsing follows explicit navigation order with wrapping and ratio-
   assert.match(focusViewer, /Previous artwork/);
   assert.match(focusViewer, /Next artwork/);
   assert.match(focusViewer, /outgoingLayer/);
-  assert.match(focusViewer, /createLayout\(outgoingLayer\.entry\.focusDimensions/);
+  assert.match(focusViewer, /createLayout\(\s*focusViewerEntryRectangle\(\s*outgoingLayer\.originRectangle,\s*outgoingLayer\.entry\.focusDimensions,?\s*\),\s*viewport\)/);
   assert.match(focusViewerStyles, /lattice-focus-viewer-browse-in/);
   assert.match(focusViewerStyles, /lattice-focus-viewer-browse-out/);
   assert.match(focusViewerStyles, /\.lattice-focus-viewer__navigation\s*\{[^}]*left: 50%;[^}]*bottom: 18px;/s);
