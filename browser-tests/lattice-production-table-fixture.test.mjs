@@ -30,6 +30,7 @@ test('Phase 3 visual fixture remains browser-test-only and free of owner/runtime
   assert.match(html, /\/browser-tests\/lattice-production-table-fixture\.jsx/);
   assert.match(source, /LatticeProductionTableRenderer/);
   assert.match(source, /projectLatticeProductionPublication/);
+  assert.match(source, /transform: \{ quarterTurns: 0, mirrorX: false, mirrorY: false \}/);
   assert.match(source, /<iframe[^>]*embed=wide/);
   assert.match(source, /<iframe[^>]*embed=tall/);
   for (const contractCase of [

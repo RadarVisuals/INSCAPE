@@ -151,7 +151,7 @@ describe('Playwright browser lifecycle', () => {
     await waitForCspFixtureReady(page, { fixtureOrigin: 'http://127.0.0.1:5174' });
     assert.deepEqual(calls.map(([kind, value]) => [kind, value]), [
       ['url', 'function'],
-      ['locator', '.published-home-world'],
+      ['locator', '[data-browser-fixture]'],
       ['function', 'function']
     ]);
     assert.equal(disposed, true);

@@ -25,6 +25,7 @@ const placement = (id, tokenId, geometry, presentation) => ({
   crop: presentation.crop, frameId: presentation.frameId, mat: presentation.mat,
   backing: presentation.backing, transparencyMode: presentation.transparencyMode,
   visibility: 'PUBLIC', locked: false,
+  transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
 });
 
 function createCanonicalPublicLattice() {
