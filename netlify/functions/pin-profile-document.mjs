@@ -2,11 +2,12 @@ import { PROFILE_DOCUMENT_LIMITS, PROFILE_DOCUMENT_PUBLICATION_VERSIONS } from '
 import { canonicalSerializeProfileDocument, createProfileDocumentPublicationFilename } from '../../src/profileDocument/domain/profileDocumentSerialization.js';
 import { parseProfileDocumentJson } from '../../src/profileDocument/domain/profileDocumentValidation.js';
 import { isValidCid } from '../../src/profileDocument/domain/cidValidation.js';
+import { FUNCTION_RESPONSE_SECURITY_HEADERS } from '../../scripts/productionSecurityPolicy.js';
 
 const PINATA_UPLOAD_URL = 'https://uploads.pinata.cloud/v3/files';
 
 function json(body, status = 200) {
-  return Response.json(body, { status, headers: { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
+  return Response.json(body, { status, headers: { 'cache-control': 'no-store', ...FUNCTION_RESPONSE_SECURITY_HEADERS } });
 }
 
 function requestError(code, message, status) {

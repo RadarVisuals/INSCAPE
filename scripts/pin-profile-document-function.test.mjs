@@ -38,6 +38,12 @@ test('Netlify publication upload accepts only canonical profile documents and re
   const response = await handler(requestFor(body));
   assert.equal(response.status, 201);
   assert.deepEqual(await response.json(), { cid: CID });
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+  assert.equal(response.headers.get('permissions-policy'), 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+  assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+  assert.match(response.headers.get('content-security-policy'), /default-src 'none'/u);
+  assert.match(response.headers.get('content-security-policy'), /frame-ancestors 'none'/u);
   assert.equal(pinataRequest.url, 'https://uploads.pinata.cloud/v3/files');
   assert.equal(pinataRequest.init.headers.authorization, 'Bearer server-only-jwt');
   assert.equal(pinataRequest.init.body.get('network'), 'public');

@@ -3,7 +3,7 @@ import test from 'node:test';
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { analyzeProductionBuild, assertSafeOutputDirectory, checkProductionBudgets, pruneProductionAuthoringAssets,
+import { analyzeProductionBuild, assertNoProhibitedProductionArtifacts, assertSafeOutputDirectory, checkProductionBudgets, pruneProductionAuthoringAssets,
   diagnosticsEnvironmentPlugin, productionBuildHygienePlugin, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
 import { ownerRuntimeIsolationPlugin } from './ownerRuntimeIsolation.js';
 
@@ -100,6 +100,58 @@ test('authoring pruning touches only the active verified output directory', asyn
   } finally { await rm(base, { recursive: true, force: true }); }
 });
 
+test('artifact hygiene rejects representative lock and temporary files with actionable paths', async () => {
+  const root = resolve(tmpdir(), `underneath-hygiene-rejected-${process.pid}`);
+  try {
+    await mkdir(resolve(root, 'assets'), { recursive: true });
+    await writeFile(resolve(root, 'assets/example.afdesign~lock~'), 'synthetic lock fixture');
+    await writeFile(resolve(root, 'assets/render.webp.tmp'), 'synthetic temporary fixture');
+    await assert.rejects(() => assertNoProhibitedProductionArtifacts(root), (error) => {
+      assert.match(error.message, /Production artifact hygiene failed/);
+      assert.match(error.message, /assets\/example\.afdesign~lock~: editor lock file/);
+      assert.match(error.message, /assets\/render\.webp\.tmp: editor swap, backup, or temporary file/);
+      return true;
+    });
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('artifact hygiene accepts ordinary intended production assets', async () => {
+  const root = resolve(tmpdir(), `underneath-hygiene-accepted-${process.pid}`);
+  try {
+    await mkdir(resolve(root, 'assets'), { recursive: true });
+    await writeFile(resolve(root, 'assets/public.webp'), 'ordinary intended asset');
+    assert.equal(await assertNoProhibitedProductionArtifacts(root), true);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('authoring pruning rejects a path that escapes the verified output directory', async () => {
+  const root = resolve(tmpdir(), `underneath-prune-escape-${process.pid}`);
+  try {
+    await mkdir(resolve(root, 'active'), { recursive: true });
+    await assert.rejects(() => pruneProductionAuthoringAssets(resolve(root, 'active'), {
+      projectRoot: process.cwd(), paths: ['../outside.txt']
+    }), /outside verified output directory/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('the two historical public lock paths cannot survive artifact hygiene', async () => {
+  const root = resolve(tmpdir(), `underneath-hygiene-historical-${process.pid}`);
+  const historicalPaths = [
+    'assets/actors/abyssal_eye/full multi eye purple.afdesign~lock~',
+    'assets/actors/skull_reaper/position.afdesign~lock~'
+  ];
+  try {
+    for (const path of historicalPaths) {
+      await mkdir(resolve(root, path, '..'), { recursive: true });
+      await writeFile(resolve(root, path), 'synthetic historical-path fixture');
+    }
+    await assert.rejects(() => assertNoProhibitedProductionArtifacts(root), (error) => {
+      for (const path of historicalPaths) assert.match(error.message, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      return true;
+    });
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test('production pruning excludes development-only prototype assets', () => {
   for (const path of ['assets/PFP', 'assets/prototype', 'assets/ratio']) assert.ok(UNUSED_PUBLIC_PATHS.includes(path), path);
 });
@@ -114,7 +166,10 @@ test('an alternate-outDir production build writes reports there and strips diagn
     await build({ configFile: false, root: project, logLevel: 'silent', plugins: [diagnosticsEnvironmentPlugin(), react(), ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
       build: { outDir: alternate, emptyOutDir: true, manifest: true } });
     const report = JSON.parse(await readFile(resolve(alternate, 'bundle-report.json'), 'utf8'));
+    const netlifyHeaders = await readFile(resolve(alternate, '_headers'), 'utf8');
     assert.equal(report.ownerRuntimeGraph.leaks.length, 0); assert.ok(report.initialJavaScript.length);
+    assert.match(netlifyHeaders, /Content-Security-Policy: default-src 'self'/u);
+    assert.match(netlifyHeaders, /frame-ancestors 'self' https:\/\/universaleverything\.io/u);
     await assert.rejects(() => readFile(resolve(alternate, 'assets/patterns')));
     const javascriptNames = (await readdir(resolve(alternate, 'assets'))).filter((name) => name.endsWith('.js'));
     for (const name of javascriptNames) {
