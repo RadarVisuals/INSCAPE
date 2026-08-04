@@ -42,7 +42,7 @@ const PROHIBITED_ARTIFACT_SHA256 = new Set([
 // Phase 1C2H baseline, recalibrated for the approved Gallery and hybrid Index runtime.
 // Keep these byte limits deterministic and deliberately close to the measured build.
 export const PRODUCTION_BUDGETS = Object.freeze({
-  initialJavaScript: Object.freeze({ raw: 1_265_000, gzip: 370_000 }),
+  initialJavaScript: Object.freeze({ raw: 1_303_524, gzip: 379_811 }),
   // The universal owner RÄCK adds grouped authoring transactions, Layers,
   // reversible compact chrome, and runtime-only module controls. Keep the lazy
   // owner boundary close to the measured Windows build with modest CI margin.
@@ -105,7 +105,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // The remaining measured growth is the accepted complete MODUL-8R
   // Activity/People/Layers/Settings presentation; legacy visitor chunks stay
   // readable and are not owner-hybrid reachability.
-  coreJavaScript: Object.freeze({ raw: 2_057_000, gzip: 615_000 }),
+  coreJavaScript: Object.freeze({ raw: 2_070_086, gzip: 618_132 }),
   publicAssets: Object.freeze({ raw: 15_200_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });

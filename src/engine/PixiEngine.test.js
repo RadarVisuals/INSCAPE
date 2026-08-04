@@ -38,6 +38,25 @@ function createTestEngine({ app = fakeApplication(), state = { renderConfig: { m
   return { app, callbacks, container, engine, state };
 }
 
+test('Pixi CSP adapter installs before the canonical Application import and construction', () => {
+  const engineSource = readFileSync(new URL('./PixiEngine.js', import.meta.url), 'utf8');
+  const adapterImport = engineSource.indexOf("import 'pixi.js/unsafe-eval';");
+  const pixiImport = engineSource.indexOf("from 'pixi.js';");
+  const workerPreference = engineSource.indexOf(
+    'Assets.setPreferences({ preferWorkers: false });',
+  );
+  const applicationConstruction = engineSource.indexOf('new Application()');
+
+  assert.notEqual(adapterImport, -1);
+  assert.notEqual(workerPreference, -1);
+  assert.ok(adapterImport < pixiImport);
+  assert.ok(pixiImport < workerPreference);
+  assert.ok(workerPreference < applicationConstruction);
+  assert.ok(adapterImport < applicationConstruction);
+  assert.equal(engineSource.match(/new Application\(/gu)?.length, 1);
+  assert.doesNotMatch(engineSource, /autoDetectRenderer\(|new Renderer\(/u);
+});
+
 test('Identity handoff uses only the existing Pixi application renderer and canvas', () => {
   const engineSource = readFileSync(new URL('./PixiEngine.js', import.meta.url), 'utf8');
   const canvasSource = readFileSync(new URL('../components/Canvas/ArtCanvas.jsx', import.meta.url), 'utf8');

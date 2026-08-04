@@ -26,6 +26,13 @@ test('production CSP contains the complete enforced directive set without placeh
   assert.equal(directive(policy, 'frame-ancestors'), `frame-ancestors ${UNIVERSAL_PROFILE_PARENT_ORIGINS.join(' ')}`);
 });
 
+test('Pixi CSP compatibility retains self-only script authority without unsafe evaluation', () => {
+  const scriptAuthority = directive(createProductionContentSecurityPolicy(), 'script-src');
+
+  assert.equal(scriptAuthority, "script-src 'self'");
+  assert.doesNotMatch(scriptAuthority, /unsafe-eval|\*|https?:/u);
+});
+
 test('connect-src derives exact origins from every supported public endpoint override and fallback', () => {
   const env = {
     VITE_LUKSO_RPC_URL: 'https://rpc.release.invalid/path',

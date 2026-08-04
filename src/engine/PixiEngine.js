@@ -1,4 +1,5 @@
 // src/engine/PixiEngine.js
+import 'pixi.js/unsafe-eval';
 import { 
   Application, 
   Assets, 
@@ -20,6 +21,9 @@ import { resolveReactionFrame } from '../config/reactionProfiles.js';
 import { getAssetReloadScope } from './stageAssetConfig.js';
 import { getRenderResolution } from './renderResolution.js';
 import { developmentLog, reportControlledError } from '../diagnostics.js';
+
+// The production CSP intentionally disallows workers; keep Pixi texture decoding on the main thread.
+Assets.setPreferences({ preferWorkers: false });
 
 const DEV_DIAGNOSTICS = typeof __DEVELOPMENT_DIAGNOSTICS__ !== 'undefined' && __DEVELOPMENT_DIAGNOSTICS__ === true;
 
