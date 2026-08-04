@@ -471,7 +471,7 @@ Moderate/low findings must be summarized and grouped, not ignored, but they do n
 
 ## 11. Task 4 - Replace the fragile owner mega-journey with dependable production-preview gates
 
-Status: `[ ]`
+Status: `[~]`
 
 Depends on: Task 0. Task 2 candidate headers should be included before final acceptance so the gate validates the intended release environment.
 
@@ -548,7 +548,22 @@ Use semantic roles, labels, state markers, and contract-level readiness. Avoid s
 
 ### Task 4 checkpoint
 
-Record root cause, gate files, three-run evidence, cold-run evidence, and process cleanup here.
+#### Task 4A - Theme and Settings production-preview gate
+
+Status: `[x]` (2026-08-04)
+
+- **Root cause and disposition:** the Task-4A browser harness inherited `--disable-gpu`, causing Edge to fall back to ANGLE SwiftShader. The earlier software-rendered THEME click took 22,582.4023 ms and exhausted most of the fixed Settings phase budget. No production Theme or navigation defect was found; all hardware-authoritative runs completed without navigation, reload, page hide, page close, or renderer crash.
+- **Hardware authority:** Task 4A now has a dedicated Edge argument list without `--disable-gpu`, `--use-angle=swiftshader`, `--enable-unsafe-swiftshader`, or other software-renderer forcing. A renderer preflight runs before Startveil and records WebGL/WebGL2 availability plus the unmasked vendor and renderer in the actionable ledger. It fails closed for SwiftShader, llvmpipe/softpipe, lavapipe, Microsoft Basic Render Driver, WARP, software rasterizer, GDI Generic, Mesa OffScreen, missing WebGL evidence, or an unavailable renderer; it does not require a specific GPU vendor or model.
+- **Hardware evidence:** the accepted renderer was `ANGLE (NVIDIA, NVIDIA GeForce RTX 2080 (0x00001E87) Direct3D11 vs_5_0 ps_5_0, D3D11)` with unmasked vendor `Google Inc. (NVIDIA)`, WebGL and WebGL2 available, `navigator.gpu` present, and no software-renderer classification.
+- **Three consecutive production-preview runs:** against `https://deploy-preview-2--enterinscape.netlify.app`, the cold first run passed in 22,038.6953 ms (total Node test 22,409.9136 ms), run 2 passed in 17,929.4769 ms (total 18,299.3661 ms), and run 3 passed in 9,065.3521 ms (total 9,438.5683 ms). Their owned Edge root PIDs were respectively 22872, 28612, and 7904. Cleanup was graceful in 683 ms, 661 ms, and 700 ms; each run reported empty `forcedPids` and `remainingPids`, and each unique Task-4A runtime was removed.
+- **Coverage in every run:** Settings opened through the accepted MODUL-8R Theme control; exactly one accessible Settings dialog was resolved from the production `role="dialog"` plus `aria-labelledby` contract and checked atomically. The six canonical workspace themes and six canonical menu themes (`carbon`, `graphite`, `slate`, `ash`, `mist`, and `paper`) were selected and semantically verified, for twelve theme selections total. The gate also verified stable owner, dialog, control, and MODUL-8R identity and attachment; Escape close and exact Theme-focus restoration; reopen, explicit close, and exact focus restoration; and no navigation or reload throughout the sequence.
+- **Bounded diagnostics and cleanup:** the existing fixed phase deadlines remain unchanged, including `themeSettingsMs = 30_000`; production code and timeout values were not changed. The post-setup watchdog, monotone Settings-step telemetry, authoritative atomic snapshot, actionable operation ledger, and success/failure cleanup contract remained active for the proof runs.
+- **Runtime preservation:** the pre-existing corrupt legacy `.browser-test-runtime` directory was deliberately left untouched. Only the exact unique Task-4A runtime and its owned PID tree were cleaned per run.
+- **Gate files:** `browser-tests/owner-theme-settings.browser.mjs`, `browser-tests/owner-production-preview-harness.mjs`, `browser-tests/owner-production-preview-harness.test.mjs`, `browser-tests/browser-test-lifecycle.mjs`, `browser-tests/browser-test-lifecycle.test.mjs`, `browser-tests/playwright-browser-adapter.mjs`, and the `test:browser:owner-theme-settings` package script.
+
+#### Task 4B - Remaining owner isolation, authoring persistence, and preview/publication preparation
+
+Status: `[ ]` - not started. Task 4 as a whole remains `[~]` until Task 4B and the remaining Task 4 exit criteria are complete.
 
 ## 12. Task 5 - Add minimum viable Alpha observability, recovery guidance, and support intake
 

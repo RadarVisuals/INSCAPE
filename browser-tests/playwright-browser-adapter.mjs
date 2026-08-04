@@ -10,6 +10,16 @@ import {
   withinDeadline
 } from './browser-test-lifecycle.mjs';
 
+export const DEFAULT_PLAYWRIGHT_EDGE_ARGS = Object.freeze([
+  '--disable-gpu',
+  '--no-first-run',
+  '--no-default-browser-check',
+  '--disable-component-update',
+  '--disable-background-networking',
+  '--disk-cache-size=1',
+  '--media-cache-size=1',
+]);
+
 function boundedText(value, limit = 256) {
   return String(value || '').replace(/[\r\n\u0000-\u001f\u007f]+/gu, ' ').replace(/https?:\/\/\S+/gu, '[url]').slice(0, limit);
 }
@@ -103,6 +113,8 @@ export async function launchPlaywrightEdge({
   browserType = chromium,
   inventory = listWindowsProcesses,
   terminateTree = terminateWindowsProcessTree,
+  browserArgs = DEFAULT_PLAYWRIGHT_EDGE_ARGS,
+  contextOptions = {},
   prepareRuntime = async (downloadsPath, artifactsDir) => {
     await mkdir(downloadsPath, { recursive: true }); await mkdir(artifactsDir, { recursive: true });
   }
@@ -121,7 +133,7 @@ export async function launchPlaywrightEdge({
       downloadsPath,
       artifactsDir,
       env: { ...process.env, TEMP: exactRuntime, TMP: exactRuntime },
-      args: ['--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-component-update', '--disable-background-networking', '--disk-cache-size=1', '--media-cache-size=1']
+      args: [...browserArgs]
     });
     launch.then((server) => { if (lateLaunch) void server.close().catch(() => server.kill().catch(() => {})); }).catch(() => {});
     resources.browserServer = await withinDeadline(launch, 20_000, 'Playwright Edge launch deadline exceeded', () => { lateLaunch = true; });
@@ -138,7 +150,13 @@ export async function launchPlaywrightEdge({
   diagnostic('setup:edge-owned', { rootPid, descendants: observed.length });
 
   resources.browser = await browserType.connect(resources.browserServer.wsEndpoint(), { timeout: 5_000 });
-  resources.context = await resources.browser.newContext({ viewport: { width: 1280, height: 720 }, serviceWorkers: 'block', bypassCSP: false, acceptDownloads: false });
+  resources.context = await resources.browser.newContext({
+    viewport: { width: 1280, height: 720 },
+    serviceWorkers: 'block',
+    bypassCSP: false,
+    acceptDownloads: false,
+    ...contextOptions,
+  });
   await resources.context.route('**/*', (route) => routeController.handle(route).catch((error) => onBrowserProblem(`Route handler: ${error.code || boundedText(error.message)}`)));
   resources.routeController = routeController;
   diagnostic('setup:routing-installed', { beforeNavigation: true });

@@ -15,6 +15,7 @@
     "test:browser:phase5b1": "node --test browser-tests/owner-lattice-placement.browser.mjs",
     "test:browser:phase5b2": "node --test browser-tests/owner-lattice-placement.browser.mjs",
     "test:browser:routing": "node --test browser-tests/owner-profile-routing.browser.mjs",
+    "test:browser:owner-theme-settings": "node --test browser-tests/owner-theme-settings.browser.mjs",
     "visual:phase3": "node browser-tests/lattice-production-table.browser.mjs --visual",
     "preview": "vite preview"
   },

@@ -44,15 +44,40 @@ describe('Playwright browser lifecycle', () => {
 
   test('only the exact workspace browser runtime path is accepted', () => {
     assert.equal(validateBrowserRuntimePath(runtimePath, workspaceRoot), runtimePath);
-    for (const unsafe of [workspaceRoot, resolve(workspaceRoot, 'other'), resolve(workspaceRoot, '..', '.browser-test-runtime')]) {
+    const task4aRuntimePath = resolve(workspaceRoot, '.browser-test-runtime-task4a');
+    const isolationRuntimePath = resolve(workspaceRoot, '.browser-test-runtime-task4a-isolation');
+    const uniqueTask4aRuntimePath = resolve(workspaceRoot,
+      '.browser-test-runtime-task4a-1234-1785847105764-01234567-89ab-4cde-8fab-0123456789ab');
+    assert.equal(validateBrowserRuntimePath(task4aRuntimePath, workspaceRoot), task4aRuntimePath);
+    assert.equal(validateBrowserRuntimePath(isolationRuntimePath, workspaceRoot), isolationRuntimePath);
+    assert.equal(validateBrowserRuntimePath(uniqueTask4aRuntimePath, workspaceRoot), uniqueTask4aRuntimePath);
+    for (const unsafe of [workspaceRoot, resolve(workspaceRoot, 'other'), resolve(runtimePath, '.browser-test-runtime-task4a'),
+      resolve(workspaceRoot, '..', '.browser-test-runtime'),
+      resolve(workspaceRoot, '.browser-test-runtime-task4a-arbitrary'),
+      resolve(workspaceRoot, '.browser-test-runtime-task4a-1234-1785847105764-01234567-89ab-3cde-8fab-0123456789ab')]) {
       assert.throws(() => validateBrowserRuntimePath(unsafe, workspaceRoot), /Refusing browser runtime cleanup/);
     }
   });
 
   test('runtime removal uses one bounded killable child operation', async () => {
     const calls = [];
-    await removeBrowserRuntime({ runtimePath, workspaceRoot, run: async (...args) => { calls.push(args); return { code: 0, stdout: '', stderr: '' }; } });
+    const result = await removeBrowserRuntime({ runtimePath, workspaceRoot, run: async (...args) => { calls.push(args); return { code: 0, stdout: '', stderr: '' }; } });
     assert.equal(calls.length, 1); assert.equal(calls[0][0], process.execPath); assert.equal(calls[0][2].timeoutMs, BROWSER_LIFECYCLE_TIMEOUTS.runtimeRemovalMs);
+    assert.equal(result.mode, 'node-rm');
+  });
+
+  test('runtime removal falls back to one bounded native Windows operation after Node UNKNOWN', async () => {
+    if (process.platform !== 'win32') return;
+    const calls = [];
+    const result = await removeBrowserRuntime({ runtimePath, workspaceRoot, run: async (...args) => {
+      calls.push(args);
+      return calls.length === 1 ? { code: 1, stdout: '', stderr: 'UNKNOWN' } : { code: 0, stdout: '', stderr: '' };
+    } });
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1][0], 'powershell.exe');
+    assert.equal(calls[1][1].at(-1), runtimePath);
+    assert.equal(calls[1][2].timeoutMs, BROWSER_LIFECYCLE_TIMEOUTS.runtimeRemovalMs);
+    assert.equal(result.mode, 'powershell-fallback');
   });
 
   test('owned descendants exclude unrelated processes and force only the owned root', async () => {
