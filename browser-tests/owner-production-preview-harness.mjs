@@ -98,7 +98,7 @@ export function ownerChannelAuthorityAllowed({ enable, allowedAccounts, contextA
 export function classifySyntheticProfileMetadataRpc({ url, postData, profileAddress }) {
   let parsedUrl; let payload;
   try { parsedUrl = new URL(url); payload = JSON.parse(postData || ''); } catch { return { methods: [], fixtureInduced: false }; }
-  if (parsedUrl.origin !== rpcOrigin || profileAddress !== OWNER_PRODUCTION_PREVIEW_PROFILE) {
+  if (parsedUrl.origin !== rpcOrigin || !/^0x[0-9a-f]{40}$/u.test(String(profileAddress || '').toLowerCase())) {
     return { methods: [], fixtureInduced: false };
   }
   const entries = Array.isArray(payload) ? payload : [payload];
@@ -246,7 +246,7 @@ async function findBrowser() {
   throw new Error('No Chromium browser found. Set BROWSER_PATH to Edge, Chrome, or Chromium.');
 }
 
-export function createOwnerProductionPreviewFixtureHtml({ previewUrl, profileAddress }) {
+export function createOwnerProductionPreviewFixtureHtml({ previewUrl, profileAddress, authorityProfiles = [profileAddress] }) {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>INSCAPE owner production preview fixture</title>
 <style>html,body,iframe{width:100%;height:100%;margin:0;border:0}iframe{display:block}
@@ -264,6 +264,7 @@ window.require = (moduleName) => {
 <script>
 (async () => {
   const profileAddress = ${JSON.stringify(profileAddress)};
+  const authorityProfiles = new Set(${JSON.stringify([].concat(authorityProfiles || []))});
   const listeners = new Map();
   let clientChannel = null;
   const fixture = window.__ownerPreviewFixture = {
@@ -302,10 +303,16 @@ window.require = (moduleName) => {
   connectButton.type = 'button';
   connectButton.dataset.ownerConnect = '';
   connectButton.textContent = 'Connect owner';
-  connectButton.addEventListener('click', async () => {
+  const applyAuthority = async ({ enable = true, allowedAccounts, contextAccounts, chainId = 42 }) => {
     if (!clientChannel) throw new Error('Task 4A owner connect requested before client channel creation');
-    connectButton.disabled = true;
-    await clientChannel.setupChannel(true, [profileAddress], [profileAddress], 42);
+    const accepted = (values) => Array.isArray(values) && values.every((value) => authorityProfiles.has(value));
+    if (!accepted(allowedAccounts) || !accepted(contextAccounts)) {
+      throw new Error('Task 4 fixture rejected an authority profile outside its explicit allowlist');
+    }
+    await connector.setContextAccounts(contextAccounts);
+    await clientChannel.setupChannel(enable, allowedAccounts, contextAccounts, chainId);
+    fixture.profileAddress = contextAccounts[0] || null;
+    fixture.connectorContextAccounts = [...connector.contextAccounts];
     fixture.channelAuthority = {
       ready: true,
       enable: clientChannel.enable,
@@ -316,10 +323,16 @@ window.require = (moduleName) => {
         enable: clientChannel.enable,
         allowedAccounts: clientChannel.allowedAccounts,
         contextAccounts: clientChannel.contextAccounts,
-        profileAddress,
+        profileAddress: contextAccounts[0],
       }),
     };
     document.body.dataset.channelAuthorityReady = 'true';
+    return fixture.channelAuthority;
+  };
+  Object.defineProperty(window, '__task4OwnerApplyAuthority', { value: applyAuthority });
+  connectButton.addEventListener('click', async () => {
+    connectButton.disabled = true;
+    await applyAuthority({ enable: true, allowedAccounts: [profileAddress], contextAccounts: [profileAddress], chainId: 42 });
   });
   document.body.append(connectButton);
   const iframe = document.createElement('iframe');
@@ -352,7 +365,7 @@ function rpcFixtureResponse(request) {
   return JSON.stringify(Array.isArray(payload) ? payload.map(responseFor) : responseFor(payload));
 }
 
-function attachPageLedger({ page, ledger, problems, profileAddress }) {
+function attachPageLedger({ authorityProfiles = [profileAddress], expectedControlledConsoleErrors = [], page, ledger, problems, profileAddress }) {
   page.on('framenavigated', (frame) => ledger.record('framenavigated', {
     frame: frame === page.mainFrame() ? 'fixture' : 'preview', url: frame.url(),
   }));
@@ -372,6 +385,12 @@ function attachPageLedger({ page, ledger, problems, profileAddress }) {
       });
       return;
     }
+    if (message.type() === 'error' && expectedControlledConsoleErrors.includes(message.text())) {
+      ledger.record('expected-controlled-console-error', {
+        profileAddress, text: message.text(), url: message.location().url || '',
+      });
+      return;
+    }
     ledger.record('console', { level: message.type(), text: message.text(), url: message.location().url || '' });
     if (message.type() === 'error') problems.push(item);
   });
@@ -383,9 +402,11 @@ function attachPageLedger({ page, ledger, problems, profileAddress }) {
     const failure = request.failure()?.errorText || 'unknown';
     if (/BLOCKED_BY_CLIENT/iu.test(failure)) return;
     const cleanupOwned = ledger.entries.some(({ type }) => type === 'lifecycle:cleanup:start');
-    const rpc = classifySyntheticProfileMetadataRpc({
-      url: request.url(), postData: request.postData(), profileAddress,
-    });
+    const rpcCandidates = authorityProfiles.map((candidateProfile) => classifySyntheticProfileMetadataRpc({
+      url: request.url(), postData: request.postData(), profileAddress: candidateProfile,
+    }));
+    const rpc = rpcCandidates.find(({ fixtureInduced }) => fixtureInduced) || rpcCandidates[0]
+      || { methods: [], fixtureInduced: false };
     const lifecyclePhase = cleanupOwned ? 'cleanup'
       : ledger.entries.some(({ type }) => type === 'startveil-reveal-complete') ? 'post-reveal'
         : ledger.entries.some(({ type }) => type === 'startveil-pointer-activated') ? 'startveil-reveal'
@@ -612,6 +633,12 @@ export async function runOwnerProductionPreviewGate(executeGate, {
   previewUrl = OWNER_PRODUCTION_PREVIEW_URL,
   profileAddress = OWNER_PRODUCTION_PREVIEW_PROFILE,
   browserArgs = TASK4A_HARDWARE_EDGE_ARGS,
+  authorityProfiles = [profileAddress],
+  contextOptions = {},
+  contextInitScript = null,
+  contextInitScriptArg,
+  graphFixtureResponse = null,
+  expectedControlledConsoleErrors = [],
 } = {}) {
   const ledger = createOwnerPreviewLedger({ label });
   const runtimePath = resolve(workspaceRoot,
@@ -640,7 +667,7 @@ export async function runOwnerProductionPreviewGate(executeGate, {
       const providerBundle = await readFile(resolve(workspaceRoot,
         'node_modules/@lukso/up-provider/dist/server.global.js'), 'utf8');
       const previewOrigin = new URL(previewUrl).origin;
-      const fixture = createOwnerProductionPreviewFixtureHtml({ previewUrl, profileAddress });
+      const fixture = createOwnerProductionPreviewFixtureHtml({ previewUrl, profileAddress, authorityProfiles });
       const routeController = createPlaywrightRouteController({
         loopbackOrigin: 'http://127.0.0.1:9',
         knownOrigins: [previewOrigin, rpcOrigin, ...graphOrigins],
@@ -656,7 +683,10 @@ export async function runOwnerProductionPreviewGate(executeGate, {
             status: 200, contentType: 'application/json', body: rpcFixtureResponse(request),
           } };
           return { action: 'fulfill', options: {
-            status: 200, contentType: 'application/json', body: JSON.stringify({ data: {} }),
+            status: 200, contentType: 'application/json',
+            body: graphFixtureResponse
+              ? JSON.stringify(graphFixtureResponse({ origin, postData: request.postData() }))
+              : JSON.stringify({ data: {} }),
           } };
         },
         onUnexpected: (origin) => {
@@ -666,7 +696,7 @@ export async function runOwnerProductionPreviewGate(executeGate, {
       await launchPlaywrightEdge({
         edgePath, runtimePath, workspaceRoot, loopbackOrigin: 'http://127.0.0.1:9', routeController, resources,
         browserArgs,
-        contextOptions: { reducedMotion: 'reduce' },
+        contextOptions: { reducedMotion: 'reduce', ...contextOptions },
         diagnostic: lifecycleDiagnostic(ledger),
         onBrowserProblem: () => {},
         onOwnedProcess: ({ rootPid, processTree, identity }) => {
@@ -676,7 +706,11 @@ export async function runOwnerProductionPreviewGate(executeGate, {
           });
         },
       });
-      attachPageLedger({ page: resources.page, ledger, problems, profileAddress });
+      if (contextInitScript) {
+        await resources.context.addInitScript(contextInitScript, contextInitScriptArg);
+        ledger.record('context-init-script-installed', { enabled: true });
+      }
+      attachPageLedger({ authorityProfiles, expectedControlledConsoleErrors, page: resources.page, ledger, problems, profileAddress });
       const documentLedger = await installDocumentLedger(resources.context, ledger);
       resources.startveilDetached = documentLedger.startveilDetached;
       resources.pageCdp = await resources.context.newCDPSession(resources.page);

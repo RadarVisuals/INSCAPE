@@ -272,8 +272,10 @@ test('Task 4A fixture configures connector context before preview client startup
     'Fixture must not contain a parser-created iframe that can race connector configuration');
   assert.ok(fixture.indexOf("connector.on('channelCreated', (_id, channel)") < fixture.indexOf("document.createElement('iframe')"),
     'Fixture must retain the created client channel before iframe/client startup');
-  assert.ok(fixture.includes('await clientChannel.setupChannel(true, [profileAddress], [profileAddress], 42)'),
-    'Parent connect must use the installed 0.3.7 setupChannel contract');
+  assert.ok(fixture.includes('await clientChannel.setupChannel(enable, allowedAccounts, contextAccounts, chainId)'),
+    'Parent authority helper must use the installed 0.3.7 setupChannel contract');
+  assert.ok(fixture.includes('allowedAccounts: [profileAddress], contextAccounts: [profileAddress], chainId: 42'),
+    'Initial parent connect must grant the exact Grid profile on LUKSO chain 42');
 });
 
 test('Task 4A owner authority policy stays fail-closed around the official account roles', () => {

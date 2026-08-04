@@ -471,7 +471,7 @@ Moderate/low findings must be summarized and grouped, not ignored, but they do n
 
 ## 11. Task 4 - Replace the fragile owner mega-journey with dependable production-preview gates
 
-Status: `[~]`
+Status: `[x]` (2026-08-04)
 
 Depends on: Task 0. Task 2 candidate headers should be included before final acceptance so the gate validates the intended release environment.
 
@@ -563,7 +563,17 @@ Status: `[x]` (2026-08-04)
 
 #### Task 4B - Remaining owner isolation, authoring persistence, and preview/publication preparation
 
-Status: `[ ]` - not started. Task 4 as a whole remains `[~]` until Task 4B and the remaining Task 4 exit criteria are complete.
+Status: `[x]` (2026-08-04). Task 4 as a whole is complete.
+
+- **Four independent production-preview gates:** entry/authority, authoring persistence, owner A-to-B isolation, and Preview/publication preparation each own their full production-preview setup, hardware preflight, bounded journey, actionable ledger, and success/failure cleanup. They run sequentially through `test:browser:owner-task4b`; no fixed sleeps, product-source hooks, HMR route, or shared browser state are used.
+- **Official Mini-App authority and fail-closed behavior:** the parent fixture uses the installed `@lukso/up-provider` channel contract, allowlists only the two explicit synthetic profiles, and changes authority through awaited `connector.setContextAccounts(...)` plus `channel.setupChannel(...)`. The gate proved disconnected state, accepted owner A, deliberate mismatched A-account/B-context rejection, disappearance of owner tools and MODUL-8R, byte-identical storage during rejection, and exact A recovery in the same preview document. The exact synthetic `getPermissions` diagnostic is narrowly classified; no general console suppression was added.
+- **Canonical authoring persistence:** a profile-scoped GraphQL fixture supplies one valid production Library asset per synthetic owner. With ARRANGE enabled, the gate performed the real pointer drag onto an unobstructed active-table point, keyboard move and resize, keyboard context-menu activation, and `Frame & mat…` Apply with DOSSIER frame and mat. The resulting Version-2 LATTICE draft contained exactly one placement. Switching A-to-B removed it; returning to A restored the same placement with byte-identical persisted draft data and still exactly one canonical record.
+- **Owner A-to-B isolation:** owner A Library selection, placement selection, temporary carbon surface, and open publication surface did not appear for owner B. B had its own Library asset, zero A placements, the default mist surface, no publication rack, and no leaked selection. Returning to A restored the exact seeded placement while both canonical draft byte strings remained unchanged.
+- **Preview and publication preparation:** Preview rendered exactly the one public placement and excluded the private placement, then restored focus to the exact Preview trigger. Version-8 snapshot preparation and download succeeded; the downloaded JSON contained only the public placement and no private placement bytes. Wallet publication remained disabled, no `/api/profile-publications` POST occurred, and the provider ledger contained no signing, upload, or transaction method.
+- **Three consecutive hardware matrices:** against `https://deploy-preview-2--enterinscape.netlify.app`, matrix 1 passed 4/4 in 39,976.4104 ms, matrix 2 passed 4/4 in 46,320.8466 ms, and matrix 3 passed 4/4 in 49,453.2256 ms. Across all three matrices the result was 12/12 passed, zero failed, zero cancelled, and zero skipped. Each gate used the accepted hardware-only renderer arguments, a fresh UUID runtime, independent profile/storage fixtures, and complete owned-process cleanup.
+- **Focused regressions:** the Task-4A/4B harness contract matrix passed 20/20, covering absolute lifecycle bounds, fail-closed renderer classification, official channel ordering, profile-scoped canonical indexer responses, valid Version-2 draft seeds, independent gate ownership, opt-in download handling, and the prohibition on automated publication.
+- **Scope and preservation:** production source, CSP, dependencies, lockfiles, environment variables, deploy state, IPFS state, and wallet state were not changed. The pre-existing corrupt legacy `.browser-test-runtime/` remains untouched and untracked. Task 5 was not started.
+- **Task-4B files:** `browser-tests/owner-task4b-fixtures.mjs`, `browser-tests/owner-task4b-gates.test.mjs`, `browser-tests/owner-entry-authority.browser.mjs`, `browser-tests/owner-authoring-persistence-preview.browser.mjs`, `browser-tests/owner-profile-isolation-preview.browser.mjs`, `browser-tests/owner-preview-publication-preparation.browser.mjs`, the shared `owner-production-preview-harness` additions and regressions, and the `test:browser:owner-task4b` package script.
 
 ## 12. Task 5 - Add minimum viable Alpha observability, recovery guidance, and support intake
 
