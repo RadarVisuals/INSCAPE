@@ -17,6 +17,7 @@
     "test:browser:routing": "node --test browser-tests/owner-profile-routing.browser.mjs",
     "test:browser:owner-theme-settings": "node --test browser-tests/owner-theme-settings.browser.mjs",
     "test:browser:owner-task4b": "node --test --test-concurrency=1 browser-tests/owner-entry-authority.browser.mjs browser-tests/owner-authoring-persistence-preview.browser.mjs browser-tests/owner-profile-isolation-preview.browser.mjs browser-tests/owner-preview-publication-preparation.browser.mjs",
+    "test:browser:alpha-support": "node --test browser-tests/alpha-support-preview.browser.mjs",
     "visual:phase3": "node browser-tests/lattice-production-table.browser.mjs --visual",
     "preview": "vite preview"
   },

@@ -7,8 +7,6 @@ import { PROFILE_DOCUMENT_LIMITS, PROFILE_DOCUMENT_VERSION } from '../domain/con
 import { PROFILE_DOCUMENT_PUBLICATION_STATUS } from '../domain/profileDocumentPublication.js';
 import { useProfileDocumentPublication } from '../state/useProfileDocumentPublication.js';
 import { uploadProfileDocument } from '../storage/profileDocumentUploadClient.js';
-import AlphaSupportPanel from '../../support/AlphaSupportPanel.jsx';
-import { ALPHA_SUPPORT_CODES } from '../../support/alphaSupport.js';
 
 function downloadText(text, filename) {
   const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
@@ -20,7 +18,6 @@ export default function ProfileDocumentPanel({ draft, snapshot, imported, stale,
   draftSaveStatus = 'saving', onBuild, onPreview, onImport, onRestore, onPublished, onClose }) {
   const fileRef = useRef(null); const [message, setMessage] = useState(''); const [cid, setCid] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [supportIssue, setSupportIssue] = useState(null);
   const cidRef = useRef(cid); const cidGenerationRef = useRef(0);
   const livePublicationContext = useCallback(() => ({ ...getPublicationContext(), cidInput: cidRef.current,
     cidGeneration: cidGenerationRef.current }), [getPublicationContext]);
@@ -43,7 +40,6 @@ export default function ProfileDocumentPanel({ draft, snapshot, imported, stale,
   };
   const uploadPublication = async () => {
     try {
-      setSupportIssue(null);
       if (!snapshot) throw new Error('Build a snapshot before publication');
       if (stale) throw new Error('Rebuild the stale snapshot before publication');
       setUploading(true); setMessage('Uploading canonical publication to Public IPFS...');
@@ -52,11 +48,7 @@ export default function ProfileDocumentPanel({ draft, snapshot, imported, stale,
       setMessage('Publication uploaded. Verifying the pinned bytes before wallet publication...');
       const verified = await publication.verifyCid(snapshot, uploaded.cid, { stale });
       setMessage(verified ? 'Public IPFS upload verified. Wallet publication is ready.' : 'Upload completed, but gateway verification is not ready yet. Use Verify CID to retry.');
-    } catch (error) {
-      setMessage(error.message);
-      setSupportIssue({ code: ALPHA_SUPPORT_CODES.IPFS_UPLOAD_FAILED, phase: 'IPFS_UPLOAD',
-        providerCategory: 'PUBLICATION_FUNCTION', message: error.message });
-    }
+    } catch (error) { setMessage(error.message); }
     finally { setUploading(false); }
   };
   const publishPublication = async () => {
@@ -90,19 +82,8 @@ export default function ProfileDocumentPanel({ draft, snapshot, imported, stale,
       <p className="profile-document-panel__publication-state" data-state={publication.status}>Publication: {publication.status}</p>
       {publication.transactionHash && <p className="profile-document-panel__hash">Transaction: {publication.transactionHash}</p>}
       {publication.error && <p className="profile-document-panel__message" role="alert">{publication.error}</p>}
-      {(publication.supportCode || supportIssue) && <AlphaSupportPanel
-        code={publication.supportCode || supportIssue.code}
-        phase={publication.supportCode === ALPHA_SUPPORT_CODES.CID_VERIFICATION_FAILED ? 'CID_VERIFY' : supportIssue?.phase || 'WALLET_PUBLICATION'}
-        providerCategory={supportIssue?.providerCategory || 'LUKSO_PROVIDER'}
-        profileAddress={activeProfileAddress}
-        transactionHash={publication.transactionHash}
-        message={publication.error || supportIssue?.message}
-      />}
     </section>
     <input ref={fileRef} hidden type="file" accept="application/json,.json" onChange={readImport} />
     {(message || error) && <p className="profile-document-panel__message" role="status">{message || error}</p>}
-    {error && !publication.supportCode && !supportIssue && <AlphaSupportPanel code={ALPHA_SUPPORT_CODES.PREVIEW_VALIDATION_FAILED}
-      phase="PREVIEW_PREPARATION" profileAddress={activeProfileAddress} message={error} />}
-    {!error && !publication.supportCode && !supportIssue && <AlphaSupportPanel compact profileAddress={activeProfileAddress} />}
   </aside>;
 }

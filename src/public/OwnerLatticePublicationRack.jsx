@@ -6,6 +6,8 @@ import { useProfileDocumentPublication } from '../profileDocument/state/useProfi
 import { uploadProfileDocument } from '../profileDocument/storage/profileDocumentUploadClient.js';
 import { buildOwnerLatticePublicationDocument } from './ownerLatticePublicationDocument.js';
 import { createOwnerLatticePublicationContext } from './ownerLatticePublicationContext.js';
+import AlphaSupportPanel from '../support/AlphaSupportPanel.jsx';
+import { ALPHA_SUPPORT_CODES } from '../support/alphaSupport.js';
 import './ownerLatticePublicationRack.css';
 
 function downloadCanonicalPublication(snapshot) {
@@ -45,6 +47,7 @@ export default function OwnerLatticePublicationRack({
   const [cid, setCid] = useState('');
   const [message, setMessage] = useState('Prepare a frozen public snapshot before uploading.');
   const [uploading, setUploading] = useState(false);
+  const [supportIssue, setSupportIssue] = useState(null);
   const cidRef = useRef(cid);
   const cidGenerationRef = useRef(0);
   const draftGenerationRef = useRef({ fingerprint: null, generation: 0 });
@@ -102,6 +105,7 @@ export default function OwnerLatticePublicationRack({
 
   const prepareSnapshot = useCallback(() => {
     try {
+      setSupportIssue(null);
       if (!draftFingerprint) throw new Error(draftState.error || 'The public lattice is not ready');
       const previous = snapshot || publishedDocument(publishedResolution, profileAddress);
       const next = buildOwnerLatticePublicationDocument({
@@ -118,12 +122,16 @@ export default function OwnerLatticePublicationRack({
       publication.invalidate('A new snapshot was prepared; verify its CID before publication.');
       setMessage(`Version 8 revision ${next.revision} is frozen and ready for Public IPFS.`);
     } catch (error) {
-      setMessage(error?.message || 'The publication snapshot could not be prepared.');
+      const nextMessage = error?.message || 'The publication snapshot could not be prepared.';
+      setMessage(nextMessage);
+      setSupportIssue({ code: ALPHA_SUPPORT_CODES.PREVIEW_VALIDATION_FAILED,
+        phase: 'PUBLICATION_SNAPSHOT', providerCategory: 'LOCAL_VALIDATION', message: nextMessage });
     }
   }, [builderInput, draftFingerprint, draftState.error, profileAddress, publication, publishedResolution, snapshot]);
 
   const uploadSnapshot = useCallback(async () => {
     try {
+      setSupportIssue(null);
       if (!snapshot) throw new Error('Prepare a snapshot before uploading.');
       if (stale) throw new Error('The owner lattice changed; prepare a new snapshot.');
       setUploading(true);
@@ -136,7 +144,10 @@ export default function OwnerLatticePublicationRack({
       const verified = await publication.verifyCid(snapshot, uploaded.cid, { stale: false });
       setMessage(verified ? 'CID verified. Wallet publication is ready.' : 'CID verification failed.');
     } catch (error) {
-      setMessage(error?.message || 'The publication upload failed.');
+      const nextMessage = error?.message || 'The publication upload failed.';
+      setMessage(nextMessage);
+      setSupportIssue({ code: ALPHA_SUPPORT_CODES.IPFS_UPLOAD_FAILED,
+        phase: 'IPFS_UPLOAD', providerCategory: 'PUBLICATION_FUNCTION', message: nextMessage });
     } finally {
       setUploading(false);
     }
@@ -144,12 +155,14 @@ export default function OwnerLatticePublicationRack({
 
   const verifyCid = useCallback(async () => {
     if (!snapshot) return;
+    setSupportIssue(null);
     setMessage('Verifying the exact pinned bytes…');
     const verified = await publication.verifyCid(snapshot, cid, { stale });
     setMessage(verified ? 'CID verified. Wallet publication is ready.' : 'CID verification failed.');
   }, [cid, publication, snapshot, stale]);
 
   const publish = useCallback(async () => {
+    setSupportIssue(null);
     setMessage('Waiting for the verified owner wallet…');
     const confirmed = await publication.publish();
     if (!confirmed?.result?.document) {
@@ -202,6 +215,14 @@ export default function OwnerLatticePublicationRack({
       <span className="owner-lattice-publication-rack__status" data-state={publication.status}>{publication.status}</span>
       {publication.transactionHash && <code>{publication.transactionHash}</code>}
     </section>
-    <footer><p role="status">{publication.error || message}</p><small>PUBLIC ONLY / EXACT BYTES / LUKSO MAINNET</small></footer>
+    <footer><p role="status">{publication.error || message}</p><small>PUBLIC ONLY / EXACT BYTES / LUKSO MAINNET</small>
+      <AlphaSupportPanel compact
+        code={publication.supportCode || supportIssue?.code || ALPHA_SUPPORT_CODES.ALPHA_SUPPORT_REQUEST}
+        phase={publication.supportCode === ALPHA_SUPPORT_CODES.CID_VERIFICATION_FAILED
+          ? 'CID_VERIFY' : supportIssue?.phase || 'PUBLICATION'}
+        providerCategory={supportIssue?.providerCategory || (publication.supportCode ? 'LUKSO_PROVIDER' : undefined)}
+        profileAddress={profileAddress} transactionHash={publication.transactionHash}
+        message={publication.error || supportIssue?.message} />
+    </footer>
   </aside>;
 }
