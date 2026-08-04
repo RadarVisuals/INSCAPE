@@ -7,6 +7,8 @@ import '../../library/collection.css';
 import '../profileDocument.css';
 import '../../public/canvasObjects.css';
 import './publishedProfileStatus.css';
+import AlphaSupportPanel from '../../support/AlphaSupportPanel.jsx';
+import { ALPHA_SUPPORT_CODES } from '../../support/alphaSupport.js';
 
 const STATUS_COPY = Object.freeze({
   CONTEXT_REQUIRED: ['PROFILE CONTEXT REQUIRED', 'Open the installed app from a Universal Profile, or provide an explicit profile address while developing locally.'],
@@ -29,6 +31,12 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
       <div className="published-profile-actions">{onOpenDirectory && <button type="button" onClick={onOpenDirectory}>DIRECTORY</button>}
         {onReturn && <button type="button" onClick={onReturn}>RETURN</button>}
         {state?.status !== PUBLISHED_PROFILE_STATUS.LOADING && state?.status !== 'CONTEXT_REQUIRED' && <RetryButton state={state} onRetry={onRetry} />}</div>
+      {[PUBLISHED_PROFILE_STATUS.INVALID, PUBLISHED_PROFILE_STATUS.ERROR].includes(state?.status) && <AlphaSupportPanel compact
+        code={state.status === PUBLISHED_PROFILE_STATUS.INVALID
+          ? ALPHA_SUPPORT_CODES.PUBLISHED_DOCUMENT_FAILED
+          : ALPHA_SUPPORT_CODES.PUBLICATION_RESOLUTION_FAILED}
+        phase="PUBLISHED_PROFILE_RESOLUTION" providerCategory="RPC_OR_IPFS_GATEWAY"
+        profileAddress={state.address} message={state.errorCode || message} />}
     </section>
   </main>;
 }

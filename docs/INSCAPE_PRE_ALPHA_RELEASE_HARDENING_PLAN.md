@@ -577,7 +577,7 @@ Status: `[x]` (2026-08-04). Task 4 as a whole is complete.
 
 ## 12. Task 5 - Add minimum viable Alpha observability, recovery guidance, and support intake
 
-Status: `[ ]`
+Status: `[~]`
 
 Depends on: Task 0. May be designed while Tasks 1-4 run, but production instrumentation requires separate authorization.
 
@@ -655,7 +655,17 @@ Never collect automatically:
 
 ### Task 5 checkpoint
 
-Record the approved monitoring mode, collected fields, retention/recipient decision, support path, and manual acceptance here.
+Status: `[~]` (2026-08-04). The bounded local implementation is complete; Deploy Preview and manual user acceptance remain pending.
+
+- **Approved first-cohort mode:** local bounded diagnostics plus manual issue submission only. No remote monitoring service, account, SDK, endpoint, source-map upload, production token, automatic message, or analytics event was added.
+- **Collected fields:** the user-triggered Copy support details action contains only the INSCAPE Alpha product label, bounded release commit, route class, viewport class, browser family/version, normalized support code, operation phase, provider category, optional public profile address, and optional already-submitted transaction hash. Arbitrary error text, full URLs, complete user agents, wallet/provider objects, controllers, signatures, calldata, canonical bytes, storage, private tables, placements, searches, unpublished metadata, screenshots, and console output are excluded.
+- **Retention and recipient:** INSCAPE sends and retains nothing. Evidence is constructed in memory only after the user opens a relevant support surface and is copied locally only after an explicit button press. The tester reviews it and sends it through the private channel where the Alpha invitation was received. No external recipient integration exists.
+- **Visible classification:** owner authority initialization, unexpected owner-runtime failure, Preview preparation, IPFS upload, CID verification, wallet rejection/provider failure, submitted transaction timeout/revert/replacement, resolver failure, and invalid/unavailable published-document states use one bounded support-code set while preserving the existing publication-error descriptions. There is no second publication error taxonomy.
+- **Recovery contract:** every relevant support surface distinguishes pre-hash retry from post-hash investigation. When a transaction hash exists, the UI explicitly forbids submitting a duplicate publication transaction. The permanent public nature of IPFS publication and the desktop owner-authoring boundary are visible in the support surface and documented in `docs/INSCAPE_ALPHA_TESTER_SUPPORT.md`.
+- **Release identity:** Vite injects only a validated Netlify `COMMIT_REF`, GitHub `GITHUB_SHA`, or explicit public `VITE_COMMIT_REF`; invalid or absent values become `development`. No Git subprocess or environment-value dump is used.
+- **Verification:** the focused support/build/owner/publication matrix passed 54/54. `npm run build` passed after 6,375 modules, `npm run build:check` passed, and `git diff --check` passed. Production totals are initial JavaScript `1,285,082` raw / `374,439` gzip; owner JavaScript `274,107` / `82,260`; standalone wallet JavaScript `3,943,745` / `1,042,203`; core JavaScript `2,073,770` / `618,783`; initial CSS `114,250` / `20,299`; owner CSS `69,159` / `12,957`; public assets `14,821,307`; largest asset `2,574,306`. The three touched ceilings add exactly the measured Task-5 delta while preserving the previous raw/gzip headroom.
+- **Remaining acceptance:** use a new Deploy Preview to inspect the normal Share-panel notice and at least one bounded owner/publication or published-visitor error surface; confirm copy success/failure feedback, readable narrow layout, focus visibility, exact release SHA, no automatic request, and the private-invitation support wording. Record the approved support recipient/channel description here before changing Task 5 to `[x]`.
+- **Scope:** no dependency, lockfile, wallet authority, publication contract, IPFS state, environment setting, remote account, deploy, upload, signature, or transaction was changed. Task 6 was not started. The corrupt legacy `.browser-test-runtime/` remains untouched and untracked.
 
 ## 13. Task 6 - Build and certify the exact release candidate
 

@@ -65,14 +65,14 @@ test('each independent budget category reports an actionable overage', () => {
   }
 });
 
-test('measured Pixi CSP allowance retains exact production budget boundaries', () => {
+test('measured Pixi CSP and local Alpha support allowances retain exact production budget boundaries', () => {
   assert.deepEqual(PRODUCTION_BUDGETS, {
     initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
     ownerJavaScript: { raw: 276_000, gzip: 83_500 },
     standaloneWalletJavaScript: { raw: 4_400_000, gzip: 1_200_000 },
-    initialCss: { raw: 117_000, gzip: 20_000 },
+    initialCss: { raw: 117_000, gzip: 20_314 },
     ownerCss: { raw: 70_000, gzip: 13_200 },
-    coreJavaScript: { raw: 2_070_086, gzip: 618_132 },
+    coreJavaScript: { raw: 2_075_884, gzip: 619_799 },
     publicAssets: { raw: 15_200_000 },
     largestPublicAsset: { raw: 2_700_000 },
   });
@@ -92,6 +92,12 @@ test('measured Pixi CSP allowance retains exact production budget boundaries', (
     over.coreJavaScript[measurement] = limit + 1;
     assert.throws(() => checkProductionBudgets({ totals: over, ownerRuntimeGraph: graph() }),
       new RegExp(`coreJavaScript\\.${measurement}: .* \\(\\+1 bytes\\)`));
+  }
+  for (const [measurement, limit] of Object.entries(PRODUCTION_BUDGETS.initialCss)) {
+    const over = structuredClone(totals);
+    over.initialCss[measurement] = limit + 1;
+    assert.throws(() => checkProductionBudgets({ totals: over, ownerRuntimeGraph: graph() }),
+      new RegExp(`initialCss\\.${measurement}: .* \\(\\+1 bytes\\)`));
   }
 });
 

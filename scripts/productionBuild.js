@@ -65,7 +65,9 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
   standaloneWalletJavaScript: Object.freeze({ raw: 4_400_000, gzip: 1_200_000 }),
-  initialCss: Object.freeze({ raw: 117_000, gzip: 20_000 }),
+  // Task 5 adds the visible local-only Alpha support surface. Preserve the
+  // pre-Task-5 gzip headroom exactly while keeping the raw ceiling unchanged.
+  initialCss: Object.freeze({ raw: 117_000, gzip: 20_314 }),
   // Phase 7 adds the lazy owner-only Identity RÄCK; Phase 7.5 adds its compact,
   // shared-theme Keeper context controls. Keep both isolated from initial CSS
   // and deliberately close to the measured owner-only output.
@@ -105,7 +107,10 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // The remaining measured growth is the accepted complete MODUL-8R
   // Activity/People/Layers/Settings presentation; legacy visitor chunks stay
   // readable and are not owner-hybrid reachability.
-  coreJavaScript: Object.freeze({ raw: 2_070_086, gzip: 618_132 }),
+  // Task 5 adds bounded evidence formatting, release identity, recovery copy,
+  // and error-surface wiring without a remote monitoring runtime. These limits
+  // add only the measured Task-5 delta and retain the prior headroom exactly.
+  coreJavaScript: Object.freeze({ raw: 2_075_884, gzip: 619_799 }),
   publicAssets: Object.freeze({ raw: 15_200_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });

@@ -28,6 +28,8 @@ import {
   selectResidentActorVisible
 } from './public/publicAccess.js';
 import { reportControlledError } from './diagnostics.js';
+import AlphaSupportPanel from './support/AlphaSupportPanel.jsx';
+import { ALPHA_SUPPORT_CODES } from './support/alphaSupport.js';
 
 const AtelierExperience = lazy(() => import('./app/AtelierExperience.jsx'));
 
@@ -59,6 +61,7 @@ function App() {
   const ownershipVerified = useWalletStore((state) => state.isHostProfileOwner);
   const verifiedOwnerProfileAddress = useWalletStore((state) => state.hostProfileAddress);
   const authorityLifecycleStatus = useWalletStore((state) => state.authorityLifecycleStatus);
+  const initializationError = useWalletStore((state) => state.initializationError);
   const initWallet = useWalletStore((state) => state.initWallet);
   const scheduleWalletRelease = useWalletStore((state) => state.scheduleWalletRelease);
   const applyRenderConfig = useStore((state) => state.applyRenderConfig);
@@ -248,6 +251,9 @@ function App() {
         aria-hidden={!interfaceVisible}
         inert={interfaceVisible ? undefined : ''}
       >
+        {authorityLifecycleStatus === 'complete' && initializationError && <AlphaSupportPanel compact
+          code={ALPHA_SUPPORT_CODES.AUTHORITY_INITIALIZATION_FAILED} phase="OWNER_AUTHORITY"
+          providerCategory="UP_PROVIDER" profileAddress={viewedProfileAddress} message={initializationError.message} />}
         {effectiveApplicationMode === APPLICATION_MODES.ATELIER ? (
           <Suspense fallback={<AtelierLoadingFallback />}>
             <AtelierExperience onRequestPublic={() => changeApplicationMode(APPLICATION_MODES.PUBLIC)} />
