@@ -36,7 +36,7 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
           ? ALPHA_SUPPORT_CODES.PUBLISHED_DOCUMENT_FAILED
           : ALPHA_SUPPORT_CODES.PUBLICATION_RESOLUTION_FAILED}
         phase="PUBLISHED_PROFILE_RESOLUTION" providerCategory="RPC_OR_IPFS_GATEWAY"
-        profileAddress={state.address} message={state.errorCode || message} />}
+        profileAddress={state.address} routeClass="PUBLISHED_VISITOR" message={state.errorCode || message} />}
     </section>
   </main>;
 }

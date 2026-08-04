@@ -221,7 +221,7 @@ export default function OwnerLatticePublicationRack({
         phase={publication.supportCode === ALPHA_SUPPORT_CODES.CID_VERIFICATION_FAILED
           ? 'CID_VERIFY' : supportIssue?.phase || 'PUBLICATION'}
         providerCategory={supportIssue?.providerCategory || (publication.supportCode ? 'LUKSO_PROVIDER' : undefined)}
-        profileAddress={profileAddress} transactionHash={publication.transactionHash}
+        profileAddress={profileAddress} routeClass="OWNER" transactionHash={publication.transactionHash}
         message={publication.error || supportIssue?.message} />
     </footer>
   </aside>;

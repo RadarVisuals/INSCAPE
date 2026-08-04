@@ -72,7 +72,7 @@ test('measured Pixi CSP and local Alpha support allowances retain exact producti
     standaloneWalletJavaScript: { raw: 4_400_000, gzip: 1_200_000 },
     initialCss: { raw: 117_000, gzip: 20_314 },
     ownerCss: { raw: 70_000, gzip: 13_200 },
-    coreJavaScript: { raw: 2_076_583, gzip: 620_172 },
+    coreJavaScript: { raw: 2_076_709, gzip: 620_158 },
     publicAssets: { raw: 15_200_000 },
     largestPublicAsset: { raw: 2_700_000 },
   });

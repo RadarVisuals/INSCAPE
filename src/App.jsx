@@ -253,7 +253,8 @@ function App() {
       >
         {authorityLifecycleStatus === 'complete' && initializationError && <AlphaSupportPanel compact
           code={ALPHA_SUPPORT_CODES.AUTHORITY_INITIALIZATION_FAILED} phase="OWNER_AUTHORITY"
-          providerCategory="UP_PROVIDER" profileAddress={viewedProfileAddress} message={initializationError.message} />}
+          providerCategory="UP_PROVIDER" profileAddress={viewedProfileAddress} routeClass="AUTHORITY_ENTRY"
+          message={initializationError.message} />}
         {effectiveApplicationMode === APPLICATION_MODES.ATELIER ? (
           <Suspense fallback={<AtelierLoadingFallback />}>
             <AtelierExperience onRequestPublic={() => changeApplicationMode(APPLICATION_MODES.PUBLIC)} />

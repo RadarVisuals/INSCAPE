@@ -12,14 +12,15 @@ export default function AlphaSupportPanel({
   phase = 'GENERAL',
   providerCategory,
   profileAddress,
+  routeClass,
   transactionHash,
   message,
   compact = false,
 }) {
   const [copyState, setCopyState] = useState('idle');
   const evidence = useMemo(() => createAlphaSupportEvidence({
-    code, phase, providerCategory, profileAddress, transactionHash, message,
-  }), [code, message, phase, profileAddress, providerCategory, transactionHash]);
+    code, phase, providerCategory, profileAddress, routeClass, transactionHash, message,
+  }), [code, message, phase, profileAddress, providerCategory, routeClass, transactionHash]);
   const report = useMemo(() => formatAlphaSupportEvidence(evidence), [evidence]);
   const recovery = alphaRecoveryGuidance(evidence.code, evidence.transactionHash);
 

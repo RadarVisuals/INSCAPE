@@ -37,7 +37,7 @@ test('Task 5 canonical publication rack exposes bounded local support evidence',
     await support.getByText('REVIEW DETAILS', { exact: true }).click();
     const evidence = await support.locator('pre').innerText();
     assert.match(evidence, new RegExp(`release: ${expectedRelease}`, 'u'));
-    assert.match(evidence, /route: OWNER_OR_PROFILE/u);
+    assert.match(evidence, /route: OWNER/u);
     assert.match(evidence, /code: ALPHA_SUPPORT_REQUEST/u);
     assert.doesNotMatch(evidence, /https?:|message:|localStorage|signature|calldata/iu);
     await support.getByRole('button', { name: 'COPY SUPPORT DETAILS', exact: true }).click();

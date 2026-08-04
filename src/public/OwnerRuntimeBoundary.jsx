@@ -24,7 +24,7 @@ class OwnerRuntimeErrorBoundary extends Component {
     if (this.state.error) {
       return <div className="mode-loading" role="alert">The owner workspace could not be loaded.
         <AlphaSupportPanel compact code={ALPHA_SUPPORT_CODES.UNEXPECTED_APPLICATION_ERROR}
-          phase="OWNER_RUNTIME" message={this.state.error.message} />
+          phase="OWNER_RUNTIME" routeClass="OWNER" message={this.state.error.message} />
       </div>;
     }
     return this.props.children;

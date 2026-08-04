@@ -110,7 +110,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Task 5 adds bounded evidence formatting, release identity, recovery copy,
   // and error-surface wiring without a remote monitoring runtime. These limits
   // add only the measured Task-5 delta and retain the prior headroom exactly.
-  coreJavaScript: Object.freeze({ raw: 2_076_583, gzip: 620_172 }),
+  coreJavaScript: Object.freeze({ raw: 2_076_709, gzip: 620_158 }),
   publicAssets: Object.freeze({ raw: 15_200_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });
