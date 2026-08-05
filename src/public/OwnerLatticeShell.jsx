@@ -274,6 +274,11 @@ function OwnerLatticeRuntime({
   const [modul8rPresentationState, setModul8rPresentationState] = useState({
     masterExpanded: true, open: true, openModule: 'library', settingsOpen: false,
   });
+  useEffect(() => {
+    if (modul8rActive && interfaceVisible && !modul8rReturnFocusRef.current) {
+      modul8rReturnFocusRef.current = browserToolRef.current;
+    }
+  }, [interfaceVisible, modul8rActive]);
   useEffect(() => setRailCollapsed(true), [profileAddress]);
   useEffect(() => setPublicationOpen(false), [profileAddress]);
   const profileIdentity = useProfileIdentity(profileAddress);

@@ -64,14 +64,12 @@ export default function Modul8rOwnerWorkspace({
   const loadCreated = useRelatedCreationsStore((state) => state.load);
   const retryCreated = useRelatedCreationsStore((state) => state.retry);
   const cancelCreated = useRelatedCreationsStore((state) => state.cancel);
-  const localReopenRef = useRef(null);
   const handledCloseRequestIdRef = useRef(closeRequestId);
   const handledOpenRequestIdRef = useRef(openRequestId);
   const relatedRecordsCallbackRef = useRef(onRelatedAssetRecordsChange);
   const libraryFaceplateAccessoryRef = useRef(null);
   const peopleFaceplateAccessoryRef = useRef(null);
   const settingsReturnFocusRef = useRef(null);
-  const effectiveReturnFocusRef = returnFocusRef || localReopenRef;
   const closeSettings = () => {
     setSettingsOpen(false);
     requestAnimationFrame(() => settingsReturnFocusRef.current?.isConnected
@@ -168,7 +166,7 @@ export default function Modul8rOwnerWorkspace({
     onModuleStateChange={setModuleState}
     onRequestClose={() => { setViewerSession(null); setSettingsOpen(false); setOpen(false); }}
     onSettingsRequest={(trigger) => { settingsReturnFocusRef.current = trigger; setSettingsOpen(true); }}
-    returnFocusRef={effectiveReturnFocusRef} />
+    returnFocusRef={returnFocusRef} />
     {settingsOpen && <Modul8rSettingsSurface menuSurfaceId={menuSurfaceId} onClose={closeSettings}
       onMenuSurfaceChange={onMenuSurfaceChange} onSurfaceChange={onSurfaceChange} surfaceId={surfaceId} />}
     {viewerSession && <LatticeFocusViewer dossier={viewerSession.entry.dossier} entry={viewerSession.entry}
@@ -177,6 +175,5 @@ export default function Modul8rOwnerWorkspace({
       position={0} renderArtwork={(entry) => <div className="modul8r-library__focus-artwork"><img alt={entry.accessibleLabel}
         decoding="async" draggable="false" referrerPolicy="no-referrer" src={entry.media.src} /></div>}
       returnFocus={viewerSession.returnFocus} surfaceColor="var(--lattice-menu-panel)" total={1} />}</>
-    : <button className="modul8r-owner-reopen" data-lattice-chrome onClick={() => setOpen(true)}
-      ref={localReopenRef} type="button">OPEN MODUL-8R{arrangeEnabled ? ' / ARRANGE ON' : ''}</button>;
+    : null;
 }
