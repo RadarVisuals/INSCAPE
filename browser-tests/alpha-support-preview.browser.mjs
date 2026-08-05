@@ -43,6 +43,23 @@ test('Task 5 canonical publication rack exposes bounded local support evidence',
       'Alpha support must be inside the visible owner viewport without scrolling');
     await support.getByText('REVIEW', { exact: true }).click();
     const evidence = await support.locator('pre').innerText();
+    const supportContrast = await support.evaluate((node) => {
+      const rgb = (value) => (value.match(/[\d.]+/gu) || []).slice(0, 3).map(Number);
+      const luminance = (value) => {
+        const channels = rgb(value).map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2]);
+      };
+      const background = luminance(getComputedStyle(node).backgroundColor);
+      return [...node.querySelectorAll('strong,button,summary,pre')].map((element) => {
+        const foreground = luminance(getComputedStyle(element).color);
+        return (Math.max(background, foreground) + 0.05) / (Math.min(background, foreground) + 0.05);
+      });
+    });
+    assert.ok(supportContrast.every((ratio) => ratio >= 4.5),
+      `Alpha support text contrast must remain at least 4.5:1; received ${supportContrast.join(', ')}`);
     assert.match(evidence, new RegExp(`release: ${expectedRelease}`, 'u'));
     assert.match(evidence, /route: OWNER/u);
     assert.match(evidence, /code: ALPHA_SUPPORT_REQUEST/u);
