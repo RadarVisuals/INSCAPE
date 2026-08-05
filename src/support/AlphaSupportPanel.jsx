@@ -23,6 +23,7 @@ export default function AlphaSupportPanel({
   }), [code, message, phase, profileAddress, providerCategory, routeClass, transactionHash]);
   const report = useMemo(() => formatAlphaSupportEvidence(evidence), [evidence]);
   const recovery = alphaRecoveryGuidance(evidence.code, evidence.transactionHash);
+  const showCompactRecovery = compact && evidence.code !== ALPHA_SUPPORT_CODES.ALPHA_SUPPORT_REQUEST;
 
   const copy = async () => {
     try {
@@ -33,14 +34,17 @@ export default function AlphaSupportPanel({
     }
   };
 
-  return <section className="alpha-support" data-compact={compact || undefined} aria-label="Alpha support">
-    <strong>ALPHA SUPPORT / {evidence.code}</strong>
-    <p>{recovery}</p>
-    <p>Send the copied details through the private channel where you received your Alpha invitation.</p>
-    <button type="button" onClick={copy}>COPY SUPPORT DETAILS</button>
+  return <section className="alpha-support" data-compact={compact || undefined} aria-label="Alpha support"
+    style={compact ? { gridTemplateColumns: '1fr auto', margin: 0 } : undefined}>
+    <strong>{compact ? 'ALPHA SUPPORT' : `ALPHA SUPPORT / ${evidence.code}`}</strong>
+    {(!compact || showCompactRecovery) && <p>{recovery}</p>}
+    {!compact && <p>Send the copied details through the private channel where you received your Alpha invitation.</p>}
+    <button type="button" onClick={copy}>{compact ? 'COPY DETAILS' : 'COPY SUPPORT DETAILS'}</button>
     {copyState === 'copied' && <span role="status">COPIED</span>}
     {copyState === 'failed' && <span role="alert">COPY FAILED - select the details below</span>}
-    <details><summary>REVIEW DETAILS</summary><pre>{report}</pre></details>
+    <details style={compact ? { gridColumn: '1 / -1' } : undefined}>
+      <summary>{compact ? 'REVIEW' : 'REVIEW DETAILS'}</summary><pre>{report}</pre>
+    </details>
     {!compact && <small>Invite-only experiment. Desktop authoring only. IPFS publication is public and permanent. Review screenshots for private information before sharing.</small>}
   </section>;
 }

@@ -33,14 +33,21 @@ test('Task 5 canonical publication rack exposes bounded local support evidence',
     await rack.waitFor({ state: 'visible', timeout: 10_000 });
     const support = rack.getByRole('region', { name: 'Alpha support' });
     await support.waitFor({ state: 'visible', timeout: 10_000 });
-    await support.getByText('ALPHA SUPPORT / ALPHA_SUPPORT_REQUEST', { exact: true }).waitFor({ state: 'visible' });
-    await support.getByText('REVIEW DETAILS', { exact: true }).click();
+    await support.getByText('ALPHA SUPPORT', { exact: true }).waitFor({ state: 'visible' });
+    const [supportBox, viewportHeight] = await Promise.all([
+      support.boundingBox(),
+      frame.evaluate(() => window.innerHeight),
+    ]);
+    assert.ok(supportBox, 'Alpha support must have a rendered bounding box');
+    assert.ok(supportBox.y >= 0 && supportBox.y + supportBox.height <= viewportHeight,
+      'Alpha support must be inside the visible owner viewport without scrolling');
+    await support.getByText('REVIEW', { exact: true }).click();
     const evidence = await support.locator('pre').innerText();
     assert.match(evidence, new RegExp(`release: ${expectedRelease}`, 'u'));
     assert.match(evidence, /route: OWNER/u);
     assert.match(evidence, /code: ALPHA_SUPPORT_REQUEST/u);
     assert.doesNotMatch(evidence, /https?:|message:|localStorage|signature|calldata/iu);
-    await support.getByRole('button', { name: 'COPY SUPPORT DETAILS', exact: true }).click();
+    await support.getByRole('button', { name: 'COPY DETAILS', exact: true }).click();
     await support.getByText(/^(?:COPIED|COPY FAILED - select the details below)$/u).waitFor({ state: 'visible', timeout: 5_000 });
     assert.equal(requests.some(({ method }) => method !== 'GET'), false, 'Support evidence caused a non-GET request');
     const fixture = await page.evaluate(() => ({

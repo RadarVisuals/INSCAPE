@@ -183,6 +183,13 @@ export default function OwnerLatticePublicationRack({
   >
     <header><div><span>PUBLICATION MODULE</span><strong>VERSION 8</strong></div>
       <button type="button" aria-label="Close Publication" disabled={publicationBusy || uploading} onClick={onClose}>×</button></header>
+    <AlphaSupportPanel compact
+      code={publication.supportCode || supportIssue?.code || ALPHA_SUPPORT_CODES.ALPHA_SUPPORT_REQUEST}
+      phase={publication.supportCode === ALPHA_SUPPORT_CODES.CID_VERIFICATION_FAILED
+        ? 'CID_VERIFY' : supportIssue?.phase || 'PUBLICATION'}
+      providerCategory={supportIssue?.providerCategory || (publication.supportCode ? 'LUKSO_PROVIDER' : undefined)}
+      profileAddress={profileAddress} routeClass="OWNER" transactionHash={publication.transactionHash}
+      message={publication.error || supportIssue?.message} />
     <section><h2>PUBLIC SNAPSHOT</h2>
       <dl><div><dt>REVISION</dt><dd>{snapshot?.revision || '—'}</dd></div>
         <div><dt>STATE</dt><dd>{draftState.error ? 'BLOCKED' : stale ? 'STALE' : snapshot ? 'FROZEN' : 'READY'}</dd></div></dl>
@@ -215,14 +222,6 @@ export default function OwnerLatticePublicationRack({
       <span className="owner-lattice-publication-rack__status" data-state={publication.status}>{publication.status}</span>
       {publication.transactionHash && <code>{publication.transactionHash}</code>}
     </section>
-    <footer><p role="status">{publication.error || message}</p><small>PUBLIC ONLY / EXACT BYTES / LUKSO MAINNET</small>
-      <AlphaSupportPanel compact
-        code={publication.supportCode || supportIssue?.code || ALPHA_SUPPORT_CODES.ALPHA_SUPPORT_REQUEST}
-        phase={publication.supportCode === ALPHA_SUPPORT_CODES.CID_VERIFICATION_FAILED
-          ? 'CID_VERIFY' : supportIssue?.phase || 'PUBLICATION'}
-        providerCategory={supportIssue?.providerCategory || (publication.supportCode ? 'LUKSO_PROVIDER' : undefined)}
-        profileAddress={profileAddress} routeClass="OWNER" transactionHash={publication.transactionHash}
-        message={publication.error || supportIssue?.message} />
-    </footer>
+    <footer><p role="status">{publication.error || message}</p><small>PUBLIC ONLY / EXACT BYTES / LUKSO MAINNET</small></footer>
   </aside>;
 }

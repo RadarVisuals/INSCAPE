@@ -54,6 +54,16 @@
   border-bottom: 1px solid var(--lattice-menu-line);
 }
 
+.owner-lattice-publication-rack > .alpha-support[data-compact] {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--lattice-menu-line-strong);
+  background: var(--lattice-menu-panel);
+}
+
 .owner-lattice-publication-rack h2 { margin: 0; color: var(--lattice-menu-muted); }
 .owner-lattice-publication-rack dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--lattice-menu-line); }
 .owner-lattice-publication-rack dl div { min-height: 48px; padding: 8px; display: grid; gap: 5px; }
