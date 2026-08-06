@@ -61,6 +61,13 @@
   background-position: var(--owner-lattice-grid-origin-x) var(--owner-lattice-grid-origin-y), var(--owner-lattice-grid-origin-x) var(--owner-lattice-grid-origin-y);
   background-size: var(--owner-lattice-cell-size) var(--owner-lattice-cell-size), var(--owner-lattice-cell-size) var(--owner-lattice-cell-size);
 }
+.owner-lattice-spatial-surface[data-grid-style="dots"] .owner-lattice-atmosphere {
+  background-image: radial-gradient(circle, var(--owner-lattice-grid-line) 0 1px, transparent 1.25px);
+  background-position:
+    calc(var(--owner-lattice-grid-origin-x) - (var(--owner-lattice-cell-size) / 2))
+    calc(var(--owner-lattice-grid-origin-y) - (var(--owner-lattice-cell-size) / 2));
+  background-size: var(--owner-lattice-cell-size) var(--owner-lattice-cell-size);
+}
 .owner-lattice-table { position: absolute; overflow: hidden; }
 .owner-lattice-table .lattice-production-table { background-color: transparent; background-image: none; }
 .owner-lattice-runtime-placeholder {

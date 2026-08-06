@@ -29,29 +29,24 @@ test('public modules do not depend on private editor state or compatibility alia
   }
 });
 
-test('the shared canvas remains outside the public/private mode branch', () => {
+test('the lightweight grid resident remains outside the public/private mode branch', () => {
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
-  const canvasIndex = appSource.indexOf('<ArtCanvas');
+  const canvasIndex = appSource.indexOf('<GridWalkerCanvas');
   const canvasCloseIndex = appSource.indexOf('/>', canvasIndex);
   const modeBranchIndex = appSource.indexOf('{effectiveApplicationMode === APPLICATION_MODES.ATELIER ? (');
 
   assert.ok(canvasIndex >= 0);
   assert.ok(canvasCloseIndex > canvasIndex);
   assert.ok(modeBranchIndex > canvasCloseIndex);
-  assert.equal(appSource.match(/import ArtCanvas from/g)?.length, 1);
-  assert.equal(appSource.match(/<ArtCanvas\b/g)?.length, 1);
+  assert.equal(appSource.match(/import GridWalkerCanvas from/g)?.length, 1);
+  assert.equal(appSource.match(/<GridWalkerCanvas\b/g)?.length, 1);
+  assert.doesNotMatch(appSource, /ArtCanvas|PixiEngine|pixi\.js|AssetResolver/);
 });
 
-test('public home is resident-only while Atelier retains stage authoring', () => {
+test('the retired Pixi stage remains outside the active application root', () => {
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
-  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
-  const homeSource = readFileSync(new URL('./HomeWorldSurface.jsx', import.meta.url), 'utf8');
-
-  assert.match(appSource, /stageVisible={effectiveApplicationMode === APPLICATION_MODES\.ATELIER && stageUserVisible}/);
-  assert.match(appSource, /foregroundOnly={effectiveApplicationMode === APPLICATION_MODES\.PUBLIC}/);
-  assert.match(shellSource, /<HomeWorldSurface/);
-  assert.match(homeSource, /onCameraChange\(clampVerticalHomeWorldCamera/);
-  assert.match(homeSource, /createPortal\(surface, root\)/);
+  assert.match(appSource, /<GridWalkerCanvas/);
+  assert.doesNotMatch(appSource, /<ArtCanvas|stageVisible=|foregroundOnly=/);
 });
 
 test('window state stays a UI-only document with no RenderConfig fields', () => {

@@ -89,8 +89,7 @@
 .modul8r-shell button { color: inherit; font: inherit; }
 .modul8r-shell button:focus-visible,
 .modul8r-development-controls :focus-visible,
-.modul8r-development-reopen:focus-visible,
-.modul8r-owner-reopen:focus-visible {
+.modul8r-development-reopen:focus-visible {
   outline: 2px solid var(--lattice-menu-ink);
   outline-offset: -3px;
 }
@@ -430,8 +429,7 @@
 .modul8r-shell__width-resize:hover::after,
 .modul8r-shell__width-resize:focus-visible::after { background: var(--lattice-menu-ink); }
 
-.modul8r-development-reopen,
-.modul8r-owner-reopen {
+.modul8r-development-reopen {
   position: absolute;
   top: 50%;
   left: 50%;
