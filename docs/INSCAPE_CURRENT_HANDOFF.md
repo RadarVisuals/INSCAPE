@@ -21,7 +21,7 @@ This is the current travel checkpoint. It describes two intentionally separate b
 ### Pre-Alpha hardening lane
 
 - Branch: `release/pre-alpha-hardening`
-- Remote checkpoint: `a0dce3c`
+- Task 5 code checkpoint (required ancestor of the current branch): `a0dce3c`
 - Commit: `Modernize Alpha support error surfaces`
 - Draft PR: `#2`
 - Deploy Preview: `https://deploy-preview-2--enterinscape.netlify.app`
