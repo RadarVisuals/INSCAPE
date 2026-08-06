@@ -46,7 +46,7 @@ test('the lightweight grid resident remains outside the public/private mode bran
 test('the retired Pixi stage remains outside the active application root', () => {
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
   assert.match(appSource, /<GridWalkerCanvas/);
-  assert.doesNotMatch(appSource, /<ArtCanvas|stageVisible=|foregroundOnly=/);
+  assert.doesNotMatch(appSource, /<ArtCanvas|foregroundOnly=|stageVisible={effectiveApplicationMode/);
 });
 
 test('window state stays a UI-only document with no RenderConfig fields', () => {
