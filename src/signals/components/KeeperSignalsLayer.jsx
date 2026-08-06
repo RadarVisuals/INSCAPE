@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { canBeginReaction, getReactionPresentation } from '../domain/reactionDirector.js';
 import { useSignalStore } from '../state/useSignalStore.js';
 import KeeperSpeechBubble from './KeeperSpeechBubble.jsx';
+import '../keeperSignals.css';
 
 export default function KeeperSignalsLayer({ interfaceReady, residentHandoffActive, reducedMotion, reactionBridge }) {
   const status = useSignalStore((state) => state.status);
