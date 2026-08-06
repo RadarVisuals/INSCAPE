@@ -543,7 +543,7 @@ For every task:
 
 ### Continue Task 5
 
-> Read `docs/TRAVEL_INSTRUCTIONS.md`, `docs/INSCAPE_CURRENT_HANDOFF.md`, and the complete authoritative `docs/INSCAPE_PRE_ALPHA_RELEASE_HARDENING_PLAN.md`. Work only on `release/pre-alpha-hardening`. Inspect local/remote HEAD and worktree state. Do not modify anything initially. Confirm whether PR #2's Deploy Preview is built from exact commit `a0dce3c16d592a5d0f0234b1b938c94c3493bbf3`. Guide me through the bounded Task 5 resolver-error acceptance checklist. If I accept it, update only the Task 5 checkpoint to `[x]`, verify the documentation diff, and wait for explicit commit/push authorization. Do not start Task 6, merge, deploy production, upload to IPFS, change environment variables, or touch `.browser-test-runtime/`.
+> Read `docs/TRAVEL_INSTRUCTIONS.md`, `docs/INSCAPE_CURRENT_HANDOFF.md`, and the complete authoritative `docs/INSCAPE_PRE_ALPHA_RELEASE_HARDENING_PLAN.md`. Work only on `release/pre-alpha-hardening`. Inspect local/remote HEAD and worktree state. Do not modify anything initially. Confirm that the current release HEAD contains Task 5 repair commit `a0dce3c16d592a5d0f0234b1b938c94c3493bbf3` as an ancestor and that PR #2's Deploy Preview is built from the exact current release HEAD. Guide me through the bounded Task 5 resolver-error acceptance checklist. If I accept it, update only the Task 5 checkpoint to `[x]`, verify the documentation diff, and wait for explicit commit/push authorization. Do not start Task 6, merge, deploy production, upload to IPFS, change environment variables, or touch `.browser-test-runtime/`.
 
 ### Prepare product/release integration
 
