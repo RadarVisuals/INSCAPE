@@ -25,18 +25,24 @@ function RetryButton({ state, onRetry }) {
 
 function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
   const [title, message] = STATUS_COPY[state?.status] || STATUS_COPY.ERROR;
-  return <main className="public-shell published-profile-status" data-published-focus-fallback tabIndex="-1" aria-label="Published profile status">
+  const supportRequired = [PUBLISHED_PROFILE_STATUS.INVALID, PUBLISHED_PROFILE_STATUS.ERROR].includes(state?.status);
+  return <main className="published-profile-status" data-lattice-menu-surface data-menu-surface="mist"
+    data-published-focus-fallback tabIndex="-1" aria-label="Published profile status">
     <section className="published-profile-status__card" role="status" aria-busy={state?.busy}>
-      <span>INSCAPE / PUBLIC WORLD</span><h1>{title}</h1><p>{message}</p><code>{state?.address}</code>
-      <div className="published-profile-actions">{onOpenDirectory && <button type="button" onClick={onOpenDirectory}>DIRECTORY</button>}
-        {onReturn && <button type="button" onClick={onReturn}>RETURN</button>}
-        {state?.status !== PUBLISHED_PROFILE_STATUS.LOADING && state?.status !== 'CONTEXT_REQUIRED' && <RetryButton state={state} onRetry={onRetry} />}</div>
-      {[PUBLISHED_PROFILE_STATUS.INVALID, PUBLISHED_PROFILE_STATUS.ERROR].includes(state?.status) && <AlphaSupportPanel compact
-        code={state.status === PUBLISHED_PROFILE_STATUS.INVALID
-          ? ALPHA_SUPPORT_CODES.PUBLISHED_DOCUMENT_FAILED
-          : ALPHA_SUPPORT_CODES.PUBLICATION_RESOLUTION_FAILED}
-        phase="PUBLISHED_PROFILE_RESOLUTION" providerCategory="RPC_OR_IPFS_GATEWAY"
-        profileAddress={state.address} routeClass="PUBLISHED_VISITOR" message={state.errorCode || message} />}
+      <header><span>PUBLIC PROFILE</span><h1>{title}</h1></header>
+      <div className="published-profile-status__body">
+        <p>{message}</p><code>{state?.address}</code>
+        <div className="published-profile-actions">{onOpenDirectory && <button type="button" onClick={onOpenDirectory}>DIRECTORY</button>}
+          {onReturn && <button type="button" onClick={onReturn}>RETURN</button>}
+          {state?.status !== PUBLISHED_PROFILE_STATUS.LOADING && state?.status !== 'CONTEXT_REQUIRED' && <RetryButton state={state} onRetry={onRetry} />}</div>
+        {supportRequired && <AlphaSupportPanel
+          code={state.status === PUBLISHED_PROFILE_STATUS.INVALID
+            ? ALPHA_SUPPORT_CODES.PUBLISHED_DOCUMENT_FAILED
+            : ALPHA_SUPPORT_CODES.PUBLICATION_RESOLUTION_FAILED}
+          phase="PUBLISHED_PROFILE_RESOLUTION" providerCategory="RPC_OR_IPFS_GATEWAY"
+          profileAddress={state.address} routeClass="PUBLISHED_VISITOR" message={state.errorCode || message} />}
+      </div>
+      <footer><span>INSCAPE / PUBLIC WORLD</span><span>{state?.status || 'ERROR'}</span></footer>
     </section>
   </main>;
 }

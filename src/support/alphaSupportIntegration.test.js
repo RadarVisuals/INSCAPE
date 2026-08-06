@@ -27,6 +27,8 @@ test('bounded support surfaces cover authority, runtime, publication and visitor
   assert.doesNotMatch(source('../profileDocument/components/ProfileDocumentPanel.jsx'), /AlphaSupportPanel/u);
   assert.match(visitor, /PUBLISHED_DOCUMENT_FAILED/u);
   assert.match(visitor, /PUBLICATION_RESOLUTION_FAILED/u);
+  assert.doesNotMatch(visitor, /<AlphaSupportPanel compact/u);
+  assert.match(visitor, /data-lattice-menu-surface/u);
 });
 
 test('release identity is injected from bounded deployment commit sources', () => {

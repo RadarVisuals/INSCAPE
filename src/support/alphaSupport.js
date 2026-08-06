@@ -109,6 +109,10 @@ export function alphaRecoveryGuidance(code, transactionHash = null) {
     return 'A transaction hash exists. Do not submit another publication transaction. Copy these details and ask support to investigate the existing hash.';
   }
   if (code === ALPHA_SUPPORT_CODES.WALLET_REJECTED) return 'Nothing was submitted. Review the request before trying again.';
+  if ([ALPHA_SUPPORT_CODES.PUBLICATION_RESOLUTION_FAILED, ALPHA_SUPPORT_CODES.PUBLISHED_DOCUMENT_FAILED,
+    ALPHA_SUPPORT_CODES.PUBLISHED_MEDIA_FAILED].includes(code)) {
+    return 'No wallet action or publication transaction is involved. Check the public network or content gateway, then copy these details if the problem continues.';
+  }
   if ([ALPHA_SUPPORT_CODES.TRANSACTION_TIMEOUT, ALPHA_SUPPORT_CODES.TRANSACTION_REVERTED,
     ALPHA_SUPPORT_CODES.TRANSACTION_REPLACED].includes(code)) {
     return 'Stop before retrying. If a wallet supplied a transaction hash, include it in the support report and do not submit a duplicate transaction.';

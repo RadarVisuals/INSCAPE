@@ -56,4 +56,6 @@ test('publication support classification reuses bounded publication outcomes', (
 test('post-hash recovery forbids duplicate publication while pre-hash guidance stays bounded', () => {
   assert.match(alphaRecoveryGuidance(ALPHA_SUPPORT_CODES.TRANSACTION_TIMEOUT, HASH), /Do not submit another/iu);
   assert.match(alphaRecoveryGuidance(ALPHA_SUPPORT_CODES.WALLET_REJECTED), /Nothing was submitted/iu);
+  assert.match(alphaRecoveryGuidance(ALPHA_SUPPORT_CODES.PUBLICATION_RESOLUTION_FAILED), /No wallet action or publication transaction is involved/iu);
+  assert.doesNotMatch(alphaRecoveryGuidance(ALPHA_SUPPORT_CODES.PUBLICATION_RESOLUTION_FAILED), /ambiguous wallet action/iu);
 });

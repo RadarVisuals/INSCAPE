@@ -65,9 +65,9 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
   standaloneWalletJavaScript: Object.freeze({ raw: 4_400_000, gzip: 1_200_000 }),
-  // Task 5 adds the visible local-only Alpha support surface. Preserve the
-  // pre-Task-5 gzip headroom exactly while keeping the raw ceiling unchanged.
-  initialCss: Object.freeze({ raw: 117_000, gzip: 20_314 }),
+  // Task 5's accepted resolver-status repair replaces the legacy presentation.
+  // Preserve its measured 15-byte gzip headroom; the raw ceiling stays fixed.
+  initialCss: Object.freeze({ raw: 117_000, gzip: 20_587 }),
   // Phase 7 adds the lazy owner-only Identity RÄCK; Phase 7.5 adds its compact,
   // shared-theme Keeper context controls. Keep both isolated from initial CSS
   // and deliberately close to the measured owner-only output.

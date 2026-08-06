@@ -34,15 +34,14 @@ export default function AlphaSupportPanel({
     }
   };
 
-  return <section className="alpha-support" data-compact={compact || undefined} aria-label="Alpha support"
-    style={compact ? { gridTemplateColumns: '1fr auto', margin: 0 } : undefined}>
+  return <section className="alpha-support" data-compact={compact || undefined} aria-label="Alpha support">
     <strong>{compact ? 'ALPHA SUPPORT' : `ALPHA SUPPORT / ${evidence.code}`}</strong>
     {(!compact || showCompactRecovery) && <p>{recovery}</p>}
     {!compact && <p>Send the copied details through the private channel where you received your Alpha invitation.</p>}
     <button type="button" onClick={copy}>{compact ? 'COPY DETAILS' : 'COPY SUPPORT DETAILS'}</button>
     {copyState === 'copied' && <span role="status">COPIED</span>}
     {copyState === 'failed' && <span role="alert">COPY FAILED - select the details below</span>}
-    <details style={compact ? { gridColumn: '1 / -1' } : undefined}>
+    <details>
       <summary>{compact ? 'REVIEW' : 'REVIEW DETAILS'}</summary><pre>{report}</pre>
     </details>
     {!compact && <small>Invite-only experiment. Desktop authoring only. IPFS publication is public and permanent. Review screenshots for private information before sharing.</small>}
