@@ -165,6 +165,43 @@ export async function terminateWindowsProcessTree(pid) {
   return runBoundedCommand('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processTerminationMs });
 }
 
+export async function listPosixProcesses({ run = runBoundedCommand } = {}) {
+  const result = await run('ps', ['-axo', 'pid=,ppid=,lstart='], {
+    stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs,
+  });
+  if (result.code !== 0) throw new Error(`Unable to inspect POSIX process ownership: ${result.stderr.trim() || `exit ${result.code}`}`);
+  return result.stdout.split(/\r?\n/u).map((line) => {
+    const match = line.match(/^\s*(\d+)\s+(\d+)\s+(.+?)\s*$/u);
+    return match ? { pid: Number(match[1]), parentPid: Number(match[2]), identity: match[3] } : null;
+  }).filter((entry) => entry && validPid(entry.pid));
+}
+
+export async function terminatePosixProcessTree(pid, {
+  inventory = listPosixProcesses,
+  kill = process.kill,
+} = {}) {
+  if (!validPid(pid)) throw new Error(`Refusing ambiguous browser process target: ${pid}`);
+  const processes = await inventory();
+  const children = new Map();
+  for (const process of processes) {
+    if (!children.has(process.parentPid)) children.set(process.parentPid, []);
+    children.get(process.parentPid).push(process.pid);
+  }
+  const targets = []; const visited = new Set();
+  const visit = (currentPid) => {
+    if (visited.has(currentPid)) return;
+    visited.add(currentPid);
+    for (const childPid of children.get(currentPid) || []) visit(childPid);
+    targets.push(currentPid);
+  };
+  visit(pid);
+  for (const targetPid of targets) {
+    try { kill(targetPid, 'SIGKILL'); }
+    catch (error) { if (error?.code !== 'ESRCH') throw error; }
+  }
+  return { code: 0, stdout: '', stderr: '', targets };
+}
+
 export function createOwnedProcessTree({
   rootPid,
   listProcesses,

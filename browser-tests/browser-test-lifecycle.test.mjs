@@ -6,8 +6,10 @@ import {
   BROWSER_LIFECYCLE_TIMEOUTS,
   createBrowserTestCleanup,
   createOwnedProcessTree,
+  listPosixProcesses,
   removeBrowserRuntime,
   runBrowserSetupWithCleanup,
+  terminatePosixProcessTree,
   validateBrowserRuntimePath,
   withinDeadline
 } from './browser-test-lifecycle.mjs';
@@ -78,6 +80,24 @@ describe('Playwright browser lifecycle', () => {
     assert.equal(calls[1][1].at(-1), runtimePath);
     assert.equal(calls[1][2].timeoutMs, BROWSER_LIFECYCLE_TIMEOUTS.runtimeRemovalMs);
     assert.equal(result.mode, 'powershell-fallback');
+  });
+
+  test('POSIX inventory records stable process creation identities', async () => {
+    const result = await listPosixProcesses({ run: async () => ({
+      code: 0, stderr: '', stdout: '  10   1 Fri Aug  7 12:00:00 2026\n  11  10 Fri Aug  7 12:00:01 2026\n',
+    }) });
+    assert.deepEqual(result, [
+      { pid: 10, parentPid: 1, identity: 'Fri Aug  7 12:00:00 2026' },
+      { pid: 11, parentPid: 10, identity: 'Fri Aug  7 12:00:01 2026' },
+    ]);
+  });
+
+  test('POSIX forced cleanup terminates only the verified root tree, descendants first', async () => {
+    const killed = [];
+    const inventory = async () => [processEntry(10, 1), processEntry(11, 10), processEntry(12, 11), processEntry(99, 1)];
+    const result = await terminatePosixProcessTree(10, { inventory, kill: (pid, signal) => killed.push([pid, signal]) });
+    assert.deepEqual(killed, [[12, 'SIGKILL'], [11, 'SIGKILL'], [10, 'SIGKILL']]);
+    assert.deepEqual(result.targets, [12, 11, 10]);
   });
 
   test('owned descendants exclude unrelated processes and force only the owned root', async () => {

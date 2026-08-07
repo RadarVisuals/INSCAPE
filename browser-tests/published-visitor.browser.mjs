@@ -50,7 +50,9 @@ const expectedCspProblems = [];
 let acceptingExpectedCspProblems = false;
 const recordBrowserProblem = (problem) => {
   const expectedBlockedFixtureRequest = /^Request failed: https:\/\/csp-blocked\.invalid csp$/iu.test(problem);
-  if (expectedBlockedFixtureRequest || (acceptingExpectedCspProblems && /content security policy|refused to connect/iu.test(problem))) {
+  const expectedReplacedFixtureImage = /^Request failed: https:\/\/published-images\.invalid net::ERR_ABORTED$/u.test(problem);
+  if (expectedBlockedFixtureRequest || expectedReplacedFixtureImage
+      || (acceptingExpectedCspProblems && /content security policy|refused to connect/iu.test(problem))) {
     expectedCspProblems.push(problem);
     return;
   }

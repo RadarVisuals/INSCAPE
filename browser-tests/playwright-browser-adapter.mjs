@@ -4,7 +4,9 @@ import { chromium } from 'playwright-core';
 import {
   BROWSER_LIFECYCLE_TIMEOUTS,
   createOwnedProcessTree,
+  listPosixProcesses,
   listWindowsProcesses,
+  terminatePosixProcessTree,
   terminateWindowsProcessTree,
   validateBrowserRuntimePath,
   withinDeadline
@@ -111,8 +113,8 @@ export async function launchPlaywrightEdge({
   onBrowserProblem = () => {},
   diagnostic = () => {},
   browserType = chromium,
-  inventory = listWindowsProcesses,
-  terminateTree = terminateWindowsProcessTree,
+  inventory = process.platform === 'win32' ? listWindowsProcesses : listPosixProcesses,
+  terminateTree = process.platform === 'win32' ? terminateWindowsProcessTree : terminatePosixProcessTree,
   browserArgs = DEFAULT_PLAYWRIGHT_EDGE_ARGS,
   contextOptions = {},
   prepareRuntime = async (downloadsPath, artifactsDir) => {
