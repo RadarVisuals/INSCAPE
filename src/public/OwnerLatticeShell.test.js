@@ -85,6 +85,10 @@ test('fixed chrome stays outside the moving authored-plane stage', () => {
   assert.match(source, /SESSION ONLY \/ NOT PERSISTED/);
 });
 
+test('the visible owner table eagerly resolves artwork while surrounding tables remain lazy', () => {
+  assert.match(source, /<LatticeProductionTableRenderer[\s\S]*imageLoading=\{sameCoordinate\(coordinate, active\) \? 'eager' : 'lazy'\}/);
+});
+
 test('owner viewport fills all 32 columns and keeps bounded per-table Space-drag camera state runtime-only', () => {
   assert.match(source, /createWidthFitLatticeOwnerViewport\(dimensions\)/);
   assert.match(source, /updateLatticeOwnerCameraY/);

@@ -1211,6 +1211,7 @@ function OwnerLatticeRuntime({
           }}
         >{lattice
           ? <><LatticeProductionTableRenderer
+              imageLoading={sameCoordinate(coordinate, active) ? 'eager' : 'lazy'}
               lattice={lattice}
               onMediaState={handlePlacementMediaState}
               onPlacementActivate={!arrangeEnabled && sameCoordinate(coordinate, active) ? openPlacementViewer : undefined}
