@@ -60,14 +60,19 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // MODUL-8R Task 8 replaces the selected owner presentation and keeps its
   // production entry wrapper within a measured allowance. The extra rollback
   // margin keeps the retained two-line LATTICE selector buildable through Task 8.
-  ownerJavaScript: Object.freeze({ raw: 276_000, gzip: 83_500 }),
+  // The combined Alpha candidate adds the lightweight Grid Walker integration
+  // and Keeper dock controls to the lazy owner graph. Preserve the prior
+  // 1,893 raw / 1,226 gzip bytes of measured headroom exactly.
+  ownerJavaScript: Object.freeze({ raw: 298_606, gzip: 91_234 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
   standaloneWalletJavaScript: Object.freeze({ raw: 4_400_000, gzip: 1_200_000 }),
   // Task 5's accepted resolver-status repair replaces the legacy presentation.
   // Preserve its measured 15-byte gzip headroom; the raw ceiling stays fixed.
-  initialCss: Object.freeze({ raw: 117_000, gzip: 20_587 }),
+  // The accepted Startveil and lightweight resident presentation are initial
+  // UI. Preserve the prior 970 raw / 15 gzip bytes of measured headroom.
+  initialCss: Object.freeze({ raw: 124_023, gzip: 21_787 }),
   // Phase 7 adds the lazy owner-only Identity RÄCK; Phase 7.5 adds its compact,
   // shared-theme Keeper context controls. Keep both isolated from initial CSS
   // and deliberately close to the measured owner-only output.
@@ -77,7 +82,9 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // raw ceiling remains unchanged; this allowance measures the shared split.
   // Phase 9 exposes the already-existing owner-only Creations, Activity, and
   // Settings styles without moving them into initial CSS.
-  ownerCss: Object.freeze({ raw: 70_000, gzip: 13_200 }),
+  // The combined Keeper dock and owner integration add only lazy owner styles.
+  // Preserve the prior 841 raw / 243 gzip bytes of measured headroom.
+  ownerCss: Object.freeze({ raw: 76_499, gzip: 14_733 }),
   // Owner/publication reconciliation adds the deterministic IPFS hydration and
   // three-way baseline guard to production. Keep the accepted growth bounded.
   // Phase 7 adds paragraph-preserving LSP3 normalization, independently

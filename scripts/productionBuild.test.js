@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { analyzeProductionBuild, assertNoProhibitedProductionArtifacts, assertSafeOutputDirectory, checkProductionBudgets, pruneProductionAuthoringAssets,
   diagnosticsEnvironmentPlugin, productionBuildHygienePlugin, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
 import { ownerRuntimeIsolationPlugin } from './ownerRuntimeIsolation.js';
+import { excludeUnsupportedWalletConnectorsPlugin } from './unsupportedWalletConnectors.js';
 
 const graph = (leaks = []) => ({ ownerModules: ['/src/public/OwnerLatticeShell.jsx', '/src/public/ModuleGridShell.jsx'], entries: [{ file: 'assets/app-a.js' }],
   ownerChunks: [{ file: 'assets/lattice-a.js', modules: ['/src/public/OwnerLatticeShell.jsx'] }], leaks });
@@ -65,13 +66,13 @@ test('each independent budget category reports an actionable overage', () => {
   }
 });
 
-test('measured Pixi CSP and local Alpha support allowances retain exact production budget boundaries', () => {
+test('measured combined Alpha allowances retain exact production budget boundaries', () => {
   assert.deepEqual(PRODUCTION_BUDGETS, {
     initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
-    ownerJavaScript: { raw: 276_000, gzip: 83_500 },
+    ownerJavaScript: { raw: 298_606, gzip: 91_234 },
     standaloneWalletJavaScript: { raw: 4_400_000, gzip: 1_200_000 },
-    initialCss: { raw: 117_000, gzip: 20_587 },
-    ownerCss: { raw: 70_000, gzip: 13_200 },
+    initialCss: { raw: 124_023, gzip: 21_787 },
+    ownerCss: { raw: 76_499, gzip: 14_733 },
     coreJavaScript: { raw: 2_076_709, gzip: 620_158 },
     publicAssets: { raw: 15_200_000 },
     largestPublicAsset: { raw: 2_700_000 },
@@ -98,6 +99,14 @@ test('measured Pixi CSP and local Alpha support allowances retain exact producti
     over.initialCss[measurement] = limit + 1;
     assert.throws(() => checkProductionBudgets({ totals: over, ownerRuntimeGraph: graph() }),
       new RegExp(`initialCss\\.${measurement}: .* \\(\\+1 bytes\\)`));
+  }
+  for (const category of ['ownerJavaScript', 'ownerCss']) {
+    for (const [measurement, limit] of Object.entries(PRODUCTION_BUDGETS[category])) {
+      const over = structuredClone(totals);
+      over[category][measurement] = limit + 1;
+      assert.throws(() => checkProductionBudgets({ totals: over, ownerRuntimeGraph: graph() }),
+        new RegExp(`${category}\\.${measurement}: .* \\(\\+1 bytes\\)`));
+    }
   }
 });
 
@@ -199,7 +208,8 @@ test('an alternate-outDir production build writes reports there and strips diagn
     await writeFile(resolve(alternate, 'owner-runtime-graph.json'), 'stale');
     await writeFile(resolve(alternate, 'bundle-report.json'), 'stale');
     const [{ build }, { default: react }] = await Promise.all([import('vite'), import('@vitejs/plugin-react')]);
-    await build({ configFile: false, root: project, logLevel: 'silent', plugins: [diagnosticsEnvironmentPlugin(), react(), ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
+    await build({ configFile: false, root: project, logLevel: 'silent', plugins: [diagnosticsEnvironmentPlugin(), react(),
+      excludeUnsupportedWalletConnectorsPlugin(), ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
       build: { outDir: alternate, emptyOutDir: true, manifest: true } });
     const report = JSON.parse(await readFile(resolve(alternate, 'bundle-report.json'), 'utf8'));
     const netlifyHeaders = await readFile(resolve(alternate, '_headers'), 'utf8');
@@ -216,6 +226,7 @@ test('an alternate-outDir production build writes reports there and strips diagn
       assert.doesNotMatch(javascript, /Real-Time Gothic Reaction|Metadata queried successfully|activeAccount/u, `${name}: verbose session diagnostic`);
       assert.doesNotMatch(javascript, /Rig Loader: Locating Stage Assets|Dynamic asset payload cached|Connecting WebSocket to watch updates|Reconnecting stream/u,
         `${name}: verbose engine/provider diagnostic`);
+      assert.doesNotMatch(javascript, /@coinbase\/cdp-sdk|brotli_wasm|axios/iu, `${name}: unsupported Base dependency`);
     }
   } finally {
     await rm(alternate, { recursive: true, force: true });
