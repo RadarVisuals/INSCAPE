@@ -23,6 +23,9 @@ test('normalizes contract-level LSP4 attribution with Library-compatible stable 
   assert.equal(creation.creators.length, 2);
   assert.equal(creation.isOwnedByViewedProfile, false);
   assert.equal(creation.ownershipKnown, true);
+  assert.equal(creation.fieldProvenance.name.scope, 'contract');
+  assert.equal(creation.fieldProvenance.description.scope, 'contract');
+  assert.equal(creation.fieldProvenance.creators.scope, 'contract');
 });
 
 test('keeps multiple authored images separate from resolution variants and uses authored index zero as primary', () => {
@@ -49,6 +52,20 @@ test('normalizes token-level attribution and current viewed-profile ownership', 
   assert.equal(creation.creatorAttributionLevel, 'token');
   assert.equal(creation.isOwnedByViewedProfile, true);
   assert.equal(creation.currentOwnerAddress, PROFILE);
+  assert.equal(creation.fieldProvenance.name.scope, 'tokenId');
+});
+
+test('retains the indexed current holder for a creator token held by another profile', () => {
+  const tokenId = '0xCAFE';
+  const row = { id: 'path-token-other', profile_id: PROFILE, token_id: `${CONTRACT}-${tokenId}`, token: {
+    id: `${CONTRACT}-${tokenId}`, tokenId, name: 'Released work', description: 'Now collected', images: [image],
+    holders: [{ profile_id: OTHER, balance: '1' }], lsp4Creators: [{ profile_id: PROFILE }],
+    attributes: [{ key: 'Medium', value: 'Digital' }], asset: { id: CONTRACT, isLSP7: false }
+  } };
+  const creation = normalizeCreatorAttribution(row, PROFILE);
+  assert.equal(creation.isOwnedByViewedProfile, false);
+  assert.equal(creation.currentOwnerAddress, OTHER);
+  assert.equal(creation.fieldProvenance.attributes.scope, 'tokenId');
 });
 
 test('excludes unrelated owned assets and retains partial metadata', () => {

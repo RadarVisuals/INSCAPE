@@ -17,6 +17,7 @@ test('query uses creator relationships and never Hold as its data source', () =>
   assert.doesNotMatch(CREATIONS_QUERY, /\bHold\s*\(/);
   assert.match(CREATIONS_QUERY, /profile_id:\s*\{ _eq: \$profile \}/);
   assert.match(CREATIONS_QUERY, /images[\s\S]*\{ index src url width height/);
+  assert.match(CREATIONS_QUERY, /TokenCreators[\s\S]*token \{[\s\S]*holders \{ id profile_id balance \}/);
 });
 
 test('paginates asset and token creator paths independently and includes unowned creations', async () => {

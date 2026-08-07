@@ -12,6 +12,16 @@ function hasPositiveBalance(holding) {
   try { return BigInt(holding.balance) > 0n; } catch { return Number(holding.balance) > 0; }
 }
 
+function indexedFieldSource(token, tokenValue, contractValue) {
+  if (token && tokenValue != null && tokenValue !== '') {
+    return { scope: 'tokenId', source: 'LUKSO INDEXER / LSP4 TOKEN METADATA' };
+  }
+  if (contractValue != null && contractValue !== '') {
+    return { scope: 'contract', source: 'LUKSO INDEXER / LSP4 CONTRACT METADATA' };
+  }
+  return null;
+}
+
 export function normalizeCreatorAttribution(record, viewedProfileAddress, options = {}) {
   const viewedProfile = normalizeProfileAddress(viewedProfileAddress);
   const attributionProfile = normalizeProfileAddress(record?.profile_id);
@@ -34,6 +44,9 @@ export function normalizeCreatorAttribution(record, viewedProfileAddress, option
   const collectionName = token ? (asset?.name || asset?.lsp4TokenName || null) : (asset?.isCollection ? asset?.name || asset?.lsp4TokenName || null : null);
   const holders = Array.isArray(metadata.holders) ? metadata.holders : [];
   const isOwnedByViewedProfile = holders.some((holding) => normalizeProfileAddress(holding?.profile_id) === viewedProfile && hasPositiveBalance(holding));
+  const currentOwnerAddress = token
+    ? normalizeProfileAddress(holders.find(hasPositiveBalance)?.profile_id)
+    : isOwnedByViewedProfile ? viewedProfile : null;
   const metadataStatus = metadata.error ? 'unavailable' : (!primaryImage.imageUrl || !metadata.description || name === 'Unnamed creation') ? 'partial' : 'ready';
 
   return {
@@ -46,10 +59,18 @@ export function normalizeCreatorAttribution(record, viewedProfileAddress, option
     imageWidth: primaryImage.width || null, imageHeight: primaryImage.height || null,
     mediaFileType: primaryImage.fileType || null,
     creators, viewedProfileIsCreator: true, creatorAttributionLevel: token ? 'token' : 'contract',
-    currentOwnerAddress: isOwnedByViewedProfile ? viewedProfile : null,
+    currentOwnerAddress,
     isOwnedByViewedProfile, ownershipKnown: true,
     attributes: (metadata.attributes || []).map(({ key, value, attributeType }) => ({ key, value, type: attributeType })),
     metadataStatus,
+    fieldProvenance: {
+      name: indexedFieldSource(token, token?.name || token?.lsp4TokenName, asset?.name || asset?.lsp4TokenName),
+      description: indexedFieldSource(token, token?.description, asset?.description),
+      images: indexedFieldSource(token, token?.images?.length ? token.images : null, asset?.images?.length ? asset.images : null),
+      attributes: indexedFieldSource(token, token?.attributes?.length ? token.attributes : null,
+        !token && asset?.attributes?.length ? asset.attributes : null),
+      creators: { scope: token ? 'tokenId' : 'contract', source: 'LUKSO INDEXER / LSP4 CREATORS' },
+    },
     rawMetadata: { indexerAttributionId: record?.id || null, indexerMetadataError: metadata.error || null, originalImageUrl: primaryImage.originalImageUrl }
   };
 }

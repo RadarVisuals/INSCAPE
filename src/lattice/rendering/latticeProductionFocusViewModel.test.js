@@ -33,6 +33,30 @@ test('focus view model exposes only resolved scoped facts and never placement pr
   assert.doesNotMatch(JSON.stringify(model.dossier), /collection|balance|supply|mint|edition|transparen/iu);
 });
 
+test('creator-presented artwork retains narrative, attributes and honest current holding', () => {
+  const holder = '0x3333333333333333333333333333333333333333';
+  const model = createLatticeProductionFocusViewModel(placement, {
+    id: stableAssetId, name: 'Released work', description: 'Collected elsewhere', standard: 'LSP8',
+    creators: [{ address: contract, name: 'Creator' }], attributes: [{ key: 'Medium', value: 'Digital' }],
+    viewedProfileIsCreator: true, creatorAttributionLevel: 'token', ownershipKnown: true,
+    isOwnedByViewedProfile: false, currentOwnerAddress: holder,
+    fieldProvenance: {
+      name: { scope: 'tokenId', source: 'LUKSO INDEXER / LSP4 TOKEN METADATA' },
+      description: { scope: 'tokenId', source: 'LUKSO INDEXER / LSP4 TOKEN METADATA' },
+      attributes: { scope: 'tokenId', source: 'LUKSO INDEXER / LSP4 TOKEN METADATA' },
+      creators: { scope: 'tokenId', source: 'LUKSO INDEXER / LSP4 CREATORS' },
+    },
+  });
+  assert.equal(model.dossier.title, 'Released work');
+  assert.equal(model.dossier.description, 'Collected elsewhere');
+  assert.deepEqual(model.dossier.traits, [{ label: 'Medium', value: 'Digital' }]);
+  assert.match(model.dossier.technical.find(({ label }) => label === 'CREATORS / TOKEN').value, /Creator/);
+  assert.equal(model.dossier.technical.find(({ label }) => label === 'PRESENTING PROFILE / RELATIONSHIP').value,
+    'CREATOR / TOKEN');
+  assert.equal(model.dossier.technical.find(({ label }) => label === 'CURRENT HOLDING / INDEXED').value,
+    `HELD BY ${holder}`);
+});
+
 test('focus view model hides synthetic or unprovenanced metadata text', () => {
   const model = createLatticeProductionFocusViewModel(placement, {
     id: stableAssetId, name: 'Token 0x01…', description: '', standard: 'LSP8', creators: [], attributes: [],
@@ -49,9 +73,14 @@ test('visitor focus view model may consume only the validated public projection'
     creators: [{ address: contract, name: 'Published creator' }],
     attributes: [{ key: 'Signal', value: 'Public', type: 'string' }],
   } };
-  const model = createLatticeProductionFocusViewModel(publicPlacement, null, { trustPublishedMetadata: true });
+  const model = createLatticeProductionFocusViewModel(publicPlacement, null, {
+    presentingProfileAddress: contract,
+    trustPublishedMetadata: true,
+  });
   assert.equal(model.dossier.title, 'Published name');
   assert.equal(model.dossier.description, 'Published description');
   assert.deepEqual(model.dossier.traits, [{ label: 'Signal', value: 'Public' }]);
-  assert.match(model.dossier.technical.find(({ label }) => label === 'CREATORS / CONTRACT').value, /Published creator/);
+  assert.match(model.dossier.technical.find(({ label }) => label === 'CREATORS / PUBLISHED METADATA').value, /Published creator/);
+  assert.equal(model.dossier.technical.find(({ label }) => label === 'PRESENTING PROFILE / RELATIONSHIP').value,
+    'CREATOR / PUBLISHED METADATA');
 });

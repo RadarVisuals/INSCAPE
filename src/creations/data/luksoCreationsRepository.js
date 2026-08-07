@@ -21,7 +21,7 @@ query ProfileCreations($profile: String!, $limit: Int!, $assetOffset: Int!, $tok
       images(where: { error: { _is_null: true } }, order_by: [{ index: asc }, { width: asc }]) { index src url width height fileType error }
       lsp4Creators { profile_id profile { name } }
       attributes { key value attributeType }
-      holders(where: { profile_id: { _eq: $profile } }) { id profile_id balance }
+      holders { id profile_id balance }
       asset {
         id name lsp4TokenName standard isLSP7 isCollection description error
         images(where: { error: { _is_null: true } }, order_by: [{ index: asc }, { width: asc }]) { index src url width height fileType error }
