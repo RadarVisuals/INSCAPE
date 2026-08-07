@@ -43,7 +43,7 @@ test('creator collections drill into private paginated token records with honest
     read('../../creations/data/luksoCreationsRepository.js'), read('../../public/useOwnerLatticeAuthoring.js'),
   ]);
   assert.match(repository, /loadCollectionTokens/);
-  assert.match(repository, /Token\(where:\s*\{ asset_id:/);
+  assert.match(repository, /Token\(where:\s*\{ _or:[\s\S]*asset_id:[\s\S]*baseAsset_id:/);
   assert.match(integration, /createCollectionTokensStore/);
   assert.match(integration, /collectionRole: asset\.stableAssetId === activeCollection\?\.id \? 'cover' : 'token'/);
   assert.match(integration, /isStrongCreatedAsset\(record, profileAddress\)/);

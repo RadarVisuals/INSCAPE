@@ -96,6 +96,40 @@ test('collection children fail closed for another profile or a different contrac
   assert.equal(normalizeCollectionToken({ ...token, asset: { id: OTHER, isCollection: true } }, collection, PROFILE), null);
 });
 
+test('normalizes current Envio collection tokens through baseAsset when asset is null', () => {
+  const collection = normalizeCreatorAttribution(assetRow({ isLSP7: false, isCollection: true, name: 'HALO' }), PROFILE);
+  const token = normalizeCollectionToken({
+    id: `${CONTRACT}-0x02`, tokenId: '0x02', name: 'HALO', images: [image], holders: [], lsp4Creators: [],
+    asset: null, baseAsset: { id: CONTRACT, isCollection: true, name: 'HALO' },
+  }, collection, PROFILE);
+  assert.equal(token.contractAddress, CONTRACT);
+  assert.equal(token.collectionName, 'HALO');
+  assert.equal(token.viewedProfileIsCollectionCreator, true);
+});
+
+test('retains direct RPC token metadata provenance and does not substitute the collection cover', () => {
+  const collection = normalizeCreatorAttribution(assetRow({ isLSP7: false, isCollection: true, name: 'HALO' }), PROFILE);
+  const token = normalizeCollectionToken({
+    id: `${CONTRACT}-0x03`, tokenId: '0x03', name: 'HALO:0003', description: '', images: [],
+    metadataResolved: true, metadataSource: 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)',
+    holders: [], lsp4Creators: [], attributes: [],
+    baseAsset: { id: CONTRACT, isCollection: true, name: 'HALO', images: [image] },
+  }, collection, PROFILE);
+  assert.equal(token.imageUrl, null);
+  assert.equal(token.fieldProvenance.name.source, 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)');
+  assert.equal(token.rawMetadata.metadataSource, 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)');
+});
+
+test('marks an on-chain token image as a collection preview instead of inventing a cover', () => {
+  const tokenId = `0x${'0'.repeat(63)}1`;
+  const collection = normalizeCreatorAttribution(assetRow({ isLSP7: false, isCollection: true, name: 'CREEPS', images: [],
+    collectionPreview: { tokenId, images: [image], metadataSource: 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)' } }), PROFILE);
+  assert.equal(collection.imageUrl, image.src);
+  assert.equal(collection.collectionPreviewTokenId, tokenId);
+  assert.equal(collection.metadataStatus, 'partial');
+  assert.equal(collection.fieldProvenance.images.scope, 'collectionPreviewTokenId');
+});
+
 test('excludes unrelated owned assets and retains partial metadata', () => {
   assert.equal(normalizeCreatorAttribution({ ...assetRow(), profile_id: OTHER }, PROFILE), null);
   assert.equal(normalizeCreatorAttribution(assetRow({ lsp4Creators: [{ profile_id: OTHER }], holders: [{ profile_id: PROFILE, balance: '1' }] }), PROFILE), null);

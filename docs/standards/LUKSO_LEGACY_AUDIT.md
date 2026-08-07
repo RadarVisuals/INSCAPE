@@ -22,6 +22,13 @@ possible LUKSO behavior.
 - `PASS` — Owner authoring authority remains separate from URL/profile identity
   and depends on current provider, supported chain, and verified permissions.
 - `PASS` — Unprovenanced cached metadata cannot enter the owner NFT dossier.
+- `PASS` — Creator collection drilldown uses Envio only for bounded token
+  discovery and indexed holder facts. When indexed token media still equals the
+  collection cover, current token metadata is resolved through direct LUKSO RPC
+  in the official `getDataForTokenId` then `LSP8TokenMetadataBaseURI` order.
+  Coverless collections may use the first discovered token's directly resolved
+  image as a non-placeable token preview; it is never relabelled as a collection
+  cover. Verified against the official LUKSO NFT metadata guide on 2026-08-07.
 
 ## Open review items
 

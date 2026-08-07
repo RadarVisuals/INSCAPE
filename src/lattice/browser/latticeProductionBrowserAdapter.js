@@ -24,9 +24,10 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress, accept
     .find(Boolean) || null;
   const previewCandidates = [...new Set([asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl]
     .map((candidate) => resolvePublishedAssetUrl(candidate)).filter(Boolean))];
-  const source = [asset.originalImageUrl, asset.imageUrl, asset.thumbnailUrl]
+  const resolvedSource = [asset.originalImageUrl, asset.imageUrl, asset.thumbnailUrl]
     .map((candidate) => resolvePublishedAssetUrl(candidate))
     .find(Boolean) || null;
+  const source = asset.collectionPreviewTokenId ? null : resolvedSource;
   const width = Number.isSafeInteger(asset.imageWidth) && asset.imageWidth > 0 ? asset.imageWidth : null;
   const height = Number.isSafeInteger(asset.imageHeight) && asset.imageHeight > 0 ? asset.imageHeight : null;
   const declaredMediaType = typeof asset.mediaType === 'string' && asset.mediaType.trim()
@@ -34,15 +35,17 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress, accept
   // Production Library records are normalized from metadata `images` and currently
   // do not persist a separate mediaType field. A validated image source therefore
   // supplies the honest legacy/default type; explicit unsupported types still fail.
-  const mediaType = declaredMediaType || (source ? 'image' : 'unknown');
+  const mediaType = declaredMediaType || (resolvedSource ? 'image' : 'unknown');
   return {
     collection: typeof asset.collectionName === 'string' && asset.collectionName.trim()
       ? asset.collectionName.trim().slice(0, 80) : null,
+    collectionPreviewTokenId: asset.collectionPreviewTokenId || null,
     height,
     isCollection: asset?.isCollection === true,
     mediaType,
     placeable: Boolean(source && width && height && ['image', 'animation'].includes(mediaType)),
-    placementUnavailableReason: !source ? 'MEDIA UNAVAILABLE'
+    placementUnavailableReason: asset.collectionPreviewTokenId ? 'COLLECTION TOKEN PREVIEW ONLY'
+      : !source ? 'MEDIA UNAVAILABLE'
       : !width || !height ? 'DIMENSIONS RESOLVING'
         : !['image', 'animation'].includes(mediaType) ? 'MEDIA TYPE UNAVAILABLE' : null,
     previewSrc: previewSource,

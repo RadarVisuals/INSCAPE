@@ -23,8 +23,10 @@ function RelatedAssetResults({ assets, onActivate, onContext, onPointerDown, wor
       const id = assetId(asset); const isSelected = selected.has(id);
       const ratio = Number(asset.width) > 0 && Number(asset.height) > 0 ? `${asset.width} / ${asset.height}` : '1 / 1';
       const opensCollection = asset.isCollection && asset.collectionRole !== 'cover';
-      const relationships = asset.collectionRole === 'cover' ? ['COLLECTION COVER']
+      const relationships = asset.collectionRole === 'cover'
+        ? [asset.collectionPreviewTokenId ? 'COLLECTION · TOKEN PREVIEW' : 'COLLECTION COVER']
         : [asset.owned ? 'OWNED' : null,
+          asset.collectionPreviewTokenId ? 'TOKEN PREVIEW' : null,
           asset.creatorRelationship === 'collection' ? 'FROM CREATED COLLECTION' : asset.created ? 'CREATED' : null,
           asset.created && !asset.owned ? 'NOT OWNED' : null].filter(Boolean);
       return <button aria-label={[asset.title || id, asset.collection].filter(Boolean).join(' / ')} aria-pressed={isSelected}

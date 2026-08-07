@@ -79,6 +79,17 @@ test('placement eligibility remains honest while media or native dimensions are 
   assert.equal(unsupportedMedia.placementUnavailableReason, 'MEDIA TYPE UNAVAILABLE');
 });
 
+test('a collection token preview remains visible but cannot masquerade as placeable collection media', () => {
+  const tokenId = `0x${'0'.repeat(63)}1`;
+  const preview = adaptLatticeProductionBrowserAsset(asset({ isCollection: true, collectionPreviewTokenId: tokenId }), PROFILE);
+  assert.equal(preview.previewSrc, 'https://assets.example/thumbnail.webp');
+  assert.equal(preview.collectionPreviewTokenId, tokenId);
+  assert.equal(preview.mediaType, 'image');
+  assert.equal(preview.src, null);
+  assert.equal(preview.placeable, false);
+  assert.equal(preview.placementUnavailableReason, 'COLLECTION TOKEN PREVIEW ONLY');
+});
+
 test('missing, malformed, duplicate, and cross-profile records fail closed without changing memberships', () => {
   const workspace = {
     ...createEmptyWorkspace(PROFILE),

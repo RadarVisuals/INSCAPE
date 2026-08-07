@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { COLLECTION_TOKENS_QUERY, createLuksoCreationsRepository, CREATIONS_QUERY } from './luksoCreationsRepository.js';
+import { collectionTokenNeedsMetadataRefresh } from './lsp8CollectionMetadataResolver.js';
 
 const PROFILE = '0x1234567890abcdef1234567890abcdef12345678';
 const CONTRACT_A = '0x1111111111111111111111111111111111111111';
@@ -17,6 +18,7 @@ test('query uses creator relationships and never Hold as its data source', () =>
   assert.doesNotMatch(CREATIONS_QUERY, /\bHold\s*\(/);
   assert.match(CREATIONS_QUERY, /profile_id:\s*\{ _eq: \$profile \}/);
   assert.match(CREATIONS_QUERY, /images[\s\S]*\{ index src url width height/);
+  assert.match(CREATIONS_QUERY, /tokens\(limit: 1, order_by: \{ id: asc \}\) \{ tokenId \}/);
   assert.match(CREATIONS_QUERY, /TokenCreators[\s\S]*token \{[\s\S]*holders \{ id profile_id balance \}/);
 });
 
@@ -31,7 +33,7 @@ test('paginates asset and token creator paths independently and includes unowned
       TokenCreators: [], TokenCreators_aggregate: { aggregate: { count: 0 } }
     } }) };
   };
-  const repository = createLuksoCreationsRepository({ fetchImpl, pageSize: 1 });
+  const repository = createLuksoCreationsRepository({ fetchImpl, pageSize: 1, collectionMetadataResolver: null });
   const batches = [];
   for await (const batch of repository.loadCreations(PROFILE)) batches.push(batch);
   assert.equal(calls.length, 2);
@@ -58,7 +60,7 @@ test('paginates every token in an accepted creator collection by exact contract'
       Token_aggregate: { aggregate: { count: 2 } },
     } }) };
   };
-  const repository = createLuksoCreationsRepository({ fetchImpl, pageSize: 1 });
+  const repository = createLuksoCreationsRepository({ fetchImpl, pageSize: 1, collectionMetadataResolver: null });
   const batches = [];
   for await (const batch of repository.loadCollectionTokens(PROFILE, collectionRecord)) batches.push(batch);
   assert.equal(calls.length, 2);
@@ -70,9 +72,82 @@ test('paginates every token in an accepted creator collection by exact contract'
   assert.equal(batches[1].assets[0].currentOwnerAddress, CONTRACT_B);
 });
 
-test('collection query uses Token asset_id scope and never treats Hold as discovery authority', () => {
-  assert.match(COLLECTION_TOKENS_QUERY, /Token\(where:\s*\{ asset_id:\s*\{ _eq: \$contract \}/);
-  assert.match(COLLECTION_TOKENS_QUERY, /Token_aggregate\(where:\s*\{ asset_id:/);
+test('collection query supports current baseAsset and legacy asset token relations without using Hold discovery', () => {
+  assert.match(COLLECTION_TOKENS_QUERY, /Token\(where:\s*\{ _or:\s*\[\{ asset_id:\s*\{ _eq: \$contract \} \}, \{ baseAsset_id:/);
+  assert.match(COLLECTION_TOKENS_QUERY, /Token_aggregate\(where:\s*\{ _or:/);
+  assert.match(COLLECTION_TOKENS_QUERY, /baseAsset \{[\s\S]*id name lsp4TokenName standard/);
   assert.doesNotMatch(COLLECTION_TOKENS_QUERY, /\bHold\s*\(/);
   assert.match(COLLECTION_TOKENS_QUERY, /holders \{ id profile_id balance \}/);
+});
+
+test('refreshes only missing or collection-cover token media and retains indexed holder facts', async () => {
+  const cover = { url: 'ipfs://collection-cover', src: 'https://gateway.example/collection-cover' };
+  const revealed = { url: 'ipfs://revealed-one', src: 'https://gateway.example/revealed-one' };
+  const current = { url: 'ipfs://current-two', src: 'https://gateway.example/current-two' };
+  const collectionRecord = {
+    contractAddress: CONTRACT_A, isCollection: true, viewedProfileIsCreator: true, creatorAttributionLevel: 'contract',
+    creators: [{ address: PROFILE }],
+  };
+  const staleToken = { id: 'stale', tokenId: `0x${'0'.repeat(63)}1`, name: 'HALO', description: '',
+    images: [cover], attributes: [], lsp4Creators: [], holders: [{ profile_id: CONTRACT_B, balance: '1' }],
+    baseAsset: { id: CONTRACT_A, isCollection: true, name: 'HALO', images: [cover] } };
+  const currentToken = { ...staleToken, id: 'current', tokenId: `0x${'0'.repeat(63)}2`,
+    name: 'HALO:0002', images: [current] };
+  const resolverCalls = [];
+  const collectionMetadataResolver = { async resolve(contract, tokens) {
+    resolverCalls.push({ contract, tokens });
+    return new Map([[staleToken.tokenId, { tokenId: staleToken.tokenId, name: 'HALO:0001', description: 'Revealed',
+      images: [revealed], attributes: [{ key: 'Rank', value: 1, attributeType: 'number' }],
+      metadataSource: 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)', metadataResolved: true }]]);
+  } };
+  const fetchImpl = async () => ({ ok: true, json: async () => ({ data: {
+    Token: [staleToken, currentToken], Token_aggregate: { aggregate: { count: 2 } },
+  } }) });
+  const repository = createLuksoCreationsRepository({ fetchImpl, pageSize: 24, collectionMetadataResolver });
+  const batches = [];
+  for await (const batch of repository.loadCollectionTokens(PROFILE, collectionRecord)) batches.push(batch);
+  assert.equal(resolverCalls.length, 1);
+  assert.deepEqual(resolverCalls[0].tokens.map(({ tokenId }) => tokenId), [staleToken.tokenId]);
+  assert.equal(batches[0].assets[0].name, 'HALO:0001');
+  assert.equal(batches[0].assets[0].imageUrl, revealed.src);
+  assert.equal(batches[0].assets[0].currentOwnerAddress, CONTRACT_B);
+  assert.deepEqual(batches[0].assets[0].fieldProvenance.images,
+    { scope: 'tokenId', source: 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)' });
+  assert.equal(batches[0].assets[1].imageUrl, current.src);
+});
+
+test('classifies collection-cover and missing token media as refresh candidates', () => {
+  const cover = { url: 'ipfs://cover' };
+  assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [cover],
+    baseAsset: { images: [cover] } }), true);
+  assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [], baseAsset: { images: [cover] } }), true);
+  assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [{ url: 'ipfs://token' }],
+    baseAsset: { images: [cover] } }), false);
+});
+
+test('uses a directly resolved token preview to keep a coverless creator collection discoverable', async () => {
+  const tokenId = `0x${'0'.repeat(63)}1`;
+  const preview = { src: 'https://gateway.example/hivemind.webp', url: 'ipfs://hivemind.webp', width: 2000, height: 2000 };
+  const collectionMetadataResolver = { async resolve(contract, tokens) {
+    assert.equal(contract, CONTRACT_A); assert.equal(tokens[0].tokenId, tokenId);
+    return new Map([[tokenId, { tokenId, name: 'Hivemind', description: 'Preview token', images: [preview], attributes: [],
+      metadataSource: 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)', metadataResolved: true }]]);
+  } };
+  const fetchImpl = async () => ({ ok: true, json: async () => ({ data: {
+    AssetCreators: [{ id: 'creeps', profile_id: PROFILE, asset_id: CONTRACT_A, asset: {
+      id: CONTRACT_A, lsp4TokenName: 'CREEPS', isCollection: true, isLSP7: false,
+      description: 'Creator collection', images: [], tokens: [{ tokenId }], holders: [], attributes: [],
+      lsp4Creators: [{ profile_id: PROFILE }],
+    } }], AssetCreators_aggregate: { aggregate: { count: 1 } },
+    TokenCreators: [], TokenCreators_aggregate: { aggregate: { count: 0 } },
+  } }) });
+  const repository = createLuksoCreationsRepository({ fetchImpl, collectionMetadataResolver });
+  const batches = [];
+  for await (const batch of repository.loadCreations(PROFILE)) batches.push(batch);
+  const collection = batches[0].assets[0];
+  assert.equal(collection.name, 'CREEPS');
+  assert.equal(collection.imageUrl, preview.src);
+  assert.equal(collection.collectionPreviewTokenId, tokenId);
+  assert.deepEqual(collection.fieldProvenance.images,
+    { scope: 'collectionPreviewTokenId', source: 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)' });
 });

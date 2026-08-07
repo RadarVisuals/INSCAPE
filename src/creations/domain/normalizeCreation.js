@@ -14,7 +14,7 @@ function hasPositiveBalance(holding) {
 
 function indexedFieldSource(token, tokenValue, contractValue) {
   if (token && tokenValue != null && tokenValue !== '') {
-    return { scope: 'tokenId', source: 'LUKSO INDEXER / LSP4 TOKEN METADATA' };
+    return { scope: 'tokenId', source: token.metadataSource || 'LUKSO INDEXER / LSP4 TOKEN METADATA' };
   }
   if (contractValue != null && contractValue !== '') {
     return { scope: 'contract', source: 'LUKSO INDEXER / LSP4 CONTRACT METADATA' };
@@ -29,7 +29,7 @@ export function normalizeCreatorAttribution(record, viewedProfileAddress, option
   if (!viewedProfile || (!collectionRecord && attributionProfile !== viewedProfile)) return null;
 
   const token = record?.token || null;
-  const asset = token?.asset || record?.asset || null;
+  const asset = token?.asset || token?.baseAsset || record?.asset || null;
   const contractAddress = normalizeProfileAddress(asset?.id || record?.asset_id || String(record?.token_id || '').slice(0, 42));
   if (!contractAddress) return null;
   const tokenId = token?.tokenId ? String(token.tokenId).toLowerCase() : null;
@@ -49,7 +49,9 @@ export function normalizeCreatorAttribution(record, viewedProfileAddress, option
     && collectionCreators.some((creator) => creator.address === viewedProfile));
   if (!viewedProfileIsCreator && !viewedProfileIsCollectionCreator) return null;
 
-  const imageGroups = selectImageGroups(metadata.images?.length ? metadata.images : asset?.images, options);
+  const collectionPreview = !token && asset?.isCollection && !asset?.images?.length ? asset.collectionPreview : null;
+  const imageGroups = selectImageGroups(collectionPreview?.images || (token?.metadataResolved === true
+    ? metadata.images : metadata.images?.length ? metadata.images : asset?.images), options);
   const primaryImage = imageGroups[0] || { imageUrl: null, thumbnailUrl: null, originalImageUrl: null };
   const name = metadata.name || metadata.lsp4TokenName || asset?.name || asset?.lsp4TokenName
     || (tokenId ? `Token ${tokenId.slice(0, 10)}…` : 'Unnamed creation');
@@ -59,13 +61,14 @@ export function normalizeCreatorAttribution(record, viewedProfileAddress, option
   const currentOwnerAddress = token
     ? normalizeProfileAddress(holders.find(hasPositiveBalance)?.profile_id)
     : isOwnedByViewedProfile ? viewedProfile : null;
-  const metadataStatus = metadata.error ? 'unavailable' : (!primaryImage.imageUrl || !metadata.description || name === 'Unnamed creation') ? 'partial' : 'ready';
+  const metadataStatus = metadata.error ? 'unavailable'
+    : collectionPreview || !primaryImage.imageUrl || !metadata.description || name === 'Unnamed creation' ? 'partial' : 'ready';
 
   return {
     id: createStableAssetId({ chainId: LUKSO_CHAIN_ID, contractAddress, tokenId }), chainId: LUKSO_CHAIN_ID,
     contractAddress, tokenId,
     standard: token ? 'LSP8' : asset?.isLSP7 ? 'LSP7' : String(asset?.standard || 'unknown'),
-    name, description: metadata.description || asset?.description || '', collectionName,
+    name, description: token?.metadataResolved === true ? metadata.description || '' : metadata.description || asset?.description || '', collectionName,
     imageUrl: primaryImage.imageUrl, thumbnailUrl: primaryImage.thumbnailUrl, originalImageUrl: primaryImage.originalImageUrl,
     imageGroups,
     imageWidth: primaryImage.width || null, imageHeight: primaryImage.height || null,
@@ -74,6 +77,7 @@ export function normalizeCreatorAttribution(record, viewedProfileAddress, option
     collectionCreators, viewedProfileIsCollectionCreator,
     collectionCreatorAttributionLevel: viewedProfileIsCollectionCreator ? 'contract' : null,
     isCollection: Boolean(!token && asset?.isCollection),
+    collectionPreviewTokenId: collectionPreview?.tokenId || null,
     currentOwnerAddress,
     isOwnedByViewedProfile, ownershipKnown: true,
     attributes: (metadata.attributes || []).map(({ key, value, attributeType }) => ({ key, value, type: attributeType })),
@@ -81,14 +85,17 @@ export function normalizeCreatorAttribution(record, viewedProfileAddress, option
     fieldProvenance: {
       name: indexedFieldSource(token, token?.name || token?.lsp4TokenName, asset?.name || asset?.lsp4TokenName),
       description: indexedFieldSource(token, token?.description, asset?.description),
-      images: indexedFieldSource(token, token?.images?.length ? token.images : null, asset?.images?.length ? asset.images : null),
+      images: collectionPreview ? { scope: 'collectionPreviewTokenId', source: collectionPreview.metadataSource }
+        : indexedFieldSource(token, token?.images?.length ? token.images : null, asset?.images?.length ? asset.images : null),
       attributes: indexedFieldSource(token, token?.attributes?.length ? token.attributes : null,
         !token && asset?.attributes?.length ? asset.attributes : null),
       creators: creators.length ? { scope: token ? 'tokenId' : 'contract', source: 'LUKSO INDEXER / LSP4 CREATORS' } : null,
       collectionCreators: collectionCreators.length
         ? { scope: 'collectionContract', source: 'LUKSO INDEXER / PARENT LSP4 CREATORS' } : null,
     },
-    rawMetadata: { indexerAttributionId: record?.id || null, indexerMetadataError: metadata.error || null, originalImageUrl: primaryImage.originalImageUrl }
+    rawMetadata: { indexerAttributionId: record?.id || null, indexerMetadataError: metadata.error || null,
+      metadataSource: metadata.metadataSource || null, collectionPreviewSource: collectionPreview?.metadataSource || null,
+      originalImageUrl: primaryImage.originalImageUrl }
   };
 }
 
