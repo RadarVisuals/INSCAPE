@@ -1286,6 +1286,7 @@ function OwnerLatticeRuntime({
     {canvasPlacementFlow?.view === 'chooser' && createPortal(<Suspense fallback={null}><ArtworkChooser
       assets={canvasPlacementAssets}
       error={browserData.assetError}
+      menuSurfaceId={menuSurfaceId}
       onCancel={closeCanvasPlacementFlow}
       onSelect={placeCanvasArtwork}
       status={browserData.assetLoadState}

@@ -199,7 +199,7 @@ test('narrow published scrolling is explicitly bounded and leaves browser touch 
   assert.match(cameraSource, /finalizeSpatialPointer\(\{[\s\S]*sharedGesture:[\s\S]*cancelled[\s\S]*\}\)/);
 });
 
-test('published renderer import graph cannot reach owner stores, persistence, or ModuleGridShell', () => {
+test('active published boundary isolates legacy styling while both visitor renderers stay outside owner authority', () => {
   const visited = new Set();
   const forbiddenSource = /useLibraryStore|useSignalStore|useProfileDocumentStore|\buseStore\b|profileDocumentStorage|runtimeWindowState|ModuleGridShell|localStorage|sessionStorage|indexedDB|snapshotStorage/i;
   const forbiddenPath = /[\\/](?:store|signals[\\/]state|library[\\/]state|profileDocument[\\/]storage[\\/]profileDocumentStorage)(?:[\\/]|\.)/i;
@@ -216,6 +216,11 @@ test('published renderer import graph cannot reach owner stores, persistence, or
     }
   }
   visit(resolve(here, 'PublishedProfileBoundary.jsx'));
+  const boundarySource = readFileSync(resolve(here, 'PublishedProfileBoundary.jsx'), 'utf8');
+  const selectorSource = readFileSync(resolve(here, 'PublishedProfileDocumentPreview.jsx'), 'utf8');
+  assert.doesNotMatch(boundarySource, /moduleGrid\.css|collection\.css|profileDocument\.css|canvasObjects\.css/);
+  assert.match(selectorSource, /lazy\(\(\) => import\('\.\/PublishedLegacyStyles\.jsx'\)\)/);
+  assert.equal([...visited].some((file) => file.endsWith('PublishedLegacyStyles.jsx')), false);
   assert.ok([...visited].some((file) => file.endsWith('PublishedHomeWorld.jsx')));
   assert.ok([...visited].some((file) => file.endsWith('HomeWorldSurface.jsx')));
 });
