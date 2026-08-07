@@ -61,9 +61,10 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // production entry wrapper within a measured allowance. The extra rollback
   // margin keeps the retained two-line LATTICE selector buildable through Task 8.
   // The combined Alpha candidate adds the lightweight Grid Walker integration
-  // and Keeper dock controls to the lazy owner graph. Preserve the prior
-  // 1,893 raw / 1,226 gzip bytes of measured headroom exactly.
-  ownerJavaScript: Object.freeze({ raw: 298_606, gzip: 91_234 }),
+  // and Keeper dock controls to the lazy owner graph. The accepted context
+  // placement route preserves the prior 1,893 raw bytes of measured headroom;
+  // gzip remains under the existing stricter boundary.
+  ownerJavaScript: Object.freeze({ raw: 300_875, gzip: 91_234 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.

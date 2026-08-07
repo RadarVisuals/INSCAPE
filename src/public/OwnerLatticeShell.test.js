@@ -12,6 +12,7 @@ const source = readFileSync(new URL('./OwnerLatticeShell.jsx', import.meta.url),
 const authoringSource = readFileSync(new URL('./useOwnerLatticeAuthoring.js', import.meta.url), 'utf8');
 const previewBuilderSource = readFileSync(new URL('./ownerLatticePreviewDocument.js', import.meta.url), 'utf8');
 const publicationRackSource = readFileSync(new URL('./OwnerLatticePublicationRack.jsx', import.meta.url), 'utf8');
+const placementChooserSource = readFileSync(new URL('./LatticeArtworkPlacementChooser.jsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./ownerLatticeShell.css', import.meta.url), 'utf8');
 const PROFILE = '0x1111111111111111111111111111111111111111';
 
@@ -232,6 +233,19 @@ test('Phase 6 ARRANGE is one session-only owner mode and viewer activation remai
   assert.match(source, /<LatticeFocusViewer/);
   assert.match(source, /surfaceColor="var\(--lattice-menu-panel\)"/);
   assert.doesNotMatch(source, /transparencyMode.*dossier|collectionName.*dossier|marketplace/iu);
+});
+
+test('ARRANGE empty-canvas context placement reuses the canonical pointer geometry and PLACE command', () => {
+  assert.match(source, /onContextMenu=\{openCanvasPlacementMenu\}/);
+  assert.match(source, /commands=\{\[\{ id: 'place', label: 'Place' \}\]\}/);
+  assert.match(source, /id: 'artwork'/);
+  assert.match(source, /<ArtworkChooser/);
+  assert.match(source, /createLatticeProductionDropGeometry\(asset\.width, asset\.height/);
+  assert.match(source, /authoring\.placePublicAsset\(\{ destination, stableAssetId: asset\.stableAssetId, tableId: activeTableId \}\)/);
+  assert.match(source, /activeDraftTable\?\.visibility !== 'PUBLIC'/);
+  assert.match(placementChooserSource, /filter\(\(\{ placeable \}\) => placeable\)/);
+  assert.match(placementChooserSource, /event\.key === 'Escape'/);
+  assert.match(placementChooserSource, /data-lattice-chrome/);
 });
 
 test('Phase 7 Identity Dossier has strict owner-runtime precedence and exact trigger focus restoration', () => {
