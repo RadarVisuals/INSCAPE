@@ -73,9 +73,10 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Preserve its measured 15-byte gzip headroom; the raw ceiling stays fixed.
   // The accepted Startveil and lightweight resident presentation are initial
   // UI. Preserve the prior 970 raw / 15 gzip bytes of measured headroom.
-  // Legacy v7 canvas styles are compatibility-only and lazy. Preserve the
-  // previous 970 raw / 15 gzip bytes of headroom around the active v8 route.
-  initialCss: Object.freeze({ raw: 50_745, gzip: 10_107 }),
+  // Legacy v7 canvas styles are compatibility-only and lazy. The production
+  // font roles now resolve centrally to bundled Geist and IBM Plex files.
+  // Preserve 970 raw / 15 gzip bytes of headroom around the active v8 route.
+  initialCss: Object.freeze({ raw: 51_493, gzip: 10_139 }),
   // Phase 7 adds the lazy owner-only Identity RÄCK; Phase 7.5 adds its compact,
   // shared-theme Keeper context controls. Keep both isolated from initial CSS
   // and deliberately close to the measured owner-only output.

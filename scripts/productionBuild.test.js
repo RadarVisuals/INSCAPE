@@ -71,7 +71,7 @@ test('measured combined Alpha allowances retain exact production budget boundari
     initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
     ownerJavaScript: { raw: 300_875, gzip: 91_234 },
     standaloneWalletJavaScript: { raw: 4_400_000, gzip: 1_200_000 },
-    initialCss: { raw: 50_745, gzip: 10_107 },
+    initialCss: { raw: 51_493, gzip: 10_139 },
     ownerCss: { raw: 76_499, gzip: 14_733 },
     coreJavaScript: { raw: 2_076_709, gzip: 620_158 },
     publicAssets: { raw: 15_200_000 },

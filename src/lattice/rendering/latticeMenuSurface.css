@@ -6,12 +6,12 @@
   --lattice-menu-line: rgb(216 215 210 / 0.12);
   --lattice-menu-line-strong: rgb(216 215 210 / 0.21);
   --lattice-menu-selected: rgb(216 215 210 / 0.055);
-  --lattice-window-type-module: 600 10px/1 "IBM Plex Mono", "Courier New", monospace;
-  --lattice-window-type-label: 600 9px/1.2 "IBM Plex Mono", "Courier New", monospace;
-  --lattice-window-type-section: 550 19px/1.18 "Geist", Arial, sans-serif;
-  --lattice-window-type-title: 550 24px/1.15 "Geist", Arial, sans-serif;
-  --lattice-window-type-body: 400 14px/1.78 "Geist", Arial, sans-serif;
-  --lattice-window-type-value: 400 12px/1.5 "Geist", Arial, sans-serif;
+  --lattice-window-type-module: 600 10px/1 "Inscape IBM Plex Mono", monospace;
+  --lattice-window-type-label: 600 9px/1.2 "Inscape IBM Plex Mono", monospace;
+  --lattice-window-type-section: 550 19px/1.18 "Inscape Geist Sans", sans-serif;
+  --lattice-window-type-title: 550 24px/1.15 "Inscape Geist Sans", sans-serif;
+  --lattice-window-type-body: 400 14px/1.78 "Inscape Geist Sans", sans-serif;
+  --lattice-window-type-value: 400 12px/1.5 "Inscape Geist Sans", sans-serif;
 }
 
 :is(.lattice-engine-shell, .lattice-focus-viewer, .lattice-production-identity-viewer, .owner-lattice-shell, .visitor-lattice-world, [data-lattice-menu-surface])[data-menu-surface="graphite"] { --lattice-menu-panel: rgb(48 50 50 / 0.98); --lattice-menu-ink: #e8e7e2; --lattice-menu-muted: rgb(232 231 226 / 0.64); --lattice-menu-faint: rgb(232 231 226 / 0.4); --lattice-menu-line: rgb(232 231 226 / 0.16); --lattice-menu-line-strong: rgb(232 231 226 / 0.27); --lattice-menu-selected: rgb(232 231 226 / 0.075); }
