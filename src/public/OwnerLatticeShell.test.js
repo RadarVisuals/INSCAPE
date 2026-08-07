@@ -235,10 +235,10 @@ test('Phase 6 ARRANGE is one session-only owner mode and viewer activation remai
   assert.doesNotMatch(source, /transparencyMode.*dossier|collectionName.*dossier|marketplace/iu);
 });
 
-test('ARRANGE empty-canvas context placement reuses the canonical pointer geometry and PLACE command', () => {
+test('ARRANGE empty-canvas context placement uses one direct artwork command and the canonical PLACE operation', () => {
   assert.match(source, /onContextMenu=\{openCanvasPlacementMenu\}/);
-  assert.match(source, /commands=\{\[\{ id: 'place', label: 'Place' \}\]\}/);
-  assert.match(source, /id: 'artwork'/);
+  assert.match(source, /id: 'artwork',[\s\S]*label: canvasPlacementAssets\.length \? 'Place artwork…'/);
+  assert.doesNotMatch(source, /getSubmenuCommands=/);
   assert.match(source, /<ArtworkChooser/);
   assert.match(source, /createLatticeProductionDropGeometry\(asset\.width, asset\.height/);
   assert.match(source, /authoring\.placePublicAsset\(\{ destination, stableAssetId: asset\.stableAssetId, tableId: activeTableId \}\)/);

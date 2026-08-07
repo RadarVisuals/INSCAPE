@@ -1269,12 +1269,11 @@ function OwnerLatticeRuntime({
     </div>, document.body)}
     {canvasPlacementFlow?.view === 'menu' && createPortal(<RackMenu
       anchor={canvasPlacementFlow.anchor}
-      commands={[{ id: 'place', label: 'Place' }]}
-      getSubmenuCommands={(commandId) => commandId === 'place' ? [{
+      commands={[{
         disabled: !canvasPlacementAssets.length,
         id: 'artwork',
-        label: canvasPlacementAssets.length ? 'Artwork…' : 'Artwork unavailable',
-      }] : []}
+        label: canvasPlacementAssets.length ? 'Place artwork…' : 'Artwork unavailable',
+      }]}
       label="Canvas placement commands"
       onClose={closeCanvasPlacementFlow}
       onCommand={(commandId) => {
