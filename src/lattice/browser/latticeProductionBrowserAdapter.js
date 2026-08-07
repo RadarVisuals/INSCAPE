@@ -1,4 +1,5 @@
 import { normalizeProfileAddress } from '../../library/config.js';
+import { creatorRelationshipForProfile } from '../../creations/domain/creatorRelationship.js';
 import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
 import { resolvePublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
 
@@ -12,9 +13,7 @@ function deepFreeze(value, seen = new WeakSet()) {
 export function adaptLatticeProductionBrowserAsset(asset, profileAddress, acceptCreated = false) {
   const ownerAddress = normalizeProfileAddress(asset?.ownerAddress);
   const identity = parseCanonicalAssetId(asset?.id);
-  const createdForProfile = (import.meta.env?.DEV ?? true) && acceptCreated && asset?.viewedProfileIsCreator === true
-    && ['contract', 'token', 'contract-and-token'].includes(asset?.creatorAttributionLevel)
-    && (asset?.creators || []).some((creator) => normalizeProfileAddress(creator?.address) === profileAddress);
+  const createdForProfile = acceptCreated && Boolean(creatorRelationshipForProfile(asset, profileAddress));
   if (!identity || (ownerAddress !== profileAddress && !createdForProfile)
     || Number(asset?.chainId) !== identity.chainId
     || normalizeProfileAddress(asset?.contractAddress) !== identity.contractAddress
@@ -40,6 +39,7 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress, accept
     collection: typeof asset.collectionName === 'string' && asset.collectionName.trim()
       ? asset.collectionName.trim().slice(0, 80) : null,
     height,
+    isCollection: asset?.isCollection === true,
     mediaType,
     placeable: Boolean(source && width && height && ['image', 'animation'].includes(mediaType)),
     placementUnavailableReason: !source ? 'MEDIA UNAVAILABLE'

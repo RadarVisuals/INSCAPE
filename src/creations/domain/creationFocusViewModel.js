@@ -4,14 +4,23 @@ export function createCreationFocusEntry(creation, dimensions) {
   const src = creation?.originalImageUrl || creation?.imageUrl || creation?.thumbnailUrl || null;
   if (!src || !dimensions?.width || !dimensions?.height) return null;
   const creators = Array.isArray(creation.creators) ? creation.creators : [];
+  const collectionCreators = Array.isArray(creation.collectionCreators) ? creation.collectionCreators : [];
   const ownership = creation.ownershipKnown === true
     ? creation.isOwnedByViewedProfile === true ? 'OWNED BY VIEWED PROFILE' : 'NOT OWNED BY VIEWED PROFILE'
     : 'CURRENT OWNERSHIP UNRESOLVED';
+  const viewedProfileRelationships = [
+    creation.viewedProfileIsCreator === true ? `CREATOR / ${String(creation.creatorAttributionLevel || 'INDEXED').toUpperCase()}` : null,
+    creation.viewedProfileIsCollectionCreator === true ? 'COLLECTION CREATOR / CONTRACT' : null,
+  ].filter(Boolean);
   const technical = [
-    creators.length ? { label: 'CREATORS / INDEXED ATTRIBUTION', value: creators.map((creator) => creator.name
+    creators.length ? { label: creation.fieldProvenance?.creators?.scope === 'tokenId' ? 'CREATORS / TOKEN' : 'CREATORS / CONTRACT', value: creators.map((creator) => creator.name
       ? `${creator.name} — ${creator.address}` : creator.address).join('\n') } : null,
-    creation.viewedProfileIsCreator === true ? { label: 'VIEWED PROFILE RELATIONSHIP', value: `CREATOR / ${String(creation.creatorAttributionLevel || 'INDEXED').toUpperCase()}` } : null,
+    collectionCreators.length ? { label: 'COLLECTION CREATORS / CONTRACT', value: collectionCreators.map((creator) => creator.name
+      ? `${creator.name} — ${creator.address}` : creator.address).join('\n') } : null,
+    viewedProfileRelationships.length ? { label: 'VIEWED PROFILE RELATIONSHIP', value: viewedProfileRelationships.join('\n') } : null,
     { label: 'CURRENT OWNERSHIP', value: ownership },
+    creation.standard === 'LSP8' && creation.tokenId && clean(creation.currentOwnerAddress)
+      ? { label: 'CURRENT HOLDER / INDEXED', value: creation.currentOwnerAddress } : null,
     creation.collectionName ? { label: 'COLLECTION / METADATA', value: creation.collectionName } : null,
     creation.contractAddress ? { label: 'CONTRACT', value: creation.contractAddress } : null,
     creation.tokenId ? { label: 'TOKEN ID / TOKEN', value: creation.tokenId } : null,

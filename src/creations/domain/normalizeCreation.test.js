@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createStableAssetId } from '../../library/domain/normalizeProfileAsset.js';
-import { deduplicateCreations, normalizeCreatorAttribution } from './normalizeCreation.js';
+import { deduplicateCreations, normalizeCollectionToken, normalizeCreatorAttribution } from './normalizeCreation.js';
 
 const PROFILE = '0x1234567890abcdef1234567890abcdef12345678';
 const OTHER = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -66,6 +66,34 @@ test('retains the indexed current holder for a creator token held by another pro
   assert.equal(creation.isOwnedByViewedProfile, false);
   assert.equal(creation.currentOwnerAddress, OTHER);
   assert.equal(creation.fieldProvenance.attributes.scope, 'tokenId');
+});
+
+test('normalizes collection children without turning collection authorship into token authorship', () => {
+  const collection = normalizeCreatorAttribution(assetRow({ isLSP7: false, isCollection: true, name: 'HALO' }), PROFILE);
+  const token = normalizeCollectionToken({
+    id: `${CONTRACT}-0x01`, tokenId: '0x01', name: 'HALO 01', description: 'First token', images: [image],
+    holders: [{ profile_id: OTHER, balance: '1' }], lsp4Creators: [{ profile_id: OTHER }], attributes: [],
+    asset: assetRow({ isLSP7: false, isCollection: true, name: 'HALO' }).asset,
+  }, collection, PROFILE);
+  assert.equal(collection.isCollection, true);
+  assert.equal(token.viewedProfileIsCreator, false);
+  assert.equal(token.creatorAttributionLevel, null);
+  assert.equal(token.viewedProfileIsCollectionCreator, true);
+  assert.equal(token.collectionCreatorAttributionLevel, 'contract');
+  assert.deepEqual(token.creators, [{ address: OTHER, name: null }]);
+  assert.equal(token.collectionCreators.some(({ address }) => address === PROFILE), true);
+  assert.equal(token.currentOwnerAddress, OTHER);
+  assert.equal(token.isOwnedByViewedProfile, false);
+  assert.equal(token.fieldProvenance.creators.scope, 'tokenId');
+  assert.equal(token.fieldProvenance.collectionCreators.scope, 'collectionContract');
+});
+
+test('collection children fail closed for another profile or a different contract', () => {
+  const collection = normalizeCreatorAttribution(assetRow({ isLSP7: false, isCollection: true }), PROFILE);
+  const token = { id: `${CONTRACT}-0x01`, tokenId: '0x01', images: [image], holders: [], lsp4Creators: [],
+    asset: { id: CONTRACT, isCollection: true } };
+  assert.equal(normalizeCollectionToken(token, collection, '0xcccccccccccccccccccccccccccccccccccccccc'), null);
+  assert.equal(normalizeCollectionToken({ ...token, asset: { id: OTHER, isCollection: true } }, collection, PROFILE), null);
 });
 
 test('excludes unrelated owned assets and retains partial metadata', () => {

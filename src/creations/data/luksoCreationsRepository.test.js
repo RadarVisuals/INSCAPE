@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createLuksoCreationsRepository, CREATIONS_QUERY } from './luksoCreationsRepository.js';
+import { COLLECTION_TOKENS_QUERY, createLuksoCreationsRepository, CREATIONS_QUERY } from './luksoCreationsRepository.js';
 
 const PROFILE = '0x1234567890abcdef1234567890abcdef12345678';
 const CONTRACT_A = '0x1111111111111111111111111111111111111111';
@@ -38,4 +38,41 @@ test('paginates asset and token creator paths independently and includes unowned
   assert.deepEqual(calls.map((call) => call.assetOffset), [0, 1]);
   assert.equal(batches.at(-1).complete, true);
   assert.equal(batches.flatMap((batch) => batch.assets).every((asset) => !asset.isOwnedByViewedProfile), true);
+});
+
+test('paginates every token in an accepted creator collection by exact contract', async () => {
+  const calls = [];
+  const collectionRecord = {
+    contractAddress: CONTRACT_A, isCollection: true, viewedProfileIsCreator: true, creatorAttributionLevel: 'contract',
+    creators: [{ address: PROFILE }],
+  };
+  const token = (tokenId, holder) => ({
+    id: `${CONTRACT_A}-${tokenId}`, tokenId, name: `HALO ${tokenId}`, images: [], attributes: [], lsp4Creators: [],
+    holders: [{ profile_id: holder, balance: '1' }], asset: { id: CONTRACT_A, isCollection: true, name: 'HALO' },
+  });
+  const fetchImpl = async (_url, options) => {
+    const { query, variables } = JSON.parse(options.body);
+    calls.push({ query, variables });
+    return { ok: true, json: async () => ({ data: {
+      Token: variables.offset === 0 ? [token('0x01', PROFILE)] : [token('0x02', CONTRACT_B)],
+      Token_aggregate: { aggregate: { count: 2 } },
+    } }) };
+  };
+  const repository = createLuksoCreationsRepository({ fetchImpl, pageSize: 1 });
+  const batches = [];
+  for await (const batch of repository.loadCollectionTokens(PROFILE, collectionRecord)) batches.push(batch);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls.map(({ variables }) => variables), [
+    { contract: CONTRACT_A, limit: 1, offset: 0 }, { contract: CONTRACT_A, limit: 1, offset: 1 },
+  ]);
+  assert.equal(batches.at(-1).complete, true);
+  assert.deepEqual(batches.flatMap(({ assets }) => assets).map(({ viewedProfileIsCollectionCreator }) => viewedProfileIsCollectionCreator), [true, true]);
+  assert.equal(batches[1].assets[0].currentOwnerAddress, CONTRACT_B);
+});
+
+test('collection query uses Token asset_id scope and never treats Hold as discovery authority', () => {
+  assert.match(COLLECTION_TOKENS_QUERY, /Token\(where:\s*\{ asset_id:\s*\{ _eq: \$contract \}/);
+  assert.match(COLLECTION_TOKENS_QUERY, /Token_aggregate\(where:\s*\{ asset_id:/);
+  assert.doesNotMatch(COLLECTION_TOKENS_QUERY, /\bHold\s*\(/);
+  assert.match(COLLECTION_TOKENS_QUERY, /holders \{ id profile_id balance \}/);
 });

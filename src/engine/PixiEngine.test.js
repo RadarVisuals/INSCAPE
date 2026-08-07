@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-globalThis.navigator = { userAgent: '' };
+Object.defineProperty(globalThis, 'navigator', {
+  configurable: true,
+  value: { userAgent: '' },
+  writable: true,
+});
 globalThis.document = { createElement: () => ({ getContext: () => null }) };
 const { PixiEngine } = await import('./PixiEngine.js');
 

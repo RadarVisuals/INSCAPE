@@ -21,8 +21,12 @@ export function createLatticeProductionFocusViewModel(placement, assetRecord, {
   const standard = ['LSP7', 'LSP8'].includes(normalized?.standard) ? normalized.standard : published.tokenStandard;
   const publishedCreatorRelationship = trustPublishedMetadata && normalizeProfileAddress(presentingProfileAddress)
     && creators.some((creator) => normalizeProfileAddress(creator?.address) === normalizeProfileAddress(presentingProfileAddress));
-  const presentingRelationship = normalized?.viewedProfileIsCreator === true
-    ? `CREATOR / ${String(normalized.creatorAttributionLevel || 'INDEXED').toUpperCase()}`
+  const normalizedRelationships = [
+    normalized?.viewedProfileIsCreator === true
+      ? `CREATOR / ${String(normalized.creatorAttributionLevel || 'INDEXED').toUpperCase()}` : null,
+    normalized?.viewedProfileIsCollectionCreator === true ? 'COLLECTION CREATOR / CONTRACT' : null,
+  ].filter(Boolean);
+  const presentingRelationship = normalizedRelationships.length ? normalizedRelationships.join('\n')
     : publishedCreatorRelationship ? 'CREATOR / PUBLISHED METADATA' : null;
   const currentHolding = normalized?.ownershipKnown === true
     ? normalized.isOwnedByViewedProfile === true ? 'HELD BY PRESENTING PROFILE'

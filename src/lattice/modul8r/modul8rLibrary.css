@@ -27,6 +27,20 @@
 .modul8r-library__focus-artwork img { display: block; object-fit: contain; }
 .modul8r-library .lattice-browser-asset__relationships { font-weight: 700; letter-spacing: .04em; }
 .modul8r-library .lattice-browser-notice button { margin-left: 8px; border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; }
+.modul8r-library__collection-heading {
+  min-height: 30px;
+  margin: calc(-1 * var(--modul8r-library-field-inset)) 0 var(--modul8r-library-field-inset);
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--lattice-menu-line);
+  font: var(--lattice-window-type-label);
+  letter-spacing: .05em;
+}
+.modul8r-library__collection-heading span { color: var(--lattice-menu-muted); white-space: nowrap; }
+.modul8r-library .lattice-browser-asset[data-collection] { cursor: pointer; }
 
 .modul8r-library__controls {
   width: 100%;

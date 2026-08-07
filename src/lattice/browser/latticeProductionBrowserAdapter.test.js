@@ -122,3 +122,15 @@ test('created-only acceptance is explicit and requires strong profile-address pr
   assert.equal(adaptLatticeProductionBrowserAsset({ ...created, creatorAttributionLevel: 'authored' }, PROFILE, true), null);
   assert.equal(adaptLatticeProductionBrowserAsset({ ...created, creators: [{ address: OTHER_PROFILE }] }, PROFILE, true), null);
 });
+
+test('collection-derived acceptance requires explicit parent creator provenance', () => {
+  const collectionChild = asset({
+    ownerAddress: null, viewedProfileIsCreator: false, creatorAttributionLevel: null,
+    creators: [{ address: OTHER_PROFILE }], viewedProfileIsCollectionCreator: true,
+    collectionCreatorAttributionLevel: 'contract', collectionCreators: [{ address: PROFILE }],
+  });
+  assert.equal(adaptLatticeProductionBrowserAsset(collectionChild, PROFILE), null);
+  assert.equal(adaptLatticeProductionBrowserAsset(collectionChild, PROFILE, true).stableAssetId, ASSET_ID);
+  assert.equal(adaptLatticeProductionBrowserAsset({ ...collectionChild,
+    collectionCreators: [{ address: OTHER_PROFILE }] }, PROFILE, true), null);
+});

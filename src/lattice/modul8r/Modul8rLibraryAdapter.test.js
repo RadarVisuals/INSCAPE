@@ -37,6 +37,24 @@ test('Task 5 uses an independent creator store, pure union, honest viewer and ex
   assert.doesNotMatch(integration, /\buseCreationsStore\(/);
 });
 
+test('creator collections drill into private paginated token records with honest relationship labels', async () => {
+  const [integration, adapter, panel, repository, authoring] = await Promise.all([
+    read('./Modul8rOwnerWorkspace.jsx'), read('./Modul8rLibraryAdapter.jsx'), read('./Modul8rLibraryPanel.jsx'),
+    read('../../creations/data/luksoCreationsRepository.js'), read('../../public/useOwnerLatticeAuthoring.js'),
+  ]);
+  assert.match(repository, /loadCollectionTokens/);
+  assert.match(repository, /Token\(where:\s*\{ asset_id:/);
+  assert.match(integration, /createCollectionTokensStore/);
+  assert.match(integration, /collectionRole: asset\.stableAssetId === activeCollection\?\.id \? 'cover' : 'token'/);
+  assert.match(integration, /isStrongCreatedAsset\(record, profileAddress\)/);
+  assert.match(adapter, /asset\.isCollection && asset\.collectionRole !== 'cover'/);
+  assert.match(panel, /CREATED \/ \{collectionContext\.name/);
+  assert.match(panel, /COLLECTION COVER/);
+  assert.match(panel, /FROM CREATED COLLECTION/);
+  assert.match(panel, /COLLECTION TOKENS UNAVAILABLE[\s\S]*RETRY/);
+  assert.match(authoring, /isCreatorRelatedAsset\(record, profile\)/);
+});
+
 test('Task 6 removes USED ON CANVAS only from MODUL-8R Library and keeps the old Browser authority', async () => {
   const [panel, oldPanel] = await Promise.all([
     read('./Modul8rLibraryPanel.jsx'), read('../browser/BrowserUnifiedPanel.jsx'),
@@ -47,7 +65,7 @@ test('Task 6 removes USED ON CANVAS only from MODUL-8R Library and keeps the old
 
 test('closing retains accepted creator authority while profile change and unmount clear it without progressive gaps', async () => {
   const integration = await read('./Modul8rOwnerWorkspace.jsx');
-  assert.match(integration, /if \(!open\) \{ cancelCreated\(\); return; \}/);
+  assert.match(integration, /if \(!open\) \{ cancelCreated\(\); cancelCollectionTokens\(\); return; \}/);
   assert.match(integration, /createdProfileAddress !== profileAddress \|\| createdStatus === 'idle'/);
   assert.match(integration, /onRelatedAssetRecordsChange\?\.\(acceptedRelatedRecords\)/);
   assert.doesNotMatch(integration, /open \? union\.records/);

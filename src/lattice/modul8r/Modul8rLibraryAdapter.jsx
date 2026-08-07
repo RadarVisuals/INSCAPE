@@ -18,11 +18,14 @@ function contextAnchor(event) {
 
 export default function Modul8rLibraryAdapter({
   categoryCommands = null,
+  collectionContext = null,
   data,
   faceplateTargetRef,
   onAssetPointerDown,
   onAssetActivate,
+  onExitCollection,
   onRenderableAssetsChange,
+  onRetryCollection,
   onRetryCreated,
 }) {
   const workspace = useBrowserWorkspace(data);
@@ -115,6 +118,7 @@ export default function Modul8rLibraryAdapter({
   };
 
   const beginOrganizationDrag = (event, asset) => {
+    if (asset.isCollection && asset.collectionRole !== 'cover') return;
     const assetId = asset.stableAssetId || asset.id;
     const selectedIds = workspace.selectedAssetIds.includes(assetId)
       ? [...workspace.selectedAssetIds] : [assetId];
@@ -200,10 +204,12 @@ export default function Modul8rLibraryAdapter({
   }}>
     {faceplateTarget && createPortal(faceplateControls, faceplateTarget)}
     <Modul8rLibraryPanel categoryDropTargetId={organizationDrag?.categoryId} categorySectionRef={categorySectionRef}
-      data={data} onAssetActivate={onAssetActivate} onAssetContext={openAssetContext} onAssetPointerDown={beginOrganizationDrag}
+      collectionContext={collectionContext} data={data} onAssetActivate={onAssetActivate} onAssetContext={openAssetContext}
+      onAssetPointerDown={beginOrganizationDrag}
       onCategoryContext={openCategoryContext}
       onCreateCategory={categoryCommands ? (trigger) => workspace.setDialog({ trigger, type: 'create' }) : null}
-      onRetryCreated={onRetryCreated} relationshipView={relationshipView} selectRelationshipView={setRelationshipView}
+      onExitCollection={onExitCollection} onRetryCollection={onRetryCollection} onRetryCreated={onRetryCreated}
+      relationshipView={relationshipView} selectRelationshipView={setRelationshipView}
       workspace={panelWorkspace} />
     {contextMenu && createPortal(<RackMenu anchor={contextMenu.anchor}
       commands={contextMenu.kind === 'category' ? categoryMenuCommands : membershipCommands}

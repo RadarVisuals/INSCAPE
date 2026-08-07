@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { normalizeProfileAddress } from '../library/config.js';
 import { useLibraryStore } from '../library/state/useLibraryStore.js';
+import { isCreatorRelatedAsset } from '../creations/domain/creatorRelationship.js';
 import { createLatticeProductionCropCandidate } from '../lattice/authoring/latticeProductionCrop.js';
 import {
   createLatticeProductionDuplicateCandidate,
@@ -491,7 +492,7 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
   const assets = useLibraryStore((state) => state.assets);
   const supplementalAssetRecords = options.supplementalAssetRecords || EMPTY_ASSET_RECORDS;
   const acceptedAssetRecords = useMemo(() => {
-    const byId = new Map(supplementalAssetRecords.filter((record) => record?.viewedProfileIsCreator === true)
+    const byId = new Map(supplementalAssetRecords.filter((record) => isCreatorRelatedAsset(record, profile))
       .map((record) => [record.id, record]));
     assets.forEach((record) => byId.set(record.id, record));
     return [...byId.values()];

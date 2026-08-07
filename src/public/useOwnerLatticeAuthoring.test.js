@@ -87,6 +87,21 @@ test('canonical PLACE accepts strong created-only provenance without inventing o
   assert.equal(createdOnly.ownerAddress, null);
 });
 
+test('canonical PLACE accepts a token from a strongly attributed creator collection', () => {
+  const storage = memoryStorage();
+  const session = createOwnerLatticeAuthoringSession({ generatePlacementId: () => 'collection-token-placement', profileAddress: PROFILE, storage });
+  const collectionToken = asset({
+    ownerAddress: null, viewedProfileIsCreator: false, creatorAttributionLevel: null,
+    creators: [{ address: OTHER }], viewedProfileIsCollectionCreator: true,
+    collectionCreatorAttributionLevel: 'contract', collectionCreators: [{ address: PROFILE }],
+    ownershipKnown: true, isOwnedByViewedProfile: false,
+  });
+  const result = session.commitPlacement({ assetRecord: collectionToken, tableId: 'table-05' });
+  assert.equal(result.ok, true);
+  assert.equal(result.draft.tables[4].placements[0].stableAssetId, ASSET);
+  assert.equal(collectionToken.viewedProfileIsCreator, false);
+});
+
 test('created-only record remains resolvable through move, resize, crop, layer, duplicate and remove', () => {
   const storage = memoryStorage(); let nextId = 0;
   const session = createOwnerLatticeAuthoringSession({ generatePlacementId: () => `created-${++nextId}`,
