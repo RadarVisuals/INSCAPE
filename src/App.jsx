@@ -12,7 +12,7 @@ import { useStore } from './store/useStore.js';
 import { useWalletStore } from './store/useWalletStore.js';
 import { resolveLibraryProfile, resolveWorkspaceProfile } from './library/config.js';
 import { loadRestoredPresentation } from './profileDocument/storage/profilePresentationStorage.js';
-import { createViewedProfileUrl, resolveExplicitViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
+import { createSelectedProfileUrl, createViewedProfileUrl, resolveExplicitViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
 import {
   PROFILE_TARGET_SOURCE,
   resolveProfileTarget,
@@ -169,8 +169,10 @@ function App() {
     setApplicationMode(mode);
   }, []);
 
-  const visitProfile = useCallback((address) => {
-    const nextUrl = createViewedProfileUrl(window.location, address, verifiedOwnerProfileAddress);
+  const visitProfile = useCallback((address, { returnToConnectedProfile = false } = {}) => {
+    const nextUrl = returnToConnectedProfile
+      ? createViewedProfileUrl(window.location, address, verifiedOwnerProfileAddress)
+      : createSelectedProfileUrl(window.location, address);
     window.history.pushState({ viewedProfileAddress: address }, '', nextUrl);
     setExplicitViewedProfileAddress(resolveExplicitViewedProfile(window.location));
   }, [verifiedOwnerProfileAddress]);

@@ -50,7 +50,7 @@ export default function PublishedProfileBoundary({
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
   const canReturn = Boolean(returnProfileAddress && returnProfileAddress.toLowerCase() !== String(address || '').toLowerCase());
-  const returnHome = canReturn ? () => onVisitProfile?.(returnProfileAddress) : null;
+  const returnHome = canReturn ? () => onVisitProfile?.(returnProfileAddress, { returnToConnectedProfile: true }) : null;
   const content = !visibleDocument
     ? <PublishedStatusSurface state={resolution} onRetry={onRetry} onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
     : <><PublishedProfileDocumentPreview document={visibleDocument} keeperVisible={keeperVisible}
