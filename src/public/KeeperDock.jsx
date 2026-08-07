@@ -1,9 +1,20 @@
 import { MoreHorizontal } from 'lucide-react';
-import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { GRID_WALKER_RANGES, GRID_WALKER_TUNING } from '../components/Canvas/gridWalkerMotion.js';
 import './menus/rackMenu.css';
+import './keeperDock.css';
 
 const RESIDENT_PHASES = new Set(['approaching', 'entering', 'docked']);
+
+function WalkerRange({ label, name, value, onChange }) {
+  const range = GRID_WALKER_RANGES[name];
+  return <label className="keeper-dock__range">
+    <span>{label}</span>
+    <input min={range.min} max={range.max} onChange={(event) => onChange(name, Number(event.target.value))}
+      step={range.step} type="range" value={value} />
+    <output>{value}</output>
+  </label>;
+}
 
 export default function KeeperDock({
   actorId,
@@ -13,8 +24,10 @@ export default function KeeperDock({
   reducedMotion = false,
   residentScale = 0.72,
   spatialTheme = 'dark',
+  gridStyle = 'lines',
   onDockStateChange,
   onFollowCursorChange,
+  onGridStyleChange,
   onMovementSpeedChange,
 }) {
   const dockRef = useRef(null);
@@ -23,11 +36,11 @@ export default function KeeperDock({
   const startedRef = useRef(false);
   const [phase, setPhase] = useState('empty');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [underlayRoot, setUnderlayRoot] = useState(null);
+  const [autonomy, setAutonomy] = useState(() => residentHandoff?.getAutonomy?.() !== false);
+  const [walkerTuning, setWalkerTuning] = useState(() => ({ ...GRID_WALKER_TUNING, size: 0.55 }));
   const resident = RESIDENT_PHASES.has(phase);
   const pointerControlsAvailable = typeof onFollowCursorChange === 'function' || typeof onMovementSpeedChange === 'function';
-  const actorLabel = actorId.replaceAll('_', ' ');
-  const maskUrl = `/assets/actors/${actorId}/mask.webp`;
+  const actorLabel = 'grid walker';
 
   const changePhase = useCallback((nextPhase) => {
     phaseRef.current = nextPhase;
@@ -75,9 +88,10 @@ export default function KeeperDock({
     else if (RESIDENT_PHASES.has(phaseRef.current)) release();
   }, [dock, release]);
 
-  useEffect(() => {
-    setUnderlayRoot(document.getElementById('keeper-dock-underlay'));
-  }, []);
+  const changeWalkerTuning = (name, value) => {
+    setWalkerTuning((current) => ({ ...current, [name]: value }));
+    residentHandoff?.setTuning?.({ [name]: value });
+  };
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -112,25 +126,16 @@ export default function KeeperDock({
   }, [onDockStateChange, residentHandoff]);
 
   return <>
-    {underlayRoot && createPortal(<div
-      className="keeper-dock__ghost"
-      data-phase={phase}
-      data-spatial-theme={spatialTheme}
-      style={{ '--keeper-dock-mask': `url("${maskUrl}")` }}
-      aria-hidden="true"
-    />, underlayRoot)}
     <aside
       ref={dockRef}
       className="keeper-dock"
       data-phase={phase}
       data-resident={resident || undefined}
-      style={{ '--keeper-dock-mask': `url("${maskUrl}")` }}
       aria-label="Keeper Dock"
       onContextMenu={(event) => {
-        if (!pointerControlsAvailable) return;
         event.preventDefault();
         event.stopPropagation();
-        setMenuOpen(true);
+        setMenuOpen((open) => !open);
       }}
     >
       <button
@@ -140,7 +145,7 @@ export default function KeeperDock({
         onClick={toggleResident}
         disabled={phase === 'releasing'}
         aria-label={resident ? `Release ${actorLabel} from dock` : `Recall ${actorLabel} to dock`}
-      />
+      ><span className="keeper-dock__shell" aria-hidden="true" /><span className="keeper-dock__orb" aria-hidden="true" /><span className="keeper-dock__core" aria-hidden="true" /></button>
       <button
         className="keeper-dock__options"
         type="button"
@@ -148,8 +153,42 @@ export default function KeeperDock({
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((value) => !value)}
       ><MoreHorizontal aria-hidden="true" /></button>
-      {menuOpen && <div className="keeper-dock__menu rack-menu-surface" role="menu" aria-label="Keeper options">
-        <strong className="rack-menu-faceplate">{actorLabel}</strong>
+      {menuOpen && <div className="keeper-dock__menu rack-menu-surface" role="menu" aria-label="Resident controls">
+        <strong className="rack-menu-faceplate">RESIDENT CONTROLS</strong>
+        <button
+          type="button"
+          role="menuitemcheckbox"
+          aria-checked={autonomy}
+          className="rack-menu-faceplate"
+          data-rack-active={autonomy || undefined}
+          onClick={() => {
+            const next = !autonomy;
+            setAutonomy(next);
+            residentHandoff?.setAutonomy?.(next);
+          }}
+        >Autonomy <span aria-hidden="true">{autonomy ? 'ON' : 'OFF'}</span></button>
+        {typeof onGridStyleChange === 'function' && <>
+          <small className="rack-menu-faceplate">GRID MARKS</small>
+          <div className="keeper-dock__grid-style rack-menu-segments" role="group" aria-label="Grid marks">
+            {['lines', 'dots'].map((style) => <button
+              aria-pressed={gridStyle === style}
+              className="rack-menu-segment"
+              data-rack-active={gridStyle === style || undefined}
+              key={style}
+              onClick={() => onGridStyleChange(style)}
+              type="button"
+            >{style}</button>)}
+          </div>
+        </>}
+        <small className="rack-menu-faceplate">BODY / LEGS</small>
+        <div className="keeper-dock__tuning">
+          <WalkerRange label="SIZE" name="size" value={walkerTuning.size} onChange={changeWalkerTuning} />
+          <WalkerRange label="LEGS" name="legCount" value={walkerTuning.legCount} onChange={changeWalkerTuning} />
+          <WalkerRange label="LENGTH" name="legRadius" value={walkerTuning.legRadius} onChange={changeWalkerTuning} />
+          <WalkerRange label="STRETCH" name="maxStretch" value={walkerTuning.maxStretch} onChange={changeWalkerTuning} />
+          <WalkerRange label="HINGE" name="hingeRadius" value={walkerTuning.hingeRadius} onChange={changeWalkerTuning} />
+          <WalkerRange label="TRAVEL" name="bodySpeed" value={walkerTuning.bodySpeed} onChange={changeWalkerTuning} />
+        </div>
         {pointerControlsAvailable ? <>
           <button
             type="button"

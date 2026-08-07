@@ -60,6 +60,7 @@ import {
 } from './keeperPointerFollow.js';
 import { prepareOwnerLatticeRuntimeDraft } from './ownerLatticeRuntimeProjection.js';
 import KeeperDock from './KeeperDock.jsx';
+import KeeperSignalsLayer from '../signals/components/KeeperSignalsLayer.jsx';
 import useOwnerLatticeBrowser from './useOwnerLatticeBrowser.js';
 import useOwnerLatticeAuthoring, {
   OWNER_LATTICE_AUTHORING_STATUS,
@@ -180,6 +181,7 @@ function OwnerLatticeRuntime({
   ownerWorkspacePresentation = 'rack',
   publishedResolution,
   residentHandoff,
+  keeperReactions,
   revealPresentation = { reducedMotion: false },
   stageId = 'moonpurple',
   visitorWalletConnected = false,
@@ -231,6 +233,7 @@ function OwnerLatticeRuntime({
   const [spacePanReady, setSpacePanReady] = useState(false);
   const [surfaceId, setSurfaceId] = useState('mist');
   const [menuSurfaceId, setMenuSurfaceId] = useState('mist');
+  const [gridStyle, setGridStyle] = useState('lines');
   const [themeOpen, setThemeOpen] = useState(false);
   const [themeAnchor, setThemeAnchor] = useState(null);
   const [browserOpen, setBrowserOpen] = useState(false);
@@ -763,6 +766,11 @@ function OwnerLatticeRuntime({
     ? 'CANONICAL DRAFT UNAVAILABLE / STORED RECORD PRESERVED / EXPLICIT RECOVERY REQUIRED'
     : previewError || authoring.error || latticeProjection.error;
   const spatialTheme = ['carbon', 'graphite'].includes(surfaceId) ? 'dark' : 'light';
+
+  useEffect(() => {
+    residentHandoff?.trackActorPosition?.(spatialRoot ? [spatialRoot] : null);
+    return () => residentHandoff?.trackActorPosition?.(null);
+  }, [residentHandoff, spatialRoot]);
   const closeBrowser = useCallback(() => {
     setBrowserOpen(false);
     const returnFocus = browserReturnFocusRef.current || browserToolRef.current;
@@ -1105,6 +1113,7 @@ function OwnerLatticeRuntime({
     data-camera-active={cameraGestureActive || undefined}
     data-gesture-active={gestureActive || undefined}
     data-interface-visible={interfaceVisible || undefined}
+    data-grid-style={gridStyle}
     data-space-pan-ready={(spacePanReady && plane.maximumCameraY > 0) || undefined}
     data-surface={surfaceId}
     onKeyDown={handleKeyDown}
@@ -1456,14 +1465,22 @@ function OwnerLatticeRuntime({
       {keeperVisible && <KeeperDock
         actorId={activeActorId}
         followCursor={keeperFollowCursor}
+        gridStyle={gridStyle}
         movementSpeed={keeperMovementSpeed}
         onDockStateChange={setKeeperDockActive}
         onFollowCursorChange={setKeeperFollowCursor}
+        onGridStyleChange={setGridStyle}
         onMovementSpeedChange={setKeeperMovementSpeed}
         reducedMotion={reducedMotion}
         residentHandoff={residentHandoff}
         residentScale={0.5}
         spatialTheme={spatialTheme}
+      />}
+      {keeperVisible && <KeeperSignalsLayer
+        interfaceReady={interfaceVisible}
+        reactionBridge={keeperReactions}
+        reducedMotion={reducedMotion}
+        residentHandoffActive={keeperDockActive}
       />}
     </>}
   </main>;

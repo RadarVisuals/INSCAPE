@@ -5,9 +5,8 @@ import {
   createApplicationModeUrl,
   resolveApplicationMode
 } from './app/appMode.js';
-import ArtCanvas from './components/Canvas/ArtCanvas';
+import GridWalkerCanvas from './components/Canvas/GridWalkerCanvas.jsx';
 import OwnerRuntimeBoundary from './public/OwnerRuntimeBoundary.jsx';
-import { AssetResolver } from './engine/assets/AssetResolver.js';
 import { Startveil } from './startveil/index.js';
 import { useStore } from './store/useStore.js';
 import { useWalletStore } from './store/useWalletStore.js';
@@ -52,7 +51,7 @@ function App() {
   });
   const [previewDocument, setPreviewDocument] = useState(null);
   const [keeperUserVisible, setKeeperUserVisible] = useState(true);
-  const [stageUserVisible, setStageUserVisible] = useState(true);
+  const [, setStageUserVisible] = useState(true);
   const [galleryActive, setGalleryActive] = useState(false);
   const activeActorId = useStore((state) => state.renderConfig.actor.id);
   const activeStageId = useStore((state) => state.renderConfig.scene.background.backdropId);
@@ -95,7 +94,6 @@ function App() {
   const publishedDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(publishedResolution?.status)
     ? publishedResolution.document
     : null;
-  const canvasDocument = previewDocument || publishedDocument;
   const residentActorVisible = selectResidentActorVisible({
     actorRevealVisible: actorVisible,
     keeperVisible: keeperUserVisible,
@@ -198,6 +196,18 @@ function App() {
     },
     moveHorizontallyToScreenPosition(clientX, direction) {
       canvasRef.current?.moveActorHorizontallyToScreenPosition(clientX, direction);
+    },
+    setAutonomy(enabled) {
+      canvasRef.current?.setAutonomy?.(enabled);
+    },
+    getAutonomy() {
+      return canvasRef.current?.getAutonomy?.();
+    },
+    setTuning(next) {
+      canvasRef.current?.setTuning?.(next);
+    },
+    getTuning() {
+      return canvasRef.current?.getTuning?.();
     }
   }), []);
 
@@ -234,13 +244,10 @@ function App() {
       >
         <div id="keeper-dock-underlay" className="application-resident-underlay" />
         <div className="application-resident-canvas">
-          <ArtCanvas
+          <GridWalkerCanvas
             ref={canvasRef}
             actorVisible={residentActorVisible}
-            stageVisible={effectiveApplicationMode === APPLICATION_MODES.ATELIER && stageUserVisible}
-            foregroundOnly={effectiveApplicationMode === APPLICATION_MODES.PUBLIC}
             reducedMotion={revealPresentation.reducedMotion}
-            presentationOverride={canvasDocument?.presentation || null}
             onReady={() => setWorldReady(true)}
           />
         </div>
@@ -271,7 +278,6 @@ function App() {
             activeActorId={activeActorId}
             stageId={activeStageId}
             environment={activeEnvironment}
-            avatarSrc={AssetResolver.resolveActorAvatarPath(activeActorId)}
             residentHandoff={residentHandoff}
             keeperReactions={keeperReactions}
             interfaceVisible={interfaceVisible}

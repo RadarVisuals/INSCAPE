@@ -12,6 +12,8 @@ const workspaceRailRoute = import.meta.env.DEV && prototypePath === '/prototype/
 const nftTableViewerRoute = import.meta.env.DEV && prototypePath === '/prototype/nft-table-viewer';
 const latticeEngineRoute = import.meta.env.DEV && prototypePath === '/prototype/lattice-engine';
 const modul8rRoute = import.meta.env.DEV && prototypePath === '/prototype/modul-8r';
+const spiderKeeperRoute = import.meta.env.DEV && prototypePath === '/prototype/spider-keeper';
+const gridWalkerRoute = import.meta.env.DEV && prototypePath === '/prototype/grid-walker';
 const modul8rDevelopmentRoute = import.meta.env.DEV
   && prototypePath === '/development/owner/modul-8r';
 const modul8rLiveOwnerRoute = modul8rDevelopmentRoute
@@ -37,6 +39,12 @@ const LatticeEnginePrototype = import.meta.env.DEV
 const Modul8rPrototype = import.meta.env.DEV
   ? React.lazy(() => import('./prototypes/modul8r/Modul8rPrototype.jsx'))
   : null;
+const SpiderKeeperPrototype = import.meta.env.DEV
+  ? React.lazy(() => import('./prototypes/spider-keeper/SpiderKeeperPrototype.jsx'))
+  : null;
+const GridWalkerPrototype = import.meta.env.DEV
+  ? React.lazy(() => import('./prototypes/grid-walker/GridWalkerPrototype.jsx'))
+  : null;
 const Modul8rDevelopmentEntrance = import.meta.env.DEV
   ? React.lazy(() => import('./lattice/modul8r/Modul8rDevelopmentEntrance.jsx'))
   : null;
@@ -55,6 +63,10 @@ const prototype = prototypeRoute && NavigationWallPrototype
             ? <LatticeEnginePrototype />
           : modul8rRoute && Modul8rPrototype
             ? <Modul8rPrototype />
+  : spiderKeeperRoute && SpiderKeeperPrototype
+    ? <SpiderKeeperPrototype />
+    : gridWalkerRoute && GridWalkerPrototype
+      ? <GridWalkerPrototype />
           : modul8rDevelopmentRoute && !modul8rLiveOwnerRoute && Modul8rDevelopmentEntrance
             ? <Modul8rDevelopmentEntrance />
         : null;
