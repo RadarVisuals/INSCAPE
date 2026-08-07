@@ -62,6 +62,7 @@ function App() {
   const authorityLifecycleStatus = useWalletStore((state) => state.authorityLifecycleStatus);
   const initializationError = useWalletStore((state) => state.initializationError);
   const initWallet = useWalletStore((state) => state.initWallet);
+  const beginWalletTransition = useWalletStore((state) => state.beginWalletTransition);
   const scheduleWalletRelease = useWalletStore((state) => state.scheduleWalletRelease);
   const applyRenderConfig = useStore((state) => state.applyRenderConfig);
   const loadActorPresets = useStore((state) => state.loadActorPresets);
@@ -114,6 +115,7 @@ function App() {
         acquisition = acquireStandaloneWalletSession({
           initializeWallet: initWallet,
           disposeWallet: () => useWalletStore.getState().disposeWallet(),
+          beginWalletTransition,
           onError: (error) => reportControlledError('standalone-wallet-connect', error)
         });
         if (cancelled) {
@@ -136,7 +138,7 @@ function App() {
       }
       acquisition?.release();
     };
-  }, [initWallet, scheduleWalletRelease]);
+  }, [beginWalletTransition, initWallet, scheduleWalletRelease]);
 
   useEffect(() => {
     const syncModeFromUrl = () => {
