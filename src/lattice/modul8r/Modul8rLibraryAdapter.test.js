@@ -5,8 +5,11 @@ import test from 'node:test';
 const read = (name) => readFile(new URL(name, import.meta.url), 'utf8');
 
 test('Task 3 adapter reuses real Browser content authorities without importing window or Rack composition', async () => {
-  const source = await read('./Modul8rLibraryAdapter.jsx');
-  assert.match(source, /useBrowserWorkspace/);
+  const [source, integration] = await Promise.all([
+    read('./Modul8rLibraryAdapter.jsx'), read('./Modul8rOwnerWorkspace.jsx'),
+  ]);
+  assert.match(integration, /useBrowserWorkspace\(libraryData, libraryPreviewRecords\)/);
+  assert.match(source, /workspace/);
   assert.match(source, /Modul8rLibraryPanel/);
   assert.match(source, /BrowserFilterControls/);
   assert.match(source, /BrowserCategoryDialog/);
@@ -63,15 +66,40 @@ test('Task 6 removes USED ON CANVAS only from MODUL-8R Library and keeps the old
   assert.match(oldPanel, /Used on Canvas[\s\S]*BROWSER_VIEW_KINDS\.USED/);
 });
 
-test('closing retains accepted creator authority while profile change and unmount clear it without progressive gaps', async () => {
-  const integration = await read('./Modul8rOwnerWorkspace.jsx');
-  assert.match(integration, /if \(!open\) \{ cancelCreated\(\); cancelCollectionTokens\(\); return; \}/);
-  assert.match(integration, /createdProfileAddress !== profileAddress \|\| createdStatus === 'idle'/);
-  assert.match(integration, /onRelatedAssetRecordsChange\?\.\(acceptedRelatedRecords\)/);
+test('closing and Preview return retain creator authority while the parent keeps it profile-scoped', async () => {
+  const [integration, owner] = await Promise.all([
+    read('./Modul8rOwnerWorkspace.jsx'), read('../../public/OwnerLatticeShell.jsx'),
+  ]);
+  assert.match(integration, /setCreatedProfileAddress\(profileAddress\)/);
+  assert.match(integration, /const useRelatedCreationsStore = createCreationsStore\(\{ retainOnRetry: true \}\)/);
+  assert.match(integration, /const libraryPreviewRecords = new Map\(\)/);
+  assert.match(integration, /useBrowserWorkspace\(libraryData, libraryPreviewRecords\)/);
+  assert.doesNotMatch(integration, /useState\(\(\) => createCreationsStore/);
+  assert.doesNotMatch(integration, /\(\) => cancelCreated\(\)/);
+  assert.match(integration, /resolveReferencedCreatedAssets\(profileAddress, data\.usedAssetIds\)/);
+  assert.match(integration, /open && moduleState\.openModule === 'library'[\s\S]*createdStatus === 'idle'[\s\S]*loadCreated\(profileAddress\)/);
+  assert.doesNotMatch(integration, /if \(!open\)[\s\S]{0,120}(?:cancelCreated|loadCreated)/);
+  assert.match(integration, /initialOpen = false/);
+  assert.match(integration, /const scopedRecords = \[profileAddress, acceptedRelatedRecords\][\s\S]*JSON\.stringify\(scopedRecords\)[\s\S]*onRelatedAssetRecordsChange\?\.\(scopedRecords\)/);
   assert.doesNotMatch(integration, /open \? union\.records/);
-  assert.match(integration, /useEffect\(\(\) => \(\) => relatedRecordsCallbackRef\.current\?\.\(\[\]\), \[profileAddress\]\)/);
-  assert.doesNotMatch(integration, /relatedRecordsCallbackRef\.current\?\.\(\[\]\), \[onRelatedAssetRecordsChange/);
+  assert.doesNotMatch(integration, /relatedRecordsCallbackRef|onRelatedAssetRecordsChange\?\.\(\[\]\)/);
   assert.doesNotMatch(integration, /union\.records[\s\S]{0,180}return \(\) => onRelatedAssetRecordsChange/);
+  assert.match(owner, /useState\(\[profileAddress, \[\]\]\)[\s\S]*modul8rRelatedAssetProfile === profileAddress[\s\S]*\? retainedModul8rRelatedAssetRecords : \[\]/);
+  assert.match(owner, /onRelatedAssetRecordsChange=\{setModul8rRelatedAssetState\}/);
+  assert.match(owner, /masterExpanded: true, open: false, openModule: 'library'/);
+});
+
+test('the curated lattice resolves exact references while full inventories remain Library-owned', async () => {
+  const [integration, owner, browser, resolver] = await Promise.all([
+    read('./Modul8rOwnerWorkspace.jsx'), read('../../public/OwnerLatticeShell.jsx'),
+    read('../../public/useOwnerLatticeBrowser.js'), read('../../library/data/resolveProfileAssetReferences.js'),
+  ]);
+  assert.match(integration, /resolveProfileAssetReferences\(profileAddress, unresolvedIds\)/);
+  assert.match(integration, /resolveReferencedCreatedAssets\(profileAddress, data\.usedAssetIds\)/);
+  assert.match(integration, /open && moduleState\.openModule === 'library'[\s\S]*loadCreated\(profileAddress\)/);
+  assert.match(owner, /useOwnerLatticeBrowser\(\s*profileAddress, libraryInventoryRequested\)/);
+  assert.match(browser, /inventoryEnabled && profileReady && status === 'idle'/);
+  assert.doesNotMatch(resolver, /luksoRpcProfileRepository|loadProfileAssets/);
 });
 
 test('Task 3 adapter exposes real query, size, unavailable, progressive, selection and category interaction seams', async () => {
@@ -101,7 +129,7 @@ test('production owner integration delegates canvas placement to the existing ow
   assert.match(integration, /Modul8rLibraryAdapter/);
   assert.match(integration, /aria-pressed=\{arrangeEnabled\}/);
   assert.match(owner, /onArrangeToggle=\{\(\) => activateWorkspaceTool\('arrange'\)\}/);
-  assert.doesNotMatch(integration, /useLibraryStore|useOwnerLatticeAuthoring|BrowserWorkspace|LatticeRackShell/);
+  assert.doesNotMatch(integration, /useLibraryStore|useOwnerLatticeAuthoring|<BrowserWorkspace|LatticeRackShell/);
 });
 
 test('Library presentation stylesheet owns no old Rack selectors or Browser window geometry variables', async () => {

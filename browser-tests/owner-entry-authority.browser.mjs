@@ -41,7 +41,7 @@ test('Task 4B production preview entry and authority fail closed and recover exa
     });
     assert.equal(restored.ownerAllowed, true);
     await owner.waitFor({ state: 'visible', timeout: 10_000 });
-    await modulator.waitFor({ state: 'visible', timeout: 10_000 });
+    assert.equal(await modulator.count(), 0, 'Authority recovery should preserve the closed Library startup state');
     assert.equal(await frame.evaluate(() => window.__task4OwnerHarness.documentId), initialDocumentId,
       'Authority recovery reloaded or replaced the preview document');
     const storageAfter = await frame.evaluate(() => Object.fromEntries(Object.keys(localStorage)
@@ -55,7 +55,9 @@ test('Task 4B production preview entry and authority fail closed and recover exa
     contextInitScriptArg: { profiles: profileSeeds, seedDrafts: false },
     expectedControlledConsoleErrors: [
       '[wallet-permission-check] (intermediate value).getPermissions is not a function',
+      '[wallet-permission-check] erc725.getPermissions is not a function',
     ],
+    expectedControlledGraphAbortOperations: ['ProfileCreations'],
     label: 'owner-entry-authority',
   });
   assert.equal(outcome.result.mismatchFailedClosed, true);

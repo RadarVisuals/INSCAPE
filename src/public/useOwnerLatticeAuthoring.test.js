@@ -13,7 +13,6 @@ import {
   createOwnerLatticeAuthoringSession,
   ownerLatticePlacementUnavailableReason,
   resolveOwnerLatticeAuthoringStorage,
-  shouldLoadOwnerLatticeAssets,
 } from './useOwnerLatticeAuthoring.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
@@ -50,17 +49,6 @@ const existingPlacement = (id, stableAssetId = ASSET) => ({
   mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
   backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO', visibility: 'PUBLIC', locked: false,
   transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
-});
-
-test('cached placed assets still trigger one idle live load for metadata enrichment', () => {
-  assert.equal(shouldLoadOwnerLatticeAssets({ libraryStatus: 'idle', profileReady: true,
-    referencedAssetCount: 1 }), true);
-  assert.equal(shouldLoadOwnerLatticeAssets({ libraryStatus: 'ready', profileReady: true,
-    referencedAssetCount: 1 }), false);
-  assert.equal(shouldLoadOwnerLatticeAssets({ libraryStatus: 'idle', profileReady: true,
-    referencedAssetCount: 0 }), false);
-  assert.equal(shouldLoadOwnerLatticeAssets({ libraryStatus: 'idle', profileReady: false,
-    referencedAssetCount: 1 }), false);
 });
 
 test('absent session mount exposes an unwritten validated draft and writes only on completed PLACE', () => {

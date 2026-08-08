@@ -11,6 +11,8 @@ import { isStrongCreatedAsset, projectLibraryAssetUnion } from '../browser/libra
 import LatticeFocusViewer from '../rendering/LatticeFocusViewer.jsx';
 import Modul8rLayersAdapter from './Modul8rLayersAdapter.jsx';
 import Modul8rSettingsSurface from './Modul8rSettingsSurface.jsx';
+import useBrowserWorkspace from '../browser/useBrowserWorkspace.js';
+import { resolveProfileAssetReferences } from '../../library/data/resolveProfileAssetReferences.js';
 
 const AUTHORING_TOOL_PRESENTATION = Object.freeze({
   duplicate: Object.freeze({ Icon: Copy, label: 'Duplicate selected placement' }),
@@ -18,6 +20,11 @@ const AUTHORING_TOOL_PRESENTATION = Object.freeze({
   mirrorVertical: Object.freeze({ Icon: FlipVertical2, label: 'Mirror vertical' }),
   rotate: Object.freeze({ Icon: RotateCw, label: 'Rotate selected placement' }),
 });
+
+// Data authority outlives the temporary MODUL-8R presentation mount used by
+// Preview. The store itself remains profile-scoped and aborts stale profiles.
+const useRelatedCreationsStore = createCreationsStore({ retainOnRetry: true });
+const libraryPreviewRecords = new Map();
 
 export default function Modul8rOwnerWorkspace({
   activeTableId,
@@ -42,7 +49,7 @@ export default function Modul8rOwnerWorkspace({
   onSurfaceChange,
   onVisitProfile,
   closeRequestId = 0,
-  initialOpen = true,
+  initialOpen = false,
   openRequestId = 0,
   profileAddress,
   reorderDisabled,
@@ -56,17 +63,19 @@ export default function Modul8rOwnerWorkspace({
   const [viewerSession, setViewerSession] = useState(null);
   const [activeCollection, setActiveCollection] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [referencedOwnedAssets, setReferencedOwnedAssets] = useState([]);
   const [moduleState, setModuleState] = useState({ masterExpanded: true, openModule: 'library' });
-  const [useRelatedCreationsStore] = useState(() => createCreationsStore({ retainOnRetry: true }));
   const [useCollectionTokensStore] = useState(() => createCollectionTokensStore());
   const createdAssets = useRelatedCreationsStore((state) => state.assets);
+  const referencedCreatedAssets = useRelatedCreationsStore((state) => state.referencedAssets);
   const createdProfileAddress = useRelatedCreationsStore((state) => state.profileAddress);
   const createdStatus = useRelatedCreationsStore((state) => state.status);
   const createdProgress = useRelatedCreationsStore((state) => state.progress);
   const createdError = useRelatedCreationsStore((state) => state.error || state.liveError);
+  const setCreatedProfileAddress = useRelatedCreationsStore((state) => state.setProfileAddress);
   const loadCreated = useRelatedCreationsStore((state) => state.load);
   const retryCreated = useRelatedCreationsStore((state) => state.retry);
-  const cancelCreated = useRelatedCreationsStore((state) => state.cancel);
+  const resolveReferencedCreatedAssets = useRelatedCreationsStore((state) => state.resolveReferencedAssets);
   const collectionTokens = useCollectionTokensStore((state) => state.assets);
   const collectionStatus = useCollectionTokensStore((state) => state.status);
   const collectionProgress = useCollectionTokensStore((state) => state.progress);
@@ -77,22 +86,43 @@ export default function Modul8rOwnerWorkspace({
   const clearCollectionTokens = useCollectionTokensStore((state) => state.clear);
   const handledCloseRequestIdRef = useRef(closeRequestId);
   const handledOpenRequestIdRef = useRef(openRequestId);
-  const relatedRecordsCallbackRef = useRef(onRelatedAssetRecordsChange);
+  const acceptedRelatedRecordsSignatureRef = useRef(null);
   const libraryFaceplateAccessoryRef = useRef(null);
   const peopleFaceplateAccessoryRef = useRef(null);
   const settingsReturnFocusRef = useRef(null);
+  const usedAssetIdsKey = (data.usedAssetIds || []).join(',');
+  const resolvedAssetIdsKey = [...ownedAssetRecords, ...createdAssets, ...referencedCreatedAssets]
+    .map(({ id }) => id).sort().join(',');
   const closeSettings = () => {
     setSettingsOpen(false);
     requestAnimationFrame(() => settingsReturnFocusRef.current?.isConnected
       && settingsReturnFocusRef.current.focus({ preventScroll: true }));
   };
 
-  useEffect(() => { relatedRecordsCallbackRef.current = onRelatedAssetRecordsChange; }, [onRelatedAssetRecordsChange]);
   useEffect(() => {
-    if (!open) { cancelCreated(); cancelCollectionTokens(); return; }
-    if (profileAddress && (createdProfileAddress !== profileAddress || createdStatus === 'idle')) loadCreated(profileAddress);
-  }, [cancelCollectionTokens, cancelCreated, createdProfileAddress, createdStatus, loadCreated, open, profileAddress]);
-  useEffect(() => () => cancelCreated(), [cancelCreated]);
+    if (profileAddress) setCreatedProfileAddress(profileAddress);
+  }, [profileAddress, setCreatedProfileAddress]);
+  useEffect(() => {
+    let current = true;
+    setReferencedOwnedAssets([]);
+    const resolvedIds = new Set(resolvedAssetIdsKey.split(',').filter(Boolean));
+    const unresolvedIds = (data.usedAssetIds || []).filter((id) => !resolvedIds.has(id));
+    if (profileAddress && unresolvedIds.length) {
+      resolveProfileAssetReferences(profileAddress, unresolvedIds)
+        .then((assets) => { if (current) setReferencedOwnedAssets(assets); })
+        .catch(() => {});
+    }
+    return () => { current = false; };
+  }, [profileAddress, resolvedAssetIdsKey, usedAssetIdsKey]);
+  useEffect(() => {
+    if (profileAddress && createdProfileAddress === profileAddress) {
+      resolveReferencedCreatedAssets(profileAddress, data.usedAssetIds);
+    }
+  }, [createdProfileAddress, profileAddress, resolveReferencedCreatedAssets, usedAssetIdsKey]);
+  useEffect(() => {
+    if (open && moduleState.openModule === 'library' && createdProfileAddress === profileAddress
+      && createdStatus === 'idle') loadCreated(profileAddress);
+  }, [createdProfileAddress, createdStatus, loadCreated, moduleState.openModule, open, profileAddress]);
   useEffect(() => () => clearCollectionTokens(), [clearCollectionTokens]);
   useEffect(() => { setActiveCollection(null); clearCollectionTokens(); }, [clearCollectionTokens, profileAddress]);
   useEffect(() => {
@@ -131,13 +161,21 @@ export default function Modul8rOwnerWorkspace({
   })).sort((left, right) => Number(right.collectionRole === 'cover') - Number(left.collectionRole === 'cover')),
   [activeCollection?.id, collectionUnion.assets]);
   const acceptedRelatedRecords = useMemo(() => {
-    const records = activeCollection ? [...union.records, ...collectionUnion.records] : union.records;
-    return [...new Map(records.filter((record) => isStrongCreatedAsset(record, profileAddress))
+    const creatorRecords = activeCollection ? [...union.records, ...referencedCreatedAssets, ...collectionUnion.records]
+      : [...union.records, ...referencedCreatedAssets];
+    const records = [...creatorRecords.filter((record) => isStrongCreatedAsset(record, profileAddress)),
+      ...referencedOwnedAssets.filter((record) => record.ownerAddress === profileAddress)];
+    return [...new Map(records
       .map((record) => [record.id, record])).values()];
-  }, [activeCollection, collectionUnion.records, profileAddress, union.records]);
-  useEffect(() => { onRelatedAssetRecordsChange?.(acceptedRelatedRecords); },
-    [acceptedRelatedRecords, onRelatedAssetRecordsChange]);
-  useEffect(() => () => relatedRecordsCallbackRef.current?.([]), [profileAddress]);
+  }, [activeCollection, collectionUnion.records, profileAddress, referencedCreatedAssets, referencedOwnedAssets,
+    union.records]);
+  useEffect(() => {
+    const scopedRecords = [profileAddress, acceptedRelatedRecords];
+    const signature = JSON.stringify(scopedRecords);
+    if (signature === acceptedRelatedRecordsSignatureRef.current) return;
+    acceptedRelatedRecordsSignatureRef.current = signature;
+    onRelatedAssetRecordsChange?.(scopedRecords);
+  }, [acceptedRelatedRecords, onRelatedAssetRecordsChange, profileAddress]);
   const unionData = useMemo(() => ({
     ...data,
     assets: union.assets,
@@ -159,6 +197,8 @@ export default function Modul8rOwnerWorkspace({
     createdError: null,
     createdStatus: 'ready',
   } : null, [activeCollection, collectionAssets, collectionError, collectionProgress, collectionStatus, data]);
+  const libraryData = collectionData || unionData;
+  const libraryWorkspace = useBrowserWorkspace(libraryData, libraryPreviewRecords);
   const unionCategoryCommands = useMemo(() => categoryCommands ? {
     ...categoryCommands,
     setCategoryAsset: (categoryId, assetId, value) => categoryCommands.setCategoryAsset(categoryId, assetId, value,
@@ -181,11 +221,11 @@ export default function Modul8rOwnerWorkspace({
     library: <Modul8rLibraryAdapter categoryCommands={activeCollection ? null : unionCategoryCommands}
       collectionContext={activeCollection ? { address: activeCollection.contractAddress, name: activeCollection.name,
         resolved: collectionProgress.resolved, total: collectionProgress.total } : null}
-      data={collectionData || unionData}
+      data={libraryData}
       faceplateTargetRef={libraryFaceplateAccessoryRef} onAssetActivate={openAsset} onAssetPointerDown={onAssetPointerDown}
       onExitCollection={() => { cancelCollectionTokens(); setActiveCollection(null); }}
       onRenderableAssetsChange={onRenderableAssetsChange} onRetryCollection={() => retryCollectionTokens(activeCollection)}
-      onRetryCreated={retryCreated} />,
+      onRetryCreated={retryCreated} workspace={libraryWorkspace} />,
     activity: ({ active }) => <Modul8rActivityAdapter active={active} profileAddress={profileAddress} />,
     people: ({ active }) => <Modul8rPeopleAdapter active={active} faceplateTargetRef={peopleFaceplateAccessoryRef}
       onVisitProfile={onVisitProfile} />,

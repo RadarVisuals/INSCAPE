@@ -15,7 +15,8 @@ import {
   launchPlaywrightEdge,
 } from './playwright-browser-adapter.mjs';
 
-export const OWNER_PRODUCTION_PREVIEW_URL = 'https://deploy-preview-2--enterinscape.netlify.app';
+export const OWNER_PRODUCTION_PREVIEW_URL = process.env.INSCAPE_OWNER_PREVIEW_URL
+  || 'https://deploy-preview-2--enterinscape.netlify.app';
 export const OWNER_PRODUCTION_PREVIEW_PROFILE = '0x1111111111111111111111111111111111111111';
 export const OWNER_PREVIEW_TIMEOUT_MS = 10_000;
 export const OWNER_PREVIEW_LIFECYCLE_TIMEOUTS = Object.freeze({
@@ -46,6 +47,8 @@ const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixturePath = '/__inscape_owner_production_preview_fixture__';
 const providerBundlePath = '/__inscape_up_provider_server__.js';
 const rpcOrigin = 'https://rpc.mainnet.lukso.network';
+const task4bMediaOrigin = 'https://task4b-fixtures.invalid';
+const task4bMediaSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#777"/></svg>';
 const graphOrigins = Object.freeze([
   'https://envio.lukso-mainnet.universal.tech',
   'https://indexer.chillwhales.dev',
@@ -365,7 +368,8 @@ function rpcFixtureResponse(request) {
   return JSON.stringify(Array.isArray(payload) ? payload.map(responseFor) : responseFor(payload));
 }
 
-function attachPageLedger({ authorityProfiles = [profileAddress], expectedControlledConsoleErrors = [], page, ledger, problems, profileAddress }) {
+function attachPageLedger({ authorityProfiles = [profileAddress], expectedControlledConsoleErrors = [],
+  expectedControlledGraphAbortOperations = [], page, ledger, problems, profileAddress }) {
   page.on('framenavigated', (frame) => ledger.record('framenavigated', {
     frame: frame === page.mainFrame() ? 'fixture' : 'preview', url: frame.url(),
   }));
@@ -416,6 +420,15 @@ function attachPageLedger({ authorityProfiles = [profileAddress], expectedContro
       methods: rpc.methods.join(','), resourceType: request.resourceType(), failure,
       lifecyclePhase, frameUrl: request.frame()?.url() || '',
     };
+    let graphOperation = null;
+    try { graphOperation = /query\s+(\w+)/u.exec(JSON.parse(request.postData() || '{}').query || '')?.[1] || null; }
+    catch { /* non-GraphQL request */ }
+    if (!cleanupOwned && failure === 'net::ERR_ABORTED'
+      && graphOrigins.includes(new URL(request.url()).origin)
+      && expectedControlledGraphAbortOperations.includes(graphOperation)) {
+      ledger.record('expected-controlled-graph-abort', { ...details, graphOperation });
+      return;
+    }
     if (!cleanupOwned && failure === 'net::ERR_ABORTED' && rpc.fixtureInduced) {
       ledger.record('expected-synthetic-profile-metadata-rpc-abort', details);
       return;
@@ -473,7 +486,7 @@ async function installDocumentLedger(context, ledger) {
       }
       const toolbar = document.querySelector('nav[aria-label="Owner workspace tools"]');
       const modulator = document.querySelector('[aria-label="Modulator"]');
-      if (toolbar && modulator && !firstOwnerReady) {
+      if (toolbar && !firstOwnerReady) {
         firstOwnerReady = true;
         emit('owner-modul8r-dom-ready', {
           toolbarNodeId: window.__task4OwnerHarness.nodeId(toolbar),
@@ -638,7 +651,9 @@ export async function runOwnerProductionPreviewGate(executeGate, {
   contextInitScript = null,
   contextInitScriptArg,
   graphFixtureResponse = null,
+  openModulatorForGate = true,
   expectedControlledConsoleErrors = [],
+  expectedControlledGraphAbortOperations = [],
 } = {}) {
   const ledger = createOwnerPreviewLedger({ label });
   const runtimePath = resolve(workspaceRoot,
@@ -670,7 +685,7 @@ export async function runOwnerProductionPreviewGate(executeGate, {
       const fixture = createOwnerProductionPreviewFixtureHtml({ previewUrl, profileAddress, authorityProfiles });
       const routeController = createPlaywrightRouteController({
         loopbackOrigin: 'http://127.0.0.1:9',
-        knownOrigins: [previewOrigin, rpcOrigin, ...graphOrigins],
+        knownOrigins: [previewOrigin, rpcOrigin, task4bMediaOrigin, ...graphOrigins],
         decideKnown: async ({ origin, request, url }) => {
           if (origin === previewOrigin && url.pathname === fixturePath) {
             return { action: 'fulfill', options: { status: 200, contentType: 'text/html', body: fixture } };
@@ -679,6 +694,9 @@ export async function runOwnerProductionPreviewGate(executeGate, {
             return { action: 'fulfill', options: { status: 200, contentType: 'text/javascript', body: providerBundle } };
           }
           if (origin === previewOrigin) return { action: 'continue' };
+          if (origin === task4bMediaOrigin) return { action: 'fulfill', options: {
+            status: 200, contentType: 'image/svg+xml', body: task4bMediaSvg,
+          } };
           if (origin === rpcOrigin) return { action: 'fulfill', options: {
             status: 200, contentType: 'application/json', body: rpcFixtureResponse(request),
           } };
@@ -710,7 +728,8 @@ export async function runOwnerProductionPreviewGate(executeGate, {
         await resources.context.addInitScript(contextInitScript, contextInitScriptArg);
         ledger.record('context-init-script-installed', { enabled: true });
       }
-      attachPageLedger({ authorityProfiles, expectedControlledConsoleErrors, page: resources.page, ledger, problems, profileAddress });
+      attachPageLedger({ authorityProfiles, expectedControlledConsoleErrors, expectedControlledGraphAbortOperations,
+        page: resources.page, ledger, problems, profileAddress });
       const documentLedger = await installDocumentLedger(resources.context, ledger);
       resources.startveilDetached = documentLedger.startveilDetached;
       resources.pageCdp = await resources.context.newCDPSession(resources.page);
@@ -848,7 +867,6 @@ export async function runOwnerProductionPreviewGate(executeGate, {
     try {
       await Promise.all([
         ownerToolbar.waitFor({ state: 'visible', timeout: ownerReadyDeadline.remainingMs() }),
-        modulator.waitFor({ state: 'visible', timeout: ownerReadyDeadline.remainingMs() }),
         page.waitForFunction(({ expectedProfile }) => window.__ownerPreviewFixture?.ready
           && window.__ownerPreviewFixture.channels > 0
           && window.__ownerPreviewFixture.profileAddress === expectedProfile
@@ -866,6 +884,13 @@ export async function runOwnerProductionPreviewGate(executeGate, {
           && window.__ownerPreviewFixture.requests.some(({ method }) => method === 'eth_chainId'),
         { expectedProfile: profileAddress }, { timeout: ownerReadyDeadline.remainingMs() }),
       ]);
+      assert.equal(await modulator.count(), 0, 'MODUL-8R must start closed until the owner explicitly opens Browser');
+      ledger.record('owner-modul8r-initially-closed', { closed: true });
+      if (openModulatorForGate) {
+        await ownerToolbar.getByRole('button', { name: 'BROWSER', exact: true })
+          .click({ timeout: ownerReadyDeadline.remainingMs() });
+        await modulator.waitFor({ state: 'visible', timeout: ownerReadyDeadline.remainingMs() });
+      }
     } catch (error) {
       try {
         ledger.record('owner-readiness-authority', await page.evaluate(() =>

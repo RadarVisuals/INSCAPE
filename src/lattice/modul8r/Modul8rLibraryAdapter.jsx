@@ -5,7 +5,6 @@ import BrowserCategoryDialog from '../browser/BrowserCategoryDialog.jsx';
 import { BrowserFilterControls } from '../browser/BrowserUnifiedPanel.jsx';
 import Modul8rLibraryPanel from './Modul8rLibraryPanel.jsx';
 import { BROWSER_VIEW_KINDS, categoryMembershipState } from '../browser/browserWorkspaceModel.js';
-import useBrowserWorkspace from '../browser/useBrowserWorkspace.js';
 import RackMenu from '../../public/menus/RackMenu.jsx';
 import '../browser/browserWorkspace.css';
 import './modul8rLibrary.css';
@@ -27,8 +26,8 @@ export default function Modul8rLibraryAdapter({
   onRenderableAssetsChange,
   onRetryCollection,
   onRetryCreated,
+  workspace,
 }) {
-  const workspace = useBrowserWorkspace(data);
   const categorySectionRef = useRef(null);
   const organizationGestureRef = useRef(null);
   const suppressSelectionRef = useRef(false);

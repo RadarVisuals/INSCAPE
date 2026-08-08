@@ -14,7 +14,7 @@ import useLatticeFloatingWindow from '../windows/useLatticeFloatingWindow.js';
 
 const clampSidebarWidth = (value) => Math.min(320, Math.max(48, Number(value) || 174));
 
-export default function useBrowserWorkspace(data) {
+export default function useBrowserWorkspace(data, sharedPreviewRecords = null) {
   const [view, setView] = useState({ kind: BROWSER_VIEW_KINDS.ALL, id: null });
   const [query, setQuery] = useState('');
   const [collection, setCollection] = useState('all');
@@ -29,7 +29,7 @@ export default function useBrowserWorkspace(data) {
   const floatingWindow = useLatticeFloatingWindow();
   const sidebarResizeGestureRef = useRef(null);
   const previewJobsRef = useRef(new Map());
-  const previewRecordsRef = useRef(new Map());
+  const previewRecordsRef = useRef(sharedPreviewRecords || new Map());
   const [previewVersion, setPreviewVersion] = useState(0);
 
   const sourceAssets = Array.isArray(data?.assets) ? data.assets : [];
@@ -39,7 +39,7 @@ export default function useBrowserWorkspace(data) {
     for (const [id, job] of previewJobsRef.current) {
       if (!liveIds.has(id)) { job.cancelled = true; previewJobsRef.current.delete(id); }
     }
-    for (const id of previewRecordsRef.current.keys()) {
+    if (!sharedPreviewRecords) for (const id of previewRecordsRef.current.keys()) {
       if (!liveIds.has(id)) previewRecordsRef.current.delete(id);
     }
     for (const asset of sourceAssets) {
@@ -65,7 +65,7 @@ export default function useBrowserWorkspace(data) {
       });
     }
     setPreviewVersion((value) => value + 1);
-  }, [sourceAssets]);
+  }, [sharedPreviewRecords, sourceAssets]);
   useEffect(() => () => {
     for (const job of previewJobsRef.current.values()) job.cancelled = true;
     previewJobsRef.current.clear();

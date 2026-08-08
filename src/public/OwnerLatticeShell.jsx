@@ -273,12 +273,15 @@ function OwnerLatticeRuntime({
   const [activityOpen, setActivityOpen] = useState(false);
   const [creationsOpen, setCreationsOpen] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
-  const [modul8rRelatedAssetRecords, setModul8rRelatedAssetRecords] = useState([]);
+  const [[modul8rRelatedAssetProfile, retainedModul8rRelatedAssetRecords],
+    setModul8rRelatedAssetState] = useState([profileAddress, []]);
+  const modul8rRelatedAssetRecords = modul8rRelatedAssetProfile === profileAddress
+    ? retainedModul8rRelatedAssetRecords : [];
   const [modul8rOpenRequestId, setModul8rOpenRequestId] = useState(0);
   const [modul8rCloseRequestId, setModul8rCloseRequestId] = useState(0);
   const [modul8rModuleRequest, setModul8rModuleRequest] = useState(null);
   const [modul8rPresentationState, setModul8rPresentationState] = useState({
-    masterExpanded: true, open: true, openModule: 'library', settingsOpen: false,
+    masterExpanded: true, open: false, openModule: 'library', settingsOpen: false,
   });
   useEffect(() => {
     if (modul8rActive && interfaceVisible && !modul8rReturnFocusRef.current) {
@@ -289,7 +292,11 @@ function OwnerLatticeRuntime({
   useEffect(() => setPublicationOpen(false), [profileAddress]);
   const profileIdentity = useProfileIdentity(profileAddress);
   const profileContractFacts = useProfileContractFacts(profileAddress, { enabled: Boolean(identityDossierOpening || identityDossierSession) });
-  const { commands: browserCategoryCommands, data: browserData } = useOwnerLatticeBrowser(profileAddress);
+  const libraryInventoryRequested = modul8rActive
+    ? modul8rPresentationState.open && modul8rPresentationState.openModule === 'library'
+    : browserActivated;
+  const { commands: browserCategoryCommands, data: browserData } = useOwnerLatticeBrowser(
+    profileAddress, libraryInventoryRequested);
   const authoring = useOwnerLatticeAuthoring(profileAddress, {
     supplementalAssetRecords: modul8rActive ? modul8rRelatedAssetRecords : [],
   });
@@ -1401,7 +1408,7 @@ function OwnerLatticeRuntime({
           moduleRequest={modul8rModuleRequest}
           onArrangeToggle={() => activateWorkspaceTool('arrange')}
           onAssetPointerDown={beginBrowserAssetDrag}
-          onRelatedAssetRecordsChange={setModul8rRelatedAssetRecords}
+          onRelatedAssetRecordsChange={setModul8rRelatedAssetState}
           onAuthoringToolActivate={(toolId) => activateWorkspaceTool(toolId)}
           onEscape={() => {
             if (publicationOpen) { setPublicationOpen(false); return true; }

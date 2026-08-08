@@ -24,6 +24,14 @@ async function switchAuthority(page, profileAddress) {
   }), profileAddress);
 }
 
+async function openBrowser(frame) {
+  const modulator = frame.getByRole('region', { name: 'Modulator' });
+  if (await modulator.count()) return;
+  await frame.getByRole('navigation', { name: 'Owner workspace tools' })
+    .getByRole('button', { name: 'BROWSER', exact: true }).click({ timeout: 10_000 });
+  await modulator.waitFor({ state: 'visible', timeout: 10_000 });
+}
+
 test('Task 4B production preview authoring persists one exact canonical placement across remount', async () => {
   const outcome = await runOwnerProductionPreviewGate(async ({ frame, ledger, page }) => {
     const draftKey = task4bDraftKey(TASK4B_PROFILE_A);
@@ -88,10 +96,12 @@ test('Task 4B production preview authoring persists one exact canonical placemen
     });
 
     await switchAuthority(page, TASK4B_PROFILE_B);
+    await openBrowser(frame);
     await frame.getByRole('button', { name: /BETA AUTHORING ASSET/u }).waitFor({ state: 'visible', timeout: 10_000 });
     assert.equal(await frame.locator('button.lattice-production-movement-control[data-placement-id]').count(), 0,
       'Owner A placement leaked into owner B during remount');
     await switchAuthority(page, TASK4B_PROFILE_A);
+    await openBrowser(frame);
     await frame.getByRole('button', { name: /ALPHA AUTHORING ASSET/u }).waitFor({ state: 'visible', timeout: 10_000 });
     await frame.locator(`[data-placement-id="${placementId}"]`).waitFor({ state: 'attached', timeout: 10_000 });
     const remountedBytes = await frame.evaluate((key) => localStorage.getItem(key), draftKey);
@@ -106,7 +116,9 @@ test('Task 4B production preview authoring persists one exact canonical placemen
     contextInitScriptArg: { profiles: profileSeeds, seedDrafts: false },
     expectedControlledConsoleErrors: [
       '[wallet-permission-check] (intermediate value).getPermissions is not a function',
+      '[wallet-permission-check] erc725.getPermissions is not a function',
     ],
+    expectedControlledGraphAbortOperations: ['ProfileCreations'],
     graphFixtureResponse: createTask4BIndexerFixture(profileSeeds),
     label: 'owner-authoring-persistence',
   });

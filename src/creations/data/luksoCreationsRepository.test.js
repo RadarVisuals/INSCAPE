@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { COLLECTION_TOKENS_QUERY, createLuksoCreationsRepository, CREATIONS_QUERY } from './luksoCreationsRepository.js';
+import { COLLECTION_TOKENS_QUERY, createLuksoCreationsRepository, CREATIONS_QUERY,
+  REFERENCED_CREATIONS_QUERY } from './luksoCreationsRepository.js';
 import { collectionTokenNeedsMetadataRefresh } from './lsp8CollectionMetadataResolver.js';
 
 const PROFILE = '0x1234567890abcdef1234567890abcdef12345678';
@@ -40,6 +41,42 @@ test('paginates asset and token creator paths independently and includes unowned
   assert.deepEqual(calls.map((call) => call.assetOffset), [0, 1]);
   assert.equal(batches.at(-1).complete, true);
   assert.equal(batches.flatMap((batch) => batch.assets).every((asset) => !asset.isOwnedByViewedProfile), true);
+});
+
+test('resolves only curated creator references without enumerating the full creations or collection lists', async () => {
+  const tokenId = `0x${'0'.repeat(63)}1`;
+  const calls = [];
+  const collection = { id: CONTRACT_B, isLSP7: false, isCollection: true, name: 'Collection',
+    description: 'Creator collection', images: [{ src: 'https://assets.example/cover.webp' }],
+    holders: [], lsp4Creators: [{ profile_id: PROFILE }], attributes: [], tokens: [{ tokenId }] };
+  const token = { id: 'token', tokenId, name: 'Curated token', description: 'Exact token',
+    images: [{ src: 'https://assets.example/token.webp' }], attributes: [], lsp4Creators: [], holders: [],
+    baseAsset: collection };
+  const repository = createLuksoCreationsRepository({ collectionMetadataResolver: null,
+    fetchImpl: async (_url, options) => {
+      calls.push(JSON.parse(options.body));
+      return { ok: true, json: async () => ({ data: {
+        AssetCreators: [row('curated-contract'), { id: 'collection-creator', profile_id: PROFILE,
+          asset_id: CONTRACT_B, asset: collection }],
+        TokenCreators: [], Token: [token],
+      } }) };
+    } });
+  const requested = [`42:${CONTRACT_A}:contract`, `42:${CONTRACT_B}:${tokenId}`];
+  const batches = [];
+  for await (const batch of repository.loadReferencedCreations(PROFILE, requested)) batches.push(batch);
+
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].query, /query ReferencedCreations/);
+  assert.deepEqual(calls[0].variables, { profile: PROFILE, contracts: [CONTRACT_A, CONTRACT_B], tokenIds: [tokenId] });
+  assert.deepEqual(batches[0].assets.map(({ id }) => id), requested);
+  assert.equal(batches[0].complete, true);
+});
+
+test('referenced creations query remains relationship-scoped and exact-token bounded', () => {
+  assert.match(REFERENCED_CREATIONS_QUERY, /AssetCreators\(where:[\s\S]*profile_id:[\s\S]*asset_id: \{ _in: \$contracts \}/);
+  assert.match(REFERENCED_CREATIONS_QUERY, /TokenCreators\(where:[\s\S]*tokenId: \{ _in: \$tokenIds \}/);
+  assert.match(REFERENCED_CREATIONS_QUERY, /Token\(where:[\s\S]*tokenId: \{ _in: \$tokenIds \}/);
+  assert.doesNotMatch(REFERENCED_CREATIONS_QUERY, /Token_aggregate|AssetCreators_aggregate|TokenCreators_aggregate/);
 });
 
 test('paginates every token in an accepted creator collection by exact contract', async () => {

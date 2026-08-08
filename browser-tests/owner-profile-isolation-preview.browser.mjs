@@ -26,6 +26,14 @@ async function switchAuthority(page, profileAddress) {
   }), profileAddress);
 }
 
+async function openBrowser(frame) {
+  const modulator = frame.getByRole('region', { name: 'Modulator' });
+  if (await modulator.count()) return;
+  await frame.getByRole('navigation', { name: 'Owner workspace tools' })
+    .getByRole('button', { name: 'BROWSER', exact: true }).click({ timeout: 10_000 });
+  await modulator.waitFor({ state: 'visible', timeout: 10_000 });
+}
+
 async function selectWorkspaceTheme(frame, value) {
   await frame.getByRole('navigation', { name: 'Owner workspace tools' })
     .getByRole('button', { name: 'THEME', exact: true }).click({ timeout: 10_000 });
@@ -57,6 +65,7 @@ test('Task 4B production preview owner A to B isolation remains exact', async ()
     await frame.getByRole('complementary', { name: 'Version 8 publication' }).waitFor({ state: 'visible', timeout: 10_000 });
 
     assert.equal((await switchAuthority(page, TASK4B_PROFILE_B)).ownerAllowed, true);
+    await openBrowser(frame);
     const betaLibraryAsset = frame.locator('.lattice-browser-assets').getByRole('button', { name: /BETA ISOLATION ASSET/u });
     await betaLibraryAsset.waitFor({ state: 'visible', timeout: 10_000 });
     assert.equal(await frame.locator('[data-placement-id]').count(), 0, 'Owner A placement leaked into owner B');
@@ -69,6 +78,7 @@ test('Task 4B production preview owner A to B isolation remains exact', async ()
     ledger.record('task4b-profile-b-isolated', { profileAddress: TASK4B_PROFILE_B });
 
     assert.equal((await switchAuthority(page, TASK4B_PROFILE_A)).ownerAllowed, true);
+    await openBrowser(frame);
     await alphaLibraryAsset.waitFor({ state: 'visible', timeout: 10_000 });
     await frame.locator('[data-placement-id="task4b-alpha-placement"]').waitFor({ state: 'attached', timeout: 10_000 });
     assert.equal(await owner.getAttribute('data-surface'), 'mist', 'Return to owner A retained a stale cross-profile Theme session');
@@ -84,8 +94,10 @@ test('Task 4B production preview owner A to B isolation remains exact', async ()
     contextInitScriptArg: { profiles: profileSeeds, seedDrafts: true },
     expectedControlledConsoleErrors: [
       '[wallet-permission-check] (intermediate value).getPermissions is not a function',
+      '[wallet-permission-check] erc725.getPermissions is not a function',
     ],
     graphFixtureResponse: createTask4BIndexerFixture(profileSeeds),
+    expectedControlledGraphAbortOperations: ['ProfileCreations'],
     label: 'owner-profile-isolation',
   });
   assert.equal(outcome.result.isolated, true);
