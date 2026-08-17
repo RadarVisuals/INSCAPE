@@ -50,12 +50,16 @@ describe('Playwright browser lifecycle', () => {
     const isolationRuntimePath = resolve(workspaceRoot, '.browser-test-runtime-task4a-isolation');
     const uniqueTask4aRuntimePath = resolve(workspaceRoot,
       '.browser-test-runtime-task4a-1234-1785847105764-01234567-89ab-4cde-8fab-0123456789ab');
+    const uniqueSystemCharacterizationRuntimePath = resolve(workspaceRoot,
+      '.browser-test-runtime-system-characterization-1234-1785847105764-01234567-89ab-4cde-8fab-0123456789ab');
     assert.equal(validateBrowserRuntimePath(task4aRuntimePath, workspaceRoot), task4aRuntimePath);
     assert.equal(validateBrowserRuntimePath(isolationRuntimePath, workspaceRoot), isolationRuntimePath);
     assert.equal(validateBrowserRuntimePath(uniqueTask4aRuntimePath, workspaceRoot), uniqueTask4aRuntimePath);
+    assert.equal(validateBrowserRuntimePath(uniqueSystemCharacterizationRuntimePath, workspaceRoot), uniqueSystemCharacterizationRuntimePath);
     for (const unsafe of [workspaceRoot, resolve(workspaceRoot, 'other'), resolve(runtimePath, '.browser-test-runtime-task4a'),
       resolve(workspaceRoot, '..', '.browser-test-runtime'),
       resolve(workspaceRoot, '.browser-test-runtime-task4a-arbitrary'),
+      resolve(workspaceRoot, '.browser-test-runtime-system-characterization-arbitrary'),
       resolve(workspaceRoot, '.browser-test-runtime-task4a-1234-1785847105764-01234567-89ab-3cde-8fab-0123456789ab')]) {
       assert.throws(() => validateBrowserRuntimePath(unsafe, workspaceRoot), /Refusing browser runtime cleanup/);
     }

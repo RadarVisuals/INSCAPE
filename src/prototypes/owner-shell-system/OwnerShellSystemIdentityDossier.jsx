@@ -15,7 +15,6 @@ const MODULE_COLLAPSED_HEIGHTS = Object.freeze({
   technical: MODULE_HEADER_HEIGHT,
 });
 const SHELL_DOCK_HEIGHT = 52;
-const SHELL_WINDOW_INSET = 18;
 
 const initials = (name) => String(name || 'PROFILE').split(/\s+/u).filter(Boolean)
   .slice(0, 2).map((part) => part[0]).join('').toUpperCase();
@@ -62,6 +61,7 @@ export default function OwnerShellSystemIdentityDossier({
   viewport,
 }) {
   const rootRef = useRef(null);
+  const rackRef = useRef(null);
   const closeRef = useRef(null);
   const settleFrameRef = useRef(null);
   const timerRef = useRef(null);
@@ -69,15 +69,8 @@ export default function OwnerShellSystemIdentityDossier({
   const [phase, setPhase] = useState('starting');
   const [returnRectangle, setReturnRectangle] = useState(originRectangle);
   const layout = useMemo(() => {
-    const base = identityDossierViewerLayout(originRectangle, viewport);
-    return {
-      ...base,
-      rack: {
-        ...base.rack,
-        height: Math.max(280, viewport.height - SHELL_DOCK_HEIGHT - (SHELL_WINDOW_INSET * 2)),
-        top: SHELL_WINDOW_INSET,
-      },
-    };
+    const availableViewport = { ...viewport, height: Math.max(1, viewport.height - SHELL_DOCK_HEIGHT) };
+    return identityDossierViewerLayout(originRectangle, availableViewport);
   }, [originRectangle, viewport]);
   const rackRectangle = phase === 'starting' ? originRectangle : phase === 'closing' ? returnRectangle : layout.rack;
   const collapsedHeight = MODULES.reduce((total, id) => total + MODULE_COLLAPSED_HEIGHTS[id], 0);
@@ -138,6 +131,22 @@ export default function OwnerShellSystemIdentityDossier({
     setPhase('closing');
   }, [getReturnRectangle, phase]);
 
+  useEffect(() => {
+    if (phase !== 'open' && phase !== 'closing') return undefined;
+    const handleOutsideInteraction = (event) => {
+      if (rackRef.current?.contains(event.target)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (phase === 'open') requestClose();
+    };
+    window.addEventListener('pointerdown', handleOutsideInteraction, true);
+    window.addEventListener('click', handleOutsideInteraction, true);
+    return () => {
+      window.removeEventListener('pointerdown', handleOutsideInteraction, true);
+      window.removeEventListener('click', handleOutsideInteraction, true);
+    };
+  }, [phase, requestClose]);
+
   const profileTrack = returning
     ? { height: rackRectangle.height, top: 0 }
     : tracks.get('profile');
@@ -156,7 +165,7 @@ export default function OwnerShellSystemIdentityDossier({
   >
     <div aria-hidden="true" className="owner-shell-system-identity__veil" />
     <div className="owner-shell-system-identity__rack-viewport">
-      <div className="owner-shell-system-identity__rack" style={{
+      <div className="owner-shell-system-identity__rack" ref={rackRef} style={{
         '--owner-shell-system-identity-expanded-width': `${layout.rack.width}px`,
         height: rackRectangle.height, left: rackRectangle.left, top: rackRectangle.top, width: rackRectangle.width,
       }}>

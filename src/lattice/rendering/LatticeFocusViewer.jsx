@@ -27,13 +27,17 @@ export default function LatticeFocusViewer({
   getReturnRectangle,
   gridVariables,
   gridVisible,
+  inspectionFrameGridVisible = true,
   inspectionVariant = 'paired',
   onClosed,
   onNavigate,
   originRectangle,
   menuSurfaceId,
+  navigationPlacement = 'viewport',
+  navigationViewportBottom = 18,
   overlayInk,
   position,
+  recenterArtworkWhenInspectionClosed = false,
   renderArtwork,
   returnFocus,
   surfaceColor,
@@ -61,9 +65,21 @@ export default function LatticeFocusViewer({
   );
   const layoutOrigin = focusViewerEntryRectangle(origin, entry.focusDimensions);
   const rackInspection = inspectionVariant === 'rack';
-  const createLayout = (rectangle, size) => rackInspection
-    ? focusViewerRackLayout(rectangle, size, dossiersOpen)
-    : focusViewerLayout(rectangle, size, dossiersOpen);
+  const createLayout = (rectangle, size) => {
+    const nextLayout = rackInspection
+      ? focusViewerRackLayout(rectangle, size, dossiersOpen)
+      : focusViewerLayout(rectangle, size, dossiersOpen);
+    if (!rackInspection || !recenterArtworkWhenInspectionClosed || dossiersOpen || nextLayout.mode !== 'rack') {
+      return nextLayout;
+    }
+    return {
+      ...nextLayout,
+      artwork: {
+        ...nextLayout.artwork,
+        left: (size.width - nextLayout.artwork.width) / 2,
+      },
+    };
+  };
   const layout = createLayout(layoutOrigin, viewport);
   const focusedRectangle = layout.artwork;
   const collapsedRectangle = phase === 'closing' ? returnRectangle : origin;
@@ -269,9 +285,12 @@ export default function LatticeFocusViewer({
       aria-label={`${entry.media.accessibleLabel || 'Artwork'} focus viewer`}
       aria-modal="true"
       className="lattice-focus-viewer"
+      data-adaptive-rack-presentation={rackInspection
+        && (recenterArtworkWhenInspectionClosed || navigationPlacement === 'artwork') || undefined}
       data-lattice-focus-viewer
       data-layout={layout.mode}
       data-grid-visible={gridVisible}
+      data-inspection-frame-grid-visible={inspectionFrameGridVisible}
       data-menu-surface={menuSurfaceId}
       data-phase={phase}
       onKeyDown={handleKeyDown}
@@ -344,8 +363,12 @@ export default function LatticeFocusViewer({
         aria-label="Artwork viewer navigation"
         className="lattice-focus-viewer__navigation"
         style={rackInspection ? {
-          left: layout.artwork.left + (layout.artwork.width / 2),
-          ...(layout.mode === 'rack-compact' ? { bottom: 'auto', top: layout.artwork.top + layout.artwork.height + 18 } : {}),
+          left: navigationPlacement === 'artwork'
+            ? layout.artwork.left + (layout.artwork.width / 2)
+            : '50%',
+          ...(layout.mode === 'rack-compact' || navigationPlacement === 'artwork'
+            ? { bottom: 'auto', top: layout.artwork.top + layout.artwork.height + 18 }
+            : { bottom: navigationViewportBottom }),
         } : undefined}
       >
         <button aria-disabled={navigationLocked || total < 2} aria-label="Previous artwork" onClick={() => requestNavigation(-1)} type="button">‹</button>
