@@ -1,5 +1,6 @@
 import { normalizeProfileAddress } from '../../library/config.js';
 import {
+  LATTICE_PRODUCTION_GRID_STATE_ACTIVE,
   LATTICE_PRODUCTION_VISIBILITY,
   assertValidLatticeProductionDraft,
 } from './latticeProductionDraft.js';
@@ -95,6 +96,7 @@ export function reconcileLatticeProductionDraft(publicationInput, currentDraftIn
     return {
       id: publishedTable.id,
       coordinate: { ...publishedTable.coordinate },
+      gridState: LATTICE_PRODUCTION_GRID_STATE_ACTIVE,
       title: publishedTable.title,
       subtitle: publishedTable.subtitle,
       labelVisible: publishedTable.labelVisible,
