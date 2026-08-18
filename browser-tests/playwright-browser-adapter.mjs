@@ -98,7 +98,7 @@ export async function waitForCspFixtureReady(page, {
     && url.searchParams.get('csp') === '1', { timeout: timeoutMs });
   await page.locator('[data-browser-fixture]').waitFor({ state: 'attached', timeout: timeoutMs });
   const fixtureHandle = await page.waitForFunction(() => Boolean(window.__fixture?.ready
-    && document.querySelector('.visitor-lattice-world,.published-home-world')), undefined, { timeout: timeoutMs, polling: 50 });
+    && document.querySelector('.visitor-grid-world,.visitor-lattice-world,.published-home-world')), undefined, { timeout: timeoutMs, polling: 50 });
   await fixtureHandle.dispose();
 }
 

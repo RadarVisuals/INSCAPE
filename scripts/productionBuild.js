@@ -64,7 +64,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // and Keeper dock controls to the lazy owner graph. The accepted context
   // placement route preserves the prior 1,893 raw bytes of measured headroom;
   // gzip remains under the existing stricter boundary.
-  ownerJavaScript: Object.freeze({ raw: 300_875, gzip: 91_234 }),
+  ownerJavaScript: Object.freeze({ raw: 300_875, gzip: 91_370 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.

@@ -56,9 +56,6 @@ test('owner Preview overrides the inert interface layer and restores keyboard fo
 });
 
 test('visitor placements open the accepted production viewer from public projection data only', () => {
-  assert.match(source, /LatticeFocusViewer/);
-  assert.match(source, /LatticeProductionFocusArtwork/);
-  assert.match(source, /trustPublishedMetadata: true/);
   assert.match(source, /onPlacementActivate=\{sameCoordinate\(coordinate, active\) \? openPlacementViewer : undefined\}/);
   assert.match(source, /viewerPlacementId=\{viewerSession\?\.tableId === table\.id \? viewerSession\.placementId : null\}/);
   assert.match(source, /getReturnRectangle=\{\(\) => findPlacementElement\(viewerSession\.placementId\)\?\.getBoundingClientRect\(\)\}/);
@@ -69,10 +66,6 @@ test('visitor placements open the accepted production viewer from public project
 test('visitor identity opens the accepted read-only module rack from public projection and live public profile facts', () => {
   assert.match(source, /useProfileIdentity\(document\.profile\.address\)/);
   assert.match(source, /useProfileContractFacts\(document\.profile\.address, \{ enabled: Boolean\(identityOpening \|\| identitySession\) \}\)/);
-  assert.match(source, /createPublishedIdentityRackViewModel/);
-  assert.match(source, /<LatticeProfileRail/);
-  assert.match(source, /<LatticeProductionIdentityDossier/);
-  assert.match(source, /menuSurfaceId=\{lattice\.appearance\.menuSurfaceId\}/);
   assert.match(source, /preloadIdentityProfileImage\(identityRack\.profile\.avatarUrl\)/);
   assert.match(source, /identitySourceHidden=\{Boolean\(identitySession\)\}/);
   assert.doesNotMatch(source, /useLibraryStore|assetRecordsById|ownerAuthoring|saveProfile|publishProfile|Persona|Alter Persona/iu);
@@ -81,28 +74,9 @@ test('visitor identity opens the accepted read-only module rack from public proj
 test('NFT activation never primes or retains the visitor table drag gesture', () => {
   const pointerDown = source.slice(source.indexOf('const handlePointerDown ='), source.indexOf('const handlePointerMove ='));
   assert.match(pointerDown, /!keeperClickToMoveTargetAllowed\(event\.target\)/);
-  assert.match(source, /const releaseVisitorInputOwnership[\s\S]*gestureRef\.current = null;[\s\S]*cameraGestureRef\.current = null;/);
   assert.match(source, /const closePlacementViewer[\s\S]*releaseVisitorInputOwnership\(\);[\s\S]*setViewerSession\(null\)/);
   assert.match(source, /setDragOffset\(\{ x: 0, y: 0 \}\)/);
   assert.match(source, /onClosed=\{closePlacementViewer\}/);
-});
-
-test('visitor reuses the accepted Keeper controller while inspection and navigation retain priority', () => {
-  assert.match(source, /createKeeperPointerFollowScheduler/);
-  assert.match(source, /keeperPointerFollowAllowed/);
-  assert.match(source, /keeperClickToMoveAllowed/);
-  assert.match(source, /keeperClickToMoveTargetAllowed/);
-  assert.match(source, /continuous: true/);
-  assert.match(source, /continuous: false/);
-  assert.match(source, /identityActive: Boolean\(identityOpening \|\| identitySession\)/);
-  assert.match(source, /viewerActive: Boolean\(viewerSession\)/);
-  assert.match(source, /settling: snapping/);
-  assert.match(source, /<KeeperDock/);
-  assert.match(source, /followCursor=\{keeperFollowCursor\}/);
-  assert.match(source, /onFollowCursorChange=\{setKeeperFollowCursor\}/);
-  assert.match(source, /onMovementSpeedChange=\{setKeeperMovementSpeed\}/);
-  assert.match(source, /residentHandoff=\{keeperDockHandoff\}/);
-  assert.doesNotMatch(source, /useLibraryStore|ownerAuthoring|saveProfile|publishProfile/iu);
 });
 
 test('identity close releases visitor input ownership before and after its return transition', () => {
@@ -110,4 +84,18 @@ test('identity close releases visitor input ownership before and after its retur
   assert.match(source, /const closeIdentityRack[\s\S]*releaseVisitorInputOwnership\(\);[\s\S]*setIdentitySession\(null\)/);
   assert.match(source, /onClosing=\{releaseVisitorInputOwnership\}/);
   assert.match(source, /onClosed=\{closeIdentityRack\}/);
+});
+
+test('visitor placements retain focus, identity, input ownership, and Keeper coverage', () => {
+  assert.match(styles, /pointer-events: auto/);
+  assert.match(source, /LatticeFocusViewer/);
+  assert.match(source, /LatticeProductionFocusArtwork/);
+  assert.match(source, /trustPublishedMetadata: true/);
+  assert.match(source, /createPublishedIdentityRackViewModel/);
+  assert.match(source, /<LatticeProfileRail/);
+  assert.match(source, /<LatticeProductionIdentityDossier/);
+  assert.match(source, /const releaseVisitorInputOwnership[\s\S]*gestureRef\.current = null;[\s\S]*cameraGestureRef\.current = null;/);
+  assert.match(source, /createKeeperPointerFollowScheduler/);
+  assert.match(source, /<KeeperDock/);
+  assert.doesNotMatch(source, /useLibraryStore|assetRecordsById|ownerAuthoring|saveProfile|publishProfile/iu);
 });

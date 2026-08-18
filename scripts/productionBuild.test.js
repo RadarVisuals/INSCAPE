@@ -69,7 +69,7 @@ test('each independent budget category reports an actionable overage', () => {
 test('measured combined Alpha allowances retain exact production budget boundaries', () => {
   assert.deepEqual(PRODUCTION_BUDGETS, {
     initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
-    ownerJavaScript: { raw: 300_875, gzip: 91_234 },
+    ownerJavaScript: { raw: 300_875, gzip: 91_370 },
     standaloneWalletJavaScript: { raw: 4_400_000, gzip: 1_200_000 },
     initialCss: { raw: 51_493, gzip: 10_139 },
     ownerCss: { raw: 76_499, gzip: 14_733 },

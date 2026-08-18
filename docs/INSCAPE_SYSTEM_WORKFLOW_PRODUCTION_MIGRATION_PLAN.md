@@ -1,6 +1,6 @@
 # INSCAPE System Workflow Production Plan
 
-Status: `[x]` - clean-break direction approved; Phase 1 complete; Phase 2 not started
+Status: `[x]` - clean-break direction approved; Phases 1 and 2 complete; Phase 3 not started
 
 Branch: `migration/system-workflow-2026-08-17`
 
@@ -267,16 +267,30 @@ Phase 1 checkpoint:
 
 ### Phase 2 - Public v9 vertical slice
 
-Status: `[ ]`
+Status: `[x]`
 
 1. Implement the v9 builder, validator, serializer, and public projection.
 2. Implement v9-only Preview with first-public-Grid media preload.
 3. Rewrite Visitor from nine spatial planes to ordered public Grids.
-4. Adapt resolver, direct-profile, iframe, and v9-only reconciliation.
+4. Adapt the injectable v9 parser/review seam, direct-profile, iframe, and v9-only reconciliation. The default resolver, key, and publication cutover remain Phase 4 work.
 5. Remove v1-v8 branches from the active route.
 6. Keep real publication disabled in this phase.
 
 Focused proof: exact envelope; byte/quantity limits; private omission; entry selection; Preview equals Visitor; refresh/read-back recovery; no owner/Library imports in Visitor.
+
+Phase 2 checkpoint:
+
+- exact `INSCAPE_PROFILE` version `9` contract with only `documentType`, `version`, `documentId`, `revision`, timestamps, LUKSO-mainnet network/profile authority, artboard, geometry, appearance, identity presentation, ordered `grids`, and empty `metadata` at the document root;
+- ordered public Grids and public placements only, with the first remaining public Grid as Visitor entry; private state is omitted and publication is blocked when no public Grid remains;
+- canonical asset references preserve placement geometry, crop, frame, mat, backing, transparency, layer, navigation order, transforms, and source/scope-qualified creator provenance;
+- exact validation, deterministic canonical serialization/hash input, content fingerprints, and v9-only reconciliation/read-back preserve public order while retaining non-conflicting private local Grids;
+- v9 Preview and Visitor share rendering, focus, media preload, and first-public-Grid behavior across profile/provider, direct-profile, and iframe review boundaries;
+- the injectable v9 parser is an isolated review seam only; the default resolver/key/publication path remains unchanged for Phase 4, and the selected MODUL8R production runtime plus its v8 Preview remain intact;
+- the v9 browsergate was modernized for the ordered-Grid contract and creator provenance;
+- focused Phase 2 regression matrix: 47/47 passed; browsergate: 12/12 passed; LUKSO standards: 5/5 passed;
+- full production build utility tests: 14/14 passed; owner-runtime isolation: 2/2 passed; production build and `build:check`: passed with `leaks: []` and no v9 module in the production owner closure;
+- minimal independently proven owner-JavaScript gzip rebaseline: `91_234` to `91_370`; accepted build measured `91_364` bytes;
+- independent final audit: **GO**.
 
 ### Phase 3 - Production System Workflow shell
 
@@ -347,11 +361,11 @@ Final acceptance covers dynamic Grid lifecycle/order, real authoring, all panels
 | --- | --- |
 | Clean-break plan | `[x]` |
 | 1. Contract/domain/storage/authoring | `[x]` |
-| 2. Public v9 vertical slice | `[ ]` |
+| 2. Public v9 vertical slice | `[x]` |
 | 3. Production System Workflow shell | `[ ]` |
 | 4. Publication/discovery/cutover | `[ ]` |
 | Post-acceptance cleanup | `[ ]` |
 
-Phase 1 is complete. Phase 2 remains unauthorized and must not start without explicit approval.
+Phases 1 and 2 are complete. Phase 3 remains unauthorized and must not start without explicit approval.
 
 Do not commit, push, deploy, upload, sign, or publish without explicit authorization.

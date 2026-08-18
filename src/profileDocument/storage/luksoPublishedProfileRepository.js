@@ -160,7 +160,7 @@ function availabilityCode(error, fallback) {
 
 export function createLuksoPublishedProfileRepository({ rpcUrl = LUKSO_RPC_URL, rpcFallbackUrls = LUKSO_RPC_FALLBACK_URLS,
   ipfsGateway = PROFILE_DOCUMENT_IPFS_GATEWAY_URL, ipfsGatewayFallbackUrls = PROFILE_DOCUMENT_IPFS_GATEWAY_FALLBACK_URLS,
-  fetchImpl = globalThis.fetch, dataReader = null, timeouts = PUBLISHED_PROFILE_TIMEOUTS } = {}) {
+  fetchImpl = globalThis.fetch, dataReader = null, documentParser = null, timeouts = PUBLISHED_PROFILE_TIMEOUTS } = {}) {
   if (typeof fetchImpl !== 'function') throw new TypeError('A fetch implementation is required');
   const timeoutPolicy = { ...PUBLISHED_PROFILE_TIMEOUTS, ...timeouts };
   const rpcEndpoints = endpointList(rpcUrl, rpcFallbackUrls, 'RPC');
@@ -228,7 +228,7 @@ export function createLuksoPublishedProfileRepository({ rpcUrl = LUKSO_RPC_URL, 
     }
     try {
       const raw = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-      const parseProfileDocumentJson = await loadProfileDocumentParser();
+      const parseProfileDocumentJson = documentParser || await loadProfileDocumentParser();
       const document = parseProfileDocumentJson(raw);
       if (normalizeProfileAddress(document.profile.address) !== requestedAddress) invalid('PROFILE_MISMATCH', 'Published profile address does not match its authority');
       return { status: PUBLISHED_PROFILE_STATUS.RESOLVED, address: requestedAddress, document, pointer };
