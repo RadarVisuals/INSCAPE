@@ -95,3 +95,27 @@ export function projectSystemWorkflowTransform(transform, dimensions, crop = nul
     swapped,
   });
 }
+
+export function projectSystemWorkflowImageRenderRectangle(imageRectangle, transformProjection) {
+  if (!imageRectangle) return null;
+  if (!transformProjection?.swapped) return Object.freeze({ ...imageRectangle });
+  return Object.freeze({
+    left: imageRectangle.left + ((imageRectangle.width - imageRectangle.height) / 2),
+    top: imageRectangle.top + ((imageRectangle.height - imageRectangle.width) / 2),
+    width: imageRectangle.height,
+    height: imageRectangle.width,
+  });
+}
+
+export function unprojectSystemWorkflowCrop(transform, crop) {
+  if (!crop) return null;
+  const quarterTurns = transform?.quarterTurns || 0;
+  const mirrorX = transform?.mirrorX === true;
+  const mirrorY = transform?.mirrorY === true;
+  let x = mirrorX ? 1 - crop.x : crop.x;
+  let y = mirrorY ? 1 - crop.y : crop.y;
+  if (quarterTurns === 1) [x, y] = [y, 1 - x];
+  else if (quarterTurns === 2) [x, y] = [1 - x, 1 - y];
+  else if (quarterTurns === 3) [x, y] = [1 - y, x];
+  return Object.freeze({ ...crop, x, y });
+}

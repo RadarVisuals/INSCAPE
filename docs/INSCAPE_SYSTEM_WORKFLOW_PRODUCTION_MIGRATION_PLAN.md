@@ -1,6 +1,6 @@
 # INSCAPE System Workflow Production Plan
 
-Status: `[x]` - clean-break direction approved; Phases 1 and 2 complete; Phase 3 not started
+Status: `[x]` - clean-break direction approved; Phases 1, 2, and 3 complete; Phase 4 not started
 
 Branch: `migration/system-workflow-2026-08-17`
 
@@ -132,7 +132,7 @@ Required draft shape:
     menuSurfaceId,
     dossierSurfaceId,
     guideMode,     // 'LINES' | 'DOTS' | 'NONE'
-    guideSize,
+    guideSize,     // signed Grid density, -8..+8; 0 preserves the base cell and guide strokes remain 1 px
     guideColor
   },
   identityPresentation,
@@ -294,7 +294,7 @@ Phase 2 checkpoint:
 
 ### Phase 3 - Production System Workflow shell
 
-Status: `[ ]`
+Status: `[x]`
 
 1. Promote accepted visual components outside prototypes.
 2. Connect profile/provider authority and draft v4.
@@ -306,6 +306,115 @@ Status: `[ ]`
 Preserve the accepted visual details: fixed bottom UI; restrained/fading selection; exact crop viewer transition; no orphan handles; centered artwork/counter; hidden focus-view guides; smooth Native Fit; thin crop boundary; outside crop completion; locked-item pass-through; outward frames; stable filter rail.
 
 Use a development-only review entry. Do not change production selection mid-phase.
+
+#### Open structural blocker - fullscreen Grid/world contract
+
+The current fixed `32x18` / `16:9` artboard contract causes unavoidable letterboxing whenever the usable browser viewport is not exactly `16:9`. The dock and other fixed UI span the viewport, but the authoring surface and placement bounds remain restricted to the centered artboard. This produces large unusable bands at common fullscreen `1440p` and `1080p` browser sizes and prevents placements from reaching the visible workspace edges. This is a contract defect, not a bounded CSS or responsive-styling defect.
+
+Do not solve this by stretching the `32x18` artboard or by masking the unused bands. Before continuing visual parity work, replace the hard outer artboard with a fullscreen world/Grid viewport:
+
+- the complete stage above the fixed bottom UI is usable;
+- Grid cells remain square and snap-to-Grid remains authoritative;
+- viewport size determines how many rows and columns are visible instead of creating letterbox borders;
+- placements remain stored in Grid/world coordinates rather than viewport pixels;
+- each Grid may retain an explicit camera/start view for authoring, Preview, and Visitor projection;
+- wider or taller viewports reveal more world without stretching, cropping, or changing placement geometry;
+- existing placement-count, asset-reference, payload-size, and coordinate safety limits remain fail-closed.
+
+Phase 3 resolves the start-view choice without introducing a fictitious per-Grid camera: the sole canonical authority is the shared, centered `SYSTEM_WORKFLOW_DEFAULT_VIEW` with `CONTAIN_REFERENCE` zoom semantics. Owner authoring, Preview, and Visitor all project through that same authority. Draft v4 and public v9 therefore intentionally contain no camera field. A persisted per-Grid camera may be introduced only with a future authored pan/zoom feature and must then replace this authority across all three consumers in one contract change.
+
+This correction affects the Phase-1 draft geometry and bounds authorities plus the Phase-2 v9 publication/Preview/Visitor projection. Because the new workflow has not been selected or published and no backward compatibility is required, correct those contracts directly before Phase 3 acceptance rather than adding a compatibility layer. Preserve the committed Phase-1 and Phase-2 checkpoints as Git rollback points. No implementation of this blocker is authorized by this note alone.
+
+#### Binding Phase-3 parity blockers - 2026-08-19 review
+
+These are not independent micro-polish requests. They identify incorrectly recreated interaction, geometry, motion, presence, and styling contracts. Correct them as coherent shared primitives after comparing the final System Workflow prototype and the production review route at identical viewports and states. Do not stack local CSS exceptions or declare parity from source assertions alone.
+
+**Artwork geometry, crop, toolbar, and focus viewer**
+
+- Resizing changes the placement/frame geometry without ever distorting the media's intrinsic aspect ratio. Turning a square placement into a rectangle must recompose the undistorted image inside that frame, as in the final prototype.
+- Crop starts from that exact composition. Zoom and pan then choose the crop inside the resized frame; entering Crop must not preserve or expose a previously distorted media ratio.
+- `NATIVE FIT` must perform a real, visible fit operation and preserve smooth media rendering. Crop pointer movement must not be inverted, and resize/crop/rotate must share one coherent transform authority.
+- Rotation must not break crop geometry, frame geometry, opening origin, closing destination, or media interpolation.
+- Artwork open and close must be one continuous source-to-destination transition from the exact Grid placement, with no cropped substitute, snap, handoff, or final-frame correction.
+- The modules following the artwork inside the NFT viewer must retain the prototype's transition between module states; they must not simply appear or disappear.
+- Double- and triple-check the complete crop toolbar and artwork interaction against the final prototype rather than fixing only the currently reported examples.
+
+**Profile/Activity cards, dismissal, and presence**
+
+- Compact-to-expanded and expanded-to-compact Profile transitions must use the final prototype's single clean card animation. Do not use a crossover or handover that first resizes and then snaps position.
+- Clicking outside either the compact or expanded Profile card returns directly to the Grid. Outside dismissal must never become unresponsive.
+- Apply the same continuous-identity rule to artwork/NFT viewer motion wherever the current implementation swaps surfaces.
+- Ordinary menus and panels must not dim or fade the background. Only immersive expanded surfaces that did so in the final prototype, such as expanded Profile or Activity, may alter background presence. Verify this literally against the prototype.
+- Expanded Activity controls require deliberate spacing and responsive behavior; actions must not disappear at smaller supported viewports.
+
+**Discover and shared Browser workspace**
+
+- Restore the complete Discover side-column styling and behavior from the final prototype, including its collapse/resize behavior.
+- Search inputs must not show the heavy native black focus rectangle after pointer interaction. Preserve an accessible keyboard-only `:focus-visible` treatment without exposing that pointer-state ring.
+- Filter and Sort menus require the accepted typography, spacing, surfaces, selected-state treatment, and custom presentation; do not expose unstyled browser controls.
+- Restore the accepted hover-information treatment and use the same shared treatment in Discover and Library.
+- Discover `CREATE` must work and match the accepted control styling.
+
+**Grid switcher**
+
+- Preserve the working vertical active indicator, Grid selection, and drag reorder.
+- Remove the six-dot drag decorations and trailing ellipsis menus; they add no useful information.
+- Put direct icon-only actions on each Grid row for rename, public/private visibility, and delete, each with a clear hover label.
+- Public/private state must be truthful and unambiguous; never show a closed/private icon for a public Grid.
+- Keep the row visually quiet and do not replace the removed dot/ellipsis clutter with another permanent control cluster.
+
+**Library and category creation**
+
+- Creating a category must not arbitrarily darken most of the workspace as though it were selected. Reproduce the prototype's intentional modal/presence treatment exactly.
+- Restore the final prototype's hover-information treatment and apply its shared version to Discover.
+- Restore the accepted Filter/Sort dropdown typography and styling.
+- Remove the heavy native pointer focus rectangle from Library search while retaining keyboard `:focus-visible` accessibility.
+
+**Bottom dock**
+
+- Rebuild spacing and responsive behavior as one dock layout rather than hiding or squeezing arbitrary controls.
+- Required logical order: `PROFILE`, `LIBRARY`, `GRIDS`, `DISCOVER`, `ACTIVITY`, `PREVIEW`, `PUBLISH`, `SETTINGS`.
+- Controls must remain understandable and reachable at supported viewport widths; responsive variants must preserve the workflow rather than silently dropping actions.
+
+**Preview and fullscreen Grid projection**
+
+- Preview must consume the corrected fullscreen world/Grid projection and must not reintroduce fixed-artboard edge restrictions, stretching, clipping, or letterbox bands.
+- Authoring, Preview, and Visitor must share placement geometry and camera/start-view semantics so a successful authoring correction cannot diverge again at publication review.
+
+**Settings**
+
+- Recreate the complete final-prototype Settings presentation rather than patching the current partial panel.
+- Replace visibly native browser sliders and dropdowns with the accepted shared control styling while preserving semantic inputs and keyboard access.
+- Square-guide size must visibly and correctly change the square guide geometry. Lines, dots, none, guide size, guide color, canvas color, themes, and related controls must all operate through canonical appearance authority.
+- Place the close action within the Settings layout without overlapping labels or controls.
+- Validate Settings at all supported viewport widths and all themes; incomplete styling or inert controls block Phase-3 acceptance.
+
+**Acceptance method**
+
+- Capture matched prototype/review screenshots for every major state above at identical viewport dimensions, including transitions where still frames alone are insufficient.
+- Compare computed geometry, typography, presence, and interaction outcomes, not only approximate visual resemblance.
+- Consolidate fixes in the smallest correct shared primitives. Do not respond to this list with a sequence of isolated one-off offsets, opacity overrides, or component-specific copies.
+- Phase 3 remained `[~]` until the fullscreen Grid/world correction and every blocker in this review were manually accepted; the completion checkpoint below records that acceptance.
+
+#### Phase-3 completion checkpoint - 2026-08-23
+
+Phase 3 is accepted and frozen at the development-only System Workflow review boundary:
+
+- the fullscreen Grid/world projection uses square cells across the complete usable viewport and shares its centered default-view authority with owner authoring, Preview, and Visitor without adding a persisted camera field;
+- placement, movement, group movement, proportional resize, crop, rotation, mirroring, selection, marquee, duplication, layer ordering, locking, removal, and snap-to-Grid behavior use the canonical System Workflow authorities;
+- artwork opening/closing, ratio-safe browsing, profile identity transitions, disclosure modules, Grid swipe transitions, selection presence, and reduced-motion behavior retain continuous visual identity without orphaned controls or transition-owned geometry;
+- Profile, Activity, Library, Discover, dynamic categories/sections, Grid switching/reordering, Settings, Docs, Preview, Visitor, the fixed dock, the layer inspector, and narrow layouts were reviewed as one coherent shell;
+- the Sora and IBM Plex Sans Condensed typography, supplied wordmark, shared controls, six themes, guide modes, guide color, and separate workspace/interface surfaces were manually accepted; the user explicitly waived another duplicate six-theme review before freeze;
+- Library/Discover organization and drag placement retain source aspect ratios, truthful membership semantics, accessible keyboard focus, theme-aware context actions, and responsive two-row control layouts;
+- MODUL8R remains the selected production owner runtime; the System Workflow entrance remains development-only and no Phase-4 key, resolver, publication, Discovery-event, upload, wallet, or deployment cutover has occurred.
+
+Final verification:
+
+- focused Phase-3 domain, shell, preview, runtime, build, isolation, and LUKSO matrix: 90/90 passed;
+- real Edge System Workflow browser matrix: 13/13 passed across canvas, projection, crop, inspector, Library, panels, and completion coverage;
+- complete repository suite: 1,230/1,230 passed, with zero failures, cancellations, or skips;
+- production build: passed; `build:check`: passed at 856,289 initial-JavaScript bytes; owner dependency leaks: none;
+- `git diff --check`: passed before staging.
 
 ### Phase 4 - Publication, discovery, cutover, and certification
 
@@ -362,10 +471,10 @@ Final acceptance covers dynamic Grid lifecycle/order, real authoring, all panels
 | Clean-break plan | `[x]` |
 | 1. Contract/domain/storage/authoring | `[x]` |
 | 2. Public v9 vertical slice | `[x]` |
-| 3. Production System Workflow shell | `[ ]` |
+| 3. Production System Workflow shell | `[x]` |
 | 4. Publication/discovery/cutover | `[ ]` |
 | Post-acceptance cleanup | `[ ]` |
 
-Phases 1 and 2 are complete. Phase 3 remains unauthorized and must not start without explicit approval.
+Phases 1, 2, and 3 are complete. Phase 4 has not started and still requires explicit authorization.
 
 Do not commit, push, deploy, upload, sign, or publish without explicit authorization.

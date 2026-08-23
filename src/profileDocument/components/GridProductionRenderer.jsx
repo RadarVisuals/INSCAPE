@@ -1,17 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createLatticeProductionLayerRanks } from '../../lattice/rendering/latticeProductionLayerOrder.js';
+import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import {
-  projectLatticeProductionArtwork,
-  projectLatticeProductionLabel,
-  projectLatticeProductionViewport,
+  projectLatticeProductionPixelArtwork,
 } from '../../lattice/rendering/latticeProductionProjection.js';
+import { projectSystemWorkflowViewport } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
+import { systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { adaptProfileDocumentV9Media, PROFILE_DOCUMENT_V9_MEDIA_STATUS } from './profileDocumentV9Media.js';
 import '../../lattice/rendering/latticeProductionTableRenderer.css';
 
 export const GRID_PRODUCTION_EAGER_MEDIA_RETRY_DELAY = 4_000;
 export const GRID_PRODUCTION_EAGER_MEDIA_ATTEMPTS = 3;
 const rectangleStyle = ({ left, top, width, height }) => ({ left, top, width, height });
-const viewportOf = (node) => ({ width: Math.max(0, node?.clientWidth || 0), height: Math.max(0, node?.clientHeight || 0) });
+const viewportOf = (node, bottomInset = 0) => ({
+  width: Math.max(0, node?.clientWidth || 0),
+  height: Math.max(0, (node?.clientHeight || 0) - bottomInset),
+});
 
 function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlacementActivate, placement, gridId, viewerSourceHidden }) {
   const media = useMemo(() => adaptProfileDocumentV9Media(placement.asset), [placement.asset]);
@@ -30,7 +34,7 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
   }, [imageLoading, loadState.attempt, loadState.src, loadState.status, media.src, media.status]);
   const decodedDimensions = loadState.src === media.src && loadState.status === 'loaded' ? loadState.dimensions : null;
   const dimensions = decodedDimensions || media.dimensions;
-  const artwork = projectLatticeProductionArtwork(placement, field, dimensions);
+  const artwork = projectLatticeProductionPixelArtwork(placement, field, dimensions);
   const effectiveBackground = placement.backing.enabled ? placement.backing.color
     : placement.transparencyMode === 'OPAQUE' ? '#d8d4ca' : 'transparent';
   const ready = media.status === PROFILE_DOCUMENT_V9_MEDIA_STATUS.READY;
@@ -72,28 +76,32 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
   </figure>;
 }
 
-export default function GridProductionRenderer({ document, grid, imageLoading = 'lazy', onMediaState, onPlacementActivate, viewerPlacementId = null }) {
+export default function GridProductionRenderer({ document, grid, imageLoading = 'lazy', onMediaState, onPlacementActivate,
+  projectionBottomInset = 0, viewerPlacementId = null }) {
   const rootRef = useRef(null);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   useEffect(() => { const node = rootRef.current; if (!node) return undefined;
-    const update = () => setViewport(viewportOf(node)); update(); const observer = new ResizeObserver(update); observer.observe(node);
-    return () => observer.disconnect(); }, []);
+    const update = () => setViewport(viewportOf(node, projectionBottomInset)); update(); const observer = new ResizeObserver(update); observer.observe(node);
+    return () => observer.disconnect(); }, [projectionBottomInset]);
   const model = useMemo(() => ({ geometry: document.geometry }), [document.geometry]);
-  const projected = viewport.width > 0 && viewport.height > 0 ? projectLatticeProductionViewport(model, viewport) : null;
+  const projected = viewport.width > 0 && viewport.height > 0 ? projectSystemWorkflowViewport(model.geometry, viewport) : null;
   const layerRanks = useMemo(() => createLatticeProductionLayerRanks(grid.placements), [grid.placements]);
-  const title = grid.title.trim(); const subtitle = grid.subtitle.trim();
+  const title = grid.title.trim();
   return <section aria-label={title || `INSCAPE ${grid.id}`} className="lattice-production-table visitor-grid-renderer"
-    data-grid-id={grid.id} data-surface={document.appearance.surfaceId} ref={rootRef} style={projected ? {
+    data-grid-id={grid.id} data-guide-mode={document.appearance.guideMode}
+    data-surface={document.appearance.surfaceId} ref={rootRef} style={projected ? {
+      '--lattice-production-guide-color': document.appearance.guideColor,
       '--lattice-production-cell-size': `${projected.cellSize}px`,
       '--lattice-production-grid-origin-x': `${projected.left}px`,
       '--lattice-production-grid-origin-y': `${projected.top}px`,
     } : undefined}>
-    {projected && <><span aria-hidden="true" className="lattice-production-table__authored-plane" style={rectangleStyle(projected)} />
+    {projected && <><LatticePixelGrid color={document.appearance.guideColor} field={projected}
+      guideInterval={systemWorkflowSnapStep(document.appearance.guideSize)} height={projected.height}
+      mode={document.appearance.guideMode} width={projected.width} />
+      <span aria-hidden="true" className="lattice-production-table__authored-plane" style={rectangleStyle(projected)} />
       {grid.placements.map((placement) => <GridPlacement field={projected} gridId={grid.id} imageLoading={imageLoading}
         key={placement.id} layerRank={layerRanks.get(placement.id)} onMediaState={onMediaState}
         onPlacementActivate={onPlacementActivate} placement={placement} viewerSourceHidden={placement.id === viewerPlacementId} />)}
-      {grid.labelVisible && Boolean(title || subtitle) && <header className="lattice-production-table__label"
-        style={projectLatticeProductionLabel(grid, projected)}>{title && <strong>{title}</strong>}{subtitle && <span>{subtitle}</span>}</header>}
     </>}
   </section>;
 }

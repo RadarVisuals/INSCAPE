@@ -65,32 +65,7 @@
 .lattice-focus-viewer__artwork {
   position: fixed;
   z-index: 2;
-  transform-origin: top left;
-  will-change: transform;
-}
-
-.lattice-focus-viewer[data-phase="starting"] .lattice-focus-viewer__artwork,
-.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__artwork {
-  transform:
-    translate3d(
-      var(--lattice-viewer-collapse-x),
-      var(--lattice-viewer-collapse-y),
-      0
-    )
-    scale(
-      var(--lattice-viewer-collapse-scale-x),
-      var(--lattice-viewer-collapse-scale-y)
-    );
-}
-
-.lattice-focus-viewer[data-phase="opening"] .lattice-focus-viewer__artwork,
-.lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__artwork {
-  transition: transform 420ms cubic-bezier(0.22, 0.76, 0.26, 1);
-}
-
-.lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__artwork {
-  transition: none;
-  transform: translate3d(0, 0, 0) scale(1);
+  will-change: left, top, width, height;
 }
 
 .lattice-focus-viewer[data-phase="open"][data-adaptive-rack-presentation] .lattice-focus-viewer__artwork {
@@ -103,7 +78,7 @@
   pointer-events: none;
 }
 
-.lattice-focus-viewer__artwork[data-browsing] {
+.lattice-focus-viewer:has(> .is-outgoing) > .lattice-focus-viewer__artwork {
   z-index: 3;
   animation: lattice-focus-viewer-browse-in var(--lattice-viewer-browse-duration) ease-out both;
 }
@@ -213,16 +188,17 @@
 .lattice-focus-viewer__dossier-body dt {
   color: var(--lattice-menu-ink);
   font: 500 12px/1.25 "Inscape IBM Plex Mono", monospace;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.04em;
 }
 
 .lattice-focus-viewer__dossier-body h2 {
-  margin: 10px 0 18px;
-  font: 400 19px/1.18 "Inscape Geist Sans", sans-serif;
-  letter-spacing: 0.02em;
+  margin: 0 0 18px;
+  font: 500 11px/1.2 "Inscape Sora", sans-serif;
+  font-variation-settings: "wght" 500;
+  letter-spacing: .025em;
 }
 
-.lattice-focus-viewer__dossier-body p { margin: 0 0 22px; }
+.lattice-focus-viewer__dossier-body p { margin: 0 0 22px; font: 400 10px/1.55 "Inscape Sora", sans-serif; font-variation-settings: "wght" 400; }
 
 .lattice-focus-viewer__dossier-body section {
   padding-top: 18px;
@@ -231,7 +207,7 @@
 
 .lattice-focus-viewer__dossier-body section > p {
   margin-top: 13px;
-  font: 500 8px/1.4 "Inscape IBM Plex Mono", monospace;
+  font: 400 10px/1.4 "Inscape IBM Plex Mono", monospace;
   letter-spacing: 0.08em;
 }
 
@@ -250,7 +226,7 @@
 .lattice-focus-viewer__dossier-body dd {
   margin: 6px 0 0;
   overflow-wrap: anywhere;
-  font: 500 8px/1.4 "Inscape IBM Plex Mono", monospace;
+  font: 400 10px/1.4 "Inscape IBM Plex Mono", monospace;
   white-space: pre-line;
 }
 .lattice-focus-viewer__dossier-body dd a { color: inherit; }
@@ -268,7 +244,7 @@
   padding: 5px 10px;
   border: 1px solid var(--lattice-menu-line-strong);
   color: var(--lattice-menu-ink);
-  font: 500 8px/1 "Inscape IBM Plex Mono", monospace;
+  font: 500 10px/1 "Inscape IBM Plex Mono", monospace;
   letter-spacing: 0.08em;
 }
 
@@ -293,8 +269,11 @@
 }
 
 .lattice-focus-viewer__rack {
+  box-sizing: border-box;
   position: fixed;
   z-index: 3;
+  overflow: hidden;
+  border: 1px solid var(--lattice-menu-line-strong);
   contain: layout;
   color: var(--lattice-menu-ink);
   opacity: 0;
@@ -306,61 +285,65 @@
 .lattice-focus-viewer[data-phase="starting"] .lattice-focus-viewer__rack,
 .lattice-focus-viewer[data-phase="closing"] .lattice-focus-viewer__rack { opacity: 0; pointer-events: none; }
 
-.lattice-focus-viewer__rack-module {
+.lattice-focus-viewer__rack > .lattice-focus-viewer__rack-module {
   position: absolute;
-  top: 0;
   left: 0;
   width: 100%;
   min-width: 0;
-  min-height: 54px;
+  min-height: 53px;
   overflow: hidden;
-  border: 1px solid var(--lattice-menu-line-strong);
-  background: color-mix(in srgb, var(--lattice-menu-panel) 97%, transparent);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.13);
-  transform: translate3d(0, var(--lattice-rack-module-y), 0);
-  will-change: transform, height;
+  border: 0;
+  background: var(--lattice-menu-panel);
+  box-shadow: none;
+  will-change: top, height;
   transition:
-    transform 320ms cubic-bezier(0.2, 0.72, 0.2, 1),
+    top 320ms cubic-bezier(0.2, 0.72, 0.2, 1),
     height 320ms cubic-bezier(0.2, 0.72, 0.2, 1),
     opacity 140ms linear;
 }
 
-.lattice-focus-viewer__rack-module[data-active] {
+.lattice-focus-viewer__rack > .lattice-focus-viewer__rack-module + .lattice-focus-viewer__rack-module {
+  border-top: 1px solid var(--lattice-menu-line-strong);
+}
+
+.lattice-focus-viewer__rack-module:has(> button[aria-expanded="true"]) {
   display: flex;
   min-height: 0;
   flex-direction: column;
-  box-shadow: 0 24px 62px rgb(0 0 0 / 0.2);
+  box-shadow: none;
 }
 
 .lattice-focus-viewer__rack-module > button {
   position: relative;
   display: grid;
-  flex: 0 0 54px;
+  flex: 0 0 53px;
   width: 100%;
-  height: 54px;
-  grid-template-columns: 8px 1fr 26px;
+  height: 53px;
+  grid-template-columns: 8px 1fr 22px;
   align-items: center;
   gap: 8px;
-  padding: 0 15px;
+  padding: 0 13px;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: var(--lattice-menu-ink);
   cursor: pointer;
-  font: var(--lattice-window-type-module);
-  letter-spacing: 0.08em;
+  font: 500 11px/1.1 "Inscape Sora", sans-serif;
+  font-variation-settings: "wght" 500;
+  letter-spacing: .025em;
+  text-transform: uppercase;
   text-align: left;
 }
 
-.lattice-focus-viewer__rack-module[data-active] > button {
-  background: var(--lattice-menu-selected);
+.lattice-focus-viewer__rack-module:has(> button[aria-expanded="true"]) > button {
+  background: color-mix(in srgb, var(--lattice-menu-ink) 12%, var(--lattice-menu-panel));
   color: var(--lattice-menu-ink);
 }
 
-.lattice-focus-viewer__rack-module[data-active] > button::before {
+.lattice-focus-viewer__rack-module:has(> button[aria-expanded="true"]) > button::before {
   position: absolute;
   inset: 0 auto 0 0;
-  width: 3px;
+  width: 4px;
   background: var(--lattice-menu-ink);
   content: "";
 }
@@ -372,18 +355,52 @@
   background: var(--lattice-menu-ink);
   opacity: 0.28;
 }
-.lattice-focus-viewer__rack-module[data-active] > button i { opacity: 1; }
-.lattice-focus-viewer__rack-module > button b {
+.lattice-focus-viewer__rack-module:has(> button[aria-expanded="true"]) > button i { opacity: 1; }
+.lattice-focus-viewer__rack-module > button::after {
   display: grid;
   height: 24px;
   place-items: center;
   font-weight: 400;
 }
 .lattice-focus-viewer__rack-module > button:focus-visible { outline: 1px solid var(--lattice-menu-ink); outline-offset: -4px; }
+.lattice-focus-viewer__rack-module > button:hover { background: var(--lattice-menu-selected); }
+
+.lattice-focus-viewer__rack-module[data-header-action] > button { padding-right: 53px; }
+.lattice-focus-viewer__rack-module[data-header-action] > button::after { display: none; }
+.lattice-focus-viewer__rack-module > .lattice-disclosure-module__header-action {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  width: 53px;
+  height: 53px;
+  display: grid;
+  place-items: center;
+}
+.lattice-focus-viewer__rack-module > .lattice-disclosure-module__header-action > button {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.lattice-focus-viewer__rack-module > .lattice-disclosure-module__header-action > button:hover,
+.lattice-focus-viewer__rack-module > .lattice-disclosure-module__header-action > button:focus-visible {
+  outline: none;
+  background: var(--lattice-menu-selected);
+}
+.lattice-focus-viewer__rack-module > .lattice-disclosure-module__header-action svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.6;
+}
 
 .lattice-focus-viewer__rack-panel {
   min-height: 0;
-  padding: 27px 24px 32px;
+  padding: 25px 24px 30px;
   overflow: auto;
   overscroll-behavior: contain;
   border-top: 1px solid var(--lattice-menu-line-strong);
@@ -399,18 +416,19 @@
 }
 .lattice-focus-viewer__rack-eyebrow {
   display: block;
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   color: var(--lattice-menu-ink);
   font: var(--lattice-window-type-label);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
 }
 .lattice-focus-viewer__rack-panel h2 {
-  margin: 0 0 22px;
+  margin: 0 0 18px;
   color: var(--lattice-menu-ink);
-  font: var(--lattice-window-type-title);
-  letter-spacing: 0.01em;
+  font: 500 11px/1.2 "Inscape Sora", sans-serif;
+  font-variation-settings: "wght" 500;
+  letter-spacing: .025em;
 }
-.lattice-focus-viewer__rack-panel p { max-width: 42em; margin: 0; white-space: pre-wrap; }
+.lattice-focus-viewer__rack-panel p { max-width: 42em; margin: 0; white-space: pre-wrap; font: 400 10px/1.55 "Inscape Sora", sans-serif; font-variation-settings: "wght" 400; }
 .lattice-focus-viewer__rack-panel dl { display: grid; margin: 0; }
 .lattice-focus-viewer__rack-panel dl > div {
   display: grid;
@@ -421,15 +439,17 @@
 }
 .lattice-focus-viewer__rack-panel dt {
   color: var(--lattice-menu-ink);
-  font: var(--lattice-window-type-label);
+  font: 500 10px/1.3 "Inscape Sora", sans-serif;
+  font-variation-settings: "wght" 500;
   line-height: 1.45;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.04em;
 }
 .lattice-focus-viewer__rack-panel dd {
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--lattice-menu-ink);
-  font: var(--lattice-window-type-value);
+  font: 400 9px/1.35 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  letter-spacing: .065em;
   white-space: pre-line;
 }
 .lattice-focus-viewer__rack-panel dd a { color: inherit; text-decoration-color: var(--lattice-menu-faint); text-underline-offset: 3px; }
@@ -453,7 +473,7 @@
 .lattice-focus-viewer__rack-attributes span {
   color: var(--lattice-menu-ink);
   font: var(--lattice-window-type-label);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.04em;
 }
 .lattice-focus-viewer__rack-attributes strong {
   overflow-wrap: anywhere;
@@ -485,16 +505,18 @@
   width: 28px;
   height: 22px;
   padding: 0;
-  font: 300 17px/1 "Inscape IBM Plex Mono", monospace;
+  display: grid;
+  place-items: center;
 }
+.lattice-focus-viewer__navigation button svg { width: 16px; height: 16px; stroke-width: 1.75; }
 
 .lattice-focus-viewer__navigation span {
   min-width: 54px;
   padding: 0 8px;
   border-right: 1px solid var(--lattice-overlay-faint);
   border-left: 1px solid var(--lattice-overlay-faint);
-  font: 8px/22px "Inscape IBM Plex Mono", monospace;
-  letter-spacing: 0.12em;
+  font: 400 10px/22px "Inscape IBM Plex Mono", monospace;
+  letter-spacing: 0.04em;
   text-align: center;
 }
 
@@ -520,7 +542,7 @@
 
 .lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__close-control { opacity: 1; }
 
-.lattice-focus-viewer__close-control[data-disabled] {
+.lattice-focus-viewer__close-control:has(button[aria-disabled="true"]) {
   pointer-events: none;
   opacity: 0;
 }
@@ -532,15 +554,15 @@
   border: 1px solid var(--lattice-dossier-border);
   background: color-mix(in srgb, var(--lattice-menu-panel) 94%, transparent);
   color: var(--lattice-overlay-ink);
-  font: 300 20px/1 "Inscape IBM Plex Mono", monospace;
   cursor: pointer;
 }
+.lattice-focus-viewer__close svg { width: 16px; height: 16px; stroke-width: 1.75; }
 
 .lattice-focus-viewer__close-control > span {
   margin-top: 10px;
   color: var(--lattice-overlay-muted);
-  font: 500 8px/1 "Inscape IBM Plex Mono", monospace;
-  letter-spacing: 0.12em;
+  font: 500 10px/1 "Inscape IBM Plex Mono", monospace;
+  letter-spacing: 0.08em;
 }
 
 .lattice-focus-viewer__navigation button:focus-visible,

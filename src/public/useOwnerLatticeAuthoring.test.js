@@ -196,7 +196,9 @@ test('corrupt records remain byte-for-byte untouched and never expose an authora
 
 test('valid multi-placement drafts load detached and unchanged without a write', () => {
   const draft = createEmptyLatticeProductionDraft(PROFILE);
+  draft.tables[0].gridState = 'ACTIVE';
   draft.tables[0].placements = [existingPlacement('placement-1')];
+  draft.tables[4].gridState = 'ACTIVE';
   draft.tables[4].placements = [existingPlacement('placement-3')];
   const raw = JSON.stringify(draft);
   const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE)]: raw });
@@ -211,7 +213,10 @@ test('valid multi-placement drafts load detached and unchanged without a write',
 
 test('loaded public placements project without draft mutation while private content stays redacted', () => {
   const draft = createEmptyLatticeProductionDraft(PROFILE);
+  draft.tables[0].gridState = 'ACTIVE';
+  draft.tables[0].visibility = 'PUBLIC';
   draft.tables[0].placements = [existingPlacement('placement-1')];
+  draft.tables[4].gridState = 'ACTIVE';
   draft.tables[4].visibility = 'PRIVATE';
   draft.tables[4].title = 'Private title';
   draft.tables[4].placements = [existingPlacement('placement-2')];

@@ -6,6 +6,7 @@ import {
   focusViewerEntryRectangle,
   focusViewerDestination,
   focusViewerLayout,
+  focusViewerPresentationDimensions,
   focusViewerRackLayout,
   focusedViewerRectangle,
   normalizeViewerRectangle,
@@ -21,6 +22,19 @@ test('browse layers preserve inherited DOMRect coordinates before applying decod
     width: 1200,
     height: 800,
   });
+});
+
+test('viewer presentation dimensions follow the authored quarter-turn orientation', () => {
+  const dimensions = { width: 1200, height: 800 };
+  assert.equal(focusViewerPresentationDimensions({ focusDimensions: dimensions }), dimensions);
+  assert.deepEqual(focusViewerPresentationDimensions({
+    focusDimensions: dimensions,
+    placement: { transform: { quarterTurns: 1 } },
+  }), { width: 800, height: 1200 });
+  assert.deepEqual(focusViewerPresentationDimensions({
+    focusDimensions: dimensions,
+    placement: { transform: { quarterTurns: 3 } },
+  }), { width: 800, height: 1200 });
 });
 
 test('viewer dossier scroll contains empty regions and both scroll-chain boundaries', () => {

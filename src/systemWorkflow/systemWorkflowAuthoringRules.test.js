@@ -44,6 +44,7 @@ import {
   createSystemWorkflowCropSession,
   finishSystemWorkflowCropPanGesture,
   nudgeSystemWorkflowCrop,
+  reframeSystemWorkflowCropForMask,
   setSystemWorkflowCropZoom,
   systemWorkflowCropMask,
   updateSystemWorkflowCropPanGesture,
@@ -56,7 +57,9 @@ import {
   SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS,
   createSystemWorkflowGroupTransformCandidate,
   createSystemWorkflowTransformCandidate,
+  projectSystemWorkflowImageRenderRectangle,
   projectSystemWorkflowTransform,
+  unprojectSystemWorkflowCrop,
 } from './systemWorkflowTransform.js';
 import {
   SYSTEM_WORKFLOW_MARQUEE_SELECTION_MODES,
@@ -85,8 +88,20 @@ test('placement creation retains canonical fit, pointer drop, IDs, bounds, and i
     3,
     2,
     { x: 260, y: 140 },
-    { left: 100, top: 50, width: 320, height: 180 },
+    { left: 100, top: 50, width: 320, height: 180, cellSize: 10 },
   ), { column: 10, row: 5, columnSpan: 12, rowSpan: 8 });
+  assert.deepEqual(createSystemWorkflowDropGeometry(
+    3,
+    2,
+    { x: 260, y: 140 },
+    { left: 100, top: 50, width: 320, height: 180, cellSize: 10, snapStep: 4 },
+  ), { column: 12, row: 4, columnSpan: 12, rowSpan: 8 });
+  assert.deepEqual(createSystemWorkflowDropGeometry(
+    3,
+    2,
+    { x: 263, y: 143 },
+    { left: 100, top: 50, width: 320, height: 180, cellSize: 10, snapStep: 1 / 9 },
+  ), { column: 10 + 3 / 9, row: 5 + 3 / 9, columnSpan: 12, rowSpan: 8 });
   const draft = createDraft();
   const before = structuredClone(draft);
   const candidate = createSystemWorkflowPlacementCandidate(draft, {
@@ -107,7 +122,7 @@ test('placement creation retains canonical fit, pointer drop, IDs, bounds, and i
   });
   assert.deepEqual(draft, before);
   assert.throws(() => createSystemWorkflowPlacementCandidate(draft, {
-    destination: { column: 31, row: 17, columnSpan: 2, rowSpan: 2 },
+    destination: { column: 4095, row: 4095, columnSpan: 2, rowSpan: 2 },
     generatePlacementId: () => 'placement-b', gridId: 'grid:home', stableAssetId: ASSET,
   }), { code: 'SYSTEM_WORKFLOW_PLACEMENT_DROP_GEOMETRY_INVALID' });
 });
@@ -126,6 +141,16 @@ test('single and group movement retain stale, lock, shared-delta, span, bounds, 
   const moved = createSystemWorkflowGroupMovementCandidate(draft, request);
   assert.deepEqual(moved.grids[0].placements.map(({ column, row }) => ({ column, row })), [
     { column: 4, row: 3 }, { column: 12, row: 11 },
+  ]);
+  const fractionalRequest = createSystemWorkflowGroupMovementRequest(
+    draft.grids[0].placements,
+    { column: 5 / 9, row: -2 / 9 },
+    'grid:home',
+  );
+  const fractionallyMoved = createSystemWorkflowGroupMovementCandidate(draft, fractionalRequest);
+  assert.deepEqual(fractionallyMoved.grids[0].placements.map(({ column, row }) => ({ column, row })), [
+    { column: 2 + 5 / 9, row: 2 - 2 / 9 },
+    { column: 10 + 5 / 9, row: 10 - 2 / 9 },
   ]);
   const first = draft.grids[0].placements[0];
   assert.equal(createSystemWorkflowMovementCandidate(draft, {
@@ -170,16 +195,22 @@ test('movement gestures, completion, cancellation, nudging, and bounds produce c
     geometry: { column: 10, row: 5, columnSpan: 12, rowSpan: 7 },
   });
   assert.deepEqual(updateSystemWorkflowMovementGesture(
-    start, { x: 100000, y: -100000 }, FIELD,
-  ).previewGeometry, { column: 20, row: 0, columnSpan: 12, rowSpan: 7 });
+    start, { x: 650, y: 420 }, { ...FIELD, snapStep: 4 },
+  ).previewGeometry, { column: 12, row: 8, columnSpan: 12, rowSpan: 7 });
+  assert.deepEqual(updateSystemWorkflowMovementGesture(
+    start, { x: 506, y: 314 }, { ...FIELD, snapStep: 1 / 9 }, 0,
+  ).previewGeometry, { column: 10 + 1 / 9, row: 5 + 3 / 9, columnSpan: 12, rowSpan: 7 });
+  assert.deepEqual(updateSystemWorkflowMovementGesture(
+    start, { x: 1000000000, y: -1000000000 }, FIELD,
+  ).previewGeometry, { column: 4084, row: -4096, columnSpan: 12, rowSpan: 7 });
   assert.deepEqual(nudgeSystemWorkflowPlacementGeometry(entry, { column: -1, row: 1 }), {
     column: 9, row: 6, columnSpan: 12, rowSpan: 7,
   });
   assert.equal(nudgeSystemWorkflowPlacementGeometry(
-    { ...entry, column: 0 }, { column: -1, row: 0 },
+    { ...entry, column: -4096 }, { column: -1, row: 0 },
   ), null);
   assert.equal(nudgeSystemWorkflowPlacementGeometry(
-    { ...entry, row: 11 }, { column: 0, row: 1 },
+    { ...entry, row: 4089 }, { column: 0, row: 1 },
   ), null);
 });
 
@@ -254,41 +285,81 @@ test('resize gestures and nudges preserve every opposite anchor and all grid bou
     geometry: { column: 10, row: 5, columnSpan: 8, rowSpan: 6 },
   });
   assert.deepEqual(updateSystemWorkflowResizeGesture(
+    start, { x: 319, y: 119 }, { ...FIELD, snapStep: 2 },
+  ).previewGeometry, { column: 8, row: 2, columnSpan: 10, rowSpan: 9 });
+  const fineStep = 5 / 9;
+  const fineSnapped = updateSystemWorkflowResizeGesture(
+    start, { x: 347, y: 151 }, { ...FIELD, snapStep: fineStep }, 0,
+  ).previewGeometry;
+  assert.equal(Math.abs(fineSnapped.column / fineStep - Math.round(fineSnapped.column / fineStep)) < 1e-9, true);
+  assert.equal(Math.abs(fineSnapped.row / fineStep - Math.round(fineSnapped.row / fineStep)) < 1e-9, true);
+  assert.deepEqual(updateSystemWorkflowResizeGesture(
+    start, { x: 395, y: 195 }, { ...FIELD, snapStep: 1 / 9 }, 0,
+  ).previewGeometry, {
+    column: 10 - 1 / 9, row: 5 - 1 / 9,
+    columnSpan: 8 + 1 / 9, rowSpan: 6 + 1 / 9,
+  });
+  assert.deepEqual(updateSystemWorkflowResizeGesture(
     start, { x: 10000, y: 10000 }, FIELD,
   ).previewGeometry, { column: 17, row: 10, columnSpan: 1, rowSpan: 1 });
   assert.deepEqual(updateSystemWorkflowResizeGesture(
-    start, { x: -10000, y: -10000 }, FIELD,
-  ).previewGeometry, { column: 0, row: 0, columnSpan: 18, rowSpan: 11 });
+    start, { x: -1000000000, y: -1000000000 }, FIELD,
+  ).previewGeometry, { column: -494, row: -501, columnSpan: 512, rowSpan: 512 });
   assert.deepEqual(nudgeSystemWorkflowResizeGeometry(entry, 'se', { column: 1, row: -1 }), {
     column: 10, row: 5, columnSpan: 9, rowSpan: 5,
   });
   assert.equal(nudgeSystemWorkflowResizeGeometry(
-    { ...entry, column: 0, columnSpan: 1 }, 'nw', { column: -1, row: 0 },
+    { ...entry, column: -4096, columnSpan: 1 }, 'nw', { column: -1, row: 0 },
   ), null);
+});
+
+test('crop resize preserves ratio, opposite anchor, and canonical bounds', () => {
+  const entry = placement('ratio-resize', 0, { column: 10, row: 5, columnSpan: 8, rowSpan: 4 });
+  const start = createSystemWorkflowResizeGesture(entry, 'nw', FIELD, { x: 400, y: 200 });
+  const resized = updateSystemWorkflowResizeGesture(
+    start,
+    { x: 320, y: 195 },
+    FIELD,
+    undefined,
+    { preserveRatio: true },
+  ).previewGeometry;
+  assert.deepEqual(resized, { column: 8, row: 4, columnSpan: 10, rowSpan: 5 });
+  assert.deepEqual(
+    [resized.column + resized.columnSpan, resized.row + resized.rowSpan],
+    [18, 9],
+  );
+  const bounded = updateSystemWorkflowResizeGesture(
+    start,
+    { x: -1000000000, y: -1000000000 },
+    FIELD,
+    undefined,
+    { preserveRatio: true },
+  ).previewGeometry;
+  assert.deepEqual(bounded, { column: -494, row: -247, columnSpan: 512, rowSpan: 256 });
 });
 
 test('placement boundaries and top remove-dock bounds cover every edge', () => {
   const boundaryCases = [
-    [{ column: 15, row: 0, columnSpan: 1, rowSpan: 1 }, { top: true, right: false, bottom: false, left: false }],
-    [{ column: 15, row: 17, columnSpan: 1, rowSpan: 1 }, { top: false, right: false, bottom: true, left: false }],
-    [{ column: 0, row: 8, columnSpan: 1, rowSpan: 1 }, { top: false, right: false, bottom: false, left: true }],
-    [{ column: 31, row: 8, columnSpan: 1, rowSpan: 1 }, { top: false, right: true, bottom: false, left: false }],
+    [{ column: 15, row: -4096, columnSpan: 1, rowSpan: 1 }, { top: true, right: false, bottom: false, left: false }],
+    [{ column: 15, row: 4095, columnSpan: 1, rowSpan: 1 }, { top: false, right: false, bottom: true, left: false }],
+    [{ column: -4096, row: 8, columnSpan: 1, rowSpan: 1 }, { top: false, right: false, bottom: false, left: true }],
+    [{ column: 4095, row: 8, columnSpan: 1, rowSpan: 1 }, { top: false, right: true, bottom: false, left: false }],
     [{ column: 14, row: 8, columnSpan: 1, rowSpan: 1 }, { top: false, right: false, bottom: false, left: false }],
   ];
   for (const [geometry, expected] of boundaryCases) {
     assert.deepEqual(systemWorkflowPlacementBoundaries(placement('edge', 0, geometry)), expected);
   }
   assert.deepEqual(systemWorkflowTopBoundaryRemoveDock(
-    placement('dock', 0, { column: 15, row: 0, columnSpan: 1, rowSpan: 1 }), 40,
-  ), { side: 'right', maximumWidth: 631 });
+    placement('dock', 0, { column: 15, row: -4096, columnSpan: 1, rowSpan: 1 }), 40,
+  ), { side: 'left', maximumWidth: 164431 });
   assert.deepEqual(systemWorkflowTopBoundaryRemoveDock(
-    placement('dock', 0, { column: 31, row: 0, columnSpan: 1, rowSpan: 1 }), 40,
-  ), { side: 'left', maximumWidth: 1231 });
+    placement('dock', 0, { column: 4095, row: -4096, columnSpan: 1, rowSpan: 1 }), 40,
+  ), { side: 'left', maximumWidth: 327631 });
   assert.deepEqual(systemWorkflowTopBoundaryRemoveDock(
-    placement('dock', 0, { column: 0, row: 0, columnSpan: 32, rowSpan: 1 }), 40,
-  ), { side: 'inside', maximumWidth: 1280 });
+    placement('dock', 0, { column: -4096, row: -4096, columnSpan: 512, rowSpan: 1 }), 40,
+  ), { side: 'right', maximumWidth: 307191 });
   assert.deepEqual(systemWorkflowTopBoundaryRemoveDock(
-    placement('dock', 0, { column: 15, row: 1, columnSpan: 1, rowSpan: 1 }), 40,
+    placement('dock', 0, { column: 15, row: -4095, columnSpan: 1, rowSpan: 1 }), 40,
   ), { side: null, maximumWidth: null });
 });
 
@@ -349,6 +420,14 @@ test('crop, presentation, and transform retain separate canonical authorities', 
     dimensions: { width: 400, height: 600 },
     swapped: true,
   });
+  assert.deepEqual(projectSystemWorkflowImageRenderRectangle(
+    { left: 1, top: 2, width: 8, height: 5 },
+    { swapped: true },
+  ), { left: 2.5, top: 0.5, width: 5, height: 8 });
+  assert.deepEqual(projectSystemWorkflowImageRenderRectangle(
+    { left: 1, top: 2, width: 8, height: 5 },
+    { swapped: false },
+  ), { left: 1, top: 2, width: 8, height: 5 });
   const remappingCases = [
     [{ quarterTurns: 0, mirrorX: false, mirrorY: false }, { x: 0.2, y: 0.7 }],
     [{ quarterTurns: 1, mirrorX: false, mirrorY: false }, { x: 1 - 0.7, y: 0.2 }],
@@ -364,6 +443,10 @@ test('crop, presentation, and transform retain separate canonical authorities', 
       { x: 0.2, y: 0.7, zoom: 1.5 },
     );
     assert.deepEqual({ x: projection.crop.x, y: projection.crop.y }, focus);
+    const roundTrip = unprojectSystemWorkflowCrop(transform, projection.crop);
+    assert.ok(Math.abs(roundTrip.x - 0.2) < 1e-12);
+    assert.ok(Math.abs(roundTrip.y - 0.7) < 1e-12);
+    assert.equal(roundTrip.zoom, 1.5);
   }
 });
 
@@ -399,6 +482,17 @@ test('crop pan, dead-zone, cancellation, nudging, and zoom limits produce bounde
   assert.ok(nudged.y < 0.5);
   assert.equal(setSystemWorkflowCropZoom(nudged, session.media, session.mask, -1).zoom, 1);
   assert.equal(setSystemWorkflowCropZoom(nudged, session.media, session.mask, 99).zoom, 4);
+
+  const reframed = reframeSystemWorkflowCropForMask(
+    { x: 0.5, y: 0.5, zoom: 2 },
+    { stableAssetId: ASSET, width: 100, height: 100 },
+    { left: 0, top: 0, width: 4, height: 4 },
+    { left: 0, top: 0, width: 6, height: 4 },
+    { renderedScale: 0.08 },
+  );
+  assert.ok(Math.abs(reframed.zoom - (4 / 3)) < 1e-12);
+  assert.equal(reframed.x, 0.625);
+  assert.equal(reframed.y, 0.5);
 });
 
 test('group duplicate, transform, and removal remain atomic and snapshot guarded', () => {

@@ -6,6 +6,7 @@ import {
   createEmptySystemWorkflowDraft,
   createSystemWorkflowGridId,
   validateSystemWorkflowDraft,
+  systemWorkflowSnapStep,
 } from './systemWorkflowDraft.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
@@ -41,7 +42,7 @@ test('draft v4 starts with one ordered public HOME Grid and no fixed topology', 
   assert.deepEqual(draft.geometry, { columns: 32, rows: 18 });
   assert.deepEqual(draft.appearance, {
     surfaceId: 'mist', menuSurfaceId: 'mist', dossierSurfaceId: 'paper',
-    guideMode: 'LINES', guideSize: 1, guideColor: '#6f746f',
+    guideMode: 'LINES', guideSize: 0, guideColor: '#6f746f',
   });
   assert.deepEqual(draft.grids, [{
     id: 'grid:home-uuid', title: 'HOME', subtitle: '', visibility: 'PUBLIC',
@@ -60,13 +61,46 @@ test('validation is exact and rejects legacy or malformed contract fields', () =
     (draft) => { draft.grids[0].coordinate = { x: 0, y: 0 }; },
     (draft) => { draft.grids[0].gridState = 'ACTIVE'; },
     (draft) => { draft.appearance.guideMode = 'GRID'; },
-    (draft) => { draft.appearance.guideSize = 0; },
+    (draft) => { draft.appearance.guideSize = -9; },
     (draft) => { draft.grids = []; },
   ]) {
     const draft = createDraft();
     mutate(draft);
     assert.equal(validateSystemWorkflowDraft(draft).valid, false);
   }
+});
+
+test('placement geometry keeps the 32 by 18 reference frame while accepting bounded world coordinates', () => {
+  const draft = createDraft();
+  draft.grids[0].placements = [placement('world-placement', 0)];
+  Object.assign(draft.grids[0].placements[0], {
+    column: -4096,
+    row: 3584,
+    columnSpan: 512,
+    rowSpan: 512,
+  });
+  assert.equal(validateSystemWorkflowDraft(draft).valid, true);
+  assert.deepEqual(draft.geometry, { columns: 32, rows: 18 });
+
+  draft.grids[0].placements[0].row = 3585;
+  assert.ok(validateSystemWorkflowDraft(draft).errors
+    .some(({ code }) => code === 'invalid_placement_geometry'));
+
+  Object.assign(draft.grids[0].placements[0], {
+    column: 2 + 1 / 9, row: 3 + 8 / 9, columnSpan: 4 + 2 / 9, rowSpan: 5 + 7 / 9,
+  });
+  assert.equal(validateSystemWorkflowDraft(draft).valid, true);
+  draft.grids[0].placements[0].column = 2.1;
+  assert.ok(validateSystemWorkflowDraft(draft).errors
+    .some(({ code }) => code === 'invalid_placement_geometry'));
+});
+
+test('signed Grid density maps -8 through +8 onto exact ninth-cell snap intervals', () => {
+  assert.equal(systemWorkflowSnapStep(-8), 1 / 9);
+  assert.equal(systemWorkflowSnapStep(0), 1);
+  assert.equal(systemWorkflowSnapStep(8), 9);
+  assert.throws(() => systemWorkflowSnapStep(-9), { code: 'SYSTEM_WORKFLOW_GRID_DENSITY_INVALID' });
+  assert.throws(() => systemWorkflowSnapStep(9), { code: 'SYSTEM_WORKFLOW_GRID_DENSITY_INVALID' });
 });
 
 test('Grid IDs use bounded injected randomness and never timestamp fallback', () => {

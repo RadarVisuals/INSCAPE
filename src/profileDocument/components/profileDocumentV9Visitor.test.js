@@ -6,6 +6,7 @@ import { projectLatticeProductionArtwork } from '../../lattice/rendering/lattice
 const preview = readFileSync(new URL('./ProfileDocumentV9Preview.jsx', import.meta.url), 'utf8');
 const visitor = readFileSync(new URL('./ProfileDocumentV9Visitor.jsx', import.meta.url), 'utf8');
 const renderer = readFileSync(new URL('./GridProductionRenderer.jsx', import.meta.url), 'utf8');
+const rendererCss = readFileSync(new URL('../../lattice/rendering/latticeProductionTableRenderer.css', import.meta.url), 'utf8');
 const production = readFileSync(new URL('./PublishedProfileDocumentPreview.jsx', import.meta.url), 'utf8');
 
 const placement = (overrides = {}) => ({
@@ -34,7 +35,7 @@ test('v9 Grid renderer reuses canonical contain, crop remap, swapped dimensions,
   assert.equal(transformed.imageTransform, 'scale(-1, 1) rotate(90deg)');
   assert.equal(transformed.imageRenderRectangle.width, transformed.imageRectangle.height);
   assert.equal(transformed.imageRenderRectangle.height, transformed.imageRectangle.width);
-  assert.match(renderer, /projectLatticeProductionArtwork/);
+  assert.match(renderer, /projectLatticeProductionPixelArtwork/);
   assert.match(renderer, /imageRenderRectangle/);
 });
 
@@ -46,11 +47,29 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(visitor, /activeIndex === 0 \? 'eager' : 'lazy'/);
   assert.match(visitor, /LatticeFocusViewer/);
   assert.match(renderer, /data-viewer-source-hidden/);
+  assert.match(visitor, /projectionBottomInset=\{VISITOR_GRID_NAVIGATION_SAFE_AREA\}/);
+  assert.match(visitor, /VISITOR_GRID_NAVIGATION_SAFE_AREA = 42/);
   assert.match(visitor, /LatticeProductionIdentityDossier/);
-  assert.match(visitor, /identitySourceHidden/);
+  assert.match(visitor, /gridVisible=\{document\.appearance\.guideMode !== 'NONE'\}/);
+  assert.match(visitor, /identityOnly/);
+  assert.match(visitor, /identityControlRef=\{identityControlRef\}/);
+  assert.match(visitor, /profileDockControlRef/);
   assert.match(visitor, /returnFocus/);
+  assert.match(visitor, /className="visitor-grid-world" data-lattice-menu-surface/);
   assert.match(visitor, /ArrowRight/);
   assert.match(visitor, /Previous Grid/);
   assert.match(visitor, /Next Grid/);
   assert.doesNotMatch(visitor, /Keeper|tables|coordinate|useLibraryStore|ownerAuthoring|wallet/iu);
+});
+
+test('v9 Grid renderer projects canonical guide mode, density, and color without an obsolete Visitor plane', () => {
+  assert.match(renderer, /data-guide-mode=\{document\.appearance\.guideMode\}/);
+  assert.match(renderer, /--lattice-production-guide-color/);
+  assert.match(renderer, /LatticePixelGrid/);
+  assert.match(renderer, /color=\{document\.appearance\.guideColor\}/);
+  assert.match(renderer, /guideInterval=\{systemWorkflowSnapStep\(document\.appearance\.guideSize\)\}/);
+  assert.match(rendererCss, /data-guide-mode="LINES"/);
+  assert.match(rendererCss, /data-guide-mode="DOTS"/);
+  assert.match(rendererCss, /background-image: none/);
+  assert.doesNotMatch(rendererCss, /linear-gradient|radial-gradient/);
 });

@@ -5,6 +5,15 @@ import { PROFILE_DOCUMENT_LIMITS } from '../../profileDocument/domain/constants.
 export const SYSTEM_WORKFLOW_DRAFT_VERSION = 4;
 export const SYSTEM_WORKFLOW_ARTBOARD = Object.freeze({ aspectWidth: 16, aspectHeight: 9 });
 export const SYSTEM_WORKFLOW_GEOMETRY = Object.freeze({ columns: 32, rows: 18 });
+export const SYSTEM_WORKFLOW_GRID_PRECISION = 9;
+export const SYSTEM_WORKFLOW_GRID_DENSITY = Object.freeze({ minimum: -8, maximum: 8, default: 0 });
+export const SYSTEM_WORKFLOW_WORLD_BOUNDS = Object.freeze({
+  minimumColumn: -4096,
+  minimumRow: -4096,
+  maximumColumn: 4096,
+  maximumRow: 4096,
+  maximumSpan: 512,
+});
 export const SYSTEM_WORKFLOW_VISIBILITY = Object.freeze({ PUBLIC: 'PUBLIC', PRIVATE: 'PRIVATE' });
 export const SYSTEM_WORKFLOW_GUIDE_MODES = Object.freeze(['LINES', 'DOTS', 'NONE']);
 export const SYSTEM_WORKFLOW_LABEL_ANCHORS = Object.freeze([
@@ -30,12 +39,27 @@ const SAFE_ID = /^[A-Za-z0-9:_-]+$/u;
 const GRID_ID = /^grid:[A-Za-z0-9_-]+$/u;
 const HEX_COLOR = /^#[0-9a-f]{6}$/iu;
 const textEncoder = new TextEncoder();
+const GRID_EPSILON = 1e-7;
 
 const record = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 const exactKeys = (value, keys) => record(value)
   && Object.keys(value).length === keys.length
   && keys.every((key) => Object.hasOwn(value, key));
 const safeInteger = (value, minimum = 0) => Number.isSafeInteger(value) && value >= minimum;
+export const isSystemWorkflowGridCoordinate = (value) => Number.isFinite(value)
+  && Math.abs(value * SYSTEM_WORKFLOW_GRID_PRECISION - Math.round(value * SYSTEM_WORKFLOW_GRID_PRECISION)) < GRID_EPSILON;
+export const quantizeSystemWorkflowGridCoordinate = (value) => (
+  Math.round(value * SYSTEM_WORKFLOW_GRID_PRECISION) / SYSTEM_WORKFLOW_GRID_PRECISION
+);
+export function systemWorkflowSnapStep(density) {
+  if (!Number.isSafeInteger(density)
+    || density < SYSTEM_WORKFLOW_GRID_DENSITY.minimum || density > SYSTEM_WORKFLOW_GRID_DENSITY.maximum) {
+    throw operationError('SYSTEM_WORKFLOW_GRID_DENSITY_INVALID', 'Grid density must be an integer from -8 through 8');
+  }
+  return density < 0
+    ? (SYSTEM_WORKFLOW_GRID_PRECISION + density) / SYSTEM_WORKFLOW_GRID_PRECISION
+    : density + 1;
+}
 const safeText = (value, maximum, { empty = true } = {}) => typeof value === 'string'
   && (empty || value.length > 0)
   && value.length <= maximum
@@ -105,7 +129,7 @@ export function createEmptySystemWorkflowDraft(profileAddress, options = {}) {
     geometry: { ...SYSTEM_WORKFLOW_GEOMETRY },
     appearance: {
       surfaceId: 'mist', menuSurfaceId: 'mist', dossierSurfaceId: 'paper',
-      guideMode: 'LINES', guideSize: 1, guideColor: '#6f746f',
+      guideMode: 'LINES', guideSize: SYSTEM_WORKFLOW_GRID_DENSITY.default, guideColor: '#6f746f',
     },
     identityPresentation: createEmptySystemWorkflowIdentityPresentation(),
     grids: [{
@@ -150,14 +174,24 @@ function validateCrop(value) {
     && Number.isFinite(value.zoom) && value.zoom >= 1 && value.zoom <= 4;
 }
 
+export function isValidSystemWorkflowPlacementGeometry(value) {
+  return isSystemWorkflowGridCoordinate(value?.column)
+    && isSystemWorkflowGridCoordinate(value?.row)
+    && isSystemWorkflowGridCoordinate(value?.columnSpan) && value.columnSpan >= 1 / SYSTEM_WORKFLOW_GRID_PRECISION
+    && isSystemWorkflowGridCoordinate(value?.rowSpan) && value.rowSpan >= 1 / SYSTEM_WORKFLOW_GRID_PRECISION
+    && value.columnSpan <= SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumSpan
+    && value.rowSpan <= SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumSpan
+    && value.column >= SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumColumn
+    && value.row >= SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumRow
+    && value.column + value.columnSpan <= SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumColumn
+    && value.row + value.rowSpan <= SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumRow;
+}
+
 function validatePlacement(value, path, fail) {
   if (!exactKeys(value, PLACEMENT_KEYS)) return fail(path, 'invalid_placement_structure', 'Invalid placement');
   if (!safeId(value.id)) fail(`${path}.id`, 'invalid_placement_id', 'Invalid placement ID');
   if (!parseCanonicalAssetId(value.stableAssetId)) fail(`${path}.stableAssetId`, 'invalid_asset_id', 'Invalid asset ID');
-  if (!safeInteger(value.column) || !safeInteger(value.row)
-    || !safeInteger(value.columnSpan, 1) || !safeInteger(value.rowSpan, 1)
-    || value.column + value.columnSpan > SYSTEM_WORKFLOW_GEOMETRY.columns
-    || value.row + value.rowSpan > SYSTEM_WORKFLOW_GEOMETRY.rows) fail(path, 'invalid_placement_geometry', 'Invalid geometry');
+  if (!isValidSystemWorkflowPlacementGeometry(value)) fail(path, 'invalid_placement_geometry', 'Invalid world geometry');
   if (!safeInteger(value.layer)) fail(`${path}.layer`, 'invalid_layer', 'Invalid layer');
   if (!safeInteger(value.navigationOrder)) fail(`${path}.navigationOrder`, 'invalid_navigation_order', 'Invalid order');
   if (!validateCrop(value.crop)) fail(`${path}.crop`, 'invalid_crop', 'Invalid crop');
@@ -200,7 +234,8 @@ export function validateSystemWorkflowDraft(input) {
     || !sets.surfaces.has(input.appearance?.dossierSurfaceId)
     || !sets.guides.has(input.appearance?.guideMode)
     || !Number.isSafeInteger(input.appearance?.guideSize)
-    || input.appearance.guideSize < 1 || input.appearance.guideSize > 8
+    || input.appearance.guideSize < SYSTEM_WORKFLOW_GRID_DENSITY.minimum
+    || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance?.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid appearance');
   validateIdentity(input.identityPresentation, fail);
   if (!Array.isArray(input.grids) || input.grids.length < 1 || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxGrids) {

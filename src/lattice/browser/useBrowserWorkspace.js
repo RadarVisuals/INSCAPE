@@ -14,20 +14,21 @@ import useLatticeFloatingWindow from '../windows/useLatticeFloatingWindow.js';
 
 const clampSidebarWidth = (value) => Math.min(320, Math.max(48, Number(value) || 174));
 
-export default function useBrowserWorkspace(data, sharedPreviewRecords = null) {
+export default function useBrowserWorkspace(data, sharedPreviewRecords = null, initialPreferences = null) {
   const [view, setView] = useState({ kind: BROWSER_VIEW_KINDS.ALL, id: null });
   const [query, setQuery] = useState('');
   const [collection, setCollection] = useState('all');
   const [sort, setSort] = useState(BROWSER_SORTS.TITLE_ASC);
-  const [assetSize, setAssetSize] = useState(BROWSER_ASSET_SIZE.DEFAULT);
-  const [sidebarWidth, setSidebarWidth] = useState(174);
-  const [hideLabels, setHideLabels] = useState(false);
+  const [assetSize, setAssetSize] = useState(() => Number(initialPreferences?.assetSize) || BROWSER_ASSET_SIZE.DEFAULT);
+  const [sidebarWidth, setSidebarWidth] = useState(() => clampSidebarWidth(initialPreferences?.sidebarWidth));
+  const [hideLabels, setHideLabels] = useState(() => initialPreferences?.hideLabels === true);
   const [selectedAssetIds, setSelectedAssetIds] = useState([]);
   const [selectionAnchorId, setSelectionAnchorId] = useState(null);
   const [lastCategoryId, setLastCategoryId] = useState(null);
   const [dialog, setDialog] = useState(null);
   const floatingWindow = useLatticeFloatingWindow();
   const sidebarResizeGestureRef = useRef(null);
+  const expandedSidebarWidthRef = useRef(sidebarWidth >= 152 ? sidebarWidth : 174);
   const previewJobsRef = useRef(new Map());
   const previewRecordsRef = useRef(sharedPreviewRecords || new Map());
   const [previewVersion, setPreviewVersion] = useState(0);
@@ -117,7 +118,13 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null) {
   const updateSidebarResize = (event) => {
     const gesture = sidebarResizeGestureRef.current;
     if (!gesture || gesture.pointerId !== event.pointerId) return;
-    setSidebarWidth(clampSidebarWidth(gesture.startWidth + event.clientX - gesture.startX));
+    const next = clampSidebarWidth(gesture.startWidth + event.clientX - gesture.startX);
+    if (next >= 152) expandedSidebarWidthRef.current = next;
+    setSidebarWidth(next);
+  };
+  const ensureSidebarWidth = (minimum = 152) => {
+    if (sidebarWidth >= minimum) return;
+    setSidebarWidth(Math.max(minimum, expandedSidebarWidthRef.current));
   };
   const finishSidebarResize = (event) => {
     const gesture = sidebarResizeGestureRef.current;
@@ -156,7 +163,8 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null) {
   return {
     collection, collections, setCollection, assetSize,
     assetSizeBounds: BROWSER_ASSET_SIZE, setAssetSize,
-    sidebarWidth, sidebarResize: { begin: beginSidebarResize, finish: finishSidebarResize, update: updateSidebarResize },
+    sidebarWidth, ensureSidebarWidth,
+    sidebarResize: { begin: beginSidebarResize, finish: finishSidebarResize, update: updateSidebarResize },
     hideLabels, setHideLabels, query, setQuery,
     sort, setSort, view, selectView, selectCategoriesDestination, lastCategoryId,
     selectedAsset, selectedAssets, selectedAssetIds, selectAsset, selectForContext, clearSelection, selectAllVisible,

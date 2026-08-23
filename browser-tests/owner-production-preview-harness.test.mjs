@@ -169,7 +169,7 @@ test('Task 4A complete post-setup gate body has a cancelling watchdog and cleanu
 test('Task 4A watchdog encloses navigation through final fixture validation', async () => {
   const source = await readFile(new URL('./owner-production-preview-harness.mjs', import.meta.url), 'utf8');
   const wrapperStart = source.indexOf('const gateOutcome = await runPostSetupGateWithCleanup(async () => {');
-  const wrapperEnd = source.indexOf('\n    }, {\n      cleanup: cleanupWithProgress,', wrapperStart);
+  const wrapperEnd = source.indexOf('cleanup: cleanupWithProgress,', wrapperStart);
   assert.ok(wrapperStart > 0 && wrapperEnd > wrapperStart, 'Post-setup gate watchdog wrapper is missing');
   for (const marker of [
     'page.goto(`${previewUrl}${fixturePath}`',

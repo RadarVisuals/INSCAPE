@@ -1,7 +1,10 @@
 import {
-  SYSTEM_WORKFLOW_GEOMETRY,
+  SYSTEM_WORKFLOW_WORLD_BOUNDS,
   SYSTEM_WORKFLOW_VISIBILITY,
   assertValidSystemWorkflowDraft,
+  isSystemWorkflowGridCoordinate,
+  isValidSystemWorkflowPlacementGeometry,
+  quantizeSystemWorkflowGridCoordinate,
 } from './domain/systemWorkflowDraft.js';
 import { projectLatticeProductionPlacement as projectSystemWorkflowPlacement } from '../lattice/rendering/latticeProductionProjection.js';
 import { sameSystemWorkflowPlacementSnapshot } from './systemWorkflowRemoval.js';
@@ -11,6 +14,8 @@ export const SYSTEM_WORKFLOW_RESIZE_CORNERS = Object.freeze(['nw', 'ne', 'se', '
 export const SYSTEM_WORKFLOW_RESIZE_DEAD_ZONE = 10;
 
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
+const snapStepOf = (field) => isSystemWorkflowGridCoordinate(field?.snapStep) && field.snapStep > 0 ? field.snapStep : 1;
+const snapCell = (value, step) => quantizeSystemWorkflowGridCoordinate(Math.round(value / step) * step);
 
 function resizeError(code, message) {
   return Object.assign(new TypeError(message), { code });
@@ -34,9 +39,7 @@ function requireProjection(field) {
   if (!field || !Number.isFinite(field.left) || !Number.isFinite(field.top)
     || !Number.isFinite(field.width) || field.width <= 0
     || !Number.isFinite(field.height) || field.height <= 0
-    || !Number.isFinite(field.cellSize) || field.cellSize <= 0
-    || field.width !== field.cellSize * SYSTEM_WORKFLOW_GEOMETRY.columns
-    || field.height !== field.cellSize * SYSTEM_WORKFLOW_GEOMETRY.rows) {
+    || !Number.isFinite(field.cellSize) || field.cellSize <= 0) {
     throw resizeError('SYSTEM_WORKFLOW_RESIZE_PROJECTION_INVALID', 'Placement resize requires the canonical projected field');
   }
   return field;
@@ -49,13 +52,8 @@ function geometryOf(placement) {
     columnSpan: placement?.columnSpan,
     rowSpan: placement?.rowSpan,
   };
-  if (!Number.isSafeInteger(geometry.column) || geometry.column < 0
-    || !Number.isSafeInteger(geometry.row) || geometry.row < 0
-    || !Number.isSafeInteger(geometry.columnSpan) || geometry.columnSpan < 1
-    || !Number.isSafeInteger(geometry.rowSpan) || geometry.rowSpan < 1
-    || geometry.column + geometry.columnSpan > SYSTEM_WORKFLOW_GEOMETRY.columns
-    || geometry.row + geometry.rowSpan > SYSTEM_WORKFLOW_GEOMETRY.rows) {
-    throw resizeError('SYSTEM_WORKFLOW_RESIZE_GEOMETRY_INVALID', 'Placement resize requires bounded integer geometry');
+  if (!isValidSystemWorkflowPlacementGeometry(geometry)) {
+    throw resizeError('SYSTEM_WORKFLOW_RESIZE_GEOMETRY_INVALID', 'Placement resize requires bounded world geometry');
   }
   return geometry;
 }
@@ -74,10 +72,10 @@ export function systemWorkflowGroupBounds(placementsInput) {
 function scaleGroupAxis(start, destination, position, span, axis, spanAxis) {
   const startEnd = start[axis] + start[spanAxis];
   const destinationEnd = destination[axis] + destination[spanAxis];
-  let nextStart = destination[axis] + Math.round(
+  let nextStart = destination[axis] + quantizeSystemWorkflowGridCoordinate(
     ((position - start[axis]) / start[spanAxis]) * destination[spanAxis],
   );
-  let nextEnd = destination[axis] + Math.round(
+  let nextEnd = destination[axis] + quantizeSystemWorkflowGridCoordinate(
     (((position + span) - start[axis]) / start[spanAxis]) * destination[spanAxis],
   );
   if (position === start[axis]) nextStart = destination[axis];
@@ -113,10 +111,10 @@ export function resizeSystemWorkflowGroupGeometries(placementsInput, destination
 export function systemWorkflowPlacementBoundaries(placement) {
   const geometry = geometryOf(placement);
   return Object.freeze({
-    top: geometry.row === 0,
-    right: geometry.column + geometry.columnSpan === SYSTEM_WORKFLOW_GEOMETRY.columns,
-    bottom: geometry.row + geometry.rowSpan === SYSTEM_WORKFLOW_GEOMETRY.rows,
-    left: geometry.column === 0,
+    top: geometry.row === SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumRow,
+    right: geometry.column + geometry.columnSpan === SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumColumn,
+    bottom: geometry.row + geometry.rowSpan === SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumRow,
+    left: geometry.column === SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumColumn,
   });
 }
 
@@ -125,19 +123,14 @@ export function systemWorkflowTopBoundaryRemoveDock(placement, cellSize) {
   if (!Number.isFinite(cellSize) || cellSize <= 0) {
     throw resizeError('SYSTEM_WORKFLOW_RESIZE_PROJECTION_INVALID', 'Placement controls require a positive projected cell size');
   }
-  if (geometry.row !== 0) return Object.freeze({ side: null, maximumWidth: null });
-  const left = geometry.column * cellSize;
-  const right = (SYSTEM_WORKFLOW_GEOMETRY.columns - geometry.column - geometry.columnSpan) * cellSize;
+  if (geometry.row !== SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumRow) return Object.freeze({ side: null, maximumWidth: null });
+  const left = (geometry.column - SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumColumn) * cellSize;
+  const right = (SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumColumn - geometry.column - geometry.columnSpan) * cellSize;
   if (left <= 9 && right <= 9) {
     return Object.freeze({ side: 'inside', maximumWidth: geometry.columnSpan * cellSize });
   }
   const side = right >= left ? 'right' : 'left';
   return Object.freeze({ side, maximumWidth: Math.max(1, (side === 'right' ? right : left) - 9) });
-}
-
-function roundedCellDelta(pixels, cellSize) {
-  const cells = pixels / cellSize;
-  return cells < 0 ? Math.ceil(cells - 0.5) : Math.floor(cells + 0.5);
 }
 
 function resizedGeometry(start, corner, columnDelta, rowDelta) {
@@ -147,15 +140,58 @@ function resizedGeometry(start, corner, columnDelta, rowDelta) {
   const south = start.row + start.rowSpan;
   const movingWest = corner.includes('w');
   const movingNorth = corner.includes('n');
-  const nextWest = movingWest ? clamp(west + columnDelta, 0, east - 1) : west;
-  const nextEast = movingWest ? east : clamp(east + columnDelta, west + 1, SYSTEM_WORKFLOW_GEOMETRY.columns);
-  const nextNorth = movingNorth ? clamp(north + rowDelta, 0, south - 1) : north;
-  const nextSouth = movingNorth ? south : clamp(south + rowDelta, north + 1, SYSTEM_WORKFLOW_GEOMETRY.rows);
+  const nextWest = movingWest
+    ? clamp(west + columnDelta, Math.max(SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumColumn,
+      east - SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumSpan), east - 1)
+    : west;
+  const nextEast = movingWest
+    ? east
+    : clamp(east + columnDelta, west + 1, Math.min(SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumColumn,
+      west + SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumSpan));
+  const nextNorth = movingNorth
+    ? clamp(north + rowDelta, Math.max(SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumRow,
+      south - SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumSpan), south - 1)
+    : north;
+  const nextSouth = movingNorth
+    ? south
+    : clamp(south + rowDelta, north + 1, Math.min(SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumRow,
+      north + SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumSpan));
   return {
     column: nextWest,
     row: nextNorth,
     columnSpan: nextEast - nextWest,
     rowSpan: nextSouth - nextNorth,
+  };
+}
+
+function ratioPreservingGeometry(start, corner, columnDelta, rowDelta) {
+  const east = start.column + start.columnSpan;
+  const south = start.row + start.rowSpan;
+  const movingWest = corner.includes('w');
+  const movingNorth = corner.includes('n');
+  const maximumWidth = Math.min(SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumSpan,
+    movingWest ? east - SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumColumn : SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumColumn - start.column);
+  const maximumHeight = Math.min(SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumSpan,
+    movingNorth ? south - SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumRow : SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumRow - start.row);
+  const requestedWidth = clamp(start.columnSpan + (movingWest ? -columnDelta : columnDelta), 1, maximumWidth);
+  const requestedHeight = clamp(start.rowSpan + (movingNorth ? -rowDelta : rowDelta), 1, maximumHeight);
+  const ratio = start.columnSpan / start.rowSpan;
+  let columnSpan;
+  let rowSpan;
+  if (Math.abs(columnDelta) >= Math.abs(rowDelta)) {
+    columnSpan = requestedWidth;
+    rowSpan = clamp(quantizeSystemWorkflowGridCoordinate(columnSpan / ratio), 1, maximumHeight);
+    if (rowSpan === maximumHeight) columnSpan = clamp(quantizeSystemWorkflowGridCoordinate(rowSpan * ratio), 1, maximumWidth);
+  } else {
+    rowSpan = requestedHeight;
+    columnSpan = clamp(quantizeSystemWorkflowGridCoordinate(rowSpan * ratio), 1, maximumWidth);
+    if (columnSpan === maximumWidth) rowSpan = clamp(quantizeSystemWorkflowGridCoordinate(columnSpan / ratio), 1, maximumHeight);
+  }
+  return {
+    column: movingWest ? east - columnSpan : start.column,
+    row: movingNorth ? south - rowSpan : start.row,
+    columnSpan,
+    rowSpan,
   };
 }
 
@@ -165,10 +201,19 @@ export function createSystemWorkflowResizeGesture(placement, cornerInput, fieldI
   const point = requirePoint(pointInput);
   const startGeometry = geometryOf(placement);
   const rectangle = projectSystemWorkflowPlacement(startGeometry, field);
+  const movingBoundary = {
+    column: corner.includes('w') ? startGeometry.column : startGeometry.column + startGeometry.columnSpan,
+    row: corner.includes('n') ? startGeometry.row : startGeometry.row + startGeometry.rowSpan,
+  };
   return {
     placementId: placement.id,
     corner,
     origin: { ...point },
+    grabOffset: {
+      column: (point.x - field.left) / field.cellSize - movingBoundary.column,
+      row: (point.y - field.top) / field.cellSize - movingBoundary.row,
+    },
+    movingBoundary,
     startRectangle: { ...rectangle },
     startGeometry: { ...startGeometry },
     previewGeometry: { ...startGeometry },
@@ -202,6 +247,7 @@ export function updateSystemWorkflowResizeGesture(
   pointInput,
   fieldInput,
   deadZone = SYSTEM_WORKFLOW_RESIZE_DEAD_ZONE,
+  { preserveRatio = false } = {},
 ) {
   const point = requirePoint(pointInput);
   const field = requireProjection(fieldInput);
@@ -211,14 +257,23 @@ export function updateSystemWorkflowResizeGesture(
   const delta = { x: point.x - gesture.origin.x, y: point.y - gesture.origin.y };
   const activated = gesture.activated || Math.hypot(delta.x, delta.y) >= deadZone;
   if (!activated) return { ...gesture, activated: false };
+  const snapStep = snapStepOf(field);
+  const movingColumn = snapCell(
+    (point.x - field.left) / field.cellSize - gesture.grabOffset.column,
+    snapStep,
+  );
+  const movingRow = snapCell(
+    (point.y - field.top) / field.cellSize - gesture.grabOffset.row,
+    snapStep,
+  );
   return {
     ...gesture,
     activated: true,
-    previewGeometry: resizedGeometry(
+    previewGeometry: (preserveRatio ? ratioPreservingGeometry : resizedGeometry)(
       gesture.startGeometry,
       gesture.corner,
-      roundedCellDelta(delta.x, field.cellSize),
-      roundedCellDelta(delta.y, field.cellSize),
+      quantizeSystemWorkflowGridCoordinate(movingColumn - gesture.movingBoundary.column),
+      quantizeSystemWorkflowGridCoordinate(movingRow - gesture.movingBoundary.row),
     ),
   };
 }
@@ -262,8 +317,8 @@ export function finishSystemWorkflowGroupResizeGesture(gesture, { cancelled = fa
 export function nudgeSystemWorkflowResizeGeometry(placement, cornerInput, delta) {
   const corner = requireCorner(cornerInput);
   const start = geometryOf(placement);
-  if (!delta || !Number.isSafeInteger(delta.column) || !Number.isSafeInteger(delta.row)) {
-    throw resizeError('SYSTEM_WORKFLOW_RESIZE_DELTA_INVALID', 'Placement resize requires an integer cell delta');
+  if (!delta || !isSystemWorkflowGridCoordinate(delta.column) || !isSystemWorkflowGridCoordinate(delta.row)) {
+    throw resizeError('SYSTEM_WORKFLOW_RESIZE_DELTA_INVALID', 'Placement resize requires a grid-precision delta');
   }
   const geometry = resizedGeometry(start, corner, delta.column, delta.row);
   return sameSystemWorkflowPlacementGeometry(start, geometry) ? null : geometry;
@@ -271,8 +326,8 @@ export function nudgeSystemWorkflowResizeGeometry(placement, cornerInput, delta)
 
 export function nudgeSystemWorkflowGroupResizeGeometries(placements, cornerInput, delta) {
   const corner = requireCorner(cornerInput);
-  if (!delta || !Number.isSafeInteger(delta.column) || !Number.isSafeInteger(delta.row)) {
-    throw resizeError('SYSTEM_WORKFLOW_RESIZE_DELTA_INVALID', 'Group resize requires an integer cell delta');
+  if (!delta || !isSystemWorkflowGridCoordinate(delta.column) || !isSystemWorkflowGridCoordinate(delta.row)) {
+    throw resizeError('SYSTEM_WORKFLOW_RESIZE_DELTA_INVALID', 'Group resize requires a grid-precision delta');
   }
   const start = systemWorkflowGroupBounds(placements);
   const destination = resizedGeometry(start, corner, delta.column, delta.row);

@@ -69,10 +69,10 @@ test('each independent budget category reports an actionable overage', () => {
 test('measured combined Alpha allowances retain exact production budget boundaries', () => {
   assert.deepEqual(PRODUCTION_BUDGETS, {
     initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
-    ownerJavaScript: { raw: 300_875, gzip: 91_370 },
+    ownerJavaScript: { raw: 304_846, gzip: 94_028 },
     standaloneWalletJavaScript: { raw: 4_400_000, gzip: 1_200_000 },
-    initialCss: { raw: 51_493, gzip: 10_139 },
-    ownerCss: { raw: 76_499, gzip: 14_733 },
+    initialCss: { raw: 51_807, gzip: 10_301 },
+    ownerCss: { raw: 82_276, gzip: 15_408 },
     coreJavaScript: { raw: 2_076_709, gzip: 620_158 },
     publicAssets: { raw: 15_200_000 },
     largestPublicAsset: { raw: 2_700_000 },
@@ -199,6 +199,17 @@ test('the two historical public lock paths cannot survive artifact hygiene', asy
 
 test('production pruning excludes development-only prototype assets', () => {
   for (const path of ['assets/PFP', 'assets/prototype', 'assets/ratio']) assert.ok(UNUSED_PUBLIC_PATHS.includes(path), path);
+});
+
+test('production pruning excludes unused font sources without removing active bundled fonts', () => {
+  for (const path of ['assets/brand/fonts', 'assets/fonts/Sora/static',
+    'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Medium.ttf']) {
+    assert.ok(UNUSED_PUBLIC_PATHS.includes(path), path);
+  }
+  for (const path of ['assets/fonts/Sora/Sora-VariableFont_wght.ttf',
+    'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf']) {
+    assert.ok(!UNUSED_PUBLIC_PATHS.includes(path), path);
+  }
 });
 
 test('an alternate-outDir production build writes reports there and strips diagnostics', async () => {

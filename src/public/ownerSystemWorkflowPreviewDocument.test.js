@@ -62,3 +62,25 @@ test('Preview rejects cross-profile draft authority and a draft without public G
     assetRecords: [], profile: {}, profileAddress: PROFILE, systemWorkflowDraft: privateOnly,
   }), { code: 'INSCAPE_PROFILE_PUBLIC_GRID_REQUIRED' });
 });
+
+test('Preview v9 retains every public placement presentation field and removes private content', () => {
+  const draft = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
+  const publicPlacement = {
+    ...placement('public-artwork', 7), column: 8, row: 5, columnSpan: 6, rowSpan: 4, layer: 3,
+    crop: { x: 0.42, y: 0.57, zoom: 1.8 }, frameId: 'DOSSIER', transparencyMode: 'OPAQUE',
+    mat: { enabled: true, color: '#102030', inset: { top: 0.1, right: 0.2, bottom: 0.1, left: 0.2 } },
+    backing: { enabled: true, color: '#d0c0b0' },
+    transform: { quarterTurns: 3, mirrorX: true, mirrorY: true },
+  };
+  draft.grids[0].placements = [publicPlacement, { ...placement('private-artwork', 1), visibility: 'PRIVATE' }];
+  const preview = buildOwnerSystemWorkflowPreviewDocument({
+    assetRecords: [asset()], profile: { name: 'Resident' }, profileAddress: PROFILE, systemWorkflowDraft: draft,
+  });
+  assert.equal(preview.grids[0].placements.length, 1);
+  const { asset: resolvedAsset, visibility, ...projected } = preview.grids[0].placements[0];
+  const { locked: _locked, stableAssetId: _stableAssetId, visibility: _sourceVisibility, ...expected } = publicPlacement;
+  assert.deepEqual(projected, expected);
+  assert.equal(visibility, 'PUBLIC');
+  assert.equal(resolvedAsset.stableAssetId, ASSET);
+  assert.equal(JSON.stringify(preview).includes('private-artwork'), false);
+});

@@ -1,8 +1,11 @@
 import { parseCanonicalAssetId } from '../profileDocument/domain/assetReference.js';
 import {
   SYSTEM_WORKFLOW_GEOMETRY,
+  SYSTEM_WORKFLOW_WORLD_BOUNDS,
   SYSTEM_WORKFLOW_VISIBILITY,
   assertValidSystemWorkflowDraft,
+  isValidSystemWorkflowPlacementGeometry,
+  quantizeSystemWorkflowGridCoordinate,
 } from './domain/systemWorkflowDraft.js';
 
 export const INITIAL_SYSTEM_WORKFLOW_PLACEMENT_ENVELOPE = Object.freeze({ columns: 12, rows: 10 });
@@ -110,11 +113,8 @@ export function assertSystemWorkflowDropGeometry(destination) {
     column: destination?.column, row: destination?.row,
     columnSpan: destination?.columnSpan, rowSpan: destination?.rowSpan,
   };
-  if (!Object.values(geometry).every(Number.isSafeInteger)
-    || geometry.column < 0 || geometry.row < 0 || geometry.columnSpan < 1 || geometry.rowSpan < 1
-    || geometry.column + geometry.columnSpan > SYSTEM_WORKFLOW_GEOMETRY.columns
-    || geometry.row + geometry.rowSpan > SYSTEM_WORKFLOW_GEOMETRY.rows) {
-    throw operationError('SYSTEM_WORKFLOW_PLACEMENT_DROP_GEOMETRY_INVALID', 'Drop geometry exceeds the canonical authored plane');
+  if (!isValidSystemWorkflowPlacementGeometry(geometry)) {
+    throw operationError('SYSTEM_WORKFLOW_PLACEMENT_DROP_GEOMETRY_INVALID', 'Drop geometry exceeds the canonical world safety bounds');
   }
   return Object.freeze(geometry);
 }
@@ -131,16 +131,19 @@ export function createSystemWorkflowDropGeometry(nativeWidth, nativeHeight, poin
   if (!Number.isFinite(pointer?.x) || !Number.isFinite(pointer?.y)
     || !Number.isFinite(rectangle?.left) || !Number.isFinite(rectangle?.top)
     || !Number.isFinite(rectangle?.width) || rectangle.width <= 0
-    || !Number.isFinite(rectangle?.height) || rectangle.height <= 0) {
+    || !Number.isFinite(rectangle?.height) || rectangle.height <= 0
+    || !Number.isFinite(rectangle?.cellSize) || rectangle.cellSize <= 0) {
     throw operationError('SYSTEM_WORKFLOW_PLACEMENT_DROP_TARGET_INVALID', 'A measurable active grid drop target is required');
   }
-  const centerColumn = Math.floor(((pointer.x - rectangle.left) / rectangle.width) * SYSTEM_WORKFLOW_GEOMETRY.columns);
-  const centerRow = Math.floor(((pointer.y - rectangle.top) / rectangle.height) * SYSTEM_WORKFLOW_GEOMETRY.rows);
+  const centerColumn = (pointer.x - rectangle.left) / rectangle.cellSize;
+  const centerRow = (pointer.y - rectangle.top) / rectangle.cellSize;
+  const snapStep = Number.isFinite(rectangle.snapStep) && rectangle.snapStep > 0 ? rectangle.snapStep : 1;
+  const snapCell = (value) => quantizeSystemWorkflowGridCoordinate(Math.round(value / snapStep) * snapStep);
   return assertSystemWorkflowDropGeometry({
-    column: Math.max(0, Math.min(SYSTEM_WORKFLOW_GEOMETRY.columns - initial.columnSpan,
-      centerColumn - Math.floor(initial.columnSpan / 2))),
-    row: Math.max(0, Math.min(SYSTEM_WORKFLOW_GEOMETRY.rows - initial.rowSpan,
-      centerRow - Math.floor(initial.rowSpan / 2))),
+    column: Math.max(SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumColumn, Math.min(SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumColumn - initial.columnSpan,
+      snapCell(centerColumn - Math.floor(initial.columnSpan / 2)))),
+    row: Math.max(SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumRow, Math.min(SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumRow - initial.rowSpan,
+      snapCell(centerRow - Math.floor(initial.rowSpan / 2)))),
     columnSpan: initial.columnSpan, rowSpan: initial.rowSpan,
   });
 }

@@ -1,13 +1,18 @@
 import {
-  SYSTEM_WORKFLOW_GEOMETRY,
+  SYSTEM_WORKFLOW_WORLD_BOUNDS,
   SYSTEM_WORKFLOW_VISIBILITY,
   assertValidSystemWorkflowDraft,
+  isSystemWorkflowGridCoordinate,
+  isValidSystemWorkflowPlacementGeometry,
+  quantizeSystemWorkflowGridCoordinate,
 } from './domain/systemWorkflowDraft.js';
 import { projectLatticeProductionPlacement as projectSystemWorkflowPlacement } from '../lattice/rendering/latticeProductionProjection.js';
 
 export const SYSTEM_WORKFLOW_MOVEMENT_DEAD_ZONE = 10;
 
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
+const snapStepOf = (field) => isSystemWorkflowGridCoordinate(field?.snapStep) && field.snapStep > 0 ? field.snapStep : 1;
+const snapCell = (value, step) => quantizeSystemWorkflowGridCoordinate(Math.round(value / step) * step);
 
 function movementError(code, message) {
   return Object.assign(new TypeError(message), { code });
@@ -24,9 +29,7 @@ function requireProjection(field) {
   if (!field || !Number.isFinite(field.left) || !Number.isFinite(field.top)
     || !Number.isFinite(field.width) || field.width <= 0
     || !Number.isFinite(field.height) || field.height <= 0
-    || !Number.isFinite(field.cellSize) || field.cellSize <= 0
-    || field.width !== field.cellSize * SYSTEM_WORKFLOW_GEOMETRY.columns
-    || field.height !== field.cellSize * SYSTEM_WORKFLOW_GEOMETRY.rows) {
+    || !Number.isFinite(field.cellSize) || field.cellSize <= 0) {
     throw movementError('SYSTEM_WORKFLOW_MOVEMENT_PROJECTION_INVALID', 'Placement movement requires the canonical projected field');
   }
   return field;
@@ -39,13 +42,8 @@ function placementGeometry(placement) {
     columnSpan: placement?.columnSpan,
     rowSpan: placement?.rowSpan,
   };
-  if (!Number.isSafeInteger(geometry.column) || geometry.column < 0
-    || !Number.isSafeInteger(geometry.row) || geometry.row < 0
-    || !Number.isSafeInteger(geometry.columnSpan) || geometry.columnSpan < 1
-    || !Number.isSafeInteger(geometry.rowSpan) || geometry.rowSpan < 1
-    || geometry.column + geometry.columnSpan > SYSTEM_WORKFLOW_GEOMETRY.columns
-    || geometry.row + geometry.rowSpan > SYSTEM_WORKFLOW_GEOMETRY.rows) {
-    throw movementError('SYSTEM_WORKFLOW_MOVEMENT_GEOMETRY_INVALID', 'Placement movement requires bounded integer geometry');
+  if (!isValidSystemWorkflowPlacementGeometry(geometry)) {
+    throw movementError('SYSTEM_WORKFLOW_MOVEMENT_GEOMETRY_INVALID', 'Placement movement requires bounded world geometry');
   }
   return geometry;
 }
@@ -95,15 +93,16 @@ export function updateSystemWorkflowMovementGesture(
 
   const pointerColumn = (point.x - field.left) / field.cellSize;
   const pointerRow = (point.y - field.top) / field.cellSize;
+  const snapStep = snapStepOf(field);
   const column = clamp(
-    Math.floor(pointerColumn - gesture.grabOffset.column + 0.5),
-    0,
-    SYSTEM_WORKFLOW_GEOMETRY.columns - gesture.startGeometry.columnSpan,
+    snapCell(pointerColumn - gesture.grabOffset.column, snapStep),
+    SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumColumn,
+    SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumColumn - gesture.startGeometry.columnSpan,
   );
   const row = clamp(
-    Math.floor(pointerRow - gesture.grabOffset.row + 0.5),
-    0,
-    SYSTEM_WORKFLOW_GEOMETRY.rows - gesture.startGeometry.rowSpan,
+    snapCell(pointerRow - gesture.grabOffset.row, snapStep),
+    SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumRow,
+    SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumRow - gesture.startGeometry.rowSpan,
   );
   return {
     ...gesture,
@@ -121,21 +120,21 @@ export function finishSystemWorkflowMovementGesture(gesture, { cancelled = false
 
 export function nudgeSystemWorkflowPlacementGeometry(placement, delta) {
   const start = placementGeometry(placement);
-  if (!delta || !Number.isSafeInteger(delta.column) || !Number.isSafeInteger(delta.row)) {
-    throw movementError('SYSTEM_WORKFLOW_MOVEMENT_DELTA_INVALID', 'Placement movement requires an integer cell delta');
+  if (!delta || !isSystemWorkflowGridCoordinate(delta.column) || !isSystemWorkflowGridCoordinate(delta.row)) {
+    throw movementError('SYSTEM_WORKFLOW_MOVEMENT_DELTA_INVALID', 'Placement movement requires a grid-precision delta');
   }
   const geometry = {
     ...start,
-    column: clamp(start.column + delta.column, 0, SYSTEM_WORKFLOW_GEOMETRY.columns - start.columnSpan),
-    row: clamp(start.row + delta.row, 0, SYSTEM_WORKFLOW_GEOMETRY.rows - start.rowSpan),
+    column: clamp(start.column + delta.column, SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumColumn, SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumColumn - start.columnSpan),
+    row: clamp(start.row + delta.row, SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumRow, SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumRow - start.rowSpan),
   };
   return sameSystemWorkflowPlacementGeometry(start, geometry) ? null : geometry;
 }
 
 export function clampSystemWorkflowGroupDelta(placements, delta) {
   if (!Array.isArray(placements) || placements.length < 1
-    || !delta || !Number.isSafeInteger(delta.column) || !Number.isSafeInteger(delta.row)) {
-    throw movementError('SYSTEM_WORKFLOW_MOVEMENT_GROUP_INVALID', 'Group movement requires placements and an integer cell delta');
+    || !delta || !isSystemWorkflowGridCoordinate(delta.column) || !isSystemWorkflowGridCoordinate(delta.row)) {
+    throw movementError('SYSTEM_WORKFLOW_MOVEMENT_GROUP_INVALID', 'Group movement requires placements and a grid-precision delta');
   }
   const geometries = placements.map(placementGeometry);
   const minimumColumn = Math.min(...geometries.map(({ column }) => column));
@@ -143,8 +142,16 @@ export function clampSystemWorkflowGroupDelta(placements, delta) {
   const maximumColumn = Math.max(...geometries.map(({ column, columnSpan }) => column + columnSpan));
   const maximumRow = Math.max(...geometries.map(({ row, rowSpan }) => row + rowSpan));
   return {
-    column: clamp(delta.column, -minimumColumn, SYSTEM_WORKFLOW_GEOMETRY.columns - maximumColumn),
-    row: clamp(delta.row, -minimumRow, SYSTEM_WORKFLOW_GEOMETRY.rows - maximumRow),
+    column: quantizeSystemWorkflowGridCoordinate(clamp(
+      delta.column,
+      SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumColumn - minimumColumn,
+      SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumColumn - maximumColumn,
+    )),
+    row: quantizeSystemWorkflowGridCoordinate(clamp(
+      delta.row,
+      SYSTEM_WORKFLOW_WORLD_BOUNDS.minimumRow - minimumRow,
+      SYSTEM_WORKFLOW_WORLD_BOUNDS.maximumRow - maximumRow,
+    )),
   };
 }
 
@@ -160,8 +167,8 @@ export function createSystemWorkflowGroupMovementRequest(placements, delta, grid
         expectedStartGeometry,
         destination: {
           ...expectedStartGeometry,
-          column: expectedStartGeometry.column + bounded.column,
-          row: expectedStartGeometry.row + bounded.row,
+          column: quantizeSystemWorkflowGridCoordinate(expectedStartGeometry.column + bounded.column),
+          row: quantizeSystemWorkflowGridCoordinate(expectedStartGeometry.row + bounded.row),
         },
       };
     }),
@@ -199,7 +206,10 @@ export function createSystemWorkflowGroupMovementCandidate(draftInput, { moves, 
     if (destination.columnSpan !== latest.columnSpan || destination.rowSpan !== latest.rowSpan) {
       throw movementError('SYSTEM_WORKFLOW_MOVEMENT_SPAN_CHANGED', 'Placement movement cannot resize the canonical placement');
     }
-    const nextDelta = { column: destination.column - latest.column, row: destination.row - latest.row };
+    const nextDelta = {
+      column: quantizeSystemWorkflowGridCoordinate(destination.column - latest.column),
+      row: quantizeSystemWorkflowGridCoordinate(destination.row - latest.row),
+    };
     if (!delta) delta = nextDelta;
     else if (delta.column !== nextDelta.column || delta.row !== nextDelta.row) {
       throw movementError('SYSTEM_WORKFLOW_MOVEMENT_GROUP_DELTA_MISMATCH', 'Every grouped placement must move by the same cell delta');
@@ -208,7 +218,8 @@ export function createSystemWorkflowGroupMovementCandidate(draftInput, { moves, 
   if (!delta?.column && !delta?.row) return null;
   for (const move of moves) {
     const placement = grid.placements.find((candidate) => candidate.id === move.placementId);
-    Object.assign(placement, placementGeometry(move.destination));
+    placement.column = quantizeSystemWorkflowGridCoordinate(placement.column + delta.column);
+    placement.row = quantizeSystemWorkflowGridCoordinate(placement.row + delta.row);
   }
   return assertValidSystemWorkflowDraft(draft);
 }

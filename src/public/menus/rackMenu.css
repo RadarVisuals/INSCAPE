@@ -65,3 +65,47 @@
 .rack-menu-command-surface.desktop-menu button:disabled { opacity: .42; cursor: default; }
 .rack-menu-command-surface.desktop-menu button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rack-menu-command-surface.desktop-menu button b { justify-self: end; color: var(--rack-menu-muted); }
+
+/* System Workflow context menus use the current Library command-row grammar. */
+.rack-menu-command-surface.desktop-menu[data-system-workflow-overlay] {
+  width: min(196px, calc(100vw - 16px));
+  border-color: var(--lattice-menu-line);
+  box-shadow: none;
+}
+
+.rack-menu-command-surface.desktop-menu[data-system-workflow-overlay] button {
+  position: relative;
+  min-height: 38px;
+  grid-template-columns: minmax(0, 1fr) 10px;
+  gap: 6px;
+  padding: 0 11px;
+  border-bottom-color: var(--lattice-menu-line);
+  font: 450 11px/1 "Inscape Sora", sans-serif;
+  font-variation-settings: "wght" 450;
+  letter-spacing: .025em;
+  text-transform: none;
+}
+
+.rack-menu-command-surface.desktop-menu[data-system-workflow-overlay] button > i {
+  display: none;
+}
+
+.rack-menu-command-surface.desktop-menu[data-system-workflow-overlay] button:hover,
+.rack-menu-command-surface.desktop-menu[data-system-workflow-overlay] button:focus-visible,
+.rack-menu-command-surface.desktop-menu[data-system-workflow-overlay] button[data-selected] {
+  box-shadow: none;
+}
+
+.rack-menu-command-surface.desktop-menu[data-system-workflow-overlay] button:hover::before,
+.rack-menu-command-surface.desktop-menu[data-system-workflow-overlay] button:focus-visible::before,
+.rack-menu-command-surface.desktop-menu[data-system-workflow-overlay] button[data-selected]::before {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  left: -1px;
+  width: 4px;
+  background: var(--rack-menu-ink);
+  content: '';
+  pointer-events: none;
+}

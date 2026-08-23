@@ -463,8 +463,7 @@ export default function VisitorLatticeWorld({
       position={viewerPosition}
       renderArtwork={(focusEntry, context) => <LatticeProductionFocusArtwork
         entry={focusEntry}
-        focused={context.phase === 'open' || context.phase === 'opening' || context.phase === 'outgoing'}
-        phase={context.phase}
+        motion={context.motion}
       />}
       returnFocus={viewerSession.returnFocus}
       surfaceColor="var(--lattice-menu-panel)"

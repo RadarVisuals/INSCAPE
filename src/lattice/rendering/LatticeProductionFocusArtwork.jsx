@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { projectLatticeProductionArtwork } from './latticeProductionProjection.js';
+import { projectArtworkMat } from './latticeMat.js';
+import { projectLatticeProductionFocusMediaMotion } from './latticeProductionFocusArtworkMotion.js';
 import './latticeProductionFocusArtwork.css';
 
 const percentRectangle = (rectangle, footprint) => ({
@@ -9,30 +10,19 @@ const percentRectangle = (rectangle, footprint) => ({
   height: `${(rectangle.height / footprint.height) * 100}%`,
 });
 
-export default function LatticeProductionFocusArtwork({ entry, focused, phase }) {
+export default function LatticeProductionFocusArtwork({ entry, motion }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [entry.media.src]);
   const dimensions = entry.focusDimensions;
-  const field = { left: 0, top: 0, cellSize: 100 };
-  const artwork = projectLatticeProductionArtwork(entry.placement, field, dimensions);
+  const footprint = { left: 0, top: 0, width: 100, height: 100 };
+  const presentation = projectArtworkMat(footprint, entry.placement.mat);
+  const mediaMotion = projectLatticeProductionFocusMediaMotion(entry.placement, dimensions, motion);
   const background = entry.placement.backing.enabled ? entry.placement.backing.color
     : entry.placement.transparencyMode === 'OPAQUE' ? '#d8d4ca' : 'transparent';
-  return <div className="lattice-production-focus-artwork" data-focused={focused || undefined} data-phase={phase}>
-    <div className="lattice-production-focus-artwork__authored">
-      {artwork.backplateRectangle && <span className="lattice-production-focus-artwork__mat" style={{ backgroundColor: artwork.mat.color }} />}
-      <span className="lattice-production-focus-artwork__opening" style={{
-        ...percentRectangle(artwork.mediaOpeningRectangle, artwork.footprint), backgroundColor: background,
-      }}>
-        <img alt="" draggable="false" src={entry.media.src} style={{
-          ...percentRectangle(artwork.imageRenderRectangle, artwork.mediaOpeningRectangle),
-          transform: artwork.imageTransform,
-          transformOrigin: 'center',
-        }} />
-      </span>
-    </div>
-    <div className="lattice-production-focus-artwork__native">
-      {!failed && <img alt={entry.accessibleLabel} decoding="async" draggable="false" onError={() => setFailed(true)} referrerPolicy="no-referrer" src={entry.media.src} />}
-      {failed && <span role="status">ARTWORK UNAVAILABLE</span>}
-    </div>
+  return <div className="lattice-production-focus-artwork">
+    {presentation.backplateRectangle && <span className="lattice-production-focus-artwork__mat" style={{ backgroundColor: presentation.mat.color }} />}
+    <span className="lattice-production-focus-artwork__opening" style={{ ...percentRectangle(presentation.mediaOpeningRectangle, footprint), backgroundColor: background }} />
+    {!failed && <img alt={entry.accessibleLabel} className="lattice-production-focus-artwork__media" onError={() => setFailed(true)} referrerPolicy="no-referrer" src={entry.media.src} style={{ ...mediaMotion.rectangle, transform: mediaMotion.css }} />}
+    {failed && <span className="lattice-production-focus-artwork__unavailable">Artwork unavailable</span>}
   </div>;
 }

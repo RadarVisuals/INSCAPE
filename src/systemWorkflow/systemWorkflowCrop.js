@@ -1,4 +1,5 @@
 import {
+  isSystemWorkflowGridCoordinate,
   SYSTEM_WORKFLOW_VISIBILITY,
   assertValidSystemWorkflowDraft,
 } from './domain/systemWorkflowDraft.js';
@@ -8,6 +9,7 @@ import {
 } from '../lattice/rendering/latticeCrop.js';
 import { projectArtworkMat } from '../lattice/rendering/latticeMat.js';
 import { sameSystemWorkflowPlacementSnapshot } from './systemWorkflowRemoval.js';
+import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop } from './systemWorkflowTransform.js';
 
 export const SYSTEM_WORKFLOW_CROP_DEAD_ZONE = 10;
 export const SYSTEM_WORKFLOW_CROP_MIN_ZOOM = 1;
@@ -57,8 +59,8 @@ export function sameSystemWorkflowCrop(left, right) {
 export function systemWorkflowCropMask(placement) {
   const columnSpan = placement?.columnSpan;
   const rowSpan = placement?.rowSpan;
-  if (!Number.isSafeInteger(columnSpan) || columnSpan < 1
-    || !Number.isSafeInteger(rowSpan) || rowSpan < 1) {
+  if (!isSystemWorkflowGridCoordinate(columnSpan) || columnSpan <= 0
+    || !isSystemWorkflowGridCoordinate(rowSpan) || rowSpan <= 0) {
     throw cropError('SYSTEM_WORKFLOW_CROP_GEOMETRY_INVALID', 'Crop authoring requires positive grid-native placement geometry');
   }
   return projectArtworkMat({ left: 0, top: 0, width: columnSpan, height: rowSpan }, placement.mat)
@@ -72,10 +74,16 @@ export function createSystemWorkflowCropSession(placement, mediaInput, maskInput
   if (!(startCrop === null || exactCrop(startCrop))) {
     throw cropError('SYSTEM_WORKFLOW_CROP_START_INVALID', 'Crop authoring requires a canonical starting crop');
   }
+  const projected = projectSystemWorkflowTransform(
+    placement?.transform,
+    media,
+    startCrop || SYSTEM_WORKFLOW_DEFAULT_CROP,
+  );
+  const visualCrop = normalizeCropForMask(projected.crop, mask, projected.dimensions);
   return {
     placementId: placement.id,
     startCrop,
-    previewCrop: normalizeCropForMask(startCrop || SYSTEM_WORKFLOW_DEFAULT_CROP, mask, media),
+    previewCrop: unprojectSystemWorkflowCrop(placement?.transform, visualCrop),
     media,
     mask,
     dirty: startCrop === null,
@@ -155,6 +163,30 @@ export function setSystemWorkflowCropZoom(crop, mediaInput, mask, zoomInput) {
   return normalizeCropForMask({ ...crop, zoom }, mask, media);
 }
 
+export function reframeSystemWorkflowCropForMask(crop, mediaInput, previousMask, nextMask, {
+  originDelta = { x: 0, y: 0 },
+  renderedScale,
+} = {}) {
+  const media = requireMedia(mediaInput);
+  const normalized = normalizeCropForMask(crop, previousMask, media);
+  const previousBounds = cropFocusBounds(previousMask, media, normalized.zoom);
+  const targetScale = renderedScale ?? (previousBounds.renderedSize.width / media.width);
+  if (!Number.isFinite(targetScale) || targetScale <= 0
+    || !Number.isFinite(originDelta?.x) || !Number.isFinite(originDelta?.y)) {
+    throw cropError('SYSTEM_WORKFLOW_CROP_REFRAME_INVALID', 'Crop reframing requires finite scale and placement displacement');
+  }
+  const coverScale = Math.max(nextMask.width / media.width, nextMask.height / media.height);
+  const zoom = clamp(targetScale / coverScale, SYSTEM_WORKFLOW_CROP_MIN_ZOOM, SYSTEM_WORKFLOW_CROP_MAX_ZOOM);
+  const nextBounds = cropFocusBounds(nextMask, media, zoom);
+  const previousLeft = previousMask.left + (previousMask.width / 2) - (normalized.x * previousBounds.renderedSize.width);
+  const previousTop = previousMask.top + (previousMask.height / 2) - (normalized.y * previousBounds.renderedSize.height);
+  return normalizeCropForMask({
+    x: (nextMask.left + (nextMask.width / 2) - (previousLeft - originDelta.x)) / nextBounds.renderedSize.width,
+    y: (nextMask.top + (nextMask.height / 2) - (previousTop - originDelta.y)) / nextBounds.renderedSize.height,
+    zoom,
+  }, nextMask, media);
+}
+
 export function createSystemWorkflowCropCandidate(draftInput, {
   crop,
   expectedMedia,
@@ -190,10 +222,11 @@ export function createSystemWorkflowCropCandidate(draftInput, {
   if (sameSystemWorkflowCrop(placement.crop, crop)) return null;
   if (crop !== null) {
     if (!exactCrop(crop)) throw cropError('SYSTEM_WORKFLOW_CROP_VALUE_INVALID', 'The completed crop is not canonical');
-    const bounds = cropFocusBounds(systemWorkflowCropMask(placement), media, crop.zoom);
+    const projected = projectSystemWorkflowTransform(placement.transform, media, crop);
+    const bounds = cropFocusBounds(systemWorkflowCropMask(placement), projected.dimensions, crop.zoom);
     const epsilon = 1e-12;
-    if (crop.x < bounds.x.minimum - epsilon || crop.x > bounds.x.maximum + epsilon
-      || crop.y < bounds.y.minimum - epsilon || crop.y > bounds.y.maximum + epsilon) {
+    if (projected.crop.x < bounds.x.minimum - epsilon || projected.crop.x > bounds.x.maximum + epsilon
+      || projected.crop.y < bounds.y.minimum - epsilon || projected.crop.y > bounds.y.maximum + epsilon) {
       throw cropError('SYSTEM_WORKFLOW_CROP_COVERAGE_INVALID', 'The completed crop would expose an edge of the media opening');
     }
   }

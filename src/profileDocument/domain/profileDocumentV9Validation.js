@@ -1,12 +1,14 @@
 import { normalizeProfileAddress } from '../../library/config.js';
 import {
   SYSTEM_WORKFLOW_FRAME_IDS,
+  SYSTEM_WORKFLOW_GRID_DENSITY,
   SYSTEM_WORKFLOW_GUIDE_MODES,
   SYSTEM_WORKFLOW_LABEL_ANCHORS,
   SYSTEM_WORKFLOW_LIMITS,
   SYSTEM_WORKFLOW_SURFACE_IDS,
   SYSTEM_WORKFLOW_TRANSPARENCY_MODES,
   SYSTEM_WORKFLOW_VISIBILITY,
+  isValidSystemWorkflowPlacementGeometry,
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import {
   INSCAPE_PROFILE_DOCUMENT_TYPE,
@@ -102,9 +104,7 @@ function validatePlacement(value, path, fail) {
   if (!exactKeys(value, PLACEMENT_KEYS)) return fail(path, 'invalid_placement_structure', 'Invalid public placement');
   if (!safeId(value.id)) fail(`${path}.id`, 'invalid_placement_id', 'Invalid placement ID');
   if (!validateProfileDocumentV9Asset(value.asset)) fail(`${path}.asset`, 'invalid_asset_reference', 'Invalid canonical asset reference');
-  if (!safeInteger(value.column) || !safeInteger(value.row)
-    || !safeInteger(value.columnSpan, 1) || !safeInteger(value.rowSpan, 1)
-    || value.column + value.columnSpan > 32 || value.row + value.rowSpan > 18) {
+  if (!isValidSystemWorkflowPlacementGeometry(value)) {
     fail(path, 'invalid_placement_geometry', 'Invalid placement geometry');
   }
   if (!safeInteger(value.layer)) fail(`${path}.layer`, 'invalid_layer', 'Invalid placement layer');
@@ -178,7 +178,8 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     || !sets.surfaces.has(input.appearance.dossierSurfaceId)
     || !sets.guides.has(input.appearance.guideMode)
     || !Number.isSafeInteger(input.appearance.guideSize)
-    || input.appearance.guideSize < 1 || input.appearance.guideSize > 8
+    || input.appearance.guideSize < SYSTEM_WORKFLOW_GRID_DENSITY.minimum
+    || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid public appearance');
   validateIdentity(input.identityPresentation, fail);
   if (!Array.isArray(input.grids) || input.grids.length < 1 || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxGrids) {

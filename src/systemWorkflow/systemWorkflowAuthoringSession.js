@@ -42,6 +42,8 @@ import {
   createSystemWorkflowGroupTransformCandidate,
   createSystemWorkflowTransformCandidate,
 } from './systemWorkflowTransform.js';
+import { createSystemWorkflowAppearanceCandidate } from './systemWorkflowAppearance.js';
+import { createSystemWorkflowLockCandidate } from './systemWorkflowLock.js';
 
 function sessionError(code, message) {
   return Object.assign(new Error(message), { code });
@@ -177,6 +179,14 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
 
     transformPlacements(request) {
       return transact((draft) => createSystemWorkflowGroupTransformCandidate(draft, request));
+    },
+
+    setAppearance(request) {
+      return transact((draft) => createSystemWorkflowAppearanceCandidate(draft, request));
+    },
+
+    setPlacementLocked(request) {
+      return transact((draft) => createSystemWorkflowLockCandidate(draft, request));
     },
   });
 }
