@@ -73,16 +73,16 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Phase 9 activates the already isolated Creations, Activity, Discovery, and
   // Settings boundaries. The measured owner graph grows only at the activation
   // seam; each substantial surface remains independently lazy.
-  // MODUL-8R Task 8 replaces the selected owner presentation and keeps its
+  // The prior owner presentation stayed within a measured allowance. The extra rollback
   // production entry wrapper within a measured allowance. The extra rollback
-  // margin keeps the retained two-line LATTICE selector buildable through Task 8.
+  // margin kept that historical selector buildable through its acceptance checkpoint.
   // The combined Alpha candidate adds the lightweight Grid Walker integration
   // and Keeper dock controls to the lazy owner graph. Phase 3's complete System
-  // Workflow review slice keeps MODUL8R selected while sharing accepted focus,
+  // Workflow review slice shared accepted focus,
   // identity, and guide primitives with that graph. These ceilings are the
   // exact matrix-wide alternate-outDir measurements.
   // Phase 4A makes the strict v9 Visitor/parser closure authoritative while the
-  // selected MODUL8R shell remains unchanged. Keep the exact measured cutover
+  // selected historical shell remained unchanged. Keep the exact measured cutover
   // boundary; the wallet runtime remains independently budgeted below.
   // Independent audit adds strict canonical-byte equality, including original
   // byte comparison so a UTF-8 BOM cannot disappear at a decoded-text boundary.
@@ -252,8 +252,7 @@ function entryKey(manifest) {
 }
 
 function ownerKey(manifest) {
-  const ownerPaths = ['src/public/OwnerSystemWorkflowShell.jsx', 'src/public/OwnerModul8rShell.jsx',
-    'src/public/OwnerLatticeShell.jsx', 'src/public/ModuleGridShell.jsx'];
+  const ownerPaths = ['src/public/OwnerSystemWorkflowShell.jsx'];
   const key = Object.keys(manifest).find((candidate) => ownerPaths.some((path) => normalize(candidate).endsWith(`/${path}`)
     || normalize(candidate) === path)) || Object.keys(manifest).find((candidate) => {
     const record = manifest[candidate];
@@ -401,16 +400,13 @@ export function productionBuildHygienePlugin() {
 export function diagnosticsEnvironmentPlugin() {
   const selectedSource = readFileSync(resolve(process.cwd(), 'src/public/ownerRuntimeSelected.js'), 'utf8');
   const ownerRuntimeSelection = selectedSource.match(/OWNER_RUNTIME_SELECTION\s*=\s*'([^']+)'/u)?.[1];
-  if (!['SYSTEM_WORKFLOW', 'MODUL8R', 'LATTICE', 'LEGACY'].includes(ownerRuntimeSelection)) {
+  if (ownerRuntimeSelection !== 'SYSTEM_WORKFLOW') {
     throw new TypeError(`Unsupported owner runtime build selection: ${String(ownerRuntimeSelection)}`);
   }
   return {
     name: 'diagnostics-environment',
     config(_config, { command }) {
-      const presentationFile = ownerRuntimeSelection === 'MODUL8R'
-        ? 'ownerWorkspacePresentation.modul8r.js' : 'ownerWorkspacePresentation.lattice.js';
       return {
-        resolve: { alias: { '#owner-workspace-presentation': resolve(process.cwd(), 'src/public', presentationFile) } },
         define: {
         __DEVELOPMENT_DIAGNOSTICS__: JSON.stringify(command === 'serve'),
         __OWNER_RUNTIME_SELECTION__: JSON.stringify(ownerRuntimeSelection),

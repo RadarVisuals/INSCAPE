@@ -338,7 +338,7 @@ test('provider and LSP6 failures are decoded accurately', () => {
 });
 
 test('browser publication source contains no Pinata endpoint, credential, SDK, or private-state dependency', () => {
-  const files = ['../storage/profileDocumentPublisher.js', '../storage/profileDocumentUploadClient.js', './profileDocumentPublication.js', '../state/useProfileDocumentPublication.js', '../components/ProfileDocumentPanel.jsx'];
+  const files = ['../storage/profileDocumentPublisher.js', '../storage/profileDocumentUploadClient.js', './profileDocumentPublication.js', '../state/useProfileDocumentPublication.js', '../../public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx'];
   const source = files.map((file) => readFileSync(new URL(file, import.meta.url), 'utf8')).join('\n').toLowerCase();
   for (const forbidden of ['pinata_jwt', 'uploads.pinata.cloud', 'bearer ', '@pinata', 'use signalstore', 'runtimewindow', 'camera state']) assert.equal(source.includes(forbidden), false, forbidden);
 });

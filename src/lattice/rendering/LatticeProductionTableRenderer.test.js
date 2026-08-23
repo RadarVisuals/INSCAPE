@@ -69,7 +69,7 @@ test('transitive visitor renderer graph excludes owner, persistence, reconciliat
   const graph = visitorGraph(entry);
   const joined = graph.join('\n');
   for (const forbidden of [
-    '/src/public/ModuleGridShell.jsx', '/src/library/state/', '/src/signals/state/',
+    '/src/public/OwnerSystemWorkflowShell.jsx', '/src/library/state/', '/src/signals/state/',
     '/src/lattice/storage/', 'Reconciliation', '/src/wallet/', 'profileDocumentPublisher',
     'profileDocumentUploadClient', 'LatticeEnginePrototype', '/src/lattice/prototype/',
     '/src/lattice/controller/',

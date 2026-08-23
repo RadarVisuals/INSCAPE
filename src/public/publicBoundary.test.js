@@ -62,7 +62,6 @@ test('framed artwork keeps form controls interactive and presentation layers ind
   const artworkSource = readFileSync(new URL('./FramedArtwork.jsx', import.meta.url), 'utf8');
   const artworkStyles = readFileSync(new URL('./canvasObjects.css', import.meta.url), 'utf8');
   const galleryStyles = readFileSync(new URL('./galleryWorld.css', import.meta.url), 'utf8');
-  const documentPreviewSource = readFileSync(new URL('../profileDocument/components/PublishedHomeWorld.jsx', import.meta.url), 'utf8');
 
   assert.match(shellStyles, /\.public-shell input,[\s\S]*\.public-shell select,[\s\S]*pointer-events:\s*auto/);
   assert.match(artworkSource, /canvas-artwork__mat/);
@@ -75,47 +74,28 @@ test('framed artwork keeps form controls interactive and presentation layers ind
   assert.match(galleryStyles, /data-transparent[^}]*background:transparent/);
   assert.doesNotMatch(artworkStyles, /data-private[^}]*content:\s*["']PRIVATE/);
   assert.match(artworkSource, /arranging && selected/);
-  assert.match(documentPreviewSource, /<GalleryWorld/);
 });
 
-test('Gallery remains spatial while Creations is an independent dock workspace', () => {
-  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
-  const dockSource = readFileSync(new URL('./ProfileNavigationDock.jsx', import.meta.url), 'utf8');
-  const gallerySource = readFileSync(new URL('./GalleryWorld.jsx', import.meta.url), 'utf8');
-
-  assert.match(shellSource, /gallery=\{upperOpen \? null : \{/);
-  assert.match(dockSource, /GalleryNavigationCard/);
-  assert.match(dockSource, /CreationsBrowser/);
-  assert.doesNotMatch(shellSource, /<CreationsWindow/);
-  assert.match(shellSource, /<GalleryWorld/);
-  assert.doesNotMatch(shellSource, /id === 'creations'\) enterGallery\(\)/);
-  assert.doesNotMatch(shellSource, /setActiveModuleId\('creations'\);\s*\n\s*}, \[closeAllWindows\]\)/);
-  assert.match(gallerySource, /import FramedArtwork/);
-  assert.match(gallerySource, /<FramedArtwork/);
-  assert.match(gallerySource, /GalleryFloorGrid/);
-  assert.match(gallerySource, /createPortal\(<>{backdrop}{gallery}<\/>/);
-  assert.match(gallerySource, /onMoveKeeperHorizontally/);
-  assert.match(gallerySource, /addEventListener\('wheel', handleWheel, \{ passive: false \}\)/);
-  assert.match(gallerySource, /onOpenArtwork\(object\.id, event\.currentTarget\)/);
-  assert.doesNotMatch(gallerySource, /onWheel=\{handleWheel\}/);
-  assert.doesNotMatch(gallerySource, /if \(direction\) onMoveKeeper\?\./);
+test('selected owner workflow does not restore the legacy Gallery workspace', () => {
+  const runtimeSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
+  assert.match(runtimeSource, /<OwnerSystemWorkflowCanvas/u);
+  assert.doesNotMatch(runtimeSource, /GalleryWorld|CreationsBrowser|UpperWorldSurface|SpatialLevelNavigation/u);
 });
 
-test('owner inventory hydrates independently of opening Index or Categories', () => {
-  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
-  const spatialSource = readFileSync(new URL('./useSpatialWorldNavigation.js', import.meta.url), 'utf8');
-  assert.match(shellSource, /if \(!ownerAuthoringEnabled \|\| libraryStatus !== 'idle'\) return;\s*void loadLibrary\(\);/);
-  assert.match(spatialSource, /galleryAssetsMissing[\s\S]*libraryStatus !== 'loading'\) void loadLibrary\(\);/);
+test('owner inventory is profile-scoped before the Library panel opens', () => {
+  const runtimeSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
+  assert.match(runtimeSource, /useLibraryStore\(\(state\) => state\.profileAddress === profileAddress \? state\.assets : \[\]\)/u);
+  assert.match(runtimeSource, /useOwnerLatticeBrowser\(profileAddress, panel === 'library' && browserEnabled\)/u);
 });
 
 test('owner folders are direct categories and Index assigns assets through contextual folder commands', () => {
-  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
+  const shellSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowLibraryPresenter.jsx', import.meta.url), 'utf8');
   const indexSource = readFileSync(new URL('./AssetIndex.jsx', import.meta.url), 'utf8');
   const categorySource = readFileSync(new URL('./CategoryNavigationCard.jsx', import.meta.url), 'utf8');
   const categoryStyles = readFileSync(new URL('./categoryNavigationCard.css', import.meta.url), 'utf8');
 
-  assert.match(shellSource, /workspace\.folders\.map\(\(folder\) => \(\{/);
-  assert.doesNotMatch(shellSource, /homeShortcut|pinnedLaunchers|onToggleHomeShortcut/);
+  assert.match(shellSource, /const categories = data\.categories \|\| \[\]/u);
+  assert.doesNotMatch(shellSource, /homeShortcut|pinnedLaunchers|onToggleHomeShortcut/u);
   assert.match(indexSource, /onContextMenu=\{\(event\) => \{ event\.preventDefault\(\); event\.stopPropagation\(\); setAssetContext/);
   assert.match(indexSource, /folder\.assetIds\.includes\(assetContext\.asset\.id\) \? 'Remove from' : 'Add to'/);
   assert.match(indexSource, /setFolderAsset\(folder\.id, assetContext\.asset\.id, !folder\.assetIds\.includes\(assetContext\.asset\.id\)\)/);
@@ -126,56 +106,24 @@ test('owner folders are direct categories and Index assigns assets through conte
   assert.doesNotMatch(categoryStyles, /\[data-empty\] nav/);
 });
 
-test('published visitors enter the same Gallery projection without owner authoring controls', () => {
-  const worldSource = readFileSync(new URL('../profileDocument/components/PublishedHomeWorld.jsx', import.meta.url), 'utf8');
-  assert.match(worldSource, /gallery=\{upperOpen \? null : \{ open: galleryOpen/);
-  assert.match(worldSource, /<GalleryWorld/);
-  assert.match(worldSource, /objects=\{galleryObjects\}/);
-  assert.doesNotMatch(worldSource, /ownerAuthoringEnabled=\{true\}/);
+test('System Workflow routing contains no legacy Gallery destination controls', () => {
+  const shellSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(shellSource, /GalleryNavigationCard|GalleryWorld|system-hud__destinations/u);
+  assert.match(shellSource, /<OwnerSystemWorkflowGlobalBar/u);
 });
 
-test('Gallery is routed through the profile dock without legacy destination controls', () => {
-  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
-  const dockSource = readFileSync(new URL('./ProfileNavigationDock.jsx', import.meta.url), 'utf8');
-  assert.match(shellSource, /gallery=\{upperOpen \? null : \{/);
-  assert.match(dockSource, /<GalleryNavigationCard/);
-  assert.doesNotMatch(shellSource, />\[ Gallery \]<\/button>/);
-  assert.doesNotMatch(shellSource, /className="system-hud__destinations"/);
+test('published navigation follows ordered v9 Grids without a spatial-world handoff', () => {
+  const visitorSource = readFileSync(new URL('../profileDocument/components/ProfileDocumentV9Visitor.jsx', import.meta.url), 'utf8');
+  assert.match(visitorSource, /const \[activeIndex, setActiveIndex\] = useState\(0\)/u);
+  assert.match(visitorSource, /document\.grids\[activeIndex\]/u);
+  assert.match(visitorSource, /aria-label="Next Grid"/u);
+  assert.doesNotMatch(visitorSource, /GalleryWorld|UpperWorldSurface|SpatialLevelNavigation/u);
 });
 
-test('Gallery transition keeps both spatial worlds mounted through a reversible vertical handoff', () => {
-  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
-  const spatialSource = readFileSync(new URL('./useSpatialWorldNavigation.js', import.meta.url), 'utf8');
-  const homeSource = readFileSync(new URL('./HomeWorldSurface.jsx', import.meta.url), 'utf8');
-  const gallerySource = readFileSync(new URL('./GalleryWorld.jsx', import.meta.url), 'utf8');
-  const homeStyles = readFileSync(new URL('./homeWorld.css', import.meta.url), 'utf8');
-  const galleryStyles = readFileSync(new URL('./galleryWorld.css', import.meta.url), 'utf8');
-  const dockSource = readFileSync(new URL('./ProfileNavigationDock.jsx', import.meta.url), 'utf8');
-
-  assert.match(shellSource, /galleryTransitionPhase/);
-  assert.match(spatialSource, /\['preparing', 'entering', 'exiting'\]/);
-  assert.match(spatialSource, /setGalleryTransitionPhase\('exiting'\)/);
-  assert.match(homeSource, /data-gallery-transition=\{transitionPhase\}/);
-  assert.match(gallerySource, /cameraX - gridPhaseX/);
-  assert.match(spatialSource, /setHomeGridPhaseX\(inheritedPhase\)/);
-  assert.match(dockSource, /collapseToAvatar=\{effectiveGalleryOpen \|\| spatialWorldActive\}/);
-  assert.match(homeStyles, /@keyframes home-world-descend/);
-  assert.match(galleryStyles, /@keyframes gallery-world-arrive/);
-  assert.match(galleryStyles, /@keyframes gallery-floor-unfold/);
-});
-
-test('Upper world is connected above Home through spatial level navigation', () => {
-  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
-  const upperSource = readFileSync(new URL('./UpperWorldSurface.jsx', import.meta.url), 'utf8');
-  const upperStyles = readFileSync(new URL('./upperWorld.css', import.meta.url), 'utf8');
-  const galleryStyles = readFileSync(new URL('./galleryWorld.css', import.meta.url), 'utf8');
-
-  assert.match(upperSource, /className="upper-world"/);
-  assert.match(upperStyles, /@keyframes upper-world-arrive/);
-  assert.match(upperStyles, /@keyframes upper-ceiling-unfold/);
-  assert.match(shellSource, /<UpperWorldSurface/);
-  assert.match(shellSource, /<SpatialLevelNavigation/);
-  assert.doesNotMatch(galleryStyles, /gallery-world__ceiling/);
+test('selected owner and Visitor omit the retired upper-world topology', () => {
+  const ownerSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
+  const visitorSource = readFileSync(new URL('../profileDocument/components/ProfileDocumentV9Visitor.jsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(`${ownerSource}\n${visitorSource}`, /UpperWorldSurface|SpatialLevelNavigation|upper-world/u);
 });
 
 test('all non-owner routes mount the published boundary instead of the local workspace shell', () => {
@@ -186,15 +134,9 @@ test('all non-owner routes mount the published boundary instead of the local wor
   assert.doesNotMatch(appSource, /viewingConnectedWorkspace \? <OwnerRuntimeBoundary/);
 });
 
-test('profile restore guards presentation storage reads and reports controlled document errors', () => {
-  const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
-  const restoreStart = shellSource.indexOf('const restoreImportedPresentation');
-  const restoreEnd = shellSource.indexOf('\n  useEffect(() => {', restoreStart);
-  const restoreSource = shellSource.slice(restoreStart, restoreEnd);
-  const tryIndex = restoreSource.indexOf('try {');
-  const readIndex = restoreSource.indexOf('window.localStorage.getItem(key)');
-
-  assert.ok(tryIndex >= 0 && readIndex > tryIndex, 'the prior presentation read is inside the guarded restore path');
-  assert.match(restoreSource, /if \(restoreStarted\)/);
-  assert.match(restoreSource, /setDocumentError\(error instanceof Error \? error\.message : String\(error\)\)/);
+test('profile restore uses the isolated System Workflow store and controlled errors', () => {
+  const controllerSource = readFileSync(new URL('./ownerSystemWorkflow/useOwnerSystemWorkflowController.js', import.meta.url), 'utf8');
+  assert.match(controllerSource, /createSystemWorkflowDraftStore\(\{ profileAddress: profile/u);
+  assert.match(controllerSource, /catch \(cause\) \{ setError\(cause\?\.message \|\| 'The canonical operation failed'\)/u);
+  assert.doesNotMatch(controllerSource, /restoreImportedPresentation|profileDocumentStorage|lattice-production-draft/u);
 });

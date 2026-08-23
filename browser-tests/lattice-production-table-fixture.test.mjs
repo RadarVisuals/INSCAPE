@@ -46,7 +46,7 @@ test('Phase 3 visual fixture remains browser-test-only and free of owner/runtime
   assert.match(browserComparison, /127\.0\.0\.1:\$\{interactivePort\}/u);
   assert.match(browserComparison, /Press Ctrl\+C/u);
   for (const forbidden of [
-    '/src/public/ModuleGridShell.jsx', '/src/library/state/', '/src/signals/state/',
+    '/src/public/OwnerSystemWorkflowShell.jsx', '/src/library/state/', '/src/signals/state/',
     '/src/lattice/storage/', 'Reconciliation', '/src/wallet/', 'profileDocumentPublisher',
     'profileDocumentUploadClient', 'LatticeEnginePrototype', '/src/lattice/prototype/',
     '/src/lattice/controller/',

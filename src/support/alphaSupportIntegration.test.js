@@ -18,13 +18,12 @@ test('Alpha support is local-only and exposes no network or persistence path', (
 test('bounded support surfaces cover authority, runtime, publication and visitor resolution', () => {
   const app = source('../App.jsx');
   const owner = source('../public/OwnerRuntimeBoundary.jsx');
-  const panel = source('../public/OwnerLatticePublicationRack.jsx');
+  const panel = source('../public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx');
   const visitor = source('../profileDocument/components/PublishedProfileBoundary.jsx');
   assert.match(app, /AUTHORITY_INITIALIZATION_FAILED/u);
   assert.match(owner, /UNEXPECTED_APPLICATION_ERROR/u);
   assert.match(panel, /IPFS_UPLOAD_FAILED/u);
   assert.match(panel, /CID_VERIFICATION_FAILED/u);
-  assert.doesNotMatch(source('../profileDocument/components/ProfileDocumentPanel.jsx'), /AlphaSupportPanel/u);
   assert.match(visitor, /PUBLISHED_DOCUMENT_FAILED/u);
   assert.match(visitor, /PUBLICATION_RESOLUTION_FAILED/u);
   assert.doesNotMatch(visitor, /<AlphaSupportPanel compact/u);

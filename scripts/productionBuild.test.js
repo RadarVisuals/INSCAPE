@@ -8,8 +8,8 @@ import { analyzeProductionBuild, assertNoProhibitedProductionArtifacts, assertSa
 import { ownerRuntimeIsolationPlugin } from './ownerRuntimeIsolation.js';
 import { excludeUnsupportedWalletConnectorsPlugin } from './unsupportedWalletConnectors.js';
 
-const graph = (leaks = []) => ({ ownerModules: ['/src/public/OwnerSystemWorkflowShell.jsx', '/src/public/OwnerLatticeShell.jsx', '/src/public/ModuleGridShell.jsx'], entries: [{ file: 'assets/app-a.js' }],
-  ownerChunks: [{ file: 'assets/lattice-a.js', modules: ['/src/public/OwnerLatticeShell.jsx'] }], leaks });
+const graph = (leaks = []) => ({ ownerModules: ['/src/public/OwnerSystemWorkflowShell.jsx'], entries: [{ file: 'assets/app-a.js' }],
+  ownerChunks: [{ file: 'assets/system-workflow-a.js', modules: ['/src/public/OwnerSystemWorkflowShell.jsx'] }], leaks });
 
 async function fixture(root, suffix = 'a') {
   await mkdir(resolve(root, '.vite'), { recursive: true }); await mkdir(resolve(root, 'assets'), { recursive: true });
@@ -19,12 +19,12 @@ async function fixture(root, suffix = 'a') {
     '_standalone-wallet.js': { file: `assets/wallet-${suffix}.js`, name: 'standaloneWalletSession', isDynamicEntry: true,
       imports: ['_shared.js'], dynamicImports: ['_wallet-icon.js'] },
     '_wallet-icon.js': { file: `assets/wallet-icon-${suffix}.js` },
-    'src/public/OwnerLatticeShell.jsx': { file: `assets/lattice-${suffix}.js`, isDynamicEntry: true, imports: ['_shared.js'], css: [`assets/lattice-${suffix}.css`] },
+    'src/public/OwnerSystemWorkflowShell.jsx': { file: `assets/system-workflow-${suffix}.js`, isDynamicEntry: true, imports: ['_shared.js'], css: [`assets/system-workflow-${suffix}.css`] },
   };
   await writeFile(resolve(root, '.vite/manifest.json'), JSON.stringify(manifest));
   await writeFile(resolve(root, 'owner-runtime-graph.json'), JSON.stringify(graph()));
   for (const file of [`app-${suffix}.js`, `shared-${suffix}.js`, `wallet-${suffix}.js`, `wallet-icon-${suffix}.js`,
-    `lattice-${suffix}.js`, `app-${suffix}.css`, `lattice-${suffix}.css`])
+    `system-workflow-${suffix}.js`, `app-${suffix}.css`, `system-workflow-${suffix}.css`])
     await writeFile(resolve(root, 'assets', file), file.repeat(3));
   await writeFile(resolve(root, 'assets/public.webp'), 'asset');
 }
@@ -47,12 +47,12 @@ test('manifest classification accepts Vite internal owner facade keys after a ne
     await fixture(root, 'facade');
     const manifestPath = resolve(root, '.vite/manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-    manifest['_OwnerLatticeShell-facade.js'] = manifest['src/public/OwnerLatticeShell.jsx'];
-    delete manifest['src/public/OwnerLatticeShell.jsx'];
+    manifest['_OwnerSystemWorkflowShell-facade.js'] = manifest['src/public/OwnerSystemWorkflowShell.jsx'];
+    delete manifest['src/public/OwnerSystemWorkflowShell.jsx'];
     await writeFile(manifestPath, JSON.stringify(manifest));
     const report = await analyzeProductionBuild(root);
     assert.equal(report.ownerJavaScript.length, 1);
-    assert.equal(report.ownerJavaScript[0].file, 'assets/lattice-facade.js');
+    assert.equal(report.ownerJavaScript[0].file, 'assets/system-workflow-facade.js');
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
@@ -201,17 +201,12 @@ test('production pruning excludes development-only prototype assets', () => {
   for (const path of ['assets/PFP', 'assets/prototype', 'assets/ratio']) assert.ok(UNUSED_PUBLIC_PATHS.includes(path), path);
 });
 
-test('manifest classification recognizes the System Workflow production owner entry', async () => {
+test('manifest classification recognizes the sole System Workflow production owner entry', async () => {
   const root = resolve(tmpdir(), `underneath-budget-system-workflow-${process.pid}`);
   try {
     await fixture(root, 'system-workflow');
-    const manifestPath = resolve(root, '.vite/manifest.json');
-    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-    manifest['src/public/OwnerSystemWorkflowShell.jsx'] = manifest['src/public/OwnerLatticeShell.jsx'];
-    delete manifest['src/public/OwnerLatticeShell.jsx'];
-    await writeFile(manifestPath, JSON.stringify(manifest));
     const report = await analyzeProductionBuild(root);
-    assert.equal(report.ownerJavaScript[0].file, 'assets/lattice-system-workflow.js');
+    assert.equal(report.ownerJavaScript[0].file, 'assets/system-workflow-system-workflow.js');
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

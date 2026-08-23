@@ -236,13 +236,13 @@ test('successful attempts clear timers and exhausted timeout is bounded', async 
 test('published rendering sources cannot access local workspace, signals, runtime windows, or persistence', () => {
   const boundary = readFileSync(new URL('../components/PublishedProfileBoundary.jsx', import.meta.url), 'utf8');
   const preview = readFileSync(new URL('../components/PublishedProfileDocumentPreview.jsx', import.meta.url), 'utf8');
-  const surface = readFileSync(new URL('../components/ProfileDocumentSurface.jsx', import.meta.url), 'utf8');
-  const space = readFileSync(new URL('../components/PublishedProfileDocumentSpaceWindow.jsx', import.meta.url), 'utf8');
-  const sources = `${boundary}\n${preview}\n${surface}\n${space}`;
+  const visitor = readFileSync(new URL('../components/ProfileDocumentV9Visitor.jsx', import.meta.url), 'utf8');
+  const renderer = readFileSync(new URL('../components/GridProductionRenderer.jsx', import.meta.url), 'utf8');
+  const sources = `${boundary}\n${preview}\n${visitor}\n${renderer}`;
   for (const forbidden of ['useLibraryStore', 'useSignalStore', 'localStorage', 'runtimeWindow', 'profileDocumentStorage', 'ModuleGridShell']) {
     assert.equal(sources.includes(forbidden), false, forbidden);
   }
-  assert.match(space, /projectDocumentSpace\(space\)/);
+  assert.match(preview, /ProfileDocumentV9Preview/);
   assert.match(boundary, /className="published-profile-retry"/);
   assert.match(boundary, /aria-busy=\{state\?\.busy\}/);
   assert.match(boundary, /state\?\.status !== PUBLISHED_PROFILE_STATUS\.LOADING/);

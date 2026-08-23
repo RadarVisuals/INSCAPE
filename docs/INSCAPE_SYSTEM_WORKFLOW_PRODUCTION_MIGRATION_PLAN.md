@@ -498,8 +498,8 @@ Final acceptance covers dynamic Grid lifecycle/order, real authoring, all panels
 | 2. Public v9 vertical slice | `[x]` |
 | 3. Production System Workflow shell | `[x]` |
 | 4. Publication/discovery/cutover | `[x]` |
-| Post-acceptance cleanup | `[ ]` |
+| Post-acceptance cleanup | `[x]` |
 
-Phases 1, 2, 3, and 4 are complete. Phase 4A steps 1-4 and Phase 4B steps 5-10 are independently audited **GO**; Phase 4B also has manual acceptance **GO** and is committed locally in the current checkpoint. Post-acceptance cleanup remains `[ ]` and has not started.
+Phases 1, 2, 3, and 4 plus post-acceptance cleanup are complete. Phase 4A steps 1-4 and Phase 4B steps 5-10 are independently audited **GO**; Phase 4B also has manual acceptance **GO** and is committed locally in the current checkpoint. Cleanup removed the obsolete owner shells/runtime-selector compatibility, development MODUL8R entrance, unreachable production MODUL8R/Rack presentation subtree, repository-orphaned Profile Document v1-v8 APIs/tests, legacy published/Visitor implementations, and obsolete MODUL8R browser gates with explicit user authorization. The production artifact remains System Workflow-only with `leaks: []`. Shared Library/browser and lattice rendering authorities are retained because the selected runtime still imports them. The first cleanup audit returned **NO-GO** because two retained standalone prototypes still import `Modul8rLibraryAdapter`; the adapter, its direct panel, and stylesheet were restored byte-identically from the Phase 4B checkpoint, and a new write-free Vite regression compiles both standalone HTML entry graphs. Final independent cleanup re-audit: **GO**, no blocking findings, focused `42/42`; unrelated prototypes and experimental work remain untouched. Cleanup verification passes the earlier focused `52/52` and `32/32` matrices, corrected final sequential Node suite `1062/1062`, current System Workflow production/publication and local Alpha-support browser gates, LUKSO standards `5/5`, production build, and `build:check` at `802_502` initial JavaScript bytes.
 
 Do not commit, push, deploy, upload, sign, or publish without explicit authorization.

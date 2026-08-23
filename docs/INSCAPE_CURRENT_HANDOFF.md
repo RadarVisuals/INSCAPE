@@ -11,6 +11,7 @@ This is the current travel checkpoint. It describes two intentionally separate b
 - Scope implemented: Phase 4A plus the user-authorized Phase 4B review candidate, corresponding to Phase 4 steps 1-10.
 - Review state: Phase 4A remains independently audited **GO** and committed at `9ff866f51e9ef6938d40d25025f2c4a2be38cadd`. Phase 4B automated certification, manual acceptance, and independent audit are all **GO** with no blocking findings. Overall Phase 4 is `[x]`; the accepted Phase 4B changes are committed locally in the current checkpoint.
 - Selected production runtime: `SYSTEM_WORKFLOW`, loaded lazily through `OwnerSystemWorkflowShell`. MODUL8R remains only the bounded one-file rollback target and is not mounted by the selected production path.
+- Post-acceptance cleanup: `[x]` independently re-audited **GO** from committed Phase 4B checkpoint `24714713ff005bc682484389712010f498d7bfe0`. The obsolete owner shells/runtime-selector compatibility, unreachable production MODUL8R/Rack presentation subtree, repository-orphaned Profile Document v1-v8 APIs/tests, legacy published/Visitor implementations, and obsolete MODUL8R browser gates have been removed with explicit user authorization. Shared System Workflow Library/browser and lattice rendering authorities remain because the selected runtime still imports them. The first cleanup audit found that two retained standalone prototypes still import the shared `Modul8rLibraryAdapter`; the adapter, its panel, and its stylesheet were restored byte-identically from the Phase 4B checkpoint, and a write-free Vite regression now compiles both prototype entry graphs. Unrelated prototypes and experimental work remain untouched.
 
 The active legacy authorities replaced in this slice were the local `OSUnderneathProfileDocument` singleton name/hash, the resolver's injectable generic v1-v8 parser, the Discovery query's old-key filter, generic v7/v8 publication serialization, and the active legacy/Lattice Visitor selector. Publisher, resolver, and Discovery now share the Phase-1 `INSCAPE_PROFILE_DOCUMENT_KEY`. Upload preparation, upload Function validation, CID verification, wallet-publication preparation, resolver read-back, Preview, and Visitor use strict canonical Profile Document v9 bytes. No dual-read, dual-write, migration, parser injection, or legacy-key fallback was added.
 
@@ -36,9 +37,21 @@ Verification at the current Phase 4B review candidate:
 - final independent re-audit: **GO**. Both canonical-byte blockers are fully resolved; no blocking findings remain. Its sole non-blocking finding was that the checkpoint count omitted the singleton-key test (`114/114` instead of `115/115`), corrected here.
 - measured selected System Workflow owner budgets: JavaScript `365_023` raw / `110_353` gzip; CSS `143_850` raw / `21_133` gzip. Initial and standalone-wallet limits were not relaxed, and exact-boundary plus limit-plus-one tests remain.
 
+Post-acceptance cleanup verification at the accepted candidate:
+
+- focused cleanup matrices: `52/52` and `32/32` passed;
+- final sequential Node suite after the retained-prototype correction: `1062/1062` passed;
+- current System Workflow production and canonical-v9 publication browser gates: passed; the adapted local Alpha-support gate passed with no non-GET support request;
+- `npm run test:lukso-standards`: `5/5` passed;
+- `npm run build`: passed, 5,430 modules transformed, production budgets passed;
+- `npm run build:check`: passed at 802,502 initial JavaScript bytes;
+- owner runtime graph remains System Workflow-only with `leaks: []`.
+- first cleanup audit: **NO-GO** because the retained `owner-shell-wireframe.html` and `owner-shell-system-prototype.html` graphs could not resolve the deleted shared Library adapter. The three-file prototype-only dependency cluster was restored byte-identically; the new two-entry write-free Vite bundle guard passes;
+- final independent cleanup re-audit: **GO** with no blocking findings; focused re-audit `42/42`, final sequential Node suite `1062/1062`, and restored-file blob hashes exactly match the Phase 4B checkpoint.
+
 Official LSP2, LSP6, and LSP0 authorities were rechecked on 2026-08-23. No live controller preflight was performed because no wallet action was authorized; no permission issue was discovered. No upload, signature, transaction, ERC725Y write, deployment, merge, push, environment-variable, or Netlify configuration action occurred during Phase 4B.
 
-Phase 4 is accepted, independently audited, and committed locally. Before any separately authorized live publication, perform the real LSP6 controller preflight and stop on any permission issue. Post-acceptance cleanup remains a separate unstarted phase; do not begin cleanup, push, deployment, upload, signature, or transaction without explicit authorization.
+Phase 4 and post-acceptance cleanup are accepted and independently audited **GO**. The user explicitly authorized one local cleanup commit after the final re-audit. Before any separately authorized live publication, perform the real LSP6 controller preflight and stop on any permission issue. Do not push, deploy, upload, sign, or transact without separate explicit authorization.
 
 The older cross-branch travel notes below remain historical context and are not authorization to alter those lanes.
 

@@ -13,7 +13,6 @@ test('selected System Workflow owner shell passes the hardware production author
     return { selectedRuntimeVisible: true };
   }, {
     label: 'owner-system-workflow-production',
-    openModulatorForGate: false,
     ownerMainSelector: 'main.system-workflow',
     ownerNavigationName: 'System Workflow',
     previewUrl: LOCAL_PRODUCTION_PREVIEW,

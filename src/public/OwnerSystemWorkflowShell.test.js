@@ -18,7 +18,7 @@ test('System Workflow production shell preserves the Phase 3 authority and isola
   assert.equal(selection.includes("OWNER_RUNTIME_SELECTION = 'SYSTEM_WORKFLOW'"), true);
   assert.match(selection, /import\('\.\/OwnerSystemWorkflowShell\.jsx'\)/);
   assert.match(loader, /SYSTEM_WORKFLOW: 'SYSTEM_WORKFLOW'/);
-  assert.match(loader, /selection === OWNER_RUNTIME\.SYSTEM_WORKFLOW/);
+  assert.doesNotMatch(loader, /selectOwnerRuntimeImporter|MODUL8R|\bLATTICE\b|\bLEGACY\b/u);
   assert.match(isolation, /OwnerSystemWorkflowShell\.jsx/);
   assert.match(productionBuild, /src\/public\/OwnerSystemWorkflowShell\.jsx/);
   assert.match(main, /import\.meta\.env\.DEV[\s\S]*\/development\/owner\/system-workflow/);
