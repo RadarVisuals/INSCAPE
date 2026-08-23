@@ -47,17 +47,34 @@ export async function preloadOwnerSystemWorkflowPreviewEntryMedia(previewDocumen
 
 export function buildOwnerSystemWorkflowPreviewDocument({
   assetRecords,
+  createdAt = 0,
+  exportedAt = createdAt,
   profile,
   profileAddress,
+  revision = 1,
   systemWorkflowDraft,
 }) {
   return buildProfileDocumentV9({
     assetRecords,
-    createdAt: 0,
-    exportedAt: 0,
+    createdAt,
+    exportedAt,
     profileAddress,
     profileIdentity: profile,
-    revision: 1,
+    revision,
     systemWorkflowDraft,
+  });
+}
+
+export function buildOwnerSystemWorkflowPublicationDocument({ previousDocument = null, ...input }) {
+  const previous = previousDocument === null ? null : assertValidProfileDocumentV9(previousDocument);
+  if (previous && previous.profile.address !== input.profileAddress) {
+    throw new TypeError('The previous publication belongs to a different profile');
+  }
+  const exportedAt = input.exportedAt ?? new Date();
+  return buildOwnerSystemWorkflowPreviewDocument({
+    ...input,
+    createdAt: previous?.createdAt ?? exportedAt,
+    exportedAt,
+    revision: previous ? previous.revision + 1 : 1,
   });
 }

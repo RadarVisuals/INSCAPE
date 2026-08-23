@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useLibraryStore } from '../../library/state/useLibraryStore.js';
 import { useProfileContractFacts, useProfileIdentity } from '../../profileIdentity/index.js';
@@ -79,6 +79,15 @@ export default function OwnerSystemWorkflowRuntime({ profileAddress, onVisitProf
   const viewer = useOwnerSystemWorkflowFocusViewer({ assetsById, controller, onOpen: () => panels.closePanel({ returnFocus: false }) });
   const activity = useOwnerSystemWorkflowActivity({ active: panel === 'activity', fixture: reviewActivity, profileAddress });
   const panelOccupied = Boolean(panel || Object.values(panels.presence).some(({ present }) => present));
+  const dismissNotice = useCallback(() => {
+    controller.clearError();
+    setNotice(null);
+  }, [controller.clearError]);
+  useEffect(() => {
+    if (!controller.error && !notice) return undefined;
+    const timeout = globalThis.setTimeout(dismissNotice, 4_500);
+    return () => globalThis.clearTimeout(timeout);
+  }, [controller.error, dismissNotice, notice]);
   useEffect(() => {
     try { globalThis.sessionStorage?.setItem(LAYERS_OPEN_KEY, String(layersOpen)); }
     catch { /* Session preference is optional. */ }
@@ -185,7 +194,8 @@ export default function OwnerSystemWorkflowRuntime({ profileAddress, onVisitProf
         setLayersExplicitlyOpened(nextOpen);
       }}
       unreadCount={activity.unreadCount} />
-    {(controller.error || notice) && <button className="system-workflow__notice" onClick={() => setNotice(null)}>{controller.error || notice}</button>}
+    {(controller.error || notice) && <button aria-label="Dismiss notification" className="system-workflow__notice"
+      type="button" onClick={dismissNotice}>{controller.error || notice}</button>}
   </main>
   {preview && <ProfileDocumentV9Preview document={preview} onExit={closePreview} onReturn={closePreview}
     onOpenDirectory={() => {

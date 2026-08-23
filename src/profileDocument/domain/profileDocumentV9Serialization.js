@@ -19,6 +19,13 @@ export function profileDocumentV9HashInput(document) {
   return new TextEncoder().encode(canonicalSerializeProfileDocumentV9(document));
 }
 
+export function isCanonicalProfileDocumentV9Bytes(document, bytes) {
+  if (!(bytes instanceof Uint8Array)) return false;
+  const canonicalBytes = profileDocumentV9HashInput(document);
+  if (canonicalBytes.byteLength !== bytes.byteLength) return false;
+  return canonicalBytes.every((byte, index) => byte === bytes[index]);
+}
+
 export function profileDocumentV9CanonicalHash(document) {
   return keccak256(profileDocumentV9HashInput(document));
 }

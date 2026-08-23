@@ -81,7 +81,12 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Workflow review slice keeps MODUL8R selected while sharing accepted focus,
   // identity, and guide primitives with that graph. These ceilings are the
   // exact matrix-wide alternate-outDir measurements.
-  ownerJavaScript: Object.freeze({ raw: 304_846, gzip: 94_028 }),
+  // Phase 4A makes the strict v9 Visitor/parser closure authoritative while the
+  // selected MODUL8R shell remains unchanged. Keep the exact measured cutover
+  // boundary; the wallet runtime remains independently budgeted below.
+  // Independent audit adds strict canonical-byte equality, including original
+  // byte comparison so a UTF-8 BOM cannot disappear at a decoded-text boundary.
+  ownerJavaScript: Object.freeze({ raw: 325_345, gzip: 95_620 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
@@ -106,7 +111,10 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // The combined Keeper dock, accepted identity/focus motion, and canonical guide
   // projection and Phase 3's shared review primitives add only lazy owner
   // styles. These ceilings use the exact matrix-wide alternate build result.
-  ownerCss: Object.freeze({ raw: 82_276, gzip: 15_408 }),
+  // Phase 4A activates the strict v9 Visitor styles at the published boundary.
+  // The accepted guide-free inspection fix makes the no-grid viewer veil fully
+  // opaque. Preserve the existing gzip ceiling and bound the measured raw split.
+  ownerCss: Object.freeze({ raw: 85_913, gzip: 15_408 }),
   // Owner/publication reconciliation adds the deterministic IPFS hydration and
   // three-way baseline guard to production. Keep the accepted growth bounded.
   // Phase 7 adds paragraph-preserving LSP3 normalization, independently

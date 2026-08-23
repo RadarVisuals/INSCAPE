@@ -20,8 +20,9 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   const selectedPlacements = selectedGrid?.placements.filter(({ id }) => selectedPlacementIds.includes(id)) || [];
   const selectPlacement = useCallback((id, additive = false) => setSelectedPlacementIds((current) => additive ? current.includes(id) ? current.filter((value) => value !== id) : [...current, id] : id ? [id] : []), []);
   const replaceSelection = useCallback((ids = []) => setSelectedPlacementIds([...new Set(ids.filter(Boolean))]), []);
+  const clearError = useCallback(() => setError(null), []);
   const gridRequest = (grid, extra = {}) => ({ gridId: grid.id, expectedGridFingerprint: systemWorkflowGridFingerprint(grid), ...extra });
-  return { ...state, selectedGrid, selectedPlacements, selectedPlacementIds, error, run, selectPlacement, replaceSelection,
+  return { ...state, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError, run, selectPlacement, replaceSelection,
     changeGrid: (id) => { run((session) => session.selectGrid(id)); setSelectedPlacementIds([]); },
     createGrid: () => run((session) => session.createGrid()),
     renameGrid: (grid, name) => run((session) => session.renameGrid(gridRequest(grid, { name }))),

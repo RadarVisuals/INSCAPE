@@ -66,13 +66,13 @@ test('each independent budget category reports an actionable overage', () => {
   }
 });
 
-test('measured combined Alpha allowances retain exact production budget boundaries', () => {
+test('measured Phase 4A allowances retain exact production budget boundaries', () => {
   assert.deepEqual(PRODUCTION_BUDGETS, {
     initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
-    ownerJavaScript: { raw: 304_846, gzip: 94_028 },
+    ownerJavaScript: { raw: 325_345, gzip: 95_620 },
     standaloneWalletJavaScript: { raw: 4_400_000, gzip: 1_200_000 },
     initialCss: { raw: 51_807, gzip: 10_301 },
-    ownerCss: { raw: 82_276, gzip: 15_408 },
+    ownerCss: { raw: 85_913, gzip: 15_408 },
     coreJavaScript: { raw: 2_076_709, gzip: 620_158 },
     publicAssets: { raw: 15_200_000 },
     largestPublicAsset: { raw: 2_700_000 },

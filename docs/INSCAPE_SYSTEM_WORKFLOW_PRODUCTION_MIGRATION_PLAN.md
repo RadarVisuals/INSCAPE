@@ -1,6 +1,6 @@
 # INSCAPE System Workflow Production Plan
 
-Status: `[x]` - clean-break direction approved; Phases 1, 2, and 3 complete; Phase 4 not started
+Status: `[x]` - clean-break direction approved; Phases 1, 2, and 3 complete; Phase 4A independently audited **GO**; overall Phase 4 remains open
 
 Branch: `migration/system-workflow-2026-08-17`
 
@@ -433,6 +433,20 @@ Status: `[ ]`
 
 No real upload, signature, transaction, merge, or deploy without separate explicit authorization. Perform the LSP6 controller preflight before the first publication.
 
+Phase 4A checkpoint (2026-08-23; independently audited **GO** and committed locally; Phase 4B awaits explicit authorization):
+
+- steps 1-4 are implemented as a clean v9 cutover; overall Phase 4 remains `[ ]` because runtime integration, browser certification, shell selection, and acceptance are Phase 4B work;
+- publisher, resolver, and Discovery now import the Phase-1 `INSCAPE_PROFILE_DOCUMENT_KEY` authority; the active `OSUnderneathProfileDocument` name/hash and Discovery filter were removed;
+- the upload Function, upload client, publisher artifact preparation, default resolver parser, active Preview, and Visitor accept canonical Profile Document v9 only and fail closed for v1-v8, malformed, noncanonical, wrong-profile, or hash-mismatched bytes;
+- the prepared System Workflow publication rack reuses the existing upload, CID verification, wallet preparation, generation/stale-write guards, read-back, and support authorities without being mounted into the production runtime;
+- focused Phase-4A publication/resolver/Discovery/v9 matrix: `115/115` passed, including the singleton-key authority plus formatted, reordered, and UTF-8 BOM-prefixed noncanonical byte rejection; production budget/runtime/isolation/artifact matrix: `38/38` passed; LUKSO standards: `5/5` passed; production build and `build:check` passed at `803_295` initial JavaScript bytes with `leaks: []`;
+- the first independent audit found that the resolver accepted hash-valid formatted/reordered v9 JSON; serialization equality corrected that defect. The second audit found string comparison still hid a UTF-8 BOM because `TextDecoder` and `Request.text()` removed it. Resolver and upload Function now compare the original fetched/request bytes with the central `profileDocumentV9HashInput` output and reject hash-valid BOM-prefixed bytes as `NON_CANONICAL_DOCUMENT` before resolution, credentials, or Pinata;
+- final independent re-audit: **GO** with no blocking findings. Both canonical-byte blockers are fully resolved. The sole non-blocking count correction (`114/114` to `115/115`) is incorporated in this checkpoint; overall Phase 4 remains `[ ]` and Phase 4B is not authorized by this result;
+- user-authorized measured budget: owner JavaScript remains `325_345` raw and measures `95_611` gzip against the retained `95_620` ceiling; owner CSS remains `85_913` raw / retained `15_408` gzip ceiling and measures `15_076` gzip, including the accepted guide-free inspection correction, with exact-boundary and limit-plus-one tests preserved;
+- MODUL8R remains selected; `ownerRuntimeSelected.js` and the production runtime loader are unchanged; the audited Phase 4A checkpoint was committed locally after GO, while no IPFS upload, signature, transaction, ERC725Y write, deployment, merge, push, environment, or Netlify configuration change occurred.
+
+Official standards rechecked on 2026-08-23: [LSP2 ERC725Y JSON Schema](https://github.com/lukso-network/LIPs/blob/main/LSPs/LSP-2-ERC725YJSONSchema.md), [LSP6 Key Manager](https://github.com/lukso-network/LIPs/blob/main/LSPs/LSP-6-KeyManager.md), and [LSP0 ERC725 Account](https://github.com/lukso-network/LIPs/blob/main/LSPs/LSP-0-ERC725Account.md). LSP6 `SETDATA`/allowed-data-key permission behavior is unchanged; controller permission preflight remains mandatory before the first separately authorized live publication.
+
 ## 9. Post-acceptance cleanup
 
 After proven cutover, remove in a separate commit:
@@ -475,6 +489,6 @@ Final acceptance covers dynamic Grid lifecycle/order, real authoring, all panels
 | 4. Publication/discovery/cutover | `[ ]` |
 | Post-acceptance cleanup | `[ ]` |
 
-Phases 1, 2, and 3 are complete. Phase 4 has not started and still requires explicit authorization.
+Phases 1, 2, and 3 are complete. Phase 4A steps 1-4 are implemented and independently audited **GO**. Overall Phase 4 remains open; do not begin Phase 4B without explicit authorization.
 
 Do not commit, push, deploy, upload, sign, or publish without explicit authorization.

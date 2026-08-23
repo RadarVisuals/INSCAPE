@@ -128,7 +128,10 @@
 
 .lattice-focus-viewer__inspection-frame[data-open] { opacity: 1; }
 
-.lattice-focus-viewer[data-grid-visible="false"] .lattice-focus-viewer__surface { background-image: none; }
+.lattice-focus-viewer[data-grid-visible="false"] .lattice-focus-viewer__surface {
+  background-color: var(--lattice-inspection-surface, #090a0a);
+  background-image: none;
+}
 .lattice-focus-viewer[data-grid-visible="false"] .lattice-focus-viewer__inspection-frame { background-image: none; }
 .lattice-focus-viewer[data-inspection-frame-grid-visible="false"] .lattice-focus-viewer__inspection-frame { background-image: none; }
 

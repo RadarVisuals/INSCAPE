@@ -2,11 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createEmptySystemWorkflowDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
 import {
+  buildOwnerSystemWorkflowPublicationDocument,
   buildOwnerSystemWorkflowPreviewDocument,
   ownerSystemWorkflowPreviewEntryMediaUrls,
   preloadOwnerSystemWorkflowPreviewEntryMedia,
   profileDocumentV9EntryGrid,
 } from './ownerSystemWorkflowPreviewDocument.js';
+import { createCanonicalPublication } from '../profileDocument/domain/profileDocumentPublication.js';
+import { canonicalSerializeProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Serialization.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const CONTRACT = '0x2222222222222222222222222222222222222222';
@@ -83,4 +86,28 @@ test('Preview v9 retains every public placement presentation field and removes p
   assert.equal(visibility, 'PUBLIC');
   assert.equal(resolvedAsset.stableAssetId, ASSET);
   assert.equal(JSON.stringify(preview).includes('private-artwork'), false);
+});
+
+test('publication preparation freezes the exact canonical v9 bytes consumed by Preview and read-back', () => {
+  const systemWorkflowDraft = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
+  const prepared = buildOwnerSystemWorkflowPublicationDocument({
+    assetRecords: [], exportedAt: 2, profile: { name: 'Resident' }, profileAddress: PROFILE,
+    systemWorkflowDraft,
+  });
+  const artifact = createCanonicalPublication(prepared);
+  assert.equal(artifact.document.version, 9);
+  assert.equal(artifact.text, canonicalSerializeProfileDocumentV9(prepared));
+  assert.deepEqual(artifact.bytes, new TextEncoder().encode(canonicalSerializeProfileDocumentV9(prepared)));
+
+  const next = buildOwnerSystemWorkflowPublicationDocument({
+    assetRecords: [], exportedAt: 3, previousDocument: prepared, profile: { name: 'Resident' },
+    profileAddress: PROFILE, systemWorkflowDraft,
+  });
+  assert.equal(next.revision, 2);
+  assert.equal(next.createdAt, prepared.createdAt);
+  assert.equal(next.exportedAt, new Date(3).toISOString());
+  assert.throws(() => buildOwnerSystemWorkflowPublicationDocument({
+    assetRecords: [], exportedAt: 3, previousDocument: prepared, profile: {}, profileAddress: '0x3333333333333333333333333333333333333333',
+    systemWorkflowDraft: createEmptySystemWorkflowDraft('0x3333333333333333333333333333333333333333', { generateId: () => 'other' }),
+  }), /different profile/);
 });

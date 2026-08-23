@@ -17,10 +17,9 @@ const placement = (overrides = {}) => ({
 });
 const field = { left: 0, top: 0, cellSize: 10 };
 
-test('production routing remains v8 while the isolated review seam validates exact v9 before lazy rendering', () => {
-  assert.match(production, /VisitorLatticeWorld/);
-  assert.match(production, /selectPublishedProfileRuntime/);
-  assert.doesNotMatch(production, /ProfileDocumentV9Visitor|VisitorGridWorld/);
+test('production routing now delegates only to the exact v9 Preview and Visitor boundary', () => {
+  assert.match(production, /ProfileDocumentV9Preview/);
+  assert.doesNotMatch(production, /VisitorLatticeWorld|PublishedHomeWorld|PublishedLegacyStyles|selectPublishedProfileRuntime/);
   assert.match(preview, /assertValidProfileDocumentV9\(input\)/);
   assert.match(preview, /VisitorGridWorld/);
 });

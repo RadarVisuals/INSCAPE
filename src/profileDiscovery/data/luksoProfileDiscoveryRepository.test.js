@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { encodeDataSourceWithHash } from '@erc725/erc725.js';
 import { createLuksoProfileDiscoveryRepository, PROFILE_DIRECTORY_IDENTITIES_QUERY, PROFILE_DIRECTORY_QUERY } from './luksoProfileDiscoveryRepository.js';
-import { OS_UNDERNEATH_PROFILE_DOCUMENT_KEY } from '../../profileDocument/storage/luksoPublishedProfileRepository.js';
+import { INSCAPE_PROFILE_DOCUMENT_KEY } from '../../profileDocument/domain/inscapeProfileDocumentKey.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const POINTER = '0x00008019f9b100209f75520cb8e0125815b6e5c6cfb0b1b12a0c12558002fa9496871e8b3ef4b6ad697066733a2f2f6261666b726569636869726f7234776764727374687574336776373376756f333665666e6b6767776d70647768796668746778357664366a646875';
@@ -20,7 +20,7 @@ test('lists current INSCAPE publication events and joins their indexed profile i
   const results = await repository.list();
   assert.match(PROFILE_DIRECTORY_QUERY, /DataChanged/);
   assert.match(PROFILE_DIRECTORY_IDENTITIES_QUERY, /Profile\(where:/);
-  assert.equal(requests[0].variables.key, OS_UNDERNEATH_PROFILE_DOCUMENT_KEY);
+  assert.equal(requests[0].variables.key, INSCAPE_PROFILE_DOCUMENT_KEY);
   assert.equal(requests[0].variables.offset, 0);
   assert.deepEqual(requests[1].variables.addresses, [PROFILE]);
   assert.equal(results[0].address, PROFILE);

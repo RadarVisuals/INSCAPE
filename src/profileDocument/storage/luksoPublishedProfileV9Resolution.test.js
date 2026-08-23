@@ -4,7 +4,7 @@ import { encodeDataSourceWithHash } from '@erc725/erc725.js';
 import { keccak256 } from 'viem';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { buildProfileDocumentV9 } from '../domain/profileDocumentV9Builder.js';
-import { parseProfileDocumentV9Json } from '../domain/profileDocumentV9Validation.js';
+import { canonicalSerializeProfileDocumentV9 } from '../domain/profileDocumentV9Serialization.js';
 import {
   PUBLISHED_PROFILE_STATUS,
   createLuksoPublishedProfileRepository,
@@ -21,17 +21,17 @@ function stream(bytes) {
 }
 
 function repositoryFor(document) {
-  const bytes = new TextEncoder().encode(JSON.stringify(document));
+  const text = document?.version === 9 ? canonicalSerializeProfileDocumentV9(document) : JSON.stringify(document);
+  const bytes = new TextEncoder().encode(text);
   const pointer = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: keccak256(bytes) }, `ipfs://${CID}`);
   return createLuksoPublishedProfileRepository({
     dataReader: async () => pointer,
-    documentParser: parseProfileDocumentV9Json,
     fetchImpl: async () => stream(bytes),
     ipfsGateway: 'https://gateway.test/ipfs/',
   });
 }
 
-test('resolver seam can consume exact v9 bytes while preserving profile authority and routing behavior', async () => {
+test('default resolver consumes exact v9 bytes while preserving profile authority and routing behavior', async () => {
   const draft = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
   const document = buildProfileDocumentV9({
     assetRecords: [], createdAt: 1, exportedAt: 2, profileAddress: PROFILE,
@@ -49,8 +49,54 @@ test('resolver seam can consume exact v9 bytes while preserving profile authorit
   assert.equal(mismatchResult.errorCode, 'PROFILE_MISMATCH');
 });
 
-test('v9 resolver parser rejects a hash-valid v8-shaped document without migration', async () => {
-  const result = await repositoryFor({ documentType: 'OS_UNDERNEATH_PROFILE', version: 8 }).resolve(PROFILE);
+test('v9 resolver parser rejects every hash-valid v1-v8 shape without migration', async () => {
+  for (let version = 1; version <= 8; version += 1) {
+    const result = await repositoryFor({ documentType: 'OS_UNDERNEATH_PROFILE', version }).resolve(PROFILE);
+    assert.equal(result.status, PUBLISHED_PROFILE_STATUS.INVALID);
+    assert.equal(result.errorCode, 'INVALID_DOCUMENT');
+  }
+});
+
+test('v9 resolver rejects hash-valid formatted and reordered documents as noncanonical', async () => {
+  const document = buildProfileDocumentV9({
+    assetRecords: [], createdAt: 1, exportedAt: 2, profileAddress: PROFILE,
+    profileIdentity: { name: 'Canonical v9' },
+    systemWorkflowDraft: createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' }),
+  });
+  const { metadata, ...rest } = document;
+  for (const text of [JSON.stringify(document, null, 2), JSON.stringify({ metadata, ...rest })]) {
+    assert.notEqual(text, canonicalSerializeProfileDocumentV9(document));
+    const bytes = new TextEncoder().encode(text);
+    const pointer = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: keccak256(bytes) }, `ipfs://${CID}`);
+    const repository = createLuksoPublishedProfileRepository({
+      dataReader: async () => pointer,
+      fetchImpl: async () => stream(bytes),
+      ipfsGateway: 'https://gateway.test/ipfs/',
+    });
+    const result = await repository.resolve(PROFILE);
+    assert.equal(result.status, PUBLISHED_PROFILE_STATUS.INVALID);
+    assert.equal(result.errorCode, 'NON_CANONICAL_DOCUMENT');
+  }
+});
+
+test('v9 resolver rejects hash-valid UTF-8 BOM-prefixed canonical JSON bytes', async () => {
+  const document = buildProfileDocumentV9({
+    assetRecords: [], createdAt: 1, exportedAt: 2, profileAddress: PROFILE,
+    profileIdentity: { name: 'Canonical v9' },
+    systemWorkflowDraft: createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' }),
+  });
+  const canonicalBytes = new TextEncoder().encode(canonicalSerializeProfileDocumentV9(document));
+  const bytes = new Uint8Array(canonicalBytes.byteLength + 3);
+  bytes.set([0xef, 0xbb, 0xbf]);
+  bytes.set(canonicalBytes, 3);
+  const pointer = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: keccak256(bytes) }, `ipfs://${CID}`);
+  const repository = createLuksoPublishedProfileRepository({
+    dataReader: async () => pointer,
+    fetchImpl: async () => stream(bytes),
+    ipfsGateway: 'https://gateway.test/ipfs/',
+  });
+
+  const result = await repository.resolve(PROFILE);
   assert.equal(result.status, PUBLISHED_PROFILE_STATUS.INVALID);
-  assert.equal(result.errorCode, 'INVALID_DOCUMENT');
+  assert.equal(result.errorCode, 'NON_CANONICAL_DOCUMENT');
 });

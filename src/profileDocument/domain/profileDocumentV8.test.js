@@ -78,14 +78,12 @@ test('v8 validation fails closed for corrupt lattice, mismatched timestamps, fal
   }), /must match/);
 });
 
-test('v8 creates canonical publication artifacts while legacy local snapshot storage remains v7-only', () => {
+test('v8 remains readable for isolated legacy tests but cannot cross the active publication boundary', () => {
   const document = buildProfileDocumentV8({ ...input(), latticeDraft: createEmptyLatticeProductionDraft(PROFILE) });
-  const artifact = createCanonicalPublication(document);
-  assert.equal(artifact.document.version, 8);
-  assert.equal(artifact.text, canonicalSerializeProfileDocument(document));
+  assert.throws(() => createCanonicalPublication(document), /unexpected or missing fields/i);
   let writes = 0;
   const storage = { setItem: () => { writes += 1; } };
   assert.equal(saveProfileSnapshot(storage, document), false);
   assert.equal(writes, 0);
-  assert.throws(() => createCanonicalPublication({ ...document, version: 9 }), /not publishable/);
+  assert.throws(() => createCanonicalPublication({ ...document, version: 9 }), /unexpected or missing fields/i);
 });

@@ -83,7 +83,7 @@ test('compact published content clears masthead and identity through 719px, with
   assert.match(css, /published-home-world__spatial>\.module-button\{touch-action:pan-y\}/);
 });
 
-test('published Keeper movement callback is wired without passing the owner handoff object into the published graph', () => {
+test('active v9 published routing does not pass legacy Keeper movement authority into the Visitor', () => {
   const appSource = readFileSync(resolve(here, '../../App.jsx'), 'utf8');
   const boundarySource = readFileSync(resolve(here, 'PublishedProfileBoundary.jsx'), 'utf8');
   const previewSource = readFileSync(resolve(here, 'PublishedProfileDocumentPreview.jsx'), 'utf8');
@@ -92,8 +92,8 @@ test('published Keeper movement callback is wired without passing the owner hand
   assert.match(appSource, /onMoveKeeperHorizontally=\{residentHandoff\.moveHorizontallyToScreenPosition\}/);
   assert.match(boundarySource, /<PublishedProfileDocumentPreview document=\{visibleDocument\}[\s\S]*onMoveKeeper=\{onMoveKeeper\}/);
   assert.match(boundarySource, /onMoveKeeperHorizontally=\{onMoveKeeperHorizontally\}/);
-  assert.match(previewSource, /<PublishedHomeWorld document=\{document\} onExit=\{onExit\} onMoveKeeper=\{onMoveKeeper\}/);
-  assert.match(previewSource, /onMoveKeeperHorizontally=\{onMoveKeeperHorizontally\}/);
+  assert.match(previewSource, /<ProfileDocumentV9Preview document=\{document\} onExit=\{onExit\}/);
+  assert.doesNotMatch(previewSource, /onMoveKeeper|onMoveKeeperHorizontally|PublishedHomeWorld/);
   assert.match(worldSource, /<HomeWorldSurface[^>]*onMoveKeeper=\{onMoveKeeper\}/);
   assert.match(worldSource, /<GalleryWorld[\s\S]*onMoveKeeperHorizontally=\{onMoveKeeperHorizontally\}/);
   assert.doesNotMatch(boundarySource + previewSource + worldSource, /residentHandoff/);
@@ -199,7 +199,7 @@ test('narrow published scrolling is explicitly bounded and leaves browser touch 
   assert.match(cameraSource, /finalizeSpatialPointer\(\{[\s\S]*sharedGesture:[\s\S]*cancelled[\s\S]*\}\)/);
 });
 
-test('active published boundary isolates legacy styling while both visitor renderers stay outside owner authority', () => {
+test('active published boundary isolates the v9 Visitor while retained legacy sources stay unreachable', () => {
   const visited = new Set();
   const forbiddenSource = /useLibraryStore|useSignalStore|useProfileDocumentStore|\buseStore\b|profileDocumentStorage|runtimeWindowState|ModuleGridShell|localStorage|sessionStorage|indexedDB|snapshotStorage/i;
   const forbiddenPath = /[\\/](?:store|signals[\\/]state|library[\\/]state|profileDocument[\\/]storage[\\/]profileDocumentStorage)(?:[\\/]|\.)/i;
@@ -208,21 +208,29 @@ test('active published boundary isolates legacy styling while both visitor rende
     const source = readFileSync(full, 'utf8');
     assert.doesNotMatch(full, forbiddenPath, `${full} crossed into a private store or persistence path`);
     assert.doesNotMatch(source, forbiddenSource, `${full} crossed the published visitor boundary`);
-    for (const match of source.matchAll(/(?:import|export)\s+(?:[^'\"]*?\s+from\s+)?['\"](\.[^'\"]+)['\"]/g)) {
-      const target = resolve(dirname(full), match[1]);
+    const visitSpecifier = (specifier) => {
+      const target = resolve(dirname(full), specifier);
       const candidates = /\.[cm]?[jt]sx?$/.test(target) ? [target] : [`${target}.js`, `${target}.jsx`, resolve(target, 'index.js')];
       const next = candidates.find((candidate) => { try { readFileSync(candidate); return true; } catch { return false; } });
       if (next) visit(next);
+    };
+    for (const match of source.matchAll(/(?:import|export)\s+(?:[^'\"]*?\s+from\s+)?['\"](\.[^'\"]+)['\"]/g)) {
+      visitSpecifier(match[1]);
+    }
+    for (const match of source.matchAll(/import\(\s*['\"](\.[^'\"]+)['\"]\s*\)/g)) {
+      visitSpecifier(match[1]);
     }
   }
   visit(resolve(here, 'PublishedProfileBoundary.jsx'));
   const boundarySource = readFileSync(resolve(here, 'PublishedProfileBoundary.jsx'), 'utf8');
   const selectorSource = readFileSync(resolve(here, 'PublishedProfileDocumentPreview.jsx'), 'utf8');
   assert.doesNotMatch(boundarySource, /moduleGrid\.css|collection\.css|profileDocument\.css|canvasObjects\.css/);
-  assert.match(selectorSource, /lazy\(\(\) => import\('\.\/PublishedLegacyStyles\.jsx'\)\)/);
+  assert.match(selectorSource, /ProfileDocumentV9Preview/);
+  assert.doesNotMatch(selectorSource, /PublishedLegacyStyles|PublishedHomeWorld|VisitorLatticeWorld/);
   assert.equal([...visited].some((file) => file.endsWith('PublishedLegacyStyles.jsx')), false);
-  assert.ok([...visited].some((file) => file.endsWith('PublishedHomeWorld.jsx')));
-  assert.ok([...visited].some((file) => file.endsWith('HomeWorldSurface.jsx')));
+  assert.equal([...visited].some((file) => file.endsWith('PublishedHomeWorld.jsx')), false);
+  assert.equal([...visited].some((file) => file.endsWith('HomeWorldSurface.jsx')), false);
+  assert.ok([...visited].some((file) => file.endsWith('ProfileDocumentV9Visitor.jsx')));
 });
 
 test('published visitor level navigation uses the shared controller contract', () => {

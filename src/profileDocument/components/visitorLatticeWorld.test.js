@@ -7,14 +7,9 @@ const selector = readFileSync(new URL('./PublishedProfileDocumentPreview.jsx', i
 const renderer = readFileSync(new URL('../../lattice/rendering/LatticeProductionTableRenderer.jsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./visitorLatticeWorld.css', import.meta.url), 'utf8');
 
-test('v8 selects one visitor-safe lattice world while legacy rendering remains the rollback', () => {
-  assert.match(selector, /selectPublishedProfileRuntime\(document\)/);
-  assert.match(selector, /const VisitorLatticeWorld = lazy/);
-  assert.match(selector, /import PublishedHomeWorld from '\.\/PublishedHomeWorld\.jsx'/);
-  assert.match(selector, /const PublishedLegacyStyles = lazy/);
-  assert.match(selector, /<VisitorLatticeWorld document=\{document\}/);
-  assert.match(selector, /<PublishedHomeWorld document=\{document\}/);
-  assert.match(selector, /<PublishedLegacyStyles \/>/);
+test('the active published selector contains no v8 or legacy rendering branch', () => {
+  assert.match(selector, /ProfileDocumentV9Preview/);
+  assert.doesNotMatch(selector, /VisitorLatticeWorld|PublishedHomeWorld|PublishedLegacyStyles|selectPublishedProfileRuntime/);
 });
 
 test('visitor lattice owns only transient navigation and reads canonical appearance', () => {

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
   DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG,
@@ -13,6 +14,11 @@ import {
   orderedFocusViewerEntries,
   shouldContainViewerScroll,
 } from './latticeFocusViewer.js';
+
+test('a grid-free inspection surface is opaque so workspace line and dot guides cannot bleed through', () => {
+  const css = readFileSync(new URL('./latticeFocusViewer.css', import.meta.url), 'utf8');
+  assert.match(css, /\[data-grid-visible="false"\] \.lattice-focus-viewer__surface \{[\s\S]*background-color: var\(--lattice-inspection-surface, #090a0a\);[\s\S]*background-image: none;/);
+});
 
 test('browse layers preserve inherited DOMRect coordinates before applying decoded dimensions', () => {
   const domRectangle = Object.create({ left: 120, top: 80, width: 240, height: 360 });
