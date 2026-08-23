@@ -369,7 +369,8 @@ function rpcFixtureResponse(request) {
 }
 
 function attachPageLedger({ authorityProfiles = [profileAddress], expectedControlledConsoleErrors = [],
-  expectedControlledGraphAbortOperations = [], page, ledger, problems, profileAddress }) {
+  expectedControlledGraphAbortOperations = [], expectedControlledRpcAbortMethods = [], page, ledger, problems,
+  profileAddress }) {
   page.on('framenavigated', (frame) => ledger.record('framenavigated', {
     frame: frame === page.mainFrame() ? 'fixture' : 'preview', url: frame.url(),
   }));
@@ -431,6 +432,13 @@ function attachPageLedger({ authorityProfiles = [profileAddress], expectedContro
     }
     if (!cleanupOwned && failure === 'net::ERR_ABORTED' && rpc.fixtureInduced) {
       ledger.record('expected-synthetic-profile-metadata-rpc-abort', details);
+      return;
+    }
+    if (!cleanupOwned && failure === 'net::ERR_ABORTED'
+      && new URL(request.url()).origin === rpcOrigin
+      && rpc.methods.length > 0
+      && rpc.methods.every((method) => expectedControlledRpcAbortMethods.includes(method))) {
+      ledger.record('expected-controlled-readonly-rpc-abort', details);
       return;
     }
     const item = `Request failed: ${request.method()} ${request.url()} ${failure} methods=${rpc.methods.join(',') || 'unknown'}`;
@@ -652,8 +660,11 @@ export async function runOwnerProductionPreviewGate(executeGate, {
   contextInitScriptArg,
   graphFixtureResponse = null,
   openModulatorForGate = true,
+  ownerMainSelector = 'main.owner-lattice-shell',
+  ownerNavigationName = 'Owner workspace tools',
   expectedControlledConsoleErrors = [],
   expectedControlledGraphAbortOperations = [],
+  expectedControlledRpcAbortMethods = [],
 } = {}) {
   const ledger = createOwnerPreviewLedger({ label });
   const runtimePath = resolve(workspaceRoot,
@@ -729,7 +740,7 @@ export async function runOwnerProductionPreviewGate(executeGate, {
         ledger.record('context-init-script-installed', { enabled: true });
       }
       attachPageLedger({ authorityProfiles, expectedControlledConsoleErrors, expectedControlledGraphAbortOperations,
-        page: resources.page, ledger, problems, profileAddress });
+        expectedControlledRpcAbortMethods, page: resources.page, ledger, problems, profileAddress });
       const documentLedger = await installDocumentLedger(resources.context, ledger);
       resources.startveilDetached = documentLedger.startveilDetached;
       resources.pageCdp = await resources.context.newCDPSession(resources.page);
@@ -777,13 +788,13 @@ export async function runOwnerProductionPreviewGate(executeGate, {
     ledger.record('entry-readiness-complete', { elapsedMs: entryReadyDeadline.elapsedMs() });
     await page.waitForFunction(() => window.__ownerPreviewFixture?.channels > 0,
       undefined, { timeout: OWNER_PREVIEW_TIMEOUT_MS });
-    const ownerBeforeConnect = await frame.evaluate(() => ({
+    const ownerBeforeConnect = await frame.evaluate(({ mainSelector, navigationName }) => ({
       documentId: window.__task4OwnerHarness.documentId,
       url: location.href,
-      ownerMainAttached: Boolean(document.querySelector('main.owner-lattice-shell')),
-      ownerToolbarAttached: Boolean(document.querySelector('nav[aria-label="Owner workspace tools"]')),
+      ownerMainAttached: Boolean(document.querySelector(mainSelector)),
+      ownerToolbarAttached: Boolean(document.querySelector(`nav[aria-label="${navigationName}"]`)),
       modulatorAttached: Boolean(document.querySelector('[aria-label="Modulator"]')),
-    }));
+    }), { mainSelector: ownerMainSelector, navigationName: ownerNavigationName });
     assert.equal(ownerBeforeConnect.ownerMainAttached, false, 'Disconnected fixture unexpectedly mounted owner shell');
     assert.equal(ownerBeforeConnect.ownerToolbarAttached, false, 'Disconnected fixture unexpectedly mounted owner toolbar');
     assert.equal(ownerBeforeConnect.modulatorAttached, false, 'Disconnected fixture unexpectedly mounted MODUL-8R');
@@ -860,7 +871,7 @@ export async function runOwnerProductionPreviewGate(executeGate, {
       }
       throw error;
     }
-    const ownerToolbar = frame.getByRole('navigation', { name: 'Owner workspace tools' });
+    const ownerToolbar = frame.getByRole('navigation', { name: ownerNavigationName, exact: true });
     const modulator = frame.getByRole('region', { name: 'Modulator' });
     const ownerReadyDeadline = createPhaseDeadline(OWNER_PREVIEW_LIFECYCLE_TIMEOUTS.ownerReadyMs);
     ledger.record('owner-readiness-start', { deadlineMs: OWNER_PREVIEW_LIFECYCLE_TIMEOUTS.ownerReadyMs });
@@ -895,19 +906,20 @@ export async function runOwnerProductionPreviewGate(executeGate, {
       try {
         ledger.record('owner-readiness-authority', await page.evaluate(() =>
           structuredClone(window.__ownerPreviewFixture)));
-        ledger.record('owner-readiness-dom-and-chunks', await withinDeadline(frame.evaluate(() => ({
+        ledger.record('owner-readiness-dom-and-chunks', await withinDeadline(frame.evaluate(({ mainSelector, navigationName }) => ({
           documentId: window.__task4OwnerHarness.documentId,
           url: location.href,
           visibility: document.visibilityState,
-          ownerMainAttached: Boolean(document.querySelector('main.owner-lattice-shell')),
-          ownerToolbarAttached: Boolean(document.querySelector('nav[aria-label="Owner workspace tools"]')),
+          ownerMainAttached: Boolean(document.querySelector(mainSelector)),
+          ownerToolbarAttached: Boolean(document.querySelector(`nav[aria-label="${navigationName}"]`)),
           modulatorAttached: Boolean(document.querySelector('[aria-label="Modulator"]')),
           startveilAttached: Boolean(document.querySelector('[aria-label="INSCAPE entry"]')),
           scriptResources: performance.getEntriesByType('resource').filter(({ initiatorType, name }) =>
             initiatorType === 'script' || /\.js(?:\?|$)/u.test(name)).map(({ name, duration, responseEnd, transferSize }) => ({
               name, duration, responseEnd, transferSize,
             })),
-        })), BROWSER_LIFECYCLE_TIMEOUTS.commandMs, 'Owner readiness DOM/chunk snapshot deadline exceeded'));
+        }), { mainSelector: ownerMainSelector, navigationName: ownerNavigationName }), BROWSER_LIFECYCLE_TIMEOUTS.commandMs,
+        'Owner readiness DOM/chunk snapshot deadline exceeded'));
       } catch (diagnosticError) {
         ledger.record('owner-readiness-evidence-unavailable', {
           code: diagnosticError.code || 'ERROR', message: diagnosticError.message,
@@ -940,16 +952,18 @@ export async function runOwnerProductionPreviewGate(executeGate, {
       chainId: authority.channelAuthority.chainId,
       providerMethods: authority.requests.map(({ method }) => method).join(','),
       startupOrder: authority.startupOrder.join(',') });
-    ledger.record('owner-identities', await frame.evaluate(() => {
-      const toolbar = document.querySelector('nav[aria-label="Owner workspace tools"]');
+    ledger.record('owner-identities', await frame.evaluate(({ mainSelector, navigationName }) => {
+      const ownerMain = document.querySelector(mainSelector);
+      const toolbar = document.querySelector(`nav[aria-label="${navigationName}"]`);
       const modulator = document.querySelector('[aria-label="Modulator"]');
       return {
         documentId: window.__task4OwnerHarness.documentId,
         url: location.href,
+        ownerMainNodeId: window.__task4OwnerHarness.nodeId(ownerMain),
         toolbarNodeId: window.__task4OwnerHarness.nodeId(toolbar),
         modulatorNodeId: window.__task4OwnerHarness.nodeId(modulator),
       };
-    }));
+    }, { mainSelector: ownerMainSelector, navigationName: ownerNavigationName }));
     await recordCdpMetrics(resources, ledger, 'owner-ready');
     result = await executeGate({ frame, ledger, operations, page, profileAddress, previewUrl });
     const finalFixture = await page.evaluate(() => structuredClone(window.__ownerPreviewFixture));

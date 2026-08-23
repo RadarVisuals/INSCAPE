@@ -321,15 +321,22 @@ test('canonical Grid placement opens the focus viewer, hides its source, and res
   assert.equal(await evaluate(`document.activeElement?.dataset.placementId`), 'art:Alpha:https');
 });
 
-test('public identity rack opens from public identity data, hides its source, and restores focus', async () => {
+test('public identity rack replaces its source and returns to the persistent compact card', async () => {
   await viewport(1280, 720, false); await navigate();
+  await click('[data-visitor-profile-trigger]');
+  await waitFor(`!!document.querySelector('[data-identity-dossier-source="true"]')`, 'public compact identity source');
   await click('[data-identity-dossier-source="true"]');
-  await page.locator('.lattice-production-identity-dossier').waitFor({ state: 'visible', timeout: 10_000 });
-  assert.equal(await evaluate(`document.querySelector('[data-identity-dossier-source="true"]').hasAttribute('data-viewer-source-hidden')`), true);
+  const identityViewer = page.locator('#lattice-profile-dossier');
+  await identityViewer.waitFor({ state: 'visible', timeout: 10_000 });
+  assert.equal(await evaluate(`document.querySelectorAll('[data-identity-dossier-source="true"]').length`), 0);
   assert.match(await evaluate(`document.querySelector('.lattice-production-identity-dossier').textContent`), /Alpha Visitor Fixture/i);
-  await pressKey('Escape');
-  await waitFor(`!document.querySelector('.lattice-production-identity-dossier')`, 'identity rack closes');
-  assert.equal(await evaluate(`document.activeElement?.dataset.identityDossierSource`), 'true');
+  await page.getByRole('button', { name: 'Close Identity Rack' }).click();
+  await waitFor(`document.querySelector('#lattice-profile-dossier')?.dataset.phase === 'compact'`, 'persistent compact identity card');
+  assert.equal(await identityViewer.count(), 1);
+  await waitFor(`document.activeElement?.classList.contains('lattice-production-identity-dossier__source-summary')`,
+    'persistent compact identity focus');
+  assert.equal(await identityViewer.locator('.lattice-production-identity-dossier__source-summary')
+    .evaluate((node) => node === document.activeElement), true);
 });
 
 test('React StrictMode reuses one factory provider while cleanup, replacement, and recovery stay safe', async () => {
@@ -418,7 +425,8 @@ test('narrow visitor mode keeps Directory and Return reachable without desktop a
   await viewport(390, 844, true); await navigate(profileB);
   const commands = await evaluate(`[...document.querySelectorAll('.visitor-grid-world__actions button')].map((button)=>({text:button.textContent.trim(),rect:button.getBoundingClientRect().toJSON()}))`);
   assert.equal(commands.length, 2);
-  assert.ok(commands.every(({ rect }) => rect.left >= 0 && rect.right <= 390 && rect.top >= 0 && rect.bottom <= 844));
+  assert.ok(commands.every(({ rect }) => rect.left >= 0 && rect.right <= 390 && rect.top >= 0 && rect.bottom <= 844),
+    `narrow commands escaped the viewport: ${JSON.stringify(commands)}`);
   await click('.visitor-grid-world__actions button:first-child');
   await waitFor(`!!document.querySelector('.profile-discovery__panel')`, 'narrow directory opens');
   await click('[aria-label="Close INSCAPE directory"]');

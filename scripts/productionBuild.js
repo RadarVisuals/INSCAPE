@@ -86,7 +86,10 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // boundary; the wallet runtime remains independently budgeted below.
   // Independent audit adds strict canonical-byte equality, including original
   // byte comparison so a UTF-8 BOM cannot disappear at a decoded-text boundary.
-  ownerJavaScript: Object.freeze({ raw: 325_345, gzip: 95_620 }),
+  // Phase 4B selects the complete System Workflow owner shell. The measured
+  // increase belongs only to this lazy owner graph; the initial and standalone
+  // wallet boundaries retain their previous limits.
+  ownerJavaScript: Object.freeze({ raw: 365_023, gzip: 110_353 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
@@ -114,7 +117,9 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Phase 4A activates the strict v9 Visitor styles at the published boundary.
   // The accepted guide-free inspection fix makes the no-grid viewer veil fully
   // opaque. Preserve the existing gzip ceiling and bound the measured raw split.
-  ownerCss: Object.freeze({ raw: 85_913, gzip: 15_408 }),
+  // Phase 4B selects the consolidated System Workflow presentation and its
+  // owner-lazy responsive, panel, canvas, and publication-rack styles.
+  ownerCss: Object.freeze({ raw: 143_850, gzip: 21_133 }),
   // Owner/publication reconciliation adds the deterministic IPFS hydration and
   // three-way baseline guard to production. Keep the accepted growth bounded.
   // Phase 7 adds paragraph-preserving LSP3 normalization, independently
@@ -247,7 +252,8 @@ function entryKey(manifest) {
 }
 
 function ownerKey(manifest) {
-  const ownerPaths = ['src/public/OwnerModul8rShell.jsx', 'src/public/OwnerLatticeShell.jsx', 'src/public/ModuleGridShell.jsx'];
+  const ownerPaths = ['src/public/OwnerSystemWorkflowShell.jsx', 'src/public/OwnerModul8rShell.jsx',
+    'src/public/OwnerLatticeShell.jsx', 'src/public/ModuleGridShell.jsx'];
   const key = Object.keys(manifest).find((candidate) => ownerPaths.some((path) => normalize(candidate).endsWith(`/${path}`)
     || normalize(candidate) === path)) || Object.keys(manifest).find((candidate) => {
     const record = manifest[candidate];
@@ -395,7 +401,7 @@ export function productionBuildHygienePlugin() {
 export function diagnosticsEnvironmentPlugin() {
   const selectedSource = readFileSync(resolve(process.cwd(), 'src/public/ownerRuntimeSelected.js'), 'utf8');
   const ownerRuntimeSelection = selectedSource.match(/OWNER_RUNTIME_SELECTION\s*=\s*'([^']+)'/u)?.[1];
-  if (!['MODUL8R', 'LATTICE', 'LEGACY'].includes(ownerRuntimeSelection)) {
+  if (!['SYSTEM_WORKFLOW', 'MODUL8R', 'LATTICE', 'LEGACY'].includes(ownerRuntimeSelection)) {
     throw new TypeError(`Unsupported owner runtime build selection: ${String(ownerRuntimeSelection)}`);
   }
   return {

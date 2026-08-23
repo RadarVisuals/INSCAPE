@@ -1,6 +1,6 @@
 # INSCAPE System Workflow Production Plan
 
-Status: `[x]` - clean-break direction approved; Phases 1, 2, and 3 complete; Phase 4A independently audited **GO**; overall Phase 4 remains open
+Status: `[x]` - clean-break direction approved; Phases 1, 2, 3, and 4 complete; Phase 4A and Phase 4B independently audited **GO**
 
 Branch: `migration/system-workflow-2026-08-17`
 
@@ -418,7 +418,7 @@ Final verification:
 
 ### Phase 4 - Publication, discovery, cutover, and certification
 
-Status: `[ ]`
+Status: `[x]`
 
 1. Switch publisher and resolver to the central INSCAPE key.
 2. Switch Discovery event/query filtering to that same key.
@@ -444,6 +444,17 @@ Phase 4A checkpoint (2026-08-23; independently audited **GO** and committed loca
 - final independent re-audit: **GO** with no blocking findings. Both canonical-byte blockers are fully resolved. The sole non-blocking count correction (`114/114` to `115/115`) is incorporated in this checkpoint; overall Phase 4 remains `[ ]` and Phase 4B is not authorized by this result;
 - user-authorized measured budget: owner JavaScript remains `325_345` raw and measures `95_611` gzip against the retained `95_620` ceiling; owner CSS remains `85_913` raw / retained `15_408` gzip ceiling and measures `15_076` gzip, including the accepted guide-free inspection correction, with exact-boundary and limit-plus-one tests preserved;
 - MODUL8R remains selected; `ownerRuntimeSelected.js` and the production runtime loader are unchanged; the audited Phase 4A checkpoint was committed locally after GO, while no IPFS upload, signature, transaction, ERC725Y write, deployment, merge, push, environment, or Netlify configuration change occurred.
+
+Phase 4B accepted checkpoint (2026-08-23; automated certification, manual acceptance, and independent audit **GO**):
+
+- steps 5-10 are implemented, manually accepted **GO**, and independently audited **GO** after the publication rack's missing sibling menu-surface authority was repaired; overall Phase 4 is `[x]` and post-acceptance cleanup has not started;
+- `OwnerSystemWorkflowShell` is registered in the lazy runtime loader, owner isolation graph, and production-build mappings, and `ownerRuntimeSelected.js` atomically selects `SYSTEM_WORKFLOW`; MODUL8R remains the bounded one-file rollback target only;
+- the promoted runtime mounts the existing canonical-v9 publication rack and preserves snapshot generation, profile isolation, deterministic bytes, CID verification, wallet preparation, read-back, inert ownership, and exact focus return; no upload or wallet action is performed by opening or preparing it;
+- the active v9 Visitor now preserves the existing public Return callback, persistent identity-rack focus return, and bounded 390px DISCOVER/RETURN controls; no legacy Visitor branch or v8 compatibility was introduced;
+- final full sequential Node suite: `1240/1240`; consolidated System Workflow browser suite: `14/14`; published v9 Visitor/direct-profile fixture: `12/12`; selected hardware owner authority/iframe gate: `1/1`; LUKSO standards: `5/5`;
+- independent Phase 4B audit: **GO**, no blocking findings, focused audit matrix `44/44`; current artifact graph retained `leaks: []`, zero forbidden provider operations, and no remaining owned browser processes;
+- final production build: 5,430 modules transformed; `build:check` passed at `802_502` initial JavaScript bytes; runtime graph has `leaks: []`; selected owner budgets are JavaScript `365_023` raw / `110_353` gzip and CSS `143_850` raw / `21_133` gzip, while initial and standalone-wallet limits remain unchanged;
+- no IPFS upload, signature, transaction, ERC725Y write, deployment, merge, push, environment-variable, or Netlify configuration change occurred. No live LSP6 preflight was attempted and no controller permission issue was discovered.
 
 Official standards rechecked on 2026-08-23: [LSP2 ERC725Y JSON Schema](https://github.com/lukso-network/LIPs/blob/main/LSPs/LSP-2-ERC725YJSONSchema.md), [LSP6 Key Manager](https://github.com/lukso-network/LIPs/blob/main/LSPs/LSP-6-KeyManager.md), and [LSP0 ERC725 Account](https://github.com/lukso-network/LIPs/blob/main/LSPs/LSP-0-ERC725Account.md). LSP6 `SETDATA`/allowed-data-key permission behavior is unchanged; controller permission preflight remains mandatory before the first separately authorized live publication.
 
@@ -486,9 +497,9 @@ Final acceptance covers dynamic Grid lifecycle/order, real authoring, all panels
 | 1. Contract/domain/storage/authoring | `[x]` |
 | 2. Public v9 vertical slice | `[x]` |
 | 3. Production System Workflow shell | `[x]` |
-| 4. Publication/discovery/cutover | `[ ]` |
+| 4. Publication/discovery/cutover | `[x]` |
 | Post-acceptance cleanup | `[ ]` |
 
-Phases 1, 2, and 3 are complete. Phase 4A steps 1-4 are implemented and independently audited **GO**. Overall Phase 4 remains open; do not begin Phase 4B without explicit authorization.
+Phases 1, 2, 3, and 4 are complete. Phase 4A steps 1-4 and Phase 4B steps 5-10 are independently audited **GO**; Phase 4B also has manual acceptance **GO** and is committed locally in the current checkpoint. Post-acceptance cleanup remains `[ ]` and has not started.
 
 Do not commit, push, deploy, upload, sign, or publish without explicit authorization.

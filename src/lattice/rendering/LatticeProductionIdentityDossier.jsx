@@ -165,8 +165,11 @@ export default function LatticeProductionIdentityDossier({
     if (!persistent) { onClosed?.(); return; }
     setPhase('compact');
     onClosed?.();
-    requestAnimationFrame(() => compactControlRef.current?.focus({ preventScroll: true }));
   }, [onClosed, persistent]);
+  useEffect(() => {
+    if (phase !== 'compact') return;
+    compactControlRef.current?.focus({ preventScroll: true });
+  }, [phase]);
   const requestOpen = useCallback(() => {
     if (!persistent || phase !== 'compact') return;
     const liveRectangle = getReturnRectangle?.();

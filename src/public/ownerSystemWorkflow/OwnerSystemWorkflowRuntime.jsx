@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useLibraryStore } from '../../library/state/useLibraryStore.js';
 import { useProfileContractFacts, useProfileIdentity } from '../../profileIdentity/index.js';
@@ -18,6 +18,8 @@ import useOwnerSystemWorkflowFocusViewer from './useOwnerSystemWorkflowFocusView
 import useOwnerSystemWorkflowLayout from './useOwnerSystemWorkflowLayout.js';
 import useOwnerSystemWorkflowPanels from './useOwnerSystemWorkflowPanels.js';
 import useOwnerSystemWorkflowDevelopmentAuthorities from './useOwnerSystemWorkflowDevelopmentAuthorities.js';
+
+const OwnerSystemWorkflowPublicationRack = lazy(() => import('./OwnerSystemWorkflowPublicationRack.jsx'));
 
 function assetMap(assets, records) {
   const map = new Map();
@@ -53,15 +55,18 @@ const initialLayersOpen = () => {
   catch { return true; }
 };
 
-export default function OwnerSystemWorkflowRuntime({ profileAddress, onVisitProfile, reviewStorage, reviewAssets,
+export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext, onPreviewDocumentChange,
+  onPublicationConfirmed, profileAddress, publishedResolution, onVisitProfile, reviewStorage, reviewAssets,
   reviewCategories, reviewActivity, reviewDiscovery, reviewProfile }) {
   const controller = useOwnerSystemWorkflowController(profileAddress, { storage: reviewStorage });
   const [preview, setPreview] = useState(null);
+  const [publicationOpen, setPublicationOpen] = useState(false);
   const [notice, setNotice] = useState(null);
   const [dossierOpen, setDossierOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(initialLayersOpen);
   const [layersExplicitlyOpened, setLayersExplicitlyOpened] = useState(false);
   const previewReturnFocus = useRef(null);
+  const publicationReturnFocus = useRef(null);
   const layout = useOwnerSystemWorkflowLayout();
   const liveIdentity = useProfileIdentity(profileAddress, { sourceMode: reviewProfile ? 'FIXTURE' : 'LIVE' });
   const contractFacts = useProfileContractFacts(profileAddress, { enabled: !reviewProfile });
@@ -69,7 +74,7 @@ export default function OwnerSystemWorkflowRuntime({ profileAddress, onVisitProf
   const rawAssets = useLibraryStore((state) => state.profileAddress === profileAddress ? state.assets : []);
   const browserEnabled = !reviewAssets;
   const reviewAuthorities = useOwnerSystemWorkflowDevelopmentAuthorities({ categories: reviewCategories, discovery: reviewDiscovery, enabled: Boolean(reviewAssets) });
-  const panels = useOwnerSystemWorkflowPanels({ blocked: Boolean(preview || dossierOpen) });
+  const panels = useOwnerSystemWorkflowPanels({ blocked: Boolean(preview || publicationOpen || dossierOpen) });
   const panel = panels.activePanel;
   const browser = useOwnerLatticeBrowser(profileAddress, panel === 'library' && browserEnabled);
   const assets = reviewAssets || browser.data.assets;
@@ -78,7 +83,7 @@ export default function OwnerSystemWorkflowRuntime({ profileAddress, onVisitProf
   const crop = useOwnerSystemWorkflowCrop({ assetsById, controller });
   const viewer = useOwnerSystemWorkflowFocusViewer({ assetsById, controller, onOpen: () => panels.closePanel({ returnFocus: false }) });
   const activity = useOwnerSystemWorkflowActivity({ active: panel === 'activity', fixture: reviewActivity, profileAddress });
-  const panelOccupied = Boolean(panel || Object.values(panels.presence).some(({ present }) => present));
+  const panelOccupied = Boolean(publicationOpen || panel || Object.values(panels.presence).some(({ present }) => present));
   const dismissNotice = useCallback(() => {
     controller.clearError();
     setNotice(null);
@@ -158,11 +163,27 @@ export default function OwnerSystemWorkflowRuntime({ profileAddress, onVisitProf
       setNotice(error?.message || 'Preview unavailable');
     }
   };
+  const closePublication = () => {
+    setPublicationOpen(false);
+    const node = publicationReturnFocus.current;
+    publicationReturnFocus.current = null;
+    requestAnimationFrame(() => node?.isConnected && node.focus({ preventScroll: true }));
+  };
+  const togglePublication = (trigger) => {
+    if (publicationOpen) {
+      closePublication();
+      return;
+    }
+    publicationReturnFocus.current = trigger;
+    panels.closePanel({ returnFocus: false });
+    setPublicationOpen(true);
+  };
   const menuSurface = controller.draft?.appearance.menuSurfaceId;
   const workspaceSurfaceColor = latticeSurfaceColor(controller.draft?.appearance.surfaceId);
-  return <><main aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
+  return <><main aria-hidden={preview || publicationOpen || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
     data-lattice-menu-surface data-menu-surface={menuSurface} data-reduced-motion={layout.reducedMotion || undefined}
-    data-surface={controller.draft?.appearance.surfaceId} data-previewing={preview ? true : undefined} inert={preview ? '' : undefined}>
+    data-surface={controller.draft?.appearance.surfaceId} data-previewing={preview ? true : undefined}
+    inert={preview || publicationOpen ? '' : undefined}>
     <OwnerSystemWorkflowCanvas assetsById={assetsById} controller={controller} crop={crop} onChangeGrid={changeGrid}
       interactionDisabled={panelOccupied} onOpenViewer={(placement) => viewer.open(placement.id)}
       onPlacementRef={viewer.registerPlacement} reducedMotion={layout.reducedMotion} viewerPlacementId={viewer.placementId} />
@@ -182,6 +203,7 @@ export default function OwnerSystemWorkflowRuntime({ profileAddress, onVisitProf
       layersActivated={layersExplicitlyOpened && layersOpen && !panelOccupied}
       layersOpen={layersOpen && !panelOccupied}
       onOpen={(name, trigger) => panels.togglePanel(name, trigger)} onPreview={(event) => startPreview(event.currentTarget)}
+      onPublish={(event) => togglePublication(event.currentTarget)} publicationOpen={publicationOpen}
       onToggleLayers={() => {
         if (panelOccupied) {
           panels.closePanel({ returnFocus: false });
@@ -203,5 +225,17 @@ export default function OwnerSystemWorkflowRuntime({ profileAddress, onVisitProf
       setPreview(null); previewReturnFocus.current = null;
       requestAnimationFrame(() => panels.openPanel('discover', trigger));
     }} />}
+  {publicationOpen && <Suspense fallback={null}><OwnerSystemWorkflowPublicationRack
+    assetRecords={records}
+    getWalletPublicationContext={getWalletPublicationContext}
+    menuSurface={menuSurface}
+    onClose={closePublication}
+    onPublished={() => onPublicationConfirmed?.()}
+    onSnapshotChange={({ document }) => onPreviewDocumentChange?.(document)}
+    profile={publicationProfile}
+    profileAddress={profileAddress}
+    publishedResolution={publishedResolution}
+    systemWorkflowDraft={controller.draft}
+  /></Suspense>}
   </>;
 }

@@ -5,19 +5,38 @@ import { readFile, readdir } from 'node:fs/promises';
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('System Workflow production shell preserves the Phase 3 authority and isolation boundary', async () => {
-  const [shell, runtime, main, selection, preview, styles, globalBar] = await Promise.all([
+  const [shell, runtime, main, selection, preview, styles, globalBar, loader, publicationRack, isolation, productionBuild] = await Promise.all([
     read('./OwnerSystemWorkflowShell.jsx'), read('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx'), read('../main.jsx'),
     read('./ownerRuntimeSelected.js'), read('./ownerSystemWorkflowPreviewDocument.js'), read('./ownerSystemWorkflow/ownerSystemWorkflow.css'),
-    read('./ownerSystemWorkflow/OwnerSystemWorkflowGlobalBar.jsx'),
+    read('./ownerSystemWorkflow/OwnerSystemWorkflowGlobalBar.jsx'), read('./ownerRuntimeLoader.js'),
+    read('./ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx'), read('../../scripts/ownerRuntimeIsolation.js'),
+    read('../../scripts/productionBuild.js'),
   ]);
   const names = await readdir(new URL('./ownerSystemWorkflow/', import.meta.url));
   const productionNames = names.filter((name) => name !== 'OwnerSystemWorkflowDevelopmentEntrance.jsx');
   const productionSources = await Promise.all(productionNames.map((name) => read(`./ownerSystemWorkflow/${name}`)));
-  assert.equal(selection.includes("OWNER_RUNTIME_SELECTION = 'MODUL8R'"), true);
+  assert.equal(selection.includes("OWNER_RUNTIME_SELECTION = 'SYSTEM_WORKFLOW'"), true);
+  assert.match(selection, /import\('\.\/OwnerSystemWorkflowShell\.jsx'\)/);
+  assert.match(loader, /SYSTEM_WORKFLOW: 'SYSTEM_WORKFLOW'/);
+  assert.match(loader, /selection === OWNER_RUNTIME\.SYSTEM_WORKFLOW/);
+  assert.match(isolation, /OwnerSystemWorkflowShell\.jsx/);
+  assert.match(productionBuild, /src\/public\/OwnerSystemWorkflowShell\.jsx/);
   assert.match(main, /import\.meta\.env\.DEV[\s\S]*\/development\/owner\/system-workflow/);
   assert.match(shell, /OwnerSystemWorkflowRuntime/);
   assert.match(runtime, /buildOwnerSystemWorkflowPreviewDocument/);
   assert.match(runtime, /ProfileDocumentV9Preview/);
+  assert.match(runtime, /lazy\(\(\) => import\('\.\/OwnerSystemWorkflowPublicationRack\.jsx'\)\)/);
+  assert.match(runtime, /onPublish=\{\(event\) => togglePublication\(event\.currentTarget\)\}/);
+  assert.match(runtime, /getWalletPublicationContext=\{getWalletPublicationContext\}/);
+  assert.match(runtime, /publishedResolution=\{publishedResolution\}/);
+  assert.match(runtime, /onPublished=\{\(\) => onPublicationConfirmed\?\.\(\)\}/);
+  assert.match(runtime, /onSnapshotChange=\{\(\{ document \}\) => onPreviewDocumentChange\?\.\(document\)\}/);
+  assert.match(globalBar, /aria-expanded=\{publicationOpen\} aria-label="Publish"/);
+  assert.match(publicationRack, /uploadProfileDocument\(snapshot\)/);
+  assert.match(publicationRack, /publication\.verifyCid\(snapshot, uploaded\.cid/);
+  assert.match(publicationRack, /publication\.publish\(\)/);
+  assert.match(publicationRack, /data-lattice-menu-surface data-menu-surface=\{menuSurface\}/);
+  assert.match(runtime, /menuSurface=\{menuSurface\}/);
   assert.match(runtime, /globalThis\.setTimeout\(dismissNotice, 4_500\)/,
     'operation notices dismiss automatically instead of permanently covering the workspace');
   assert.match(runtime, /aria-label="Dismiss notification"[\s\S]*onClick=\{dismissNotice\}/,

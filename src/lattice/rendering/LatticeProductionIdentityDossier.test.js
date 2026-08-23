@@ -35,6 +35,7 @@ test('grows one source card directly into one rack without a split image or inte
   assert.doesNotMatch(source, /data-shape=\{model\.profile\.avatarShape\}/);
   assert.match(source, /lattice-production-identity-dossier__source-copy/);
   assert.match(source, /if \(!persistent\) \{ onClosed\?\.\(\); return; \}\s*setPhase\('compact'\)/);
+  assert.match(source, /if \(phase !== 'compact'\) return;\s*compactControlRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(source, /data-persistent=\{persistent \|\| undefined\}/);
   assert.match(source, /disabled=\{!compact\} onClick=\{requestOpen\}/);
   assert.doesNotMatch(source, /className="lattice-profile-rail__identity-copy"/);

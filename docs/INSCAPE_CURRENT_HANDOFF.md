@@ -8,29 +8,37 @@ This is the current travel checkpoint. It describes two intentionally separate b
 
 - Branch: `migration/system-workflow-2026-08-17`
 - Required starting HEAD: `c8c1e12f38f03f5410364462cfd84c18be9b8eb1`
-- Scope implemented: Phase 4A only, corresponding to Phase 4 steps 1-4.
-- Review state: independent Phase 4A re-audit returned **GO** with no blocking findings; the reviewed local checkpoint is committed and overall Phase 4 remains `[ ]` pending explicit authorization for Phase 4B.
-- Selected production runtime: MODUL8R. `ownerRuntimeSelected.js` and the production runtime loader were not changed.
+- Scope implemented: Phase 4A plus the user-authorized Phase 4B review candidate, corresponding to Phase 4 steps 1-10.
+- Review state: Phase 4A remains independently audited **GO** and committed at `9ff866f51e9ef6938d40d25025f2c4a2be38cadd`. Phase 4B automated certification, manual acceptance, and independent audit are all **GO** with no blocking findings. Overall Phase 4 is `[x]`; the accepted Phase 4B changes are committed locally in the current checkpoint.
+- Selected production runtime: `SYSTEM_WORKFLOW`, loaded lazily through `OwnerSystemWorkflowShell`. MODUL8R remains only the bounded one-file rollback target and is not mounted by the selected production path.
 
 The active legacy authorities replaced in this slice were the local `OSUnderneathProfileDocument` singleton name/hash, the resolver's injectable generic v1-v8 parser, the Discovery query's old-key filter, generic v7/v8 publication serialization, and the active legacy/Lattice Visitor selector. Publisher, resolver, and Discovery now share the Phase-1 `INSCAPE_PROFILE_DOCUMENT_KEY`. Upload preparation, upload Function validation, CID verification, wallet-publication preparation, resolver read-back, Preview, and Visitor use strict canonical Profile Document v9 bytes. No dual-read, dual-write, migration, parser injection, or legacy-key fallback was added.
 
-Verification at this audited Phase 4A checkpoint:
+Phase 4B connects the promoted shell to the existing owner runtime seam, mounts the existing v9 publication rack, preserves profile-keyed resets and lazy owner isolation, and selects the System Workflow shell atomically. The final public browser pass also restored the v9 Visitor's dropped `onReturn` callback, verified its persistent identity-rack focus return, and bounded DISCOVER/RETURN inside a 390px viewport without adding a legacy Visitor branch.
+
+Verification at the current Phase 4B review candidate:
 
 - focused Phase-4A publication/resolver/Discovery/Profile-v9 matrix: `115/115` passed, including the exact singleton-key authority and hash-valid BOM-prefixed resolver/upload rejection;
 - production budget, owner/runtime isolation, public-boundary, and artifact matrix: `38/38` passed;
 - System Workflow 24-Grid notice/safety regression matrix: `16/16` passed; the notice now dismisses on click and automatically after 4.5 seconds without changing the ceiling;
+- final full sequential Node suite: `1240/1240` passed;
+- consolidated System Workflow browser suite: `14/14` passed;
+- selected hardware production owner/authority/iframe gate: `1/1` passed with no forbidden provider operation;
+- published canonical-v9 Visitor/direct-profile fixture: `12/12` passed, including Return, persistent identity, artwork inspection, CSP/media failure, 390px layout, and zero owner storage operations;
+- canonical v9 publication rack browser gate: passed with local snapshot preparation only and zero upload requests;
+- independent Phase 4B audit matrix: `44/44` passed with no blocking findings;
 - `npm run test:lukso-standards`: `5/5` passed;
-- `npm run build`: passed, 5,465 modules transformed, production budgets passed;
-- `npm run build:check`: passed at 803,295 initial JavaScript bytes after the byte-exact BOM correction;
+- `npm run build`: passed, 5,430 modules transformed, production budgets passed;
+- `npm run build:check`: passed at 802,502 initial JavaScript bytes;
 - owner runtime graph: `leaks: []`;
 - first independent audit: `NO-GO` for one blocker. Hash-valid formatted/reordered v9 JSON could resolve because schema parsing was not followed by canonical serialization equality. That defect was corrected.
 - second independent audit: `NO-GO` because `TextDecoder` and `Request.text()` stripped a UTF-8 BOM before the string comparison. Resolver and upload Function now retain the original bytes, parse through fatal UTF-8 decoding, and compare those bytes against the central `profileDocumentV9HashInput` output. Hash-valid BOM-prefixed JSON now returns resolver `INVALID / NON_CANONICAL_DOCUMENT` and upload HTTP `422 / NON_CANONICAL_DOCUMENT` before credentials or Pinata.
 - final independent re-audit: **GO**. Both canonical-byte blockers are fully resolved; no blocking findings remain. Its sole non-blocking finding was that the checkpoint count omitted the singleton-key test (`114/114` instead of `115/115`), corrected here.
-- measured owner budgets authorized for Phase 4A: JavaScript `325_345` raw / `95_611` gzip measured against the retained `95_620` gzip ceiling; CSS `85_913` raw / `15_076` gzip measured against the retained `15_408` gzip ceiling. The final 82 raw CSS bytes make grid-free artwork inspection fully opaque so workspace line/dot guides cannot bleed through.
+- measured selected System Workflow owner budgets: JavaScript `365_023` raw / `110_353` gzip; CSS `143_850` raw / `21_133` gzip. Initial and standalone-wallet limits were not relaxed, and exact-boundary plus limit-plus-one tests remain.
 
-Official LSP2, LSP6, and LSP0 authorities were rechecked on 2026-08-23. No live controller preflight was performed because no wallet action was authorized; no permission issue was discovered. The audited Phase 4A checkpoint was committed locally after GO. No upload, signature, transaction, ERC725Y write, deployment, merge, push, environment-variable, or Netlify configuration action occurred.
+Official LSP2, LSP6, and LSP0 authorities were rechecked on 2026-08-23. No live controller preflight was performed because no wallet action was authorized; no permission issue was discovered. No upload, signature, transaction, ERC725Y write, deployment, merge, push, environment-variable, or Netlify configuration action occurred during Phase 4B.
 
-Phase 4B must add `OwnerSystemWorkflowShell` to the runtime loader/isolation/build mappings, perform the consolidated visual and browser certification, select the new shell only after acceptance, and perform the LSP6 controller preflight before any separately authorized live publication. Do not start post-acceptance cleanup in Phase 4B.
+Phase 4 is accepted, independently audited, and committed locally. Before any separately authorized live publication, perform the real LSP6 controller preflight and stop on any permission issue. Post-acceptance cleanup remains a separate unstarted phase; do not begin cleanup, push, deployment, upload, signature, or transaction without explicit authorization.
 
 The older cross-branch travel notes below remain historical context and are not authorization to alter those lanes.
 

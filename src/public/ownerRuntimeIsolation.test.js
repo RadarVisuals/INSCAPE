@@ -16,6 +16,7 @@ const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
 const OWNER_RUNTIME_PAIRINGS = Object.freeze({
   MODUL8R: './OwnerModul8rShell.jsx',
+  SYSTEM_WORKFLOW: './OwnerSystemWorkflowShell.jsx',
   LATTICE: './OwnerLatticeShell.jsx',
   LEGACY: './ModuleGridShell.jsx',
 });
@@ -52,6 +53,7 @@ test('cold application entry cannot statically reach the owner shell or Library 
   const graph = staticImportGraph(resolve(here, '../App.jsx'));
   for (const forbidden of [
     resolve(here, 'OwnerModul8rShell.jsx'),
+    resolve(here, 'OwnerSystemWorkflowShell.jsx'),
     resolve(here, 'OwnerLatticeShell.jsx'),
     resolve(here, 'ModuleGridShell.jsx'),
     resolve(here, '../library/state/useLibraryStore.js'),
@@ -65,15 +67,18 @@ test('cold application entry cannot statically reach the owner shell or Library 
   assert.doesNotMatch(loaderSource, /from\s+['\"]\.\/ModuleGridShell\.jsx['\"]/);
 });
 
-test('build selector accepts exactly the MODUL8R, LATTICE, and LEGACY runtime pairings', () => {
+test('build selector accepts exactly the System Workflow and retained rollback runtime pairings', () => {
   assert.deepEqual(selectedRuntimePair("export const OWNER_RUNTIME_SELECTION = 'MODUL8R';\nconst load = () => import('./OwnerModul8rShell.jsx');"),
     { selection: 'MODUL8R', modulePath: './OwnerModul8rShell.jsx' });
+  assert.deepEqual(selectedRuntimePair("export const OWNER_RUNTIME_SELECTION = 'SYSTEM_WORKFLOW';\nconst load = () => import('./OwnerSystemWorkflowShell.jsx');"),
+    { selection: 'SYSTEM_WORKFLOW', modulePath: './OwnerSystemWorkflowShell.jsx' });
   assert.deepEqual(selectedRuntimePair("export const OWNER_RUNTIME_SELECTION = 'LATTICE';\nconst load = () => import('./OwnerLatticeShell.jsx');"),
     { selection: 'LATTICE', modulePath: './OwnerLatticeShell.jsx' });
   assert.deepEqual(selectedRuntimePair("export const OWNER_RUNTIME_SELECTION = 'LEGACY';\nconst load = () => import('./ModuleGridShell.jsx');"),
     { selection: 'LEGACY', modulePath: './ModuleGridShell.jsx' });
   assert.throws(() => selectedRuntimePair("const OWNER_RUNTIME_SELECTION = 'LATTICE'; import('./ModuleGridShell.jsx')"), /mismatched/);
   assert.throws(() => selectedRuntimePair("const OWNER_RUNTIME_SELECTION = 'MODUL8R'; import('./OwnerLatticeShell.jsx')"), /mismatched/);
+  assert.throws(() => selectedRuntimePair("const OWNER_RUNTIME_SELECTION = 'SYSTEM_WORKFLOW'; import('./OwnerModul8rShell.jsx')"), /mismatched/);
   assert.throws(() => selectedRuntimePair("const OWNER_RUNTIME_SELECTION = 'LEGACY'; import('./OwnerLatticeShell.jsx')"), /mismatched/);
   assert.throws(() => selectedRuntimePair("const OWNER_RUNTIME_SELECTION = 'UNKNOWN'; import('./OwnerLatticeShell.jsx')"), /Unsupported/);
 });
@@ -131,11 +136,15 @@ test('internal selector invokes only the selected lazy runtime importer', async 
   const calls = [];
   const importers = {
     importModul8r: async () => { calls.push('modul8r'); return { default: () => null }; },
+    importSystemWorkflow: async () => { calls.push('system-workflow'); return { default: () => null }; },
     importLattice: async () => { calls.push('lattice'); return { default: () => null }; },
     importLegacy: async () => { calls.push('legacy'); return { default: () => null }; },
   };
   await createOwnerRuntimeLoader(selectOwnerRuntimeImporter(OWNER_RUNTIME.MODUL8R, importers))();
   assert.deepEqual(calls, ['modul8r']);
+  calls.length = 0;
+  await createOwnerRuntimeLoader(selectOwnerRuntimeImporter(OWNER_RUNTIME.SYSTEM_WORKFLOW, importers))();
+  assert.deepEqual(calls, ['system-workflow']);
   calls.length = 0;
   await createOwnerRuntimeLoader(selectOwnerRuntimeImporter(OWNER_RUNTIME.LATTICE, importers))();
   assert.deepEqual(calls, ['lattice']);

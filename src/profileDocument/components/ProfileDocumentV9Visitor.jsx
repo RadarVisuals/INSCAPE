@@ -16,7 +16,7 @@ const VISITOR_GRID_NAVIGATION_SAFE_AREA = 42;
 const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-6)}`;
 const frozenRectangle = ({ height, left, top, width }) => Object.freeze({ height, left, top, width });
 
-export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirectory }) {
+export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirectory, onReturn }) {
   const rootRef = useRef(null);
   const identityControlRef = useRef(null);
   const profileDockControlRef = useRef(null);
@@ -172,8 +172,9 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
           <button aria-label="Next Grid" disabled={activeIndex === lastIndex || Boolean(viewerSession || identityDossierActive)}
             onClick={() => selectGrid(activeIndex + 1)} type="button">&gt;</button>
         </div>
-        {(onOpenDirectory || onExit) && <div className="visitor-grid-world__actions">
+        {(onOpenDirectory || onReturn || onExit) && <div className="visitor-grid-world__actions">
           {onOpenDirectory && <button onClick={onOpenDirectory} type="button">DISCOVER</button>}
+          {onReturn && <button onClick={onReturn} type="button">RETURN</button>}
           {onExit && <button onClick={onExit} type="button">EXIT</button>}
         </div>}
       </nav>

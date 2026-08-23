@@ -7,6 +7,7 @@ const preview = readFileSync(new URL('./ProfileDocumentV9Preview.jsx', import.me
 const visitor = readFileSync(new URL('./ProfileDocumentV9Visitor.jsx', import.meta.url), 'utf8');
 const renderer = readFileSync(new URL('./GridProductionRenderer.jsx', import.meta.url), 'utf8');
 const rendererCss = readFileSync(new URL('../../lattice/rendering/latticeProductionTableRenderer.css', import.meta.url), 'utf8');
+const visitorCss = readFileSync(new URL('./visitorGridWorld.css', import.meta.url), 'utf8');
 const production = readFileSync(new URL('./PublishedProfileDocumentPreview.jsx', import.meta.url), 'utf8');
 
 const placement = (overrides = {}) => ({
@@ -58,6 +59,12 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(visitor, /ArrowRight/);
   assert.match(visitor, /Previous Grid/);
   assert.match(visitor, /Next Grid/);
+  assert.match(visitor, /onOpenDirectory \|\| onReturn \|\| onExit/);
+  assert.match(visitor, /onReturn && <button onClick=\{onReturn\} type="button">RETURN<\/button>/);
+  assert.match(visitorCss, /@media \(max-width: 640px\)[\s\S]*\.visitor-grid-world__dock button \{[^}]*width: 64px;[^}]*min-width: 64px;[^}]*flex-basis: 64px;/);
+  assert.match(visitorCss, /\.visitor-grid-world__dock > nav > button \{ width: 56px; min-width: 56px; flex-basis: 56px; \}/);
+  assert.match(visitorCss, /\.visitor-grid-world__actions button \{ width: 60px; min-width: 60px; padding-inline: 4px; flex-basis: 60px; \}/);
+  assert.match(visitorCss, /\.visitor-grid-world__navigation span \{ min-width: 52px; \}/);
   assert.doesNotMatch(visitor, /Keeper|tables|coordinate|useLibraryStore|ownerAuthoring|wallet/iu);
 });
 

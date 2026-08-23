@@ -9,9 +9,9 @@ const workspace = readFileSync(new URL('../lattice/modul8r/Modul8rOwnerWorkspace
 const productionPresentation = readFileSync(new URL('./ownerWorkspacePresentation.modul8r.js', import.meta.url), 'utf8');
 const rollbackPresentation = readFileSync(new URL('./ownerWorkspacePresentation.lattice.js', import.meta.url), 'utf8');
 
-test('Task 8 selects one complete production-named MODUL-8R owner entry', () => {
-  assert.match(selected, /OWNER_RUNTIME_SELECTION = 'MODUL8R'/);
-  assert.match(selected, /import\('\.\/OwnerModul8rShell\.jsx'\)/);
+test('Task 8 keeps the complete production-named MODUL-8R rollback entry', () => {
+  assert.match(selected, /OWNER_RUNTIME_SELECTION = 'SYSTEM_WORKFLOW'/);
+  assert.match(selected, /import\('\.\/OwnerSystemWorkflowShell\.jsx'\)/);
   assert.match(entry, /ownerWorkspacePresentation="modul8r"/);
   assert.match(owner, /from '#owner-workspace-presentation'/);
   assert.match(productionPresentation, /import\('\.\.\/lattice\/modul8r\/Modul8rOwnerWorkspace\.jsx'\)/);
@@ -19,9 +19,8 @@ test('Task 8 selects one complete production-named MODUL-8R owner entry', () => 
   assert.doesNotMatch(workspace, /development fixture|\/prototype\/modul-8r|Modul8rOwnerLibraryDevelopment/iu);
 });
 
-test('Task 8 keeps one bounded source-level rollback pairing', () => {
-  assert.match(selected, /Rollback changes MODUL8R to[\s\S]*LATTICE/);
-  assert.match(selected, /\.\/OwnerLatticeShell\.jsx/);
+test('Phase 4B keeps one bounded source-level rollback pairing', () => {
+  assert.match(selected, /Rollback changes[\s\S]*SYSTEM_WORKFLOW to MODUL8R[\s\S]*\.\/OwnerModul8rShell\.jsx/);
   assert.match(rollbackPresentation, /import\('\.\.\/lattice\/browser\/BrowserWorkspace\.jsx'\)\)/);
   assert.doesNotMatch(productionPresentation, /BrowserWorkspace\.jsx|ActivityBrowser\.jsx|CreationsBrowser\.jsx|SettingsBrowser\.jsx/);
 });

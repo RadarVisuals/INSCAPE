@@ -16,6 +16,16 @@ test('production graph accepts owner modules reachable only through a dynamic ch
   assert.doesNotThrow(() => assertOwnerRuntimeGraph(graph));
 });
 
+test('production graph recognizes the System Workflow shell as owner-only', () => {
+  const graph = createOwnerRuntimeGraph({
+    'entry.js': chunk('entry.js', { entry: true }),
+    'system-workflow.js': chunk('system-workflow.js', { modules: { 'C:\\repo\\src\\public\\OwnerSystemWorkflowShell.jsx': {} } })
+  });
+  assert.deepEqual(graph.leaks, []);
+  assert.equal(graph.ownerChunks[0].file, 'system-workflow.js');
+  assert.doesNotThrow(() => assertOwnerRuntimeGraph(graph));
+});
+
 test('production graph rejects owner modules in the initial static entry closure', () => {
   const graph = createOwnerRuntimeGraph({
     'entry.js': chunk('entry.js', { entry: true, imports: ['owner.js'] }),

@@ -8,7 +8,7 @@ import { analyzeProductionBuild, assertNoProhibitedProductionArtifacts, assertSa
 import { ownerRuntimeIsolationPlugin } from './ownerRuntimeIsolation.js';
 import { excludeUnsupportedWalletConnectorsPlugin } from './unsupportedWalletConnectors.js';
 
-const graph = (leaks = []) => ({ ownerModules: ['/src/public/OwnerLatticeShell.jsx', '/src/public/ModuleGridShell.jsx'], entries: [{ file: 'assets/app-a.js' }],
+const graph = (leaks = []) => ({ ownerModules: ['/src/public/OwnerSystemWorkflowShell.jsx', '/src/public/OwnerLatticeShell.jsx', '/src/public/ModuleGridShell.jsx'], entries: [{ file: 'assets/app-a.js' }],
   ownerChunks: [{ file: 'assets/lattice-a.js', modules: ['/src/public/OwnerLatticeShell.jsx'] }], leaks });
 
 async function fixture(root, suffix = 'a') {
@@ -66,13 +66,13 @@ test('each independent budget category reports an actionable overage', () => {
   }
 });
 
-test('measured Phase 4A allowances retain exact production budget boundaries', () => {
+test('measured Phase 4B allowances retain exact production budget boundaries', () => {
   assert.deepEqual(PRODUCTION_BUDGETS, {
     initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
-    ownerJavaScript: { raw: 325_345, gzip: 95_620 },
+    ownerJavaScript: { raw: 365_023, gzip: 110_353 },
     standaloneWalletJavaScript: { raw: 4_400_000, gzip: 1_200_000 },
     initialCss: { raw: 51_807, gzip: 10_301 },
-    ownerCss: { raw: 85_913, gzip: 15_408 },
+    ownerCss: { raw: 143_850, gzip: 21_133 },
     coreJavaScript: { raw: 2_076_709, gzip: 620_158 },
     publicAssets: { raw: 15_200_000 },
     largestPublicAsset: { raw: 2_700_000 },
@@ -199,6 +199,20 @@ test('the two historical public lock paths cannot survive artifact hygiene', asy
 
 test('production pruning excludes development-only prototype assets', () => {
   for (const path of ['assets/PFP', 'assets/prototype', 'assets/ratio']) assert.ok(UNUSED_PUBLIC_PATHS.includes(path), path);
+});
+
+test('manifest classification recognizes the System Workflow production owner entry', async () => {
+  const root = resolve(tmpdir(), `underneath-budget-system-workflow-${process.pid}`);
+  try {
+    await fixture(root, 'system-workflow');
+    const manifestPath = resolve(root, '.vite/manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+    manifest['src/public/OwnerSystemWorkflowShell.jsx'] = manifest['src/public/OwnerLatticeShell.jsx'];
+    delete manifest['src/public/OwnerLatticeShell.jsx'];
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    const report = await analyzeProductionBuild(root);
+    assert.equal(report.ownerJavaScript[0].file, 'assets/lattice-system-workflow.js');
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test('production pruning excludes unused font sources without removing active bundled fonts', () => {

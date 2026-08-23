@@ -13,8 +13,6 @@ const uploadClient = source('./storage/profileDocumentUploadClient.js');
 const uploadFunction = source('../../netlify/functions/pin-profile-document.mjs');
 const activeVisitor = source('./components/PublishedProfileDocumentPreview.jsx');
 const systemPublicationUi = source('../public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx');
-const systemRuntime = source('../public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx');
-const runtimeLoader = source('../public/ownerRuntimeLoader.js');
 const runtimeSelector = source('../public/ownerRuntimeSelected.js');
 
 test('publisher, resolver, and Discovery import one central exact singleton-key authority', () => {
@@ -44,7 +42,7 @@ test('active upload, CID, resolver, and Visitor boundaries are v9-only with no p
   }
 });
 
-test('prepared publication UI reuses canonical v9 upload, CID, wallet, and read-back authorities without mounting Phase 4B', () => {
+test('prepared publication UI reuses canonical v9 upload, CID, wallet, and read-back authorities', () => {
   assert.match(systemPublicationUi, /buildOwnerSystemWorkflowPublicationDocument/);
   assert.match(systemPublicationUi, /canonicalSerializeProfileDocumentV9/);
   assert.match(systemPublicationUi, /uploadProfileDocument\(snapshot\)/);
@@ -52,7 +50,6 @@ test('prepared publication UI reuses canonical v9 upload, CID, wallet, and read-
   assert.match(systemPublicationUi, /publication\.publish\(\)/);
   assert.match(systemPublicationUi, /confirmed\.result\.document/);
   assert.doesNotMatch(systemPublicationUi, /buildProfileDocumentV8|canonicalSerializeProfileDocument\(|version 8/i);
-  assert.doesNotMatch(systemRuntime, /OwnerSystemWorkflowPublicationRack/);
-  assert.doesNotMatch(runtimeLoader, /OwnerSystemWorkflowShell|SYSTEM_WORKFLOW/);
-  assert.match(runtimeSelector, /OWNER_RUNTIME_SELECTION = 'MODUL8R'/);
+  assert.match(runtimeSelector, /OWNER_RUNTIME_SELECTION = 'SYSTEM_WORKFLOW'/);
+  assert.match(runtimeSelector, /import\('\.\/OwnerSystemWorkflowShell\.jsx'\)/);
 });

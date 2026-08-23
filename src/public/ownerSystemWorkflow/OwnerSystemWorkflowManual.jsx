@@ -33,7 +33,7 @@ const chapters = Object.freeze([
     sections: [
       ['Preview', 'Preview renders the visitor-facing projection of the current draft. Use it to verify visible Grids, profile presentation and artwork before publication.'],
       ['Visibility', 'A public Grid may appear in the visitor projection; a private Grid remains owner-only. Library categories and sections are never visitor navigation.'],
-      ['Publish', 'Publication is a separate deliberate step. It remains unavailable until the canonical publication authority is connected and the snapshot is ready.'],
+      ['Publish', 'Prepare and review one frozen public version 9 snapshot, then upload and verify its exact CID before any separately confirmed wallet publication.'],
     ],
   },
 ]);

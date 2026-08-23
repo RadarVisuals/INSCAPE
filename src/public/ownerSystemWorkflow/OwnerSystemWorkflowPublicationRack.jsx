@@ -36,6 +36,7 @@ export default function OwnerSystemWorkflowPublicationRack({
   assetRecords,
   getWalletPublicationContext,
   initialSnapshot = null,
+  menuSurface,
   onClose,
   onPublished,
   onSnapshotChange,
@@ -164,7 +165,7 @@ export default function OwnerSystemWorkflowPublicationRack({
   const verifiedReady = publication.status === PROFILE_DOCUMENT_PUBLICATION_STATUS.CID_VERIFIED
     && Boolean(publication.verified);
   return <aside aria-label="Version 9 publication" className="owner-lattice-publication-rack"
-    data-lattice-chrome onKeyDown={(event) => {
+    data-lattice-chrome data-lattice-menu-surface data-menu-surface={menuSurface} onKeyDown={(event) => {
       if (event.key === 'Escape' && !publicationBusy && !uploading) onClose?.();
     }}>
     <header><div><span>PUBLICATION MODULE</span><strong>VERSION 9</strong></div>
