@@ -17,6 +17,7 @@ test('profile rail is an injected public-navigation shell with an explicit unres
 
 test('rail collapse, selection, focus and Escape remain controlled by the caller', () => {
   assert.match(source, /activeEntryId/);
+  assert.match(source, /const visuallyCollapsed = identityOnly \? false : collapsed \|\| compact/);
   assert.match(source, /aria-current=\{active \? 'page'/);
   assert.match(source, /aria-expanded=\{!collapsed\}/);
   assert.match(source, /onCollapsedChange\?\.\(!collapsed\)/);
@@ -25,7 +26,6 @@ test('rail collapse, selection, focus and Escape remain controlled by the caller
   assert.match(source, /event\.key !== 'Escape'/);
   assert.match(source, /onEscape\?\.\(\)/);
   assert.match(source, /inert=\{blocked \? '' : undefined\}/);
-  assert.match(source, /visuallyCollapsed = collapsed \|\| compact/);
   assert.match(source, /!compact && <button/);
   assert.match(source, /disabled=\{entry\.disabled === true\}/);
   assert.match(source, /disabled=\{disabled\}/);
@@ -47,7 +47,7 @@ test('rail is fixed, carbon, compactable and does not shift the lattice', () => 
 test('rail uses the approved type hierarchy, loaded aliases and clear Lucide chevrons', () => {
   assert.match(source, /ChevronRight/);
   assert.doesNotMatch(source, /<i[^>]*>›<\/i>/);
-  assert.match(styles, /font: 600 13px\/1 "Inscape Geist Sans"/);
+  assert.match(styles, /font: 600 14px\/1 "Inscape Geist Sans"/);
   assert.match(styles, /font-size: 10px; font-weight: 500; letter-spacing: 0\.105em/);
   assert.match(styles, /font-family: "Inscape IBM Plex Mono"/);
   assert.match(styles, /stroke-width: 2/);

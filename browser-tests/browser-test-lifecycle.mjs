@@ -99,11 +99,13 @@ export function validateBrowserRuntimePath(runtimePath, workspaceRoot) {
     '.browser-test-runtime-task4a-isolation',
   ]);
   const uniqueTask4aRuntime = /^\.browser-test-runtime-task4a-\d+-\d+-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runtimeName);
+  const uniqueSystemCharacterizationRuntime = /^\.browser-test-runtime-system-characterization-\d+-\d+-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runtimeName);
+  const uniquePublishedVisitorRuntime = /^\.browser-test-runtime-published-visitor-\d+-\d+-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runtimeName);
   const expectedRuntime = resolve(exactWorkspace, basename(exactRuntime));
   const driveRoot = resolve(exactRuntime, dirname(exactRuntime) === exactRuntime ? '.' : '..');
   if (!isAbsolute(exactRuntime) || exactRuntime !== expectedRuntime || !within(exactWorkspace, exactRuntime)
       || exactRuntime === exactWorkspace || exactRuntime === driveRoot
-      || (!allowedRuntimeNames.has(runtimeName) && !uniqueTask4aRuntime)) {
+      || (!allowedRuntimeNames.has(runtimeName) && !uniqueTask4aRuntime && !uniqueSystemCharacterizationRuntime && !uniquePublishedVisitorRuntime)) {
     throw new Error(`Refusing browser runtime cleanup outside the exact test artifact path: ${exactRuntime}`);
   }
   return exactRuntime;

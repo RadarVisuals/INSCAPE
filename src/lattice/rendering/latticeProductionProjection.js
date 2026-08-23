@@ -2,6 +2,7 @@ import { assertValidLatticeProductionPublication } from '../domain/latticeProduc
 import { projectCroppedMediaRectangle } from './latticeCrop.js';
 import { projectArtworkMat } from './latticeMat.js';
 import { projectLatticeProductionTransform } from '../authoring/latticeProductionTransform.js';
+import { projectLatticePixelRectangle } from './latticePixelGeometry.js';
 
 const positiveViewport = (viewport) => Boolean(viewport
   && Number.isFinite(viewport.width) && viewport.width > 0
@@ -90,8 +91,8 @@ export function projectLatticeProductionLabel(table, field) {
   });
 }
 
-export function projectLatticeProductionArtwork(placement, field, mediaDimensions) {
-  const footprint = projectLatticeProductionPlacement(placement, field);
+function projectArtwork(placement, field, mediaDimensions, projectPlacement) {
+  const footprint = projectPlacement(placement, field);
   const mat = projectArtworkMat(footprint, placement.mat);
   if (!mediaDimensions) return Object.freeze({
     footprint,
@@ -121,4 +122,12 @@ export function projectLatticeProductionArtwork(placement, field, mediaDimension
     imageRenderRectangle: Object.freeze(imageRenderRectangle),
     imageTransform: transformed.css,
   });
+}
+
+export function projectLatticeProductionArtwork(placement, field, mediaDimensions) {
+  return projectArtwork(placement, field, mediaDimensions, projectLatticeProductionPlacement);
+}
+
+export function projectLatticeProductionPixelArtwork(placement, field, mediaDimensions) {
+  return projectArtwork(placement, field, mediaDimensions, projectLatticePixelRectangle);
 }

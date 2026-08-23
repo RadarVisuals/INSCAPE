@@ -4,16 +4,20 @@ import { LUKSO_RPC_FALLBACK_URLS, LUKSO_RPC_URL, normalizeProfileAddress,
   PROFILE_DOCUMENT_IPFS_GATEWAY_FALLBACK_URLS, PROFILE_DOCUMENT_IPFS_GATEWAY_URL } from '../../library/config.js';
 import { PROFILE_DOCUMENT_LIMITS } from '../domain/constants.js';
 import { isValidCid } from '../domain/cidValidation.js';
+import { INSCAPE_PROFILE_DOCUMENT_KEY } from '../domain/inscapeProfileDocumentKey.js';
 
-let profileDocumentParserPromise;
-function loadProfileDocumentParser() {
-  profileDocumentParserPromise ||= import('../domain/profileDocumentValidation.js')
-    .then(({ parseProfileDocumentJson }) => parseProfileDocumentJson);
-  return profileDocumentParserPromise;
+let profileDocumentCodecPromise;
+function loadProfileDocumentCodec() {
+  profileDocumentCodecPromise ||= Promise.all([
+    import('../domain/profileDocumentV9Validation.js'),
+    import('../domain/profileDocumentV9Serialization.js'),
+  ]).then(([{ parseProfileDocumentV9Json }, { isCanonicalProfileDocumentV9Bytes }]) => ({
+    isCanonicalProfileDocumentV9Bytes,
+    parseProfileDocumentV9Json,
+  }));
+  return profileDocumentCodecPromise;
 }
 
-export const OS_UNDERNEATH_PROFILE_DOCUMENT_KEY_NAME = 'OSUnderneathProfileDocument';
-export const OS_UNDERNEATH_PROFILE_DOCUMENT_KEY = '0x4a5b4ddee4f353a47d88a0ad908a9ff0bee45f7d31158b2d79ddafd15817cb4e';
 export const PUBLISHED_PROFILE_STATUS = Object.freeze({
   LOADING: 'LOADING', RESOLVED: 'RESOLVED', UNAVAILABLE: 'UNAVAILABLE', INVALID: 'INVALID', ERROR: 'ERROR', STALE: 'STALE'
 });
@@ -86,7 +90,7 @@ async function boundedOperation(operation, { callerSignal, timeoutMs, timeoutCod
 async function readErc725YValue(address, { rpcUrl, fetchImpl, signal }) {
   const response = await fetchImpl(rpcUrl, { method: 'POST', signal, headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: address,
-      data: encodeFunctionData({ abi: GET_DATA_ABI, functionName: 'getData', args: [OS_UNDERNEATH_PROFILE_DOCUMENT_KEY] }) }, 'latest'] }) });
+      data: encodeFunctionData({ abi: GET_DATA_ABI, functionName: 'getData', args: [INSCAPE_PROFILE_DOCUMENT_KEY] }) }, 'latest'] }) });
   if (!response.ok) throw new Error(`LUKSO RPC request failed (${response.status})`);
   let payload; try { payload = await response.json(); } catch { throw new Error('Malformed LUKSO RPC response'); }
   throwIfAborted(signal);
@@ -228,8 +232,11 @@ export function createLuksoPublishedProfileRepository({ rpcUrl = LUKSO_RPC_URL, 
     }
     try {
       const raw = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-      const parseProfileDocumentJson = await loadProfileDocumentParser();
-      const document = parseProfileDocumentJson(raw);
+      const { isCanonicalProfileDocumentV9Bytes, parseProfileDocumentV9Json } = await loadProfileDocumentCodec();
+      const document = parseProfileDocumentV9Json(raw);
+      if (!isCanonicalProfileDocumentV9Bytes(document, bytes)) {
+        invalid('NON_CANONICAL_DOCUMENT', 'Published profile bytes are not the canonical v9 serialization');
+      }
       if (normalizeProfileAddress(document.profile.address) !== requestedAddress) invalid('PROFILE_MISMATCH', 'Published profile address does not match its authority');
       return { status: PUBLISHED_PROFILE_STATUS.RESOLVED, address: requestedAddress, document, pointer };
     } catch (error) {

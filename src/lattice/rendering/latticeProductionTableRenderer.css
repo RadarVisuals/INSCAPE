@@ -11,17 +11,17 @@
   min-height: 1px;
   overflow: hidden;
   background-color: var(--lattice-production-surface);
-  background-image:
-    linear-gradient(var(--lattice-production-grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--lattice-production-grid-line) 1px, transparent 1px);
-  background-position:
-    var(--lattice-production-grid-origin-x, 0) var(--lattice-production-grid-origin-y, 0),
-    var(--lattice-production-grid-origin-x, 0) var(--lattice-production-grid-origin-y, 0);
-  background-size:
-    var(--lattice-production-cell-size, 40px) var(--lattice-production-cell-size, 40px),
-    var(--lattice-production-cell-size, 40px) var(--lattice-production-cell-size, 40px);
+  background-image: none;
   color: var(--lattice-production-label-ink);
   isolation: isolate;
+}
+
+.lattice-production-table[data-guide-mode="LINES"] {
+  background-image: none;
+}
+
+.lattice-production-table[data-guide-mode="DOTS"] {
+  background-image: none;
 }
 
 .lattice-production-table[data-surface="graphite"] { --lattice-production-surface: #383a3a; --lattice-production-grid-line: rgb(232 231 226 / 0.115); }

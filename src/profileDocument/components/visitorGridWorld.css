@@ -1,0 +1,47 @@
+.visitor-grid-world {
+  --visitor-grid-surface: #0b0c0c;
+  --visitor-grid-ink: #d8d7d2;
+  --visitor-dock-height: 42px;
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  overflow: hidden;
+  outline: none;
+  pointer-events: auto;
+  background: var(--visitor-grid-surface);
+  color: var(--visitor-grid-ink);
+  font-family: "Inscape IBM Plex Mono", monospace;
+}
+.visitor-grid-world[data-surface="graphite"] { --visitor-grid-surface: #383a3a; }
+.visitor-grid-world[data-surface="slate"] { --visitor-grid-surface: #7b7b7b; }
+.visitor-grid-world[data-surface="ash"] { --visitor-grid-surface: #b2b2b2; --visitor-grid-ink: #111313; }
+.visitor-grid-world[data-surface="mist"] { --visitor-grid-surface: #c9c6bd; --visitor-grid-ink: #111313; }
+.visitor-grid-world[data-surface="paper"] { --visitor-grid-surface: #d8d4ca; --visitor-grid-ink: #111313; }
+.visitor-grid-world__viewport { position: absolute; inset: 0; }
+.visitor-grid-renderer { position: absolute; inset: 0; }
+.visitor-grid-renderer .lattice-production-placement[data-frame-id="DOSSIER"] { box-shadow: inset 0 0 0 clamp(2px, .28vw, 5px) currentColor; }
+.visitor-grid-renderer .lattice-production-placement[data-frame-id="CAPTION"] { box-shadow: inset 0 -22px #090a0a, inset 0 0 0 clamp(1px, .16vw, 3px) currentColor; }
+.visitor-grid-world > .lattice-profile-rail[data-identity-only] { top: auto; bottom: calc(var(--visitor-dock-height) + 12px); left: 12px; }
+.visitor-grid-world__dock { position: fixed; z-index: 12; inset: auto 0 0; height: var(--visitor-dock-height); display: grid; grid-template-columns: minmax(0, 1fr) 112px; overflow: hidden; border-top: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-ink); background: var(--lattice-menu-panel); }
+.visitor-grid-world__dock > nav { min-width: 0; display: flex; align-items: stretch; overflow-x: auto; scrollbar-width: none; }
+.visitor-grid-world__dock > nav::-webkit-scrollbar { display: none; }
+.visitor-grid-world__dock button { position: relative; width: 104px; min-width: 0; min-height: 0; padding: 0 12px; flex: 0 1 104px; border: 0; color: var(--lattice-menu-muted); background: transparent; cursor: pointer; font: 500 11px/1 "Inscape Sora", sans-serif; font-variation-settings: "wght" 500; letter-spacing: .035em; text-transform: uppercase; }
+.visitor-grid-world__dock button:is(:hover, :focus-visible) { outline: 0; color: var(--lattice-menu-ink); background: var(--lattice-menu-selected); }
+.visitor-grid-world__dock button[aria-expanded="true"] { color: var(--lattice-menu-ink); background: var(--lattice-menu-selected); }
+.visitor-grid-world__dock button[aria-expanded="true"]::before { position: absolute; z-index: 2; top: -1px; right: -1px; left: -1px; height: 4px; background: var(--lattice-menu-ink); content: ''; }
+.visitor-grid-world__dock button:disabled { cursor: default; opacity: .3; }
+.visitor-grid-world__navigation, .visitor-grid-world__actions { display: flex; align-items: stretch; }
+.visitor-grid-world__navigation button { min-width: 34px; width: 34px; padding: 0; }
+.visitor-grid-world__navigation span { min-width: 96px; max-width: 150px; padding: 0 8px; display: grid; place-items: center; overflow: hidden; color: var(--lattice-menu-ink); font: 500 11px/1 "Inscape Sora", sans-serif; font-variation-settings: "wght" 500; letter-spacing: .035em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.visitor-grid-world__brand { box-sizing: border-box; width: 112px; padding: 0 14px; display: grid; place-items: center; color: var(--lattice-menu-ink); }
+.visitor-grid-world__brand > span { width: 150%; aspect-ratio: 8 / 1; display: block; translate: -15px 0; background: currentColor; -webkit-mask: url('/assets/brand/inscape-wordmark.svg') center / contain no-repeat; mask: url('/assets/brand/inscape-wordmark.svg') center / contain no-repeat; }
+
+@media (max-width: 640px) {
+  .visitor-grid-world__dock { grid-template-columns: minmax(0, 1fr); }
+  .visitor-grid-world__dock > nav { width: 100%; }
+  .visitor-grid-world__dock button { width: 64px; min-width: 64px; padding-inline: 8px; flex-basis: 64px; }
+  .visitor-grid-world__dock > nav > button { width: 56px; min-width: 56px; flex-basis: 56px; }
+  .visitor-grid-world__actions button { width: 60px; min-width: 60px; padding-inline: 4px; flex-basis: 60px; }
+  .visitor-grid-world__navigation span { min-width: 52px; }
+  .visitor-grid-world__brand { display: none; }
+}

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const ownerSource = readFileSync(new URL('./OwnerLatticeShell.jsx', import.meta.url), 'utf8');
+const ownerSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
 const creationsSource = readFileSync(new URL('./CreationsBrowser.jsx', import.meta.url), 'utf8');
 const activitySource = readFileSync(new URL('./ActivityBrowser.jsx', import.meta.url), 'utf8');
 const creationsStyles = readFileSync(new URL('./creationsBrowser.css', import.meta.url), 'utf8');
@@ -13,9 +13,9 @@ const chromeStyles = readFileSync(new URL('../lattice/rendering/latticeChromePri
 const menuStyles = readFileSync(new URL('../lattice/rendering/latticeMenuSurface.css', import.meta.url), 'utf8');
 const tokenStyles = readFileSync(new URL('../inscapeTokens.css', import.meta.url), 'utf8');
 
-test('owner portal windows receive the active rack menu surface instead of legacy fixed colors', () => {
-  assert.match(ownerSource, /<CreationsBrowser\s+menuSurfaceId=\{menuSurfaceId\}/);
-  assert.match(ownerSource, /<ActivityBrowser\s+menuSurfaceId=\{menuSurfaceId\}/);
+test('System Workflow owner surfaces receive the active canonical menu surface', () => {
+  assert.match(ownerSource, /data-lattice-menu-surface data-menu-surface=\{menuSurface\}/);
+  assert.match(ownerSource, /<OwnerSystemWorkflowPanelLayer[\s\S]*menuSurface=\{menuSurface\}/);
   assert.match(creationsSource, /data-lattice-menu-surface data-menu-surface=\{menuSurfaceId\}/);
   assert.match(activitySource, /data-lattice-menu-surface data-menu-surface=\{menuSurfaceId\}/);
   assert.match(menuStyles, /\[data-lattice-menu-surface\]/);

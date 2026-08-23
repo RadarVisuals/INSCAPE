@@ -1,5 +1,5 @@
 import { createCanonicalPublication, normalizeProfileDocumentCid } from '../domain/profileDocumentPublication.js';
-import { assertProfileDocumentPublicationVersion } from '../domain/constants.js';
+import { assertValidProfileDocumentV9 } from '../domain/profileDocumentV9Validation.js';
 
 const DEFAULT_UPLOAD_ENDPOINT = '/api/profile-publications';
 const DEFAULT_UPLOAD_TIMEOUT_MS = 50_000;
@@ -17,7 +17,7 @@ export async function uploadProfileDocument(snapshot, {
   fetchImpl = fetch,
   timeoutMs = DEFAULT_UPLOAD_TIMEOUT_MS
 } = {}) {
-  assertProfileDocumentPublicationVersion(snapshot);
+  assertValidProfileDocumentV9(snapshot);
   const artifact = createCanonicalPublication(snapshot);
   let response;
   try {

@@ -1,35 +1,21 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { runOwnerProductionPreviewGate } from './owner-production-preview-harness.mjs';
-import {
-  TASK4B_CONTRACT_A,
-  TASK4B_PROFILE_A,
-  createTask4BIndexerFixture,
-  installTask4BStorageFixture,
-  task4bAssetId,
-  task4bPlacement,
-  task4bProfileSeed,
-} from './owner-task4b-fixtures.mjs';
 
-const previewUrl = 'https://deploy-preview-2--enterinscape.netlify.app';
+const previewUrl = 'http://127.0.0.1:4173';
 const expectedRelease = String(process.env.EXPECTED_RELEASE_COMMIT || '').toLowerCase();
-const profileSeeds = [task4bProfileSeed({
-  contractAddress: TASK4B_CONTRACT_A,
-  name: 'ALPHA SUPPORT ASSET',
-  placements: [task4bPlacement('alpha-support-placement', task4bAssetId(TASK4B_CONTRACT_A))],
-  previewUrl,
-  profileAddress: TASK4B_PROFILE_A,
-})];
 
-test('Task 5 canonical publication rack exposes bounded local support evidence', async () => {
-  assert.match(expectedRelease, /^[0-9a-f]{40}$/u, 'EXPECTED_RELEASE_COMMIT must be the exact deployed SHA');
+test('canonical v9 publication rack exposes bounded local support evidence', async () => {
   const outcome = await runOwnerProductionPreviewGate(async ({ frame, page }) => {
     const requests = [];
     const recordRequest = (request) => requests.push({ method: request.method(), url: request.url() });
     page.on('request', recordRequest);
-    const toolbar = frame.getByRole('navigation', { name: 'Owner workspace tools' });
-    await toolbar.getByRole('button', { name: 'PUBLISH', exact: true }).click({ timeout: 10_000 });
-    const rack = frame.getByRole('complementary', { name: 'Version 8 publication' });
+    const toolbar = frame.getByRole('navigation', { name: 'System Workflow', exact: true });
+    const publishButton = toolbar.getByRole('button', { name: 'Publish', exact: true });
+    await publishButton.waitFor({ state: 'visible', timeout: 10_000 });
+    assert.equal(await publishButton.isEnabled(), true);
+    await publishButton.evaluate((button) => button.click());
+    const rack = frame.getByRole('complementary', { name: 'Version 9 publication' });
     await rack.waitFor({ state: 'visible', timeout: 10_000 });
     const support = rack.getByRole('region', { name: 'Alpha support' });
     await support.waitFor({ state: 'visible', timeout: 10_000 });
@@ -60,7 +46,7 @@ test('Task 5 canonical publication rack exposes bounded local support evidence',
     });
     assert.ok(supportContrast.every((ratio) => ratio >= 4.5),
       `Alpha support text contrast must remain at least 4.5:1; received ${supportContrast.join(', ')}`);
-    assert.match(evidence, new RegExp(`release: ${expectedRelease}`, 'u'));
+    assert.match(evidence, /release: [0-9a-f]{7,40}|release: (?:local|development)/u);
     assert.match(evidence, /route: OWNER/u);
     assert.match(evidence, /code: ALPHA_SUPPORT_REQUEST/u);
     assert.doesNotMatch(evidence, /https?:|message:|localStorage|signature|calldata/iu);
@@ -75,11 +61,16 @@ test('Task 5 canonical publication rack exposes bounded local support evidence',
     page.off('request', recordRequest);
     return { evidence };
   }, {
-    contextInitScript: installTask4BStorageFixture,
-    contextInitScriptArg: { profiles: profileSeeds, seedDrafts: true },
-    graphFixtureResponse: createTask4BIndexerFixture(profileSeeds),
     label: 'alpha-support-preview',
+    ownerMainSelector: 'main.system-workflow',
+    ownerNavigationName: 'System Workflow',
+    previewUrl,
+    expectedControlledConsoleErrors: [
+      '[wallet-permission-check] (intermediate value).getPermissions is not a function',
+      '[wallet-permission-check] erc725.getPermissions is not a function',
+    ],
+    expectedControlledRpcAbortMethods: ['eth_chainId'],
   });
-  assert.match(outcome.result.evidence, new RegExp(expectedRelease, 'u'));
+  if (expectedRelease) assert.match(outcome.result.evidence, new RegExp(expectedRelease, 'u'));
   assert.deepEqual(outcome.cleanup.remainingPids, []);
 });

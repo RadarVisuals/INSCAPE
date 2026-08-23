@@ -15,6 +15,22 @@ export const UNUSED_PUBLIC_PATHS = Object.freeze([
   'assets/palettes',
   'assets/prototype',
   'assets/ratio',
+  'assets/brand/fonts',
+  'assets/fonts/Sora/README.txt',
+  'assets/fonts/Sora/static',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-SemiBold.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Bold.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-ExtraLight.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Light.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Thin.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-MediumItalic.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-ThinItalic.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Italic.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-BoldItalic.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-ExtraLightItalic.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Medium.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-LightItalic.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-SemiBoldItalic.ttf',
   'assets/inscape-table-grid-arena-banner.png',
   'assets/inscape-table-grid-banner.png',
   'assets/inscape-table-grid-grunge-banner.png',
@@ -57,14 +73,23 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Phase 9 activates the already isolated Creations, Activity, Discovery, and
   // Settings boundaries. The measured owner graph grows only at the activation
   // seam; each substantial surface remains independently lazy.
-  // MODUL-8R Task 8 replaces the selected owner presentation and keeps its
+  // The prior owner presentation stayed within a measured allowance. The extra rollback
   // production entry wrapper within a measured allowance. The extra rollback
-  // margin keeps the retained two-line LATTICE selector buildable through Task 8.
+  // margin kept that historical selector buildable through its acceptance checkpoint.
   // The combined Alpha candidate adds the lightweight Grid Walker integration
-  // and Keeper dock controls to the lazy owner graph. The accepted context
-  // placement route preserves the prior 1,893 raw bytes of measured headroom;
-  // gzip remains under the existing stricter boundary.
-  ownerJavaScript: Object.freeze({ raw: 300_875, gzip: 91_234 }),
+  // and Keeper dock controls to the lazy owner graph. Phase 3's complete System
+  // Workflow review slice shared accepted focus,
+  // identity, and guide primitives with that graph. These ceilings are the
+  // exact matrix-wide alternate-outDir measurements.
+  // Phase 4A makes the strict v9 Visitor/parser closure authoritative while the
+  // selected historical shell remained unchanged. Keep the exact measured cutover
+  // boundary; the wallet runtime remains independently budgeted below.
+  // Independent audit adds strict canonical-byte equality, including original
+  // byte comparison so a UTF-8 BOM cannot disappear at a decoded-text boundary.
+  // Phase 4B selects the complete System Workflow owner shell. The measured
+  // increase belongs only to this lazy owner graph; the initial and standalone
+  // wallet boundaries retain their previous limits.
+  ownerJavaScript: Object.freeze({ raw: 365_023, gzip: 110_353 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
@@ -76,7 +101,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Legacy v7 canvas styles are compatibility-only and lazy. The production
   // font roles now resolve centrally to bundled Geist and IBM Plex files.
   // Preserve 970 raw / 15 gzip bytes of headroom around the active v8 route.
-  initialCss: Object.freeze({ raw: 51_493, gzip: 10_139 }),
+  initialCss: Object.freeze({ raw: 51_807, gzip: 10_301 }),
   // Phase 7 adds the lazy owner-only Identity RÄCK; Phase 7.5 adds its compact,
   // shared-theme Keeper context controls. Keep both isolated from initial CSS
   // and deliberately close to the measured owner-only output.
@@ -86,9 +111,15 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // raw ceiling remains unchanged; this allowance measures the shared split.
   // Phase 9 exposes the already-existing owner-only Creations, Activity, and
   // Settings styles without moving them into initial CSS.
-  // The combined Keeper dock and owner integration add only lazy owner styles.
-  // Preserve the prior 841 raw / 243 gzip bytes of measured headroom.
-  ownerCss: Object.freeze({ raw: 76_499, gzip: 14_733 }),
+  // The combined Keeper dock, accepted identity/focus motion, and canonical guide
+  // projection and Phase 3's shared review primitives add only lazy owner
+  // styles. These ceilings use the exact matrix-wide alternate build result.
+  // Phase 4A activates the strict v9 Visitor styles at the published boundary.
+  // The accepted guide-free inspection fix makes the no-grid viewer veil fully
+  // opaque. Preserve the existing gzip ceiling and bound the measured raw split.
+  // Phase 4B selects the consolidated System Workflow presentation and its
+  // owner-lazy responsive, panel, canvas, and publication-rack styles.
+  ownerCss: Object.freeze({ raw: 143_850, gzip: 21_133 }),
   // Owner/publication reconciliation adds the deterministic IPFS hydration and
   // three-way baseline guard to production. Keep the accepted growth bounded.
   // Phase 7 adds paragraph-preserving LSP3 normalization, independently
@@ -221,7 +252,7 @@ function entryKey(manifest) {
 }
 
 function ownerKey(manifest) {
-  const ownerPaths = ['src/public/OwnerModul8rShell.jsx', 'src/public/OwnerLatticeShell.jsx', 'src/public/ModuleGridShell.jsx'];
+  const ownerPaths = ['src/public/OwnerSystemWorkflowShell.jsx'];
   const key = Object.keys(manifest).find((candidate) => ownerPaths.some((path) => normalize(candidate).endsWith(`/${path}`)
     || normalize(candidate) === path)) || Object.keys(manifest).find((candidate) => {
     const record = manifest[candidate];
@@ -369,16 +400,13 @@ export function productionBuildHygienePlugin() {
 export function diagnosticsEnvironmentPlugin() {
   const selectedSource = readFileSync(resolve(process.cwd(), 'src/public/ownerRuntimeSelected.js'), 'utf8');
   const ownerRuntimeSelection = selectedSource.match(/OWNER_RUNTIME_SELECTION\s*=\s*'([^']+)'/u)?.[1];
-  if (!['MODUL8R', 'LATTICE', 'LEGACY'].includes(ownerRuntimeSelection)) {
+  if (ownerRuntimeSelection !== 'SYSTEM_WORKFLOW') {
     throw new TypeError(`Unsupported owner runtime build selection: ${String(ownerRuntimeSelection)}`);
   }
   return {
     name: 'diagnostics-environment',
     config(_config, { command }) {
-      const presentationFile = ownerRuntimeSelection === 'MODUL8R'
-        ? 'ownerWorkspacePresentation.modul8r.js' : 'ownerWorkspacePresentation.lattice.js';
       return {
-        resolve: { alias: { '#owner-workspace-presentation': resolve(process.cwd(), 'src/public', presentationFile) } },
         define: {
         __DEVELOPMENT_DIAGNOSTICS__: JSON.stringify(command === 'serve'),
         __OWNER_RUNTIME_SELECTION__: JSON.stringify(ownerRuntimeSelection),

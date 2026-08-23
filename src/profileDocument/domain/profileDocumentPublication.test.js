@@ -2,25 +2,25 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { decodeDataSourceWithHash } from '@erc725/erc725.js';
-import { buildProfileDocumentV3, buildProfileDocumentV8 } from './profileDocumentBuilder.js';
-import { canonicalSerializeProfileDocument, formatProfileDocumentJson } from './profileDocumentSerialization.js';
+import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { buildProfileDocumentV9 } from './profileDocumentV9Builder.js';
+import { canonicalSerializeProfileDocumentV9, formatProfileDocumentV9Json } from './profileDocumentV9Serialization.js';
 import { canonicalPublicationHash, createCanonicalPublication, encodeProfileDocumentVerifiableUri, normalizeProfileDocumentCid, publicationContentFingerprint } from './profileDocumentPublication.js';
 import { createProfileDocumentPublisher, describePublicationError } from '../storage/profileDocumentPublisher.js';
-import { OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileRepository.js';
-import { PROFILE_DOCUMENT_LIMITS, PROFILE_DOCUMENT_VERSION } from './constants.js';
+import { PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileRepository.js';
+import { PROFILE_DOCUMENT_LIMITS } from './constants.js';
 import { createProfileDocumentPublicationState } from '../state/useProfileDocumentPublication.js';
-import { createEmptyLatticeProductionDraft } from '../../lattice/domain/latticeProductionDraft.js';
+import { INSCAPE_PROFILE_DOCUMENT_KEY } from './inscapeProfileDocumentKey.js';
 
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
 const CID = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw';
 
 function documentFor(address = PROFILE_A) {
-  return buildProfileDocumentV3({ profileAddress: address,
-    workspace: { version: 3, profileAddress: address, favorites: [], folders: [], canvas: { launchers: [], objects: [] } },
-    assets: [], publicPresentation: { keeperId: 'abyssal_eye', stageId: 'black' },
-    signalSettings: { notifications: true, speech: true, visualEffects: true, audio: false },
-    profileIdentity: { name: 'Published profile' }, documentId: 'profile:publication', revision: 1, createdAt: 1, exportedAt: 2 });
+  return buildProfileDocumentV9({ profileAddress: address, assetRecords: [],
+    profileIdentity: { name: 'Published profile' }, documentId: 'profile:publication', revision: 1,
+    createdAt: 1, exportedAt: 2,
+    systemWorkflowDraft: createEmptySystemWorkflowDraft(address, { generateId: () => 'home' }) });
 }
 
 function responseFor(bytes, headers) {
@@ -46,34 +46,25 @@ function context(overrides = {}, snapshot = documentFor()) {
 
 test('canonical publication download is the exact serializer output and never the formatted export', () => {
   const document = documentFor(); const artifact = createCanonicalPublication(document);
-  assert.deepEqual(artifact.bytes, new TextEncoder().encode(canonicalSerializeProfileDocument(document)));
-  assert.notEqual(artifact.text, formatProfileDocumentJson(document));
-  assert.equal(artifact.filename, `os-underneath-published-profile-profile-v${PROFILE_DOCUMENT_VERSION}-publication.json`);
+  assert.deepEqual(artifact.bytes, new TextEncoder().encode(canonicalSerializeProfileDocumentV9(document)));
+  assert.notEqual(artifact.text, formatProfileDocumentV9Json(document));
+  assert.equal(artifact.filename, 'inscape-published-profile-profile-v9.json');
   assert.equal(Object.isFrozen(artifact.document), true); assert.equal(Object.isFrozen(artifact.document.profile), true);
 });
 
-test('v8 uses the same canonical CID verification and freshness boundary as v7', async () => {
-  const document = buildProfileDocumentV8({
-    profileAddress: PROFILE_A,
-    workspace: { version: 8, profileAddress: PROFILE_A, favorites: [], folders: [], canvas: { launchers: [], objects: [] } },
-    assets: [], publicPresentation: { keeperId: 'abyssal_eye', stageId: 'black' }, signalSettings: {},
-    profileIdentity: { name: 'Readable only' }, createdAt: 1, exportedAt: 2,
-    latticeDraft: createEmptyLatticeProductionDraft(PROFILE_A),
-  });
+test('publisher rejects v1-v8 before reading publication context or CID bytes', async () => {
+  const document = documentFor();
   let contextReads = 0;
   let fetches = 0;
   const publisher = createProfileDocumentPublisher({
     getContext: () => { contextReads += 1; return context({}, document); },
-    fetchImpl: async () => {
-      fetches += 1;
-      return responseFor(new TextEncoder().encode(canonicalSerializeProfileDocument(document)));
-    },
+    fetchImpl: async () => { fetches += 1; return responseFor(new Uint8Array()); },
   });
-  const verified = await publisher.verifyCid(document, CID);
-  assert.equal(verified.artifact.document.version, 8);
-  assert.equal(verified.artifact.text, canonicalSerializeProfileDocument(document));
-  assert.ok(contextReads >= 2);
-  assert.equal(fetches, 1);
+  for (let version = 1; version <= 8; version += 1) {
+    await assert.rejects(() => publisher.verifyCid({ ...document, version }, CID));
+  }
+  assert.equal(contextReads, 0);
+  assert.equal(fetches, 0);
 });
 
 test('closing and reopening publication creates a new unverified session', () => {
@@ -95,11 +86,11 @@ test('the frozen key value is an LSP2 VerifiableURI for the exact canonical-byte
   const artifact = createCanonicalPublication(documentFor());
   const encoded = encodeProfileDocumentVerifiableUri(CID, artifact.hash); const decoded = decodeDataSourceWithHash(encoded);
   assert.equal(decoded.url, `ipfs://${CID}`); assert.equal(decoded.verification.method, 'keccak256(bytes)'); assert.equal(decoded.verification.data, artifact.hash);
-  assert.equal(OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, '0x4a5b4ddee4f353a47d88a0ad908a9ff0bee45f7d31158b2d79ddafd15817cb4e');
+  assert.equal(INSCAPE_PROFILE_DOCUMENT_KEY, '0x804dd24d51189d1d9e972f155541cead2653af105983d5acac1ec2b3478d9362');
 });
 
 test('CID mismatch and stale, visitor, wrong-profile, or wrong-chain context block every wallet call', async () => {
-  const document = documentFor(); const wrongBytes = new TextEncoder().encode(canonicalSerializeProfileDocument({ ...document, revision: 2 }));
+  const document = documentFor(); const wrongBytes = new TextEncoder().encode(canonicalSerializeProfileDocumentV9({ ...document, revision: 2 }));
   let live = context(); let walletCalls = 0;
   live.walletClient.writeContract = async () => { walletCalls += 1; return '0xabc'; };
   const mismatch = createProfileDocumentPublisher({ getContext: () => live, ipfsGateway: 'https://gateway.test/ipfs/', fetchImpl: async () => responseFor(wrongBytes) });
@@ -121,8 +112,8 @@ test('invalid, oversized, wrong-profile, and hash-mismatched gateway content nev
   const cases = [
     new TextEncoder().encode('{invalid'),
     new Uint8Array(PROFILE_DOCUMENT_LIMITS.maxJsonBytes + 1),
-    new TextEncoder().encode(canonicalSerializeProfileDocument(documentFor(PROFILE_B))),
-    new TextEncoder().encode(canonicalSerializeProfileDocument({ ...document, revision: 2 }))
+    new TextEncoder().encode(canonicalSerializeProfileDocumentV9(documentFor(PROFILE_B))),
+    new TextEncoder().encode(canonicalSerializeProfileDocumentV9({ ...document, revision: 2 }))
   ];
   for (const bytes of cases) {
     const publisher = createProfileDocumentPublisher({ getContext: () => live, ipfsGateway: 'https://gateway.test/ipfs/', fetchImpl: async () => responseFor(bytes) });
@@ -147,7 +138,7 @@ async function verifiedFixture({ mutateBeforeSubmission, walletError, receiptSta
   live.walletClient.writeContract = async (request) => {
     calls += 1; if (walletError) throw walletError;
     assert.equal(request.address, PROFILE_A); assert.equal(request.functionName, 'setData');
-    assert.equal(request.account, live.walletClient.account); assert.equal(request.args[0], OS_UNDERNEATH_PROFILE_DOCUMENT_KEY);
+    assert.equal(request.account, live.walletClient.account); assert.equal(request.args[0], INSCAPE_PROFILE_DOCUMENT_KEY);
     return '0xabc';
   };
   live.publicClient.simulateContract = async () => { simulations += 1; throw new Error('Public RPC simulation must not be used'); };
@@ -315,7 +306,7 @@ test('a draft change after provider invocation confirms only the frozen submitte
   live = { ...live, draftFingerprint: `${live.draftFingerprint}:newer`, draftGeneration: 2, snapshotStale: true };
   wallet.resolve('0xold-artifact'); const result = await pending;
   assert.equal(writes, 1); assert.equal(result.transactionHash, '0xold-artifact');
-  assert.equal(canonicalSerializeProfileDocument(result.result.document), artifact.text);
+  assert.equal(canonicalSerializeProfileDocumentV9(result.result.document), artifact.text);
   assert.equal(publisher.isFresh(verified), false);
 });
 
@@ -342,12 +333,12 @@ test('provider and LSP6 failures are decoded accurately', () => {
   noPermissions.cause = { data: `0xf292052a${'0'.repeat(24)}${PROFILE_A.slice(2)}` };
   assert.equal(describePublicationError(noPermissions), `NoPermissionsSet: ${PROFILE_A} has no LSP6 permissions`);
   const notAllowed = new Error('execution reverted');
-  notAllowed.cause = { data: `0x557ae079${'0'.repeat(24)}${PROFILE_A.slice(2)}${OS_UNDERNEATH_PROFILE_DOCUMENT_KEY.slice(2)}` };
-  assert.equal(describePublicationError(notAllowed), `NotAllowedERC725YDataKey: ${PROFILE_A} cannot set ${OS_UNDERNEATH_PROFILE_DOCUMENT_KEY}`);
+  notAllowed.cause = { data: `0x557ae079${'0'.repeat(24)}${PROFILE_A.slice(2)}${INSCAPE_PROFILE_DOCUMENT_KEY.slice(2)}` };
+  assert.equal(describePublicationError(notAllowed), `NotAllowedERC725YDataKey: ${PROFILE_A} cannot set ${INSCAPE_PROFILE_DOCUMENT_KEY}`);
 });
 
 test('browser publication source contains no Pinata endpoint, credential, SDK, or private-state dependency', () => {
-  const files = ['../storage/profileDocumentPublisher.js', '../storage/profileDocumentUploadClient.js', './profileDocumentPublication.js', '../state/useProfileDocumentPublication.js', '../components/ProfileDocumentPanel.jsx'];
+  const files = ['../storage/profileDocumentPublisher.js', '../storage/profileDocumentUploadClient.js', './profileDocumentPublication.js', '../state/useProfileDocumentPublication.js', '../../public/ownerSystemWorkflow/OwnerSystemWorkflowPublicationRack.jsx'];
   const source = files.map((file) => readFileSync(new URL(file, import.meta.url), 'utf8')).join('\n').toLowerCase();
   for (const forbidden of ['pinata_jwt', 'uploads.pinata.cloud', 'bearer ', '@pinata', 'use signalstore', 'runtimewindow', 'camera state']) assert.equal(source.includes(forbidden), false, forbidden);
 });

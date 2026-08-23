@@ -54,9 +54,11 @@ test('only eager media receives bounded automatic retries and cannot remain load
 });
 
 test('authored boundary is invisible and the atmospheric grid shares its exact projected origin and cell size', () => {
-  assert.equal((styles.match(/linear-gradient\(/gu) || []).length, 2);
-  assert.match(styles, /var\(--lattice-production-cell-size/);
-  assert.match(styles, /var\(--lattice-production-grid-origin-x/);
+  assert.match(source, /'--lattice-production-cell-size': `\$\{projected\.cellSize\}px`/);
+  assert.match(source, /'--lattice-production-grid-origin-x': `\$\{projected\.left\}px`/);
+  assert.match(source, /'--lattice-production-grid-origin-y': `\$\{projected\.top\}px`/);
+  assert.match(styles, /data-guide-mode="LINES"[^}]*background-image: none/s);
+  assert.match(styles, /data-guide-mode="DOTS"[^}]*background-image: none/s);
   const planeRule = styles.match(/\.lattice-production-table__authored-plane\s*\{([^}]*)\}/su)?.[1] || '';
   assert.doesNotMatch(planeRule, /border|outline|background|box-shadow/iu);
   assert.match(styles, /\.lattice-production-placement__opening\s*\{[^}]*overflow: hidden;/su);
@@ -67,7 +69,7 @@ test('transitive visitor renderer graph excludes owner, persistence, reconciliat
   const graph = visitorGraph(entry);
   const joined = graph.join('\n');
   for (const forbidden of [
-    '/src/public/ModuleGridShell.jsx', '/src/library/state/', '/src/signals/state/',
+    '/src/public/OwnerSystemWorkflowShell.jsx', '/src/library/state/', '/src/signals/state/',
     '/src/lattice/storage/', 'Reconciliation', '/src/wallet/', 'profileDocumentPublisher',
     'profileDocumentUploadClient', 'LatticeEnginePrototype', '/src/lattice/prototype/',
     '/src/lattice/controller/',

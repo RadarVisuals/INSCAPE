@@ -8,8 +8,8 @@ import { analyzeProductionBuild, assertNoProhibitedProductionArtifacts, assertSa
 import { ownerRuntimeIsolationPlugin } from './ownerRuntimeIsolation.js';
 import { excludeUnsupportedWalletConnectorsPlugin } from './unsupportedWalletConnectors.js';
 
-const graph = (leaks = []) => ({ ownerModules: ['/src/public/OwnerLatticeShell.jsx', '/src/public/ModuleGridShell.jsx'], entries: [{ file: 'assets/app-a.js' }],
-  ownerChunks: [{ file: 'assets/lattice-a.js', modules: ['/src/public/OwnerLatticeShell.jsx'] }], leaks });
+const graph = (leaks = []) => ({ ownerModules: ['/src/public/OwnerSystemWorkflowShell.jsx'], entries: [{ file: 'assets/app-a.js' }],
+  ownerChunks: [{ file: 'assets/system-workflow-a.js', modules: ['/src/public/OwnerSystemWorkflowShell.jsx'] }], leaks });
 
 async function fixture(root, suffix = 'a') {
   await mkdir(resolve(root, '.vite'), { recursive: true }); await mkdir(resolve(root, 'assets'), { recursive: true });
@@ -19,12 +19,12 @@ async function fixture(root, suffix = 'a') {
     '_standalone-wallet.js': { file: `assets/wallet-${suffix}.js`, name: 'standaloneWalletSession', isDynamicEntry: true,
       imports: ['_shared.js'], dynamicImports: ['_wallet-icon.js'] },
     '_wallet-icon.js': { file: `assets/wallet-icon-${suffix}.js` },
-    'src/public/OwnerLatticeShell.jsx': { file: `assets/lattice-${suffix}.js`, isDynamicEntry: true, imports: ['_shared.js'], css: [`assets/lattice-${suffix}.css`] },
+    'src/public/OwnerSystemWorkflowShell.jsx': { file: `assets/system-workflow-${suffix}.js`, isDynamicEntry: true, imports: ['_shared.js'], css: [`assets/system-workflow-${suffix}.css`] },
   };
   await writeFile(resolve(root, '.vite/manifest.json'), JSON.stringify(manifest));
   await writeFile(resolve(root, 'owner-runtime-graph.json'), JSON.stringify(graph()));
   for (const file of [`app-${suffix}.js`, `shared-${suffix}.js`, `wallet-${suffix}.js`, `wallet-icon-${suffix}.js`,
-    `lattice-${suffix}.js`, `app-${suffix}.css`, `lattice-${suffix}.css`])
+    `system-workflow-${suffix}.js`, `app-${suffix}.css`, `system-workflow-${suffix}.css`])
     await writeFile(resolve(root, 'assets', file), file.repeat(3));
   await writeFile(resolve(root, 'assets/public.webp'), 'asset');
 }
@@ -47,12 +47,12 @@ test('manifest classification accepts Vite internal owner facade keys after a ne
     await fixture(root, 'facade');
     const manifestPath = resolve(root, '.vite/manifest.json');
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-    manifest['_OwnerLatticeShell-facade.js'] = manifest['src/public/OwnerLatticeShell.jsx'];
-    delete manifest['src/public/OwnerLatticeShell.jsx'];
+    manifest['_OwnerSystemWorkflowShell-facade.js'] = manifest['src/public/OwnerSystemWorkflowShell.jsx'];
+    delete manifest['src/public/OwnerSystemWorkflowShell.jsx'];
     await writeFile(manifestPath, JSON.stringify(manifest));
     const report = await analyzeProductionBuild(root);
     assert.equal(report.ownerJavaScript.length, 1);
-    assert.equal(report.ownerJavaScript[0].file, 'assets/lattice-facade.js');
+    assert.equal(report.ownerJavaScript[0].file, 'assets/system-workflow-facade.js');
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
@@ -66,13 +66,13 @@ test('each independent budget category reports an actionable overage', () => {
   }
 });
 
-test('measured combined Alpha allowances retain exact production budget boundaries', () => {
+test('measured Phase 4B allowances retain exact production budget boundaries', () => {
   assert.deepEqual(PRODUCTION_BUDGETS, {
     initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
-    ownerJavaScript: { raw: 300_875, gzip: 91_234 },
+    ownerJavaScript: { raw: 365_023, gzip: 110_353 },
     standaloneWalletJavaScript: { raw: 4_400_000, gzip: 1_200_000 },
-    initialCss: { raw: 51_493, gzip: 10_139 },
-    ownerCss: { raw: 76_499, gzip: 14_733 },
+    initialCss: { raw: 51_807, gzip: 10_301 },
+    ownerCss: { raw: 143_850, gzip: 21_133 },
     coreJavaScript: { raw: 2_076_709, gzip: 620_158 },
     publicAssets: { raw: 15_200_000 },
     largestPublicAsset: { raw: 2_700_000 },
@@ -199,6 +199,26 @@ test('the two historical public lock paths cannot survive artifact hygiene', asy
 
 test('production pruning excludes development-only prototype assets', () => {
   for (const path of ['assets/PFP', 'assets/prototype', 'assets/ratio']) assert.ok(UNUSED_PUBLIC_PATHS.includes(path), path);
+});
+
+test('manifest classification recognizes the sole System Workflow production owner entry', async () => {
+  const root = resolve(tmpdir(), `underneath-budget-system-workflow-${process.pid}`);
+  try {
+    await fixture(root, 'system-workflow');
+    const report = await analyzeProductionBuild(root);
+    assert.equal(report.ownerJavaScript[0].file, 'assets/system-workflow-system-workflow.js');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('production pruning excludes unused font sources without removing active bundled fonts', () => {
+  for (const path of ['assets/brand/fonts', 'assets/fonts/Sora/static',
+    'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Medium.ttf']) {
+    assert.ok(UNUSED_PUBLIC_PATHS.includes(path), path);
+  }
+  for (const path of ['assets/fonts/Sora/Sora-VariableFont_wght.ttf',
+    'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf']) {
+    assert.ok(!UNUSED_PUBLIC_PATHS.includes(path), path);
+  }
 });
 
 test('an alternate-outDir production build writes reports there and strips diagnostics', async () => {

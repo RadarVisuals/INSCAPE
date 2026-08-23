@@ -45,7 +45,7 @@ test('Category dialogs reject empty input and categories use the shared result s
   assert.match(categoryDialog, /setName\(categoryDialogInitialName\(dialog\)\)/);
   assert.match(workspace, /BrowserCategoryDialog/);
   assert.match(categoryDialog, /if \(!deletion && !name\.trim\(\)\) return/);
-  assert.match(categoryDialog, /ASSETS AND LATTICE PLACEMENTS ARE NOT AFFECTED/);
+  assert.match(categoryDialog, /Assets and Grid placements are not affected\./);
   assert.match(unifiedPanel, /workspace\.filteredAssets/);
   assert.match(unifiedPanel, /NO ASSETS IN THIS VIEW/);
   assert.match(unifiedPanel, /NONE MATCH THE ACTIVE SEARCH OR FILTERS/);
@@ -187,9 +187,10 @@ test('Browser assets expose a distinct multi-selection surface hook', () => {
 test('Browser preview sizing and optional labels share one session-only visual control', () => {
   const assets = readFileSync(new URL('./BrowserAssetResults.jsx', import.meta.url), 'utf8');
   const hook = readFileSync(new URL('./useBrowserWorkspace.js', import.meta.url), 'utf8');
-  assert.match(hook, /useState\(BROWSER_ASSET_SIZE\.DEFAULT\)/);
+  assert.match(hook, /useState\(\(\) => Number\(initialPreferences\?\.assetSize\) \|\| BROWSER_ASSET_SIZE\.DEFAULT\)/);
   assert.match(hook, /assetSizeBounds: BROWSER_ASSET_SIZE, setAssetSize/);
-  assert.match(hook, /sidebarWidth, sidebarResize:/);
+  assert.match(hook, /sidebarWidth, ensureSidebarWidth,/);
+  assert.match(hook, /sidebarResize: \{ begin: beginSidebarResize, finish: finishSidebarResize, update: updateSidebarResize \}/);
   assert.match(hook, /hideLabels, setHideLabels/);
   assert.match(workspace, /faceplateAccessory/);
   assert.match(workspace, /aria-label="Search assets"/);

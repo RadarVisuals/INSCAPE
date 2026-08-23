@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createEmptyLatticeProductionDraft } from '../domain/latticeProductionDraft.js';
+import {
+  LATTICE_PRODUCTION_GRID_STATES,
+  LATTICE_PRODUCTION_VISIBILITY,
+  createEmptyLatticeProductionDraft,
+} from '../domain/latticeProductionDraft.js';
 import {
   createCompactLatticeProductionPlacementGeometry,
   createInitialLatticeProductionPlacementGeometry,
@@ -105,6 +109,8 @@ test('placement IDs use injected collision-resistant candidates with bounded col
 
 test('complete candidates use generated global IDs, max plus one orders, and exact canonical defaults', () => {
   const draft = createEmptyLatticeProductionDraft(PROFILE);
+  draft.tables[0].gridState = LATTICE_PRODUCTION_GRID_STATES.ACTIVE;
+  draft.tables[0].visibility = LATTICE_PRODUCTION_VISIBILITY.PUBLIC;
   draft.tables[0].placements = [placement('placement-1')];
   draft.tables[4].placements = [placement('placement-3', { layer: 1, navigationOrder: 2 })];
   const before = structuredClone(draft);

@@ -5,19 +5,15 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { resolveOwnerAuthoringEnabled } from './publicAccess.js';
 import {
-  OWNER_RUNTIME,
   createOwnerRuntimeLoader,
   loadOwnerRuntimeWhenAuthorized,
-  selectOwnerRuntimeImporter,
 } from './ownerRuntimeLoader.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
 const OWNER_RUNTIME_PAIRINGS = Object.freeze({
-  MODUL8R: './OwnerModul8rShell.jsx',
-  LATTICE: './OwnerLatticeShell.jsx',
-  LEGACY: './ModuleGridShell.jsx',
+  SYSTEM_WORKFLOW: './OwnerSystemWorkflowShell.jsx',
 });
 
 function selectedRuntimePair(source) {
@@ -51,9 +47,7 @@ function staticImportGraph(entry) {
 test('cold application entry cannot statically reach the owner shell or Library and Signals stores', () => {
   const graph = staticImportGraph(resolve(here, '../App.jsx'));
   for (const forbidden of [
-    resolve(here, 'OwnerModul8rShell.jsx'),
-    resolve(here, 'OwnerLatticeShell.jsx'),
-    resolve(here, 'ModuleGridShell.jsx'),
+    resolve(here, 'OwnerSystemWorkflowShell.jsx'),
     resolve(here, '../library/state/useLibraryStore.js'),
     resolve(here, '../signals/state/useSignalStore.js')
   ]) assert.equal(graph.has(forbidden), false, `${forbidden} is statically reachable from App`);
@@ -61,21 +55,15 @@ test('cold application entry cannot statically reach the owner shell or Library 
   const loaderSource = readFileSync(resolve(here, 'ownerRuntimeLoader.js'), 'utf8');
   const selectedSource = readFileSync(resolve(here, 'ownerRuntimeSelected.js'), 'utf8');
   const selected = selectedRuntimePair(selectedSource);
-  assert.ok(Object.values(OWNER_RUNTIME_PAIRINGS).includes(selected.modulePath));
-  assert.doesNotMatch(loaderSource, /from\s+['\"]\.\/ModuleGridShell\.jsx['\"]/);
+  assert.deepEqual(selected, { selection: 'SYSTEM_WORKFLOW', modulePath: './OwnerSystemWorkflowShell.jsx' });
+  assert.doesNotMatch(`${loaderSource}\n${selectedSource}`, /Owner(?:Modul8r|Lattice)Shell|ModuleGridShell|MODUL8R|LATTICE|LEGACY/u);
 });
 
-test('build selector accepts exactly the MODUL8R, LATTICE, and LEGACY runtime pairings', () => {
-  assert.deepEqual(selectedRuntimePair("export const OWNER_RUNTIME_SELECTION = 'MODUL8R';\nconst load = () => import('./OwnerModul8rShell.jsx');"),
-    { selection: 'MODUL8R', modulePath: './OwnerModul8rShell.jsx' });
-  assert.deepEqual(selectedRuntimePair("export const OWNER_RUNTIME_SELECTION = 'LATTICE';\nconst load = () => import('./OwnerLatticeShell.jsx');"),
-    { selection: 'LATTICE', modulePath: './OwnerLatticeShell.jsx' });
-  assert.deepEqual(selectedRuntimePair("export const OWNER_RUNTIME_SELECTION = 'LEGACY';\nconst load = () => import('./ModuleGridShell.jsx');"),
-    { selection: 'LEGACY', modulePath: './ModuleGridShell.jsx' });
-  assert.throws(() => selectedRuntimePair("const OWNER_RUNTIME_SELECTION = 'LATTICE'; import('./ModuleGridShell.jsx')"), /mismatched/);
-  assert.throws(() => selectedRuntimePair("const OWNER_RUNTIME_SELECTION = 'MODUL8R'; import('./OwnerLatticeShell.jsx')"), /mismatched/);
-  assert.throws(() => selectedRuntimePair("const OWNER_RUNTIME_SELECTION = 'LEGACY'; import('./OwnerLatticeShell.jsx')"), /mismatched/);
-  assert.throws(() => selectedRuntimePair("const OWNER_RUNTIME_SELECTION = 'UNKNOWN'; import('./OwnerLatticeShell.jsx')"), /Unsupported/);
+test('build selector accepts only the System Workflow runtime pairing', () => {
+  assert.deepEqual(selectedRuntimePair("export const OWNER_RUNTIME_SELECTION = 'SYSTEM_WORKFLOW';\nconst load = () => import('./OwnerSystemWorkflowShell.jsx');"),
+    { selection: 'SYSTEM_WORKFLOW', modulePath: './OwnerSystemWorkflowShell.jsx' });
+  assert.throws(() => selectedRuntimePair("const OWNER_RUNTIME_SELECTION = 'MODUL8R'; import('./OwnerModul8rShell.jsx')"), /mismatched/);
+  assert.throws(() => selectedRuntimePair("const OWNER_RUNTIME_SELECTION = 'SYSTEM_WORKFLOW'; import('./OwnerLatticeShell.jsx')"), /mismatched/);
 });
 
 test('cold visitor authority states perform no owner persistence operations and never request the owner chunk', async () => {
@@ -125,24 +113,6 @@ test('verified matching authority loads the owner runtime once and authority los
   assert.equal(imports, 1);
   assert.equal(loadOwnerRuntimeWhenAuthorized(false, loader), null);
   assert.equal(imports, 1);
-});
-
-test('internal selector invokes only the selected lazy runtime importer', async () => {
-  const calls = [];
-  const importers = {
-    importModul8r: async () => { calls.push('modul8r'); return { default: () => null }; },
-    importLattice: async () => { calls.push('lattice'); return { default: () => null }; },
-    importLegacy: async () => { calls.push('legacy'); return { default: () => null }; },
-  };
-  await createOwnerRuntimeLoader(selectOwnerRuntimeImporter(OWNER_RUNTIME.MODUL8R, importers))();
-  assert.deepEqual(calls, ['modul8r']);
-  calls.length = 0;
-  await createOwnerRuntimeLoader(selectOwnerRuntimeImporter(OWNER_RUNTIME.LATTICE, importers))();
-  assert.deepEqual(calls, ['lattice']);
-  calls.length = 0;
-  await createOwnerRuntimeLoader(selectOwnerRuntimeImporter(OWNER_RUNTIME.LEGACY, importers))();
-  assert.deepEqual(calls, ['legacy']);
-  assert.throws(() => selectOwnerRuntimeImporter('UNKNOWN', importers), /Unsupported owner runtime/);
 });
 
 test('profile-keyed owner subtree resets without relying on an App remount', () => {

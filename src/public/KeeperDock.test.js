@@ -3,9 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const dockSource = readFileSync(new URL('./KeeperDock.jsx', import.meta.url), 'utf8');
-const shellSource = readFileSync(new URL('./ModuleGridShell.jsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./moduleGrid.css', import.meta.url), 'utf8');
-const ownerStyles = readFileSync(new URL('./ownerLatticeShell.css', import.meta.url), 'utf8');
 const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
 
 test('production Keeper Dock controls the lightweight Grid Walker without restoring the retired actor portal', () => {
@@ -24,16 +22,9 @@ test('production Keeper Dock controls the lightweight Grid Walker without restor
   assert.match(dockSource, /residentScale = 0\.72/);
   assert.match(dockSource, /residentScale,/);
   assert.doesNotMatch(dockSource, /\bLock\b|\bUnlock\b|keeper-dock__label|keeper-dock__empty|keeper-dock__resident|Voice \/ Audio|Speech Scale/);
-  assert.match(shellSource, /if \(keeperDockActive\) return;/);
-  assert.doesNotMatch(shellSource, /keeperDockRef\.current\.release/);
   assert.match(styles, /\.keeper-dock__ghost/);
   assert.match(dockSource, /keeper-dock__menu rack-menu-surface/);
   assert.match(dockSource, /className="rack-menu-faceplate"/);
   assert.match(dockSource, /data-rack-active=/);
-  assert.match(ownerStyles, /\.owner-lattice-shell \.keeper-dock__menu \{[^}]*width: 210px;/s);
-  assert.match(ownerStyles, /\.owner-lattice-shell \.keeper-dock__menu \{[^}]*position: absolute;/s);
-  assert.match(ownerStyles, /\.rack-menu-faceplate::before \{[^}]*width: 3px;[^}]*height: 3px;/s);
-  assert.match(ownerStyles, /\.rack-menu-faceplate\[data-rack-active\][^}]*box-shadow: inset 3px 0 var\(--rack-menu-ink\)/s);
-  assert.match(ownerStyles, /\.rack-menu-segment \{[^}]*display: grid;[^}]*place-items: center;/s);
   assert.doesNotMatch(styles, /\.keeper-dock__label|\.keeper-dock__empty|\.keeper-dock__resident/);
 });

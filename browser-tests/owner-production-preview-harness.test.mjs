@@ -8,7 +8,6 @@ import {
   OWNER_PRODUCTION_PREVIEW_PROFILE,
   OWNER_PRODUCTION_PREVIEW_URL,
   TASK4A_HARDWARE_EDGE_ARGS,
-  atomicSettingsSnapshot,
   assertTask4HardwareRenderer,
   classifyTask4Renderer,
   classifySyntheticProfileMetadataRpc,
@@ -17,7 +16,6 @@ import {
   createOwnerPreviewLedger,
   createPhaseDeadline,
   ownerChannelAuthorityAllowed,
-  recordSettingsStep,
   runPostSetupGateWithCleanup,
 } from './owner-production-preview-harness.mjs';
 
@@ -106,40 +104,6 @@ test('Task 4A phase deadlines are absolute and cannot reset after expiry', async
   assert.throws(() => deadline.remainingMs(), (error) => error.code === 'ETIMEDOUT');
 });
 
-test('Task 4A Settings step telemetry records monotone before/after time and budget', async () => {
-  const monotonicTimes = [1_000, 1_001, 1_004];
-  const ledger = createOwnerPreviewLedger({
-    label: 'settings-telemetry', monotonicNow: () => monotonicTimes.shift(),
-  });
-  const remainingBudgets = [30_000, 29_975];
-  const deadline = { remainingBudgetMs: () => remainingBudgets.shift() };
-  assert.equal(await recordSettingsStep({ deadline, ledger, step: 'theme-click' }, async () => 'clicked'), 'clicked');
-  assert.deepEqual(ledger.entries.map(({ type, step, outcome, monotonicElapsedMs, remainingSettingsMs }) => ({
-    type, step, outcome, monotonicElapsedMs, remainingSettingsMs,
-  })), [
-    { type: 'settings-step-before', step: 'theme-click', outcome: undefined,
-      monotonicElapsedMs: 1, remainingSettingsMs: 30_000 },
-    { type: 'settings-step-after', step: 'theme-click', outcome: 'complete',
-      monotonicElapsedMs: 4, remainingSettingsMs: 29_975 },
-  ]);
-});
-
-test('Task 4A Settings step telemetry records definitive deadline failure', async () => {
-  let monotonic = 5_000;
-  const ledger = createOwnerPreviewLedger({ monotonicNow: () => monotonic++ });
-  const deadline = createPhaseDeadline(10, () => monotonic);
-  monotonic += 11;
-  await assert.rejects(recordSettingsStep({ deadline, ledger, step: 'atomic-settings-snapshot' }, async () => {
-    deadline.remainingMs();
-  }), (error) => error.code === 'ETIMEDOUT');
-  assert.deepEqual(ledger.entries.map(({ type, outcome, code, remainingSettingsMs }) => ({
-    type, outcome, code, remainingSettingsMs,
-  })), [
-    { type: 'settings-step-before', outcome: undefined, code: undefined, remainingSettingsMs: 0 },
-    { type: 'settings-step-after', outcome: 'failed', code: 'ETIMEDOUT', remainingSettingsMs: 0 },
-  ]);
-});
-
 test('Task 4A complete post-setup gate body has a cancelling watchdog and cleanup', async () => {
   const ledger = createOwnerPreviewLedger({ label: 'watchdog-regression' });
   const operations = createGateOperationTracker(ledger, () => {});
@@ -169,7 +133,7 @@ test('Task 4A complete post-setup gate body has a cancelling watchdog and cleanu
 test('Task 4A watchdog encloses navigation through final fixture validation', async () => {
   const source = await readFile(new URL('./owner-production-preview-harness.mjs', import.meta.url), 'utf8');
   const wrapperStart = source.indexOf('const gateOutcome = await runPostSetupGateWithCleanup(async () => {');
-  const wrapperEnd = source.indexOf('\n    }, {\n      cleanup: cleanupWithProgress,', wrapperStart);
+  const wrapperEnd = source.indexOf('cleanup: cleanupWithProgress,', wrapperStart);
   assert.ok(wrapperStart > 0 && wrapperEnd > wrapperStart, 'Post-setup gate watchdog wrapper is missing');
   for (const marker of [
     'page.goto(`${previewUrl}${fixturePath}`',
@@ -180,78 +144,6 @@ test('Task 4A watchdog encloses navigation through final fixture validation', as
     const position = source.indexOf(marker, wrapperStart);
     assert.ok(position > wrapperStart && position < wrapperEnd,
       `${marker} must remain inside the complete post-setup watchdog`);
-  }
-});
-
-test('Task 4A Theme state check is one atomic concrete-dialog locator evaluation', async () => {
-  let evaluations = 0;
-  const expected = { documentId: 'document', ownerId: 'owner', settingsId: 'settings' };
-  const settings = { evaluate: async () => { evaluations += 1; return expected; } };
-  const deadline = { remainingMs: () => 100 };
-  assert.strictEqual(await atomicSettingsSnapshot(settings, deadline), expected);
-  assert.equal(evaluations, 1);
-  const source = await readFile(new URL('./owner-production-preview-harness.mjs', import.meta.url), 'utf8');
-  const start = source.indexOf('export async function atomicSettingsSnapshot');
-  const end = source.indexOf('\n}\n\nfunction safeDetails', start);
-  const implementation = source.slice(start, end);
-  assert.equal(implementation.split('settings.evaluate(').length - 1, 1);
-  assert.equal(implementation.includes('aria-label="SETTINGS"'), false,
-    'Atomic state lookup must not duplicate Playwright accessible-name resolution');
-  for (const field of ['ownerId', 'settingsId', 'workspaceControlId', 'menuControlId',
-    'ownerAttached', 'settingsAttached', 'workspaceControlAttached', 'menuControlAttached',
-    'surface', 'menuSurface']) assert.match(implementation, new RegExp(`\\b${field}\\b`, 'u'));
-});
-
-test('Task 4A resolves the real aria-labelledby production Settings dialog exactly once before snapshot', async () => {
-  const gateSource = await readFile(new URL('./owner-theme-settings.browser.mjs', import.meta.url), 'utf8');
-  const productionSource = await readFile(new URL('../src/lattice/modul8r/Modul8rSettingsSurface.jsx', import.meta.url), 'utf8');
-  assert.match(productionSource,
-    /<section aria-labelledby="modul8r-settings-title"[^>]*role="dialog">/u,
-  'Production Settings must retain its role=dialog plus aria-labelledby contract');
-  assert.match(productionSource, /<strong id="modul8r-settings-title">SETTINGS<\/strong>/u);
-  assert.doesNotMatch(productionSource, /<section[^>]*aria-label=/u,
-    'Regression contract must not invent an aria-label on production Settings');
-  const roleLookup = gateSource.indexOf("frame.getByRole('dialog', { name: 'SETTINGS' })");
-  const exactCount = gateSource.indexOf('assert.equal(dialogCount, 1', roleLookup);
-  const atomicSnapshot = gateSource.indexOf('atomicSettingsSnapshot(settings, settingsDeadline)', roleLookup);
-  assert.ok(roleLookup > 0 && exactCount > roleLookup && atomicSnapshot > exactCount,
-    'Playwright must resolve and prove the unique accessible dialog before its concrete locator is evaluated');
-  const ariaSnapshot = gateSource.indexOf('settings.ariaSnapshot(', atomicSnapshot);
-  assert.ok(ariaSnapshot > atomicSnapshot,
-    'Best-effort ARIA diagnostics must run only after the authoritative atomic Settings snapshot');
-  assert.ok(gateSource.indexOf("ledger.record('settings-structure'", atomicSnapshot) < ariaSnapshot,
-    'Authoritative Settings evidence must be recorded before optional ARIA diagnostics');
-});
-
-test('Task 4A interactive Theme operations all consume the remaining absolute phase deadline', async () => {
-  const source = await readFile(new URL('./owner-theme-settings.browser.mjs', import.meta.url), 'utf8');
-  assert.equal(source.includes('stateSnapshot'), false, 'Sequential stateSnapshot round-trips must not return');
-  const callsFor = (method) => {
-    const calls = []; const marker = `.${method}(`; let cursor = 0;
-    while ((cursor = source.indexOf(marker, cursor)) >= 0) {
-      const start = cursor; let index = cursor + marker.length; let depth = 1; let quote = null; let escaped = false;
-      for (; index < source.length && depth > 0; index += 1) {
-        const character = source[index];
-        if (quote) {
-          if (escaped) escaped = false;
-          else if (character === '\\') escaped = true;
-          else if (character === quote) quote = null;
-        } else if (character === '"' || character === "'" || character === '`') quote = character;
-        else if (character === '(') depth += 1;
-        else if (character === ')') depth -= 1;
-      }
-      calls.push(source.slice(start, index)); cursor = index;
-    }
-    return calls;
-  };
-  for (const method of ['click', 'selectOption', 'press', 'waitForFunction', 'ariaSnapshot']) {
-    const calls = callsFor(method);
-    assert.ok(calls.length > 0, `Expected at least one ${method} operation in the Theme gate`);
-    for (const call of calls) {
-      assert.match(call, /timeout:/u, `Every ${method} operation in the Theme gate must set an explicit timeout`);
-      assert.match(call, /(?:settingsDeadline|deadline)\.remainingMs\(\)/u,
-        `Every ${method} operation in the Theme gate must use the remaining Settings deadline`);
-    }
   }
 });
 

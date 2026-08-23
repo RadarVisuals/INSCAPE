@@ -180,12 +180,12 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     const pending = await page.evaluate(() => ({ requests: [...window.__publishedRequests],
       storage: [...window.__routingStorageOperations], text: document.body.textContent,
       ownerResources: performance.getEntriesByType('resource').map((entry) => entry.name)
-        .filter((name) => /OwnerLatticeShell|useOwnerLattice/iu.test(name)) }));
+        .filter((name) => /OwnerSystemWorkflowShell|useOwnerSystemWorkflow/iu.test(name)) }));
     assert.deepEqual(pending.requests, []);
     assert.deepEqual(pending.storage, []);
     assert.equal(pending.ownerResources.length, 0);
     assert.doesNotMatch(pending.text, /PROFILE UNAVAILABLE|GALLERY/iu);
-    assert.equal(await page.locator('.owner-lattice-shell').count(), 0);
+    assert.equal(await page.locator('.system-workflow').count(), 0);
   });
 
   test('root A to B, explicit visitor, RETURN, and Back/Forward preserve URL intent', async () => {

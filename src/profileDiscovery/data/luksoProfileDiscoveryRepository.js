@@ -1,6 +1,7 @@
 import { LUKSO_INDEXER_URL, normalizeProfileAddress } from '../../library/config.js';
 import { selectProfileAvatar } from '../../profileIdentity/domain/profileIdentity.js';
-import { isPublishedProfilePointerValue, OS_UNDERNEATH_PROFILE_DOCUMENT_KEY } from '../../profileDocument/storage/luksoPublishedProfileRepository.js';
+import { isPublishedProfilePointerValue } from '../../profileDocument/storage/luksoPublishedProfileRepository.js';
+import { INSCAPE_PROFILE_DOCUMENT_KEY } from '../../profileDocument/domain/inscapeProfileDocumentKey.js';
 
 // DataChanged is the indexed ERC725Y publication event. The emitter address is
 // the Universal Profile; custom keys are not populated in the profile_id field.
@@ -60,7 +61,7 @@ export function createLuksoProfileDiscoveryRepository({ endpoint = LUKSO_INDEXER
     const indexedPublications = [];
     for (let page = 0; page < maximumDirectoryPages; page += 1) {
       const directory = await request(PROFILE_DIRECTORY_QUERY,
-        { key: OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, limit: directoryPageSize, offset: page * directoryPageSize }, signal);
+        { key: INSCAPE_PROFILE_DOCUMENT_KEY, limit: directoryPageSize, offset: page * directoryPageSize }, signal);
       if (!Array.isArray(directory?.DataChanged)) throw new Error('Invalid INSCAPE directory response');
       indexedPublications.push(...directory.DataChanged);
       if (directory.DataChanged.length < directoryPageSize) break;
