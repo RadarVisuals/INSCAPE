@@ -1,6 +1,7 @@
 import { getConnection, reconnect, watchConnection } from '@wagmi/core';
 import { setupLuksoConnector } from '@lukso/up-modal';
 import { resolveStandaloneUniversalProfile } from '../store/universalProfileValidation.js';
+import { ensureUniversalProfileExtensionConnector } from './universalProfileExtensionReadiness.js';
 
 export const isEmbeddedApplication = () => typeof window !== 'undefined' && window.parent !== window;
 
@@ -19,6 +20,7 @@ export async function createStandaloneWalletSession({ initializeWallet, disposeW
 
   let syncGeneration = 0;
   let disposed = false;
+  let showSignInPromise = null;
 
   const syncConnection = async (connection) => {
     const generation = ++syncGeneration;
@@ -67,7 +69,18 @@ export async function createStandaloneWalletSession({ initializeWallet, disposeW
   await syncConnection(getConnection(connector.wagmiConfig));
 
   return {
-    showSignIn: () => connector.showSignInModal(),
+    showSignIn: () => {
+      if (showSignInPromise) return showSignInPromise;
+      showSignInPromise = (async () => {
+        await ensureUniversalProfileExtensionConnector({
+          wagmiConfig: connector.wagmiConfig
+        });
+        if (!disposed) connector.showSignInModal();
+      })().finally(() => {
+        showSignInPromise = null;
+      });
+      return showSignInPromise;
+    },
     dispose() {
       disposed = true;
       syncGeneration += 1;

@@ -21,3 +21,13 @@ test('connecting and reconnecting remain pending instead of flashing a settled c
   assert.ok(transitionIndex >= 0 && transitionIndex < disconnectedIndex,
     'transitional connector states must be handled before settled disconnection');
 });
+
+test('standalone sign-in repairs Universal Profile extension readiness before opening the modal', () => {
+  const readinessIndex = sessionSource.indexOf('await ensureUniversalProfileExtensionConnector');
+  const modalIndex = sessionSource.indexOf('connector.showSignInModal()');
+
+  assert.ok(readinessIndex >= 0, 'sign-in must check the EIP-6963 connector before opening');
+  assert.ok(modalIndex > readinessIndex, 'the modal must read the repaired Wagmi connector list');
+  assert.match(sessionSource, /if \(showSignInPromise\) return showSignInPromise/,
+    'rapid repeated sign-in clicks must share one readiness operation');
+});
