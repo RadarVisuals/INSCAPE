@@ -13,11 +13,20 @@ const normalizeFixture = (entry, index) => ({
   type: activityType(entry.type),
   unread: entry.unread ?? entry.read !== true,
 });
+export function ownerSystemWorkflowActivityTimestamp(timestamp, { locales, timeZone } = {}) {
+  const value = Number(timestamp);
+  if (!Number.isFinite(value) || value <= 0) return { date: 'UNKNOWN', time: '' };
+  const instant = new Date(value);
+  if (!Number.isFinite(instant.getTime())) return { date: 'UNKNOWN', time: '' };
+  return {
+    date: new Intl.DateTimeFormat(locales, { dateStyle: 'medium', timeZone }).format(instant),
+    time: new Intl.DateTimeFormat(locales, { timeStyle: 'short', timeZone }).format(instant),
+  };
+}
 const normalizeSignal = (entry, index) => ({
   ...entry,
   id: entry.id || `activity-${index + 1}`,
-  date: entry.timestamp ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(entry.timestamp * 1000)) : 'RECENT',
-  time: entry.timestamp ? new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(new Date(entry.timestamp * 1000)) : '',
+  ...ownerSystemWorkflowActivityTimestamp(entry.timestamp),
   label: entry.title || String(entry.type || 'ACTIVITY').replaceAll('_', ' '),
   detail: entry.assetReference?.name || entry.counterparty || '',
   type: activityType(entry.type),
