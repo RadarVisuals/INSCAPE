@@ -45,6 +45,7 @@
   inset: 0;
   isolation: isolate;
   overflow: hidden;
+  pointer-events: auto;
   color: var(--study-ink);
   background: var(--study-surface);
   font-family: "Inscape Geist Sans", sans-serif;
