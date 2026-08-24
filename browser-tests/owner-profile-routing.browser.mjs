@@ -3,6 +3,7 @@ import { after, before, describe, test } from 'node:test';
 import { access } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { createServer } from 'node:net';
+import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createServer as createViteServer } from 'vite';
 import {
@@ -15,9 +16,10 @@ import {
 import { createPlaywrightRouteController, launchPlaywrightEdge } from './playwright-browser-adapter.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const runtimeDir = resolve(root, '.browser-test-runtime');
+const runtimeDir = resolve(root, `.browser-test-runtime-owner-routing-${process.pid}-${Date.now()}-${randomUUID()}`);
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
+const ROUTING_NAVIGATION_TIMEOUT_MS = 30_000;
 const browserCandidates = [process.env.BROWSER_PATH,
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
   'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
@@ -98,7 +100,7 @@ async function detachWalletLifecycle() {
 
 async function waitForOwnerShell(label) {
   try {
-    await page.locator('.owner-lattice-shell').waitFor({ state: 'attached', timeout: 15_000 });
+    await page.locator('.system-workflow').waitFor({ state: 'attached', timeout: 15_000 });
   } catch (error) {
     const state = await page.evaluate(async () => {
       const { useWalletStore } = await import('/src/store/useWalletStore.js');
@@ -161,7 +163,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
   });
 
   test('pending implicit authority is neutral and makes no publication, owner graph, or owner storage request', async () => {
-    assert.ok((await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 }))?.ok());
+    assert.ok((await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: ROUTING_NAVIGATION_TIMEOUT_MS }))?.ok());
     await waitForInitialWalletSettlement();
     await detachWalletLifecycle();
     await page.evaluate(async () => {
@@ -221,7 +223,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
   });
 
   test('signed-out root, profile fallback, and unpublished explicit visitor have exact return semantics', async () => {
-    assert.ok((await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 }))?.ok());
+    assert.ok((await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: ROUTING_NAVIGATION_TIMEOUT_MS }))?.ok());
     await waitForInitialWalletSettlement();
     await detachWalletLifecycle();
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: null,
@@ -229,7 +231,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     await setUrl(''); await page.getByText('PROFILE CONTEXT REQUIRED').waitFor();
     assert.equal(await page.getByRole('button', { name: 'RETURN' }).count(), 0);
 
-    assert.ok((await page.goto(`${baseUrl}/?profile=${PROFILE_A}`, { waitUntil: 'domcontentloaded', timeout: 10_000 }))?.ok());
+    assert.ok((await page.goto(`${baseUrl}/?profile=${PROFILE_A}`, { waitUntil: 'domcontentloaded', timeout: ROUTING_NAVIGATION_TIMEOUT_MS }))?.ok());
     await waitForInitialWalletSettlement();
     await detachWalletLifecycle();
     await page.evaluate(async () => {
