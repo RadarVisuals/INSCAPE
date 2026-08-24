@@ -456,6 +456,13 @@ Phase 4B accepted checkpoint (2026-08-23; automated certification, manual accept
 - final production build: 5,430 modules transformed; `build:check` passed at `802_502` initial JavaScript bytes; runtime graph has `leaks: []`; selected owner budgets are JavaScript `365_023` raw / `110_353` gzip and CSS `143_850` raw / `21_133` gzip, while initial and standalone-wallet limits remain unchanged;
 - no IPFS upload, signature, transaction, ERC725Y write, deployment, merge, push, environment-variable, or Netlify configuration change occurred. No live LSP6 preflight was attempted and no controller permission issue was discovered.
 
+2026-08-24 alpha real-media and compound-transform correction budget checkpoint:
+
+- accepted commit `ffdabe75653169bac3d6264823d792610342d13c` corrected browser-oriented canonical media dimensions, live crop-resize continuity, and shared-bounds group rotate/mirror behavior; Netlify correctly rejected its first Preview build because the intentionally added owner code exceeded the prior near-zero-headroom owner-JavaScript ceiling;
+- Netlify Linux measured `370_816` raw / `112_012` gzip owner JavaScript, the local primary production build measured `370_816` / `112_013`, and the alternate-outDir Windows matrix measured the highest gzip boundary at `112_020`; only `ownerJavaScript` was rebaselined to `370_816` raw / `112_023` gzip, preserving the previous 0 raw / 3 gzip bytes of measured headroom above the highest platform measurement;
+- focused production-budget and owner-isolation coverage passed `18/18`; the production build transformed 5,431 modules and passed with owner CSS unchanged at `143_870` raw / `21_140` gzip, `build:check` passed at `802_502` initial JavaScript bytes, and the emitted owner runtime graph retained `leaks: []`;
+- the general Rollup chunk-size warning, initial and standalone-wallet budgets, production publication lock, wallet authority, upload, signature, transaction, ERC725Y, merge, and Tasks 6-7 boundaries remain unchanged.
+
 Official standards rechecked on 2026-08-23: [LSP2 ERC725Y JSON Schema](https://github.com/lukso-network/LIPs/blob/main/LSPs/LSP-2-ERC725YJSONSchema.md), [LSP6 Key Manager](https://github.com/lukso-network/LIPs/blob/main/LSPs/LSP-6-KeyManager.md), and [LSP0 ERC725 Account](https://github.com/lukso-network/LIPs/blob/main/LSPs/LSP-0-ERC725Account.md). LSP6 `SETDATA`/allowed-data-key permission behavior is unchanged; controller permission preflight remains mandatory before the first separately authorized live publication.
 
 ## 9. Post-acceptance cleanup

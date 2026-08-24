@@ -89,7 +89,11 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Phase 4B selects the complete System Workflow owner shell. The measured
   // increase belongs only to this lazy owner graph; the initial and standalone
   // wallet boundaries retain their previous limits.
-  ownerJavaScript: Object.freeze({ raw: 365_023, gzip: 110_356 }),
+  // The accepted canonical media-geometry and compound-transform correction
+  // measures 370,816 raw and 112,012 gzip bytes in Netlify's Linux owner graph;
+  // the alternate-outDir Windows matrix measures 112,020 gzip bytes. Preserve
+  // Phase 4B's prior 0 raw / 3 gzip bytes above the highest measured boundary.
+  ownerJavaScript: Object.freeze({ raw: 370_816, gzip: 112_023 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
