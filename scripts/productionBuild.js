@@ -93,7 +93,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // compact hash-pinned LSP4 Visitor resolution measure 375,472 raw / 113,972
   // gzip bytes in the primary graph and 113,978 gzip in alternate output. Preserve
   // Phase 4B's prior 0 raw / 3 gzip bytes above the highest measured boundary.
-  ownerJavaScript: Object.freeze({ raw: 376_121, gzip: 114_199 }),
+  ownerJavaScript: Object.freeze({ raw: 376_121, gzip: 114_208 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.

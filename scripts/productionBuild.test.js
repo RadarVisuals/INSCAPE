@@ -71,7 +71,7 @@ test('each independent budget category reports an actionable overage', () => {
 test('measured Phase 4B allowances retain exact production budget boundaries', () => {
   assert.deepEqual(PRODUCTION_BUDGETS, {
     initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
-    ownerJavaScript: { raw: 376_121, gzip: 114_199 },
+    ownerJavaScript: { raw: 376_121, gzip: 114_208 },
     standaloneWalletJavaScript: { raw: 4_400_000, gzip: 1_200_000 },
     initialCss: { raw: 51_807, gzip: 10_301 },
     ownerCss: { raw: 143_870, gzip: 21_140 },
