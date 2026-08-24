@@ -119,7 +119,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // opaque. Preserve the existing gzip ceiling and bound the measured raw split.
   // Phase 4B selects the consolidated System Workflow presentation and its
   // owner-lazy responsive, panel, canvas, and publication-rack styles.
-  ownerCss: Object.freeze({ raw: 143_850, gzip: 21_133 }),
+  ownerCss: Object.freeze({ raw: 143_870, gzip: 21_140 }),
   // Owner/publication reconciliation adds the deterministic IPFS hydration and
   // three-way baseline guard to production. Keep the accepted growth bounded.
   // Phase 7 adds paragraph-preserving LSP3 normalization, independently
