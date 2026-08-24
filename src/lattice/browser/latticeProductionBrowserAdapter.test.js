@@ -60,7 +60,7 @@ test('real Browser adaptation validates owner scope, canonical identity, media, 
   assert.deepEqual(workspace, before);
 });
 
-test('placement eligibility remains honest while media or native dimensions are unresolved', () => {
+test('placement eligibility allows bounded on-demand browser decoding when metadata dimensions are unresolved', () => {
   const workspace = createEmptyWorkspace(PROFILE);
   const missingDimensions = adaptLatticeProductionBrowserData({
     assets: [asset({ imageWidth: null })], profileAddress: PROFILE, workspace,
@@ -71,8 +71,8 @@ test('placement eligibility remains honest while media or native dimensions are 
   const unsupportedMedia = adaptLatticeProductionBrowserData({
     assets: [asset({ mediaType: 'video' })], profileAddress: PROFILE, workspace,
   }).assets[0];
-  assert.equal(missingDimensions.placeable, false);
-  assert.equal(missingDimensions.placementUnavailableReason, 'DIMENSIONS RESOLVING');
+  assert.equal(missingDimensions.placeable, true);
+  assert.equal(missingDimensions.placementUnavailableReason, null);
   assert.equal(missingMedia.placeable, false);
   assert.equal(missingMedia.placementUnavailableReason, 'MEDIA UNAVAILABLE');
   assert.equal(unsupportedMedia.placeable, false);

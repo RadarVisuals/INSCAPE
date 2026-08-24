@@ -15,7 +15,7 @@ function PanelPresence({ children, id, panels }) {
 
 export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assetsById, categoryCommands, browser, controller, crop, discoveryCommands, discoveryGroups, layout, libraryData,
   layersOpen, menuSurface, onChangeGrid, onClose, onDossierChange, onLayersOpenChange, onVisitProfile, panelOccupied, panels, profileIdentity, profileModel,
-  reviewDiscovery, workspaceSurfaceColor }) {
+  resolveAssetDimensions, reviewDiscovery, workspaceSurfaceColor }) {
   const show = (id) => panels.presence[id];
   return <>
     {!panelOccupied && layersOpen && <OwnerSystemWorkflowSelectionInspector assetsById={assetsById} controller={controller} crop={crop} layout={layout}
@@ -24,7 +24,8 @@ export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assets
     {show('docs').present && <PanelPresence id="docs" panels={panels}><OwnerSystemWorkflowManual onClose={onClose} /></PanelPresence>}
     {show('library').present && <PanelPresence id="library" panels={panels}>
       <OwnerSystemWorkflowLibraryWorkspace categoryCommands={categoryCommands} controller={controller} data={libraryData}
-        menuSurface={menuSurface} onClose={onClose} phase={show('library').phase} /></PanelPresence>}
+        menuSurface={menuSurface} onClose={onClose} phase={show('library').phase}
+        resolveAssetDimensions={resolveAssetDimensions} /></PanelPresence>}
     {show('profile').present && <PanelPresence id="profile" panels={panels}><div className="system-workflow__profile-layer">
       <OwnerSystemWorkflowProfile guideVisible={controller.draft.appearance.guideMode !== 'NONE'} identity={profileIdentity} layout={layout} menuSurface={menuSurface} model={profileModel}
         onDossierChange={onDossierChange} phase={show('profile').phase} workspaceSurfaceColor={workspaceSurfaceColor} /></div></PanelPresence>}

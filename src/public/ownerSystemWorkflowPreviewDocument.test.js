@@ -10,6 +10,13 @@ import {
 } from './ownerSystemWorkflowPreviewDocument.js';
 import { createCanonicalPublication } from '../profileDocument/domain/profileDocumentPublication.js';
 import { canonicalSerializeProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Serialization.js';
+import { adaptProfileDocumentV9Media } from '../profileDocument/components/profileDocumentV9Media.js';
+import { createSystemWorkflowDropGeometry } from '../systemWorkflow/systemWorkflowPlacement.js';
+import {
+  ownerSystemWorkflowAssetDimensions,
+  ownerSystemWorkflowDecodedAsset,
+} from './ownerSystemWorkflow/ownerSystemWorkflowAssetDimensions.js';
+import { createOwnerSystemWorkflowFocusViewModel } from './ownerSystemWorkflow/ownerSystemWorkflowFocusViewModel.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const CONTRACT = '0x2222222222222222222222222222222222222222';
@@ -110,4 +117,46 @@ test('publication preparation freezes the exact canonical v9 bytes consumed by P
     assetRecords: [], exportedAt: 3, previousDocument: prepared, profile: {}, profileAddress: '0x3333333333333333333333333333333333333333',
     systemWorkflowDraft: createEmptySystemWorkflowDraft('0x3333333333333333333333333333333333333333', { generateId: () => 'other' }),
   }), /different profile/);
+});
+
+test('decoded source dimensions drive drag geometry, placement, owner metadata, and v9 Visitor media', () => {
+  const source = 'https://assets.example/image.png';
+  const decodedAsset = ownerSystemWorkflowDecodedAsset({
+    ...asset(), imageUrl: source, imageWidth: 1920, imageHeight: 1080,
+  }, { source, width: 1080, height: 1920 });
+  const dimensions = ownerSystemWorkflowAssetDimensions(decodedAsset);
+  assert.deepEqual(dimensions, { width: 1080, height: 1920 });
+  const destination = createSystemWorkflowDropGeometry(dimensions.width, dimensions.height,
+    { x: 320, y: 180 }, { left: 0, top: 0, width: 640, height: 360, cellSize: 20 });
+  assert.ok(destination.rowSpan > destination.columnSpan, 'drag preview and placement use the decoded portrait ratio');
+
+  const systemWorkflowDraft = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
+  const placed = { ...placement('decoded-phone', 0), ...destination };
+  systemWorkflowDraft.grids[0].placements = [placed];
+  const ownerFocus = createOwnerSystemWorkflowFocusViewModel(placed, decodedAsset);
+  assert.deepEqual(ownerFocus.focusDimensions, dimensions);
+  assert.ok(ownerFocus.dossier.technical.some(({ label, value }) => label === 'SOURCE DIMENSIONS'
+    && value === '1080 × 1920 PX'));
+
+  const preview = buildOwnerSystemWorkflowPreviewDocument({
+    assetRecords: [decodedAsset], profile: { name: 'Resident' }, profileAddress: PROFILE, systemWorkflowDraft,
+  });
+  assert.deepEqual(preview.grids[0].placements[0].asset.media, {
+    url: source, width: 1080, height: 1920, type: 'image',
+  });
+  assert.deepEqual(adaptProfileDocumentV9Media(preview.grids[0].placements[0].asset).dimensions, dimensions);
+});
+
+test('missing dimensions remain unknown through owner and v9 projection', () => {
+  const unknownAsset = { ...asset(), imageWidth: null, imageHeight: null };
+  assert.equal(ownerSystemWorkflowAssetDimensions(unknownAsset), null);
+  const systemWorkflowDraft = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
+  systemWorkflowDraft.grids[0].placements = [placement('unknown-media', 0)];
+  const preview = buildOwnerSystemWorkflowPreviewDocument({
+    assetRecords: [unknownAsset], profile: {}, profileAddress: PROFILE, systemWorkflowDraft,
+  });
+  assert.deepEqual(preview.grids[0].placements[0].asset.media, {
+    url: unknownAsset.imageUrl, width: null, height: null, type: 'image',
+  });
+  assert.equal(adaptProfileDocumentV9Media(preview.grids[0].placements[0].asset).dimensions, null);
 });

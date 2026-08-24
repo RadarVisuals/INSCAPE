@@ -15,7 +15,10 @@ import {
   measureOwnerSystemWorkflowArtboard,
   projectOwnerSystemWorkflowPlacement,
 } from './systemWorkflowArtboardProjection.js';
-import { ownerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDimensions.js';
+import {
+  decodeOwnerSystemWorkflowAssetDimensions,
+  ownerSystemWorkflowAssetDimensions,
+} from './ownerSystemWorkflowAssetDimensions.js';
 import { markOwnerSystemWorkflowPointerFocus } from './ownerSystemWorkflowSelection.js';
 
 const sourceFor = (asset) => asset?.src || asset?.originalImageUrl || asset?.imageUrl || asset?.thumbnailUrl || null;
@@ -38,7 +41,7 @@ const projectedSelectionOutline = (bounds, field) => {
   return { ...rectangle, width: rectangle.width + 1, height: rectangle.height + 1 };
 };
 
-function GridSwipePreview({ appearance, assetsById, grid, worldViewport }) {
+function GridSwipePreview({ appearance, assetsById, grid, onAssetDimensions, worldViewport }) {
   if (!grid || !worldViewport) return null;
   return <>
     <LatticePixelGrid color={appearance.guideColor} field={worldViewport} guideInterval={systemWorkflowSnapStep(appearance.guideSize)}
@@ -59,14 +62,17 @@ function GridSwipePreview({ appearance, assetsById, grid, worldViewport }) {
       return <div className="system-workflow__placement" data-cropped={Boolean(placement.crop) || undefined} key={placement.id}
         style={{ ...projected, zIndex: placement.layer + 1 }}>
         <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
-          {src ? <img src={src} alt="" draggable={false} style={imageRenderRectangle ? { ...imageRenderRectangle, transform: transform.css } : undefined} /> : <em>Media</em>}
+          {src ? <img src={src} alt="" draggable={false} onLoad={(event) => onAssetDimensions?.(asset, {
+            source: src, width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight,
+          })} style={imageRenderRectangle ? { ...imageRenderRectangle, transform: transform.css } : undefined} /> : <em>Media</em>}
         </span>
       </div>;
     })}
   </>;
 }
 
-export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop, interactionDisabled = false, onChangeGrid, onOpenViewer, onPlacementRef, reducedMotion = false, viewerPlacementId = null }) {
+export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop, interactionDisabled = false, onAssetDimensions,
+  onChangeGrid, onOpenViewer, onPlacementRef, reducedMotion = false, resolveAssetDimensions, viewerPlacementId = null }) {
   const canvasRef = useRef(null);
   const feedbackTimerRef = useRef(null);
   const [dropFeedback, setDropFeedback] = useState(null);
@@ -81,7 +87,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
     ? adjacentSystemWorkflowGridId(controller.draft, grid.id, direction)
     : null;
   const interaction = useOwnerSystemWorkflowPlacementInteraction({
-    canvasRef, canNavigateGrid: adjacentGrid, controller, cropSession,
+    canvasRef, canNavigateGrid: adjacentGrid, controller, cropResize: crop?.cropResize, cropSession,
     disabled: interactionDisabled || viewerOpen,
     onNavigateGrid: (direction, options) => {
       const gridId = adjacentGrid(direction);
@@ -162,10 +168,10 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
     <div ref={canvasRef} className="system-workflow__canvas" data-guide={appearance.guideMode} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={Boolean(interaction.gridSwipe) || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, ...swipeStyle }}
       onPointerDown={(event) => { if (!cropSession) interaction.beginCanvasSelection(event); }}
       onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => {
+      onDrop={async (event) => {
         const asset = assetsById.get(event.dataTransfer.getData('application/x-inscape-asset'));
         if (!asset) return;
-        const dimensions = ownerSystemWorkflowAssetDimensions(asset);
+        const dimensions = await (resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions)(asset);
         if (!dimensions) return;
         const field = createOwnerSystemWorkflowProjectedField(canvasRef.current, snapStep);
         if (!field) return;
@@ -196,7 +202,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
         const imageRectangle = dimensions && (transform.crop ? projectCroppedMediaRectangle(opening, transform.dimensions, transform.crop) : fitNativeMediaRectangle(opening, transform.dimensions));
         const imageRenderRectangle = projectSystemWorkflowImageRenderRectangle(imageRectangle, transform);
         return <div aria-disabled={placement.locked || undefined} aria-label={`Select ${asset?.title || asset?.name || 'artwork'}`} aria-pressed={isSelected}
-          className="system-workflow__placement" data-cropped={Boolean(visibleCrop) || undefined} data-cropping={cropping || undefined} data-system-workflow-crop-surface={cropping || undefined} data-locked={placement.locked || undefined}
+          className="system-workflow__placement" data-cropped={Boolean(visibleCrop) || undefined} data-cropping={cropping || undefined} data-system-workflow-crop-surface={cropping || undefined} data-system-workflow-placement-id={placement.id} data-locked={placement.locked || undefined}
           data-viewing={viewerPlacementId === placement.id || undefined}
           key={placement.id} onClick={(event) => { if (!cropSession && !interaction.clickSuppressedRef.current && !placement.locked) controller.selectPlacement(placement.id, event.shiftKey); }}
           onDoubleClick={(event) => { if (cropSession || placement.locked) return; event.stopPropagation(); onOpenViewer(placement, event.currentTarget); }}
@@ -204,7 +210,9 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
           onPointerDown={(event) => { markOwnerSystemWorkflowPointerFocus(event.currentTarget); if (cropping) crop.beginCropDrag(event, placement.id, worldViewport.cellSize); else if (!cropSession) interaction.beginPlacementGesture(event, placement); }} ref={(node) => onPlacementRef?.(placement.id, node)} role="button" tabIndex={placement.locked ? -1 : 0}
           style={{ ...projected, zIndex: placement.layer + 1 }}>
           <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
-            {src ? <img src={src} alt="" draggable={false} style={imageRenderRectangle ? { ...imageRenderRectangle, transform: transform.css } : undefined} /> : <em>Media</em>}
+            {src ? <img src={src} alt="" draggable={false} onLoad={(event) => onAssetDimensions?.(asset, {
+              source: src, width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight,
+            })} style={imageRenderRectangle ? { ...imageRenderRectangle, transform: transform.css } : undefined} /> : <em>Media</em>}
           </span>
         </div>;
       })}
@@ -218,7 +226,8 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
       {interaction.marquee && <i className="system-workflow__marquee" style={interaction.marquee} />}
       </div>
       {interaction.gridSwipe && swipeGrid && <div aria-hidden="true" className="system-workflow__grid-plane system-workflow__grid-plane--adjacent">
-        <GridSwipePreview appearance={appearance} assetsById={assetsById} grid={swipeGrid} worldViewport={worldViewport} />
+        <GridSwipePreview appearance={appearance} assetsById={assetsById} grid={swipeGrid}
+          onAssetDimensions={onAssetDimensions} worldViewport={worldViewport} />
       </div>}
     </div>
     <output aria-live="polite" className="system-workflow__drop-feedback" data-visible={Boolean(dropFeedback) || undefined}>{dropFeedback}</output>

@@ -22,6 +22,7 @@ function LibraryNavigationButton({ active, categoryId, count, draggable = false,
 }
 
 function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDown, workspace }) {
+  const [decodedRatios, setDecodedRatios] = useState(() => new Map());
   if (!assets.length) return <p className="lattice-browser-status">{emptyLabel}</p>;
   const selected = new Set(workspace.selectedAssetIds);
   const size = Math.min(BROWSER_ASSET_SIZE.MAXIMUM, Math.max(BROWSER_ASSET_SIZE.MINIMUM,
@@ -32,7 +33,8 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
     } }} style={{ '--lattice-browser-asset-media-max': `${Math.round(size * 1.15)}px`, '--lattice-browser-asset-min': `${size}px` }}>
     {assets.map((asset) => {
       const id = assetId(asset); const isSelected = selected.has(id);
-      const ratio = Number(asset.width) > 0 && Number(asset.height) > 0 ? `${asset.width} / ${asset.height}` : '1 / 1';
+      const ratio = decodedRatios.get(id)
+        || (Number(asset.width) > 0 && Number(asset.height) > 0 ? `${asset.width} / ${asset.height}` : undefined);
       const opensCollection = asset.isCollection && asset.collectionRole !== 'cover';
       const relationships = asset.collectionRole === 'cover'
         ? [asset.collectionPreviewTokenId ? 'COLLECTION · TOKEN PREVIEW' : 'COLLECTION COVER']
@@ -48,9 +50,18 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
         onKeyDown={(event) => { if (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10') {
           event.preventDefault(); event.stopPropagation(); onContext?.(event, asset);
         } }} type="button">
-        <span className="lattice-browser-asset__media" style={{ aspectRatio: ratio }}><img alt="" aria-hidden="true"
+        <span className="lattice-browser-asset__media" style={ratio ? { aspectRatio: ratio } : undefined}><img alt="" aria-hidden="true"
           className="lattice-browser-asset__decoded-image" decoding="async" draggable="false" loading="lazy"
-          onError={() => workspace.markAssetUnavailable(id, asset.previewSrc)} src={asset.previewSrc} /></span>
+          onError={() => workspace.markAssetUnavailable(id, asset.previewSrc)}
+          onLoad={(event) => {
+            const { naturalHeight: height, naturalWidth: width } = event.currentTarget;
+            if (!width || !height) return;
+            setDecodedRatios((current) => {
+              const value = `${width} / ${height}`;
+              if (current.get(id) === value) return current;
+              const next = new Map(current); next.set(id, value); return next;
+            });
+          }} src={asset.previewSrc} /></span>
         {!workspace.hideLabels && <span className="lattice-browser-asset__record"><strong>{asset.title || id}</strong>
           {asset.collection && <small>{asset.collection}</small>}
           {relationships.length > 0 && <span className="lattice-browser-asset__relationships">

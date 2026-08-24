@@ -23,6 +23,7 @@ const mediaFor = (placement, assetsById) => {
 export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
   const [cropSession, setCropSession] = useState(null);
   const dragRef = useRef(null);
+  const resizeRef = useRef(null);
   const sessionRef = useRef(null);
   sessionRef.current = cropSession;
   const commit = (crop) => {
@@ -51,6 +52,34 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
     setCropSession({ ...session, controlZoom: visual.crop.zoom, renderedScaleAtZoomOne: rendered.width / visual.dimensions.width / visual.crop.zoom,
       expectedMedia: { ...media }, geometry: { column: placement.column, row: placement.row, columnSpan: placement.columnSpan, rowSpan: placement.rowSpan },
       interacted: false, transform });
+  };
+  const cropResize = {
+    begin: () => {
+      resizeRef.current = sessionRef.current ? structuredClone(sessionRef.current) : null;
+    },
+    preview: (placement) => {
+      const start = resizeRef.current;
+      if (!start || placement?.id !== start.placementId) return;
+      const nextMask = systemWorkflowCropMask(placement);
+      const visual = projectSystemWorkflowTransform(start.transform, start.media, start.previewCrop);
+      const visualMedia = { ...visual.dimensions, stableAssetId: start.media.stableAssetId };
+      const previewCrop = reframeSystemWorkflowCropForMask(visual.crop, visualMedia, start.mask, nextMask, {
+        originDelta: { x: placement.column - start.geometry.column, y: placement.row - start.geometry.row },
+        renderedScale: start.renderedScaleAtZoomOne * start.controlZoom,
+      });
+      setCropSession({
+        ...start,
+        geometry: { column: placement.column, row: placement.row, columnSpan: placement.columnSpan, rowSpan: placement.rowSpan },
+        mask: nextMask,
+        previewCrop: unprojectSystemWorkflowCrop(start.transform, previewCrop),
+        interacted: true,
+        dirty: true,
+      });
+    },
+    finish: ({ cancelled = false } = {}) => {
+      if (cancelled && resizeRef.current) setCropSession(resizeRef.current);
+      resizeRef.current = null;
+    },
   };
   const cancelCrop = () => setCropSession(null);
   const applyCrop = () => commit({ ...sessionRef.current.previewCrop });
@@ -120,6 +149,14 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
     };
     const onPointerDown = (event) => {
       if (event.target?.closest?.('[data-system-workflow-crop-surface], .system-workflow__crop-controls, .system-workflow__resize-handle')) return;
+      const placementId = event.target?.closest?.('[data-system-workflow-placement-id]')?.dataset?.systemWorkflowPlacementId;
+      const placement = controller.selectedGrid?.placements.find(({ id }) => id === placementId);
+      if (placement && placement.id !== sessionRef.current?.placementId && !placement.locked && mediaFor(placement, assetsById)) {
+        applyCrop();
+        controller.replaceSelection([placement.id]);
+        beginCrop(placement);
+        return;
+      }
       applyCrop();
       controller.replaceSelection([]);
     };
@@ -130,9 +167,14 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
 
   useEffect(() => {
     if (!cropSession) return;
+    // Pointer preview is ahead of canonical placement geometry until pointer-up.
+    // Reconciliation here would undo the live reframe and cause a visible jump
+    // when the resize transaction commits.
+    if (resizeRef.current) return;
     const placement = controller.selectedGrid?.placements.find(({ id }) => id === cropSession.placementId);
     if (!placement) { setCropSession(null); return; }
-    if (placement.columnSpan === cropSession.mask.width && placement.rowSpan === cropSession.mask.height) return;
+    if (placement.column === cropSession.geometry.column && placement.row === cropSession.geometry.row
+      && placement.columnSpan === cropSession.geometry.columnSpan && placement.rowSpan === cropSession.geometry.rowSpan) return;
     const nextMask = systemWorkflowCropMask(placement);
     setCropSession((current) => {
       if (!current) return current;
@@ -148,5 +190,5 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
   }, [controller.generation, controller.selectedGrid, cropSession]);
 
   useEffect(() => () => cleanupDrag(), []);
-  return { applyCrop, beginCrop, beginCropDrag, cancelCrop, cropSession, restoreNativeFit, updateCropZoom };
+  return { applyCrop, beginCrop, beginCropDrag, cancelCrop, cropResize, cropSession, restoreNativeFit, updateCropZoom };
 }

@@ -7,7 +7,7 @@ import { systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkfl
 import OwnerSystemWorkflowWorkspaceRail from './OwnerSystemWorkflowWorkspaceControls.jsx';
 import { OwnerSystemWorkflowWorkspaceShell } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
 import { createOwnerSystemWorkflowProjectedField } from './systemWorkflowArtboardProjection.js';
-import { ownerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDimensions.js';
+import { decodeOwnerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDimensions.js';
 import OwnerSystemWorkflowLibraryPresenter from './OwnerSystemWorkflowLibraryPresenter.jsx';
 import { projectLatticePixelRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
 
@@ -21,8 +21,10 @@ function projectDropPreview(destination, field) {
   return projectLatticePixelRectangle(destination, field);
 }
 
-export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, controller, data, menuSurface, onClose, phase }) {
+export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, controller, data, menuSurface, onClose, phase,
+  resolveAssetDimensions }) {
   const workspace = useBrowserWorkspace(data, null, libraryPreferences);
+  const resolveDimensions = resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions;
   const [dragPreview, setDragPreview] = useState(null);
   const dragRef = useRef(null);
   useEffect(() => {
@@ -30,8 +32,8 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, 
     libraryPreferences.hideLabels = workspace.hideLabels;
     libraryPreferences.sidebarWidth = workspace.sidebarWidth;
   }, [workspace.assetSize, workspace.hideLabels, workspace.sidebarWidth]);
-  const place = (asset, destination = null) => {
-    const dimensions = ownerSystemWorkflowAssetDimensions(asset);
+  const place = async (asset, destination = null, resolvedDimensions = null) => {
+    const dimensions = resolvedDimensions || await resolveDimensions(asset);
     if (!dimensions) return false;
     return controller.run((session) => session.placeAsset({
       gridId: controller.selectedGridId,
@@ -54,8 +56,8 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, 
   const beginAssetDrag = (event, asset, _workspace, options = {}) => {
     if (event.button !== 0 || !asset.placeable) return;
     const origin = { x: event.clientX, y: event.clientY };
-    const active = { asset, pointerId: event.pointerId, moved: false, source: event.currentTarget };
-    const previewAt = (pointerEvent) => {
+    const active = { asset, dimensions: null, lastPointer: null, pointerId: event.pointerId, moved: false, source: event.currentTarget };
+    const previewAt = (pointerEvent, dimensions = active.dimensions) => {
       const canvas = document.querySelector('.system-workflow__canvas');
       const rectangle = canvas?.getBoundingClientRect();
       const inside = Boolean(rectangle
@@ -65,7 +67,6 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, 
         canvas, systemWorkflowSnapStep(controller.draft.appearance.guideSize),
       ) : null;
       if (!field) return { destination: null, rectangle: null };
-      const dimensions = ownerSystemWorkflowAssetDimensions(asset);
       if (!dimensions) return { destination: null, rectangle: null };
       const destination = createSystemWorkflowDropGeometry(dimensions.width, dimensions.height,
         { x: pointerEvent.clientX, y: pointerEvent.clientY }, field, options);
@@ -76,18 +77,27 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, 
       active.moved ||= Math.hypot(pointerEvent.clientX - origin.x, pointerEvent.clientY - origin.y) > DRAG_THRESHOLD;
       if (!active.moved) return;
       pointerEvent.preventDefault();
+      active.lastPointer = pointerEvent;
       active.source?.setAttribute('data-workflow-dragging', '');
       const preview = previewAt(pointerEvent);
       setDragPreview({ asset, ...preview });
     };
-    const finish = (pointerEvent) => {
+    const finish = async (pointerEvent) => {
       if (pointerEvent.pointerId !== active.pointerId) return;
-      const preview = active.moved ? previewAt(pointerEvent) : null;
-      if (preview?.destination) place(asset, preview.destination);
+      const dimensions = active.dimensions || await active.dimensionPromise;
+      const preview = active.moved && dimensions ? previewAt(pointerEvent, dimensions) : null;
+      if (preview?.destination) await place(asset, preview.destination, dimensions);
       else if (active.moved) rejectDrop();
       cleanup();
     };
     const cancel = () => cleanup(); Object.assign(active, { move, finish, cancel }); dragRef.current = active;
+    active.dimensionPromise = Promise.resolve(resolveDimensions(asset)).then((dimensions) => {
+      active.dimensions = dimensions;
+      if (dragRef.current === active && active.moved && active.lastPointer && dimensions) {
+        setDragPreview({ asset, ...previewAt(active.lastPointer, dimensions) });
+      }
+      return dimensions;
+    });
     globalThis.addEventListener('pointermove', move, true); globalThis.addEventListener('pointerup', finish, true); globalThis.addEventListener('pointercancel', cancel, true);
   };
   useEffect(() => () => cleanup(), []);

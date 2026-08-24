@@ -43,11 +43,10 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress, accept
     height,
     isCollection: asset?.isCollection === true,
     mediaType,
-    placeable: Boolean(source && width && height && ['image', 'animation'].includes(mediaType)),
+    placeable: Boolean(source && ['image', 'animation'].includes(mediaType)),
     placementUnavailableReason: asset.collectionPreviewTokenId ? 'COLLECTION TOKEN PREVIEW ONLY'
       : !source ? 'MEDIA UNAVAILABLE'
-      : !width || !height ? 'DIMENSIONS RESOLVING'
-        : !['image', 'animation'].includes(mediaType) ? 'MEDIA TYPE UNAVAILABLE' : null,
+      : !['image', 'animation'].includes(mediaType) ? 'MEDIA TYPE UNAVAILABLE' : null,
     previewSrc: previewSource,
     previewCandidates,
     src: source,

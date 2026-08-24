@@ -7,7 +7,7 @@ const rect = (node) => {
   return value ? { left: value.left, top: value.top, right: value.right, bottom: value.bottom, width: value.width, height: value.height } : null;
 };
 
-export default function useOwnerSystemWorkflowFocusViewer({ assetsById, controller, onOpen }) {
+export default function useOwnerSystemWorkflowFocusViewer({ assetsById, controller, onOpen, resolveAssetDimensions }) {
   const [placementId, setPlacementId] = useState(null);
   const [originRectangle, setOriginRectangle] = useState(null);
   const placementRefs = useRef(new Map());
@@ -28,8 +28,7 @@ export default function useOwnerSystemWorkflowFocusViewer({ assetsById, controll
     const sourceUrl = asset?.src || asset?.originalImageUrl || asset?.imageUrl || asset?.thumbnailUrl;
     const origin = rect(source);
     if (!source || !next || !sourceUrl || !origin) return false;
-    const image = new Image(); image.decoding = 'async'; image.src = sourceUrl;
-    try { await image.decode(); } catch { /* Existing media fallback remains visible in the viewer. */ }
+    if (resolveAssetDimensions && !await resolveAssetDimensions(asset)) return false;
     if (!source.isConnected) return false;
     setOriginRectangle(origin);
     controller.replaceSelection([id]);

@@ -49,6 +49,7 @@ import {
   systemWorkflowCropMask,
   updateSystemWorkflowCropPanGesture,
 } from './systemWorkflowCrop.js';
+import { projectCroppedMediaRectangle } from '../lattice/rendering/latticeCrop.js';
 import {
   createSystemWorkflowPresentationCandidate,
   systemWorkflowPlacementPresentation,
@@ -59,6 +60,7 @@ import {
   createSystemWorkflowTransformCandidate,
   projectSystemWorkflowImageRenderRectangle,
   projectSystemWorkflowTransform,
+  transformSystemWorkflowGroupGeometries,
   unprojectSystemWorkflowCrop,
 } from './systemWorkflowTransform.js';
 import {
@@ -493,6 +495,35 @@ test('crop pan, dead-zone, cancellation, nudging, and zoom limits produce bounde
   assert.ok(Math.abs(reframed.zoom - (4 / 3)) < 1e-12);
   assert.equal(reframed.x, 0.625);
   assert.equal(reframed.y, 0.5);
+
+  const previousRectangle = projectCroppedMediaRectangle(
+    { left: 0, top: 0, width: 4, height: 4 },
+    { width: 100, height: 100 },
+    { x: 0.5, y: 0.5, zoom: 2 },
+  );
+  const liveReframe = reframeSystemWorkflowCropForMask(
+    { x: 0.5, y: 0.5, zoom: 2 },
+    { stableAssetId: ASSET, width: 100, height: 100 },
+    { left: 0, top: 0, width: 4, height: 4 },
+    { left: 0, top: 0, width: 6, height: 4 },
+    { originDelta: { x: -2, y: 0 }, renderedScale: 0.08 },
+  );
+  const liveRectangle = projectCroppedMediaRectangle(
+    { left: 0, top: 0, width: 6, height: 4 },
+    { width: 100, height: 100 },
+    liveReframe,
+  );
+  assert.deepEqual({
+    left: 10 + previousRectangle.left,
+    top: 3 + previousRectangle.top,
+    width: previousRectangle.width,
+    height: previousRectangle.height,
+  }, {
+    left: 8 + liveRectangle.left,
+    top: 3 + liveRectangle.top,
+    width: liveRectangle.width,
+    height: liveRectangle.height,
+  });
 });
 
 test('group duplicate, transform, and removal remain atomic and snapshot guarded', () => {
@@ -513,7 +544,9 @@ test('group duplicate, transform, and removal remain atomic and snapshot guarded
     operation: SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.MIRROR_VERTICAL,
     placementIds: ['a', 'b'],
   });
-  assert.deepEqual(transformed.grids[0].placements.map(({ transform }) => transform.mirrorY), [true, true]);
+  assert.deepEqual(transformed.grids[0].placements.map(({ row, transform }) => ({ row, mirrorY: transform.mirrorY })), [
+    { row: 8, mirrorY: true }, { row: 2, mirrorY: true },
+  ]);
   const removed = createSystemWorkflowGroupRemovalCandidate(draft, {
     expectedPlacements: structuredClone(entries), gridId: 'grid:home', placementIds: ['a', 'b'],
   });
@@ -525,6 +558,34 @@ test('group duplicate, transform, and removal remain atomic and snapshot guarded
     gridId: 'grid:home', operation: SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.ROTATE,
     placementIds: ['a', 'b'],
   }), { code: 'SYSTEM_WORKFLOW_TRANSFORM_PLACEMENT_LOCKED' });
+});
+
+test('group rotate and mirrors transform placement geometry around shared bounds', () => {
+  const entries = [
+    placement('left', 0, { column: 2, row: 3, columnSpan: 4, rowSpan: 2 }),
+    placement('right', 1, { column: 10, row: 6, columnSpan: 2, rowSpan: 3 }),
+  ];
+  assert.deepEqual(transformSystemWorkflowGroupGeometries(
+    entries,
+    SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.MIRROR_HORIZONTAL,
+  ).map(({ destination }) => destination), [
+    { column: 8, row: 3, columnSpan: 4, rowSpan: 2 },
+    { column: 2, row: 6, columnSpan: 2, rowSpan: 3 },
+  ]);
+  assert.deepEqual(transformSystemWorkflowGroupGeometries(
+    entries,
+    SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.MIRROR_VERTICAL,
+  ).map(({ destination }) => destination), [
+    { column: 2, row: 7, columnSpan: 4, rowSpan: 2 },
+    { column: 10, row: 3, columnSpan: 2, rowSpan: 3 },
+  ]);
+  assert.deepEqual(transformSystemWorkflowGroupGeometries(
+    entries,
+    SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.ROTATE,
+  ).map(({ destination }) => destination), [
+    { column: 4, row: 7, columnSpan: 2, rowSpan: 4 },
+    { column: 7, row: 1, columnSpan: 3, rowSpan: 2 },
+  ]);
 });
 
 test('single and group duplicate fail before exceeding the 200 placement boundary', () => {

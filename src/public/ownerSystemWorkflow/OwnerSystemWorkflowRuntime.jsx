@@ -18,6 +18,10 @@ import useOwnerSystemWorkflowFocusViewer from './useOwnerSystemWorkflowFocusView
 import useOwnerSystemWorkflowLayout from './useOwnerSystemWorkflowLayout.js';
 import useOwnerSystemWorkflowPanels from './useOwnerSystemWorkflowPanels.js';
 import useOwnerSystemWorkflowDevelopmentAuthorities from './useOwnerSystemWorkflowDevelopmentAuthorities.js';
+import {
+  decodeOwnerSystemWorkflowAssetDimensions,
+  ownerSystemWorkflowDecodedAsset,
+} from './ownerSystemWorkflowAssetDimensions.js';
 
 const OwnerSystemWorkflowPublicationRack = lazy(() => import('./OwnerSystemWorkflowPublicationRack.jsx'));
 
@@ -65,6 +69,7 @@ export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext
   const [dossierOpen, setDossierOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(initialLayersOpen);
   const [layersExplicitlyOpened, setLayersExplicitlyOpened] = useState(false);
+  const [decodedDimensions, setDecodedDimensions] = useState(() => new Map());
   const previewReturnFocus = useRef(null);
   const publicationReturnFocus = useRef(null);
   const layout = useOwnerSystemWorkflowLayout();
@@ -79,9 +84,35 @@ export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext
   const browser = useOwnerLatticeBrowser(profileAddress, panel === 'library' && browserEnabled);
   const assets = reviewAssets || browser.data.assets;
   const records = reviewAssets || rawAssets;
-  const assetsById = useMemo(() => assetMap(assets, records), [assets, records]);
+  const refineAsset = useCallback((asset) => ownerSystemWorkflowDecodedAsset(
+    asset, decodedDimensions.get(asset?.stableAssetId || asset?.id),
+  ), [decodedDimensions]);
+  const resolvedAssets = useMemo(() => assets.map(refineAsset), [assets, refineAsset]);
+  const canonicalRecords = useMemo(() => records.map(refineAsset), [records, refineAsset]);
+  const assetsById = useMemo(() => assetMap(resolvedAssets, canonicalRecords), [canonicalRecords, resolvedAssets]);
+  const registerAssetDimensions = useCallback((asset, dimensions) => {
+    const id = asset?.stableAssetId || asset?.id;
+    const refined = ownerSystemWorkflowDecodedAsset(asset, dimensions);
+    if (!id || refined === asset) return null;
+    const decoded = Object.freeze({
+      source: refined.decodedImageSource,
+      width: refined.decodedImageWidth,
+      height: refined.decodedImageHeight,
+    });
+    setDecodedDimensions((current) => {
+      const previous = current.get(id);
+      if (previous?.source === decoded.source && previous.width === decoded.width && previous.height === decoded.height) return current;
+      const next = new Map(current); next.set(id, decoded); return next;
+    });
+    return decoded;
+  }, []);
+  const resolveAssetDimensions = useCallback(async (asset) => {
+    const decoded = await decodeOwnerSystemWorkflowAssetDimensions(asset);
+    return decoded ? registerAssetDimensions(asset, decoded) : null;
+  }, [registerAssetDimensions]);
   const crop = useOwnerSystemWorkflowCrop({ assetsById, controller });
-  const viewer = useOwnerSystemWorkflowFocusViewer({ assetsById, controller, onOpen: () => panels.closePanel({ returnFocus: false }) });
+  const viewer = useOwnerSystemWorkflowFocusViewer({ assetsById, controller,
+    onOpen: () => panels.closePanel({ returnFocus: false }), resolveAssetDimensions });
   const activity = useOwnerSystemWorkflowActivity({ active: panel === 'activity', fixture: reviewActivity, profileAddress });
   const panelOccupied = Boolean(publicationOpen || panel || Object.values(panels.presence).some(({ present }) => present));
   const dismissNotice = useCallback(() => {
@@ -123,7 +154,7 @@ export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext
     return true;
   };
   const libraryData = useMemo(() => reviewAssets ? {
-    assets: reviewAssets,
+    assets: resolvedAssets,
     categories: reviewAuthorities.categories || [],
     categoryOrganization: reviewAuthorities.categoryOrganization,
     favorites: [],
@@ -132,8 +163,8 @@ export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext
     rejectedAssetCount: 0,
     status: 'ready',
     usedAssetIds: controller.selectedGrid?.placements.map(({ stableAssetId }) => stableAssetId) || [],
-  } : browser.data, [browser.data, controller.selectedGrid, profileAddress, reviewAssets,
-    reviewAuthorities.categories, reviewAuthorities.categoryOrganization]);
+  } : { ...browser.data, assets: resolvedAssets }, [browser.data, controller.selectedGrid, profileAddress, resolvedAssets,
+    reviewAssets, reviewAuthorities.categories, reviewAuthorities.categoryOrganization]);
   const profileModel = useMemo(() => createProductionIdentityDossierViewModel({
     assetRecords: assetsById,
     contractFacts,
@@ -154,7 +185,16 @@ export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext
     previewReturnFocus.current = trigger;
     panels.closePanel({ returnFocus: false });
     try {
-      const document = buildOwnerSystemWorkflowPreviewDocument({ assetRecords: records, profile: publicationProfile,
+      const referencedIds = new Set(controller.draft.grids.flatMap((grid) => grid.placements.map(({ stableAssetId }) => stableAssetId)));
+      const decodedEntries = await Promise.all([...referencedIds].map(async (id) => {
+        const asset = assetsById.get(id);
+        return [id, asset ? await resolveAssetDimensions(asset) : null];
+      }));
+      const previewDimensions = new Map(decodedEntries.filter(([, dimensions]) => dimensions));
+      const previewRecords = records.map((asset) => ownerSystemWorkflowDecodedAsset(
+        asset, previewDimensions.get(asset?.id) || decodedDimensions.get(asset?.id),
+      ));
+      const document = buildOwnerSystemWorkflowPreviewDocument({ assetRecords: previewRecords, profile: publicationProfile,
         profileAddress, systemWorkflowDraft: controller.draft });
       await preloadOwnerSystemWorkflowPreviewEntryMedia(document, reviewAssets ? { timeoutMs: 500 } : undefined);
       setPreview(document);
@@ -184,9 +224,11 @@ export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext
     data-lattice-menu-surface data-menu-surface={menuSurface} data-reduced-motion={layout.reducedMotion || undefined}
     data-surface={controller.draft?.appearance.surfaceId} data-previewing={preview ? true : undefined}
     inert={preview || publicationOpen ? '' : undefined}>
-    <OwnerSystemWorkflowCanvas assetsById={assetsById} controller={controller} crop={crop} onChangeGrid={changeGrid}
+    <OwnerSystemWorkflowCanvas assetsById={assetsById} controller={controller} crop={crop}
+      onAssetDimensions={registerAssetDimensions} onChangeGrid={changeGrid}
       interactionDisabled={panelOccupied} onOpenViewer={(placement) => viewer.open(placement.id)}
-      onPlacementRef={viewer.registerPlacement} reducedMotion={layout.reducedMotion} viewerPlacementId={viewer.placementId} />
+      onPlacementRef={viewer.registerPlacement} reducedMotion={layout.reducedMotion}
+      resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.placementId} />
     <OwnerSystemWorkflowPanelLayer activity={activity} assets={assets} assetsById={assetsById} browser={browser}
       controller={controller} crop={crop} layersOpen={layersOpen} layout={layout} libraryData={libraryData} menuSurface={menuSurface} onChangeGrid={changeGrid}
       workspaceSurfaceColor={workspaceSurfaceColor}
@@ -195,6 +237,7 @@ export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext
         if (!open) setLayersExplicitlyOpened(false);
       }} onVisitProfile={onVisitProfile}
       panelOccupied={panelOccupied} panels={panels} profileIdentity={profileIdentity} profileModel={profileModel}
+      resolveAssetDimensions={resolveAssetDimensions}
       categoryCommands={reviewAuthorities.categoryCommands || browser.commands} discoveryCommands={reviewAuthorities.discoveryCommands}
       discoveryGroups={reviewAuthorities.discoveryGroups} reviewDiscovery={reviewAuthorities.discovery} />
     {viewer.placementId && <OwnerSystemWorkflowFocusViewer menuSurface={menuSurface} viewer={viewer}
@@ -226,7 +269,7 @@ export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext
       requestAnimationFrame(() => panels.openPanel('discover', trigger));
     }} />}
   {publicationOpen && <Suspense fallback={null}><OwnerSystemWorkflowPublicationRack
-    assetRecords={records}
+    assetRecords={canonicalRecords}
     getWalletPublicationContext={getWalletPublicationContext}
     menuSurface={menuSurface}
     onClose={closePublication}

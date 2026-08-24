@@ -29,7 +29,7 @@ function selectedRecords(controller, grid, placement) {
   return selected.some(({ id }) => id === placement.id) ? selected : [placement];
 }
 
-export default function useOwnerSystemWorkflowPlacementInteraction({ canvasRef, canNavigateGrid = () => false, controller, cropSession = null, disabled = false, onNavigateGrid, reducedMotion = false, snapStep = 1 }) {
+export default function useOwnerSystemWorkflowPlacementInteraction({ canvasRef, canNavigateGrid = () => false, controller, cropResize = null, cropSession = null, disabled = false, onNavigateGrid, reducedMotion = false, snapStep = 1 }) {
   const [previewById, setPreviewById] = useState(new Map());
   const [marquee, setMarquee] = useState(null);
   const [gridSwipe, setGridSwipe] = useState(null);
@@ -66,6 +66,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ canvasRef, 
     const domainGesture = kind === 'resize'
       ? records.length > 1 ? createSystemWorkflowGroupResizeGesture(records, corner, field, point) : createSystemWorkflowResizeGesture(placement, corner, field, point)
       : createSystemWorkflowMovementGesture(placement, field, point);
+    if (kind === 'resize' && cropSession) cropResize?.begin?.();
     const update = (pointerEvent) => {
       const active = gestureRef.current;
       if (!active || pointerEvent.pointerId !== active.pointerId) return;
@@ -83,7 +84,10 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ canvasRef, 
       const previews = new Map();
       if (active.kind === 'resize') {
         if (active.records.length > 1) next.previewDestinations.forEach(({ placementId, destination }) => previews.set(placementId, destination));
-        else previews.set(active.placement.id, next.previewGeometry);
+        else {
+          previews.set(active.placement.id, next.previewGeometry);
+          if (active.cropResize) cropResize?.preview?.({ ...active.placement, ...next.previewGeometry });
+        }
       } else {
         const rawDelta = { column: next.previewGeometry.column - active.placement.column, row: next.previewGeometry.row - active.placement.row };
         const delta = active.records.length > 1 ? clampSystemWorkflowGroupDelta(active.records, rawDelta) : rawDelta;
@@ -111,6 +115,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ canvasRef, 
           }
         }
       }
+      if (active.cropResize) cropResize?.finish?.({ cancelled });
       clearGesture();
     };
     const finish = (pointerEvent) => complete(pointerEvent, false);
