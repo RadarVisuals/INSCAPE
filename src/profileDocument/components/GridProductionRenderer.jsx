@@ -7,6 +7,7 @@ import {
 import { projectSystemWorkflowViewport } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
 import { systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { adaptProfileDocumentV9Media, PROFILE_DOCUMENT_V9_MEDIA_STATUS } from './profileDocumentV9Media.js';
+import { resolveProfileDocumentV9ContentReference } from '../domain/profileDocumentV9ContentReferenceResolver.js';
 import '../../lattice/rendering/latticeProductionTableRenderer.css';
 
 export const GRID_PRODUCTION_EAGER_MEDIA_RETRY_DELAY = 4_000;
@@ -18,7 +19,24 @@ const viewportOf = (node, bottomInset = 0) => ({
 });
 
 function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlacementActivate, placement, gridId, viewerSourceHidden }) {
-  const media = useMemo(() => adaptProfileDocumentV9Media(placement.asset), [placement.asset]);
+  const reference = placement.asset?.media?.reference || null;
+  const referenceKey = reference
+    ? `${placement.asset.stableAssetId}:${reference.verification.method}:${reference.verification.data}` : null;
+  const [referenceResolution, setReferenceResolution] = useState(() => ({ key: referenceKey, complete: false, url: null }));
+  useEffect(() => {
+    if (!referenceKey) { setReferenceResolution({ key: null, complete: true, url: null }); return undefined; }
+    const controller = new AbortController();
+    setReferenceResolution({ key: referenceKey, complete: false, url: null });
+    resolveProfileDocumentV9ContentReference(placement.asset, { signal: controller.signal })
+      .then((resolved) => { if (!controller.signal.aborted) setReferenceResolution({
+        key: referenceKey, complete: true, url: resolved?.src || null,
+      }); });
+    return () => controller.abort();
+  }, [placement.asset, referenceKey]);
+  const activeResolution = referenceResolution.key === referenceKey ? referenceResolution : { complete: false, url: null };
+  const media = useMemo(() => adaptProfileDocumentV9Media(placement.asset, {
+    resolvedUrl: activeResolution.url, resolutionComplete: !referenceKey || activeResolution.complete,
+  }), [activeResolution.complete, activeResolution.url, placement.asset, referenceKey]);
   const [loadState, setLoadState] = useState(() => ({ src: media.src, status: 'loading', dimensions: null, attempt: 0 }));
   useEffect(() => setLoadState({ src: media.src, status: 'loading', dimensions: null, attempt: 0 }), [media.src]);
   useEffect(() => {
@@ -39,7 +57,8 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
     : placement.transparencyMode === 'OPAQUE' ? '#d8d4ca' : 'transparent';
   const ready = media.status === PROFILE_DOCUMENT_V9_MEDIA_STATUS.READY;
   const loaded = ready && loadState.src === media.src && loadState.status === 'loaded';
-  const failed = !ready || loadState.src === media.src && loadState.status === 'failed';
+  const failed = !ready && media.status !== PROFILE_DOCUMENT_V9_MEDIA_STATUS.RESOLVING
+    || loadState.src === media.src && loadState.status === 'failed';
   useEffect(() => onMediaState?.({
     dimensions: loaded ? dimensions : null, media, placementId: placement.id,
     status: failed ? 'failed' : loaded ? 'ready' : 'loading', gridId,

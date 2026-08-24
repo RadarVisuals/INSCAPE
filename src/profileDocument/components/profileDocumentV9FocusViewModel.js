@@ -3,9 +3,9 @@ import { adaptProfileDocumentV9Media, PROFILE_DOCUMENT_V9_MEDIA_STATUS } from '.
 const clean = (value) => typeof value === 'string' && value.trim() ? value.trim() : null;
 const shortAddress = (value) => value ? `${value.slice(0, 8)}…${value.slice(-6)}` : null;
 
-export function createProfileDocumentV9FocusViewModel(placement) {
+export function createProfileDocumentV9FocusViewModel(placement, mediaOptions) {
   const published = placement?.asset;
-  const media = adaptProfileDocumentV9Media(published);
+  const media = adaptProfileDocumentV9Media(published, mediaOptions);
   if (!published || media.status !== PROFILE_DOCUMENT_V9_MEDIA_STATUS.READY) return null;
   const dimensions = media.dimensions;
   const creatorGroups = new Map();

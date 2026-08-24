@@ -14,6 +14,9 @@ const safeText = (value, maximum, { nullable = false } = {}) => nullable && valu
   || typeof value === 'string' && value.length <= maximum && !/[\u0000-\u001f\u007f]/u.test(value);
 const CREATOR_SCOPES = new Set(['contract', 'tokenId']);
 const CREATOR_SOURCES = new Set(['LUKSO INDEXER / LSP4 CREATORS', 'LSP4Creators[]']);
+const LSP4_METADATA_KEY = '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e';
+const VERIFICATION_METHODS = new Set(['keccak256(bytes)', 'keccak256(utf8)', '0x8019f9b1', '0x6f357c6a']);
+const HASH = /^0x[0-9a-f]{64}$/u;
 
 function cleanText(value, maximum, { nullable = false } = {}) {
   if (nullable && value == null) return null;
@@ -21,7 +24,31 @@ function cleanText(value, maximum, { nullable = false } = {}) {
   return value.replace(/[\u0000-\u001f\u007f]/gu, ' ').replace(/\s+/gu, ' ').trim().slice(0, maximum);
 }
 
-export function buildProfileDocumentV9Asset(asset, expectedStableAssetId) {
+function buildCompactContentReference(value, identity) {
+  if (!record(value) || value.protocol !== 'erc725y' || value.scope !== 'tokenId'
+    || value.dataKey !== LSP4_METADATA_KEY || !identity.tokenId
+    || !record(value.verification) || !VERIFICATION_METHODS.has(String(value.verification.method).toLowerCase())
+    || !HASH.test(String(value.verification.data).toLowerCase())) return null;
+  return {
+    protocol: 'erc725y', scope: 'tokenId', dataKey: LSP4_METADATA_KEY,
+    verification: {
+      method: String(value.verification.method).toLowerCase(),
+      data: String(value.verification.data).toLowerCase(),
+    },
+  };
+}
+
+export function validateProfileDocumentV9ContentReference(value) {
+  return exactKeys(value, ['protocol', 'scope', 'dataKey', 'verification'])
+    && value.protocol === 'erc725y' && value.scope === 'tokenId' && value.dataKey === LSP4_METADATA_KEY
+    && exactKeys(value.verification, ['method', 'data'])
+    && typeof value.verification.method === 'string' && typeof value.verification.data === 'string'
+    && VERIFICATION_METHODS.has(String(value.verification.method).toLowerCase())
+    && value.verification.method === value.verification.method.toLowerCase()
+    && HASH.test(value.verification.data);
+}
+
+export function buildProfileDocumentV9Asset(asset, expectedStableAssetId, { compactContentReference = true } = {}) {
   if (!record(asset) || asset.id !== expectedStableAssetId) {
     throw new TypeError(`Missing or mismatched production asset: ${expectedStableAssetId}`);
   }
@@ -29,10 +56,12 @@ export function buildProfileDocumentV9Asset(asset, expectedStableAssetId) {
   if (!identity || identity.stableAssetId !== expectedStableAssetId) {
     throw new TypeError(`Missing or mismatched production asset: ${expectedStableAssetId}`);
   }
+  const contentReference = compactContentReference
+    ? buildCompactContentReference(asset.contentReference, identity) : null;
   const mediaCandidate = [asset.originalImageUrl, asset.imageUrl, asset.thumbnailUrl]
     .find((value) => parsePublishedAssetUrl(value));
-  const mediaUrl = parsePublishedAssetUrl(mediaCandidate)?.value;
-  if (!mediaUrl) throw new TypeError(`Production asset has no publishable media: ${expectedStableAssetId}`);
+  const mediaUrl = contentReference ? null : parsePublishedAssetUrl(mediaCandidate)?.value;
+  if (!contentReference && !mediaUrl) throw new TypeError(`Production asset has no publishable media: ${expectedStableAssetId}`);
   const declaredType = typeof asset.mediaType === 'string' && asset.mediaType.trim()
     ? asset.mediaType.trim().toLowerCase()
     : null;
@@ -64,6 +93,7 @@ export function buildProfileDocumentV9Asset(asset, expectedStableAssetId) {
     collectionName: cleanText(asset.collectionName, 80, { nullable: true }),
     media: {
       url: mediaUrl,
+      ...(contentReference ? { reference: contentReference } : {}),
       width: Number.isSafeInteger(asset.imageWidth) && asset.imageWidth > 0 ? asset.imageWidth : null,
       height: Number.isSafeInteger(asset.imageHeight) && asset.imageHeight > 0 ? asset.imageHeight : null,
       type: mediaType,
@@ -88,8 +118,11 @@ export function validateProfileDocumentV9Asset(asset) {
     || asset.tokenStandard === 'LSP7' && tokenId) return false;
   if (!safeText(asset.name, 80) || !safeText(asset.description, 2000)
     || !safeText(asset.collectionName, 80, { nullable: true })) return false;
-  if (!exactKeys(asset.media, ['url', 'width', 'height', 'type'])
-    || !isValidPublishedAssetUrl(asset.media.url)
+  const compactReference = exactKeys(asset.media, ['url', 'reference', 'width', 'height', 'type'])
+    && asset.media.url === null && validateProfileDocumentV9ContentReference(asset.media.reference);
+  const directUrl = exactKeys(asset.media, ['url', 'width', 'height', 'type'])
+    && isValidPublishedAssetUrl(asset.media.url);
+  if (!(compactReference || directUrl)
     || !(asset.media.width === null || Number.isSafeInteger(asset.media.width) && asset.media.width > 0)
     || !(asset.media.height === null || Number.isSafeInteger(asset.media.height) && asset.media.height > 0)
     || !['image', 'animation', 'unknown'].includes(asset.media.type)) return false;
@@ -107,7 +140,7 @@ export function validateProfileDocumentV9Asset(asset) {
       && safeText(attribute.type, 40, { nullable: true }));
 }
 
-export function createProfileDocumentV9AssetResolver(assetRecords = []) {
+export function createProfileDocumentV9AssetResolver(assetRecords = [], options) {
   const records = assetRecords instanceof Map ? new Map(assetRecords) : new Map();
   if (!(assetRecords instanceof Map)) {
     for (const asset of Array.isArray(assetRecords) ? assetRecords : []) {
@@ -115,5 +148,5 @@ export function createProfileDocumentV9AssetResolver(assetRecords = []) {
       records.set(asset?.id, asset);
     }
   }
-  return (stableAssetId) => buildProfileDocumentV9Asset(records.get(stableAssetId), stableAssetId);
+  return (stableAssetId) => buildProfileDocumentV9Asset(records.get(stableAssetId), stableAssetId, options);
 }

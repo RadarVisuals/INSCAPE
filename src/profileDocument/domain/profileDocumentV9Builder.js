@@ -83,10 +83,10 @@ export function buildProfileDocumentV9({
   const created = timestamp(createdAt ?? 0, 'Document creation time');
   const exported = timestamp(exportedAt ?? createdAt ?? 0, 'Document export time');
   if (Date.parse(created) > Date.parse(exported)) throw new TypeError('Document creation time cannot follow export time');
-  const resolveAsset = createProfileDocumentV9AssetResolver(assetRecords);
+  const resolveAvatarAsset = createProfileDocumentV9AssetResolver(assetRecords, { compactContentReference: false });
   const identity = structuredClone(draft.identityPresentation);
   const avatarAsset = identity.avatar.mode === 'inscape' && identity.avatar.stableAssetId
-    ? resolveAsset(identity.avatar.stableAssetId)
+    ? resolveAvatarAsset(identity.avatar.stableAssetId)
     : null;
   return assertValidProfileDocumentV9({
     documentType: INSCAPE_PROFILE_DOCUMENT_TYPE,

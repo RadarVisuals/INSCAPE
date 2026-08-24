@@ -1,10 +1,13 @@
 import { IPFS_GATEWAY_URL } from '../config.js';
+import { resolveVerifiedOnchainSvgDataUri } from './onchainDataUri.js';
 
 function gatewayBase(gateway) {
   return `${String(gateway || IPFS_GATEWAY_URL).replace(/\/+$/, '')}/`;
 }
 
-export function resolveContentUrl(value, { ipfsGateway = IPFS_GATEWAY_URL, allowRelative = false } = {}) {
+export function resolveContentUrl(value, {
+  ipfsGateway = IPFS_GATEWAY_URL, allowRelative = false, verification = null,
+} = {}) {
   if (typeof value !== 'string') return null;
   const source = value.trim();
   if (!source) return null;
@@ -14,6 +17,7 @@ export function resolveContentUrl(value, { ipfsGateway = IPFS_GATEWAY_URL, allow
     if (!path || /[\s<>"']/u.test(path)) return null;
     return `${gatewayBase(ipfsGateway)}${path}`;
   }
+  if (/^data:/iu.test(source)) return resolveVerifiedOnchainSvgDataUri(source, verification);
   try {
     const url = new URL(source);
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
@@ -39,7 +43,7 @@ export function selectImageUrls(images, options) {
 export function selectImageGroups(images, options) {
   const groups = new Map();
   for (const image of Array.isArray(images) ? images : []) {
-    const resolved = resolveContentUrl(image?.src || image?.url, options);
+    const resolved = resolveContentUrl(image?.src || image?.url, { ...options, verification: image?.verification });
     if (!resolved) continue;
     const index = Number.isInteger(image?.index) && image.index >= 0 ? image.index : 0;
     if (!groups.has(index)) groups.set(index, []);

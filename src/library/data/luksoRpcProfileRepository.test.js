@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { encodeDataSourceWithHash } from '@erc725/erc725.js';
+import { keccak256 } from 'viem';
 import { createLuksoRpcProfileRepository } from './luksoRpcProfileRepository.js';
 import { createLsp8CollectionMetadataResolver } from '../../creations/data/lsp8CollectionMetadataResolver.js';
 
@@ -236,4 +237,83 @@ test('collection metadata resolver prefers token metadata and falls back to the 
   assert.equal(result.get(secondTokenId).name, 'Base two');
   assert.equal(result.get(secondTokenId).metadataSource, 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)');
   assert.equal(fetched.some((url) => url.endsWith('/metadata/2')), true);
+});
+
+test('hydrates verified on-chain LSP4 JSON and SVG media without a network fetch or NFT-specific route', async () => {
+  const burntPixContract = '0x3983151e0442906000dab83c8b1cf3f2d2535f82';
+  const burntPixTokenId = '0x00000000000000000000000085bc3f6772107468dd9edf194f114b0c8c66eb71';
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1025 1025"><rect width="1025" height="1025" fill="#202020"/></svg>';
+  const svgBytes = new TextEncoder().encode(svg);
+  const svgUrl = `data:image/svg+xml;base64,${Buffer.from(svgBytes).toString('base64')}`;
+  const metadata = JSON.stringify({ LSP4Metadata: { images: [[{
+    width: 768, height: 768, url: svgUrl,
+    verification: { method: 'keccak256(bytes)', data: keccak256(svgBytes) },
+  }]] } });
+  const metadataVerification = {
+    method: 'keccak256(utf8)', data: keccak256(new TextEncoder().encode(metadata)),
+  };
+  const metadataPointer = encodeDataSourceWithHash(metadataVerification,
+    `data:application/json;charset=UTF-8,${metadata}`);
+  const client = {
+    async multicall({ contracts }) {
+      if (contracts[0]?.functionName === 'supportsInterface') {
+        return [{ status: 'success', result: true }, { status: 'success', result: false }];
+      }
+      return [{ status: 'success', result: [burntPixTokenId] }];
+    },
+    async readContract({ functionName, args }) {
+      if (functionName === 'getDataForTokenId') {
+        return args[1] === '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e'
+          ? metadataPointer : '0x';
+      }
+      if (args[0] === '0xf675e9361af1c1664c1868cfa3eb97672d6b1a513aa5b81dec34c9ee330e818d') return '0x02';
+      if (args[0] === '0xe0261fa95db2eb3b5439bd033cda66d56b96f92f243a8228fd87550ed7bdfdb3') return '0x01';
+      return '0x';
+    },
+  };
+  const repository = createLuksoRpcProfileRepository({
+    client, rpcUrl: 'https://rpc.example', discoverContracts: async () => [burntPixContract],
+    fetchImpl: async () => { throw new Error('on-chain metadata must not fetch'); },
+  });
+  const batches = [];
+  for await (const batch of repository.loadProfileAssets(profile)) batches.push(batch);
+  const asset = batches[0].assets[0];
+  assert.equal(asset.id, `42:${burntPixContract}:${burntPixTokenId}`);
+  assert.equal(asset.imageUrl, svgUrl);
+  assert.equal(asset.imageWidth, 768);
+  assert.equal(asset.imageHeight, 768);
+  assert.deepEqual(asset.contentReference, {
+    protocol: 'erc725y', scope: 'tokenId',
+    dataKey: '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e',
+    verification: metadataVerification,
+  });
+  assert.equal(asset.fieldProvenance.images.source, 'LSP4MetadataForTokenId');
+  assert.equal(batches[0].failures, 0);
+});
+
+test('Creations collection repair uses the same verified on-chain SVG metadata path', async () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><rect width="1" height="1"/></svg>';
+  const svgBytes = new TextEncoder().encode(svg);
+  const svgUrl = `data:image/svg+xml;base64,${Buffer.from(svgBytes).toString('base64')}`;
+  const metadata = JSON.stringify({ LSP4Metadata: { name: 'On-chain work', images: [{
+    width: 1, height: 1, url: svgUrl,
+    verification: { method: 'keccak256(bytes)', data: keccak256(svgBytes) },
+  }] } });
+  const pointer = encodeDataSourceWithHash({
+    method: 'keccak256(utf8)', data: keccak256(new TextEncoder().encode(metadata)),
+  }, `data:application/json;charset=UTF-8,${metadata}`);
+  const resolver = createLsp8CollectionMetadataResolver({
+    rpcUrl: 'https://rpc.example',
+    client: { async readContract({ functionName, args }) {
+      if (functionName === 'getDataForTokenId'
+        && args[1] === '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e') return pointer;
+      if (functionName === 'getData' && args[0] === '0xf675e9361af1c1664c1868cfa3eb97672d6b1a513aa5b81dec34c9ee330e818d') return '0x02';
+      return '0x';
+    } },
+    fetchImpl: async () => { throw new Error('on-chain metadata must not fetch'); },
+  });
+  const result = await resolver.resolve(lsp8, [{ tokenId }]);
+  assert.equal(result.get(tokenId).name, 'On-chain work');
+  assert.equal(result.get(tokenId).images[0].url, svgUrl);
+  assert.equal(result.get(tokenId).metadataSource, 'LSP4MetadataForTokenId (DIRECT LUKSO RPC)');
 });

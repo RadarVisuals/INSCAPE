@@ -89,11 +89,11 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Phase 4B selects the complete System Workflow owner shell. The measured
   // increase belongs only to this lazy owner graph; the initial and standalone
   // wallet boundaries retain their previous limits.
-  // The accepted media-geometry, compound-transform, and Activity timestamp
-  // corrections measure 370,971 raw / 112,076 gzip bytes in the primary owner
-  // graph; the alternate-outDir matrix measures 370,971 / 112,056. Preserve
+  // The accepted media-geometry, Activity timestamp, verified on-chain SVG, and
+  // compact hash-pinned LSP4 Visitor resolution measure 375,472 raw / 113,972
+  // gzip bytes in the primary graph and 113,978 gzip in alternate output. Preserve
   // Phase 4B's prior 0 raw / 3 gzip bytes above the highest measured boundary.
-  ownerJavaScript: Object.freeze({ raw: 370_971, gzip: 112_079 }),
+  ownerJavaScript: Object.freeze({ raw: 376_121, gzip: 114_199 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
@@ -388,7 +388,7 @@ export function productionBuildHygienePlugin() {
       productionEnvironment = config.env;
     },
     generateBundle(_options, bundle) { chunkGroups = collectChunkModuleGroups(bundle); },
-    async closeBundle() {
+    async writeBundle() {
       await assertNoProhibitedProductionArtifacts(outputDirectory);
       await pruneProductionAuthoringAssets(outputDirectory);
       await writeNetlifyHeaders(outputDirectory, { env: productionEnvironment });

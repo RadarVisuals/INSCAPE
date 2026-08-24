@@ -160,3 +160,76 @@ test('missing dimensions remain unknown through owner and v9 projection', () => 
   });
   assert.equal(adaptProfileDocumentV9Media(preview.grids[0].placements[0].asset).dimensions, null);
 });
+
+test('compact verified on-chain media keeps its ratio and many Burnt Pix placements inside v9', () => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1025 1025"><desc>${'x'.repeat(192_000)}</desc><rect width="1025" height="1025"/></svg>`;
+  const source = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+  assert.ok(source.length > 256_000, 'the fixture stays representative of the real Burnt Pix payload scale');
+  const onchainAsset = {
+    ...asset(), imageUrl: source, originalImageUrl: source, imageWidth: 768, imageHeight: 768,
+    contractAddress: '0x3983151e0442906000dab83c8b1cf3f2d2535f82',
+    tokenId: '0x00000000000000000000000085bc3f6772107468dd9edf194f114b0c8c66eb71',
+    contentReference: {
+      protocol: 'erc725y', scope: 'tokenId',
+      dataKey: '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e',
+      verification: { method: 'keccak256(utf8)', data: `0x${'11'.repeat(32)}` },
+    },
+  };
+  onchainAsset.id = `42:${onchainAsset.contractAddress}:${onchainAsset.tokenId}`;
+  const systemWorkflowDraft = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
+  systemWorkflowDraft.grids[0].placements = [{
+    ...placement('burnt-pix', 0), stableAssetId: onchainAsset.id, columnSpan: 6, rowSpan: 6,
+  }];
+  const preview = buildOwnerSystemWorkflowPreviewDocument({
+    assetRecords: [onchainAsset], profile: {}, profileAddress: PROFILE, systemWorkflowDraft,
+  });
+  assert.deepEqual(ownerSystemWorkflowPreviewEntryMediaUrls(preview), []);
+  assert.deepEqual(preview.grids[0].placements[0].asset.media, {
+    url: null, reference: onchainAsset.contentReference, width: 768, height: 768, type: 'image',
+  });
+  assert.deepEqual(adaptProfileDocumentV9Media(preview.grids[0].placements[0].asset, {
+    resolvedUrl: source, resolutionComplete: true,
+  }), {
+    status: 'ready', dimensions: { width: 768, height: 768 }, label: 'Preview artwork',
+    src: source, stableAssetId: onchainAsset.id,
+  });
+  assert.deepEqual(adaptProfileDocumentV9Media(preview.grids[0].placements[0].asset, {
+    decodedDimensions: { width: 150, height: 150 }, resolvedUrl: source, resolutionComplete: true,
+  }).dimensions, { width: 150, height: 150 });
+  assert.equal(canonicalSerializeProfileDocumentV9(preview).includes(source), false);
+  assert.ok(new TextEncoder().encode(canonicalSerializeProfileDocumentV9(preview)).byteLength < 512 * 1024);
+
+  systemWorkflowDraft.identityPresentation.avatar = {
+    mode: 'inscape', stableAssetId: onchainAsset.id, shape: 'square',
+  };
+  const avatarPreview = buildOwnerSystemWorkflowPreviewDocument({
+    assetRecords: [onchainAsset], profile: {}, profileAddress: PROFILE, systemWorkflowDraft,
+  });
+  assert.equal(avatarPreview.identityPresentation.avatar.asset.media.url, source,
+    'the synchronous identity avatar retains its already-validated media source');
+  systemWorkflowDraft.identityPresentation.avatar = { mode: 'official', stableAssetId: null, shape: 'square' };
+
+  systemWorkflowDraft.grids[0].placements = Array.from({ length: 15 }, (_entry, index) => ({
+    ...placement(`burnt-pix-repeat-${index}`, index), stableAssetId: onchainAsset.id,
+  }));
+  const repeatedPreview = buildOwnerSystemWorkflowPreviewDocument({
+    assetRecords: [onchainAsset], profile: {}, profileAddress: PROFILE, systemWorkflowDraft,
+  });
+  assert.equal(repeatedPreview.grids[0].placements.length, 15);
+  assert.ok(new TextEncoder().encode(canonicalSerializeProfileDocumentV9(repeatedPreview)).byteLength < 512 * 1024);
+
+  const distinctAssets = Array.from({ length: 15 }, (_entry, index) => {
+    const tokenId = `0x${(index + 1).toString(16).padStart(64, '0')}`;
+    return { ...onchainAsset, id: `42:${onchainAsset.contractAddress}:${tokenId}`, tokenId,
+      contentReference: { ...onchainAsset.contentReference,
+        verification: { method: 'keccak256(utf8)', data: `0x${(index + 1).toString(16).padStart(64, '0')}` } } };
+  });
+  systemWorkflowDraft.grids[0].placements = distinctAssets.map((entry, index) => ({
+    ...placement(`burnt-pix-distinct-${index}`, index), stableAssetId: entry.id,
+  }));
+  const distinctPreview = buildOwnerSystemWorkflowPublicationDocument({
+    assetRecords: distinctAssets, exportedAt: 2, profile: {}, profileAddress: PROFILE, systemWorkflowDraft,
+  });
+  assert.equal(distinctPreview.grids[0].placements.length, 15);
+  assert.ok(new TextEncoder().encode(canonicalSerializeProfileDocumentV9(distinctPreview)).byteLength < 512 * 1024);
+});

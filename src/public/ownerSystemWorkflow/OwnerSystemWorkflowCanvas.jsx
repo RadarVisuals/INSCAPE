@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { projectCroppedMediaRectangle } from '../../lattice/rendering/latticeCrop.js';
 import { fitNativeMediaRectangle } from '../../lattice/rendering/latticeGeometry.js';
 import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
+import { projectLatticeRasterBleedRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
 import { createSystemWorkflowDropGeometry } from '../../systemWorkflow/systemWorkflowPlacement.js';
 import { systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { adjacentSystemWorkflowGridId } from '../../systemWorkflow/domain/systemWorkflowNavigation.js';
@@ -58,7 +59,9 @@ function GridSwipePreview({ appearance, assetsById, grid, onAssetDimensions, wor
       const imageRectangle = dimensions && (transform.crop
         ? projectCroppedMediaRectangle(opening, transform.dimensions, transform.crop)
         : fitNativeMediaRectangle(opening, transform.dimensions));
-      const imageRenderRectangle = projectSystemWorkflowImageRenderRectangle(imageRectangle, transform);
+      const imageRenderRectangle = projectSystemWorkflowImageRenderRectangle(
+        imageRectangle && projectLatticeRasterBleedRectangle(imageRectangle, opening), transform,
+      );
       return <div className="system-workflow__placement" data-cropped={Boolean(placement.crop) || undefined} key={placement.id}
         style={{ ...projected, zIndex: placement.layer + 1 }}>
         <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
@@ -200,7 +203,9 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
           ? projectSystemWorkflowTransform(placement.transform, dimensions, visibleCrop)
           : projectSystemWorkflowTransform(placement.transform, { width: placement.columnSpan, height: placement.rowSpan }, visibleCrop);
         const imageRectangle = dimensions && (transform.crop ? projectCroppedMediaRectangle(opening, transform.dimensions, transform.crop) : fitNativeMediaRectangle(opening, transform.dimensions));
-        const imageRenderRectangle = projectSystemWorkflowImageRenderRectangle(imageRectangle, transform);
+        const imageRenderRectangle = projectSystemWorkflowImageRenderRectangle(
+          imageRectangle && projectLatticeRasterBleedRectangle(imageRectangle, opening), transform,
+        );
         return <div aria-disabled={placement.locked || undefined} aria-label={`Select ${asset?.title || asset?.name || 'artwork'}`} aria-pressed={isSelected}
           className="system-workflow__placement" data-cropped={Boolean(visibleCrop) || undefined} data-cropping={cropping || undefined} data-system-workflow-crop-surface={cropping || undefined} data-system-workflow-placement-id={placement.id} data-locked={placement.locked || undefined}
           data-viewing={viewerPlacementId === placement.id || undefined}

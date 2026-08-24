@@ -106,7 +106,10 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
   }, [activeGrid.id, identityDossierActive, placementMedia, viewerSession]);
   const viewerEntries = useMemo(() => activeGrid.placements.map((placement) => {
     const decoded = placementMedia[`${activeGrid.id}:${placement.id}`];
-    const model = createProfileDocumentV9FocusViewModel(placement);
+    const model = createProfileDocumentV9FocusViewModel(placement, {
+      decodedDimensions: decoded?.dimensions, resolvedUrl: decoded?.media?.src,
+      resolutionComplete: decoded?.status !== 'loading',
+    });
     return model && decoded?.status === 'ready' && decoded.dimensions
       ? { ...model, focusDimensions: decoded.dimensions, media: { ...model.media, src: decoded.media.src } } : null;
   }).filter(Boolean), [activeGrid, placementMedia]);

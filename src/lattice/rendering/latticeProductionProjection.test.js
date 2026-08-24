@@ -5,6 +5,7 @@ import { projectLatticeProductionPublication } from '../domain/latticeProduction
 import {
   createLatticeProductionTableRenderModel,
   projectLatticeProductionArtwork,
+  projectLatticeProductionPixelArtwork,
   projectLatticeProductionLabel,
   projectLatticeProductionPlacement,
   projectLatticeProductionViewport,
@@ -81,6 +82,8 @@ test('placement, label, native ratio, crop, and mat projection share the same ce
   const cropped = projectLatticeProductionArtwork(croppedPlacement, field, { width: 900, height: 1600 });
   assert.equal(cropped.imageRectangle.width, 320);
   assert.ok(cropped.imageRectangle.height > cropped.mediaOpeningRectangle.height);
+  assert.equal(cropped.imageRenderRectangle.left, cropped.mediaOpeningRectangle.left - 1);
+  assert.equal(cropped.imageRenderRectangle.width, cropped.imageRectangle.width + 2);
 
   const mattedPlacement = {
     ...model.table.placements[0],
@@ -91,6 +94,25 @@ test('placement, label, native ratio, crop, and mat projection share the same ce
   assert.deepEqual({ ...matted.mediaOpeningRectangle, height: Math.round(matted.mediaOpeningRectangle.height) }, {
     left: 192, top: 144, width: 224, height: 144,
   });
+});
+
+test('fractional viewport full-bleed raster projection preserves canonical geometry through mirror and rotation', () => {
+  const model = createLatticeProductionTableRenderModel(publication(), 'table-05');
+  const field = projectLatticeProductionViewport(model, { width: 1308, height: 881 });
+  const squarePlacement = {
+    ...model.table.placements[0], column: 5 / 9, row: 10 / 9, columnSpan: 20 / 9, rowSpan: 20 / 9,
+    crop: { x: 0.5, y: 0.5, zoom: 1 },
+    transform: { quarterTurns: 1, mirrorX: true, mirrorY: false },
+  };
+  const artwork = projectLatticeProductionPixelArtwork(squarePlacement, field, { width: 150, height: 150 });
+  assert.equal(Number.isInteger(artwork.footprint.left), true);
+  assert.equal(Number.isInteger(artwork.footprint.top), true);
+  assert.deepEqual(artwork.imageRectangle, artwork.mediaOpeningRectangle);
+  assert.equal(artwork.imageRenderRectangle.left, artwork.mediaOpeningRectangle.left - 1);
+  assert.equal(artwork.imageRenderRectangle.top, artwork.mediaOpeningRectangle.top - 1);
+  assert.equal(artwork.imageRenderRectangle.width, artwork.mediaOpeningRectangle.width + 2);
+  assert.equal(artwork.imageRenderRectangle.height, artwork.mediaOpeningRectangle.height + 2);
+  assert.equal(artwork.imageTransform, 'scale(-1, 1) rotate(90deg)');
 });
 
 test('resize changes projection only and never authored placement data', () => {

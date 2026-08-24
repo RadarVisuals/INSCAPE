@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   createLatticePixelBoundaryPositions,
   projectLatticePixelBoundary,
+  projectLatticeRasterBleedRectangle,
   projectLatticePixelRectangle,
 } from './latticePixelGeometry.js';
 
@@ -28,4 +29,22 @@ test('fractional guide intervals, adjacent placements, and resize corners use on
   assert.equal(columns.includes(projectLatticePixelBoundary(field, 'column', 30 / 9) + 0.5), true);
   assert.equal(rows.includes(projectLatticePixelBoundary(field, 'row', 5 / 9) + 0.5), true);
   assert.equal(rows.includes(projectLatticePixelBoundary(field, 'row', 20 / 9) + 0.5), true);
+});
+
+test('full-bleed media crosses raster edges while intentional contain letterboxing remains intact', () => {
+  const opening = { left: 244, top: 334, width: 61, height: 37 };
+  assert.deepEqual(projectLatticeRasterBleedRectangle({ ...opening }, opening), {
+    left: 243, top: 333, width: 63, height: 39,
+  });
+  assert.deepEqual(projectLatticeRasterBleedRectangle({
+    left: 244, top: 340, width: 61, height: 25,
+  }, opening), {
+    left: 243, top: 340, width: 63, height: 25,
+  });
+  assert.deepEqual(projectLatticeRasterBleedRectangle({
+    left: 243.99999999999, top: 333.99999999999, width: 61.00000000002, height: 37.00000000002,
+  }, opening), {
+    left: 242.99999999999, top: 332.99999999999, width: 63.00000000002, height: 39.00000000002,
+  });
+  assert.throws(() => projectLatticeRasterBleedRectangle(null, opening), /positive rectangles/);
 });

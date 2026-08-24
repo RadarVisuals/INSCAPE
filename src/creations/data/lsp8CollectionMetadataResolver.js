@@ -3,6 +3,7 @@ import { createPublicClient, fallback, getAddress, http } from 'viem';
 import { lukso } from 'viem/chains';
 import { IPFS_GATEWAY_URL, LUKSO_RPC_FALLBACK_URLS, LUKSO_RPC_URL, normalizeProfileAddress } from '../../library/config.js';
 import { resolveContentUrl } from '../../library/data/resolveContentUrl.js';
+import { decodeVerifiedOnchainJsonDataUri } from '../../library/data/onchainDataUri.js';
 
 const METADATA_KEY = '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e';
 const BASE_URI_KEY = '0x1a7628600c3bac7101f53697f48df381ddc36b9015e7d7c9c5633d1252aa2843';
@@ -19,10 +20,14 @@ const RESPONSE_TIMEOUT_MS = 10_000;
 
 function abortError() { return new DOMException('The operation was aborted', 'AbortError'); }
 function throwIfAborted(signal) { if (signal?.aborted) throw abortError(); }
-function decodeUri(value) {
+function decodePointer(value) {
   if (!value || value === '0x') return null;
-  try { return decodeDataSourceWithHash(value)?.url || null; } catch { return null; }
+  try {
+    const pointer = decodeDataSourceWithHash(value);
+    return pointer?.url ? pointer : null;
+  } catch { return null; }
 }
+const decodeUri = (value) => decodePointer(value)?.url || null;
 function decodeNumber(value) {
   if (typeof value !== 'string' || !/^0x[0-9a-f]+$/iu.test(value) || value.length > 66) return null;
   try { return Number(BigInt(value)); } catch { return null; }
@@ -62,7 +67,9 @@ function createClient(primary, fallbacks) {
   const transports = urls.map((url) => http(url, { timeout: 20_000, retryCount: 2, retryDelay: 750 }));
   return createPublicClient({ chain: lukso, transport: transports.length > 1 ? fallback(transports) : transports[0] });
 }
-async function fetchDocument(uri, { fetchImpl, ipfsGateway, signal, metadataResponseMs }) {
+async function fetchDocument(pointer, { fetchImpl, ipfsGateway, signal, metadataResponseMs }) {
+  const uri = pointer?.url;
+  if (/^data:/iu.test(uri || '')) return decodeVerifiedOnchainJsonDataUri(uri, pointer.verification);
   const url = resolveContentUrl(uri, { ipfsGateway }); if (!url) return null;
   const controller = new AbortController(); const abort = () => controller.abort(signal?.reason);
   signal?.addEventListener('abort', abort, { once: true });
@@ -112,9 +119,9 @@ export function createLsp8CollectionMetadataResolver({
       const tokenId = token.tokenId.toLowerCase(); const address = getAddress(contract);
       const direct = await publicClient.readContract({ address, abi: ABI, functionName: 'getDataForTokenId',
         args: [tokenId, METADATA_KEY] }).catch(() => null);
-      let uri = decodeUri(direct); let source = uri ? 'LSP4MetadataForTokenId' : 'LSP8TokenMetadataBaseURI';
+      let pointer = decodePointer(direct); let source = pointer ? 'LSP4MetadataForTokenId' : 'LSP8TokenMetadataBaseURI';
       let tokenFormat = format; let tokenBaseUri = baseUri;
-      if (!uri && format >= 100) {
+      if (!pointer && format >= 100) {
         const [tokenFormatValue, tokenBaseValue] = await Promise.all([
           publicClient.readContract({ address, abi: ABI, functionName: 'getDataForTokenId',
             args: [tokenId, TOKEN_ID_FORMAT_KEY] }).catch(() => null),
@@ -128,8 +135,8 @@ export function createLsp8CollectionMetadataResolver({
           ? 'LSP8TokenMetadataBaseURIForTokenId'
           : 'LSP8TokenMetadataBaseURI';
       }
-      if (!uri && tokenBaseUri) uri = `${tokenBaseUri}${decodeTokenId(tokenId, tokenFormat)}`;
-      const document = uri ? await fetchDocument(uri, { fetchImpl, ipfsGateway, signal, metadataResponseMs }) : null;
+      if (!pointer && tokenBaseUri) pointer = { url: `${tokenBaseUri}${decodeTokenId(tokenId, tokenFormat)}`, verification: null };
+      const document = pointer ? await fetchDocument(pointer, { fetchImpl, ipfsGateway, signal, metadataResponseMs }) : null;
       if (!document) return null;
       const metadata = metadataRoot(document);
       return { tokenId, name: metadata.name || metadata.title || null, description: metadata.description || '',
@@ -150,7 +157,8 @@ function imageIdentity(images) {
 export function collectionTokenNeedsMetadataRefresh(token) {
   const parent = token?.asset || token?.baseAsset; const tokenImage = imageIdentity(token?.images);
   const parentImage = imageIdentity(parent?.images);
-  return Boolean(token?.tokenId && (!tokenImage || parentImage && tokenImage === parentImage));
+  return Boolean(token?.tokenId && (!tokenImage || !resolveContentUrl(tokenImage)
+    || parentImage && tokenImage === parentImage));
 }
 function overlayToken(token, metadata) {
   return metadata ? { ...token, name: metadata.name, lsp4TokenName: metadata.name,

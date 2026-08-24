@@ -160,6 +160,9 @@ test('classifies collection-cover and missing token media as refresh candidates'
   assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [], baseAsset: { images: [cover] } }), true);
   assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [{ url: 'ipfs://token' }],
     baseAsset: { images: [cover] } }), false);
+  assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [{
+    url: 'data:image/svg+xml;base64,PHN2Zy8+',
+  }], baseAsset: { images: [cover] } }), true);
 });
 
 test('uses a directly resolved token preview to keep a coverless creator collection discoverable', async () => {

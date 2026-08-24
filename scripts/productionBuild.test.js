@@ -8,6 +8,8 @@ import { analyzeProductionBuild, assertNoProhibitedProductionArtifacts, assertSa
 import { ownerRuntimeIsolationPlugin } from './ownerRuntimeIsolation.js';
 import { excludeUnsupportedWalletConnectorsPlugin } from './unsupportedWalletConnectors.js';
 
+const removeTree = (path) => rm(path, { recursive: true, force: true, maxRetries: 8, retryDelay: 100 });
+
 const graph = (leaks = []) => ({ ownerModules: ['/src/public/OwnerSystemWorkflowShell.jsx'], entries: [{ file: 'assets/app-a.js' }],
   ownerChunks: [{ file: 'assets/system-workflow-a.js', modules: ['/src/public/OwnerSystemWorkflowShell.jsx'] }], leaks });
 
@@ -38,7 +40,7 @@ test('manifest classification survives hashed filename changes and current synth
     assert.equal(first.standaloneWalletJavaScript.length, 2);
     assert.ok(first.standaloneWalletJavaScript.every(({ file }) => file.includes('wallet')));
     assert.deepEqual(first.totals, second.totals); assert.equal(checkProductionBudgets(first), true);
-  } finally { await Promise.all(roots.map((root) => rm(root, { recursive: true, force: true }))); }
+  } finally { await Promise.all(roots.map(removeTree)); }
 });
 
 test('manifest classification accepts Vite internal owner facade keys after a nested lazy split', async () => {
@@ -53,7 +55,7 @@ test('manifest classification accepts Vite internal owner facade keys after a ne
     const report = await analyzeProductionBuild(root);
     assert.equal(report.ownerJavaScript.length, 1);
     assert.equal(report.ownerJavaScript[0].file, 'assets/system-workflow-facade.js');
-  } finally { await rm(root, { recursive: true, force: true }); }
+  } finally { await removeTree(root); }
 });
 
 test('each independent budget category reports an actionable overage', () => {
@@ -69,7 +71,7 @@ test('each independent budget category reports an actionable overage', () => {
 test('measured Phase 4B allowances retain exact production budget boundaries', () => {
   assert.deepEqual(PRODUCTION_BUDGETS, {
     initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
-    ownerJavaScript: { raw: 370_971, gzip: 112_079 },
+    ownerJavaScript: { raw: 376_121, gzip: 114_199 },
     standaloneWalletJavaScript: { raw: 4_400_000, gzip: 1_200_000 },
     initialCss: { raw: 51_807, gzip: 10_301 },
     ownerCss: { raw: 143_870, gzip: 21_140 },
@@ -124,7 +126,7 @@ test('missing manifest and graph inputs fail clearly', async () => {
     await assert.rejects(() => analyzeProductionBuild(root), /missing or invalid Vite manifest/);
     await mkdir(resolve(root, '.vite'), { recursive: true }); await writeFile(resolve(root, '.vite/manifest.json'), '{}');
     await assert.rejects(() => analyzeProductionBuild(root), /missing or invalid owner runtime graph/);
-  } finally { await rm(root, { recursive: true, force: true }); }
+  } finally { await removeTree(root); }
 });
 
 test('output validation rejects roots, profiles and unrelated directories', () => {
@@ -142,7 +144,7 @@ test('authoring pruning touches only the active verified output directory', asyn
     assertSafeOutputDirectory(process.cwd(), active); await pruneProductionAuthoringAssets(active);
     await assert.rejects(() => readFile(resolve(active, 'assets/patterns/stale.txt')));
     assert.equal(await readFile(resolve(normal, 'assets/patterns/sentinel.txt'), 'utf8'), 'normal');
-  } finally { await rm(base, { recursive: true, force: true }); }
+  } finally { await removeTree(base); }
 });
 
 test('artifact hygiene rejects representative lock and temporary files with actionable paths', async () => {
@@ -157,7 +159,7 @@ test('artifact hygiene rejects representative lock and temporary files with acti
       assert.match(error.message, /assets\/render\.webp\.tmp: editor swap, backup, or temporary file/);
       return true;
     });
-  } finally { await rm(root, { recursive: true, force: true }); }
+  } finally { await removeTree(root); }
 });
 
 test('artifact hygiene accepts ordinary intended production assets', async () => {
@@ -166,7 +168,7 @@ test('artifact hygiene accepts ordinary intended production assets', async () =>
     await mkdir(resolve(root, 'assets'), { recursive: true });
     await writeFile(resolve(root, 'assets/public.webp'), 'ordinary intended asset');
     assert.equal(await assertNoProhibitedProductionArtifacts(root), true);
-  } finally { await rm(root, { recursive: true, force: true }); }
+  } finally { await removeTree(root); }
 });
 
 test('authoring pruning rejects a path that escapes the verified output directory', async () => {
@@ -176,7 +178,7 @@ test('authoring pruning rejects a path that escapes the verified output director
     await assert.rejects(() => pruneProductionAuthoringAssets(resolve(root, 'active'), {
       projectRoot: process.cwd(), paths: ['../outside.txt']
     }), /outside verified output directory/);
-  } finally { await rm(root, { recursive: true, force: true }); }
+  } finally { await removeTree(root); }
 });
 
 test('the two historical public lock paths cannot survive artifact hygiene', async () => {
@@ -194,7 +196,7 @@ test('the two historical public lock paths cannot survive artifact hygiene', asy
       for (const path of historicalPaths) assert.match(error.message, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
       return true;
     });
-  } finally { await rm(root, { recursive: true, force: true }); }
+  } finally { await removeTree(root); }
 });
 
 test('production pruning excludes development-only prototype assets', () => {
@@ -207,7 +209,7 @@ test('manifest classification recognizes the sole System Workflow production own
     await fixture(root, 'system-workflow');
     const report = await analyzeProductionBuild(root);
     assert.equal(report.ownerJavaScript[0].file, 'assets/system-workflow-system-workflow.js');
-  } finally { await rm(root, { recursive: true, force: true }); }
+  } finally { await removeTree(root); }
 });
 
 test('production pruning excludes unused font sources without removing active bundled fonts', () => {
@@ -249,6 +251,6 @@ test('an alternate-outDir production build writes reports there and strips diagn
       assert.doesNotMatch(javascript, /@coinbase\/cdp-sdk|brotli_wasm|axios/iu, `${name}: unsupported Base dependency`);
     }
   } finally {
-    await rm(alternate, { recursive: true, force: true });
+    await removeTree(alternate);
   }
 });

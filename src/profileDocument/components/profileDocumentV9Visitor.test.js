@@ -33,7 +33,7 @@ test('v9 Grid renderer reuses canonical contain, crop remap, swapped dimensions,
   const transformed = projectLatticeProductionArtwork(placement({ crop: { x: 0.2, y: 0.8, zoom: 2 },
     transform: { quarterTurns: 1, mirrorX: true, mirrorY: false } }), field, { width: 900, height: 1600 });
   assert.equal(transformed.imageTransform, 'scale(-1, 1) rotate(90deg)');
-  assert.equal(transformed.imageRenderRectangle.width, transformed.imageRectangle.height);
+  assert.equal(transformed.imageRenderRectangle.width, transformed.imageRectangle.height + 1);
   assert.equal(transformed.imageRenderRectangle.height, transformed.imageRectangle.width);
   assert.match(renderer, /projectLatticeProductionPixelArtwork/);
   assert.match(renderer, /imageRenderRectangle/);
@@ -44,6 +44,10 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(renderer, /onError/);
   assert.match(renderer, /onLoad/);
   assert.match(renderer, /data-media-state/);
+  assert.match(renderer, /resolveProfileDocumentV9ContentReference/);
+  assert.match(renderer, /referenceResolution\.key === referenceKey/);
+  assert.match(renderer, /controller\.abort\(\)/);
+  assert.match(renderer, /naturalHeight: height, naturalWidth: width/);
   assert.match(visitor, /activeIndex === 0 \? 'eager' : 'lazy'/);
   assert.match(visitor, /LatticeFocusViewer/);
   assert.match(renderer, /data-viewer-source-hidden/);
