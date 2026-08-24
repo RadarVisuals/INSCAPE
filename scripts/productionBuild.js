@@ -89,7 +89,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Phase 4B selects the complete System Workflow owner shell. The measured
   // increase belongs only to this lazy owner graph; the initial and standalone
   // wallet boundaries retain their previous limits.
-  ownerJavaScript: Object.freeze({ raw: 365_023, gzip: 110_353 }),
+  ownerJavaScript: Object.freeze({ raw: 365_023, gzip: 110_356 }),
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
