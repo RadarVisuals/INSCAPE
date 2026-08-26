@@ -240,6 +240,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       isWalletConnected: false, isHostProfileOwner: false });
     await setUrl(''); await page.locator('.system-workflow--public-discover .lattice-browser-sidebar').waitFor();
     assert.match(await page.locator('.system-workflow--public-discover').innerText(), /PUBLISHED WORLDS/iu);
+    assert.equal(await page.locator('.system-workflow__workspace-owner-entry').count(), 1);
     assert.doesNotMatch(await page.locator('body').innerText(), /PROFILE CONTEXT REQUIRED/iu);
     assert.equal(await page.getByRole('button', { name: 'RETURN' }).count(), 0);
 

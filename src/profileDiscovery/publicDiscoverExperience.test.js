@@ -19,6 +19,13 @@ test('anonymous Discover omits relationship-only navigation and has no dead clos
   assert.match(discover, /\{onClose && <button aria-label="Close Discover"/);
 });
 
+test('anonymous Discover offers an explicit owner connection without gating visitor entry', () => {
+  assert.match(app, /<PublicDiscoverExperience onRequestOwner=\{requestStandaloneSignIn\}/);
+  assert.match(experience, /onRequestOwner=\{onRequestOwner\}/);
+  assert.match(discover, /onRequestOwner && <button className="system-workflow__workspace-owner-entry"/);
+  assert.match(discover, />Connect profile</);
+});
+
 test('published visitors open the same Discover workspace instead of the legacy directory modal', () => {
   assert.match(publishedBoundary, /lazy\(\(\) => import\('\.\.\/\.\.\/profileDiscovery\/PublicDiscoverExperience\.jsx'\)\)/);
   assert.match(publishedBoundary, /<PublicDiscoverExperience/);

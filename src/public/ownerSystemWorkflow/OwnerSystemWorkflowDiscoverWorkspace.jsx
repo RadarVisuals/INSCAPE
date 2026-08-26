@@ -1,4 +1,4 @@
-import { Search, SquareArrowOutUpRight, UserCheck, UserRound, UsersRound, X } from 'lucide-react';
+import { LogIn, Search, SquareArrowOutUpRight, UserCheck, UserRound, UsersRound, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useProfileDiscoveryController from '../../profileDiscovery/useProfileDiscoveryController.js';
@@ -25,7 +25,7 @@ function SidebarButton({ active, count, custom = false, icon: Icon, id, label, o
 }
 
 export default function OwnerSystemWorkflowDiscoverWorkspace({ anonymous = false, assets = [], fixture, groupCommands,
-  groups = [], menuSurface, onClose, onSelect, phase = 'open' }) {
+  groups = [], menuSurface, onClose, onRequestOwner, onSelect, phase = 'open' }) {
   const repository = useMemo(() => fixture ? { source: 'DEVELOPMENT_FIXTURE', list: async () => fixture.map((profile, index) => ({
     ...profile, avatarUrl: assets[index + 2]?.src || assets[index + 2]?.imageUrl || null,
     follower: ['FOLLOWS YOU', 'MUTUAL'].includes(profile.relationship), following: ['FOLLOWING', 'MUTUAL'].includes(profile.relationship),
@@ -74,6 +74,7 @@ export default function OwnerSystemWorkflowDiscoverWorkspace({ anonymous = false
     <label className="system-workflow__workspace-size"><span>Size</span><input aria-label="Profile card size" max={BROWSER_ASSET_SIZE.MAXIMUM} min={BROWSER_ASSET_SIZE.MINIMUM} step="1" onChange={(event) => { const next = Number(event.target.value); discoverPreferences.cardSize = next; setCardSize(next); }} type="range" value={cardSize} /></label>
     <OwnerSystemWorkflowSelectMenu compact defaultValue="ALL" label="Profile filters" menuSurface={menuSurface} onChange={setRole} options={roles.map((value) => ({ label: value === 'ALL' ? 'All' : value, value }))} triggerPrefix="Filters" value={role} />
     <OwnerSystemWorkflowSelectMenu compact label="Sort profiles" menuSurface={menuSurface} onChange={setSort} options={[{ label: 'A–Z', value: 'name-asc' }, { label: 'Z–A', value: 'name-desc' }]} value={sort} />
+    {onRequestOwner && <button className="system-workflow__workspace-owner-entry" onClick={onRequestOwner} type="button"><LogIn aria-hidden="true" size={13} /><span>Connect profile</span></button>}
     {onClose && <button aria-label="Close Discover" className="system-workflow__workspace-close" onClick={onClose} type="button"><X size={13} /></button>}
   </div>;
   return <OwnerSystemWorkflowWorkspaceShell className="system-workflow__discover" label="Discover directory" phase={phase} rail={rail} sidebarCollapsed={sidebar.collapsed}>

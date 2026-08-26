@@ -168,23 +168,28 @@ function App() {
     setExplicitViewedProfileAddress(resolveExplicitViewedProfile(window.location));
   }, [verifiedOwnerProfileAddress]);
 
+  const requestStandaloneSignIn = useCallback(() => {
+    if (window.parent !== window) return;
+    const sessionOrPromise = standaloneWalletSessionRef.current;
+    if (!sessionOrPromise) return;
+    setStandaloneSignInActive(true);
+    void Promise.resolve(sessionOrPromise).then((session) => {
+      if (!session) { setStandaloneSignInActive(false); return null; }
+      return session.showSignIn();
+    }).catch((error) => {
+      setStandaloneSignInActive(false);
+      reportControlledError('standalone-wallet-sign-in', error);
+    });
+  }, []);
+
   const handleUserGesture = useCallback(() => {
     const signInRequired = shouldRequestStandaloneSignIn({
       embedded: window.parent !== window,
       walletConnected: useWalletStore.getState().isWalletConnected,
       targetSource: profileTarget.source
     });
-    if (signInRequired) {
-      setStandaloneSignInActive(true);
-      void standaloneWalletSessionRef.current?.then((session) => {
-        if (!session) { setStandaloneSignInActive(false); return null; }
-        return session.showSignIn();
-      }).catch((error) => {
-        setStandaloneSignInActive(false);
-        reportControlledError('standalone-wallet-sign-in', error);
-      });
-    }
-  }, [profileTarget.source]);
+    if (signInRequired) requestStandaloneSignIn();
+  }, [profileTarget.source, requestStandaloneSignIn]);
 
   const registerDesktopContextMenu = useCallback((handler) => {
     desktopContextMenuRef.current = handler;
@@ -216,7 +221,8 @@ function App() {
           standaloneSignInActive ? null : profileTarget.pending
             ? <div className="mode-loading" role="status">Resolving profile...</div>
             : profileTarget.source === PROFILE_TARGET_SOURCE.NONE ? <Suspense fallback={null}>
-              <PublicDiscoverExperience onSelect={(address) => visitProfile(address)} />
+              <PublicDiscoverExperience onRequestOwner={requestStandaloneSignIn}
+                onSelect={(address) => visitProfile(address)} />
             </Suspense>
             : localOwnerRoute ? !ownerSourceReady ? <div className="mode-loading" role="status">Resolving owner workspace...</div> : <OwnerRuntimeBoundary
             ownerAuthoringEnabled={ownerAuthoringEnabled}

@@ -333,6 +333,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__local-rail::-webkit-scrollbar { display: none; }
 .system-workflow__workspace-rail-controls { box-sizing: border-box; width: 100%; height: var(--workflow-rail-height); display: grid; grid-template-columns: minmax(240px, 1fr) 112px 150px 112px 92px 38px; align-items: stretch; }
 .system-workflow__workspace-rail-controls:not(:has(.system-workflow__workspace-close)) { grid-template-columns: minmax(240px, 1fr) 112px 150px 112px 92px; }
+.system-workflow__workspace-rail-controls:has(.system-workflow__workspace-owner-entry) { grid-template-columns: minmax(240px, 1fr) 112px 150px 112px 92px 132px; }
 .system-workflow__workspace-rail-controls > :is(label, button) { min-width: 0; margin: 0; overflow: hidden; border: 0; color: var(--workflow-ink); background: transparent; font: var(--workflow-type-browser-rail); letter-spacing: .045em; white-space: nowrap; }
 .system-workflow__workspace-rail-controls > :is(label, button):hover { background: var(--workflow-hover); }
 .system-workflow__workspace-search { container-type: inline-size; padding: 0 10px; display: grid; grid-template-columns: auto minmax(24px, 1fr); align-items: center; gap: 7px; }
@@ -365,6 +366,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__workspace-labels input:checked { border-color: var(--workflow-ink); background: radial-gradient(circle, var(--workflow-ink) 0 2.5px, transparent 3px); }
 .system-workflow__workspace-labels input:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: 2px; }
 .system-workflow__workspace-close { width: 100%; padding: 0; display: grid; place-items: center; border-right: 0 !important; cursor: pointer; }
+.system-workflow__workspace-owner-entry { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 0 10px; cursor: pointer; }
 .system-workflow__browser-workspace .lattice-browser-panel { grid-template-columns: var(--lattice-browser-sidebar-width) 1px minmax(0, 1fr); }
 .system-workflow__browser-workspace .lattice-browser-sidebar button { min-height: var(--workflow-row-height); font: var(--workflow-type-sidebar); font-variation-settings: "wght" 450; letter-spacing: 0; }
 .system-workflow__browser-workspace .lattice-browser-sidebar > button,
