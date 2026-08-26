@@ -332,6 +332,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__local-rail { min-width: 0; min-height: var(--workflow-rail-height); overflow-x: auto; overflow-y: hidden; border-top: 1px solid var(--workflow-border); background: var(--workflow-panel); scrollbar-width: none; }
 .system-workflow__local-rail::-webkit-scrollbar { display: none; }
 .system-workflow__workspace-rail-controls { box-sizing: border-box; width: 100%; height: var(--workflow-rail-height); display: grid; grid-template-columns: minmax(240px, 1fr) 112px 150px 112px 92px 38px; align-items: stretch; }
+.system-workflow__workspace-rail-controls:not(:has(.system-workflow__workspace-close)) { grid-template-columns: minmax(240px, 1fr) 112px 150px 112px 92px; }
 .system-workflow__workspace-rail-controls > :is(label, button) { min-width: 0; margin: 0; overflow: hidden; border: 0; color: var(--workflow-ink); background: transparent; font: var(--workflow-type-browser-rail); letter-spacing: .045em; white-space: nowrap; }
 .system-workflow__workspace-rail-controls > :is(label, button):hover { background: var(--workflow-hover); }
 .system-workflow__workspace-search { container-type: inline-size; padding: 0 10px; display: grid; grid-template-columns: auto minmax(24px, 1fr); align-items: center; gap: 7px; }
@@ -604,6 +605,8 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__activity-history-rail button[aria-pressed="true"] { font-weight: 550; font-variation-settings: "wght" 550, "wdth" 88; }
 
 .system-workflow__discover-browser { height: 100%; min-height: 0; overflow: hidden; }
+.system-workflow--public-discover { z-index: 500; }
+.system-workflow--public-discover .system-workflow__workspace-window { bottom: var(--workflow-window-inset); }
 .system-workflow__browser-workspace .lattice-browser-panel { width: calc(100% + 1px); margin-left: -1px; }
 .system-workflow__browser-workspace .lattice-browser-sidebar { min-height: 0; overflow: auto; border-right: 0; background: var(--workflow-panel); box-shadow: inset 1px 0 var(--workflow-border-strong); }
 .system-workflow__browser-workspace .lattice-browser-sidebar > button,

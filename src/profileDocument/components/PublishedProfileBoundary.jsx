@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import PublishedProfileDocumentPreview from './PublishedProfileDocumentPreview.jsx';
-import ProfileDiscoveryBoundary from '../../profileDiscovery/ProfileDiscoveryBoundary.jsx';
 import { PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileRepository.js';
 import './publishedProfileStatus.css';
 import AlphaSupportPanel from '../../support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from '../../support/alphaSupport.js';
+
+const PublicDiscoverExperience = lazy(() => import('../../profileDiscovery/PublicDiscoverExperience.jsx'));
 
 const STATUS_COPY = Object.freeze({
   CONTEXT_REQUIRED: ['PROFILE CONTEXT REQUIRED', 'Open the installed app from a Universal Profile, or provide an explicit profile address while developing locally.'],
@@ -56,8 +57,10 @@ export default function PublishedProfileBoundary({
       onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={onRetry} /></div>}
     </>;
-  return <>{content}{directoryOpen && <ProfileDiscoveryBoundary menuSurfaceId={visibleDocument?.appearance?.menuSurfaceId || 'mist'}
-    onClose={() => setDirectoryOpen(false)} onSelect={(profile) => {
-    onVisitProfile?.(profile.address); setDirectoryOpen(false);
-  }} />}</>;
+  return <>{content}{directoryOpen && <Suspense fallback={null}><PublicDiscoverExperience
+    menuSurfaceId={visibleDocument?.appearance?.menuSurfaceId || 'mist'}
+    surfaceId={visibleDocument?.appearance?.surfaceId || 'mist'}
+    onClose={() => setDirectoryOpen(false)} onSelect={(address) => {
+    onVisitProfile?.(address); setDirectoryOpen(false);
+  }} /></Suspense>}</>;
 }

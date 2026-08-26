@@ -27,6 +27,7 @@ import AlphaSupportPanel from './support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from './support/alphaSupport.js';
 
 const AtelierExperience = lazy(() => import('./app/AtelierExperience.jsx'));
+const PublicDiscoverExperience = lazy(() => import('./profileDiscovery/PublicDiscoverExperience.jsx'));
 
 function AtelierLoadingFallback() {
   return <div className="mode-loading" role="status">Opening Atelier…</div>;
@@ -38,6 +39,7 @@ function App() {
   const [applicationMode, setApplicationMode] = useState(() => resolveApplicationMode(window.location));
   const routeWorkspaceProfileAddress = useMemo(() => resolveLibraryProfile(window.location), []);
   const [explicitViewedProfileAddress, setExplicitViewedProfileAddress] = useState(() => resolveExplicitViewedProfile(window.location));
+  const [retainedPublicProfileAddress, setRetainedPublicProfileAddress] = useState(null);
   const [worldReady, setWorldReady] = useState(false);
   const [revealStage, setRevealStage] = useState('sealed');
   const [revealPresentation, setRevealPresentation] = useState({
@@ -61,7 +63,7 @@ function App() {
   const profileTarget = resolveProfileTarget({
     explicitViewedProfileAddress,
     connectedProfileAddress: verifiedOwnerProfileAddress,
-    workspaceFallbackAddress: routeWorkspaceProfileAddress,
+    workspaceFallbackAddress: routeWorkspaceProfileAddress || retainedPublicProfileAddress,
     authorityLifecycleStatus
   });
   const viewedProfileAddress = profileTarget.address;
@@ -83,6 +85,21 @@ function App() {
   const ownerSourceReady = publishedResolution?.status !== PUBLISHED_PROFILE_STATUS.LOADING;
 
   useEffect(() => setWorldReady(true), []);
+
+  useEffect(() => {
+    if (authorityLifecycleStatus === 'complete' && verifiedOwnerProfileAddress) {
+      setRetainedPublicProfileAddress(verifiedOwnerProfileAddress);
+    }
+  }, [authorityLifecycleStatus, verifiedOwnerProfileAddress]);
+
+  useEffect(() => {
+    if (authorityLifecycleStatus !== 'complete' || verifiedOwnerProfileAddress
+      || explicitViewedProfileAddress || routeWorkspaceProfileAddress || !retainedPublicProfileAddress) return;
+    const nextUrl = createSelectedProfileUrl(window.location, retainedPublicProfileAddress);
+    window.history.replaceState({ viewedProfileAddress: retainedPublicProfileAddress }, '', nextUrl);
+    setExplicitViewedProfileAddress(retainedPublicProfileAddress);
+  }, [authorityLifecycleStatus, explicitViewedProfileAddress, retainedPublicProfileAddress,
+    routeWorkspaceProfileAddress, verifiedOwnerProfileAddress]);
 
   useEffect(() => {
     if (window.parent !== window) {
@@ -198,6 +215,9 @@ function App() {
         ) : (
           standaloneSignInActive ? null : profileTarget.pending
             ? <div className="mode-loading" role="status">Resolving profile...</div>
+            : profileTarget.source === PROFILE_TARGET_SOURCE.NONE ? <Suspense fallback={null}>
+              <PublicDiscoverExperience onSelect={(address) => visitProfile(address)} />
+            </Suspense>
             : localOwnerRoute ? !ownerSourceReady ? <div className="mode-loading" role="status">Resolving owner workspace...</div> : <OwnerRuntimeBoundary
             ownerAuthoringEnabled={ownerAuthoringEnabled}
             workspaceProfileAddress={connectedWorkspaceProfileAddress}

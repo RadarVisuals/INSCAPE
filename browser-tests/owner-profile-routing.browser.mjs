@@ -208,6 +208,16 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       isWalletConnected: true, isHostProfileOwner: true });
     await waitForOwnerShell('Owner B did not replace owner A');
 
+    await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: null,
+      isWalletConnected: false, isHostProfileOwner: false });
+    await page.getByText('PROFILE UNAVAILABLE').waitFor();
+    assert.match(await page.url(), new RegExp(`view=${PROFILE_B}`),
+      'disconnect must retain owner B as an explicit public visitor route');
+    assert.doesNotMatch(await page.locator('body').innerText(), /PROFILE CONTEXT REQUIRED/iu);
+    await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: PROFILE_B,
+      isWalletConnected: true, isHostProfileOwner: true });
+    await waitForOwnerShell('Reconnecting B did not restore owner B');
+
     await setUrl(`?view=${PROFILE_A}`);
     await page.getByText('PROFILE UNAVAILABLE').waitFor();
     assert.match(await page.url(), new RegExp(`view=${PROFILE_A}`));
@@ -228,7 +238,9 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     await detachWalletLifecycle();
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: null,
       isWalletConnected: false, isHostProfileOwner: false });
-    await setUrl(''); await page.getByText('PROFILE CONTEXT REQUIRED').waitFor();
+    await setUrl(''); await page.locator('.system-workflow--public-discover .lattice-browser-sidebar').waitFor();
+    assert.match(await page.locator('.system-workflow--public-discover').innerText(), /PUBLISHED WORLDS/iu);
+    assert.doesNotMatch(await page.locator('body').innerText(), /PROFILE CONTEXT REQUIRED/iu);
     assert.equal(await page.getByRole('button', { name: 'RETURN' }).count(), 0);
 
     assert.ok((await page.goto(`${baseUrl}/?profile=${PROFILE_A}`, { waitUntil: 'domcontentloaded', timeout: ROUTING_NAVIGATION_TIMEOUT_MS }))?.ok());

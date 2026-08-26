@@ -62,7 +62,7 @@ test('an explicit public profile route never requests standalone sign-in', () =>
     embedded: false,
     walletConnected: false,
     targetSource: PROFILE_TARGET_SOURCE.NONE
-  }), true);
+  }), false);
   assert.equal(shouldRequestStandaloneSignIn({
     embedded: true,
     walletConnected: false,
@@ -72,5 +72,13 @@ test('an explicit public profile route never requests standalone sign-in', () =>
     embedded: false,
     walletConnected: true,
     targetSource: PROFILE_TARGET_SOURCE.NONE
+  }), false);
+});
+
+test('anonymous public entry never makes wallet sign-in a prerequisite', () => {
+  assert.equal(shouldRequestStandaloneSignIn({
+    embedded: false,
+    walletConnected: false,
+    targetSource: PROFILE_TARGET_SOURCE.WORKSPACE_FALLBACK
   }), false);
 });
