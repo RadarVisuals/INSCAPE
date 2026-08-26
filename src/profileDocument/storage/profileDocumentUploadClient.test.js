@@ -31,6 +31,13 @@ test('upload client does not accept a successful response without a valid CID', 
   await assert.rejects(() => uploadProfileDocument(document, { fetchImpl: async () => Response.json({ cid: 'bad' }, { status: 201 }) }), /invalid IPFS CID/i);
 });
 
+test('plain Vite HTML fallback is identified as an unavailable publication function', async () => {
+  await assert.rejects(() => uploadProfileDocument(document, {
+    fetchImpl: async () => new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html' } }),
+  }), (error) => error.code === 'PUBLICATION_FUNCTION_UNAVAILABLE'
+    && /Plain Vite cannot upload to IPFS/u.test(error.message));
+});
+
 test('upload client rejects v1-v8 and malformed payloads before the publication endpoint', async () => {
   let calls = 0;
   const fetchImpl = async () => { calls += 1; return Response.json({ cid: CID }, { status: 201 }); };

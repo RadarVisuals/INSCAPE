@@ -302,7 +302,17 @@ export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext
     menuSurface={menuSurface}
     onClose={closePublication}
     onMotionComplete={publicationPresence.completeTransition}
-    onPublished={() => onPublicationConfirmed?.()}
+    onPublished={(result) => {
+      import('../../profileDocument/storage/ownerDraftReconciliation.js').then(({ recordOwnerPublicationBaseline }) => {
+        recordOwnerPublicationBaseline({
+          document: result?.document,
+          draft: controller.draft,
+          profileAddress,
+          storage: reviewStorage ?? globalThis.localStorage,
+        });
+      }).catch(() => {});
+      onPublicationConfirmed?.(result);
+    }}
     onSnapshotChange={({ document }) => onPreviewDocumentChange?.(document)}
     profile={publicationProfile}
     profileAddress={profileAddress}

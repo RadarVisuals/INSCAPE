@@ -22,14 +22,16 @@ test('System Workflow production shell preserves the Phase 3 authority and isola
   assert.match(isolation, /OwnerSystemWorkflowShell\.jsx/);
   assert.match(productionBuild, /src\/public\/OwnerSystemWorkflowShell\.jsx/);
   assert.match(main, /import\.meta\.env\.DEV[\s\S]*\/development\/owner\/system-workflow/);
-  assert.match(shell, /OwnerSystemWorkflowRuntime/);
+  assert.match(shell, /OwnerSystemWorkflowReconciliationBoundary/);
+  const reconciliationBoundary = productionSources.find((source) => source.includes('reconcileStoredOwnerDraftWithPublishedProfile'));
+  assert.match(reconciliationBoundary, /lazy\(\(\) => import\('\.\/OwnerSystemWorkflowRuntime\.jsx'\)\)/);
   assert.match(runtime, /buildOwnerSystemWorkflowPreviewDocument/);
   assert.match(runtime, /ProfileDocumentV9Preview/);
   assert.match(runtime, /lazy\(\(\) => import\('\.\/OwnerSystemWorkflowPublicationRack\.jsx'\)\)/);
   assert.match(runtime, /onPublish=\{\(event\) => togglePublication\(event\.currentTarget\)\}/);
   assert.match(runtime, /getWalletPublicationContext=\{getWalletPublicationContext\}/);
   assert.match(runtime, /publishedResolution=\{publishedResolution\}/);
-  assert.match(runtime, /onPublished=\{\(\) => onPublicationConfirmed\?\.\(\)\}/);
+  assert.match(runtime, /onPublished=\{\(result\) => \{[\s\S]*recordOwnerPublicationBaseline[\s\S]*onPublicationConfirmed\?\.\(result\)/u);
   assert.match(runtime, /onSnapshotChange=\{\(\{ document \}\) => onPreviewDocumentChange\?\.\(document\)\}/);
   assert.match(globalBar, /aria-expanded=\{publicationOpen\} aria-label="Publish"/);
   assert.match(publicationRack, /uploadProfileDocument\(snapshot\)/);

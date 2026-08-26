@@ -44,8 +44,7 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
 }
 
 export default function PublishedProfileBoundary({
-  address, keeperVisible, onCancelKeeperDock, onDockKeeper, resolution, onRetry, returnProfileAddress, onVisitProfile,
-  onMoveKeeper, onMoveKeeperHorizontally, onReleaseKeeper, onUpdateKeeperDock,
+  address, resolution, onRetry, returnProfileAddress, onVisitProfile,
 }) {
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
@@ -53,10 +52,8 @@ export default function PublishedProfileBoundary({
   const returnHome = canReturn ? () => onVisitProfile?.(returnProfileAddress, { returnToConnectedProfile: true }) : null;
   const content = !visibleDocument
     ? <PublishedStatusSurface state={resolution} onRetry={onRetry} onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
-    : <><PublishedProfileDocumentPreview document={visibleDocument} keeperVisible={keeperVisible}
-      onCancelKeeperDock={onCancelKeeperDock} onDockKeeper={onDockKeeper} onMoveKeeper={onMoveKeeper}
-      onMoveKeeperHorizontally={onMoveKeeperHorizontally} onOpenDirectory={() => setDirectoryOpen(true)}
-      onReleaseKeeper={onReleaseKeeper} onReturn={returnHome} onUpdateKeeperDock={onUpdateKeeperDock} />
+    : <><PublishedProfileDocumentPreview document={visibleDocument}
+      onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={onRetry} /></div>}
     </>;
   return <>{content}{directoryOpen && <ProfileDiscoveryBoundary menuSurfaceId={visibleDocument?.appearance?.menuSurfaceId || 'mist'}

@@ -6,13 +6,13 @@ const dockSource = readFileSync(new URL('./KeeperDock.jsx', import.meta.url), 'u
 const styles = readFileSync(new URL('./moduleGrid.css', import.meta.url), 'utf8');
 const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
 
-test('production Keeper Dock controls the lightweight Grid Walker without restoring the retired actor portal', () => {
+test('retained Keeper Dock study is unreachable from the active application root', () => {
   assert.match(dockSource, /GRID_WALKER_RANGES, GRID_WALKER_TUNING/);
   assert.match(dockSource, /actorLabel = 'grid walker'/);
   assert.match(dockSource, /keeper-dock__shell/);
   assert.match(dockSource, /residentHandoff\?\.setTuning/);
   assert.doesNotMatch(dockSource, /\/assets\/actors\/\$\{actorId\}\/mask\.webp|createPortal/);
-  assert.match(appSource, /id="keeper-dock-underlay"/);
+  assert.doesNotMatch(appSource, /KeeperDock|GridWalkerCanvas|keeper-dock-underlay|residentHandoff|keeperReactions/u);
   assert.match(dockSource, /MoreHorizontal/);
   assert.match(dockSource, /onContextMenu/);
   assert.match(dockSource, /role="menuitemcheckbox"/);

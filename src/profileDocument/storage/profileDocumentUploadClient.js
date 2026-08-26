@@ -36,6 +36,11 @@ export async function uploadProfileDocument(snapshot, {
 
   let payload;
   try { payload = await response.json(); } catch { payload = null; }
+  if (!payload) {
+    throw new ProfileDocumentUploadError(
+      'The publication function is unavailable. Plain Vite cannot upload to IPFS; use Netlify Dev or the exact Deploy Preview.',
+      'PUBLICATION_FUNCTION_UNAVAILABLE');
+  }
   if (!response.ok) {
     throw new ProfileDocumentUploadError(payload?.error?.message || 'The IPFS upload failed', payload?.error?.code);
   }

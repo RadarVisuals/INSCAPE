@@ -63,7 +63,7 @@ test('Profile Document public authority is v9-only and legacy readers are absent
 test('active public and owner boundaries remain separated after legacy shell removal', () => {
   const app = source('../App.jsx');
   const boundary = source('./OwnerRuntimeBoundary.jsx');
-  assert.match(app, /localOwnerRoute \? <OwnerRuntimeBoundary/u);
+  assert.match(app, /localOwnerRoute \? !ownerSourceReady \?[\s\S]*<OwnerRuntimeBoundary/u);
   assert.match(app, /: <PublishedProfileBoundary/u);
   assert.match(boundary, /workspace && workspace === viewed/u);
   assert.doesNotMatch(boundary, /PublishedProfileBoundary|localStorage|useLibraryStore|useSignalStore/u);

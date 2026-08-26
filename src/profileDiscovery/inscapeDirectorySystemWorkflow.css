@@ -7,7 +7,10 @@
   display: grid;
   place-items: center;
   pointer-events: auto;
-  background: color-mix(in srgb, var(--lattice-menu-ink, #111313) 9%, transparent);
+  background-color: var(--lattice-menu-panel, rgb(215 211 202));
+  background-image: linear-gradient(var(--lattice-menu-line, rgb(17 19 19 / .18)) 1px, transparent 1px),
+    linear-gradient(90deg, var(--lattice-menu-line, rgb(17 19 19 / .18)) 1px, transparent 1px);
+  background-size: clamp(44px, 6.25vw, 80px) clamp(44px, 6.25vw, 80px);
   color: var(--lattice-menu-ink, #111313);
   font-family: "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
 }

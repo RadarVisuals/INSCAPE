@@ -29,24 +29,15 @@ test('public modules do not depend on private editor state or compatibility alia
   }
 });
 
-test('the lightweight grid resident remains outside the public/private mode branch', () => {
+test('the retired Keeper and Grid Walker stay outside the active application root', () => {
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
-  const canvasIndex = appSource.indexOf('<GridWalkerCanvas');
-  const canvasCloseIndex = appSource.indexOf('/>', canvasIndex);
-  const modeBranchIndex = appSource.indexOf('{effectiveApplicationMode === APPLICATION_MODES.ATELIER ? (');
-
-  assert.ok(canvasIndex >= 0);
-  assert.ok(canvasCloseIndex > canvasIndex);
-  assert.ok(modeBranchIndex > canvasCloseIndex);
-  assert.equal(appSource.match(/import GridWalkerCanvas from/g)?.length, 1);
-  assert.equal(appSource.match(/<GridWalkerCanvas\b/g)?.length, 1);
-  assert.doesNotMatch(appSource, /ArtCanvas|PixiEngine|pixi\.js|AssetResolver/);
+  assert.doesNotMatch(appSource, /GridWalkerCanvas|KeeperDock|keeper-dock-underlay|residentHandoff|keeperReactions/u);
+  assert.doesNotMatch(appSource, /ArtCanvas|PixiEngine|pixi\.js|AssetResolver|selectResidentActorVisible/u);
 });
 
 test('the retired Pixi stage remains outside the active application root', () => {
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
-  assert.match(appSource, /<GridWalkerCanvas/);
-  assert.doesNotMatch(appSource, /<ArtCanvas|foregroundOnly=|stageVisible={effectiveApplicationMode/);
+  assert.doesNotMatch(appSource, /<GridWalkerCanvas|<ArtCanvas|foregroundOnly=|stageVisible={effectiveApplicationMode/);
 });
 
 test('window state stays a UI-only document with no RenderConfig fields', () => {
@@ -132,7 +123,7 @@ test('selected owner and Visitor omit the retired upper-world topology', () => {
 
 test('all non-owner routes mount the published boundary instead of the local workspace shell', () => {
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
-  assert.match(appSource, /localOwnerRoute \? <OwnerRuntimeBoundary/);
+  assert.match(appSource, /localOwnerRoute \? !ownerSourceReady \?[\s\S]*<OwnerRuntimeBoundary/);
   assert.match(appSource, /: <PublishedProfileBoundary/);
   assert.match(appSource, /selectPublicProfileRoute\(ownerAuthoringEnabled\)/);
   assert.doesNotMatch(appSource, /viewingConnectedWorkspace \? <OwnerRuntimeBoundary/);
