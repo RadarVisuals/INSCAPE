@@ -24,7 +24,7 @@ export const PUBLISHED_PROFILE_STATUS = Object.freeze({
 
 const GET_DATA_ABI = [{ type: 'function', name: 'getData', stateMutability: 'view',
   inputs: [{ name: 'dataKey', type: 'bytes32' }], outputs: [{ name: 'dataValue', type: 'bytes' }] }];
-const SUPPORTED_HASH_METHODS = new Set(['keccak256(bytes)', 'keccak256(utf8)']);
+const SUPPORTED_HASH_METHODS = new Set(['keccak256(utf8)']);
 export const PUBLISHED_PROFILE_TIMEOUTS = Object.freeze({
   rpcResponseMs: 12_000,
   gatewayResponseMs: 15_000,

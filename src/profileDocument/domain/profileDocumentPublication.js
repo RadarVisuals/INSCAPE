@@ -49,7 +49,7 @@ export function publicationContentFingerprint(document) {
 export function encodeProfileDocumentVerifiableUri(ipfsUri, hash) {
   const uri = normalizeProfileDocumentCid(ipfsUri);
   if (!/^0x[0-9a-f]{64}$/iu.test(hash || '')) throw new Error('A canonical keccak256 hash is required');
-  return encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: hash }, uri);
+  return encodeDataSourceWithHash({ method: 'keccak256(utf8)', data: hash }, uri);
 }
 
 function chainNumber(value) {

@@ -5,7 +5,7 @@ import { createLuksoProfileDiscoveryRepository, PROFILE_DIRECTORY_IDENTITIES_QUE
 import { INSCAPE_PROFILE_DOCUMENT_KEY } from '../../profileDocument/domain/inscapeProfileDocumentKey.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
-const POINTER = '0x00008019f9b100209f75520cb8e0125815b6e5c6cfb0b1b12a0c12558002fa9496871e8b3ef4b6ad697066733a2f2f6261666b726569636869726f7234776764727374687574336776373376756f333665666e6b6767776d70647768796668746778357664366a646875';
+const POINTER = '0x00006f357c6a00209f75520cb8e0125815b6e5c6cfb0b1b12a0c12558002fa9496871e8b3ef4b6ad697066733a2f2f6261666b726569636869726f7234776764727374687574336776373376756f333665666e6b6767776d70647768796668746778357664366a646875';
 
 test('lists current INSCAPE publication events and joins their indexed profile identities', async () => {
   const requests = [];
@@ -41,7 +41,7 @@ test('cleared or malformed publication pointers never enter the directory', asyn
 });
 
 test('structurally valid non-IPFS pointers never enter the directory', async () => {
-  const unsupported = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: `0x${'11'.repeat(32)}` },
+  const unsupported = encodeDataSourceWithHash({ method: 'keccak256(utf8)', data: `0x${'11'.repeat(32)}` },
     'https://example.test/profile.json');
   const repository = createLuksoProfileDiscoveryRepository({ fetchImpl: async () => ({ ok: true,
     json: async () => ({ data: { DataChanged: [{ address: PROFILE, value: unsupported, blockNumber: 44 }] } }) }) });
@@ -52,7 +52,7 @@ test('IPFS pointers with malformed CIDs or paths never enter the directory', asy
   const addresses = ['0x2222222222222222222222222222222222222222', '0x3333333333333333333333333333333333333333',
     '0x4444444444444444444444444444444444444444'];
   const values = ['ipfs://not-a-cid', 'ipfs://bafy-profile', 'ipfs://bafkreiabc/profile.json'].map((uri) =>
-    encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: `0x${'22'.repeat(32)}` }, uri));
+    encodeDataSourceWithHash({ method: 'keccak256(utf8)', data: `0x${'22'.repeat(32)}` }, uri));
   let calls = 0;
   const repository = createLuksoProfileDiscoveryRepository({ fetchImpl: async () => {
     calls += 1;

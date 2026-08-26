@@ -85,7 +85,10 @@ test('bare and ipfs CID inputs normalize while URLs, paths, queries, schemes, an
 test('the frozen key value is an LSP2 VerifiableURI for the exact canonical-byte hash', () => {
   const artifact = createCanonicalPublication(documentFor());
   const encoded = encodeProfileDocumentVerifiableUri(CID, artifact.hash); const decoded = decodeDataSourceWithHash(encoded);
-  assert.equal(decoded.url, `ipfs://${CID}`); assert.equal(decoded.verification.method, 'keccak256(bytes)'); assert.equal(decoded.verification.data, artifact.hash);
+  assert.equal(decoded.url, `ipfs://${CID}`); assert.equal(decoded.verification.method, 'keccak256(utf8)'); assert.equal(decoded.verification.data, artifact.hash);
+  assert.equal(encoded.startsWith('0x00006f357c6a0020'), true,
+    'off-chain IPFS VerifiableURI must use the LSP2 keccak256(utf8) header');
+  assert.equal(encoded.startsWith('0x00008019f9b10020'), false);
   assert.equal(INSCAPE_PROFILE_DOCUMENT_KEY, '0x804dd24d51189d1d9e972f155541cead2653af105983d5acac1ec2b3478d9362');
 });
 

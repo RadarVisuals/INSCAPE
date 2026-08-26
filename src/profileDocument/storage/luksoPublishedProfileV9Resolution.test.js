@@ -23,7 +23,7 @@ function stream(bytes) {
 function repositoryFor(document) {
   const text = document?.version === 9 ? canonicalSerializeProfileDocumentV9(document) : JSON.stringify(document);
   const bytes = new TextEncoder().encode(text);
-  const pointer = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: keccak256(bytes) }, `ipfs://${CID}`);
+  const pointer = encodeDataSourceWithHash({ method: 'keccak256(utf8)', data: keccak256(bytes) }, `ipfs://${CID}`);
   return createLuksoPublishedProfileRepository({
     dataReader: async () => pointer,
     fetchImpl: async () => stream(bytes),
@@ -67,7 +67,7 @@ test('v9 resolver rejects hash-valid formatted and reordered documents as noncan
   for (const text of [JSON.stringify(document, null, 2), JSON.stringify({ metadata, ...rest })]) {
     assert.notEqual(text, canonicalSerializeProfileDocumentV9(document));
     const bytes = new TextEncoder().encode(text);
-    const pointer = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: keccak256(bytes) }, `ipfs://${CID}`);
+    const pointer = encodeDataSourceWithHash({ method: 'keccak256(utf8)', data: keccak256(bytes) }, `ipfs://${CID}`);
     const repository = createLuksoPublishedProfileRepository({
       dataReader: async () => pointer,
       fetchImpl: async () => stream(bytes),
@@ -89,7 +89,7 @@ test('v9 resolver rejects hash-valid UTF-8 BOM-prefixed canonical JSON bytes', a
   const bytes = new Uint8Array(canonicalBytes.byteLength + 3);
   bytes.set([0xef, 0xbb, 0xbf]);
   bytes.set(canonicalBytes, 3);
-  const pointer = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: keccak256(bytes) }, `ipfs://${CID}`);
+  const pointer = encodeDataSourceWithHash({ method: 'keccak256(utf8)', data: keccak256(bytes) }, `ipfs://${CID}`);
   const repository = createLuksoPublishedProfileRepository({
     dataReader: async () => pointer,
     fetchImpl: async () => stream(bytes),

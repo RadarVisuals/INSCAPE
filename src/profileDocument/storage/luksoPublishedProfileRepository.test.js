@@ -32,7 +32,7 @@ const streamResponse = (chunks, options = {}) => new Response(new ReadableStream
 } }), { status: 200, headers: options.headers });
 
 function pointerFor(bytes, uri = `ipfs://${CID}`) {
-  return encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: keccak256(bytes) }, uri);
+  return encodeDataSourceWithHash({ method: 'keccak256(utf8)', data: keccak256(bytes) }, uri);
 }
 
 function repositoryFor({ value, chunks, fetchImpl } = {}) {
@@ -86,7 +86,7 @@ test('the default reader requests the singleton key through mocked ERC725Y RPC',
 
 test('hash mismatch, malformed pointers, and unsafe URI schemes are invalid', async () => {
   const bytes = canonicalBytes();
-  const wrongHash = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: `0x${'00'.repeat(32)}` }, `ipfs://${CID}`);
+  const wrongHash = encodeDataSourceWithHash({ method: 'keccak256(utf8)', data: `0x${'00'.repeat(32)}` }, `ipfs://${CID}`);
   assert.equal((await repositoryFor({ value: wrongHash, chunks: [bytes] }).resolve(PROFILE_A)).errorCode, 'HASH_MISMATCH');
   assert.equal((await repositoryFor({ value: '0x1234', chunks: [bytes] }).resolve(PROFILE_A)).status, PUBLISHED_PROFILE_STATUS.INVALID);
   assert.equal((await repositoryFor({ value: pointerFor(bytes, 'https://example.test/profile.json'), chunks: [bytes] }).resolve(PROFILE_A)).errorCode, 'UNSAFE_URI');
@@ -95,12 +95,22 @@ test('hash mismatch, malformed pointers, and unsafe URI schemes are invalid', as
   }
 });
 
+test('off-chain v9 pointers reject the on-chain bytes verification method before gateway access', async () => {
+  const bytes = canonicalBytes(); let fetched = false;
+  const onchainMethod = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: keccak256(bytes) }, `ipfs://${CID}`);
+  const result = await repositoryFor({ value: onchainMethod,
+    fetchImpl: async () => { fetched = true; return streamResponse([bytes]); } }).resolve(PROFILE_A);
+  assert.equal(result.status, PUBLISHED_PROFILE_STATUS.INVALID);
+  assert.equal(result.errorCode, 'MALFORMED_POINTER');
+  assert.equal(fetched, false);
+});
+
 test('oversized content is rejected during streaming and cancels before later chunks', async () => {
   const limit = PROFILE_DOCUMENT_LIMITS.maxJsonBytes; let pulls = 0; let cancelled = false;
   const response = new Response(new ReadableStream({ pull(controller) {
     pulls += 1; controller.enqueue(new Uint8Array(limit / 2 + 1));
   }, cancel() { cancelled = true; } }));
-  const value = encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: `0x${'11'.repeat(32)}` }, `ipfs://${CID}`);
+  const value = encodeDataSourceWithHash({ method: 'keccak256(utf8)', data: `0x${'11'.repeat(32)}` }, `ipfs://${CID}`);
   const result = await repositoryFor({ value, fetchImpl: async () => response }).resolve(PROFILE_A);
   assert.equal(result.errorCode, 'OVERSIZED_DOCUMENT'); assert.equal(cancelled, true); assert.ok(pulls >= 2);
 });

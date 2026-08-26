@@ -38,6 +38,13 @@ possible LUKSO behavior.
   official LSP4 metadata specification and metadata-preparation guide on
   2026-08-25.
 
+- `PASS` — Profile Document v9 off-chain IPFS pointers use the LSP2
+  `keccak256(utf8)` verification method and exact `0x00006f357c6a0020`
+  header. The pre-submission `keccak256(bytes)` encoder defect was caught before
+  the first v9 on-chain write; the resolver and Discovery now reject that
+  on-chain/base64 method for an external v9 IPFS pointer. Verified against the
+  official LSP2 ERC725Y JSON Schema documentation on 2026-08-26.
+
 ## Open review items
 
 - `REVIEW` — Creations discovery currently uses indexed LSP4 `AssetCreators` and
