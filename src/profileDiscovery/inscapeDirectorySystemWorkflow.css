@@ -1,0 +1,167 @@
+.profile-discovery {
+  position: fixed;
+  z-index: 500;
+  inset: 0;
+  padding: 24px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  background: color-mix(in srgb, var(--lattice-menu-ink, #111313) 9%, transparent);
+  color: var(--lattice-menu-ink, #111313);
+  font-family: "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+}
+
+.profile-discovery__panel {
+  width: min(760px, calc(100vw - 48px));
+  height: min(560px, calc(100dvh - 48px));
+  display: grid;
+  grid-template-rows: 58px auto auto minmax(0, 1fr) 30px;
+  overflow: hidden;
+  border: 1px solid var(--lattice-menu-line-strong, rgb(17 19 19 / .3));
+  border-radius: 0;
+  background: var(--lattice-menu-panel, rgb(215 211 202 / .98));
+  box-shadow: 8px 10px 24px rgb(0 0 0 / .2);
+  color: inherit;
+  text-transform: uppercase;
+}
+
+.profile-discovery__panel > header {
+  min-width: 0;
+  padding: 0 10px 0 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--lattice-menu-line, rgb(17 19 19 / .18));
+}
+
+.profile-discovery__panel header p {
+  margin: 0 0 4px;
+  color: var(--lattice-menu-muted, rgb(17 19 19 / .58));
+  font: 400 9px/1.2 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  letter-spacing: .08em;
+}
+
+.profile-discovery__panel h2 {
+  margin: 0;
+  overflow: hidden;
+  font: 500 16px/1 "Inscape Sora", sans-serif;
+  font-variation-settings: "wght" 500;
+  letter-spacing: .025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-discovery__panel > header button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--lattice-menu-muted, rgb(17 19 19 / .58));
+  cursor: pointer;
+  font: 400 18px/1 "Inscape Sora", sans-serif;
+}
+
+.profile-discovery__panel > header button:is(:hover, :focus-visible) {
+  outline: 0;
+  background: var(--lattice-menu-selected, rgb(17 19 19 / .065));
+  color: var(--lattice-menu-ink, #111313);
+}
+
+.profile-discovery__search {
+  min-width: 0;
+  padding: 14px 18px 10px;
+  display: block;
+}
+
+.profile-discovery__search input {
+  width: 100%;
+  height: 38px;
+  box-sizing: border-box;
+  padding: 0 11px;
+  border: 1px solid var(--lattice-menu-line-strong, rgb(17 19 19 / .3));
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: 500 10px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.profile-discovery__search input::placeholder { color: var(--lattice-menu-faint, rgb(17 19 19 / .36)); opacity: 1; }
+.profile-discovery__search input:focus { border-color: var(--lattice-menu-ink, #111313); }
+
+.profile-discovery__context {
+  min-height: 30px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--lattice-menu-line, rgb(17 19 19 / .18));
+  color: var(--lattice-menu-muted, rgb(17 19 19 / .58));
+  font: 400 9px/1.2 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  letter-spacing: .08em;
+}
+
+.profile-discovery__context strong { color: var(--lattice-menu-ink, #111313); font-weight: 500; }
+.profile-discovery__status { min-height: 0; color: var(--lattice-menu-muted, rgb(17 19 19 / .58)); font: 400 12px/1.5 "Inscape Sora", sans-serif; text-transform: none; }
+.profile-discovery__status p { margin: 18px; }
+.profile-discovery__status div { padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.profile-discovery__status div p { margin: 0; }
+.profile-discovery__status button { height: 30px; padding: 0 10px; border: 1px solid var(--lattice-menu-line-strong, rgb(17 19 19 / .3)); background: transparent; color: inherit; cursor: pointer; font: 500 10px/1 "Inscape Sora", sans-serif; }
+
+.profile-discovery__results {
+  min-height: 0;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  align-content: start;
+  gap: 8px;
+  overflow-y: auto;
+  scrollbar-color: var(--lattice-menu-muted, rgb(17 19 19 / .58)) transparent;
+  scrollbar-width: thin;
+}
+
+.profile-discovery__result {
+  min-width: 0;
+  padding: 0;
+  display: grid;
+  grid-template-rows: minmax(116px, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid var(--lattice-menu-line, rgb(17 19 19 / .18));
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-discovery__result:is(:hover, :focus-visible),
+.profile-discovery__result[aria-selected="true"] { outline: 0; border-color: var(--lattice-menu-line-strong, rgb(17 19 19 / .3)); background: var(--lattice-menu-selected, rgb(17 19 19 / .065)); }
+.profile-discovery__result[aria-selected="true"] { box-shadow: inset 3px 0 var(--lattice-menu-ink, #111313); }
+.profile-discovery__avatar { width: 100%; min-width: 0; height: 116px; display: grid; place-items: center; overflow: hidden; background: var(--lattice-menu-selected, rgb(17 19 19 / .065)); color: inherit; font: 500 22px/1 "Inscape Sora", sans-serif; }
+.profile-discovery__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-discovery__result-copy { min-width: 0; padding: 10px; display: grid; gap: 5px; }
+.profile-discovery__result-copy strong { overflow: hidden; font: 500 11px/1.2 "Inscape Sora", sans-serif; font-variation-settings: "wght" 500; letter-spacing: .025em; text-overflow: ellipsis; text-transform: none; white-space: nowrap; }
+.profile-discovery__result-copy code { overflow: hidden; color: var(--lattice-menu-muted, rgb(17 19 19 / .58)); font: 400 9px/1.2 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; text-overflow: ellipsis; text-transform: none; white-space: nowrap; }
+.profile-discovery__result-copy small { color: var(--lattice-menu-muted, rgb(17 19 19 / .58)); font: 400 9px/1.25 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .04em; text-transform: none; }
+
+.profile-discovery__panel > footer { min-width: 0; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--lattice-menu-line, rgb(17 19 19 / .18)); color: var(--lattice-menu-faint, rgb(17 19 19 / .36)); font: 400 8px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .07em; }
+
+@media (max-width: 560px), (max-height: 560px) {
+  .profile-discovery { padding: 12px; }
+  .profile-discovery__panel { width: calc(100vw - 24px); height: calc(100dvh - 24px); grid-template-rows: 50px auto auto minmax(0, 1fr); }
+  .profile-discovery__panel > header { padding-left: 14px; }
+  .profile-discovery__search { padding: 10px 14px 8px; }
+  .profile-discovery__context { padding-inline: 14px; }
+  .profile-discovery__results { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); padding: 8px; }
+  .profile-discovery__panel > footer { display: none; }
+}
+
+.profile-discovery__status,
+.profile-discovery__results { grid-row: 4; }
+.profile-discovery__panel > footer { grid-row: 5; }

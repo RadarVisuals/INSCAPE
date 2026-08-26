@@ -293,6 +293,14 @@ test('Directory visits a published workspace, Close remains Close, and Return re
   await viewport(1280, 720, false); await navigate();
   await click('.visitor-grid-world__actions button');
   await waitFor(`!!document.querySelector('.profile-discovery__panel')`, 'directory opens');
+  const directoryStyle = await evaluate(`(()=>{const root=document.querySelector('.profile-discovery');const panel=document.querySelector('.profile-discovery__panel');const result=document.querySelector('.profile-discovery__result');const title=document.querySelector('#profile-discovery-title');const rect=panel.getBoundingClientRect();return{menuSurface:root.dataset.menuSurface,background:getComputedStyle(panel).backgroundColor,color:getComputedStyle(panel).color,titleFont:getComputedStyle(title).fontFamily,resultDisplay:getComputedStyle(result).display,width:rect.width,height:rect.height}})()`);
+  assert.equal(directoryStyle.menuSurface, 'mist');
+  assert.match(directoryStyle.background, /215, 211, 202/);
+  assert.match(directoryStyle.color, /17, 19, 19/);
+  assert.match(directoryStyle.titleFont, /Inscape Sora/);
+  assert.equal(directoryStyle.resultDisplay, 'grid');
+  assert.equal(directoryStyle.width, 760);
+  assert.equal(directoryStyle.height, 560);
   await evaluate(`document.querySelector('[aria-label="Close INSCAPE directory"]').focus()`);
   await pressKey('Enter');
   await waitFor(`!document.querySelector('.profile-discovery__panel')`, 'directory closes with Enter on Close');

@@ -59,7 +59,8 @@ export default function PublishedProfileBoundary({
       onReleaseKeeper={onReleaseKeeper} onReturn={returnHome} onUpdateKeeperDock={onUpdateKeeperDock} />
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={onRetry} /></div>}
     </>;
-  return <>{content}{directoryOpen && <ProfileDiscoveryBoundary onClose={() => setDirectoryOpen(false)} onSelect={(profile) => {
+  return <>{content}{directoryOpen && <ProfileDiscoveryBoundary menuSurfaceId={visibleDocument?.appearance?.menuSurfaceId || 'mist'}
+    onClose={() => setDirectoryOpen(false)} onSelect={(profile) => {
     onVisitProfile?.(profile.address); setDirectoryOpen(false);
   }} />}</>;
 }

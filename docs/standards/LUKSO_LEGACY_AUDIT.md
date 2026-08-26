@@ -45,6 +45,13 @@ possible LUKSO behavior.
   on-chain/base64 method for an external v9 IPFS pointer. Verified against the
   official LSP2 ERC725Y JSON Schema documentation on 2026-08-26.
 
+- `PASS` — Standalone profile sign-in keeps the official `@lukso/up-modal`
+  visibility lifecycle separate from settled Universal Profile authority. The
+  modal's documented `onClose` callback ends the presentation gate, while
+  successful authority still settles through the watched Wagmi connection;
+  provisional `PROFILE CONTEXT REQUIRED` UI is not rendered behind the modal.
+  Verified against the official up-modal API reference on 2026-08-26.
+
 ## Open review items
 
 - `REVIEW` — Creations discovery currently uses indexed LSP4 `AssetCreators` and

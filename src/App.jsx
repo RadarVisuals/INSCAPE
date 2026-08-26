@@ -51,6 +51,7 @@ function App() {
   });
   const [previewDocument, setPreviewDocument] = useState(null);
   const [keeperUserVisible, setKeeperUserVisible] = useState(true);
+  const [standaloneSignInActive, setStandaloneSignInActive] = useState(false);
   const [, setStageUserVisible] = useState(true);
   const [galleryActive, setGalleryActive] = useState(false);
   const activeActorId = useStore((state) => state.renderConfig.actor.id);
@@ -116,6 +117,7 @@ function App() {
           initializeWallet: initWallet,
           disposeWallet: () => useWalletStore.getState().disposeWallet(),
           beginWalletTransition,
+          onSignInClose: () => setStandaloneSignInActive(false),
           onError: (error) => reportControlledError('standalone-wallet-connect', error)
         });
         if (cancelled) {
@@ -139,6 +141,10 @@ function App() {
       acquisition?.release();
     };
   }, [beginWalletTransition, initWallet, scheduleWalletRelease]);
+
+  useEffect(() => {
+    if (standaloneSignInActive && visitorWalletConnected && authorityLifecycleStatus === 'complete') setStandaloneSignInActive(false);
+  }, [authorityLifecycleStatus, standaloneSignInActive, visitorWalletConnected]);
 
   useEffect(() => {
     const syncModeFromUrl = () => {
@@ -226,12 +232,20 @@ function App() {
 
   const handleUserGesture = useCallback(() => {
     canvasRef.current?.acknowledgeUserGesture();
-    if (shouldRequestStandaloneSignIn({
+    const signInRequired = shouldRequestStandaloneSignIn({
       embedded: window.parent !== window,
       walletConnected: useWalletStore.getState().isWalletConnected,
       targetSource: profileTarget.source
-    })) {
-      void standaloneWalletSessionRef.current?.then((session) => session?.showSignIn());
+    });
+    if (signInRequired) {
+      setStandaloneSignInActive(true);
+      void standaloneWalletSessionRef.current?.then((session) => {
+        if (!session) { setStandaloneSignInActive(false); return null; }
+        return session.showSignIn();
+      }).catch((error) => {
+        setStandaloneSignInActive(false);
+        reportControlledError('standalone-wallet-sign-in', error);
+      });
     }
   }, [profileTarget.source]);
 
@@ -271,7 +285,7 @@ function App() {
             <AtelierExperience onRequestPublic={() => changeApplicationMode(APPLICATION_MODES.PUBLIC)} />
           </Suspense>
         ) : (
-          profileTarget.pending ? <div className="mode-loading" role="status">Resolving profile...</div> : localOwnerRoute ? <OwnerRuntimeBoundary
+          standaloneSignInActive ? null : profileTarget.pending ? <div className="mode-loading" role="status">Resolving profile...</div> : localOwnerRoute ? <OwnerRuntimeBoundary
             ownerAuthoringEnabled={ownerAuthoringEnabled}
             workspaceProfileAddress={connectedWorkspaceProfileAddress}
             getWalletPublicationContext={getWalletPublicationContext}

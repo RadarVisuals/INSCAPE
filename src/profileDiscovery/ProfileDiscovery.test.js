@@ -17,6 +17,18 @@ test('standalone Profile Discovery delegates data state but retains every modal 
   assert.doesNotMatch(source, /new AbortController|cleanupRef/);
 });
 
+test('standalone Profile Discovery uses the current menu-surface visual system', async () => {
+  const [source, styles] = await Promise.all([
+    read('./ProfileDiscovery.jsx'), read('./inscapeDirectorySystemWorkflow.css'),
+  ]);
+  assert.match(source, /menuSurfaceId = 'mist'/);
+  assert.match(source, /data-lattice-menu-surface data-menu-surface=\{menuSurfaceId\}/);
+  assert.match(styles, /var\(--lattice-menu-panel/);
+  assert.match(styles, /var\(--lattice-menu-line-strong/);
+  assert.match(styles, /"Inscape Sora"/);
+  assert.doesNotMatch(styles, /#e87945|rgba\(4, 5, 5/);
+});
+
 test('People controller files contain no modal, focus, DOM, presentation, or routing ownership', async () => {
   const [controller, hook] = await Promise.all([
     read('./profileDiscoveryController.js'), read('./useProfileDiscoveryController.js'),

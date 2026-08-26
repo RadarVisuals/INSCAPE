@@ -9,12 +9,13 @@ let sharedSessionPromise = null;
 let sharedConsumers = 0;
 let pendingRelease = null;
 
-export async function createStandaloneWalletSession({ initializeWallet, disposeWallet, beginWalletTransition, onError }) {
+export async function createStandaloneWalletSession({ initializeWallet, disposeWallet, beginWalletTransition, onError, onSignInClose }) {
   const connector = await setupLuksoConnector({
     theme: 'dark',
     chains: { defaultChainId: 42 },
     connectors: { eoa: false },
     storage: { key: 'inscape-up' },
+    onClose: () => onSignInClose?.(),
     onError: (event) => onError?.(event?.detail || new Error('Universal Profile connection failed.'))
   });
 
