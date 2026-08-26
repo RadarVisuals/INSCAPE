@@ -1,7 +1,8 @@
 /* Accepted System Workflow presentation, promoted from the frozen study into
    the production component namespace. Canonical geometry and state remain in
    the production components; this layer owns only their presentation. */
-.system-workflow {
+.system-workflow,
+.system-workflow__token-scope {
   --workflow-window-inset: 18px;
   --workflow-dock-height: 42px;
   --workflow-dock-clearance: 12px;
@@ -32,6 +33,9 @@
   --workflow-type-control: 400 11px/1.2 "Inscape Geist Sans", sans-serif;
   --workflow-type-sidebar: 450 11px/1.1 "Inscape Sora", sans-serif;
   --workflow-type-browser-rail: 400 10px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --workflow-type-panel-heading: 500 11px/1.15 "Inscape Sora", sans-serif;
+  --workflow-type-panel-body: 400 11px/1.5 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --workflow-type-panel-rail: 400 11px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
   --workflow-type-label: 500 10px/1.25 "Inscape IBM Plex Mono", monospace;
   --workflow-type-micro: 400 10px/1.35 "Inscape IBM Plex Mono", monospace;
   --workflow-type-technical: 400 10px/1.35 "Inscape IBM Plex Mono", monospace;
@@ -122,7 +126,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background-color: var(--study-surface);
+  background-color: transparent;
 }
 .system-workflow__grid-plane--current {
   z-index: 1;
@@ -135,18 +139,9 @@
   pointer-events: none;
   transform: translate3d(calc(var(--workflow-grid-swipe-x, 0px) + var(--workflow-grid-swipe-side, 100%)), 0, 0);
 }
-.system-workflow__canvas[data-swiping][data-guide="LINES"] .system-workflow__grid-plane--adjacent::before {
-  position: absolute;
-  z-index: 1000;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--guide-color);
-  content: '';
-  pointer-events: none;
-}
-.system-workflow__canvas[data-swipe-direction="next"] .system-workflow__grid-plane--adjacent::before { left: 0; }
-.system-workflow__canvas[data-swipe-direction="previous"] .system-workflow__grid-plane--adjacent::before { right: 0; }
+.system-workflow__canvas[data-space-navigation] { cursor: grab; }
+.system-workflow__canvas[data-swiping] { cursor: grabbing; }
+.system-workflow__canvas[data-space-navigation] .system-workflow__placement { cursor: grab; }
 .system-workflow__canvas[data-swipe-settling] .system-workflow__grid-plane {
   transition: transform 280ms cubic-bezier(.22, 1, .36, 1);
 }
@@ -396,7 +391,8 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__select-popover button[aria-selected="true"], .system-workflow__filter-options > button[aria-checked="true"] { font-weight: 500; }
 .system-workflow__select-popover button:focus-visible, .system-workflow__filter-popover button:focus-visible { outline: 1px solid var(--lattice-menu-ink); outline-offset: -2px; }
 .system-workflow__filter-popover > header button { align-self: stretch; padding: 0 10px; border: 0; border-left: 1px solid var(--lattice-menu-line); color: inherit; background: transparent; font: inherit; }
-.system-workflow__filter-options { padding-bottom: 5px; display: grid; }
+.system-workflow__filter-popover { grid-template-rows: minmax(0, 1fr); overflow: hidden; }
+.system-workflow__filter-options { min-height: 0; padding-bottom: 5px; display: grid; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .system-workflow__grid-switcher {
   container: grid-panel / inline-size;
   position: fixed;
@@ -467,8 +463,8 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__manual { width: min(540px, calc(100vw - 24px)); height: min(470px, calc(100vh - var(--workflow-dock-height) - 24px)); display: grid; grid-template-rows: minmax(0, 1fr) var(--workflow-rail-height); }
 .system-workflow__manual-body { min-height: 0; display: block; overflow-y: auto; }
 .system-workflow__manual-body section { padding: 15px 16px 16px; }
-.system-workflow__manual-body h2 { margin: 0 0 8px; font: 500 11px/1.15 "Inscape Sora", sans-serif; font-variation-settings: "wght" 500; letter-spacing: .025em; }
-.system-workflow__manual-body p { margin: 0; color: var(--workflow-muted); font: 400 11px/1.5 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .03em; }
+.system-workflow__manual-body h2 { margin: 0 0 8px; font: var(--workflow-type-panel-heading); font-variation-settings: "wght" 500; letter-spacing: .025em; }
+.system-workflow__manual-body p { margin: 0; color: var(--workflow-muted); font: var(--workflow-type-panel-body); letter-spacing: .03em; }
 .system-workflow__manual-chapter-intro,
 .system-workflow__manual-index-intro { background: var(--workflow-selection); }
 .system-workflow__manual-index-intro { min-height: 92px; }
@@ -477,11 +473,11 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__manual-index button { position: relative; min-height: 62px; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
 .system-workflow__manual-index button:is(:hover, :focus-visible) { outline: 0; background: var(--workflow-hover); box-shadow: var(--workflow-active-vertical); }
 .system-workflow__manual-index span { min-width: 0; padding: 11px 14px; display: grid; align-content: center; gap: 5px; }
-.system-workflow__manual-index b { font: 500 11px/1.15 "Inscape Sora", sans-serif; font-variation-settings: "wght" 500; }
-.system-workflow__manual-index em { overflow: hidden; color: var(--workflow-muted); font: 400 11px/1.35 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .03em; text-overflow: ellipsis; white-space: nowrap; }
+.system-workflow__manual-index b { font: var(--workflow-type-panel-heading); font-variation-settings: "wght" 500; }
+.system-workflow__manual-index em { overflow: hidden; color: var(--workflow-muted); font: var(--workflow-type-panel-body); line-height: 1.35; letter-spacing: .03em; text-overflow: ellipsis; white-space: nowrap; }
 .system-workflow__manual > footer { min-width: 0; display: flex; overflow-x: auto; border-top: 1px solid var(--workflow-border); scrollbar-width: none; }
 .system-workflow__manual > footer::-webkit-scrollbar { display: none; }
-.system-workflow__manual > footer button { position: relative; min-width: 0; flex: 1 0 82px; padding: 0 8px; border: 0; color: var(--workflow-muted); background: transparent; font: 400 11px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .055em; cursor: pointer; }
+.system-workflow__manual > footer button { position: relative; min-width: 0; flex: 1 0 82px; padding: 0 8px; border: 0; color: var(--workflow-muted); background: transparent; font: var(--workflow-type-panel-rail); letter-spacing: .055em; cursor: pointer; }
 .system-workflow__manual > footer button:is(:hover, :focus-visible) { outline: 0; color: var(--workflow-ink); background: var(--workflow-hover); }
 .system-workflow__manual > footer button[aria-pressed="true"] { color: var(--workflow-ink); background: var(--workflow-selection); }
 .system-workflow__manual > footer .system-workflow__manual-close { flex: 0 0 42px; padding: 0; display: grid; place-items: center; color: var(--workflow-muted); }
@@ -808,3 +804,4 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow[data-reduced-motion] *,
 .system-workflow[data-reduced-motion] *::before,
 .system-workflow[data-reduced-motion] *::after { scroll-behavior: auto !important; transition-duration: 0ms !important; animation-duration: 0ms !important; }
+.system-workflow__panel-presence[hidden] { display: none !important; }

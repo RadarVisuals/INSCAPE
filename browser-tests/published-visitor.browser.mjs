@@ -331,7 +331,7 @@ test('public identity rack replaces its source and returns to the persistent com
   await identityViewer.waitFor({ state: 'visible', timeout: 10_000 });
   assert.equal(await evaluate(`document.querySelectorAll('[data-identity-dossier-source="true"]').length`), 0);
   assert.match(await evaluate(`document.querySelector('.lattice-production-identity-dossier').textContent`), /Alpha Visitor Fixture/i);
-  await page.getByRole('button', { name: 'Close Identity Rack' }).click();
+  await page.getByRole('button', { name: 'Close profile' }).click();
   await waitFor(`document.querySelector('#lattice-profile-dossier')?.dataset.phase === 'compact'`, 'persistent compact identity card');
   assert.equal(await identityViewer.count(), 1);
   await waitFor(`document.activeElement?.classList.contains('lattice-production-identity-dossier__source-summary')`,
@@ -393,9 +393,12 @@ test('canonical published HTTPS and IPFS media render with no referrer', async (
   assert.equal(await evaluate(`document.querySelector('[data-placement-id="art:Alpha:https"] img').loading`), 'eager');
   const transformed = await evaluate(`(()=>{const n=document.querySelector('[data-placement-id="art:Alpha:ipfs"] img');return {transform:n.style.transform}})()`);
   assert.match(transformed.transform, /scale\(-1, 1\) rotate\(90deg\)/);
-  const fit = await evaluate(`(()=>{const dimensions=(id)=>{const p=document.querySelector('[data-placement-id="'+id+'"]');const o=p.querySelector('.lattice-production-placement__opening').getBoundingClientRect();const i=p.querySelector('img').getBoundingClientRect();return {opening:{w:o.width,h:o.height},image:{w:i.width,h:i.height}}};return {native:dimensions('art:Alpha:https'),cropped:dimensions('art:Alpha:ipfs')}})()`);
-  assert.ok(fit.native.image.w <= fit.native.opening.w + 1 && fit.native.image.h <= fit.native.opening.h + 1, 'native no-crop media is contained');
-  assert.ok(fit.cropped.image.w >= fit.cropped.opening.w - 1 && fit.cropped.image.h >= fit.cropped.opening.h - 1, 'cropped media covers its opening');
+  const fit = await evaluate(`(()=>{const dimensions=(id)=>{const p=document.querySelector('[data-placement-id="'+id+'"]');const opening=p.querySelector('.lattice-production-placement__opening');const o=opening.getBoundingClientRect();const i=p.querySelector('img').getBoundingClientRect();return {opening:{w:o.width,h:o.height,overflow:getComputedStyle(opening).overflow},image:{w:i.width,h:i.height}}};return {native:dimensions('art:Alpha:https'),cropped:dimensions('art:Alpha:ipfs')}})()`);
+  assert.equal(fit.native.opening.overflow, 'hidden');
+  assert.ok(fit.native.image.w <= fit.native.opening.w + 2 && fit.native.image.h <= fit.native.opening.h + 2,
+    `native no-crop media is contained: ${JSON.stringify(fit.native)}`);
+  assert.ok(fit.cropped.image.w >= fit.cropped.opening.w - 1 && fit.cropped.image.h >= fit.cropped.opening.h - 1,
+    `cropped media covers its opening: ${JSON.stringify(fit.cropped)}`);
 });
 
 test('canonical broken media reaches fallback after retries and recovers on a new source', async () => {

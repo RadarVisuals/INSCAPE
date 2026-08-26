@@ -56,11 +56,11 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
       }
       const job = { cancelled: false, signature }; previewJobsRef.current.set(id, job);
       previewRecordsRef.current.set(id, { assetRef: asset, signature, status: 'pending' });
-      resolveBrowserPreview(candidates).then((source) => {
+      resolveBrowserPreview(candidates).then((decoded) => {
         if (job.cancelled || previewJobsRef.current.get(id) !== job) return;
         previewJobsRef.current.delete(id);
-        previewRecordsRef.current.set(id, source
-          ? { assetRef: asset, signature, source, status: 'ready' }
+        previewRecordsRef.current.set(id, decoded
+          ? { assetRef: asset, signature, ...decoded, status: 'ready' }
           : { assetRef: asset, signature, status: 'unavailable' });
         setPreviewVersion((value) => value + 1);
       });
@@ -71,9 +71,15 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
     for (const job of previewJobsRef.current.values()) job.cancelled = true;
     previewJobsRef.current.clear();
   }, []);
-  const assets = useMemo(() => sourceAssets.flatMap((asset) => {
+  const assets = useMemo(() => sourceAssets.map((asset) => {
     const preview = previewRecordsRef.current.get(browserAssetId(asset));
-    return preview?.status === 'ready' ? [{ ...asset, previewSrc: preview.source }] : [];
+    return preview?.status === 'ready' ? {
+      ...asset,
+      decodedImageHeight: preview.height,
+      decodedImageSource: preview.source,
+      decodedImageWidth: preview.width,
+      previewSrc: preview.source,
+    } : { ...asset, previewSrc: null };
   }), [previewVersion, sourceAssets]);
   const unavailableCount = sourceAssets.filter((asset) => previewRecordsRef.current
     .get(browserAssetId(asset))?.status === 'unavailable').length;
@@ -170,7 +176,9 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
     selectedAsset, selectedAssets, selectedAssetIds, selectAsset, selectForContext, clearSelection, selectAllVisible,
     selectedCategory, dialog, setDialog, filteredAssets, viewAssetCount: scopedAssets.length,
     hasActiveFilters, clearFilters, unavailableCount, markAssetUnavailable, isAssetRenderable, areAssetsRenderable,
-    renderableAssets: assets, renderableAssetIds: assets.map(browserAssetId),
+    renderableAssets: assets,
+    renderableAssetIds: assets.filter((asset) => previewRecordsRef.current
+      .get(browserAssetId(asset))?.status === 'ready').map(browserAssetId),
     move: floatingWindow.move,
     rackWidthResize: floatingWindow.rackWidthResize,
     resize: floatingWindow.resize,

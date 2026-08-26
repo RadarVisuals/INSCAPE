@@ -30,6 +30,14 @@ possible LUKSO behavior.
   image as a non-placeable token preview; it is never relabelled as a collection
   cover. Verified against the official LUKSO NFT metadata guide on 2026-08-07.
 
+- `PASS` — Library asset media retains authored `ipfs://` references as
+  independently resolved gateway candidates instead of coupling both the
+  indexer-derived preview and its fallback to one provider. Preview decoding is
+  bounded, unavailable bytes remain unavailable, and only a successfully
+  browser-decoded source can enter owner placement. Verified against the
+  official LSP4 metadata specification and metadata-preparation guide on
+  2026-08-25.
+
 ## Open review items
 
 - `REVIEW` — Creations discovery currently uses indexed LSP4 `AssetCreators` and

@@ -22,7 +22,8 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress, accept
   const previewSource = [asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl]
     .map((candidate) => resolvePublishedAssetUrl(candidate))
     .find(Boolean) || null;
-  const previewCandidates = [...new Set([asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl]
+  const imageVariants = (asset.imageGroups?.[0]?.variants || []).map((variant) => variant?.url);
+  const previewCandidates = [...new Set([asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl, ...imageVariants]
     .map((candidate) => resolvePublishedAssetUrl(candidate)).filter(Boolean))];
   const resolvedSource = [asset.originalImageUrl, asset.imageUrl, asset.thumbnailUrl]
     .map((candidate) => resolvePublishedAssetUrl(candidate))
@@ -73,6 +74,7 @@ export function adaptLatticeProductionBrowserData({
       assetProgress: { failures: 0, resolved: 0, total: 0 },
       assets: [],
       categories: [],
+      categoryOrganization: { rootCategoryIds: [], sections: [] },
       favorites: [],
       ownerContext: profile,
       rejectedAssetCount: 0,
@@ -99,6 +101,9 @@ export function adaptLatticeProductionBrowserData({
     name: folder.name,
     public: folder.public === true,
   }));
+  const categoryOrganization = workspace.categoryOrganization || {
+    rootCategoryIds: categories.map(({ id }) => id), sections: [],
+  };
   return deepFreeze({
     assetError: typeof error === 'string' ? error : null,
     assetLoadState: ['idle', 'loading', 'ready', 'partial', 'error'].includes(status) ? status : 'error',
@@ -109,6 +114,10 @@ export function adaptLatticeProductionBrowserData({
     },
     assets: acceptedAssets,
     categories,
+    categoryOrganization: {
+      rootCategoryIds: [...categoryOrganization.rootCategoryIds],
+      sections: categoryOrganization.sections.map((section) => ({ ...section, categoryIds: [...section.categoryIds] })),
+    },
     favorites: [...workspace.favorites],
     ownerContext: profile,
     rejectedAssetCount,

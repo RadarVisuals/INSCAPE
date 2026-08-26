@@ -35,6 +35,21 @@ test('source-bound browser-decoded dimensions override pre-orientation metadata'
   })), { width: 1080, height: 1920 }, 'a thumbnail decode cannot replace source dimensions');
 });
 
+test('a successfully decoded fallback becomes the canonical render and placement source', () => {
+  const stale = 'https://dead.example/image';
+  const fallback = 'https://gateway.example/ipfs/work';
+  const decoded = ownerSystemWorkflowDecodedAsset({
+    src: stale,
+    previewCandidates: [stale, fallback],
+    imageWidth: 2000,
+    imageHeight: 1000,
+  }, { source: fallback, width: 1000, height: 2000 });
+  assert.equal(decoded.src, fallback);
+  assert.equal(decoded.previewSrc, fallback);
+  assert.equal(decoded.decodedImageSource, fallback);
+  assert.deepEqual(ownerSystemWorkflowAssetDimensions(decoded), { width: 1000, height: 2000 });
+});
+
 test('browser decoding preserves portrait, landscape, and square natural dimensions after orientation', async () => {
   const cases = [
     ['portrait', 1080, 1920],
@@ -66,4 +81,23 @@ test('failed or unavailable decoding stays unknown instead of inventing dimensio
     ImageConstructor: FailedImage, cache: new Map(),
   }), null);
   assert.equal(ownerSystemWorkflowAssetDimensions({ imageWidth: null, imageHeight: null }), null);
+});
+
+test('dimension decoding skips a failed source and accepts the next bounded candidate', async () => {
+  class CandidateImage {
+    set src(value) {
+      this.source = value;
+      if (value.includes('fallback')) {
+        this.naturalWidth = 1600; this.naturalHeight = 900;
+        queueMicrotask(() => this.onload());
+      } else queueMicrotask(() => this.onerror());
+    }
+    decode() { return Promise.reject(new Error('use load events')); }
+  }
+  assert.deepEqual(await decodeOwnerSystemWorkflowAssetDimensions({
+    src: 'https://dead.example/image',
+    previewCandidates: ['https://dead.example/image', 'https://gateway.example/fallback'],
+  }, { ImageConstructor: CandidateImage, cache: new Map(), timeoutMs: 20 }), {
+    source: 'https://gateway.example/fallback', width: 1600, height: 900,
+  });
 });

@@ -34,3 +34,10 @@ test('owner focus view model retains canonical presentation and builds all three
 test('owner focus view model rejects missing media without inventing a fallback authority', () => {
   assert.equal(createOwnerSystemWorkflowFocusViewModel(placement, { name: 'Missing' }), null);
 });
+
+test('owner focus view model leaves an absent description absent', () => {
+  const model = createOwnerSystemWorkflowFocusViewModel(placement, {
+    id: placement.stableAssetId, name: 'Untitled record', src: '/record.webp', width: 800, height: 800,
+  });
+  assert.equal(model.dossier.description, null);
+});

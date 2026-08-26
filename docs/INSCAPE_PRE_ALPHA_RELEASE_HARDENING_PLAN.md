@@ -185,7 +185,7 @@ Identify the exact stable product checkpoint from which hardening will proceed, 
 - Dirty-path classification: `src/main.jsx`, `src/prototypes/startveilCube/`, `src/prototypes/spider-keeper/`, and `browser-tests/startveil-cube.browser.mjs` are development-only prototype work; root `startveil-v3-*.png`, root `modul8r-*-review*.png`, `public/assets/inscape-*.png`, and `public/inscape-x-banner-composition.html` are branding/review assets; this plan is release-process documentation. No accepted production change awaiting commit, generated tracked/runtime output, or unknown-ownership path was identified. All remain unstaged and preserved.
 - The uncommitted prototype routes and lazy imports in the original `src/main.jsx` are individually guarded by `import.meta.env.DEV`. The release base contains only the previously accepted prototype/development routes, also guarded by `import.meta.env.DEV`. The original untracked public branding assets are absent from the release lane and have no committed production reference; the four table-grid banners are additionally named in the existing production-build prune list.
 - Production owner selection remains the accepted two-line seam in `src/public/ownerRuntimeSelected.js`: selection `MODUL8R` with `OwnerModul8rShell.jsx`. The accepted product checkpoint is Version 8 canonical with Version 7 compatibility, MODUL-8R Tasks 1-9 `[x]`, placement-presentation parity `[x]`, test maintenance `[x]`, and published-visitor harness maintenance `[x]`; Phase 10 remains unauthorized.
-- Clean-lane host inventory: Node `v18.20.7`, npm `10.8.2`, Windows NT `10.0.22631.0`, AMD64. Required public deployment configuration name: `VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL`. Optional public endpoint overrides are `VITE_IPFS_GATEWAY_URL`, `VITE_LUKSO_RPC_URL`, `VITE_LUKSO_RPC_FALLBACK_URLS`, `VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_FALLBACK_URLS`, `VITE_LUKSO_INDEXER_URL`, `VITE_CHILLWHALES_INDEXER_URL`, and `VITE_LUKSO_WSS_RPC_URL`. Required server-only secret name: `PINATA_JWT`; no values were read or recorded. `npm ci` completed from the lockfile; it warned that the current Node patch level is below several transitive packages' declared engines, but the authorized build and focused checks completed successfully.
+- Clean-lane host inventory: Node `v18.20.7`, npm `10.8.2`, Windows NT `10.0.22631.0`, AMD64. Required public deployment configuration name: `VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL`. Optional public endpoint overrides are `VITE_IPFS_GATEWAY_URL`, `VITE_IPFS_GATEWAY_FALLBACK_URLS`, `VITE_LUKSO_RPC_URL`, `VITE_LUKSO_RPC_FALLBACK_URLS`, `VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_FALLBACK_URLS`, `VITE_LUKSO_INDEXER_URL`, `VITE_CHILLWHALES_INDEXER_URL`, and `VITE_LUKSO_WSS_RPC_URL`. Required server-only secret name: `PINATA_JWT`; no values were read or recorded. `npm ci` completed from the lockfile; it warned that the current Node patch level is below several transitive packages' declared engines, but the authorized build and focused checks completed successfully.
 - Baseline verification: `npm run build` passed after transforming 6,364 modules; `npm run build:check` passed; and the focused production build, owner-runtime, MODUL-8R selector, public-boundary, public-access, and isolation matrix passed 40/40 with zero failures, cancellations, or skips. `git diff --check` passed.
 - Production totals: initial JavaScript 1,240,851 raw / 362,760 gzip; owner JavaScript 274,107 / 82,281; standalone wallet JavaScript 3,943,745 / 1,042,227; core JavaScript 2,054,796 / 613,812; total JavaScript 5,998,541 / 1,656,039; initial CSS 113,237 / 19,985; owner CSS 69,159 / 12,957; public assets 14,821,539 raw; largest public asset 2,574,306 raw. All accepted production budgets passed.
 - Graph and isolation evidence: the selected entry is `MODUL8R`; `OwnerModul8rShell` and its Library/Signals stores are lazy owner chunks; the generated owner graph reports `leaks: []`; the manifest contains the canonical lazy `VisitorLatticeWorld` entry; cold visitor tests never request the owner chunk or perform owner persistence; public projection tests exclude private records and workspace mutation authority. A production-artifact scan found zero prototype source/route/component markers and zero markers for the excluded untracked branding assets.
@@ -671,7 +671,7 @@ Status: `[x]` (2026-08-07). The bounded implementation, automated Deploy Preview
 
 ## 13. Task 6 - Build and certify the exact release candidate
 
-Status: `[ ]`
+Status: `[~]`
 
 Depends on: Tasks 1-5 implemented; deploy-preview portions of Tasks 1, 2, and 4 complete.
 
@@ -746,6 +746,9 @@ Against the exact deploy preview:
 
 Record the exact commit, artifact/report hashes, build totals, automatic matrix, manual matrix, preview URL, publication test identity, and rollback target here. Do not record secrets or canonical document contents.
 
+- **Pre-clean functional freeze (2026-08-26):** RadarVisuals/user accepted the integrated local System Workflow behavior and visual review surface on the real-profile and bounded fixture routes. The accepted behavior includes profile-scoped Library categories and sections, owner/Visitor canvas Grid parity with Grid-free NFT and expanded-Profile inspection, the canonical v9 Preview/Publish boundary, and a Library collection filter constrained to the Library window with an internally scrollable list. This acceptance is the immutable behavioral baseline for cleanup; it is not yet the exact Task-6 candidate or permission to deploy, upload, sign, or transact.
+- **Pre-alpha cleanup decision (2026-08-26):** the user requires a dedicated deep-clean gate before the exact candidate commit and first Alpha. Begin from a pushed pre-clean checkpoint, inventory production, test, static-asset, Function, documentation, ignored, and untracked reachability, and classify paths as `KEEP`, `DELETE`, or `REVIEW`. Removal is limited to generated, temporary, replaced, orphaned, development-only, or otherwise proven-unneeded material and must not change the accepted behavior. Ambiguous or user-owned paths require explicit review. Required security, recovery, rollback, canonical-v9, wallet-authority, and active regression boundaries remain. After cleanup, repeat the complete affected certification matrix and create a new exact candidate SHA.
+
 ## 14. Task 7 - Launch and operate the supervised Alpha
 
 Status: `[ ]`
@@ -809,7 +812,7 @@ Record cohort size, supported environment, release commit, observation period, a
 
 The following work remains separate unless real Alpha evidence promotes it:
 
-- Phase 10 broad legacy cleanup and documentation consolidation;
+- Phase 10 architectural cleanup beyond the authorized bounded pre-alpha deep-clean gate, including speculative refactors and compatibility removal;
 - removal of compatibility readers for already-published documents;
 - large bundle-budget recalibration or cleanup without measured user impact;
 - full mobile owner authoring;
@@ -821,7 +824,7 @@ The following work remains separate unless real Alpha evidence promotes it:
 - large analytics, personalization, or unrestricted AI behavior;
 - architectural refactors performed only for aesthetic cleanliness.
 
-Phase 10 may remove only proven-unreachable production code while preserving required legacy-document readers. It receives its own later authorization and must not be smuggled into Tasks 0-7.
+The bounded pre-alpha deep-clean gate recorded in Task 6 may remove only classified, proven-unneeded material while preserving required legacy-document readers and accepted behavior. Any broader Phase 10 architectural cleanup still receives its own later authorization and must not be smuggled into Tasks 0-7.
 
 ## 16. Definition of ready for the first external Alpha
 

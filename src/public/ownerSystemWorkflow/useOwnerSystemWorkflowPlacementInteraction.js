@@ -33,10 +33,12 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ canvasRef, 
   const [previewById, setPreviewById] = useState(new Map());
   const [marquee, setMarquee] = useState(null);
   const [gridSwipe, setGridSwipe] = useState(null);
+  const [spaceNavigation, setSpaceNavigation] = useState(false);
   const gestureRef = useRef(null);
   const marqueeRef = useRef(null);
   const gridSwipeTimerRef = useRef(null);
   const clickSuppressedRef = useRef(false);
+  const spacePressedRef = useRef(false);
   const grid = controller.selectedGrid;
 
   const clearGesture = () => {
@@ -52,6 +54,10 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ canvasRef, 
 
   const beginPlacementGesture = (event, placement, kind = 'move', corner = null) => {
     if (disabled || placement.locked || event.button !== 0 || !grid) return;
+    if (spacePressedRef.current) {
+      beginCanvasSelection(event, { navigationOnly: true });
+      return;
+    }
     if (cropSession && (kind !== 'resize' || cropSession.placementId !== placement.id)) return;
     // Shift-click belongs to selection, not movement. Let the placement click
     // handler toggle the item without replacing the existing selection first.
@@ -137,9 +143,10 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ canvasRef, 
     marqueeRef.current = null;
     setMarquee(null);
   };
-  const beginCanvasSelection = (event) => {
-    if (disabled || event.button !== 0 || event.target !== event.currentTarget || !grid) return;
+  const beginCanvasSelection = (event, { navigationOnly = spacePressedRef.current } = {}) => {
+    if (disabled || event.button !== 0 || !grid || !navigationOnly && event.target !== event.currentTarget) return;
     event.preventDefault();
+    if (navigationOnly) event.stopPropagation();
     const field = projectedField(canvasRef.current, snapStep);
     const origin = { x: event.clientX, y: event.clientY };
     const move = (pointerEvent) => {
@@ -150,9 +157,8 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ canvasRef, 
       if (active.mode === 'pending' && Math.hypot(deltaX, deltaY) > 6) {
         const direction = deltaX < 0 ? 'next' : 'previous';
         const targetGridId = canNavigateGrid(direction);
-        active.mode = !event.shiftKey && Math.abs(deltaX) > Math.abs(deltaY) * 1.35 && targetGridId
-          ? 'swipe'
-          : 'marquee';
+        active.mode = navigationOnly && Math.abs(deltaX) > Math.abs(deltaY) * 1.35 && targetGridId
+          ? 'swipe' : navigationOnly ? 'navigation' : 'marquee';
         if (active.mode === 'swipe') {
           active.direction = direction;
           active.targetGridId = targetGridId;
@@ -165,6 +171,10 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ canvasRef, 
         const directionalDelta = direction === 'next' ? Math.min(0, deltaX) : Math.max(0, deltaX);
         const boundedDelta = Math.max(-field.viewportWidth, Math.min(field.viewportWidth, directionalDelta));
         setGridSwipe({ deltaX: boundedDelta, direction, settling: false, targetGridId: active.targetGridId });
+        return;
+      }
+      if (active.mode === 'navigation') {
+        active.end = { x: pointerEvent.clientX, y: pointerEvent.clientY };
         return;
       }
       active.end = {
@@ -212,6 +222,10 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ canvasRef, 
         clearMarquee();
         return;
       }
+      if (active.mode === 'navigation') {
+        clearMarquee();
+        return;
+      }
       if (!active.moved) controller.replaceSelection([]);
       else {
         const left = (Math.min(origin.x, active.end.x) - field.left) / field.cellSize;
@@ -245,5 +259,28 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ canvasRef, 
     clearMarquee();
     globalThis.clearTimeout?.(gridSwipeTimerRef.current);
   }, []);
-  return { beginCanvasSelection, beginPlacementGesture, clickSuppressedRef, gridSwipe, marquee, nudgeSelection, previewById };
+  useEffect(() => {
+    const editable = (event) => /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable;
+    const keydown = (event) => {
+      if (event.code !== 'Space' || editable(event) || disabled || cropSession) return;
+      event.preventDefault();
+      spacePressedRef.current = true;
+      setSpaceNavigation(true);
+    };
+    const release = (event) => {
+      if (event?.code && event.code !== 'Space') return;
+      spacePressedRef.current = false;
+      setSpaceNavigation(false);
+    };
+    globalThis.addEventListener?.('keydown', keydown, true);
+    globalThis.addEventListener?.('keyup', release, true);
+    globalThis.addEventListener?.('blur', release);
+    return () => {
+      globalThis.removeEventListener?.('keydown', keydown, true);
+      globalThis.removeEventListener?.('keyup', release, true);
+      globalThis.removeEventListener?.('blur', release);
+      spacePressedRef.current = false;
+    };
+  }, [cropSession, disabled]);
+  return { beginCanvasSelection, beginPlacementGesture, clickSuppressedRef, gridSwipe, marquee, nudgeSelection, previewById, spaceNavigation };
 }

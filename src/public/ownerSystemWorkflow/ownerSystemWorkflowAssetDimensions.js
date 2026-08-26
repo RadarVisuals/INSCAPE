@@ -2,8 +2,20 @@ function positiveDimension(value) {
   return Number.isSafeInteger(value) && value > 0 ? value : null;
 }
 
+export function ownerSystemWorkflowAssetSources(asset) {
+  return [...new Set([
+    asset?.decodedImageSource,
+    asset?.previewSrc,
+    ...(Array.isArray(asset?.previewCandidates) ? asset.previewCandidates : []),
+    asset?.src,
+    asset?.originalImageUrl,
+    asset?.imageUrl,
+    asset?.thumbnailUrl,
+  ].filter((source) => typeof source === 'string' && source))];
+}
+
 export function ownerSystemWorkflowAssetSource(asset) {
-  return asset?.src || asset?.originalImageUrl || asset?.imageUrl || asset?.thumbnailUrl || null;
+  return ownerSystemWorkflowAssetSources(asset)[0] || null;
 }
 
 export function ownerSystemWorkflowAssetDimensions(asset) {
@@ -20,10 +32,11 @@ export function ownerSystemWorkflowAssetDimensions(asset) {
 }
 
 export function ownerSystemWorkflowDecodedAsset(asset, decoded) {
-  const source = ownerSystemWorkflowAssetSource(asset);
+  const acceptedSources = ownerSystemWorkflowAssetSources(asset);
+  const source = decoded?.source;
   const width = positiveDimension(decoded?.width);
   const height = positiveDimension(decoded?.height);
-  if (!asset || !source || decoded?.source !== source || !width || !height) return asset;
+  if (!asset || !source || !acceptedSources.includes(source) || !width || !height) return asset;
   return Object.freeze({
     ...asset,
     decodedImageSource: source,
@@ -31,6 +44,8 @@ export function ownerSystemWorkflowDecodedAsset(asset, decoded) {
     decodedImageHeight: height,
     imageWidth: width,
     imageHeight: height,
+    previewSrc: source,
+    src: source,
     width,
     height,
   });
@@ -41,20 +56,29 @@ const decodedBySource = new Map();
 export function decodeOwnerSystemWorkflowAssetDimensions(asset, {
   ImageConstructor = globalThis.Image,
   cache = decodedBySource,
+  timeoutMs = 8_000,
 } = {}) {
-  const source = ownerSystemWorkflowAssetSource(asset);
-  if (!source || typeof ImageConstructor !== 'function') return Promise.resolve(null);
-  if (cache.has(source)) return cache.get(source);
-  const pending = new Promise((resolve) => {
+  const accepted = ownerSystemWorkflowAssetDimensions(asset);
+  if (accepted && asset?.decodedImageSource) return Promise.resolve(Object.freeze({
+    source: asset.decodedImageSource, ...accepted,
+  }));
+  const sources = ownerSystemWorkflowAssetSources(asset);
+  if (!sources.length || typeof ImageConstructor !== 'function') return Promise.resolve(null);
+  const decodeSource = (source) => {
+    if (cache.has(source)) return cache.get(source);
+    const pending = new Promise((resolve) => {
     const image = new ImageConstructor();
     let settled = false;
     const finish = () => {
       if (settled) return;
       settled = true;
+      clearTimeout(timeout);
+      image.onload = null; image.onerror = null;
       const width = positiveDimension(image.naturalWidth);
       const height = positiveDimension(image.naturalHeight);
       resolve(width && height ? Object.freeze({ source, width, height }) : null);
     };
+    const timeout = setTimeout(finish, timeoutMs);
     image.decoding = 'async';
     image.referrerPolicy = 'no-referrer';
     image.onload = finish;
@@ -62,9 +86,17 @@ export function decodeOwnerSystemWorkflowAssetDimensions(asset, {
     image.src = source;
     if (typeof image.decode === 'function') image.decode().then(finish, () => {});
   });
-  cache.set(source, pending);
-  pending.then((dimensions) => {
-    if (!dimensions && cache.get(source) === pending) cache.delete(source);
-  });
-  return pending;
+    cache.set(source, pending);
+    pending.then((dimensions) => {
+      if (!dimensions && cache.get(source) === pending) cache.delete(source);
+    });
+    return pending;
+  };
+  return (async () => {
+    for (const source of sources) {
+      const dimensions = await decodeSource(source);
+      if (dimensions) return dimensions;
+    }
+    return null;
+  })();
 }

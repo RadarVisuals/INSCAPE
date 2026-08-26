@@ -42,11 +42,9 @@ const projectedSelectionOutline = (bounds, field) => {
   return { ...rectangle, width: rectangle.width + 1, height: rectangle.height + 1 };
 };
 
-function GridSwipePreview({ appearance, assetsById, grid, onAssetDimensions, worldViewport }) {
+function GridSwipePreview({ assetsById, grid, onAssetDimensions, worldViewport }) {
   if (!grid || !worldViewport) return null;
   return <>
-    <LatticePixelGrid color={appearance.guideColor} field={worldViewport} guideInterval={systemWorkflowSnapStep(appearance.guideSize)}
-      height={worldViewport.height} mode={appearance.guideMode} width={worldViewport.width} />
     {grid.placements.slice().sort((left, right) => left.layer - right.layer).map((placement) => {
       const asset = assetsById.get(placement.stableAssetId);
       const src = sourceFor(asset);
@@ -168,7 +166,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
 
   if (!grid) return null;
   return <section className="system-workflow__stage" aria-label={`${grid.title} Grid`} data-system-workflow-stage>
-    <div ref={canvasRef} className="system-workflow__canvas" data-guide={appearance.guideMode} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={Boolean(interaction.gridSwipe) || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, ...swipeStyle }}
+    <div ref={canvasRef} className="system-workflow__canvas" data-guide={appearance.guideMode} data-space-navigation={interaction.spaceNavigation || undefined} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={Boolean(interaction.gridSwipe) || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, ...swipeStyle }}
       onPointerDown={(event) => { if (!cropSession) interaction.beginCanvasSelection(event); }}
       onDragOver={(event) => event.preventDefault()}
       onDrop={async (event) => {
@@ -186,9 +184,9 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
           destination: createSystemWorkflowDropGeometry(dimensions.width, dimensions.height, { x: event.clientX, y: event.clientY }, field),
         }));
       }}>
-      <div className="system-workflow__grid-plane system-workflow__grid-plane--current">
       {worldViewport && <LatticePixelGrid color={appearance.guideColor} field={worldViewport} guideInterval={snapStep}
         height={worldViewport.height} mode={appearance.guideMode} width={worldViewport.width} />}
+      <div className="system-workflow__grid-plane system-workflow__grid-plane--current">
       {projectedPlacements.slice().sort((left, right) => left.layer - right.layer).map((placement) => {
         const asset = assetsById.get(placement.stableAssetId);
         const src = sourceFor(asset);
@@ -231,7 +229,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
       {interaction.marquee && <i className="system-workflow__marquee" style={interaction.marquee} />}
       </div>
       {interaction.gridSwipe && swipeGrid && <div aria-hidden="true" className="system-workflow__grid-plane system-workflow__grid-plane--adjacent">
-        <GridSwipePreview appearance={appearance} assetsById={assetsById} grid={swipeGrid}
+        <GridSwipePreview assetsById={assetsById} grid={swipeGrid}
           onAssetDimensions={onAssetDimensions} worldViewport={worldViewport} />
       </div>}
     </div>

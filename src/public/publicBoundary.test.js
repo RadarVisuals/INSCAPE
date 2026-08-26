@@ -84,8 +84,12 @@ test('selected owner workflow does not restore the legacy Gallery workspace', ()
 
 test('owner inventory is profile-scoped before the Library panel opens', () => {
   const runtimeSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
-  assert.match(runtimeSource, /useLibraryStore\(\(state\) => state\.profileAddress === profileAddress \? state\.assets : \[\]\)/u);
-  assert.match(runtimeSource, /useOwnerLatticeBrowser\(profileAddress, panel === 'library' && browserEnabled\)/u);
+  const browserSource = readFileSync(new URL('./useOwnerLatticeBrowser.js', import.meta.url), 'utf8');
+  assert.match(browserSource, /storeProfileAddress === profile/u);
+  assert.match(browserSource, /createdProfileAddress === profile/u);
+  assert.match(runtimeSource, /useOwnerLatticeBrowser\(profileAddress, panel === 'library' && browserEnabled, referencedAssetIds\)/u);
+  assert.match(runtimeSource, /const records = reviewAssets \|\| browser\.records/);
+  assert.doesNotMatch(runtimeSource, /const rawAssets = useLibraryStore/);
 });
 
 test('owner folders are direct categories and Index assigns assets through contextual folder commands', () => {

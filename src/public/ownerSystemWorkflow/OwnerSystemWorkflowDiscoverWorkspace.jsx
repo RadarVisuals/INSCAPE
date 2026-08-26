@@ -98,7 +98,10 @@ export default function OwnerSystemWorkflowDiscoverWorkspace({ assets, fixture, 
                 <button aria-label={`Open ${person.name || 'profile'} in Inscape`} className="lattice-browser-asset__media system-workflow__discover-avatar" onClick={() => onSelect(person)} type="button">{person.avatarUrl ? <img alt="" src={person.avatarUrl} /> : initials(person.name)}</button>
                 {labelsVisible && <div className="lattice-browser-asset__record"><strong>{person.name || 'Unnamed profile'}</strong><span className="system-workflow__discover-actions"><button aria-label={`Open ${person.name || 'profile'} in Inscape`} onClick={() => onSelect(person)} title="Open in Inscape" type="button"><ProfileRouteIcon direction="in" /></button>{officialProfileUrl && <a aria-label={`Open ${person.name || 'profile'} on Universal Everything`} href={officialProfileUrl} rel="noreferrer" target="_blank" title="Open Universal Profile"><ProfileRouteIcon direction="out" /></a>}</span><div className="system-workflow__discover-card-meta"><span className="system-workflow__discover-tags"><small>{person.role}</small>{person.relationship && <small>{person.relationship}</small>}</span></div></div>}
               </article>;
-            })}</div> : <p className="lattice-browser-status">No people match this view.</p>}
+            })}</div> : <div className="lattice-browser-status">
+              <strong>{people.length ? 'No profiles match this view.' : 'No published Inscape profiles yet.'}</strong>
+              {!people.length && <small>Discover shows profiles after they publish an Inscape presentation.</small>}
+            </div>}
       </main>
     </div>
     {groupContext && createPortal(<RackMenu anchor={groupContext.anchor} commands={[{ id: 'rename', label: 'Rename' }, { id: 'delete', label: 'Delete' }]}

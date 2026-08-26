@@ -185,19 +185,21 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
     </footer>
     {viewerSession && viewerEntry && <LatticeFocusViewer dossier={viewerEntry.dossier} entry={viewerEntry}
       getReturnRectangle={() => findPlacementElement(viewerSession.placementId)?.getBoundingClientRect()}
-      gridVariables={gridVariables} gridVisible inspectionVariant="rack" menuSurfaceId={document.appearance.menuSurfaceId}
+      gridVariables={gridVariables} gridVisible={false} inspectionVariant="rack" menuSurfaceId={document.appearance.menuSurfaceId}
       onClosed={closePlacementViewer} onNavigate={navigateViewer} originRectangle={viewerSession.originRectangle}
       position={viewerPosition} renderArtwork={(focusEntry, context) => <LatticeProductionFocusArtwork entry={focusEntry}
         motion={context.motion} />}
       returnFocus={viewerSession.returnFocus} surfaceColor={workspaceSurfaceColor} total={viewerEntries.length} />}
     {identitySession && identityRack && !viewerSession && <Suspense fallback={null}><LatticeProductionIdentityDossier
+      dismissOnBackdrop
       getReturnRectangle={() => identityControlRef.current?.closest('.lattice-profile-rail')?.getBoundingClientRect()
         || identityControlRef.current?.getBoundingClientRect() || identitySession.originRectangle}
-      gridVariables={gridVariables} gridVisible={document.appearance.guideMode !== 'NONE'} menuSurfaceId={document.appearance.menuSurfaceId} model={identityRack}
+      gridVariables={gridVariables} gridVisible={false} menuSurfaceId={document.appearance.menuSurfaceId} model={identityRack}
       onClosing={releaseVisitorInputOwnership}
       onClosed={() => setIdentitySession((current) => current && ({ ...current, compact: true }))}
+      onDismiss={closeProfile}
       onOpening={() => setIdentitySession((current) => current && ({ ...current, compact: false }))}
-      originRectangle={identitySession.originRectangle} persistent
+      originRectangle={identitySession.originRectangle} inlineCloseControl persistent
       preloadedProfileImageUrl={identitySession.preloadedProfileImageUrl} reducedMotion={reducedMotion}
       returnFocus={identityControlRef.current} sourceIdentity={officialIdentity} viewport={identitySession.viewport}
       workspaceSurfaceColor={workspaceSurfaceColor} /></Suspense>}

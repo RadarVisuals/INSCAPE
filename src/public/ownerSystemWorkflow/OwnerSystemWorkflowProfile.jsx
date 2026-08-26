@@ -1,6 +1,7 @@
 import { UserRound } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
-import LatticeProductionIdentityDossier from '../../lattice/rendering/LatticeProductionIdentityDossier.jsx';
+import { lazy, Suspense, useMemo, useRef, useState } from 'react';
+
+const LatticeProductionIdentityDossier = lazy(() => import('../../lattice/rendering/LatticeProductionIdentityDossier.jsx'));
 
 const rectangle = (node) => {
   const value = node?.getBoundingClientRect();
@@ -8,7 +9,7 @@ const rectangle = (node) => {
 };
 const compactAddress = (address) => address?.length > 18 ? `${address.slice(0, 10)}…${address.slice(-6)}` : address;
 
-export default function OwnerSystemWorkflowProfile({ guideVisible, identity, layout, menuSurface, model, onDossierChange, phase, workspaceSurfaceColor }) {
+export default function OwnerSystemWorkflowProfile({ identity, layout, menuSurface, model, onClose, onDossierChange, phase, workspaceSurfaceColor }) {
   const cardRef = useRef(null);
   const [session, setSession] = useState(null);
   const sourceIdentity = useMemo(() => ({
@@ -22,6 +23,11 @@ export default function OwnerSystemWorkflowProfile({ guideVisible, identity, lay
     setSession({ originRectangle, returnFocus: cardRef.current });
     onDossierChange?.(true);
   };
+  const dismissDossier = () => {
+    setSession(null);
+    onDossierChange?.(false);
+    onClose?.();
+  };
   return <>
     <aside aria-hidden={phase === 'closing' || undefined} aria-label="Profile" className="system-workflow__profile system-workflow__motion-panel"
       data-viewing={Boolean(session) || undefined} inert={phase === 'closing' ? '' : undefined}>
@@ -33,13 +39,15 @@ export default function OwnerSystemWorkflowProfile({ guideVisible, identity, lay
         <span><b>{sourceIdentity.displayName}</b><small>{sourceIdentity.secondaryLabel}</small></span>
       </button>
     </aside>
-    {session && model && <LatticeProductionIdentityDossier
+    {session && model && <Suspense fallback={null}><LatticeProductionIdentityDossier
+      dismissOnBackdrop
       getReturnRectangle={() => rectangle(cardRef.current?.closest('.system-workflow__profile') || cardRef.current) || session.originRectangle}
-      gridVisible={guideVisible}
+      gridVisible={false}
       inlineCloseControl
       menuSurfaceId={menuSurface}
       model={model}
       onClosed={() => onDossierChange?.(false)}
+      onDismiss={dismissDossier}
       onOpening={() => onDossierChange?.(true)}
       originRectangle={session.originRectangle}
       preloadedProfileImageUrl={sourceIdentity.avatarUrl}
@@ -49,6 +57,6 @@ export default function OwnerSystemWorkflowProfile({ guideVisible, identity, lay
       sourceIdentity={sourceIdentity}
       workspaceSurfaceColor={workspaceSurfaceColor}
       viewport={{ width: layout.width, height: Math.max(1, layout.height - 52) }}
-    />}
+    /></Suspense>}
   </>;
 }

@@ -19,9 +19,10 @@ test('System Workflow persistence uses the profile-isolated draft v4 store', () 
 });
 
 test('publication preparation remains explicit and CID verification is snapshot-bound', () => {
-  assert.match(publicationSource, /PREPARE SNAPSHOT/u);
+  assert.match(publicationSource, /PREPARE PUBLICATION/u);
   assert.match(publicationSource, /publication\.verifyCid\(snapshot, uploaded\.cid/u);
-  assert.match(publicationSource, /publication\.verifyCid\(snapshot, cid, \{ stale \}\)/u);
   assert.match(publicationSource, /publication\.publish\(\)/u);
+  assert.match(publicationSource, /Only your <strong>Public Grids<\/strong>/u);
+  assert.doesNotMatch(publicationSource, /CID \/ MANUAL FALLBACK|PUBLISH VERSION 9/u);
   assert.doesNotMatch(publicationSource, /OwnerRackBoard|profileRackPresentation|buildProfileDocumentV8/u);
 });

@@ -110,6 +110,13 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     await workspace.locator('.system-workflow__workspace-labels input').check();
 
     await workspace.getByRole('button', { name: /Filters: All/i }).click();
+    const filterPopover = page.getByRole('dialog', { name: 'Filters' });
+    assert.deepEqual(await filterPopover.evaluate((node) => {
+      const bounds = node.getBoundingClientRect();
+      const workspaceBounds = document.querySelector('[aria-label="Library workspace"]').getBoundingClientRect();
+      const options = node.querySelector('.system-workflow__filter-options');
+      return [bounds.top >= workspaceBounds.top + 17, bounds.bottom < innerHeight, getComputedStyle(options).overflowY];
+    }), [true, true, 'auto'], 'collection filters remain viewport-bounded with an independently scrollable list');
     await page.getByRole('radio', { name: 'CHROMATIC FIELDS', exact: true }).click();
     assert.equal(await workspace.locator('.lattice-browser-asset').count(), 1);
     assert.match(await workspace.getByRole('button', { name: /Filters:/i }).getAttribute('aria-label'), /CHROMATIC FIELDS/i);

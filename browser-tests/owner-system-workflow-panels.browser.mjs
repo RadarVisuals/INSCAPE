@@ -80,10 +80,18 @@ test('normal motion preserves Profile, Activity, and focus-viewer source continu
     await dossier.waitFor();
     assert.equal(await dossier.locator('.lattice-production-identity-dossier__shared-avatar').count(), 1);
     assert.equal(await profileCard.getAttribute('aria-expanded'), 'true');
+    await dossier.click({ position: { x: 5, y: 5 } });
+    await page.waitForFunction(() => document.querySelector('#lattice-profile-dossier')?.dataset.phase === 'closing');
+    assert.equal(await dossier.count(), 1, 'expanded Profile remains mounted while it animates back to its source card');
+    await page.locator('.system-workflow__profile').waitFor({ state: 'detached' });
+
+    await profileTrigger.click();
+    await profileCard.click();
+    await dossier.waitFor();
     await page.getByRole('button', { name: 'Close profile' }).click();
     await page.waitForFunction(() => document.querySelector('#lattice-profile-dossier')?.dataset.phase === 'compact');
     assert.equal(await dossier.locator('.lattice-production-identity-dossier__shared-avatar').count(), 1, 'Profile keeps one identity source through its compact transition');
-    await page.keyboard.press('Escape');
+    await page.locator('.system-workflow__profile-layer').click({ position: { x: 700, y: 300 } });
     await page.locator('.system-workflow__profile').waitFor({ state: 'detached' });
     assert.equal(await profileTrigger.evaluate((node) => node === document.activeElement), true);
 

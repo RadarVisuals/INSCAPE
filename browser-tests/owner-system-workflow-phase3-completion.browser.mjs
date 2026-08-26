@@ -122,7 +122,8 @@ test('Profile, Activity, Discover, and Settings expose the promoted lifecycle an
     assert.equal(await dossier.locator('.lattice-production-identity-dossier__shared-avatar').evaluate((node) => getComputedStyle(node).opacity), '0', 'the Profile avatar clears the content track outside the Profile module');
     assert.equal(await dossier.locator('#identity-dossier-links-panel').evaluate((node) => getComputedStyle(node).opacity), '1', 'dossier module content transitions into the active track');
     await dossier.getByRole('button', { name: /Technical/ }).click();
-    assert.match(await dossier.innerText(), /CANONICAL ADDRESS/);
+    assert.match(await dossier.innerText(), /UNIVERSAL PROFILE/);
+    assert.doesNotMatch(await dossier.innerText(), /CANONICAL ADDRESS/);
     await page.getByRole('button', { name: 'Close profile' }).click();
     await page.waitForFunction(() => document.querySelector('#lattice-profile-dossier')?.dataset.phase === 'compact');
     assert.deepEqual(await dossier.locator('.lattice-production-identity-dossier').boundingBox(), compactProfileRectangle,
@@ -246,7 +247,7 @@ test('Profile, Activity, Discover, and Settings expose the promoted lifecycle an
     await discover.getByLabel('Search profiles').fill('surface');
     assert.equal(await discover.locator('.system-workflow__discover-grid > .system-workflow__discover-card').count(), 1);
     await discover.getByLabel('Search profiles').fill('no match');
-    assert.match(await discover.innerText(), /No people match/);
+    assert.match(await discover.innerText(), /No profiles match this view|No published Inscape profiles yet/);
     await discover.getByLabel('Search profiles').fill('');
     await discover.getByRole('button', { name: /Sort profiles/ }).click();
     await page.getByRole('option', { name: 'Z–A', exact: true }).click();
@@ -328,6 +329,8 @@ test('Focus viewer and v9 Preview preserve source, metadata, navigation, privacy
     assert.equal(await rack.getAttribute('aria-hidden'), 'true');
     await viewer.locator('.lattice-focus-viewer__artwork').click();
     assert.equal(await rack.getAttribute('data-open'), 'true');
+    assert.equal(await viewer.getAttribute('data-grid-visible'), 'false',
+      'Owner artwork inspection never carries the workspace Grid into the focused surface');
     await viewer.getByRole('button', { name: 'Next artwork' }).click();
     await page.getByRole('dialog', { name: 'MOUNTAIN SIGNAL II focus viewer' }).waitFor();
     assert.match(await page.getByRole('navigation', { name: 'Artwork viewer navigation' }).innerText(), /02 \/ 02/);
@@ -349,6 +352,15 @@ test('Focus viewer and v9 Preview preserve source, metadata, navigation, privacy
     await settings.getByRole('button', { name: 'Close Settings' }).click();
     await settings.waitFor({ state: 'detached' });
 
+    await placement.click();
+    await placement.dblclick();
+    const ownerNoGridViewer = page.getByRole('dialog', { name: 'ABYSSAL STUDY focus viewer' });
+    await ownerNoGridViewer.waitFor();
+    assert.equal(await ownerNoGridViewer.getAttribute('data-grid-visible'), 'false', 'Owner artwork viewer inherits Grid display None');
+    assert.equal(await ownerNoGridViewer.locator('.lattice-focus-viewer__surface').evaluate((node) => getComputedStyle(node).backgroundImage), 'none');
+    await ownerNoGridViewer.getByRole('button', { name: 'Close artwork viewer' }).click();
+    await ownerNoGridViewer.waitFor({ state: 'detached' });
+
     const previewTrigger = page.getByRole('button', { name: 'Preview', exact: true });
     await previewTrigger.click();
     const preview = page.getByRole('main', { name: 'Published INSCAPE Grid visitor' });
@@ -362,6 +374,15 @@ test('Focus viewer and v9 Preview preserve source, metadata, navigation, privacy
       'Owner and Visitor project MOUNTAIN SIGNAL II onto the exact same viewport rectangle');
     assert.equal(await preview.locator('[data-visibility="PRIVATE"]').count(), 0);
     assert.equal(await preview.locator('.lattice-production-table__label').count(), 0, 'Visitor Grid has no duplicate in-canvas Grid label');
+    const visitorPlacement = preview.locator('[data-placement-id="placement-abyssal"]');
+    await page.waitForFunction(() => document.querySelector('[data-placement-id="placement-abyssal"]')?.dataset.mediaState === 'ready');
+    await visitorPlacement.click();
+    const visitorNoGridViewer = page.locator('[data-lattice-focus-viewer]');
+    await visitorNoGridViewer.waitFor();
+    assert.equal(await visitorNoGridViewer.getAttribute('data-grid-visible'), 'false', 'Preview artwork viewer inherits published Grid display None');
+    assert.equal(await visitorNoGridViewer.locator('.lattice-focus-viewer__surface').evaluate((node) => getComputedStyle(node).backgroundImage), 'none');
+    await visitorNoGridViewer.getByRole('button', { name: 'Close artwork viewer' }).click();
+    await visitorNoGridViewer.waitFor({ state: 'detached' });
     await preview.getByRole('button', { name: 'Profile', exact: true }).click();
     const visitorIdentity = preview.locator('.lattice-profile-rail__identity');
     const visitorCompactAvatar = await visitorIdentity.locator('.lattice-profile-rail__avatar').evaluate((node) => {
@@ -386,7 +407,7 @@ test('Focus viewer and v9 Preview preserve source, metadata, navigation, privacy
       const ring = node.querySelector(':scope > .inscape-profile-avatar-ring'); const circle = ring.querySelector('circle');
       return [getComputedStyle(ring).color, circle.getAttribute('stroke-width'), circle.getAttribute('vector-effect')];
     }), visitorCompactAvatar.slice(2, 5), 'Visitor compact and expanded avatars share the exact same non-scaling ring');
-    await page.getByRole('button', { name: 'Close Identity Rack' }).click();
+    await page.getByRole('button', { name: 'Close profile' }).click();
     await visitorDossier.evaluate((node) => new Promise((resolve) => {
       if (node.dataset.phase === 'compact') { resolve(); return; }
       new MutationObserver((records, observer) => {
@@ -401,12 +422,36 @@ test('Focus viewer and v9 Preview preserve source, metadata, navigation, privacy
       'Visitor compact card retains avatar, name, and address after closing');
     await visitorDossier.locator('.lattice-production-identity-dossier__source-summary').click();
     await expectPhase(visitorDossier, 'open');
-    await page.getByRole('button', { name: 'Close Identity Rack' }).click();
-    await expectPhase(visitorDossier, 'compact');
+    await visitorDossier.click({ position: { x: 5, y: 5 } });
+    await visitorDossier.waitFor({ state: 'detached' });
+    assert.equal(await preview.getByRole('button', { name: 'Profile', exact: true }).getAttribute('aria-expanded'), 'false');
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'phase3-preview-wide.png') });
     await preview.getByRole('button', { name: 'EXIT' }).click();
     await page.locator('.system-workflow').waitFor();
     assert.equal(await previewTrigger.evaluate((node) => node === document.activeElement), true);
+  } finally {
+    await browser.close();
+  }
+});
+
+test('normal-motion Preview animates an expanded Profile home before grid dismissal', { timeout: 60_000 }, async () => {
+  const browser = await chromium.launch({ executablePath: EDGE, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
+    await routeFixtureMedia(page);
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    await page.getByRole('button', { name: 'Preview', exact: true }).click();
+    const preview = page.getByRole('main', { name: 'Published INSCAPE Grid visitor' });
+    await preview.waitFor({ timeout: 10_000 });
+    await preview.getByRole('button', { name: 'Profile', exact: true }).click();
+    await preview.locator('.lattice-profile-rail__identity').click();
+    const dossier = page.locator('#lattice-profile-dossier');
+    await expectPhase(dossier, 'open');
+    await dossier.click({ position: { x: 5, y: 5 } });
+    await expectPhase(dossier, 'closing');
+    assert.equal(await dossier.count(), 1, 'Preview keeps expanded Profile mounted throughout its return animation');
+    await dossier.waitFor({ state: 'detached' });
+    assert.equal(await preview.getByRole('button', { name: 'Profile', exact: true }).getAttribute('aria-expanded'), 'false');
   } finally {
     await browser.close();
   }
@@ -438,7 +483,7 @@ test('narrow and reduced-motion state machines keep dock, overlays, crop, viewer
       await panel.waitFor();
       assert.ok(inViewport(await panel.boundingBox(), 390, 720), `${label} escaped the narrow viewport`);
       assert.equal(await page.locator('.system-workflow__inspector').count(), 0);
-      assert.equal(await page.locator('[data-system-workflow-panel]').count(), 1);
+      assert.equal(await page.locator('[data-system-workflow-panel]:visible').count(), 1);
       if (label === 'Discover') {
         const localRail = await panel.locator('.system-workflow__local-rail').boundingBox();
         const discoverRail = await panel.locator('.system-workflow__workspace-rail-controls').boundingBox();
@@ -448,7 +493,7 @@ test('narrow and reduced-motion state machines keep dock, overlays, crop, viewer
         if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'phase3-narrow-discover.png') });
       }
       await page.keyboard.press('Escape');
-      await panel.waitFor({ state: 'detached' });
+      await panel.waitFor({ state: label === 'Library' ? 'hidden' : 'detached' });
       await page.waitForFunction((name) => document.activeElement?.getAttribute('aria-label') === name, label);
       assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
     }

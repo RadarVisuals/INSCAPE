@@ -85,8 +85,8 @@ export default function useOwnerSystemWorkflowPanels({ blocked = false } = {}) {
       closePanel();
     };
     globalThis.addEventListener?.('keydown', onKeyDown);
-    globalThis.addEventListener?.('pointerdown', onPointerDown);
-    return () => { globalThis.removeEventListener?.('keydown', onKeyDown); globalThis.removeEventListener?.('pointerdown', onPointerDown); };
+    globalThis.addEventListener?.('pointerdown', onPointerDown, true);
+    return () => { globalThis.removeEventListener?.('keydown', onKeyDown); globalThis.removeEventListener?.('pointerdown', onPointerDown, true); };
   }, [activePanel, blocked, closePanel]);
 
   const completePanelTransition = useCallback((panelId) => presence[panelId]?.completeTransition(), [presence]);

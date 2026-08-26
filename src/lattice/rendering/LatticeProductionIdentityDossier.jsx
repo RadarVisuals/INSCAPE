@@ -54,7 +54,7 @@ function TechnicalSection({ entries }) {
     return 'registers';
   };
   const groups = [
-    { id: 'contract', label: 'Profile contract' },
+    { id: 'contract', label: 'Universal Profile' },
     { id: 'publication', label: 'Publication' },
     { id: 'registers', label: 'Asset registers' }
   ].map((group) => ({
@@ -66,7 +66,8 @@ function TechnicalSection({ entries }) {
     <dl>{group.entries.map((entry) => <div key={entry.id}>
       <dt>{entry.label}</dt>
       <dd>{entry.url ? <a href={entry.url} target="_blank" rel="noreferrer">{entry.value}<ExternalLink aria-hidden="true" /></a> : entry.value}</dd>
-      <small>{entry.provenance.replaceAll('_', ' ')}</small>
+      {entry.provenance && !['CANONICAL_ADDRESS', 'DIRECT_RPC'].includes(entry.provenance)
+        && <small>{entry.provenance.replaceAll('_', ' ')}</small>}
     </div>)}</dl>
   </section>)}</div>;
 }
@@ -74,6 +75,7 @@ function TechnicalSection({ entries }) {
 const FOCUSABLE_SELECTOR = 'button:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])';
 
 export default function LatticeProductionIdentityDossier({
+  dismissOnBackdrop = false,
   getReturnRectangle,
   gridVariables = null,
   gridVisible = true,
@@ -82,6 +84,7 @@ export default function LatticeProductionIdentityDossier({
   model,
   onClosing,
   onClosed,
+  onDismiss,
   onOpening,
   originRectangle,
   persistent = false,
@@ -96,6 +99,7 @@ export default function LatticeProductionIdentityDossier({
   const dossierRef = useRef(null);
   const closeRef = useRef(null);
   const compactControlRef = useRef(null);
+  const dismissAfterCloseRef = useRef(false);
   const returnFocusRef = useRef(null);
   const phaseTimerRef = useRef(null);
   const [activeSection, setActiveSection] = useState('profile');
@@ -162,10 +166,15 @@ export default function LatticeProductionIdentityDossier({
   }, [phase]);
 
   const finishClose = useCallback(() => {
+    if (dismissAfterCloseRef.current) {
+      dismissAfterCloseRef.current = false;
+      onDismiss?.();
+      return;
+    }
     if (!persistent) { onClosed?.(); return; }
     setPhase('compact');
     onClosed?.();
-  }, [onClosed, persistent]);
+  }, [onClosed, onDismiss, persistent]);
   useEffect(() => {
     if (phase !== 'compact') return;
     compactControlRef.current?.focus({ preventScroll: true });
@@ -186,6 +195,11 @@ export default function LatticeProductionIdentityDossier({
     if (reducedMotion) { finishClose(); return; }
     setPhase('closing');
   }, [finishClose, getReturnRectangle, onClosing, phase, reducedMotion]);
+  const requestDismiss = useCallback(() => {
+    if (phase === 'compact') { onDismiss?.(); return; }
+    dismissAfterCloseRef.current = true;
+    requestClose();
+  }, [onDismiss, phase, requestClose]);
   useEffect(() => {
     if (phase !== 'closing') return undefined;
     phaseTimerRef.current = window.setTimeout(finishClose, IDENTITY_TRANSITION_MS + 120);
@@ -193,12 +207,17 @@ export default function LatticeProductionIdentityDossier({
   }, [finishClose, phase]);
   useEffect(() => {
     const closeOnEscape = (event) => {
-      if (event.key !== 'Escape' || phase === 'compact') return;
+      if (event.key !== 'Escape') return;
+      if (phase === 'compact') {
+        if (!onDismiss) return;
+        event.preventDefault(); event.stopPropagation(); onDismiss();
+        return;
+      }
       event.preventDefault(); event.stopPropagation(); requestClose();
     };
     window.addEventListener('keydown', closeOnEscape, true);
     return () => window.removeEventListener('keydown', closeOnEscape, true);
-  }, [requestClose]);
+  }, [onDismiss, phase, requestClose]);
 
   const handleKeyDown = (event) => {
     if (event.key !== 'Tab') return;
@@ -223,14 +242,20 @@ export default function LatticeProductionIdentityDossier({
     id="lattice-profile-dossier"
     style={{ ...(gridVariables || {}), ...(workspaceSurfaceColor ? { '--lattice-identity-workspace-surface': workspaceSurfaceColor } : {}) }}
     onKeyDown={handleKeyDown}
-    onPointerDown={(event) => { if (phase === 'open' && event.target === event.currentTarget) requestClose(); }}
+    onPointerDown={(event) => {
+      const backdropHit = event.target === event.currentTarget || event.target?.closest?.('[data-identity-dossier-backdrop]');
+      if (!backdropHit) return;
+      if (phase === 'open' && dismissOnBackdrop) requestDismiss();
+      else if (phase === 'open') requestClose();
+      else if (phase === 'compact') onDismiss?.();
+    }}
     onWheel={(event) => {
       if (event.target.closest?.('[data-identity-dossier-scroll]')) { event.stopPropagation(); return; }
       event.preventDefault(); event.stopPropagation();
     }}
     role={compact ? undefined : 'dialog'}
   >
-    <div aria-hidden="true" className="lattice-production-identity-viewer__veil" />
+    <div aria-hidden="true" className="lattice-production-identity-viewer__veil" data-identity-dossier-backdrop />
     <div className="lattice-production-identity-dossier" ref={dossierRef} onTransitionEnd={(event) => {
       if (phase === 'closing' && event.target === dossierRef.current && event.propertyName === 'left') finishClose();
     }} style={{

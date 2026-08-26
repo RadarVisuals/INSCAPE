@@ -7,7 +7,7 @@ import { systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkfl
 import OwnerSystemWorkflowWorkspaceRail from './OwnerSystemWorkflowWorkspaceControls.jsx';
 import { OwnerSystemWorkflowWorkspaceShell } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
 import { createOwnerSystemWorkflowProjectedField } from './systemWorkflowArtboardProjection.js';
-import { decodeOwnerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDimensions.js';
+import { decodeOwnerSystemWorkflowAssetDimensions, ownerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDimensions.js';
 import OwnerSystemWorkflowLibraryPresenter from './OwnerSystemWorkflowLibraryPresenter.jsx';
 import { projectLatticePixelRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
 
@@ -15,6 +15,7 @@ const rejectDrop = () => globalThis.dispatchEvent?.(new CustomEvent('inscape:sys
 const DRAG_THRESHOLD = 6;
 const sourceFor = (asset) => asset?.previewSrc || asset?.src || asset?.imageUrl || asset?.thumbnailUrl || null;
 const libraryPreferences = { assetSize: 150, hideLabels: false, sidebarWidth: 174 };
+const ownerLibraryPreviewRecords = new Map();
 
 function projectDropPreview(destination, field) {
   if (!destination || !field) return null;
@@ -23,7 +24,7 @@ function projectDropPreview(destination, field) {
 
 export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, controller, data, menuSurface, onClose, phase,
   resolveAssetDimensions }) {
-  const workspace = useBrowserWorkspace(data, null, libraryPreferences);
+  const workspace = useBrowserWorkspace(data, ownerLibraryPreviewRecords, libraryPreferences);
   const resolveDimensions = resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions;
   const [dragPreview, setDragPreview] = useState(null);
   const dragRef = useRef(null);
@@ -53,10 +54,12 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, 
     dragRef.current = null;
     setDragPreview(null);
   };
-  const beginAssetDrag = (event, asset, _workspace, options = {}) => {
-    if (event.button !== 0 || !asset.placeable) return;
+  const beginAssetDrag = (event, asset, workspaceState, options = {}) => {
+    const id = asset?.stableAssetId || asset?.id;
+    if (event.button !== 0 || !asset.placeable || !workspaceState?.isAssetRenderable(id)) return;
     const origin = { x: event.clientX, y: event.clientY };
-    const active = { asset, dimensions: null, lastPointer: null, pointerId: event.pointerId, moved: false, source: event.currentTarget };
+    const active = { asset, dimensions: ownerSystemWorkflowAssetDimensions(asset), lastPointer: null,
+      pointerId: event.pointerId, moved: false, source: event.currentTarget };
     const previewAt = (pointerEvent, dimensions = active.dimensions) => {
       const canvas = document.querySelector('.system-workflow__canvas');
       const rectangle = canvas?.getBoundingClientRect();
@@ -84,19 +87,22 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, 
     };
     const finish = async (pointerEvent) => {
       if (pointerEvent.pointerId !== active.pointerId) return;
-      const dimensions = active.dimensions || await active.dimensionPromise;
-      const preview = active.moved && dimensions ? previewAt(pointerEvent, dimensions) : null;
-      if (preview?.destination) await place(asset, preview.destination, dimensions);
-      else if (active.moved) rejectDrop();
+      const moved = active.moved;
+      const pendingDimensions = active.dimensionPromise;
       cleanup();
+      if (!moved) return;
+      const dimensions = active.dimensions || await pendingDimensions;
+      const preview = dimensions ? previewAt(pointerEvent, dimensions) : null;
+      if (preview?.destination) await place(asset, preview.destination, dimensions);
+      else rejectDrop();
     };
     const cancel = () => cleanup(); Object.assign(active, { move, finish, cancel }); dragRef.current = active;
     active.dimensionPromise = Promise.resolve(resolveDimensions(asset)).then((dimensions) => {
-      active.dimensions = dimensions;
+      active.dimensions = dimensions || active.dimensions;
       if (dragRef.current === active && active.moved && active.lastPointer && dimensions) {
-        setDragPreview({ asset, ...previewAt(active.lastPointer, dimensions) });
+        setDragPreview({ asset, ...previewAt(active.lastPointer, active.dimensions) });
       }
-      return dimensions;
+      return active.dimensions;
     });
     globalThis.addEventListener('pointermove', move, true); globalThis.addEventListener('pointerup', finish, true); globalThis.addEventListener('pointercancel', cancel, true);
   };
@@ -105,7 +111,9 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, 
     placing={Boolean(dragPreview)} rail={<OwnerSystemWorkflowWorkspaceRail menuSurface={menuSurface} onClose={onClose} workspace={workspace} />}
     sidebarCollapsed={workspace.sidebarWidth <= 72}>
     <OwnerSystemWorkflowLibraryPresenter categoryCommands={categoryCommands} data={data}
-      menuSurfaceId={menuSurface} onAssetActivate={(_event, asset) => asset.placeable && place(asset)}
+      menuSurfaceId={menuSurface} onAssetActivate={(_event, asset) => asset.isCollection && asset.collectionRole !== 'cover'
+        ? data.onOpenCollection?.(asset.assetRecord)
+        : asset.placeable && workspace.isAssetRenderable(asset.stableAssetId || asset.id) && place(asset)}
       onAssetPointerDown={beginAssetDrag} workspace={workspace} />
     {dragPreview?.rectangle && createPortal(<div aria-hidden="true" className="system-workflow__placement-preview" style={dragPreview.rectangle}>
       {sourceFor(dragPreview.asset) && <img alt="" src={sourceFor(dragPreview.asset)} />}

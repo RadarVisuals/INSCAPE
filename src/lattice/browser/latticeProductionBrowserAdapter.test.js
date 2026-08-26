@@ -32,6 +32,9 @@ test('real Browser adaptation validates owner scope, canonical identity, media, 
     favorites: [ASSET_ID],
     folders: [{ id: 'category-a', name: 'Category A', assetIds: [ASSET_ID], public: true,
       createdAt: 1, updatedAt: 2 }],
+    categoryOrganization: { rootCategoryIds: [], sections: [
+      { id: 'section-a', name: 'Section A', categoryIds: ['category-a'] },
+    ] },
     canvas: { launchers: [], objects: [{ id: 'legacy-object' }] },
     tables: { placements: [{ id: 'legacy-placement' }] },
   };
@@ -44,6 +47,8 @@ test('real Browser adaptation validates owner scope, canonical identity, media, 
   assert.equal(result.assets.length, 1);
   assert.deepEqual(result.favorites, [ASSET_ID]);
   assert.deepEqual(result.categories, [{ id: 'category-a', name: 'Category A', assetIds: [ASSET_ID], public: true }]);
+  assert.deepEqual(result.categoryOrganization, workspace.categoryOrganization);
+  assert.equal(Object.isFrozen(result.categoryOrganization.sections[0].categoryIds), true);
   assert.equal(result.assets[0].stableAssetId, ASSET_ID);
   assert.equal(result.assets[0].placeable, true);
   assert.equal(result.assets[0].mediaType, 'image');
@@ -77,6 +82,22 @@ test('placement eligibility allows bounded on-demand browser decoding when metad
   assert.equal(missingMedia.placementUnavailableReason, 'MEDIA UNAVAILABLE');
   assert.equal(unsupportedMedia.placeable, false);
   assert.equal(unsupportedMedia.placementUnavailableReason, 'MEDIA TYPE UNAVAILABLE');
+});
+
+test('preview candidates retain the original metadata URL as fallback after an indexer-derived source', () => {
+  const adapted = adaptLatticeProductionBrowserAsset(asset({
+    thumbnailUrl: 'https://indexer.example/image/stale',
+    imageUrl: 'https://indexer.example/image/stale',
+    originalImageUrl: 'https://indexer.example/image/stale',
+    imageGroups: [{ variants: [
+      { url: 'https://indexer.example/image/stale' },
+      { url: 'https://gateway.example/ipfs/original' },
+    ] }],
+  }), PROFILE);
+  assert.deepEqual(adapted.previewCandidates, [
+    'https://indexer.example/image/stale',
+    'https://gateway.example/ipfs/original',
+  ]);
 });
 
 test('a collection token preview remains visible but cannot masquerade as placeable collection media', () => {

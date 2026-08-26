@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Folder, Layers3, Plus, SquareStack, UserRound, WandSparkles } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight, Folder, Images, Layers3, Plus, SquareStack, UserRound, WandSparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { BROWSER_ASSET_SIZE, BROWSER_VIEW_KINDS, categoryAssetIds, categoryMembershipState } from '../../lattice/browser/browserWorkspaceModel.js';
@@ -50,7 +50,7 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
         onKeyDown={(event) => { if (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10') {
           event.preventDefault(); event.stopPropagation(); onContext?.(event, asset);
         } }} type="button">
-        <span className="lattice-browser-asset__media" style={ratio ? { aspectRatio: ratio } : undefined}><img alt="" aria-hidden="true"
+        <span className="lattice-browser-asset__media" style={ratio ? { aspectRatio: ratio } : undefined}>{asset.previewSrc ? <img alt="" aria-hidden="true"
           className="lattice-browser-asset__decoded-image" decoding="async" draggable="false" loading="lazy"
           onError={() => workspace.markAssetUnavailable(id, asset.previewSrc)}
           onLoad={(event) => {
@@ -61,7 +61,7 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
               if (current.get(id) === value) return current;
               const next = new Map(current); next.set(id, value); return next;
             });
-          }} src={asset.previewSrc} /></span>
+          }} src={asset.previewSrc} /> : <span>Media unavailable</span>}</span>
         {!workspace.hideLabels && <span className="lattice-browser-asset__record"><strong>{asset.title || id}</strong>
           {asset.collection && <small>{asset.collection}</small>}
           {relationships.length > 0 && <span className="lattice-browser-asset__relationships">
@@ -149,7 +149,9 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
     if (asset.isCollection && asset.collectionRole !== 'cover') return;
     const id = assetId(asset); const selectedIds = workspace.selectedAssetIds.includes(id) ? [...workspace.selectedAssetIds] : [id];
     if (event.button !== 0) return;
-    if (selectedIds.length === 1) onAssetPointerDown?.(event, asset, workspace, { placementPreset: 'compact' });
+    if (selectedIds.length === 1 && workspace.isAssetRenderable(id)) {
+      onAssetPointerDown?.(event, asset, workspace, { placementPreset: 'compact' });
+    }
     const element = event.currentTarget; const pointerId = event.pointerId; const start = { x: event.clientX, y: event.clientY };
     let started = false;
     const categoryAt = (pointerEvent) => document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY)
@@ -235,10 +237,12 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         unresolved={category.assetIds.filter((id) => !renderableIds.has(id)).length} />}
     </div>;
   };
-  const emptyLabel = workspace.hasActiveFilters && workspace.viewAssetCount
-    ? `${workspace.viewAssetCount} assets are in this view / none match the active search or filters`
-    : relationshipView === 'created' && data.createdStatus === 'loading' ? 'Loading creator-attributed works'
-      : relationshipView === 'created' && data.createdStatus === 'error' ? 'Created source unavailable' : 'No assets in this view';
+  const emptyLabel = data.collectionContext && data.status === 'loading' ? 'Loading collection tokens'
+    : data.collectionContext && data.status === 'error' ? 'Collection tokens unavailable'
+      : workspace.hasActiveFilters && workspace.viewAssetCount
+        ? `${workspace.viewAssetCount} assets are in this view / none match the active search or filters`
+        : relationshipView === 'created' && data.createdStatus === 'loading' ? 'Loading creator-attributed works'
+          : relationshipView === 'created' && data.createdStatus === 'error' ? 'Created source unavailable' : 'No assets in this view';
   return <div className="system-workflow__library-presenter" onKeyDown={(event) => {
     if (event.key !== 'Escape') return;
     if (workspace.dialog) { event.stopPropagation(); closeDialog(); }
@@ -247,6 +251,12 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
   }}>
     <div className="lattice-browser-panel" style={{ '--lattice-browser-sidebar-width': `${workspace.sidebarWidth}px` }}>
       <nav aria-label="Browser navigation" className="lattice-browser-sidebar">
+        {data.collectionContext ? <>
+          <LibraryNavigationButton count={null} icon={ArrowLeft} label="Back to Created"
+            onClick={() => { setRelationshipView('created'); data.onCloseCollection?.(); }} />
+          <LibraryNavigationButton active count={data.collectionContext.total ?? assets.length} icon={Images}
+            label={data.collectionContext.name || 'Collection'} onClick={() => {}} />
+        </> : <>
         <LibraryNavigationButton active={relationshipView === 'all' && workspace.view.kind === BROWSER_VIEW_KINDS.ALL}
           count={assets.length} icon={Layers3} label="All Assets" onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.ALL, id: null })} />
         <LibraryNavigationButton active={relationshipView === 'owned'} count={assets.filter((asset) => asset.owned).length}
@@ -306,6 +316,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
             </section>;
           })}
         </div>
+        </>}
       </nav>
       <button aria-label="Resize Browser navigation" className="lattice-browser-sidebar-resize"
         disabled={Boolean(workspace.dialog)}
@@ -313,9 +324,17 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         onPointerDown={workspace.sidebarResize.begin} onPointerMove={workspace.sidebarResize.update}
         onPointerUp={workspace.sidebarResize.finish} title="Resize Browser navigation" type="button" />
       <main className="lattice-browser-results">
+        {data.collectionContext && <div className="lattice-browser-notice" role="status">
+          Created / {data.collectionContext.name || 'Collection'} · {data.collectionContext.resolved || 0} / {data.collectionContext.total || 0} tokens
+        </div>}
         {data.error && <div className="lattice-browser-notice" data-error role="status">{data.error}</div>}
+        {data.collectionContext && data.error && data.onRetryCollection
+          && <button className="lattice-browser-notice" onClick={data.onRetryCollection} type="button">Retry collection</button>}
         {data.createdError && <div className="lattice-browser-notice" data-error role="status">Created source unavailable{data.createdRetained ? ' / retained results' : ''}</div>}
+        {data.createdError && data.onRetryCreated
+          && <button className="lattice-browser-notice" onClick={data.onRetryCreated} type="button">Retry created works</button>}
         {data.createdStatus === 'loading' && <p className="lattice-browser-notice" role="status">Loading created {data.createdProgress?.resolved || 0} / {data.createdProgress?.total || 0}</p>}
+        {data.collectionContext && data.status === 'loading' && <p className="lattice-browser-notice" role="status">Loading collection tokens {data.progress?.resolved || 0} / {data.progress?.total || 0}</p>}
         <LibraryResults assets={related} emptyLabel={emptyLabel} onActivate={onAssetActivate}
           onContext={openAssetContext} onPointerDown={beginOrganizationDrag}
           workspace={{ ...workspace, selectAsset: (id, event) => { if (!suppressSelectionRef.current) workspace.selectAsset(id, event); } }} />

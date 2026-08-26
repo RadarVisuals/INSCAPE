@@ -44,11 +44,12 @@ test('active upload, CID, resolver, and Visitor boundaries are v9-only with no p
 
 test('prepared publication UI reuses canonical v9 upload, CID, wallet, and read-back authorities', () => {
   assert.match(systemPublicationUi, /buildOwnerSystemWorkflowPublicationDocument/);
-  assert.match(systemPublicationUi, /canonicalSerializeProfileDocumentV9/);
+  assert.match(systemPublicationUi, /assertValidProfileDocumentV9/);
+  assert.match(systemPublicationUi, /profileDocumentV9ContentFingerprint/);
   assert.match(systemPublicationUi, /uploadProfileDocument\(snapshot\)/);
   assert.match(systemPublicationUi, /publication\.verifyCid\(snapshot, uploaded\.cid/);
   assert.match(systemPublicationUi, /publication\.publish\(\)/);
-  assert.match(systemPublicationUi, /confirmed\.result\.document/);
+  assert.match(systemPublicationUi, /confirmed\?\.result\?\.document/);
   assert.doesNotMatch(systemPublicationUi, /buildProfileDocumentV8|canonicalSerializeProfileDocument\(|version 8/i);
   assert.match(runtimeSelector, /OWNER_RUNTIME_SELECTION = 'SYSTEM_WORKFLOW'/);
   assert.match(runtimeSelector, /import\('\.\/OwnerSystemWorkflowShell\.jsx'\)/);

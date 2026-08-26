@@ -14,7 +14,7 @@ export function createOwnerSystemWorkflowFocusViewModel(placement, asset) {
     accessibleLabel: clean(asset.name) || clean(asset.title) || 'Artwork',
     dossier: Object.freeze({
       title: clean(asset.name) || clean(asset.title),
-      description: clean(asset.description) || 'A focused artwork presentation with canonical placement and media metadata.',
+      description: clean(asset.description),
       traits: Object.freeze([
         ...(asset.collectionName || asset.collection ? [{ label: 'COLLECTION', value: asset.collectionName || asset.collection }] : []),
         ...attributes.map((entry) => ({ label: clean(entry.key || entry.label), value: String(entry.value ?? '') })).filter(({ label }) => label),

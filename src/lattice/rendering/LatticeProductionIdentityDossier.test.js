@@ -16,7 +16,10 @@ test('uses a body portal with reversible inert ownership, reliable closing, and 
   assert.match(source, /window\.addEventListener\('keydown', closeOnEscape, true\)/);
   assert.match(source, /setPhase\('opening'\)/);
   assert.match(source, /setPhase\('closing'\)/);
-  assert.match(source, /phase === 'open' && event\.target === event\.currentTarget/);
+  assert.match(source, /data-identity-dossier-backdrop/);
+  assert.match(source, /phase === 'open' && dismissOnBackdrop\) requestDismiss\(\)/);
+  assert.match(source, /dismissAfterCloseRef\.current[\s\S]*onDismiss\?\.\(\);[\s\S]*if \(!persistent\)/);
+  assert.match(source, /else if \(phase === 'open'\) requestClose\(\);[\s\S]*phase === 'compact'\) onDismiss\?\.\(\)/);
   assert.match(source, /if \(phase === 'closing' \|\| phase === 'compact'\) return;\s*onClosing\?\.\(\);/);
   assert.match(source, /data-identity-dossier-scroll/);
   assert.match(source, /closeRef\.current\?\.focus\(\{ preventScroll: true \}\)/);

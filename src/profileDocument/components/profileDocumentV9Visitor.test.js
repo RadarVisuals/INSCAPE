@@ -50,11 +50,14 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(renderer, /naturalHeight: height, naturalWidth: width/);
   assert.match(visitor, /activeIndex === 0 \? 'eager' : 'lazy'/);
   assert.match(visitor, /LatticeFocusViewer/);
+  assert.equal((visitor.match(/gridVisible=\{false\}/g) || []).length, 2,
+    'both the artwork viewer and identity dossier remain free of the published workspace Grid');
+  assert.doesNotMatch(visitor, /gridVisible=\{document\.appearance\.guideMode !== 'NONE'\}/);
   assert.match(renderer, /data-viewer-source-hidden/);
   assert.match(visitor, /projectionBottomInset=\{VISITOR_GRID_NAVIGATION_SAFE_AREA\}/);
   assert.match(visitor, /VISITOR_GRID_NAVIGATION_SAFE_AREA = 42/);
   assert.match(visitor, /LatticeProductionIdentityDossier/);
-  assert.match(visitor, /gridVisible=\{document\.appearance\.guideMode !== 'NONE'\}/);
+  assert.match(visitor, /gridVisible=\{false\}/);
   assert.match(visitor, /identityOnly/);
   assert.match(visitor, /identityControlRef=\{identityControlRef\}/);
   assert.match(visitor, /profileDockControlRef/);

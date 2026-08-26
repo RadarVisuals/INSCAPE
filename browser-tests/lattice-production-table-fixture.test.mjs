@@ -55,6 +55,7 @@ test('Phase 3 visual fixture remains browser-test-only and free of owner/runtime
     || file.includes('/src/lattice/rendering/') || file.includes('/src/profileDocument/domain/')
     || file.endsWith('/src/lattice/authoring/latticeProductionTransform.js')
     || file.endsWith('/src/lattice/authoring/latticeProductionRemoval.js')
+    || file.endsWith('/src/library/data/onchainDataUri.js')
     || file.endsWith('/src/library/config.js')));
   assert.deepEqual(unexpectedGraphEntries, []);
 });
