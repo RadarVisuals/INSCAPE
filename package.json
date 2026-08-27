@@ -10,7 +10,6 @@
     "test": "node --test",
     "test:lukso-standards": "node --test scripts/luksoStandards.audit.test.js",
     "test:browser": "node --test browser-tests/published-visitor.browser.mjs",
-    "test:browser:phase3": "node --test browser-tests/lattice-production-table.browser.mjs",
     "test:browser:phase4": "node --test browser-tests/owner-lattice-navigation.browser.mjs",
     "test:browser:phase5a": "node --test browser-tests/owner-lattice-browser.browser.mjs",
     "test:browser:phase5b1": "node --test browser-tests/owner-lattice-placement.browser.mjs",
@@ -19,7 +18,6 @@
     "test:browser:alpha-support": "node --test browser-tests/alpha-support-preview.browser.mjs",
     "test:browser:system-workflow-phase4b": "node --test browser-tests/owner-system-workflow-publication.browser.mjs",
     "test:browser:system-workflow-production": "node --test browser-tests/owner-system-workflow-production.browser.mjs",
-    "visual:phase3": "node browser-tests/lattice-production-table.browser.mjs --visual",
     "preview": "vite preview"
   },
   "dependencies": {
