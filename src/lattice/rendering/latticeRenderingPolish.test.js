@@ -5,6 +5,7 @@ import test from 'node:test';
 const identity = readFileSync(new URL('./latticeProductionIdentityDossier.css', import.meta.url), 'utf8');
 const focus = readFileSync(new URL('./latticeFocusViewer.css', import.meta.url), 'utf8');
 const ownerCanvas = readFileSync(new URL('../../public/ownerSystemWorkflow/OwnerSystemWorkflowCanvas.jsx', import.meta.url), 'utf8');
+const progressiveArtwork = readFileSync(new URL('../../public/ownerSystemWorkflow/progressiveArtworkSources.js', import.meta.url), 'utf8');
 const publicAsset = readFileSync(new URL('../../profileDocument/domain/profileDocumentV9Asset.js', import.meta.url), 'utf8');
 
 test('expanded profile rack has one true border and its active selector occupies that border', () => {
@@ -21,6 +22,7 @@ test('profile and artwork metadata racks cannot create horizontal scrollbars fro
 });
 
 test('owner canvas and published preview both prefer the highest-fidelity authored media source', () => {
-  assert.match(ownerCanvas, /asset\?\.src \|\| asset\?\.originalImageUrl \|\| asset\?\.imageUrl \|\| asset\?\.thumbnailUrl/);
+  assert.match(ownerCanvas, /ProgressiveArtworkImage/);
+  assert.match(progressiveArtwork, /\[asset\?\.src, asset\?\.originalImageUrl, asset\?\.imageUrl, \.\.\.low\]/);
   assert.match(publicAsset, /\[asset\.originalImageUrl, asset\.imageUrl, asset\.thumbnailUrl\]/);
 });

@@ -9,7 +9,7 @@ import {
   reconcileBrowserSelection,
   updateBrowserSelection,
 } from './browserWorkspaceModel.js';
-import { browserAssetSupportsPreview, browserPreviewCandidates, browserPreviewWorkIsCurrent, resolveBrowserPreview } from './browserRenderableAssets.js';
+import { browserAssetSupportsPreview, browserPreviewCandidates } from './browserRenderableAssets.js';
 import useLatticeFloatingWindow from '../windows/useLatticeFloatingWindow.js';
 
 const clampSidebarWidth = (value) => Math.min(320, Math.max(48, Number(value) || 174));
@@ -29,7 +29,6 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
   const floatingWindow = useLatticeFloatingWindow();
   const sidebarResizeGestureRef = useRef(null);
   const expandedSidebarWidthRef = useRef(sidebarWidth >= 152 ? sidebarWidth : 174);
-  const previewJobsRef = useRef(new Map());
   const previewRecordsRef = useRef(sharedPreviewRecords || new Map());
   const [previewVersion, setPreviewVersion] = useState(0);
 
@@ -37,61 +36,42 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
   const categories = Array.isArray(data?.categories) ? data.categories : [];
   useEffect(() => {
     const liveIds = new Set(sourceAssets.map(browserAssetId));
-    for (const [id, job] of previewJobsRef.current) {
-      if (!liveIds.has(id)) { job.cancelled = true; previewJobsRef.current.delete(id); }
-    }
     if (!sharedPreviewRecords) for (const id of previewRecordsRef.current.keys()) {
       if (!liveIds.has(id)) previewRecordsRef.current.delete(id);
     }
-    for (const asset of sourceAssets) {
-      const id = browserAssetId(asset); if (!id) continue;
-      const candidates = browserPreviewCandidates(asset);
-      const signature = `${asset.mediaType || ''}\n${candidates.join('\n')}`;
-      const acceptedPreview = previewRecordsRef.current.get(id);
-      if (browserPreviewWorkIsCurrent(acceptedPreview, previewJobsRef.current.get(id), asset, signature)) continue;
-      const previous = previewJobsRef.current.get(id); if (previous) previous.cancelled = true;
-      if (!browserAssetSupportsPreview(asset) || !candidates.length) {
-        previewRecordsRef.current.set(id, { assetRef: asset, signature, status: 'unavailable' });
-        previewJobsRef.current.delete(id); continue;
-      }
-      const job = { cancelled: false, signature }; previewJobsRef.current.set(id, job);
-      previewRecordsRef.current.set(id, { assetRef: asset, signature, status: 'pending' });
-      resolveBrowserPreview(candidates).then((decoded) => {
-        if (job.cancelled || previewJobsRef.current.get(id) !== job) return;
-        previewJobsRef.current.delete(id);
-        previewRecordsRef.current.set(id, decoded
-          ? { assetRef: asset, signature, ...decoded, status: 'ready' }
-          : { assetRef: asset, signature, status: 'unavailable' });
-        setPreviewVersion((value) => value + 1);
-      });
-    }
-    setPreviewVersion((value) => value + 1);
   }, [sharedPreviewRecords, sourceAssets]);
-  useEffect(() => () => {
-    for (const job of previewJobsRef.current.values()) job.cancelled = true;
-    previewJobsRef.current.clear();
-  }, []);
   const assets = useMemo(() => sourceAssets.map((asset) => {
     const preview = previewRecordsRef.current.get(browserAssetId(asset));
+    const fallback = browserPreviewCandidates(asset)[0] || null;
     return preview?.status === 'ready' ? {
       ...asset,
       decodedImageHeight: preview.height,
       decodedImageSource: preview.source,
       decodedImageWidth: preview.width,
       previewSrc: preview.source,
-    } : { ...asset, previewSrc: null };
+    } : { ...asset, previewSrc: preview?.status === 'unavailable' ? null : fallback };
   }), [previewVersion, sourceAssets]);
   const unavailableCount = sourceAssets.filter((asset) => previewRecordsRef.current
     .get(browserAssetId(asset))?.status === 'unavailable').length;
-  const markAssetUnavailable = useCallback((id, source) => {
+  const markAssetReady = useCallback((id, source, width, height) => {
+    const asset = sourceAssets.find((candidate) => browserAssetId(candidate) === id);
+    if (!asset || !source || !Number(width) || !Number(height)) return;
     const current = previewRecordsRef.current.get(id);
-    if (current?.status !== 'ready' || current.source !== source) return;
-    previewRecordsRef.current.set(id, { assetRef: current.assetRef, signature: current.signature, status: 'unavailable' });
+    if (current?.status === 'ready' && current.source === source && current.width === width && current.height === height) return;
+    previewRecordsRef.current.set(id, { assetRef: asset, source, width, height, status: 'ready' });
     setPreviewVersion((value) => value + 1);
-  }, []);
-  const isAssetRenderable = useCallback((id) => previewRecordsRef.current.get(id)?.status === 'ready', []);
+  }, [sourceAssets]);
+  const markAssetUnavailable = useCallback((id) => {
+    const asset = sourceAssets.find((candidate) => browserAssetId(candidate) === id);
+    if (!asset) return;
+    previewRecordsRef.current.set(id, { assetRef: asset, status: 'unavailable' });
+    setPreviewVersion((value) => value + 1);
+  }, [sourceAssets]);
+  const renderableIds = useMemo(() => new Set(assets.filter((asset) => asset.previewSrc
+    && browserAssetSupportsPreview(asset)).map(browserAssetId)), [assets]);
+  const isAssetRenderable = useCallback((id) => renderableIds.has(id), [renderableIds]);
   const areAssetsRenderable = useCallback((ids) => Array.isArray(ids)
-    && ids.length > 0 && ids.every((id) => previewRecordsRef.current.get(id)?.status === 'ready'), []);
+    && ids.length > 0 && ids.every((id) => renderableIds.has(id)), [renderableIds]);
   const scopedAssets = useMemo(() => browserViewAssets(assets, categories, view, data?.usedAssetIds),
     [assets, categories, data?.usedAssetIds, view]);
   const filteredAssets = useMemo(() => filterAndSortBrowserAssets(scopedAssets,
@@ -175,10 +155,9 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
     sort, setSort, view, selectView, selectCategoriesDestination, lastCategoryId,
     selectedAsset, selectedAssets, selectedAssetIds, selectAsset, selectForContext, clearSelection, selectAllVisible,
     selectedCategory, dialog, setDialog, filteredAssets, viewAssetCount: scopedAssets.length,
-    hasActiveFilters, clearFilters, unavailableCount, markAssetUnavailable, isAssetRenderable, areAssetsRenderable,
+    hasActiveFilters, clearFilters, unavailableCount, markAssetReady, markAssetUnavailable, isAssetRenderable, areAssetsRenderable,
     renderableAssets: assets,
-    renderableAssetIds: assets.filter((asset) => previewRecordsRef.current
-      .get(browserAssetId(asset))?.status === 'ready').map(browserAssetId),
+    renderableAssetIds: [...renderableIds],
     move: floatingWindow.move,
     rackWidthResize: floatingWindow.rackWidthResize,
     resize: floatingWindow.resize,

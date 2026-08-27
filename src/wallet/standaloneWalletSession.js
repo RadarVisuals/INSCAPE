@@ -11,7 +11,7 @@ let pendingRelease = null;
 
 export async function createStandaloneWalletSession({ initializeWallet, disposeWallet, beginWalletTransition, onError, onSignInClose }) {
   const connector = await setupLuksoConnector({
-    theme: 'dark',
+    theme: 'light',
     chains: { defaultChainId: 42 },
     connectors: { eoa: false },
     storage: { key: 'inscape-up' },

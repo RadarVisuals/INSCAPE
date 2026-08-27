@@ -1,5 +1,5 @@
 import { lazy, Suspense, useRef } from 'react';
-import OwnerSystemWorkflowDiscover from './OwnerSystemWorkflowDiscoverWorkspace.jsx';
+import PublicEntryPortal from '../../startveil/PublicEntryPortal.jsx';
 import OwnerSystemWorkflowLibraryWorkspace from './OwnerSystemWorkflowLibraryWorkspace.jsx';
 import OwnerSystemWorkflowManual from './OwnerSystemWorkflowManual.jsx';
 import OwnerSystemWorkflowProfile from './OwnerSystemWorkflowProfile.jsx';
@@ -39,8 +39,8 @@ export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assets
       <Suspense fallback={null}><OwnerSystemWorkflowActivity activity={activity} onClose={onClose}
         phase={show('activity').phase} /></Suspense></PanelPresence>}
     {show('discover').present && <PanelPresence id="discover" panels={panels}>
-      <OwnerSystemWorkflowDiscover assets={assets} fixture={reviewDiscovery} groupCommands={discoveryCommands} groups={discoveryGroups} menuSurface={menuSurface} onClose={onClose}
-        onSelect={(entry) => { panels.closePanel({ returnFocus: false }); onVisitProfile?.(entry.address); }} phase={show('discover').phase} /></PanelPresence>}
+      <PublicEntryPortal embedded initialMode="explore" onClose={onClose}
+        onVisitProfile={(address) => { panels.closePanel({ returnFocus: false }); onVisitProfile?.(address); }} /></PanelPresence>}
     {show('settings').present && <PanelPresence id="settings" panels={panels}>
       <OwnerSystemWorkflowSettings appearance={controller.draft.appearance} controller={controller} menuSurface={menuSurface}
         onClose={onClose} phase={show('settings').phase} /></PanelPresence>}

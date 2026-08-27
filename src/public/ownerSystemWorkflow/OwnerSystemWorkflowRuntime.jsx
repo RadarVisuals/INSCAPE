@@ -92,6 +92,8 @@ export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext
   const assetsById = useMemo(() => assetMap(resolvedAssets, canonicalRecords), [canonicalRecords, resolvedAssets]);
   const registerAssetDimensions = useCallback((asset, dimensions) => {
     const id = asset?.stableAssetId || asset?.id;
+    const canonicalSources = new Set([asset?.src, asset?.originalImageUrl, asset?.imageUrl].filter(Boolean));
+    if (dimensions?.source && !canonicalSources.has(dimensions.source)) return dimensions;
     const refined = ownerSystemWorkflowDecodedAsset(asset, dimensions);
     if (!id || refined === asset) return null;
     const decoded = Object.freeze({
@@ -108,7 +110,7 @@ export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext
   }, []);
   const resolveAssetDimensions = useCallback(async (asset) => {
     const decoded = await decodeOwnerSystemWorkflowAssetDimensions(asset);
-    return decoded ? registerAssetDimensions(asset, decoded) : null;
+    return decoded ? registerAssetDimensions(asset, decoded) || decoded : null;
   }, [registerAssetDimensions]);
   const crop = useOwnerSystemWorkflowCrop({ assetsById, controller });
   const viewer = useOwnerSystemWorkflowFocusViewer({ assetsById, controller,

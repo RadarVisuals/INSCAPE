@@ -81,6 +81,9 @@ function App() {
     : APPLICATION_MODES.PUBLIC;
   const publicProfileRoute = selectPublicProfileRoute(ownerAuthoringEnabled);
   const localOwnerRoute = publicProfileRoute === 'LOCAL_OWNER';
+  const publicEntryPortal = effectiveApplicationMode === APPLICATION_MODES.PUBLIC
+    && !explicitViewedProfileAddress && !routeWorkspaceProfileAddress && !retainedPublicProfileAddress
+    && [PROFILE_TARGET_SOURCE.PENDING, PROFILE_TARGET_SOURCE.NONE].includes(profileTarget.source);
   const [publishedResolution, retryPublishedProfile] = usePublishedProfile(viewedProfileAddress);
   const ownerSourceReady = publishedResolution?.status !== PUBLISHED_PROFILE_STATUS.LOADING;
 
@@ -218,7 +221,7 @@ function App() {
             <AtelierExperience onRequestPublic={() => changeApplicationMode(APPLICATION_MODES.PUBLIC)} />
           </Suspense>
         ) : (
-          standaloneSignInActive ? null : profileTarget.pending
+          standaloneSignInActive || publicEntryPortal ? null : profileTarget.pending
             ? <div className="mode-loading" role="status">Resolving profile...</div>
             : profileTarget.source === PROFILE_TARGET_SOURCE.NONE ? <Suspense fallback={null}>
               <PublicDiscoverExperience onRequestOwner={requestStandaloneSignIn}
@@ -249,6 +252,9 @@ function App() {
       </div>
       <Startveil
         ready={worldReady}
+        portal={publicEntryPortal}
+        onConnect={requestStandaloneSignIn}
+        onVisitProfile={(address) => visitProfile(address)}
         onUserGesture={handleUserGesture}
         onPresentationMode={setRevealPresentation}
         onRevealWorld={() => setRevealStage('world')}

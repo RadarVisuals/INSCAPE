@@ -214,7 +214,7 @@ test('Browser preview sizing and optional labels share one session-only visual c
   assert.match(styles, /button\[data-active\] \{ background: var\(--lattice-browser-selected-tone\)/);
 });
 
-test('Browser reveals decoded backgrounds only and never renders placeholder or broken-image surfaces', () => {
+test('Browser defers media decoding to visible cards and never renders placeholder or broken-image surfaces', () => {
   const assets = readFileSync(new URL('./BrowserAssetResults.jsx', import.meta.url), 'utf8');
   const hook = readFileSync(new URL('./useBrowserWorkspace.js', import.meta.url), 'utf8');
   assert.match(assets, /lattice-browser-asset__decoded-image/);
@@ -222,8 +222,9 @@ test('Browser reveals decoded backgrounds only and never renders placeholder or 
   assert.match(assets, /decoding="async"/);
   assert.match(assets, /onMediaUnavailable/);
   assert.doesNotMatch(assets, /MEDIA UNRESOLVED|TYPE UNRESOLVED|UNRESOLVED ASSET/);
-  assert.match(hook, /resolveBrowserPreview/);
-  assert.match(hook, /status: 'pending'/);
+  assert.doesNotMatch(hook, /resolveBrowserPreview/);
+  assert.match(hook, /markAssetReady/);
+  assert.match(hook, /markAssetUnavailable/);
   assert.match(hook, /status: 'unavailable'/);
   assert.match(hook, /isAssetRenderable/);
   assert.match(workspace, /workspace\.areAssetsRenderable\(contextMenu\.assetIds\)/);

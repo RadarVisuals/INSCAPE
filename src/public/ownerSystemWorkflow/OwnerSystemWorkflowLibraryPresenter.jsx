@@ -8,6 +8,25 @@ import { OwnerSystemWorkflowSidebarDeleteConfirmation, OwnerSystemWorkflowSideba
 
 const assetId = (asset) => asset?.stableAssetId || asset?.id;
 
+function LazyLibraryArtwork({ asset, id, onRatio, workspace }) {
+  const candidates = [...new Set([asset.previewSrc, ...(asset.previewCandidates || [])].filter(Boolean))];
+  const signature = candidates.join('\n');
+  const [candidateIndex, setCandidateIndex] = useState(0);
+  useEffect(() => setCandidateIndex(0), [signature]);
+  const source = candidates[candidateIndex] || null;
+  if (!source) return <span>Media unavailable</span>;
+  return <img alt="" aria-hidden="true" className="lattice-browser-asset__decoded-image"
+    decoding="async" draggable="false" loading="lazy" onError={() => {
+      if (candidateIndex + 1 < candidates.length) setCandidateIndex(candidateIndex + 1);
+      else workspace.markAssetUnavailable(id);
+    }} onLoad={(event) => {
+      const { naturalHeight: height, naturalWidth: width } = event.currentTarget;
+      if (!width || !height) return;
+      workspace.markAssetReady(id, source, width, height);
+      onRatio(`${width} / ${height}`);
+    }} src={source} />;
+}
+
 function LibraryNavigationButton({ active, categoryId, count, draggable = false, dropTarget, icon: Icon = Folder,
   label, onClick, onContextMenu, onDragEnd, onDragStart, unresolved = 0 }) {
   return <button aria-label={label} aria-pressed={active} data-active={active || undefined}
@@ -50,18 +69,12 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
         onKeyDown={(event) => { if (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10') {
           event.preventDefault(); event.stopPropagation(); onContext?.(event, asset);
         } }} type="button">
-        <span className="lattice-browser-asset__media" style={ratio ? { aspectRatio: ratio } : undefined}>{asset.previewSrc ? <img alt="" aria-hidden="true"
-          className="lattice-browser-asset__decoded-image" decoding="async" draggable="false" loading="lazy"
-          onError={() => workspace.markAssetUnavailable(id, asset.previewSrc)}
-          onLoad={(event) => {
-            const { naturalHeight: height, naturalWidth: width } = event.currentTarget;
-            if (!width || !height) return;
-            setDecodedRatios((current) => {
-              const value = `${width} / ${height}`;
-              if (current.get(id) === value) return current;
-              const next = new Map(current); next.set(id, value); return next;
-            });
-          }} src={asset.previewSrc} /> : <span>Media unavailable</span>}</span>
+        <span className="lattice-browser-asset__media" style={ratio ? { aspectRatio: ratio } : undefined}>
+          <LazyLibraryArtwork asset={asset} id={id} workspace={workspace} onRatio={(value) => setDecodedRatios((current) => {
+            if (current.get(id) === value) return current;
+            const next = new Map(current); next.set(id, value); return next;
+          })} />
+        </span>
         {!workspace.hideLabels && <span className="lattice-browser-asset__record"><strong>{asset.title || id}</strong>
           {asset.collection && <small>{asset.collection}</small>}
           {relationships.length > 0 && <span className="lattice-browser-asset__relationships">

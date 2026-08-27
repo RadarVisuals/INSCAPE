@@ -32,7 +32,8 @@ test('creator collections open their bounded token view and can return to Create
 test('Library keeps creator records visible when their preview media is unavailable', () => {
   const workspace = readFileSync(new URL('../lattice/browser/useBrowserWorkspace.js', import.meta.url), 'utf8');
   assert.match(workspace, /sourceAssets\.map\(\(asset\) =>/);
-  assert.match(workspace, /previewSrc: null/);
+  assert.match(workspace, /preview\?\.status === 'unavailable' \? null : fallback/);
+  assert.match(workspace, /markAssetUnavailable/);
   assert.match(presenterSource, /Media unavailable/);
   assert.match(presenterSource, /workspace\.isAssetRenderable\(id\)/);
   assert.match(workspaceSource, /!workspaceState\?\.isAssetRenderable\(id\)/);

@@ -21,8 +21,10 @@ import {
   ownerSystemWorkflowAssetDimensions,
 } from './ownerSystemWorkflowAssetDimensions.js';
 import { markOwnerSystemWorkflowPointerFocus } from './ownerSystemWorkflowSelection.js';
+import ProgressiveArtworkImage from './ProgressiveArtworkImage.jsx';
+import { progressiveArtworkSources } from './progressiveArtworkSources.js';
 
-const sourceFor = (asset) => asset?.src || asset?.originalImageUrl || asset?.imageUrl || asset?.thumbnailUrl || null;
+const sourceFor = (asset) => progressiveArtworkSources(asset).high;
 const boundsOf = (placements) => placements.length ? {
   column: Math.min(...placements.map(({ column }) => column)),
   row: Math.min(...placements.map(({ row }) => row)),
@@ -65,9 +67,8 @@ function GridSwipePreview({ appearance, assetsById, grid, onAssetDimensions, sna
       return <div className="system-workflow__placement" data-cropped={Boolean(placement.crop) || undefined} key={placement.id}
         style={{ ...projected, zIndex: placement.layer + 1 }}>
         <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
-          {src ? <img src={src} alt="" draggable={false} onLoad={(event) => onAssetDimensions?.(asset, {
-            source: src, width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight,
-          })} style={imageRenderRectangle ? { ...imageRenderRectangle, transform: transform.css } : undefined} /> : <em>Media</em>}
+          {src ? <ProgressiveArtworkImage asset={asset} onSourceLoad={(dimensions) => onAssetDimensions?.(asset, dimensions)}
+            style={imageRenderRectangle ? { ...imageRenderRectangle, transform: transform.css } : undefined} /> : <em>Media</em>}
         </span>
       </div>;
     })}
@@ -215,9 +216,8 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
           onPointerDown={(event) => { markOwnerSystemWorkflowPointerFocus(event.currentTarget); if (cropping) crop.beginCropDrag(event, placement.id, worldViewport.cellSize); else if (!cropSession) interaction.beginPlacementGesture(event, placement); }} ref={(node) => onPlacementRef?.(placement.id, node)} role="button" tabIndex={placement.locked ? -1 : 0}
           style={{ ...projected, zIndex: placement.layer + 1 }}>
           <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
-            {src ? <img src={src} alt="" draggable={false} onLoad={(event) => onAssetDimensions?.(asset, {
-              source: src, width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight,
-            })} style={imageRenderRectangle ? { ...imageRenderRectangle, transform: transform.css } : undefined} /> : <em>Media</em>}
+            {src ? <ProgressiveArtworkImage asset={asset} onSourceLoad={(dimensions) => onAssetDimensions?.(asset, dimensions)}
+              style={imageRenderRectangle ? { ...imageRenderRectangle, transform: transform.css } : undefined} /> : <em>Media</em>}
           </span>
         </div>;
       })}

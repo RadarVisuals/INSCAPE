@@ -7,8 +7,12 @@ const experience = readFileSync(new URL('./PublicDiscoverExperience.jsx', import
 const discover = readFileSync(new URL('../public/ownerSystemWorkflow/OwnerSystemWorkflowDiscoverWorkspace.jsx', import.meta.url), 'utf8');
 const publishedBoundary = readFileSync(new URL('../profileDocument/components/PublishedProfileBoundary.jsx', import.meta.url), 'utf8');
 
-test('anonymous root enters the shared Discover workspace without an owner profile', () => {
+test('anonymous root keeps public exploration inside the Portal instead of entering the workspace Discover shell', () => {
   assert.match(app, /profileTarget\.source === PROFILE_TARGET_SOURCE\.NONE/);
+  assert.match(app, /const publicEntryPortal =/);
+  assert.match(app, /portal=\{publicEntryPortal\}/);
+  assert.match(readFileSync(new URL('../startveil/PublicEntryPortal.jsx', import.meta.url), 'utf8'), /public-entry-portal__world-grid/);
+  assert.match(app, /standaloneSignInActive \|\| publicEntryPortal \? null/);
   assert.match(app, /<PublicDiscoverExperience/);
   assert.match(experience, /<OwnerSystemWorkflowDiscoverWorkspace anonymous/);
   assert.match(discover, /label: 'Published worlds'/);
@@ -26,9 +30,10 @@ test('anonymous Discover offers an explicit owner connection without gating visi
   assert.match(discover, />Connect profile</);
 });
 
-test('published visitors open the same Discover workspace instead of the legacy directory modal', () => {
-  assert.match(publishedBoundary, /lazy\(\(\) => import\('\.\.\/\.\.\/profileDiscovery\/PublicDiscoverExperience\.jsx'\)\)/);
-  assert.match(publishedBoundary, /<PublicDiscoverExperience/);
+test('published visitors open the shared world-card directory instead of the legacy people workspace', () => {
+  assert.match(publishedBoundary, /lazy\(\(\) => import\('\.\.\/\.\.\/startveil\/PublicEntryPortal\.jsx'\)\)/);
+  assert.match(publishedBoundary, /<PublicEntryPortal embedded initialMode="explore"/);
+  assert.doesNotMatch(publishedBoundary, /OwnerSystemWorkflowDiscoverWorkspace/);
   assert.doesNotMatch(publishedBoundary, /ProfileDiscoveryBoundary/);
 });
 

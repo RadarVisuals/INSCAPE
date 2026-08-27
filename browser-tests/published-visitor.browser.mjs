@@ -292,24 +292,24 @@ test('exact v9 mounts one semantic ordered-Grid surface without owner, Library, 
 test('Directory visits a published workspace, Close remains Close, and Return restores the connected workspace', async () => {
   await viewport(1280, 720, false); await navigate();
   await click('.visitor-grid-world__actions button');
-  await waitFor(`!!document.querySelector('.profile-discovery__panel')`, 'directory opens');
-  const directoryStyle = await evaluate(`(()=>{const root=document.querySelector('.profile-discovery');const panel=document.querySelector('.profile-discovery__panel');const result=document.querySelector('.profile-discovery__result');const title=document.querySelector('#profile-discovery-title');const rect=panel.getBoundingClientRect();return{menuSurface:root.dataset.menuSurface,background:getComputedStyle(panel).backgroundColor,color:getComputedStyle(panel).color,titleFont:getComputedStyle(title).fontFamily,resultDisplay:getComputedStyle(result).display,width:rect.width,height:rect.height}})()`);
+  await waitFor(`!!document.querySelector('.public-entry-portal[data-embedded][data-mode="explore"]')`, 'directory opens');
+  const directoryStyle = await evaluate(`(()=>{const root=document.querySelector('.public-entry-portal');const rect=root.getBoundingClientRect();return{menuSurface:root.dataset.menuSurface,background:getComputedStyle(root).backgroundColor,color:getComputedStyle(root).color,pointerEvents:getComputedStyle(root).pointerEvents,hitRoot:document.elementFromPoint(innerWidth/2,innerHeight/2)?.closest('.public-entry-portal')===root,width:rect.width,height:rect.height}})()`);
   assert.equal(directoryStyle.menuSurface, 'mist');
   assert.match(directoryStyle.background, /215, 211, 202/);
   assert.match(directoryStyle.color, /17, 19, 19/);
-  assert.match(directoryStyle.titleFont, /Inscape Sora/);
-  assert.equal(directoryStyle.resultDisplay, 'grid');
-  assert.equal(directoryStyle.width, 760);
-  assert.equal(directoryStyle.height, 560);
-  await evaluate(`document.querySelector('[aria-label="Close INSCAPE directory"]').focus()`);
+  assert.equal(directoryStyle.pointerEvents, 'auto');
+  assert.equal(directoryStyle.hitRoot, true);
+  assert.equal(directoryStyle.width, 1280);
+  assert.equal(directoryStyle.height, 720);
+  await evaluate(`document.querySelector('[aria-label="Return to workspace"]').focus()`);
   await pressKey('Enter');
-  await waitFor(`!document.querySelector('.profile-discovery__panel')`, 'directory closes with Enter on Close');
+  await waitFor(`!document.querySelector('.public-entry-portal')`, 'directory closes with Enter on Close');
   assert.equal(await evaluate(`window.__fixture.address`), profileA);
 
   await click('.visitor-grid-world__actions button');
-  await page.locator('.profile-discovery__search input').fill('Beta');
-  await waitFor(`document.querySelectorAll('.profile-discovery__result').length === 1`, 'directory search result');
-  await click('.profile-discovery__result');
+  await page.locator('.public-entry-portal__header-search input').fill('Beta');
+  await waitFor(`document.querySelectorAll('.public-entry-portal__world-card').length === 1 && !document.querySelector('.public-entry-portal__world-action').disabled`, 'directory search result');
+  await click('.public-entry-portal__world-action');
   await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileB)}`, 'directory profile visit');
   await waitFor(`!!document.querySelector('.visitor-grid-world__actions button:nth-child(2)')`, 'Return command');
   await click('.visitor-grid-world__actions button:nth-child(2)');
@@ -410,6 +410,7 @@ test('semantic controls and owned keyboard input navigate dynamic ordered Grids'
   await page.keyboard.down('Space'); await page.mouse.move(rightDrag.x, rightDrag.y); await page.mouse.down();
   await page.mouse.move(rightDrag.x + 180, rightDrag.y - 4, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Space');
   await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-home'`, 'reverse Space-drag returns to the entry Grid');
+  await waitFor(`document.querySelector('.visitor-grid-world')?.dataset.gridSwipeSettling !== 'true'`, 'reverse Space-drag settles');
   assert.equal(await evaluate(`document.querySelectorAll('.visitor-grid-renderer').length`), 1);
 });
 
@@ -461,9 +462,9 @@ test('narrow visitor mode keeps Directory and Return reachable without desktop a
   assert.ok(commands.every(({ rect }) => rect.left >= 0 && rect.right <= 390 && rect.top >= 0 && rect.bottom <= 844),
     `narrow commands escaped the viewport: ${JSON.stringify(commands)}`);
   await click('.visitor-grid-world__actions button:first-child');
-  await waitFor(`!!document.querySelector('.profile-discovery__panel')`, 'narrow directory opens');
-  await click('[aria-label="Close INSCAPE directory"]');
-  await waitFor(`!document.querySelector('.profile-discovery__panel')`, 'narrow directory closes');
+  await waitFor(`!!document.querySelector('.public-entry-portal[data-embedded]')`, 'narrow directory opens');
+  await click('[aria-label="Return to workspace"]');
+  await waitFor(`!document.querySelector('.public-entry-portal')`, 'narrow directory closes');
   await click('.visitor-grid-world__actions button:nth-child(2)');
   await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileA)}`, 'narrow Return');
   assert.equal(await evaluate(`document.querySelectorAll('[data-resize-control]').length`), 0, 'narrow mode exposes no desktop resize control');

@@ -9,7 +9,7 @@ function readReducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 }
 
-export function useStartveil({ ready, entryReady = true, onUserGesture, onPresentationMode, onRevealWorld, onRevealActor, onRevealInterface, onComplete }) {
+export function useStartveil({ ready, entryReady = true, keyboardEntryEnabled = true, onUserGesture, onPresentationMode, onRevealWorld, onRevealActor, onRevealInterface, onComplete }) {
   const [state, setState] = useState(() => createStartveilState(ready));
   const [sessionSeen] = useState(readSessionSeen);
   const [reducedMotion] = useState(readReducedMotion);
@@ -44,16 +44,16 @@ export function useStartveil({ ready, entryReady = true, onUserGesture, onPresen
     if (state === STARTVEIL_STATES.COMPLETE) callbacksRef.current.onComplete?.();
   }, [state]);
 
-  const enter = useCallback(() => {
+  const enter = useCallback(({ notifyUserGesture = true } = {}) => {
     if (state !== STARTVEIL_STATES.DORMANT || !entryReady || activationRef.current) return;
     activationRef.current = true;
-    callbacksRef.current.onUserGesture?.();
+    if (notifyUserGesture) callbacksRef.current.onUserGesture?.();
     try { window.sessionStorage.setItem(STARTVEIL_SESSION_KEY, 'true'); } catch { /* entry remains available */ }
     setState(transitionStartveil(state, 'ENTER'));
   }, [entryReady, state]);
 
   useEffect(() => {
-    if (state !== STARTVEIL_STATES.DORMANT) return undefined;
+    if (state !== STARTVEIL_STATES.DORMANT || !keyboardEntryEnabled) return undefined;
     const handleEntryKey = (event) => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
       event.preventDefault();
@@ -61,7 +61,7 @@ export function useStartveil({ ready, entryReady = true, onUserGesture, onPresen
     };
     window.addEventListener('keydown', handleEntryKey);
     return () => window.removeEventListener('keydown', handleEntryKey);
-  }, [enter, state]);
+  }, [enter, keyboardEntryEnabled, state]);
 
   return { state, enter, reducedMotion, shortened, canEnter: state === STARTVEIL_STATES.DORMANT && entryReady };
 }

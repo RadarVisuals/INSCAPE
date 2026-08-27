@@ -227,6 +227,10 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__placement[data-cropping] { cursor: grab; outline: 1px solid color-mix(in srgb, var(--study-ink) 46%, transparent); outline-offset: 3px; }
 .system-workflow__placement[data-cropping]:active { cursor: grabbing; }
 .system-workflow__placement[data-viewing] { visibility: hidden; }
+.system-workflow__progressive-media { position: absolute; inset: 0; display: block; overflow: hidden; }
+.system-workflow__progressive-media > img { position: absolute; }
+.system-workflow__progressive-media > img:last-child { opacity: 0; transition: opacity 140ms ease-out; }
+.system-workflow__progressive-media[data-high-ready] > img:last-child { opacity: 1; }
 .system-workflow__selection-chrome { position: absolute; z-index: 20; inset: 0; opacity: 0; pointer-events: none; transition: opacity var(--workflow-motion-in) var(--workflow-ease); }
 .system-workflow__selection-chrome[data-selected] { opacity: 1; }
 .system-workflow__selection-chrome[aria-hidden="true"],

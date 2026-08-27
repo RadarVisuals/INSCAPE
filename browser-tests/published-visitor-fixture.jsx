@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import ProfileDocumentV9Preview from '../src/profileDocument/components/ProfileDocumentV9Preview.jsx';
-import ProfileDiscoveryBoundary from '../src/profileDiscovery/ProfileDiscoveryBoundary.jsx';
+import PublicEntryPortal from '../src/startveil/PublicEntryPortal.jsx';
+import { PublishedProfileResolutionStore } from '../src/profileDocument/state/publishedProfileResolutionStore.js';
 import { buildProfileDocumentV9 } from '../src/profileDocument/domain/profileDocumentV9Builder.js';
 import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
 import '../src/index.css';
@@ -66,6 +67,13 @@ function Fixture() {
     address: entry, name: `${suffixFor(entry)} Visitor Fixture`,
     avatarUrl: `https://published-images.invalid/avatar-${suffixFor(entry)}.png`, status: 'PUBLISHED',
   })) }), []);
+  const publishedResolutionStore = useMemo(() => new PublishedProfileResolutionStore({ repository: {
+    resolve: async (entry) => {
+      const entrySuffix = suffixFor(entry);
+      return { address: entry, document: createCanonicalDocument(entry, entrySuffix,
+        `https://published-images.invalid/art-${entrySuffix}.png`), status: 'RESOLVED' };
+    },
+  } }), []);
   const suffix = suffixFor(address);
   const effectiveArtworkUrl = artworkUrl.replace(/Alpha|Beta/u, suffix);
   const document = useMemo(() => createCanonicalDocument(address, suffix, effectiveArtworkUrl),
@@ -92,8 +100,8 @@ function Fixture() {
     <div className="application-interface" data-visible>
       <ProfileDocumentV9Preview document={document}
         onOpenDirectory={() => setDirectoryOpen(true)} onReturn={address === PROFILE_A ? undefined : () => visit(PROFILE_A)} />
-      {directoryOpen && <ProfileDiscoveryBoundary repository={directoryRepository} onClose={() => setDirectoryOpen(false)}
-        onSelect={(profile) => visit(profile.address)} />}
+      {directoryOpen && <PublicEntryPortal discoveryRepository={directoryRepository} embedded initialMode="explore"
+        onClose={() => setDirectoryOpen(false)} onVisitProfile={visit} resolutionStore={publishedResolutionStore} />}
     </div>
   </div>;
 }

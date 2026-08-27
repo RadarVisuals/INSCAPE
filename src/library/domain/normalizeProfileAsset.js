@@ -1,5 +1,5 @@
 import { LUKSO_CHAIN_ID, normalizeProfileAddress } from '../config.js';
-import { selectImageUrls } from '../data/resolveContentUrl.js';
+import { selectImageGroups, selectImageUrls } from '../data/resolveContentUrl.js';
 
 function normalizeCreator(entry) {
   const address = normalizeProfileAddress(entry?.profile_id || entry?.address);
@@ -28,6 +28,7 @@ export function normalizeProfileAsset(holding, ownerAddress, options = {}) {
   const images = metadata.images?.length ? metadata.images : contractMetadata?.images;
   const attributes = metadata.attributes?.length ? metadata.attributes : contractMetadata?.attributes || [];
   const urls = selectImageUrls(images, options);
+  const imageGroups = selectImageGroups(images, options);
   const creators = (metadata.lsp4Creators?.length ? metadata.lsp4Creators : contractMetadata?.lsp4Creators || []).map(normalizeCreator).filter(Boolean);
   const name = metadata.name || metadata.lsp4TokenName || contractMetadata?.name || contractMetadata?.lsp4TokenName
     || (tokenId ? `Token ${tokenId.slice(0, 10)}…` : 'Unnamed asset');
@@ -41,6 +42,7 @@ export function normalizeProfileAsset(holding, ownerAddress, options = {}) {
     tokenType: contractMetadata?.lsp4TokenType || null,
     name, description: metadata.description || contractMetadata?.description || '', collectionName,
     imageUrl: urls.imageUrl, thumbnailUrl: urls.thumbnailUrl, originalImageUrl: urls.originalImageUrl,
+    imageGroups,
     imageWidth: urls.width, imageHeight: urls.height,
     mediaFileType: urls.fileType || null,
     creators, attributes: attributes.map(({ key, value, attributeType }) => ({ key, value, type: attributeType })),

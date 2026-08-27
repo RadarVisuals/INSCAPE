@@ -751,13 +751,16 @@ export async function runOwnerProductionPreviewGate(executeGate, {
     ledger.record('startveil-reveal-start', {
       deadlineMs: OWNER_PREVIEW_LIFECYCLE_TIMEOUTS.startveilRevealMs,
     });
-    await frame.getByRole('button', { name: /ENTER/u }).click({
-      timeout: Math.min(BROWSER_LIFECYCLE_TIMEOUTS.commandMs, startveilRevealDeadline.remainingMs()),
+    const entryActivation = await frame.evaluate(() => {
+      const node = document.querySelector('[aria-label="INSCAPE entry"]');
+      const button = node?.querySelector('.startveil__entry');
+      const state = node?.getAttribute('data-state') || 'detached';
+      const activation = state === 'dormant' && button && !button.disabled ? 'explicit' : 'automatic';
+      if (activation === 'explicit') button.click();
+      return { activation, state, documentId: window.__task4OwnerHarness.documentId,
+        visibility: document.visibilityState, focused: document.hasFocus() };
     });
-    ledger.record('startveil-pointer-activated', await frame.locator('[aria-label="INSCAPE entry"]').evaluate((node) => ({
-      state: node.getAttribute('data-state'), documentId: window.__task4OwnerHarness.documentId,
-      visibility: document.visibilityState, focused: document.hasFocus(),
-    })));
+    ledger.record('startveil-pointer-activated', entryActivation);
     try {
       const detached = await withinDeadline(resources.startveilDetached,
         startveilRevealDeadline.remainingMs(),

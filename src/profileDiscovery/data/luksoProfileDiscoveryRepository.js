@@ -48,7 +48,7 @@ function normalizeIndexerProfile(profile) {
 }
 
 export function createLuksoProfileDiscoveryRepository({ endpoint = LUKSO_INDEXER_URL, fetchImpl = globalThis.fetch,
-  directoryPageSize = 200, maximumDirectoryPages = 50 } = {}) {
+  directoryPageSize = 200, maximumDirectoryPages = 50, cacheTtlMs = 60_000, now = () => Date.now() } = {}) {
   const request = async (query, variables, signal) => {
     const response = await fetchImpl(endpoint, { method: 'POST', signal, headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ query, variables }) });
@@ -57,7 +57,9 @@ export function createLuksoProfileDiscoveryRepository({ endpoint = LUKSO_INDEXER
     if (payload.errors?.length) throw new Error(payload.errors[0]?.message || 'INSCAPE directory failed');
     return payload.data;
   };
+  let cachedProfiles = null; let cachedAt = 0;
   return { source: 'LUKSO Envio Indexer', async list({ signal } = {}) {
+    if (cachedProfiles && now() - cachedAt < cacheTtlMs) return cachedProfiles.map((profile) => ({ ...profile }));
     const indexedPublications = [];
     for (let page = 0; page < maximumDirectoryPages; page += 1) {
       const directory = await request(PROFILE_DIRECTORY_QUERY,
@@ -80,11 +82,13 @@ export function createLuksoProfileDiscoveryRepository({ endpoint = LUKSO_INDEXER
     }
     const byAddress = new Map(indexedProfiles.map(normalizeIndexerProfile).filter(Boolean)
       .map((profile) => [profile.address, profile]));
-    return publications.map((event) => {
+    const profiles = publications.map((event) => {
       const address = normalizeProfileAddress(event.address); const profile = byAddress.get(address);
       return profile ? { ...profile, publicationBlock: Number(event.blockNumber) || null,
         publicationTransactionHash: clean(event.transactionHash, 66) || null } : null;
     }).filter(Boolean).sort((a, b) => (b.publicationBlock || 0) - (a.publicationBlock || 0));
+    cachedProfiles = profiles.map((profile) => ({ ...profile })); cachedAt = now();
+    return profiles;
   } };
 }
 
