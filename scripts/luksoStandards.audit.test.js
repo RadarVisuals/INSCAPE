@@ -49,12 +49,15 @@ test('issued, creator-attributed and currently held relationships remain separat
 test('metadata dossiers require provenance and do not convert creator evidence into owner authority', () => {
   const owned = readTarget('src/library/domain/normalizeProfileAsset.js');
   const created = readTarget('src/creations/domain/normalizeCreation.js');
-  const dossier = readTarget('src/lattice/rendering/latticeProductionFocusViewModel.js');
+  const publishedAsset = readTarget('src/profileDocument/domain/profileDocumentV9Asset.js');
+  const dossier = readTarget('src/profileDocument/components/profileDocumentV9FocusViewModel.js');
   assert.match(owned, /fieldProvenance/u);
   assert.match(created, /fieldProvenance/u);
-  assert.match(dossier, /fieldProvenance\?\.name/u);
-  assert.match(dossier, /fieldProvenance\?\.description/u);
-  assert.match(dossier, /ownershipKnown === true/u);
+  assert.match(publishedAsset, /fieldProvenance\?\.creators/u);
+  assert.match(publishedAsset, /canonicalCreatorProvenance\.source/u);
+  assert.match(publishedAsset, /canonicalCreatorProvenance\.scope/u);
+  assert.match(dossier, /creator\.source/u);
+  assert.match(dossier, /creator\.scope/u);
   assert.doesNotMatch(dossier, /viewedProfileIsCreator[^\n]*isOwnedByViewedProfile\s*=\s*true/u);
 });
 
