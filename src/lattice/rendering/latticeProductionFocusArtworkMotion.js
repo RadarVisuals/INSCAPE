@@ -68,7 +68,7 @@ const renderRectangle = (rectangle, projection) => projection.swapped ? {
 } : rectangle;
 
 export function projectLatticeProductionFocusMediaMotion(placement, dimensions, motion) {
-  const projection = projectLatticeProductionTransform(placement.transform, dimensions, placement.crop);
+  const projection = projectSystemWorkflowTransform(placement.transform, dimensions, placement.crop);
   const sourceOpening = motion.sourceRectangle;
   const sourceVisual = projection.crop
     ? projectCroppedMediaRectangle(sourceOpening, projection.dimensions, projection.crop)
@@ -88,7 +88,7 @@ export function projectLatticeProductionFocusMediaMotion(placement, dimensions, 
     )),
   });
 }
-import { projectLatticeProductionTransform } from '../authoring/latticeProductionTransform.js';
+import { projectSystemWorkflowTransform } from '../../systemWorkflow/systemWorkflowTransform.js';
 import { projectCroppedMediaRectangle } from './latticeCrop.js';
 import { fitNativeMediaRectangle } from './latticeGeometry.js';
 import { projectArtworkMat } from './latticeMat.js';

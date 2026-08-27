@@ -1,7 +1,7 @@
 import { assertValidLatticeProductionPublication } from '../domain/latticeProductionPublication.js';
 import { projectCroppedMediaRectangle } from './latticeCrop.js';
 import { projectArtworkMat } from './latticeMat.js';
-import { projectLatticeProductionTransform } from '../authoring/latticeProductionTransform.js';
+import { projectSystemWorkflowTransform } from '../../systemWorkflow/systemWorkflowTransform.js';
 import { projectLatticePixelRectangle, projectLatticeRasterBleedRectangle } from './latticePixelGeometry.js';
 
 const positiveViewport = (viewport) => Boolean(viewport
@@ -103,7 +103,7 @@ function projectArtwork(placement, field, mediaDimensions, projectPlacement) {
     imageRenderRectangle: null,
     imageTransform: 'none',
   });
-  const transformed = projectLatticeProductionTransform(placement.transform, mediaDimensions, placement.crop);
+  const transformed = projectSystemWorkflowTransform(placement.transform, mediaDimensions, placement.crop);
   const imageRectangle = transformed.crop
     ? projectCroppedMediaRectangle(mat.mediaOpeningRectangle, transformed.dimensions, transformed.crop)
     : fitNativeMediaRectangle(mat.mediaOpeningRectangle, transformed.dimensions);
