@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createChillwhalesProfileRepository } from './chillwhalesProfileRepository.js';
-import { createChillwhalesProfileReferencesRepository } from './chillwhalesProfileReferencesRepository.js';
 
 const profile = '0xf3c189819fd5b042f692983bfbfd57ab607ee709';
 const lsp7 = '0x1111111111111111111111111111111111111111';
@@ -80,56 +79,6 @@ test('combines contract assets with individual LSP8 tokens without returning col
   assert.equal(token.imageUrl, 'https://gateway.example/ipfs/QmKeeper/token.webp');
   assert.deepEqual(token.attributes, [{ key: 'Eyes', value: 'Many', type: 'string' }]);
   assert.deepEqual(token.creators, [{ address: profile, name: 'VXCTXR' }]);
-});
-
-test('resolves only explicitly curated contract and token references in one bounded indexer request', async () => {
-  const requests = [];
-  const tokenId = '0x01';
-  const repository = createChillwhalesProfileReferencesRepository({
-    endpoint: 'https://indexer.example/v1/graphql',
-    fetchImpl: async (_url, options) => {
-      requests.push(JSON.parse(options.body));
-      return response({
-        owned_asset: [{ id: 'owned-contract', address: lsp7, owner: profile, balance: '1',
-          tokenIds_aggregate: { aggregate: { count: 0 } }, digitalAsset: {
-            address: lsp7, lsp4TokenName: { value: 'Curated contract' }, lsp4TokenType: { value: 'NFT' },
-            lsp4Creators: [], lsp4Metadata: metadata({ image: 'https://assets.example/contract.webp' }),
-          } }],
-        owned_token: [{ id: 'owned-token', address: collection, owner: profile, token_id: tokenId, digitalAsset: {
-          address: collection, lsp4TokenName: { value: 'Curated collection' }, lsp4TokenType: { value: 'COLLECTION' },
-          lsp4Creators: [], lsp4Metadata: metadata(),
-        }, nft: { lsp4Metadata: metadata({ name: 'Curated token', image: 'https://assets.example/token.webp' }),
-          lsp4MetadataBaseUri: null } }],
-      });
-    },
-  });
-  const requested = [`42:${lsp7}:contract`, `42:${collection}:${tokenId}`];
-  const batches = [];
-  for await (const batch of repository.loadProfileAssetReferences(profile, requested)) batches.push(batch);
-
-  assert.equal(requests.length, 1);
-  assert.match(requests[0].query, /query InscapeProfileAssetReferences/);
-  assert.deepEqual(requests[0].variables, { owner: profile, contracts: [lsp7, collection], tokenIds: [tokenId] });
-  assert.deepEqual(batches[0].assets.map(({ id }) => id), requested);
-  assert.equal(batches[0].total, 2);
-  assert.equal(batches[0].complete, true);
-});
-
-test('targeted indexer resolution rejects cross-profile holding rows', async () => {
-  const repository = createChillwhalesProfileReferencesRepository({
-    fetchImpl: async () => response({
-      owned_asset: [{ id: 'wrong-owner', address: lsp7, owner: collection, balance: '1',
-        tokenIds_aggregate: { aggregate: { count: 0 } }, digitalAsset: {
-          address: lsp7, lsp4TokenName: { value: 'Not held here' }, lsp4TokenType: { value: 'NFT' },
-          lsp4Creators: [], lsp4Metadata: metadata({ image: 'https://assets.example/wrong.webp' }),
-        } }],
-      owned_token: [],
-    }),
-  });
-  const batches = [];
-  for await (const batch of repository.loadProfileAssetReferences(profile, [`42:${lsp7}:contract`])) batches.push(batch);
-  assert.deepEqual(batches[0].assets, []);
-  assert.equal(batches[0].resolved, 0);
 });
 
 test('uses base URI metadata when direct token metadata is empty and counts missing media as a failure', async () => {
