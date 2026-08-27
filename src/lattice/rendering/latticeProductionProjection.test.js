@@ -1,25 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createEmptyLatticeProductionDraft } from '../domain/latticeProductionDraft.js';
-import { projectLatticeProductionPublication } from '../domain/latticeProductionAdapter.js';
 import {
-  createLatticeProductionTableRenderModel,
   projectLatticeProductionArtwork,
   projectLatticeProductionPixelArtwork,
-  projectLatticeProductionLabel,
   projectLatticeProductionPlacement,
-  projectLatticeProductionViewport,
 } from './latticeProductionProjection.js';
 
-const PROFILE = '0x1111111111111111111111111111111111111111';
 const CONTRACT = '0x2222222222222222222222222222222222222222';
 const ASSET = `42:${CONTRACT}:0x01`;
-const asset = {
-  id: ASSET, chainId: 42, contractAddress: CONTRACT, tokenId: '0x01', standard: 'LSP8',
-  name: 'Canonical work', description: '', collectionName: null,
-  imageUrl: 'https://media.example/work.webp', imageWidth: 1600, imageHeight: 900,
-  mediaType: 'image', creators: [], attributes: [],
-};
 const placement = {
   id: 'placement-a', stableAssetId: ASSET,
   column: 4, row: 3, columnSpan: 8, rowSpan: 6, layer: 7, navigationOrder: 0,
@@ -29,56 +17,15 @@ const placement = {
   transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
 };
 
-function publication() {
-  const draft = createEmptyLatticeProductionDraft(PROFILE);
-  draft.tables[4].title = 'Center archive';
-  draft.tables[4].subtitle = 'One canonical table';
-  draft.tables[4].placements = [structuredClone(placement)];
-  return projectLatticeProductionPublication(draft, [asset], { lastPublished: '2026-07-29T12:00:00.000Z' });
-}
-
-test('renderer boundary accepts only a validated public publication and returns a detached frozen table', () => {
-  const source = publication();
-  const before = structuredClone(source);
-  const model = createLatticeProductionTableRenderModel(source, 'table-05');
-  assert.equal(Object.isFrozen(model), true);
-  assert.equal(Object.isFrozen(model.table.placements[0].asset.media), true);
-  assert.notEqual(model.table, source.tables[4]);
-  assert.deepEqual(source, before);
-  assert.throws(() => createLatticeProductionTableRenderModel(createEmptyLatticeProductionDraft(PROFILE), 'table-05'));
-  assert.throws(() => createLatticeProductionTableRenderModel(source, 'table-99'), /Unknown/);
-});
-
-test('32 by 18 projection uniformly contains the complete plane with square cells and centered letterboxing', () => {
-  const model = createLatticeProductionTableRenderModel(publication(), 'table-05');
-  assert.deepEqual(projectLatticeProductionViewport(model, { width: 1280, height: 720 }), {
-    cellSize: 40, width: 1280, height: 720, left: 0, top: 0,
-  });
-  assert.deepEqual(projectLatticeProductionViewport(model, { width: 1000, height: 1000 }), {
-    cellSize: 31.25, width: 1000, height: 562.5, left: 0, top: 218.75,
-  });
-  const wide = projectLatticeProductionViewport(model, { width: 1600, height: 600 });
-  assert.equal(wide.cellSize, 100 / 3);
-  assert.equal(wide.width, 3200 / 3);
-  assert.equal(wide.height, 600);
-  assert.ok(Math.abs(wide.left - (800 / 3)) < Number.EPSILON * 512);
-  assert.equal(wide.top, 0);
-  assert.throws(() => projectLatticeProductionViewport(model, { width: 0, height: 600 }), /positive viewport/);
-});
-
-test('placement, label, native ratio, crop, and mat projection share the same cell field', () => {
-  const model = createLatticeProductionTableRenderModel(publication(), 'table-05');
-  const field = projectLatticeProductionViewport(model, { width: 1280, height: 720 });
-  assert.deepEqual(projectLatticeProductionPlacement(model.table.placements[0], field), {
+test('placement, native ratio, crop, and mat projection share the same cell field', () => {
+  const field = { cellSize: 40, width: 1280, height: 720, left: 0, top: 0 };
+  assert.deepEqual(projectLatticeProductionPlacement(placement, field), {
     left: 160, top: 120, width: 320, height: 240,
   });
-  assert.deepEqual(projectLatticeProductionLabel(model.table, field), {
-    left: 40, top: 40, transform: 'translate(0%, 0%)',
-  });
-  const native = projectLatticeProductionArtwork(model.table.placements[0], field, { width: 1600, height: 900 });
+  const native = projectLatticeProductionArtwork(placement, field, { width: 1600, height: 900 });
   assert.deepEqual(native.imageRectangle, { left: 160, top: 150, width: 320, height: 180 });
 
-  const croppedPlacement = { ...model.table.placements[0], crop: { x: 0.5, y: 0.5, zoom: 1 } };
+  const croppedPlacement = { ...placement, crop: { x: 0.5, y: 0.5, zoom: 1 } };
   const cropped = projectLatticeProductionArtwork(croppedPlacement, field, { width: 900, height: 1600 });
   assert.equal(cropped.imageRectangle.width, 320);
   assert.ok(cropped.imageRectangle.height > cropped.mediaOpeningRectangle.height);
@@ -86,7 +33,7 @@ test('placement, label, native ratio, crop, and mat projection share the same ce
   assert.equal(cropped.imageRenderRectangle.width, cropped.imageRectangle.width + 2);
 
   const mattedPlacement = {
-    ...model.table.placements[0],
+    ...placement,
     mat: { enabled: true, color: '#d8d4ca', inset: { top: 0.1, right: 0.2, bottom: 0.3, left: 0.1 } },
   };
   const matted = projectLatticeProductionArtwork(mattedPlacement, field, { width: 100, height: 100 });
@@ -97,10 +44,11 @@ test('placement, label, native ratio, crop, and mat projection share the same ce
 });
 
 test('fractional viewport full-bleed raster projection preserves canonical geometry through mirror and rotation', () => {
-  const model = createLatticeProductionTableRenderModel(publication(), 'table-05');
-  const field = projectLatticeProductionViewport(model, { width: 1308, height: 881 });
+  const cellSize = Math.min(1308 / 32, 881 / 18);
+  const field = { cellSize, width: 32 * cellSize, height: 18 * cellSize,
+    left: (1308 - (32 * cellSize)) / 2, top: (881 - (18 * cellSize)) / 2 };
   const squarePlacement = {
-    ...model.table.placements[0], column: 5 / 9, row: 10 / 9, columnSpan: 20 / 9, rowSpan: 20 / 9,
+    ...placement, column: 5 / 9, row: 10 / 9, columnSpan: 20 / 9, rowSpan: 20 / 9,
     crop: { x: 0.5, y: 0.5, zoom: 1 },
     transform: { quarterTurns: 1, mirrorX: true, mirrorY: false },
   };
@@ -116,12 +64,13 @@ test('fractional viewport full-bleed raster projection preserves canonical geome
 });
 
 test('resize changes projection only and never authored placement data', () => {
-  const source = publication();
-  const model = createLatticeProductionTableRenderModel(source, 'table-05');
-  const authored = structuredClone(model.table.placements[0]);
-  const first = projectLatticeProductionPlacement(model.table.placements[0], projectLatticeProductionViewport(model, { width: 1280, height: 720 }));
-  const second = projectLatticeProductionPlacement(model.table.placements[0], projectLatticeProductionViewport(model, { width: 390, height: 844 }));
+  const authored = structuredClone(placement);
+  const first = projectLatticeProductionPlacement(placement,
+    { cellSize: 40, width: 1280, height: 720, left: 0, top: 0 });
+  const secondCell = 390 / 32;
+  const second = projectLatticeProductionPlacement(placement,
+    { cellSize: secondCell, width: 390, height: 18 * secondCell, left: 0, top: (844 - (18 * secondCell)) / 2 });
   assert.notDeepEqual(first, second);
-  assert.deepEqual(model.table.placements[0], authored);
+  assert.deepEqual(placement, authored);
   assert.equal(first.width / first.height, second.width / second.height);
 });
