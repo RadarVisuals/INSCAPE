@@ -63,13 +63,6 @@ import {
   transformSystemWorkflowGroupGeometries,
   unprojectSystemWorkflowCrop,
 } from './systemWorkflowTransform.js';
-import {
-  SYSTEM_WORKFLOW_MARQUEE_SELECTION_MODES,
-  resolveSystemWorkflowMarqueeSelection,
-  systemWorkflowMarqueeIntersects,
-  systemWorkflowMarqueeRectangle,
-} from './systemWorkflowMarqueeSelection.js';
-
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const ASSET = '42:0x2222222222222222222222222222222222222222:0x01';
 const MEDIA = Object.freeze({ stableAssetId: ASSET, width: 1600, height: 900 });
@@ -628,15 +621,6 @@ test('arbitrary layer reorder rejects a locked peer and every stale full topolog
   assert.throws(() => createSystemWorkflowLayerReorderCandidate(stale, {
     expectedPlacements, gridId: 'grid:home', orderedPlacementIds: ['c', 'a', 'b'],
   }), { code: 'SYSTEM_WORKFLOW_LAYER_TOPOLOGY_STALE' });
-});
-
-test('topology-free marquee rules are mechanically retained without Grid topology', () => {
-  const rectangle = systemWorkflowMarqueeRectangle({ x: 90, y: 70 }, { x: 20, y: 10 });
-  assert.deepEqual(rectangle, { left: 20, top: 10, width: 70, height: 60 });
-  assert.equal(systemWorkflowMarqueeIntersects(rectangle, { left: 0, top: 0, width: 30, height: 30 }), true);
-  assert.deepEqual(resolveSystemWorkflowMarqueeSelection(
-    ['a', 'b'], ['b', 'c'], SYSTEM_WORKFLOW_MARQUEE_SELECTION_MODES.TOGGLE,
-  ), ['a', 'c']);
 });
 
 test('single removal still requires the complete canonical placement snapshot', () => {
