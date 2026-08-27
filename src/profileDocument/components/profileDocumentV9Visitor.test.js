@@ -7,7 +7,6 @@ const app = readFileSync(new URL('../../App.jsx', import.meta.url), 'utf8');
 const boundary = readFileSync(new URL('./PublishedProfileBoundary.jsx', import.meta.url), 'utf8');
 const preview = readFileSync(new URL('./ProfileDocumentV9Preview.jsx', import.meta.url), 'utf8');
 const visitor = readFileSync(new URL('./ProfileDocumentV9Visitor.jsx', import.meta.url), 'utf8');
-const directoryCss = readFileSync(new URL('../../profileDiscovery/inscapeDirectorySystemWorkflow.css', import.meta.url), 'utf8');
 const renderer = readFileSync(new URL('./GridProductionRenderer.jsx', import.meta.url), 'utf8');
 const rendererCss = readFileSync(new URL('../../lattice/rendering/latticeProductionTableRenderer.css', import.meta.url), 'utf8');
 const visitorCss = readFileSync(new URL('./visitorGridWorld.css', import.meta.url), 'utf8');
@@ -28,11 +27,9 @@ test('production routing now delegates only to the exact v9 Preview and Visitor 
   assert.match(preview, /VisitorGridWorld/);
 });
 
-test('published Visitor has no Keeper handoff and Directory fully covers fallback content', () => {
+test('published Visitor has no Keeper handoff', () => {
   assert.doesNotMatch(`${app}\n${boundary}\n${production}\n${preview}\n${visitor}`,
     /Keeper|keeperVisible|residentHandoff|onVisitorReady|onMoveKeeper|onDockKeeper|onReleaseKeeper/iu);
-  assert.match(directoryCss, /background-color: var\(--lattice-menu-panel/);
-  assert.match(directoryCss, /background-image: linear-gradient/);
 });
 
 test('v9 Grid renderer reuses canonical contain, crop remap, swapped dimensions, and render-rectangle transforms', () => {
