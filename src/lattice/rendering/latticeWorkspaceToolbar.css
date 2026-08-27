@@ -6,9 +6,9 @@
   height: 40px;
   display: flex;
   align-items: stretch;
-  border: 1px solid var(--lattice-menu-line-strong);
+  border: 1px solid var(--lattice-menu-line);
   background: var(--lattice-menu-panel);
-  box-shadow: 10px 12px 30px rgba(0, 0, 0, 0.28);
+  box-shadow: none;
   color: var(--lattice-menu-ink);
   font-family: "Inscape IBM Plex Mono", monospace;
   transition: opacity 180ms linear;
@@ -60,7 +60,7 @@
 .lattice-workspace-toolbar__tool:hover,
 .lattice-workspace-toolbar__tool:focus-visible,
 .lattice-workspace-toolbar__tool[data-active] {
-  background: var(--lattice-menu-selected);
+  background: color-mix(in srgb, var(--lattice-menu-ink) 12%, var(--lattice-menu-panel));
   color: var(--lattice-menu-ink);
 }
 
@@ -70,7 +70,7 @@
   right: 0;
   bottom: -1px;
   left: 0;
-  height: 2px;
+  height: 4px;
   background: var(--lattice-menu-ink);
 }
 
@@ -88,7 +88,7 @@
   width: 100%;
   height: 40px;
   border: 0;
-  border-bottom: 1px solid var(--lattice-menu-line-strong);
+  border-bottom: 1px solid var(--lattice-menu-line);
   box-shadow: none;
 }
 
@@ -142,9 +142,9 @@
   right: 18px;
   width: 150px;
   display: grid;
-  border: 1px solid var(--lattice-menu-line-strong);
+  border: 1px solid var(--lattice-menu-line);
   background: var(--lattice-menu-panel);
-  box-shadow: 10px 12px 30px rgba(0, 0, 0, 0.28);
+  box-shadow: none;
   color: var(--lattice-menu-ink);
   font-family: "Inscape IBM Plex Mono", monospace;
 }

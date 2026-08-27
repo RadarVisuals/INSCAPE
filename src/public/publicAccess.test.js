@@ -4,8 +4,7 @@ import {
   resolveOwnerAuthoringEnabled,
   runOwnerAuthoringMutation,
   selectLiveCanvasContent,
-  selectPublicProfileRoute,
-  selectResidentActorVisible
+  selectPublicProfileRoute
 } from './publicAccess.js';
 
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
@@ -23,14 +22,6 @@ test('only verified matching owners route to the local shell', () => {
   assert.equal(selectPublicProfileRoute(true), 'LOCAL_OWNER');
   assert.equal(selectPublicProfileRoute(false), 'PUBLISHED_VISITOR');
   assert.equal(selectPublicProfileRoute(undefined), 'PUBLISHED_VISITOR');
-});
-
-test('published visitors cannot reveal the resident actor before their runtime interface is ready', () => {
-  const visible = { actorRevealVisible: true, keeperVisible: true };
-  assert.equal(selectResidentActorVisible({ ...visible, ownerRuntime: true, publishedVisitorReady: false }), true);
-  assert.equal(selectResidentActorVisible({ ...visible, ownerRuntime: false, publishedVisitorReady: false }), false);
-  assert.equal(selectResidentActorVisible({ ...visible, ownerRuntime: false, publishedVisitorReady: true }), true);
-  assert.equal(selectResidentActorVisible({ ...visible, ownerRuntime: false, publishedVisitorReady: true, keeperVisible: false }), false);
 });
 
 test('visitors see public artwork but never private canvas records', () => {

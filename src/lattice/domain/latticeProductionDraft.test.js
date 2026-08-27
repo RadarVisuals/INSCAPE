@@ -3,8 +3,10 @@ import test from 'node:test';
 import {
   LATTICE_PRODUCTION_COORDINATES,
   LATTICE_PRODUCTION_ENTRY_COORDINATE,
+  LATTICE_PRODUCTION_GRID_STATES,
   LATTICE_PRODUCTION_VISIBILITY,
   createEmptyLatticeProductionDraft,
+  migrateLatticeProductionDraft,
   validateLatticeProductionDraft,
 } from './latticeProductionDraft.js';
 
@@ -30,7 +32,56 @@ test('production drafts fix the 32 by 18 authored plane and permanent row-major 
     'table-06', 'table-07', 'table-08', 'table-09',
   ]);
   assert.equal(Object.hasOwn(draft, 'activeTable'), false);
+  assert.deepEqual(draft.tables.filter(({ gridState }) => gridState === LATTICE_PRODUCTION_GRID_STATES.ACTIVE)
+    .map(({ id, title, visibility }) => ({ id, title, visibility })), [
+    { id: 'table-05', title: 'HOME', visibility: LATTICE_PRODUCTION_VISIBILITY.PUBLIC },
+  ]);
+  assert.equal(draft.tables.filter(({ gridState }) => gridState === LATTICE_PRODUCTION_GRID_STATES.UNUSED).length, 8);
   assert.equal(validateLatticeProductionDraft(draft).valid, true);
+});
+
+test('draft migration preserves every historical table as active while upgrading v1 transforms', () => {
+  const version2 = createEmptyLatticeProductionDraft(PROFILE);
+  version2.draftVersion = 2;
+  version2.tables.forEach((table) => {
+    delete table.gridState;
+    table.visibility = LATTICE_PRODUCTION_VISIBILITY.PUBLIC;
+  });
+  const migratedV2 = migrateLatticeProductionDraft(version2);
+  assert.equal(migratedV2.draftVersion, 3);
+  assert.ok(migratedV2.tables.every(({ gridState }) => gridState === LATTICE_PRODUCTION_GRID_STATES.ACTIVE));
+  assert.equal(validateLatticeProductionDraft(migratedV2).valid, true);
+
+  const version1 = structuredClone(version2);
+  version1.draftVersion = 1;
+  version1.tables[4].placements = [placement()];
+  delete version1.tables[4].placements[0].transform;
+  const migratedV1 = migrateLatticeProductionDraft(version1);
+  assert.deepEqual(migratedV1.tables[4].placements[0].transform,
+    { quarterTurns: 0, mirrorX: false, mirrorY: false });
+  assert.ok(migratedV1.tables.every(({ gridState }) => gridState === LATTICE_PRODUCTION_GRID_STATES.ACTIVE));
+  assert.equal(validateLatticeProductionDraft(migratedV1).valid, true);
+});
+
+test('unused Grids are pristine private slots and the entry Grid always remains active', () => {
+  for (const mutate of [
+    (grid) => { grid.visibility = LATTICE_PRODUCTION_VISIBILITY.PUBLIC; },
+    (grid) => { grid.title = 'HIDDEN DATA'; },
+    (grid) => { grid.subtitle = 'HIDDEN DATA'; },
+    (grid) => { grid.labelVisible = false; },
+    (grid) => { grid.labelAnchor = 'bottom-right'; },
+    (grid) => { grid.labelOffset.column = 1; },
+    (grid) => { grid.placements.push(placement()); },
+  ]) {
+    const draft = createEmptyLatticeProductionDraft(PROFILE);
+    mutate(draft.tables[0]);
+    assert.ok(validateLatticeProductionDraft(draft).errors.some(({ code }) => code === 'invalid_unused_grid'));
+  }
+  const draft = createEmptyLatticeProductionDraft(PROFILE);
+  draft.tables[4].gridState = LATTICE_PRODUCTION_GRID_STATES.UNUSED;
+  draft.tables[4].visibility = LATTICE_PRODUCTION_VISIBILITY.PRIVATE;
+  draft.tables[4].title = '';
+  assert.ok(validateLatticeProductionDraft(draft).errors.some(({ code }) => code === 'inactive_entry_grid'));
 });
 
 test('draft validation requires bounded integer cell geometry and controlled presentation values', () => {

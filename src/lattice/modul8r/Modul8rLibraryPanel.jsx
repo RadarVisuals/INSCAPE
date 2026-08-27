@@ -1,4 +1,4 @@
-import { Folder, Layers3, Plus, SquareStack, UserRound, WandSparkles } from 'lucide-react';
+import { ArrowLeft, Folder, Images, Layers3, Plus, SquareStack, UserRound, WandSparkles } from 'lucide-react';
 import { BROWSER_ASSET_SIZE, BROWSER_VIEW_KINDS, categoryAssetIds } from '../browser/browserWorkspaceModel.js';
 
 const assetId = (asset) => asset?.stableAssetId || asset?.id;
@@ -7,7 +7,7 @@ function NavButton({ active, categoryId, count, dropTarget, Icon = Folder, label
   return <button aria-label={label} data-active={active || undefined} data-browser-category-id={categoryId}
     data-drop-target={dropTarget || undefined} onClick={onClick} onContextMenu={onContextMenu} title={label} type="button">
     <span><Icon aria-hidden="true" size={14} strokeWidth={2} /><b>{label}</b></span>
-    <i title={unresolved ? `${count} visible / ${unresolved} unresolved` : `${count} visible`}>{count}{unresolved ? ` / ${unresolved} U` : ''}</i>
+    {count !== null && count !== undefined && <i title={unresolved ? `${count} visible / ${unresolved} unresolved` : `${count} visible`}>{count}{unresolved ? ` / ${unresolved} U` : ''}</i>}
   </button>;
 }
 
@@ -22,9 +22,17 @@ function RelatedAssetResults({ assets, onActivate, onContext, onPointerDown, wor
     {assets.map((asset) => {
       const id = assetId(asset); const isSelected = selected.has(id);
       const ratio = Number(asset.width) > 0 && Number(asset.height) > 0 ? `${asset.width} / ${asset.height}` : '1 / 1';
+      const opensCollection = asset.isCollection && asset.collectionRole !== 'cover';
+      const relationships = asset.collectionRole === 'cover'
+        ? [asset.collectionPreviewTokenId ? 'COLLECTION · TOKEN PREVIEW' : 'COLLECTION COVER']
+        : [asset.owned ? 'OWNED' : null,
+          asset.collectionPreviewTokenId ? 'TOKEN PREVIEW' : null,
+          asset.creatorRelationship === 'collection' ? 'FROM CREATED COLLECTION' : asset.created ? 'CREATED' : null,
+          asset.created && !asset.owned ? 'NOT OWNED' : null].filter(Boolean);
       return <button aria-label={[asset.title || id, asset.collection].filter(Boolean).join(' / ')} aria-pressed={isSelected}
         className="lattice-browser-asset" data-multi-selected={isSelected && selected.size > 1 || undefined}
-        data-selected={isSelected || undefined} key={id} onClick={(event) => workspace.selectAsset(id, event)}
+        data-collection={opensCollection || undefined} data-selected={isSelected || undefined} key={id}
+        onClick={(event) => opensCollection ? onActivate?.(event, asset) : workspace.selectAsset(id, event)}
         onDoubleClick={(event) => onActivate?.(event, asset)} onPointerDown={(event) => onPointerDown?.(event, asset)}
         onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); onContext?.(event, asset); }}
         onKeyDown={(event) => { if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
@@ -35,27 +43,33 @@ function RelatedAssetResults({ assets, onActivate, onContext, onPointerDown, wor
           onError={() => workspace.markAssetUnavailable(id, asset.previewSrc)} src={asset.previewSrc} /></span>
         {!workspace.hideLabels && <span className="lattice-browser-asset__record"><strong>{asset.title || id}</strong>
           {asset.collection && <small>{asset.collection}</small>}
-          <small className="lattice-browser-asset__relationships">{[asset.owned ? 'OWNED' : null, asset.created ? 'CREATED' : null,
-            asset.created && !asset.owned ? 'NOT OWNED' : null].filter(Boolean).join(' · ')}</small></span>}
+          <small className="lattice-browser-asset__relationships">{relationships.join(' · ')}</small></span>}
       </button>;
     })}
   </div>;
 }
 
-export default function Modul8rLibraryPanel({ categoryDropTargetId, categorySectionRef, data, onAssetActivate,
-  onAssetContext, onAssetPointerDown, onCategoryContext, onCreateCategory, onRetryCreated, relationshipView,
-  selectRelationshipView, workspace }) {
+export default function Modul8rLibraryPanel({ categoryDropTargetId, categorySectionRef, collectionContext, data,
+  onAssetActivate, onAssetContext, onAssetPointerDown, onCategoryContext, onCreateCategory, onExitCollection,
+  onRetryCollection, onRetryCreated, relationshipView, selectRelationshipView, workspace }) {
   const assets = workspace.renderableAssets; const categories = data.categories || [];
   const renderableIds = new Set(workspace.renderableAssetIds); const filed = categoryAssetIds(categories);
   const related = relationshipView === 'owned' ? workspace.filteredAssets.filter((asset) => asset.owned)
     : relationshipView === 'created' ? workspace.filteredAssets.filter((asset) => asset.created) : workspace.filteredAssets;
-  const emptyLabel = workspace.hasActiveFilters && workspace.viewAssetCount
+  const emptyLabel = collectionContext && data.status === 'loading' ? 'LOADING COLLECTION TOKENS'
+    : collectionContext && data.status === 'error' ? 'COLLECTION TOKENS UNAVAILABLE'
+    : workspace.hasActiveFilters && workspace.viewAssetCount
     ? `${workspace.viewAssetCount} ASSETS ARE IN THIS VIEW / NONE MATCH THE ACTIVE SEARCH OR FILTERS`
     : relationshipView === 'created' && data.createdStatus === 'loading' ? 'LOADING CREATOR-ATTRIBUTED WORKS'
       : relationshipView === 'created' && data.createdStatus === 'error' ? 'CREATED SOURCE UNAVAILABLE' : 'NO ASSETS IN THIS VIEW';
   const selectBuiltIn = (view) => { selectRelationshipView('all'); workspace.selectView(view); };
   return <div className="lattice-browser-panel" style={{ '--lattice-browser-sidebar-width': `${workspace.sidebarWidth}px` }}>
     <nav aria-label="Browser navigation" className="lattice-browser-sidebar">
+      {collectionContext ? <>
+        <NavButton count={null} Icon={ArrowLeft} label="Back to Created" onClick={onExitCollection} />
+        <NavButton active count={collectionContext.total ?? assets.length} Icon={Images}
+          label={collectionContext.name || 'Collection'} onClick={() => {}} />
+      </> : <>
       <NavButton active={relationshipView === 'all' && workspace.view.kind === BROWSER_VIEW_KINDS.ALL} count={assets.length} Icon={Layers3} label="All Assets" onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.ALL, id: null })} />
       <NavButton active={relationshipView === 'owned'} count={assets.filter((asset) => asset.owned).length} Icon={UserRound} label="Owned" onClick={() => { selectRelationshipView('owned'); workspace.selectView({ kind: BROWSER_VIEW_KINDS.ALL, id: null }); }} />
       <NavButton active={relationshipView === 'created'} count={assets.filter((asset) => asset.created).length} Icon={WandSparkles} label="Created" onClick={() => { selectRelationshipView('created'); workspace.selectView({ kind: BROWSER_VIEW_KINDS.ALL, id: null }); }} />
@@ -68,14 +82,19 @@ export default function Modul8rLibraryPanel({ categoryDropTargetId, categorySect
         dropTarget={categoryDropTargetId === category.id} key={category.id} label={category.name}
         onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.CATEGORY, id: category.id })}
         onContextMenu={(event) => { event.preventDefault(); onCategoryContext?.(event, category); }}
-        unresolved={category.assetIds.filter((id) => !renderableIds.has(id)).length} />)}{!categories.length && <p>NO CATEGORIES</p>}</div>
+        unresolved={category.assetIds.filter((id) => !renderableIds.has(id)).length} />)}{!categories.length && <p>NO CATEGORIES</p>}</div></>}
     </nav>
     <button aria-label="Resize Browser navigation" className="lattice-browser-sidebar-resize" onLostPointerCapture={workspace.sidebarResize.finish}
       onPointerCancel={workspace.sidebarResize.finish} onPointerDown={workspace.sidebarResize.begin} onPointerMove={workspace.sidebarResize.update}
       onPointerUp={workspace.sidebarResize.finish} title="Resize Browser navigation" type="button" />
-    <main className="lattice-browser-results">{data.error && <p className="lattice-browser-notice" data-error>{data.error}</p>}
+    <main className="lattice-browser-results">
+      {collectionContext && <div className="modul8r-library__collection-heading"><b>CREATED / {collectionContext.name || 'COLLECTION'}</b>
+        <span>{collectionContext.resolved || 0} / {collectionContext.total || 0} TOKENS</span></div>}
+      {data.error && <div className="lattice-browser-notice" data-error role="status">{collectionContext ? 'COLLECTION TOKENS UNAVAILABLE' : data.error}
+        {collectionContext && onRetryCollection && <button onClick={onRetryCollection} type="button">RETRY</button>}</div>}
       {data.createdError && <div className="lattice-browser-notice" data-error role="status">CREATED SOURCE UNAVAILABLE{data.createdRetained ? ' / RETAINED RESULTS' : ''}{onRetryCreated && <button onClick={onRetryCreated} type="button">RETRY</button>}</div>}
       {data.createdStatus === 'loading' && <p className="lattice-browser-notice" role="status">LOADING CREATED {data.createdProgress?.resolved || 0} / {data.createdProgress?.total || 0}</p>}
+      {collectionContext && data.status === 'loading' && <p className="lattice-browser-notice" role="status">LOADING COLLECTION TOKENS {data.progress?.resolved || 0} / {data.progress?.total || 0}</p>}
       <RelatedAssetResults assets={related} onActivate={onAssetActivate} onContext={onAssetContext} onPointerDown={onAssetPointerDown}
         workspace={{ ...workspace, emptyLabel }} />
     </main>

@@ -1,5 +1,5 @@
 import { createCanonicalPublication, normalizeProfileDocumentCid } from '../domain/profileDocumentPublication.js';
-import { assertProfileDocumentPublicationVersion } from '../domain/constants.js';
+import { assertValidProfileDocumentV9 } from '../domain/profileDocumentV9Validation.js';
 
 const DEFAULT_UPLOAD_ENDPOINT = '/api/profile-publications';
 const DEFAULT_UPLOAD_TIMEOUT_MS = 50_000;
@@ -17,7 +17,7 @@ export async function uploadProfileDocument(snapshot, {
   fetchImpl = fetch,
   timeoutMs = DEFAULT_UPLOAD_TIMEOUT_MS
 } = {}) {
-  assertProfileDocumentPublicationVersion(snapshot);
+  assertValidProfileDocumentV9(snapshot);
   const artifact = createCanonicalPublication(snapshot);
   let response;
   try {
@@ -36,6 +36,11 @@ export async function uploadProfileDocument(snapshot, {
 
   let payload;
   try { payload = await response.json(); } catch { payload = null; }
+  if (!payload) {
+    throw new ProfileDocumentUploadError(
+      'The publication function is unavailable. Plain Vite cannot upload to IPFS; use Netlify Dev or the exact Deploy Preview.',
+      'PUBLICATION_FUNCTION_UNAVAILABLE');
+  }
   if (!response.ok) {
     throw new ProfileDocumentUploadError(payload?.error?.message || 'The IPFS upload failed', payload?.error?.code);
   }

@@ -4,7 +4,7 @@ import { clampMenuPosition } from './contextMenuModel.js';
 const PANEL_WIDTH = 224;
 const ROW_HEIGHT = 27;
 
-export default function DesktopMenu({ anchor, commands, label, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand }) {
+export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = null, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand, systemWorkflowOverlay = false }) {
   const ref = useRef(null);
   const hoverTimerRef = useRef(0);
   const [position, setPosition] = useState(anchor);
@@ -65,7 +65,10 @@ export default function DesktopMenu({ anchor, commands, label, onCommand, onClos
       </div>}
     </>;
   };
-  return <div ref={ref} className={`desktop-menu${getSubmenuCommands ? ' desktop-menu--cascade' : ''}${className ? ` ${className}` : ''}`} role="menu" aria-label={label} style={{ left: position.x, top: position.y }} onKeyDown={onKeyDown} onPointerLeave={() => { window.clearTimeout(hoverTimerRef.current); onPreviewCommand?.(null); }}>
+  return <div ref={ref} className={`desktop-menu${getSubmenuCommands ? ' desktop-menu--cascade' : ''}${className ? ` ${className}` : ''}`}
+    data-lattice-menu-surface={menuSurfaceId || undefined} data-menu-surface={menuSurfaceId || undefined}
+    data-system-workflow-overlay={systemWorkflowOverlay || undefined}
+    role="menu" aria-label={label} style={{ left: position.x, top: position.y }} onKeyDown={onKeyDown} onPointerLeave={() => { window.clearTimeout(hoverTimerRef.current); onPreviewCommand?.(null); }}>
     {renderPanel(commands)}
   </div>;
 }

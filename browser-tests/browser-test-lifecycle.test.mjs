@@ -6,8 +6,10 @@ import {
   BROWSER_LIFECYCLE_TIMEOUTS,
   createBrowserTestCleanup,
   createOwnedProcessTree,
+  listPosixProcesses,
   removeBrowserRuntime,
   runBrowserSetupWithCleanup,
+  terminatePosixProcessTree,
   validateBrowserRuntimePath,
   withinDeadline
 } from './browser-test-lifecycle.mjs';
@@ -44,15 +46,70 @@ describe('Playwright browser lifecycle', () => {
 
   test('only the exact workspace browser runtime path is accepted', () => {
     assert.equal(validateBrowserRuntimePath(runtimePath, workspaceRoot), runtimePath);
-    for (const unsafe of [workspaceRoot, resolve(workspaceRoot, 'other'), resolve(workspaceRoot, '..', '.browser-test-runtime')]) {
+    const task4aRuntimePath = resolve(workspaceRoot, '.browser-test-runtime-task4a');
+    const isolationRuntimePath = resolve(workspaceRoot, '.browser-test-runtime-task4a-isolation');
+    const uniqueTask4aRuntimePath = resolve(workspaceRoot,
+      '.browser-test-runtime-task4a-1234-1785847105764-01234567-89ab-4cde-8fab-0123456789ab');
+    const uniqueSystemCharacterizationRuntimePath = resolve(workspaceRoot,
+      '.browser-test-runtime-system-characterization-1234-1785847105764-01234567-89ab-4cde-8fab-0123456789ab');
+    const uniquePublishedVisitorRuntimePath = resolve(workspaceRoot,
+      '.browser-test-runtime-published-visitor-1234-1785847105764-01234567-89ab-4cde-8fab-0123456789ab');
+    const uniqueOwnerRoutingRuntimePath = resolve(workspaceRoot,
+      '.browser-test-runtime-owner-routing-1234-1785847105764-01234567-89ab-4cde-8fab-0123456789ab');
+    assert.equal(validateBrowserRuntimePath(task4aRuntimePath, workspaceRoot), task4aRuntimePath);
+    assert.equal(validateBrowserRuntimePath(isolationRuntimePath, workspaceRoot), isolationRuntimePath);
+    assert.equal(validateBrowserRuntimePath(uniqueTask4aRuntimePath, workspaceRoot), uniqueTask4aRuntimePath);
+    assert.equal(validateBrowserRuntimePath(uniqueSystemCharacterizationRuntimePath, workspaceRoot), uniqueSystemCharacterizationRuntimePath);
+    assert.equal(validateBrowserRuntimePath(uniquePublishedVisitorRuntimePath, workspaceRoot), uniquePublishedVisitorRuntimePath);
+    assert.equal(validateBrowserRuntimePath(uniqueOwnerRoutingRuntimePath, workspaceRoot), uniqueOwnerRoutingRuntimePath);
+    for (const unsafe of [workspaceRoot, resolve(workspaceRoot, 'other'), resolve(runtimePath, '.browser-test-runtime-task4a'),
+      resolve(workspaceRoot, '..', '.browser-test-runtime'),
+      resolve(workspaceRoot, '.browser-test-runtime-task4a-arbitrary'),
+      resolve(workspaceRoot, '.browser-test-runtime-system-characterization-arbitrary'),
+      resolve(workspaceRoot, '.browser-test-runtime-published-visitor-arbitrary'),
+      resolve(workspaceRoot, '.browser-test-runtime-owner-routing-arbitrary'),
+      resolve(workspaceRoot, '.browser-test-runtime-task4a-1234-1785847105764-01234567-89ab-3cde-8fab-0123456789ab')]) {
       assert.throws(() => validateBrowserRuntimePath(unsafe, workspaceRoot), /Refusing browser runtime cleanup/);
     }
   });
 
   test('runtime removal uses one bounded killable child operation', async () => {
     const calls = [];
-    await removeBrowserRuntime({ runtimePath, workspaceRoot, run: async (...args) => { calls.push(args); return { code: 0, stdout: '', stderr: '' }; } });
+    const result = await removeBrowserRuntime({ runtimePath, workspaceRoot, run: async (...args) => { calls.push(args); return { code: 0, stdout: '', stderr: '' }; } });
     assert.equal(calls.length, 1); assert.equal(calls[0][0], process.execPath); assert.equal(calls[0][2].timeoutMs, BROWSER_LIFECYCLE_TIMEOUTS.runtimeRemovalMs);
+    assert.equal(result.mode, 'node-rm');
+  });
+
+  test('runtime removal falls back to one bounded native Windows operation after Node UNKNOWN', async () => {
+    if (process.platform !== 'win32') return;
+    const calls = [];
+    const result = await removeBrowserRuntime({ runtimePath, workspaceRoot, run: async (...args) => {
+      calls.push(args);
+      return calls.length === 1 ? { code: 1, stdout: '', stderr: 'UNKNOWN' } : { code: 0, stdout: '', stderr: '' };
+    } });
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1][0], 'powershell.exe');
+    assert.equal(calls[1][1].at(-1), runtimePath);
+    assert.equal(calls[1][2].timeoutMs, BROWSER_LIFECYCLE_TIMEOUTS.runtimeRemovalMs);
+    assert.equal(result.mode, 'powershell-fallback');
+  });
+
+  test('POSIX inventory records stable process creation identities', async () => {
+    const result = await listPosixProcesses({ run: async () => ({
+      code: 0, stderr: '', stdout: '  10   1 Fri Aug  7 12:00:00 2026\n  11  10 Fri Aug  7 12:00:01 2026\n',
+    }) });
+    assert.deepEqual(result, [
+      { pid: 10, parentPid: 1, identity: 'Fri Aug  7 12:00:00 2026' },
+      { pid: 11, parentPid: 10, identity: 'Fri Aug  7 12:00:01 2026' },
+    ]);
+  });
+
+  test('POSIX forced cleanup terminates only the verified root tree, descendants first', async () => {
+    const killed = [];
+    const inventory = async () => [processEntry(10, 1), processEntry(11, 10), processEntry(12, 11), processEntry(99, 1)];
+    const result = await terminatePosixProcessTree(10, { inventory, kill: (pid, signal) => killed.push([pid, signal]) });
+    assert.deepEqual(killed, [[12, 'SIGKILL'], [11, 'SIGKILL'], [10, 'SIGKILL']]);
+    assert.deepEqual(result.targets, [12, 11, 10]);
   });
 
   test('owned descendants exclude unrelated processes and force only the owned root', async () => {

@@ -1,5 +1,6 @@
 .lattice-engine-shell,
-.owner-lattice-shell {
+.owner-lattice-shell,
+.lattice-placement-chooser {
   --lattice-chrome-surface: var(--lattice-menu-panel);
   --lattice-chrome-ink: var(--lattice-menu-ink);
   --lattice-chrome-muted: var(--lattice-menu-muted);

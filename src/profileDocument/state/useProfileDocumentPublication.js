@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PROFILE_DOCUMENT_PUBLICATION_STATUS } from '../domain/profileDocumentPublication.js';
 import { createProfileDocumentPublisher, describePublicationError } from '../storage/profileDocumentPublisher.js';
+import { ALPHA_SUPPORT_CODES, classifyPublicationSupportCode } from '../../support/alphaSupport.js';
 
 export function createProfileDocumentPublicationState() {
   return { status: PROFILE_DOCUMENT_PUBLICATION_STATUS.READY, error: null,
-    verified: null, transactionHash: null, receiptConfirmed: false };
+    supportCode: null, verified: null, transactionHash: null, receiptConfirmed: false };
 }
 
 export function useProfileDocumentPublication(getContext, freshnessKey) {
@@ -34,7 +35,8 @@ export function useProfileDocumentPublication(getContext, freshnessKey) {
     setState({ ...createProfileDocumentPublicationState(), status: PROFILE_DOCUMENT_PUBLICATION_STATUS.VERIFYING_CID });
     try { return await publisher.verifyCid(snapshot, cid, options); }
     catch (error) {
-      setState({ ...createProfileDocumentPublicationState(), status: PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR, error: describePublicationError(error) });
+      setState({ ...createProfileDocumentPublicationState(), status: PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR,
+        supportCode: ALPHA_SUPPORT_CODES.CID_VERIFICATION_FAILED, error: describePublicationError(error) });
       return null;
     }
   }, [publisher]);
@@ -42,8 +44,10 @@ export function useProfileDocumentPublication(getContext, freshnessKey) {
   const publish = useCallback(() => {
     if (!state.verified) return Promise.resolve(null);
     return publisher.publish(state.verified).catch((error) => {
+      const described = describePublicationError(error);
       setState((current) => ({ ...current, status: PROFILE_DOCUMENT_PUBLICATION_STATUS.ERROR,
-        error: describePublicationError(error) }));
+        supportCode: classifyPublicationSupportCode(error, described), error: described,
+        transactionHash: error?.transactionHash || current.transactionHash }));
       return null;
     });
   }, [publisher, state.verified]);

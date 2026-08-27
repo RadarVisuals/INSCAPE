@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { after, before, describe, test } from 'node:test';
 import { access } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -19,7 +20,7 @@ import {
 } from './playwright-browser-adapter.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const runtimeDir = resolve(root, '.browser-test-runtime');
+const runtimeDir = resolve(root, `.browser-test-runtime-published-visitor-${process.pid}-${Date.now()}-${randomUUID()}`);
 const profileA = '0x1111111111111111111111111111111111111111';
 const profileB = '0x2222222222222222222222222222222222222222';
 const browserCandidates = [
@@ -50,7 +51,10 @@ const expectedCspProblems = [];
 let acceptingExpectedCspProblems = false;
 const recordBrowserProblem = (problem) => {
   const expectedBlockedFixtureRequest = /^Request failed: https:\/\/csp-blocked\.invalid csp$/iu.test(problem);
-  if (expectedBlockedFixtureRequest || (acceptingExpectedCspProblems && /content security policy|refused to connect/iu.test(problem))) {
+  const expectedReplacedFixtureImage = /^Request failed: https:\/\/published-images\.invalid net::ERR_ABORTED$/u.test(problem);
+  const expectedReplacedProfileRead = /^Request failed: https:\/\/rpc\.mainnet\.lukso\.network net::ERR_ABORTED$/u.test(problem);
+  if (expectedBlockedFixtureRequest || expectedReplacedFixtureImage || expectedReplacedProfileRead
+      || (acceptingExpectedCspProblems && /content security policy|refused to connect/iu.test(problem))) {
     expectedCspProblems.push(problem);
     return;
   }
@@ -113,33 +117,29 @@ async function viewport(width, height, touch = false) {
   await waitFor(`innerWidth === ${width} && innerHeight === ${height}`, `${width}x${height} viewport`);
 }
 
-async function navigate(address = profileA, runtime = 'lattice') {
+async function navigate(address = profileA, runtime = 'grid') {
   const run = String(++navigationSequence);
   const fixtureUrl = `${baseUrl}/browser-tests/fixture.html?view=${address}&runtime=${runtime}&run=${run}`;
   try {
     assert.equal(interceptionInstalled, true, 'Playwright routing must exist before navigation');
-    const response = await page.goto(fixtureUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 });
+    const response = await page.goto(fixtureUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
     assert.ok(response?.ok(), `Fixture navigation returned HTTP ${response?.status() ?? 'unknown'}`);
     lifecycleDiagnostic('bootstrap:document-loaded');
     await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(address)} && window.__fixture?.ready === true && window.__fixture?.runtime === ${JSON.stringify(runtime)}`, 'published fixture');
     lifecycleDiagnostic('bootstrap:fixture-mounted');
-    await waitFor(`${runtime === 'lattice' ? "document.querySelector('.visitor-lattice-world')" : "document.querySelector('.published-home-world')"} && window.__fixture`, 'published visitor world');
+    await waitFor(`document.querySelector('.visitor-grid-world') && window.__fixture`, 'v9 published visitor world');
     lifecycleDiagnostic('bootstrap:published-ready');
   } catch (error) {
     await collectBootstrapDiagnostics(error, fixtureUrl);
     throw error;
   }
-  if (runtime === 'lattice') {
-    await waitFor(`document.querySelectorAll('.visitor-lattice-world__table').length === 9 && document.querySelectorAll('.lattice-production-table').length === 9`, 'canonical nine-table visitor projection');
-    await waitFor(`document.querySelector('.visitor-lattice-world__table[data-active]')?.querySelector('.lattice-production-table')?.dataset.tableId === 'table-05'`, 'canonical visitor entry table');
-  } else {
-    await waitFor(`!!document.querySelector('.published-home-world__spatial')`, 'legacy visitor compatibility projection');
-  }
+  await waitFor(`document.querySelectorAll('.visitor-grid-renderer').length === 1`, 'one active ordered Grid projection');
+  await waitFor(`document.querySelector('.visitor-grid-world__viewport')?.dataset.activeGridId?.endsWith('-home')`, 'first public Grid visitor entry');
 }
 
 async function collectBootstrapDiagnostics(error, fixtureUrl) {
   let state = {}; let viteReachable = false;
-  try { state = await evaluate(`(()=>{const root=document.querySelector('[data-browser-fixture]');return {href:location.href,readyState:document.readyState,root:Boolean(root),rootChildren:Math.min(root?.childElementCount||0,100),published:Boolean(document.querySelector('.visitor-lattice-world,.published-home-world')&&window.__fixture),runtime:window.__fixture?.runtime||null}})()`); } catch { state = { evaluation: 'unavailable' }; }
+  try { state = await evaluate(`(()=>{const root=document.querySelector('[data-browser-fixture]');return {href:location.href,readyState:document.readyState,root:Boolean(root),rootChildren:Math.min(root?.childElementCount||0,100),published:Boolean(document.querySelector('.visitor-grid-world')&&window.__fixture),runtime:window.__fixture?.runtime||null}})()`); } catch { state = { evaluation: 'unavailable' }; }
   try { viteReachable = (await fetch(fixtureUrl, { signal: AbortSignal.timeout(BROWSER_LIFECYCLE_TIMEOUTS.resourceCloseMs) })).ok; } catch { /* bounded diagnostic only */ }
   lifecycleDiagnostic('bootstrap:failed-state', {
     code: error.code || 'ERROR', location: state.href?.startsWith(baseUrl) ? 'fixture' : state.href || 'unknown', readyState: state.readyState || 'unknown',
@@ -150,7 +150,7 @@ async function collectBootstrapDiagnostics(error, fixtureUrl) {
 
 async function navigateCsp(address = profileA) {
   const run = String(++navigationSequence);
-  await page.goto(`${baseUrl}/browser-tests/fixture.html?view=${address}&runtime=lattice&run=${run}&csp=1`, { waitUntil: 'domcontentloaded', timeout: 10_000 });
+  await page.goto(`${baseUrl}/browser-tests/fixture.html?view=${address}&runtime=grid&run=${run}&csp=1`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
   await waitForCspFixtureReady(page, { fixtureOrigin: baseUrl });
   await viewport(activeViewport.width, activeViewport.height, activeViewport.touch);
 }
@@ -283,32 +283,40 @@ after(async () => {
   if (failures.length) throw new AggregateError(failures, 'Published visitor browser after-hook failed');
 });
 
-test('canonical Version-8 visitor mounts one semantic nine-table public surface', async () => {
+test('exact v9 mounts one semantic ordered-Grid surface without owner, Library, or legacy topology', async () => {
   await viewport(1280, 720, false); await navigate();
-  const state = await evaluate(`(()=>({runtime:window.__fixture.runtime,worlds:document.querySelectorAll('.visitor-lattice-world').length,tables:document.querySelectorAll('.visitor-lattice-world__table').length,renderers:document.querySelectorAll('.lattice-production-table').length,active:document.querySelector('.visitor-lattice-world__table[data-active] .lattice-production-table')?.dataset.tableId,legacy:document.querySelectorAll('.published-home-world').length,ownerControls:document.querySelectorAll('[data-owner-route="true"],[data-resize-control]').length}))()`);
-  assert.deepEqual(state, { runtime: 'lattice', worlds: 1, tables: 9, renderers: 9, active: 'table-05', legacy: 0, ownerControls: 0 });
+  const state = await evaluate(`(()=>({runtime:window.__fixture.runtime,worlds:document.querySelectorAll('.visitor-grid-world').length,renderers:document.querySelectorAll('.visitor-grid-renderer').length,active:document.querySelector('.visitor-grid-renderer')?.dataset.gridId,legacy:document.querySelectorAll('.visitor-lattice-world,.published-home-world,[data-table-id]').length,ownerControls:document.querySelectorAll('[data-owner-route="true"],[data-resize-control]').length}))()`);
+  assert.deepEqual(state, { runtime: 'grid', worlds: 1, renderers: 1, active: 'grid:alpha-home', legacy: 0, ownerControls: 0 });
 });
 
 test('Directory visits a published workspace, Close remains Close, and Return restores the connected workspace', async () => {
   await viewport(1280, 720, false); await navigate();
-  await click('.visitor-lattice-world__actions button');
-  await waitFor(`!!document.querySelector('.profile-discovery__panel')`, 'directory opens');
-  await evaluate(`document.querySelector('[aria-label="Close INSCAPE directory"]').focus()`);
+  await click('.visitor-grid-world__actions button');
+  await waitFor(`!!document.querySelector('.public-entry-portal[data-embedded][data-mode="explore"]')`, 'directory opens');
+  const directoryStyle = await evaluate(`(()=>{const root=document.querySelector('.public-entry-portal');const rect=root.getBoundingClientRect();return{menuSurface:root.dataset.menuSurface,background:getComputedStyle(root).backgroundColor,color:getComputedStyle(root).color,pointerEvents:getComputedStyle(root).pointerEvents,hitRoot:document.elementFromPoint(innerWidth/2,innerHeight/2)?.closest('.public-entry-portal')===root,width:rect.width,height:rect.height}})()`);
+  assert.equal(directoryStyle.menuSurface, 'mist');
+  assert.match(directoryStyle.background, /215, 211, 202/);
+  assert.match(directoryStyle.color, /17, 19, 19/);
+  assert.equal(directoryStyle.pointerEvents, 'auto');
+  assert.equal(directoryStyle.hitRoot, true);
+  assert.equal(directoryStyle.width, 1280);
+  assert.equal(directoryStyle.height, 720);
+  await evaluate(`document.querySelector('[aria-label="Return to workspace"]').focus()`);
   await pressKey('Enter');
-  await waitFor(`!document.querySelector('.profile-discovery__panel')`, 'directory closes with Enter on Close');
+  await waitFor(`!document.querySelector('.public-entry-portal')`, 'directory closes with Enter on Close');
   assert.equal(await evaluate(`window.__fixture.address`), profileA);
 
-  await click('.visitor-lattice-world__actions button');
-  await page.locator('.profile-discovery__search input').fill('Beta');
-  await waitFor(`document.querySelectorAll('.profile-discovery__result').length === 1`, 'directory search result');
-  await click('.profile-discovery__result');
+  await click('.visitor-grid-world__actions button');
+  await page.locator('.public-entry-portal__header-search input').fill('Beta');
+  await waitFor(`document.querySelectorAll('.public-entry-portal__world-card').length === 1 && !document.querySelector('.public-entry-portal__world-action').disabled`, 'directory search result');
+  await click('.public-entry-portal__world-action');
   await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileB)}`, 'directory profile visit');
-  await waitFor(`!!document.querySelector('.visitor-lattice-world__actions button:nth-child(2)')`, 'Return command');
-  await click('.visitor-lattice-world__actions button:nth-child(2)');
+  await waitFor(`!!document.querySelector('.visitor-grid-world__actions button:nth-child(2)')`, 'Return command');
+  await click('.visitor-grid-world__actions button:nth-child(2)');
   await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileA)}`, 'connected workspace return');
 });
 
-test('canonical table placement opens the production focus viewer and restores its source', async () => {
+test('canonical Grid placement opens the focus viewer, hides its source, and restores exact focus', async () => {
   await viewport(1280, 720, false); await navigate();
   await waitFor(`document.querySelector('[data-placement-id="art:Alpha:https"]')?.dataset.mediaState === 'ready'`, 'canonical placement media');
   await click('[data-placement-id="art:Alpha:https"]');
@@ -319,6 +327,25 @@ test('canonical table placement opens the production focus viewer and restores i
   await pressKey('Escape');
   await waitFor(`!document.querySelector('.lattice-focus-viewer')`, 'production focus viewer closes');
   await waitFor(`!document.querySelector('[data-placement-id="art:Alpha:https"]').hasAttribute('data-viewer-source-hidden')`, 'placement source restored');
+  assert.equal(await evaluate(`document.activeElement?.dataset.placementId`), 'art:Alpha:https');
+});
+
+test('public identity rack replaces its source and returns to the persistent compact card', async () => {
+  await viewport(1280, 720, false); await navigate();
+  await click('[data-visitor-profile-trigger]');
+  await waitFor(`!!document.querySelector('[data-identity-dossier-source="true"]')`, 'public compact identity source');
+  await click('[data-identity-dossier-source="true"]');
+  const identityViewer = page.locator('#lattice-profile-dossier');
+  await identityViewer.waitFor({ state: 'visible', timeout: 10_000 });
+  assert.equal(await evaluate(`document.querySelectorAll('[data-identity-dossier-source="true"]').length`), 0);
+  assert.match(await evaluate(`document.querySelector('.lattice-production-identity-dossier').textContent`), /Alpha Visitor Fixture/i);
+  await page.getByRole('button', { name: 'Close profile' }).click();
+  await waitFor(`document.querySelector('#lattice-profile-dossier')?.dataset.phase === 'compact'`, 'persistent compact identity card');
+  assert.equal(await identityViewer.count(), 1);
+  await waitFor(`document.activeElement?.classList.contains('lattice-production-identity-dossier__source-summary')`,
+    'persistent compact identity focus');
+  assert.equal(await identityViewer.locator('.lattice-production-identity-dossier__source-summary')
+    .evaluate((node) => node === document.activeElement), true);
 });
 
 test('React StrictMode reuses one factory provider while cleanup, replacement, and recovery stay safe', async () => {
@@ -356,43 +383,55 @@ test('React StrictMode reuses one factory provider while cleanup, replacement, a
   await navigate();
 });
 
-test('canonical empty-world pointer following sends one continuous Keeper update', async () => {
+test('semantic controls and owned keyboard input navigate dynamic ordered Grids', async () => {
   await viewport(1280, 720, false); await navigate();
-  await evaluate(`window.__fixture.resetMoves()`);
-  await page.mouse.move(920, 600);
-  await waitFor(`window.__fixture.moves.length === 1`, 'one Keeper pointer-follow move');
-  assert.deepEqual(await evaluate(`window.__fixture.moves.map(({x,y,options})=>({x,y,continuous:options?.continuous}))`), [{ x: 920, y: 600, continuous: true }]);
-});
-
-test('canonical drag and semantic controls navigate the permanent lattice topology', async () => {
-  await viewport(1280, 720, false); await navigate();
-  const surface = await point('.visitor-lattice-world', 0.88, 0.78);
-  await mouse('mousePressed', surface.x, surface.y);
-  await mouse('mouseMoved', surface.x - 180, surface.y, { buttons: 1 });
-  await mouse('mouseReleased', surface.x - 180, surface.y);
-  await waitFor(`document.querySelector('.visitor-lattice-world__table[data-active] .lattice-production-table')?.dataset.tableId === 'table-06' && !document.querySelector('.visitor-lattice-world__stage').hasAttribute('data-snapping')`, 'drag navigation to right table');
-  await click('[aria-label="Navigate to table below"]');
-  await waitFor(`document.querySelector('.visitor-lattice-world__table[data-active] .lattice-production-table')?.dataset.tableId === 'table-09'`, 'semantic navigation to lower table');
-  assert.equal(await evaluate(`document.querySelectorAll('.visitor-lattice-world__table').length`), 9);
+  await click('[aria-label="Next Grid"]');
+  await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-archive'`, 'next ordered Grid');
+  await evaluate(`document.querySelector('.visitor-grid-world').focus()`); await pressKey('ArrowLeft');
+  await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-home'`, 'keyboard returns to entry Grid');
+  const leftDrag = await point('.visitor-grid-world__viewport', .72, .5);
+  await page.keyboard.down('Space');
+  await waitFor(`document.querySelector('.visitor-grid-world')?.dataset.spaceNavigation === 'true'`, 'visitor Space navigation ownership');
+  await page.mouse.move(leftDrag.x, leftDrag.y); await page.mouse.down();
+  await page.mouse.move(leftDrag.x - 180, leftDrag.y + 4, { steps: 8 });
+  const liveSwipe = await evaluate(`(()=>{const planes=[...document.querySelectorAll('.visitor-grid-world__grid-plane')];return {count:planes.length,currentLeft:planes[0]?.getBoundingClientRect().left,adjacentLeft:planes[1]?.getBoundingClientRect().left,viewportWidth:document.querySelector('.visitor-grid-world__viewport')?.clientWidth}})()`);
+  assert.equal(liveSwipe.count, 2, 'the adjacent Grid is painted during the gesture');
+  assert.ok(liveSwipe.currentLeft < -100, `the current Grid follows the pointer: ${JSON.stringify(liveSwipe)}`);
+  assert.ok(liveSwipe.adjacentLeft > 0 && liveSwipe.adjacentLeft < liveSwipe.viewportWidth,
+    `the adjacent Grid enters the viewport: ${JSON.stringify(liveSwipe)}`);
+  await page.mouse.up();
+  assert.equal(await evaluate(`document.querySelector('.visitor-grid-world')?.dataset.gridSwipeSettling`), 'true',
+    'release settles the moving Grid planes before navigation commits');
+  await page.keyboard.up('Space');
+  await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-archive'`, 'Space-drag advances the published Grid');
+  assert.equal(await evaluate(`document.querySelectorAll('.lattice-focus-viewer').length`), 0,
+    'Space-drag must not activate the artwork beneath the pointer');
+  const rightDrag = await point('.visitor-grid-world__viewport', .28, .5);
+  await page.keyboard.down('Space'); await page.mouse.move(rightDrag.x, rightDrag.y); await page.mouse.down();
+  await page.mouse.move(rightDrag.x + 180, rightDrag.y - 4, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Space');
+  await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-home'`, 'reverse Space-drag returns to the entry Grid');
+  await waitFor(`document.querySelector('.visitor-grid-world')?.dataset.gridSwipeSettling !== 'true'`, 'reverse Space-drag settles');
+  assert.equal(await evaluate(`document.querySelectorAll('.visitor-grid-renderer').length`), 1);
 });
 
 test('canonical published HTTPS and IPFS media render with no referrer', async () => {
   await viewport(1280, 720, false); await navigate();
-  await waitFor(`document.querySelectorAll('.visitor-lattice-world__table[data-active] [data-media-state="ready"]').length === 2`, 'canonical published images');
-  const policy = await evaluate(`[...document.querySelectorAll('.visitor-lattice-world__table[data-active] img')].map((image)=>image.referrerPolicy)`);
+  await waitFor(`document.querySelectorAll('.visitor-grid-renderer [data-media-state="ready"]').length === 2`, 'canonical published images');
+  const policy = await evaluate(`[...document.querySelectorAll('.visitor-grid-renderer img')].map((image)=>image.referrerPolicy)`);
   assert.equal(policy.length, 2); assert.ok(policy.every((value) => value === 'no-referrer'));
   assert.ok(imageRequests.some((url) => url.includes('/ipfs/') && url.includes('space-Alpha.png')), 'IPFS media used the configured HTTPS gateway');
+  assert.equal(await evaluate(`document.querySelector('[data-placement-id="art:Alpha:https"] img').loading`), 'eager');
+  const transformed = await evaluate(`(()=>{const n=document.querySelector('[data-placement-id="art:Alpha:ipfs"] img');return {transform:n.style.transform}})()`);
+  assert.match(transformed.transform, /scale\(-1, 1\) rotate\(90deg\)/);
+  const fit = await evaluate(`(()=>{const dimensions=(id)=>{const p=document.querySelector('[data-placement-id="'+id+'"]');const opening=p.querySelector('.lattice-production-placement__opening');const o=opening.getBoundingClientRect();const i=p.querySelector('img').getBoundingClientRect();return {opening:{w:o.width,h:o.height,overflow:getComputedStyle(opening).overflow},image:{w:i.width,h:i.height}}};return {native:dimensions('art:Alpha:https'),cropped:dimensions('art:Alpha:ipfs')}})()`);
+  assert.equal(fit.native.opening.overflow, 'hidden');
+  assert.ok(fit.native.image.w <= fit.native.opening.w + 2 && fit.native.image.h <= fit.native.opening.h + 2,
+    `native no-crop media is contained: ${JSON.stringify(fit.native)}`);
+  assert.ok(fit.cropped.image.w >= fit.cropped.opening.w - 1 && fit.cropped.image.h >= fit.cropped.opening.h - 1,
+    `cropped media covers its opening: ${JSON.stringify(fit.cropped)}`);
 });
 
-test('legacy insecure media is rejected while canonical broken media falls back and recovers', async () => {
-  const insecure = 'http://published-images.invalid/insecure.png';
-  await viewport(1280, 720, false); await navigate(profileA, 'legacy');
-  assert.equal(await evaluate(`window.__fixture.runtime`), 'legacy');
-  await evaluate(`window.__fixture.setArtworkUrl(${JSON.stringify(insecure)})`);
-  await enterGallery();
-  await waitFor(`!!document.querySelector('[data-canvas-object-id="legacy:Alpha:artwork"] [data-published-image-fallback]')`, 'legacy insecure media fallback');
-  assert.equal(imageRequests.includes(insecure), false);
-
+test('canonical broken media reaches fallback after retries and recovers on a new source', async () => {
   await navigate();
   await evaluate(`window.__fixture.setArtworkUrl('https://published-images.invalid/broken-art.png')`);
   await waitFor(`document.querySelector('[data-placement-id="art:Alpha:https"]')?.dataset.mediaState === 'failed'`, 'canonical broken media fallback');
@@ -418,14 +457,15 @@ test('an actual CSP response header blocks disallowed canonical media and expose
 
 test('narrow visitor mode keeps Directory and Return reachable without desktop authoring parity', async () => {
   await viewport(390, 844, true); await navigate(profileB);
-  const commands = await evaluate(`[...document.querySelectorAll('.visitor-lattice-world__actions button')].map((button)=>({text:button.textContent.trim(),rect:button.getBoundingClientRect().toJSON()}))`);
+  const commands = await evaluate(`[...document.querySelectorAll('.visitor-grid-world__actions button')].map((button)=>({text:button.textContent.trim(),rect:button.getBoundingClientRect().toJSON()}))`);
   assert.equal(commands.length, 2);
-  assert.ok(commands.every(({ rect }) => rect.left >= 0 && rect.right <= 390 && rect.top >= 0 && rect.bottom <= 844));
-  await click('.visitor-lattice-world__actions button:first-child');
-  await waitFor(`!!document.querySelector('.profile-discovery__panel')`, 'narrow directory opens');
-  await click('[aria-label="Close INSCAPE directory"]');
-  await waitFor(`!document.querySelector('.profile-discovery__panel')`, 'narrow directory closes');
-  await click('.visitor-lattice-world__actions button:nth-child(2)');
+  assert.ok(commands.every(({ rect }) => rect.left >= 0 && rect.right <= 390 && rect.top >= 0 && rect.bottom <= 844),
+    `narrow commands escaped the viewport: ${JSON.stringify(commands)}`);
+  await click('.visitor-grid-world__actions button:first-child');
+  await waitFor(`!!document.querySelector('.public-entry-portal[data-embedded]')`, 'narrow directory opens');
+  await click('[aria-label="Return to workspace"]');
+  await waitFor(`!document.querySelector('.public-entry-portal')`, 'narrow directory closes');
+  await click('.visitor-grid-world__actions button:nth-child(2)');
   await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileA)}`, 'narrow Return');
   assert.equal(await evaluate(`document.querySelectorAll('[data-resize-control]').length`), 0, 'narrow mode exposes no desktop resize control');
 });

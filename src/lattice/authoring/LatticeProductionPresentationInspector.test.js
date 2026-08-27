@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const inspector = readFileSync(new URL('./LatticeProductionPresentationInspector.jsx', import.meta.url), 'utf8');
 const movement = readFileSync(new URL('./LatticeProductionMovementLayer.jsx', import.meta.url), 'utf8');
-const owner = readFileSync(new URL('../../public/OwnerLatticeShell.jsx', import.meta.url), 'utf8');
+const systemInspector = readFileSync(new URL('../../public/ownerSystemWorkflow/OwnerSystemWorkflowSelectionInspector.jsx', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./latticeProductionPresentationInspector.css', import.meta.url), 'utf8');
 
 test('right-click and keyboard placement menu open only the canonical LATTICE presentation inspector', () => {
@@ -14,7 +14,7 @@ test('right-click and keyboard placement menu open only the canonical LATTICE pr
   assert.match(movement, /<LatticeProductionPresentationInspector/);
   assert.match(movement, /setContextMenu\(null\);[\s\S]*setPresentationInspector/);
   assert.match(movement, /cropSession \|\| gestureRef\.current \|\| presentationInspector/);
-  assert.doesNotMatch(`${movement}\n${inspector}\n${owner}`, /ModuleGridShell|ArtworkInspector|LatticeEnginePrototype|LatticeEngineDevControls|prototype fixtures/);
+  assert.doesNotMatch(`${movement}\n${inspector}`, /ModuleGridShell|ArtworkInspector|LatticeEnginePrototype|LatticeEngineDevControls|prototype fixtures/);
 });
 
 test('portal inspector restores pointer interaction inside the inert owner chrome boundary', () => {
@@ -30,7 +30,7 @@ test('inspector uses canonical constants, mat resolver, and local preview state 
   assert.match(inspector, /normalizeLatticeProductionPresentation/);
   assert.match(inspector, /const \[value, setValue\] = useState\(initial\)/);
   assert.match(movement, /kind: 'presentation'/);
-  assert.match(owner, /createLatticeProductionPresentationCandidate\(authoring\.draft, compositionPreview\.request\)/);
+  assert.match(systemInspector, /session\.setPlacementPresentation\(\{ gridId: grid\.id, placementId: placement\.id/u);
   assert.doesNotMatch(inspector, /localStorage|commitCompletedOperation|commitPresentation/);
 });
 

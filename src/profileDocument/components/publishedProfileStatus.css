@@ -1,75 +1,63 @@
 .published-profile-status {
-  display: grid;
+  --lattice-menu-panel: rgb(215 211 202 / .98);
+  --lattice-menu-ink: #111313;
+  --lattice-menu-muted: rgb(17 19 19 / .58);
+  --lattice-menu-faint: rgb(17 19 19 / .36);
+  --lattice-menu-line-strong: rgb(17 19 19 / .3);
+  --lattice-menu-selected: rgb(17 19 19 / .065);
   place-items: center;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   padding: 24px;
+  overflow: auto;
   box-sizing: border-box;
   pointer-events: auto;
-  background-color: #050606;
-  background-image:
-    linear-gradient(rgba(238, 235, 223, .11) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(238, 235, 223, .11) 1px, transparent 1px);
-  background-size: 80px 80px;
+  background-color: #c9c6bd;
+  background-image: linear-gradient(rgb(18 20 20 / .11) 1px, transparent 1px), linear-gradient(90deg, rgb(18 20 20 / .11) 1px, transparent 1px);
+  background-size: clamp(44px, 6.25vw, 80px) clamp(44px, 6.25vw, 80px);
+  color: var(--lattice-menu-ink);
+  font-family: "Geist", Arial, sans-serif;
 }
 
 .published-profile-status__card {
-  width: min(560px, calc(100vw - 40px));
+  display: grid;
+  width: min(620px, calc(100vw - 40px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  overflow: auto;
   box-sizing: border-box;
-  padding: 30px;
-  border: 1px solid var(--color-border-strong);
-  background: rgba(4, 5, 5, .97);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, .58);
+  border: 1px solid var(--lattice-menu-line-strong);
+  background: var(--lattice-menu-panel);
+  color: var(--lattice-menu-ink);
 }
-.published-profile-status__card > span {
-  color: rgba(238, 235, 223, .42);
-  font-size: 9px;
-  font-weight: 650;
-  letter-spacing: .11em;
-}
-.published-profile-status__card h1 {
-  margin: 14px 0 10px;
-  color: var(--color-text-warm);
-  font: 650 22px/1.15 var(--font-interface);
-  letter-spacing: .04em;
-}
-.published-profile-status__card p {
-  max-width: 440px;
-  margin: 0 0 15px;
-  color: rgba(238, 235, 223, .62);
-  font-size: 11px;
-  line-height: 1.65;
-  text-transform: none;
-}
-.published-profile-status__card code {
-  display: block;
-  overflow: hidden;
-  color: rgba(238, 235, 223, .38);
-  font: 10px/1.4 monospace;
-  text-overflow: ellipsis;
-  text-transform: none;
-  white-space: nowrap;
-}
-.published-profile-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 24px;
-}
-.published-profile-actions button,
-.published-profile-actions .published-profile-retry {
-  min-height: 36px;
-  margin: 0;
-  padding: 0 14px;
-  border: 1px solid var(--color-border-strong);
-  background: transparent;
-  color: rgba(238, 235, 223, .82);
-  font: 650 9px/1 var(--font-interface);
-  letter-spacing: .08em;
-  cursor: pointer;
-}
-.published-profile-actions button:hover { border-color: rgba(238, 235, 223, .58); color: var(--color-text-bright); }
 
-@media (max-width: 560px) {
-  .published-profile-status { padding: 12px; background-size: 56px 56px; }
-  .published-profile-status__card { width: 100%; padding: 22px; }
-  .published-profile-status__card h1 { font-size: 18px; }
+.published-profile-status__card > header { display: grid; gap: 5px; min-height: 62px; padding: 11px 13px; box-sizing: border-box; border-bottom: 1px solid var(--lattice-menu-line-strong); }
+.published-profile-status__card > header span,
+.published-profile-status__card > footer,
+.published-profile-status__card code { font: 600 9px/1.2 "IBM Plex Mono", monospace; letter-spacing: .09em; }
+.published-profile-status__card > header span { color: var(--lattice-menu-muted); }
+.published-profile-status__card h1 { margin: 0; font-size: 24px; line-height: 1.15; }
+.published-profile-status__body { display: grid; gap: 13px; min-width: 0; padding: 16px; }
+.published-profile-status__body > p { max-width: 500px; margin: 0; color: var(--lattice-menu-muted); font-size: 14px; line-height: 1.78; }
+.published-profile-status__body > code { display: block; overflow: hidden; color: var(--lattice-menu-faint); text-overflow: ellipsis; text-transform: none; white-space: nowrap; }
+.published-profile-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 0; }
+.published-profile-actions button { min-width: 104px; min-height: 36px; padding: 0 12px; border: 1px solid var(--lattice-menu-line-strong); background: transparent; color: inherit; font: 600 10px/1 "IBM Plex Mono", monospace; letter-spacing: .08em; cursor: pointer; }
+.published-profile-actions button:hover,
+.published-profile-actions button:focus-visible { background: var(--lattice-menu-selected); }
+.published-profile-actions button:focus-visible { outline: 2px solid var(--lattice-menu-ink); outline-offset: -3px; }
+.published-profile-actions button:disabled { color: var(--lattice-menu-faint); cursor: default; }
+.published-profile-status__card > footer { display: flex; justify-content: space-between; padding: 9px 13px; border-top: 1px solid var(--lattice-menu-line-strong); color: var(--lattice-menu-faint); }
+
+@media (max-width: 640px) {
+  .published-profile-status { place-items: stretch; padding: 8px; }
+  .published-profile-status__card { width: 100%; max-height: calc(100dvh - 16px); }
+  .published-profile-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .published-profile-actions button { min-width: 0; }
+}
+
+@media (max-width: 420px) {
+  .published-profile-actions { grid-template-columns: 1fr; }
+  .published-profile-status__card > footer { flex-direction: column; }
 }

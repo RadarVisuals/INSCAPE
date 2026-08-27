@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { luksoProfileDiscoveryRepository } from './data/luksoProfileDiscoveryRepository.js';
 import useProfileDiscoveryController from './useProfileDiscoveryController.js';
-import './inscapeDirectory.css';
+import '../lattice/rendering/latticeMenuSurface.css';
+import './inscapeDirectorySystemWorkflow.css';
 
 const abbreviate = (address) => address ? `${address.slice(0, 8)}…${address.slice(-6)}` : '';
 const initials = (result) => (result.name || 'UP').split(/\s+/u).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
@@ -15,7 +16,7 @@ function Result({ result, active, onFocus, onSelect, optionRef }) {
   </button>;
 }
 
-export default function ProfileDiscovery({ onClose, onSelect, repository = luksoProfileDiscoveryRepository }) {
+export default function ProfileDiscovery({ menuSurfaceId = 'mist', onClose, onSelect, repository = luksoProfileDiscoveryRepository }) {
   const {
     activeIndex, error, moveActive: moveControllerActive, profiles, query, resolveSelection, results,
     retry, setActiveIndex, setQuery, status,
@@ -50,7 +51,8 @@ export default function ProfileDiscovery({ onClose, onSelect, repository = lukso
     if (event.key === 'Tab') { const focusable = [...dialogRef.current.querySelectorAll('input,button:not(:disabled)')]; if (!focusable.length) return;
       const edge = event.shiftKey ? focusable[0] : focusable.at(-1); if (document.activeElement === edge) { event.preventDefault(); (event.shiftKey ? focusable.at(-1) : focusable[0]).focus(); } }
   };
-  return <div className="profile-discovery" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+  return <div className="profile-discovery" data-lattice-menu-surface data-menu-surface={menuSurfaceId} role="presentation"
+    onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section ref={dialogRef} className="profile-discovery__panel" role="dialog" aria-modal="true" aria-labelledby="profile-discovery-title" onKeyDown={onKeyDown}>
       <header><div><p>INSCAPE / PUBLIC DIRECTORY</p><h2 id="profile-discovery-title">Explore worlds</h2></div><button type="button" onClick={onClose} aria-label="Close INSCAPE directory">×</button></header>
       <label className="profile-discovery__search"><span className="sr-only">Search published workspaces</span><input ref={inputRef} type="search" role="combobox" aria-autocomplete="list" aria-expanded={results.length > 0} aria-controls="inscape-directory-results" aria-activedescendant={results[activeIndex] ? optionId(results[activeIndex]) : undefined} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="SEARCH NAME OR PROFILE ADDRESS" autoComplete="off" /></label>

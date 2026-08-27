@@ -14,10 +14,8 @@ const latticeEngineRoute = import.meta.env.DEV && prototypePath === '/prototype/
 const modul8rRoute = import.meta.env.DEV && prototypePath === '/prototype/modul-8r';
 const spiderKeeperRoute = import.meta.env.DEV && prototypePath === '/prototype/spider-keeper';
 const gridWalkerRoute = import.meta.env.DEV && prototypePath === '/prototype/grid-walker';
-const modul8rDevelopmentRoute = import.meta.env.DEV
-  && prototypePath === '/development/owner/modul-8r';
-const modul8rLiveOwnerRoute = modul8rDevelopmentRoute
-  && new URLSearchParams(window.location.search).get('live') === '1';
+const systemWorkflowDevelopmentRoute = import.meta.env.DEV
+  && prototypePath === '/development/owner/system-workflow';
 const NavigationWallPrototype = import.meta.env.DEV
   ? React.lazy(() => import('./NavigationWallPrototype.jsx'))
   : null;
@@ -45,8 +43,8 @@ const SpiderKeeperPrototype = import.meta.env.DEV
 const GridWalkerPrototype = import.meta.env.DEV
   ? React.lazy(() => import('./prototypes/grid-walker/GridWalkerPrototype.jsx'))
   : null;
-const Modul8rDevelopmentEntrance = import.meta.env.DEV
-  ? React.lazy(() => import('./lattice/modul8r/Modul8rDevelopmentEntrance.jsx'))
+const OwnerSystemWorkflowDevelopmentEntrance = import.meta.env.DEV
+  ? React.lazy(() => import('./public/ownerSystemWorkflow/OwnerSystemWorkflowDevelopmentEntrance.jsx'))
   : null;
 
 const prototype = prototypeRoute && NavigationWallPrototype
@@ -67,8 +65,8 @@ const prototype = prototypeRoute && NavigationWallPrototype
     ? <SpiderKeeperPrototype />
     : gridWalkerRoute && GridWalkerPrototype
       ? <GridWalkerPrototype />
-          : modul8rDevelopmentRoute && !modul8rLiveOwnerRoute && Modul8rDevelopmentEntrance
-            ? <Modul8rDevelopmentEntrance />
+          : systemWorkflowDevelopmentRoute && OwnerSystemWorkflowDevelopmentEntrance
+            ? <OwnerSystemWorkflowDevelopmentEntrance />
         : null;
 
 ReactDOM.createRoot(document.getElementById('root')).render(

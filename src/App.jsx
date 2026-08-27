@@ -5,14 +5,11 @@ import {
   createApplicationModeUrl,
   resolveApplicationMode
 } from './app/appMode.js';
-import GridWalkerCanvas from './components/Canvas/GridWalkerCanvas.jsx';
 import OwnerRuntimeBoundary from './public/OwnerRuntimeBoundary.jsx';
 import { Startveil } from './startveil/index.js';
-import { useStore } from './store/useStore.js';
 import { useWalletStore } from './store/useWalletStore.js';
 import { resolveLibraryProfile, resolveWorkspaceProfile } from './library/config.js';
-import { loadRestoredPresentation } from './profileDocument/storage/profilePresentationStorage.js';
-import { createViewedProfileUrl, resolveExplicitViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
+import { createSelectedProfileUrl, createViewedProfileUrl, resolveExplicitViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
 import {
   PROFILE_TARGET_SOURCE,
   resolveProfileTarget,
@@ -23,24 +20,26 @@ import { usePublishedProfile } from './profileDocument/state/usePublishedProfile
 import { PUBLISHED_PROFILE_STATUS } from './profileDocument/storage/luksoPublishedProfileRepository.js';
 import {
   resolveOwnerAuthoringEnabled,
-  selectPublicProfileRoute,
-  selectResidentActorVisible
+  selectPublicProfileRoute
 } from './public/publicAccess.js';
 import { reportControlledError } from './diagnostics.js';
+import AlphaSupportPanel from './support/AlphaSupportPanel.jsx';
+import { ALPHA_SUPPORT_CODES } from './support/alphaSupport.js';
 
 const AtelierExperience = lazy(() => import('./app/AtelierExperience.jsx'));
+const PublicDiscoverExperience = lazy(() => import('./profileDiscovery/PublicDiscoverExperience.jsx'));
 
 function AtelierLoadingFallback() {
   return <div className="mode-loading" role="status">Opening Atelier…</div>;
 }
 
 function App() {
-  const canvasRef = useRef(null);
   const desktopContextMenuRef = useRef(null);
   const standaloneWalletSessionRef = useRef(null);
   const [applicationMode, setApplicationMode] = useState(() => resolveApplicationMode(window.location));
   const routeWorkspaceProfileAddress = useMemo(() => resolveLibraryProfile(window.location), []);
   const [explicitViewedProfileAddress, setExplicitViewedProfileAddress] = useState(() => resolveExplicitViewedProfile(window.location));
+  const [retainedPublicProfileAddress, setRetainedPublicProfileAddress] = useState(null);
   const [worldReady, setWorldReady] = useState(false);
   const [revealStage, setRevealStage] = useState('sealed');
   const [revealPresentation, setRevealPresentation] = useState({
@@ -48,32 +47,27 @@ function App() {
     reducedMotion: false
   });
   const [previewDocument, setPreviewDocument] = useState(null);
-  const [keeperUserVisible, setKeeperUserVisible] = useState(true);
-  const [, setStageUserVisible] = useState(true);
+  const [standaloneSignInActive, setStandaloneSignInActive] = useState(false);
   const [galleryActive, setGalleryActive] = useState(false);
-  const activeActorId = useStore((state) => state.renderConfig.actor.id);
-  const activeStageId = useStore((state) => state.renderConfig.scene.background.backdropId);
-  const activeEnvironment = useStore((state) => state.renderConfig.scene.environment);
   const visitorWalletConnected = useWalletStore((state) => state.isWalletConnected);
   const ownershipVerified = useWalletStore((state) => state.isHostProfileOwner);
   const verifiedOwnerProfileAddress = useWalletStore((state) => state.hostProfileAddress);
   const authorityLifecycleStatus = useWalletStore((state) => state.authorityLifecycleStatus);
+  const initializationError = useWalletStore((state) => state.initializationError);
   const initWallet = useWalletStore((state) => state.initWallet);
+  const beginWalletTransition = useWalletStore((state) => state.beginWalletTransition);
   const scheduleWalletRelease = useWalletStore((state) => state.scheduleWalletRelease);
-  const applyRenderConfig = useStore((state) => state.applyRenderConfig);
-  const loadActorPresets = useStore((state) => state.loadActorPresets);
   const connectedWorkspaceProfileAddress = resolveWorkspaceProfile(verifiedOwnerProfileAddress, {
     search: routeWorkspaceProfileAddress ? `?profile=${routeWorkspaceProfileAddress}` : ''
   });
   const profileTarget = resolveProfileTarget({
     explicitViewedProfileAddress,
     connectedProfileAddress: verifiedOwnerProfileAddress,
-    workspaceFallbackAddress: routeWorkspaceProfileAddress,
+    workspaceFallbackAddress: routeWorkspaceProfileAddress || retainedPublicProfileAddress,
     authorityLifecycleStatus
   });
   const viewedProfileAddress = profileTarget.address;
   const worldVisible = ['world', 'resident', 'interface', 'complete'].includes(revealStage);
-  const actorVisible = ['resident', 'interface', 'complete'].includes(revealStage);
   const interfaceVisible = ['interface', 'complete'].includes(revealStage);
   const ownerAuthoringEnabled = resolveOwnerAuthoringEnabled({
     ownershipVerified,
@@ -87,16 +81,28 @@ function App() {
     : APPLICATION_MODES.PUBLIC;
   const publicProfileRoute = selectPublicProfileRoute(ownerAuthoringEnabled);
   const localOwnerRoute = publicProfileRoute === 'LOCAL_OWNER';
+  const publicEntryPortal = effectiveApplicationMode === APPLICATION_MODES.PUBLIC
+    && !explicitViewedProfileAddress && !routeWorkspaceProfileAddress && !retainedPublicProfileAddress
+    && [PROFILE_TARGET_SOURCE.PENDING, PROFILE_TARGET_SOURCE.NONE].includes(profileTarget.source);
   const [publishedResolution, retryPublishedProfile] = usePublishedProfile(viewedProfileAddress);
-  const publishedDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(publishedResolution?.status)
-    ? publishedResolution.document
-    : null;
-  const residentActorVisible = selectResidentActorVisible({
-    actorRevealVisible: actorVisible,
-    keeperVisible: keeperUserVisible,
-    ownerRuntime: effectiveApplicationMode === APPLICATION_MODES.ATELIER || localOwnerRoute,
-    publishedVisitorReady: interfaceVisible && Boolean(publishedDocument)
-  });
+  const ownerSourceReady = publishedResolution?.status !== PUBLISHED_PROFILE_STATUS.LOADING;
+
+  useEffect(() => setWorldReady(true), []);
+
+  useEffect(() => {
+    if (authorityLifecycleStatus === 'complete' && verifiedOwnerProfileAddress) {
+      setRetainedPublicProfileAddress(verifiedOwnerProfileAddress);
+    }
+  }, [authorityLifecycleStatus, verifiedOwnerProfileAddress]);
+
+  useEffect(() => {
+    if (authorityLifecycleStatus !== 'complete' || verifiedOwnerProfileAddress
+      || explicitViewedProfileAddress || routeWorkspaceProfileAddress || !retainedPublicProfileAddress) return;
+    const nextUrl = createSelectedProfileUrl(window.location, retainedPublicProfileAddress);
+    window.history.replaceState({ viewedProfileAddress: retainedPublicProfileAddress }, '', nextUrl);
+    setExplicitViewedProfileAddress(retainedPublicProfileAddress);
+  }, [authorityLifecycleStatus, explicitViewedProfileAddress, retainedPublicProfileAddress,
+    routeWorkspaceProfileAddress, verifiedOwnerProfileAddress]);
 
   useEffect(() => {
     if (window.parent !== window) {
@@ -111,6 +117,8 @@ function App() {
         acquisition = acquireStandaloneWalletSession({
           initializeWallet: initWallet,
           disposeWallet: () => useWalletStore.getState().disposeWallet(),
+          beginWalletTransition,
+          onSignInClose: () => setStandaloneSignInActive(false),
           onError: (error) => reportControlledError('standalone-wallet-connect', error)
         });
         if (cancelled) {
@@ -133,7 +141,11 @@ function App() {
       }
       acquisition?.release();
     };
-  }, [initWallet, scheduleWalletRelease]);
+  }, [beginWalletTransition, initWallet, scheduleWalletRelease]);
+
+  useEffect(() => {
+    if (standaloneSignInActive && visitorWalletConnected && authorityLifecycleStatus === 'complete') setStandaloneSignInActive(false);
+  }, [authorityLifecycleStatus, standaloneSignInActive, visitorWalletConnected]);
 
   useEffect(() => {
     const syncModeFromUrl = () => {
@@ -145,88 +157,42 @@ function App() {
     return () => window.removeEventListener('popstate', syncModeFromUrl);
   }, [routeWorkspaceProfileAddress]);
 
-  const applyPublicPresentation = useCallback(({ keeperId, stageId, environment }) => {
-    const current = useStore.getState().renderConfig;
-    applyRenderConfig({ ...current, actor: { ...current.actor, id: keeperId },
-      scene: { ...current.scene,
-        environment: environment || current.scene.environment,
-        background: { ...current.scene.background, backdropId: stageId } } });
-  }, [applyRenderConfig]);
-
-  useEffect(() => {
-    if (!ownerAuthoringEnabled) return;
-    loadActorPresets();
-    const restored = loadRestoredPresentation(window.localStorage, connectedWorkspaceProfileAddress);
-    if (restored) applyPublicPresentation(restored);
-  }, [applyPublicPresentation, connectedWorkspaceProfileAddress, loadActorPresets, ownerAuthoringEnabled]);
-
   const changeApplicationMode = useCallback((mode) => {
     const nextUrl = createApplicationModeUrl(window.location, mode);
     window.history.pushState({ applicationMode: mode }, '', nextUrl);
     setApplicationMode(mode);
   }, []);
 
-  const visitProfile = useCallback((address) => {
-    const nextUrl = createViewedProfileUrl(window.location, address, verifiedOwnerProfileAddress);
+  const visitProfile = useCallback((address, { returnToConnectedProfile = false } = {}) => {
+    const nextUrl = returnToConnectedProfile
+      ? createViewedProfileUrl(window.location, address, verifiedOwnerProfileAddress)
+      : createSelectedProfileUrl(window.location, address);
     window.history.pushState({ viewedProfileAddress: address }, '', nextUrl);
     setExplicitViewedProfileAddress(resolveExplicitViewedProfile(window.location));
   }, [verifiedOwnerProfileAddress]);
 
-  const residentHandoff = useMemo(() => ({
-    start(bounds, options) {
-      return canvasRef.current?.startResidentHandoff(bounds, options);
-    },
-    updateBounds(bounds) {
-      return canvasRef.current?.updateResidentHandoffBounds(bounds);
-    },
-    exit(bounds, options) {
-      return canvasRef.current?.exitResidentHandoff(bounds, options);
-    },
-    cancel() {
-      canvasRef.current?.cancelResidentHandoff();
-    },
-    trackActorPosition(target) {
-      canvasRef.current?.setActorScreenPositionTarget(target);
-    },
-    moveToScreenPosition(clientX, clientY, options) {
-      canvasRef.current?.moveActorToScreenPosition(clientX, clientY, options);
-    },
-    moveHorizontallyToScreenPosition(clientX, direction) {
-      canvasRef.current?.moveActorHorizontallyToScreenPosition(clientX, direction);
-    },
-    setAutonomy(enabled) {
-      canvasRef.current?.setAutonomy?.(enabled);
-    },
-    getAutonomy() {
-      return canvasRef.current?.getAutonomy?.();
-    },
-    setTuning(next) {
-      canvasRef.current?.setTuning?.(next);
-    },
-    getTuning() {
-      return canvasRef.current?.getTuning?.();
-    }
-  }), []);
-
-  const keeperReactions = useMemo(() => ({
-    getAvailability() {
-      return canvasRef.current?.getKeeperReactionAvailability?.();
-    },
-    trigger(reactionType) {
-      return canvasRef.current?.triggerKeeperReaction?.(reactionType);
-    }
-  }), []);
+  const requestStandaloneSignIn = useCallback(() => {
+    if (window.parent !== window) return;
+    const sessionOrPromise = standaloneWalletSessionRef.current;
+    if (!sessionOrPromise) return;
+    setStandaloneSignInActive(true);
+    void Promise.resolve(sessionOrPromise).then((session) => {
+      if (!session) { setStandaloneSignInActive(false); return null; }
+      return session.showSignIn();
+    }).catch((error) => {
+      setStandaloneSignInActive(false);
+      reportControlledError('standalone-wallet-sign-in', error);
+    });
+  }, []);
 
   const handleUserGesture = useCallback(() => {
-    canvasRef.current?.acknowledgeUserGesture();
-    if (shouldRequestStandaloneSignIn({
+    const signInRequired = shouldRequestStandaloneSignIn({
       embedded: window.parent !== window,
       walletConnected: useWalletStore.getState().isWalletConnected,
       targetSource: profileTarget.source
-    })) {
-      void standaloneWalletSessionRef.current?.then((session) => session?.showSignIn());
-    }
-  }, [profileTarget.source]);
+    });
+    if (signInRequired) requestStandaloneSignIn();
+  }, [profileTarget.source, requestStandaloneSignIn]);
 
   const registerDesktopContextMenu = useCallback((handler) => {
     desktopContextMenuRef.current = handler;
@@ -239,15 +205,6 @@ function App() {
         data-visible={worldVisible || undefined}
         onContextMenu={(event) => desktopContextMenuRef.current?.(event)}
       >
-        <div id="keeper-dock-underlay" className="application-resident-underlay" />
-        <div className="application-resident-canvas">
-          <GridWalkerCanvas
-            ref={canvasRef}
-            actorVisible={residentActorVisible}
-            reducedMotion={revealPresentation.reducedMotion}
-            onReady={() => setWorldReady(true)}
-          />
-        </div>
       </div>
       <div
         className="application-interface"
@@ -255,12 +212,22 @@ function App() {
         aria-hidden={!interfaceVisible}
         inert={interfaceVisible ? undefined : ''}
       >
+        {authorityLifecycleStatus === 'complete' && initializationError && <AlphaSupportPanel compact
+          code={ALPHA_SUPPORT_CODES.AUTHORITY_INITIALIZATION_FAILED} phase="OWNER_AUTHORITY"
+          providerCategory="UP_PROVIDER" profileAddress={viewedProfileAddress} routeClass="AUTHORITY_ENTRY"
+          message={initializationError.message} />}
         {effectiveApplicationMode === APPLICATION_MODES.ATELIER ? (
           <Suspense fallback={<AtelierLoadingFallback />}>
             <AtelierExperience onRequestPublic={() => changeApplicationMode(APPLICATION_MODES.PUBLIC)} />
           </Suspense>
         ) : (
-          profileTarget.pending ? <div className="mode-loading" role="status">Resolving profile...</div> : localOwnerRoute ? <OwnerRuntimeBoundary
+          standaloneSignInActive || publicEntryPortal ? null : profileTarget.pending
+            ? <div className="mode-loading" role="status">Resolving profile...</div>
+            : profileTarget.source === PROFILE_TARGET_SOURCE.NONE ? <Suspense fallback={null}>
+              <PublicDiscoverExperience onRequestOwner={requestStandaloneSignIn}
+                onSelect={(address) => visitProfile(address)} />
+            </Suspense>
+            : localOwnerRoute ? !ownerSourceReady ? <div className="mode-loading" role="status">Resolving owner workspace...</div> : <OwnerRuntimeBoundary
             ownerAuthoringEnabled={ownerAuthoringEnabled}
             workspaceProfileAddress={connectedWorkspaceProfileAddress}
             getWalletPublicationContext={getWalletPublicationContext}
@@ -268,41 +235,26 @@ function App() {
             viewedProfileAddress={viewedProfileAddress}
             onVisitProfile={visitProfile}
             onRequestAtelier={() => changeApplicationMode(APPLICATION_MODES.ATELIER)}
-            activeActorId={activeActorId}
-            stageId={activeStageId}
-            environment={activeEnvironment}
-            residentHandoff={residentHandoff}
-            keeperReactions={keeperReactions}
             interfaceVisible={interfaceVisible}
             revealPresentation={revealPresentation}
-            onApplyRestoredPresentation={applyPublicPresentation}
             onPreviewDocumentChange={setPreviewDocument}
-            keeperVisible={keeperUserVisible}
-            stageVisible={false}
-            onKeeperVisibilityChange={setKeeperUserVisible}
-            onStageVisibilityChange={setStageUserVisible}
             registerWorldContextMenu={registerDesktopContextMenu}
             onGalleryOpenChange={setGalleryActive}
             publishedResolution={publishedResolution}
             onPublicationConfirmed={retryPublishedProfile}
-          /> : <PublishedProfileBoundary address={viewedProfileAddress}
-            keeperVisible={keeperUserVisible}
-            onCancelKeeperDock={residentHandoff.cancel}
-            onDockKeeper={residentHandoff.start}
-            resolution={publishedResolution}
+          /> : <PublishedProfileBoundary address={viewedProfileAddress} resolution={publishedResolution}
             onRetry={retryPublishedProfile}
             returnProfileAddress={profileTarget.source === PROFILE_TARGET_SOURCE.EXPLICIT
               ? verifiedOwnerProfileAddress
               : null}
-            onVisitProfile={visitProfile}
-            onMoveKeeper={residentHandoff.moveToScreenPosition}
-            onMoveKeeperHorizontally={residentHandoff.moveHorizontallyToScreenPosition}
-            onReleaseKeeper={residentHandoff.exit}
-            onUpdateKeeperDock={residentHandoff.updateBounds} />
+            onVisitProfile={visitProfile} />
         )}
       </div>
       <Startveil
         ready={worldReady}
+        portal={publicEntryPortal}
+        onConnect={requestStandaloneSignIn}
+        onVisitProfile={(address) => visitProfile(address)}
         onUserGesture={handleUserGesture}
         onPresentationMode={setRevealPresentation}
         onRevealWorld={() => setRevealStage('world')}

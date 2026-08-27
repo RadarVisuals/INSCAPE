@@ -1,8 +1,8 @@
 import { normalizeProfileAddress } from '../../library/config.js';
 import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
+import { creatorRelationshipForProfile } from '../../creations/domain/creatorRelationship.js';
 import { adaptLatticeProductionBrowserAsset } from './latticeProductionBrowserAdapter.js';
 
-const STRONG_CREATOR_LEVELS = new Set(['contract', 'token', 'contract-and-token']);
 const present = (value) => value !== null && value !== undefined && value !== '';
 
 function mergeUnique(left, right, key) {
@@ -11,9 +11,9 @@ function mergeUnique(left, right, key) {
 
 export function isStrongCreatedAsset(asset, profileAddress) {
   const profile = normalizeProfileAddress(profileAddress);
-  if (!profile || asset?.viewedProfileIsCreator !== true || !STRONG_CREATOR_LEVELS.has(asset?.creatorAttributionLevel)) return false;
+  if (!profile || !creatorRelationshipForProfile(asset, profile)) return false;
   if (!parseCanonicalAssetId(asset?.id)) return false;
-  return (asset.creators || []).some((creator) => normalizeProfileAddress(creator?.address) === profile);
+  return true;
 }
 
 export function mergeOwnedAndCreatedAsset(owned, created, profileAddress) {
@@ -27,8 +27,12 @@ export function mergeOwnedAndCreatedAsset(owned, created, profileAddress) {
   merged.attributes = mergeUnique(owned.attributes, created.attributes, (attribute) => `${attribute?.key}\n${attribute?.value}\n${attribute?.type}`);
   merged.imageGroups = mergeUnique(owned.imageGroups, created.imageGroups, (group) => `${group?.index}\n${group?.imageUrl}`)
     .sort((left, right) => Number(left?.index) - Number(right?.index));
-  merged.viewedProfileIsCreator = true;
-  merged.creatorAttributionLevel = created.creatorAttributionLevel;
+  merged.viewedProfileIsCreator = created.viewedProfileIsCreator === true;
+  merged.creatorAttributionLevel = created.creatorAttributionLevel || null;
+  merged.viewedProfileIsCollectionCreator = created.viewedProfileIsCollectionCreator === true;
+  merged.collectionCreatorAttributionLevel = created.collectionCreatorAttributionLevel || null;
+  merged.collectionCreators = mergeUnique(owned.collectionCreators, created.collectionCreators,
+    (creator) => normalizeProfileAddress(creator?.address) || JSON.stringify(creator));
   merged.ownershipKnown = true;
   merged.isOwnedByViewedProfile = true;
   merged.ownerAddress = normalizeProfileAddress(owned.ownerAddress);
@@ -45,6 +49,7 @@ function createdBrowserAsset(asset, profileAddress) {
   if (!isStrongCreatedAsset(asset, profileAddress)) return null;
   const projected = adaptLatticeProductionBrowserAsset(asset, profileAddress, true);
   return projected ? { ...projected, assetRecord: asset, created: true, owned: false,
+    creatorRelationship: creatorRelationshipForProfile(asset, profileAddress),
     currentOwnerAddress: asset.currentOwnerAddress ?? null, isOwnedByViewedProfile: false } : null;
 }
 
@@ -70,6 +75,7 @@ export function projectLibraryAssetUnion({ createdAssets = [], ownedAssets = [],
     const owned = ownedById.has(record.id); const created = createdById.has(record.id);
     const projected = owned ? adaptLatticeProductionBrowserAsset(record, profile) : createdBrowserAsset(record, profile);
     return projected ? { ...projected, assetRecord: record, created, owned,
+      creatorRelationship: created ? creatorRelationshipForProfile(record, profile) : null,
       currentOwnerAddress: record.currentOwnerAddress ?? null, isOwnedByViewedProfile: owned } : null;
   }).filter(Boolean);
   return { assets, records };
