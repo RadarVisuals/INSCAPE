@@ -4,7 +4,7 @@ import { fitNativeMediaRectangle } from '../../lattice/rendering/latticeGeometry
 import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import { projectLatticeRasterBleedRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
 import { createSystemWorkflowDropGeometry } from '../../systemWorkflow/systemWorkflowPlacement.js';
-import { systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { isSystemWorkflowWorldCoverGrid, systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { adjacentSystemWorkflowGridId } from '../../systemWorkflow/domain/systemWorkflowNavigation.js';
 import {
   projectSystemWorkflowImageRenderRectangle,
@@ -12,8 +12,11 @@ import {
 } from '../../systemWorkflow/systemWorkflowTransform.js';
 import useOwnerSystemWorkflowPlacementInteraction from './useOwnerSystemWorkflowPlacementInteraction.js';
 import {
+  OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES,
   createOwnerSystemWorkflowProjectedField,
   measureOwnerSystemWorkflowArtboard,
+  measureOwnerSystemWorkflowHeroArtboard,
+  ownerSystemWorkflowProjectedFieldContainsPoint,
   projectOwnerSystemWorkflowPlacement,
 } from './systemWorkflowArtboardProjection.js';
 import {
@@ -83,6 +86,8 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
   const [worldViewport, setWorldViewport] = useState(null);
   const retainedSelection = useRef(null);
   const grid = controller.selectedGrid;
+  const worldCover = isSystemWorkflowWorldCoverGrid(grid);
+  const artboardMode = worldCover ? OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO : OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID;
   const cropSession = crop?.cropSession || null;
   const appearance = controller.draft?.appearance;
   const snapStep = systemWorkflowSnapStep(appearance.guideSize);
@@ -99,6 +104,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
     },
     reducedMotion,
     snapStep,
+    artboardMode,
   });
   const swipeGridId = interaction.gridSwipe?.targetGridId || null;
   const swipeGrid = swipeGridId ? controller.draft.grids.find(({ id }) => id === swipeGridId) : null;
@@ -117,14 +123,16 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
     if (!node) return undefined;
     const measure = () => {
       const rectangle = node.getBoundingClientRect();
-      setWorldViewport(measureOwnerSystemWorkflowArtboard(rectangle.width, rectangle.height));
+      setWorldViewport(worldCover
+        ? measureOwnerSystemWorkflowHeroArtboard(rectangle.width, rectangle.height)
+        : measureOwnerSystemWorkflowArtboard(rectangle.width, rectangle.height));
     };
     measure();
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
     observer?.observe(node);
     globalThis.addEventListener?.('resize', measure);
     return () => { observer?.disconnect(); globalThis.removeEventListener?.('resize', measure); };
-  }, []);
+  }, [worldCover]);
 
   useEffect(() => {
     const reportRejectedDrop = () => {
@@ -168,7 +176,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
   }, [controller, cropSession, grid, interaction, interactionDisabled, snapStep, viewerOpen]);
 
   if (!grid) return null;
-  return <section className="system-workflow__stage" aria-label={`${grid.title} Grid`} data-system-workflow-stage>
+  return <section className="system-workflow__stage" aria-label={`${grid.title} Grid`} data-system-workflow-stage data-world-cover={worldCover || undefined}>
     <div ref={canvasRef} className="system-workflow__canvas" data-guide={appearance.guideMode} data-space-navigation={interaction.spaceNavigation || undefined} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={Boolean(interaction.gridSwipe) || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, ...swipeStyle }}
       onPointerDown={(event) => { if (!cropSession) interaction.beginCanvasSelection(event); }}
       onDragOver={(event) => event.preventDefault()}
@@ -177,8 +185,11 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
         if (!asset) return;
         const dimensions = await (resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions)(asset);
         if (!dimensions) return;
-        const field = createOwnerSystemWorkflowProjectedField(canvasRef.current, snapStep);
-        if (!field) return;
+        const field = createOwnerSystemWorkflowProjectedField(canvasRef.current, snapStep, 1, artboardMode);
+        if (!field || worldCover && !ownerSystemWorkflowProjectedFieldContainsPoint(field, { x: event.clientX, y: event.clientY })) {
+          globalThis.dispatchEvent?.(new CustomEvent('inscape:system-workflow-drop-rejected'));
+          return;
+        }
         controller.run((session) => session.placeAsset({
           gridId: grid.id,
           stableAssetId: asset.stableAssetId || asset.id,
@@ -229,6 +240,10 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
             corner.includes('s') ? renderedSelection.bounds.bottom : renderedSelection.bounds.row, worldViewport)} />)}
       </div>}
       {interaction.marquee && <i className="system-workflow__marquee" style={interaction.marquee} />}
+      {worldCover && worldViewport && <div aria-hidden="true" className="system-workflow__world-cover-aperture"
+        style={{ left: worldViewport.left, top: worldViewport.top, width: worldViewport.width, height: worldViewport.height }}>
+        <span>INSCAPE HERO IMAGE · VISIBLE AREA 768 × 432 · 16:9</span>
+      </div>}
       </div>
       {interaction.gridSwipe && swipeGrid && <div aria-hidden="true" className="system-workflow__grid-plane system-workflow__grid-plane--adjacent">
         <GridSwipePreview appearance={appearance} assetsById={assetsById} grid={swipeGrid}

@@ -1,7 +1,9 @@
 import { normalizeProfileAddress } from '../../library/config.js';
 import {
   SYSTEM_WORKFLOW_VISIBILITY,
+  SYSTEM_WORKFLOW_WORLD_COVER_SIZE,
   assertValidSystemWorkflowDraft,
+  isSystemWorkflowWorldCoverGrid,
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import {
   INSCAPE_PROFILE_DOCUMENT_TYPE,
@@ -37,7 +39,8 @@ export function projectSystemWorkflowPublicGrids(draftInput, assetRecords = []) 
   const draft = assertValidSystemWorkflowDraft(draftInput);
   const resolveAsset = createProfileDocumentV9AssetResolver(assetRecords);
   const grids = draft.grids
-    .filter(({ visibility }) => visibility === SYSTEM_WORKFLOW_VISIBILITY.PUBLIC)
+    .filter((grid) => !isSystemWorkflowWorldCoverGrid(grid)
+      && grid.visibility === SYSTEM_WORKFLOW_VISIBILITY.PUBLIC)
     .map((grid) => ({
       id: grid.id,
       title: grid.title,
@@ -59,6 +62,33 @@ export function projectSystemWorkflowPublicGrids(draftInput, assetRecords = []) 
     throw publicationError('INSCAPE_PROFILE_PUBLIC_GRID_REQUIRED', 'Publication requires at least one public Grid');
   }
   return grids;
+}
+
+function projectSystemWorkflowWorldCover(draft, assetRecords) {
+  const cover = draft.grids.find(isSystemWorkflowWorldCoverGrid);
+  if (!cover?.placements.length) return null;
+  const resolveAsset = createProfileDocumentV9AssetResolver(assetRecords);
+  return {
+    width: SYSTEM_WORKFLOW_WORLD_COVER_SIZE.width,
+    height: SYSTEM_WORKFLOW_WORLD_COVER_SIZE.height,
+    grid: {
+      id: cover.id,
+      title: cover.title,
+      subtitle: cover.subtitle,
+      visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,
+      labelVisible: false,
+      labelAnchor: cover.labelAnchor,
+      labelOffset: { ...cover.labelOffset },
+      placements: cover.placements
+        .filter(({ visibility }) => visibility === SYSTEM_WORKFLOW_VISIBILITY.PUBLIC)
+        .sort((left, right) => left.navigationOrder - right.navigationOrder || left.id.localeCompare(right.id))
+        .map(({ locked: _locked, stableAssetId, ...placement }) => ({
+          ...structuredClone(placement),
+          visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,
+          asset: resolveAsset(stableAssetId),
+        })),
+    },
+  };
 }
 
 export function buildProfileDocumentV9({
@@ -88,6 +118,7 @@ export function buildProfileDocumentV9({
   const avatarAsset = identity.avatar.mode === 'inscape' && identity.avatar.stableAssetId
     ? resolveAvatarAsset(identity.avatar.stableAssetId)
     : null;
+  const worldCover = projectSystemWorkflowWorldCover(draft, assetRecords);
   return assertValidProfileDocumentV9({
     documentType: INSCAPE_PROFILE_DOCUMENT_TYPE,
     version: INSCAPE_PROFILE_DOCUMENT_VERSION,
@@ -112,12 +143,13 @@ export function buildProfileDocumentV9({
       visibility: { ...identity.visibility },
     },
     grids: projectSystemWorkflowPublicGrids(draft, assetRecords),
-    metadata: {},
+    metadata: worldCover ? { worldCover } : {},
   });
 }
 
 export function countProfileDocumentV9Assets(document) {
   const value = assertValidProfileDocumentV9(document);
   return value.grids.reduce((total, grid) => total + grid.placements.length, 0)
+    + (value.metadata.worldCover?.grid.placements.length || 0)
     + (value.identityPresentation.avatar.asset ? 1 : 0);
 }

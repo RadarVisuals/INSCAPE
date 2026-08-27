@@ -57,7 +57,7 @@ const initialLayersOpen = () => {
   catch { return true; }
 };
 
-export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext, onPreviewDocumentChange,
+export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWalletPublicationContext, onConnect, onDisconnect, onEnterMyWorld, onPreviewDocumentChange,
   onPublicationConfirmed, profileAddress, publishedResolution, onVisitProfile, reviewStorage, reviewAssets,
   reviewCategories, reviewActivity, reviewDiscovery, reviewProfile }) {
   const controller = useOwnerSystemWorkflowController(profileAddress, { storage: reviewStorage });
@@ -251,6 +251,7 @@ export default function OwnerSystemWorkflowRuntime({ getWalletPublicationContext
       onPlacementRef={viewer.registerPlacement} reducedMotion={layout.reducedMotion}
       resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.placementId} />
     <OwnerSystemWorkflowPanelLayer activity={activity} assets={assets} assetsById={assetsById} browser={browser}
+      connectedProfile={connectedProfile} onConnect={onConnect} onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld}
       controller={controller} crop={crop} layersOpen={layersOpen} layout={layout} libraryData={libraryData} menuSurface={menuSurface} onChangeGrid={changeGrid}
       workspaceSurfaceColor={workspaceSurfaceColor}
       onClose={() => panels.closePanel()} onDossierChange={setDossierOpen} onLayersOpenChange={(open) => {

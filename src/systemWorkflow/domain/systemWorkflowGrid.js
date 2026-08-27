@@ -4,6 +4,7 @@ import {
   SYSTEM_WORKFLOW_VISIBILITY,
   assertValidSystemWorkflowDraft,
   createSystemWorkflowGridId,
+  isSystemWorkflowWorldCoverGrid,
 } from './systemWorkflowDraft.js';
 
 function gridError(code, message) {
@@ -14,6 +15,12 @@ function requireGrid(draft, gridId) {
   const grid = draft.grids.find(({ id }) => id === gridId);
   if (!grid) throw gridError('SYSTEM_WORKFLOW_GRID_UNKNOWN', 'The canonical Grid does not exist');
   return grid;
+}
+
+function requireEditableGrid(grid) {
+  if (isSystemWorkflowWorldCoverGrid(grid)) {
+    throw gridError('SYSTEM_WORKFLOW_WORLD_COVER_PROTECTED', 'The World Cover cannot be renamed, reordered, hidden, or deleted');
+  }
 }
 
 export function systemWorkflowGridFingerprint(gridInput) {
@@ -44,15 +51,15 @@ function nextDefaultGridTitle(draft) {
 }
 
 export function systemWorkflowGridOrder(draftInput) {
-  return assertValidSystemWorkflowDraft(draftInput).grids.map(({ id }) => id);
+  return assertValidSystemWorkflowDraft(draftInput).grids.filter((grid) => !isSystemWorkflowWorldCoverGrid(grid)).map(({ id }) => id);
 }
 
 export function createSystemWorkflowGridCandidate(draftInput, options = {}) {
   const draft = assertValidSystemWorkflowDraft(draftInput);
-  if (draft.grids.length >= SYSTEM_WORKFLOW_LIMITS.maxGrids) {
+  if (draft.grids.filter((grid) => !isSystemWorkflowWorldCoverGrid(grid)).length >= SYSTEM_WORKFLOW_LIMITS.maxGrids) {
     throw gridError('SYSTEM_WORKFLOW_GRID_LIMIT_REACHED', 'The 24 Grid safety limit is reached');
   }
-  draft.grids.push({
+  const grid = {
     id: createSystemWorkflowGridId(draft.grids.map(({ id }) => id), options),
     title: nextDefaultGridTitle(draft),
     subtitle: '',
@@ -61,7 +68,9 @@ export function createSystemWorkflowGridCandidate(draftInput, options = {}) {
     labelAnchor: 'top-left',
     labelOffset: { column: 0, row: 0 },
     placements: [],
-  });
+  };
+  const coverIndex = draft.grids.findIndex(isSystemWorkflowWorldCoverGrid);
+  draft.grids.splice(coverIndex < 0 ? draft.grids.length : coverIndex, 0, grid);
   return assertValidSystemWorkflowDraft(draft);
 }
 
@@ -72,6 +81,7 @@ export function createSystemWorkflowGridRenameCandidate(draftInput, {
 } = {}) {
   const draft = assertValidSystemWorkflowDraft(draftInput);
   const grid = requireGrid(draft, gridId);
+  requireEditableGrid(grid);
   requireExpectedGridFingerprint(grid, expectedGridFingerprint);
   const title = normalizedName(name);
   if (!title) throw gridError('SYSTEM_WORKFLOW_GRID_NAME_INVALID', 'A non-empty safe Grid name is required');
@@ -87,6 +97,7 @@ export function createSystemWorkflowGridVisibilityCandidate(draftInput, {
 } = {}) {
   const draft = assertValidSystemWorkflowDraft(draftInput);
   const grid = requireGrid(draft, gridId);
+  requireEditableGrid(grid);
   requireExpectedGridFingerprint(grid, expectedGridFingerprint);
   if (!Object.values(SYSTEM_WORKFLOW_VISIBILITY).includes(visibility)) {
     throw gridError('SYSTEM_WORKFLOW_GRID_VISIBILITY_INVALID', 'A canonical Grid visibility is required');
@@ -102,7 +113,7 @@ export function createSystemWorkflowGridReorderCandidate(draftInput, {
   toIndex,
 } = {}) {
   const draft = assertValidSystemWorkflowDraft(draftInput);
-  const currentOrder = draft.grids.map(({ id }) => id);
+  const currentOrder = draft.grids.filter((grid) => !isSystemWorkflowWorldCoverGrid(grid)).map(({ id }) => id);
   if (!Array.isArray(expectedOrder)
     || expectedOrder.length !== currentOrder.length
     || expectedOrder.some((id, index) => id !== currentOrder[index])) {
@@ -110,12 +121,14 @@ export function createSystemWorkflowGridReorderCandidate(draftInput, {
   }
   const fromIndex = currentOrder.indexOf(gridId);
   if (fromIndex < 0) throw gridError('SYSTEM_WORKFLOW_GRID_UNKNOWN', 'The canonical Grid does not exist');
-  if (!Number.isSafeInteger(toIndex) || toIndex < 0 || toIndex >= draft.grids.length) {
+  if (!Number.isSafeInteger(toIndex) || toIndex < 0 || toIndex >= currentOrder.length) {
     throw gridError('SYSTEM_WORKFLOW_GRID_REORDER_INVALID', 'A bounded destination index is required');
   }
   if (fromIndex === toIndex) return null;
-  const [grid] = draft.grids.splice(fromIndex, 1);
-  draft.grids.splice(toIndex, 0, grid);
+  const ordered = draft.grids.filter((grid) => !isSystemWorkflowWorldCoverGrid(grid));
+  const [grid] = ordered.splice(fromIndex, 1);
+  ordered.splice(toIndex, 0, grid);
+  draft.grids = [...ordered, draft.grids.find(isSystemWorkflowWorldCoverGrid)];
   return assertValidSystemWorkflowDraft(draft);
 }
 
@@ -126,6 +139,7 @@ function deletionFingerprint(grid) {
 export function inspectSystemWorkflowGridDeletion(draftInput, { gridId } = {}) {
   const draft = assertValidSystemWorkflowDraft(draftInput);
   const grid = requireGrid(draft, gridId);
+  requireEditableGrid(grid);
   return Object.freeze({
     gridId: grid.id,
     title: grid.title,
@@ -136,7 +150,7 @@ export function inspectSystemWorkflowGridDeletion(draftInput, { gridId } = {}) {
 
 export function createSystemWorkflowGridDeleteCandidate(draftInput, { confirmation, gridId } = {}) {
   const draft = assertValidSystemWorkflowDraft(draftInput);
-  if (draft.grids.length === 1) {
+  if (draft.grids.filter((grid) => !isSystemWorkflowWorldCoverGrid(grid)).length === 1) {
     throw gridError('SYSTEM_WORKFLOW_GRID_LAST', 'The final remaining Grid cannot be deleted');
   }
   const impact = inspectSystemWorkflowGridDeletion(draft, { gridId });

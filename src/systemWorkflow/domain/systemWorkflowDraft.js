@@ -5,6 +5,8 @@ import { PROFILE_DOCUMENT_LIMITS } from '../../profileDocument/domain/constants.
 export const SYSTEM_WORKFLOW_DRAFT_VERSION = 4;
 export const SYSTEM_WORKFLOW_ARTBOARD = Object.freeze({ aspectWidth: 16, aspectHeight: 9 });
 export const SYSTEM_WORKFLOW_GEOMETRY = Object.freeze({ columns: 32, rows: 18 });
+export const SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID = 'grid:world-cover';
+export const SYSTEM_WORKFLOW_WORLD_COVER_SIZE = Object.freeze({ width: 768, height: 432 });
 export const SYSTEM_WORKFLOW_GRID_PRECISION = 9;
 export const SYSTEM_WORKFLOW_GRID_DENSITY = Object.freeze({ minimum: -8, maximum: 8, default: 0 });
 export const SYSTEM_WORKFLOW_WORLD_BOUNDS = Object.freeze({
@@ -27,6 +29,7 @@ export const SYSTEM_WORKFLOW_TRANSPARENCY_MODES = Object.freeze(['AUTO', 'PRESER
 export const SYSTEM_WORKFLOW_LIMITS = Object.freeze({
   ...PROFILE_DOCUMENT_LIMITS,
   maxGrids: 24,
+  maxAuthoringGrids: 25,
   maxPlacementsPerGrid: 200,
 });
 
@@ -119,6 +122,28 @@ export function createEmptySystemWorkflowIdentityPresentation() {
   };
 }
 
+export function isSystemWorkflowWorldCoverGrid(gridOrId) {
+  return (typeof gridOrId === 'string' ? gridOrId : gridOrId?.id) === SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID;
+}
+
+export function createEmptySystemWorkflowWorldCoverGrid() {
+  return {
+    id: SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID,
+    title: 'WORLD COVER', subtitle: '', visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,
+    labelVisible: false, labelAnchor: 'top-left', labelOffset: { column: 0, row: 0 },
+    placements: [],
+  };
+}
+
+export function ensureSystemWorkflowWorldCoverGrid(draftInput) {
+  const draft = structuredClone(draftInput);
+  if (!draft || typeof draft !== 'object' || !Array.isArray(draft.grids)) return draft;
+  if (!draft?.grids?.some(isSystemWorkflowWorldCoverGrid)) {
+    draft.grids.push(createEmptySystemWorkflowWorldCoverGrid());
+  }
+  return draft;
+}
+
 export function createEmptySystemWorkflowDraft(profileAddress, options = {}) {
   const profile = normalizeProfileAddress(profileAddress);
   if (!profile) throw operationError('SYSTEM_WORKFLOW_PROFILE_INVALID', 'A valid profile address is required');
@@ -137,7 +162,7 @@ export function createEmptySystemWorkflowDraft(profileAddress, options = {}) {
       title: 'HOME', subtitle: '', visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,
       labelVisible: true, labelAnchor: 'top-left', labelOffset: { column: 0, row: 0 },
       placements: [],
-    }],
+    }, createEmptySystemWorkflowWorldCoverGrid()],
   };
 }
 
@@ -238,8 +263,8 @@ export function validateSystemWorkflowDraft(input) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance?.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid appearance');
   validateIdentity(input.identityPresentation, fail);
-  if (!Array.isArray(input.grids) || input.grids.length < 1 || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxGrids) {
-    fail('grids', 'invalid_grid_count', 'One to 24 Grids required');
+  if (!Array.isArray(input.grids) || input.grids.length < 2 || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxAuthoringGrids) {
+    fail('grids', 'invalid_grid_count', 'One to 24 Grids plus the World Cover are required');
   } else {
     const gridIds = new Set();
     const placementIds = new Set();
@@ -274,6 +299,14 @@ export function validateSystemWorkflowDraft(input) {
         navigationOrders.add(placement?.navigationOrder);
       });
     });
+    const coverGrids = input.grids.filter(isSystemWorkflowWorldCoverGrid);
+    if (coverGrids.length !== 1) fail('grids', 'invalid_world_cover_count', 'Exactly one World Cover is required');
+    const cover = coverGrids[0];
+    if (cover && (cover.title !== 'WORLD COVER' || cover.subtitle !== ''
+      || cover.visibility !== SYSTEM_WORKFLOW_VISIBILITY.PUBLIC || cover.labelVisible !== false
+      || cover.labelAnchor !== 'top-left' || cover.labelOffset.column !== 0 || cover.labelOffset.row !== 0)) {
+      fail('grids', 'invalid_world_cover', 'The World Cover system Grid cannot be renamed or reconfigured');
+    }
     if (totalAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) {
       fail('grids', 'too_many_asset_references', 'Too many asset references');
     }

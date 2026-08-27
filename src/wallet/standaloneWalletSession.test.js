@@ -31,3 +31,10 @@ test('standalone sign-in repairs Universal Profile extension readiness before op
   assert.match(sessionSource, /if \(showSignInPromise\) return showSignInPromise/,
     'rapid repeated sign-in clicks must share one readiness operation');
 });
+
+test('standalone disconnect uses the active Wagmi configuration before clearing local wallet state', () => {
+  const disconnectIndex = sessionSource.indexOf('await disconnectWagmi(connector.wagmiConfig)');
+  const disposeIndex = sessionSource.indexOf('if (!disposed) disposeWallet()', disconnectIndex);
+  assert.ok(disconnectIndex >= 0);
+  assert.ok(disposeIndex > disconnectIndex);
+});

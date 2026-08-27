@@ -23,7 +23,8 @@ const placement = (id, order) => ({
 
 function draftWithPlacementCounts(counts) {
   const draft = createDraft();
-  draft.grids = counts.map((count, gridIndex) => ({
+  const cover = draft.grids.find(({ id }) => id === 'grid:world-cover');
+  draft.grids = [...counts.map((count, gridIndex) => ({
     ...structuredClone(draft.grids[0]),
     id: `grid:g-${gridIndex}`,
     title: gridIndex === 0 ? 'HOME' : `GRID ${gridIndex + 1}`,
@@ -31,7 +32,7 @@ function draftWithPlacementCounts(counts) {
       `p-${gridIndex}-${placementIndex}`,
       placementIndex,
     )),
-  }));
+  })), cover];
   return draft;
 }
 
@@ -47,6 +48,9 @@ test('draft v4 starts with one ordered public HOME Grid and no fixed topology', 
   assert.deepEqual(draft.grids, [{
     id: 'grid:home-uuid', title: 'HOME', subtitle: '', visibility: 'PUBLIC',
     labelVisible: true, labelAnchor: 'top-left', labelOffset: { column: 0, row: 0 }, placements: [],
+  }, {
+    id: 'grid:world-cover', title: 'WORLD COVER', subtitle: '', visibility: 'PUBLIC',
+    labelVisible: false, labelAnchor: 'top-left', labelOffset: { column: 0, row: 0 }, placements: [],
   }]);
   assert.equal(Object.hasOwn(draft, 'tables'), false);
   assert.equal(Object.hasOwn(draft.grids[0], 'coordinate'), false);
@@ -116,7 +120,7 @@ test('Grid IDs use bounded injected randomness and never timestamp fallback', ()
 
 test('draft validation enforces the 24 Grid safety ceiling and stable unique IDs', () => {
   const draft = createDraft();
-  while (draft.grids.length < SYSTEM_WORKFLOW_LIMITS.maxGrids) {
+  while (draft.grids.filter(({ id }) => id !== 'grid:world-cover').length < SYSTEM_WORKFLOW_LIMITS.maxGrids) {
     const index = draft.grids.length;
     draft.grids.push({
       ...structuredClone(draft.grids[0]),

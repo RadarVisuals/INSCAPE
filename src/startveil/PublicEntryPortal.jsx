@@ -12,12 +12,12 @@ const compactAddress = (address) => address ? `${address.slice(0, 8)}…${addres
 const initials = (value) => String(value || 'UP').split(/\s+/u).filter(Boolean).slice(0, 2)
   .map((part) => part[0]).join('').toUpperCase();
 
-function WorldPreview({ document, grid, priority = false }) {
+function WorldPreview({ canonical = false, document, grid, priority = false }) {
   const frameRef = useRef(null);
   const [fit, setFit] = useState(null);
   useEffect(() => {
     const frame = frameRef.current;
-    if (!frame || !document || !grid) return undefined;
+    if (!frame || !document || !grid || canonical) return undefined;
     let animationFrame = 0;
     const update = () => {
       window.cancelAnimationFrame(animationFrame);
@@ -34,7 +34,7 @@ function WorldPreview({ document, grid, priority = false }) {
         }), { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
         const contentWidth = Math.max(1, bounds.right - bounds.left);
         const contentHeight = Math.max(1, bounds.bottom - bounds.top);
-        const scale = Math.min(8, Math.min(width * .92 / contentWidth, height * .9 / contentHeight));
+        const scale = Math.max(width / contentWidth, height / contentHeight);
         setFit({ x: (width - contentWidth * scale) / 2 - bounds.left * scale,
           y: (height - contentHeight * scale) / 2 - bounds.top * scale, scale });
       });
@@ -45,9 +45,10 @@ function WorldPreview({ document, grid, priority = false }) {
     resize.observe(frame);
     update();
     return () => { window.cancelAnimationFrame(animationFrame); mutations.disconnect(); resize.disconnect(); };
-  }, [document, grid]);
-  if (!document || !grid) return <div className="public-entry-portal__preview-state"><span>PUBLIC WORLD</span><small>RESOLVING PRESENTATION</small></div>;
+  }, [canonical, document, grid]);
+  if (!document || !grid) return <div className="public-entry-portal__preview-state" data-placeholder="true"><span>INSCAPE</span></div>;
   return <div className="public-entry-portal__world-fit" data-fitted={fit ? '' : undefined}
+    data-canonical={canonical || undefined}
     data-surface={document.appearance.surfaceId} ref={frameRef}
     style={fit ? { '--portal-preview-scale': fit.scale, '--portal-preview-x': `${fit.x}px`, '--portal-preview-y': `${fit.y}px` } : undefined}>
     <Suspense fallback={<div className="public-entry-portal__preview-state"><span>PUBLIC WORLD</span><small>PREPARING GRID</small></div>}>
@@ -72,40 +73,52 @@ function PublishedWorldCard({ compact = false, discoveryStatus, onVisit, profile
   }, [compact, nearViewport]);
   const [resolution] = usePublishedProfile(nearViewport ? profile?.address || null : null, resolutionStore);
   const document = VISIBLE_DOCUMENT_STATES.has(resolution?.status) ? resolution.document : null;
-  const grid = document?.grids?.[0] || null;
+  const grid = document?.metadata?.worldCover?.grid || null;
+  const identity = document?.profile?.cachedIdentity || profile;
   const canVisit = Boolean(profile?.address && document);
   return <article aria-busy={resolution?.busy || undefined} className="public-entry-portal__world-card" ref={cardRef}
     data-empty={!profile || undefined} data-variant={compact ? 'compact' : 'feature'}>
     <button aria-label={canVisit ? `Enter ${profile.name || 'published world'}` : 'Published world unavailable'}
       className="public-entry-portal__world-action" disabled={!canVisit} onClick={() => onVisit?.(profile.address)} type="button" />
     <div className="public-entry-portal__world-preview" data-surface={document?.appearance?.surfaceId || 'carbon'}>
-      <WorldPreview document={document} grid={grid} priority={!compact} />
+      <WorldPreview canonical document={document} grid={grid} priority={!compact} />
     </div>
     <footer>
       <span className="public-entry-portal__publisher-avatar">
-        {profile?.avatarUrl ? <img alt="" referrerPolicy="no-referrer" src={profile.avatarUrl} /> : initials(profile?.name)}
+        {identity?.avatarUrl ? <img alt="" referrerPolicy="no-referrer" src={identity.avatarUrl} /> : initials(identity?.name)}
       </span>
-      <span className="public-entry-portal__publisher"><strong>{profile?.name || 'INSCAPE PUBLIC NETWORK'}</strong>
+      <span className="public-entry-portal__publisher"><strong>{identity?.name || 'INSCAPE PUBLIC NETWORK'}</strong>
         <code>{compactAddress(profile?.address)}</code></span>
-      <span className="public-entry-portal__grid-title"><strong>{grid?.title || 'PUBLIC WORLD'}</strong>
-        <small>{profile ? 'VERIFIED PUBLICATION' : discoveryStatus === 'error' ? 'DIRECTORY UNAVAILABLE' : 'READING DIRECTORY'}</small></span>
-      <span className="public-entry-portal__publication"><strong>PUBLISHED</strong><small>{profile?.publicationBlock ? `BLOCK ${profile.publicationBlock}` : 'LUKSO MAINNET'}</small></span>
     </footer>
   </article>;
 }
 
-export default function PublicEntryPortal({ discoveryRepository, embedded = false, initialMode = 'landing', onClose,
-  onConnect, onVisitProfile, resolutionStore }) {
+export default function PublicEntryPortal({ connectedProfile, discoveryRepository, embedded = false, initialMode = 'landing', onClose,
+  onConnect, onDisconnect, onEnterMyWorld, onVisitProfile, resolutionStore }) {
   const [mode, setMode] = useState(initialMode === 'explore' ? 'explore' : 'landing');
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef(null);
   const discovery = useProfileDiscoveryController({ repository: discoveryRepository });
   const featured = discovery.results[0] || null;
   const exploreResults = discovery.results.slice(0, MAX_EXPLORE_RESULTS);
   useEffect(() => {
     if (mode !== 'explore') return undefined;
-    const close = (event) => { if (event.key !== 'Escape') return; onClose ? onClose() : setMode('landing'); };
+    const close = (event) => { if (event.key !== 'Escape' || accountOpen) return; onClose ? onClose() : setMode('landing'); };
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
-  }, [mode, onClose]);
+  }, [accountOpen, mode, onClose]);
+  useEffect(() => {
+    if (!accountOpen) return undefined;
+    const close = (event) => {
+      if (event.key === 'Escape' || !accountRef.current?.contains(event.target)) setAccountOpen(false);
+    };
+    window.addEventListener('keydown', close);
+    window.addEventListener('pointerdown', close);
+    return () => {
+      window.removeEventListener('keydown', close);
+      window.removeEventListener('pointerdown', close);
+    };
+  }, [accountOpen]);
 
   const returnHome = () => onClose ? onClose() : setMode('landing');
   return <div className="public-entry-portal" data-embedded={embedded || undefined}
@@ -120,7 +133,20 @@ export default function PublicEntryPortal({ discoveryRepository, embedded = fals
       </label>}
       <nav aria-label="Public entry">
         <button aria-current={mode === 'explore' ? 'page' : undefined} onClick={() => setMode('explore')} type="button">EXPLORE WORLDS</button>
-        {onConnect && <button onClick={onConnect} type="button">CONNECT</button>}
+        {connectedProfile ? <div className="public-entry-portal__account" ref={accountRef}>
+          <button aria-expanded={accountOpen} className="public-entry-portal__account-trigger"
+            onClick={() => setAccountOpen((open) => !open)} type="button">
+            <span className="public-entry-portal__account-avatar">{connectedProfile.avatarUrl
+              ? <img alt="" referrerPolicy="no-referrer" src={connectedProfile.avatarUrl} />
+              : initials(connectedProfile.name)}</span>
+            <span>{connectedProfile.name || compactAddress(connectedProfile.address)}</span>
+          </button>
+          {accountOpen && <div className="public-entry-portal__account-menu">
+            <button onClick={() => { setAccountOpen(false); onEnterMyWorld?.(); }} type="button">ENTER MY WORLD</button>
+            <code>{compactAddress(connectedProfile.address)}</code>
+            <button onClick={() => { setAccountOpen(false); onDisconnect?.(); }} type="button">DISCONNECT</button>
+          </div>}
+        </div> : onConnect && <button onClick={onConnect} type="button">CONNECT</button>}
       </nav>
     </header>
 
@@ -131,7 +157,9 @@ export default function PublicEntryPortal({ discoveryRepository, embedded = fals
         resolutionStore={resolutionStore} />
       <div className="public-entry-portal__actions">
         <button className="public-entry-portal__primary" onClick={() => setMode('explore')} type="button"><span>EXPLORE WORLDS</span><b aria-hidden="true">→</b></button>
-        {onConnect && <button onClick={onConnect} type="button"><span>CONNECT PROFILE</span><b aria-hidden="true">→</b></button>}
+        {connectedProfile
+          ? <button onClick={onEnterMyWorld} type="button"><span>ENTER MY WORLD</span><b aria-hidden="true">→</b></button>
+          : onConnect && <button onClick={onConnect} type="button"><span>CONNECT PROFILE</span><b aria-hidden="true">→</b></button>}
       </div>
     </main> : <main className="public-entry-portal__explore">
       <section aria-label="Published worlds" className="public-entry-portal__world-grid">

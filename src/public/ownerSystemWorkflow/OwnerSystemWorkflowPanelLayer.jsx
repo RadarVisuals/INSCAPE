@@ -16,8 +16,8 @@ function PanelPresence({ children, id, panels, retained = false }) {
     onTransitionEnd={(event) => { if (event.propertyName === 'opacity') panels.completePanelTransition(id); }}>{children}</div>;
 }
 
-export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assetsById, categoryCommands, browser, controller, crop, discoveryCommands, discoveryGroups, layout, libraryData,
-  layersOpen, menuSurface, onChangeGrid, onClose, onDossierChange, onLayersOpenChange, onVisitProfile, panelOccupied, panels, profileIdentity, profileModel,
+export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assetsById, categoryCommands, browser, connectedProfile, controller, crop, discoveryCommands, discoveryGroups, layout, libraryData,
+  layersOpen, menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onDossierChange, onEnterMyWorld, onLayersOpenChange, onVisitProfile, panelOccupied, panels, profileIdentity, profileModel,
   resolveAssetDimensions, reviewDiscovery, workspaceSurfaceColor }) {
   const show = (id) => panels.presence[id];
   const libraryMounted = useRef(false);
@@ -39,7 +39,9 @@ export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assets
       <Suspense fallback={null}><OwnerSystemWorkflowActivity activity={activity} onClose={onClose}
         phase={show('activity').phase} /></Suspense></PanelPresence>}
     {show('discover').present && <PanelPresence id="discover" panels={panels}>
-      <PublicEntryPortal embedded initialMode="explore" onClose={onClose}
+      <PublicEntryPortal connectedProfile={connectedProfile || profileIdentity} embedded initialMode="explore" onClose={onClose}
+        onConnect={onConnect} onDisconnect={onDisconnect}
+        onEnterMyWorld={() => { onClose(); onEnterMyWorld?.(); }}
         onVisitProfile={(address) => { panels.closePanel({ returnFocus: false }); onVisitProfile?.(address); }} /></PanelPresence>}
     {show('settings').present && <PanelPresence id="settings" panels={panels}>
       <OwnerSystemWorkflowSettings appearance={controller.draft.appearance} controller={controller} menuSurface={menuSurface}

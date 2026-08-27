@@ -1,4 +1,4 @@
-import { getConnection, reconnect, watchConnection } from '@wagmi/core';
+import { disconnect as disconnectWagmi, getConnection, reconnect, watchConnection } from '@wagmi/core';
 import { setupLuksoConnector } from '@lukso/up-modal';
 import { resolveStandaloneUniversalProfile } from '../store/universalProfileValidation.js';
 import { ensureUniversalProfileExtensionConnector } from './universalProfileExtensionReadiness.js';
@@ -81,6 +81,12 @@ export async function createStandaloneWalletSession({ initializeWallet, disposeW
         showSignInPromise = null;
       });
       return showSignInPromise;
+    },
+    async disconnect() {
+      if (disposed) return false;
+      await disconnectWagmi(connector.wagmiConfig);
+      if (!disposed) disposeWallet();
+      return true;
     },
     dispose() {
       disposed = true;

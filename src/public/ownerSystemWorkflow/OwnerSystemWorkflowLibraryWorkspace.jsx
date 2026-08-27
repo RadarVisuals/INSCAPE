@@ -3,10 +3,14 @@ import { createPortal } from 'react-dom';
 import useBrowserWorkspace from '../../lattice/browser/useBrowserWorkspace.js';
 import '../../lattice/browser/browserWorkspace.css';
 import { createSystemWorkflowDropGeometry } from '../../systemWorkflow/systemWorkflowPlacement.js';
-import { systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { isSystemWorkflowWorldCoverGrid, systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import OwnerSystemWorkflowWorkspaceRail from './OwnerSystemWorkflowWorkspaceControls.jsx';
 import { OwnerSystemWorkflowWorkspaceShell } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
-import { createOwnerSystemWorkflowProjectedField } from './systemWorkflowArtboardProjection.js';
+import {
+  OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES,
+  createOwnerSystemWorkflowProjectedField,
+  ownerSystemWorkflowProjectedFieldContainsPoint,
+} from './systemWorkflowArtboardProjection.js';
 import { decodeOwnerSystemWorkflowAssetDimensions, ownerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDimensions.js';
 import OwnerSystemWorkflowLibraryPresenter from './OwnerSystemWorkflowLibraryPresenter.jsx';
 import { projectLatticePixelRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
@@ -66,10 +70,16 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, 
       const inside = Boolean(rectangle
         && pointerEvent.clientX >= rectangle.left && pointerEvent.clientX <= rectangle.right
         && pointerEvent.clientY >= rectangle.top && pointerEvent.clientY <= rectangle.bottom);
+      const artboardMode = isSystemWorkflowWorldCoverGrid(controller.selectedGrid)
+        ? OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO
+        : OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID;
       const field = inside ? createOwnerSystemWorkflowProjectedField(
-        canvas, systemWorkflowSnapStep(controller.draft.appearance.guideSize),
+        canvas, systemWorkflowSnapStep(controller.draft.appearance.guideSize), 1, artboardMode,
       ) : null;
-      if (!field) return { destination: null, rectangle: null };
+      if (!field || artboardMode === OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO
+        && !ownerSystemWorkflowProjectedFieldContainsPoint(field, { x: pointerEvent.clientX, y: pointerEvent.clientY })) {
+        return { destination: null, rectangle: null };
+      }
       if (!dimensions) return { destination: null, rectangle: null };
       const destination = createSystemWorkflowDropGeometry(dimensions.width, dimensions.height,
         { x: pointerEvent.clientX, y: pointerEvent.clientY }, field, options);

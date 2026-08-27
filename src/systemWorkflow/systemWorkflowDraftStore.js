@@ -2,6 +2,7 @@ import { keccak256, stringToHex } from 'viem';
 import { normalizeProfileAddress } from '../library/config.js';
 import {
   createEmptySystemWorkflowDraft,
+  ensureSystemWorkflowWorldCoverGrid,
   validateSystemWorkflowDraft,
 } from './domain/systemWorkflowDraft.js';
 
@@ -45,7 +46,7 @@ function immutableDetached(value) {
 }
 
 function acceptedDraft(candidate, profileAddress) {
-  const validation = validateSystemWorkflowDraft(candidate);
+  const validation = validateSystemWorkflowDraft(ensureSystemWorkflowWorldCoverGrid(candidate));
   return validation.valid && validation.value.profileAddress === profileAddress ? validation.value : null;
 }
 

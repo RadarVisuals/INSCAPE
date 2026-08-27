@@ -4,17 +4,46 @@ import { projectLatticePixelRectangle } from '../../lattice/rendering/latticePix
 
 export const OWNER_SYSTEM_WORKFLOW_COLUMNS = SYSTEM_WORKFLOW_GEOMETRY.columns;
 export const OWNER_SYSTEM_WORKFLOW_ROWS = SYSTEM_WORKFLOW_GEOMETRY.rows;
+export const OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES = Object.freeze({ GRID: 'grid', HERO: 'hero' });
+export const OWNER_SYSTEM_WORKFLOW_HERO_MAXIMUM = Object.freeze({ width: 768, height: 432 });
 
-export function measureOwnerSystemWorkflowArtboard(availableWidth, availableHeight) {
+export function measureOwnerSystemWorkflowArtboard(availableWidth, availableHeight, scale = 1) {
   const width = Number(availableWidth);
   const height = Number(availableHeight);
   if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return null;
-  return projectSystemWorkflowViewport(SYSTEM_WORKFLOW_GEOMETRY, { width, height });
+  if (!Number.isFinite(scale) || scale <= 0 || scale > 1) return null;
+  const projection = projectSystemWorkflowViewport(SYSTEM_WORKFLOW_GEOMETRY, { width: width * scale, height: height * scale });
+  return Object.freeze({
+    ...projection,
+    left: projection.left + width * (1 - scale) / 2,
+    top: projection.top + height * (1 - scale) / 2,
+  });
 }
 
-export function createOwnerSystemWorkflowProjectedField(node, snapStep = 1) {
+export function measureOwnerSystemWorkflowHeroArtboard(availableWidth, availableHeight) {
+  const width = Number(availableWidth);
+  const height = Number(availableHeight);
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return null;
+  const widthLimit = width * 0.84;
+  const heightLimit = Math.max(1, height - 96) * (SYSTEM_WORKFLOW_GEOMETRY.columns / SYSTEM_WORKFLOW_GEOMETRY.rows);
+  const referenceWidth = Math.min(OWNER_SYSTEM_WORKFLOW_HERO_MAXIMUM.width, widthLimit, heightLimit);
+  const referenceHeight = referenceWidth * (SYSTEM_WORKFLOW_GEOMETRY.rows / SYSTEM_WORKFLOW_GEOMETRY.columns);
+  const projection = projectSystemWorkflowViewport(SYSTEM_WORKFLOW_GEOMETRY, {
+    width: referenceWidth,
+    height: referenceHeight,
+  });
+  return Object.freeze({
+    ...projection,
+    left: (width - referenceWidth) / 2,
+    top: (height - referenceHeight) / 2,
+  });
+}
+
+export function createOwnerSystemWorkflowProjectedField(node, snapStep = 1, scale = 1, mode = OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID) {
   const rectangle = node?.getBoundingClientRect?.();
-  const projection = rectangle && measureOwnerSystemWorkflowArtboard(rectangle.width, rectangle.height);
+  const projection = rectangle && (mode === OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO
+    ? measureOwnerSystemWorkflowHeroArtboard(rectangle.width, rectangle.height)
+    : measureOwnerSystemWorkflowArtboard(rectangle.width, rectangle.height, scale));
   if (!rectangle || !projection || !Number.isFinite(snapStep) || snapStep <= 0) return null;
   return Object.freeze({
     cellSize: projection.cellSize,
@@ -28,6 +57,14 @@ export function createOwnerSystemWorkflowProjectedField(node, snapStep = 1) {
     viewportWidth: rectangle.width,
     viewportHeight: rectangle.height,
   });
+}
+
+export function ownerSystemWorkflowProjectedFieldContainsPoint(field, point) {
+  if (!field || !point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
+  const width = OWNER_SYSTEM_WORKFLOW_COLUMNS * field.cellSize;
+  const height = OWNER_SYSTEM_WORKFLOW_ROWS * field.cellSize;
+  return point.x >= field.left && point.x <= field.left + width
+    && point.y >= field.top && point.y <= field.top + height;
 }
 
 export function ownerSystemWorkflowArtboardContainsPoint(artboard, point) {

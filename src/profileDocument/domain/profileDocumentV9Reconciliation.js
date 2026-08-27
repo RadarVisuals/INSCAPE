@@ -2,6 +2,7 @@ import {
   SYSTEM_WORKFLOW_DRAFT_VERSION,
   SYSTEM_WORKFLOW_VISIBILITY,
   assertValidSystemWorkflowDraft,
+  createEmptySystemWorkflowWorldCoverGrid,
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 
@@ -55,6 +56,9 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
       .filter(({ visibility, id }) => visibility === SYSTEM_WORKFLOW_VISIBILITY.PRIVATE && !publishedIds.has(id))
       .map((grid) => structuredClone(grid));
   }
+  const worldCover = document.metadata.worldCover
+    ? restoredPublicGrid(document.metadata.worldCover.grid)
+    : createEmptySystemWorkflowWorldCoverGrid();
   return assertValidSystemWorkflowDraft({
     profileAddress: document.profile.address,
     draftVersion: SYSTEM_WORKFLOW_DRAFT_VERSION,
@@ -62,7 +66,7 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     geometry: { ...document.geometry },
     appearance: { ...document.appearance },
     identityPresentation: restoredIdentity(document.identityPresentation),
-    grids: [...document.grids.map(restoredPublicGrid), ...privateGrids],
+    grids: [...document.grids.map(restoredPublicGrid), ...privateGrids, worldCover],
   });
 }
 

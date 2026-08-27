@@ -109,9 +109,23 @@ test('public placement projection preserves canonical asset and presentation whi
   assert.deepEqual(input, draft(), 'projection must not mutate the canonical draft');
 });
 
+test('an authored World Cover is published separately from visitor Grids at the canonical 16:9 size', () => {
+  const systemWorkflowDraft = draft();
+  systemWorkflowDraft.grids.find(({ id }) => id === 'grid:world-cover').placements = [
+    placement('world-cover-placement', 0, { locked: false }),
+  ];
+  const value = document({ systemWorkflowDraft });
+  assert.deepEqual(value.grids.map(({ id }) => id), ['grid:home', 'grid:second']);
+  assert.equal(value.metadata.worldCover.width, 768);
+  assert.equal(value.metadata.worldCover.height, 432);
+  assert.equal(value.metadata.worldCover.grid.id, 'grid:world-cover');
+  assert.deepEqual(value.metadata.worldCover.grid.placements.map(({ id }) => id), ['world-cover-placement']);
+  assert.equal(validateProfileDocumentV9(value).valid, true);
+});
+
 test('publication fails closed when public filtering leaves no Grid', () => {
   const value = draft();
-  value.grids.forEach((grid) => { grid.visibility = 'PRIVATE'; });
+  value.grids.filter(({ id }) => id !== 'grid:world-cover').forEach((grid) => { grid.visibility = 'PRIVATE'; });
   assert.throws(() => buildProfileDocumentV9({
     assetRecords: [], createdAt: 1, exportedAt: 2, profileAddress: PROFILE, systemWorkflowDraft: value,
   }), { code: 'INSCAPE_PROFILE_PUBLIC_GRID_REQUIRED' });
@@ -200,11 +214,11 @@ test('canonical serialization and hash input are stable while content/reconcilia
 test('v9-only reconciliation restores public draft-v4 state and preserves unrelated private Grids', () => {
   const published = document();
   const current = draft();
-  current.grids = current.grids.filter(({ visibility }) => visibility === 'PRIVATE');
-  current.grids[0].placements[0].locked = true;
+  current.grids = current.grids.filter(({ visibility, id }) => visibility === 'PRIVATE' || id === 'grid:world-cover');
+  current.grids.find(({ id }) => id === 'grid:private').placements[0].locked = true;
   const restored = reconcileSystemWorkflowDraftFromProfileDocumentV9(published, current);
   assert.equal(restored.draftVersion, 4);
-  assert.deepEqual(restored.grids.map(({ id }) => id), ['grid:home', 'grid:second', 'grid:private']);
+  assert.deepEqual(restored.grids.map(({ id }) => id), ['grid:home', 'grid:second', 'grid:private', 'grid:world-cover']);
   assert.equal(restored.grids[0].placements[0].stableAssetId, ASSET);
   assert.equal(restored.grids[0].placements[0].locked, false);
   assert.equal(restored.grids[2].placements[0].locked, true);

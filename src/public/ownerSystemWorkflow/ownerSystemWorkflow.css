@@ -134,6 +134,25 @@
   transform: translate3d(var(--workflow-grid-swipe-x, 0), 0, 0);
 }
 .system-workflow__grid-plane--current > .system-workflow__placement { pointer-events: auto; }
+.system-workflow__world-cover-aperture {
+  position: absolute;
+  z-index: 18;
+  box-sizing: border-box;
+  border: 2px solid var(--workflow-ink);
+  box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--workflow-panel) 72%, transparent);
+  pointer-events: none;
+}
+.system-workflow__world-cover-aperture > span {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: -2px;
+  padding: 4px 6px;
+  color: var(--workflow-ink);
+  background: var(--workflow-panel);
+  font: var(--workflow-type-micro);
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
 .system-workflow__grid-plane--adjacent {
   z-index: 2;
   pointer-events: none;
@@ -420,9 +439,13 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
   box-shadow: var(--workflow-shadow-panel);
 }
 .system-workflow__grid-list { min-height: 54px; max-height: min(378px, calc(100vh - 126px)); overflow-x: hidden; overflow-y: auto; }
+.system-workflow__grid-section-label { min-height: 27px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--workflow-border); color: var(--workflow-muted); background: color-mix(in srgb, var(--workflow-panel) 94%, var(--workflow-ink)); font: var(--workflow-type-micro); letter-spacing: .075em; }
+.system-workflow__grid-section-label strong { color: var(--workflow-ink); font: inherit; }
 .system-workflow__grid-row { position: relative; width: 100%; max-width: 100%; min-height: 54px; box-sizing: border-box; display: grid; grid-template-columns: 32px minmax(0, 1fr) 108px; align-items: stretch; overflow: hidden; border-bottom: 1px solid var(--workflow-border); }
 .system-workflow__grid-row:last-child { border-bottom: 0; }
 .system-workflow__grid-row[aria-current="page"] { background: var(--workflow-selection); box-shadow: none; }
+.system-workflow__grid-row[data-world-cover] { min-height: 62px; grid-template-columns: 48px minmax(0, 1fr); border-bottom-color: var(--workflow-border-strong); }
+.system-workflow__grid-row[data-world-cover] > small { color: var(--workflow-ink); }
 .system-workflow__grid-row[aria-current="page"]::before,
 .system-workflow__layer-row[data-selected]::before { position: absolute; z-index: 2; top: 0; bottom: 0; left: -1px; width: 4px; background: var(--workflow-ink); content: ''; pointer-events: none; }
 .system-workflow__grid-row > small { display: grid; place-items: center; color: var(--workflow-muted); font: var(--workflow-type-micro); }

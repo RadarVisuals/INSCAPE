@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { normalizeProfileAddress } from '../../library/config.js';
-import { systemWorkflowGridFingerprint } from '../../systemWorkflow/domain/systemWorkflowGrid.js';
+import { systemWorkflowGridFingerprint, systemWorkflowGridOrder } from '../../systemWorkflow/domain/systemWorkflowGrid.js';
 import { createSystemWorkflowAuthoringSession } from '../../systemWorkflow/systemWorkflowAuthoringSession.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 
@@ -29,7 +29,7 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
     createGrid: () => run((session) => session.createGrid()),
     renameGrid: (grid, name) => run((session) => session.renameGrid(gridRequest(grid, { name }))),
     setGridVisibility: (grid, visibility) => run((session) => session.setGridVisibility(gridRequest(grid, { visibility }))),
-    reorderGrid: (gridId, toIndex) => run((session) => session.reorderGrid({ gridId, toIndex, expectedOrder: state.draft.grids.map(({ id }) => id) })),
+    reorderGrid: (gridId, toIndex) => run((session) => session.reorderGrid({ gridId, toIndex, expectedOrder: systemWorkflowGridOrder(state.draft) })),
     deleteGrid: (grid) => run((session) => session.deleteGrid({ gridId: grid.id, confirmation: session.inspectGridDeletion({ gridId: grid.id }) })),
     setAppearance: (patch) => run((session) => session.setAppearance({ expectedAppearance: state.draft.appearance, appearance: patch })),
     toggleLock: (placement) => run((session) => session.setPlacementLocked({ gridId: state.selectedGridId, placementId: placement.id, expectedPlacement: placement, locked: !placement.locked })),

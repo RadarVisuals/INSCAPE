@@ -50,6 +50,7 @@ function App() {
   const [standaloneSignInActive, setStandaloneSignInActive] = useState(false);
   const [galleryActive, setGalleryActive] = useState(false);
   const visitorWalletConnected = useWalletStore((state) => state.isWalletConnected);
+  const walletProfileMetadata = useWalletStore((state) => state.profileMetadata);
   const ownershipVerified = useWalletStore((state) => state.isHostProfileOwner);
   const verifiedOwnerProfileAddress = useWalletStore((state) => state.hostProfileAddress);
   const authorityLifecycleStatus = useWalletStore((state) => state.authorityLifecycleStatus);
@@ -86,6 +87,11 @@ function App() {
     && [PROFILE_TARGET_SOURCE.PENDING, PROFILE_TARGET_SOURCE.NONE].includes(profileTarget.source);
   const [publishedResolution, retryPublishedProfile] = usePublishedProfile(viewedProfileAddress);
   const ownerSourceReady = publishedResolution?.status !== PUBLISHED_PROFILE_STATUS.LOADING;
+  const connectedProfile = verifiedOwnerProfileAddress ? {
+    address: verifiedOwnerProfileAddress,
+    name: walletProfileMetadata?.name || '',
+    avatarUrl: walletProfileMetadata?.avatarUrl || null,
+  } : null;
 
   useEffect(() => setWorldReady(true), []);
 
@@ -185,6 +191,22 @@ function App() {
     });
   }, []);
 
+  const disconnectStandalone = useCallback(() => {
+    if (window.parent !== window) {
+      useWalletStore.getState().disposeWallet();
+      return;
+    }
+    const sessionOrPromise = standaloneWalletSessionRef.current;
+    if (!sessionOrPromise) return;
+    void Promise.resolve(sessionOrPromise).then((session) => session?.disconnect()).catch((error) => {
+      reportControlledError('standalone-wallet-disconnect', error);
+    });
+  }, []);
+
+  const enterConnectedWorld = useCallback(() => {
+    if (verifiedOwnerProfileAddress) visitProfile(verifiedOwnerProfileAddress, { returnToConnectedProfile: true });
+  }, [verifiedOwnerProfileAddress, visitProfile]);
+
   const handleUserGesture = useCallback(() => {
     const signInRequired = shouldRequestStandaloneSignIn({
       embedded: window.parent !== window,
@@ -234,6 +256,10 @@ function App() {
             visitorWalletConnected={visitorWalletConnected}
             viewedProfileAddress={viewedProfileAddress}
             onVisitProfile={visitProfile}
+            connectedProfile={connectedProfile}
+            onConnect={requestStandaloneSignIn}
+            onDisconnect={disconnectStandalone}
+            onEnterMyWorld={enterConnectedWorld}
             onRequestAtelier={() => changeApplicationMode(APPLICATION_MODES.ATELIER)}
             interfaceVisible={interfaceVisible}
             revealPresentation={revealPresentation}
@@ -243,6 +269,8 @@ function App() {
             publishedResolution={publishedResolution}
             onPublicationConfirmed={retryPublishedProfile}
           /> : <PublishedProfileBoundary address={viewedProfileAddress} resolution={publishedResolution}
+            connectedProfile={connectedProfile} onConnect={requestStandaloneSignIn}
+            onDisconnect={disconnectStandalone} onEnterMyWorld={enterConnectedWorld}
             onRetry={retryPublishedProfile}
             returnProfileAddress={profileTarget.source === PROFILE_TARGET_SOURCE.EXPLICIT
               ? verifiedOwnerProfileAddress
@@ -251,9 +279,12 @@ function App() {
         )}
       </div>
       <Startveil
+        connectedProfile={connectedProfile}
         ready={worldReady}
         portal={publicEntryPortal}
         onConnect={requestStandaloneSignIn}
+        onDisconnect={disconnectStandalone}
+        onEnterMyWorld={enterConnectedWorld}
         onVisitProfile={(address) => visitProfile(address)}
         onUserGesture={handleUserGesture}
         onPresentationMode={setRevealPresentation}

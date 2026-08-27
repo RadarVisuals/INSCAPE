@@ -21,7 +21,7 @@ test('development parity fixture matches the frozen Phase 3 study without becomi
   assert.deepEqual(OWNER_SYSTEM_WORKFLOW_REVIEW_CATEGORIES.map(({ id }) => id), ['portfolio', 'field-notes']);
   const store = createSystemWorkflowDraftStore({ profileAddress: OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE, storage: createOwnerSystemWorkflowReviewStorage() });
   const draft = store.getDraft();
-  assert.equal(draft.grids.length, 1);
+  assert.equal(draft.grids.length, 2);
   assert.equal(draft.grids[0].title, 'HOME');
   assert.deepEqual(draft.grids[0].placements.map(({ column, row, columnSpan, rowSpan }) => ({ column, row, columnSpan, rowSpan })), [
     { column: 15, row: 4, columnSpan: 4, rowSpan: 4 },

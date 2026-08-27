@@ -2,6 +2,7 @@ import { normalizeProfileAddress } from '../../library/config.js';
 import {
   SYSTEM_WORKFLOW_DRAFT_VERSION,
   assertValidSystemWorkflowDraft,
+  createEmptySystemWorkflowWorldCoverGrid,
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { assertValidProfileDocumentV9 } from '../domain/profileDocumentV9Validation.js';
 import {
@@ -30,6 +31,23 @@ export function systemWorkflowDraftFingerprint(draftInput) {
 
 export function createOwnerDraftFromPublishedProfile(documentInput) {
   const document = assertValidProfileDocumentV9(documentInput);
+  const restoredGrid = (grid) => ({
+    id: grid.id,
+    title: grid.title,
+    subtitle: grid.subtitle,
+    visibility: grid.visibility,
+    labelVisible: grid.labelVisible,
+    labelAnchor: grid.labelAnchor,
+    labelOffset: structuredClone(grid.labelOffset),
+    placements: grid.placements.map(({ asset, ...placement }) => ({
+      ...structuredClone(placement),
+      stableAssetId: asset.stableAssetId,
+      locked: false,
+    })),
+  });
+  const worldCover = document.metadata.worldCover
+    ? restoredGrid(document.metadata.worldCover.grid)
+    : createEmptySystemWorkflowWorldCoverGrid();
   const draft = {
     profileAddress: document.profile.address,
     draftVersion: SYSTEM_WORKFLOW_DRAFT_VERSION,
@@ -48,20 +66,7 @@ export function createOwnerDraftFromPublishedProfile(documentInput) {
       dossierSurface: document.identityPresentation.dossierSurface,
       visibility: structuredClone(document.identityPresentation.visibility),
     },
-    grids: document.grids.map((grid) => ({
-      id: grid.id,
-      title: grid.title,
-      subtitle: grid.subtitle,
-      visibility: grid.visibility,
-      labelVisible: grid.labelVisible,
-      labelAnchor: grid.labelAnchor,
-      labelOffset: structuredClone(grid.labelOffset),
-      placements: grid.placements.map(({ asset, ...placement }) => ({
-        ...structuredClone(placement),
-        stableAssetId: asset.stableAssetId,
-        locked: false,
-      })),
-    })),
+    grids: [...document.grids.map(restoredGrid), worldCover],
   };
   return assertValidSystemWorkflowDraft(draft);
 }

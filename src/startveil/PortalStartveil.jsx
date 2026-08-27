@@ -7,7 +7,7 @@ import './publicEntryPortal.css';
 
 const REVEAL_MS = 920;
 
-export default function PortalStartveil({ portal = false, onConnect, onVisitProfile, ...props }) {
+export default function PortalStartveil({ connectedProfile, portal = false, onConnect, onDisconnect, onEnterMyWorld, onVisitProfile, ...props }) {
   const [sequenceReady, setSequenceReady] = useState(false);
   const portalSeenRef = useRef(portal);
   const reducedMotionPreferred = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
@@ -51,7 +51,8 @@ export default function PortalStartveil({ portal = false, onConnect, onVisitProf
     data-reduced-motion={reducedMotion || undefined} data-sequence={shortened ? 'short' : 'full'}
     data-state={state} data-exiting={exiting || undefined} data-lattice-menu-surface data-menu-surface="mist">
     <div aria-hidden="true" className="startveil__grid" />
-    {portal && ready ? <PublicEntryPortal onConnect={onConnect} onVisitProfile={visitProfile} />
+    {portal && ready ? <PublicEntryPortal connectedProfile={connectedProfile} onConnect={onConnect}
+      onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld} onVisitProfile={visitProfile} />
       : <div className="startveil__intro">
         <span aria-hidden="true" className="startveil__intro-wordmark" />
         <small>{props.ready ? 'PUBLIC NETWORK · LUKSO MAINNET' : 'PREPARING INSCAPE'}</small>

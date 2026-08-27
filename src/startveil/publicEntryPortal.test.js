@@ -31,8 +31,8 @@ test('Explore Worlds unfolds inside the Portal and never enters the workspace Li
 test('the same Explore Worlds surface can be opened from owner and visitor workspaces', () => {
   const panelLayer = read('../public/ownerSystemWorkflow/OwnerSystemWorkflowPanelLayer.jsx');
   const publishedBoundary = read('../profileDocument/components/PublishedProfileBoundary.jsx');
-  assert.match(panelLayer, /<PublicEntryPortal embedded initialMode="explore"/);
-  assert.match(publishedBoundary, /<PublicEntryPortal embedded initialMode="explore"/);
+  assert.match(panelLayer, /<PublicEntryPortal[\s\S]*embedded initialMode="explore"/);
+  assert.match(publishedBoundary, /<PublicEntryPortal[\s\S]*embedded initialMode="explore"/);
   assert.match(portal, /onClose \? onClose\(\) : setMode\('landing'\)/);
 });
 
@@ -41,7 +41,7 @@ test('public directory navigation and search reuse the owner dock and Library in
   assert.match(portal, /<Search aria-hidden="true" size=\{13\}/);
   assert.match(styles, /font: 450 11px\/1 "Inscape Sora", sans-serif/);
   assert.match(styles, /header nav button\[aria-current='page'\]::after[^}]*height: 4px/s);
-  assert.match(styles, /header-search:focus-within[^}]*box-shadow: inset 0 -4px 0 var\(--lattice-menu-ink\)/s);
+  assert.match(styles, /header-search:focus-within[^}]*background: transparent;[^}]*box-shadow: none;/s);
   assert.doesNotMatch(portal, /public-entry-portal__coordinates/);
   assert.doesNotMatch(portal, /INSCAPE<br \/>PUBLIC NETWORK|<i aria-hidden="true">\+<\/i>/);
   assert.doesNotMatch(portal, /ESC RETURN|RETURN TO PORTAL|public-entry-portal__axis/);
@@ -70,7 +70,7 @@ test('Portal reuses the dock wordmark, canonical menu tokens, and production Gri
   assert.match(styles, /var\(--lattice-menu-panel/);
   assert.match(styles, /var\(--lattice-window-type-label\)/);
   assert.match(portal, /GridProductionRenderer/);
-  assert.match(portal, /document\?\.grids\?\.\[0\]/);
+  assert.match(portal, /document\?\.metadata\?\.worldCover\?\.grid/);
   assert.match(portal, /data-surface=\{document\.appearance\.surfaceId\}/);
   assert.match(styles, /world-fit\[data-surface='mist'\]/);
 });
@@ -80,6 +80,12 @@ test('profile avatar remains a small publisher signature rather than the world c
   assert.match(styles, /public-entry-portal__publisher-avatar \{ width: 38px; height: 38px;/);
   assert.match(portal, /public-entry-portal__world-preview/);
   assert.doesNotMatch(portal, /world-preview[^\n]*avatarUrl/);
+});
+
+test('world artwork covers its complete preview frame without decorative gutters', () => {
+  assert.match(portal, /Math\.max\(width \/ contentWidth, height \/ contentHeight\)/);
+  assert.doesNotMatch(portal, /width \* \.92|height \* \.9|Math\.min\(8/);
+  assert.match(styles, /public-entry-portal__world-preview \{[^}]*overflow: hidden;/);
 });
 
 test('Connect Profile keeps the official UP Modal but presents it in the INSCAPE mist system', () => {

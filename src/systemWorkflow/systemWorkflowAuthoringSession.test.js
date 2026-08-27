@@ -114,7 +114,7 @@ test('getDraft is detached and profile records remain isolated', () => {
   detached.grids[0].title = 'MUTATED';
   detached.grids.push(detached.grids[0]);
   assert.equal(store.getDraft().grids[0].title, 'HOME');
-  assert.equal(store.getDraft().grids.length, 1);
+  assert.equal(store.getDraft().grids.length, 2);
 
   const draftA = store.getDraft();
   draftA.grids[0].subtitle = 'profile-a';
@@ -163,7 +163,7 @@ test('session commits exactly once per completed operation and persists no-op or
   assert.equal(session.createGrid({ generateId: () => 'second' }), true);
   assert.equal(storage.activity.writes, 2);
   assert.deepEqual(session.getState().draft.grids.map(({ id }) => id), [
-    'grid:home-a', 'grid:second',
+    'grid:home-a', 'grid:second', 'grid:world-cover',
   ]);
 });
 

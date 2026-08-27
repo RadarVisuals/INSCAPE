@@ -8,6 +8,8 @@ import {
   SYSTEM_WORKFLOW_SURFACE_IDS,
   SYSTEM_WORKFLOW_TRANSPARENCY_MODES,
   SYSTEM_WORKFLOW_VISIBILITY,
+  SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID,
+  SYSTEM_WORKFLOW_WORLD_COVER_SIZE,
   isValidSystemWorkflowPlacementGeometry,
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import {
@@ -30,6 +32,7 @@ const PLACEMENT_KEYS = [
   'crop', 'frameId', 'mat', 'backing', 'transparencyMode', 'visibility', 'transform',
 ];
 const IDENTITY_KEYS = ['alias', 'avatar', 'bio', 'tags', 'dossierSurface', 'visibility'];
+const WORLD_COVER_KEYS = ['width', 'height', 'grid'];
 const ID = /^[A-Za-z0-9:_-]+$/u;
 const GRID_ID = /^grid:[A-Za-z0-9_-]+$/u;
 const HEX_COLOR = /^#[0-9a-f]{6}$/iu;
@@ -129,6 +132,45 @@ function validatePlacement(value, path, fail) {
     || typeof value.transform?.mirrorY !== 'boolean') fail(`${path}.transform`, 'invalid_transform', 'Invalid placement transform');
 }
 
+function validateWorldCover(value, fail) {
+  if (!exactKeys(value, WORLD_COVER_KEYS)
+    || value.width !== SYSTEM_WORKFLOW_WORLD_COVER_SIZE.width
+    || value.height !== SYSTEM_WORKFLOW_WORLD_COVER_SIZE.height) {
+    fail('metadata.worldCover', 'invalid_world_cover', 'World Cover must use the canonical 768 by 432 aperture');
+    return 0;
+  }
+  const grid = value.grid;
+  if (!exactKeys(grid, GRID_KEYS)
+    || grid.id !== SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID
+    || grid.title !== 'WORLD COVER' || grid.subtitle !== ''
+    || grid.visibility !== SYSTEM_WORKFLOW_VISIBILITY.PUBLIC
+    || grid.labelVisible !== false || grid.labelAnchor !== 'top-left'
+    || !exactKeys(grid.labelOffset, ['column', 'row'])
+    || grid.labelOffset.column !== 0 || grid.labelOffset.row !== 0
+    || !Array.isArray(grid.placements)
+    || grid.placements.length > SYSTEM_WORKFLOW_LIMITS.maxPlacementsPerGrid) {
+    fail('metadata.worldCover.grid', 'invalid_world_cover_grid', 'Invalid canonical World Cover Grid');
+    return 0;
+  }
+  const ids = new Set();
+  const layers = new Set();
+  const navigationOrders = new Set();
+  let previousNavigationOrder = -1;
+  grid.placements.forEach((placement, index) => {
+    const path = `metadata.worldCover.grid.placements[${index}]`;
+    validatePlacement(placement, path, fail);
+    if (ids.has(placement?.id)) fail(`${path}.id`, 'duplicate_placement_id', 'Duplicate World Cover placement ID');
+    ids.add(placement?.id);
+    if (layers.has(placement?.layer)) fail(`${path}.layer`, 'duplicate_layer', 'Duplicate World Cover layer');
+    layers.add(placement?.layer);
+    if (navigationOrders.has(placement?.navigationOrder)) fail(`${path}.navigationOrder`, 'duplicate_navigation_order', 'Duplicate World Cover navigation order');
+    navigationOrders.add(placement?.navigationOrder);
+    if (placement?.navigationOrder <= previousNavigationOrder) fail(`${path}.navigationOrder`, 'non_canonical_navigation_order', 'World Cover placements must be sorted by navigation order');
+    previousNavigationOrder = placement?.navigationOrder;
+  });
+  return grid.placements.length;
+}
+
 export class ProfileDocumentV9ValidationError extends Error {
   constructor(errors) {
     super(errors[0]?.message || 'Invalid INSCAPE Profile Document');
@@ -223,7 +265,19 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     });
     if (totalAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) fail('grids', 'too_many_asset_references', 'Too many total asset references');
   }
-  if (!exactKeys(input.metadata, [])) fail('metadata', 'unexpected_fields', 'Profile metadata must be empty');
+  let worldCoverAssetReferences = 0;
+  if (exactKeys(input.metadata, [])) {
+    // Older v9 publications without an authored World Cover remain valid.
+  } else if (exactKeys(input.metadata, ['worldCover'])) {
+    worldCoverAssetReferences = validateWorldCover(input.metadata.worldCover, fail);
+  } else {
+    fail('metadata', 'unexpected_fields', 'Profile metadata contains unsupported fields');
+  }
+  const documentAssetReferences = (input.grids || []).reduce((total, grid) => total + (grid?.placements?.length || 0), 0)
+    + worldCoverAssetReferences + (input.identityPresentation?.avatar?.asset ? 1 : 0);
+  if (documentAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) {
+    fail('metadata.worldCover', 'too_many_asset_references', 'Too many total asset references');
+  }
   return { valid: errors.length === 0, errors, value: errors.length ? null : structuredClone(input), size: measuredSize };
 }
 

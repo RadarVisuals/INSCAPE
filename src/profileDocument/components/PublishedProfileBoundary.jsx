@@ -45,7 +45,7 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
 }
 
 export default function PublishedProfileBoundary({
-  address, resolution, onRetry, returnProfileAddress, onVisitProfile,
+  address, connectedProfile, onConnect, onDisconnect, onEnterMyWorld, resolution, onRetry, returnProfileAddress, onVisitProfile,
 }) {
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
@@ -57,7 +57,8 @@ export default function PublishedProfileBoundary({
       onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={onRetry} /></div>}
     </>;
-  return <>{content}{directoryOpen && <Suspense fallback={null}><PublicEntryPortal embedded initialMode="explore"
+  return <>{content}{directoryOpen && <Suspense fallback={null}><PublicEntryPortal connectedProfile={connectedProfile}
+    embedded initialMode="explore" onConnect={onConnect} onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld}
     onClose={() => setDirectoryOpen(false)} onVisitProfile={(address) => {
     onVisitProfile?.(address); setDirectoryOpen(false);
   }} /></Suspense>}</>;

@@ -35,6 +35,7 @@ test('dynamic Grid CRUD appends private Grids, preserves IDs, and deletes only w
   assert.deepEqual(created.grids.map(({ id, title, visibility }) => ({ id, title, visibility })), [
     { id: 'grid:home', title: 'HOME', visibility: 'PUBLIC' },
     { id: 'grid:second', title: 'GRID 02', visibility: 'PRIVATE' },
+    { id: 'grid:world-cover', title: 'WORLD COVER', visibility: 'PUBLIC' },
   ]);
   const renamed = createSystemWorkflowGridRenameCandidate(created, {
     expectedGridFingerprint: systemWorkflowGridFingerprint(created.grids[1]),
@@ -46,7 +47,7 @@ test('dynamic Grid CRUD appends private Grids, preserves IDs, and deletes only w
   });
   assert.equal(visible.grids[1].title, 'Archive Room');
   assert.equal(visible.grids[1].visibility, 'PUBLIC');
-  assert.equal(home.grids.length, 1);
+  assert.equal(home.grids.length, 2);
 
   const impact = inspectSystemWorkflowGridDeletion(visible, { gridId: 'grid:second' });
   assert.throws(
@@ -58,7 +59,7 @@ test('dynamic Grid CRUD appends private Grids, preserves IDs, and deletes only w
   const deleted = createSystemWorkflowGridDeleteCandidate(visible, {
     gridId: 'grid:second', confirmation: impact,
   });
-  assert.deepEqual(deleted.grids.map(({ id }) => id), ['grid:home']);
+  assert.deepEqual(deleted.grids.map(({ id }) => id), ['grid:home', 'grid:world-cover']);
   assert.throws(
     () => createSystemWorkflowGridDeleteCandidate(deleted, {
       gridId: 'grid:home', confirmation: inspectSystemWorkflowGridDeletion(deleted, { gridId: 'grid:home' }),
@@ -113,11 +114,11 @@ test('reorder is atomic, stale-safe, and ordered navigation has no coordinates',
 
 test('the Grid lifecycle reaches 24 and rejects the twenty-fifth', () => {
   let draft = initial();
-  while (draft.grids.length < 24) {
+  while (draft.grids.filter(({ id }) => id !== 'grid:world-cover').length < 24) {
     const id = `generated-${draft.grids.length}`;
     draft = createSystemWorkflowGridCandidate(draft, { generateId: () => id });
   }
-  assert.equal(draft.grids.length, 24);
+  assert.equal(draft.grids.length, 25);
   assert.throws(
     () => createSystemWorkflowGridCandidate(draft, { generateId: () => 'overflow' }),
     { code: 'SYSTEM_WORKFLOW_GRID_LIMIT_REACHED' },

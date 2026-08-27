@@ -32,7 +32,7 @@ test('anonymous Discover offers an explicit owner connection without gating visi
 
 test('published visitors open the shared world-card directory instead of the legacy people workspace', () => {
   assert.match(publishedBoundary, /lazy\(\(\) => import\('\.\.\/\.\.\/startveil\/PublicEntryPortal\.jsx'\)\)/);
-  assert.match(publishedBoundary, /<PublicEntryPortal embedded initialMode="explore"/);
+  assert.match(publishedBoundary, /<PublicEntryPortal[\s\S]*embedded initialMode="explore"/);
   assert.doesNotMatch(publishedBoundary, /OwnerSystemWorkflowDiscoverWorkspace/);
   assert.doesNotMatch(publishedBoundary, /ProfileDiscoveryBoundary/);
 });
