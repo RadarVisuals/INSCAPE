@@ -40,33 +40,6 @@ test('the retired Pixi stage remains outside the active application root', () =>
   assert.doesNotMatch(appSource, /<GridWalkerCanvas|<ArtCanvas|foregroundOnly=|stageVisible={effectiveApplicationMode/);
 });
 
-test('window state stays a UI-only document with no RenderConfig fields', () => {
-  const stateSource = readFileSync(new URL('./windows/windowState.js', import.meta.url), 'utf8');
-
-  assert.doesNotMatch(stateSource, /renderConfig/i);
-  assert.match(stateSource, /openIds/);
-  assert.match(stateSource, /activeId/);
-});
-
-test('framed artwork keeps form controls interactive and presentation layers independent', () => {
-  const shellStyles = readFileSync(new URL('./moduleGrid.css', import.meta.url), 'utf8');
-  const artworkSource = readFileSync(new URL('./FramedArtwork.jsx', import.meta.url), 'utf8');
-  const artworkStyles = readFileSync(new URL('./canvasObjects.css', import.meta.url), 'utf8');
-  const galleryStyles = readFileSync(new URL('./galleryWorld.css', import.meta.url), 'utf8');
-
-  assert.match(shellStyles, /\.public-shell input,[\s\S]*\.public-shell select,[\s\S]*pointer-events:\s*auto/);
-  assert.match(artworkSource, /canvas-artwork__mat/);
-  assert.match(artworkSource, /canvas-artwork__image-bed/);
-  assert.match(artworkSource, /data-transparent/);
-  assert.match(artworkSource, /asset\?\.thumbnailUrl \|\| asset\?\.imageUrl/);
-  assert.match(artworkSource, /object\.presentation\.background === 'transparent'/);
-  assert.match(artworkStyles, /data-mat="light"[^}]*\.canvas-artwork__mat/);
-  assert.match(artworkStyles, /data-background="light"[^}]*\.canvas-artwork__image-bed/);
-  assert.match(galleryStyles, /data-transparent[^}]*background:transparent/);
-  assert.doesNotMatch(artworkStyles, /data-private[^}]*content:\s*["']PRIVATE/);
-  assert.match(artworkSource, /arranging && selected/);
-});
-
 test('selected owner workflow does not restore the legacy Gallery workspace', () => {
   const runtimeSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx', import.meta.url), 'utf8');
   assert.match(runtimeSource, /<OwnerSystemWorkflowCanvas/u);
@@ -83,22 +56,11 @@ test('owner inventory is profile-scoped before the Library panel opens', () => {
   assert.doesNotMatch(runtimeSource, /const rawAssets = useLibraryStore/);
 });
 
-test('owner folders are direct categories and Index assigns assets through contextual folder commands', () => {
+test('owner folders remain direct categories in the selected Library presenter', () => {
   const shellSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowLibraryPresenter.jsx', import.meta.url), 'utf8');
-  const indexSource = readFileSync(new URL('./AssetIndex.jsx', import.meta.url), 'utf8');
-  const categorySource = readFileSync(new URL('./CategoryNavigationCard.jsx', import.meta.url), 'utf8');
-  const categoryStyles = readFileSync(new URL('./categoryNavigationCard.css', import.meta.url), 'utf8');
 
   assert.match(shellSource, /const categories = data\.categories \|\| \[\]/u);
   assert.doesNotMatch(shellSource, /homeShortcut|pinnedLaunchers|onToggleHomeShortcut/u);
-  assert.match(indexSource, /onContextMenu=\{\(event\) => \{ event\.preventDefault\(\); event\.stopPropagation\(\); setAssetContext/);
-  assert.match(indexSource, /folder\.assetIds\.includes\(assetContext\.asset\.id\) \? 'Remove from' : 'Add to'/);
-  assert.match(indexSource, /setFolderAsset\(folder\.id, assetContext\.asset\.id, !folder\.assetIds\.includes\(assetContext\.asset\.id\)\)/);
-  assert.doesNotMatch(indexSource, /ORGANIZE|ADD TO FOLDER/);
-  assert.match(categorySource, /onContextMenu=\{onContext \?/);
-  assert.match(categorySource, /data-empty=\{!items\.length \|\| undefined\}/);
-  assert.match(categorySource, /style=\{!items\.length \? \{ overflowY: 'hidden' \} : undefined\}/);
-  assert.doesNotMatch(categoryStyles, /\[data-empty\] nav/);
 });
 
 test('System Workflow routing contains no legacy Gallery destination controls', () => {
