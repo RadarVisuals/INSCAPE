@@ -67,11 +67,6 @@ test('review Grid fills the usable viewport while retaining one canonical 32 by 
     assert.ok(await page.locator('.system-workflow__placement').nth(1).locator('img').evaluate((image) => image.naturalWidth > 1 && image.naturalHeight > 1));
     if (SCREENSHOT_DIR) await writeFile(resolve(SCREENSHOT_DIR, 'review-artboard-geometry.json'), JSON.stringify(ledger, null, 2));
 
-    await page.goto(`${ROOT}/owner-shell-system-prototype.html`, { waitUntil: 'networkidle' });
-    for (const [width, height] of VIEWPORTS) {
-      await page.setViewportSize({ width, height });
-      if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, `prototype-artboard-${width}x${height}.png`) });
-    }
   } finally {
     await browser.close();
   }

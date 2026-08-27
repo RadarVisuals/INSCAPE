@@ -260,9 +260,6 @@ test('accepted icon rail and layers operate through canonical commands', { timeo
     await page.locator('.system-workflow__grid-switcher').waitFor();
     assert.equal(await page.locator('.system-workflow__inspector').count(), 0, 'Grid switcher owns the overlay layer exclusively');
 
-    await page.goto(`${ROOT}/owner-shell-system-prototype.html`, { waitUntil: 'networkidle' });
-    await page.locator('.owner-shell-system__placement').first().click();
-    if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'prototype-inspector-1440x900.png') });
   } finally {
     await browser.close();
   }

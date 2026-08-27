@@ -266,10 +266,6 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     }
     assert.equal(await workspace.getByText('NO CATEGORIES', { exact: true }).count(), 0, 'an empty Library sidebar stays visually empty');
 
-    await page.goto(`${ROOT}/owner-shell-system-prototype.html`, { waitUntil: 'networkidle' });
-    await page.getByRole('button', { name: /^Library$/i }).click();
-    await page.getByRole('region', { name: 'Library workspace' }).waitFor();
-    if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'prototype-library-1440x900.png') });
   } finally {
     await browser.close();
   }
