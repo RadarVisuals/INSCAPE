@@ -389,6 +389,18 @@ test('semantic controls and owned keyboard input navigate dynamic ordered Grids'
   await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-archive'`, 'next ordered Grid');
   await evaluate(`document.querySelector('.visitor-grid-world').focus()`); await pressKey('ArrowLeft');
   await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-home'`, 'keyboard returns to entry Grid');
+  const leftDrag = await point('.visitor-grid-world__viewport', .72, .5);
+  await page.keyboard.down('Space');
+  await waitFor(`document.querySelector('.visitor-grid-world')?.dataset.spaceNavigation === 'true'`, 'visitor Space navigation ownership');
+  await page.mouse.move(leftDrag.x, leftDrag.y); await page.mouse.down();
+  await page.mouse.move(leftDrag.x - 180, leftDrag.y + 4, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Space');
+  await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-archive'`, 'Space-drag advances the published Grid');
+  assert.equal(await evaluate(`document.querySelectorAll('.lattice-focus-viewer').length`), 0,
+    'Space-drag must not activate the artwork beneath the pointer');
+  const rightDrag = await point('.visitor-grid-world__viewport', .28, .5);
+  await page.keyboard.down('Space'); await page.mouse.move(rightDrag.x, rightDrag.y); await page.mouse.down();
+  await page.mouse.move(rightDrag.x + 180, rightDrag.y - 4, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Space');
+  await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-home'`, 'reverse Space-drag returns to the entry Grid');
   assert.equal(await evaluate(`document.querySelectorAll('.visitor-grid-renderer').length`), 1);
 });
 

@@ -74,6 +74,10 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(visitor, /returnFocus/);
   assert.match(visitor, /className="visitor-grid-world" data-lattice-menu-surface/);
   assert.match(visitor, /ArrowRight/);
+  assert.match(visitor, /resolveVisitorGridDragDestination/);
+  assert.match(visitor, /event\.code !== 'Space'/);
+  assert.match(visitor, /onPointerDown=\{beginGridDrag\}/);
+  assert.match(visitor, /suppressPlacementClickRef/);
   assert.match(visitor, /Previous Grid/);
   assert.match(visitor, /Next Grid/);
   assert.match(visitor, /onOpenDirectory \|\| onReturn \|\| onExit/);

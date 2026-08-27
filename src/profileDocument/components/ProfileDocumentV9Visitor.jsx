@@ -8,6 +8,7 @@ import { preloadIdentityProfileImage } from '../../public/identity/preloadIdenti
 import GridProductionRenderer from './GridProductionRenderer.jsx';
 import { createProfileDocumentV9FocusViewModel } from './profileDocumentV9FocusViewModel.js';
 import { createPublishedIdentityRackViewModel } from './publishedIdentityRackViewModel.js';
+import { resolveVisitorGridDragDestination } from './visitorGridDragNavigation.js';
 import '../../lattice/rendering/latticeMenuSurface.css';
 import './visitorGridWorld.css';
 
@@ -20,6 +21,9 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
   const rootRef = useRef(null);
   const identityControlRef = useRef(null);
   const profileDockControlRef = useRef(null);
+  const gridDragRef = useRef(null);
+  const spacePressedRef = useRef(false);
+  const suppressPlacementClickRef = useRef(false);
   const identityOpenRequestRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [placementMedia, setPlacementMedia] = useState({});
@@ -27,6 +31,8 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
   const [profileVisible, setProfileVisible] = useState(false);
   const [identityOpening, setIdentityOpening] = useState(false);
   const [identitySession, setIdentitySession] = useState(null);
+  const [gridDragging, setGridDragging] = useState(false);
+  const [spaceNavigation, setSpaceNavigation] = useState(false);
   const profileIdentity = useProfileIdentity(document.profile.address);
   const profileContractFacts = useProfileContractFacts(document.profile.address, { enabled: Boolean(identityOpening || identitySession) });
   const identityRack = useMemo(() => createPublishedIdentityRackViewModel({
@@ -86,6 +92,70 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
     if (viewerSession || identityDossierActive) return;
     setActiveIndex(Math.max(0, Math.min(lastIndex, index)));
   }, [identityDossierActive, lastIndex, viewerSession]);
+  const clearGridDrag = useCallback(() => {
+    const active = gridDragRef.current;
+    if (!active) return;
+    globalThis.removeEventListener?.('pointermove', active.move, true);
+    globalThis.removeEventListener?.('pointerup', active.finish, true);
+    globalThis.removeEventListener?.('pointercancel', active.cancel, true);
+    gridDragRef.current = null;
+    setGridDragging(false);
+  }, []);
+  const visitorInputBlocked = Boolean(viewerSession || identityOpening || identityDossierActive);
+  const beginGridDrag = useCallback((event) => {
+    if (!spacePressedRef.current || visitorInputBlocked || event.button !== 0 || gridDragRef.current) return;
+    event.preventDefault(); event.stopPropagation();
+    const origin = { x: event.clientX, y: event.clientY };
+    const viewportWidth = event.currentTarget.clientWidth;
+    const active = { end: origin, moved: false, pointerId: event.pointerId };
+    const move = (pointerEvent) => {
+      if (gridDragRef.current !== active || pointerEvent.pointerId !== active.pointerId) return;
+      pointerEvent.preventDefault();
+      active.end = { x: pointerEvent.clientX, y: pointerEvent.clientY };
+      if (!active.moved && Math.hypot(active.end.x - origin.x, active.end.y - origin.y) > 6) {
+        active.moved = true; setGridDragging(true);
+      }
+    };
+    const complete = (pointerEvent, cancelled = false) => {
+      if (gridDragRef.current !== active || pointerEvent?.pointerId != null && pointerEvent.pointerId !== active.pointerId) return;
+      const deltaX = active.end.x - origin.x; const deltaY = active.end.y - origin.y;
+      if (active.moved) {
+        suppressPlacementClickRef.current = true;
+        globalThis.setTimeout?.(() => { suppressPlacementClickRef.current = false; }, 0);
+      }
+      clearGridDrag();
+      if (cancelled) return;
+      const destination = resolveVisitorGridDragDestination({ activeIndex, deltaX, deltaY, lastIndex, viewportWidth });
+      if (destination !== null) selectGrid(destination);
+    };
+    active.move = move;
+    active.finish = (pointerEvent) => complete(pointerEvent, false);
+    active.cancel = (pointerEvent) => complete(pointerEvent, true);
+    gridDragRef.current = active;
+    globalThis.addEventListener?.('pointermove', active.move, true);
+    globalThis.addEventListener?.('pointerup', active.finish, true);
+    globalThis.addEventListener?.('pointercancel', active.cancel, true);
+  }, [activeIndex, clearGridDrag, lastIndex, selectGrid, visitorInputBlocked]);
+  useEffect(() => {
+    const editable = (event) => /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable;
+    const keydown = (event) => {
+      if (event.code !== 'Space' || editable(event) || visitorInputBlocked) return;
+      event.preventDefault(); spacePressedRef.current = true; setSpaceNavigation(true);
+    };
+    const release = (event) => {
+      if (event?.code && event.code !== 'Space') return;
+      spacePressedRef.current = false; setSpaceNavigation(false); gridDragRef.current?.cancel?.();
+    };
+    globalThis.addEventListener?.('keydown', keydown, true);
+    globalThis.addEventListener?.('keyup', release, true);
+    globalThis.addEventListener?.('blur', release);
+    return () => {
+      globalThis.removeEventListener?.('keydown', keydown, true);
+      globalThis.removeEventListener?.('keyup', release, true);
+      globalThis.removeEventListener?.('blur', release);
+      spacePressedRef.current = false; clearGridDrag();
+    };
+  }, [clearGridDrag, visitorInputBlocked]);
   const handlePlacementMediaState = useCallback((state) => {
     const key = `${state.gridId}:${state.placementId}`;
     setPlacementMedia((current) => {
@@ -153,8 +223,11 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
 
   return <main aria-label="Published INSCAPE Grid visitor" className="visitor-grid-world" data-lattice-menu-surface
     data-guide-mode={document.appearance.guideMode} data-menu-surface={document.appearance.menuSurfaceId}
-    data-surface={document.appearance.surfaceId} onKeyDown={handleKeyDown} ref={rootRef} tabIndex="-1">
-    <div className="visitor-grid-world__viewport" data-active-grid-id={activeGrid.id}>
+    data-surface={document.appearance.surfaceId} data-space-navigation={spaceNavigation || undefined}
+    data-grid-dragging={gridDragging || undefined} onKeyDown={handleKeyDown} ref={rootRef} tabIndex="-1">
+    <div className="visitor-grid-world__viewport" data-active-grid-id={activeGrid.id}
+      onClickCapture={(event) => { if (suppressPlacementClickRef.current) { event.preventDefault(); event.stopPropagation(); } }}
+      onPointerDown={beginGridDrag}>
       <GridProductionRenderer document={document} grid={activeGrid} imageLoading={activeIndex === 0 ? 'eager' : 'lazy'}
         onMediaState={handlePlacementMediaState} onPlacementActivate={openPlacementViewer}
         projectionBottomInset={VISITOR_GRID_NAVIGATION_SAFE_AREA}
