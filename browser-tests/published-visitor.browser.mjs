@@ -393,7 +393,16 @@ test('semantic controls and owned keyboard input navigate dynamic ordered Grids'
   await page.keyboard.down('Space');
   await waitFor(`document.querySelector('.visitor-grid-world')?.dataset.spaceNavigation === 'true'`, 'visitor Space navigation ownership');
   await page.mouse.move(leftDrag.x, leftDrag.y); await page.mouse.down();
-  await page.mouse.move(leftDrag.x - 180, leftDrag.y + 4, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Space');
+  await page.mouse.move(leftDrag.x - 180, leftDrag.y + 4, { steps: 8 });
+  const liveSwipe = await evaluate(`(()=>{const planes=[...document.querySelectorAll('.visitor-grid-world__grid-plane')];return {count:planes.length,currentLeft:planes[0]?.getBoundingClientRect().left,adjacentLeft:planes[1]?.getBoundingClientRect().left,viewportWidth:document.querySelector('.visitor-grid-world__viewport')?.clientWidth}})()`);
+  assert.equal(liveSwipe.count, 2, 'the adjacent Grid is painted during the gesture');
+  assert.ok(liveSwipe.currentLeft < -100, `the current Grid follows the pointer: ${JSON.stringify(liveSwipe)}`);
+  assert.ok(liveSwipe.adjacentLeft > 0 && liveSwipe.adjacentLeft < liveSwipe.viewportWidth,
+    `the adjacent Grid enters the viewport: ${JSON.stringify(liveSwipe)}`);
+  await page.mouse.up();
+  assert.equal(await evaluate(`document.querySelector('.visitor-grid-world')?.dataset.gridSwipeSettling`), 'true',
+    'release settles the moving Grid planes before navigation commits');
+  await page.keyboard.up('Space');
   await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-archive'`, 'Space-drag advances the published Grid');
   assert.equal(await evaluate(`document.querySelectorAll('.lattice-focus-viewer').length`), 0,
     'Space-drag must not activate the artwork beneath the pointer');

@@ -17,9 +17,19 @@
 .visitor-grid-world[data-surface="ash"] { --visitor-grid-surface: #b2b2b2; --visitor-grid-ink: #111313; }
 .visitor-grid-world[data-surface="mist"] { --visitor-grid-surface: #c9c6bd; --visitor-grid-ink: #111313; }
 .visitor-grid-world[data-surface="paper"] { --visitor-grid-surface: #d8d4ca; --visitor-grid-ink: #111313; }
-.visitor-grid-world__viewport { position: absolute; inset: 0; }
+.visitor-grid-world__viewport { position: absolute; inset: 0; overflow: hidden; }
 .visitor-grid-world[data-space-navigation] .visitor-grid-world__viewport { cursor: grab; }
 .visitor-grid-world[data-grid-dragging] .visitor-grid-world__viewport { cursor: grabbing; }
+.visitor-grid-world__grid-plane { position: absolute; inset: 0; overflow: hidden; }
+.visitor-grid-world__grid-plane--current {
+  transform: translate3d(var(--visitor-grid-swipe-x, 0px), 0, 0);
+}
+.visitor-grid-world__grid-plane--adjacent {
+  transform: translate3d(calc(var(--visitor-grid-swipe-x, 0px) + var(--visitor-grid-swipe-side, 100%)), 0, 0);
+}
+.visitor-grid-world[data-grid-swipe-settling] .visitor-grid-world__grid-plane {
+  transition: transform 280ms cubic-bezier(.22, 1, .36, 1);
+}
 .visitor-grid-renderer { position: absolute; inset: 0; }
 .visitor-grid-renderer .lattice-production-placement[data-frame-id="DOSSIER"] { box-shadow: inset 0 0 0 clamp(2px, .28vw, 5px) currentColor; }
 .visitor-grid-renderer .lattice-production-placement[data-frame-id="CAPTION"] { box-shadow: inset 0 -22px #090a0a, inset 0 0 0 clamp(1px, .16vw, 3px) currentColor; }

@@ -22,6 +22,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
   const identityControlRef = useRef(null);
   const profileDockControlRef = useRef(null);
   const gridDragRef = useRef(null);
+  const gridSwipeTimerRef = useRef(null);
   const spacePressedRef = useRef(false);
   const suppressPlacementClickRef = useRef(false);
   const identityOpenRequestRef = useRef(0);
@@ -32,6 +33,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
   const [identityOpening, setIdentityOpening] = useState(false);
   const [identitySession, setIdentitySession] = useState(null);
   const [gridDragging, setGridDragging] = useState(false);
+  const [gridSwipe, setGridSwipe] = useState(null);
   const [spaceNavigation, setSpaceNavigation] = useState(false);
   const profileIdentity = useProfileIdentity(document.profile.address);
   const profileContractFacts = useProfileContractFacts(document.profile.address, { enabled: Boolean(identityOpening || identitySession) });
@@ -52,6 +54,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
 
   useEffect(() => {
     setActiveIndex(0); setPlacementMedia({}); setViewerSession(null); setProfileVisible(false); setIdentitySession(null);
+    globalThis.clearTimeout?.(gridSwipeTimerRef.current); gridSwipeTimerRef.current = null; setGridSwipe(null);
     rootRef.current?.focus({ preventScroll: true });
   }, [document.documentId, document.revision]);
   useEffect(() => { identityOpenRequestRef.current += 1; setIdentityOpening(false); setIdentitySession(null); }, [document.profile.address]);
@@ -107,13 +110,24 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
     event.preventDefault(); event.stopPropagation();
     const origin = { x: event.clientX, y: event.clientY };
     const viewportWidth = event.currentTarget.clientWidth;
-    const active = { end: origin, moved: false, pointerId: event.pointerId };
+    const active = { end: origin, mode: 'pending', moved: false, pointerId: event.pointerId, targetIndex: null };
     const move = (pointerEvent) => {
       if (gridDragRef.current !== active || pointerEvent.pointerId !== active.pointerId) return;
       pointerEvent.preventDefault();
       active.end = { x: pointerEvent.clientX, y: pointerEvent.clientY };
-      if (!active.moved && Math.hypot(active.end.x - origin.x, active.end.y - origin.y) > 6) {
+      const deltaX = active.end.x - origin.x; const deltaY = active.end.y - origin.y;
+      if (active.mode === 'pending' && Math.hypot(deltaX, deltaY) > 6) {
+        const direction = deltaX < 0 ? 'next' : 'previous';
+        const targetIndex = direction === 'next' ? activeIndex + 1 : activeIndex - 1;
+        active.mode = Math.abs(deltaX) > Math.abs(deltaY) * 1.35 && targetIndex >= 0 && targetIndex <= lastIndex
+          ? 'swipe' : 'navigation';
+        active.direction = direction; active.targetIndex = active.mode === 'swipe' ? targetIndex : null;
         active.moved = true; setGridDragging(true);
+      }
+      if (active.mode === 'swipe') {
+        const directionalDelta = active.direction === 'next' ? Math.min(0, deltaX) : Math.max(0, deltaX);
+        const boundedDelta = Math.max(-viewportWidth, Math.min(viewportWidth, directionalDelta));
+        setGridSwipe({ deltaX: boundedDelta, direction: active.direction, settling: false, targetIndex: active.targetIndex });
       }
     };
     const complete = (pointerEvent, cancelled = false) => {
@@ -124,9 +138,26 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
         globalThis.setTimeout?.(() => { suppressPlacementClickRef.current = false; }, 0);
       }
       clearGridDrag();
-      if (cancelled) return;
-      const destination = resolveVisitorGridDragDestination({ activeIndex, deltaX, deltaY, lastIndex, viewportWidth });
-      if (destination !== null) selectGrid(destination);
+      if (active.mode !== 'swipe') return;
+      const destination = cancelled ? null
+        : resolveVisitorGridDragDestination({ activeIndex, deltaX, deltaY, lastIndex, viewportWidth });
+      const committed = destination !== null;
+      const completeSwipe = () => {
+        if (!committed) {
+          setGridSwipe(null); gridSwipeTimerRef.current = null; return;
+        }
+        selectGrid(destination);
+        gridSwipeTimerRef.current = globalThis.setTimeout?.(() => {
+          setGridSwipe(null); gridSwipeTimerRef.current = null;
+        }, 34);
+      };
+      if (reducedMotion) completeSwipe();
+      else {
+        setGridSwipe({ deltaX: committed ? (active.direction === 'next' ? -viewportWidth : viewportWidth) : 0,
+          direction: active.direction, settling: true, targetIndex: active.targetIndex });
+        globalThis.clearTimeout?.(gridSwipeTimerRef.current);
+        gridSwipeTimerRef.current = globalThis.setTimeout?.(completeSwipe, committed ? 280 : 220);
+      }
     };
     active.move = move;
     active.finish = (pointerEvent) => complete(pointerEvent, false);
@@ -135,7 +166,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
     globalThis.addEventListener?.('pointermove', active.move, true);
     globalThis.addEventListener?.('pointerup', active.finish, true);
     globalThis.addEventListener?.('pointercancel', active.cancel, true);
-  }, [activeIndex, clearGridDrag, lastIndex, selectGrid, visitorInputBlocked]);
+  }, [activeIndex, clearGridDrag, lastIndex, reducedMotion, selectGrid, visitorInputBlocked]);
   useEffect(() => {
     const editable = (event) => /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable;
     const keydown = (event) => {
@@ -153,7 +184,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
       globalThis.removeEventListener?.('keydown', keydown, true);
       globalThis.removeEventListener?.('keyup', release, true);
       globalThis.removeEventListener?.('blur', release);
-      spacePressedRef.current = false; clearGridDrag();
+      spacePressedRef.current = false; clearGridDrag(); globalThis.clearTimeout?.(gridSwipeTimerRef.current);
     };
   }, [clearGridDrag, visitorInputBlocked]);
   const handlePlacementMediaState = useCallback((state) => {
@@ -220,18 +251,28 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
   };
   const gridVariables = { '--lattice-grid-cell-size': 'calc(min(100vw / 32, 100vh / 18))',
     '--lattice-grid-origin-x': '0px', '--lattice-grid-origin-y': '0px' };
+  const swipeGrid = Number.isInteger(gridSwipe?.targetIndex) ? document.grids[gridSwipe.targetIndex] : null;
+  const swipeStyle = gridSwipe ? { '--visitor-grid-swipe-x': `${gridSwipe.deltaX}px`,
+    '--visitor-grid-swipe-side': gridSwipe.direction === 'next' ? '100%' : '-100%' } : undefined;
 
   return <main aria-label="Published INSCAPE Grid visitor" className="visitor-grid-world" data-lattice-menu-surface
     data-guide-mode={document.appearance.guideMode} data-menu-surface={document.appearance.menuSurfaceId}
     data-surface={document.appearance.surfaceId} data-space-navigation={spaceNavigation || undefined}
-    data-grid-dragging={gridDragging || undefined} onKeyDown={handleKeyDown} ref={rootRef} tabIndex="-1">
+    data-grid-dragging={gridDragging || undefined} data-grid-swipe-settling={gridSwipe?.settling || undefined}
+    onKeyDown={handleKeyDown} ref={rootRef} style={swipeStyle} tabIndex="-1">
     <div className="visitor-grid-world__viewport" data-active-grid-id={activeGrid.id}
       onClickCapture={(event) => { if (suppressPlacementClickRef.current) { event.preventDefault(); event.stopPropagation(); } }}
       onPointerDown={beginGridDrag}>
-      <GridProductionRenderer document={document} grid={activeGrid} imageLoading={activeIndex === 0 ? 'eager' : 'lazy'}
-        onMediaState={handlePlacementMediaState} onPlacementActivate={openPlacementViewer}
-        projectionBottomInset={VISITOR_GRID_NAVIGATION_SAFE_AREA}
-        viewerPlacementId={viewerSession?.gridId === activeGrid.id ? viewerSession.placementId : null} />
+      <div className="visitor-grid-world__grid-plane visitor-grid-world__grid-plane--current">
+        <GridProductionRenderer document={document} grid={activeGrid} imageLoading={activeIndex === 0 ? 'eager' : 'lazy'}
+          onMediaState={handlePlacementMediaState} onPlacementActivate={openPlacementViewer}
+          projectionBottomInset={VISITOR_GRID_NAVIGATION_SAFE_AREA}
+          viewerPlacementId={viewerSession?.gridId === activeGrid.id ? viewerSession.placementId : null} />
+      </div>
+      {gridSwipe && swipeGrid && <div aria-hidden="true" className="visitor-grid-world__grid-plane visitor-grid-world__grid-plane--adjacent">
+        <GridProductionRenderer document={document} grid={swipeGrid} imageLoading="eager"
+          onMediaState={handlePlacementMediaState} projectionBottomInset={VISITOR_GRID_NAVIGATION_SAFE_AREA} />
+      </div>}
     </div>
     {(profileVisible || identityOpening) && !identitySession && <LatticeProfileRail blocked={Boolean(viewerSession)} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
       identityDisabled={Boolean(identityOpening || identityDossierActive || viewerSession)} identityExpanded={Boolean(identityOpening || identityDossierActive)}

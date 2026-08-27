@@ -42,9 +42,11 @@ const projectedSelectionOutline = (bounds, field) => {
   return { ...rectangle, width: rectangle.width + 1, height: rectangle.height + 1 };
 };
 
-function GridSwipePreview({ assetsById, grid, onAssetDimensions, worldViewport }) {
+function GridSwipePreview({ appearance, assetsById, grid, onAssetDimensions, snapStep, worldViewport }) {
   if (!grid || !worldViewport) return null;
   return <>
+    <LatticePixelGrid color={appearance.guideColor} field={worldViewport} guideInterval={snapStep}
+      height={worldViewport.height} mode={appearance.guideMode} width={worldViewport.width} />
     {grid.placements.slice().sort((left, right) => left.layer - right.layer).map((placement) => {
       const asset = assetsById.get(placement.stableAssetId);
       const src = sourceFor(asset);
@@ -184,9 +186,9 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
           destination: createSystemWorkflowDropGeometry(dimensions.width, dimensions.height, { x: event.clientX, y: event.clientY }, field),
         }));
       }}>
+      <div className="system-workflow__grid-plane system-workflow__grid-plane--current">
       {worldViewport && <LatticePixelGrid color={appearance.guideColor} field={worldViewport} guideInterval={snapStep}
         height={worldViewport.height} mode={appearance.guideMode} width={worldViewport.width} />}
-      <div className="system-workflow__grid-plane system-workflow__grid-plane--current">
       {projectedPlacements.slice().sort((left, right) => left.layer - right.layer).map((placement) => {
         const asset = assetsById.get(placement.stableAssetId);
         const src = sourceFor(asset);
@@ -229,8 +231,8 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
       {interaction.marquee && <i className="system-workflow__marquee" style={interaction.marquee} />}
       </div>
       {interaction.gridSwipe && swipeGrid && <div aria-hidden="true" className="system-workflow__grid-plane system-workflow__grid-plane--adjacent">
-        <GridSwipePreview assetsById={assetsById} grid={swipeGrid}
-          onAssetDimensions={onAssetDimensions} worldViewport={worldViewport} />
+        <GridSwipePreview appearance={appearance} assetsById={assetsById} grid={swipeGrid}
+          onAssetDimensions={onAssetDimensions} snapStep={snapStep} worldViewport={worldViewport} />
       </div>}
     </div>
     <output aria-live="polite" className="system-workflow__drop-feedback" data-visible={Boolean(dropFeedback) || undefined}>{dropFeedback}</output>

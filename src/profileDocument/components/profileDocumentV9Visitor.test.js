@@ -78,6 +78,10 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(visitor, /event\.code !== 'Space'/);
   assert.match(visitor, /onPointerDown=\{beginGridDrag\}/);
   assert.match(visitor, /suppressPlacementClickRef/);
+  assert.match(visitor, /visitor-grid-world__grid-plane--current/);
+  assert.match(visitor, /visitor-grid-world__grid-plane--adjacent/);
+  assert.match(visitor, /--visitor-grid-swipe-x/);
+  assert.match(visitorCss, /data-grid-swipe-settling/);
   assert.match(visitor, /Previous Grid/);
   assert.match(visitor, /Next Grid/);
   assert.match(visitor, /onOpenDirectory \|\| onReturn \|\| onExit/);

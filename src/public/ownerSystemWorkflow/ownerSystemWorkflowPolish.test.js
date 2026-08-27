@@ -19,7 +19,7 @@ test('Library remains mounted after first open without retaining an interactive 
   assert.match(source, /libraryMounted\.current && <PanelPresence id="library" panels=\{panels\} retained>/);
 });
 
-test('Grid navigation is explicitly Space-drag and the architectural grid is rendered once', () => {
+test('Grid navigation is explicitly Space-drag and both moving planes render their architectural grid', () => {
   const interaction = read('./useOwnerSystemWorkflowPlacementInteraction.js');
   const canvas = read('./OwnerSystemWorkflowCanvas.jsx');
   const styles = read('./ownerSystemWorkflow.css');
@@ -27,7 +27,9 @@ test('Grid navigation is explicitly Space-drag and the architectural grid is ren
   assert.match(interaction, /beginCanvasSelection\(event, \{ navigationOnly: true \}\)/);
   assert.match(interaction, /navigationOnly && Math\.abs\(deltaX\)/);
   assert.doesNotMatch(interaction, /!event\.shiftKey && Math\.abs\(deltaX\)/);
-  assert.equal((canvas.match(/<LatticePixelGrid/g) || []).length, 1);
+  assert.equal((canvas.match(/<LatticePixelGrid/g) || []).length, 2);
+  assert.match(canvas, /grid-plane--current[\s\S]*<LatticePixelGrid/);
+  assert.match(canvas, /grid-plane--adjacent[\s\S]*<GridSwipePreview/);
   assert.doesNotMatch(styles, /grid-plane--adjacent::before/);
   assert.match(styles, /\[data-space-navigation\] \{ cursor: grab; \}/);
 });
