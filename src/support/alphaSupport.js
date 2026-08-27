@@ -37,7 +37,6 @@ function boundedText(value, maximum = 180) {
 
 export function resolveAlphaRouteClass(locationLike = {}) {
   const search = new URLSearchParams(locationLike.search || '');
-  if (search.get('mode') === 'atelier') return 'ATELIER';
   if (search.has('view')) return 'DIRECT_PROFILE';
   if (search.has('profile')) return 'OWNER_OR_PROFILE';
   return 'PUBLIC_ENTRY';

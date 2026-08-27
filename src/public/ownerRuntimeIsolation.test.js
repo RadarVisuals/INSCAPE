@@ -76,7 +76,6 @@ test('cold visitor authority states perform no owner persistence operations and 
   } };
   try {
     const coldRuntime = await import(`./ownerRuntimeLoader.js?cold-visitor=${Date.now()}`);
-    const coldStore = await import(`../store/useStore.js?cold-visitor=${Date.now()}`);
     let imports = 0;
     const loader = coldRuntime.createOwnerRuntimeLoader(async () => { imports += 1; return { default: () => null }; });
     const matching = { verifiedOwnerProfileAddress: PROFILE_A, workspaceProfileAddress: PROFILE_A, viewedProfileAddress: PROFILE_A };
@@ -92,8 +91,6 @@ test('cold visitor authority states perform no owner persistence operations and 
     }
     assert.equal(imports, 0);
     assert.deepEqual(operations, []);
-    coldStore.useStore.getState().loadActorPresets();
-    assert.deepEqual(operations, [['get', 'underneath.actor-presets.v1']]);
   } finally {
     if (priorWindow === undefined) delete globalThis.window;
     else globalThis.window = priorWindow;

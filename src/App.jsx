@@ -1,10 +1,5 @@
 // src/App.jsx
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  APPLICATION_MODES,
-  createApplicationModeUrl,
-  resolveApplicationMode
-} from './app/appMode.js';
 import OwnerRuntimeBoundary from './public/OwnerRuntimeBoundary.jsx';
 import { Startveil } from './startveil/index.js';
 import { useWalletStore } from './store/useWalletStore.js';
@@ -26,17 +21,11 @@ import { reportControlledError } from './diagnostics.js';
 import AlphaSupportPanel from './support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from './support/alphaSupport.js';
 
-const AtelierExperience = lazy(() => import('./app/AtelierExperience.jsx'));
 const PublicDiscoverExperience = lazy(() => import('./profileDiscovery/PublicDiscoverExperience.jsx'));
-
-function AtelierLoadingFallback() {
-  return <div className="mode-loading" role="status">Opening Atelier…</div>;
-}
 
 function App() {
   const desktopContextMenuRef = useRef(null);
   const standaloneWalletSessionRef = useRef(null);
-  const [applicationMode, setApplicationMode] = useState(() => resolveApplicationMode(window.location));
   const routeWorkspaceProfileAddress = useMemo(() => resolveLibraryProfile(window.location), []);
   const [explicitViewedProfileAddress, setExplicitViewedProfileAddress] = useState(() => resolveExplicitViewedProfile(window.location));
   const [retainedPublicProfileAddress, setRetainedPublicProfileAddress] = useState(null);
@@ -77,13 +66,9 @@ function App() {
     viewedProfileAddress
   });
   const getWalletPublicationContext = useCallback(() => useWalletStore.getState(), []);
-  const effectiveApplicationMode = applicationMode === APPLICATION_MODES.ATELIER && ownerAuthoringEnabled
-    ? APPLICATION_MODES.ATELIER
-    : APPLICATION_MODES.PUBLIC;
   const publicProfileRoute = selectPublicProfileRoute(ownerAuthoringEnabled);
   const localOwnerRoute = publicProfileRoute === 'LOCAL_OWNER';
-  const publicEntryPortal = effectiveApplicationMode === APPLICATION_MODES.PUBLIC
-    && !explicitViewedProfileAddress && !routeWorkspaceProfileAddress && !retainedPublicProfileAddress
+  const publicEntryPortal = !explicitViewedProfileAddress && !routeWorkspaceProfileAddress && !retainedPublicProfileAddress
     && [PROFILE_TARGET_SOURCE.PENDING, PROFILE_TARGET_SOURCE.NONE].includes(profileTarget.source);
   const [publishedResolution, retryPublishedProfile] = usePublishedProfile(viewedProfileAddress);
   const ownerSourceReady = publishedResolution?.status !== PUBLISHED_PROFILE_STATUS.LOADING;
@@ -154,20 +139,13 @@ function App() {
   }, [authorityLifecycleStatus, standaloneSignInActive, visitorWalletConnected]);
 
   useEffect(() => {
-    const syncModeFromUrl = () => {
-      setApplicationMode(resolveApplicationMode(window.location));
+    const syncProfileFromUrl = () => {
       setExplicitViewedProfileAddress(resolveExplicitViewedProfile(window.location));
     };
-    syncModeFromUrl();
-    window.addEventListener('popstate', syncModeFromUrl);
-    return () => window.removeEventListener('popstate', syncModeFromUrl);
+    syncProfileFromUrl();
+    window.addEventListener('popstate', syncProfileFromUrl);
+    return () => window.removeEventListener('popstate', syncProfileFromUrl);
   }, [routeWorkspaceProfileAddress]);
-
-  const changeApplicationMode = useCallback((mode) => {
-    const nextUrl = createApplicationModeUrl(window.location, mode);
-    window.history.pushState({ applicationMode: mode }, '', nextUrl);
-    setApplicationMode(mode);
-  }, []);
 
   const visitProfile = useCallback((address, { returnToConnectedProfile = false } = {}) => {
     const nextUrl = returnToConnectedProfile
@@ -221,7 +199,7 @@ function App() {
   }, []);
 
   return (
-    <div className="application-root" data-application-mode={effectiveApplicationMode} data-startveil-stage={revealStage} data-gallery-active={galleryActive || undefined}>
+    <div className="application-root" data-application-mode="public" data-startveil-stage={revealStage} data-gallery-active={galleryActive || undefined}>
       <div
         className="application-world"
         data-visible={worldVisible || undefined}
@@ -238,12 +216,7 @@ function App() {
           code={ALPHA_SUPPORT_CODES.AUTHORITY_INITIALIZATION_FAILED} phase="OWNER_AUTHORITY"
           providerCategory="UP_PROVIDER" profileAddress={viewedProfileAddress} routeClass="AUTHORITY_ENTRY"
           message={initializationError.message} />}
-        {effectiveApplicationMode === APPLICATION_MODES.ATELIER ? (
-          <Suspense fallback={<AtelierLoadingFallback />}>
-            <AtelierExperience onRequestPublic={() => changeApplicationMode(APPLICATION_MODES.PUBLIC)} />
-          </Suspense>
-        ) : (
-          standaloneSignInActive || publicEntryPortal ? null : profileTarget.pending
+        {standaloneSignInActive || publicEntryPortal ? null : profileTarget.pending
             ? <div className="mode-loading" role="status">Resolving profile...</div>
             : profileTarget.source === PROFILE_TARGET_SOURCE.NONE ? <Suspense fallback={null}>
               <PublicDiscoverExperience onRequestOwner={requestStandaloneSignIn}
@@ -260,7 +233,6 @@ function App() {
             onConnect={requestStandaloneSignIn}
             onDisconnect={disconnectStandalone}
             onEnterMyWorld={enterConnectedWorld}
-            onRequestAtelier={() => changeApplicationMode(APPLICATION_MODES.ATELIER)}
             interfaceVisible={interfaceVisible}
             revealPresentation={revealPresentation}
             onPreviewDocumentChange={setPreviewDocument}
@@ -275,8 +247,7 @@ function App() {
             returnProfileAddress={profileTarget.source === PROFILE_TARGET_SOURCE.EXPLICIT
               ? verifiedOwnerProfileAddress
               : null}
-            onVisitProfile={visitProfile} />
-        )}
+            onVisitProfile={visitProfile} />}
       </div>
       <Startveil
         connectedProfile={connectedProfile}

@@ -41,7 +41,7 @@ test('invalid addresses, hashes, codes and unknown fields fail closed', () => {
 test('route classification never retains a full URL or query value', () => {
   assert.equal(resolveAlphaRouteClass({ search: `?view=${PROFILE}&secret=value` }), 'DIRECT_PROFILE');
   assert.equal(resolveAlphaRouteClass({ search: `?profile=${PROFILE}` }), 'OWNER_OR_PROFILE');
-  assert.equal(resolveAlphaRouteClass({ search: '?mode=atelier' }), 'ATELIER');
+  assert.equal(resolveAlphaRouteClass({ search: '?mode=atelier' }), 'PUBLIC_ENTRY');
   assert.equal(resolveAlphaRouteClass({ search: '' }), 'PUBLIC_ENTRY');
 });
 
