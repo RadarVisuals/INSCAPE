@@ -140,7 +140,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
       for (const method of ['getItem', 'setItem', 'removeItem']) {
         const original = Storage.prototype[method];
         Storage.prototype[method] = function routingStorageProbe(key, ...rest) {
-          if (/^(?:inscape\.library-|inscape\.lattice-production-draft)/u.test(String(key))) {
+          if (/^(?:inscape\.library-|inscape\.system-workflow-draft)/u.test(String(key))) {
             window.__routingStorageOperations.push({ method, key: String(key) });
           }
           return original.call(this, key, ...rest);
