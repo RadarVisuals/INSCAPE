@@ -8,7 +8,12 @@ import { useWalletStore } from '../../store/useWalletStore.js';
 import { developmentLog, reportControlledError } from '../../diagnostics.js';
 import {
   createFolder,
+  createCategorySection,
+  deleteCategorySection,
   deleteFolder,
+  moveCategory,
+  moveCategorySection,
+  renameCategorySection,
   renameFolder,
   resetCanvasLayout,
   setFolderAsset,
@@ -118,13 +123,11 @@ export const useLibraryStore = create((set, get) => ({
     });
     set({ loadGeneration: generation, assets: forceLive ? [] : get().assets, sourceMode: 'INDEXER', status: 'loading',
       error: null, liveError: null, progress: { resolved: 0, total: 0, failures: 0 } });
-    const priorityAssetIds = [...new Set((get().workspace?.canvas?.objects || [])
-      .map((object) => object?.stableAssetId).filter(Boolean))];
     const consume = async (repository, signal, options = {}) => {
       const unresolvedAssetIds = []; let sourceAssets = []; let sourceFailures = 0;
       const replaceOnComplete = options.replaceOnComplete ?? !options.preserveProgress;
       for await (const batch of repository.loadProfileAssets(requestedProfileAddress,
-        { signal, priorityAssetIds, requestedAssetIds: options.requestedAssetIds })) {
+        { signal, requestedAssetIds: options.requestedAssetIds })) {
         if (get().loadGeneration !== generation) {
           developmentLog('[asset-index] stale batch discarded', { generation, profileAddress: requestedProfileAddress });
           return;
@@ -324,23 +327,32 @@ export const useLibraryStore = create((set, get) => ({
     const workspace = setFolderPublic(get().workspace, folderId, isPublic); set({ workspace }); scheduleSave(workspace);
   },
   commitCategoryForProfile(expectedProfileAddress, command) {
-    const beforeIds = command?.type === 'create'
-      ? new Set(get().workspace?.folders?.map(({ id }) => id) || []) : null;
+    const beforeIds = command?.type === 'create' ? new Set(get().workspace?.folders?.map(({ id }) => id) || []) : null;
+    const beforeSectionIds = command?.type === 'create-section'
+      ? new Set(get().workspace?.categoryOrganization?.sections?.map(({ id }) => id) || []) : null;
     const workspace = commitProfileScopedCategory(set, get, expectedProfileAddress, (current) => {
       if (command?.type === 'create') return createFolder(current, command.name);
       if (command?.type === 'rename') return renameFolder(current, command.categoryId, command.name);
       if (command?.type === 'delete') return deleteFolder(current, command.categoryId);
       if (command?.type === 'public') return setFolderPublic(current, command.categoryId, command.value);
+      if (command?.type === 'create-section') return createCategorySection(current, command.name);
+      if (command?.type === 'rename-section') return renameCategorySection(current, command.sectionId, command.name);
+      if (command?.type === 'delete-section') return deleteCategorySection(current, command.sectionId);
+      if (command?.type === 'move-category') return moveCategory(current, command.categoryId, command.sectionId, command.beforeId);
+      if (command?.type === 'move-section') return moveCategorySection(current, command.sectionId, command.beforeId);
       if (command?.type === 'asset') return setFolderAsset(current, command.categoryId, command.assetId, command.value);
       if (command?.type === 'assets') {
-        const acceptedIds = new Set(get().assets.map(({ id }) => id));
+        const acceptedIds = new Set([...get().assets.map(({ id }) => id),
+          ...(command.acceptedAssetIds || [])]);
         const assetIds = Array.isArray(command.assetIds) ? [...new Set(command.assetIds)] : [];
         if (!assetIds.length || assetIds.some((id) => typeof id !== 'string' || !acceptedIds.has(id))) return current;
         return setFolderAssets(current, command.categoryId, assetIds, command.value);
       }
       return current;
     });
-    return beforeIds ? workspace?.folders.find(({ id }) => !beforeIds.has(id))?.id || null : Boolean(workspace);
+    if (beforeIds) return workspace?.folders.find(({ id }) => !beforeIds.has(id))?.id || null;
+    if (beforeSectionIds) return workspace?.categoryOrganization.sections.find(({ id }) => !beforeSectionIds.has(id))?.id || null;
+    return Boolean(workspace);
   },
   setCanvasObjectLocked(id, locked) {
     const workspace = setCanvasObjectLocked(get().workspace, id, locked); set({ workspace }); scheduleSave(workspace);

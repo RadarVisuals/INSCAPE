@@ -8,14 +8,12 @@
     "build": "vite build",
     "build:check": "node scripts/checkProductionBuild.js",
     "test": "node --test",
+    "test:lukso-standards": "node --test scripts/luksoStandards.audit.test.js",
     "test:browser": "node --test browser-tests/published-visitor.browser.mjs",
-    "test:browser:phase3": "node --test browser-tests/lattice-production-table.browser.mjs",
-    "test:browser:phase4": "node --test browser-tests/owner-lattice-navigation.browser.mjs",
-    "test:browser:phase5a": "node --test browser-tests/owner-lattice-browser.browser.mjs",
-    "test:browser:phase5b1": "node --test browser-tests/owner-lattice-placement.browser.mjs",
-    "test:browser:phase5b2": "node --test browser-tests/owner-lattice-placement.browser.mjs",
     "test:browser:routing": "node --test browser-tests/owner-profile-routing.browser.mjs",
-    "visual:phase3": "node browser-tests/lattice-production-table.browser.mjs --visual",
+    "test:browser:alpha-support": "node --test browser-tests/alpha-support-preview.browser.mjs",
+    "test:browser:system-workflow-phase4b": "node --test browser-tests/owner-system-workflow-publication.browser.mjs",
+    "test:browser:system-workflow-production": "node --test browser-tests/owner-system-workflow-production.browser.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -25,8 +23,6 @@
     "@wagmi/core": "^3.0.0",
     "buffer": "^6.0.3",
     "lucide-react": "^0.370.0",
-    "pixi-filters": "^6.1.5",
-    "pixi.js": "^8.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "viem": "^2.54.6",
@@ -35,7 +31,6 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
     "playwright-core": "1.61.1",
-    "vite": "^5.2.0",
-    "ws": "^8.21.0"
+    "vite": "^5.2.0"
   }
 }

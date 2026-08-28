@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createEmptyWorkspace } from '../../library/domain/libraryWorkspace.js';
-import { adaptLatticeProductionBrowserData } from './latticeProductionBrowserAdapter.js';
+import { adaptLatticeProductionBrowserAsset, adaptLatticeProductionBrowserData } from './latticeProductionBrowserAdapter.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const OTHER_PROFILE = '0x2222222222222222222222222222222222222222';
@@ -32,6 +32,9 @@ test('real Browser adaptation validates owner scope, canonical identity, media, 
     favorites: [ASSET_ID],
     folders: [{ id: 'category-a', name: 'Category A', assetIds: [ASSET_ID], public: true,
       createdAt: 1, updatedAt: 2 }],
+    categoryOrganization: { rootCategoryIds: [], sections: [
+      { id: 'section-a', name: 'Section A', categoryIds: ['category-a'] },
+    ] },
     canvas: { launchers: [], objects: [{ id: 'legacy-object' }] },
     tables: { placements: [{ id: 'legacy-placement' }] },
   };
@@ -44,6 +47,8 @@ test('real Browser adaptation validates owner scope, canonical identity, media, 
   assert.equal(result.assets.length, 1);
   assert.deepEqual(result.favorites, [ASSET_ID]);
   assert.deepEqual(result.categories, [{ id: 'category-a', name: 'Category A', assetIds: [ASSET_ID], public: true }]);
+  assert.deepEqual(result.categoryOrganization, workspace.categoryOrganization);
+  assert.equal(Object.isFrozen(result.categoryOrganization.sections[0].categoryIds), true);
   assert.equal(result.assets[0].stableAssetId, ASSET_ID);
   assert.equal(result.assets[0].placeable, true);
   assert.equal(result.assets[0].mediaType, 'image');
@@ -60,7 +65,7 @@ test('real Browser adaptation validates owner scope, canonical identity, media, 
   assert.deepEqual(workspace, before);
 });
 
-test('placement eligibility remains honest while media or native dimensions are unresolved', () => {
+test('placement eligibility allows bounded on-demand browser decoding when metadata dimensions are unresolved', () => {
   const workspace = createEmptyWorkspace(PROFILE);
   const missingDimensions = adaptLatticeProductionBrowserData({
     assets: [asset({ imageWidth: null })], profileAddress: PROFILE, workspace,
@@ -71,12 +76,39 @@ test('placement eligibility remains honest while media or native dimensions are 
   const unsupportedMedia = adaptLatticeProductionBrowserData({
     assets: [asset({ mediaType: 'video' })], profileAddress: PROFILE, workspace,
   }).assets[0];
-  assert.equal(missingDimensions.placeable, false);
-  assert.equal(missingDimensions.placementUnavailableReason, 'DIMENSIONS RESOLVING');
+  assert.equal(missingDimensions.placeable, true);
+  assert.equal(missingDimensions.placementUnavailableReason, null);
   assert.equal(missingMedia.placeable, false);
   assert.equal(missingMedia.placementUnavailableReason, 'MEDIA UNAVAILABLE');
   assert.equal(unsupportedMedia.placeable, false);
   assert.equal(unsupportedMedia.placementUnavailableReason, 'MEDIA TYPE UNAVAILABLE');
+});
+
+test('preview candidates retain the original metadata URL as fallback after an indexer-derived source', () => {
+  const adapted = adaptLatticeProductionBrowserAsset(asset({
+    thumbnailUrl: 'https://indexer.example/image/stale',
+    imageUrl: 'https://indexer.example/image/stale',
+    originalImageUrl: 'https://indexer.example/image/stale',
+    imageGroups: [{ variants: [
+      { url: 'https://indexer.example/image/stale' },
+      { url: 'https://gateway.example/ipfs/original' },
+    ] }],
+  }), PROFILE);
+  assert.deepEqual(adapted.previewCandidates, [
+    'https://indexer.example/image/stale',
+    'https://gateway.example/ipfs/original',
+  ]);
+});
+
+test('a collection token preview remains visible but cannot masquerade as placeable collection media', () => {
+  const tokenId = `0x${'0'.repeat(63)}1`;
+  const preview = adaptLatticeProductionBrowserAsset(asset({ isCollection: true, collectionPreviewTokenId: tokenId }), PROFILE);
+  assert.equal(preview.previewSrc, 'https://assets.example/thumbnail.webp');
+  assert.equal(preview.collectionPreviewTokenId, tokenId);
+  assert.equal(preview.mediaType, 'image');
+  assert.equal(preview.src, null);
+  assert.equal(preview.placeable, false);
+  assert.equal(preview.placementUnavailableReason, 'COLLECTION TOKEN PREVIEW ONLY');
 });
 
 test('missing, malformed, duplicate, and cross-profile records fail closed without changing memberships', () => {
@@ -112,4 +144,25 @@ test('wrong-profile workspace rejects its complete data boundary', () => {
   assert.deepEqual(result.assets, []);
   assert.deepEqual(result.categories, []);
   assert.deepEqual(result.favorites, []);
+});
+
+test('created-only acceptance is explicit and requires strong profile-address provenance', () => {
+  const created = asset({ ownerAddress: null, viewedProfileIsCreator: true, creatorAttributionLevel: 'contract',
+    creators: [{ address: PROFILE }], ownershipKnown: true, isOwnedByViewedProfile: false });
+  assert.equal(adaptLatticeProductionBrowserAsset(created, PROFILE), null);
+  assert.equal(adaptLatticeProductionBrowserAsset(created, PROFILE, true).stableAssetId, ASSET_ID);
+  assert.equal(adaptLatticeProductionBrowserAsset({ ...created, creatorAttributionLevel: 'authored' }, PROFILE, true), null);
+  assert.equal(adaptLatticeProductionBrowserAsset({ ...created, creators: [{ address: OTHER_PROFILE }] }, PROFILE, true), null);
+});
+
+test('collection-derived acceptance requires explicit parent creator provenance', () => {
+  const collectionChild = asset({
+    ownerAddress: null, viewedProfileIsCreator: false, creatorAttributionLevel: null,
+    creators: [{ address: OTHER_PROFILE }], viewedProfileIsCollectionCreator: true,
+    collectionCreatorAttributionLevel: 'contract', collectionCreators: [{ address: PROFILE }],
+  });
+  assert.equal(adaptLatticeProductionBrowserAsset(collectionChild, PROFILE), null);
+  assert.equal(adaptLatticeProductionBrowserAsset(collectionChild, PROFILE, true).stableAssetId, ASSET_ID);
+  assert.equal(adaptLatticeProductionBrowserAsset({ ...collectionChild,
+    collectionCreators: [{ address: OTHER_PROFILE }] }, PROFILE, true), null);
 });

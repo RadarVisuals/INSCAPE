@@ -546,6 +546,8 @@ Pre-writer checkpoint (2026-08-01): the pure production snapshot builder is impl
 
 Implemented Phase 8B checkpoint (2026-08-01, surface accepted; awaiting real-publication acceptance): versions 7 and 8 now share the complete existing upload, canonical verification, wallet, receipt, and resolver-read-back policy, while the legacy local snapshot store remains version-7-only. Owner PUBLISH lazy-loads a bounded RÄCK surface with explicit prepare, verify, and publish stages. The frozen v8 snapshot is runtime-only, profile-scoped, public-only, generation-bound, and becomes stale after any relevant live-context change. No automatic upload or wallet action occurs. Focused Phase 8B checks pass 56/56, `git diff --check` passes, and production build/budgets pass with the publication controller isolated in a 29.04 kB raw / 9.90 kB gzip lazy chunk. Interactive review accepted the publication surface and FROZEN/STALE lifecycle without initiating an upload or wallet action. Final acceptance requires the explicit revision-one/revision-two publication and cross-account/direct/iframe matrix.
 
+Final Phase 8 acceptance (2026-08-01): a real version-8 revision one and a changed revision two were published from the production deployment. A different authenticated Universal Profile resolved both through the direct `?view=0x…` visitor route, and revision two exposed the new public workspace state. This accepts the public-IPFS upload, CID verification, wallet write, on-chain pointer, latest-document resolution, owner/visitor isolation, and production visitor renderer. Phase 8 is complete. Version 7 remains readable as the compatibility and rollback boundary.
+
 Rollback: disable new version 8 publication. Already published version 8 documents remain readable. An on-chain return to version 7 requires explicit owner authorization.
 
 Manual test:
@@ -561,6 +563,8 @@ Manual test:
 ### Phase 9 — cutover and Alpha hardening
 
 Enable the production owner and visitor lattice paths while retaining the complete fallback. Verify isolation, accessibility, reduced motion, responsive behavior, performance budgets, deployment, and rollback.
+
+Owner profile-navigation activation (2026-08-01, awaiting interactive acceptance): `OwnerLatticeShell.jsx` now owns mutually bounded CREATIONS, ACTIVITY, and DISCOVER session windows with exact rail-trigger focus return. `CreationsBrowser.jsx` retains the creator-attribution repository and progressive source states but replaces its old `NftFlipViewer` activation with the accepted `LatticeFocusViewer` RÄCK, decoded native dimensions, previous/next navigation, current menu-surface tokens, and explicit indexed, metadata, or derived technical labels. `ActivityBrowser.jsx` continues to consume `luksoActivityRepository` event history and now closes through Escape. `ProfileDiscoveryBoundary.jsx` remains the current public directory and no Gallery import is introduced. `LatticeWorkspaceToolbar.jsx` and `SettingsBrowser.jsx` activate MORE → SETTINGS only; unsupported INTERFACE remains absent. These are lazy owner-only surfaces and do not alter canonical documents, Library ownership, publication, routing, wallet/IPFS, or visitor capabilities.
 
 ### Phase 10 — legacy cleanup
 

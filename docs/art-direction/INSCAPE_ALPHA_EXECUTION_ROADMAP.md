@@ -34,6 +34,10 @@ Approved production-integration inventory:
 
 - `docs/art-direction/INSCAPE_PRODUCTION_INTEGRATION_INVENTORY.md` — audited production boundaries, exact legacy mapping, canonical authority rules, cutover, rollback, and manual-test plan.
 
+Accepted development-only visual and interaction authority awaiting staged production implementation:
+
+- `docs/art-direction/INSCAPE_MODUL8R_ROADMAP_AND_BOUNDARY.md` — accepted MODUL-8R naming, geometry, Library/Activity/People/Layers accordion, Settings/Theme ownership, staged Alpha cutover, rollback, and the explicitly post-Alpha Atelier, control-cell, embedded-mode, and MEDI-8R boundaries.
+
 ## Status legend
 
 - `[x]` complete, verified, committed, and pushed
@@ -45,7 +49,19 @@ Approved production-integration inventory:
 
 Latest accepted production checkpoint:
 
-- `bb17f9c` — universal owner RÄCK, Unified Browser, multi-select authoring, and grouped composition tools
+- `20f071b` — accepted post-Task-9 placement-presentation parity repair
+
+Latest accepted MODUL-8R design-authority checkpoint:
+
+- `0f1136d` — isolated development prototype, accepted visual and interaction authority; not yet imported into production
+
+Latest accepted MODUL-8R production-integration architecture checkpoint:
+
+- `0abb94c` — atomic production owner-runtime cutover to MODUL-8R
+
+Latest accepted MODUL-8R implementation checkpoint:
+
+- `20f071b` — Tasks 1–9 complete plus accepted Frame & mat authoring parity
 
 Last verified sequence at the time this roadmap was created:
 
@@ -70,17 +86,19 @@ The working tree was clean when this roadmap was created.
 - [x] Prototype design through canonical Phase 6 frozen.
 - [x] Browser combines INDEX and CATEGORIES in one isolated workspace.
 - [x] Frozen lattice prototype decomposed into focused modules without changing its behavior.
+- [x] Development-only MODUL-8R prototype visually and interactionally accepted at `/prototype/modul-8r`.
+- [x] MODUL-8R prototype stylesheet consolidated to one exact-selector authority; compact mode and decorative status concepts rejected.
 
 ### Production track
 
 - [x] Phase 4 owner navigation and fixed chrome are integrated and visually accepted behind the verified owner gate.
 - [x] The version-8 lattice Visitor runtime, Owner Preview, NFT viewer, Identity RÄCK, and Keeper parity are integrated and interactively accepted.
-- [~] Version 8 defines the canonical nine-table profile-document model and now shares the production publication pipeline with version 7; surface and real-publication acceptance remain open.
+- [x] Version 8 is the canonical nine-table profile-document model, shares the production publication pipeline with version 7, and is accepted across owner, visitor, direct, iframe, Preview, and real-publication surfaces.
 - [x] Production INDEX/CATEGORIES stores are wired read-only to the isolated Browser; canonical authoring remains separately bounded by the current Phase 5B capability.
 - [x] Phase 4 fixed chrome, the Phase 6 production NFT viewer, and the Phase 7 production identity RÄCK are integrated and visually accepted.
-- [ ] Legacy Home/Gallery/Upper/five-table behavior remains compatibility data, not the Alpha destination.
+- [x] Legacy Home/Gallery/Upper/five-table behavior is retained only as compatibility data and is not the Alpha destination.
 
-Phase 1 and Phase 2A–2C are complete and approved. The Phase 3 renderer-only checkpoint is accepted and remains `[~]` until Phase 8 cross-surface integration. Phases 4–7.5 are implemented, verified, and interactively accepted as `[x]`. Phase 5 is `[x]`: the Alpha authoring loop is complete, and the Phase 5B.6 boundary review deliberately defers nonessential presentation editors rather than keeping Phase 5 artificially open.
+Phases 1–9 are complete, verified, and interactively accepted. Phase 3 became `[x]` when its canonical renderer completed the Phase 8 cross-surface cutover. Phase 5 is `[x]`: the Alpha authoring loop is complete, including the accepted post-Task-9 frame, mat, backing, and transparency parity repair. Phase 10 legacy cleanup remains separately unauthorized and unstarted.
 
 ### Locked production-integration constraints
 
@@ -315,7 +333,7 @@ Exit criterion: the user approves the exact version 8 read/build/validation/reco
 
 ## Phase 3 — shared production table renderer
 
-Status: `[~]` — **renderer-only sub-slice accepted; production cutover remains incomplete**
+Status: `[x]` — **canonical renderer integrated, verified, and accepted across all production surfaces**
 
 Goal: render one canonical table identically for owner preview, visitor view, direct visits, and iframes.
 
@@ -338,7 +356,7 @@ Renderer-only sub-slice checklist:
 - [x] add a fail-closed production media adapter for validated public HTTPS/IPFS references and honest unavailable/unsupported states;
 - [x] keep the renderer's transitive import graph free of owner stores, persistence, reconciliation, wallets/providers, publication writers, authoring callbacks, and prototype fixtures;
 - [x] keep one removable browser-test-only comparison fixture that mounts the exact same canonical public-table value directly and in 640 × 360 and 390 × 600 iframes;
-- [ ] connect the renderer to Owner Preview, visitor deployment, direct visits, or production iframe surfaces only in a later separately approved slice.
+- [x] connect the renderer to Owner Preview, visitor deployment, direct visits, and production iframe surfaces through the later accepted Phase 8 cutover.
 
 User visual test:
 
@@ -697,7 +715,7 @@ Click-to-move correction checkpoint (2026-07-31, awaiting interactive acceptance
 
 ## Phase 8 — publication and visitor integration
 
-Status: `[~]`
+Status: `[x]`
 
 Goal: publish and resolve the canonical nine-table workspace through the existing wallet/IPFS flow.
 
@@ -802,7 +820,7 @@ Phase 8A completion audit (2026-08-01): the version-aware boundary routes readab
 
 ## Phase 8B — version 8 publication
 
-Status: `[~]` — implementation, automatic verification, and publication-surface inspection accepted on 2026-08-01; awaiting one real revision-one/revision-two publication acceptance cycle.
+Status: `[x]` — implementation, automatic verification, publication-surface inspection, and the real revision-one/revision-two publication cycle were interactively accepted on 2026-08-01.
 
 Goal: publish one frozen, canonical version-8 owner lattice snapshot through the unchanged public-IPFS, wallet, ERC725Y-pointer, and exact read-back sequence. The already deployed version-aware resolver remains the reader authority, and versions 1–7 remain readable through the legacy renderer.
 
@@ -863,15 +881,21 @@ Automatic verification passes 56/56 focused builder, validator, canonical-public
 
 Interactive surface acceptance (2026-08-01): the owner accepted the PUBLISH RÄCK presentation, explicit snapshot preparation, FROZEN/STALE refresh behavior, and close/focus-return boundary. No upload, wallet signature, transaction, or on-chain pointer change was performed. Phase 8B remains open only for the explicit revision-one/revision-two publication and cross-route read-back matrix.
 
-## Phase 9 — parallel cutover and Alpha hardening
+Final Phase 8B acceptance (2026-08-01): the owner published a real version-8 revision one from the verified production deployment, opened that published workspace through the direct `?view=0x…` route while authenticated as a different Universal Profile, then made one public owner-workspace change and published revision two. The second visitor read-back exposed the updated workspace correctly. This interactively confirms the public-IPFS upload, canonical CID verification, owner wallet transaction, on-chain pointer, latest-revision resolver, cross-account isolation, and direct visitor route. Phase 8 is complete; no rollback or data repair is required.
 
-Status: `[ ]`
+## Phase 9 — MODUL-8R staged parity, atomic cutover, and Alpha hardening
 
-Goal: make the new workspace the Alpha runtime without deleting the fallback prematurely.
+Status: `[x]`
+
+Goal: build complete MODUL-8R parity outside the live production route, then switch one bounded owner integration atomically without deleting the fallback prematurely.
 
 Includes:
 
-- feature-flagged or explicitly reversible cutover;
+- behavior-preserving extraction of reusable floating-window controllers before any visual work;
+- a clean `.modul8r-*` production presentation that does not inherit old Rack/Browser structural CSS;
+- a development-only owner comparison entrance proven absent from production output;
+- real Library, Activity, People, Layers, Settings, and Theme parity through bounded adapters over existing authorities;
+- one explicitly reversible atomic owner cutover only after complete parity acceptance;
 - production error/loading/empty states;
 - keyboard, focus, reduced-motion, and responsive checks;
 - owner/visitor isolation audit;
@@ -879,6 +903,46 @@ Includes:
 - CSS/JS budget and build checks;
 - live Netlify/domain smoke test;
 - no Gallery room, Upper room, social room, marketplace execution, mobile authoring, or Keeper dialogue system in Alpha unless separately approved.
+
+Signed-out direct-visit correction (2026-08-01, awaiting live acceptance): an explicit public `?view=0x…` target already resolves independently of wallet authority, but the Startveil gesture still opened the standalone sign-in modal whenever no wallet was connected. Entry now suppresses that connector request only for an explicit public profile target. The ordinary homepage retains sign-in, embedded visits remain host-owned, connected owner routing is unchanged, and the public boundary still receives no wallet or authoring capabilities. Focused routing, URL, owner-access, and visitor-isolation checks pass 14/14. The required visual test is a fresh private browser with no extension: open a published direct URL, enter through Startveil, and confirm the workspace is immediately viewable without a login modal.
+
+Owner navigation completion checkpoint (2026-08-01, awaiting interactive acceptance): the stale Phase-4 disables are removed from CREATIONS, ACTIVITY, DISCOVER, and MORE. DISCOVER opens the current public INSCAPE profile directory and never revives Gallery. ACTIVITY opens indexed event history with explicit loading, partial, retry, refresh, close, Escape, and focus-return behavior; it remains distinct from metadata. CREATIONS reuses the isolated creator-attribution repository and opens decoded works through the accepted production NFT RÄCK, never the rejected flip/card viewer. MORE exposes only the existing functional SETTINGS surface; the undefined INTERFACE affordance stays hidden. The owner-only boundaries remain lazy and no schema, storage, publication, route, wallet, IPFS, visitor capability, Gallery, Upper, marketplace, or Keeper-dialogue behavior changes. The focused functional set passes 37/37, production-budget tests pass 9/9, and the production build passes at 1,238,211 initial JavaScript raw / 361,775 gzip, 261,694 owner JavaScript raw / 79,206 gzip, 65,581 owner CSS raw / 12,430 gzip, and 2,016,189 core JavaScript raw / 601,296 gzip. The owner JavaScript ceiling is deliberately recalibrated to 263,000 raw / 80,000 gzip and owner CSS gzip to 12,500 for this measured activation; initial limits remain unchanged.
+
+Superseded MODUL-8R direction checkpoint (2026-08-01, documentation only): this checkpoint correctly selected the universal owner `MODUL-8R` name, LIBRARY/ACTIVITY/PEOPLE/LAYERS information architecture, exclusive-open content chassis, contextual Search/Size, Layers usage consolidation, Settings/Theme direction, and unchanged NFT/Identity RÄCK terminology. Its proposed narrow in-place shell cutover is superseded by the accepted 2026-08-02 architecture audit below. No runtime behavior changed at this checkpoint.
+
+Owner-window styling checkpoint (2026-08-01): the standalone CREATIONS and ACTIVITY rollback surfaces now inherit the active owner menu/theme tokens and IBM Plex Mono interface grammar instead of fixed legacy colours. Their clean L-corner resize handles, the Browser resize handle, hidden native scrollbar buttons, and the seven-pixel expanded rack-content inset share the accepted owner-window treatment. The focused Browser, owner-shell, Creations, theme-window, and shared RÄCK-menu set passes 37/37; `git diff --check`, the production build, and the explicit production budget check pass at 1,238,211 initial JavaScript bytes. No repository, data, routing, persistence, publication, wallet, visitor, or prototype behavior changes.
+
+MODUL-8R production-integration architecture checkpoint (2026-08-02, read-only and accepted): do not evolve `LatticeRackShell` into MODUL-8R in place. Browser currently owns Rack state and geometry, Rack CSS consumes Browser variables, Browser CSS reaches into Rack selectors, and the accepted accordion requires a different structure and transition model. The accepted sequence extracts reusable headless window/controllers first, builds a fresh `.modul8r-*` presentation behind a development-only owner entrance, connects real repositories through bounded adapters, certifies complete visual/functional/isolation/budget parity, and only then switches one owner import/wiring boundary atomically. The current `THE RACK`, Browser, standalone windows, routes, and production bundle remain unchanged through the parity gate. Old presentation source is retained as rollback until live cutover acceptance and a fresh reachability audit. The rejected uncommitted hybrid Task 1 was restored before this audit and contributes no checkpoint code. The sole detailed execution authority is `INSCAPE_MODUL8R_ROADMAP_AND_BOUNDARY.md` Task 1–9.
+
+MODUL-8R Task 1 checkpoint (2026-08-02, implemented and interactively accepted): checkpoint `40f4137` extracts generic floating-window geometry and controllers into `src/lattice/windows/` while preserving the Browser workspace's exact `move`, `rackWidthResize`, `resize`, `windowPosition`, and `windowSize` interface. The production `THE RACK`, Browser JSX/CSS, standalone windows, routes, prototype, owner/visitor boundaries, schemas, storage, publication, and wallet behavior remain unchanged. The focused floating-window and Browser set passes 24/24 and `git diff --check` passes. Interactive review accepted movement, both resize paths, viewport containment, close/reopen, reduced motion, and the existing focus, Escape, inert, and stacking behavior. Task 2 is not started.
+
+MODUL-8R Task 2 checkpoint (2026-08-02, implemented and interactively accepted): checkpoint `ea23eb7` adds a clean production-grade `Modul8rShell`, separate shell model, fresh `.modul8r-*` stylesheet, focused tests, and the strictly development-only `/development/owner/modul-8r` entrance. The accepted master/module geometry, fixed order, exclusive-open behavior, collapse state retention, right-edge resize, responsive containment, focus/Escape behavior, reduced motion, six themes, and title click-versus-drag semantics are preserved; the title is visible and aligned with the module labels. The final focused shell/controller set passes 9/9, the real Edge browser matrix passes 1/1, the previously verified Task 1 Browser regression set passes 24/24, `git diff --check` and the production build pass, and output, manifest, and owner-runtime-graph searches contain zero MODUL-8R development markers. The live owner graph and Task 3 remain untouched.
+
+MODUL-8R Task 3 checkpoint (2026-08-02, implemented and interactively accepted): checkpoint `bbf03d8` mounts the real profile-scoped Library inside the development-only live-owner shell at `/development/owner/modul-8r?live=1` through a bounded adapter over the accepted Browser content, workspace-v8, category-command, progressive-media, selection, and canonical placement authorities. Search, Size, filters, labels, unavailable results, category operations, drag-to-category, and ARRANGE-gated drag-to-canvas remain functional without importing the old Browser window or `THE RACK` presentation. Focused Task 3 tests, the production build and budgets, and production output/manifest/owner-runtime isolation checks passed. The old production Browser and `THE RACK` remain live and are the rollback; no production route was cut over.
+
+MODUL-8R Task 4 status (2026-08-02): `[x]` — Activity and People headless controllers and development-shell adapters are implemented, automatically verified, and interactively accepted at checkpoint `16abf9b`, including the limited core-budget recalibration.
+
+MODUL-8R Task 4 accepted checkpoint (2026-08-02): checkpoint `16abf9b` makes the standalone Activity and Profile Discovery surfaces delegate request/query/selection state to DOM-free injected controllers while retaining their existing window, modal, focus, Escape, resize, and restoration ownership. Development-only Activity and People adapters consume those controllers through an explicit stable active lifecycle; switching modules, collapsing the master, closing MODUL-8R, or unmounting aborts active work without discarding accepted rows, results, query, or selection state. People selection still calls the existing owner `onVisitProfile` authority, and Activity retains indexed-event and official-profile-link provenance. The focused controller/repository/standalone/MODUL-8R/owner-isolation set passes 68/68, production-build utility tests pass 9/9, the six-theme/six-viewport shell browser matrix passes 1/1, the production build and budgets pass, and production output/manifest/owner-graph searches contain zero development MODUL-8R markers. The interactively approved limited aggregate core ceiling is 2,025,000 raw / 605,000 gzip; actual core is 2,021,273 raw / 603,175 gzip while initial entry remains 1,238,211 raw / 361,786 gzip. The pre-existing real-App owner-routing browser harness passed two cases but its owner A-to-B case failed twice during Startveil/navigation timing, and the published-visitor fixture failed before mounting; neither failure is claimed as a Task 4 pass. Task 5 remains not started.
+
+MODUL-8R Task 5 status (2026-08-02): `[x]` — the honest OWNED/CREATED Library union is implemented, automatically verified, and interactively accepted at implementation checkpoint `61b8775`.
+
+MODUL-8R Task 5 accepted checkpoint (2026-08-02): checkpoint `61b8775` projects independently progressive owned and strongly creator-attributed records into one canonical stable-ID union. Owned records remain authoritative on overlap; created-only records use the adapter's explicit strong-created path without manufactured ownership, remain visibly `CREATED · NOT OWNED`, and retain actual or null current-owner facts. Accepted created records remain available to canonical placement and editing when MODUL-8R closes, while active CREATED network work is cancelled; profile changes and unmount clear the supplemental authority. Focused correction tests pass 53/53, the expanded Task 3–5/creator/category/viewer/placement/owner-isolation set passes 185/185, the MODUL-8R browser matrix passes 1/1, `npm run build`, `npm run build:check`, and `git diff --check` pass, and production budgets remain within the accepted ceiling. Initial JavaScript is 1,238,211 raw / 361,798 gzip, owner JavaScript is 262,968 raw / 79,544 gzip, and aggregate core JavaScript is 2,021,889 raw / 603,402 gzip. Task 6 remains unstarted and requires a separate explicit instruction.
+
+MODUL-8R Task 6 status (2026-08-02): `[x]` — implementation checkpoint `71282fa` provides canonical active-table Layers, read-only all-nine-table usage navigation, and Settings/Theme parity; it is automatically verified and interactively accepted behind the development-only live-owner boundary. The implementation reuses the exact owner layer/media/selection/reorder/navigation authorities, the signal Settings store, and session-only owner surface/menu theme callbacks. MODUL-8R Library alone no longer exposes USED ON CANVAS; the production Browser, standalone Settings, top-level Theme, routes, schemas, storage, publication, wallet, visitor runtime, and prototype remain unchanged. Focused sets pass 102/102, the Edge shell matrix passes 1/1, production build/budgets and `build:check` pass at unchanged Task 5 totals, `git diff --check` passes, and production output contains zero MODUL-8R markers. Task 7 remains unstarted.
+
+MODUL-8R Task 7 status (2026-08-02): `[x]` — full development parity, the production bundle gate, and the complete visual confirmation are interactively accepted. No Task 1–6 product-code regression or parity gap was found, so no corrective product scope was added. The complete focused MODUL-8R/controller/repository/owner-isolation matrix passes 176/176, and the real Edge shell matrix passes 1/1 across the accepted six viewports, six themes, reduced motion, drag, resize, module lifecycle, collapse-state retention, close, Escape, and focus restoration. The sequential full suite completes 1,006/1,009; all three failures are pre-existing stale assertions outside this boundary: the Phase 3 visual-fixture graph whitelist predates later canonical authoring dependencies, the legacy viewer test expects a now multiline `createLayout` call, and the frozen MODUL-8R prototype contrast parser accepts only hex despite checkpoint `0f1136d` using valid `rgb(...)` tokens. Those frozen/unrelated sources remain untouched. The production build, budget check, and 18/18 explicit production/owner-isolation checks pass at 1,238,211 initial JavaScript bytes; the owner graph has zero leaks and production output has zero MODUL-8R/development markers. Task 8 remains unstarted and the accepted production rollback surfaces remain intact.
+
+MODUL-8R Task 8 status (2026-08-02): `[x]` — the atomic production owner cutover is implemented at the two-line selected-runtime seam, with a production-named MODUL-8R wrapper and build-selected presentation graph. The old Rack, Browser workspace, and standalone owner windows cannot co-render in the selected owner runtime; all existing canonical authoring, Library, Activity, People, Layers, Settings/Theme, Preview, Publish, focus, profile, storage, wallet, IPFS, and visitor authorities remain in place. Focused Task 8/build/isolation tests pass 50/50, the wider focused matrix passes 463/463, the dedicated real Edge shell matrix passes 1/1, production build and `build:check` pass, and both the MODUL-8R selector and exact two-line LATTICE rollback selector build within budgets. The required full-suite run completed 1,005/1,012; the four Task 8 source-contract failures from that run are corrected and green in later focused matrices, leaving only the same three known stale failures. Final production totals are 1,240,851 raw / 362,737 gzip initial JavaScript, 263,459 / 79,743 owner JavaScript, and 2,043,467 / 611,060 aggregate core JavaScript, with zero owner leaks and no old `BrowserWorkspace` in the selected output. The ordinary-route Edge test reached its late stale Rack-era disabled-control cardinality check after exercising production mounting, navigation, pointer ownership, and storage isolation; the assertion is corrected semantically but not rerun. The user accepted the production preview on 2026-08-02, completing Task 8. Task 9 remains unstarted and unauthorized.
+
+MODUL-8R Task 9 pre-acceptance implementation checkpoint (2026-08-02): `[~]` at that checkpoint — a fresh reachability inventory removed only two superseded presentation panels, `BrowserIndexPanel.jsx` and `BrowserCategoriesPanel.jsx`, plus their exclusive tab/category-section CSS. Every old Rack/Browser/standalone surface required by the exact two-line LATTICE rollback remains, as do shared authorities, visitor/direct/iframe compatibility, tests, fixtures, prototypes, and user assets. The focused production-shell/Browser/selector/isolation set passed 110/113 with three stale development-wrapper source assertions; a wider authority/workflow set passed 211/211; build utilities passed 10/10; and the real Edge MODUL-8R shell matrix passed 1/1. Both exact LATTICE rollback and restored MODUL-8R builds passed budgets, `build:check` passed, the selected graph had zero owner leaks, and selected output had zero old Browser/Rack, deleted-panel, development-route, fixture, or structure-only markers. The sequential suite completed 1,009/1,015 with the six later-corrected stale assertions. This paragraph records the historical pre-acceptance state; the acceptance and current green-suite checkpoints below supersede its status.
+
+MODUL-8R Task 9 acceptance (2026-08-02): the owner approved the complete cleanup and live acceptance checklist. Task 9 and Phase 9 are `[x]`. This acceptance does not authorize Task 10, broader cleanup, or post-Alpha work.
+
+Post-Task-9 placement-presentation parity repair addendum (2026-08-03): `[x]` — the production owner placement menu and a LATTICE-native inspector restore authoring access to the existing canonical frame, mat, backing, and transparency fields through one stale-safe atomic operation and the existing profile-scoped draft store. The change adds no schema, key, publication or visitor contract, LEGACY/prototype dependency, Task 10 work, or cleanup. Focused verification passes 112/112, wider renderer/domain/visitor isolation passes 82/82, direct/iframe/public-access coverage passes 64/64, both MODUL8R and exact LATTICE rollback builds pass, and the selected graph has zero leaks. The sequential suite remains at its six documented stale failures (1,018/1,024); stale owner browser harnesses fail before reaching this repair. A live pointer-boundary defect found during acceptance was corrected with an explicit interactive portal boundary and a focused 21/21 regression matrix; the production build remains green. The owner accepted the repaired Frame & mat flow on 2026-08-03. This acceptance does not authorize Task 10 or broader work.
+
+Test and roadmap maintenance checkpoint (2026-08-03): `[x]` — the six historical source-level assertions were aligned with the already accepted architecture without changing production code. The Phase 3 fixture graph now admits only the two exact canonical presentation helpers it transitively uses; the viewer assertion accepts the current multiline ratio-safe layout composition; the three MODUL-8R composition checks read the canonical production workspace instead of its DEV-only forwarding wrapper; and the frozen prototype contrast parser accepts both hexadecimal and modern `rgb(...)` tokens. The focused maintenance matrix passes 46/46 and the complete sequential suite passes 1,025/1,025 with zero failures. Phase 3, Version 8, Phase 9, MODUL-8R Tasks 1–9, and the placement-presentation parity repair are current `[x]` checkpoints. Phase 10 remains `[ ]` and separately unauthorized.
+
+Published-visitor browser-harness maintenance checkpoint (2026-08-03): `[x]` — the obsolete Version-4-direct `PublishedHomeWorld` harness now enters the production `PublishedProfileDocumentPreview` dispatch with a validated canonical Version-8 nine-table fixture and an explicit Version-7 compatibility fixture. Bootstrap readiness is semantic and records the selected runtime; the removed `.published-home-world__header` wait was the reproduced cancellation cause after document, fixture, and visitor mount had already succeeded. The old profile-card pixel choreography, Categories/detached-browser/flip-viewer, and Home-only inert-drag assertions are retired because they are not Version-8 visitor contracts. Their coverage is replaced by canonical table projection, production focus-viewer, Keeper pointer-follow, and lattice-navigation checks, while Directory/direct-profile/Return, legacy readability, HTTPS/IPFS `no-referrer`, insecure/broken/CSP fallback and recovery, narrow accessibility, owner-storage isolation, and StrictMode/provider lifecycle coverage remain explicit. The focused fixture/lifecycle set passes 18/18, the visitor/publication/compatibility unit matrix passes 150/150, the published visitor Edge harness passes 12/12 with zero failed/cancelled/skipped tests and zero remaining owned processes, and the direct/iframe Phase-3 matrix passes 1/1 after restoring its required neutral placement transform. The complete sequential suite passes 1,027/1,027; production build, budget check at 1,240,851 initial JavaScript bytes, and `git diff --check` pass without production-code changes. The separate unchanged real-App owner-profile routing harness remains timing-unstable at its pre-existing owner A-to-B wait and completed 2/3 with zero cancellations and complete cleanup. This maintenance checkpoint does not authorize Phase 10 or any product, schema, storage, publication, wallet, or visitor redesign.
 
 User visual test: complete Alpha acceptance checklist on localhost, deploy preview, `enterinscape.com`, direct visit, and Universal Profile iframe.
 
@@ -942,4 +1006,4 @@ Start with:
 
 ## Immediate next action
 
-Perform one explicit revision-one publication and one revision-two publication, then execute the recorded cross-account/direct/iframe read-back matrix. Confirm the resolved canonical bytes, latest revision, all nine public tables, Viewer, Identity RÄCK, Keeper behavior, and absence of owner/private state. Do not begin Phase 9 until that acceptance boundary is complete.
+MODUL-8R Task 9 is `[x]`: the post-acceptance unreachable-presentation cleanup is implemented, automatically verified, and interactively accepted. Do not begin broader cleanup or Task 10, or start embedded mode, Atelier/control cells, MEDI-8R, persistence, schema, publication, wallet, or visitor work without separate approval.

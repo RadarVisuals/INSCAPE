@@ -4,11 +4,23 @@ import { chromium } from 'playwright-core';
 import {
   BROWSER_LIFECYCLE_TIMEOUTS,
   createOwnedProcessTree,
+  listPosixProcesses,
   listWindowsProcesses,
+  terminatePosixProcessTree,
   terminateWindowsProcessTree,
   validateBrowserRuntimePath,
   withinDeadline
 } from './browser-test-lifecycle.mjs';
+
+export const DEFAULT_PLAYWRIGHT_EDGE_ARGS = Object.freeze([
+  '--disable-gpu',
+  '--no-first-run',
+  '--no-default-browser-check',
+  '--disable-component-update',
+  '--disable-background-networking',
+  '--disk-cache-size=1',
+  '--media-cache-size=1',
+]);
 
 function boundedText(value, limit = 256) {
   return String(value || '').replace(/[\r\n\u0000-\u001f\u007f]+/gu, ' ').replace(/https?:\/\/\S+/gu, '[url]').slice(0, limit);
@@ -84,8 +96,9 @@ export async function waitForCspFixtureReady(page, {
   await page.waitForURL((url) => url.origin === fixtureOrigin
     && url.pathname === '/browser-tests/fixture.html'
     && url.searchParams.get('csp') === '1', { timeout: timeoutMs });
-  await page.locator('.published-home-world').waitFor({ state: 'attached', timeout: timeoutMs });
-  const fixtureHandle = await page.waitForFunction(() => Boolean(window.__fixture), undefined, { timeout: timeoutMs, polling: 50 });
+  await page.locator('[data-browser-fixture]').waitFor({ state: 'attached', timeout: timeoutMs });
+  const fixtureHandle = await page.waitForFunction(() => Boolean(window.__fixture?.ready
+    && document.querySelector('.visitor-grid-world,.visitor-lattice-world,.published-home-world')), undefined, { timeout: timeoutMs, polling: 50 });
   await fixtureHandle.dispose();
 }
 
@@ -100,8 +113,10 @@ export async function launchPlaywrightEdge({
   onBrowserProblem = () => {},
   diagnostic = () => {},
   browserType = chromium,
-  inventory = listWindowsProcesses,
-  terminateTree = terminateWindowsProcessTree,
+  inventory = process.platform === 'win32' ? listWindowsProcesses : listPosixProcesses,
+  terminateTree = process.platform === 'win32' ? terminateWindowsProcessTree : terminatePosixProcessTree,
+  browserArgs = DEFAULT_PLAYWRIGHT_EDGE_ARGS,
+  contextOptions = {},
   prepareRuntime = async (downloadsPath, artifactsDir) => {
     await mkdir(downloadsPath, { recursive: true }); await mkdir(artifactsDir, { recursive: true });
   }
@@ -120,7 +135,7 @@ export async function launchPlaywrightEdge({
       downloadsPath,
       artifactsDir,
       env: { ...process.env, TEMP: exactRuntime, TMP: exactRuntime },
-      args: ['--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-component-update', '--disable-background-networking', '--disk-cache-size=1', '--media-cache-size=1']
+      args: [...browserArgs]
     });
     launch.then((server) => { if (lateLaunch) void server.close().catch(() => server.kill().catch(() => {})); }).catch(() => {});
     resources.browserServer = await withinDeadline(launch, 20_000, 'Playwright Edge launch deadline exceeded', () => { lateLaunch = true; });
@@ -137,7 +152,13 @@ export async function launchPlaywrightEdge({
   diagnostic('setup:edge-owned', { rootPid, descendants: observed.length });
 
   resources.browser = await browserType.connect(resources.browserServer.wsEndpoint(), { timeout: 5_000 });
-  resources.context = await resources.browser.newContext({ viewport: { width: 1280, height: 720 }, serviceWorkers: 'block', bypassCSP: false, acceptDownloads: false });
+  resources.context = await resources.browser.newContext({
+    viewport: { width: 1280, height: 720 },
+    serviceWorkers: 'block',
+    bypassCSP: false,
+    acceptDownloads: false,
+    ...contextOptions,
+  });
   await resources.context.route('**/*', (route) => routeController.handle(route).catch((error) => onBrowserProblem(`Route handler: ${error.code || boundedText(error.message)}`)));
   resources.routeController = routeController;
   diagnostic('setup:routing-installed', { beforeNavigation: true });

@@ -1,10 +1,11 @@
-import { canonicalSerializeProfileDocument } from '../domain/profileDocumentSerialization.js';
+import { canonicalSerializeProfileDocumentV9 } from '../domain/profileDocumentV9Serialization.js';
 import { assertPublicationContext, createCanonicalPublication, encodeProfileDocumentVerifiableUri, normalizeProfileDocumentCid, publicationContentFingerprint } from '../domain/profileDocumentPublication.js';
-import { createLuksoPublishedProfileRepository, OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, PUBLISHED_PROFILE_STATUS } from './luksoPublishedProfileRepository.js';
+import { createLuksoPublishedProfileRepository, PUBLISHED_PROFILE_STATUS } from './luksoPublishedProfileRepository.js';
 import { PROFILE_DOCUMENT_IPFS_GATEWAY_URL, normalizeProfileAddress } from '../../library/config.js';
 import { keccak256 } from 'viem';
 import { describePublicationError, PUBLICATION_ERROR_ABI } from './publicationError.js';
-import { assertProfileDocumentPublicationVersion } from '../domain/constants.js';
+import { assertValidProfileDocumentV9 } from '../domain/profileDocumentV9Validation.js';
+import { INSCAPE_PROFILE_DOCUMENT_KEY } from '../domain/inscapeProfileDocumentKey.js';
 
 export const SET_PROFILE_DOCUMENT_ABI = [
   { type: 'function', name: 'setData', stateMutability: 'payable', inputs: [{ name: 'dataKey', type: 'bytes32' }, { name: 'dataValue', type: 'bytes' }], outputs: [] },
@@ -14,7 +15,7 @@ export const SET_PROFILE_DOCUMENT_ABI = [
 export { describePublicationError };
 
 function matchesArtifact(document, artifact) {
-  return keccak256(new TextEncoder().encode(canonicalSerializeProfileDocument(document))).toLowerCase() === artifact.hash.toLowerCase();
+  return keccak256(new TextEncoder().encode(canonicalSerializeProfileDocumentV9(document))).toLowerCase() === artifact.hash.toLowerCase();
 }
 
 function accountAddress(context) {
@@ -122,7 +123,7 @@ export function createProfileDocumentPublisher({ getContext, fetchImpl = globalT
 
   return {
     async verifyCid(snapshot, cidInput, { stale = false } = {}) {
-      assertProfileDocumentPublicationVersion(snapshot);
+      assertValidProfileDocumentV9(snapshot);
       const artifact = createCanonicalPublication(snapshot);
       if (stale) throw new Error('Rebuild the stale snapshot before publication');
       const uri = normalizeProfileDocumentCid(cidInput);
@@ -156,7 +157,7 @@ export function createProfileDocumentPublisher({ getContext, fetchImpl = globalT
 
     publish(verified) {
       if (!verified?.artifact || !verified?.value || !verified?.identity) return Promise.reject(new Error('Verify the CID before requesting publication'));
-      try { assertProfileDocumentPublicationVersion(verified.artifact.document); }
+      try { assertValidProfileDocumentV9(verified.artifact.document); }
       catch (error) { return Promise.reject(error); }
       const identity = verified.identity;
       if (active) {
@@ -174,7 +175,7 @@ export function createProfileDocumentPublisher({ getContext, fetchImpl = globalT
         const current = assertFreshBinding(getContext(), verified);
         const address = normalizeProfileAddress(verified.artifact.document.profile.address);
         const call = { address, abi: SET_PROFILE_DOCUMENT_ABI, functionName: 'setData',
-          args: [OS_UNDERNEATH_PROFILE_DOCUMENT_KEY, verified.value], account: current.walletClient.account };
+          args: [INSCAPE_PROFILE_DOCUMENT_KEY, verified.value], account: current.walletClient.account };
         const transactionHash = await current.walletClient.writeContract(call);
         const record = { verified, transactionHash, publicClient: current.publicClient, receipt: null, result: null };
         submitted.set(identity, record);

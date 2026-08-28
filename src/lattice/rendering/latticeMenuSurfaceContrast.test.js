@@ -29,7 +29,7 @@ test('viewer rack and legacy dossier text inherit owner-menu ink with AA contras
   assert.match(identityStyles, /background: var\(--lattice-menu-panel\)/u);
   assert.match(identityStyles, /color: var\(--lattice-menu-ink\)/u);
   assert.match(identityStyles, /identity-dossier__technical dt[^}]*color: var\(--lattice-menu-ink\)/u);
-  assert.match(identityStyles, /identity-dossier__links a small[^}]*color: var\(--lattice-menu-ink\)/u);
+  assert.match(identityStyles, /identity-dossier__links strong[^}]*font: 500 10px/u);
   for (const [theme, [ink, panel]] of Object.entries(themes)) {
     assert.ok(contrast(ink, panel) >= 4.5, `${theme} essential small-label contrast must be at least 4.5:1`);
   }

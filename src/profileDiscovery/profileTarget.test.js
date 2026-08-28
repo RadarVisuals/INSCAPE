@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PROFILE_TARGET_SOURCE, resolveProfileTarget } from './profileTarget.js';
+import {
+  PROFILE_TARGET_SOURCE,
+  resolveProfileTarget,
+  shouldRequestStandaloneSignIn
+} from './profileTarget.js';
 
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
@@ -46,4 +50,35 @@ test('root account transitions derive the latest settled profile without retaini
   assert.equal(target({ connectedProfileAddress: PROFILE_A }).address, PROFILE_A);
   assert.equal(target({ connectedProfileAddress: PROFILE_A, authorityLifecycleStatus: 'pending' }).address, null);
   assert.equal(target({ connectedProfileAddress: PROFILE_B }).address, PROFILE_B);
+});
+
+test('an explicit public profile route never requests standalone sign-in', () => {
+  assert.equal(shouldRequestStandaloneSignIn({
+    embedded: false,
+    walletConnected: false,
+    targetSource: PROFILE_TARGET_SOURCE.EXPLICIT
+  }), false);
+  assert.equal(shouldRequestStandaloneSignIn({
+    embedded: false,
+    walletConnected: false,
+    targetSource: PROFILE_TARGET_SOURCE.NONE
+  }), false);
+  assert.equal(shouldRequestStandaloneSignIn({
+    embedded: true,
+    walletConnected: false,
+    targetSource: PROFILE_TARGET_SOURCE.NONE
+  }), false);
+  assert.equal(shouldRequestStandaloneSignIn({
+    embedded: false,
+    walletConnected: true,
+    targetSource: PROFILE_TARGET_SOURCE.NONE
+  }), false);
+});
+
+test('anonymous public entry never makes wallet sign-in a prerequisite', () => {
+  assert.equal(shouldRequestStandaloneSignIn({
+    embedded: false,
+    walletConnected: false,
+    targetSource: PROFILE_TARGET_SOURCE.WORKSPACE_FALLBACK
+  }), false);
 });

@@ -1,16 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildProfileDocumentV3, buildProfileDocumentV8 } from '../domain/profileDocumentBuilder.js';
+import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { buildProfileDocumentV9 } from '../domain/profileDocumentV9Builder.js';
+import { canonicalSerializeProfileDocumentV9 } from '../domain/profileDocumentV9Serialization.js';
 import { uploadProfileDocument } from './profileDocumentUploadClient.js';
-import { createEmptyLatticeProductionDraft } from '../../lattice/domain/latticeProductionDraft.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const CID = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw';
-const document = buildProfileDocumentV3({
-  profileAddress: PROFILE,
-  workspace: { version: 3, profileAddress: PROFILE, favorites: [], folders: [], canvas: { launchers: [], objects: [] } },
-  assets: [], publicPresentation: { keeperId: 'abyssal_eye', stageId: 'black' },
-  signalSettings: {}, profileIdentity: { name: 'Upload client test' }, createdAt: 1, exportedAt: 2
+const document = buildProfileDocumentV9({
+  profileAddress: PROFILE, assetRecords: [], profileIdentity: { name: 'Upload client test' },
+  createdAt: 1, exportedAt: 2,
+  systemWorkflowDraft: createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' }),
 });
 
 test('upload client sends canonical bytes and validates the returned CID', async () => {
@@ -22,6 +22,7 @@ test('upload client sends canonical bytes and validates the returned CID', async
   assert.equal(request.url, '/api/profile-publications');
   assert.equal(request.init.headers['content-type'], 'application/json');
   assert.equal(request.init.body, result.artifact.text);
+  assert.equal(request.init.body, canonicalSerializeProfileDocumentV9(document));
   assert.equal(result.cid, CID);
   assert.equal(result.ipfsUri, `ipfs://${CID}`);
 });
@@ -30,23 +31,22 @@ test('upload client does not accept a successful response without a valid CID', 
   await assert.rejects(() => uploadProfileDocument(document, { fetchImpl: async () => Response.json({ cid: 'bad' }, { status: 201 }) }), /invalid IPFS CID/i);
 });
 
-test('upload client sends canonical v8 through the same publication endpoint', async () => {
-  const version8 = buildProfileDocumentV8({
-    profileAddress: PROFILE,
-    workspace: { version: 8, profileAddress: PROFILE, favorites: [], folders: [], canvas: { launchers: [], objects: [] } },
-    assets: [], publicPresentation: { keeperId: 'abyssal_eye', stageId: 'black' }, signalSettings: {},
-    profileIdentity: { name: 'Readable only' }, createdAt: 1, exportedAt: 2,
-    latticeDraft: createEmptyLatticeProductionDraft(PROFILE),
-  });
+test('plain Vite HTML fallback is identified as an unavailable publication function', async () => {
+  await assert.rejects(() => uploadProfileDocument(document, {
+    fetchImpl: async () => new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html' } }),
+  }), (error) => error.code === 'PUBLICATION_FUNCTION_UNAVAILABLE'
+    && /Plain Vite cannot upload to IPFS/u.test(error.message));
+});
+
+test('upload client rejects v1-v8 and malformed payloads before the publication endpoint', async () => {
   let calls = 0;
-  let body;
-  const result = await uploadProfileDocument(version8, { fetchImpl: async (_url, init) => {
-    calls += 1;
-    body = init.body;
-    return Response.json({ cid: CID }, { status: 201 });
-  } });
-  assert.equal(calls, 1);
-  assert.equal(body, result.artifact.text);
-  assert.equal(result.artifact.document.version, 8);
+  const fetchImpl = async () => { calls += 1; return Response.json({ cid: CID }, { status: 201 }); };
+  for (let version = 1; version <= 8; version += 1) {
+    await assert.rejects(() => uploadProfileDocument({ ...document, version }, { fetchImpl }));
+  }
+  for (const malformed of [null, {}, { documentType: 'INSCAPE_PROFILE', version: 9 }]) {
+    await assert.rejects(() => uploadProfileDocument(malformed, { fetchImpl }));
+  }
+  assert.equal(calls, 0);
 });
 
