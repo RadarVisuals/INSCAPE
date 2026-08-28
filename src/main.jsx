@@ -4,6 +4,13 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 
+if (import.meta.env.PROD) {
+  window.addEventListener('vite:preloadError', (event) => {
+    event.preventDefault();
+    window.location.reload();
+  }, { once: true });
+}
+
 const developmentPath = window.location.pathname.replace(/\/+$/, '');
 const systemWorkflowDevelopmentRoute = import.meta.env.DEV
   && developmentPath === '/development/owner/system-workflow';

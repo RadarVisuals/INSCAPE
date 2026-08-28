@@ -35,6 +35,15 @@ test('the retired Keeper and Grid Walker stay outside the active application roo
   assert.doesNotMatch(appSource, /ArtCanvas|PixiEngine|pixi\.js|AssetResolver|selectResidentActorVisible/u);
 });
 
+test('production entry recovers an open tab after hashed lazy chunks are replaced', () => {
+  const mainSource = readFileSync(new URL('../main.jsx', import.meta.url), 'utf8');
+  assert.match(mainSource, /if \(import\.meta\.env\.PROD\)/u);
+  assert.match(mainSource, /addEventListener\('vite:preloadError'/u);
+  assert.match(mainSource, /event\.preventDefault\(\)/u);
+  assert.match(mainSource, /window\.location\.reload\(\)/u);
+  assert.match(mainSource, /\{ once: true \}/u);
+});
+
 test('the retired Pixi stage remains outside the active application root', () => {
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
   assert.doesNotMatch(appSource, /<GridWalkerCanvas|<ArtCanvas|foregroundOnly=|stageVisible={effectiveApplicationMode/);
