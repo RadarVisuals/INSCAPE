@@ -283,6 +283,7 @@
   z-index: 3;
   overflow: hidden;
   border: 1px solid var(--lattice-menu-line-strong);
+  background: var(--lattice-menu-panel);
   contain: layout;
   color: var(--lattice-menu-ink);
   opacity: 0;
@@ -412,6 +413,7 @@
   padding: 25px 24px 30px;
   overflow-x: hidden;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   overscroll-behavior: contain;
   border-top: 1px solid var(--lattice-menu-line-strong);
   color: var(--lattice-menu-ink);
@@ -483,14 +485,16 @@
 }
 .lattice-focus-viewer__rack-attributes span {
   color: var(--lattice-menu-ink);
-  font: var(--lattice-window-type-label);
-  letter-spacing: 0.04em;
+  font: 500 11px/1.1 "Inscape Sora", sans-serif;
+  font-variation-settings: "wght" 500;
+  letter-spacing: .025em;
 }
 .lattice-focus-viewer__rack-attributes strong {
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--lattice-menu-ink);
-  font: 500 14px/1.35 "Inscape Sora", sans-serif;
+  font: 400 10px/1.55 "Inscape Sora", sans-serif;
+  font-variation-settings: "wght" 400;
 }
 
 .lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__navigation {
