@@ -1,17 +1,17 @@
-.alpha-support { display: grid; grid-template-columns: 1fr auto; gap: 9px 12px; margin-top: 12px; padding: 12px; border: 1px solid var(--lattice-menu-line-strong, #66554b); background: var(--lattice-menu-selected, #151113); color: inherit; font: 12px/1.5 system-ui; }
-.alpha-support > strong { align-self: center; overflow-wrap: anywhere; font: 600 10px/1 monospace; }
+.alpha-support { display: grid; grid-template-columns: 1fr auto; gap: 9px 12px; margin-top: 12px; padding: 12px; border: 1px solid var(--lattice-menu-line-strong, #66554b); background: var(--lattice-menu-selected, #151113); color: inherit; font: 12px/1.5 "Inscape Sora", sans-serif; }
+.alpha-support > strong { align-self: center; overflow-wrap: anywhere; font: 600 10px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; }
 .alpha-support > p,
 .alpha-support > small,
 .alpha-support > details,
 .alpha-support > span { grid-column: 1 / -1; }
 .alpha-support p,
-.alpha-support small { margin: 0; color: var(--lattice-menu-muted, #bdb0a8); }
-.alpha-support > button { grid-column: 2; grid-row: 1; min-height: 34px; padding: 0 10px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; font: 600 10px/1 monospace; white-space: nowrap; }
+.alpha-support small { margin: 0; color: var(--lattice-menu-muted, #bdb0a8); font-family: "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; }
+.alpha-support > button { grid-column: 2; grid-row: 1; min-height: 34px; padding: 0 10px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; font: 600 10px/1 "Inscape Sora", sans-serif; white-space: nowrap; }
 .alpha-support > button:hover,
 .alpha-support > button:focus-visible { background: var(--lattice-menu-selected, rgb(238 235 223 / .08)); }
 .alpha-support :is(button, summary):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.alpha-support > span { font: 600 9px/1.2 monospace; }
-.alpha-support summary { cursor: pointer; font: 600 10px/1 monospace; }
-.alpha-support pre { max-height: 180px; overflow: auto; font: 9px/1.45 monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.alpha-support > span { font: 600 9px/1.2 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; }
+.alpha-support summary { cursor: pointer; font: 600 10px/1 "Inscape Sora", sans-serif; }
+.alpha-support pre { max-height: 180px; overflow: auto; font: 9px/1.45 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; white-space: pre-wrap; overflow-wrap: anywhere; }
 .alpha-support[data-compact] { max-width: 520px; margin: 0 auto; }
 @media (max-width: 460px) { .alpha-support { grid-template-columns: 1fr; } .alpha-support > button { grid-column: 1; grid-row: auto; width: 100%; } }

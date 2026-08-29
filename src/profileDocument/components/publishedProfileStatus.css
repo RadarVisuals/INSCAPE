@@ -18,7 +18,7 @@
   background-image: linear-gradient(rgb(18 20 20 / .11) 1px, transparent 1px), linear-gradient(90deg, rgb(18 20 20 / .11) 1px, transparent 1px);
   background-size: clamp(44px, 6.25vw, 80px) clamp(44px, 6.25vw, 80px);
   color: var(--lattice-menu-ink);
-  font-family: "Geist", Arial, sans-serif;
+  font-family: "Inscape Sora", sans-serif;
 }
 
 .published-profile-status__card {
@@ -36,14 +36,14 @@
 .published-profile-status__card > header { display: grid; gap: 5px; min-height: 62px; padding: 11px 13px; box-sizing: border-box; border-bottom: 1px solid var(--lattice-menu-line-strong); }
 .published-profile-status__card > header span,
 .published-profile-status__card > footer,
-.published-profile-status__card code { font: 600 9px/1.2 "IBM Plex Mono", monospace; letter-spacing: .09em; }
+.published-profile-status__card code { font: 600 9px/1.2 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .09em; }
 .published-profile-status__card > header span { color: var(--lattice-menu-muted); }
-.published-profile-status__card h1 { margin: 0; font-size: 24px; line-height: 1.15; }
+.published-profile-status__card h1 { margin: 0; font-family: "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; font-size: 24px; line-height: 1.15; }
 .published-profile-status__body { display: grid; gap: 13px; min-width: 0; padding: 16px; }
-.published-profile-status__body > p { max-width: 500px; margin: 0; color: var(--lattice-menu-muted); font-size: 14px; line-height: 1.78; }
+.published-profile-status__body > p { max-width: 500px; margin: 0; color: var(--lattice-menu-muted); font-family: "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; font-size: 14px; line-height: 1.78; }
 .published-profile-status__body > code { display: block; overflow: hidden; color: var(--lattice-menu-faint); text-overflow: ellipsis; text-transform: none; white-space: nowrap; }
 .published-profile-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 0; }
-.published-profile-actions button { min-width: 104px; min-height: 36px; padding: 0 12px; border: 1px solid var(--lattice-menu-line-strong); background: transparent; color: inherit; font: 600 10px/1 "IBM Plex Mono", monospace; letter-spacing: .08em; cursor: pointer; }
+.published-profile-actions button { min-width: 104px; min-height: 36px; padding: 0 12px; border: 1px solid var(--lattice-menu-line-strong); background: transparent; color: inherit; font: 600 10px/1 "Inscape Sora", sans-serif; letter-spacing: .08em; cursor: pointer; }
 .published-profile-actions button:hover,
 .published-profile-actions button:focus-visible { background: var(--lattice-menu-selected); }
 .published-profile-actions button:focus-visible { outline: 2px solid var(--lattice-menu-ink); outline-offset: -3px; }

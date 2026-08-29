@@ -1,4 +1,5 @@
 export const LATTICE_PRODUCTION_FOCUS_TRANSITION_MS = 420;
+export const LATTICE_PRODUCTION_FOCUS_LANDING_MS = 150;
 
 const clampUnit = (value) => Math.min(1, Math.max(0, value));
 const curve = (time, point1, point2) => {

@@ -104,7 +104,7 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // The accepted Startveil and lightweight resident presentation are initial
   // UI. Preserve the prior 970 raw / 15 gzip bytes of measured headroom.
   // Legacy v7 canvas styles are compatibility-only and lazy. The production
-  // font roles now resolve centrally to bundled Geist and IBM Plex files.
+  // font roles now resolve centrally to bundled Sora and IBM Plex Sans Condensed files.
   // Preserve 970 raw / 15 gzip bytes of headroom around the active v8 route.
   initialCss: Object.freeze({ raw: 51_807, gzip: 10_301 }),
   // Phase 7 adds the lazy owner-only Identity RÄCK; Phase 7.5 adds its compact,
@@ -163,6 +163,13 @@ export const PRODUCTION_BUDGETS = Object.freeze({
 });
 
 const normalize = (value) => value.replaceAll('\\', '/');
+const LEGACY_FONT_PATTERN = /(?:PP Monument|Geist(?: Sans| Mono)?|IBM Plex Mono|Space Mono|Bahnschrift|system-ui|\bmonospace\b)/iu;
+const PRODUCTION_FONT_FILES = Object.freeze([
+  'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf',
+  'assets/fonts/IBM_Plex_Sans_Condensed/OFL.txt',
+  'assets/fonts/Sora/OFL.txt',
+  'assets/fonts/Sora/Sora-VariableFont_wght.ttf',
+]);
 const isWithin = (parent, child) => {
   const path = relative(parent, child);
   return path !== '' && path !== '..' && !path.startsWith(`..${sep}`) && !isAbsolute(path);
@@ -222,6 +229,26 @@ export async function assertNoProhibitedProductionArtifacts(outputDirectory) {
   const findings = await findProhibitedProductionArtifacts(outputDirectory);
   if (findings.length) {
     throw new Error(`Production artifact hygiene failed:\n${findings.map(({ file, reason }) => `- ${file}: ${reason}`).join('\n')}`);
+  }
+  return true;
+}
+
+export async function assertProductionFontContract(outputDirectory) {
+  const files = await walk(outputDirectory);
+  const cssFiles = files.filter((file) => file.endsWith('.css'));
+  const css = (await Promise.all(cssFiles.map((file) => readFile(resolve(outputDirectory, file), 'utf8')))).join('\n');
+  if (LEGACY_FONT_PATTERN.test(css)) throw new Error('Production font contract failed: a CSS chunk contains a legacy font');
+  for (const [family, fontPath] of [
+    ['Inscape Sora', '/assets/fonts/Sora/Sora-VariableFont_wght.ttf'],
+    ['Inscape IBM Plex Sans Condensed', '/assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf'],
+  ]) {
+    if (!css.includes(family) || !css.includes(fontPath)) {
+      throw new Error(`Production font contract failed: missing ${family} declaration or request`);
+    }
+  }
+  const fontFiles = files.filter((file) => file.startsWith('assets/fonts/'));
+  if (JSON.stringify(fontFiles) !== JSON.stringify(PRODUCTION_FONT_FILES)) {
+    throw new Error(`Production font contract failed: unexpected font assets: ${fontFiles.join(', ')}`);
   }
   return true;
 }
@@ -394,6 +421,7 @@ export function productionBuildHygienePlugin() {
       await pruneProductionAuthoringAssets(outputDirectory);
       await writeNetlifyHeaders(outputDirectory, { env: productionEnvironment });
       await assertNoProhibitedProductionArtifacts(outputDirectory);
+      await assertProductionFontContract(outputDirectory);
       const report = await analyzeProductionBuild(outputDirectory, { chunkGroups });
       await writeFile(resolve(outputDirectory, BUILD_REPORT_FILE), `${JSON.stringify(report, null, 2)}\n`);
       checkProductionBudgets(report);
@@ -422,7 +450,9 @@ export function diagnosticsEnvironmentPlugin() {
 }
 
 export async function checkExistingBuild(outputDirectory) {
-  const report = await analyzeProductionBuild(resolve(outputDirectory));
+  const resolvedOutput = resolve(outputDirectory);
+  await assertProductionFontContract(resolvedOutput);
+  const report = await analyzeProductionBuild(resolvedOutput);
   checkProductionBudgets(report);
   return report;
 }

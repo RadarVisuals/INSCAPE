@@ -5,7 +5,7 @@
 .lattice-production-focus-artwork__mat { inset: 0; }
 .lattice-production-focus-artwork__opening { overflow: hidden; }
 .lattice-production-focus-artwork__media { z-index: 2; max-width: none; max-height: none; object-fit: fill; transform-origin: center; user-select: none; -webkit-user-drag: none; will-change: left, top, width, height; }
-.lattice-production-focus-artwork__unavailable { position: absolute; inset: 0; display: grid; place-items: center; color: var(--lattice-menu-ink); font: 8px/1.4 "Inscape IBM Plex Mono", monospace; letter-spacing: .12em; }
+.lattice-production-focus-artwork__unavailable { position: absolute; inset: 0; display: grid; place-items: center; color: var(--lattice-menu-ink); font: 8px/1.4 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .12em; }
 @media (prefers-reduced-motion: reduce) {
   .lattice-production-focus-artwork__media { will-change: auto; }
 }

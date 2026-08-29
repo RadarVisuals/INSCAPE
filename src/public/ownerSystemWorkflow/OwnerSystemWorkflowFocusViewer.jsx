@@ -9,6 +9,7 @@ export default function OwnerSystemWorkflowFocusViewer({ menuSurface, viewer, wo
     gridVisible={false} inspectionFrameGridVisible={false} inspectionVariant="rack" inlineRackClose menuSurfaceId={menuSurface}
     navigationPlacement="viewport" navigationViewportBottom={72} onClosed={viewer.close}
     onClosing={clearOwnerSystemWorkflowDocumentSelection} onNavigate={viewer.navigate}
+    onReturnLanding={viewer.revealSource}
     originRectangle={viewer.originRectangle} position={viewer.position} recenterArtworkWhenInspectionClosed
     renderArtwork={(entry, context) => <LatticeProductionFocusArtwork entry={entry} motion={context.motion} />}
     returnFocus={viewer.returnFocus} surfaceColor={workspaceSurfaceColor} total={viewer.total} />;

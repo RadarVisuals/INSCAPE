@@ -18,11 +18,20 @@ test('production browser and rack surfaces retain clean corner handles', () => {
   assert.doesNotMatch(browserStyles, /\.lattice-browser-resize\s*\{[^}]*linear-gradient/s);
 });
 
-test('production typography resolves bundled Geist and IBM Plex files instead of platform fonts', () => {
-  assert.match(tokenStyles, /font-family:\s*"Inscape Geist Sans";[\s\S]*geist-sans-latin-500-normal\.woff2/);
-  assert.match(tokenStyles, /font-family:\s*"Inscape IBM Plex Mono";[\s\S]*IBMPlexMono-Medium\.ttf/);
-  assert.match(tokenStyles, /--font-interface:\s*"Inscape Geist Sans", sans-serif/);
-  assert.match(tokenStyles, /--font-body:\s*"Inscape Geist Sans", sans-serif/);
-  assert.match(tokenStyles, /--font-mono:\s*"Inscape IBM Plex Mono", monospace/);
+test('central typography exposes only the approved interface and technical faces', () => {
+  assert.match(tokenStyles, /font-family:\s*"Inscape Sora";[\s\S]*Sora-VariableFont_wght\.ttf/);
+  assert.match(tokenStyles, /font-family:\s*"Inscape IBM Plex Sans Condensed";[\s\S]*IBMPlexSansCondensed-Regular\.ttf/);
+  assert.match(tokenStyles, /--font-interface:\s*"Inscape Sora", sans-serif/);
+  assert.match(tokenStyles, /--font-body:\s*"Inscape Sora", sans-serif/);
+  assert.match(tokenStyles, /--font-technical:\s*"Inscape IBM Plex Sans Condensed", sans-serif/);
+  assert.doesNotMatch(tokenStyles, /--font-mono:/);
+  assert.doesNotMatch(tokenStyles, /--font-brand:/);
+  assert.match(tokenStyles, /\[data-technical\][^}]*font-family:\s*var\(--font-technical\)/);
+  assert.match(menuStyles, /--lattice-window-type-module:\s*500 11px\/1\.2 var\(--font-interface\)/);
+  assert.match(menuStyles, /--lattice-window-type-label:\s*500 10px\/1\.25 var\(--font-technical\)/);
+  assert.match(menuStyles, /--lattice-window-type-body:\s*400 14px\/1\.78 var\(--font-body\)/);
+  assert.match(menuStyles, /--lattice-window-type-value:\s*400 12px\/1\.5 var\(--font-technical\)/);
+  assert.doesNotMatch(menuStyles, /@font-face/);
+  assert.doesNotMatch(tokenStyles, /PP Monument|Geist|IBM Plex Mono|Space Mono|monospace/);
   assert.doesNotMatch(`${tokenStyles}\n${menuStyles}\n${browserStyles}`, /"Geist"|"IBM Plex Mono"|Bahnschrift|Aptos Narrow|Courier New|SFMono-Regular|Consolas/);
 });

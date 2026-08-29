@@ -10,6 +10,7 @@ const rect = (node) => {
 export default function useOwnerSystemWorkflowFocusViewer({ assetsById, controller, onOpen, resolveAssetDimensions }) {
   const [placementId, setPlacementId] = useState(null);
   const [originRectangle, setOriginRectangle] = useState(null);
+  const [sourceHidden, setSourceHidden] = useState(false);
   const placementRefs = useRef(new Map());
   const placements = useMemo(() => (controller.selectedGrid?.placements || []).slice().sort((left, right) => left.navigationOrder - right.navigationOrder || left.id.localeCompare(right.id)), [controller.selectedGrid]);
   const position = placements.findIndex(({ id }) => id === placementId);
@@ -18,6 +19,7 @@ export default function useOwnerSystemWorkflowFocusViewer({ assetsById, controll
   const registerPlacement = (id, node) => { if (node) placementRefs.current.set(id, node); else placementRefs.current.delete(id); };
   const close = () => {
     clearOwnerSystemWorkflowDocumentSelection();
+    setSourceHidden(false);
     setPlacementId(null);
     setOriginRectangle(null);
   };
@@ -31,6 +33,7 @@ export default function useOwnerSystemWorkflowFocusViewer({ assetsById, controll
     if (resolveAssetDimensions && !await resolveAssetDimensions(asset)) return false;
     if (!source.isConnected) return false;
     setOriginRectangle(origin);
+    setSourceHidden(true);
     controller.replaceSelection([id]);
     setPlacementId(id);
     onOpen?.();
@@ -40,6 +43,7 @@ export default function useOwnerSystemWorkflowFocusViewer({ assetsById, controll
     if (position < 0 || placements.length < 2) return;
     const next = placements[(position + direction + placements.length) % placements.length];
     controller.replaceSelection([next.id]);
+    setSourceHidden(true);
     setPlacementId(next.id);
   };
   useEffect(() => { if (placementId && position < 0) close(); }, [placementId, position]);
@@ -53,7 +57,9 @@ export default function useOwnerSystemWorkflowFocusViewer({ assetsById, controll
     placementId,
     position,
     registerPlacement,
+    revealSource: () => setSourceHidden(false),
     returnFocus: placementRefs.current.get(placementId) || null,
+    sourcePlacementId: sourceHidden ? placementId : null,
     total: placements.length,
   };
 }

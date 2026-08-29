@@ -29,7 +29,7 @@
   background: var(--lattice-browser-frame);
   box-shadow: var(--lattice-chrome-shadow);
   color: var(--lattice-browser-ink);
-  font-family: "Inscape IBM Plex Mono", monospace;
+  font-family: "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
   pointer-events: auto;
   transition: height var(--lattice-chrome-motion-duration) var(--lattice-chrome-motion-easing);
   user-select: none;
@@ -60,7 +60,7 @@
 .lattice-browser-sidebar button::before { content: ""; position: absolute; left: -1px; inset-block: 0; width: 3px; background: transparent; }
 .lattice-browser-sidebar button > span { min-width: 0; display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lattice-browser-sidebar button > span > b { min-width: 0; overflow: hidden; font: inherit; text-overflow: ellipsis; white-space: nowrap; }
-.lattice-browser-sidebar button i { flex: 0 0 auto; color: var(--lattice-browser-label-ink); font: 400 10px/1 "Inscape IBM Plex Mono", monospace; }
+.lattice-browser-sidebar button i { flex: 0 0 auto; color: var(--lattice-browser-label-ink); font: 400 10px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; }
 .lattice-browser-sidebar button:hover { background: var(--lattice-browser-hover-tone); color: var(--lattice-browser-ink); }
 .lattice-browser-sidebar button[data-active] { background: var(--lattice-browser-selected-tone); color: var(--lattice-browser-ink); font-weight: 500; }
 .lattice-browser-sidebar button[data-active]::before { background: var(--lattice-browser-ink); }
@@ -137,7 +137,7 @@
 .lattice-browser-asset__media > span { color: var(--lattice-browser-faint); font: var(--lattice-window-type-label); letter-spacing: 0.06em; }
 .lattice-browser-asset__media > .lattice-browser-asset__decoded-image { width: 100%; height: 100%; display: block; object-fit: contain; pointer-events: none; }
 .lattice-browser-asset__record { min-width: 0; min-height: 40px; padding: 8px 9px; display: grid; align-content: center; gap: 5px; border-top: 1px solid var(--lattice-browser-line-strong); background: var(--lattice-browser-card-tone); }
-.lattice-browser-asset__record strong { overflow: hidden; font: 500 14px/1.35 "Inscape Geist Sans", sans-serif; letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; }
+.lattice-browser-asset__record strong { overflow: hidden; font: 500 14px/1.35 "Inscape Sora", sans-serif; letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; }
 .lattice-browser-asset__record small { color: var(--lattice-browser-label-ink); font: var(--lattice-window-type-label); letter-spacing: 0.08em; }
 .lattice-browser-assets[data-size="list"] { grid-template-columns: 1fr; gap: 4px; }
 .lattice-browser-assets[data-size="list"] .lattice-browser-asset { display: grid; grid-template-columns: 68px minmax(0, 1fr); }
@@ -160,15 +160,15 @@
 .lattice-browser-dialog-layer { position: absolute; z-index: 5; inset: 125px 0 28px; display: grid; place-items: center; padding: 18px; background: rgb(0 0 0 / 0.18); }
 .lattice-browser-dialog-layer form { width: min(360px, 100%); border: 1px solid var(--lattice-menu-line-strong); background: var(--lattice-menu-panel); color: var(--lattice-menu-ink); box-shadow: 8px 9px 18px rgb(0 0 0 / 0.2); }
 .lattice-browser-dialog-layer form > header { height: 38px; padding: 0 12px; display: flex; align-items: center; border-bottom: 1px solid var(--lattice-menu-line); }
-.lattice-browser-dialog-layer form > header strong { font: 600 18px/1.18 "Inscape Geist Sans", sans-serif; letter-spacing: 0; }
+.lattice-browser-dialog-layer form > header strong { font: 600 18px/1.18 "Inscape Sora", sans-serif; letter-spacing: 0; }
 .lattice-browser-dialog-layer form > label,
-.lattice-browser-dialog-layer form > p { margin: 0; padding: 16px; display: grid; gap: 8px; color: var(--lattice-menu-muted); font: 400 12px/1.58 "Inscape Geist Sans", sans-serif; letter-spacing: 0; }
+.lattice-browser-dialog-layer form > p { margin: 0; padding: 16px; display: grid; gap: 8px; color: var(--lattice-menu-muted); font: 400 12px/1.58 "Inscape Sora", sans-serif; letter-spacing: 0; }
 .lattice-browser-dialog-layer form > .lattice-browser-dialog-error { padding-top: 0; color: var(--lattice-menu-ink); font: var(--lattice-window-type-label); letter-spacing: 0.06em; }
-.lattice-browser-dialog-layer label span { color: var(--lattice-menu-faint); font: 500 10px/1.25 "Inscape IBM Plex Mono", monospace; letter-spacing: 0.07em; }
-.lattice-browser-dialog-layer input { height: 32px; padding: 0 9px; border: 1px solid var(--lattice-menu-line); border-radius: 0; outline: 0; background: transparent; color: var(--lattice-menu-ink); font: 400 12px/1.5 "Inscape Geist Sans", sans-serif; }
+.lattice-browser-dialog-layer label span { color: var(--lattice-menu-faint); font: 500 10px/1.25 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: 0.07em; }
+.lattice-browser-dialog-layer input { height: 32px; padding: 0 9px; border: 1px solid var(--lattice-menu-line); border-radius: 0; outline: 0; background: transparent; color: var(--lattice-menu-ink); font: 400 12px/1.5 "Inscape Sora", sans-serif; }
 .lattice-browser-dialog-layer input:focus { border-color: var(--lattice-menu-ink); }
 .lattice-browser-dialog-layer footer { padding: 10px; display: flex; justify-content: flex-end; gap: 4px; border-top: 1px solid var(--lattice-menu-line); }
-.lattice-browser-dialog-layer footer button { height: 30px; padding: 0 10px; border: 1px solid var(--lattice-menu-line); background: transparent; color: var(--lattice-menu-ink); cursor: pointer; font: 500 11px/1.1 "Inscape Geist Sans", sans-serif; letter-spacing: 0.02em; }
+.lattice-browser-dialog-layer footer button { height: 30px; padding: 0 10px; border: 1px solid var(--lattice-menu-line); background: transparent; color: var(--lattice-menu-ink); cursor: pointer; font: 500 11px/1.1 "Inscape Sora", sans-serif; letter-spacing: 0.02em; }
 .lattice-browser-dialog-layer footer button:disabled { color: var(--lattice-menu-faint); cursor: default; }
 
 .lattice-browser-workspace :is(button, input):focus-visible { outline: var(--lattice-chrome-focus-outline); outline-offset: -2px; }

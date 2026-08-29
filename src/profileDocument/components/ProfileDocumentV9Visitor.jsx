@@ -203,7 +203,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
     const originRectangle = frozenRectangle(element.getBoundingClientRect());
     const nativeImage = new Image(); nativeImage.decoding = 'async'; nativeImage.referrerPolicy = 'no-referrer'; nativeImage.src = mediaState.media.src;
     try { await nativeImage.decode(); } catch { /* Viewer preserves its honest media failure state. */ }
-    if (element.isConnected) setViewerSession({ originRectangle, placementId: placement.id, returnFocus: element, gridId });
+    if (element.isConnected) setViewerSession({ originRectangle, placementId: placement.id, returnFocus: element, gridId, sourceHidden: true });
   }, [activeGrid.id, identityDossierActive, placementMedia, viewerSession]);
   const viewerEntries = useMemo(() => activeGrid.placements.map((placement) => {
     const decoded = placementMedia[`${activeGrid.id}:${placement.id}`];
@@ -222,7 +222,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
     if (!viewerEntries.length || viewerPosition < 0) return;
     const destination = viewerEntries[(viewerPosition + direction + viewerEntries.length) % viewerEntries.length];
     const element = findPlacementElement(destination.placement.id);
-    setViewerSession((current) => current && ({ ...current, placementId: destination.placement.id,
+    setViewerSession((current) => current && ({ ...current, placementId: destination.placement.id, sourceHidden: true,
       returnFocus: element || current.returnFocus }));
   }, [findPlacementElement, viewerEntries, viewerPosition]);
   const closePlacementViewer = useCallback(() => {
@@ -267,7 +267,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
         <GridProductionRenderer document={document} grid={activeGrid} imageLoading={activeIndex === 0 ? 'eager' : 'lazy'}
           onMediaState={handlePlacementMediaState} onPlacementActivate={openPlacementViewer}
           projectionBottomInset={VISITOR_GRID_NAVIGATION_SAFE_AREA}
-          viewerPlacementId={viewerSession?.gridId === activeGrid.id ? viewerSession.placementId : null} />
+          viewerPlacementId={viewerSession?.gridId === activeGrid.id && viewerSession.sourceHidden ? viewerSession.placementId : null} />
       </div>
       {gridSwipe && swipeGrid && <div aria-hidden="true" className="visitor-grid-world__grid-plane visitor-grid-world__grid-plane--adjacent">
         <GridProductionRenderer document={document} grid={swipeGrid} imageLoading="eager"
@@ -301,6 +301,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
       getReturnRectangle={() => findPlacementElement(viewerSession.placementId)?.getBoundingClientRect()}
       gridVariables={gridVariables} gridVisible={false} inspectionVariant="rack" menuSurfaceId={document.appearance.menuSurfaceId}
       onClosed={closePlacementViewer} onNavigate={navigateViewer} originRectangle={viewerSession.originRectangle}
+      onReturnLanding={() => setViewerSession((current) => current && ({ ...current, sourceHidden: false }))}
       position={viewerPosition} renderArtwork={(focusEntry, context) => <LatticeProductionFocusArtwork entry={focusEntry}
         motion={context.motion} />}
       returnFocus={viewerSession.returnFocus} surfaceColor={workspaceSurfaceColor} total={viewerEntries.length} />}

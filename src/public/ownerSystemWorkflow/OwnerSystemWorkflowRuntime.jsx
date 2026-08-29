@@ -249,7 +249,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
       onAssetDimensions={registerAssetDimensions} onChangeGrid={changeGrid}
       interactionDisabled={panelOccupied} onOpenViewer={(placement) => viewer.open(placement.id)}
       onPlacementRef={viewer.registerPlacement} reducedMotion={layout.reducedMotion}
-      resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.placementId} />
+      resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.sourcePlacementId} />
     <OwnerSystemWorkflowPanelLayer activity={activity} assets={assets} assetsById={assetsById} browser={browser}
       connectedProfile={connectedProfile} onConnect={onConnect} onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld}
       controller={controller} crop={crop} layersOpen={layersOpen} layout={layout} libraryData={libraryData} menuSurface={menuSurface} onChangeGrid={changeGrid}

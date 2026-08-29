@@ -6,7 +6,7 @@
   --rack-menu-line: var(--lattice-menu-line, var(--color-border));
   --rack-menu-line-strong: var(--lattice-menu-line-strong, var(--color-border-strong));
   --rack-menu-selected: var(--lattice-menu-selected, var(--color-hover));
-  --rack-menu-module-type: var(--lattice-window-type-module, 600 10px/1 var(--font-mono));
+  --rack-menu-module-type: var(--lattice-window-type-module, 600 10px/1 var(--font-interface));
   display: grid;
   border: 1px solid var(--rack-menu-line-strong);
   background: var(--rack-menu-panel);

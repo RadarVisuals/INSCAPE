@@ -4,7 +4,7 @@ import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { analyzeProductionBuild, assertNoProhibitedProductionArtifacts, assertSafeOutputDirectory, checkProductionBudgets, pruneProductionAuthoringAssets,
-  diagnosticsEnvironmentPlugin, productionBuildHygienePlugin, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
+  assertProductionFontContract, diagnosticsEnvironmentPlugin, productionBuildHygienePlugin, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
 import { ownerRuntimeIsolationPlugin } from './ownerRuntimeIsolation.js';
 import { excludeUnsupportedWalletConnectorsPlugin } from './unsupportedWalletConnectors.js';
 
@@ -221,6 +221,22 @@ test('production pruning excludes unused font sources without removing active bu
     'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf']) {
     assert.ok(!UNUSED_PUBLIC_PATHS.includes(path), path);
   }
+});
+
+test('fresh production CSS and copied font assets are limited to Sora and IBM Plex Sans Condensed', async () => {
+  const root = resolve(tmpdir(), `inscape-font-contract-${process.pid}`);
+  try {
+    await mkdir(resolve(root, 'assets/fonts/Sora'), { recursive: true });
+    await mkdir(resolve(root, 'assets/fonts/IBM_Plex_Sans_Condensed'), { recursive: true });
+    await writeFile(resolve(root, 'assets/index.css'), '@font-face{font-family:"Inscape Sora";src:url("/assets/fonts/Sora/Sora-VariableFont_wght.ttf")}@font-face{font-family:"Inscape IBM Plex Sans Condensed";src:url("/assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf")}');
+    for (const file of ['assets/fonts/Sora/OFL.txt', 'assets/fonts/Sora/Sora-VariableFont_wght.ttf',
+      'assets/fonts/IBM_Plex_Sans_Condensed/OFL.txt', 'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf']) {
+      await writeFile(resolve(root, file), 'fixture');
+    }
+    assert.equal(await assertProductionFontContract(root), true);
+    await writeFile(resolve(root, 'assets/legacy.css'), '.legacy{font-family:Geist,system-ui}');
+    await assert.rejects(() => assertProductionFontContract(root), /legacy font/);
+  } finally { await removeTree(root); }
 });
 
 test('an alternate-outDir production build writes reports there and strips diagnostics', async () => {

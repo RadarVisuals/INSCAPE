@@ -1,5 +1,5 @@
 .lattice-disclosure-module { box-sizing: border-box; min-width: 0; overflow: hidden; border: 1px solid var(--lattice-menu-line-strong); background: var(--lattice-menu-panel); }
-.lattice-disclosure-module > button { color: inherit; font-family: "Inscape IBM Plex Mono", monospace; }
+.lattice-disclosure-module > button { color: inherit; font-family: "Inscape Sora", sans-serif; }
 .lattice-disclosure-module > button::after { content: '+'; font-family: inherit; font-weight: 400; }
 .lattice-disclosure-module:has(> button[aria-expanded="true"]) > button::after { content: '−'; }
 .lattice-disclosure-module__panel { min-width: 0; min-height: 0; overflow: hidden; border-top: 1px solid var(--lattice-menu-line-strong); opacity: 0; visibility: hidden; transition: opacity 180ms linear, visibility 0s linear 180ms; }

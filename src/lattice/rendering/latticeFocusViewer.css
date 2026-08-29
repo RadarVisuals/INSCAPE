@@ -11,7 +11,7 @@
   color: var(--lattice-menu-ink);
   isolation: isolate;
   overscroll-behavior: contain;
-  font-family: "Inscape IBM Plex Mono", "Inscape IBM Plex Mono", monospace;
+  font-family: "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
 }
 
 .lattice-focus-viewer[data-phase="starting"],
@@ -65,7 +65,13 @@
 .lattice-focus-viewer__artwork {
   position: fixed;
   z-index: 2;
+  opacity: 1;
   will-change: left, top, width, height;
+}
+
+.lattice-focus-viewer[data-return-landing] > .lattice-focus-viewer__artwork {
+  opacity: 0;
+  transition: opacity var(--lattice-viewer-landing-duration) linear;
 }
 
 .lattice-focus-viewer[data-phase="open"][data-adaptive-rack-presentation] .lattice-focus-viewer__artwork {
@@ -184,13 +190,13 @@
   padding: 18px 20px 25px;
   overflow: auto;
   overscroll-behavior: contain;
-  font: 400 12px/1.58 "Inscape Geist Sans", sans-serif;
+  font: 400 12px/1.58 "Inscape Sora", sans-serif;
 }
 
 .lattice-focus-viewer__dossier-body small,
 .lattice-focus-viewer__dossier-body dt {
   color: var(--lattice-menu-ink);
-  font: 500 12px/1.25 "Inscape IBM Plex Mono", monospace;
+  font: 500 12px/1.25 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
   letter-spacing: 0.04em;
 }
 
@@ -210,7 +216,7 @@
 
 .lattice-focus-viewer__dossier-body section > p {
   margin-top: 13px;
-  font: 400 10px/1.4 "Inscape IBM Plex Mono", monospace;
+  font: 400 10px/1.4 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
   letter-spacing: 0.08em;
 }
 
@@ -229,7 +235,7 @@
 .lattice-focus-viewer__dossier-body dd {
   margin: 6px 0 0;
   overflow-wrap: anywhere;
-  font: 400 10px/1.4 "Inscape IBM Plex Mono", monospace;
+  font: 400 10px/1.4 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
   white-space: pre-line;
 }
 .lattice-focus-viewer__dossier-body dd a { color: inherit; }
@@ -247,7 +253,7 @@
   padding: 5px 10px;
   border: 1px solid var(--lattice-menu-line-strong);
   color: var(--lattice-menu-ink);
-  font: 500 10px/1 "Inscape IBM Plex Mono", monospace;
+  font: 500 10px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
   letter-spacing: 0.08em;
 }
 
@@ -484,7 +490,7 @@
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--lattice-menu-ink);
-  font: 500 14px/1.35 "Inscape Geist Sans", sans-serif;
+  font: 500 14px/1.35 "Inscape Sora", sans-serif;
 }
 
 .lattice-focus-viewer[data-phase="open"] .lattice-focus-viewer__navigation {
@@ -521,7 +527,7 @@
   padding: 0 8px;
   border-right: 1px solid var(--lattice-overlay-faint);
   border-left: 1px solid var(--lattice-overlay-faint);
-  font: 400 10px/22px "Inscape IBM Plex Mono", monospace;
+  font: 400 10px/22px "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
   letter-spacing: 0.04em;
   text-align: center;
 }
@@ -567,7 +573,7 @@
 .lattice-focus-viewer__close-control > span {
   margin-top: 10px;
   color: var(--lattice-overlay-muted);
-  font: 500 10px/1 "Inscape IBM Plex Mono", monospace;
+  font: 500 10px/1 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
   letter-spacing: 0.08em;
 }
 

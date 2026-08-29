@@ -10,7 +10,7 @@
   pointer-events: auto;
   background: var(--visitor-grid-surface);
   color: var(--visitor-grid-ink);
-  font-family: "Inscape IBM Plex Mono", monospace;
+  font-family: "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
 }
 .visitor-grid-world[data-surface="graphite"] { --visitor-grid-surface: #383a3a; }
 .visitor-grid-world[data-surface="slate"] { --visitor-grid-surface: #7b7b7b; }

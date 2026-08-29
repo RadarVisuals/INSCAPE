@@ -47,9 +47,9 @@ test('rail is fixed, carbon, compactable and does not shift the lattice', () => 
 test('rail uses the approved type hierarchy, loaded aliases and clear Lucide chevrons', () => {
   assert.match(source, /ChevronRight/);
   assert.doesNotMatch(source, /<i[^>]*>›<\/i>/);
-  assert.match(styles, /font: 600 14px\/1 "Inscape Geist Sans"/);
+  assert.match(styles, /font: 600 14px\/1 "Inscape Sora"/);
   assert.match(styles, /font-size: 10px; font-weight: 500; letter-spacing: 0\.105em/);
-  assert.match(styles, /font-family: "Inscape IBM Plex Mono"/);
+  assert.match(styles, /font-family: "Inscape IBM Plex Sans Condensed"/);
   assert.match(styles, /stroke-width: 2/);
   assert.match(styles, /color: var\(--lattice-menu-ink\)/);
   assert.doesNotMatch(styles, /"IBM Plex Mono"|"Courier New"/);

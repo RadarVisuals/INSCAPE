@@ -65,7 +65,7 @@
   place-items: center;
   padding: 8px;
   color: var(--lattice-production-label-muted);
-  font: 8px/1.25 "Inscape IBM Plex Mono", monospace;
+  font: 8px/1.25 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
   letter-spacing: 0.08em;
   text-align: center;
   text-transform: uppercase;
@@ -82,7 +82,7 @@
   border: 1px solid color-mix(in srgb, currentColor 34%, transparent);
   background: var(--lattice-production-label-surface);
   color: var(--lattice-production-label-ink);
-  font-family: "Inscape IBM Plex Mono", monospace;
+  font-family: "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
   line-height: 1.15;
   text-transform: uppercase;
 }
