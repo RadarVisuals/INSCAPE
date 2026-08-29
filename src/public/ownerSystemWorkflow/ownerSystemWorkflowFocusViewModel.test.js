@@ -23,7 +23,7 @@ test('owner focus view model retains canonical presentation and builds all three
   assert.deepEqual(model.focusDimensions, { width: 2400, height: 1350 });
   assert.equal(model.dossier.description, 'Narrative record.');
   assert.deepEqual(model.dossier.traits, [
-    { label: 'COLLECTION', value: 'STUDIES' },
+    { label: 'Collection', value: 'STUDIES' },
     { label: 'FREQUENCY', value: 'LOW' },
   ]);
   assert.ok(model.dossier.technical.some(({ label }) => label === 'SOURCE DIMENSIONS'));
