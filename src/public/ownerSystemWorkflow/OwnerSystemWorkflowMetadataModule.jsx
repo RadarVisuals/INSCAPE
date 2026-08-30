@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { ExternalLink, UserRound, X } from 'lucide-react';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { useProfileIdentity } from '../../profileIdentity/index.js';
+import { clampOwnerSystemWorkflowWindowPosition } from './ownerSystemWorkflowWindowGeometry.js';
 
 const compact = (value) => value?.length > 18 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value;
 
@@ -35,6 +36,31 @@ export function OwnerSystemWorkflowMetadataContent({ dossier }) {
 export default function OwnerSystemWorkflowMetadataModule({ dossier, onClose, onDock }) {
   const [position, setPosition] = useState(() => ({ x: Math.max(18, (globalThis.innerWidth || 1000) - 318), y: 72 }));
   const drag = useRef(null);
+  const moduleRef = useRef(null);
+  const viewport = () => {
+    const workbench = globalThis.document?.querySelector?.('[data-presentation-workbench]')?.getBoundingClientRect?.();
+    return { height: workbench?.bottom || globalThis.innerHeight || 700, width: workbench?.right || globalThis.innerWidth || 1000 };
+  };
+  const measuredSize = () => {
+    const rectangle = moduleRef.current?.getBoundingClientRect?.();
+    return rectangle ? { height: rectangle.height, width: rectangle.width } : { height: 68, width: 286 };
+  };
+  const clampPosition = (candidate, size = measuredSize()) => clampOwnerSystemWorkflowWindowPosition(
+    candidate, size, viewport(), 8,
+  );
+  useLayoutEffect(() => {
+    const node = moduleRef.current;
+    if (!node) return undefined;
+    const reclamp = () => setPosition((current) => {
+      const next = clampPosition(current);
+      return next.x === current.x && next.y === current.y ? current : next;
+    });
+    reclamp();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(reclamp) : null;
+    observer?.observe(node);
+    globalThis.addEventListener?.('resize', reclamp);
+    return () => { observer?.disconnect(); globalThis.removeEventListener?.('resize', reclamp); };
+  }, []);
   const beginDrag = (event) => {
     if (event.button !== 0 || event.target.closest('button')) return;
     drag.current = { id: event.pointerId, clientX: event.clientX, clientY: event.clientY, left: position.x, top: position.y };
@@ -43,14 +69,14 @@ export default function OwnerSystemWorkflowMetadataModule({ dossier, onClose, on
   const moveDrag = (event) => {
     const start = drag.current;
     if (!start || start.id !== event.pointerId) return;
-    setPosition({
-      x: Math.max(8, Math.min((globalThis.innerWidth || 1000) - 294, start.left + event.clientX - start.clientX)),
-      y: Math.max(8, Math.min((globalThis.innerHeight || 700) - 76, start.top + event.clientY - start.clientY)),
-    });
+    setPosition(clampPosition({
+      x: start.left + event.clientX - start.clientX,
+      y: start.top + event.clientY - start.clientY,
+    }));
   };
   const stopDrag = (event) => { if (drag.current?.id === event.pointerId) drag.current = null; };
   return <aside aria-label="Metadata module" className="system-workflow__metadata-module" data-floating
-    style={{ left: position.x, top: position.y }}>
+    ref={moduleRef} style={{ left: position.x, top: position.y }}>
     <header onPointerDown={beginDrag} onPointerMove={moveDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag}>
       <strong>METADATA</strong><span className="system-workflow__module-controls">
         <button aria-label="Dock Metadata to Presentation Board" className="system-workflow__round-control"

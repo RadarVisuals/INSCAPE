@@ -8,6 +8,7 @@ test('owner Presentation Board reuses the existing interactive canvas inside one
   const runtime = read('./OwnerSystemWorkflowRuntime.jsx');
   const board = read('./PresentationBoardDefinitive.jsx');
   const canvas = read('./OwnerSystemWorkflowCanvas.jsx');
+  const geometry = read('./presentationBoardGeometry.js');
   const styles = read('./ownerSystemWorkflow.css');
 
   assert.match(runtime, /<PresentationBoard[\s\S]*<OwnerSystemWorkflowCanvas[\s\S]*<\/PresentationBoard>/);
@@ -29,7 +30,11 @@ test('owner Presentation Board reuses the existing interactive canvas inside one
   assert.match(board, /'window'[\s\S]*'maximizing'[\s\S]*'maximized'[\s\S]*'restoring'/);
   assert.match(board, /resizePresentationBoardFromCorner/);
   assert.match(board, /corners\.map/);
-  assert.match(board, /presentationBoardInspectionFrame\(view,[\s\S]*host\?\.clientWidth[\s\S]*sidecarWidth/);
+  assert.match(board, /sidecarWidth: sidecarOpen \? metadataWidth : 0/);
+  assert.match(board, /presentationBoardInspectionFrame\(view,[\s\S]*host\?\.clientWidth[\s\S]*geometryOptions/);
+  assert.match(board, /PRESENTATION_BOARD_METADATA_SIDECAR\.trackWidth/);
+  assert.match(geometry, /trackWidth: 286/);
+  assert.match(geometry, /gap: 8/);
   assert.doesNotMatch(board, /OWNER/);
   assert.match(board, /LatticePixelGrid/);
   assert.match(board, /application\/x-inscape-asset/);

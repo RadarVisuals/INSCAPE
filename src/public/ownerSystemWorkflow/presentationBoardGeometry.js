@@ -1,6 +1,11 @@
 export const PRESENTATION_STAGE = Object.freeze({ width: 1600, height: 900, aspectRatio: 16 / 9 });
 export const PRESENTATION_BOARD_MINIMUM_PERCENTAGE = 25;
 export const PRESENTATION_BOARD_DEFAULT_PERCENTAGE = 100;
+export const PRESENTATION_BOARD_METADATA_SIDECAR = Object.freeze({
+  gap: 8,
+  panelWidth: 278,
+  trackWidth: 286,
+});
 
 const finitePositive = (value) => Number.isFinite(Number(value)) && Number(value) > 0;
 const cleanOffset = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -44,8 +49,13 @@ export function maximumPresentationBoardPercentage(fit, viewport, options = {}) 
   if (!fit || !space || !finitePositive(fit.stage?.width) || !finitePositive(fit.stage?.height)) {
     return PRESENTATION_BOARD_DEFAULT_PERCENTAGE;
   }
-  const maximumScale = Math.min(space.width / fit.stage.width, space.stageHeight / fit.stage.height);
-  return Math.max(PRESENTATION_BOARD_DEFAULT_PERCENTAGE, Math.floor((maximumScale + Number.EPSILON) * 100));
+  const sidecarWidth = Math.max(0, cleanOffset(options.sidecarWidth));
+  const availableStageWidth = Math.max(1, space.width - sidecarWidth);
+  const maximumScale = Math.min(availableStageWidth / fit.stage.width, space.stageHeight / fit.stage.height);
+  const minimumMaximum = sidecarWidth > 0
+    ? PRESENTATION_BOARD_MINIMUM_PERCENTAGE
+    : PRESENTATION_BOARD_DEFAULT_PERCENTAGE;
+  return Math.max(minimumMaximum, Math.floor((maximumScale + Number.EPSILON) * 100));
 }
 
 export function normalizePresentationBoardPercentage(value, maximumPercentage, fallback = PRESENTATION_BOARD_DEFAULT_PERCENTAGE) {

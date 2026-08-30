@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   PRESENTATION_BOARD_DEFAULT_PERCENTAGE,
+  PRESENTATION_BOARD_METADATA_SIDECAR,
   PRESENTATION_BOARD_MINIMUM_PERCENTAGE,
   clampPresentationBoardScale,
   fitPresentationBoard,
@@ -89,6 +90,40 @@ test('resize recomputes the safe maximum, clamps only when needed, and never mut
   assert.equal(resized.fit.stage.width / resized.fit.stage.height, 16 / 9);
   assert.notDeepEqual(resized.fit, initial.fit);
   assert.equal(JSON.stringify(documentGeometry), '{"columns":32,"rows":18}');
+});
+
+test('sidecar track lowers only the horizontal maximum and keeps the complete group inside the Workbench', () => {
+  const viewport = { width: 1440, height: 806 };
+  const baseOptions = { inset: 24, identityStripHeight: 38 };
+  const fit = fitPresentationBoard(viewport, baseOptions);
+  const sidecarOptions = { ...baseOptions, sidecarWidth: PRESENTATION_BOARD_METADATA_SIDECAR.trackWidth };
+  assert.deepEqual(PRESENTATION_BOARD_METADATA_SIDECAR, { gap: 8, panelWidth: 278, trackWidth: 286 });
+  assert.equal(maximumPresentationBoardPercentage(fit, viewport, baseOptions), 100);
+  assert.equal(maximumPresentationBoardPercentage(fit, viewport, sidecarOptions), 86);
+
+  const unconstrained = projectPresentationBoardView({ columns: 32, rows: 18 }, viewport, 1, baseOptions);
+  const constrained = resizePresentationBoardView(unconstrained, viewport, sidecarOptions);
+  assert.equal(constrained.scale, 0.86);
+  assert.equal(constrained.maximumPercentage, 86);
+  assert.ok(constrained.frame.board.width + PRESENTATION_BOARD_METADATA_SIDECAR.trackWidth
+    <= viewport.width - sidecarOptions.inset * 2);
+  assert.equal(constrained.frame.stage.width / constrained.frame.stage.height, 16 / 9);
+  assert.equal(unconstrained.scale, 1);
+});
+
+test('corner resize respects an active sidecar maximum while inner Metadata leaves the base maximum unchanged', () => {
+  const viewport = { width: 1440, height: 806 };
+  const sidecarOptions = { inset: 24, identityStripHeight: 38, sidecarWidth: 286 };
+  const sidecarView = projectPresentationBoardView({ columns: 32, rows: 18 }, viewport, 0.5, sidecarOptions);
+  const frame = { ...sidecarView.frame.board, left: 24, top: 24 };
+  const resized = resizePresentationBoardFromCorner(sidecarView, frame, 'se', { x: 5000, y: 5000 });
+  assert.equal(resized.view.scale, 0.86);
+  assert.ok(resized.view.frame.board.width + sidecarOptions.sidecarWidth <= viewport.width - sidecarOptions.inset * 2);
+
+  const innerView = projectPresentationBoardView({ columns: 32, rows: 18 }, viewport, 1,
+    { inset: 24, identityStripHeight: 38 });
+  assert.equal(innerView.maximumPercentage, 100);
+  assert.equal(innerView.scale, 1);
 });
 
 test('inspect frame uses the safe fitted viewport without overwriting permanent Board zoom', () => {

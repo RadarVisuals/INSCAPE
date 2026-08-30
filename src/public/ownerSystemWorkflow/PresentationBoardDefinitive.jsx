@@ -4,14 +4,13 @@ import { ChevronDown, ChevronRight, UserRound, X } from 'lucide-react';
 import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import RackMenu from '../menus/RackMenu.jsx';
 import ProgressiveArtworkImage from './ProgressiveArtworkImage.jsx';
-import { presentationBoardInspectionFrame, projectPresentationBoardView, resizePresentationBoardFromCorner,
-  resizePresentationBoardView } from './presentationBoardGeometry.js';
+import { PRESENTATION_BOARD_METADATA_SIDECAR, presentationBoardInspectionFrame, projectPresentationBoardView,
+  resizePresentationBoardFromCorner, resizePresentationBoardView } from './presentationBoardGeometry.js';
 
 const compactAddress = (address) => address?.length > 18 ? `${address.slice(0, 10)}…${address.slice(-6)}` : address;
 const corners = ['nw', 'ne', 'sw', 'se'];
 const WORKBENCH_CELL = 24;
 const SHORTCUT_SIZE = { width: 82, height: 70 };
-const METADATA_WIDTH = 286;
 const sameFrame = (left, right) => left && right
   && ['height', 'left', 'top', 'width'].every((key) => Math.abs(left[key] - right[key]) < 0.01);
 const snap = (value) => Math.round(value / WORKBENCH_CELL) * WORKBENCH_CELL;
@@ -53,10 +52,12 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
   const windowSnapshotRef = useRef(null);
   const inspectionActive = Boolean(renderInspection);
   const sidecarOpen = metadataDocked && metadataProjection === 'side';
-  const metadataWidth = layoutMode === 'narrow' ? Math.min(180, (host?.clientWidth || 390) * 0.42) : METADATA_WIDTH;
+  const metadataWidth = layoutMode === 'narrow' ? Math.min(180, (host?.clientWidth || 390) * 0.42)
+    : PRESENTATION_BOARD_METADATA_SIDECAR.trackWidth;
   boardPhaseRef.current = boardPhase;
   const geometryOptions = { inset: layoutMode === 'narrow' ? 8 : 24,
-    identityStripHeight: layoutMode === 'narrow' ? 34 : 38 };
+    identityStripHeight: layoutMode === 'narrow' ? 34 : 38,
+    sidecarWidth: sidecarOpen ? metadataWidth : 0 };
 
   useLayoutEffect(() => {
     if (!host) return undefined;
@@ -68,7 +69,7 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
     observer?.observe(host);
     globalThis.addEventListener?.('resize', measure);
     return () => { observer?.disconnect(); globalThis.removeEventListener?.('resize', measure); };
-  }, [documentGeometry, host, layoutMode]);
+  }, [documentGeometry, host, layoutMode, metadataWidth, sidecarOpen]);
 
   useEffect(() => {
     try { globalThis.localStorage?.setItem(shortcutStorageKey(profileAddress), JSON.stringify({
@@ -98,7 +99,7 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
     view.frame.board, sidecarOpen ? metadataWidth : 0) : null;
   const windowFrame = view && renderedPosition ? { ...view.frame.board, ...renderedPosition } : null;
   const maximumView = presentationBoardInspectionFrame(view, { width: host?.clientWidth, height: host?.clientHeight },
-    { ...geometryOptions, sidecarWidth: sidecarOpen ? metadataWidth : 0 });
+    geometryOptions);
   const maximumFrame = maximumView?.board || null;
   const maximized = boardPhase === 'maximizing' || boardPhase === 'maximized';
   const renderedFrame = maximized ? maximumFrame

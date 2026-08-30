@@ -218,9 +218,12 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
           const rect = button.getBoundingClientRect();
           return rect.top + rect.height / 2;
         });
-      const frameStyle = getComputedStyle(document.querySelector('.system-workflow__presentation-board'), '::before');
+      const boardNode = document.querySelector('.system-workflow__presentation-board');
+      const boardStyle = getComputedStyle(boardNode);
+      const frameStyle = getComputedStyle(boardNode, '::before');
       return {
         boardRight: boardRect.right,
+        frameGap: Number.parseFloat(boardStyle.getPropertyValue('--workflow-board-frame-gap')),
         buttonCenterOffsets: controlCenters.map((center) => center - (headerRect.top + headerRect.height / 2)),
         contentBottomGap: contentRect.bottom - lastRect.bottom,
         contentLeftGap: firstRect.left - panelRect.left,
@@ -240,11 +243,14 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
         windowSeparator: getComputedStyle(windowControls).borderLeftWidth,
       };
     });
-    assert.ok(closeEnough(sideAlignment.boardRight, sideAlignment.panelLeft));
+    assert.equal(sideAlignment.frameGap, 8);
+    assert.ok(closeEnough(sideAlignment.panelLeft - sideAlignment.boardRight, sideAlignment.frameGap));
     assert.ok(closeEnough(sideAlignment.ratio, 16 / 9, 0.003));
-    for (const gap of [sideAlignment.contentTopGap, sideAlignment.contentLeftGap,
-      sideAlignment.contentRightGap, sideAlignment.contentBottomGap, sideAlignment.firstCellGap]) {
+    for (const gap of [sideAlignment.contentTopGap, sideAlignment.firstCellGap]) {
       assert.ok(closeEnough(gap, 8, 0.75), JSON.stringify(sideAlignment));
+    }
+    for (const gap of [sideAlignment.contentLeftGap, sideAlignment.contentRightGap, sideAlignment.contentBottomGap]) {
+      assert.ok(closeEnough(gap, 0, 0.75), JSON.stringify(sideAlignment));
     }
     assert.equal(sideAlignment.frameLeft, '-9px');
     assert.equal(sideAlignment.frameBottom, '-9px');
@@ -253,11 +259,31 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     assert.equal(sideAlignment.metadataSeparator, '1px');
     assert.equal(sideAlignment.windowSeparator, '1px');
     assert.ok(closeEnough(sideAlignment.metadataControls.top, sideAlignment.header.top, 0.25), JSON.stringify(sideAlignment));
-    assert.ok(closeEnough(sideAlignment.metadataControls.bottom, sideAlignment.header.bottom - 1, 0.25), JSON.stringify(sideAlignment));
+    assert.ok(closeEnough(sideAlignment.metadataControls.bottom, sideAlignment.header.bottom, 0.25), JSON.stringify(sideAlignment));
     assert.ok(closeEnough(sideAlignment.windowControls.top, sideAlignment.header.top, 0.25), JSON.stringify(sideAlignment));
-    assert.ok(closeEnough(sideAlignment.windowControls.bottom, sideAlignment.header.bottom - 1, 0.25), JSON.stringify(sideAlignment));
+    assert.ok(closeEnough(sideAlignment.windowControls.bottom, sideAlignment.header.bottom, 0.25), JSON.stringify(sideAlignment));
     assert.ok(sideAlignment.buttonCenterOffsets.every((offset) => Math.abs(offset) <= 0.5), JSON.stringify(sideAlignment));
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-metadata-side-wide.png') });
+
+    const sidecarResizeHandle = await page.getByRole('button', { name: 'Resize Presentation Board from se' }).boundingBox();
+    await page.mouse.move(sidecarResizeHandle.x + sidecarResizeHandle.width / 2,
+      sidecarResizeHandle.y + sidecarResizeHandle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(sidecarResizeHandle.x + 1_000, sidecarResizeHandle.y + 600, { steps: 10 });
+    await page.mouse.up();
+    const resizedSidecarGroup = await page.evaluate(() => {
+      const boardRect = document.querySelector('.system-workflow__presentation-board').getBoundingClientRect();
+      const panelRect = document.querySelector('.system-workflow__metadata-projection.is-side').getBoundingClientRect();
+      const workbenchRect = document.querySelector('[data-presentation-workbench]').getBoundingClientRect();
+      const metadataControlsRect = document.querySelector('.system-workflow__metadata-dock-controls').getBoundingClientRect();
+      return { board: boardRect.toJSON(), metadataControls: metadataControlsRect.toJSON(),
+        panel: panelRect.toJSON(), workbench: workbenchRect.toJSON() };
+    });
+    assert.ok(resizedSidecarGroup.panel.right <= resizedSidecarGroup.workbench.right + 0.25,
+      JSON.stringify(resizedSidecarGroup));
+    assert.ok(closeEnough(resizedSidecarGroup.panel.left - resizedSidecarGroup.board.right, 8),
+      JSON.stringify(resizedSidecarGroup));
+    assert.ok(closeEnough(resizedSidecarGroup.board.width / (resizedSidecarGroup.board.height - 38), 16 / 9, 0.003));
 
     const placement = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
     await placement.dblclick();
@@ -270,8 +296,8 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
       return { inspect: inspect.toJSON(), metadata: metadata.toJSON() };
     });
     assert.ok(inspectingHeader.inspect.right <= inspectingHeader.metadata.left, JSON.stringify(inspectingHeader));
-    assert.ok(closeEnough(inspectingHeader.metadata.left, sideAlignment.metadataControls.left, 0.25),
-      JSON.stringify({ before: sideAlignment.metadataControls, inspectingHeader }));
+    assert.ok(closeEnough(inspectingHeader.metadata.left, resizedSidecarGroup.metadataControls.left, 0.25),
+      JSON.stringify({ before: resizedSidecarGroup.metadataControls, inspectingHeader }));
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-inspect-metadata-side-wide.png') });
     await page.setViewportSize({ width: 390, height: 720 });
     await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'narrow');
@@ -306,7 +332,7 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
       return { board: boardRect.toJSON(), overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         panel: panelRect.toJSON() };
     });
-    assert.ok(closeEnough(maximizedSide.board.right, maximizedSide.panel.left));
+    assert.ok(closeEnough(maximizedSide.panel.left - maximizedSide.board.right, 8));
     assert.ok(maximizedSide.panel.right <= 1440);
     assert.equal(maximizedSide.overflow, 0);
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-metadata-side-maximized-wide.png') });
@@ -326,6 +352,26 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     await page.getByRole('button', { name: 'Undock Metadata' }).click();
     const metadata = page.getByRole('complementary', { name: 'Metadata module' });
     await metadata.waitFor();
+    await page.setViewportSize({ width: 390, height: 720 });
+    await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'narrow');
+    const detachedNarrow = await page.evaluate(() => {
+      const moduleRect = document.querySelector('.system-workflow__metadata-module[data-floating]').getBoundingClientRect();
+      const workbenchRect = document.querySelector('[data-presentation-workbench]').getBoundingClientRect();
+      return { module: moduleRect.toJSON(), workbench: workbenchRect.toJSON(), overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+    });
+    assert.ok(detachedNarrow.module.left >= detachedNarrow.workbench.left + 8 - 0.25
+      && detachedNarrow.module.right <= detachedNarrow.workbench.right - 8 + 0.25,
+    JSON.stringify(detachedNarrow));
+    assert.ok(detachedNarrow.module.top >= detachedNarrow.workbench.top + 8 - 0.25
+      && detachedNarrow.module.bottom <= detachedNarrow.workbench.bottom - 8 + 0.25,
+    JSON.stringify(detachedNarrow));
+    assert.equal(detachedNarrow.overflow, 0);
+    const narrowPosition = await metadata.boundingBox();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'wide');
+    const restoredWidePosition = await metadata.boundingBox();
+    assert.ok(closeEnough(restoredWidePosition.x, narrowPosition.x) && closeEnough(restoredWidePosition.y, narrowPosition.y),
+      JSON.stringify({ narrowPosition, restoredWidePosition }));
     await page.getByRole('button', { name: 'Close Metadata' }).click();
     await metadata.waitFor({ state: 'detached' });
     await page.locator('[data-presentation-workbench]').click({ button: 'right', position: { x: 50, y: 80 } });
