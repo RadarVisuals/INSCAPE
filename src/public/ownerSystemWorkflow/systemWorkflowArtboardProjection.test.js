@@ -65,3 +65,18 @@ test('Hero artboard stays compact on desktop and preserves a centered 16:9 apert
     y: field.top + 18 * field.cellSize,
   }), true);
 });
+
+test('Stage scaling keeps pointer projection proportional at 25, 75, and the safe fitted maximum', () => {
+  const documentPlacement = Object.freeze({ column: 7, row: 4, columnSpan: 3, rowSpan: 2 });
+  const fieldAt = (scale) => createOwnerSystemWorkflowProjectedField({
+    getBoundingClientRect: () => ({ left: 100, top: 60, width: 800 * scale, height: 450 * scale }),
+  });
+  const quarter = fieldAt(.25);
+  const reduced = fieldAt(.75);
+  const fitted = fieldAt(1);
+  assert.equal(quarter.cellSize, fitted.cellSize * .25);
+  assert.equal(reduced.cellSize, fitted.cellSize * .75);
+  assert.deepEqual(documentPlacement, { column: 7, row: 4, columnSpan: 3, rowSpan: 2 });
+  assert.deepEqual(projectOwnerSystemWorkflowPlacement(documentPlacement, measureOwnerSystemWorkflowArtboard(800, 450)),
+    { left: 175, top: 100, width: 75, height: 50 });
+});

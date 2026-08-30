@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import DisclosureModule from './DisclosureModule.jsx';
+import { createLatticeArtworkMetadataSections, LatticeArtworkMetadataContent } from './LatticeArtworkMetadata.jsx';
 import { createDisclosureModuleTracks } from './disclosureModuleTracks.js';
 
 const resolved = (value) => typeof value === 'string' && value.trim();
@@ -28,28 +29,8 @@ function RecordContent({ dossier }) {
   ))}</dl>;
 }
 
-function RackNarrativeContent({ dossier }) {
-  return <>
-    {resolved(dossier?.title) && <h2>{dossier.title}</h2>}
-    {resolved(dossier?.description) && <p>{dossier.description}</p>}
-  </>;
-}
-
-function AttributeContent({ dossier }) {
-  return <ul className="lattice-focus-viewer__rack-attributes">
-    {(dossier?.traits || []).map(({ label, value }) => <li key={label}><span>{label}</span><strong>{value}</strong></li>)}
-  </ul>;
-}
-
 function LatticeFocusRack({ activeSection, closeButtonRef, dossier, layout, onClose, onSectionChange, open }) {
-  const sections = [
-    { id: 'narrative', label: 'NARRATIVE', available: resolved(dossier?.title) || resolved(dossier?.description),
-      content: <RackNarrativeContent dossier={dossier} /> },
-    { id: 'attributes', label: 'ATTRIBUTES', available: dossier?.traits?.length > 0,
-      content: <AttributeContent dossier={dossier} /> },
-    { id: 'technical', label: 'TECHNICAL', available: dossier?.technical?.some(({ value }) => resolved(value)),
-      content: <RecordContent dossier={dossier} /> },
-  ].filter(({ available }) => available);
+  const sections = createLatticeArtworkMetadataSections(dossier);
   const selected = sections.some(({ id }) => id === activeSection) ? activeSection : sections[0]?.id;
   useEffect(() => {
     if (selected && selected !== activeSection) onSectionChange?.(selected);
@@ -72,7 +53,8 @@ function LatticeFocusRack({ activeSection, closeButtonRef, dossier, layout, onCl
         headerAction={active && section.id === 'narrative' && onClose ? <button aria-label="Close artwork viewer"
           onClick={onClose} ref={closeButtonRef} type="button"><X aria-hidden="true" /></button> : null}
         id={`lattice-rack-${section.id}`} key={section.id} label={section.label} onToggle={() => onSectionChange?.(section.id)}
-        style={moduleTracks.get(section.id)}>{section.content}</DisclosureModule>;
+        style={moduleTracks.get(section.id)}><LatticeArtworkMetadataContent attributesClassName="lattice-focus-viewer__rack-attributes"
+          dossier={dossier} section={section.id} /></DisclosureModule>;
     })}
   </aside>;
 }

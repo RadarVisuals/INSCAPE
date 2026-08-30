@@ -16,7 +16,7 @@ import {
   ownerSystemWorkflowAssetDimensions,
   ownerSystemWorkflowDecodedAsset,
 } from './ownerSystemWorkflow/ownerSystemWorkflowAssetDimensions.js';
-import { createOwnerSystemWorkflowFocusViewModel } from './ownerSystemWorkflow/ownerSystemWorkflowFocusViewModel.js';
+import { createOwnerSystemWorkflowMetadataViewModel } from './ownerSystemWorkflow/ownerSystemWorkflowMetadataViewModel.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const CONTRACT = '0x2222222222222222222222222222222222222222';
@@ -133,9 +133,8 @@ test('decoded source dimensions drive drag geometry, placement, owner metadata, 
   const systemWorkflowDraft = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
   const placed = { ...placement('decoded-phone', 0), ...destination };
   systemWorkflowDraft.grids[0].placements = [placed];
-  const ownerFocus = createOwnerSystemWorkflowFocusViewModel(placed, decodedAsset);
-  assert.deepEqual(ownerFocus.focusDimensions, dimensions);
-  assert.ok(ownerFocus.dossier.technical.some(({ label, value }) => label === 'SOURCE DIMENSIONS'
+  const ownerMetadata = createOwnerSystemWorkflowMetadataViewModel(placed, decodedAsset);
+  assert.ok(ownerMetadata.dossier.technical.some(({ kind, value }) => kind === 'dimensions'
     && value === '1080 × 1920 PX'));
 
   const preview = buildOwnerSystemWorkflowPreviewDocument({

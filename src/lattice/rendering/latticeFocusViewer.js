@@ -308,6 +308,27 @@ export function focusViewerRackLayout(originRectangle, viewport, rackOpen, confi
   });
 }
 
+export function focusViewerIsolatedLayout(originRectangle, viewport, config = DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG) {
+  const origin = normalizeViewerRectangle(originRectangle, 'originRectangle');
+  const size = viewerViewport(viewport);
+  const margin = size.width < 640 ? 16 : Math.max(32, Number(config.horizontalMargin));
+  const topMargin = size.width < 640 ? 20 : Math.max(32, Number(config.verticalMargin));
+  const navigationClearance = Math.max(0, Number(config.isolatedNavigationClearance ?? 76));
+  const availableWidth = Math.max(1, size.width - (margin * 2));
+  const availableHeight = Math.max(1, size.height - (topMargin * 2) - navigationClearance);
+  const scale = Math.min(availableWidth / origin.width, availableHeight / origin.height);
+  const width = origin.width * scale;
+  const height = origin.height * scale;
+  const artwork = rectangle((size.width - width) / 2,
+    topMargin + ((availableHeight - height) / 2), width, height);
+  return Object.freeze({
+    mode: 'isolated',
+    artwork,
+    inspectionFrame: rectangle(artwork.left, artwork.top, artwork.width, artwork.height),
+    contentHeight: size.height,
+  });
+}
+
 export function orderedFocusViewerEntries(entries) {
   if (!Array.isArray(entries)) throw new TypeError('viewer entries must be an array');
   return [...entries].sort((left, right) => {

@@ -29,7 +29,7 @@ function selectedRecords(controller, grid, placement) {
   return selected.some(({ id }) => id === placement.id) ? selected : [placement];
 }
 
-export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMode = 'grid', canvasRef, canNavigateGrid = () => false, controller, cropResize = null, cropSession = null, disabled = false, onNavigateGrid, reducedMotion = false, snapStep = 1 }) {
+export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMode = 'grid', canvasRef, canNavigateGrid = () => false, controller, cropResize = null, cropSession = null, disabled = false, onNavigateGrid, reducedMotion = false, snapStep = 1, viewScale = 1 }) {
   const [previewById, setPreviewById] = useState(new Map());
   const [marquee, setMarquee] = useState(null);
   const [gridSwipe, setGridSwipe] = useState(null);
@@ -76,15 +76,17 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     const update = (pointerEvent) => {
       const active = gestureRef.current;
       if (!active || pointerEvent.pointerId !== active.pointerId) return;
+      const currentField = projectedField(canvasRef.current, snapStep, artboardMode);
       const next = active.kind === 'resize'
-        ? active.records.length > 1 ? updateSystemWorkflowGroupResizeGesture(active.domainGesture, { x: pointerEvent.clientX, y: pointerEvent.clientY }, projectedField(canvasRef.current, snapStep, artboardMode)) : updateSystemWorkflowResizeGesture(
+        ? active.records.length > 1 ? updateSystemWorkflowGroupResizeGesture(active.domainGesture, { x: pointerEvent.clientX, y: pointerEvent.clientY }, currentField) : updateSystemWorkflowResizeGesture(
           active.domainGesture,
           { x: pointerEvent.clientX, y: pointerEvent.clientY },
-          projectedField(canvasRef.current, snapStep, artboardMode),
+          currentField,
           undefined,
           { preserveRatio: pointerEvent.shiftKey },
         )
-        : updateSystemWorkflowMovementGesture(active.domainGesture, { x: pointerEvent.clientX, y: pointerEvent.clientY }, projectedField(canvasRef.current, snapStep, artboardMode));
+        : updateSystemWorkflowMovementGesture(active.domainGesture, { x: pointerEvent.clientX, y: pointerEvent.clientY }, currentField,
+          Math.min(10, currentField.cellSize));
       active.domainGesture = next;
       active.moved ||= next.activated;
       const previews = new Map();
@@ -182,7 +184,12 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
         y: Math.max(field.viewportTop, Math.min(field.viewportTop + field.viewportHeight, pointerEvent.clientY)),
       };
       active.moved ||= Math.hypot(active.end.x - origin.x, active.end.y - origin.y) > 6;
-      if (active.moved) setMarquee({ left: Math.min(origin.x, active.end.x) - field.viewportLeft, top: Math.min(origin.y, active.end.y) - field.viewportTop, width: Math.abs(active.end.x - origin.x), height: Math.abs(active.end.y - origin.y) });
+      if (active.moved) setMarquee({
+        left: (Math.min(origin.x, active.end.x) - field.viewportLeft) / viewScale,
+        top: (Math.min(origin.y, active.end.y) - field.viewportTop) / viewScale,
+        width: Math.abs(active.end.x - origin.x) / viewScale,
+        height: Math.abs(active.end.y - origin.y) / viewScale,
+      });
     };
     const finish = (pointerEvent) => {
       const active = marqueeRef.current;

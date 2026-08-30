@@ -7,6 +7,7 @@ import {
   focusViewerEntryRectangle,
   focusViewerDestination,
   focusViewerLayout,
+  focusViewerIsolatedLayout,
   focusViewerPresentationDimensions,
   focusViewerRackLayout,
   focusedViewerRectangle,
@@ -77,6 +78,30 @@ test('production rack validates its open state', () => {
     { width: 1200, height: 800 },
     'open',
   ), /boolean/);
+});
+
+test('isolated viewer gives the artwork the full safe viewport without allocating metadata space', () => {
+  const origin = { left: 12, top: 18, width: 900, height: 600 };
+  const layout = focusViewerIsolatedLayout(origin, { width: 1440, height: 900 });
+  assert.equal(layout.mode, 'isolated');
+  assert.equal(layout.artwork.width / layout.artwork.height, 1.5);
+  assert.ok(layout.artwork.left >= 48 && layout.artwork.top >= 40);
+  assert.ok(layout.artwork.left + layout.artwork.width <= 1392);
+  assert.ok(layout.artwork.top + layout.artwork.height <= 784);
+  assert.equal('inspectionRack' in layout, false);
+  assert.equal('leftDossier' in layout, false);
+});
+
+test('isolated Board viewer recovers the navigation clearance when controls move into its header', () => {
+  const origin = { left: 0, top: 0, width: 600, height: 600 };
+  const legacy = focusViewerIsolatedLayout(origin, { width: 900, height: 520 });
+  const contextual = focusViewerIsolatedLayout(origin, { width: 900, height: 520 }, {
+    ...DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG,
+    isolatedNavigationClearance: 0,
+  });
+  assert.ok(Math.abs((contextual.artwork.height - legacy.artwork.height) - 76) < Number.EPSILON * 512);
+  assert.equal(contextual.artwork.width, contextual.artwork.height);
+  assert.equal(contextual.artwork.top + (contextual.artwork.height / 2), 260);
 });
 
 test('focused viewer preserves native presentation ratio and centers within safe viewport margins', () => {

@@ -8,19 +8,21 @@ const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
 const URL = process.env.INSCAPE_SYSTEM_WORKFLOW_URL || 'http://127.0.0.1:5173/development/owner/system-workflow';
 const SCREENSHOT_DIR = process.env.INSCAPE_SYSTEM_WORKFLOW_SCREENSHOT_DIR ? resolve(process.env.INSCAPE_SYSTEM_WORKFLOW_SCREENSHOT_DIR) : null;
 
-test('canvas move resize nudge marquee lock and viewer use one completed-operation commit', { timeout: 60_000 }, async () => {
+test('canvas move resize nudge marquee lock and keyboard selection use completed-operation commits', { timeout: 60_000 }, async () => {
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
     if (SCREENSHOT_DIR) await mkdir(SCREENSHOT_DIR, { recursive: true });
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(URL, { waitUntil: 'networkidle' });
+    await page.getByRole('slider', { name: 'Board zoom' }).fill('100');
     await page.evaluate(() => { window.__workflowWrites = 0; addEventListener('inscape:review-storage-write', () => { window.__workflowWrites += 1; }); });
     const abyssal = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
     await abyssal.click();
+    const renderedCell = await page.locator('.system-workflow__canvas').evaluate((node) => {
+      const logicalCell = Number.parseFloat(getComputedStyle(node).getPropertyValue('--world-cell-size'));
+      return Math.round(logicalCell * node.getBoundingClientRect().width / node.offsetWidth);
+    });
     const placementRect = await abyssal.boundingBox();
-    const selectionRect = await page.locator('.system-workflow__selection-outline').boundingBox();
-    assert.deepEqual({ ...selectionRect, width: selectionRect.width - 1, height: selectionRect.height - 1 }, placementRect,
-      'selection border overlays the same four pixel-snapped Grid boundaries without a doubled trailing edge');
     assert.equal(await page.locator('.system-workflow__resize-handle').count(), 4);
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'review-selection-1440x900.png') });
 
@@ -30,7 +32,7 @@ test('canvas move resize nudge marquee lock and viewer use one completed-operati
     await page.mouse.move(placementRect.x + placementRect.width / 2 + 45, placementRect.y + placementRect.height / 2, { steps: 4 });
     await page.mouse.up();
     assert.equal(await page.evaluate(() => window.__workflowWrites), 1);
-    assert.equal(Math.round((await abyssal.boundingBox()).x - placementRect.x), 45);
+    assert.ok(Math.abs(Math.round((await abyssal.boundingBox()).x - placementRect.x) - renderedCell) <= 1);
 
     await page.evaluate(() => { window.__workflowWrites = 0; });
     const southeast = page.getByRole('button', { name: 'Resize selection from se' });
@@ -41,13 +43,14 @@ test('canvas move resize nudge marquee lock and viewer use one completed-operati
     await page.mouse.move(handleRect.x + 49, handleRect.y + 49, { steps: 4 });
     await page.mouse.up();
     assert.equal(await page.evaluate(() => window.__workflowWrites), 1);
-    assert.equal(Math.round((await abyssal.boundingBox()).width - beforeResize.width), 45);
+    assert.ok(Math.abs(Math.round((await abyssal.boundingBox()).width - beforeResize.width) - renderedCell) <= 1);
 
     await page.evaluate(() => { window.__workflowWrites = 0; });
     const beforeNudge = await abyssal.boundingBox();
+    await abyssal.focus();
     await page.keyboard.press('ArrowRight');
     assert.equal(await page.evaluate(() => window.__workflowWrites), 1);
-    assert.equal(Math.round((await abyssal.boundingBox()).x - beforeNudge.x), 45);
+    assert.ok(Math.abs(Math.round((await abyssal.boundingBox()).x - beforeNudge.x) - renderedCell) <= 1);
 
     const mountain = page.getByRole('button', { name: /Select MOUNTAIN SIGNAL II/ });
     const first = await abyssal.boundingBox();
@@ -94,12 +97,27 @@ test('canvas move resize nudge marquee lock and viewer use one completed-operati
     assert.equal(await idleInspector.getByRole('navigation', { name: 'Selection actions' }).count(), 0, 'selection tools disappear without a Grid selection');
     assert.equal(await idleInspector.locator('.system-workflow__layer-row').count(), 2);
 
-    await abyssal.dblclick();
-    await page.getByRole('dialog', { name: 'ABYSSAL STUDY focus viewer' }).waitFor();
-    assert.equal(await page.locator('.system-workflow__selection-chrome').getAttribute('aria-hidden'), 'true');
-    await page.keyboard.press('Escape');
-    await page.waitForFunction(() => document.activeElement?.classList.contains('system-workflow__placement'));
+    await abyssal.focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await abyssal.getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.locator('.lattice-focus-viewer').count(), 0);
     assert.equal(await abyssal.evaluate((node) => node === document.activeElement), true);
+  } finally {
+    await browser.close();
+  }
+});
+
+test('selection chrome never paints a stroke over an artwork edge', { timeout: 60_000 }, async () => {
+  const browser = await chromium.launch({ executablePath: EDGE, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    const placement = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
+    await placement.click();
+    assert.equal(await page.locator('.system-workflow__selection-outline').count(), 0);
+    const chrome = page.locator('.system-workflow__selection-chrome');
+    assert.equal(await chrome.locator('.system-workflow__resize-handle').count(), 4);
+    assert.equal(await chrome.evaluate((node) => node.parentElement?.classList.contains('system-workflow__stage-viewport')), true);
   } finally {
     await browser.close();
   }

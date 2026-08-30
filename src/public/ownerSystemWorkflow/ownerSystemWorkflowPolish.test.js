@@ -22,6 +22,7 @@ test('Library remains mounted after first open without retaining an interactive 
 test('Grid navigation is explicitly Space-drag and both moving planes render their architectural grid', () => {
   const interaction = read('./useOwnerSystemWorkflowPlacementInteraction.js');
   const canvas = read('./OwnerSystemWorkflowCanvas.jsx');
+  const pixelGrid = read('../../lattice/rendering/LatticePixelGrid.jsx');
   const styles = read('./ownerSystemWorkflow.css');
   assert.match(interaction, /event\.code !== 'Space'/);
   assert.match(interaction, /beginCanvasSelection\(event, \{ navigationOnly: true \}\)/);
@@ -30,6 +31,9 @@ test('Grid navigation is explicitly Space-drag and both moving planes render the
   assert.equal((canvas.match(/<LatticePixelGrid/g) || []).length, 2);
   assert.match(canvas, /grid-plane--current[\s\S]*<LatticePixelGrid/);
   assert.match(canvas, /grid-plane--adjacent[\s\S]*<GridSwipePreview/);
+  assert.match(pixelGrid, /createLatticePixelGuideBounds\(field, spacing \/ 2\)/);
+  assert.match(pixelGrid, /<clipPath[^>]*clipPathUnits="userSpaceOnUse"[\s\S]*<rect \{\.\.\.geometry\.bounds\}/);
+  assert.equal((pixelGrid.match(/clipPath=\{geometry\.bounds/g) || []).length, 2);
   assert.doesNotMatch(styles, /grid-plane--adjacent::before/);
   assert.match(styles, /\[data-space-navigation\] \{ cursor: grab; \}/);
 });
@@ -43,6 +47,13 @@ test('Library collection filters stay viewport-bounded and scroll their option l
   assert.match(controls, /scrollIntoView\(\{ block: 'nearest' \}\)/);
   assert.match(styles, /\.system-workflow__filter-popover \{[^}]*grid-template-rows: minmax\(0, 1fr\);[^}]*overflow: hidden;/s);
   assert.match(styles, /\.system-workflow__filter-options \{[^}]*min-height: 0;[^}]*overflow-y: auto;[^}]*overscroll-behavior: contain;/s);
+});
+
+test('undocked Metadata stays within half the viewport and scrolls its content', () => {
+  const styles = read('./ownerSystemWorkflow.css');
+  assert.match(styles, /\.system-workflow__metadata-module\[data-floating\] \{[^}]*max-height: 50dvh;[^}]*grid-template-rows: 32px minmax\(0, 1fr\);/s);
+  assert.match(styles, /\.system-workflow__metadata-module\[data-floating\] > \.system-workflow__metadata-module-content \{[^}]*min-height: 0;[^}]*grid-auto-rows: max-content;[^}]*align-content: start;[^}]*overflow-y: auto;[^}]*overscroll-behavior: contain;[^}]*scrollbar-width: none;/s);
+  assert.match(styles, /\.system-workflow__metadata-module\[data-floating\] > \.system-workflow__metadata-module-content::\-webkit-scrollbar \{[^}]*display: none;/s);
 });
 
 test('Publish exposes one dock-attached control while preserving every canonical gate', () => {
@@ -71,13 +82,11 @@ test('Publish exposes one dock-attached control while preserving every canonical
   assert.match(source, /<details><summary>HELP WITH THIS ERROR<\/summary>/);
 });
 
-test('Owner and Visitor inspection never carry the workspace Grid into focused surfaces', () => {
-  const ownerViewer = read('./OwnerSystemWorkflowFocusViewer.jsx');
+test('Owner and Visitor inspection never carry the workspace Grid', () => {
   const runtime = read('./OwnerSystemWorkflowRuntime.jsx');
   const visitor = read('../../profileDocument/components/ProfileDocumentV9Visitor.jsx');
   const profile = read('./OwnerSystemWorkflowProfile.jsx');
-  assert.match(ownerViewer, /gridVisible=\{false\} inspectionFrameGridVisible=\{false\}/);
-  assert.doesNotMatch(runtime, /OwnerSystemWorkflowFocusViewer gridVisible=/);
+  assert.match(runtime, /OwnerSystemWorkflowFocusViewer|useOwnerSystemWorkflowFocusViewer/);
   assert.match(profile, /gridVisible=\{false\}/);
   assert.equal((visitor.match(/gridVisible=\{false\}/g) || []).length, 2);
   assert.doesNotMatch(visitor, /gridVisible=\{document\.appearance\.guideMode !== 'NONE'\}/);

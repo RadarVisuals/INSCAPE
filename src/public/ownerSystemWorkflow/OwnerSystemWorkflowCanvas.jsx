@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { projectCroppedMediaRectangle } from '../../lattice/rendering/latticeCrop.js';
 import { fitNativeMediaRectangle } from '../../lattice/rendering/latticeGeometry.js';
 import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
@@ -34,18 +35,31 @@ const boundsOf = (placements) => placements.length ? {
   right: Math.max(...placements.map(({ column, columnSpan }) => column + columnSpan)),
   bottom: Math.max(...placements.map(({ row, rowSpan }) => row + rowSpan)),
 } : null;
-const projectedHandlePoint = (column, row, field) => {
-  const { left, top } = projectOwnerSystemWorkflowPlacement({ column, row, columnSpan: 0, rowSpan: 0 }, field);
-  return { left, top };
-};
 const projectedSelectionOutline = (bounds, field) => {
   const rectangle = projectOwnerSystemWorkflowPlacement({
     column: bounds.column, row: bounds.row,
     columnSpan: bounds.right - bounds.column,
     rowSpan: bounds.bottom - bounds.row,
   }, field);
-  return { ...rectangle, width: rectangle.width + 1, height: rectangle.height + 1 };
+  return rectangle;
 };
+const screenPixelMetrics = (rectangle, scale) => {
+  const devicePixelRatio = Number.isFinite(globalThis.devicePixelRatio) && globalThis.devicePixelRatio > 0
+    ? globalThis.devicePixelRatio : 1;
+  const snap = (value) => Math.round(value * scale * devicePixelRatio) / devicePixelRatio;
+  const left = snap(rectangle.left);
+  const top = snap(rectangle.top);
+  const right = snap(rectangle.left + rectangle.width);
+  const bottom = snap(rectangle.top + rectangle.height);
+  return {
+    rectangle: { left, top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) },
+    screenPixel: 1 / devicePixelRatio,
+  };
+};
+const screenHandlePoint = (corner, rectangle) => ({
+  left: corner.includes('e') ? rectangle.left + rectangle.width : rectangle.left,
+  top: corner.includes('s') ? rectangle.top + rectangle.height : rectangle.top,
+});
 
 function GridSwipePreview({ appearance, assetsById, grid, onAssetDimensions, snapStep, worldViewport }) {
   if (!grid || !worldViewport) return null;
@@ -78,8 +92,8 @@ function GridSwipePreview({ appearance, assetsById, grid, onAssetDimensions, sna
   </>;
 }
 
-export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop, interactionDisabled = false, onAssetDimensions,
-  onChangeGrid, onOpenViewer, onPlacementRef, reducedMotion = false, resolveAssetDimensions, viewerPlacementId = null }) {
+export default function OwnerSystemWorkflowCanvas({ assetsById, boardScale = 1, controller, crop, interactionDisabled = false, onAssetDimensions,
+  onChangeGrid, onOpenViewer, onPlacementRef, reducedMotion = false, resolveAssetDimensions, selectionOverlayHost, viewerPlacementId }) {
   const canvasRef = useRef(null);
   const feedbackTimerRef = useRef(null);
   const [dropFeedback, setDropFeedback] = useState(null);
@@ -91,25 +105,26 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
   const cropSession = crop?.cropSession || null;
   const appearance = controller.draft?.appearance;
   const snapStep = systemWorkflowSnapStep(appearance.guideSize);
+  const viewScale = Number.isFinite(boardScale) && boardScale > 0 ? boardScale : 1;
   const viewerOpen = Boolean(viewerPlacementId);
   const adjacentGrid = (direction) => controller.draft && grid
     ? adjacentSystemWorkflowGridId(controller.draft, grid.id, direction)
     : null;
   const interaction = useOwnerSystemWorkflowPlacementInteraction({
     canvasRef, canNavigateGrid: adjacentGrid, controller, cropResize: crop?.cropResize, cropSession,
-    disabled: interactionDisabled || viewerOpen,
+    disabled: interactionDisabled,
     onNavigateGrid: (direction, options) => {
       const gridId = adjacentGrid(direction);
       if (gridId) onChangeGrid?.(gridId, direction, options);
     },
     reducedMotion,
     snapStep,
-    artboardMode,
+    artboardMode, viewScale,
   });
   const swipeGridId = interaction.gridSwipe?.targetGridId || null;
   const swipeGrid = swipeGridId ? controller.draft.grids.find(({ id }) => id === swipeGridId) : null;
   const swipeStyle = interaction.gridSwipe ? {
-    '--workflow-grid-swipe-x': `${interaction.gridSwipe.deltaX}px`,
+    '--workflow-grid-swipe-x': `${interaction.gridSwipe.deltaX / viewScale}px`,
     '--workflow-grid-swipe-side': interaction.gridSwipe.direction === 'next' ? '100%' : '-100%',
   } : undefined;
   const projectedPlacements = grid?.placements.map((placement) => ({ ...placement, ...(interaction.previewById.get(placement.id) || {}) })) || [];
@@ -117,12 +132,15 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
   const selectionBounds = boundsOf(selected);
   if (selectionBounds) retainedSelection.current = { bounds: selectionBounds, primary: selected.at(-1), count: selected.length };
   const renderedSelection = selectionBounds ? retainedSelection.current : retainedSelection.current;
+  const selectionMetrics = renderedSelection && worldViewport
+    ? screenPixelMetrics(projectedSelectionOutline(renderedSelection.bounds, worldViewport), viewScale)
+    : null;
 
   useLayoutEffect(() => {
     const node = canvasRef.current;
     if (!node) return undefined;
     const measure = () => {
-      const rectangle = node.getBoundingClientRect();
+      const rectangle = { width: node.clientWidth, height: node.clientHeight };
       setWorldViewport(worldCover
         ? measureOwnerSystemWorkflowHeroArtboard(rectangle.width, rectangle.height)
         : measureOwnerSystemWorkflowArtboard(rectangle.width, rectangle.height));
@@ -176,8 +194,8 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
   }, [controller, cropSession, grid, interaction, interactionDisabled, snapStep, viewerOpen]);
 
   if (!grid) return null;
-  return <section className="system-workflow__stage" aria-label={`${grid.title} Grid`} data-system-workflow-stage data-world-cover={worldCover || undefined}>
-    <div ref={canvasRef} className="system-workflow__canvas" data-guide={appearance.guideMode} data-space-navigation={interaction.spaceNavigation || undefined} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={Boolean(interaction.gridSwipe) || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, ...swipeStyle }}
+  return <section className="system-workflow__stage-content" aria-label={`${grid.title} Grid`} data-system-workflow-stage data-world-cover={worldCover || undefined}>
+    <div ref={canvasRef} className="system-workflow__canvas" data-guide={appearance.guideMode} data-space-navigation={interaction.spaceNavigation || undefined} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={Boolean(interaction.gridSwipe) || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, '--workflow-board-inverse-scale': 1 / viewScale, ...swipeStyle }}
       onPointerDown={(event) => { if (!cropSession) interaction.beginCanvasSelection(event); }}
       onDragOver={(event) => event.preventDefault()}
       onDrop={async (event) => {
@@ -222,9 +240,15 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
           className="system-workflow__placement" data-cropped={Boolean(visibleCrop) || undefined} data-cropping={cropping || undefined} data-system-workflow-crop-surface={cropping || undefined} data-system-workflow-placement-id={placement.id} data-locked={placement.locked || undefined}
           data-viewing={viewerPlacementId === placement.id || undefined}
           key={placement.id} onClick={(event) => { if (!cropSession && !interaction.clickSuppressedRef.current && !placement.locked) controller.selectPlacement(placement.id, event.shiftKey); }}
-          onDoubleClick={(event) => { if (cropSession || placement.locked) return; event.stopPropagation(); onOpenViewer(placement, event.currentTarget); }}
-          onKeyDown={(event) => { if (!cropSession && event.key === 'Enter' && !placement.locked) { event.preventDefault(); onOpenViewer(placement, event.currentTarget); } }}
-          onPointerDown={(event) => { markOwnerSystemWorkflowPointerFocus(event.currentTarget); if (cropping) crop.beginCropDrag(event, placement.id, worldViewport.cellSize); else if (!cropSession) interaction.beginPlacementGesture(event, placement); }} ref={(node) => onPlacementRef?.(placement.id, node)} role="button" tabIndex={placement.locked ? -1 : 0}
+          onDoubleClick={(event) => { if (cropSession || placement.locked) return; event.stopPropagation(); onOpenViewer?.(placement, event.currentTarget); }}
+          onKeyDown={(event) => {
+            if (cropSession || placement.locked) return;
+            if (event.key === 'Enter') { event.preventDefault(); onOpenViewer?.(placement, event.currentTarget); return; }
+            if (event.key !== ' ') return;
+            event.preventDefault();
+            controller.selectPlacement(placement.id, event.shiftKey);
+          }}
+          onPointerDown={(event) => { markOwnerSystemWorkflowPointerFocus(event.currentTarget); if (cropping) crop.beginCropDrag(event, placement.id, worldViewport.cellSize * viewScale); else if (!cropSession) interaction.beginPlacementGesture(event, placement); }} ref={(node) => onPlacementRef?.(placement.id, node)} role="button" tabIndex={placement.locked ? -1 : 0}
           style={{ ...projected, zIndex: placement.layer + 1 }}>
           <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
             {src ? <ProgressiveArtworkImage asset={asset} onSourceLoad={(dimensions) => onAssetDimensions?.(asset, dimensions)}
@@ -232,13 +256,6 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
           </span>
         </div>;
       })}
-      {renderedSelection && worldViewport && <div className="system-workflow__selection-chrome" aria-hidden={viewerOpen || !selectionBounds} data-cropping={Boolean(cropSession) || undefined} data-group={renderedSelection.count > 1 || undefined} data-selected={Boolean(selectionBounds) || undefined} data-viewing={viewerOpen || undefined}>
-        <i className="system-workflow__selection-outline" style={projectedSelectionOutline(renderedSelection.bounds, worldViewport)} />
-        {['nw', 'ne', 'se', 'sw'].map((corner) => <button aria-label={`Resize selection from ${corner}`} className={`system-workflow__resize-handle is-${corner}`} disabled={viewerOpen || !selectionBounds}
-          key={corner} onPointerDown={(event) => interaction.beginPlacementGesture(event, renderedSelection.primary, 'resize', corner)} type="button"
-          style={projectedHandlePoint(corner.includes('e') ? renderedSelection.bounds.right : renderedSelection.bounds.column,
-            corner.includes('s') ? renderedSelection.bounds.bottom : renderedSelection.bounds.row, worldViewport)} />)}
-      </div>}
       {interaction.marquee && <i className="system-workflow__marquee" style={interaction.marquee} />}
       {worldCover && worldViewport && <div aria-hidden="true" className="system-workflow__world-cover-aperture"
         style={{ left: worldViewport.left, top: worldViewport.top, width: worldViewport.width, height: worldViewport.height }}>
@@ -250,6 +267,15 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, controller, crop
           onAssetDimensions={onAssetDimensions} snapStep={snapStep} worldViewport={worldViewport} />
       </div>}
     </div>
+    {selectionMetrics && selectionOverlayHost && createPortal(<div className="system-workflow__selection-chrome" aria-hidden={viewerOpen || !selectionBounds}
+      data-cropping={Boolean(cropSession) || undefined} data-group={renderedSelection.count > 1 || undefined}
+      data-selected={Boolean(selectionBounds) || undefined} data-viewing={viewerOpen || undefined}
+      style={{ '--workflow-screen-pixel': `${selectionMetrics.screenPixel}px` }}>
+      {['nw', 'ne', 'se', 'sw'].map((corner) => <button aria-label={`Resize selection from ${corner}`}
+        className={`system-workflow__resize-handle is-${corner}`} disabled={viewerOpen || !selectionBounds}
+        key={corner} onPointerDown={(event) => interaction.beginPlacementGesture(event, renderedSelection.primary, 'resize', corner)}
+        type="button" style={screenHandlePoint(corner, selectionMetrics.rectangle)} />)}
+    </div>, selectionOverlayHost)}
     <output aria-live="polite" className="system-workflow__drop-feedback" data-visible={Boolean(dropFeedback) || undefined}>{dropFeedback}</output>
   </section>;
 }

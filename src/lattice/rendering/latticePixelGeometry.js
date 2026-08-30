@@ -26,6 +26,19 @@ export function createLatticePixelBoundaryPositions(field, axis, interval, limit
   return [...new Set(positions)];
 }
 
+export function createLatticePixelGuideBounds(field, inset = 0) {
+  if (!Number.isFinite(field?.left) || !Number.isFinite(field?.top)
+    || !finitePositive(field?.referenceWidth) || !finitePositive(field?.referenceHeight)
+    || !Number.isFinite(inset) || inset < 0
+    || field.referenceWidth <= inset * 2 || field.referenceHeight <= inset * 2) return null;
+  return Object.freeze({
+    x: field.left + inset,
+    y: field.top + inset,
+    width: field.referenceWidth - inset * 2,
+    height: field.referenceHeight - inset * 2,
+  });
+}
+
 export function projectLatticePixelRectangle(geometry, field) {
   const left = projectLatticePixelBoundary(field, 'column', geometry.column);
   const top = projectLatticePixelBoundary(field, 'row', geometry.row);
@@ -34,9 +47,14 @@ export function projectLatticePixelRectangle(geometry, field) {
   return Object.freeze({ left, top, width: right - left, height: bottom - top });
 }
 
-const RASTER_EDGE_EPSILON = 1e-7;
+// Pixel-snapped placement rectangles can differ from an aspect-ratio fitted
+// media edge by up to one layout pixel once the board scale and native-ratio
+// fit have both been rounded. Treat that remainder as raster
+// rounding, not intentional letterboxing, so the backing cannot leak through
+// as a one-device-pixel seam after the board is composited or scaled.
+const RASTER_EDGE_TOLERANCE = 1 + 1e-7;
 
-const sameRasterEdge = (left, right) => Math.abs(left - right) <= RASTER_EDGE_EPSILON;
+const sameRasterEdge = (left, right) => Math.abs(left - right) <= RASTER_EDGE_TOLERANCE;
 
 export function projectLatticeRasterBleedRectangle(rectangle, opening, bleed = 1) {
   if (!rectangle || !opening || !finitePositive(rectangle.width) || !finitePositive(rectangle.height)

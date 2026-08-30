@@ -120,6 +120,7 @@ test('normal motion preserves Profile, Activity, and focus-viewer source continu
     await viewer.waitFor({ state: 'detached' });
     assert.equal(await placement.getAttribute('data-viewing'), null);
     assert.equal(await placementTrigger.evaluate((node) => node === document.activeElement), true);
+
   } finally {
     await browser.close();
   }

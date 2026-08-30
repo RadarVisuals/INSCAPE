@@ -62,10 +62,13 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
           asset.created && !asset.owned ? 'NOT OWNED' : null].filter(Boolean);
       return <button aria-label={[asset.title || id, asset.collection].filter(Boolean).join(' / ')} aria-pressed={isSelected}
         className="lattice-browser-asset" data-collection={opensCollection || undefined}
-        data-multi-selected={isSelected && selected.size > 1 || undefined} data-selected={isSelected || undefined} key={id}
+        data-multi-selected={isSelected && selected.size > 1 || undefined} data-selected={isSelected || undefined}
+        draggable={!opensCollection} key={id}
         onClick={(event) => opensCollection ? onActivate?.(event, asset) : workspace.selectAsset(id, event)}
         onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); onContext?.(event, asset); }}
         onDoubleClick={(event) => onActivate?.(event, asset)} onPointerDown={(event) => onPointerDown?.(event, asset)}
+        onDragStart={(event) => { event.dataTransfer.effectAllowed = 'copy';
+          event.dataTransfer.setData('application/x-inscape-asset', id); }}
         onKeyDown={(event) => { if (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10') {
           event.preventDefault(); event.stopPropagation(); onContext?.(event, asset);
         } }} type="button">

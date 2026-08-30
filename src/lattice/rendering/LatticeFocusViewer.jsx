@@ -7,6 +7,7 @@ import { LatticeArtworkPresentation } from './LatticePlacementRenderer.jsx';
 import {
   DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG,
   focusViewerEntryRectangle,
+  focusViewerIsolatedLayout,
   focusViewerLayout,
   focusViewerPresentationDimensions,
   focusViewerRackLayout,
@@ -36,12 +37,13 @@ const markPointerFocusReturn = (node) => {
   globalThis.addEventListener?.('keydown', clear, { capture: true, once: true });
 };
 
-const viewportSize = () => ({
-  width: Math.max(1, window.innerWidth),
-  height: Math.max(1, window.innerHeight),
-});
+const viewportSize = (portalTarget, contained) => contained && portalTarget
+  ? { width: Math.max(1, portalTarget.clientWidth), height: Math.max(1, portalTarget.clientHeight) }
+  : { width: Math.max(1, window.innerWidth), height: Math.max(1, window.innerHeight) };
 
 export default function LatticeFocusViewer({
+  contained = false,
+  controlsTarget = null,
   dossier,
   entry,
   getReturnRectangle,
@@ -59,6 +61,7 @@ export default function LatticeFocusViewer({
   navigationPlacement = 'viewport',
   navigationViewportBottom = 18,
   overlayInk,
+  portalTarget = document.body,
   position,
   recenterArtworkWhenInspectionClosed = false,
   renderArtwork,
@@ -85,7 +88,7 @@ export default function LatticeFocusViewer({
   const [dossiersOpen, setDossiersOpen] = useState(true);
   const [activeDossier, setActiveDossier] = useState('narrative');
   const [outgoingLayer, setOutgoingLayer] = useState(null);
-  const [viewport, setViewport] = useState(viewportSize);
+  const [viewport, setViewport] = useState(() => viewportSize(portalTarget, contained));
   const [returnRectangle, setReturnRectangle] = useState(origin);
   const [returnLanding, setReturnLanding] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(
@@ -94,8 +97,13 @@ export default function LatticeFocusViewer({
   const presentationDimensions = focusViewerPresentationDimensions(entry);
   const layoutOrigin = focusViewerEntryRectangle(origin, presentationDimensions);
   const rackInspection = inspectionVariant === 'rack';
+  const isolatedInspection = inspectionVariant === 'none';
   const createLayout = (rectangle, size) => {
-    const nextLayout = rackInspection
+    const nextLayout = isolatedInspection
+      ? focusViewerIsolatedLayout(rectangle, size, controlsTarget
+        ? { ...DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG, isolatedNavigationClearance: 0 }
+        : DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG)
+      : rackInspection
       ? focusViewerRackLayout(rectangle, size, dossiersOpen)
       : focusViewerLayout(rectangle, size, dossiersOpen);
     if (!rackInspection || !recenterArtworkWhenInspectionClosed || dossiersOpen || nextLayout.mode !== 'rack') {
@@ -187,10 +195,12 @@ export default function LatticeFocusViewer({
   }, [finishClose, returnLanding]);
 
   useEffect(() => {
-    const resize = () => setViewport(viewportSize());
+    const resize = () => setViewport(viewportSize(portalTarget, contained));
+    const observer = contained && typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
+    observer?.observe(portalTarget);
     window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, []);
+    return () => { observer?.disconnect(); window.removeEventListener('resize', resize); };
+  }, [contained, portalTarget]);
 
   useEffect(() => {
     const query = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
@@ -213,7 +223,10 @@ export default function LatticeFocusViewer({
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root) return undefined;
+    if (!root || contained) {
+      closeRef.current?.focus({ preventScroll: true });
+      return undefined;
+    }
     const isolated = [...document.body.children]
       .filter((node) => node !== root)
       .map((node) => ({ node, hadInert: node.hasAttribute('inert'), inertValue: node.inert }));
@@ -229,7 +242,7 @@ export default function LatticeFocusViewer({
         returnFocusRef.current.focus({ preventScroll: true });
       }
     };
-  }, []);
+  }, [contained]);
 
   const requestNavigation = useCallback((direction) => {
     if (phase !== 'open' || navigationLocked || total < 2) return;
@@ -257,8 +270,12 @@ export default function LatticeFocusViewer({
       return;
     }
     if (phase !== 'open' || navigationLocked) return;
+    if (isolatedInspection) {
+      requestNavigation(1);
+      return;
+    }
     setDossiersOpen((current) => !current);
-  }, [navigationLocked, phase]);
+  }, [isolatedInspection, navigationLocked, phase, requestNavigation]);
 
   useEffect(() => {
     const closeOnEscape = (event) => {
@@ -358,6 +375,7 @@ export default function LatticeFocusViewer({
       aria-label={`${entry.media.accessibleLabel || 'Artwork'} focus viewer`}
       aria-modal="true"
       className="lattice-focus-viewer"
+      data-contained={contained || undefined}
       data-adaptive-rack-presentation={rackInspection
         && (recenterArtworkWhenInspectionClosed || navigationPlacement === 'artwork') || undefined}
       data-lattice-focus-viewer
@@ -441,7 +459,7 @@ export default function LatticeFocusViewer({
           },
         })}
       </div>
-      <LatticeFocusInspection
+      {!isolatedInspection && <LatticeFocusInspection
         activeSection={activeDossier}
         closeButtonRef={inlineRackClose ? closeRef : undefined}
         dossier={dossier}
@@ -450,8 +468,8 @@ export default function LatticeFocusViewer({
         onSectionChange={setActiveDossier}
         open={dossiersOpen}
         variant={inspectionVariant}
-      />
-      <nav
+      />}
+      {!controlsTarget && <nav
         aria-label="Artwork viewer navigation"
         className="lattice-focus-viewer__navigation"
         style={rackInspection ? {
@@ -466,11 +484,11 @@ export default function LatticeFocusViewer({
         <button aria-disabled={navigationLocked || total < 2} aria-label="Previous artwork" onClick={() => requestNavigation(-1)} type="button"><ChevronLeft aria-hidden="true" /></button>
         <span>{String(position + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span>
         <button aria-disabled={navigationLocked || total < 2} aria-label="Next artwork" onClick={() => requestNavigation(1)} type="button"><ChevronRight aria-hidden="true" /></button>
-      </nav>
-      {!inlineRackClose && <div
+      </nav>}
+      {!controlsTarget && !inlineRackClose && <div
         className="lattice-focus-viewer__close-control"
         style={{
-          ...(rackInspection ? { left: 'auto', right: 18, top: 18, transform: 'none' } : {
+          ...((rackInspection || isolatedInspection) ? { left: 'auto', right: 18, top: 18, transform: 'none' } : {
             left: layout.inspectionFrame.left + (layout.inspectionFrame.width / 2),
             top: Math.max(16, layout.inspectionFrame.top - 118),
           }),
@@ -486,7 +504,20 @@ export default function LatticeFocusViewer({
         ><X aria-hidden="true" /></button>
         <span>Close inspection</span>
       </div>}
+      {controlsTarget && createPortal(<div className="lattice-focus-viewer__board-controls" data-phase={phase}>
+        <strong>INSPECT</strong>
+        {total > 1 && <>
+          <button aria-disabled={navigationLocked} aria-label="Previous artwork"
+            onClick={() => requestNavigation(-1)} type="button"><ChevronLeft aria-hidden="true" /></button>
+          <span>{String(position + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span>
+          <button aria-disabled={navigationLocked} aria-label="Next artwork"
+            onClick={() => requestNavigation(1)} type="button"><ChevronRight aria-hidden="true" /></button>
+        </>}
+        <button aria-disabled={phase !== 'open' || navigationLocked} aria-label="Close artwork viewer"
+          className="is-close" onClick={(event) => requestClose(event.detail === 0 ? 'keyboard' : 'pointer')}
+          ref={closeRef} type="button"><X aria-hidden="true" /></button>
+      </div>, controlsTarget)}
     </section>,
-    document.body,
+    portalTarget,
   );
 }

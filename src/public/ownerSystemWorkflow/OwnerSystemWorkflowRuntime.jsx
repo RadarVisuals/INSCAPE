@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
+import { createPortal } from 'react-dom';
 import { useProfileContractFacts, useProfileIdentity } from '../../profileIdentity/index.js';
 import { latticeSurfaceColor } from '../../lattice/rendering/latticeGeometry.js';
 import { createProductionIdentityDossierViewModel } from '../identity/productionIdentityDossierViewModel.js';
@@ -7,7 +8,9 @@ import useOwnerLatticeBrowser from '../useOwnerLatticeBrowser.js';
 import OwnerSystemWorkflowCanvas from './OwnerSystemWorkflowCanvas.jsx';
 import OwnerSystemWorkflowFocusViewer from './OwnerSystemWorkflowFocusViewer.jsx';
 import OwnerSystemWorkflowGlobalBar from './OwnerSystemWorkflowGlobalBar.jsx';
+import OwnerSystemWorkflowMetadataModule, { OwnerSystemWorkflowMetadataContent } from './OwnerSystemWorkflowMetadataModule.jsx';
 import OwnerSystemWorkflowPanelLayer from './OwnerSystemWorkflowPanelLayer.jsx';
+import PresentationBoard from './PresentationBoard.jsx';
 import useOwnerSystemWorkflowActivity from './useOwnerSystemWorkflowActivity.js';
 import useOwnerSystemWorkflowController from './useOwnerSystemWorkflowController.js';
 import useOwnerSystemWorkflowCrop from './useOwnerSystemWorkflowCrop.js';
@@ -15,6 +18,8 @@ import useOwnerSystemWorkflowFocusViewer from './useOwnerSystemWorkflowFocusView
 import useOwnerSystemWorkflowLayout from './useOwnerSystemWorkflowLayout.js';
 import useOwnerSystemWorkflowPanels, { useOwnerSystemWorkflowPanelPresence } from './useOwnerSystemWorkflowPanels.js';
 import useOwnerSystemWorkflowDevelopmentAuthorities from './useOwnerSystemWorkflowDevelopmentAuthorities.js';
+import { createOwnerSystemWorkflowMetadataViewModel } from './ownerSystemWorkflowMetadataViewModel.js';
+import RackMenu from '../menus/RackMenu.jsx';
 import {
   decodeOwnerSystemWorkflowAssetDimensions,
   ownerSystemWorkflowDecodedAsset,
@@ -68,6 +73,12 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const [layersOpen, setLayersOpen] = useState(initialLayersOpen);
   const [layersExplicitlyOpened, setLayersExplicitlyOpened] = useState(false);
   const [decodedDimensions, setDecodedDimensions] = useState(() => new Map());
+  const [metadataOpen, setMetadataOpen] = useState(true);
+  const [metadataDocked, setMetadataDocked] = useState(true);
+  const [metadataProjection, setMetadataProjection] = useState('closed');
+  const [workspaceMenu, setWorkspaceMenu] = useState(null);
+  const [boardShortcutExists, setBoardShortcutExists] = useState(false);
+  const [boardAddRequest, setBoardAddRequest] = useState(null);
   const previewReturnFocus = useRef(null);
   const publicationReturnFocus = useRef(null);
   const layout = useOwnerSystemWorkflowLayout();
@@ -116,7 +127,12 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const viewer = useOwnerSystemWorkflowFocusViewer({ assetsById, controller,
     onOpen: () => panels.closePanel({ returnFocus: false }), resolveAssetDimensions });
   const activity = useOwnerSystemWorkflowActivity({ active: panel === 'activity', fixture: reviewActivity, profileAddress });
-  const panelOccupied = Boolean(publicationPresence.present || panel || Object.values(panels.presence).some(({ present }) => present));
+  const panelOccupied = Boolean(publicationPresence.present || panel
+    || Object.values(panels.presence).some(({ present }) => present));
+  const metadataPlacement = controller.selectedPlacements.length === 1 ? controller.selectedPlacements[0] : null;
+  const metadataEntry = useMemo(() => metadataPlacement
+    ? createOwnerSystemWorkflowMetadataViewModel(metadataPlacement, assetsById.get(metadataPlacement.stableAssetId))
+    : null, [assetsById, metadataPlacement]);
   const dismissNotice = useCallback(() => {
     controller.clearError();
     setNotice(null);
@@ -245,11 +261,33 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     data-lattice-menu-surface data-menu-surface={menuSurface} data-reduced-motion={layout.reducedMotion || undefined}
     data-surface={controller.draft?.appearance.surfaceId} data-previewing={preview ? true : undefined}
     inert={preview ? '' : undefined}>
-    <OwnerSystemWorkflowCanvas assetsById={assetsById} controller={controller} crop={crop}
-      onAssetDimensions={registerAssetDimensions} onChangeGrid={changeGrid}
-      interactionDisabled={panelOccupied} onOpenViewer={(placement) => viewer.open(placement.id)}
-      onPlacementRef={viewer.registerPlacement} reducedMotion={layout.reducedMotion}
-      resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.sourcePlacementId} />
+    <PresentationBoard addShortcutRequest={boardAddRequest} assetsById={assetsById}
+      documentGeometry={controller.draft?.geometry} identity={profileIdentity}
+      inspectionAtmosphere={viewer.atmosphereActive}
+      metadataDocked={metadataOpen && metadataDocked} metadataProjection={metadataProjection}
+      onMetadataClose={() => { setMetadataOpen(false); setMetadataDocked(false); setMetadataProjection('closed'); }}
+      onMetadataProjectionChange={setMetadataProjection}
+      onMetadataUndock={() => { setMetadataDocked(false); setMetadataProjection('closed'); }}
+      onInspectionCancel={viewer.close}
+      onShortcutCreated={() => setBoardShortcutExists(true)}
+      onContextMenu={(event) => {
+        if (event.target.closest('.system-workflow__metadata-module')) return;
+        event.preventDefault();
+        setWorkspaceMenu({ x: event.clientX, y: event.clientY });
+      }}
+      layoutMode={layout.mode} profileAddress={profileAddress} reducedMotion={layout.reducedMotion}
+      renderInspection={viewer.placementId ? (container, controlsContainer) => <OwnerSystemWorkflowFocusViewer
+        container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}
+        viewer={viewer} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
+      renderMetadata={() => <OwnerSystemWorkflowMetadataContent dossier={metadataEntry?.dossier || null} />}>
+      <OwnerSystemWorkflowCanvas assetsById={assetsById} controller={controller} crop={crop}
+        onAssetDimensions={registerAssetDimensions} onChangeGrid={changeGrid}
+        interactionDisabled={panelOccupied || Boolean(viewer.placementId)} onOpenViewer={(placement) => viewer.open(placement.id)}
+        onPlacementRef={viewer.registerPlacement} reducedMotion={layout.reducedMotion}
+        resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.sourcePlacementId} />
+    </PresentationBoard>
+    {metadataOpen && !metadataDocked && <OwnerSystemWorkflowMetadataModule dossier={metadataEntry?.dossier || null}
+      onClose={() => setMetadataOpen(false)} onDock={() => { setMetadataDocked(true); setMetadataProjection('closed'); }} />}
     <OwnerSystemWorkflowPanelLayer activity={activity} assets={assets} assetsById={assetsById} browser={browser}
       connectedProfile={connectedProfile} onConnect={onConnect} onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld}
       controller={controller} crop={crop} layersOpen={layersOpen} layout={layout} libraryData={libraryData} menuSurface={menuSurface} onChangeGrid={changeGrid}
@@ -258,12 +296,10 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
         setLayersOpen(open);
         if (!open) setLayersExplicitlyOpened(false);
       }} onVisitProfile={onVisitProfile}
-      panelOccupied={panelOccupied} panels={panels} profileIdentity={profileIdentity} profileModel={profileModel}
+      panelOccupied={panelOccupied || Boolean(viewer.placementId)} panels={panels} profileIdentity={profileIdentity} profileModel={profileModel}
       resolveAssetDimensions={resolveAssetDimensions}
       categoryCommands={reviewAuthorities.categoryCommands || browser.commands} discoveryCommands={reviewAuthorities.discoveryCommands}
       discoveryGroups={reviewAuthorities.discoveryGroups} reviewDiscovery={reviewAuthorities.discovery} />
-    {viewer.placementId && <OwnerSystemWorkflowFocusViewer menuSurface={menuSurface} viewer={viewer}
-      workspaceSurfaceColor={workspaceSurfaceColor} />}
     <OwnerSystemWorkflowGlobalBar activePanel={panel}
       layersActivated={layersExplicitlyOpened && layersOpen && !panelOccupied}
       layersOpen={layersOpen && !panelOccupied}
@@ -292,6 +328,19 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
       unreadCount={activity.unreadCount} />
     {(controller.error || notice) && <button aria-label="Dismiss notification" className="system-workflow__notice"
       type="button" onClick={dismissNotice}>{controller.error || notice}</button>}
+    {workspaceMenu && createPortal(<RackMenu anchor={workspaceMenu}
+      commands={[{ id: 'add', label: 'ADD' }]}
+      getSubmenuCommands={(id) => id === 'add' ? [
+        { disabled: boardShortcutExists, id: 'presentation-board', label: 'PRESENTATION BOARD' },
+        { disabled: metadataOpen, id: 'metadata', label: 'METADATA MODULE' },
+      ] : []}
+      label="Workbench commands" onClose={() => setWorkspaceMenu(null)}
+      onCommand={(id) => {
+        if (id === 'metadata') { setMetadataOpen(true); setMetadataDocked(false); setMetadataProjection('closed'); }
+        if (id === 'presentation-board') setBoardAddRequest({ id: performance.now(), x: workspaceMenu.x, y: workspaceMenu.y });
+        setWorkspaceMenu(null);
+      }}
+      systemWorkflowOverlay />, document.body)}
   </main>
   {preview && <Suspense fallback={null}><ProfileDocumentV9Preview document={preview} onExit={closePreview} onReturn={closePreview}
     onOpenDirectory={() => {
