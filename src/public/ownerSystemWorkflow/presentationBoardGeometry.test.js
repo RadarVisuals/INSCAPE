@@ -9,11 +9,34 @@ import {
   maximumPresentationBoardPercentage,
   normalizePresentationBoardPercentage,
   presentationBoardInspectionFrame,
+  presentationBoardResponsiveMetrics,
   projectPresentationBoardView,
   resizePresentationBoardFromCorner,
   resizePresentationBoardView,
   setPresentationBoardScale,
 } from './presentationBoardGeometry.js';
+
+test('responsive Board geometry crosses the narrow boundary without a size discontinuity', () => {
+  const phone = presentationBoardResponsiveMetrics(390);
+  assert.equal(phone.identityStripHeight, 34);
+  assert.equal(phone.inset, 8);
+  assert.ok(Math.abs(phone.metadataWidth - 163.8) < 0.001);
+  assert.deepEqual(presentationBoardResponsiveMetrics(600), {
+    identityStripHeight: 34,
+    inset: 8,
+    metadataWidth: 180,
+  });
+  assert.deepEqual(presentationBoardResponsiveMetrics(760), {
+    identityStripHeight: 38,
+    inset: 24,
+    metadataWidth: PRESENTATION_BOARD_METADATA_SIDECAR.trackWidth,
+  });
+  const before = presentationBoardResponsiveMetrics(759);
+  const after = presentationBoardResponsiveMetrics(761);
+  assert.ok(Math.abs(after.metadataWidth - before.metadataWidth) < 1);
+  assert.ok(Math.abs(after.inset - before.inset) < 1);
+  assert.ok(Math.abs(after.identityStripHeight - before.identityStripHeight) < 1);
+});
 
 test('Presentation Board fits one canonical 16:9 Stage inside wide and narrow Workbenches', () => {
   const wide = fitPresentationBoard({ width: 1440, height: 806 }, { inset: 24, identityStripHeight: 38 });
@@ -92,6 +115,18 @@ test('resize recomputes the safe maximum, clamps only when needed, and never mut
   assert.equal(JSON.stringify(documentGeometry), '{"columns":32,"rows":18}');
 });
 
+test('viewport remeasurement preserves a continuous handle-resize scale', () => {
+  const options = { inset: 24, identityStripHeight: 38 };
+  const initial = projectPresentationBoardView({ columns: 32, rows: 18 }, { width: 1440, height: 806 }, 0.5, options);
+  const frame = { ...initial.frame.board, left: 160, top: 120 };
+  const dragged = resizePresentationBoardFromCorner(initial, frame, 'se', { x: 7, y: 4 });
+  const remeasured = resizePresentationBoardView(dragged.view, { width: 1440, height: 806 }, options);
+
+  assert.notEqual(dragged.view.scale * 100, Math.round(dragged.view.scale * 100));
+  assert.equal(remeasured.scale, dragged.view.scale);
+  assert.equal(remeasured.frame.board.width, dragged.view.frame.board.width);
+});
+
 test('sidecar track lowers only the horizontal maximum and keeps the complete group inside the Workbench', () => {
   const viewport = { width: 1440, height: 806 };
   const baseOptions = { inset: 24, identityStripHeight: 38 };
@@ -161,12 +196,39 @@ test('corner resizing preserves Stage ratio and anchors the opposite corner', ()
     { inset: 24, identityStripHeight: 38 });
   const frame = { ...view.frame.board, left: 160, top: 120 };
   const southEast = resizePresentationBoardFromCorner(view, frame, 'se', { x: 160, y: 0 });
-  assert.equal(southEast.view.scale, 0.63);
+  assert.ok(southEast.view.scale > 0.59 && southEast.view.scale < 0.6);
   assert.deepEqual(southEast.position, { left: 160, top: 120 });
   assert.equal(southEast.view.frame.stage.width / southEast.view.frame.stage.height, 16 / 9);
 
   const northWest = resizePresentationBoardFromCorner(view, frame, 'nw', { x: 160, y: 0 });
-  assert.equal(northWest.view.scale, 0.38);
+  assert.ok(northWest.view.scale > 0.4 && northWest.view.scale < 0.41);
   assert.equal(northWest.position.left + northWest.view.frame.board.width, frame.left + frame.width);
   assert.equal(northWest.position.top + northWest.view.frame.board.height, frame.top + frame.height);
+});
+
+test('corner resizing keeps sub-percentage pointer movement continuous', () => {
+  const view = projectPresentationBoardView({ columns: 32, rows: 18 }, { width: 1440, height: 806 }, 0.5,
+    { inset: 24, identityStripHeight: 38 });
+  const frame = { ...view.frame.board, left: 160, top: 120 };
+  const first = resizePresentationBoardFromCorner(view, frame, 'se', { x: 1, y: 1 });
+  const second = resizePresentationBoardFromCorner(view, frame, 'se', { x: 2, y: 2 });
+
+  assert.ok(first.view.scale > view.scale);
+  assert.ok(second.view.scale > first.view.scale);
+  assert.ok(second.view.frame.board.width - first.view.frame.board.width < 2);
+  assert.notEqual(first.view.scale * 100, Math.round(first.view.scale * 100));
+});
+
+test('corner resizing has no axis-selection jump when pointer axes oppose each other', () => {
+  const view = projectPresentationBoardView({ columns: 32, rows: 18 }, { width: 1440, height: 806 }, 0.5,
+    { inset: 24, identityStripHeight: 38 });
+  const frame = { ...view.frame.board, left: 160, top: 120 };
+  const beforeCrossover = resizePresentationBoardFromCorner(view, frame, 'se', { x: 100, y: -55 });
+  const afterCrossover = resizePresentationBoardFromCorner(view, frame, 'se', { x: 100, y: -57 });
+
+  assert.ok(Math.abs(afterCrossover.view.frame.board.width - beforeCrossover.view.frame.board.width) < 2);
+  assert.equal(beforeCrossover.position.left, frame.left);
+  assert.equal(beforeCrossover.position.top, frame.top);
+  assert.equal(afterCrossover.position.left, frame.left);
+  assert.equal(afterCrossover.position.top, frame.top);
 });

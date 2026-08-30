@@ -171,7 +171,37 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(URL, { waitUntil: 'networkidle' });
+    const metadataMotionSupported = await page.evaluate(() => {
+      if (typeof Element.prototype.animate !== 'function') return false;
+      const animate = Element.prototype.animate;
+      globalThis.__inscapeMetadataAnimationFrames = [];
+      globalThis.__inscapeMetadataViewTransitionCount = 0;
+      if (typeof document.startViewTransition === 'function') {
+        const start = document.startViewTransition.bind(document);
+        document.startViewTransition = (callback) => {
+          globalThis.__inscapeMetadataViewTransitionCount += 1;
+          return start(callback);
+        };
+      }
+      Element.prototype.animate = function instrumentMetadataAnimation(keyframes, options) {
+        if (this.matches?.('.system-workflow__metadata-down-host, .system-workflow__metadata-projection.is-side, .system-workflow__metadata-module')) {
+          globalThis.__inscapeMetadataAnimationFrames.push({
+            className: this.className,
+            duration: options?.duration,
+            keyframes,
+          });
+        }
+        return animate.call(this, keyframes, options);
+      };
+      return true;
+    });
     const board = page.locator('.system-workflow__presentation-board');
+    const waitForMetadataMotion = () => page.waitForFunction(() => {
+      const node = document.querySelector(
+        '.system-workflow__metadata-down-host, .system-workflow__metadata-projection.is-side, .system-workflow__metadata-module',
+      );
+      return !node || node.getAnimations({ subtree: true }).every((animation) => animation.playState === 'finished');
+    });
     const before = await board.boundingBox();
     const header = board.locator('.system-workflow__identity-strip');
     const handle = await header.boundingBox();
@@ -186,6 +216,7 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     await page.getByRole('button', { name: 'Open Metadata below Board bar' }).click();
     const dropdown = page.getByRole('complementary', { name: 'Metadata below Presentation Board bar' });
     await dropdown.waitFor();
+    await waitForMetadataMotion();
     const dropdownAlignment = await page.evaluate(() => {
       const boardRect = document.querySelector('.system-workflow__presentation-board').getBoundingClientRect();
       const panelRect = document.querySelector('.system-workflow__metadata-projection.is-down').getBoundingClientRect();
@@ -197,6 +228,7 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     await dropdown.waitFor({ state: 'detached' });
     const side = page.getByRole('complementary', { name: 'Metadata beside Presentation Board' });
     await side.waitFor();
+    await waitForMetadataMotion();
     const sideAlignment = await page.evaluate(() => {
       const boardRect = document.querySelector('.system-workflow__presentation-board').getBoundingClientRect();
       const panelRect = document.querySelector('.system-workflow__metadata-projection.is-side').getBoundingClientRect();
@@ -316,6 +348,7 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     await page.getByRole('button', { name: 'Open Metadata below Board bar' }).click();
     await side.waitFor({ state: 'detached' });
     await dropdown.waitFor();
+    await waitForMetadataMotion();
     assert.equal(await dropdown.count(), 1);
     assert.equal(await board.getByText('METADATA', { exact: true }).count(), 1);
     await page.getByRole('button', { name: 'Close artwork viewer' }).click();
@@ -324,6 +357,7 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     await page.getByRole('button', { name: 'Open Metadata beside Presentation Board' }).click();
     await dropdown.waitFor({ state: 'detached' });
     await side.waitFor();
+    await waitForMetadataMotion();
     await page.getByRole('button', { name: 'Maximize Presentation Board' }).click();
     await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.boardPhase === 'maximized');
     const maximizedSide = await page.evaluate(() => {
@@ -341,10 +375,12 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     const narrowSide = await page.evaluate(() => {
       const boardRect = document.querySelector('.system-workflow__presentation-board').getBoundingClientRect();
       const panelRect = document.querySelector('.system-workflow__metadata-projection.is-side').getBoundingClientRect();
+      const titleRect = document.querySelector('.system-workflow__board-title').getBoundingClientRect();
       return { board: boardRect.toJSON(), overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-        panel: panelRect.toJSON() };
+        panel: panelRect.toJSON(), title: titleRect.toJSON() };
     });
     assert.ok(narrowSide.board.left >= 0 && narrowSide.panel.right <= 390, JSON.stringify(narrowSide));
+    assert.ok(closeEnough(narrowSide.title.right, narrowSide.board.right, 0.25), JSON.stringify(narrowSide));
     assert.equal(narrowSide.overflow, 0);
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-metadata-side-narrow.png') });
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -352,6 +388,7 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     await page.getByRole('button', { name: 'Undock Metadata' }).click();
     const metadata = page.getByRole('complementary', { name: 'Metadata module' });
     await metadata.waitFor();
+    await waitForMetadataMotion();
     await page.setViewportSize({ width: 390, height: 720 });
     await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'narrow');
     const detachedNarrow = await page.evaluate(() => {
@@ -377,7 +414,41 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     await page.locator('[data-presentation-workbench]').click({ button: 'right', position: { x: 50, y: 80 } });
     await page.getByRole('menuitem', { name: 'ADD' }).focus();
     await page.getByRole('menuitem', { name: 'METADATA MODULE' }).click();
-    await page.getByRole('complementary', { name: 'Metadata module' }).waitFor();
+    const readdedMetadata = page.getByRole('complementary', { name: 'Metadata module' });
+    await readdedMetadata.waitFor();
+    assert.equal(await page.locator('.system-workflow').getAttribute('data-metadata-mode'), 'detached');
+    assert.equal(await page.locator('.system-workflow__metadata-module-content').count(), 1);
+    await page.getByRole('button', { name: 'Dock Metadata to Presentation Board' }).click();
+    await readdedMetadata.waitFor({ state: 'detached' });
+    assert.equal(await page.locator('.system-workflow').getAttribute('data-metadata-mode'), 'docked-closed');
+    await page.getByRole('button', { name: 'Open Metadata below Board bar' }).click();
+    await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.metadataMode === 'inner');
+    assert.equal(await page.locator('.system-workflow__metadata-module-content').count(), 1);
+    await page.getByRole('button', { name: 'Close Metadata below Board bar' }).dblclick({ delay: 10 });
+    await page.waitForTimeout(450);
+    assert.equal(await page.locator('.system-workflow').getAttribute('data-metadata-mode'), 'inner',
+      'two fast toggles are both reduced and return Metadata to its starting mode');
+    await page.evaluate(() => {
+      for (const label of ['Open Metadata beside Presentation Board', 'Close Metadata below Board bar',
+        'Undock Metadata', 'Close Metadata']) {
+        document.querySelector(`button[aria-label="${label}"]`)?.click();
+      }
+    });
+    await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.metadataMode === 'closed');
+    await page.waitForTimeout(180);
+    assert.equal(await page.locator('.system-workflow').getAttribute('data-metadata-mode'), 'closed');
+    assert.equal(await page.locator('.system-workflow__metadata-module-content').count(), 0);
+    if (metadataMotionSupported) {
+      const animationFrames = await page.evaluate(() => globalThis.__inscapeMetadataAnimationFrames);
+      assert.ok(animationFrames.some((frame) => frame.className === 'system-workflow__metadata-down-host'), JSON.stringify(animationFrames));
+      assert.ok(animationFrames.some((frame) => frame.className.includes('system-workflow__metadata-projection is-side')), JSON.stringify(animationFrames));
+      assert.ok(animationFrames.some((frame) => frame.className === 'system-workflow__metadata-module'), JSON.stringify(animationFrames));
+      assert.ok(animationFrames.some((frame) => frame.duration === 120)
+        && animationFrames.some((frame) => frame.duration === 160), JSON.stringify(animationFrames));
+      const fadeFrames = animationFrames.filter((frame) => frame.duration === 120 || frame.duration === 160);
+      assert.ok(fadeFrames.every((frame) => frame.keyframes.every((keyframe) => keyframe.transform === undefined)), JSON.stringify(animationFrames));
+      assert.equal(await page.evaluate(() => globalThis.__inscapeMetadataViewTransitionCount), 0);
+    }
   } finally {
     await browser.close();
   }
@@ -513,13 +584,67 @@ test('Presentation Board resizes from its corners and preserves exact maximize, 
     assert.equal(await page.getByRole('slider', { name: 'Board zoom' }).count(), 0);
 
     const board = page.locator('.system-workflow__presentation-board');
+    const stage = page.locator('[data-presentation-stage]');
+    assert.equal(await board.getAttribute('data-scale-rendering'), 'settled');
+    const settledSampling = await stage.evaluate((node) => ({
+      scale: Number(node.closest('.system-workflow__presentation-board').dataset.boardScale),
+      transform: getComputedStyle(node).transform,
+      viewport: node.parentElement.getBoundingClientRect().toJSON(),
+      stage: node.getBoundingClientRect().toJSON(),
+    }));
+    assert.equal(settledSampling.transform, 'none', JSON.stringify(settledSampling));
+    assert.ok(settledSampling.stage.width >= settledSampling.viewport.width, JSON.stringify(settledSampling));
+    assert.ok(settledSampling.stage.width - settledSampling.viewport.width < 1, JSON.stringify(settledSampling));
+    assert.ok(settledSampling.stage.height >= settledSampling.viewport.height, JSON.stringify(settledSampling));
+    assert.ok(settledSampling.stage.height - settledSampling.viewport.height < 1, JSON.stringify(settledSampling));
+    const identityMediaTransforms = await page.locator('.system-workflow__placement img').evaluateAll((nodes) =>
+      nodes.map((node) => getComputedStyle(node).transform));
+    assert.ok(identityMediaTransforms.includes('none'), JSON.stringify(identityMediaTransforms));
+    const manualResizeTransitions = await page.locator('.system-workflow__stage-viewport')
+      .evaluate((node) => getComputedStyle(node).transitionProperty.split(',').map((value) => value.trim()));
+    assert.equal(manualResizeTransitions.includes('height'), false, JSON.stringify(manualResizeTransitions));
     const initial = await board.boundingBox();
+    const placementsBeforeHold = await page.locator('.system-workflow__placement').evaluateAll((nodes) => nodes.map((node) => {
+      const rectangle = node.getBoundingClientRect();
+      return { height: rectangle.height, left: rectangle.left, top: rectangle.top, width: rectangle.width };
+    }));
     const southEast = page.getByRole('button', { name: 'Resize Presentation Board from se' });
     const handle = await southEast.boundingBox();
     await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
     await page.mouse.down();
+    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.scaleRendering === 'live');
+    const placementsWhileHeld = await page.locator('.system-workflow__placement').evaluateAll((nodes) => nodes.map((node) => {
+      const rectangle = node.getBoundingClientRect();
+      return { height: rectangle.height, left: rectangle.left, top: rectangle.top, width: rectangle.width };
+    }));
+    assert.deepEqual(placementsWhileHeld, placementsBeforeHold);
+    const liveSampling = await stage.evaluate((node) => ({
+      transform: getComputedStyle(node).transform,
+      zoom: Number(getComputedStyle(node).zoom),
+    }));
+    assert.notEqual(liveSampling.transform, 'none', JSON.stringify(liveSampling));
+    assert.equal(liveSampling.zoom, 1, JSON.stringify(liveSampling));
+    await page.mouse.move(handle.x + handle.width / 2 + 1, handle.y + handle.height / 2 + 1);
+    const firstPixel = await board.boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2 + 2, handle.y + handle.height / 2 + 2);
+    const secondPixel = await board.boundingBox();
+    assert.ok(firstPixel.width > initial.width, JSON.stringify({ initial, firstPixel }));
+    assert.ok(secondPixel.width > firstPixel.width, JSON.stringify({ firstPixel, secondPixel }));
+    assert.ok(secondPixel.width - firstPixel.width < 2, JSON.stringify({ firstPixel, secondPixel }));
     await page.mouse.move(handle.x + 360, handle.y + 200, { steps: 8 });
     await page.mouse.up();
+    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.scaleRendering === 'settled');
+    const resizedSampling = await stage.evaluate((node) => ({
+      scale: Number(node.closest('.system-workflow__presentation-board').dataset.boardScale),
+      transform: getComputedStyle(node).transform,
+      viewport: node.parentElement.getBoundingClientRect().toJSON(),
+      stage: node.getBoundingClientRect().toJSON(),
+    }));
+    assert.equal(resizedSampling.transform, 'none', JSON.stringify(resizedSampling));
+    assert.ok(resizedSampling.stage.width >= resizedSampling.viewport.width, JSON.stringify(resizedSampling));
+    assert.ok(resizedSampling.stage.width - resizedSampling.viewport.width < 1, JSON.stringify(resizedSampling));
+    assert.ok(resizedSampling.stage.height >= resizedSampling.viewport.height, JSON.stringify(resizedSampling));
+    assert.ok(resizedSampling.stage.height - resizedSampling.viewport.height < 1, JSON.stringify(resizedSampling));
     const resized = await board.boundingBox();
     assert.ok(resized.width > initial.width + 300, JSON.stringify({ initial, resized }));
     assert.ok(closeEnough((resized.height - 38) / resized.width, 9 / 16, 0.003));
@@ -544,6 +669,16 @@ test('Presentation Board resizes from its corners and preserves exact maximize, 
     const reopened = await board.boundingBox();
     assert.ok(closeEnough(reopened.width, resized.width) && closeEnough(reopened.height, resized.height), JSON.stringify({ reopened, resized }));
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-desktop-wide.png') });
+    await page.setViewportSize({ width: 759, height: 720 });
+    await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'narrow');
+    const beforeResponsiveBoundary = await board.boundingBox();
+    await page.setViewportSize({ width: 761, height: 720 });
+    await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'compact');
+    const afterResponsiveBoundary = await board.boundingBox();
+    assert.ok(Math.abs(afterResponsiveBoundary.width - beforeResponsiveBoundary.width) < 10,
+      JSON.stringify({ beforeResponsiveBoundary, afterResponsiveBoundary }));
+    assert.ok(Math.abs(afterResponsiveBoundary.x - beforeResponsiveBoundary.x) < 10,
+      JSON.stringify({ beforeResponsiveBoundary, afterResponsiveBoundary }));
     await page.setViewportSize({ width: 390, height: 720 });
     await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'narrow');
     const narrowBoard = await board.boundingBox();
@@ -634,20 +769,42 @@ test('artwork-only view stays inside the Board without changing its current size
   }
 });
 
-test('Workbench Add creates the canonical Presentation Board shortcut at the requested location', { timeout: 60_000 }, async () => {
+test('Workbench ADD commands follow canonical Board and Metadata lifecycle state', { timeout: 60_000 }, async () => {
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(URL, { waitUntil: 'networkidle' });
-    await page.locator('[data-presentation-workbench]').click({ button: 'right', position: { x: 920, y: 540 } });
+    const workbench = page.locator('[data-presentation-workbench]');
+    const board = page.getByRole('article', { name: 'Presentation Board' });
+    assert.equal(await page.locator('.system-workflow').getAttribute('data-board-instance-state'), 'window');
+    await workbench.click({ button: 'right', position: { x: 920, y: 540 } });
     await page.getByRole('menuitem', { name: 'ADD' }).focus();
-    await page.getByRole('menuitem', { name: 'PRESENTATION BOARD' }).click();
+    assert.equal(await page.getByRole('menuitem', { name: 'PRESENTATION BOARD' }).isDisabled(), true);
+    assert.equal(await page.getByRole('menuitem', { name: 'METADATA MODULE' }).isDisabled(), true);
+    await page.keyboard.press('Escape');
+
+    await page.getByRole('button', { name: 'Close Presentation Board to shortcut' }).click();
+    await board.waitFor({ state: 'detached' });
     const shortcut = page.getByRole('button', { name: 'Open PRESENTATION BOARD' });
     await shortcut.waitFor();
-    const position = await shortcut.boundingBox();
-    assert.ok(position.x >= 900 && position.y >= 520, JSON.stringify(position));
+    assert.equal(await page.locator('.system-workflow').getAttribute('data-board-instance-state'), 'minimized');
+    await workbench.click({ button: 'right', position: { x: 920, y: 540 } });
+    await page.getByRole('menuitem', { name: 'ADD' }).focus();
+    assert.equal(await page.getByRole('menuitem', { name: 'PRESENTATION BOARD' }).isDisabled(), true);
+    await page.keyboard.press('Escape');
     await shortcut.dblclick();
-    await page.getByRole('article', { name: 'Presentation Board' }).waitFor();
+    await board.waitFor();
+    assert.equal(await page.locator('.system-workflow').getAttribute('data-board-instance-state'), 'window');
+
+    await page.getByRole('button', { name: 'Close Metadata' }).click();
+    assert.equal(await page.locator('.system-workflow').getAttribute('data-metadata-mode'), 'closed');
+    await workbench.click({ button: 'right', position: { x: 920, y: 540 } });
+    await page.getByRole('menuitem', { name: 'ADD' }).focus();
+    assert.equal(await page.getByRole('menuitem', { name: 'METADATA MODULE' }).isDisabled(), false);
+    assert.equal(await page.getByRole('menuitem', { name: 'PRESENTATION BOARD' }).isDisabled(), true);
+    await page.getByRole('menuitem', { name: 'METADATA MODULE' }).click();
+    assert.equal(await page.getByRole('complementary', { name: 'Metadata module' }).count(), 1);
+    assert.equal(await page.locator('.system-workflow__metadata-module-content').count(), 1);
   } finally {
     await browser.close();
   }

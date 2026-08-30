@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { renderedSystemWorkflowCssTransform } from '../../systemWorkflow/systemWorkflowTransform.js';
 import { projectArtworkMat } from './latticeMat.js';
 import { projectLatticeProductionFocusMediaMotion } from './latticeProductionFocusArtworkMotion.js';
 import './latticeProductionFocusArtwork.css';
@@ -22,7 +23,8 @@ export default function LatticeProductionFocusArtwork({ entry, motion }) {
   return <div className="lattice-production-focus-artwork">
     {presentation.backplateRectangle && <span className="lattice-production-focus-artwork__mat" style={{ backgroundColor: presentation.mat.color }} />}
     <span className="lattice-production-focus-artwork__opening" style={{ ...percentRectangle(presentation.mediaOpeningRectangle, footprint), backgroundColor: background }} />
-    {!failed && <img alt={entry.accessibleLabel} className="lattice-production-focus-artwork__media" onError={() => setFailed(true)} referrerPolicy="no-referrer" src={entry.media.src} style={{ ...mediaMotion.rectangle, transform: mediaMotion.css }} />}
+    {!failed && <img alt={entry.accessibleLabel} className="lattice-production-focus-artwork__media" onError={() => setFailed(true)} referrerPolicy="no-referrer" src={entry.media.src}
+      style={{ ...mediaMotion.rectangle, transform: renderedSystemWorkflowCssTransform(mediaMotion) }} />}
     {failed && <span className="lattice-production-focus-artwork__unavailable">Artwork unavailable</span>}
   </div>;
 }

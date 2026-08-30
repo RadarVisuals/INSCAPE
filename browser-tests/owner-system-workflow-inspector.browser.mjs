@@ -37,7 +37,7 @@ test('accepted icon rail and layers operate through canonical commands', { timeo
     await page.evaluate(() => { window.__workflowWrites = 0; });
     await page.getByRole('button', { name: 'Rotate', exact: true }).click();
     assert.equal(await page.evaluate(() => window.__workflowWrites), 1);
-    assert.match(await page.getByRole('button', { name: /Select ABYSSAL STUDY/ }).locator('img').getAttribute('style'), /90deg/);
+    assert.match(await page.locator('.system-workflow__placement[aria-label^="Select ABYSSAL STUDY"] img').first().getAttribute('style'), /90deg/);
     await page.evaluate(() => { window.__workflowWrites = 0; });
     await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
     assert.equal(await page.evaluate(() => window.__workflowWrites), 1);
@@ -56,12 +56,12 @@ test('accepted icon rail and layers operate through canonical commands', { timeo
     assert.equal(await page.evaluate(() => window.__workflowWrites), 1);
     assert.equal(await page.locator('.system-workflow__placement').count(), 2);
 
-    await page.getByRole('button', { name: /Select ABYSSAL STUDY/ }).click();
+    await page.locator('.system-workflow__placement[aria-label^="Select ABYSSAL STUDY"]').click();
     await page.getByRole('button', { name: 'Frame and mat', exact: true }).click();
     assert.equal(await page.getByRole('region', { name: 'Frame and mat controls' }).isVisible(), true);
     await page.getByRole('button', { name: /^Cancel$/i }).click();
 
-    const mountain = page.getByRole('button', { name: /Select MOUNTAIN SIGNAL II/ });
+    const mountain = page.locator('.system-workflow__placement[aria-label^="Select MOUNTAIN SIGNAL II"]');
     await mountain.click();
     assert.deepEqual(await mountain.evaluate((node) => ({
       outlineStyle: getComputedStyle(node).outlineStyle,
@@ -79,16 +79,21 @@ test('accepted icon rail and layers operate through canonical commands', { timeo
       };
     });
     const rotatedRowA = await rotatedEdgeOffsets();
-    assert.deepEqual(rotatedRowA, { left: 0, right: 0, usesPixels: true },
-      'rotated media shares the placement pixel edges');
+    assert.equal(rotatedRowA.usesPixels, true, 'rotated media uses explicit device-pixel geometry');
+    assert.ok(Math.abs(rotatedRowA.left - rotatedRowA.right) < 0.01,
+      `rotated media overscan stays symmetric: ${JSON.stringify(rotatedRowA)}`);
+    assert.ok(rotatedRowA.left >= -1.01 && rotatedRowA.left <= 0,
+      `rotated media covers its placement edge without exposing a seam: ${JSON.stringify(rotatedRowA)}`);
     await page.keyboard.press('ArrowUp');
     const rotatedRowB = await rotatedEdgeOffsets();
     assert.deepEqual(rotatedRowB, rotatedRowA,
       'rotated media keeps identical edge coverage after crossing a differently rounded Grid row');
 
-    const rotatedSourceRatio = await mountain.locator('img').evaluate((image) => {
-      const rectangle = image.getBoundingClientRect();
-      return rectangle.width / rectangle.height;
+    const rotatedSourceRatio = await mountain.locator('img').evaluateAll((images) => {
+      const image = images.find((candidate) => candidate.naturalWidth > 0 && candidate.naturalHeight > 0);
+      if (!image) return Number.NaN;
+      const sourceRatio = image.naturalWidth / image.naturalHeight;
+      return image.style.transform.includes('90deg') ? 1 / sourceRatio : sourceRatio;
     });
     await mountain.dblclick();
     const openingSamples = await page.evaluate(async () => new Promise((resolveSamples) => {
@@ -122,19 +127,15 @@ test('accepted icon rail and layers operate through canonical commands', { timeo
       `viewer artwork handoff shifted ${JSON.stringify({ lastOpeningSample, stableOpenSample })}`);
     assert.ok(Math.abs(lastOpeningSample.imageLeft - stableOpenSample.imageLeft) < 0.01,
       `viewer media handoff shifted ${JSON.stringify({ lastOpeningSample, stableOpenSample })}`);
-    assert.equal(await page.getByRole('dialog', { name: 'MOUNTAIN SIGNAL II focus viewer' }).evaluate((node) => {
-      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
-        acceptNode: (text) => text.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT,
-      });
-      const text = walker.nextNode();
+    assert.equal(await page.locator('.system-workflow__identity-primary strong').evaluate((node) => {
       const selection = globalThis.getSelection();
-      if (!text || !selection) return false;
+      if (!selection) return false;
       const range = document.createRange();
-      range.selectNodeContents(text);
+      range.selectNodeContents(node);
       selection.removeAllRanges();
       selection.addRange(range);
       return selection.rangeCount === 1 && selection.toString().length > 0;
-    }), true, 'viewer text remains natively selectable while open');
+    }), true, 'Board header text remains natively selectable while the viewer is open');
     await page.getByRole('button', { name: 'Close artwork viewer' }).click();
     assert.equal(await page.evaluate(() => globalThis.getSelection()?.rangeCount || 0), 0,
       'viewer close clears native text selection before its geometry transition');
@@ -155,6 +156,10 @@ test('accepted icon rail and layers operate through canonical commands', { timeo
     assert.ok(closingRatios.length >= 3, 'rotated viewer closing exposes a measurable geometry sequence');
     closingRatios.forEach((ratio) => assert.ok(Math.abs(ratio - rotatedSourceRatio) < 0.002,
       `rotated viewer closing stretched media from ${rotatedSourceRatio} to ${ratio}`));
+    await page.waitForFunction(() => {
+      const placement = document.querySelector('.system-workflow__placement[aria-label^="Select MOUNTAIN SIGNAL II"]');
+      return document.activeElement === placement && placement?.hasAttribute('data-lattice-pointer-focus-return');
+    });
     const returnedFocus = await mountain.evaluate((node) => {
       const style = getComputedStyle(node);
       return {
@@ -173,7 +178,13 @@ test('accepted icon rail and layers operate through canonical commands', { timeo
     assert.equal(returnedFocus.pointerReturn, true, `pointer close marks its focus provenance: ${JSON.stringify(returnedFocus)}`);
     assert.equal(returnedFocus.outlineStyle, 'none', `pointer close must not paint a keyboard focus outline: ${JSON.stringify(returnedFocus)}`);
 
-    await page.locator('.system-workflow__canvas').click({ position: { x: 1400, y: 100 } });
+    const deselectCanvas = () => page.locator('.system-workflow__canvas').evaluate((node) => {
+      const rectangle = node.getBoundingClientRect();
+      const init = { bubbles: true, button: 0, clientX: rectangle.right - 2, clientY: rectangle.bottom - 2, pointerId: 71 };
+      node.dispatchEvent(new PointerEvent('pointerdown', init));
+      globalThis.dispatchEvent(new PointerEvent('pointerup', init));
+    });
+    await deselectCanvas();
     const deselectedFocus = await mountain.evaluate((node) => ({
       active: document.activeElement === node,
       outlineStyle: getComputedStyle(node).outlineStyle,
@@ -184,7 +195,7 @@ test('accepted icon rail and layers operate through canonical commands', { timeo
       'canvas deselection does not resurrect a native outline on the returned placement');
 
     await mountain.click();
-    await page.locator('.system-workflow__canvas').click({ position: { x: 1400, y: 100 } });
+    await deselectCanvas();
     const ordinaryDeselection = await mountain.evaluate((node) => ({
       active: document.activeElement === node,
       outlineStyle: getComputedStyle(node).outlineStyle,

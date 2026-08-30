@@ -223,24 +223,24 @@ export default function LatticeFocusViewer({
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root || contained) {
-      closeRef.current?.focus({ preventScroll: true });
-      return undefined;
-    }
+    if (!root) return undefined;
+    const restoreFocus = () => {
+      if (!returnFocusRef.current?.isConnected) return;
+      if (closeInputRef.current === 'pointer') markPointerFocusReturn(returnFocusRef.current);
+      returnFocusRef.current.focus({ preventScroll: true });
+    };
+    closeRef.current?.focus({ preventScroll: true });
+    if (contained) return restoreFocus;
     const isolated = [...document.body.children]
       .filter((node) => node !== root)
       .map((node) => ({ node, hadInert: node.hasAttribute('inert'), inertValue: node.inert }));
     isolated.forEach(({ node }) => { node.inert = true; });
-    closeRef.current?.focus({ preventScroll: true });
     return () => {
       isolated.forEach(({ node, hadInert, inertValue }) => {
         if (hadInert) node.inert = inertValue;
         else node.removeAttribute('inert');
       });
-      if (returnFocusRef.current?.isConnected) {
-        if (closeInputRef.current === 'pointer') markPointerFocusReturn(returnFocusRef.current);
-        returnFocusRef.current.focus({ preventScroll: true });
-      }
+      restoreFocus();
     };
   }, [contained]);
 
@@ -508,10 +508,10 @@ export default function LatticeFocusViewer({
         <strong>INSPECT</strong>
         {total > 1 && <>
           <button aria-disabled={navigationLocked} aria-label="Previous artwork"
-            onClick={() => requestNavigation(-1)} type="button"><ChevronLeft aria-hidden="true" /></button>
+            className="is-previous" onClick={() => requestNavigation(-1)} type="button"><ChevronLeft aria-hidden="true" /></button>
           <span>{String(position + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span>
           <button aria-disabled={navigationLocked} aria-label="Next artwork"
-            onClick={() => requestNavigation(1)} type="button"><ChevronRight aria-hidden="true" /></button>
+            className="is-next" onClick={() => requestNavigation(1)} type="button"><ChevronRight aria-hidden="true" /></button>
         </>}
         <button aria-disabled={phase !== 'open' || navigationLocked} aria-label="Close artwork viewer"
           className="is-close" onClick={(event) => requestClose(event.detail === 0 ? 'keyboard' : 'pointer')}

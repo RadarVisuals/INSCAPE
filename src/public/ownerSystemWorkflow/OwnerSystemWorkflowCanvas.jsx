@@ -10,6 +10,7 @@ import { adjacentSystemWorkflowGridId } from '../../systemWorkflow/domain/system
 import {
   projectSystemWorkflowImageRenderRectangle,
   projectSystemWorkflowTransform,
+  renderedSystemWorkflowCssTransform,
 } from '../../systemWorkflow/systemWorkflowTransform.js';
 import useOwnerSystemWorkflowPlacementInteraction from './useOwnerSystemWorkflowPlacementInteraction.js';
 import {
@@ -85,7 +86,8 @@ function GridSwipePreview({ appearance, assetsById, grid, onAssetDimensions, sna
         style={{ ...projected, zIndex: placement.layer + 1 }}>
         <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
           {src ? <ProgressiveArtworkImage asset={asset} onSourceLoad={(dimensions) => onAssetDimensions?.(asset, dimensions)}
-            style={imageRenderRectangle ? { ...imageRenderRectangle, transform: transform.css } : undefined} /> : <em>Media</em>}
+            style={imageRenderRectangle ? { ...imageRenderRectangle,
+              transform: renderedSystemWorkflowCssTransform(transform) } : undefined} /> : <em>Media</em>}
         </span>
       </div>;
     })}
@@ -93,7 +95,8 @@ function GridSwipePreview({ appearance, assetsById, grid, onAssetDimensions, sna
 }
 
 export default function OwnerSystemWorkflowCanvas({ assetsById, boardScale = 1, controller, crop, interactionDisabled = false, onAssetDimensions,
-  onChangeGrid, onOpenViewer, onPlacementRef, reducedMotion = false, resolveAssetDimensions, selectionOverlayHost, viewerPlacementId }) {
+  onChangeGrid, onOpenViewer, onPlacementRef, reducedMotion = false, renderingMode = 'settled', resolveAssetDimensions,
+  selectionOverlayHost, viewerPlacementId }) {
   const canvasRef = useRef(null);
   const feedbackTimerRef = useRef(null);
   const [dropFeedback, setDropFeedback] = useState(null);
@@ -150,7 +153,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, boardScale = 1, 
     observer?.observe(node);
     globalThis.addEventListener?.('resize', measure);
     return () => { observer?.disconnect(); globalThis.removeEventListener?.('resize', measure); };
-  }, [worldCover]);
+  }, [renderingMode, worldCover]);
 
   useEffect(() => {
     const reportRejectedDrop = () => {
@@ -252,7 +255,8 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, boardScale = 1, 
           style={{ ...projected, zIndex: placement.layer + 1 }}>
           <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
             {src ? <ProgressiveArtworkImage asset={asset} onSourceLoad={(dimensions) => onAssetDimensions?.(asset, dimensions)}
-              style={imageRenderRectangle ? { ...imageRenderRectangle, transform: transform.css } : undefined} /> : <em>Media</em>}
+              style={imageRenderRectangle ? { ...imageRenderRectangle,
+                transform: renderedSystemWorkflowCssTransform(transform) } : undefined} /> : <em>Media</em>}
           </span>
         </div>;
       })}

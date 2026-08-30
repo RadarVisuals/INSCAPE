@@ -6,10 +6,25 @@ export const PRESENTATION_BOARD_METADATA_SIDECAR = Object.freeze({
   panelWidth: 278,
   trackWidth: 286,
 });
+const PRESENTATION_BOARD_RESPONSIVE_BLEND = Object.freeze({ start: 600, end: 760 });
 
 const finitePositive = (value) => Number.isFinite(Number(value)) && Number(value) > 0;
 const cleanOffset = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
 const percentageScale = (percentage) => percentage / 100;
+
+export function presentationBoardResponsiveMetrics(viewportWidth) {
+  const width = Math.max(1, Number(viewportWidth) || 1);
+  const blend = Math.min(1, Math.max(0,
+    (width - PRESENTATION_BOARD_RESPONSIVE_BLEND.start)
+      / (PRESENTATION_BOARD_RESPONSIVE_BLEND.end - PRESENTATION_BOARD_RESPONSIVE_BLEND.start)));
+  const narrowMetadataWidth = Math.min(180, width * 0.42);
+  return Object.freeze({
+    identityStripHeight: 34 + 4 * blend,
+    inset: 8 + 16 * blend,
+    metadataWidth: narrowMetadataWidth
+      + (PRESENTATION_BOARD_METADATA_SIDECAR.trackWidth - narrowMetadataWidth) * blend,
+  });
+}
 
 function availablePresentationBoardSpace(viewport, options = {}) {
   const width = Number(viewport?.width);
@@ -75,6 +90,16 @@ export function clampPresentationBoardScale(scale, maximumScale = 1, fallbackSca
   ));
 }
 
+function clampContinuousPresentationBoardScale(scale, maximumScale = 1, fallbackScale = 1) {
+  const minimumScale = percentageScale(PRESENTATION_BOARD_MINIMUM_PERCENTAGE);
+  const numericMaximum = Number(maximumScale);
+  const safeMaximum = Number.isFinite(numericMaximum) ? Math.max(minimumScale, numericMaximum) : 1;
+  const numericFallback = Number(fallbackScale);
+  const safeFallback = Number.isFinite(numericFallback) ? numericFallback : 1;
+  const requested = Number(scale);
+  return Math.min(safeMaximum, Math.max(minimumScale, Number.isFinite(requested) ? requested : safeFallback));
+}
+
 function projectScaledPresentationBoard(fit, viewport, scale) {
   const stage = Object.freeze({ width: fit.stage.width * scale, height: fit.stage.height * scale });
   const board = Object.freeze({
@@ -102,7 +127,19 @@ export function projectPresentationBoardView(documentGeometry, viewport, scale =
 
 export function resizePresentationBoardView(view, viewport, options = {}) {
   if (!view) return null;
-  return projectPresentationBoardView(view.documentGeometry, viewport, view.scale, options);
+  const fit = fitPresentationBoard(viewport, options);
+  if (!fit) return null;
+  const maximumPercentage = maximumPresentationBoardPercentage(fit, viewport, options);
+  const safeScale = clampContinuousPresentationBoardScale(
+    view.scale, percentageScale(maximumPercentage), view.scale,
+  );
+  return Object.freeze({
+    documentGeometry: view.documentGeometry,
+    fit,
+    frame: projectScaledPresentationBoard(fit, viewport, safeScale),
+    maximumPercentage,
+    scale: safeScale,
+  });
 }
 
 export function presentationBoardInspectionFrame(view, viewport, options = {}) {
@@ -145,18 +182,33 @@ export function setPresentationBoardScale(view, scale) {
   return Object.freeze({ ...view, frame: projectScaledPresentationBoard(view.fit, viewport, safeScale), scale: safeScale });
 }
 
+function setContinuousPresentationBoardScale(view, scale) {
+  const safeScale = clampContinuousPresentationBoardScale(
+    scale, percentageScale(view.maximumPercentage), view.scale,
+  );
+  if (safeScale === view.scale) return view;
+  const viewport = {
+    width: view.frame.board.left * 2 + view.frame.board.width,
+    height: view.frame.board.top * 2 + view.frame.board.height,
+  };
+  return Object.freeze({ ...view, frame: projectScaledPresentationBoard(view.fit, viewport, safeScale), scale: safeScale });
+}
+
 export function resizePresentationBoardFromCorner(view, frame, corner, movement) {
   if (!view || !frame || !['ne', 'nw', 'se', 'sw'].includes(corner)) return null;
   const deltaX = Number(movement?.x) || 0;
   const deltaY = Number(movement?.y) || 0;
   const horizontalDirection = corner.endsWith('e') ? 1 : -1;
   const verticalDirection = corner.startsWith('s') ? 1 : -1;
-  const stageHeight = Math.max(1, frame.height - view.fit.identityStripHeight);
-  const widthFromX = frame.width + (deltaX * horizontalDirection);
-  const widthFromY = (stageHeight + (deltaY * verticalDirection)) * PRESENTATION_STAGE.aspectRatio;
-  const requestedWidth = Math.abs(widthFromX - frame.width) >= Math.abs(widthFromY - frame.width)
-    ? widthFromX : widthFromY;
-  const nextView = setPresentationBoardScale(view, requestedWidth / view.fit.stage.width);
+  const signedWidthMovement = deltaX * horizontalDirection;
+  const signedHeightMovement = deltaY * verticalDirection;
+  const inverseAspect = 1 / PRESENTATION_STAGE.aspectRatio;
+  // Project the pointer delta onto the Stage's fixed-ratio diagonal. This keeps
+  // both axes responsive without switching abruptly between X- and Y-derived sizes.
+  const projectedWidthMovement = (signedWidthMovement + signedHeightMovement * inverseAspect)
+    / (1 + inverseAspect ** 2);
+  const requestedWidth = frame.width + projectedWidthMovement;
+  const nextView = setContinuousPresentationBoardScale(view, requestedWidth / view.fit.stage.width);
   const width = nextView.frame.board.width;
   const height = nextView.frame.board.height;
   return Object.freeze({

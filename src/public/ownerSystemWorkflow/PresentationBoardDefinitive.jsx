@@ -4,7 +4,9 @@ import { ChevronDown, ChevronRight, UserRound, X } from 'lucide-react';
 import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import RackMenu from '../menus/RackMenu.jsx';
 import ProgressiveArtworkImage from './ProgressiveArtworkImage.jsx';
-import { PRESENTATION_BOARD_METADATA_SIDECAR, presentationBoardInspectionFrame, projectPresentationBoardView,
+import { PRESENTATION_BOARD_INSTANCE_STATE } from './ownerSystemWorkflowModuleState.js';
+import { loadPresentationBoardShortcut, presentationBoardShortcutStorageKey } from './presentationBoardShortcutStorage.js';
+import { presentationBoardInspectionFrame, presentationBoardResponsiveMetrics, projectPresentationBoardView,
   resizePresentationBoardFromCorner, resizePresentationBoardView } from './presentationBoardGeometry.js';
 
 const compactAddress = (address) => address?.length > 18 ? `${address.slice(0, 10)}…${address.slice(-6)}` : address;
@@ -14,20 +16,12 @@ const SHORTCUT_SIZE = { width: 82, height: 70 };
 const sameFrame = (left, right) => left && right
   && ['height', 'left', 'top', 'width'].every((key) => Math.abs(left[key] - right[key]) < 0.01);
 const snap = (value) => Math.round(value / WORKBENCH_CELL) * WORKBENCH_CELL;
-const shortcutStorageKey = (profileAddress) => `inscape:workbench:presentation-board:${profileAddress || 'anonymous'}`;
-
-function loadShortcut(profileAddress) {
-  try {
-    const value = JSON.parse(globalThis.localStorage?.getItem(shortcutStorageKey(profileAddress)) || 'null');
-    return value && typeof value === 'object' ? value : null;
-  } catch { return null; }
-}
-
-export default function PresentationBoardDefinitive({ addShortcutRequest, assetsById = new Map(), children, documentGeometry,
+export default function PresentationBoardDefinitive({ assetsById = new Map(), children, documentGeometry,
   identity, inspectionAtmosphere = false, layoutMode = 'wide', metadataDocked = false, metadataProjection = 'closed', onContextMenu,
-  onInspectionCancel, onMetadataClose, onMetadataProjectionChange, onMetadataUndock, onShortcutCreated,
+  onInspectionCancel, onMetadataClose, onMetadataInnerToggle, onMetadataSidecarToggle, onMetadataUndock, onMinimize, onRestore,
+  instanceState = PRESENTATION_BOARD_INSTANCE_STATE.WINDOW,
   profileAddress, reducedMotion = false, renderInspection, renderMetadata }) {
-  const storedShortcut = useMemo(() => loadShortcut(profileAddress), [profileAddress]);
+  const storedShortcut = useMemo(() => loadPresentationBoardShortcut(profileAddress), [profileAddress]);
   const [host, setHost] = useState(null);
   const [view, setView] = useState(null);
   const [boardPosition, setBoardPosition] = useState(null);
@@ -35,7 +29,7 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
   const [inspectionControlsHost, setInspectionControlsHost] = useState(null);
   const [selectionOverlayHost, setSelectionOverlayHost] = useState(null);
   const [boardPhase, setBoardPhase] = useState('window');
-  const [open, setOpen] = useState(storedShortcut?.open !== false);
+  const [scaleRendering, setScaleRendering] = useState('settled');
   const [shortcutPosition, setShortcutPosition] = useState(storedShortcut?.position || { left: 24, top: 72 });
   const [shortcutName, setShortcutName] = useState(storedShortcut?.name || 'PRESENTATION BOARD');
   const [shortcutIconId, setShortcutIconId] = useState(storedShortcut?.iconAssetId || null);
@@ -45,18 +39,18 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
   const boardNodeRef = useRef(null);
   const boardDragRef = useRef(null);
   const boardResizeRef = useRef(null);
+  const liveStageRef = useRef(null);
   const shortcutDragRef = useRef(null);
-  const handledAddRef = useRef(null);
   const completedTransitionRef = useRef(null);
   const boardPhaseRef = useRef(boardPhase);
   const windowSnapshotRef = useRef(null);
   const inspectionActive = Boolean(renderInspection);
   const sidecarOpen = metadataDocked && metadataProjection === 'side';
-  const metadataWidth = layoutMode === 'narrow' ? Math.min(180, (host?.clientWidth || 390) * 0.42)
-    : PRESENTATION_BOARD_METADATA_SIDECAR.trackWidth;
+  const responsiveMetrics = presentationBoardResponsiveMetrics(host?.clientWidth || 390);
+  const metadataWidth = responsiveMetrics.metadataWidth;
   boardPhaseRef.current = boardPhase;
-  const geometryOptions = { inset: layoutMode === 'narrow' ? 8 : 24,
-    identityStripHeight: layoutMode === 'narrow' ? 34 : 38,
+  const geometryOptions = { inset: responsiveMetrics.inset,
+    identityStripHeight: responsiveMetrics.identityStripHeight,
     sidecarWidth: sidecarOpen ? metadataWidth : 0 };
 
   useLayoutEffect(() => {
@@ -72,24 +66,16 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
   }, [documentGeometry, host, layoutMode, metadataWidth, sidecarOpen]);
 
   useEffect(() => {
-    try { globalThis.localStorage?.setItem(shortcutStorageKey(profileAddress), JSON.stringify({
-      iconAssetId: shortcutIconId, name: shortcutName, open, position: shortcutPosition,
+    try { globalThis.localStorage?.setItem(presentationBoardShortcutStorageKey(profileAddress), JSON.stringify({
+      iconAssetId: shortcutIconId, name: shortcutName,
+      open: instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW, position: shortcutPosition,
     })); } catch { /* Workbench layout persistence is optional. */ }
-  }, [open, profileAddress, shortcutIconId, shortcutName, shortcutPosition]);
+  }, [instanceState, profileAddress, shortcutIconId, shortcutName, shortcutPosition]);
 
   const clampShortcut = (position) => ({
     left: Math.max(0, Math.min((host?.clientWidth || SHORTCUT_SIZE.width) - SHORTCUT_SIZE.width, snap(position.left))),
     top: Math.max(0, Math.min((host?.clientHeight || SHORTCUT_SIZE.height) - SHORTCUT_SIZE.height, snap(position.top))),
   });
-  useEffect(() => {
-    if (!addShortcutRequest || !host || handledAddRef.current === addShortcutRequest.id) return;
-    handledAddRef.current = addShortcutRequest.id;
-    const bounds = host.getBoundingClientRect();
-    setShortcutPosition(clampShortcut({ left: addShortcutRequest.x - bounds.left, top: addShortcutRequest.y - bounds.top }));
-    setOpen(false);
-    onShortcutCreated?.();
-  }, [addShortcutRequest, host, onShortcutCreated]);
-
   const defaultTop = layoutMode === 'narrow' ? 48 : view?.frame.board.top || 0;
   const clampPosition = (position, frame = view?.frame.board, extraWidth = 0) => ({
     left: Math.max(8, Math.min((host?.clientWidth || 0) - (frame?.width || 0) - extraWidth - 8, position.left)),
@@ -105,19 +91,42 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
   const renderedFrame = maximized ? maximumFrame
     : boardPhase === 'restoring' && windowSnapshotRef.current ? windowSnapshotRef.current.frame : windowFrame;
   const displayScale = maximized ? maximumView?.scale || 1 : view?.scale || 1;
+  const liveScaleRendering = scaleRendering === 'live' || boardPhase === 'maximizing' || boardPhase === 'restoring';
+  const settledStageWidth = view ? Math.ceil(view.fit.stage.width * displayScale) : 0;
+  const settledStageHeight = view ? Math.ceil(view.fit.stage.height * displayScale) : 0;
+  const currentStageWidth = view ? view.fit.stage.width * displayScale : 0;
+  const currentStageHeight = view ? view.fit.stage.height * displayScale : 0;
+  const liveStage = liveStageRef.current;
+  const liveTransformScale = liveStage?.displayWidth
+    ? currentStageWidth / liveStage.displayWidth : displayScale;
+  const prepareLiveScaleRendering = () => {
+    liveStageRef.current = {
+      displayHeight: currentStageHeight, displayWidth: currentStageWidth,
+      height: settledStageHeight, width: settledStageWidth,
+    };
+    setScaleRendering('live');
+  };
 
   const maximize = () => {
     if (!view || !renderedPosition || boardPhase !== 'window') return;
     windowSnapshotRef.current = { frame: { ...view.frame.board, ...renderedPosition }, position: renderedPosition };
     if (reducedMotion || sameFrame(windowSnapshotRef.current.frame, maximumFrame)) setBoardPhase('maximized');
-    else { completedTransitionRef.current = null; setBoardPhase('maximizing'); }
+    else {
+      completedTransitionRef.current = null;
+      prepareLiveScaleRendering();
+      requestAnimationFrame(() => setBoardPhase('maximizing'));
+    }
   };
   const restore = () => {
     if (!windowSnapshotRef.current || !['maximized', 'maximizing'].includes(boardPhase)) return;
     if (inspectionActive) { onInspectionCancel?.(); return; }
     if (reducedMotion || sameFrame(maximumFrame, windowSnapshotRef.current.frame)) {
       setBoardPosition(windowSnapshotRef.current.position); windowSnapshotRef.current = null; setBoardPhase('window');
-    } else { completedTransitionRef.current = null; setBoardPhase('restoring'); }
+    } else {
+      completedTransitionRef.current = null;
+      prepareLiveScaleRendering();
+      requestAnimationFrame(() => setBoardPhase('restoring'));
+    }
   };
 
   useEffect(() => {
@@ -126,7 +135,7 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
     const finish = () => {
       if (cancelled || boardPhaseRef.current !== 'restoring' || completedTransitionRef.current === 'restoring') return;
       completedTransitionRef.current = 'restoring'; setBoardPosition(windowSnapshotRef.current?.position || null);
-      windowSnapshotRef.current = null; setBoardPhase('window');
+      windowSnapshotRef.current = null; setBoardPhase('window'); setScaleRendering('settled');
     };
     const frame = requestAnimationFrame(() => {
       const transitions = (boardNodeRef.current?.getAnimations?.() || [])
@@ -146,9 +155,10 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
     if (event.target !== event.currentTarget || !['height', 'left', 'top', 'width'].includes(event.propertyName)) return;
     if (completedTransitionRef.current === boardPhase) return;
     completedTransitionRef.current = boardPhase;
-    if (boardPhase === 'maximizing') setBoardPhase('maximized');
+    if (boardPhase === 'maximizing') { setBoardPhase('maximized'); setScaleRendering('settled'); }
     else if (boardPhase === 'restoring') {
-      setBoardPosition(windowSnapshotRef.current?.position || null); windowSnapshotRef.current = null; setBoardPhase('window');
+      setBoardPosition(windowSnapshotRef.current?.position || null); windowSnapshotRef.current = null;
+      setBoardPhase('window'); setScaleRendering('settled');
     }
   };
   const beginBoardDrag = (event) => {
@@ -165,6 +175,7 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
   const beginBoardResize = (corner, event) => {
     if (event.button !== 0 || !view || !windowFrame || boardPhase !== 'window') return;
     event.preventDefault(); event.stopPropagation();
+    prepareLiveScaleRendering();
     boardResizeRef.current = { corner, id: event.pointerId, clientX: event.clientX, clientY: event.clientY, frame: windowFrame, view };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -176,7 +187,10 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
     setView(resized.view); setBoardPosition(clampPosition(resized.position, resized.view.frame.board,
       sidecarOpen ? metadataWidth : 0));
   };
-  const stopBoardResize = (event) => { if (boardResizeRef.current?.id === event.pointerId) boardResizeRef.current = null; };
+  const stopBoardResize = (event) => {
+    if (boardResizeRef.current?.id !== event.pointerId) return;
+    boardResizeRef.current = null; setScaleRendering('settled');
+  };
   useEffect(() => {
     const move = (event) => moveBoardResize(event); const stop = (event) => stopBoardResize(event);
     globalThis.addEventListener?.('pointermove', move, true); globalThis.addEventListener?.('pointerup', stop, true);
@@ -199,7 +213,7 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
   const minimizeToShortcut = () => {
     if (!windowFrame || inspectionActive) return;
     const frame = boardPhase === 'maximized' ? maximumFrame : windowFrame;
-    setShortcutPosition(clampShortcut({ left: frame.left, top: frame.top })); setOpen(false); onShortcutCreated?.();
+    setShortcutPosition(clampShortcut({ left: frame.left, top: frame.top })); onMinimize?.();
   };
   const commitRename = () => {
     const value = renameValue.trim(); if (value) setShortcutName(value.slice(0, 48)); else setRenameValue(shortcutName);
@@ -214,11 +228,12 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
   return <div className="system-workflow__workbench" data-presentation-workbench onContextMenu={onContextMenu} ref={setHost}>
     {host && <LatticePixelGrid color="var(--study-grid)" field={workbenchField} guideInterval={1}
       guideSize={1} height={host.clientHeight} mode="LINES" width={host.clientWidth} />}
-    {!open && <button aria-label={`Open ${shortcutName}`} className="system-workflow__desktop-shortcut"
+    {instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED
+      && <button aria-label={`Open ${shortcutName}`} className="system-workflow__desktop-shortcut"
       onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setShortcutMenu({ x: event.clientX, y: event.clientY }); }}
-      onDoubleClick={() => setOpen(true)} onDragOver={(event) => { if ([...event.dataTransfer.types].includes('application/x-inscape-asset')) event.preventDefault(); }}
+      onDoubleClick={onRestore} onDragOver={(event) => { if ([...event.dataTransfer.types].includes('application/x-inscape-asset')) event.preventDefault(); }}
       onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const id = event.dataTransfer.getData('application/x-inscape-asset'); if (assetsById.has(id)) setShortcutIconId(id); }}
-      onKeyDown={(event) => { if (event.key === 'Enter' && !renaming) { event.preventDefault(); setOpen(true); } }}
+      onKeyDown={(event) => { if (event.key === 'Enter' && !renaming) { event.preventDefault(); onRestore?.(); } }}
       onPointerCancel={stopShortcutDrag} onPointerDown={beginShortcutDrag} onPointerMove={moveShortcutDrag}
       onPointerUp={stopShortcutDrag} style={{ left: shortcutPosition.left, top: shortcutPosition.top }} type="button">
       <span aria-hidden="true" className="system-workflow__desktop-shortcut-icon">
@@ -231,8 +246,10 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
           if (event.key === 'Escape') { event.preventDefault(); setRenameValue(shortcutName); setRenaming(false); }
         }} value={renameValue} /> : <strong>{shortcutName}</strong>}
     </button>}
-    {view && open && <article aria-label="Presentation Board" className="system-workflow__presentation-board"
+    {view && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW
+      && <article aria-label="Presentation Board" className="system-workflow__presentation-board"
       data-board-phase={boardPhase} data-board-scale={view.scale} data-maximized={maximized || undefined}
+      data-scale-rendering={liveScaleRendering ? 'live' : 'settled'}
       data-inspecting={inspectionActive || undefined} data-inspection-atmosphere={inspectionAtmosphere || undefined}
       data-metadata-sidecar={sidecarOpen || undefined}
       onTransitionEnd={finishBoardTransition} ref={boardNodeRef}
@@ -249,12 +266,14 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
           {inspectionActive && <span className="system-workflow__board-inspection-controls-host" ref={setInspectionControlsHost} />}
           {metadataDocked && <span className="system-workflow__metadata-dock-controls">
             <strong>METADATA</strong>
-            <button aria-label="Open Metadata below Board bar" aria-pressed={metadataProjection === 'down'}
-              className="system-workflow__round-control"
-              onClick={() => onMetadataProjectionChange?.(metadataProjection === 'down' ? 'closed' : 'down')} type="button"><ChevronDown /></button>
-            <button aria-label="Open Metadata beside Presentation Board" aria-pressed={metadataProjection === 'side'}
-              className="system-workflow__round-control"
-              onClick={() => onMetadataProjectionChange?.(metadataProjection === 'side' ? 'closed' : 'side')} type="button"><ChevronRight /></button>
+            <button aria-label={metadataProjection === 'down' ? 'Close Metadata below Board bar' : 'Open Metadata below Board bar'}
+              aria-pressed={metadataProjection === 'down'}
+              className="system-workflow__round-control system-workflow__metadata-direction is-down"
+              onClick={onMetadataInnerToggle} type="button"><ChevronDown /></button>
+            <button aria-label={metadataProjection === 'side' ? 'Close Metadata beside Presentation Board' : 'Open Metadata beside Presentation Board'}
+              aria-pressed={metadataProjection === 'side'}
+              className="system-workflow__round-control system-workflow__metadata-direction is-side"
+              onClick={onMetadataSidecarToggle} type="button"><ChevronRight /></button>
             <button aria-label="Undock Metadata" className="system-workflow__round-control" onClick={onMetadataUndock}
               type="button"><i aria-hidden="true" className="system-workflow__state-glyph is-docked" /></button>
             <button aria-label="Close Metadata" className="system-workflow__round-control is-close" onClick={onMetadataClose}
@@ -272,10 +291,12 @@ export default function PresentationBoardDefinitive({ addShortcutRequest, assets
       </header>
       <div className="system-workflow__stage-viewport" ref={setSelectionOverlayHost} style={{ height: view.fit.stage.height * displayScale }}>
         <div className="system-workflow__stage" data-presentation-stage
-          style={{ height: view.fit.stage.height, transform: `scale(${displayScale})`, width: view.fit.stage.width }}>
-          {cloneElement(children, { boardScale: displayScale,
+          style={{ height: liveScaleRendering ? liveStage?.height || view.fit.stage.height : settledStageHeight,
+            transform: liveScaleRendering ? `scale(${liveTransformScale})` : undefined,
+            width: liveScaleRendering ? liveStage?.width || view.fit.stage.width : settledStageWidth }}>
+          {cloneElement(children, { boardScale: liveScaleRendering ? liveTransformScale : 1,
             interactionDisabled: children.props.interactionDisabled || boardPhase === 'maximizing' || boardPhase === 'restoring',
-            selectionOverlayHost })}
+            renderingMode: liveScaleRendering ? 'live' : 'settled', selectionOverlayHost })}
         </div>
       </div>
       {metadataDocked && metadataProjection === 'down'

@@ -125,3 +125,20 @@ test('normal motion preserves Profile, Activity, and focus-viewer source continu
     await browser.close();
   }
 });
+
+test('Layers remains mounted while artwork inspection is open', { timeout: 60_000 }, async () => {
+  const browser = await chromium.launch({ executablePath: EDGE, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    const placement = page.locator('.system-workflow__placement').first();
+    await placement.click();
+    const inspector = page.getByRole('complementary', { name: 'Selection and layers inspector' });
+    await inspector.waitFor();
+    await placement.dblclick();
+    await page.getByRole('dialog', { name: 'ABYSSAL STUDY focus viewer' }).waitFor();
+    assert.equal(await inspector.isVisible(), true);
+  } finally {
+    await browser.close();
+  }
+});

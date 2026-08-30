@@ -172,6 +172,11 @@ export function projectSystemWorkflowTransform(transform, dimensions, crop = nul
   });
 }
 
+export function renderedSystemWorkflowCssTransform(projection) {
+  const css = projection?.css;
+  return css === 'scale(1, 1) rotate(0deg)' ? undefined : css;
+}
+
 export function projectSystemWorkflowImageRenderRectangle(imageRectangle, transformProjection) {
   if (!imageRectangle) return null;
   if (!transformProjection?.swapped) return Object.freeze({ ...imageRectangle });

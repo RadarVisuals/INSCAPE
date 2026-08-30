@@ -60,6 +60,7 @@ import {
   createSystemWorkflowTransformCandidate,
   projectSystemWorkflowImageRenderRectangle,
   projectSystemWorkflowTransform,
+  renderedSystemWorkflowCssTransform,
   transformSystemWorkflowGroupGeometries,
   unprojectSystemWorkflowCrop,
 } from './systemWorkflowTransform.js';
@@ -423,6 +424,8 @@ test('crop, presentation, and transform retain separate canonical authorities', 
     { left: 1, top: 2, width: 8, height: 5 },
     { swapped: false },
   ), { left: 1, top: 2, width: 8, height: 5 });
+  assert.equal(renderedSystemWorkflowCssTransform({ css: 'scale(1, 1) rotate(0deg)' }), undefined);
+  assert.equal(renderedSystemWorkflowCssTransform({ css: 'scale(-1, 1) rotate(90deg)' }), 'scale(-1, 1) rotate(90deg)');
   const remappingCases = [
     [{ quarterTurns: 0, mirrorX: false, mirrorY: false }, { x: 0.2, y: 0.7 }],
     [{ quarterTurns: 1, mirrorX: false, mirrorY: false }, { x: 1 - 0.7, y: 0.2 }],

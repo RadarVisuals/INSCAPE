@@ -150,9 +150,7 @@
 .system-workflow__board-inspection-host { position: absolute; z-index: 30; inset: var(--workflow-identity-strip-height) 0 0; overflow: hidden; border-radius: var(--workflow-board-radius); pointer-events: none; }
 .system-workflow__board-inspection-host:has(.lattice-focus-viewer) { pointer-events: auto; }
 .system-workflow__stage-viewport {
-  transition:
-    height 260ms var(--workflow-ease),
-    filter 260ms var(--workflow-ease);
+  transition: filter 260ms var(--workflow-ease);
 }
 .system-workflow__presentation-board[data-inspection-atmosphere] .system-workflow__stage-viewport {
   filter: grayscale(1) contrast(.72) brightness(.3);
@@ -160,6 +158,11 @@
 .system-workflow__board-inspection-host .lattice-focus-viewer[data-contained][data-grid-visible="false"] .lattice-focus-viewer__surface {
   background-color: rgb(5 6 6 / 18%);
   background-image: none;
+}
+.system-workflow__presentation-board:is([data-board-phase="maximizing"], [data-board-phase="restoring"]) .system-workflow__stage-viewport {
+  transition:
+    height 260ms var(--workflow-ease),
+    filter 260ms var(--workflow-ease);
 }
 .system-workflow__presentation-board:is([data-board-phase="maximizing"], [data-board-phase="restoring"]) .system-workflow__stage { transition: transform 260ms var(--workflow-ease); }
 
@@ -241,20 +244,28 @@
   display: grid;
   place-items: center;
   overflow: hidden;
-  border: 1px solid var(--workflow-ink);
+  border: 1px solid var(--workflow-border-strong);
   border-radius: 50%;
-  color: var(--workflow-panel);
-  background: var(--workflow-ink);
+  color: var(--workflow-muted);
+  background: var(--workflow-selection);
   cursor: pointer;
+  transition: color 120ms var(--workflow-ease), background-color 120ms var(--workflow-ease), border-color 120ms var(--workflow-ease);
 }
-.lattice-focus-viewer__board-controls > button:is(:hover, :focus-visible) { outline: 1px solid var(--workflow-ink); outline-offset: 2px; }
+.lattice-focus-viewer__board-controls > button:hover { border-color: var(--workflow-muted); color: var(--workflow-ink); background: color-mix(in srgb, var(--workflow-ink) 16%, var(--workflow-panel)); }
+.lattice-focus-viewer__board-controls > button:focus-visible { outline: 0; border-color: var(--workflow-ink); color: var(--workflow-ink); box-shadow: inset 0 0 0 1px var(--workflow-panel); }
 .lattice-focus-viewer__board-controls > button[aria-disabled="true"] { pointer-events: none; opacity: .35; }
-.lattice-focus-viewer__board-controls > button svg { width: 12px; height: 12px; stroke-width: 2; }
+.lattice-focus-viewer__board-controls > button svg { width: 12px; height: 12px; stroke-width: 2; transition: transform 120ms var(--workflow-ease), stroke-width 120ms var(--workflow-ease); }
+.lattice-focus-viewer__board-controls > button:is(.is-previous, .is-next):hover svg { stroke-width: 2.5; }
+.lattice-focus-viewer__board-controls > button.is-previous:hover svg { transform: translateX(-1px); }
+.lattice-focus-viewer__board-controls > button.is-next:hover svg { transform: translateX(1px); }
 .lattice-focus-viewer__board-controls > button.is-close svg { width: 14px; height: 14px; stroke-width: 2.7; }
-.system-workflow .system-workflow__round-control { box-sizing: border-box; width: 20px; min-width: 20px; height: 20px; padding: 0; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--workflow-ink); border-radius: 50% !important; color: var(--workflow-panel); background: var(--workflow-ink); cursor: pointer; }
-.system-workflow__round-control:is(:hover, :focus-visible, [aria-pressed="true"]) { outline: 1px solid var(--workflow-ink); outline-offset: 2px; }
+.system-workflow .system-workflow__round-control { box-sizing: border-box; width: 20px; min-width: 20px; height: 20px; padding: 0; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--workflow-border-strong); border-radius: 50% !important; color: var(--workflow-muted); background: var(--workflow-selection); cursor: pointer; transition: color 120ms var(--workflow-ease), background-color 120ms var(--workflow-ease), border-color 120ms var(--workflow-ease); }
+.system-workflow .system-workflow__round-control:hover { border-color: var(--workflow-muted); color: var(--workflow-ink); background: color-mix(in srgb, var(--workflow-ink) 16%, var(--workflow-panel)); }
+.system-workflow .system-workflow__round-control:focus-visible { outline: 0; border-color: var(--workflow-ink); color: var(--workflow-ink); box-shadow: inset 0 0 0 1px var(--workflow-panel); }
+.system-workflow .system-workflow__round-control[aria-pressed="true"] { border-color: var(--workflow-muted); color: var(--workflow-ink); background: color-mix(in srgb, var(--workflow-ink) 14%, var(--workflow-panel)); }
 .system-workflow__round-control:disabled { cursor: default; opacity: .35; }
-.system-workflow__round-control svg { width: 12px; height: 12px; stroke-width: 2; }
+.system-workflow__round-control svg { width: 12px; height: 12px; stroke-width: 2; transition: transform 140ms var(--workflow-ease), stroke-width 140ms var(--workflow-ease); }
+.system-workflow__metadata-direction[aria-pressed="true"] svg { stroke-width: 2.5; transform: rotate(180deg); }
 .system-workflow__round-control.is-close svg { width: 14px; height: 14px; stroke-width: 2.7; }
 .system-workflow__state-glyph { box-sizing: border-box; width: 10px; height: 10px; display: block; border: 2px solid currentColor; border-radius: 50%; }
 .system-workflow__state-glyph.is-contained::after,
@@ -908,6 +919,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow[data-layout="narrow"] .system-workflow__metadata-dock-controls > strong { display: none; }
 .system-workflow[data-layout="narrow"] :is(.system-workflow__metadata-dock-controls, .system-workflow__board-window-controls) { gap: 4px; padding-inline: 4px; }
 .system-workflow[data-layout="narrow"] .system-workflow__presentation-board[data-metadata-sidecar] .system-workflow__identity-primary { display: none; }
+.system-workflow[data-layout="narrow"] .system-workflow__presentation-board[data-metadata-sidecar] .system-workflow__board-title { margin-left: auto; }
 .system-workflow[data-layout="narrow"] .system-workflow__presentation-board[data-metadata-sidecar][data-inspecting]
   .lattice-focus-viewer__board-controls > :is(span, button:not(.is-close)) { display: none; }
 
