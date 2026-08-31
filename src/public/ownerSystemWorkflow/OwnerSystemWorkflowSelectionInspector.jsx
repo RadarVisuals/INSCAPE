@@ -28,7 +28,8 @@ function reorderBlock(ids, selectedIds, direction) {
   return ordered;
 }
 
-export default function OwnerSystemWorkflowSelectionInspector({ assetsById, controller, crop, layout, onBeginCrop, onMinimize, obscuredByGridSwitcher = false }) {
+export default function OwnerSystemWorkflowSelectionInspector({ assetsById, authoringLocked = false,
+  controller, crop, layout, onBeginCrop, onMinimize, obscuredByGridSwitcher = false }) {
   const [removeCandidateId, setRemoveCandidateId] = useState(null);
   const [presentation, setPresentation] = useState(null);
   const [position, setPosition] = useState(savedPosition);
@@ -39,6 +40,7 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, cont
   const unlockedSelected = selected.filter(({ locked }) => !locked);
   const primary = unlockedSelected.length === 1 ? unlockedSelected[0] : null;
   useEffect(() => { if (!removeCandidateId) return undefined; const cancel = (event) => event.key === 'Escape' && setRemoveCandidateId(null); globalThis.addEventListener('keydown', cancel, true); return () => globalThis.removeEventListener('keydown', cancel, true); }, [removeCandidateId]);
+  useEffect(() => { if (authoringLocked) { setPresentation(null); setRemoveCandidateId(null); } }, [authoringLocked]);
   useEffect(() => { if (presentation && !grid?.placements.some(({ id }) => id === presentation.placementId)) setPresentation(null); }, [grid, presentation]);
   useEffect(() => () => {
     const active = dragRef.current;
@@ -62,11 +64,12 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, cont
   if (!grid) return null;
   const ordered = [...grid.placements].sort((left, right) => left.layer - right.layer);
   const layers = [...ordered].reverse();
-  const editable = unlockedSelected.length === selected.length && unlockedSelected.length > 0;
+  const editable = !authoringLocked && unlockedSelected.length === selected.length && unlockedSelected.length > 0;
   const transform = (operation) => controller.run((session) => unlockedSelected.length === 1
     ? session.transformPlacement({ gridId: grid.id, placementId: primary.id, expectedPlacement: primary, operation })
     : session.transformPlacements({ gridId: grid.id, placementIds: unlockedSelected.map(({ id }) => id), expectedPlacements: unlockedSelected, operation }));
   const duplicate = () => {
+    if (authoringLocked) return;
     const duplicatedIds = controller.run((session) => {
       const existingIds = new Set(session.getState().draft.grids.find(({ id }) => id === grid.id).placements.map(({ id }) => id));
       const committed = unlockedSelected.length === 1
@@ -79,6 +82,7 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, cont
     if (Array.isArray(duplicatedIds) && duplicatedIds.length) controller.replaceSelection(duplicatedIds);
   };
   const removeSelection = () => {
+    if (authoringLocked) return;
     const removable = grid.placements.filter(({ id, locked }) => controller.selectedPlacementIds.includes(id) && !locked);
     if (!removable.length || removable.length !== selected.length) return;
     const committed = controller.run((session) => removable.length === 1
@@ -88,7 +92,7 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, cont
     setRemoveCandidateId(null);
   };
   const moveLayer = (operation) => {
-    if (!editable) return;
+    if (authoringLocked || !editable) return;
     if (unlockedSelected.length === 1) {
       controller.run((session) => session.changePlacementLayer({ gridId: grid.id, placementId: primary.id, expectedPlacement: primary, expectedPlacements: systemWorkflowLayerTopologySnapshot(grid), operation }));
       return;
@@ -98,15 +102,16 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, cont
     controller.run((session) => session.reorderPlacementLayers({ gridId: grid.id, expectedPlacements: systemWorkflowLayerTopologySnapshot(grid), orderedPlacementIds: reorderBlock(orderedIds, unlockedSelected.map(({ id }) => id), operation) }));
   };
   const availability = primary ? systemWorkflowLayerOperationAvailability(grid, primary.id) : { BACK: editable, BACKWARD: editable, FORWARD: editable, FRONT: editable };
-  const beginPresentation = () => primary && setPresentation({ placementId: primary.id, frameId: primary.frameId, mat: structuredClone(primary.mat), backing: structuredClone(primary.backing), transparencyMode: primary.transparencyMode });
+  const beginPresentation = () => !authoringLocked && primary && setPresentation({ placementId: primary.id, frameId: primary.frameId, mat: structuredClone(primary.mat), backing: structuredClone(primary.backing), transparencyMode: primary.transparencyMode });
   const applyPresentation = () => {
+    if (authoringLocked) return;
     const placement = grid.placements.find(({ id }) => id === presentation?.placementId);
     if (!placement) return;
     controller.run((session) => session.setPlacementPresentation({ gridId: grid.id, placementId: placement.id, expectedPlacement: placement, presentation: { frameId: presentation.frameId, mat: presentation.mat, backing: presentation.backing, transparencyMode: presentation.transparencyMode } }));
     setPresentation(null);
   };
   const reorderFromDrop = (sourceId, targetId) => {
-    if (!sourceId || sourceId === targetId || grid.placements.some(({ locked }) => locked)) return;
+    if (authoringLocked || !sourceId || sourceId === targetId || grid.placements.some(({ locked }) => locked)) return;
     const ids = ordered.map(({ id }) => id);
     const sourceIndex = ids.indexOf(sourceId); const targetIndex = ids.indexOf(targetId);
     ids.splice(targetIndex, 0, ids.splice(sourceIndex, 1)[0]);
@@ -165,7 +170,9 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, cont
     </div><footer><button onClick={() => setPresentation(null)} type="button">Cancel</button><button onClick={applyPresentation} type="button">Apply</button></footer></section>
   </aside>;
 
-  return <aside aria-label="Selection and layers inspector" className="system-workflow__inspector system-workflow__selection-inspector" data-obscured={obscuredByGridSwitcher || undefined} ref={inspectorRef} style={panelStyle}>{panelHeader}
+  return <aside aria-label="Selection and layers inspector" className="system-workflow__inspector system-workflow__selection-inspector"
+    data-authoring-locked={authoringLocked || undefined}
+    data-obscured={obscuredByGridSwitcher || undefined} ref={inspectorRef} style={panelStyle}>{panelHeader}
     {selected.length > 0 && <nav aria-label="Selection actions" className="system-workflow__selection-actions">
       <button aria-label="Rotate" disabled={!editable} onClick={() => transform(SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.ROTATE)} title="Rotate" type="button"><RotateCw size={15} /></button>
       <button aria-label="Mirror horizontal" disabled={!editable} onClick={() => transform(SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.MIRROR_HORIZONTAL)} title="Mirror horizontal" type="button"><FlipHorizontal2 size={15} /></button>
@@ -175,18 +182,18 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, cont
       <button aria-label="Move backward" disabled={!availability.BACKWARD} onClick={() => moveLayer(SYSTEM_WORKFLOW_LAYER_OPERATIONS.BACKWARD)} title="Move backward" type="button"><ChevronDown size={15} /></button>
       <button aria-label="Move forward" disabled={!availability.FORWARD} onClick={() => moveLayer(SYSTEM_WORKFLOW_LAYER_OPERATIONS.FORWARD)} title="Move forward" type="button"><ChevronUp size={15} /></button>
       <button aria-label="Bring to front" disabled={!availability.FRONT} onClick={() => moveLayer(SYSTEM_WORKFLOW_LAYER_OPERATIONS.FRONT)} title="Bring to front" type="button"><ChevronsUp size={15} /></button>
-      <button aria-label="Crop" disabled={!primary} onClick={() => onBeginCrop?.(primary)} title={primary ? 'Crop' : 'Crop requires one artwork'} type="button"><Crop size={15} /></button>
-      <button aria-label="Frame and mat" disabled={!primary} onClick={beginPresentation} title={primary ? 'Frame and mat' : 'Frame and mat requires one artwork'} type="button"><Frame size={15} /></button>
+      <button aria-label="Crop" disabled={authoringLocked || !primary} onClick={() => onBeginCrop?.(primary)} title={primary ? 'Crop' : 'Crop requires one artwork'} type="button"><Crop size={15} /></button>
+      <button aria-label="Frame and mat" disabled={authoringLocked || !primary} onClick={beginPresentation} title={primary ? 'Frame and mat' : 'Frame and mat requires one artwork'} type="button"><Frame size={15} /></button>
     </nav>}
     <section className="system-workflow__layers">
       <div className="system-workflow__layer-list">{layers.map((layer) => {
         const asset = assetsById.get(layer.stableAssetId); const title = asset?.title || asset?.name || 'UNTITLED'; const confirming = removeCandidateId === layer.id;
         const removingSelectedGroup = confirming && selected.length > 1 && controller.selectedPlacementIds.includes(layer.id) && editable;
         return <div className="system-workflow__layer-row" data-confirming={confirming || undefined} data-selected={controller.selectedPlacementIds.includes(layer.id) || undefined}
-          draggable={!grid.placements.some(({ locked }) => locked)} key={layer.id} onDragStart={(event) => event.dataTransfer.setData('text/x-inscape-layer', layer.id)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => reorderFromDrop(event.dataTransfer.getData('text/x-inscape-layer'), layer.id)}>
+          draggable={!authoringLocked && !grid.placements.some(({ locked }) => locked)} key={layer.id} onDragStart={(event) => event.dataTransfer.setData('text/x-inscape-layer', layer.id)} onDragOver={(event) => { if (!authoringLocked) event.preventDefault(); }} onDrop={(event) => reorderFromDrop(event.dataTransfer.getData('text/x-inscape-layer'), layer.id)}>
           <button className="system-workflow__layer-select" disabled={layer.locked} onClick={(event) => { controller.selectPlacement(layer.id, event.shiftKey); setRemoveCandidateId(null); }} type="button"><img alt="" src={sourceFor(asset)} /><span>{title}</span></button>
-          <button aria-label={`${layer.locked ? 'Unlock' : 'Lock'} ${title}`} aria-pressed={layer.locked} className="system-workflow__layer-lock" onClick={() => { controller.toggleLock(layer); setRemoveCandidateId(null); }} title={layer.locked ? 'Unlock placement' : 'Lock placement'} type="button"><Lock size={13} /></button>
-          <button aria-label={`Remove ${title} from Grid`} className="system-workflow__layer-remove" disabled={layer.locked} onClick={() => setRemoveCandidateId(layer.id)} title="Remove from Grid" type="button"><Trash2 size={14} /></button>
+          <button aria-label={`${layer.locked ? 'Unlock' : 'Lock'} ${title}`} aria-pressed={layer.locked} className="system-workflow__layer-lock" disabled={authoringLocked} onClick={() => { controller.toggleLock(layer); setRemoveCandidateId(null); }} title={layer.locked ? 'Unlock placement' : 'Lock placement'} type="button"><Lock size={13} /></button>
+          <button aria-label={`Remove ${title} from Grid`} className="system-workflow__layer-remove" disabled={authoringLocked || layer.locked} onClick={() => setRemoveCandidateId(layer.id)} title="Remove from Grid" type="button"><Trash2 size={14} /></button>
           {confirming && <div aria-label={removingSelectedGroup ? 'Remove selected placements from Grid' : `Remove ${title} from Grid`} className="system-workflow__remove-confirm" role="alertdialog"><img alt="" src={sourceFor(asset)} /><span>{removingSelectedGroup ? `Remove ${selected.length} selected?` : 'Remove from Grid?'}</span><button onClick={() => setRemoveCandidateId(null)} type="button">Cancel</button><button onClick={() => { if (removingSelectedGroup) { removeSelection(); return; } const committed = controller.run((session) => session.removePlacement({ gridId: grid.id, placementId: layer.id, expectedPlacement: layer })); if (committed !== false) controller.replaceSelection(controller.selectedPlacementIds.filter((id) => id !== layer.id)); setRemoveCandidateId(null); }} type="button">Remove</button></div>}
         </div>;
       })}</div>

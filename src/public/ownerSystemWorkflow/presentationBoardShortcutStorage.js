@@ -16,9 +16,9 @@ const boundedNumber = (value, minimum, maximum, fallback) => {
 
 export function normalizePresentationBoardShortcutIconPresentation(value) {
   return {
-    labelSize: boundedNumber(value?.labelSize, 7, 12, 8),
-    offsetX: boundedNumber(value?.offsetX, -24, 24, 0),
-    offsetY: boundedNumber(value?.offsetY, -24, 24, 0),
+    labelSize: boundedNumber(value?.labelSize, 7, 20, 8),
+    offsetX: boundedNumber(value?.offsetX, -150, 150, 0),
+    offsetY: boundedNumber(value?.offsetY, -150, 150, 0),
     scale: boundedNumber(value?.scale, .75, 3, 1),
     size: boundedNumber(value?.size, 40, 150, 60),
   };

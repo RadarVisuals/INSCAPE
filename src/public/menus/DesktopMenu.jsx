@@ -2,7 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { clampMenuPosition } from './contextMenuModel.js';
 
 const PANEL_WIDTH = 224;
-const ROW_HEIGHT = 27;
+const ROW_HEIGHT = 43;
+const SYSTEM_WORKFLOW_PANEL_WIDTH = 196;
+const SYSTEM_WORKFLOW_ROW_HEIGHT = 38;
 
 export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = null, onCommand, onClose, returnFocus, className = '', panelClassName = '', getSubmenuCommands, onPreviewCommand, systemWorkflowOverlay = false }) {
   const ref = useRef(null);
@@ -44,11 +46,13 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
     const openIndex = panelCommands.findIndex((command) => command.id === openId);
     const openCommand = openIndex >= 0 ? panelCommands[openIndex] : null;
     const submenu = openCommand ? submenuFor(openCommand) : [];
-    const opensLeft = position.x + PANEL_WIDTH * (depth + 2) > window.innerWidth - 8;
-    const desiredChildTop = panelViewportTop + 4 + openIndex * ROW_HEIGHT;
-    const childHeight = submenu.length * ROW_HEIGHT + 8;
+    const panelWidth = systemWorkflowOverlay ? SYSTEM_WORKFLOW_PANEL_WIDTH : PANEL_WIDTH;
+    const rowHeight = systemWorkflowOverlay ? SYSTEM_WORKFLOW_ROW_HEIGHT : ROW_HEIGHT;
+    const opensLeft = position.x + panelWidth * (depth + 2) > window.innerWidth - 8;
+    const desiredChildTop = panelViewportTop + openIndex * rowHeight;
+    const childHeight = submenu.length * rowHeight + 2;
     const childViewportTop = Math.max(8, Math.min(desiredChildTop, window.innerHeight - childHeight - 8));
-    const childTop = childViewportTop - panelViewportTop;
+    const childTop = childViewportTop - panelViewportTop - 1;
     return <>
       {panelCommands.map((command) => {
         const hasSubmenu = submenuFor(command).length > 0;
@@ -57,10 +61,12 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
         const mixed = command.mixed === true;
         const displayLabel = (legacySelected ? command.label.slice(2) : command.label).replace(/\s*>$/, '');
         return <button key={command.id} type="button" role={command.checkable ? 'menuitemcheckbox' : 'menuitem'} disabled={command.disabled} data-submenu={hasSubmenu || undefined} data-selected={selected || undefined} data-mixed={mixed || undefined} aria-checked={command.checkable ? mixed ? 'mixed' : selected : undefined} aria-haspopup={hasSubmenu ? 'menu' : undefined} aria-expanded={hasSubmenu ? openId === command.id : undefined}
-          onPointerEnter={() => openSubmenu(depth, command)} onFocus={() => openSubmenu(depth, command, true)}
+          onPointerEnter={() => openSubmenu(depth, command)} onFocus={() => { if (depth > 0) openSubmenu(depth, command, true); }}
           onClick={() => { if (hasSubmenu) { openSubmenu(depth, command, true); return; } onPreviewCommand?.(null); onCommand(command.id); }}><i aria-hidden="true" /><span>{displayLabel}</span><b aria-hidden="true">{hasSubmenu ? '›' : mixed ? '−' : selected ? '·' : ''}</b></button>;
       })}
-      {submenu.length > 0 && <div className={`desktop-menu desktop-menu--flyout${panelClassName ? ` ${panelClassName}` : ''}`} role="menu" aria-label={`${openCommand.label} options`} style={{ position: 'absolute', top: childTop, left: opensLeft ? 'auto' : `calc(100% + 4px)`, right: opensLeft ? `calc(100% + 4px)` : 'auto' }}>
+      {submenu.length > 0 && <div className={`desktop-menu desktop-menu--flyout${panelClassName ? ` ${panelClassName}` : ''}`}
+        data-system-workflow-overlay={systemWorkflowOverlay || undefined} role="menu" aria-label={`${openCommand.label} options`}
+        style={{ position: 'absolute', top: childTop, left: opensLeft ? 'auto' : `calc(100% + 4px)`, right: opensLeft ? `calc(100% + 4px)` : 'auto' }}>
         {renderPanel(submenu, depth + 1, childViewportTop)}
       </div>}
     </>;
@@ -68,7 +74,7 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
   return <div ref={ref} className={`desktop-menu${getSubmenuCommands ? ' desktop-menu--cascade' : ''}${className ? ` ${className}` : ''}`}
     data-lattice-menu-surface={menuSurfaceId || undefined} data-menu-surface={menuSurfaceId || undefined}
     data-system-workflow-overlay={systemWorkflowOverlay || undefined}
-    role="menu" aria-label={label} style={{ left: position.x, top: position.y }} onKeyDown={onKeyDown} onPointerLeave={() => { window.clearTimeout(hoverTimerRef.current); onPreviewCommand?.(null); }}>
+    role="menu" aria-label={label} style={{ left: position.x, top: position.y }} onKeyDown={onKeyDown} onPointerLeave={() => { window.clearTimeout(hoverTimerRef.current); setOpenPath([]); onPreviewCommand?.(null); }}>
     {renderPanel(commands)}
   </div>;
 }

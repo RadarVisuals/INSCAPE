@@ -29,7 +29,9 @@ function selectedRecords(controller, grid, placement) {
   return selected.some(({ id }) => id === placement.id) ? selected : [placement];
 }
 
-export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMode = 'grid', canvasRef, canNavigateGrid = () => false, controller, cropResize = null, cropSession = null, disabled = false, onNavigateGrid, reducedMotion = false, snapStep = 1, viewScale = 1 }) {
+export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMode = 'grid', authoringDisabled = false,
+  canvasRef, canNavigateGrid = () => false, controller, cropResize = null, cropSession = null, disabled = false,
+  onNavigateGrid, reducedMotion = false, snapStep = 1, viewScale = 1 }) {
   const [previewById, setPreviewById] = useState(new Map());
   const [marquee, setMarquee] = useState(null);
   const [gridSwipe, setGridSwipe] = useState(null);
@@ -53,7 +55,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
   };
 
   const beginPlacementGesture = (event, placement, kind = 'move', corner = null) => {
-    if (disabled || placement.locked || event.button !== 0 || !grid) return;
+    if (disabled || authoringDisabled || placement.locked || event.button !== 0 || !grid) return;
     if (spacePressedRef.current) {
       beginCanvasSelection(event, { navigationOnly: true });
       return;
@@ -146,7 +148,8 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     setMarquee(null);
   };
   const beginCanvasSelection = (event, { navigationOnly = spacePressedRef.current } = {}) => {
-    if (disabled || event.button !== 0 || !grid || !navigationOnly && event.target !== event.currentTarget) return;
+    if (disabled || authoringDisabled && !navigationOnly || event.button !== 0 || !grid
+      || !navigationOnly && event.target !== event.currentTarget) return;
     event.preventDefault();
     if (navigationOnly) event.stopPropagation();
     const field = projectedField(canvasRef.current, snapStep, artboardMode);
@@ -251,6 +254,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
   };
 
   const nudgeSelection = (delta) => {
+    if (authoringDisabled) return false;
     const records = grid?.placements.filter(({ id, locked }) => controller.selectedPlacementIds.includes(id) && !locked) || [];
     if (!records.length) return false;
     if (records.length === 1) {
@@ -266,6 +270,11 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     clearMarquee();
     globalThis.clearTimeout?.(gridSwipeTimerRef.current);
   }, []);
+  useEffect(() => {
+    if (!disabled && !authoringDisabled) return;
+    clearGesture();
+    clearMarquee();
+  }, [authoringDisabled, disabled]);
   useEffect(() => {
     const editable = (event) => /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable;
     const keydown = (event) => {

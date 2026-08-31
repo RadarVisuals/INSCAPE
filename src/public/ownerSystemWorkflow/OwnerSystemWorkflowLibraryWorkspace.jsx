@@ -26,7 +26,7 @@ function projectDropPreview(destination, field) {
   return projectLatticePixelRectangle(destination, field);
 }
 
-export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, controller, data, menuSurface, onClose, phase,
+export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, controller, data, menuSurface, onClose, phase,
   resolveAssetDimensions }) {
   const workspace = useBrowserWorkspace(data, ownerLibraryPreviewRecords, libraryPreferences);
   const resolveDimensions = resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions;
@@ -38,6 +38,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, 
     libraryPreferences.sidebarWidth = workspace.sidebarWidth;
   }, [workspace.assetSize, workspace.hideLabels, workspace.sidebarWidth]);
   const place = async (asset, destination = null, resolvedDimensions = null) => {
+    if (authoringLocked) return false;
     const dimensions = resolvedDimensions || await resolveDimensions(asset);
     if (!dimensions) return false;
     return controller.run((session) => session.placeAsset({
@@ -60,7 +61,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ categoryCommands, 
   };
   const beginAssetDrag = (event, asset, workspaceState, options = {}) => {
     const id = asset?.stableAssetId || asset?.id;
-    if (event.button !== 0 || !asset.placeable || !workspaceState?.isAssetRenderable(id)) return;
+    if (authoringLocked || event.button !== 0 || !asset.placeable || !workspaceState?.isAssetRenderable(id)) return;
     const origin = { x: event.clientX, y: event.clientY };
     const active = { asset, dimensions: ownerSystemWorkflowAssetDimensions(asset), lastPointer: null,
       pointerId: event.pointerId, moved: false, source: event.currentTarget };

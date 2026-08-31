@@ -20,27 +20,46 @@ rewrite, schema migration, publication, upload, deployment, or wallet action.
 INSCAPE must separate the creation environment from the created result:
 
 1. **INSCAPE Workbench** — the application shell and experimental workspace.
-2. **Presentation Board** — a bounded, movable object on the Workbench.
-3. **Stage** — the clipped canonical visual output inside the Board.
+2. **Display Module** — a bounded, movable object on the Workbench.
+3. **Stage** — the clipped canonical visual output inside the Display Module.
 4. **Grid** — a scene or composition rendered inside the Stage.
 5. **Assets and authored primitives** — content placed inside a Grid.
 
 The Workbench is not the published artwork. Editor navigation, Library,
 Activity, Preview, Publish, settings, and future creative modules stay outside
-the published Stage.
+the published Stage. Workbench background, alignment-grid visibility and
+colour, and shortcut snapping are local editor preferences. They must not enter
+the public profile document or IPFS publication snapshot.
 
-## Presentation Board
+## Display Module
+
+`Display Module` is the product-facing term. Existing `PresentationBoard` and
+`presentationBoard*` implementation identifiers and persistence keys remain
+internal compatibility names during this migration; do not broadly rename them.
 
 - Begin with one canonical 16:9 Stage. Do not introduce arbitrary ratios during
   the first migration.
 - Content outside the Stage boundary is clipped and is not published.
-- The Board may move freely on the Workbench without changing published
+- The Display Module may move freely on the Workbench without changing published
   composition coordinates.
 - Pan and zoom are camera/view state. They never resize assets, mutate the Grid,
   or alter published geometry.
 - Support a fitted overview and sufficiently strong zoom for precise editing.
-- Do not implement the Board as an HTML iframe. Use one application context with
+- Do not implement the Display Module as an HTML iframe. Use one application context with
   an isolated, clipped viewport and camera transform.
+- The Display Module bar owns the authoring instruments in the order
+  **Lock, Metadata**, followed by its window controls. Metadata is a singular
+  module that may be attached, detached, or closed, but must never be mounted
+  in two places at once.
+- Layers remains the existing global Workbench dock window. It is not attached
+  to the Display Module and has no Display Module sidecar lifecycle.
+- A detached Metadata module opens at the upper-right of the Workbench and
+  remains viewport-bounded. Attached Metadata retains its established inner
+  and right-side projections.
+- The composition Lock is local, profile-scoped Workbench state. While active,
+  it prevents placement, movement, resize, crop, transform, reorder, removal,
+  and other authored-geometry mutations without blocking selection or artwork
+  inspection. It is never part of the published document.
 
 ## Identity and authored personas
 
@@ -77,7 +96,7 @@ the published Stage.
 
 - Owner editing and public inspection must not silently replace or rearrange
   the application dock.
-- The canonical Board should make a separate full-application Preview mode
+- The canonical Display Module should make a separate full-application Preview mode
   unnecessary. A future public-inspection state may hide authoring controls and
   private content without changing route or workspace context.
 - Keep public/private projection explicit. Only public canonical content may
@@ -115,7 +134,7 @@ into generic dashboard, marketplace, or AI-generated interface styling.
 - Retain the established carbon, graphite, slate, ash, mist, and paper surface
   family. Artwork and authored Grid appearance may vary; application chrome
   remains coherent.
-- Shadows communicate a genuinely elevated Board, window, menu, or modal. They
+- Shadows communicate a genuinely elevated Display Module, window, menu, or modal. They
   remain restrained and must not turn every bounded region into a floating card.
 - Spacing follows structural rails, cells, borders, and neighbouring production
   components. Avoid large empty padding used only to make a UI appear modern.
@@ -136,9 +155,12 @@ into generic dashboard, marketplace, or AI-generated interface styling.
 
 - A visible Grid must correspond to real layout, snapping, measurement, or
   navigation geometry. Never add a Grid as detached background decoration.
-- Headers, rails, cards, Boards, windows, and controls align to the same active
+- The Workbench alignment Grid may be hidden independently from shortcut
+  snapping. The Display Module Grid and its authored snapping remain separate,
+  publishable Stage appearance and geometry.
+- Headers, rails, cards, Display Modules, windows, and controls align to the same active
   structural coordinates wherever their relationship is visible.
-- The Presentation Board boundary must remain visually unmistakable at every
+- The Display Module boundary must remain visually unmistakable at every
   zoom level and viewport size.
 - Zoom changes inspection scale, not document geometry. Visual chrome must not
   accidentally scale as authored Stage content.

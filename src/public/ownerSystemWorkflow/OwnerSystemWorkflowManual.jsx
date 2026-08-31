@@ -8,7 +8,7 @@ const chapters = Object.freeze([
       ['Grids', 'Each Grid is a separate profile space. Create, rename, reorder, hide or reveal them from Grids in the dock. Drag across the canvas to move between neighbouring Grids.'],
       ['Arrange', 'Select an item to move or resize it. Shift-click or marquee-select to work with several placements. Crop changes the visible area without distorting the source artwork.'],
       ['Layers', 'Open Layers from the dock to reorder, duplicate, lock or remove placements. Locked placements remain visible while the canvas stays available for selection around them.'],
-      ['Appearance', 'Settings controls Grid guides, snapping, workspace colour and interface colour. Guide spacing is also the snapping interval used while authoring.'],
+      ['Appearance', 'Settings separates local Workbench background, grid and shortcut snapping from the Display Module appearance included when you publish. Display Module guide spacing is also the snapping interval used while authoring.'],
     ],
   },
   {

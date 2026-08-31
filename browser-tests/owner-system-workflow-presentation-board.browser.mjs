@@ -214,8 +214,8 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     assert.ok(after.x > before.x + 50 && after.y > before.y + 35, JSON.stringify({ before, after }));
 
     assert.equal(await page.getByRole('complementary', { name: 'Metadata module' }).count(), 0);
-    await page.getByRole('button', { name: 'Open Metadata below Board bar' }).click();
-    const dropdown = page.getByRole('complementary', { name: 'Metadata below Presentation Board bar' });
+    await page.getByRole('button', { name: 'Open Metadata below Display Module bar' }).click();
+    const dropdown = page.getByRole('complementary', { name: 'Metadata below Display Module bar' });
     await dropdown.waitFor();
     await waitForMetadataMotion();
     const dropdownAlignment = await page.evaluate(() => {
@@ -225,9 +225,9 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     });
     assert.ok(closeEnough(dropdownAlignment.boardRight, dropdownAlignment.panelRight));
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-metadata-down-wide.png') });
-    await page.getByRole('button', { name: 'Open Metadata beside Presentation Board' }).click();
+    await page.getByRole('button', { name: 'Open Metadata beside Display Module' }).click();
     await dropdown.waitFor({ state: 'detached' });
-    const side = page.getByRole('complementary', { name: 'Metadata beside Presentation Board' });
+    const side = page.getByRole('complementary', { name: 'Metadata beside Display Module' });
     await side.waitFor();
     await waitForMetadataMotion();
     const sideAlignment = await page.evaluate(() => {
@@ -298,7 +298,7 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     assert.ok(sideAlignment.buttonCenterOffsets.every((offset) => Math.abs(offset) <= 0.5), JSON.stringify(sideAlignment));
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-metadata-side-wide.png') });
 
-    const sidecarResizeHandle = await page.getByRole('button', { name: 'Resize Presentation Board from se' }).boundingBox();
+    const sidecarResizeHandle = await page.getByRole('button', { name: 'Resize Display Module from se' }).boundingBox();
     await page.mouse.move(sidecarResizeHandle.x + sidecarResizeHandle.width / 2,
       sidecarResizeHandle.y + sidecarResizeHandle.height / 2);
     await page.mouse.down();
@@ -346,7 +346,7 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-inspect-metadata-side-narrow.png') });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'wide');
-    await page.getByRole('button', { name: 'Open Metadata below Board bar' }).click();
+    await page.getByRole('button', { name: 'Open Metadata below Display Module bar' }).click();
     await side.waitFor({ state: 'detached' });
     await dropdown.waitFor();
     await waitForMetadataMotion();
@@ -355,11 +355,11 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     await page.getByRole('button', { name: 'Close artwork viewer' }).click();
     await page.locator('[data-lattice-focus-viewer]').waitFor({ state: 'detached' });
 
-    await page.getByRole('button', { name: 'Open Metadata beside Presentation Board' }).click();
+    await page.getByRole('button', { name: 'Open Metadata beside Display Module' }).click();
     await dropdown.waitFor({ state: 'detached' });
     await side.waitFor();
     await waitForMetadataMotion();
-    await page.getByRole('button', { name: 'Maximize Presentation Board' }).click();
+    await page.getByRole('button', { name: 'Maximize Display Module' }).click();
     await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.boardPhase === 'maximized');
     const maximizedSide = await page.evaluate(() => {
       const boardRect = document.querySelector('.system-workflow__presentation-board').getBoundingClientRect();
@@ -413,24 +413,24 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     await page.getByRole('button', { name: 'Close Metadata' }).click();
     await metadata.waitFor({ state: 'detached' });
     await page.locator('[data-presentation-workbench]').click({ button: 'right', position: { x: 50, y: 80 } });
-    await page.getByRole('menuitem', { name: 'ADD' }).focus();
+    await page.getByRole('menuitem', { name: 'ADD' }).hover();
     await page.getByRole('menuitem', { name: 'METADATA MODULE' }).click();
     const readdedMetadata = page.getByRole('complementary', { name: 'Metadata module' });
     await readdedMetadata.waitFor();
     assert.equal(await page.locator('.system-workflow').getAttribute('data-metadata-mode'), 'detached');
     assert.equal(await page.locator('.system-workflow__metadata-module-content').count(), 1);
-    await page.getByRole('button', { name: 'Dock Metadata to Presentation Board' }).click();
+    await page.getByRole('button', { name: 'Dock Metadata to Display Module' }).click();
     await readdedMetadata.waitFor({ state: 'detached' });
     assert.equal(await page.locator('.system-workflow').getAttribute('data-metadata-mode'), 'docked-closed');
-    await page.getByRole('button', { name: 'Open Metadata below Board bar' }).click();
+    await page.getByRole('button', { name: 'Open Metadata below Display Module bar' }).click();
     await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.metadataMode === 'inner');
     assert.equal(await page.locator('.system-workflow__metadata-module-content').count(), 1);
-    await page.getByRole('button', { name: 'Close Metadata below Board bar' }).dblclick({ delay: 10 });
+    await page.getByRole('button', { name: 'Close Metadata below Display Module bar' }).dblclick({ delay: 10 });
     await page.waitForTimeout(450);
     assert.equal(await page.locator('.system-workflow').getAttribute('data-metadata-mode'), 'inner',
       'two fast toggles are both reduced and return Metadata to its starting mode');
     await page.evaluate(() => {
-      for (const label of ['Open Metadata beside Presentation Board', 'Close Metadata below Board bar',
+      for (const label of ['Open Metadata beside Display Module', 'Close Metadata below Display Module bar',
         'Undock Metadata', 'Close Metadata']) {
         document.querySelector(`button[aria-label="${label}"]`)?.click();
       }
@@ -575,7 +575,7 @@ test.skip('legacy inspection-to-immediate-restore contract replaced by persisten
   }
 });
 
-test('Presentation Board resizes from its corners and preserves exact maximize, restore, and shortcut state', { timeout: 60_000 }, async () => {
+test('Display Module resizes from its corners and preserves exact maximize, restore, and shortcut state', { timeout: 60_000 }, async () => {
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -609,7 +609,7 @@ test('Presentation Board resizes from its corners and preserves exact maximize, 
       const rectangle = node.getBoundingClientRect();
       return { height: rectangle.height, left: rectangle.left, top: rectangle.top, width: rectangle.width };
     }));
-    const southEast = page.getByRole('button', { name: 'Resize Presentation Board from se' });
+    const southEast = page.getByRole('button', { name: 'Resize Display Module from se' });
     const handle = await southEast.boundingBox();
     await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
     await page.mouse.down();
@@ -650,20 +650,20 @@ test('Presentation Board resizes from its corners and preserves exact maximize, 
     assert.ok(resized.width > initial.width + 300, JSON.stringify({ initial, resized }));
     assert.ok(closeEnough((resized.height - 38) / resized.width, 9 / 16, 0.003));
 
-    await page.getByRole('button', { name: 'Maximize Presentation Board' }).click();
+    await page.getByRole('button', { name: 'Maximize Display Module' }).click();
     await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.boardPhase === 'maximized');
     const maximized = await board.boundingBox();
     assert.ok(maximized.width > resized.width);
-    assert.equal(await page.getByRole('button', { name: 'Restore Presentation Board' }).count(), 1);
-    await page.getByRole('button', { name: 'Restore Presentation Board' }).click();
+    assert.equal(await page.getByRole('button', { name: 'Restore Display Module' }).count(), 1);
+    await page.getByRole('button', { name: 'Restore Display Module' }).click();
     await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.boardPhase === 'window');
     const restored = await board.boundingBox();
     assert.ok(closeEnough(restored.x, resized.x) && closeEnough(restored.y, resized.y), JSON.stringify({ resized, restored }));
     assert.ok(closeEnough(restored.width, resized.width) && closeEnough(restored.height, resized.height), JSON.stringify({ resized, restored }));
 
-    await page.getByRole('button', { name: 'Close Presentation Board to shortcut' }).click();
+    await page.getByRole('button', { name: 'Close Display Module to shortcut' }).click();
     await board.waitFor({ state: 'detached' });
-    const shortcut = page.getByRole('button', { name: 'Open PRESENTATION BOARD' });
+    const shortcut = page.getByRole('button', { name: 'Open DISPLAY MODULE' });
     await shortcut.waitFor();
     await shortcut.dblclick();
     await board.waitFor();
@@ -712,7 +712,7 @@ test('artwork-only view stays inside the Board without changing its current size
     assert.equal(await placement.evaluate((node) => getComputedStyle(node).filter), 'none');
     await page.locator('[data-lattice-focus-viewer]').waitFor({ state: 'detached' });
 
-    const southEast = page.getByRole('button', { name: 'Resize Presentation Board from se' });
+    const southEast = page.getByRole('button', { name: 'Resize Display Module from se' });
     const resizeHandle = await southEast.boundingBox();
     await page.mouse.move(resizeHandle.x + resizeHandle.width / 2, resizeHandle.y + resizeHandle.height / 2);
     await page.mouse.down();
@@ -776,22 +776,34 @@ test('Workbench ADD commands follow canonical Board and Metadata lifecycle state
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(URL, { waitUntil: 'networkidle' });
     const workbench = page.locator('[data-presentation-workbench]');
-    const board = page.getByRole('article', { name: 'Presentation Board' });
+    const board = page.getByRole('article', { name: 'Display Module' });
     assert.equal(await page.locator('.system-workflow').getAttribute('data-board-instance-state'), 'window');
     await workbench.click({ button: 'right', position: { x: 920, y: 540 } });
-    await page.getByRole('menuitem', { name: 'ADD' }).focus();
-    assert.equal(await page.getByRole('menuitem', { name: 'PRESENTATION BOARD' }).isDisabled(), true);
+    const workbenchMenu = page.getByRole('menu', { name: 'Workbench commands' });
+    const activeMenuSurface = await page.locator('.system-workflow').getAttribute('data-menu-surface');
+    assert.equal(await workbenchMenu.getAttribute('data-menu-surface'), activeMenuSurface);
+    assert.equal(await page.getByRole('menu', { name: 'ADD options' }).count(), 0,
+      'the ADD flyout stays closed until pointer intent');
+    await page.getByRole('menuitem', { name: 'ADD' }).hover();
+    const addFlyout = page.getByRole('menu', { name: 'ADD options' });
+    await addFlyout.waitFor();
+    const [workbenchMenuBox, addFlyoutBox] = await Promise.all([workbenchMenu.boundingBox(), addFlyout.boundingBox()]);
+    assert.ok(closeEnough(workbenchMenuBox.y, addFlyoutBox.y), JSON.stringify({ addFlyoutBox, workbenchMenuBox }));
+    if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'display-module-add-menu-wide.png') });
+    assert.equal(await page.getByRole('menuitem', { name: 'DISPLAY MODULE' }).isDisabled(), true);
     assert.equal(await page.getByRole('menuitem', { name: 'METADATA MODULE' }).isDisabled(), true);
+    await page.mouse.move(workbenchMenuBox.x - 12, workbenchMenuBox.y - 12);
+    await addFlyout.waitFor({ state: 'detached' });
     await page.keyboard.press('Escape');
 
-    await page.getByRole('button', { name: 'Close Presentation Board to shortcut' }).click();
+    await page.getByRole('button', { name: 'Close Display Module to shortcut' }).click();
     await board.waitFor({ state: 'detached' });
-    const shortcut = page.getByRole('button', { name: 'Open PRESENTATION BOARD' });
+    const shortcut = page.getByRole('button', { name: 'Open DISPLAY MODULE' });
     await shortcut.waitFor();
     assert.equal(await page.locator('.system-workflow').getAttribute('data-board-instance-state'), 'minimized');
     await workbench.click({ button: 'right', position: { x: 920, y: 540 } });
-    await page.getByRole('menuitem', { name: 'ADD' }).focus();
-    assert.equal(await page.getByRole('menuitem', { name: 'PRESENTATION BOARD' }).isDisabled(), true);
+    await page.getByRole('menuitem', { name: 'ADD' }).hover();
+    assert.equal(await page.getByRole('menuitem', { name: 'DISPLAY MODULE' }).isDisabled(), true);
     await page.keyboard.press('Escape');
     await shortcut.dblclick();
     await board.waitFor();
@@ -800,9 +812,9 @@ test('Workbench ADD commands follow canonical Board and Metadata lifecycle state
     await page.getByRole('button', { name: 'Close Metadata' }).click();
     assert.equal(await page.locator('.system-workflow').getAttribute('data-metadata-mode'), 'closed');
     await workbench.click({ button: 'right', position: { x: 920, y: 540 } });
-    await page.getByRole('menuitem', { name: 'ADD' }).focus();
+    await page.getByRole('menuitem', { name: 'ADD' }).hover();
     assert.equal(await page.getByRole('menuitem', { name: 'METADATA MODULE' }).isDisabled(), false);
-    assert.equal(await page.getByRole('menuitem', { name: 'PRESENTATION BOARD' }).isDisabled(), true);
+    assert.equal(await page.getByRole('menuitem', { name: 'DISPLAY MODULE' }).isDisabled(), true);
     await page.getByRole('menuitem', { name: 'METADATA MODULE' }).click();
     assert.equal(await page.getByRole('complementary', { name: 'Metadata module' }).count(), 1);
     assert.equal(await page.locator('.system-workflow__metadata-module-content').count(), 1);
@@ -817,7 +829,7 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     if (SCREENSHOT_DIR) await mkdir(SCREENSHOT_DIR, { recursive: true });
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(URL, { waitUntil: 'networkidle' });
-    await page.getByRole('button', { name: 'Close Presentation Board to shortcut' }).click();
+    await page.getByRole('button', { name: 'Close Display Module to shortcut' }).click();
     let shortcut = page.locator('.system-workflow__desktop-shortcut');
     const before = await shortcut.boundingBox();
     await page.mouse.move(before.x + before.width / 2, before.y + 10);
@@ -829,8 +841,12 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     assert.equal(moved.y % 24, 0);
 
     await shortcut.click({ button: 'right' });
+    const shortcutMenu = page.getByRole('menu', { name: 'Display Module shortcut commands' });
+    assert.equal(await shortcutMenu.getAttribute('data-menu-surface'),
+      await page.locator('.system-workflow').getAttribute('data-menu-surface'));
+    if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'display-module-shortcut-menu-wide.png') });
     await page.getByRole('menuitem', { name: 'RENAME' }).click();
-    const input = page.getByRole('textbox', { name: 'Presentation Board shortcut name' });
+    const input = page.getByRole('textbox', { name: 'Display Module shortcut name' });
     await input.fill('CURATED NFTs');
     await input.press('Enter');
     shortcut = page.getByRole('button', { name: 'Open CURATED NFTs' });
@@ -866,14 +882,19 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     await page.getByRole('button', { name: 'Close workspace' }).click();
     await shortcut.click({ button: 'right' });
     await page.getByRole('menuitem', { name: 'EDIT ICON' }).click();
-    const iconEditor = page.getByRole('dialog', { name: 'Edit Presentation Board shortcut icon' });
+    const iconEditor = page.getByRole('dialog', { name: 'Edit Display Module shortcut icon' });
     await iconEditor.waitFor();
     await iconEditor.getByRole('slider', { name: 'Shortcut icon size' }).fill('140');
     await iconEditor.getByRole('slider', { name: 'Shortcut icon zoom' }).fill('2');
     await iconEditor.getByRole('slider', { name: 'Shortcut icon horizontal position' }).fill('7');
     await iconEditor.getByRole('slider', { name: 'Shortcut icon vertical position' }).fill('-5');
     await iconEditor.getByRole('slider', { name: 'Shortcut label size' }).fill('11');
+    assert.equal(await iconEditor.getByRole('slider', { name: 'Shortcut label size' }).getAttribute('max'), '20');
+    assert.equal(await iconEditor.getByRole('slider', { name: 'Shortcut icon horizontal position' }).getAttribute('max'), '150');
+    assert.equal(await iconEditor.getByRole('slider', { name: 'Shortcut icon vertical position' }).getAttribute('min'), '-150');
     assert.match(await customIcon.locator('img').first().getAttribute('style'), /translate\(7px, -5px\) scale\(2\)/);
+    assert.match(await iconEditor.locator('.system-workflow__shortcut-icon-preview img').first().getAttribute('style'),
+      /translate\(4\.2px, -3px\) scale\(2\)/);
     assert.deepEqual(await customIcon.evaluate((node) => {
       const rectangle = node.getBoundingClientRect();
       return { height: rectangle.height, width: rectangle.width };
@@ -886,7 +907,7 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
         && stored.iconPresentation.labelSize === 11
         && stored.iconPresentation.offsetX === 7 && stored.iconPresentation.offsetY === -5;
     });
-    await iconEditor.getByRole('button', { name: 'DONE' }).click();
+    await iconEditor.getByRole('button', { name: 'Done' }).click();
     await page.reload({ waitUntil: 'networkidle' });
     shortcut = page.getByRole('button', { name: 'Open CURATED NFTs' });
     await shortcut.waitFor();
@@ -895,16 +916,16 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     assert.equal((await shortcut.locator('.system-workflow__desktop-shortcut-icon').boundingBox()).width, 140);
     const shortcutPositionBeforeOpen = await shortcut.boundingBox();
     await shortcut.dblclick();
-    const board = page.getByRole('article', { name: 'Presentation Board' });
+    const board = page.getByRole('article', { name: 'Display Module' });
     await board.waitFor();
     assert.equal(await page.locator('.system-workflow__desktop-shortcut').count(), 1,
-      'the desktop shortcut remains visible while its Presentation Board is open');
+      'the desktop shortcut remains visible while its Display Module is open');
     const boardHeader = await board.locator('.system-workflow__identity-strip').boundingBox();
     await page.mouse.move(boardHeader.x + 90, boardHeader.y + boardHeader.height / 2);
     await page.mouse.down();
     await page.mouse.move(boardHeader.x + 190, boardHeader.y + boardHeader.height / 2 + 80, { steps: 4 });
     await page.mouse.up();
-    await page.getByRole('button', { name: 'Close Presentation Board to shortcut' }).click();
+    await page.getByRole('button', { name: 'Close Display Module to shortcut' }).click();
     shortcut = page.getByRole('button', { name: 'Open CURATED NFTs' });
     await shortcut.waitFor();
     const shortcutPositionAfterClose = await shortcut.boundingBox();
@@ -914,7 +935,7 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     await page.setViewportSize({ width: 390, height: 720 });
     await shortcut.click({ button: 'right' });
     await page.getByRole('menuitem', { name: 'EDIT ICON' }).click();
-    const narrowEditor = page.getByRole('dialog', { name: 'Edit Presentation Board shortcut icon' });
+    const narrowEditor = page.getByRole('dialog', { name: 'Edit Display Module shortcut icon' });
     await narrowEditor.waitFor();
     const narrowEditorBox = await narrowEditor.boundingBox();
     const narrowEditorGeometry = await narrowEditor.evaluate((node) => ({
@@ -930,6 +951,142 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     assert.ok(narrowEditorBox.x >= 8 && narrowEditorBox.x + narrowEditorBox.width <= 382,
       JSON.stringify({ box: narrowEditorBox, ...narrowEditorGeometry }));
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-shortcut-icon-editor-narrow.png') });
+  } finally {
+    await browser.close();
+  }
+});
+
+test('Workbench appearance stays local and independent from the published Display Module appearance', { timeout: 60_000 }, async () => {
+  const browser = await chromium.launch({ executablePath: EDGE, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    const pageErrors = [];
+    page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    await page.evaluate(() => {
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith('inscape:workbench:preferences:')) localStorage.removeItem(key);
+      }
+    });
+    await page.reload({ waitUntil: 'networkidle' });
+
+    const root = page.locator('.system-workflow');
+    const stage = page.locator('[data-presentation-stage]');
+    const originalStageSurface = await stage.getAttribute('data-surface');
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const settings = page.getByRole('dialog', { name: 'Settings' });
+    await settings.waitFor();
+
+    await settings.getByRole('button', { name: /^Workbench background:/ }).click();
+    await page.getByRole('option', { name: 'Carbon' }).click();
+    assert.equal(await root.getAttribute('data-surface'), 'carbon');
+    assert.equal(await stage.getAttribute('data-surface'), originalStageSurface);
+
+    await settings.getByLabel('Workbench grid color').fill('#ff00ff');
+    await settings.getByRole('button', { name: /^Workbench grid display:/ }).click();
+    await page.getByRole('option', { name: 'Dots' }).click();
+    const workbenchGrid = page.locator('[data-presentation-workbench] > .lattice-pixel-grid');
+    await workbenchGrid.waitFor();
+    assert.equal(await workbenchGrid.locator('path').getAttribute('stroke'), '#ff00ff');
+
+    await settings.getByLabel('Shortcut snapping').uncheck();
+    await settings.getByRole('button', { name: /^Workbench grid display:/ }).click();
+    await page.getByRole('option', { name: 'None' }).click();
+    assert.equal(await workbenchGrid.count(), 0);
+    const stored = await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((candidate) => candidate.startsWith('inscape:workbench:preferences:'));
+      return key ? JSON.parse(localStorage.getItem(key)) : null;
+    });
+    assert.deepEqual(stored, { compositionLocked: false, gridColor: '#ff00ff', gridMode: 'NONE', shortcutSnap: false, surfaceId: 'carbon' });
+
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal(await root.getAttribute('data-surface'), 'carbon');
+    assert.equal(await stage.getAttribute('data-surface'), originalStageSurface);
+    assert.equal(await page.locator('[data-presentation-workbench] > .lattice-pixel-grid').count(), 0);
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const reloadedSettings = page.getByRole('dialog', { name: 'Settings' });
+    assert.equal(await reloadedSettings.getByLabel('Shortcut snapping').isChecked(), false);
+    assert.deepEqual(pageErrors, []);
+
+    if (SCREENSHOT_DIR) {
+      await page.waitForFunction(() => getComputedStyle(document.querySelector('aside[aria-label="Settings"]')).opacity === '1');
+      await mkdir(SCREENSHOT_DIR, { recursive: true });
+      await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'workbench-settings-local-wide.png') });
+    }
+    await page.setViewportSize({ width: 390, height: 720 });
+    if (SCREENSHOT_DIR) {
+      await page.waitForTimeout(100);
+      await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'workbench-settings-local-narrow.png') });
+    }
+  } finally {
+    await browser.close();
+  }
+});
+
+test('Display Module composition Lock blocks authored geometry without absorbing Layers', { timeout: 60_000 }, async () => {
+  const browser = await chromium.launch({ executablePath: EDGE, headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    const pageErrors = [];
+    page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
+    await page.goto(URL, { waitUntil: 'networkidle' });
+
+    const board = page.locator('.system-workflow__presentation-board');
+    const toolbarOrder = await board.locator('.system-workflow__board-title > span > strong').allTextContents();
+    assert.deepEqual(toolbarOrder.slice(0, 2), ['LOCK', 'METADATA']);
+    assert.equal(await board.getByRole('button', { name: 'Layers' }).count(), 0);
+    const visibleLayersTriggers = await page.getByRole('button', { name: 'Layers' }).evaluateAll((buttons) =>
+      buttons.filter((button) => button.getClientRects().length > 0).length);
+    assert.ok(visibleLayersTriggers >= 1);
+    assert.equal(await page.locator('.system-workflow__layers-attached-host').count(), 0);
+
+    const gridsTrigger = page.getByRole('button', { name: /^Grids$/i });
+    await gridsTrigger.click();
+    const grids = page.locator('.system-workflow__grid-switcher');
+    await grids.waitFor();
+    await grids.getByRole('button', { name: 'New Grid' }).click();
+    const regularGridOptions = grids.locator('.system-workflow__grid-row:not([data-world-cover]) .system-workflow__grid-activate');
+    await regularGridOptions.first().click();
+    await page.waitForFunction(() => !document.documentElement.dataset.systemWorkflowGridDirection);
+    await gridsTrigger.click();
+    await grids.waitFor({ state: 'detached' });
+
+    const placement = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
+    await placement.click();
+    const before = await placement.boundingBox();
+    await page.getByRole('button', { name: 'Lock Display Module composition' }).click();
+    assert.equal(await board.getAttribute('data-authoring-locked'), 'true');
+    assert.equal(await page.getByRole('button', { name: 'Resize selection from se' }).count(), 0);
+    assert.equal(await placement.getAttribute('aria-pressed'), 'true');
+    assert.notEqual(await placement.locator('.system-workflow__progressive-media').evaluate((node) => getComputedStyle(node).filter), 'none');
+    await placement.focus();
+    await placement.press('ArrowRight');
+    await placement.press('Delete');
+    const after = await placement.boundingBox();
+    assert.deepEqual(after, before);
+    assert.equal(await placement.count(), 1);
+
+    await placement.dblclick();
+    await page.locator('[data-lattice-focus-viewer]').waitFor();
+    await page.getByRole('button', { name: 'Close artwork viewer' }).click();
+    await page.locator('[data-lattice-focus-viewer]').waitFor({ state: 'detached' });
+
+    const stageContent = page.locator('[data-system-workflow-stage]');
+    const originalGridLabel = await stageContent.getAttribute('aria-label');
+    const canvas = page.locator('.system-workflow__canvas');
+    const canvasBox = await canvas.boundingBox();
+    await page.keyboard.down('Space');
+    await page.mouse.move(canvasBox.x + canvasBox.width * .7, canvasBox.y + canvasBox.height * .7);
+    await page.mouse.down();
+    await page.mouse.move(canvasBox.x + canvasBox.width * .7 - 160, canvasBox.y + canvasBox.height * .7, { steps: 6 });
+    assert.equal(await canvas.getAttribute('data-swiping'), 'true');
+    await page.mouse.up();
+    await page.keyboard.up('Space');
+    await page.waitForFunction((label) => document.querySelector('[data-system-workflow-stage]')?.getAttribute('aria-label') !== label,
+      originalGridLabel);
+    await page.getByRole('button', { name: 'Unlock Display Module composition' }).click();
+    assert.equal(await board.getAttribute('data-authoring-locked'), null);
+    assert.deepEqual(pageErrors, []);
   } finally {
     await browser.close();
   }

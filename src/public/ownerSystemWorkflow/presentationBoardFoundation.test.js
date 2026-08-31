@@ -4,7 +4,7 @@ import test from 'node:test';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-test('owner Presentation Board reuses the existing interactive canvas inside one clipped Stage', () => {
+test('owner Display Module reuses the existing interactive canvas inside one clipped Stage', () => {
   const runtime = read('./OwnerSystemWorkflowRuntime.jsx');
   const canonicalExport = read('./PresentationBoard.jsx');
   const board = read('./PresentationBoardDefinitive.jsx');
@@ -24,13 +24,15 @@ test('owner Presentation Board reuses the existing interactive canvas inside one
   assert.match(moduleState, /CLOSED: 'closed'[\s\S]*DETACHED: 'detached'[\s\S]*DOCKED_CLOSED: 'docked-closed'[\s\S]*INNER: 'inner'[\s\S]*SIDECAR: 'sidecar'/);
   assert.match(moduleState, /ABSENT: 'absent'[\s\S]*MINIMIZED: 'minimized'[\s\S]*WINDOW: 'window'/);
   assert.match(board, /data-presentation-workbench/);
-  assert.match(board, /data-presentation-stage/);
+  assert.match(board, /data-presentation-stage data-surface=\{displaySurface\}/);
+  assert.match(runtime, /data-surface=\{workbenchPreferences\.surfaceId\}/);
+  assert.match(runtime, /displaySurface=\{controller\.draft\?\.appearance\.surfaceId\}/);
   assert.match(board, /transform: liveScaleRendering \? `scale\(\$\{liveTransformScale\}\)` : undefined/);
   assert.match(board, /settledStageWidth = view \? Math\.ceil\(view\.fit\.stage\.width \* displayScale\) : 0/);
   assert.match(board, /boardScale: liveScaleRendering \? liveTransformScale : 1/);
   assert.doesNotMatch(board, /aria-label="Board zoom"|Board zoom percentage|system-workflow__board-zoom[^\n]*type="range"/);
-  assert.match(board, /aria-label=\{maximized \? 'Restore Presentation Board' : 'Maximize Presentation Board'\}/);
-  assert.match(board, /aria-label="Close Presentation Board to shortcut"/);
+  assert.match(board, /aria-label=\{maximized \? 'Restore Display Module' : 'Maximize Display Module'\}/);
+  assert.match(board, /aria-label="Close Display Module to shortcut"/);
   assert.match(board, /instanceState === PRESENTATION_BOARD_INSTANCE_STATE\.MINIMIZED/);
   assert.match(board, /instanceState === PRESENTATION_BOARD_INSTANCE_STATE\.WINDOW/);
   assert.doesNotMatch(board, /const \[open, setOpen\]/);
@@ -39,7 +41,7 @@ test('owner Presentation Board reuses the existing interactive canvas inside one
   assert.match(board, /onContextMenu=\{onContextMenu\}/);
   assert.match(board, /beginBoardDrag[\s\S]*setBoardPosition/);
   assert.match(runtime, /OwnerSystemWorkflowMetadataModule/);
-  assert.match(runtime, /label: 'ADD'[\s\S]*label: 'PRESENTATION BOARD'[\s\S]*label: 'METADATA MODULE'/);
+  assert.match(runtime, /label: 'ADD'[\s\S]*label: 'DISPLAY MODULE'[\s\S]*label: 'METADATA MODULE'/);
   assert.match(runtime, /useOwnerSystemWorkflowFocusViewer/);
   assert.match(runtime, /<OwnerSystemWorkflowFocusViewer/);
   assert.match(runtime, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer\) => <OwnerSystemWorkflowFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
@@ -51,9 +53,12 @@ test('owner Presentation Board reuses the existing interactive canvas inside one
   assert.match(board, /presentationBoardResponsiveMetrics/);
   assert.match(geometry, /trackWidth: 286/);
   assert.match(geometry, /gap: 8/);
-  assert.doesNotMatch(board, /OWNER/);
+  assert.doesNotMatch(board, />OWNER<|['"]OWNER['"]/);
   assert.match(board, /LatticePixelGrid/);
+  assert.match(board, /mode=\{workbenchGridMode\}/);
+  assert.match(board, /snap\(position\.left, shortcutSnap\)/);
   assert.match(board, /application\/x-inscape-asset/);
+  assert.match(board, /shortcutAsset \? <ProgressiveArtworkImage[^\n]+ : 'DM'/);
   assert.match(board, /RENAME/);
   assert.match(board, /metadataProjection === 'down'/);
   assert.match(board, /metadataProjection === 'side'/);
@@ -76,6 +81,9 @@ test('owner Presentation Board reuses the existing interactive canvas inside one
   assert.match(board, /aria-label="Shortcut icon zoom"/);
   assert.match(board, /aria-label="Shortcut icon size"[^>]*max="150"/);
   assert.match(board, /aria-label="Shortcut label size"/);
+  assert.match(board, /aria-label="Shortcut label size"[^>]*max="20"/);
+  assert.match(board, /shortcutIconPreviewStyle/);
+  assert.match(board, /menuSurfaceId=\{menuSurface\}/);
   assert.match(board, /iconPresentation: shortcutIconPresentation/);
   assert.match(board, /visible: shortcutVisible/);
   assert.match(styles, /system-workflow__metadata-projection\.is-side/);
@@ -96,7 +104,8 @@ test('owner Presentation Board reuses the existing interactive canvas inside one
   assert.match(styles, /\.system-workflow__board-inspection-host \{[^}]*border-radius: var\(--workflow-board-radius\);/s);
   assert.match(styles, /\.system-workflow__metadata-projection \{[^}]*border-radius: var\(--workflow-board-radius\);/s);
   assert.match(styles, /\.system-workflow__board-window-controls,[\s\S]*?\.system-workflow__metadata-dock-controls \{[^}]*height: 100%;[^}]*align-items: center;[^}]*border-left: 1px solid var\(--workflow-border-strong\)/s);
-  assert.match(board, /const sidecarOpen = metadataDocked && metadataProjection === 'side';/);
+  assert.match(board, /const metadataSidecarOpen = metadataDocked && metadataProjection === 'side';/);
+  assert.match(board, /const sidecarOpen = metadataSidecarOpen;/);
   assert.ok(board.indexOf('system-workflow__board-inspection-controls-host')
     < board.indexOf('system-workflow__metadata-dock-controls'));
   assert.doesNotMatch(board, /!inspectionActive && metadataDocked/);
@@ -112,14 +121,15 @@ test('owner Presentation Board reuses the existing interactive canvas inside one
   assert.doesNotMatch(`${canvas}\n${styles}`, /system-workflow__selection-outline/);
   assert.match(styles, /\.system-workflow__resize-handle \{[^}]*border: var\(--workflow-screen-pixel, 1px\)/s);
   assert.match(styles, /\.system-workflow__progressive-media \{[^}]*overflow: visible;/s);
+  assert.match(styles, /\[data-authoring-locked\] \.system-workflow__placement\[aria-pressed="true"\] \.system-workflow__artwork-media \{[^}]*drop-shadow/s);
   assert.match(styles, /\.system-workflow__placement\[data-cropped\] \{ overflow: hidden; \}/);
   assert.doesNotMatch(styles, /\.system-workflow__placement::after/);
   assert.match(styles, /\.system-workflow__stage-viewport \{[^}]*overflow: clip;[^}]*background: var\(--workflow-board-frame-surface\);/s);
   assert.match(styles, /\.system-workflow__stage-viewport \{\s*transition: filter 260ms var\(--workflow-ease\);\s*\}/s);
   assert.match(styles, /data-board-phase="maximizing"[\s\S]*data-board-phase="restoring"[\s\S]*\.system-workflow__stage-viewport \{[^}]*height 260ms var\(--workflow-ease\)/s);
-  assert.match(styles, /data-metadata-sidecar[^}]*\.system-workflow__board-title \{ margin-left: auto; \}/);
-  assert.match(board, /metadataProjection === 'down' \? 'Close Metadata below Board bar' : 'Open Metadata below Board bar'/);
-  assert.match(board, /metadataProjection === 'side' \? 'Close Metadata beside Presentation Board' : 'Open Metadata beside Presentation Board'/);
+  assert.match(styles, /data-sidecar[^}]*\.system-workflow__board-title \{ margin-left: auto; \}/);
+  assert.match(board, /metadataProjection === 'down' \? 'Close Metadata below Display Module bar' : 'Open Metadata below Display Module bar'/);
+  assert.match(board, /metadataProjection === 'side' \? 'Close Metadata beside Display Module' : 'Open Metadata beside Display Module'/);
   assert.match(styles, /\.system-workflow__metadata-direction\[aria-pressed="true"\] svg \{[^}]*transform: rotate\(180deg\)/);
   assert.doesNotMatch(styles, /round-control:is\([^)]*\[aria-pressed="true"\][^)]*\)[^{]*\{[^}]*outline:/s);
   assert.match(runtime, /\.system-workflow__metadata-down-host, \.system-workflow__metadata-projection\.is-side, \.system-workflow__metadata-module/);
@@ -137,7 +147,15 @@ test('owner Presentation Board reuses the existing interactive canvas inside one
   assert.match(styles, /\.lattice-focus-viewer__board-controls/);
   assert.match(styles, /\[data-inspection-atmosphere\] \.system-workflow__stage-viewport \{[\s\S]*filter: grayscale\(1\) contrast\(\.72\) brightness\(\.3\);/);
   assert.match(runtime, /inspectionAtmosphere=\{viewer\.atmosphereActive\}/);
-  assert.match(runtime, /panelOccupied=\{panelOccupied\} panels=\{panels\}/);
+  assert.match(runtime, /layersOpen=\{layersOpen\}/);
+  assert.doesNotMatch(`${runtime}\n${board}`, /OWNER_LAYERS_MODE|renderLayers|data-layers-sidecar|<strong>LAYERS<\/strong>/);
+  assert.match(board, /<strong>LOCK<\/strong>[\s\S]*<strong>METADATA<\/strong>/);
+  assert.match(runtime, /authoringLocked=\{authoringLocked\}/);
+  assert.match(runtime, /if \(!authoringLocked\) crop\.cancelCrop\(\);/);
+  assert.match(canvas, /authoringDisabled: authoringLocked[\s\S]*disabled: interactionDisabled/);
+  assert.match(canvas, /onClick=\{\(event\) => \{[\s\S]*controller\.selectPlacement/);
+  assert.match(canvas, /onDoubleClick=\{\(event\) => \{[\s\S]*onOpenViewer/);
+  assert.match(canvas, /\{!authoringLocked && selectionMetrics && selectionOverlayHost && createPortal/);
   assert.doesNotMatch(runtime, /panelOccupied=\{panelOccupied \|\| Boolean\(viewer\.placementId\)\}/);
   assert.match(styles, /\.lattice-focus-viewer__board-controls > button \{[^}]*border: 1px solid var\(--workflow-border-strong\);[^}]*color: var\(--workflow-muted\);[^}]*background: var\(--workflow-selection\);/s);
   assert.doesNotMatch(styles, /\.lattice-focus-viewer__board-controls > button:is\(:hover, :focus-visible\)[^{]*\{[^}]*outline:/s);

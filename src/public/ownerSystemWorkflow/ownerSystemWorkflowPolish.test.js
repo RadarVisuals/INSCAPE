@@ -26,6 +26,7 @@ test('Grid navigation is explicitly Space-drag and both moving planes render the
   const styles = read('./ownerSystemWorkflow.css');
   assert.match(interaction, /event\.code !== 'Space'/);
   assert.match(interaction, /beginCanvasSelection\(event, \{ navigationOnly: true \}\)/);
+  assert.match(interaction, /authoringDisabled && !navigationOnly/);
   assert.match(interaction, /navigationOnly && Math\.abs\(deltaX\)/);
   assert.doesNotMatch(interaction, /!event\.shiftKey && Math\.abs\(deltaX\)/);
   assert.equal((canvas.match(/<LatticePixelGrid/g) || []).length, 2);
@@ -52,8 +53,16 @@ test('Library collection filters stay viewport-bounded and scroll their option l
 test('undocked Metadata stays within half the viewport and scrolls its content', () => {
   const styles = read('./ownerSystemWorkflow.css');
   assert.match(styles, /\.system-workflow__metadata-module\[data-floating\] \{[^}]*max-height: 50dvh;[^}]*grid-template-rows: 32px minmax\(0, 1fr\);/s);
-  assert.match(styles, /\.system-workflow__metadata-module\[data-floating\] > \.system-workflow__metadata-module-content \{[^}]*min-height: 0;[^}]*grid-auto-rows: max-content;[^}]*align-content: start;[^}]*overflow-y: auto;[^}]*overscroll-behavior: contain;[^}]*scrollbar-width: none;/s);
-  assert.match(styles, /\.system-workflow__metadata-module\[data-floating\] > \.system-workflow__metadata-module-content::\-webkit-scrollbar \{[^}]*display: none;/s);
+  assert.match(styles, /\.system-workflow__metadata-module\[data-floating\] > \.system-workflow__metadata-module-content \{[^}]*min-height: 0;[^}]*grid-auto-rows: max-content;[^}]*align-content: start;[^}]*overflow-y: auto;[^}]*overscroll-behavior: contain;[^}]*scrollbar-width: thin;/s);
+});
+
+test('Metadata creator avatars fill their circular frame while the fallback icon retains inset spacing', () => {
+  const styles = read('./ownerSystemWorkflow.css');
+  assert.match(styles, /metadata-module-content section > :is\(a, div\) \{[^}]*grid-template-columns: 60px minmax\(0, 1fr\) 14px;/s);
+  assert.match(styles, /metadata-module-content section > :is\(a, div\) > i \{[^}]*width: 60px;[^}]*height: 60px;[^}]*border-radius: 50%;/s);
+  assert.match(styles, /metadata-module-content section > :is\(a, div\) > i img \{[^}]*width: 100%;[^}]*height: 100%;[^}]*display: block;[^}]*object-fit: cover;/s);
+  assert.doesNotMatch(styles, /metadata-module-content section > :is\(a, div\) > i img \{[^}]*padding:/s);
+  assert.match(styles, /metadata-module-content section > :is\(a, div\) > i svg \{[^}]*padding: 6px;/s);
 });
 
 test('Publish exposes one dock-attached control while preserving every canonical gate', () => {

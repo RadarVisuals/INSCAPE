@@ -16,19 +16,20 @@ function PanelPresence({ children, id, panels, retained = false }) {
     onTransitionEnd={(event) => { if (event.propertyName === 'opacity') panels.completePanelTransition(id); }}>{children}</div>;
 }
 
-export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assetsById, categoryCommands, browser, connectedProfile, controller, crop, discoveryCommands, discoveryGroups, layout, libraryData,
+export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assetsById, authoringLocked = false, categoryCommands, browser, connectedProfile, controller, crop, discoveryCommands, discoveryGroups, layout, libraryData,
   layersOpen, menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onDossierChange, onEnterMyWorld, onLayersOpenChange, onVisitProfile, panelOccupied, panels, profileIdentity, profileModel,
-  resolveAssetDimensions, reviewDiscovery, workspaceSurfaceColor }) {
+  resolveAssetDimensions, reviewDiscovery, workspaceSurfaceColor, workbenchPreferences, onWorkbenchPreferencesChange }) {
   const show = (id) => panels.presence[id];
   const libraryMounted = useRef(false);
   if (show('library').present) libraryMounted.current = true;
   return <>
-    {!panelOccupied && layersOpen && <OwnerSystemWorkflowSelectionInspector assetsById={assetsById} controller={controller} crop={crop} layout={layout}
-      onBeginCrop={crop.beginCrop} onMinimize={() => onLayersOpenChange(false)} />}
+    {!panelOccupied && layersOpen && <OwnerSystemWorkflowSelectionInspector assetsById={assetsById} authoringLocked={authoringLocked}
+      controller={controller} crop={crop} layout={layout} onBeginCrop={crop.beginCrop}
+      onMinimize={() => onLayersOpenChange(false)} />}
     {show('grids').present && <PanelPresence id="grids" panels={panels}><SystemWorkflowGridSwitcher controller={controller} data-layout={layout.mode} onSelectGrid={onChangeGrid} /></PanelPresence>}
     {show('docs').present && <PanelPresence id="docs" panels={panels}><OwnerSystemWorkflowManual onClose={onClose} /></PanelPresence>}
     {libraryMounted.current && <PanelPresence id="library" panels={panels} retained>
-      <OwnerSystemWorkflowLibraryWorkspace categoryCommands={categoryCommands} controller={controller} data={libraryData}
+      <OwnerSystemWorkflowLibraryWorkspace authoringLocked={authoringLocked} categoryCommands={categoryCommands} controller={controller} data={libraryData}
         menuSurface={menuSurface} onClose={onClose} phase={show('library').phase}
         resolveAssetDimensions={resolveAssetDimensions} /></PanelPresence>}
     {show('profile').present && <PanelPresence id="profile" panels={panels}><div className="system-workflow__profile-layer"
@@ -45,6 +46,7 @@ export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assets
         onVisitProfile={(address) => { panels.closePanel({ returnFocus: false }); onVisitProfile?.(address); }} /></PanelPresence>}
     {show('settings').present && <PanelPresence id="settings" panels={panels}>
       <OwnerSystemWorkflowSettings appearance={controller.draft.appearance} controller={controller} menuSurface={menuSurface}
-        onClose={onClose} phase={show('settings').phase} /></PanelPresence>}
+        onClose={onClose} onWorkbenchPreferencesChange={onWorkbenchPreferencesChange}
+        phase={show('settings').phase} workbenchPreferences={workbenchPreferences} /></PanelPresence>}
   </>;
 }

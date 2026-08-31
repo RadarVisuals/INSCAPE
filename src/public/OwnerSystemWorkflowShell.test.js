@@ -79,10 +79,11 @@ test('System Workflow production shell preserves the Phase 3 authority and isola
 });
 
 test('System Workflow dock tools cannot expand into the INSCAPE wordmark', async () => {
-  const [styles, globalBar, runtime] = await Promise.all([
+  const [styles, globalBar, runtime, board] = await Promise.all([
     read('./ownerSystemWorkflow/ownerSystemWorkflow.css'),
     read('./ownerSystemWorkflow/OwnerSystemWorkflowGlobalBar.jsx'),
     read('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx'),
+    read('./ownerSystemWorkflow/PresentationBoardDefinitive.jsx'),
   ]);
   assert.match(styles, /\.system-workflow__global-bar \{[^}]*grid-template-columns: minmax\(0, 1fr\) 104px 132px;/s,
     'the wide dock reserves bounded columns for its compact tools and wordmark');
@@ -94,10 +95,6 @@ test('System Workflow dock tools cannot expand into the INSCAPE wordmark', async
   assert.match(styles, /\.system-workflow__global-bar \.system-workflow__dock-tools > button:is\(:hover, :focus-visible\) \{[^}]*color: var\(--workflow-muted\);[^}]*background: transparent;/s);
   assert.match(styles, /\.system-workflow__global-bar \.system-workflow__dock-tools > button\[aria-expanded="true"\] \{[^}]*color: var\(--workflow-ink\);[^}]*background: transparent;/s,
     'dock tools use color alone to communicate an open panel');
-  assert.match(styles, /\.system-workflow__global-bar \.system-workflow__dock-tools > \.system-workflow__layers-trigger\[aria-expanded\] \{[^}]*color: var\(--workflow-muted\);/s,
-    'the automatically visible Layers tool starts muted instead of looking permanently selected');
-  assert.match(styles, /\.system-workflow__global-bar \.system-workflow__dock-tools > \.system-workflow__layers-trigger\[data-layers-activated\] \{[^}]*color: var\(--workflow-ink\);/s,
-    'an explicitly opened Layers tool can ink without restoring the old selector');
   assert.match(styles, /\.system-workflow \.system-workflow__layers-trigger > svg \{[^}]*color: currentColor;[^}]*stroke: currentColor;/s,
     'the Layers glyph follows its muted trigger color instead of forcing ink directly');
   assert.doesNotMatch(styles, /\.system-workflow \.system-workflow__layers-trigger > svg \{[^}]*var\(--workflow-ink\)/s);
@@ -109,8 +106,7 @@ test('System Workflow dock tools cannot expand into the INSCAPE wordmark', async
     'opening a dropdown does not switch back to Bahnschrift');
   assert.match(globalBar, /FileText[\s\S]*Settings2[\s\S]*Layers3/,
     'workspace tools keep documentation and settings before the persistent Layers control');
-  assert.doesNotMatch(globalBar, /Layers2/,
-    'the persistent Layers control retains the established three-layer glyph');
-  assert.match(globalBar, /data-layers-activated=\{layersActivated \|\| undefined\}/);
   assert.match(runtime, /layersActivated=\{layersExplicitlyOpened && layersOpen && !panelOccupied\}/);
+  assert.match(board, /<strong>LOCK<\/strong>[\s\S]*<strong>METADATA<\/strong>/,
+    'the Display Module owns Lock before Metadata without absorbing Layers');
 });

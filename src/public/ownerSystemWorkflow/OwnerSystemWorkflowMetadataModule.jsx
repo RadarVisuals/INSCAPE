@@ -79,7 +79,7 @@ export default function OwnerSystemWorkflowMetadataModule({ dossier, onClose, on
     ref={moduleRef} style={{ left: position.x, top: position.y }}>
     <header onPointerDown={beginDrag} onPointerMove={moveDrag} onPointerUp={stopDrag} onPointerCancel={stopDrag}>
       <strong>METADATA</strong><span className="system-workflow__module-controls">
-        <button aria-label="Dock Metadata to Presentation Board" className="system-workflow__round-control"
+        <button aria-label="Dock Metadata to Display Module" className="system-workflow__round-control"
           onClick={onDock} type="button"><i aria-hidden="true" className="system-workflow__state-glyph" /></button>
         <button aria-label="Close Metadata" className="system-workflow__round-control is-close"
           onClick={onClose} type="button"><X /></button>

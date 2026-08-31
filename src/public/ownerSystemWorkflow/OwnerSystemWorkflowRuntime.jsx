@@ -30,6 +30,7 @@ import {
   transitionPresentationBoardInstance,
 } from './ownerSystemWorkflowModuleState.js';
 import { loadPresentationBoardShortcut } from './presentationBoardShortcutStorage.js';
+import { loadWorkbenchPreferences, saveWorkbenchPreferences } from './workbenchPreferences.js';
 import RackMenu from '../menus/RackMenu.jsx';
 import {
   decodeOwnerSystemWorkflowAssetDimensions,
@@ -77,6 +78,9 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   onPublicationConfirmed, profileAddress, publishedResolution, onVisitProfile, reviewStorage, reviewAssets,
   reviewCategories, reviewActivity, reviewDiscovery, reviewProfile }) {
   const controller = useOwnerSystemWorkflowController(profileAddress, { storage: reviewStorage });
+  const [workbenchPreferences, setWorkbenchPreferences] = useState(() => loadWorkbenchPreferences(
+    profileAddress, controller.draft?.appearance.surfaceId,
+  ));
   const [preview, setPreview] = useState(null);
   const [publicationOpen, setPublicationOpen] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -91,6 +95,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const previewReturnFocus = useRef(null);
   const publicationReturnFocus = useRef(null);
   const metadataTransitionRef = useRef(null);
+  const workbenchPreferencesProfileRef = useRef(profileAddress);
   useEffect(() => () => {
     const transition = metadataTransitionRef.current;
     metadataTransitionRef.current = null;
@@ -161,6 +166,14 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     try { globalThis.sessionStorage?.setItem(LAYERS_OPEN_KEY, String(layersOpen)); }
     catch { /* Session preference is optional. */ }
   }, [layersOpen]);
+  useEffect(() => {
+    if (workbenchPreferencesProfileRef.current !== profileAddress) {
+      workbenchPreferencesProfileRef.current = profileAddress;
+      setWorkbenchPreferences(loadWorkbenchPreferences(profileAddress, controller.draft?.appearance.surfaceId));
+      return;
+    }
+    saveWorkbenchPreferences(profileAddress, workbenchPreferences);
+  }, [controller.draft?.appearance.surfaceId, profileAddress, workbenchPreferences]);
   const gridTransitionRef = useRef(null);
   const changeGrid = (gridId, directionHint = null, options = {}) => {
     if (!gridId || gridId === controller.selectedGridId || gridTransitionRef.current) return false;
@@ -271,9 +284,14 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     panels.togglePanel(name, trigger);
   };
   const menuSurface = controller.draft?.appearance.menuSurfaceId;
-  const workspaceSurfaceColor = latticeSurfaceColor(controller.draft?.appearance.surfaceId);
+  const workspaceSurfaceColor = latticeSurfaceColor(workbenchPreferences.surfaceId);
   const metadataState = ownerMetadataModeView(metadataMode);
   const moduleAvailability = ownerWorkbenchModuleAvailability(metadataMode, boardInstanceState);
+  const authoringLocked = workbenchPreferences.compositionLocked;
+  const toggleAuthoringLock = () => {
+    if (!authoringLocked) crop.cancelCrop();
+    setWorkbenchPreferences((current) => ({ ...current, compositionLocked: !current.compositionLocked }));
+  };
   const moveMetadata = (event) => {
     const metadataElement = () => globalThis.document?.querySelector?.(
       '.system-workflow__metadata-down-host, .system-workflow__metadata-projection.is-side, .system-workflow__metadata-module',
@@ -333,13 +351,16 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     beginOutgoing();
   };
   return <><main aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
-    data-board-instance-state={boardInstanceState} data-metadata-mode={metadataMode}
+    data-authoring-locked={authoringLocked || undefined} data-board-instance-state={boardInstanceState}
+    data-metadata-mode={metadataMode}
     data-lattice-menu-surface data-menu-surface={menuSurface} data-reduced-motion={layout.reducedMotion || undefined}
-    data-surface={controller.draft?.appearance.surfaceId} data-previewing={preview ? true : undefined}
+    data-surface={workbenchPreferences.surfaceId} data-previewing={preview ? true : undefined}
     inert={preview ? '' : undefined}>
-    <PresentationBoard assetsById={assetsById} instanceState={boardInstanceState}
+    <PresentationBoard assetsById={assetsById} authoringLocked={authoringLocked} instanceState={boardInstanceState}
+      displaySurface={controller.draft?.appearance.surfaceId}
       documentGeometry={controller.draft?.geometry} identity={profileIdentity}
       inspectionAtmosphere={viewer.atmosphereActive}
+      menuSurface={menuSurface}
       metadataDocked={metadataState.docked} metadataProjection={metadataState.projection}
       onMetadataClose={() => moveMetadata(OWNER_METADATA_EVENT.CLOSE)}
       onMetadataInnerToggle={() => moveMetadata(OWNER_METADATA_EVENT.TOGGLE_INNER)}
@@ -348,17 +369,20 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
       onMinimize={() => transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.MINIMIZE)}
       onRestore={() => transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.RESTORE)}
       onInspectionCancel={viewer.close}
+      onAuthoringLockToggle={toggleAuthoringLock}
       onContextMenu={(event) => {
         if (event.target.closest('.system-workflow__metadata-module')) return;
         event.preventDefault();
         setWorkspaceMenu({ x: event.clientX, y: event.clientY });
       }}
       layoutMode={layout.mode} profileAddress={profileAddress} reducedMotion={layout.reducedMotion}
+      shortcutSnap={workbenchPreferences.shortcutSnap} workbenchGridColor={workbenchPreferences.gridColor}
+      workbenchGridMode={workbenchPreferences.gridMode}
       renderInspection={viewer.placementId ? (container, controlsContainer) => <OwnerSystemWorkflowFocusViewer
         container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}
         viewer={viewer} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
       renderMetadata={() => <OwnerSystemWorkflowMetadataContent dossier={metadataEntry?.dossier || null} />}>
-      <OwnerSystemWorkflowCanvas assetsById={assetsById} controller={controller} crop={crop}
+      <OwnerSystemWorkflowCanvas assetsById={assetsById} authoringLocked={authoringLocked} controller={controller} crop={crop}
         onAssetDimensions={registerAssetDimensions} onChangeGrid={changeGrid}
         interactionDisabled={panelOccupied || Boolean(viewer.placementId)} onOpenViewer={(placement) => viewer.open(placement.id)}
         onPlacementRef={viewer.registerPlacement} reducedMotion={layout.reducedMotion}
@@ -367,10 +391,12 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     {metadataMode === OWNER_METADATA_MODE.DETACHED && <OwnerSystemWorkflowMetadataModule dossier={metadataEntry?.dossier || null}
       onClose={() => moveMetadata(OWNER_METADATA_EVENT.CLOSE)}
       onDock={() => moveMetadata(OWNER_METADATA_EVENT.ATTACH)} />}
-    <OwnerSystemWorkflowPanelLayer activity={activity} assets={assets} assetsById={assetsById} browser={browser}
+    <OwnerSystemWorkflowPanelLayer activity={activity} assets={assets} assetsById={assetsById} authoringLocked={authoringLocked} browser={browser}
       connectedProfile={connectedProfile} onConnect={onConnect} onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld}
       controller={controller} crop={crop} layersOpen={layersOpen} layout={layout} libraryData={libraryData} menuSurface={menuSurface} onChangeGrid={changeGrid}
       workspaceSurfaceColor={workspaceSurfaceColor}
+      workbenchPreferences={workbenchPreferences}
+      onWorkbenchPreferencesChange={(change) => setWorkbenchPreferences((current) => ({ ...current, ...change }))}
       onClose={() => panels.closePanel()} onDossierChange={setDossierOpen} onLayersOpenChange={(open) => {
         setLayersOpen(open);
         if (!open) setLayersExplicitlyOpened(false);
@@ -410,10 +436,10 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     {workspaceMenu && createPortal(<RackMenu anchor={workspaceMenu}
       commands={[{ id: 'add', label: 'ADD' }]}
       getSubmenuCommands={(id) => id === 'add' ? [
-        { disabled: !moduleAvailability.presentationBoard, id: 'presentation-board', label: 'PRESENTATION BOARD' },
+        { disabled: !moduleAvailability.presentationBoard, id: 'presentation-board', label: 'DISPLAY MODULE' },
         { disabled: !moduleAvailability.metadata, id: 'metadata', label: 'METADATA MODULE' },
       ] : []}
-      label="Workbench commands" onClose={() => setWorkspaceMenu(null)}
+      label="Workbench commands" menuSurfaceId={menuSurface} onClose={() => setWorkspaceMenu(null)}
       onCommand={(id) => {
         if (id === 'metadata') moveMetadata(OWNER_METADATA_EVENT.ADD);
         if (id === 'presentation-board') transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.ADD);

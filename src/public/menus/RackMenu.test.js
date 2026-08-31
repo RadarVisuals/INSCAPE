@@ -24,6 +24,12 @@ test('explicit checked and mixed commands preserve their complete visible labels
   assert.match(desktopMenu, /aria-checked=\{command\.checkable \? mixed \? 'mixed' : selected : undefined\}/);
 });
 
+test('cascade menus wait for pointer intent and close their flyout when the pointer leaves', () => {
+  assert.match(desktopMenu, /onFocus=\{\(\) => \{ if \(depth > 0\) openSubmenu\(depth, command, true\); \}\}/);
+  assert.match(desktopMenu, /onPointerLeave=\{\(\) => \{ window\.clearTimeout\(hoverTimerRef\.current\); setOpenPath\(\[\]\);/);
+  assert.match(desktopMenu, /SYSTEM_WORKFLOW_ROW_HEIGHT = 38/);
+});
+
 test('active production context-menu callers use RackMenu instead of styling DesktopMenu directly', () => {
   for (const caller of [productionLibrary, productionDiscover]) {
     assert.match(caller, /import RackMenu/);
