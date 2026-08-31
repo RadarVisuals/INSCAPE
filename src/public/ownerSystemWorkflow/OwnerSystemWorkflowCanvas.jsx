@@ -126,6 +126,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, boardScale = 1, 
   });
   const swipeGridId = interaction.gridSwipe?.targetGridId || null;
   const swipeGrid = swipeGridId ? controller.draft.grids.find(({ id }) => id === swipeGridId) : null;
+  const selectionNavigating = Boolean(interaction.gridSwipe);
   const swipeStyle = interaction.gridSwipe ? {
     '--workflow-grid-swipe-x': `${interaction.gridSwipe.deltaX / viewScale}px`,
     '--workflow-grid-swipe-side': interaction.gridSwipe.direction === 'next' ? '100%' : '-100%',
@@ -133,8 +134,9 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, boardScale = 1, 
   const projectedPlacements = grid?.placements.map((placement) => ({ ...placement, ...(interaction.previewById.get(placement.id) || {}) })) || [];
   const selected = projectedPlacements.filter(({ id, locked }) => controller.selectedPlacementIds.includes(id) && !locked);
   const selectionBounds = boundsOf(selected);
-  if (selectionBounds) retainedSelection.current = { bounds: selectionBounds, primary: selected.at(-1), count: selected.length };
-  const renderedSelection = selectionBounds ? retainedSelection.current : retainedSelection.current;
+  if (retainedSelection.current?.gridId !== grid?.id) retainedSelection.current = null;
+  if (selectionBounds) retainedSelection.current = { bounds: selectionBounds, primary: selected.at(-1), count: selected.length, gridId: grid.id };
+  const renderedSelection = retainedSelection.current;
   const selectionMetrics = renderedSelection && worldViewport
     ? screenPixelMetrics(projectedSelectionOutline(renderedSelection.bounds, worldViewport), viewScale)
     : null;
@@ -271,12 +273,12 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, boardScale = 1, 
           onAssetDimensions={onAssetDimensions} snapStep={snapStep} worldViewport={worldViewport} />
       </div>}
     </div>
-    {selectionMetrics && selectionOverlayHost && createPortal(<div className="system-workflow__selection-chrome" aria-hidden={viewerOpen || !selectionBounds}
+    {selectionMetrics && selectionOverlayHost && createPortal(<div className="system-workflow__selection-chrome" aria-hidden={viewerOpen || !selectionBounds || selectionNavigating}
       data-cropping={Boolean(cropSession) || undefined} data-group={renderedSelection.count > 1 || undefined}
-      data-selected={Boolean(selectionBounds) || undefined} data-viewing={viewerOpen || undefined}
+      data-navigating={selectionNavigating || undefined} data-selected={Boolean(selectionBounds) || undefined} data-viewing={viewerOpen || undefined}
       style={{ '--workflow-screen-pixel': `${selectionMetrics.screenPixel}px` }}>
       {['nw', 'ne', 'se', 'sw'].map((corner) => <button aria-label={`Resize selection from ${corner}`}
-        className={`system-workflow__resize-handle is-${corner}`} disabled={viewerOpen || !selectionBounds}
+        className={`system-workflow__resize-handle is-${corner}`} disabled={viewerOpen || !selectionBounds || selectionNavigating}
         key={corner} onPointerDown={(event) => interaction.beginPlacementGesture(event, renderedSelection.primary, 'resize', corner)}
         type="button" style={screenHandlePoint(corner, selectionMetrics.rectangle)} />)}
     </div>, selectionOverlayHost)}

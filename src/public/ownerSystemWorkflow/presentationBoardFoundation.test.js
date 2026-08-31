@@ -10,6 +10,7 @@ test('owner Presentation Board reuses the existing interactive canvas inside one
   const board = read('./PresentationBoardDefinitive.jsx');
   const moduleState = read('./ownerSystemWorkflowModuleState.js');
   const canvas = read('./OwnerSystemWorkflowCanvas.jsx');
+  const controller = read('./useOwnerSystemWorkflowController.js');
   const geometry = read('./presentationBoardGeometry.js');
   const styles = read('./ownerSystemWorkflow.css');
 
@@ -27,7 +28,7 @@ test('owner Presentation Board reuses the existing interactive canvas inside one
   assert.match(board, /transform: liveScaleRendering \? `scale\(\$\{liveTransformScale\}\)` : undefined/);
   assert.match(board, /settledStageWidth = view \? Math\.ceil\(view\.fit\.stage\.width \* displayScale\) : 0/);
   assert.match(board, /boardScale: liveScaleRendering \? liveTransformScale : 1/);
-  assert.doesNotMatch(board, /aria-label="Board zoom"|type="range"|Board zoom percentage/);
+  assert.doesNotMatch(board, /aria-label="Board zoom"|Board zoom percentage|system-workflow__board-zoom[^\n]*type="range"/);
   assert.match(board, /aria-label=\{maximized \? 'Restore Presentation Board' : 'Maximize Presentation Board'\}/);
   assert.match(board, /aria-label="Close Presentation Board to shortcut"/);
   assert.match(board, /instanceState === PRESENTATION_BOARD_INSTANCE_STATE\.MINIMIZED/);
@@ -69,6 +70,14 @@ test('owner Presentation Board reuses the existing interactive canvas inside one
   assert.match(styles, /\.system-workflow__board-resize-handle \{[^}]*position: absolute;/s);
   assert.doesNotMatch(styles, /system-workflow__board-resize-handle::after/);
   assert.match(styles, /\.system-workflow__desktop-shortcut \{[^}]*position: absolute;/s);
+  assert.match(styles, /\.system-workflow__desktop-shortcut-icon\[data-custom\] \{[^}]*width: var\(--workflow-shortcut-icon-size, 60px\);[^}]*height: var\(--workflow-shortcut-icon-size, 60px\);[^}]*border: 0;[^}]*background: transparent;/s);
+  assert.match(styles, /system-workflow__shortcut-icon-preview[\s\S]*object-fit: contain/);
+  assert.match(board, /label: 'EDIT ICON'/);
+  assert.match(board, /aria-label="Shortcut icon zoom"/);
+  assert.match(board, /aria-label="Shortcut icon size"[^>]*max="150"/);
+  assert.match(board, /aria-label="Shortcut label size"/);
+  assert.match(board, /iconPresentation: shortcutIconPresentation/);
+  assert.match(board, /visible: shortcutVisible/);
   assert.match(styles, /system-workflow__metadata-projection\.is-side/);
   assert.match(styles, /\.system-workflow__metadata-projection\.is-side \{[^}]*bottom: calc\(-1 \* var\(--workflow-board-frame-gap\)\);[^}]*left: calc\(100% \+ var\(--workflow-board-frame-gap\)\);[^}]*width: calc\(var\(--workflow-metadata-width, 286px\) - var\(--workflow-board-frame-gap\)\);[^}]*padding-block: var\(--workflow-board-frame-gap\);[^}]*overflow: hidden;/s);
   assert.match(styles, /\.system-workflow__metadata-side-scroll \{[^}]*overflow-y: auto;[^}]*clip-path: inset\(0 round var\(--workflow-board-radius\)\);[^}]*scrollbar-width: none;/s);
@@ -93,6 +102,12 @@ test('owner Presentation Board reuses the existing interactive canvas inside one
   assert.doesNotMatch(board, /!inspectionActive && metadataDocked/);
   assert.match(board, /selectionOverlayHost/);
   assert.match(canvas, /createPortal\([\s\S]*system-workflow__selection-chrome[\s\S]*selectionOverlayHost/);
+  assert.match(canvas, /retainedSelection\.current\?\.gridId !== grid\?\.id[\s\S]*retainedSelection\.current = null/);
+  assert.match(canvas, /selectionNavigating = Boolean\(interaction\.gridSwipe\)[\s\S]*data-navigating=\{selectionNavigating/);
+  assert.match(styles, /\.system-workflow__selection-chrome\[data-navigating\] \{ opacity: 0; transition: none; \}/);
+  assert.match(styles, /html\[data-system-workflow-grid-direction\] \.system-workflow__selection-chrome \{ opacity: 0; transition: none; \}/);
+  assert.match(controller, /createGrid:[^\n]*setSelectedPlacementIds\(\[\]\)/);
+  assert.match(controller, /deleteGrid:[^\n]*grid\.id === state\.selectedGridId[^\n]*setSelectedPlacementIds\(\[\]\)/);
   assert.match(canvas, /devicePixelRatio/);
   assert.doesNotMatch(`${canvas}\n${styles}`, /system-workflow__selection-outline/);
   assert.match(styles, /\.system-workflow__resize-handle \{[^}]*border: var\(--workflow-screen-pixel, 1px\)/s);

@@ -17,7 +17,47 @@ test('panel controller phases, dismisses and restores exact trigger focus', { ti
     await grids.waitFor();
     await page.waitForFunction(() => document.querySelector('.system-workflow__grid-switcher')?.closest('[data-system-workflow-panel]')?.dataset.panelPhase === 'open');
     assert.equal(await page.locator('.system-workflow__inspector').count(), 0, 'inspector is structurally absent while Grid switcher owns the overlay layer');
-    await page.keyboard.press('Escape');
+    await grids.getByRole('button', { name: 'New Grid' }).click();
+    assert.equal(await page.locator('.system-workflow__selection-chrome').count(), 0,
+      'creating and entering a Grid discards selection chrome from the previous Grid');
+    const regularGridOptions = grids.locator('.system-workflow__grid-row:not([data-world-cover]) .system-workflow__grid-activate');
+    await regularGridOptions.first().click();
+    await page.waitForFunction(() => !document.documentElement.dataset.systemWorkflowGridDirection);
+    await gridsTrigger.click();
+    await grids.waitFor({ state: 'detached' });
+    await page.getByRole('button', { name: /Select ABYSSAL STUDY/ }).click();
+    await gridsTrigger.click();
+    await grids.waitFor();
+    await regularGridOptions.nth(1).click();
+    assert.deepEqual(await page.locator('.system-workflow__selection-chrome').evaluateAll((nodes) => nodes.map((node) => ({
+      opacity: getComputedStyle(node).opacity,
+      transition: getComputedStyle(node).transitionDuration,
+    }))), [], 'switching Grids never carries the previous selection handles into the new Stage');
+    await page.waitForFunction(() => !document.documentElement.dataset.systemWorkflowGridDirection);
+    await regularGridOptions.first().click();
+    await page.waitForFunction(() => !document.documentElement.dataset.systemWorkflowGridDirection);
+    await gridsTrigger.click();
+    await grids.waitFor({ state: 'detached' });
+    await page.getByRole('button', { name: /Select ABYSSAL STUDY/ }).click();
+    const canvasBox = await page.locator('.system-workflow__canvas').boundingBox();
+    await page.keyboard.down('Space');
+    await page.mouse.move(canvasBox.x + canvasBox.width * .7, canvasBox.y + canvasBox.height * .7);
+    await page.mouse.down();
+    await page.mouse.move(canvasBox.x + canvasBox.width * .7 - 160, canvasBox.y + canvasBox.height * .7, { steps: 4 });
+    assert.deepEqual(await page.locator('.system-workflow__selection-chrome[data-navigating]').evaluateAll((nodes) => nodes.map((node) => ({
+      handlesDisabled: [...node.querySelectorAll('.system-workflow__resize-handle')].every((handle) => handle.disabled),
+      opacity: getComputedStyle(node).opacity,
+      transition: getComputedStyle(node).transitionDuration,
+    }))), [{ handlesDisabled: true, opacity: '0', transition: '0s' }],
+    'direct Presentation Board swipe navigation hides the active selection before the Grid starts moving');
+    await page.mouse.up();
+    await page.keyboard.up('Space');
+    await page.waitForFunction(() => !document.querySelector('.system-workflow__canvas')?.dataset.swiping);
+    await gridsTrigger.click();
+    await grids.waitFor();
+    await regularGridOptions.first().click();
+    await page.waitForFunction(() => !document.documentElement.dataset.systemWorkflowGridDirection);
+    await gridsTrigger.click();
     await page.waitForFunction(() => document.querySelector('.system-workflow__grid-switcher')?.closest('[data-system-workflow-panel]')?.dataset.panelPhase === 'closing');
     assert.equal(await grids.locator('..').getAttribute('data-panel-phase'), 'closing');
     await grids.waitFor({ state: 'detached' });

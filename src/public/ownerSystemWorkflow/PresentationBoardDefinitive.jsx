@@ -5,17 +5,36 @@ import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import RackMenu from '../menus/RackMenu.jsx';
 import ProgressiveArtworkImage from './ProgressiveArtworkImage.jsx';
 import { PRESENTATION_BOARD_INSTANCE_STATE } from './ownerSystemWorkflowModuleState.js';
-import { loadPresentationBoardShortcut, presentationBoardShortcutStorageKey } from './presentationBoardShortcutStorage.js';
+import {
+  DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION,
+  loadPresentationBoardShortcut,
+  normalizePresentationBoardShortcutIconPresentation,
+  presentationBoardShortcutStorageKey,
+} from './presentationBoardShortcutStorage.js';
 import { presentationBoardInspectionFrame, presentationBoardResponsiveMetrics, projectPresentationBoardView,
   resizePresentationBoardFromCorner, resizePresentationBoardView } from './presentationBoardGeometry.js';
 
 const compactAddress = (address) => address?.length > 18 ? `${address.slice(0, 10)}…${address.slice(-6)}` : address;
 const corners = ['nw', 'ne', 'sw', 'se'];
 const WORKBENCH_CELL = 24;
-const SHORTCUT_SIZE = { width: 82, height: 70 };
+const MINIMUM_SHORTCUT_SIZE = { width: 82, height: 64 };
+const SHORTCUT_ICON_EDITOR_SIZE = { width: 252, height: 300 };
 const sameFrame = (left, right) => left && right
   && ['height', 'left', 'top', 'width'].every((key) => Math.abs(left[key] - right[key]) < 0.01);
 const snap = (value) => Math.round(value / WORKBENCH_CELL) * WORKBENCH_CELL;
+const shortcutIconStyle = ({ offsetX, offsetY, scale }) => ({
+  transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
+});
+const shortcutBounds = ({ labelSize, size }) => ({
+  height: Math.max(MINIMUM_SHORTCUT_SIZE.height, Math.ceil(size + labelSize * 1.25 + 16)),
+  width: Math.max(MINIMUM_SHORTCUT_SIZE.width, size + 10),
+});
+const shortcutPresentationStyle = (presentation) => ({
+  '--workflow-shortcut-height': `${shortcutBounds(presentation).height}px`,
+  '--workflow-shortcut-icon-size': `${presentation.size}px`,
+  '--workflow-shortcut-label-size': `${presentation.labelSize}px`,
+  '--workflow-shortcut-width': `${shortcutBounds(presentation).width}px`,
+});
 export default function PresentationBoardDefinitive({ assetsById = new Map(), children, documentGeometry,
   identity, inspectionAtmosphere = false, layoutMode = 'wide', metadataDocked = false, metadataProjection = 'closed', onContextMenu,
   onInspectionCancel, onMetadataClose, onMetadataInnerToggle, onMetadataSidecarToggle, onMetadataUndock, onMinimize, onRestore,
@@ -33,6 +52,10 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const [shortcutPosition, setShortcutPosition] = useState(storedShortcut?.position || { left: 24, top: 72 });
   const [shortcutName, setShortcutName] = useState(storedShortcut?.name || 'PRESENTATION BOARD');
   const [shortcutIconId, setShortcutIconId] = useState(storedShortcut?.iconAssetId || null);
+  const [shortcutVisible, setShortcutVisible] = useState(Boolean(storedShortcut?.visible || storedShortcut?.open === false));
+  const [shortcutIconPresentation, setShortcutIconPresentation] = useState(() =>
+    normalizePresentationBoardShortcutIconPresentation(storedShortcut?.iconPresentation));
+  const [shortcutIconEditing, setShortcutIconEditing] = useState(false);
   const [shortcutMenu, setShortcutMenu] = useState(null);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(shortcutName);
@@ -67,15 +90,27 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
 
   useEffect(() => {
     try { globalThis.localStorage?.setItem(presentationBoardShortcutStorageKey(profileAddress), JSON.stringify({
-      iconAssetId: shortcutIconId, name: shortcutName,
-      open: instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW, position: shortcutPosition,
+      iconAssetId: shortcutIconId, iconPresentation: shortcutIconPresentation, name: shortcutName,
+      open: instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW, position: shortcutPosition, visible: shortcutVisible,
     })); } catch { /* Workbench layout persistence is optional. */ }
-  }, [instanceState, profileAddress, shortcutIconId, shortcutName, shortcutPosition]);
+  }, [instanceState, profileAddress, shortcutIconId, shortcutIconPresentation, shortcutName, shortcutPosition, shortcutVisible]);
 
+  useEffect(() => {
+    if (!shortcutVisible || !shortcutIconId) setShortcutIconEditing(false);
+  }, [shortcutIconId, shortcutVisible]);
+
+  const currentShortcutBounds = shortcutBounds(shortcutIconPresentation);
   const clampShortcut = (position) => ({
-    left: Math.max(0, Math.min((host?.clientWidth || SHORTCUT_SIZE.width) - SHORTCUT_SIZE.width, snap(position.left))),
-    top: Math.max(0, Math.min((host?.clientHeight || SHORTCUT_SIZE.height) - SHORTCUT_SIZE.height, snap(position.top))),
+    left: Math.max(0, Math.min((host?.clientWidth || currentShortcutBounds.width) - currentShortcutBounds.width, snap(position.left))),
+    top: Math.max(0, Math.min((host?.clientHeight || currentShortcutBounds.height) - currentShortcutBounds.height, snap(position.top))),
   });
+  useEffect(() => {
+    if (!host || !shortcutVisible) return;
+    setShortcutPosition((current) => {
+      const next = clampShortcut(current);
+      return next.left === current.left && next.top === current.top ? current : next;
+    });
+  }, [host, shortcutIconPresentation.labelSize, shortcutIconPresentation.size, shortcutVisible]);
   const defaultTop = layoutMode === 'narrow' ? 48 : view?.frame.board.top || 0;
   const clampPosition = (position, frame = view?.frame.board, extraWidth = 0) => ({
     left: Math.max(8, Math.min((host?.clientWidth || 0) - (frame?.width || 0) - extraWidth - 8, position.left)),
@@ -212,8 +247,8 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const stopShortcutDrag = (event) => { if (shortcutDragRef.current?.id === event.pointerId) shortcutDragRef.current = null; };
   const minimizeToShortcut = () => {
     if (!windowFrame || inspectionActive) return;
-    const frame = boardPhase === 'maximized' ? maximumFrame : windowFrame;
-    setShortcutPosition(clampShortcut({ left: frame.left, top: frame.top })); onMinimize?.();
+    setShortcutVisible(true);
+    onMinimize?.();
   };
   const commitRename = () => {
     const value = renameValue.trim(); if (value) setShortcutName(value.slice(0, 48)); else setRenameValue(shortcutName);
@@ -224,20 +259,32 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const avatarUrl = identity?.status === 'RESOLVED' ? identity.avatarUrl : null;
   const address = identity?.normalizedAddress || identity?.address || profileAddress;
   const shortcutAsset = shortcutIconId ? assetsById.get(shortcutIconId) : null;
+  const hostRectangle = host?.getBoundingClientRect();
+  const iconEditorPosition = hostRectangle ? {
+    left: Math.max(8, Math.min(globalThis.innerWidth - SHORTCUT_ICON_EDITOR_SIZE.width - 8,
+      hostRectangle.left + shortcutPosition.left + currentShortcutBounds.width + 8)),
+    top: Math.max(8, Math.min(globalThis.innerHeight - SHORTCUT_ICON_EDITOR_SIZE.height - 8,
+      hostRectangle.top + shortcutPosition.top)),
+  } : { left: 8, top: 8 };
   const workbenchField = host ? { cellSize: WORKBENCH_CELL, left: 0, top: 0 } : null;
   return <div className="system-workflow__workbench" data-presentation-workbench onContextMenu={onContextMenu} ref={setHost}>
     {host && <LatticePixelGrid color="var(--study-grid)" field={workbenchField} guideInterval={1}
       guideSize={1} height={host.clientHeight} mode="LINES" width={host.clientWidth} />}
-    {instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED
-      && <button aria-label={`Open ${shortcutName}`} className="system-workflow__desktop-shortcut"
+    {shortcutVisible
+      && <button aria-label={instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED
+        ? `Open ${shortcutName}` : `${shortcutName} shortcut`} className="system-workflow__desktop-shortcut"
       onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setShortcutMenu({ x: event.clientX, y: event.clientY }); }}
-      onDoubleClick={onRestore} onDragOver={(event) => { if ([...event.dataTransfer.types].includes('application/x-inscape-asset')) event.preventDefault(); }}
-      onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const id = event.dataTransfer.getData('application/x-inscape-asset'); if (assetsById.has(id)) setShortcutIconId(id); }}
-      onKeyDown={(event) => { if (event.key === 'Enter' && !renaming) { event.preventDefault(); onRestore?.(); } }}
+      onDoubleClick={() => { if (instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED) onRestore?.(); }} onDragOver={(event) => { if ([...event.dataTransfer.types].includes('application/x-inscape-asset')) event.preventDefault(); }}
+      onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const id = event.dataTransfer.getData('application/x-inscape-asset'); if (assetsById.has(id)) {
+        setShortcutIconId(id);
+        setShortcutIconPresentation(DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION);
+      } }}
+      onKeyDown={(event) => { if (event.key === 'Enter' && !renaming && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED) { event.preventDefault(); onRestore?.(); } }}
       onPointerCancel={stopShortcutDrag} onPointerDown={beginShortcutDrag} onPointerMove={moveShortcutDrag}
-      onPointerUp={stopShortcutDrag} style={{ left: shortcutPosition.left, top: shortcutPosition.top }} type="button">
-      <span aria-hidden="true" className="system-workflow__desktop-shortcut-icon">
-        {shortcutAsset ? <ProgressiveArtworkImage asset={shortcutAsset} /> : 'PB'}
+      onPointerUp={stopShortcutDrag} style={{ left: shortcutPosition.left, top: shortcutPosition.top,
+        ...shortcutPresentationStyle(shortcutIconPresentation) }} type="button">
+      <span aria-hidden="true" className="system-workflow__desktop-shortcut-icon" data-custom={shortcutAsset ? true : undefined}>
+        {shortcutAsset ? <ProgressiveArtworkImage asset={shortcutAsset} style={shortcutIconStyle(shortcutIconPresentation)} /> : 'PB'}
       </span>
       {renaming ? <input aria-label="Presentation Board shortcut name" autoFocus maxLength="48"
         onBlur={commitRename} onChange={(event) => setRenameValue(event.target.value)}
@@ -246,6 +293,22 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
           if (event.key === 'Escape') { event.preventDefault(); setRenameValue(shortcutName); setRenaming(false); }
         }} value={renameValue} /> : <strong>{shortcutName}</strong>}
     </button>}
+    {shortcutIconEditing && shortcutAsset && <section aria-label="Edit Presentation Board shortcut icon"
+      className="system-workflow__shortcut-icon-editor" onKeyDown={(event) => {
+        if (event.key === 'Escape') { event.preventDefault(); setShortcutIconEditing(false); }
+      }} role="dialog" style={iconEditorPosition}>
+      <div className="system-workflow__shortcut-icon-preview" aria-hidden="true">
+        <ProgressiveArtworkImage asset={shortcutAsset} style={shortcutIconStyle(shortcutIconPresentation)} />
+      </div>
+      <div className="system-workflow__shortcut-icon-controls">
+        <label><span>SIZE</span><input aria-label="Shortcut icon size" autoFocus max="150" min="40" onChange={(event) => setShortcutIconPresentation((current) => ({ ...current, size: Number(event.target.value) }))} step="1" type="range" value={shortcutIconPresentation.size} /><output>{shortcutIconPresentation.size}px</output></label>
+        <label><span>ZOOM</span><input aria-label="Shortcut icon zoom" max="3" min="0.75" onChange={(event) => setShortcutIconPresentation((current) => ({ ...current, scale: Number(event.target.value) }))} step="0.05" type="range" value={shortcutIconPresentation.scale} /><output>{Math.round(shortcutIconPresentation.scale * 100)}%</output></label>
+        <label><span>X</span><input aria-label="Shortcut icon horizontal position" max="24" min="-24" onChange={(event) => setShortcutIconPresentation((current) => ({ ...current, offsetX: Number(event.target.value) }))} step="1" type="range" value={shortcutIconPresentation.offsetX} /><output>{shortcutIconPresentation.offsetX > 0 ? '+' : ''}{shortcutIconPresentation.offsetX}</output></label>
+        <label><span>Y</span><input aria-label="Shortcut icon vertical position" max="24" min="-24" onChange={(event) => setShortcutIconPresentation((current) => ({ ...current, offsetY: Number(event.target.value) }))} step="1" type="range" value={shortcutIconPresentation.offsetY} /><output>{shortcutIconPresentation.offsetY > 0 ? '+' : ''}{shortcutIconPresentation.offsetY}</output></label>
+        <label><span>FONT</span><input aria-label="Shortcut label size" max="12" min="7" onChange={(event) => setShortcutIconPresentation((current) => ({ ...current, labelSize: Number(event.target.value) }))} step="1" type="range" value={shortcutIconPresentation.labelSize} /><output>{shortcutIconPresentation.labelSize}px</output></label>
+      </div>
+      <footer><button onClick={() => setShortcutIconPresentation(DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION)} type="button">RESET</button><button onClick={() => setShortcutIconEditing(false)} type="button">DONE</button><button aria-label="Close icon editor" className="system-workflow__shortcut-icon-editor-close" onClick={() => setShortcutIconEditing(false)} title="Close" type="button"><X /></button></footer>
+    </section>}
     {view && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW
       && <article aria-label="Presentation Board" className="system-workflow__presentation-board"
       data-board-phase={boardPhase} data-board-scale={view.scale} data-maximized={maximized || undefined}
@@ -318,10 +381,12 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       </div>
     </article>}
     {shortcutMenu && createPortal(<RackMenu anchor={shortcutMenu} commands={[
-      { id: 'rename', label: 'RENAME' }, { disabled: !shortcutIconId, id: 'reset-icon', label: 'RESET ICON' },
+      { id: 'rename', label: 'RENAME' }, { disabled: !shortcutIconId, id: 'edit-icon', label: 'EDIT ICON' },
+      { disabled: !shortcutIconId, id: 'reset-icon', label: 'RESET ICON' },
     ]} label="Presentation Board shortcut commands" onClose={() => setShortcutMenu(null)} onCommand={(id) => {
       if (id === 'rename') { setRenameValue(shortcutName); setRenaming(true); }
-      if (id === 'reset-icon') setShortcutIconId(null);
+      if (id === 'edit-icon') setShortcutIconEditing(true);
+      if (id === 'reset-icon') { setShortcutIconId(null); setShortcutIconPresentation(DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION); }
       setShortcutMenu(null);
     }} systemWorkflowOverlay />, document.body)}
   </div>;

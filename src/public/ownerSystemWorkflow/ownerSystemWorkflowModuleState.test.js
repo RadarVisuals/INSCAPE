@@ -11,7 +11,12 @@ import {
   transitionOwnerMetadataMode,
   transitionPresentationBoardInstance,
 } from './ownerSystemWorkflowModuleState.js';
-import { loadPresentationBoardShortcut, presentationBoardShortcutStorageKey } from './presentationBoardShortcutStorage.js';
+import {
+  DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION,
+  loadPresentationBoardShortcut,
+  normalizePresentationBoardShortcutIconPresentation,
+  presentationBoardShortcutStorageKey,
+} from './presentationBoardShortcutStorage.js';
 
 const metadataModes = Object.values(OWNER_METADATA_MODE);
 
@@ -76,6 +81,17 @@ test('legacy shortcut open-state restores safely and invalid storage fails close
   const storage = { getItem: (key) => values.get(key) || null };
   assert.deepEqual(loadPresentationBoardShortcut('0xabc', storage), { name: 'BOARD', open: false });
   assert.equal(loadPresentationBoardShortcut('invalid', { getItem: () => '{' }), null);
+});
+
+test('shortcut icon presentation preserves alpha-safe framing controls within exact bounds', () => {
+  assert.deepEqual(normalizePresentationBoardShortcutIconPresentation(null),
+    DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION);
+  assert.deepEqual(normalizePresentationBoardShortcutIconPresentation({ labelSize: 99, offsetX: 99, offsetY: -99, scale: 8, size: 999 }),
+    { labelSize: 12, offsetX: 24, offsetY: -24, scale: 3, size: 150 });
+  assert.deepEqual(normalizePresentationBoardShortcutIconPresentation({ labelSize: '10', offsetX: '7', offsetY: '-5', scale: '1.75', size: '126' }),
+    { labelSize: 10, offsetX: 7, offsetY: -5, scale: 1.75, size: 126 });
+  assert.deepEqual(normalizePresentationBoardShortcutIconPresentation({ offsetX: 'bad', offsetY: null, scale: Infinity }),
+    DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION);
 });
 
 test('Workbench ADD availability is derived only from canonical lifecycle states', () => {

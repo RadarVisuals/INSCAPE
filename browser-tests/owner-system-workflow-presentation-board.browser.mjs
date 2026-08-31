@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -813,6 +814,7 @@ test('Workbench ADD commands follow canonical Board and Metadata lifecycle state
 test('Workbench shortcut snaps, renames, and accepts a Library artwork as its icon', { timeout: 60_000 }, async () => {
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
+    if (SCREENSHOT_DIR) await mkdir(SCREENSHOT_DIR, { recursive: true });
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(URL, { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: 'Close Presentation Board to shortcut' }).click();
@@ -847,6 +849,87 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
       target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }));
     });
     assert.equal(await shortcut.locator('.system-workflow__desktop-shortcut-icon img').count() > 0, true);
+    const customIcon = shortcut.locator('.system-workflow__desktop-shortcut-icon');
+    assert.deepEqual(await customIcon.evaluate((node) => {
+      const rectangle = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      return {
+        background: style.backgroundColor,
+        border: style.borderTopWidth,
+        custom: node.dataset.custom,
+        height: rectangle.height,
+        objectFit: getComputedStyle(node.querySelector('img')).objectFit,
+        width: rectangle.width,
+      };
+    }), { background: 'rgba(0, 0, 0, 0)', border: '0px', custom: 'true', height: 60, objectFit: 'contain', width: 60 });
+
+    await page.getByRole('button', { name: 'Close workspace' }).click();
+    await shortcut.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'EDIT ICON' }).click();
+    const iconEditor = page.getByRole('dialog', { name: 'Edit Presentation Board shortcut icon' });
+    await iconEditor.waitFor();
+    await iconEditor.getByRole('slider', { name: 'Shortcut icon size' }).fill('140');
+    await iconEditor.getByRole('slider', { name: 'Shortcut icon zoom' }).fill('2');
+    await iconEditor.getByRole('slider', { name: 'Shortcut icon horizontal position' }).fill('7');
+    await iconEditor.getByRole('slider', { name: 'Shortcut icon vertical position' }).fill('-5');
+    await iconEditor.getByRole('slider', { name: 'Shortcut label size' }).fill('11');
+    assert.match(await customIcon.locator('img').first().getAttribute('style'), /translate\(7px, -5px\) scale\(2\)/);
+    assert.deepEqual(await customIcon.evaluate((node) => {
+      const rectangle = node.getBoundingClientRect();
+      return { height: rectangle.height, width: rectangle.width };
+    }), { height: 140, width: 140 });
+    if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-shortcut-icon-editor-wide.png') });
+    await page.waitForFunction(() => {
+      const key = Object.keys(localStorage).find((candidate) => candidate.startsWith('inscape:workbench:presentation-board:'));
+      const stored = key && JSON.parse(localStorage.getItem(key));
+      return stored?.iconPresentation?.scale === 2 && stored.iconPresentation.size === 140
+        && stored.iconPresentation.labelSize === 11
+        && stored.iconPresentation.offsetX === 7 && stored.iconPresentation.offsetY === -5;
+    });
+    await iconEditor.getByRole('button', { name: 'DONE' }).click();
+    await page.reload({ waitUntil: 'networkidle' });
+    shortcut = page.getByRole('button', { name: 'Open CURATED NFTs' });
+    await shortcut.waitFor();
+    assert.match(await shortcut.locator('.system-workflow__desktop-shortcut-icon img').first().getAttribute('style'),
+      /translate\(7px, -5px\) scale\(2\)/);
+    assert.equal((await shortcut.locator('.system-workflow__desktop-shortcut-icon').boundingBox()).width, 140);
+    const shortcutPositionBeforeOpen = await shortcut.boundingBox();
+    await shortcut.dblclick();
+    const board = page.getByRole('article', { name: 'Presentation Board' });
+    await board.waitFor();
+    assert.equal(await page.locator('.system-workflow__desktop-shortcut').count(), 1,
+      'the desktop shortcut remains visible while its Presentation Board is open');
+    const boardHeader = await board.locator('.system-workflow__identity-strip').boundingBox();
+    await page.mouse.move(boardHeader.x + 90, boardHeader.y + boardHeader.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(boardHeader.x + 190, boardHeader.y + boardHeader.height / 2 + 80, { steps: 4 });
+    await page.mouse.up();
+    await page.getByRole('button', { name: 'Close Presentation Board to shortcut' }).click();
+    shortcut = page.getByRole('button', { name: 'Open CURATED NFTs' });
+    await shortcut.waitFor();
+    const shortcutPositionAfterClose = await shortcut.boundingBox();
+    assert.ok(closeEnough(shortcutPositionAfterClose.x, shortcutPositionBeforeOpen.x)
+      && closeEnough(shortcutPositionAfterClose.y, shortcutPositionBeforeOpen.y),
+    JSON.stringify({ shortcutPositionAfterClose, shortcutPositionBeforeOpen }));
+    await page.setViewportSize({ width: 390, height: 720 });
+    await shortcut.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'EDIT ICON' }).click();
+    const narrowEditor = page.getByRole('dialog', { name: 'Edit Presentation Board shortcut icon' });
+    await narrowEditor.waitFor();
+    const narrowEditorBox = await narrowEditor.boundingBox();
+    const narrowEditorGeometry = await narrowEditor.evaluate((node) => ({
+      computedLeft: getComputedStyle(node).left,
+      host: node.closest('.system-workflow__workbench').getBoundingClientRect().toJSON(),
+      inlineLeft: node.style.left,
+      offsetParent: node.offsetParent?.getBoundingClientRect().toJSON(),
+      position: getComputedStyle(node).position,
+      transform: getComputedStyle(node).transform,
+      translate: getComputedStyle(node).translate,
+      viewportWidth: globalThis.innerWidth,
+    }));
+    assert.ok(narrowEditorBox.x >= 8 && narrowEditorBox.x + narrowEditorBox.width <= 382,
+      JSON.stringify({ box: narrowEditorBox, ...narrowEditorGeometry }));
+    if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-shortcut-icon-editor-narrow.png') });
   } finally {
     await browser.close();
   }

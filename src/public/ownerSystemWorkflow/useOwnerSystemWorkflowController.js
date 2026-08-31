@@ -26,11 +26,11 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   return { ...state, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError,
     run, selectPlacement, replaceSelection,
     changeGrid: (id) => { run((session) => session.selectGrid(id)); setSelectedPlacementIds([]); },
-    createGrid: () => run((session) => session.createGrid()),
+    createGrid: () => { const result = run((session) => session.createGrid()); if (result !== false) setSelectedPlacementIds([]); return result; },
     renameGrid: (grid, name) => run((session) => session.renameGrid(gridRequest(grid, { name }))),
     setGridVisibility: (grid, visibility) => run((session) => session.setGridVisibility(gridRequest(grid, { visibility }))),
     reorderGrid: (gridId, toIndex) => run((session) => session.reorderGrid({ gridId, toIndex, expectedOrder: systemWorkflowGridOrder(state.draft) })),
-    deleteGrid: (grid) => run((session) => session.deleteGrid({ gridId: grid.id, confirmation: session.inspectGridDeletion({ gridId: grid.id }) })),
+    deleteGrid: (grid) => { const result = run((session) => session.deleteGrid({ gridId: grid.id, confirmation: session.inspectGridDeletion({ gridId: grid.id }) })); if (result !== false && grid.id === state.selectedGridId) setSelectedPlacementIds([]); return result; },
     setAppearance: (patch) => run((session) => session.setAppearance({ expectedAppearance: state.draft.appearance, appearance: patch })),
     toggleLock: (placement) => run((session) => session.setPlacementLocked({ gridId: state.selectedGridId, placementId: placement.id, expectedPlacement: placement, locked: !placement.locked })),
   };
