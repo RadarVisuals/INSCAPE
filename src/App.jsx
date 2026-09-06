@@ -2,13 +2,13 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import OwnerRuntimeBoundary from './public/OwnerRuntimeBoundary.jsx';
 import { Startveil } from './startveil/index.js';
+import { StartupDestinationBoundary, StartupDestinationContext } from './startveil/StartupDestinationContext.jsx';
 import { useWalletStore } from './store/useWalletStore.js';
 import { resolveLibraryProfile, resolveWorkspaceProfile } from './library/config.js';
 import { createSelectedProfileUrl, createViewedProfileUrl, resolveExplicitViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
 import {
   PROFILE_TARGET_SOURCE,
-  resolveProfileTarget,
-  shouldRequestStandaloneSignIn
+  resolveProfileTarget
 } from './profileDiscovery/profileTarget.js';
 import PublishedProfileBoundary from './profileDocument/components/PublishedProfileBoundary.jsx';
 import { usePublishedProfile } from './profileDocument/state/usePublishedProfile.js';
@@ -22,19 +22,21 @@ import AlphaSupportPanel from './support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from './support/alphaSupport.js';
 
 const PublicDiscoverExperience = lazy(() => import('./profileDiscovery/PublicDiscoverExperience.jsx'));
+const CreepsMetadataRecoveryPanel = import.meta.env.DEV
+  ? lazy(() => import('./recovery/CreepsMetadataRecoveryPanel.jsx'))
+  : null;
 
 function App() {
   const desktopContextMenuRef = useRef(null);
   const standaloneWalletSessionRef = useRef(null);
   const routeWorkspaceProfileAddress = useMemo(() => resolveLibraryProfile(window.location), []);
+  const creepsMetadataRecoveryRoute = useMemo(() => import.meta.env.DEV
+    && window.location.pathname.replace(/\/+$/, '') === '/development/creeps-recovery', []);
   const [explicitViewedProfileAddress, setExplicitViewedProfileAddress] = useState(() => resolveExplicitViewedProfile(window.location));
   const [retainedPublicProfileAddress, setRetainedPublicProfileAddress] = useState(null);
-  const [worldReady, setWorldReady] = useState(false);
   const [revealStage, setRevealStage] = useState('sealed');
-  const [revealPresentation, setRevealPresentation] = useState({
-    sequence: 'full',
-    reducedMotion: false
-  });
+  const [readyDestinationKey, setReadyDestinationKey] = useState(null);
+  const interfaceRef = useRef(null);
   const [previewDocument, setPreviewDocument] = useState(null);
   const [standaloneSignInActive, setStandaloneSignInActive] = useState(false);
   const [galleryActive, setGalleryActive] = useState(false);
@@ -57,7 +59,6 @@ function App() {
     authorityLifecycleStatus
   });
   const viewedProfileAddress = profileTarget.address;
-  const worldVisible = ['world', 'resident', 'interface', 'complete'].includes(revealStage);
   const interfaceVisible = ['interface', 'complete'].includes(revealStage);
   const ownerAuthoringEnabled = resolveOwnerAuthoringEnabled({
     ownershipVerified,
@@ -78,7 +79,19 @@ function App() {
     avatarUrl: walletProfileMetadata?.avatarUrl || null,
   } : null;
 
-  useEffect(() => setWorldReady(true), []);
+  // Reveal a resolved destination or its recovery UI; optional artwork media
+  // continues loading inside that destination. The public portal is independent.
+  const destinationKey = `${publicProfileRoute}:${viewedProfileAddress || 'directory'}`;
+  const onDestinationReady = useCallback(() => setReadyDestinationKey(destinationKey), [destinationKey]);
+  const entryDestinationReady = publicEntryPortal || (!profileTarget.pending && ownerSourceReady
+    && readyDestinationKey === destinationKey);
+  useEffect(() => {
+    if (revealStage !== 'complete') return;
+    const node = interfaceRef.current;
+    if (!node) return;
+    const focusTarget = node.querySelector('[data-published-focus-fallback], .visitor-grid-world, .system-workflow__global-bar button');
+    (focusTarget || node).focus({ preventScroll: true });
+  }, [revealStage]);
 
   useEffect(() => {
     if (authorityLifecycleStatus === 'complete' && verifiedOwnerProfileAddress) {
@@ -185,33 +198,33 @@ function App() {
     if (verifiedOwnerProfileAddress) visitProfile(verifiedOwnerProfileAddress, { returnToConnectedProfile: true });
   }, [verifiedOwnerProfileAddress, visitProfile]);
 
-  const handleUserGesture = useCallback(() => {
-    const signInRequired = shouldRequestStandaloneSignIn({
-      embedded: window.parent !== window,
-      walletConnected: useWalletStore.getState().isWalletConnected,
-      targetSource: profileTarget.source
-    });
-    if (signInRequired) requestStandaloneSignIn();
-  }, [profileTarget.source, requestStandaloneSignIn]);
-
   const registerDesktopContextMenu = useCallback((handler) => {
     desktopContextMenuRef.current = handler;
   }, []);
+
+  if (creepsMetadataRecoveryRoute && CreepsMetadataRecoveryPanel) return <Suspense
+    fallback={<div className="mode-loading">Opening CREEPS recovery control…</div>}
+  >
+    <CreepsMetadataRecoveryPanel onRequestSignIn={requestStandaloneSignIn} />
+  </Suspense>;
 
   return (
     <div className="application-root" data-application-mode="public" data-startveil-stage={revealStage} data-gallery-active={galleryActive || undefined}>
       <div
         className="application-world"
-        data-visible={worldVisible || undefined}
+        data-visible={interfaceVisible || undefined}
         onContextMenu={(event) => desktopContextMenuRef.current?.(event)}
       >
       </div>
       <div
         className="application-interface"
+        ref={interfaceRef} tabIndex={-1}
         data-visible={interfaceVisible || undefined}
         aria-hidden={!interfaceVisible}
-        inert={interfaceVisible ? undefined : ''}
+        inert={revealStage === 'complete' ? undefined : ''}
       >
+      <StartupDestinationContext.Provider key={destinationKey} value={onDestinationReady}>
+      <StartupDestinationBoundary>
         {authorityLifecycleStatus === 'complete' && initializationError && <AlphaSupportPanel compact
           code={ALPHA_SUPPORT_CODES.AUTHORITY_INITIALIZATION_FAILED} phase="OWNER_AUTHORITY"
           providerCategory="UP_PROVIDER" profileAddress={viewedProfileAddress} routeClass="AUTHORITY_ENTRY"
@@ -234,7 +247,6 @@ function App() {
             onDisconnect={disconnectStandalone}
             onEnterMyWorld={enterConnectedWorld}
             interfaceVisible={interfaceVisible}
-            revealPresentation={revealPresentation}
             onPreviewDocumentChange={setPreviewDocument}
             registerWorldContextMenu={registerDesktopContextMenu}
             onGalleryOpenChange={setGalleryActive}
@@ -248,19 +260,17 @@ function App() {
               ? verifiedOwnerProfileAddress
               : null}
             onVisitProfile={visitProfile} />}
+      </StartupDestinationBoundary>
+      </StartupDestinationContext.Provider>
       </div>
       <Startveil
         connectedProfile={connectedProfile}
-        ready={worldReady}
+        ready={entryDestinationReady}
         portal={publicEntryPortal}
         onConnect={requestStandaloneSignIn}
         onDisconnect={disconnectStandalone}
         onEnterMyWorld={enterConnectedWorld}
         onVisitProfile={(address) => visitProfile(address)}
-        onUserGesture={handleUserGesture}
-        onPresentationMode={setRevealPresentation}
-        onRevealWorld={() => setRevealStage('world')}
-        onRevealActor={() => setRevealStage('resident')}
         onRevealInterface={() => setRevealStage('interface')}
         onComplete={() => setRevealStage('complete')}
       />

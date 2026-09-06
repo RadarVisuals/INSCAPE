@@ -44,6 +44,48 @@ const createStore = (storage, profileAddress = PROFILE_A) => createSystemWorkflo
   storage,
 });
 
+test('a second editor cannot overwrite an already saved external change', () => {
+  const storage = memoryStorage();
+  const first = createStore(storage); const second = createStore(storage);
+  const earlier = second.getDraft();
+  const newer = first.getDraft(); newer.grids[0].subtitle = 'saved in first tab';
+  assert.equal(first.commitCompletedOperation(newer, { expectedGeneration: 0 }), true);
+  const saved = storage.records.get(systemWorkflowDraftKey(PROFILE_A));
+  earlier.grids[0].subtitle = 'stale second tab';
+  assert.equal(second.commitCompletedOperation(earlier, { expectedGeneration: 0 }), false);
+  assert.equal(second.getGeneration(), 0);
+  assert.equal(storage.records.get(systemWorkflowDraftKey(PROFILE_A)), saved);
+  second.reload();
+  const refreshed = second.getDraft(); refreshed.grids[0].subtitle = 'continued after reload';
+  assert.equal(second.commitCompletedOperation(refreshed, { expectedGeneration: second.getGeneration() }), true);
+});
+
+test('external removal and read failure preserve the accepted draft and do not write', () => {
+  const storage = memoryStorage(); const store = createStore(storage);
+  assert.equal(store.commitCompletedOperation(store.getDraft(), { expectedGeneration: 0 }), true);
+  const before = store.getDraft(); const writes = storage.activity.writes;
+  storage.failures.read = true;
+  assert.equal(store.commitCompletedOperation(before, { expectedGeneration: 1 }), false);
+  storage.failures.read = false;
+  storage.records.delete(systemWorkflowDraftKey(PROFILE_A));
+  assert.equal(store.commitCompletedOperation(before, { expectedGeneration: 1 }), false);
+  assert.equal(storage.activity.writes, writes);
+  assert.deepEqual(store.getDraft(), before);
+  assert.equal(store.getGeneration(), 1);
+});
+
+test('a stale corruption confirmation never removes a replacement record', () => {
+  for (const replacement of ['different corruption', JSON.stringify(createEmptySystemWorkflowDraft(PROFILE_A, { generateId: () => 'replacement' }))]) {
+    const key = systemWorkflowDraftKey(PROFILE_A);
+    const storage = memoryStorage({ [key]: '{broken' }); const store = createStore(storage);
+    const expectedFingerprint = store.getRecordState().fingerprint;
+    storage.records.set(key, replacement);
+    assert.equal(store.resetCorruptDraft({ expectedFingerprint, profileAddress: PROFILE_A }), false);
+    assert.equal(storage.records.get(key), replacement);
+    assert.equal(storage.activity.removes, 0);
+  }
+});
+
 test('corrupt canonical records block authoring and require exact explicit recovery', () => {
   const key = systemWorkflowDraftKey(PROFILE_A);
   const storage = memoryStorage({ [key]: '{not-json' });

@@ -17,7 +17,9 @@ import {
 import {
   interpolateLatticeProductionFocusRectangle,
   LATTICE_PRODUCTION_FOCUS_LANDING_MS,
+  LATTICE_PRODUCTION_FOCUS_OPENING_MS,
   LATTICE_PRODUCTION_FOCUS_TRANSITION_MS,
+  latticeProductionFocusOpeningProgress,
   latticeProductionFocusTransitionProgress,
 } from './latticeProductionFocusArtworkMotion.js';
 import './latticeMenuSurface.css';
@@ -160,12 +162,15 @@ export default function LatticeFocusViewer({
   useEffect(() => {
     if (phase !== 'opening' && phase !== 'closing') return undefined;
     const opening = phase === 'opening';
+    const duration = opening ? LATTICE_PRODUCTION_FOCUS_OPENING_MS : LATTICE_PRODUCTION_FOCUS_TRANSITION_MS;
     const startedAt = performance.now();
     let frame = null;
     const advance = (time) => {
       const elapsed = Math.min(1, Math.max(0,
-        (time - startedAt) / LATTICE_PRODUCTION_FOCUS_TRANSITION_MS));
-      const eased = latticeProductionFocusTransitionProgress(elapsed);
+        (time - startedAt) / duration));
+      const eased = opening
+        ? latticeProductionFocusOpeningProgress(elapsed)
+        : latticeProductionFocusTransitionProgress(elapsed);
       setMotionProgress(opening ? eased : 1 - eased);
       if (elapsed < 1) {
         frame = requestAnimationFrame(advance);

@@ -8,7 +8,7 @@ export function OwnerSystemWorkflowSidebarEditor({ dialog, entityLabel = 'item',
   useEffect(() => {
     setName(categoryDialogInitialName(dialog));
     inputRef.current?.focus({ preventScroll: true });
-  }, [dialog]);
+  }, [dialog?.type, dialog?.category?.id, dialog?.section?.id]);
   if (!dialog) return null;
   const submit = (event) => {
     event.preventDefault();
@@ -37,7 +37,7 @@ export function OwnerSystemWorkflowSidebarDeleteConfirmation({ entityLabel, name
   </div>;
 }
 
-export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, phase, placing = false, rail, sidebarCollapsed = false }) {
+export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, phase, placing = false, rail, sidebarCollapsed = false, style, resizeHandle }) {
   const [hoverLabel, setHoverLabel] = useState(null);
   const showHoverLabel = (event) => {
     const button = event.target.closest?.('.lattice-browser-sidebar button');
@@ -55,7 +55,7 @@ export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, 
   };
   return <section aria-hidden={phase === 'closing' || undefined} aria-label={label}
     className={`system-workflow__workspace-window system-workflow__browser-workspace system-workflow__motion-panel ${className}`}
-    data-placing={placing || undefined}
+    data-placing={placing || undefined} style={style}
     data-sidebar-collapsed={sidebarCollapsed || undefined}
     inert={phase === 'closing' ? '' : undefined}
     onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setHoverLabel(null); }}
@@ -63,6 +63,7 @@ export function OwnerSystemWorkflowWorkspaceShell({ children, className, label, 
     onPointerOver={showHoverLabel} onPointerLeave={() => setHoverLabel(null)}>
     <div className="system-workflow__browser-body">{children}</div>
     <footer className="system-workflow__local-rail">{rail}</footer>
+    {resizeHandle}
     {hoverLabel?.label && <output aria-hidden="true" className="system-workflow__sidebar-hover-label"
       data-active={hoverLabel.active || undefined}
       style={{ height: hoverLabel.height, left: hoverLabel.left, top: hoverLabel.top }}>{hoverLabel.label}</output>}

@@ -1,7 +1,7 @@
-import { Bell, CloudUpload, Compass, Eye, FileText, Grid3X3, Layers3, Library, Settings2, UserRound } from 'lucide-react';
+import { Bell, CloudUpload, Compass, Eye, FileText, Grid3X3, Library, Settings2, UserRound } from 'lucide-react';
 
-export default function OwnerSystemWorkflowGlobalBar({ activePanel, layersActivated = false, layersOpen, onOpen,
-  onPreview, onPublish, onToggleLayers, publicationOpen = false, unreadCount }) {
+export default function OwnerSystemWorkflowGlobalBar({ activePanel, onOpen,
+  onPreview, onPublish, publicationOpen = false, unreadCount }) {
   const panelButton = (id, label, Icon, extra = null) => <button data-system-workflow-panel-trigger aria-label={label}
     aria-expanded={['profile', 'activity', 'grids', 'settings'].includes(id) ? activePanel === id : undefined}
     aria-pressed={['discover', 'library'].includes(id) ? activePanel === id : undefined}
@@ -23,8 +23,6 @@ export default function OwnerSystemWorkflowGlobalBar({ activePanel, layersActiva
         onClick={(event) => onOpen('docs', event.currentTarget)} title="Docs" type="button"><FileText size={14} /></button>
       <button data-system-workflow-panel-trigger aria-expanded={activePanel === 'settings'} aria-label="Settings"
         onClick={(event) => onOpen('settings', event.currentTarget)} title="Settings" type="button"><Settings2 size={14} /></button>
-      <button aria-expanded={layersOpen} aria-label="Layers" className="system-workflow__layers-trigger" data-layers-activated={layersActivated || undefined}
-        onClick={onToggleLayers} title="Layers" type="button"><Layers3 size={14} /></button>
     </div>
   </header>;
 }

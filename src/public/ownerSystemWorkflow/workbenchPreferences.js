@@ -4,6 +4,7 @@ import {
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 
 export const DEFAULT_WORKBENCH_PREFERENCES = Object.freeze({
+  chromeNoise: true,
   compositionLocked: false,
   gridColor: null,
   gridMode: 'LINES',
@@ -28,6 +29,7 @@ export function normalizeWorkbenchPreferences(value, fallbackSurfaceId = DEFAULT
   const safeFallbackSurface = SYSTEM_WORKFLOW_SURFACE_IDS.includes(fallbackSurfaceId)
     ? fallbackSurfaceId : DEFAULT_WORKBENCH_PREFERENCES.surfaceId;
   return Object.freeze({
+    chromeNoise: typeof source.chromeNoise === 'boolean' ? source.chromeNoise : true,
     compositionLocked: typeof source.compositionLocked === 'boolean' ? source.compositionLocked : false,
     gridColor: validHexColor(source.gridColor) ? source.gridColor.toLowerCase() : null,
     gridMode: SYSTEM_WORKFLOW_GUIDE_MODES.includes(source.gridMode) ? source.gridMode : DEFAULT_WORKBENCH_PREFERENCES.gridMode,

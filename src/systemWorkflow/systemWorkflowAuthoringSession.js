@@ -62,7 +62,7 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
     if (candidate === null) return false;
     const candidateDraft = candidate?.draft || candidate;
     if (!store.commitCompletedOperation(candidateDraft, { expectedGeneration: generation })) {
-      throw sessionError('SYSTEM_WORKFLOW_OPERATION_STALE', 'The authoring operation became stale before commit');
+      throw sessionError('SYSTEM_WORKFLOW_OPERATION_STALE', 'The change could not be saved. Storage may be unavailable or the draft changed in another tab. Reload before continuing.');
     }
     selectedGridId = reconcileSystemWorkflowGridSelection(store.getDraft(), selectedGridId);
     return true;

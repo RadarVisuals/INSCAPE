@@ -41,8 +41,8 @@ test('owner reuses one contained artwork-only focus viewer owned by the Presenta
 });
 
 test('owner metadata remains independent from artwork focus motion', () => {
-  assert.match(ownerRuntime, /<OwnerSystemWorkflowMetadataModule/);
-  assert.match(ownerMetadata, /aria-label="Metadata module"/);
+  assert.match(ownerRuntime, /renderMetadata=\{\(\) => <OwnerSystemWorkflowMetadataContent/);
+  assert.match(ownerMetadata, /export function OwnerSystemWorkflowMetadataContent/);
   assert.match(ownerMetadata, /dossier\?\.description/);
   assert.doesNotMatch(ownerMetadata, /LatticeFocusViewer|originRectangle|returnLanding|createPortal/);
 });

@@ -24,6 +24,10 @@ export function createOwnerLatticeCategoryCommands(profileAddress, getStore = us
   });
 }
 
+export function canOpenCreatorCollection(profileAddress, collectionRecord) {
+  return Boolean(normalizeProfileAddress(profileAddress) && collectionRecord?.isCollection === true);
+}
+
 export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled = true, referencedAssetIds = []) {
   const profile = normalizeProfileAddress(profileAddress);
   const [useRelatedCreationsStore] = useState(() => createCreationsStore({ retainOnRetry: true }));
@@ -35,6 +39,7 @@ export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled 
   const status = useLibraryStore((state) => state.status);
   const progress = useLibraryStore((state) => state.progress);
   const error = useLibraryStore((state) => state.error || state.liveError);
+  const persistenceError = useLibraryStore((state) => state.persistenceError);
   const setProfileAddress = useLibraryStore((state) => state.setProfileAddress);
   const load = useLibraryStore((state) => state.load);
   const createdAssets = useRelatedCreationsStore((state) => state.assets);
@@ -119,7 +124,7 @@ export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled 
   }), [adaptedData, createdAssets.length, createdError, createdProfileReady, createdProgress, createdStatus, union.assets]);
   const closeCollection = () => { cancelCollectionTokens(); setActiveCollection(null); };
   const openCollection = (collectionRecord) => {
-    if (!profileReady || collectionRecord?.isCollection !== true) return false;
+    if (!canOpenCreatorCollection(profile, collectionRecord)) return false;
     setActiveCollection(collectionRecord);
     loadCollectionTokens(profile, collectionRecord);
     return true;
@@ -161,5 +166,6 @@ export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled 
   const records = useMemo(() => [...new Map([...union.records, ...referencedUnion.records, ...collectionUnion.records]
     .map((record) => [record.id, record])).values()], [collectionUnion.records, referencedUnion.records, union.records]);
   return { commands: profileReady && !activeCollection ? commands : null,
-    data: collectionData || unionData, records, retryCreated };
+    data: { ...(collectionData || { ...unionData, onOpenCollection: openCollection }),
+      persistenceError: profileReady ? persistenceError : null }, records, retryCreated };
 }

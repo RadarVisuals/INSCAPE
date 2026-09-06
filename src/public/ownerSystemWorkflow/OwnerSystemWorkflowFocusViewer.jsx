@@ -22,6 +22,9 @@ export default function OwnerSystemWorkflowFocusViewer({ container, controlsCont
     onClosing={() => { clearOwnerSystemWorkflowDocumentSelection(); viewer.beginReturn(); }} onNavigate={viewer.navigate}
     onReturnLanding={viewer.revealSource}
     originRectangle={originRectangle} overlayInk="var(--workflow-ink)" position={viewer.position}
-    renderArtwork={(entry, context) => <LatticeProductionFocusArtwork entry={entry} motion={context.motion} />}
+    renderArtwork={(entry, context) => <div className="system-workflow__focus-artwork-handoff"
+      data-selection-handoff={context.phase === 'starting' || undefined}>
+      <LatticeProductionFocusArtwork entry={entry} motion={context.motion} />
+    </div>}
     returnFocus={viewer.returnFocus} surfaceColor={workspaceSurfaceColor} total={viewer.total} />;
 }

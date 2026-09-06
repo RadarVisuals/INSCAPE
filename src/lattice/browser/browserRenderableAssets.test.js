@@ -1,12 +1,29 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  browserAssetHasPreviewCandidate,
+  browserAssetPreviewUnavailable,
   browserAssetSupportsPreview,
   decodeBrowserPreview,
   browserPreviewCandidates,
   browserPreviewWorkIsCurrent,
   resolveBrowserPreview,
 } from './browserRenderableAssets.js';
+
+test('only supported media with a normalized source can attempt to enter the Library', () => {
+  assert.equal(browserAssetHasPreviewCandidate({ mediaType: 'image', previewCandidates: ['image'] }), true);
+  assert.equal(browserAssetHasPreviewCandidate({ mediaType: 'image', previewCandidates: [] }), false);
+  assert.equal(browserAssetHasPreviewCandidate({ mediaType: 'audio', previewCandidates: ['audio'] }), false);
+});
+
+test('exhausted preview failures hide only the exact failed metadata record', () => {
+  const asset = { id: 'asset-a' };
+  const unavailable = { assetRef: asset, status: 'unavailable' };
+  assert.equal(browserAssetPreviewUnavailable(unavailable, asset), true);
+  assert.equal(browserAssetPreviewUnavailable(unavailable, { ...asset }), false,
+    'updated metadata receives a fresh preview attempt');
+  assert.equal(browserAssetPreviewUnavailable({ assetRef: asset, status: 'ready' }, asset), false);
+});
 
 test('preview candidates retain normalized thumbnail, display, original priority without duplicates', () => {
   assert.deepEqual(browserPreviewCandidates({ previewCandidates: ['thumb', 'display', 'original', 'display', null] }),

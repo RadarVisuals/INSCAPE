@@ -1,3 +1,4 @@
+export const LATTICE_PRODUCTION_FOCUS_OPENING_MS = 460;
 export const LATTICE_PRODUCTION_FOCUS_TRANSITION_MS = 420;
 export const LATTICE_PRODUCTION_FOCUS_LANDING_MS = 150;
 
@@ -40,6 +41,12 @@ export function latticeProductionFocusTransitionProgress(progress) {
   const clamped = clampUnit(progress);
   if (clamped === 0 || clamped === 1) return clamped;
   return curve(solveCurveTime(clamped, 0.22, 0.26), 0.76, 1);
+}
+
+export function latticeProductionFocusOpeningProgress(progress) {
+  const clamped = clampUnit(progress);
+  if (clamped === 0 || clamped === 1) return clamped;
+  return curve(solveCurveTime(clamped, 0.4, 0.2), 0, 1);
 }
 
 export function interpolateLatticeProductionFocusRectangle(start, end, progress) {

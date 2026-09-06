@@ -1,0 +1,133 @@
+/* Display Module instruments share one bounded bay; chrome stays outside Stage. */
+.system-workflow__instrument-bay {
+  box-sizing: border-box;
+  position: absolute;
+  z-index: 40;
+  top: 0;
+  left: calc(100% + var(--workflow-board-frame-gap));
+  width: calc(var(--workflow-metadata-width) - var(--workflow-board-frame-gap));
+  height: 100%;
+  display: grid;
+  grid-template-rows: 38px auto minmax(0, 1fr);
+  gap: 0;
+  overflow: hidden;
+  color: var(--workflow-ink);
+  border-radius: var(--workflow-board-radius);
+}
+.system-workflow__instrument-bay[data-projection="overlay"] {
+  top: var(--workflow-identity-strip-height);
+  right: 6px;
+  left: auto;
+  width: min(300px, calc(100% - 12px));
+  height: min(420px, calc(100% - var(--workflow-identity-strip-height) - 6px));
+  border: 1px solid var(--workflow-border-strong);
+  background: var(--workflow-selection);
+  box-shadow: 4px 6px 14px rgb(17 19 19 / 14%);
+}
+.system-workflow__instrument-rail {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-inline: 6px;
+}
+.system-workflow__instrument-rail [role="tablist"] { display: flex; min-width: 0; flex: 1; align-self: stretch; }
+.system-workflow__instrument-rail [role="tab"] {
+  min-width: 0;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--workflow-muted);
+  font: var(--workflow-type-control);
+  cursor: pointer;
+}
+.system-workflow__instrument-rail [role="tab"][aria-selected="true"] {
+  color: var(--workflow-ink);
+  box-shadow: var(--workflow-active-horizontal);
+}
+.system-workflow__instrument-rail [role="tab"]:hover { background: var(--workflow-hover); }
+.system-workflow__instrument-scope { padding: 8px 10px; font: var(--workflow-type-technical); overflow-wrap: anywhere; }
+.system-workflow__instrument-scope span { display: block; margin-top: 4px; color: var(--workflow-muted); }
+.system-workflow__instrument-content {
+  box-sizing: border-box;
+  min-height: 0;
+  min-width: 0;
+  padding: 8px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--workflow-panel);
+  border: 1px solid var(--workflow-border);
+  border-radius: var(--workflow-board-radius, 10px);
+}
+.system-workflow__instrument-layers { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; gap: 8px; }
+.system-workflow__instrument-layers .system-workflow__selection-actions {
+  position: static;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--workflow-border);
+  border-radius: 0;
+  box-shadow: none;
+}
+.system-workflow__instrument-layers .system-workflow__selection-actions > button {
+  width: auto;
+  height: 32px;
+  padding: 6px;
+  min-width: 0;
+  border: 0;
+  color: var(--workflow-ink);
+  background: transparent;
+}
+.system-workflow__instrument-layers .system-workflow__selection-actions > button:disabled { opacity: .3; }
+.system-workflow__instrument-layers .system-workflow__selection-actions > button:is(:hover, :focus-visible):not(:disabled) { background: var(--workflow-hover); }
+.system-workflow__instrument-layers .system-workflow__layer-list { max-height: none; overflow: visible; }
+.system-workflow__instrument-content .system-workflow__metadata-module-content { height: auto; border: 0; padding: 4px; }
+.system-workflow__instrument-content .system-workflow__metadata-module-content > section { padding: 8px 0 14px; }
+.system-workflow__instrument-window { --detached-window-width: 320px; position: fixed; z-index: 45; }
+.system-workflow__instrument-window .system-workflow__instrument-content { display: block; }
+.system-workflow__instrument-window header:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
+.system-workflow__instrument-window [role="separator"]:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
+
+/* Library and the module share the available Workbench rather than overlapping. */
+.system-workflow { --workflow-library-track: min(440px, 38vw); }
+.system-workflow[data-library-open] .system-workflow__workbench { left: var(--workflow-library-track); }
+.system-workflow .system-workflow__library { width: var(--workflow-library-track); min-width: 0; }
+.system-workflow .system-workflow__library .system-workflow__workspace-rail-controls {
+  height: 76px;
+  grid-template-columns: 65px minmax(75px, 1fr) 75px 65px 38px;
+  grid-template-rows: repeat(2, 38px);
+}
+.system-workflow .system-workflow__library .system-workflow__workspace-rail-controls > :first-child { grid-column: 1 / -1; }
+.system-workflow .system-workflow__library .system-workflow__local-rail { height: 76px; }
+.system-workflow .system-workflow__library { grid-template-rows: minmax(0, 1fr) 76px; }
+.system-workflow[data-layout="narrow"] .system-workflow__instrument-bay[data-projection="overlay"] {
+  position: fixed;
+  top: var(--instrument-overlay-top);
+  right: 8px;
+  left: 8px;
+  width: auto;
+  height: min(360px, calc(100dvh - var(--instrument-overlay-top) - 60px));
+}
+.system-workflow[data-layout="narrow"][data-library-open] .system-workflow__workbench {
+  left: 0;
+  bottom: auto;
+  height: min(calc(100dvh - 234px), max(300px, 42dvh));
+}
+.system-workflow[data-layout="narrow"] .system-workflow__library {
+  top: min(calc(100dvh - 234px), max(300px, 42dvh));
+  right: 8px;
+  bottom: 54px;
+  left: 8px;
+  width: auto;
+}
+.system-workflow[data-layout="narrow"] .system-workflow__identity-primary { display: flex; min-width: 0; }
+.system-workflow[data-layout="narrow"] .system-workflow__identity-primary strong { display: block; overflow: hidden; text-overflow: ellipsis; }
+.system-workflow[data-layout="narrow"] .system-workflow__identity-primary code { display: none; }
+.system-workflow[data-layout="narrow"] .system-workflow__library-resize { display: none; }
+.system-workflow__instrument-layers .system-workflow__selection-actions > button:focus-visible {
+  outline: 1px solid var(--workflow-ink); outline-offset: -2px;
+}
+.system-workflow[data-layout="narrow"] .system-workflow__library .system-workflow__workspace-rail-controls {
+  grid-template-columns: 48px minmax(60px, 1fr) 78px 70px;
+}

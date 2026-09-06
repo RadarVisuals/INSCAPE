@@ -39,7 +39,7 @@ test('Metadata lifecycle follows the accepted add, attach, projection, detach, a
   assert.equal(mode, OWNER_METADATA_MODE.DETACHED);
   assert.equal(transitionOwnerMetadataMode(mode, OWNER_METADATA_EVENT.ADD), OWNER_METADATA_MODE.DETACHED);
   mode = transitionOwnerMetadataMode(mode, OWNER_METADATA_EVENT.ATTACH);
-  assert.equal(mode, OWNER_METADATA_MODE.DOCKED_CLOSED);
+  assert.equal(mode, OWNER_METADATA_MODE.SIDECAR);
   mode = transitionOwnerMetadataMode(mode, OWNER_METADATA_EVENT.TOGGLE_INNER);
   assert.equal(mode, OWNER_METADATA_MODE.INNER);
   mode = transitionOwnerMetadataMode(mode, OWNER_METADATA_EVENT.TOGGLE_SIDECAR);

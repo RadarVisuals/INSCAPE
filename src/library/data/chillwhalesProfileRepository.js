@@ -1,5 +1,6 @@
 import { CHILLWHALES_INDEXER_URL, IPFS_GATEWAY_URL, LIBRARY_PAGE_SIZE, normalizeProfileAddress } from '../config.js';
 import { normalizeProfileAsset } from '../domain/normalizeProfileAsset.js';
+import { metadataImages as collectMetadataImages } from './metadataImages.js';
 
 const PROFILE_ASSET_FRAGMENTS = `
 fragment InscapeMetadata on lsp4_metadata {
@@ -73,16 +74,7 @@ function mergeTokenMetadata(nft) {
 }
 
 function metadataImages(metadata) {
-  let images = Array.isArray(metadata?.images) && metadata.images.length ? metadata.images : metadata?.icon;
-  if (!Array.isArray(images) || !images.length) images = (Array.isArray(metadata?.assets) ? metadata.assets : [])
-    .filter((asset) => !asset?.file_type || String(asset.file_type).toLowerCase().startsWith('image/'));
-  return (Array.isArray(images) ? images : []).map((image) => ({
-    index: Number.isInteger(image?.image_index) ? image.image_index : 0,
-    url: image?.url || null,
-    width: Number(image?.width) || null,
-    height: Number(image?.height) || null,
-    fileType: image?.file_type || null
-  }));
+  return collectMetadataImages(metadata || {}, { indexed: true });
 }
 
 function metadataAttributes(metadata) {

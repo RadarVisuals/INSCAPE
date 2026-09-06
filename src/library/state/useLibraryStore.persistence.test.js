@@ -14,7 +14,7 @@ const memoryStorage = () => {
   return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), values };
 };
 
-test('a pending Library save cannot overwrite an immediately restored workspace', async () => {
+test('a completed Library command cannot overwrite a subsequently restored workspace', async () => {
   const storage = memoryStorage();
   resetLibraryStoreForTests(PROFILE, storage);
   useLibraryStore.getState().createFolder('Pending old folder');
@@ -27,6 +27,24 @@ test('a pending Library save cannot overwrite an immediately restored workspace'
 
   resetLibraryStoreForTests(PROFILE, storage);
   assert.deepEqual(useLibraryStore.getState().workspace, restored);
+});
+
+test('category commands are durable before returning and rejected saves leave UI state unchanged', () => {
+  const storage = memoryStorage();
+  resetLibraryStoreForTests(PROFILE, storage);
+  const id = useLibraryStore.getState().commitCategoryForProfile(PROFILE, { type: 'create', name: 'Immediate' });
+  assert.ok(id);
+  assert.equal(loadLibraryWorkspace(storage, PROFILE).folders[0].id, id);
+  const before = useLibraryStore.getState().workspace;
+  const originalSave = storage.setItem;
+  storage.setItem = () => { throw new Error('quota'); };
+  assert.equal(useLibraryStore.getState().commitCategoryForProfile(PROFILE, { type: 'rename', categoryId: id, name: 'Not saved' }), false);
+  assert.equal(useLibraryStore.getState().workspace, before);
+  assert.match(useLibraryStore.getState().persistenceError, /not saved/);
+  storage.setItem = originalSave;
+  assert.equal(useLibraryStore.getState().commitCategoryForProfile(PROFILE, { type: 'rename', categoryId: id, name: 'Recovered' }), true);
+  assert.equal(useLibraryStore.getState().persistenceError, null);
+  resetLibraryStoreForTests(PROFILE, memoryStorage());
 });
 
 test('failed immediate Library persistence preserves current state', () => {

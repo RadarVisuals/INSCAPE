@@ -100,6 +100,18 @@ test('preview candidates retain the original metadata URL as fallback after an i
   ]);
 });
 
+test('browser-blocked public IPFS gateways collapse onto the configured canonical gateway', () => {
+  const cid = 'bafybeih6feccail34eyaqq6lpa45h66iquxcrrdxp7sxpnu3prrc2xfo4a';
+  const adapted = adaptLatticeProductionBrowserAsset(asset({
+    thumbnailUrl: `https://ipfs.io/ipfs/${cid}/image.webp`,
+    imageUrl: `https://dweb.link/ipfs/${cid}/image.webp`,
+    originalImageUrl: `https://ipfs.io/ipfs/${cid}/image.webp`,
+  }), PROFILE);
+  assert.deepEqual(adapted.previewCandidates, [
+    `https://api.universalprofile.cloud/ipfs/${cid}/image.webp`,
+  ]);
+});
+
 test('a collection token preview remains visible but cannot masquerade as placeable collection media', () => {
   const tokenId = `0x${'0'.repeat(63)}1`;
   const preview = adaptLatticeProductionBrowserAsset(asset({ isCollection: true, collectionPreviewTokenId: tokenId }), PROFILE);

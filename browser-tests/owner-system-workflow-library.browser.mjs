@@ -22,7 +22,7 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     await page.waitForFunction(() => document.querySelector('[aria-label="Library workspace"]')?.closest('[data-system-workflow-panel]')?.dataset.panelPhase === 'open');
     await page.waitForFunction(() => document.querySelectorAll('.system-workflow__library .lattice-browser-asset').length === 7);
     const bounds = await workspace.boundingBox();
-    assert.deepEqual(bounds, { x: 18, y: 18, width: 980, height: 822 });
+    assert.deepEqual(bounds, { x: 0, y: 0, width: 980, height: 858 });
     const sidebarResize = workspace.getByRole('button', { name: 'Resize Browser navigation' });
     assert.equal(await sidebarResize.evaluate((node) => getComputedStyle(node, '::after').width), '1px');
     assert.equal(await sidebarResize.evaluate((node) => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
@@ -136,8 +136,9 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     await page.evaluate(() => { window.__workflowWrites = 0; });
     await workspace.getByLabel('Search').fill('MOUNTAIN SIGNAL II');
     const secondCard = workspace.locator('.lattice-browser-asset').first(); const cardBox = await secondCard.boundingBox();
+    const canvasBox = await page.locator('.system-workflow__canvas').boundingBox();
     await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
-    await page.mouse.down(); await page.mouse.move(1210, 180, { steps: 6 });
+    await page.mouse.down(); await page.mouse.move(canvasBox.x + canvasBox.width / 2, canvasBox.y + canvasBox.height / 2, { steps: 6 });
     assert.equal(await workspace.getAttribute('data-placing'), 'true');
     await page.waitForTimeout(240);
     const placingOpacity = Number.parseFloat(await workspace.evaluate((node) => getComputedStyle(node).opacity));

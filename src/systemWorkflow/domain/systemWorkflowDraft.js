@@ -1,6 +1,7 @@
 import { normalizeProfileAddress } from '../../library/config.js';
 import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
 import { PROFILE_DOCUMENT_LIMITS } from '../../profileDocument/domain/constants.js';
+import { isValidPlacementMedia } from './placementMedia.js';
 
 export const SYSTEM_WORKFLOW_DRAFT_VERSION = 4;
 export const SYSTEM_WORKFLOW_ARTBOARD = Object.freeze({ aspectWidth: 16, aspectHeight: 9 });
@@ -213,7 +214,8 @@ export function isValidSystemWorkflowPlacementGeometry(value) {
 }
 
 function validatePlacement(value, path, fail) {
-  if (!exactKeys(value, PLACEMENT_KEYS)) return fail(path, 'invalid_placement_structure', 'Invalid placement');
+  if (!exactKeys(value, Object.hasOwn(value || {}, 'selectedMedia') ? [...PLACEMENT_KEYS, 'selectedMedia'] : PLACEMENT_KEYS)) return fail(path, 'invalid_placement_structure', 'Invalid placement');
+  if (Object.hasOwn(value, 'selectedMedia') && !isValidPlacementMedia(value.selectedMedia)) fail(`${path}.selectedMedia`, 'invalid_selected_media', 'Invalid selected image');
   if (!safeId(value.id)) fail(`${path}.id`, 'invalid_placement_id', 'Invalid placement ID');
   if (!parseCanonicalAssetId(value.stableAssetId)) fail(`${path}.stableAssetId`, 'invalid_asset_id', 'Invalid asset ID');
   if (!isValidSystemWorkflowPlacementGeometry(value)) fail(path, 'invalid_placement_geometry', 'Invalid world geometry');

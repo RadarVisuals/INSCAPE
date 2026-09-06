@@ -6,11 +6,13 @@ const destination = (overrides = {}) => resolveVisitorGridDragDestination({
   activeIndex: 1, deltaX: -100, deltaY: 10, lastIndex: 2, viewportWidth: 1000, ...overrides,
 });
 
-test('visitor Space-drag follows owner Grid direction and respects both boundaries', () => {
+test('visitor Space-drag follows owner Grid direction and wraps both boundaries', () => {
   assert.equal(destination(), 2);
   assert.equal(destination({ deltaX: 100 }), 0);
-  assert.equal(destination({ activeIndex: 2 }), null);
-  assert.equal(destination({ activeIndex: 0, deltaX: 100 }), null);
+  assert.equal(destination({ activeIndex: 2 }), 0);
+  assert.equal(destination({ activeIndex: 0, deltaX: 100 }), 2);
+  assert.equal(destination({ activeIndex: 0, lastIndex: 0 }), null);
+  assert.equal(destination({ activeIndex: 0, lastIndex: 0, deltaX: 100 }), null);
 });
 
 test('visitor Space-drag requires a horizontal gesture beyond the bounded threshold', () => {

@@ -99,7 +99,11 @@ test('reorder is atomic, stale-safe, and ordered navigation has no coordinates',
   assert.deepEqual(systemWorkflowGridOrder(reordered), ['grid:third', 'grid:home', 'grid:second']);
   assert.equal(firstSystemWorkflowGridId(reordered), 'grid:third');
   assert.equal(adjacentSystemWorkflowGridId(reordered, 'grid:third', 'next'), 'grid:home');
-  assert.equal(adjacentSystemWorkflowGridId(reordered, 'grid:third', 'previous'), null);
+  assert.equal(adjacentSystemWorkflowGridId(reordered, 'grid:third', 'previous'), 'grid:second');
+  assert.equal(adjacentSystemWorkflowGridId(reordered, 'grid:second', 'next'), 'grid:third');
+  assert.equal(adjacentSystemWorkflowGridId(initial(), 'grid:home', 'next'), null);
+  assert.equal(adjacentSystemWorkflowGridId(initial(), 'grid:home', 'previous'), null);
+  assert.equal(adjacentSystemWorkflowGridId(reordered, 'grid:world-cover', 'next'), null);
   assert.equal(reconcileSystemWorkflowGridSelection(reordered, 'grid:missing'), 'grid:third');
   assert.throws(
     () => createSystemWorkflowGridReorderCandidate(reordered, {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 import { createOwnerSystemWorkflowFocusViewModel } from './ownerSystemWorkflowFocusViewModel.js';
 import { clearOwnerSystemWorkflowDocumentSelection } from './ownerSystemWorkflowSelection.js';
 
@@ -37,7 +38,7 @@ export default function useOwnerSystemWorkflowFocusViewer({ assetsById, controll
     openRequestRef.current = request;
     const source = placementRefs.current.get(id);
     const next = placements.find((candidate) => candidate.id === id);
-    const asset = next && assetsById.get(next.stableAssetId);
+    const asset = next && assetForPlacement(assetsById.get(next.stableAssetId), next);
     const sourceUrl = asset?.src || asset?.originalImageUrl || asset?.imageUrl || asset?.thumbnailUrl;
     const origin = rect(source);
     if (!source || !next || !sourceUrl || !origin) return false;

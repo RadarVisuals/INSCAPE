@@ -1,6 +1,7 @@
 import { normalizeProfileAddress } from '../../library/config.js';
 import { buildAssetReference, createCanonicalAssetId, normalizeTokenId } from './assetReference.js';
 import { isValidPublishedAssetUrl, parsePublishedAssetUrl } from './publishedAssetUrl.js';
+import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 
 const ASSET_KEYS = [
   'stableAssetId', 'network', 'chainId', 'tokenStandard', 'contractAddress', 'tokenId',
@@ -148,5 +149,6 @@ export function createProfileDocumentV9AssetResolver(assetRecords = [], options)
       records.set(asset?.id, asset);
     }
   }
-  return (stableAssetId) => buildProfileDocumentV9Asset(records.get(stableAssetId), stableAssetId, options);
+  return (stableAssetId, selectedMedia) => buildProfileDocumentV9Asset(
+    assetForPlacement(records.get(stableAssetId), { selectedMedia }), stableAssetId, options);
 }

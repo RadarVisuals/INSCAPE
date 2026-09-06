@@ -85,9 +85,9 @@ test('System Workflow dock tools cannot expand into the INSCAPE wordmark', async
     read('./ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx'),
     read('./ownerSystemWorkflow/PresentationBoardDefinitive.jsx'),
   ]);
-  assert.match(styles, /\.system-workflow__global-bar \{[^}]*grid-template-columns: minmax\(0, 1fr\) 104px 132px;/s,
+  assert.match(styles, /\.system-workflow__global-bar \{[^}]*grid-template-columns: minmax\(0, 1fr\) 70px 132px;/s,
     'the wide dock reserves bounded columns for its compact tools and wordmark');
-  assert.match(styles, /\.system-workflow__dock-tools \{[^}]*--workflow-dock-tool-size: 28px;[^}]*grid-template-columns: repeat\(3, 28px\);[^}]*justify-content: center;[^}]*gap: 3px;/s,
+  assert.match(styles, /\.system-workflow__dock-tools \{[^}]*--workflow-dock-tool-size: 28px;[^}]*grid-template-columns: repeat\(2, 28px\);[^}]*justify-content: center;[^}]*gap: 3px;/s,
     'wide dock tools form one compact centered group before the wordmark');
   assert.match(styles, /\.system-workflow__global-bar \.system-workflow__dock-tools > button \{[^}]*width: var\(--workflow-dock-tool-size\);[^}]*min-width: var\(--workflow-dock-tool-size\);[^}]*padding: 0;[^}]*display: grid;/s,
     'dock tools retain their bounded footprint instead of inheriting the 104px navigation-button width');
@@ -104,9 +104,13 @@ test('System Workflow dock tools cannot expand into the INSCAPE wordmark', async
     'dropdown options reuse the Library asset-title typography');
   assert.doesNotMatch(styles, /\.system-workflow__select-popover (?:header|button)[^}]*Inscape Bahnschrift/s,
     'opening a dropdown does not switch back to Bahnschrift');
-  assert.match(globalBar, /FileText[\s\S]*Settings2[\s\S]*Layers3/,
-    'workspace tools keep documentation and settings before the persistent Layers control');
-  assert.match(runtime, /layersActivated=\{layersExplicitlyOpened && layersOpen && !panelOccupied\}/);
-  assert.match(board, /<strong>LOCK<\/strong>[\s\S]*<strong>METADATA<\/strong>/,
-    'the Display Module owns Lock before Metadata without absorbing Layers');
+  assert.match(globalBar, /FileText[\s\S]*Settings2/,
+    'the global dock retains only documentation and global settings controls');
+  assert.doesNotMatch(globalBar, /Layers3|onToggleLayers/,
+    'Layers no longer behaves like a global INSCAPE dock tool');
+  assert.match(board, /function BoardWorkspaceControls[\s\S]*data-instrument-trigger="layers"[\s\S]*data-instrument-trigger="metadata"/,
+    'the Display Module titlebar exposes its two instruments');
+  assert.match(runtime, /renderInstruments=[\s\S]*<DisplayInstruments/);
+  assert.doesNotMatch(board, /onToggleToolbar|MetadataDirectionControls/,
+    'placement tools belong inside Layers and presentation belongs to the shared bay');
 });

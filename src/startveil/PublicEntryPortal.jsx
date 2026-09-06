@@ -3,6 +3,7 @@ import { Search } from 'lucide-react';
 import useProfileDiscoveryController from '../profileDiscovery/useProfileDiscoveryController.js';
 import { usePublishedProfile } from '../profileDocument/state/usePublishedProfile.js';
 import { PUBLISHED_PROFILE_STATUS } from '../profileDocument/storage/luksoPublishedProfileRepository.js';
+import { selectFeaturedWorld } from './featuredWorld.js';
 import './publicEntryPortal.css';
 
 const GridProductionRenderer = lazy(() => import('../profileDocument/components/GridProductionRenderer.jsx'));
@@ -78,7 +79,7 @@ function PublishedWorldCard({ compact = false, discoveryStatus, onVisit, profile
   const canVisit = Boolean(profile?.address && document);
   return <article aria-busy={resolution?.busy || undefined} className="public-entry-portal__world-card" ref={cardRef}
     data-empty={!profile || undefined} data-variant={compact ? 'compact' : 'feature'}>
-    <button aria-label={canVisit ? `Enter ${profile.name || 'published world'}` : 'Published world unavailable'}
+    <button aria-label={canVisit ? `Enter ${identity?.name || 'published world'}` : 'Published world unavailable'}
       className="public-entry-portal__world-action" disabled={!canVisit} onClick={() => onVisit?.(profile.address)} type="button" />
     <div className="public-entry-portal__world-preview" data-surface={document?.appearance?.surfaceId || 'carbon'}>
       <WorldPreview canonical document={document} grid={grid} priority={!compact} />
@@ -99,7 +100,7 @@ export default function PublicEntryPortal({ connectedProfile, discoveryRepositor
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef(null);
   const discovery = useProfileDiscoveryController({ repository: discoveryRepository });
-  const featured = discovery.results[0] || null;
+  const featured = selectFeaturedWorld(discovery.profiles);
   const exploreResults = discovery.results.slice(0, MAX_EXPLORE_RESULTS);
   useEffect(() => {
     if (mode !== 'explore') return undefined;

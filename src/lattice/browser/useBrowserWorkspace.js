@@ -9,7 +9,8 @@ import {
   reconcileBrowserSelection,
   updateBrowserSelection,
 } from './browserWorkspaceModel.js';
-import { browserAssetSupportsPreview, browserPreviewCandidates } from './browserRenderableAssets.js';
+import { browserAssetHasPreviewCandidate, browserAssetPreviewUnavailable, browserAssetSupportsPreview,
+  browserPreviewCandidates } from './browserRenderableAssets.js';
 import useLatticeFloatingWindow from '../windows/useLatticeFloatingWindow.js';
 
 const clampSidebarWidth = (value) => Math.min(320, Math.max(48, Number(value) || 174));
@@ -40,7 +41,8 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
       if (!liveIds.has(id)) previewRecordsRef.current.delete(id);
     }
   }, [sharedPreviewRecords, sourceAssets]);
-  const assets = useMemo(() => sourceAssets.map((asset) => {
+  const assets = useMemo(() => sourceAssets.filter((asset) => browserAssetHasPreviewCandidate(asset)
+    && !browserAssetPreviewUnavailable(previewRecordsRef.current.get(browserAssetId(asset)), asset)).map((asset) => {
     const preview = previewRecordsRef.current.get(browserAssetId(asset));
     const fallback = browserPreviewCandidates(asset)[0] || null;
     return preview?.status === 'ready' ? {
@@ -51,20 +53,22 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
       previewSrc: preview.source,
     } : { ...asset, previewSrc: preview?.status === 'unavailable' ? null : fallback };
   }), [previewVersion, sourceAssets]);
-  const unavailableCount = sourceAssets.filter((asset) => previewRecordsRef.current
-    .get(browserAssetId(asset))?.status === 'unavailable').length;
+  const unavailableCount = sourceAssets.filter((asset) => !browserAssetHasPreviewCandidate(asset)
+    || browserAssetPreviewUnavailable(previewRecordsRef.current.get(browserAssetId(asset)), asset)).length;
   const markAssetReady = useCallback((id, source, width, height) => {
     const asset = sourceAssets.find((candidate) => browserAssetId(candidate) === id);
     if (!asset || !source || !Number(width) || !Number(height)) return;
     const current = previewRecordsRef.current.get(id);
     if (current?.status === 'ready' && current.source === source && current.width === width && current.height === height) return;
-    previewRecordsRef.current.set(id, { assetRef: asset, source, width, height, status: 'ready' });
+    previewRecordsRef.current.set(id, { assetRef: asset, signature: browserPreviewCandidates(asset).join('\n'),
+      source, width, height, status: 'ready' });
     setPreviewVersion((value) => value + 1);
   }, [sourceAssets]);
   const markAssetUnavailable = useCallback((id) => {
     const asset = sourceAssets.find((candidate) => browserAssetId(candidate) === id);
     if (!asset) return;
-    previewRecordsRef.current.set(id, { assetRef: asset, status: 'unavailable' });
+    previewRecordsRef.current.set(id, { assetRef: asset,
+      signature: browserPreviewCandidates(asset).join('\n'), status: 'unavailable' });
     setPreviewVersion((value) => value + 1);
   }, [sourceAssets]);
   const renderableIds = useMemo(() => new Set(assets.filter((asset) => asset.previewSrc
@@ -155,7 +159,8 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
     sort, setSort, view, selectView, selectCategoriesDestination, lastCategoryId,
     selectedAsset, selectedAssets, selectedAssetIds, selectAsset, selectForContext, clearSelection, selectAllVisible,
     selectedCategory, dialog, setDialog, filteredAssets, viewAssetCount: scopedAssets.length,
-    hasActiveFilters, clearFilters, unavailableCount, markAssetReady, markAssetUnavailable, isAssetRenderable, areAssetsRenderable,
+    hasActiveFilters, clearFilters, unavailableCount, markAssetReady, markAssetUnavailable,
+    isAssetRenderable, areAssetsRenderable,
     renderableAssets: assets,
     renderableAssetIds: [...renderableIds],
     move: floatingWindow.move,

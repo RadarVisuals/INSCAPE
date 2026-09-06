@@ -4,6 +4,7 @@ import { PROFILE_DOCUMENT_PUBLICATION_STATUS } from '../../profileDocument/domai
 import { profileDocumentV9ContentFingerprint } from '../../profileDocument/domain/profileDocumentV9Serialization.js';
 import { assertValidProfileDocumentV9 } from '../../profileDocument/domain/profileDocumentV9Validation.js';
 import { useProfileDocumentPublication } from '../../profileDocument/state/useProfileDocumentPublication.js';
+import { usePublicationRecovery } from '../../profileDocument/state/usePublicationRecovery.js';
 import { uploadProfileDocument } from '../../profileDocument/storage/profileDocumentUploadClient.js';
 import AlphaSupportPanel from '../../support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from '../../support/alphaSupport.js';
@@ -83,6 +84,7 @@ export default function OwnerSystemWorkflowPublicationRack({
   const publicationBusy = ['VERIFYING_CID', 'AWAITING_WALLET', 'CONFIRMING_TRANSACTION', 'VERIFYING_PUBLICATION']
     .includes(publication.status);
   const busy = ['PREPARING', 'UPLOADING', 'WALLET'].includes(operationPhase) || publicationBusy;
+  const recovery = usePublicationRecovery(profileAddress, publication.status, busy);
 
   const prepareSnapshot = useCallback(() => {
     try {
@@ -177,8 +179,25 @@ export default function OwnerSystemWorkflowPublicationRack({
       <small>The NFTs already exist publicly on LUKSO. Publishing only updates how your INSCAPE profile presents them.</small>
     </section>
     {draftState.error && <section><p role="alert">{draftState.error}</p></section>}
+    {!busy && recovery.blocked && <section className="owner-lattice-publication-rack__recovery">
+      <h2>PREVIOUS PUBLICATION</h2>
+      <p role="status">{recovery.message}</p>
+      {recovery.record?.transactionHash && <small className="owner-lattice-publication-rack__hash">Transaction: {recovery.record.transactionHash}</small>}
+      <div className="owner-lattice-publication-rack__rail">
+        {['PUBLISHED', 'FAILED'].includes(recovery.status)
+          ? <button type="button" onClick={() => {
+            const acknowledged = recovery.acknowledge();
+            if (!acknowledged) return;
+            publication.reset();
+            setOperationPhase(null);
+            setMessage(recovery.message);
+            if (acknowledged.result) onPublished?.(acknowledged.result);
+          }}>ACKNOWLEDGE RESULT</button>
+          : <button type="button" disabled={recovery.status === 'CHECKING'} onClick={recovery.check}>CHECK AGAIN</button>}
+      </div>
+    </section>}
     <section className="owner-lattice-publication-rack__status-copy">
-      <p role="status">{publication.error || message}</p>
+      <p role="status">{!busy && recovery.blocked ? 'Resolve the previous publication before preparing another one.' : publication.error || message}</p>
       <small>Making the presentation public stores it permanently. Publishing to your profile requires one wallet confirmation.</small>
     </section>
     {showSupport && <section className="owner-lattice-publication-rack__support">
@@ -192,7 +211,7 @@ export default function OwnerSystemWorkflowPublicationRack({
     </section>}
     <footer className="owner-lattice-publication-rack__rail">
       <button type="button" className="owner-lattice-publication-rack__publish"
-        disabled={busy || Boolean(draftState.error) || Boolean(publication.transactionHash && publication.error)}
+        disabled={busy || recovery.blocked || Boolean(draftState.error) || Boolean(publication.transactionHash && publication.error)}
         onClick={action}>{buttonLabel}</button>
       <button type="button" aria-label="Close Publication" disabled={busy} onClick={onClose}><X aria-hidden="true" size={15} /></button>
     </footer>

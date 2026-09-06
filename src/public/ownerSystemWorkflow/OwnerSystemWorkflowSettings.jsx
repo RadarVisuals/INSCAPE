@@ -42,6 +42,8 @@ export default function OwnerSystemWorkflowSettings({ appearance, controller, me
     </section>
     <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Interface</strong></header>
       <label><span>Windows</span><OwnerSystemWorkflowSelectMenu label="Menu theme" menuSurface={menuSurface} onChange={(menuSurfaceId) => controller.setAppearance({ menuSurfaceId })} options={themeOptions} value={appearance.menuSurfaceId} /></label>
+      <CheckControl checked={workbenchPreferences.chromeNoise} label="Chrome noise"
+        onChange={(chromeNoise) => onWorkbenchPreferencesChange({ chromeNoise })} />
     </section>
     <button aria-label="Close Settings" className="system-workflow__settings-close" onClick={onClose} title="Close Settings" type="button"><X size={14} /></button>
   </aside>;

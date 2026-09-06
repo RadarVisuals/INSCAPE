@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import { useProfileContractFacts, useProfileIdentity } from '../../profileIdentity/index.js';
 import LatticeFocusViewer from '../../lattice/rendering/LatticeFocusViewer.jsx';
 import LatticeProfileRail from '../../lattice/rendering/LatticeProfileRail.jsx';
@@ -18,6 +19,7 @@ const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-
 const frozenRectangle = ({ height, left, top, width }) => Object.freeze({ height, left, top, width });
 
 export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirectory, onReturn }) {
+  useStartupDestinationReady();
   const rootRef = useRef(null);
   const identityControlRef = useRef(null);
   const profileDockControlRef = useRef(null);
@@ -93,7 +95,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
   }, [closeProfile, identityDossierActive, identitySession?.compact, profileVisible]);
   const selectGrid = useCallback((index) => {
     if (viewerSession || identityDossierActive) return;
-    setActiveIndex(Math.max(0, Math.min(lastIndex, index)));
+    setActiveIndex(((index % (lastIndex + 1)) + lastIndex + 1) % (lastIndex + 1));
   }, [identityDossierActive, lastIndex, viewerSession]);
   const clearGridDrag = useCallback(() => {
     const active = gridDragRef.current;
@@ -106,7 +108,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
   }, []);
   const visitorInputBlocked = Boolean(viewerSession || identityOpening || identityDossierActive);
   const beginGridDrag = useCallback((event) => {
-    if (!spacePressedRef.current || visitorInputBlocked || event.button !== 0 || gridDragRef.current) return;
+    if (!spacePressedRef.current || visitorInputBlocked || event.button !== 0 || gridDragRef.current || gridSwipeTimerRef.current !== null) return;
     event.preventDefault(); event.stopPropagation();
     const origin = { x: event.clientX, y: event.clientY };
     const viewportWidth = event.currentTarget.clientWidth;
@@ -118,8 +120,8 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
       const deltaX = active.end.x - origin.x; const deltaY = active.end.y - origin.y;
       if (active.mode === 'pending' && Math.hypot(deltaX, deltaY) > 6) {
         const direction = deltaX < 0 ? 'next' : 'previous';
-        const targetIndex = direction === 'next' ? activeIndex + 1 : activeIndex - 1;
-        active.mode = Math.abs(deltaX) > Math.abs(deltaY) * 1.35 && targetIndex >= 0 && targetIndex <= lastIndex
+        const targetIndex = (activeIndex + (direction === 'next' ? 1 : lastIndex)) % (lastIndex + 1);
+        active.mode = Math.abs(deltaX) > Math.abs(deltaY) * 1.35 && lastIndex > 0
           ? 'swipe' : 'navigation';
         active.direction = direction; active.targetIndex = active.mode === 'swipe' ? targetIndex : null;
         active.moved = true; setGridDragging(true);
@@ -153,7 +155,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
       };
       if (reducedMotion) completeSwipe();
       else {
-        setGridSwipe({ deltaX: committed ? (active.direction === 'next' ? -viewportWidth : viewportWidth) : 0,
+        setGridSwipe({ deltaX: committed ? (active.direction === 'next' ? -1 : 1) * (viewportWidth - 1) : 0,
           direction: active.direction, settling: true, targetIndex: active.targetIndex });
         globalThis.clearTimeout?.(gridSwipeTimerRef.current);
         gridSwipeTimerRef.current = globalThis.setTimeout?.(completeSwipe, committed ? 280 : 220);
@@ -253,7 +255,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
     '--lattice-grid-origin-x': '0px', '--lattice-grid-origin-y': '0px' };
   const swipeGrid = Number.isInteger(gridSwipe?.targetIndex) ? document.grids[gridSwipe.targetIndex] : null;
   const swipeStyle = gridSwipe ? { '--visitor-grid-swipe-x': `${gridSwipe.deltaX}px`,
-    '--visitor-grid-swipe-side': gridSwipe.direction === 'next' ? '100%' : '-100%' } : undefined;
+    '--visitor-grid-swipe-side': gridSwipe.direction === 'next' ? 'calc(100% - 1px)' : 'calc(-100% + 1px)' } : undefined;
 
   return <main aria-label="Published INSCAPE Grid visitor" className="visitor-grid-world" data-lattice-menu-surface
     data-guide-mode={document.appearance.guideMode} data-menu-surface={document.appearance.menuSurfaceId}
@@ -263,6 +265,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
     <div className="visitor-grid-world__viewport" data-active-grid-id={activeGrid.id}
       onClickCapture={(event) => { if (suppressPlacementClickRef.current) { event.preventDefault(); event.stopPropagation(); } }}
       onPointerDown={beginGridDrag}>
+      <div className="visitor-grid-world__grid-track">
       <div className="visitor-grid-world__grid-plane visitor-grid-world__grid-plane--current">
         <GridProductionRenderer document={document} grid={activeGrid} imageLoading={activeIndex === 0 ? 'eager' : 'lazy'}
           onMediaState={handlePlacementMediaState} onPlacementActivate={openPlacementViewer}
@@ -273,6 +276,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
         <GridProductionRenderer document={document} grid={swipeGrid} imageLoading="eager"
           onMediaState={handlePlacementMediaState} projectionBottomInset={VISITOR_GRID_NAVIGATION_SAFE_AREA} />
       </div>}
+      </div>
     </div>
     {(profileVisible || identityOpening) && !identitySession && <LatticeProfileRail blocked={Boolean(viewerSession)} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
       identityDisabled={Boolean(identityOpening || identityDossierActive || viewerSession)} identityExpanded={Boolean(identityOpening || identityDossierActive)}
@@ -283,10 +287,10 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
           disabled={Boolean(viewerSession || identityOpening || identityDossierActive)} onClick={toggleProfile}
           ref={profileDockControlRef} type="button">PROFILE</button>
         <div aria-label="Published Grid navigation" className="visitor-grid-world__navigation" role="group">
-          <button aria-label="Previous Grid" disabled={activeIndex === 0 || Boolean(viewerSession || identityDossierActive)}
+          <button aria-label="Previous Grid" disabled={lastIndex === 0 || Boolean(viewerSession || identityDossierActive)}
             onClick={() => selectGrid(activeIndex - 1)} type="button">&lt;</button>
           <span aria-live="polite">{activeGrid.title}</span>
-          <button aria-label="Next Grid" disabled={activeIndex === lastIndex || Boolean(viewerSession || identityDossierActive)}
+          <button aria-label="Next Grid" disabled={lastIndex === 0 || Boolean(viewerSession || identityDossierActive)}
             onClick={() => selectGrid(activeIndex + 1)} type="button">&gt;</button>
         </div>
         {(onOpenDirectory || onReturn || onExit) && <div className="visitor-grid-world__actions">

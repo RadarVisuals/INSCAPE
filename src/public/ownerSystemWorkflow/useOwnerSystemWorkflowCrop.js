@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 import {
   createSystemWorkflowCropPanGesture,
   createSystemWorkflowCropSession,
@@ -13,7 +14,7 @@ import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop } from '../
 import { ownerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDimensions.js';
 
 const mediaFor = (placement, assetsById) => {
-  const asset = assetsById.get(placement?.stableAssetId);
+  const asset = assetForPlacement(assetsById.get(placement?.stableAssetId), placement);
   const dimensions = ownerSystemWorkflowAssetDimensions(asset);
   return placement && Number.isSafeInteger(dimensions?.width) && Number.isSafeInteger(dimensions?.height)
     ? { stableAssetId: placement.stableAssetId, ...dimensions }

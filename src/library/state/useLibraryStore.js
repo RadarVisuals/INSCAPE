@@ -25,23 +25,28 @@ import {
   createCanvasObject, removeCanvasObject, reorderCanvasObject, replaceCanvasObjectAsset,
   setAllCanvasObjectsLocked, setCanvasObjectGeometry, setCanvasObjectLocked, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility
 } from '../domain/canvasObjects.js';
-import { loadLibraryWorkspace, saveLibraryWorkspace } from '../storage/libraryWorkspaceStorage.js';
+import { browserLibraryStorage, createLibraryWorkspacePersistence } from '../storage/libraryWorkspacePersistence.js';
 import { loadLibraryAssetCache, saveLibraryAssetCache } from '../storage/libraryAssetCache.js';
 import { createTablePlacement, removeTablePlacement, reorderTablePlacement, updateTablePlacement } from '../domain/tablePlacements.js';
 
 const profileAddress = resolveWorkspaceProfile(useWalletStore.getState().hostProfileAddress);
-let workspaceStorage = typeof window === 'undefined' ? null : window.localStorage;
+let workspaceStorage = browserLibraryStorage();
+let workspacePersistence = createLibraryWorkspacePersistence(workspaceStorage);
+const initialWorkspace = workspacePersistence.load(profileAddress);
 const tableAuthoringEnabled = import.meta.env?.DEV ?? true;
-let saveTimer = null;
 let activeLoadController = null;
 const INDEXER_SOURCE_TIMEOUT_MS = 8000;
 const ENVIO_ENRICHMENT_TIMEOUT_MS = 12000;
 const RPC_REPAIR_TIMEOUT_MS = 60000;
 const RPC_SOURCE_TIMEOUT_MS = 240000;
 
-function scheduleSave(workspace) {
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => saveLibraryWorkspace(workspaceStorage, workspace), 180);
+function commitWorkspace(set, get, workspace, extra = {}) {
+  if (workspace === get().workspace) return false;
+  if (workspace?.profileAddress !== get().profileAddress) return false;
+  const result = workspacePersistence.save(workspace);
+  if (!result.ok) { set({ persistenceError: result.error }); return false; }
+  set({ workspace, persistenceError: null, ...extra });
+  return true;
 }
 
 function uniqueAssets(existing, incoming) {
@@ -60,9 +65,7 @@ function commitProfileScopedCategory(set, get, expectedProfileAddress, update) {
   const current = get();
   if (current.profileAddress !== expectedProfile || current.workspace !== before.workspace
     || normalizeProfileAddress(current.workspace?.profileAddress) !== expectedProfile) return null;
-  set({ workspace });
-  scheduleSave(workspace);
-  return workspace;
+  return commitWorkspace(set, get, workspace) ? workspace : null;
 }
 
 export const useLibraryStore = create((set, get) => ({
@@ -76,7 +79,7 @@ export const useLibraryStore = create((set, get) => ({
   searchQuery: '',
   activeView: { type: 'all', id: null },
   selectedAssetId: null,
-  workspace: loadLibraryWorkspace(workspaceStorage, profileAddress),
+  ...initialWorkspace,
   loadGeneration: 0,
 
   setProfileAddress(nextProfileAddress) {
@@ -89,13 +92,7 @@ export const useLibraryStore = create((set, get) => ({
     });
     activeLoadController?.abort();
     activeLoadController = null;
-    if (saveTimer) {
-      clearTimeout(saveTimer);
-      saveTimer = null;
-      if (get().workspace?.profileAddress) saveLibraryWorkspace(workspaceStorage, get().workspace);
-    }
-    const workspace = loadLibraryWorkspace(workspaceStorage, profile);
-    set({ profileAddress: profile, workspace, assets: loadLibraryAssetCache(workspaceStorage, profile), sourceMode: null, status: 'idle', error: null, liveError: null,
+    set({ profileAddress: profile, ...workspacePersistence.load(profile), assets: loadLibraryAssetCache(workspaceStorage, profile), sourceMode: null, status: 'idle', error: null, liveError: null,
       progress: { resolved: 0, total: 0, failures: 0 }, searchQuery: '', activeView: { type: 'all', id: null }, selectedAssetId: null,
       loadGeneration: get().loadGeneration + 1 });
     return true;
@@ -288,43 +285,42 @@ export const useLibraryStore = create((set, get) => ({
   createFolder(name) {
     const workspace = createFolder(get().workspace, name);
     const created = workspace.folders.length > get().workspace.folders.length ? workspace.folders.at(-1) : null;
-    set({ workspace, activeView: workspace.folders.length > get().workspace.folders.length
-      ? { type: 'folder', id: workspace.folders.at(-1).id } : get().activeView });
-    scheduleSave(workspace);
-    return created?.id || null;
+    const committed = commitWorkspace(set, get, workspace, { activeView: created
+      ? { type: 'folder', id: created.id } : get().activeView });
+    return committed ? created?.id || null : null;
   },
   renameFolder(id, name) {
-    const workspace = renameFolder(get().workspace, id, name); set({ workspace }); scheduleSave(workspace);
+    const workspace = renameFolder(get().workspace, id, name); commitWorkspace(set, get, workspace);
   },
   deleteFolder(id) {
     const workspace = deleteFolder(get().workspace, id);
-    set({ workspace, activeView: get().activeView.id === id ? { type: 'all', id: null } : get().activeView }); scheduleSave(workspace);
+    commitWorkspace(set, get, workspace, { activeView: get().activeView.id === id ? { type: 'all', id: null } : get().activeView });
   },
   setFolderAsset(folderId, assetId, included) {
-    const workspace = setFolderAsset(get().workspace, folderId, assetId, included); set({ workspace }); scheduleSave(workspace);
+    const workspace = setFolderAsset(get().workspace, folderId, assetId, included); commitWorkspace(set, get, workspace);
   },
   toggleFavorite(assetId) {
-    const workspace = toggleFavorite(get().workspace, assetId); set({ workspace }); scheduleSave(workspace);
+    const workspace = toggleFavorite(get().workspace, assetId); commitWorkspace(set, get, workspace);
   },
   createCanvasObject(input) {
     const previous = get().workspace;
-    const workspace = createCanvasObject(previous, input); set({ workspace }); scheduleSave(workspace);
+    const workspace = createCanvasObject(previous, input); if (!commitWorkspace(set, get, workspace)) return null;
     return workspace === previous ? null : workspace.canvas.objects.find((object) => !previous.canvas.objects.some((prior) => prior.id === object.id))?.id || null;
   },
   setCanvasObjectGeometry(id, geometry) {
-    const workspace = setCanvasObjectGeometry(get().workspace, id, geometry); set({ workspace }); scheduleSave(workspace);
+    const workspace = setCanvasObjectGeometry(get().workspace, id, geometry); commitWorkspace(set, get, workspace);
   },
   setCanvasObjectPresentation(id, presentation) {
-    const workspace = setCanvasObjectPresentation(get().workspace, id, presentation); set({ workspace }); scheduleSave(workspace);
+    const workspace = setCanvasObjectPresentation(get().workspace, id, presentation); commitWorkspace(set, get, workspace);
   },
   replaceCanvasObjectAsset(id, stableAssetId) {
-    const workspace = replaceCanvasObjectAsset(get().workspace, id, stableAssetId); set({ workspace }); scheduleSave(workspace);
+    const workspace = replaceCanvasObjectAsset(get().workspace, id, stableAssetId); commitWorkspace(set, get, workspace);
   },
   setCanvasObjectVisitorVisibility(id, visitorVisible) {
-    const workspace = setCanvasObjectVisitorVisibility(get().workspace, id, visitorVisible); set({ workspace }); scheduleSave(workspace);
+    const workspace = setCanvasObjectVisitorVisibility(get().workspace, id, visitorVisible); commitWorkspace(set, get, workspace);
   },
   setFolderPublic(folderId, isPublic) {
-    const workspace = setFolderPublic(get().workspace, folderId, isPublic); set({ workspace }); scheduleSave(workspace);
+    const workspace = setFolderPublic(get().workspace, folderId, isPublic); commitWorkspace(set, get, workspace);
   },
   commitCategoryForProfile(expectedProfileAddress, command) {
     const beforeIds = command?.type === 'create' ? new Set(get().workspace?.folders?.map(({ id }) => id) || []) : null;
@@ -355,40 +351,39 @@ export const useLibraryStore = create((set, get) => ({
     return Boolean(workspace);
   },
   setCanvasObjectLocked(id, locked) {
-    const workspace = setCanvasObjectLocked(get().workspace, id, locked); set({ workspace }); scheduleSave(workspace);
+    const workspace = setCanvasObjectLocked(get().workspace, id, locked); commitWorkspace(set, get, workspace);
   },
   setAllCanvasObjectsLocked(locked) {
-    const workspace = setAllCanvasObjectsLocked(get().workspace, locked); set({ workspace }); scheduleSave(workspace);
+    const workspace = setAllCanvasObjectsLocked(get().workspace, locked); commitWorkspace(set, get, workspace);
   },
   reorderCanvasObject(id, command) {
-    const workspace = reorderCanvasObject(get().workspace, id, command); set({ workspace }); scheduleSave(workspace);
+    const workspace = reorderCanvasObject(get().workspace, id, command); commitWorkspace(set, get, workspace);
   },
   removeCanvasObject(id) {
-    const workspace = removeCanvasObject(get().workspace, id); set({ workspace }); scheduleSave(workspace);
+    const workspace = removeCanvasObject(get().workspace, id); commitWorkspace(set, get, workspace);
   },
   ...(tableAuthoringEnabled ? {
     createTablePlacement(input) {
       const previous = get().workspace;
-      const workspace = createTablePlacement(previous, input); set({ workspace }); scheduleSave(workspace);
+      const workspace = createTablePlacement(previous, input); if (!commitWorkspace(set, get, workspace)) return null;
       return workspace === previous ? null : workspace.tables.placements.find((placement) => !previous.tables.placements.some((prior) => prior.id === placement.id))?.id || null;
     },
     updateTablePlacement(id, patch) {
-      const workspace = updateTablePlacement(get().workspace, id, patch); set({ workspace }); scheduleSave(workspace);
+      const workspace = updateTablePlacement(get().workspace, id, patch); commitWorkspace(set, get, workspace);
     },
     reorderTablePlacement(id, command) {
-      const workspace = reorderTablePlacement(get().workspace, id, command); set({ workspace }); scheduleSave(workspace);
+      const workspace = reorderTablePlacement(get().workspace, id, command); commitWorkspace(set, get, workspace);
     },
     removeTablePlacement(id) {
-      const workspace = removeTablePlacement(get().workspace, id); set({ workspace }); scheduleSave(workspace);
+      const workspace = removeTablePlacement(get().workspace, id); commitWorkspace(set, get, workspace);
     }
   } : {}),
   resetCanvasLayout() {
-    const workspace = resetCanvasLayout(get().workspace); set({ workspace }); scheduleSave(workspace);
+    const workspace = resetCanvasLayout(get().workspace); commitWorkspace(set, get, workspace);
   },
   replaceWorkspace(workspace, { persist = true } = {}) {
-    if (persist && !saveLibraryWorkspace(workspaceStorage, workspace)) return false;
-    if (persist && saveTimer) clearTimeout(saveTimer);
-    if (persist) saveTimer = null;
+    if (workspace?.profileAddress !== get().profileAddress) return false;
+    if (persist) return commitWorkspace(set, get, workspace);
     set({ workspace });
     return true;
   }
@@ -398,17 +393,15 @@ export function resetLibraryStoreForTests(nextProfileAddress, nextStorage) {
   workspaceStorage = nextStorage;
   activeLoadController?.abort();
   activeLoadController = null;
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = null;
-  const workspace = loadLibraryWorkspace(nextStorage, nextProfileAddress);
-  useLibraryStore.setState({ profileAddress: nextProfileAddress, workspace, assets: [], status: 'idle', sourceMode: null,
+  workspacePersistence = createLibraryWorkspacePersistence(nextStorage);
+  useLibraryStore.setState({ profileAddress: nextProfileAddress, ...workspacePersistence.load(nextProfileAddress), assets: [], status: 'idle', sourceMode: null,
     progress: { resolved: 0, total: 0, failures: 0 }, searchQuery: '', activeView: { type: 'all', id: null }, selectedAssetId: null });
 }
 
 export function flushLibraryWorkspace() {
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = null;
-  return saveLibraryWorkspace(workspaceStorage, useLibraryStore.getState().workspace);
+  const result = workspacePersistence.save(useLibraryStore.getState().workspace);
+  useLibraryStore.setState({ persistenceError: result.error });
+  return result.ok;
 }
 
 export const flushLibraryWorkspaceForTests = flushLibraryWorkspace;

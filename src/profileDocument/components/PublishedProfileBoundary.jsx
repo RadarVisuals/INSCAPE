@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
+import { StartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import PublishedProfileDocumentPreview from './PublishedProfileDocumentPreview.jsx';
 import { PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileRepository.js';
 import './publishedProfileStatus.css';
@@ -25,6 +26,7 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
   const supportRequired = [PUBLISHED_PROFILE_STATUS.INVALID, PUBLISHED_PROFILE_STATUS.ERROR].includes(state?.status);
   return <main className="published-profile-status" data-lattice-menu-surface data-menu-surface="mist"
     data-published-focus-fallback tabIndex="-1" aria-label="Published profile status">
+    {state?.status !== PUBLISHED_PROFILE_STATUS.LOADING && <StartupDestinationReady />}
     <section className="published-profile-status__card" role="status" aria-busy={state?.busy}>
       <header><span>PUBLIC PROFILE</span><h1>{title}</h1></header>
       <div className="published-profile-status__body">

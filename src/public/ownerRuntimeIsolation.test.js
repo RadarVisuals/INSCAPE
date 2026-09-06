@@ -129,6 +129,6 @@ test('owner loading failure stays in a controlled owner-only boundary', async ()
 
   const boundarySource = readFileSync(resolve(here, 'OwnerRuntimeBoundary.jsx'), 'utf8');
   assert.match(boundarySource, /if \(ownerAuthoringEnabled !== true\) return null/);
-  assert.match(boundarySource, /role="alert">The owner workspace could not be loaded/);
+  assert.match(boundarySource, /<StartupDestinationFailure title="The owner workspace could not be loaded/);
   assert.doesNotMatch(boundarySource, /PublishedProfileBoundary|localStorage|useLibraryStore|useSignalStore/);
 });

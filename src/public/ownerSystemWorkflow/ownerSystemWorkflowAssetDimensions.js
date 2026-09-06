@@ -52,6 +52,32 @@ export function ownerSystemWorkflowDecodedAsset(asset, decoded) {
 }
 
 const decodedBySource = new Map();
+const MAX_CACHED_SOURCES = 256;
+
+function decodeSourceDimensions(source, ImageConstructor, timeoutMs) {
+  return new Promise((resolve) => {
+    let image; let timeout; let settled = false;
+    const finish = (failed = false) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (image) { image.onload = null; image.onerror = null; }
+      const width = !failed && positiveDimension(image?.naturalWidth);
+      const height = !failed && positiveDimension(image?.naturalHeight);
+      resolve(width && height ? Object.freeze({ source, width, height }) : null);
+    };
+    try {
+      image = new ImageConstructor();
+      timeout = setTimeout(() => finish(true), timeoutMs);
+      image.decoding = 'async';
+      image.referrerPolicy = 'no-referrer';
+      image.onload = () => finish();
+      image.onerror = () => finish(true);
+      image.src = source;
+      if (typeof image.decode === 'function') Promise.resolve(image.decode()).then(() => finish(), () => {});
+    } catch { finish(true); }
+  });
+}
 
 export function decodeOwnerSystemWorkflowAssetDimensions(asset, {
   ImageConstructor = globalThis.Image,
@@ -65,28 +91,14 @@ export function decodeOwnerSystemWorkflowAssetDimensions(asset, {
   const sources = ownerSystemWorkflowAssetSources(asset);
   if (!sources.length || typeof ImageConstructor !== 'function') return Promise.resolve(null);
   const decodeSource = (source) => {
-    if (cache.has(source)) return cache.get(source);
-    const pending = new Promise((resolve) => {
-    const image = new ImageConstructor();
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      image.onload = null; image.onerror = null;
-      const width = positiveDimension(image.naturalWidth);
-      const height = positiveDimension(image.naturalHeight);
-      resolve(width && height ? Object.freeze({ source, width, height }) : null);
-    };
-    const timeout = setTimeout(finish, timeoutMs);
-    image.decoding = 'async';
-    image.referrerPolicy = 'no-referrer';
-    image.onload = finish;
-    image.onerror = finish;
-    image.src = source;
-    if (typeof image.decode === 'function') image.decode().then(finish, () => {});
-  });
+    if (cache.has(source)) {
+      const cached = cache.get(source);
+      cache.delete(source); cache.set(source, cached);
+      return cached;
+    }
+    const pending = decodeSourceDimensions(source, ImageConstructor, timeoutMs);
     cache.set(source, pending);
+    while (cache.size > MAX_CACHED_SOURCES) cache.delete(cache.keys().next().value);
     pending.then((dimensions) => {
       if (!dimensions && cache.get(source) === pending) cache.delete(source);
     });

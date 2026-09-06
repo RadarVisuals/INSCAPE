@@ -100,9 +100,10 @@ test('all non-owner routes mount the published boundary instead of the local wor
   assert.doesNotMatch(appSource, /viewingConnectedWorkspace \? <OwnerRuntimeBoundary/);
 });
 
-test('profile restore uses the isolated System Workflow store and controlled errors', () => {
+test('profile restore uses the isolated System Workflow store', () => {
   const controllerSource = readFileSync(new URL('./ownerSystemWorkflow/useOwnerSystemWorkflowController.js', import.meta.url), 'utf8');
   assert.match(controllerSource, /createSystemWorkflowDraftStore\(\{ profileAddress: profile/u);
-  assert.match(controllerSource, /catch \(cause\) \{ setError\(cause\?\.message \|\| 'The canonical operation failed'\)/u);
+  // Error handling is exercised through the mounted controller in
+  // browser-tests/controller-hardening.browser.mjs, not source formatting.
   assert.doesNotMatch(controllerSource, /restoreImportedPresentation|profileDocumentStorage|lattice-production-draft/u);
 });

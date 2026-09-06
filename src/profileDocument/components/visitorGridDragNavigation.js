@@ -6,7 +6,8 @@ export function resolveVisitorGridDragDestination({ activeIndex, deltaX, deltaY,
   if (horizontal <= Math.abs(deltaY) * 1.35) return null;
   const threshold = Math.min(120, Math.max(64, viewportWidth * .08));
   if (horizontal < threshold) return null;
-  if (deltaX < 0 && activeIndex < lastIndex) return activeIndex + 1;
-  if (deltaX > 0 && activeIndex > 0) return activeIndex - 1;
+  if (lastIndex === 0) return null;
+  if (deltaX < 0) return (activeIndex + 1) % (lastIndex + 1);
+  if (deltaX > 0) return (activeIndex + lastIndex) % (lastIndex + 1);
   return null;
 }

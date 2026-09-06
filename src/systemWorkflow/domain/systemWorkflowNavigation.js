@@ -27,8 +27,9 @@ export function adjacentSystemWorkflowGridId(draftInput, gridId, direction) {
   const grids = navigableGrids(draft);
   const index = grids.findIndex(({ id }) => id === gridId);
   if (index < 0) throw navigationError('SYSTEM_WORKFLOW_GRID_UNKNOWN', 'The selected Grid does not exist');
-  const destination = index + (direction === 'next' ? 1 : -1);
-  return grids[destination]?.id || null;
+  if (grids.length < 2) return null;
+  const destination = (index + (direction === 'next' ? 1 : -1) + grids.length) % grids.length;
+  return grids[destination].id;
 }
 
 export function reconcileSystemWorkflowGridSelection(draftInput, selectedGridId) {

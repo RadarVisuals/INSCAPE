@@ -81,7 +81,7 @@ export default function useOwnerSystemWorkflowPanels({ blocked = false } = {}) {
       closePanel();
     };
     const onPointerDown = (event) => {
-      if (blocked || !activePanel || event.defaultPrevented || event.target?.closest?.('[data-system-workflow-panel], [data-system-workflow-panel-trigger], [data-system-workflow-overlay]')) return;
+      if (blocked || !activePanel || activePanel === 'library' || event.defaultPrevented || event.target?.closest?.('[data-system-workflow-panel], [data-system-workflow-panel-trigger], [data-system-workflow-overlay]')) return;
       closePanel();
     };
     globalThis.addEventListener?.('keydown', onKeyDown);

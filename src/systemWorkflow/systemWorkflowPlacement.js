@@ -154,6 +154,7 @@ export function createSystemWorkflowPlacementCandidate(draftInput, {
   nativeHeight,
   nativeWidth,
   stableAssetId,
+  selectedMedia,
   gridId,
 } = {}) {
   const draft = assertValidSystemWorkflowDraft(draftInput);
@@ -172,6 +173,7 @@ export function createSystemWorkflowPlacementCandidate(draftInput, {
       ? { generateCandidate: generatePlacementId }
       : undefined),
     stableAssetId,
+    ...(selectedMedia ? { selectedMedia: structuredClone(selectedMedia) } : {}),
     ...(destination ? assertSystemWorkflowDropGeometry(destination)
       : createInitialSystemWorkflowPlacementGeometry(nativeWidth, nativeHeight)),
     layer: nextPlacementOrder(grid.placements.map(({ layer }) => layer), 'layer'),

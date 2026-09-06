@@ -1,4 +1,5 @@
 import { Component, lazy, Suspense } from 'react';
+import { StartupDestinationFailure } from '../startveil/StartupDestinationContext.jsx';
 import { normalizeProfileAddress } from '../library/config.js';
 import { loadOwnerRuntime } from './ownerRuntimeLoader.js';
 import AlphaSupportPanel from '../support/AlphaSupportPanel.jsx';
@@ -22,10 +23,10 @@ class OwnerRuntimeErrorBoundary extends Component {
 
   render() {
     if (this.state.error) {
-      return <div className="mode-loading" role="alert">The owner workspace could not be loaded.
+      return <StartupDestinationFailure title="The owner workspace could not be loaded.">
         <AlphaSupportPanel compact code={ALPHA_SUPPORT_CODES.UNEXPECTED_APPLICATION_ERROR}
           phase="OWNER_RUNTIME" routeClass="OWNER" message={this.state.error.message} />
-      </div>;
+      </StartupDestinationFailure>;
     }
     return this.props.children;
   }

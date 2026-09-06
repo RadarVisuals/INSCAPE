@@ -10,6 +10,14 @@ export function browserAssetSupportsPreview(asset) {
   return BROWSER_SUPPORTED_MEDIA_TYPES.includes(String(asset?.mediaType || '').toLocaleLowerCase());
 }
 
+export function browserAssetHasPreviewCandidate(asset) {
+  return browserAssetSupportsPreview(asset) && browserPreviewCandidates(asset).length > 0;
+}
+
+export function browserAssetPreviewUnavailable(record, asset) {
+  return record?.status === 'unavailable' && record.assetRef === asset;
+}
+
 export function browserPreviewWorkIsCurrent(record, job, asset, signature) {
   if (job?.signature === signature && job.cancelled !== true) return true;
   if (record?.signature !== signature) return false;

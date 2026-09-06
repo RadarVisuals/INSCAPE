@@ -10,6 +10,8 @@ import { NETLIFY_HEADERS_FILE, writeNetlifyHeaders } from './productionSecurityP
 export const BUILD_REPORT_FILE = 'bundle-report.json';
 export const GENERATED_BUILD_FILES = Object.freeze([BUILD_REPORT_FILE, 'owner-runtime-graph.json', NETLIFY_HEADERS_FILE]);
 export const UNUSED_PUBLIC_PATHS = Object.freeze([
+  // Local recovery materials remain in public/ for development only.
+  'recovery',
   'assets/PFP',
   'assets/patterns',
   'assets/palettes',

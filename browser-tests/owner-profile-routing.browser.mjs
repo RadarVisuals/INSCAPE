@@ -194,10 +194,7 @@ describe('owner/viewed-profile routing through the real App', { concurrency: fal
     await setRoutingState({ authorityLifecycleStatus: 'complete', hostProfileAddress: PROFILE_A,
       isWalletConnected: true, isHostProfileOwner: true });
     await waitForOwnerShell('Owner A did not become active');
-    const enter = page.locator('.startveil__entry');
-    await enter.waitFor({ state: 'visible', timeout: 20_000 });
-    await page.waitForFunction(() => !document.querySelector('.startveil__entry')?.disabled, undefined, { timeout: 20_000 });
-    await enter.evaluate((button) => button.click());
+    await page.locator('.startveil').waitFor({ state: 'detached', timeout: 20_000 });
     await page.waitForFunction(() => document.querySelector('.application-interface')?.dataset.visible === 'true', undefined, { timeout: 15_000 });
 
     await setRoutingState({ authorityLifecycleStatus: 'pending', hostProfileAddress: PROFILE_A,

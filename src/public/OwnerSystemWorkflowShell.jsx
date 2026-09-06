@@ -2,6 +2,7 @@ import { normalizeProfileAddress } from '../library/config.js';
 import '../lattice/rendering/latticeMenuSurface.css';
 import OwnerSystemWorkflowReconciliationBoundary from './ownerSystemWorkflow/OwnerSystemWorkflowReconciliationBoundary.jsx';
 import './ownerSystemWorkflow/ownerSystemWorkflow.css';
+import './ownerSystemWorkflow/displayInstruments.css';
 
 export default function OwnerSystemWorkflowShell({
   ownerAuthoringEnabled = true,

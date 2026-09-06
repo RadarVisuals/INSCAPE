@@ -29,9 +29,7 @@ test('Grid navigation is explicitly Space-drag and both moving planes render the
   assert.match(interaction, /authoringDisabled && !navigationOnly/);
   assert.match(interaction, /navigationOnly && Math\.abs\(deltaX\)/);
   assert.doesNotMatch(interaction, /!event\.shiftKey && Math\.abs\(deltaX\)/);
-  assert.equal((canvas.match(/<LatticePixelGrid/g) || []).length, 2);
-  assert.match(canvas, /grid-plane--current[\s\S]*<LatticePixelGrid/);
-  assert.match(canvas, /grid-plane--adjacent[\s\S]*<GridSwipePreview/);
+  assert.match(canvas, /renderedGrids\.map\([\s\S]*key=\{scene\.id\}[\s\S]*<LatticePixelGrid/);
   assert.match(pixelGrid, /createLatticePixelGuideBounds\(field, spacing \/ 2\)/);
   assert.match(pixelGrid, /<clipPath[^>]*clipPathUnits="userSpaceOnUse"[\s\S]*<rect \{\.\.\.geometry\.bounds\}/);
   assert.equal((pixelGrid.match(/clipPath=\{geometry\.bounds/g) || []).length, 2);
@@ -50,19 +48,63 @@ test('Library collection filters stay viewport-bounded and scroll their option l
   assert.match(styles, /\.system-workflow__filter-options \{[^}]*min-height: 0;[^}]*overflow-y: auto;[^}]*overscroll-behavior: contain;/s);
 });
 
-test('undocked Metadata stays within half the viewport and scrolls its content', () => {
+test('detached and sidecar Metadata share one dossier layout while detached remains viewport-bounded', () => {
+  const detachedWindow = read('./OwnerSystemWorkflowDetachedWindow.jsx');
+  const source = read('./OwnerSystemWorkflowMetadataModule.jsx');
   const styles = read('./ownerSystemWorkflow.css');
-  assert.match(styles, /\.system-workflow__metadata-module\[data-floating\] \{[^}]*max-height: 50dvh;[^}]*grid-template-rows: 32px minmax\(0, 1fr\);/s);
-  assert.match(styles, /\.system-workflow__metadata-module\[data-floating\] > \.system-workflow__metadata-module-content \{[^}]*min-height: 0;[^}]*grid-auto-rows: max-content;[^}]*align-content: start;[^}]*overflow-y: auto;[^}]*overscroll-behavior: contain;[^}]*scrollbar-width: thin;/s);
+  assert.match(source, /<small>CREATOR<\/small>/);
+  assert.doesNotMatch(source, /CREATOR ATTRIBUTION/);
+  assert.match(source, /OwnerSystemWorkflowDetachedWindow/);
+  assert.match(source, /presentationBoardAdjacentWindowGeometry\(board, viewport, \{ chromeGutter \}\)/);
+  assert.match(source, /clampOwnerSystemWorkflowWindowHeight\(candidate, top, viewport\(\)\.height, \{ minimum \}\)/);
+  assert.match(detachedWindow, /data-detached-window data-floating/);
+  assert.match(detachedWindow, /system-workflow__detached-window-titlebar/);
+  assert.match(detachedWindow, /system-workflow__detached-window-surface/);
+  assert.match(detachedWindow, /system-workflow__detached-window-resize/);
+  assert.match(styles, /\.system-workflow__detached-window \{[^}]*--detached-window-width: 320px;[^}]*--detached-window-radius: 10px;[^}]*--detached-window-gutter: 6px;[^}]*--detached-window-titlebar-height: 38px;[^}]*--detached-window-titlebar-padding: 12px;[^}]*--detached-window-content-padding: 16px;[^}]*--detached-window-shadow-inset: 6px;[^}]*--detached-window-shadow-height: 90px;[^}]*border: 1px solid var\(--workflow-border-strong\);[^}]*background: var\(--workflow-selection\);/s);
+  assert.match(styles, /\.system-workflow__detached-window \{[^}]*border-color: rgb\(255 255 255 \/ 20%\);/s);
+  assert.match(styles, /\.system-workflow:not\(\[data-chrome-noise="off"\]\) \.system-workflow__detached-window::after \{[^}]*inset: 1px;[^}]*background-image: url\("\/assets\/noise-samples\/grain-mono\.png"\);[^}]*background-position: var\(--detached-window-noise-x, 0\) var\(--detached-window-noise-y, 0\);[^}]*background-size: var\(--workflow-window-chrome-noise-size\) var\(--workflow-window-chrome-noise-size\);[^}]*background-repeat: repeat;[^}]*mix-blend-mode: hard-light;[^}]*opacity: var\(--workflow-window-chrome-noise-opacity\);/s);
+  assert.match(source, /'--detached-window-noise-x': `\$\{-position\.x - 1\}px`/);
+  assert.match(source, /'--detached-window-noise-y': `\$\{-position\.y - 1\}px`/);
+  assert.match(styles, /\.system-workflow__detached-window-resize \{[^}]*right: 0;[^}]*bottom: 0;[^}]*left: 0;[^}]*height: 9px;[^}]*cursor: ns-resize;[^}]*touch-action: none;/s);
+  assert.match(styles, /\.system-workflow__detached-window-surface \{[^}]*width: calc\(100% - \(2 \* var\(--detached-window-gutter\)\)\);[^}]*margin: 0 0 var\(--detached-window-gutter\);[^}]*padding: var\(--detached-window-content-padding\);[^}]*overflow-y: auto;[^}]*border-radius: var\(--detached-window-radius\);[^}]*scrollbar-width: none;/s);
+  assert.match(styles, /:is\(\.system-workflow__detached-window-surface, \.system-workflow__metadata-projection \.system-workflow__metadata-module-content\)::before \{[^}]*inset: var\(--detached-window-shadow-inset, 5px\);[^}]*border-radius: var\(--detached-window-radius, 7px\);[^}]*url\("\/assets\/patterns\/detached-window-shadow-dither\.png"\) top center \/ 100% var\(--detached-window-shadow-height, 90px\) no-repeat;[^}]*pointer-events: none;/s);
+  assert.match(styles, /opacity: var\(--workflow-window-inner-shadow-opacity, 1\);/);
+  assert.match(styles, /:is\(\.system-workflow__detached-window-surface, \.system-workflow__metadata-projection \.system-workflow__metadata-module-content\) \{[^}]*box-shadow: inset 0 0 0 1px rgb\(0 0 0 \/ 8%\);/s);
+  assert.match(styles, /\.system-workflow:is\(\[data-menu-surface="ash"\], \[data-menu-surface="mist"\], \[data-menu-surface="paper"\]\)[\s\S]*--detached-window-shadow-height: 45px;[\s\S]*--workflow-window-inner-shadow-opacity: 18%;/);
+  assert.match(styles, /\.system-workflow__detached-window-surface \{[^}]*border-color: rgb\(255 255 255 \/ 15%\);/s);
+  assert.match(styles, /:is\(\.system-workflow__detached-window, \.system-workflow__metadata-projection\.is-side\) \.system-workflow__metadata-module-traits \{[^}]*grid-template-columns: minmax\(0, 1fr\);[^}]*gap: 0;/s);
+  assert.match(styles, /:is\(\.system-workflow__detached-window, \.system-workflow__metadata-projection\.is-side\) \.system-workflow__metadata-module-traits > li > :is\(small, strong\) \{[^}]*font: 400 11px\/1\.4 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;[^}]*letter-spacing: \.065em;/s);
+  assert.match(styles, /:is\(\.system-workflow__detached-window, \.system-workflow__metadata-projection\.is-side\) \.system-workflow__metadata-module-description p \{[^}]*font: 400 12px\/1\.55 "Inscape Sora", sans-serif;/s);
+  assert.match(styles, /:is\(\.system-workflow__detached-window, \.system-workflow__metadata-projection\.is-side\) \.system-workflow__metadata-module-traits::before \{[^}]*font: 500 13px\/1\.3 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif;[^}]*letter-spacing: \.09em;[^}]*content: "TRAITS";/s);
+  assert.match(styles, /\.system-workflow__detached-window-titlebar \{[^}]*padding-inline: var\(--detached-window-titlebar-padding\);[^}]*border: 0;[^}]*background: transparent;/s);
+  assert.match(styles, /\.system-workflow__detached-window-titlebar > strong \{[^}]*translate: 0 1px;/s);
+  assert.match(styles, /\.system-workflow__metadata-projection\.is-side \{[^}]*top: var\(--workflow-identity-strip-height\);[^}]*bottom: var\(--workflow-board-frame-gap\);[^}]*height: auto;[^}]*max-height: none;[^}]*padding: 0;/s);
+  assert.match(styles, /\.system-workflow__metadata-sidecar-shell \{[^}]*top: 0;[^}]*left: calc\(100% \+ var\(--workflow-board-frame-gap\)\);[^}]*will-change: clip-path, opacity;/s);
+  assert.match(styles, /\.system-workflow__metadata-sidecar-rail \{[^}]*top: 0;[^}]*left: 0;[^}]*height: var\(--workflow-identity-strip-height\);/s);
+  assert.match(styles, /\.system-workflow__metadata-sidecar-rail \.system-workflow__metadata-dock-controls > strong \{[^}]*margin-right: auto;/s);
+  assert.match(styles, /\.system-workflow__metadata-projection\.is-side \.system-workflow__metadata-module-content \{[^}]*margin: 0;[^}]*background: var\(--workflow-panel\);/s);
+});
+
+test('Layers keeps placement tools with its content and shares window behavior with Metadata', () => {
+  const source = read('./OwnerSystemWorkflowSelectionInspector.jsx');
+  const instruments = read('./DisplayInstruments.jsx');
+  const window = read('./DisplayInstrumentWindow.jsx');
+  assert.match(source, /return renderPanel\(<>{toolbar}/);
+  assert.doesNotMatch(source, /TOOLBAR_POSITION_KEY|beginToolbarDrag|beginPanelResize/);
+  assert.match(instruments, /<DisplayInstrumentWindow/);
+  assert.match(window, /<OwnerSystemWorkflowDetachedWindow/);
+  assert.match(window, /onPointerCancel: finish/);
 });
 
 test('Metadata creator avatars fill their circular frame while the fallback icon retains inset spacing', () => {
   const styles = read('./ownerSystemWorkflow.css');
-  assert.match(styles, /metadata-module-content section > :is\(a, div\) \{[^}]*grid-template-columns: 60px minmax\(0, 1fr\) 14px;/s);
-  assert.match(styles, /metadata-module-content section > :is\(a, div\) > i \{[^}]*width: 60px;[^}]*height: 60px;[^}]*border-radius: 50%;/s);
+  assert.match(styles, /metadata-module-content section > :is\(a, div\) \{[^}]*grid-template-columns: 38px minmax\(0, 1fr\) 14px;/s);
+  assert.match(styles, /metadata-module-content section > :is\(a, div\) > i \{[^}]*width: 38px;[^}]*height: 38px;[^}]*border-radius: 50%;/s);
   assert.match(styles, /metadata-module-content section > :is\(a, div\) > i img \{[^}]*width: 100%;[^}]*height: 100%;[^}]*display: block;[^}]*object-fit: cover;/s);
   assert.doesNotMatch(styles, /metadata-module-content section > :is\(a, div\) > i img \{[^}]*padding:/s);
-  assert.match(styles, /metadata-module-content section > :is\(a, div\) > i svg \{[^}]*padding: 6px;/s);
+  assert.match(styles, /metadata-module-content section > :is\(a, div\) > i svg \{[^}]*padding: 5px;/s);
+  assert.match(styles, /:is\(\.system-workflow__detached-window, \.system-workflow__metadata-projection\.is-side\) \.system-workflow__metadata-module-content section > :is\(a, div\) > i \{[^}]*width: 42px;[^}]*height: 42px;/s);
 });
 
 test('Publish exposes one dock-attached control while preserving every canonical gate', () => {

@@ -47,30 +47,9 @@
 .startveil__intro-wordmark { width: 100%; aspect-ratio: 8 / 1; }
 .startveil__intro small { color: var(--lattice-menu-muted); font: var(--lattice-window-type-label); letter-spacing: .14em; }
 
-.startveil__entry {
-  position: static;
-  min-width: 180px;
-  margin: 14px 0 0;
-  padding: 14px 18px;
-  border: 1px solid var(--lattice-menu-line-strong);
-  background: var(--lattice-menu-ink);
-  color: var(--lattice-menu-panel);
-  font: var(--lattice-window-type-label);
-  letter-spacing: .1em;
-  opacity: 0;
-  transform: none;
-  pointer-events: none;
-  cursor: pointer;
-}
-.startveil[data-ready]:not([data-portal]) .startveil__entry { opacity: 1; pointer-events: auto; animation: public-entry-control 260ms ease-out both; }
-.startveil__entry:is(:hover, :focus-visible) { outline: 1px solid var(--lattice-menu-ink); outline-offset: 3px; }
-.startveil[data-exiting] .startveil__intro,
-.startveil[data-handoff] .startveil__intro,
-.startveil[data-exiting] .public-entry-portal,
-.startveil[data-handoff] .public-entry-portal { animation: public-entry-exit 180ms ease-in both; pointer-events: none; }
-.startveil[data-state='revealing-world'] { animation: public-entry-exit 180ms ease-in both; }
-.startveil[data-state='revealing-resident'],
-.startveil[data-state='revealing-interface'] { opacity: 0; background: transparent; }
+.startveil { transition: opacity var(--startveil-reveal-duration, 200ms) ease-out; }
+.startveil[data-exiting] { opacity: 0; pointer-events: none; }
+.startveil[data-sequence='short'] .startveil__intro { animation: none; }
 
 .public-entry-portal {
   --portal-grid-size: 4.166667vw;
@@ -332,6 +311,5 @@
   .startveil__intro,
   .public-entry-portal,
   .public-entry-portal__explore,
-  .startveil[data-exiting] .public-entry-portal,
-  .startveil[data-handoff] .public-entry-portal { animation: none !important; }
+  .startveil[data-exiting] .public-entry-portal { animation: none !important; }
 }

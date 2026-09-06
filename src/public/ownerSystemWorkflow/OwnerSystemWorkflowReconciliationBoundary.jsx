@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
+import { StartupDestinationFailure } from '../../startveil/StartupDestinationContext.jsx';
 
 const OwnerSystemWorkflowRuntime = lazy(() => import('./OwnerSystemWorkflowRuntime.jsx'));
 
@@ -26,6 +27,6 @@ export default function OwnerSystemWorkflowReconciliationBoundary(props) {
     return () => { active = false; };
   }, [profileAddress, publishedDocument, reviewStorage]);
   if (state === 'LOADING') return null;
-  if (state === 'ERROR') return <div className="public-profile-state"><p>Published workspace alignment failed</p></div>;
+  if (state === 'ERROR') return <StartupDestinationFailure title="Published workspace alignment failed" />;
   return <Suspense fallback={null}><OwnerSystemWorkflowRuntime {...props} /></Suspense>;
 }

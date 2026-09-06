@@ -21,13 +21,17 @@
 .visitor-grid-world[data-space-navigation] .visitor-grid-world__viewport { cursor: grab; }
 .visitor-grid-world[data-grid-dragging] .visitor-grid-world__viewport { cursor: grabbing; }
 .visitor-grid-world__grid-plane { position: absolute; inset: 0; overflow: hidden; }
-.visitor-grid-world__grid-plane--current {
+.visitor-grid-world__grid-track {
+  position: absolute;
+  inset: 0;
   transform: translate3d(var(--visitor-grid-swipe-x, 0px), 0, 0);
 }
 .visitor-grid-world__grid-plane--adjacent {
-  transform: translate3d(calc(var(--visitor-grid-swipe-x, 0px) + var(--visitor-grid-swipe-side, 100%)), 0, 0);
+  left: var(--visitor-grid-swipe-side, 100%);
+  right: auto;
+  width: 100%;
 }
-.visitor-grid-world[data-grid-swipe-settling] .visitor-grid-world__grid-plane {
+.visitor-grid-world[data-grid-swipe-settling] .visitor-grid-world__grid-track {
   transition: transform 280ms cubic-bezier(.22, 1, .36, 1);
 }
 .visitor-grid-renderer { position: absolute; inset: 0; }

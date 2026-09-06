@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  LATTICE_PRODUCTION_FOCUS_OPENING_MS,
   LATTICE_PRODUCTION_FOCUS_TRANSITION_MS,
   projectLatticeProductionFocusMediaMotion,
 } from './latticeProductionFocusArtworkMotion.js';
 
-test('production focus artwork retains the accepted 420ms geometry duration', () => {
+test('production focus artwork gives opening a gentler runway while retaining the accepted close duration', () => {
+  assert.equal(LATTICE_PRODUCTION_FOCUS_OPENING_MS, 460);
   assert.equal(LATTICE_PRODUCTION_FOCUS_TRANSITION_MS, 420);
 });
 

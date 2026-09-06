@@ -101,3 +101,47 @@ test('dimension decoding skips a failed source and accepts the next bounded cand
     source: 'https://gateway.example/fallback', width: 1600, height: 900,
   });
 });
+
+test('synchronous image failures are retryable and do not poison the source cache', async () => {
+  const cache = new Map(); const asset = { src: 'https://assets.example/retry' };
+  for (const ImageConstructor of [class { constructor() { throw new Error('constructor'); } },
+    class { set src(_) { throw new Error('source setter'); } },
+    class { decode() { throw new Error('decode'); } }]) {
+    assert.equal(await decodeOwnerSystemWorkflowAssetDimensions(asset, { ImageConstructor, cache }), null);
+    assert.equal(cache.size, 0);
+  }
+  class WorkingImage {
+    naturalWidth = 100; naturalHeight = 200;
+    decode() { return Promise.resolve(); }
+  }
+  assert.deepEqual(await decodeOwnerSystemWorkflowAssetDimensions(asset, { ImageConstructor: WorkingImage, cache }),
+    { source: asset.src, width: 100, height: 200 });
+});
+
+test('concurrent requests share decoding and timed-out sources release their cache entry', async () => {
+  const cache = new Map(); let count = 0; let instance;
+  class DelayedImage { constructor() { count++; instance = this; } }
+  const options = { cache, ImageConstructor: DelayedImage, timeoutMs: 10 };
+  const asset = { src: 'https://assets.example/delayed' };
+  const first = decodeOwnerSystemWorkflowAssetDimensions(asset, options);
+  const second = decodeOwnerSystemWorkflowAssetDimensions(asset, options);
+  assert.equal(count, 1);
+  assert.deepEqual(await Promise.all([first, second]), [null, null]);
+  assert.equal(cache.size, 0);
+  assert.equal(instance.onload, null);
+  assert.equal(instance.onerror, null);
+});
+
+test('long sessions keep a bounded cache and retain recently reused dimensions', async () => {
+  const cache = new Map();
+  class LoadedImage {
+    naturalWidth = 20; naturalHeight = 40;
+    decode() { return Promise.resolve(); }
+  }
+  const decode = (id) => decodeOwnerSystemWorkflowAssetDimensions({ src: `https://assets.example/${id}` }, { cache, ImageConstructor: LoadedImage });
+  for (let id = 0; id < 256; id++) await decode(id);
+  await decode(0); await decode(256);
+  assert.equal(cache.size, 256);
+  assert.equal(cache.has('https://assets.example/0'), true);
+  assert.equal(cache.has('https://assets.example/1'), false);
+});

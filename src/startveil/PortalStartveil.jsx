@@ -1,41 +1,31 @@
-import { useEffect, useRef, useState } from 'react';
-import { STARTVEIL_STATES } from './startveilMachine.js';
+import { useEffect, useState } from 'react';
+import { STARTVEIL_STATES, STARTVEIL_REVEAL_MS, STARTVEIL_RETURN_REVEAL_MS } from './startveilMachine.js';
 import { useStartveil } from './useStartveil.js';
 import PublicEntryPortal from './PublicEntryPortal.jsx';
 import '../lattice/rendering/latticeMenuSurface.css';
 import './publicEntryPortal.css';
 
-const REVEAL_MS = 920;
+const INTRO_MS = 720;
 
 export default function PortalStartveil({ connectedProfile, portal = false, onConnect, onDisconnect, onEnterMyWorld, onVisitProfile, ...props }) {
   const [sequenceReady, setSequenceReady] = useState(false);
-  const portalSeenRef = useRef(portal);
-  const reducedMotionPreferred = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
   const { state, enter, reducedMotion, shortened, canEnter } = useStartveil({
     ...props,
-    entryReady: sequenceReady,
-    keyboardEntryEnabled: !portal,
+    entryReady: sequenceReady && props.ready,
   });
 
   const dormant = state === STARTVEIL_STATES.DORMANT;
   const ready = dormant && canEnter && sequenceReady;
-  const exiting = state === STARTVEIL_STATES.ENTERING;
-  const handoff = ![
-    STARTVEIL_STATES.LOADING,
-    STARTVEIL_STATES.DORMANT,
-    STARTVEIL_STATES.ENTERING,
-  ].includes(state);
+  const exiting = state === STARTVEIL_STATES.REVEALING_INTERFACE;
 
   useEffect(() => {
-    if (reducedMotionPreferred) { setSequenceReady(true); return undefined; }
-    const timer = window.setTimeout(() => setSequenceReady(true), REVEAL_MS);
+    if (shortened) { setSequenceReady(true); return undefined; }
+    const timer = window.setTimeout(() => setSequenceReady(true), INTRO_MS);
     return () => window.clearTimeout(timer);
-  }, [reducedMotionPreferred]);
+  }, [shortened]);
 
   useEffect(() => {
-    const arrivedFromPortal = portalSeenRef.current && !portal;
-    portalSeenRef.current ||= portal;
-    if (arrivedFromPortal && ready) enter({ notifyUserGesture: false });
+    if (!portal && ready) enter();
   }, [enter, portal, ready]);
 
   if (state === STARTVEIL_STATES.COMPLETE) return null;
@@ -43,11 +33,11 @@ export default function PortalStartveil({ connectedProfile, portal = false, onCo
   const visitProfile = (address) => {
     if (!ready || !address) return;
     onVisitProfile?.(address);
-    enter({ notifyUserGesture: false });
   };
 
-  return <section aria-busy={!ready && !handoff} aria-label="INSCAPE entry" className="startveil"
-    data-handoff={handoff || undefined} data-portal={portal || undefined} data-ready={ready || undefined}
+  return <section aria-busy={!ready && !exiting} aria-label="INSCAPE entry" className="startveil"
+    style={{ '--startveil-reveal-duration': `${reducedMotion ? 0 : shortened ? STARTVEIL_RETURN_REVEAL_MS : STARTVEIL_REVEAL_MS}ms` }}
+    data-portal={portal || undefined} data-ready={ready || undefined}
     data-reduced-motion={reducedMotion || undefined} data-sequence={shortened ? 'short' : 'full'}
     data-state={state} data-exiting={exiting || undefined} data-lattice-menu-surface data-menu-surface="mist">
     <div aria-hidden="true" className="startveil__grid" />
@@ -56,10 +46,9 @@ export default function PortalStartveil({ connectedProfile, portal = false, onCo
       : <div className="startveil__intro">
         <span aria-hidden="true" className="startveil__intro-wordmark" />
         <small>{props.ready ? 'PUBLIC NETWORK · LUKSO MAINNET' : 'PREPARING INSCAPE'}</small>
-        {!portal && <button className="startveil__entry" disabled={!ready} onClick={() => enter()} type="button">ENTER INSCAPE</button>}
       </div>}
     <span aria-live="polite" className="startveil__status">
-      {handoff ? 'Opening INSCAPE.' : portal && ready ? 'Choose Explore Worlds or Connect Profile.'
+      {exiting ? 'Opening INSCAPE.' : portal && ready ? 'Choose Explore Worlds or Connect Profile.'
         : ready ? 'INSCAPE ready.' : props.ready ? 'Resolving INSCAPE.' : 'Preparing INSCAPE.'}
     </span>
   </section>;

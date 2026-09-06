@@ -59,6 +59,7 @@ export function createSystemWorkflowDraftStore({
   let generation = 0;
   let currentDraft = null;
   let recordState = null;
+  let acceptedRaw;
 
   const createEmpty = (profile) => deepFreeze(createEmptySystemWorkflowDraft(
     profile,
@@ -79,12 +80,14 @@ export function createSystemWorkflowDraftStore({
       };
     }
     if (raw === null) return {
+      raw,
       draft: createEmpty(profile),
       state: Object.freeze({ status: SYSTEM_WORKFLOW_RECORD_STATUS.ABSENT }),
     };
     try {
       const draft = acceptedDraft(JSON.parse(raw), profile);
       if (draft) return {
+        raw,
         draft: deepFreeze(draft),
         state: Object.freeze({ status: SYSTEM_WORKFLOW_RECORD_STATUS.VALID }),
       };
@@ -92,6 +95,7 @@ export function createSystemWorkflowDraftStore({
       // Corruption is represented below without exposing the stored bytes.
     }
     return {
+      raw,
       draft: null,
       state: Object.freeze({
         status: SYSTEM_WORKFLOW_RECORD_STATUS.CORRUPT,
@@ -101,11 +105,20 @@ export function createSystemWorkflowDraftStore({
   };
 
   const acceptLoaded = (loaded) => {
+    acceptedRaw = loaded.raw;
     currentDraft = loaded.draft;
     recordState = loaded.state;
   };
 
   acceptLoaded(load(activeProfileAddress));
+
+  // Compare the persisted record, not just this store's in-memory generation.
+  // localStorage has no atomic compare-and-swap; this rejects already-visible
+  // external edits without pretending to provide simultaneous writer locking.
+  const storageStillCurrent = () => {
+    try { return Boolean(storage?.getItem) && storage.getItem(systemWorkflowDraftKey(activeProfileAddress)) === acceptedRaw; }
+    catch { return false; }
+  };
 
   return Object.freeze({
     getDraft() {
@@ -141,10 +154,11 @@ export function createSystemWorkflowDraftStore({
       if (recordState.status !== SYSTEM_WORKFLOW_RECORD_STATUS.CORRUPT
         || confirmedProfileAddress !== activeProfileAddress
         || expectedFingerprint !== recordState.fingerprint
-        || !storage?.removeItem) return false;
+        || !storage?.removeItem || !storageStillCurrent()) return false;
       try { storage.removeItem(systemWorkflowDraftKey(activeProfileAddress)); }
       catch { return false; }
       currentDraft = createEmpty(activeProfileAddress);
+      acceptedRaw = null;
       recordState = Object.freeze({ status: SYSTEM_WORKFLOW_RECORD_STATUS.ABSENT });
       generation += 1;
       return true;
@@ -164,9 +178,11 @@ export function createSystemWorkflowDraftStore({
     commitCompletedOperation(candidate, { expectedGeneration } = {}) {
       if (expectedGeneration !== generation || !currentDraft) return false;
       const draft = acceptedDraft(candidate, activeProfileAddress);
-      if (!draft || !storage?.setItem) return false;
-      try { storage.setItem(systemWorkflowDraftKey(activeProfileAddress), JSON.stringify(draft)); }
+      if (!draft || !storage?.setItem || !storageStillCurrent()) return false;
+      const raw = JSON.stringify(draft);
+      try { storage.setItem(systemWorkflowDraftKey(activeProfileAddress), raw); }
       catch { return false; }
+      acceptedRaw = raw;
       currentDraft = deepFreeze(draft);
       recordState = Object.freeze({ status: SYSTEM_WORKFLOW_RECORD_STATUS.VALID });
       generation += 1;

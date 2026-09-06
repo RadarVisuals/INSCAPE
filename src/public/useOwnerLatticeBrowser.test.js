@@ -1,10 +1,27 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
+import useOwnerLatticeBrowser, { canOpenCreatorCollection } from './useOwnerLatticeBrowser.js';
+
+const PROFILE = '0x84841412e9f66e360c6da5f9dba11b8e88d87ea8';
 
 const source = readFileSync(new URL('./useOwnerLatticeBrowser.js', import.meta.url), 'utf8');
 const presenterSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowLibraryPresenter.jsx', import.meta.url), 'utf8');
 const workspaceSource = readFileSync(new URL('./ownerSystemWorkflow/OwnerSystemWorkflowLibraryWorkspace.jsx', import.meta.url), 'utf8');
+
+test('root Library exposes collection opening before any collection is active or holdings load', () => {
+  let browser;
+  function Probe() {
+    browser = useOwnerLatticeBrowser(PROFILE, false);
+    return null;
+  }
+  renderToString(createElement(Probe));
+  assert.equal(browser.data.collectionContext, undefined);
+  assert.equal(typeof browser.data.onOpenCollection, 'function');
+  assert.equal(browser.data.onOpenCollection({ isCollection: false }), false);
+});
 
 test('owner Browser hook exposes adapted data and a narrow guarded category boundary', () => {
   assert.match(source, /useLibraryStore/);
@@ -27,19 +44,28 @@ test('creator collections open their bounded token view and can return to Create
   assert.match(presenterSource, /label="Back to Created"/);
   assert.match(presenterSource, /data\.onCloseCollection\?\.\(\)/);
   assert.match(presenterSource, /Loading collection tokens/);
+  assert.match(presenterSource, /if \(!opensCollection\) onActivate/);
 });
 
-test('Library keeps creator records visible when their preview media is unavailable', () => {
+test('Library removes creator records after every preview source is unavailable', () => {
   const workspace = readFileSync(new URL('../lattice/browser/useBrowserWorkspace.js', import.meta.url), 'utf8');
-  assert.match(workspace, /sourceAssets\.map\(\(asset\) =>/);
+  assert.match(workspace, /sourceAssets\.filter/);
+  assert.match(workspace, /browserAssetPreviewUnavailable/);
   assert.match(workspace, /preview\?\.status === 'unavailable' \? null : fallback/);
   assert.match(workspace, /markAssetUnavailable/);
-  assert.match(presenterSource, /Media unavailable/);
   assert.match(presenterSource, /workspace\.isAssetRenderable\(id\)/);
   assert.match(workspaceSource, /!workspaceState\?\.isAssetRenderable\(id\)/);
   assert.match(workspaceSource, /cleanup\(\);\s*if \(!moved\) return/);
   assert.match(workspaceSource, /ownerLibraryPreviewRecords/);
   assert.match(workspaceSource, /useBrowserWorkspace\(data, ownerLibraryPreviewRecords/);
+});
+
+test('creator collection opening is not coupled to transient owned-inventory readiness', () => {
+  assert.equal(canOpenCreatorCollection(PROFILE, { isCollection: true }), true);
+  assert.equal(canOpenCreatorCollection(PROFILE, { isCollection: false }), false);
+  assert.equal(canOpenCreatorCollection('invalid', { isCollection: true }), false);
+  assert.match(source, /canOpenCreatorCollection\(profile, collectionRecord\)/);
+  assert.doesNotMatch(source, /if \(!profileReady \|\| collectionRecord\?\.isCollection/);
 });
 
 test('owner Browser restores the creator-attributed union without confusing creation and holding', () => {
@@ -50,7 +76,7 @@ test('owner Browser restores the creator-attributed union without confusing crea
   assert.match(source, /createdRetained: Boolean\(createdProfileReady && createdError && createdAssets\.length\)/);
   assert.match(source, /acceptedAssetIds = union\.assets\.map/);
   assert.match(source, /createdAssets: \[activeCollection, \.\.\.collectionTokens\]/);
-  assert.match(source, /data: collectionData \|\| unionData/);
+  assert.match(source, /collectionData \|\| \{ \.\.\.unionData, onOpenCollection: openCollection \}/);
   assert.match(source, /resolveReferencedAssets\(profile, referencedAssetKey\.split\(','\)\)/);
 });
 

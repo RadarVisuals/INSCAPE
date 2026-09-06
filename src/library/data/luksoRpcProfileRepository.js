@@ -1,4 +1,5 @@
 import { ERC725, decodeDataSourceWithHash } from '@erc725/erc725.js';
+import { metadataImages as collectMetadataImages } from './metadataImages.js';
 import { createPublicClient, fallback, getAddress, http } from 'viem';
 import { lukso } from 'viem/chains';
 import { IPFS_GATEWAY_URL, LIBRARY_PAGE_SIZE, LUKSO_RPC_FALLBACK_URLS, LUKSO_RPC_URL,
@@ -129,24 +130,9 @@ function decodeMetadataPointer(value) {
   } catch { return null; }
 }
 
-function flattenMedia(value, output = []) {
-  if (Array.isArray(value)) value.forEach((entry) => flattenMedia(entry, output));
-  else if (value && typeof value === 'object' && (value.url || value.src)) output.push(value);
-  return output;
-}
-
 function metadataRoot(document) { return document?.LSP4Metadata || document || {}; }
 
-function metadataImages(document) {
-  const root = metadataRoot(document);
-  const images = flattenMedia(root.images);
-  if (images.length) return images;
-  const image = flattenMedia(root.image);
-  if (image.length) return image;
-  const icon = flattenMedia(root.icon);
-  if (icon.length) return icon;
-  return flattenMedia(root.assets).filter((entry) => !entry.fileType || String(entry.fileType).startsWith('image/'));
-}
+function metadataImages(document) { return collectMetadataImages(metadataRoot(document)); }
 
 function metadataAttributes(document) {
   const attributes = metadataRoot(document)?.attributes;

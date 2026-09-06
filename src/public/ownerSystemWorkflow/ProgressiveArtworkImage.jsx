@@ -11,11 +11,13 @@ export default function ProgressiveArtworkImage({ alt = '', asset, draggable = f
     const { naturalHeight: height, naturalWidth: width } = event.currentTarget;
     if (width && height) onSourceLoad?.({ source, width, height });
   };
-  if (sources.low === sources.high) return <img alt={alt} className="system-workflow__artwork-media" decoding="async" draggable={draggable} loading="eager"
+  // Moving Stage media must paint atomically. Async decoding can expose the
+  // guides for a frame when an offscreen, already-loaded Grid slides into view.
+  if (sources.low === sources.high) return <img alt={alt} className="system-workflow__artwork-media" decoding="sync" draggable={draggable} loading="eager"
     onLoad={(event) => report(event, sources.high)} src={sources.high} style={style} />;
   return <span className="system-workflow__artwork-media system-workflow__progressive-media" data-high-ready={highReady || undefined}>
-    <img alt={alt} decoding="async" draggable={draggable} loading="eager" src={sources.low} style={style} />
-    {!highFailed && <img alt="" aria-hidden="true" decoding="async" draggable={draggable} loading="eager"
+    <img alt={alt} decoding="sync" draggable={draggable} loading="eager" src={sources.low} style={style} />
+    {!highFailed && <img alt="" aria-hidden="true" decoding="sync" draggable={draggable} loading="eager"
       onError={() => setHighFailed(true)} onLoad={(event) => { setHighReady(true); report(event, sources.high); }}
       src={sources.high} style={style} />}
   </span>;

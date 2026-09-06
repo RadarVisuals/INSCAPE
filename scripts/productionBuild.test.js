@@ -141,9 +141,15 @@ test('authoring pruning touches only the active verified output directory', asyn
   try {
     await mkdir(resolve(active, 'assets/patterns'), { recursive: true }); await mkdir(resolve(normal, 'assets/patterns'), { recursive: true });
     await writeFile(resolve(active, 'assets/patterns/stale.txt'), 'active'); await writeFile(resolve(normal, 'assets/patterns/sentinel.txt'), 'normal');
+    await mkdir(resolve(active, 'recovery/images'), { recursive: true });
+    await mkdir(resolve(base, 'public/recovery/images'), { recursive: true });
+    await writeFile(resolve(active, 'recovery/images/5.webp'), 'copied recovery');
+    await writeFile(resolve(base, 'public/recovery/images/5.webp'), 'original recovery');
     assertSafeOutputDirectory(process.cwd(), active); await pruneProductionAuthoringAssets(active);
     await assert.rejects(() => readFile(resolve(active, 'assets/patterns/stale.txt')));
     assert.equal(await readFile(resolve(normal, 'assets/patterns/sentinel.txt'), 'utf8'), 'normal');
+    await assert.rejects(() => readFile(resolve(active, 'recovery/images/5.webp')));
+    assert.equal(await readFile(resolve(base, 'public/recovery/images/5.webp'), 'utf8'), 'original recovery');
   } finally { await removeTree(base); }
 });
 

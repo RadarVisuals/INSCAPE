@@ -3,7 +3,6 @@ import PublicEntryPortal from '../../startveil/PublicEntryPortal.jsx';
 import OwnerSystemWorkflowLibraryWorkspace from './OwnerSystemWorkflowLibraryWorkspace.jsx';
 import OwnerSystemWorkflowManual from './OwnerSystemWorkflowManual.jsx';
 import OwnerSystemWorkflowProfile from './OwnerSystemWorkflowProfile.jsx';
-import OwnerSystemWorkflowSelectionInspector from './OwnerSystemWorkflowSelectionInspector.jsx';
 import OwnerSystemWorkflowSettings from './OwnerSystemWorkflowSettings.jsx';
 import SystemWorkflowGridSwitcher from './SystemWorkflowGridSwitcher.jsx';
 
@@ -17,15 +16,12 @@ function PanelPresence({ children, id, panels, retained = false }) {
 }
 
 export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assetsById, authoringLocked = false, categoryCommands, browser, connectedProfile, controller, crop, discoveryCommands, discoveryGroups, layout, libraryData,
-  layersOpen, menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onDossierChange, onEnterMyWorld, onLayersOpenChange, onVisitProfile, panelOccupied, panels, profileIdentity, profileModel,
+  menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onDossierChange, onEnterMyWorld, onVisitProfile, panelOccupied, panels, profileIdentity, profileModel,
   resolveAssetDimensions, reviewDiscovery, workspaceSurfaceColor, workbenchPreferences, onWorkbenchPreferencesChange }) {
   const show = (id) => panels.presence[id];
   const libraryMounted = useRef(false);
   if (show('library').present) libraryMounted.current = true;
   return <>
-    {!panelOccupied && layersOpen && <OwnerSystemWorkflowSelectionInspector assetsById={assetsById} authoringLocked={authoringLocked}
-      controller={controller} crop={crop} layout={layout} onBeginCrop={crop.beginCrop}
-      onMinimize={() => onLayersOpenChange(false)} />}
     {show('grids').present && <PanelPresence id="grids" panels={panels}><SystemWorkflowGridSwitcher controller={controller} data-layout={layout.mode} onSelectGrid={onChangeGrid} /></PanelPresence>}
     {show('docs').present && <PanelPresence id="docs" panels={panels}><OwnerSystemWorkflowManual onClose={onClose} /></PanelPresence>}
     {libraryMounted.current && <PanelPresence id="library" panels={panels} retained>

@@ -279,18 +279,17 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     assert.equal(sideAlignment.frameGap, 8);
     assert.ok(closeEnough(sideAlignment.panelLeft - sideAlignment.boardRight, sideAlignment.frameGap));
     assert.ok(closeEnough(sideAlignment.ratio, 16 / 9, 0.003));
-    for (const gap of [sideAlignment.contentTopGap, sideAlignment.firstCellGap]) {
-      assert.ok(closeEnough(gap, 8, 0.75), JSON.stringify(sideAlignment));
+    for (const gap of [sideAlignment.contentTopGap, sideAlignment.contentLeftGap,
+      sideAlignment.contentRightGap, sideAlignment.contentBottomGap]) {
+      assert.ok(closeEnough(gap, 17, 0.75), JSON.stringify(sideAlignment));
     }
-    for (const gap of [sideAlignment.contentLeftGap, sideAlignment.contentRightGap, sideAlignment.contentBottomGap]) {
-      assert.ok(closeEnough(gap, 0, 0.75), JSON.stringify(sideAlignment));
-    }
+    assert.ok(closeEnough(sideAlignment.firstCellGap, 0, 0.75), JSON.stringify(sideAlignment));
     assert.equal(sideAlignment.frameLeft, '-9px');
     assert.equal(sideAlignment.frameBottom, '-9px');
     assert.equal(sideAlignment.frameRight, '-295px');
     assert.equal(sideAlignment.frameRadius, '12px');
-    assert.equal(sideAlignment.metadataSeparator, '1px');
-    assert.equal(sideAlignment.windowSeparator, '1px');
+    assert.equal(sideAlignment.metadataSeparator, '0px');
+    assert.equal(sideAlignment.windowSeparator, '0px');
     assert.ok(closeEnough(sideAlignment.metadataControls.top, sideAlignment.header.top, 0.25), JSON.stringify(sideAlignment));
     assert.ok(closeEnough(sideAlignment.metadataControls.bottom, sideAlignment.header.bottom, 0.25), JSON.stringify(sideAlignment));
     assert.ok(closeEnough(sideAlignment.windowControls.top, sideAlignment.header.top, 0.25), JSON.stringify(sideAlignment));
@@ -390,6 +389,7 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     const metadata = page.getByRole('complementary', { name: 'Metadata module' });
     await metadata.waitFor();
     await waitForMetadataMotion();
+    if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'presentation-board-metadata-detached-wide.png') });
     await page.setViewportSize({ width: 390, height: 720 });
     await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'narrow');
     const detachedNarrow = await page.evaluate(() => {
@@ -661,7 +661,7 @@ test('Display Module resizes from its corners and preserves exact maximize, rest
     assert.ok(closeEnough(restored.x, resized.x) && closeEnough(restored.y, resized.y), JSON.stringify({ resized, restored }));
     assert.ok(closeEnough(restored.width, resized.width) && closeEnough(restored.height, resized.height), JSON.stringify({ resized, restored }));
 
-    await page.getByRole('button', { name: 'Close Display Module to shortcut' }).click();
+    await page.getByRole('button', { name: 'Minimize Display Module to shortcut' }).click();
     await board.waitFor({ state: 'detached' });
     const shortcut = page.getByRole('button', { name: 'Open DISPLAY MODULE' });
     await shortcut.waitFor();
@@ -735,11 +735,13 @@ test('artwork-only view stays inside the Board without changing its current size
     assert.equal(await page.locator('.lattice-focus-viewer__board-controls > span').textContent(), '01 / 02');
     assert.equal(await page.locator('[data-lattice-focus-viewer]').getAttribute('data-layout'), 'isolated');
     const atmosphere = await page.evaluate(() => ({
+      artworkFilter: getComputedStyle(document.querySelector('.system-workflow__artwork-plane')).filter,
       backdrop: getComputedStyle(document.querySelector('.lattice-focus-viewer__surface')).backgroundColor,
       compositionFilter: getComputedStyle(document.querySelector('.system-workflow__stage-viewport')).filter,
       sourceVisibility: getComputedStyle(document.querySelector('.system-workflow__placement[data-viewing]')).visibility,
     }));
-    assert.notEqual(atmosphere.compositionFilter, 'none');
+    assert.equal(atmosphere.compositionFilter, 'none');
+    assert.notEqual(atmosphere.artworkFilter, 'none');
     assert.match(atmosphere.backdrop, /rgba\(5, 6, 6, 0\.18\)/);
     assert.equal(atmosphere.sourceVisibility, 'hidden');
     const contained = await page.evaluate(() => {
@@ -796,7 +798,7 @@ test('Workbench ADD commands follow canonical Board and Metadata lifecycle state
     await addFlyout.waitFor({ state: 'detached' });
     await page.keyboard.press('Escape');
 
-    await page.getByRole('button', { name: 'Close Display Module to shortcut' }).click();
+    await page.getByRole('button', { name: 'Minimize Display Module to shortcut' }).click();
     await board.waitFor({ state: 'detached' });
     const shortcut = page.getByRole('button', { name: 'Open DISPLAY MODULE' });
     await shortcut.waitFor();
@@ -829,7 +831,7 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     if (SCREENSHOT_DIR) await mkdir(SCREENSHOT_DIR, { recursive: true });
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(URL, { waitUntil: 'networkidle' });
-    await page.getByRole('button', { name: 'Close Display Module to shortcut' }).click();
+    await page.getByRole('button', { name: 'Minimize Display Module to shortcut' }).click();
     let shortcut = page.locator('.system-workflow__desktop-shortcut');
     const before = await shortcut.boundingBox();
     await page.mouse.move(before.x + before.width / 2, before.y + 10);
@@ -925,7 +927,7 @@ test('Workbench shortcut snaps, renames, and accepts a Library artwork as its ic
     await page.mouse.down();
     await page.mouse.move(boardHeader.x + 190, boardHeader.y + boardHeader.height / 2 + 80, { steps: 4 });
     await page.mouse.up();
-    await page.getByRole('button', { name: 'Close Display Module to shortcut' }).click();
+    await page.getByRole('button', { name: 'Minimize Display Module to shortcut' }).click();
     shortcut = page.getByRole('button', { name: 'Open CURATED NFTs' });
     await shortcut.waitFor();
     const shortcutPositionAfterClose = await shortcut.boundingBox();

@@ -10,6 +10,19 @@ function deepFreeze(value, seen = new WeakSet()) {
   return Object.freeze(value);
 }
 
+function resolveBrowserPreviewUrl(value) {
+  const resolved = resolvePublishedAssetUrl(value);
+  if (!resolved) return null;
+  try {
+    const url = new URL(resolved);
+    if (!['ipfs.io', 'dweb.link'].includes(url.hostname.toLowerCase())
+      || !url.pathname.startsWith('/ipfs/')) return resolved;
+    return resolvePublishedAssetUrl(`ipfs://${url.pathname.slice('/ipfs/'.length)}`) || resolved;
+  } catch {
+    return resolved;
+  }
+}
+
 export function adaptLatticeProductionBrowserAsset(asset, profileAddress, acceptCreated = false) {
   const ownerAddress = normalizeProfileAddress(asset?.ownerAddress);
   const identity = parseCanonicalAssetId(asset?.id);
@@ -20,13 +33,13 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress, accept
     || (asset?.tokenId == null ? null : String(asset.tokenId).toLowerCase()) !== identity.tokenId) return null;
 
   const previewSource = [asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl]
-    .map((candidate) => resolvePublishedAssetUrl(candidate))
+    .map(resolveBrowserPreviewUrl)
     .find(Boolean) || null;
   const imageVariants = (asset.imageGroups?.[0]?.variants || []).map((variant) => variant?.url);
   const previewCandidates = [...new Set([asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl, ...imageVariants]
-    .map((candidate) => resolvePublishedAssetUrl(candidate)).filter(Boolean))];
+    .map(resolveBrowserPreviewUrl).filter(Boolean))];
   const resolvedSource = [asset.originalImageUrl, asset.imageUrl, asset.thumbnailUrl]
-    .map((candidate) => resolvePublishedAssetUrl(candidate))
+    .map(resolveBrowserPreviewUrl)
     .find(Boolean) || null;
   const source = asset.collectionPreviewTokenId ? null : resolvedSource;
   const width = Number.isSafeInteger(asset.imageWidth) && asset.imageWidth > 0 ? asset.imageWidth : null;
@@ -50,6 +63,7 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress, accept
       : !['image', 'animation'].includes(mediaType) ? 'MEDIA TYPE UNAVAILABLE' : null,
     previewSrc: previewSource,
     previewCandidates,
+    imageGroups: asset.imageGroups || [],
     src: source,
     stableAssetId: identity.stableAssetId,
     title: typeof asset.name === 'string' && asset.name.trim()

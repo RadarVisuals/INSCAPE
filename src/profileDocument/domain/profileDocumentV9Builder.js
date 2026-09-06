@@ -52,10 +52,10 @@ export function projectSystemWorkflowPublicGrids(draftInput, assetRecords = []) 
       placements: grid.placements
         .filter(({ visibility }) => visibility === SYSTEM_WORKFLOW_VISIBILITY.PUBLIC)
         .sort((left, right) => left.navigationOrder - right.navigationOrder || left.id.localeCompare(right.id))
-        .map(({ locked: _locked, stableAssetId, ...placement }) => ({
+        .map(({ locked: _locked, stableAssetId, selectedMedia, ...placement }) => ({
           ...structuredClone(placement),
           visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,
-          asset: resolveAsset(stableAssetId),
+          asset: resolveAsset(stableAssetId, selectedMedia),
         })),
     }));
   if (!grids.length) {
@@ -82,10 +82,10 @@ function projectSystemWorkflowWorldCover(draft, assetRecords) {
       placements: cover.placements
         .filter(({ visibility }) => visibility === SYSTEM_WORKFLOW_VISIBILITY.PUBLIC)
         .sort((left, right) => left.navigationOrder - right.navigationOrder || left.id.localeCompare(right.id))
-        .map(({ locked: _locked, stableAssetId, ...placement }) => ({
+        .map(({ locked: _locked, stableAssetId, selectedMedia, ...placement }) => ({
           ...structuredClone(placement),
           visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,
-          asset: resolveAsset(stableAssetId),
+          asset: resolveAsset(stableAssetId, selectedMedia),
         })),
     },
   };

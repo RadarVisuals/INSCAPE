@@ -1,9 +1,11 @@
 import { ownerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDimensions.js';
+import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 
 const clean = (value) => typeof value === 'string' && value.trim() ? value.trim() : null;
 const sourceFor = (asset) => asset?.src || asset?.originalImageUrl || asset?.imageUrl || asset?.thumbnailUrl || null;
 
 export function createOwnerSystemWorkflowFocusViewModel(placement, asset) {
+  asset = assetForPlacement(asset, placement);
   const src = sourceFor(asset);
   const dimensions = ownerSystemWorkflowAssetDimensions(asset);
   if (!placement || !src || !dimensions) return null;

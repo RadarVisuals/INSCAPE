@@ -55,7 +55,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
   };
 
   const beginPlacementGesture = (event, placement, kind = 'move', corner = null) => {
-    if (disabled || authoringDisabled || placement.locked || event.button !== 0 || !grid) return;
+    if (disabled || gridSwipeTimerRef.current !== null || authoringDisabled || placement.locked || event.button !== 0 || !grid) return;
     if (spacePressedRef.current) {
       beginCanvasSelection(event, { navigationOnly: true });
       return;
@@ -148,7 +148,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     setMarquee(null);
   };
   const beginCanvasSelection = (event, { navigationOnly = spacePressedRef.current } = {}) => {
-    if (disabled || authoringDisabled && !navigationOnly || event.button !== 0 || !grid
+    if (disabled || gridSwipeTimerRef.current !== null || marqueeRef.current || authoringDisabled && !navigationOnly || event.button !== 0 || !grid
       || !navigationOnly && event.target !== event.currentTarget) return;
     event.preventDefault();
     if (navigationOnly) event.stopPropagation();
@@ -197,6 +197,10 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     const finish = (pointerEvent) => {
       const active = marqueeRef.current;
       if (!active || pointerEvent.pointerId !== active.pointerId) return;
+      if (active.moved || active.mode !== 'pending') {
+        clickSuppressedRef.current = true;
+        globalThis.setTimeout?.(() => { clickSuppressedRef.current = false; }, 0);
+      }
       if (active.mode === 'swipe') {
         const deltaX = active.end.x - origin.x;
         const threshold = Math.min(120, Math.max(64, field.viewportWidth * .08));
@@ -221,7 +225,9 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
         if (reducedMotion) completeSwipe();
         else {
           setGridSwipe({
-            deltaX: committed ? (direction === 'next' ? -field.viewportWidth : field.viewportWidth) : 0,
+            // One local pixel of shared coverage prevents antialiasing seams;
+            // settle by the same distance so the incoming artwork lands exactly.
+            deltaX: committed ? (direction === 'next' ? -1 : 1) * (field.viewportWidth - viewScale) : 0,
             direction,
             settling: true,
             targetGridId: active.targetGridId,

@@ -18,6 +18,9 @@ function restoredPublicGrid(grid) {
     placements: grid.placements.map(({ asset, ...placement }) => ({
       ...structuredClone(placement),
       stableAssetId: asset.stableAssetId,
+      ...(asset.media.url && asset.media.type === 'image' ? { selectedMedia: {
+        url: asset.media.url, width: asset.media.width, height: asset.media.height,
+      } } : {}),
       visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,
       locked: false,
     })),

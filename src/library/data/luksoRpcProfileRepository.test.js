@@ -229,7 +229,7 @@ test('collection metadata resolver prefers token metadata and falls back to the 
   };
   const resolver = createLsp8CollectionMetadataResolver({ client, rpcUrl: 'https://rpc.example',
     ipfsGateway: 'https://gateway.example/ipfs/', fetchImpl: async (url) => {
-      fetched.push(url); return response(documents[url.split('/').at(-1)]);
+      fetched.push(url); return Response.json(documents[url.split('/').at(-1)]);
     } });
   const result = await resolver.resolve(lsp8, [{ tokenId }, { tokenId: secondTokenId }]);
   assert.equal(result.get(tokenId).name, 'Direct one');
@@ -237,6 +237,30 @@ test('collection metadata resolver prefers token metadata and falls back to the 
   assert.equal(result.get(secondTokenId).name, 'Base two');
   assert.equal(result.get(secondTokenId).metadataSource, 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)');
   assert.equal(fetched.some((url) => url.endsWith('/metadata/2')), true);
+});
+
+test('collection contexts retry failed reads and refresh after their TTL', async () => {
+  let failing = true; let reads = 0; let now = 0;
+  const resolver = createLsp8CollectionMetadataResolver({ contextTtlMs: 5, now: () => now,
+    client: { async readContract({ functionName }) {
+      if (functionName === 'getDataForTokenId') return '0x';
+      reads++; if (failing) throw new Error('RPC unavailable'); return '0x';
+    } }, fetchImpl: () => { throw new Error('no metadata pointer'); } });
+  await resolver.resolve(lsp8, [{ tokenId }]); assert.equal(reads, 2);
+  failing = false;
+  await resolver.resolve(lsp8, [{ tokenId }]); assert.equal(reads, 4);
+  await resolver.resolve(lsp8, [{ tokenId }]); assert.equal(reads, 4);
+  now = 6;
+  await resolver.resolve(lsp8, [{ tokenId }]); assert.equal(reads, 6);
+});
+
+test('collection metadata body deadline is enforced through the resolver', async () => {
+  let cancelled = false;
+  const resolver = createLsp8CollectionMetadataResolver({ metadataResponseMs: 5,
+    client: { async readContract({ functionName }) { return functionName === 'getDataForTokenId' ? uri('slow-body') : '0x'; } },
+    fetchImpl: async () => new Response(new ReadableStream({ cancel() { cancelled = true; } })) });
+  const result = await resolver.resolve(lsp8, [{ tokenId }]);
+  assert.equal(result.size, 0); assert.equal(cancelled, true);
 });
 
 test('hydrates verified on-chain LSP4 JSON and SVG media without a network fetch or NFT-specific route', async () => {

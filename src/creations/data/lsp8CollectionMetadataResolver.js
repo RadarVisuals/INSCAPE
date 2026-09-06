@@ -1,9 +1,11 @@
 import { decodeDataSourceWithHash } from '@erc725/erc725.js';
+import { metadataImages as collectMetadataImages } from '../../library/data/metadataImages.js';
 import { createPublicClient, fallback, getAddress, http } from 'viem';
 import { lukso } from 'viem/chains';
 import { IPFS_GATEWAY_URL, LUKSO_RPC_FALLBACK_URLS, LUKSO_RPC_URL, normalizeProfileAddress } from '../../library/config.js';
 import { resolveContentUrl } from '../../library/data/resolveContentUrl.js';
 import { decodeVerifiedOnchainJsonDataUri } from '../../library/data/onchainDataUri.js';
+import { fetchMetadataJson } from '../../library/data/fetchMetadataJson.js';
 
 const METADATA_KEY = '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e';
 const BASE_URI_KEY = '0x1a7628600c3bac7101f53697f48df381ddc36b9015e7d7c9c5633d1252aa2843';
@@ -44,18 +46,7 @@ function decodeTokenId(tokenId, format) {
   return tokenId;
 }
 function metadataRoot(document) { return document?.LSP4Metadata || document || {}; }
-function flattenMedia(value, output = []) {
-  if (Array.isArray(value)) value.forEach((entry) => flattenMedia(entry, output));
-  else if (value && typeof value === 'object' && (value.url || value.src)) output.push(value);
-  return output;
-}
-function metadataImages(document) {
-  const root = metadataRoot(document);
-  return flattenMedia(root.images).length ? flattenMedia(root.images)
-    : flattenMedia(root.image).length ? flattenMedia(root.image)
-      : flattenMedia(root.icon).length ? flattenMedia(root.icon)
-        : flattenMedia(root.assets).filter((entry) => !entry.fileType || String(entry.fileType).startsWith('image/'));
-}
+function metadataImages(document) { return collectMetadataImages(metadataRoot(document)); }
 function metadataAttributes(document) {
   const values = metadataRoot(document).attributes;
   return (Array.isArray(values) ? values : []).map((entry) => ({ key: entry?.key || entry?.trait_type || entry?.name || '',
@@ -71,21 +62,13 @@ async function fetchDocument(pointer, { fetchImpl, ipfsGateway, signal, metadata
   const uri = pointer?.url;
   if (/^data:/iu.test(uri || '')) return decodeVerifiedOnchainJsonDataUri(uri, pointer.verification);
   const url = resolveContentUrl(uri, { ipfsGateway }); if (!url) return null;
-  const controller = new AbortController(); const abort = () => controller.abort(signal?.reason);
-  signal?.addEventListener('abort', abort, { once: true });
-  const timeout = setTimeout(() => controller.abort(), metadataResponseMs);
-  try {
-    const response = await fetchImpl(url, { signal: controller.signal, headers: { accept: 'application/json' } });
-    if (!response.ok) throw new Error(`ASSET METADATA RESPONDED ${response.status}`);
-    return response.json();
-  } finally {
-    clearTimeout(timeout); signal?.removeEventListener('abort', abort);
-  }
+  return fetchMetadataJson(url, { fetchImpl, signal, timeoutMs: metadataResponseMs });
 }
-async function mapConcurrent(items, mapper) {
+async function mapConcurrent(items, mapper, signal) {
   const results = new Array(items.length); let cursor = 0;
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, items.length) }, async () => {
     while (cursor < items.length) {
+      throwIfAborted(signal);
       const index = cursor; cursor += 1;
       try { results[index] = await mapper(items[index]); } catch (error) { results[index] = { error }; }
     }
@@ -97,24 +80,33 @@ async function mapConcurrent(items, mapper) {
 export function createLsp8CollectionMetadataResolver({
   rpcUrl = LUKSO_RPC_URL, rpcFallbackUrls = LUKSO_RPC_FALLBACK_URLS,
   ipfsGateway = IPFS_GATEWAY_URL, fetchImpl = globalThis.fetch, client,
-  metadataResponseMs = RESPONSE_TIMEOUT_MS,
+  metadataResponseMs = RESPONSE_TIMEOUT_MS, contextTtlMs = 5 * 60_000, now = Date.now,
 } = {}) {
   if (typeof fetchImpl !== 'function') throw new TypeError('fetch is required');
   const publicClient = client || createClient(rpcUrl, rpcFallbackUrls); const contexts = new Map();
   return { source: 'DIRECT LUKSO RPC', async resolve(contractAddress, tokens, { signal } = {}) {
+    throwIfAborted(signal);
     const contract = normalizeProfileAddress(contractAddress);
     const candidates = (Array.isArray(tokens) ? tokens : []).filter((token) => /^0x[0-9a-f]{64}$/iu.test(token?.tokenId));
     if (!contract || !candidates.length) return new Map();
     let context = contexts.get(contract);
+    if (context && context.expiresAt <= now()) { contexts.delete(contract); context = null; }
     if (!context) {
       const address = getAddress(contract);
-      context = Promise.all([
-        publicClient.readContract({ address, abi: ABI, functionName: 'getData', args: [TOKEN_ID_FORMAT_KEY] }).catch(() => null),
-        publicClient.readContract({ address, abi: ABI, functionName: 'getData', args: [BASE_URI_KEY] }).catch(() => null),
-      ]).then(([format, base]) => ({ format: decodeNumber(format), baseUri: decodeUri(base) }));
+      context = { expiresAt: Infinity };
+      let failed = false;
+      const missing = () => { failed = true; return null; };
+      context.promise = Promise.all([
+        publicClient.readContract({ address, abi: ABI, functionName: 'getData', args: [TOKEN_ID_FORMAT_KEY] }).catch(missing),
+        publicClient.readContract({ address, abi: ABI, functionName: 'getData', args: [BASE_URI_KEY] }).catch(missing),
+      ]).then(([format, base]) => {
+        context.expiresAt = failed ? 0 : now() + contextTtlMs;
+        return { format: decodeNumber(format), baseUri: decodeUri(base) };
+      });
       contexts.set(contract, context);
+      while (contexts.size > 128) contexts.delete(contexts.keys().next().value);
     }
-    const { format, baseUri } = await context; throwIfAborted(signal);
+    const { format, baseUri } = await context.promise; throwIfAborted(signal);
     const outcomes = await mapConcurrent(candidates, async (token) => {
       const tokenId = token.tokenId.toLowerCase(); const address = getAddress(contract);
       const direct = await publicClient.readContract({ address, abi: ABI, functionName: 'getDataForTokenId',
@@ -142,7 +134,7 @@ export function createLsp8CollectionMetadataResolver({
       return { tokenId, name: metadata.name || metadata.title || null, description: metadata.description || '',
         images: metadataImages(document), attributes: metadataAttributes(document),
         metadataSource: `${source} (DIRECT LUKSO RPC)`, metadataResolved: true };
-    });
+    }, signal);
     throwIfAborted(signal);
     return new Map(outcomes.filter((outcome) => outcome && !outcome.error).map((outcome) => [outcome.tokenId, outcome]));
   } };

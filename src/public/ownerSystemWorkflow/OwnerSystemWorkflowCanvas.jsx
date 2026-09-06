@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 import { createPortal } from 'react-dom';
 import { projectCroppedMediaRectangle } from '../../lattice/rendering/latticeCrop.js';
 import { fitNativeMediaRectangle } from '../../lattice/rendering/latticeGeometry.js';
@@ -28,6 +29,8 @@ import {
 import { markOwnerSystemWorkflowPointerFocus } from './ownerSystemWorkflowSelection.js';
 import ProgressiveArtworkImage from './ProgressiveArtworkImage.jsx';
 import { progressiveArtworkSources } from './progressiveArtworkSources.js';
+import useGridPlayback from './useGridPlayback.js';
+import { systemWorkflowPlacementRequest } from './systemWorkflowPlacementRequest.js';
 
 const sourceFor = (asset) => progressiveArtworkSources(asset).high;
 const boundsOf = (placements) => placements.length ? {
@@ -62,41 +65,9 @@ const screenHandlePoint = (corner, rectangle) => ({
   top: corner.includes('s') ? rectangle.top + rectangle.height : rectangle.top,
 });
 
-function GridSwipePreview({ appearance, assetsById, grid, onAssetDimensions, snapStep, worldViewport }) {
-  if (!grid || !worldViewport) return null;
-  return <>
-    <LatticePixelGrid color={appearance.guideColor} field={worldViewport} guideInterval={snapStep}
-      height={worldViewport.height} mode={appearance.guideMode} width={worldViewport.width} />
-    {grid.placements.slice().sort((left, right) => left.layer - right.layer).map((placement) => {
-      const asset = assetsById.get(placement.stableAssetId);
-      const src = sourceFor(asset);
-      const projected = projectOwnerSystemWorkflowPlacement(placement, worldViewport);
-      const dimensions = ownerSystemWorkflowAssetDimensions(asset);
-      const opening = { left: 0, top: 0, width: projected.width, height: projected.height };
-      const transform = dimensions
-        ? projectSystemWorkflowTransform(placement.transform, dimensions, placement.crop)
-        : projectSystemWorkflowTransform(placement.transform, { width: placement.columnSpan, height: placement.rowSpan }, placement.crop);
-      const imageRectangle = dimensions && (transform.crop
-        ? projectCroppedMediaRectangle(opening, transform.dimensions, transform.crop)
-        : fitNativeMediaRectangle(opening, transform.dimensions));
-      const imageRenderRectangle = projectSystemWorkflowImageRenderRectangle(
-        imageRectangle && projectLatticeRasterBleedRectangle(imageRectangle, opening), transform,
-      );
-      return <div className="system-workflow__placement" data-cropped={Boolean(placement.crop) || undefined} key={placement.id}
-        style={{ ...projected, zIndex: placement.layer + 1 }}>
-        <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
-          {src ? <ProgressiveArtworkImage asset={asset} onSourceLoad={(dimensions) => onAssetDimensions?.(asset, dimensions)}
-            style={imageRenderRectangle ? { ...imageRenderRectangle,
-              transform: renderedSystemWorkflowCssTransform(transform) } : undefined} /> : <em>Media</em>}
-        </span>
-      </div>;
-    })}
-  </>;
-}
-
 export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked = false, boardScale = 1, controller, crop, interactionDisabled = false, onAssetDimensions,
   onChangeGrid, onOpenViewer, onPlacementRef, reducedMotion = false, renderingMode = 'settled', resolveAssetDimensions,
-  selectionOverlayHost, viewerPlacementId }) {
+  selectionOverlayHost, viewerPlacementId, playingGrids = false, onPauseGrids, onPlaybackTransitionChange }) {
   const canvasRef = useRef(null);
   const feedbackTimerRef = useRef(null);
   const [dropFeedback, setDropFeedback] = useState(null);
@@ -123,17 +94,39 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     reducedMotion,
     snapStep, viewScale,
   });
-  const swipeGridId = interaction.gridSwipe?.targetGridId || null;
-  const swipeGrid = swipeGridId ? controller.draft.grids.find(({ id }) => id === swipeGridId) : null;
-  const selectionNavigating = Boolean(interaction.gridSwipe);
-  const swipeStyle = interaction.gridSwipe ? {
-    '--workflow-grid-swipe-x': `${interaction.gridSwipe.deltaX / viewScale}px`,
-    '--workflow-grid-swipe-side': interaction.gridSwipe.direction === 'next' ? '100%' : '-100%',
+  const playback = useGridPlayback({ playing: playingGrids, enabled: !interactionDisabled && !cropSession && !worldCover && !interaction.gridSwipe,
+    gridId: grid?.id, nextGridId: adjacentGrid('next'), canvasRef, viewScale, reducedMotion,
+    onPause: onPauseGrids || (() => {}), onAdvance: onChangeGrid });
+  const gridSwipe = interaction.gridSwipe || playback.swipe;
+  const dropContext = useMemo(() => ({}), [grid?.id, controller.draft.profileAddress, authoringLocked, interactionDisabled, playingGrids, Boolean(gridSwipe)]);
+  const currentDropContext = useRef(dropContext);
+  currentDropContext.current = dropContext;
+  const swipeSourceRef = useRef(grid?.id);
+  if (!gridSwipe) swipeSourceRef.current = grid?.id;
+  const sourceGridId = gridSwipe ? swipeSourceRef.current : grid?.id;
+  useEffect(() => { onPlaybackTransitionChange?.(Boolean(playback.swipe)); }, [Boolean(playback.swipe), onPlaybackTransitionChange]);
+  useEffect(() => () => onPlaybackTransitionChange?.(false), [onPlaybackTransitionChange]);
+  const swipeGridId = gridSwipe?.targetGridId || null;
+  // Keep neighboring media mounted outside the clipped Stage before a gesture.
+  // A newly mounted image can miss the first paint even when its URL is cached.
+  const previousGridId = adjacentGrid('previous');
+  const nextGridId = adjacentGrid('next');
+  // Continuous playback has no dwell at arrival. Warm the following scene
+  // during the current slide, before it becomes the next visible neighbor.
+  const playbackAheadId = playingGrids && nextGridId
+    ? adjacentSystemWorkflowGridId(controller.draft, nextGridId, 'next') : null;
+  const renderedGrids = [...new Set([grid?.id, sourceGridId, previousGridId, nextGridId, playbackAheadId, swipeGridId].filter(Boolean))]
+    .map((id) => controller.draft.grids.find((candidate) => candidate.id === id)).filter(Boolean);
+  const selectionNavigating = Boolean(gridSwipe);
+  const swipeStyle = gridSwipe ? {
+    '--workflow-grid-swipe-x': `${gridSwipe.deltaX / viewScale}px`,
+    '--workflow-grid-swipe-side': gridSwipe.direction === 'next' ? 'calc(100% - 1px)' : 'calc(-100% + 1px)',
   } : undefined;
-  const projectedPlacements = grid?.placements.map((placement) => ({ ...placement, ...(interaction.previewById.get(placement.id) || {}) })) || [];
+  const projectedPlacements = grid?.placements.filter(({ id }) => !controller.hiddenPlacementIds?.has(id))
+    .map((placement) => ({ ...placement, ...(interaction.previewById.get(placement.id) || {}) })) || [];
   const selected = projectedPlacements.filter(({ id, locked }) => controller.selectedPlacementIds.includes(id) && !locked);
   const selectionBounds = boundsOf(selected);
-  if (retainedSelection.current?.gridId !== grid?.id) retainedSelection.current = null;
+  if (retainedSelection.current?.gridId !== grid?.id || controller.hiddenPlacementIds?.has(retainedSelection.current?.primary?.id)) retainedSelection.current = null;
   if (selectionBounds) retainedSelection.current = { bounds: selectionBounds, primary: selected.at(-1), count: selected.length, gridId: grid.id };
   const renderedSelection = retainedSelection.current;
   const selectionMetrics = renderedSelection && worldViewport
@@ -173,7 +166,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     const onKeyDown = (event) => {
       if (!grid || cropSession || interactionDisabled || viewerOpen || /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName)) return;
       if (event.key === 'Escape') { controller.replaceSelection([]); return; }
-      if (authoringLocked) return;
+      if (authoringLocked || playingGrids || playback.swipe) return;
       const records = grid.placements.filter(({ id }) => controller.selectedPlacementIds.includes(id));
       if (!records.length) return;
       if (event.key === 'Delete' || event.key === 'Backspace') {
@@ -196,37 +189,53 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     };
     globalThis.addEventListener?.('keydown', onKeyDown);
     return () => globalThis.removeEventListener?.('keydown', onKeyDown);
-  }, [authoringLocked, controller, cropSession, grid, interaction, interactionDisabled, snapStep, viewerOpen]);
+  }, [authoringLocked, controller, cropSession, grid, interaction, interactionDisabled, snapStep, viewerOpen, playingGrids, playback.swipe]);
 
   if (!grid) return null;
   return <section className="system-workflow__stage-content" aria-label={`${grid.title} Grid`} data-system-workflow-stage data-world-cover={worldCover || undefined}>
     <div ref={canvasRef} className="system-workflow__canvas" data-guide={appearance.guideMode} data-space-navigation={interaction.spaceNavigation || undefined} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={Boolean(interaction.gridSwipe) || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, '--workflow-board-inverse-scale': 1 / viewScale, ...swipeStyle }}
+      onClick={(event) => {
+        if (cropSession || interaction.clickSuppressedRef.current || event.target.closest?.('[data-system-workflow-placement-id]')) return;
+        controller.replaceSelection([]);
+      }}
+      onPointerDownCapture={(event) => {
+        if (!playingGrids && !playback.swipe) return;
+        event.preventDefault(); event.stopPropagation(); playback.stop();
+      }}
       onPointerDown={(event) => { if (!cropSession) interaction.beginCanvasSelection(event); }}
       onDragOver={(event) => { if (!authoringLocked) event.preventDefault(); }}
       onDrop={async (event) => {
-        if (authoringLocked) return;
+        if (authoringLocked || interactionDisabled || playingGrids || gridSwipe) return;
+        const point = { x: event.clientX, y: event.clientY };
         const asset = assetsById.get(event.dataTransfer.getData('application/x-inscape-asset'));
         if (!asset) return;
-        const dimensions = await (resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions)(asset);
-        if (!dimensions) return;
+        let dimensions;
+        try { dimensions = await (resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions)(asset); } catch { return; }
+        if (!dimensions || !canvasRef.current?.isConnected || currentDropContext.current !== dropContext) return;
         const field = createOwnerSystemWorkflowProjectedField(canvasRef.current, snapStep, 1, artboardMode);
-        if (!field || worldCover && !ownerSystemWorkflowProjectedFieldContainsPoint(field, { x: event.clientX, y: event.clientY })) {
+        if (!field || worldCover && !ownerSystemWorkflowProjectedFieldContainsPoint(field, point)) {
           globalThis.dispatchEvent?.(new CustomEvent('inscape:system-workflow-drop-rejected'));
           return;
         }
-        controller.run((session) => session.placeAsset({
-          gridId: grid.id,
-          stableAssetId: asset.stableAssetId || asset.id,
-          nativeWidth: dimensions.width,
-          nativeHeight: dimensions.height,
-          destination: createSystemWorkflowDropGeometry(dimensions.width, dimensions.height, { x: event.clientX, y: event.clientY }, field),
-        }));
+        controller.placeAsset(systemWorkflowPlacementRequest(asset, dimensions, grid.id,
+          createSystemWorkflowDropGeometry(dimensions.width, dimensions.height, point, field)));
       }}>
-      <div className="system-workflow__grid-plane system-workflow__grid-plane--current">
+      <div className="system-workflow__grid-track">
+      {renderedGrids.map((scene) => {
+        const active = scene.id === grid.id;
+        const source = scene.id === sourceGridId;
+        const incoming = scene.id === swipeGridId;
+        const scenePlacements = active ? projectedPlacements : scene.placements.filter(({ id }) => !controller.hiddenPlacementIds?.has(id));
+        return <div key={scene.id} aria-hidden={!active || undefined} inert={active ? undefined : ''}
+          data-preview-grid-id={active ? undefined : scene.id} data-rendered-grid-id={scene.id}
+          className={`system-workflow__grid-plane system-workflow__grid-plane--${source ? 'current' : 'adjacent'}`}
+          style={{ visibility: source || incoming ? 'visible' : 'hidden',
+            left: source ? 0 : incoming ? undefined : scene.id === previousGridId ? 'calc(-100% + 1px)' : 'calc(100% - 1px)' }}>
       {worldViewport && <LatticePixelGrid color={appearance.guideColor} field={worldViewport} guideInterval={snapStep}
         height={worldViewport.height} mode={appearance.guideMode} width={worldViewport.width} />}
-      {projectedPlacements.slice().sort((left, right) => left.layer - right.layer).map((placement) => {
-        const asset = assetsById.get(placement.stableAssetId);
+      <div className="system-workflow__artwork-plane">
+      {scenePlacements.slice().sort((left, right) => left.layer - right.layer).map((placement) => {
+        const asset = assetForPlacement(assetsById.get(placement.stableAssetId), placement);
         const src = sourceFor(asset);
         const isSelected = controller.selectedPlacementIds.includes(placement.id) && !placement.locked;
         const visibleCrop = cropSession?.placementId === placement.id ? cropSession.previewCrop : placement.crop;
@@ -243,7 +252,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
           imageRectangle && projectLatticeRasterBleedRectangle(imageRectangle, opening), transform,
         );
         return <div aria-disabled={placement.locked || undefined} aria-label={`Select ${asset?.title || asset?.name || 'artwork'}`} aria-pressed={isSelected}
-          className="system-workflow__placement" data-cropped={Boolean(visibleCrop) || undefined} data-cropping={cropping || undefined} data-system-workflow-crop-surface={cropping || undefined} data-system-workflow-placement-id={placement.id} data-locked={placement.locked || undefined}
+          className="system-workflow__placement" data-cropped={Boolean(visibleCrop) || undefined} data-cropping={cropping || undefined} data-system-workflow-crop-surface={cropping || undefined} data-system-workflow-placement-id={active ? placement.id : undefined} data-locked={placement.locked || undefined}
           data-viewing={viewerPlacementId === placement.id || undefined}
           key={placement.id} onClick={(event) => {
             if (cropSession || interaction.clickSuppressedRef.current) return;
@@ -257,7 +266,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
             event.preventDefault();
             controller.selectPlacement(placement.id, event.shiftKey);
           }}
-          onPointerDown={(event) => { markOwnerSystemWorkflowPointerFocus(event.currentTarget); if (authoringLocked) return; if (cropping) crop.beginCropDrag(event, placement.id, worldViewport.cellSize * viewScale); else if (!cropSession) interaction.beginPlacementGesture(event, placement); }} ref={(node) => onPlacementRef?.(placement.id, node)} role="button" tabIndex={placement.locked ? -1 : 0}
+          onPointerDown={(event) => { markOwnerSystemWorkflowPointerFocus(event.currentTarget); if (authoringLocked) return; if (cropping) crop.beginCropDrag(event, placement.id, worldViewport.cellSize * viewScale); else if (!cropSession) interaction.beginPlacementGesture(event, placement); }} ref={active ? (node) => onPlacementRef?.(placement.id, node) : undefined} role="button" tabIndex={!active || placement.locked ? -1 : 0}
           style={{ ...projected, zIndex: placement.layer + 1 }}>
           <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
             {src ? <ProgressiveArtworkImage asset={asset} onSourceLoad={(dimensions) => onAssetDimensions?.(asset, dimensions)}
@@ -266,16 +275,15 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
           </span>
         </div>;
       })}
-      {interaction.marquee && <i className="system-workflow__marquee" style={interaction.marquee} />}
-      {worldCover && worldViewport && <div aria-hidden="true" className="system-workflow__world-cover-aperture"
+      </div>
+      {active && interaction.marquee && <i className="system-workflow__marquee" style={interaction.marquee} />}
+      {active && worldCover && worldViewport && <div aria-hidden="true" className="system-workflow__world-cover-aperture"
         style={{ left: worldViewport.left, top: worldViewport.top, width: worldViewport.width, height: worldViewport.height }}>
         <span>INSCAPE HERO IMAGE · VISIBLE AREA 768 × 432 · 16:9</span>
       </div>}
+      </div>;
+      })}
       </div>
-      {interaction.gridSwipe && swipeGrid && <div aria-hidden="true" className="system-workflow__grid-plane system-workflow__grid-plane--adjacent">
-        <GridSwipePreview appearance={appearance} assetsById={assetsById} grid={swipeGrid}
-          onAssetDimensions={onAssetDimensions} snapStep={snapStep} worldViewport={worldViewport} />
-      </div>}
     </div>
     {!authoringLocked && selectionMetrics && selectionOverlayHost && createPortal(<div className="system-workflow__selection-chrome" aria-hidden={viewerOpen || !selectionBounds || selectionNavigating}
       data-cropping={Boolean(cropSession) || undefined} data-group={renderedSelection.count > 1 || undefined}

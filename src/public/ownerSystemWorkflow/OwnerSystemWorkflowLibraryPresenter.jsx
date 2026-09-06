@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { BROWSER_ASSET_SIZE, BROWSER_VIEW_KINDS, categoryAssetIds, categoryMembershipState } from '../../lattice/browser/browserWorkspaceModel.js';
 import RackMenu from '../menus/RackMenu.jsx';
 import { clearOwnerSystemWorkflowDocumentSelection } from './ownerSystemWorkflowSelection.js';
+import OwnerSystemWorkflowLibraryImages, { libraryImageChoices } from './OwnerSystemWorkflowLibraryImages.jsx';
 import { OwnerSystemWorkflowSidebarDeleteConfirmation, OwnerSystemWorkflowSidebarEditor } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
 
 const assetId = (asset) => asset?.stableAssetId || asset?.id;
@@ -40,7 +41,7 @@ function LibraryNavigationButton({ active, categoryId, count, draggable = false,
   </button>;
 }
 
-function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDown, workspace }) {
+function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDown, onOpenImages, workspace }) {
   const [decodedRatios, setDecodedRatios] = useState(() => new Map());
   if (!assets.length) return <p className="lattice-browser-status">{emptyLabel}</p>;
   const selected = new Set(workspace.selectedAssetIds);
@@ -60,15 +61,17 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
         : [asset.owned ? 'OWNED' : null, asset.collectionPreviewTokenId ? 'TOKEN PREVIEW' : null,
           asset.creatorRelationship === 'collection' ? 'FROM CREATED COLLECTION' : asset.created ? 'CREATED' : null,
           asset.created && !asset.owned ? 'NOT OWNED' : null].filter(Boolean);
-      return <button aria-label={[asset.title || id, asset.collection].filter(Boolean).join(' / ')} aria-pressed={isSelected}
+      const imageCount = !opensCollection ? libraryImageChoices(asset).length : 0;
+      return <div className="system-workflow__library-item" key={id}><button aria-label={[asset.title || id, asset.collection].filter(Boolean).join(' / ')} aria-pressed={isSelected}
         className="lattice-browser-asset" data-collection={opensCollection || undefined}
         data-multi-selected={isSelected && selected.size > 1 || undefined} data-selected={isSelected || undefined}
         draggable={!opensCollection} key={id}
         onClick={(event) => opensCollection ? onActivate?.(event, asset) : workspace.selectAsset(id, event)}
         onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); onContext?.(event, asset); }}
-        onDoubleClick={(event) => onActivate?.(event, asset)} onPointerDown={(event) => onPointerDown?.(event, asset)}
+        onDoubleClick={(event) => { if (!opensCollection) onActivate?.(event, asset); }}
+        onPointerDown={(event) => onPointerDown?.(event, asset)}
         onDragStart={(event) => { event.dataTransfer.effectAllowed = 'copy';
-          event.dataTransfer.setData('application/x-inscape-asset', id); }}
+          event.dataTransfer.setData('application/x-inscape-asset', id); event.preventDefault(); }}
         onKeyDown={(event) => { if (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10') {
           event.preventDefault(); event.stopPropagation(); onContext?.(event, asset);
         } }} type="button">
@@ -84,7 +87,12 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
             {relationships.map((relationship) => <small key={relationship}>{relationship}</small>)}
           </span>}
         </span>}
-      </button>;
+      </button>
+        {imageCount > 1 && <button className="system-workflow__library-images-trigger" type="button"
+          data-library-images-for={id}
+          aria-label={`Open ${imageCount} images of ${asset.title || id}`} onClick={(event) => onOpenImages(event, asset)}>
+          <Images size={13} />{imageCount} images</button>}
+      </div>;
     })}
   </div>;
 }
@@ -96,7 +104,20 @@ function contextAnchor(event) {
 }
 
 export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, data, menuSurfaceId,
-  onAssetActivate, onAssetPointerDown, workspace }) {
+  onAssetActivate, onAssetPointerDown, onImageActivate, workspace }) {
+  const [imageAsset, setImageAsset] = useState(null);
+  const imageReturnRef = useRef(null);
+  const resultsRef = useRef(null);
+  const closeImages = () => {
+    setImageAsset(null);
+    requestAnimationFrame(() => {
+      if (resultsRef.current) resultsRef.current.scrollTop = imageReturnRef.current?.scrollTop || 0;
+      const trigger = [...(resultsRef.current?.querySelectorAll('[data-library-images-for]') || [])]
+        .find((node) => node.dataset.libraryImagesFor === imageReturnRef.current?.id);
+      trigger?.focus({ preventScroll: true });
+    });
+  };
+  useEffect(() => { setImageAsset(null); }, [workspace.view, workspace.query, workspace.collection]);
   const categorySectionRef = useRef(null); const organizationGestureRef = useRef(null); const suppressSelectionRef = useRef(false);
   const [contextMenu, setContextMenu] = useState(null); const [organizationDrag, setOrganizationDrag] = useState(null);
   const [collapsedSections, setCollapsedSections] = useState(() => new Set());
@@ -339,7 +360,10 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         onLostPointerCapture={workspace.sidebarResize.finish} onPointerCancel={workspace.sidebarResize.finish}
         onPointerDown={workspace.sidebarResize.begin} onPointerMove={workspace.sidebarResize.update}
         onPointerUp={workspace.sidebarResize.finish} title="Resize Browser navigation" type="button" />
-      <main className="lattice-browser-results">
+      <main className="lattice-browser-results" ref={resultsRef}>
+        {data.persistenceError && <div className="lattice-browser-notice" data-error role="alert">{data.persistenceError}</div>}
+        {imageAsset ? <OwnerSystemWorkflowLibraryImages asset={imageAsset} onBack={closeImages}
+          onActivate={onImageActivate} onPointerDown={onAssetPointerDown} /> : <>
         {data.collectionContext && <div className="lattice-browser-notice" role="status">
           Created / {data.collectionContext.name || 'Collection'} · {data.collectionContext.resolved || 0} / {data.collectionContext.total || 0} tokens
         </div>}
@@ -352,8 +376,13 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         {data.createdStatus === 'loading' && <p className="lattice-browser-notice" role="status">Loading created {data.createdProgress?.resolved || 0} / {data.createdProgress?.total || 0}</p>}
         {data.collectionContext && data.status === 'loading' && <p className="lattice-browser-notice" role="status">Loading collection tokens {data.progress?.resolved || 0} / {data.progress?.total || 0}</p>}
         <LibraryResults assets={related} emptyLabel={emptyLabel} onActivate={onAssetActivate}
+          onOpenImages={(event, asset) => {
+            imageReturnRef.current = { id: assetId(asset), scrollTop: resultsRef.current.scrollTop };
+            setImageAsset(asset); resultsRef.current.scrollTop = 0;
+          }}
           onContext={openAssetContext} onPointerDown={beginOrganizationDrag}
           workspace={{ ...workspace, selectAsset: (id, event) => { if (!suppressSelectionRef.current) workspace.selectAsset(id, event); } }} />
+        </>}
       </main>
     </div>
     {contextMenu && createPortal(<RackMenu anchor={contextMenu.anchor}

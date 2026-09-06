@@ -46,6 +46,8 @@
 .owner-lattice-publication-rack__rail .owner-lattice-publication-rack__publish:not(:disabled):is(:hover, :focus-visible) { color: var(--workflow-ink, var(--lattice-menu-ink)); background: var(--workflow-selection, var(--lattice-menu-selected)); }
 .owner-lattice-publication-rack__publish:disabled { opacity: .42; }
 .owner-lattice-publication-rack__status { color: var(--workflow-muted, var(--lattice-menu-muted)); }
+.owner-lattice-publication-rack__hash { overflow-wrap: anywhere; }
+.owner-lattice-publication-rack__recovery .owner-lattice-publication-rack__rail { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 640px) {
   .owner-lattice-publication-rack { left: 8px; bottom: 60px; width: calc(100vw - 16px); max-height: calc(100vh - 68px); }
 }

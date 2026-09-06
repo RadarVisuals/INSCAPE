@@ -11,10 +11,75 @@ import { PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileReposi
 import { PROFILE_DOCUMENT_LIMITS } from './constants.js';
 import { createProfileDocumentPublicationState } from '../state/useProfileDocumentPublication.js';
 import { INSCAPE_PROFILE_DOCUMENT_KEY } from './inscapeProfileDocumentKey.js';
+import { createPublicationJournal } from '../storage/publicationJournal.js';
 
 const PROFILE_A = '0x1111111111111111111111111111111111111111';
 const PROFILE_B = '0x2222222222222222222222222222222222222222';
 const CID = 'QmYwAPJzv5CZsnAzt8auVZRnGi2CWF7rP3pVYdWrJwEmQw';
+
+test('journal blocks duplicate wallet submission across publisher instances and preserves post-hash failures', async () => {
+  const entries = new Map();
+  const storage = { getItem: (key) => entries.get(key) ?? null, setItem: (key, value) => entries.set(key, value), removeItem: (key) => entries.delete(key) };
+  const journal = createPublicationJournal({ getStorage: () => storage });
+  const document = documentFor(); const artifact = createCanonicalPublication(document);
+  const live = context({}, document);
+  const hash = `0x${'a'.repeat(64)}`;
+  let writes = 0;
+  live.walletClient.writeContract = async () => { writes += 1; assert.equal(journal.read(PROFILE_A).status, 'SUBMITTING'); return hash; };
+  live.publicClient.waitForTransactionReceipt = async () => { throw new Error('receipt timeout'); };
+  const create = () => createProfileDocumentPublisher({ journal, getContext: () => live, fetchImpl: async () => responseFor(artifact.bytes),
+    resolvePublished: async () => ({ status: 'RESOLVED', document }) });
+  const first = create(); const verified = await first.verifyCid(document, CID);
+  await assert.rejects(first.publish(verified), /receipt timeout/);
+  assert.equal(journal.read(PROFILE_A).transactionHash, hash);
+  const reloaded = create(); const nextVerified = await reloaded.verifyCid(document, CID);
+  await assert.rejects(reloaded.publish(nextVerified), /previous publication/);
+  assert.equal(writes, 1);
+  live.publicClient.waitForTransactionReceipt = async () => ({ status: 'success' });
+  await first.publish(verified);
+  assert.equal(journal.read(PROFILE_A), null);
+  assert.equal(writes, 1);
+});
+
+test('journal storage failures block wallet invocation; ambiguous pre-hash failures remain reserved', async () => {
+  for (const mode of ['quota', 'rejected', 'wrapped-rejection', 'ambiguous', 'hash-save']) {
+    const entries = new Map(); let saves = 0; let writes = 0;
+    const storage = { getItem: (key) => entries.get(key) ?? null, removeItem: (key) => entries.delete(key),
+      setItem: (key, value) => { saves += 1; if (mode === 'quota' || (mode === 'hash-save' && saves === 2)) throw new Error('quota'); entries.set(key, value); } };
+    const journal = createPublicationJournal({ getStorage: () => storage });
+    const document = documentFor(); const artifact = createCanonicalPublication(document); const live = context({}, document);
+    live.walletClient.writeContract = async () => {
+      writes += 1;
+      if (mode === 'hash-save') return `0x${'b'.repeat(64)}`;
+      if (mode === 'wrapped-rejection') throw new Error('Contract function failed', { cause: new Error('Transaction failed', { cause: Object.assign(new Error('Rejected'), { code: 4001 }) }) });
+      throw Object.assign(new Error(mode), { code: mode === 'rejected' ? 4001 : -32000 });
+    };
+    const publisher = createProfileDocumentPublisher({ journal, getContext: () => live, fetchImpl: async () => responseFor(artifact.bytes) });
+    const verified = await publisher.verifyCid(document, CID);
+    await assert.rejects(publisher.publish(verified), (error) => {
+      if (mode === 'hash-save') assert.equal(error.transactionHash, `0x${'b'.repeat(64)}`);
+      return true;
+    });
+    assert.equal(writes, mode === 'quota' ? 0 : 1);
+    assert.equal(journal.read(PROFILE_A)?.status || null, ['ambiguous', 'hash-save'].includes(mode) ? 'SUBMITTING' : null);
+    if (mode === 'ambiguous') { await assert.rejects(publisher.publish(verified), /previous publication/); assert.equal(writes, 1); }
+  }
+});
+
+test('repricing persists the replacement hash before receipt interruption', async () => {
+  const entries = new Map();
+  const journal = createPublicationJournal({ getStorage: () => ({ getItem: (key) => entries.get(key) ?? null, setItem: (key, value) => entries.set(key, value), removeItem: (key) => entries.delete(key) }) });
+  const document = documentFor(); const artifact = createCanonicalPublication(document); const live = context({}, document);
+  live.walletClient.writeContract = async () => `0x${'a'.repeat(64)}`;
+  const replacementHash = `0x${'b'.repeat(64)}`;
+  live.publicClient.waitForTransactionReceipt = async ({ onReplaced }) => {
+    onReplaced({ reason: 'repriced', transaction: { hash: replacementHash } });
+    throw new Error('receipt timeout');
+  };
+  const publisher = createProfileDocumentPublisher({ journal, getContext: () => live, fetchImpl: async () => responseFor(artifact.bytes) });
+  await assert.rejects(publisher.publish(await publisher.verifyCid(document, CID)), /receipt timeout/);
+  assert.equal(journal.read(PROFILE_A).transactionHash, replacementHash);
+});
 
 function documentFor(address = PROFILE_A) {
   return buildProfileDocumentV9({ profileAddress: address, assetRecords: [],

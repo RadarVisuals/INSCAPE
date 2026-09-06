@@ -1,9 +1,11 @@
 import OwnerSystemWorkflowDiscoverWorkspace from '../public/ownerSystemWorkflow/OwnerSystemWorkflowDiscoverWorkspace.jsx';
+import { useStartupDestinationReady } from '../startveil/StartupDestinationContext.jsx';
 import '../lattice/browser/browserWorkspace.css';
 import '../lattice/rendering/latticeMenuSurface.css';
 import '../public/ownerSystemWorkflow/ownerSystemWorkflow.css';
 
 export default function PublicDiscoverExperience({ menuSurfaceId = 'mist', onClose, onRequestOwner, onSelect, surfaceId = 'mist' }) {
+  useStartupDestinationReady();
   return <main className="system-workflow system-workflow--public-discover" data-lattice-menu-surface
     data-menu-surface={menuSurfaceId} data-surface={surfaceId}>
     <OwnerSystemWorkflowDiscoverWorkspace anonymous menuSurface={menuSurfaceId} onClose={onClose}

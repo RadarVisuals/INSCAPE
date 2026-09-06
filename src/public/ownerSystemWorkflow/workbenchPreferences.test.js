@@ -22,11 +22,11 @@ test('Workbench preferences remain profile-scoped local editor state', () => {
   const storage = memoryStorage();
   const profile = '0xAbC';
   const saved = saveWorkbenchPreferences(profile, {
-    compositionLocked: true, gridColor: '#AABBCC', gridMode: 'DOTS', shortcutSnap: false, surfaceId: 'carbon',
+    chromeNoise: false, compositionLocked: true, gridColor: '#AABBCC', gridMode: 'DOTS', shortcutSnap: false, surfaceId: 'carbon',
   }, storage);
 
   assert.deepEqual(saved, {
-    compositionLocked: true, gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false, surfaceId: 'carbon',
+    chromeNoise: false, compositionLocked: true, gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false, surfaceId: 'carbon',
   });
   assert.deepEqual(loadWorkbenchPreferences(profile, 'paper', storage), saved);
   assert.equal(storage.values.size, 1);
@@ -36,7 +36,7 @@ test('Workbench preferences remain profile-scoped local editor state', () => {
 test('Workbench preferences reject malformed local values and inherit the current Stage surface once', () => {
   const storage = memoryStorage();
   storage.setItem(workbenchPreferencesStorageKey('0xdef'), JSON.stringify({
-    gridColor: 'red', gridMode: 'BROKEN', shortcutSnap: 'yes', surfaceId: 'unknown',
+    chromeNoise: 'no', gridColor: 'red', gridMode: 'BROKEN', shortcutSnap: 'yes', surfaceId: 'unknown',
   }));
 
   assert.deepEqual(loadWorkbenchPreferences('0xdef', 'graphite', storage), {
