@@ -6,6 +6,43 @@ const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:517
 const settle = (page) => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const stageSize = (page) => page.locator('[data-presentation-stage]').evaluate((node) => ({ width: node.clientWidth, height: node.clientHeight }));
 
+test('Display interaction survives host window changes without draft writes', { timeout: 60_000 }, async () => {
+  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.route('**/*', (route) => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    await page.goto(`${origin}/development/owner/system-workflow`);
+    const bay = page.getByRole('complementary', { name: 'Display Module instruments', exact: true });
+    await bay.waitFor();
+    await page.evaluate(() => { window.__displayWrites = 0; addEventListener('inscape:review-storage-write', () => { window.__displayWrites += 1; }); });
+    await bay.getByRole('button', { name: 'MOUNTAIN SIGNAL II', exact: true }).click();
+    await bay.getByRole('tab', { name: 'Metadata', exact: true }).click();
+    assert.match(await bay.innerText(), /MOUNTAIN SIGNAL II/);
+    await page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).click();
+    await page.locator('.system-workflow__desktop-shortcut').dblclick();
+    await bay.waitFor();
+    assert.equal(await bay.getByRole('tab', { name: 'Metadata', exact: true }).getAttribute('aria-selected'), 'true');
+    assert.match(await bay.innerText(), /MOUNTAIN SIGNAL II/);
+    await page.getByRole('button', { name: 'Select MOUNTAIN SIGNAL II', exact: true }).dblclick();
+    await page.getByRole('button', { name: 'Close artwork viewer', exact: true }).click();
+    await page.getByRole('button', { name: 'Close artwork viewer', exact: true }).waitFor({ state: 'detached' });
+    assert.match(await bay.innerText(), /MOUNTAIN SIGNAL II/);
+    await page.getByRole('button', { name: 'Grids', exact: true }).click();
+    assert.equal(await page.evaluate(() => window.__displayWrites), 0);
+    const grids = page.getByRole('listbox', { name: 'Ordered Grids', exact: true });
+    const home = grids.getByRole('option').first();
+    await page.getByRole('button', { name: 'New Grid', exact: true }).click();
+    assert.equal(await home.getAttribute('aria-selected'), 'false');
+    const writesAfterCreatingGrid = await page.evaluate(() => window.__displayWrites);
+    await home.click();
+    assert.equal(await home.getAttribute('aria-selected'), 'true');
+    assert.equal(await page.evaluate(() => window.__displayWrites), writesAfterCreatingGrid);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
 test('Display Module instruments preserve selection, canonical writes, bounds, and Library access', { timeout: 60_000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {

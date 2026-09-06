@@ -107,7 +107,7 @@ mist eventueel berekende imports en interne afhankelijkheden van packages.
 - [x] **2. Bewerkingskern vereenvoudigen.** Navigatie losmaken van volledig documentwerk en de concrete geometriecirkel
    verbreken. Gereed wanneer navigatie geen volledige validatie per render
    uitvoert, de importcirkel weg is en geometrie-/swipetests hetzelfde gedrag tonen.
-- [ ] **3. Display Module zelfstandig maken.** De bestaande Display-aansturing afbakenen: selectie, crop, viewer,
+- [x] **3. Display Module zelfstandig maken.** De bestaande Display-aansturing afbakenen: selectie, crop, viewer,
    instrumenten en playback horen bij de compositie; venster/shortcut bij de
    host. Gereed wanneer de host geen geselecteerde placement hoeft te inspecteren
    om Metadata of Layers aan te sturen. Geen generiek pluginframework toevoegen.
@@ -171,7 +171,54 @@ gebruikte aanvankelijk zijn verkeerde standaardpoort 5174; met de draaiende app
 op 5173 slaagt hij. De wraptest detecteert geen Stage-lekken in 586 gesamplede
 frames op 2044 px en 937 op 390 px; eindbeelden op beide breedtes geïnspecteerd.
 Dit is geen garantie over alle frames of mediacombinaties. Bewijs staat in
-`.browser-test-runtime/step2-*`; stappen 3–6 blijven open.
+`.browser-test-runtime/step2-*`. Checkpoint: `18c06620bbfc435e5477afd9d1f221bdc8d98760`.
+
+### Stap 3: Display-aansturing afbakenen
+
+`DisplayModule.jsx` bezit nu de bestaande crop- en viewerhooks,
+instrumenttoestand, selectie-afhankelijke Metadata/Layers, playback en
+Grid-overgangen. De Workbench-runtime leest geen geselecteerde placements meer
+om die instrumenten te renderen. Hij levert assets, de bestaande controller,
+vensterconfiguratie en beschikbaarheid van de werkruimte. Zijn opdrachten aan
+Display zijn beperkt tot Grid kiezen en Metadata openen; Display meldt of de
+bestaande Metadata-menuactie beschikbaar is.
+
+Het onderdeel blijft gemount bij minimaliseren zodat tijdelijke instrument- en
+selectietoestand behouden blijven. Playback pauzeert bij een niet-actief venster,
+Preview of conflicterende interactie. De gebruikte geometrie, opslagkeys,
+draftschema's en CSS zijn niet aangepast. Eén nieuw bronbestand bevat de
+verplaatste verantwoordelijkheid; er is geen tweede editor of pluginframework.
+
+Dit is nog geen volledige zelfstandigheid: de controller wordt nog in de host
+gemaakt en gedeeld met Library, Grids, instellingen en publicatie. Ook combineert
+PresentationBoard nog het Workbench-oppervlak, shortcut en venster. Die concrete
+koppelingen blijven werk voor stap 4; meerdere module-instanties zijn hiermee
+niet ingeschakeld.
+
+Verificatie: 138 gerichte ownerchecks en de volledige reeks van 768 unitchecks
+slagen. Build en buildcontrole slagen met 779773 initial-JS-bytes; bestaande
+dependency-/chunkwaarschuwingen blijven zichtbaar. Browserbewijs: instrumenten
+en vensterlevenscyclus (3), crop (2), volle wraparound (1), playback (1) en
+plaatsingsannulering (1) geslaagd. De nieuwe venstercheck controleert behoud van
+Metadata/selectie na minimaliseren/heropenen, de viewer en de Grid-opdracht
+vanuit de host zonder extra draftwrites. Instrumentbeelden op 1440 en 390 px
+bekeken; de volle wraptest vond geen lekken in 699 en 917 gesamplede frames op
+2044 en 390 px. Dit bewijst niet alle frames of iedere mediacombinatie.
+
+De uitvoering werd onderbroken door een VS Code-herstart na geheugenuitputting
+in een testproces. Een achtergebleven, geïdentificeerde headless screenshotbrowser
+is afgesloten; de lokale Vite-server is opnieuw gestart. Zware browserchecks
+zijn daarna afzonderlijk uitgevoerd, zonder hun tijdslimiet te verhogen.
+De oude croptest verwees naar een verdwenen region en één img per artwork.
+De huidige toolbar en de hoge-resolutieafbeelding worden nu expliciet gebruikt.
+De resterende meetverschillen zijn ook met de gecommitte stap-2-runtime
+gereproduceerd op een tijdelijke vergelijkingsserver, zonder bronbestanden te
+vervangen. Native Fit bevat de bestaande twee verticale bleedpixels; resize
+vergelijkingen houden rekening met twee pixel-afgeronde maskers maal de cropzoom
+(gemeten verschil ongeveer 1,3 px). Opslagtellingen, zoom en Done/Cancel-uitkomsten
+blijven gecontroleerd. Productiegeometrie is niet gewijzigd om tests te laten slagen.
+De vergelijkingsserver is afgesloten. Bewijs: `.browser-test-runtime/step3-*`.
+Stappen 4–6 blijven open.
 
 Bewaar bij volgende stappen steeds het bewijs en de commitverwijzing hier.
 De checklist is uitvoeringsregistratie; het actieve contract blijft de enige

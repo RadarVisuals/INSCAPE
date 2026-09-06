@@ -8,7 +8,7 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const viewer = read('./LatticeFocusViewer.jsx');
 const viewerStyles = read('./latticeFocusViewer.css');
 const ownerViewer = read('../../public/ownerSystemWorkflow/OwnerSystemWorkflowFocusViewer.jsx');
-const ownerRuntime = read('../../public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx');
+const ownerDisplay = read('../../public/ownerSystemWorkflow/DisplayModule.jsx');
 const ownerViewerState = read('../../public/ownerSystemWorkflow/useOwnerSystemWorkflowFocusViewer.js');
 const ownerMetadata = read('../../public/ownerSystemWorkflow/OwnerSystemWorkflowMetadataModule.jsx');
 const visitor = read('../../profileDocument/components/ProfileDocumentV9Visitor.jsx');
@@ -23,8 +23,8 @@ test('focus return lands at its exact endpoint before the overlay copy fades', (
 });
 
 test('owner reuses one contained artwork-only focus viewer owned by the Presentation Board', () => {
-  assert.match(ownerRuntime, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer\) => <OwnerSystemWorkflowFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
-  assert.equal((ownerRuntime.match(/<OwnerSystemWorkflowFocusViewer/g) || []).length, 1);
+  assert.match(ownerDisplay, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer\) => <OwnerSystemWorkflowFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
+  assert.equal((ownerDisplay.match(/<OwnerSystemWorkflowFocusViewer/g) || []).length, 1);
   assert.match(ownerViewer, /contained portalTarget=\{container\}/);
   assert.match(ownerViewer, /controlsTarget=\{controlsContainer\}/);
   assert.match(ownerViewer, /inspectionVariant="none"/);
@@ -34,14 +34,14 @@ test('owner reuses one contained artwork-only focus viewer owned by the Presenta
   assert.doesNotMatch(viewerStyles, /lattice-focus-viewer-browse-(?:in|out)[\s\S]{0,160}transform:/);
   assert.match(ownerViewer, /onClosing=\{\(\) => \{ clearOwnerSystemWorkflowDocumentSelection\(\); viewer\.beginReturn\(\); \}\}/);
   assert.match(ownerViewerState, /beginReturn: \(\) => setAtmosphereActive\(false\)/);
-  assert.match(ownerRuntime, /inspectionAtmosphere=\{viewer\.atmosphereActive\}/);
+  assert.match(ownerDisplay, /inspectionAtmosphere=\{viewer\.atmosphereActive\}/);
   assert.match(viewer, /portalTarget,/);
   assert.match(viewerStyles, /\.lattice-focus-viewer\[data-contained\][\s\S]*position: absolute;/);
   assert.match(viewerStyles, /\.lattice-focus-viewer\[data-contained\] :is\([\s\S]*\.lattice-focus-viewer__rack,[\s\S]*\.lattice-focus-viewer__close-control[\s\S]*position: absolute;/);
 });
 
 test('owner metadata remains independent from artwork focus motion', () => {
-  assert.match(ownerRuntime, /renderMetadata=\{\(\) => <OwnerSystemWorkflowMetadataContent/);
+  assert.match(ownerDisplay, /renderMetadata=\{\(\) => <OwnerSystemWorkflowMetadataContent/);
   assert.match(ownerMetadata, /export function OwnerSystemWorkflowMetadataContent/);
   assert.match(ownerMetadata, /dossier\?\.description/);
   assert.doesNotMatch(ownerMetadata, /LatticeFocusViewer|originRectangle|returnLanding|createPortal/);

@@ -15,7 +15,7 @@ function PanelPresence({ children, id, panels, retained = false }) {
     onTransitionEnd={(event) => { if (event.propertyName === 'opacity') panels.completePanelTransition(id); }}>{children}</div>;
 }
 
-export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assetsById, authoringLocked = false, categoryCommands, browser, connectedProfile, controller, crop, discoveryCommands, discoveryGroups, layout, libraryData,
+export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assetsById, authoringLocked = false, categoryCommands, browser, connectedProfile, controller, discoveryCommands, discoveryGroups, layout, libraryData,
   menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onDossierChange, onEnterMyWorld, onVisitProfile, panelOccupied, panels, profileIdentity, profileModel,
   resolveAssetDimensions, reviewDiscovery, workspaceSurfaceColor, workbenchPreferences, onWorkbenchPreferencesChange }) {
   const show = (id) => panels.presence[id];

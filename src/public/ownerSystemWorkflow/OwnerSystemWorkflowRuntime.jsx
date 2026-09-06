@@ -1,29 +1,18 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
-import { flushSync } from 'react-dom';
-import { isSystemWorkflowWorldCoverGrid } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { createPortal } from 'react-dom';
 import { useProfileContractFacts, useProfileIdentity } from '../../profileIdentity/index.js';
 import { latticeSurfaceColor } from '../../lattice/rendering/latticeGeometry.js';
 import { createProductionIdentityDossierViewModel } from '../identity/productionIdentityDossierViewModel.js';
 import useOwnerLatticeBrowser from '../useOwnerLatticeBrowser.js';
-import OwnerSystemWorkflowCanvas from './OwnerSystemWorkflowCanvas.jsx';
-import OwnerSystemWorkflowFocusViewer from './OwnerSystemWorkflowFocusViewer.jsx';
+import DisplayModule from './DisplayModule.jsx';
 import OwnerSystemWorkflowGlobalBar from './OwnerSystemWorkflowGlobalBar.jsx';
-import { OwnerSystemWorkflowMetadataContent } from './OwnerSystemWorkflowMetadataModule.jsx';
 import OwnerSystemWorkflowPanelLayer from './OwnerSystemWorkflowPanelLayer.jsx';
-import PresentationBoard from './PresentationBoard.jsx';
-import DisplayInstruments from './DisplayInstruments.jsx';
-import OwnerSystemWorkflowSelectionInspector from './OwnerSystemWorkflowSelectionInspector.jsx';
-import { initialDisplayInstruments, transitionDisplayInstruments } from './displayInstrumentState.js';
 import useOwnerSystemWorkflowActivity from './useOwnerSystemWorkflowActivity.js';
 import useOwnerSystemWorkflowController from './useOwnerSystemWorkflowController.js';
-import useOwnerSystemWorkflowCrop from './useOwnerSystemWorkflowCrop.js';
-import useOwnerSystemWorkflowFocusViewer from './useOwnerSystemWorkflowFocusViewer.js';
 import useOwnerSystemWorkflowLayout from './useOwnerSystemWorkflowLayout.js';
 import useOwnerSystemWorkflowPanels, { useOwnerSystemWorkflowPanelPresence } from './useOwnerSystemWorkflowPanels.js';
 import useOwnerSystemWorkflowDevelopmentAuthorities from './useOwnerSystemWorkflowDevelopmentAuthorities.js';
-import { createOwnerSystemWorkflowMetadataViewModel } from './ownerSystemWorkflowMetadataViewModel.js';
 import {
   PRESENTATION_BOARD_INSTANCE_EVENT,
   presentationBoardInstanceStateFromShortcut,
@@ -80,10 +69,8 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const [publicationOpen, setPublicationOpen] = useState(false);
   const [notice, setNotice] = useState(null);
   const [dossierOpen, setDossierOpen] = useState(false);
-  const [instruments, dispatchInstruments] = useReducer(transitionDisplayInstruments, initialDisplayInstruments);
-  const [playingGrids, setPlayingGrids] = useState(false);
-  const [playbackTransition, setPlaybackTransition] = useState(false);
-  const pauseGrids = useCallback(() => setPlayingGrids(false), []);
+  const displayRef = useRef(null);
+  const [metadataAvailable, setMetadataAvailable] = useState(false);
   const [decodedDimensions, setDecodedDimensions] = useState(() => new Map());
   const [workspaceMenu, setWorkspaceMenu] = useState(null);
   const [boardInstanceState, transitionBoardInstance] = useReducer(transitionPresentationBoardInstance, profileAddress,
@@ -134,16 +121,9 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     const decoded = await decodeOwnerSystemWorkflowAssetDimensions(asset);
     return decoded ? registerAssetDimensions(asset, decoded) || decoded : null;
   }, [registerAssetDimensions]);
-  const crop = useOwnerSystemWorkflowCrop({ assetsById, controller });
-  const viewer = useOwnerSystemWorkflowFocusViewer({ assetsById, controller,
-    onOpen: () => { if (panel !== 'library') panels.closePanel({ returnFocus: false }); }, resolveAssetDimensions });
   const activity = useOwnerSystemWorkflowActivity({ active: panel === 'activity', fixture: reviewActivity, profileAddress });
   const panelOccupied = Boolean(publicationPresence.present || (panel && panel !== 'library')
     || Object.entries(panels.presence).some(([id, { present }]) => id !== 'library' && present));
-  const metadataPlacement = controller.selectedPlacements.length === 1 ? controller.selectedPlacements[0] : null;
-  const metadataEntry = useMemo(() => metadataPlacement
-    ? createOwnerSystemWorkflowMetadataViewModel(metadataPlacement, assetsById.get(metadataPlacement.stableAssetId))
-    : null, [assetsById, metadataPlacement]);
   const dismissNotice = useCallback(() => {
     controller.clearError();
     setNotice(null);
@@ -161,31 +141,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     }
     saveWorkbenchPreferences(profileAddress, workbenchPreferences);
   }, [controller.draft?.appearance.surfaceId, profileAddress, workbenchPreferences]);
-  const gridTransitionRef = useRef(null);
-  const changeGrid = (gridId, directionHint = null, options = {}) => {
-    if (!gridId || gridId === controller.selectedGridId || gridTransitionRef.current) return false;
-    const grids = controller.draft?.grids || [];
-    const currentIndex = grids.findIndex(({ id }) => id === controller.selectedGridId);
-    const nextIndex = grids.findIndex(({ id }) => id === gridId);
-    if (nextIndex < 0) return false;
-    const direction = directionHint || (nextIndex > currentIndex ? 'next' : 'previous');
-    const commit = () => flushSync(() => controller.changeGrid(gridId));
-    const transitionDocument = globalThis.document;
-    if (options.animate === false || layout.reducedMotion || typeof transitionDocument?.startViewTransition !== 'function') {
-      commit();
-      return true;
-    }
-    const root = transitionDocument.documentElement;
-    root.dataset.systemWorkflowGridDirection = direction;
-    const transition = transitionDocument.startViewTransition(commit);
-    gridTransitionRef.current = transition;
-    const cleanup = () => {
-      if (gridTransitionRef.current === transition) gridTransitionRef.current = null;
-      delete root.dataset.systemWorkflowGridDirection;
-    };
-    transition.finished.then(cleanup, cleanup);
-    return true;
-  };
+  const changeGrid = (...args) => displayRef.current?.changeGrid(...args) ?? false;
   const libraryData = useMemo(() => reviewAssets ? {
     assets: resolvedAssets,
     categories: reviewAuthorities.categories || [],
@@ -272,31 +228,14 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   };
   const menuSurface = controller.draft?.appearance.menuSurfaceId;
   const workspaceSurfaceColor = latticeSurfaceColor(workbenchPreferences.surfaceId);
-  const moduleAvailability = { metadata: instruments.metadata === 'closed',
+  const moduleAvailability = { metadata: metadataAvailable,
     presentationBoard: boardInstanceState === 'absent' };
   const authoringLocked = workbenchPreferences.compositionLocked;
-  const toggleAuthoringLock = () => {
-    if (!authoringLocked) crop.cancelCrop();
-    setWorkbenchPreferences((current) => ({ ...current, compositionLocked: !current.compositionLocked }));
-  };
-  const instrumentCommand = (event) => {
-    if (event.instrument !== 'layers' || ['close', 'toggle', 'detach'].includes(event.type)) crop.cancelCrop();
-    dispatchInstruments(event);
-  };
-  const toggleInstrument = (instrument) => {
+  const instrumentsObscured = panelOccupied || (layout.mode === 'narrow' && panel === 'library');
+  const revealInstruments = () => {
     if (publicationOpen) closePublication({ returnFocus: false });
-    if (panelOccupied || (layout.mode === 'narrow' && panel === 'library')) panels.closePanel({ returnFocus: false });
-    instrumentCommand({ type: panelOccupied || (layout.mode === 'narrow' && panel === 'library') ? 'open' : 'toggle', instrument });
+    if (instrumentsObscured) panels.closePanel({ returnFocus: false });
   };
-  const instrumentsVisible = !panelOccupied && !(layout.mode === 'narrow' && panel === 'library');
-  const playbackDisabled = controller.draft.grids.filter((grid) => !isSystemWorkflowWorldCoverGrid(grid)).length < 2
-    || isSystemWorkflowWorldCoverGrid(controller.selectedGrid) || panelOccupied || Boolean(viewer.placementId || crop.cropSession);
-  useEffect(() => {
-    if (preview || playbackDisabled || boardInstanceState !== 'window') pauseGrids();
-  }, [preview, playbackDisabled, boardInstanceState, pauseGrids]);
-  const selectionLabel = metadataEntry?.dossier?.title || (controller.selectedPlacements.length > 1
-    ? `${controller.selectedPlacements.length} selected` : controller.selectedPlacements.length === 1
-      ? 'Selected artwork' : 'No artwork selected');
   return <><main aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
     data-authoring-locked={authoringLocked || undefined} data-board-instance-state={boardInstanceState}
     data-chrome-noise={workbenchPreferences.chromeNoise ? 'on' : 'off'}
@@ -304,49 +243,29 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     data-lattice-menu-surface data-menu-surface={menuSurface} data-reduced-motion={layout.reducedMotion || undefined}
     data-surface={workbenchPreferences.surfaceId} data-previewing={preview ? true : undefined}
     inert={preview ? '' : undefined}>
-    <PresentationBoard assetsById={assetsById} authoringLocked={authoringLocked} instanceState={boardInstanceState}
-      displaySurface={controller.draft?.appearance.surfaceId}
-      documentGeometry={controller.draft?.geometry} identity={profileIdentity}
-      inspectionAtmosphere={viewer.atmosphereActive}
-      layersOpen={instrumentsVisible && (instruments.active === 'layers' || instruments.layers === 'detached')}
-      metadataOpen={instrumentsVisible && (instruments.active === 'metadata' || instruments.metadata === 'detached')}
-      instrumentBayOpen={instrumentsVisible && Boolean(instruments.active)}
-      playing={playingGrids} playbackDisabled={playbackDisabled}
-      onTogglePlayback={() => { controller.replaceSelection([]); setPlayingGrids((current) => !current); }}
-      menuSurface={menuSurface}
-      onMinimize={() => transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.MINIMIZE)}
-      onRestore={() => transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.RESTORE)}
-      onToggleLayers={() => toggleInstrument('layers')}
-      onToggleMetadata={() => toggleInstrument('metadata')}
-      onInspectionCancel={viewer.close}
-      onAuthoringLockToggle={toggleAuthoringLock}
-      onContextMenu={(event) => {
-        if (event.target.closest('.system-workflow__instrument-bay, .system-workflow__instrument-window')) return;
-        event.preventDefault();
-        setWorkspaceMenu({ x: event.clientX, y: event.clientY });
-      }}
-      layoutMode={layout.mode} profileAddress={profileAddress} reducedMotion={layout.reducedMotion}
-      shortcutSnap={workbenchPreferences.shortcutSnap} workbenchGridColor={workbenchPreferences.gridColor}
-      workbenchGridMode={workbenchPreferences.gridMode}
-      renderInspection={viewer.placementId ? (container, controlsContainer) => <OwnerSystemWorkflowFocusViewer
-        container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}
-        viewer={viewer} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
-      renderInstruments={instrumentsVisible ? (projection, overlayTop) => <DisplayInstruments
-        state={instruments} dispatch={instrumentCommand} projection={projection} overlayTop={overlayTop}
-        scope={controller.selectedGrid?.title || 'Untitled Grid'} selectionLabel={selectionLabel}
-        renderLayers={() => <OwnerSystemWorkflowSelectionInspector key={controller.selectedGridId}
-          assetsById={assetsById} authoringLocked={authoringLocked || playingGrids || playbackTransition} controller={controller} crop={crop} onBeginCrop={crop.beginCrop} />}
-        renderMetadata={() => <OwnerSystemWorkflowMetadataContent dossier={metadataEntry?.dossier || null} />} /> : null}>
-    <OwnerSystemWorkflowCanvas assetsById={assetsById} authoringLocked={authoringLocked} controller={controller} crop={crop}
-        playingGrids={playingGrids} onPauseGrids={pauseGrids} onPlaybackTransitionChange={setPlaybackTransition}
-        onAssetDimensions={registerAssetDimensions} onChangeGrid={changeGrid}
-        interactionDisabled={panelOccupied || Boolean(viewer.placementId)} onOpenViewer={(placement) => viewer.open(placement.id)}
-        onPlacementRef={viewer.registerPlacement} reducedMotion={layout.reducedMotion}
-        resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.sourcePlacementId} />
-    </PresentationBoard>
+    <DisplayModule ref={displayRef} assetsById={assetsById} controller={controller}
+      authoringLocked={authoringLocked} active={!preview && boardInstanceState === 'window'}
+      panelOccupied={panelOccupied} instrumentsObscured={instrumentsObscured}
+      onRevealInstruments={revealInstruments}
+      onInspect={() => { if (panel !== 'library') panels.closePanel({ returnFocus: false }); }}
+      onMetadataAvailabilityChange={setMetadataAvailable}
+      onAuthoringLockToggle={() => setWorkbenchPreferences((current) => ({ ...current, compositionLocked: !current.compositionLocked }))}
+      registerAssetDimensions={registerAssetDimensions} resolveAssetDimensions={resolveAssetDimensions}
+      menuSurface={menuSurface} reducedMotion={layout.reducedMotion} workspaceSurfaceColor={workspaceSurfaceColor}
+      windowProps={{ instanceState: boardInstanceState, identity: profileIdentity,
+        onMinimize: () => transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.MINIMIZE),
+        onRestore: () => transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.RESTORE),
+        onContextMenu: (event) => {
+          if (event.target.closest('.system-workflow__instrument-bay, .system-workflow__instrument-window')) return;
+          event.preventDefault();
+          setWorkspaceMenu({ x: event.clientX, y: event.clientY });
+        },
+        layoutMode: layout.mode, profileAddress, reducedMotion: layout.reducedMotion,
+        shortcutSnap: workbenchPreferences.shortcutSnap, workbenchGridColor: workbenchPreferences.gridColor,
+        workbenchGridMode: workbenchPreferences.gridMode }} />
     <OwnerSystemWorkflowPanelLayer activity={activity} assets={assets} assetsById={assetsById} authoringLocked={authoringLocked} browser={browser}
       connectedProfile={connectedProfile} onConnect={onConnect} onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld}
-      controller={controller} crop={crop} layout={layout} libraryData={libraryData} menuSurface={menuSurface} onChangeGrid={changeGrid}
+      controller={controller} layout={layout} libraryData={libraryData} menuSurface={menuSurface} onChangeGrid={changeGrid}
       workspaceSurfaceColor={workspaceSurfaceColor}
       workbenchPreferences={workbenchPreferences}
       onWorkbenchPreferencesChange={(change) => setWorkbenchPreferences((current) => ({ ...current, ...change }))}
@@ -372,7 +291,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
       ] : []}
       label="Workbench commands" menuSurfaceId={menuSurface} onClose={() => setWorkspaceMenu(null)}
       onCommand={(id) => {
-        if (id === 'metadata') instrumentCommand({ type: 'open', instrument: 'metadata' });
+        if (id === 'metadata') displayRef.current?.openMetadata();
         if (id === 'presentation-board') transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.ADD);
         setWorkspaceMenu(null);
       }}

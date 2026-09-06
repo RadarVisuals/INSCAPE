@@ -6,6 +6,9 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
 test('owner Display Module reuses the existing interactive canvas inside one clipped Stage', () => {
   const runtime = read('./OwnerSystemWorkflowRuntime.jsx');
+  const display = read('./DisplayModule.jsx');
+  assert.match(runtime, /<DisplayModule/);
+  assert.doesNotMatch(runtime, /selectedPlacements|useOwnerSystemWorkflowCrop|useOwnerSystemWorkflowFocusViewer|transitionDisplayInstruments/);
   const canonicalExport = read('./PresentationBoard.jsx');
   const board = read('./PresentationBoardDefinitive.jsx');
   const moduleState = read('./ownerSystemWorkflowModuleState.js');
@@ -14,12 +17,12 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   const geometry = read('./presentationBoardGeometry.js');
   const styles = read('./ownerSystemWorkflow.css');
 
-  assert.match(runtime, /<PresentationBoard[\s\S]*<OwnerSystemWorkflowCanvas[\s\S]*<\/PresentationBoard>/);
+  assert.match(display, /<PresentationBoard[\s\S]*<OwnerSystemWorkflowCanvas[\s\S]*<\/PresentationBoard>/);
   assert.equal(canonicalExport.trim(), "export { default } from './PresentationBoardDefinitive.jsx';");
   assert.equal(existsSync(new URL('./PresentationBoardDesktop.jsx', import.meta.url)), false);
-  assert.equal((runtime.match(/<PresentationBoard/g) || []).length, 1);
+  assert.equal((display.match(/<PresentationBoard/g) || []).length, 1);
   assert.match(runtime, /useReducer\(transitionPresentationBoardInstance/);
-  assert.match(runtime, /useReducer\(transitionDisplayInstruments, initialDisplayInstruments\)/);
+  assert.match(display, /useReducer\(transitionDisplayInstruments, initialDisplayInstruments\)/);
   assert.match(board, /instrumentBayOpen && instrumentLayout.attached/);
   assert.match(board, /renderInstruments\?\./);
   assert.doesNotMatch(runtime, /setMetadataOpen|setMetadataDocked|setMetadataProjection|boardShortcutExists|boardAddRequest/);
@@ -28,7 +31,7 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(board, /data-presentation-workbench/);
   assert.match(board, /data-presentation-stage data-surface=\{displaySurface\}/);
   assert.match(runtime, /data-surface=\{workbenchPreferences\.surfaceId\}/);
-  assert.match(runtime, /displaySurface=\{controller\.draft\?\.appearance\.surfaceId\}/);
+  assert.match(display, /displaySurface=\{controller\.draft\?\.appearance\.surfaceId\}/);
   assert.match(board, /transform: liveScaleRendering \? `scale\(\$\{liveTransformScale\}\)` : undefined/);
   assert.match(board, /settledStageWidth = view \? Math\.ceil\(view\.fit\.stage\.width \* displayScale\) : 0/);
   assert.match(board, /boardScale: liveScaleRendering \? liveTransformScale : 1/);
@@ -42,11 +45,11 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(board, /cloneElement\(children, \{[\s\S]*boardScale: liveScaleRendering \? liveTransformScale : 1,[\s\S]*interactionDisabled:/);
   assert.match(board, /onContextMenu=\{onContextMenu\}/);
   assert.match(board, /beginBoardDrag[\s\S]*setBoardPosition/);
-  assert.match(runtime, /OwnerSystemWorkflowMetadataModule/);
+  assert.match(display, /OwnerSystemWorkflowMetadataModule/);
   assert.match(runtime, /label: 'ADD'[\s\S]*label: 'DISPLAY MODULE'[\s\S]*label: 'METADATA MODULE'/);
-  assert.match(runtime, /useOwnerSystemWorkflowFocusViewer/);
-  assert.match(runtime, /<OwnerSystemWorkflowFocusViewer/);
-  assert.match(runtime, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer\) => <OwnerSystemWorkflowFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
+  assert.match(display, /useOwnerSystemWorkflowFocusViewer/);
+  assert.match(display, /<OwnerSystemWorkflowFocusViewer/);
+  assert.match(display, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer\) => <OwnerSystemWorkflowFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
   assert.match(board, /'window'[\s\S]*'maximizing'[\s\S]*'maximized'[\s\S]*'restoring'/);
   assert.match(board, /resizePresentationBoardFromCorner/);
   assert.match(board, /corners\.map/);
@@ -150,12 +153,12 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(styles, /\.lattice-focus-viewer__board-controls/);
   assert.doesNotMatch(styles, /\[data-inspection-atmosphere\] \.system-workflow__stage-viewport \{[\s\S]*filter:/);
   assert.match(styles, /\[data-inspection-atmosphere\] \.system-workflow__grid-plane--current > \.system-workflow__artwork-plane \{[\s\S]*filter: grayscale\(1\) contrast\(\.72\) brightness\(\.3\);/);
-  assert.match(runtime, /inspectionAtmosphere=\{viewer\.atmosphereActive\}/);
+  assert.match(display, /inspectionAtmosphere=\{viewer\.atmosphereActive\}/);
   assert.doesNotMatch(board, /<strong>\{authoringLocked \? 'LOCKED' : 'LOCK'\}<\/strong>/);
   assert.match(board, /authoringLocked \? <LockKeyhole \/> : <Lock \/>/);
   assert.match(styles, /\[data-authoring-locked\] \.system-workflow__composition-lock \{[^}]*border-color: #ef4d55;[^}]*color: #ff5a62;[^}]*box-shadow:/s);
   assert.match(runtime, /authoringLocked=\{authoringLocked\}/);
-  assert.match(runtime, /if \(!authoringLocked\) crop\.cancelCrop\(\);/);
+  assert.match(display, /if \(!authoringLocked\) crop\.cancelCrop\(\);/);
   assert.match(canvas, /authoringDisabled: authoringLocked[\s\S]*disabled: interactionDisabled/);
   assert.match(canvas, /onClick=\{\(event\) => \{[\s\S]*controller\.selectPlacement/);
   assert.match(canvas, /onDoubleClick=\{\(event\) => \{[\s\S]*onOpenViewer/);
@@ -166,6 +169,6 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(styles, /\.lattice-focus-viewer__surface \{[\s\S]*background-color: rgb\(5 6 6 \/ 18%\);/);
   assert.doesNotMatch(styles, /system-workflow__board-zoom-slider|system-workflow__board-zoom-controls/);
   assert.doesNotMatch(`${board}\n${styles}`, /Zoom Board out|Zoom Board in|Fit Board|\bFIT\b|zoomWithWheel/);
-  assert.equal((runtime.match(/<OwnerSystemWorkflowCanvas/g) || []).length, 1);
-  assert.doesNotMatch(`${runtime}\n${board}`, /iframe|buildProfileDocumentV9|setDraft|updatePlacement/);
+  assert.equal((display.match(/<OwnerSystemWorkflowCanvas/g) || []).length, 1);
+  assert.doesNotMatch(`${runtime}\n${display}\n${board}`, /iframe|buildProfileDocumentV9|setDraft|updatePlacement/);
 });
