@@ -142,15 +142,10 @@ export function createLsp8CollectionMetadataResolver({
 
 export const lsp8CollectionMetadataResolver = createLsp8CollectionMetadataResolver();
 
-function imageIdentity(images) {
-  const image = Array.isArray(images) ? images[0] : null;
-  return String(image?.url || image?.src || '').trim() || null;
-}
+// A valid indexed preview does not prove that attachments or metadata updates
+// have been indexed. Refresh each loaded collection page, with bounded concurrency.
 export function collectionTokenNeedsMetadataRefresh(token) {
-  const parent = token?.asset || token?.baseAsset; const tokenImage = imageIdentity(token?.images);
-  const parentImage = imageIdentity(parent?.images);
-  return Boolean(token?.tokenId && (!tokenImage || !resolveContentUrl(tokenImage)
-    || parentImage && tokenImage === parentImage));
+  return Boolean(token?.tokenId && token.metadataResolved !== true);
 }
 function overlayToken(token, metadata) {
   return metadata ? { ...token, name: metadata.name, lsp4TokenName: metadata.name,

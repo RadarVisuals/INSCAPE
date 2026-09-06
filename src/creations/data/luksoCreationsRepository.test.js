@@ -117,7 +117,7 @@ test('collection query supports current baseAsset and legacy asset token relatio
   assert.match(COLLECTION_TOKENS_QUERY, /holders \{ id profile_id balance \}/);
 });
 
-test('refreshes only missing or collection-cover token media and retains indexed holder facts', async () => {
+test('refreshes loaded tokens even with previews and retains indexed fallback and holder facts', async () => {
   const cover = { url: 'ipfs://collection-cover', src: 'https://gateway.example/collection-cover' };
   const revealed = { url: 'ipfs://revealed-one', src: 'https://gateway.example/revealed-one' };
   const current = { url: 'ipfs://current-two', src: 'https://gateway.example/current-two' };
@@ -144,7 +144,7 @@ test('refreshes only missing or collection-cover token media and retains indexed
   const batches = [];
   for await (const batch of repository.loadCollectionTokens(PROFILE, collectionRecord)) batches.push(batch);
   assert.equal(resolverCalls.length, 1);
-  assert.deepEqual(resolverCalls[0].tokens.map(({ tokenId }) => tokenId), [staleToken.tokenId]);
+  assert.deepEqual(resolverCalls[0].tokens.map(({ tokenId }) => tokenId), [staleToken.tokenId, currentToken.tokenId]);
   assert.equal(batches[0].assets[0].name, 'HALO:0001');
   assert.equal(batches[0].assets[0].imageUrl, revealed.src);
   assert.equal(batches[0].assets[0].currentOwnerAddress, CONTRACT_B);
@@ -153,13 +153,14 @@ test('refreshes only missing or collection-cover token media and retains indexed
   assert.equal(batches[0].assets[1].imageUrl, current.src);
 });
 
-test('classifies collection-cover and missing token media as refresh candidates', () => {
+test('indexed previews do not establish complete metadata', () => {
   const cover = { url: 'ipfs://cover' };
   assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [cover],
     baseAsset: { images: [cover] } }), true);
   assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [], baseAsset: { images: [cover] } }), true);
   assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [{ url: 'ipfs://token' }],
-    baseAsset: { images: [cover] } }), false);
+    baseAsset: { images: [cover] } }), true);
+  assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', metadataResolved: true }), false);
   assert.equal(collectionTokenNeedsMetadataRefresh({ tokenId: '0x01', images: [{
     url: 'data:image/svg+xml;base64,PHN2Zy8+',
   }], baseAsset: { images: [cover] } }), true);

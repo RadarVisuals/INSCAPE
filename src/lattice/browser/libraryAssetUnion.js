@@ -1,3 +1,4 @@
+import { imageResourceIdentity } from '../../library/data/resolveContentUrl.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
 import { creatorRelationshipForProfile } from '../../creations/domain/creatorRelationship.js';
@@ -25,8 +26,11 @@ export function mergeOwnedAndCreatedAsset(owned, created, profileAddress) {
   }
   merged.creators = mergeUnique(owned.creators, created.creators, (creator) => normalizeProfileAddress(creator?.address) || JSON.stringify(creator));
   merged.attributes = mergeUnique(owned.attributes, created.attributes, (attribute) => `${attribute?.key}\n${attribute?.value}\n${attribute?.type}`);
-  merged.imageGroups = mergeUnique(owned.imageGroups, created.imageGroups, (group) => `${group?.index}\n${group?.imageUrl}`)
+  merged.imageGroups = mergeUnique(owned.imageGroups, created.imageGroups, (group) => `${group?.index}\n${group?.resourceId || imageResourceIdentity(group?.imageUrl)}`)
     .sort((left, right) => Number(left?.index) - Number(right?.index));
+  const directImages = created.fieldProvenance?.images?.scope === 'tokenId'
+    && created.fieldProvenance.images.source?.includes('(DIRECT LUKSO RPC)');
+  if (directImages) merged.imageGroups = created.imageGroups || [];
   merged.viewedProfileIsCreator = created.viewedProfileIsCreator === true;
   merged.creatorAttributionLevel = created.creatorAttributionLevel || null;
   merged.viewedProfileIsCollectionCreator = created.viewedProfileIsCollectionCreator === true;
@@ -41,6 +45,7 @@ export function mergeOwnedAndCreatedAsset(owned, created, profileAddress) {
     ...(created.fieldProvenance || {}), ...(owned.fieldProvenance || {}),
     creators: owned.fieldProvenance?.creators || { scope: created.creatorAttributionLevel, source: 'INDEXED CREATOR ATTRIBUTION' },
   };
+  if (directImages) merged.fieldProvenance.images = created.fieldProvenance.images;
   merged.rawMetadata = { ...(created.rawMetadata || {}), ...(owned.rawMetadata || {}) };
   return merged;
 }

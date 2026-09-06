@@ -77,6 +77,7 @@ export function selectImageGroups(images, options) {
     const largest = canonical.at(-1);
     return {
       index,
+      resourceId: imageResourceIdentity(largest.url || largest.src || largest.resolved),
       thumbnailUrl: thumbnail.resolved,
       imageUrl: largest.resolved,
       originalImageUrl: largest.resolved,
@@ -91,4 +92,18 @@ export function selectImageGroups(images, options) {
       }))
     };
   });
+}
+
+// Identity is separate from the transport URL and its verification parameters.
+export function imageResourceIdentity(value) {
+  if (typeof value !== 'string') return null;
+  if (/^ipfs:\/\//i.test(value)) return value.replace(/^ipfs:\/\/(?:ipfs\/)?/i, 'ipfs://');
+  try {
+    const url = new URL(value);
+    if (url.hostname === 'api.universalprofile.cloud') {
+      const match = url.pathname.match(/^\/(?:image|ipfs)\/((?:Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]+)(?:\/.*)?)$/);
+      if (match) return 'ipfs://' + match[1];
+    }
+  } catch { /* Keep non-IPFS resources distinct. */ }
+  return value;
 }

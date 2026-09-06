@@ -55,3 +55,18 @@ test('collection failure is explicit and retry starts from an empty bounded resu
   assert.equal(store.getState().status, 'ready');
   assert.deepEqual(store.getState().assets.map(({ id }) => id), ['recovered']);
 });
+
+
+test('reopening a collection replaces the previous media snapshot and removed tokens', async () => {
+  let attempt = 0;
+  const repository = { async *loadCollectionTokens() {
+    attempt++;
+    const asset = { ...token('same-token'), imageGroups: [{ index: 0, imageUrl: 'https://art.test/' + attempt + '.webp' }] };
+    yield { assets: attempt === 1 ? [asset, token('removed')] : [asset], resolved: 1, total: 1, failures: 0, complete: true };
+  } };
+  const store = createCollectionTokensStore({ repository });
+  await store.getState().load(PROFILE_A, collection(COLLECTION_A));
+  await store.getState().load(PROFILE_A, collection(COLLECTION_A));
+  assert.deepEqual(store.getState().assets.map(a => a.id), ['same-token']);
+  assert.deepEqual(store.getState().assets[0].imageGroups, [{ index: 0, imageUrl: 'https://art.test/2.webp' }]);
+});

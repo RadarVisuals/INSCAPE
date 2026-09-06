@@ -28,14 +28,16 @@ export function createCollectionTokensStore({ repository = luksoCreationsReposit
       });
       const current = () => get().loadGeneration === generation && get().profileAddress === profile
         && get().collectionAddress === collectionAddress && !controller.signal.aborted;
+      let loadedAssets = [];
       try {
         for await (const batch of repository.loadCollectionTokens(profile, collectionRecord, { signal: controller.signal })) {
           if (!current()) return;
-          set((state) => ({
-            assets: deduplicateCreations([...state.assets, ...batch.assets]),
+          loadedAssets = deduplicateCreations([...loadedAssets, ...batch.assets]);
+          set({
+            assets: loadedAssets,
             status: batch.complete ? 'ready' : 'loading',
             progress: { resolved: batch.resolved, total: batch.total, failures: batch.failures },
-          }));
+          });
         }
         if (current() && get().status === 'loading') set({ status: 'ready' });
       } catch (error) {

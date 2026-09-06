@@ -82,3 +82,29 @@ test('accepts collection-derived tokens without claiming direct token creation',
   assert.equal(result.assets[0].created, true);
   assert.equal(projectLibraryAssetUnion({ createdAssets: [child], profileAddress: '0x4444444444444444444444444444444444444444' }).records.length, 0);
 });
+
+
+test('merges the same preview from IPFS and the verified image gateway without merging distinct attachments', () => {
+  const cid = 'QmR5biKn8HUNbmE6uZFSfLBTBst1HaxCFGfJBNy84wiqLh';
+  const preview = 'https://api.universalprofile.cloud/ipfs/' + cid + '/images-0-1800x1800';
+  const indexed = 'https://api.universalprofile.cloud/image/' + cid + '/images-0-1800x1800?method=keccak256(bytes)&data=0x123';
+  const result = projectLibraryAssetUnion({ profileAddress: PROFILE,
+    ownedAssets: [owned(CONTRACT_A, { imageGroups: [{ index: 0, imageUrl: preview }] })],
+    createdAssets: [created(CONTRACT_A, { imageGroups: [{ index: 0, imageUrl: indexed },
+      { index: 1, imageUrl: 'https://art.test/gray.webp' }, { index: 2, imageUrl: 'https://art.test/purple.webp' }] })],
+  });
+  assert.equal(result.records[0].imageGroups.length, 3);
+});
+
+test('fresh direct token images replace stale owned media without changing ownership', () => {
+  const images = [{ index: 0, imageUrl: 'https://art.test/new-preview.webp' },
+    { index: 1, imageUrl: 'https://art.test/gray.webp' }, { index: 2, imageUrl: 'https://art.test/purple.webp' }];
+  const provenance = { scope: 'tokenId', source: 'LSP4MetadataForTokenId (DIRECT LUKSO RPC)' };
+  const result = projectLibraryAssetUnion({ profileAddress: PROFILE,
+    ownedAssets: [owned(CONTRACT_A, { imageGroups: [{ index: 0, imageUrl: 'https://art.test/old.webp' }] })],
+    createdAssets: [created(CONTRACT_A, { imageGroups: images, fieldProvenance: { images: provenance } })],
+  });
+  assert.deepEqual(result.records[0].imageGroups, images);
+  assert.deepEqual(result.records[0].fieldProvenance.images, provenance);
+  assert.equal(result.records[0].isOwnedByViewedProfile, true);
+});
