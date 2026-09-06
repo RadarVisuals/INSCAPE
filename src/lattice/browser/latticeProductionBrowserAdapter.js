@@ -32,11 +32,16 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress, accept
     || normalizeProfileAddress(asset?.contractAddress) !== identity.contractAddress
     || (asset?.tokenId == null ? null : String(asset.tokenId).toLowerCase()) !== identity.tokenId) return null;
 
-  const previewSource = [asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl]
+  const sizedVariants = (asset.imageGroups?.[0]?.variants || [])
+    .filter((variant) => Number(variant.width) > 0 && resolveBrowserPreviewUrl(variant.url))
+    .sort((left, right) => Number(left.width) - Number(right.width));
+  const libraryThumbnail = (sizedVariants.find((variant) => Number(variant.width) >= 640)
+    || sizedVariants.at(-1))?.url || asset.thumbnailUrl;
+  const previewSource = [libraryThumbnail, asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl]
     .map(resolveBrowserPreviewUrl)
     .find(Boolean) || null;
   const imageVariants = (asset.imageGroups?.[0]?.variants || []).map((variant) => variant?.url);
-  const previewCandidates = [...new Set([asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl, ...imageVariants]
+  const previewCandidates = [...new Set([libraryThumbnail, asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl, ...imageVariants]
     .map(resolveBrowserPreviewUrl).filter(Boolean))];
   const resolvedSource = [asset.originalImageUrl, asset.imageUrl, asset.thumbnailUrl]
     .map(resolveBrowserPreviewUrl)

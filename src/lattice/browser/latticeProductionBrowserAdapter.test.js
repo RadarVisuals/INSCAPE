@@ -178,3 +178,21 @@ test('collection-derived acceptance requires explicit parent creator provenance'
   assert.equal(adaptLatticeProductionBrowserAsset({ ...collectionChild,
     collectionCreators: [{ address: OTHER_PROFILE }] }, PROFILE, true), null);
 });
+
+
+test('Library uses the 640px variant while placement keeps the original source', () => {
+  const input = asset({ imageGroups: [{ index: 0, variants: [180, 320, 640, 1024, 1800]
+    .map(width => ({ width, url: 'https://assets.example/' + width + '.webp' })) }] });
+  const before = structuredClone(input);
+  const result = adaptLatticeProductionBrowserAsset(input, PROFILE);
+  assert.equal(result.previewSrc, 'https://assets.example/640.webp');
+  assert.equal(result.previewCandidates[0], result.previewSrc);
+  assert.equal(result.src, input.originalImageUrl);
+  assert.equal(result.width, 1200);
+  assert.deepEqual(input, before);
+  const small = adaptLatticeProductionBrowserAsset(asset({ imageGroups: [{ variants: [
+    { width: 180, url: 'https://assets.example/180.webp' },
+    { width: 320, url: 'https://assets.example/320.webp' },
+  ] }] }), PROFILE);
+  assert.equal(small.previewSrc, 'https://assets.example/320.webp');
+});
