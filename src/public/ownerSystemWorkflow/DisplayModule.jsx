@@ -17,7 +17,8 @@ import { createOwnerSystemWorkflowMetadataViewModel } from './ownerSystemWorkflo
 export default forwardRef(function DisplayModule({ assetsById, controller, authoringLocked, active,
   panelOccupied, instrumentsObscured, onRevealInstruments, onInspect, onMetadataAvailabilityChange,
   onAuthoringLockToggle, registerAssetDimensions, resolveAssetDimensions, menuSurface,
-  reducedMotion, workspaceSurfaceColor, windowProps }, ref) {
+  reducedMotion, workspaceSurfaceColor, windowProps, placementTargetRef, shortcutTargetRef, workspaceRef }, ref) {
+  const instrumentTriggers = useRef({});
   const [instruments, dispatchInstruments] = useReducer(transitionDisplayInstruments, initialDisplayInstruments);
   const [playingGrids, setPlayingGrids] = useState(false);
   const [playbackTransition, setPlaybackTransition] = useState(false);
@@ -81,7 +82,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
   const selectionLabel = metadataEntry?.dossier?.title || (controller.selectedPlacements.length > 1
     ? `${controller.selectedPlacements.length} selected` : controller.selectedPlacements.length === 1
       ? 'Selected artwork' : 'No artwork selected');
-  return <PresentationBoard {...windowProps} assetsById={assetsById} authoringLocked={authoringLocked}
+  return <PresentationBoard {...windowProps} shortcutTargetRef={shortcutTargetRef} instrumentTriggers={instrumentTriggers} assetsById={assetsById} authoringLocked={authoringLocked}
       displaySurface={controller.draft?.appearance.surfaceId}
       documentGeometry={controller.draft?.geometry}
       inspectionAtmosphere={viewer.atmosphereActive}
@@ -99,12 +100,12 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
         container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}
         viewer={viewer} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
       renderInstruments={instrumentsVisible ? (projection, overlayTop) => <DisplayInstruments
-        state={instruments} dispatch={instrumentCommand} projection={projection} overlayTop={overlayTop}
+        workspaceRef={workspaceRef} instrumentTriggers={instrumentTriggers} state={instruments} dispatch={instrumentCommand} projection={projection} overlayTop={overlayTop}
         scope={controller.selectedGrid?.title || 'Untitled Grid'} selectionLabel={selectionLabel}
         renderLayers={() => <OwnerSystemWorkflowSelectionInspector key={controller.selectedGridId}
           assetsById={assetsById} authoringLocked={authoringLocked || playingGrids || playbackTransition} controller={controller} crop={crop} onBeginCrop={crop.beginCrop} />}
         renderMetadata={() => <OwnerSystemWorkflowMetadataContent dossier={metadataEntry?.dossier || null} />} /> : null}>
-    <OwnerSystemWorkflowCanvas assetsById={assetsById} authoringLocked={authoringLocked} controller={controller} crop={crop}
+    <OwnerSystemWorkflowCanvas placementTargetRef={placementTargetRef} assetsById={assetsById} authoringLocked={authoringLocked} controller={controller} crop={crop}
         playingGrids={playingGrids} onPauseGrids={pauseGrids} onPlaybackTransitionChange={setPlaybackTransition}
         onAssetDimensions={registerAssetDimensions} onChangeGrid={changeGrid}
         interactionDisabled={panelOccupied || Boolean(viewer.placementId)} onOpenViewer={(placement) => viewer.open(placement.id)}

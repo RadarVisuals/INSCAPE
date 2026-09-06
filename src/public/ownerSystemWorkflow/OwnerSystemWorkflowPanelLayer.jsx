@@ -15,7 +15,7 @@ function PanelPresence({ children, id, panels, retained = false }) {
     onTransitionEnd={(event) => { if (event.propertyName === 'opacity') panels.completePanelTransition(id); }}>{children}</div>;
 }
 
-export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assetsById, authoringLocked = false, categoryCommands, browser, connectedProfile, controller, discoveryCommands, discoveryGroups, layout, libraryData,
+export default function OwnerSystemWorkflowPanelLayer({ placementTargetRef, shortcutTargetRef, workspaceRef, activity, assets, assetsById, authoringLocked = false, categoryCommands, browser, connectedProfile, controller, discoveryCommands, discoveryGroups, layout, libraryData,
   menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onDossierChange, onEnterMyWorld, onVisitProfile, panelOccupied, panels, profileIdentity, profileModel,
   resolveAssetDimensions, reviewDiscovery, workspaceSurfaceColor, workbenchPreferences, onWorkbenchPreferencesChange }) {
   const show = (id) => panels.presence[id];
@@ -25,7 +25,9 @@ export default function OwnerSystemWorkflowPanelLayer({ activity, assets, assets
     {show('grids').present && <PanelPresence id="grids" panels={panels}><SystemWorkflowGridSwitcher controller={controller} data-layout={layout.mode} onSelectGrid={onChangeGrid} /></PanelPresence>}
     {show('docs').present && <PanelPresence id="docs" panels={panels}><OwnerSystemWorkflowManual onClose={onClose} /></PanelPresence>}
     {libraryMounted.current && <PanelPresence id="library" panels={panels} retained>
-      <OwnerSystemWorkflowLibraryWorkspace authoringLocked={authoringLocked} categoryCommands={categoryCommands} controller={controller} data={libraryData}
+      <OwnerSystemWorkflowLibraryWorkspace placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef}
+        placementScope={`${controller.draft.profileAddress}:${controller.selectedGridId}`}
+        authoringLocked={authoringLocked} categoryCommands={categoryCommands} data={libraryData}
         menuSurface={menuSurface} onClose={onClose} phase={show('library').phase}
         resolveAssetDimensions={resolveAssetDimensions} /></PanelPresence>}
     {show('profile').present && <PanelPresence id="profile" panels={panels}><div className="system-workflow__profile-layer"

@@ -20,9 +20,23 @@ test('Display interaction survives host window changes without draft writes', { 
     await bay.getByRole('button', { name: 'MOUNTAIN SIGNAL II', exact: true }).click();
     await bay.getByRole('tab', { name: 'Metadata', exact: true }).click();
     assert.match(await bay.innerText(), /MOUNTAIN SIGNAL II/);
+    const board = page.getByRole('article', { name: 'Display Module', exact: true });
+    const beforeResize = await board.boundingBox();
+    await page.getByRole('button', { name: 'Resize Display Module from se', exact: true }).focus();
+    await page.keyboard.press('ArrowLeft');
+    await settle(page);
+    const resized = await board.boundingBox();
+    assert.ok(resized.width < beforeResize.width);
+    await page.getByRole('button', { name: 'Maximize Display Module', exact: true }).click();
+    await settle(page);
+    assert.ok((await board.boundingBox()).width > resized.width);
+    await page.getByRole('button', { name: 'Restore Display Module', exact: true }).click();
+    await settle(page);
+    assert.deepEqual(await board.boundingBox(), resized);
     await page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).click();
     await page.locator('.system-workflow__desktop-shortcut').dblclick();
     await bay.waitFor();
+    assert.deepEqual(await board.boundingBox(), resized);
     assert.equal(await bay.getByRole('tab', { name: 'Metadata', exact: true }).getAttribute('aria-selected'), 'true');
     assert.match(await bay.innerText(), /MOUNTAIN SIGNAL II/);
     await page.getByRole('button', { name: 'Select MOUNTAIN SIGNAL II', exact: true }).dblclick();
@@ -51,6 +65,18 @@ test('Display Module instruments preserve selection, canonical writes, bounds, a
     page.on('pageerror', (error) => errors.push(error.message));
     await page.route('**/*', (route) => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.goto(`${origin}/development/owner/system-workflow`);
+    // An unrelated surface earlier in the document must not steal placement
+    // or focus from the explicitly connected Display.
+    await page.evaluate(() => {
+      const decoy = document.createElement('div');
+      decoy.className = 'system-workflow__canvas';
+      decoy.style.cssText = 'position:fixed;left:-5000px;top:0;width:10px;height:10px';
+      const trigger = document.createElement('button');
+      trigger.dataset.instrumentTrigger = 'metadata';
+      trigger.textContent = 'Unrelated metadata trigger';
+      decoy.append(trigger);
+      document.body.prepend(decoy);
+    });
     const bay = page.getByRole('complementary', { name: 'Display Module instruments', exact: true });
     await bay.waitFor();
     await settle(page);
@@ -133,7 +159,7 @@ test('Display Module instruments preserve selection, canonical writes, bounds, a
     const card = page.locator('.system-workflow__library').getByRole('button', { name: 'ABYSSAL STUDY / INSCAPE STUDIES', exact: true });
     await card.scrollIntoViewIfNeeded();
     const cardBox = await card.boundingBox();
-    const target = await page.locator('.system-workflow__canvas').boundingBox();
+    const target = await page.locator('.system-workflow .system-workflow__canvas').boundingBox();
     await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + 30);
     await page.mouse.down();
     await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 8 });

@@ -42,6 +42,16 @@ test('Escape and closing the Library cancel placement, including deferred image 
       await page.evaluate(() => window.__releasePlacementDimensions());
       await page.waitForTimeout(100);
       assert.equal(await snapshot(), original, 'a delayed decode cannot place after closing the Library');
+      await page.getByRole('button', { name: 'Library', exact: true }).click();
+      await page.evaluate(() => { window.__releasePlacementDimensions = null; });
+      await card.dblclick();
+      await page.waitForFunction(() => typeof window.__releasePlacementDimensions === 'function');
+      await page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).click();
+      await page.evaluate(() => window.__releasePlacementDimensions());
+      await page.waitForTimeout(100);
+      assert.equal(await snapshot(), original, 'a delayed decode cannot place into a closed Display');
+      await page.locator('.system-workflow__desktop-shortcut').dblclick();
+      await page.getByRole('button', { name: 'Library', exact: true }).click();
       await page.evaluate(() => { window.__releasePlacementDimensions = null; });
       const canvas = page.locator('.system-workflow__canvas');
       await canvas.evaluate(node => {

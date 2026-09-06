@@ -1,7 +1,6 @@
 export const presentationBoardShortcutStorageKey = (profileAddress) =>
   `inscape:workbench:presentation-board:${profileAddress || 'anonymous'}`;
 
-export const PRESENTATION_BOARD_SHORTCUT_ASSET_DROP = 'inscape:shortcut-asset-drop';
 
 export const DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION = Object.freeze({
   labelSize: 8,

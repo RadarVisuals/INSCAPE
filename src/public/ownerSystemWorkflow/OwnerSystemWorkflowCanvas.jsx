@@ -1,10 +1,10 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 import { createPortal } from 'react-dom';
 import { projectCroppedMediaRectangle } from '../../lattice/rendering/latticeCrop.js';
 import { fitNativeMediaRectangle } from '../../lattice/rendering/latticeGeometry.js';
 import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
-import { projectLatticeRasterBleedRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
+import { projectLatticeRasterBleedRectangle, projectLatticePixelRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
 import { createSystemWorkflowDropGeometry } from '../../systemWorkflow/systemWorkflowPlacement.js';
 import { isSystemWorkflowWorldCoverGrid, systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { adjacentSystemWorkflowGridIdInOrder } from '../../systemWorkflow/domain/systemWorkflowNavigation.js';
@@ -67,7 +67,7 @@ const screenHandlePoint = (corner, rectangle) => ({
 
 export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked = false, boardScale = 1, controller, crop, interactionDisabled = false, onAssetDimensions,
   onChangeGrid, onOpenViewer, onPlacementRef, reducedMotion = false, renderingMode = 'settled', resolveAssetDimensions,
-  selectionOverlayHost, viewerPlacementId, playingGrids = false, onPauseGrids, onPlaybackTransitionChange }) {
+  placementTargetRef, selectionOverlayHost, viewerPlacementId, playingGrids = false, onPauseGrids, onPlaybackTransitionChange }) {
   const canvasRef = useRef(null);
   const feedbackTimerRef = useRef(null);
   const [dropFeedback, setDropFeedback] = useState(null);
@@ -81,6 +81,26 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   const snapStep = systemWorkflowSnapStep(appearance.guideSize);
   const viewScale = Number.isFinite(boardScale) && boardScale > 0 ? boardScale : 1;
   const viewerOpen = Boolean(viewerPlacementId);
+  const placementContext = useMemo(() => ({}), [grid?.id, controller.draft.profileAddress, authoringLocked, interactionDisabled]);
+  const currentPlacementContext = useRef(placementContext);
+  currentPlacementContext.current = placementContext;
+  useImperativeHandle(placementTargetRef, () => {
+    const isCurrent = () => currentPlacementContext.current === placementContext
+      && canvasRef.current?.isConnected && !authoringLocked && !interactionDisabled;
+    return {
+      isCurrent,
+      placeAsset: (asset, dimensions, destination = null) => isCurrent()
+        && controller.placeAsset(systemWorkflowPlacementRequest(asset, dimensions, grid.id, destination)),
+      previewAt: (point, dimensions, options = {}) => {
+        const canvas = canvasRef.current;
+        if (!isCurrent() || !dimensions || !canvas.contains(document.elementFromPoint(point.x, point.y))) return null;
+        const field = createOwnerSystemWorkflowProjectedField(canvas, snapStep, viewScale, artboardMode);
+        if (!field || worldCover && !ownerSystemWorkflowProjectedFieldContainsPoint(field, point)) return null;
+        const destination = createSystemWorkflowDropGeometry(dimensions.width, dimensions.height, point, field, options);
+        return { destination, rectangle: projectLatticePixelRectangle(destination, field) };
+      },
+    };
+  });
   const gridOrder = useMemo(() => controller.draft.grids
     .filter((candidate) => !isSystemWorkflowWorldCoverGrid(candidate)).map(({ id }) => id), [controller.draft.grids]);
   const adjacentGrid = (direction) => controller.draft && grid

@@ -70,6 +70,9 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const [notice, setNotice] = useState(null);
   const [dossierOpen, setDossierOpen] = useState(false);
   const displayRef = useRef(null);
+  const placementTargetRef = useRef(null);
+  const shortcutTargetRef = useRef(null);
+  const workspaceRef = useRef(null);
   const [metadataAvailable, setMetadataAvailable] = useState(false);
   const [decodedDimensions, setDecodedDimensions] = useState(() => new Map());
   const [workspaceMenu, setWorkspaceMenu] = useState(null);
@@ -236,14 +239,14 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     if (publicationOpen) closePublication({ returnFocus: false });
     if (instrumentsObscured) panels.closePanel({ returnFocus: false });
   };
-  return <><main aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
+  return <><main ref={workspaceRef} aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
     data-authoring-locked={authoringLocked || undefined} data-board-instance-state={boardInstanceState}
     data-chrome-noise={workbenchPreferences.chromeNoise ? 'on' : 'off'}
     data-library-open={panel === 'library' || undefined}
     data-lattice-menu-surface data-menu-surface={menuSurface} data-reduced-motion={layout.reducedMotion || undefined}
     data-surface={workbenchPreferences.surfaceId} data-previewing={preview ? true : undefined}
     inert={preview ? '' : undefined}>
-    <DisplayModule ref={displayRef} assetsById={assetsById} controller={controller}
+    <DisplayModule ref={displayRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef} assetsById={assetsById} controller={controller}
       authoringLocked={authoringLocked} active={!preview && boardInstanceState === 'window'}
       panelOccupied={panelOccupied} instrumentsObscured={instrumentsObscured}
       onRevealInstruments={revealInstruments}
@@ -263,7 +266,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
         layoutMode: layout.mode, profileAddress, reducedMotion: layout.reducedMotion,
         shortcutSnap: workbenchPreferences.shortcutSnap, workbenchGridColor: workbenchPreferences.gridColor,
         workbenchGridMode: workbenchPreferences.gridMode }} />
-    <OwnerSystemWorkflowPanelLayer activity={activity} assets={assets} assetsById={assetsById} authoringLocked={authoringLocked} browser={browser}
+    <OwnerSystemWorkflowPanelLayer placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef} activity={activity} assets={assets} assetsById={assetsById} authoringLocked={authoringLocked} browser={browser}
       connectedProfile={connectedProfile} onConnect={onConnect} onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld}
       controller={controller} layout={layout} libraryData={libraryData} menuSurface={menuSurface} onChangeGrid={changeGrid}
       workspaceSurfaceColor={workspaceSurfaceColor}

@@ -2,20 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useBrowserWorkspace from '../../lattice/browser/useBrowserWorkspace.js';
 import '../../lattice/browser/browserWorkspace.css';
-import { createSystemWorkflowDropGeometry } from '../../systemWorkflow/systemWorkflowPlacement.js';
-import { isSystemWorkflowWorldCoverGrid, systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import OwnerSystemWorkflowWorkspaceRail from './OwnerSystemWorkflowWorkspaceControls.jsx';
 import { OwnerSystemWorkflowWorkspaceShell } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
-import {
-  OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES,
-  createOwnerSystemWorkflowProjectedField,
-  ownerSystemWorkflowProjectedFieldContainsPoint,
-} from './systemWorkflowArtboardProjection.js';
 import { decodeOwnerSystemWorkflowAssetDimensions, ownerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDimensions.js';
 import OwnerSystemWorkflowLibraryPresenter from './OwnerSystemWorkflowLibraryPresenter.jsx';
-import { projectLatticePixelRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
-import { PRESENTATION_BOARD_SHORTCUT_ASSET_DROP } from './presentationBoardShortcutStorage.js';
-import { systemWorkflowPlacementRequest } from './systemWorkflowPlacementRequest.js';
 
 const rejectDrop = () => globalThis.dispatchEvent?.(new CustomEvent('inscape:system-workflow-drop-rejected'));
 const DRAG_THRESHOLD = 6;
@@ -23,19 +13,14 @@ const sourceFor = (asset) => asset?.previewSrc || asset?.src || asset?.imageUrl 
 const libraryPreferences = { assetSize: 150, hideLabels: false, sidebarWidth: 174 };
 const ownerLibraryPreviewRecords = new Map();
 
-function projectDropPreview(destination, field) {
-  if (!destination || !field) return null;
-  return projectLatticePixelRectangle(destination, field);
-}
-
-export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, controller, data, menuSurface, onClose, phase,
-  resolveAssetDimensions }) {
+export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, placementScope, data, menuSurface, onClose, phase,
+  resolveAssetDimensions, placementTargetRef, shortcutTargetRef, workspaceRef }) {
   const workspace = useBrowserWorkspace(data, ownerLibraryPreviewRecords, libraryPreferences);
   const resolveDimensions = resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions;
   const [dragPreview, setDragPreview] = useState(null);
   const dragRef = useRef(null);
   const libraryClosed = phase === 'closing' || phase === 'closed';
-  const placementContext = useMemo(() => ({}), [controller.selectedGridId, controller.draft.profileAddress, authoringLocked, libraryClosed]);
+  const placementContext = useMemo(() => ({}), [placementScope, authoringLocked, libraryClosed]);
   const currentPlacementContext = useRef(placementContext);
   currentPlacementContext.current = placementContext;
   const mounted = useRef(true);
@@ -43,7 +28,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
   const resizeRef = useRef(null);
   const clampWidth = (width) => Math.min(window.innerWidth * 0.48, Math.max(300, width));
   useEffect(() => {
-    const root = document.querySelector('.system-workflow');
+    const root = workspaceRef.current;
     if (libraryWidth !== null) root?.style.setProperty('--workflow-library-track', `min(48vw, ${libraryWidth}px)`);
     return () => root?.style.removeProperty('--workflow-library-track');
   }, [libraryWidth]);
@@ -57,14 +42,12 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     libraryPreferences.hideLabels = workspace.hideLabels;
     libraryPreferences.sidebarWidth = workspace.sidebarWidth;
   }, [workspace.assetSize, workspace.hideLabels, workspace.sidebarWidth]);
-  const place = async (asset, destination = null, resolvedDimensions = null) => {
+  const place = async (asset, destination = null, resolvedDimensions = null, target = placementTargetRef.current) => {
     if (authoringLocked || libraryClosed) return false;
     let dimensions;
     try { dimensions = resolvedDimensions || await resolveDimensions(asset); } catch { return false; }
     if (!dimensions || !mounted.current || currentPlacementContext.current !== placementContext) return false;
-    return controller.placeAsset(systemWorkflowPlacementRequest(
-      asset, dimensions, controller.selectedGridId, destination,
-    ));
+    return target?.placeAsset(asset, dimensions, destination) || false;
   };
   const cleanup = () => {
     const active = dragRef.current;
@@ -81,36 +64,16 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     const id = asset?.stableAssetId || asset?.id;
     if (libraryClosed || dragRef.current || event.button !== 0 || !asset.placeable || !workspaceState?.isAssetRenderable(id)) return;
     const origin = { x: event.clientX, y: event.clientY };
-    const active = { asset, dimensions: ownerSystemWorkflowAssetDimensions(asset), lastPointer: null,
+    const active = { target: placementTargetRef.current, asset, dimensions: ownerSystemWorkflowAssetDimensions(asset), lastPointer: null,
       pointerId: event.pointerId, moved: false, source: event.currentTarget };
     const previewAt = (pointerEvent, dimensions = active.dimensions) => {
-      const shortcut = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY)?.closest('.system-workflow__desktop-shortcut');
-      if (shortcut) {
+      const point = { x: pointerEvent.clientX, y: pointerEvent.clientY };
+      const shortcut = shortcutTargetRef.current?.node;
+      if (shortcut?.contains(document.elementFromPoint(point.x, point.y))) {
         const bounds = shortcut.getBoundingClientRect();
         return { destination: null, kind: 'shortcut', rectangle: { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height } };
       }
-      if (authoringLocked) return { destination: null, rectangle: null };
-      const canvas = document.querySelector('.system-workflow__canvas');
-      if (document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY)?.closest('.system-workflow__canvas') !== canvas)
-        return { destination: null, rectangle: null };
-      const rectangle = canvas?.getBoundingClientRect();
-      const inside = Boolean(rectangle
-        && pointerEvent.clientX >= rectangle.left && pointerEvent.clientX <= rectangle.right
-        && pointerEvent.clientY >= rectangle.top && pointerEvent.clientY <= rectangle.bottom);
-      const artboardMode = isSystemWorkflowWorldCoverGrid(controller.selectedGrid)
-        ? OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO
-        : OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID;
-      const field = inside ? createOwnerSystemWorkflowProjectedField(
-        canvas, systemWorkflowSnapStep(controller.draft.appearance.guideSize), 1, artboardMode,
-      ) : null;
-      if (!field || artboardMode === OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO
-        && !ownerSystemWorkflowProjectedFieldContainsPoint(field, { x: pointerEvent.clientX, y: pointerEvent.clientY })) {
-        return { destination: null, rectangle: null };
-      }
-      if (!dimensions) return { destination: null, rectangle: null };
-      const destination = createSystemWorkflowDropGeometry(dimensions.width, dimensions.height,
-        { x: pointerEvent.clientX, y: pointerEvent.clientY }, field, options);
-      return { destination, rectangle: projectDropPreview(destination, field) };
+      return active.target?.previewAt(point, dimensions, options) || { destination: null, rectangle: null };
     };
     const move = (pointerEvent) => {
       if (pointerEvent.pointerId !== active.pointerId) return;
@@ -128,19 +91,13 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       const pendingDimensions = active.dimensionPromise;
       cleanup();
       if (!moved) return;
-      const shortcut = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY)
-        ?.closest('.system-workflow__desktop-shortcut');
-      if (shortcut) {
-        const drop = new CustomEvent(PRESENTATION_BOARD_SHORTCUT_ASSET_DROP, {
-          bubbles: true, cancelable: true, detail: { asset },
-        });
-        shortcut.dispatchEvent(drop);
-        if (drop.defaultPrevented) return;
-      }
+      const shortcut = shortcutTargetRef.current;
+      if (shortcut?.node?.contains(document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY))
+        && shortcut.placeAsset(asset)) return;
       const dimensions = active.dimensions || await pendingDimensions;
       if (!mounted.current || currentPlacementContext.current !== placementContext) return;
       const preview = dimensions ? previewAt(pointerEvent, dimensions) : null;
-      if (preview?.destination) await place(asset, preview.destination, dimensions);
+      if (preview?.destination) await place(asset, preview.destination, dimensions, active.target);
       else rejectDrop();
     };
     const cancel = () => cleanup();
@@ -190,6 +147,6 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     {dragPreview?.rectangle && createPortal(<div aria-hidden="true" className="system-workflow__placement-preview" style={dragPreview.rectangle}>
       {sourceFor(dragPreview.asset) && <img alt="" src={sourceFor(dragPreview.asset)} />}
       <span>{dragPreview.kind === 'shortcut' ? 'Release to replace icon' : 'Release to add layer'}</span>
-    </div>, document.querySelector('.system-workflow') || document.body)}
+    </div>, workspaceRef.current || document.body)}
   </OwnerSystemWorkflowWorkspaceShell>;
 }

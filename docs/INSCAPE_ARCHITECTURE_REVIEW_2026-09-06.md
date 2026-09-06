@@ -111,7 +111,7 @@ mist eventueel berekende imports en interne afhankelijkheden van packages.
    instrumenten en playback horen bij de compositie; venster/shortcut bij de
    host. Gereed wanneer de host geen geselecteerde placement hoeft te inspecteren
    om Metadata of Layers aan te sturen. Geen generiek pluginframework toevoegen.
-- [ ] **4. Workbench en module expliciet verbinden.** Venster/shortcutbeheer
+- [x] **4. Workbench en module expliciet verbinden.** Venster/shortcutbeheer
    scheiden van compositiegedrag. Library-drop en focus op de bestaande module richten zonder documentbrede
    'eerste canvas'-aannames. Gereed wanneer het doel expliciet is en uitgestelde
    media nog steeds correct annuleren bij sluiten of wisselen.
@@ -218,7 +218,42 @@ vergelijkingen houden rekening met twee pixel-afgeronde maskers maal de cropzoom
 (gemeten verschil ongeveer 1,3 px). Opslagtellingen, zoom en Done/Cancel-uitkomsten
 blijven gecontroleerd. Productiegeometrie is niet gewijzigd om tests te laten slagen.
 De vergelijkingsserver is afgesloten. Bewijs: `.browser-test-runtime/step3-*`.
-Stappen 4–6 blijven open.
+Checkpoint stap 3: `757dd53e51fc4836cda6651af3dcff4f22b60fd4` (gepust).
+
+### Stap 4: expliciete plaatsingsdoelen en shortcut-eigenaarschap
+
+De Library ontvangt nu een concreet plaatsingsdoel van de Display Canvas.
+De Canvas berekent zijn eigen dropgeometrie; de Library kent geen controller
+of Display-projectiehelpers meer en zoekt niet langer het eerste canvas in het
+document. Een uitgestelde afbeelding blijft gebonden aan het oorspronkelijke
+doel: een gewijzigde Grid/context, gesloten Library of geminimaliseerde Display
+kan geen late plaatsing in een ander actief doel veroorzaken.
+
+Shortcut-drops gebruiken eveneens een expliciete ref in plaats van een globale
+asset-drop-event. `PresentationBoardShortcut.jsx` bezit de bestaande shortcutnaam,
+positie, afbeelding, menu's en opslag. PresentationBoard behoudt venstergeometrie
+en herstel. Instrumentfocus gebruikt de eigen knoppen, tab/panel-IDs zijn per
+instance uniek en portals ontvangen hun werkruimte expliciet. Eén nieuw
+bronbestand groepeert verplaatst gedrag; opslagkeys, schema en CSS blijven gelijk.
+
+Verificatie: alle 768 unitchecks en vijf browserchecks slagen. Build en
+buildcontrole slagen met 779773 initial-JS-bytes; bestaande waarschuwingen blijven
+zichtbaar. De browser plaatst bewust een extra canvas en Metadata-knop vóór de
+app en controleert dat plaatsing en focus de juiste Display blijven gebruiken.
+Verder gecontroleerd: annulering van vertraagde media bij Library-sluiten en
+minimaliseren, shortcut-drops op 1440/700 px, naam/icooninstellingen na herladen,
+en vensterafmetingen na resize, maximaliseren, herstellen en heropenen.
+Instrument- en Library-beelden op brede en smalle viewports zijn bekeken.
+De fixture blokkeert externe previews; de zichtbare ontbrekende preview is geen
+bewijs van een productie-mediaregressie. Bewijs: `.browser-test-runtime/step4-final-*`.
+
+Grenzen: de host maakt nog steeds de gedeelde controller voor Grids, instellingen
+en publicatie. Het document bevat nog één compositie; meerdere Displays zijn niet
+ingeschakeld. PresentationBoard omvat nog het Workbench-oppervlak en Displayvenster.
+Algemene gesturelisteners en drop-afwijzingsfeedback zijn niet allemaal per module
+geïsoleerd. De volle wraparoundchecks van stap 3 zijn hier niet opnieuw uitgevoerd;
+er zijn geen live wallet-, upload- of publicatiehandelingen getest. Stappen 5–6
+blijven open.
 
 Bewaar bij volgende stappen steeds het bewijs en de commitverwijzing hier.
 De checklist is uitvoeringsregistratie; het actieve contract blijft de enige

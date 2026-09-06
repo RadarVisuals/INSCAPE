@@ -39,9 +39,25 @@ test('image chooser pointer drop replaces only the shortcut icon and survives re
       assert.equal(await icon.getAttribute('src'), 'https://images.inscape.test/transparent-fallback.webp');
       assert.equal(await page.evaluate(() => JSON.stringify(window.__imageTest.draft())), initial);
       await page.screenshot({ path: `.browser-test-runtime/shortcut-image-${width}.png` });
+      await page.getByRole('button', { name: 'Close workspace', exact: true }).click();
+      const shortcut = page.locator('.system-workflow__desktop-shortcut');
+      await shortcut.click({ button: 'right' });
+      await page.getByRole('menuitem', { name: 'RENAME', exact: true }).click();
+      const name = page.getByRole('textbox', { name: 'Display Module shortcut name', exact: true });
+      await name.fill('MY CHAPTER');
+      await name.press('Enter');
+      await shortcut.click({ button: 'right' });
+      await page.getByRole('menuitem', { name: 'EDIT ICON', exact: true }).click();
+      await page.getByRole('slider', { name: 'Shortcut icon size', exact: true }).fill('100');
+      await page.getByRole('slider', { name: 'Shortcut icon zoom', exact: true }).fill('1.5');
+      await page.getByRole('button', { name: 'Done', exact: true }).click();
       await page.reload();
       await icon.waitFor();
       assert.equal(await icon.getAttribute('src'), 'https://images.inscape.test/transparent-fallback.webp');
+      assert.equal(await shortcut.getAttribute('aria-label'), 'Open MY CHAPTER');
+      assert.equal(await shortcut.evaluate(node => getComputedStyle(node).getPropertyValue('--workflow-shortcut-icon-size')), '100px');
+      assert.match(await icon.getAttribute('style'), /scale\(1\.5\)/);
+      assert.equal(await page.evaluate(() => JSON.stringify(window.__imageTest.draft())), initial);
       assert.deepEqual(errors, []);
       await page.close();
     }
