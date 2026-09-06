@@ -1,7 +1,7 @@
 # INSCAPE — architectuur, styling en schaalgedrag
 
-Datum: 6 september 2026. Onderzoek, geen nieuwe productautoriteit of toestemming
-voor implementatie. Productiecode en bestaande tests zijn niet gewijzigd.
+Datum: 6 september 2026. Onderzoek met uitvoeringsregistratie van de daarna
+goedgekeurde vereenvoudiging; geen nieuwe productautoriteit.
 Meetprogramma's, resultaten en screenshots staan in `.browser-test-runtime`.
 
 ## Besluit na verduidelijking van de productvisie
@@ -104,7 +104,7 @@ mist eventueel berekende imports en interne afhankelijkheden van packages.
    buiten de commits. De reeds aangesloten ontwikkeltool blijft broncode en
    wordt niet uitgevoerd. Bewijs: volledige tests, browserchecks, standaarden,
    build en vergelijking van lokale en remote commit.
-- [ ] **2. Bewerkingskern vereenvoudigen.** Navigatie losmaken van volledig documentwerk en de concrete geometriecirkel
+- [x] **2. Bewerkingskern vereenvoudigen.** Navigatie losmaken van volledig documentwerk en de concrete geometriecirkel
    verbreken. Gereed wanneer navigatie geen volledige validatie per render
    uitvoert, de importcirkel weg is en geometrie-/swipetests hetzelfde gedrag tonen.
 - [ ] **3. Display Module zelfstandig maken.** De bestaande Display-aansturing afbakenen: selectie, crop, viewer,
@@ -129,7 +129,7 @@ van deze vereenvoudigingsronde. Geen nieuw moduletype of pluginframework bouwen.
 Checkpoint van de bestaande code: `fd2adec10c9febecff1157a09d3bb0b968d5dd2c`.
 Gepusht naar `feature/presentation-board-foundation`; remote hash gecontroleerd
 op 6 september 2026. Dit bewaart de opeengestapelde werkende wijzigingen vóór
-de architecturale vereenvoudiging. Stappen 2–6 zijn nog niet uitgevoerd.
+de architecturale vereenvoudiging. De voortgang erna staat hieronder.
 
 Verificatie van dit checkpoint: de ongewijzigde codebasis had 767 geslaagde
 unitchecks en een geslaagde build/buildcontrole uit de audit. Aanvullend zijn
@@ -139,6 +139,39 @@ testserver/readiness-timeouts; afzonderlijke uitvoering slaagde met respectievel
 12 en 12 checks. Geen timeouts verhoogd of productgedrag veranderd om dit te
 verbergen. De enige bronopmaakcorrectie bij het vastleggen was een overtollige
 lege eindregel in de bestaande ontwikkeltool-CSS.
+
+### Stap 2: navigatie en geometrie
+
+De Canvas bepaalt vorige/volgende Grids nu uit de scène-ID-volgorde van zijn
+geaccepteerde draft. De bestaande documentvalidatie blijft bij de domeingrens.
+Bij 100 losse navigatievragen doet het oude documentpad 100 structured clones;
+de nieuwe volgordeberekening doet er nul. Dit is geen gemeten UI-versnelling:
+session/store-kopieën en andere documentbewerkingen zijn hiermee niet verwijderd.
+
+De ongewijzigde placementprojectie woont nu in het bestaande
+`systemWorkflowViewportProjection.js`. Movement en Resize importeren haar daar;
+de renderer behoudt zijn bestaande export als alias. Daardoor verdwijnt de
+vierbestands-importcirkel. De scan van letterlijke lokale imports vindt nu nul
+cyclische groepen; berekende imports en package-internals vallen buiten de scan.
+Er zijn geen nieuwe bronbestanden, schema's, modules of CSS-varianten toegevoegd.
+
+Bij verificatie kwamen twee buildomgevingsproblemen naar voren: te weinig ruimte
+op C: voor tijdelijke kopieën en herhaald ENOTEMPTY bij het verwijderen van
+een tijdelijke recovery-map op Windows. Tests gebruiken daarom tijdelijke opslag
+onder `.browser-test-runtime/step2-temp` op E:. De bestaande buildpruner krijgt
+drie begrensde herpogingen; zijn padcontrole en fout bij blijvend falen blijven
+bestaan. Originele recovery-assets zijn niet verplaatst of verwijderd.
+
+Verificatie: 47 gerichte geometrie-/navigatietests en de volledige reeks van
+768 tests geslaagd. Productiebuild en buildcontrole slagen (779773 initial-JS-bytes);
+bestaande dependency- en chunkwaarschuwingen blijven zichtbaar.
+Vijf browserchecks slagen: instrumenten (2), volle
+Grid-wraparound, continue playback en plaatsingsannulering. De instrumenttest
+gebruikte aanvankelijk zijn verkeerde standaardpoort 5174; met de draaiende app
+op 5173 slaagt hij. De wraptest detecteert geen Stage-lekken in 586 gesamplede
+frames op 2044 px en 937 op 390 px; eindbeelden op beide breedtes geïnspecteerd.
+Dit is geen garantie over alle frames of mediacombinaties. Bewijs staat in
+`.browser-test-runtime/step2-*`; stappen 3–6 blijven open.
 
 Bewaar bij volgende stappen steeds het bewijs en de commitverwijzing hier.
 De checklist is uitvoeringsregistratie; het actieve contract blijft de enige

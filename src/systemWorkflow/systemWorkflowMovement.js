@@ -6,7 +6,7 @@ import {
   isValidSystemWorkflowPlacementGeometry,
   quantizeSystemWorkflowGridCoordinate,
 } from './domain/systemWorkflowDraft.js';
-import { projectLatticeProductionPlacement as projectSystemWorkflowPlacement } from '../lattice/rendering/latticeProductionProjection.js';
+import { projectSystemWorkflowPlacement } from './systemWorkflowViewportProjection.js';
 
 export const SYSTEM_WORKFLOW_MOVEMENT_DEAD_ZONE = 10;
 

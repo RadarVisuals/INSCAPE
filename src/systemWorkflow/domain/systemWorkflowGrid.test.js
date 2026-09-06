@@ -13,11 +13,25 @@ import {
 } from './systemWorkflowGrid.js';
 import {
   adjacentSystemWorkflowGridId,
+  adjacentSystemWorkflowGridIdInOrder,
   firstSystemWorkflowGridId,
   reconcileSystemWorkflowGridSelection,
 } from './systemWorkflowNavigation.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
+
+test('render navigation uses scene order, wraps in both directions and excludes the cover', () => {
+  const order = Object.freeze(['grid:home', 'grid:second', 'grid:third']);
+  for (let index = 0; index < order.length; index += 1) {
+    assert.equal(adjacentSystemWorkflowGridIdInOrder(order, order[index], 'next'), order[(index + 1) % order.length]);
+    assert.equal(adjacentSystemWorkflowGridIdInOrder(order, order[index], 'previous'), order[(index + order.length - 1) % order.length]);
+  }
+  assert.equal(adjacentSystemWorkflowGridIdInOrder(['grid:home'], 'grid:home', 'next'), null);
+  assert.equal(adjacentSystemWorkflowGridIdInOrder(order, 'grid:world-cover', 'previous'), null);
+  assert.throws(() => adjacentSystemWorkflowGridIdInOrder(order, 'grid:missing', 'next'), { code: 'SYSTEM_WORKFLOW_GRID_UNKNOWN' });
+  assert.throws(() => adjacentSystemWorkflowGridIdInOrder(order, 'grid:home', 'up'), { code: 'SYSTEM_WORKFLOW_NAVIGATION_DIRECTION_INVALID' });
+  assert.throws(() => adjacentSystemWorkflowGridId({ grids: order.map((id) => ({ id })) }, 'grid:home', 'next'));
+});
 const ASSET = '42:0x2222222222222222222222222222222222222222:0x01';
 const initial = () => createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
 const placement = () => ({

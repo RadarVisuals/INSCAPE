@@ -203,7 +203,9 @@ export async function pruneProductionAuthoringAssets(outputDirectory, {
     if (!isWithin(verifiedOutput, target)) throw new Error(`Refusing build-output prune path outside verified output directory: ${path}`);
     return target;
   });
-  await Promise.all(targets.map((target) => rm(target, { recursive: true, force: true })));
+  // Windows can briefly retain directory entries after their files are removed.
+  // Retry only within the verified build output; persistent failures still reject.
+  await Promise.all(targets.map((target) => rm(target, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })));
 }
 
 async function walk(directory, root = directory) {

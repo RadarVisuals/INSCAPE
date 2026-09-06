@@ -6,6 +6,15 @@ export const SYSTEM_WORKFLOW_DEFAULT_VIEW = Object.freeze({
 
 const positive = (value) => Number.isFinite(value) && value > 0;
 
+export function projectSystemWorkflowPlacement(placement, field) {
+  return Object.freeze({
+    left: field.left + (placement.column * field.cellSize),
+    top: field.top + (placement.row * field.cellSize),
+    width: placement.columnSpan * field.cellSize,
+    height: placement.rowSpan * field.cellSize,
+  });
+}
+
 export function projectSystemWorkflowViewport(geometry, viewport, view = SYSTEM_WORKFLOW_DEFAULT_VIEW) {
   if (!Number.isSafeInteger(geometry?.columns) || geometry.columns < 1
     || !Number.isSafeInteger(geometry?.rows) || geometry.rows < 1) {

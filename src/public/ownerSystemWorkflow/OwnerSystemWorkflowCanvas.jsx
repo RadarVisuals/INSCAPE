@@ -7,7 +7,7 @@ import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import { projectLatticeRasterBleedRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
 import { createSystemWorkflowDropGeometry } from '../../systemWorkflow/systemWorkflowPlacement.js';
 import { isSystemWorkflowWorldCoverGrid, systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
-import { adjacentSystemWorkflowGridId } from '../../systemWorkflow/domain/systemWorkflowNavigation.js';
+import { adjacentSystemWorkflowGridIdInOrder } from '../../systemWorkflow/domain/systemWorkflowNavigation.js';
 import {
   projectSystemWorkflowImageRenderRectangle,
   projectSystemWorkflowTransform,
@@ -81,8 +81,10 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   const snapStep = systemWorkflowSnapStep(appearance.guideSize);
   const viewScale = Number.isFinite(boardScale) && boardScale > 0 ? boardScale : 1;
   const viewerOpen = Boolean(viewerPlacementId);
+  const gridOrder = useMemo(() => controller.draft.grids
+    .filter((candidate) => !isSystemWorkflowWorldCoverGrid(candidate)).map(({ id }) => id), [controller.draft.grids]);
   const adjacentGrid = (direction) => controller.draft && grid
-    ? adjacentSystemWorkflowGridId(controller.draft, grid.id, direction)
+    ? adjacentSystemWorkflowGridIdInOrder(gridOrder, grid.id, direction)
     : null;
   const interaction = useOwnerSystemWorkflowPlacementInteraction({
     artboardMode, authoringDisabled: authoringLocked, canvasRef, canNavigateGrid: adjacentGrid, controller,
@@ -114,7 +116,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   // Continuous playback has no dwell at arrival. Warm the following scene
   // during the current slide, before it becomes the next visible neighbor.
   const playbackAheadId = playingGrids && nextGridId
-    ? adjacentSystemWorkflowGridId(controller.draft, nextGridId, 'next') : null;
+    ? adjacentSystemWorkflowGridIdInOrder(gridOrder, nextGridId, 'next') : null;
   const renderedGrids = [...new Set([grid?.id, sourceGridId, previousGridId, nextGridId, playbackAheadId, swipeGridId].filter(Boolean))]
     .map((id) => controller.draft.grids.find((candidate) => candidate.id === id)).filter(Boolean);
   const selectionNavigating = Boolean(gridSwipe);

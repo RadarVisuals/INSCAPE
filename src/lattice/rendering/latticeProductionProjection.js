@@ -1,6 +1,8 @@
 import { projectCroppedMediaRectangle } from './latticeCrop.js';
 import { projectArtworkMat } from './latticeMat.js';
 import { projectSystemWorkflowTransform } from '../../systemWorkflow/systemWorkflowTransform.js';
+import { projectSystemWorkflowPlacement as projectLatticeProductionPlacement } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
+export { projectLatticeProductionPlacement };
 import { projectLatticePixelRectangle, projectLatticeRasterBleedRectangle } from './latticePixelGeometry.js';
 
 function fitNativeMediaRectangle(rectangle, media) {
@@ -17,15 +19,6 @@ function fitNativeMediaRectangle(rectangle, media) {
     width,
     height,
   };
-}
-
-export function projectLatticeProductionPlacement(placement, field) {
-  return Object.freeze({
-    left: field.left + (placement.column * field.cellSize),
-    top: field.top + (placement.row * field.cellSize),
-    width: placement.columnSpan * field.cellSize,
-    height: placement.rowSpan * field.cellSize,
-  });
 }
 
 function projectArtwork(placement, field, mediaDimensions, projectPlacement) {
