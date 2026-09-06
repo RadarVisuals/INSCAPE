@@ -115,7 +115,7 @@ mist eventueel berekende imports en interne afhankelijkheden van packages.
    scheiden van compositiegedrag. Library-drop en focus op de bestaande module richten zonder documentbrede
    'eerste canvas'-aannames. Gereed wanneer het doel expliciet is en uitgestelde
    media nog steeds correct annuleren bij sluiten of wisselen.
-- [ ] **5. Restanten en styling opruimen.** Oude Metadata-paden en verouderde actieve commands opruimen zodra hun
+- [x] **5. Restanten en styling opruimen.** Oude Metadata-paden en verouderde actieve commands opruimen zodra hun
    vervangers afgedekt zijn; bijbehorende bronpatroontests herzien. Styling
    begrenzen langs de dan duidelijke eigenaars. Geen brede naamwijziging tegelijk.
 - [ ] **6. Eindcontrole en checkpoint.** De volledige workflows en de nieuwe
@@ -254,6 +254,41 @@ Algemene gesturelisteners en drop-afwijzingsfeedback zijn niet allemaal per modu
 geïsoleerd. De volle wraparoundchecks van stap 3 zijn hier niet opnieuw uitgevoerd;
 er zijn geen live wallet-, upload- of publicatiehandelingen getest. Stappen 5–6
 blijven open.
+
+### Stap 5: ongebruikte Metadata- en Library-paden verwijderen
+
+Checkpoint stap 4: `e4d281144594abe23f4a7be8d9cac7fba8cad5ae` (gepust).
+
+Referentieonderzoek in src, browser-tests en scripts vond geen actieve consumers
+van de oude Metadata-machine of de default Metadata-windowcomponent. De werkende
+Display gebruikt `displayInstrumentState` en `DisplayInstrumentWindow` met de
+gedeelde dossiercontent. De oude machine, availability-helper en windowwrapper
+zijn verwijderd; de gebruikte content en profielidentiteit blijven ongewijzigd.
+Vier tests die uitsluitend de verwijderde machine controleerden zijn verwijderd.
+De bestaande gedragschecks van de actieve instrumenten blijven behouden.
+
+De Library-store biedt geen oude canvas-/table-bewerkingscommands meer aan;
+hiervoor werden geen aanroepers gevonden. De domeinlezers, normalisatie en
+opslagcompatibiliteit voor bestaande workspacegegevens blijven bestaan. Dit is
+geen migratie en wist geen opgeslagen gegevens.
+
+Uit het gedeelde stylesheet zijn 24 regels verwijderd waarvan alle selectors
+uitsluitend verdwenen Metadata-projecties en controls betroffen (174 regels tekst).
+Gedeelde regels met nog actieve detached-window-selectors blijven intact, inclusief
+hun specificiteit: de oude alternatieve takken daarin zijn dus niet allemaal weg.
+Er is geen brede stylesheetopsplitsing of naamswijziging uitgevoerd. De actieve
+instrumentlayout blijft in `displayInstruments.css`. Totaal bron/tests: 494 regels
+verwijderd, één importregel aangepast; geen nieuwe bestanden.
+
+Verificatie: 764 unitchecks slagen (768 minus vier uitsluitend oude tests).
+Drie instrument-browserchecks slagen, inclusief selectie, attach/detach, focus,
+Library-plaatsing, vensterherstel en lange Metadata op compacte grenzen. Beelden
+op 1440 en 390 px zijn bekeken; de externe previewbeperking van de fixture blijft
+dezelfde als in stap 4. Build en buildcontrole slagen met 779773 initial-JS-bytes;
+bestaande dependency- en chunkwaarschuwingen blijven zichtbaar.
+Logbestanden: `.browser-test-runtime/step5-*`.
+De integrale workflow-eindcontrole van stap 6 blijft open; deze stap bewijst geen
+volledige modulaire host of volledige verwijdering van alle historische code.
 
 Bewaar bij volgende stappen steeds het bewijs en de commitverwijzing hier.
 De checklist is uitvoeringsregistratie; het actieve contract blijft de enige

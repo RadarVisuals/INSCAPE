@@ -15,25 +15,18 @@ import {
   moveCategorySection,
   renameCategorySection,
   renameFolder,
-  resetCanvasLayout,
   setFolderAsset,
   setFolderAssets,
   setFolderPublic,
   toggleFavorite
 } from '../domain/libraryWorkspace.js';
-import {
-  createCanvasObject, removeCanvasObject, reorderCanvasObject, replaceCanvasObjectAsset,
-  setAllCanvasObjectsLocked, setCanvasObjectGeometry, setCanvasObjectLocked, setCanvasObjectPresentation, setCanvasObjectVisitorVisibility
-} from '../domain/canvasObjects.js';
 import { browserLibraryStorage, createLibraryWorkspacePersistence } from '../storage/libraryWorkspacePersistence.js';
 import { loadLibraryAssetCache, saveLibraryAssetCache } from '../storage/libraryAssetCache.js';
-import { createTablePlacement, removeTablePlacement, reorderTablePlacement, updateTablePlacement } from '../domain/tablePlacements.js';
 
 const profileAddress = resolveWorkspaceProfile(useWalletStore.getState().hostProfileAddress);
 let workspaceStorage = browserLibraryStorage();
 let workspacePersistence = createLibraryWorkspacePersistence(workspaceStorage);
 const initialWorkspace = workspacePersistence.load(profileAddress);
-const tableAuthoringEnabled = import.meta.env?.DEV ?? true;
 let activeLoadController = null;
 const INDEXER_SOURCE_TIMEOUT_MS = 8000;
 const ENVIO_ENRICHMENT_TIMEOUT_MS = 12000;
@@ -302,23 +295,6 @@ export const useLibraryStore = create((set, get) => ({
   toggleFavorite(assetId) {
     const workspace = toggleFavorite(get().workspace, assetId); commitWorkspace(set, get, workspace);
   },
-  createCanvasObject(input) {
-    const previous = get().workspace;
-    const workspace = createCanvasObject(previous, input); if (!commitWorkspace(set, get, workspace)) return null;
-    return workspace === previous ? null : workspace.canvas.objects.find((object) => !previous.canvas.objects.some((prior) => prior.id === object.id))?.id || null;
-  },
-  setCanvasObjectGeometry(id, geometry) {
-    const workspace = setCanvasObjectGeometry(get().workspace, id, geometry); commitWorkspace(set, get, workspace);
-  },
-  setCanvasObjectPresentation(id, presentation) {
-    const workspace = setCanvasObjectPresentation(get().workspace, id, presentation); commitWorkspace(set, get, workspace);
-  },
-  replaceCanvasObjectAsset(id, stableAssetId) {
-    const workspace = replaceCanvasObjectAsset(get().workspace, id, stableAssetId); commitWorkspace(set, get, workspace);
-  },
-  setCanvasObjectVisitorVisibility(id, visitorVisible) {
-    const workspace = setCanvasObjectVisitorVisibility(get().workspace, id, visitorVisible); commitWorkspace(set, get, workspace);
-  },
   setFolderPublic(folderId, isPublic) {
     const workspace = setFolderPublic(get().workspace, folderId, isPublic); commitWorkspace(set, get, workspace);
   },
@@ -349,37 +325,6 @@ export const useLibraryStore = create((set, get) => ({
     if (beforeIds) return workspace?.folders.find(({ id }) => !beforeIds.has(id))?.id || null;
     if (beforeSectionIds) return workspace?.categoryOrganization.sections.find(({ id }) => !beforeSectionIds.has(id))?.id || null;
     return Boolean(workspace);
-  },
-  setCanvasObjectLocked(id, locked) {
-    const workspace = setCanvasObjectLocked(get().workspace, id, locked); commitWorkspace(set, get, workspace);
-  },
-  setAllCanvasObjectsLocked(locked) {
-    const workspace = setAllCanvasObjectsLocked(get().workspace, locked); commitWorkspace(set, get, workspace);
-  },
-  reorderCanvasObject(id, command) {
-    const workspace = reorderCanvasObject(get().workspace, id, command); commitWorkspace(set, get, workspace);
-  },
-  removeCanvasObject(id) {
-    const workspace = removeCanvasObject(get().workspace, id); commitWorkspace(set, get, workspace);
-  },
-  ...(tableAuthoringEnabled ? {
-    createTablePlacement(input) {
-      const previous = get().workspace;
-      const workspace = createTablePlacement(previous, input); if (!commitWorkspace(set, get, workspace)) return null;
-      return workspace === previous ? null : workspace.tables.placements.find((placement) => !previous.tables.placements.some((prior) => prior.id === placement.id))?.id || null;
-    },
-    updateTablePlacement(id, patch) {
-      const workspace = updateTablePlacement(get().workspace, id, patch); commitWorkspace(set, get, workspace);
-    },
-    reorderTablePlacement(id, command) {
-      const workspace = reorderTablePlacement(get().workspace, id, command); commitWorkspace(set, get, workspace);
-    },
-    removeTablePlacement(id) {
-      const workspace = removeTablePlacement(get().workspace, id); commitWorkspace(set, get, workspace);
-    }
-  } : {}),
-  resetCanvasLayout() {
-    const workspace = resetCanvasLayout(get().workspace); commitWorkspace(set, get, workspace);
   },
   replaceWorkspace(workspace, { persist = true } = {}) {
     if (workspace?.profileAddress !== get().profileAddress) return false;

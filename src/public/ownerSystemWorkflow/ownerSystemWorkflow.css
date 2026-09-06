@@ -238,44 +238,6 @@
   gap: 7px;
   padding: 0 8px;
 }
-.system-workflow__metadata-dock-controls > strong { min-width: 100px; margin-right: 8px; font: var(--workflow-type-label); letter-spacing: .04em; }
-.system-workflow__metadata-sidecar-shell {
-  position: absolute;
-  z-index: 36;
-  top: 0;
-  left: calc(100% + var(--workflow-board-frame-gap));
-  box-sizing: border-box;
-  width: calc(var(--workflow-metadata-width, 286px) - var(--workflow-board-frame-gap));
-  height: calc(100% + var(--workflow-board-frame-gap));
-  overflow: visible;
-  background: var(--workflow-board-frame-surface);
-  pointer-events: none;
-  will-change: clip-path, opacity;
-}
-.system-workflow__metadata-sidecar-rail {
-  position: absolute;
-  z-index: 37;
-  top: 0;
-  left: 0;
-  box-sizing: border-box;
-  width: 100%;
-  height: var(--workflow-identity-strip-height);
-  display: flex;
-  align-items: stretch;
-  color: var(--workflow-ink);
-  background: transparent;
-  cursor: move;
-  pointer-events: auto;
-  touch-action: none;
-}
-.system-workflow__metadata-sidecar-rail .system-workflow__metadata-dock-controls {
-  width: 100%;
-  min-width: 0;
-  padding-inline: 8px;
-  border-left: 0;
-  justify-content: flex-start;
-}
-.system-workflow__metadata-sidecar-rail .system-workflow__metadata-dock-controls > strong { min-width: 0; margin-right: auto; }
 .system-workflow__composition-lock svg { width: 11px; height: 11px; }
 .system-workflow__board-workspace-controls svg { width: 12px; height: 12px; }
 .system-workflow__presentation-board[data-authoring-locked] .system-workflow__composition-lock {
@@ -391,118 +353,6 @@
 .system-workflow__shortcut-icon-editor > footer button { min-width: 0; flex: 1 1 0; padding: 0 8px; border: 0; color: var(--workflow-muted); background: transparent; font: var(--workflow-type-panel-rail); letter-spacing: .055em; cursor: pointer; }
 .system-workflow__shortcut-icon-editor > footer .system-workflow__shortcut-icon-editor-close { flex: 0 0 42px; padding: 0; display: grid; place-items: center; }
 .system-workflow__shortcut-icon-editor-close svg { width: 15px; height: 15px; }
-
-.system-workflow__metadata-projection { position: absolute; z-index: 36; box-sizing: border-box; width: var(--workflow-metadata-width, 286px); overflow: auto; border-radius: var(--workflow-board-radius); color: var(--workflow-ink); background: var(--workflow-board-frame-surface); }
-.system-workflow__metadata-projection .system-workflow__metadata-module-content {
-  position: relative;
-  isolation: isolate;
-  border-color: rgb(255 255 255 / 15%);
-}
-.system-workflow__metadata-down-host {
-  --workflow-metadata-outward-radius: calc(var(--workflow-board-radius) * 1.5);
-  position: absolute;
-  z-index: 36;
-  top: var(--workflow-identity-strip-height);
-  right: 0;
-  bottom: 0;
-  width: var(--workflow-metadata-width, 286px);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  overflow: visible;
-  pointer-events: none;
-}
-.system-workflow__metadata-projection.is-down {
-  position: relative;
-  z-index: 1;
-  box-sizing: border-box;
-  width: 100%;
-  max-height: 60%;
-  flex: 0 1 auto;
-  padding: 0 0 var(--workflow-board-frame-gap) var(--workflow-board-frame-gap);
-  display: grid;
-  grid-template-rows: minmax(0, 1fr);
-  overflow: hidden;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  pointer-events: auto;
-}
-.system-workflow__metadata-down-host::before,
-.system-workflow__metadata-down-host::after {
-  flex: 0 0 var(--workflow-metadata-outward-radius);
-  width: var(--workflow-metadata-outward-radius);
-  height: var(--workflow-metadata-outward-radius);
-  background: var(--workflow-board-frame-surface);
-  -webkit-mask: radial-gradient(circle var(--workflow-metadata-outward-radius) at bottom left,
-    transparent calc(100% - 1px), #000 100%);
-  mask: radial-gradient(circle var(--workflow-metadata-outward-radius) at bottom left,
-    transparent calc(100% - 1px), #000 100%);
-  content: "";
-  pointer-events: none;
-}
-.system-workflow__metadata-down-host::before {
-  position: absolute;
-  top: 0;
-  left: calc(-1 * var(--workflow-metadata-outward-radius));
-}
-.system-workflow__metadata-down-host::after {
-  align-self: flex-end;
-}
-.system-workflow__metadata-down-scroll {
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  border-radius: var(--workflow-board-radius);
-  clip-path: inset(0 round var(--workflow-board-radius));
-  overscroll-behavior: contain;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.system-workflow__metadata-down-scroll::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
-}
-.system-workflow__metadata-projection.is-down .system-workflow__metadata-module-content {
-  min-height: auto;
-  padding: calc(14px + var(--workflow-board-frame-gap)) 12px 11px;
-  gap: 0;
-  border: 1px solid var(--workflow-border-strong);
-  border-radius: var(--workflow-board-radius);
-  background: var(--workflow-panel);
-}
-.system-workflow__metadata-projection.is-down .system-workflow__metadata-module-content > section,
-.system-workflow__metadata-projection.is-down .system-workflow__metadata-module-content .system-workflow__metadata-module-traits > li {
-  min-height: 0;
-}
-.system-workflow__metadata-projection.is-down .system-workflow__metadata-module-content > section { padding-bottom: 14px; }
-.system-workflow__metadata-projection.is-side {
-  top: var(--workflow-identity-strip-height);
-  bottom: var(--workflow-board-frame-gap);
-  left: 0;
-  width: 100%;
-  height: auto;
-  max-height: none;
-  padding: 0;
-  overflow: hidden;
-  overscroll-behavior: contain;
-  pointer-events: auto;
-  scrollbar-width: none;
-}
-.system-workflow__metadata-side-scroll {
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  border-radius: var(--workflow-board-radius);
-  clip-path: inset(0 round var(--workflow-board-radius));
-}
-.system-workflow__metadata-projection.is-side::-webkit-scrollbar,
-.system-workflow__metadata-side-scroll::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
-}
 @container presentation-board (max-width: 600px) {
   .system-workflow__metadata-dock-controls > strong,
   .lattice-focus-viewer__board-controls > strong,
@@ -1068,7 +918,6 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow[data-layout="narrow"] .system-workflow__identity-strip code { display: none; }
 .system-workflow[data-layout="narrow"] .system-workflow__board-title > small { display: none; }
 .system-workflow[data-layout="narrow"] .system-workflow__identity-primary { padding-inline: 6px; }
-.system-workflow[data-layout="narrow"] .system-workflow__metadata-dock-controls > strong { display: none; }
 .system-workflow[data-layout="narrow"] :is(.system-workflow__board-workspace-controls, .system-workflow__composition-lock-controls, .system-workflow__metadata-dock-controls, .system-workflow__metadata-direction-controls, .system-workflow__board-window-controls) { gap: 3px; padding-inline: 4px; }
 .system-workflow[data-layout="narrow"] .system-workflow__presentation-board[data-metadata-sidecar] .system-workflow__identity-primary { display: none; }
 .system-workflow[data-layout="narrow"] .system-workflow__presentation-board[data-metadata-sidecar] .system-workflow__board-title { margin-left: auto; }
@@ -1190,25 +1039,6 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 
 /* Metadata keeps one dossier treatment across the reusable detached shell and
    its sidecar projection; only the sidecar needs local surface geometry. */
-.system-workflow__metadata-projection.is-side .system-workflow__metadata-module-content {
-  box-sizing: border-box;
-  position: relative;
-  height: 100%;
-  min-height: 0;
-  padding: 16px;
-  gap: 0;
-  align-content: start;
-  grid-auto-rows: max-content;
-  isolation: isolate;
-  overflow-x: hidden;
-  overflow-y: auto;
-  border: 1px solid rgb(255 255 255 / 20%);
-  border-radius: 10px;
-  background: var(--workflow-panel);
-  overscroll-behavior: contain;
-  scrollbar-width: none;
-}
-.system-workflow__metadata-projection.is-side .system-workflow__metadata-module-content::-webkit-scrollbar { width: 0; height: 0; display: none; }
 :is(.system-workflow__detached-window, .system-workflow__metadata-projection.is-side) .system-workflow__metadata-module-content > section,
 :is(.system-workflow__detached-window, .system-workflow__metadata-projection.is-side) .system-workflow__metadata-module-content .system-workflow__metadata-module-traits > li {
   min-height: 0;
@@ -1242,10 +1072,6 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 :is(.system-workflow__detached-window, .system-workflow__metadata-projection.is-side) .system-workflow__metadata-module-traits > li > :is(small, strong) { font: 400 11px/1.4 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .065em; }
 :is(.system-workflow__detached-window, .system-workflow__metadata-projection.is-side) .system-workflow__metadata-module-traits > li > strong { text-align: right; text-transform: uppercase; }
 :is(.system-workflow__detached-window, .system-workflow__metadata-projection.is-side) .system-workflow__metadata-asset-link { padding: 2px 0 0; font: 500 10px/1.3 "Inscape IBM Plex Sans Condensed", "Arial Narrow", sans-serif; letter-spacing: .055em; }
-.system-workflow__metadata-projection.is-side .system-workflow__metadata-module-content {
-  margin: 0;
-  background: var(--workflow-panel);
-}
 
 /* Layers reuses the locked detached-window shell. Its selection tools remain
    one draggable group with the window, but occupy their own chrome bar. */
