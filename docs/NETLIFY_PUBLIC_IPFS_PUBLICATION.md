@@ -15,6 +15,40 @@ For local end-to-end testing of the function, run the site through Netlify Dev r
 
 ## Security and operations
 
+### Local transaction recovery
+
+Publish reserves a small `inscape:publication:v1:42:<profile>` localStorage
+record before requesting the wallet. It retains only the profile, chain,
+canonical content hash, IPFS URI, timestamp, transaction hash and submission
+state. It contains no draft, snapshot bytes, controller details or credentials.
+Unavailable or invalid storage blocks a new wallet request and preserves the
+existing record. A Web Lock additionally excludes concurrent publication in
+other tabs on browsers that support it; localStorage alone is not an atomic
+cross-tab lock.
+
+Reopening Publish after a reload checks the saved hash using a read-only
+mainnet client. A successful receipt must also match the profile and canonical
+hash of the current published document before recovery reports Published.
+Missing receipts, RPC errors and read-back mismatches stay unknown. Check Again
+only repeats reads. A confirmed failure or verified publication can be
+acknowledged; the next publication still requires a fresh snapshot/CID check
+and an explicit wallet action. Recovery does not overwrite the local draft.
+
+A repriced hash is saved when the receipt watcher observes it. A replacement
+that happened while the app was closed may remain unknown: recovery does not
+guess the new hash. If the app closes before the wallet returns a hash, or that
+hash cannot be saved, the pre-request reservation remains. Check wallet activity
+and use supervised support; do not delete the record or repeat the request
+without resolving the previous outcome. Clearing browser data removes this
+local recovery information. There is no remote recovery journal.
+
+Standards boundary rechecked against the official
+[Universal Profile setData documentation](https://docs.lukso.tech/contracts/contracts/UniversalProfile/)
+on 2026-09-06. Recovery does not change the custom ERC725Y key, LSP2 encoding,
+or controller-authority checks.
+
+### Service operation
+
 - Public IPFS is permanent public content. Only the already-filtered public snapshot is uploaded.
 - The endpoint is not a generic file uploader: noncanonical and invalid profile documents are rejected before Pinata is called.
 - Same-origin enforcement reduces browser abuse; Netlify applies a limit of 12 upload attempts per IP per hour. Monitor function usage and tighten the limit if the public alpha attracts abuse.

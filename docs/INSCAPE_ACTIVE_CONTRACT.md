@@ -2,6 +2,7 @@
 
 Status: sole active product-direction document
 Established: 2026-08-28
+Product clarification: 2026-09-06 — public Workbench and independent modules
 Rollback baseline before the documentation reset: `64458ac`
 
 ## Authority
@@ -11,25 +12,96 @@ handoffs, roadmaps, art-direction notes, archived prototypes, and deleted
 documentation are not product authority. Consult Git history only when the user
 explicitly requests recovery or historical evidence.
 
+Read `docs/INSCAPE_CREATIVE_INTENT.md` after this contract before substantial
+product, architecture, UI, composition, asset-model, metadata, or module work.
+It is required context for why the product exists and for avoiding the false
+interpretation of INSCAPE as an elaborate profile viewer or NFT-card gallery.
+It does not independently expand active implementation scope; this contract
+remains the sole authority for accepted direction.
+
 The existing application remains the working baseline until a replacement is
 implemented and accepted. Direction below is not permission to perform a broad
 rewrite, schema migration, publication, upload, deployment, or wallet action.
 
 ## Product hierarchy
 
-INSCAPE must separate the creation environment from the created result:
+INSCAPE is an artist's online desktop: one environment for composing,
+experiencing, and publishing artwork through independent creative modules.
+It begins with the founder's own artistic practice and also accommodates other
+makers. Human Underneath is the founder's artistic world, not a required theme
+or content model for everyone using INSCAPE.
 
-1. **INSCAPE Workbench** — the application shell and experimental workspace.
-2. **Display Module** — a bounded, movable object on the Workbench.
-3. **Stage** — the clipped canonical visual output inside the Display Module.
-4. **Grid** — a scene or composition rendered inside the Stage.
-5. **Assets and authored primitives** — content placed inside a Grid.
+The hierarchy is:
 
-The Workbench is not the published artwork. Editor navigation, Library,
-Activity, Preview, Publish, settings, and future creative modules stay outside
-the published Stage. Workbench background, alignment-grid visibility and
-colour, and shortcut snapping are local editor preferences. They must not enter
-the public profile document or IPFS publication snapshot.
+1. **INSCAPE Workbench** — the containing desktop and experimental workspace.
+2. **Module instance** — an independently configured creative application on
+   that desktop. Multiple instances of the same type are accepted direction.
+3. **Display Module** — a module type for composing assets across Grids.
+4. **Stage and Grids** — the Display Module's clipped visual output and scenes.
+5. **Assets and authored primitives** — material interpreted by a module.
+
+One Workbench per Universal Profile is the current product direction. Multiple
+Workbenches per profile remain unproven and are not a requirement.
+
+The public Workbench is part of the created experience. Visitors can enter its
+desktop and open the creator's published modules. The creator's Library
+organization, Layers and authoring tools, Activity, and publication controls
+are not part of that visitor experience. Module chrome is not Stage content.
+
+## Workbench host and module responsibilities
+
+- Keep the host independent of each module's creative behavior. It manages
+  module instances, shortcuts, window lifecycle and geometry, shared asset
+  access, persistence, publication, and owner/visitor state boundaries.
+- A module owns its content model, parameters, supported inputs, rendering,
+  behavior, and exposed visitor controls. The host must not need to understand
+  eyes, animation effects, audio analysis, or every module-specific setting.
+- The host coordinates saving and restoring settings; each module defines and
+  validates what those settings mean. This direction does not specify a new
+  serialization format or replace the current validation boundaries.
+- Right click → Add creates a module instance. Its shortcut opens the existing
+  instance. Closing a window is distinct from deleting its authored instance.
+- Multiple Display Modules can organize chapters such as Lunar Desert, a photo
+  series, or other presentations, each with its own content and Grids.
+- Modules must be able to cooperate through explicit inputs and outputs, for
+  example music influencing an animation. Universal interoperability between
+  every module is not required. Introduce concrete connections as workflows
+  require them rather than building a speculative general system first.
+- Initially modules are developed by the founder and the INSCAPE maintainers.
+  External contributions are a possible future direction, not a commitment to
+  an arbitrary-code plugin marketplace or a public developer SDK now.
+- Future module types need not share the Display Module's canvas model, aspect
+  ratio, or renderer. Runtime technology and isolation are implementation
+  decisions to evaluate against a concrete module, not product assumptions.
+
+## Public Workbench and visitor interaction
+
+- The maker chooses which modules and Grids enter the public snapshot. Private
+  modules and private Grids are omitted from that document, not merely hidden
+  by the interface. Draft work can remain private while other work is published.
+- Explicit Publish updates the public configuration as a snapshot. Later local
+  edits do not change the existing publication.
+- The maker authors the public starting arrangement: window positions and
+  sizes, shortcuts, and which modules start open. Arriving with all modules
+  closed is valid. These authored public choices must be distinguished from
+  private editor preferences and temporary window state.
+- Visitors may move, resize, open, and close available module windows and use
+  the interactive controls a module exposes. Those changes are session-local;
+  they do not alter the creator's draft or publication. Reload restores the
+  published starting configuration. Inspection can include source metadata
+  without exposing the author's Layers or Library workspace.
+- Direct entry to the Workbench and to a published module is accepted
+  direction. An identity module could provide a directly linked visiting card
+  from which the visitor explores the rest of the published Workbench.
+- Background, alignment-grid settings, and shortcut snapping remain local
+  editor preferences in the current implementation. Publishing a desktop does
+  not authorize serializing all workspace preferences. Which appearance
+  settings become explicit public choices remains to be specified.
+
+These are accepted product boundaries, not a claim that the current v9 document
+or renderer already supports the complete public desktop, multiple independent
+module instances, or module connections. Preserve the working application until
+each agreed change has an explicit, tested migration where needed.
 
 ## Display Module
 
@@ -45,17 +117,75 @@ internal compatibility names during this migration; do not broadly rename them.
 - Pan and zoom are camera/view state. They never resize assets, mutate the Grid,
   or alter published geometry.
 - Support a fitted overview and sufficiently strong zoom for precise editing.
+- Ordered Grid navigation wraps from last to first and first to last, in the
+  editor and public presentation. A single Grid does not swipe to itself; the
+  World Cover remains outside the editor's scene sequence.
+- The Display Module title bar offers local Play/Pause before Layers. Playback
+  slides continuously through the ordered Grids and wraps without a dwell.
+  Pause retains progress; Stage interaction returns to manual control. Playback
+  does not change the draft schema or publication. Reduced motion uses discrete
+  Grid changes instead of sliding.
 - Do not implement the Display Module as an HTML iframe. Use one application context with
   an isolated, clipped viewport and camera transform.
-- The Display Module bar owns the authoring instruments in the order
-  **Lock, Metadata**, followed by its window controls. Metadata is a singular
-  module that may be attached, detached, or closed, but must never be mounted
-  in two places at once.
-- Layers remains the existing global Workbench dock window. It is not attached
-  to the Display Module and has no Display Module sidecar lifecycle.
-- A detached Metadata module opens at the upper-right of the Workbench and
-  remains viewport-bounded. Attached Metadata retains its established inner
-  and right-side projections.
+- The Display Module owns the instruments required to author and inspect its
+  composition. Ownership is independent from presentation: an instrument may
+  be attached to the module, temporarily overlay its non-published viewport,
+  detach onto the Workbench, or close. Instrument chrome never becomes Stage
+  content and is never published.
+- Use a stable directional grammar for attached instruments: the left side is
+  for authoring and scene structure; the right side is for Metadata, provenance,
+  and narrative inspection. This describes orientation and control logic; it
+  must not force two full-width sidecars around the 16:9 Stage.
+- The Display Module must offer a compact projection that uses at most one
+  full-width attached utility bay. Layers and Metadata may switch as tabs or
+  share that bay as a vertically divided, resizable stack, while a compact
+  authoring rail may remain on the opposite edge. Either section may collapse
+  or temporarily take the full bay. This compact projection is an option, not
+  a mandate that every viewport or workflow use the same arrangement.
+- Do not require two permanently attached full-width sidecars. On sufficiently
+  wide Workbenches they may be available as a user-selected arrangement. When
+  width is constrained, keep both instruments available through the shared
+  bay, a bounded overlay, or a detached Workbench window.
+- Responsive layouts must preserve a useful Stage width. If an attached bay
+  would make the module exceed its Workbench bounds or reduce the Stage below
+  its usable threshold, that instrument changes to overlay or detached
+  presentation; the canonical Stage geometry does not reflow.
+- **Layers is a Display Module instrument**, scoped to that module's active
+  Grid. It is not a global document-agnostic Workbench dock. Layers may attach
+  in the shared utility bay, open from a compact authoring rail, overlay the
+  module viewport as a bounded floating panel, detach onto the Workbench, or
+  close, but a single Layers instance must never be mounted in two places at
+  once.
+- Layer rows and Stage placements share one selection model. The list exposes
+  the active Grid's render order from front to back; reordering rows changes
+  placement z-order. Placement lock, visibility, removal, and other accepted
+  row actions remain synchronized with the Stage and obey the composition
+  Lock.
+- The Layers eye toggle temporarily hides a placement in the editing Stage only.
+  Keep its row available to show it again. This is session-local Workbench state:
+  it resets on reload, never changes the draft schema or public/private visibility,
+  and does not hide the placement from Preview or publication.
+- Placement tools belong with Layers as one authoring instrument. Its compact
+  toolbar may sit above or below the layer list according to available space.
+  The Display Module title bar should expose the instrument and composition
+  controls needed to find or toggle that workspace, but must not become the
+  full editing toolbar.
+- **The existing Metadata inspector is singular per Display Module**. It may attach on the
+  module's right in the shared utility bay, overlay the module viewport as a
+  bounded reading panel, detach onto the Workbench, or close, but must never be
+  mounted in two places at once. Attached and overlay presentations must cap
+  their usable height and contain long metadata with internal scrolling rather
+  than enlarging or obscuring the application shell without bound.
+- A future standalone Metadata module's scope and relationship to this
+  inspector remain open. The current Add-menu name alone does not settle that
+  design or authorize removing the working inspector.
+- Detached Layers and Metadata remain viewport-bounded and must identify the
+  Display Module and active Grid or selection they currently inspect. Their
+  detached position is Workbench view state, not published composition state.
+- The title-bar identity strip retains the official Universal Profile name and
+  address as the trusted publishing anchor. It may compact to make room for
+  instrument toggles, but authoring controls must not replace or impersonate
+  that identity.
 - The composition Lock is local, profile-scoped Workbench state. While active,
   it prevents placement, movement, resize, crop, transform, reorder, removal,
   and other authored-geometry mutations without blocking selection or artwork
@@ -76,10 +206,21 @@ internal compatibility names during this migration; do not broadly rename them.
 
 ## Cover, entry, and Discover
 
+- Direct world links enter the targeted world automatically through Startveil,
+  without a separate Enter button. The bare INSCAPE URL retains the public
+  Explore/Connect entrance. Its featured world is explicitly selected as
+  `0xf3C189819Fd5b042f692983bFbFD57ab607ee709`, independent of directory ordering.
+- Startveil remains visible until the destination interface or its recovery
+  surface has mounted. A short reveal then hands over interaction and keyboard
+  focus. Optional artwork media loads progressively; boot or resident timers
+  must not stand in for destination readiness. Returning visits shorten the
+  reveal and reduced-motion entry skips it.
+
 - A **Cover Grid** is an existing public Grid selected as the source of the
   Discover snapshot.
 - An **Entry Grid** is an existing public Grid selected as the first interactive
-  scene a visitor enters.
+  scene in the current Display Module presentation. This does not require every
+  future public Workbench visit to open a Display Module automatically.
 - Cover and Entry default to the same Grid but may be selected independently.
 - Private Grids cannot be Cover or Entry. A public snapshot must never leak a
   private Grid.
@@ -92,8 +233,22 @@ internal compatibility names during this migration; do not broadly rename them.
   The snapshot is the poster/loading state; the interactive renderer replaces
   it in the same bounded presentation area when ready.
 
+The entry and card transition above retain the existing presentation baseline.
+Discover's eventual presentation of published Workbenches is not yet designed.
+Do not infer a final Discover layout from the current screen. Exact module-link
+URLs, optional Grid links, and their interaction with the maker's starting
+arrangement remain to be specified when implementing public Workbench entry.
+
 ## Editing, public inspection, and publication
 
+- The Library retains one entry per token while exposing its available image
+  representations and attached images through an image chooser. Resolution
+  variants of one image remain one choice. Choosing an image does not create a
+  new token identity or change Library category membership.
+- An image chosen for placement belongs to that placement. Preserve its resource
+  and dimensions through draft persistence, Preview, and public projection,
+  alongside the original token identity and provenance. Different placements
+  of the same token may use different images.
 - Owner editing and public inspection must not silently replace or rearrange
   the application dock.
 - The canonical Display Module should make a separate full-application Preview mode
@@ -125,6 +280,10 @@ into generic dashboard, marketplace, or AI-generated interface styling.
 
 ### Geometry and surfaces
 
+- The Display Module and its creative instruments retain the current restrained
+  rounded, textured window chrome, as confirmed by the founder. Concentrate that
+  tactile treatment around the instruments; Library, menus, and the application
+  dock retain their flatter structural surfaces and existing selector grammar.
 - Default interface geometry is square and structural: zero corner radius,
   one-pixel borders, contiguous faceplates, clipped overflow, and deliberate
   alignment. Circular geometry is reserved for avatars, identity marks, status
@@ -179,8 +338,13 @@ into generic dashboard, marketplace, or AI-generated interface styling.
 
 ## Scope discipline
 
-- Do not build the future animation, shader, audio, modulation, or free-module
-  Workbench merely because this architecture permits it.
+- The independent-module host and public Workbench are accepted direction.
+  They do not authorize implementing every proposed animation, audio,
+  headtracking, or identity module immediately.
+- Monetization, third-party module distribution, collaborative editing,
+  connection protocols, module-version upgrades, and responsive public-layout
+  rules remain open implementation or product decisions. Preserve room for
+  experiments without treating every possibility as a committed feature.
 - Implement migrations in narrow replace-and-verify slices.
 - Delete old presentation code only after its accepted replacement is live and
   regression-covered.

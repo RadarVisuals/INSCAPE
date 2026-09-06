@@ -3,6 +3,9 @@
 ## Sole product authority
 
 - Read `docs/INSCAPE_ACTIVE_CONTRACT.md` before substantial work.
+- Then read `docs/INSCAPE_CREATIVE_INTENT.md` before substantial product,
+  architecture, UI, composition, asset-model, metadata, or module work. It is
+  required product-meaning context, not independent implementation authority.
 - Do not use deleted documents, Git history, archived handoffs, phase plans,
   roadmaps, art-direction notes, or the protected untracked continuation handoff
   as current product direction unless the user explicitly asks for them.
