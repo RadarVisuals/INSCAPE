@@ -94,7 +94,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       const shortcut = shortcutTargetRef.current;
       if (shortcut?.node?.contains(document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY))
         && shortcut.placeAsset(asset)) return;
-      const dimensions = active.dimensions || await pendingDimensions;
+      const dimensions = await pendingDimensions;
       if (!mounted.current || currentPlacementContext.current !== placementContext) return;
       const preview = dimensions ? previewAt(pointerEvent, dimensions) : null;
       if (preview?.destination) await place(asset, preview.destination, dimensions, active.target);
@@ -107,12 +107,12 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     };
     Object.assign(active, { move, finish, cancel, escape }); dragRef.current = active;
     active.dimensionPromise = Promise.resolve().then(() => resolveDimensions(asset)).then((dimensions) => {
-      active.dimensions = dimensions || active.dimensions;
+      active.dimensions = dimensions;
       if (dragRef.current === active && active.moved && active.lastPointer && dimensions) {
         setDragPreview({ asset, ...previewAt(active.lastPointer, active.dimensions) });
       }
       return active.dimensions;
-    }).catch(() => active.dimensions);
+    }).catch(() => null);
     globalThis.addEventListener('pointermove', move, true); globalThis.addEventListener('pointerup', finish, true); globalThis.addEventListener('pointercancel', cancel, true);
     globalThis.addEventListener('keydown', escape, true);
   };

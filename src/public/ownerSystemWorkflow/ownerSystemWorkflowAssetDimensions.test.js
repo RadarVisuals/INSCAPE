@@ -145,3 +145,38 @@ test('long sessions keep a bounded cache and retain recently reused dimensions',
   assert.equal(cache.has('https://assets.example/0'), true);
   assert.equal(cache.has('https://assets.example/1'), false);
 });
+
+
+test('Library thumbnail dimensions never stand in for the placement source decode', async () => {
+  const source = 'https://assets.example/full.webp';
+  const requested = [];
+  class FullImage {
+    set src(value) { requested.push(value); this.naturalWidth = 2000; this.naturalHeight = 1500; }
+    decode() { return Promise.resolve(); }
+  }
+  for (const size of [180, 320, 640]) {
+    const asset = { src: source, previewSrc: 'https://assets.example/' + size + '.webp',
+      decodedImageSource: 'https://assets.example/' + size + '.webp', decodedImageWidth: size,
+      decodedImageHeight: size, width: 2000, height: 1500 };
+    assert.deepEqual(ownerSystemWorkflowAssetDimensions(asset), { width: 2000, height: 1500 });
+    assert.deepEqual(await decodeOwnerSystemWorkflowAssetDimensions(asset, { ImageConstructor: FullImage, cache: new Map() }),
+      { source, width: 2000, height: 1500 });
+  }
+  assert.deepEqual(requested, [source, source, source]);
+});
+
+test('a cached thumbnail cannot supply a missing source dimension or claim a source is decoded', async () => {
+  const source = 'https://assets.example/full.webp';
+  const asset = { src: source, previewSrc: 'https://assets.example/640.webp',
+    decodedImageSource: 'https://assets.example/640.webp', decodedImageWidth: 640, decodedImageHeight: 640 };
+  assert.equal(ownerSystemWorkflowAssetDimensions(asset), null);
+  let requested;
+  class FullImage {
+    set src(value) { requested = value; this.naturalWidth = 1000; this.naturalHeight = 2000; }
+    decode() { return Promise.resolve(); }
+  }
+  const selected = { ...asset, selectedMedia: { url: 'https://assets.example/selected.webp', width: 1000, height: 2000 } };
+  assert.equal((await decodeOwnerSystemWorkflowAssetDimensions(selected, { ImageConstructor: FullImage, cache: new Map() })).source,
+    selected.selectedMedia.url);
+  assert.equal(requested, selected.selectedMedia.url);
+});

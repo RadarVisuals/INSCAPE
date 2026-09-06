@@ -4,12 +4,13 @@ function positiveDimension(value) {
 
 export function ownerSystemWorkflowAssetSources(asset) {
   return [...new Set([
-    asset?.decodedImageSource,
-    asset?.previewSrc,
-    ...(Array.isArray(asset?.previewCandidates) ? asset.previewCandidates : []),
+    asset?.selectedMedia?.url,
     asset?.src,
     asset?.originalImageUrl,
     asset?.imageUrl,
+    asset?.decodedImageSource,
+    asset?.previewSrc,
+    ...(Array.isArray(asset?.previewCandidates) ? asset.previewCandidates : []),
     asset?.thumbnailUrl,
   ].filter((source) => typeof source === 'string' && source))];
 }
@@ -85,7 +86,8 @@ export function decodeOwnerSystemWorkflowAssetDimensions(asset, {
   timeoutMs = 8_000,
 } = {}) {
   const accepted = ownerSystemWorkflowAssetDimensions(asset);
-  if (accepted && asset?.decodedImageSource) return Promise.resolve(Object.freeze({
+  if (accepted && asset?.decodedImageSource === ownerSystemWorkflowAssetSource(asset)
+    && positiveDimension(asset.decodedImageWidth) && positiveDimension(asset.decodedImageHeight)) return Promise.resolve(Object.freeze({
     source: asset.decodedImageSource, ...accepted,
   }));
   const sources = ownerSystemWorkflowAssetSources(asset);

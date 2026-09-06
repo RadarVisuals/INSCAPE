@@ -333,6 +333,20 @@ directe kaartplaatsing. Controleer dezelfde asset via kaart en afbeeldingskiezer
 inclusief trage decode en annulering; behoud bestaande composities. Dit is een
 afgebakende workflowcorrectie, geen aanleiding voor een nieuwe architectuurlaag.
 
+Nacorrectie, 7 september 2026: de bronvolgorde geeft de expliciete imagekeuze en
+plaatsingsbron nu voorrang op de Library-preview. Een cached thumbnaildecode kan
+geen decode van die bron vervangen. Een pointer-drop wacht op de brondecodering;
+de voorlopige previewafmetingen worden niet meer als definitief resultaat gebruikt.
+Sluiten of een gewijzigde plaatsingscontext blijft een vertraagde drop annuleren.
+De bestaande bronfallbacks en cachebegrenzing blijven behouden. Geen draftmigratie
+of aanpassing van bestaande placements; de 640px Library-weergave blijft bestaan.
+Regressies vergelijken 180/320/640px previews met dezelfde 2000px bron en controleren
+een expliciete andere imagekeuze en een drop die nog op de bron wacht.
+Verificatie van deze nacorrectie: 770 unitchecks, twee browserchecks (annulering
+op 1440/700 px en imagekeuze/drag/herladen/Preview op 1440/1024 px), build en
+buildcontrole geslaagd. Initial-JS-budget: 780162 bytes. Bewijs:
+`.browser-test-runtime/source-dimensions-*.log`.
+
 **Pas noodzakelijk voor meerdere zelfstandige modules:** instance-identiteit in
 controller/draft en opslag (de shortcutkey is nu profielgebonden); scheiding van
 Workbench-oppervlak en Displayvenster; scope voor nog globale keyboard-/dropfeedback;
