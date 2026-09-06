@@ -118,7 +118,7 @@ mist eventueel berekende imports en interne afhankelijkheden van packages.
 - [x] **5. Restanten en styling opruimen.** Oude Metadata-paden en verouderde actieve commands opruimen zodra hun
    vervangers afgedekt zijn; bijbehorende bronpatroontests herzien. Styling
    begrenzen langs de dan duidelijke eigenaars. Geen brede naamwijziging tegelijk.
-- [ ] **6. Eindcontrole en checkpoint.** De volledige workflows en de nieuwe
+- [x] **6. Eindcontrole en checkpoint.** De volledige workflows en de nieuwe
    verantwoordelijkheden toetsen aan deze audit. Verwijderde koppelingen en
    resterende beperkingen benoemen; getest eindpunt committen en pushen.
 
@@ -289,6 +289,83 @@ bestaande dependency- en chunkwaarschuwingen blijven zichtbaar.
 Logbestanden: `.browser-test-runtime/step5-*`.
 De integrale workflow-eindcontrole van stap 6 blijft open; deze stap bewijst geen
 volledige modulaire host of volledige verwijdering van alle historische code.
+
+### Stap 6: eindbeoordeling van de vereenvoudigingsronde
+
+Onderzochte codecheckpoint: `7c70d9c` (inclusief de daarna door de maker bevestigde
+metadatafix `a930674` en de 640px Library-previewkeuze). Deze controle wijzigt geen
+productiecode en is geen nieuwe productrichting.
+
+**Conclusie: de bestaande kern behouden en gericht verder werken blijft de
+onderbouwde route. De afgesproken vereenvoudiging is geen bewijs dat de volledige
+toekomstige modulearchitectuur al bestaat.**
+
+Opnieuw gevolgde grenzen:
+
+- De Workbench-runtime maakt nog één controller, maar inspecteert geen geselecteerde
+  placements om Metadata/Layers te renderen. `DisplayModule` bezit crop, viewer,
+  selectie-afhankelijke instrumenten, playback en Grid-overgangen.
+- Library levert media aan een expliciete Canvas-/shortcutref. Zij importeert geen
+  Display-geometrie en zoekt geen eerste canvas via een documentquery.
+- Shortcutnaam, icoon en opslag wonen in `PresentationBoardShortcut`; de bestaande
+  venstergeometrie blijft in PresentationBoard. Instrumentfocus en portals krijgen
+  hun eigenaar expliciet mee.
+- Oude Metadata-state en de ongebruikte windowwrapper zijn weg. De gebruikte
+  dossiercontent, opslagcompatibiliteit en publicatiegrenzen blijven bestaan.
+- De scan van letterlijke lokale JS/JSX-imports omvat 215 productiebronbestanden,
+  vindt nul cyclische groepen en 27 bestanden in de afhankelijkheden van de 18
+  systemWorkflow-bestanden, zonder JSX. Berekende imports en packages vallen buiten
+  deze scan; deze aantallen zijn geen kwaliteitsscore.
+
+**Concrete resterende correctie voor het huidige gebruik:** thumbnaildecodering en
+native plaatsingsafmetingen zijn nog gekoppeld. `LazyLibraryArtwork` meldt de
+geladen previewmaat aan `useBrowserWorkspace`; dat zet `decodedImageWidth/Height`.
+`ownerSystemWorkflowAssetDimensions` geeft die voorrang en de directe kaartplaatsing
+gebruikt ze als native afmetingen. Een uitgevoerde proef met een 1800px bron en
+640px preview levert dus `nativeWidth: 640, nativeHeight: 640`. De oorspronkelijke
+bron-URL blijft beschikbaar en zonder expliciete imagekeuze wordt geen selectedMedia
+opgeslagen: dit bewijst geen verlaging van de gepubliceerde afbeeldingsresolutie.
+Het bewijst wel dat Library-previewkeuze de plaatsingsmaat kan beïnvloeden.
+De expliciete afbeeldingskiezer meet het gekozen bestand afzonderlijk.
+
+Aanbevolen volgende correctie: houd preview-readiness apart van bronafmetingen voor
+directe kaartplaatsing. Controleer dezelfde asset via kaart en afbeeldingskiezer,
+inclusief trage decode en annulering; behoud bestaande composities. Dit is een
+afgebakende workflowcorrectie, geen aanleiding voor een nieuwe architectuurlaag.
+
+**Pas noodzakelijk voor meerdere zelfstandige modules:** instance-identiteit in
+controller/draft en opslag (de shortcutkey is nu profielgebonden); scheiding van
+Workbench-oppervlak en Displayvenster; scope voor nog globale keyboard-/dropfeedback;
+expliciete documentversie/migratie voor publieke modules en hun startsituatie.
+Het v9-document blijft één compositie. Geen tweede Display of universele pluginbus
+toegevoegd om deze ronde administratief 'klaar' te maken.
+
+**Gericht laten staan:** gedeelde CSS met actieve consumers en oude alternatieve
+selectors, legacy opslaglezers, bestaande domeinhelpers en compatibiliteitsnamen.
+Library-lijstvirtualisatie en bredere schaal-/netwerkcapaciteit zijn niet opnieuw
+gemeten. Geen belofte over duizenden assets, bezoekersaantallen of lange sessies.
+
+Nieuw uitgevoerd: **23 geslaagde browserchecks** over instrumenten (3), Library-
+afbeeldingskeuze/drag/herladen/Preview (1), plaatsingsannulering (1), crop (2),
+volledig gevulde wraparound (1), continue playback (1), publicatievoorbereiding (1),
+gesimuleerd publicatieherstel (1) en publieke bezoekersweergave (12). Zware suites
+zijn na elkaar uitgevoerd. De wraptest vond geen lekken in 733 gesamplede frames
+op 2044 px en 916 op 390 px; beide eindbeelden zijn bekeken. Dit bewijst niet alle
+frames of alle media. Logs: `.browser-test-runtime/step6-*.log`; importscan:
+`.browser-test-runtime/step6-imports.json`.
+
+De ongewijzigde productiecode op `7c70d9c` heeft **768 geslaagde unitchecks** en een
+geslaagde build/buildcontrole uit de onmiddellijk voorafgaande thumbnailwijziging
+(`.browser-test-runtime/library640-*.log`, 780162 initial-JS-bytes). Deze zijn niet
+nogmaals gestart voor alleen deze documentregistratie. Bestaande dependency- en
+chunkwaarschuwingen blijven zichtbaar. Geen productiebron of test gewijzigd in
+stap 6. De ronde is afgesloten met bovenstaande concrete restpunten, niet met een
+claim dat alle technische schuld weg is.
+
+De proeven gebruiken afzonderlijke browserprofielen en fixtures; echte uploads,
+signatures, transacties, deploys, Safari/Firefox en fysieke telefoons vallen buiten
+deze eindcontrole. De tijdelijke bezoekers-testserver en browser zijn schoon
+afgesloten; de bestaande lokale ontwikkelapp blijft draaien.
 
 Bewaar bij volgende stappen steeds het bewijs en de commitverwijzing hier.
 De checklist is uitvoeringsregistratie; het actieve contract blijft de enige
