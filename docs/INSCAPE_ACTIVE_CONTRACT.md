@@ -206,6 +206,15 @@ internal compatibility names during this migration; do not broadly rename them.
 
 ## Cover, entry, and Discover
 
+- Account controls remain available from Profile on the owner's Workbench,
+  independently of any authored Identity Module. Explicit Disconnect from the
+  owner's Workbench or its Discover panel opens signed-out Discover. Disconnect
+  while visiting a public presentation preserves that visitor destination.
+- Discover is the shared navigation label for the publication directory.
+  An authored Identity Module may present custom biography and fields alongside
+  artwork; these are distinct from official Universal Profile metadata and
+  account controls. Its implementation and publication format remain to be scoped.
+
 - Direct world links enter the targeted world automatically through Startveil,
   without a separate Enter button. The bare INSCAPE URL retains the public
   Explore/Connect entrance. Its featured world is explicitly selected as

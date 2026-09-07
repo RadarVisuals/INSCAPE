@@ -14,6 +14,73 @@
 - Preserve user-owned and unrelated changes. Never add, edit, delete, or treat
   `docs/INSCAPE_ALPHA_CONTINUATION_HANDOFF.md` as authority.
 
+## Change discipline: inspect dependencies before extending
+
+- Before a feature or workflow change, trace the relevant existing path through
+  UI, state, data, persistence, and access boundaries. Inspect the code and tests
+  that the change will depend on; do not assume working screens prove sound
+  separation. Keep this investigation proportional to the change.
+- Before editing, briefly explain in plain language what the change depends on,
+  who currently owns those responsibilities, and any concrete prerequisite
+  cleanup. Distinguish accepted intent, observed behavior, and assumptions.
+  Investigate technical questions yourself; ask the user about unresolved
+  purpose or tradeoffs, not implementation details they cannot assess.
+- If an observed responsibility conflict would make the requested change
+  fragile or duplicate behavior, simplify that boundary first in a small,
+  reviewable step. Replace the existing path and remove superseded logic where
+  safe; do not merely add another flag, wrapper, or parallel implementation.
+- Do not turn this into a mandatory whole-app audit or require a perfect
+  foundation. Cleanup must address an evidenced dependency of the current work.
+  More files and abstractions are not evidence of better architecture. If the
+  existing boundary is adequate, proceed with the requested change.
+- Keep Workbench hosting, module-specific behavior, navigation, wallet
+  authority, and authored versus temporary state distinct as required by the
+  active contract. Connect them through explicit actions and inputs rather than
+  letting a change in one silently choose unrelated behavior in another.
+- Verify the affected behavior and its important transitions, including existing
+  workflows. Prefer behavioral regression evidence over assertions that merely
+  match source text. Use the required checks below and inspect UI results.
+- Report what the work revealed about the architecture, what was actually
+  simplified, and what remains coupled or unproven. A behavior fix is not proof
+  of an architectural cleanup. If new evidence changes the next step, explain
+  why before proceeding; do not silently expand scope.
+
+## Implementation guardrails
+
+Apply these where the changed workflow touches the relevant boundary; they do
+not require a separate audit or approval round for every edit.
+
+- Give each fact one authoritative owner. Derive secondary views instead of
+  maintaining synchronized copies. Document the purpose and invalidation of
+  caches; a cache must not silently become a second source of truth.
+- Treat saved drafts and published documents as compatibility boundaries.
+  Changes to schemas, defaults, identifiers, or storage keys must explain how
+  existing data is read or migrated and include representative old-data checks.
+  Never reset or overwrite a user's work merely to make new code load.
+- Bind asynchronous results and interactions to their originating profile,
+  module, and request where relevant. Ignore or cancel obsolete work after
+  navigation, account changes, closure, or disposal. Clean up listeners, timers,
+  animation loops, and owned media resources according to their lifecycle.
+- Distinguish loading, empty, unavailable, stale, and failed states. Do not turn
+  failed reads into successful empty results or report persistence success
+  before it is confirmed. Recovery actions must have a meaningful effect.
+- Prefer explicit module targets and scoped events or references over global
+  selectors and broadcasts. Introduce shared abstractions from concrete uses;
+  do not build a generic plugin framework for hypothetical modules.
+- Measure performance claims using representative content and workloads.
+  Match media resolution to its purpose, bound network work, and avoid loading
+  optional runtimes before needed. An empty canvas is not evidence that a
+  covered artwork scene renders correctly or performs well.
+- Reuse existing dependencies and shared UI before adding alternatives. Explain
+  the need and maintenance cost of a new dependency or parallel styling system.
+  Preserve keyboard access, focus recovery, and reduced-motion behavior when
+  changing interactions.
+- Keep changes reversible and reviewable. At a handoff, state what changed,
+  what checks actually ran, outstanding limits, and whether work is local,
+  committed, or pushed. Never imply that Git or a deployment contains changes
+  that have not been saved there. Keep temporary progress out of this file;
+  durable product decisions belong in the active contract.
+
 ## Retained operational references
 
 - `docs/NETLIFY_PUBLIC_IPFS_PUBLICATION.md` is only the deployment/publication
