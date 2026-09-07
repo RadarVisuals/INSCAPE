@@ -100,42 +100,13 @@ test('Profile, Activity, Discover, and Settings expose the promoted lifecycle an
     const compactIdentityText = (await profileCard.innerText()).replace(/\s+/gu, ' ').trim();
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'phase3-profile-compact-wide.png') });
     await profileCard.click();
-    const dossier = page.locator('#lattice-profile-dossier');
+    const dossier = page.locator('.identity-module aside');
     await dossier.waitFor();
-    assert.deepEqual(await dossier.locator('.lattice-production-identity-dossier__shared-avatar').evaluate((node) => {
-      const style = getComputedStyle(node); return [style.borderRadius, style.clipPath];
-    }), ['50%', 'circle(50% at 50% 50%)'], 'one shared profile avatar keeps the same hard-clipped circular silhouette');
-    assert.deepEqual(await dossier.locator('.lattice-production-identity-dossier__shared-avatar > svg:not(.inscape-profile-avatar-ring)').evaluate((node) => {
-      const style = getComputedStyle(node); return [style.width, style.height];
-    }), ['21px', '21px'], 'expanded fallback avatar preserves the source glyph scale');
-    assert.equal(await dossier.locator('.lattice-production-identity-dossier__shared-avatar > .inscape-profile-avatar-ring').count(), 1, 'animated Profile avatar keeps one non-scaling vector ring');
-    assert.equal(await dossier.locator('.lattice-production-identity-dossier__shared-avatar').count(), 1, 'compact and expanded Profile share one animated dossier avatar');
-    assert.equal((await dossier.locator('.lattice-production-identity-dossier__source-copy').innerText()).replace(/\s+/gu, ' ').trim(), compactIdentityText,
-      'the animated source summary reuses the exact compact owner identity copy');
-    if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'phase3-profile-expanded-wide.png') });
     assert.match(await dossier.innerText(), /visual research practice/i);
     assert.match(await dossier.innerText(), /FIELD NOTES/);
-    assert.equal(await dossier.getByRole('button', { name: /Profile/ }).getAttribute('aria-expanded'), 'true');
-    await dossier.getByRole('button', { name: /Links/ }).click();
-    assert.equal(await dossier.getByRole('button', { name: /Links/ }).getAttribute('aria-expanded'), 'true');
-    await page.waitForTimeout(190);
-    assert.equal(await dossier.locator('.lattice-production-identity-dossier__shared-avatar').evaluate((node) => getComputedStyle(node).opacity), '0', 'the Profile avatar clears the content track outside the Profile module');
-    assert.equal(await dossier.locator('#identity-dossier-links-panel').evaluate((node) => getComputedStyle(node).opacity), '1', 'dossier module content transitions into the active track');
-    await dossier.getByRole('button', { name: /Technical/ }).click();
-    assert.match(await dossier.innerText(), /UNIVERSAL PROFILE/);
-    assert.doesNotMatch(await dossier.innerText(), /CANONICAL ADDRESS/);
-    await page.getByRole('button', { name: 'Close profile' }).click();
-    await page.waitForFunction(() => document.querySelector('#lattice-profile-dossier')?.dataset.phase === 'compact');
-    assert.deepEqual(await dossier.locator('.lattice-production-identity-dossier').boundingBox(), compactProfileRectangle,
-      'the same persistent Profile surface lands on the exact compact border-box');
-    assert.equal(await dossier.locator('.lattice-production-identity-dossier__source-summary').evaluate((node) => node === document.activeElement), true,
-      'the persistent compact Profile surface receives returned focus without a source handoff');
-    assert.equal((await dossier.locator('.lattice-production-identity-dossier__source-summary').innerText()).replace(/\s+/gu, ' ').trim(), compactIdentityText,
-      'the compact identity copy remains present after the closing motion');
-    await page.keyboard.press('Escape');
-    await page.locator('.system-workflow__profile').waitFor({ state: 'detached' });
-    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Profile');
-    assert.equal(await profileTrigger.evaluate((node) => node === document.activeElement), true);
+    await page.getByRole('button', { name: 'Close Identity' }).click();
+    await dossier.waitFor({ state: 'detached' });
+    assert.equal(await profileTrigger.evaluate(node => node === document.activeElement), true);
 
     const activityTrigger = page.getByRole('button', { name: 'Activity', exact: true });
     assert.equal(await page.getByLabel('2 unread').count(), 1);
@@ -396,35 +367,12 @@ test('Focus viewer and v9 Preview preserve source, metadata, navigation, privacy
     const visitorCompactCard = await visitorIdentity.locator('..').boundingBox();
     const visitorCompactText = (await visitorIdentity.innerText()).replace(/\s+/gu, ' ').trim();
     await visitorIdentity.click();
-    const visitorDossier = page.locator('#lattice-profile-dossier');
+    const visitorDossier = page.locator('.identity-module aside');
     await visitorDossier.waitFor();
-    assert.equal(await visitorDossier.getAttribute('data-grid-visible'), 'false', 'Visitor Profile inherits the disabled Grid guide state');
-    assert.equal(await visitorDossier.locator('.lattice-production-identity-viewer__veil').evaluate((node) => getComputedStyle(node).backgroundImage), 'none',
-      'opening the Visitor Profile does not reintroduce a disabled Grid');
-    assert.equal(await visitorIdentity.count(), 0,
-      'Visitor removes the source card while the persistent dossier owns its pixels');
-    assert.deepEqual(await visitorDossier.locator('.lattice-production-identity-dossier__shared-avatar').evaluate((node) => {
-      const ring = node.querySelector(':scope > .inscape-profile-avatar-ring'); const circle = ring.querySelector('circle');
-      return [getComputedStyle(ring).color, circle.getAttribute('stroke-width'), circle.getAttribute('vector-effect')];
-    }), visitorCompactAvatar.slice(2, 5), 'Visitor compact and expanded avatars share the exact same non-scaling ring');
-    await page.getByRole('button', { name: 'Close profile' }).click();
-    await visitorDossier.evaluate((node) => new Promise((resolve) => {
-      if (node.dataset.phase === 'compact') { resolve(); return; }
-      new MutationObserver((records, observer) => {
-        if (node.dataset.phase !== 'compact') return;
-        observer.disconnect(); resolve();
-      }).observe(node, { attributes: true, attributeFilter: ['data-phase'] });
-    }));
-    assert.equal(await visitorDossier.count(), 1, 'Visitor uses one persistent dossier surface instead of an avatar-only handoff');
-    assert.deepEqual(await visitorDossier.locator('.lattice-production-identity-dossier').boundingBox(), visitorCompactCard,
-      'Visitor dossier returns to the exact full compact-card rectangle');
-    assert.equal((await visitorDossier.locator('.lattice-production-identity-dossier__source-summary').innerText()).replace(/\s+/gu, ' ').trim(), visitorCompactText,
-      'Visitor compact card retains avatar, name, and address after closing');
-    await visitorDossier.locator('.lattice-production-identity-dossier__source-summary').click();
-    await expectPhase(visitorDossier, 'open');
-    await visitorDossier.click({ position: { x: 5, y: 5 } });
+    assert.equal(await visitorDossier.getAttribute('aria-modal'), null);
+    await page.getByRole('button', { name: 'Close Identity' }).click();
     await visitorDossier.waitFor({ state: 'detached' });
-    assert.equal(await preview.getByRole('button', { name: 'Profile', exact: true }).getAttribute('aria-expanded'), 'false');
+    assert.equal(await preview.getByRole('button', { name: 'Profile', exact: true }).evaluate(node => node === document.activeElement), true);
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'phase3-preview-wide.png') });
     await preview.getByRole('button', { name: 'EXIT' }).click();
     await page.locator('.system-workflow').waitFor();
@@ -445,13 +393,11 @@ test('normal-motion Preview animates an expanded Profile home before grid dismis
     await preview.waitFor({ timeout: 10_000 });
     await preview.getByRole('button', { name: 'Profile', exact: true }).click();
     await preview.locator('.lattice-profile-rail__identity').click();
-    const dossier = page.locator('#lattice-profile-dossier');
-    await expectPhase(dossier, 'open');
-    await dossier.click({ position: { x: 5, y: 5 } });
-    await expectPhase(dossier, 'closing');
-    assert.equal(await dossier.count(), 1, 'Preview keeps expanded Profile mounted throughout its return animation');
+    const dossier = page.locator('.identity-module aside');
+    await dossier.waitFor();
+    await page.getByRole('button', { name: 'Close Identity' }).click();
     await dossier.waitFor({ state: 'detached' });
-    assert.equal(await preview.getByRole('button', { name: 'Profile', exact: true }).getAttribute('aria-expanded'), 'false');
+    assert.equal(await preview.getByRole('button', { name: 'Profile', exact: true }).evaluate(node => node === document.activeElement), true);
   } finally {
     await browser.close();
   }

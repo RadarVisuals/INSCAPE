@@ -33,5 +33,13 @@ test('published identity rack consumes only the validated public projection and 
   assert.equal(model.profile.description, 'Published public identity.');
   assert.equal(model.profile.descriptionProvenance, 'INSCAPE_PUBLISHED_BIO');
   assert.equal(model.technical.find(({ id }) => id === 'address').value, PROFILE);
-  assert.equal(model.links.find(({ id }) => id === 'inscape-profile').url, `https://inscape.example/?view=${PROFILE}`);
+  assert.equal(model.links.some(({ id }) => id === 'inscape-profile'), false);
+  assert.equal(model.officialProfile.url, `https://universaleverything.io/${PROFILE}`);
+  assert.equal(model.card.background.type, 'clouds');
+  const document = documentFor();
+  document.identityPresentation.card = { version: 1, background: { type: 'plain', color: null, speed: 1 }, fields: [
+    { id: 'field:role', label: 'Role', type: 'text', value: 'Artist' },
+  ] };
+  const customized = createPublishedIdentityRackViewModel({ document, identity: { address: PROFILE, status: 'IDLE' }, contractFacts: {} });
+  assert.deepEqual(customized.card, document.identityPresentation.card);
 });

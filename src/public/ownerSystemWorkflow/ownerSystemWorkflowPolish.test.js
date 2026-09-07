@@ -58,9 +58,7 @@ test('detached and sidecar Metadata share one dossier layout while detached rema
   assert.match(detachedWindow, /system-workflow__detached-window-titlebar/);
   assert.match(detachedWindow, /system-workflow__detached-window-surface/);
   assert.match(detachedWindow, /system-workflow__detached-window-resize/);
-  assert.match(styles, /\.system-workflow__detached-window \{[^}]*--detached-window-width: 320px;[^}]*--detached-window-radius: 10px;[^}]*--detached-window-gutter: 6px;[^}]*--detached-window-titlebar-height: 38px;[^}]*--detached-window-titlebar-padding: 12px;[^}]*--detached-window-content-padding: 16px;[^}]*--detached-window-shadow-inset: 6px;[^}]*--detached-window-shadow-height: 90px;[^}]*border: 1px solid var\(--workflow-border-strong\);[^}]*background: var\(--workflow-selection\);/s);
   assert.match(styles, /\.system-workflow__detached-window \{[^}]*border-color: rgb\(255 255 255 \/ 20%\);/s);
-  assert.match(styles, /\.system-workflow:not\(\[data-chrome-noise="off"\]\) \.system-workflow__detached-window::after \{[^}]*inset: 1px;[^}]*background-image: url\("\/assets\/noise-samples\/grain-mono\.png"\);[^}]*background-position: var\(--detached-window-noise-x, 0\) var\(--detached-window-noise-y, 0\);[^}]*background-size: var\(--workflow-window-chrome-noise-size\) var\(--workflow-window-chrome-noise-size\);[^}]*background-repeat: repeat;[^}]*mix-blend-mode: hard-light;[^}]*opacity: var\(--workflow-window-chrome-noise-opacity\);/s);
   assert.match(styles, /\.system-workflow__detached-window-resize \{[^}]*right: 0;[^}]*bottom: 0;[^}]*left: 0;[^}]*height: 9px;[^}]*cursor: ns-resize;[^}]*touch-action: none;/s);
   assert.match(styles, /\.system-workflow__detached-window-surface \{[^}]*width: calc\(100% - \(2 \* var\(--detached-window-gutter\)\)\);[^}]*margin: 0 0 var\(--detached-window-gutter\);[^}]*padding: var\(--detached-window-content-padding\);[^}]*overflow-y: auto;[^}]*border-radius: var\(--detached-window-radius\);[^}]*scrollbar-width: none;/s);
   assert.match(styles, /:is\(\.system-workflow__detached-window-surface, \.system-workflow__metadata-projection \.system-workflow__metadata-module-content\)::before \{[^}]*inset: var\(--detached-window-shadow-inset, 5px\);[^}]*border-radius: var\(--detached-window-radius, 7px\);[^}]*url\("\/assets\/patterns\/detached-window-shadow-dither\.png"\) top center \/ 100% var\(--detached-window-shadow-height, 90px\) no-repeat;[^}]*pointer-events: none;/s);
@@ -129,15 +127,9 @@ test('Owner and Visitor inspection never carry the workspace Grid', () => {
   const profile = read('./OwnerSystemWorkflowProfile.jsx');
   assert.match(runtime, /<DisplayModule/);
   assert.match(read('./DisplayModule.jsx'), /useOwnerSystemWorkflowFocusViewer/);
-  assert.match(profile, /gridVisible=\{false\}/);
-  assert.equal((visitor.match(/gridVisible=\{false\}/g) || []).length, 2);
+  assert.equal((visitor.match(/gridVisible=\{false\}/g) || []).length, 1);
   assert.doesNotMatch(visitor, /gridVisible=\{document\.appearance\.guideMode !== 'NONE'\}/);
-  assert.match(visitor, /dismissOnBackdrop/);
-  assert.match(visitor, /onDismiss=\{closeProfile\}/);
-  assert.match(visitor, /originRectangle=\{identitySession\.originRectangle\} inlineCloseControl persistent/);
-  assert.match(profile, /const dismissDossier = \(\) => \{[\s\S]*setSession\(null\)/);
-  assert.match(profile, /onDismiss=\{dismissDossier\}/);
-  assert.match(profile, /dismissOnBackdrop/);
+  assert.match(profile, /onOpenIdentity/);
 });
 
 test('dock panels dismiss before canvas handlers and Publish remains a non-modal dock surface', () => {
@@ -145,7 +137,7 @@ test('dock panels dismiss before canvas handlers and Publish remains a non-modal
   const panelLayer = read('./OwnerSystemWorkflowPanelLayer.jsx');
   const panels = read('./useOwnerSystemWorkflowPanels.js');
   assert.match(panels, /addEventListener\?\.\('pointerdown', onPointerDown, true\)/);
-  assert.match(runtime, /blocked: Boolean\(preview \|\| dossierOpen\)/);
+  assert.match(runtime, /blocked: Boolean\(preview\)/);
   assert.match(runtime, /closest\?\.\('\[data-system-workflow-artboard\]'\)/);
   assert.doesNotMatch(runtime, /inert=\{preview \|\| publicationOpen/);
   assert.match(runtime, /onOpen=\{openDockPanel\}/);

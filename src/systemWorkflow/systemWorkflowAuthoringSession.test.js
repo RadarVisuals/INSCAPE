@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { resolveIdentityCard } from '../profileIdentity/domain/identityCard.js';
 import { createEmptySystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
 import { systemWorkflowGridFingerprint } from './domain/systemWorkflowGrid.js';
 import { createSystemWorkflowAuthoringSession } from './systemWorkflowAuthoringSession.js';
@@ -42,6 +43,25 @@ const createStore = (storage, profileAddress = PROFILE_A) => createSystemWorkflo
   generateGridId: () => profileAddress === PROFILE_A ? 'home-a' : 'home-b',
   profileAddress,
   storage,
+});
+
+test('Identity artwork saves its chosen image without changing Grids, and rejects stale or failed writes', () => {
+  const storage = memoryStorage(); const store = createStore(storage);
+  const session = createSystemWorkflowAuthoringSession({ store });
+  const original = store.getDraft();
+  const avatar = { mode: 'inscape', stableAssetId: `42:${PROFILE_B}:0x01`, shape: 'square',
+    selectedMedia: { url: 'https://assets.example/purple.png', width: 2000, height: 2000 } };
+  assert.equal(session.setIdentityAvatar({ expectedAvatar: original.identityPresentation.avatar, avatar }), true);
+  assert.equal(storage.activity.writes, 1);
+  assert.deepEqual(createStore(storage).getDraft().identityPresentation.avatar, avatar);
+  assert.deepEqual(store.getDraft().grids, original.grids);
+  assert.equal(session.setIdentityAvatar({ expectedAvatar: avatar, avatar }), false);
+  assert.throws(() => session.setIdentityAvatar({ expectedAvatar: original.identityPresentation.avatar, avatar }), /changed/);
+  assert.throws(() => session.setIdentityAvatar({ expectedAvatar: avatar,
+    avatar: { ...avatar, selectedMedia: { ...avatar.selectedMedia, url: 'javascript:alert(1)' } } }));
+  storage.failures.write = true;
+  assert.throws(() => session.setIdentityAvatar({ expectedAvatar: avatar, avatar: original.identityPresentation.avatar }), /could not be saved/);
+  assert.deepEqual(store.getDraft().identityPresentation.avatar, avatar);
 });
 
 test('a second editor cannot overwrite an already saved external change', () => {
@@ -207,6 +227,61 @@ test('session commits exactly once per completed operation and persists no-op or
   assert.deepEqual(session.getState().draft.grids.map(({ id }) => id), [
     'grid:home-a', 'grid:second', 'grid:world-cover',
   ]);
+});
+
+test('Identity details persist separately, reject stale edits and preserve the draft on storage failure', () => {
+  const storage = memoryStorage();
+  const store = createStore(storage);
+  const session = createSystemWorkflowAuthoringSession({ store });
+  const initial = store.getDraft();
+  const { alias, bio, tags } = initial.identityPresentation;
+  const expectedDetails = { alias, bio, tags };
+  const details = { alias: 'Human Underneath', bio: { mode: 'inscape', customText: 'A story from my world.' }, tags: { ...tags, additional: ['Illustration'] } };
+  assert.equal(session.setIdentityDetails({ expectedDetails, details }), true);
+  assert.equal(storage.activity.writes, 1);
+  assert.deepEqual(store.getDraft().grids, initial.grids);
+  assert.deepEqual(store.getDraft().identityPresentation.avatar, initial.identityPresentation.avatar);
+  assert.equal(createStore(storage).getDraft().identityPresentation.alias, 'Human Underneath');
+  assert.throws(() => session.setIdentityDetails({ expectedDetails, details: { ...details, alias: 'Stale' } }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
+  assert.equal(session.setIdentityDetails({ expectedDetails: details, details }), false);
+  assert.equal(storage.activity.writes, 1);
+  assert.throws(() => session.setIdentityDetails({ expectedDetails: details, details: { ...details, alias: 'x'.repeat(81) } }));
+  const saved = store.getDraft();
+  storage.failures.write = true;
+  assert.throws(() => session.setIdentityDetails({ expectedDetails: details, details: { ...details, alias: 'Unsaved' } }), { code: 'SYSTEM_WORKFLOW_OPERATION_STALE' });
+  assert.deepEqual(store.getDraft(), saved);
+});
+
+test('Identity card saves are isolated, durable and reject stale or failed writes', () => {
+  const storage = memoryStorage(); const store = createStore(storage);
+  const session = createSystemWorkflowAuthoringSession({ store });
+  const before = store.getDraft(); const expectedCard = resolveIdentityCard(before.identityPresentation);
+  const card = { ...expectedCard, background: { type: 'clouds', color: '#123456', speed: 0 }, fields: [
+    { id: 'field:role', label: 'Role', type: 'list', value: ['Artist', 'Writer'] },
+  ] };
+  assert.equal(session.setIdentityCard({ expectedCard, card }), true);
+  assert.equal(storage.activity.writes, 1);
+  assert.deepEqual(createStore(storage).getDraft().identityPresentation.card, card);
+  assert.deepEqual(store.getDraft().grids, before.grids);
+  assert.deepEqual(store.getDraft().identityPresentation.avatar, before.identityPresentation.avatar);
+  assert.equal(session.setIdentityCard({ expectedCard: card, card }), false);
+  assert.throws(() => session.setIdentityCard({ expectedCard, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
+  assert.equal(storage.activity.writes, 1);
+  storage.failures.write = true;
+  assert.throws(() => session.setIdentityCard({ expectedCard: card, card: { ...card, fields: [] } }), { code: 'SYSTEM_WORKFLOW_OPERATION_STALE' });
+  assert.deepEqual(store.getDraft().identityPresentation.card, card);
+});
+
+test('explicitly saving the default Identity background makes it durable without rewriting old drafts on read', () => {
+  const storage = memoryStorage(); const store = createStore(storage);
+  const session = createSystemWorkflowAuthoringSession({ store });
+  const expectedCard = resolveIdentityCard(store.getDraft().identityPresentation);
+  assert.equal(Object.hasOwn(store.getDraft().identityPresentation, 'card'), false);
+  assert.equal(storage.activity.writes, 0);
+  assert.equal(session.setIdentityCard({ expectedCard, card: expectedCard }), true);
+  assert.deepEqual(store.getDraft().identityPresentation.card, expectedCard);
+  assert.equal(session.setIdentityCard({ expectedCard, card: expectedCard }), false);
+  assert.equal(storage.activity.writes, 1);
 });
 
 test('removed broad updatePlacement authority is not exposed by the session', () => {

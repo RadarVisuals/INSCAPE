@@ -179,12 +179,35 @@ test('Display Module instruments preserve selection, canonical writes, bounds, a
     await page.getByRole('separator', { name: 'Resize Layers height', exact: true }).focus();
     await page.keyboard.press('ArrowUp');
     assert.ok((await detached.boundingBox()).height < originalPosition.height);
+    // Shared chrome must resolve identically without sharing module geometry.
+    const chrome = await page.evaluate(() => {
+      const board = document.querySelector('.system-workflow__presentation-board');
+      const detached = document.querySelector('.system-workflow__instrument-window');
+      const sample = (node, pseudo) => {
+        const style = getComputedStyle(node, pseudo);
+        return { image: style.backgroundImage, size: style.backgroundSize,
+          blend: style.mixBlendMode, opacity: style.opacity, pointer: style.pointerEvents };
+      };
+      return { board: sample(board, '::after'), detached: sample(detached, '::after'),
+        radius: getComputedStyle(detached).borderRadius,
+        boardRadius: getComputedStyle(board, '::before').borderRadius,
+        shadow: getComputedStyle(detached).boxShadow, boardShadow: getComputedStyle(board).boxShadow };
+    });
+    assert.deepEqual(chrome.board, chrome.detached);
+    assert.match(chrome.board.image, /grain-mono\.png/);
+    assert.equal(chrome.board.size, '128px 128px');
+    assert.equal(chrome.board.pointer, 'none');
+    assert.equal(chrome.radius, '10px');
+    assert.equal(chrome.radius, chrome.boardRadius);
+    assert.equal(chrome.shadow, chrome.boardShadow);
+    if (process.env.INSCAPE_CAPTURE) await page.screenshot({ path: '.browser-test-runtime/chrome-detached-wide.png' });
     await page.setViewportSize({ width: 390, height: 560 });
     await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'narrow');
     await settle(page);
     const detachedBounds = await detached.boundingBox();
     assert.ok(detachedBounds.x >= 0 && detachedBounds.x + detachedBounds.width <= 390);
     assert.ok(detachedBounds.y >= 0 && detachedBounds.y + detachedBounds.height <= 518);
+    if (process.env.INSCAPE_CAPTURE) await page.screenshot({ path: '.browser-test-runtime/chrome-detached-narrow.png' });
     await page.getByRole('button', { name: 'Attach Layers', exact: true }).click();
     assert.equal(await page.getByRole('navigation', { name: 'Selection actions' }).count(), 1);
     assert.equal(await page.evaluate(() => window.__instrumentWrites), 2);

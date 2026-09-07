@@ -13,6 +13,7 @@ import {
 import { parsePublishedAssetUrl } from './publishedAssetUrl.js';
 import { createProfileDocumentV9AssetResolver } from './profileDocumentV9Asset.js';
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
+import { projectIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 
 function timestamp(value, label) {
   const milliseconds = value instanceof Date ? value.getTime()
@@ -116,7 +117,7 @@ export function buildProfileDocumentV9({
   const resolveAvatarAsset = createProfileDocumentV9AssetResolver(assetRecords, { compactContentReference: false });
   const identity = structuredClone(draft.identityPresentation);
   const avatarAsset = identity.avatar.mode === 'inscape' && identity.avatar.stableAssetId
-    ? resolveAvatarAsset(identity.avatar.stableAssetId)
+    ? resolveAvatarAsset(identity.avatar.stableAssetId, identity.avatar.selectedMedia)
     : null;
   const worldCover = projectSystemWorkflowWorldCover(draft, assetRecords);
   return assertValidProfileDocumentV9({
@@ -132,6 +133,7 @@ export function buildProfileDocumentV9({
     geometry: { ...draft.geometry },
     appearance: { ...draft.appearance },
     identityPresentation: {
+      ...(identity.card ? { card: projectIdentityCard(identity.card) } : {}),
       alias: identity.alias,
       avatar: { mode: identity.avatar.mode, asset: avatarAsset, shape: identity.avatar.shape },
       bio: {

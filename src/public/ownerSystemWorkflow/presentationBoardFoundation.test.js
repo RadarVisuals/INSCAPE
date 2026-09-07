@@ -74,11 +74,9 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(canvas, /onDoubleClick[\s\S]*onOpenViewer/);
   assert.doesNotMatch(`${board}\n${canvas}\n${styles}`, /system-workflow__camera-plane|workflow-camera|view\.camera/);
   assert.match(styles, /\.system-workflow__stage \{[^}]*aspect-ratio: 16 \/ 9;[^}]*overflow: clip;[^}]*transform-origin: top left;/s);
-  assert.match(styles, /\.system-workflow__presentation-board \{[^}]*--workflow-window-chrome-radius: 10px;[^}]*--workflow-window-chrome-gutter: 6px;[^}]*--workflow-window-chrome-shadow-inset: 6px;[^}]*--workflow-window-chrome-shadow-height: 90px;/s);
   assert.match(styles, /--workflow-window-chrome-noise-size: 128px;/);
   assert.match(styles, /\.system-workflow__presentation-board \{[^}]*--workflow-board-frame-gap: var\(--workflow-window-chrome-gutter\);[^}]*--workflow-board-radius: var\(--workflow-window-chrome-radius\);/s);
   assert.match(styles, /\.system-workflow__presentation-board \{[^}]*--workflow-board-frame-surface: var\(--workflow-selection\);/s);
-  assert.match(styles, /\.system-workflow:not\(\[data-chrome-noise="off"\]\) \.system-workflow__presentation-board::after,[^{]*\{[^}]*grain-mono\.png[^}]*mix-blend-mode: hard-light;[^}]*opacity: var\(--workflow-window-chrome-noise-opacity\);/s);
   assert.match(styles, /\.system-workflow__identity-strip \{[^}]*background: transparent;/s);
   assert.match(styles, /\.system-workflow__presentation-board::before \{[^}]*border: 1px solid var\(--workflow-border-strong\);[^}]*border-radius: var\(--workflow-board-radius\)/s);
   assert.match(styles, /\.system-workflow__presentation-board::before \{[^}]*border-color: rgb\(255 255 255 \/ 20%\);/s);

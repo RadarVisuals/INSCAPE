@@ -12,6 +12,12 @@
   --workflow-content-padding: 10px;
   --workflow-gap-small: 6px;
   --workflow-gap-medium: 10px;
+  /* Shared module chrome. Content layout and Stage geometry stay module-owned. */
+  --workflow-window-chrome-radius: 10px;
+  --workflow-window-chrome-gutter: 6px;
+  --workflow-window-chrome-shadow-inset: 6px;
+  --workflow-window-chrome-shadow-height: 90px;
+  --workflow-window-chrome-shadow: 4px 6px 14px rgb(17 19 19 / 14%);
   --workflow-window-chrome-noise-size: 128px;
   --workflow-window-chrome-noise-opacity: 30%;
   --workflow-border: var(--lattice-menu-line);
@@ -108,13 +114,6 @@
 }
 
 .system-workflow__presentation-board {
-  --workflow-window-chrome-radius: 10px;
-  --workflow-window-chrome-gutter: 6px;
-  --workflow-window-chrome-shadow-inset: 6px;
-  --workflow-window-chrome-shadow-height: 90px;
-}
-
-.system-workflow__presentation-board {
   --workflow-board-frame-gap: var(--workflow-window-chrome-gutter);
   --workflow-board-radius: var(--workflow-window-chrome-radius);
   --workflow-board-frame-surface: var(--workflow-selection);
@@ -125,7 +124,7 @@
   grid-template-rows: var(--workflow-identity-strip-height) minmax(0, 1fr) auto;
   overflow: visible;
   background: transparent;
-  box-shadow: 4px 6px 14px rgb(17 19 19 / 14%);
+  box-shadow: var(--workflow-window-chrome-shadow);
   container: presentation-board / inline-size;
   isolation: isolate;
 }
@@ -148,8 +147,21 @@
 .system-workflow__presentation-board::before {
   border-color: rgb(255 255 255 / 20%);
 }
-.system-workflow:not([data-chrome-noise="off"]) .system-workflow__presentation-board::after,
-.system-workflow:not([data-chrome-noise="off"]) .system-workflow__instrument-bay[data-projection="overlay"]::after {
+/* One texture treatment; each surface below owns its clipping and anchoring. */
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__presentation-board::after,
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__instrument-bay[data-projection="overlay"]::after,
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__detached-window::after,
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__selection-actions.is-detached::before {
+  background-image: url("/assets/noise-samples/grain-mono.png");
+  background-size: var(--workflow-window-chrome-noise-size) var(--workflow-window-chrome-noise-size);
+  background-repeat: repeat;
+  mix-blend-mode: hard-light;
+  opacity: var(--workflow-window-chrome-noise-opacity);
+  content: "";
+  pointer-events: none;
+}
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__presentation-board::after,
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__instrument-bay[data-projection="overlay"]::after {
   position: absolute;
   z-index: -1;
   top: 0;
@@ -157,27 +169,24 @@
   bottom: calc(-1 * var(--workflow-board-frame-gap));
   left: calc(-1 * var(--workflow-board-frame-gap));
   border-radius: calc(var(--workflow-board-radius) - 1px);
-  background: url("/assets/noise-samples/grain-mono.png") 0 0 / var(--workflow-window-chrome-noise-size) var(--workflow-window-chrome-noise-size) repeat fixed;
-  mix-blend-mode: hard-light;
-  opacity: var(--workflow-window-chrome-noise-opacity);
-  content: "";
-  pointer-events: none;
+  background-position: 0 0;
+  background-attachment: fixed;
   transition: right 240ms var(--workflow-ease);
 }
-.system-workflow:not([data-chrome-noise="off"]) .system-workflow__instrument-bay[data-projection="overlay"]::after {
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__instrument-bay[data-projection="overlay"]::after {
   inset: 0;
   border-radius: inherit;
 }
 .system-workflow__presentation-board[data-metadata-sidecar]::before {
   right: calc(-1 * (var(--workflow-metadata-width) + var(--workflow-board-frame-gap) + 1px));
 }
-.system-workflow:not([data-chrome-noise="off"]) .system-workflow__presentation-board[data-metadata-sidecar]::after {
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__presentation-board[data-metadata-sidecar]::after {
   right: calc(-1 * (var(--workflow-metadata-width) + var(--workflow-board-frame-gap)));
 }
 .system-workflow__presentation-board[data-metadata-sidecar-collapsing]::before {
   right: calc(-1 * (var(--workflow-board-frame-gap) + 1px));
 }
-.system-workflow:not([data-chrome-noise="off"]) .system-workflow__presentation-board[data-metadata-sidecar-collapsing]::after {
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__presentation-board[data-metadata-sidecar-collapsing]::after {
   right: calc(-1 * var(--workflow-board-frame-gap));
 }
 
@@ -306,10 +315,10 @@
 .lattice-focus-viewer__board-controls > button.is-previous:hover svg { transform: translateX(-1px); }
 .lattice-focus-viewer__board-controls > button.is-next:hover svg { transform: translateX(1px); }
 .lattice-focus-viewer__board-controls > button.is-close svg { width: 14px; height: 14px; stroke-width: 2.7; }
-.system-workflow .system-workflow__round-control { box-sizing: border-box; width: 20px; min-width: 20px; height: 20px; padding: 0; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--workflow-border-strong); border-radius: 50% !important; color: var(--workflow-muted); background: var(--workflow-selection); cursor: pointer; transition: color 120ms var(--workflow-ease), background-color 120ms var(--workflow-ease), border-color 120ms var(--workflow-ease); }
-.system-workflow .system-workflow__round-control:hover { border-color: var(--workflow-muted); color: var(--workflow-ink); background: color-mix(in srgb, var(--workflow-ink) 16%, var(--workflow-panel)); }
-.system-workflow .system-workflow__round-control:focus-visible { outline: 0; border-color: var(--workflow-ink); color: var(--workflow-ink); box-shadow: inset 0 0 0 1px var(--workflow-panel); }
-.system-workflow .system-workflow__round-control[aria-pressed="true"] { border-color: var(--workflow-muted); color: var(--workflow-ink); background: color-mix(in srgb, var(--workflow-ink) 14%, var(--workflow-panel)); }
+:is(.system-workflow, .system-workflow__token-scope) .system-workflow__round-control { box-sizing: border-box; width: 20px; min-width: 20px; height: 20px; padding: 0; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--workflow-border-strong); border-radius: 50% !important; color: var(--workflow-muted); background: var(--workflow-selection); cursor: pointer; transition: color 120ms var(--workflow-ease), background-color 120ms var(--workflow-ease), border-color 120ms var(--workflow-ease); }
+:is(.system-workflow, .system-workflow__token-scope) .system-workflow__round-control:hover { border-color: var(--workflow-muted); color: var(--workflow-ink); background: color-mix(in srgb, var(--workflow-ink) 16%, var(--workflow-panel)); }
+:is(.system-workflow, .system-workflow__token-scope) .system-workflow__round-control:focus-visible { outline: 0; border-color: var(--workflow-ink); color: var(--workflow-ink); box-shadow: inset 0 0 0 1px var(--workflow-panel); }
+:is(.system-workflow, .system-workflow__token-scope) .system-workflow__round-control[aria-pressed="true"] { border-color: var(--workflow-muted); color: var(--workflow-ink); background: color-mix(in srgb, var(--workflow-ink) 14%, var(--workflow-panel)); }
 .system-workflow__round-control:disabled { cursor: default; opacity: .35; }
 .system-workflow__round-control svg { width: 12px; height: 12px; stroke-width: 2; transition: transform 140ms var(--workflow-ease), stroke-width 140ms var(--workflow-ease); }
 .system-workflow__metadata-direction[aria-pressed="true"] { border-color: var(--workflow-ink); }
@@ -926,13 +935,13 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 
 .system-workflow__detached-window {
   --detached-window-width: 320px;
-  --detached-window-radius: 10px;
-  --detached-window-gutter: 6px;
-  --detached-window-titlebar-height: 38px;
+  --detached-window-radius: var(--workflow-window-chrome-radius);
+  --detached-window-gutter: var(--workflow-window-chrome-gutter);
+  --detached-window-titlebar-height: var(--workflow-rail-height);
   --detached-window-titlebar-padding: 12px;
   --detached-window-content-padding: 16px;
-  --detached-window-shadow-inset: 6px;
-  --detached-window-shadow-height: 90px;
+  --detached-window-shadow-inset: var(--workflow-window-chrome-shadow-inset);
+  --detached-window-shadow-height: var(--workflow-window-chrome-shadow-height);
   position: absolute;
   z-index: 26;
   box-sizing: border-box;
@@ -947,24 +956,17 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
   border-radius: var(--detached-window-radius);
   color: var(--workflow-ink);
   background: var(--workflow-selection);
-  box-shadow: 4px 6px 14px rgb(17 19 19 / 14%);
+  box-shadow: var(--workflow-window-chrome-shadow);
 }
 .system-workflow__detached-window {
   border-color: rgb(255 255 255 / 20%);
 }
-.system-workflow:not([data-chrome-noise="off"]) .system-workflow__detached-window::after {
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__detached-window::after {
   position: absolute;
   z-index: 0;
   inset: 1px;
   border-radius: calc(var(--detached-window-radius) - 1px);
-  background-image: url("/assets/noise-samples/grain-mono.png");
   background-position: var(--detached-window-noise-x, 0) var(--detached-window-noise-y, 0);
-  background-size: var(--workflow-window-chrome-noise-size) var(--workflow-window-chrome-noise-size);
-  background-repeat: repeat;
-  mix-blend-mode: hard-light;
-  opacity: var(--workflow-window-chrome-noise-opacity);
-  pointer-events: none;
-  content: "";
 }
 .system-workflow__detached-window > :is(.system-workflow__detached-window-titlebar, .system-workflow__detached-window-surface) { position: relative; z-index: 1; }
 .system-workflow__detached-window-surface {
@@ -1005,6 +1007,8 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%);
 }
 .system-workflow:is([data-menu-surface="ash"], [data-menu-surface="mist"], [data-menu-surface="paper"])
+  :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content),
+.visitor-grid-world:is([data-menu-surface="ash"], [data-menu-surface="mist"], [data-menu-surface="paper"])
   :is(.system-workflow__detached-window-surface, .system-workflow__metadata-projection .system-workflow__metadata-module-content) {
   --detached-window-shadow-height: 45px;
   --workflow-window-inner-shadow-opacity: 18%;
@@ -1102,16 +1106,13 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 }
 .system-workflow__selection-actions.is-detached > .system-workflow__selection-toolbar-grip:active { cursor: grabbing; }
 .system-workflow__selection-actions.is-detached:not([data-positioned]) { visibility: hidden; }
-.system-workflow:not([data-chrome-noise="off"]) .system-workflow__selection-actions.is-detached::before {
+:is(.system-workflow, .visitor-grid-world):not([data-chrome-noise="off"]) .system-workflow__selection-actions.is-detached::before {
   position: absolute;
   z-index: 0;
   inset: 1px;
-  border-radius: 9px;
-  background: url("/assets/noise-samples/grain-mono.png") 0 0 / var(--workflow-window-chrome-noise-size) var(--workflow-window-chrome-noise-size) repeat fixed;
-  mix-blend-mode: hard-light;
-  opacity: var(--workflow-window-chrome-noise-opacity);
-  content: "";
-  pointer-events: none;
+  border-radius: calc(var(--workflow-window-chrome-radius) - 1px);
+  background-position: 0 0;
+  background-attachment: fixed;
 }
 .system-workflow__selection-actions.is-detached > button {
   position: relative;

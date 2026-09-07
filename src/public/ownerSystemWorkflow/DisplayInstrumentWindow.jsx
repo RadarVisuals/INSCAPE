@@ -2,15 +2,18 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { PanelRightClose, X } from 'lucide-react';
 import OwnerSystemWorkflowDetachedWindow from './OwnerSystemWorkflowDetachedWindow.jsx';
 
-// Shared view-only movement and sizing for both Display Module instruments.
-export default function DisplayInstrumentWindow({ children, instrument, onAttach, onClose, title }) {
+// View-only window behavior. The caller supplies its content and commands.
+export function WorkbenchWindow({ children, label, controls, title, titleContent, width = 320, initialHeight = 420, preferredHeight, initialX = 18 }) {
   const node = useRef(null);
   const gesture = useRef(null);
   const resize = useRef(null);
   const [position, setPosition] = useState(() => ({
-    x: instrument === 'layers' ? 18 : Math.max(8, globalThis.innerWidth - 326), y: 72,
+    x: initialX, y: 72,
   }));
-  const [height, setHeight] = useState(420);
+  const [height, setHeight] = useState(initialHeight);
+  useLayoutEffect(() => {
+    if (Number.isFinite(preferredHeight)) setHeight(Math.max(180, Math.min(globalThis.innerHeight - position.y - 54, preferredHeight)));
+  }, [preferredHeight]);
   const clamp = (value) => ({
     x: Math.max(8, Math.min(globalThis.innerWidth - (node.current?.offsetWidth || 300) - 8, value.x)),
     y: Math.max(8, Math.min(globalThis.innerHeight - (node.current?.offsetHeight || height) - 54, value.y)),
@@ -26,9 +29,8 @@ export default function DisplayInstrumentWindow({ children, instrument, onAttach
     update();
     return () => { observer.disconnect(); globalThis.removeEventListener('resize', update); };
   }, []);
-  const label = instrument === 'layers' ? 'Layers' : 'Metadata';
   const start = (event) => {
-    if (event.button !== 0 || event.target.closest('button')) return;
+    if (event.button !== 0 || event.target.closest('button, a')) return;
     event.preventDefault();
     gesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY, position };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -52,10 +54,8 @@ export default function DisplayInstrumentWindow({ children, instrument, onAttach
     className="system-workflow__instrument-window" title={`${label} · ${title}`}
     headerPointerProps={{ 'aria-label': `Move ${label} window`, tabIndex: 0, onKeyDown,
       onPointerDown: start, onPointerMove: move, onPointerUp: finish, onPointerCancel: finish }}
-    controls={<><button aria-label={`Attach ${label}`} className="system-workflow__round-control" onClick={onAttach}
-      type="button"><PanelRightClose /></button><button aria-label={`Close ${label}`} className="system-workflow__round-control"
-      onClick={onClose} type="button"><X /></button></>}
-    style={{ left: position.x, top: position.y, height, maxHeight: 'calc(100dvh - 70px)' }}
+    controls={controls} titleContent={titleContent}
+    style={{ '--detached-window-width': `${width}px`, left: position.x, top: position.y, height, maxHeight: 'calc(100dvh - 70px)' }}
     resizeHandleProps={{ 'aria-label': `Resize ${label} height`, role: 'separator', tabIndex: 0,
       'aria-orientation': 'horizontal', 'aria-valuenow': Math.round(height),
       onPointerDown: (event) => {
@@ -76,4 +76,15 @@ export default function DisplayInstrumentWindow({ children, instrument, onAttach
     surfaceClassName="system-workflow__instrument-content">
     {children}
   </OwnerSystemWorkflowDetachedWindow>;
+}
+
+export default function DisplayInstrumentWindow({ children, instrument, onAttach, onClose, title }) {
+  const label = instrument === 'layers' ? 'Layers' : 'Metadata';
+  return <WorkbenchWindow label={label} title={title}
+    initialX={instrument === 'layers' ? 18 : Math.max(8, globalThis.innerWidth - 326)}
+    controls={<><button aria-label={`Attach ${label}`} className="system-workflow__round-control" onClick={onAttach}
+      type="button"><PanelRightClose /></button><button aria-label={`Close ${label}`} className="system-workflow__round-control"
+      onClick={onClose} type="button"><X /></button></>}>
+    {children}
+  </WorkbenchWindow>;
 }

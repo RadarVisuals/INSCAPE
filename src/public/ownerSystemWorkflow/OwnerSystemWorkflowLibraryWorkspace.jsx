@@ -14,7 +14,7 @@ const libraryPreferences = { assetSize: 150, hideLabels: false, sidebarWidth: 17
 const ownerLibraryPreviewRecords = new Map();
 
 export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, placementScope, data, menuSurface, onClose, phase,
-  resolveAssetDimensions, placementTargetRef, shortcutTargetRef, workspaceRef }) {
+  resolveAssetDimensions, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef }) {
   const workspace = useBrowserWorkspace(data, ownerLibraryPreviewRecords, libraryPreferences);
   const resolveDimensions = resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions;
   const [dragPreview, setDragPreview] = useState(null);
@@ -65,9 +65,17 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     if (libraryClosed || dragRef.current || event.button !== 0 || !asset.placeable || !workspaceState?.isAssetRenderable(id)) return;
     const origin = { x: event.clientX, y: event.clientY };
     const active = { target: placementTargetRef.current, asset, dimensions: ownerSystemWorkflowAssetDimensions(asset), lastPointer: null,
+      moduleTarget: moduleAssetTargetRef?.current,
       pointerId: event.pointerId, moved: false, source: event.currentTarget };
     const previewAt = (pointerEvent, dimensions = active.dimensions) => {
       const point = { x: pointerEvent.clientX, y: pointerEvent.clientY };
+      const hit = document.elementFromPoint(point.x, point.y);
+      const moduleTarget = active.moduleTarget;
+      if (moduleTarget && moduleAssetTargetRef?.current === moduleTarget && moduleTarget.node?.contains(hit)) {
+        const bounds = moduleTarget.node.getBoundingClientRect();
+        return { destination: null, kind: 'module', label: moduleTarget.label, rectangle: { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height } };
+      }
+      if (hit?.closest('[data-workbench-module]')) return { destination: null, rectangle: null };
       const shortcut = shortcutTargetRef.current?.node;
       if (shortcut?.contains(document.elementFromPoint(point.x, point.y))) {
         const bounds = shortcut.getBoundingClientRect();
@@ -91,6 +99,14 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       const pendingDimensions = active.dimensionPromise;
       cleanup();
       if (!moved) return;
+      if (!mounted.current || currentPlacementContext.current !== placementContext) return;
+      const hit = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY);
+      const moduleTarget = active.moduleTarget;
+      if (moduleTarget && moduleAssetTargetRef?.current === moduleTarget && moduleTarget.node?.contains(hit)) {
+        if (!moduleTarget.placeAsset(asset)) rejectDrop();
+        return;
+      }
+      if (hit?.closest('[data-workbench-module]')) { rejectDrop(); return; }
       const shortcut = shortcutTargetRef.current;
       if (shortcut?.node?.contains(document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY))
         && shortcut.placeAsset(asset)) return;
@@ -146,7 +162,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       onAssetPointerDown={beginAssetDrag} onImageActivate={(_event, asset) => place(asset)} workspace={workspace} />
     {dragPreview?.rectangle && createPortal(<div aria-hidden="true" className="system-workflow__placement-preview" style={dragPreview.rectangle}>
       {sourceFor(dragPreview.asset) && <img alt="" src={sourceFor(dragPreview.asset)} />}
-      <span>{dragPreview.kind === 'shortcut' ? 'Release to replace icon' : 'Release to add layer'}</span>
+      <span>{dragPreview.kind === 'module' ? dragPreview.label : dragPreview.kind === 'shortcut' ? 'Release to replace icon' : 'Release to add layer'}</span>
     </div>, workspaceRef.current || document.body)}
   </OwnerSystemWorkflowWorkspaceShell>;
 }

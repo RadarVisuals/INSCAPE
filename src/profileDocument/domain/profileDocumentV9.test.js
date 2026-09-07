@@ -15,7 +15,9 @@ import {
   validateProfileDocumentV9,
 } from './profileDocumentV9Validation.js';
 import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from './profileDocumentV9Reconciliation.js';
+import { createOwnerDraftFromPublishedProfile } from '../storage/ownerDraftReconciliation.js';
 import { SYSTEM_WORKFLOW_LIMITS } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { isValidIdentityCard, resolveIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
 const CONTRACT = '0x2222222222222222222222222222222222222222';
@@ -66,6 +68,74 @@ function document(overrides = {}) {
     revision: 4, systemWorkflowDraft: draft(), ...overrides,
   });
 }
+
+test('Identity chosen image survives the existing public avatar envelope and draft restoration', () => {
+  const input = draft();
+  const selectedMedia = { url: 'https://assets.example/purple.png', width: 2000, height: 2000 };
+  input.identityPresentation.avatar = { mode: 'inscape', stableAssetId: ASSET, shape: 'square', selectedMedia };
+  const published = document({ systemWorkflowDraft: input });
+  assert.equal(published.version, 9);
+  assert.deepEqual(Object.keys(published.identityPresentation.avatar), ['mode', 'asset', 'shape']);
+  assert.equal(published.identityPresentation.avatar.asset.media.url, selectedMedia.url);
+  assert.equal(published.identityPresentation.avatar.asset.media.width, 2000);
+  assert.equal(published.grids[0].placements[0].asset.media.url, asset().imageUrl);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(published).identityPresentation.avatar,
+    input.identityPresentation.avatar);
+  assert.deepEqual(createOwnerDraftFromPublishedProfile(published).identityPresentation.avatar,
+    input.identityPresentation.avatar);
+  assert.equal(document().identityPresentation.avatar.mode, 'official');
+});
+
+test('Identity settings round-trip, empty fields stay private, and legacy cards retain their defaults', () => {
+  const input = draft();
+  const legacy = document();
+  assert.equal(Object.hasOwn(legacy.identityPresentation, 'card'), false);
+  assert.equal(resolveIdentityCard(legacy.identityPresentation).background.type, 'plain');
+  assert.equal(resolveIdentityCard({ avatar: { mode: 'inscape' } }).background.type, 'clouds');
+  input.identityPresentation.card = { version: 1, background: { type: 'clouds', color: '#7020cc', speed: 0.4 }, fields: [
+    { id: 'field:location', label: ' Location ', type: 'text', value: 'The Underneath\nLunar Desert' },
+    { id: 'field:roles', label: 'Open to', type: 'list', value: [' Collaboration ', '', 'Commissions'] },
+    { id: 'field:unfinished', label: '', type: 'text', value: 'UNPUBLISHED EMPTY FIELD' },
+    { id: 'field:empty', label: 'Empty', type: 'text', value: '   ' },
+  ] };
+  const published = document({ systemWorkflowDraft: input });
+  assert.equal(published.version, 9);
+  assert.deepEqual(published.identityPresentation.card.background, input.identityPresentation.card.background);
+  assert.deepEqual(published.identityPresentation.card.fields.map(field => field.id), ['field:location', 'field:roles']);
+  assert.deepEqual(published.identityPresentation.card.fields[1].value, ['Collaboration', 'Commissions']);
+  assert.equal(canonicalSerializeProfileDocumentV9(published).includes('UNPUBLISHED EMPTY FIELD'), false);
+  assert.equal(input.identityPresentation.card.fields.length, 4, 'publication does not mutate the draft');
+  const parsed = parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(published));
+  assert.deepEqual(parsed.identityPresentation.card, published.identityPresentation.card);
+  for (const restore of [reconcileSystemWorkflowDraftFromProfileDocumentV9, createOwnerDraftFromPublishedProfile]) {
+    assert.deepEqual(restore(published).identityPresentation.card, published.identityPresentation.card);
+  }
+  const changed = structuredClone(published); changed.identityPresentation.card.background.speed = 0.8;
+  assert.notEqual(profileDocumentV9ContentFingerprint(changed), profileDocumentV9ContentFingerprint(published));
+  assert.notEqual(profileDocumentV9CanonicalHash(changed), profileDocumentV9CanonicalHash(published));
+});
+
+test('Identity card boundaries reject executable settings, invalid values and unbounded fields', () => {
+  const card = resolveIdentityCard();
+  const validField = { id: 'field:one', label: 'Role', type: 'text', value: 'Artist' };
+  for (const invalid of [null, {}, { ...card, version: 2 }, { ...card, shader: 'code' },
+    { ...card, background: { ...card.background, type: 'custom-code' } },
+    { ...card, background: { ...card.background, color: 'url(https://example.org)' } },
+    { ...card, background: { ...card.background, speed: 3 } },
+    { ...card, background: { ...card.background, speed: NaN } },
+    { ...card, fields: [validField, validField] },
+    { ...card, fields: [{ ...validField, value: '\u0000' }] },
+    { ...card, fields: [{ ...validField, value: 'x'.repeat(2001) }] },
+    { ...card, fields: [{ ...validField, type: 'list', value: Array(17).fill('x') }] },
+    { ...card, fields: Array.from({ length: 17 }, (_, index) => ({ ...validField, id: `field:${index}` })) },
+  ]) {
+    assert.equal(isValidIdentityCard(invalid), false);
+    const candidate = document(); candidate.identityPresentation.card = invalid;
+    assert.equal(validateProfileDocumentV9(candidate).valid, false);
+    const input = draft(); input.identityPresentation.card = invalid;
+    assert.throws(() => document({ systemWorkflowDraft: input }));
+  }
+});
 
 test('v9 builder emits only the clean INSCAPE envelope and ordered public Grids', () => {
   const value = document();

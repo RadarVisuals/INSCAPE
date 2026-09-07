@@ -2,6 +2,7 @@ import { normalizeProfileAddress } from '../../library/config.js';
 import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
 import { PROFILE_DOCUMENT_LIMITS } from '../../profileDocument/domain/constants.js';
 import { isValidPlacementMedia } from './placementMedia.js';
+import { isValidIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 
 export const SYSTEM_WORKFLOW_DRAFT_VERSION = 4;
 export const SYSTEM_WORKFLOW_ARTBOARD = Object.freeze({ aspectWidth: 16, aspectHeight: 9 });
@@ -168,9 +169,11 @@ export function createEmptySystemWorkflowDraft(profileAddress, options = {}) {
 }
 
 function validateIdentity(value, fail) {
-  if (!exactKeys(value, IDENTITY_KEYS)) return fail('identityPresentation', 'invalid_identity_structure', 'Invalid identity');
+  if (!exactKeys(value, Object.hasOwn(value || {}, 'card') ? [...IDENTITY_KEYS, 'card'] : IDENTITY_KEYS)) return fail('identityPresentation', 'invalid_identity_structure', 'Invalid identity');
+  if (Object.hasOwn(value, 'card') && !isValidIdentityCard(value.card)) fail('identityPresentation.card', 'invalid_identity_card', 'Invalid Identity card settings');
   if (!safeText(value.alias, 80)) fail('identityPresentation.alias', 'invalid_alias', 'Invalid alias');
-  if (!exactKeys(value.avatar, ['mode', 'stableAssetId', 'shape'])
+  if (!exactKeys(value.avatar, Object.hasOwn(value.avatar || {}, 'selectedMedia') ? ['mode', 'stableAssetId', 'shape', 'selectedMedia'] : ['mode', 'stableAssetId', 'shape'])
+    || (Object.hasOwn(value.avatar || {}, 'selectedMedia') && (!isValidPlacementMedia(value.avatar.selectedMedia) || value.avatar.mode !== 'inscape' || !value.avatar.stableAssetId))
     || !['official', 'inscape'].includes(value.avatar?.mode)
     || !['round', 'square'].includes(value.avatar?.shape)
     || !(value.avatar?.stableAssetId === null || parseCanonicalAssetId(value.avatar?.stableAssetId))) {

@@ -1,16 +1,15 @@
-import { cloneElement, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { cloneElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Info, Layers3, Lock, LockKeyhole, Maximize2, Minimize2, Minus, Play, Pause,
-  UserRound,
 } from 'lucide-react';
 import PresentationBoardShortcut from './PresentationBoardShortcut.jsx';
+import { loadPresentationBoardShortcut } from './presentationBoardShortcutStorage.js';
 import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import { displayInstrumentLayout } from './displayInstrumentState.js';
 import { PRESENTATION_BOARD_INSTANCE_STATE } from './ownerSystemWorkflowModuleState.js';
 import { presentationBoardInspectionFrame, presentationBoardResponsiveMetrics, projectPresentationBoardView,
   resizePresentationBoardFromCorner, resizePresentationBoardView } from './presentationBoardGeometry.js';
 
-const compactAddress = (address) => address?.length > 18 ? `${address.slice(0, 10)}…${address.slice(-6)}` : address;
 const corners = ['nw', 'ne', 'sw', 'se'];
 const WORKBENCH_CELL = 24;
 const sameFrame = (left, right) => left && right
@@ -39,7 +38,7 @@ function BoardWorkspaceControls({ instrumentTriggers, layersOpen, metadataOpen, 
   </span>;
 }
 export default function PresentationBoardDefinitive({ assetsById = new Map(), children, documentGeometry,
-  authoringLocked = false, displaySurface, identity, inspectionAtmosphere = false,
+  authoringLocked = false, displaySurface, inspectionAtmosphere = false,
   layersOpen = false, metadataOpen = false, instrumentBayOpen = false, layoutMode = 'wide', onAuthoringLockToggle, onContextMenu,
   onInspectionCancel,
   onMinimize, onRestore, onToggleLayers, onToggleMetadata,
@@ -49,6 +48,10 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   shortcutTargetRef, instrumentTriggers, shortcutSnap = true, workbenchGridColor = null, workbenchGridMode = 'LINES' }) {
   const localShortcutRef = useRef(null);
   const shortcutRef = shortcutTargetRef || localShortcutRef;
+  const storedName = useMemo(() => loadPresentationBoardShortcut(profileAddress)?.name, [profileAddress]);
+  const [moduleName, setModuleName] = useState(null);
+  const displayName = moduleName?.profile === profileAddress ? moduleName.name
+    : storedName && storedName !== 'PRESENTATION BOARD' ? storedName : 'DISPLAY MODULE';
   const [host, setHost] = useState(null);
   const [view, setView] = useState(null);
   const [boardPosition, setBoardPosition] = useState(null);
@@ -234,14 +237,12 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     shortcutRef.current?.show();
     onMinimize?.();
   };
-  const officialName = identity?.status === 'RESOLVED' && identity.name ? identity.name : 'IDENTITY RESOLVING';
-  const avatarUrl = identity?.status === 'RESOLVED' ? identity.avatarUrl : null;
-  const address = identity?.normalizedAddress || identity?.address || profileAddress;
   const workbenchField = host ? { cellSize: WORKBENCH_CELL, left: 0, top: 0 } : null;
   return <div className="system-workflow__workbench" data-presentation-workbench onContextMenu={onContextMenu} ref={setHost}>
     {host && <LatticePixelGrid color={workbenchGridColor || 'var(--study-grid)'} field={workbenchField} guideInterval={1}
       guideSize={1} height={host.clientHeight} mode={workbenchGridMode} width={host.clientWidth} />}
     <PresentationBoardShortcut assetsById={assetsById} host={host} instanceState={instanceState}
+      name={displayName} onNameChange={(name) => setModuleName({ profile: profileAddress, name })}
       menuSurface={menuSurface} onRestore={onRestore} profileAddress={profileAddress}
       shortcutSnap={shortcutSnap} shortcutTargetRef={shortcutRef} />
     {view && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW
@@ -258,8 +259,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       <header className="system-workflow__identity-strip" onPointerCancel={stopBoardDrag} onPointerDown={beginBoardDrag}
         onPointerMove={moveBoardDrag} onPointerUp={stopBoardDrag}>
         <span className="system-workflow__identity-primary">
-          <i aria-hidden="true" className="system-workflow__identity-mark">{avatarUrl ? <img alt="" src={avatarUrl} /> : <UserRound />}</i>
-          <strong>{officialName}</strong><code>{compactAddress(address)}</code>
+          <strong title={displayName}>{displayName}</strong>
         </span>
         <span className="system-workflow__board-title">
           {inspectionActive && <span className="system-workflow__board-inspection-controls-host" ref={setInspectionControlsHost} />}

@@ -10,12 +10,13 @@ const OwnerSystemWorkflowDetachedWindow = forwardRef(function OwnerSystemWorkflo
   style,
   surfaceClassName = '',
   title,
+  titleContent,
 }, ref) {
   const rootClassName = `system-workflow__detached-window${className ? ` ${className}` : ''}`;
   const contentClassName = `system-workflow__detached-window-surface${surfaceClassName ? ` ${surfaceClassName}` : ''}`;
   return <aside aria-label={ariaLabel} className={rootClassName} data-detached-window data-floating ref={ref} style={style}>
     <header className="system-workflow__detached-window-titlebar" {...headerPointerProps}>
-      <strong title={title}>{title}</strong>
+      {titleContent ?? <strong title={title}>{title}</strong>}
       <span className="system-workflow__detached-window-controls">{controls}</span>
     </header>
     <div className={contentClassName}>{children}</div>

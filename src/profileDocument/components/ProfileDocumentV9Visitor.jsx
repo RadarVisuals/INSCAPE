@@ -5,7 +5,6 @@ import LatticeFocusViewer from '../../lattice/rendering/LatticeFocusViewer.jsx';
 import LatticeProfileRail from '../../lattice/rendering/LatticeProfileRail.jsx';
 import LatticeProductionFocusArtwork from '../../lattice/rendering/LatticeProductionFocusArtwork.jsx';
 import { latticeSurfaceColor } from '../../lattice/rendering/latticeGeometry.js';
-import { preloadIdentityProfileImage } from '../../public/identity/preloadIdentityProfileImage.js';
 import GridProductionRenderer from './GridProductionRenderer.jsx';
 import { createProfileDocumentV9FocusViewModel } from './profileDocumentV9FocusViewModel.js';
 import { createPublishedIdentityRackViewModel } from './publishedIdentityRackViewModel.js';
@@ -13,7 +12,7 @@ import { resolveVisitorGridDragDestination } from './visitorGridDragNavigation.j
 import '../../lattice/rendering/latticeMenuSurface.css';
 import './visitorGridWorld.css';
 
-const LatticeProductionIdentityDossier = lazy(() => import('../../lattice/rendering/LatticeProductionIdentityDossier.jsx'));
+const IdentityModule = lazy(() => import('../../public/identity/IdentityModule.jsx'));
 const VISITOR_GRID_NAVIGATION_SAFE_AREA = 42;
 const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-6)}`;
 const frozenRectangle = ({ height, left, top, width }) => Object.freeze({ height, left, top, width });
@@ -27,18 +26,16 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
   const gridSwipeTimerRef = useRef(null);
   const spacePressedRef = useRef(false);
   const suppressPlacementClickRef = useRef(false);
-  const identityOpenRequestRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [placementMedia, setPlacementMedia] = useState({});
   const [viewerSession, setViewerSession] = useState(null);
   const [profileVisible, setProfileVisible] = useState(false);
-  const [identityOpening, setIdentityOpening] = useState(false);
-  const [identitySession, setIdentitySession] = useState(null);
+  const [identityOpen, setIdentityOpen] = useState(false);
   const [gridDragging, setGridDragging] = useState(false);
   const [gridSwipe, setGridSwipe] = useState(null);
   const [spaceNavigation, setSpaceNavigation] = useState(false);
   const profileIdentity = useProfileIdentity(document.profile.address);
-  const profileContractFacts = useProfileContractFacts(document.profile.address, { enabled: Boolean(identityOpening || identitySession) });
+  const profileContractFacts = useProfileContractFacts(document.profile.address, { enabled: identityOpen });
   const identityRack = useMemo(() => createPublishedIdentityRackViewModel({
     contractFacts: profileContractFacts, document, identity: profileIdentity,
   }), [document, profileContractFacts, profileIdentity]);
@@ -49,37 +46,28 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
     secondaryLabel: compactAddress(document.profile.address),
   }), [document, identityRack]);
   const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
-  const identityDossierActive = Boolean(identitySession && !identitySession.compact);
   const activeGrid = document.grids[activeIndex];
   const lastIndex = document.grids.length - 1;
   const workspaceSurfaceColor = latticeSurfaceColor(document.appearance.surfaceId);
 
   useEffect(() => {
-    setActiveIndex(0); setPlacementMedia({}); setViewerSession(null); setProfileVisible(false); setIdentitySession(null);
+    setActiveIndex(0); setPlacementMedia({}); setViewerSession(null); setProfileVisible(false); setIdentityOpen(false);
     globalThis.clearTimeout?.(gridSwipeTimerRef.current); gridSwipeTimerRef.current = null; setGridSwipe(null);
     rootRef.current?.focus({ preventScroll: true });
   }, [document.documentId, document.revision]);
-  useEffect(() => { identityOpenRequestRef.current += 1; setIdentityOpening(false); setIdentitySession(null); }, [document.profile.address]);
-
-  const releaseVisitorInputOwnership = useCallback(() => {
-    setViewerSession(null); setIdentityOpening(false); rootRef.current?.focus({ preventScroll: true });
-  }, []);
   const closeProfile = useCallback(({ returnFocus = false } = {}) => {
-    identityOpenRequestRef.current += 1;
-    setIdentityOpening(false);
-    setIdentitySession(null);
     setProfileVisible(false);
     if (returnFocus) queueMicrotask(() => profileDockControlRef.current?.focus({ preventScroll: true }));
   }, []);
   const toggleProfile = useCallback(() => {
-    if (viewerSession || identityOpening || identityDossierActive) return;
-    if (profileVisible || identitySession) closeProfile();
+    if (viewerSession) return;
+    if (profileVisible) closeProfile();
     else setProfileVisible(true);
-  }, [closeProfile, identityDossierActive, identityOpening, identitySession, profileVisible, viewerSession]);
+  }, [closeProfile, profileVisible, viewerSession]);
   useEffect(() => {
-    if ((!profileVisible && !identitySession?.compact) || identityDossierActive) return undefined;
+    if (!profileVisible) return undefined;
     const handlePointerDown = (event) => {
-      if (event.target?.closest?.('.lattice-profile-rail, #lattice-profile-dossier, [data-visitor-profile-trigger]')) return;
+      if (event.target?.closest?.('.lattice-profile-rail, .identity-module, [data-visitor-profile-trigger]')) return;
       closeProfile();
     };
     const handleEscape = (event) => {
@@ -92,11 +80,11 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
       globalThis.removeEventListener?.('pointerdown', handlePointerDown);
       globalThis.removeEventListener?.('keydown', handleEscape);
     };
-  }, [closeProfile, identityDossierActive, identitySession?.compact, profileVisible]);
+  }, [closeProfile, profileVisible]);
   const selectGrid = useCallback((index) => {
-    if (viewerSession || identityDossierActive) return;
+    if (viewerSession) return;
     setActiveIndex(((index % (lastIndex + 1)) + lastIndex + 1) % (lastIndex + 1));
-  }, [identityDossierActive, lastIndex, viewerSession]);
+  }, [lastIndex, viewerSession]);
   const clearGridDrag = useCallback(() => {
     const active = gridDragRef.current;
     if (!active) return;
@@ -106,7 +94,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
     gridDragRef.current = null;
     setGridDragging(false);
   }, []);
-  const visitorInputBlocked = Boolean(viewerSession || identityOpening || identityDossierActive);
+  const visitorInputBlocked = Boolean(viewerSession);
   const beginGridDrag = useCallback((event) => {
     if (!spacePressedRef.current || visitorInputBlocked || event.button !== 0 || gridDragRef.current || gridSwipeTimerRef.current !== null) return;
     event.preventDefault(); event.stopPropagation();
@@ -172,7 +160,7 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
   useEffect(() => {
     const editable = (event) => /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable;
     const keydown = (event) => {
-      if (event.code !== 'Space' || editable(event) || visitorInputBlocked) return;
+      if (event.code !== 'Space' || editable(event) || visitorInputBlocked || event.target?.closest?.('[data-workbench-module]')) return;
       event.preventDefault(); spacePressedRef.current = true; setSpaceNavigation(true);
     };
     const release = (event) => {
@@ -199,14 +187,14 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
     });
   }, []);
   const openPlacementViewer = useCallback(async ({ element, placement, gridId }) => {
-    if (gridId !== activeGrid.id || viewerSession || identityDossierActive) return;
+    if (gridId !== activeGrid.id || viewerSession) return;
     const mediaState = placementMedia[`${gridId}:${placement.id}`];
     if (mediaState?.status !== 'ready' || !mediaState.dimensions) return;
     const originRectangle = frozenRectangle(element.getBoundingClientRect());
     const nativeImage = new Image(); nativeImage.decoding = 'async'; nativeImage.referrerPolicy = 'no-referrer'; nativeImage.src = mediaState.media.src;
     try { await nativeImage.decode(); } catch { /* Viewer preserves its honest media failure state. */ }
     if (element.isConnected) setViewerSession({ originRectangle, placementId: placement.id, returnFocus: element, gridId, sourceHidden: true });
-  }, [activeGrid.id, identityDossierActive, placementMedia, viewerSession]);
+  }, [activeGrid.id, placementMedia, viewerSession]);
   const viewerEntries = useMemo(() => activeGrid.placements.map((placement) => {
     const decoded = placementMedia[`${activeGrid.id}:${placement.id}`];
     const model = createProfileDocumentV9FocusViewModel(placement, {
@@ -232,20 +220,12 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
     queueMicrotask(() => returnFocus?.isConnected ? returnFocus.focus({ preventScroll: true })
       : rootRef.current?.focus({ preventScroll: true }));
   }, [viewerSession]);
-  const openIdentityRack = useCallback(async () => {
-    if (viewerSession || identitySession || identityOpening || !identityRack) return;
-    const source = identityControlRef.current; if (!source) return;
-    const requestId = identityOpenRequestRef.current + 1; identityOpenRequestRef.current = requestId;
-    const sourceSurface = source.closest('.lattice-profile-rail') || source;
-    const originRectangle = frozenRectangle(sourceSurface.getBoundingClientRect());
-    const viewport = Object.freeze({ width: window.innerWidth, height: window.innerHeight }); setIdentityOpening(true);
-    const preloadedProfileImageUrl = await preloadIdentityProfileImage(identityRack.profile.avatarUrl);
-    if (identityOpenRequestRef.current === requestId && source.isConnected) {
-      setIdentitySession({ originRectangle, preloadedProfileImageUrl, viewport }); setIdentityOpening(false);
-    }
-  }, [identityOpening, identityRack, identitySession, viewerSession]);
+  const openIdentityRack = () => {
+    if (viewerSession || !identityRack) return;
+    setIdentityOpen(true); setProfileVisible(false);
+  };
   const handleKeyDown = (event) => {
-    if (event.target.closest?.('button,a,input,select,textarea') || viewerSession || identityDossierActive) return;
+    if (event.target.closest?.('button,a,input,select,textarea,.identity-module') || viewerSession) return;
     const destination = ['ArrowRight', 'PageDown'].includes(event.key) ? activeIndex + 1
       : ['ArrowLeft', 'PageUp'].includes(event.key) ? activeIndex - 1
         : event.key === 'Home' ? 0 : event.key === 'End' ? lastIndex : null;
@@ -278,19 +258,19 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
       </div>}
       </div>
     </div>
-    {(profileVisible || identityOpening) && !identitySession && <LatticeProfileRail blocked={Boolean(viewerSession)} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
-      identityDisabled={Boolean(identityOpening || identityDossierActive || viewerSession)} identityExpanded={Boolean(identityOpening || identityDossierActive)}
+    {profileVisible && <LatticeProfileRail blocked={Boolean(viewerSession)} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
+      identityDisabled={Boolean(viewerSession)} identityExpanded={identityOpen}
       officialIdentity={officialIdentity} onIdentityActivate={openIdentityRack} />}
     <footer className="visitor-grid-world__dock">
       <nav aria-label="Published profile navigation">
-        <button aria-expanded={Boolean(profileVisible || identitySession)} aria-label="Profile" data-visitor-profile-trigger
-          disabled={Boolean(viewerSession || identityOpening || identityDossierActive)} onClick={toggleProfile}
+        <button aria-expanded={profileVisible} aria-label="Profile" data-visitor-profile-trigger
+          disabled={Boolean(viewerSession)} onClick={toggleProfile}
           ref={profileDockControlRef} type="button">PROFILE</button>
         <div aria-label="Published Grid navigation" className="visitor-grid-world__navigation" role="group">
-          <button aria-label="Previous Grid" disabled={lastIndex === 0 || Boolean(viewerSession || identityDossierActive)}
+          <button aria-label="Previous Grid" disabled={lastIndex === 0 || Boolean(viewerSession)}
             onClick={() => selectGrid(activeIndex - 1)} type="button">&lt;</button>
           <span aria-live="polite">{activeGrid.title}</span>
-          <button aria-label="Next Grid" disabled={lastIndex === 0 || Boolean(viewerSession || identityDossierActive)}
+          <button aria-label="Next Grid" disabled={lastIndex === 0 || Boolean(viewerSession)}
             onClick={() => selectGrid(activeIndex + 1)} type="button">&gt;</button>
         </div>
         {(onOpenDirectory || onReturn || onExit) && <div className="visitor-grid-world__actions">
@@ -309,18 +289,9 @@ export default function ProfileDocumentV9Visitor({ document, onExit, onOpenDirec
       position={viewerPosition} renderArtwork={(focusEntry, context) => <LatticeProductionFocusArtwork entry={focusEntry}
         motion={context.motion} />}
       returnFocus={viewerSession.returnFocus} surfaceColor={workspaceSurfaceColor} total={viewerEntries.length} />}
-    {identitySession && identityRack && !viewerSession && <Suspense fallback={null}><LatticeProductionIdentityDossier
-      dismissOnBackdrop
-      getReturnRectangle={() => identityControlRef.current?.closest('.lattice-profile-rail')?.getBoundingClientRect()
-        || identityControlRef.current?.getBoundingClientRect() || identitySession.originRectangle}
-      gridVariables={gridVariables} gridVisible={false} menuSurfaceId={document.appearance.menuSurfaceId} model={identityRack}
-      onClosing={releaseVisitorInputOwnership}
-      onClosed={() => setIdentitySession((current) => current && ({ ...current, compact: true }))}
-      onDismiss={closeProfile}
-      onOpening={() => setIdentitySession((current) => current && ({ ...current, compact: false }))}
-      originRectangle={identitySession.originRectangle} inlineCloseControl persistent
-      preloadedProfileImageUrl={identitySession.preloadedProfileImageUrl} reducedMotion={reducedMotion}
-      returnFocus={identityControlRef.current} sourceIdentity={officialIdentity} viewport={identitySession.viewport}
-      workspaceSurfaceColor={workspaceSurfaceColor} /></Suspense>}
+    {identityOpen && identityRack && <div hidden={Boolean(viewerSession)}><Suspense fallback={<p role="status">Opening Identity…</p>}>
+      <IdentityModule key={document.profile.address} model={identityRack} menuSurface={document.appearance.menuSurfaceId}
+        onClose={() => setIdentityOpen(false)} returnFocus={profileDockControlRef.current} />
+    </Suspense></div>}
   </main>;
 }

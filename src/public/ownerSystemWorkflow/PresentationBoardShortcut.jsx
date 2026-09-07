@@ -35,11 +35,9 @@ const shortcutPresentationStyle = (presentation) => ({
   '--workflow-shortcut-width': `${shortcutBounds(presentation).width}px`,
 });
 export default function PresentationBoardShortcut({ assetsById, host, instanceState, menuSurface,
-  onRestore, profileAddress, shortcutSnap, shortcutTargetRef }) {
+  onRestore, profileAddress, shortcutSnap, shortcutTargetRef, name: shortcutName, onNameChange }) {
   const storedShortcut = useMemo(() => loadPresentationBoardShortcut(profileAddress), [profileAddress]);
   const [shortcutPosition, setShortcutPosition] = useState(storedShortcut?.position || { left: 24, top: 72 });
-  const [shortcutName, setShortcutName] = useState(storedShortcut?.name && storedShortcut.name !== 'PRESENTATION BOARD'
-    ? storedShortcut.name : 'DISPLAY MODULE');
   const [shortcutIconId, setShortcutIconId] = useState(storedShortcut?.iconAssetId || null);
   const [shortcutIconMedia, setShortcutIconMedia] = useState(() => isValidPlacementMedia(storedShortcut?.iconMedia) ? storedShortcut.iconMedia : null);
   const shortcutNode = useRef(null);
@@ -111,7 +109,7 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
   };
   const stopShortcutDrag = (event) => { if (shortcutDragRef.current?.id === event.pointerId) shortcutDragRef.current = null; };
   const commitRename = () => {
-    const value = renameValue.trim(); if (value) setShortcutName(value.slice(0, 48)); else setRenameValue(shortcutName);
+    const value = renameValue.trim(); if (value) onNameChange(value.slice(0, 48)); else setRenameValue(shortcutName);
     setRenaming(false);
   };
 

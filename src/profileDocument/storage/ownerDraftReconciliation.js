@@ -55,11 +55,17 @@ export function createOwnerDraftFromPublishedProfile(documentInput) {
     geometry: structuredClone(document.geometry),
     appearance: structuredClone(document.appearance),
     identityPresentation: {
+      ...(document.identityPresentation.card ? { card: structuredClone(document.identityPresentation.card) } : {}),
       alias: document.identityPresentation.alias,
       avatar: {
         mode: document.identityPresentation.avatar.mode,
         stableAssetId: document.identityPresentation.avatar.asset?.stableAssetId || null,
         shape: document.identityPresentation.avatar.shape,
+        ...(document.identityPresentation.avatar.asset?.media?.url && document.identityPresentation.avatar.asset.media.type === 'image' ? { selectedMedia: {
+          url: document.identityPresentation.avatar.asset.media.url,
+          width: document.identityPresentation.avatar.asset.media.width,
+          height: document.identityPresentation.avatar.asset.media.height,
+        } } : {}),
       },
       bio: structuredClone(document.identityPresentation.bio),
       tags: structuredClone(document.identityPresentation.tags),

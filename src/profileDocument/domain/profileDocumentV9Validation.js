@@ -19,6 +19,7 @@ import {
 } from './constants.js';
 import { isValidPublishedAssetUrl } from './publishedAssetUrl.js';
 import { validateProfileDocumentV9Asset } from './profileDocumentV9Asset.js';
+import { isValidIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 
 const DOCUMENT_KEYS = [
   'documentType', 'version', 'documentId', 'revision', 'createdAt', 'exportedAt',
@@ -74,7 +75,8 @@ function validCrop(value) {
 }
 
 function validateIdentity(value, fail) {
-  if (!exactKeys(value, IDENTITY_KEYS)) return fail('identityPresentation', 'invalid_identity_structure', 'Invalid identity presentation');
+  if (!allowedKeys(value, IDENTITY_KEYS, ['card'])) return fail('identityPresentation', 'invalid_identity_structure', 'Invalid identity presentation');
+  if (Object.hasOwn(value, 'card') && !isValidIdentityCard(value.card, { published: true })) fail('identityPresentation.card', 'invalid_identity_card', 'Invalid public Identity card');
   if (!safeText(value.alias, 80)) fail('identityPresentation.alias', 'invalid_alias', 'Invalid identity alias');
   if (!exactKeys(value.avatar, ['mode', 'asset', 'shape'])
     || !['official', 'inscape'].includes(value.avatar?.mode)

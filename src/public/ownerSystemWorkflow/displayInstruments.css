@@ -8,7 +8,7 @@
   width: calc(var(--workflow-metadata-width) - var(--workflow-board-frame-gap));
   height: 100%;
   display: grid;
-  grid-template-rows: 38px auto minmax(0, 1fr);
+  grid-template-rows: var(--workflow-rail-height) auto minmax(0, 1fr);
   gap: 0;
   overflow: hidden;
   color: var(--workflow-ink);
@@ -22,7 +22,7 @@
   height: min(420px, calc(100% - var(--workflow-identity-strip-height) - 6px));
   border: 1px solid var(--workflow-border-strong);
   background: var(--workflow-selection);
-  box-shadow: 4px 6px 14px rgb(17 19 19 / 14%);
+  box-shadow: var(--workflow-window-chrome-shadow);
 }
 .system-workflow__instrument-rail {
   min-width: 0;

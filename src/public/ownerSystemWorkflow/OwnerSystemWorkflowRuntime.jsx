@@ -28,6 +28,7 @@ import {
 
 const OwnerSystemWorkflowPublicationRack = lazy(() => import('./OwnerSystemWorkflowPublicationRack.jsx'));
 const ProfileDocumentV9Preview = lazy(() => import('../../profileDocument/components/ProfileDocumentV9Preview.jsx'));
+const IdentityModule = lazy(() => import('../identity/IdentityModule.jsx'));
 
 function assetMap(assets, records) {
   const map = new Map();
@@ -68,10 +69,13 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const [preview, setPreview] = useState(null);
   const [publicationOpen, setPublicationOpen] = useState(false);
   const [notice, setNotice] = useState(null);
-  const [dossierOpen, setDossierOpen] = useState(false);
+  const [identityOpen, setIdentityOpen] = useState(false);
+  const identityReturnFocus = useRef(null);
+  useEffect(() => { setIdentityOpen(false); }, [profileAddress]);
   const displayRef = useRef(null);
   const placementTargetRef = useRef(null);
   const shortcutTargetRef = useRef(null);
+  const identityTargetRef = useRef(null);
   const workspaceRef = useRef(null);
   const [metadataAvailable, setMetadataAvailable] = useState(false);
   const [decodedDimensions, setDecodedDimensions] = useState(() => new Map());
@@ -87,11 +91,13 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const profileIdentity = reviewIdentity(profileAddress, reviewProfile) || liveIdentity;
   const browserEnabled = !reviewAssets;
   const reviewAuthorities = useOwnerSystemWorkflowDevelopmentAuthorities({ categories: reviewCategories, discovery: reviewDiscovery, enabled: Boolean(reviewAssets) });
-  const panels = useOwnerSystemWorkflowPanels({ blocked: Boolean(preview || dossierOpen) });
+  const panels = useOwnerSystemWorkflowPanels({ blocked: Boolean(preview) });
   const publicationPresence = useOwnerSystemWorkflowPanelPresence(publicationOpen);
   const panel = panels.activePanel;
-  const referencedAssetIds = useMemo(() => controller.draft.grids
-    .flatMap((grid) => grid.placements.map(({ stableAssetId }) => stableAssetId)), [controller.draft.grids]);
+  const referencedAssetIds = useMemo(() => [...controller.draft.grids
+    .flatMap((grid) => grid.placements.map(({ stableAssetId }) => stableAssetId)),
+    ...(controller.draft.identityPresentation.avatar.mode === 'inscape' && controller.draft.identityPresentation.avatar.stableAssetId
+      ? [controller.draft.identityPresentation.avatar.stableAssetId] : [])], [controller.draft.grids, controller.draft.identityPresentation.avatar]);
   const browser = useOwnerLatticeBrowser(profileAddress, panel === 'library' && browserEnabled, referencedAssetIds);
   const assets = reviewAssets || browser.data.assets;
   const records = reviewAssets || browser.records;
@@ -256,7 +262,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
       onAuthoringLockToggle={() => setWorkbenchPreferences((current) => ({ ...current, compositionLocked: !current.compositionLocked }))}
       registerAssetDimensions={registerAssetDimensions} resolveAssetDimensions={resolveAssetDimensions}
       menuSurface={menuSurface} reducedMotion={layout.reducedMotion} workspaceSurfaceColor={workspaceSurfaceColor}
-      windowProps={{ instanceState: boardInstanceState, identity: profileIdentity,
+      windowProps={{ instanceState: boardInstanceState,
         onMinimize: () => transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.MINIMIZE),
         onRestore: () => transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.RESTORE),
         onContextMenu: (event) => {
@@ -267,17 +273,30 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
         layoutMode: layout.mode, profileAddress, reducedMotion: layout.reducedMotion,
         shortcutSnap: workbenchPreferences.shortcutSnap, workbenchGridColor: workbenchPreferences.gridColor,
         workbenchGridMode: workbenchPreferences.gridMode }} />
-    <OwnerSystemWorkflowPanelLayer placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef} activity={activity} assets={assets} assetsById={assetsById} authoringLocked={authoringLocked} browser={browser}
+    <OwnerSystemWorkflowPanelLayer moduleAssetTargetRef={identityTargetRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef} activity={activity} assets={assets} assetsById={assetsById} authoringLocked={authoringLocked} browser={browser}
       connectedProfile={connectedProfile} onConnect={onConnect} onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld}
       controller={controller} layout={layout} libraryData={libraryData} menuSurface={menuSurface} onChangeGrid={changeGrid}
       workspaceSurfaceColor={workspaceSurfaceColor}
       workbenchPreferences={workbenchPreferences}
       onWorkbenchPreferencesChange={(change) => setWorkbenchPreferences((current) => ({ ...current, ...change }))}
-      onClose={() => panels.closePanel()} onDossierChange={setDossierOpen} onVisitProfile={onVisitProfile}
+      onClose={() => panels.closePanel()} onVisitProfile={onVisitProfile}
+      onOpenIdentity={(event) => {
+        identityReturnFocus.current = event.currentTarget.closest('.system-workflow')?.querySelector('[data-system-workflow-panel-trigger][aria-label="Profile"]');
+        panels.closePanel({ returnFocus: false }); setIdentityOpen(true);
+      }}
       panelOccupied={panelOccupied} panels={panels} profileIdentity={profileIdentity} profileModel={profileModel}
       resolveAssetDimensions={resolveAssetDimensions}
       categoryCommands={reviewAuthorities.categoryCommands || browser.commands} discoveryCommands={reviewAuthorities.discoveryCommands}
       discoveryGroups={reviewAuthorities.discoveryGroups} reviewDiscovery={reviewAuthorities.discovery} />
+    {identityOpen && profileModel && <Suspense fallback={<p role="status">Opening Identity…</p>}>
+      <IdentityModule key={profileAddress} model={profileModel} menuSurface={menuSurface}
+        assetTargetRef={identityTargetRef} onAvatarChange={controller.setIdentityAvatar}
+        onDetailsChange={controller.setIdentityDetails}
+        onCardChange={controller.setIdentityCard}
+        customAvatar={controller.draft.identityPresentation.avatar.mode === 'inscape'}
+        portraitChoices={resolvedAssets.filter((asset) => asset.placeable !== false && (asset.originalImageUrl || asset.imageUrl))}
+        returnFocus={identityReturnFocus.current} onClose={() => setIdentityOpen(false)} />
+    </Suspense>}
     <OwnerSystemWorkflowGlobalBar activePanel={panel}
       onOpen={openDockPanel} onPreview={(event) => {
         if (publicationOpen) closePublication({ returnFocus: false });

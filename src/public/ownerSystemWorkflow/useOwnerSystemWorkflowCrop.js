@@ -140,6 +140,7 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
   useEffect(() => {
     if (!cropSession) return undefined;
     const onKeyDown = (event) => {
+      if (event.target?.closest?.('[data-workbench-module]')) return;
       if (event.key === 'Escape') cancelCrop();
       else if (event.key === 'Enter') applyCrop();
       else if (event.key.startsWith('Arrow')) {
@@ -149,6 +150,7 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
       event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation?.();
     };
     const onPointerDown = (event) => {
+      if (event.target?.closest?.('[data-workbench-module]')) return;
       if (event.target?.closest?.('[data-system-workflow-crop-surface], .system-workflow__crop-controls, .system-workflow__resize-handle')) return;
       const placementId = event.target?.closest?.('[data-system-workflow-placement-id]')?.dataset?.systemWorkflowPlacementId;
       const placement = controller.selectedGrid?.placements.find(({ id }) => id === placementId);

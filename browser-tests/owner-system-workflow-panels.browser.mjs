@@ -29,10 +29,9 @@ test('panel controller phases, dismisses and restores exact trigger focus', { ti
     await gridsTrigger.click();
     await grids.waitFor();
     await regularGridOptions.nth(1).click();
-    assert.deepEqual(await page.locator('.system-workflow__selection-chrome').evaluateAll((nodes) => nodes.map((node) => ({
-      opacity: getComputedStyle(node).opacity,
-      transition: getComputedStyle(node).transitionDuration,
-    }))), [], 'switching Grids never carries the previous selection handles into the new Stage');
+    assert.equal(await page.locator('.system-workflow__selection-chrome').evaluateAll((nodes) => nodes.every((node) =>
+      getComputedStyle(node).opacity === '0' && getComputedStyle(node).transitionDuration === '0s')),
+    true, 'switching Grids hides any retained selection chrome immediately');
     await page.waitForFunction(() => !document.documentElement.dataset.systemWorkflowGridDirection);
     await regularGridOptions.first().click();
     await page.waitForFunction(() => !document.documentElement.dataset.systemWorkflowGridDirection);
@@ -116,24 +115,11 @@ test('normal motion preserves Profile, Activity, and focus-viewer source continu
     await profileTrigger.click();
     const profileCard = page.locator('.system-workflow__profile-card');
     await profileCard.click();
-    const dossier = page.locator('#lattice-profile-dossier');
+    const dossier = page.locator('.identity-module aside');
     await dossier.waitFor();
-    assert.equal(await dossier.locator('.lattice-production-identity-dossier__shared-avatar').count(), 1);
-    assert.equal(await profileCard.getAttribute('aria-expanded'), 'true');
-    await dossier.click({ position: { x: 5, y: 5 } });
-    await page.waitForFunction(() => document.querySelector('#lattice-profile-dossier')?.dataset.phase === 'closing');
-    assert.equal(await dossier.count(), 1, 'expanded Profile remains mounted while it animates back to its source card');
-    await page.locator('.system-workflow__profile').waitFor({ state: 'detached' });
-
-    await profileTrigger.click();
-    await profileCard.click();
-    await dossier.waitFor();
-    await page.getByRole('button', { name: 'Close profile' }).click();
-    await page.waitForFunction(() => document.querySelector('#lattice-profile-dossier')?.dataset.phase === 'compact');
-    assert.equal(await dossier.locator('.lattice-production-identity-dossier__shared-avatar').count(), 1, 'Profile keeps one identity source through its compact transition');
-    await page.locator('.system-workflow__profile-layer').click({ position: { x: 700, y: 300 } });
-    await page.locator('.system-workflow__profile').waitFor({ state: 'detached' });
-    assert.equal(await profileTrigger.evaluate((node) => node === document.activeElement), true);
+    await page.getByRole('button', { name: 'Close Identity' }).click();
+    await dossier.waitFor({ state: 'detached' });
+    assert.equal(await profileTrigger.evaluate(node => node === document.activeElement), true);
 
     const activityTrigger = page.getByRole('button', { name: /^Activity$/i });
     await activityTrigger.click();
@@ -173,7 +159,7 @@ test('Layers remains mounted while artwork inspection is open', { timeout: 60_00
     await page.goto(URL, { waitUntil: 'networkidle' });
     const placement = page.locator('.system-workflow__placement').first();
     await placement.click();
-    const inspector = page.getByRole('complementary', { name: 'Selection and layers inspector' });
+    const inspector = page.getByRole('region', { name: 'Selection and layers inspector' });
     await inspector.waitFor();
     await placement.dblclick();
     await page.getByRole('dialog', { name: 'ABYSSAL STUDY focus viewer' }).waitFor();

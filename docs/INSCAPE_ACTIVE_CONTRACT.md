@@ -182,10 +182,9 @@ internal compatibility names during this migration; do not broadly rename them.
 - Detached Layers and Metadata remain viewport-bounded and must identify the
   Display Module and active Grid or selection they currently inspect. Their
   detached position is Workbench view state, not published composition state.
-- The title-bar identity strip retains the official Universal Profile name and
-  address as the trusted publishing anchor. It may compact to make room for
-  instrument toggles, but authoring controls must not replace or impersonate
-  that identity.
+- The Display title bar identifies its presentation. The official publishing
+  identity is available in the Identity Module header; authored presentation
+  names must not be treated as official profile metadata.
 - The composition Lock is local, profile-scoped Workbench state. While active,
   it prevents placement, movement, resize, crop, transform, reorder, removal,
   and other authored-geometry mutations without blocking selection or artwork
@@ -206,6 +205,58 @@ internal compatibility names during this migration; do not broadly rename them.
 
 ## Cover, entry, and Discover
 
+- Identity's title bar shows the official avatar and profile name, followed by
+  `#` and the first four hexadecimal address characters after `0x`. The full
+  address is available on hover/focus, with an explicit copy action and a
+  diagonal link to the official Universal Everything profile. This header is
+  separate from authored Identity artwork and aliases. The redundant INSCAPE
+  IDENTITY caption, self-link, and permanent Library-drop banner are omitted.
+  The Display Module title bar shows its existing shortcut/presentation name;
+  renaming that shortcut also updates the title, using one name state.
+  Copy, source and QR controls use the same muted icon weight. QR sharing
+  generates the full address locally, on demand, with a declared dependency;
+  it performs no upload, wallet action or publication.
+
+- Identity starts compact. A centered chevron reveals its INSCAPE extension
+  below the official profile section. Expansion preserves the window's top
+  edge, grows only as needed, and uses contained scrolling at viewport bounds.
+  Expand/collapse is temporary window state, including for visitors.
+  The upper section uses official name, biography, visible tags and authored
+  profile links. Known platforms can use icons with hover/focus labels;
+  duplicate-platform and unknown-site links retain visible names.
+  The official-avatar fallback is small and uses a plain theme surface.
+  Explicitly chosen Library artwork retains the larger artistic presentation.
+  Cards without saved background settings retain their existing defaults:
+  official avatars use plain, and INSCAPE artwork uses clouds. Choosing
+  artwork is not evidence that its image has transparency.
+  The lower extension separates authored title, story and additional tags.
+  Owner editing uses the existing alias/bio/tags fields and authoring session,
+  with stale-write and storage-failure checks. Visitors have no edit command.
+  Makers may additionally name, order and remove free information fields with
+  text or list content. These use one shared responsive layout, not a second
+  canvas editor. Empty fields are omitted from the visible and public card.
+
+- Identity background and free fields use the optional, declarative
+  `identityPresentation.card` envelope (version 1), shared by draft-v4 and
+  public-v9 validation. Absence remains valid and does not trigger a write or
+  change old publication bytes. Explicit Save records the selection even if
+  it matches the previous default. Both publication restoration paths retain
+  the envelope. New documents containing it require the updated reader;
+  older deployed strict readers do not understand this optional extension.
+  The host delegates validation to the Identity domain instead of interpreting
+  shader behavior. Unsupported types, versions and properties are rejected.
+  Background choices are Plain (theme surface) and Clouds, with theme or hex
+  cloud color and speed from 0 to 2. Zero is still; reduced motion remains still
+  at every setting. Editing previews locally; Save persists and Cancel restores.
+  Shader implementation stays in the renderer, never in the document.
+  Free fields have stable IDs, labels up to 60 characters, and either text up
+  to 2,000 characters or up to 16 list items of 160 characters each. At most 16
+  fields are accepted. Publication trims values and omits empty fields/items
+  without changing the owner's draft. These are authored descriptions, not
+  verified facts or official profile metadata. Visitors receive the published
+  settings and fields without authoring commands. No shader marketplace,
+  third-party code loading or arbitrary field layout is implemented here.
+
 - Account controls remain available from Profile on the owner's Workbench,
   independently of any authored Identity Module. Explicit Disconnect from the
   owner's Workbench or its Discover panel opens signed-out Discover. Disconnect
@@ -214,6 +265,35 @@ internal compatibility names during this migration; do not broadly rename them.
   An authored Identity Module may present custom biography and fields alongside
   artwork; these are distinct from official Universal Profile metadata and
   account controls. Its implementation and publication format remain to be scoped.
+  The Identity Module will replace the existing dossier rather than add a second
+  profile presentation. Its window uses the shared rounded module chrome; the
+  old dossier's overlay styling is not its visual baseline.
+  The first replacement opens from Profile as a non-modal, movable, vertically
+  resizable window in owner and visitor views. It reads the existing projected
+  identity data; window interaction is session-local and does not write a draft
+  or publication. Closing returns focus to Profile. Authored
+  shortcuts and starting arrangements, and direct module links remain separate
+  work; this replacement does not add a module-instance publication schema.
+
+- Identity content follows the founder's artwork-and-story reference, within
+  the shared rounded module window. A module-owned animated cloud shader sits
+  behind the portrait; reduced motion renders a still frame. It does not copy
+  the old dossier's horizontal menus. Library images can replace the Identity
+  portrait without changing official Universal Profile metadata. The existing
+  profile-scoped avatar setting retains the asset ID and optional selected
+  image resource. Older drafts without that optional resource remain valid.
+  Saving uses the existing authoring authority; the module does not publish.
+  The existing public avatar asset envelope carries the selected image without
+  a new avatar schema. The optional card envelope described above carries
+  free fields and background settings; source facts must not stand in for
+  invented personal fields.
+  The default cloud palette responds to the existing light/dark surface tokens.
+  Creator-authored shader aesthetics are also an accepted future direction:
+  visual styles and animated materials may be authored and monetized as part
+  of the founder's creative offering. Theme adaptation is a default, not a
+  requirement that all artistic shaders look alike. Shader behavior belongs
+  to the module, not the Workbench host. Third-party packaging, paid access,
+  and execution of third-party shader code remain unspecified and unimplemented.
 
 - Direct world links enter the targeted world automatically through Startveil,
   without a separate Enter button. The bare INSCAPE URL retains the public
@@ -293,6 +373,10 @@ into generic dashboard, marketplace, or AI-generated interface styling.
   rounded, textured window chrome, as confirmed by the founder. Concentrate that
   tactile treatment around the instruments; Library, menus, and the application
   dock retain their flatter structural surfaces and existing selector grammar.
+- Reuse the shared window-chrome tokens, grain treatment, window controls, and
+  existing detached-window shell for compatible module windows. Keep content
+  layout and Stage-specific clipping separate; do not copy a module's chrome
+  into a new stylesheet merely to recreate the same appearance.
 - Default interface geometry is square and structural: zero corner radius,
   one-pixel borders, contiguous faceplates, clipped overflow, and deliberate
   alignment. Circular geometry is reserved for avatars, identity marks, status
@@ -371,3 +455,25 @@ into generic dashboard, marketplace, or AI-generated interface styling.
 - Recheck official LUKSO sources live before changing standards-facing behavior.
 - Do not run `npm audit fix --force`, downgrade `@lukso/up-modal`, or introduce
   untested overrides to conceal inherited dependency findings.
+
+### Dependency checkpoint (2026-09-07)
+
+The Identity QR addition declares the already locked `qrcode-generator@1.5.2`
+directly; no package versions or transitive package entries changed. Its code
+loads when the QR is opened. Existing origin: `@lukso/up-modal` through
+`@lukso/web-components` and `qr-code-styling`.
+
+A live `npm audit --json` reported 93 advisories (10 low, 61 moderate,
+19 high, 3 critical). This is a dependency inventory, not a demonstrated
+browser exploit or a security clearance. The critical entries are `form-data`,
+`request` and `tar`. A confirmed path runs from `@lukso/up-modal` through LUKSO
+contract packages, `solidity-bytes-utils`, `@truffle/hdwallet-provider` and
+legacy Web3 utilities. Vite also has a direct high-severity advisory.
+The local Node 18.20.7 emits engine warnings for existing dependencies
+requiring newer Node versions. These findings predate the QR declaration.
+
+Before a release, perform a focused dependency maintenance slice: align the
+Node/toolchain version, assess current supported Vite and LUKSO package
+updates, trace affected runtime paths, and verify wallet and publication
+boundaries after any upgrade. Do not combine blind dependency upgrades with
+Identity layout work or claim build success resolves these advisories.

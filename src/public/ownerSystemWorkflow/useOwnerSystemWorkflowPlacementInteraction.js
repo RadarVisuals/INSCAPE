@@ -284,6 +284,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
   useEffect(() => {
     const editable = (event) => /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable;
     const keydown = (event) => {
+      if (event.target?.closest?.('[data-workbench-module]')) return;
       if (event.code !== 'Space' || editable(event) || disabled || cropSession) return;
       event.preventDefault();
       spacePressedRef.current = true;

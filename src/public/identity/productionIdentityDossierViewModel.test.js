@@ -37,7 +37,7 @@ test('projects authoritative identity, canonical URLs, exact counts, and no soci
   assert.equal(model.links[0].verificationStatus, 'AUTHORED_NOT_VERIFIED');
   assert.equal(model.links[0].kind, 'AUTHORED');
   assert.equal(model.links.find((entry) => entry.id === 'universal-everything').kind, 'SYSTEM');
-  assert.equal(model.links.find((entry) => entry.id === 'inscape-profile').url, `https://inscape.test/?view=${ADDRESS}`);
+  assert.equal(model.links.some((entry) => entry.id === 'inscape-profile'), false);
   assert.equal(model.links.find((entry) => entry.id === 'explorer').verificationStatus, 'CANONICAL_ROUTE');
   assert.equal(model.technical.find((entry) => entry.id === 'received').value, '0');
   assert.equal(model.technical.find((entry) => entry.id === 'issued').label, 'ISSUED ASSET CONTRACTS');
@@ -61,6 +61,12 @@ test('applies active draft overlays with provenance and redacts every inactive p
   const model = JSON.parse(serialized);
   assert.equal(model.profile.displayName, 'DRAFT ALIAS');
   assert.equal(model.profile.nameProvenance, 'INSCAPE_DRAFT_ALIAS');
+  assert.equal(model.officialProfile.name, 'OFFICIAL');
+  assert.equal(model.authoredProfile.title, 'DRAFT ALIAS');
+  assert.equal(model.authoredProfile.description, null);
+  assert.equal(model.officialProfile.description, 'First paragraph.\n\nSecond paragraph.');
+  assert.equal(model.officialProfile.avatarUrl, 'https://gw.test/ipfs/official');
+  assert.equal(model.officialProfile.url, `https://universaleverything.io/${ADDRESS}`);
   assert.equal(model.profile.avatarUrl, 'https://gw.test/ipfs/official');
   assert.equal(model.profile.description, 'First paragraph.\n\nSecond paragraph.');
   assert.deepEqual(model.profile.tags, ['draft']);

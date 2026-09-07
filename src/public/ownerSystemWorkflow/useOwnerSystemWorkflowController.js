@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { normalizeProfileAddress } from '../../library/config.js';
+import { resolveIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { systemWorkflowGridFingerprint, systemWorkflowGridOrder } from '../../systemWorkflow/domain/systemWorkflowGrid.js';
 import { createSystemWorkflowAuthoringSession } from '../../systemWorkflow/systemWorkflowAuthoringSession.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
@@ -73,6 +74,15 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   const gridRequest = (grid, extra = {}) => ({ gridId: grid.id, expectedGridFingerprint: systemWorkflowGridFingerprint(grid), ...extra });
   return { ...state, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError,
     run, selectPlacement, replaceSelection, hiddenPlacementIds, togglePlacementVisibility,
+    setIdentityAvatar: (avatar) => run((session) => session.setIdentityAvatar({ expectedAvatar: state.draft.identityPresentation.avatar, avatar })),
+    setIdentityCard: (card) => run((session) => session.setIdentityCard({ expectedCard: resolveIdentityCard(state.draft.identityPresentation), card })),
+    setIdentityDetails: (values) => run((session) => {
+      const { alias, bio, tags } = state.draft.identityPresentation;
+      return session.setIdentityDetails({ expectedDetails: { alias, bio, tags }, details: {
+        alias: values.title, bio: { mode: values.description ? 'inscape' : 'official', customText: values.description },
+        tags: { ...tags, additional: values.tags },
+      } });
+    }),
     placeAsset: (request) => run((session) => {
       const before = new Set(session.getState().draft.grids.find(({ id }) => id === request.gridId)?.placements.map(({ id }) => id));
       const committed = session.placeAsset(request);

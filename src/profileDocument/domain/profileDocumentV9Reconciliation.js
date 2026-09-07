@@ -29,11 +29,15 @@ function restoredPublicGrid(grid) {
 
 function restoredIdentity(identity) {
   return {
+    ...(identity.card ? { card: structuredClone(identity.card) } : {}),
     alias: identity.alias,
     avatar: {
       mode: identity.avatar.mode,
       stableAssetId: identity.avatar.asset?.stableAssetId || null,
       shape: identity.avatar.shape,
+      ...(identity.avatar.asset?.media?.url && identity.avatar.asset.media.type === 'image' ? { selectedMedia: {
+        url: identity.avatar.asset.media.url, width: identity.avatar.asset.media.width, height: identity.avatar.asset.media.height,
+      } } : {}),
     },
     bio: { ...identity.bio },
     tags: structuredClone(identity.tags),

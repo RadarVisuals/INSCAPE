@@ -330,22 +330,21 @@ test('canonical Grid placement opens the focus viewer, hides its source, and res
   assert.equal(await evaluate(`document.activeElement?.dataset.placementId`), 'art:Alpha:https');
 });
 
-test('public identity rack replaces its source and returns to the persistent compact card', async () => {
+test('public Identity remains interactive alongside Grids and returns focus on close', async () => {
   await viewport(1280, 720, false); await navigate();
   await click('[data-visitor-profile-trigger]');
   await waitFor(`!!document.querySelector('[data-identity-dossier-source="true"]')`, 'public compact identity source');
   await click('[data-identity-dossier-source="true"]');
-  const identityViewer = page.locator('#lattice-profile-dossier');
+  const identityViewer = page.locator('.identity-module aside');
   await identityViewer.waitFor({ state: 'visible', timeout: 10_000 });
   assert.equal(await evaluate(`document.querySelectorAll('[data-identity-dossier-source="true"]').length`), 0);
-  assert.match(await evaluate(`document.querySelector('.lattice-production-identity-dossier').textContent`), /Alpha Visitor Fixture/i);
-  await page.getByRole('button', { name: 'Close profile' }).click();
-  await waitFor(`document.querySelector('#lattice-profile-dossier')?.dataset.phase === 'compact'`, 'persistent compact identity card');
+  assert.match(await identityViewer.innerText(), /Alpha Visitor Fixture/i);
+  assert.equal(await page.getByRole('button', { name: 'Next Grid', exact: true }).isEnabled(), true);
+  await page.getByRole('button', { name: 'Next Grid', exact: true }).click();
   assert.equal(await identityViewer.count(), 1);
-  await waitFor(`document.activeElement?.classList.contains('lattice-production-identity-dossier__source-summary')`,
-    'persistent compact identity focus');
-  assert.equal(await identityViewer.locator('.lattice-production-identity-dossier__source-summary')
-    .evaluate((node) => node === document.activeElement), true);
+  await page.getByRole('button', { name: 'Close Identity' }).click();
+  await identityViewer.waitFor({ state: 'detached' });
+  assert.equal(await page.locator('[data-visitor-profile-trigger]').evaluate(node => node === document.activeElement), true);
 });
 
 test('React StrictMode reuses one factory provider while cleanup, replacement, and recovery stay safe', async () => {

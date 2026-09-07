@@ -170,10 +170,11 @@ must yield to an overlay instead of crushing or reflowing the canonical Stage.
 The instrument remains owned by the Display Module in every presentation and
 is never part of the published Stage.
 
-The title bar is a compact orientation and control surface. Its Universal
-Profile name and address identify the trusted publishing context and therefore
-still have a purpose. It may also expose instrument toggles and window-level
-commands, but it should not carry the complete placement toolbar or layer list.
+The Display title bar identifies the presentation and exposes compact instrument
+and window controls. The official Universal Profile avatar, name, and address
+belong in the Identity Module title bar, keeping the trusted publishing context
+available without repeating it above every composition. The Display title bar
+should not carry the complete placement toolbar or layer list.
 Detailed editing controls belong with Layers, where their scope and effect are
 visible.
 

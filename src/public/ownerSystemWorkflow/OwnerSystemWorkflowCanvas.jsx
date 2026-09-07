@@ -186,6 +186,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
 
   useEffect(() => {
     const onKeyDown = (event) => {
+      if (event.target?.closest?.('[data-workbench-module]')) return;
       if (!grid || cropSession || interactionDisabled || viewerOpen || /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName)) return;
       if (event.key === 'Escape') { controller.replaceSelection([]); return; }
       if (authoringLocked || playingGrids || playback.swipe) return;
