@@ -2,26 +2,17 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import OwnerRuntimeBoundary from './public/OwnerRuntimeBoundary.jsx';
 import { Startveil } from './startveil/index.js';
-import { StartupDestinationBoundary, StartupDestinationContext } from './startveil/StartupDestinationContext.jsx';
+import { StartupDestinationBoundary, StartupDestinationContext, StartupDestinationReady } from './startveil/StartupDestinationContext.jsx';
 import { useWalletStore } from './store/useWalletStore.js';
-import { resolveLibraryProfile, resolveWorkspaceProfile } from './library/config.js';
-import { createSelectedProfileUrl, createViewedProfileUrl, resolveExplicitViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
-import {
-  PROFILE_TARGET_SOURCE,
-  resolveProfileTarget
-} from './profileDiscovery/profileTarget.js';
+import useApplicationNavigation from './profileDiscovery/useApplicationNavigation.js';
 import PublishedProfileBoundary from './profileDocument/components/PublishedProfileBoundary.jsx';
 import { usePublishedProfile } from './profileDocument/state/usePublishedProfile.js';
 import { PUBLISHED_PROFILE_STATUS } from './profileDocument/storage/luksoPublishedProfileRepository.js';
-import {
-  resolveOwnerAuthoringEnabled,
-  selectPublicProfileRoute
-} from './public/publicAccess.js';
 import { reportControlledError } from './diagnostics.js';
 import AlphaSupportPanel from './support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from './support/alphaSupport.js';
 
-const PublicDiscoverExperience = lazy(() => import('./profileDiscovery/PublicDiscoverExperience.jsx'));
+const PublicEntryPortal = lazy(() => import('./startveil/PublicEntryPortal.jsx'));
 const CreepsMetadataRecoveryPanel = import.meta.env.DEV
   ? lazy(() => import('./recovery/CreepsMetadataRecoveryPanel.jsx'))
   : null;
@@ -29,11 +20,8 @@ const CreepsMetadataRecoveryPanel = import.meta.env.DEV
 function App() {
   const desktopContextMenuRef = useRef(null);
   const standaloneWalletSessionRef = useRef(null);
-  const routeWorkspaceProfileAddress = useMemo(() => resolveLibraryProfile(window.location), []);
   const creepsMetadataRecoveryRoute = useMemo(() => import.meta.env.DEV
     && window.location.pathname.replace(/\/+$/, '') === '/development/creeps-recovery', []);
-  const [explicitViewedProfileAddress, setExplicitViewedProfileAddress] = useState(() => resolveExplicitViewedProfile(window.location));
-  const [retainedPublicProfileAddress, setRetainedPublicProfileAddress] = useState(null);
   const [revealStage, setRevealStage] = useState('sealed');
   const [readyDestinationKey, setReadyDestinationKey] = useState(null);
   const interfaceRef = useRef(null);
@@ -49,28 +37,16 @@ function App() {
   const initWallet = useWalletStore((state) => state.initWallet);
   const beginWalletTransition = useWalletStore((state) => state.beginWalletTransition);
   const scheduleWalletRelease = useWalletStore((state) => state.scheduleWalletRelease);
-  const connectedWorkspaceProfileAddress = resolveWorkspaceProfile(verifiedOwnerProfileAddress, {
-    search: routeWorkspaceProfileAddress ? `?profile=${routeWorkspaceProfileAddress}` : ''
-  });
-  const profileTarget = resolveProfileTarget({
-    explicitViewedProfileAddress,
-    connectedProfileAddress: verifiedOwnerProfileAddress,
-    workspaceFallbackAddress: routeWorkspaceProfileAddress || retainedPublicProfileAddress,
-    authorityLifecycleStatus
-  });
-  const viewedProfileAddress = profileTarget.address;
+  const navigation = useApplicationNavigation({ status: authorityLifecycleStatus,
+    profileAddress: verifiedOwnerProfileAddress, ownershipVerified });
+  const { destination, content } = navigation;
+  const viewedProfileAddress = content?.address || null;
   const interfaceVisible = ['interface', 'complete'].includes(revealStage);
-  const ownerAuthoringEnabled = resolveOwnerAuthoringEnabled({
-    ownershipVerified,
-    verifiedOwnerProfileAddress,
-    workspaceProfileAddress: connectedWorkspaceProfileAddress,
-    viewedProfileAddress
-  });
+  const ownerAuthoringEnabled = content?.kind === 'workbench';
+  const connectedWorkspaceProfileAddress = ownerAuthoringEnabled ? viewedProfileAddress : null;
   const getWalletPublicationContext = useCallback(() => useWalletStore.getState(), []);
-  const publicProfileRoute = selectPublicProfileRoute(ownerAuthoringEnabled);
-  const localOwnerRoute = publicProfileRoute === 'LOCAL_OWNER';
-  const publicEntryPortal = !explicitViewedProfileAddress && !routeWorkspaceProfileAddress && !retainedPublicProfileAddress
-    && [PROFILE_TARGET_SOURCE.PENDING, PROFILE_TARGET_SOURCE.NONE].includes(profileTarget.source);
+  const localOwnerRoute = ownerAuthoringEnabled;
+  const publicEntryPortal = destination.kind === 'entry' && revealStage !== 'complete';
   const [publishedResolution, retryPublishedProfile] = usePublishedProfile(viewedProfileAddress);
   const ownerSourceReady = publishedResolution?.status !== PUBLISHED_PROFILE_STATUS.LOADING;
   const connectedProfile = verifiedOwnerProfileAddress ? {
@@ -81,32 +57,20 @@ function App() {
 
   // Reveal a resolved destination or its recovery UI; optional artwork media
   // continues loading inside that destination. The public portal is independent.
-  const destinationKey = `${publicProfileRoute}:${viewedProfileAddress || 'directory'}`;
+  const destinationKey = `${destination.kind}:${destination.address || ''}`;
   const onDestinationReady = useCallback(() => setReadyDestinationKey(destinationKey), [destinationKey]);
-  const entryDestinationReady = publicEntryPortal || (!profileTarget.pending && ownerSourceReady
-    && readyDestinationKey === destinationKey);
+  const entryDestinationReady = publicEntryPortal || (destination.kind !== 'pending'
+    && (destination.kind === 'discover' || ownerSourceReady) && readyDestinationKey === destinationKey);
   useEffect(() => {
     if (revealStage !== 'complete') return;
     const node = interfaceRef.current;
     if (!node) return;
-    const focusTarget = node.querySelector('[data-published-focus-fallback], .visitor-grid-world, .system-workflow__global-bar button');
+    if (document.activeElement !== node && node.contains(document.activeElement)
+      && !document.activeElement.closest('[inert]')) return;
+    const focusTarget = [...node.querySelectorAll('[data-published-focus-fallback], .visitor-grid-world, .system-workflow__global-bar button, .public-entry-portal__header-wordmark')]
+      .find((target) => !target.closest('[inert]'));
     (focusTarget || node).focus({ preventScroll: true });
-  }, [revealStage]);
-
-  useEffect(() => {
-    if (authorityLifecycleStatus === 'complete' && verifiedOwnerProfileAddress) {
-      setRetainedPublicProfileAddress(verifiedOwnerProfileAddress);
-    }
-  }, [authorityLifecycleStatus, verifiedOwnerProfileAddress]);
-
-  useEffect(() => {
-    if (authorityLifecycleStatus !== 'complete' || verifiedOwnerProfileAddress
-      || explicitViewedProfileAddress || routeWorkspaceProfileAddress || !retainedPublicProfileAddress) return;
-    const nextUrl = createSelectedProfileUrl(window.location, retainedPublicProfileAddress);
-    window.history.replaceState({ viewedProfileAddress: retainedPublicProfileAddress }, '', nextUrl);
-    setExplicitViewedProfileAddress(retainedPublicProfileAddress);
-  }, [authorityLifecycleStatus, explicitViewedProfileAddress, retainedPublicProfileAddress,
-    routeWorkspaceProfileAddress, verifiedOwnerProfileAddress]);
+  }, [revealStage, destinationKey, readyDestinationKey]);
 
   useEffect(() => {
     if (window.parent !== window) {
@@ -148,30 +112,19 @@ function App() {
   }, [beginWalletTransition, initWallet, scheduleWalletRelease]);
 
   useEffect(() => {
-    if (standaloneSignInActive && visitorWalletConnected && authorityLifecycleStatus === 'complete') setStandaloneSignInActive(false);
-  }, [authorityLifecycleStatus, standaloneSignInActive, visitorWalletConnected]);
+    if (standaloneSignInActive && visitorWalletConnected && authorityLifecycleStatus === 'complete') {
+      setStandaloneSignInActive(false);
+      navigation.completeSignIn();
+    }
+  }, [authorityLifecycleStatus, standaloneSignInActive, visitorWalletConnected, navigation.completeSignIn]);
 
-  useEffect(() => {
-    const syncProfileFromUrl = () => {
-      setExplicitViewedProfileAddress(resolveExplicitViewedProfile(window.location));
-    };
-    syncProfileFromUrl();
-    window.addEventListener('popstate', syncProfileFromUrl);
-    return () => window.removeEventListener('popstate', syncProfileFromUrl);
-  }, [routeWorkspaceProfileAddress]);
-
-  const visitProfile = useCallback((address, { returnToConnectedProfile = false } = {}) => {
-    const nextUrl = returnToConnectedProfile
-      ? createViewedProfileUrl(window.location, address, verifiedOwnerProfileAddress)
-      : createSelectedProfileUrl(window.location, address);
-    window.history.pushState({ viewedProfileAddress: address }, '', nextUrl);
-    setExplicitViewedProfileAddress(resolveExplicitViewedProfile(window.location));
-  }, [verifiedOwnerProfileAddress]);
+  const visitProfile = navigation.visitProfile;
 
   const requestStandaloneSignIn = useCallback(() => {
     if (window.parent !== window) return;
     const sessionOrPromise = standaloneWalletSessionRef.current;
     if (!sessionOrPromise) return;
+    navigation.beginSignIn();
     setStandaloneSignInActive(true);
     void Promise.resolve(sessionOrPromise).then((session) => {
       if (!session) { setStandaloneSignInActive(false); return null; }
@@ -180,19 +133,27 @@ function App() {
       setStandaloneSignInActive(false);
       reportControlledError('standalone-wallet-sign-in', error);
     });
-  }, []);
+  }, [navigation.beginSignIn]);
 
   const disconnectStandalone = useCallback(() => {
+    const finish = navigation.beginDisconnect();
+    if (!finish) return;
     if (window.parent !== window) {
       useWalletStore.getState().disposeWallet();
+      finish(true);
       return;
     }
     const sessionOrPromise = standaloneWalletSessionRef.current;
-    if (!sessionOrPromise) return;
-    void Promise.resolve(sessionOrPromise).then((session) => session?.disconnect()).catch((error) => {
+    if (!sessionOrPromise) { finish(false); return; }
+    void Promise.resolve(sessionOrPromise).then(async (session) => {
+      if (!session) { finish(false); return; }
+      await session.disconnect();
+      finish(true);
+    }).catch((error) => {
+      finish(false);
       reportControlledError('standalone-wallet-disconnect', error);
     });
-  }, []);
+  }, [navigation.beginDisconnect]);
 
   const enterConnectedWorld = useCallback(() => {
     if (verifiedOwnerProfileAddress) visitProfile(verifiedOwnerProfileAddress, { returnToConnectedProfile: true });
@@ -223,18 +184,16 @@ function App() {
         aria-hidden={!interfaceVisible}
         inert={revealStage === 'complete' ? undefined : ''}
       >
-      <StartupDestinationContext.Provider key={destinationKey} value={onDestinationReady}>
+      <StartupDestinationContext.Provider key={`${content?.kind || 'portal'}:${viewedProfileAddress || ''}`} value={onDestinationReady}>
       <StartupDestinationBoundary>
         {authorityLifecycleStatus === 'complete' && initializationError && <AlphaSupportPanel compact
           code={ALPHA_SUPPORT_CODES.AUTHORITY_INITIALIZATION_FAILED} phase="OWNER_AUTHORITY"
           providerCategory="UP_PROVIDER" profileAddress={viewedProfileAddress} routeClass="AUTHORITY_ENTRY"
           message={initializationError.message} />}
-        {standaloneSignInActive || publicEntryPortal ? null : profileTarget.pending
+        <div aria-hidden={destination.kind === 'discover' || undefined} inert={destination.kind === 'discover' ? '' : undefined}>
+        {standaloneSignInActive || publicEntryPortal || !content ? null : content.kind === 'pending'
             ? <div className="mode-loading" role="status">Resolving profile...</div>
-            : profileTarget.source === PROFILE_TARGET_SOURCE.NONE ? <Suspense fallback={null}>
-              <PublicDiscoverExperience onRequestOwner={requestStandaloneSignIn}
-                onSelect={(address) => visitProfile(address)} />
-            </Suspense>
+            : content.kind === 'entry' ? null
             : localOwnerRoute ? !ownerSourceReady ? <div className="mode-loading" role="status">Resolving owner workspace...</div> : <OwnerRuntimeBoundary
             ownerAuthoringEnabled={ownerAuthoringEnabled}
             workspaceProfileAddress={connectedWorkspaceProfileAddress}
@@ -242,6 +201,7 @@ function App() {
             visitorWalletConnected={visitorWalletConnected}
             viewedProfileAddress={viewedProfileAddress}
             onVisitProfile={visitProfile}
+            onOpenDiscover={navigation.openDiscover}
             connectedProfile={connectedProfile}
             onConnect={requestStandaloneSignIn}
             onDisconnect={disconnectStandalone}
@@ -256,10 +216,16 @@ function App() {
             connectedProfile={connectedProfile} onConnect={requestStandaloneSignIn}
             onDisconnect={disconnectStandalone} onEnterMyWorld={enterConnectedWorld}
             onRetry={retryPublishedProfile}
-            returnProfileAddress={profileTarget.source === PROFILE_TARGET_SOURCE.EXPLICIT
-              ? verifiedOwnerProfileAddress
-              : null}
-            onVisitProfile={visitProfile} />}
+            returnProfileAddress={verifiedOwnerProfileAddress}
+            onOpenDiscover={navigation.openDiscover} onVisitProfile={visitProfile} />}
+        </div>
+        {!standaloneSignInActive && !publicEntryPortal && ['entry', 'discover'].includes(destination.kind) && <Suspense fallback={<div className="mode-loading">Opening Discover...</div>}>
+          <PublicEntryPortal embedded mode={destination.kind === 'discover' ? 'explore' : 'landing'}
+            onExplore={navigation.openDiscover} onClose={content?.address ? navigation.closeDiscover : undefined} onHome={navigation.closeDiscover}
+            connectedProfile={connectedProfile} onConnect={requestStandaloneSignIn}
+            onDisconnect={disconnectStandalone} onEnterMyWorld={enterConnectedWorld} onVisitProfile={visitProfile} />
+          <StartupDestinationReady />
+        </Suspense>}
       </StartupDestinationBoundary>
       </StartupDestinationContext.Provider>
       </div>
@@ -267,6 +233,7 @@ function App() {
         connectedProfile={connectedProfile}
         ready={entryDestinationReady}
         portal={publicEntryPortal}
+        onExplore={navigation.openDiscover}
         onConnect={requestStandaloneSignIn}
         onDisconnect={disconnectStandalone}
         onEnterMyWorld={enterConnectedWorld}

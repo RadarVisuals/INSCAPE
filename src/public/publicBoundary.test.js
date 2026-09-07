@@ -95,11 +95,11 @@ test('selected owner and Visitor omit the retired upper-world topology', () => {
   assert.doesNotMatch(`${ownerSource}\n${visitorSource}`, /UpperWorldSurface|SpatialLevelNavigation|upper-world/u);
 });
 
-test('all non-owner routes mount the published boundary instead of the local workspace shell', () => {
+test('profile destinations mount the owner boundary only for an authorized Workbench', () => {
   const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
   assert.match(appSource, /localOwnerRoute \? !ownerSourceReady \?[\s\S]*<OwnerRuntimeBoundary/);
   assert.match(appSource, /: <PublishedProfileBoundary/);
-  assert.match(appSource, /selectPublicProfileRoute\(ownerAuthoringEnabled\)/);
+  assert.match(appSource, /ownerAuthoringEnabled = content\?\.kind === 'workbench'/);
   assert.doesNotMatch(appSource, /viewingConnectedWorkspace \? <OwnerRuntimeBoundary/);
 });
 

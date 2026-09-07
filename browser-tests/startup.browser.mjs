@@ -114,7 +114,7 @@ test('automatic startup and the editorial landing world through the real App', {
       await capture('landing-small-desktop');
       await page.setViewportSize({ width: 1440, height: 900 });
       await capture('landing-wide');
-      await page.getByRole('button', { name: 'EXPLORE WORLDS', exact: true }).first().click();
+      await page.getByRole('button', { name: 'DISCOVER', exact: true }).first().click();
       await page.getByRole('searchbox', { name: 'Search published worlds' }).fill('Other artist');
       await page.getByRole('button', { name: 'Return to INSCAPE landing' }).click();
       await feature.getByRole('button', { name: 'Enter Featured artist', exact: true }).click();

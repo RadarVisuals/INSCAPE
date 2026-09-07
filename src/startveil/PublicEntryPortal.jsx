@@ -94,9 +94,11 @@ function PublishedWorldCard({ compact = false, discoveryStatus, onVisit, profile
   </article>;
 }
 
-export default function PublicEntryPortal({ connectedProfile, discoveryRepository, embedded = false, initialMode = 'landing', onClose,
+export default function PublicEntryPortal({ connectedProfile, discoveryRepository, embedded = false, initialMode = 'landing', mode: controlledMode, onExplore, onHome, onClose,
   onConnect, onDisconnect, onEnterMyWorld, onVisitProfile, resolutionStore }) {
-  const [mode, setMode] = useState(initialMode === 'explore' ? 'explore' : 'landing');
+  const [localMode, setMode] = useState(initialMode === 'explore' ? 'explore' : 'landing');
+  const mode = controlledMode || localMode;
+  const explore = () => { if (mode !== 'explore') onExplore ? onExplore() : setMode('explore'); };
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef(null);
   const discovery = useProfileDiscoveryController({ repository: discoveryRepository });
@@ -104,10 +106,10 @@ export default function PublicEntryPortal({ connectedProfile, discoveryRepositor
   const exploreResults = discovery.results.slice(0, MAX_EXPLORE_RESULTS);
   useEffect(() => {
     if (mode !== 'explore') return undefined;
-    const close = (event) => { if (event.key !== 'Escape' || accountOpen) return; onClose ? onClose() : setMode('landing'); };
+    const close = (event) => { if (event.key !== 'Escape' || accountOpen) return; (onClose || onHome) ? (onClose || onHome)() : setMode('landing'); };
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
-  }, [accountOpen, mode, onClose]);
+  }, [accountOpen, mode, onClose, onHome]);
   useEffect(() => {
     if (!accountOpen) return undefined;
     const close = (event) => {
@@ -121,7 +123,7 @@ export default function PublicEntryPortal({ connectedProfile, discoveryRepositor
     };
   }, [accountOpen]);
 
-  const returnHome = () => onClose ? onClose() : setMode('landing');
+  const returnHome = () => (onClose || onHome) ? (onClose || onHome)() : setMode('landing');
   return <div className="public-entry-portal" data-embedded={embedded || undefined}
     data-lattice-menu-surface data-menu-surface="mist" data-mode={mode}>
     <header className="public-entry-portal__header">
@@ -133,7 +135,7 @@ export default function PublicEntryPortal({ connectedProfile, discoveryRepositor
           placeholder="SEARCH WORLDS" type="search" value={discovery.query} />
       </label>}
       <nav aria-label="Public entry">
-        <button aria-current={mode === 'explore' ? 'page' : undefined} onClick={() => setMode('explore')} type="button">EXPLORE WORLDS</button>
+        <button aria-current={mode === 'explore' ? 'page' : undefined} onClick={explore} type="button">DISCOVER</button>
         {connectedProfile ? <div className="public-entry-portal__account" ref={accountRef}>
           <button aria-expanded={accountOpen} className="public-entry-portal__account-trigger"
             onClick={() => setAccountOpen((open) => !open)} type="button">
@@ -157,7 +159,7 @@ export default function PublicEntryPortal({ connectedProfile, discoveryRepositor
       <PublishedWorldCard discoveryStatus={discovery.status} onVisit={onVisitProfile} profile={featured}
         resolutionStore={resolutionStore} />
       <div className="public-entry-portal__actions">
-        <button className="public-entry-portal__primary" onClick={() => setMode('explore')} type="button"><span>EXPLORE WORLDS</span><b aria-hidden="true">→</b></button>
+        <button className="public-entry-portal__primary" onClick={explore} type="button"><span>DISCOVER</span><b aria-hidden="true">→</b></button>
         {connectedProfile
           ? <button onClick={onEnterMyWorld} type="button"><span>ENTER MY WORLD</span><b aria-hidden="true">→</b></button>
           : onConnect && <button onClick={onConnect} type="button"><span>CONNECT PROFILE</span><b aria-hidden="true">→</b></button>}
@@ -169,7 +171,7 @@ export default function PublicEntryPortal({ connectedProfile, discoveryRepositor
         {!exploreResults.length && <div className="public-entry-portal__empty">
           <strong>{discovery.status === 'loading' ? 'READING PUBLIC NETWORK' : discovery.status === 'error' ? 'PUBLIC DIRECTORY UNAVAILABLE' : 'NO WORLDS FOUND'}</strong>
           <small>{discovery.status === 'error' ? 'THE DIRECTORY CAN BE RETRIED WITHOUT CONNECTING A PROFILE.' : 'TRY ANOTHER NAME OR PROFILE ADDRESS.'}</small>
-          {discovery.status === 'error' && <button onClick={discovery.retry} type="button">RETRY DIRECTORY</button>}
+          {discovery.status === 'error' && <button onClick={discovery.retry} type="button">RETRY DISCOVER</button>}
         </div>}
       </section>
     </main>}

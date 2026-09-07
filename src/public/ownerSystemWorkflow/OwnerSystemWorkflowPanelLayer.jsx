@@ -33,7 +33,7 @@ export default function OwnerSystemWorkflowPanelLayer({ placementTargetRef, shor
     {show('profile').present && <PanelPresence id="profile" panels={panels}><div className="system-workflow__profile-layer"
       onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <OwnerSystemWorkflowProfile identity={profileIdentity} layout={layout} menuSurface={menuSurface} model={profileModel}
-        onClose={onClose} onDossierChange={onDossierChange} phase={show('profile').phase} workspaceSurfaceColor={workspaceSurfaceColor} /></div></PanelPresence>}
+        onClose={onClose} onDisconnect={onDisconnect} onDossierChange={onDossierChange} phase={show('profile').phase} workspaceSurfaceColor={workspaceSurfaceColor} /></div></PanelPresence>}
     {show('activity').present && <PanelPresence id="activity" panels={panels}>
       <Suspense fallback={null}><OwnerSystemWorkflowActivity activity={activity} onClose={onClose}
         phase={show('activity').phase} /></Suspense></PanelPresence>}

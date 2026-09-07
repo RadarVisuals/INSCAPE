@@ -1156,6 +1156,9 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
    state-machine (`data-layout`), rather than independent viewport patches. */
 .system-workflow__profile-card { width: 100%; min-height: 92px; padding: 14px; display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: center; gap: 12px; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; transition: background-color 120ms linear; }
 .system-workflow__profile[data-viewing] { visibility: hidden; }
+.system-workflow__profile-disconnect { width: 100%; min-height: 40px; padding: 10px 14px; border: 0; border-top: 1px solid var(--workflow-border); background: transparent; color: var(--workflow-ink); text-align: left; font: 500 11px/1.2 "Inscape Sora", sans-serif; cursor: pointer; }
+.system-workflow__profile-disconnect:hover { background: var(--workflow-hover); }
+.system-workflow__profile-disconnect:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -3px; }
 .system-workflow__profile-card[data-viewing] { opacity: 0; pointer-events: none; }
 .system-workflow__profile-card > span:last-child { min-width: 0; display: grid; gap: 7px; }
 .system-workflow__profile-card b { overflow: hidden; font: 500 11px/1.1 "Inscape Sora", sans-serif; font-variation-settings: "wght" 500; letter-spacing: .025em; text-overflow: ellipsis; white-space: nowrap; }

@@ -9,7 +9,7 @@ const rectangle = (node) => {
 };
 const compactAddress = (address) => address?.length > 18 ? `${address.slice(0, 10)}…${address.slice(-6)}` : address;
 
-export default function OwnerSystemWorkflowProfile({ identity, layout, menuSurface, model, onClose, onDossierChange, phase, workspaceSurfaceColor }) {
+export default function OwnerSystemWorkflowProfile({ identity, layout, menuSurface, model, onClose, onDisconnect, onDossierChange, phase, workspaceSurfaceColor }) {
   const cardRef = useRef(null);
   const [session, setSession] = useState(null);
   const sourceIdentity = useMemo(() => ({
@@ -38,6 +38,7 @@ export default function OwnerSystemWorkflowProfile({ identity, layout, menuSurfa
         </span>
         <span><b>{sourceIdentity.displayName}</b><small>{sourceIdentity.secondaryLabel}</small></span>
       </button>
+      {onDisconnect && <button className="system-workflow__profile-disconnect" onClick={onDisconnect} type="button">Disconnect</button>}
     </aside>
     {session && model && <Suspense fallback={null}><LatticeProductionIdentityDossier
       dismissOnBackdrop

@@ -1,4 +1,3 @@
-import { lazy, Suspense, useState } from 'react';
 import { StartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import PublishedProfileDocumentPreview from './PublishedProfileDocumentPreview.jsx';
 import { PUBLISHED_PROFILE_STATUS } from '../storage/luksoPublishedProfileRepository.js';
@@ -6,7 +5,6 @@ import './publishedProfileStatus.css';
 import AlphaSupportPanel from '../../support/AlphaSupportPanel.jsx';
 import { ALPHA_SUPPORT_CODES } from '../../support/alphaSupport.js';
 
-const PublicEntryPortal = lazy(() => import('../../startveil/PublicEntryPortal.jsx'));
 
 const STATUS_COPY = Object.freeze({
   CONTEXT_REQUIRED: ['PROFILE CONTEXT REQUIRED', 'Open the installed app from a Universal Profile, or provide an explicit profile address while developing locally.'],
@@ -31,7 +29,7 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
       <header><span>PUBLIC PROFILE</span><h1>{title}</h1></header>
       <div className="published-profile-status__body">
         <p>{message}</p><code>{state?.address}</code>
-        <div className="published-profile-actions">{onOpenDirectory && <button type="button" onClick={onOpenDirectory}>DIRECTORY</button>}
+        <div className="published-profile-actions">{onOpenDirectory && <button type="button" onClick={onOpenDirectory}>DISCOVER</button>}
           {onReturn && <button type="button" onClick={onReturn}>RETURN</button>}
           {state?.status !== PUBLISHED_PROFILE_STATUS.LOADING && state?.status !== 'CONTEXT_REQUIRED' && <RetryButton state={state} onRetry={onRetry} />}</div>
         {supportRequired && <AlphaSupportPanel
@@ -47,21 +45,16 @@ function PublishedStatusSurface({ state, onRetry, onOpenDirectory, onReturn }) {
 }
 
 export default function PublishedProfileBoundary({
-  address, connectedProfile, onConnect, onDisconnect, onEnterMyWorld, resolution, onRetry, returnProfileAddress, onVisitProfile,
+  address, resolution, onRetry, returnProfileAddress, onVisitProfile, onOpenDiscover,
 }) {
-  const [directoryOpen, setDirectoryOpen] = useState(false);
   const visibleDocument = [PUBLISHED_PROFILE_STATUS.RESOLVED, PUBLISHED_PROFILE_STATUS.STALE].includes(resolution?.status) ? resolution.document : null;
   const canReturn = Boolean(returnProfileAddress && returnProfileAddress.toLowerCase() !== String(address || '').toLowerCase());
   const returnHome = canReturn ? () => onVisitProfile?.(returnProfileAddress, { returnToConnectedProfile: true }) : null;
   const content = !visibleDocument
-    ? <PublishedStatusSurface state={resolution} onRetry={onRetry} onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
+    ? <PublishedStatusSurface state={resolution} onRetry={onRetry} onOpenDirectory={onOpenDiscover} onReturn={returnHome} />
     : <><PublishedProfileDocumentPreview document={visibleDocument}
-      onOpenDirectory={() => setDirectoryOpen(true)} onReturn={returnHome} />
+      onOpenDirectory={onOpenDiscover} onReturn={returnHome} />
     {resolution.status === PUBLISHED_PROFILE_STATUS.STALE && <div className="published-profile-stale" role="status" aria-busy={resolution.busy}>Showing the last verified document while {resolution.busy ? 'checking the network.' : 'the network is unavailable.'} <RetryButton state={resolution} onRetry={onRetry} /></div>}
     </>;
-  return <>{content}{directoryOpen && <Suspense fallback={null}><PublicEntryPortal connectedProfile={connectedProfile}
-    embedded initialMode="explore" onConnect={onConnect} onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld}
-    onClose={() => setDirectoryOpen(false)} onVisitProfile={(address) => {
-    onVisitProfile?.(address); setDirectoryOpen(false);
-  }} /></Suspense>}</>;
+  return content;
 }

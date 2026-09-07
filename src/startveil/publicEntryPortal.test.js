@@ -12,15 +12,15 @@ const walletSession = read('../wallet/standaloneWalletSession.js');
 test('bare public entry resolves into a Portal without restoring the generic Enter gate', () => {
   assert.match(app, /portal=\{publicEntryPortal\}/);
   assert.match(startveil, /portal && ready \? <PublicEntryPortal/);
-  assert.match(portal, />EXPLORE WORLDS</);
+  assert.match(portal, />DISCOVER</);
   assert.match(portal, />CONNECT</);
   assert.doesNotMatch(portal, />ENTER</);
-  assert.doesNotMatch(startveil, /onExplore/);
+  assert.match(startveil, /onExplore/);
   assert.match(startveil, /import '\.\/publicEntryPortal\.css'/);
   assert.doesNotMatch(startveil, /inscapeStartveil\.css/);
 });
 
-test('Explore Worlds unfolds inside the Portal and never enters the workspace Library shell', () => {
+test('Discover unfolds inside the Portal and never enters the workspace Library shell', () => {
   assert.match(portal, /initialMode === 'explore' \? 'explore' : 'landing'/);
   assert.match(portal, /public-entry-portal__world-grid/);
   assert.match(portal, /Search published worlds/);
@@ -28,12 +28,12 @@ test('Explore Worlds unfolds inside the Portal and never enters the workspace Li
   assert.doesNotMatch(portal, /PublicDiscoverExperience|OwnerSystemWorkflowDiscoverWorkspace/);
 });
 
-test('the same Explore Worlds surface can be opened from owner and visitor workspaces', () => {
+test('the same Discover surface can be opened from owner and visitor workspaces', () => {
   const panelLayer = read('../public/ownerSystemWorkflow/OwnerSystemWorkflowPanelLayer.jsx');
   const publishedBoundary = read('../profileDocument/components/PublishedProfileBoundary.jsx');
   assert.match(panelLayer, /<PublicEntryPortal[\s\S]*embedded initialMode="explore"/);
-  assert.match(publishedBoundary, /<PublicEntryPortal[\s\S]*embedded initialMode="explore"/);
-  assert.match(portal, /onClose \? onClose\(\) : setMode\('landing'\)/);
+  assert.match(publishedBoundary, /onOpenDirectory=\{onOpenDiscover\}/);
+  assert.match(portal, /onHome/);
 });
 
 test('public directory navigation and search reuse the owner dock and Library interaction language', () => {
@@ -48,7 +48,7 @@ test('public directory navigation and search reuse the owner dock and Library in
 });
 
 test('public directory hierarchy lives in the header while cards retain the hidden snap geometry', () => {
-  assert.doesNotMatch(portal, /<header><h1>EXPLORE WORLDS|PUBLISHED WORLDS<\/span>/);
+  assert.doesNotMatch(portal, /<header><h1>DISCOVER|PUBLISHED WORLDS<\/span>/);
   assert.match(styles, /grid-template-columns: repeat\(auto-fill, calc\(var\(--portal-grid-size\) \* 6\)\)/);
   assert.match(styles, /world-grid[^}]*gap: var\(--portal-grid-size\)/s);
   assert.match(styles, /header-wordmark i \{ width: 156px/);

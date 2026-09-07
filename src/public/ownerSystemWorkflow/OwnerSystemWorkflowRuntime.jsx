@@ -57,7 +57,7 @@ function reviewIdentity(profileAddress, fixture) {
   };
 }
 
-export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWalletPublicationContext, onConnect, onDisconnect, onEnterMyWorld, onPreviewDocumentChange,
+export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWalletPublicationContext, onConnect, onDisconnect, onEnterMyWorld, onOpenDiscover, onPreviewDocumentChange,
   onPublicationConfirmed, profileAddress, publishedResolution, onVisitProfile, reviewStorage, reviewAssets,
   reviewCategories, reviewActivity, reviewDiscovery, reviewProfile }) {
   useStartupDestinationReady();
@@ -227,6 +227,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   }, [closePublication, publicationOpen]);
   const openDockPanel = (name, trigger) => {
     if (publicationOpen) closePublication({ returnFocus: false });
+    if (name === 'discover' && onOpenDiscover) { panels.closePanel({ returnFocus: false }); onOpenDiscover(trigger); return; }
     panels.togglePanel(name, trigger);
   };
   const menuSurface = controller.draft?.appearance.menuSurfaceId;
@@ -304,7 +305,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     onOpenDirectory={() => {
       const trigger = previewReturnFocus.current;
       setPreview(null); previewReturnFocus.current = null;
-      requestAnimationFrame(() => panels.openPanel('discover', trigger));
+      requestAnimationFrame(() => onOpenDiscover ? onOpenDiscover(trigger) : panels.openPanel('discover', trigger));
     }} /></Suspense>}
   {publicationPresence.present && <Suspense fallback={null}><OwnerSystemWorkflowPublicationRack
     assetRecords={canonicalRecords}

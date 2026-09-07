@@ -7,7 +7,7 @@ import './publicEntryPortal.css';
 
 const INTRO_MS = 720;
 
-export default function PortalStartveil({ connectedProfile, portal = false, onConnect, onDisconnect, onEnterMyWorld, onVisitProfile, ...props }) {
+export default function PortalStartveil({ connectedProfile, portal = false, onConnect, onDisconnect, onEnterMyWorld, onVisitProfile, onExplore, ...props }) {
   const [sequenceReady, setSequenceReady] = useState(false);
   const { state, enter, reducedMotion, shortened, canEnter } = useStartveil({
     ...props,
@@ -41,14 +41,14 @@ export default function PortalStartveil({ connectedProfile, portal = false, onCo
     data-reduced-motion={reducedMotion || undefined} data-sequence={shortened ? 'short' : 'full'}
     data-state={state} data-exiting={exiting || undefined} data-lattice-menu-surface data-menu-surface="mist">
     <div aria-hidden="true" className="startveil__grid" />
-    {portal && ready ? <PublicEntryPortal connectedProfile={connectedProfile} onConnect={onConnect}
+    {portal && ready ? <PublicEntryPortal connectedProfile={connectedProfile} onConnect={onConnect} onExplore={onExplore}
       onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld} onVisitProfile={visitProfile} />
       : <div className="startveil__intro">
         <span aria-hidden="true" className="startveil__intro-wordmark" />
         <small>{props.ready ? 'PUBLIC NETWORK · LUKSO MAINNET' : 'PREPARING INSCAPE'}</small>
       </div>}
     <span aria-live="polite" className="startveil__status">
-      {exiting ? 'Opening INSCAPE.' : portal && ready ? 'Choose Explore Worlds or Connect Profile.'
+      {exiting ? 'Opening INSCAPE.' : portal && ready ? 'Choose Discover or Connect Profile.'
         : ready ? 'INSCAPE ready.' : props.ready ? 'Resolving INSCAPE.' : 'Preparing INSCAPE.'}
     </span>
   </section>;
