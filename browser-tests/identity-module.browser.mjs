@@ -255,8 +255,8 @@ test('Identity content and window are independent of the owner workspace', async
     await page.goto(`${origin}/development/owner/system-workflow`);
     await page.locator('.system-workflow').waitFor();
     await page.evaluate(async () => {
-      const { default: React } = await import('/node_modules/.vite/deps/react.js');
-      const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+      const { default: React } = await import('/@id/react');
+      const { default: ReactDOM } = await import('/@id/react-dom/client');
       const { default: Identity } = await import('/src/public/identity/IdentityModule.jsx');
       const node = document.createElement('div'); document.querySelector('.system-workflow').append(node);
       const root = ReactDOM.createRoot(node);

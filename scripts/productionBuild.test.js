@@ -68,11 +68,11 @@ test('each independent budget category reports an actionable overage', () => {
   }
 });
 
-test('measured Phase 4B allowances retain exact production budget boundaries', () => {
+test('measured production allowances retain exact budget boundaries after the Vite 6 migration', () => {
   assert.deepEqual(PRODUCTION_BUDGETS, {
     initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
     ownerJavaScript: { raw: 378_237, gzip: 114_888 },
-    standaloneWalletJavaScript: { raw: 4_400_000, gzip: 1_200_000 },
+    standaloneWalletJavaScript: { raw: 4_600_000, gzip: 1_225_000 },
     initialCss: { raw: 51_807, gzip: 10_301 },
     ownerCss: { raw: 143_870, gzip: 21_140 },
     coreJavaScript: { raw: 2_076_709, gzip: 620_158 },

@@ -100,7 +100,11 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // WalletConnect's platform-conditional graph is larger in Netlify's Linux build
   // than in the local Windows build. Keep a small measured cross-platform margin
   // while continuing to budget this lazy runtime independently from the core app.
-  standaloneWalletJavaScript: Object.freeze({ raw: 4_400_000, gzip: 1_200_000 }),
+  // Vite 6.4.3 / esbuild 0.25.12 rebuild the unchanged wallet dependency graph
+  // to 4,545,415 raw / 1,208,418 gzip bytes on Windows. Retain the new default
+  // CommonJS semantics; allow a bounded cross-platform margin for this lazy
+  // group only. Initial/core budgets and runtime-isolation checks stay fixed.
+  standaloneWalletJavaScript: Object.freeze({ raw: 4_600_000, gzip: 1_225_000 }),
   // Task 5's accepted resolver-status repair replaces the legacy presentation.
   // Preserve its measured 15-byte gzip headroom; the raw ceiling stays fixed.
   // The accepted Startveil and lightweight resident presentation are initial

@@ -477,3 +477,30 @@ Node/toolchain version, assess current supported Vite and LUKSO package
 updates, trace affected runtime paths, and verify wallet and publication
 boundaries after any upgrade. Do not combine blind dependency upgrades with
 Identity layout work or claim build success resolves these advisories.
+
+The subsequent local maintenance check updated Vite 5.4.21 to 6.4.3 and
+esbuild 0.21.5 to 0.25.12. Lockfile comparison found no runtime package
+version changes. The audit now reports 91 findings (10 low, 60 moderate,
+18 high, 3 critical); the inherited wallet-chain findings remain unresolved.
+The configured registry still reports `@lukso/up-modal@0.21.11` as latest.
+This is a targeted remediation, not a claim that Vite 6 is the newest major
+or that the application has received security clearance.
+
+Vite 6's changed bundling exceeds the former standalone-wallet budget with
+the same application inputs. The measured Windows output is 4,545,415 raw /
+1,208,418 gzip bytes. Only that lazy group's limits were recalibrated to
+4,600,000 / 1,225,000; initial/core limits and isolation checks are unchanged.
+The migration retains Vite's defaults rather than adding compatibility
+switches. See the [official Vite 6 migration notes](https://v6.vite.dev/guide/migration#advanced).
+Local Node 18.20.7 and its engine warnings remain a release prerequisite;
+this maintenance check does not upgrade the workstation or deployment runtime.
+
+Local verification after migration: 756 Node tests, seven Identity browser
+cases, five LUKSO standards checks, production build and build check passed.
+The built wallet chunk imported in an isolated browser without creating a
+wallet session; live wallet connection/signing remains untested here.
+Identity was visually checked at 390 and 1440 pixels. The targeted review
+confirmed shared card validation, profile-scoped authoring callbacks and
+module-owned shader cleanup; no new abstraction or layout layer was needed.
+The Identity browser harness now resolves React through Vite's module IDs
+instead of assuming the optimizer's physical cache path.
