@@ -4,8 +4,8 @@ const compactAddress = (address) => address?.length > 18 ? `${address.slice(0, 1
 
 export default function OwnerSystemWorkflowProfile({ identity, model, onDisconnect, onOpenIdentity, phase }) {
   const sourceIdentity = useMemo(() => ({
-    avatarUrl: model?.profile.avatarUrl || identity?.avatarUrl || null,
-    displayName: model?.profile.displayName || identity?.name || 'UNNAMED PROFILE',
+    avatarUrl: model?.officialProfile.avatarUrl || identity?.avatarUrl || null,
+    displayName: model?.officialProfile.name || identity?.name || 'UNNAMED PROFILE',
     secondaryLabel: `${compactAddress(model?.address)} · OWNER`,
   }), [identity, model]);
   return <>

@@ -2,6 +2,7 @@ import { forwardRef } from 'react';
 
 const OwnerSystemWorkflowDetachedWindow = forwardRef(function OwnerSystemWorkflowDetachedWindow({
   ariaLabel,
+  as: Element = 'aside',
   children,
   className = '',
   controls,
@@ -14,14 +15,14 @@ const OwnerSystemWorkflowDetachedWindow = forwardRef(function OwnerSystemWorkflo
 }, ref) {
   const rootClassName = `system-workflow__detached-window${className ? ` ${className}` : ''}`;
   const contentClassName = `system-workflow__detached-window-surface${surfaceClassName ? ` ${surfaceClassName}` : ''}`;
-  return <aside aria-label={ariaLabel} className={rootClassName} data-detached-window data-floating ref={ref} style={style}>
+  return <Element aria-label={ariaLabel} className={rootClassName} data-detached-window data-floating ref={ref} style={style}>
     <header className="system-workflow__detached-window-titlebar" {...headerPointerProps}>
       {titleContent ?? <strong title={title}>{title}</strong>}
       <span className="system-workflow__detached-window-controls">{controls}</span>
     </header>
     <div className={contentClassName}>{children}</div>
     {resizeHandleProps && <div {...resizeHandleProps} className="system-workflow__detached-window-resize" />}
-  </aside>;
+  </Element>;
 });
 
 export default OwnerSystemWorkflowDetachedWindow;

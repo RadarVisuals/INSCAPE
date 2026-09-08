@@ -216,22 +216,58 @@ internal compatibility names during this migration; do not broadly rename them.
   Copy, source and QR controls use the same muted icon weight. QR sharing
   generates the full address locally, on demand, with a declared dependency;
   it performs no upload, wallet action or publication.
+  The dock's account menu uses the official profile name and avatar as well;
+  the authored title and artwork belong to the Identity presentation.
+  QR sharing reuses the shared window chrome and opens beside its trigger,
+  following that trigger while open and staying within viewport bounds.
+  Its scan surface is still and high-contrast, with softly rounded modules.
+  It currently encodes the address; switching to a public INSCAPE profile URL
+  is deferred until that public destination is settled.
 
 - Identity starts compact. A centered chevron reveals its INSCAPE extension
   below the official profile section. Expansion preserves the window's top
   edge, grows only as needed, and uses contained scrolling at viewport bounds.
   Expand/collapse is temporary window state, including for visitors.
-  The upper section uses official name, biography, visible tags and authored
-  profile links. Known platforms can use icons with hover/focus labels;
-  duplicate-platform and unknown-site links retain visible names.
+  The upper section keeps the official name, with an optional authored title
+  above it. The custom title keeps its original small condensed technical font;
+  username typography is unchanged. Tags form a separate, spaced group below
+  the biography. Subtitle support is removed from the interface and card data
+  model. The local draft loader discards the removed subtitle property from
+  drafts written by the previous editor, then validates the remaining data.
+  Other content is preserved; the next successful save writes the cleaned draft.
+  An authored biography replaces the official bio
+  in this artistic presentation when provided; otherwise the official bio is
+  used. The official title-bar identity remains unchanged. Visible official
+  and additional tags and profile links belong in this upper section.
+  Profile links use icons with hover/focus labels and accessible names;
+  unknown sites use the shared globe icon. Repeated platforms remain separate
+  links, distinguished by those labels.
   The official-avatar fallback is small and uses a plain theme surface.
   Explicitly chosen Library artwork retains the larger artistic presentation.
   Cards without saved background settings retain their existing defaults:
   official avatars use plain, and INSCAPE artwork uses clouds. Choosing
   artwork is not evidence that its image has transparency.
-  The lower extension separates authored title, story and additional tags.
-  Owner editing uses the existing alias/bio/tags fields and authoring session,
-  with stale-write and storage-failure checks. Visitors have no edit command.
+  The chevron overlays the hero directly, without a separate full-width bar.
+  One chevron click reveals all nonempty fields directly. There is no second
+  category-expansion step or summary row. Existing category strings remain
+  intact in saved data but do not add a navigation step to the card.
+  An owner-only gear beside Close enables editing directly in the hero and
+  field cells, with a + Add cell alongside the existing cells. Save and Cancel
+  are in the title bar. Appearance controls remain a secondary inline section.
+  Title, biography, tags, artwork,
+  background and fields save atomically through the authoring session,
+  with stale-write and storage-failure checks. Save and Cancel restore the
+  reading view and focus to the gear. Visitors have no edit command.
+  Dropping Library artwork enters the same temporary edit session. Its
+  keyboard-accessible selector and reset are available inside the editor;
+  Save commits the preview and Cancel restores the saved artwork with the rest
+  of the card. Artwork participates in the same stale-write checks.
+  No redundant artwork or technical-address section appears in reading mode.
+  Identity height follows measured content, with no manual height-resize handle.
+  Title-bar movement remains available. Long content scrolls within viewport
+  bounds. Other instruments retain their existing resizing behavior.
+  The cloud pattern is anchored to the card's top edge and width, so expanding
+  the card reveals more of the same running shader instead of rescaling it.
   Makers may additionally name, order and remove free information fields with
   text or list content. These use one shared responsive layout, not a second
   canvas editor. Empty fields are omitted from the visible and public card.
@@ -256,6 +292,13 @@ internal compatibility names during this migration; do not broadly rename them.
   verified facts or official profile metadata. Visitors receive the published
   settings and fields without authoring commands. No shader marketplace,
   third-party code loading or arbitrary field layout is implemented here.
+  Optional field category (60 characters) retains the same envelope.
+  Old documents without categories remain valid and are
+  not rewritten on read; documents using them need this updated strict reader.
+  One cloud canvas spans the hero and extension. The lower reading surface uses
+  90% theme-surface opacity while text remains opaque. Renderer resolution stays
+  bounded, with a lower cap on narrow screens; this is not a guarantee of mobile
+  frame rate. Hidden/offscreen, reduced-motion and disposal behavior still apply.
 
 - Account controls remain available from Profile on the owner's Workbench,
   independently of any authored Identity Module. Explicit Disconnect from the
@@ -268,8 +311,8 @@ internal compatibility names during this migration; do not broadly rename them.
   The Identity Module will replace the existing dossier rather than add a second
   profile presentation. Its window uses the shared rounded module chrome; the
   old dossier's overlay styling is not its visual baseline.
-  The first replacement opens from Profile as a non-modal, movable, vertically
-  resizable window in owner and visitor views. It reads the existing projected
+  The replacement opens from Profile as a non-modal, movable window that fits
+  its content in owner and visitor views. It reads the existing projected
   identity data; window interaction is session-local and does not write a draft
   or publication. Closing returns focus to Profile. Authored
   shortcuts and starting arrangements, and direct module links remain separate
@@ -294,6 +337,13 @@ internal compatibility names during this migration; do not broadly rename them.
   requirement that all artistic shaders look alike. Shader behavior belongs
   to the module, not the Workbench host. Third-party packaging, paid access,
   and execution of third-party shader code remain unspecified and unimplemented.
+
+- The INSCAPE Founder designation is product-owned, separate from authored
+  roles and official LSP3 metadata. It is assigned to residentzero's mainnet
+  profile `0x001048331cd14cef40dd5da644a738e7324fe691`. The Identity projection
+  shows it only for that address with a resolved mainnet chain fact. Editing a
+  title, biography or field cannot grant it; it is not serialized in
+  the creator-authored card. It grants no wallet or authoring authority.
 
 - Direct world links enter the targeted world automatically through Startveil,
   without a separate Enter button. The bare INSCAPE URL retains the public

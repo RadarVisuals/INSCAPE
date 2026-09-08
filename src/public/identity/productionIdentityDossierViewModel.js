@@ -7,6 +7,8 @@ const cleanOverlayText = (value, maximum) => typeof value === 'string' && !/[\u0
   ? value.trim().slice(0, maximum) : '';
 const resolved = (fact) => fact?.status === PROFILE_CONTRACT_FACT_STATUS.RESOLVED;
 const freezeEntries = (entries) => Object.freeze(entries.map((entry) => Object.freeze(entry)));
+// Product designation, independent of editable names, titles, tags and published card content.
+const INSCAPE_FOUNDER_PROFILE = '0x001048331cd14cef40dd5da644a738e7324fe691';
 
 function selectUrlCandidate(candidates, minimumWidth = 0) {
   const urls = (Array.isArray(candidates) ? candidates : [])
@@ -117,6 +119,9 @@ export function createProductionIdentityDossierViewModel({
   return Object.freeze({
     key: address,
     address,
+    designation: address === INSCAPE_FOUNDER_PROFILE && resolved(contractFacts?.chain)
+      && contractFacts.chain.value === LUKSO_CHAIN_ID
+      ? Object.freeze({ label: 'Founder', title: 'INSCAPE founder' }) : null,
     card: resolveIdentityCard(presentation),
     cardConfigured: Object.hasOwn(presentation, 'card'),
     officialProfile: Object.freeze({

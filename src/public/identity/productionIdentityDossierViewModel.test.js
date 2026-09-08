@@ -24,6 +24,20 @@ const identity = () => normalizeLsp3Identity(ADDRESS, {
   links: [{ title: 'Authored site', url: 'https://example.com/profile' }]
 }, { ipfsGateway: 'https://gw.test/ipfs/', source: 'LIVE' });
 
+test('INSCAPE founder designation is bound to its mainnet profile, never authored labels', () => {
+  const founder = '0x001048331cd14cef40dd5da644a738e7324fe691';
+  const presentation = { ...createIdentityPresentation(), alias: 'Founder',
+    card: { version: 1, background: { type: 'plain', color: null, speed: 1 }, fields: [] } };
+  assert.equal(createProductionIdentityDossierViewModel({ identity: identity(), contractFacts: facts(), identityPresentation: presentation }).designation, null);
+  for (const [chain, expected] of [[resolvedContractFact(42), 'Founder'], [resolvedContractFact(4201), null], [errorContractFact(), null]]) {
+    const model = createProductionIdentityDossierViewModel({
+      identity: normalizeLsp3Identity(founder, { name: 'residentzero' }),
+      contractFacts: createProfileContractFacts(founder, { chain }), identityPresentation: createIdentityPresentation(),
+    });
+    assert.equal(model.designation?.label || null, expected);
+  }
+});
+
 test('projects authoritative identity, canonical URLs, exact counts, and no social verification claim', () => {
   const model = createProductionIdentityDossierViewModel({
     identity: identity(), contractFacts: facts(), identityPresentation: createIdentityPresentation(),

@@ -3,8 +3,9 @@ import { PanelRightClose, X } from 'lucide-react';
 import OwnerSystemWorkflowDetachedWindow from './OwnerSystemWorkflowDetachedWindow.jsx';
 
 // View-only window behavior. The caller supplies its content and commands.
-export function WorkbenchWindow({ children, label, controls, title, titleContent, width = 320, initialHeight = 420, preferredHeight, initialX = 18 }) {
+export function WorkbenchWindow({ children, label, controls, title, titleContent, width = 320, initialHeight = 420, preferredHeight, initialX = 18, fitContent = false }) {
   const node = useRef(null);
+  const measuredContent = useRef(null);
   const gesture = useRef(null);
   const resize = useRef(null);
   const [position, setPosition] = useState(() => ({
@@ -12,8 +13,22 @@ export function WorkbenchWindow({ children, label, controls, title, titleContent
   }));
   const [height, setHeight] = useState(initialHeight);
   useLayoutEffect(() => {
-    if (Number.isFinite(preferredHeight)) setHeight(Math.max(180, Math.min(globalThis.innerHeight - position.y - 54, preferredHeight)));
-  }, [preferredHeight]);
+    if (!fitContent && Number.isFinite(preferredHeight)) setHeight(Math.max(180, Math.min(globalThis.innerHeight - position.y - 54, preferredHeight)));
+  }, [preferredHeight, fitContent]);
+  useLayoutEffect(() => {
+    if (!fitContent) return undefined;
+    const content = measuredContent.current;
+    const measure = () => {
+      const chromeHeight = node.current.offsetHeight - content.parentElement.clientHeight;
+      setHeight(Math.max(180, Math.min(globalThis.innerHeight - position.y - 54,
+        Math.ceil(content.getBoundingClientRect().height + chromeHeight))));
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(content);
+    globalThis.addEventListener('resize', measure);
+    measure();
+    return () => { observer.disconnect(); globalThis.removeEventListener('resize', measure); };
+  }, [fitContent, position.y]);
   const clamp = (value) => ({
     x: Math.max(8, Math.min(globalThis.innerWidth - (node.current?.offsetWidth || 300) - 8, value.x)),
     y: Math.max(8, Math.min(globalThis.innerHeight - (node.current?.offsetHeight || height) - 54, value.y)),
@@ -56,7 +71,7 @@ export function WorkbenchWindow({ children, label, controls, title, titleContent
       onPointerDown: start, onPointerMove: move, onPointerUp: finish, onPointerCancel: finish }}
     controls={controls} titleContent={titleContent}
     style={{ '--detached-window-width': `${width}px`, left: position.x, top: position.y, height, maxHeight: 'calc(100dvh - 70px)' }}
-    resizeHandleProps={{ 'aria-label': `Resize ${label} height`, role: 'separator', tabIndex: 0,
+    resizeHandleProps={fitContent ? undefined : { 'aria-label': `Resize ${label} height`, role: 'separator', tabIndex: 0,
       'aria-orientation': 'horizontal', 'aria-valuenow': Math.round(height),
       onPointerDown: (event) => {
         if (event.button !== 0) return;
@@ -74,7 +89,7 @@ export function WorkbenchWindow({ children, label, controls, title, titleContent
         resizeHeight(height + (event.key === 'ArrowDown' ? 1 : -1) * (event.shiftKey ? 24 : 8));
       } }}
     surfaceClassName="system-workflow__instrument-content">
-    {children}
+    {fitContent ? <div ref={measuredContent}>{children}</div> : children}
   </OwnerSystemWorkflowDetachedWindow>;
 }
 

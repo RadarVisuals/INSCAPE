@@ -15,7 +15,8 @@ export function isValidIdentityCard(value, { published = false } = {}) {
   if (!Array.isArray(value.fields) || value.fields.length > IDENTITY_CARD_LIMITS.fields) return false;
   const ids = new Set();
   return value.fields.every(field => {
-    if (!exact(field, ['id', 'label', 'type', 'value']) || typeof field.id !== 'string'
+    if (!exact(field, ['id', 'label', 'type', 'value', ...(Object.hasOwn(field || {}, 'category') ? ['category'] : [])])
+      || Object.hasOwn(field, 'category') && !text(field.category, 60) || typeof field.id !== 'string'
       || !/^field:[A-Za-z0-9_-]{1,64}$/u.test(field.id) || ids.has(field.id)
       || !text(field.label, IDENTITY_CARD_LIMITS.label)) return false;
     ids.add(field.id);

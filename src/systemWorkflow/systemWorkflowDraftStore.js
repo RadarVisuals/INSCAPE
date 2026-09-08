@@ -85,7 +85,14 @@ export function createSystemWorkflowDraftStore({
       state: Object.freeze({ status: SYSTEM_WORKFLOW_RECORD_STATUS.ABSENT }),
     };
     try {
-      const draft = acceptedDraft(JSON.parse(raw), profile);
+      const candidate = JSON.parse(raw);
+      // The removed Identity subtitle may exist in drafts written by the editor.
+      // Discard only that obsolete property; all remaining data is still validated.
+      const card = candidate?.identityPresentation?.card;
+      if (card?.version === 1 && typeof card.subtitle === 'string' && card.subtitle.length <= 160) {
+        delete card.subtitle;
+      }
+      const draft = acceptedDraft(candidate, profile);
       if (draft) return {
         raw,
         draft: deepFreeze(draft),

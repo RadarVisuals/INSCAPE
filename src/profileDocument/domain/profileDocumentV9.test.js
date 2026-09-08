@@ -119,6 +119,8 @@ test('Identity card boundaries reject executable settings, invalid values and un
   const card = resolveIdentityCard();
   const validField = { id: 'field:one', label: 'Role', type: 'text', value: 'Artist' };
   for (const invalid of [null, {}, { ...card, version: 2 }, { ...card, shader: 'code' },
+    { ...card, subtitle: 'Unsupported field' },
+    { ...card, fields: [{ ...validField, category: 'x'.repeat(61) }] },
     { ...card, background: { ...card.background, type: 'custom-code' } },
     { ...card, background: { ...card.background, color: 'url(https://example.org)' } },
     { ...card, background: { ...card.background, speed: 3 } },
@@ -135,6 +137,19 @@ test('Identity card boundaries reject executable settings, invalid values and un
     const input = draft(); input.identityPresentation.card = invalid;
     assert.throws(() => document({ systemWorkflowDraft: input }));
   }
+});
+
+test('optional Identity categories round-trip while cards without categories stay unchanged', () => {
+  const legacy = resolveIdentityCard();
+  const input = draft(); input.identityPresentation.card = legacy;
+  assert.deepEqual(document({ systemWorkflowDraft: input }).identityPresentation.card, legacy);
+  const card = { ...legacy, fields: [
+    { id: 'field:role', category: 'Practice', label: 'Role', type: 'text', value: 'Artist' },
+  ] };
+  input.identityPresentation.card = card;
+  const published = document({ systemWorkflowDraft: input });
+  assert.equal(validateProfileDocumentV9(published).valid, true);
+  assert.deepEqual(published.identityPresentation.card, card);
 });
 
 test('v9 builder emits only the clean INSCAPE envelope and ordered public Grids', () => {

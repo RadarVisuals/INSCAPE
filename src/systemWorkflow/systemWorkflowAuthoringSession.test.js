@@ -45,22 +45,56 @@ const createStore = (storage, profileAddress = PROFILE_A) => createSystemWorkflo
   storage,
 });
 
+test('drafts written with the removed subtitle still open and save without losing other content', () => {
+  const original = createEmptySystemWorkflowDraft(PROFILE_A);
+  original.identityPresentation.alias = 'Human Underneath';
+  original.identityPresentation.card = { ...resolveIdentityCard(), subtitle: 'Old subtitle', fields: [
+    { id: 'field:role', label: 'Role', type: 'text', value: 'Artist' },
+  ] };
+  const raw = JSON.stringify(original);
+  const storage = memoryStorage({ [systemWorkflowDraftKey(PROFILE_A)]: raw });
+  const store = createStore(storage);
+  assert.equal(store.getRecordState().status, SYSTEM_WORKFLOW_RECORD_STATUS.VALID);
+  const expected = structuredClone(original); delete expected.identityPresentation.card.subtitle;
+  assert.deepEqual(store.getDraft(), expected);
+  assert.equal(storage.getItem(systemWorkflowDraftKey(PROFILE_A)), raw);
+  assert.equal(storage.activity.writes, 0);
+  assert.equal(store.commitCompletedOperation(store.getDraft(), { expectedGeneration: store.getGeneration() }), true);
+  assert.deepEqual(JSON.parse(storage.getItem(systemWorkflowDraftKey(PROFILE_A))), expected);
+  assert.deepEqual(createStore(storage).getDraft(), expected);
+  const invalid = structuredClone(original); invalid.identityPresentation.card.background.type = 'invalid';
+  const invalidStorage = memoryStorage({ [systemWorkflowDraftKey(PROFILE_A)]: JSON.stringify(invalid) });
+  assert.equal(createStore(invalidStorage).getRecordState().status, SYSTEM_WORKFLOW_RECORD_STATUS.CORRUPT);
+  assert.equal(invalidStorage.activity.removes, 0);
+});
+
+function identityDetails(draft) {
+  const { alias, bio, tags, avatar } = draft.identityPresentation;
+  return { alias, bio, tags, avatar };
+}
+
 test('Identity artwork saves its chosen image without changing Grids, and rejects stale or failed writes', () => {
   const storage = memoryStorage(); const store = createStore(storage);
   const session = createSystemWorkflowAuthoringSession({ store });
   const original = store.getDraft();
+  const saveAvatar = ({ expectedAvatar, avatar }) => session.setIdentityConfiguration({
+    expectedDetails: { ...identityDetails(store.getDraft()), avatar: expectedAvatar },
+    details: { ...identityDetails(store.getDraft()), avatar },
+    expectedCard: resolveIdentityCard(store.getDraft().identityPresentation),
+    card: resolveIdentityCard(store.getDraft().identityPresentation),
+  });
   const avatar = { mode: 'inscape', stableAssetId: `42:${PROFILE_B}:0x01`, shape: 'square',
     selectedMedia: { url: 'https://assets.example/purple.png', width: 2000, height: 2000 } };
-  assert.equal(session.setIdentityAvatar({ expectedAvatar: original.identityPresentation.avatar, avatar }), true);
+  assert.equal(saveAvatar({ expectedAvatar: original.identityPresentation.avatar, avatar }), true);
   assert.equal(storage.activity.writes, 1);
   assert.deepEqual(createStore(storage).getDraft().identityPresentation.avatar, avatar);
   assert.deepEqual(store.getDraft().grids, original.grids);
-  assert.equal(session.setIdentityAvatar({ expectedAvatar: avatar, avatar }), false);
-  assert.throws(() => session.setIdentityAvatar({ expectedAvatar: original.identityPresentation.avatar, avatar }), /changed/);
-  assert.throws(() => session.setIdentityAvatar({ expectedAvatar: avatar,
+  assert.equal(saveAvatar({ expectedAvatar: avatar, avatar }), false);
+  assert.throws(() => saveAvatar({ expectedAvatar: original.identityPresentation.avatar, avatar }), /changed/);
+  assert.throws(() => saveAvatar({ expectedAvatar: avatar,
     avatar: { ...avatar, selectedMedia: { ...avatar.selectedMedia, url: 'javascript:alert(1)' } } }));
   storage.failures.write = true;
-  assert.throws(() => session.setIdentityAvatar({ expectedAvatar: avatar, avatar: original.identityPresentation.avatar }), /could not be saved/);
+  assert.throws(() => saveAvatar({ expectedAvatar: avatar, avatar: original.identityPresentation.avatar }), /could not be saved/);
   assert.deepEqual(store.getDraft().identityPresentation.avatar, avatar);
 });
 
@@ -235,20 +269,20 @@ test('Identity details persist separately, reject stale edits and preserve the d
   const session = createSystemWorkflowAuthoringSession({ store });
   const initial = store.getDraft();
   const { alias, bio, tags } = initial.identityPresentation;
-  const expectedDetails = { alias, bio, tags };
-  const details = { alias: 'Human Underneath', bio: { mode: 'inscape', customText: 'A story from my world.' }, tags: { ...tags, additional: ['Illustration'] } };
-  assert.equal(session.setIdentityDetails({ expectedDetails, details }), true);
+  const expectedDetails = { alias, bio, tags, avatar: store.getDraft().identityPresentation.avatar };
+  const details = { ...expectedDetails, alias: 'Human Underneath', bio: { mode: 'inscape', customText: 'A story from my world.' }, tags: { ...tags, additional: ['Illustration'] } };
+  assert.equal(session.setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails, details }), true);
   assert.equal(storage.activity.writes, 1);
   assert.deepEqual(store.getDraft().grids, initial.grids);
   assert.deepEqual(store.getDraft().identityPresentation.avatar, initial.identityPresentation.avatar);
   assert.equal(createStore(storage).getDraft().identityPresentation.alias, 'Human Underneath');
-  assert.throws(() => session.setIdentityDetails({ expectedDetails, details: { ...details, alias: 'Stale' } }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
-  assert.equal(session.setIdentityDetails({ expectedDetails: details, details }), false);
+  assert.throws(() => session.setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails, details: { ...details, alias: 'Stale' } }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
+  assert.equal(session.setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails: details, details }), false);
   assert.equal(storage.activity.writes, 1);
-  assert.throws(() => session.setIdentityDetails({ expectedDetails: details, details: { ...details, alias: 'x'.repeat(81) } }));
+  assert.throws(() => session.setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails: details, details: { ...details, alias: 'x'.repeat(81) } }));
   const saved = store.getDraft();
   storage.failures.write = true;
-  assert.throws(() => session.setIdentityDetails({ expectedDetails: details, details: { ...details, alias: 'Unsaved' } }), { code: 'SYSTEM_WORKFLOW_OPERATION_STALE' });
+  assert.throws(() => session.setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails: details, details: { ...details, alias: 'Unsaved' } }), { code: 'SYSTEM_WORKFLOW_OPERATION_STALE' });
   assert.deepEqual(store.getDraft(), saved);
 });
 
@@ -259,16 +293,16 @@ test('Identity card saves are isolated, durable and reject stale or failed write
   const card = { ...expectedCard, background: { type: 'clouds', color: '#123456', speed: 0 }, fields: [
     { id: 'field:role', label: 'Role', type: 'list', value: ['Artist', 'Writer'] },
   ] };
-  assert.equal(session.setIdentityCard({ expectedCard, card }), true);
+  assert.equal(session.setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard, card }), true);
   assert.equal(storage.activity.writes, 1);
   assert.deepEqual(createStore(storage).getDraft().identityPresentation.card, card);
   assert.deepEqual(store.getDraft().grids, before.grids);
   assert.deepEqual(store.getDraft().identityPresentation.avatar, before.identityPresentation.avatar);
-  assert.equal(session.setIdentityCard({ expectedCard: card, card }), false);
-  assert.throws(() => session.setIdentityCard({ expectedCard, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
+  assert.equal(session.setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard: card, card }), false);
+  assert.throws(() => session.setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
   assert.equal(storage.activity.writes, 1);
   storage.failures.write = true;
-  assert.throws(() => session.setIdentityCard({ expectedCard: card, card: { ...card, fields: [] } }), { code: 'SYSTEM_WORKFLOW_OPERATION_STALE' });
+  assert.throws(() => session.setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard: card, card: { ...card, fields: [] } }), { code: 'SYSTEM_WORKFLOW_OPERATION_STALE' });
   assert.deepEqual(store.getDraft().identityPresentation.card, card);
 });
 
@@ -278,10 +312,37 @@ test('explicitly saving the default Identity background makes it durable without
   const expectedCard = resolveIdentityCard(store.getDraft().identityPresentation);
   assert.equal(Object.hasOwn(store.getDraft().identityPresentation, 'card'), false);
   assert.equal(storage.activity.writes, 0);
-  assert.equal(session.setIdentityCard({ expectedCard, card: expectedCard }), true);
+  assert.equal(session.setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard, card: expectedCard }), true);
   assert.deepEqual(store.getDraft().identityPresentation.card, expectedCard);
-  assert.equal(session.setIdentityCard({ expectedCard, card: expectedCard }), false);
+  assert.equal(session.setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard, card: expectedCard }), false);
   assert.equal(storage.activity.writes, 1);
+});
+
+test('Identity editor commits details, artwork and card atomically and rejects stale or failed saves', () => {
+  const storage = memoryStorage(); const store = createStore(storage);
+  const session = createSystemWorkflowAuthoringSession({ store });
+  const before = store.getDraft();
+  const { alias, bio, tags } = before.identityPresentation;
+  const expectedDetails = { alias, bio, tags, avatar: store.getDraft().identityPresentation.avatar };
+  const expectedCard = resolveIdentityCard(before.identityPresentation);
+  const details = { ...expectedDetails, alias: 'Human Underneath', bio: { mode: 'inscape', customText: 'My custom biography.' }, tags,
+    avatar: { mode: 'inscape', stableAssetId: `42:${PROFILE_B}:0x01`, shape: 'square',
+      selectedMedia: { url: 'https://assets.example/purple.png', width: 2000, height: 2000 } } };
+  const card = { ...expectedCard, fields: [{ id: 'field:role', category: 'Practice', label: 'Role', type: 'text', value: 'Illustrator' }] };
+  storage.failures.write = true;
+  assert.throws(() => session.setIdentityConfiguration({ expectedDetails, expectedCard, details, card }), { code: 'SYSTEM_WORKFLOW_OPERATION_STALE' });
+  assert.deepEqual(store.getDraft(), before);
+  storage.failures.write = false;
+  assert.equal(session.setIdentityConfiguration({ expectedDetails, expectedCard, details, card }), true);
+  assert.deepEqual(createStore(storage).getDraft().identityPresentation.card, card);
+  assert.equal(store.getDraft().identityPresentation.alias, details.alias);
+  assert.deepEqual(createStore(storage).getDraft().identityPresentation.avatar, details.avatar);
+  assert.equal(storage.activity.writes, 2, 'one failed attempt followed by one complete save');
+  assert.deepEqual(store.getDraft().grids, before.grids);
+  assert.throws(() => session.setIdentityConfiguration({ expectedDetails, expectedCard: card, details, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
+  assert.throws(() => session.setIdentityConfiguration({ expectedDetails: details, expectedCard, details, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
+  assert.throws(() => session.setIdentityConfiguration({ expectedDetails: { ...details, avatar: expectedDetails.avatar },
+    expectedCard: card, details, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
 });
 
 test('removed broad updatePlacement authority is not exposed by the session', () => {

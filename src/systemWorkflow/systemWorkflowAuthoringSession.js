@@ -51,6 +51,10 @@ function sessionError(code, message) {
   return Object.assign(new Error(message), { code });
 }
 
+function identityDetails({ alias, bio, tags, avatar }) {
+  return { alias, bio, tags, avatar };
+}
+
 export function createSystemWorkflowAuthoringSession({ store } = {}) {
   if (!store?.getDraft || !store?.getGeneration || !store?.commitCompletedOperation) {
     throw new TypeError('A System Workflow draft store is required');
@@ -71,38 +75,17 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
   }
 
   return Object.freeze({
-    setIdentityCard({ expectedCard, card }) {
-      return transact((draft) => {
-        const current = resolveIdentityCard(draft.identityPresentation);
-        if (JSON.stringify(current) !== JSON.stringify(expectedCard)) {
-          throw sessionError('SYSTEM_WORKFLOW_IDENTITY_STALE', 'The Identity card changed. Reopen the editor before saving.');
-        }
-        if (Object.hasOwn(draft.identityPresentation, 'card') && JSON.stringify(current) === JSON.stringify(card)) return null;
-        draft.identityPresentation.card = structuredClone(card);
-        return assertValidSystemWorkflowDraft(draft);
-      });
-    },
-    setIdentityDetails({ expectedDetails, details }) {
+    setIdentityConfiguration({ expectedDetails, expectedCard, details, card }) {
       return transact((draft) => {
         const current = draft.identityPresentation;
-        const before = { alias: current.alias, bio: current.bio, tags: current.tags };
-        if (JSON.stringify(before) !== JSON.stringify(expectedDetails)) {
-          throw sessionError('SYSTEM_WORKFLOW_IDENTITY_STALE', 'The Identity details changed. Reopen the editor before saving.');
+        const before = { alias: current.alias, bio: current.bio, tags: current.tags, avatar: current.avatar };
+        if (JSON.stringify(before) !== JSON.stringify(identityDetails(expectedDetails))
+          || JSON.stringify(resolveIdentityCard(current)) !== JSON.stringify(expectedCard)) {
+          throw sessionError('SYSTEM_WORKFLOW_IDENTITY_STALE', 'The Identity changed. Reopen the editor before saving.');
         }
-        if (JSON.stringify(before) === JSON.stringify(details)) return null;
-        current.alias = details.alias;
-        current.bio = structuredClone(details.bio);
-        current.tags = structuredClone(details.tags);
-        return assertValidSystemWorkflowDraft(draft);
-      });
-    },
-    setIdentityAvatar({ expectedAvatar, avatar }) {
-      return transact((draft) => {
-        if (JSON.stringify(draft.identityPresentation.avatar) !== JSON.stringify(expectedAvatar)) {
-          throw sessionError('SYSTEM_WORKFLOW_IDENTITY_STALE', 'The Identity artwork changed. Try again with the current card.');
-        }
-        if (JSON.stringify(expectedAvatar) === JSON.stringify(avatar)) return null;
-        draft.identityPresentation.avatar = structuredClone(avatar);
+        if (JSON.stringify(before) === JSON.stringify(identityDetails(details)) && Object.hasOwn(current, 'card')
+          && JSON.stringify(current.card) === JSON.stringify(card)) return null;
+        Object.assign(current, structuredClone(details), { card: structuredClone(card) });
         return assertValidSystemWorkflowDraft(draft);
       });
     },

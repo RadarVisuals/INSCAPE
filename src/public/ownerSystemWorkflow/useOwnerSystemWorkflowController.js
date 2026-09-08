@@ -74,12 +74,12 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   const gridRequest = (grid, extra = {}) => ({ gridId: grid.id, expectedGridFingerprint: systemWorkflowGridFingerprint(grid), ...extra });
   return { ...state, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError,
     run, selectPlacement, replaceSelection, hiddenPlacementIds, togglePlacementVisibility,
-    setIdentityAvatar: (avatar) => run((session) => session.setIdentityAvatar({ expectedAvatar: state.draft.identityPresentation.avatar, avatar })),
-    setIdentityCard: (card) => run((session) => session.setIdentityCard({ expectedCard: resolveIdentityCard(state.draft.identityPresentation), card })),
-    setIdentityDetails: (values) => run((session) => {
-      const { alias, bio, tags } = state.draft.identityPresentation;
-      return session.setIdentityDetails({ expectedDetails: { alias, bio, tags }, details: {
-        alias: values.title, bio: { mode: values.description ? 'inscape' : 'official', customText: values.description },
+    saveIdentity: ({ profile: values, card, avatar }) => run((session) => {
+      const { alias, bio, tags, avatar: expectedAvatar } = state.draft.identityPresentation;
+      const changedBio = values.description !== (bio.mode === 'inscape' ? bio.customText : '');
+      return session.setIdentityConfiguration({ expectedDetails: { alias, bio, tags, avatar: expectedAvatar },
+        expectedCard: resolveIdentityCard(state.draft.identityPresentation), card, details: {
+        avatar, alias: values.title, bio: changedBio ? { mode: values.description ? 'inscape' : 'official', customText: values.description } : bio,
         tags: { ...tags, additional: values.tags },
       } });
     }),

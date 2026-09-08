@@ -18,7 +18,8 @@ float fbm(vec2 p){
   return n;
 }
 void main(){
-  vec2 p=gl_FragCoord.xy/resolution.y*3.;
+  // Top-anchored, width-relative space: revealing the extension does not remap the hero.
+  vec2 p=vec2(gl_FragCoord.x,resolution.y-gl_FragCoord.y)/resolution.x*6.;
   vec2 drift=vec2(time*.025,time*.009);
   vec2 warp=vec2(fbm(p+drift),fbm(p+vec2(4.3,1.2)-drift*.6));
   float cloud=fbm(p+warp*2.4+drift);
@@ -82,14 +83,20 @@ export default function IdentityClouds({ surface, color = null, speed = 1 }) {
       canvas.dataset.shader = 'ready';
       if (!motion.matches && settings.current.speed > 0) frame = requestAnimationFrame(draw);
     };
-    const refresh = () => { cancelAnimationFrame(frame); previous = 0; frame = requestAnimationFrame(draw); };
+    const refresh = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(draw); };
     refreshRef.current = refresh;
     const resize = new ResizeObserver(() => {
       // Soft clouds need no device-pixel scaling; cap GPU work for large windows.
       const bounds = canvas.getBoundingClientRect();
-      const scale = Math.min(1, 640 / Math.max(bounds.width, bounds.height, 1));
-      canvas.width = Math.max(1, Math.round(bounds.width * scale));
-      canvas.height = Math.max(1, Math.round(bounds.height * scale)); refresh();
+      const limit = globalThis.innerWidth <= 640 ? 400 : 640;
+      const scale = Math.min(1, limit / Math.max(bounds.width, bounds.height, 1));
+      const width = Math.max(1, Math.round(bounds.width * scale));
+      const height = Math.max(1, Math.round(bounds.height * scale));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width; canvas.height = height;
+        // Resizing clears the buffer. Repaint immediately, preserving elapsed time.
+        cancelAnimationFrame(frame); draw(performance.now());
+      }
     });
     const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; refresh(); });
     const contextLost = (event) => { event.preventDefault(); lost = true; cancelAnimationFrame(frame); delete canvas.dataset.shader; };

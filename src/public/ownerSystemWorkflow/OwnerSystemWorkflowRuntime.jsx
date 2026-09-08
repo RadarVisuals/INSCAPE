@@ -290,9 +290,8 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
       discoveryGroups={reviewAuthorities.discoveryGroups} reviewDiscovery={reviewAuthorities.discovery} />
     {identityOpen && profileModel && <Suspense fallback={<p role="status">Opening Identity…</p>}>
       <IdentityModule key={profileAddress} model={profileModel} menuSurface={menuSurface}
-        assetTargetRef={identityTargetRef} onAvatarChange={controller.setIdentityAvatar}
-        onDetailsChange={controller.setIdentityDetails}
-        onCardChange={controller.setIdentityCard}
+        assetTargetRef={identityTargetRef} avatar={controller.draft.identityPresentation.avatar}
+        onSave={controller.saveIdentity}
         customAvatar={controller.draft.identityPresentation.avatar.mode === 'inscape'}
         portraitChoices={resolvedAssets.filter((asset) => asset.placeable !== false && (asset.originalImageUrl || asset.imageUrl))}
         returnFocus={identityReturnFocus.current} onClose={() => setIdentityOpen(false)} />

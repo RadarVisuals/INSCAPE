@@ -1,9 +1,70 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
-import createQr from 'qrcode-generator';
+import { createAddressQrImage } from '../src/public/identity/addressQr.js';
 
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5174';
+test('expansion preserves the cloud program, clock and top-anchored pattern', async () => {
+  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true,
+    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    await page.addInitScript(() => {
+      const proto = WebGLRenderingContext.prototype, names = new WeakMap(), clocks = new WeakMap();
+      const location = proto.getUniformLocation, uniform = proto.uniform1f, draw = proto.drawArrays, create = proto.createProgram;
+      window.__identityPrograms = 0;
+      proto.createProgram = function(...args) { if (this.canvas.classList.contains('identity-module__clouds')) window.__identityPrograms++; return create.apply(this, args); };
+      proto.getUniformLocation = function(program, name) { const result = location.call(this, program, name); if (result) names.set(result, name); return result; };
+      proto.uniform1f = function(loc, value) { if (names.get(loc) === 'time') clocks.set(this, value); return uniform.call(this, loc, value); };
+      proto.drawArrays = function(...args) {
+        const result = draw.apply(this, args);
+        if (this.canvas.classList.contains('identity-module__clouds')) {
+          const samples = [];
+          for (const x of [.2, .5, .8]) for (const y of [.1, .2, .3]) {
+            const pixel = new Uint8Array(4);
+            this.readPixels(Math.floor(this.canvas.width * x), this.canvas.height - 1 - Math.floor(this.canvas.width * y), 1, 1, this.RGBA, this.UNSIGNED_BYTE, pixel);
+            samples.push(...pixel.slice(0, 3));
+          }
+          window.__identityCloud = { time: clocks.get(this), samples };
+        }
+        return result;
+      };
+    });
+    await page.goto(`${origin}/development/owner/system-workflow`);
+    await page.locator('.system-workflow').waitFor();
+    await page.evaluate(async () => {
+      const React = (await import('/@id/react')).default;
+      const { createRoot } = (await import('/@id/react-dom/client')).default;
+      const Identity = (await import('/src/public/identity/IdentityModule.jsx')).default;
+      const node = document.createElement('div'); document.querySelector('.system-workflow').append(node);
+      const root = createRoot(node);
+      root.render(React.createElement(Identity, { menuSurface: 'carbon', onClose: () => root.unmount(), model: {
+        address: '0x1111111111111111111111111111111111111111',
+        profile: { displayName: 'Continuity', tags: [], avatarProvenance: 'INSCAPE_PUBLISHED_ASSET', avatarUrl: '/assets/actors/skull_reaper/full.webp' },
+        card: { version: 1, background: { type: 'clouds', color: null, speed: 1 }, fields: [
+          { id: 'field:role', label: 'Role', type: 'text', value: 'Artist' },
+          { id: 'field:projects', label: 'Projects', type: 'list', value: ['Inscape', 'Human Underneath', 'Illustration', 'Sound'] },
+        ] }, links: [],
+      } }));
+    });
+    await page.waitForFunction(() => window.__identityCloud?.time > .1);
+    const before = await page.evaluate(() => ({ ...window.__identityCloud, programs: window.__identityPrograms }));
+    await page.getByRole('button', { name: 'Expand INSCAPE details' }).click();
+    await page.waitForTimeout(150);
+    assert.ok(await page.evaluate(() => window.__identityCloud.time) >= before.time, 'animation clock is not reset');
+    assert.equal(await page.evaluate(() => window.__identityPrograms), before.programs, 'program not recreated');
+    await page.emulateMedia({ reducedMotion: 'reduce' }); await page.waitForTimeout(100);
+    const expanded = await page.evaluate(() => window.__identityCloud);
+    await page.getByRole('button', { name: 'Collapse INSCAPE details' }).click(); await page.waitForTimeout(100);
+    const compact = await page.evaluate(() => window.__identityCloud);
+    assert.equal(compact.time, expanded.time);
+    const differences = compact.samples.map((value, index) => Math.abs(value - expanded.samples[index]));
+    assert.ok(Math.max(...differences) < 20, `pattern remains anchored; sampling differences: ${differences}`);
+    await page.getByRole('button', { name: 'Expand INSCAPE details' }).click(); await page.waitForTimeout(100);
+    assert.equal(await page.locator('.identity-module__fields dd').last().isVisible(), true);
+    assert.equal(await page.getByRole('separator', { name: 'Resize Identity height' }).count(), 0);
+  } finally { await browser.close(); }
+});
 test('Library drops replace Identity artwork, shader animates, and Display stays unchanged', async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true,
     args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -43,6 +104,8 @@ test('Library drops replace Identity artwork, shader animates, and Display stays
     await page.getByText('Release to replace Identity artwork', { exact: true }).waitFor();
     await page.mouse.up();
     await page.waitForFunction(() => document.querySelector('.identity-module__portrait img')?.src.includes('skull_reaper'));
+    assert.equal(await page.evaluate(() => window.__identityWrites), 0, 'dropping artwork only previews it');
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
     assert.equal(await page.evaluate(() => window.__identityWrites), 1);
     const canvas = page.locator('.identity-module__clouds[data-shader="ready"]');
     await canvas.waitFor();
@@ -63,11 +126,20 @@ test('Library drops replace Identity artwork, shader animates, and Display stays
     const draws = await page.evaluate(() => window.__cloudDraws); await page.waitForTimeout(100);
     assert.equal(await page.evaluate(() => window.__cloudDraws), draws);
     await page.getByRole('button', { name: 'Profile', exact: true }).click();
+    assert.equal(await page.locator('[data-identity-dossier-source] img').count(), 0, 'custom artwork must not replace the account avatar');
     await page.locator('[data-identity-dossier-source]').click();
     assert.match(await page.locator('.identity-module__portrait img').getAttribute('src'), /skull_reaper/);
-    await page.getByRole('button', { name: 'Expand INSCAPE details' }).click();
-    await page.getByText('Identity artwork', { exact: true }).click();
+    await page.getByRole('button', { name: 'Edit Identity', exact: true }).click();
+    await page.getByText('Appearance & artwork', { exact: true }).click();
     await page.getByRole('button', { name: 'Use Universal Profile image' }).click();
+    assert.equal(await page.locator('.identity-module__portrait img').count(), 0);
+    assert.equal(await page.evaluate(() => window.__identityWrites), 1, 'reset is also a preview');
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    assert.match(await page.locator('.identity-module__portrait img').getAttribute('src'), /skull_reaper/);
+    await page.getByRole('button', { name: 'Edit Identity', exact: true }).click();
+    await page.getByText('Appearance & artwork', { exact: true }).click();
+    await page.getByRole('button', { name: 'Use Universal Profile image' }).click();
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
     assert.equal(await page.evaluate(() => window.__identityWrites), 2);
     await page.unrouteAll({ behavior: 'wait' });
   } finally { await browser.close(); }
@@ -127,22 +199,28 @@ test('owner opens Identity, keeps it while using Library, and closes without dra
     assert.equal(await identity.getByRole('link', { name: 'Open official Universal Profile' }).getAttribute('href'),
       'https://universaleverything.io/0x1111111111111111111111111111111111111111');
     const copy = identity.getByRole('button', { name: 'Copy profile address', exact: true });
-    const icons = await identity.evaluate(node => ['.identity-module__source-link svg', '.identity-module__address-control svg'].map(selector => {
+    const icons = await identity.evaluate(node => ['.identity-module__source-link svg', '.identity-module__address-control svg', '.identity-module__title > .identity-module__header-action svg'].map(selector => {
       const style = getComputedStyle(node.querySelector(selector)); return [style.color, style.strokeWidth, style.marginLeft];
     }));
     assert.deepEqual(icons[0], icons[1]);
+    assert.deepEqual(icons[0], icons[2]);
     await identity.getByRole('button', { name: 'Show address QR code' }).click();
     const qr = page.getByRole('dialog', { name: 'Share profile address' });
     await qr.locator('img').waitFor();
-    const expectedQr = createQr(0, 'M');
-    expectedQr.addData('0x1111111111111111111111111111111111111111'); expectedQr.make();
-    assert.equal(await qr.locator('img').getAttribute('src'), expectedQr.createDataURL(6));
-    assert.equal(await qr.locator('code').innerText(), '0x1111111111111111111111111111111111111111');
+    assert.equal(await qr.locator('img').getAttribute('src'), createAddressQrImage('0x1111111111111111111111111111111111111111'));
+    assert.equal(await qr.locator('code').textContent(), '0x1111111111111111111111111111111111111111');
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
+      await page.waitForFunction(() => {
+        const anchor = document.querySelector('[aria-label="Show address QR code"]').getBoundingClientRect();
+        const popup = document.querySelector('.identity-module__qr').getBoundingClientRect();
+        return Math.abs(popup.top - anchor.bottom - 8) < 1
+          && Math.abs(popup.left - Math.max(16, Math.min(anchor.left, innerWidth - popup.width - 16))) < 1;
+      });
       const bounds = await qr.boundingBox();
       assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width);
       await page.screenshot({ path: `.browser-test-runtime/identity-qr-${width}.png` });
+      await qr.locator('img').screenshot({ path: `.browser-test-runtime/identity-qr-code-${width}.png` });
     }
     await qr.getByRole('button', { name: 'Close QR code' }).focus();
     await page.keyboard.press('Escape');
@@ -206,7 +284,7 @@ test('Display title follows the existing shortcut name and survives reload', asy
   } finally { await browser.close(); }
 });
 
-test('compact Identity expands downwards and saves only authored details', async () => {
+test('Identity edits in place, exposes all cells with one click, and fits content without manual resizing', async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -215,38 +293,72 @@ test('compact Identity expands downwards and saves only authored details', async
     await page.locator('[data-identity-dossier-source]').click();
     const identity = page.locator('.identity-module aside');
     const officialName = await identity.locator('.identity-module__story h2').innerText();
-    const before = await identity.boundingBox();
+    assert.equal(await identity.getByRole('separator').count(), 0);
     await page.evaluate(() => { window.__identityWrites = 0; addEventListener('inscape:review-storage-write', () => window.__identityWrites++); });
-    await page.getByRole('button', { name: 'Expand INSCAPE details' }).click();
-    const expanded = await identity.boundingBox();
-    assert.equal(expanded.y, before.y); assert.ok(expanded.height > before.height);
-    const details = page.getByRole('region', { name: 'INSCAPE profile', exact: true });
-    await details.getByRole('button', { name: 'Edit', exact: true }).click();
-    await details.getByLabel('Title', { exact: true }).fill('Human Underneath');
-    await details.getByLabel('Story', { exact: true }).fill('My illustrated world.');
-    await details.getByLabel('Tags, separated by commas').fill('Illustration, Sound');
-    await details.getByRole('button', { name: 'Save details' }).click();
-    await details.getByRole('heading', { name: 'Human Underneath' }).waitFor();
-    assert.equal(await page.evaluate(() => window.__identityWrites), 1);
-    assert.equal(await identity.locator('.identity-module__story h2').innerText(), officialName);
+    await identity.getByRole('button', { name: 'Edit Identity', exact: true }).click();
+    const hero = identity.locator('.identity-module__story');
+    await hero.getByLabel('Custom title', { exact: true }).fill('Human Underneath');
+    assert.equal(await hero.getByLabel('Subtitle', { exact: true }).count(), 0);
+    await hero.getByLabel('Custom bio', { exact: true }).fill('My illustrated world.');
+    await hero.getByLabel('Tags, separated by commas').fill('Illustration, Sound');
+    await identity.getByRole('button', { name: 'Add field', exact: true }).click();
+    await identity.getByLabel('Field 1 name', { exact: true }).fill('Role');
+    await identity.getByLabel('Field 1 content type', { exact: true }).selectOption('list');
+    await identity.getByLabel('Field 1 content', { exact: true }).fill('Artist\nWriter');
+    await identity.getByRole('button', { name: 'Add field', exact: true }).click();
+    await identity.getByLabel('Field 2 name', { exact: true }).fill('Location');
+    await identity.getByLabel('Field 2 content', { exact: true }).fill('The Underneath');
+    await identity.getByRole('button', { name: 'Move field 2 up' }).click();
+    assert.equal(await identity.getByLabel('Field 1 name', { exact: true }).inputValue(), 'Location');
+    await identity.getByText('Appearance & artwork', { exact: true }).click();
+    await identity.getByLabel('Background style').selectOption('clouds');
     for (const width of [1440, 390]) {
-      await page.setViewportSize({ width, height: 1000 });
-      await page.screenshot({ path: `.browser-test-runtime/identity-expanded-${width}.png` });
-      const content = identity.locator('.system-workflow__instrument-content');
-      assert.equal(await content.evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
+      await page.setViewportSize({ width, height: 1000 }); await page.waitForTimeout(200);
+      await identity.getByRole('button', { name: 'Save', exact: true }).hover();
+      const headerTop = (await identity.locator('.system-workflow__detached-window-titlebar').boundingBox()).y;
+      for (const name of ['Save', 'Cancel']) {
+        assert.equal((await identity.getByRole('button', { name, exact: true }).boundingBox()).y, headerTop);
+      }
+      await page.screenshot({ path: `.browser-test-runtime/identity-inline-edit-${width}.png` });
+      assert.equal(await identity.locator('.system-workflow__instrument-content').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
     }
-    await page.getByRole('button', { name: 'Collapse INSCAPE details' }).click();
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    assert.equal((await identity.boundingBox()).height, before.height);
+    await identity.getByRole('button', { name: 'Save', exact: true }).click();
+    assert.equal(await hero.getByLabel('Custom title', { exact: true }).count(), 0);
     assert.equal(await page.evaluate(() => window.__identityWrites), 1);
-    // This development fixture deliberately uses in-memory storage; domain tests cover reload persistence.
-    await page.getByRole('button', { name: 'Close Identity', exact: true }).click();
+    assert.equal(await hero.locator('h2').innerText(), officialName);
+    assert.equal(await hero.locator('.identity-module__custom-title').textContent(), 'Human Underneath');
+    assert.equal(await hero.locator('.identity-module__subtitle').count(), 0);
+    assert.equal(await identity.getByRole('button', { name: 'Edit Identity', exact: true }).evaluate(n => n === document.activeElement), true);
+    assert.equal(await identity.locator('.identity-module__extension summary').count(), 0);
+    assert.deepEqual(await identity.locator('.identity-module__fields dt').allTextContents(), ['Location', 'Role']);
+    assert.deepEqual(await identity.locator('.identity-module__fields li').allTextContents(), ['Artist', 'Writer']);
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 1000 }); await page.waitForTimeout(200);
+      await identity.getByRole('button', { name: 'Collapse INSCAPE details' }).click();
+      await page.waitForTimeout(150);
+      const gap = await identity.locator('.system-workflow__instrument-content').evaluate(n =>
+        n.clientHeight - n.querySelector('.identity-module__card').getBoundingClientRect().height);
+      assert.ok(gap <= 2, 'no empty bar below compact content: ' + gap);
+      await page.screenshot({ path: `.browser-test-runtime/identity-inline-compact-${width}.png` });
+      await identity.getByRole('button', { name: 'Expand INSCAPE details' }).click();
+      assert.equal(await identity.locator('.identity-module__fields dd').first().isVisible(), true);
+      assert.equal(await identity.locator('.identity-module__fields dd').last().isVisible(), true);
+      await page.screenshot({ path: `.browser-test-runtime/identity-inline-expanded-${width}.png` });
+    }
+    await identity.getByRole('button', { name: 'Edit Identity', exact: true }).click();
+    await identity.getByRole('button', { name: 'Remove field 2' }).click();
+    await hero.getByLabel('Custom title', { exact: true }).fill('Discarded');
+    await identity.getByRole('button', { name: 'Cancel', exact: true }).click();
+    assert.equal(await identity.locator('.identity-module__fields dd').count(), 2);
+    assert.equal(await hero.locator('.identity-module__custom-title').textContent(), 'Human Underneath');
+    assert.equal(await page.evaluate(() => window.__identityWrites), 1);
+    await identity.getByRole('button', { name: 'Close Identity', exact: true }).click();
     await page.getByRole('button', { name: 'Profile', exact: true }).click();
-    await page.locator('[data-identity-dossier-source]').click();
-    await page.getByRole('button', { name: 'Expand INSCAPE details' }).click();
-    await page.getByRole('heading', { name: 'Human Underneath', exact: true }).waitFor();
+    assert.equal(await page.locator('[data-identity-dossier-source] b').innerText(), officialName, 'custom title must not replace the account name');
+    await page.screenshot({ path: '.browser-test-runtime/identity-dock-official.png' });
   } finally { await browser.close(); }
 });
+
 test('Identity content and window are independent of the owner workspace', async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
@@ -262,7 +374,8 @@ test('Identity content and window are independent of the owner workspace', async
       const root = ReactDOM.createRoot(node);
       window.__renderIdentityTheme = (menuSurface) => root.render(React.createElement(Identity, { menuSurface, model: {
         address: '0x1111111111111111111111111111111111111111',
-        profile: { displayName: 'Identity test', description: 'Existing biography', tags: [], avatarProvenance: 'INSCAPE_PUBLISHED_ASSET' },
+        profile: { displayName: 'Identity test', description: 'Existing biography', tags: [], avatarProvenance: 'INSCAPE_PUBLISHED_ASSET', avatarUrl: '/assets/actors/skull_reaper/full.webp' },
+        authoredProfile: { title: 'Human Underneath', description: 'An illustrated world, built from art, motion and sound.', tags: ['Illustration', 'Sound'] },
         card: { version: 1, background: { type: 'clouds', color: '#7733cc', speed: 0.4 }, fields: [
           { id: 'field:role', label: 'Role', type: 'list', value: ['Artist', 'Writer'] },
           { id: 'field:location', label: 'Location', type: 'text', value: 'The Underneath' },
@@ -278,9 +391,9 @@ test('Identity content and window are independent of the owner workspace', async
     });
     const identity = page.getByRole('complementary', { name: 'Identity — Identity test' });
     await identity.waitFor();
-    assert.match(await identity.innerText(), /Existing biography/);
+    assert.match(await identity.innerText(), /An illustrated world/);
     const links = identity.getByRole('navigation', { name: 'Profile links' });
-    assert.equal(await links.getByRole('link', { name: 'Artist on X', exact: true }).locator('span:not(.identity-module__link-tooltip)').innerText(), 'Artist on X');
+    assert.equal(await links.getByRole('link', { name: 'Artist on X', exact: true }).locator('span:not(.identity-module__link-tooltip)').count(), 0);
     const github = links.getByRole('link', { name: 'Source code', exact: true });
     assert.equal(await github.locator('svg.lucide-github').count(), 1);
     assert.equal(await github.locator('span:not(.identity-module__link-tooltip)').count(), 0);
@@ -326,85 +439,5 @@ test('Identity content and window are independent of the owner workspace', async
     assert.ok(box.x >= 0 && box.x + box.width <= 390);
     await page.getByRole('button', { name: 'Close Identity', exact: true }).click();
     await identity.waitFor({ state: 'detached' });
-  } finally { await browser.close(); }
-});
-
-test('Identity background previews cancel cleanly; saved fields reorder and survive reopening', async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true,
-    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-  try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-    await page.goto(`${origin}/development/owner/system-workflow`);
-    await page.getByRole('button', { name: 'Profile', exact: true }).click();
-    await page.locator('[data-identity-dossier-source]').click();
-    await page.evaluate(() => { window.__identityWrites = 0; addEventListener('inscape:review-storage-write', () => window.__identityWrites++); });
-    const identity = page.locator('.identity-module');
-    await identity.getByRole('button', { name: 'Expand INSCAPE details' }).click();
-    const appearance = identity.getByRole('region', { name: 'Identity background', exact: true });
-    await appearance.getByRole('button', { name: 'Edit background' }).click();
-    await appearance.getByLabel('Background style').selectOption('clouds');
-    await identity.locator('.identity-module__clouds[data-shader="ready"]').waitFor();
-    assert.equal(await page.evaluate(() => window.__identityWrites), 0);
-    await appearance.getByRole('button', { name: 'Cancel', exact: true }).click();
-    assert.equal(await identity.locator('.identity-module__clouds').count(), 0);
-    await appearance.getByRole('button', { name: 'Edit background' }).click();
-    await appearance.getByLabel('Background style').selectOption('clouds');
-    await appearance.getByLabel('Use theme cloud color').uncheck();
-    await appearance.getByLabel('Cloud color', { exact: true }).evaluate(input => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '#7733cc');
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    await appearance.getByRole('slider', { name: 'Cloud movement speed' }).focus();
-    await page.keyboard.press('Home');
-    await page.screenshot({ path: '.browser-test-runtime/identity-background-editor.png' });
-    await appearance.getByRole('button', { name: 'Save card', exact: true }).click();
-    assert.equal(await page.evaluate(() => window.__identityWrites), 1);
-    const cloud = identity.locator('.identity-module__clouds[data-shader="ready"]');
-    await cloud.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
-    const still = await cloud.screenshot(); await page.waitForTimeout(150);
-    assert.deepEqual(await cloud.screenshot(), still, 'speed zero stops animation');
-    const fields = identity.getByRole('region', { name: 'Identity fields', exact: true });
-    await fields.getByRole('button', { name: 'Edit fields' }).click();
-    await fields.getByRole('button', { name: 'Add field', exact: true }).click();
-    let rows = fields.locator('fieldset');
-    await rows.nth(0).getByLabel('Field name').fill('Location');
-    await rows.nth(0).getByLabel('Content', { exact: true }).fill('The Underneath\nLunar Desert');
-    await fields.getByRole('button', { name: 'Add field', exact: true }).click();
-    await rows.nth(1).getByLabel('Field name').fill('Role');
-    await rows.nth(1).getByLabel('Content type').selectOption('list');
-    await rows.nth(1).getByLabel('One item per line').fill('Artist\nWriter');
-    await fields.getByRole('button', { name: 'Move field 2 up' }).click();
-    assert.equal(await rows.nth(0).getByLabel('Field name').inputValue(), 'Role');
-    for (const width of [1440, 390]) {
-      await page.setViewportSize({ width, height: 1000 });
-      await rows.nth(0).scrollIntoViewIfNeeded();
-      await page.screenshot({ path: `.browser-test-runtime/identity-field-editor-${width}.png` });
-    }
-    await fields.getByRole('button', { name: 'Add field', exact: true }).click();
-    await fields.getByRole('button', { name: 'Save card', exact: true }).click();
-    assert.equal(await page.evaluate(() => window.__identityWrites), 2);
-    assert.deepEqual(await fields.locator('dt').allTextContents(), ['Role', 'Location']);
-    for (const width of [1440, 390]) {
-      await page.setViewportSize({ width, height: 1000 });
-      await fields.scrollIntoViewIfNeeded();
-      await page.screenshot({ path: `.browser-test-runtime/identity-fields-${width}.png` });
-      assert.equal(await identity.locator('.system-workflow__instrument-content').evaluate(n => n.scrollWidth <= n.clientWidth + 1), true);
-    }
-    await fields.getByRole('button', { name: 'Edit fields' }).click();
-    await fields.getByRole('button', { name: 'Remove field 3' }).click();
-    await fields.getByRole('button', { name: 'Save card', exact: true }).click();
-    await identity.getByRole('button', { name: 'Close Identity', exact: true }).click();
-    await page.getByRole('button', { name: 'Profile', exact: true }).click();
-    await page.locator('[data-identity-dossier-source]').click();
-    await identity.getByRole('button', { name: 'Expand INSCAPE details' }).click();
-    assert.deepEqual(await fields.locator('dt').allTextContents(), ['Role', 'Location']);
-    await appearance.getByRole('button', { name: 'Edit background' }).click();
-    assert.equal(await appearance.getByLabel('Background style').inputValue(), 'clouds');
-    assert.equal(await appearance.getByLabel('Cloud color', { exact: true }).inputValue(), '#7733cc');
-    assert.equal(await appearance.getByRole('slider', { name: 'Cloud movement speed' }).inputValue(), '0');
-    await appearance.getByLabel('Background style').selectOption('plain');
-    await appearance.getByRole('button', { name: 'Save card', exact: true }).click();
-    assert.equal(await identity.locator('.identity-module__clouds').count(), 0);
-    assert.equal(await page.evaluate(() => window.__identityWrites), 4);
   } finally { await browser.close(); }
 });
