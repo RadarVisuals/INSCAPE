@@ -6,6 +6,28 @@ The browser never receives a Pinata credential. It verifies the returned CID aga
 
 ## Netlify configuration
 
+The repository pins Node `24.20.0` in `.node-version`; `package.json` declares
+the supported Node 24 range. Netlify reads this file for builds, but an external
+`NODE_VERSION` setting can override it. Verify the actual build and Functions
+runtime in deployment logs before a release; editing this file does not deploy.
+See [Netlify's dependency documentation](https://docs.netlify.com/build/configure-builds/manage-dependencies/).
+
+On the current Windows workstation, NVM has Node 24 installed but the global
+Node link may still select Node 18. NVM commands require an interactive terminal;
+do not repeatedly invoke NVM through noninteractive automation (it opens dialogs).
+For a local PowerShell session, select the installed version without changing
+Windows settings or requesting elevation:
+
+```powershell
+$inscapeNode = Join-Path $env:NVM_HOME ('v' + (Get-Content .node-version).Trim())
+$env:Path = "$inscapeNode;$env:Path"
+node --version
+npm --version
+```
+
+This changes only that terminal and its child processes. New terminals must
+select the version again until the workstation's global NVM link is corrected.
+
 1. Connect the repository to the Netlify project. `netlify.toml` configures `npm run build`, the `dist` publish directory, the Functions directory, and the single-page-app fallback.
 2. In Netlify, create a secret environment variable named `PINATA_JWT`. Give that Pinata JWT only the file-write permission required for uploads. Do not name it `VITE_PINATA_JWT`; every `VITE_*` value is public browser configuration.
 3. Set `VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL` to an operated public HTTPS IPFS gateway that ends in `/ipfs/`. This gateway is used for the mandatory byte-for-byte verification and published-profile recovery.

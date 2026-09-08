@@ -456,7 +456,7 @@ into generic dashboard, marketplace, or AI-generated interface styling.
 - Do not run `npm audit fix --force`, downgrade `@lukso/up-modal`, or introduce
   untested overrides to conceal inherited dependency findings.
 
-### Dependency checkpoint (2026-09-07)
+### Dependency checkpoint (2026-09-08)
 
 The Identity QR addition declares the already locked `qrcode-generator@1.5.2`
 directly; no package versions or transitive package entries changed. Its code
@@ -482,7 +482,8 @@ The subsequent local maintenance check updated Vite 5.4.21 to 6.4.3 and
 esbuild 0.21.5 to 0.25.12. Lockfile comparison found no runtime package
 version changes. The audit now reports 91 findings (10 low, 60 moderate,
 18 high, 3 critical); the inherited wallet-chain findings remain unresolved.
-The configured registry still reports `@lukso/up-modal@0.21.11` as latest.
+The configured registry still reports `@lukso/up-modal@0.21.11` and
+`@lukso/web-components@1.207.0` as latest (rechecked September 8).
 This is a targeted remediation, not a claim that Vite 6 is the newest major
 or that the application has received security clearance.
 
@@ -492,10 +493,34 @@ the same application inputs. The measured Windows output is 4,545,415 raw /
 4,600,000 / 1,225,000; initial/core limits and isolation checks are unchanged.
 The migration retains Vite's defaults rather than adding compatibility
 switches. See the [official Vite 6 migration notes](https://v6.vite.dev/guide/migration#advanced).
-Local Node 18.20.7 and its engine warnings remain a release prerequisite;
-this maintenance check does not upgrade the workstation or deployment runtime.
+Node 24.20.0 LTS is now installed and selected explicitly for local checks and
+the development server. `.node-version` pins it for project tooling; the
+package engine range is `>=24.20.0 <25`. The global Windows NVM link can still
+select Node 18, so a normal terminal is not automatically migrated. Use the
+session-only instructions in `NETLIFY_PUBLIC_IPFS_PUBLICATION.md`. No deployment
+runtime has been changed or verified remotely.
 
-Local verification after migration: 756 Node tests, seven Identity browser
+The September 8 targeted lockfile update retains all existing wallet/LUKSO
+versions and updates PostCSS, nanoid, DOMPurify and the Browserslist data chain.
+A broad `npm audit fix` trial unexpectedly downgraded transitive packages; it
+was reverted before the final clean installation. No downgrade, force option,
+or override remains. `npm ci` succeeds under Node 24 with no engine warnings.
+The current audit is **87 findings: 10 low, 59 moderate, 15 high, 3 critical**.
+
+The emitted Rollup module inventory and a bundled esbuild import graph of
+`netlify/functions/pin-profile-document.mjs` were checked against the affected
+installed paths in that audit. The critical `form-data`, `request` and `tar`
+paths are absent from both outputs; no high-severity affected paths were found
+there either. Eleven flagged parent LUKSO packages are present in the browser
+(including contract ABI modules), but have no direct advisory in this audit:
+their findings are inherited from dependencies outside the emitted graph.
+Axios remains pinned to 1.16.0 by `@coinbase/cdp-sdk`; its affected path was
+also absent from these outputs. This bounds the inspected runtime exposure,
+not installation/supply-chain risk or every possible exploit. Keep the
+inherited findings visible and revisit upstream package releases before release.
+
+Local verification repeated under Node 24 after the targeted updates:
+756 Node tests, seven Identity browser
 cases, five LUKSO standards checks, production build and build check passed.
 The built wallet chunk imported in an isolated browser without creating a
 wallet session; live wallet connection/signing remains untested here.
@@ -504,3 +529,7 @@ confirmed shared card validation, profile-scoped authoring callbacks and
 module-owned shader cleanup; no new abstraction or layout layer was needed.
 The Identity browser harness now resolves React through Vite's module IDs
 instead of assuming the optimizer's physical cache path.
+The Vite watcher also excludes `.browser-test-runtime` and
+`.browser-test-profile`: watching Windows-locked Chromium cookie files caused
+an observed EBUSY development-server crash during the first Node 24 browser run.
+The browser suite and full tests/build passed after that narrowly scoped fix.

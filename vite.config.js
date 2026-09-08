@@ -22,6 +22,8 @@ export default defineConfig(({ mode }) => {
       watch: {
         ignored: [
           '**/.edge-*/**',
+          '**/.browser-test-runtime/**',
+          '**/.browser-test-profile/**',
           '**/.agents/**',
           '**/codebase_dump.md'
         ]
