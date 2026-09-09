@@ -14,10 +14,13 @@ import useArtworkPicking from '../../public/ownerSystemWorkflow/useArtworkPickin
 export const GRID_PRODUCTION_EAGER_MEDIA_RETRY_DELAY = 4_000;
 export const GRID_PRODUCTION_EAGER_MEDIA_ATTEMPTS = 3;
 const rectangleStyle = ({ left, top, width, height }) => ({ left, top, width, height });
-const viewportOf = (node, bottomInset = 0) => ({
-  width: Math.max(0, node?.clientWidth || 0),
-  height: Math.max(0, (node?.clientHeight || 0) - bottomInset),
-});
+const viewportOf = (node, bottomInset = 0) => {
+  const style = node ? getComputedStyle(node) : null;
+  return {
+    width: Math.max(0, parseFloat(style?.width) || 0),
+    height: Math.max(0, (parseFloat(style?.height) || 0) - bottomInset),
+  };
+};
 
 function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlacementActivate, onPointerActivate, placement, gridId, viewerSourceHidden }) {
   const reference = placement.asset?.media?.reference || null;

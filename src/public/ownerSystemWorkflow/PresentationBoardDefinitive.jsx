@@ -129,8 +129,8 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     } });
   }, [displayName, renderedFrame?.left, renderedFrame?.top, renderedFrame?.width, renderedFrame?.height, onWindowChange, immersive]);
   const liveScaleRendering = !immersive && (scaleRendering === 'live' || boardPhase === 'maximizing' || boardPhase === 'restoring');
-  const settledStageWidth = view ? Math.ceil(view.fit.stage.width * displayScale) : 0;
-  const settledStageHeight = view ? Math.ceil(view.fit.stage.height * displayScale) : 0;
+  const settledStageWidth = view ? view.fit.stage.width * displayScale : 0;
+  const settledStageHeight = view ? view.fit.stage.height * displayScale : 0;
   const currentStageWidth = view ? view.fit.stage.width * displayScale : 0;
   const currentStageHeight = view ? view.fit.stage.height * displayScale : 0;
   const liveStage = liveStageRef.current;

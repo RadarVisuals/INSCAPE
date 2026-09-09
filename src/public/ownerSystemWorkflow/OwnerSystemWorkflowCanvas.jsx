@@ -166,7 +166,8 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     const node = canvasRef.current;
     if (!node) return undefined;
     const measure = () => {
-      const rectangle = { width: node.clientWidth, height: node.clientHeight };
+      const style = getComputedStyle(node);
+      const rectangle = { width: parseFloat(style.width), height: parseFloat(style.height) };
       setWorldViewport(worldCover
         ? measureOwnerSystemWorkflowHeroArtboard(rectangle.width, rectangle.height)
         : measureOwnerSystemWorkflowArtboard(rectangle.width, rectangle.height));
