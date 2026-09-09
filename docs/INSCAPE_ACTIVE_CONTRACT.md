@@ -150,6 +150,10 @@ internal compatibility names during this migration; do not broadly rename them.
   picking remains available with Alt-click cycling through overlapping artwork.
   Keyboard and Layers selection remain explicit. These are temporary Display
   interactions shared by owner and visitor, not saved placement mutations.
+  During focus, clicking outside the selected artwork's visible pixels within
+  the Stage closes inspection through the same restore path as Escape. That
+  click does not activate underlying artwork. Metadata and title-bar controls
+  retain their own interactions. Unavailable masks use the rectangular fallback.
 - Do not implement the Display Module as an HTML iframe. Use one application context with
   an isolated, clipped viewport and camera transform.
 - The Display Module owns the instruments required to author and inspect its

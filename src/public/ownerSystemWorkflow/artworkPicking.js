@@ -56,7 +56,8 @@ export function artworkImagePoint(image, clientX, clientY) {
   return u >= 0 && u < 1 && v >= 0 && v < 1 ? { u, v } : null;
 }
 
-function hitsArtwork(node, x, y) {
+export function hitsArtwork(node, x, y) {
+  if (!node?.isConnected || !inside(node.getBoundingClientRect(), x, y)) return false;
   // Authored backing and mats are visible surfaces too, including letterboxes.
   if ([...node.querySelectorAll('span')].some(span => {
     const color = getComputedStyle(span).backgroundColor;

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { hitsArtwork } from './artworkPicking.js';
 
 export default function DisplayFocusViewer({ scene, controlsContainer, viewer }) {
   const latest = useRef(viewer); latest.current = viewer;
@@ -57,7 +58,13 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     return () => window.removeEventListener('keydown', keydown, true);
   });
   if (!controlsContainer) return null;
-  return createPortal(<div className="system-workflow__scene-controls" role="group" aria-label="Artwork inspection">
+  return <>{scene?.parentElement && createPortal(<div aria-hidden="true" className="system-workflow__inspection-hit-surface"
+    onPointerDown={event => { event.preventDefault(); event.stopPropagation(); }}
+    onClick={event => {
+      event.preventDefault(); event.stopPropagation();
+      if (event.button === 0 && !hitsArtwork(latest.current.returnFocus, event.clientX, event.clientY)) close();
+    }} onDoubleClick={event => { event.preventDefault(); event.stopPropagation(); }} />, scene.parentElement)}
+  {createPortal(<div className="system-workflow__scene-controls" role="group" aria-label="Artwork inspection">
     <span>INSPECT</span>
     <button className="system-workflow__round-control" aria-label="Previous artwork" disabled={closing || viewer.total < 2}
       onClick={() => viewer.navigate(-1)} type="button"><ChevronLeft /></button>
@@ -66,5 +73,5 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
       onClick={() => viewer.navigate(1)} type="button"><ChevronRight /></button>
     <button className="system-workflow__round-control" aria-label="Close artwork viewer" disabled={closing}
       onClick={close} ref={closeRef} type="button"><X /></button>
-  </div>, controlsContainer);
+  </div>, controlsContainer)}</>;
 }
