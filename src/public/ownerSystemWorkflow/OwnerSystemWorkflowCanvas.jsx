@@ -230,8 +230,11 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
         controller.replaceSelection([]);
       }}
       onPointerDownCapture={(event) => {
-        if (!playingGrids && !playback.swipe) return;
-        event.preventDefault(); event.stopPropagation(); playback.stop();
+        if (playingGrids || playback.swipe) {
+          event.preventDefault(); event.stopPropagation(); playback.stop();
+          return;
+        }
+        if (authoringLocked && !cropSession) interaction.beginCanvasSelection(event, { navigationOnly: true });
       }}
       onPointerDown={(event) => { if (!cropSession) interaction.beginCanvasSelection(event); }}
       onDragOver={(event) => { if (!authoringLocked) event.preventDefault(); }}

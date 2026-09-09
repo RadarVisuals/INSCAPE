@@ -17,7 +17,7 @@
 .visitor-grid-world[data-surface="ash"] { --visitor-grid-surface: #b2b2b2; --visitor-grid-ink: #111313; }
 .visitor-grid-world[data-surface="mist"] { --visitor-grid-surface: #c9c6bd; --visitor-grid-ink: #111313; }
 .visitor-grid-world[data-surface="paper"] { --visitor-grid-surface: #d8d4ca; --visitor-grid-ink: #111313; }
-.visitor-grid-world__viewport { position: absolute; inset: 0; overflow: hidden; }
+.visitor-grid-world__viewport { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
 .visitor-grid-world[data-workbench] .system-workflow__workbench { position: absolute; inset: 0 0 var(--visitor-dock-height); }
 .visitor-grid-world[data-space-navigation] .visitor-grid-world__viewport { cursor: grab; }
 .visitor-grid-world[data-grid-dragging] .visitor-grid-world__viewport { cursor: grabbing; }

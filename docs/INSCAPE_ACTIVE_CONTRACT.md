@@ -129,6 +129,9 @@ internal compatibility names during this migration; do not broadly rename them.
 - Ordered Grid navigation wraps from last to first and first to last, in the
   editor and public presentation. A single Grid does not swipe to itself; the
   World Cover remains outside the editor's scene sequence.
+- Dragging the Display Stage swipes between Grids directly in Visitor mode and
+  when the owner's Display composition is locked. Unlocked authoring retains
+  Space-drag navigation so ordinary dragging remains available for editing.
 - The Display Module title bar offers local Play/Pause before Layers. Playback
   slides continuously through the ordered Grids and wraps without a dwell.
   Pause retains progress; Stage interaction returns to manual control. Playback

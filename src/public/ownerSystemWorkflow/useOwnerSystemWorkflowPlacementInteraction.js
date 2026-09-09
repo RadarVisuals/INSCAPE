@@ -238,7 +238,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
         clearMarquee();
         return;
       }
-      if (active.mode === 'navigation') {
+      if (active.mode === 'navigation' || navigationOnly) {
         clearMarquee();
         return;
       }

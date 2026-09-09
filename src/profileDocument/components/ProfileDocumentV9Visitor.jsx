@@ -159,7 +159,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
   }, []);
   const visitorInputBlocked = Boolean(viewer.placementId);
   const beginGridDrag = useCallback((event) => {
-    if (!spacePressedRef.current || visitorInputBlocked || event.button !== 0 || gridDragRef.current || gridSwipeTimerRef.current !== null) return;
+    if (visitorInputBlocked || event.button !== 0 || gridDragRef.current || gridSwipeTimerRef.current !== null) return;
     event.preventDefault(); event.stopPropagation();
     const origin = { x: event.clientX, y: event.clientY };
     const viewportWidth = event.currentTarget.clientWidth;
