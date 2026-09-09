@@ -3,6 +3,7 @@ import {
   Info, Layers3, Lock, LockKeyhole, Maximize2, Minimize2, Minus, Play, Pause,
 } from 'lucide-react';
 import PresentationBoardShortcut from './PresentationBoardShortcut.jsx';
+import { DisplayStageSizeContext } from './DisplayStageSizeContext.js';
 import { loadPresentationBoardShortcut } from './presentationBoardShortcutStorage.js';
 import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import { displayInstrumentLayout } from './displayInstrumentState.js';
@@ -217,7 +218,6 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
         current.scale + Math.max(-.06, Math.min(.06, -pixels * .001)));
       if (next.scale === current.scale) return;
       if (!resize) {
-        prepareLiveScaleRendering();
         resize = { centerX: windowFrame.left + windowFrame.width / 2,
           centerY: windowFrame.top + windowFrame.height / 2, timer: null };
         wheelResizeRef.current = resize;
@@ -227,8 +227,8 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       setBoardPosition(clampPosition({ left: resize.centerX - next.frame.board.width / 2,
         top: resize.centerY - next.frame.board.height / 2 }, next.frame.board));
       clearTimeout(resize.timer);
-      // Apply each wheel step immediately. Reflow the artwork only once the
-      // gesture ends, rather than letting its layout lag behind every step.
+      // Retain the gesture's centre across wheel events. Stage dimensions and
+      // artwork projection update together, without a bitmap-scaling handoff.
       resize.timer = setTimeout(() => {
         if (wheelResizeRef.current !== resize) return;
         wheelResizeRef.current = null;
@@ -309,7 +309,6 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     if (event.button !== 0 || !view || !windowFrame || boardPhase !== 'window') return;
     event.preventDefault(); event.stopPropagation();
     stopWheelResize();
-    prepareLiveScaleRendering();
     boardResizeRef.current = { corner, id: event.pointerId, clientX: event.clientX, clientY: event.clientY, frame: windowFrame, view };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -401,9 +400,13 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
             transform: liveScaleRendering ? `scale(${liveTransformScale})` : undefined,
             width: liveScaleRendering ? liveStage?.width || view.fit.stage.width : settledStageWidth }}>
           <div className="system-workflow__inspection-scene" ref={inspectionSceneRef}>
+          <DisplayStageSizeContext.Provider value={{
+            width: liveScaleRendering ? liveStage?.width || view.fit.stage.width : settledStageWidth,
+            height: liveScaleRendering ? liveStage?.height || view.fit.stage.height : settledStageHeight }}>
           {cloneElement(children, { boardScale: liveScaleRendering ? liveTransformScale : 1,
             interactionDisabled: children.props.interactionDisabled || boardPhase === 'maximizing' || boardPhase === 'restoring',
             renderingMode: liveScaleRendering ? 'live' : 'settled', selectionOverlayHost })}
+          </DisplayStageSizeContext.Provider>
           </div>
         </div>
       </div>

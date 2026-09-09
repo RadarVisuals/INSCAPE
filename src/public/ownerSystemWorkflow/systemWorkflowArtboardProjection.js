@@ -1,6 +1,5 @@
 import { SYSTEM_WORKFLOW_GEOMETRY } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
-import { projectSystemWorkflowViewport } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
-import { projectLatticePixelRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
+import { projectSystemWorkflowPlacement, projectSystemWorkflowViewport } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
 
 export const OWNER_SYSTEM_WORKFLOW_COLUMNS = SYSTEM_WORKFLOW_GEOMETRY.columns;
 export const OWNER_SYSTEM_WORKFLOW_ROWS = SYSTEM_WORKFLOW_GEOMETRY.rows;
@@ -74,5 +73,5 @@ export function ownerSystemWorkflowArtboardContainsPoint(artboard, point) {
 
 export function projectOwnerSystemWorkflowPlacement(placement, artboard) {
   if (!artboard || !placement) return null;
-  return projectLatticePixelRectangle(placement, artboard);
+    return projectSystemWorkflowPlacement(placement, artboard);
 }

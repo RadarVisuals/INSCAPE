@@ -1,4 +1,5 @@
-import { useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { DisplayStageSizeContext } from './DisplayStageSizeContext.js';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 import { createPortal } from 'react-dom';
 import { projectCroppedMediaRectangle } from '../../lattice/rendering/latticeCrop.js';
@@ -72,7 +73,8 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   const canvasRef = useRef(null);
   const feedbackTimerRef = useRef(null);
   const [dropFeedback, setDropFeedback] = useState(null);
-  const [worldViewport, setWorldViewport] = useState(null);
+  const [measuredViewport, setWorldViewport] = useState(null);
+  const stageSize = useContext(DisplayStageSizeContext);
   const retainedSelection = useRef(null);
   const grid = controller.selectedGrid;
   const picking = useArtworkPicking(canvasRef, grid?.id + ':' + controller.draft.profileAddress);
@@ -82,6 +84,9 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     return placement ? { placement, element } : null;
   };
   const worldCover = isSystemWorkflowWorldCoverGrid(grid);
+  const worldViewport = stageSize
+    ? (worldCover ? measureOwnerSystemWorkflowHeroArtboard : measureOwnerSystemWorkflowArtboard)(stageSize.width, stageSize.height)
+    : measuredViewport;
   const artboardMode = worldCover ? OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO : OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID;
   const cropSession = crop?.cropSession || null;
   const appearance = controller.draft?.appearance;
@@ -164,7 +169,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
 
   useLayoutEffect(() => {
     const node = canvasRef.current;
-    if (!node) return undefined;
+    if (!node || stageSize) return undefined;
     const measure = () => {
       const style = getComputedStyle(node);
       const rectangle = { width: parseFloat(style.width), height: parseFloat(style.height) };
@@ -177,7 +182,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     observer?.observe(node);
     globalThis.addEventListener?.('resize', measure);
     return () => { observer?.disconnect(); globalThis.removeEventListener?.('resize', measure); };
-  }, [renderingMode, worldCover]);
+  }, [renderingMode, worldCover, Boolean(stageSize)]);
 
   useEffect(() => {
     const reportRejectedDrop = () => {

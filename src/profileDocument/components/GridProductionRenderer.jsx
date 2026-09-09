@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { DisplayStageSizeContext } from '../../public/ownerSystemWorkflow/DisplayStageSizeContext.js';
 import { createLatticeProductionLayerRanks } from '../../lattice/rendering/latticeProductionLayerOrder.js';
 import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import {
-  projectLatticeProductionPixelArtwork,
+  projectLatticeProductionArtwork,
 } from '../../lattice/rendering/latticeProductionProjection.js';
 import { projectSystemWorkflowViewport } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
 import { systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
@@ -56,7 +57,7 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
   }, [imageLoading, loadState.attempt, loadState.src, loadState.status, media.src, media.status]);
   const decodedDimensions = loadState.src === media.src && loadState.status === 'loaded' ? loadState.dimensions : null;
   const dimensions = decodedDimensions || media.dimensions;
-  const artwork = projectLatticeProductionPixelArtwork(placement, field, dimensions);
+  const artwork = projectLatticeProductionArtwork(placement, field, dimensions);
   const effectiveBackground = placement.backing.enabled ? placement.backing.color
     : placement.transparencyMode === 'OPAQUE' ? '#d8d4ca' : 'transparent';
   const ready = media.status === PROFILE_DOCUMENT_V9_MEDIA_STATUS.READY;
@@ -109,10 +110,12 @@ export default function GridProductionRenderer({ document, grid, imageLoading = 
     const placement = grid.placements.find(item => item.id === element.dataset.placementId);
     if (placement) onPlacementActivate?.({ element, placement, gridId: grid.id });
   };
-  const [viewport, setViewport] = useState({ width: 0, height: 0 });
-  useEffect(() => { const node = rootRef.current; if (!node) return undefined;
+  const [measuredViewport, setViewport] = useState({ width: 0, height: 0 });
+  const stageSize = useContext(DisplayStageSizeContext);
+  const viewport = stageSize ? { width: stageSize.width, height: Math.max(0, stageSize.height - projectionBottomInset) } : measuredViewport;
+  useEffect(() => { const node = rootRef.current; if (!node || stageSize) return undefined;
     const update = () => setViewport(viewportOf(node, projectionBottomInset)); update(); const observer = new ResizeObserver(update); observer.observe(node);
-    return () => observer.disconnect(); }, [projectionBottomInset]);
+    return () => observer.disconnect(); }, [projectionBottomInset, Boolean(stageSize)]);
   const model = useMemo(() => ({ geometry: document.geometry }), [document.geometry]);
   const projected = viewport.width > 0 && viewport.height > 0 ? projectSystemWorkflowViewport(model.geometry, viewport) : null;
   const layerRanks = useMemo(() => createLatticeProductionLayerRanks(grid.placements), [grid.placements]);
@@ -120,7 +123,7 @@ export default function GridProductionRenderer({ document, grid, imageLoading = 
   return <section aria-label={title || `INSCAPE ${grid.id}`} className="lattice-production-table visitor-grid-renderer"
     data-grid-id={grid.id} data-guide-mode={document.appearance.guideMode}
     data-surface={document.appearance.surfaceId} ref={rootRef} onLoadCapture={picking.onLoadCapture}
-    title="Alt-click to cycle overlapping artwork" style={projected ? {
+    style={projected ? {
       '--lattice-production-guide-color': document.appearance.guideColor,
       '--lattice-production-cell-size': `${projected.cellSize}px`,
       '--lattice-production-grid-origin-x': `${projected.left}px`,
