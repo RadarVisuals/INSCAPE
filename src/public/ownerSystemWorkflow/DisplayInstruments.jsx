@@ -1,0 +1,57 @@
+import { useId, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { PictureInPicture2, X } from 'lucide-react';
+import DisplayInstrumentWindow from './DisplayInstrumentWindow.jsx';
+import './displayInstruments.css';
+
+const names = { layers: 'Layers', metadata: 'Metadata' };
+
+export default function DisplayInstruments({ workspaceRef, instrumentTriggers, state, dispatch, projection, scope, selectionLabel, renderLayers, renderMetadata, overlayTop }) {
+  const tabs = useRef({});
+  const instanceId = useId();
+  const instruments = Object.keys(names).filter(id => id === 'layers' ? renderLayers : renderMetadata);
+  const active = state.active;
+  const content = (instrument) => instrument === 'layers' ? renderLayers() : renderMetadata();
+  const returnToTrigger = (instrument) => requestAnimationFrame(() =>
+    instrumentTriggers.current[instrument]?.focus({ preventScroll: true }));
+  const command = (type, instrument) => { dispatch({ type, instrument }); returnToTrigger(instrument); };
+  const switchTab = (event, instrument) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault(); event.stopPropagation();
+    const next = event.key === 'Home' ? instruments[0] : event.key === 'End' ? instruments.at(-1)
+      : instruments[(instruments.indexOf(instrument) + 1) % instruments.length];
+    dispatch({ type: 'open', instrument: next });
+    tabs.current[next]?.focus();
+  };
+  return <>
+    {active && <aside aria-label="Display Module instruments" className="system-workflow__instrument-bay"
+      data-projection={projection} style={{ '--instrument-overlay-top': `${overlayTop}px` }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && !event.defaultPrevented) {
+          event.preventDefault(); event.stopPropagation(); command('toggle', active);
+        }
+      }}>
+      <header className="system-workflow__instrument-rail">
+        <div role="tablist" aria-label="Display Module instruments">{instruments.map(id =>
+          <button key={id} role="tab" id={`${instanceId}-display-tab-${id}`} aria-controls={`${instanceId}-display-panel-${id}`}
+            aria-selected={active === id} tabIndex={active === id ? 0 : -1} ref={(node) => { tabs.current[id] = node; }}
+            onClick={() => dispatch({ type: 'open', instrument: id })} onKeyDown={(event) => switchTab(event, id)}
+            type="button">{names[id]}{state[id] === 'detached' ? ' ↗' : ''}</button>)}</div>
+        <button aria-label={`Detach ${names[active]}`} title={`Detach ${names[active]}`} className="system-workflow__round-control"
+          onClick={() => command('detach', active)} type="button"><PictureInPicture2 /></button>
+        <button aria-label="Close instrument bay" title="Close instrument bay" className="system-workflow__round-control"
+          onClick={() => command('toggle', active)} type="button"><X /></button>
+      </header>
+      <small className="system-workflow__instrument-scope">Display Module · {scope}
+        {active === 'metadata' && <span>{selectionLabel}</span>}</small>
+      {instruments.map((id) => <div key={id} role="tabpanel" id={`${instanceId}-display-panel-${id}`}
+        aria-labelledby={`${instanceId}-display-tab-${id}`} hidden={active !== id}
+        className="system-workflow__instrument-content">{active === id ? content(id) : null}</div>)}
+    </aside>}
+    {instruments.filter((id) => state[id] === 'detached').map((id) => createPortal(
+      <DisplayInstrumentWindow key={id} instrument={id}
+        title={`Display Module / ${scope}${id === 'metadata' ? ` / ${selectionLabel}` : ''}`}
+        onAttach={() => command('attach', id)} onClose={() => command('close', id)}>{content(id)}</DisplayInstrumentWindow>,
+      workspaceRef.current, id))}
+  </>;
+}

@@ -2,9 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   createEmptyWorkspace,
+  createCategorySection,
   createFolder,
+  deleteCategorySection,
   deleteFolder,
   isProtectedLibraryView,
+  moveCategory,
+  moveCategorySection,
+  renameCategorySection,
   renameFolder,
   resetCanvasLayout,
   setFolderAsset,
@@ -12,6 +17,29 @@ import {
   setFolderPublic,
   toggleFavorite
 } from './libraryWorkspace.js';
+
+test('category sections organize and reorder categories without changing category data', () => {
+  let workspace = createFolder(createFolder(createEmptyWorkspace('0xprofile'), 'First', 10), 'Second', 20);
+  const [firstId, secondId] = workspace.folders.map(({ id }) => id);
+  const folders = structuredClone(workspace.folders);
+  workspace = createCategorySection(createCategorySection(workspace, 'Archive'), 'Current');
+  const [archiveId, currentId] = workspace.categoryOrganization.sections.map(({ id }) => id);
+  workspace = moveCategory(workspace, secondId, archiveId);
+  workspace = moveCategory(workspace, firstId, archiveId, secondId);
+  assert.deepEqual(workspace.categoryOrganization, {
+    rootCategoryIds: [],
+    sections: [
+      { id: archiveId, name: 'Archive', categoryIds: [firstId, secondId] },
+      { id: currentId, name: 'Current', categoryIds: [] },
+    ],
+  });
+  workspace = renameCategorySection(workspace, archiveId, 'Past');
+  workspace = moveCategorySection(workspace, currentId, archiveId);
+  assert.deepEqual(workspace.categoryOrganization.sections.map(({ name }) => name), ['Current', 'Past']);
+  workspace = deleteCategorySection(workspace, archiveId);
+  assert.deepEqual(workspace.categoryOrganization.rootCategoryIds, [firstId, secondId]);
+  assert.deepEqual(workspace.folders, folders);
+});
 
 test('folders create, rename, add/remove references, and delete without touching favorites', () => {
   let workspace = createEmptyWorkspace('0xprofile');
@@ -28,6 +56,7 @@ test('folders create, rename, add/remove references, and delete without touching
   workspace = setFolderAsset(workspace, id, 'asset-a', false, 50);
   workspace = deleteFolder(workspace, id);
   assert.deepEqual(workspace.folders, []);
+  assert.deepEqual(workspace.categoryOrganization.rootCategoryIds, []);
   assert.deepEqual(workspace.favorites, ['asset-b']);
 });
 

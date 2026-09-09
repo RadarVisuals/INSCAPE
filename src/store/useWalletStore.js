@@ -73,6 +73,11 @@ export const useWalletStore = create((set, get) => ({
 
   disposeWallet: () => lifecycleManager(set, get).dispose(),
   scheduleWalletRelease: () => lifecycleManager(set, get).scheduleRelease(),
+  beginWalletTransition: () => {
+    const report = lifecycleManager(set, get).dispose();
+    set({ authorityLifecycleStatus: 'pending' });
+    return report;
+  },
   _recoverProviderContext: (reason) => lifecycleManager(set, get).recover(reason),
 
   _failClosedProviderContext: (initializationError = null) => {

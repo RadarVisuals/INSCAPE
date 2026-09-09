@@ -1,6 +1,5 @@
 export const OWNER_RUNTIME_MODULES = [
-  '/src/public/OwnerLatticeShell.jsx',
-  '/src/public/ModuleGridShell.jsx',
+  '/src/public/OwnerSystemWorkflowShell.jsx',
   '/src/library/state/useLibraryStore.js',
   '/src/signals/state/useSignalStore.js'
 ];

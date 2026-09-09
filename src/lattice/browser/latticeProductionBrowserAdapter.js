@@ -1,4 +1,5 @@
 import { normalizeProfileAddress } from '../../library/config.js';
+import { creatorRelationshipForProfile } from '../../creations/domain/creatorRelationship.js';
 import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
 import { resolvePublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
 
@@ -9,22 +10,43 @@ function deepFreeze(value, seen = new WeakSet()) {
   return Object.freeze(value);
 }
 
-export function adaptLatticeProductionBrowserAsset(asset, profileAddress) {
+function resolveBrowserPreviewUrl(value) {
+  const resolved = resolvePublishedAssetUrl(value);
+  if (!resolved) return null;
+  try {
+    const url = new URL(resolved);
+    if (!['ipfs.io', 'dweb.link'].includes(url.hostname.toLowerCase())
+      || !url.pathname.startsWith('/ipfs/')) return resolved;
+    return resolvePublishedAssetUrl(`ipfs://${url.pathname.slice('/ipfs/'.length)}`) || resolved;
+  } catch {
+    return resolved;
+  }
+}
+
+export function adaptLatticeProductionBrowserAsset(asset, profileAddress, acceptCreated = false) {
   const ownerAddress = normalizeProfileAddress(asset?.ownerAddress);
   const identity = parseCanonicalAssetId(asset?.id);
-  if (!identity || ownerAddress !== profileAddress
+  const createdForProfile = acceptCreated && Boolean(creatorRelationshipForProfile(asset, profileAddress));
+  if (!identity || (ownerAddress !== profileAddress && !createdForProfile)
     || Number(asset?.chainId) !== identity.chainId
     || normalizeProfileAddress(asset?.contractAddress) !== identity.contractAddress
     || (asset?.tokenId == null ? null : String(asset.tokenId).toLowerCase()) !== identity.tokenId) return null;
 
-  const previewSource = [asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl]
-    .map((candidate) => resolvePublishedAssetUrl(candidate))
+  const sizedVariants = (asset.imageGroups?.[0]?.variants || [])
+    .filter((variant) => Number(variant.width) > 0 && resolveBrowserPreviewUrl(variant.url))
+    .sort((left, right) => Number(left.width) - Number(right.width));
+  const libraryThumbnail = (sizedVariants.find((variant) => Number(variant.width) >= 640)
+    || sizedVariants.at(-1))?.url || asset.thumbnailUrl;
+  const previewSource = [libraryThumbnail, asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl]
+    .map(resolveBrowserPreviewUrl)
     .find(Boolean) || null;
-  const previewCandidates = [...new Set([asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl]
-    .map((candidate) => resolvePublishedAssetUrl(candidate)).filter(Boolean))];
-  const source = [asset.originalImageUrl, asset.imageUrl, asset.thumbnailUrl]
-    .map((candidate) => resolvePublishedAssetUrl(candidate))
+  const imageVariants = (asset.imageGroups?.[0]?.variants || []).map((variant) => variant?.url);
+  const previewCandidates = [...new Set([libraryThumbnail, asset.thumbnailUrl, asset.imageUrl, asset.originalImageUrl, ...imageVariants]
+    .map(resolveBrowserPreviewUrl).filter(Boolean))];
+  const resolvedSource = [asset.originalImageUrl, asset.imageUrl, asset.thumbnailUrl]
+    .map(resolveBrowserPreviewUrl)
     .find(Boolean) || null;
+  const source = asset.collectionPreviewTokenId ? null : resolvedSource;
   const width = Number.isSafeInteger(asset.imageWidth) && asset.imageWidth > 0 ? asset.imageWidth : null;
   const height = Number.isSafeInteger(asset.imageHeight) && asset.imageHeight > 0 ? asset.imageHeight : null;
   const declaredMediaType = typeof asset.mediaType === 'string' && asset.mediaType.trim()
@@ -32,18 +54,21 @@ export function adaptLatticeProductionBrowserAsset(asset, profileAddress) {
   // Production Library records are normalized from metadata `images` and currently
   // do not persist a separate mediaType field. A validated image source therefore
   // supplies the honest legacy/default type; explicit unsupported types still fail.
-  const mediaType = declaredMediaType || (source ? 'image' : 'unknown');
+  const mediaType = declaredMediaType || (resolvedSource ? 'image' : 'unknown');
   return {
     collection: typeof asset.collectionName === 'string' && asset.collectionName.trim()
       ? asset.collectionName.trim().slice(0, 80) : null,
+    collectionPreviewTokenId: asset.collectionPreviewTokenId || null,
     height,
+    isCollection: asset?.isCollection === true,
     mediaType,
-    placeable: Boolean(source && width && height && ['image', 'animation'].includes(mediaType)),
-    placementUnavailableReason: !source ? 'MEDIA UNAVAILABLE'
-      : !width || !height ? 'DIMENSIONS RESOLVING'
-        : !['image', 'animation'].includes(mediaType) ? 'MEDIA TYPE UNAVAILABLE' : null,
+    placeable: Boolean(source && ['image', 'animation'].includes(mediaType)),
+    placementUnavailableReason: asset.collectionPreviewTokenId ? 'COLLECTION TOKEN PREVIEW ONLY'
+      : !source ? 'MEDIA UNAVAILABLE'
+      : !['image', 'animation'].includes(mediaType) ? 'MEDIA TYPE UNAVAILABLE' : null,
     previewSrc: previewSource,
     previewCandidates,
+    imageGroups: asset.imageGroups || [],
     src: source,
     stableAssetId: identity.stableAssetId,
     title: typeof asset.name === 'string' && asset.name.trim()
@@ -68,6 +93,7 @@ export function adaptLatticeProductionBrowserData({
       assetProgress: { failures: 0, resolved: 0, total: 0 },
       assets: [],
       categories: [],
+      categoryOrganization: { rootCategoryIds: [], sections: [] },
       favorites: [],
       ownerContext: profile,
       rejectedAssetCount: 0,
@@ -94,6 +120,9 @@ export function adaptLatticeProductionBrowserData({
     name: folder.name,
     public: folder.public === true,
   }));
+  const categoryOrganization = workspace.categoryOrganization || {
+    rootCategoryIds: categories.map(({ id }) => id), sections: [],
+  };
   return deepFreeze({
     assetError: typeof error === 'string' ? error : null,
     assetLoadState: ['idle', 'loading', 'ready', 'partial', 'error'].includes(status) ? status : 'error',
@@ -104,6 +133,10 @@ export function adaptLatticeProductionBrowserData({
     },
     assets: acceptedAssets,
     categories,
+    categoryOrganization: {
+      rootCategoryIds: [...categoryOrganization.rootCategoryIds],
+      sections: categoryOrganization.sections.map((section) => ({ ...section, categoryIds: [...section.categoryIds] })),
+    },
     favorites: [...workspace.favorites],
     ownerContext: profile,
     rejectedAssetCount,

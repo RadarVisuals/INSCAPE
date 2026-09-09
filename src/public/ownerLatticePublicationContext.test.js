@@ -1,21 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createEmptyLatticeProductionDraft } from '../lattice/domain/latticeProductionDraft.js';
+import { createEmptySystemWorkflowDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
 import { canonicalPublicationHash, publicationContentFingerprint } from '../profileDocument/domain/profileDocumentPublication.js';
-import { buildOwnerLatticePublicationDocument } from './ownerLatticePublicationDocument.js';
+import { buildOwnerSystemWorkflowPublicationDocument } from './ownerSystemWorkflowPreviewDocument.js';
 import { createOwnerLatticePublicationContext } from './ownerLatticePublicationContext.js';
 
 const PROFILE = '0xf3c189819fd5b042f692983bfbfd57ab607ee709';
 
 function snapshot() {
-  return buildOwnerLatticePublicationDocument({
-    activeActorId: 'abyssal_eye',
+  return buildOwnerSystemWorkflowPublicationDocument({
     assetRecords: [],
     exportedAt: '2026-08-01T12:00:00.000Z',
-    latticeDraft: createEmptyLatticeProductionDraft(PROFILE),
     profile: { name: 'Resident Zero' },
     profileAddress: PROFILE,
-    stageId: 'moonpurple',
+    systemWorkflowDraft: createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' }),
   });
 }
 
@@ -42,7 +40,7 @@ function context(overrides = {}) {
   });
 }
 
-test('lattice publication context binds exact frozen snapshot and generation identities', () => {
+test('publication context binds an exact frozen v9 snapshot and generation identities', () => {
   const value = snapshot();
   const result = context({ snapshot: value, snapshotDraftFingerprint: publicationContentFingerprint(value) });
   assert.equal(result.ownerAuthoringEnabled, true);
@@ -55,7 +53,7 @@ test('lattice publication context binds exact frozen snapshot and generation ide
   assert.equal(result.draftGeneration, 4);
 });
 
-test('lattice publication context fails owner authority and marks changed public content stale', () => {
+test('publication context fails owner authority and marks changed public content stale', () => {
   const stale = context({ draftFingerprint: 'changed' });
   assert.equal(stale.snapshotStale, true);
   const wrongOwner = context({ getWalletPublicationContext: () => ({

@@ -1,11 +1,14 @@
 import { LUKSO_CHAIN_ID, normalizeProfileAddress } from '../../library/config.js';
 import { PROFILE_CONTRACT_FACT_STATUS } from '../../profileIdentity/domain/profileContractFacts.js';
 import { PROFILE_IDENTITY_STATUS } from '../../profileIdentity/domain/profileIdentity.js';
+import { resolveIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 
 const cleanOverlayText = (value, maximum) => typeof value === 'string' && !/[\u0000-\u001f\u007f]/u.test(value)
   ? value.trim().slice(0, maximum) : '';
 const resolved = (fact) => fact?.status === PROFILE_CONTRACT_FACT_STATUS.RESOLVED;
 const freezeEntries = (entries) => Object.freeze(entries.map((entry) => Object.freeze(entry)));
+// Product designation, independent of editable names, titles, tags and published card content.
+const INSCAPE_FOUNDER_PROFILE = '0x001048331cd14cef40dd5da644a738e7324fe691';
 
 function selectUrlCandidate(candidates, minimumWidth = 0) {
   const urls = (Array.isArray(candidates) ? candidates : [])
@@ -25,16 +28,6 @@ function resolveAsset(assetRecords, stableAssetId) {
   return (Array.isArray(assetRecords) ? assetRecords : []).find((asset) => asset?.id === stableAssetId) || null;
 }
 
-function canonicalInscapeUrl(locationLike, address) {
-  try {
-    const url = new URL(locationLike?.href || String(locationLike));
-    url.search = '';
-    url.hash = '';
-    url.searchParams.set('view', address);
-    return url.toString();
-  } catch { return null; }
-}
-
 function verifiedPublishedAt(publishedResolution) {
   if (!['RESOLVED', 'STALE'].includes(publishedResolution?.status)) return null;
   const exportedAt = publishedResolution?.document?.exportedAt;
@@ -50,7 +43,6 @@ export function createProductionIdentityDossierViewModel({
   cachedIdentity = null,
   presentationScope = 'owner',
   publishedResolution,
-  locationLike = globalThis.location
 } = {}) {
   const address = normalizeProfileAddress(contractFacts?.address?.value || identity?.normalizedAddress || identity?.address);
   if (!address) return null;
@@ -64,12 +56,12 @@ export function createProductionIdentityDossierViewModel({
     : metadataResolved && identity?.name ? 'LSP3_NAME' : cachedName ? 'PUBLISHED_IDENTITY_CACHE' : 'FALLBACK';
 
   const avatarMode = presentation.avatar?.mode === 'inscape' ? 'inscape' : 'official';
-  const officialProfileImage = selectUrlCandidate(identity?.profileImageCandidates, 64);
+  const officialProfileImage = selectUrlCandidate(identity?.profileImageCandidates, 256);
   const draftAvatarAsset = avatarMode === 'inscape'
     ? resolveAsset(assetRecords, presentation.avatar?.stableAssetId) : null;
   const cachedAvatarUrl = cleanOverlayText(cachedIdentity?.avatarUrl, 2048) || null;
   const avatarUrl = avatarMode === 'inscape'
-    ? draftAvatarAsset?.imageUrl || draftAvatarAsset?.originalImageUrl || draftAvatarAsset?.thumbnailUrl || null
+    ? presentation.avatar?.selectedMedia?.url || draftAvatarAsset?.originalImageUrl || draftAvatarAsset?.imageUrl || draftAvatarAsset?.thumbnailUrl || null
     : metadataResolved ? officialProfileImage?.url || identity?.avatarUrl || cachedAvatarUrl : cachedAvatarUrl;
   const avatarProvenance = avatarMode === 'inscape' && avatarUrl
     ? presentationScope === 'published' ? 'INSCAPE_PUBLISHED_ASSET' : 'INSCAPE_DRAFT_ASSET'
@@ -96,11 +88,9 @@ export function createProductionIdentityDossierViewModel({
     id: `authored-${link.id}`, label: link.label, url: link.url, kind: 'AUTHORED',
     provenance: 'LSP3_PROFILE_AUTHORED', verificationStatus: 'AUTHORED_NOT_VERIFIED'
   })) : [];
-  const inscapeUrl = canonicalInscapeUrl(locationLike, address);
   const systemLinks = [
     { id: 'universal-everything', label: 'UNIVERSAL EVERYTHING', url: `https://universaleverything.io/${address}` },
     ...(networkVerified ? [{ id: 'explorer', label: 'LUKSO EXPLORER', url: `https://explorer.execution.mainnet.lukso.network/address/${address}` }] : []),
-    ...(inscapeUrl ? [{ id: 'inscape-profile', label: 'INSCAPE PROFILE', url: inscapeUrl }] : [])
   ].map((link) => ({ ...link, kind: 'SYSTEM', provenance: 'CANONICAL_SYSTEM_ROUTE', verificationStatus: 'CANONICAL_ROUTE' }));
   const links = linksVisible ? [...authoredLinks, ...systemLinks] : [];
 
@@ -129,6 +119,23 @@ export function createProductionIdentityDossierViewModel({
   return Object.freeze({
     key: address,
     address,
+    designation: address === INSCAPE_FOUNDER_PROFILE && resolved(contractFacts?.chain)
+      && contractFacts.chain.value === LUKSO_CHAIN_ID
+      ? Object.freeze({ label: 'Founder', title: 'INSCAPE founder' }) : null,
+    card: resolveIdentityCard(presentation),
+    cardConfigured: Object.hasOwn(presentation, 'card'),
+    officialProfile: Object.freeze({
+      name: officialName || 'UNNAMED PROFILE',
+      description: bioMode === 'hidden' ? null : officialDescription,
+      tags: Object.freeze(officialTags),
+      avatarUrl: metadataResolved ? officialProfileImage?.url || identity?.avatarUrl || cachedAvatarUrl : cachedAvatarUrl,
+      url: `https://universaleverything.io/${address}`,
+    }),
+    authoredProfile: Object.freeze({
+      title: alias,
+      description: bioMode === 'inscape' ? description : null,
+      tags: Object.freeze(additionalTags),
+    }),
     profile: Object.freeze({
       displayName, nameProvenance, avatarUrl, avatarProvenance,
       avatarShape: presentation.avatar?.shape === 'round' ? 'round' : 'square',

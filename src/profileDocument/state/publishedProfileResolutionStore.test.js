@@ -17,7 +17,7 @@ test('initial transient failure is ERROR while a same-session refresh failure re
   assert.equal(stale.status, PUBLISHED_PROFILE_STATUS.STALE); assert.strictEqual(stale.document, documentA);
 });
 
-test('switching addresses aborts the former request and ignores a late stale generation', async () => {
+test('different profile addresses resolve concurrently without cancelling neighbouring world cards', async () => {
   let finishA; let signalA;
   const repository = { resolve(address, { signal }) {
     if (address === PROFILE_A) { signalA = signal; return new Promise((resolve) => { finishA = resolve; }); }
@@ -25,10 +25,10 @@ test('switching addresses aborts the former request and ignores a late stale gen
   } };
   const store = new PublishedProfileResolutionStore({ repository });
   const first = store.resolve(PROFILE_A); const second = await store.resolve(PROFILE_B);
-  assert.equal(signalA.aborted, true); assert.equal(second.status, PUBLISHED_PROFILE_STATUS.UNAVAILABLE);
+  assert.equal(signalA.aborted, false); assert.equal(second.status, PUBLISHED_PROFILE_STATUS.UNAVAILABLE);
   finishA({ status: PUBLISHED_PROFILE_STATUS.RESOLVED, address: PROFILE_A, document: documentA });
   await first;
-  assert.equal(store.get(PROFILE_A).status, PUBLISHED_PROFILE_STATUS.LOADING);
+  assert.equal(store.get(PROFILE_A).status, PUBLISHED_PROFILE_STATUS.RESOLVED);
   assert.equal(store.get(PROFILE_B).status, PUBLISHED_PROFILE_STATUS.UNAVAILABLE);
 });
 

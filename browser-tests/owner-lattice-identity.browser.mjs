@@ -94,10 +94,7 @@ test('production owner Identity Dossier owns focus, scrolling, modules, and resp
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
     await setAuthority(page);
-    const enter = page.locator('.startveil__entry');
-    await enter.waitFor({ state: 'visible', timeout: 20_000 });
-    await page.waitForFunction(() => !document.querySelector('.startveil__entry')?.disabled);
-    await enter.evaluate((node) => node.click());
+    await page.locator('.startveil').waitFor({ state: 'detached', timeout: 20_000 });
     await page.locator('.owner-lattice-shell').waitFor({ state: 'attached', timeout: 20_000 });
     diagnostic('phase7:owner-ready');
 

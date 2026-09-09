@@ -1,0 +1,50 @@
+import { lazy, Suspense, useRef } from 'react';
+import PublicEntryPortal from '../../startveil/PublicEntryPortal.jsx';
+import OwnerSystemWorkflowLibraryWorkspace from './OwnerSystemWorkflowLibraryWorkspace.jsx';
+import OwnerSystemWorkflowManual from './OwnerSystemWorkflowManual.jsx';
+import OwnerSystemWorkflowProfile from './OwnerSystemWorkflowProfile.jsx';
+import OwnerSystemWorkflowSettings from './OwnerSystemWorkflowSettings.jsx';
+import SystemWorkflowGridSwitcher from './SystemWorkflowGridSwitcher.jsx';
+
+const OwnerSystemWorkflowActivity = lazy(() => import('./OwnerSystemWorkflowActivity.jsx'));
+
+function PanelPresence({ children, id, panels, retained = false }) {
+  const state = panels.presence[id];
+  return <div aria-hidden={!state.present || undefined} className="system-workflow__panel-presence" data-panel-phase={state.phase} data-system-workflow-panel
+    hidden={retained && !state.present} inert={retained && !state.present ? '' : undefined}
+    onTransitionEnd={(event) => { if (event.propertyName === 'opacity') panels.completePanelTransition(id); }}>{children}</div>;
+}
+
+export default function OwnerSystemWorkflowPanelLayer({ moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, activity, assets, assetsById, authoringLocked = false, categoryCommands, browser, connectedProfile, controller, discoveryCommands, discoveryGroups, layout, libraryData,
+  menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onOpenIdentity, onEnterMyWorld, onVisitProfile, panelOccupied, panels, profileIdentity, profileModel,
+  resolveAssetDimensions, reviewDiscovery, workspaceSurfaceColor, workbenchPreferences, onWorkbenchPreferencesChange }) {
+  const show = (id) => panels.presence[id];
+  const libraryMounted = useRef(false);
+  if (show('library').present) libraryMounted.current = true;
+  return <>
+    {show('grids').present && <PanelPresence id="grids" panels={panels}><SystemWorkflowGridSwitcher controller={controller} data-layout={layout.mode} onSelectGrid={onChangeGrid} /></PanelPresence>}
+    {show('docs').present && <PanelPresence id="docs" panels={panels}><OwnerSystemWorkflowManual onClose={onClose} /></PanelPresence>}
+    {libraryMounted.current && <PanelPresence id="library" panels={panels} retained>
+      <OwnerSystemWorkflowLibraryWorkspace moduleAssetTargetRef={moduleAssetTargetRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef}
+        placementScope={`${controller.draft.profileAddress}:${controller.selectedGridId}`}
+        authoringLocked={authoringLocked} categoryCommands={categoryCommands} data={libraryData}
+        menuSurface={menuSurface} onClose={onClose} phase={show('library').phase}
+        resolveAssetDimensions={resolveAssetDimensions} /></PanelPresence>}
+    {show('profile').present && <PanelPresence id="profile" panels={panels}><div className="system-workflow__profile-layer"
+      onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <OwnerSystemWorkflowProfile identity={profileIdentity} model={profileModel} onOpenIdentity={onOpenIdentity}
+        onDisconnect={onDisconnect} phase={show('profile').phase} /></div></PanelPresence>}
+    {show('activity').present && <PanelPresence id="activity" panels={panels}>
+      <Suspense fallback={null}><OwnerSystemWorkflowActivity activity={activity} onClose={onClose}
+        phase={show('activity').phase} /></Suspense></PanelPresence>}
+    {show('discover').present && <PanelPresence id="discover" panels={panels}>
+      <PublicEntryPortal connectedProfile={connectedProfile || profileIdentity} embedded initialMode="explore" onClose={onClose}
+        onConnect={onConnect} onDisconnect={onDisconnect}
+        onEnterMyWorld={() => { onClose(); onEnterMyWorld?.(); }}
+        onVisitProfile={(address) => { panels.closePanel({ returnFocus: false }); onVisitProfile?.(address); }} /></PanelPresence>}
+    {show('settings').present && <PanelPresence id="settings" panels={panels}>
+      <OwnerSystemWorkflowSettings appearance={controller.draft.appearance} controller={controller} menuSurface={menuSurface}
+        onClose={onClose} onWorkbenchPreferencesChange={onWorkbenchPreferencesChange}
+        phase={show('settings').phase} workbenchPreferences={workbenchPreferences} /></PanelPresence>}
+  </>;
+}

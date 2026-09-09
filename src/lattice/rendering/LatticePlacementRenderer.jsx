@@ -7,7 +7,6 @@ import './latticePlacementRenderer.css';
 
 const percentage = (value, total) => `${(value / total) * 100}%`;
 
-// Deferred visual defect: ISSUE-001 in docs/new-issues/LATTICE_VIEWER_VISUAL_ISSUES.md
 export function LatticeArtworkPresentation({ cropEditing = false, entry }) {
   const {
     backing,

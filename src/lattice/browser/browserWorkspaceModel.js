@@ -5,59 +5,6 @@ export const BROWSER_FILING_FILTERS = Object.freeze({
   SORTED: 'sorted',
   UNSORTED: 'unsorted',
 });
-export const BROWSER_RESIZE_STEP = 24;
-
-const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
-
-export function browserWindowMargin(viewport) {
-  return 10;
-}
-
-export function browserViewportBounds(viewport) {
-  const width = Math.max(320, Number(viewport?.width) || 1280);
-  const height = Math.max(320, Number(viewport?.height) || 720);
-  const margin = browserWindowMargin({ height, width });
-  return {
-    maximumHeight: Math.max(300, height - (margin * 2)),
-    maximumWidth: Math.max(300, width - (margin * 2)),
-    minimumHeight: Math.min(440, Math.max(300, height - (margin * 2))),
-    minimumWidth: Math.min(360, Math.max(300, width - (margin * 2))),
-  };
-}
-
-export function initialBrowserSize(viewport) {
-  const bounds = browserViewportBounds(viewport);
-  return {
-    width: clamp(1040, bounds.minimumWidth, bounds.maximumWidth),
-    height: clamp(680, bounds.minimumHeight, bounds.maximumHeight),
-  };
-}
-
-export function clampBrowserSize(size, viewport) {
-  const bounds = browserViewportBounds(viewport);
-  return {
-    width: clamp(Number(size?.width) || bounds.minimumWidth, bounds.minimumWidth, bounds.maximumWidth),
-    height: clamp(Number(size?.height) || bounds.minimumHeight, bounds.minimumHeight, bounds.maximumHeight),
-  };
-}
-
-export function resizeBrowserAroundCenter(size, delta, viewport) {
-  return clampBrowserSize({
-    width: (Number(size?.width) || 0) + ((Number(delta?.x) || 0) * 2),
-    height: (Number(size?.height) || 0) + ((Number(delta?.y) || 0) * 2),
-  }, viewport);
-}
-
-export function resizeBrowserByKey(size, key, viewport, step = BROWSER_RESIZE_STEP) {
-  const delta = {
-    ArrowDown: { x: 0, y: step / 2 },
-    ArrowLeft: { x: -step / 2, y: 0 },
-    ArrowRight: { x: step / 2, y: 0 },
-    ArrowUp: { x: 0, y: -step / 2 },
-  }[key];
-  return delta ? resizeBrowserAroundCenter(size, delta, viewport) : null;
-}
-
 export function filterBrowserAssets(assets, categories, {
   favorites = [],
   filing = BROWSER_FILING_FILTERS.ALL,
@@ -90,27 +37,6 @@ export function searchBrowserCategoryAssets(assets, query = '') {
 
 export function categoryDialogInitialName(dialog) {
   return dialog?.type === 'rename' ? String(dialog?.category?.name || '') : '';
-}
-
-export function clampBrowserPosition(position, size, viewport) {
-  const width = Math.max(320, Number(viewport?.width) || 1280);
-  const height = Math.max(320, Number(viewport?.height) || 720);
-  const margin = browserWindowMargin({ height, width });
-  const windowWidth = Math.max(1, Number(size?.width) || 1);
-  const windowHeight = Math.max(1, Number(size?.height) || 1);
-  return {
-    left: clamp(Number(position?.left) || margin, margin, Math.max(margin, width - windowWidth - margin)),
-    top: clamp(Number(position?.top) || margin, margin, Math.max(margin, height - windowHeight - margin)),
-  };
-}
-
-export function initialBrowserPosition(size, viewport) {
-  const width = Math.max(320, Number(viewport?.width) || 1280);
-  const height = Math.max(320, Number(viewport?.height) || 720);
-  return clampBrowserPosition({
-    left: (width - Number(size?.width || 0)) / 2,
-    top: (height - Number(size?.height || 0)) / 2,
-  }, size, { height, width });
 }
 
 export const BROWSER_VIEW_KINDS = Object.freeze({

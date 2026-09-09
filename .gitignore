@@ -5,3 +5,4 @@ dist/
 .edge-codex/
 .edge-*/
 .browser-test-profile/
+.browser-test-runtime/

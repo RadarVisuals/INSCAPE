@@ -1,0 +1,83 @@
+const finitePositive = (value) => Number.isFinite(value) && value > 0;
+
+export const snapLatticePixelBoundary = (value) => Math.round(value);
+
+export function projectLatticePixelBoundary(field, axis, coordinate) {
+  const origin = axis === 'column' ? field?.left : axis === 'row' ? field?.top : NaN;
+  if (!Number.isFinite(origin) || !finitePositive(field?.cellSize) || !Number.isFinite(coordinate)) {
+    throw new TypeError('Lattice pixel projection requires a canonical field, axis, and coordinate');
+  }
+  return snapLatticePixelBoundary(origin + coordinate * field.cellSize);
+}
+
+export function createLatticePixelBoundaryPositions(field, axis, interval, limit, strokeWidth = 1) {
+  if (!field || !finitePositive(interval) || !finitePositive(limit)) return [];
+  const origin = axis === 'column' ? field.left : axis === 'row' ? field.top : NaN;
+  if (!Number.isFinite(origin) || !finitePositive(field.cellSize)) return [];
+  const spacing = field.cellSize * interval;
+  const width = Math.max(1, Math.round(strokeWidth));
+  const strokeOffset = width % 2 ? 0.5 : 0;
+  const firstIndex = Math.ceil(-origin / spacing);
+  const lastIndex = Math.floor((limit - origin) / spacing);
+  const positions = [];
+  for (let index = firstIndex; index <= lastIndex; index += 1) {
+    positions.push(projectLatticePixelBoundary(field, axis, index * interval) + strokeOffset);
+  }
+  return [...new Set(positions)];
+}
+
+export function createLatticePixelGuideBounds(field, inset = 0) {
+  if (!Number.isFinite(field?.left) || !Number.isFinite(field?.top)
+    || !finitePositive(field?.referenceWidth) || !finitePositive(field?.referenceHeight)
+    || !Number.isFinite(inset) || inset < 0
+    || field.referenceWidth <= inset * 2 || field.referenceHeight <= inset * 2) return null;
+  return Object.freeze({
+    x: field.left + inset,
+    y: field.top + inset,
+    width: field.referenceWidth - inset * 2,
+    height: field.referenceHeight - inset * 2,
+  });
+}
+
+export function projectLatticePixelRectangle(geometry, field) {
+  const left = projectLatticePixelBoundary(field, 'column', geometry.column);
+  const top = projectLatticePixelBoundary(field, 'row', geometry.row);
+  const right = projectLatticePixelBoundary(field, 'column', geometry.column + geometry.columnSpan);
+  const bottom = projectLatticePixelBoundary(field, 'row', geometry.row + geometry.rowSpan);
+  return Object.freeze({ left, top, width: right - left, height: bottom - top });
+}
+
+// Pixel-snapped placement rectangles can differ from an aspect-ratio fitted
+// media edge by up to one layout pixel once the board scale and native-ratio
+// fit have both been rounded. Treat that remainder as raster
+// rounding, not intentional letterboxing, so the backing cannot leak through
+// as a one-device-pixel seam after the board is composited or scaled.
+const RASTER_EDGE_TOLERANCE = 1 + 1e-7;
+
+// Taper protection continuously as edges separate. A binary threshold changes
+// the rendered image by a whole pixel during an otherwise fractional resize.
+const rasterEdgeCoverage = (left, right) => Math.max(0, 1 - Math.abs(left - right) / RASTER_EDGE_TOLERANCE);
+
+export function projectLatticeRasterBleedRectangle(rectangle, opening, bleed = 1) {
+  if (!rectangle || !opening || !finitePositive(rectangle.width) || !finitePositive(rectangle.height)
+    || !finitePositive(opening.width) || !finitePositive(opening.height)
+    || !Number.isFinite(rectangle.left) || !Number.isFinite(rectangle.top)
+    || !Number.isFinite(opening.left) || !Number.isFinite(opening.top)
+    || !finitePositive(bleed)) {
+    throw new TypeError('Lattice raster bleed requires positive rectangles and bleed');
+  }
+  let { left, top, width, height } = rectangle;
+  const rectangleRight = rectangle.left + rectangle.width;
+  const rectangleBottom = rectangle.top + rectangle.height;
+  const openingRight = opening.left + opening.width;
+  const openingBottom = opening.top + opening.height;
+  const leftBleed = bleed * rasterEdgeCoverage(rectangle.left, opening.left);
+  const rightBleed = bleed * rasterEdgeCoverage(rectangleRight, openingRight);
+  const topBleed = bleed * rasterEdgeCoverage(rectangle.top, opening.top);
+  const bottomBleed = bleed * rasterEdgeCoverage(rectangleBottom, openingBottom);
+  left -= leftBleed;
+  top -= topBleed;
+  width += leftBleed + rightBleed;
+  height += topBleed + bottomBleed;
+  return Object.freeze({ left, top, width, height });
+}
