@@ -294,7 +294,6 @@
 .system-workflow__scene-controls { display: flex; align-items: center; gap: 6px; }
 .system-workflow__scene-controls > span { font-size: 10px; color: var(--workflow-muted); }
 .system-workflow__inspection-scene :is(.system-workflow__placement, .lattice-production-placement) {
-  filter: grayscale(0) contrast(1) brightness(1);
   transition: filter 360ms ease-in-out, opacity 360ms ease-in-out;
 }
 .system-workflow__inspection-scene[data-inspection-phase="active"] [data-inspection-context="background"] { filter: grayscale(1) contrast(.72) brightness(.3); }
