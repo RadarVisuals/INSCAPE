@@ -55,8 +55,10 @@ export function normalizeProfileAsset(holding, ownerAddress, options = {}) {
         contractMetadata?.images?.length ? contractMetadata.images : null),
       attributes: fieldSource(token, contractMetadata, metadata.attributes?.length ? metadata.attributes : null,
         contractMetadata?.attributes?.length ? contractMetadata.attributes : null),
-      creators: contractMetadata?.lsp4Creators?.length
-        ? { scope: 'contract', source: contractMetadata.metadataSource || 'LSP4Creators[]' } : null,
+      // The creators array comes from LSP4Creators, independently of the
+      // description/image metadata source. Match the scope selected above.
+      creators: creators.length
+        ? { scope: token && metadata.lsp4Creators?.length ? 'tokenId' : 'contract', source: 'LSP4Creators[]' } : null,
       tokenType: contractMetadata?.lsp4TokenType
         ? { scope: 'contract', source: contractMetadata.tokenTypeSource || 'LSP4TokenType' } : null
     },
