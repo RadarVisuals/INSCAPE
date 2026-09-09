@@ -267,6 +267,8 @@
 .system-workflow__inspection-scene :is(.system-workflow__placement, .lattice-production-placement) { transition: filter 260ms var(--workflow-ease), opacity 260ms var(--workflow-ease); }
 .system-workflow__inspection-scene [data-inspection-context="background"] { filter: grayscale(1) contrast(.72) brightness(.3); }
 .system-workflow__inspection-scene [data-inspection-context="foreground"] { opacity: 0; }
+.system-workflow__inspection-scene [data-inspection-context="lift-source"] { visibility: hidden; }
+.system-workflow__lift-artwork { position: absolute; z-index: 35; pointer-events: none; }
 .system-workflow__presentation-board[data-inspecting] .system-workflow__stage-viewport { pointer-events: none; }
 .system-workflow__inspection-hit-surface { position: absolute; inset: 0; z-index: 40; pointer-events: auto; }
 @media (prefers-reduced-motion: reduce) { .system-workflow__inspection-scene :is(.system-workflow__placement, .lattice-production-placement) { transition: none; } }

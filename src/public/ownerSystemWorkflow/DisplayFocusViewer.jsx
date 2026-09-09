@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import DisplayLiftArtwork from './DisplayLiftArtwork.jsx';
 
 export default function DisplayFocusViewer({ scene, controlsContainer, viewer }) {
   const latest = useRef(viewer); latest.current = viewer;
@@ -8,10 +9,11 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
   const timer = useRef(null);
   const [closing, setClosing] = useState(false);
   const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const lift = viewer.entry?.placement.inspectionMode === 'LIFT';
 
   useLayoutEffect(() => {
     const source = viewer.returnFocus;
-    if (!scene || !source || closing) return undefined;
+    if (!scene || !source || (closing && !lift)) return undefined;
     // Both renderers place artwork in sibling elements with explicit z-order.
     // Change only temporary presentation; retain the authored geometry/order.
     const siblings = [...source.parentElement.children].filter(node =>
@@ -21,10 +23,11 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     const selectedIndex = ordered.findIndex(item => item.node === source);
     if (selectedIndex < 0) return undefined;
     ordered.forEach(({ node }, index) => {
-      if (node !== source) node.setAttribute('data-inspection-context', index > selectedIndex ? 'foreground' : 'background');
+      if (node === source && lift) node.setAttribute('data-inspection-context', 'lift-source');
+      else if (node !== source) node.setAttribute('data-inspection-context', !lift && index > selectedIndex ? 'foreground' : 'background');
     });
     return () => siblings.forEach(node => node.removeAttribute('data-inspection-context'));
-  }, [scene, viewer.placementId, closing]);
+  }, [scene, viewer.placementId, closing, lift]);
 
   useEffect(() => {
     closeRef.current?.focus({ preventScroll: true });
@@ -60,7 +63,9 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     return () => window.removeEventListener('keydown', keydown, true);
   });
   if (!controlsContainer) return null;
-  return <>{scene?.parentElement && createPortal(<div aria-hidden="true" className="system-workflow__inspection-hit-surface"
+  return <>{lift && <DisplayLiftArtwork key={viewer.placementId} scene={scene} source={viewer.returnFocus}
+    entry={viewer.entry} closing={closing} reducedMotion={reducedMotion} />}
+  {scene?.parentElement && createPortal(<div aria-hidden="true" className="system-workflow__inspection-hit-surface"
     onPointerDown={event => { event.preventDefault(); event.stopPropagation(); }}
     onClick={event => {
       event.preventDefault(); event.stopPropagation();

@@ -218,7 +218,9 @@ export function isValidSystemWorkflowPlacementGeometry(value) {
 }
 
 function validatePlacement(value, path, fail) {
-  if (!exactKeys(value, Object.hasOwn(value || {}, 'selectedMedia') ? [...PLACEMENT_KEYS, 'selectedMedia'] : PLACEMENT_KEYS)) return fail(path, 'invalid_placement_structure', 'Invalid placement');
+  const optionalKeys = ['selectedMedia', 'inspectionMode'].filter(key => Object.hasOwn(value || {}, key));
+  if (!exactKeys(value, [...PLACEMENT_KEYS, ...optionalKeys])) return fail(path, 'invalid_placement_structure', 'Invalid placement');
+  if (Object.hasOwn(value, 'inspectionMode') && !['IN_PLACE', 'LIFT'].includes(value.inspectionMode)) fail(`${path}.inspectionMode`, 'invalid_inspection_mode', 'Invalid artwork inspection mode');
   if (Object.hasOwn(value, 'selectedMedia') && !isValidPlacementMedia(value.selectedMedia)) fail(`${path}.selectedMedia`, 'invalid_selected_media', 'Invalid selected image');
   if (!safeId(value.id)) fail(`${path}.id`, 'invalid_placement_id', 'Invalid placement ID');
   if (!parseCanonicalAssetId(value.stableAssetId)) fail(`${path}.stableAssetId`, 'invalid_asset_id', 'Invalid asset ID');

@@ -78,12 +78,12 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
     controller.run((session) => session.reorderPlacementLayers({ gridId: grid.id, expectedPlacements: systemWorkflowLayerTopologySnapshot(grid), orderedPlacementIds: reorderBlock(orderedIds, unlockedSelected.map(({ id }) => id), operation) }));
   };
   const availability = primary ? systemWorkflowLayerOperationAvailability(grid, primary.id) : { BACK: editable, BACKWARD: editable, FORWARD: editable, FRONT: editable };
-  const beginPresentation = () => !authoringLocked && primary && setPresentation({ placementId: primary.id, frameId: primary.frameId, mat: structuredClone(primary.mat), backing: structuredClone(primary.backing), transparencyMode: primary.transparencyMode });
+  const beginPresentation = () => !authoringLocked && primary && setPresentation({ placementId: primary.id, frameId: primary.frameId, mat: structuredClone(primary.mat), backing: structuredClone(primary.backing), transparencyMode: primary.transparencyMode, inspectionMode: primary.inspectionMode || 'IN_PLACE' });
   const applyPresentation = () => {
     if (authoringLocked) return;
     const placement = grid.placements.find(({ id }) => id === presentation?.placementId);
     if (!placement) return;
-    controller.run((session) => session.setPlacementPresentation({ gridId: grid.id, placementId: placement.id, expectedPlacement: placement, presentation: { frameId: presentation.frameId, mat: presentation.mat, backing: presentation.backing, transparencyMode: presentation.transparencyMode } }));
+    controller.run((session) => session.setPlacementPresentation({ gridId: grid.id, placementId: placement.id, expectedPlacement: placement, presentation: { frameId: presentation.frameId, mat: presentation.mat, backing: presentation.backing, transparencyMode: presentation.transparencyMode, inspectionMode: presentation.inspectionMode } }));
     setPresentation(null);
   };
   const reorderFromDrop = (sourceId, targetId) => {
@@ -105,6 +105,7 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
     </>, 'system-workflow__crop-controls');
 
   if (presentation) return renderPanel(<><div className="system-workflow__presentation-fields">
+      <label><span>On inspect</span><select value={presentation.inspectionMode} onChange={(event) => setPresentation((current) => ({ ...current, inspectionMode: event.target.value }))}><option value="IN_PLACE">Focus in place</option><option value="LIFT">Lift to centre</option></select></label>
       <label><span>Frame</span><select value={presentation.frameId} onChange={(event) => setPresentation((current) => ({ ...current, frameId: event.target.value }))}>{PRESENTATION_FRAMES.map((value) => <option key={value}>{value}</option>)}</select></label>
       <label><span>Mat</span><input checked={presentation.mat.enabled} onChange={(event) => setPresentation((current) => ({ ...current, mat: { ...current.mat, enabled: event.target.checked } }))} type="checkbox" /></label>
       <label><span>Mat color</span><input value={presentation.mat.color} onChange={(event) => setPresentation((current) => ({ ...current, mat: { ...current.mat, color: event.target.value } }))} type="color" /></label>

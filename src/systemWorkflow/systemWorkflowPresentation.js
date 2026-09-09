@@ -27,11 +27,14 @@ function exactKeys(value, keys) {
 }
 
 export function normalizeSystemWorkflowPresentation(value) {
-  if (!exactKeys(value, PRESENTATION_KEYS)) {
+  if (!exactKeys(value, Object.hasOwn(value || {}, 'inspectionMode') ? [...PRESENTATION_KEYS, 'inspectionMode'] : PRESENTATION_KEYS)) {
     throw presentationError('SYSTEM_WORKFLOW_PRESENTATION_VALUE_INVALID', 'Placement presentation requires canonical frame, mat, backing, and transparency values');
   }
   if (!FRAME_IDS.has(value.frameId)) {
     throw presentationError('SYSTEM_WORKFLOW_PRESENTATION_FRAME_INVALID', 'Unknown placement frame ID');
+  }
+  if (Object.hasOwn(value, 'inspectionMode') && !['IN_PLACE', 'LIFT'].includes(value.inspectionMode)) {
+    throw presentationError('SYSTEM_WORKFLOW_PRESENTATION_INSPECTION_INVALID', 'Unknown artwork inspection mode');
   }
   if (!TRANSPARENCY_MODES.has(value.transparencyMode)) {
     throw presentationError('SYSTEM_WORKFLOW_PRESENTATION_TRANSPARENCY_INVALID', 'Unknown placement transparency mode');
@@ -59,6 +62,7 @@ export function normalizeSystemWorkflowPresentation(value) {
     mat,
     backing,
     transparencyMode: value.transparencyMode,
+    ...(Object.hasOwn(value, 'inspectionMode') ? { inspectionMode: value.inspectionMode } : {}),
   };
 }
 
@@ -68,6 +72,7 @@ export function systemWorkflowPlacementPresentation(placement) {
     mat: placement?.mat,
     backing: placement?.backing,
     transparencyMode: placement?.transparencyMode,
+    ...(Object.hasOwn(placement || {}, 'inspectionMode') ? { inspectionMode: placement.inspectionMode } : {}),
   });
 }
 
@@ -103,5 +108,6 @@ export function createSystemWorkflowPresentationCandidate(draftInput, {
   placement.mat = normalized.mat;
   placement.backing = normalized.backing;
   placement.transparencyMode = normalized.transparencyMode;
+  if (Object.hasOwn(normalized, 'inspectionMode')) placement.inspectionMode = normalized.inspectionMode;
   return assertValidSystemWorkflowDraft(draft);
 }

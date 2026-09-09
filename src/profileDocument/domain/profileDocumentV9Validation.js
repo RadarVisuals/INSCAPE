@@ -107,7 +107,8 @@ function validateIdentity(value, fail) {
 }
 
 function validatePlacement(value, path, fail) {
-  if (!exactKeys(value, PLACEMENT_KEYS)) return fail(path, 'invalid_placement_structure', 'Invalid public placement');
+  if (!exactKeys(value, Object.hasOwn(value || {}, 'inspectionMode') ? [...PLACEMENT_KEYS, 'inspectionMode'] : PLACEMENT_KEYS)) return fail(path, 'invalid_placement_structure', 'Invalid public placement');
+  if (Object.hasOwn(value, 'inspectionMode') && !['IN_PLACE', 'LIFT'].includes(value.inspectionMode)) fail(`${path}.inspectionMode`, 'invalid_inspection_mode', 'Invalid artwork inspection mode');
   if (!safeId(value.id)) fail(`${path}.id`, 'invalid_placement_id', 'Invalid placement ID');
   if (!validateProfileDocumentV9Asset(value.asset)) fail(`${path}.asset`, 'invalid_asset_reference', 'Invalid canonical asset reference');
   if (!isValidSystemWorkflowPlacementGeometry(value)) {

@@ -27,6 +27,7 @@ function canonicalPlacementSnapshot(placement) {
     } : null,
     backing: placement.backing ? { ...placement.backing } : null,
     transparencyMode: placement.transparencyMode,
+    inspectionMode: placement.inspectionMode || 'IN_PLACE',
     transform: placement.transform ? { ...placement.transform } : null,
     visibility: placement.visibility,
     locked: placement.locked,
