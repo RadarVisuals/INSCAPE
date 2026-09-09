@@ -14,7 +14,7 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
 
   useLayoutEffect(() => {
     const source = viewer.returnFocus;
-    if (!scene || !source || (closing && !lift)) return undefined;
+    if (!scene || !source) return undefined;
     // Both renderers place artwork in sibling elements with explicit z-order.
     // Change only temporary presentation; retain the authored geometry/order.
     const siblings = [...source.parentElement.children].filter(node =>
@@ -24,10 +24,19 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     const selectedIndex = ordered.findIndex(item => item.node === source);
     if (selectedIndex < 0) return undefined;
     ordered.forEach(({ node }, index) => {
-      if (node !== source) node.setAttribute('data-inspection-context', !lift && index > selectedIndex ? 'foreground' : 'background');
+      node.setAttribute('data-inspection-context', node === source ? 'selected'
+        : !lift && index > selectedIndex ? 'foreground' : 'background');
     });
     return () => siblings.forEach(node => node.removeAttribute('data-inspection-context'));
-  }, [scene, viewer.placementId, closing, lift]);
+  }, [scene, viewer.placementId, lift]);
+
+  useLayoutEffect(() => {
+    if (!scene) return undefined;
+    // Retain placement roles throughout restoration. Only change the fade
+    // target, so the selected artwork never joins the dimmed group on close.
+    scene.setAttribute('data-inspection-phase', closing ? 'closing' : 'active');
+    return () => scene.removeAttribute('data-inspection-phase');
+  }, [scene, closing]);
 
   useEffect(() => {
     closeRef.current?.focus({ preventScroll: true });
@@ -48,7 +57,7 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     closingRef.current = true;
     setClosing(true);
     latest.current.beginReturn?.();
-    if (!lift) timer.current = setTimeout(finishClose, reducedMotion ? 0 : 260);
+    if (!lift) timer.current = setTimeout(finishClose, reducedMotion ? 0 : 360);
   };
   useEffect(() => {
     const keydown = event => {
