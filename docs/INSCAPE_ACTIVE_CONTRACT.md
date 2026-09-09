@@ -159,7 +159,7 @@ internal compatibility names during this migration; do not broadly rename them.
   closing restores the scene. Pointer picking follows visible image pixels,
   passing through transparent areas to artwork underneath. Visible backing and
   mats remain selectable. While a transparency mask is unavailable, rectangular
-  picking remains available with Alt-click cycling through overlapping artwork.
+  picking remains available. Alt-click cycling and its Stage tooltip are removed.
   Keyboard and Layers selection remain explicit. These are temporary Display
   interactions shared by owner and visitor, not saved placement mutations.
   During focus, clicking anywhere within the Stage, including on the selected

@@ -84,7 +84,6 @@ export function hitsArtwork(node, x, y) {
 export function createArtworkPicker() {
   let disposed = false;
   let running = 0;
-  let cycle = null;
   let press = null;
   const tasks = new Map();
   const queue = [];
@@ -108,7 +107,7 @@ export function createArtworkPicker() {
         try { finish(readArtworkMask(task.image)); }
         catch {
           // Keep display loading unchanged. A separate anonymous CORS read may
-          // access pixels; a refusal leaves rectangular picking + Alt cycling.
+          // access pixels; a refusal leaves rectangular picking.
           const copy = task.copy = new Image(); copy.crossOrigin = 'anonymous'; copy.referrerPolicy = 'no-referrer';
           copy.onload = () => {
             try { finish(readArtworkMask(copy)); } catch { finish({ status: 'unavailable' }); }
@@ -142,18 +141,12 @@ export function createArtworkPicker() {
       // Evicted/expired masks are prepared asynchronously. A click never waits
       // for preparation; unknown pixels retain the rectangular fallback.
       candidates.forEach(candidate => candidate.querySelectorAll('img').forEach(image => this.prepare(image)));
-      let node;
-      if (event.altKey && candidates.length) {
-        const same = cycle?.plane === plane && Math.hypot(x - cycle.x, y - cycle.y) < 5
-          && candidates.length === cycle.nodes.length && candidates.every((item, i) => item === cycle.nodes[i]);
-        const index = same ? (cycle.index + 1) % candidates.length : Math.min(1, candidates.length - 1);
-        cycle = { plane, x, y, nodes: candidates, index }; node = candidates[index];
-      } else { cycle = null; node = candidates.find(candidate => hitsArtwork(candidate, x, y)) || null; }
+      const node = candidates.find(candidate => hitsArtwork(candidate, x, y)) || null;
       if (event.type === 'pointerdown') press = { plane, x, y, node, time: Date.now() };
       return node;
     },
     dispose() {
-      disposed = true; cycle = null; press = null;
+      disposed = true; press = null;
       for (const task of tasks.values()) {
         clearTimeout(task.timer); clearTimeout(task.timeout);
         if (task.copy) { task.copy.onload = null; task.copy.onerror = null; task.copy.src = ''; }

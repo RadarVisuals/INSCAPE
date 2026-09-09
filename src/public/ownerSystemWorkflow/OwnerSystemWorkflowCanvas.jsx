@@ -224,7 +224,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   if (!grid) return null;
   return <section className="system-workflow__stage-content" aria-label={`${grid.title} Grid`} data-system-workflow-stage data-world-cover={worldCover || undefined}>
     <div ref={canvasRef} className="system-workflow__canvas" data-guide={appearance.guideMode} data-space-navigation={interaction.spaceNavigation || undefined} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={Boolean(interaction.gridSwipe) || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, '--workflow-board-inverse-scale': 1 / viewScale, ...swipeStyle }}
-      onLoadCapture={picking.onLoadCapture} title="Alt-click to cycle overlapping artwork"
+      onLoadCapture={picking.onLoadCapture}
       onClick={(event) => {
         if (cropSession || interaction.clickSuppressedRef.current || event.target.closest?.('[data-system-workflow-placement-id]')) return;
         controller.replaceSelection([]);
@@ -317,7 +317,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
             }
             markOwnerSystemWorkflowPointerFocus(hit.element);
             if (hit.element !== event.currentTarget) { event.preventDefault(); hit.element.focus({ preventScroll: true }); }
-            if (authoringLocked || event.altKey) return;
+            if (authoringLocked) return;
             if (cropping) crop.beginCropDrag(event, placement.id, worldViewport.cellSize * viewScale);
             else if (!cropSession) interaction.beginPlacementGesture(event, hit.placement);
           }} ref={active ? (node) => onPlacementRef?.(placement.id, node) : undefined} role="button" tabIndex={!active || placement.locked ? -1 : 0}
