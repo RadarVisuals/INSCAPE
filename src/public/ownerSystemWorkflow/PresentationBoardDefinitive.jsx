@@ -63,7 +63,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const [immersive, setImmersive] = useState(false);
   const [screenSize, setScreenSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const wheelRef = useRef({ time: 0, blockedUntil: 0 });
-  const wheelAnimationRef = useRef(null);
+  const wheelResizeRef = useRef(null);
   const exitImmersiveRef = useRef(null);
   const [scaleRendering, setScaleRendering] = useState('settled');
   const boardNodeRef = useRef(null);
@@ -144,18 +144,18 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     setScaleRendering('live');
   };
 
-  const stopWheelAnimation = () => {
-    if (!wheelAnimationRef.current) return;
-    cancelAnimationFrame(wheelAnimationRef.current.frame);
-    wheelAnimationRef.current = null;
+  const stopWheelResize = () => {
+    if (!wheelResizeRef.current) return;
+    clearTimeout(wheelResizeRef.current.timer);
+    wheelResizeRef.current = null;
     setScaleRendering('settled');
   };
   useLayoutEffect(() => {
-    stopWheelAnimation();
+    stopWheelResize();
     setScaleRendering('settled');
     return () => {
-      if (wheelAnimationRef.current) cancelAnimationFrame(wheelAnimationRef.current.frame);
-      wheelAnimationRef.current = null;
+      if (wheelResizeRef.current) clearTimeout(wheelResizeRef.current.timer);
+      wheelResizeRef.current = null;
     };
   }, [host, geometryKey, view?.fit.stage.width, view?.fit.stage.height, metadataSidecarOpen, metadataWidth, immersive, boardPhase, instanceState]);
 
@@ -211,33 +211,29 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
         if (maximized) { restore(); wheelRef.current.blockedUntil = now + 450; return; }
       }
       const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? stage.clientHeight : 1);
-      let animation = wheelAnimationRef.current;
-      const target = setContinuousPresentationBoardScale(view,
-        (animation?.target ?? view.scale) + Math.max(-.12, Math.min(.12, -pixels * .002))).scale;
-      if (animation) { animation.target = target; return; }
-      if (target === view.scale) return;
-      animation = { target, current: view.scale, time: now, frame: null,
-        centerX: windowFrame.left + windowFrame.width / 2,
-        centerY: windowFrame.top + windowFrame.height / 2 };
-      wheelAnimationRef.current = animation;
-      if (!reducedMotion) prepareLiveScaleRendering();
-      const tick = time => {
-        if (wheelAnimationRef.current !== animation) return;
-        const amount = reducedMotion ? 1 : 1 - Math.exp(-Math.min(64, time - animation.time) / 65);
-        animation.time = time;
-        animation.current += (animation.target - animation.current) * amount;
-        const complete = Math.abs(animation.target - animation.current) < .0001;
-        if (complete) animation.current = animation.target;
-        const next = setContinuousPresentationBoardScale(view, animation.current);
-        setView(next);
-        setBoardPosition(clampPosition({ left: animation.centerX - next.frame.board.width / 2,
-          top: animation.centerY - next.frame.board.height / 2 }, next.frame.board));
-        if (complete && time - wheelRef.current.time > 120) {
-          wheelAnimationRef.current = null;
-          setScaleRendering('settled');
-        } else animation.frame = requestAnimationFrame(tick);
-      };
-      animation.frame = requestAnimationFrame(tick);
+      let resize = wheelResizeRef.current;
+      const current = resize?.view || view;
+      const next = setContinuousPresentationBoardScale(current,
+        current.scale + Math.max(-.06, Math.min(.06, -pixels * .001)));
+      if (next.scale === current.scale) return;
+      if (!resize) {
+        prepareLiveScaleRendering();
+        resize = { centerX: windowFrame.left + windowFrame.width / 2,
+          centerY: windowFrame.top + windowFrame.height / 2, timer: null };
+        wheelResizeRef.current = resize;
+      }
+      resize.view = next;
+      setView(next);
+      setBoardPosition(clampPosition({ left: resize.centerX - next.frame.board.width / 2,
+        top: resize.centerY - next.frame.board.height / 2 }, next.frame.board));
+      clearTimeout(resize.timer);
+      // Apply each wheel step immediately. Reflow the artwork only once the
+      // gesture ends, rather than letting its layout lag behind every step.
+      resize.timer = setTimeout(() => {
+        if (wheelResizeRef.current !== resize) return;
+        wheelResizeRef.current = null;
+        setScaleRendering('settled');
+      }, 160);
     };
     stage.addEventListener('wheel', wheel, { passive: false });
     return () => stage.removeEventListener('wheel', wheel);
@@ -299,7 +295,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   };
   const beginBoardDrag = (event) => {
     if (immersive || event.button !== 0 || !renderedPosition || boardPhase !== 'window' || event.target.closest('button')) return;
-    stopWheelAnimation();
+    stopWheelResize();
     boardDragRef.current = { id: event.pointerId, clientX: event.clientX, clientY: event.clientY, ...renderedPosition };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -312,7 +308,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const beginBoardResize = (corner, event) => {
     if (event.button !== 0 || !view || !windowFrame || boardPhase !== 'window') return;
     event.preventDefault(); event.stopPropagation();
-    stopWheelAnimation();
+    stopWheelResize();
     prepareLiveScaleRendering();
     boardResizeRef.current = { corner, id: event.pointerId, clientX: event.clientX, clientY: event.clientY, frame: windowFrame, view };
     event.currentTarget.setPointerCapture(event.pointerId);
