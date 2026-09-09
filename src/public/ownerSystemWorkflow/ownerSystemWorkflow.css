@@ -261,13 +261,14 @@
   stroke-width: 2.8;
 }
 .system-workflow__board-inspection-controls-host { min-width: 0; height: 100%; display: flex; align-items: stretch; }
-.system-workflow__inspection-camera { position: relative; width: 100%; height: 100%; transform-origin: 0 0; transform: var(--display-camera-transform, translate(0px, 0px) scale(1)); transition: transform 360ms var(--workflow-ease); }
-.system-workflow__camera-controls { display: flex; align-items: center; gap: 6px; }
-.system-workflow__camera-controls > span { font-size: 10px; color: var(--workflow-muted); }
-.system-workflow__inspection-camera :is(.system-workflow__placement, .lattice-production-placement) { transition: filter 260ms var(--workflow-ease); }
-.system-workflow__inspection-camera[data-camera-focusing] :is(.system-workflow__placement, .lattice-production-placement):not([data-camera-subject]) { filter: grayscale(1) contrast(.72) brightness(.3); }
+.system-workflow__inspection-scene { position: relative; width: 100%; height: 100%; }
+.system-workflow__scene-controls { display: flex; align-items: center; gap: 6px; }
+.system-workflow__scene-controls > span { font-size: 10px; color: var(--workflow-muted); }
+.system-workflow__inspection-scene :is(.system-workflow__placement, .lattice-production-placement) { transition: filter 260ms var(--workflow-ease), opacity 260ms var(--workflow-ease); }
+.system-workflow__inspection-scene [data-inspection-context="background"] { filter: grayscale(1) contrast(.72) brightness(.3); }
+.system-workflow__inspection-scene [data-inspection-context="foreground"] { opacity: 0; }
 .system-workflow__presentation-board[data-inspecting] .system-workflow__stage-viewport { pointer-events: none; }
-@media (prefers-reduced-motion: reduce) { .system-workflow__inspection-camera { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .system-workflow__inspection-scene :is(.system-workflow__placement, .lattice-production-placement) { transition: none; } }
 .lattice-focus-viewer__board-controls {
   box-sizing: border-box;
   height: 100%;

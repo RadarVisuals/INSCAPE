@@ -2,9 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-
-export default function DisplayFocusViewer({ camera, controlsContainer, viewer }) {
+export default function DisplayFocusViewer({ scene, controlsContainer, viewer }) {
   const latest = useRef(viewer); latest.current = viewer;
   const closeRef = useRef(null);
   const timer = useRef(null);
@@ -13,67 +11,43 @@ export default function DisplayFocusViewer({ camera, controlsContainer, viewer }
 
   useLayoutEffect(() => {
     const source = viewer.returnFocus;
-    if (!camera || !source || closing) return undefined;
-    camera.setAttribute('data-camera-focusing', '');
-    source.setAttribute('data-camera-subject', '');
-    return () => {
-      camera.removeAttribute('data-camera-focusing');
-      source.removeAttribute('data-camera-subject');
-    };
-  }, [camera, viewer.placementId, closing]);
-
-  useLayoutEffect(() => {
-    if (!camera || closing) return undefined;
-    const frame = requestAnimationFrame(() => {
-      const stage = camera.parentElement;
-      const bounds = stage.getBoundingClientRect();
-      const source = latest.current.getReturnRectangle();
-      if (!source || !bounds.width || !bounds.height) return;
-      const width = stage.clientWidth, height = stage.clientHeight;
-      const pixelScale = bounds.width / width;
-      // Read the current animated transform so artwork navigation can also
-      // recover original scene coordinates during an unfinished camera move.
-      const matrix = new DOMMatrixReadOnly(getComputedStyle(camera).transform);
-      const x = ((source.left - bounds.left) / pixelScale - matrix.e) / matrix.a;
-      const y = ((source.top - bounds.top) / pixelScale - matrix.f) / matrix.d;
-      const w = source.width / pixelScale / matrix.a;
-      const h = source.height / pixelScale / matrix.d;
-      const fillsStage = w >= width * .9 && h >= height * .9;
-      const zoom = fillsStage ? 1 : clamp(Math.min(width * .82 / w, height * .9 / h), 1.5, 3);
-      const tx = clamp(width / 2 - (x + w / 2) * zoom, width * (1 - zoom), 0);
-      // A placement cropped by the bottom of the Stage keeps that edge outside
-      // the viewport, instead of exposing the portrait's unfinished silhouette.
-      const desiredY = y + h >= height - 2 ? height - (y + h) * zoom : height / 2 - (y + h / 2) * zoom;
-      const ty = clamp(desiredY, height * (1 - zoom), 0);
-      camera.style.setProperty('--display-camera-transform', `translate(${tx}px, ${ty}px) scale(${zoom})`);
+    if (!scene || !source || closing) return undefined;
+    // Both renderers place artwork in sibling elements with explicit z-order.
+    // Change only temporary presentation; retain the authored geometry/order.
+    const siblings = [...source.parentElement.children].filter(node =>
+      node.matches('.system-workflow__placement, .lattice-production-placement'));
+    const ordered = siblings.map((node, index) => ({ node, index, layer: Number(getComputedStyle(node).zIndex) || 0 }))
+      .sort((a, b) => a.layer - b.layer || a.index - b.index);
+    const selectedIndex = ordered.findIndex(item => item.node === source);
+    if (selectedIndex < 0) return undefined;
+    ordered.forEach(({ node }, index) => {
+      if (node !== source) node.setAttribute('data-inspection-context', index > selectedIndex ? 'foreground' : 'background');
     });
-    return () => cancelAnimationFrame(frame);
-  }, [camera, viewer.placementId, closing]);
+    return () => siblings.forEach(node => node.removeAttribute('data-inspection-context'));
+  }, [scene, viewer.placementId, closing]);
 
   useEffect(() => {
     closeRef.current?.focus({ preventScroll: true });
     return () => {
       clearTimeout(timer.current);
-      camera?.style.removeProperty('--display-camera-transform');
     };
-  }, [camera]);
+  }, [scene]);
 
   const close = () => {
     if (timer.current !== null) return;
     setClosing(true);
     latest.current.beginReturn?.();
-    camera?.style.removeProperty('--display-camera-transform');
     timer.current = setTimeout(() => {
       const source = latest.current.returnFocus;
       latest.current.close();
       queueMicrotask(() => source?.isConnected && source.focus({ preventScroll: true }));
-    }, reducedMotion ? 0 : 360);
+    }, reducedMotion ? 0 : 260);
   };
   useEffect(() => {
     const keydown = event => {
       if (event.defaultPrevented || /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable) return;
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
-      else if (!closing && camera?.closest('article')?.contains(event.target)
+      else if (!closing && scene?.closest('article')?.contains(event.target)
         && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
         event.preventDefault(); event.stopPropagation();
         latest.current.navigate(event.key === 'ArrowLeft' ? -1 : 1);
@@ -83,7 +57,7 @@ export default function DisplayFocusViewer({ camera, controlsContainer, viewer }
     return () => window.removeEventListener('keydown', keydown, true);
   });
   if (!controlsContainer) return null;
-  return createPortal(<div className="system-workflow__camera-controls" role="group" aria-label="Artwork inspection">
+  return createPortal(<div className="system-workflow__scene-controls" role="group" aria-label="Artwork inspection">
     <span>INSPECT</span>
     <button className="system-workflow__round-control" aria-label="Previous artwork" disabled={closing || viewer.total < 2}
       onClick={() => viewer.navigate(-1)} type="button"><ChevronLeft /></button>
