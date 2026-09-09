@@ -438,9 +438,11 @@
   z-index: 1;
   pointer-events: none;
 }
-.system-workflow__artwork-plane { position: absolute; inset: 0; overflow: hidden; pointer-events: none; transition: filter 260ms var(--workflow-ease); }
-.system-workflow__grid-plane--current > .system-workflow__artwork-plane > .system-workflow__placement { pointer-events: auto; }
-.system-workflow__presentation-board[data-inspection-atmosphere] .system-workflow__grid-plane--current > .system-workflow__artwork-plane {
+:is(.system-workflow__artwork-plane, .visitor-grid-renderer__artwork-plane) { position: absolute; inset: 0; overflow: hidden; pointer-events: none; transition: filter 260ms var(--workflow-ease); }
+.system-workflow__grid-plane--current > .system-workflow__artwork-plane > .system-workflow__placement,
+.visitor-grid-world__grid-plane--current .visitor-grid-renderer__artwork-plane > .lattice-production-placement { pointer-events: auto; }
+.system-workflow__presentation-board[data-inspection-atmosphere] .system-workflow__grid-plane--current > .system-workflow__artwork-plane,
+.system-workflow__presentation-board[data-inspection-atmosphere] .visitor-grid-world__grid-plane--current .visitor-grid-renderer__artwork-plane {
   filter: grayscale(1) contrast(.72) brightness(.3);
 }
 .system-workflow__world-cover-aperture {

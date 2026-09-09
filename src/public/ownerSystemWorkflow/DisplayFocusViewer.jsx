@@ -1,14 +1,14 @@
 import { useLayoutEffect } from 'react';
 import LatticeFocusViewer from '../../lattice/rendering/LatticeFocusViewer.jsx';
 import LatticeProductionFocusArtwork from '../../lattice/rendering/LatticeProductionFocusArtwork.jsx';
-import { clearOwnerSystemWorkflowDocumentSelection } from './ownerSystemWorkflowSelection.js';
 
 const containedRectangle = (rectangle, container) => {
   const bounds = container?.getBoundingClientRect();
-  return rectangle && bounds ? { ...rectangle, left: rectangle.left - bounds.left, top: rectangle.top - bounds.top } : null;
+  return rectangle && bounds ? { left: rectangle.left - bounds.left, top: rectangle.top - bounds.top,
+    width: rectangle.width, height: rectangle.height } : null;
 };
 
-export default function OwnerSystemWorkflowFocusViewer({ container, controlsContainer, menuSurface, viewer, workspaceSurfaceColor }) {
+export default function DisplayFocusViewer({ container, controlsContainer, menuSurface, viewer, workspaceSurfaceColor }) {
   useLayoutEffect(() => { viewer.present?.(); }, [viewer.placementId]);
   if (!viewer.entry || !viewer.originRectangle) return null;
   const originRectangle = containedRectangle(viewer.getReturnRectangle(), container);
@@ -19,7 +19,7 @@ export default function OwnerSystemWorkflowFocusViewer({ container, controlsCont
     gridVariables={{ '--lattice-grid-cell-size': '1px', '--lattice-grid-origin-x': '0px', '--lattice-grid-origin-y': '0px' }}
     gridVisible={false} inspectionFrameGridVisible={false} inspectionVariant="none" menuSurfaceId={menuSurface}
     navigationPlacement="viewport" navigationViewportBottom={72} onClosed={viewer.close}
-    onClosing={() => { clearOwnerSystemWorkflowDocumentSelection(); viewer.beginReturn(); }} onNavigate={viewer.navigate}
+    onClosing={viewer.beginReturn} onNavigate={viewer.navigate}
     onReturnLanding={viewer.revealSource}
     originRectangle={originRectangle} overlayInk="var(--workflow-ink)" position={viewer.position}
     renderArtwork={(entry, context) => <div className="system-workflow__focus-artwork-handoff"

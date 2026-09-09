@@ -105,8 +105,8 @@ geometry, plus the Display name and shortcut position, visibility and artwork.
 Module content remains in the existing Grid and Identity envelopes. Identity
 height follows its content. Visitor interactions remain session-local.
 
-Existing documents without this configuration still load with the previous
-presentation defaults; a subsequent preparation can save the new configuration.
+Existing documents without this configuration load in the shared Display window
+with runtime defaults; a subsequent preparation can save the new configuration.
 The publication version and ERC725Y pointer key remain unchanged. A publication
 still requires a new verified content hash and URI and a separate wallet action.
 Multiple independent instances and module connections remain accepted direction,
@@ -134,6 +134,14 @@ internal compatibility names during this migration; do not broadly rename them.
   Pause retains progress; Stage interaction returns to manual control. Playback
   does not change the draft schema or publication. Reduced motion uses discrete
   Grid changes instead of sliding.
+- Owner, Preview and Visitor use the same contained Display artwork inspection,
+  title-bar artwork navigation and Metadata instrument. The former full-screen
+  visitor artwork/dossier presentation is retired, including for old publications.
+  Visitors retain window interaction, Grid playback and Metadata inspection, with
+  no Layers tab, placement tools or composition Lock. Metadata can attach, overlay
+  or detach through the same bounded instrument shell. Published creator attribution
+  and source details remain available. These interactions are session-local and
+  never write an owner draft or rewrite publication bytes.
 - Do not implement the Display Module as an HTML iframe. Use one application context with
   an isolated, clipped viewport and camera transform.
 - The Display Module owns the instruments required to author and inspect its

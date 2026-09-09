@@ -1,9 +1,7 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import { useProfileContractFacts, useProfileIdentity } from '../../profileIdentity/index.js';
-import LatticeFocusViewer from '../../lattice/rendering/LatticeFocusViewer.jsx';
 import LatticeProfileRail from '../../lattice/rendering/LatticeProfileRail.jsx';
-import LatticeProductionFocusArtwork from '../../lattice/rendering/LatticeProductionFocusArtwork.jsx';
 import { latticeSurfaceColor } from '../../lattice/rendering/latticeGeometry.js';
 import GridProductionRenderer from './GridProductionRenderer.jsx';
 import { createProfileDocumentV9FocusViewModel } from './profileDocumentV9FocusViewModel.js';
@@ -12,16 +10,22 @@ import { resolveVisitorGridDragDestination } from './visitorGridDragNavigation.j
 import '../../lattice/rendering/latticeMenuSurface.css';
 import './visitorGridWorld.css';
 import PresentationBoard from '../../public/ownerSystemWorkflow/PresentationBoard.jsx';
+import DisplayFocusViewer from '../../public/ownerSystemWorkflow/DisplayFocusViewer.jsx';
+import DisplayInstruments from '../../public/ownerSystemWorkflow/DisplayInstruments.jsx';
+import { transitionDisplayInstruments } from '../../public/ownerSystemWorkflow/displayInstrumentState.js';
+import { OwnerSystemWorkflowMetadataContent } from '../../public/ownerSystemWorkflow/OwnerSystemWorkflowMetadataModule.jsx';
+import { createDefaultWorkbenchPresentation } from '../domain/workbenchPresentation.js';
+import useOwnerSystemWorkflowLayout from '../../public/ownerSystemWorkflow/useOwnerSystemWorkflowLayout.js';
+import useGridPlayback from '../../public/ownerSystemWorkflow/useGridPlayback.js';
 import { resolvePublishedAssetUrl } from '../domain/publishedAssetUrl.js';
 import '../../public/ownerSystemWorkflow/ownerSystemWorkflow.css';
 
-function PublishedStage({ children, activeGridId, onClickCapture, onPointerDown }) {
+function PublishedStage({ children, activeGridId, onClickCapture, onPointerDown, viewportRef }) {
   return <div className="visitor-grid-world__viewport" data-active-grid-id={activeGridId}
-    onClickCapture={onClickCapture} onPointerDown={onPointerDown}>{children}</div>;
+    ref={viewportRef} onClickCapture={onClickCapture} onPointerDown={onPointerDown}>{children}</div>;
 }
 
 const IdentityModule = lazy(() => import('../../public/identity/IdentityModule.jsx'));
-const VISITOR_GRID_NAVIGATION_SAFE_AREA = 42;
 const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-6)}`;
 const frozenRectangle = ({ height, left, top, width }) => Object.freeze({ height, left, top, width });
 
@@ -32,6 +36,12 @@ export default function ProfileDocumentV9Visitor(props) {
 function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn }) {
   useStartupDestinationReady();
   const rootRef = useRef(null);
+  const layout = useOwnerSystemWorkflowLayout();
+  const stageRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const instrumentTriggers = useRef({});
+  const [instruments, dispatchInstruments] = useReducer(transitionDisplayInstruments,
+    { active: null, layers: 'closed', metadata: 'attached' });
   const identityControlRef = useRef(null);
   const profileDockControlRef = useRef(null);
   const gridDragRef = useRef(null);
@@ -48,8 +58,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
   const changeIdentityWindow = useCallback(({ left, top, width }) => setIdentityWindow(current =>
     current?.left === left && current?.top === top && current?.width === width ? current : { left, top, width }), []);
   const displayPresentation = useMemo(() => {
-    const display = document.workbench?.display;
-    if (!display) return null;
+    const display = document.workbench?.display || createDefaultWorkbenchPresentation().display;
     const icon = display.shortcut.icon;
     return { ...display, shortcut: { ...display.shortcut, open: display.open,
       iconAssetId: icon?.stableAssetId || null, iconMedia: icon?.media?.type === 'image'
@@ -69,10 +78,21 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
       || document.identityPresentation.alias || 'UNNAMED PROFILE',
     secondaryLabel: compactAddress(document.profile.address),
   }), [document, identityRack]);
-  const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+  const reducedMotion = layout.reducedMotion;
   const activeGrid = document.grids[activeIndex];
   const lastIndex = document.grids.length - 1;
   const workspaceSurfaceColor = latticeSurfaceColor(document.appearance.surfaceId);
+  const playback = useGridPlayback({ playing,
+    enabled: displayOpen && lastIndex > 0 && !viewerSession && !gridSwipe,
+    gridId: activeGrid.id, nextGridId: document.grids[(activeIndex + 1) % document.grids.length]?.id,
+    canvasRef: stageRef, viewScale: 1, reducedMotion,
+    onPause: () => setPlaying(false),
+    onAdvance: gridId => {
+      const index = document.grids.findIndex(grid => grid.id === gridId);
+      if (index < 0) return false;
+      setActiveIndex(index); return true;
+    },
+  });
 
   useEffect(() => {
     setActiveIndex(0); setPlacementMedia({}); setViewerSession(null); setProfileVisible(false); setIdentityOpen(Boolean(document.workbench?.identity.open));
@@ -210,16 +230,20 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
       return { ...current, [key]: state };
     });
   }, []);
-  const openPlacementViewer = useCallback(async ({ element, placement, gridId }) => {
+  const openPlacementViewer = useCallback(({ element, placement, gridId }) => {
     if (gridId !== activeGrid.id || viewerSession) return;
     const mediaState = placementMedia[`${gridId}:${placement.id}`];
     if (mediaState?.status !== 'ready' || !mediaState.dimensions) return;
     const originRectangle = frozenRectangle(element.getBoundingClientRect());
-    const nativeImage = new Image(); nativeImage.decoding = 'async'; nativeImage.referrerPolicy = 'no-referrer'; nativeImage.src = mediaState.media.src;
-    try { await nativeImage.decode(); } catch { /* Viewer preserves its honest media failure state. */ }
-    if (element.isConnected) setViewerSession({ originRectangle, placementId: placement.id, returnFocus: element, gridId, sourceHidden: true });
+    if (!element.isConnected) return;
+    // The renderer has already decoded this media. Open synchronously so a late
+    // decode cannot resurrect an inspection after navigation or disposal.
+    setViewerSession({ originRectangle, placementId: placement.id, returnFocus: element, gridId,
+      sourceHidden: false, atmosphereActive: true });
+    dispatchInstruments({ type: 'open', instrument: 'metadata' });
   }, [activeGrid.id, placementMedia, viewerSession]);
-  const viewerEntries = useMemo(() => activeGrid.placements.map((placement) => {
+  const viewerEntries = useMemo(() => activeGrid.placements.slice()
+    .sort((left, right) => left.navigationOrder - right.navigationOrder || left.id.localeCompare(right.id)).map((placement) => {
     const decoded = placementMedia[`${activeGrid.id}:${placement.id}`];
     const model = createProfileDocumentV9FocusViewModel(placement, {
       decodedDimensions: decoded?.dimensions, resolvedUrl: decoded?.media?.src,
@@ -244,6 +268,14 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
     queueMicrotask(() => returnFocus?.isConnected ? returnFocus.focus({ preventScroll: true })
       : rootRef.current?.focus({ preventScroll: true }));
   }, [viewerSession]);
+  const viewer = viewerSession && viewerEntry ? {
+    ...viewerSession, entry: viewerEntry, position: viewerPosition, total: viewerEntries.length,
+    getReturnRectangle: () => findPlacementElement(viewerSession.placementId)?.getBoundingClientRect() || viewerSession.originRectangle,
+    close: closePlacementViewer, navigate: navigateViewer,
+    present: () => setViewerSession(current => current && ({ ...current, sourceHidden: true, atmosphereActive: true })),
+    beginReturn: () => setViewerSession(current => current && ({ ...current, atmosphereActive: false })),
+    revealSource: () => setViewerSession(current => current && ({ ...current, sourceHidden: false })),
+  } : null;
   const openIdentityRack = () => {
     if (viewerSession || !identityRack) return;
     setIdentityOpen(true); setProfileVisible(false);
@@ -253,41 +285,58 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
     const destination = ['ArrowRight', 'PageDown'].includes(event.key) ? activeIndex + 1
       : ['ArrowLeft', 'PageUp'].includes(event.key) ? activeIndex - 1
         : event.key === 'Home' ? 0 : event.key === 'End' ? lastIndex : null;
-    if (destination === null) return; event.preventDefault(); selectGrid(destination);
+    if (destination === null) return; event.preventDefault(); playback.stop(); selectGrid(destination);
   };
-  const gridVariables = { '--lattice-grid-cell-size': 'calc(min(100vw / 32, 100vh / 18))',
-    '--lattice-grid-origin-x': '0px', '--lattice-grid-origin-y': '0px' };
-  const swipeGrid = Number.isInteger(gridSwipe?.targetIndex) ? document.grids[gridSwipe.targetIndex] : null;
-  const swipeStyle = gridSwipe ? { '--visitor-grid-swipe-x': `${gridSwipe.deltaX}px`,
-    '--visitor-grid-swipe-side': gridSwipe.direction === 'next' ? 'calc(100% - 1px)' : 'calc(-100% + 1px)' } : undefined;
+  const swipe = gridSwipe || playback.swipe;
+  const swipeGrid = Number.isInteger(swipe?.targetIndex) ? document.grids[swipe.targetIndex]
+    : document.grids.find(grid => grid.id === swipe?.targetGridId);
+  const swipeStyle = swipe ? { '--visitor-grid-swipe-x': `${swipe.deltaX}px`,
+    '--visitor-grid-swipe-side': swipe.direction === 'next' ? 'calc(100% - 1px)' : 'calc(-100% + 1px)' } : undefined;
 
-  const stage = <PublishedStage activeGridId={activeGrid.id}
+  const stage = <PublishedStage activeGridId={activeGrid.id} viewportRef={stageRef}
       onClickCapture={(event) => { if (suppressPlacementClickRef.current) { event.preventDefault(); event.stopPropagation(); } }}
-      onPointerDown={beginGridDrag}>
+      onPointerDown={event => { playback.stop(); beginGridDrag(event); }}>
       <div className="visitor-grid-world__grid-track">
       <div className="visitor-grid-world__grid-plane visitor-grid-world__grid-plane--current">
         <GridProductionRenderer document={document} grid={activeGrid} imageLoading={activeIndex === 0 ? 'eager' : 'lazy'}
           onMediaState={handlePlacementMediaState} onPlacementActivate={openPlacementViewer}
-          projectionBottomInset={document.workbench ? 0 : VISITOR_GRID_NAVIGATION_SAFE_AREA}
+          projectionBottomInset={0}
           viewerPlacementId={viewerSession?.gridId === activeGrid.id && viewerSession.sourceHidden ? viewerSession.placementId : null} />
       </div>
-      {gridSwipe && swipeGrid && <div aria-hidden="true" className="visitor-grid-world__grid-plane visitor-grid-world__grid-plane--adjacent">
+      {swipe && swipeGrid && <div aria-hidden="true" className="visitor-grid-world__grid-plane visitor-grid-world__grid-plane--adjacent">
         <GridProductionRenderer document={document} grid={swipeGrid} imageLoading="eager"
-          onMediaState={handlePlacementMediaState} projectionBottomInset={document.workbench ? 0 : VISITOR_GRID_NAVIGATION_SAFE_AREA} />
+          onMediaState={handlePlacementMediaState} projectionBottomInset={0} />
       </div>}
       </div>
     </PublishedStage>;
 
-  return <main aria-label="Published INSCAPE Grid visitor" className={`visitor-grid-world${document.workbench ? ' system-workflow' : ''}`} data-workbench={document.workbench ? true : undefined} data-lattice-menu-surface
+  return <main aria-label="Published INSCAPE Grid visitor" className="visitor-grid-world system-workflow" data-workbench data-layout={layout.mode} data-lattice-menu-surface
     data-guide-mode={document.appearance.guideMode} data-menu-surface={document.appearance.menuSurfaceId}
     data-surface={document.appearance.surfaceId} data-space-navigation={spaceNavigation || undefined}
     data-grid-dragging={gridDragging || undefined} data-grid-swipe-settling={gridSwipe?.settling || undefined}
     onKeyDown={handleKeyDown} ref={rootRef} style={swipeStyle} tabIndex="-1">
-    {displayPresentation ? <PresentationBoard readOnly initialPresentation={displayPresentation}
+    <PresentationBoard readOnly initialPresentation={displayPresentation} layoutMode={layout.mode}
       documentGeometry={document.geometry} profileAddress={document.profile.address}
       instanceState={displayOpen ? 'window' : 'minimized'} onMinimize={() => setDisplayOpen(false)} onRestore={() => setDisplayOpen(true)}
       menuSurface={document.appearance.menuSurfaceId} displaySurface={document.appearance.surfaceId} reducedMotion={reducedMotion}
-      workbenchGridMode="NONE" shortcutSnap={false}>{stage}</PresentationBoard> : stage}
+      workbenchGridMode="NONE" shortcutSnap={false}
+      playing={playing} playbackDisabled={lastIndex === 0 || Boolean(viewerSession)}
+      onTogglePlayback={() => setPlaying(current => !current)}
+      instrumentTriggers={instrumentTriggers}
+      metadataOpen={instruments.active === 'metadata' || instruments.metadata === 'detached'}
+      instrumentBayOpen={Boolean(instruments.active)}
+      onToggleMetadata={() => dispatchInstruments({ type: 'toggle', instrument: 'metadata' })}
+      inspectionAtmosphere={viewerSession?.atmosphereActive === true} onInspectionCancel={closePlacementViewer}
+      renderInspection={viewer ? (container, controlsContainer) => <DisplayFocusViewer
+        container={container} controlsContainer={controlsContainer} viewer={viewer}
+        menuSurface={document.appearance.menuSurfaceId} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
+      renderInstruments={(projection, overlayTop) => <DisplayInstruments workspaceRef={rootRef}
+        instrumentTriggers={instrumentTriggers} state={instruments} dispatch={dispatchInstruments}
+        projection={projection} overlayTop={overlayTop} scope={activeGrid.title}
+        selectionLabel={viewerEntry?.dossier.title || 'No artwork selected'}
+        renderMetadata={() => <OwnerSystemWorkflowMetadataContent dossier={viewerEntry?.dossier || null} />} />}>
+      {stage}
+    </PresentationBoard>
     {profileVisible && <LatticeProfileRail blocked={Boolean(viewerSession)} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
       identityDisabled={Boolean(viewerSession)} identityExpanded={identityOpen}
       officialIdentity={officialIdentity} onIdentityActivate={openIdentityRack} />}
@@ -296,13 +345,13 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
         <button aria-expanded={document.workbench ? identityOpen : profileVisible} aria-label="Profile" data-visitor-profile-trigger
           disabled={Boolean(viewerSession)} onClick={document.workbench ? () => setIdentityOpen(current => !current) : toggleProfile}
           ref={profileDockControlRef} type="button">PROFILE</button>
-        {document.workbench && !displayOpen && <button aria-label="Open Display" onClick={() => setDisplayOpen(true)} type="button">DISPLAY</button>}
-        {(displayOpen || !document.workbench) && <div aria-label="Published Grid navigation" className="visitor-grid-world__navigation" role="group">
+        {!displayOpen && <button aria-label="Open Display" onClick={() => setDisplayOpen(true)} type="button">DISPLAY</button>}
+        {displayOpen && <div aria-label="Published Grid navigation" className="visitor-grid-world__navigation" role="group">
           <button aria-label="Previous Grid" disabled={lastIndex === 0 || Boolean(viewerSession)}
-            onClick={() => selectGrid(activeIndex - 1)} type="button">&lt;</button>
+            onClick={() => { playback.stop(); selectGrid(activeIndex - 1); }} type="button">&lt;</button>
           <span aria-live="polite">{activeGrid.title}</span>
           <button aria-label="Next Grid" disabled={lastIndex === 0 || Boolean(viewerSession)}
-            onClick={() => selectGrid(activeIndex + 1)} type="button">&gt;</button>
+            onClick={() => { playback.stop(); selectGrid(activeIndex + 1); }} type="button">&gt;</button>
         </div>}
         {(onOpenDirectory || onReturn || onExit) && <div className="visitor-grid-world__actions">
           {onOpenDirectory && <button onClick={onOpenDirectory} type="button">DISCOVER</button>}
@@ -312,14 +361,6 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
       </nav>
       <strong aria-label="INSCAPE" className="visitor-grid-world__brand"><span aria-hidden="true" /></strong>
     </footer>
-    {viewerSession && viewerEntry && <LatticeFocusViewer dossier={viewerEntry.dossier} entry={viewerEntry}
-      getReturnRectangle={() => findPlacementElement(viewerSession.placementId)?.getBoundingClientRect()}
-      gridVariables={gridVariables} gridVisible={false} inspectionVariant="rack" menuSurfaceId={document.appearance.menuSurfaceId}
-      onClosed={closePlacementViewer} onNavigate={navigateViewer} originRectangle={viewerSession.originRectangle}
-      onReturnLanding={() => setViewerSession((current) => current && ({ ...current, sourceHidden: false }))}
-      position={viewerPosition} renderArtwork={(focusEntry, context) => <LatticeProductionFocusArtwork entry={focusEntry}
-        motion={context.motion} />}
-      returnFocus={viewerSession.returnFocus} surfaceColor={workspaceSurfaceColor} total={viewerEntries.length} />}
     {identityOpen && identityRack && <div hidden={Boolean(viewerSession)}><Suspense fallback={<p role="status">Opening Identity…</p>}>
       <IdentityModule key={document.profile.address} model={identityRack} menuSurface={document.appearance.menuSurfaceId}
         initialWindow={identityWindow} onWindowChange={document.workbench ? changeIdentityWindow : undefined}

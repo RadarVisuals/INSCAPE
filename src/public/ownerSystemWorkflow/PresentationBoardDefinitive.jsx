@@ -25,14 +25,14 @@ function BoardWindowControls({ disabled, maximized, onMaximize, onMinimize, onRe
     </button>
   </span>;
 }
-function BoardWorkspaceControls({ instrumentTriggers, layersOpen, metadataOpen, onToggleLayers, onToggleMetadata, playing, playbackDisabled, onTogglePlayback }) {
+function BoardWorkspaceControls({ instrumentTriggers, layersOpen, metadataOpen, onToggleLayers, onToggleMetadata, playing, playbackDisabled, onTogglePlayback, readOnly }) {
   return <span className="system-workflow__board-workspace-controls">
-    <button aria-label={playing ? 'Pause Grids' : 'Play Grids'} aria-pressed={playing}
+    {onTogglePlayback && <button aria-label={playing ? 'Pause Grids' : 'Play Grids'} aria-pressed={playing}
       className="system-workflow__round-control" disabled={playbackDisabled} onClick={onTogglePlayback}
-      title={playing ? 'Pause Grids' : 'Play Grids'} type="button">{playing ? <Pause /> : <Play />}</button>
-    <button aria-label="Layers" aria-pressed={layersOpen} data-instrument-trigger="layers" ref={(node) => { if (instrumentTriggers) instrumentTriggers.current.layers = node; }}
+      title={playing ? 'Pause Grids' : 'Play Grids'} type="button">{playing ? <Pause /> : <Play />}</button>}
+    {!readOnly && <button aria-label="Layers" aria-pressed={layersOpen} data-instrument-trigger="layers" ref={(node) => { if (instrumentTriggers) instrumentTriggers.current.layers = node; }}
       className="system-workflow__round-control system-workflow__layers-trigger"
-      onClick={onToggleLayers} title="Layers and placement tools" type="button"><Layers3 /></button>
+      onClick={onToggleLayers} title="Layers and placement tools" type="button"><Layers3 /></button>}
     <button aria-label="Metadata" aria-pressed={metadataOpen} data-instrument-trigger="metadata" ref={(node) => { if (instrumentTriggers) instrumentTriggers.current.metadata = node; }}
       className="system-workflow__round-control" onClick={onToggleMetadata} title="Metadata" type="button"><Info /></button>
   </span>;
@@ -273,9 +273,9 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
         </span>
         <span className="system-workflow__board-title">
           {inspectionActive && <span className="system-workflow__board-inspection-controls-host" ref={setInspectionControlsHost} />}
-          {!readOnly && <BoardWorkspaceControls instrumentTriggers={instrumentTriggers} layersOpen={layersOpen} metadataOpen={metadataOpen}
+          <BoardWorkspaceControls readOnly={readOnly} instrumentTriggers={instrumentTriggers} layersOpen={layersOpen} metadataOpen={metadataOpen}
             playing={playing} playbackDisabled={playbackDisabled} onTogglePlayback={onTogglePlayback}
-            onToggleLayers={onToggleLayers} onToggleMetadata={onToggleMetadata} />}
+            onToggleLayers={onToggleLayers} onToggleMetadata={onToggleMetadata} />
           {!readOnly && <span className="system-workflow__composition-lock-controls">
             <button aria-label={authoringLocked ? 'Unlock Display Module composition' : 'Lock Display Module composition'}
               aria-pressed={authoringLocked} className="system-workflow__round-control system-workflow__composition-lock"

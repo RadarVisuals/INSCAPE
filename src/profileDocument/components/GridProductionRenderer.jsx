@@ -118,9 +118,9 @@ export default function GridProductionRenderer({ document, grid, imageLoading = 
       guideInterval={systemWorkflowSnapStep(document.appearance.guideSize)} height={projected.height}
       mode={document.appearance.guideMode} width={projected.width} />
       <span aria-hidden="true" className="lattice-production-table__authored-plane" style={rectangleStyle(projected)} />
-      {grid.placements.map((placement) => <GridPlacement field={projected} gridId={grid.id} imageLoading={imageLoading}
+      <div className="visitor-grid-renderer__artwork-plane">{grid.placements.map((placement) => <GridPlacement field={projected} gridId={grid.id} imageLoading={imageLoading}
         key={placement.id} layerRank={layerRanks.get(placement.id)} onMediaState={onMediaState}
-        onPlacementActivate={onPlacementActivate} placement={placement} viewerSourceHidden={placement.id === viewerPlacementId} />)}
+        onPlacementActivate={onPlacementActivate} placement={placement} viewerSourceHidden={placement.id === viewerPlacementId} />)}</div>
     </>}
   </section>;
 }

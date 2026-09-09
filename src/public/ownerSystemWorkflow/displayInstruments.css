@@ -84,6 +84,11 @@
 .system-workflow__instrument-layers .system-workflow__layer-list { max-height: none; overflow: visible; }
 .system-workflow__instrument-content .system-workflow__metadata-module-content { height: auto; border: 0; padding: 4px; }
 .system-workflow__instrument-content .system-workflow__metadata-module-content > section { padding: 8px 0 14px; }
+.system-workflow__metadata-sources { margin-top: 12px; font: var(--workflow-type-technical); }
+.system-workflow__metadata-sources summary { cursor: pointer; }
+.system-workflow__metadata-sources .system-workflow__metadata-module-traits { grid-template-columns: minmax(0, 1fr); }
+.system-workflow__metadata-sources a { color: inherit; overflow-wrap: anywhere; }
+.system-workflow__metadata-sources :is(summary, a):focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: 2px; }
 .system-workflow__instrument-window { --detached-window-width: 320px; position: fixed; z-index: 45; }
 .system-workflow__instrument-window .system-workflow__instrument-content { display: block; }
 .system-workflow__instrument-window header:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }

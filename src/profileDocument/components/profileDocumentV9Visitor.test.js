@@ -56,15 +56,13 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(renderer, /controller\.abort\(\)/);
   assert.match(renderer, /naturalHeight: height, naturalWidth: width/);
   assert.match(visitor, /activeIndex === 0 \? 'eager' : 'lazy'/);
-  assert.match(visitor, /LatticeFocusViewer/);
-  assert.equal((visitor.match(/gridVisible=\{false\}/g) || []).length, 1,
-    'the artwork viewer remains free of the published workspace Grid');
+  assert.match(visitor, /DisplayFocusViewer/);
+  assert.doesNotMatch(visitor, /LatticeFocusViewer|inspectionVariant="rack"/);
   assert.doesNotMatch(visitor, /gridVisible=\{document\.appearance\.guideMode !== 'NONE'\}/);
   assert.match(renderer, /data-viewer-source-hidden/);
-  assert.match(visitor, /projectionBottomInset=\{document.workbench \? 0 : VISITOR_GRID_NAVIGATION_SAFE_AREA\}/);
-  assert.match(visitor, /VISITOR_GRID_NAVIGATION_SAFE_AREA = 42/);
+  assert.match(visitor, /projectionBottomInset=\{0\}/);
+  assert.match(visitor, /createDefaultWorkbenchPresentation/);
   assert.match(visitor, /IdentityModule/);
-  assert.match(visitor, /gridVisible=\{false\}/);
   assert.match(visitor, /identityOnly/);
   assert.match(visitor, /identityControlRef=\{identityControlRef\}/);
   assert.match(visitor, /profileDockControlRef/);
@@ -72,7 +70,7 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(visitor, /ArrowRight/);
   assert.match(visitor, /resolveVisitorGridDragDestination/);
   assert.match(visitor, /event\.code !== 'Space'/);
-  assert.match(visitor, /onPointerDown=\{beginGridDrag\}/);
+  assert.match(visitor, /onPointerDown=\{event => \{ playback\.stop\(\); beginGridDrag\(event\); \}\}/);
   assert.match(visitor, /suppressPlacementClickRef/);
   assert.match(visitor, /visitor-grid-world__grid-plane--current/);
   assert.match(visitor, /visitor-grid-world__grid-plane--adjacent/);

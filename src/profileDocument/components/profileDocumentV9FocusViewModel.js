@@ -30,6 +30,8 @@ export function createProfileDocumentV9FocusViewModel(placement, mediaOptions) {
   ].filter(Boolean);
   return Object.freeze({
     dossier: { title: clean(published.name), description: clean(published.description),
+      collection: clean(published.collectionName), creators: published.creators.map(creator => ({ ...creator })),
+      assetDetailHref: published.contractAddress ? `https://explorer.lukso.network/address/${published.contractAddress}` : null,
       traits: published.attributes.map((attribute) => ({ label: clean(attribute.key), value: String(attribute.value ?? '') }))
         .filter((attribute) => attribute.label), technical },
     focusDimensions: dimensions, media, placement,

@@ -18,7 +18,9 @@ function Creator({ creator }) {
 
 function OwnerSystemWorkflowMetadataFields({ dossier }) {
   return <>
-    <section><small>CREATOR</small><Creator creator={dossier?.creators?.[0]} /></section>
+    <section><small>CREATOR</small>{dossier?.creators?.length
+      ? dossier.creators.map((creator, index) => <Creator key={`${creator.address}-${index}`} creator={creator} />)
+      : <Creator />}</section>
     <section className="system-workflow__metadata-module-description"><small>DESCRIPTION</small>
       <p>{dossier?.description || 'Select one artwork to inspect its metadata.'}</p></section>
     {dossier?.collection && <section className="system-workflow__metadata-module-collection"><small>COLLECTION</small>
@@ -28,6 +30,13 @@ function OwnerSystemWorkflowMetadataFields({ dossier }) {
     </ul>}
     {dossier?.assetDetailHref && <a className="system-workflow__metadata-asset-link" href={dossier.assetDetailHref}
       rel="noreferrer" target="_blank">ASSET ID ↗</a>}
+    {dossier?.technical?.length > 0 && <details className="system-workflow__metadata-sources">
+      <summary>Source details</summary>
+      <ul className="system-workflow__metadata-module-traits">{dossier.technical.map((entry, index) =>
+        <li key={`${entry.label}-${index}`}><small>{entry.label}</small><strong>{entry.href
+          ? <a href={entry.href} rel="noreferrer" target="_blank">{entry.value}</a> : entry.value}</strong>
+          {entry.provenance && <small>{entry.provenance}</small>}</li>)}</ul>
+    </details>}
   </>;
 }
 

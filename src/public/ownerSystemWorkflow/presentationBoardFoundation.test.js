@@ -49,8 +49,8 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(display, /OwnerSystemWorkflowMetadataModule/);
   assert.match(runtime, /label: 'ADD'[\s\S]*label: 'DISPLAY MODULE'[\s\S]*label: 'METADATA MODULE'/);
   assert.match(display, /useOwnerSystemWorkflowFocusViewer/);
-  assert.match(display, /<OwnerSystemWorkflowFocusViewer/);
-  assert.match(display, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer\) => <OwnerSystemWorkflowFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
+  assert.match(display, /<DisplayFocusViewer/);
+  assert.match(display, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer\) => <DisplayFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
   assert.match(board, /'window'[\s\S]*'maximizing'[\s\S]*'maximized'[\s\S]*'restoring'/);
   assert.match(board, /resizePresentationBoardFromCorner/);
   assert.match(board, /corners\.map/);
@@ -136,7 +136,7 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(board, /className="system-workflow__stage-viewport" data-surface=\{displaySurface\}/);
   assert.match(styles, /\.lattice-focus-viewer__board-controls/);
   assert.doesNotMatch(styles, /\[data-inspection-atmosphere\] \.system-workflow__stage-viewport \{[\s\S]*filter:/);
-  assert.match(styles, /\[data-inspection-atmosphere\] \.system-workflow__grid-plane--current > \.system-workflow__artwork-plane \{[\s\S]*filter: grayscale\(1\) contrast\(\.72\) brightness\(\.3\);/);
+  assert.match(styles, /\[data-inspection-atmosphere\] \.system-workflow__grid-plane--current > \.system-workflow__artwork-plane,[^{]+\{\s*filter: grayscale\(1\) contrast\(\.72\) brightness\(\.3\);/);
   assert.match(display, /inspectionAtmosphere=\{viewer\.atmosphereActive\}/);
   assert.doesNotMatch(board, /<strong>\{authoringLocked \? 'LOCKED' : 'LOCK'\}<\/strong>/);
   assert.match(board, /authoringLocked \? <LockKeyhole \/> : <Lock \/>/);

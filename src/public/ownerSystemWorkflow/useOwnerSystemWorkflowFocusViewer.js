@@ -66,7 +66,7 @@ export default function useOwnerSystemWorkflowFocusViewer({ assetsById, controll
   useEffect(() => { if (placementId && position < 0) close(); }, [placementId, position]);
   return {
     atmosphereActive,
-    beginReturn: () => setAtmosphereActive(false),
+    beginReturn: () => { clearOwnerSystemWorkflowDocumentSelection(); setAtmosphereActive(false); },
     close,
     entry,
     getReturnRectangle: () => rect(placementRefs.current.get(placementId)) || originRectangle,

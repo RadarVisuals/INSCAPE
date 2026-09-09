@@ -2,7 +2,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { flushSync } from 'react-dom';
 import { isSystemWorkflowWorldCoverGrid } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import OwnerSystemWorkflowCanvas from './OwnerSystemWorkflowCanvas.jsx';
-import OwnerSystemWorkflowFocusViewer from './OwnerSystemWorkflowFocusViewer.jsx';
+import DisplayFocusViewer from './DisplayFocusViewer.jsx';
 import { OwnerSystemWorkflowMetadataContent } from './OwnerSystemWorkflowMetadataModule.jsx';
 import PresentationBoard from './PresentationBoard.jsx';
 import DisplayInstruments from './DisplayInstruments.jsx';
@@ -96,7 +96,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       onToggleMetadata={() => toggleInstrument('metadata')}
       onInspectionCancel={viewer.close}
       onAuthoringLockToggle={toggleAuthoringLock}
-      renderInspection={viewer.placementId ? (container, controlsContainer) => <OwnerSystemWorkflowFocusViewer
+      renderInspection={viewer.placementId ? (container, controlsContainer) => <DisplayFocusViewer
         container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}
         viewer={viewer} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
       renderInstruments={instrumentsVisible ? (projection, overlayTop) => <DisplayInstruments

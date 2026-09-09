@@ -127,7 +127,8 @@ test('Owner and Visitor inspection never carry the workspace Grid', () => {
   const profile = read('./OwnerSystemWorkflowProfile.jsx');
   assert.match(runtime, /<DisplayModule/);
   assert.match(read('./DisplayModule.jsx'), /useOwnerSystemWorkflowFocusViewer/);
-  assert.equal((visitor.match(/gridVisible=\{false\}/g) || []).length, 1);
+  assert.match(visitor, /DisplayFocusViewer/);
+  assert.match(read('./DisplayFocusViewer.jsx'), /gridVisible=\{false\}/);
   assert.doesNotMatch(visitor, /gridVisible=\{document\.appearance\.guideMode !== 'NONE'\}/);
   assert.match(profile, /onOpenIdentity/);
 });
