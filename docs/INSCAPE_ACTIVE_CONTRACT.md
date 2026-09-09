@@ -145,8 +145,10 @@ internal compatibility names during this migration; do not broadly rename them.
   or detach through the same bounded instrument shell. Published creator attribution
   and source details remain available. These interactions are session-local and
   never write an owner draft or rewrite publication bytes.
-- Each placement's presentation settings offer **Focus in place** or
-  **Lift to centre**. The choice is saved as optional `inspectionMode`
+- An always-visible **Inspect: In place | Lift** selector above the Layers list
+  applies immediately to the single selected, unlocked placement. It remains
+  disabled without an editable selection and is not nested in Frame and mat.
+  The choice is saved as optional `inspectionMode`
   (`IN_PLACE` or `LIFT`) in drafts and public placements. Existing drafts and
   publications without it retain Focus in place; no image or geometry is copied
   into the saved setting. Visitors follow the authored choice. Lift to centre

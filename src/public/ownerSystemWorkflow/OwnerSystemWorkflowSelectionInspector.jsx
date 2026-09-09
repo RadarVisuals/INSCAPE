@@ -78,12 +78,12 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
     controller.run((session) => session.reorderPlacementLayers({ gridId: grid.id, expectedPlacements: systemWorkflowLayerTopologySnapshot(grid), orderedPlacementIds: reorderBlock(orderedIds, unlockedSelected.map(({ id }) => id), operation) }));
   };
   const availability = primary ? systemWorkflowLayerOperationAvailability(grid, primary.id) : { BACK: editable, BACKWARD: editable, FORWARD: editable, FRONT: editable };
-  const beginPresentation = () => !authoringLocked && primary && setPresentation({ placementId: primary.id, frameId: primary.frameId, mat: structuredClone(primary.mat), backing: structuredClone(primary.backing), transparencyMode: primary.transparencyMode, inspectionMode: primary.inspectionMode || 'IN_PLACE' });
+  const beginPresentation = () => !authoringLocked && primary && setPresentation({ placementId: primary.id, frameId: primary.frameId, mat: structuredClone(primary.mat), backing: structuredClone(primary.backing), transparencyMode: primary.transparencyMode });
   const applyPresentation = () => {
     if (authoringLocked) return;
     const placement = grid.placements.find(({ id }) => id === presentation?.placementId);
     if (!placement) return;
-    controller.run((session) => session.setPlacementPresentation({ gridId: grid.id, placementId: placement.id, expectedPlacement: placement, presentation: { frameId: presentation.frameId, mat: presentation.mat, backing: presentation.backing, transparencyMode: presentation.transparencyMode, inspectionMode: presentation.inspectionMode } }));
+    controller.run((session) => session.setPlacementPresentation({ gridId: grid.id, placementId: placement.id, expectedPlacement: placement, presentation: { frameId: presentation.frameId, mat: presentation.mat, backing: presentation.backing, transparencyMode: presentation.transparencyMode, inspectionMode: placement.inspectionMode || 'IN_PLACE' } }));
     setPresentation(null);
   };
   const reorderFromDrop = (sourceId, targetId) => {
@@ -105,7 +105,6 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
     </>, 'system-workflow__crop-controls');
 
   if (presentation) return renderPanel(<><div className="system-workflow__presentation-fields">
-      <label><span>On inspect</span><select value={presentation.inspectionMode} onChange={(event) => setPresentation((current) => ({ ...current, inspectionMode: event.target.value }))}><option value="IN_PLACE">Focus in place</option><option value="LIFT">Lift to centre</option></select></label>
       <label><span>Frame</span><select value={presentation.frameId} onChange={(event) => setPresentation((current) => ({ ...current, frameId: event.target.value }))}>{PRESENTATION_FRAMES.map((value) => <option key={value}>{value}</option>)}</select></label>
       <label><span>Mat</span><input checked={presentation.mat.enabled} onChange={(event) => setPresentation((current) => ({ ...current, mat: { ...current.mat, enabled: event.target.checked } }))} type="checkbox" /></label>
       <label><span>Mat color</span><input value={presentation.mat.color} onChange={(event) => setPresentation((current) => ({ ...current, mat: { ...current.mat, color: event.target.value } }))} type="color" /></label>
@@ -114,6 +113,24 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
       <label><span>Transparency</span><select value={presentation.transparencyMode} onChange={(event) => setPresentation((current) => ({ ...current, transparencyMode: event.target.value }))}>{TRANSPARENCY.map((value) => <option key={value}>{value}</option>)}</select></label>
     </div><footer><button onClick={() => setPresentation(null)} type="button">Cancel</button><button onClick={applyPresentation} type="button">Apply</button></footer>
   </>, 'system-workflow__presentation-controls');
+
+  const inspectPlacement = selected.length === 1 ? selected[0] : null;
+  const changeInspection = (inspectionMode) => {
+    if (!editable || !inspectPlacement) return;
+    controller.run((session) => session.setPlacementPresentation({
+      gridId: grid.id, placementId: inspectPlacement.id, expectedPlacement: inspectPlacement,
+      presentation: { frameId: inspectPlacement.frameId, mat: inspectPlacement.mat,
+        backing: inspectPlacement.backing, transparencyMode: inspectPlacement.transparencyMode, inspectionMode },
+    }));
+  };
+  const inspectionSelector = <div className="system-workflow__inspection-selector" role="group" aria-label="Artwork inspection mode">
+    <span>Inspect</span>
+    {[['IN_PLACE', 'In place'], ['LIFT', 'Lift']].map(([mode, label]) => <button key={mode} type="button"
+      disabled={!editable || !inspectPlacement}
+      aria-pressed={Boolean(inspectPlacement && (inspectPlacement.inspectionMode || 'IN_PLACE') === mode)}
+      title={mode === 'LIFT' ? 'Lift to centre' : 'Focus in place'}
+      onClick={() => changeInspection(mode)}>{label}</button>)}
+  </div>;
 
   const toolbar = <nav aria-label="Selection actions" className="system-workflow__selection-actions">
       <button aria-label="Rotate" disabled={!editable} onClick={() => transform(SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.ROTATE)} title="Rotate" type="button"><RotateCw size={15} /></button>
@@ -127,7 +144,7 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
       <button aria-label="Crop" disabled={authoringLocked || !primary} onClick={() => onBeginCrop?.(primary)} title={primary ? 'Crop' : 'Crop requires one artwork'} type="button"><Crop size={15} /></button>
       <button aria-label="Frame and mat" disabled={authoringLocked || !primary} onClick={beginPresentation} title={primary ? 'Frame and mat' : 'Frame and mat requires one artwork'} type="button"><Frame size={15} /></button>
     </nav>;
-  return renderPanel(<>{toolbar}<div className="system-workflow__layer-list">{layers.map((layer) => {
+  return renderPanel(<><div className="system-workflow__layer-controls">{toolbar}{inspectionSelector}</div><div className="system-workflow__layer-list">{layers.map((layer) => {
         const asset = assetForPlacement(assetsById.get(layer.stableAssetId), layer); const title = asset?.title || asset?.name || 'UNTITLED'; const confirming = removeCandidateId === layer.id;
         const removingSelectedGroup = confirming && selected.length > 1 && controller.selectedPlacementIds.includes(layer.id) && editable;
         const hidden = controller.hiddenPlacementIds?.has(layer.id) || false;

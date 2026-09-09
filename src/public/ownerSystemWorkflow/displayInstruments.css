@@ -60,6 +60,14 @@
   border-radius: var(--workflow-board-radius, 10px);
 }
 .system-workflow__instrument-layers { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; gap: 8px; }
+.system-workflow__layer-controls { min-width: 0; display: grid; gap: 8px; }
+.system-workflow__inspection-selector { display: grid; grid-template-columns: auto repeat(2, minmax(0, 1fr)); align-items: stretch; border: 1px solid var(--workflow-border); }
+.system-workflow__inspection-selector > span { align-self: center; padding: 0 8px; color: var(--workflow-muted); font: 400 10px/1.2 "Inscape Sora", sans-serif; }
+.system-workflow__inspection-selector > button { position: relative; min-width: 0; min-height: 32px; padding: 6px; border: 0; border-left: 1px solid var(--workflow-border); border-radius: 0; color: var(--workflow-ink); background: transparent; font: 400 10px/1.2 "Inscape Sora", sans-serif; cursor: pointer; }
+.system-workflow__inspection-selector > button[aria-pressed="true"]::before { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: currentColor; }
+.system-workflow__inspection-selector > button:disabled { opacity: .3; cursor: not-allowed; }
+.system-workflow__inspection-selector > button:hover:not(:disabled) { background: var(--workflow-hover); }
+.system-workflow__inspection-selector > button:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -3px; }
 .system-workflow__instrument-layers .system-workflow__selection-actions {
   position: static;
   display: grid;
