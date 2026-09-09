@@ -61,6 +61,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const [boardPhase, setBoardPhase] = useState('window');
   const [scaleRendering, setScaleRendering] = useState('settled');
   const boardNodeRef = useRef(null);
+  const inspectionCameraRef = useRef(null);
   const boardDragRef = useRef(null);
   const boardResizeRef = useRef(null);
   const liveStageRef = useRef(null);
@@ -292,9 +293,11 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
           style={{ height: liveScaleRendering ? liveStage?.height || view.fit.stage.height : settledStageHeight,
             transform: liveScaleRendering ? `scale(${liveTransformScale})` : undefined,
             width: liveScaleRendering ? liveStage?.width || view.fit.stage.width : settledStageWidth }}>
+          <div className="system-workflow__inspection-camera" ref={inspectionCameraRef}>
           {cloneElement(children, { boardScale: liveScaleRendering ? liveTransformScale : 1,
             interactionDisabled: children.props.interactionDisabled || boardPhase === 'maximizing' || boardPhase === 'restoring',
             renderingMode: liveScaleRendering ? 'live' : 'settled', selectionOverlayHost })}
+          </div>
         </div>
       </div>
       {renderInstruments?.(metadataSidecarOpen ? 'attached' : 'overlay',
@@ -305,7 +308,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
         onKeyDown={(event) => resizeBoardFromKeyboard(corner, event)} onPointerUp={stopBoardResize} type="button" />)}
       <div className="system-workflow__board-inspection-host" ref={setInspectionHost}>
         {inspectionActive && inspectionHost && inspectionControlsHost
-          ? renderInspection(inspectionHost, inspectionControlsHost) : null}
+          ? renderInspection(inspectionHost, inspectionControlsHost, inspectionCameraRef.current) : null}
       </div>
     </article>}
   </div>;

@@ -45,7 +45,7 @@ export default function useDisplayInspection(options) {
       if (!ready || !mounted.current || operation !== request.current || scope !== next.scope
         || !source.isConnected || !next.items.some(item => item.id === id)) return false;
       next.onOpen?.(id);
-      update({ scope, placementId: id, originRectangle, sourceHidden: false, atmosphereActive: true });
+      update({ scope, placementId: id, originRectangle });
       return true;
     };
     if (!current.prepare) return finish(Boolean(current.getEntry(id)));
@@ -56,11 +56,7 @@ export default function useDisplayInspection(options) {
     if (!active || position < 0 || available.length < 2) return;
     const destination = available[(position + direction + available.length) % available.length];
     options.onNavigate?.(destination.id);
-    update({ ...active, placementId: destination.id, sourceHidden: true });
-  };
-  const changePresentation = change => {
-    const current = sessionRef.current;
-    if (current?.scope === latest.current.scope) update({ ...current, ...change });
+    update({ ...active, placementId: destination.id });
   };
   useEffect(() => {
     if (placementId && !items.some(item => item.id === placementId)) close();
@@ -68,13 +64,11 @@ export default function useDisplayInspection(options) {
   return {
     placementId, entry, position, total: available.length,
     originRectangle: active?.originRectangle || null,
-    atmosphereActive: active?.atmosphereActive === true,
-    sourcePlacementId: active?.sourceHidden ? placementId : null,
+    atmosphereActive: false,
+    sourcePlacementId: null,
     returnFocus: placementId ? options.getElement(placementId) : null,
     getReturnRectangle: () => rectangle(options.getElement(placementId)) || active?.originRectangle || null,
     open, close, navigate,
-    present: () => changePresentation({ sourceHidden: true, atmosphereActive: true }),
-    beginReturn: () => { options.onBeginReturn?.(); changePresentation({ atmosphereActive: false }); },
-    revealSource: () => changePresentation({ sourceHidden: false }),
+    beginReturn: () => options.onBeginReturn?.(),
   };
 }

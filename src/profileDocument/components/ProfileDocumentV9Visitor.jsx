@@ -303,8 +303,8 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
       instrumentBayOpen={Boolean(instruments.active)}
       onToggleMetadata={() => dispatchInstruments({ type: 'toggle', instrument: 'metadata' })}
       inspectionAtmosphere={viewer.atmosphereActive} onInspectionCancel={viewer.close}
-      renderInspection={viewer.placementId && viewer.entry ? (container, controlsContainer) => <DisplayFocusViewer
-        container={container} controlsContainer={controlsContainer} viewer={viewer}
+      renderInspection={viewer.placementId && viewer.entry ? (container, controlsContainer, camera) => <DisplayFocusViewer
+        camera={camera} container={container} controlsContainer={controlsContainer} viewer={viewer}
         menuSurface={document.appearance.menuSurfaceId} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
       renderInstruments={(projection, overlayTop) => <DisplayInstruments workspaceRef={rootRef}
         instrumentTriggers={instrumentTriggers} state={instruments} dispatch={dispatchInstruments}

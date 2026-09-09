@@ -96,8 +96,8 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       onToggleMetadata={() => toggleInstrument('metadata')}
       onInspectionCancel={viewer.close}
       onAuthoringLockToggle={toggleAuthoringLock}
-      renderInspection={viewer.placementId ? (container, controlsContainer) => <DisplayFocusViewer
-        container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}
+      renderInspection={viewer.placementId ? (container, controlsContainer, camera) => <DisplayFocusViewer
+        camera={camera} container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}
         viewer={viewer} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
       renderInstruments={instrumentsVisible ? (projection, overlayTop) => <DisplayInstruments
         workspaceRef={workspaceRef} instrumentTriggers={instrumentTriggers} state={instruments} dispatch={instrumentCommand} projection={projection} overlayTop={overlayTop}
