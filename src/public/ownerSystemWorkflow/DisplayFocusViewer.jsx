@@ -48,8 +48,10 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
   const finishClose = () => {
     const source = latest.current.returnFocus;
     latest.current.close();
-    queueMicrotask(() => {
-      if (source?.isConnected) source.focus({ preventScroll: true });
+    requestAnimationFrame(() => {
+      // React must first unmount the lifted copy and reveal its source. A
+      // microtask can run before that commit, when the source cannot be focused.
+      if (source?.isConnected && !source.closest('[data-inspecting]')) source.focus({ preventScroll: true });
     });
   };
   const close = () => {

@@ -24,7 +24,7 @@ export default function useDisplayInspection(options) {
     a.navigationOrder - b.navigationOrder || a.id.localeCompare(b.id)), [options.items]);
   const active = session?.scope === options.scope ? session : null;
   const placementId = active?.placementId || null;
-  const available = items.filter(item => options.getEntry(item.id));
+  const available = items.filter(item => options.getEntry(item.id) && rectangle(options.getElement(item.id)));
   const position = available.findIndex(item => item.id === placementId);
   const entry = placementId ? options.getEntry(placementId) : null;
   const close = useCallback(() => {
@@ -42,7 +42,7 @@ export default function useDisplayInspection(options) {
     const scope = current.scope;
     const finish = ready => {
       const next = latest.current;
-      if (!ready || !mounted.current || operation !== request.current || scope !== next.scope
+      if (!ready || !next.getEntry(id) || !mounted.current || operation !== request.current || scope !== next.scope
         || !source.isConnected || !next.items.some(item => item.id === id)) return false;
       next.onOpen?.(id);
       update({ scope, placementId: id, originRectangle });
@@ -56,11 +56,11 @@ export default function useDisplayInspection(options) {
     if (!active || position < 0 || available.length < 2) return;
     const destination = available[(position + direction + available.length) % available.length];
     options.onNavigate?.(destination.id);
-    update({ ...active, placementId: destination.id });
+    update({ ...active, placementId: destination.id, originRectangle: rectangle(options.getElement(destination.id)) });
   };
   useEffect(() => {
-    if (placementId && !items.some(item => item.id === placementId)) close();
-  }, [placementId, items, close]);
+    if (placementId && (!entry || !rectangle(options.getElement(placementId)))) close();
+  }, [placementId, items, entry, close]);
   return {
     placementId, entry, position, total: available.length,
     originRectangle: active?.originRectangle || null,

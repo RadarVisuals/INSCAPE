@@ -42,7 +42,7 @@ test('v9 Grid renderer reuses canonical contain, crop remap, swapped dimensions,
   assert.equal(transformed.imageTransform, 'scale(-1, 1) rotate(90deg)');
   assert.equal(transformed.imageRenderRectangle.width, transformed.imageRectangle.height + 1);
   assert.equal(transformed.imageRenderRectangle.height, transformed.imageRectangle.width);
-  assert.match(renderer, /projectLatticeProductionPixelArtwork/);
+  assert.match(renderer, /projectLatticeProductionArtwork/);
   assert.match(renderer, /imageRenderRectangle/);
 });
 

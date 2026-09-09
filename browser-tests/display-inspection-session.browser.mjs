@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 
-const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5174';
+const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5186';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
 test('owner Display opens, browses and returns focus through the shared inspection', { timeout: 30_000 }, async () => {
@@ -15,12 +15,12 @@ test('owner Display opens, browses and returns focus through the shared inspecti
     await page.goto(`${origin}/development/owner/system-workflow`);
     const first = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
     await first.dblclick();
-    await page.getByRole('dialog', { name: 'ABYSSAL STUDY focus viewer' }).waitFor();
+    await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Next artwork', exact: true }).click();
-    await page.getByRole('dialog', { name: 'MOUNTAIN SIGNAL II focus viewer' }).waitFor();
+    await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor();
     await page.screenshot({ path: '.browser-test-runtime/owner-shared-inspection.png' });
     await page.keyboard.press('Escape');
-    await page.locator('.lattice-focus-viewer').waitFor({ state: 'detached' });
+    await page.locator('.system-workflow__scene-controls').waitFor({ state: 'detached' });
     assert.equal(await page.getByRole('button', { name: /Select MOUNTAIN SIGNAL II/ }).evaluate(node => node === document.activeElement), true);
     assert.equal(await page.locator('.system-workflow__placement[data-viewing]').count(), 0);
     assert.deepEqual(errors, []);
@@ -71,16 +71,13 @@ test('shared inspection orders available artwork and owns the complete return li
   await page.getByRole('button', { name: 'first', exact: true }).click();
   assert.deepEqual(await page.evaluate(() => {
     const v = sessionTest.viewer; return [v.placementId, v.position, v.total, v.sourcePlacementId, v.atmosphereActive];
-  }), ['first', 0, 2, null, true]);
-  await page.evaluate(() => sessionTest.viewer.present()); await settle(page);
-  assert.equal(await page.evaluate(() => sessionTest.viewer.sourcePlacementId), 'first');
+  }), ['first', 0, 2, null, false]);
   await page.evaluate(() => sessionTest.viewer.navigate(-1)); await settle(page);
   assert.equal(await page.evaluate(() => sessionTest.viewer.placementId), 'last');
   await page.evaluate(() => sessionTest.viewer.navigate(1)); await settle(page);
   assert.equal(await page.evaluate(() => sessionTest.viewer.returnFocus.textContent), 'first');
   await page.evaluate(() => sessionTest.viewer.beginReturn()); await settle(page);
-  assert.deepEqual(await page.evaluate(() => [sessionTest.viewer.atmosphereActive, sessionTest.viewer.sourcePlacementId]), [false, 'first']);
-  await page.evaluate(() => sessionTest.viewer.revealSource()); await settle(page);
+  assert.deepEqual(await page.evaluate(() => [sessionTest.viewer.atmosphereActive, sessionTest.viewer.sourcePlacementId]), [false, null]);
   assert.equal(await page.evaluate(() => sessionTest.viewer.sourcePlacementId), null);
   await page.evaluate(() => sessionTest.viewer.close()); await settle(page);
   assert.equal(await page.evaluate(() => sessionTest.viewer.placementId), null);

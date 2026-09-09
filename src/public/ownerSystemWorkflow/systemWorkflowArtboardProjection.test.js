@@ -26,12 +26,12 @@ test('world projection keeps square cells while the usable Grid fills wide and n
   assert.equal(narrow.top, 224.3125);
   assert.equal(narrow.referenceWidth, 390);
   assert.equal(narrow.referenceHeight, 219.375);
-  assert.deepEqual(projectOwnerSystemWorkflowPlacement({ column: 20, row: 9, columnSpan: 5, rowSpan: 3 }, narrow), { left: 244, top: 334, width: 61, height: 37 });
+  assert.deepEqual(projectOwnerSystemWorkflowPlacement({ column: 20, row: 9, columnSpan: 5, rowSpan: 3 }, narrow), { left: 243.75, top: 334, width: 60.9375, height: 36.5625 });
   assert.equal(ownerSystemWorkflowArtboardContainsPoint(narrow, { x: 0, y: 0 }), true);
   assert.equal(ownerSystemWorkflowArtboardContainsPoint(narrow, { x: 390, y: 668 }), true);
   assert.equal(ownerSystemWorkflowArtboardContainsPoint(narrow, { x: 200, y: -1 }), false);
   assert.deepEqual(projectOwnerSystemWorkflowPlacement({ column: -2, row: -3, columnSpan: 2, rowSpan: 3 }, narrow), {
-    left: -24, top: 188, width: 24, height: 36,
+    left: -24.375, top: 187.75, width: 24.375, height: 36.5625,
   });
 });
 

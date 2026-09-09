@@ -252,7 +252,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
       }
       clearMarquee();
     };
-    const cancel = () => clearMarquee();
+    const cancel = () => { clearMarquee(); setGridSwipe(null); };
     marqueeRef.current = { cancel, end: origin, finish, mode: 'pending', move, moved: false, pointerId: event.pointerId };
     globalThis.addEventListener('pointermove', move, true);
     globalThis.addEventListener('pointerup', finish, true);
@@ -277,9 +277,18 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     globalThis.clearTimeout?.(gridSwipeTimerRef.current);
   }, []);
   useEffect(() => {
+    clearGesture(); clearMarquee();
+    globalThis.clearTimeout?.(gridSwipeTimerRef.current);
+    gridSwipeTimerRef.current = null;
+    setGridSwipe(null);
+  }, [controller.draft.profileAddress, grid?.id]);
+  useEffect(() => {
     if (!disabled && !authoringDisabled) return;
     clearGesture();
     clearMarquee();
+    globalThis.clearTimeout?.(gridSwipeTimerRef.current);
+    gridSwipeTimerRef.current = null;
+    setGridSwipe(null);
   }, [authoringDisabled, disabled]);
   useEffect(() => {
     const editable = (event) => /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable;
@@ -294,6 +303,11 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
       if (event?.code && event.code !== 'Space') return;
       spacePressedRef.current = false;
       setSpaceNavigation(false);
+      if (event?.type === 'blur') {
+        clearGesture(); clearMarquee();
+        globalThis.clearTimeout?.(gridSwipeTimerRef.current);
+        gridSwipeTimerRef.current = null; setGridSwipe(null);
+      }
     };
     globalThis.addEventListener?.('keydown', keydown, true);
     globalThis.addEventListener?.('keyup', release, true);

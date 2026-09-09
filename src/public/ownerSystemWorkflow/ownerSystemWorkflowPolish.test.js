@@ -78,7 +78,7 @@ test('Layers keeps placement tools with its content and shares window behavior w
   const source = read('./OwnerSystemWorkflowSelectionInspector.jsx');
   const instruments = read('./DisplayInstruments.jsx');
   const window = read('./DisplayInstrumentWindow.jsx');
-  assert.match(source, /return renderPanel\(<>{toolbar}/);
+  assert.match(source, /system-workflow__layer-controls/);
   assert.doesNotMatch(source, /TOOLBAR_POSITION_KEY|beginToolbarDrag|beginPanelResize/);
   assert.match(instruments, /<DisplayInstrumentWindow/);
   assert.match(window, /<OwnerSystemWorkflowDetachedWindow/);

@@ -45,11 +45,11 @@ test('four transparent foreground layers pass through to the background; solid p
   assert.deepEqual(await page.evaluate(() => hits), ['layer-0', 'layer-4']);
 }));
 
-test('Alt-click cycles opaque overlapping layers and keyboard activation stays explicit', () => fixture(async page => {
+test('Alt no longer overrides pixel picking and keyboard activation stays explicit', () => fixture(async page => {
   await page.keyboard.down('Alt');
   for (let i = 0; i < 4; i++) await page.mouse.click(60, 60);
   await page.keyboard.up('Alt');
-  assert.deepEqual(await page.evaluate(() => hits), ['layer-3', 'layer-2', 'layer-1', 'layer-0']);
+  assert.deepEqual(await page.evaluate(() => hits), ['layer-4', 'layer-4', 'layer-4', 'layer-4']);
   assert.equal(await page.evaluate(() => picker.pick({ type: 'click', detail: 0, currentTarget: document.getElementById('layer-4') }, document.getElementById('root')).id), 'layer-4');
 }));
 
@@ -84,7 +84,7 @@ test('Stage scaling, letterbox space and authored backing participate in picking
   assert.deepEqual(await page.evaluate(() => hits), ['layer-4']);
 }));
 
-test('blocked pixel access keeps media visible and supports cycling; disposal cancels pending work', async () => {
+test('blocked pixel access keeps rectangular picking; disposal cancels pending work', async () => {
   await fixture(async page => {
   // Force the browser's tainted-canvas outcome; routed responses can otherwise
   // bypass CORS, while this Edge build denies second-port loopback requests.
@@ -96,7 +96,7 @@ test('blocked pixel access keeps media visible and supports cycling; disposal ca
   await page.mouse.click(180, 180);
   assert.deepEqual(await page.evaluate(() => hits.splice(0)), ['layer-4']);
   await page.keyboard.down('Alt'); await page.mouse.click(180, 180); await page.keyboard.up('Alt');
-  assert.deepEqual(await page.evaluate(() => hits), ['layer-3']);
+  assert.deepEqual(await page.evaluate(() => hits), ['layer-4']);
   assert.equal(await page.evaluate(() => { picker.dispose(); return picker.pick({ type: 'click', detail: 1, clientX: 60, clientY: 60 }, document.getElementById('root')); }), null);
   });
 });

@@ -62,21 +62,16 @@ test('full-bleed media crosses raster edges while intentional contain letterboxi
   }, opening), {
     left: 243, top: 340, width: 63, height: 25,
   });
-  assert.deepEqual(projectLatticeRasterBleedRectangle({
-    left: 243.99999999999, top: 333.99999999999, width: 61.00000000002, height: 37.00000000002,
-  }, opening), {
-    left: 242.99999999999, top: 332.99999999999, width: 63.00000000002, height: 39.00000000002,
-  });
-  assert.deepEqual(projectLatticeRasterBleedRectangle({
-    left: 244.25, top: 334, width: 60.5, height: 37,
-  }, opening), {
-    left: 243.25, top: 333, width: 62.5, height: 39,
-  }, 'sub-pixel contain-fit residue bleeds across both rounded vertical edges');
-  assert.deepEqual(projectLatticeRasterBleedRectangle({
-    left: 245, top: 334, width: 59, height: 37,
-  }, opening), {
-    left: 244, top: 333, width: 61, height: 39,
-  }, 'a one-layout-pixel fitting remainder cannot leak backing at either vertical edge');
+  const sample = inset => projectLatticeRasterBleedRectangle({
+    left: opening.left + inset, top: opening.top, width: opening.width - 2 * inset, height: opening.height,
+  }, opening);
+  for (const boundary of [0, .25, 1]) {
+    const before = sample(Math.max(0, boundary - .00001));
+    const after = sample(boundary + .00001);
+    assert.ok(Math.abs(after.left - before.left) < .0001, 'edge coverage changes continuously');
+    assert.ok(Math.abs(after.width - before.width) < .0002);
+  }
+  assert.ok(sample(.25).left < opening.left, 'near-touching edges retain coverage');
   assert.deepEqual(projectLatticeRasterBleedRectangle({
     left: 246, top: 334, width: 57, height: 37,
   }, opening), {

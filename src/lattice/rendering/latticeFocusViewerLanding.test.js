@@ -22,24 +22,8 @@ test('focus return lands at its exact endpoint before the overlay copy fades', (
   assert.match(viewerStyles, /\[data-return-landing\] > \.lattice-focus-viewer__artwork \{[\s\S]*opacity: 0;[\s\S]*transition: opacity var\(--lattice-viewer-landing-duration\) linear;/);
 });
 
-test('owner reuses one contained artwork-only focus viewer owned by the Presentation Board', () => {
-  assert.match(ownerDisplay, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer\) => <DisplayFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
-  assert.equal((ownerDisplay.match(/<DisplayFocusViewer/g) || []).length, 1);
-  assert.match(ownerViewer, /contained portalTarget=\{container\}/);
-  assert.match(ownerViewer, /controlsTarget=\{controlsContainer\}/);
-  assert.match(ownerViewer, /inspectionVariant="none"/);
-  assert.match(viewer, /data-contained=\{contained \|\| undefined\}/);
-  assert.match(viewer, /controlsTarget && createPortal\(<div className="lattice-focus-viewer__board-controls"/);
-  assert.match(viewer, /if \(isolatedInspection\) \{\s*requestNavigation\(1\);/);
-  assert.doesNotMatch(viewerStyles, /lattice-focus-viewer-browse-(?:in|out)[\s\S]{0,160}transform:/);
-  assert.match(ownerViewer, /onClosing=\{viewer\.beginReturn\}/);
-  assert.doesNotMatch(ownerViewer, /clearOwnerSystemWorkflowDocumentSelection/);
-  assert.match(ownerViewerState, /onBeginReturn: clearOwnerSystemWorkflowDocumentSelection/);
-  assert.match(ownerDisplay, /inspectionAtmosphere=\{viewer\.atmosphereActive\}/);
-  assert.match(viewer, /portalTarget,/);
-  assert.match(viewerStyles, /\.lattice-focus-viewer\[data-contained\][\s\S]*position: absolute;/);
-  assert.match(viewerStyles, /\.lattice-focus-viewer\[data-contained\] :is\([\s\S]*\.lattice-focus-viewer__rack,[\s\S]*\.lattice-focus-viewer__close-control[\s\S]*position: absolute;/);
-});
+// Shared Display inspection and focus restoration are exercised in
+// browser-tests/display-hardening.browser.mjs.
 
 test('owner metadata remains independent from artwork focus motion', () => {
   assert.match(ownerDisplay, /renderMetadata=\{\(\) => <OwnerSystemWorkflowMetadataContent/);

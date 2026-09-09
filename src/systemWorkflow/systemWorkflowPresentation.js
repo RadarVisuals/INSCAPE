@@ -102,7 +102,9 @@ export function createSystemWorkflowPresentationCandidate(draftInput, {
   }
   if (placement.locked) throw presentationError('SYSTEM_WORKFLOW_PRESENTATION_PLACEMENT_LOCKED', 'The canonical placement is locked');
 
-  const normalized = normalizeSystemWorkflowPresentation(presentation);
+  const normalized = normalizeSystemWorkflowPresentation({ ...presentation,
+    ...(Object.hasOwn(presentation || {}, 'inspectionMode') || !Object.hasOwn(placement, 'inspectionMode')
+      ? {} : { inspectionMode: placement.inspectionMode }) });
   if (samePresentation(systemWorkflowPlacementPresentation(placement), normalized)) return null;
   placement.frameId = normalized.frameId;
   placement.mat = normalized.mat;

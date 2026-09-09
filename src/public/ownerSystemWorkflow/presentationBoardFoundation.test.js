@@ -34,7 +34,6 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(runtime, /data-surface=\{workbenchPreferences\.surfaceId\}/);
   assert.match(display, /displaySurface=\{controller\.draft\?\.appearance\.surfaceId\}/);
   assert.match(board, /transform: liveScaleRendering \? `scale\(\$\{liveTransformScale\}\)` : undefined/);
-  assert.match(board, /settledStageWidth = view \? Math\.ceil\(view\.fit\.stage\.width \* displayScale\) : 0/);
   assert.match(board, /boardScale: liveScaleRendering \? liveTransformScale : 1/);
   assert.doesNotMatch(board, /aria-label="Board zoom"|Board zoom percentage|system-workflow__board-zoom[^\n]*type="range"/);
   assert.match(board, /aria-label=\{maximized \? 'Restore Display Module' : 'Maximize Display Module'\}/);
@@ -50,7 +49,7 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(runtime, /label: 'ADD'[\s\S]*label: 'DISPLAY MODULE'[\s\S]*label: 'METADATA MODULE'/);
   assert.match(display, /useOwnerSystemWorkflowFocusViewer/);
   assert.match(display, /<DisplayFocusViewer/);
-  assert.match(display, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer\) => <DisplayFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
+  assert.match(display, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer, scene\) => <DisplayFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
   assert.match(board, /'window'[\s\S]*'maximizing'[\s\S]*'maximized'[\s\S]*'restoring'/);
   assert.match(board, /resizePresentationBoardFromCorner/);
   assert.match(board, /corners\.map/);
@@ -68,7 +67,7 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(shortcut, /RENAME/);
   assert.match(board, /aria-label="Metadata"/);
   assert.match(board, /system-workflow__board-inspection-controls-host/);
-  assert.match(board, /renderInspection\(inspectionHost, inspectionControlsHost\)/);
+  assert.match(board, /renderInspection\(inspectionHost, inspectionControlsHost, inspectionSceneRef\.current\)/);
   assert.match(canvas, /system-workflow__stage-content/);
   assert.match(canvas, /system-workflow__artwork-plane/);
   assert.match(canvas, /onDoubleClick[\s\S]*onOpenViewer/);

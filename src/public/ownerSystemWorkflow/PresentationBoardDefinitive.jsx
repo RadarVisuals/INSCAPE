@@ -2,6 +2,7 @@ import { cloneElement, useEffect, useLayoutEffect, useMemo, useRef, useState } f
 import {
   Info, Layers3, Lock, LockKeyhole, Maximize2, Minimize2, Minus, Play, Pause,
 } from 'lucide-react';
+import useDisplayImmersive from './useDisplayImmersive.js';
 import PresentationBoardShortcut from './PresentationBoardShortcut.jsx';
 import { DisplayStageSizeContext } from './DisplayStageSizeContext.js';
 import { loadPresentationBoardShortcut } from './presentationBoardShortcutStorage.js';
@@ -164,29 +165,9 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     wheelRef.current.blockedUntil = performance.now() + 450;
     setImmersive(false);
   };
-  useLayoutEffect(() => {
-    if (!immersive) return undefined;
-    const board = boardNodeRef.current;
-    const previousFocus = document.activeElement;
-    // Use the browser's top layer without reparenting/remounting the artwork.
-    board?.showPopover?.();
-    exitImmersiveRef.current?.focus({ preventScroll: true });
-    const resize = () => setScreenSize({ width: window.innerWidth, height: window.innerHeight });
-    const escape = event => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault(); event.stopImmediatePropagation();
-      onInspectionCancel?.(); leaveImmersive();
-    };
-    resize();
-    window.addEventListener('resize', resize);
-    window.addEventListener('keydown', escape, true);
-    return () => {
-      window.removeEventListener('resize', resize);
-      window.removeEventListener('keydown', escape, true);
-      if (board?.matches(':popover-open')) board.hidePopover();
-      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
-    };
-  }, [immersive]);
+  useDisplayImmersive({ active: immersive, available: instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW,
+    boardRef: boardNodeRef, exitRef: exitImmersiveRef, onExit: leaveImmersive,
+    onResize: setScreenSize, onInspectionCancel });
 
   useEffect(() => {
     const stage = selectionOverlayHost;

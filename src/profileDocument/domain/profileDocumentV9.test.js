@@ -20,6 +20,7 @@ import { SYSTEM_WORKFLOW_LIMITS } from '../../systemWorkflow/domain/systemWorkfl
 import { isValidIdentityCard, resolveIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
+import { createSystemWorkflowPresentationCandidate } from '../../systemWorkflow/systemWorkflowPresentation.js';
 const CONTRACT = '0x2222222222222222222222222222222222222222';
 const ASSET = `42:${CONTRACT}:0x01`;
 const asset = () => ({
@@ -68,6 +69,37 @@ function document(overrides = {}) {
     revision: 4, systemWorkflowDraft: draft(), ...overrides,
   });
 }
+
+test('inspection choice round-trips through public bytes while older documents stay unchanged', () => {
+  const original = document();
+  const oldBytes = canonicalSerializeProfileDocumentV9(original);
+  assert.equal(canonicalSerializeProfileDocumentV9(parseProfileDocumentV9Json(oldBytes)), oldBytes);
+  assert.equal(Object.hasOwn(original.grids[0].placements[0], 'inspectionMode'), false);
+  const input = draft(); input.grids[0].placements[0].inspectionMode = 'LIFT';
+  const published = document({ systemWorkflowDraft: input });
+  const parsed = parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(published));
+  assert.equal(parsed.grids[0].placements[0].inspectionMode, 'LIFT');
+  const recovered = createOwnerDraftFromPublishedProfile(parsed);
+  assert.equal(recovered.grids[0].placements[0].inspectionMode, 'LIFT');
+  assert.notEqual(profileDocumentV9ContentFingerprint(original), profileDocumentV9ContentFingerprint(published));
+  for (const bad of ['ZOOM', null, true, {}]) {
+    const invalid = structuredClone(published); invalid.grids[0].placements[0].inspectionMode = bad;
+    assert.equal(validateProfileDocumentV9(invalid).valid, false);
+  }
+});
+
+test('presentation edits retain inspection choice and reject stale placement snapshots', () => {
+  const input = draft(); const placement = input.grids[0].placements[0];
+  placement.locked = false; placement.inspectionMode = 'LIFT';
+  const presentation = { frameId: placement.frameId, mat: placement.mat,
+    backing: placement.backing, transparencyMode: placement.transparencyMode };
+  const request = { gridId: input.grids[0].id, placementId: placement.id, expectedPlacement: placement, presentation };
+  assert.equal(createSystemWorkflowPresentationCandidate(input, request), null, 'legacy no-op does not create a revision');
+  const changed = createSystemWorkflowPresentationCandidate(input, { ...request, presentation: { ...presentation, frameId: 'NONE' } });
+  assert.equal(changed.grids[0].placements[0].inspectionMode, 'LIFT');
+  const stale = structuredClone(placement); stale.inspectionMode = 'IN_PLACE';
+  assert.throws(() => createSystemWorkflowPresentationCandidate(input, { ...request, expectedPlacement: stale }), /changed/);
+});
 
 test('Identity chosen image survives the existing public avatar envelope and draft restoration', () => {
   const input = draft();
