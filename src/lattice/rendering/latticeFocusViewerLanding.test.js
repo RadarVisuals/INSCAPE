@@ -34,7 +34,7 @@ test('owner reuses one contained artwork-only focus viewer owned by the Presenta
   assert.doesNotMatch(viewerStyles, /lattice-focus-viewer-browse-(?:in|out)[\s\S]{0,160}transform:/);
   assert.match(ownerViewer, /onClosing=\{viewer\.beginReturn\}/);
   assert.doesNotMatch(ownerViewer, /clearOwnerSystemWorkflowDocumentSelection/);
-  assert.match(ownerViewerState, /beginReturn: \(\) => \{ clearOwnerSystemWorkflowDocumentSelection\(\); setAtmosphereActive\(false\); \}/);
+  assert.match(ownerViewerState, /onBeginReturn: clearOwnerSystemWorkflowDocumentSelection/);
   assert.match(ownerDisplay, /inspectionAtmosphere=\{viewer\.atmosphereActive\}/);
   assert.match(viewer, /portalTarget,/);
   assert.match(viewerStyles, /\.lattice-focus-viewer\[data-contained\][\s\S]*position: absolute;/);
@@ -49,9 +49,7 @@ test('owner metadata remains independent from artwork focus motion', () => {
 });
 
 test('Visitor uses the same landing handoff while retaining its stored layer order', () => {
-  assert.match(visitor, /sourceHidden: true/);
-  assert.match(visitor, /viewerSession\.sourceHidden \? viewerSession\.placementId : null/);
-  assert.match(visitor, /revealSource: \(\) => setViewerSession\(current => current && \(\{ \.\.\.current, sourceHidden: false \}\)\)/);
+  assert.match(visitor, /viewerPlacementId=\{viewer\.sourcePlacementId\}/);
   assert.doesNotMatch(visitor, /placement\.layer\s*=/);
 });
 

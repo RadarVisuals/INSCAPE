@@ -10,6 +10,7 @@ import { resolveVisitorGridDragDestination } from './visitorGridDragNavigation.j
 import '../../lattice/rendering/latticeMenuSurface.css';
 import './visitorGridWorld.css';
 import PresentationBoard from '../../public/ownerSystemWorkflow/PresentationBoard.jsx';
+import useDisplayInspection from '../../public/ownerSystemWorkflow/useDisplayInspection.js';
 import DisplayFocusViewer from '../../public/ownerSystemWorkflow/DisplayFocusViewer.jsx';
 import DisplayInstruments from '../../public/ownerSystemWorkflow/DisplayInstruments.jsx';
 import { transitionDisplayInstruments } from '../../public/ownerSystemWorkflow/displayInstrumentState.js';
@@ -27,7 +28,6 @@ function PublishedStage({ children, activeGridId, onClickCapture, onPointerDown,
 
 const IdentityModule = lazy(() => import('../../public/identity/IdentityModule.jsx'));
 const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-6)}`;
-const frozenRectangle = ({ height, left, top, width }) => Object.freeze({ height, left, top, width });
 
 export default function ProfileDocumentV9Visitor(props) {
   return <ProfileDocumentV9Session key={`${props.document.profile.address}:${props.document.documentId}:${props.document.revision}`} {...props} />;
@@ -50,7 +50,6 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
   const suppressPlacementClickRef = useRef(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [placementMedia, setPlacementMedia] = useState({});
-  const [viewerSession, setViewerSession] = useState(null);
   const [profileVisible, setProfileVisible] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(Boolean(document.workbench?.identity.open));
   const [displayOpen, setDisplayOpen] = useState(document.workbench?.display.open !== false);
@@ -82,8 +81,28 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
   const activeGrid = document.grids[activeIndex];
   const lastIndex = document.grids.length - 1;
   const workspaceSurfaceColor = latticeSurfaceColor(document.appearance.surfaceId);
+  const viewerEntries = useMemo(() => activeGrid.placements.map((placement) => {
+    const decoded = placementMedia[`${activeGrid.id}:${placement.id}`];
+    const model = createProfileDocumentV9FocusViewModel(placement, {
+      decodedDimensions: decoded?.dimensions, resolvedUrl: decoded?.media?.src,
+      resolutionComplete: decoded?.status !== 'loading',
+    });
+    return model && decoded?.status === 'ready' && decoded.dimensions
+      ? { ...model, focusDimensions: decoded.dimensions, media: { ...model.media, src: decoded.media.src } } : null;
+  }).filter(Boolean), [activeGrid, placementMedia]);
+  const findPlacementElement = useCallback((placementId) => [...(rootRef.current?.querySelectorAll('[data-placement-id]') || [])]
+    .find((node) => node.dataset.placementId === placementId), []);
+  const entriesById = useMemo(() => new Map(viewerEntries.map(entry => [entry.placement.id, entry])), [viewerEntries]);
+  const viewer = useDisplayInspection({
+    scope: activeGrid.id,
+    items: activeGrid.placements,
+    getEntry: id => entriesById.get(id),
+    getElement: findPlacementElement,
+    onOpen: () => dispatchInstruments({ type: 'open', instrument: 'metadata' }),
+  });
+  const viewerEntry = viewer.entry;
   const playback = useGridPlayback({ playing,
-    enabled: displayOpen && lastIndex > 0 && !viewerSession && !gridSwipe,
+    enabled: displayOpen && lastIndex > 0 && !viewer.placementId && !gridSwipe,
     gridId: activeGrid.id, nextGridId: document.grids[(activeIndex + 1) % document.grids.length]?.id,
     canvasRef: stageRef, viewScale: 1, reducedMotion,
     onPause: () => setPlaying(false),
@@ -95,7 +114,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
   });
 
   useEffect(() => {
-    setActiveIndex(0); setPlacementMedia({}); setViewerSession(null); setProfileVisible(false); setIdentityOpen(Boolean(document.workbench?.identity.open));
+    setActiveIndex(0); setPlacementMedia({}); setProfileVisible(false); setIdentityOpen(Boolean(document.workbench?.identity.open));
     globalThis.clearTimeout?.(gridSwipeTimerRef.current); gridSwipeTimerRef.current = null; setGridSwipe(null);
     rootRef.current?.focus({ preventScroll: true });
   }, [document.documentId, document.revision]);
@@ -104,10 +123,10 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
     if (returnFocus) queueMicrotask(() => profileDockControlRef.current?.focus({ preventScroll: true }));
   }, []);
   const toggleProfile = useCallback(() => {
-    if (viewerSession) return;
+    if (viewer.placementId) return;
     if (profileVisible) closeProfile();
     else setProfileVisible(true);
-  }, [closeProfile, profileVisible, viewerSession]);
+  }, [closeProfile, profileVisible, viewer.placementId]);
   useEffect(() => {
     if (!profileVisible) return undefined;
     const handlePointerDown = (event) => {
@@ -126,9 +145,9 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
     };
   }, [closeProfile, profileVisible]);
   const selectGrid = useCallback((index) => {
-    if (viewerSession) return;
+    if (viewer.placementId) return;
     setActiveIndex(((index % (lastIndex + 1)) + lastIndex + 1) % (lastIndex + 1));
-  }, [lastIndex, viewerSession]);
+  }, [lastIndex, viewer.placementId]);
   const clearGridDrag = useCallback(() => {
     const active = gridDragRef.current;
     if (!active) return;
@@ -138,7 +157,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
     gridDragRef.current = null;
     setGridDragging(false);
   }, []);
-  const visitorInputBlocked = Boolean(viewerSession);
+  const visitorInputBlocked = Boolean(viewer.placementId);
   const beginGridDrag = useCallback((event) => {
     if (!spacePressedRef.current || visitorInputBlocked || event.button !== 0 || gridDragRef.current || gridSwipeTimerRef.current !== null) return;
     event.preventDefault(); event.stopPropagation();
@@ -230,58 +249,15 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
       return { ...current, [key]: state };
     });
   }, []);
-  const openPlacementViewer = useCallback(({ element, placement, gridId }) => {
-    if (gridId !== activeGrid.id || viewerSession) return;
-    const mediaState = placementMedia[`${gridId}:${placement.id}`];
-    if (mediaState?.status !== 'ready' || !mediaState.dimensions) return;
-    const originRectangle = frozenRectangle(element.getBoundingClientRect());
-    if (!element.isConnected) return;
-    // The renderer has already decoded this media. Open synchronously so a late
-    // decode cannot resurrect an inspection after navigation or disposal.
-    setViewerSession({ originRectangle, placementId: placement.id, returnFocus: element, gridId,
-      sourceHidden: false, atmosphereActive: true });
-    dispatchInstruments({ type: 'open', instrument: 'metadata' });
-  }, [activeGrid.id, placementMedia, viewerSession]);
-  const viewerEntries = useMemo(() => activeGrid.placements.slice()
-    .sort((left, right) => left.navigationOrder - right.navigationOrder || left.id.localeCompare(right.id)).map((placement) => {
-    const decoded = placementMedia[`${activeGrid.id}:${placement.id}`];
-    const model = createProfileDocumentV9FocusViewModel(placement, {
-      decodedDimensions: decoded?.dimensions, resolvedUrl: decoded?.media?.src,
-      resolutionComplete: decoded?.status !== 'loading',
-    });
-    return model && decoded?.status === 'ready' && decoded.dimensions
-      ? { ...model, focusDimensions: decoded.dimensions, media: { ...model.media, src: decoded.media.src } } : null;
-  }).filter(Boolean), [activeGrid, placementMedia]);
-  const viewerPosition = viewerEntries.findIndex(({ placement }) => placement.id === viewerSession?.placementId);
-  const viewerEntry = viewerPosition >= 0 ? viewerEntries[viewerPosition] : null;
-  const findPlacementElement = useCallback((placementId) => [...(rootRef.current?.querySelectorAll('[data-placement-id]') || [])]
-    .find((node) => node.dataset.placementId === placementId), []);
-  const navigateViewer = useCallback((direction) => {
-    if (!viewerEntries.length || viewerPosition < 0) return;
-    const destination = viewerEntries[(viewerPosition + direction + viewerEntries.length) % viewerEntries.length];
-    const element = findPlacementElement(destination.placement.id);
-    setViewerSession((current) => current && ({ ...current, placementId: destination.placement.id, sourceHidden: true,
-      returnFocus: element || current.returnFocus }));
-  }, [findPlacementElement, viewerEntries, viewerPosition]);
-  const closePlacementViewer = useCallback(() => {
-    const returnFocus = viewerSession?.returnFocus; setViewerSession(null);
-    queueMicrotask(() => returnFocus?.isConnected ? returnFocus.focus({ preventScroll: true })
-      : rootRef.current?.focus({ preventScroll: true }));
-  }, [viewerSession]);
-  const viewer = viewerSession && viewerEntry ? {
-    ...viewerSession, entry: viewerEntry, position: viewerPosition, total: viewerEntries.length,
-    getReturnRectangle: () => findPlacementElement(viewerSession.placementId)?.getBoundingClientRect() || viewerSession.originRectangle,
-    close: closePlacementViewer, navigate: navigateViewer,
-    present: () => setViewerSession(current => current && ({ ...current, sourceHidden: true, atmosphereActive: true })),
-    beginReturn: () => setViewerSession(current => current && ({ ...current, atmosphereActive: false })),
-    revealSource: () => setViewerSession(current => current && ({ ...current, sourceHidden: false })),
-  } : null;
+  const openPlacementViewer = ({ element, placement, gridId }) => {
+    if (gridId === activeGrid.id) viewer.open(placement.id, element);
+  };
   const openIdentityRack = () => {
-    if (viewerSession || !identityRack) return;
+    if (viewer.placementId || !identityRack) return;
     setIdentityOpen(true); setProfileVisible(false);
   };
   const handleKeyDown = (event) => {
-    if (event.target.closest?.('button,a,input,select,textarea,.identity-module') || viewerSession) return;
+    if (event.target.closest?.('button,a,input,select,textarea,.identity-module') || viewer.placementId) return;
     const destination = ['ArrowRight', 'PageDown'].includes(event.key) ? activeIndex + 1
       : ['ArrowLeft', 'PageUp'].includes(event.key) ? activeIndex - 1
         : event.key === 'Home' ? 0 : event.key === 'End' ? lastIndex : null;
@@ -301,7 +277,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
         <GridProductionRenderer document={document} grid={activeGrid} imageLoading={activeIndex === 0 ? 'eager' : 'lazy'}
           onMediaState={handlePlacementMediaState} onPlacementActivate={openPlacementViewer}
           projectionBottomInset={0}
-          viewerPlacementId={viewerSession?.gridId === activeGrid.id && viewerSession.sourceHidden ? viewerSession.placementId : null} />
+          viewerPlacementId={viewer.sourcePlacementId} />
       </div>
       {swipe && swipeGrid && <div aria-hidden="true" className="visitor-grid-world__grid-plane visitor-grid-world__grid-plane--adjacent">
         <GridProductionRenderer document={document} grid={swipeGrid} imageLoading="eager"
@@ -320,14 +296,14 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
       instanceState={displayOpen ? 'window' : 'minimized'} onMinimize={() => setDisplayOpen(false)} onRestore={() => setDisplayOpen(true)}
       menuSurface={document.appearance.menuSurfaceId} displaySurface={document.appearance.surfaceId} reducedMotion={reducedMotion}
       workbenchGridMode="NONE" shortcutSnap={false}
-      playing={playing} playbackDisabled={lastIndex === 0 || Boolean(viewerSession)}
+      playing={playing} playbackDisabled={lastIndex === 0 || Boolean(viewer.placementId)}
       onTogglePlayback={() => setPlaying(current => !current)}
       instrumentTriggers={instrumentTriggers}
       metadataOpen={instruments.active === 'metadata' || instruments.metadata === 'detached'}
       instrumentBayOpen={Boolean(instruments.active)}
       onToggleMetadata={() => dispatchInstruments({ type: 'toggle', instrument: 'metadata' })}
-      inspectionAtmosphere={viewerSession?.atmosphereActive === true} onInspectionCancel={closePlacementViewer}
-      renderInspection={viewer ? (container, controlsContainer) => <DisplayFocusViewer
+      inspectionAtmosphere={viewer.atmosphereActive} onInspectionCancel={viewer.close}
+      renderInspection={viewer.placementId && viewer.entry ? (container, controlsContainer) => <DisplayFocusViewer
         container={container} controlsContainer={controlsContainer} viewer={viewer}
         menuSurface={document.appearance.menuSurfaceId} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
       renderInstruments={(projection, overlayTop) => <DisplayInstruments workspaceRef={rootRef}
@@ -337,20 +313,20 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
         renderMetadata={() => <OwnerSystemWorkflowMetadataContent dossier={viewerEntry?.dossier || null} />} />}>
       {stage}
     </PresentationBoard>
-    {profileVisible && <LatticeProfileRail blocked={Boolean(viewerSession)} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
-      identityDisabled={Boolean(viewerSession)} identityExpanded={identityOpen}
+    {profileVisible && <LatticeProfileRail blocked={Boolean(viewer.placementId)} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
+      identityDisabled={Boolean(viewer.placementId)} identityExpanded={identityOpen}
       officialIdentity={officialIdentity} onIdentityActivate={openIdentityRack} />}
     <footer className="visitor-grid-world__dock">
       <nav aria-label="Published profile navigation">
         <button aria-expanded={document.workbench ? identityOpen : profileVisible} aria-label="Profile" data-visitor-profile-trigger
-          disabled={Boolean(viewerSession)} onClick={document.workbench ? () => setIdentityOpen(current => !current) : toggleProfile}
+          disabled={Boolean(viewer.placementId)} onClick={document.workbench ? () => setIdentityOpen(current => !current) : toggleProfile}
           ref={profileDockControlRef} type="button">PROFILE</button>
         {!displayOpen && <button aria-label="Open Display" onClick={() => setDisplayOpen(true)} type="button">DISPLAY</button>}
         {displayOpen && <div aria-label="Published Grid navigation" className="visitor-grid-world__navigation" role="group">
-          <button aria-label="Previous Grid" disabled={lastIndex === 0 || Boolean(viewerSession)}
+          <button aria-label="Previous Grid" disabled={lastIndex === 0 || Boolean(viewer.placementId)}
             onClick={() => { playback.stop(); selectGrid(activeIndex - 1); }} type="button">&lt;</button>
           <span aria-live="polite">{activeGrid.title}</span>
-          <button aria-label="Next Grid" disabled={lastIndex === 0 || Boolean(viewerSession)}
+          <button aria-label="Next Grid" disabled={lastIndex === 0 || Boolean(viewer.placementId)}
             onClick={() => { playback.stop(); selectGrid(activeIndex + 1); }} type="button">&gt;</button>
         </div>}
         {(onOpenDirectory || onReturn || onExit) && <div className="visitor-grid-world__actions">
@@ -361,7 +337,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
       </nav>
       <strong aria-label="INSCAPE" className="visitor-grid-world__brand"><span aria-hidden="true" /></strong>
     </footer>
-    {identityOpen && identityRack && <div hidden={Boolean(viewerSession)}><Suspense fallback={<p role="status">Opening Identity…</p>}>
+    {identityOpen && identityRack && <div hidden={Boolean(viewer.placementId)}><Suspense fallback={<p role="status">Opening Identity…</p>}>
       <IdentityModule key={document.profile.address} model={identityRack} menuSurface={document.appearance.menuSurfaceId}
         initialWindow={identityWindow} onWindowChange={document.workbench ? changeIdentityWindow : undefined}
         onClose={() => setIdentityOpen(false)} returnFocus={profileDockControlRef.current} />
