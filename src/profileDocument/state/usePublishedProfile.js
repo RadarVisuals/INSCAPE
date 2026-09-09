@@ -19,8 +19,10 @@ export function usePublishedProfile(address, store = publishedProfileResolutionS
   );
   useEffect(() => {
     if (!profileAddress) return undefined;
+    const current = store.get(profileAddress);
+    if (current?.status === 'RESOLVED' && !current.busy) return undefined;
     store.resolve(profileAddress).catch(() => {});
-    return () => store.cancel(profileAddress);
+    return undefined;
   }, [profileAddress, store]);
   return [state, () => profileAddress ? store.resolve(profileAddress) : Promise.resolve(NO_PROFILE_CONTEXT)];
 }

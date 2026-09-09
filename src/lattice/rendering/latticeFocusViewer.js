@@ -64,6 +64,15 @@ export function focusViewerEntryRectangle(originRectangle, focusDimensions) {
     : origin;
 }
 
+export function focusViewerPresentationDimensions(entry) {
+  const dimensions = entry?.focusDimensions;
+  if (!(dimensions?.width > 0 && dimensions?.height > 0)) return dimensions;
+  const quarterTurns = entry?.placement?.transform?.quarterTurns || 0;
+  return quarterTurns % 2 === 1
+    ? Object.freeze({ width: dimensions.height, height: dimensions.width })
+    : dimensions;
+}
+
 export function focusedViewerRectangle(originRectangle, viewport, config = DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG) {
   const origin = normalizeViewerRectangle(originRectangle, 'originRectangle');
   const viewportWidth = finitePositive(Number(viewport?.width), 'viewport.width');
@@ -251,7 +260,9 @@ export function focusViewerRackLayout(originRectangle, viewport, rackOpen, confi
   const margin = compact ? 16 : Math.max(32, Number(config.horizontalMargin));
   const verticalMargin = compact ? 28 : Math.max(32, Number(config.verticalMargin));
   const gap = compact ? 64 : 56;
-  const rackWidth = compact ? Math.max(1, size.width - (margin * 2)) : Math.min(380, size.width * 0.3);
+  const rackWidth = compact
+    ? Math.max(1, size.width - (margin * 2))
+    : Math.min(430, Math.max(380, size.width * 0.34));
   const navigationClearance = 84;
 
   if (compact) {

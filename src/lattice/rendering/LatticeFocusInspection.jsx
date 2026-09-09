@@ -1,4 +1,7 @@
 import React, { useEffect } from 'react';
+import { X } from 'lucide-react';
+import DisclosureModule from './DisclosureModule.jsx';
+import { createDisclosureModuleTracks } from './disclosureModuleTracks.js';
 
 const resolved = (value) => typeof value === 'string' && value.trim();
 
@@ -7,12 +10,11 @@ const rectangleStyle = ({ height, left, top, width }) => ({ height, left, top, w
 function NarrativeContent({ dossier }) {
   return <>
     {(resolved(dossier?.title) || resolved(dossier?.description)) && <>
-      <small>DESCRIPTION</small>
       {resolved(dossier?.title) && <h2>{dossier.title}</h2>}
       {resolved(dossier?.description) && <p>{dossier.description}</p>}
     </>}
     {dossier?.traits?.length > 0 && <section>
-      <small>TRAITS</small>
+      <small>Traits</small>
       <ul className="lattice-focus-viewer__traits">
         {dossier.traits.map(({ label, value }) => <li key={label}>{label}: {value}</li>)}
       </ul>
@@ -28,7 +30,6 @@ function RecordContent({ dossier }) {
 
 function RackNarrativeContent({ dossier }) {
   return <>
-    {(resolved(dossier?.title) || resolved(dossier?.description)) && <small className="lattice-focus-viewer__rack-eyebrow">DESCRIPTION</small>}
     {resolved(dossier?.title) && <h2>{dossier.title}</h2>}
     {resolved(dossier?.description) && <p>{dossier.description}</p>}
   </>;
@@ -40,28 +41,20 @@ function AttributeContent({ dossier }) {
   </ul>;
 }
 
-function LatticeFocusRack({ activeSection, dossier, layout, onSectionChange, open }) {
+function LatticeFocusRack({ activeSection, closeButtonRef, dossier, layout, onClose, onSectionChange, open }) {
   const sections = [
-    { id: 'narrative', label: 'NARRATIVE MODULE', available: resolved(dossier?.title) || resolved(dossier?.description),
+    { id: 'narrative', label: 'NARRATIVE', available: resolved(dossier?.title) || resolved(dossier?.description),
       content: <RackNarrativeContent dossier={dossier} /> },
-    { id: 'attributes', label: 'ATTRIBUTE MODULE', available: dossier?.traits?.length > 0,
+    { id: 'attributes', label: 'ATTRIBUTES', available: dossier?.traits?.length > 0,
       content: <AttributeContent dossier={dossier} /> },
-    { id: 'technical', label: 'TECHNICAL MODULE', available: dossier?.technical?.some(({ value }) => resolved(value)),
+    { id: 'technical', label: 'TECHNICAL', available: dossier?.technical?.some(({ value }) => resolved(value)),
       content: <RecordContent dossier={dossier} /> },
   ].filter(({ available }) => available);
   const selected = sections.some(({ id }) => id === activeSection) ? activeSection : sections[0]?.id;
   useEffect(() => {
     if (selected && selected !== activeSection) onSectionChange?.(selected);
   }, [activeSection, onSectionChange, selected]);
-  const collapsedRackHeight = Math.max(0, sections.length - 1) * 54 + Math.max(0, sections.length - 1) * 4;
-  const expandedModuleHeight = Math.round(Math.max(54, layout.inspectionRack.height - collapsedRackHeight));
-  let moduleTop = 0;
-  const moduleTracks = new Map(sections.map(({ id }) => {
-    const height = id === selected ? expandedModuleHeight : 54;
-    const track = { height, '--lattice-rack-module-y': `${Math.round(moduleTop)}px` };
-    moduleTop += height + 4;
-    return [id, track];
-  }));
+  const moduleTracks = createDisclosureModuleTracks(sections, selected, layout.inspectionRack.height, 53);
   return <aside
     aria-hidden={!open}
     aria-label="Artwork metadata rack"
@@ -73,18 +66,13 @@ function LatticeFocusRack({ activeSection, dossier, layout, onSectionChange, ope
   >
     {sections.map((section) => {
       const active = section.id === selected;
-      const panelId = `lattice-rack-${section.id}-panel`;
-      return <section className="lattice-focus-viewer__rack-module" data-active={active || undefined}
-        key={section.id} style={moduleTracks.get(section.id)}>
-        <button aria-controls={panelId} aria-expanded={active} onClick={() => onSectionChange?.(section.id)} type="button">
-          <i aria-hidden="true" />
-          <span>{section.label}</span>
-          <b aria-hidden="true">{active ? '−' : '+'}</b>
-        </button>
-        {active && <div className="lattice-focus-viewer__rack-panel" data-lattice-viewer-scroll id={panelId} role="region">
-          {section.content}
-        </div>}
-      </section>;
+      return <DisclosureModule active={active}
+        className="lattice-focus-viewer__rack-module lattice-inspection-rack__module"
+        contentClassName="lattice-focus-viewer__rack-panel lattice-inspection-rack__panel"
+        headerAction={active && section.id === 'narrative' && onClose ? <button aria-label="Close artwork viewer"
+          onClick={onClose} ref={closeButtonRef} type="button"><X aria-hidden="true" /></button> : null}
+        id={`lattice-rack-${section.id}`} key={section.id} label={section.label} onToggle={() => onSectionChange?.(section.id)}
+        style={moduleTracks.get(section.id)}>{section.content}</DisclosureModule>;
     })}
   </aside>;
 }
@@ -126,7 +114,7 @@ function LatticeFocusCombinedDossier({ dossier, open, rectangle }) {
   </aside>;
 }
 
-export default function LatticeFocusInspection({ activeSection, dossier, layout, onSectionChange, open, variant = 'paired' }) {
+export default function LatticeFocusInspection({ activeSection, closeButtonRef, dossier, layout, onClose, onSectionChange, open, variant = 'paired' }) {
   return <>
     <div
       aria-hidden="true"
@@ -138,8 +126,8 @@ export default function LatticeFocusInspection({ activeSection, dossier, layout,
         '--lattice-inspection-frame-top': `${layout.inspectionFrame.top}px`,
       }}
     />
-    {variant === 'rack' ? <LatticeFocusRack activeSection={activeSection} dossier={dossier} layout={layout}
-      onSectionChange={onSectionChange} open={open} /> : layout.mode === 'lower' ? (
+    {variant === 'rack' ? <LatticeFocusRack activeSection={activeSection} closeButtonRef={closeButtonRef} dossier={dossier}
+      layout={layout} onClose={onClose} onSectionChange={onSectionChange} open={open} /> : layout.mode === 'lower' ? (
       <LatticeFocusCombinedDossier dossier={dossier} open={open} rectangle={layout.leftDossier} />
     ) : <>
       <LatticeFocusDossier dossier={dossier} layoutMode={layout.mode} open={open} rectangle={layout.leftDossier} side="left" />

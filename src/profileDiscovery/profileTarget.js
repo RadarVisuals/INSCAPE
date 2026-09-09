@@ -35,5 +35,5 @@ export function resolveProfileTarget({
 export function shouldRequestStandaloneSignIn({ embedded, walletConnected, targetSource }) {
   return !embedded
     && !walletConnected
-    && targetSource !== PROFILE_TARGET_SOURCE.EXPLICIT;
+    && targetSource === PROFILE_TARGET_SOURCE.CONNECTED;
 }

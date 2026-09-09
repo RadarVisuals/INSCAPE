@@ -2,6 +2,7 @@ import { assertValidLatticeProductionPublication } from '../domain/latticeProduc
 import { projectCroppedMediaRectangle } from './latticeCrop.js';
 import { projectArtworkMat } from './latticeMat.js';
 import { projectLatticeProductionTransform } from '../authoring/latticeProductionTransform.js';
+import { projectLatticePixelRectangle, projectLatticeRasterBleedRectangle } from './latticePixelGeometry.js';
 
 const positiveViewport = (viewport) => Boolean(viewport
   && Number.isFinite(viewport.width) && viewport.width > 0
@@ -90,8 +91,8 @@ export function projectLatticeProductionLabel(table, field) {
   });
 }
 
-export function projectLatticeProductionArtwork(placement, field, mediaDimensions) {
-  const footprint = projectLatticeProductionPlacement(placement, field);
+function projectArtwork(placement, field, mediaDimensions, projectPlacement) {
+  const footprint = projectPlacement(placement, field);
   const mat = projectArtworkMat(footprint, placement.mat);
   if (!mediaDimensions) return Object.freeze({
     footprint,
@@ -106,12 +107,13 @@ export function projectLatticeProductionArtwork(placement, field, mediaDimension
   const imageRectangle = transformed.crop
     ? projectCroppedMediaRectangle(mat.mediaOpeningRectangle, transformed.dimensions, transformed.crop)
     : fitNativeMediaRectangle(mat.mediaOpeningRectangle, transformed.dimensions);
+  const rasterRectangle = projectLatticeRasterBleedRectangle(imageRectangle, mat.mediaOpeningRectangle);
   const imageRenderRectangle = transformed.swapped ? {
-    left: imageRectangle.left + ((imageRectangle.width - imageRectangle.height) / 2),
-    top: imageRectangle.top + ((imageRectangle.height - imageRectangle.width) / 2),
-    width: imageRectangle.height,
-    height: imageRectangle.width,
-  } : imageRectangle;
+    left: rasterRectangle.left + ((rasterRectangle.width - rasterRectangle.height) / 2),
+    top: rasterRectangle.top + ((rasterRectangle.height - rasterRectangle.width) / 2),
+    width: rasterRectangle.height,
+    height: rasterRectangle.width,
+  } : rasterRectangle;
   return Object.freeze({
     footprint,
     mat: mat.mat,
@@ -121,4 +123,12 @@ export function projectLatticeProductionArtwork(placement, field, mediaDimension
     imageRenderRectangle: Object.freeze(imageRenderRectangle),
     imageTransform: transformed.css,
   });
+}
+
+export function projectLatticeProductionArtwork(placement, field, mediaDimensions) {
+  return projectArtwork(placement, field, mediaDimensions, projectLatticeProductionPlacement);
+}
+
+export function projectLatticeProductionPixelArtwork(placement, field, mediaDimensions) {
+  return projectArtwork(placement, field, mediaDimensions, projectLatticePixelRectangle);
 }

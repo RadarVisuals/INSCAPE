@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createEmptyLatticeProductionDraft } from '../domain/latticeProductionDraft.js';
+import {
+  LATTICE_PRODUCTION_GRID_STATES,
+  LATTICE_PRODUCTION_VISIBILITY,
+  createEmptyLatticeProductionDraft,
+} from '../domain/latticeProductionDraft.js';
 import {
   LATTICE_PRODUCTION_DRAFT_KEY_PREFIX,
   createLatticeProductionDraftStore,
@@ -49,6 +53,22 @@ test('canonical storage keys use one versioned lowercase profile scope', () => {
   assert.throws(() => latticeProductionDraftKey('not-a-profile'), /valid profile address/);
 });
 
+test('historical v2 drafts load as detached all-active v3 state without an incidental storage write', () => {
+  const historical = titledDraft(PROFILE_A, 'Historical center');
+  historical.draftVersion = 2;
+  historical.tables.forEach((table) => {
+    delete table.gridState;
+    table.visibility = LATTICE_PRODUCTION_VISIBILITY.PUBLIC;
+  });
+  const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE_A)]: JSON.stringify(historical) });
+  const store = createLatticeProductionDraftStore({ storage, profileAddress: PROFILE_A });
+  const restored = store.getDraft();
+  assert.equal(restored.draftVersion, 3);
+  assert.ok(restored.tables.every(({ gridState }) => gridState === LATTICE_PRODUCTION_GRID_STATES.ACTIVE));
+  assert.equal(storage.writeCount, 0);
+  assert.equal(JSON.parse(storage.values.get(latticeProductionDraftKey(PROFILE_A))).draftVersion, 2);
+});
+
 test('reconciliation classifies absent, valid, and corrupt records without rewriting corruption', () => {
   const absentStorage = memoryStorage();
   const absent = createLatticeProductionDraftStore({ storage: absentStorage, profileAddress: PROFILE_A });
@@ -74,7 +94,7 @@ test('reconciliation compensation restores only absence or a validated prior dra
   assert.equal(absent.commitCompletedOperation(titledDraft(PROFILE_A, 'Created')), true);
   assert.equal(absent.restoreReconciliationCheckpoint(absentCheckpoint), true);
   assert.equal(absentStorage.values.has(latticeProductionDraftKey(PROFILE_A)), false);
-  assert.equal(absent.getDraft().tables[4].title, '');
+  assert.equal(absent.getDraft().tables[4].title, 'HOME');
 
   const prior = titledDraft(PROFILE_A, 'Prior');
   const validStorage = memoryStorage({ [latticeProductionDraftKey(PROFILE_A)]: JSON.stringify(prior) });
@@ -163,7 +183,7 @@ test('invalid completed operations fail closed without overwriting accepted stat
 test('malformed, unsupported, and wrong-profile records recover to an unwritten empty draft', () => {
   const corruptRecords = [
     '{broken',
-    JSON.stringify({ ...titledDraft(PROFILE_A, 'Future'), draftVersion: 3 }),
+    JSON.stringify({ ...titledDraft(PROFILE_A, 'Future'), draftVersion: 4 }),
     JSON.stringify(titledDraft(PROFILE_B, 'Other profile')),
   ];
 
@@ -171,7 +191,7 @@ test('malformed, unsupported, and wrong-profile records recover to an unwritten 
     const storage = memoryStorage({ [latticeProductionDraftKey(PROFILE_A)]: raw });
     const store = createLatticeProductionDraftStore({ storage, profileAddress: PROFILE_A });
     assert.equal(store.getDraft().profileAddress, PROFILE_A);
-    assert.equal(store.getDraft().tables[4].title, '');
+    assert.equal(store.getDraft().tables[4].title, 'HOME');
     assert.equal(storage.writeCount, 0);
     assert.equal(storage.values.get(latticeProductionDraftKey(PROFILE_A)), raw);
   });
@@ -197,7 +217,7 @@ test('profile switching isolates drafts and rejects late cross-profile commits',
 
   assert.equal(store.setProfileAddress(PROFILE_B), true);
   assert.equal(store.getProfileAddress(), PROFILE_B);
-  assert.equal(store.getDraft().tables[4].title, '');
+  assert.equal(store.getDraft().tables[4].title, 'HOME');
   assert.equal(store.commitCompletedOperation(lateProfileACommit), false);
   assert.equal(store.commitCompletedOperation(titledDraft(PROFILE_B, 'Profile B')), true);
 

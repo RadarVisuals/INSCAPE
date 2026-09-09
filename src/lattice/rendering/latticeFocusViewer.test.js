@@ -1,17 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
   DEFAULT_LATTICE_FOCUS_VIEWER_CONFIG,
   focusViewerEntryRectangle,
   focusViewerDestination,
   focusViewerLayout,
+  focusViewerPresentationDimensions,
   focusViewerRackLayout,
   focusedViewerRectangle,
   normalizeViewerRectangle,
   orderedFocusViewerEntries,
   shouldContainViewerScroll,
 } from './latticeFocusViewer.js';
+
+test('a grid-free inspection surface is opaque so workspace line and dot guides cannot bleed through', () => {
+  const css = readFileSync(new URL('./latticeFocusViewer.css', import.meta.url), 'utf8');
+  assert.match(css, /\[data-grid-visible="false"\] \.lattice-focus-viewer__surface \{[\s\S]*background-color: var\(--lattice-inspection-surface, #090a0a\);[\s\S]*background-image: none;/);
+});
 
 test('browse layers preserve inherited DOMRect coordinates before applying decoded dimensions', () => {
   const domRectangle = Object.create({ left: 120, top: 80, width: 240, height: 360 });
@@ -21,6 +28,19 @@ test('browse layers preserve inherited DOMRect coordinates before applying decod
     width: 1200,
     height: 800,
   });
+});
+
+test('viewer presentation dimensions follow the authored quarter-turn orientation', () => {
+  const dimensions = { width: 1200, height: 800 };
+  assert.equal(focusViewerPresentationDimensions({ focusDimensions: dimensions }), dimensions);
+  assert.deepEqual(focusViewerPresentationDimensions({
+    focusDimensions: dimensions,
+    placement: { transform: { quarterTurns: 1 } },
+  }), { width: 800, height: 1200 });
+  assert.deepEqual(focusViewerPresentationDimensions({
+    focusDimensions: dimensions,
+    placement: { transform: { quarterTurns: 3 } },
+  }), { width: 800, height: 1200 });
 });
 
 test('viewer dossier scroll contains empty regions and both scroll-chain boundaries', () => {

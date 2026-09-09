@@ -1,7 +1,7 @@
 import { CHILLWHALES_INDEXER_URL, IPFS_GATEWAY_URL, LIBRARY_PAGE_SIZE, normalizeProfileAddress } from '../config.js';
 import { normalizeProfileAsset } from '../domain/normalizeProfileAsset.js';
 
-const PROFILE_ASSETS_QUERY = `
+const PROFILE_ASSET_FRAGMENTS = `
 fragment InscapeMetadata on lsp4_metadata {
   name { value }
   description { value }
@@ -21,6 +21,9 @@ fragment InscapeDigitalAsset on digital_asset {
   }
   lsp4Metadata { ...InscapeMetadata }
 }
+`;
+
+const PROFILE_ASSETS_QUERY = `${PROFILE_ASSET_FRAGMENTS}
 query InscapeProfileAssets($owner: String!, $limit: Int!, $assetOffset: Int!, $tokenOffset: Int!) {
   owned_asset(
     where: { owner: { _ilike: $owner } }
@@ -115,7 +118,7 @@ function contractMetadata(digitalAsset) {
   };
 }
 
-function normalizeOwnedAsset(row, ownerAddress, options) {
+export function normalizeOwnedAsset(row, ownerAddress, options) {
   const contract = contractMetadata(row?.digitalAsset);
   return normalizeProfileAsset({
     id: row?.id,
@@ -125,7 +128,7 @@ function normalizeOwnedAsset(row, ownerAddress, options) {
   }, ownerAddress, options);
 }
 
-function normalizeOwnedToken(row, ownerAddress, options) {
+export function normalizeOwnedToken(row, ownerAddress, options) {
   const contract = contractMetadata(row?.digitalAsset);
   const metadata = mergeTokenMetadata(row?.nft);
   return normalizeProfileAsset({

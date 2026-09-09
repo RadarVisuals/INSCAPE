@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createViewedProfileUrl, resolveExplicitViewedProfile, resolveViewedProfile } from './viewedProfileUrl.js';
+import { createSelectedProfileUrl, createViewedProfileUrl, resolveExplicitViewedProfile, resolveViewedProfile } from './viewedProfileUrl.js';
 
 const CONNECTED = '0x1111111111111111111111111111111111111111';
 const VIEWED = '0x2222222222222222222222222222222222222222';
@@ -18,6 +18,14 @@ test('returning to the connected profile removes only the view parameter', () =>
   const url = createViewedProfileUrl(location, CONNECTED, CONNECTED);
   assert.match(url, new RegExp(`profile=${CONNECTED}`));
   assert.doesNotMatch(url, /[?&]view=/);
+});
+
+test('selecting even the connected profile retains explicit URL intent across authority restarts', () => {
+  const location = { href: `https://example.test/?profile=${CONNECTED}&mode=public`, search: `?profile=${CONNECTED}&mode=public` };
+  const url = createSelectedProfileUrl(location, CONNECTED);
+  assert.match(url, new RegExp(`profile=${CONNECTED}`));
+  assert.match(url, new RegExp(`view=${CONNECTED}`));
+  assert.equal(resolveExplicitViewedProfile({ search: url.slice(url.indexOf('?')) }), CONNECTED);
 });
 
 test('an explicit navigation target is not replaced by a later wallet identity', () => {

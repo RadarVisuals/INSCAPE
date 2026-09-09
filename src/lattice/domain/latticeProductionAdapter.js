@@ -96,6 +96,8 @@ export function projectLatticeProductionPublication(draftInput, assetRecords, { 
     },
     lastPublished,
     tables: draft.tables.map((table) => {
+      // Valid unused Grids are necessarily private, so the existing Version 8
+      // redacted-slot projection remains the single publication boundary.
       if (table.visibility === LATTICE_PRODUCTION_VISIBILITY.PRIVATE) return {
         id: table.id,
         coordinate: { ...table.coordinate },

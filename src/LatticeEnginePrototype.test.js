@@ -188,23 +188,24 @@ test('viewer browsing follows explicit navigation order with wrapping and ratio-
   assert.match(focusViewer, /Previous artwork/);
   assert.match(focusViewer, /Next artwork/);
   assert.match(focusViewer, /outgoingLayer/);
-  assert.match(focusViewer, /createLayout\(\s*focusViewerEntryRectangle\(\s*outgoingLayer\.originRectangle,\s*outgoingLayer\.entry\.focusDimensions,?\s*\),\s*viewport\)/);
+  assert.match(focusViewer, /createLayout\(focusViewerEntryRectangle\([\s\S]*?outgoingLayer\.originRectangle,[\s\S]*?focusViewerPresentationDimensions\(outgoingLayer\.entry\)[\s\S]*?\), viewport\)\.artwork/);
   assert.match(focusViewerStyles, /lattice-focus-viewer-browse-in/);
   assert.match(focusViewerStyles, /lattice-focus-viewer-browse-out/);
   assert.match(focusViewerStyles, /\.lattice-focus-viewer__navigation\s*\{[^}]*left: 50%;[^}]*bottom: 18px;/s);
   assert.doesNotMatch(focusViewer, /controlsTop/);
   assert.doesNotMatch(focusViewer, /navigationDirection|onNavigationSettled|localStorage|sessionStorage|indexedDB/iu);
   assert.doesNotMatch(focusViewerStyles, /lattice-focus-viewer-(?:next|previous)|data-direction|navigation-duration/iu);
-  assert.match(focusViewerStyles, /transition: transform 420ms/);
+  assert.match(focusViewerStyles, /animation: lattice-focus-viewer-browse-in var\(--lattice-viewer-browse-duration\)/);
   assert.match(focusViewer, /className="lattice-focus-viewer__surface"/);
   assert.match(focusViewerStyles, /\.lattice-focus-viewer\[data-phase="starting"\] \.lattice-focus-viewer__surface,[\s\S]*?\.lattice-focus-viewer\[data-phase="closing"\] \.lattice-focus-viewer__surface\s*\{[^}]*opacity: 0;/s);
   assert.match(focusViewerStyles, /\.lattice-focus-viewer\[data-phase="opening"\] \.lattice-focus-viewer__surface,[\s\S]*?\.lattice-focus-viewer\[data-phase="closing"\] \.lattice-focus-viewer__surface\s*\{[^}]*transition: opacity 240ms/);
   assert.doesNotMatch(focusViewerStyles, /\.lattice-focus-viewer\[data-phase="closing"\]\s*\{[^}]*opacity:/s);
-  assert.match(focusViewerStyles, /will-change: transform/);
+  assert.match(focusViewerStyles, /will-change: left, top, width, height/);
   assert.doesNotMatch(focusViewerStyles, /(?:left|top|width|height) 420ms/);
   assert.match(focusViewerStyles, /@keyframes lattice-focus-viewer-browse-in\s*\{[^}]*transform: scale\(0\.995\)/s);
   assert.match(focusViewerStyles, /@keyframes lattice-focus-viewer-browse-out\s*\{[^}]*transform: scale\(1\)/s);
-  assert.match(focusViewerStyles, /\[data-phase="open"\] \.lattice-focus-viewer__artwork\s*\{[^}]*transition: none;/s);
+  assert.match(focusViewerStyles, /\[data-phase="open"\]\[data-adaptive-rack-presentation\] \.lattice-focus-viewer__artwork\s*\{[^}]*transition: left 320ms/s);
+  assert.doesNotMatch(focusViewerStyles, /\[data-phase="open"\] \.lattice-focus-viewer__artwork\s*\{[^}]*(?:top|width|height)\s+\d+ms/s);
 });
 
 test('Phase 5 paired dossiers remain an explicit prototype compatibility variant', () => {

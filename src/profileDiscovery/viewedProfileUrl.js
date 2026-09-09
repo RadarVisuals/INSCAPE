@@ -16,3 +16,10 @@ export function createViewedProfileUrl(locationLike, address, connectedProfileAd
   if (!viewed || viewed === connected) url.searchParams.delete('view'); else url.searchParams.set('view', viewed);
   return `${url.pathname}${url.search}${url.hash}`;
 }
+
+export function createSelectedProfileUrl(locationLike, address) {
+  const url = new URL(locationLike?.href || String(locationLike), globalThis.location?.origin || 'http://localhost');
+  const viewed = normalizeProfileAddress(address);
+  if (viewed) url.searchParams.set('view', viewed); else url.searchParams.delete('view');
+  return `${url.pathname}${url.search}${url.hash}`;
+}

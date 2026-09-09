@@ -5,7 +5,6 @@ import BrowserCategoryDialog from '../browser/BrowserCategoryDialog.jsx';
 import { BrowserFilterControls } from '../browser/BrowserUnifiedPanel.jsx';
 import Modul8rLibraryPanel from './Modul8rLibraryPanel.jsx';
 import { BROWSER_VIEW_KINDS, categoryMembershipState } from '../browser/browserWorkspaceModel.js';
-import useBrowserWorkspace from '../browser/useBrowserWorkspace.js';
 import RackMenu from '../../public/menus/RackMenu.jsx';
 import '../browser/browserWorkspace.css';
 import './modul8rLibrary.css';
@@ -18,14 +17,19 @@ function contextAnchor(event) {
 
 export default function Modul8rLibraryAdapter({
   categoryCommands = null,
+  categoryVisibilityCommands = true,
+  collectionContext = null,
   data,
   faceplateTargetRef,
   onAssetPointerDown,
   onAssetActivate,
+  onExitCollection,
   onRenderableAssetsChange,
+  onRetryCollection,
   onRetryCreated,
+  menuSurfaceId = null,
+  workspace,
 }) {
-  const workspace = useBrowserWorkspace(data);
   const categorySectionRef = useRef(null);
   const organizationGestureRef = useRef(null);
   const suppressSelectionRef = useRef(false);
@@ -70,7 +74,7 @@ export default function Modul8rLibraryAdapter({
     const category = data.categories.find(({ id }) => id === contextMenu.categoryId);
     return category ? [
       { id: 'rename', label: 'RENAME' },
-      { id: 'visibility', label: category.public ? 'MAKE PRIVATE' : 'MAKE PUBLIC' },
+      ...(categoryVisibilityCommands ? [{ id: 'visibility', label: category.public ? 'MAKE PRIVATE' : 'MAKE PUBLIC' }] : []),
       { id: 'delete', label: 'DELETE' },
     ] : [];
   })() : [];
@@ -115,6 +119,7 @@ export default function Modul8rLibraryAdapter({
   };
 
   const beginOrganizationDrag = (event, asset) => {
+    if (asset.isCollection && asset.collectionRole !== 'cover') return;
     const assetId = asset.stableAssetId || asset.id;
     const selectedIds = workspace.selectedAssetIds.includes(assetId)
       ? [...workspace.selectedAssetIds] : [assetId];
@@ -182,7 +187,7 @@ export default function Modul8rLibraryAdapter({
   const faceplateControls = <div className="modul8r-library__faceplate-controls">
     <div className="modul8r-library__controls">
       <label className="modul8r-library__search"><Search aria-hidden="true" size={13} /><input aria-label="Search assets" onChange={(event) => workspace.setQuery(event.target.value)} placeholder="SEARCH" type="search" value={workspace.query} /></label>
-      <label className="modul8r-library__size"><span>SIZE</span><input aria-label="Asset thumbnail size" max={workspace.assetSizeBounds.MAXIMUM} min={workspace.assetSizeBounds.MINIMUM} onChange={(event) => workspace.setAssetSize(Number(event.target.value))} type="range" value={workspace.assetSize} /><output>{workspace.assetSize}</output></label>
+      <label className="modul8r-library__size"><span>SIZE</span><input aria-label="Asset thumbnail size" max={workspace.assetSizeBounds.MAXIMUM} min={workspace.assetSizeBounds.MINIMUM} onChange={(event) => workspace.setAssetSize(Number(event.target.value))} step="1" type="range" value={workspace.assetSize} /><output>{workspace.assetSize}</output></label>
       <span className="modul8r-library__indicators">
         {data.status === 'loading' && <output className="modul8r-library__progress">{data.progress?.resolved || 0} / {data.progress?.total || 0}</output>}
         {workspace.unavailableCount > 0 && <output aria-label={`${workspace.unavailableCount} unavailable assets`}
@@ -200,12 +205,14 @@ export default function Modul8rLibraryAdapter({
   }}>
     {faceplateTarget && createPortal(faceplateControls, faceplateTarget)}
     <Modul8rLibraryPanel categoryDropTargetId={organizationDrag?.categoryId} categorySectionRef={categorySectionRef}
-      data={data} onAssetActivate={onAssetActivate} onAssetContext={openAssetContext} onAssetPointerDown={beginOrganizationDrag}
+      collectionContext={collectionContext} data={data} onAssetActivate={onAssetActivate} onAssetContext={openAssetContext}
+      onAssetPointerDown={beginOrganizationDrag}
       onCategoryContext={openCategoryContext}
       onCreateCategory={categoryCommands ? (trigger) => workspace.setDialog({ trigger, type: 'create' }) : null}
-      onRetryCreated={onRetryCreated} relationshipView={relationshipView} selectRelationshipView={setRelationshipView}
+      onExitCollection={onExitCollection} onRetryCollection={onRetryCollection} onRetryCreated={onRetryCreated}
+      relationshipView={relationshipView} selectRelationshipView={setRelationshipView}
       workspace={panelWorkspace} />
-    {contextMenu && createPortal(<RackMenu anchor={contextMenu.anchor}
+    {contextMenu && createPortal(<RackMenu anchor={contextMenu.anchor} menuSurfaceId={menuSurfaceId} systemWorkflowOverlay={!categoryVisibilityCommands}
       commands={contextMenu.kind === 'category' ? categoryMenuCommands : membershipCommands}
       label={contextMenu.kind === 'category' ? 'Category commands' : 'NFT category membership'}
       onClose={() => closeContextMenu()} onCommand={handleContextCommand} returnFocus={contextMenu.trigger} />, document.body)}

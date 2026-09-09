@@ -5,6 +5,7 @@ import { IPFS_GATEWAY_URL, LIBRARY_PAGE_SIZE, LUKSO_RPC_FALLBACK_URLS, LUKSO_RPC
   normalizeProfileAddress } from '../config.js';
 import { createStableAssetId, normalizeProfileAsset } from '../domain/normalizeProfileAsset.js';
 import { resolveContentUrl } from './resolveContentUrl.js';
+import { decodeVerifiedOnchainJsonDataUri } from './onchainDataUri.js';
 
 const LSP5_RECEIVED_ASSETS_SCHEMA = [{
   name: 'LSP5ReceivedAssets[]',
@@ -120,9 +121,12 @@ function prioritizeHoldings(holdings, priorityAssetIds) {
     }).map((entry) => entry.holding);
 }
 
-function decodeMetadataUri(value) {
+function decodeMetadataPointer(value) {
   if (!value || value === '0x') return null;
-  try { return decodeDataSourceWithHash(value)?.url || null; } catch { return null; }
+  try {
+    const pointer = decodeDataSourceWithHash(value);
+    return pointer?.url ? pointer : null;
+  } catch { return null; }
 }
 
 function flattenMedia(value, output = []) {
@@ -214,7 +218,9 @@ async function readContractFacts(address, client) {
   };
 }
 
-async function fetchMetadataDocument(uri, { fetchImpl, ipfsGateway, signal, metadataResponseMs = METADATA_RESPONSE_TIMEOUT_MS }) {
+async function fetchMetadataDocument(pointer, { fetchImpl, ipfsGateway, signal, metadataResponseMs = METADATA_RESPONSE_TIMEOUT_MS }) {
+  const uri = pointer?.url;
+  if (/^data:/iu.test(uri || '')) return decodeVerifiedOnchainJsonDataUri(uri, pointer.verification);
   const url = resolveContentUrl(uri, { ipfsGateway });
   if (!url) return null;
   throwIfAborted(signal);
@@ -238,17 +244,17 @@ async function fetchMetadataDocument(uri, { fetchImpl, ipfsGateway, signal, meta
 async function readCollectionMetadata(address, client, context) {
   const value = await client.readContract({ address: getAddress(address), abi: ERC725Y_ABI,
     functionName: 'getData', args: [LSP4_METADATA_KEY] });
-  const uri = decodeMetadataUri(value);
-  return uri ? fetchMetadataDocument(uri, context) : null;
+  const pointer = decodeMetadataPointer(value);
+  return pointer ? fetchMetadataDocument(pointer, context) : null;
 }
 
 async function readTokenMetadata(holding, client, context, globalTokenIdFormat) {
   if (holding.standard === 'LSP7') return null;
   const directValue = await client.readContract({ address: getAddress(holding.address), abi: LSP8_ABI,
     functionName: 'getDataForTokenId', args: [holding.tokenId, LSP4_METADATA_KEY] }).catch(() => null);
-  let uri = decodeMetadataUri(directValue);
-  let source = uri ? 'LSP4MetadataForTokenId' : null;
-  if (!uri) {
+  let pointer = decodeMetadataPointer(directValue);
+  let source = pointer ? 'LSP4MetadataForTokenId' : null;
+  if (!pointer) {
     let tokenIdFormat = globalTokenIdFormat;
     if (tokenIdFormat != null && tokenIdFormat >= 100) {
       const tokenFormatValue = await client.readContract({ address: getAddress(holding.address), abi: LSP8_ABI,
@@ -261,15 +267,15 @@ async function readTokenMetadata(holding, client, context, globalTokenIdFormat) 
       : await client.readContract({ address: getAddress(holding.address), abi: ERC725Y_ABI,
         functionName: 'getData', args: [LSP8_METADATA_BASE_URI_KEY] }).catch(() => null);
     const baseValue = tokenBaseValue && tokenBaseValue !== '0x' ? tokenBaseValue : globalBaseValue;
-    const baseUri = decodeMetadataUri(baseValue);
+    const baseUri = decodeMetadataPointer(baseValue)?.url || null;
     if (baseUri) {
       const decodedTokenId = decodeTokenIdForMetadata(String(holding.tokenId).toLowerCase(), tokenIdFormat);
-      uri = decodedTokenId == null ? null : `${baseUri}${decodedTokenId}`;
+      pointer = decodedTokenId == null ? null : { url: `${baseUri}${decodedTokenId}`, verification: null };
       source = tokenBaseValue && tokenBaseValue !== '0x' ? 'LSP8TokenMetadataBaseURIForTokenId' : 'LSP8TokenMetadataBaseURI';
     }
   }
-  const document = uri ? await fetchMetadataDocument(uri, context) : null;
-  return document ? { document, source } : null;
+  const document = pointer ? await fetchMetadataDocument(pointer, context) : null;
+  return document ? { document, pointer, source } : null;
 }
 
 function toNormalizedAsset(holding, ownerAddress, tokenDocument, collectionDocument, contractFacts, options) {
@@ -291,7 +297,16 @@ function toNormalizedAsset(holding, ownerAddress, tokenDocument, collectionDocum
       attributes: metadataAttributes(tokenDocument?.document), asset: contractMetadata,
       metadataSource: tokenDocument?.source || 'LSP4MetadataForTokenId' }
   } : { id: `rpc:${holding.address}`, balance: holding.balance, asset_id: holding.address, asset: contractMetadata };
-  return normalizeProfileAsset(rawHolding, ownerAddress, options);
+  const normalized = normalizeProfileAsset(rawHolding, ownerAddress, options);
+  const verification = tokenDocument?.pointer?.verification;
+  const compactOnchainReference = normalized?.imageUrl?.startsWith('data:image/svg+xml;base64,')
+    && tokenDocument?.pointer?.url?.startsWith('data:application/json')
+    && typeof verification?.method === 'string' && /^0x[0-9a-f]{64}$/iu.test(verification?.data || '')
+    ? {
+      protocol: 'erc725y', scope: 'tokenId', dataKey: LSP4_METADATA_KEY,
+      verification: { method: verification.method, data: verification.data.toLowerCase() },
+    } : null;
+  return compactOnchainReference ? { ...normalized, contentReference: compactOnchainReference } : normalized;
 }
 
 async function mapConcurrent(items, concurrency, mapper) {

@@ -1,9 +1,13 @@
 import { encodeDataSourceWithHash } from '@erc725/erc725.js';
 import { keccak256 } from 'viem';
 import { normalizeProfileAddress } from '../../library/config.js';
-import { canonicalSerializeProfileDocument, createProfileDocumentPublicationFilename, profileDocumentContentFingerprint } from './profileDocumentSerialization.js';
 import { isValidCid } from './cidValidation.js';
-import { assertProfileDocumentPublicationVersion } from './constants.js';
+import {
+  canonicalSerializeProfileDocumentV9,
+  createProfileDocumentV9Filename,
+  profileDocumentV9ContentFingerprint,
+} from './profileDocumentV9Serialization.js';
+import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 
 export const PROFILE_DOCUMENT_PUBLICATION_STATUS = Object.freeze({
   READY: 'READY', VERIFYING_CID: 'VERIFYING_CID', CID_VERIFIED: 'CID_VERIFIED',
@@ -28,25 +32,24 @@ function deepFreeze(value) {
 }
 
 export function createCanonicalPublication(snapshot) {
-  assertProfileDocumentPublicationVersion(snapshot);
-  const document = deepFreeze(structuredClone(snapshot));
-  const text = canonicalSerializeProfileDocument(document);
+  const document = deepFreeze(assertValidProfileDocumentV9(snapshot));
+  const text = canonicalSerializeProfileDocumentV9(document);
   const bytes = new TextEncoder().encode(text);
-  return Object.freeze({ document, text, bytes, hash: keccak256(bytes), filename: createProfileDocumentPublicationFilename(document) });
+  return Object.freeze({ document, text, bytes, hash: keccak256(bytes), filename: createProfileDocumentV9Filename(document) });
 }
 
 export function canonicalPublicationHash(snapshot) {
-  return keccak256(new TextEncoder().encode(canonicalSerializeProfileDocument(snapshot)));
+  return keccak256(new TextEncoder().encode(canonicalSerializeProfileDocumentV9(snapshot)));
 }
 
 export function publicationContentFingerprint(document) {
-  return keccak256(new TextEncoder().encode(profileDocumentContentFingerprint(document)));
+  return keccak256(new TextEncoder().encode(profileDocumentV9ContentFingerprint(document)));
 }
 
 export function encodeProfileDocumentVerifiableUri(ipfsUri, hash) {
   const uri = normalizeProfileDocumentCid(ipfsUri);
   if (!/^0x[0-9a-f]{64}$/iu.test(hash || '')) throw new Error('A canonical keccak256 hash is required');
-  return encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: hash }, uri);
+  return encodeDataSourceWithHash({ method: 'keccak256(utf8)', data: hash }, uri);
 }
 
 function chainNumber(value) {

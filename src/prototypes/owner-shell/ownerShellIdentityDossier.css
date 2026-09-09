@@ -1,0 +1,67 @@
+.owner-shell-identity { position: fixed; inset: 0; z-index: 40; overflow: hidden; isolation: isolate; color: var(--lattice-menu-ink); }
+.owner-shell-identity:not([data-phase="open"]) { pointer-events: none; }
+.owner-shell-identity__veil { position: fixed; inset: 0; z-index: 0; background: color-mix(in srgb, var(--prototype-panel) 92%, transparent); opacity: 0; transition: opacity 260ms cubic-bezier(.22,.76,.26,1); }
+.owner-shell-identity:is([data-phase="opening"], [data-phase="open"]) .owner-shell-identity__veil { opacity: 1; }
+.owner-shell-identity[data-phase="closing"] .owner-shell-identity__veil { opacity: 0; transition-delay: 140ms; }
+
+.owner-shell-identity__rack-viewport { position: fixed; z-index: 2; inset: 0 0 52px; overflow: hidden; pointer-events: none; }
+.owner-shell-identity__rack { position: absolute; overflow: hidden; pointer-events: auto; box-shadow: var(--prototype-shadow-workspace); transition: left 420ms cubic-bezier(.2,.72,.2,1), top 420ms cubic-bezier(.2,.72,.2,1), width 420ms cubic-bezier(.2,.72,.2,1), height 420ms cubic-bezier(.2,.72,.2,1), box-shadow 420ms cubic-bezier(.2,.72,.2,1); }
+.owner-shell-identity:is([data-phase="starting"], [data-phase="closing"]) .owner-shell-identity__rack { box-shadow: var(--prototype-shadow-compact); }
+.owner-shell-identity__module { position: absolute; left: 0; width: 100%; min-height: 53px; overflow: hidden; box-sizing: border-box; border: 1px solid var(--lattice-menu-line-strong); background: var(--prototype-panel); box-shadow: 4px 5px 12px rgb(0 0 0 / .1); transition: top 320ms cubic-bezier(.2,.72,.2,1), height 320ms cubic-bezier(.2,.72,.2,1), opacity 160ms linear, border-color 420ms cubic-bezier(.2,.72,.2,1), box-shadow 420ms cubic-bezier(.2,.72,.2,1); }
+.owner-shell-identity__module[data-active] { box-shadow: var(--prototype-shadow-workspace); }
+.owner-shell-identity:is([data-phase="opening"], [data-phase="closing"]) .owner-shell-identity__module { transition-duration: 420ms, 420ms, 160ms, 420ms, 420ms; }
+.owner-shell-identity:is([data-phase="starting"], [data-phase="closing"]) .owner-shell-identity__module.is-profile { border-color: var(--lattice-menu-line-strong); box-shadow: none; }
+.owner-shell-identity:is([data-phase="starting"], [data-phase="closing"]) .owner-shell-identity__module:not(.is-profile) { opacity: 0; }
+
+.owner-shell-identity__lead { width: 100%; height: 92px; min-height: 53px; padding: 14px; display: grid; grid-template-columns: 58px minmax(0, 1fr) 22px; align-items: center; gap: 12px; border: 0; color: inherit; background-color: var(--prototype-selection); text-align: left; cursor: pointer; transition: height 320ms cubic-bezier(.2,.72,.2,1), padding 320ms cubic-bezier(.2,.72,.2,1), grid-template-columns 320ms cubic-bezier(.2,.72,.2,1), background-color 420ms cubic-bezier(.2,.72,.2,1); }
+.owner-shell-identity__avatar { width: 58px; height: 58px; display: grid; place-items: center; border: 1px solid var(--lattice-menu-line-strong); border-radius: 50%; background: var(--prototype-selection); font: 600 15px/1 "Inscape Geist Sans", sans-serif; transition: width 320ms cubic-bezier(.2,.72,.2,1), height 320ms cubic-bezier(.2,.72,.2,1); }
+.owner-shell-identity__lead > span:nth-child(2) { min-width: 0; display: grid; gap: 6px; }
+.owner-shell-identity__lead small { color: var(--lattice-menu-muted); font: var(--lattice-window-type-label); letter-spacing: .07em; }
+.owner-shell-identity__lead code { color: var(--lattice-menu-muted); font: var(--prototype-type-micro); letter-spacing: .06em; }
+.owner-shell-identity__lead strong { overflow: hidden; font: 600 14px/1 "Inscape Geist Sans", sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.owner-shell-identity__lead > b { font: var(--lattice-window-type-module); font-weight: 400; }
+.owner-shell-identity:is([data-phase="starting"], [data-phase="closing"]) .owner-shell-identity__lead { grid-template-columns: 58px minmax(0, 1fr); background-color: transparent; }
+.owner-shell-identity:is([data-phase="starting"], [data-phase="closing"]) .owner-shell-identity__lead > span:nth-child(2) > small,
+.owner-shell-identity:is([data-phase="starting"], [data-phase="closing"]) .owner-shell-identity__lead > b { display: none; }
+.owner-shell-identity__module.is-profile:not([data-active]) .owner-shell-identity__lead { height: 53px; padding: 7px 13px; grid-template-columns: 36px minmax(0, 1fr) 22px; }
+.owner-shell-identity__module.is-profile:not([data-active]) .owner-shell-identity__avatar { width: 36px; height: 36px; font-size: 10px; }
+.owner-shell-identity__module.is-profile:not([data-active]) .owner-shell-identity__lead small { display: none; }
+
+.owner-shell-identity__module-header { position: relative; width: 100%; height: 53px; padding: 0 13px; display: grid; grid-template-columns: 8px 1fr 22px; align-items: center; gap: 8px; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.owner-shell-identity__module-header i { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .3; }
+.owner-shell-identity__module[data-active] .owner-shell-identity__module-header { background: var(--prototype-selection); }
+.owner-shell-identity__module[data-active] .owner-shell-identity__module-header i { opacity: 1; }
+.owner-shell-identity__module-header strong, .owner-shell-identity__module-header b { font: var(--lattice-window-type-module); letter-spacing: .09em; }
+.owner-shell-identity__module-header b { font-weight: 400; text-align: center; }
+
+.owner-shell-identity__panel { position: absolute; top: 53px; bottom: 0; left: 0; width: var(--owner-shell-identity-expanded-width, 100%); overflow: auto; border-top: 1px solid var(--lattice-menu-line); opacity: 0; transition: opacity 120ms linear; }
+.owner-shell-identity__module[data-active] > .owner-shell-identity__panel { opacity: 1; transition-delay: 150ms; }
+.owner-shell-identity[data-phase="closing"] .owner-shell-identity__panel { opacity: 0; transition-duration: 70ms; transition-delay: 0ms; }
+.owner-shell-identity__panel.is-profile-panel { top: 92px; }
+.owner-shell-identity__profile-body { padding: 22px 24px 28px; }
+.owner-shell-identity__profile-body > small, .owner-shell-identity__profile-body footer, .owner-shell-identity__list-body > small { font: var(--lattice-window-type-label); letter-spacing: .09em; }
+.owner-shell-identity__profile-body p { margin: 14px 0 0; white-space: pre-wrap; font: var(--lattice-window-type-body); }
+.owner-shell-identity__profile-body ul { margin: 14px 0 0; padding: 0; display: flex; gap: 6px; list-style: none; }
+.owner-shell-identity__profile-body li { padding: 6px 8px; border: 1px solid var(--lattice-menu-line); font: var(--lattice-window-type-label); }
+.owner-shell-identity__profile-body footer { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--lattice-menu-line); }
+.owner-shell-identity__list-body > small { display: block; padding: 11px 16px; border-bottom: 1px solid var(--lattice-menu-line); background: var(--prototype-selection); }
+.owner-shell-identity__list-body ol { margin: 0; padding: 0; list-style: none; }
+.owner-shell-identity__list-body li { border-bottom: 1px solid var(--lattice-menu-line); }
+.owner-shell-identity__list-body a { min-height: 56px; padding: 9px 16px; display: flex; align-items: center; justify-content: space-between; color: inherit; text-decoration: none; }
+.owner-shell-identity__list-body a > span { display: grid; gap: 4px; }
+.owner-shell-identity__list-body a strong { font: 500 14px/1.35 "Inscape Geist Sans", sans-serif; }
+.owner-shell-identity__list-body a small { font: var(--lattice-window-type-label); }
+.owner-shell-identity__list-body svg { width: 14px; }
+.owner-shell-identity__technical-body dl { margin: 0; }
+.owner-shell-identity__technical-body dl > div { padding: 11px 16px 12px; border-bottom: 1px solid var(--lattice-menu-line); }
+.owner-shell-identity__technical-body dt, .owner-shell-identity__technical-body dl small { font: var(--lattice-window-type-label); letter-spacing: .08em; }
+.owner-shell-identity__technical-body dd { margin: 6px 0 7px; overflow-wrap: anywhere; font: 500 14px/1.35 "Inscape Geist Sans", sans-serif; }
+
+.owner-shell-identity__close { position: fixed; z-index: 4; top: 18px; right: 20px; min-width: 132px; height: 42px; padding: 0 11px 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 1px solid var(--lattice-menu-line-strong); background: var(--prototype-panel); color: inherit; cursor: pointer; font: var(--lattice-window-type-label); letter-spacing: .09em; opacity: 0; pointer-events: none; transition: opacity 120ms linear; }
+.owner-shell-identity[data-phase="open"] .owner-shell-identity__close { opacity: 1; pointer-events: auto; }
+.owner-shell-identity__close svg { width: 16px; height: 16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .owner-shell-identity__veil, .owner-shell-identity__rack, .owner-shell-identity__module,
+  .owner-shell-identity__lead, .owner-shell-identity__avatar, .owner-shell-identity__panel { transition: none; }
+}

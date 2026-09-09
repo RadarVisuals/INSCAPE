@@ -1,4 +1,4 @@
-export const LIBRARY_WORKSPACE_VERSION = 8;
+export const LIBRARY_WORKSPACE_VERSION = 9;
 
 export const LIBRARY_VIEW_TYPES = Object.freeze({ ALL: 'all', FAVORITES: 'favorites', FOLDER: 'folder' });
 
@@ -6,13 +6,30 @@ function folderId() {
   return globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `folder-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function sectionId() {
+  return globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `section-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function organization(workspace) {
+  return workspace.categoryOrganization || { rootCategoryIds: workspace.folders.map(({ id }) => id), sections: [] };
+}
+
+function sameIds(left, right) {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
+
 export function createEmptyWorkspace(profileAddress) {
-  return { version: LIBRARY_WORKSPACE_VERSION, profileAddress, favorites: [], folders: [], canvas: { launchers: [], objects: [] }, tables: { placements: [] } };
+  return { version: LIBRARY_WORKSPACE_VERSION, profileAddress, favorites: [], folders: [],
+    categoryOrganization: { rootCategoryIds: [], sections: [] },
+    canvas: { launchers: [], objects: [] }, tables: { placements: [] } };
 }
 
 export function createFolder(workspace, name, now = Date.now()) {
   const trimmed = String(name || '').trim();
-  return !trimmed ? workspace : { ...workspace, folders: [...workspace.folders, { id: folderId(), name: trimmed, assetIds: [], public: false, createdAt: now, updatedAt: now }] };
+  if (!trimmed) return workspace;
+  const id = folderId(); const current = organization(workspace);
+  return { ...workspace, folders: [...workspace.folders, { id, name: trimmed, assetIds: [], public: false, createdAt: now, updatedAt: now }],
+    categoryOrganization: { ...current, rootCategoryIds: [...current.rootCategoryIds, id] } };
 }
 
 export function renameFolder(workspace, id, name, now = Date.now()) {
@@ -23,10 +40,66 @@ export function renameFolder(workspace, id, name, now = Date.now()) {
 
 export function deleteFolder(workspace, id) {
   if (!workspace.folders.some((folder) => folder.id === id)) return workspace;
+  const current = organization(workspace);
   return {
     ...workspace,
-    folders: workspace.folders.filter((folder) => folder.id !== id)
+    folders: workspace.folders.filter((folder) => folder.id !== id),
+    categoryOrganization: {
+      rootCategoryIds: current.rootCategoryIds.filter((categoryId) => categoryId !== id),
+      sections: current.sections.map((section) => ({ ...section,
+        categoryIds: section.categoryIds.filter((categoryId) => categoryId !== id) })),
+    },
   };
+}
+
+export function createCategorySection(workspace, name) {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return workspace;
+  const current = organization(workspace);
+  return { ...workspace, categoryOrganization: { ...current,
+    sections: [...current.sections, { id: sectionId(), name: trimmed, categoryIds: [] }] } };
+}
+
+export function renameCategorySection(workspace, id, name) {
+  const trimmed = String(name || '').trim(); const current = organization(workspace);
+  if (!trimmed || !current.sections.some((section) => section.id === id)) return workspace;
+  return { ...workspace, categoryOrganization: { ...current,
+    sections: current.sections.map((section) => section.id === id ? { ...section, name: trimmed } : section) } };
+}
+
+export function deleteCategorySection(workspace, id) {
+  const current = organization(workspace); const removed = current.sections.find((section) => section.id === id);
+  if (!removed) return workspace;
+  return { ...workspace, categoryOrganization: {
+    rootCategoryIds: [...current.rootCategoryIds, ...removed.categoryIds],
+    sections: current.sections.filter((section) => section.id !== id),
+  } };
+}
+
+export function moveCategory(workspace, id, sectionIdValue = null, beforeId = null) {
+  if (!workspace.folders.some((folder) => folder.id === id) || id === beforeId) return workspace;
+  const current = organization(workspace);
+  if (sectionIdValue && !current.sections.some((section) => section.id === sectionIdValue)) return workspace;
+  const rootCategoryIds = current.rootCategoryIds.filter((categoryId) => categoryId !== id);
+  const sections = current.sections.map((section) => ({ ...section,
+    categoryIds: section.categoryIds.filter((categoryId) => categoryId !== id) }));
+  const target = sectionIdValue ? sections.find((section) => section.id === sectionIdValue).categoryIds : rootCategoryIds;
+  const index = beforeId ? target.indexOf(beforeId) : -1;
+  target.splice(index < 0 ? target.length : index, 0, id);
+  const unchanged = sameIds(rootCategoryIds, current.rootCategoryIds)
+    && sections.every((section, sectionIndex) => sameIds(section.categoryIds, current.sections[sectionIndex].categoryIds));
+  return unchanged ? workspace : { ...workspace, categoryOrganization: { rootCategoryIds, sections } };
+}
+
+export function moveCategorySection(workspace, id, beforeId = null) {
+  if (id === beforeId) return workspace;
+  const current = organization(workspace); const moved = current.sections.find((section) => section.id === id);
+  if (!moved) return workspace;
+  const sections = current.sections.filter((section) => section.id !== id);
+  const index = beforeId ? sections.findIndex((section) => section.id === beforeId) : -1;
+  sections.splice(index < 0 ? sections.length : index, 0, moved);
+  return sections.every((section, sectionIndex) => section.id === current.sections[sectionIndex].id)
+    ? workspace : { ...workspace, categoryOrganization: { ...current, sections } };
 }
 
 export function setFolderAsset(workspace, folderIdValue, assetId, included, now = Date.now()) {

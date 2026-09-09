@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createEmptyLatticeProductionDraft, LATTICE_PRODUCTION_VISIBILITY } from './latticeProductionDraft.js';
+import {
+  LATTICE_PRODUCTION_GRID_STATES,
+  createEmptyLatticeProductionDraft,
+  LATTICE_PRODUCTION_VISIBILITY,
+} from './latticeProductionDraft.js';
 import { projectLatticeProductionPublication } from './latticeProductionAdapter.js';
 import { reconcileLatticeProductionDraft, remapPrivatePlacementId } from './latticeProductionReconciliation.js';
 
@@ -85,6 +89,7 @@ test('placement-ID remapping exposes a bounded fail-closed search boundary', () 
 test('global collision remapping is stable across tables and bounded for maximum-length IDs', () => {
   const maximumId = 'a'.repeat(200);
   const current = createEmptyLatticeProductionDraft(PROFILE);
+  current.tables[0].gridState = LATTICE_PRODUCTION_GRID_STATES.ACTIVE;
   current.tables[0].placements = [placement(maximumId, PRIVATE_ASSET, LATTICE_PRODUCTION_VISIBILITY.PRIVATE)];
   const publication = publicationWith(maximumId);
   const first = reconcileLatticeProductionDraft(publication, current, { profileAddress: PROFILE });
@@ -98,6 +103,7 @@ test('global collision remapping is stable across tables and bounded for maximum
 
 test('private table authoring and inactive identity values survive without entering the public source', () => {
   const current = createEmptyLatticeProductionDraft(PROFILE);
+  current.tables[0].gridState = LATTICE_PRODUCTION_GRID_STATES.ACTIVE;
   current.tables[0].visibility = LATTICE_PRODUCTION_VISIBILITY.PRIVATE;
   current.tables[0].title = 'Private title';
   current.tables[0].placements = [placement('private-only', PRIVATE_ASSET)];
@@ -107,9 +113,25 @@ test('private table authoring and inactive identity values survive without enter
   publication.tables[0] = { id: 'table-01', coordinate: { x: -1, y: -1 }, visibility: 'PRIVATE' };
   const restored = reconcileLatticeProductionDraft(publication, current, { profileAddress: PROFILE });
   assert.equal(restored.tables[0].title, 'Private title');
+  assert.equal(restored.tables[0].gridState, LATTICE_PRODUCTION_GRID_STATES.ACTIVE);
   assert.equal(restored.tables[0].placements[0].stableAssetId, PRIVATE_ASSET);
   assert.equal(restored.identityPresentation.avatar.stableAssetId, PRIVATE_ASSET);
   assert.equal(restored.identityPresentation.bio.customText, 'Private inactive bio');
+});
+
+test('public reconciliation activates public slots while preserving known local private Grid lifecycle state', () => {
+  const current = createEmptyLatticeProductionDraft(PROFILE);
+  const source = createEmptyLatticeProductionDraft(PROFILE);
+  source.tables[0].gridState = LATTICE_PRODUCTION_GRID_STATES.ACTIVE;
+  source.tables[0].visibility = LATTICE_PRODUCTION_VISIBILITY.PUBLIC;
+  source.tables[0].title = 'Published Grid';
+  const publication = projectLatticeProductionPublication(source, [], {
+    lastPublished: '2026-07-29T00:00:00.000Z',
+  });
+  const restored = reconcileLatticeProductionDraft(publication, current, { profileAddress: PROFILE });
+  assert.equal(restored.tables[0].gridState, LATTICE_PRODUCTION_GRID_STATES.ACTIVE);
+  assert.equal(restored.tables[1].gridState, LATTICE_PRODUCTION_GRID_STATES.UNUSED);
+  assert.equal(restored.tables[4].gridState, LATTICE_PRODUCTION_GRID_STATES.ACTIVE);
 });
 
 test('wrong-profile reconciliation fails before producing a draft', () => {

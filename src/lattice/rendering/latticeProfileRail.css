@@ -5,9 +5,9 @@
   top: 24px;
   left: 24px;
   width: var(--rail-width);
-  border: 1px solid var(--lattice-menu-line-strong);
+  border: 1px solid var(--lattice-menu-line);
   background: var(--lattice-menu-panel);
-  box-shadow: 10px 12px 30px rgba(0, 0, 0, 0.22);
+  box-shadow: none;
   color: var(--lattice-menu-ink);
   font-family: "Inscape IBM Plex Mono", monospace;
   transition:
@@ -16,6 +16,9 @@
 }
 
 .lattice-profile-rail[data-collapsed] { --rail-width: 48px; }
+.lattice-profile-rail[data-compact] { border-color: transparent; background: transparent; box-shadow: none; }
+.lattice-profile-rail[data-identity-only] { --rail-width: 300px; border-color: var(--lattice-menu-line); background: var(--lattice-menu-panel); box-shadow: none; }
+.lattice-profile-rail[data-identity-only][data-identity-source-hidden] { visibility: hidden; }
 .lattice-profile-rail[data-blocked] { opacity: 0; pointer-events: none; }
 
 .lattice-profile-rail > header,
@@ -26,14 +29,14 @@
   align-items: center;
   justify-content: space-between;
   color: var(--lattice-menu-faint);
-  font-size: 7px;
+  font-size: 10px;
   letter-spacing: 0.12em;
 }
 
 .lattice-profile-rail > header {
   height: 27px;
   border-bottom: 1px solid var(--lattice-menu-line);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .lattice-profile-rail > header b { font-weight: 400; }
@@ -65,7 +68,7 @@
 .lattice-profile-rail button:focus-visible,
 .lattice-profile-rail button[data-active] {
   outline: none;
-  background: var(--lattice-menu-selected);
+  background: color-mix(in srgb, var(--lattice-menu-ink) 12%, var(--lattice-menu-panel));
   color: var(--lattice-menu-ink);
 }
 
@@ -86,20 +89,31 @@
 }
 
 .lattice-profile-rail__identity[data-viewer-source-hidden] { visibility: hidden; }
+.lattice-profile-rail__identity[data-active] { background: transparent; }
+.lattice-profile-rail__identity[data-active]:is(:hover, :focus-visible) { background: var(--lattice-menu-selected); }
+.lattice-profile-rail[data-compact] .lattice-profile-rail__identity { border-bottom: 0 !important; }
+.lattice-profile-rail[data-identity-only] .lattice-profile-rail__identity { min-height: 88px; padding: 14px; gap: 12px; border-bottom: 0 !important; }
+.lattice-profile-rail[data-identity-only] .lattice-profile-rail__avatar { width: 58px; height: 58px; flex-basis: 58px; }
+.lattice-profile-rail[data-compact] .lattice-profile-rail__identity:is([data-active], :hover, :focus-visible) { background: transparent; box-shadow: none; }
+.lattice-profile-rail[data-compact] .lattice-profile-rail__identity:focus-visible .lattice-profile-rail__avatar { box-shadow: inset 0 0 0 1px var(--lattice-menu-muted); }
 
 .lattice-profile-rail__avatar {
   box-sizing: border-box;
+  position: relative;
   width: 48px;
   height: 48px;
   flex: 0 0 48px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--lattice-menu-line-strong);
+  border: 0;
+  border-radius: 50%;
   color: var(--lattice-menu-ink);
+  overflow: hidden;
 }
 
-.lattice-profile-rail__avatar img { width: 100%; height: 100%; object-fit: cover; }
-.lattice-profile-rail__avatar svg { width: 19px; height: 19px; stroke-width: 1.75; }
+.lattice-profile-rail__avatar img { width: 100%; height: 100%; display: block; border-radius: inherit; object-fit: cover; }
+.lattice-profile-rail__avatar > svg:not(.inscape-profile-avatar-ring) { width: 21px; height: 21px; stroke-width: 2; }
+.lattice-profile-rail__avatar > .inscape-profile-avatar-ring { position: absolute; inset: 0; width: 100%; height: 100%; display: block; color: var(--lattice-menu-line, currentColor); pointer-events: none; }
 
 .lattice-profile-rail__identity-copy {
   min-width: 0;
@@ -110,8 +124,8 @@
 .lattice-profile-rail__identity-copy strong {
   overflow: hidden;
   color: var(--lattice-menu-ink);
-  font: 600 13px/1 "Inscape Geist Sans", sans-serif;
-  letter-spacing: 0.11em;
+  font: 600 14px/1 "Inscape Geist Sans", sans-serif;
+  letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -120,13 +134,13 @@
   display: inline;
   margin-inline-start: 5px;
   color: var(--lattice-menu-muted);
-  font: 400 9px/1 "Inscape IBM Plex Mono", monospace;
-  letter-spacing: 0.08em;
+  font: 500 10px/1 "Inscape IBM Plex Mono", monospace;
+  letter-spacing: 0.05em;
 }
 
 .lattice-profile-rail__identity-copy small {
   color: var(--lattice-menu-muted);
-  font-size: 8px;
+  font-size: 10px;
   font-style: normal;
   letter-spacing: 0.11em;
 }
@@ -151,14 +165,14 @@
   position: absolute;
   left: -1px;
   inset-block: 0;
-  width: 2px;
+  width: 4px;
   background: transparent;
 }
 
 .lattice-profile-rail > nav button[data-active]::before { background: var(--lattice-menu-ink); }
-.lattice-profile-rail > nav svg { width: 14px; height: 14px; stroke-width: 2; }
+.lattice-profile-rail > nav svg { width: 16px; height: 16px; stroke-width: 1.75; }
 .lattice-profile-rail > nav strong { font-size: 10px; font-weight: 500; letter-spacing: 0.105em; }
-.lattice-profile-rail > nav small { color: var(--lattice-menu-faint); font-size: 8px; letter-spacing: 0.08em; }
+.lattice-profile-rail > nav small { color: var(--lattice-menu-faint); font-size: 10px; letter-spacing: 0.08em; }
 .lattice-profile-rail > nav .lattice-profile-rail__row-chevron { width: 13px; height: 13px; stroke-width: 1.75; }
 
 .lattice-profile-rail__collapse {
@@ -170,7 +184,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.1em;
 }
 

@@ -92,10 +92,21 @@ function within(parent, child) {
 export function validateBrowserRuntimePath(runtimePath, workspaceRoot) {
   if (typeof runtimePath !== 'string' || typeof workspaceRoot !== 'string') throw new Error('Browser runtime cleanup requires resolved string paths');
   const exactWorkspace = resolve(workspaceRoot); const exactRuntime = resolve(runtimePath);
-  const expectedRuntime = resolve(exactWorkspace, '.browser-test-runtime');
+  const runtimeName = basename(exactRuntime);
+  const allowedRuntimeNames = new Set([
+    '.browser-test-runtime',
+    '.browser-test-runtime-task4a',
+    '.browser-test-runtime-task4a-isolation',
+  ]);
+  const uniqueTask4aRuntime = /^\.browser-test-runtime-task4a-\d+-\d+-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runtimeName);
+  const uniqueSystemCharacterizationRuntime = /^\.browser-test-runtime-system-characterization-\d+-\d+-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runtimeName);
+  const uniquePublishedVisitorRuntime = /^\.browser-test-runtime-published-visitor-\d+-\d+-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runtimeName);
+  const uniqueOwnerRoutingRuntime = /^\.browser-test-runtime-owner-routing-\d+-\d+-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(runtimeName);
+  const expectedRuntime = resolve(exactWorkspace, basename(exactRuntime));
   const driveRoot = resolve(exactRuntime, dirname(exactRuntime) === exactRuntime ? '.' : '..');
   if (!isAbsolute(exactRuntime) || exactRuntime !== expectedRuntime || !within(exactWorkspace, exactRuntime)
-      || exactRuntime === exactWorkspace || exactRuntime === driveRoot || basename(exactRuntime) !== '.browser-test-runtime') {
+      || exactRuntime === exactWorkspace || exactRuntime === driveRoot
+      || (!allowedRuntimeNames.has(runtimeName) && !uniqueTask4aRuntime && !uniqueSystemCharacterizationRuntime && !uniquePublishedVisitorRuntime && !uniqueOwnerRoutingRuntime)) {
     throw new Error(`Refusing browser runtime cleanup outside the exact test artifact path: ${exactRuntime}`);
   }
   return exactRuntime;
@@ -128,8 +139,16 @@ export async function removeBrowserRuntime({ runtimePath, workspaceRoot, timeout
   const exactRuntime = validateBrowserRuntimePath(runtimePath, workspaceRoot);
   const script = "const {rmSync}=require('node:fs');try{rmSync(process.argv[1],{recursive:true,force:true,maxRetries:0})}catch(e){console.error(e.code||'ERROR');process.exitCode=1}";
   const result = await run(process.execPath, ['-e', script, exactRuntime], { stdio: ['ignore', 'pipe', 'pipe'], timeoutMs });
-  if (result.code !== 0) throw Object.assign(new Error(`Browser runtime removal failed: ${result.stderr.trim() || `exit ${result.code}`}`), { code: 'RUNTIME_REMOVE_FAILED' });
-  return { runtimePath: exactRuntime };
+  if (result.code === 0) return { runtimePath: exactRuntime, mode: 'node-rm' };
+  if (process.platform !== 'win32') {
+    throw Object.assign(new Error(`Browser runtime removal failed: ${result.stderr.trim() || `exit ${result.code}`}`), { code: 'RUNTIME_REMOVE_FAILED' });
+  }
+  const windowsScript = '& { param([string]$Target) Remove-Item -LiteralPath $Target -Recurse -Force -ErrorAction Stop }';
+  const fallback = await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', windowsScript, exactRuntime], {
+    stdio: ['ignore', 'pipe', 'pipe'], timeoutMs,
+  });
+  if (fallback.code !== 0) throw Object.assign(new Error(`Browser runtime removal failed: ${fallback.stderr.trim() || result.stderr.trim() || `exit ${fallback.code}`}`), { code: 'RUNTIME_REMOVE_FAILED' });
+  return { runtimePath: exactRuntime, mode: 'powershell-fallback' };
 }
 
 export async function listWindowsProcesses() {
@@ -147,6 +166,43 @@ export async function listWindowsProcesses() {
 export async function terminateWindowsProcessTree(pid) {
   if (!validPid(pid)) throw new Error(`Refusing ambiguous browser process target: ${pid}`);
   return runBoundedCommand('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processTerminationMs });
+}
+
+export async function listPosixProcesses({ run = runBoundedCommand } = {}) {
+  const result = await run('ps', ['-axo', 'pid=,ppid=,lstart='], {
+    stdio: ['ignore', 'pipe', 'pipe'], timeoutMs: BROWSER_LIFECYCLE_TIMEOUTS.processInventoryMs,
+  });
+  if (result.code !== 0) throw new Error(`Unable to inspect POSIX process ownership: ${result.stderr.trim() || `exit ${result.code}`}`);
+  return result.stdout.split(/\r?\n/u).map((line) => {
+    const match = line.match(/^\s*(\d+)\s+(\d+)\s+(.+?)\s*$/u);
+    return match ? { pid: Number(match[1]), parentPid: Number(match[2]), identity: match[3] } : null;
+  }).filter((entry) => entry && validPid(entry.pid));
+}
+
+export async function terminatePosixProcessTree(pid, {
+  inventory = listPosixProcesses,
+  kill = process.kill,
+} = {}) {
+  if (!validPid(pid)) throw new Error(`Refusing ambiguous browser process target: ${pid}`);
+  const processes = await inventory();
+  const children = new Map();
+  for (const process of processes) {
+    if (!children.has(process.parentPid)) children.set(process.parentPid, []);
+    children.get(process.parentPid).push(process.pid);
+  }
+  const targets = []; const visited = new Set();
+  const visit = (currentPid) => {
+    if (visited.has(currentPid)) return;
+    visited.add(currentPid);
+    for (const childPid of children.get(currentPid) || []) visit(childPid);
+    targets.push(currentPid);
+  };
+  visit(pid);
+  for (const targetPid of targets) {
+    try { kill(targetPid, 'SIGKILL'); }
+    catch (error) { if (error?.code !== 'ESRCH') throw error; }
+  }
+  return { code: 0, stdout: '', stderr: '', targets };
 }
 
 export function createOwnedProcessTree({

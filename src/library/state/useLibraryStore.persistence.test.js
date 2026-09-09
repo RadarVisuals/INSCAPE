@@ -115,7 +115,7 @@ test('late asset batches cannot write the outgoing or incoming profile cache aft
     await pending;
     assert.deepEqual(useLibraryStore.getState().assets, []);
     assert.equal(operations.some(({ method, key }) => method === 'setItem'
-      && key.startsWith('inscape.library-assets.v1:')), false);
+      && key.startsWith('inscape.library-assets.v2:')), false);
   } finally {
     chillwhalesProfileRepository.loadProfileAssets = originalLoad;
     resetLibraryStoreForTests(PROFILE, memoryStorage());

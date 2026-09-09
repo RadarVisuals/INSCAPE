@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  LATTICE_PRODUCTION_GRID_STATES,
   LATTICE_PRODUCTION_VISIBILITY,
   createEmptyLatticeProductionDraft,
 } from './latticeProductionDraft.js';
@@ -45,6 +46,7 @@ test('pure projection resolves real assets, sorts navigation, omits locks, and d
   assert.ok(publication.tables[4].placements.every((entry) => !Object.hasOwn(entry, 'locked') && !Object.hasOwn(entry, 'stableAssetId')));
   assert.equal(Object.hasOwn(publication, 'profileAddress'), false);
   assert.equal(Object.hasOwn(publication, 'activeTable'), false);
+  assert.equal(Object.hasOwn(publication.tables[4], 'gridState'), false);
   assert.deepEqual(draft, before);
 });
 
@@ -52,6 +54,7 @@ test('private tables retain only their permanent slot and private placements are
   const draft = createEmptyLatticeProductionDraft(PROFILE);
   draft.tables[0] = {
     ...draft.tables[0], title: 'PRIVATE TITLE', subtitle: 'PRIVATE SUBTITLE', labelVisible: true,
+    gridState: LATTICE_PRODUCTION_GRID_STATES.ACTIVE,
     visibility: LATTICE_PRODUCTION_VISIBILITY.PRIVATE,
     placements: [placement('private-placement', ASSET, 0)],
   };

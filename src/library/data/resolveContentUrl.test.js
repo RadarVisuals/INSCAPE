@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveContentUrl, selectImageGroups, selectImageUrls } from './resolveContentUrl.js';
+import { keccak256 } from 'viem';
+import { resolveContentUrl, resolveContentUrls, selectImageGroups, selectImageUrls } from './resolveContentUrl.js';
+
+const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><path d="M0 0h1v1z"/></svg>';
+const SVG_URI = `data:image/svg+xml;base64,${Buffer.from(SVG).toString('base64')}`;
+const SVG_VERIFICATION = { method: 'keccak256(bytes)', data: keccak256(new TextEncoder().encode(SVG)) };
 
 test('resolves IPFS and web URLs while rejecting unsafe schemes', () => {
   assert.equal(resolveContentUrl('ipfs://ipfs/QmHash/file.png', { ipfsGateway: 'https://gw.test/ipfs/' }), 'https://gw.test/ipfs/QmHash/file.png');
   assert.equal(resolveContentUrl('https://example.test/image.png'), 'https://example.test/image.png');
   assert.equal(resolveContentUrl('javascript:alert(1)'), null);
   assert.equal(resolveContentUrl('data:text/html,bad'), null);
+  assert.equal(resolveContentUrl(SVG_URI), null);
+  assert.equal(resolveContentUrl(SVG_URI, { verification: SVG_VERIFICATION }), SVG_URI);
 });
 
 test('selects a modest thumbnail and the largest preview', () => {
@@ -46,4 +53,46 @@ test('preserves distinct authored image indexes while selecting size variants wi
   assert.equal(groups[0].thumbnailUrl, 'https://example.test/first-large.png');
   assert.equal(groups[0].variants.length, 2);
   assert.equal(groups[1].imageUrl, 'https://example.test/second.png');
+});
+
+test('resolves IPFS through independent ordered gateways without duplicating the primary', () => {
+  assert.deepEqual(resolveContentUrls('ipfs://bafywork', {
+    ipfsGateway: 'https://primary.example/ipfs/',
+    ipfsGatewayFallbackUrls: 'https://primary.example/ipfs/,https://fallback.example/ipfs/',
+  }), [
+    'https://primary.example/ipfs/bafywork',
+    'https://fallback.example/ipfs/bafywork',
+  ]);
+  assert.deepEqual(resolveContentUrls('https://assets.example/work.png', {
+    ipfsGatewayFallbackUrls: 'https://fallback.example/ipfs/',
+  }), ['https://assets.example/work.png']);
+});
+
+test('retains the original IPFS URL after a derived indexer source', () => {
+  const groups = selectImageGroups([{
+    index: 0,
+    src: 'https://indexer.example/image/stale',
+    url: 'ipfs://bafycreatorwork',
+    width: 2000,
+    height: 2000,
+  }], { ipfsGateway: 'https://gateway.example/ipfs/' });
+  assert.equal(groups[0].thumbnailUrl, 'https://indexer.example/image/stale');
+  assert.equal(groups[0].imageUrl, 'https://indexer.example/image/stale');
+  assert.equal(groups[0].originalImageUrl, 'https://indexer.example/image/stale');
+  assert.deepEqual(groups[0].variants.map(({ url }) => url), [
+    'https://indexer.example/image/stale',
+    'https://gateway.example/ipfs/bafycreatorwork',
+    'https://ipfs.io/ipfs/bafycreatorwork',
+    'https://dweb.link/ipfs/bafycreatorwork',
+  ]);
+});
+
+test('selects a verified on-chain SVG through the ordinary image-group authority', () => {
+  const urls = selectImageUrls([{
+    url: SVG_URI, width: 768, height: 768, verification: SVG_VERIFICATION,
+  }]);
+  assert.equal(urls.imageUrl, SVG_URI);
+  assert.equal(urls.originalImageUrl, SVG_URI);
+  assert.equal(urls.width, 768);
+  assert.equal(urls.height, 768);
 });

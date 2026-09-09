@@ -1,0 +1,337 @@
+:root {
+  --up-modal-font-family: "Inscape Sora", sans-serif;
+  --up-modal-font-color: var(--lattice-menu-ink, #111313);
+  --up-modal-btn-color: var(--lattice-menu-selected, #c3c0b8);
+  --up-modal-btn-text: var(--lattice-menu-ink, #111313);
+  --up-modal-btn-radius: 0px;
+  --up-modal-border-radius: 0px;
+  --up-modal-bg: var(--lattice-menu-panel, #d7d3ca);
+}
+
+.startveil {
+  --portal-grid-size: 4.166667vw;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background-color: var(--lattice-menu-panel, #d7d3ca);
+  color: var(--lattice-menu-ink, #111313);
+  cursor: default;
+  isolation: isolate;
+}
+.startveil[data-ready] { cursor: default; }
+
+.startveil::before,
+.startveil__grain,
+.startveil__scan { display: none; }
+.startveil__grid { position: absolute; inset: 0; z-index: -1; opacity: 0; background: none; animation: none !important; }
+.startveil__grid i { display: none; }
+
+.startveil__intro {
+  width: min(68vw, 430px);
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+  animation: public-entry-intro 720ms cubic-bezier(.2, .72, .2, 1) both;
+}
+.startveil__intro-wordmark,
+.public-entry-portal__wordmark span,
+.public-entry-portal__header-wordmark i {
+  display: block;
+  background: currentColor;
+  -webkit-mask: url('/assets/brand/inscape-wordmark.svg') center / contain no-repeat;
+  mask: url('/assets/brand/inscape-wordmark.svg') center / contain no-repeat;
+}
+.startveil__intro-wordmark { width: 100%; aspect-ratio: 8 / 1; }
+.startveil__intro small { color: var(--lattice-menu-muted); font: var(--lattice-window-type-label); letter-spacing: .14em; }
+
+.startveil__entry {
+  position: static;
+  min-width: 180px;
+  margin: 14px 0 0;
+  padding: 14px 18px;
+  border: 1px solid var(--lattice-menu-line-strong);
+  background: var(--lattice-menu-ink);
+  color: var(--lattice-menu-panel);
+  font: var(--lattice-window-type-label);
+  letter-spacing: .1em;
+  opacity: 0;
+  transform: none;
+  pointer-events: none;
+  cursor: pointer;
+}
+.startveil[data-ready]:not([data-portal]) .startveil__entry { opacity: 1; pointer-events: auto; animation: public-entry-control 260ms ease-out both; }
+.startveil__entry:is(:hover, :focus-visible) { outline: 1px solid var(--lattice-menu-ink); outline-offset: 3px; }
+.startveil[data-exiting] .startveil__intro,
+.startveil[data-handoff] .startveil__intro,
+.startveil[data-exiting] .public-entry-portal,
+.startveil[data-handoff] .public-entry-portal { animation: public-entry-exit 180ms ease-in both; pointer-events: none; }
+.startveil[data-state='revealing-world'] { animation: public-entry-exit 180ms ease-in both; }
+.startveil[data-state='revealing-resident'],
+.startveil[data-state='revealing-interface'] { opacity: 0; background: transparent; }
+
+.public-entry-portal {
+  --portal-grid-size: 4.166667vw;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: rgb(215 211 202);
+  color: var(--lattice-menu-ink);
+  pointer-events: auto;
+  font-family: "Inscape Sora", sans-serif;
+  animation: public-entry-portal-arrive 420ms cubic-bezier(.2, .72, .2, 1) both;
+}
+.public-entry-portal[data-embedded] { position: fixed; z-index: 70; }
+.public-entry-portal button { color: inherit; }
+.public-entry-portal__header {
+  position: absolute;
+  z-index: 10;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 52px;
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr) auto;
+  align-items: center;
+  border-bottom: 1px solid var(--lattice-menu-line-strong);
+  background: var(--lattice-menu-panel);
+}
+.public-entry-portal__header-wordmark { width: 100%; height: 100%; padding: 0 24px; display: grid; place-items: center start; box-sizing: border-box; border: 0; background: transparent; cursor: pointer; }
+.public-entry-portal__header-wordmark i { width: 156px; max-width: 100%; aspect-ratio: 8 / 1; }
+.public-entry-portal__header-search {
+  box-sizing: border-box;
+  width: calc(var(--portal-grid-size) * 4);
+  height: 100%;
+  padding: 0 18px;
+  display: grid;
+  grid-template-columns: auto minmax(24px, 1fr);
+  align-items: center;
+  gap: 7px;
+  justify-self: start;
+  border-right: 1px solid var(--lattice-menu-line);
+  border-left: 1px solid var(--lattice-menu-line);
+  color: var(--lattice-menu-ink);
+  background: transparent;
+  font: 450 11px/1 "Inscape Sora", sans-serif;
+  letter-spacing: .035em;
+}
+.public-entry-portal__header-search:is(:hover, :focus-within) { background: var(--lattice-menu-selected); }
+.public-entry-portal__header-search:focus-within { background: transparent; box-shadow: none; }
+.public-entry-portal__header-search input { min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; color: inherit; background: transparent; font: inherit; letter-spacing: inherit; text-transform: uppercase; }
+.public-entry-portal__header-search input::placeholder { color: var(--lattice-menu-muted); opacity: 1; }
+.public-entry-portal__header nav { height: 100%; display: flex; grid-column: 3; align-items: stretch; }
+.public-entry-portal__account { position: relative; height: 100%; }
+.public-entry-portal__header nav .public-entry-portal__account-trigger { display: flex; align-items: center; gap: 9px; color: var(--lattice-menu-ink); font-weight: 500; text-align: left; }
+.public-entry-portal__account-avatar { width: 24px; height: 24px; display: grid; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid var(--lattice-menu-line-strong); border-radius: 50%; font: 600 8px/1 "Inscape Sora", sans-serif; }
+.public-entry-portal__account-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.public-entry-portal__account-menu { position: absolute; z-index: 30; top: calc(100% + 1px); display: grid; overflow: hidden; border: 1px solid var(--lattice-menu-line-strong); background: var(--lattice-menu-panel); box-shadow: 6px 8px 18px rgb(17 19 19 / .14); }
+.public-entry-portal__header nav .public-entry-portal__account-menu button { position: relative; width: 100%; height: 38px; padding: 0 12px; border: 0; border-bottom: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-ink); background: transparent; font: 450 9px/1 "Inscape Sora", sans-serif; letter-spacing: .045em; text-align: left; }
+.public-entry-portal__header nav .public-entry-portal__account-menu button:is(:hover, :focus-visible) { background: var(--lattice-menu-selected); box-shadow: inset 4px 0 0 var(--lattice-menu-ink); }
+.public-entry-portal__account-menu code { padding: 9px 12px; border-bottom: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-muted); background: color-mix(in srgb, var(--lattice-menu-panel) 92%, var(--lattice-menu-ink)); font: 400 8px/1.2 "Inscape IBM Plex Mono", monospace; }
+.public-entry-portal__header nav button {
+  position: relative;
+  width: 112px;
+  padding: 0 14px;
+  border: 0;
+  border-left: 1px solid var(--lattice-menu-line);
+  background: transparent;
+  color: var(--lattice-menu-muted);
+  cursor: pointer;
+  font: 450 11px/1 "Inscape Sora", sans-serif;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+.public-entry-portal__header nav button:first-child { width: 136px; }
+.public-entry-portal__header button:is(:hover, :focus-visible),
+.public-entry-portal__header nav button[aria-current='page'] { outline: 0; background: var(--lattice-menu-selected); color: var(--lattice-menu-ink); }
+.public-entry-portal__header nav button[aria-current='page']::after { position: absolute; right: -1px; bottom: -1px; left: -1px; height: 4px; background: var(--lattice-menu-ink); content: ''; pointer-events: none; }
+.public-entry-portal__header nav .public-entry-portal__account {
+  width: 168px;
+  min-width: 168px;
+  align-self: stretch;
+}
+.public-entry-portal__header nav .public-entry-portal__account > .public-entry-portal__account-trigger {
+  position: relative;
+  width: 100%;
+  min-width: 100%;
+  height: 100%;
+  padding: 0 10px;
+  box-sizing: border-box;
+  justify-content: center;
+}
+.public-entry-portal__header nav .public-entry-portal__account > .public-entry-portal__account-trigger[aria-expanded='true'] {
+  background: var(--lattice-menu-selected);
+  color: var(--lattice-menu-ink);
+}
+.public-entry-portal__header nav .public-entry-portal__account > .public-entry-portal__account-trigger[aria-expanded='true']::after {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  left: -1px;
+  height: 4px;
+  background: var(--lattice-menu-ink);
+  content: '';
+  pointer-events: none;
+}
+.public-entry-portal__header nav .public-entry-portal__account .public-entry-portal__account-menu {
+  right: 0;
+  left: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+.public-entry-portal__header nav .public-entry-portal__account .public-entry-portal__account-menu > button {
+  width: 100%;
+  min-width: 100%;
+  box-sizing: border-box;
+}
+
+.public-entry-portal__main {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  width: min(72vw, 570px);
+  display: grid;
+  justify-items: center;
+  row-gap: 22px;
+  transform: translate(-50%, -49%);
+}
+.public-entry-portal__wordmark { width: min(72%, 410px); color: var(--lattice-menu-ink); }
+.public-entry-portal__wordmark span { width: 100%; aspect-ratio: 8 / 1; }
+.public-entry-portal__statement { margin: -9px 0 1px; color: var(--lattice-menu-muted); font: var(--lattice-window-type-label); letter-spacing: .09em; }
+
+.public-entry-portal__world-card {
+  box-sizing: border-box;
+  position: relative;
+  width: min(100%, 560px);
+  margin: 0;
+  border: 1px solid var(--lattice-menu-line-strong);
+  background: var(--lattice-menu-panel);
+  box-shadow: 7px 9px 20px rgb(17 19 19 / .12);
+}
+.public-entry-portal__world-action { position: absolute; z-index: 8; inset: 0; width: 100%; border: 0; background: transparent; cursor: pointer; }
+.public-entry-portal__world-action:focus-visible { outline: 2px solid var(--lattice-menu-ink); outline-offset: 4px; }
+.public-entry-portal__world-action:disabled { cursor: default; }
+.public-entry-portal__world-preview { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #0b0c0c; }
+.public-entry-portal__world-preview[data-surface='graphite'], .public-entry-portal__world-fit[data-surface='graphite'] { background: #383a3a; }
+.public-entry-portal__world-preview[data-surface='slate'], .public-entry-portal__world-fit[data-surface='slate'] { background: #7b7b7b; }
+.public-entry-portal__world-preview[data-surface='ash'], .public-entry-portal__world-fit[data-surface='ash'] { background: #b2b2b2; }
+.public-entry-portal__world-preview[data-surface='mist'], .public-entry-portal__world-fit[data-surface='mist'] { background: #c9c6bd; }
+.public-entry-portal__world-preview[data-surface='paper'], .public-entry-portal__world-fit[data-surface='paper'] { background: #d8d4ca; }
+.public-entry-portal__world-fit { position: absolute; inset: 0; overflow: hidden; }
+.public-entry-portal__world-preview .visitor-grid-renderer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translate(var(--portal-preview-x, 0), var(--portal-preview-y, 0)) scale(var(--portal-preview-scale, 1));
+  transform-origin: 0 0;
+}
+.public-entry-portal__world-fit[data-fitted] .visitor-grid-renderer { opacity: 1; }
+.public-entry-portal__world-fit[data-canonical] .visitor-grid-renderer { opacity: 1; transform: none; }
+.public-entry-portal__preview-state { position: absolute; inset: 0; display: grid; place-content: center; gap: 8px; color: #d8d7d2; text-align: center; }
+.public-entry-portal__preview-state[data-placeholder] { background: #080909; }
+.public-entry-portal__preview-state[data-placeholder] span { font: 400 clamp(24px, 5vw, 48px)/1 "Inscape Sora", sans-serif; letter-spacing: .08em; }
+.public-entry-portal__preview-state span { font: 500 13px/1 "Inscape Sora", sans-serif; letter-spacing: .12em; }
+.public-entry-portal__preview-state small { color: rgb(216 215 210 / .55); font: 500 8px/1 "Inscape IBM Plex Mono", monospace; letter-spacing: .1em; }
+.public-entry-portal__world-card > footer {
+  min-height: 62px;
+  padding: 9px 11px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  border-top: 1px solid var(--lattice-menu-line-strong);
+}
+.public-entry-portal__publisher-avatar { width: 38px; height: 38px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--lattice-menu-line-strong); border-radius: 50%; background: var(--lattice-menu-selected); font: 600 10px/1 "Inscape Sora", sans-serif; }
+.public-entry-portal__publisher-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.public-entry-portal__publisher,
+.public-entry-portal__grid-title,
+.public-entry-portal__publication { min-width: 0; display: grid; gap: 4px; }
+.public-entry-portal__publisher strong,
+.public-entry-portal__grid-title strong,
+.public-entry-portal__publication strong { overflow: hidden; font: 500 9px/1 "Inscape Sora", sans-serif; letter-spacing: .04em; text-overflow: ellipsis; white-space: nowrap; }
+.public-entry-portal__publisher code,
+.public-entry-portal__grid-title small,
+.public-entry-portal__publication small { overflow: hidden; color: var(--lattice-menu-muted); font: 400 7px/1.2 "Inscape IBM Plex Mono", monospace; letter-spacing: .04em; text-overflow: ellipsis; white-space: nowrap; }
+.public-entry-portal__publication { text-align: right; }
+
+.public-entry-portal__explore {
+  position: absolute;
+  z-index: 3;
+  top: 80px;
+  right: var(--portal-grid-size);
+  bottom: 28px;
+  left: var(--portal-grid-size);
+  display: block;
+  animation: public-entry-explore-arrive 300ms cubic-bezier(.2, .72, .2, 1) both;
+}
+.public-entry-portal__world-grid { height: 100%; min-height: 0; padding: 0 5px 22px 0; display: grid; grid-template-columns: repeat(auto-fill, calc(var(--portal-grid-size) * 6)); align-content: start; gap: var(--portal-grid-size); overflow: auto; scrollbar-color: var(--lattice-menu-line-strong) transparent; scrollbar-width: thin; }
+.public-entry-portal__world-card[data-variant='compact'] { width: 100%; box-shadow: 5px 6px 13px rgb(17 19 19 / .09); }
+.public-entry-portal__world-card[data-variant='compact'] .public-entry-portal__world-preview { aspect-ratio: 16 / 9; }
+.public-entry-portal__world-card[data-variant='compact'] > footer { min-height: 54px; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; padding: 7px 9px; }
+.public-entry-portal__world-card[data-variant='compact'] .public-entry-portal__publisher-avatar { width: 32px; height: 32px; }
+.public-entry-portal__world-card[data-variant='compact'] .public-entry-portal__grid-title { display: none; }
+.public-entry-portal__world-card[data-variant='compact'] .lattice-production-placement__status { display: none; }
+.public-entry-portal__empty { grid-column: 1 / -1; min-height: 210px; display: grid; place-content: center; justify-items: center; gap: 9px; border: 1px solid var(--lattice-menu-line); background: rgb(215 211 202 / .45); text-align: center; }
+.public-entry-portal__empty strong { font: 500 11px/1 "Inscape Sora", sans-serif; letter-spacing: .09em; }
+.public-entry-portal__empty small { color: var(--lattice-menu-muted); font: var(--lattice-window-type-label); letter-spacing: .06em; }
+.public-entry-portal__empty button { padding: 10px 12px; border: 1px solid var(--lattice-menu-line-strong); background: transparent; cursor: pointer; font: var(--lattice-window-type-label); letter-spacing: .06em; }
+.public-entry-portal__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.public-entry-portal__actions button { min-width: 190px; height: 48px; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--lattice-menu-line-strong); background: var(--lattice-menu-panel); cursor: pointer; font: var(--lattice-window-type-label); letter-spacing: .06em; }
+.public-entry-portal__actions button b { font: 400 15px/1 "Inscape Sora", sans-serif; }
+.public-entry-portal__actions .public-entry-portal__primary { background: var(--lattice-menu-ink); color: var(--lattice-menu-panel); }
+.public-entry-portal__actions button:is(:hover, :focus-visible) { outline: 1px solid var(--lattice-menu-ink); outline-offset: 3px; }
+
+.public-entry-portal__footer { position: absolute; right: 0; bottom: 0; left: 0; height: 28px; padding: 0 14px; display: flex; align-items: center; justify-content: flex-end; border-top: 1px solid var(--lattice-menu-line-strong); background: var(--lattice-menu-panel); color: var(--lattice-menu-ink); font: 500 8px/1 "Inscape IBM Plex Mono", monospace; letter-spacing: .07em; }
+.public-entry-portal__footer span { text-align: right; }
+
+@keyframes public-entry-intro { from { opacity: 0; clip-path: inset(44% 0); } to { opacity: 1; clip-path: inset(0); } }
+@keyframes public-entry-portal-arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes public-entry-explore-arrive { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes public-entry-control { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes public-entry-exit { to { opacity: 0; transform: scale(.997); } }
+
+@media (max-width: 760px) {
+  .startveil,
+  .public-entry-portal { --portal-grid-size: 8.333333vw; }
+  .public-entry-portal__header { grid-template-columns: 120px minmax(0, 1fr) auto; }
+  .public-entry-portal__header-wordmark { padding-inline: 14px; }
+  .public-entry-portal__header-wordmark i { width: 100px; }
+  .public-entry-portal__header-search { width: 100%; padding-inline: 10px; }
+  .public-entry-portal__header nav button { width: 72px; padding-inline: 8px; font-size: 9px; }
+  .public-entry-portal__header nav button:first-child { width: 96px; }
+  .public-entry-portal__header nav .public-entry-portal__account { width: 120px; min-width: 120px; }
+  .public-entry-portal__main { top: 49%; width: min(88vw, 570px); }
+  .public-entry-portal__statement { font-size: 7px; letter-spacing: .05em; }
+  .public-entry-portal__world-card > footer { grid-template-columns: 38px minmax(0, 1fr) auto; }
+  .public-entry-portal__grid-title { display: none; }
+  .public-entry-portal__actions { width: 100%; gap: 10px; }
+  .public-entry-portal__actions button { min-width: 0; height: 44px; padding-inline: 11px; font-size: 8px; }
+  .public-entry-portal__world-grid { grid-template-columns: 1fr; gap: 14px; }
+}
+
+@media (max-width: 480px) {
+  .startveil,
+  .public-entry-portal { --portal-grid-size: 12.5vw; }
+  .public-entry-portal__header { grid-template-columns: 100px minmax(0, 1fr) auto; }
+  .public-entry-portal__header-wordmark i { width: 80px; }
+  .public-entry-portal__header nav button { width: 58px; padding-inline: 5px; font-size: 8px; }
+  .public-entry-portal__header nav button:first-child { width: 82px; }
+  .public-entry-portal__header nav .public-entry-portal__account { width: 96px; min-width: 96px; }
+  .public-entry-portal__header nav .public-entry-portal__account > .public-entry-portal__account-trigger { gap: 5px; padding-inline: 6px; }
+  .public-entry-portal__account-avatar { width: 20px; height: 20px; }
+  .public-entry-portal__header-search { padding-inline: 6px; gap: 4px; }
+}
+@media (min-width: 1920px) { .startveil, .public-entry-portal { --portal-grid-size: 3.571429vw; } }
+@media (min-width: 2400px) { .startveil, .public-entry-portal { --portal-grid-size: 3.125vw; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .startveil__intro,
+  .public-entry-portal,
+  .public-entry-portal__explore,
+  .startveil[data-exiting] .public-entry-portal,
+  .startveil[data-handoff] .public-entry-portal { animation: none !important; }
+}

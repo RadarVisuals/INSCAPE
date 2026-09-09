@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   browserAssetSupportsPreview,
+  decodeBrowserPreview,
   browserPreviewCandidates,
   browserPreviewWorkIsCurrent,
   resolveBrowserPreview,
@@ -13,12 +14,21 @@ test('preview candidates retain normalized thumbnail, display, original priority
   assert.deepEqual(browserPreviewCandidates({ previewSrc: 'thumb', src: 'original' }), ['thumb', 'original']);
 });
 
+test('browser preview decoding is bounded when a host never settles', async () => {
+  class HangingImage {
+    set src(_value) {}
+    decode() { return new Promise(() => {}); }
+  }
+  await assert.rejects(decodeBrowserPreview('https://dead.example/image', HangingImage, 5),
+    /timed out/);
+});
+
 test('preview resolution tries candidates locally and reveals only the first successful decode', async () => {
   const attempts = [];
   const result = await resolveBrowserPreview(['thumb', 'display', 'original'], async (source) => {
     attempts.push(source); if (source !== 'display') throw new Error('decode failed');
   });
-  assert.equal(result, 'display');
+  assert.deepEqual(result, { source: 'display', width: null, height: null });
   assert.deepEqual(attempts, ['thumb', 'display']);
   assert.equal(await resolveBrowserPreview(['thumb'], async () => { throw new Error('decode failed'); }), null);
 });

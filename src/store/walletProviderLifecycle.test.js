@@ -113,6 +113,21 @@ test('initialization is idempotent, disposal owns all listeners, and remount ins
   }
 });
 
+test('connector transitions revoke owner authority immediately but remain visibly pending', async () => {
+  ERC725.prototype.fetchData = async () => profileResult();
+  const provider = providerFixture();
+  await useWalletStore.getState().initWallet({ provider });
+  assert.equal(useWalletStore.getState().isHostProfileOwner, true);
+
+  const report = useWalletStore.getState().beginWalletTransition();
+  const state = useWalletStore.getState();
+  assert.equal(report.listenersRemoved, true);
+  assert.equal(state.authorityLifecycleStatus, 'pending');
+  assert.equal(state.hostProfileAddress, null);
+  assert.equal(state.isWalletConnected, false);
+  assert.equal(state.isHostProfileOwner, false);
+});
+
 test('standalone context is accepted only through its explicit resolver and never queries iframe context', async () => {
   ERC725.prototype.fetchData = async () => profileResult('Standalone profile');
   const provider = providerFixture({ accounts: [PROFILE_A], contextAccounts: [PROFILE_B] });
