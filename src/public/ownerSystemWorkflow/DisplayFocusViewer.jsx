@@ -1,7 +1,18 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { hitsArtwork } from './artworkPicking.js';
+
+function markPointerReturn(node) {
+  if (node.hasAttribute('data-inspection-pointer-focus')) return;
+  node.setAttribute('data-inspection-pointer-focus', '');
+  const clear = () => {
+    node.removeAttribute('data-inspection-pointer-focus');
+    node.removeEventListener('blur', clear);
+    node.removeEventListener('keydown', clear);
+  };
+  node.addEventListener('blur', clear, { once: true });
+  node.addEventListener('keydown', clear, { once: true });
+}
 
 export default function DisplayFocusViewer({ scene, controlsContainer, viewer }) {
   const latest = useRef(viewer); latest.current = viewer;
@@ -34,14 +45,18 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     };
   }, [scene]);
 
-  const close = () => {
+  const close = (input = 'keyboard') => {
     if (timer.current !== null) return;
     setClosing(true);
     latest.current.beginReturn?.();
     timer.current = setTimeout(() => {
       const source = latest.current.returnFocus;
       latest.current.close();
-      queueMicrotask(() => source?.isConnected && source.focus({ preventScroll: true }));
+      queueMicrotask(() => {
+        if (!source?.isConnected) return;
+        if (input === 'pointer') markPointerReturn(source);
+        source.focus({ preventScroll: true });
+      });
     }, reducedMotion ? 0 : 260);
   };
   useEffect(() => {
@@ -62,7 +77,7 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     onPointerDown={event => { event.preventDefault(); event.stopPropagation(); }}
     onClick={event => {
       event.preventDefault(); event.stopPropagation();
-      if (event.button === 0 && !hitsArtwork(latest.current.returnFocus, event.clientX, event.clientY)) close();
+      if (event.button === 0) close('pointer');
     }} onDoubleClick={event => { event.preventDefault(); event.stopPropagation(); }} />, scene.parentElement)}
   {createPortal(<div className="system-workflow__scene-controls" role="group" aria-label="Artwork inspection">
     <span>INSPECT</span>
@@ -72,6 +87,6 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     <button className="system-workflow__round-control" aria-label="Next artwork" disabled={closing || viewer.total < 2}
       onClick={() => viewer.navigate(1)} type="button"><ChevronRight /></button>
     <button className="system-workflow__round-control" aria-label="Close artwork viewer" disabled={closing}
-      onClick={close} ref={closeRef} type="button"><X /></button>
+      onClick={event => close(event.detail === 0 ? 'keyboard' : 'pointer')} ref={closeRef} type="button"><X /></button>
   </div>, controlsContainer)}</>;
 }

@@ -556,7 +556,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
   touch-action: none;
 }
 .system-workflow__placement:focus { outline: 0; }
-.system-workflow__placement:focus-visible:not([data-system-workflow-pointer-focus]):not([data-lattice-pointer-focus-return]) {
+.system-workflow__placement:focus-visible:not([data-system-workflow-pointer-focus]):not([data-lattice-pointer-focus-return]):not([data-inspection-pointer-focus]) {
   outline: 1px solid currentColor;
   outline-offset: -2px;
 }
