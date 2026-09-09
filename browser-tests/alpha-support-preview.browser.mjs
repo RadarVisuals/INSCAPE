@@ -8,7 +8,7 @@ const expectedRelease = String(process.env.EXPECTED_RELEASE_COMMIT || '').toLowe
 test('publication rack keeps technical support evidence out of the normal path', async () => {
   const outcome = await runOwnerProductionPreviewGate(async ({ frame, page }) => {
     const requests = [];
-    const recordRequest = (request) => requests.push({ method: request.method(), url: request.url() });
+    const recordRequest = (request) => requests.push({ method: request.method(), url: request.url(), postData: request.postData() });
     page.on('request', recordRequest);
     const toolbar = frame.getByRole('navigation', { name: 'System Workflow', exact: true });
     const publishButton = toolbar.getByRole('button', { name: 'Publish', exact: true });
@@ -19,7 +19,17 @@ test('publication rack keeps technical support evidence out of the normal path',
     await rack.waitFor({ state: 'visible', timeout: 10_000 });
     const support = rack.getByRole('region', { name: 'Alpha support' });
     assert.equal(await support.count(), 0, 'technical support detail appears only after a publication error');
-    assert.equal(requests.some(({ method }) => method !== 'GET'), false, 'Support evidence caused a non-GET request');
+    const unexpected = requests.filter(({ method, url, postData }) => {
+      if (method === 'GET') return false;
+      // Background profile reads use POST too. Only explicitly read-only RPC
+      // methods on the controlled fixture endpoint are permitted here.
+      if (method !== 'POST' || new URL(url).origin !== 'https://rpc.mainnet.lukso.network') return true;
+      try {
+        const value = JSON.parse(postData); const calls = Array.isArray(value) ? value : [value];
+        return !calls.length || calls.some(call => !['eth_chainId', 'eth_call', 'eth_getCode'].includes(call.method));
+      } catch { return true; }
+    });
+    assert.deepEqual(unexpected, [], 'Opening the publication rack must not upload, submit a transaction or send support evidence');
     const fixture = await page.evaluate(() => ({
       forbiddenRequests: [...window.__ownerPreviewFixture.forbiddenRequests],
       providerMethods: window.__ownerPreviewFixture.requests.map(({ method }) => method),

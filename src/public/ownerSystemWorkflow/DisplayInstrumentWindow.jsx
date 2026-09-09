@@ -3,15 +3,18 @@ import { PanelRightClose, X } from 'lucide-react';
 import OwnerSystemWorkflowDetachedWindow from './OwnerSystemWorkflowDetachedWindow.jsx';
 
 // View-only window behavior. The caller supplies its content and commands.
-export function WorkbenchWindow({ children, label, controls, title, titleContent, width = 320, initialHeight = 420, preferredHeight, initialX = 18, fitContent = false }) {
+export function WorkbenchWindow({ children, label, controls, title, titleContent, width = 320, initialHeight = 420, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange }) {
   const node = useRef(null);
   const measuredContent = useRef(null);
   const gesture = useRef(null);
   const resize = useRef(null);
   const [position, setPosition] = useState(() => ({
-    x: initialX, y: 72,
+    x: initialX, y: initialY,
   }));
   const [height, setHeight] = useState(initialHeight);
+  useLayoutEffect(() => {
+    onLayoutChange?.({ left: position.x, top: position.y, width, height });
+  }, [position.x, position.y, width, height, onLayoutChange]);
   useLayoutEffect(() => {
     if (!fitContent && Number.isFinite(preferredHeight)) setHeight(Math.max(180, Math.min(globalThis.innerHeight - position.y - 54, preferredHeight)));
   }, [preferredHeight, fitContent]);

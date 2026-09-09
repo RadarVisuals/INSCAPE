@@ -35,8 +35,8 @@ const shortcutPresentationStyle = (presentation) => ({
   '--workflow-shortcut-width': `${shortcutBounds(presentation).width}px`,
 });
 export default function PresentationBoardShortcut({ assetsById, host, instanceState, menuSurface,
-  onRestore, profileAddress, shortcutSnap, shortcutTargetRef, name: shortcutName, onNameChange }) {
-  const storedShortcut = useMemo(() => loadPresentationBoardShortcut(profileAddress), [profileAddress]);
+  onRestore, profileAddress, shortcutSnap, shortcutTargetRef, name: shortcutName, onNameChange, initialShortcut, onShortcutChange, readOnly = false }) {
+  const storedShortcut = useMemo(() => initialShortcut || (readOnly ? null : loadPresentationBoardShortcut(profileAddress)), [profileAddress]);
   const [shortcutPosition, setShortcutPosition] = useState(storedShortcut?.position || { left: 24, top: 72 });
   const [shortcutIconId, setShortcutIconId] = useState(storedShortcut?.iconAssetId || null);
   const [shortcutIconMedia, setShortcutIconMedia] = useState(() => isValidPlacementMedia(storedShortcut?.iconMedia) ? storedShortcut.iconMedia : null);
@@ -45,11 +45,16 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
   const [shortcutIconPresentation, setShortcutIconPresentation] = useState(() =>
     normalizePresentationBoardShortcutIconPresentation(storedShortcut?.iconPresentation));
   const [shortcutIconEditing, setShortcutIconEditing] = useState(false);
+  useEffect(() => {
+    onShortcutChange?.({ position: shortcutPosition, visible: shortcutVisible, iconAssetId: shortcutIconId,
+      iconMedia: shortcutIconMedia, iconPresentation: shortcutIconPresentation });
+  }, [shortcutPosition, shortcutVisible, shortcutIconId, shortcutIconMedia, shortcutIconPresentation, onShortcutChange]);
   const [shortcutMenu, setShortcutMenu] = useState(null);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(shortcutName);
   const shortcutDragRef = useRef(null);
   useEffect(() => {
+    if (readOnly) return;
     try { globalThis.localStorage?.setItem(presentationBoardShortcutStorageKey(profileAddress), JSON.stringify({
       iconAssetId: shortcutIconId, iconMedia: shortcutIconMedia, iconPresentation: shortcutIconPresentation, name: shortcutName,
       open: instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW, position: shortcutPosition, visible: shortcutVisible,
@@ -126,9 +131,10 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
     {shortcutVisible
       && <button aria-label={instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED
         ? `Open ${shortcutName}` : `${shortcutName} shortcut`} className="system-workflow__desktop-shortcut" ref={shortcutNode}
-      onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setShortcutMenu({ x: event.clientX, y: event.clientY }); }}
+      onContextMenu={(event) => { if (readOnly) return; event.preventDefault(); event.stopPropagation(); setShortcutMenu({ x: event.clientX, y: event.clientY }); }}
       onDoubleClick={() => { if (instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED) onRestore?.(); }} onDragOver={(event) => { if ([...event.dataTransfer.types].includes('application/x-inscape-asset')) event.preventDefault(); }}
       onDrop={(event) => { event.preventDefault(); event.stopPropagation();
+        if (readOnly) return;
         applyShortcutAsset(assetsById.get(event.dataTransfer.getData('application/x-inscape-asset')));
       }}
       onKeyDown={(event) => { if (event.key === 'Enter' && !renaming && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED) { event.preventDefault(); onRestore?.(); } }}

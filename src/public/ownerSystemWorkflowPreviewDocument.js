@@ -53,6 +53,7 @@ export function buildOwnerSystemWorkflowPreviewDocument({
   profileAddress,
   revision = 1,
   systemWorkflowDraft,
+  workbench,
 }) {
   return buildProfileDocumentV9({
     assetRecords,
@@ -62,6 +63,7 @@ export function buildOwnerSystemWorkflowPreviewDocument({
     profileIdentity: profile,
     revision,
     systemWorkflowDraft,
+    workbench,
   });
 }
 

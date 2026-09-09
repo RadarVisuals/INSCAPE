@@ -20,6 +20,8 @@ import {
 } from './ownerSystemWorkflowModuleState.js';
 import { loadPresentationBoardShortcut } from './presentationBoardShortcutStorage.js';
 import { loadWorkbenchPreferences, saveWorkbenchPreferences } from './workbenchPreferences.js';
+import { createDefaultWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
+import { createProfileDocumentV9AssetResolver } from '../../profileDocument/domain/profileDocumentV9Asset.js';
 import RackMenu from '../menus/RackMenu.jsx';
 import {
   decodeOwnerSystemWorkflowAssetDimensions,
@@ -63,15 +65,35 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   reviewCategories, reviewActivity, reviewDiscovery, reviewProfile }) {
   useStartupDestinationReady();
   const controller = useOwnerSystemWorkflowController(profileAddress, { storage: reviewStorage });
+  const initialWorkbench = useRef(controller.draft.workbench || null);
+  const [workbenchLayout, setWorkbenchLayout] = useState(() => controller.draft.workbench || createDefaultWorkbenchPresentation());
+  const [shortcutLayout, setShortcutLayout] = useState(null);
+  const changeDisplayWindow = useCallback(change => setWorkbenchLayout(current => {
+    const display = { ...current.display, ...change };
+    return JSON.stringify(display) === JSON.stringify(current.display) ? current : { ...current, display };
+  }), []);
+  const changeIdentityWindow = useCallback(({ left, top, width }) => setWorkbenchLayout(current => {
+    const window = { left, top, width };
+    return JSON.stringify(window) === JSON.stringify(current.identity.window) ? current
+      : { ...current, identity: { ...current.identity, window } };
+  }), []);
+  const initialDisplay = useMemo(() => {
+    const display = initialWorkbench.current?.display;
+    if (!display) return undefined;
+    const icon = display.shortcut.icon;
+    return { ...display, shortcut: { ...display.shortcut, open: display.open,
+      iconAssetId: icon?.stableAssetId || null, iconMedia: icon?.media?.type === 'image'
+        ? { url: icon.media.url, width: icon.media.width, height: icon.media.height } : null } };
+  }, []);
   const [workbenchPreferences, setWorkbenchPreferences] = useState(() => loadWorkbenchPreferences(
     profileAddress, controller.draft?.appearance.surfaceId,
   ));
   const [preview, setPreview] = useState(null);
   const [publicationOpen, setPublicationOpen] = useState(false);
   const [notice, setNotice] = useState(null);
-  const [identityOpen, setIdentityOpen] = useState(false);
+  const [identityOpen, setIdentityOpen] = useState(() => Boolean(initialWorkbench.current?.identity.open));
   const identityReturnFocus = useRef(null);
-  useEffect(() => { setIdentityOpen(false); }, [profileAddress]);
+  useEffect(() => { setIdentityOpen(Boolean(controller.draft.workbench?.identity.open)); }, [profileAddress]);
   const displayRef = useRef(null);
   const placementTargetRef = useRef(null);
   const shortcutTargetRef = useRef(null);
@@ -81,7 +103,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const [decodedDimensions, setDecodedDimensions] = useState(() => new Map());
   const [workspaceMenu, setWorkspaceMenu] = useState(null);
   const [boardInstanceState, transitionBoardInstance] = useReducer(transitionPresentationBoardInstance, profileAddress,
-    (address) => presentationBoardInstanceStateFromShortcut(loadPresentationBoardShortcut(address)));
+    (address) => presentationBoardInstanceStateFromShortcut(initialWorkbench.current?.display || loadPresentationBoardShortcut(address)));
   const previewReturnFocus = useRef(null);
   const publicationReturnFocus = useRef(null);
   const workbenchPreferencesProfileRef = useRef(profileAddress);
@@ -97,7 +119,8 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const referencedAssetIds = useMemo(() => [...controller.draft.grids
     .flatMap((grid) => grid.placements.map(({ stableAssetId }) => stableAssetId)),
     ...(controller.draft.identityPresentation.avatar.mode === 'inscape' && controller.draft.identityPresentation.avatar.stableAssetId
-      ? [controller.draft.identityPresentation.avatar.stableAssetId] : [])], [controller.draft.grids, controller.draft.identityPresentation.avatar]);
+      ? [controller.draft.identityPresentation.avatar.stableAssetId] : []),
+    ...(controller.draft.workbench?.display.shortcut.icon ? [controller.draft.workbench.display.shortcut.icon.stableAssetId] : [])], [controller.draft.grids, controller.draft.identityPresentation.avatar, controller.draft.workbench]);
   const browser = useOwnerLatticeBrowser(profileAddress, panel === 'library' && browserEnabled, referencedAssetIds);
   const assets = reviewAssets || browser.data.assets;
   const records = reviewAssets || browser.records;
@@ -106,6 +129,23 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   ), [decodedDimensions]);
   const resolvedAssets = useMemo(() => assets.map(refineAsset), [assets, refineAsset]);
   const canonicalRecords = useMemo(() => records.map(refineAsset), [records, refineAsset]);
+  const workbenchProjection = useMemo(() => {
+    try {
+    let shortcut = workbenchLayout.display.shortcut;
+    if (shortcutLayout) {
+      const icon = shortcutLayout.iconAssetId
+        ? (shortcut.icon?.stableAssetId === shortcutLayout.iconAssetId && (!shortcutLayout.iconMedia
+          || (shortcutLayout.iconMedia.url === shortcut.icon.media.url
+            && shortcutLayout.iconMedia.width === shortcut.icon.media.width && shortcutLayout.iconMedia.height === shortcut.icon.media.height))
+          ? shortcut.icon : createProfileDocumentV9AssetResolver(canonicalRecords, { compactContentReference: false })(shortcutLayout.iconAssetId, shortcutLayout.iconMedia)) : null;
+      shortcut = { position: shortcutLayout.position, visible: shortcutLayout.visible, icon, iconPresentation: shortcutLayout.iconPresentation };
+    }
+    return { error: null, value: { ...workbenchLayout,
+      display: { ...workbenchLayout.display, shortcut, open: boardInstanceState === 'window' },
+      identity: { ...workbenchLayout.identity, open: identityOpen } } };
+    } catch { return { error: 'The Display shortcut artwork is still unavailable. Open Library to resolve it, or reset its icon before publishing.', value: null }; }
+  }, [workbenchLayout, shortcutLayout, canonicalRecords, boardInstanceState, identityOpen]);
+  const workbench = workbenchProjection.value;
   const assetsById = useMemo(() => assetMap(resolvedAssets, canonicalRecords), [canonicalRecords, resolvedAssets]);
   const registerAssetDimensions = useCallback((asset, dimensions) => {
     if (asset?.selectedMedia) return dimensions;
@@ -185,6 +225,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     try {
       const { buildOwnerSystemWorkflowPreviewDocument, preloadOwnerSystemWorkflowPreviewEntryMedia } =
         await import('../ownerSystemWorkflowPreviewDocument.js');
+      if (workbenchProjection.error) throw new Error(workbenchProjection.error);
       const referencedIds = new Set(controller.draft.grids.flatMap((grid) => grid.placements.map(({ stableAssetId }) => stableAssetId)));
       const decodedEntries = await Promise.all([...referencedIds].map(async (id) => {
         const asset = assetsById.get(id);
@@ -195,7 +236,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
         asset, previewDimensions.get(asset?.id) || decodedDimensions.get(asset?.id),
       ));
       const document = buildOwnerSystemWorkflowPreviewDocument({ assetRecords: previewRecords, profile: publicationProfile,
-        profileAddress, systemWorkflowDraft: controller.draft });
+        profileAddress, systemWorkflowDraft: controller.draft, workbench });
       await preloadOwnerSystemWorkflowPreviewEntryMedia(document, reviewAssets ? { timeoutMs: 500 } : undefined);
       setPreview(document);
     } catch (error) {
@@ -263,6 +304,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
       registerAssetDimensions={registerAssetDimensions} resolveAssetDimensions={resolveAssetDimensions}
       menuSurface={menuSurface} reducedMotion={layout.reducedMotion} workspaceSurfaceColor={workspaceSurfaceColor}
       windowProps={{ instanceState: boardInstanceState,
+        initialPresentation: initialDisplay, onWindowChange: changeDisplayWindow, onShortcutChange: setShortcutLayout,
         onMinimize: () => transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.MINIMIZE),
         onRestore: () => transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.RESTORE),
         onContextMenu: (event) => {
@@ -290,6 +332,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
       discoveryGroups={reviewAuthorities.discoveryGroups} reviewDiscovery={reviewAuthorities.discovery} />
     {identityOpen && profileModel && <Suspense fallback={<p role="status">Opening Identity…</p>}>
       <IdentityModule key={profileAddress} model={profileModel} menuSurface={menuSurface}
+        initialWindow={workbenchLayout.identity.window} onWindowChange={changeIdentityWindow}
         assetTargetRef={identityTargetRef} avatar={controller.draft.identityPresentation.avatar}
         onSave={controller.saveIdentity}
         customAvatar={controller.draft.identityPresentation.avatar.mode === 'inscape'}
@@ -348,6 +391,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     publishedResolution={publishedResolution}
     phase={publicationPresence.phase}
     systemWorkflowDraft={controller.draft}
+    workbench={workbench} onSaveWorkbench={controller.saveWorkbench} preparationError={workbenchProjection.error}
   /></Suspense>}
   </>;
 }

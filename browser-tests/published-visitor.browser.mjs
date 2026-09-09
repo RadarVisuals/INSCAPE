@@ -87,7 +87,9 @@ async function findBrowser() {
   throw new Error('No Chromium browser found. Set BROWSER_PATH to Edge, Chrome, or Chromium.');
 }
 
-async function waitForViteReadiness(url, signal, timeoutMs = 5_000) {
+// A cold HTML/dependency transform exceeded five seconds in the audit repair run.
+// Keep it bounded within the separate 60-second overall setup deadline.
+async function waitForViteReadiness(url, signal, timeoutMs = 30_000) {
   const started = Date.now(); let lastError;
   while (Date.now() - started < timeoutMs) {
     signal.throwIfAborted();
@@ -403,6 +405,7 @@ test('semantic controls and owned keyboard input navigate dynamic ordered Grids'
     'release settles the moving Grid planes before navigation commits');
   await page.keyboard.up('Space');
   await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-archive'`, 'Space-drag advances the published Grid');
+  await waitFor(`document.querySelector('.visitor-grid-world')?.dataset.gridSwipeSettling !== 'true'`, 'forward Space-drag settles before the next gesture');
   assert.equal(await evaluate(`document.querySelectorAll('.lattice-focus-viewer').length`), 0,
     'Space-drag must not activate the artwork beneath the pointer');
   const rightDrag = await point('.visitor-grid-world__viewport', .28, .5);

@@ -12,20 +12,22 @@ const titleCase = (value) => value.charAt(0).toUpperCase() + value.slice(1).toLo
 const themeOptions = SYSTEM_WORKFLOW_SURFACE_IDS.map((value) => ({ label: titleCase(value), value }));
 const guideOptions = ['LINES', 'DOTS', 'NONE'].map((value) => ({ label: titleCase(value), value }));
 
-function CheckControl({ checked, label, onChange }) {
+function CheckControl({ checked, disabled = false, label, onChange }) {
   return <label className="system-workflow__check-control"><span>{label}</span>
-    <input checked={checked} onChange={(event) => onChange(event.target.checked)} type="checkbox" /><i aria-hidden="true">{checked && <Check size={12} />}</i></label>;
+    <input checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} type="checkbox" /><i aria-hidden="true">{checked && <Check size={12} />}</i></label>;
 }
 
 export default function OwnerSystemWorkflowSettings({ appearance, controller, menuSurface, onClose,
   onWorkbenchPreferencesChange, phase, workbenchPreferences }) {
   const signalSettings = useSignalStore((state) => state.settings);
+  const signalProfile = useSignalStore((state) => state.profileAddress);
+  const profile = controller.draft.profileAddress;
   const updateSignalSetting = useSignalStore((state) => state.updateSetting);
   return <aside aria-hidden={phase === 'closing' || undefined} aria-label="Settings"
     className="system-workflow__settings system-workflow__motion-panel" inert={phase === 'closing' ? '' : undefined} role="dialog">
     <section className="system-workflow__settings-section"><header><strong>Activity</strong></header>
-      <div>{SIGNAL_OPTIONS.map(([key, label]) => <CheckControl checked={signalSettings[key]} key={key} label={label}
-        onChange={(checked) => updateSignalSetting(key, checked)} />)}</div>
+      <div>{SIGNAL_OPTIONS.map(([key, label]) => <CheckControl checked={signalProfile === profile && signalSettings[key]} disabled={signalProfile !== profile} key={key} label={label}
+        onChange={(checked) => updateSignalSetting(key, checked, profile)} />)}</div>
     </section>
     <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Workbench</strong><span>Local to this device</span></header>
       <label><span>Background</span><OwnerSystemWorkflowSelectMenu label="Workbench background" menuSurface={menuSurface} onChange={(surfaceId) => onWorkbenchPreferencesChange({ surfaceId })} options={themeOptions} value={workbenchPreferences.surfaceId} /></label>

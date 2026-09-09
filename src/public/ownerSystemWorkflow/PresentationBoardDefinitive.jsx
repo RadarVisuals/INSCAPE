@@ -45,16 +45,16 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   playing = false, playbackDisabled = true, onTogglePlayback,
   instanceState = PRESENTATION_BOARD_INSTANCE_STATE.WINDOW,
   menuSurface = null, profileAddress, reducedMotion = false, renderInspection, renderInstruments,
-  shortcutTargetRef, instrumentTriggers, shortcutSnap = true, workbenchGridColor = null, workbenchGridMode = 'LINES' }) {
+  shortcutTargetRef, instrumentTriggers, shortcutSnap = true, workbenchGridColor = null, workbenchGridMode = 'LINES', initialPresentation, onWindowChange, onShortcutChange, readOnly = false }) {
   const localShortcutRef = useRef(null);
   const shortcutRef = shortcutTargetRef || localShortcutRef;
-  const storedName = useMemo(() => loadPresentationBoardShortcut(profileAddress)?.name, [profileAddress]);
+  const storedName = useMemo(() => initialPresentation?.name || (readOnly ? null : loadPresentationBoardShortcut(profileAddress)?.name), [profileAddress]);
   const [moduleName, setModuleName] = useState(null);
   const displayName = moduleName?.profile === profileAddress ? moduleName.name
     : storedName && storedName !== 'PRESENTATION BOARD' ? storedName : 'DISPLAY MODULE';
   const [host, setHost] = useState(null);
   const [view, setView] = useState(null);
-  const [boardPosition, setBoardPosition] = useState(null);
+  const [boardPosition, setBoardPosition] = useState(initialPresentation?.window ? { left: initialPresentation.window.left, top: initialPresentation.window.top } : null);
   const [inspectionHost, setInspectionHost] = useState(null);
   const [inspectionControlsHost, setInspectionControlsHost] = useState(null);
   const [selectionOverlayHost, setSelectionOverlayHost] = useState(null);
@@ -81,8 +81,11 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     if (!host) return undefined;
     const measure = () => setView((current) => {
       const viewport = { width: host.clientWidth, height: host.clientHeight };
-      const next = current ? resizePresentationBoardView(current, viewport, geometryOptions)
+      let next = current ? resizePresentationBoardView(current, viewport, geometryOptions)
         : projectPresentationBoardView(documentGeometry, viewport, 0.9, geometryOptions);
+      if (!current && initialPresentation?.window && next) {
+        next = projectPresentationBoardView(documentGeometry, viewport, Math.min(1, initialPresentation.window.width / next.fit.stage.width), geometryOptions);
+      }
       // A scale constrained by an attached bay must not become a tiny Stage
       // after moving to the narrow overlay projection.
       return next && !metadataSidecarOpen && next.frame.stage.width < Math.min(320, next.fit.stage.width)
@@ -112,6 +115,11 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const renderedFrame = maximized ? maximumFrame
     : boardPhase === 'restoring' && windowSnapshotRef.current ? windowSnapshotRef.current.frame : windowFrame;
   const displayScale = maximized ? maximumView?.scale || 1 : view?.scale || 1;
+  useEffect(() => {
+    if (renderedFrame) onWindowChange?.({ name: displayName, window: {
+      left: renderedFrame.left, top: renderedFrame.top, width: renderedFrame.width, height: renderedFrame.height,
+    } });
+  }, [displayName, renderedFrame?.left, renderedFrame?.top, renderedFrame?.width, renderedFrame?.height, onWindowChange]);
   const liveScaleRendering = scaleRendering === 'live' || boardPhase === 'maximizing' || boardPhase === 'restoring';
   const settledStageWidth = view ? Math.ceil(view.fit.stage.width * displayScale) : 0;
   const settledStageHeight = view ? Math.ceil(view.fit.stage.height * displayScale) : 0;
@@ -242,6 +250,8 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     {host && <LatticePixelGrid color={workbenchGridColor || 'var(--study-grid)'} field={workbenchField} guideInterval={1}
       guideSize={1} height={host.clientHeight} mode={workbenchGridMode} width={host.clientWidth} />}
     <PresentationBoardShortcut assetsById={assetsById} host={host} instanceState={instanceState}
+      readOnly={readOnly}
+      initialShortcut={initialPresentation?.shortcut} onShortcutChange={onShortcutChange}
       name={displayName} onNameChange={(name) => setModuleName({ profile: profileAddress, name })}
       menuSurface={menuSurface} onRestore={onRestore} profileAddress={profileAddress}
       shortcutSnap={shortcutSnap} shortcutTargetRef={shortcutRef} />
@@ -263,14 +273,14 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
         </span>
         <span className="system-workflow__board-title">
           {inspectionActive && <span className="system-workflow__board-inspection-controls-host" ref={setInspectionControlsHost} />}
-          <BoardWorkspaceControls instrumentTriggers={instrumentTriggers} layersOpen={layersOpen} metadataOpen={metadataOpen}
+          {!readOnly && <BoardWorkspaceControls instrumentTriggers={instrumentTriggers} layersOpen={layersOpen} metadataOpen={metadataOpen}
             playing={playing} playbackDisabled={playbackDisabled} onTogglePlayback={onTogglePlayback}
-            onToggleLayers={onToggleLayers} onToggleMetadata={onToggleMetadata} />
-          <span className="system-workflow__composition-lock-controls">
+            onToggleLayers={onToggleLayers} onToggleMetadata={onToggleMetadata} />}
+          {!readOnly && <span className="system-workflow__composition-lock-controls">
             <button aria-label={authoringLocked ? 'Unlock Display Module composition' : 'Lock Display Module composition'}
               aria-pressed={authoringLocked} className="system-workflow__round-control system-workflow__composition-lock"
               onClick={onAuthoringLockToggle} type="button">{authoringLocked ? <LockKeyhole /> : <Lock />}</button>
-          </span>
+          </span>}
           <BoardWindowControls disabled={inspectionActive} maximized={maximized}
             onMaximize={maximize} onMinimize={minimizeToShortcut} onRestore={restore} />
         </span>

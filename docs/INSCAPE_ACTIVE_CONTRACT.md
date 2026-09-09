@@ -98,10 +98,19 @@ are not part of that visitor experience. Module chrome is not Stage content.
   not authorize serializing all workspace preferences. Which appearance
   settings become explicit public choices remains to be specified.
 
-These are accepted product boundaries, not a claim that the current v9 document
-or renderer already supports the complete public desktop, multiple independent
-module instances, or module connections. Preserve the working application until
-each agreed change has an explicit, tested migration where needed.
+The current v9 document and private draft support an optional `workbench`
+starting configuration for the implemented Display and Identity modules.
+Prepare Publication explicitly captures and saves their open state and window
+geometry, plus the Display name and shortcut position, visibility and artwork.
+Module content remains in the existing Grid and Identity envelopes. Identity
+height follows its content. Visitor interactions remain session-local.
+
+Existing documents without this configuration still load with the previous
+presentation defaults; a subsequent preparation can save the new configuration.
+The publication version and ERC725Y pointer key remain unchanged. A publication
+still requires a new verified content hash and URI and a separate wallet action.
+Multiple independent instances and module connections remain accepted direction,
+not implemented capabilities.
 
 ## Display Module
 

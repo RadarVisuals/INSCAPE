@@ -2,7 +2,7 @@ export const METADATA_MAX_BYTES = 2 * 1024 * 1024;
 
 // A response-header deadline alone does not bound a stalled response body.
 export async function fetchMetadataJson(url, { fetchImpl = fetch, signal, timeoutMs = 10_000,
-  maxBytes = METADATA_MAX_BYTES } = {}) {
+  maxBytes = METADATA_MAX_BYTES, imageUrl = null } = {}) {
   const controller = new AbortController(); let timer; let reader;
   const abortError = () => new DOMException('Metadata request aborted', 'AbortError');
   if (signal?.aborted) throw abortError();
@@ -18,6 +18,11 @@ export async function fetchMetadataJson(url, { fetchImpl = fetch, signal, timeou
     const response = await fetchImpl(url, { signal: controller.signal, headers: { accept: 'application/json' } });
     if (controller.signal.aborted) { response.body?.cancel().catch(() => {}); throw abortError(); }
     if (!response.ok) { response.body?.cancel().catch(() => {}); throw new Error(`ASSET METADATA RESPONDED ${response.status}`); }
+    const contentType = response.headers?.get('content-type') || '';
+    if (imageUrl && contentType.startsWith('image/')) {
+      response.body?.cancel().catch(() => {});
+      return { image: [{ url: imageUrl, fileType: contentType }] };
+    }
     const oversized = () => Object.assign(new Error('Metadata response is too large'), { code: 'METADATA_TOO_LARGE' });
     if (Number(response.headers?.get('content-length')) > maxBytes) {
       response.body?.cancel().catch(() => {}); throw oversized();

@@ -101,6 +101,7 @@ export function buildProfileDocumentV9({
   profileIdentity,
   revision = 1,
   systemWorkflowDraft,
+  workbench,
 }) {
   const address = normalizeProfileAddress(profileAddress);
   if (!address) throw new TypeError('A valid Universal Profile address is required');
@@ -146,6 +147,7 @@ export function buildProfileDocumentV9({
     },
     grids: projectSystemWorkflowPublicGrids(draft, assetRecords),
     metadata: worldCover ? { worldCover } : {},
+    ...((workbench || draft.workbench) ? { workbench: structuredClone(workbench || draft.workbench) } : {}),
   });
 }
 
@@ -153,5 +155,6 @@ export function countProfileDocumentV9Assets(document) {
   const value = assertValidProfileDocumentV9(document);
   return value.grids.reduce((total, grid) => total + grid.placements.length, 0)
     + (value.metadata.worldCover?.grid.placements.length || 0)
-    + (value.identityPresentation.avatar.asset ? 1 : 0);
+    + (value.identityPresentation.avatar.asset ? 1 : 0)
+    + (value.workbench?.display.shortcut.icon ? 1 : 0);
 }

@@ -11,6 +11,19 @@ const memoryStorage = () => {
   return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), values };
 };
 
+test('obsolete profile settings and activity callbacks cannot mutate the current account', async () => {
+  const storage = memoryStorage();
+  resetSignalStoreForTests(PROFILE, storage);
+  const old = useSignalStore.getState();
+  old.setProfileAddress(OTHER_PROFILE);
+  const before = structuredClone(useSignalStore.getState().document);
+  assert.equal(old.updateSetting('audio', true, PROFILE), false);
+  assert.equal(old.markSeen(null, PROFILE), false);
+  await old.synchronize({ expectedProfile: PROFILE });
+  assert.deepEqual(useSignalStore.getState().document, before);
+  assert.equal(storage.values.size, 0);
+});
+
 test('a pending Signals save cannot overwrite immediately restored settings', async () => {
   const storage = memoryStorage();
   resetSignalStoreForTests(PROFILE, storage);

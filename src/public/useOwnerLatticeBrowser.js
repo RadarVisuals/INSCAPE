@@ -49,6 +49,7 @@ export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled 
   const createdProgress = useRelatedCreationsStore((state) => state.progress);
   const createdError = useRelatedCreationsStore((state) => state.error || state.liveError);
   const loadCreated = useRelatedCreationsStore((state) => state.load);
+  const setCreatedProfile = useRelatedCreationsStore((state) => state.setProfileAddress);
   const retryCreated = useRelatedCreationsStore((state) => state.retry);
   const resolveReferencedAssets = useRelatedCreationsStore((state) => state.resolveReferencedAssets);
   const cancelCreated = useRelatedCreationsStore((state) => state.cancel);
@@ -68,6 +69,9 @@ export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled 
   useEffect(() => {
     if (profile) setProfileAddress(profile);
   }, [profile, setProfileAddress]);
+  useEffect(() => {
+    if (profile) setCreatedProfile(profile);
+  }, [profile, setCreatedProfile]);
 
   useEffect(() => {
     if (inventoryEnabled && profileReady && status === 'idle') load();
@@ -78,8 +82,8 @@ export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled 
   }, [createdProfileReady, createdStatus, inventoryEnabled, loadCreated, profile, profileReady]);
   const referencedAssetKey = [...new Set(referencedAssetIds)].sort().join(',');
   useEffect(() => {
-    if (profileReady && referencedAssetKey) resolveReferencedAssets(profile, referencedAssetKey.split(','));
-  }, [profile, profileReady, referencedAssetKey, resolveReferencedAssets]);
+    if (profileReady && createdProfileReady && referencedAssetKey) resolveReferencedAssets(profile, referencedAssetKey.split(','));
+  }, [profile, profileReady, createdProfileReady, referencedAssetKey, resolveReferencedAssets]);
   useEffect(() => () => cancelCreated(), [cancelCreated]);
   useEffect(() => () => cancelCollectionTokens(), [cancelCollectionTokens]);
   useEffect(() => {

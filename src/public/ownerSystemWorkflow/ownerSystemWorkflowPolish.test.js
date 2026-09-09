@@ -104,7 +104,7 @@ test('Publish exposes one dock-attached control while preserving every canonical
   assert.match(source, /uploadProfileDocument\(snapshot\)/);
   assert.match(source, /publication\.verifyCid\(snapshot, uploaded\.cid/);
   assert.match(source, /publication\.publish\(\)/);
-  assert.match(source, /Only your <strong>Public Grids<\/strong>/);
+  assert.match(source, /Your <strong>Public Grids<\/strong>, custom Identity card and prepared Workbench setup/);
   assert.doesNotMatch(source, /CID \/ MANUAL FALLBACK|PUBLISH VERSION 9/);
   assert.match(styles, /bottom: calc\(var\(--workflow-dock-height/);
   assert.match(styles, /left: var\(--workflow-window-inset/);

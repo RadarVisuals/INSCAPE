@@ -18,6 +18,7 @@
 .visitor-grid-world[data-surface="mist"] { --visitor-grid-surface: #c9c6bd; --visitor-grid-ink: #111313; }
 .visitor-grid-world[data-surface="paper"] { --visitor-grid-surface: #d8d4ca; --visitor-grid-ink: #111313; }
 .visitor-grid-world__viewport { position: absolute; inset: 0; overflow: hidden; }
+.visitor-grid-world[data-workbench] .system-workflow__workbench { position: absolute; inset: 0 0 var(--visitor-dock-height); }
 .visitor-grid-world[data-space-navigation] .visitor-grid-world__viewport { cursor: grab; }
 .visitor-grid-world[data-grid-dragging] .visitor-grid-world__viewport { cursor: grabbing; }
 .visitor-grid-world__grid-plane { position: absolute; inset: 0; overflow: hidden; }
@@ -46,6 +47,7 @@
 .visitor-grid-world__dock button[aria-expanded="true"] { color: var(--lattice-menu-ink); background: var(--lattice-menu-selected); }
 .visitor-grid-world__dock button[aria-expanded="true"]::before { position: absolute; z-index: 2; top: -1px; right: -1px; left: -1px; height: 4px; background: var(--lattice-menu-ink); content: ''; }
 .visitor-grid-world__dock button:disabled { cursor: default; opacity: .3; }
+.visitor-grid-world[data-workbench] .visitor-grid-world__dock button { width: auto; min-width: max-content; flex: 0 0 auto; padding-inline: 12px; font: 500 11px/1 "Inscape Sora", sans-serif; white-space: nowrap; }
 .visitor-grid-world__navigation, .visitor-grid-world__actions { display: flex; align-items: stretch; }
 .visitor-grid-world__navigation button { min-width: 34px; width: 34px; padding: 0; }
 .visitor-grid-world__navigation span { min-width: 96px; max-width: 150px; padding: 0 8px; display: grid; place-items: center; overflow: hidden; color: var(--lattice-menu-ink); font: 500 11px/1 "Inscape Sora", sans-serif; font-variation-settings: "wght" 500; letter-spacing: .035em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }

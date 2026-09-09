@@ -20,6 +20,7 @@ import {
 import { isValidPublishedAssetUrl } from './publishedAssetUrl.js';
 import { validateProfileDocumentV9Asset } from './profileDocumentV9Asset.js';
 import { isValidIdentityCard } from '../../profileIdentity/domain/identityCard.js';
+import { isValidWorkbenchPresentation } from './workbenchPresentation.js';
 
 const DOCUMENT_KEYS = [
   'documentType', 'version', 'documentId', 'revision', 'createdAt', 'exportedAt',
@@ -188,7 +189,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   try { measuredSize ??= new TextEncoder().encode(JSON.stringify(input)).byteLength; } catch { measuredSize = Infinity; }
   if (measuredSize > SYSTEM_WORKFLOW_LIMITS.maxJsonBytes) fail('$', 'document_too_large', `Document exceeds ${SYSTEM_WORKFLOW_LIMITS.maxJsonBytes} bytes`);
   if (depth(input) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!exactKeys(input, DOCUMENT_KEYS)) {
+  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench'])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -226,12 +227,14 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid public appearance');
   validateIdentity(input.identityPresentation, fail);
+  if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid public Workbench configuration');
   if (!Array.isArray(input.grids) || input.grids.length < 1 || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxGrids) {
     fail('grids', 'invalid_grid_count', 'One to 24 public Grids required');
   } else {
     const gridIds = new Set();
     const placementIds = new Set();
     let totalAssetReferences = input.identityPresentation?.avatar?.asset == null ? 0 : 1;
+    if (input.workbench?.display?.shortcut?.icon) totalAssetReferences += 1;
     input.grids.forEach((grid, gridIndex) => {
       const path = `grids[${gridIndex}]`;
       if (!exactKeys(grid, GRID_KEYS)) return fail(path, 'invalid_grid_structure', 'Invalid public Grid');

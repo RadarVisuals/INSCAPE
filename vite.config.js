@@ -17,13 +17,15 @@ export default defineConfig(({ mode }) => {
     plugins: [diagnosticsEnvironmentPlugin(), react(), excludeUnsupportedWalletConnectorsPlugin(),
       ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
     build: { manifest: true },
+    // Audit exports and browser runtime artifacts are not application entries.
+    optimizeDeps: { entries: ['index.html', 'browser-tests/*.html'] },
     preview: { headers: productionResponseSecurityHeaders(productionEnvironment) },
     server: {
       watch: {
         ignored: [
           '**/.edge-*/**',
-          '**/.browser-test-runtime/**',
-          '**/.browser-test-profile/**',
+          '**/.browser-test-runtime*/**',
+          '**/.browser-test-profile*/**',
           '**/.agents/**',
           '**/codebase_dump.md'
         ]

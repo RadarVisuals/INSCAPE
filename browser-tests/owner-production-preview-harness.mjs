@@ -289,6 +289,10 @@ function rpcFixtureResponse(request) {
 function attachPageLedger({ authorityProfiles = [profileAddress], expectedControlledConsoleErrors = [],
   expectedControlledGraphAbortOperations = [], expectedControlledRpcAbortMethods = [], page, ledger, problems,
   profileAddress }) {
+  const publicEntryRequests = new WeakSet();
+  page.on('request', request => {
+    if (!ledger.entries.some(({ type }) => type === 'channel-authority-ready')) publicEntryRequests.add(request);
+  });
   page.on('framenavigated', (frame) => ledger.record('framenavigated', {
     frame: frame === page.mainFrame() ? 'fixture' : 'preview', url: frame.url(),
   }));
@@ -342,6 +346,15 @@ function attachPageLedger({ authorityProfiles = [profileAddress], expectedContro
     let graphOperation = null;
     try { graphOperation = /query\s+(\w+)/u.exec(JSON.parse(request.postData() || '{}').query || '')?.[1] || null; }
     catch { /* non-GraphQL request */ }
+    // Connecting replaces PublicEntryPortal with the owner destination. Its
+    // discovery controller cancels the now-obsolete public directory read.
+    const enteringOwner = publicEntryRequests.has(request)
+      && ledger.entries.some(({ type }) => type === 'connect-authority-start');
+    if (!cleanupOwned && enteringOwner && failure === 'net::ERR_ABORTED'
+      && graphOperation === 'InscapeDirectory' && graphOrigins.includes(new URL(request.url()).origin)) {
+      ledger.record('expected-public-directory-navigation-abort', { ...details, graphOperation });
+      return;
+    }
     if (!cleanupOwned && failure === 'net::ERR_ABORTED'
       && graphOrigins.includes(new URL(request.url()).origin)
       && expectedControlledGraphAbortOperations.includes(graphOperation)) {
@@ -359,9 +372,9 @@ function attachPageLedger({ authorityProfiles = [profileAddress], expectedContro
       ledger.record('expected-controlled-readonly-rpc-abort', details);
       return;
     }
-    const item = `Request failed: ${request.method()} ${request.url()} ${failure} methods=${rpc.methods.join(',') || 'unknown'}`;
+    const item = `Request failed: ${request.method()} ${request.url()} ${failure} methods=${rpc.methods.join(',') || 'unknown'} operation=${graphOperation || 'unknown'}`;
     ledger.record('request-failed', {
-      ...details, phase: cleanupOwned ? 'cleanup' : 'gate',
+      ...details, graphOperation, phase: cleanupOwned ? 'cleanup' : 'gate',
     });
     if (!cleanupOwned) problems.push(item);
   });

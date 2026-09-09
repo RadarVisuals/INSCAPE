@@ -155,7 +155,7 @@ function IdentityTitle({ address, profile }) {
 }
 
 // Inputs are already projected for owner or visitor. No draft, wallet or route ownership.
-export default function IdentityModule({ model, onClose, returnFocus, menuSurface, assetTargetRef, avatar, onSave, customAvatar = false, portraitChoices = [] }) {
+export default function IdentityModule({ model, onClose, returnFocus, menuSurface, assetTargetRef, avatar, onSave, customAvatar = false, portraitChoices = [], initialWindow, onWindowChange }) {
   const [expanded, setExpanded] = useState(false);
   const editRef = useRef(null);
   const extensionId = useId();
@@ -215,8 +215,9 @@ export default function IdentityModule({ model, onClose, returnFocus, menuSurfac
       }
       if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); event.stopPropagation(); if (editing) edit.cancel(); else close(); }
     }} onPointerDown={(event) => event.stopPropagation()} onWheel={(event) => event.stopPropagation()}>
-    <WorkbenchWindow label="Identity" title={model.profile.displayName} width={840} fitContent
-      initialX={Math.max(8, (globalThis.innerWidth - 840) / 2)}
+    <WorkbenchWindow label="Identity" title={model.profile.displayName} width={initialWindow?.width || 840} fitContent
+      initialX={initialWindow?.left ?? Math.max(8, (globalThis.innerWidth - 840) / 2)} initialY={initialWindow?.top ?? 72}
+      onLayoutChange={onWindowChange}
       titleContent={<IdentityTitle address={model.address} profile={model.officialProfile || {
         name: model.profile.displayName, avatarUrl: null, url: `https://universaleverything.io/${model.address}`,
       }} />}

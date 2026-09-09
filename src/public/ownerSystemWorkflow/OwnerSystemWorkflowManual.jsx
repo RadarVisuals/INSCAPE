@@ -1,66 +1,64 @@
-import { useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 
-const chapters = Object.freeze([
-  {
-    id: 'canvas', label: 'Canvas', summary: 'Navigate Grids and arrange what appears in each space.',
-    sections: [
-      ['Grids', 'Each Grid is a separate profile space. Create, rename, reorder, hide or reveal them from Grids in the dock. Drag across the canvas to move between neighbouring Grids.'],
-      ['Arrange', 'Select an item to move or resize it. Shift-click or marquee-select to work with several placements. Crop changes the visible area without distorting the source artwork.'],
-      ['Layers', 'Open Layers from the dock to reorder, duplicate, lock or remove placements. Locked placements remain visible while the canvas stays available for selection around them.'],
-      ['Appearance', 'Settings separates local Workbench background, grid and shortcut snapping from the Display Module appearance included when you publish. Display Module guide spacing is also the snapping interval used while authoring.'],
-    ],
-  },
-  {
-    id: 'library', label: 'Library', summary: 'Find, organise and place assets from your connected collection.',
-    sections: [
-      ['Place assets', 'Open Library, then hold and drag an asset onto the current Grid. The placement preview shows where it will land before release.'],
-      ['Categories', 'Categories organise assets without changing their ownership or removing other memberships. An asset may belong to more than one category.'],
-      ['Sections', 'Sections group related categories in the sidebar. Drag categories onto a section to build a clearer personal structure.'],
-      ['Browse', 'Search, labels, thumbnail size, filters and sorting change only the current Library view. They do not alter the underlying asset.'],
-    ],
-  },
-  {
-    id: 'profile', label: 'Profile', summary: 'Review identity, signals and people without leaving the workspace.',
-    sections: [
-      ['Profile', 'The compact card keeps your identity close to the canvas. Expand it to inspect profile information, authored links and technical account data.'],
-      ['Discover', 'Discover presents people and public profiles. Groups are personal organisation; opening a profile does not add it to a Grid.'],
-      ['Activity', 'Activity shows recent profile, asset, social and LYX signals. Open the full history to search, filter, refresh or mark notifications as read.'],
-    ],
-  },
-  {
-    id: 'share', label: 'Share', summary: 'Check the visitor experience before anything becomes public.',
-    sections: [
-      ['Preview', 'Preview renders the visitor-facing projection of the current draft. Use it to verify visible Grids, profile presentation and artwork before publication.'],
-      ['Visibility', 'A public Grid may appear in the visitor projection; a private Grid remains owner-only. Library categories and sections are never visitor navigation.'],
-      ['Publish', 'Prepare and review one frozen public version 9 snapshot, then upload and verify its exact CID before any separately confirmed wallet publication.'],
-    ],
-  },
-]);
+const chapters = [
+  { id: 'workbench', label: 'Workbench', summary: 'Your desktop for composing and presenting your work.', sections: [
+    ['Modules', 'Display holds your artwork compositions. Identity holds your custom profile card. Each opens in its own window on the Workbench.'],
+    ['Windows and shortcuts', 'Drag a window by its header to move it. Minimize Display to its shortcut, then double-click the shortcut to reopen it. Closing Identity keeps its content; open it again from your profile controls.'],
+    ['Your tools', 'Library, Layers and Activity belong to your private workspace. Discover lets you visit other profiles. Settings includes local Workbench preferences and the Display appearance used in your presentation.'],
+  ] },
+  { id: 'display', label: 'Display', summary: 'Compose artwork across Grids inside the Display Module.', sections: [
+    ['Grids', 'Use Grids to create, name and order scenes within Display. Mark each Grid public or private. Visitors can navigate the public scenes.'],
+    ['Arrange artwork', 'Drag an asset from Library onto the Stage. Select a placement to move or resize it. Shift-click or drag a selection rectangle to select several. Crop adjusts the visible area of the artwork.'],
+    ['Layers', 'Open Layers from Display to reorder, duplicate, lock or remove placements. Removing a placement leaves the source asset in your Library.'],
+    ['Stage and window', 'The Stage keeps its composition proportions when the Display window changes size. Moving the window changes its position on the Workbench; it does not move artwork within a Grid.'],
+  ] },
+  { id: 'identity', label: 'Identity', summary: 'Give your profile its own presentation.', sections: [
+    ['Edit on the card', 'Use the cogwheel to edit the card in place. Choose its artwork and background, write your bio and tags, and add text or list cells. Save applies your changes; Cancel discards that edit.'],
+    ['Expand', 'The chevron reveals the information cells in one step. The card fits the content shown, and its animated background continues as you open and close the details.'],
+    ['Profile and account', 'The dock shows your Universal Profile identity. The custom card is your authored presentation inside Identity. Editing it does not rename your Universal Profile.'],
+    ['Share an address', 'The copy and QR controls share your profile address. The QR currently contains the address itself, rather than a link that opens your INSCAPE page.'],
+  ] },
+  { id: 'library', label: 'Library', summary: 'Find and organise the assets you work with.', sections: [
+    ['Place assets', 'Drag an asset onto the Display Stage to create a placement. The placement preview shows where it will land.'],
+    ['Categories and sections', 'Categories organise assets without changing ownership. An asset may belong to several categories. Sections group related categories in the sidebar.'],
+    ['Browse', 'Search, filters, sorting and thumbnail size change the Library view. Your Library organisation stays private when you publish.'],
+  ] },
+  { id: 'publish', label: 'Publish', summary: 'Review the experience visitors will enter.', sections: [
+    ['Preview', 'Preview shows your current public Display content and custom Identity card, with the current window arrangement. Check both expanded content and smaller screens.'],
+    ['Prepare', 'Arrange the windows and decide which should start open. Prepare Publication saves that starting setup and freezes a snapshot for review, including the Display name and shortcut. Preparing does not upload or ask your wallet to publish.'],
+    ['Make it public', 'The next action uploads and verifies the prepared presentation. Publishing the verified result to your profile is a separate wallet action. Later edits need a new preparation and publication.'],
+    ['What visitors receive', 'Public Grids, the Identity card and the prepared Workbench setup are included. Private Grids, Library organisation, Layers tools and Activity stay private. Visitors can explore and rearrange their session without changing your saved work.'],
+  ] },
+];
 
 export default function OwnerSystemWorkflowManual({ onClose }) {
-  const [chapterId, setChapterId] = useState('index');
-  const chapter = chapters.find(({ id }) => id === chapterId);
-  const isAbout = chapterId === 'about';
+  const [chapterIndex, setChapterIndex] = useState(0);
+  const tabs = useRef([]);
+  const id = useId();
+  const chapter = chapters[chapterIndex];
+  const selectWithKeyboard = (event, index) => {
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? chapters.length - 1
+      : event.key === 'ArrowRight' ? (index + 1) % chapters.length
+        : event.key === 'ArrowLeft' ? (index + chapters.length - 1) % chapters.length : null;
+    if (next === null) return;
+    event.preventDefault();
+    setChapterIndex(next);
+    tabs.current[next]?.focus();
+  };
   return <aside aria-label="Docs" className="system-workflow__manual system-workflow__motion-panel" role="dialog">
-    <div className="system-workflow__manual-body">
-      {chapter ? <>
-        <section className="system-workflow__manual-chapter-intro"><h2>{chapter.label}</h2><p>{chapter.summary}</p></section>
-        {chapter.sections.map(([title, description]) => <section key={title}><h2>{title}</h2><p>{description}</p></section>)}
-      </> : isAbout ? <>
-        <section className="system-workflow__manual-index-intro"><h2>What is Inscape?</h2><p>Inscape is a creative environment for shaping how your identity, artwork and digital world are experienced.</p><p>Arrange assets across Grids, build a presentation that feels like your own and decide what visitors can see. Everything begins in this workspace and stays under your control.</p></section>
-      </> : <>
-        <section className="system-workflow__manual-chapter-intro"><h2>Index</h2><p>Choose a chapter for a clear overview of what each part of Inscape does.</p></section>
-        <nav aria-label="Documentation index" className="system-workflow__manual-index">
-          {chapters.map(({ id, label, summary }) => <button key={id} onClick={() => setChapterId(id)} type="button"><span><b>{label}</b><em>{summary}</em></span></button>)}
-        </nav>
-      </>}
+    <header className="system-workflow__manual-header">
+      <div aria-label="Documentation chapters" role="tablist">
+        {chapters.map(({ id: chapterId, label }, index) => <button
+          aria-controls={`${id}-panel`} aria-selected={index === chapterIndex} id={`${id}-${chapterId}`}
+          key={chapterId} onClick={() => setChapterIndex(index)} onKeyDown={event => selectWithKeyboard(event, index)}
+          ref={node => { tabs.current[index] = node; }} role="tab" tabIndex={index === chapterIndex ? 0 : -1} type="button">{label}</button>)}
+      </div>
+      <button aria-label="Close Docs" className="system-workflow__manual-close" onClick={onClose} type="button"><X size={15} /></button>
+    </header>
+    <div aria-labelledby={`${id}-${chapter.id}`} className="system-workflow__manual-body" id={`${id}-panel`} key={chapter.id} role="tabpanel" tabIndex={0}>
+      <section className="system-workflow__manual-chapter-intro"><h2>{chapter.label}</h2><p>{chapter.summary}</p></section>
+      {chapter.sections.map(([title, description]) => <section key={title}><h2>{title}</h2><p>{description}</p></section>)}
     </div>
-    <footer aria-label="Documentation chapters">
-      <button aria-pressed={chapterId === 'index'} onClick={() => setChapterId('index')} type="button">Index</button>
-      <button aria-pressed={isAbout} onClick={() => setChapterId('about')} type="button">What?</button>
-      {chapters.map(({ id, label }) => <button aria-pressed={chapterId === id} key={id} onClick={() => setChapterId(id)} type="button">{label}</button>)}
-      <button aria-label="Close Docs" className="system-workflow__manual-close" onClick={onClose} title="Close" type="button"><X size={15} /></button>
-    </footer>
   </aside>;
 }

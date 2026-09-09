@@ -33,7 +33,7 @@ test('publication preparation remains explicit and CID verification is snapshot-
   assert.match(publicationSource, /PREPARE PUBLICATION/u);
   assert.match(publicationSource, /publication\.verifyCid\(snapshot, uploaded\.cid/u);
   assert.match(publicationSource, /publication\.publish\(\)/u);
-  assert.match(publicationSource, /Only your <strong>Public Grids<\/strong>/u);
+  assert.match(publicationSource, /Your <strong>Public Grids<\/strong>, custom Identity card and prepared Workbench setup/u);
   assert.doesNotMatch(publicationSource, /CID \/ MANUAL FALLBACK|PUBLISH VERSION 9/u);
   assert.doesNotMatch(publicationSource, /OwnerRackBoard|profileRackPresentation|buildProfileDocumentV8/u);
 });

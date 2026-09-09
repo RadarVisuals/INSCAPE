@@ -3,6 +3,7 @@ import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReferen
 import { PROFILE_DOCUMENT_LIMITS } from '../../profileDocument/domain/constants.js';
 import { isValidPlacementMedia } from './placementMedia.js';
 import { isValidIdentityCard } from '../../profileIdentity/domain/identityCard.js';
+import { isValidWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 
 export const SYSTEM_WORKFLOW_DRAFT_VERSION = 4;
 export const SYSTEM_WORKFLOW_ARTBOARD = Object.freeze({ aspectWidth: 16, aspectHeight: 9 });
@@ -248,7 +249,7 @@ function validatePlacement(value, path, fail) {
 export function validateSystemWorkflowDraft(input) {
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
-  if (!exactKeys(input, DRAFT_KEYS)) {
+  if (!exactKeys(input, Object.hasOwn(input || {}, 'workbench') ? [...DRAFT_KEYS, 'workbench'] : DRAFT_KEYS)) {
     fail('$', 'invalid_draft_structure', 'Invalid draft');
     return { valid: false, errors, value: null };
   }
@@ -268,12 +269,14 @@ export function validateSystemWorkflowDraft(input) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance?.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid appearance');
   validateIdentity(input.identityPresentation, fail);
+  if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid Workbench configuration');
   if (!Array.isArray(input.grids) || input.grids.length < 2 || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxAuthoringGrids) {
     fail('grids', 'invalid_grid_count', 'One to 24 Grids plus the World Cover are required');
   } else {
     const gridIds = new Set();
     const placementIds = new Set();
     let totalAssetReferences = input.identityPresentation.avatar.stableAssetId === null ? 0 : 1;
+    if (input.workbench?.display?.shortcut?.icon) totalAssetReferences += 1;
     input.grids.forEach((grid, gridIndex) => {
       const path = `grids[${gridIndex}]`;
       if (!exactKeys(grid, GRID_KEYS)) return fail(path, 'invalid_grid_structure', 'Invalid Grid');

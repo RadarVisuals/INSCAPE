@@ -8,7 +8,7 @@ test('Library reports failed storage, preserves the form, saves before reload an
     for (const width of [1440, 700]) {
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await page.goto('http://127.0.0.1:5173/browser-tests/library-storage-fixture.html');
+      await page.goto(`${process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173'}/browser-tests/library-storage-fixture.html`);
       await page.getByRole('button', { name: 'Create Category', exact: true }).click();
       const input = page.getByRole('textbox', { name: 'category name', exact: true });
       await input.fill('Keep my category');

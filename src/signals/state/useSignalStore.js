@@ -41,7 +41,8 @@ export const useSignalStore = create((set, get) => {
       return true;
     },
 
-    async synchronize({ mode = 'LIVE', explicitReplay = false } = {}) {
+    async synchronize({ mode = 'LIVE', explicitReplay = false, expectedProfile = get().profileAddress } = {}) {
+      if (normalizeProfileAddress(expectedProfile) !== get().profileAddress) return;
       if (get().status === 'loading') return;
       const generation = get().syncGeneration + 1;
       set({ syncGeneration: generation, status: 'loading', sourceMode: mode, error: null, partialError: null });
@@ -61,11 +62,13 @@ export const useSignalStore = create((set, get) => {
         if (get().syncGeneration === generation) set({ status: 'error', error: error instanceof Error ? error.message : String(error) });
       }
     },
-    markSeen(id = null) {
+    markSeen(id = null, expectedProfile = get().profileAddress) {
+      if (normalizeProfileAddress(expectedProfile) !== get().profileAddress) return false;
       const history = get().history.map((signal) => !id || signal.id === id ? { ...signal, seen: true, read: true } : signal);
       const document = { ...get().document, history }; set({ history, document }); persist(document);
     },
-    updateSetting(key, value) {
+    updateSetting(key, value, expectedProfile = get().profileAddress) {
+      if (normalizeProfileAddress(expectedProfile) !== get().profileAddress) return false;
       if (!Object.hasOwn(get().settings, key) || typeof value !== 'boolean') return;
       const settings = { ...get().settings, [key]: value }; const document = { ...get().document, settings };
       set({ settings, document, queue: key === 'notifications' && !value ? [] : get().queue,

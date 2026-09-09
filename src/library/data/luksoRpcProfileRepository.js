@@ -1,3 +1,4 @@
+import { fetchMetadataJson } from './fetchMetadataJson.js';
 import { ERC725, decodeDataSourceWithHash } from '@erc725/erc725.js';
 import { metadataImages as collectMetadataImages } from './metadataImages.js';
 import { createPublicClient, fallback, getAddress, http } from 'viem';
@@ -210,21 +211,7 @@ async function fetchMetadataDocument(pointer, { fetchImpl, ipfsGateway, signal, 
   const url = resolveContentUrl(uri, { ipfsGateway });
   if (!url) return null;
   throwIfAborted(signal);
-  const requestController = new AbortController();
-  const abortRequest = () => requestController.abort(signal?.reason);
-  signal?.addEventListener('abort', abortRequest, { once: true });
-  const timeout = setTimeout(() => requestController.abort(), metadataResponseMs);
-  try {
-    const response = await fetchImpl(url, { signal: requestController.signal,
-      headers: { accept: 'application/json,image/*;q=0.8,*/*;q=0.2' } });
-    if (!response.ok) throw new Error(`ASSET METADATA RESPONDED ${response.status}`);
-    const contentType = response.headers?.get?.('content-type') || '';
-    if (contentType.startsWith('image/')) return { image: [{ url: uri, fileType: contentType }] };
-    return response.json();
-  } finally {
-    clearTimeout(timeout);
-    signal?.removeEventListener('abort', abortRequest);
-  }
+  return fetchMetadataJson(url, { fetchImpl, signal, timeoutMs: metadataResponseMs, imageUrl: uri });
 }
 
 async function readCollectionMetadata(address, client, context) {

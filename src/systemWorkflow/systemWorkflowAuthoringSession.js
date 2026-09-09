@@ -75,6 +75,9 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
   }
 
   return Object.freeze({
+    saveWorkbench(workbench) {
+      return transact(draft => assertValidSystemWorkflowDraft({ ...draft, workbench: structuredClone(workbench) }));
+    },
     setIdentityConfiguration({ expectedDetails, expectedCard, details, card }) {
       return transact((draft) => {
         const current = draft.identityPresentation;

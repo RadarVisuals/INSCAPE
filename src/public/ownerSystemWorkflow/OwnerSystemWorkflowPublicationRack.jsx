@@ -34,6 +34,9 @@ export default function OwnerSystemWorkflowPublicationRack({
   publishedResolution,
   phase,
   systemWorkflowDraft,
+  workbench,
+  onSaveWorkbench,
+  preparationError,
 }) {
   const [snapshot, setSnapshot] = useState(() => initialSnapshot ? assertValidProfileDocumentV9(initialSnapshot) : null);
   const [message, setMessage] = useState('Ready to publish your current public presentation.');
@@ -46,16 +49,17 @@ export default function OwnerSystemWorkflowPublicationRack({
   const cidGenerationRef = useRef(0);
   const draftGenerationRef = useRef({ fingerprint: null, generation: 0 });
 
-  const builderInput = useMemo(() => ({ assetRecords, profile, profileAddress, systemWorkflowDraft }),
-    [assetRecords, profile, profileAddress, systemWorkflowDraft]);
+  const builderInput = useMemo(() => ({ assetRecords, profile, profileAddress, systemWorkflowDraft, workbench }),
+    [assetRecords, profile, profileAddress, systemWorkflowDraft, workbench]);
   const draftState = useMemo(() => {
     try {
+      if (preparationError) throw new Error(preparationError);
       const candidate = buildOwnerSystemWorkflowPublicationDocument({ ...builderInput, exportedAt: new Date(0) });
       return { error: null, fingerprint: profileDocumentV9ContentFingerprint(candidate) };
     } catch (error) {
       return { error: error?.message || 'The public System Workflow cannot be projected', fingerprint: null };
     }
-  }, [builderInput]);
+  }, [builderInput, preparationError]);
   if (draftGenerationRef.current.fingerprint !== draftState.fingerprint) {
     draftGenerationRef.current = {
       fingerprint: draftState.fingerprint,
@@ -97,6 +101,7 @@ export default function OwnerSystemWorkflowPublicationRack({
         exportedAt: new Date(),
         previousDocument: previous,
       });
+      if (onSaveWorkbench && !onSaveWorkbench(next.workbench)) throw new Error('The Workbench setup could not be saved.');
       snapshotRef.current = next;
       snapshotDraftFingerprintRef.current = draftFingerprint;
       snapshotGenerationRef.current += 1;
@@ -114,7 +119,7 @@ export default function OwnerSystemWorkflowPublicationRack({
         phase: 'PUBLICATION_SNAPSHOT', providerCategory: 'LOCAL_VALIDATION', message: nextMessage });
       setOperationPhase(null);
     }
-  }, [builderInput, draftFingerprint, draftState.error, onSnapshotChange, profileAddress, publication, publishedResolution, snapshot]);
+  }, [builderInput, draftFingerprint, draftState.error, onSaveWorkbench, onSnapshotChange, profileAddress, publication, publishedResolution, snapshot]);
 
   const uploadSnapshot = useCallback(async () => {
     try {
@@ -173,9 +178,9 @@ export default function OwnerSystemWorkflowPublicationRack({
     }}>
     <section className="owner-lattice-publication-rack__summary">
       <h2>WHAT GOES LIVE</h2>
-      <p>Only your <strong>Public Grids</strong>: their visible artwork, composition, crop and transforms.</p>
+      <p>Your <strong>Public Grids</strong>, custom Identity card and prepared Workbench setup: window positions, starting open state, Display name and shortcut.</p>
       <h2>WHAT STAYS PRIVATE</h2>
-      <p>Private Grids, Library organisation, drafts, selections, edit history and local preferences stay in this browser.</p>
+      <p>Private Grids, Library organisation, Layers tools, Activity, selections and local preferences stay private.</p>
       <small>The NFTs already exist publicly on LUKSO. Publishing only updates how your INSCAPE profile presents them.</small>
     </section>
     {draftState.error && <section><p role="alert">{draftState.error}</p></section>}

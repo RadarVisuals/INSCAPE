@@ -17,12 +17,12 @@ export default function OwnerSystemWorkflowReconciliationBoundary(props) {
     }
     setState('LOADING');
     import('../../profileDocument/storage/ownerDraftReconciliation.js')
-      .then(({ reconcileStoredOwnerDraftWithPublishedProfile }) => reconcileStoredOwnerDraftWithPublishedProfile({
+      .then(({ reconcileStoredOwnerDraftWithPublishedProfile }) => active && reconcileStoredOwnerDraftWithPublishedProfile({
         document: publishedDocument,
         profileAddress,
         storage: reviewStorage ?? globalThis.localStorage,
       }))
-      .then(() => active && setState('READY'))
+      .then(result => active && setState(['HYDRATION_FAILED', 'LOCAL_DRAFT_UNAVAILABLE', 'HYDRATED_WITHOUT_BASELINE'].includes(result?.status) ? 'ERROR' : 'READY'))
       .catch(() => active && setState('ERROR'));
     return () => { active = false; };
   }, [profileAddress, publishedDocument, reviewStorage]);

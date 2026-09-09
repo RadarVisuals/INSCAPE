@@ -6,6 +6,7 @@ import { PublishedProfileResolutionStore } from '../src/profileDocument/state/pu
 import { buildProfileDocumentV9 } from '../src/profileDocument/domain/profileDocumentV9Builder.js';
 import { createEmptySystemWorkflowDraft } from '../src/systemWorkflow/domain/systemWorkflowDraft.js';
 import '../src/index.css';
+import { createDefaultWorkbenchPresentation } from '../src/profileDocument/domain/workbenchPresentation.js';
 
 export const PROFILE_A = '0x1111111111111111111111111111111111111111';
 export const PROFILE_B = '0x2222222222222222222222222222222222222222';
@@ -45,6 +46,18 @@ function createCanonicalDocument(address, suffix, artworkUrl) {
     ...structuredClone(systemWorkflowDraft.grids[0]), id: `grid:${suffix.toLowerCase()}-archive`,
     title: `${suffix} Archive`, subtitle: 'Ordered second Grid', placements: [],
   });
+  if (new URLSearchParams(location.search).has('workbench')) {
+    systemWorkflowDraft.workbench = createDefaultWorkbenchPresentation();
+    systemWorkflowDraft.workbench.display.name = 'Lunar Desert';
+    systemWorkflowDraft.workbench.display.open = false;
+    systemWorkflowDraft.workbench.display.window = { left: 40, top: 90, width: 720, height: 438 };
+    systemWorkflowDraft.workbench.identity.open = true;
+    systemWorkflowDraft.workbench.identity.window = { left: 80, top: 64, width: 680 };
+    systemWorkflowDraft.identityPresentation.alias = 'HUMAN UNDERNEATH';
+    systemWorkflowDraft.identityPresentation.card = { version: 1,
+      background: { type: 'clouds', color: '#7139a5', speed: .5 },
+      fields: [{ id: 'field:place', label: 'Location', type: 'text', value: 'The Underneath' }] };
+  }
   return buildProfileDocumentV9({
     assetRecords: assets, createdAt: 1, exportedAt: 2, profileAddress: address,
     profileIdentity: { name: `${suffix} Visitor Fixture`, avatarUrl: `https://published-images.invalid/avatar-${suffix}.png` },

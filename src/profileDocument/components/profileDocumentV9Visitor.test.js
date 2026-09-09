@@ -61,7 +61,7 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
     'the artwork viewer remains free of the published workspace Grid');
   assert.doesNotMatch(visitor, /gridVisible=\{document\.appearance\.guideMode !== 'NONE'\}/);
   assert.match(renderer, /data-viewer-source-hidden/);
-  assert.match(visitor, /projectionBottomInset=\{VISITOR_GRID_NAVIGATION_SAFE_AREA\}/);
+  assert.match(visitor, /projectionBottomInset=\{document.workbench \? 0 : VISITOR_GRID_NAVIGATION_SAFE_AREA\}/);
   assert.match(visitor, /VISITOR_GRID_NAVIGATION_SAFE_AREA = 42/);
   assert.match(visitor, /IdentityModule/);
   assert.match(visitor, /gridVisible=\{false\}/);
@@ -69,7 +69,6 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(visitor, /identityControlRef=\{identityControlRef\}/);
   assert.match(visitor, /profileDockControlRef/);
   assert.match(visitor, /returnFocus/);
-  assert.match(visitor, /className="visitor-grid-world" data-lattice-menu-surface/);
   assert.match(visitor, /ArrowRight/);
   assert.match(visitor, /resolveVisitorGridDragDestination/);
   assert.match(visitor, /event\.code !== 'Space'/);

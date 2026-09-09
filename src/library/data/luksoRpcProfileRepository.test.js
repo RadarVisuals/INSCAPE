@@ -13,7 +13,7 @@ const hash = `0x${'0'.repeat(64)}`;
 const uri = (name) => encodeDataSourceWithHash({ method: 'keccak256(bytes)', data: hash }, `ipfs://${name}`);
 
 function response(body) {
-  return { ok: true, headers: { get: () => 'application/json' }, json: async () => body };
+  return Response.json(body);
 }
 
 test('discovers LSP5 contracts, verifies direct ownership and normalizes LSP7 and LSP8 metadata', async () => {
@@ -237,6 +237,30 @@ test('collection metadata resolver prefers token metadata and falls back to the 
   assert.equal(result.get(secondTokenId).name, 'Base two');
   assert.equal(result.get(secondTokenId).metadataSource, 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)');
   assert.equal(fetched.some((url) => url.endsWith('/metadata/2')), true);
+});
+
+test('RPC metadata stays bounded after headers and cancels a stalled body', async () => {
+  let cancelled = false;
+  let requestSignal;
+  const client = {
+    async multicall({ contracts }) {
+      return contracts[0]?.functionName === 'supportsInterface'
+        ? [{ status: 'success', result: false }, { status: 'success', result: true }]
+        : [{ status: 'success', result: 1n }];
+    },
+    async readContract() { return uri('stalled-body'); },
+  };
+  const repository = createLuksoRpcProfileRepository({ client, rpcUrl: 'https://rpc.example', metadataResponseMs: 10,
+    discoverContracts: async () => [lsp7], fetchImpl: async (_url, { signal }) => {
+      requestSignal = signal;
+      return new Response(new ReadableStream({ cancel() { cancelled = true; } }), { headers: { 'content-type': 'application/json' } });
+    } });
+  const batches = [];
+  for await (const batch of repository.loadProfileAssets(profile)) batches.push(batch);
+  assert.equal(requestSignal.aborted, true);
+  assert.equal(cancelled, true);
+  assert.equal(batches.at(-1).complete, true);
+  assert.equal(batches.at(-1).failures, 1);
 });
 
 test('collection contexts retry failed reads and refresh after their TTL', async () => {

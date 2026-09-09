@@ -52,46 +52,45 @@ export default function useOwnerSystemWorkflowActivity({ active, fixture, profil
   const [fixtureStatus, setFixtureStatus] = useState('ready');
   const [identityRevision, setIdentityRevision] = useState(0);
   useEffect(() => {
-    if (fixture || !active) return;
     setProfileAddress(profileAddress);
-  }, [active, fixture, profileAddress, setProfileAddress]);
+  }, [profileAddress, setProfileAddress]);
   useEffect(() => {
     if (fixture || !active || storeProfile !== profileAddress || status !== 'idle') return;
     synchronize({ mode: 'LIVE' });
   }, [active, fixture, profileAddress, status, storeProfile, synchronize]);
   useEffect(() => {
-    if (fixture || !active) return undefined;
+    if (fixture || !active || storeProfile !== profileAddress) return undefined;
     const subscriptions = history.filter(({ counterparty }) => counterparty).map((entry) => {
       const cache = getProfileIdentityCache(entry.sourceMode || sourceMode || 'LIVE');
       cache.resolve(entry.counterparty).catch(() => {});
       return cache.subscribe(entry.counterparty, () => setIdentityRevision((value) => value + 1));
     });
     return () => subscriptions.forEach((unsubscribe) => unsubscribe());
-  }, [active, fixture, history, sourceMode]);
+  }, [active, fixture, history, sourceMode, storeProfile, profileAddress]);
   const entries = useMemo(() => fixture
     ? fixture.map(normalizeFixture).map((entry) => ({ ...entry, unread: entry.unread && !fixtureReadIds.has(entry.id) }))
-    : history.map((entry, index) => normalizeSignal(entry, index,
+    : (storeProfile === profileAddress ? history : []).map((entry, index) => normalizeSignal(entry, index,
       getProfileIdentityCache(entry.sourceMode || sourceMode || 'LIVE').peek(entry.counterparty))),
-  [fixture, fixtureReadIds, history, identityRevision, sourceMode]);
+  [fixture, fixtureReadIds, history, identityRevision, sourceMode, storeProfile, profileAddress]);
   const markRead = useCallback((id = null) => {
-    if (!fixture) { markSeen(id); return; }
+    if (!fixture) { markSeen(id, profileAddress); return; }
     setFixtureReadIds((current) => new Set(id ? [...current, id] : entries.filter(({ unread }) => unread).map(({ id: entryId }) => entryId)));
-  }, [entries, fixture, markSeen]);
+  }, [entries, fixture, markSeen, profileAddress]);
   const refresh = useCallback(async () => {
-    if (!fixture) return synchronize({ mode: 'LIVE' });
+    if (!fixture) return synchronize({ mode: 'LIVE', expectedProfile: profileAddress });
     setFixtureStatus('loading');
     await Promise.resolve();
     setFixtureStatus('ready');
     return undefined;
-  }, [fixture, synchronize]);
+  }, [fixture, synchronize, profileAddress]);
   return {
     entries,
-    error: fixture ? null : error,
+    error: fixture || storeProfile !== profileAddress ? null : error,
     markRead,
-    partialError: fixture ? null : partialError,
+    partialError: fixture || storeProfile !== profileAddress ? null : partialError,
     refresh,
     retry: refresh,
-    status: fixture ? fixtureStatus : status,
+    status: fixture ? fixtureStatus : storeProfile === profileAddress ? status : 'idle',
     unreadCount: entries.filter(({ unread }) => unread).length,
   };
 }

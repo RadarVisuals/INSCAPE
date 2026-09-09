@@ -74,6 +74,7 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   const gridRequest = (grid, extra = {}) => ({ gridId: grid.id, expectedGridFingerprint: systemWorkflowGridFingerprint(grid), ...extra });
   return { ...state, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError,
     run, selectPlacement, replaceSelection, hiddenPlacementIds, togglePlacementVisibility,
+    saveWorkbench: workbench => run(session => session.saveWorkbench(workbench)),
     saveIdentity: ({ profile: values, card, avatar }) => run((session) => {
       const { alias, bio, tags, avatar: expectedAvatar } = state.draft.identityPresentation;
       const changedBio = values.description !== (bio.mode === 'inscape' ? bio.customText : '');

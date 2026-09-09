@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import useOwnerLatticeBrowser from '../src/public/useOwnerLatticeBrowser.js';
 import { resetLibraryStoreForTests, useLibraryStore } from '../src/library/state/useLibraryStore.js';
@@ -18,11 +18,12 @@ window.storageTest = { denied: false, store: useLibraryStore,
   saved: () => storage.getItem(libraryWorkspaceKey(profile)),
   externalChange: () => storage.setItem(libraryWorkspaceKey(profile), JSON.stringify({ ...useLibraryStore.getState().workspace, favorites: ['external'] })) };
 resetLibraryStoreForTests(profile, storage);
-const controller = { selectedGridId: 'home', draft: { profileAddress: profile } };
 function Fixture() {
   const browser = useOwnerLatticeBrowser(profile, false);
-  return <main className="system-workflow" data-lattice-menu-surface data-menu-surface="paper" data-layout={innerWidth < 800 ? 'narrow' : 'wide'} data-library-open>
-    <OwnerSystemWorkflowLibraryWorkspace categoryCommands={browser.commands} controller={controller} data={browser.data}
+  const workspaceRef = useRef(null), placementTargetRef = useRef(null), shortcutTargetRef = useRef(null), moduleAssetTargetRef = useRef(null);
+  return <main ref={workspaceRef} className="system-workflow" data-lattice-menu-surface data-menu-surface="paper" data-layout={innerWidth < 800 ? 'narrow' : 'wide'} data-library-open>
+    <OwnerSystemWorkflowLibraryWorkspace categoryCommands={browser.commands} placementScope={`${profile}:home`} data={browser.data}
+      workspaceRef={workspaceRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} moduleAssetTargetRef={moduleAssetTargetRef}
       menuSurface="paper" onClose={() => {}} phase="open" />
   </main>;
 }

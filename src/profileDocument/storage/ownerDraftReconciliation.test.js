@@ -3,6 +3,7 @@ import test from 'node:test';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { buildProfileDocumentV9 } from '../domain/profileDocumentV9Builder.js';
+import { ownerPublicationBaselineKey } from './ownerPublicationBaselineStorage.js';
 import {
   createOwnerDraftFromPublishedProfile,
   reconcileOwnerDraftWithPublishedProfile,
@@ -51,14 +52,14 @@ test('a published v9 document reconstructs a valid editable owner draft', () => 
   assert.equal(draft.grids[0].placements[0].locked, false);
 });
 
-test('a baseline-less origin replaces its unrelated local draft from the verified publication', () => {
+test('a baseline-less origin preserves its existing local draft', () => {
   const old = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'old-home' });
   old.grids[0].title = 'OLD LOCAL';
   const storage = memoryStorage({ [systemWorkflowDraftKey(PROFILE)]: JSON.stringify(old) });
   const store = createSystemWorkflowDraftStore({ profileAddress: PROFILE, storage });
   const result = reconcileOwnerDraftWithPublishedProfile({ document: publication(), profileAddress: PROFILE, storage, store });
-  assert.equal(result.status, 'HYDRATED_FROM_PUBLISHED');
-  assert.equal(store.getDraft().grids[0].title, 'PUBLISHED HOME');
+  assert.equal(result.status, 'LOCAL_CHANGES_PRESERVED');
+  assert.equal(store.getDraft().grids[0].title, 'OLD LOCAL');
 });
 
 test('post-baseline local edits survive a newer publication until explicitly reconciled', () => {
@@ -78,4 +79,53 @@ test('post-baseline local edits survive a newer publication until explicitly rec
   });
   assert.equal(result.status, 'LOCAL_CHANGES_PRESERVED');
   assert.equal(store.getDraft().grids[0].subtitle, 'UNPUBLISHED LOCAL EDIT');
+});
+
+test('corrupt and unreadable baselines never authorize replacing existing private work', () => {
+  for (const denied of [false, true]) {
+    const old = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'private' });
+    old.grids[0].visibility = 'PRIVATE';
+    const raw = JSON.stringify(old);
+    const storage = memoryStorage({ [systemWorkflowDraftKey(PROFILE)]: raw, [ownerPublicationBaselineKey(PROFILE)]: '{broken' });
+    const read = storage.getItem;
+    if (denied) storage.getItem = key => { if (key === ownerPublicationBaselineKey(PROFILE)) throw Error('Denied'); return read(key); };
+    const store = createSystemWorkflowDraftStore({ profileAddress: PROFILE, storage });
+    const result = reconcileOwnerDraftWithPublishedProfile({ document: publication(), profileAddress: PROFILE, storage, store });
+    assert.equal(result.status, 'LOCAL_CHANGES_PRESERVED');
+    assert.equal(result.baselineStatus, denied ? 'unavailable' : 'corrupt');
+    assert.equal(storage.records.get(systemWorkflowDraftKey(PROFILE)), raw);
+  }
+});
+
+test('failed baseline persistence cannot authorize replacing later private edits', () => {
+  const storage = memoryStorage();
+  const write = storage.setItem;
+  storage.setItem = (key, value) => { if (key === ownerPublicationBaselineKey(PROFILE)) throw Error('Denied'); write(key, value); };
+  const store = createSystemWorkflowDraftStore({ profileAddress: PROFILE, storage });
+  assert.equal(reconcileOwnerDraftWithPublishedProfile({ document: publication(), profileAddress: PROFILE, storage, store }).status, 'HYDRATED_WITHOUT_BASELINE');
+  const edited = store.getDraft(); edited.grids[0].subtitle = 'Private edits';
+  store.commitCompletedOperation(edited, { expectedGeneration: store.getGeneration() });
+  assert.equal(reconcileOwnerDraftWithPublishedProfile({ document: publication(2), profileAddress: PROFILE, storage, store }).status, 'LOCAL_CHANGES_PRESERVED');
+  assert.equal(store.getDraft().grids[0].subtitle, 'Private edits');
+});
+
+test('the storage restoration path retains alternate media and dimensions', () => {
+  const document = publication();
+  document.grids[0].placements[0].asset.media = { type: 'image', url: 'https://example.com/alternate.png', width: 900, height: 600 };
+  const storage = memoryStorage();
+  const store = createSystemWorkflowDraftStore({ profileAddress: PROFILE, storage });
+  reconcileOwnerDraftWithPublishedProfile({ document, profileAddress: PROFILE, storage, store });
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: PROFILE, storage }).getDraft().grids[0].placements[0].selectedMedia,
+    { url: 'https://example.com/alternate.png', width: 900, height: 600 });
+});
+
+test('a retained baseline does not prevent restoring an absent draft', () => {
+  const storage = memoryStorage();
+  const initialStore = createSystemWorkflowDraftStore({ profileAddress: PROFILE, storage });
+  reconcileOwnerDraftWithPublishedProfile({ document: publication(), profileAddress: PROFILE, storage, store: initialStore });
+  storage.removeItem(systemWorkflowDraftKey(PROFILE));
+  const store = createSystemWorkflowDraftStore({ profileAddress: PROFILE, storage });
+  assert.equal(reconcileOwnerDraftWithPublishedProfile({ document: publication(), profileAddress: PROFILE, storage, store }).status,
+    'HYDRATED_FROM_PUBLISHED');
+  assert.equal(store.getDraft().grids[0].title, 'PUBLISHED HOME');
 });

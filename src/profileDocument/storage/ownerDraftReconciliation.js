@@ -1,9 +1,8 @@
 import { normalizeProfileAddress } from '../../library/config.js';
 import {
-  SYSTEM_WORKFLOW_DRAFT_VERSION,
   assertValidSystemWorkflowDraft,
-  createEmptySystemWorkflowWorldCoverGrid,
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { reconcileSystemWorkflowDraftFromProfileDocumentV9 as createOwnerDraftFromPublishedProfile } from '../domain/profileDocumentV9Reconciliation.js';
 import { assertValidProfileDocumentV9 } from '../domain/profileDocumentV9Validation.js';
 import {
   loadOwnerPublicationBaseline,
@@ -29,53 +28,7 @@ export function systemWorkflowDraftFingerprint(draftInput) {
   return `draft-v1:${text.length}:${(first >>> 0).toString(16).padStart(8, '0')}:${(second >>> 0).toString(16).padStart(8, '0')}`;
 }
 
-export function createOwnerDraftFromPublishedProfile(documentInput) {
-  const document = assertValidProfileDocumentV9(documentInput);
-  const restoredGrid = (grid) => ({
-    id: grid.id,
-    title: grid.title,
-    subtitle: grid.subtitle,
-    visibility: grid.visibility,
-    labelVisible: grid.labelVisible,
-    labelAnchor: grid.labelAnchor,
-    labelOffset: structuredClone(grid.labelOffset),
-    placements: grid.placements.map(({ asset, ...placement }) => ({
-      ...structuredClone(placement),
-      stableAssetId: asset.stableAssetId,
-      locked: false,
-    })),
-  });
-  const worldCover = document.metadata.worldCover
-    ? restoredGrid(document.metadata.worldCover.grid)
-    : createEmptySystemWorkflowWorldCoverGrid();
-  const draft = {
-    profileAddress: document.profile.address,
-    draftVersion: SYSTEM_WORKFLOW_DRAFT_VERSION,
-    artboard: structuredClone(document.artboard),
-    geometry: structuredClone(document.geometry),
-    appearance: structuredClone(document.appearance),
-    identityPresentation: {
-      ...(document.identityPresentation.card ? { card: structuredClone(document.identityPresentation.card) } : {}),
-      alias: document.identityPresentation.alias,
-      avatar: {
-        mode: document.identityPresentation.avatar.mode,
-        stableAssetId: document.identityPresentation.avatar.asset?.stableAssetId || null,
-        shape: document.identityPresentation.avatar.shape,
-        ...(document.identityPresentation.avatar.asset?.media?.url && document.identityPresentation.avatar.asset.media.type === 'image' ? { selectedMedia: {
-          url: document.identityPresentation.avatar.asset.media.url,
-          width: document.identityPresentation.avatar.asset.media.width,
-          height: document.identityPresentation.avatar.asset.media.height,
-        } } : {}),
-      },
-      bio: structuredClone(document.identityPresentation.bio),
-      tags: structuredClone(document.identityPresentation.tags),
-      dossierSurface: document.identityPresentation.dossierSurface,
-      visibility: structuredClone(document.identityPresentation.visibility),
-    },
-    grids: [...document.grids.map(restoredGrid), worldCover],
-  };
-  return assertValidSystemWorkflowDraft(draft);
-}
+export { reconcileSystemWorkflowDraftFromProfileDocumentV9 as createOwnerDraftFromPublishedProfile } from '../domain/profileDocumentV9Reconciliation.js';
 
 function matchingDocument(documentInput, profileAddress) {
   if (!documentInput) return null;
@@ -98,17 +51,22 @@ export function reconcileOwnerDraftWithPublishedProfile({ document: documentInpu
   const localFingerprint = systemWorkflowDraftFingerprint(localDraft);
   const importedDraft = createOwnerDraftFromPublishedProfile(document);
   const publishedFingerprint = systemWorkflowDraftFingerprint(importedDraft);
-  const baseline = loadOwnerPublicationBaseline(storage, profileAddress);
-  if (baseline?.publishedFingerprint === publishedFingerprint) {
+  const baselineRecord = loadOwnerPublicationBaseline(storage, profileAddress);
+  const baseline = baselineRecord.value;
+  if (recordState.status === 'valid' && !baseline) {
+    return Object.freeze({ status: 'LOCAL_CHANGES_PRESERVED', baselineStatus: baselineRecord.status, publishedFingerprint });
+  }
+  if (recordState.status === 'valid' && baseline?.publishedFingerprint === publishedFingerprint) {
     return Object.freeze({ status: 'LOCAL_DRAFT_CURRENT', publishedFingerprint });
   }
-  if (baseline && baseline.localFingerprint !== localFingerprint) {
+  if (recordState.status === 'valid' && baseline && baseline.localFingerprint !== localFingerprint) {
     return Object.freeze({ status: 'LOCAL_CHANGES_PRESERVED', publishedFingerprint });
   }
-  if (!store.commitCompletedOperation(importedDraft, { expectedGeneration: store.getGeneration() })) {
+  if (!store.commitCompletedOperation(recordState.status === 'valid'
+    ? createOwnerDraftFromPublishedProfile(document, localDraft) : importedDraft, { expectedGeneration: store.getGeneration() })) {
     return Object.freeze({ status: 'HYDRATION_FAILED', publishedFingerprint });
   }
-  const importedFingerprint = systemWorkflowDraftFingerprint(importedDraft);
+  const importedFingerprint = systemWorkflowDraftFingerprint(store.getDraft());
   const baselineSaved = saveOwnerPublicationBaseline(storage, profileAddress, {
     publishedFingerprint,
     localFingerprint: importedFingerprint,
