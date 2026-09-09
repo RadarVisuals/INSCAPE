@@ -126,6 +126,13 @@ internal compatibility names during this migration; do not broadly rename them.
 - Pan and zoom are camera/view state. They never resize assets, mutate the Grid,
   or alter published geometry.
 - Support a fitted overview and sufficiently strong zoom for precise editing.
+- Scrolling over the Stage resizes the Display window around its centre within
+  window bounds. Scrolling over instruments retains their own scrolling.
+  After reaching maximum size, a separate upward scroll enters an immersive
+  browser-area Stage view, with Workbench and instruments hidden and plain black
+  letterboxing to preserve 16:9. Scroll down, Escape, or the revealed Exit control
+  restores the prior window. Immersive geometry is temporary and never captured
+  as the published window arrangement. Owner and Visitor share this behavior.
 - Ordered Grid navigation wraps from last to first and first to last, in the
   editor and public presentation. A single Grid does not swipe to itself; the
   World Cover remains outside the editor's scene sequence.

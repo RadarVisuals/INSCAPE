@@ -191,6 +191,35 @@
 }
 
 .system-workflow__presentation-board[data-maximized] { z-index: 8; }
+.system-workflow__presentation-board[data-immersive] {
+  position: fixed; inset: 0; margin: 0; padding: 0; border: 0;
+  max-width: none; max-height: none; border-radius: 0; box-shadow: none;
+  display: grid; grid-template: 1fr / 1fr; place-items: center;
+  background: #000; overflow: hidden; z-index: 2147483647;
+}
+.system-workflow__presentation-board[data-immersive]::before,
+.system-workflow__presentation-board[data-immersive]::after { display: none !important; }
+.system-workflow__presentation-board[data-immersive]::backdrop { background: #000; }
+.system-workflow__presentation-board[data-immersive] > :not(.system-workflow__stage-viewport, .system-workflow__identity-strip, .system-workflow__immersive-exit, .system-workflow__board-inspection-host) { display: none; }
+.system-workflow__presentation-board[data-immersive] > .system-workflow__stage-viewport { border-radius: 0; grid-area: 1 / 1; }
+.system-workflow__presentation-board[data-immersive] > .system-workflow__identity-strip {
+  position: absolute; inset: 0 70px auto 0; z-index: 60; opacity: 0;
+  background: #111; transition: opacity 180ms ease;
+}
+.system-workflow__presentation-board[data-immersive] .system-workflow__identity-strip:is(:hover, :focus-within) { opacity: 1; }
+.system-workflow__presentation-board[data-immersive] :is(.system-workflow__board-workspace-controls, .system-workflow__composition-lock-controls, .system-workflow__board-window-controls) { display: none; }
+.system-workflow__immersive-exit {
+  position: absolute; top: 0; right: 0; z-index: 61; min-height: 36px;
+  display: flex; align-items: center; gap: 6px; padding: 8px;
+  border: 0; border-radius: 0; background: #111; color: #fff;
+  font: 400 11px/1 "Inscape Sora", sans-serif; opacity: 0; cursor: pointer;
+  transition: opacity 180ms ease;
+}
+.system-workflow__immersive-exit:is(:hover, :focus-visible) { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .system-workflow__immersive-exit,
+  .system-workflow__presentation-board[data-immersive] > .system-workflow__identity-strip { transition: none; }
+}
 .system-workflow__presentation-board:is([data-board-phase="maximizing"], [data-board-phase="restoring"]) {
   transition:
     left 260ms var(--workflow-ease),
