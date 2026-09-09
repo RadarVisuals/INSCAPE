@@ -47,6 +47,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   menuSurface = null, profileAddress, reducedMotion = false, renderInspection, renderInstruments,
   shortcutTargetRef, instrumentTriggers, shortcutSnap = true, workbenchGridColor = null, workbenchGridMode = 'LINES', initialPresentation, onWindowChange, onShortcutChange, readOnly = false }) {
   const localShortcutRef = useRef(null);
+  const geometryKey = JSON.stringify(documentGeometry);
   const shortcutRef = shortcutTargetRef || localShortcutRef;
   const storedName = useMemo(() => initialPresentation?.name || (readOnly ? null : loadPresentationBoardShortcut(profileAddress)?.name), [profileAddress]);
   const [moduleName, setModuleName] = useState(null);
@@ -103,7 +104,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     observer?.observe(host);
     globalThis.addEventListener?.('resize', measure);
     return () => { observer?.disconnect(); globalThis.removeEventListener?.('resize', measure); };
-  }, [documentGeometry, host, layoutMode, metadataSidecarOpen, metadataWidth]);
+  }, [geometryKey, host, layoutMode, metadataSidecarOpen, metadataWidth]);
 
   const defaultTop = layoutMode === 'narrow' ? 48 : view?.frame.board.top || 0;
   const clampPosition = (position, frame = view?.frame.board) => ({
@@ -156,7 +157,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       if (wheelAnimationRef.current) cancelAnimationFrame(wheelAnimationRef.current.frame);
       wheelAnimationRef.current = null;
     };
-  }, [host, documentGeometry, view?.fit, metadataSidecarOpen, metadataWidth, immersive, boardPhase, instanceState]);
+  }, [host, geometryKey, view?.fit.stage.width, view?.fit.stage.height, metadataSidecarOpen, metadataWidth, immersive, boardPhase, instanceState]);
 
   const leaveImmersive = () => {
     wheelRef.current.blockedUntil = performance.now() + 450;
@@ -212,7 +213,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? stage.clientHeight : 1);
       let animation = wheelAnimationRef.current;
       const target = setContinuousPresentationBoardScale(view,
-        (animation?.target ?? view.scale) + Math.max(-.06, Math.min(.06, -pixels * .001))).scale;
+        (animation?.target ?? view.scale) + Math.max(-.12, Math.min(.12, -pixels * .002))).scale;
       if (animation) { animation.target = target; return; }
       if (target === view.scale) return;
       animation = { target, current: view.scale, time: now, frame: null,
