@@ -42,7 +42,7 @@
   pointer-events: none;
 }
 .lattice-production-placement[data-placement-activatable] { pointer-events: auto; cursor: zoom-in; }
-.lattice-production-placement[data-placement-activatable]:focus-visible:not([data-inspection-pointer-focus]) { outline: 1px solid currentColor; outline-offset: 3px; }
+.lattice-production-placement:is(:focus, :focus-visible) { outline: none; }
 .lattice-production-placement[data-viewer-source-hidden] { opacity: 0; }
 
 .lattice-production-placement__mat,

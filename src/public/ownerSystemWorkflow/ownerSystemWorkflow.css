@@ -555,11 +555,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
   cursor: pointer;
   touch-action: none;
 }
-.system-workflow__placement:focus { outline: 0; }
-.system-workflow__placement:focus-visible:not([data-system-workflow-pointer-focus]):not([data-lattice-pointer-focus-return]):not([data-inspection-pointer-focus]) {
-  outline: 1px solid currentColor;
-  outline-offset: -2px;
-}
+.system-workflow__placement:is(:focus, :focus-visible) { outline: none; }
 
 .system-workflow__placement > span { position: absolute; inset: 0; display: block; box-sizing: border-box; pointer-events: none; }
 .system-workflow__placement img { position: absolute; display: block; max-width: none; max-height: none; object-fit: fill; transform-origin: center; pointer-events: none; }

@@ -153,8 +153,9 @@ internal compatibility names during this migration; do not broadly rename them.
   During focus, clicking anywhere within the Stage, including on the selected
   artwork, closes inspection through the same restore path as Escape. That
   click does not activate underlying artwork. Metadata and title-bar controls
-  retain their own interactions. Pointer dismissal restores focus without a
-  lingering keyboard outline; keyboard interaction retains visible focus.
+  retain their own interactions. Stage artwork never displays a rectangular
+  focus outline, including after keyboard interaction or focus restoration.
+  Keyboard activation and focus indicators on interface controls remain available.
 - Do not implement the Display Module as an HTML iframe. Use one application context with
   an isolated, clipped viewport and camera transform.
 - The Display Module owns the instruments required to author and inspect its

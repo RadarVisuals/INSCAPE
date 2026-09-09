@@ -2,18 +2,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
-function markPointerReturn(node) {
-  if (node.hasAttribute('data-inspection-pointer-focus')) return;
-  node.setAttribute('data-inspection-pointer-focus', '');
-  const clear = () => {
-    node.removeAttribute('data-inspection-pointer-focus');
-    node.removeEventListener('blur', clear);
-    node.removeEventListener('keydown', clear);
-  };
-  node.addEventListener('blur', clear, { once: true });
-  node.addEventListener('keydown', clear, { once: true });
-}
-
 export default function DisplayFocusViewer({ scene, controlsContainer, viewer }) {
   const latest = useRef(viewer); latest.current = viewer;
   const closeRef = useRef(null);
@@ -45,7 +33,7 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     };
   }, [scene]);
 
-  const close = (input = 'keyboard') => {
+  const close = () => {
     if (timer.current !== null) return;
     setClosing(true);
     latest.current.beginReturn?.();
@@ -54,7 +42,6 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
       latest.current.close();
       queueMicrotask(() => {
         if (!source?.isConnected) return;
-        if (input === 'pointer') markPointerReturn(source);
         source.focus({ preventScroll: true });
       });
     }, reducedMotion ? 0 : 260);
@@ -77,7 +64,7 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     onPointerDown={event => { event.preventDefault(); event.stopPropagation(); }}
     onClick={event => {
       event.preventDefault(); event.stopPropagation();
-      if (event.button === 0) close('pointer');
+      if (event.button === 0) close();
     }} onDoubleClick={event => { event.preventDefault(); event.stopPropagation(); }} />, scene.parentElement)}
   {createPortal(<div className="system-workflow__scene-controls" role="group" aria-label="Artwork inspection">
     <span>INSPECT</span>
@@ -87,6 +74,6 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     <button className="system-workflow__round-control" aria-label="Next artwork" disabled={closing || viewer.total < 2}
       onClick={() => viewer.navigate(1)} type="button"><ChevronRight /></button>
     <button className="system-workflow__round-control" aria-label="Close artwork viewer" disabled={closing}
-      onClick={event => close(event.detail === 0 ? 'keyboard' : 'pointer')} ref={closeRef} type="button"><X /></button>
+      onClick={close} ref={closeRef} type="button"><X /></button>
   </div>, controlsContainer)}</>;
 }
