@@ -54,7 +54,9 @@ export function projectLatticePixelRectangle(geometry, field) {
 // as a one-device-pixel seam after the board is composited or scaled.
 const RASTER_EDGE_TOLERANCE = 1 + 1e-7;
 
-const sameRasterEdge = (left, right) => Math.abs(left - right) <= RASTER_EDGE_TOLERANCE;
+// Taper protection continuously as edges separate. A binary threshold changes
+// the rendered image by a whole pixel during an otherwise fractional resize.
+const rasterEdgeCoverage = (left, right) => Math.max(0, 1 - Math.abs(left - right) / RASTER_EDGE_TOLERANCE);
 
 export function projectLatticeRasterBleedRectangle(rectangle, opening, bleed = 1) {
   if (!rectangle || !opening || !finitePositive(rectangle.width) || !finitePositive(rectangle.height)
@@ -69,9 +71,13 @@ export function projectLatticeRasterBleedRectangle(rectangle, opening, bleed = 1
   const rectangleBottom = rectangle.top + rectangle.height;
   const openingRight = opening.left + opening.width;
   const openingBottom = opening.top + opening.height;
-  if (sameRasterEdge(rectangle.left, opening.left)) { left -= bleed; width += bleed; }
-  if (sameRasterEdge(rectangleRight, openingRight)) width += bleed;
-  if (sameRasterEdge(rectangle.top, opening.top)) { top -= bleed; height += bleed; }
-  if (sameRasterEdge(rectangleBottom, openingBottom)) height += bleed;
+  const leftBleed = bleed * rasterEdgeCoverage(rectangle.left, opening.left);
+  const rightBleed = bleed * rasterEdgeCoverage(rectangleRight, openingRight);
+  const topBleed = bleed * rasterEdgeCoverage(rectangle.top, opening.top);
+  const bottomBleed = bleed * rasterEdgeCoverage(rectangleBottom, openingBottom);
+  left -= leftBleed;
+  top -= topBleed;
+  width += leftBleed + rightBleed;
+  height += topBleed + bottomBleed;
   return Object.freeze({ left, top, width, height });
 }
