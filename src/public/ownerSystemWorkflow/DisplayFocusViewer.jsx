@@ -7,6 +7,7 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
   const latest = useRef(viewer); latest.current = viewer;
   const closeRef = useRef(null);
   const timer = useRef(null);
+  const closingRef = useRef(false);
   const [closing, setClosing] = useState(false);
   const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const lift = viewer.entry?.placement.inspectionMode === 'LIFT';
@@ -23,8 +24,7 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     const selectedIndex = ordered.findIndex(item => item.node === source);
     if (selectedIndex < 0) return undefined;
     ordered.forEach(({ node }, index) => {
-      if (node === source && lift) node.setAttribute('data-inspection-context', 'lift-source');
-      else if (node !== source) node.setAttribute('data-inspection-context', !lift && index > selectedIndex ? 'foreground' : 'background');
+      if (node !== source) node.setAttribute('data-inspection-context', !lift && index > selectedIndex ? 'foreground' : 'background');
     });
     return () => siblings.forEach(node => node.removeAttribute('data-inspection-context'));
   }, [scene, viewer.placementId, closing, lift]);
@@ -36,18 +36,19 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     };
   }, [scene]);
 
+  const finishClose = () => {
+    const source = latest.current.returnFocus;
+    latest.current.close();
+    queueMicrotask(() => {
+      if (source?.isConnected) source.focus({ preventScroll: true });
+    });
+  };
   const close = () => {
-    if (timer.current !== null) return;
+    if (closingRef.current) return;
+    closingRef.current = true;
     setClosing(true);
     latest.current.beginReturn?.();
-    timer.current = setTimeout(() => {
-      const source = latest.current.returnFocus;
-      latest.current.close();
-      queueMicrotask(() => {
-        if (!source?.isConnected) return;
-        source.focus({ preventScroll: true });
-      });
-    }, reducedMotion ? 0 : 260);
+    if (!lift) timer.current = setTimeout(finishClose, reducedMotion ? 0 : 260);
   };
   useEffect(() => {
     const keydown = event => {
@@ -64,7 +65,7 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
   });
   if (!controlsContainer) return null;
   return <>{lift && <DisplayLiftArtwork key={viewer.placementId} scene={scene} source={viewer.returnFocus}
-    entry={viewer.entry} closing={closing} reducedMotion={reducedMotion} />}
+    entry={viewer.entry} closing={closing} reducedMotion={reducedMotion} onCloseComplete={finishClose} />}
   {scene?.parentElement && createPortal(<div aria-hidden="true" className="system-workflow__inspection-hit-surface"
     onPointerDown={event => { event.preventDefault(); event.stopPropagation(); }}
     onClick={event => {

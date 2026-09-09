@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import LatticeProductionFocusArtwork from '../../lattice/rendering/LatticeProductionFocusArtwork.jsx';
 import { focusedViewerRectangle, focusViewerPresentationDimensions } from '../../lattice/rendering/latticeFocusViewer.js';
@@ -7,8 +7,12 @@ import { interpolateLatticeProductionFocusRectangle, latticeProductionFocusOpeni
 
 // Presentation-only geometry in the Stage's local coordinates, including when
 // its containing window is scaled. Authored placement geometry never changes.
-export default function DisplayLiftArtwork({ scene, source, entry, closing, reducedMotion }) {
+export default function DisplayLiftArtwork({ scene, source, entry, closing, reducedMotion, onCloseComplete }) {
   const host = scene?.parentElement;
+  const artworkRef = useRef(null);
+  const completeRef = useRef(onCloseComplete); completeRef.current = onCloseComplete;
+  const progressRef = useRef(0);
+  const [ready, setReady] = useState(false);
   const [geometry, setGeometry] = useState(null);
   const [progress, setProgress] = useState(reducedMotion ? 1 : 0);
   useLayoutEffect(() => {
@@ -34,30 +38,65 @@ export default function DisplayLiftArtwork({ scene, source, entry, closing, redu
     return () => observer.disconnect();
   }, [host, source, entry]);
 
+  const hasGeometry = Boolean(geometry);
   useLayoutEffect(() => {
-    if (reducedMotion) { setProgress(closing ? 0 : 1); return undefined; }
+    const image = artworkRef.current?.querySelector('img');
+    if (!image) return undefined;
+    let disposed = false;
+    setReady(false);
+    const prepare = async () => {
+      try {
+        await image.decode();
+        if (!disposed && image.naturalWidth > 0) setReady(true);
+      } catch { /* Keep the original visible if this copy cannot be decoded. */ }
+    };
+    image.addEventListener('load', prepare);
+    if (image.complete && image.naturalWidth > 0) prepare();
+    return () => { disposed = true; image.removeEventListener('load', prepare); };
+  }, [hasGeometry, entry.media.src]);
+
+  useLayoutEffect(() => {
+    if (!ready || !source) return undefined;
+    // Hide only once the replacement is decoded, and restore in the same
+    // commit that removes the replacement. Keep this separate from dimming.
+    source.setAttribute('data-lift-source', '');
+    return () => source.removeAttribute('data-lift-source');
+  }, [ready, source]);
+
+  useLayoutEffect(() => {
+    if (!ready) {
+      if (closing) completeRef.current();
+      return undefined;
+    }
+    if (reducedMotion) {
+      setProgress(closing ? 0 : 1);
+      if (closing) completeRef.current();
+      return undefined;
+    }
     let frame;
     const start = performance.now();
     // Closing can interrupt the opening animation without jumping to full size.
-    const from = closing ? progress : 0;
+    const from = closing ? progressRef.current : 0;
     const duration = closing ? 260 : 460;
     const tick = now => {
       const elapsed = Math.min(1, (now - start) / duration);
       const eased = closing ? latticeProductionFocusTransitionProgress(elapsed)
         : latticeProductionFocusOpeningProgress(elapsed);
-      setProgress(closing ? from * (1 - eased) : eased);
+      progressRef.current = closing ? from * (1 - eased) : eased;
+      setProgress(progressRef.current);
       if (elapsed < 1) frame = requestAnimationFrame(tick);
+      else if (closing) frame = requestAnimationFrame(() => completeRef.current());
     };
     if (!closing) setProgress(0);
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [closing, reducedMotion, entry.placement.id]);
+  }, [closing, reducedMotion, entry.placement.id, ready]);
 
   if (!geometry || !host) return null;
   const currentRectangle = interpolateLatticeProductionFocusRectangle(
     geometry.sourceRectangle, geometry.focusedRectangle, progress);
   return createPortal(<div aria-hidden="true" className="system-workflow__lift-artwork"
-    style={currentRectangle}>
+    ref={artworkRef} style={{ ...currentRectangle, visibility: ready ? 'visible' : 'hidden' }}>
     <LatticeProductionFocusArtwork entry={entry} motion={{ ...geometry, currentRectangle, progress }} />
   </div>, host);
 }
