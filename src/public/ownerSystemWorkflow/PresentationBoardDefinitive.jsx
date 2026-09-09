@@ -288,6 +288,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       </header>
       <div aria-hidden="true" className="system-workflow__stage-border" />
       <div className="system-workflow__stage-viewport" data-surface={displaySurface}
+        onDragStartCapture={(event) => event.preventDefault()}
         ref={setSelectionOverlayHost} style={{ height: view.fit.stage.height * displayScale }}>
         <div className="system-workflow__stage" data-presentation-stage data-surface={displaySurface}
           style={{ height: liveScaleRendering ? liveStage?.height || view.fit.stage.height : settledStageHeight,

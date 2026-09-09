@@ -387,11 +387,18 @@
   position: relative;
   width: 100%;
   overflow: clip;
+  -webkit-user-select: none;
+  user-select: none;
   border-radius: var(--workflow-board-radius);
   /* A transformed Stage can end on a fractional device pixel while the Board
      is resized. Composite that antialiased edge into the Board frame itself;
      the Workbench surface must never become a visible seam around artwork. */
   background: var(--workflow-board-frame-surface);
+}
+.system-workflow__stage-viewport img {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 .system-workflow__stage-border {
   box-sizing: border-box;
