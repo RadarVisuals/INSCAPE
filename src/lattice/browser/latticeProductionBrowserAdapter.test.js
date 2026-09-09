@@ -79,6 +79,17 @@ test('placement eligibility remains honest while media or native dimensions are 
   assert.equal(unsupportedMedia.placementUnavailableReason, 'MEDIA TYPE UNAVAILABLE');
 });
 
+test('a collection token preview remains visible but cannot masquerade as placeable collection media', () => {
+  const tokenId = `0x${'0'.repeat(63)}1`;
+  const preview = adaptLatticeProductionBrowserAsset(asset({ isCollection: true, collectionPreviewTokenId: tokenId }), PROFILE);
+  assert.equal(preview.previewSrc, 'https://assets.example/thumbnail.webp');
+  assert.equal(preview.collectionPreviewTokenId, tokenId);
+  assert.equal(preview.mediaType, 'image');
+  assert.equal(preview.src, null);
+  assert.equal(preview.placeable, false);
+  assert.equal(preview.placementUnavailableReason, 'COLLECTION TOKEN PREVIEW ONLY');
+});
+
 test('missing, malformed, duplicate, and cross-profile records fail closed without changing memberships', () => {
   const workspace = {
     ...createEmptyWorkspace(PROFILE),
@@ -121,4 +132,16 @@ test('created-only acceptance is explicit and requires strong profile-address pr
   assert.equal(adaptLatticeProductionBrowserAsset(created, PROFILE, true).stableAssetId, ASSET_ID);
   assert.equal(adaptLatticeProductionBrowserAsset({ ...created, creatorAttributionLevel: 'authored' }, PROFILE, true), null);
   assert.equal(adaptLatticeProductionBrowserAsset({ ...created, creators: [{ address: OTHER_PROFILE }] }, PROFILE, true), null);
+});
+
+test('collection-derived acceptance requires explicit parent creator provenance', () => {
+  const collectionChild = asset({
+    ownerAddress: null, viewedProfileIsCreator: false, creatorAttributionLevel: null,
+    creators: [{ address: OTHER_PROFILE }], viewedProfileIsCollectionCreator: true,
+    collectionCreatorAttributionLevel: 'contract', collectionCreators: [{ address: PROFILE }],
+  });
+  assert.equal(adaptLatticeProductionBrowserAsset(collectionChild, PROFILE), null);
+  assert.equal(adaptLatticeProductionBrowserAsset(collectionChild, PROFILE, true).stableAssetId, ASSET_ID);
+  assert.equal(adaptLatticeProductionBrowserAsset({ ...collectionChild,
+    collectionCreators: [{ address: OTHER_PROFILE }] }, PROFILE, true), null);
 });

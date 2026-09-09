@@ -97,7 +97,7 @@
   border: 1px solid var(--lattice-boundary);
   background: var(--lattice-label-surface);
   color: var(--lattice-label-ink);
-  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-family: "Inscape IBM Plex Mono", monospace;
   line-height: 1.15;
   text-transform: uppercase;
 }

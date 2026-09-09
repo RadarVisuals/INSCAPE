@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { encodeDataSourceWithHash } from '@erc725/erc725.js';
 import { createLuksoRpcProfileRepository } from './luksoRpcProfileRepository.js';
+import { createLsp8CollectionMetadataResolver } from '../../creations/data/lsp8CollectionMetadataResolver.js';
 
 const profile = '0x84841412e9f66e360c6da5f9dba11b8e88d87ea8';
 const lsp8 = '0x1111111111111111111111111111111111111111';
@@ -205,4 +206,34 @@ test('decodes a numeric LSP8 token id before concatenating a metadata base URI',
   assert.equal(fetched.some((url) => url.endsWith('/metadata/1')), true);
   assert.equal(batches[0].assets[0].name, 'Numeric token');
   assert.deepEqual(batches[0].assets[0].attributes, [{ key: 'Rank', value: 281, type: 'number' }]);
+});
+
+test('collection metadata resolver prefers token metadata and falls back to the current numeric base URI', async () => {
+  const secondTokenId = `0x${'0'.repeat(63)}2`;
+  const fetched = [];
+  const client = {
+    async readContract({ functionName, args }) {
+      if (functionName === 'getDataForTokenId' && args[1] === '0x9afb95cacc9f95858ec44aa8c3b685511002e30ae54415823f406128b85b238e') {
+        return args[0] === tokenId ? uri('direct-one') : '0x';
+      }
+      if (functionName === 'getDataForTokenId') return '0x';
+      if (args[0] === '0xf675e9361af1c1664c1868cfa3eb97672d6b1a513aa5b81dec34c9ee330e818d') return '0x00';
+      if (args[0] === '0x1a7628600c3bac7101f53697f48df381ddc36b9015e7d7c9c5633d1252aa2843') return uri('metadata/');
+      return '0x';
+    },
+  };
+  const documents = {
+    'direct-one': { LSP4Metadata: { name: 'Direct one', images: [{ url: 'ipfs://one' }] } },
+    '2': { LSP4Metadata: { name: 'Base two', description: 'Revealed', images: [{ url: 'ipfs://two' }] } },
+  };
+  const resolver = createLsp8CollectionMetadataResolver({ client, rpcUrl: 'https://rpc.example',
+    ipfsGateway: 'https://gateway.example/ipfs/', fetchImpl: async (url) => {
+      fetched.push(url); return response(documents[url.split('/').at(-1)]);
+    } });
+  const result = await resolver.resolve(lsp8, [{ tokenId }, { tokenId: secondTokenId }]);
+  assert.equal(result.get(tokenId).name, 'Direct one');
+  assert.equal(result.get(tokenId).metadataSource, 'LSP4MetadataForTokenId (DIRECT LUKSO RPC)');
+  assert.equal(result.get(secondTokenId).name, 'Base two');
+  assert.equal(result.get(secondTokenId).metadataSource, 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)');
+  assert.equal(fetched.some((url) => url.endsWith('/metadata/2')), true);
 });

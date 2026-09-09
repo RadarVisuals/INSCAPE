@@ -21,7 +21,7 @@
 .lattice-production-focus-artwork__opening { overflow: hidden; }
 .lattice-production-focus-artwork__opening img { max-width: none; max-height: none; }
 .lattice-production-focus-artwork__native img { width: 100%; height: 100%; object-fit: contain; }
-.lattice-production-focus-artwork__native > span { position: absolute; inset: 0; display: grid; place-items: center; color: var(--lattice-menu-ink); font: 8px/1.4 "IBM Plex Mono", monospace; letter-spacing: .12em; }
+.lattice-production-focus-artwork__native > span { position: absolute; inset: 0; display: grid; place-items: center; color: var(--lattice-menu-ink); font: 8px/1.4 "Inscape IBM Plex Mono", monospace; letter-spacing: .12em; }
 @media (prefers-reduced-motion: reduce) {
   .lattice-production-focus-artwork__authored,
   .lattice-production-focus-artwork__native { transition: none; animation: none; }

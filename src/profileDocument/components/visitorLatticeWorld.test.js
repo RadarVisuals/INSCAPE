@@ -9,8 +9,12 @@ const styles = readFileSync(new URL('./visitorLatticeWorld.css', import.meta.url
 
 test('v8 selects one visitor-safe lattice world while legacy rendering remains the rollback', () => {
   assert.match(selector, /selectPublishedProfileRuntime\(document\)/);
+  assert.match(selector, /const VisitorLatticeWorld = lazy/);
+  assert.match(selector, /import PublishedHomeWorld from '\.\/PublishedHomeWorld\.jsx'/);
+  assert.match(selector, /const PublishedLegacyStyles = lazy/);
   assert.match(selector, /<VisitorLatticeWorld document=\{document\}/);
   assert.match(selector, /<PublishedHomeWorld document=\{document\}/);
+  assert.match(selector, /<PublishedLegacyStyles \/>/);
 });
 
 test('visitor lattice owns only transient navigation and reads canonical appearance', () => {

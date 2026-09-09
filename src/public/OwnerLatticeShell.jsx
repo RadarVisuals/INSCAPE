@@ -61,6 +61,7 @@ import {
 import { prepareOwnerLatticeRuntimeDraft } from './ownerLatticeRuntimeProjection.js';
 import KeeperDock from './KeeperDock.jsx';
 import KeeperSignalsLayer from '../signals/components/KeeperSignalsLayer.jsx';
+import RackMenu from './menus/RackMenu.jsx';
 import useOwnerLatticeBrowser from './useOwnerLatticeBrowser.js';
 import useOwnerLatticeAuthoring, {
   OWNER_LATTICE_AUTHORING_STATUS,
@@ -80,6 +81,7 @@ import './ownerLatticeShell.css';
 
 const ProfileDocumentPreview = lazy(() => import('../profileDocument/components/ProfileDocumentPreview.jsx'));
 const OwnerLatticePublicationRack = lazy(() => import('./OwnerLatticePublicationRack.jsx'));
+const ArtworkChooser = lazy(() => import('./LatticeArtworkPlacementChooser.jsx'));
 
 const RUNTIME_PROJECTION_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 const CENTER_TABLE_ID = 'table-05';
@@ -241,6 +243,7 @@ function OwnerLatticeRuntime({
   const [browserActiveTab, setBrowserActiveTab] = useState('index');
   const [browserTabRequest, setBrowserTabRequest] = useState(null);
   const [browserAssetDrag, setBrowserAssetDrag] = useState(null);
+  const [canvasPlacementFlow, setCanvasPlacementFlow] = useState(null);
   const [compositionPreview, setCompositionPreview] = useState(null);
   const [cropModeActive, setCropModeActive] = useState(false);
   const [arrangeEnabled, setArrangeEnabled] = useState(false);
@@ -270,12 +273,15 @@ function OwnerLatticeRuntime({
   const [activityOpen, setActivityOpen] = useState(false);
   const [creationsOpen, setCreationsOpen] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
-  const [modul8rRelatedAssetRecords, setModul8rRelatedAssetRecords] = useState([]);
+  const [[modul8rRelatedAssetProfile, retainedModul8rRelatedAssetRecords],
+    setModul8rRelatedAssetState] = useState([profileAddress, []]);
+  const modul8rRelatedAssetRecords = modul8rRelatedAssetProfile === profileAddress
+    ? retainedModul8rRelatedAssetRecords : [];
   const [modul8rOpenRequestId, setModul8rOpenRequestId] = useState(0);
   const [modul8rCloseRequestId, setModul8rCloseRequestId] = useState(0);
   const [modul8rModuleRequest, setModul8rModuleRequest] = useState(null);
   const [modul8rPresentationState, setModul8rPresentationState] = useState({
-    masterExpanded: true, open: true, openModule: 'library', settingsOpen: false,
+    masterExpanded: true, open: false, openModule: 'library', settingsOpen: false,
   });
   useEffect(() => {
     if (modul8rActive && interfaceVisible && !modul8rReturnFocusRef.current) {
@@ -286,7 +292,11 @@ function OwnerLatticeRuntime({
   useEffect(() => setPublicationOpen(false), [profileAddress]);
   const profileIdentity = useProfileIdentity(profileAddress);
   const profileContractFacts = useProfileContractFacts(profileAddress, { enabled: Boolean(identityDossierOpening || identityDossierSession) });
-  const { commands: browserCategoryCommands, data: browserData } = useOwnerLatticeBrowser(profileAddress);
+  const libraryInventoryRequested = modul8rActive
+    ? modul8rPresentationState.open && modul8rPresentationState.openModule === 'library'
+    : browserActivated;
+  const { commands: browserCategoryCommands, data: browserData } = useOwnerLatticeBrowser(
+    profileAddress, libraryInventoryRequested);
   const authoring = useOwnerLatticeAuthoring(profileAddress, {
     supplementalAssetRecords: modul8rActive ? modul8rRelatedAssetRecords : [],
   });
@@ -347,6 +357,7 @@ function OwnerLatticeRuntime({
     return new Map(records.map((asset) => [asset.id, asset]));
   }, [authoring.assetRecords]);
   const publicationAssetRecords = useMemo(() => [...assetRecordsById.values()], [assetRecordsById]);
+  const canvasPlacementAssets = useMemo(() => browserData.assets.filter(({ placeable }) => placeable), [browserData.assets]);
   const publicationProfile = useMemo(() => profileIdentity?.status === 'RESOLVED'
     ? { name: profileIdentity.name, avatarUrl: profileIdentity.avatarUrl }
     : {}, [profileIdentity?.avatarUrl, profileIdentity?.name, profileIdentity?.status]);
@@ -762,6 +773,50 @@ function OwnerLatticeRuntime({
     profileReady: authoring.profileReady,
   });
   const placementUnavailableReason = arrangeEnabled ? authoringPlacementUnavailableReason : 'PLACE REQUIRES ARRANGE';
+  const closeCanvasPlacementFlow = useCallback(() => {
+    setCanvasPlacementFlow(null);
+    queueMicrotask(() => viewportRef.current?.focus({ preventScroll: true }));
+  }, []);
+  const openCanvasPlacementMenu = useCallback((event) => {
+    if (!arrangeEnabled || cropModeActive || settlingRef.current || gestureRef.current
+      || activeDraftTable?.visibility !== 'PUBLIC'
+      || event.target.closest?.('[data-lattice-chrome],[data-lattice-placement-control]')) return;
+    const tableElement = tableElementsRef.current.get(activeTableId);
+    const rectangle = tableElement?.getBoundingClientRect();
+    if (!rectangle || event.clientX < rectangle.left || event.clientX > rectangle.right
+      || event.clientY < rectangle.top || event.clientY > rectangle.bottom) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setCanvasPlacementFlow({
+      anchor: { x: event.clientX, y: event.clientY },
+      normalizedPoint: {
+        x: (event.clientX - rectangle.left) / rectangle.width,
+        y: (event.clientY - rectangle.top) / rectangle.height,
+      },
+      view: 'menu',
+    });
+  }, [activeDraftTable?.visibility, activeTableId, arrangeEnabled, cropModeActive]);
+  const placeCanvasArtwork = useCallback((chosen) => {
+    const flow = canvasPlacementFlow;
+    const asset = browserData.assets.find(({ stableAssetId }) => stableAssetId === chosen?.stableAssetId);
+    const tableElement = tableElementsRef.current.get(activeTableId);
+    const rectangle = tableElement?.getBoundingClientRect();
+    let destination = null;
+    if (flow?.normalizedPoint && asset?.placeable && rectangle && activeDraftTable?.visibility === 'PUBLIC') {
+      try {
+        destination = createLatticeProductionDropGeometry(asset.width, asset.height, {
+          x: rectangle.left + (flow.normalizedPoint.x * rectangle.width),
+          y: rectangle.top + (flow.normalizedPoint.y * rectangle.height),
+        }, rectangle);
+      } catch { destination = null; }
+    }
+    setCanvasPlacementFlow(null);
+    if (destination) authoring.placePublicAsset({ destination, stableAssetId: asset.stableAssetId, tableId: activeTableId });
+    queueMicrotask(() => viewportRef.current?.focus({ preventScroll: true }));
+  }, [activeDraftTable?.visibility, activeTableId, authoring.placePublicAsset, browserData.assets, canvasPlacementFlow]);
+  useEffect(() => {
+    if (!arrangeEnabled) setCanvasPlacementFlow(null);
+  }, [arrangeEnabled, profileAddress]);
   const canonicalNotice = authoring.status === OWNER_LATTICE_AUTHORING_STATUS.CORRUPT
     ? 'CANONICAL DRAFT UNAVAILABLE / STORED RECORD PRESERVED / EXPLICIT RECOVERY REQUIRED'
     : previewError || authoring.error || latticeProjection.error;
@@ -1116,6 +1171,7 @@ function OwnerLatticeRuntime({
     data-grid-style={gridStyle}
     data-space-pan-ready={(spacePanReady && plane.maximumCameraY > 0) || undefined}
     data-surface={surfaceId}
+    onContextMenu={openCanvasPlacementMenu}
     onKeyDown={handleKeyDown}
     onKeyUp={handleKeyUp}
     onLostPointerCapture={() => { if (!finishCameraGesture(true)) finishGesture(true); }}
@@ -1162,6 +1218,7 @@ function OwnerLatticeRuntime({
           }}
         >{lattice
           ? <><LatticeProductionTableRenderer
+              imageLoading={sameCoordinate(coordinate, active) ? 'eager' : 'lazy'}
               lattice={lattice}
               onMediaState={handlePlacementMediaState}
               onPlacementActivate={!arrangeEnabled && sameCoordinate(coordinate, active) ? openPlacementViewer : undefined}
@@ -1218,6 +1275,30 @@ function OwnerLatticeRuntime({
       {browserAssetDrag.asset.previewSrc || browserAssetDrag.asset.src
         ? <img alt="" src={browserAssetDrag.asset.previewSrc || browserAssetDrag.asset.src} /> : <span>MEDIA</span>}
     </div>, document.body)}
+    {canvasPlacementFlow?.view === 'menu' && createPortal(<RackMenu
+      anchor={canvasPlacementFlow.anchor}
+      commands={[{
+        disabled: !canvasPlacementAssets.length,
+        id: 'artwork',
+        label: canvasPlacementAssets.length ? 'Place artwork…' : 'Artwork unavailable',
+      }]}
+      label="Canvas placement commands"
+      onClose={closeCanvasPlacementFlow}
+      onCommand={(commandId) => {
+        if (commandId === 'artwork' && canvasPlacementAssets.length) {
+          setCanvasPlacementFlow((current) => current && ({ ...current, view: 'chooser' }));
+        }
+      }}
+      returnFocus={viewportRef.current}
+    />, document.body)}
+    {canvasPlacementFlow?.view === 'chooser' && createPortal(<Suspense fallback={null}><ArtworkChooser
+      assets={canvasPlacementAssets}
+      error={browserData.assetError}
+      menuSurfaceId={menuSurfaceId}
+      onCancel={closeCanvasPlacementFlow}
+      onSelect={placeCanvasArtwork}
+      status={browserData.assetLoadState}
+    /></Suspense>, document.body)}
     {spatialRoot && createPortal(spatialSurface, spatialRoot)}
     {interfaceVisible && <>
       <LatticeProfileRail
@@ -1327,7 +1408,7 @@ function OwnerLatticeRuntime({
           moduleRequest={modul8rModuleRequest}
           onArrangeToggle={() => activateWorkspaceTool('arrange')}
           onAssetPointerDown={beginBrowserAssetDrag}
-          onRelatedAssetRecordsChange={setModul8rRelatedAssetRecords}
+          onRelatedAssetRecordsChange={setModul8rRelatedAssetState}
           onAuthoringToolActivate={(toolId) => activateWorkspaceTool(toolId)}
           onEscape={() => {
             if (publicationOpen) { setPublicationOpen(false); return true; }

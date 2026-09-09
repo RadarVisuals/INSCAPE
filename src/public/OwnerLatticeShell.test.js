@@ -12,6 +12,8 @@ const source = readFileSync(new URL('./OwnerLatticeShell.jsx', import.meta.url),
 const authoringSource = readFileSync(new URL('./useOwnerLatticeAuthoring.js', import.meta.url), 'utf8');
 const previewBuilderSource = readFileSync(new URL('./ownerLatticePreviewDocument.js', import.meta.url), 'utf8');
 const publicationRackSource = readFileSync(new URL('./OwnerLatticePublicationRack.jsx', import.meta.url), 'utf8');
+const placementChooserSource = readFileSync(new URL('./LatticeArtworkPlacementChooser.jsx', import.meta.url), 'utf8');
+const placementChooserStyles = readFileSync(new URL('./latticeArtworkPlacementChooser.css', import.meta.url), 'utf8');
 const styles = readFileSync(new URL('./ownerLatticeShell.css', import.meta.url), 'utf8');
 const PROFILE = '0x1111111111111111111111111111111111111111';
 
@@ -81,6 +83,10 @@ test('fixed chrome stays outside the moving authored-plane stage', () => {
   assert.match(source, /const PROFILE_RAIL_ENTRIES = Object\.freeze/);
   assert.match(source, /<LatticeWorkspaceToolbar[\s\S]*?owner/);
   assert.match(source, /SESSION ONLY \/ NOT PERSISTED/);
+});
+
+test('the visible owner table eagerly resolves artwork while surrounding tables remain lazy', () => {
+  assert.match(source, /<LatticeProductionTableRenderer[\s\S]*imageLoading=\{sameCoordinate\(coordinate, active\) \? 'eager' : 'lazy'\}/);
 });
 
 test('owner viewport fills all 32 columns and keeps bounded per-table Space-drag camera state runtime-only', () => {
@@ -232,6 +238,22 @@ test('Phase 6 ARRANGE is one session-only owner mode and viewer activation remai
   assert.match(source, /<LatticeFocusViewer/);
   assert.match(source, /surfaceColor="var\(--lattice-menu-panel\)"/);
   assert.doesNotMatch(source, /transparencyMode.*dossier|collectionName.*dossier|marketplace/iu);
+});
+
+test('ARRANGE empty-canvas context placement uses one direct artwork command and the canonical PLACE operation', () => {
+  assert.match(source, /onContextMenu=\{openCanvasPlacementMenu\}/);
+  assert.match(source, /id: 'artwork',[\s\S]*label: canvasPlacementAssets\.length \? 'Place artwork…'/);
+  assert.doesNotMatch(source, /getSubmenuCommands=/);
+  assert.match(source, /<ArtworkChooser/);
+  assert.match(source, /createLatticeProductionDropGeometry\(asset\.width, asset\.height/);
+  assert.match(source, /authoring\.placePublicAsset\(\{ destination, stableAssetId: asset\.stableAssetId, tableId: activeTableId \}\)/);
+  assert.match(source, /activeDraftTable\?\.visibility !== 'PUBLIC'/);
+  assert.match(placementChooserSource, /filter\(\(\{ placeable \}\) => placeable\)/);
+  assert.match(placementChooserSource, /event\.key === 'Escape'/);
+  assert.match(placementChooserSource, /data-lattice-chrome/);
+  assert.match(placementChooserSource, /lattice-browser-workspace lattice-chrome-window lattice-placement-chooser/);
+  assert.match(placementChooserSource, /data-menu-surface=\{menuSurfaceId\}/);
+  assert.doesNotMatch(`${placementChooserSource}\n${placementChooserStyles}`, /artwork-dialog-backdrop|artwork-chooser|module-accent|#e87945|232\s*,\s*121\s*,\s*69/iu);
 });
 
 test('Phase 7 Identity Dossier has strict owner-runtime precedence and exact trigger focus restoration', () => {

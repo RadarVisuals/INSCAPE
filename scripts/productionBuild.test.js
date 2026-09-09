@@ -3,9 +3,10 @@ import test from 'node:test';
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { analyzeProductionBuild, assertSafeOutputDirectory, checkProductionBudgets, pruneProductionAuthoringAssets,
+import { analyzeProductionBuild, assertNoProhibitedProductionArtifacts, assertSafeOutputDirectory, checkProductionBudgets, pruneProductionAuthoringAssets,
   diagnosticsEnvironmentPlugin, productionBuildHygienePlugin, PRODUCTION_BUDGETS, UNUSED_PUBLIC_PATHS } from './productionBuild.js';
 import { ownerRuntimeIsolationPlugin } from './ownerRuntimeIsolation.js';
+import { excludeUnsupportedWalletConnectorsPlugin } from './unsupportedWalletConnectors.js';
 
 const graph = (leaks = []) => ({ ownerModules: ['/src/public/OwnerLatticeShell.jsx', '/src/public/ModuleGridShell.jsx'], entries: [{ file: 'assets/app-a.js' }],
   ownerChunks: [{ file: 'assets/lattice-a.js', modules: ['/src/public/OwnerLatticeShell.jsx'] }], leaks });
@@ -65,6 +66,50 @@ test('each independent budget category reports an actionable overage', () => {
   }
 });
 
+test('measured combined Alpha allowances retain exact production budget boundaries', () => {
+  assert.deepEqual(PRODUCTION_BUDGETS, {
+    initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
+    ownerJavaScript: { raw: 300_875, gzip: 91_234 },
+    standaloneWalletJavaScript: { raw: 4_400_000, gzip: 1_200_000 },
+    initialCss: { raw: 51_493, gzip: 10_139 },
+    ownerCss: { raw: 76_499, gzip: 14_733 },
+    coreJavaScript: { raw: 2_076_709, gzip: 620_158 },
+    publicAssets: { raw: 15_200_000 },
+    largestPublicAsset: { raw: 2_700_000 },
+  });
+
+  const totals = Object.fromEntries(Object.entries(PRODUCTION_BUDGETS).map(([name, limits]) =>
+    [name, { ...limits }]));
+  assert.equal(checkProductionBudgets({ totals, ownerRuntimeGraph: graph() }), true);
+
+  for (const [measurement, limit] of Object.entries(PRODUCTION_BUDGETS.initialJavaScript)) {
+    const over = structuredClone(totals);
+    over.initialJavaScript[measurement] = limit + 1;
+    assert.throws(() => checkProductionBudgets({ totals: over, ownerRuntimeGraph: graph() }),
+      new RegExp(`initialJavaScript\\.${measurement}: .* \\(\\+1 bytes\\)`));
+  }
+  for (const [measurement, limit] of Object.entries(PRODUCTION_BUDGETS.coreJavaScript)) {
+    const over = structuredClone(totals);
+    over.coreJavaScript[measurement] = limit + 1;
+    assert.throws(() => checkProductionBudgets({ totals: over, ownerRuntimeGraph: graph() }),
+      new RegExp(`coreJavaScript\\.${measurement}: .* \\(\\+1 bytes\\)`));
+  }
+  for (const [measurement, limit] of Object.entries(PRODUCTION_BUDGETS.initialCss)) {
+    const over = structuredClone(totals);
+    over.initialCss[measurement] = limit + 1;
+    assert.throws(() => checkProductionBudgets({ totals: over, ownerRuntimeGraph: graph() }),
+      new RegExp(`initialCss\\.${measurement}: .* \\(\\+1 bytes\\)`));
+  }
+  for (const category of ['ownerJavaScript', 'ownerCss']) {
+    for (const [measurement, limit] of Object.entries(PRODUCTION_BUDGETS[category])) {
+      const over = structuredClone(totals);
+      over[category][measurement] = limit + 1;
+      assert.throws(() => checkProductionBudgets({ totals: over, ownerRuntimeGraph: graph() }),
+        new RegExp(`${category}\\.${measurement}: .* \\(\\+1 bytes\\)`));
+    }
+  }
+});
+
 test('owner leakage fails independently of byte budgets', () => {
   const totals = Object.fromEntries(Object.entries(PRODUCTION_BUDGETS).map(([key, value]) =>
     [key, Object.fromEntries(Object.keys(value).map((measurement) => [measurement, 0]))]));
@@ -100,6 +145,58 @@ test('authoring pruning touches only the active verified output directory', asyn
   } finally { await rm(base, { recursive: true, force: true }); }
 });
 
+test('artifact hygiene rejects representative lock and temporary files with actionable paths', async () => {
+  const root = resolve(tmpdir(), `underneath-hygiene-rejected-${process.pid}`);
+  try {
+    await mkdir(resolve(root, 'assets'), { recursive: true });
+    await writeFile(resolve(root, 'assets/example.afdesign~lock~'), 'synthetic lock fixture');
+    await writeFile(resolve(root, 'assets/render.webp.tmp'), 'synthetic temporary fixture');
+    await assert.rejects(() => assertNoProhibitedProductionArtifacts(root), (error) => {
+      assert.match(error.message, /Production artifact hygiene failed/);
+      assert.match(error.message, /assets\/example\.afdesign~lock~: editor lock file/);
+      assert.match(error.message, /assets\/render\.webp\.tmp: editor swap, backup, or temporary file/);
+      return true;
+    });
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('artifact hygiene accepts ordinary intended production assets', async () => {
+  const root = resolve(tmpdir(), `underneath-hygiene-accepted-${process.pid}`);
+  try {
+    await mkdir(resolve(root, 'assets'), { recursive: true });
+    await writeFile(resolve(root, 'assets/public.webp'), 'ordinary intended asset');
+    assert.equal(await assertNoProhibitedProductionArtifacts(root), true);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('authoring pruning rejects a path that escapes the verified output directory', async () => {
+  const root = resolve(tmpdir(), `underneath-prune-escape-${process.pid}`);
+  try {
+    await mkdir(resolve(root, 'active'), { recursive: true });
+    await assert.rejects(() => pruneProductionAuthoringAssets(resolve(root, 'active'), {
+      projectRoot: process.cwd(), paths: ['../outside.txt']
+    }), /outside verified output directory/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('the two historical public lock paths cannot survive artifact hygiene', async () => {
+  const root = resolve(tmpdir(), `underneath-hygiene-historical-${process.pid}`);
+  const historicalPaths = [
+    'assets/actors/abyssal_eye/full multi eye purple.afdesign~lock~',
+    'assets/actors/skull_reaper/position.afdesign~lock~'
+  ];
+  try {
+    for (const path of historicalPaths) {
+      await mkdir(resolve(root, path, '..'), { recursive: true });
+      await writeFile(resolve(root, path), 'synthetic historical-path fixture');
+    }
+    await assert.rejects(() => assertNoProhibitedProductionArtifacts(root), (error) => {
+      for (const path of historicalPaths) assert.match(error.message, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      return true;
+    });
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test('production pruning excludes development-only prototype assets', () => {
   for (const path of ['assets/PFP', 'assets/prototype', 'assets/ratio']) assert.ok(UNUSED_PUBLIC_PATHS.includes(path), path);
 });
@@ -111,10 +208,14 @@ test('an alternate-outDir production build writes reports there and strips diagn
     await writeFile(resolve(alternate, 'owner-runtime-graph.json'), 'stale');
     await writeFile(resolve(alternate, 'bundle-report.json'), 'stale');
     const [{ build }, { default: react }] = await Promise.all([import('vite'), import('@vitejs/plugin-react')]);
-    await build({ configFile: false, root: project, logLevel: 'silent', plugins: [diagnosticsEnvironmentPlugin(), react(), ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
+    await build({ configFile: false, root: project, logLevel: 'silent', plugins: [diagnosticsEnvironmentPlugin(), react(),
+      excludeUnsupportedWalletConnectorsPlugin(), ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
       build: { outDir: alternate, emptyOutDir: true, manifest: true } });
     const report = JSON.parse(await readFile(resolve(alternate, 'bundle-report.json'), 'utf8'));
+    const netlifyHeaders = await readFile(resolve(alternate, '_headers'), 'utf8');
     assert.equal(report.ownerRuntimeGraph.leaks.length, 0); assert.ok(report.initialJavaScript.length);
+    assert.match(netlifyHeaders, /Content-Security-Policy: default-src 'self'/u);
+    assert.match(netlifyHeaders, /frame-ancestors 'self' https:\/\/universaleverything\.io/u);
     await assert.rejects(() => readFile(resolve(alternate, 'assets/patterns')));
     const javascriptNames = (await readdir(resolve(alternate, 'assets'))).filter((name) => name.endsWith('.js'));
     for (const name of javascriptNames) {
@@ -125,6 +226,7 @@ test('an alternate-outDir production build writes reports there and strips diagn
       assert.doesNotMatch(javascript, /Real-Time Gothic Reaction|Metadata queried successfully|activeAccount/u, `${name}: verbose session diagnostic`);
       assert.doesNotMatch(javascript, /Rig Loader: Locating Stage Assets|Dynamic asset payload cached|Connecting WebSocket to watch updates|Reconnecting stream/u,
         `${name}: verbose engine/provider diagnostic`);
+      assert.doesNotMatch(javascript, /@coinbase\/cdp-sdk|brotli_wasm|axios/iu, `${name}: unsupported Base dependency`);
     }
   } finally {
     await rm(alternate, { recursive: true, force: true });

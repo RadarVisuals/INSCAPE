@@ -27,7 +27,10 @@ test('component uses the Task 1 controller and exposes only real shell controls'
 });
 
 test('fresh shell presentation owns exact faceplate geometry, containment and motion isolation', async () => {
-  const styles = await read('./modul8rShell.css');
+  const [styles, ownerWorkspace] = await Promise.all([
+    read('./modul8rShell.css'),
+    read('./Modul8rOwnerWorkspace.jsx'),
+  ]);
   assert.match(styles, /\.modul8r-master[\s\S]*height: 38px/);
   assert.match(styles, /\.modul8r-module__faceplate[\s\S]*min-height: 38px/);
   assert.match(styles, /data-module="library"\]\[data-expanded\][\s\S]*min-height: 60px;[\s\S]*flex-basis: 60px/);
@@ -37,7 +40,10 @@ test('fresh shell presentation owns exact faceplate geometry, containment and mo
   assert.match(styles, /prefers-reduced-motion: reduce/);
   assert.match(styles, /width: min\(var\(--modul8r-width\), calc\(100vw - 20px\)\)/);
   assert.match(styles, /\.modul8r-shell \{[\s\S]*pointer-events: auto;/);
-  assert.match(styles, /\.modul8r-development-reopen,[\s\S]*\.modul8r-owner-reopen \{[\s\S]*pointer-events: auto;/);
+  assert.match(styles, /\.modul8r-development-reopen \{[\s\S]*pointer-events: auto;/);
+  assert.doesNotMatch(styles, /modul8r-owner-reopen/);
+  assert.doesNotMatch(ownerWorkspace, /OPEN MODUL-8R|modul8r-owner-reopen|localReopenRef/);
+  assert.match(ownerWorkspace, /return open \?[\s\S]*: null;/);
   assert.doesNotMatch(styles, /lattice-rack-|lattice-browser-|--lattice-browser-/);
   for (const className of [...styles.matchAll(/\.([a-z][\w-]*)/g)].map((match) => match[1])) {
     assert.match(className, /^modul8r-/, `unexpected non-MODUL-8R class: ${className}`);

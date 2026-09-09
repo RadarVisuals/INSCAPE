@@ -106,14 +106,14 @@
 .lattice-production-identity-dossier__links a:hover,
 .lattice-production-identity-dossier__links a:focus-visible { outline: none; background: var(--lattice-menu-selected); }
 .lattice-production-identity-dossier__links span { display: grid; gap: 4px; }
-.lattice-production-identity-dossier__links strong { font: 500 14px/1.35 "Geist", Arial, sans-serif; }
+.lattice-production-identity-dossier__links strong { font: 500 14px/1.35 "Inscape Geist Sans", sans-serif; }
 .lattice-production-identity-dossier__links a small { width: fit-content; padding: 3px 5px; background: var(--lattice-menu-selected); color: var(--lattice-menu-ink); font: var(--lattice-window-type-label); letter-spacing: .07em; }
 .lattice-production-identity-dossier__links svg { width: 14px; }
 
 .lattice-production-identity-dossier__technical dl { margin: 0; }
 .lattice-production-identity-dossier__technical dl > div { padding: 11px 16px 12px; border-bottom: 1px solid var(--lattice-menu-line); }
 .lattice-production-identity-dossier__technical dt { color: var(--lattice-menu-ink); font: var(--lattice-window-type-label); font-weight: 600; letter-spacing: .08em; }
-.lattice-production-identity-dossier__technical dd { margin: 6px 0 7px; overflow-wrap: anywhere; font: 500 14px/1.35 "Geist", Arial, sans-serif; }
+.lattice-production-identity-dossier__technical dd { margin: 6px 0 7px; overflow-wrap: anywhere; font: 500 14px/1.35 "Inscape Geist Sans", sans-serif; }
 .lattice-production-identity-dossier__technical dl small { width: fit-content; padding: 3px 5px; display: block; background: var(--lattice-menu-selected); color: var(--lattice-menu-ink); font: var(--lattice-window-type-label); letter-spacing: .07em; }
 .lattice-production-identity-dossier__technical a { display: inline-flex; align-items: center; gap: 7px; }
 .lattice-production-identity-dossier__technical svg { width: 12px; }

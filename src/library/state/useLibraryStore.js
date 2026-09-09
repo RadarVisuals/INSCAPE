@@ -118,13 +118,11 @@ export const useLibraryStore = create((set, get) => ({
     });
     set({ loadGeneration: generation, assets: forceLive ? [] : get().assets, sourceMode: 'INDEXER', status: 'loading',
       error: null, liveError: null, progress: { resolved: 0, total: 0, failures: 0 } });
-    const priorityAssetIds = [...new Set((get().workspace?.canvas?.objects || [])
-      .map((object) => object?.stableAssetId).filter(Boolean))];
     const consume = async (repository, signal, options = {}) => {
       const unresolvedAssetIds = []; let sourceAssets = []; let sourceFailures = 0;
       const replaceOnComplete = options.replaceOnComplete ?? !options.preserveProgress;
       for await (const batch of repository.loadProfileAssets(requestedProfileAddress,
-        { signal, priorityAssetIds, requestedAssetIds: options.requestedAssetIds })) {
+        { signal, requestedAssetIds: options.requestedAssetIds })) {
         if (get().loadGeneration !== generation) {
           developmentLog('[asset-index] stale batch discarded', { generation, profileAddress: requestedProfileAddress });
           return;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { normalizeProfileAddress } from '../library/config.js';
 import { useLibraryStore } from '../library/state/useLibraryStore.js';
+import { isCreatorRelatedAsset } from '../creations/domain/creatorRelationship.js';
 import { createLatticeProductionCropCandidate } from '../lattice/authoring/latticeProductionCrop.js';
 import {
   createLatticeProductionDuplicateCandidate,
@@ -51,11 +52,6 @@ export function ownerLatticePlacementUnavailableReason({ activeTable, authoringS
   if (!activeTable) return 'CANONICAL DRAFT UNAVAILABLE';
   if (activeTable.visibility === 'PRIVATE') return 'PUBLIC PLACEMENT UNAVAILABLE / PRIVATE TABLE';
   return profileReady ? null : 'ASSET PROFILE RESOLVING';
-}
-
-export function shouldLoadOwnerLatticeAssets({ libraryStatus, profileReady, referencedAssetCount } = {}) {
-  return Boolean(profileReady && libraryStatus === 'idle'
-    && Number.isSafeInteger(referencedAssetCount) && referencedAssetCount > 0);
 }
 
 export function createOwnerLatticeAuthoringSession({ generatePlacementId, profileAddress, storage } = {}) {
@@ -491,15 +487,14 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
   const assets = useLibraryStore((state) => state.assets);
   const supplementalAssetRecords = options.supplementalAssetRecords || EMPTY_ASSET_RECORDS;
   const acceptedAssetRecords = useMemo(() => {
-    const byId = new Map(supplementalAssetRecords.filter((record) => record?.viewedProfileIsCreator === true)
+    const byId = new Map(supplementalAssetRecords.filter((record) =>
+      normalizeProfileAddress(record?.ownerAddress) === profile || isCreatorRelatedAsset(record, profile))
       .map((record) => [record.id, record]));
     assets.forEach((record) => byId.set(record.id, record));
     return [...byId.values()];
   }, [assets, supplementalAssetRecords]);
   const acceptedAssetRecordsRef = useRef(acceptedAssetRecords);
   acceptedAssetRecordsRef.current = acceptedAssetRecords;
-  const libraryStatus = useLibraryStore((state) => state.status);
-  const load = useLibraryStore((state) => state.load);
   const generationRef = useRef(0);
   const session = useMemo(
     () => profile ? createOwnerLatticeAuthoringSession({ profileAddress: profile, storage: storageRef.current }) : null,
@@ -527,10 +522,6 @@ export default function useOwnerLatticeAuthoring(profileAddress, options = {}) {
   ), [runtime.draft]);
   const currentIds = useMemo(() => new Set(acceptedAssetRecords.map(({ id }) => id)), [acceptedAssetRecords]);
   const missingReferencedAssets = [...referencedIds].some((id) => !currentIds.has(id));
-
-  useEffect(() => {
-    if (shouldLoadOwnerLatticeAssets({ libraryStatus, profileReady, referencedAssetCount: referencedIds.size })) load();
-  }, [libraryStatus, load, profileReady, referencedIds]);
 
   const placePublicAsset = useCallback(({ destination, stableAssetId, tableId } = {}) => {
     const generation = generationRef.current;

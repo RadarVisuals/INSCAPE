@@ -6,12 +6,52 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Inscape Geist Sans";
+  src: url("/assets/fonts/geist-sans-latin-400-normal.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inscape Geist Sans";
+  src: url("/assets/fonts/geist-sans-latin-500-normal.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inscape Geist Sans";
+  src: url("/assets/fonts/geist-sans-latin-600-normal.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inscape IBM Plex Mono";
+  src: url("/assets/fonts/IBMPlexMono-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inscape IBM Plex Mono";
+  src: url("/assets/fonts/IBMPlexMono-Medium.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
   --font-brand: "PP Monument Extended", "Arial Wide", "Helvetica Neue", Arial, sans-serif;
-  --font-interface: "Bahnschrift Condensed", "Arial Narrow", "Aptos Narrow", sans-serif;
-  --font-body: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-interface: "Inscape Geist Sans", sans-serif;
+  --font-body: "Inscape Geist Sans", sans-serif;
+  --font-mono: "Inscape IBM Plex Mono", monospace;
   --font-size-subtitle: .6875rem;
   --font-weight-regular: 400;
   --line-height-body: 1.6;

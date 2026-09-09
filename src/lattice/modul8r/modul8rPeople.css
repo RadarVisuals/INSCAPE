@@ -24,6 +24,6 @@
 .modul8r-people__avatar img { width: 100%; height: 100%; object-fit: cover; }
 .modul8r-people__copy { min-width: 0; display: grid; gap: 5px; }
 .modul8r-people__copy strong { overflow: hidden; font: var(--lattice-window-type-title); text-overflow: ellipsis; white-space: nowrap; }
-.modul8r-people__copy code { color: var(--lattice-menu-muted); font: 400 10px/1 "Inscape IBM Plex Mono","IBM Plex Mono",monospace; }
+.modul8r-people__copy code { color: var(--lattice-menu-muted); font: 400 10px/1 "Inscape IBM Plex Mono","Inscape IBM Plex Mono", monospace; }
 .modul8r-people__copy small { color: var(--lattice-menu-faint); font: var(--lattice-window-type-label); letter-spacing: .08em; }
 @media (max-width: 520px) { .modul8r-people__search { width: min(190px, 52vw); } .modul8r-people__context { padding-inline: 10px; } .modul8r-people__context strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .modul8r-people__results { padding-left: 8px; } }

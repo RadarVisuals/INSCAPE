@@ -244,6 +244,13 @@ describe('Task 8 production MODUL-8R through the real App route', { concurrency:
       ['LIBRARY', 'ACTIVITY', 'PEOPLE', 'LAYERS']);
     await page.getByRole('button', { name: 'Close Modulator' }).click();
     await page.locator('.modul8r-shell').waitFor({ state: 'detached' });
+    assert.equal(await page.getByRole('button', { name: 'OPEN MODUL-8R' }).count(), 0);
+    const browserTool = page.getByRole('button', { name: 'BROWSER' });
+    assert.equal(await browserTool.evaluate((node) => document.activeElement === node), true);
+    await browserTool.click();
+    await page.locator('.modul8r-shell').waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: 'Close Modulator' }).click();
+    await page.locator('.modul8r-shell').waitFor({ state: 'detached' });
 
     await Promise.all(fixedChromeSelectors.map((selector) => page.locator(selector)
       .waitFor({ state: 'attached', timeout: 60_000 })));

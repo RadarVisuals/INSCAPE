@@ -8,7 +8,7 @@ let sharedSessionPromise = null;
 let sharedConsumers = 0;
 let pendingRelease = null;
 
-export async function createStandaloneWalletSession({ initializeWallet, disposeWallet, onError }) {
+export async function createStandaloneWalletSession({ initializeWallet, disposeWallet, beginWalletTransition, onError }) {
   const connector = await setupLuksoConnector({
     theme: 'dark',
     chains: { defaultChainId: 42 },
@@ -23,6 +23,11 @@ export async function createStandaloneWalletSession({ initializeWallet, disposeW
   const syncConnection = async (connection) => {
     const generation = ++syncGeneration;
     if (disposed) return false;
+
+    if (connection?.status === 'connecting' || connection?.status === 'reconnecting') {
+      beginWalletTransition?.();
+      return false;
+    }
 
     if (connection?.status !== 'connected' || connection.chainId !== 42 || !connection.connector) {
       disposeWallet();

@@ -15,7 +15,7 @@ export default function UnavailableProfileSurface({
       connectedProfileAddress={connectedProfileAddress}
       connectedVisitorProfileAddress={connectedVisitorProfileAddress}
       onSearch={() => setSearchOpen(true)}
-      onReturn={() => onVisitProfile?.(connectedProfileAddress)}
+      onReturn={() => onVisitProfile?.(connectedProfileAddress, { returnToConnectedProfile: true })}
     />
     {searchOpen && <ProfileDiscovery
       onClose={() => setSearchOpen(false)}

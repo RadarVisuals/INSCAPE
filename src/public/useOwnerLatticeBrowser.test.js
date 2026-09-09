@@ -16,10 +16,12 @@ test('owner Browser hook exposes adapted data and a narrow guarded category boun
   assert.doesNotMatch(source, /loadLibraryWorkspace|saveLibraryWorkspace|normalizeWorkspace|libraryWorkspaceKey/);
 });
 
-test('owner asset loading is profile-runtime owned and never depends on opening Browser', () => {
-  const loadEffect = source.slice(source.indexOf("if (profileReady && status === 'idle')"), source.indexOf('const data = useMemo'));
+test('full owner inventory loading is explicit and can remain dormant for the curated lattice', () => {
+  const loadEffect = source.slice(source.indexOf('useEffect(() => {', source.indexOf('setProfileAddress(profile)')),
+    source.indexOf('const data = useMemo'));
   assert.match(loadEffect, /load\(\)/);
-  assert.doesNotMatch(loadEffect, /\bopen\b/);
+  assert.match(loadEffect, /inventoryEnabled && profileReady && status === 'idle'/);
+  assert.match(source, /inventoryEnabled = true/);
 });
 
 test('owner Browser data is gated by both active store and workspace profile', () => {

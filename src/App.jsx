@@ -12,7 +12,7 @@ import { useStore } from './store/useStore.js';
 import { useWalletStore } from './store/useWalletStore.js';
 import { resolveLibraryProfile, resolveWorkspaceProfile } from './library/config.js';
 import { loadRestoredPresentation } from './profileDocument/storage/profilePresentationStorage.js';
-import { createViewedProfileUrl, resolveExplicitViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
+import { createSelectedProfileUrl, createViewedProfileUrl, resolveExplicitViewedProfile } from './profileDiscovery/viewedProfileUrl.js';
 import {
   PROFILE_TARGET_SOURCE,
   resolveProfileTarget,
@@ -27,6 +27,8 @@ import {
   selectResidentActorVisible
 } from './public/publicAccess.js';
 import { reportControlledError } from './diagnostics.js';
+import AlphaSupportPanel from './support/AlphaSupportPanel.jsx';
+import { ALPHA_SUPPORT_CODES } from './support/alphaSupport.js';
 
 const AtelierExperience = lazy(() => import('./app/AtelierExperience.jsx'));
 
@@ -58,7 +60,9 @@ function App() {
   const ownershipVerified = useWalletStore((state) => state.isHostProfileOwner);
   const verifiedOwnerProfileAddress = useWalletStore((state) => state.hostProfileAddress);
   const authorityLifecycleStatus = useWalletStore((state) => state.authorityLifecycleStatus);
+  const initializationError = useWalletStore((state) => state.initializationError);
   const initWallet = useWalletStore((state) => state.initWallet);
+  const beginWalletTransition = useWalletStore((state) => state.beginWalletTransition);
   const scheduleWalletRelease = useWalletStore((state) => state.scheduleWalletRelease);
   const applyRenderConfig = useStore((state) => state.applyRenderConfig);
   const loadActorPresets = useStore((state) => state.loadActorPresets);
@@ -111,6 +115,7 @@ function App() {
         acquisition = acquireStandaloneWalletSession({
           initializeWallet: initWallet,
           disposeWallet: () => useWalletStore.getState().disposeWallet(),
+          beginWalletTransition,
           onError: (error) => reportControlledError('standalone-wallet-connect', error)
         });
         if (cancelled) {
@@ -133,7 +138,7 @@ function App() {
       }
       acquisition?.release();
     };
-  }, [initWallet, scheduleWalletRelease]);
+  }, [beginWalletTransition, initWallet, scheduleWalletRelease]);
 
   useEffect(() => {
     const syncModeFromUrl = () => {
@@ -166,8 +171,10 @@ function App() {
     setApplicationMode(mode);
   }, []);
 
-  const visitProfile = useCallback((address) => {
-    const nextUrl = createViewedProfileUrl(window.location, address, verifiedOwnerProfileAddress);
+  const visitProfile = useCallback((address, { returnToConnectedProfile = false } = {}) => {
+    const nextUrl = returnToConnectedProfile
+      ? createViewedProfileUrl(window.location, address, verifiedOwnerProfileAddress)
+      : createSelectedProfileUrl(window.location, address);
     window.history.pushState({ viewedProfileAddress: address }, '', nextUrl);
     setExplicitViewedProfileAddress(resolveExplicitViewedProfile(window.location));
   }, [verifiedOwnerProfileAddress]);
@@ -255,6 +262,10 @@ function App() {
         aria-hidden={!interfaceVisible}
         inert={interfaceVisible ? undefined : ''}
       >
+        {authorityLifecycleStatus === 'complete' && initializationError && <AlphaSupportPanel compact
+          code={ALPHA_SUPPORT_CODES.AUTHORITY_INITIALIZATION_FAILED} phase="OWNER_AUTHORITY"
+          providerCategory="UP_PROVIDER" profileAddress={viewedProfileAddress} routeClass="AUTHORITY_ENTRY"
+          message={initializationError.message} />}
         {effectiveApplicationMode === APPLICATION_MODES.ATELIER ? (
           <Suspense fallback={<AtelierLoadingFallback />}>
             <AtelierExperience onRequestPublic={() => changeApplicationMode(APPLICATION_MODES.PUBLIC)} />

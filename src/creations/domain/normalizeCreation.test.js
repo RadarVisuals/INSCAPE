@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createStableAssetId } from '../../library/domain/normalizeProfileAsset.js';
-import { deduplicateCreations, normalizeCreatorAttribution } from './normalizeCreation.js';
+import { deduplicateCreations, normalizeCollectionToken, normalizeCreatorAttribution } from './normalizeCreation.js';
 
 const PROFILE = '0x1234567890abcdef1234567890abcdef12345678';
 const OTHER = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -23,6 +23,9 @@ test('normalizes contract-level LSP4 attribution with Library-compatible stable 
   assert.equal(creation.creators.length, 2);
   assert.equal(creation.isOwnedByViewedProfile, false);
   assert.equal(creation.ownershipKnown, true);
+  assert.equal(creation.fieldProvenance.name.scope, 'contract');
+  assert.equal(creation.fieldProvenance.description.scope, 'contract');
+  assert.equal(creation.fieldProvenance.creators.scope, 'contract');
 });
 
 test('keeps multiple authored images separate from resolution variants and uses authored index zero as primary', () => {
@@ -49,6 +52,82 @@ test('normalizes token-level attribution and current viewed-profile ownership', 
   assert.equal(creation.creatorAttributionLevel, 'token');
   assert.equal(creation.isOwnedByViewedProfile, true);
   assert.equal(creation.currentOwnerAddress, PROFILE);
+  assert.equal(creation.fieldProvenance.name.scope, 'tokenId');
+});
+
+test('retains the indexed current holder for a creator token held by another profile', () => {
+  const tokenId = '0xCAFE';
+  const row = { id: 'path-token-other', profile_id: PROFILE, token_id: `${CONTRACT}-${tokenId}`, token: {
+    id: `${CONTRACT}-${tokenId}`, tokenId, name: 'Released work', description: 'Now collected', images: [image],
+    holders: [{ profile_id: OTHER, balance: '1' }], lsp4Creators: [{ profile_id: PROFILE }],
+    attributes: [{ key: 'Medium', value: 'Digital' }], asset: { id: CONTRACT, isLSP7: false }
+  } };
+  const creation = normalizeCreatorAttribution(row, PROFILE);
+  assert.equal(creation.isOwnedByViewedProfile, false);
+  assert.equal(creation.currentOwnerAddress, OTHER);
+  assert.equal(creation.fieldProvenance.attributes.scope, 'tokenId');
+});
+
+test('normalizes collection children without turning collection authorship into token authorship', () => {
+  const collection = normalizeCreatorAttribution(assetRow({ isLSP7: false, isCollection: true, name: 'HALO' }), PROFILE);
+  const token = normalizeCollectionToken({
+    id: `${CONTRACT}-0x01`, tokenId: '0x01', name: 'HALO 01', description: 'First token', images: [image],
+    holders: [{ profile_id: OTHER, balance: '1' }], lsp4Creators: [{ profile_id: OTHER }], attributes: [],
+    asset: assetRow({ isLSP7: false, isCollection: true, name: 'HALO' }).asset,
+  }, collection, PROFILE);
+  assert.equal(collection.isCollection, true);
+  assert.equal(token.viewedProfileIsCreator, false);
+  assert.equal(token.creatorAttributionLevel, null);
+  assert.equal(token.viewedProfileIsCollectionCreator, true);
+  assert.equal(token.collectionCreatorAttributionLevel, 'contract');
+  assert.deepEqual(token.creators, [{ address: OTHER, name: null }]);
+  assert.equal(token.collectionCreators.some(({ address }) => address === PROFILE), true);
+  assert.equal(token.currentOwnerAddress, OTHER);
+  assert.equal(token.isOwnedByViewedProfile, false);
+  assert.equal(token.fieldProvenance.creators.scope, 'tokenId');
+  assert.equal(token.fieldProvenance.collectionCreators.scope, 'collectionContract');
+});
+
+test('collection children fail closed for another profile or a different contract', () => {
+  const collection = normalizeCreatorAttribution(assetRow({ isLSP7: false, isCollection: true }), PROFILE);
+  const token = { id: `${CONTRACT}-0x01`, tokenId: '0x01', images: [image], holders: [], lsp4Creators: [],
+    asset: { id: CONTRACT, isCollection: true } };
+  assert.equal(normalizeCollectionToken(token, collection, '0xcccccccccccccccccccccccccccccccccccccccc'), null);
+  assert.equal(normalizeCollectionToken({ ...token, asset: { id: OTHER, isCollection: true } }, collection, PROFILE), null);
+});
+
+test('normalizes current Envio collection tokens through baseAsset when asset is null', () => {
+  const collection = normalizeCreatorAttribution(assetRow({ isLSP7: false, isCollection: true, name: 'HALO' }), PROFILE);
+  const token = normalizeCollectionToken({
+    id: `${CONTRACT}-0x02`, tokenId: '0x02', name: 'HALO', images: [image], holders: [], lsp4Creators: [],
+    asset: null, baseAsset: { id: CONTRACT, isCollection: true, name: 'HALO' },
+  }, collection, PROFILE);
+  assert.equal(token.contractAddress, CONTRACT);
+  assert.equal(token.collectionName, 'HALO');
+  assert.equal(token.viewedProfileIsCollectionCreator, true);
+});
+
+test('retains direct RPC token metadata provenance and does not substitute the collection cover', () => {
+  const collection = normalizeCreatorAttribution(assetRow({ isLSP7: false, isCollection: true, name: 'HALO' }), PROFILE);
+  const token = normalizeCollectionToken({
+    id: `${CONTRACT}-0x03`, tokenId: '0x03', name: 'HALO:0003', description: '', images: [],
+    metadataResolved: true, metadataSource: 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)',
+    holders: [], lsp4Creators: [], attributes: [],
+    baseAsset: { id: CONTRACT, isCollection: true, name: 'HALO', images: [image] },
+  }, collection, PROFILE);
+  assert.equal(token.imageUrl, null);
+  assert.equal(token.fieldProvenance.name.source, 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)');
+  assert.equal(token.rawMetadata.metadataSource, 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)');
+});
+
+test('marks an on-chain token image as a collection preview instead of inventing a cover', () => {
+  const tokenId = `0x${'0'.repeat(63)}1`;
+  const collection = normalizeCreatorAttribution(assetRow({ isLSP7: false, isCollection: true, name: 'CREEPS', images: [],
+    collectionPreview: { tokenId, images: [image], metadataSource: 'LSP8TokenMetadataBaseURI (DIRECT LUKSO RPC)' } }), PROFILE);
+  assert.equal(collection.imageUrl, image.src);
+  assert.equal(collection.collectionPreviewTokenId, tokenId);
+  assert.equal(collection.metadataStatus, 'partial');
+  assert.equal(collection.fieldProvenance.images.scope, 'collectionPreviewTokenId');
 });
 
 test('excludes unrelated owned assets and retains partial metadata', () => {

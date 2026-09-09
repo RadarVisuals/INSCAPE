@@ -13,7 +13,6 @@ import {
   createOwnerLatticeAuthoringSession,
   ownerLatticePlacementUnavailableReason,
   resolveOwnerLatticeAuthoringStorage,
-  shouldLoadOwnerLatticeAssets,
 } from './useOwnerLatticeAuthoring.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
@@ -52,17 +51,6 @@ const existingPlacement = (id, stableAssetId = ASSET) => ({
   transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
 });
 
-test('cached placed assets still trigger one idle live load for metadata enrichment', () => {
-  assert.equal(shouldLoadOwnerLatticeAssets({ libraryStatus: 'idle', profileReady: true,
-    referencedAssetCount: 1 }), true);
-  assert.equal(shouldLoadOwnerLatticeAssets({ libraryStatus: 'ready', profileReady: true,
-    referencedAssetCount: 1 }), false);
-  assert.equal(shouldLoadOwnerLatticeAssets({ libraryStatus: 'idle', profileReady: true,
-    referencedAssetCount: 0 }), false);
-  assert.equal(shouldLoadOwnerLatticeAssets({ libraryStatus: 'idle', profileReady: false,
-    referencedAssetCount: 1 }), false);
-});
-
 test('absent session mount exposes an unwritten validated draft and writes only on completed PLACE', () => {
   const storage = memoryStorage();
   const session = createOwnerLatticeAuthoringSession({
@@ -85,6 +73,21 @@ test('canonical PLACE accepts strong created-only provenance without inventing o
   assert.equal(result.ok, true);
   assert.equal(result.draft.tables[4].placements[0].stableAssetId, ASSET);
   assert.equal(createdOnly.ownerAddress, null);
+});
+
+test('canonical PLACE accepts a token from a strongly attributed creator collection', () => {
+  const storage = memoryStorage();
+  const session = createOwnerLatticeAuthoringSession({ generatePlacementId: () => 'collection-token-placement', profileAddress: PROFILE, storage });
+  const collectionToken = asset({
+    ownerAddress: null, viewedProfileIsCreator: false, creatorAttributionLevel: null,
+    creators: [{ address: OTHER }], viewedProfileIsCollectionCreator: true,
+    collectionCreatorAttributionLevel: 'contract', collectionCreators: [{ address: PROFILE }],
+    ownershipKnown: true, isOwnedByViewedProfile: false,
+  });
+  const result = session.commitPlacement({ assetRecord: collectionToken, tableId: 'table-05' });
+  assert.equal(result.ok, true);
+  assert.equal(result.draft.tables[4].placements[0].stableAssetId, ASSET);
+  assert.equal(collectionToken.viewedProfileIsCreator, false);
 });
 
 test('created-only record remains resolvable through move, resize, crop, layer, duplicate and remove', () => {

@@ -166,10 +166,13 @@ export default function VisitorLatticeWorld({
   const viewerTable = viewerSession ? lattice.tables.find(({ id }) => id === viewerSession.tableId) : null;
   const viewerEntries = useMemo(() => (viewerTable?.placements || []).map((placement) => {
     const decoded = placementMedia[`${viewerTable.id}:${placement.id}`];
-    const model = createLatticeProductionFocusViewModel(placement, null, { trustPublishedMetadata: true });
+    const model = createLatticeProductionFocusViewModel(placement, null, {
+      presentingProfileAddress: document.profile.address,
+      trustPublishedMetadata: true,
+    });
     return model && decoded?.status === 'ready' && decoded.dimensions
       ? { ...model, focusDimensions: decoded.dimensions, media: { ...model.media, src: decoded.media.src } } : null;
-  }).filter(Boolean), [placementMedia, viewerTable]);
+  }).filter(Boolean), [document.profile.address, placementMedia, viewerTable]);
   const viewerPosition = viewerEntries.findIndex(({ placement }) => placement.id === viewerSession?.placementId);
   const viewerEntry = viewerPosition >= 0 ? viewerEntries[viewerPosition] : null;
   const findPlacementElement = useCallback((placementId) => [...(rootRef.current

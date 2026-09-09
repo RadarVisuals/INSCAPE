@@ -6,6 +6,7 @@ const PROFILE = '0x1111111111111111111111111111111111111111';
 const CONTRACT_A = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const CONTRACT_B = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 const id = (contract) => `42:${contract}:contract`;
+const tokenId = (contract, token = '0x01') => `42:${contract}:${token}`;
 const media = { imageUrl: 'https://example.com/image.png', thumbnailUrl: 'https://example.com/thumb.png',
   originalImageUrl: 'https://example.com/original.png', imageWidth: 1200, imageHeight: 800 };
 const owned = (contract = CONTRACT_A, overrides = {}) => ({ id: id(contract), chainId: 42, ownerAddress: PROFILE,
@@ -64,4 +65,20 @@ test('profile A creator records are rejected immediately by a profile B projecti
   assert.equal(projectLibraryAssetUnion({ createdAssets: [profileARecord], profileAddress: PROFILE }).records.length, 1);
   assert.deepEqual(projectLibraryAssetUnion({ createdAssets: [profileARecord],
     profileAddress: '0x2222222222222222222222222222222222222222' }).records, []);
+});
+
+test('accepts collection-derived tokens without claiming direct token creation', () => {
+  const child = created(CONTRACT_B, {
+    id: tokenId(CONTRACT_B), tokenId: '0x01', standard: 'LSP8', isCollection: false,
+    creators: [{ address: '0x3333333333333333333333333333333333333333' }],
+    viewedProfileIsCreator: false, creatorAttributionLevel: null,
+    collectionCreators: [{ address: PROFILE }], viewedProfileIsCollectionCreator: true,
+    collectionCreatorAttributionLevel: 'contract',
+  });
+  const result = projectLibraryAssetUnion({ createdAssets: [child], profileAddress: PROFILE });
+  assert.equal(result.records.length, 1);
+  assert.equal(result.records[0].viewedProfileIsCreator, false);
+  assert.equal(result.assets[0].creatorRelationship, 'collection');
+  assert.equal(result.assets[0].created, true);
+  assert.equal(projectLibraryAssetUnion({ createdAssets: [child], profileAddress: '0x4444444444444444444444444444444444444444' }).records.length, 0);
 });

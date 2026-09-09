@@ -1,8 +1,8 @@
 import { normalizeProfileAddress } from '../config.js';
 import { createStableAssetId } from '../domain/normalizeProfileAsset.js';
 
-const CACHE_VERSION = 1;
-const CACHE_KEY_PREFIX = 'inscape.library-assets.v1:';
+const CACHE_VERSION = 2;
+const CACHE_KEY_PREFIX = 'inscape.library-assets.v2:';
 const MAX_CACHE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_CACHED_ASSETS = 1000;
 
@@ -15,7 +15,8 @@ export function libraryAssetCacheKey(profileAddress) {
 function normalizeCachedAsset(asset, profileAddress) {
   const contractAddress = normalizeProfileAddress(asset?.contractAddress);
   const ownerAddress = normalizeProfileAddress(asset?.ownerAddress);
-  if (!contractAddress || ownerAddress !== profileAddress) return null;
+  if (!contractAddress || ownerAddress !== profileAddress || !asset?.fieldProvenance
+    || typeof asset.fieldProvenance !== 'object' || Array.isArray(asset.fieldProvenance)) return null;
   let id;
   try { id = createStableAssetId({ chainId: asset?.chainId, contractAddress, tokenId: asset?.tokenId }); }
   catch { return null; }

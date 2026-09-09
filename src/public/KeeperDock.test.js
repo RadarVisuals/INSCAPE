@@ -8,9 +8,12 @@ const styles = readFileSync(new URL('./moduleGrid.css', import.meta.url), 'utf8'
 const ownerStyles = readFileSync(new URL('./ownerLatticeShell.css', import.meta.url), 'utf8');
 const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
 
-test('production Keeper Dock uses actor silhouettes and contains docked canvas movement', () => {
-  assert.match(dockSource, /\/assets\/actors\/\$\{actorId\}\/mask\.webp/);
-  assert.match(dockSource, /createPortal/);
+test('production Keeper Dock controls the lightweight Grid Walker without restoring the retired actor portal', () => {
+  assert.match(dockSource, /GRID_WALKER_RANGES, GRID_WALKER_TUNING/);
+  assert.match(dockSource, /actorLabel = 'grid walker'/);
+  assert.match(dockSource, /keeper-dock__shell/);
+  assert.match(dockSource, /residentHandoff\?\.setTuning/);
+  assert.doesNotMatch(dockSource, /\/assets\/actors\/\$\{actorId\}\/mask\.webp|createPortal/);
   assert.match(appSource, /id="keeper-dock-underlay"/);
   assert.match(dockSource, /MoreHorizontal/);
   assert.match(dockSource, /onContextMenu/);
