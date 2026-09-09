@@ -9,6 +9,7 @@ import { systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkfl
 import { adaptProfileDocumentV9Media, PROFILE_DOCUMENT_V9_MEDIA_STATUS } from './profileDocumentV9Media.js';
 import { resolveProfileDocumentV9ContentReference } from '../domain/profileDocumentV9ContentReferenceResolver.js';
 import '../../lattice/rendering/latticeProductionTableRenderer.css';
+import useArtworkPicking from '../../public/ownerSystemWorkflow/useArtworkPicking.js';
 
 export const GRID_PRODUCTION_EAGER_MEDIA_RETRY_DELAY = 4_000;
 export const GRID_PRODUCTION_EAGER_MEDIA_ATTEMPTS = 3;
@@ -18,7 +19,7 @@ const viewportOf = (node, bottomInset = 0) => ({
   height: Math.max(0, (node?.clientHeight || 0) - bottomInset),
 });
 
-function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlacementActivate, placement, gridId, viewerSourceHidden }) {
+function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlacementActivate, onPointerActivate, placement, gridId, viewerSourceHidden }) {
   const reference = placement.asset?.media?.reference || null;
   const referenceKey = reference
     ? `${placement.asset.stableAssetId}:${reference.verification.method}:${reference.verification.data}` : null;
@@ -69,7 +70,7 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
     data-frame-id={placement.frameId} data-media-state={failed ? media.status === 'ready' ? 'failed' : media.status : loaded ? 'ready' : 'loading'}
     data-placement-id={placement.id} data-placement-activatable={activatable || undefined}
     data-transparency-mode={placement.transparencyMode} data-viewer-source-hidden={viewerSourceHidden || undefined}
-    style={{ ...rectangleStyle(artwork.footprint), zIndex: layerRank }} onClick={activate}
+    style={{ ...rectangleStyle(artwork.footprint), zIndex: layerRank }} onClick={event => event.detail === 0 ? activate(event) : onPointerActivate(event)}
     onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); activate(event); } }} tabIndex={activatable ? 0 : -1}>
     {artwork.backplateRectangle && <span aria-hidden="true" className="lattice-production-placement__mat" style={{ backgroundColor: artwork.mat.color }} />}
     <span className="lattice-production-placement__opening" style={{
@@ -98,6 +99,13 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
 export default function GridProductionRenderer({ document, grid, imageLoading = 'lazy', onMediaState, onPlacementActivate,
   projectionBottomInset = 0, viewerPlacementId = null }) {
   const rootRef = useRef(null);
+  const picking = useArtworkPicking(rootRef, grid);
+  const activatePointer = event => {
+    const element = picking.pick(event, event.currentTarget.parentElement);
+    if (!element?.hasAttribute('data-placement-activatable')) return;
+    const placement = grid.placements.find(item => item.id === element.dataset.placementId);
+    if (placement) onPlacementActivate?.({ element, placement, gridId: grid.id });
+  };
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   useEffect(() => { const node = rootRef.current; if (!node) return undefined;
     const update = () => setViewport(viewportOf(node, projectionBottomInset)); update(); const observer = new ResizeObserver(update); observer.observe(node);
@@ -108,7 +116,8 @@ export default function GridProductionRenderer({ document, grid, imageLoading = 
   const title = grid.title.trim();
   return <section aria-label={title || `INSCAPE ${grid.id}`} className="lattice-production-table visitor-grid-renderer"
     data-grid-id={grid.id} data-guide-mode={document.appearance.guideMode}
-    data-surface={document.appearance.surfaceId} ref={rootRef} style={projected ? {
+    data-surface={document.appearance.surfaceId} ref={rootRef} onLoadCapture={picking.onLoadCapture}
+    title="Alt-click to cycle overlapping artwork" style={projected ? {
       '--lattice-production-guide-color': document.appearance.guideColor,
       '--lattice-production-cell-size': `${projected.cellSize}px`,
       '--lattice-production-grid-origin-x': `${projected.left}px`,
@@ -120,7 +129,7 @@ export default function GridProductionRenderer({ document, grid, imageLoading = 
       <span aria-hidden="true" className="lattice-production-table__authored-plane" style={rectangleStyle(projected)} />
       <div className="visitor-grid-renderer__artwork-plane">{grid.placements.map((placement) => <GridPlacement field={projected} gridId={grid.id} imageLoading={imageLoading}
         key={placement.id} layerRank={layerRanks.get(placement.id)} onMediaState={onMediaState}
-        onPlacementActivate={onPlacementActivate} placement={placement} viewerSourceHidden={placement.id === viewerPlacementId} />)}</div>
+        onPlacementActivate={onPlacementActivate} onPointerActivate={activatePointer} placement={placement} viewerSourceHidden={placement.id === viewerPlacementId} />)}</div>
     </>}
   </section>;
 }

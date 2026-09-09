@@ -28,6 +28,7 @@ import {
 } from './ownerSystemWorkflowAssetDimensions.js';
 import { markOwnerSystemWorkflowPointerFocus } from './ownerSystemWorkflowSelection.js';
 import ProgressiveArtworkImage from './ProgressiveArtworkImage.jsx';
+import useArtworkPicking from './useArtworkPicking.js';
 import { progressiveArtworkSources } from './progressiveArtworkSources.js';
 import useGridPlayback from './useGridPlayback.js';
 import { systemWorkflowPlacementRequest } from './systemWorkflowPlacementRequest.js';
@@ -74,6 +75,12 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   const [worldViewport, setWorldViewport] = useState(null);
   const retainedSelection = useRef(null);
   const grid = controller.selectedGrid;
+  const picking = useArtworkPicking(canvasRef, grid?.id + ':' + controller.draft.profileAddress);
+  const pickPlacement = event => {
+    const element = crop?.cropSession ? event.currentTarget : picking.pick(event, event.currentTarget.parentElement);
+    const placement = grid?.placements.find(item => item.id === element?.dataset.systemWorkflowPlacementId);
+    return placement ? { placement, element } : null;
+  };
   const worldCover = isSystemWorkflowWorldCoverGrid(grid);
   const artboardMode = worldCover ? OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO : OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID;
   const cropSession = crop?.cropSession || null;
@@ -217,6 +224,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   if (!grid) return null;
   return <section className="system-workflow__stage-content" aria-label={`${grid.title} Grid`} data-system-workflow-stage data-world-cover={worldCover || undefined}>
     <div ref={canvasRef} className="system-workflow__canvas" data-guide={appearance.guideMode} data-space-navigation={interaction.spaceNavigation || undefined} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={Boolean(interaction.gridSwipe) || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, '--workflow-board-inverse-scale': 1 / viewScale, ...swipeStyle }}
+      onLoadCapture={picking.onLoadCapture} title="Alt-click to cycle overlapping artwork"
       onClick={(event) => {
         if (cropSession || interaction.clickSuppressedRef.current || event.target.closest?.('[data-system-workflow-placement-id]')) return;
         controller.replaceSelection([]);
@@ -278,10 +286,18 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
           className="system-workflow__placement" data-cropped={Boolean(visibleCrop) || undefined} data-cropping={cropping || undefined} data-system-workflow-crop-surface={cropping || undefined} data-system-workflow-placement-id={active ? placement.id : undefined} data-locked={placement.locked || undefined}
           data-viewing={viewerPlacementId === placement.id || undefined}
           key={placement.id} onClick={(event) => {
-            if (cropSession || interaction.clickSuppressedRef.current) return;
-            if (!placement.locked) controller.selectPlacement(placement.id, event.shiftKey);
+            if (cropSession || interactionDisabled || interaction.clickSuppressedRef.current) return;
+            const hit = pickPlacement(event);
+            event.stopPropagation();
+            if (!hit) { controller.replaceSelection([]); return; }
+            if (!hit.placement.locked) controller.selectPlacement(hit.placement.id, event.shiftKey);
           }}
-          onDoubleClick={(event) => { if (cropSession || placement.locked) return; event.stopPropagation(); onOpenViewer?.(placement, event.currentTarget); }}
+          onDoubleClick={(event) => {
+            if (cropSession || interactionDisabled) return;
+            event.stopPropagation();
+            const hit = pickPlacement(event);
+            if (hit && !hit.placement.locked) onOpenViewer?.(hit.placement, hit.element);
+          }}
           onKeyDown={(event) => {
             if (cropSession || placement.locked) return;
             if (event.key === 'Enter') { event.preventDefault(); onOpenViewer?.(placement, event.currentTarget); return; }
@@ -289,7 +305,19 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
             event.preventDefault();
             controller.selectPlacement(placement.id, event.shiftKey);
           }}
-          onPointerDown={(event) => { markOwnerSystemWorkflowPointerFocus(event.currentTarget); if (authoringLocked) return; if (cropping) crop.beginCropDrag(event, placement.id, worldViewport.cellSize * viewScale); else if (!cropSession) interaction.beginPlacementGesture(event, placement); }} ref={active ? (node) => onPlacementRef?.(placement.id, node) : undefined} role="button" tabIndex={!active || placement.locked ? -1 : 0}
+          onPointerDown={(event) => {
+            if (interactionDisabled) return;
+            const hit = pickPlacement(event);
+            if (!hit) {
+              interaction.beginCanvasSelection(event, { emptyArtworkHit: true });
+              return;
+            }
+            markOwnerSystemWorkflowPointerFocus(hit.element);
+            if (hit.element !== event.currentTarget) { event.preventDefault(); hit.element.focus({ preventScroll: true }); }
+            if (authoringLocked || event.altKey) return;
+            if (cropping) crop.beginCropDrag(event, placement.id, worldViewport.cellSize * viewScale);
+            else if (!cropSession) interaction.beginPlacementGesture(event, hit.placement);
+          }} ref={active ? (node) => onPlacementRef?.(placement.id, node) : undefined} role="button" tabIndex={!active || placement.locked ? -1 : 0}
           style={{ ...projected, zIndex: placement.layer + 1 }}>
           <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
             {src ? <ProgressiveArtworkImage asset={asset} onSourceLoad={(dimensions) => onAssetDimensions?.(asset, dimensions)}

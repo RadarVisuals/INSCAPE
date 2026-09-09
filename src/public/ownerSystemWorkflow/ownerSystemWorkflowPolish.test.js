@@ -121,14 +121,14 @@ test('Publish exposes one dock-attached control while preserving every canonical
   assert.match(source, /<details><summary>HELP WITH THIS ERROR<\/summary>/);
 });
 
-test('Owner and Visitor inspection never carry the workspace Grid', () => {
+test('Owner and Visitor share in-scene inspection without an extra artwork renderer', () => {
   const runtime = read('./OwnerSystemWorkflowRuntime.jsx');
   const visitor = read('../../profileDocument/components/ProfileDocumentV9Visitor.jsx');
   const profile = read('./OwnerSystemWorkflowProfile.jsx');
   assert.match(runtime, /<DisplayModule/);
   assert.match(read('./DisplayModule.jsx'), /useOwnerSystemWorkflowFocusViewer/);
   assert.match(visitor, /DisplayFocusViewer/);
-  assert.match(read('./DisplayFocusViewer.jsx'), /gridVisible=\{false\}/);
+  assert.doesNotMatch(read('./DisplayFocusViewer.jsx'), /LatticeFocusViewer|LatticeProductionFocusArtwork|LatticePixelGrid/);
   assert.doesNotMatch(visitor, /gridVisible=\{document\.appearance\.guideMode !== 'NONE'\}/);
   assert.match(profile, /onOpenIdentity/);
 });

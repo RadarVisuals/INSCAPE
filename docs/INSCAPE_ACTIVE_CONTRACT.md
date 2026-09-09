@@ -142,6 +142,14 @@ internal compatibility names during this migration; do not broadly rename them.
   or detach through the same bounded instrument shell. Published creator attribution
   and source details remain available. These interactions are session-local and
   never write an owner draft or rewrite publication bytes.
+- Current artwork focus keeps the composition and camera fixed. The selected
+  artwork stays visible, layers behind it dim, and foreground layers fade away;
+  closing restores the scene. Pointer picking follows visible image pixels,
+  passing through transparent areas to artwork underneath. Visible backing and
+  mats remain selectable. While a transparency mask is unavailable, rectangular
+  picking remains available with Alt-click cycling through overlapping artwork.
+  Keyboard and Layers selection remain explicit. These are temporary Display
+  interactions shared by owner and visitor, not saved placement mutations.
 - Do not implement the Display Module as an HTML iframe. Use one application context with
   an isolated, clipped viewport and camera transform.
 - The Display Module owns the instruments required to author and inspect its

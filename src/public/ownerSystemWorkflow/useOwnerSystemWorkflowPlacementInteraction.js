@@ -147,9 +147,9 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     marqueeRef.current = null;
     setMarquee(null);
   };
-  const beginCanvasSelection = (event, { navigationOnly = spacePressedRef.current } = {}) => {
+  const beginCanvasSelection = (event, { navigationOnly = spacePressedRef.current, emptyArtworkHit = false } = {}) => {
     if (disabled || gridSwipeTimerRef.current !== null || marqueeRef.current || authoringDisabled && !navigationOnly || event.button !== 0 || !grid
-      || !navigationOnly && event.target !== event.currentTarget) return;
+      || !navigationOnly && !emptyArtworkHit && event.target !== event.currentTarget) return;
     event.preventDefault();
     if (navigationOnly) event.stopPropagation();
     const field = projectedField(canvasRef.current, snapStep, artboardMode);
