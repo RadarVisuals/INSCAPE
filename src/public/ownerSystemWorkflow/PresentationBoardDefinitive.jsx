@@ -8,7 +8,7 @@ import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import { displayInstrumentLayout } from './displayInstrumentState.js';
 import { PRESENTATION_BOARD_INSTANCE_STATE } from './ownerSystemWorkflowModuleState.js';
 import { presentationBoardInspectionFrame, presentationBoardResponsiveMetrics, projectPresentationBoardView,
-  resizePresentationBoardFromCorner, resizePresentationBoardView } from './presentationBoardGeometry.js';
+  resizePresentationBoardFromCorner, resizePresentationBoardView, setContinuousPresentationBoardScale } from './presentationBoardGeometry.js';
 
 const corners = ['nw', 'ne', 'sw', 'se'];
 const WORKBENCH_CELL = 24;
@@ -62,6 +62,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const [immersive, setImmersive] = useState(false);
   const [screenSize, setScreenSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const wheelRef = useRef({ time: 0, blockedUntil: 0 });
+  const wheelAnimationRef = useRef(null);
   const exitImmersiveRef = useRef(null);
   const [scaleRendering, setScaleRendering] = useState('settled');
   const boardNodeRef = useRef(null);
@@ -142,6 +143,21 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     setScaleRendering('live');
   };
 
+  const stopWheelAnimation = () => {
+    if (!wheelAnimationRef.current) return;
+    cancelAnimationFrame(wheelAnimationRef.current.frame);
+    wheelAnimationRef.current = null;
+    setScaleRendering('settled');
+  };
+  useLayoutEffect(() => {
+    stopWheelAnimation();
+    setScaleRendering('settled');
+    return () => {
+      if (wheelAnimationRef.current) cancelAnimationFrame(wheelAnimationRef.current.frame);
+      wheelAnimationRef.current = null;
+    };
+  }, [host, documentGeometry, view?.fit, metadataSidecarOpen, metadataWidth, immersive, boardPhase, instanceState]);
+
   const leaveImmersive = () => {
     wheelRef.current.blockedUntil = performance.now() + 450;
     setImmersive(false);
@@ -194,13 +210,33 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
         if (maximized) { restore(); wheelRef.current.blockedUntil = now + 450; return; }
       }
       const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? stage.clientHeight : 1);
-      const scale = view.scale + Math.max(-.06, Math.min(.06, -pixels * .001));
-      const next = projectPresentationBoardView(documentGeometry,
-        { width: host.clientWidth, height: host.clientHeight }, scale, geometryOptions);
-      if (!next) return;
-      setView(next);
-      setBoardPosition(clampPosition({ left: windowFrame.left + (windowFrame.width - next.frame.board.width) / 2,
-        top: windowFrame.top + (windowFrame.height - next.frame.board.height) / 2 }, next.frame.board));
+      let animation = wheelAnimationRef.current;
+      const target = setContinuousPresentationBoardScale(view,
+        (animation?.target ?? view.scale) + Math.max(-.06, Math.min(.06, -pixels * .001))).scale;
+      if (animation) { animation.target = target; return; }
+      if (target === view.scale) return;
+      animation = { target, current: view.scale, time: now, frame: null,
+        centerX: windowFrame.left + windowFrame.width / 2,
+        centerY: windowFrame.top + windowFrame.height / 2 };
+      wheelAnimationRef.current = animation;
+      if (!reducedMotion) prepareLiveScaleRendering();
+      const tick = time => {
+        if (wheelAnimationRef.current !== animation) return;
+        const amount = reducedMotion ? 1 : 1 - Math.exp(-Math.min(64, time - animation.time) / 65);
+        animation.time = time;
+        animation.current += (animation.target - animation.current) * amount;
+        const complete = Math.abs(animation.target - animation.current) < .0001;
+        if (complete) animation.current = animation.target;
+        const next = setContinuousPresentationBoardScale(view, animation.current);
+        setView(next);
+        setBoardPosition(clampPosition({ left: animation.centerX - next.frame.board.width / 2,
+          top: animation.centerY - next.frame.board.height / 2 }, next.frame.board));
+        if (complete && time - wheelRef.current.time > 120) {
+          wheelAnimationRef.current = null;
+          setScaleRendering('settled');
+        } else animation.frame = requestAnimationFrame(tick);
+      };
+      animation.frame = requestAnimationFrame(tick);
     };
     stage.addEventListener('wheel', wheel, { passive: false });
     return () => stage.removeEventListener('wheel', wheel);
@@ -262,6 +298,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   };
   const beginBoardDrag = (event) => {
     if (immersive || event.button !== 0 || !renderedPosition || boardPhase !== 'window' || event.target.closest('button')) return;
+    stopWheelAnimation();
     boardDragRef.current = { id: event.pointerId, clientX: event.clientX, clientY: event.clientY, ...renderedPosition };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -274,6 +311,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const beginBoardResize = (corner, event) => {
     if (event.button !== 0 || !view || !windowFrame || boardPhase !== 'window') return;
     event.preventDefault(); event.stopPropagation();
+    stopWheelAnimation();
     prepareLiveScaleRendering();
     boardResizeRef.current = { corner, id: event.pointerId, clientX: event.clientX, clientY: event.clientY, frame: windowFrame, view };
     event.currentTarget.setPointerCapture(event.pointerId);

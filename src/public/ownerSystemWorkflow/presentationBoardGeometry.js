@@ -182,7 +182,7 @@ export function setPresentationBoardScale(view, scale) {
   return Object.freeze({ ...view, frame: projectScaledPresentationBoard(view.fit, viewport, safeScale), scale: safeScale });
 }
 
-function setContinuousPresentationBoardScale(view, scale) {
+export function setContinuousPresentationBoardScale(view, scale) {
   const safeScale = clampContinuousPresentationBoardScale(
     scale, percentageScale(view.maximumPercentage), view.scale,
   );
