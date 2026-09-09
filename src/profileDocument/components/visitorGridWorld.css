@@ -36,6 +36,18 @@
   transition: transform 280ms cubic-bezier(.22, 1, .36, 1);
 }
 .visitor-grid-renderer { position: absolute; inset: 0; }
+/* The incoming scene already overlaps its neighbour by one pixel. Keep its
+   surface inside that overlap so it cannot show through the artwork's moving
+   antialiased edge. The current scene supplies the surface at the join. */
+.visitor-grid-world__grid-plane--adjacent .visitor-grid-renderer { background-color: transparent; }
+.visitor-grid-world__grid-plane--adjacent .visitor-grid-renderer::before {
+  content: '';
+  position: absolute;
+  inset: 0 1px;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--lattice-production-surface);
+}
 .visitor-grid-renderer .lattice-production-placement[data-frame-id="DOSSIER"] { box-shadow: inset 0 0 0 clamp(2px, .28vw, 5px) currentColor; }
 .visitor-grid-renderer .lattice-production-placement[data-frame-id="CAPTION"] { box-shadow: inset 0 -22px #090a0a, inset 0 0 0 clamp(1px, .16vw, 3px) currentColor; }
 .visitor-grid-world > .lattice-profile-rail[data-identity-only] { top: auto; bottom: calc(var(--visitor-dock-height) + 12px); left: 12px; }

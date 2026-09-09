@@ -58,6 +58,13 @@ function createCanonicalDocument(address, suffix, artworkUrl) {
       background: { type: 'clouds', color: '#7139a5', speed: .5 },
       fields: [{ id: 'field:place', label: 'Location', type: 'text', value: 'The Underneath' }] };
   }
+  if (new URLSearchParams(location.search).has('covered')) {
+    const background = { ...systemWorkflowDraft.grids[0].placements[0],
+      column: 0, row: 0, columnSpan: 32, rowSpan: 18, frameId: 'NONE' };
+    systemWorkflowDraft.grids.forEach((grid, index) => {
+      grid.placements = [{ ...structuredClone(background), id: `covered:${index}` }];
+    });
+  }
   return buildProfileDocumentV9({
     assetRecords: assets, createdAt: 1, exportedAt: 2, profileAddress: address,
     profileIdentity: { name: `${suffix} Visitor Fixture`, avatarUrl: `https://published-images.invalid/avatar-${suffix}.png` },
