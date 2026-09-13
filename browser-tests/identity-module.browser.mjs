@@ -41,9 +41,12 @@ test('expansion preserves the cloud program, clock and top-anchored pattern', as
       root.render(React.createElement(Identity, { menuSurface: 'carbon', onClose: () => root.unmount(), model: {
         address: '0x1111111111111111111111111111111111111111',
         profile: { displayName: 'Continuity', tags: [], avatarProvenance: 'INSCAPE_PUBLISHED_ASSET', avatarUrl: '/assets/actors/skull_reaper/full.webp' },
-        card: { version: 1, background: { type: 'clouds', color: null, speed: 1 }, fields: [
+        card: { version: 1, columns: 5, background: { type: 'clouds', color: null, speed: 1 }, fields: [
           { id: 'field:role', label: 'Role', type: 'text', value: 'Artist' },
           { id: 'field:projects', label: 'Projects', type: 'list', value: ['Inscape', 'Human Underneath', 'Illustration', 'Sound'] },
+          { id: 'field:location', label: 'Currently in', type: 'text', value: 'The Underneath' },
+          { id: 'field:aesthetic', label: 'Aesthetic', type: 'list', value: ['Biomechanical', 'Osteological'] },
+          { id: 'field:exploring', label: 'Exploring', type: 'list', value: ['Dynamic & Expressive Visual Systems', 'Reactivity & Interactivity', 'Motion through code'] },
         ] }, links: [],
       } }));
     });
@@ -62,6 +65,9 @@ test('expansion preserves the cloud program, clock and top-anchored pattern', as
     assert.ok(Math.max(...differences) < 20, `pattern remains anchored; sampling differences: ${differences}`);
     await page.getByRole('button', { name: 'Expand INSCAPE details' }).click(); await page.waitForTimeout(100);
     assert.equal(await page.locator('.identity-module__fields dd').last().isVisible(), true);
+    const rows = await page.locator('.identity-module__cell').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().top));
+    assert.ok(rows.every(top => Math.abs(top - rows[0]) < 1), 'five normal sections share one row on a wide card');
+    await page.screenshot({ path: '.browser-test-runtime/identity-five-columns.png' });
     assert.equal(await page.getByRole('separator', { name: 'Resize Identity height' }).count(), 0);
   } finally { await browser.close(); }
 });
@@ -310,6 +316,8 @@ test('Identity edits in place, exposes all cells with one click, and fits conten
     await identity.getByLabel('Field 2 content', { exact: true }).fill('The Underneath');
     await identity.getByRole('button', { name: 'Move field 2 up' }).click();
     assert.equal(await identity.getByLabel('Field 1 name', { exact: true }).inputValue(), 'Location');
+    await identity.getByLabel('Detail columns', { exact: true }).selectOption('5');
+    await identity.getByLabel('Field 2 wide', { exact: true }).check();
     await identity.getByText('Appearance & artwork', { exact: true }).click();
     await identity.getByLabel('Background style').selectOption('clouds');
     for (const width of [1440, 390]) {
@@ -332,6 +340,8 @@ test('Identity edits in place, exposes all cells with one click, and fits conten
     assert.equal(await identity.locator('.identity-module__extension summary').count(), 0);
     assert.deepEqual(await identity.locator('.identity-module__fields dt').allTextContents(), ['Location', 'Role']);
     assert.deepEqual(await identity.locator('.identity-module__fields li').allTextContents(), ['Artist', 'Writer']);
+    assert.equal(await identity.locator('.identity-module__fields').getAttribute('data-columns'), '5');
+    assert.equal(await identity.locator('.identity-module__cell').nth(1).getAttribute('data-wide'), 'true');
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 1000 }); await page.waitForTimeout(200);
       await identity.getByRole('button', { name: 'Collapse INSCAPE details' }).click();
@@ -343,6 +353,11 @@ test('Identity edits in place, exposes all cells with one click, and fits conten
       await identity.getByRole('button', { name: 'Expand INSCAPE details' }).click();
       assert.equal(await identity.locator('.identity-module__fields dd').first().isVisible(), true);
       assert.equal(await identity.locator('.identity-module__fields dd').last().isVisible(), true);
+      const columns = await identity.locator('.identity-module__fields').evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length);
+      assert.equal(columns, width === 1440 ? 5 : 1, 'columns respond to card width');
+      const cellWidths = await identity.locator('.identity-module__cell').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().width));
+      assert.ok(Math.abs(cellWidths[1] / cellWidths[0] - (width === 1440 ? 2 : 1)) < .01, 'wide spans two columns only when space permits');
+      assert.equal(await identity.locator('.identity-module__fields').evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
       await page.screenshot({ path: `.browser-test-runtime/identity-inline-expanded-${width}.png` });
     }
     await identity.getByRole('button', { name: 'Edit Identity', exact: true }).click();

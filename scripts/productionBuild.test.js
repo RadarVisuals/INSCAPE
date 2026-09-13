@@ -229,6 +229,26 @@ test('production pruning excludes unused font sources without removing active bu
   }
 });
 
+test('the mini app bridge stays outside initial bytes while remaining in aggregate budgets', async () => {
+  const root = resolve(tmpdir(), `inscape-mini-app-entry-${process.pid}`);
+  try {
+    await fixture(root, 'mini-app');
+    const before = await analyzeProductionBuild(root);
+    const manifestPath = resolve(root, '.vite/manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+    manifest['mini-app-host.html'] = { file: 'assets/mini-app-host.js', isEntry: true, imports: ['_shared.js'] };
+    await writeFile(resolve(root, 'assets/mini-app-host.js'), 'const bridge = true;');
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    const after = await analyzeProductionBuild(root);
+    assert.deepEqual(after.initialJavaScript, before.initialJavaScript);
+    assert.ok(after.lazyJavaScript.some(item => item.file === 'assets/mini-app-host.js'));
+    assert.equal(after.totals.coreJavaScript.raw - before.totals.coreJavaScript.raw, Buffer.byteLength('const bridge = true;'));
+    manifest['unexpected.html'] = { file: 'assets/unexpected.js', isEntry: true };
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    await assert.rejects(() => analyzeProductionBuild(root), /entry|entries/iu);
+  } finally { await removeTree(root); }
+});
+
 test('fresh production CSS and copied font assets are limited to Sora and IBM Plex Sans Condensed', async () => {
   const root = resolve(tmpdir(), `inscape-font-contract-${process.pid}`);
   try {

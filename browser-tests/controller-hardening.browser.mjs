@@ -7,7 +7,7 @@ test('controller scopes selection, failures and retained callbacks to the active
   try {
     const page = await browser.newPage();
     const errors = []; page.on('pageerror', error => errors.push(error.message));
-    await page.goto('http://127.0.0.1:5173/browser-tests/controller-hardening-fixture.html');
+    await page.goto(`${process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173'}/browser-tests/controller-hardening-fixture.html`);
     await page.waitForFunction(() => window.hardening?.controller);
     await page.evaluate(() => {
       const c = window.hardening.controller;

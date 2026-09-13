@@ -5,6 +5,134 @@ Established: 2026-08-28
 Product clarification: 2026-09-06 — public Workbench and independent modules
 Rollback baseline before the documentation reset: `64458ac`
 
+## Mirror animation module
+
+Mirror is an independent Workbench module fed by an image selected from Library.
+Its Pixi runtime owns reflection, clipping, scale, position, in-plane rotation,
+automation and render-resource cleanup. INSCAPE owns Library resolution, profile
+authority, module placement and persistence. The standalone demo uses that same
+runtime; there is no iframe or second animation implementation.
+
+The profile draft optionally carries `animations`. Each Mirror record stores one
+resolved source asset, validated settings and host presentation separately.
+Modules start private; only explicitly public modules with an image enter the
+optional v9 `animations` publication field. Existing documents without this field
+remain valid. Visitor uses the same renderer with playback and metadata, without
+authoring controls or draft writes. Helper grids and playback time are temporary.
+The initial implementation allows four Mirror modules and loads Pixi on demand.
+
+## Mobile entrance and Index
+
+The isolated mobile prototype establishes a two-sided artwork-led entrance.
+Tapping the front reveals the profile metadata on its reverse; tapping the
+reverse returns to the front. Every turn continues in the same direction.
+Works is a separate action on the reverse, with a compact preview of the first
+authored entries. There is no extra About dialog. The reverse presents the existing
+Identity bio, tags, links and nonempty authored fields. The founder approved
+profile and publication integration on 2026-09-12. The original standalone
+projects remain preserved as visual and interaction references.
+
+The integrated Mobile module owns one presentation per profile. Owner opens its
+portrait editor through Workbench Add. Editing happens directly on its output;
+Layers and Settings occupy a separate, movable companion window that can close
+and reopen but does not dock into the portrait. Display retains its existing
+attached/detached behaviour and its frame feature is outside this change.
+Mobile authoring uses the existing profile
+draft store and publication action, with no separate metadata or storage owner.
+The optional draft `mobile` field starts private. Explicit inclusion projects a
+validated presentation into the optional v9 publication `mobile` field.
+Version 1 remains readable without changing its appearance. The next authored
+edit upgrades it to version 2, adding neutral rotation and mirror settings for
+the three fixed roles. Editor open/close does not upgrade content.
+Older drafts and publications without Mobile remain valid; restoring a document
+without Mobile preserves any local Mobile composition as private.
+
+The standard design canvas is 1080 by 1920 (9:16). Foreground artwork, alpha mask
+and controls share that canvas and fit without viewport cropping. The background
+fills the screen and may crop. Standard Library compositions fit horizontally
+centred and bottom-aligned, so taller screens add background above the composition,
+not a strip below its artwork. Existing saved coordinates, masks and scales stay
+unchanged; this rendering correction applies to existing drafts and publications
+without rewriting them. Deliberate artwork scaling, positioning and cover-fit
+cropping still apply. The custom Steyra depth study retains its centred canvas.
+The editor provides the resolution, a downloadable
+SVG guide. Placement snaps invisibly to 12 design-pixel increments; no snapping
+grid is drawn. Background, artwork and mask
+come from Library; image fit, scale, position, background colour and an optional
+thin mask border are authored settings. Identity and functional icons can move,
+but their text and meaning remain owned by INSCAPE and the profile. The official
+username appears on the front. The reverse matches Desktop Identity: the authored
+title appears as a small uppercase label above the prominent official username,
+omitted when identical to the username. A title never replaces the
+official username in Mobile.
+
+Mobile has three fixed image roles, not an arbitrary layer stack. Each supports
+quarter-turn rotation and horizontal/vertical mirroring. Artwork can move and
+scale inside the mask, with contain/cover crop settings. Duplicate, frame and
+layer stacking-order controls are not included. The window shell and transform
+buttons are shared with Display; each module retains its own state and actions.
+Locking and hiding elements are temporary editor aids. Edit mode selects and
+manipulates content; Preview restores visitor interactions. Gallery headings and
+introductory copy are edited in place and tiles reorder directly. Collection
+names matching a work's fallback name are not repeated as tile captions.
+
+Draft asset references retain stable asset IDs and media selection. Publication
+resolves the selected assets using the existing canonical metadata projection;
+published metadata is a snapshot refreshed by explicit publication. There is no
+second title, description or attribution editor. Missing sources must remain
+unavailable rather than becoming fabricated content or successful empty reads.
+
+Owner preview and Mobile Visitor use the same renderer. Phone visitors enter the
+Mobile presentation without loading the desktop Workbench; desktop visitors do
+not load the Mobile renderer or editor. A profile without a published Mobile
+presentation has an explicit unavailable state and an optional desktop action.
+Theme persists across the card, Index and viewer. The founder's Steyra renderer
+and separate Through the Eye / seven-layer experiment are curated custom work,
+not a default template for other profiles. Executable imported themes, LSP8
+template packaging, paid accounts and a general shader editor are deferred.
+
+The active standalone mobile preview is `Mobile/INSCAPE final/inscape-profile-card`.
+Its entrance flips to a flat profile reverse, with a separate Index action that
+opens the staggered image tiles. The entrance eye is not a navigation target;
+tapping it flips the card like the rest of the artwork. Through the Eye and the
+seven-layer interaction remain in the artwork viewer for The world inside.
+The entrance retains the depth study's recessed animated Steyra and inward
+foreground wordmark and identity. Its eye journey and room-wall metadata remain
+separate experiments in `Mobile/inscape-profile-card/depth-study`; the active
+preview uses the flat profile reverse instead.
+
+Index is an explicitly authored table of contents, not a wallet inventory.
+The maker chooses published destinations and their order inside INSCAPE.
+Entries have a title, an optional cover derived from existing content unless
+overridden, and a destination to a work, composition or experience. Unsupported
+mobile destinations require an explicit desktop treatment rather than a
+silently broken embedded desktop. The integrated first format supports explicitly
+chosen Library images, reordered in the Mobile editor, with an authored Index
+heading and introduction. Its staggered tiles open the shared image viewer;
+counts and navigation order are derived from the selected entries. Additional
+destination types must be explicitly supported before they can be authored.
+
+The prototype prepares read-only presentation fields and distinguishes
+unconnected content from successfully loaded empty content. Its hardcoded
+gallery and bio are not public profile data. The existing Through the Eye
+portal and seven-layer hold-to-separate experiment remain available together
+as an explicitly identified experiment, outside the published Index entries.
+
+## Authoring undo
+
+Completed profile-draft edits share one chronological undo/redo history across
+Display instances, Identity, Mirror and Mobile. Ctrl/Cmd+Z undoes; Ctrl/Cmd+Shift+Z
+or Ctrl+Y redoes. Text-entry controls retain native text undo. Pointer gestures
+group continuous updates into one step. New edits discard redo, and failures to
+save leave both history and the draft unchanged. History is bounded, temporary
+and isolated by profile; reloading a draft clears its history. Existing saved
+drafts gain no history fields or storage-key changes.
+
+Undo restores authored draft data, not wallet transactions or old publications.
+Preview navigation, playback, helper visibility, local window presentation and
+publication's host-layout capture do not become artwork undo steps. Independent
+Workbench preferences remain local preferences rather than authored content.
+
 ## Authority
 
 This file records current accepted direction. Historical plans, phases,
@@ -105,12 +233,73 @@ geometry, plus the Display name and shortcut position, visibility and artwork.
 Module content remains in the existing Grid and Identity envelopes. Identity
 height follows its content. Visitor interactions remain session-local.
 
+Preview and Prepare Publication share a pure Workbench presentation capture.
+It combines current module reports, saved arrangements, and existing defaults;
+only current draft modules contribute layouts or unresolved-artwork errors.
+The existing authoring session remains the sole path for saving that capture.
+
 Existing documents without this configuration load in the shared Display window
 with runtime defaults; a subsequent preparation can save the new configuration.
 The publication version and ERC725Y pointer key remain unchanged. A publication
 still requires a new verified content hash and URI and a separate wallet action.
-Multiple independent instances and module connections remain accepted direction,
-not implemented capabilities.
+Multiple Display instances are implemented through an optional `displays` array.
+The original Display retains its root content envelope and existing storage key;
+additional Displays have stable IDs and their own Grids, appearance and format.
+All instances commit through one profile draft store. Selection, inspection,
+playback and composition lock are scoped to an instance. Module connections
+remain accepted direction, not an implemented capability.
+
+The first implementation bounds a Workbench to eight Displays. Right click Add
+creates an additional private Display; its context menu can include it in the
+next publication. Public projection omits private instances and private Grids.
+The original Display retains its existing public-Grid publication requirement.
+`workbench.displays` retains additional window and shortcut arrangements when
+Prepare Publication captures the Workbench. Closing minimizes to the shortcut;
+it does not delete content. Visitor window changes remain session-local.
+Optional arrays do not rewrite older documents on read. Publications using them
+require the updated strict reader and a newly verified hash and URI.
+
+## Hosted mini apps
+
+The Workbench can host existing web mini apps by external HTTPS URL, with
+connection support through the official LUKSO UP Provider client protocol.
+Adding another app does not require a domain entry in code or deployment
+configuration. This is a URL-based module; INSCAPE owns its window and
+connection lifecycle while the remote application owns its creative behavior,
+content, and storage. It does not add an arbitrary-code module SDK.
+
+Right click Add → Mini App creates a private instance. Settings saves its name,
+URL, and explicit inclusion in publication through the existing profile draft
+store. Up to four instances are supported. Closing destroys the running frame
+and leaves a shortcut; removing the instance is a separate settings action.
+Owner and Visitor use the same window and host. Movement and resizing are
+temporary until Prepare Publication captures the starting arrangement.
+
+Optional `miniApps` fields extend draft v4 and public document v9; optional
+`workbench.miniApps` stores their starting windows. Public projection omits
+private apps and their windows. Older documents remain readable without writes.
+Restoring a publication retains noncolliding local apps and their window
+arrangements as private. An over-limit restoration fails without truncation.
+Published URLs reference live websites, whose contents can change independently
+of the INSCAPE snapshot. App-internal settings are not captured by INSCAPE.
+
+The viewed Universal Profile is public context, distinct from the connected
+visitor's account. Connect App grants only that instance access to the existing
+wallet authority; wallet actions still require the wallet's approval. Grants
+are never saved, published, or shared across instances. Account/provider/chain
+changes, closure, reload, and preview suspension revoke them. Microphone
+delegation starts off and is controlled per app, with browser permission still
+required. Preview suspension also ends that delegation.
+
+The founder approved general HTTPS hosting on 2026-09-13. Production permits
+HTTPS frames; each bridge still binds connection messages and optional microphone
+delegation to its own app's exact origin and window. There is no app domain list.
+Private localhost drafts remain readable and run only during development.
+Embedding headers, supported wallet methods, and ancestor permission policies
+determine compatibility; working on Universal Everything is not a guarantee
+that every app works unchanged here. Grid/LSP28 import and synchronization,
+app-to-app audio sharing, and a marketplace are not implemented by this host.
+See [mini app hosting](MINI_APP_HOSTING.md) for the boundaries and checks.
 
 ## Display Module
 
@@ -118,8 +307,13 @@ not implemented capabilities.
 `presentationBoard*` implementation identifiers and persistence keys remain
 internal compatibility names during this migration; do not broadly rename them.
 
-- Begin with one canonical 16:9 Stage. Do not introduce arbitrary ratios during
-  the first migration.
+- Each Display has a Landscape (16:9, 32 by 18 coordinates) or Portrait
+  (9:16, 18 by 32 coordinates) Stage. All Grids in an instance share its format.
+  The owner chooses the format through that Display's context menu. Resizing
+  preserves it. Format changes preserve placement coordinates and sizes; the
+  artist rearranges content for the changed clipping boundary. Existing Displays
+  remain landscape until explicitly changed. Arbitrary aspect ratios remain
+  outside current scope. The profile's World Cover remains landscape.
 - Content outside the Stage boundary is clipped and is not published.
 - The Display Module may move freely on the Workbench without changing published
   composition coordinates.
@@ -130,7 +324,7 @@ internal compatibility names during this migration; do not broadly rename them.
   window bounds. Scrolling over instruments retains their own scrolling.
   After reaching maximum size, a separate upward scroll enters an immersive
   browser-area Stage view, with Workbench and instruments hidden and plain black
-  letterboxing to preserve 16:9. Scroll down, Escape, or the revealed Exit control
+  letterboxing to preserve the authored Stage ratio. Scroll down, Escape, or the revealed Exit control
   restores the prior window. Immersive geometry is temporary and never captured
   as the published window arrangement. Owner and Visitor share this behavior.
 - Ordered Grid navigation wraps from last to first and first to last, in the
@@ -275,6 +469,13 @@ internal compatibility names during this migration; do not broadly rename them.
   is deferred until that public destination is settled.
 
 - Identity starts compact. A centered chevron reveals its INSCAPE extension
+  with a selectable 2–5 column detail layout. A section can be marked Wide to
+  span two available columns. Sections retain authored order and wrap to fewer
+  columns according to the card's width, without shrinking the text. Optional
+  `card.columns` and field `wide` settings use the existing Save/Cancel and
+  publication path. Older cards without these settings retain two columns and
+  their existing final full-width section; no saved content is rewritten on read.
+  Identity's extension sits
   below the official profile section. Expansion preserves the window's top
   edge, grows only as needed, and uses contained scrolling at viewport bounds.
   Expand/collapse is temporary window state, including for visitors.

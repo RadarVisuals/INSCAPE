@@ -16,13 +16,14 @@ export default defineConfig(({ mode }) => {
     define: { __INSCAPE_RELEASE_COMMIT__: JSON.stringify(resolveReleaseCommit({ ...process.env, ...productionEnvironment })) },
     plugins: [diagnosticsEnvironmentPlugin(), react(), excludeUnsupportedWalletConnectorsPlugin(),
       ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
-    build: { manifest: true },
+    build: { manifest: true, rollupOptions: { input: { app: 'index.html', miniAppHost: 'mini-app-host.html' } } },
     // Audit exports and browser runtime artifacts are not application entries.
-    optimizeDeps: { entries: ['index.html', 'browser-tests/*.html'] },
+    optimizeDeps: { entries: ['index.html', 'mini-app-host.html', 'browser-tests/*.html'] },
     preview: { headers: productionResponseSecurityHeaders(productionEnvironment) },
     server: {
       watch: {
         ignored: [
+          '**/output/**',
           '**/.edge-*/**',
           '**/.browser-test-runtime*/**',
           '**/.browser-test-profile*/**',

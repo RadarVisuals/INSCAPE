@@ -151,6 +151,8 @@ test('Identity card boundaries reject executable settings, invalid values and un
   const card = resolveIdentityCard();
   const validField = { id: 'field:one', label: 'Role', type: 'text', value: 'Artist' };
   for (const invalid of [null, {}, { ...card, version: 2 }, { ...card, shader: 'code' },
+    ...[1, 6, 2.5, '3', null].map(columns => ({ ...card, columns })),
+    { ...card, fields: [{ ...validField, wide: 'yes' }] },
     { ...card, subtitle: 'Unsupported field' },
     { ...card, fields: [{ ...validField, category: 'x'.repeat(61) }] },
     { ...card, background: { ...card.background, type: 'custom-code' } },
@@ -168,6 +170,21 @@ test('Identity card boundaries reject executable settings, invalid values and un
     assert.equal(validateProfileDocumentV9(candidate).valid, false);
     const input = draft(); input.identityPresentation.card = invalid;
     assert.throws(() => document({ systemWorkflowDraft: input }));
+  }
+});
+
+test('Identity column preferences and wide fields survive publication and restore without changing legacy cards', () => {
+  const input = draft();
+  const legacy = resolveIdentityCard();
+  input.identityPresentation.card = legacy;
+  assert.deepEqual(document({ systemWorkflowDraft: input }).identityPresentation.card, legacy);
+  for (const columns of [2, 3, 4, 5]) {
+    const card = { ...legacy, columns, fields: [{ id: 'field:exploring', label: 'Exploring', type: 'list', value: ['Motion through code'], wide: true }] };
+    input.identityPresentation.card = card;
+    const published = parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(document({ systemWorkflowDraft: input })));
+    assert.deepEqual(published.identityPresentation.card, card);
+    assert.deepEqual(createOwnerDraftFromPublishedProfile(published).identityPresentation.card, card);
+    assert.deepEqual(input.identityPresentation.card, card);
   }
 });
 

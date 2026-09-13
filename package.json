@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@erc725/erc725.js": "^0.28.2",
+    "@inscape/mirror": "file:packages/mirror",
     "@lukso/up-modal": "^0.21.11",
     "@lukso/up-provider": "^0.3.7",
     "@wagmi/core": "^3.0.0",

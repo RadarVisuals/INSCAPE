@@ -63,6 +63,8 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
   };
   useEffect(() => {
     const keydown = event => {
+      const instance = scene?.closest('[data-display-instance]');
+      if (instance && !instance.hasAttribute('data-active-display')) return;
       if (event.defaultPrevented || /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable) return;
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
       else if (!closing && scene?.closest('article')?.contains(event.target)

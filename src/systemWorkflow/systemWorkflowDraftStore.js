@@ -1,5 +1,6 @@
 import { keccak256, stringToHex } from 'viem';
 import { normalizeProfileAddress } from '../library/config.js';
+import { draftChanges, applyDraftChanges, draftChangeLabel } from './draftHistory.js';
 import {
   createEmptySystemWorkflowDraft,
   ensureSystemWorkflowWorldCoverGrid,
@@ -60,6 +61,13 @@ export function createSystemWorkflowDraftStore({
   let currentDraft = null;
   let recordState = null;
   let acceptedRaw;
+  const listeners = new Set();
+  const histories = new Map();
+  let historyGroup = null;
+  const history = () => {
+    if (!histories.has(activeProfileAddress)) histories.set(activeProfileAddress, { undo: [], redo: [] });
+    return histories.get(activeProfileAddress);
+  };
 
   const createEmpty = (profile) => deepFreeze(createEmptySystemWorkflowDraft(
     profile,
@@ -127,7 +135,13 @@ export function createSystemWorkflowDraftStore({
     catch { return false; }
   };
 
-  return Object.freeze({
+  const api = {
+    beginHistoryGroup() { if (!historyGroup && currentDraft) historyGroup = { before: currentDraft, entry: null }; },
+    endHistoryGroup() { historyGroup = null; },
+    getHistory() { const h = history(); return { undo: h.undo.at(-1)?.label || null, redo: h.redo.at(-1)?.label || null }; },
+    undo() { return travel('undo'); },
+    redo() { return travel('redo'); },
+    subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
     getDraft() {
       if (!currentDraft) {
         const unavailable = recordState.status === SYSTEM_WORKFLOW_RECORD_STATUS.UNAVAILABLE;
@@ -152,8 +166,11 @@ export function createSystemWorkflowDraftStore({
     },
 
     reload() {
+      historyGroup = null;
+      histories.delete(activeProfileAddress);
       acceptLoaded(load(activeProfileAddress));
       generation += 1;
+      listeners.forEach(listener => listener());
       return recordState.status !== SYSTEM_WORKFLOW_RECORD_STATUS.UNAVAILABLE;
     },
 
@@ -164,10 +181,12 @@ export function createSystemWorkflowDraftStore({
         || !storage?.removeItem || !storageStillCurrent()) return false;
       try { storage.removeItem(systemWorkflowDraftKey(activeProfileAddress)); }
       catch { return false; }
+      histories.delete(activeProfileAddress);
       currentDraft = createEmpty(activeProfileAddress);
       acceptedRaw = null;
       recordState = Object.freeze({ status: SYSTEM_WORKFLOW_RECORD_STATUS.ABSENT });
       generation += 1;
+      listeners.forEach(listener => listener());
       return true;
     },
 
@@ -175,25 +194,53 @@ export function createSystemWorkflowDraftStore({
       const next = normalizeProfileAddress(nextProfileAddress);
       if (!next) return false;
       if (next === activeProfileAddress) return true;
+      historyGroup = null;
       const loaded = load(next);
       activeProfileAddress = next;
       acceptLoaded(loaded);
       generation += 1;
+      listeners.forEach(listener => listener());
       return true;
     },
 
-    commitCompletedOperation(candidate, { expectedGeneration } = {}) {
+    commitCompletedOperation(candidate, { expectedGeneration, historyLabel, recordHistory = true } = {}) {
       if (expectedGeneration !== generation || !currentDraft) return false;
       const draft = acceptedDraft(candidate, activeProfileAddress);
       if (!draft || !storage?.setItem || !storageStillCurrent()) return false;
       const raw = JSON.stringify(draft);
+      const changes = recordHistory ? draftChanges(currentDraft, draft) : [];
       try { storage.setItem(systemWorkflowDraftKey(activeProfileAddress), raw); }
       catch { return false; }
+      if (changes.length) {
+        const h = history(); h.redo = [];
+        if (historyGroup?.entry && h.undo.at(-1) === historyGroup.entry) {
+          historyGroup.entry.changes = draftChanges(historyGroup.before, draft);
+          if (!historyGroup.entry.changes.length) { h.undo.pop(); historyGroup.entry = null; }
+        } else {
+          const entry = { changes, label: historyLabel || draftChangeLabel(changes) };
+          h.undo.push(entry); if (historyGroup) historyGroup.entry = entry;
+        }
+        while (h.undo.length > 50 || h.undo.length > 1 && JSON.stringify(h.undo).length > 4_000_000) h.undo.shift();
+      }
       acceptedRaw = raw;
       currentDraft = deepFreeze(draft);
       recordState = Object.freeze({ status: SYSTEM_WORKFLOW_RECORD_STATUS.VALID });
       generation += 1;
+      listeners.forEach(listener => listener());
       return true;
     },
-  });
+  };
+  function travel(direction) {
+    historyGroup = null;
+    const h = history(), entry = h[direction].at(-1);
+    if (!entry || !currentDraft) return false;
+    const next = applyDraftChanges(currentDraft, entry.changes, direction);
+    if (!next) return false;
+    // Move history before notification so subscribers see the final state.
+    const other = direction === 'undo' ? 'redo' : 'undo';
+    h[direction].pop(); h[other].push(entry);
+    if (api.commitCompletedOperation(next, { expectedGeneration: generation, recordHistory: false })) return true;
+    h[other].pop(); h[direction].push(entry); return false;
+  }
+  return Object.freeze(api);
 }

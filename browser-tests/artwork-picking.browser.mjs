@@ -190,6 +190,7 @@ for (const width of [1440, 390]) test(`visitor clicks through transparent foregr
     await page.screenshot({ path: `.browser-test-runtime/transparent-picking-${width}.png` });
     await page.keyboard.press('Escape');
     await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor({ state: 'detached' });
+    await page.waitForFunction(() => document.querySelector('[data-placement-id]') === document.activeElement);
     assert.equal(await back.evaluate(node => node === document.activeElement), true);
     assert.equal(await page.evaluate(() => window.__visitorStorageOps.filter(op => ['setItem', 'removeItem', 'clear'].includes(op.method)).length), 0);
     assert.deepEqual(errors, []);

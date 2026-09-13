@@ -3,7 +3,7 @@ import { PanelRightClose, X } from 'lucide-react';
 import OwnerSystemWorkflowDetachedWindow from './OwnerSystemWorkflowDetachedWindow.jsx';
 
 // View-only window behavior. The caller supplies its content and commands.
-export function WorkbenchWindow({ children, label, controls, title, titleContent, width = 320, initialHeight = 420, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange }) {
+export function WorkbenchWindow({ children, label, controls, title, titleContent, width = 320, resizableWidth = false, initialHeight = 420, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange }) {
   const node = useRef(null);
   const measuredContent = useRef(null);
   const gesture = useRef(null);
@@ -12,9 +12,11 @@ export function WorkbenchWindow({ children, label, controls, title, titleContent
     x: initialX, y: initialY,
   }));
   const [height, setHeight] = useState(initialHeight);
+  const [resizedWidth, setResizedWidth] = useState(width);
+  const windowWidth = resizableWidth ? resizedWidth : width;
   useLayoutEffect(() => {
-    onLayoutChange?.({ left: position.x, top: position.y, width, height });
-  }, [position.x, position.y, width, height, onLayoutChange]);
+    onLayoutChange?.({ left: position.x, top: position.y, width: windowWidth, height });
+  }, [position.x, position.y, windowWidth, height, onLayoutChange]);
   useLayoutEffect(() => {
     if (!fitContent && Number.isFinite(preferredHeight)) setHeight(Math.max(180, Math.min(globalThis.innerHeight - position.y - 54, preferredHeight)));
   }, [preferredHeight, fitContent]);
@@ -61,6 +63,7 @@ export function WorkbenchWindow({ children, label, controls, title, titleContent
   };
   const finish = () => { gesture.current = null; };
   const resizeHeight = (value) => setHeight(Math.max(180, Math.min(globalThis.innerHeight - position.y - 54, value)));
+  const resizeWidth = value => setResizedWidth(Math.max(240, Math.min(globalThis.innerWidth - position.x - 8, value)));
   const onKeyDown = (event) => {
     if (event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
     event.preventDefault(); event.stopPropagation();
@@ -73,20 +76,28 @@ export function WorkbenchWindow({ children, label, controls, title, titleContent
     headerPointerProps={{ 'aria-label': `Move ${label} window`, tabIndex: 0, onKeyDown,
       onPointerDown: start, onPointerMove: move, onPointerUp: finish, onPointerCancel: finish }}
     controls={controls} titleContent={titleContent}
-    style={{ '--detached-window-width': `${width}px`, left: position.x, top: position.y, height, maxHeight: 'calc(100dvh - 70px)' }}
-    resizeHandleProps={fitContent ? undefined : { 'aria-label': `Resize ${label} height`, role: 'separator', tabIndex: 0,
+    style={{ '--detached-window-width': `${windowWidth}px`, left: position.x, top: position.y, height, maxHeight: 'calc(100dvh - 70px)' }}
+    resizeHandleProps={fitContent ? undefined : { 'aria-label': `Resize ${label} ${resizableWidth ? 'window' : 'height'}`, role: 'separator', tabIndex: 0,
+      ...(resizableWidth ? { style: { cursor: 'nwse-resize' }, 'aria-valuetext': `${Math.round(windowWidth)} by ${Math.round(height)} pixels` } : {}),
       'aria-orientation': 'horizontal', 'aria-valuenow': Math.round(height),
       onPointerDown: (event) => {
         if (event.button !== 0) return;
         event.preventDefault();
-        resize.current = { id: event.pointerId, y: event.clientY, height: node.current.offsetHeight };
+        resize.current = { id: event.pointerId, x: event.clientX, y: event.clientY, width: node.current.offsetWidth, height: node.current.offsetHeight };
         event.currentTarget.setPointerCapture(event.pointerId);
       },
       onPointerMove: (event) => {
-        if (resize.current?.id === event.pointerId) resizeHeight(resize.current.height + event.clientY - resize.current.y);
+        if (resize.current?.id === event.pointerId) {
+          resizeHeight(resize.current.height + event.clientY - resize.current.y);
+          if (resizableWidth) resizeWidth(resize.current.width + event.clientX - resize.current.x);
+        }
       },
       onPointerUp: () => { resize.current = null; }, onPointerCancel: () => { resize.current = null; },
       onKeyDown: (event) => {
+        if (resizableWidth && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+          event.preventDefault(); event.stopPropagation();
+          resizeWidth(windowWidth + (event.key === 'ArrowRight' ? 1 : -1) * (event.shiftKey ? 24 : 8)); return;
+        }
         if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
         event.preventDefault(); event.stopPropagation();
         resizeHeight(height + (event.key === 'ArrowDown' ? 1 : -1) * (event.shiftKey ? 24 : 8));

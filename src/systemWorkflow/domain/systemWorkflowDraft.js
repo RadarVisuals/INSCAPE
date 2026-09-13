@@ -4,6 +4,11 @@ import { PROFILE_DOCUMENT_LIMITS } from '../../profileDocument/domain/constants.
 import { isValidPlacementMedia } from './placementMedia.js';
 import { isValidIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { isValidWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
+import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, isDisplayFormat, projectDisplayDraft } from './displayModules.js';
+import { validMirrorModules } from './mirrorModules.js';
+import { validMiniApps } from '../../miniApps/domain/miniApps.js';
+import { validMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
+import { canUseMobileRenderer } from '../../mobile/domain/customPresentation.js';
 
 export const SYSTEM_WORKFLOW_DRAFT_VERSION = 4;
 export const SYSTEM_WORKFLOW_ARTBOARD = Object.freeze({ aspectWidth: 16, aspectHeight: 9 });
@@ -251,16 +256,13 @@ function validatePlacement(value, path, fail) {
 export function validateSystemWorkflowDraft(input) {
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
-  if (!exactKeys(input, Object.hasOwn(input || {}, 'workbench') ? [...DRAFT_KEYS, 'workbench'] : DRAFT_KEYS)) {
+  if (!exactKeys(input, [...DRAFT_KEYS, ...['workbench', 'displays', 'animations', 'mobile', 'miniApps'].filter(key => Object.hasOwn(input || {}, key))])) {
     fail('$', 'invalid_draft_structure', 'Invalid draft');
     return { valid: false, errors, value: null };
   }
   if (!normalizeProfileAddress(input.profileAddress) || input.profileAddress !== input.profileAddress.toLowerCase()) fail('profileAddress', 'invalid_profile_address', 'Invalid profile address');
   if (input.draftVersion !== SYSTEM_WORKFLOW_DRAFT_VERSION) fail('draftVersion', 'unsupported_draft_version', 'Unsupported draft version');
-  if (!exactKeys(input.artboard, ['aspectWidth', 'aspectHeight'])
-    || input.artboard.aspectWidth !== 16 || input.artboard.aspectHeight !== 9) fail('artboard', 'invalid_artboard', 'Invalid artboard');
-  if (!exactKeys(input.geometry, ['columns', 'rows'])
-    || input.geometry.columns !== 32 || input.geometry.rows !== 18) fail('geometry', 'invalid_geometry', 'Invalid geometry');
+  if (!isDisplayFormat(input.artboard, input.geometry)) fail('artboard', 'invalid_artboard', 'Invalid Display format');
   if (!exactKeys(input.appearance, APPEARANCE_KEYS)
     || !sets.surfaces.has(input.appearance?.surfaceId)
     || !sets.surfaces.has(input.appearance?.menuSurfaceId)
@@ -271,7 +273,37 @@ export function validateSystemWorkflowDraft(input) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance?.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid appearance');
   validateIdentity(input.identityPresentation, fail);
+  if (Object.hasOwn(input, 'miniApps') && !validMiniApps(input.miniApps)) fail('miniApps', 'invalid_mini_apps', 'Invalid mini app configuration');
+  if (Array.isArray(input.workbench?.miniApps) && input.workbench.miniApps.some(item => !Array.isArray(input.miniApps)
+    || !input.miniApps.some(app => app?.id === item?.id))) fail('workbench.miniApps', 'unknown_mini_app', 'Window refers to an unavailable mini app');
+  if (Object.hasOwn(input, 'mobile') && (!validMobilePresentation(input.mobile) || !canUseMobileRenderer(input.mobile, input.profileAddress))) fail('mobile', 'invalid_mobile', 'Invalid Mobile presentation');
+  if (Object.hasOwn(input, 'animations') && !validMirrorModules(input.animations)) fail('animations', 'invalid_animations', 'Invalid Mirror module configuration');
+  if (Object.hasOwn(input, 'displays')) {
+    if (!Array.isArray(input.displays) || input.displays.length > MAX_DISPLAY_MODULES - 1) {
+      fail('displays', 'invalid_display_count', 'At most eight Display Modules are supported');
+    } else {
+      const ids = new Set([PRIMARY_DISPLAY_ID]);
+      let references = (input.grids || []).reduce((sum, grid) => sum + (grid.placements?.length || 0), 0);
+      for (const module of input.displays) {
+        if (!exactKeys(module, ['id', 'visibility', ...DISPLAY_CONTENT_KEYS]) || !/^display:[A-Za-z0-9_-]{1,80}$/u.test(module?.id)
+          || ids.has(module.id) || !sets.visibility.has(module.visibility)) {
+          fail('displays', 'invalid_display', 'Invalid or duplicate Display Module'); continue;
+        }
+        ids.add(module.id);
+        const validation = validateSystemWorkflowDraft(projectDisplayDraft(input, module.id));
+        validation.errors.forEach(error => fail(`displays.${module.id}.${error.path}`, error.code, error.message));
+        references += (module.grids || []).reduce((sum, grid) => sum + (grid.placements?.length || 0), 0);
+      }
+      if (references > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) fail('displays', 'too_many_asset_references', 'Too many asset references');
+    }
+  }
   if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid Workbench configuration');
+  const mirrorReferences = Array.isArray(input.animations) ? input.animations.filter(item => item?.asset).length : 0;
+  const allReferences = mobileReferenceCount(input.mobile) + mirrorReferences + (Array.isArray(input.grids) ? input.grids : []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0)
+    + (Array.isArray(input.displays) ? input.displays : []).reduce((sum, module) => sum + (Array.isArray(module?.grids) ? module.grids : []).reduce((count, grid) => count + (grid?.placements?.length || 0), 0), 0)
+    + (input.identityPresentation?.avatar?.stableAssetId ? 1 : 0) + (input.workbench?.display?.shortcut?.icon ? 1 : 0)
+    + (input.workbench?.displays || []).filter(item => item?.shortcut?.icon).length;
+  if (allReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) fail('$', 'too_many_asset_references', 'Too many asset references');
   if (!Array.isArray(input.grids) || input.grids.length < 2 || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxAuthoringGrids) {
     fail('grids', 'invalid_grid_count', 'One to 24 Grids plus the World Cover are required');
   } else {

@@ -43,8 +43,9 @@ function availablePresentationBoardSpace(viewport, options = {}) {
 export function fitPresentationBoard(viewport, options = {}) {
   const space = availablePresentationBoardSpace(viewport, options);
   if (!space) return null;
-  const stageWidth = Math.min(space.width, space.stageHeight * PRESENTATION_STAGE.aspectRatio);
-  const stageHeight = stageWidth / PRESENTATION_STAGE.aspectRatio;
+  const aspectRatio = options.aspectRatio || PRESENTATION_STAGE.aspectRatio;
+  const stageWidth = Math.min(space.width, space.stageHeight * aspectRatio);
+  const stageHeight = stageWidth / aspectRatio;
   const boardHeight = stageHeight + space.identityStripHeight;
   return Object.freeze({
     board: Object.freeze({
@@ -112,7 +113,7 @@ function projectScaledPresentationBoard(fit, viewport, scale) {
 }
 
 export function projectPresentationBoardView(documentGeometry, viewport, scale = 1, options = {}) {
-  const fit = fitPresentationBoard(viewport, options);
+  const fit = fitPresentationBoard(viewport, { ...options, aspectRatio: documentGeometry?.columns / documentGeometry?.rows || options.aspectRatio });
   if (!fit) return null;
   const maximumPercentage = maximumPresentationBoardPercentage(fit, viewport, options);
   const safeScale = clampPresentationBoardScale(scale, percentageScale(maximumPercentage));
@@ -127,7 +128,7 @@ export function projectPresentationBoardView(documentGeometry, viewport, scale =
 
 export function resizePresentationBoardView(view, viewport, options = {}) {
   if (!view) return null;
-  const fit = fitPresentationBoard(viewport, options);
+  const fit = fitPresentationBoard(viewport, { ...options, aspectRatio: view.documentGeometry?.columns / view.documentGeometry?.rows || options.aspectRatio });
   if (!fit) return null;
   const maximumPercentage = maximumPresentationBoardPercentage(fit, viewport, options);
   const safeScale = clampContinuousPresentationBoardScale(
@@ -202,7 +203,7 @@ export function resizePresentationBoardFromCorner(view, frame, corner, movement)
   const verticalDirection = corner.startsWith('s') ? 1 : -1;
   const signedWidthMovement = deltaX * horizontalDirection;
   const signedHeightMovement = deltaY * verticalDirection;
-  const inverseAspect = 1 / PRESENTATION_STAGE.aspectRatio;
+  const inverseAspect = view.fit.stage.height / view.fit.stage.width;
   // Project the pointer delta onto the Stage's fixed-ratio diagonal. This keeps
   // both axes responsive without switching abruptly between X- and Y-derived sizes.
   const projectedWidthMovement = (signedWidthMovement + signedHeightMovement * inverseAspect)

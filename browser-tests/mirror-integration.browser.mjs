@@ -1,0 +1,88 @@
+import assert from 'node:assert/strict';
+import { chromium } from 'playwright-core';
+const origin = 'http://127.0.0.1:5186';
+const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless:true,
+  args:['--use-angle=swiftshader','--enable-unsafe-swiftshader'] });
+try {
+  const page = await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
+  const errors=[]; page.on('pageerror',e=>{ errors.push(e.message); console.error(e.stack); });
+  await page.route('https://raw.githubusercontent.com/**',route=>route.fulfill({path:`public/${new URL(route.request().url()).pathname.split('/public/')[1]}`}));
+  await page.route(`${origin}/__mirror__`,route=>route.fulfill({contentType:'text/html',body:'<div id="root"></div>'}));
+  await page.goto(`${origin}/__mirror__`);
+  await page.evaluate(async()=>{
+    const refresh=(await import('/@react-refresh')).default;
+    refresh.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>type=>type;window.__vite_plugin_react_preamble_installed__=true;
+    const React=(await import('/@id/react')).default;
+    const {createRoot}=(await import('/@id/react-dom/client')).default;
+    const Runtime=(await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
+    const fixture=await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
+    const {systemWorkflowDraftKey}=await import('/src/systemWorkflow/systemWorkflowDraftStore.js');
+    await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
+    await import('/src/lattice/rendering/latticeMenuSurface.css');
+    const storage=fixture.createOwnerSystemWorkflowReviewStorage();
+    const root=createRoot(document.getElementById('root'));
+    const props={profileAddress:fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_PROFILE,reviewStorage:storage,reviewAssets:fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
+      reviewCategories:[],reviewActivity:[],reviewDiscovery:[],reviewProfile:{name:'Mirror review'}};
+    window.review={root,storage,profile:props.profileAddress,render:()=>root.render(React.createElement(Runtime,props)),
+      draft:()=>JSON.parse(storage.getItem(systemWorkflowDraftKey(props.profileAddress)))};
+    review.render();
+  });
+  await page.locator('.system-workflow__presentation-board').waitFor();
+  assert.equal(await page.locator('.mirror-surface canvas').count(),0);
+  await page.mouse.click(15,15,{button:'right'});
+  await page.getByRole('menuitem',{name:'ADD',exact:true}).hover();
+  await page.getByRole('menuitem',{name:'MIRROR ANIMATION',exact:true}).click();
+  await page.locator('.mirror-surface canvas').waitFor();
+  const header = await page.getByLabel('Move Mirror window', { exact: true }).boundingBox();
+  await page.mouse.move(header.x + 100, header.y + header.height / 2); await page.mouse.down();
+  await page.mouse.move(header.x + 650, header.y + header.height / 2, { steps: 10 }); await page.mouse.up();
+  await page.getByRole('button',{name:'Library',exact:true}).click();
+  const asset=page.getByRole('button',{name:'ABYSSAL STUDY / INSCAPE STUDIES',exact:true});
+  const a=await asset.boundingBox(), b=await page.locator('.mirror-surface__stage').boundingBox();
+  await page.mouse.move(a.x+a.width/2,a.y+a.height/2);await page.mouse.down();
+  await page.mouse.move(b.x+b.width*.85,b.y+b.height*.5,{steps:20});await page.mouse.up();
+  await page.waitForFunction(()=>review.draft().animations?.[0]?.asset);
+  await page.getByRole('button',{name:'Library',exact:true}).click();
+  await page.getByLabel('rotation automation',{exact:true}).check();
+  await page.getByLabel('rotation movement',{exact:true}).selectOption('noise');
+  await page.getByLabel('Mirror axis',{exact:true}).selectOption('horizontal');
+  await page.getByLabel('Include in publication',{exact:true}).check();
+  await page.waitForFunction(()=>review.draft().animations[0].settings.parameters.rotation.enabled);
+  await page.locator('.mirror-workbench .system-workflow__instrument-content').evaluate(node=>node.scrollTop=0);
+  await page.screenshot({path:'output/mirror-owner-wide.png'});
+  await page.setViewportSize({width:390,height:844});
+  await page.getByLabel('rotation automation',{exact:true}).scrollIntoViewIfNeeded();
+  await page.screenshot({path:'output/mirror-owner-narrow.png'});
+  const ownerBounds=await page.locator('.mirror-workbench .system-workflow__instrument-window').boundingBox();
+  assert.ok(ownerBounds.x>=0&&ownerBounds.x+ownerBounds.width<=391,JSON.stringify(ownerBounds));
+  await page.setViewportSize({width:1440,height:1000});
+  await page.getByRole('button',{name:'Close MIRROR 1',exact:true}).click();
+  assert.equal(await page.locator('.mirror-surface canvas').count(),0);
+  await page.getByRole('button',{name:'MIRROR 1',exact:true}).click();
+  await page.locator('.mirror-surface canvas').waitFor();
+  await page.waitForTimeout(200);
+  await page.evaluate(async()=>{
+    const React=(await import('/@id/react')).default;
+    const {buildProfileDocumentV9}=await import('/src/profileDocument/domain/profileDocumentV9Builder.js');
+    const fixture=await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js');
+    const Visitor=(await import('/src/profileDocument/components/ProfileDocumentV9Visitor.jsx')).default;
+    review.before=JSON.stringify(review.draft());
+    review.document=buildProfileDocumentV9({profileAddress:review.profile,systemWorkflowDraft:review.draft(),assetRecords:fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS});
+    review.root.render(React.createElement(Visitor,{document:review.document}));
+  });
+  await page.locator('.visitor-grid-world .mirror-surface canvas').waitFor();
+  await page.waitForFunction(()=>document.querySelector('.mirror-surface__transport')?.textContent.includes('2000'));
+  assert.equal(await page.locator('.mirror-surface__controls').count(),0);
+  await page.screenshot({path:'output/mirror-visitor-wide.png'});
+  await page.setViewportSize({width:390,height:844});
+  await page.waitForTimeout(200);
+  await page.screenshot({path:'output/mirror-visitor-narrow.png'});
+  const bounds=await page.locator('.mirror-workbench .system-workflow__instrument-window').boundingBox();
+  assert.ok(bounds.x>=0&&bounds.x+bounds.width<=391,JSON.stringify(bounds));
+  await page.getByRole('button',{name:'Play',exact:true}).click();
+  await page.waitForTimeout(120);
+  await page.getByRole('button',{name:'Pause',exact:true}).click();
+  assert.equal(await page.evaluate(()=>JSON.stringify(review.draft())===review.before),true);
+  assert.deepEqual(errors,[]);
+  console.log('PASS Mirror: Library drop, automated settings, close/reopen, publication, visitor, narrow bounds and no visitor draft writes');
+} finally {await browser.close();}

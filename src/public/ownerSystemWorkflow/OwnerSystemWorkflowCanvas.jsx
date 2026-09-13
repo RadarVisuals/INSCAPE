@@ -85,7 +85,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   };
   const worldCover = isSystemWorkflowWorldCoverGrid(grid);
   const worldViewport = stageSize
-    ? (worldCover ? measureOwnerSystemWorkflowHeroArtboard : measureOwnerSystemWorkflowArtboard)(stageSize.width, stageSize.height)
+    ? (worldCover ? measureOwnerSystemWorkflowHeroArtboard : measureOwnerSystemWorkflowArtboard)(stageSize.width, stageSize.height, 1, controller.draft.geometry)
     : measuredViewport;
   const artboardMode = worldCover ? OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO : OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID;
   const cropSession = crop?.cropSession || null;
@@ -175,7 +175,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
       const rectangle = { width: parseFloat(style.width), height: parseFloat(style.height) };
       setWorldViewport(worldCover
         ? measureOwnerSystemWorkflowHeroArtboard(rectangle.width, rectangle.height)
-        : measureOwnerSystemWorkflowArtboard(rectangle.width, rectangle.height));
+        : measureOwnerSystemWorkflowArtboard(rectangle.width, rectangle.height, 1, controller.draft.geometry));
     };
     measure();
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
@@ -199,6 +199,8 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
 
   useEffect(() => {
     const onKeyDown = (event) => {
+      const instance = canvasRef.current?.closest('[data-display-instance]');
+      if (instance && !instance.hasAttribute('data-active-display')) return;
       if (event.target?.closest?.('[data-workbench-module]')) return;
       if (!grid || cropSession || interactionDisabled || viewerOpen || /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName)) return;
       if (event.key === 'Escape') { controller.replaceSelection([]); return; }
@@ -229,7 +231,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
 
   if (!grid) return null;
   return <section className="system-workflow__stage-content" aria-label={`${grid.title} Grid`} data-system-workflow-stage data-world-cover={worldCover || undefined}>
-    <div ref={canvasRef} className="system-workflow__canvas" data-guide={appearance.guideMode} data-space-navigation={interaction.spaceNavigation || undefined} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={Boolean(interaction.gridSwipe) || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, '--workflow-board-inverse-scale': 1 / viewScale, ...swipeStyle }}
+    <div ref={canvasRef} data-stage-columns={controller.draft.geometry.columns} data-stage-rows={controller.draft.geometry.rows} className="system-workflow__canvas" data-guide={appearance.guideMode} data-space-navigation={interaction.spaceNavigation || undefined} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={Boolean(interaction.gridSwipe) || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, '--workflow-board-inverse-scale': 1 / viewScale, ...swipeStyle }}
       onLoadCapture={picking.onLoadCapture}
       onClick={(event) => {
         if (cropSession || interaction.clickSuppressedRef.current || event.target.closest?.('[data-system-workflow-placement-id]')) return;

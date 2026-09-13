@@ -61,13 +61,13 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
   }
   let selectedGridId = firstSystemWorkflowGridId(store.getDraft());
 
-  function transact(createCandidate) {
+  function transact(createCandidate, options = {}) {
     const generation = store.getGeneration();
     const draft = store.getDraft();
     const candidate = createCandidate(draft);
     if (candidate === null) return false;
     const candidateDraft = candidate?.draft || candidate;
-    if (!store.commitCompletedOperation(candidateDraft, { expectedGeneration: generation })) {
+    if (!store.commitCompletedOperation(candidateDraft, { ...options, expectedGeneration: generation })) {
       throw sessionError('SYSTEM_WORKFLOW_OPERATION_STALE', 'The change could not be saved. Storage may be unavailable or the draft changed in another tab. Reload before continuing.');
     }
     selectedGridId = reconcileSystemWorkflowGridSelection(store.getDraft(), selectedGridId);
@@ -76,7 +76,8 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
 
   return Object.freeze({
     saveWorkbench(workbench) {
-      return transact(draft => assertValidSystemWorkflowDraft({ ...draft, workbench: structuredClone(workbench) }));
+      // Publication captures host layout; it is not an artwork edit.
+      return transact(draft => assertValidSystemWorkflowDraft({ ...draft, workbench: structuredClone(workbench) }), { recordHistory: false });
     },
     setIdentityConfiguration({ expectedDetails, expectedCard, details, card }) {
       return transact((draft) => {
@@ -93,6 +94,7 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
       });
     },
     getState() {
+      selectedGridId = reconcileSystemWorkflowGridSelection(store.getDraft(), selectedGridId);
       return Object.freeze({
         draft: store.getDraft(),
         generation: store.getGeneration(),

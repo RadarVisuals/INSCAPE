@@ -70,13 +70,13 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     const previewAt = (pointerEvent, dimensions = active.dimensions) => {
       const point = { x: pointerEvent.clientX, y: pointerEvent.clientY };
       const hit = document.elementFromPoint(point.x, point.y);
-      const moduleTarget = active.moduleTarget;
-      if (moduleTarget && moduleAssetTargetRef?.current === moduleTarget && moduleTarget.node?.contains(hit)) {
+      const moduleTarget = active.moduleTarget?.targetAt?.(point) || active.moduleTarget;
+      if (moduleTarget && moduleAssetTargetRef?.current === active.moduleTarget && moduleTarget.node?.contains(hit)) {
         const bounds = moduleTarget.node.getBoundingClientRect();
         return { destination: null, kind: 'module', label: moduleTarget.label, rectangle: { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height } };
       }
       if (hit?.closest('[data-workbench-module]')) return { destination: null, rectangle: null };
-      const shortcut = shortcutTargetRef.current?.node;
+      const shortcut = (shortcutTargetRef.current?.targetAt?.(point) || shortcutTargetRef.current)?.node;
       if (shortcut?.contains(document.elementFromPoint(point.x, point.y))) {
         const bounds = shortcut.getBoundingClientRect();
         return { destination: null, kind: 'shortcut', rectangle: { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height } };
@@ -97,23 +97,25 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       if (pointerEvent.pointerId !== active.pointerId) return;
       const moved = active.moved;
       const pendingDimensions = active.dimensionPromise;
+      // Resolve while drag-only drop surfaces are still visible. Cleanup removes
+      // the source marker that controls those surfaces.
+      const hit = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY);
+      const moduleTarget = active.moduleTarget?.targetAt?.({ x: pointerEvent.clientX, y: pointerEvent.clientY }) || active.moduleTarget;
       cleanup();
       if (!moved) return;
       if (!mounted.current || currentPlacementContext.current !== placementContext) return;
-      const hit = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY);
-      const moduleTarget = active.moduleTarget;
-      if (moduleTarget && moduleAssetTargetRef?.current === moduleTarget && moduleTarget.node?.contains(hit)) {
-        if (!moduleTarget.placeAsset(asset)) rejectDrop();
+      if (moduleTarget && moduleAssetTargetRef?.current === active.moduleTarget && active.moduleTarget?.has?.(moduleTarget) !== false && moduleTarget.node?.contains(hit)) {
+        if (!await moduleTarget.placeAsset(asset)) rejectDrop();
         return;
       }
       if (hit?.closest('[data-workbench-module]')) { rejectDrop(); return; }
-      const shortcut = shortcutTargetRef.current;
+      const shortcut = shortcutTargetRef.current?.targetAt?.({ x: pointerEvent.clientX, y: pointerEvent.clientY }) || shortcutTargetRef.current;
       if (shortcut?.node?.contains(document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY))
         && shortcut.placeAsset(asset)) return;
       const dimensions = await pendingDimensions;
       if (!mounted.current || currentPlacementContext.current !== placementContext) return;
       const preview = dimensions ? previewAt(pointerEvent, dimensions) : null;
-      if (preview?.destination) await place(asset, preview.destination, dimensions, active.target);
+      if (preview?.destination) await place(asset, preview.destination, dimensions, preview.target || active.target);
       else rejectDrop();
     };
     const cancel = () => cleanup();

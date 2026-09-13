@@ -1,5 +1,5 @@
-export const presentationBoardShortcutStorageKey = (profileAddress) =>
-  `inscape:workbench:presentation-board:${profileAddress || 'anonymous'}`;
+export const presentationBoardShortcutStorageKey = (profileAddress, instanceId) =>
+  `inscape:workbench:presentation-board:${profileAddress || 'anonymous'}${instanceId ? ':' + instanceId : ''}`;
 
 
 export const DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION = Object.freeze({
@@ -25,9 +25,9 @@ export function normalizePresentationBoardShortcutIconPresentation(value) {
   };
 }
 
-export function loadPresentationBoardShortcut(profileAddress, storage = globalThis.localStorage) {
+export function loadPresentationBoardShortcut(profileAddress, storage = globalThis.localStorage, instanceId) {
   try {
-    const value = JSON.parse(storage?.getItem(presentationBoardShortcutStorageKey(profileAddress)) || 'null');
+    const value = JSON.parse(storage?.getItem(presentationBoardShortcutStorageKey(profileAddress, instanceId)) || 'null');
     return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
   } catch { return null; }
 }

@@ -68,7 +68,7 @@ function nextPlacementOrder(values, field) {
   return maximum + 1;
 }
 
-export function createInitialSystemWorkflowPlacementGeometry(nativeWidth, nativeHeight) {
+export function createInitialSystemWorkflowPlacementGeometry(nativeWidth, nativeHeight, geometry = SYSTEM_WORKFLOW_GEOMETRY) {
   if (!Number.isFinite(nativeWidth) || nativeWidth <= 0
     || !Number.isFinite(nativeHeight) || nativeHeight <= 0) {
     throw operationError('SYSTEM_WORKFLOW_PLACEMENT_DIMENSIONS_UNAVAILABLE', 'Positive native media dimensions are required');
@@ -79,17 +79,17 @@ export function createInitialSystemWorkflowPlacementGeometry(nativeWidth, native
   );
   const columnSpan = Math.min(INITIAL_SYSTEM_WORKFLOW_PLACEMENT_ENVELOPE.columns, Math.max(1, Math.round(nativeWidth * scale)));
   const rowSpan = Math.min(INITIAL_SYSTEM_WORKFLOW_PLACEMENT_ENVELOPE.rows, Math.max(1, Math.round(nativeHeight * scale)));
-  const column = Math.floor((SYSTEM_WORKFLOW_GEOMETRY.columns - columnSpan) / 2);
-  const row = Math.floor((SYSTEM_WORKFLOW_GEOMETRY.rows - rowSpan) / 2);
+  const column = Math.floor((geometry.columns - columnSpan) / 2);
+  const row = Math.floor((geometry.rows - rowSpan) / 2);
   if (column < 0 || row < 0
-    || column + columnSpan > SYSTEM_WORKFLOW_GEOMETRY.columns
-    || row + rowSpan > SYSTEM_WORKFLOW_GEOMETRY.rows) {
+    || column + columnSpan > geometry.columns
+    || row + rowSpan > geometry.rows) {
     throw operationError('SYSTEM_WORKFLOW_PLACEMENT_GEOMETRY_INVALID', 'Initial placement geometry exceeds the canonical authored plane');
   }
   return Object.freeze({ column, row, columnSpan, rowSpan });
 }
 
-export function createCompactSystemWorkflowPlacementGeometry(nativeWidth, nativeHeight) {
+export function createCompactSystemWorkflowPlacementGeometry(nativeWidth, nativeHeight, geometry = SYSTEM_WORKFLOW_GEOMETRY) {
   if (!Number.isFinite(nativeWidth) || nativeWidth <= 0
     || !Number.isFinite(nativeHeight) || nativeHeight <= 0) {
     throw operationError('SYSTEM_WORKFLOW_PLACEMENT_DIMENSIONS_UNAVAILABLE', 'Positive native media dimensions are required');
@@ -103,8 +103,8 @@ export function createCompactSystemWorkflowPlacementGeometry(nativeWidth, native
     rowSpan = Math.min(4, Math.max(2, Math.round(2 / ratio)));
     columnSpan = Math.min(4, Math.max(1, Math.round(rowSpan * ratio)));
   }
-  const column = Math.floor((SYSTEM_WORKFLOW_GEOMETRY.columns - columnSpan) / 2);
-  const row = Math.floor((SYSTEM_WORKFLOW_GEOMETRY.rows - rowSpan) / 2);
+  const column = Math.floor((geometry.columns - columnSpan) / 2);
+  const row = Math.floor((geometry.rows - rowSpan) / 2);
   return Object.freeze({ column, row, columnSpan, rowSpan });
 }
 
@@ -175,7 +175,7 @@ export function createSystemWorkflowPlacementCandidate(draftInput, {
     stableAssetId,
     ...(selectedMedia ? { selectedMedia: structuredClone(selectedMedia) } : {}),
     ...(destination ? assertSystemWorkflowDropGeometry(destination)
-      : createInitialSystemWorkflowPlacementGeometry(nativeWidth, nativeHeight)),
+      : createInitialSystemWorkflowPlacementGeometry(nativeWidth, nativeHeight, draft.geometry)),
     layer: nextPlacementOrder(grid.placements.map(({ layer }) => layer), 'layer'),
     navigationOrder: nextPlacementOrder(
       grid.placements.map(({ navigationOrder }) => navigationOrder),

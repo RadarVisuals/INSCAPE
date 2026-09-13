@@ -6,7 +6,7 @@ export default function SystemWorkflowGridSwitcher({ controller, onSelectGrid = 
   const [editing, setEditing] = useState(null);
   const [confirming, setConfirming] = useState(null);
   const grids = controller.draft?.grids || [];
-  const cover = grids.find(isSystemWorkflowWorldCoverGrid);
+  const cover = (!controller.moduleId || controller.moduleId === 'display:primary') && grids.find(isSystemWorkflowWorldCoverGrid);
   const regularGrids = grids.filter((grid) => !isSystemWorkflowWorldCoverGrid(grid));
   return <aside className="system-workflow__grid-switcher system-workflow__motion-panel" aria-label="Grids" {...panelProps}>
     <div className="system-workflow__grid-list" role="listbox" aria-label="Ordered Grids">

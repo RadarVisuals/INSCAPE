@@ -2,24 +2,26 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { resolveIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { systemWorkflowGridFingerprint, systemWorkflowGridOrder } from '../../systemWorkflow/domain/systemWorkflowGrid.js';
-import { createSystemWorkflowAuthoringSession } from '../../systemWorkflow/systemWorkflowAuthoringSession.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
+import { createDisplayModuleSession, addDisplayModule, setDisplayModuleFormat } from '../../systemWorkflow/displayModuleSession.js';
+import { PRIMARY_DISPLAY_ID } from '../../systemWorkflow/domain/displayModules.js';
 
 function browserStorage() { try { return globalThis.localStorage; } catch { return null; } }
 
-export default function useOwnerSystemWorkflowController(profileAddress, { storage } = {}) {
+export default function useOwnerSystemWorkflowController(profileAddress, { storage, sharedStore, moduleId = PRIMARY_DISPLAY_ID } = {}) {
   const profile = normalizeProfileAddress(profileAddress);
   const selectedStorage = storage ?? browserStorage();
   const authority = useMemo(() => {
     if (!profile) return null;
-    const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage: selectedStorage });
-    return { store, session: createSystemWorkflowAuthoringSession({ store }) };
-  }, [profile, selectedStorage]);
+    const store = sharedStore || createSystemWorkflowDraftStore({ profileAddress: profile, storage: selectedStorage });
+    return { store, session: createDisplayModuleSession(store, moduleId) };
+  }, [profile, selectedStorage, sharedStore, moduleId]);
   const liveAuthority = useRef(authority);
   liveAuthority.current = authority;
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [, render] = useState(0);
+  useEffect(() => authority?.store.subscribe(() => render(v => v + 1)), [authority]);
   const [failure, setFailure] = useState(null);
   const error = failure?.authority === authority ? failure.message : null;
   // View-only visibility: never committed to the draft or browser storage.
@@ -72,7 +74,12 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   };
   const clearError = useCallback(() => setFailure(null), []);
   const gridRequest = (grid, extra = {}) => ({ gridId: grid.id, expectedGridFingerprint: systemWorkflowGridFingerprint(grid), ...extra });
-  return { ...state, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError,
+  return { ...state, store: authority?.store, moduleId, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError,
+    addDisplay: orientation => run(() => addDisplayModule(authority.store, orientation)),
+    setDisplayFormat: orientation => run(() => {
+      if (!setDisplayModuleFormat(authority.store, moduleId, orientation)) throw new Error('The Display format could not be saved');
+      return true;
+    }),
     run, selectPlacement, replaceSelection, hiddenPlacementIds, togglePlacementVisibility,
     saveWorkbench: workbench => run(session => session.saveWorkbench(workbench)),
     saveIdentity: ({ profile: values, card, avatar }) => run((session) => {

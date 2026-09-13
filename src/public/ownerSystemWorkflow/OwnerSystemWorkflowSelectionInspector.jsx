@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
+import ArtworkTransformTools from './ArtworkTransformTools.jsx';
 import {
   ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, Copy, Crop, Eye, EyeOff, FlipHorizontal2, FlipVertical2, Frame, Lock, RotateCw, Trash2,
 } from 'lucide-react';
@@ -133,9 +134,7 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
   </div>;
 
   const toolbar = <nav aria-label="Selection actions" className="system-workflow__selection-actions">
-      <button aria-label="Rotate" disabled={!editable} onClick={() => transform(SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.ROTATE)} title="Rotate" type="button"><RotateCw size={15} /></button>
-      <button aria-label="Mirror horizontal" disabled={!editable} onClick={() => transform(SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.MIRROR_HORIZONTAL)} title="Mirror horizontal" type="button"><FlipHorizontal2 size={15} /></button>
-      <button aria-label="Mirror vertical" disabled={!editable} onClick={() => transform(SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.MIRROR_VERTICAL)} title="Mirror vertical" type="button"><FlipVertical2 size={15} /></button>
+      <ArtworkTransformTools disabled={!editable} onTransform={transform} />
       <button aria-label="Duplicate" disabled={!editable} onClick={duplicate} title="Duplicate" type="button"><Copy size={15} /></button>
       <button aria-label="Send to back" disabled={authoringLocked || !availability.BACK} onClick={() => moveLayer(SYSTEM_WORKFLOW_LAYER_OPERATIONS.BACK)} title="Send to back" type="button"><ChevronsDown size={15} /></button>
       <button aria-label="Move backward" disabled={authoringLocked || !availability.BACKWARD} onClick={() => moveLayer(SYSTEM_WORKFLOW_LAYER_OPERATIONS.BACKWARD)} title="Move backward" type="button"><ChevronDown size={15} /></button>

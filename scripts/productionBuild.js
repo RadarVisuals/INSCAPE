@@ -287,8 +287,12 @@ const sum = (items) => ({
 
 function entryKey(manifest) {
   const keys = Object.keys(manifest).filter((key) => manifest[key].isEntry);
-  if (keys.length !== 1) throw new Error(`Expected one Vite entry in the manifest, found ${keys.length}`);
-  return keys[0];
+  if (!manifest['index.html']?.isEntry || keys.some(key => !['index.html', 'mini-app-host.html'].includes(key))) {
+    throw new Error(`Unexpected Vite application entries: ${keys.join(', ')}`);
+  }
+  // Host bytes remain in core/lazy totals; this entry is loaded only inside an
+  // opened mini app and is not part of the main document's initial graph.
+  return 'index.html';
 }
 
 function ownerKey(manifest) {

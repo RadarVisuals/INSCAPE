@@ -27,15 +27,26 @@ function PublishedStage({ children, activeGridId, onClickCapture, onPointerDown,
 }
 
 const IdentityModule = lazy(() => import('../../public/identity/IdentityModule.jsx'));
+const MirrorWorkbench = lazy(() => import('../../mirror/MirrorWorkbench.jsx'));
+const MiniAppsWorkbench = lazy(() => import('../../miniApps/MiniAppsWorkbench.jsx'));
 const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-6)}`;
 
 export default function ProfileDocumentV9Visitor(props) {
   return <ProfileDocumentV9Session key={`${props.document.profile.address}:${props.document.documentId}:${props.document.revision}`} {...props} />;
 }
 
-function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn }) {
+function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn, onConnect, embedded = false, instanceId, active = true, onActivate }) {
   useStartupDestinationReady();
   const rootRef = useRef(null);
+  const [activeDisplay, setActiveDisplay] = useState('display:primary');
+  const additionalDocuments = useMemo(() => (document.displays || []).map(module => {
+    const { displays: _displays, animations: _animations, miniApps: _miniApps, ...shared } = document;
+    const { id, ...content } = module;
+    const { id: _presentationId, ...display } = document.workbench?.displays?.find(item => item.id === id) || createDefaultWorkbenchPresentation().display;
+    return { id, document: { ...shared, ...content, metadata: {}, workbench: { version: 1,
+      display,
+      identity: { ...createDefaultWorkbenchPresentation().identity, open: false } } } };
+  }), [document]);
   const layout = useOwnerSystemWorkflowLayout();
   const stageRef = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -90,7 +101,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
     return model && decoded?.status === 'ready' && decoded.dimensions
       ? { ...model, focusDimensions: decoded.dimensions, media: { ...model.media, src: decoded.media.src } } : null;
   }).filter(Boolean), [activeGrid, placementMedia]);
-  const findPlacementElement = useCallback((placementId) => [...(rootRef.current?.querySelectorAll('[data-placement-id]') || [])]
+  const findPlacementElement = useCallback((placementId) => [...(stageRef.current?.querySelectorAll('[data-placement-id]') || [])]
     .find((node) => node.dataset.placementId === placementId), []);
   const entriesById = useMemo(() => new Map(viewerEntries.map(entry => [entry.placement.id, entry])), [viewerEntries]);
   const viewer = useDisplayInspection({
@@ -257,6 +268,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
     setIdentityOpen(true); setProfileVisible(false);
   };
   const handleKeyDown = (event) => {
+    if (!active || !embedded && activeDisplay !== 'display:primary') return;
     if (event.target.closest?.('button,a,input,select,textarea,.identity-module') || viewer.placementId) return;
     const destination = ['ArrowRight', 'PageDown'].includes(event.key) ? activeIndex + 1
       : ['ArrowLeft', 'PageUp'].includes(event.key) ? activeIndex - 1
@@ -267,7 +279,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
   const swipeGrid = Number.isInteger(swipe?.targetIndex) ? document.grids[swipe.targetIndex]
     : document.grids.find(grid => grid.id === swipe?.targetGridId);
   const swipeStyle = swipe ? { '--visitor-grid-swipe-x': `${swipe.deltaX}px`,
-    '--visitor-grid-swipe-side': swipe.direction === 'next' ? 'calc(100% - 1px)' : 'calc(-100% + 1px)' } : undefined;
+    '--visitor-grid-swipe-side': swipe.direction === 'next' ? 'calc(100% - 1px)' : 'calc(-100% + 1px)' } : { '--visitor-grid-swipe-x': '0px', '--visitor-grid-swipe-side': '100%' };
 
   const stage = <PublishedStage activeGridId={activeGrid.id} viewportRef={stageRef}
       onClickCapture={(event) => { if (suppressPlacementClickRef.current) { event.preventDefault(); event.stopPropagation(); } }}
@@ -286,12 +298,13 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
       </div>
     </PublishedStage>;
 
-  return <main aria-label="Published INSCAPE Grid visitor" className="visitor-grid-world system-workflow" data-workbench data-layout={layout.mode} data-lattice-menu-surface
+  return <main data-embedded-display={embedded || undefined} data-display-instance={instanceId || 'display:primary'} data-active-display={(embedded ? active : activeDisplay === 'display:primary') || undefined}
+    onPointerDownCapture={event => { if (event.target.closest('[data-display-instance]') === rootRef.current) { if (embedded) onActivate?.(); else setActiveDisplay('display:primary'); } }} aria-label="Published INSCAPE Grid visitor" className="visitor-grid-world system-workflow" data-workbench data-layout={layout.mode} data-lattice-menu-surface
     data-guide-mode={document.appearance.guideMode} data-menu-surface={document.appearance.menuSurfaceId}
     data-surface={document.appearance.surfaceId} data-space-navigation={spaceNavigation || undefined}
     data-grid-dragging={gridDragging || undefined} data-grid-swipe-settling={gridSwipe?.settling || undefined}
     onKeyDown={handleKeyDown} ref={rootRef} style={swipeStyle} tabIndex="-1">
-    <PresentationBoard readOnly initialPresentation={displayPresentation} layoutMode={layout.mode}
+    <PresentationBoard readOnly instanceId={instanceId} initialPresentation={displayPresentation} layoutMode={layout.mode}
       documentGeometry={document.geometry} profileAddress={document.profile.address}
       instanceState={displayOpen ? 'window' : 'minimized'} onMinimize={() => setDisplayOpen(false)} onRestore={() => setDisplayOpen(true)}
       menuSurface={document.appearance.menuSurfaceId} displaySurface={document.appearance.surfaceId} reducedMotion={reducedMotion}
@@ -306,17 +319,17 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
       renderInspection={viewer.placementId && viewer.entry ? (container, controlsContainer, scene) => <DisplayFocusViewer
         scene={scene} container={container} controlsContainer={controlsContainer} viewer={viewer}
         menuSurface={document.appearance.menuSurfaceId} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
-      renderInstruments={(projection, overlayTop) => <DisplayInstruments workspaceRef={rootRef}
+      renderInstruments={(projection, overlayTop, displayName) => <DisplayInstruments workspaceRef={rootRef}
         instrumentTriggers={instrumentTriggers} state={instruments} dispatch={dispatchInstruments}
-        projection={projection} overlayTop={overlayTop} scope={activeGrid.title}
+        projection={projection} overlayTop={overlayTop} scope={`${displayName} / ${activeGrid.title}`}
         selectionLabel={viewerEntry?.dossier.title || 'No artwork selected'}
         renderMetadata={() => <OwnerSystemWorkflowMetadataContent dossier={viewerEntry?.dossier || null} />} />}>
       {stage}
     </PresentationBoard>
-    {profileVisible && <LatticeProfileRail blocked={Boolean(viewer.placementId)} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
+    {!embedded && profileVisible && <LatticeProfileRail blocked={Boolean(viewer.placementId)} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
       identityDisabled={Boolean(viewer.placementId)} identityExpanded={identityOpen}
       officialIdentity={officialIdentity} onIdentityActivate={openIdentityRack} />}
-    <footer className="visitor-grid-world__dock">
+    {!embedded && <footer className="visitor-grid-world__dock">
       <nav aria-label="Published profile navigation">
         <button aria-expanded={document.workbench ? identityOpen : profileVisible} aria-label="Profile" data-visitor-profile-trigger
           disabled={Boolean(viewer.placementId)} onClick={document.workbench ? () => setIdentityOpen(current => !current) : toggleProfile}
@@ -336,11 +349,20 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn 
         </div>}
       </nav>
       <strong aria-label="INSCAPE" className="visitor-grid-world__brand"><span aria-hidden="true" /></strong>
-    </footer>
-    {identityOpen && identityRack && <div hidden={Boolean(viewer.placementId)}><Suspense fallback={<p role="status">Opening Identity…</p>}>
+    </footer>}
+    {!embedded && identityOpen && identityRack && <div hidden={Boolean(viewer.placementId)}><Suspense fallback={<p role="status">Opening Identity…</p>}>
       <IdentityModule key={document.profile.address} model={identityRack} menuSurface={document.appearance.menuSurfaceId}
         initialWindow={identityWindow} onWindowChange={document.workbench ? changeIdentityWindow : undefined}
         onClose={() => setIdentityOpen(false)} returnFocus={profileDockControlRef.current} />
     </Suspense></div>}
+    {!embedded && additionalDocuments.map(item => <ProfileDocumentV9Session key={item.id} document={item.document}
+      embedded instanceId={item.id} active={activeDisplay === item.id} onActivate={() => setActiveDisplay(item.id)} />)}
+    {!embedded && document.animations?.length > 0 && <Suspense fallback={<p role="status">Opening Mirror…</p>}>
+      <MirrorWorkbench records={document.animations} profileAddress={document.profile.address} />
+    </Suspense>}
+    {!embedded && document.miniApps?.length > 0 && <Suspense fallback={<p role="status">Opening mini apps…</p>}>
+      <MiniAppsWorkbench records={document.miniApps} presentations={document.workbench?.miniApps}
+        profileAddress={document.profile.address} onConnect={onConnect} />
+    </Suspense>}
   </main>;
 }

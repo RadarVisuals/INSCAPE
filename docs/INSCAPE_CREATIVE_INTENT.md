@@ -117,7 +117,7 @@ mixed-media.
 The Workbench hosts separate creative modules. The Display Module is the first
 composition module, not a synonym for the entire product. Multiple instances
 can organize chapters or separate bodies of work. Other module types need not
-use Grids or a 16:9 canvas. This is accepted direction, not evidence that the
+use Grids or the Display canvas formats. This is accepted direction, not evidence that the
 current application already implements that full model.
 
 ## Display Module

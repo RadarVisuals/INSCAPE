@@ -84,7 +84,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       ? 'Selected artwork' : 'No artwork selected');
   return <PresentationBoard {...windowProps} shortcutTargetRef={shortcutTargetRef} instrumentTriggers={instrumentTriggers} assetsById={assetsById} authoringLocked={authoringLocked}
       displaySurface={controller.draft?.appearance.surfaceId}
-      documentGeometry={controller.draft?.geometry}
+      documentGeometry={isSystemWorkflowWorldCoverGrid(controller.selectedGrid) ? { columns: 32, rows: 18 } : controller.draft?.geometry}
       inspectionAtmosphere={viewer.atmosphereActive}
       layersOpen={instrumentsVisible && (instruments.active === 'layers' || instruments.layers === 'detached')}
       metadataOpen={instrumentsVisible && (instruments.active === 'metadata' || instruments.metadata === 'detached')}
@@ -99,9 +99,9 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       renderInspection={viewer.placementId ? (container, controlsContainer, scene) => <DisplayFocusViewer
         scene={scene} container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}
         viewer={viewer} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
-      renderInstruments={instrumentsVisible ? (projection, overlayTop) => <DisplayInstruments
+      renderInstruments={instrumentsVisible ? (projection, overlayTop, displayName) => <DisplayInstruments
         workspaceRef={workspaceRef} instrumentTriggers={instrumentTriggers} state={instruments} dispatch={instrumentCommand} projection={projection} overlayTop={overlayTop}
-        scope={controller.selectedGrid?.title || 'Untitled Grid'} selectionLabel={selectionLabel}
+        scope={`${displayName} / ${controller.selectedGrid?.title || 'Untitled Grid'}`} selectionLabel={selectionLabel}
         renderLayers={() => <OwnerSystemWorkflowSelectionInspector key={controller.selectedGridId}
           assetsById={assetsById} authoringLocked={authoringLocked || playingGrids || playbackTransition} controller={controller} crop={crop} onBeginCrop={crop.beginCrop} />}
         renderMetadata={() => <OwnerSystemWorkflowMetadataContent dossier={metadataEntry?.dossier || null} />} /> : null}>

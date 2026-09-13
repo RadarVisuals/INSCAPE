@@ -293,6 +293,8 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
   useEffect(() => {
     const editable = (event) => /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable;
     const keydown = (event) => {
+      const instance = canvasRef.current?.closest('[data-display-instance]');
+      if (instance && !instance.hasAttribute('data-active-display')) return;
       if (event.target?.closest?.('[data-workbench-module]')) return;
       if (event.code !== 'Space' || editable(event) || disabled || cropSession) return;
       event.preventDefault();

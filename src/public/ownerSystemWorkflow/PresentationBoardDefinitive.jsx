@@ -46,7 +46,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   onMinimize, onRestore, onToggleLayers, onToggleMetadata,
   playing = false, playbackDisabled = true, onTogglePlayback,
   instanceState = PRESENTATION_BOARD_INSTANCE_STATE.WINDOW,
-  menuSurface = null, profileAddress, reducedMotion = false, renderInspection, renderInstruments,
+  menuSurface = null, profileAddress, instanceId, reducedMotion = false, renderInspection, renderInstruments,
   shortcutTargetRef, instrumentTriggers, shortcutSnap = true, workbenchGridColor = null, workbenchGridMode = 'LINES', initialPresentation, onWindowChange, onShortcutChange, readOnly = false }) {
   const localShortcutRef = useRef(null);
   const geometryKey = JSON.stringify(documentGeometry);
@@ -90,7 +90,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     if (!host) return undefined;
     const measure = () => setView((current) => {
       const viewport = { width: host.clientWidth, height: host.clientHeight };
-      let next = current ? resizePresentationBoardView(current, viewport, geometryOptions)
+      let next = current && JSON.stringify(current.documentGeometry) === geometryKey ? resizePresentationBoardView(current, viewport, geometryOptions)
         : projectPresentationBoardView(documentGeometry, viewport, 0.9, geometryOptions);
       if (!current && initialPresentation?.window && next) {
         next = projectPresentationBoardView(documentGeometry, viewport, Math.min(1, initialPresentation.window.width / next.fit.stage.width), geometryOptions);
@@ -259,7 +259,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   }, [boardPhase]);
   useEffect(() => {
     if (boardPhase !== 'maximized' || inspectionActive || immersive) return undefined;
-    const onKeyDown = (event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); restore(); } };
+    const onKeyDown = (event) => { const instance = boardNodeRef.current?.closest('[data-display-instance]'); if (event.defaultPrevented || instance && !instance.hasAttribute('data-active-display')) return; if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); restore(); } };
     globalThis.addEventListener?.('keydown', onKeyDown, true);
     return () => globalThis.removeEventListener?.('keydown', onKeyDown, true);
   }, [boardPhase, inspectionActive, immersive]);
@@ -335,7 +335,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     {host && <LatticePixelGrid color={workbenchGridColor || 'var(--study-grid)'} field={workbenchField} guideInterval={1}
       guideSize={1} height={host.clientHeight} mode={workbenchGridMode} width={host.clientWidth} />}
     <PresentationBoardShortcut assetsById={assetsById} host={host} instanceState={instanceState}
-      readOnly={readOnly}
+      readOnly={readOnly} instanceId={instanceId}
       initialShortcut={initialPresentation?.shortcut} onShortcutChange={onShortcutChange}
       name={displayName} onNameChange={(name) => setModuleName({ profile: profileAddress, name })}
       menuSurface={menuSurface} onRestore={onRestore} profileAddress={profileAddress}
@@ -392,7 +392,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
         </div>
       </div>
       {renderInstruments?.(metadataSidecarOpen ? 'attached' : 'overlay',
-        Math.min((host?.clientHeight || 700) - 210, renderedFrame.top + renderedFrame.height + 12))}
+        Math.min((host?.clientHeight || 700) - 210, renderedFrame.top + renderedFrame.height + 12), displayName)}
       {immersive && <button className="system-workflow__immersive-exit" ref={exitImmersiveRef}
         aria-label="Exit immersive view" onClick={leaveImmersive} type="button"><Minimize2 size={16} /> Exit</button>}
       {!immersive && boardPhase === 'window' && corners.map((corner) => <button aria-label={`Resize Display Module from ${corner}`}

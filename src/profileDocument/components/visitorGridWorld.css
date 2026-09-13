@@ -32,7 +32,7 @@
   right: auto;
   width: 100%;
 }
-.visitor-grid-world[data-grid-swipe-settling] .visitor-grid-world__grid-track {
+.visitor-grid-world[data-grid-swipe-settling] > .system-workflow__workbench .visitor-grid-world__grid-track {
   transition: transform 280ms cubic-bezier(.22, 1, .36, 1);
 }
 .visitor-grid-renderer { position: absolute; inset: 0; }
@@ -75,3 +75,11 @@
   .visitor-grid-world__navigation span { min-width: 52px; }
   .visitor-grid-world__brand { display: none; }
 }
+.visitor-grid-world[data-embedded-display] { position: absolute; inset: 0; background: transparent; pointer-events: none; }
+.visitor-grid-world[data-embedded-display] > .system-workflow__workbench { background: transparent; pointer-events: none; }
+.visitor-grid-world[data-embedded-display] .system-workflow__presentation-board { pointer-events: auto; }
+.visitor-grid-world[data-embedded-display] .system-workflow__desktop-shortcut { pointer-events: auto; }
+.visitor-grid-world[data-embedded-display][data-active-display] { z-index: 2; }
+
+.visitor-grid-world[data-embedded-display] { z-index: 0; }
+.visitor-grid-world[data-embedded-display][data-active-display] { z-index: 9; }

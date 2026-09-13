@@ -16,7 +16,9 @@ test('Preview builds directly from the current isolated System Workflow draft', 
 
 test('System Workflow persistence uses the profile-isolated draft v4 store', () => {
   assert.match(controllerSource, /createSystemWorkflowDraftStore/u);
-  assert.match(controllerSource, /createSystemWorkflowAuthoringSession/u);
+  assert.match(controllerSource, /createDisplayModuleSession/u);
+  const moduleSessionSource = readFileSync(new URL('../../systemWorkflow/displayModuleSession.js', import.meta.url), 'utf8');
+  assert.match(moduleSessionSource, /createSystemWorkflowAuthoringSession/u);
   assert.doesNotMatch(controllerSource, /lattice-production-draft|profileDocumentStorage|useProfileDocumentStore/u);
 });
 

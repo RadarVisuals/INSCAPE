@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <title>INSCAPE Mobile design guide — 1080 × 1920</title>
+  <desc>Export background and mask on this same canvas. The full design fits without cropping. Only the background may extend beyond it. Remove this guide layer before exporting artwork.</desc>
+  <rect width="1080" height="1920" fill="#ecece7"/>
+  <g id="guides-remove-before-export" fill="none" stroke="#999" stroke-width="2">
+    <rect x="65" y="96" width="950" height="1728" stroke-dasharray="12 12"/>
+    <path d="M540 0V1920M0 960H1080" stroke-dasharray="4 16"/>
+  </g>
+  <g fill="#252723" font-family="sans-serif" font-size="24">
+    <text x="80" y="135">1080 × 1920 · INSCAPE Mobile</text>
+    <text x="80" y="175">Keep important content inside the guides.</text>
+    <text x="80" y="1780">Background can extend. Artwork and mask stay aligned.</text>
+  </g>
+</svg>

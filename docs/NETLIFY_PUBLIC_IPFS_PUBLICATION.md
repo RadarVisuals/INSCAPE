@@ -37,6 +37,25 @@ For local end-to-end testing of the function, run the site through Netlify Dev r
 
 ## Security and operations
 
+### Hosted mini app origins
+
+Mini apps accept external HTTPS URLs directly in Workbench Settings. The former
+`VITE_MINI_APP_ORIGINS` configuration is no longer used; adding another domain
+requires no code change or rebuild after this host version is deployed.
+The production CSP permits `frame-src 'self' https:` while script and network
+authority for INSCAPE itself retain their existing restrictions.
+
+Microphone uses the browser's default policy and explicit iframe delegation.
+Both the bridge frame and its app frame start with `microphone 'none'`. The Mic
+action reloads only that app and delegates to its exact origin, subject to browser
+permission. Camera, geolocation, payment and USB remain disabled in response
+headers. Function responses still disable microphone as well.
+
+Deploy `mini-app-host.html` alongside `index.html` and the generated assets;
+the generated `_headers` requires revalidation of both HTML entries. Serving
+INSCAPE inside another site's frame can impose stricter microphone restrictions
+that INSCAPE cannot override. This configuration does not authorize deployment.
+
 ### Local transaction recovery
 
 Publish reserves a small `inscape:publication:v1:42:<profile>` localStorage

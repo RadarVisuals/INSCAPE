@@ -35,7 +35,7 @@ const shortcutPresentationStyle = (presentation) => ({
   '--workflow-shortcut-width': `${shortcutBounds(presentation).width}px`,
 });
 export default function PresentationBoardShortcut({ assetsById, host, instanceState, menuSurface,
-  onRestore, profileAddress, shortcutSnap, shortcutTargetRef, name: shortcutName, onNameChange, initialShortcut, onShortcutChange, readOnly = false }) {
+  onRestore, profileAddress, shortcutSnap, shortcutTargetRef, name: shortcutName, onNameChange, initialShortcut, onShortcutChange, instanceId, readOnly = false }) {
   const storedShortcut = useMemo(() => initialShortcut || (readOnly ? null : loadPresentationBoardShortcut(profileAddress)), [profileAddress]);
   const [shortcutPosition, setShortcutPosition] = useState(storedShortcut?.position || { left: 24, top: 72 });
   const [shortcutIconId, setShortcutIconId] = useState(storedShortcut?.iconAssetId || null);
@@ -55,7 +55,7 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
   const shortcutDragRef = useRef(null);
   useEffect(() => {
     if (readOnly) return;
-    try { globalThis.localStorage?.setItem(presentationBoardShortcutStorageKey(profileAddress), JSON.stringify({
+    try { globalThis.localStorage?.setItem(presentationBoardShortcutStorageKey(profileAddress, instanceId), JSON.stringify({
       iconAssetId: shortcutIconId, iconMedia: shortcutIconMedia, iconPresentation: shortcutIconPresentation, name: shortcutName,
       open: instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW, position: shortcutPosition, visible: shortcutVisible,
     })); } catch { /* Workbench layout persistence is optional. */ }

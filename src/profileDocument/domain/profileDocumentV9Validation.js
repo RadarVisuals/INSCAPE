@@ -21,6 +21,11 @@ import { isValidPublishedAssetUrl } from './publishedAssetUrl.js';
 import { validateProfileDocumentV9Asset } from './profileDocumentV9Asset.js';
 import { isValidIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { isValidWorkbenchPresentation } from './workbenchPresentation.js';
+import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, isDisplayFormat } from '../../systemWorkflow/domain/displayModules.js';
+import { validMirrorModules } from '../../systemWorkflow/domain/mirrorModules.js';
+import { validMiniApps } from '../../miniApps/domain/miniApps.js';
+import { validMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
+import { canUseMobileRenderer } from '../../mobile/domain/customPresentation.js';
 
 const DOCUMENT_KEYS = [
   'documentType', 'version', 'documentId', 'revision', 'createdAt', 'exportedAt',
@@ -190,7 +195,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   try { measuredSize ??= new TextEncoder().encode(JSON.stringify(input)).byteLength; } catch { measuredSize = Infinity; }
   if (measuredSize > SYSTEM_WORKFLOW_LIMITS.maxJsonBytes) fail('$', 'document_too_large', `Document exceeds ${SYSTEM_WORKFLOW_LIMITS.maxJsonBytes} bytes`);
   if (depth(input) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench'])) {
+  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'animations', 'mobile', 'miniApps'])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -214,10 +219,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     || Object.hasOwn(cached || {}, 'avatarUrl') && !(safeText(cached.avatarUrl, SYSTEM_WORKFLOW_LIMITS.maxUrlLength, { empty: false }) && isValidPublishedAssetUrl(cached.avatarUrl))) {
     fail('profile.cachedIdentity', 'invalid_identity', 'Invalid cached public identity fallback');
   }
-  if (!exactKeys(input.artboard, ['aspectWidth', 'aspectHeight'])
-    || input.artboard.aspectWidth !== 16 || input.artboard.aspectHeight !== 9) fail('artboard', 'invalid_artboard', 'Artboard must be 16:9');
-  if (!exactKeys(input.geometry, ['columns', 'rows'])
-    || input.geometry.columns !== 32 || input.geometry.rows !== 18) fail('geometry', 'invalid_geometry', 'Geometry must be 32 by 18');
+  if (!isDisplayFormat(input.artboard, input.geometry)) fail('artboard', 'invalid_artboard', 'Invalid Display format');
   if (!exactKeys(input.appearance, APPEARANCE_KEYS)
     || !sets.surfaces.has(input.appearance.surfaceId)
     || !sets.surfaces.has(input.appearance.menuSurfaceId)
@@ -228,6 +230,31 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid public appearance');
   validateIdentity(input.identityPresentation, fail);
+  if (Object.hasOwn(input, 'animations') && !validMirrorModules(input.animations, true)) fail('animations', 'invalid_animations', 'Invalid published Mirror module');
+  if (Object.hasOwn(input, 'miniApps') && !validMiniApps(input.miniApps, true)) fail('miniApps', 'invalid_mini_apps', 'Invalid published mini app');
+  if (Array.isArray(input.workbench?.miniApps) && input.workbench.miniApps.some(item => !Array.isArray(input.miniApps)
+    || !input.miniApps.some(app => app?.id === item?.id))) fail('workbench.miniApps', 'unknown_mini_app', 'Window refers to an unavailable mini app');
+  if (Object.hasOwn(input, 'mobile') && (!validMobilePresentation(input.mobile, true) || !canUseMobileRenderer(input.mobile, input.profile?.address))) fail('mobile', 'invalid_mobile', 'Invalid published Mobile presentation');
+  let moduleReferences = 0;
+  if (Object.hasOwn(input, 'displays')) {
+    if (!Array.isArray(input.displays) || input.displays.length > MAX_DISPLAY_MODULES - 1) {
+      fail('displays', 'invalid_display_count', 'Invalid Display count');
+    } else {
+      const ids = new Set([PRIMARY_DISPLAY_ID]);
+      const { displays: _displays, workbench: _workbench, animations: _animations, mobile: _mobile, miniApps: _miniApps, ...shared } = input;
+      for (const module of input.displays) {
+        if (!exactKeys(module, ['id', ...DISPLAY_CONTENT_KEYS]) || !/^display:[A-Za-z0-9_-]{1,80}$/u.test(module?.id) || ids.has(module.id)) {
+          fail('displays', 'invalid_display', 'Invalid or duplicate Display'); continue;
+        }
+        ids.add(module.id);
+        const { id, ...content } = module;
+        const result = validateProfileDocumentV9({ ...shared, ...content, metadata: {} });
+        result.errors.forEach(error => fail(`displays.${id}.${error.path}`, error.code, error.message));
+        moduleReferences += (module.grids || []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0);
+      }
+      if (input.workbench?.displays?.some(module => !ids.has(module.id))) fail('workbench.displays', 'unknown_display', 'Window refers to an unavailable Display');
+    }
+  } else if (input.workbench?.displays?.length) fail('workbench.displays', 'unknown_display', 'Window refers to an unavailable Display');
   if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid public Workbench configuration');
   if (!Array.isArray(input.grids) || input.grids.length < 1 || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxGrids) {
     fail('grids', 'invalid_grid_count', 'One to 24 public Grids required');
@@ -280,7 +307,9 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     fail('metadata', 'unexpected_fields', 'Profile metadata contains unsupported fields');
   }
   const documentAssetReferences = (input.grids || []).reduce((total, grid) => total + (grid?.placements?.length || 0), 0)
-    + worldCoverAssetReferences + (input.identityPresentation?.avatar?.asset ? 1 : 0);
+    + worldCoverAssetReferences + (input.identityPresentation?.avatar?.asset ? 1 : 0) + moduleReferences
+    + (input.workbench?.display?.shortcut?.icon ? 1 : 0) + (input.workbench?.displays || []).filter(module => module.shortcut?.icon).length
+    + (Array.isArray(input.animations) ? input.animations.length : 0) + mobileReferenceCount(input.mobile);
   if (documentAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) {
     fail('metadata.worldCover', 'too_many_asset_references', 'Too many total asset references');
   }

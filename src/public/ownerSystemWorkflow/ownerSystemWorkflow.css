@@ -113,6 +113,13 @@
   background: color-mix(in srgb, var(--study-surface) 96%, var(--study-ink));
 }
 
+.system-workflow__display-instance { position: absolute; inset: 0; pointer-events: none; }
+.system-workflow__display-instance > .system-workflow__workbench { background: transparent; pointer-events: none; }
+.system-workflow__display-instance .system-workflow__presentation-board,
+.system-workflow__display-instance .system-workflow__desktop-shortcut { pointer-events: auto; }
+.system-workflow__display-instance[data-active-display] { z-index: 2; }
+.system-workflow__display-instance:not([data-active-display]) :is(.system-workflow__canvas, .system-workflow__layers-trigger) { view-transition-name: none !important; }
+
 .system-workflow__presentation-board {
   --workflow-board-frame-gap: var(--workflow-window-chrome-gutter);
   --workflow-board-radius: var(--workflow-window-chrome-radius);
@@ -413,6 +420,9 @@
 }
 @container presentation-board (max-width: 360px) {
   .system-workflow__identity-primary > strong { display: none; }
+  .system-workflow__presentation-board:not([data-inspecting]) .system-workflow__identity-primary > strong {
+    display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .lattice-focus-viewer__board-controls { gap: 3px; padding-inline: 4px; }
   .lattice-focus-viewer__board-controls > span { min-width: 34px; }
 }
@@ -608,7 +618,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__placement[data-viewing] { visibility: hidden; }
 .system-workflow__artwork-media { transition: filter 120ms ease-out; }
 .system-workflow__progressive-media { position: absolute; inset: 0; display: block; overflow: visible; }
-.system-workflow[data-authoring-locked] .system-workflow__placement[aria-pressed="true"]:not([data-viewing]) .system-workflow__artwork-media {
+.system-workflow__presentation-board[data-authoring-locked] .system-workflow__placement[aria-pressed="true"]:not([data-viewing]) .system-workflow__artwork-media {
   --workflow-locked-selection-edge: calc(1px * var(--workflow-board-inverse-scale, 1));
   filter: drop-shadow(0 0 var(--workflow-locked-selection-edge) var(--study-ink));
 }

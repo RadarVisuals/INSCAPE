@@ -7,7 +7,8 @@ const text = (value, max, multiline = false) => typeof value === 'string' && val
   && !(multiline ? /[\u0000-\u0009\u000b-\u001f\u007f]/u : /[\u0000-\u001f\u007f]/u).test(value);
 
 export function isValidIdentityCard(value, { published = false } = {}) {
-  if (!exact(value, ['version', 'background', 'fields']) || value.version !== 1) return false;
+  if (!exact(value, ['version', 'background', 'fields', ...(Object.hasOwn(value || {}, 'columns') ? ['columns'] : [])]) || value.version !== 1) return false;
+  if (Object.hasOwn(value, 'columns') && (!Number.isInteger(value.columns) || value.columns < 2 || value.columns > 5)) return false;
   const background = value.background;
   if (!exact(background, ['type', 'color', 'speed']) || !['plain', 'clouds'].includes(background.type)
     || !(background.color === null || typeof background.color === 'string' && /^#[0-9a-f]{6}$/iu.test(background.color))
@@ -15,7 +16,8 @@ export function isValidIdentityCard(value, { published = false } = {}) {
   if (!Array.isArray(value.fields) || value.fields.length > IDENTITY_CARD_LIMITS.fields) return false;
   const ids = new Set();
   return value.fields.every(field => {
-    if (!exact(field, ['id', 'label', 'type', 'value', ...(Object.hasOwn(field || {}, 'category') ? ['category'] : [])])
+    if (!exact(field, ['id', 'label', 'type', 'value', ...(Object.hasOwn(field || {}, 'category') ? ['category'] : []), ...(Object.hasOwn(field || {}, 'wide') ? ['wide'] : [])])
+      || Object.hasOwn(field, 'wide') && typeof field.wide !== 'boolean'
       || Object.hasOwn(field, 'category') && !text(field.category, 60) || typeof field.id !== 'string'
       || !/^field:[A-Za-z0-9_-]{1,64}$/u.test(field.id) || ids.has(field.id)
       || !text(field.label, IDENTITY_CARD_LIMITS.label)) return false;

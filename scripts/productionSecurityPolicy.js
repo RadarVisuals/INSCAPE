@@ -89,7 +89,7 @@ export function createProductionContentSecurityPolicy(env = {}) {
     "img-src 'self' https: data:",
     `connect-src 'self' ${productionConnectOrigins(env).join(' ')}`,
     "worker-src 'none'",
-    "frame-src 'none'",
+    "frame-src 'self' https:",
     `frame-ancestors ${UNIVERSAL_PROFILE_PARENT_ORIGINS.join(' ')}`,
     "form-action 'self'",
     "manifest-src 'self'",
@@ -102,7 +102,10 @@ export function productionResponseSecurityHeaders(env = {}) {
   return Object.freeze({
     'Content-Security-Policy': createProductionContentSecurityPolicy(env),
     'Referrer-Policy': 'no-referrer',
-    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+    // Microphone uses the browser default plus explicit per-frame delegation.
+    // Both iframe levels start at microphone 'none'; enabling Mic delegates
+    // only to that app's exact origin, subject to browser permission.
+    'Permissions-Policy': 'camera=(), geolocation=(), payment=(), usb=()',
     'X-Content-Type-Options': 'nosniff'
   });
 }
@@ -132,6 +135,9 @@ export function createNetlifyHeaders({ env = {}, manifest = {} } = {}) {
     '  Cache-Control: public, max-age=0, must-revalidate',
     '',
     '/index.html',
+    '  Cache-Control: public, max-age=0, must-revalidate',
+    '',
+    '/mini-app-host.html',
     '  Cache-Control: public, max-age=0, must-revalidate'
   ];
   for (const file of manifestFiles(manifest)) {

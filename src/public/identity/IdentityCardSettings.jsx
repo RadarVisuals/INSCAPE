@@ -77,8 +77,12 @@ export function IdentityFields({ card, edit }) {
     edit.setCard({ fields: next });
   };
   const add = () => edit.setCard({ fields: [...fields, { id: `field:${crypto.randomUUID()}`, label: '', type: 'text', value: '' }] });
-  return <dl className="identity-module__fields" aria-label="Identity fields">{fields.map((field, index) =>
-    <div key={field.id} className="identity-module__cell">
+  return <div className="identity-module__field-layout">
+    {edit && <label className="identity-module__columns">Detail columns<select aria-label="Detail columns" value={card.columns ?? 2}
+      onChange={event => edit.setCard({ columns: Number(event.target.value) })}>{[2, 3, 4, 5].map(count => <option key={count} value={count}>{count}</option>)}</select>
+      <small>Wraps to fewer columns when the card is narrower.</small></label>}
+    <dl className="identity-module__fields" data-columns={card.columns ?? 2} data-legacy-layout={card.columns == null} style={{ '--identity-columns': card.columns ?? 2 }} aria-label="Identity fields">{fields.map((field, index) =>
+    <div key={field.id} className="identity-module__cell" data-wide={field.wide === true}>
       <dt>{edit ? <input className="identity-module__inline" aria-label={`Field ${index + 1} name`} placeholder="Field name"
         maxLength={limits.label} value={field.label} onChange={event => updateField(field.id, { label: event.target.value })} /> : field.label}</dt>
       <dd>{edit ? <InlineText className="identity-module__inline" aria-label={`Field ${index + 1} content`}
@@ -88,6 +92,8 @@ export function IdentityFields({ card, edit }) {
         onChange={event => updateField(field.id, { value: field.type === 'list' ? event.target.value.split('\n') : event.target.value })} />
         : field.type === 'list' ? <ul>{field.value.map((item, itemIndex) => <li key={itemIndex}>{item}</li>)}</ul> : field.value}</dd>
       {edit && <div className="identity-module__cell-actions">
+        <label className="identity-module__wide"><input type="checkbox" aria-label={`Field ${index + 1} wide`} checked={field.wide === true}
+          onChange={event => edit.setCard({ columns: card.columns ?? 2, fields: fields.map(item => item.id === field.id ? { ...item, wide: event.target.checked } : item) })} />Wide</label>
         <select aria-label={`Field ${index + 1} content type`} value={field.type} onChange={event => updateField(field.id, {
           type: event.target.value, value: event.target.value === 'list' ? field.value.split('\n') : field.value.join('\n'),
         })}><option value="text">Text</option><option value="list">List</option></select>
@@ -98,7 +104,7 @@ export function IdentityFields({ card, edit }) {
     </div>)}
     {edit && <div className="identity-module__add-cell"><dt><button type="button" onClick={add} disabled={fields.length >= limits.fields}
       aria-label="Add field"><Plus /><span>Add cell</span></button></dt></div>}
-  </dl>;
+  </dl></div>;
 }
 
 export function IdentityAppearanceSettings({ edit, children }) {

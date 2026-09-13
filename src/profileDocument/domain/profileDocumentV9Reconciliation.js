@@ -6,6 +6,9 @@ import {
   createEmptySystemWorkflowWorldCoverGrid,
 } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
+import { restoreMobilePresentation } from '../../mobile/domain/mobilePresentation.js';
+import { restoreMiniApps } from '../../miniApps/domain/miniApps.js';
+import { createDefaultWorkbenchPresentation } from './workbenchPresentation.js';
 
 function restoredPublicGrid(grid) {
   return {
@@ -67,6 +70,25 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
   const worldCover = document.metadata.worldCover
     ? restoredPublicGrid(document.metadata.worldCover.grid)
     : createEmptySystemWorkflowWorldCoverGrid();
+  const publishedDisplays = (document.displays || []).map(module => {
+    const local = currentDraftInput?.displays?.find(item => item.id === module.id);
+    const publicIds = new Set(module.grids.map(grid => grid.id));
+    return { ...structuredClone(module), visibility: 'PUBLIC', grids: [...module.grids.map(restoredPublicGrid),
+      ...(local?.grids || []).filter(grid => grid.visibility === 'PRIVATE' && !publicIds.has(grid.id)).map(grid => structuredClone(grid)),
+      createEmptySystemWorkflowWorldCoverGrid()] };
+  });
+  const privateDisplays = (currentDraftInput?.displays || []).filter(module => !publishedDisplays.some(item => item.id === module.id))
+    .flatMap(module => {
+      if (module.visibility === 'PRIVATE') return [module];
+      const grids = module.grids.filter(grid => grid.visibility === 'PRIVATE');
+      return grids.length ? [{ ...module, visibility: 'PRIVATE', grids: [...grids, createEmptySystemWorkflowWorldCoverGrid()] }] : [];
+    });
+  const miniApps = restoreMiniApps(document.miniApps, currentDraftInput?.miniApps);
+  const privateMiniAppWindows = (currentDraftInput?.workbench?.miniApps || []).filter(window =>
+    miniApps.some(app => app.id === window.id && app.visibility === 'PRIVATE'));
+  const workbench = document.workbench ? structuredClone(document.workbench)
+    : privateMiniAppWindows.length ? createDefaultWorkbenchPresentation() : null;
+  if (privateMiniAppWindows.length) workbench.miniApps = [...(workbench.miniApps || []), ...structuredClone(privateMiniAppWindows)];
   return assertValidSystemWorkflowDraft({
     profileAddress: document.profile.address,
     draftVersion: SYSTEM_WORKFLOW_DRAFT_VERSION,
@@ -74,7 +96,16 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     geometry: { ...document.geometry },
     appearance: { ...document.appearance },
     identityPresentation: restoredIdentity(document.identityPresentation),
-    ...(document.workbench ? { workbench: structuredClone(document.workbench) } : {}),
+    ...(workbench ? { workbench } : {}),
+    ...((document.miniApps || currentDraftInput?.miniApps) ? { miniApps } : {}),
+    ...((document.animations || currentDraftInput?.animations) ? { animations: [
+      ...(document.animations || []).map(item => ({ ...structuredClone(item), visibility: 'PUBLIC' })),
+      ...(currentDraftInput?.animations || []).filter(item => item.visibility === 'PRIVATE'
+        && !document.animations?.some(published => published.id === item.id)).map(item => structuredClone(item)),
+    ] } : {}),
+    ...((document.displays || currentDraftInput?.displays) ? { displays: [...publishedDisplays, ...structuredClone(privateDisplays)] } : {}),
+    ...(document.mobile ? { mobile: restoreMobilePresentation(document.mobile, currentDraftInput?.mobile) }
+      : currentDraftInput?.mobile ? { mobile: { ...structuredClone(currentDraftInput.mobile), visibility: 'PRIVATE' } } : {}),
     grids: [...document.grids.map(restoredPublicGrid), ...privateGrids, worldCover],
   });
 }
