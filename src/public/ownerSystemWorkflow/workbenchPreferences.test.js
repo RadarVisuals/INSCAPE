@@ -26,11 +26,24 @@ test('Workbench preferences remain profile-scoped local editor state', () => {
   }, storage);
 
   assert.deepEqual(saved, {
-    chromeNoise: false, compositionLocked: true, gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false, surfaceId: 'carbon',
+    chromeNoise: false, compositionLocked: true, dockVisible: true, gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false, surfaceId: 'carbon',
   });
   assert.deepEqual(loadWorkbenchPreferences(profile, 'paper', storage), saved);
   assert.equal(storage.values.size, 1);
   assert.ok(storage.values.has(workbenchPreferencesStorageKey(profile)));
+});
+
+test('old preferences show the dock; hiding it persists only for that profile', () => {
+  const storage = memoryStorage();
+  const key = workbenchPreferencesStorageKey('0xabc');
+  const legacy = JSON.stringify({ surfaceId: 'carbon', shortcutSnap: false });
+  storage.setItem(key, legacy);
+  const loaded = loadWorkbenchPreferences('0xabc', 'paper', storage);
+  assert.equal(loaded.dockVisible, true);
+  assert.equal(storage.getItem(key), legacy);
+  saveWorkbenchPreferences('0xabc', { ...loaded, dockVisible: false }, storage);
+  assert.equal(loadWorkbenchPreferences('0xabc', 'paper', storage).dockVisible, false);
+  assert.equal(loadWorkbenchPreferences('0xdef', 'paper', storage).dockVisible, true);
 });
 
 test('Workbench preferences reject malformed local values and inherit the current Stage surface once', () => {

@@ -1,4 +1,5 @@
 import { MAX_MINI_APPS, validMiniApps } from './domain/miniApps.js';
+import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
 
 export function addMiniApp(store, profile) {
   if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
@@ -12,14 +13,12 @@ export function addMiniApp(store, profile) {
 }
 
 export function saveMiniApp(store, profile, expected, next) {
+  if (!next) return removeWorkbenchModule(store, profile, 'mini-app', expected);
   if (store.getProfileAddress() !== profile) return false;
   const draft = store.getDraft(), generation = store.getGeneration();
   const current = draft.miniApps?.find(item => item.id === expected.id);
   if (JSON.stringify(current) !== JSON.stringify(expected)) return false;
-  const miniApps = next ? draft.miniApps.map(item => item.id === expected.id ? { ...next, id: expected.id } : item)
-    : draft.miniApps.filter(item => item.id !== expected.id);
+  const miniApps = draft.miniApps.map(item => item.id === expected.id ? { ...next, id: expected.id } : item);
   if (!validMiniApps(miniApps)) return false;
-  const workbench = draft.workbench?.miniApps ? { ...draft.workbench,
-    miniApps: draft.workbench.miniApps.filter(item => miniApps.some(app => app.id === item.id)) } : draft.workbench;
-  return store.commitCompletedOperation({ ...draft, miniApps, ...(workbench ? { workbench } : {}) }, { expectedGeneration: generation });
+  return store.commitCompletedOperation({ ...draft, miniApps }, { expectedGeneration: generation });
 }

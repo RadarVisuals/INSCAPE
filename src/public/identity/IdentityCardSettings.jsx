@@ -44,8 +44,22 @@ function InlineText({ value, onChange, ...props }) {
   const ref = useRef(null);
   useLayoutEffect(() => {
     const node = ref.current;
-    node.style.height = 'auto';
-    node.style.height = Math.min(280, node.scrollHeight) + 'px';
+    const measure = () => {
+      node.style.overflowY = 'hidden';
+      node.style.height = 'auto';
+      const style = getComputedStyle(node);
+      const height = Math.ceil(node.scrollHeight + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth));
+      node.style.height = Math.min(280, height) + 'px';
+      node.style.overflowY = height > 280 ? 'auto' : 'hidden';
+    };
+    measure();
+    let width = node.getBoundingClientRect().width;
+    const observer = new ResizeObserver(() => {
+      const next = node.getBoundingClientRect().width;
+      if (next !== width) { width = next; measure(); }
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
   }, [value]);
   return <textarea ref={ref} rows={1} value={value} onChange={onChange} {...props} />;
 }
@@ -70,19 +84,51 @@ export function IdentityProfileEditor({ edit, official, children }) {
 }
 
 export function IdentityFields({ card, edit }) {
+  const grid = useRef(null);
+  const [moved, setMoved] = useState(null);
+  useLayoutEffect(() => {
+    if (!moved || !edit) return;
+    const cell = [...grid.current.children].find(node => node.dataset.fieldId === moved.id);
+    cell?.querySelector('input')?.focus({ preventScroll: true });
+    cell?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const timer = setTimeout(() => setMoved(null), 1400);
+    return () => clearTimeout(timer);
+  }, [moved, Boolean(edit)]);
+  const [dividers, setDividers] = useState({ width: 1, height: 1, path: '' });
+  useLayoutEffect(() => {
+    const node = grid.current;
+    const measure = () => {
+      const bounds = node.getBoundingClientRect();
+      const segments = new Set();
+      for (const cell of node.children) {
+        const box = cell.getBoundingClientRect(), x = box.left - bounds.left, y = box.top - bounds.top;
+        if (x > 1) segments.add(`M${x},${y}v${box.height}`);
+        if (y > 1) segments.add(`M0,${y}H${bounds.width}`);
+      }
+      const next = { width: bounds.width || 1, height: bounds.height || 1, path: [...segments].join(' ') };
+      setDividers(current => current.width === next.width && current.height === next.height && current.path === next.path ? current : next);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    for (const cell of node.children) observer.observe(cell);
+    measure();
+    return () => observer.disconnect();
+  }, [card, Boolean(edit)]);
   const fields = edit ? card.fields : projectIdentityCard(card).fields;
   const updateField = (id, update) => edit.setCard({ fields: fields.map(field => field.id === id ? { ...field, ...update } : field) });
   const move = (index, offset) => {
     const next = [...fields]; [next[index], next[index + offset]] = [next[index + offset], next[index]];
     edit.setCard({ fields: next });
+    setMoved({ id: fields[index].id, message: `${fields[index].label || 'Field'} moved to position ${index + offset + 1}` });
   };
   const add = () => edit.setCard({ fields: [...fields, { id: `field:${crypto.randomUUID()}`, label: '', type: 'text', value: '' }] });
   return <div className="identity-module__field-layout">
+    {edit && <span className="identity-module__move-status" role="status">{moved?.message || ''}</span>}
     {edit && <label className="identity-module__columns">Detail columns<select aria-label="Detail columns" value={card.columns ?? 2}
       onChange={event => edit.setCard({ columns: Number(event.target.value) })}>{[2, 3, 4, 5].map(count => <option key={count} value={count}>{count}</option>)}</select>
       <small>Wraps to fewer columns when the card is narrower.</small></label>}
-    <dl className="identity-module__fields" data-columns={card.columns ?? 2} data-legacy-layout={card.columns == null} style={{ '--identity-columns': card.columns ?? 2 }} aria-label="Identity fields">{fields.map((field, index) =>
-    <div key={field.id} className="identity-module__cell" data-wide={field.wide === true}>
+    <div className="identity-module__field-grid"><dl ref={grid} className="identity-module__fields" data-columns={card.columns ?? 2} data-legacy-layout={card.columns == null} style={{ '--identity-columns': card.columns ?? 2 }} aria-label="Identity fields">{fields.map((field, index) =>
+    <div key={field.id} className="identity-module__cell" data-field-id={field.id} data-moved={Boolean(edit && moved?.id === field.id)} data-wide={field.wide === true}>
       <dt>{edit ? <input className="identity-module__inline" aria-label={`Field ${index + 1} name`} placeholder="Field name"
         maxLength={limits.label} value={field.label} onChange={event => updateField(field.id, { label: event.target.value })} /> : field.label}</dt>
       <dd>{edit ? <InlineText className="identity-module__inline" aria-label={`Field ${index + 1} content`}
@@ -104,7 +150,7 @@ export function IdentityFields({ card, edit }) {
     </div>)}
     {edit && <div className="identity-module__add-cell"><dt><button type="button" onClick={add} disabled={fields.length >= limits.fields}
       aria-label="Add field"><Plus /><span>Add cell</span></button></dt></div>}
-  </dl></div>;
+  </dl><svg className="identity-module__dividers" aria-hidden="true" viewBox={`0 0 ${dividers.width} ${dividers.height}`} preserveAspectRatio="none"><path d={dividers.path} /></svg></div></div>;
 }
 
 export function IdentityAppearanceSettings({ edit, children }) {

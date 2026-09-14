@@ -66,7 +66,7 @@ test('validation is exact and rejects legacy or malformed contract fields', () =
     (draft) => { draft.grids[0].gridState = 'ACTIVE'; },
     (draft) => { draft.appearance.guideMode = 'GRID'; },
     (draft) => { draft.appearance.guideSize = -9; },
-    (draft) => { draft.grids = []; },
+    (draft) => { draft.grids = [draft.grids[0]]; },
   ]) {
     const draft = createDraft();
     mutate(draft);

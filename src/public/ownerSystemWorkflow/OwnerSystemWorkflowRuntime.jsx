@@ -4,14 +4,17 @@ import { createPortal } from 'react-dom';
 import { useProfileContractFacts, useProfileIdentity } from '../../profileIdentity/index.js';
 import { latticeSurfaceColor } from '../../lattice/rendering/latticeGeometry.js';
 import { createProductionIdentityDossierViewModel } from '../identity/productionIdentityDossierViewModel.js';
+import { loadIdentityShortcut, saveIdentityShortcut } from '../identity/useIdentityShortcut.js';
 import useOwnerLatticeBrowser from '../useOwnerLatticeBrowser.js';
 import DisplayModule from './DisplayModule.jsx';
 import OwnerDisplayInstance from './OwnerDisplayInstance.jsx';
+import WorkbenchAlignmentGrid from './WorkbenchAlignmentGrid.jsx';
 import { addMirrorModule } from '../../systemWorkflow/mirrorModuleSession.js';
 import { addMiniApp } from '../../miniApps/miniAppSession.js';
 import { MAX_MINI_APPS } from '../../miniApps/domain/miniApps.js';
 import { openMobileModule } from '../../mobile/mobileSession.js';
 import useDraftUndo from './useDraftUndo.js';
+import { removeWorkbenchModule } from '../../systemWorkflow/removeWorkbenchModule.js';
 import { PRIMARY_DISPLAY_ID } from '../../systemWorkflow/domain/displayModules.js';
 import OwnerSystemWorkflowGlobalBar from './OwnerSystemWorkflowGlobalBar.jsx';
 import OwnerSystemWorkflowPanelLayer from './OwnerSystemWorkflowPanelLayer.jsx';
@@ -79,10 +82,15 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const [instanceRecords, setInstanceRecords] = useState({});
   const [instancePresentations, setInstancePresentations] = useState({});
   const [miniAppPresentations, setMiniAppPresentations] = useState({});
-  const registerMiniAppPresentation = useCallback((id, presentation) => setMiniAppPresentations(current => ({ ...current, [id]: presentation })), []);
-  const registerController = useCallback((id, record) => setInstanceRecords(current => ({ ...current, [id]: record })), []);
-  const registerPresentation = useCallback((id, presentation) => setInstancePresentations(current => ({ ...current, [id]: presentation })), []);
-  const selectedInstance = instanceRecords[activeDisplayId];
+  const registerMiniAppPresentation = useCallback((id, presentation) => setMiniAppPresentations(current => { const next = { ...current }; if (presentation) next[id] = presentation; else delete next[id]; return next; }), []);
+  const registerController = useCallback((id, record) => setInstanceRecords(current => { const next = { ...current }; if (record) next[id] = record; else delete next[id]; return next; }), []);
+  const registerPresentation = useCallback((id, presentation) => setInstancePresentations(current => { const next = { ...current }; if (presentation !== undefined) next[id] = presentation; else delete next[id]; return next; }), []);
+  const hasPrimaryDisplay = controller.draft.grids.length > 0;
+  const selectedInstance = controller.draft.displays?.some(item => item.id === activeDisplayId) ? instanceRecords[activeDisplayId] : null;
+  useEffect(() => {
+    if (activeDisplayId === PRIMARY_DISPLAY_ID ? !hasPrimaryDisplay : !controller.draft.displays?.some(item => item.id === activeDisplayId))
+      setActiveDisplayId(hasPrimaryDisplay ? PRIMARY_DISPLAY_ID : controller.draft.displays?.[0]?.id || PRIMARY_DISPLAY_ID);
+  }, [activeDisplayId, hasPrimaryDisplay, controller.draft.displays]);
   const activeController = selectedInstance?.controller || controller;
   const currentError = activeController.error || controller.error;
   const initialWorkbench = useRef(controller.draft.workbench || null);
@@ -98,13 +106,13 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
       : { ...current, identity: { ...current.identity, window } };
   }), []);
   const initialDisplay = useMemo(() => {
-    const display = initialWorkbench.current?.display;
+    const display = controller.draft.workbench?.display;
     if (!display) return undefined;
     const icon = display.shortcut.icon;
     return { ...display, shortcut: { ...display.shortcut, open: display.open,
       iconAssetId: icon?.stableAssetId || null, iconMedia: icon?.media?.type === 'image'
         ? { url: icon.media.url, width: icon.media.width, height: icon.media.height } : null } };
-  }, []);
+  }, [hasPrimaryDisplay, profileAddress]);
   const [workbenchPreferences, setWorkbenchPreferences] = useState(() => loadWorkbenchPreferences(
     profileAddress, controller.draft?.appearance.surfaceId,
   ));
@@ -112,9 +120,23 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const [publicationOpen, setPublicationOpen] = useState(false);
   const [notice, setNotice] = useState(null);
   useDraftUndo(controller.store, Boolean(preview), setNotice);
-  const [identityOpen, setIdentityOpen] = useState(() => Boolean(initialWorkbench.current?.identity.open));
+  const [identityOpen, setIdentityOpen] = useState(() => {
+    const mode = loadIdentityShortcut(profileAddress)?.mode;
+    return mode ? mode !== 'closed' : Boolean(initialWorkbench.current?.identity.open);
+  });
   const identityReturnFocus = useRef(null);
-  useEffect(() => { setIdentityOpen(Boolean(controller.draft.workbench?.identity.open)); }, [profileAddress]);
+  const identityPresentationRef = useRef(null);
+  const openIdentity = trigger => {
+    identityReturnFocus.current = trigger || workspaceRef.current;
+    panels.closePanel({ returnFocus: false });
+    if (!identityPresentationRef.current) saveIdentityShortcut(profileAddress, { ...loadIdentityShortcut(profileAddress), mode: 'window' });
+    setIdentityOpen(true);
+    identityPresentationRef.current?.restore();
+  };
+  useEffect(() => {
+    const mode = loadIdentityShortcut(profileAddress)?.mode;
+    setIdentityOpen(mode ? mode !== 'closed' : Boolean(controller.draft.workbench?.identity.open));
+  }, [profileAddress]);
   const displayRef = useRef(null);
   const placementTargetRef = useRef(null);
   const allPlacementTargetsRef = useRef(null);
@@ -149,7 +171,6 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     has(target) { return identityTargetRef.current === target || [...moduleAssetTargets.current.values()].includes(target); },
   };
   const workspaceRef = useRef(null);
-  const [metadataAvailable, setMetadataAvailable] = useState(false);
   const [decodedDimensions, setDecodedDimensions] = useState(() => new Map());
   const [workspaceMenu, setWorkspaceMenu] = useState(null);
   const [boardInstanceState, transitionBoardInstance] = useReducer(transitionPresentationBoardInstance, profileAddress,
@@ -182,11 +203,11 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const resolvedAssets = useMemo(() => assets.map(refineAsset), [assets, refineAsset]);
   const canonicalRecords = useMemo(() => records.map(refineAsset), [records, refineAsset]);
   const workbenchProjection = useMemo(() => captureWorkbenchPresentation({
-    layout: workbenchLayout, shortcut: shortcutLayout, assetRecords: canonicalRecords,
-    displayOpen: boardInstanceState === 'window', identityOpen,
+    layout: workbenchLayout, shortcut: shortcutLayout, assetRecords: canonicalRecords, hasPrimaryDisplay,
+    displayOpen: hasPrimaryDisplay && boardInstanceState === 'window', identityOpen,
     displays: controller.draft.displays, miniApps: controller.draft.miniApps,
     displayPresentations: instancePresentations, miniAppPresentations,
-  }), [workbenchLayout, shortcutLayout, canonicalRecords, boardInstanceState, identityOpen, instancePresentations, controller.draft.displays, controller.draft.miniApps, miniAppPresentations]);
+  }), [hasPrimaryDisplay, workbenchLayout, shortcutLayout, canonicalRecords, boardInstanceState, identityOpen, instancePresentations, controller.draft.displays, controller.draft.miniApps, miniAppPresentations]);
   const workbench = workbenchProjection.value;
   const assetsById = useMemo(() => assetMap(resolvedAssets, canonicalRecords), [canonicalRecords, resolvedAssets]);
   const registerAssetDimensions = useCallback((asset, dimensions) => {
@@ -319,57 +340,63 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
     if (name === 'discover' && onOpenDiscover) { panels.closePanel({ returnFocus: false }); onOpenDiscover(trigger); return; }
     panels.togglePanel(name, trigger);
   };
+  const toggleLibrary = () => {
+    if (publicationOpen) closePublication({ returnFocus: false });
+    panels.togglePanel('library', workspaceRef.current);
+  };
+  const openPreview = trigger => {
+    if (publicationOpen) closePublication({ returnFocus: false });
+    startPreview(trigger);
+  };
   const menuSurface = controller.draft?.appearance.menuSurfaceId;
   const workspaceSurfaceColor = latticeSurfaceColor(workbenchPreferences.surfaceId);
-  const moduleAvailability = { metadata: selectedInstance?.metadataAvailable ?? metadataAvailable,
-    presentationBoard: (controller.draft.displays?.length || 0) < 7 };
+  const moduleAvailability = { presentationBoard: !hasPrimaryDisplay || (controller.draft.displays?.length || 0) < 7 };
   const authoringLocked = workbenchPreferences.compositionLocked;
-  const instrumentsObscured = panelOccupied || (layout.mode === 'narrow' && panel === 'library');
+  const instrumentsObscured = panelOccupied;
   const revealInstruments = () => {
     if (publicationOpen) closePublication({ returnFocus: false });
     if (instrumentsObscured) panels.closePanel({ returnFocus: false });
   };
-  return <><main ref={workspaceRef} aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
+  const deleteDisplay = expected => {
+    try {
+      if (!removeWorkbenchModule(controller.store, profileAddress, 'display', expected)) { setNotice('Could not delete this Display. Reopen its menu and try again.'); return; }
+      requestAnimationFrame(() => workspaceRef.current?.focus());
+    } catch (error) { setNotice(error.message || 'Could not delete this Display'); }
+  };
+  return <><main tabIndex={-1} ref={workspaceRef} aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
     onContextMenu={event => { if (event.target === event.currentTarget) { event.preventDefault(); setWorkspaceMenu({ x: event.clientX, y: event.clientY }); } }}
+    style={workbenchPreferences.dockVisible ? undefined : { '--workflow-dock-height': '0px' }}
+    onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')) { event.preventDefault(); setWorkspaceMenu({ x: 16, y: 16 }); } }}
     data-authoring-locked={authoringLocked || undefined} data-board-instance-state={boardInstanceState}
     data-chrome-noise={workbenchPreferences.chromeNoise ? 'on' : 'off'}
-    data-library-open={panel === 'library' || undefined}
     data-lattice-menu-surface data-menu-surface={menuSurface} data-reduced-motion={layout.reducedMotion || undefined}
     data-surface={workbenchPreferences.surfaceId} data-previewing={preview ? true : undefined}
     inert={preview ? '' : undefined}>
-    <div className="system-workflow__display-instance" data-display-instance={PRIMARY_DISPLAY_ID} data-active-display={activeDisplayId === PRIMARY_DISPLAY_ID || undefined}
+    <WorkbenchAlignmentGrid hostRef={workspaceRef} color={workbenchPreferences.gridColor} mode={workbenchPreferences.gridMode} />
+    {hasPrimaryDisplay && <div className="system-workflow__display-instance" data-display-instance={PRIMARY_DISPLAY_ID} data-active-display={activeDisplayId === PRIMARY_DISPLAY_ID || undefined}
       onPointerDownCapture={() => setActiveDisplayId(PRIMARY_DISPLAY_ID)} onFocusCapture={() => setActiveDisplayId(PRIMARY_DISPLAY_ID)}>
     <DisplayModule ref={displayRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef} assetsById={assetsById} controller={controller}
       authoringLocked={authoringLocked} active={!preview && boardInstanceState === 'window'}
       panelOccupied={panelOccupied} instrumentsObscured={instrumentsObscured}
-      onRevealInstruments={revealInstruments}
+      onRevealInstruments={revealInstruments} onToggleLibrary={toggleLibrary}
       onInspect={() => { if (panel !== 'library') panels.closePanel({ returnFocus: false }); }}
-      onMetadataAvailabilityChange={setMetadataAvailable}
       onAuthoringLockToggle={() => setWorkbenchPreferences((current) => ({ ...current, compositionLocked: !current.compositionLocked }))}
       registerAssetDimensions={registerAssetDimensions} resolveAssetDimensions={resolveAssetDimensions}
       menuSurface={menuSurface} reducedMotion={layout.reducedMotion} workspaceSurfaceColor={workspaceSurfaceColor}
-      windowProps={{ instanceState: boardInstanceState,
+      windowProps={{ instanceState: boardInstanceState, onDelete: () => deleteDisplay({ id: PRIMARY_DISPLAY_ID, grids: controller.draft.grids }),
         initialPresentation: initialDisplay, onWindowChange: changeDisplayWindow, onShortcutChange: setShortcutLayout,
         onMinimize: () => transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.MINIMIZE),
         onRestore: () => transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.RESTORE),
-        onContextMenu: (event) => {
-          if (event.target.closest('.system-workflow__instrument-bay, .system-workflow__instrument-window')) return;
-          event.preventDefault();
-          setWorkspaceMenu({ x: event.clientX, y: event.clientY });
-        },
         layoutMode: layout.mode, profileAddress, reducedMotion: layout.reducedMotion,
-        shortcutSnap: workbenchPreferences.shortcutSnap, workbenchGridColor: workbenchPreferences.gridColor,
-        workbenchGridMode: workbenchPreferences.gridMode }} />
-    </div>
+        shortcutSnap: workbenchPreferences.shortcutSnap }} />
+    </div>}
     {(controller.draft.displays || []).map((module, index) => <OwnerDisplayInstance key={module.id} id={module.id} index={index + 1}
-      store={controller.store} profileAddress={profileAddress} initialPresentation={initialWorkbench.current?.displays?.find(item => item.id === module.id)}
+      onDelete={() => deleteDisplay(module)} store={controller.store} profileAddress={profileAddress} initialPresentation={initialWorkbench.current?.displays?.find(item => item.id === module.id)}
       active={activeDisplayId === module.id} onActivate={setActiveDisplayId} onController={registerController} onPresentation={registerPresentation}
-      onContextMenu={(event, id) => { event.preventDefault(); setActiveDisplayId(id); setWorkspaceMenu({ x: event.clientX, y: event.clientY }); }}
-      shared={{ assetsById, panelOccupied, instrumentsObscured, onRevealInstruments: revealInstruments,
+      shared={{ assetsById, panelOccupied, instrumentsObscured, onRevealInstruments: revealInstruments, onToggleLibrary: toggleLibrary,
         onInspect: () => { if (panel !== 'library') panels.closePanel({ returnFocus: false }); },
         registerAssetDimensions, resolveAssetDimensions, menuSurface, reducedMotion: layout.reducedMotion, workspaceSurfaceColor, workspaceRef,
-        windowProps: { layoutMode: layout.mode, reducedMotion: layout.reducedMotion, shortcutSnap: workbenchPreferences.shortcutSnap,
-          workbenchGridMode: 'NONE', workbenchGridColor: workbenchPreferences.gridColor } }} />)}
+        windowProps: { layoutMode: layout.mode, reducedMotion: layout.reducedMotion, shortcutSnap: workbenchPreferences.shortcutSnap } }} />)}
     {controller.draft.mobile && <Suspense fallback={<p role="status">Opening Mobile…</p>}><MobileEditor
       key={profileAddress} mobile={controller.draft.mobile} store={controller.store} profileAddress={profileAddress}
       assetsById={assetsById} identity={profileModel} registerTarget={registerModuleAssetTarget} suspended={Boolean(preview)} /></Suspense>}
@@ -388,8 +415,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
       onWorkbenchPreferencesChange={(change) => setWorkbenchPreferences((current) => ({ ...current, ...change }))}
       onClose={() => panels.closePanel()} onVisitProfile={onVisitProfile}
       onOpenIdentity={(event) => {
-        identityReturnFocus.current = event.currentTarget.closest('.system-workflow')?.querySelector('[data-system-workflow-panel-trigger][aria-label="Profile"]');
-        panels.closePanel({ returnFocus: false }); setIdentityOpen(true);
+        openIdentity(event.currentTarget.closest('.system-workflow')?.querySelector('[data-system-workflow-panel-trigger][aria-label="Profile"]'));
       }}
       panelOccupied={panelOccupied} panels={panels} profileIdentity={profileIdentity} profileModel={profileModel}
       resolveAssetDimensions={resolveAssetDimensions}
@@ -397,6 +423,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
       discoveryGroups={reviewAuthorities.discoveryGroups} reviewDiscovery={reviewAuthorities.discovery} />
     {identityOpen && profileModel && <Suspense fallback={<p role="status">Opening Identity…</p>}>
       <IdentityModule key={profileAddress} model={profileModel} menuSurface={menuSurface}
+        presentationRef={identityPresentationRef} onDisconnect={onDisconnect}
         initialWindow={workbenchLayout.identity.window} onWindowChange={changeIdentityWindow}
         assetTargetRef={identityTargetRef} avatar={controller.draft.identityPresentation.avatar}
         onSave={controller.saveIdentity}
@@ -404,36 +431,43 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
         portraitChoices={resolvedAssets.filter((asset) => asset.placeable !== false && (asset.originalImageUrl || asset.imageUrl))}
         returnFocus={identityReturnFocus.current} onClose={() => setIdentityOpen(false)} />
     </Suspense>}
-    <OwnerSystemWorkflowGlobalBar activePanel={panel}
-      onOpen={openDockPanel} onPreview={(event) => {
-        if (publicationOpen) closePublication({ returnFocus: false });
-        startPreview(event.currentTarget);
-      }}
+    {workbenchPreferences.dockVisible && <OwnerSystemWorkflowGlobalBar activePanel={panel}
+      onOpen={openDockPanel} onPreview={event => openPreview(event.currentTarget)}
       onPublish={(event) => togglePublication(event.currentTarget)} publicationOpen={publicationOpen}
-      unreadCount={activity.unreadCount} />
+      unreadCount={activity.unreadCount} />}
     {(currentError || notice) && <button aria-label="Dismiss notification" className="system-workflow__notice"
       type="button" onClick={dismissNotice}>{currentError || notice}</button>}
     {workspaceMenu && createPortal(<RackMenu anchor={workspaceMenu}
-      commands={[{ id: 'add', label: 'ADD' }, { disabled: selectedInstance?.locked ?? authoringLocked, id: 'landscape', label: 'LANDSCAPE 16:9' }, { disabled: selectedInstance?.locked ?? authoringLocked, id: 'portrait', label: 'PORTRAIT 9:16' }, ...(activeDisplayId !== PRIMARY_DISPLAY_ID ? [{ id: 'visibility', label: controller.draft.displays?.find(item => item.id === activeDisplayId)?.visibility === 'PUBLIC' ? 'MAKE DISPLAY PRIVATE' : 'INCLUDE DISPLAY IN PUBLICATION' }] : [])]}
+      commands={[{ id: 'add', label: 'ADD' }, { id: 'identity', label: 'IDENTITY' }, { id: 'library', label: 'LIBRARY' },
+        { id: 'discover', label: 'DISCOVER' }, { id: 'preview', label: 'PREVIEW' }, { id: 'publish', label: 'PUBLISH' },
+        { id: 'toggle-dock', label: workbenchPreferences.dockVisible ? 'HIDE DOCK' : 'SHOW DOCK' }]}
       getSubmenuCommands={(id) => id === 'add' ? [
         { disabled: !moduleAvailability.presentationBoard, id: 'presentation-board', label: 'DISPLAY MODULE' },
         { disabled: (controller.draft.animations?.length || 0) >= 4, id: 'mirror', label: 'MIRROR ANIMATION' },
         { disabled: (controller.draft.miniApps?.length || 0) >= MAX_MINI_APPS, id: 'mini-app', label: 'MINI APP' },
         { id: 'mobile', label: controller.draft.mobile ? 'OPEN MOBILE' : 'MOBILE MODULE' },
-        { disabled: !moduleAvailability.metadata, id: 'metadata', label: 'METADATA MODULE' },
+      ] : id === 'presentation-board' ? [
+        { disabled: !moduleAvailability.presentationBoard, id: 'add-display-horizontal', label: 'HORIZONTAL 16:9' },
+        { disabled: !moduleAvailability.presentationBoard, id: 'add-display-vertical', label: 'VERTICAL 9:16' },
       ] : []}
-      label="Workbench commands" menuSurfaceId={menuSurface} onClose={() => setWorkspaceMenu(null)}
+      label="Workbench commands" menuSurfaceId={menuSurface} returnFocus={workspaceRef.current} onClose={() => setWorkspaceMenu(null)}
       onCommand={(id) => {
+        if (id === 'library') toggleLibrary();
+        if (id === 'identity') openIdentity(workspaceRef.current);
+        if (id === 'discover') openDockPanel('discover', workspaceRef.current);
+        if (id === 'preview') openPreview(workspaceRef.current);
+        if (id === 'publish') togglePublication(workspaceRef.current);
         if (id === 'mirror') { try { addMirrorModule(controller.store); } catch (error) { setNotice(error.message); } }
         if (id === 'mini-app') { try { addMiniApp(controller.store, profileAddress); } catch (error) { setNotice(error.message); } }
         if (id === 'mobile') { try { openMobileModule(controller.store); } catch (error) { setNotice(error.message); } }
-        if (id === 'metadata') (selectedInstance?.displayRef || displayRef).current?.openMetadata();
-        if (id === 'landscape' || id === 'portrait') activeController.setDisplayFormat(id.toUpperCase());
-        if (id === 'visibility') controller.run(() => {
-          const draft = controller.store.getDraft();
-          return controller.store.commitCompletedOperation({ ...draft, displays: draft.displays.map(module => module.id === activeDisplayId ? { ...module, visibility: module.visibility === 'PUBLIC' ? 'PRIVATE' : 'PUBLIC' } : module) }, { expectedGeneration: controller.store.getGeneration() });
-        });
-        if (id === 'presentation-board') { const added = controller.addDisplay('LANDSCAPE'); if (added) setActiveDisplayId(added); }
+        if (id === 'toggle-dock') {
+          setWorkbenchPreferences(current => ({ ...current, dockVisible: !current.dockVisible }));
+          requestAnimationFrame(() => workspaceRef.current?.focus());
+        }
+        if (id === 'add-display-horizontal' || id === 'add-display-vertical') {
+          const added = controller.addDisplay(id === 'add-display-vertical' ? 'PORTRAIT' : 'LANDSCAPE');
+          if (added) { setActiveDisplayId(added); if (added === PRIMARY_DISPLAY_ID) transitionBoardInstance(PRESENTATION_BOARD_INSTANCE_EVENT.RESTORE); }
+        }
         setWorkspaceMenu(null);
       }}
       systemWorkflowOverlay />, document.body)}

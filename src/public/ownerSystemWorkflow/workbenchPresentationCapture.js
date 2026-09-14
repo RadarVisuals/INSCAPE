@@ -5,7 +5,7 @@ import { createProfileDocumentV9AssetResolver } from '../../profileDocument/doma
 // presentation inputs; only the existing authoring session saves the result.
 // The current draft's module lists determine membership, never cached layouts.
 export function captureWorkbenchPresentation({
-  layout, shortcut, assetRecords, displayOpen, identityOpen,
+  layout, shortcut, assetRecords, displayOpen, identityOpen, hasPrimaryDisplay = true,
   displays, miniApps, displayPresentations = {}, miniAppPresentations = {},
 }) {
   try {
@@ -14,7 +14,7 @@ export function captureWorkbenchPresentation({
     }
 
     let capturedShortcut = layout.display.shortcut;
-    if (shortcut) {
+    if (shortcut && hasPrimaryDisplay) {
       const existing = capturedShortcut.icon;
       const sameMedia = !shortcut.iconMedia || existing
         && shortcut.iconMedia.url === existing.media.url
@@ -35,7 +35,8 @@ export function captureWorkbenchPresentation({
         || savedMiniApps?.find(item => item.id === app.id) || createMiniAppPresentation(app.id, index)) } : {}),
       ...(displays ? { displays: displays.map(({ id }) => ({ id, ...(displayPresentations[id]
         || savedDisplays?.find(item => item.id === id) || createDefaultWorkbenchPresentation().display) })) } : {}),
-      display: { ...layout.display, shortcut: capturedShortcut, open: displayOpen },
+      display: hasPrimaryDisplay ? { ...layout.display, shortcut: capturedShortcut, open: displayOpen }
+        : { ...createDefaultWorkbenchPresentation().display, open: false },
       identity: { ...layout.identity, open: identityOpen },
     } };
   } catch {

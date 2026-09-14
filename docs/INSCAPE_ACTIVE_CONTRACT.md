@@ -189,6 +189,32 @@ are not part of that visitor experience. Module chrome is not Stage content.
   serialization format or replace the current validation boundaries.
 - Right click → Add creates a module instance. Its shortcut opens the existing
   instance. Closing a window is distinct from deleting its authored instance.
+- The owner's Workbench context menu offers Add and a top-level Show/Hide dock
+  command. Dock visibility is a profile-scoped local preference, never published;
+  older preferences show the dock. Hidden docks release their reserved space.
+  Display Format belongs to that Display's canvas, title-bar and shortcut menus.
+  The open Display's menu also offers Close module (minimize to its shortcut)
+  and Delete module through the existing undoable deletion action.
+  Add → Display Module offers Horizontal (16:9) and Vertical (9:16) when
+  creating an instance; its Format menu remains available for later changes.
+  New Displays start with clean shortcut artwork and names, using a 960×540
+  horizontal or 405×720 vertical window constrained to the available Workbench.
+  Recreating a deleted primary Display starts a fresh presentation; existing
+  saved presentations retain their dimensions. Shortcut fallbacks are scoped
+  to the Display instance. Add and Format share the same orientation defaults.
+  Format changes preserve the window's size relative to those defaults, so an
+  unresized horizontal Display becomes the same size as Add → Vertical.
+  Viewport bounds still apply; existing saved windows are not rewritten on read.
+  Metadata remains a Display instrument and is not an Add-menu module.
+  Library stays anchored to the Workbench's left edge above ordinary module
+  windows and shortcuts. Its existing drag-to-hide behavior exposes drop targets.
+  Opening or resizing it never reserves space or shifts modules or shortcuts,
+  including on narrow screens. Dock visibility does not close Library or change
+  the open panel. Workbench and Display context menus open the same shared
+  Library without changing the active module or Grid.
+  Dock visibility changes preserve normal Display window pixel dimensions and
+  position wherever the available bounds allow. Maximized windows continue to
+  fit the available Workbench. Opening Library does not reserve desktop space.
 - Multiple Display Modules can organize chapters such as Lunar Desert, a photo
   series, or other presentations, each with its own content and Grids.
 - Modules must be able to cooperate through explicit inputs and outputs, for
@@ -252,10 +278,21 @@ remain accepted direction, not an implemented capability.
 The first implementation bounds a Workbench to eight Displays. Right click Add
 creates an additional private Display; its context menu can include it in the
 next publication. Public projection omits private instances and private Grids.
-The original Display retains its existing public-Grid publication requirement.
+The original Display requires a public Grid while it exists. An empty root
+`grids` array represents its absence in draft v4 and document v9; additional
+Display records still require Grids. Older nonempty documents retain their
+existing interpretation, and no storage key changes. Add recreates the original
+Display when absent before allocating another instance.
 `workbench.displays` retains additional window and shortcut arrangements when
 Prepare Publication captures the Workbench. Closing minimizes to the shortcut;
 it does not delete content. Visitor window changes remain session-local.
+Owner shortcuts offer right-click Delete for every created Display, Mirror,
+Mobile and mini app. Deletion removes authored module content and its saved
+arrangement through one undoable draft operation. A desktop with no created
+modules is valid and survives reload and publication. Identity remains accessible
+through Profile; removing modules does not delete Library assets or change an
+existing publication. The Workbench owns its alignment grid independently of
+Display presence.
 Optional arrays do not rewrite older documents on read. Publications using them
 require the updated strict reader and a newly verified hash and URI.
 
@@ -302,6 +339,22 @@ app-to-app audio sharing, and a marketplace are not implemented by this host.
 See [mini app hosting](MINI_APP_HOSTING.md) for the boundaries and checks.
 
 ## Display Module
+
+Layers offers one custom Gutter value in canvas units and Apply to all for the
+current scene. It preserves image sizes and directional ordering, including
+staggered layouts. Neighbours are identified by overlapping projections on the
+opposite axis; matching top edges are not required. Each axis is spaced from
+its leading neighbours, retaining positions for images without predecessors.
+The same target gap applies horizontally and vertically. Multiple constraints
+may leave larger gaps; image sizes are never changed to force exact spacing.
+Locked or editor-hidden images disable the action. Overlapping image bounds,
+or arrangements where spacing would introduce a conflicting neighbour, are
+rejected atomically rather than flattened or partially moved.
+The gap is rounded to existing one-ninth-unit geometry precision. All moves are
+validated and saved in one undoable operation through the Display session.
+Only resulting placement coordinates persist; there is no new draft schema,
+automatic reflow, drag snapping or publication field. Existing drafts remain
+unchanged until the owner applies the operation.
 
 `Display Module` is the product-facing term. Existing `PresentationBoard` and
 `presentationBoard*` implementation identifiers and persistence keys remain
@@ -436,6 +489,21 @@ internal compatibility names during this migration; do not broadly rename them.
 
 ## Identity and authored personas
 
+Identity can minimize to a movable circular crop of its existing portrait and
+background. The same cloud canvas remains mounted and animating, respecting
+reduced motion and visibility. Click restores the retained window; the circle's
+context menu offers Open Identity, Small/Medium/Large, Circle/Rounded square,
+Close and owner-only
+Disconnect. Minimizing is disabled during an unsaved edit. The owner's Workbench
+context menu opens or restores Identity independently of the dock. Shortcut size,
+shape, position and window/minimized/closed state are optional local preferences under `inscape:identity-shortcut:`
+plus the profile address, never draft or publication content. Missing preferences
+use a medium circle at the upper right and the existing starting open state;
+older size/position-only records remain readable without resetting them.
+Rounded square uses the shared module corner radius. Visitors use temporary state only.
+Close removes the module from view and releases the renderer. Existing publications and
+drafts retain their schemas and content.
+
 - The identity strip is trusted publication chrome, not artistic Stage content.
 - It is derived from the official Universal Profile identity and authority.
 - Authored content cannot replace or impersonate that publication anchor.
@@ -467,6 +535,44 @@ internal compatibility names during this migration; do not broadly rename them.
   Its scan surface is still and high-contrast, with softly rounded modules.
   It currently encodes the address; switching to a public INSCAPE profile URL
   is deferred until that public destination is settled.
+
+- Identity establishes the approved shared bevel window chrome: a thin edge and inner highlight,
+  a one-pixel content gutter, and a filled close control. One module-owned cloud
+  renderer spans the body and title bar; the title bar and detail extension
+  overlay 65%-opaque surfaces while text and controls remain opaque. Detail
+  dividers are internal only and fade over 16px into an 8px outer inset.
+  The shared shell owns this opt-in style through `chrome="bevel"` and an explicit
+  `menuSurface`. `workbenchWindowChrome.css` owns the edge, overlay, selector and
+  raised-control tokens and their light/dark theme values. Controls use the shared
+  window-cap class, including the recessed pressed state and keyboard focus.
+  Identity owns its content layout, artwork, editor and divider geometry.
+  This is the reference for subsequent window migration; other instruments retain
+  their existing chrome until migrated and visually verified. The shared window
+  accepts the supplied background; shader settings and lifecycle remain owned
+  by Identity. Styling choices are not persisted profile data.
+
+- Display adopts the same bevel tokens for its outer frame, title-bar controls,
+  inspection controls and attached, overlay and detached instrument panels.
+  The frame continues to expand around the attached bay through Display's
+  existing geometry; Stage dimensions, artwork crop and saved compositions are
+  independent of this chrome. Detached panels receive the module theme explicitly.
+  Owner and Visitor share this treatment, including the two-pixel tab selector,
+  reduced grain, thin content boundary and light-theme control shadows.
+
+  The current Display frame experiment removes the title bar's layout space.
+  A compact control group overlays the upper-right Stage. The controls use plain
+  icons with hover feedback, keyboard focus and an active underline instead of
+  raised circles. One shared 65%-opaque backing maintains contrast over light and
+  dark artwork;
+  the remaining top strip stays draggable and keyboard movable. The Display name
+  is available on hover, with maximize/restore before minimize. Stage aspect ratio
+  and authored geometry remain unchanged; older windows retain their saved width
+  and position without a data migration. Attached/overlay/detached instrument
+  behaviour is retained while the standalone frame is evaluated.
+  Display's artwork clip meets the outer one-pixel stroke without an extra
+  content gutter; its inner radius is the outer radius minus that stroke.
+  Its outer stroke omits inset highlights to avoid bright spots along the
+  antialiased corners. Identity and instrument windows retain their bevels.
 
 - Identity starts compact. A centered chevron reveals its INSCAPE extension
   with a selectable 2–5 column detail layout. A section can be marked Wide to

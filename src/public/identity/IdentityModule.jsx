@@ -1,4 +1,7 @@
-import { Check, ChevronDown, Settings, BadgeCheck, Github, Globe, Instagram, UserRound, X, Youtube } from 'lucide-react';
+import { Check, ChevronDown, Minus, Settings, BadgeCheck, Github, Globe, Instagram, UserRound, X, Youtube } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import RackMenu from '../menus/RackMenu.jsx';
+import useIdentityShortcut, { IDENTITY_SHORTCUT_SIZES } from './useIdentityShortcut.js';
 import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { WorkbenchWindow } from '../ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import OwnerSystemWorkflowDetachedWindow from '../ownerSystemWorkflow/OwnerSystemWorkflowDetachedWindow.jsx';
@@ -38,7 +41,6 @@ function LinksSection({ links }) {
     const Icon = icons[link.platform];
     return <li key={link.id}><a href={link.url} target="_blank" rel="noreferrer" aria-label={link.label} title={link.label}>
       {Icon ? <Icon aria-hidden="true" /> : <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M18.9 2H22l-6.8 7.8L23.2 22h-6.3L12 14.6 5.5 22H2.3l7.9-9L2 2h6.5l4.4 6.8L18.9 2ZM17.8 20h1.7L7.5 4H5.7l12.1 16Z" /></svg>}
-      <span className="identity-module__link-tooltip">{link.label}</span>
     </a></li>;
   })}</ol></nav>;
 }
@@ -46,9 +48,9 @@ function LinksSection({ links }) {
 // Small header controls share native 16px geometry and rounded square corners.
 function IdentityActionIcon({ kind }) {
   return <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-    {kind === 'copy' && <><rect x="5.5" y="5.5" width="8" height="8" rx="1" /><path d="M10.5 3.5v-1a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h1" /></>}
-    {kind === 'source' && <><path d="M8.5 3.5h-6a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-6M9.5 1.5h4v4M13.5 1.5l-7 7" /></>}
-    {kind === 'qr' && <><rect x="1.5" y="1.5" width="4" height="4" rx="1" /><rect x="9.5" y="1.5" width="4" height="4" rx="1" /><rect x="1.5" y="9.5" width="4" height="4" rx="1" /><rect x="9.5" y="9.5" width="4" height="4" rx="1" /></>}
+    {kind === 'copy' && <><rect x="5.5" y="5.5" width="9" height="9" rx="1" /><path d="M10.5 3.5v-1a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h1" /></>}
+    {kind === 'source' && <path d="M7 1.5H3.5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V9M9.5 1.5h5v5M14.5 1.5 7.5 8.5" />}
+    {kind === 'qr' && <path d="M1.5 5V3.5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2V5M1.5 8h13M1.5 11v1.5a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V11" />}
   </svg>;
 }
 
@@ -99,7 +101,7 @@ function AddressQr({ address }) {
   }, [open, address]);
   return <>
     <button ref={trigger} className="identity-module__header-action" type="button" popovertarget={id}
-      aria-label="Show address QR code" aria-expanded={open} title="Show address QR code"><IdentityActionIcon kind="qr" /></button>
+      aria-label="Show address QR code" aria-expanded={open} title="Show QR code"><IdentityActionIcon kind="qr" /></button>
     <div ref={popover} id={id} popover="auto" className="identity-module__qr" role="dialog" aria-label="Share profile address"
       onPointerDown={event => event.stopPropagation()}
       onKeyDown={event => { if (event.key === 'Escape') event.stopPropagation(); }}>
@@ -155,7 +157,13 @@ function IdentityTitle({ address, profile }) {
 }
 
 // Inputs are already projected for owner or visitor. No draft, wallet or route ownership.
-export default function IdentityModule({ model, onClose, returnFocus, menuSurface, assetTargetRef, avatar, onSave, customAvatar = false, portraitChoices = [], initialWindow, onWindowChange }) {
+export default function IdentityModule({ model, onClose, returnFocus, menuSurface, assetTargetRef, presentationRef, onDisconnect, avatar, onSave, customAvatar = false, portraitChoices = [], initialWindow, onWindowChange }) {
+  const [shortcutMenu, setShortcutMenu] = useState(null);
+  const shortcutButton = useRef(null);
+  const shortcut = useIdentityShortcut(model.address, Boolean(onSave));
+  const minimized = shortcut.position.mode === 'minimized';
+  const restore = () => { shortcut.setMode('window'); setShortcutMenu(null); requestAnimationFrame(() => closeRef.current?.focus()); };
+  useImperativeHandle(presentationRef, () => ({ restore }));
   const [expanded, setExpanded] = useState(false);
   const editRef = useRef(null);
   const extensionId = useId();
@@ -193,20 +201,34 @@ export default function IdentityModule({ model, onClose, returnFocus, menuSurfac
   };
   const replacePortraitRef = useRef(replacePortrait);
   replacePortraitRef.current = replacePortrait;
-  const editable = Boolean(onSave);
+  const editable = Boolean(onSave) && !minimized;
   useImperativeHandle(assetTargetRef, () => editable ? {
     get node() { return portraitRef.current; },
     label: 'Release to replace Identity artwork', placeAsset: (asset) => replacePortraitRef.current(asset),
   } : null, [editable]);
   const [imageFailed, setImageFailed] = useState(false);
   useEffect(() => { setImageFailed(false); }, [portraitUrl]);
-  useEffect(() => { closeRef.current?.focus({ preventScroll: true }); }, []);
+  useEffect(() => { (minimized ? shortcutButton : closeRef).current?.focus({ preventScroll: true }); }, []);
   const close = () => {
+    shortcut.setMode('closed');
     onClose();
     queueMicrotask(() => { if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true }); });
   };
-  return <div className="identity-module system-workflow__token-scope" data-artwork={hasArtwork ? 'custom' : 'official'} data-expanded={expanded} data-editing={editing} data-workbench-module="identity" data-lattice-menu-surface
+  const openShortcutMenu = event => {
+    event.preventDefault(); event.stopPropagation();
+    setShortcutMenu({ x: event.clientX || shortcut.position.x, y: event.clientY || shortcut.position.y });
+  };
+  const circle = <button ref={shortcutButton} type="button" className="identity-module__circle" aria-label={`Open Identity: ${official.name}`}
+    {...shortcut.pointer} onContextMenu={openShortcutMenu}
+    onKeyDown={event => {
+      if (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10') openShortcutMenu(event);
+      else shortcut.moveByKey(event);
+    }} onClick={event => { if (event.detail === 0 || !shortcut.suppressClick.current) restore(); shortcut.suppressClick.current = false; }}>
+    {portraitUrl && !imageFailed ? <img alt="" draggable={false} src={portraitUrl} onError={() => setImageFailed(true)} /> : <UserRound />}
+  </button>;
+  return <div className="identity-module system-workflow__token-scope" data-shortcut-shape={shortcut.position.shape} data-minimized={minimized || undefined} data-artwork={hasArtwork ? 'custom' : 'official'} data-expanded={expanded} data-editing={editing} data-workbench-module="identity" data-lattice-menu-surface
     data-menu-surface={menuSurface} onKeyDown={(event) => {
+      if (shortcutMenu) return;
       const qr = event.currentTarget.querySelector('[popover]:popover-open');
       if (event.key === 'Escape' && qr) {
         event.preventDefault(); event.stopPropagation(); qr.hidePopover();
@@ -215,20 +237,24 @@ export default function IdentityModule({ model, onClose, returnFocus, menuSurfac
       }
       if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); event.stopPropagation(); if (editing) edit.cancel(); else close(); }
     }} onPointerDown={(event) => event.stopPropagation()} onWheel={(event) => event.stopPropagation()}>
-    <WorkbenchWindow label="Identity" title={model.profile.displayName} width={initialWindow?.width || 840} fitContent
+    <WorkbenchWindow chrome="bevel" menuSurface={menuSurface} label="Identity" title={model.profile.displayName} width={initialWindow?.width || 840} fitContent
+      compact={minimized ? { content: circle, style: { left: shortcut.position.x, top: shortcut.position.y,
+        width: shortcut.position.size, height: shortcut.position.size, minHeight: 0, maxHeight: 'none',
+        '--detached-window-width': `${shortcut.position.size}px`, borderRadius: shortcut.position.shape === 'square' ? 'var(--workflow-window-chrome-radius)' : '50%', overflow: 'hidden' } } : undefined}
+      background={background.type === 'clouds' ? <IdentityClouds surface={menuSurface} color={background.color} speed={background.speed} /> : null}
       initialX={initialWindow?.left ?? Math.max(8, (globalThis.innerWidth - 840) / 2)} initialY={initialWindow?.top ?? 72}
       onLayoutChange={onWindowChange}
       titleContent={<IdentityTitle address={model.address} profile={model.officialProfile || {
         name: model.profile.displayName, avatarUrl: null, url: `https://universaleverything.io/${model.address}`,
       }} />}
       controls={<>{editing && <><button type="button" className="identity-module__save" onClick={edit.save}>Save</button>
-        <button type="button" className="identity-module__save" onClick={edit.cancel}>Cancel</button></>}{onSave && <button ref={editRef} aria-label="Edit Identity" title="Edit Identity" aria-pressed={editing}
-        className="system-workflow__round-control" type="button" onClick={() => {
+        <button type="button" className="identity-module__save" onClick={edit.cancel}>Cancel</button></>}<button type="button" aria-label="Minimize Identity" title="Minimize Identity" disabled={editing}
+          className="system-workflow__window-cap" onClick={() => { shortcut.setMode('minimized'); requestAnimationFrame(() => shortcutButton.current?.focus()); }}><Minus /></button>{onSave && <button ref={editRef} aria-label="Edit Identity" title="Edit Identity" aria-pressed={editing}
+        className="system-workflow__window-cap" data-icon="settings" type="button" onClick={() => {
           if (editing) edit.cancel(); else { edit.start(); setExpanded(true); }
-        }}><Settings /></button>}<button aria-label="Close Identity" className="system-workflow__round-control"
+        }}><Settings /></button>}<button aria-label="Close Identity" className="system-workflow__window-cap"
         ref={closeRef} onClick={close} type="button"><X /></button></>}>
       <div className="identity-module__card">
-        {background.type === 'clouds' && <IdentityClouds surface={menuSurface} color={background.color} speed={background.speed} />}
       <div className="identity-module__intro">
         <div className="identity-module__portrait" ref={portraitRef} aria-label="Identity artwork">
           {portraitUrl && !imageFailed
@@ -267,5 +293,19 @@ export default function IdentityModule({ model, onClose, returnFocus, menuSurfac
       {artworkError && <p role="alert">{artworkError}</p>}
       </div>
     </WorkbenchWindow>
+    {shortcutMenu && createPortal(<RackMenu anchor={shortcutMenu} label="Identity shortcut commands" menuSurfaceId={menuSurface}
+      commands={[{ id: 'open', label: 'OPEN IDENTITY' }, { id: 'size', label: 'SIZE' }, { id: 'shape', label: 'SHAPE' }, { id: 'close', label: 'CLOSE' },
+        ...(onSave && onDisconnect ? [{ id: 'disconnect', label: 'DISCONNECT' }] : [])]}
+      getSubmenuCommands={id => id === 'size' ? Object.entries(IDENTITY_SHORTCUT_SIZES).map(([id, size]) => ({ id, label: id.toUpperCase(), checkable: true, selected: shortcut.position.size === size }))
+        : id === 'shape' ? [{ id: 'circle', label: 'CIRCLE', checkable: true, selected: shortcut.position.shape === 'circle' },
+          { id: 'square', label: 'ROUNDED SQUARE', checkable: true, selected: shortcut.position.shape === 'square' }] : []}
+      returnFocus={shortcutButton.current} onClose={() => setShortcutMenu(null)} onCommand={id => {
+        setShortcutMenu(null);
+        if (id === 'open') restore();
+        else if (id === 'close') close();
+        else if (id === 'circle' || id === 'square') { shortcut.setShape(id); requestAnimationFrame(() => shortcutButton.current?.focus()); }
+        else if (id === 'disconnect') onDisconnect?.();
+        else if (IDENTITY_SHORTCUT_SIZES[id]) { shortcut.resize(IDENTITY_SHORTCUT_SIZES[id]); requestAnimationFrame(() => shortcutButton.current?.focus()); }
+      }} systemWorkflowOverlay />, document.body)}
   </div>;
 }

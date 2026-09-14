@@ -43,6 +43,7 @@ import {
   createSystemWorkflowTransformCandidate,
 } from './systemWorkflowTransform.js';
 import { createSystemWorkflowAppearanceCandidate } from './systemWorkflowAppearance.js';
+import { createSystemWorkflowGutterCandidate } from './systemWorkflowGutters.js';
 import { createSystemWorkflowLockCandidate } from './systemWorkflowLock.js';
 import { assertValidSystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
 import { resolveIdentityCard } from '../profileIdentity/domain/identityCard.js';
@@ -156,6 +157,10 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
 
     movePlacements(request) {
       return transact((draft) => createSystemWorkflowGroupMovementCandidate(draft, request));
+    },
+
+    applyGutters(request) {
+      return transact((draft) => createSystemWorkflowGutterCandidate(draft, request));
     },
 
     resizePlacement(request) {

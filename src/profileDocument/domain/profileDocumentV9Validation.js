@@ -248,6 +248,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
         }
         ids.add(module.id);
         const { id, ...content } = module;
+        if (!content.grids?.length) fail('displays', 'invalid_grid_count', 'An additional Display must contain Grids');
         const result = validateProfileDocumentV9({ ...shared, ...content, metadata: {} });
         result.errors.forEach(error => fail(`displays.${id}.${error.path}`, error.code, error.message));
         moduleReferences += (module.grids || []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0);
@@ -256,7 +257,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     }
   } else if (input.workbench?.displays?.length) fail('workbench.displays', 'unknown_display', 'Window refers to an unavailable Display');
   if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid public Workbench configuration');
-  if (!Array.isArray(input.grids) || input.grids.length < 1 || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxGrids) {
+  if (!Array.isArray(input.grids) || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxGrids) {
     fail('grids', 'invalid_grid_count', 'One to 24 public Grids required');
   } else {
     const gridIds = new Set();
@@ -302,6 +303,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   if (exactKeys(input.metadata, [])) {
     // Older v9 publications without an authored World Cover remain valid.
   } else if (exactKeys(input.metadata, ['worldCover'])) {
+    if (input.grids?.length === 0) fail('metadata.worldCover', 'invalid_world_cover', 'An absent Display cannot retain a World Cover');
     worldCoverAssetReferences = validateWorldCover(input.metadata.worldCover, fail);
   } else {
     fail('metadata', 'unexpected_fields', 'Profile metadata contains unsupported fields');

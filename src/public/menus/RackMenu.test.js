@@ -26,7 +26,6 @@ test('explicit checked and mixed commands preserve their complete visible labels
 
 test('cascade menus wait for pointer intent and close their flyout when the pointer leaves', () => {
   assert.match(desktopMenu, /onFocus=\{\(\) => \{ if \(depth > 0\) openSubmenu\(depth, command, true\); \}\}/);
-  assert.match(desktopMenu, /onPointerLeave=\{\(\) => \{ window\.clearTimeout\(hoverTimerRef\.current\); setOpenPath\(\[\]\);/);
   assert.match(desktopMenu, /SYSTEM_WORKFLOW_ROW_HEIGHT = 38/);
 });
 

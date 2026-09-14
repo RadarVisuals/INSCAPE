@@ -131,9 +131,9 @@ export function resizePresentationBoardView(view, viewport, options = {}) {
   const fit = fitPresentationBoard(viewport, { ...options, aspectRatio: view.documentGeometry?.columns / view.documentGeometry?.rows || options.aspectRatio });
   if (!fit) return null;
   const maximumPercentage = maximumPresentationBoardPercentage(fit, viewport, options);
-  const safeScale = clampContinuousPresentationBoardScale(
-    view.scale, percentageScale(maximumPercentage), view.scale,
-  );
+  // Available desktop space is not a request to resize the user's window.
+  // Retain its pixel width, constrained only by the new available bounds.
+  const safeScale = Math.min(view.frame.stage.width / fit.stage.width, percentageScale(maximumPercentage));
   return Object.freeze({
     documentGeometry: view.documentGeometry,
     fit,

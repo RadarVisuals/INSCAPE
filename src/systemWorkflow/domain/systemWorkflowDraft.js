@@ -146,7 +146,7 @@ export function createEmptySystemWorkflowWorldCoverGrid() {
 export function ensureSystemWorkflowWorldCoverGrid(draftInput) {
   const draft = structuredClone(draftInput);
   if (!draft || typeof draft !== 'object' || !Array.isArray(draft.grids)) return draft;
-  if (!draft?.grids?.some(isSystemWorkflowWorldCoverGrid)) {
+  if (draft.grids.length && !draft.grids.some(isSystemWorkflowWorldCoverGrid)) {
     draft.grids.push(createEmptySystemWorkflowWorldCoverGrid());
   }
   return draft;
@@ -290,6 +290,7 @@ export function validateSystemWorkflowDraft(input) {
           fail('displays', 'invalid_display', 'Invalid or duplicate Display Module'); continue;
         }
         ids.add(module.id);
+        if (!module.grids?.length) fail('displays', 'invalid_grid_count', 'An additional Display must contain Grids');
         const validation = validateSystemWorkflowDraft(projectDisplayDraft(input, module.id));
         validation.errors.forEach(error => fail(`displays.${module.id}.${error.path}`, error.code, error.message));
         references += (module.grids || []).reduce((sum, grid) => sum + (grid.placements?.length || 0), 0);
@@ -304,7 +305,7 @@ export function validateSystemWorkflowDraft(input) {
     + (input.identityPresentation?.avatar?.stableAssetId ? 1 : 0) + (input.workbench?.display?.shortcut?.icon ? 1 : 0)
     + (input.workbench?.displays || []).filter(item => item?.shortcut?.icon).length;
   if (allReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) fail('$', 'too_many_asset_references', 'Too many asset references');
-  if (!Array.isArray(input.grids) || input.grids.length < 2 || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxAuthoringGrids) {
+  if (!Array.isArray(input.grids) || input.grids.length === 1 || input.grids.length > SYSTEM_WORKFLOW_LIMITS.maxAuthoringGrids) {
     fail('grids', 'invalid_grid_count', 'One to 24 Grids plus the World Cover are required');
   } else {
     const gridIds = new Set();
@@ -342,7 +343,7 @@ export function validateSystemWorkflowDraft(input) {
       });
     });
     const coverGrids = input.grids.filter(isSystemWorkflowWorldCoverGrid);
-    if (coverGrids.length !== 1) fail('grids', 'invalid_world_cover_count', 'Exactly one World Cover is required');
+    if (input.grids.length && coverGrids.length !== 1) fail('grids', 'invalid_world_cover_count', 'Exactly one World Cover is required');
     const cover = coverGrids[0];
     if (cover && (cover.title !== 'WORLD COVER' || cover.subtitle !== ''
       || cover.visibility !== SYSTEM_WORKFLOW_VISIBILITY.PUBLIC || cover.labelVisible !== false

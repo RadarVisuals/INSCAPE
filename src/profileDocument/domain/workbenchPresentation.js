@@ -63,3 +63,17 @@ export function createDefaultWorkbenchPresentation() {
 export function createMiniAppPresentation(id, index = 0) {
   return { id, open: true, window: { left: 96 + index * 32, top: 88 + index * 24, width: 720, height: 540 } };
 }
+
+export const DISPLAY_DEFAULT_WINDOW_SIZES = Object.freeze({
+  LANDSCAPE: Object.freeze({ width: 960, height: 540 }),
+  PORTRAIT: Object.freeze({ width: 405, height: 720 }),
+});
+
+// Shared creation/format sizing; existing documents retain their saved presentation.
+export function createNewDisplayPresentation(orientation = 'LANDSCAPE', index = 0) {
+  const display = createDefaultWorkbenchPresentation().display;
+  return { ...display, name: index ? `DISPLAY ${index + 1}` : 'DISPLAY MODULE',
+    window: { left: 96 + index * 24, top: 96 + index * 24,
+      ...DISPLAY_DEFAULT_WINDOW_SIZES[orientation] },
+    shortcut: { ...display.shortcut, position: { left: 24 + index * 96, top: 72 } } };
+}

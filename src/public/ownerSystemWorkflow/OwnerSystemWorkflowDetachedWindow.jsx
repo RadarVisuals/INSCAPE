@@ -1,9 +1,14 @@
 import { forwardRef } from 'react';
+import './workbenchWindowChrome.css';
 
 const OwnerSystemWorkflowDetachedWindow = forwardRef(function OwnerSystemWorkflowDetachedWindow({
   ariaLabel,
   as: Element = 'aside',
   children,
+  background,
+  compactContent,
+  chrome,
+  menuSurface,
   className = '',
   controls,
   headerPointerProps,
@@ -15,12 +20,14 @@ const OwnerSystemWorkflowDetachedWindow = forwardRef(function OwnerSystemWorkflo
 }, ref) {
   const rootClassName = `system-workflow__detached-window${className ? ` ${className}` : ''}`;
   const contentClassName = `system-workflow__detached-window-surface${surfaceClassName ? ` ${surfaceClassName}` : ''}`;
-  return <Element aria-label={ariaLabel} className={rootClassName} data-detached-window data-floating ref={ref} style={style}>
-    <header className="system-workflow__detached-window-titlebar" {...headerPointerProps}>
+  return <Element aria-label={ariaLabel} className={rootClassName} data-window-chrome={chrome} data-menu-surface={menuSurface} data-detached-window data-floating ref={ref} style={style}>
+    {background}
+    <header style={compactContent ? { display: 'none' } : undefined} className="system-workflow__detached-window-titlebar" {...headerPointerProps}>
       {titleContent ?? <strong title={title}>{title}</strong>}
       <span className="system-workflow__detached-window-controls">{controls}</span>
     </header>
-    <div className={contentClassName}>{children}</div>
+    <div style={compactContent ? { display: 'none' } : undefined} className={contentClassName}>{children}</div>
+    {compactContent}
     {resizeHandleProps && <div {...resizeHandleProps} className="system-workflow__detached-window-resize" />}
   </Element>;
 });

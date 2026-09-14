@@ -6,6 +6,7 @@ import {
 export const DEFAULT_WORKBENCH_PREFERENCES = Object.freeze({
   chromeNoise: true,
   compositionLocked: false,
+  dockVisible: true,
   gridColor: null,
   gridMode: 'LINES',
   shortcutSnap: true,
@@ -31,6 +32,7 @@ export function normalizeWorkbenchPreferences(value, fallbackSurfaceId = DEFAULT
   return Object.freeze({
     chromeNoise: typeof source.chromeNoise === 'boolean' ? source.chromeNoise : true,
     compositionLocked: typeof source.compositionLocked === 'boolean' ? source.compositionLocked : false,
+    dockVisible: typeof source.dockVisible === 'boolean' ? source.dockVisible : true,
     gridColor: validHexColor(source.gridColor) ? source.gridColor.toLowerCase() : null,
     gridMode: SYSTEM_WORKFLOW_GUIDE_MODES.includes(source.gridMode) ? source.gridMode : DEFAULT_WORKBENCH_PREFERENCES.gridMode,
     shortcutSnap: typeof source.shortcutSnap === 'boolean' ? source.shortcutSnap : DEFAULT_WORKBENCH_PREFERENCES.shortcutSnap,

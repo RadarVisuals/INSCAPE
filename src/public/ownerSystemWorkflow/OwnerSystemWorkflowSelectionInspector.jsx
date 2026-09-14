@@ -31,6 +31,8 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
   controller, crop, onBeginCrop }) {
   const [removeCandidateId, setRemoveCandidateId] = useState(null);
   const [presentation, setPresentation] = useState(null);
+  const [gutter, setGutter] = useState('1');
+  const [gutterMessage, setGutterMessage] = useState('');
   const grid = controller.selectedGrid;
   const selected = controller.selectedPlacements;
   const unlockedSelected = selected.filter(({ locked }) => !locked);
@@ -39,6 +41,17 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
   useEffect(() => { if (authoringLocked) { setPresentation(null); setRemoveCandidateId(null); } }, [authoringLocked]);
   useEffect(() => { if (presentation && !grid?.placements.some(({ id }) => id === presentation.placementId)) setPresentation(null); }, [grid, presentation]);
   if (!grid) return null;
+  const applyGutters = () => {
+    if (authoringLocked) return;
+    setGutterMessage('');
+    const committed = controller.run(session => {
+      try {
+        if (!gutter.trim()) throw new Error('Enter a gutter value.');
+        return session.applyGutters({ gridId: grid.id, gutter: Number(gutter), expectedPlacements: grid.placements });
+      } catch (error) { setGutterMessage(error.message); return false; }
+    });
+    if (committed) setGutterMessage('Gutters applied. Undo restores the previous spacing.');
+  };
   const ordered = [...grid.placements].sort((left, right) => left.layer - right.layer);
   const layers = [...ordered].reverse();
   const editable = !authoringLocked && unlockedSelected.length === selected.length && unlockedSelected.length > 0;
@@ -143,7 +156,15 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
       <button aria-label="Crop" disabled={authoringLocked || !primary} onClick={() => onBeginCrop?.(primary)} title={primary ? 'Crop' : 'Crop requires one artwork'} type="button"><Crop size={15} /></button>
       <button aria-label="Frame and mat" disabled={authoringLocked || !primary} onClick={beginPresentation} title={primary ? 'Frame and mat' : 'Frame and mat requires one artwork'} type="button"><Frame size={15} /></button>
     </nav>;
-  return renderPanel(<><div className="system-workflow__layer-controls">{toolbar}{inspectionSelector}</div><div className="system-workflow__layer-list">{layers.map((layer) => {
+  return renderPanel(<><div className="system-workflow__layer-controls">{toolbar}{inspectionSelector}
+      <div className="system-workflow__gutter-controls">
+        <label>Gutter <span>(canvas units)</span><input type="number" min="0" max="32" step="any" value={gutter}
+          disabled={authoringLocked} onChange={event => { setGutter(event.target.value); setGutterMessage(''); }} /></label>
+        <button type="button" onClick={applyGutters} disabled={authoringLocked || grid.placements.length < 2
+          || grid.placements.some(item => item.locked || controller.hiddenPlacementIds?.has(item.id))}>Apply to all</button>
+      </div>
+      {gutterMessage && <p className="system-workflow__gutter-message" role="status">{gutterMessage}</p>}
+    </div><div className="system-workflow__layer-list">{layers.map((layer) => {
         const asset = assetForPlacement(assetsById.get(layer.stableAssetId), layer); const title = asset?.title || asset?.name || 'UNTITLED'; const confirming = removeCandidateId === layer.id;
         const removingSelectedGroup = confirming && selected.length > 1 && controller.selectedPlacementIds.includes(layer.id) && editable;
         const hidden = controller.hiddenPlacementIds?.has(layer.id) || false;

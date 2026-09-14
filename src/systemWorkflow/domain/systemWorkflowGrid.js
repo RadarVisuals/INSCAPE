@@ -56,6 +56,7 @@ export function systemWorkflowGridOrder(draftInput) {
 
 export function createSystemWorkflowGridCandidate(draftInput, options = {}) {
   const draft = assertValidSystemWorkflowDraft(draftInput);
+  if (!draft.grids.length) throw gridError('SYSTEM_WORKFLOW_DISPLAY_ABSENT', 'Add a Display Module before creating a Grid');
   if (draft.grids.filter((grid) => !isSystemWorkflowWorldCoverGrid(grid)).length >= SYSTEM_WORKFLOW_LIMITS.maxGrids) {
     throw gridError('SYSTEM_WORKFLOW_GRID_LIMIT_REACHED', 'The 24 Grid safety limit is reached');
   }

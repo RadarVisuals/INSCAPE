@@ -6,7 +6,7 @@ import './displayInstruments.css';
 
 const names = { layers: 'Layers', metadata: 'Metadata' };
 
-export default function DisplayInstruments({ workspaceRef, instrumentTriggers, state, dispatch, projection, scope, selectionLabel, renderLayers, renderMetadata, overlayTop }) {
+export default function DisplayInstruments({ menuSurface, workspaceRef, instrumentTriggers, state, dispatch, projection, scope, selectionLabel, renderLayers, renderMetadata, overlayTop }) {
   const tabs = useRef({});
   const instanceId = useId();
   const instruments = Object.keys(names).filter(id => id === 'layers' ? renderLayers : renderMetadata);
@@ -25,7 +25,7 @@ export default function DisplayInstruments({ workspaceRef, instrumentTriggers, s
   };
   return <>
     {active && <aside aria-label="Display Module instruments" className="system-workflow__instrument-bay"
-      data-projection={projection} style={{ '--instrument-overlay-top': `${overlayTop}px` }}
+      data-window-chrome="bevel" data-menu-surface={menuSurface} data-projection={projection} style={{ '--instrument-overlay-top': `${overlayTop}px` }}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && !event.defaultPrevented) {
           event.preventDefault(); event.stopPropagation(); command('toggle', active);
@@ -37,9 +37,9 @@ export default function DisplayInstruments({ workspaceRef, instrumentTriggers, s
             aria-selected={active === id} tabIndex={active === id ? 0 : -1} ref={(node) => { tabs.current[id] = node; }}
             onClick={() => dispatch({ type: 'open', instrument: id })} onKeyDown={(event) => switchTab(event, id)}
             type="button">{names[id]}{state[id] === 'detached' ? ' ↗' : ''}</button>)}</div>
-        <button aria-label={`Detach ${names[active]}`} title={`Detach ${names[active]}`} className="system-workflow__round-control"
+        <button aria-label={`Detach ${names[active]}`} title={`Detach ${names[active]}`} className="system-workflow__window-cap"
           onClick={() => command('detach', active)} type="button"><PictureInPicture2 /></button>
-        <button aria-label="Close instrument bay" title="Close instrument bay" className="system-workflow__round-control"
+        <button aria-label="Close instrument bay" title="Close instrument bay" className="system-workflow__window-cap"
           onClick={() => command('toggle', active)} type="button"><X /></button>
       </header>
       <small className="system-workflow__instrument-scope">Display Module · {scope}
@@ -49,7 +49,7 @@ export default function DisplayInstruments({ workspaceRef, instrumentTriggers, s
         className="system-workflow__instrument-content">{active === id ? content(id) : null}</div>)}
     </aside>}
     {instruments.filter((id) => state[id] === 'detached').map((id) => createPortal(
-      <DisplayInstrumentWindow key={id} instrument={id}
+      <DisplayInstrumentWindow menuSurface={menuSurface} key={id} instrument={id}
         title={`Display Module / ${scope}${id === 'metadata' ? ` / ${selectionLabel}` : ''}`}
         onAttach={() => command('attach', id)} onClose={() => command('close', id)}>{content(id)}</DisplayInstrumentWindow>,
       workspaceRef.current, id))}

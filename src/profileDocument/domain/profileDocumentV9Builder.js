@@ -62,7 +62,7 @@ export function projectSystemWorkflowPublicGrids(draftInput, assetRecords = []) 
           asset: resolveAsset(stableAssetId, selectedMedia),
         })),
     }));
-  if (!grids.length) {
+  if (!grids.length && draft.grids.length) {
     throw publicationError('INSCAPE_PROFILE_PUBLIC_GRID_REQUIRED', 'Publication requires at least one public Grid');
   }
   return grids;

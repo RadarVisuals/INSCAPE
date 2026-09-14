@@ -3,7 +3,7 @@ import { PanelRightClose, X } from 'lucide-react';
 import OwnerSystemWorkflowDetachedWindow from './OwnerSystemWorkflowDetachedWindow.jsx';
 
 // View-only window behavior. The caller supplies its content and commands.
-export function WorkbenchWindow({ children, label, controls, title, titleContent, width = 320, resizableWidth = false, initialHeight = 420, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange }) {
+export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, label, controls, title, titleContent, width = 320, resizableWidth = false, initialHeight = 420, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange }) {
   const node = useRef(null);
   const measuredContent = useRef(null);
   const gesture = useRef(null);
@@ -15,13 +15,13 @@ export function WorkbenchWindow({ children, label, controls, title, titleContent
   const [resizedWidth, setResizedWidth] = useState(width);
   const windowWidth = resizableWidth ? resizedWidth : width;
   useLayoutEffect(() => {
-    onLayoutChange?.({ left: position.x, top: position.y, width: windowWidth, height });
-  }, [position.x, position.y, windowWidth, height, onLayoutChange]);
+    if (!compact) onLayoutChange?.({ left: position.x, top: position.y, width: windowWidth, height });
+  }, [position.x, position.y, windowWidth, height, onLayoutChange, Boolean(compact)]);
   useLayoutEffect(() => {
     if (!fitContent && Number.isFinite(preferredHeight)) setHeight(Math.max(180, Math.min(globalThis.innerHeight - position.y - 54, preferredHeight)));
   }, [preferredHeight, fitContent]);
   useLayoutEffect(() => {
-    if (!fitContent) return undefined;
+    if (!fitContent || compact) return undefined;
     const content = measuredContent.current;
     const measure = () => {
       const chromeHeight = node.current.offsetHeight - content.parentElement.clientHeight;
@@ -33,12 +33,13 @@ export function WorkbenchWindow({ children, label, controls, title, titleContent
     globalThis.addEventListener('resize', measure);
     measure();
     return () => { observer.disconnect(); globalThis.removeEventListener('resize', measure); };
-  }, [fitContent, position.y]);
+  }, [fitContent, position.y, Boolean(compact)]);
   const clamp = (value) => ({
     x: Math.max(8, Math.min(globalThis.innerWidth - (node.current?.offsetWidth || 300) - 8, value.x)),
     y: Math.max(8, Math.min(globalThis.innerHeight - (node.current?.offsetHeight || height) - 54, value.y)),
   });
   useLayoutEffect(() => {
+    if (compact) return undefined;
     const update = () => setPosition((current) => {
       const next = clamp(current);
       return next.x === current.x && next.y === current.y ? current : next;
@@ -48,7 +49,7 @@ export function WorkbenchWindow({ children, label, controls, title, titleContent
     globalThis.addEventListener('resize', update);
     update();
     return () => { observer.disconnect(); globalThis.removeEventListener('resize', update); };
-  }, []);
+  }, [Boolean(compact)]);
   const start = (event) => {
     if (event.button !== 0 || event.target.closest('button, a')) return;
     event.preventDefault();
@@ -75,9 +76,9 @@ export function WorkbenchWindow({ children, label, controls, title, titleContent
     className="system-workflow__instrument-window" title={`${label} · ${title}`}
     headerPointerProps={{ 'aria-label': `Move ${label} window`, tabIndex: 0, onKeyDown,
       onPointerDown: start, onPointerMove: move, onPointerUp: finish, onPointerCancel: finish }}
-    controls={controls} titleContent={titleContent}
-    style={{ '--detached-window-width': `${windowWidth}px`, left: position.x, top: position.y, height, maxHeight: 'calc(100dvh - 70px)' }}
-    resizeHandleProps={fitContent ? undefined : { 'aria-label': `Resize ${label} ${resizableWidth ? 'window' : 'height'}`, role: 'separator', tabIndex: 0,
+    controls={controls} titleContent={titleContent} background={background} compactContent={compact?.content} chrome={chrome} menuSurface={menuSurface}
+    style={{ '--detached-window-width': `${windowWidth}px`, left: position.x, top: position.y, height, maxHeight: 'calc(100dvh - 70px)', ...compact?.style }}
+    resizeHandleProps={fitContent || compact ? undefined : { 'aria-label': `Resize ${label} ${resizableWidth ? 'window' : 'height'}`, role: 'separator', tabIndex: 0,
       ...(resizableWidth ? { style: { cursor: 'nwse-resize' }, 'aria-valuetext': `${Math.round(windowWidth)} by ${Math.round(height)} pixels` } : {}),
       'aria-orientation': 'horizontal', 'aria-valuenow': Math.round(height),
       onPointerDown: (event) => {
@@ -107,12 +108,12 @@ export function WorkbenchWindow({ children, label, controls, title, titleContent
   </OwnerSystemWorkflowDetachedWindow>;
 }
 
-export default function DisplayInstrumentWindow({ children, instrument, onAttach, onClose, title }) {
+export default function DisplayInstrumentWindow({ menuSurface, children, instrument, onAttach, onClose, title }) {
   const label = instrument === 'layers' ? 'Layers' : 'Metadata';
-  return <WorkbenchWindow label={label} title={title}
+  return <WorkbenchWindow chrome="bevel" menuSurface={menuSurface} label={label} title={title}
     initialX={instrument === 'layers' ? 18 : Math.max(8, globalThis.innerWidth - 326)}
-    controls={<><button aria-label={`Attach ${label}`} className="system-workflow__round-control" onClick={onAttach}
-      type="button"><PanelRightClose /></button><button aria-label={`Close ${label}`} className="system-workflow__round-control"
+    controls={<><button aria-label={`Attach ${label}`} className="system-workflow__window-cap" data-icon="utility" onClick={onAttach}
+      type="button"><PanelRightClose /></button><button aria-label={`Close ${label}`} className="system-workflow__window-cap"
       onClick={onClose} type="button"><X /></button></>}>
     {children}
   </WorkbenchWindow>;

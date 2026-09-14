@@ -7,7 +7,7 @@ function navigationError(code, message) {
 }
 
 export function firstSystemWorkflowGridId(draftInput) {
-  return navigableGrids(assertValidSystemWorkflowDraft(draftInput))[0].id;
+  return navigableGrids(assertValidSystemWorkflowDraft(draftInput))[0]?.id ?? null;
 }
 
 export function selectSystemWorkflowGrid(draftInput, gridId) {
@@ -39,5 +39,5 @@ export function adjacentSystemWorkflowGridIdInOrder(gridIds, gridId, direction) 
 
 export function reconcileSystemWorkflowGridSelection(draftInput, selectedGridId) {
   const draft = assertValidSystemWorkflowDraft(draftInput);
-  return draft.grids.some(({ id }) => id === selectedGridId) ? selectedGridId : navigableGrids(draft)[0].id;
+  return draft.grids.some(({ id }) => id === selectedGridId) ? selectedGridId : navigableGrids(draft)[0]?.id ?? null;
 }

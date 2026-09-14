@@ -51,6 +51,27 @@ test('expansion preserves the cloud program, clock and top-anchored pattern', as
       } }));
     });
     await page.waitForFunction(() => window.__identityCloud?.time > .1);
+    // Lazy module loading can place the legacy shell stylesheet after bevel chrome.
+    await page.evaluate(async () => {
+      const style = document.createElement('style');
+      style.textContent = (await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css?raw')).default;
+      document.head.append(style);
+    });
+    const assertCardEdges = async () => {
+      const edges = await page.locator('.identity-module > aside').evaluate(window => {
+        const surface = window.querySelector('.system-workflow__instrument-content');
+        const box = window.getBoundingClientRect(), body = surface.getBoundingClientRect();
+        return { gutter: getComputedStyle(window).getPropertyValue('--detached-window-gutter').trim(),
+          left: body.left - box.left, right: box.right - body.right, bottom: box.bottom - body.bottom };
+      });
+      assert.equal(edges.gutter, '1px', 'bevel gutter survives legacy stylesheet loading later');
+      for (const side of ['left', 'right', 'bottom']) assert.ok(Math.abs(edges[side] - 2) < 1, `${side} is only the border plus 1px gutter: ${edges[side]}`);
+    };
+    await assertCardEdges();
+    assert.equal(await page.locator('.identity-module__clouds').count(), 1, 'one cloud renderer covers body and title bar');
+    const cloudBounds = await page.locator('.identity-module__clouds').boundingBox();
+    const titleBounds = await page.locator('.identity-module > aside > header').boundingBox();
+    assert.ok(cloudBounds.y <= titleBounds.y && cloudBounds.y + cloudBounds.height > titleBounds.y + titleBounds.height, 'clouds extend behind the title bar');
     const before = await page.evaluate(() => ({ ...window.__identityCloud, programs: window.__identityPrograms }));
     await page.getByRole('button', { name: 'Expand INSCAPE details' }).click();
     await page.waitForTimeout(150);
@@ -68,7 +89,12 @@ test('expansion preserves the cloud program, clock and top-anchored pattern', as
     const rows = await page.locator('.identity-module__cell').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().top));
     assert.ok(rows.every(top => Math.abs(top - rows[0]) < 1), 'five normal sections share one row on a wide card');
     await page.screenshot({ path: '.browser-test-runtime/identity-five-columns.png' });
+    await assertCardEdges();
     assert.equal(await page.getByRole('separator', { name: 'Resize Identity height' }).count(), 0);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(150);
+    await assertCardEdges();
+    await page.screenshot({ path: '.browser-test-runtime/identity-gutter-narrow.png' });
   } finally { await browser.close(); }
 });
 test('Library drops replace Identity artwork, shader animates, and Display stays unchanged', async () => {
@@ -115,11 +141,18 @@ test('Library drops replace Identity artwork, shader animates, and Display stays
     assert.equal(await page.evaluate(() => window.__identityWrites), 1);
     const canvas = page.locator('.identity-module__clouds[data-shader="ready"]');
     await canvas.waitFor();
+    // The canvas now also sits behind header controls. Keep hover transitions
+    // and delayed tooltips out of the shader's screenshot comparison.
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(250);
+    // Compare the shader itself, not text/caret/hover painting above its canvas.
+    const isolateShader = await page.addStyleTag({ content: '.identity-module > aside > :not(.identity-module__clouds) { visibility: hidden !important; }' });
     const first = await canvas.screenshot(); await page.waitForTimeout(250);
-    assert.notDeepEqual(await canvas.screenshot(), first, 'cloud pixels animate');
+    assert.equal((await canvas.screenshot()).equals(first), false, 'cloud pixels animate');
     await page.emulateMedia({ reducedMotion: 'reduce' }); await page.waitForTimeout(200);
     const still = await canvas.screenshot(); await page.waitForTimeout(200);
-    assert.deepEqual(await canvas.screenshot(), still, 'reduced motion stays still');
+    assert.equal((await canvas.screenshot()).equals(still), true, 'reduced motion stays still');
+    await isolateShader.evaluate(node => node.remove());
     assert.deepEqual(await page.locator('[data-system-workflow-placement-id]').evaluateAll(nodes => nodes.map(n => n.dataset.systemWorkflowPlacementId)), placementIds);
     await page.getByRole('button', { name: 'Library', exact: true }).click();
     for (const width of [1440, 390]) {
@@ -167,7 +200,7 @@ test('published Identity uses the shared chrome without blocking Grid navigation
     const chrome = await identity.evaluate(node => ({ radius: getComputedStyle(node).borderRadius,
       grain: getComputedStyle(node, '::after').backgroundImage,
       control: getComputedStyle(node.querySelector('[aria-label="Close Identity"]')).width }));
-    assert.equal(chrome.radius, '10px'); assert.match(chrome.grain, /grain-mono/); assert.equal(chrome.control, '20px');
+    assert.equal(chrome.radius, '10px'); assert.match(chrome.grain, /grain-mono/); assert.equal(chrome.control, '26px');
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.waitForTimeout(250);
@@ -303,6 +336,7 @@ test('Identity edits in place, exposes all cells with one click, and fits conten
     await page.evaluate(() => { window.__identityWrites = 0; addEventListener('inscape:review-storage-write', () => window.__identityWrites++); });
     await identity.getByRole('button', { name: 'Edit Identity', exact: true }).click();
     const hero = identity.locator('.identity-module__story');
+    assert.equal(await identity.getByRole('button', { name: 'Edit Identity', exact: true }).evaluate(n => getComputedStyle(n).transform), 'matrix(1, 0, 0, 1, 0, 1)');
     await hero.getByLabel('Custom title', { exact: true }).fill('Human Underneath');
     assert.equal(await hero.getByLabel('Subtitle', { exact: true }).count(), 0);
     await hero.getByLabel('Custom bio', { exact: true }).fill('My illustrated world.');
@@ -316,6 +350,9 @@ test('Identity edits in place, exposes all cells with one click, and fits conten
     await identity.getByLabel('Field 2 content', { exact: true }).fill('The Underneath');
     await identity.getByRole('button', { name: 'Move field 2 up' }).click();
     assert.equal(await identity.getByLabel('Field 1 name', { exact: true }).inputValue(), 'Location');
+    assert.equal(await identity.getByLabel('Field 1 name', { exact: true }).evaluate(n => n === document.activeElement), true);
+    assert.equal(await identity.locator('[data-moved="true"] input').first().inputValue(), 'Location');
+    assert.equal(await identity.getByRole('status').textContent(), 'Location moved to position 1');
     await identity.getByLabel('Detail columns', { exact: true }).selectOption('5');
     await identity.getByLabel('Field 2 wide', { exact: true }).check();
     await identity.getByText('Appearance & artwork', { exact: true }).click();
@@ -323,6 +360,7 @@ test('Identity edits in place, exposes all cells with one click, and fits conten
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 1000 }); await page.waitForTimeout(200);
       await identity.getByRole('button', { name: 'Save', exact: true }).hover();
+      assert.equal(await identity.locator('textarea').evaluateAll(nodes => nodes.every(n => n.scrollHeight <= n.clientHeight)), true, 'short editor content fits without scrollbars after resizing');
       const headerTop = (await identity.locator('.system-workflow__detached-window-titlebar').boundingBox()).y;
       for (const name of ['Save', 'Cancel']) {
         assert.equal((await identity.getByRole('button', { name, exact: true }).boundingBox()).y, headerTop);
@@ -354,9 +392,9 @@ test('Identity edits in place, exposes all cells with one click, and fits conten
       assert.equal(await identity.locator('.identity-module__fields dd').first().isVisible(), true);
       assert.equal(await identity.locator('.identity-module__fields dd').last().isVisible(), true);
       const columns = await identity.locator('.identity-module__fields').evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length);
-      assert.equal(columns, width === 1440 ? 5 : 1, 'columns respond to card width');
+      assert.equal(columns, width === 1440 ? 5 : 2, 'columns respond to card width');
       const cellWidths = await identity.locator('.identity-module__cell').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().width));
-      assert.ok(Math.abs(cellWidths[1] / cellWidths[0] - (width === 1440 ? 2 : 1)) < .01, 'wide spans two columns only when space permits');
+      assert.ok(Math.abs(cellWidths[1] / cellWidths[0] - 2) < .01, 'wide spans two columns when space permits');
       assert.equal(await identity.locator('.identity-module__fields').evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
       await page.screenshot({ path: `.browser-test-runtime/identity-inline-expanded-${width}.png` });
     }
@@ -408,12 +446,12 @@ test('Identity content and window are independent of the owner workspace', async
     await identity.waitFor();
     assert.match(await identity.innerText(), /An illustrated world/);
     const links = identity.getByRole('navigation', { name: 'Profile links' });
-    assert.equal(await links.getByRole('link', { name: 'Artist on X', exact: true }).locator('span:not(.identity-module__link-tooltip)').count(), 0);
+    assert.equal(await links.getByRole('link', { name: 'Artist on X', exact: true }).getAttribute('title'), 'Artist on X');
     const github = links.getByRole('link', { name: 'Source code', exact: true });
     assert.equal(await github.locator('svg.lucide-github').count(), 1);
-    assert.equal(await github.locator('span:not(.identity-module__link-tooltip)').count(), 0);
+    assert.equal(await github.locator('span').count(), 0);
     await github.focus();
-    await github.locator('.identity-module__link-tooltip').waitFor();
+    assert.equal(await github.getAttribute('title'), 'Source code');
     assert.equal(await links.getByRole('link', { name: 'Personal site', exact: true }).locator('svg.lucide-globe').count(), 1);
     await identity.getByRole('button', { name: 'Expand INSCAPE details' }).click();
     assert.equal(await identity.getByRole('button', { name: 'Edit', exact: true }).count(), 0);
@@ -428,7 +466,7 @@ test('Identity content and window are independent of the owner workspace', async
     }
     await identity.getByRole('button', { name: 'Collapse INSCAPE details' }).click();
     let previousTheme = null;
-    for (const theme of ['carbon', 'paper']) {
+    for (const theme of ['carbon', 'ash', 'mist', 'paper']) {
       await page.evaluate(theme => window.__renderIdentityTheme(theme), theme);
       await page.waitForTimeout(250);
       const appearance = await page.locator('.identity-module__clouds').evaluate(node => ({
@@ -436,6 +474,26 @@ test('Identity content and window are independent of the owner workspace', async
       }));
       if (previousTheme) assert.notDeepEqual(appearance, previousTheme);
       previousTheme = appearance;
+      const chrome = await identity.evaluate(node => {
+        const style = getComputedStyle(node);
+        const cap = getComputedStyle(node.querySelector('[aria-label="Close Identity"]'));
+        return { border: style.borderTopWidth, gutter: style.getPropertyValue('--detached-window-gutter').trim(),
+          contentBorder: getComputedStyle(node.querySelector('.system-workflow__instrument-content')).borderTopWidth,
+          header: getComputedStyle(node.querySelector('header')).backgroundColor,
+          extension: getComputedStyle(node.querySelector('.identity-module__extension')).backgroundColor,
+          capWidth: cap.width, capBorder: cap.borderTopWidth, capRadius: cap.borderRadius };
+      });
+      assert.equal(chrome.border, '1px');
+      assert.equal(chrome.gutter, '1px');
+      assert.equal(chrome.contentBorder, '0px');
+      assert.equal(chrome.header, chrome.extension, 'header and details share the same translucent surface');
+      assert.equal(chrome.capWidth, '26px');
+      assert.equal(chrome.capBorder, '0px');
+      assert.equal(chrome.capRadius, '50%');
+      await identity.getByRole('button', { name: 'Close Identity', exact: true }).focus();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      assert.equal(await identity.getByRole('button', { name: 'Close Identity', exact: true }).evaluate(n => getComputedStyle(n).outlineWidth), '1px');
       for (const width of [1440, 390]) {
         await page.setViewportSize({ width, height: 900 }); await page.waitForTimeout(150);
         await page.screenshot({ path: `.browser-test-runtime/identity-${theme}-verified-${width}.png` });

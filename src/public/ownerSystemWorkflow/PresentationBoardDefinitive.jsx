@@ -2,56 +2,56 @@ import { cloneElement, useEffect, useLayoutEffect, useMemo, useRef, useState } f
 import {
   Info, Layers3, Lock, LockKeyhole, Maximize2, Minimize2, Minus, Play, Pause,
 } from 'lucide-react';
+import './workbenchWindowChrome.css';
 import useDisplayImmersive from './useDisplayImmersive.js';
 import PresentationBoardShortcut from './PresentationBoardShortcut.jsx';
 import { DisplayStageSizeContext } from './DisplayStageSizeContext.js';
 import { loadPresentationBoardShortcut } from './presentationBoardShortcutStorage.js';
-import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
+import { DISPLAY_DEFAULT_WINDOW_SIZES } from '../../profileDocument/domain/workbenchPresentation.js';
 import { displayInstrumentLayout } from './displayInstrumentState.js';
 import { PRESENTATION_BOARD_INSTANCE_STATE } from './ownerSystemWorkflowModuleState.js';
 import { presentationBoardInspectionFrame, presentationBoardResponsiveMetrics, projectPresentationBoardView,
   resizePresentationBoardFromCorner, resizePresentationBoardView, setContinuousPresentationBoardScale } from './presentationBoardGeometry.js';
 
 const corners = ['nw', 'ne', 'sw', 'se'];
-const WORKBENCH_CELL = 24;
 const sameFrame = (left, right) => left && right
   && ['height', 'left', 'top', 'width'].every((key) => Math.abs(left[key] - right[key]) < 0.01);
 function BoardWindowControls({ disabled, maximized, onMaximize, onMinimize, onRestore }) {
   return <span className="system-workflow__board-window-controls">
-    <button aria-label="Minimize Display Module to shortcut" className="system-workflow__round-control"
-      disabled={disabled} onClick={onMinimize} type="button"><Minus /></button>
     <button aria-label={maximized ? 'Restore Display Module' : 'Maximize Display Module'}
-      className="system-workflow__round-control" disabled={disabled}
+      className="system-workflow__overlay-icon" disabled={disabled}
       onClick={maximized ? onRestore : onMaximize} type="button">
       {maximized ? <Minimize2 /> : <Maximize2 />}
     </button>
+    <button aria-label="Minimize Display Module to shortcut" className="system-workflow__overlay-icon"
+      disabled={disabled} onClick={onMinimize} type="button"><Minus /></button>
   </span>;
 }
 function BoardWorkspaceControls({ instrumentTriggers, layersOpen, metadataOpen, onToggleLayers, onToggleMetadata, playing, playbackDisabled, onTogglePlayback, readOnly }) {
   return <span className="system-workflow__board-workspace-controls">
     {onTogglePlayback && <button aria-label={playing ? 'Pause Grids' : 'Play Grids'} aria-pressed={playing}
-      className="system-workflow__round-control" disabled={playbackDisabled} onClick={onTogglePlayback}
+      className="system-workflow__overlay-icon" disabled={playbackDisabled} onClick={onTogglePlayback}
       title={playing ? 'Pause Grids' : 'Play Grids'} type="button">{playing ? <Pause /> : <Play />}</button>}
     {!readOnly && <button aria-label="Layers" aria-pressed={layersOpen} data-instrument-trigger="layers" ref={(node) => { if (instrumentTriggers) instrumentTriggers.current.layers = node; }}
-      className="system-workflow__round-control system-workflow__layers-trigger"
+      className="system-workflow__overlay-icon system-workflow__layers-trigger"
       onClick={onToggleLayers} title="Layers and placement tools" type="button"><Layers3 /></button>}
     <button aria-label="Metadata" aria-pressed={metadataOpen} data-instrument-trigger="metadata" ref={(node) => { if (instrumentTriggers) instrumentTriggers.current.metadata = node; }}
-      className="system-workflow__round-control" onClick={onToggleMetadata} title="Metadata" type="button"><Info /></button>
+      className="system-workflow__overlay-icon" onClick={onToggleMetadata} title="Metadata" type="button"><Info /></button>
   </span>;
 }
 export default function PresentationBoardDefinitive({ assetsById = new Map(), children, documentGeometry,
   authoringLocked = false, displaySurface, inspectionAtmosphere = false,
   layersOpen = false, metadataOpen = false, instrumentBayOpen = false, layoutMode = 'wide', onAuthoringLockToggle, onContextMenu,
-  onInspectionCancel,
+  onInspectionCancel, onDelete, moduleCommands, moduleSubmenu, onModuleCommand,
   onMinimize, onRestore, onToggleLayers, onToggleMetadata,
   playing = false, playbackDisabled = true, onTogglePlayback,
   instanceState = PRESENTATION_BOARD_INSTANCE_STATE.WINDOW,
   menuSurface = null, profileAddress, instanceId, reducedMotion = false, renderInspection, renderInstruments,
-  shortcutTargetRef, instrumentTriggers, shortcutSnap = true, workbenchGridColor = null, workbenchGridMode = 'LINES', initialPresentation, onWindowChange, onShortcutChange, readOnly = false }) {
+  shortcutTargetRef, instrumentTriggers, shortcutSnap = true, initialPresentation, onWindowChange, onShortcutChange, readOnly = false }) {
   const localShortcutRef = useRef(null);
   const geometryKey = JSON.stringify(documentGeometry);
   const shortcutRef = shortcutTargetRef || localShortcutRef;
-  const storedName = useMemo(() => initialPresentation?.name || (readOnly ? null : loadPresentationBoardShortcut(profileAddress)?.name), [profileAddress]);
+  const storedName = useMemo(() => initialPresentation?.name || (readOnly ? null : loadPresentationBoardShortcut(profileAddress, undefined, instanceId)?.name), [profileAddress, instanceId]);
   const [moduleName, setModuleName] = useState(null);
   const displayName = moduleName?.profile === profileAddress ? moduleName.name
     : storedName && storedName !== 'PRESENTATION BOARD' ? storedName : 'DISPLAY MODULE';
@@ -83,7 +83,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const metadataWidth = instrumentLayout.width;
   boardPhaseRef.current = boardPhase;
   const geometryOptions = { inset: responsiveMetrics.inset,
-    identityStripHeight: responsiveMetrics.identityStripHeight,
+    identityStripHeight: 0,
     sidecarWidth: metadataSidecarOpen ? metadataWidth : 0 };
 
   useLayoutEffect(() => {
@@ -91,9 +91,14 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     const measure = () => setView((current) => {
       const viewport = { width: host.clientWidth, height: host.clientHeight };
       let next = current && JSON.stringify(current.documentGeometry) === geometryKey ? resizePresentationBoardView(current, viewport, geometryOptions)
-        : projectPresentationBoardView(documentGeometry, viewport, 0.9, geometryOptions);
-      if (!current && initialPresentation?.window && next) {
-        next = projectPresentationBoardView(documentGeometry, viewport, Math.min(1, initialPresentation.window.width / next.fit.stage.width), geometryOptions);
+        : projectPresentationBoardView(documentGeometry, viewport, 1, geometryOptions);
+      if (next && (!current || JSON.stringify(current.documentGeometry) !== geometryKey)) {
+        // Preserve the user's size relative to the same defaults used by Add.
+        const targetSize = DISPLAY_DEFAULT_WINDOW_SIZES[documentGeometry?.rows > documentGeometry?.columns ? 'PORTRAIT' : 'LANDSCAPE'];
+        const previousSize = DISPLAY_DEFAULT_WINDOW_SIZES[current?.documentGeometry?.rows > current?.documentGeometry?.columns ? 'PORTRAIT' : 'LANDSCAPE'];
+        const width = current ? current.frame.stage.width / previousSize.width * targetSize.width
+          : initialPresentation?.window?.width || targetSize.width;
+        next = setContinuousPresentationBoardScale(next, Math.min(1, width / next.fit.stage.width));
       }
       // A scale constrained by an attached bay must not become a tiny Stage
       // after moving to the narrow overlay projection.
@@ -109,6 +114,9 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   }, [geometryKey, host, layoutMode, metadataSidecarOpen, metadataWidth]);
 
   const defaultTop = layoutMode === 'narrow' ? 48 : view?.frame.board.top || 0;
+  useLayoutEffect(() => {
+    if (view) setBoardPosition(current => current || { left: view.frame.board.left, top: defaultTop });
+  }, [view, defaultTop]);
   const clampPosition = (position, frame = view?.frame.board) => ({
     left: Math.max(8,
       Math.min((host?.clientWidth || 0) - (frame?.width || 0) - (metadataSidecarOpen ? metadataWidth : 0) - 8, position.left)),
@@ -330,18 +338,17 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     shortcutRef.current?.show();
     onMinimize?.();
   };
-  const workbenchField = host ? { cellSize: WORKBENCH_CELL, left: 0, top: 0 } : null;
-  return <div className="system-workflow__workbench" data-presentation-workbench onContextMenu={onContextMenu} ref={setHost}>
-    {host && <LatticePixelGrid color={workbenchGridColor || 'var(--study-grid)'} field={workbenchField} guideInterval={1}
-      guideSize={1} height={host.clientHeight} mode={workbenchGridMode} width={host.clientWidth} />}
-    <PresentationBoardShortcut assetsById={assetsById} host={host} instanceState={instanceState}
+  return <div className="system-workflow__workbench" data-presentation-workbench ref={setHost}>
+    <PresentationBoardShortcut onDelete={readOnly ? undefined : onDelete} assetsById={assetsById} host={host} instanceState={instanceState}
       readOnly={readOnly} instanceId={instanceId}
+      moduleCommands={moduleCommands} moduleSubmenu={moduleSubmenu} onModuleCommand={onModuleCommand}
       initialShortcut={initialPresentation?.shortcut} onShortcutChange={onShortcutChange}
       name={displayName} onNameChange={(name) => setModuleName({ profile: profileAddress, name })}
       menuSurface={menuSurface} onRestore={onRestore} profileAddress={profileAddress}
       shortcutSnap={shortcutSnap} shortcutTargetRef={shortcutRef} />
     {view && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW
-      && <article aria-label="Display Module" className="system-workflow__presentation-board"
+      && <article aria-label="Display Module" className="system-workflow__presentation-board" data-window-chrome="bevel" data-menu-surface={menuSurface}
+      onContextMenu={onContextMenu}
       popover={immersive ? 'manual' : undefined} data-immersive={immersive || undefined}
       data-authoring-locked={authoringLocked || undefined}
       data-board-phase={boardPhase} data-board-scale={view.scale} data-maximized={maximized || undefined}
@@ -349,22 +356,27 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       data-inspecting={inspectionActive || undefined} data-inspection-atmosphere={inspectionAtmosphere || undefined}
       data-metadata-sidecar={metadataSidecarOpen || undefined} data-instrument-bay={instrumentBayOpen || undefined}
       onTransitionEnd={finishBoardTransition} ref={boardNodeRef}
-      style={{ '--workflow-identity-strip-height': `${view.fit.identityStripHeight}px`,
+      style={{ '--workflow-identity-strip-height': `${responsiveMetrics.identityStripHeight}px`,
         '--workflow-metadata-width': `${metadataWidth}px`, height: renderedFrame.height,
         left: renderedFrame.left, top: renderedFrame.top, width: renderedFrame.width }}>
-      <header className="system-workflow__identity-strip" onPointerCancel={stopBoardDrag} onPointerDown={beginBoardDrag}
+      <header className="system-workflow__identity-strip" tabIndex={0} aria-label={`Move Display Module: ${displayName}`}
+        onKeyDown={event => {
+          if (event.target === event.currentTarget && (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')) { onContextMenu?.(event); return; }
+          if (event.target !== event.currentTarget || immersive || boardPhase !== 'window' || !event.key.startsWith('Arrow')) return;
+          event.preventDefault(); event.stopPropagation();
+          const step = event.shiftKey ? 24 : 8;
+          setBoardPosition(clampPosition({ left: renderedPosition.left + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0),
+            top: renderedPosition.top + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0) }));
+        }} onPointerCancel={stopBoardDrag} onPointerDown={beginBoardDrag}
         onPointerMove={moveBoardDrag} onPointerUp={stopBoardDrag}>
-        <span className="system-workflow__identity-primary">
-          <strong title={displayName}>{displayName}</strong>
-        </span>
-        <span className="system-workflow__board-title">
+        <span className="system-workflow__board-title" title={displayName}>
           {inspectionActive && <span className="system-workflow__board-inspection-controls-host" ref={setInspectionControlsHost} />}
           <BoardWorkspaceControls readOnly={readOnly} instrumentTriggers={instrumentTriggers} layersOpen={layersOpen} metadataOpen={metadataOpen}
             playing={playing} playbackDisabled={playbackDisabled} onTogglePlayback={onTogglePlayback}
             onToggleLayers={onToggleLayers} onToggleMetadata={onToggleMetadata} />
           {!readOnly && <span className="system-workflow__composition-lock-controls">
             <button aria-label={authoringLocked ? 'Unlock Display Module composition' : 'Lock Display Module composition'}
-              aria-pressed={authoringLocked} className="system-workflow__round-control system-workflow__composition-lock"
+              aria-pressed={authoringLocked} className="system-workflow__overlay-icon system-workflow__composition-lock"
               onClick={onAuthoringLockToggle} type="button">{authoringLocked ? <LockKeyhole /> : <Lock />}</button>
           </span>}
           <BoardWindowControls disabled={inspectionActive} maximized={maximized}

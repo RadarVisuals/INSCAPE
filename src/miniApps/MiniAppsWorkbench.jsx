@@ -1,3 +1,4 @@
+import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppWindow, Settings, X } from 'lucide-react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
@@ -39,6 +40,7 @@ function MiniAppInstance({ record, initialPresentation, index, store, profileAdd
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => { if (suspended) setMicrophone(false); }, [suspended]);
   useEffect(() => { onPresentationChange?.(record.id, presentation); }, [record.id, presentation, onPresentationChange]);
+  useEffect(() => () => onPresentationChange?.(record.id, null), [record.id, onPresentationChange]);
   const changeLayout = useCallback(window => setPresentation(current => JSON.stringify(window) === JSON.stringify(current.window)
     ? current : { ...current, window }), []);
   const close = () => {
@@ -51,10 +53,12 @@ function MiniAppInstance({ record, initialPresentation, index, store, profileAdd
     if (next) finishEditing();
     return true;
   };
+  const shortcutMenu = useModuleShortcutMenu({ store, profileAddress, kind: 'mini-app', record: record });
   const url = miniAppUrl(record.url, { hostOrigin: location.origin, allowLocal: import.meta.env.DEV });
   return <div className="mini-app-workbench" data-workbench-module="mini-app" data-mini-app-id={record.id}
     style={{ '--mini-app-z': active ? 49 : 45, '--mini-app-shortcut-bottom': `${64 + index * 38}px` }} onPointerDownCapture={onActivate} onFocusCapture={onActivate}>
-    {!presentation.open && <button ref={shortcut} className="mini-app-shortcut" type="button" onClick={() => {
+    {shortcutMenu.content}
+    {!presentation.open && <button ref={shortcut} className="mini-app-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown} type="button" onClick={() => {
       setPresentation(current => ({ ...current, open: true })); onActivate();
     }}><AppWindow size={18} /><span>{record.name}</span></button>}
     {presentation.open && <WorkbenchWindow label="Mini app" title={record.name} width={presentation.window.width} resizableWidth

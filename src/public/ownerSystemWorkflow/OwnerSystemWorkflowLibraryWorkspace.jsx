@@ -27,11 +27,6 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
   const [libraryWidth, setLibraryWidth] = useState(null);
   const resizeRef = useRef(null);
   const clampWidth = (width) => Math.min(window.innerWidth * 0.48, Math.max(300, width));
-  useEffect(() => {
-    const root = workspaceRef.current;
-    if (libraryWidth !== null) root?.style.setProperty('--workflow-library-track', `min(48vw, ${libraryWidth}px)`);
-    return () => root?.style.removeProperty('--workflow-library-track');
-  }, [libraryWidth]);
   const finishResize = (event) => {
     if (resizeRef.current?.pointerId !== event.pointerId) return;
     resizeRef.current = null;

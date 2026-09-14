@@ -27,9 +27,9 @@ for (const workbench of [false, true]) for (const width of [1440, 390]) {
       const source = page.locator('[data-placement-id="art:Alpha:https"]');
       await page.waitForFunction(() => document.querySelector('[data-placement-id="art:Alpha:https"]')?.dataset.mediaState === 'ready');
       await source.focus(); await page.keyboard.press('Enter');
-      const viewer = board.locator('.lattice-focus-viewer[data-contained]');
+      const viewer = board.getByRole('group', { name: 'Artwork inspection', exact: true });
       await viewer.waitFor();
-      await page.waitForFunction(() => document.querySelector('.lattice-focus-viewer')?.dataset.phase === 'open');
+      await page.waitForFunction(() => document.querySelector('.system-workflow__inspection-scene')?.dataset.inspectionPhase === 'active');
       assert.equal(await page.locator('.lattice-focus-viewer__rack').count(), 0);
       assert.equal(await page.getByRole('tab', { name: 'Layers', exact: true }).count(), 0);
       assert.equal(await page.getByRole('button', { name: 'Layers', exact: true }).count(), 0);
@@ -41,7 +41,7 @@ for (const workbench of [false, true]) for (const width of [1440, 390]) {
       assert.ok(focus.x >= frame.x - 1 && focus.y >= frame.y - 1 && focus.x + focus.width <= frame.x + frame.width + 1);
       const bayFrame = await bay.boundingBox();
       assert.ok(bayFrame.x >= 0 && bayFrame.x + bayFrame.width <= width + 1 && bayFrame.y + bayFrame.height <= 900, JSON.stringify(bayFrame));
-      await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.lattice-focus-viewer__board-controls')).opacity) === 1);
+      await page.waitForFunction(() => Boolean(document.querySelector('.system-workflow__scene-controls')));
       await page.screenshot({ path: `.browser-test-runtime/visitor-inspection-${workbench ? 'saved' : 'old'}-${width}.png` });
       await board.getByRole('button', { name: 'Next artwork', exact: true }).click();
       await page.waitForFunction(() => document.querySelector('.system-workflow__instrument-scope')?.textContent.includes('Alpha IPFS Artwork'));
@@ -54,16 +54,17 @@ for (const workbench of [false, true]) for (const width of [1440, 390]) {
       assert.equal(await page.locator('.system-workflow__metadata-module-content').count(), 1);
       await detached.getByRole('button', { name: /Attach Metadata/ }).click();
       await bay.waitFor();
-      await page.waitForFunction(() => document.querySelector('.lattice-focus-viewer__board-controls')?.dataset.phase === 'open');
+      await page.waitForFunction(() => Boolean(document.querySelector('.system-workflow__scene-controls')));
       await board.getByRole('button', { name: 'Close artwork viewer', exact: true }).click();
       await viewer.waitFor({ state: 'detached' });
       await page.waitForFunction(() => !document.querySelector('[data-viewer-source-hidden]'));
       await page.getByRole('button', { name: 'Metadata', exact: true }).click();
       await source.focus(); await page.keyboard.press('Enter');
       await viewer.waitFor();
-      await page.waitForFunction(() => document.querySelector('.lattice-focus-viewer')?.dataset.phase === 'open');
+      await page.waitForFunction(() => document.querySelector('.system-workflow__inspection-scene')?.dataset.inspectionPhase === 'active');
       await page.keyboard.press('Escape');
       await viewer.waitFor({ state: 'detached' });
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       assert.equal(await source.evaluate(node => node === document.activeElement), true);
       if (width === 390) {
         await page.getByRole('button', { name: 'Play Grids', exact: true }).click();
@@ -75,7 +76,7 @@ for (const workbench of [false, true]) for (const width of [1440, 390]) {
       await source.click(); await viewer.waitFor();
       await page.evaluate(() => window.__fixture.visit('0x2222222222222222222222222222222222222222'));
       await page.waitForFunction(() => window.__fixture.address.startsWith('0x2222'));
-      assert.equal(await page.locator('.lattice-focus-viewer').count(), 0);
+      assert.equal(await page.locator('.system-workflow__scene-controls').count(), 0);
       const writes = await page.evaluate(() => window.__visitorStorageOps.filter(({ method }) => ['setItem', 'removeItem', 'clear'].includes(method)));
       assert.deepEqual(writes, []);
       assert.deepEqual(errors, []);

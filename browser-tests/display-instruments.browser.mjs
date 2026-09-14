@@ -21,6 +21,23 @@ test('Display interaction survives host window changes without draft writes', { 
     await bay.getByRole('tab', { name: 'Metadata', exact: true }).click();
     assert.match(await bay.innerText(), /MOUNTAIN SIGNAL II/);
     const board = page.getByRole('article', { name: 'Display Module', exact: true });
+    const overlay = await board.evaluate(node => {
+      const frame = node.getBoundingClientRect();
+      const stage = node.querySelector('.system-workflow__stage-viewport').getBoundingClientRect();
+      const controls = node.querySelector('.system-workflow__board-title').getBoundingClientRect();
+      return { stageFillsFrame: Math.abs(stage.y - frame.y) < 1 && Math.abs(stage.height - frame.height) < 1,
+        controlsInside: controls.x >= frame.x && controls.right <= frame.right && controls.y >= stage.y && controls.bottom <= stage.bottom };
+    });
+    assert.equal(overlay.stageFillsFrame, true, 'the toolbar takes no space away from the Stage');
+    assert.equal(overlay.controlsInside, true);
+    const drag = board.locator(':scope > header');
+    await drag.focus();
+    const dragStart = await board.boundingBox();
+    await page.keyboard.press('ArrowLeft');
+    await settle(page);
+    assert.ok((await board.boundingBox()).x < dragStart.x);
+    await page.keyboard.press('ArrowRight');
+    await settle(page);
     const beforeResize = await board.boundingBox();
     await page.getByRole('button', { name: 'Resize Display Module from se', exact: true }).focus();
     await page.keyboard.press('ArrowLeft');
@@ -39,10 +56,10 @@ test('Display interaction survives host window changes without draft writes', { 
     assert.deepEqual(await board.boundingBox(), resized);
     assert.equal(await bay.getByRole('tab', { name: 'Metadata', exact: true }).getAttribute('aria-selected'), 'true');
     assert.match(await bay.innerText(), /MOUNTAIN SIGNAL II/);
-    await page.getByRole('button', { name: 'Select MOUNTAIN SIGNAL II', exact: true }).dblclick();
+    await page.getByRole('button', { name: 'Select ABYSSAL STUDY', exact: true }).dblclick();
     await page.getByRole('button', { name: 'Close artwork viewer', exact: true }).click();
     await page.getByRole('button', { name: 'Close artwork viewer', exact: true }).waitFor({ state: 'detached' });
-    assert.match(await bay.innerText(), /MOUNTAIN SIGNAL II/);
+    assert.match(await bay.innerText(), /ABYSSAL STUDY/);
     await page.getByRole('button', { name: 'Grids', exact: true }).click();
     assert.equal(await page.evaluate(() => window.__displayWrites), 0);
     const grids = page.getByRole('listbox', { name: 'Ordered Grids', exact: true });
@@ -199,7 +216,7 @@ test('Display Module instruments preserve selection, canonical writes, bounds, a
     assert.equal(chrome.board.pointer, 'none');
     assert.equal(chrome.radius, '10px');
     assert.equal(chrome.radius, chrome.boardRadius);
-    assert.equal(chrome.shadow, chrome.boardShadow);
+    assert.ok(chrome.shadow.endsWith(chrome.boardShadow), 'the detached shell adds its bevel highlight to the shared outer shadow');
     if (process.env.INSCAPE_CAPTURE) await page.screenshot({ path: '.browser-test-runtime/chrome-detached-wide.png' });
     await page.setViewportSize({ width: 390, height: 560 });
     await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'narrow');

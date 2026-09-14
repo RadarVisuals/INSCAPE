@@ -46,7 +46,7 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(board, /onContextMenu=\{onContextMenu\}/);
   assert.match(board, /beginBoardDrag[\s\S]*setBoardPosition/);
   assert.match(display, /OwnerSystemWorkflowMetadataModule/);
-  assert.match(runtime, /label: 'ADD'[\s\S]*label: 'DISPLAY MODULE'[\s\S]*label: 'METADATA MODULE'/);
+  assert.match(runtime, /label: 'ADD'[\s\S]*label: 'DISPLAY MODULE'/);
   assert.match(display, /useOwnerSystemWorkflowFocusViewer/);
   assert.match(display, /<DisplayFocusViewer/);
   assert.match(display, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer, scene\) => <DisplayFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
@@ -59,8 +59,9 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(geometry, /trackWidth: 286/);
   assert.match(geometry, /gap: 8/);
   assert.doesNotMatch(board, />OWNER<|['"]OWNER['"]/);
-  assert.match(board, /LatticePixelGrid/);
-  assert.match(board, /mode=\{workbenchGridMode\}/);
+  assert.doesNotMatch(board, /LatticePixelGrid/);
+  assert.match(runtime, /<WorkbenchAlignmentGrid/);
+  assert.match(read('./WorkbenchAlignmentGrid.jsx'), /<LatticePixelGrid/);
   assert.match(shortcut, /snap\(position\.left, shortcutSnap\)/);
   assert.match(shortcut, /application\/x-inscape-asset/);
   assert.match(shortcut, /shortcutAsset \? <ProgressiveArtworkImage[^\n]+ : 'DM'/);

@@ -6,7 +6,7 @@ export const MAX_DISPLAY_MODULES = 8;
 export const DISPLAY_CONTENT_KEYS = ['artboard', 'geometry', 'appearance', 'grids'];
 
 export function displayModuleIds(draft) {
-  return [PRIMARY_DISPLAY_ID, ...(draft.displays || []).map(module => module.id)];
+  return [...(draft.grids.length ? [PRIMARY_DISPLAY_ID] : []), ...(draft.displays || []).map(module => module.id)];
 }
 
 export function displayContent(draft, id = PRIMARY_DISPLAY_ID) {

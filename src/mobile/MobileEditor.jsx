@@ -1,3 +1,4 @@
+import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Crop, Eye, EyeOff, Lock, Settings2, Trash2, X } from 'lucide-react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
@@ -41,6 +42,7 @@ export default function MobileEditor({ mobile, store, profileAddress, assetsById
   const [locked, setLocked] = useState(new Set()), [hidden, setHidden] = useState(new Set());
   const [positionDraft, setPositionDraft] = useState(null), [imageDraft, setImageDraft] = useState(null);
   const [navigation, setNavigation] = useState(null), [previewHeight, setPreviewHeight] = useState(720);
+  const shortcutMenu = useModuleShortcutMenu({ store, profileAddress, kind: 'mobile', record: mobile });
   const live = useRef(true);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   useEffect(() => { setPositionDraft(null); setImageDraft(null); }, [mobile]);
@@ -110,7 +112,8 @@ export default function MobileEditor({ mobile, store, profileAddress, assetsById
   const selectedReference = roles.includes(selection) ? mobile.front[selection] : mobile.index.entries[entryIndex]?.asset;
   const disabled = suspended || locked.has(selection);
   return <div className="mobile-editor-host" data-workbench-module="mobile">
-    {!mobile.editor.open && <button className="mobile-editor-reopen" onClick={() => save(c => ({ ...c, editor: { open: true } }), null)}>MOBILE</button>}
+    {shortcutMenu.content}
+    {!mobile.editor.open && <button className="mobile-editor-reopen" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown} onClick={() => save(c => ({ ...c, editor: { open: true } }), null)}>MOBILE</button>}
     {mobile.editor.open && <>
       <WorkbenchWindow label="Mobile" title="PRESENTATION" width={400} initialX={100} initialY={55} initialHeight={820}
         controls={<><button aria-label="Open Mobile tools" onClick={() => setToolsOpen(true)}><Settings2 size={16} /></button><button aria-label="Close Mobile editor" onClick={() => save(c => ({ ...c, editor: { open: false } }), null)}><X size={16} /></button></>}>

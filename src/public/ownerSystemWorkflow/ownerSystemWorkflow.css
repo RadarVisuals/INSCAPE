@@ -378,7 +378,7 @@
 .system-workflow__state-glyph.is-contained::after,
 .system-workflow__state-glyph.is-docked::after { width: 4px; height: 4px; display: block; margin: 1px; border-radius: 50%; background: currentColor; content: ""; }
 
-.system-workflow__board-resize-handle { position: absolute; z-index: 20; width: 16px; min-width: 0; height: 16px; min-height: 0; padding: 0; border: 0; outline: 0; background: transparent; touch-action: none; }
+.system-workflow__board-resize-handle { position: absolute; z-index: 42; width: 16px; min-width: 0; height: 16px; min-height: 0; padding: 0; border: 0; outline: 0; background: transparent; touch-action: none; }
 .system-workflow__board-resize-handle.is-nw { top: 0; left: 0; cursor: nwse-resize; }
 .system-workflow__board-resize-handle.is-ne { top: 0; right: 0; cursor: nesw-resize; }
 .system-workflow__board-resize-handle.is-sw { bottom: 0; left: 0; cursor: nesw-resize; }
@@ -1474,7 +1474,8 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 /* Keep the outer Library flush while the artwork scrolls inside an inset viewport. */
 .system-workflow .system-workflow__library {
   top: 0; left: 0; right: auto; bottom: var(--workflow-dock-height);
-  width: min(100vw, var(--workflow-library-width, min(980px, max(480px, calc(100vw - 300px)))));
+  z-index: 80;
+  width: min(100vw, var(--workflow-library-width, 440px));
   min-width: 0;
 }
 .system-workflow__library .lattice-browser-results {

@@ -106,7 +106,8 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     ...((document.displays || currentDraftInput?.displays) ? { displays: [...publishedDisplays, ...structuredClone(privateDisplays)] } : {}),
     ...(document.mobile ? { mobile: restoreMobilePresentation(document.mobile, currentDraftInput?.mobile) }
       : currentDraftInput?.mobile ? { mobile: { ...structuredClone(currentDraftInput.mobile), visibility: 'PRIVATE' } } : {}),
-    grids: [...document.grids.map(restoredPublicGrid), ...privateGrids, worldCover],
+    grids: document.grids.length || privateGrids.length
+      ? [...document.grids.map(restoredPublicGrid), ...privateGrids, worldCover] : [],
   });
 }
 

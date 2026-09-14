@@ -1,5 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useReducer, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
+import RackMenu from '../menus/RackMenu.jsx';
+import { PRIMARY_DISPLAY_ID } from '../../systemWorkflow/domain/displayModules.js';
 import { isSystemWorkflowWorldCoverGrid } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import OwnerSystemWorkflowCanvas from './OwnerSystemWorkflowCanvas.jsx';
 import DisplayFocusViewer from './DisplayFocusViewer.jsx';
@@ -15,10 +17,44 @@ import { createOwnerSystemWorkflowMetadataViewModel } from './ownerSystemWorkflo
 // Display owns composition interaction. The host supplies assets, its accepted
 // controller and window configuration; it does not inspect selection or crop state.
 export default forwardRef(function DisplayModule({ assetsById, controller, authoringLocked, active,
-  panelOccupied, instrumentsObscured, onRevealInstruments, onInspect, onMetadataAvailabilityChange,
+  panelOccupied, instrumentsObscured, onRevealInstruments, onInspect, onToggleLibrary,
   onAuthoringLockToggle, registerAssetDimensions, resolveAssetDimensions, menuSurface,
   reducedMotion, workspaceSurfaceColor, windowProps, placementTargetRef, shortcutTargetRef, workspaceRef }, ref) {
   const instrumentTriggers = useRef({});
+  const [moduleMenu, setModuleMenu] = useState(null);
+  const formatCommands = [
+    { id: 'landscape', label: 'HORIZONTAL 16:9', checkable: true, selected: controller.draft.geometry.columns > controller.draft.geometry.rows, disabled: authoringLocked },
+    { id: 'portrait', label: 'VERTICAL 9:16', checkable: true, selected: controller.draft.geometry.rows > controller.draft.geometry.columns, disabled: authoringLocked },
+  ];
+  const moduleCommands = [{ id: 'format', label: 'FORMAT', disabled: authoringLocked },
+    ...(onToggleLibrary ? [{ id: 'toggle-library', label: 'LIBRARY' }] : []),
+    ...(controller.moduleId !== PRIMARY_DISPLAY_ID ? [{ id: 'visibility', label: controller.store.getDraft().displays?.find(item => item.id === controller.moduleId)?.visibility === 'PUBLIC' ? 'MAKE DISPLAY PRIVATE' : 'INCLUDE DISPLAY IN PUBLICATION' }] : [])];
+  const moduleSubmenu = id => id === 'format' ? formatCommands : [];
+  const moduleCommand = id => {
+    if (id === 'toggle-library') onToggleLibrary?.();
+    if ((id === 'landscape' || id === 'portrait') && !authoringLocked) controller.setDisplayFormat(id.toUpperCase());
+    if (id === 'visibility') controller.run(() => {
+      const draft = controller.store.getDraft();
+      return controller.store.commitCompletedOperation({ ...draft, displays: draft.displays.map(module => module.id === controller.moduleId
+        ? { ...module, visibility: module.visibility === 'PUBLIC' ? 'PRIVATE' : 'PUBLIC' } : module) }, { expectedGeneration: controller.store.getGeneration() });
+    });
+    if (id === 'close-module') {
+      viewer.close();
+      shortcutTargetRef.current?.show();
+      windowProps.onMinimize?.();
+      requestAnimationFrame(() => shortcutTargetRef.current?.node?.focus());
+    }
+    if (id === 'delete-module') moduleMenu?.onDelete?.();
+    setModuleMenu(null);
+  };
+  const openModuleMenu = event => {
+    if (event.target.closest('.system-workflow__instrument-bay, .system-workflow__instrument-window')) return;
+    event.preventDefault(); event.stopPropagation();
+    const bounds = event.currentTarget.getBoundingClientRect();
+    setModuleMenu({ x: event.clientX || bounds.left, y: event.clientY || bounds.top,
+      trigger: event.currentTarget.querySelector('.system-workflow__identity-strip') || event.currentTarget,
+      onDelete: windowProps.onDelete });
+  };
   const [instruments, dispatchInstruments] = useReducer(transitionDisplayInstruments, initialDisplayInstruments);
   const [playingGrids, setPlayingGrids] = useState(false);
   const [playbackTransition, setPlaybackTransition] = useState(false);
@@ -73,16 +109,15 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
   useEffect(() => {
     if (!active || playbackDisabled) pauseGrids();
   }, [active, playbackDisabled, pauseGrids]);
-  const metadataAvailable = instruments.metadata === 'closed';
-  useEffect(() => { onMetadataAvailabilityChange(metadataAvailable); }, [metadataAvailable, onMetadataAvailabilityChange]);
   useImperativeHandle(ref, () => ({
     changeGrid,
-    openMetadata: () => instrumentCommand({ type: 'open', instrument: 'metadata' }),
   }));
   const selectionLabel = metadataEntry?.dossier?.title || (controller.selectedPlacements.length > 1
     ? `${controller.selectedPlacements.length} selected` : controller.selectedPlacements.length === 1
       ? 'Selected artwork' : 'No artwork selected');
-  return <PresentationBoard {...windowProps} shortcutTargetRef={shortcutTargetRef} instrumentTriggers={instrumentTriggers} assetsById={assetsById} authoringLocked={authoringLocked}
+  return <><PresentationBoard {...windowProps} onContextMenu={openModuleMenu}
+      moduleCommands={moduleCommands} moduleSubmenu={moduleSubmenu} onModuleCommand={moduleCommand}
+      shortcutTargetRef={shortcutTargetRef} instrumentTriggers={instrumentTriggers} assetsById={assetsById} authoringLocked={authoringLocked}
       displaySurface={controller.draft?.appearance.surfaceId}
       documentGeometry={isSystemWorkflowWorldCoverGrid(controller.selectedGrid) ? { columns: 32, rows: 18 } : controller.draft?.geometry}
       inspectionAtmosphere={viewer.atmosphereActive}
@@ -99,7 +134,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       renderInspection={viewer.placementId ? (container, controlsContainer, scene) => <DisplayFocusViewer
         scene={scene} container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}
         viewer={viewer} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
-      renderInstruments={instrumentsVisible ? (projection, overlayTop, displayName) => <DisplayInstruments
+      renderInstruments={instrumentsVisible ? (projection, overlayTop, displayName) => <DisplayInstruments menuSurface={menuSurface}
         workspaceRef={workspaceRef} instrumentTriggers={instrumentTriggers} state={instruments} dispatch={instrumentCommand} projection={projection} overlayTop={overlayTop}
         scope={`${displayName} / ${controller.selectedGrid?.title || 'Untitled Grid'}`} selectionLabel={selectionLabel}
         renderLayers={() => <OwnerSystemWorkflowSelectionInspector key={controller.selectedGridId}
@@ -111,5 +146,11 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
         interactionDisabled={panelOccupied || Boolean(viewer.placementId)} onOpenViewer={(placement) => viewer.open(placement.id)}
         onPlacementRef={viewer.registerPlacement} reducedMotion={reducedMotion}
         resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.sourcePlacementId} />
-    </PresentationBoard>;
+    </PresentationBoard>
+    {moduleMenu && createPortal(<RackMenu anchor={moduleMenu} commands={[...moduleCommands,
+      { id: 'close-module', label: 'CLOSE MODULE' },
+      ...(moduleMenu.onDelete ? [{ id: 'delete-module', label: 'DELETE MODULE' }] : []),
+    ]} getSubmenuCommands={moduleSubmenu}
+      label="Display Module commands" menuSurfaceId={menuSurface} returnFocus={moduleMenu.trigger}
+      onClose={() => setModuleMenu(null)} onCommand={moduleCommand} systemWorkflowOverlay />, document.body)}</>;
 });

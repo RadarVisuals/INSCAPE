@@ -87,12 +87,12 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
     }} onDoubleClick={event => { event.preventDefault(); event.stopPropagation(); }} />, scene.parentElement)}
   {createPortal(<div className="system-workflow__scene-controls" role="group" aria-label="Artwork inspection">
     <span>INSPECT</span>
-    <button className="system-workflow__round-control" aria-label="Previous artwork" disabled={closing || viewer.total < 2}
+    <button className="system-workflow__overlay-icon" aria-label="Previous artwork" disabled={closing || viewer.total < 2}
       onClick={() => viewer.navigate(-1)} type="button"><ChevronLeft /></button>
     <span aria-live="polite">{String(viewer.position + 1).padStart(2, '0')} / {String(viewer.total).padStart(2, '0')}</span>
-    <button className="system-workflow__round-control" aria-label="Next artwork" disabled={closing || viewer.total < 2}
+    <button className="system-workflow__overlay-icon" aria-label="Next artwork" disabled={closing || viewer.total < 2}
       onClick={() => viewer.navigate(1)} type="button"><ChevronRight /></button>
-    <button className="system-workflow__round-control" aria-label="Close artwork viewer" disabled={closing}
+    <button className="system-workflow__overlay-icon" aria-label="Close artwork viewer" disabled={closing}
       onClick={close} ref={closeRef} type="button"><X /></button>
   </div>, controlsContainer)}</>;
 }

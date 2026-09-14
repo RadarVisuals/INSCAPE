@@ -1,3 +1,4 @@
+import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import MirrorSurface from './MirrorSurface.jsx';
@@ -59,9 +60,11 @@ function MirrorInstance({ record, store, profileAddress, registerTarget, suspend
   }
   const settingsChange = useCallback(settings => save({ settings }), [save]);
   const assetAccepted = useCallback(asset => save({ asset }), [save]);
+  const shortcutMenu = useModuleShortcutMenu({ store, profileAddress, kind: 'mirror', record: record });
   const dossier = useMemo(() => record.asset ? createProfileDocumentV9FocusViewModel({ asset: record.asset })?.dossier : null, [record.asset]);
   return <div className="mirror-workbench" data-workbench-module="mirror" data-mirror-id={record.id}>
-    {!presentation.open && <button className="mirror-workbench__reopen" style={{ left: 24 + index * 124 }} onClick={() => open(true)}>{record.name}</button>}
+    {shortcutMenu.content}
+    {!presentation.open && <button className="mirror-workbench__reopen" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown} style={{ left: 24 + index * 124 }} onClick={() => open(true)}>{record.name}</button>}
     {presentation.open && <WorkbenchWindow label="Mirror" title={record.name} width={presentation.window.width}
       initialX={presentation.window.left} initialY={presentation.window.top} initialHeight={presentation.window.height}
       onLayoutChange={changeLayout} controls={<button type="button" className="system-workflow__round-control" aria-label={`Close ${record.name}`} onClick={() => open(false)}><X /></button>}>

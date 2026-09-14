@@ -11,7 +11,7 @@ export function profileDocumentV9EntryGrid(documentInput) {
 
 export function ownerSystemWorkflowPreviewEntryMediaUrls(previewDocument) {
   const entryGrid = profileDocumentV9EntryGrid(previewDocument);
-  return [...new Set(entryGrid.placements
+  return [...new Set((entryGrid?.placements || [])
     .map(({ asset }) => resolvePublishedAssetUrl(asset.media.url))
     .filter(Boolean))];
 }

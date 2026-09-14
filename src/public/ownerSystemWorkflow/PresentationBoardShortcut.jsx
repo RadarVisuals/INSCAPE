@@ -35,8 +35,9 @@ const shortcutPresentationStyle = (presentation) => ({
   '--workflow-shortcut-width': `${shortcutBounds(presentation).width}px`,
 });
 export default function PresentationBoardShortcut({ assetsById, host, instanceState, menuSurface,
-  onRestore, profileAddress, shortcutSnap, shortcutTargetRef, name: shortcutName, onNameChange, initialShortcut, onShortcutChange, instanceId, readOnly = false }) {
-  const storedShortcut = useMemo(() => initialShortcut || (readOnly ? null : loadPresentationBoardShortcut(profileAddress)), [profileAddress]);
+  onDelete, onRestore, profileAddress, shortcutSnap, shortcutTargetRef, name: shortcutName, onNameChange, initialShortcut, onShortcutChange, instanceId, readOnly = false,
+  moduleCommands = [], moduleSubmenu, onModuleCommand }) {
+  const storedShortcut = useMemo(() => initialShortcut || (readOnly ? null : loadPresentationBoardShortcut(profileAddress, undefined, instanceId)), [profileAddress, instanceId]);
   const [shortcutPosition, setShortcutPosition] = useState(storedShortcut?.position || { left: 24, top: 72 });
   const [shortcutIconId, setShortcutIconId] = useState(storedShortcut?.iconAssetId || null);
   const [shortcutIconMedia, setShortcutIconMedia] = useState(() => isValidPlacementMedia(storedShortcut?.iconMedia) ? storedShortcut.iconMedia : null);
@@ -127,17 +128,26 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
     top: Math.max(8, Math.min(globalThis.innerHeight - SHORTCUT_ICON_EDITOR_SIZE.height - 8,
       hostRectangle.top + shortcutPosition.top)),
   } : { left: 8, top: 8 };
+  const openMenu = event => {
+    if (readOnly) return;
+    event.preventDefault(); event.stopPropagation();
+    const bounds = event.currentTarget.getBoundingClientRect();
+    setShortcutMenu({ x: event.clientX || bounds.left, y: event.clientY || bounds.bottom, onDelete });
+  };
   return <>
     {shortcutVisible
       && <button aria-label={instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED
         ? `Open ${shortcutName}` : `${shortcutName} shortcut`} className="system-workflow__desktop-shortcut" ref={shortcutNode}
-      onContextMenu={(event) => { if (readOnly) return; event.preventDefault(); event.stopPropagation(); setShortcutMenu({ x: event.clientX, y: event.clientY }); }}
+      onContextMenu={openMenu}
       onDoubleClick={() => { if (instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED) onRestore?.(); }} onDragOver={(event) => { if ([...event.dataTransfer.types].includes('application/x-inscape-asset')) event.preventDefault(); }}
       onDrop={(event) => { event.preventDefault(); event.stopPropagation();
         if (readOnly) return;
         applyShortcutAsset(assetsById.get(event.dataTransfer.getData('application/x-inscape-asset')));
       }}
-      onKeyDown={(event) => { if (event.key === 'Enter' && !renaming && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED) { event.preventDefault(); onRestore?.(); } }}
+      onKeyDown={(event) => {
+        if (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10') openMenu(event);
+        if (event.key === 'Enter' && !renaming && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED) { event.preventDefault(); onRestore?.(); }
+      }}
       onPointerCancel={stopShortcutDrag} onPointerDown={beginShortcutDrag} onPointerMove={moveShortcutDrag}
       onPointerUp={stopShortcutDrag} style={{ left: shortcutPosition.left, top: shortcutPosition.top,
         ...shortcutPresentationStyle(shortcutIconPresentation) }} type="button">
@@ -168,9 +178,13 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
       <footer><button onClick={() => setShortcutIconPresentation(DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION)} type="button">Reset</button><button onClick={() => setShortcutIconEditing(false)} type="button">Done</button><button aria-label="Close icon editor" className="system-workflow__shortcut-icon-editor-close" onClick={() => setShortcutIconEditing(false)} title="Close" type="button"><X /></button></footer>
     </section>}
     {shortcutMenu && createPortal(<RackMenu anchor={shortcutMenu} commands={[
+      ...moduleCommands,
       { id: 'rename', label: 'RENAME' }, { disabled: !shortcutIconId, id: 'edit-icon', label: 'EDIT ICON' },
       { disabled: !shortcutIconId, id: 'reset-icon', label: 'RESET ICON' },
-    ]} label="Display Module shortcut commands" menuSurfaceId={menuSurface} onClose={() => setShortcutMenu(null)} onCommand={(id) => {
+      ...(onDelete ? [{ id: 'delete', label: 'DELETE' }] : []),
+    ]} getSubmenuCommands={moduleSubmenu} returnFocus={shortcutNode.current} label="Display Module shortcut commands" menuSurfaceId={menuSurface} onClose={() => setShortcutMenu(null)} onCommand={(id) => {
+      onModuleCommand?.(id);
+      if (id === 'delete') shortcutMenu.onDelete?.();
       if (id === 'rename') { setRenameValue(shortcutName); setRenaming(true); }
       if (id === 'edit-icon') setShortcutIconEditing(true);
       if (id === 'reset-icon') { setShortcutIconId(null); setShortcutIconPresentation(DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION); }

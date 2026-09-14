@@ -23,8 +23,22 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
     return () => { window.removeEventListener('keydown', close); window.removeEventListener('pointerdown', outside, true); window.clearTimeout(hoverTimerRef.current); };
   }, [onClose, onPreviewCommand, returnFocus]);
   const onKeyDown = (event) => {
+    const button = event.target.closest('button');
+    const panel = button?.closest('[role="menu"]');
+    if (event.key === 'ArrowRight' && button?.getAttribute('aria-haspopup') === 'menu') {
+      event.preventDefault(); button.click();
+      requestAnimationFrame(() => panel?.querySelector('[role="menu"] button:not(:disabled)')?.focus());
+      return;
+    }
+    if (event.key === 'ArrowLeft' && panel && panel !== ref.current) {
+      event.preventDefault();
+      const parent = panel.parentElement.closest('[role="menu"]');
+      const trigger = parent?.querySelector(':scope > button[aria-expanded="true"]');
+      setOpenPath(current => current.slice(0, Number(panel.dataset.depth) - 1));
+      trigger?.focus(); return;
+    }
     if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
-    event.preventDefault(); const buttons = [...ref.current.querySelectorAll('button:not(:disabled)')];
+    event.preventDefault(); const buttons = [...(panel || ref.current).querySelectorAll(':scope > button:not(:disabled)')];
     const offset = event.key === 'ArrowDown' ? 1 : -1; const index = buttons.indexOf(document.activeElement);
     buttons[(index + offset + buttons.length) % buttons.length]?.focus();
   };
@@ -46,7 +60,7 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
     const openIndex = panelCommands.findIndex((command) => command.id === openId);
     const openCommand = openIndex >= 0 ? panelCommands[openIndex] : null;
     const submenu = openCommand ? submenuFor(openCommand) : [];
-    const panelWidth = systemWorkflowOverlay ? SYSTEM_WORKFLOW_PANEL_WIDTH : PANEL_WIDTH;
+    const panelWidth = systemWorkflowOverlay ? Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) : PANEL_WIDTH;
     const rowHeight = systemWorkflowOverlay ? SYSTEM_WORKFLOW_ROW_HEIGHT : ROW_HEIGHT;
     const opensLeft = position.x + panelWidth * (depth + 2) > window.innerWidth - 8;
     const desiredChildTop = panelViewportTop + openIndex * rowHeight;
@@ -65,8 +79,8 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
           onClick={() => { if (hasSubmenu) { openSubmenu(depth, command, true); return; } onPreviewCommand?.(null); onCommand(command.id); }}><i aria-hidden="true" /><span>{displayLabel}</span><b aria-hidden="true">{hasSubmenu ? '›' : mixed ? '−' : selected ? '·' : ''}</b></button>;
       })}
       {submenu.length > 0 && <div className={`desktop-menu desktop-menu--flyout${panelClassName ? ` ${panelClassName}` : ''}`}
-        data-system-workflow-overlay={systemWorkflowOverlay || undefined} role="menu" aria-label={`${openCommand.label} options`}
-        style={{ position: 'absolute', top: childTop, left: opensLeft ? 'auto' : `calc(100% + 4px)`, right: opensLeft ? `calc(100% + 4px)` : 'auto' }}>
+        data-depth={depth + 1} data-system-workflow-overlay={systemWorkflowOverlay || undefined} role="menu" aria-label={`${openCommand.label} options`}
+        style={{ position: 'absolute', width: panelWidth, top: childTop, left: opensLeft ? 'auto' : '100%', right: opensLeft ? '100%' : 'auto' }}>
         {renderPanel(submenu, depth + 1, childViewportTop)}
       </div>}
     </>;
@@ -74,7 +88,8 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
   return <div ref={ref} className={`desktop-menu${getSubmenuCommands ? ' desktop-menu--cascade' : ''}${className ? ` ${className}` : ''}`}
     data-lattice-menu-surface={menuSurfaceId || undefined} data-menu-surface={menuSurfaceId || undefined}
     data-system-workflow-overlay={systemWorkflowOverlay || undefined}
-    role="menu" aria-label={label} style={{ left: position.x, top: position.y }} onKeyDown={onKeyDown} onPointerLeave={() => { window.clearTimeout(hoverTimerRef.current); setOpenPath([]); onPreviewCommand?.(null); }}>
+    role="menu" aria-label={label} style={{ left: position.x, top: position.y, ...(systemWorkflowOverlay ? { width: Math.min(SYSTEM_WORKFLOW_PANEL_WIDTH, (window.innerWidth - 20) / 2) } : {}) }} onKeyDown={onKeyDown}
+    onPointerLeave={() => { window.clearTimeout(hoverTimerRef.current); setOpenPath([]); onPreviewCommand?.(null); }}>
     {renderPanel(commands)}
   </div>;
 }

@@ -1,0 +1,134 @@
+/* Approved bevel chrome. Opt in through chrome="bevel" on the shared shell.
+   Theme changes values; the window and control recipes remain identical. */
+[data-window-chrome="bevel"] {
+  --workflow-window-edge: color-mix(in srgb, var(--workflow-ink) 25%, var(--workflow-panel));
+  --workflow-window-edge-top: inset 0 1px 0 rgb(255 255 255 / 18%);
+  --workflow-window-edge-sides: inset 1px 0 0 rgb(255 255 255 / 10%), inset -1px -1px 0 rgb(0 0 0 / 18%);
+  --workflow-window-overlay: color-mix(in srgb, var(--workflow-panel) 65%, transparent);
+  --workflow-window-selector: inset 0 2px 0 var(--workflow-ink);
+  --workflow-window-control-size: 26px;
+  --workflow-window-control-ink: var(--workflow-ink);
+  --workflow-window-control-fill: linear-gradient(155deg, color-mix(in srgb, var(--workflow-ink) 19%, var(--workflow-panel)), color-mix(in srgb, var(--workflow-ink) 12%, var(--workflow-panel)));
+  --workflow-window-control-hover: linear-gradient(155deg, color-mix(in srgb, var(--workflow-ink) 25%, var(--workflow-panel)), color-mix(in srgb, var(--workflow-ink) 16%, var(--workflow-panel)));
+  --workflow-window-control-shadow: inset 0 1px 0 rgb(255 255 255 / 28%), inset 0 0 0 1px rgb(255 255 255 / 5%), 0 2px 0 rgb(0 0 0 / 40%), 0 3px 4px rgb(0 0 0 / 24%);
+  --workflow-window-control-active-shadow: inset 0 1px 0 rgb(255 255 255 / 18%), inset 0 0 0 1px rgb(255 255 255 / 5%), 0 1px 0 rgb(0 0 0 / 40%);
+  --workflow-window-control-pressed-fill: color-mix(in srgb, var(--workflow-ink) 12%, var(--workflow-panel));
+  --workflow-window-control-pressed-shadow: inset 0 2px 3px rgb(0 0 0 / 28%), inset 0 -1px 0 rgb(255 255 255 / 8%);
+  --workflow-window-chrome-noise-opacity: 3%;
+}
+.system-workflow__detached-window[data-window-chrome="bevel"] {
+  --detached-window-gutter: 1px;
+  border-color: var(--workflow-window-edge);
+  background: var(--workflow-panel);
+  box-shadow: var(--workflow-window-edge-top), var(--workflow-window-chrome-shadow);
+}
+[data-window-chrome="bevel"]:is([data-menu-surface="ash"], [data-menu-surface="mist"], [data-menu-surface="paper"]) {
+  --workflow-window-control-ink: color-mix(in srgb, var(--workflow-ink) 85%, var(--workflow-panel));
+  --workflow-window-control-fill: linear-gradient(155deg, color-mix(in srgb, white 18%, var(--workflow-panel)), color-mix(in srgb, var(--workflow-ink) 4%, var(--workflow-panel)));
+  --workflow-window-control-hover: linear-gradient(155deg, color-mix(in srgb, white 30%, var(--workflow-panel)), var(--workflow-panel));
+  --workflow-window-control-shadow: inset 0 1px 0 rgb(255 255 255 / 70%), inset 0 -1px 0 rgb(0 0 0 / 6%), 0 1px 2px rgb(0 0 0 / 12%), 0 2px 4px rgb(0 0 0 / 5%);
+  --workflow-window-control-active-shadow: inset 0 1px 1px rgb(0 0 0 / 8%), 0 1px 1px rgb(0 0 0 / 6%);
+  --workflow-window-control-pressed-fill: color-mix(in srgb, var(--workflow-ink) 3%, var(--workflow-panel));
+  --workflow-window-control-pressed-shadow: inset 0 2px 3px rgb(0 0 0 / 10%), inset 0 -1px 0 rgb(255 255 255 / 50%);
+}
+.system-workflow__detached-window[data-window-chrome="bevel"]::before {
+  content: ''; position: absolute; inset: 0; z-index: 5; pointer-events: none;
+  border-radius: inherit; box-shadow: var(--workflow-window-edge-sides);
+}
+.system-workflow__detached-window[data-window-chrome="bevel"] > .system-workflow__detached-window-titlebar {
+  background: var(--workflow-window-overlay);
+}
+.system-workflow__detached-window[data-window-chrome="bevel"] > .system-workflow__detached-window-surface {
+  border: 0;
+  border-radius: 0 0 calc(var(--detached-window-radius) - 2px) calc(var(--detached-window-radius) - 2px);
+  box-shadow: none; background: transparent;
+}
+.system-workflow__detached-window[data-window-chrome="bevel"] > .system-workflow__detached-window-surface::before { display: none; }
+
+/* These controls own their states instead of overriding legacy round controls. */
+[data-window-chrome="bevel"] .system-workflow__window-cap {
+  box-sizing: border-box; display: grid; place-items: center; padding: 0;
+  width: var(--workflow-window-control-size); min-width: var(--workflow-window-control-size); height: var(--workflow-window-control-size);
+  overflow: hidden; border: 0; border-radius: 50%; cursor: pointer;
+  color: var(--workflow-window-control-ink); background: var(--workflow-window-control-fill);
+  box-shadow: var(--workflow-window-control-shadow);
+}
+[data-window-chrome="bevel"] .system-workflow__window-cap svg { width: 17px; height: 17px; stroke-width: 2.8; }
+[data-window-chrome="bevel"] .system-workflow__window-cap:is([data-icon="settings"], [data-icon="utility"]) svg { width: 16px; height: 16px; stroke-width: 1.8; }
+[data-window-chrome="bevel"] .system-workflow__window-cap:hover { background: var(--workflow-window-control-hover); }
+[data-window-chrome="bevel"] .system-workflow__window-cap:active { transform: translateY(1px); box-shadow: var(--workflow-window-control-active-shadow); }
+[data-window-chrome="bevel"] .system-workflow__window-cap[aria-pressed="true"] {
+  transform: translateY(1px); background: var(--workflow-window-control-pressed-fill); box-shadow: var(--workflow-window-control-pressed-shadow);
+}
+[data-window-chrome="bevel"] .system-workflow__window-cap:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: 2px; }
+[data-window-chrome="bevel"] .system-workflow__window-cap:disabled { cursor: default; opacity: .35; }
+
+/* Display keeps its frame geometry (including the attached bay) outside Stage. */
+.system-workflow__presentation-board[data-window-chrome="bevel"] {
+  --workflow-board-frame-gap: 0px;
+  --workflow-board-frame-surface: var(--workflow-panel);
+  grid-template-rows: minmax(0, 1fr);
+}
+.system-workflow__presentation-board[data-window-chrome="bevel"]::before {
+  border-color: var(--workflow-window-edge);
+  box-shadow: none;
+}
+.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip {
+  position: absolute; inset: 0 0 auto; z-index: 41;
+  height: 48px; padding: 8px 10px;
+  justify-content: flex-end; overflow: visible; background: transparent;
+}
+.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip:focus-visible {
+  outline: 1px solid var(--workflow-ink); outline-offset: -2px;
+}
+.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__board-title {
+  max-width: 100%; gap: 4px; padding-inline: 4px;
+  background: var(--workflow-window-overlay); border-radius: 4px;
+}
+.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__identity-strip .system-workflow__overlay-icon {
+  box-sizing: border-box; display: grid; place-items: center; flex: 0 0 28px;
+  width: 28px; min-width: 28px; height: 28px; padding: 0;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  color: var(--workflow-ink); cursor: pointer; transform: none;
+}
+.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__identity-strip .system-workflow__overlay-icon svg {
+  width: 16px; height: 16px; stroke-width: 1.8;
+}
+.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__identity-strip .system-workflow__overlay-icon:hover { background: var(--workflow-hover); }
+.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__identity-strip .system-workflow__overlay-icon[aria-pressed="true"] { box-shadow: inset 0 -2px 0 currentColor; }
+.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__identity-strip .system-workflow__overlay-icon:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: 1px; }
+.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__identity-strip .system-workflow__overlay-icon:disabled { opacity: .35; cursor: default; }
+.system-workflow__presentation-board[data-window-chrome="bevel"][data-authoring-locked] .system-workflow__identity-strip .system-workflow__composition-lock { color: #ff5a62; }
+.system-workflow__presentation-board[data-window-chrome="bevel"] :is(.system-workflow__board-window-controls, .system-workflow__board-workspace-controls, .system-workflow__composition-lock-controls) {
+  padding-inline: 4px; gap: 5px;
+}
+.system-workflow__presentation-board[data-window-chrome="bevel"][data-inspecting] > .system-workflow__identity-strip { pointer-events: none; }
+.system-workflow__presentation-board[data-window-chrome="bevel"][data-inspecting] .system-workflow__board-title { pointer-events: auto; }
+.system-workflow__presentation-board[data-window-chrome="bevel"]:not([data-immersive]) > .system-workflow__stage-viewport {
+  border-radius: calc(var(--workflow-board-radius) - 1px);
+}
+.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__stage-border { border: 0; }
+/* Paint the standalone outline above the artwork's antialiased clip, once.
+   A stroke behind that clip lets light artwork brighten the curved edge. */
+.system-workflow__presentation-board[data-window-chrome="bevel"]:not([data-metadata-sidecar])::before { border-color: transparent; }
+.system-workflow__presentation-board[data-window-chrome="bevel"]:not([data-metadata-sidecar], [data-immersive]) > .system-workflow__stage-border {
+  inset: -1px; border: 1px solid var(--workflow-window-edge);
+  border-radius: var(--workflow-board-radius);
+}
+.system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__window-cap svg,
+.system-workflow__instrument-bay[data-window-chrome="bevel"] .system-workflow__window-cap svg {
+  width: 16px; height: 16px; stroke-width: 1.8;
+}
+.system-workflow__instrument-bay[data-window-chrome="bevel"] > .system-workflow__instrument-content {
+  border: 0; border-radius: 0; background: var(--workflow-window-overlay);
+}
+.system-workflow__instrument-bay[data-window-chrome="bevel"] > .system-workflow__instrument-rail {
+  background: var(--workflow-window-overlay);
+}
+.system-workflow__instrument-bay[data-window-chrome="bevel"] [role="tab"][aria-selected="true"] {
+  box-shadow: var(--workflow-window-selector);
+}
+.system-workflow__instrument-bay[data-window-chrome="bevel"][data-projection="overlay"] {
+  border-color: var(--workflow-window-edge); background: var(--workflow-panel);
+  box-shadow: var(--workflow-window-edge-top), var(--workflow-window-edge-sides), var(--workflow-window-chrome-shadow);
+}
