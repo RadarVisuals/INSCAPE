@@ -33,7 +33,7 @@ export default function useDisplayInspection(options) {
     update(null);
     if (current?.scope === latest.current.scope) latest.current.onClose?.();
   }, [update]);
-  const open = useCallback((id, source = latest.current.getElement(id)) => {
+  const open = useCallback((id, source = latest.current.getElement(id), interaction = {}) => {
     const current = latest.current;
     if (!mounted.current || sessionRef.current || !current.items.some(item => item.id === id)) return false;
     const originRectangle = rectangle(source);
@@ -44,8 +44,9 @@ export default function useDisplayInspection(options) {
       const next = latest.current;
       if (!ready || !next.getEntry(id) || !mounted.current || operation !== request.current || scope !== next.scope
         || !source.isConnected || !next.items.some(item => item.id === id)) return false;
-      next.onOpen?.(id);
-      update({ scope, placementId: id, originRectangle });
+      next.onOpen?.(id, interaction);
+      update({ scope, placementId: id, originRectangle, cue: interaction.cue || null,
+        cueMetadataOpen: Boolean(interaction.cue) });
       return true;
     };
     if (!current.prepare) return finish(Boolean(current.getEntry(id)));
@@ -56,13 +57,22 @@ export default function useDisplayInspection(options) {
     if (!active || position < 0 || available.length < 2) return;
     const destination = available[(position + direction + available.length) % available.length];
     options.onNavigate?.(destination.id);
-    update({ ...active, placementId: destination.id, originRectangle: rectangle(options.getElement(destination.id)) });
+    update({ ...active, cue: null, cueMetadataOpen: false, placementId: destination.id, originRectangle: rectangle(options.getElement(destination.id)) });
   };
+  const setCueMetadataOpen = useCallback(value => {
+    const current = sessionRef.current;
+    if (!current?.cue || current.scope !== latest.current.scope) return;
+    update({ ...current, cueMetadataOpen: Boolean(value) });
+  }, [update]);
   useEffect(() => {
     if (placementId && (!entry || !rectangle(options.getElement(placementId)))) close();
   }, [placementId, items, entry, close]);
   return {
     placementId, entry, position, total: available.length,
+    cue: active?.cue || null,
+    cueMetadataOpen: Boolean(active?.cueMetadataOpen), setCueMetadataOpen,
+    getElement: options.getElement,
+    getEntry: options.getEntry,
     originRectangle: active?.originRectangle || null,
     atmosphereActive: false,
     sourcePlacementId: null,

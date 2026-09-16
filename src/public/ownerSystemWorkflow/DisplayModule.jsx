@@ -5,6 +5,7 @@ import { PRIMARY_DISPLAY_ID } from '../../systemWorkflow/domain/displayModules.j
 import { isSystemWorkflowWorldCoverGrid } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import OwnerSystemWorkflowCanvas from './OwnerSystemWorkflowCanvas.jsx';
 import DisplayFocusViewer from './DisplayFocusViewer.jsx';
+import DisplayInspectionCues from './DisplayInspectionCues.jsx';
 import { OwnerSystemWorkflowMetadataContent } from './OwnerSystemWorkflowMetadataModule.jsx';
 import PresentationBoard from './PresentationBoard.jsx';
 import DisplayInstruments from './DisplayInstruments.jsx';
@@ -130,6 +131,13 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       onToggleLayers={() => toggleInstrument('layers')}
       onToggleMetadata={() => toggleInstrument('metadata')}
       onInspectionCancel={viewer.close}
+      renderCues={host => <DisplayInspectionCues key={`${controller.draft.profileAddress}:${controller.selectedGridId}`}
+        host={host} items={controller.selectedGrid?.placements || []} viewer={viewer}
+        editable={!authoringLocked} disabled={panelOccupied || playingGrids || playbackTransition || Boolean(crop.cropSession)}
+        getDossier={id => {
+          const placement = controller.selectedGrid?.placements.find(item => item.id === id);
+          return createOwnerSystemWorkflowMetadataViewModel(placement, assetsById.get(placement?.stableAssetId))?.dossier;
+        }} />}
       onAuthoringLockToggle={toggleAuthoringLock}
       renderInspection={viewer.placementId ? (container, controlsContainer, scene) => <DisplayFocusViewer
         scene={scene} container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}

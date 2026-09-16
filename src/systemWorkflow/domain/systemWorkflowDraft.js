@@ -11,6 +11,7 @@ import { validMobilePresentation, mobileReferenceCount } from '../../mobile/doma
 import { canUseMobileRenderer } from '../../mobile/domain/customPresentation.js';
 
 export const SYSTEM_WORKFLOW_DRAFT_VERSION = 4;
+export const resolveInspectionMode = placement => placement?.inspectionMode || 'LIFT';
 export const SYSTEM_WORKFLOW_ARTBOARD = Object.freeze({ aspectWidth: 16, aspectHeight: 9 });
 export const SYSTEM_WORKFLOW_GEOMETRY = Object.freeze({ columns: 32, rows: 18 });
 export const SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID = 'grid:world-cover';

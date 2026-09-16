@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import LatticeProductionFocusArtwork from '../../lattice/rendering/LatticeProductionFocusArtwork.jsx';
-import { focusedViewerRectangle, focusViewerPresentationDimensions } from '../../lattice/rendering/latticeFocusViewer.js';
+import { displayLiftRectangle } from './displayLiftGeometry.js';
 import { interpolateLatticeProductionFocusRectangle, latticeProductionFocusOpeningProgress,
   latticeProductionFocusTransitionProgress } from '../../lattice/rendering/latticeProductionFocusArtworkMotion.js';
 
@@ -25,11 +25,8 @@ export default function DisplayLiftArtwork({ scene, source, entry, closing, redu
       const scaleY = host.clientHeight / bounds.height;
       const sourceRectangle = { left: (origin.left - bounds.left) * scaleX,
         top: (origin.top - bounds.top) * scaleY, width: origin.width * scaleX, height: origin.height * scaleY };
-      const dimensions = focusViewerPresentationDimensions(entry);
-      setGeometry({ sourceRectangle, focusedRectangle: focusedViewerRectangle(
-        { left: 0, top: 0, ...dimensions }, { width: host.clientWidth, height: host.clientHeight },
-        { horizontalMargin: Math.min(32, host.clientWidth * .04),
-          verticalMargin: Math.min(32, host.clientHeight * .04), verticalArtworkScale: 1 }) });
+      setGeometry({ sourceRectangle, focusedRectangle: displayLiftRectangle(entry,
+        { width: host.clientWidth, height: host.clientHeight }) });
     };
     measure();
     const observer = new ResizeObserver(measure);

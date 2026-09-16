@@ -84,6 +84,22 @@ test('shared inspection orders available artwork and owns the complete return li
   assert.deepEqual(await page.evaluate(() => sessionTest.events), [['open', 'first'], ['navigate', 'last'], ['navigate', 'first'], ['close']]);
 }));
 
+test('metadata visibility is independent from artwork lifetime and resets on navigation', () => withSession(async page => {
+  await page.evaluate(() => sessionTest.viewer.open('first', undefined, { cue: { x: .4, y: .3 } })); await settle(page);
+  assert.equal(await page.evaluate(() => sessionTest.viewer.cueMetadataOpen), true);
+  await page.evaluate(() => sessionTest.viewer.setCueMetadataOpen(false)); await settle(page);
+  assert.deepEqual(await page.evaluate(() => [sessionTest.viewer.placementId, sessionTest.viewer.cueMetadataOpen, sessionTest.events]),
+    ['first', false, [['open', 'first']]]);
+  await page.evaluate(() => sessionTest.viewer.setCueMetadataOpen(true)); await settle(page);
+  assert.equal(await page.evaluate(() => sessionTest.viewer.cueMetadataOpen), true);
+  await page.evaluate(() => sessionTest.viewer.navigate(1)); await settle(page);
+  assert.deepEqual(await page.evaluate(() => [sessionTest.viewer.placementId, sessionTest.viewer.cueMetadataOpen, sessionTest.viewer.cue]), ['last', false, null]);
+  await page.evaluate(() => sessionTest.viewer.setCueMetadataOpen(true)); await settle(page);
+  assert.equal(await page.evaluate(() => sessionTest.viewer.cueMetadataOpen), false);
+  await page.evaluate(() => sessionTest.viewer.close()); await settle(page);
+  assert.deepEqual(await page.evaluate(() => sessionTest.events), [['open', 'first'], ['navigate', 'last'], ['close']]);
+}));
+
 for (const interruption of ['grid', 'profile', 'close', 'remove', 'unmount', 'reject']) {
   test(`pending inspection cannot reopen after ${interruption}`, () => withSession(async page => {
     await page.evaluate(() => { sessionTest.deferred = true; sessionTest.render(); }); await settle(page);

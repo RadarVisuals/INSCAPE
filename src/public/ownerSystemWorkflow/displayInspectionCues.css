@@ -1,0 +1,26 @@
+.display-inspection-cues { position: absolute; inset: 0; z-index: 45; pointer-events: none; color: var(--workflow-ink); }
+.display-inspection-cue { box-sizing: border-box; position: absolute; width: 30px; height: 30px; transform: translate(-50%, -50%); display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: var(--workflow-ink); pointer-events: none; opacity: 0; cursor: pointer; touch-action: none; transition: opacity 140ms ease; }
+.display-inspection-cue > span { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--workflow-border-strong); border-radius: 50%; background: color-mix(in srgb, var(--workflow-panel) 60%, transparent); font: 400 16px/1 "Inscape Sora", sans-serif; }
+.system-workflow__presentation-board:hover .display-inspection-cue,
+.display-inspection-cue:focus-visible, .display-inspection-cues[data-open] .display-inspection-cue { opacity: 1; pointer-events: auto; }
+.display-inspection-cue:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: 1px; }
+.display-inspection-bubble { box-sizing: border-box; position: absolute; display: flex; flex-direction: column; overflow: hidden; pointer-events: auto; user-select: text; border: 1px solid var(--workflow-border-strong); border-radius: var(--workflow-board-radius); background: var(--workflow-panel); color: var(--workflow-ink); animation: display-cue-unfold 160ms ease-out; font: var(--workflow-type-control); }
+/* The material belongs to this foldout only. All tint and edge colours follow
+   the selected menu surface; unsupported/reduced-transparency views stay solid. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .display-inspection-bubble {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--workflow-ink) 7%, transparent), transparent 35%, transparent 75%, color-mix(in srgb, var(--workflow-ink) 4%, transparent)), color-mix(in srgb, var(--workflow-panel) 60%, transparent);
+    -webkit-backdrop-filter: blur(16px) saturate(1.08);
+    backdrop-filter: blur(16px) saturate(1.08);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--workflow-ink) 18%, transparent), inset 1px 0 0 color-mix(in srgb, var(--workflow-ink) 7%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--workflow-ink) 10%, transparent);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .display-inspection-bubble { background: var(--workflow-panel); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+}
+.system-workflow__presentation-board:has(.display-inspection-cues[data-open]) .system-workflow__selection-chrome { visibility: hidden; }
+.display-inspection-bubble :is(button, select):focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
+.display-inspection-error { position: absolute; bottom: 8px; left: 8px; margin: 0; background: var(--workflow-panel); font: var(--workflow-type-control); }
+@keyframes display-cue-unfold { from { opacity: 0; } to { opacity: 1; } }
+@media (hover: none) { .display-inspection-cue { opacity: 1; pointer-events: auto; } }
+@media (prefers-reduced-motion: reduce) { .display-inspection-cue { transition: none; } .display-inspection-bubble { animation: none; } }

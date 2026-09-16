@@ -12,6 +12,7 @@ import './visitorGridWorld.css';
 import PresentationBoard from '../../public/ownerSystemWorkflow/PresentationBoard.jsx';
 import useDisplayInspection from '../../public/ownerSystemWorkflow/useDisplayInspection.js';
 import DisplayFocusViewer from '../../public/ownerSystemWorkflow/DisplayFocusViewer.jsx';
+import DisplayInspectionCues from '../../public/ownerSystemWorkflow/DisplayInspectionCues.jsx';
 import DisplayInstruments from '../../public/ownerSystemWorkflow/DisplayInstruments.jsx';
 import { transitionDisplayInstruments } from '../../public/ownerSystemWorkflow/displayInstrumentState.js';
 import { OwnerSystemWorkflowMetadataContent } from '../../public/ownerSystemWorkflow/OwnerSystemWorkflowMetadataModule.jsx';
@@ -106,11 +107,11 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     .find((node) => node.dataset.placementId === placementId), []);
   const entriesById = useMemo(() => new Map(viewerEntries.map(entry => [entry.placement.id, entry])), [viewerEntries]);
   const viewer = useDisplayInspection({
-    scope: activeGrid?.id,
+    scope: `${document.profile.address}:${document.documentId}:${document.revision}:${instanceId || 'display:primary'}:${activeGrid?.id}`,
     items: activeGrid?.placements || [],
     getEntry: id => entriesById.get(id),
     getElement: findPlacementElement,
-    onOpen: () => dispatchInstruments({ type: 'open', instrument: 'metadata' }),
+    onOpen: (_id, interaction) => { if (!interaction.cue) dispatchInstruments({ type: 'open', instrument: 'metadata' }); },
   });
   const viewerEntry = viewer.entry;
   const playback = useGridPlayback({ playing,
@@ -317,6 +318,8 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
       instrumentBayOpen={Boolean(instruments.active)}
       onToggleMetadata={() => dispatchInstruments({ type: 'toggle', instrument: 'metadata' })}
       inspectionAtmosphere={viewer.atmosphereActive} onInspectionCancel={viewer.close}
+      renderCues={host => <DisplayInspectionCues key={`${document.profile.address}:${activeGrid.id}`}
+        host={host} items={activeGrid.placements} viewer={viewer} disabled={playing || Boolean(gridSwipe)} />}
       renderInspection={viewer.placementId && viewer.entry ? (container, controlsContainer, scene) => <DisplayFocusViewer
         scene={scene} container={container} controlsContainer={controlsContainer} viewer={viewer}
         menuSurface={document.appearance.menuSurfaceId} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}

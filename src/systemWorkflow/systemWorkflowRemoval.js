@@ -27,7 +27,7 @@ function canonicalPlacementSnapshot(placement) {
     } : null,
     backing: placement.backing ? { ...placement.backing } : null,
     transparencyMode: placement.transparencyMode,
-    inspectionMode: placement.inspectionMode || 'IN_PLACE',
+    inspectionMode: resolveInspectionMode(placement),
     transform: placement.transform ? { ...placement.transform } : null,
     visibility: placement.visibility,
     locked: placement.locked,
@@ -100,3 +100,4 @@ export function createSystemWorkflowRemovalCandidate(draftInput, {
   grid.placements.splice(placementIndex, 1);
   return assertValidSystemWorkflowDraft(draft);
 }
+import { resolveInspectionMode } from './domain/systemWorkflowDraft.js';

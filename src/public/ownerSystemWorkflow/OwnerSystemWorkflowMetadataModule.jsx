@@ -4,17 +4,18 @@ import { useProfileIdentity } from '../../profileIdentity/index.js';
 
 const compact = (value) => value?.length > 18 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value;
 
-function Creator({ creator }) {
+export function MetadataCreator({ creator, compactView = false }) {
   const address = normalizeProfileAddress(creator?.address);
   const identity = useProfileIdentity(address);
   const resolved = identity?.status === 'RESOLVED' && identity.isUniversalProfile;
-  const name = resolved && identity.name || creator?.name || compact(address) || 'Unknown creator';
+  const name = resolved && identity.name || creator?.name || (compactView ? null : compact(address)) || 'Unknown creator';
   const href = address ? resolved ? `https://universaleverything.io/${address}`
     : `https://explorer.lukso.network/address/${address}` : null;
   const body = <><i>{resolved && identity.avatarUrl ? <img alt="" src={identity.avatarUrl} /> : <UserRound />}</i>
-    <span><strong>{name}</strong>{address && <small>{compact(address)}</small>}</span>{href && <ExternalLink />}</>;
+    <span><strong>{name}</strong>{address && !compactView && <small>{compact(address)}</small>}</span>{href && <ExternalLink />}</>;
   return href ? <a aria-label={`Open creator ${name}`} href={href} rel="noreferrer" target="_blank">{body}</a> : <div>{body}</div>;
 }
+const Creator = MetadataCreator;
 
 function OwnerSystemWorkflowMetadataFields({ dossier }) {
   return <>

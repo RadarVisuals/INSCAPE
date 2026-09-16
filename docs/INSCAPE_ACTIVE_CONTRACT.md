@@ -340,6 +340,55 @@ See [mini app hosting](MINI_APP_HOSTING.md) for the boundaries and checks.
 
 ## Display Module
 
+The September 16 inspection-cue experiment adds hover/focus cues and a compact
+metadata foldout inside Display, shared by Owner, Preview and Visitor. Cue
+activation follows the placement's existing In place/Lift choice. In place
+retains its scene cue; Lift has a separate cue relative to the fitted enlarged
+artwork, initially near its upper-right edge. Unlocked owners can drag or
+keyboard-adjust that enlarged-view cue without moving the thumbnail cue or
+the artwork. Each view retains its own opening-direction preference.
+Closing metadata leaves the artwork inspected and a + to reopen the foldout.
+Clicking the Stage returns the artwork; Escape closes the foldout first and
+the artwork on a second press. Metadata visibility belongs to the temporary
+inspection session and resets on close, navigation or scope change.
+The foldout is testing a theme-tinted glass surface: a 60% panel tint over
+backdrop blur, subtle theme-derived edges, opaque text and bounded internal
+scrolling. Unsupported or reduced-transparency views use a solid theme panel.
+This material experiment is specific to the artwork foldout. The existing Metadata
+instrument remains independently available during this experiment; cue clicks
+do not open, close, attach or move it. The foldout reuses existing metadata
+projections and fields, introducing no second metadata source.
+
+The artwork foldout has a description-first Info view with expandable long
+copy and compact creator attribution. The entire foldout uses Sora, including
+attributes, source details and settings. Info, Attributes and Details use a compact
+top icon rail with accessible names and tooltips. The active cue becomes the
+minus inside that rail and collapses only metadata; there is no duplicate close
+control or external minus while the foldout is open. The minus uses the edge
+nearest its cue: right for a left-opening foldout, left for a right-opening one.
+The plus and minus share their SVG geometry, control size and centre. The card
+grows around that centre, with its header below the content when it needs to open
+upward. Width/direction adapt at Display edges instead of displacing the cue.
+Lift still uses its separate enlarged-artwork anchor when entering inspection.
+Icons brighten on hover/selection without square fills or an active underline;
+keyboard focus remains outlined. Unlocked owners can drag the minus or empty
+header space in both Lift and In place, using the same cue-anchor gesture.
+Automatic opening direction stays fixed until the foldout closes so dragging
+does not flip it. Technical identifiers live in Details and owner cue controls
+use a settings view that replaces the body; a content icon returns to that
+section. Content scrolls within the available Display height.
+This presentation does not replace or redesign the attached/detached sidecar.
+Edition or circulation labels require sourced artwork-level facts; a distinct
+token ID alone is not evidence of a unique edition.
+
+Unlocked owners can move cues within placement bounds plus a modest margin,
+use arrow keys to adjust, Home to reset, and choose a preferred left/right
+opening direction. These experimental offsets and preferences live only in
+the mounted Grid session and reset on Grid change, closure or reload. They are
+not yet authored/published settings. Visitors cannot move them. Deciding what
+the foldout replaces and persisting cue placement follows interaction review.
+
+
 Layers offers one custom Gutter value in canvas units and Apply to all for the
 current scene. It preserves image sizes and directional ordering, including
 staggered layouts. Neighbours are identified by overlapping projections on the
@@ -404,7 +453,9 @@ internal compatibility names during this migration; do not broadly rename them.
   disabled without an editable selection and is not nested in Frame and mat.
   The choice is saved as optional `inspectionMode`
   (`IN_PLACE` or `LIFT`) in drafts and public placements. Existing drafts and
-  publications without it retain Focus in place; no image or geometry is copied
+  publications without it now default to Lift; explicit IN_PLACE choices remain
+  respected. This is a read-time default change, with no saved document rewrite.
+  No image or geometry is copied
   into the saved setting. Visitors follow the authored choice. Lift to centre
   enlarges the artwork within the Stage using its original media proportions,
   dims the other artwork, and returns it on close without changing the scene.

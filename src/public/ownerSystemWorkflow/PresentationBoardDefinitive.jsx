@@ -46,7 +46,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   onMinimize, onRestore, onToggleLayers, onToggleMetadata,
   playing = false, playbackDisabled = true, onTogglePlayback,
   instanceState = PRESENTATION_BOARD_INSTANCE_STATE.WINDOW,
-  menuSurface = null, profileAddress, instanceId, reducedMotion = false, renderInspection, renderInstruments,
+  menuSurface = null, profileAddress, instanceId, reducedMotion = false, renderInspection, renderInstruments, renderCues,
   shortcutTargetRef, instrumentTriggers, shortcutSnap = true, initialPresentation, onWindowChange, onShortcutChange, readOnly = false }) {
   const localShortcutRef = useRef(null);
   const geometryKey = JSON.stringify(documentGeometry);
@@ -181,6 +181,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     const stage = selectionOverlayHost;
     if (!stage) return undefined;
     const wheel = event => {
+      if (event.target.closest?.('.display-inspection-bubble')) return;
       if (event.ctrlKey || !event.deltaY || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
       event.preventDefault(); event.stopPropagation();
       const now = performance.now();
@@ -403,6 +404,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
           </div>
         </div>
       </div>
+      {selectionOverlayHost && renderCues?.(selectionOverlayHost)}
       {renderInstruments?.(metadataSidecarOpen ? 'attached' : 'overlay',
         Math.min((host?.clientHeight || 700) - 210, renderedFrame.top + renderedFrame.height + 12), displayName)}
       {immersive && <button className="system-workflow__immersive-exit" ref={exitImmersiveRef}

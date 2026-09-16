@@ -97,7 +97,7 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
     if (authoringLocked) return;
     const placement = grid.placements.find(({ id }) => id === presentation?.placementId);
     if (!placement) return;
-    controller.run((session) => session.setPlacementPresentation({ gridId: grid.id, placementId: placement.id, expectedPlacement: placement, presentation: { frameId: presentation.frameId, mat: presentation.mat, backing: presentation.backing, transparencyMode: presentation.transparencyMode, inspectionMode: placement.inspectionMode || 'IN_PLACE' } }));
+    controller.run((session) => session.setPlacementPresentation({ gridId: grid.id, placementId: placement.id, expectedPlacement: placement, presentation: { frameId: presentation.frameId, mat: presentation.mat, backing: presentation.backing, transparencyMode: presentation.transparencyMode, inspectionMode: resolveInspectionMode(placement) } }));
     setPresentation(null);
   };
   const reorderFromDrop = (sourceId, targetId) => {
@@ -141,7 +141,7 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
     <span>Inspect</span>
     {[['IN_PLACE', 'In place'], ['LIFT', 'Lift']].map(([mode, label]) => <button key={mode} type="button"
       disabled={!editable || !inspectPlacement}
-      aria-pressed={Boolean(inspectPlacement && (inspectPlacement.inspectionMode || 'IN_PLACE') === mode)}
+      aria-pressed={Boolean(inspectPlacement && resolveInspectionMode(inspectPlacement) === mode)}
       title={mode === 'LIFT' ? 'Lift to centre' : 'Focus in place'}
       onClick={() => changeInspection(mode)}>{label}</button>)}
   </div>;
@@ -180,3 +180,5 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
         </div>;
       })}</div></>, 'system-workflow__layers');
 }
+
+import { resolveInspectionMode } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
