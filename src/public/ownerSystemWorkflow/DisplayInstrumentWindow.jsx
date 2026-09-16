@@ -3,7 +3,7 @@ import { PanelRightClose, X } from 'lucide-react';
 import OwnerSystemWorkflowDetachedWindow from './OwnerSystemWorkflowDetachedWindow.jsx';
 
 // View-only window behavior. The caller supplies its content and commands.
-export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, label, controls, title, titleContent, width = 320, resizableWidth = false, initialHeight = 420, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange }) {
+export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizableWidth = false, initialHeight = 420, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange }) {
   const node = useRef(null);
   const measuredContent = useRef(null);
   const gesture = useRef(null);
@@ -73,7 +73,7 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
       y: current.y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0) }));
   };
   return <OwnerSystemWorkflowDetachedWindow ariaLabel={`${label} — ${title}`} ref={node}
-    className="system-workflow__instrument-window" title={`${label} · ${title}`}
+    className={`system-workflow__instrument-window ${className}`} title={`${label} · ${title}`}
     headerPointerProps={{ 'aria-label': `Move ${label} window`, tabIndex: 0, onKeyDown,
       onPointerDown: start, onPointerMove: move, onPointerUp: finish, onPointerCancel: finish }}
     controls={controls} titleContent={titleContent} background={background} compactContent={compact?.content} chrome={chrome} menuSurface={menuSurface}

@@ -12,6 +12,16 @@ export const Copy = icon(<><rect x="5.5" y="5.5" width="9" height="9" rx="1" /><
 export const ExternalLink = icon(<path d="M7 1.5H3.5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V9M9.5 1.5h5v5M14.5 1.5 7.5 8.5" />);
 export const Minus = icon(<path d="M3 8.5h10" />);
 export const Plus = icon(<path d="M3 8.5h10M8 3.5v10" />);
+export const Pencil = icon(<path d="m3 10 7.5-7.5 3 3L6 13l-4 1ZM9 4l3 3" />);
+export const Bold = icon(<path d="M4.5 2.5h4a3 3 0 0 1 0 6h-4Zm0 6h4.5a2.5 2.5 0 0 1 0 5h-4.5Z" />);
+export const Italic = icon(<path d="M7 2.5h6M3 13.5h6M10 2.5l-4 11" />);
+export const Underline = icon(<path d="M4 2v6a4 4 0 0 0 8 0V2M3 14h10" />);
+export const Quote = icon(<path d="M2 4h4v4H2Zm4 4c0 3-1 4-3 4M10 4h4v4h-4Zm4 4c0 3-1 4-3 4" />);
+export const List = icon(<path d="M6 4h8M6 8h8M6 12h8M2 4h.5M2 8h.5M2 12h.5" />);
+export const ListOrdered = icon(<path d="M6 4h8M6 8h8M6 12h8M1.5 2.5h1V6M1.5 10a1 1 0 1 1 2 0l-2 3h2" />);
+export const Link = icon(<><path d="m6 10 4-4M6 5l2-2a3 3 0 0 1 5 4l-2 2M5 6 3 8a3 3 0 0 0 4 5l2-2" /></>);
+export const Undo = icon(<path d="M5 3 2 6l3 3M2 6h7a4 4 0 0 1 0 8" />);
+export const Redo = icon(<path d="m11 3 3 3-3 3M14 6H7a4 4 0 0 0 0 8" />);
 export const FileText = icon(<><path d="M9.5 1.5h-6v13h9v-10ZM9.5 1.5v3h3M5.5 7h5M5.5 9.5h5M5.5 12h3" /></>);
 export const Tag = icon(<><path d="M8 1.5H2v6l7 7 5.5-5.5Z" /><circle cx="5" cy="4.5" r=".75" /></>);
 export const X = icon(<path d="m4 4 8 8M12 4l-8 8" />);

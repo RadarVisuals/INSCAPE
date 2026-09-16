@@ -7,6 +7,7 @@ import { isValidWorkbenchPresentation } from '../../profileDocument/domain/workb
 import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, isDisplayFormat, projectDisplayDraft } from './displayModules.js';
 import { validMirrorModules } from './mirrorModules.js';
 import { validMiniApps } from '../../miniApps/domain/miniApps.js';
+import { validTextModules } from '../../text/domain/article.js';
 import { validMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
 import { canUseMobileRenderer } from '../../mobile/domain/customPresentation.js';
 
@@ -257,7 +258,7 @@ function validatePlacement(value, path, fail) {
 export function validateSystemWorkflowDraft(input) {
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
-  if (!exactKeys(input, [...DRAFT_KEYS, ...['workbench', 'displays', 'animations', 'mobile', 'miniApps'].filter(key => Object.hasOwn(input || {}, key))])) {
+  if (!exactKeys(input, [...DRAFT_KEYS, ...['workbench', 'displays', 'animations', 'mobile', 'miniApps', 'texts'].filter(key => Object.hasOwn(input || {}, key))])) {
     fail('$', 'invalid_draft_structure', 'Invalid draft');
     return { valid: false, errors, value: null };
   }
@@ -274,6 +275,8 @@ export function validateSystemWorkflowDraft(input) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance?.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid appearance');
   validateIdentity(input.identityPresentation, fail);
+  if (Object.hasOwn(input, 'texts') && !validTextModules(input.texts)) fail('texts', 'invalid_texts', 'Invalid Text module');
+  if (Array.isArray(input.workbench?.texts) && input.workbench.texts.some(item => !Array.isArray(input.texts) || !input.texts.some(text => text?.id === item?.id))) fail('workbench.texts', 'unknown_text', 'Window refers to an unavailable Text module');
   if (Object.hasOwn(input, 'miniApps') && !validMiniApps(input.miniApps)) fail('miniApps', 'invalid_mini_apps', 'Invalid mini app configuration');
   if (Array.isArray(input.workbench?.miniApps) && input.workbench.miniApps.some(item => !Array.isArray(input.miniApps)
     || !input.miniApps.some(app => app?.id === item?.id))) fail('workbench.miniApps', 'unknown_mini_app', 'Window refers to an unavailable mini app');

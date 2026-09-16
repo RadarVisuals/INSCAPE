@@ -1,5 +1,6 @@
 import { validateProfileDocumentV9Asset } from './profileDocumentV9Asset.js';
 import { MAX_MINI_APPS, MINI_APP_ID } from '../../miniApps/domain/miniApps.js';
+import { MAX_TEXT_MODULES, TEXT_ID } from '../../text/domain/article.js';
 
 const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value)
   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
@@ -12,7 +13,16 @@ const windowFrame = (value, height) => exact(value, height ? ['left', 'top', 'wi
 // The currently implemented modules only. Content remains owned by their existing
 // validated Grid/Identity envelopes; this describes their public starting layout.
 export function isValidWorkbenchPresentation(value) {
-  if (!exact(value, ['version', 'display', 'identity', ...['displays', 'miniApps'].filter(key => Object.hasOwn(value || {}, key))]) || value.version !== 1) return false;
+  if (!exact(value, ['version', 'display', 'identity', ...['displays', 'miniApps', 'texts'].filter(key => Object.hasOwn(value || {}, key))]) || value.version !== 1) return false;
+  if (Object.hasOwn(value, 'texts')) {
+    if (!Array.isArray(value.texts) || value.texts.length > MAX_TEXT_MODULES) return false;
+    const ids = new Set();
+    for (const item of value.texts) {
+      if (!exact(item, ['id', 'open', 'window']) || !TEXT_ID.test(item.id) || ids.has(item.id)
+        || typeof item.open !== 'boolean' || !windowFrame(item.window, true)) return false;
+      ids.add(item.id);
+    }
+  }
   if (Object.hasOwn(value, 'miniApps')) {
     if (!Array.isArray(value.miniApps) || value.miniApps.length > MAX_MINI_APPS) return false;
     const ids = new Set();
@@ -62,6 +72,10 @@ export function createDefaultWorkbenchPresentation() {
 
 export function createMiniAppPresentation(id, index = 0) {
   return { id, open: true, window: { left: 96 + index * 32, top: 88 + index * 24, width: 720, height: 540 } };
+}
+
+export function createTextPresentation(id, index = 0) {
+  return { id, open: true, window: { left: 120 + index * 24, top: 80 + index * 24, width: 720, height: 680 } };
 }
 
 export const DISPLAY_DEFAULT_WINDOW_SIZES = Object.freeze({

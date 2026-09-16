@@ -12,6 +12,8 @@ import WorkbenchAlignmentGrid from './WorkbenchAlignmentGrid.jsx';
 import { addMirrorModule } from '../../systemWorkflow/mirrorModuleSession.js';
 import { addMiniApp } from '../../miniApps/miniAppSession.js';
 import { MAX_MINI_APPS } from '../../miniApps/domain/miniApps.js';
+import { addTextModule } from '../../text/textSession.js';
+import { MAX_TEXT_MODULES } from '../../text/domain/article.js';
 import { openMobileModule } from '../../mobile/mobileSession.js';
 import useDraftUndo from './useDraftUndo.js';
 import { removeWorkbenchModule } from '../../systemWorkflow/removeWorkbenchModule.js';
@@ -43,6 +45,7 @@ const ProfileDocumentV9Preview = lazy(() => import('../../profileDocument/compon
 const IdentityModule = lazy(() => import('../identity/IdentityModule.jsx'));
 const MirrorWorkbench = lazy(() => import('../../mirror/MirrorWorkbench.jsx'));
 const MiniAppsWorkbench = lazy(() => import('../../miniApps/MiniAppsWorkbench.jsx'));
+const TextWorkbench = lazy(() => import('../../text/TextWorkbench.jsx'));
 const MobileEditor = lazy(() => import('../../mobile/MobileEditor.jsx'));
 
 function assetMap(assets, records) {
@@ -82,6 +85,10 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const [instanceRecords, setInstanceRecords] = useState({});
   const [instancePresentations, setInstancePresentations] = useState({});
   const [miniAppPresentations, setMiniAppPresentations] = useState({});
+  const [textPresentations, setTextPresentations] = useState({});
+  const registerTextPresentation = useCallback((id, presentation) => setTextPresentations(current => {
+    const next = { ...current }; if (presentation) next[id] = presentation; else delete next[id]; return next;
+  }), []);
   const registerMiniAppPresentation = useCallback((id, presentation) => setMiniAppPresentations(current => { const next = { ...current }; if (presentation) next[id] = presentation; else delete next[id]; return next; }), []);
   const registerController = useCallback((id, record) => setInstanceRecords(current => { const next = { ...current }; if (record) next[id] = record; else delete next[id]; return next; }), []);
   const registerPresentation = useCallback((id, presentation) => setInstancePresentations(current => { const next = { ...current }; if (presentation !== undefined) next[id] = presentation; else delete next[id]; return next; }), []);
@@ -205,9 +212,9 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
   const workbenchProjection = useMemo(() => captureWorkbenchPresentation({
     layout: workbenchLayout, shortcut: shortcutLayout, assetRecords: canonicalRecords, hasPrimaryDisplay,
     displayOpen: hasPrimaryDisplay && boardInstanceState === 'window', identityOpen,
-    displays: controller.draft.displays, miniApps: controller.draft.miniApps,
-    displayPresentations: instancePresentations, miniAppPresentations,
-  }), [hasPrimaryDisplay, workbenchLayout, shortcutLayout, canonicalRecords, boardInstanceState, identityOpen, instancePresentations, controller.draft.displays, controller.draft.miniApps, miniAppPresentations]);
+    displays: controller.draft.displays, miniApps: controller.draft.miniApps, texts: controller.draft.texts,
+    displayPresentations: instancePresentations, miniAppPresentations, textPresentations,
+  }), [hasPrimaryDisplay, workbenchLayout, shortcutLayout, canonicalRecords, boardInstanceState, identityOpen, instancePresentations, controller.draft.displays, controller.draft.miniApps, miniAppPresentations, controller.draft.texts, textPresentations]);
   const workbench = workbenchProjection.value;
   const assetsById = useMemo(() => assetMap(resolvedAssets, canonicalRecords), [canonicalRecords, resolvedAssets]);
   const registerAssetDimensions = useCallback((asset, dimensions) => {
@@ -397,6 +404,10 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
         onInspect: () => { if (panel !== 'library') panels.closePanel({ returnFocus: false }); },
         registerAssetDimensions, resolveAssetDimensions, menuSurface, reducedMotion: layout.reducedMotion, workspaceSurfaceColor, workspaceRef,
         windowProps: { layoutMode: layout.mode, reducedMotion: layout.reducedMotion, shortcutSnap: workbenchPreferences.shortcutSnap } }} />)}
+    {controller.draft.texts?.length > 0 && <Suspense fallback={<p role="status">Opening Text…</p>}><TextWorkbench
+      records={controller.draft.texts} store={controller.store} profileAddress={profileAddress} assets={canonicalRecords}
+      presentations={initialWorkbench.current?.texts} onPresentationChange={registerTextPresentation}
+      registerTarget={registerModuleAssetTarget} suspended={Boolean(preview)} /></Suspense>}
     {controller.draft.mobile && <Suspense fallback={<p role="status">Opening Mobile…</p>}><MobileEditor
       key={profileAddress} mobile={controller.draft.mobile} store={controller.store} profileAddress={profileAddress}
       assetsById={assetsById} identity={profileModel} registerTarget={registerModuleAssetTarget} suspended={Boolean(preview)} /></Suspense>}
@@ -445,6 +456,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
         { disabled: !moduleAvailability.presentationBoard, id: 'presentation-board', label: 'DISPLAY MODULE' },
         { disabled: (controller.draft.animations?.length || 0) >= 4, id: 'mirror', label: 'MIRROR ANIMATION' },
         { disabled: (controller.draft.miniApps?.length || 0) >= MAX_MINI_APPS, id: 'mini-app', label: 'MINI APP' },
+        { disabled: (controller.draft.texts?.length || 0) >= MAX_TEXT_MODULES, id: 'text', label: 'TEXT' },
         { id: 'mobile', label: controller.draft.mobile ? 'OPEN MOBILE' : 'MOBILE MODULE' },
       ] : id === 'presentation-board' ? [
         { disabled: !moduleAvailability.presentationBoard, id: 'add-display-horizontal', label: 'HORIZONTAL 16:9' },
@@ -459,6 +471,7 @@ export default function OwnerSystemWorkflowRuntime({ connectedProfile, getWallet
         if (id === 'publish') togglePublication(workspaceRef.current);
         if (id === 'mirror') { try { addMirrorModule(controller.store); } catch (error) { setNotice(error.message); } }
         if (id === 'mini-app') { try { addMiniApp(controller.store, profileAddress); } catch (error) { setNotice(error.message); } }
+        if (id === 'text') { try { addTextModule(controller.store, profileAddress); } catch (error) { setNotice(error.message); } }
         if (id === 'mobile') { try { openMobileModule(controller.store); } catch (error) { setNotice(error.message); } }
         if (id === 'toggle-dock') {
           setWorkbenchPreferences(current => ({ ...current, dockVisible: !current.dockVisible }));

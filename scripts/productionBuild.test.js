@@ -68,15 +68,15 @@ test('each independent budget category reports an actionable overage', () => {
   }
 });
 
-test('measured production allowances retain exact budget boundaries after the Vite 6 migration', () => {
+test('measured production allowances retain exact budget boundaries with the lazy article editor', () => {
   assert.deepEqual(PRODUCTION_BUDGETS, {
     initialJavaScript: { raw: 1_303_524, gzip: 379_811 },
     ownerJavaScript: { raw: 378_237, gzip: 114_888 },
     standaloneWalletJavaScript: { raw: 4_600_000, gzip: 1_225_000 },
     initialCss: { raw: 51_807, gzip: 10_301 },
     ownerCss: { raw: 143_870, gzip: 21_140 },
-    coreJavaScript: { raw: 2_076_709, gzip: 620_158 },
-    publicAssets: { raw: 15_200_000 },
+    coreJavaScript: { raw: 2_480_000, gzip: 770_000 },
+    publicAssets: { raw: 17_600_000 },
     largestPublicAsset: { raw: 2_700_000 },
   });
 
@@ -249,11 +249,16 @@ test('the mini app bridge stays outside initial bytes while remaining in aggrega
   } finally { await removeTree(root); }
 });
 
-test('fresh production CSS and copied font assets are limited to Sora and IBM Plex Sans Condensed', async () => {
+test('production font assets include approved article fonts while interface fonts stay constrained', async () => {
   const root = resolve(tmpdir(), `inscape-font-contract-${process.pid}`);
   try {
     await mkdir(resolve(root, 'assets/fonts/Sora'), { recursive: true });
     await mkdir(resolve(root, 'assets/fonts/IBM_Plex_Sans_Condensed'), { recursive: true });
+    for (const [directory, file] of [['Cormorant', 'Cormorant.ttf'], ['Literata', 'Literata.ttf'], ['IBM_Plex_Mono', 'IBMPlexMono-Regular.ttf']]) {
+      await mkdir(resolve(root, 'assets/fonts', directory), { recursive: true });
+      await writeFile(resolve(root, 'assets/fonts', directory, file), 'fixture');
+      await writeFile(resolve(root, 'assets/fonts', directory, 'OFL.txt'), 'fixture');
+    }
     await writeFile(resolve(root, 'assets/index.css'), '@font-face{font-family:"Inscape Sora";src:url("/assets/fonts/Sora/Sora-VariableFont_wght.ttf")}@font-face{font-family:"Inscape IBM Plex Sans Condensed";src:url("/assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf")}');
     for (const file of ['assets/fonts/Sora/OFL.txt', 'assets/fonts/Sora/Sora-VariableFont_wght.ttf',
       'assets/fonts/IBM_Plex_Sans_Condensed/OFL.txt', 'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf']) {

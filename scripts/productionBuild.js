@@ -163,16 +163,27 @@ export const PRODUCTION_BUDGETS = Object.freeze({
   // Task 5 adds bounded evidence formatting, release identity, recovery copy,
   // and error-surface wiring without a remote monitoring runtime. These limits
   // add only the measured Task-5 delta and retain the prior headroom exactly.
-  coreJavaScript: Object.freeze({ raw: 2_076_709, gzip: 620_158 }),
-  publicAssets: Object.freeze({ raw: 15_200_000 }),
+  // Text adds the on-demand Tiptap editor (416 kB raw / 131 kB gzip), its
+  // reader and local draft integration. Measured aggregate: 2,435,393 / 755,647.
+  // Initial and owner-static limits remain unchanged; keep bounded build margin.
+  coreJavaScript: Object.freeze({ raw: 2_480_000, gzip: 770_000 }),
+  // Three approved, locally served article fonts and their OFL licenses.
+  // Measured copied assets: 17,454,360 bytes; fonts load only when selected.
+  publicAssets: Object.freeze({ raw: 17_600_000 }),
   largestPublicAsset: Object.freeze({ raw: 2_700_000 })
 });
 
 const normalize = (value) => value.replaceAll('\\', '/');
 const LEGACY_FONT_PATTERN = /(?:PP Monument|Geist(?: Sans| Mono)?|IBM Plex Mono|Space Mono|Bahnschrift|system-ui|\bmonospace\b)/iu;
 const PRODUCTION_FONT_FILES = Object.freeze([
+  'assets/fonts/Cormorant/Cormorant.ttf',
+  'assets/fonts/Cormorant/OFL.txt',
+  'assets/fonts/IBM_Plex_Mono/IBMPlexMono-Regular.ttf',
+  'assets/fonts/IBM_Plex_Mono/OFL.txt',
   'assets/fonts/IBM_Plex_Sans_Condensed/IBMPlexSansCondensed-Regular.ttf',
   'assets/fonts/IBM_Plex_Sans_Condensed/OFL.txt',
+  'assets/fonts/Literata/Literata.ttf',
+  'assets/fonts/Literata/OFL.txt',
   'assets/fonts/Sora/OFL.txt',
   'assets/fonts/Sora/Sora-VariableFont_wght.ttf',
 ]);

@@ -8,6 +8,7 @@ import {
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 import { restoreMobilePresentation } from '../../mobile/domain/mobilePresentation.js';
 import { restoreMiniApps } from '../../miniApps/domain/miniApps.js';
+import { restoreTextModules } from '../../text/domain/article.js';
 import { createDefaultWorkbenchPresentation } from './workbenchPresentation.js';
 
 function restoredPublicGrid(grid) {
@@ -84,11 +85,17 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
       return grids.length ? [{ ...module, visibility: 'PRIVATE', grids: [...grids, createEmptySystemWorkflowWorldCoverGrid()] }] : [];
     });
   const miniApps = restoreMiniApps(document.miniApps, currentDraftInput?.miniApps);
+  const texts = restoreTextModules(document.texts, currentDraftInput?.texts);
   const privateMiniAppWindows = (currentDraftInput?.workbench?.miniApps || []).filter(window =>
     miniApps.some(app => app.id === window.id && app.visibility === 'PRIVATE'));
-  const workbench = document.workbench ? structuredClone(document.workbench)
+  let workbench = document.workbench ? structuredClone(document.workbench)
     : privateMiniAppWindows.length ? createDefaultWorkbenchPresentation() : null;
   if (privateMiniAppWindows.length) workbench.miniApps = [...(workbench.miniApps || []), ...structuredClone(privateMiniAppWindows)];
+  const privateTextWindows = (currentDraftInput?.workbench?.texts || []).filter(w => texts.some(t => t.id === w.id && t.visibility === 'PRIVATE'));
+  if (privateTextWindows.length) {
+    workbench ||= createDefaultWorkbenchPresentation();
+    workbench.texts = [...(workbench.texts || []), ...structuredClone(privateTextWindows)];
+  }
   return assertValidSystemWorkflowDraft({
     profileAddress: document.profile.address,
     draftVersion: SYSTEM_WORKFLOW_DRAFT_VERSION,
@@ -98,6 +105,7 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     identityPresentation: restoredIdentity(document.identityPresentation),
     ...(workbench ? { workbench } : {}),
     ...((document.miniApps || currentDraftInput?.miniApps) ? { miniApps } : {}),
+    ...((document.texts || currentDraftInput?.texts) ? { texts } : {}),
     ...((document.animations || currentDraftInput?.animations) ? { animations: [
       ...(document.animations || []).map(item => ({ ...structuredClone(item), visibility: 'PUBLIC' })),
       ...(currentDraftInput?.animations || []).filter(item => item.visibility === 'PRIVATE'

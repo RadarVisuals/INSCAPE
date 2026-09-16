@@ -17,7 +17,7 @@ export function displayContent(draft, id = PRIMARY_DISPLAY_ID) {
 }
 
 export function projectDisplayDraft(draft, id = PRIMARY_DISPLAY_ID) {
-  const { displays: _displays, workbench: _workbench, animations: _animations, mobile: _mobile, miniApps: _miniApps, ...shared } = draft;
+  const { displays: _displays, workbench: _workbench, animations: _animations, mobile: _mobile, miniApps: _miniApps, texts: _texts, ...shared } = draft;
   const content = displayContent(draft, id);
   return { ...shared, ...Object.fromEntries(DISPLAY_CONTENT_KEYS.map(key => [key, content[key]])) };
 }

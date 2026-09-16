@@ -5,6 +5,36 @@ Established: 2026-08-28
 Product clarification: 2026-09-06 — public Workbench and independent modules
 Rollback baseline before the documentation reset: `64458ac`
 
+## Text authoring
+
+The Text module is a simple Tiptap editor with formatting, local saving and a
+reader. On 2026-09-16 the founder removed NFT tools and all file import/export
+from its scope. No article upload endpoint or token transaction flow remains.
+One module holds one illustrated article; the initial bound is four modules.
+Read uses the same full content viewport as Visitor: no duplicate window title,
+Write/Read rail or saved-status footer reserves space. Window actions appear
+on hover or keyboard focus as an overlay, and remain available on touch.
+Settings and save failures overlay content without changing authored geometry.
+Writing uses labelled icon controls and retains its undo history across Read.
+The shared Workbench window owns geometry and lifecycle. Tiptap loads only for
+authoring. Library images retain their resolved asset identity and source
+information separately from authored captions and alternative text.
+Source information remains stored with inserted artwork, but is not displayed
+as an Artwork info section in Text. Authored captions remain optional.
+
+Optional `texts` extends the existing profile draft and v9 public document;
+`workbench.texts` carries starting windows. Typing saves through the existing
+profile draft store. Public articles use the normal Workbench publication flow.
+Older documents remain readable without storage-key changes or content resets.
+Legacy draft NFT bindings are accepted as unused compatibility data, never used
+or published; new records and restored public articles do not create bindings.
+Restoring an older publication retains missing local articles as private.
+
+Article typography may use Sora, IBM Plex Sans Condensed, Literata, Cormorant
+Garamond and IBM Plex Mono under their bundled OFL licenses. The three additional
+families are authored article choices, not alternative interface fonts. Existing
+Sora/Plex interface typography remains authoritative.
+
 ## Mirror animation module
 
 Mirror is an independent Workbench module fed by an image selected from Library.

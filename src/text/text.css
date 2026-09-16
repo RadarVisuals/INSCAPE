@@ -1,0 +1,56 @@
+@font-face { font-family: 'Inscape Article Literata'; src: url('/assets/fonts/Literata/Literata.ttf') format('truetype'); font-weight: 200 900; font-display: swap; }
+@font-face { font-family: 'Inscape Article Cormorant'; src: url('/assets/fonts/Cormorant/Cormorant.ttf') format('truetype'); font-weight: 300 700; font-display: swap; }
+@font-face { font-family: 'Inscape Article Mono'; src: url('/assets/fonts/IBM_Plex_Mono/IBMPlexMono-Regular.ttf') format('truetype'); font-weight: 400; font-display: swap; }
+.text-workbench { color: var(--workflow-ink); font: var(--workflow-type-control); }
+.text-workbench .system-workflow__instrument-window { z-index: var(--text-z, 46); }
+.text-workbench .system-workflow__instrument-content { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+.text-module-body { min-height: 0; height: 100%; display: flex; flex-direction: column; }
+.text-module-scroll { overflow: auto; min-height: 0; flex: 1; overscroll-behavior: contain; }
+.text-workbench :is(.text-module-scroll, .text-settings, textarea) { scrollbar-width: none; }
+.text-workbench :is(.text-module-scroll, .text-settings, textarea)::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.text-module-scroll:focus-visible { outline: 1px solid var(--workflow-border); outline-offset: -1px; }
+.text-module-rail, .text-toolbar { display: flex; gap: 0; flex-wrap: wrap; border-bottom: 1px solid var(--workflow-border); flex-shrink: 0; }
+.text-module-body :is(button, input, select, textarea), .text-shortcut { font: var(--workflow-type-control); color: inherit; background: var(--workflow-panel); border: 1px solid var(--workflow-border); border-radius: 0; min-height: 30px; padding: 5px 8px; max-width: 100%; }
+.text-workbench button { cursor: pointer; }
+.text-workbench button:disabled { opacity: .5; cursor: default; }
+.text-workbench button:hover:not(:disabled) { color: var(--workflow-ink); background: var(--workflow-panel-raised, var(--workflow-panel)); }
+.text-workbench button[aria-pressed='true'] { box-shadow: inset 0 -2px 0 currentColor; }
+.text-workbench :is(button, input, select, summary):focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: -2px; }
+.text-module-rail > button, .text-toolbar > button, .text-toolbar > select { border-width: 0 1px 0 0; }
+.text-toolbar { position: sticky; top: 0; z-index: 2; background: var(--workflow-panel); }
+.text-toolbar button { font-size: 11px; }
+.text-toolbar > button { width: 32px; display: inline-flex; align-items: center; justify-content: center; padding: 6px; }
+.text-toolbar select { font-size: 11px; max-width: 190px; }
+.text-document, .text-editor-page { max-width: 66ch; margin: 0 auto; padding: 24px; font-size: 16px; line-height: 1.65; overflow-wrap: anywhere; }
+.text-editor-page .text-document { padding: 0; font-family: inherit; }
+.text-document :is(p, h1, h2, h3, blockquote, figure, ul, ol) { margin: 0 0 1em; }
+.text-document :is(h1, h2, h3) { line-height: 1.3; font-weight: 500; }
+.text-document h1 { font-size: 1.65em; } .text-document h2 { font-size: 1.35em; } .text-document h3 { font-size: 1.15em; }
+.text-document blockquote { border-left: 2px solid var(--workflow-border); padding-left: 16px; margin-left: 0; }
+.text-document a { color: inherit; text-decoration: underline; }
+.text-document img { display: block; max-width: 100%; max-height: 480px; object-fit: contain; margin: 0 auto; }
+.text-document figcaption { font-size: .85em; margin-top: 8px; }
+.text-workbench .text-document-title { font: inherit; font-size: 28px; line-height: 1.3; font-weight: 500; width: 100%; margin: 0 0 20px; padding: 0; border: 0; background: transparent; }
+.text-workbench textarea.text-document-title { field-sizing: content; resize: none; min-height: 1.3em; max-height: 6em; }
+.text-editor-content { min-height: 180px; outline: none; white-space: pre-wrap; }
+.text-editor-content:focus-visible { outline: 1px solid var(--workflow-border); outline-offset: 6px; }
+.text-document p:empty::before { content: '\00a0'; }
+.text-status { flex-shrink: 0; border-top: 1px solid var(--workflow-border); padding: 6px 10px; margin: 0; font-family: 'Inscape IBM Plex Sans Condensed'; font-size: 12px; overflow-wrap: anywhere; }
+.text-settings, .text-inline-form { padding: 12px; border-bottom: 1px solid var(--workflow-border); display: flex; flex-direction: column; gap: 8px; }
+.text-settings label, .text-inline-form label, .text-artwork-editor label { display: flex; flex-direction: column; gap: 4px; }
+.text-settings .text-visibility { flex-direction: row; align-items: center; }
+.text-settings p { margin: 0; overflow-wrap: anywhere; }
+.text-artwork-editor { border: 1px solid var(--workflow-border); padding: 8px; margin-bottom: 16px; }
+.text-artwork-editor.ProseMirror-selectednode { outline: 2px solid var(--workflow-ink); }
+.text-artwork-editor label { font: 12px/1.4 'Inscape IBM Plex Sans Condensed'; margin-top: 6px; }
+.text-shortcut { position: fixed; left: 24px; bottom: var(--text-shortcut-bottom); z-index: 40; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.text-workbench .text-window--read { grid-template-rows: minmax(0, 1fr); }
+.text-workbench .text-window--read[data-window-chrome] > .system-workflow__detached-window-titlebar { position: absolute; inset: 0 0 auto; z-index: 3; background: transparent; border: 0; opacity: 0; pointer-events: none; }
+.text-workbench .text-window--read[data-window-chrome]:hover > .system-workflow__detached-window-titlebar,
+.text-workbench .text-window--read[data-window-chrome]:focus-within > .system-workflow__detached-window-titlebar { opacity: 1; pointer-events: auto; }
+.text-window--read > .system-workflow__instrument-content { height: 100%; flex: 1; }
+.text-window .text-settings { position: absolute; inset: 34px 8px auto; max-height: calc(100% - 46px); overflow: auto; z-index: 4; background: var(--workflow-panel); border: 1px solid var(--workflow-border); }
+.text-window .text-settings > button { align-self: flex-end; display: inline-flex; align-items: center; justify-content: center; }
+.text-window .text-status { position: absolute; inset: auto 0 0; z-index: 4; background: var(--workflow-panel); }
+@media (hover: none) { .text-workbench .text-window--read[data-window-chrome] > .system-workflow__detached-window-titlebar { opacity: 1; pointer-events: auto; } }
+@media (max-width: 600px) { .text-document, .text-editor-page { padding: 16px; } .text-toolbar select { max-width: 160px; } }

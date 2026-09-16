@@ -30,6 +30,7 @@ function PublishedStage({ children, activeGridId, onClickCapture, onPointerDown,
 const IdentityModule = lazy(() => import('../../public/identity/IdentityModule.jsx'));
 const MirrorWorkbench = lazy(() => import('../../mirror/MirrorWorkbench.jsx'));
 const MiniAppsWorkbench = lazy(() => import('../../miniApps/MiniAppsWorkbench.jsx'));
+const TextWorkbench = lazy(() => import('../../text/TextWorkbench.jsx'));
 const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-6)}`;
 
 export default function ProfileDocumentV9Visitor(props) {
@@ -41,7 +42,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const rootRef = useRef(null);
   const [activeDisplay, setActiveDisplay] = useState('display:primary');
   const additionalDocuments = useMemo(() => (document.displays || []).map(module => {
-    const { displays: _displays, animations: _animations, miniApps: _miniApps, ...shared } = document;
+    const { displays: _displays, animations: _animations, miniApps: _miniApps, texts: _texts, ...shared } = document;
     const { id, ...content } = module;
     const { id: _presentationId, ...display } = document.workbench?.displays?.find(item => item.id === id) || createDefaultWorkbenchPresentation().display;
     return { id, document: { ...shared, ...content, metadata: {}, workbench: { version: 1,
@@ -363,6 +364,9 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
       embedded instanceId={item.id} active={activeDisplay === item.id} onActivate={() => setActiveDisplay(item.id)} />)}
     {!embedded && document.animations?.length > 0 && <Suspense fallback={<p role="status">Opening Mirror…</p>}>
       <MirrorWorkbench records={document.animations} profileAddress={document.profile.address} />
+    </Suspense>}
+    {!embedded && document.texts?.length > 0 && <Suspense fallback={<p role="status">Opening Text…</p>}>
+      <TextWorkbench records={document.texts} presentations={document.workbench?.texts} profileAddress={document.profile.address} />
     </Suspense>}
     {!embedded && document.miniApps?.length > 0 && <Suspense fallback={<p role="status">Opening mini apps…</p>}>
       <MiniAppsWorkbench records={document.miniApps} presentations={document.workbench?.miniApps}

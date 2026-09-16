@@ -1,4 +1,4 @@
-import { createDefaultWorkbenchPresentation, createMiniAppPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
+import { createDefaultWorkbenchPresentation, createMiniAppPresentation, createTextPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../../profileDocument/domain/profileDocumentV9Asset.js';
 
 // Pure projection for Preview and Prepare Publication. The host supplies live
@@ -6,7 +6,7 @@ import { createProfileDocumentV9AssetResolver } from '../../profileDocument/doma
 // The current draft's module lists determine membership, never cached layouts.
 export function captureWorkbenchPresentation({
   layout, shortcut, assetRecords, displayOpen, identityOpen, hasPrimaryDisplay = true,
-  displays, miniApps, displayPresentations = {}, miniAppPresentations = {},
+  displays, miniApps, texts, displayPresentations = {}, miniAppPresentations = {}, textPresentations = {},
 }) {
   try {
     if (displays?.some(({ id }) => displayPresentations[id] === null)) {
@@ -28,9 +28,11 @@ export function captureWorkbenchPresentation({
 
     // Optional collections are rebuilt from authored membership. Saved layouts
     // and live reports are fallbacks for those IDs only, including after Undo.
-    const { displays: savedDisplays, miniApps: savedMiniApps, ...base } = layout;
+    const { displays: savedDisplays, miniApps: savedMiniApps, texts: savedTexts, ...base } = layout;
     return { error: null, value: {
       ...base,
+      ...(texts ? { texts: texts.map((text, index) => textPresentations[text.id]
+        || savedTexts?.find(item => item.id === text.id) || createTextPresentation(text.id, index)) } : {}),
       ...(miniApps ? { miniApps: miniApps.map((app, index) => miniAppPresentations[app.id]
         || savedMiniApps?.find(item => item.id === app.id) || createMiniAppPresentation(app.id, index)) } : {}),
       ...(displays ? { displays: displays.map(({ id }) => ({ id, ...(displayPresentations[id]

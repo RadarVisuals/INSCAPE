@@ -24,6 +24,7 @@ import { isValidWorkbenchPresentation } from './workbenchPresentation.js';
 import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, isDisplayFormat } from '../../systemWorkflow/domain/displayModules.js';
 import { validMirrorModules } from '../../systemWorkflow/domain/mirrorModules.js';
 import { validMiniApps } from '../../miniApps/domain/miniApps.js';
+import { validTextModules } from '../../text/domain/article.js';
 import { validMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
 import { canUseMobileRenderer } from '../../mobile/domain/customPresentation.js';
 
@@ -195,7 +196,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   try { measuredSize ??= new TextEncoder().encode(JSON.stringify(input)).byteLength; } catch { measuredSize = Infinity; }
   if (measuredSize > SYSTEM_WORKFLOW_LIMITS.maxJsonBytes) fail('$', 'document_too_large', `Document exceeds ${SYSTEM_WORKFLOW_LIMITS.maxJsonBytes} bytes`);
   if (depth(input) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'animations', 'mobile', 'miniApps'])) {
+  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'animations', 'mobile', 'miniApps', 'texts'])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -232,6 +233,8 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   validateIdentity(input.identityPresentation, fail);
   if (Object.hasOwn(input, 'animations') && !validMirrorModules(input.animations, true)) fail('animations', 'invalid_animations', 'Invalid published Mirror module');
   if (Object.hasOwn(input, 'miniApps') && !validMiniApps(input.miniApps, true)) fail('miniApps', 'invalid_mini_apps', 'Invalid published mini app');
+  if (Object.hasOwn(input, 'texts') && !validTextModules(input.texts, true)) fail('texts', 'invalid_texts', 'Invalid published Text module');
+  if (Array.isArray(input.workbench?.texts) && input.workbench.texts.some(item => !Array.isArray(input.texts) || !input.texts.some(text => text?.id === item?.id))) fail('workbench.texts', 'unknown_text', 'Window refers to an unavailable Text module');
   if (Array.isArray(input.workbench?.miniApps) && input.workbench.miniApps.some(item => !Array.isArray(input.miniApps)
     || !input.miniApps.some(app => app?.id === item?.id))) fail('workbench.miniApps', 'unknown_mini_app', 'Window refers to an unavailable mini app');
   if (Object.hasOwn(input, 'mobile') && (!validMobilePresentation(input.mobile, true) || !canUseMobileRenderer(input.mobile, input.profile?.address))) fail('mobile', 'invalid_mobile', 'Invalid published Mobile presentation');
@@ -241,7 +244,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
       fail('displays', 'invalid_display_count', 'Invalid Display count');
     } else {
       const ids = new Set([PRIMARY_DISPLAY_ID]);
-      const { displays: _displays, workbench: _workbench, animations: _animations, mobile: _mobile, miniApps: _miniApps, ...shared } = input;
+      const { displays: _displays, workbench: _workbench, animations: _animations, mobile: _mobile, miniApps: _miniApps, texts: _texts, ...shared } = input;
       for (const module of input.displays) {
         if (!exactKeys(module, ['id', ...DISPLAY_CONTENT_KEYS]) || !/^display:[A-Za-z0-9_-]{1,80}$/u.test(module?.id) || ids.has(module.id)) {
           fail('displays', 'invalid_display', 'Invalid or duplicate Display'); continue;

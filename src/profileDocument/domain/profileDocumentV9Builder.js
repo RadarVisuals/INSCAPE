@@ -17,6 +17,7 @@ import { projectIdentityCard } from '../../profileIdentity/domain/identityCard.j
 import { projectDisplayDraft } from '../../systemWorkflow/domain/displayModules.js';
 import { projectMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
 import { projectMiniApps } from '../../miniApps/domain/miniApps.js';
+import { projectTextModules } from '../../text/domain/article.js';
 
 function timestamp(value, label) {
   const milliseconds = value instanceof Date ? value.getTime()
@@ -129,8 +130,10 @@ export function buildProfileDocumentV9({
       grids: projectSystemWorkflowPublicGrids(projectDisplayDraft(draft, module.id), assetRecords) }));
   const presentation = workbench || draft.workbench;
   const miniApps = draft.miniApps ? projectMiniApps(draft.miniApps) : undefined;
+  const texts = draft.texts ? projectTextModules(draft.texts) : undefined;
   const publicWorkbench = presentation ? structuredClone(presentation) : null;
   if (publicWorkbench?.miniApps) publicWorkbench.miniApps = publicWorkbench.miniApps.filter(item => miniApps?.some(app => app.id === item.id));
+  if (publicWorkbench?.texts) publicWorkbench.texts = publicWorkbench.texts.filter(item => texts?.some(text => text.id === item.id));
   if (publicWorkbench?.displays) publicWorkbench.displays = publicWorkbench.displays.filter(module => displays?.some(content => content.id === module.id));
   return assertValidProfileDocumentV9({
     documentType: INSCAPE_PROFILE_DOCUMENT_TYPE,
@@ -160,6 +163,7 @@ export function buildProfileDocumentV9({
     metadata: worldCover ? { worldCover } : {},
     ...(displays ? { displays } : {}),
     ...(miniApps?.length ? { miniApps } : {}),
+    ...(texts?.length ? { texts } : {}),
     ...(draft.mobile?.visibility === 'PUBLIC' ? { mobile: projectMobilePresentation(draft.mobile, assetRecords) } : {}),
     ...(draft.animations ? { animations: draft.animations.filter(item => item.visibility === 'PUBLIC').map(({ visibility, ...item }) => {
       if (!item.asset) throw new TypeError('Choose artwork for each public Mirror module before publishing.');
