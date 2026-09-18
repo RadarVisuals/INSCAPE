@@ -42,8 +42,10 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
     }
   }, [sharedPreviewRecords, sourceAssets]);
   const assets = useMemo(() => sourceAssets.filter((asset) => browserAssetHasPreviewCandidate(asset)
-    && !browserAssetPreviewUnavailable(previewRecordsRef.current.get(browserAssetId(asset)), asset)).map((asset) => {
-    const preview = previewRecordsRef.current.get(browserAssetId(asset));
+    && (!browserAssetPreviewUnavailable(previewRecordsRef.current.get(browserAssetId(asset)), asset)
+      || asset.imageGroups?.length > 1)).map((asset) => {
+    const cachedPreview = previewRecordsRef.current.get(browserAssetId(asset));
+    const preview = cachedPreview?.signature === browserPreviewCandidates(asset).join('\n') ? cachedPreview : null;
     const fallback = browserPreviewCandidates(asset)[0] || null;
     return preview?.status === 'ready' ? {
       ...asset,
@@ -57,9 +59,9 @@ export default function useBrowserWorkspace(data, sharedPreviewRecords = null, i
     || browserAssetPreviewUnavailable(previewRecordsRef.current.get(browserAssetId(asset)), asset)).length;
   const markAssetReady = useCallback((id, source, width, height) => {
     const asset = sourceAssets.find((candidate) => browserAssetId(candidate) === id);
-    if (!asset || !source || !Number(width) || !Number(height)) return;
+    if (!asset || !source || !Number(width) || !Number(height) || !browserPreviewCandidates(asset).includes(source)) return;
     const current = previewRecordsRef.current.get(id);
-    if (current?.status === 'ready' && current.source === source && current.width === width && current.height === height) return;
+    if (current?.status === 'ready' && current.signature === browserPreviewCandidates(asset).join('\n') && current.source === source && current.width === width && current.height === height) return;
     previewRecordsRef.current.set(id, { assetRef: asset, signature: browserPreviewCandidates(asset).join('\n'),
       source, width, height, status: 'ready' });
     setPreviewVersion((value) => value + 1);

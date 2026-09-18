@@ -78,13 +78,13 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     const update = (pointerEvent) => {
       const active = gestureRef.current;
       if (!active || pointerEvent.pointerId !== active.pointerId) return;
-      const currentField = projectedField(canvasRef.current, snapStep, artboardMode);
+      const currentField = projectedField(canvasRef.current, pointerEvent.altKey ? 1 / 9 : snapStep, artboardMode);
       const next = active.kind === 'resize'
-        ? active.records.length > 1 ? updateSystemWorkflowGroupResizeGesture(active.domainGesture, { x: pointerEvent.clientX, y: pointerEvent.clientY }, currentField) : updateSystemWorkflowResizeGesture(
+        ? active.records.length > 1 ? updateSystemWorkflowGroupResizeGesture(active.domainGesture, { x: pointerEvent.clientX, y: pointerEvent.clientY }, currentField, 3, { preserveRatio: pointerEvent.shiftKey }) : updateSystemWorkflowResizeGesture(
           active.domainGesture,
           { x: pointerEvent.clientX, y: pointerEvent.clientY },
           currentField,
-          undefined,
+          3,
           { preserveRatio: pointerEvent.shiftKey },
         )
         : updateSystemWorkflowMovementGesture(active.domainGesture, { x: pointerEvent.clientX, y: pointerEvent.clientY }, currentField,
@@ -95,7 +95,9 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
       if (active.kind === 'resize') {
         if (active.records.length > 1) next.previewDestinations.forEach(({ placementId, destination }) => previews.set(placementId, destination));
         else {
-          previews.set(active.placement.id, next.previewGeometry);
+          previews.set(active.placement.id, { ...next.previewGeometry,
+            ...(active.corner.length === 1 && active.placement.kind !== 'text'
+              ? { mediaFrameRatio: active.placement.mediaFrameRatio ?? active.placement.columnSpan / active.placement.rowSpan } : {}) });
           if (active.cropResize) cropResize?.preview?.({ ...active.placement, ...next.previewGeometry });
         }
       } else {

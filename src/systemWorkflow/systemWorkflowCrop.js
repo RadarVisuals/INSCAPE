@@ -63,7 +63,7 @@ export function systemWorkflowCropMask(placement) {
     || !isSystemWorkflowGridCoordinate(rowSpan) || rowSpan <= 0) {
     throw cropError('SYSTEM_WORKFLOW_CROP_GEOMETRY_INVALID', 'Crop authoring requires positive grid-native placement geometry');
   }
-  return projectArtworkMat({ left: 0, top: 0, width: columnSpan, height: rowSpan }, placement.mat)
+  return projectArtworkMat({ left: 0, top: 0, width: placement.mediaFrameRatio === undefined ? columnSpan : rowSpan * placement.mediaFrameRatio, height: rowSpan }, placement.mat)
     .mediaOpeningRectangle;
 }
 

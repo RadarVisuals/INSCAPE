@@ -108,9 +108,10 @@ test('System Workflow dock tools cannot expand into the INSCAPE wordmark', async
     'the global dock retains only documentation and global settings controls');
   assert.doesNotMatch(globalBar, /Layers3|onToggleLayers/,
     'Layers no longer behaves like a global INSCAPE dock tool');
-  assert.match(board, /function BoardWorkspaceControls[\s\S]*data-instrument-trigger="layers"[\s\S]*data-instrument-trigger="metadata"/,
-    'the Display Module titlebar exposes its two instruments');
-  assert.match(await read('./ownerSystemWorkflow/DisplayModule.jsx'), /renderInstruments=[\s\S]*<DisplayInstruments/);
+  assert.doesNotMatch(board, /data-instrument-trigger=/,
+    'shared tools are reached through menus, not Display toolbar icons');
+  assert.match(globalBar, /SharedDisplayToolsLauncher/);
+  assert.match(await read('./ownerSystemWorkflow/DisplayModule.jsx'), /<SharedDisplayToolContent id="layers"/);
   assert.doesNotMatch(board, /onToggleToolbar|MetadataDirectionControls/,
     'placement tools belong inside Layers and presentation belongs to the shared bay');
 });

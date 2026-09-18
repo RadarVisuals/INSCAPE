@@ -26,7 +26,7 @@ test('focus return lands at its exact endpoint before the overlay copy fades', (
 // browser-tests/display-hardening.browser.mjs.
 
 test('owner metadata remains independent from artwork focus motion', () => {
-  assert.match(ownerDisplay, /renderMetadata=\{\(\) => <OwnerSystemWorkflowMetadataContent/);
+  assert.match(ownerDisplay, /<SharedDisplayToolContent id="metadata"[\s\S]*<OwnerSystemWorkflowMetadataContent/);
   assert.match(ownerMetadata, /export function OwnerSystemWorkflowMetadataContent/);
   assert.match(ownerMetadata, /dossier\?\.description/);
   assert.doesNotMatch(ownerMetadata, /LatticeFocusViewer|originRectangle|returnLanding|createPortal/);

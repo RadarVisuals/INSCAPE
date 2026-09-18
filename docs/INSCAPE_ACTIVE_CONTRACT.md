@@ -11,11 +11,35 @@ The Text module is a simple Tiptap editor with formatting, local saving and a
 reader. On 2026-09-16 the founder removed NFT tools and all file import/export
 from its scope. No article upload endpoint or token transaction flow remains.
 One module holds one illustrated article; the initial bound is four modules.
-Read uses the same full content viewport as Visitor: no duplicate window title,
-Write/Read rail or saved-status footer reserves space. Window actions appear
+Write and Read use the same full content viewport as Visitor: no duplicate window title,
+formatting toolbar or saved-status footer reserves space. Window actions appear
 on hover or keyboard focus as an overlay, and remain available on touch.
-Settings and save failures overlay content without changing authored geometry.
+Formatting, optional title, appearance, artwork captions and save recovery belong
+to a separate movable Text tools window. Save failures expose a small output
+indicator; Retry reads the latest saved draft and preserves unrelated edits.
+Conflicting text requires an explicit replacement choice. Failed recovery never
+resets the draft or reports an unconfirmed save as successful.
+New Text starts transparent and frameless. Background colour/opacity and the
+frame are independent authored settings; older articles retain their appearance.
+Text tools offers optional per-side inner spacing in text pixels, including zero.
+Custom spacing uses the full available text width; Automatic retains the existing
+responsive padding and reading-width limit.
+Automatic bottom spacing in standalone Text yields to the available height when
+the article itself fits, avoiding scrolling solely for empty end space. Longer
+articles retain scrolling and their normal end spacing; custom padding is respected.
+Optional `appearance.padding` belongs to the article and travels through draft,
+publication, restore and Display transfer.
+Articles without it retain their existing layout without a migration or reset.
+Dragging the Text move handle onto an unlocked Display attaches it to that Grid;
+dragging its handle out detaches it as a private standalone Text. The tools also
+offer keyboard-accessible move actions. Each move is atomic and undoable, retaining
+rich formatting and appearance. A drop preview identifies the receiving Display.
+Text is owned once, either by its independent module or by its Grid placement.
 Writing uses labelled icon controls and retains its undo history across Read.
+Paragraphs and headings support left, centre and right alignment, plus
+justification with the last line left, centred, right or fully justified.
+Optional block alignment is shared by Write, Read and Visitor; older articles
+without it retain their existing appearance.
 The shared Workbench window owns geometry and lifecycle. Tiptap loads only for
 authoring. Library images retain their resolved asset identity and source
 information separately from authored captions and alternative text.
@@ -35,21 +59,59 @@ Garamond and IBM Plex Mono under their bundled OFL licenses. The three additiona
 families are authored article choices, not alternative interface fonts. Existing
 Sora/Plex interface typography remains authoritative.
 
-## Mirror animation module
+Text tools exposes a separate Title size when an optional title is present.
+Optional `appearance.titleFontSize` accepts 8–300 pixels and travels with the
+article through saving, Display transfer and publication. Omission retains the
+existing 28-pixel title; body Text size remains independent.
 
-Mirror is an independent Workbench module fed by an image selected from Library.
-Its Pixi runtime owns reflection, clipping, scale, position, in-plane rotation,
-automation and render-resource cleanup. INSCAPE owns Library resolution, profile
-authority, module placement and persistence. The standalone demo uses that same
-runtime; there is no iframe or second animation implementation.
+## Placement Animation module
 
-The profile draft optionally carries `animations`. Each Mirror record stores one
-resolved source asset, validated settings and host presentation separately.
-Modules start private; only explicitly public modules with an image enter the
-optional v9 `animations` publication field. Existing documents without this field
-remain valid. Visitor uses the same renderer with playback and metadata, without
-authoring controls or draft writes. Helper grids and playback time are temporary.
-The initial implementation allows four Mirror modules and loads Pixi on demand.
+The owner opens one independent Animation window through Add → Animation module.
+It has its own UI and follows one selected artwork placement in the active Display;
+it has no canvas, source-asset store, timeline or cross-Grid travel behavior.
+Workbench reuses its shared window/selection host and stores the window's open
+state and geometry locally. Closing the window leaves authored effects intact.
+
+The Display placement owns optional `animation`: Float supplies horizontal and
+vertical amplitudes in canvas units (0–4) and a figure-eight cycle (2–60 seconds);
+Flicker supplies depth (0–1) and a repeating opacity cycle (3–30 seconds).
+Both effects can coexist. Text placements are outside this first version.
+The window lists only applied effects. Add effect offers unused effects; one
+settings section opens at a time. Each effect has independent On/Off and Remove
+actions; Remove all effects is one undoable edit. Optional effect `enabled: false`
+keeps its parameters while suppressing playback. Omission means enabled, preserving
+existing draft-v4/public-v9 records without a migration or rewrite. Re-enabling
+retains the stored values; removing and adding again uses defaults.
+
+A small explicit effect catalog supplies labels, parameter bounds/defaults and
+render instructions to the editor, validators and shared renderer. Effect CSS is
+kept beside its definition. Adding an effect still requires its behavior, catalog
+registration, stylesheet import and behavioral checks; this is not a plugin engine.
+The editor receives a target summary and scoped change action, not a Display
+controller or store. Display retains edit authority and temporary preview state.
+Library assets and other placements of the same artwork are not modified.
+Effect edits use the existing scoped authoring transaction, save and undo path.
+
+Unlocked authoring is static until Preview is enabled in Animation. Preview is
+temporary, stops on target/Grid changes or window closure, and suspends direct
+artwork manipulation. Locked Displays, Play Grids and Visitor render saved effects.
+Inspection suspends the source motion. Reduced motion disables both effects;
+offscreen scenes, hidden browser documents and the owner behind public Preview
+pause motion. CSS applies translation and opacity without changing saved geometry,
+crop, free scaling or source transforms; there is no per-frame draft write.
+
+Draft-v4 and public-v9 accept this optional placement field. Existing data without
+it stays static and is not rewritten. Publication, restoration and duplication
+retain it. The Animation editor is not part of the public document; effects are.
+This is separate from the removed Mirror canvas module and does not restore its
+former top-level `animations` records.
+
+## Removed Mirror module
+
+The founder removed the Mirror animation module on 2026-09-17. Its runtime,
+creation controls, demo and `animations` draft/publication field are removed.
+The founder confirmed that no saved compositions require Mirror compatibility.
+Display and Mobile image-flipping controls are independent and remain available.
 
 ## Mobile entrance and Index
 
@@ -151,7 +213,7 @@ as an explicitly identified experiment, outside the published Index entries.
 ## Authoring undo
 
 Completed profile-draft edits share one chronological undo/redo history across
-Display instances, Identity, Mirror and Mobile. Ctrl/Cmd+Z undoes; Ctrl/Cmd+Shift+Z
+Display instances, Identity and Mobile. Ctrl/Cmd+Z undoes; Ctrl/Cmd+Shift+Z
 or Ctrl+Y redoes. Text-entry controls retain native text undo. Pointer gestures
 group continuous updates into one step. New edits discard redo, and failures to
 save leave both history and the draft unchanged. History is bounded, temporary
@@ -235,7 +297,7 @@ are not part of that visitor experience. Module chrome is not Stage content.
   Format changes preserve the window's size relative to those defaults, so an
   unresized horizontal Display becomes the same size as Add → Vertical.
   Viewport bounds still apply; existing saved windows are not rewritten on read.
-  Metadata remains a Display instrument and is not an Add-menu module.
+  Metadata is a shared Workbench tool and is not an authored Add-menu module.
   Library stays anchored to the Workbench's left edge above ordinary module
   windows and shortcuts. Its existing drag-to-hide behavior exposes drop targets.
   Opening or resizing it never reserves space or shifts modules or shortcuts,
@@ -292,7 +354,28 @@ height follows its content. Visitor interactions remain session-local.
 Preview and Prepare Publication share a pure Workbench presentation capture.
 It combines current module reports, saved arrangements, and existing defaults;
 only current draft modules contribute layouts or unresolved-artwork errors.
-The existing authoring session remains the sole path for saving that capture.
+The Workbench session owns saving that capture and Identity configuration.
+Display authoring sessions, including the original Display, project and merge
+only their module content through the shared profile draft store. The original
+Display's root storage envelope is retained for compatibility.
+
+The owner's local arrangement also survives reload independently of publication.
+A profile-scoped `inscape:workbench:layout:v1` record stores module geometry,
+open state and shortcuts, selected Display Grid, lock and instrument state,
+and Text Read/Write and tools state. It contains no module content. Existing
+drafts fall back to their saved Workbench or runtime defaults; deleted module
+IDs are ignored. A changed saved Workbench configuration invalidates the local
+record. Unreadable records are retained until the owner explicitly saves the
+current layout; failed writes are reported with a retry action. Optional
+`views['workbench:tools']` retains shared Layers and Artwork info open state,
+window geometry and the explicit Display target. Older per-Display instrument
+records are consolidated on read without changing authored content.
+
+Failed Text edits are retained in a profile/module-scoped recovery buffer owned
+by the live draft store, so disposing an editor does not discard them. Recovery
+blocks preview, publication preparation, draft undo and conflicting Display
+operations until saved. A leave-page warning protects pending edits, but the
+buffer is not durable across a forced reload when storage cannot save.
 
 Existing documents without this configuration load in the shared Display window
 with runtime defaults; a subsequent preparation can save the new configuration.
@@ -316,7 +399,7 @@ Display when absent before allocating another instance.
 `workbench.displays` retains additional window and shortcut arrangements when
 Prepare Publication captures the Workbench. Closing minimizes to the shortcut;
 it does not delete content. Visitor window changes remain session-local.
-Owner shortcuts offer right-click Delete for every created Display, Mirror,
+Owner shortcuts offer right-click Delete for every created Display,
 Mobile and mini app. Deletion removes authored module content and its saved
 arrangement through one undoable draft operation. A desktop with no created
 modules is valid and survives reload and publication. Identity remains accessible
@@ -370,54 +453,29 @@ See [mini app hosting](MINI_APP_HOSTING.md) for the boundaries and checks.
 
 ## Display Module
 
-The September 16 inspection-cue experiment adds hover/focus cues and a compact
-metadata foldout inside Display, shared by Owner, Preview and Visitor. Cue
-activation follows the placement's existing In place/Lift choice. In place
-retains its scene cue; Lift has a separate cue relative to the fitted enlarged
-artwork, initially near its upper-right edge. Unlocked owners can drag or
-keyboard-adjust that enlarged-view cue without moving the thumbnail cue or
-the artwork. Each view retains its own opening-direction preference.
-Closing metadata leaves the artwork inspected and a + to reopen the foldout.
-Clicking the Stage returns the artwork; Escape closes the foldout first and
-the artwork on a second press. Metadata visibility belongs to the temporary
-inspection session and resets on close, navigation or scope change.
-The foldout is testing a theme-tinted glass surface: a 60% panel tint over
-backdrop blur, subtle theme-derived edges, opaque text and bounded internal
-scrolling. Unsupported or reduced-transparency views use a solid theme panel.
-This material experiment is specific to the artwork foldout. The existing Metadata
-instrument remains independently available during this experiment; cue clicks
-do not open, close, attach or move it. The foldout reuses existing metadata
-projections and fields, introducing no second metadata source.
+Display supports authored text layers within a Grid. Text layers share placement
+geometry, ordering, selection, movement, resizing, duplication, locking and undo
+with artwork. Layers lists the text and opens its separate Text tools companion;
+it does not contain a second text editor. Rich text uses the same article model
+and renderer as standalone Text; existing plain text layers remain readable and
+upgrade when edited. Text retains its background/frame choices and follows the
+Grid and Display scale. Resizing
+the text box changes its wrapping area; font size is an explicit text setting.
+Owner and Visitor use the same text renderer. Text has no Library asset,
+creator attribution, artwork inspection, crop or artwork mat controls.
+An explicit `kind: text` placement extends draft v4 and public v9 documents;
+existing artwork placements remain unchanged. Private Grids and placements
+remain excluded from publication. Existing document and storage keys stay valid.
 
-The artwork foldout has a description-first Info view with expandable long
-copy and compact creator attribution. The entire foldout uses Sora, including
-attributes, source details and settings. Info, Attributes and Details use a compact
-top icon rail with accessible names and tooltips. The active cue becomes the
-minus inside that rail and collapses only metadata; there is no duplicate close
-control or external minus while the foldout is open. The minus uses the edge
-nearest its cue: right for a left-opening foldout, left for a right-opening one.
-The plus and minus share their SVG geometry, control size and centre. The card
-grows around that centre, with its header below the content when it needs to open
-upward. Width/direction adapt at Display edges instead of displacing the cue.
-Lift still uses its separate enlarged-artwork anchor when entering inspection.
-Icons brighten on hover/selection without square fills or an active underline;
-keyboard focus remains outlined. Unlocked owners can drag the minus or empty
-header space in both Lift and In place, using the same cue-anchor gesture.
-Automatic opening direction stays fixed until the foldout closes so dragging
-does not flip it. Technical identifiers live in Details and owner cue controls
-use a settings view that replaces the body; a content icon returns to that
-section. Content scrolls within the available Display height.
-This presentation does not replace or redesign the attached/detached sidecar.
-Edition or circulation labels require sourced artwork-level facts; a distinct
-token ID alone is not evidence of a unique edition.
-
-Unlocked owners can move cues within placement bounds plus a modest margin,
-use arrow keys to adjust, Home to reset, and choose a preferred left/right
-opening direction. These experimental offsets and preferences live only in
-the mounted Grid session and reset on Grid change, closure or reload. They are
-not yet authored/published settings. Visitors cannot move them. Deciding what
-the foldout replaces and persisting cue placement follows interaction review.
-
+Metadata now has one shared Workbench output window, exposed as Artwork info.
+Opening it enables artwork + markers across Displays; selecting a marker or
+artwork updates that window without lifting, dimming or moving the scene.
+Closing it removes the markers and metadata output. There are no independent
+metadata foldouts. Artwork inspection remains a separate temporary interaction.
+Unlocked owners may adjust marker offsets; these remain mounted-Grid session
+state and are not authored or published. Visitors cannot move markers.
+Metadata continues to use existing asset projections, with no second source
+of artwork facts. Edition labels still require sourced artwork-level facts.
 
 Layers offers one custom Gutter value in canvas units and Apply to all for the
 current scene. It preserves image sizes and directional ordering, including
@@ -452,8 +510,14 @@ internal compatibility names during this migration; do not broadly rename them.
 - Pan and zoom are camera/view state. They never resize assets, mutate the Grid,
   or alter published geometry.
 - Support a fitted overview and sufficiently strong zoom for precise editing.
-- Scrolling over the Stage resizes the Display window around its centre within
-  window bounds. Scrolling over instruments retains their own scrolling.
+- Scrolling up over the Stage temporarily enlarges Display while its centre moves
+  progressively from the original position to the available Workbench centre,
+  reserving space for the dock and attached instruments, above standalone Text.
+  Position and size follow the same progress, avoiding edge collisions and
+  abrupt recentering. Scrolling back down follows the same path and stops
+  at its exact starting size and position; Escape or Restore also returns there.
+  Temporary enlargement never updates the captured Workbench arrangement.
+  Move and resize handles apply to the restored window. Scrolling over instruments retains their own scrolling.
   After reaching maximum size, a separate upward scroll enters an immersive
   browser-area Stage view, with Workbench and instruments hidden and plain black
   letterboxing to preserve the authored Stage ratio. Scroll down, Escape, or the revealed Exit control
@@ -465,22 +529,23 @@ internal compatibility names during this migration; do not broadly rename them.
 - Dragging the Display Stage swipes between Grids directly in Visitor mode and
   when the owner's Display composition is locked. Unlocked authoring retains
   Space-drag navigation so ordinary dragging remains available for editing.
-- The Display Module title bar offers local Play/Pause before Layers. Playback
+- The Display context menu offers Play Grids when more than one Grid exists.
+  While playing, its toolbar exposes Pause; otherwise no playback icon appears. Playback
   slides continuously through the ordered Grids and wraps without a dwell.
   Pause retains progress; Stage interaction returns to manual control. Playback
   does not change the draft schema or publication. Reduced motion uses discrete
   Grid changes instead of sliding.
 - Owner, Preview and Visitor use the same contained Display artwork inspection,
-  title-bar artwork navigation and Metadata instrument. The former full-screen
+  keyboard artwork navigation and Metadata instrument. The former full-screen
   visitor artwork/dossier presentation is retired, including for old publications.
   Visitors retain window interaction, Grid playback and Metadata inspection, with
-  no Layers tab, placement tools or composition Lock. Metadata can attach, overlay
-  or detach through the same bounded instrument shell. Published creator attribution
+  no Layers tab, placement tools or composition Lock. Metadata uses one shared,
+  bounded Workbench window. Published creator attribution
   and source details remain available. These interactions are session-local and
   never write an owner draft or rewrite publication bytes.
-- An always-visible **Inspect: In place | Lift** selector above the Layers list
-  applies immediately to the single selected, unlocked placement. It remains
-  disabled without an editable selection and is not nested in Frame and mat.
+- **Inspect: In place | Lift** appears in Selection properties below the Layers
+  list for one selected artwork. It applies to the selected, unlocked placement
+  and is not nested in Frame and mat.
   The choice is saved as optional `inspectionMode`
   (`IN_PLACE` or `LIFT`) in drafts and public placements. Existing drafts and
   publications without it now default to Lift; explicit IN_PLACE choices remain
@@ -505,35 +570,28 @@ internal compatibility names during this migration; do not broadly rename them.
   Keyboard activation and focus indicators on interface controls remain available.
 - Do not implement the Display Module as an HTML iframe. Use one application context with
   an isolated, clipped viewport and camera transform.
-- The Display Module owns the instruments required to author and inspect its
-  composition. Ownership is independent from presentation: an instrument may
-  be attached to the module, temporarily overlay its non-published viewport,
-  detach onto the Workbench, or close. Instrument chrome never becomes Stage
-  content and is never published.
-- Use a stable directional grammar for attached instruments: the left side is
-  for authoring and scene structure; the right side is for Metadata, provenance,
-  and narrative inspection. This describes orientation and control logic; it
-  must not force two full-width sidecars around the 16:9 Stage.
-- The Display Module must offer a compact projection that uses at most one
-  full-width attached utility bay. Layers and Metadata may switch as tabs or
-  share that bay as a vertically divided, resizable stack, while a compact
-  authoring rail may remain on the opposite edge. Either section may collapse
-  or temporarily take the full bay. This compact projection is an option, not
-  a mandate that every viewport or workflow use the same arrangement.
-- Do not require two permanently attached full-width sidecars. On sufficiently
-  wide Workbenches they may be available as a user-selected arrangement. When
-  width is constrained, keep both instruments available through the shared
-  bay, a bounded overlay, or a detached Workbench window.
-- Responsive layouts must preserve a useful Stage width. If an attached bay
-  would make the module exceed its Workbench bounds or reduce the Stage below
-  its usable threshold, that instrument changes to overlay or detached
-  presentation; the canonical Stage geometry does not reflow.
-- **Layers is a Display Module instrument**, scoped to that module's active
-  Grid. It is not a global document-agnostic Workbench dock. Layers may attach
-  in the shared utility bay, open from a compact authoring rail, overlay the
-  module viewport as a bounded floating panel, detach onto the Workbench, or
-  close, but a single Layers instance must never be mounted in two places at
-  once.
+- The Workbench hosts one shared Layers window and one shared Artwork info
+  window. Both are independently movable and resizable, with no reserved sidecar
+  space or changes to Display geometry. Both start closed.
+- Layers follows the explicitly active Display and its current Grid. Its content
+  and actions still belong to that Display session. Metadata follows the selected
+  artwork in the targeted Display; its title identifies Display, Grid and artwork.
+  A missing or minimized target shows an empty prompt, never another Display's
+  content. These windows do not own or duplicate authored content.
+- Owner tool state survives reload in the profile-local layout record; visitor
+  Metadata state stays session-local. Old open sidecars migrate to shared windows.
+- Workbench and Display context menus expose Tools → Layers / Metadata; Visitor
+  exposes Metadata only. Display menu actions explicitly target that Display.
+  A keyboard-accessible Tools launcher in the owner and Visitor docks provides
+  the same shared tools, retaining the current target. Owner Layers also offers
+  Artwork info for the selected artwork.
+- The ordinary Display toolbar contains composition Lock (owner only), maximize
+  and minimize. Layers, Metadata, Play and the Inspect label/counter/arrows are
+  absent. Active artwork inspection adds only Return to composition; Escape
+  and existing arrow-key artwork navigation remain available.
+- The shared Display toolbar is quiet until the pointer approaches its top
+  edge or keyboard focus enters it. Touch exposes a Show/Hide controls button.
+  Hovering over the artwork alone does not reveal the toolbar.
 - Layer rows and Stage placements share one selection model. The list exposes
   the active Grid's render order from front to back; reordering rows changes
   placement z-order. Placement lock, visibility, removal, and other accepted
@@ -543,23 +601,14 @@ internal compatibility names during this migration; do not broadly rename them.
   Keep its row available to show it again. This is session-local Workbench state:
   it resets on reload, never changes the draft schema or public/private visibility,
   and does not hide the placement from Preview or publication.
-- Placement tools belong with Layers as one authoring instrument. Its compact
-  toolbar may sit above or below the layer list according to available space.
-  The Display Module title bar should expose the instrument and composition
-  controls needed to find or toggle that workspace, but must not become the
-  full editing toolbar.
-- **The existing Metadata inspector is singular per Display Module**. It may attach on the
-  module's right in the shared utility bay, overlay the module viewport as a
-  bounded reading panel, detach onto the Workbench, or close, but must never be
-  mounted in two places at once. Attached and overlay presentations must cap
-  their usable height and contain long metadata with internal scrolling rather
-  than enlarging or obscuring the application shell without bound.
-- A future standalone Metadata module's scope and relationship to this
-  inspector remain open. The current Add-menu name alone does not settle that
-  design or authorize removing the working inspector.
-- Detached Layers and Metadata remain viewport-bounded and must identify the
-  Display Module and active Grid or selection they currently inspect. Their
-  detached position is Workbench view state, not published composition state.
+- Layers presents its thumbnail list first, in front-to-back order, followed by
+  properties for the current selection. Artwork-only controls are absent for
+  Text. Composition spacing is a separate collapsible section. Existing scoped
+  controller actions remain authoritative; reorganizing controls adds no stored
+  content, schema or publication fields.
+- Long metadata scrolls inside the shared bounded window. Shared tool positions
+  and selection targets are Workbench view state, never published composition
+  state. Visitor Metadata has no authoring actions or Layers window.
 - The Display title bar identifies its presentation. The official publishing
   identity is available in the Identity Module header; authored presentation
   names must not be treated as official profile metadata.
@@ -633,10 +682,9 @@ drafts retain their schemas and content.
   by Identity. Styling choices are not persisted profile data.
 
 - Display adopts the same bevel tokens for its outer frame, title-bar controls,
-  inspection controls and attached, overlay and detached instrument panels.
-  The frame continues to expand around the attached bay through Display's
-  existing geometry; Stage dimensions, artwork crop and saved compositions are
-  independent of this chrome. Detached panels receive the module theme explicitly.
+  inspection controls and independent instrument windows. Opening tools leaves
+  Stage dimensions, artwork crop and saved compositions unchanged. Tool windows
+  receive the module theme explicitly.
   Owner and Visitor share this treatment, including the two-pixel tab selector,
   reduced grain, thin content boundary and light-theme control shadows.
 
@@ -818,10 +866,16 @@ arrangement remain to be specified when implementing public Workbench entry.
 
 ## Editing, public inspection, and publication
 
-- The Library retains one entry per token while exposing its available image
-  representations and attached images through an image chooser. Resolution
-  variants of one image remain one choice. Choosing an image does not create a
-  new token identity or change Library category membership.
+- The Library retains one canonical record per token. Its browsing grid exposes
+  covers and supported attached images as individual tiles labelled with their
+  source NFT; the image chooser can still focus on one NFT. Resolution variants
+  of one image remain one choice. Choosing an image does not create a new token
+  identity or change Library category membership. Navigation counts count source
+  records, not their image tiles. A compact circular image-count button opens the
+  NFT's image chooser. Library category drops remain available during asset drags;
+  the Library fades and lets asset drops reach Displays behind its content area,
+  while its category sidebar remains a drop target. Metadata refresh must keep cover URLs and image
+  choices consistent without changing holding or creator authority.
 - An image chosen for placement belongs to that placement. Preserve its resource
   and dimensions through draft persistence, Preview, and public projection,
   alongside the original token identity and provenance. Different placements
@@ -838,6 +892,59 @@ arrangement remain to be specified when implementing public Workbench entry.
   force until an explicit, tested migration replaces them.
 
 ## Visual language
+
+Selected artwork uses 28-pixel resize targets with contrasting corner marks.
+Single selections also have midpoint handles: left/right changes width only;
+top/bottom changes height only. Corners retain Shift-proportional dragging.
+Layers Selection exposes Width and Height in canvas units (1–512, quantized to
+ninths); Enter or leaving the field commits one undoable resize, anchored at the
+top left. Invalid sizes do not change saved work. Text resizing reflows its content.
+For artwork, side handles and numeric sizes enable free scaling of the media,
+including its transparent margins and existing crop. Optional placement
+`mediaFrameRatio` retains the original fitting-frame ratio; omission preserves
+existing draft-v4/public-v9 rendering without rewriting old data. The field
+travels through publication, restoration and duplication; it is placement data,
+not a change to the source asset or metadata. Owner and public renderers share
+the same fitting calculation. Fit/Cover restore native proportions by clearing
+this optional reference; Centre retains it. Group selections retain corner handles.
+Targets stay inside the visible Display, including artwork extending beyond it;
+their offset from the authored corner is retained by the drag gesture. While
+selection handles are visible, window corner targets yield pointer interaction;
+Escape clears selection to resize the window. Shift preserves proportions for
+single and grouped resizing; Alt uses the existing ninth-cell precision.
+Layers offers Fit inside Display, Cover Display and Centre for one unlocked
+artwork. Fit/Cover use source proportions (including quarter-turn orientation),
+centre the placement, and retain crop, source and other content settings. These
+are single undoable geometry edits, with no new saved layout constraint or schema.
+
+Display and Text own optional authored `appearance.edges`: four corner radii in
+clockwise order from top left (0–64 pixels), a shadow switch, and grain strength
+(0–1). Display also accepts optional `appearance.frame`; Text retains its existing
+frame setting. Omitted fields preserve existing appearance without a data rewrite.
+Square adjoining corners and rounded outer corners allow modules to read together.
+Grain is optional and independent of interface noise and texture in source artwork.
+These settings survive publication, restore and Text transfer into Display.
+
+Workbench owns module-edge snapping and the local gap preference (0–128 pixels).
+Nearby visible module edges take priority over grid snapping, including top and
+bottom alignment. Zero gap permits flush joins. Alt bypasses both kinds of snapping;
+viewport bounds still win. Display resize retains its ratio and opposite corner.
+Only open content windows participate; instruments, shortcuts, enlarged inspection
+windows and other Workbenches are excluded. Changing preferences does not rearrange
+windows. Publication captures the resulting layout through its existing flow;
+snapping preferences remain local and Visitor movement remains temporary.
+
+Workbench Grid snapping uses the existing 24-pixel guide spacing when moving or resizing
+owner Display and standalone Text windows, as well as Display shortcuts.
+Alt bypasses window snapping temporarily; focused window headers support arrow
+keys. Viewport limits take priority at edges. The existing profile-local
+`shortcutSnap` preference remains the storage owner, now labelled Grid snapping;
+older values retain their meaning for shortcuts and also control these windows.
+Toggling snapping or changing guide visibility does not rearrange existing
+windows. Text snaps its moving edges. Display snaps the edge on the dominant
+resize axis and derives the other dimension from its fixed Stage ratio, retaining
+the opposite corner. Artwork placement inside Display retains its own rules.
+Visitor window movement remains free and does not acquire owner preferences.
 
 INSCAPE is flat, technical, spatial, and deliberately bounded. It must not drift
 into generic dashboard, marketplace, or AI-generated interface styling.

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import { useProfileContractFacts, useProfileIdentity } from '../../profileIdentity/index.js';
 import LatticeProfileRail from '../../lattice/rendering/LatticeProfileRail.jsx';
@@ -12,9 +12,10 @@ import './visitorGridWorld.css';
 import PresentationBoard from '../../public/ownerSystemWorkflow/PresentationBoard.jsx';
 import useDisplayInspection from '../../public/ownerSystemWorkflow/useDisplayInspection.js';
 import DisplayFocusViewer from '../../public/ownerSystemWorkflow/DisplayFocusViewer.jsx';
+import RackMenu from '../../public/menus/RackMenu.jsx';
+import { createPortal } from 'react-dom';
 import DisplayInspectionCues from '../../public/ownerSystemWorkflow/DisplayInspectionCues.jsx';
-import DisplayInstruments from '../../public/ownerSystemWorkflow/DisplayInstruments.jsx';
-import { transitionDisplayInstruments } from '../../public/ownerSystemWorkflow/displayInstrumentState.js';
+import { SharedDisplayToolsProvider, SharedDisplayToolWindows, SharedDisplayToolContent, SharedDisplayToolsLauncher, displayToolCommands, useSharedDisplayTools } from '../../public/ownerSystemWorkflow/SharedDisplayTools.jsx';
 import { OwnerSystemWorkflowMetadataContent } from '../../public/ownerSystemWorkflow/OwnerSystemWorkflowMetadataModule.jsx';
 import { createDefaultWorkbenchPresentation } from '../domain/workbenchPresentation.js';
 import useOwnerSystemWorkflowLayout from '../../public/ownerSystemWorkflow/useOwnerSystemWorkflowLayout.js';
@@ -28,21 +29,23 @@ function PublishedStage({ children, activeGridId, onClickCapture, onPointerDown,
 }
 
 const IdentityModule = lazy(() => import('../../public/identity/IdentityModule.jsx'));
-const MirrorWorkbench = lazy(() => import('../../mirror/MirrorWorkbench.jsx'));
 const MiniAppsWorkbench = lazy(() => import('../../miniApps/MiniAppsWorkbench.jsx'));
 const TextWorkbench = lazy(() => import('../../text/TextWorkbench.jsx'));
 const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-6)}`;
 
 export default function ProfileDocumentV9Visitor(props) {
-  return <ProfileDocumentV9Session key={`${props.document.profile.address}:${props.document.documentId}:${props.document.revision}`} {...props} />;
+  return <SharedDisplayToolsProvider key={`${props.document.profile.address}:${props.document.documentId}:${props.document.revision}`}><ProfileDocumentV9Session {...props} /></SharedDisplayToolsProvider>;
 }
 
 function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn, onConnect, embedded = false, instanceId, active = true, onActivate }) {
   useStartupDestinationReady();
+  const tools = useSharedDisplayTools();
+  const targetId = instanceId || 'display:primary';
+  const [metadataSelection, setMetadataSelection] = useState(null);
   const rootRef = useRef(null);
   const [activeDisplay, setActiveDisplay] = useState('display:primary');
   const additionalDocuments = useMemo(() => (document.displays || []).map(module => {
-    const { displays: _displays, animations: _animations, miniApps: _miniApps, texts: _texts, ...shared } = document;
+    const { displays: _displays, miniApps: _miniApps, texts: _texts, ...shared } = document;
     const { id, ...content } = module;
     const { id: _presentationId, ...display } = document.workbench?.displays?.find(item => item.id === id) || createDefaultWorkbenchPresentation().display;
     return { id, document: { ...shared, ...content, metadata: {}, workbench: { version: 1,
@@ -52,9 +55,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const layout = useOwnerSystemWorkflowLayout();
   const stageRef = useRef(null);
   const [playing, setPlaying] = useState(false);
-  const instrumentTriggers = useRef({});
-  const [instruments, dispatchInstruments] = useReducer(transitionDisplayInstruments,
-    { active: null, layers: 'closed', metadata: 'attached' });
+  const [displayMenu, setDisplayMenu] = useState(null);
   const identityControlRef = useRef(null);
   const profileDockControlRef = useRef(null);
   const gridDragRef = useRef(null);
@@ -95,7 +96,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const hasDisplay = document.grids.length > 0;
   const lastIndex = document.grids.length - 1;
   const workspaceSurfaceColor = latticeSurfaceColor(document.appearance.surfaceId);
-  const viewerEntries = useMemo(() => (activeGrid?.placements || []).map((placement) => {
+  const viewerEntries = useMemo(() => (activeGrid?.placements || []).filter(placement => placement.kind !== 'text').map((placement) => {
     const decoded = placementMedia[`${activeGrid.id}:${placement.id}`];
     const model = createProfileDocumentV9FocusViewModel(placement, {
       decodedDimensions: decoded?.dimensions, resolvedUrl: decoded?.media?.src,
@@ -109,12 +110,14 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const entriesById = useMemo(() => new Map(viewerEntries.map(entry => [entry.placement.id, entry])), [viewerEntries]);
   const viewer = useDisplayInspection({
     scope: `${document.profile.address}:${document.documentId}:${document.revision}:${instanceId || 'display:primary'}:${activeGrid?.id}`,
-    items: activeGrid?.placements || [],
+    items: (activeGrid?.placements || []).filter(placement => placement.kind !== 'text'),
     getEntry: id => entriesById.get(id),
     getElement: findPlacementElement,
-    onOpen: (_id, interaction) => { if (!interaction.cue) dispatchInstruments({ type: 'open', instrument: 'metadata' }); },
+    onOpen: id => setMetadataSelection({ gridId: activeGrid.id, id }),
+    onNavigate: id => setMetadataSelection({ gridId: activeGrid.id, id }),
   });
-  const viewerEntry = viewer.entry;
+  const viewerEntry = metadataSelection?.gridId === activeGrid?.id ? entriesById.get(metadataSelection.id) : null;
+  const selectMetadata = id => { tools.activate(targetId); setMetadataSelection({ gridId: activeGrid.id, id }); };
   const playback = useGridPlayback({ playing,
     enabled: displayOpen && lastIndex > 0 && !viewer.placementId && !gridSwipe,
     gridId: activeGrid?.id, nextGridId: document.grids[(activeIndex + 1) % document.grids.length]?.id,
@@ -264,7 +267,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     });
   }, []);
   const openPlacementViewer = ({ element, placement, gridId }) => {
-    if (gridId === activeGrid.id) viewer.open(placement.id, element);
+    if (gridId === activeGrid.id) { selectMetadata(placement.id); if (!tools.state.metadata) viewer.open(placement.id, element); }
   };
   const openIdentityRack = () => {
     if (viewer.placementId || !identityRack) return;
@@ -302,7 +305,8 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     </PublishedStage>;
 
   return <main data-embedded-display={embedded || undefined} data-display-instance={instanceId || 'display:primary'} data-active-display={(embedded ? active : activeDisplay === 'display:primary') || undefined}
-    onPointerDownCapture={event => { if (event.target.closest('[data-display-instance]') === rootRef.current) { if (embedded) onActivate?.(); else setActiveDisplay('display:primary'); } }} aria-label="Published INSCAPE Grid visitor" className="visitor-grid-world system-workflow" data-workbench data-layout={layout.mode} data-lattice-menu-surface
+    onFocusCapture={event => { if (event.target.closest('[data-display-instance]') === rootRef.current && !event.target.closest('.visitor-grid-world__dock, [data-shared-display-tools]')) { tools.activate(targetId); if (embedded) onActivate?.(); else setActiveDisplay('display:primary'); } }}
+    onPointerDownCapture={event => { if (event.target.closest('[data-display-instance]') === rootRef.current && !event.target.closest('.visitor-grid-world__dock, [data-shared-display-tools]')) { tools.activate(targetId); if (embedded) onActivate?.(); else setActiveDisplay('display:primary'); } }} aria-label="Published INSCAPE Grid visitor" className="visitor-grid-world system-workflow" data-workbench data-layout={layout.mode} data-lattice-menu-surface
     data-guide-mode={document.appearance.guideMode} data-menu-surface={document.appearance.menuSurfaceId}
     data-surface={document.appearance.surfaceId} data-space-navigation={spaceNavigation || undefined}
     data-grid-dragging={gridDragging || undefined} data-grid-swipe-settling={gridSwipe?.settling || undefined}
@@ -310,32 +314,47 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     {hasDisplay && <PresentationBoard readOnly instanceId={instanceId} initialPresentation={displayPresentation} layoutMode={layout.mode}
       documentGeometry={document.geometry} profileAddress={document.profile.address}
       instanceState={displayOpen ? 'window' : 'minimized'} onMinimize={() => setDisplayOpen(false)} onRestore={() => setDisplayOpen(true)}
-      menuSurface={document.appearance.menuSurfaceId} displaySurface={document.appearance.surfaceId} reducedMotion={reducedMotion}
+      menuSurface={document.appearance.menuSurfaceId} displaySurface={document.appearance.surfaceId} moduleAppearance={document.appearance} reducedMotion={reducedMotion}
       shortcutSnap={false}
-      playing={playing} playbackDisabled={lastIndex === 0 || Boolean(viewer.placementId)}
+      onContextMenu={event => {
+        event.preventDefault(); event.stopPropagation();
+        const rect = event.currentTarget.getBoundingClientRect();
+        setDisplayMenu({ x: event.clientX || rect.left, y: event.clientY || rect.top,
+          trigger: event.currentTarget.querySelector('.system-workflow__identity-strip') });
+      }}
+      playing={playing}
       onTogglePlayback={() => setPlaying(current => !current)}
-      instrumentTriggers={instrumentTriggers}
-      metadataOpen={instruments.active === 'metadata' || instruments.metadata === 'detached'}
-      instrumentBayOpen={Boolean(instruments.active)}
-      onToggleMetadata={() => dispatchInstruments({ type: 'toggle', instrument: 'metadata' })}
       inspectionAtmosphere={viewer.atmosphereActive} onInspectionCancel={viewer.close}
       renderCues={host => <DisplayInspectionCues key={`${document.profile.address}:${activeGrid.id}`}
-        host={host} items={activeGrid.placements} viewer={viewer} disabled={playing || Boolean(gridSwipe)} />}
+        host={host} items={activeGrid.placements} viewer={viewer} contentVersion={viewerEntries} onSelect={selectMetadata} disabled={!tools.state.metadata || playing || Boolean(gridSwipe)} />}
       renderInspection={viewer.placementId && viewer.entry ? (container, controlsContainer, scene) => <DisplayFocusViewer
         scene={scene} container={container} controlsContainer={controlsContainer} viewer={viewer}
         menuSurface={document.appearance.menuSurfaceId} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
-      renderInstruments={(projection, overlayTop, displayName) => <DisplayInstruments menuSurface={document.appearance.menuSurfaceId} workspaceRef={rootRef}
-        instrumentTriggers={instrumentTriggers} state={instruments} dispatch={dispatchInstruments}
-        projection={projection} overlayTop={overlayTop} scope={`${displayName} / ${activeGrid.title}`}
-        selectionLabel={viewerEntry?.dossier.title || 'No artwork selected'}
-        renderMetadata={() => <OwnerSystemWorkflowMetadataContent dossier={viewerEntry?.dossier || null} />} />}>
+>
       {stage}
     </PresentationBoard>}
+    {displayMenu && createPortal(<RackMenu anchor={displayMenu} label="Display commands"
+      commands={[{ id: 'tools', label: 'TOOLS' },
+        ...(lastIndex > 0 ? [{ id: 'play-grids', label: playing ? 'PAUSE GRIDS' : 'PLAY GRIDS', disabled: Boolean(viewer.placementId) }] : [])]}
+      getSubmenuCommands={id => id === 'tools' ? displayToolCommands(true) : []}
+      menuSurfaceId={document.appearance.menuSurfaceId} returnFocus={displayMenu.trigger}
+      onClose={() => setDisplayMenu(null)} onCommand={id => {
+        if (id === 'tool-metadata') tools.command('metadata', true, displayMenu.trigger, targetId);
+        if (id === 'play-grids') setPlaying(current => !current);
+        displayMenu.trigger?.focus();
+        setDisplayMenu(null);
+      }} systemWorkflowOverlay />, globalThis.document.body)}
+    {!embedded && <SharedDisplayToolWindows readOnly menuSurface={document.appearance.menuSurfaceId} />}
+    <SharedDisplayToolContent id="metadata" targetId={targetId} available={displayOpen && activeGrid != null}
+      label={`${displayPresentation?.name || 'Display Module'} / ${activeGrid?.title || 'Grid'} / ${viewerEntry?.dossier.title || 'No artwork selected'}`}>
+      <OwnerSystemWorkflowMetadataContent dossier={viewerEntry?.dossier || null} />
+    </SharedDisplayToolContent>
     {!embedded && profileVisible && <LatticeProfileRail blocked={Boolean(viewer.placementId)} collapsed entries={[]} identityControlRef={identityControlRef} identityOnly
       identityDisabled={Boolean(viewer.placementId)} identityExpanded={identityOpen}
       officialIdentity={officialIdentity} onIdentityActivate={openIdentityRack} />}
     {!embedded && <footer className="visitor-grid-world__dock">
       <nav aria-label="Published profile navigation">
+        <SharedDisplayToolsLauncher readOnly menuSurface={document.appearance.menuSurfaceId} />
         <button aria-expanded={document.workbench ? identityOpen : profileVisible} aria-label="Profile" data-visitor-profile-trigger
           disabled={Boolean(viewer.placementId)} onClick={document.workbench ? () => setIdentityOpen(current => !current) : toggleProfile}
           ref={profileDockControlRef} type="button">PROFILE</button>
@@ -362,9 +381,6 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     </Suspense></div>}
     {!embedded && additionalDocuments.map(item => <ProfileDocumentV9Session key={item.id} document={item.document}
       embedded instanceId={item.id} active={activeDisplay === item.id} onActivate={() => setActiveDisplay(item.id)} />)}
-    {!embedded && document.animations?.length > 0 && <Suspense fallback={<p role="status">Opening Mirror…</p>}>
-      <MirrorWorkbench records={document.animations} profileAddress={document.profile.address} />
-    </Suspense>}
     {!embedded && document.texts?.length > 0 && <Suspense fallback={<p role="status">Opening Text…</p>}>
       <TextWorkbench records={document.texts} presentations={document.workbench?.texts} profileAddress={document.profile.address} />
     </Suspense>}

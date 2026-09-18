@@ -10,6 +10,8 @@ export const DEFAULT_WORKBENCH_PREFERENCES = Object.freeze({
   gridColor: null,
   gridMode: 'LINES',
   shortcutSnap: true,
+  edgeSnap: true,
+  moduleGap: 0,
   surfaceId: 'mist',
 });
 
@@ -30,6 +32,8 @@ export function normalizeWorkbenchPreferences(value, fallbackSurfaceId = DEFAULT
   const safeFallbackSurface = SYSTEM_WORKFLOW_SURFACE_IDS.includes(fallbackSurfaceId)
     ? fallbackSurfaceId : DEFAULT_WORKBENCH_PREFERENCES.surfaceId;
   return Object.freeze({
+    edgeSnap: typeof source.edgeSnap === 'boolean' ? source.edgeSnap : true,
+    moduleGap: Number.isFinite(source.moduleGap) && source.moduleGap >= 0 && source.moduleGap <= 128 ? source.moduleGap : 0,
     chromeNoise: typeof source.chromeNoise === 'boolean' ? source.chromeNoise : true,
     compositionLocked: typeof source.compositionLocked === 'boolean' ? source.compositionLocked : false,
     dockVisible: typeof source.dockVisible === 'boolean' ? source.dockVisible : true,

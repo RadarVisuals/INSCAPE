@@ -1,3 +1,5 @@
+import { validPlacementAnimation } from '../../systemWorkflow/domain/placementAnimation.js';
+import { validModuleEdges } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import {
   SYSTEM_WORKFLOW_FRAME_IDS,
@@ -22,9 +24,9 @@ import { validateProfileDocumentV9Asset } from './profileDocumentV9Asset.js';
 import { isValidIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { isValidWorkbenchPresentation } from './workbenchPresentation.js';
 import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, isDisplayFormat } from '../../systemWorkflow/domain/displayModules.js';
-import { validMirrorModules } from '../../systemWorkflow/domain/mirrorModules.js';
 import { validMiniApps } from '../../miniApps/domain/miniApps.js';
-import { validTextModules } from '../../text/domain/article.js';
+import { validTextModules, assertArticle, ARTICLE_TYPE } from '../../text/domain/article.js';
+import { DISPLAY_TEXT_KEYS, isTextPlacement, validDisplayText } from '../../systemWorkflow/domain/displayText.js';
 import { validMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
 import { canUseMobileRenderer } from '../../mobile/domain/customPresentation.js';
 
@@ -71,6 +73,12 @@ const sets = {
 
 function depth(value, current = 0) {
   if (!value || typeof value !== 'object') return current;
+  // Articles enforce their own bounded rich-text depth/node/byte limits. Their
+  // internal tree is not extra nesting in the surrounding document envelope.
+  if (value.documentType === ARTICLE_TYPE) {
+    try { assertArticle(value); return current; } catch { /* Report invalid trees through normal validation. */ }
+  }
+  if (current > SYSTEM_WORKFLOW_LIMITS.maxDepth) return current;
   return Object.values(value).reduce((maximum, child) => Math.max(maximum, depth(child, current + 1)), current);
 }
 
@@ -113,7 +121,16 @@ function validateIdentity(value, fail) {
 }
 
 function validatePlacement(value, path, fail) {
-  if (!exactKeys(value, Object.hasOwn(value || {}, 'inspectionMode') ? [...PLACEMENT_KEYS, 'inspectionMode'] : PLACEMENT_KEYS)) return fail(path, 'invalid_placement_structure', 'Invalid public placement');
+  if (isTextPlacement(value)) {
+    if (!exactKeys(value, DISPLAY_TEXT_KEYS) || !validDisplayText(value.text)) return fail(path, 'invalid_text_placement', 'Invalid public text layer');
+    if (!safeId(value.id) || !isValidSystemWorkflowPlacementGeometry(value) || !safeInteger(value.layer) || !safeInteger(value.navigationOrder)
+      || value.visibility !== 'PUBLIC' || !exactKeys(value.transform, ['quarterTurns', 'mirrorX', 'mirrorY'])
+      || ![0, 1, 2, 3].includes(value.transform.quarterTurns) || typeof value.transform.mirrorX !== 'boolean' || typeof value.transform.mirrorY !== 'boolean') fail(path, 'invalid_text_geometry', 'Invalid public text geometry');
+    return;
+  }
+  if (!exactKeys(value, [...PLACEMENT_KEYS, ...['inspectionMode', 'mediaFrameRatio', 'animation'].filter(key => Object.hasOwn(value || {}, key))])) return fail(path, 'invalid_placement_structure', 'Invalid public placement');
+  if (Object.hasOwn(value, 'animation') && !validPlacementAnimation(value.animation)) fail(`${path}.animation`, 'invalid_animation', 'Invalid placement animation');
+  if (Object.hasOwn(value, 'mediaFrameRatio') && (!Number.isFinite(value.mediaFrameRatio) || value.mediaFrameRatio < 1 / 512 || value.mediaFrameRatio > 512)) fail(`${path}.mediaFrameRatio`, 'invalid_media_frame_ratio', 'Invalid media frame ratio');
   if (Object.hasOwn(value, 'inspectionMode') && !['IN_PLACE', 'LIFT'].includes(value.inspectionMode)) fail(`${path}.inspectionMode`, 'invalid_inspection_mode', 'Invalid artwork inspection mode');
   if (!safeId(value.id)) fail(`${path}.id`, 'invalid_placement_id', 'Invalid placement ID');
   if (!validateProfileDocumentV9Asset(value.asset)) fail(`${path}.asset`, 'invalid_asset_reference', 'Invalid canonical asset reference');
@@ -196,7 +213,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   try { measuredSize ??= new TextEncoder().encode(JSON.stringify(input)).byteLength; } catch { measuredSize = Infinity; }
   if (measuredSize > SYSTEM_WORKFLOW_LIMITS.maxJsonBytes) fail('$', 'document_too_large', `Document exceeds ${SYSTEM_WORKFLOW_LIMITS.maxJsonBytes} bytes`);
   if (depth(input) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'animations', 'mobile', 'miniApps', 'texts'])) {
+  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'mobile', 'miniApps', 'texts'])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -221,7 +238,9 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     fail('profile.cachedIdentity', 'invalid_identity', 'Invalid cached public identity fallback');
   }
   if (!isDisplayFormat(input.artboard, input.geometry)) fail('artboard', 'invalid_artboard', 'Invalid Display format');
-  if (!exactKeys(input.appearance, APPEARANCE_KEYS)
+  if (!exactKeys(input.appearance, [...APPEARANCE_KEYS, ...['edges', 'frame'].filter(key => Object.hasOwn(input.appearance || {}, key))])
+    || input.appearance?.edges !== undefined && !validModuleEdges(input.appearance.edges)
+    || input.appearance?.frame !== undefined && typeof input.appearance.frame !== 'boolean'
     || !sets.surfaces.has(input.appearance.surfaceId)
     || !sets.surfaces.has(input.appearance.menuSurfaceId)
     || !sets.surfaces.has(input.appearance.dossierSurfaceId)
@@ -231,7 +250,6 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid public appearance');
   validateIdentity(input.identityPresentation, fail);
-  if (Object.hasOwn(input, 'animations') && !validMirrorModules(input.animations, true)) fail('animations', 'invalid_animations', 'Invalid published Mirror module');
   if (Object.hasOwn(input, 'miniApps') && !validMiniApps(input.miniApps, true)) fail('miniApps', 'invalid_mini_apps', 'Invalid published mini app');
   if (Object.hasOwn(input, 'texts') && !validTextModules(input.texts, true)) fail('texts', 'invalid_texts', 'Invalid published Text module');
   if (Array.isArray(input.workbench?.texts) && input.workbench.texts.some(item => !Array.isArray(input.texts) || !input.texts.some(text => text?.id === item?.id))) fail('workbench.texts', 'unknown_text', 'Window refers to an unavailable Text module');
@@ -244,7 +262,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
       fail('displays', 'invalid_display_count', 'Invalid Display count');
     } else {
       const ids = new Set([PRIMARY_DISPLAY_ID]);
-      const { displays: _displays, workbench: _workbench, animations: _animations, mobile: _mobile, miniApps: _miniApps, texts: _texts, ...shared } = input;
+      const { displays: _displays, workbench: _workbench, mobile: _mobile, miniApps: _miniApps, texts: _texts, ...shared } = input;
       for (const module of input.displays) {
         if (!exactKeys(module, ['id', ...DISPLAY_CONTENT_KEYS]) || !/^display:[A-Za-z0-9_-]{1,80}$/u.test(module?.id) || ids.has(module.id)) {
           fail('displays', 'invalid_display', 'Invalid or duplicate Display'); continue;
@@ -314,7 +332,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   const documentAssetReferences = (input.grids || []).reduce((total, grid) => total + (grid?.placements?.length || 0), 0)
     + worldCoverAssetReferences + (input.identityPresentation?.avatar?.asset ? 1 : 0) + moduleReferences
     + (input.workbench?.display?.shortcut?.icon ? 1 : 0) + (input.workbench?.displays || []).filter(module => module.shortcut?.icon).length
-    + (Array.isArray(input.animations) ? input.animations.length : 0) + mobileReferenceCount(input.mobile);
+    + mobileReferenceCount(input.mobile);
   if (documentAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) {
     fail('metadata.worldCover', 'too_many_asset_references', 'Too many total asset references');
   }

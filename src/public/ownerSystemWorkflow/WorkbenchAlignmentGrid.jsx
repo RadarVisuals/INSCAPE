@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
+import { WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 
-const field = { cellSize: 24, left: 0, top: 0 };
+const field = { cellSize: WORKBENCH_GRID_STEP, left: 0, top: 0 };
 export default function WorkbenchAlignmentGrid({ hostRef, color, mode }) {
   const [size, setSize] = useState({ width: 0, height: 0 });
   useEffect(() => {

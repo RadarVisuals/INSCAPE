@@ -8,7 +8,7 @@ import { systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraf
 import { buildOwnerSystemWorkflowPreviewDocument } from '../src/public/ownerSystemWorkflowPreviewDocument.js';
 import '../src/index.css';
 
-const fixtures = assets.map((asset, index) => index ? asset : { ...asset,
+let fixtures = assets.map((asset, index) => index ? asset : { ...asset,
   imageGroups: ['main', 'transparent', 'unavailable'].map((name, index) => ({ index,
     originalImageUrl: `https://images.inscape.test/${name}.webp`, imageUrl: `https://images.inscape.test/${name}.webp`,
     variants: name === 'transparent' ? [{ url: 'https://images.inscape.test/transparent-fallback.webp' }] : [],
@@ -25,6 +25,15 @@ window.__imageTest = {
   preview: () => buildOwnerSystemWorkflowPreviewDocument({ assetRecords: fixtures, profileAddress: profile,
     systemWorkflowDraft: window.__imageTest.draft() }),
 };
-createRoot(document.getElementById('root')).render(<OwnerSystemWorkflowShell ownerAuthoringEnabled
+const root = createRoot(document.getElementById('root'));
+const render = () => root.render(<OwnerSystemWorkflowShell ownerAuthoringEnabled
   workspaceProfileAddress={profile} viewedProfileAddress={profile} reviewStorage={storage}
   reviewAssets={fixtures} reviewCategories={categories} reviewProfile={{ name: 'Image selection fixture' }} />);
+window.__imageTest.replaceCover = (url) => {
+  fixtures = fixtures.map((asset, index) => index ? asset : { ...asset,
+    imageUrl: url, thumbnailUrl: url, originalImageUrl: url, src: url, previewSrc: url, previewCandidates: [url],
+    imageGroups: [{ index: 0, imageUrl: url, originalImageUrl: url, variants: [] }, ...asset.imageGroups.slice(1)],
+  });
+  render();
+};
+render();

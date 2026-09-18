@@ -1,3 +1,4 @@
+import { createSystemWorkflowAnimationCandidate } from './systemWorkflowAnimation.js';
 import {
   createSystemWorkflowGridCandidate,
   createSystemWorkflowGridDeleteCandidate,
@@ -45,15 +46,10 @@ import {
 import { createSystemWorkflowAppearanceCandidate } from './systemWorkflowAppearance.js';
 import { createSystemWorkflowGutterCandidate } from './systemWorkflowGutters.js';
 import { createSystemWorkflowLockCandidate } from './systemWorkflowLock.js';
-import { assertValidSystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
-import { resolveIdentityCard } from '../profileIdentity/domain/identityCard.js';
+import { createSystemWorkflowArrangeCandidate } from './systemWorkflowArrange.js';
 
 function sessionError(code, message) {
   return Object.assign(new Error(message), { code });
-}
-
-function identityDetails({ alias, bio, tags, avatar }) {
-  return { alias, bio, tags, avatar };
 }
 
 export function createSystemWorkflowAuthoringSession({ store } = {}) {
@@ -76,24 +72,6 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
   }
 
   return Object.freeze({
-    saveWorkbench(workbench) {
-      // Publication captures host layout; it is not an artwork edit.
-      return transact(draft => assertValidSystemWorkflowDraft({ ...draft, workbench: structuredClone(workbench) }), { recordHistory: false });
-    },
-    setIdentityConfiguration({ expectedDetails, expectedCard, details, card }) {
-      return transact((draft) => {
-        const current = draft.identityPresentation;
-        const before = { alias: current.alias, bio: current.bio, tags: current.tags, avatar: current.avatar };
-        if (JSON.stringify(before) !== JSON.stringify(identityDetails(expectedDetails))
-          || JSON.stringify(resolveIdentityCard(current)) !== JSON.stringify(expectedCard)) {
-          throw sessionError('SYSTEM_WORKFLOW_IDENTITY_STALE', 'The Identity changed. Reopen the editor before saving.');
-        }
-        if (JSON.stringify(before) === JSON.stringify(identityDetails(details)) && Object.hasOwn(current, 'card')
-          && JSON.stringify(current.card) === JSON.stringify(card)) return null;
-        Object.assign(current, structuredClone(details), { card: structuredClone(card) });
-        return assertValidSystemWorkflowDraft(draft);
-      });
-    },
     getState() {
       selectedGridId = reconcileSystemWorkflowGridSelection(store.getDraft(), selectedGridId);
       return Object.freeze({
@@ -165,6 +143,14 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
 
     resizePlacement(request) {
       return transact((draft) => createSystemWorkflowResizeCandidate(draft, request));
+    },
+
+    setPlacementAnimation(request) {
+      return transact(draft => createSystemWorkflowAnimationCandidate(draft, request));
+    },
+
+    arrangePlacement(request) {
+      return transact(draft => createSystemWorkflowArrangeCandidate(draft, request));
     },
 
     resizePlacements(request) {

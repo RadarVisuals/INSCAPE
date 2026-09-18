@@ -33,8 +33,12 @@ export default function OwnerSystemWorkflowSettings({ appearance, controller, me
       <label><span>Background</span><OwnerSystemWorkflowSelectMenu label="Workbench background" menuSurface={menuSurface} onChange={(surfaceId) => onWorkbenchPreferencesChange({ surfaceId })} options={themeOptions} value={workbenchPreferences.surfaceId} /></label>
       <label><span>Grid display</span><OwnerSystemWorkflowSelectMenu label="Workbench grid display" menuSurface={menuSurface} onChange={(gridMode) => onWorkbenchPreferencesChange({ gridMode })} options={guideOptions} value={workbenchPreferences.gridMode} /></label>
       <label><span>Grid color</span><span className="system-workflow__settings-color"><input aria-label="Workbench grid color" onChange={(event) => onWorkbenchPreferencesChange({ gridColor: event.target.value })} type="color" value={workbenchPreferences.gridColor || workbenchGridColorPreview(workbenchPreferences.surfaceId)} /><button disabled={!workbenchPreferences.gridColor} onClick={() => onWorkbenchPreferencesChange({ gridColor: null })} type="button">Auto</button></span></label>
-      <CheckControl checked={workbenchPreferences.shortcutSnap} label="Shortcut snapping"
+      <CheckControl checked={workbenchPreferences.shortcutSnap} label="Grid snapping"
         onChange={(shortcutSnap) => onWorkbenchPreferencesChange({ shortcutSnap })} />
+      <CheckControl checked={workbenchPreferences.edgeSnap} label="Module edge snapping" onChange={edgeSnap => onWorkbenchPreferencesChange({ edgeSnap })} />
+      <label><span>Module gap (px)</span><input aria-label="Module gap" type="number" min={0} max={128} value={workbenchPreferences.moduleGap} onChange={event => { const moduleGap = event.target.valueAsNumber; if (Number.isFinite(moduleGap) && moduleGap >= 0 && moduleGap <= 128) onWorkbenchPreferencesChange({ moduleGap }); }} /></label>
+      <p>Nearby module edges take priority over the grid. A zero gap joins modules flush.</p>
+      <p>Align Display and Text windows and shortcuts to the grid. Hold Alt while moving or resizing a window to bypass snapping.</p>
     </section>
     <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Display Module</strong><span>Included when published</span></header>
       <label><span>Background</span><OwnerSystemWorkflowSelectMenu label="Display Module background" menuSurface={menuSurface} onChange={(surfaceId) => controller.setAppearance({ surfaceId })} options={themeOptions} value={appearance.surfaceId} /></label>

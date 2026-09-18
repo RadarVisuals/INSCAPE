@@ -1,9 +1,37 @@
 import { validateProfileDocumentV9Asset } from '../../profileDocument/domain/profileDocumentV9Asset.js';
+import { validModuleEdges, moduleEdgeStyle } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';
 
 export const ARTICLE_TYPE = 'INSCAPEArticle';
 export const ARTICLE_MAX_BYTES = 192 * 1024;
 export const MAX_TEXT_MODULES = 4;
+export const defaultTextAppearance = () => ({ background: null, opacity: 1, frame: false, scale: 1, fontSize: 16, color: '#ffffff' });
+export const textAppearance = article => article.appearance || { ...defaultTextAppearance(), background: '#101111', frame: true };
+export function textContentStyle(article) {
+  const padding = article.appearance?.padding;
+  return padding ? { padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`, maxWidth: 'none' } : {};
+}
+export function textSurfaceStyle(article) {
+  if (!article.appearance) return { background: 'var(--workflow-panel)', color: 'var(--workflow-ink)', boxShadow: 'inset 0 0 0 1px var(--workflow-border)' };
+  const appearance = textAppearance(article);
+  const hex = appearance.background;
+  const background = hex ? `rgba(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}, ${appearance.opacity})` : 'transparent';
+  return { background, color: appearance.color, ...moduleEdgeStyle(appearance.edges), boxShadow: [appearance.frame ? `inset 0 0 0 1px ${appearance.color}` : '', appearance.edges?.shadow ? 'var(--workflow-window-chrome-shadow)' : ''].filter(Boolean).join(', ') || 'none' };
+}
+export function textOutputStyle(article, window) {
+  const transform = article.appearance?.transform;
+  if (!transform) return textSurfaceStyle(article);
+  const rotated = transform.quarterTurns % 2 === 1;
+  return { ...textSurfaceStyle(article), position: 'absolute', left: '50%', top: '50%',
+    width: rotated ? window.height : window.width, height: rotated ? window.width : window.height,
+    transform: `translate(-50%, -50%) rotate(${transform.quarterTurns * 90}deg) scale(${transform.mirrorX ? -1 : 1}, ${transform.mirrorY ? -1 : 1})` };
+}
 export const TEXT_ID = /^text:[A-Za-z0-9_-]{1,80}$/u;
+export const ARTICLE_ALIGNMENTS = Object.freeze(['left', 'center', 'right', 'justify-left', 'justify-center', 'justify-right', 'justify-all']);
+export function articleAlignmentStyle(alignment) {
+  if (!ARTICLE_ALIGNMENTS.includes(alignment)) return {};
+  if (!alignment.startsWith('justify-')) return { textAlign: alignment, textAlignLast: 'auto' };
+  return { textAlign: 'justify', textAlignLast: alignment === 'justify-all' ? 'justify' : alignment.slice(8) };
+}
 export const ARTICLE_FONTS = Object.freeze([
   { id: 'sora', label: 'Sora', family: 'Inscape Sora', directory: 'Sora', file: 'Sora-VariableFont_wght.ttf' },
   { id: 'plex', label: 'IBM Plex Sans Condensed', family: 'Inscape IBM Plex Sans Condensed', directory: 'IBM_Plex_Sans_Condensed', file: 'IBMPlexSansCondensed-Regular.ttf' },
@@ -29,8 +57,23 @@ function validMark(mark) {
     && [undefined, null].includes(mark.attrs.class);
 }
 export function assertArticle(article) {
-  if (!exact(article, ['documentType', 'version', 'title', 'font', 'content']) || article.documentType !== ARTICLE_TYPE
+  if (!exact(article, ['documentType', 'version', 'title', 'font', 'content'], ['appearance']) || article.documentType !== ARTICLE_TYPE
     || article.version !== 1 || !string(article.title, 160) || !ARTICLE_FONTS.some(f => f.id === article.font)) throw new Error('Unsupported article format. The source has not been changed.');
+  if (article.appearance !== undefined) {
+    const a = article.appearance;
+    if (!exact(a, ['background', 'opacity', 'frame', 'scale', 'fontSize', 'color'], ['transform', 'compact', 'padding', 'edges', 'titleFontSize'])
+      || !(a.background === null || /^#[\da-f]{6}$/iu.test(a.background)) || !/^#[\da-f]{6}$/iu.test(a.color)
+      || !Number.isFinite(a.opacity) || a.opacity < 0 || a.opacity > 1 || typeof a.frame !== 'boolean'
+      || !Number.isFinite(a.scale) || a.scale < .01 || a.scale > 100
+      || !Number.isFinite(a.fontSize) || a.fontSize < 8 || a.fontSize > 300
+      || (a.titleFontSize !== undefined && (!Number.isFinite(a.titleFontSize) || a.titleFontSize < 8 || a.titleFontSize > 300))) throw new Error('Unsupported Text appearance.');
+    if (a.edges !== undefined && !validModuleEdges(a.edges)) throw new Error('Unsupported Text edges.');
+    if (a.compact !== undefined && typeof a.compact !== 'boolean') throw new Error('Unsupported Text spacing.');
+    if (a.padding !== undefined && (!exact(a.padding, ['top', 'right', 'bottom', 'left'])
+      || Object.values(a.padding).some(value => !Number.isFinite(value) || value < 0 || value > 512))) throw new Error('Unsupported Text inner spacing.');
+    if (a.transform !== undefined && (!exact(a.transform, ['quarterTurns', 'mirrorX', 'mirrorY']) || ![0, 1, 2, 3].includes(a.transform.quarterTurns)
+      || typeof a.transform.mirrorX !== 'boolean' || typeof a.transform.mirrorY !== 'boolean')) throw new Error('Unsupported Text transform.');
+  }
   let count = 0;
   function visit(node, parent, depth) {
     if (++count > 6000 || depth > 16 || !exact(node, ['type'], ['attrs', 'content', 'text', 'marks'])) throw new Error('Article structure exceeds supported limits.');
@@ -44,7 +87,11 @@ export function assertArticle(article) {
       return;
     }
     if (node.text !== undefined || node.marks !== undefined) throw new Error('Invalid article block.');
-    if (type === 'heading') { if (!exact(node.attrs, ['level']) || ![1, 2, 3].includes(node.attrs.level)) throw new Error('Unsupported heading.'); }
+    if (['paragraph', 'heading'].includes(type)) {
+      if (type === 'heading' && (!exact(node.attrs, ['level'], ['textAlign']) || ![1, 2, 3].includes(node.attrs.level))) throw new Error('Unsupported heading.');
+      if (type === 'paragraph' && node.attrs && !exact(node.attrs, [], ['textAlign'])) throw new Error('Unsupported paragraph attributes.');
+      if (node.attrs?.textAlign != null && !ARTICLE_ALIGNMENTS.includes(node.attrs.textAlign)) throw new Error('Unsupported paragraph alignment.');
+    }
     else if (type === 'orderedList') { if (node.attrs && (!exact(node.attrs, ['start'], ['type']) || !Number.isSafeInteger(node.attrs.start)
       || node.attrs.start < 1 || node.attrs.start > 9999 || ![undefined, null].includes(node.attrs.type))) throw new Error('Unsupported list.'); }
     else if (type === 'artwork') {
@@ -63,7 +110,7 @@ export function assertArticle(article) {
   return article;
 }
 export function createArticle(title = '') {
-  return { documentType: ARTICLE_TYPE, version: 1, title, font: 'sora', content: { type: 'doc', content: [{ type: 'paragraph' }] } };
+  return { documentType: ARTICLE_TYPE, version: 1, title, font: 'sora', content: { type: 'doc', content: [{ type: 'paragraph' }] }, appearance: defaultTextAppearance() };
 }
 export function validTextModules(items, published = false) {
   try {

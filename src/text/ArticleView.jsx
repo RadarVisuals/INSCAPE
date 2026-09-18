@@ -1,5 +1,5 @@
 import { createElement, useEffect, useState } from 'react';
-import { ARTICLE_FONTS, assertArticle } from './domain/article.js';
+import { ARTICLE_FONTS, assertArticle, articleAlignmentStyle, textAppearance, textContentStyle } from './domain/article.js';
 import { resolvePublishedAssetUrl } from '../profileDocument/domain/publishedAssetUrl.js';
 import './text.css';
 
@@ -21,12 +21,13 @@ function renderNode(node, key) {
   }, node.text);
   if (node.type === 'artwork') return <ArticleArtwork key={key} attrs={node.attrs} />;
   const tag = ({ doc: 'div', paragraph: 'p', heading: `h${node.attrs?.level}`, bulletList: 'ul', orderedList: 'ol', listItem: 'li', blockquote: 'blockquote', horizontalRule: 'hr', hardBreak: 'br' })[node.type];
-  return createElement(tag, { key, ...(node.type === 'orderedList' ? { start: node.attrs?.start } : {}) },
+  return createElement(tag, { key, ...(['paragraph', 'heading'].includes(node.type) ? { style: articleAlignmentStyle(node.attrs?.textAlign) } : {}), ...(node.type === 'orderedList' ? { start: node.attrs?.start } : {}) },
     ['hardBreak', 'horizontalRule'].includes(node.type) ? undefined : node.content?.length ? node.content.map((n, i) => renderNode(n, `${key}-${i}`)) : <br />);
 }
 export default function ArticleView({ article }) {
   try { assertArticle(article); } catch (e) { return <p role="alert">{e.message}</p>; }
-  return <article className="text-document" style={{ fontFamily: ARTICLE_FONTS.find(f => f.id === article.font).family }}>
-    {article.title && <h1 className="text-document-title">{article.title}</h1>}{renderNode(article.content, 'article')}
+  const appearance = textAppearance(article);
+  return <article className={`text-document${appearance.compact ? ' text-document--compact' : ''}`} style={{ ...textContentStyle(article), fontFamily: ARTICLE_FONTS.find(f => f.id === article.font).family, fontSize: appearance.fontSize, color: article.appearance ? appearance.color : 'inherit', zoom: appearance.scale }}>
+    {article.title && <h1 className="text-document-title" style={{ fontSize: appearance.titleFontSize ?? 28 }}>{article.title}</h1>}{renderNode(article.content, 'article')}
   </article>;
 }

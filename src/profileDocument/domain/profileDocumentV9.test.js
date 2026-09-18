@@ -20,6 +20,49 @@ import { SYSTEM_WORKFLOW_LIMITS } from '../../systemWorkflow/domain/systemWorkfl
 import { isValidIdentityCard, resolveIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 
 const PROFILE = '0x1111111111111111111111111111111111111111';
+import { createSystemWorkflowResizeCandidate, createSystemWorkflowResizeGesture, updateSystemWorkflowResizeGesture } from '../../systemWorkflow/systemWorkflowResize.js';
+import { placementMediaRectangle } from '../../lattice/rendering/placementMediaRectangle.js';
+
+test('side resizing changes one axis and preserves fitted image height, saved source, crop and public restoration', () => {
+  const input = draft(); const original = input.grids[0].placements[0]; original.locked = false;
+  const changed = createSystemWorkflowResizeCandidate(input, { gridId: input.grids[0].id,
+    placementId: original.id, expectedPlacement: original, corner: 'e',
+    destination: { column: original.column, row: original.row, columnSpan: 4, rowSpan: original.rowSpan } });
+  const resized = changed.grids[0].placements[0];
+  assert.equal(original.columnSpan, 8);
+  assert.equal(resized.rowSpan, original.rowSpan);
+  assert.deepEqual(resized.crop, original.crop);
+  assert.equal(resized.stableAssetId, original.stableAssetId);
+  const dimensions = { width: 300, height: 800 };
+  for (const crop of [null, { x: .5, y: .5, zoom: 2 }]) {
+    const before = placementMediaRectangle({ left: 0, top: 0, width: 8, height: 6 }, dimensions, crop);
+    const after = placementMediaRectangle({ left: 0, top: 0, width: 4, height: 6 }, dimensions, crop, resized.mediaFrameRatio);
+    assert.equal(after.height, before.height); assert.equal(after.width, before.width / 2);
+    assert.equal(after.top, before.top); assert.equal(after.left, before.left / 2);
+  }
+  const published = document({ systemWorkflowDraft: changed });
+  const parsed = parseProfileDocumentV9Json(canonicalSerializeProfileDocumentV9(published));
+  assert.equal(createOwnerDraftFromPublishedProfile(parsed).grids[0].placements[0].mediaFrameRatio, 8 / 6);
+  for (const bad of [null, 0, -1, '2', 513]) {
+    const invalid = structuredClone(published); invalid.grids[0].placements[0].mediaFrameRatio = bad;
+    assert.equal(validateProfileDocumentV9(invalid).valid, false);
+  }
+  assert.throws(() => createSystemWorkflowResizeCandidate(changed, { gridId: input.grids[0].id,
+    placementId: original.id, expectedPlacement: original, corner: 'e', destination: original }), /changed/);
+});
+
+test('side pointer gestures ignore the other axis and keep their opposite edge', () => {
+  const original = { id: 'beam', column: 4, row: 3, columnSpan: 8, rowSpan: 6 };
+  const field = { left: 0, top: 0, width: 320, height: 180, cellSize: 10 };
+  for (const side of ['n', 'e', 's', 'w']) {
+    const gesture = createSystemWorkflowResizeGesture(original, side, field, { x: 60, y: 60 });
+    const next = updateSystemWorkflowResizeGesture(gesture, { x: 80, y: 80 }, field, 0, { preserveRatio: true }).previewGeometry;
+    if (side === 'e' || side === 'w') { assert.equal(next.rowSpan, 6); assert.equal(next.row, 3); }
+    else { assert.equal(next.columnSpan, 8); assert.equal(next.column, 4); }
+    if (side === 'w') assert.equal(next.column + next.columnSpan, 12);
+    if (side === 'n') assert.equal(next.row + next.rowSpan, 9);
+  }
+});
 import { createSystemWorkflowPresentationCandidate } from '../../systemWorkflow/systemWorkflowPresentation.js';
 const CONTRACT = '0x2222222222222222222222222222222222222222';
 const ASSET = `42:${CONTRACT}:0x01`;
@@ -343,6 +386,23 @@ test('canonical serialization and hash input are stable while content/reconcilia
   assert.notEqual(profileDocumentV9ContentFingerprint(first), profileDocumentV9ContentFingerprint(changedCache));
   assert.equal(profileDocumentV9ReconciliationFingerprint(first), profileDocumentV9ReconciliationFingerprint(changedCache));
   assert.throws(() => parseProfileDocumentV9Json(JSON.stringify({ ...first, version: 8 })));
+});
+
+test('optional placement animation survives publication and restoration; old documents stay static', () => {
+  const source = draft();
+  const motion = { float: { horizontal: .3, vertical: .2, period: 8 }, flicker: { depth: .8, period: 6 } };
+  source.grids[0].placements[0].animation = motion;
+  const published = document({ systemWorkflowDraft: source });
+  assert.deepEqual(published.grids[0].placements[0].animation, motion);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(published, source).grids[0].placements[0].animation, motion);
+  assert.equal(document().grids[0].placements[0].animation, undefined);
+  const switchedOff = structuredClone(source);
+  switchedOff.grids[0].placements[0].animation.float.enabled = false;
+  const disabledPublic = document({ systemWorkflowDraft: switchedOff });
+  assert.deepEqual(disabledPublic.grids[0].placements[0].animation, switchedOff.grids[0].placements[0].animation);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(disabledPublic, source).grids[0].placements[0].animation, switchedOff.grids[0].placements[0].animation);
+  const invalid = structuredClone(published); invalid.grids[0].placements[0].animation.float.period = -1;
+  assert.equal(validateProfileDocumentV9(invalid).valid, false);
 });
 
 test('v9-only reconciliation restores public draft-v4 state and preserves unrelated private Grids', () => {

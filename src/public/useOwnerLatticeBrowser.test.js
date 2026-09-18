@@ -53,7 +53,7 @@ test('Library removes creator records after every preview source is unavailable'
   assert.match(workspace, /browserAssetPreviewUnavailable/);
   assert.match(workspace, /preview\?\.status === 'unavailable' \? null : fallback/);
   assert.match(workspace, /markAssetUnavailable/);
-  assert.match(presenterSource, /workspace\.isAssetRenderable\(id\)/);
+  assert.match(presenterSource, /mediaWorkspace\.isAssetRenderable\(id\)/);
   assert.match(workspaceSource, /!workspaceState\?\.isAssetRenderable\(id\)/);
   assert.match(workspaceSource, /cleanup\(\);\s*if \(!moved\) return/);
   assert.match(workspaceSource, /ownerLibraryPreviewRecords/);

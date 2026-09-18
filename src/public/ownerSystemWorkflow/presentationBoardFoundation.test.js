@@ -24,9 +24,9 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.equal(existsSync(new URL('./PresentationBoardDesktop.jsx', import.meta.url)), false);
   assert.equal((display.match(/<PresentationBoard/g) || []).length, 1);
   assert.match(runtime, /useReducer\(transitionPresentationBoardInstance/);
-  assert.match(display, /useReducer\(transitionDisplayInstruments, initialDisplayInstruments\)/);
-  assert.match(board, /instrumentBayOpen && instrumentLayout.attached/);
-  assert.match(board, /renderInstruments\?\./);
+  assert.match(display, /useSharedDisplayTools\(\)/);
+  assert.doesNotMatch(board, /metadataSidecarOpen|instrumentBayOpen/);
+  assert.doesNotMatch(board, /renderInstruments/);
   assert.doesNotMatch(runtime, /setMetadataOpen|setMetadataDocked|setMetadataProjection|boardShortcutExists|boardAddRequest/);
   assert.match(moduleState, /ABSENT: 'absent'[\s\S]*MINIMIZED: 'minimized'[\s\S]*WINDOW: 'window'/);
   assert.match(board, /data-presentation-workbench/);
@@ -53,7 +53,7 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(board, /'window'[\s\S]*'maximizing'[\s\S]*'maximized'[\s\S]*'restoring'/);
   assert.match(board, /resizePresentationBoardFromCorner/);
   assert.match(board, /corners\.map/);
-  assert.match(board, /sidecarWidth: metadataSidecarOpen \? metadataWidth : 0/);
+  assert.match(board, /sidecarWidth: 0/);
   assert.match(board, /presentationBoardInspectionFrame\(view,[\s\S]*host\?\.clientWidth[\s\S]*geometryOptions/);
   assert.match(board, /presentationBoardResponsiveMetrics/);
   assert.match(geometry, /trackWidth: 286/);
@@ -66,7 +66,7 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(shortcut, /application\/x-inscape-asset/);
   assert.match(shortcut, /shortcutAsset \? <ProgressiveArtworkImage[^\n]+ : 'DM'/);
   assert.match(shortcut, /RENAME/);
-  assert.match(board, /aria-label="Metadata"/);
+  assert.doesNotMatch(board, /aria-label="Artwork info"|aria-label="Layers"/);
   assert.match(board, /system-workflow__board-inspection-controls-host/);
   assert.match(board, /renderInspection\(inspectionHost, inspectionControlsHost, inspectionSceneRef\.current\)/);
   assert.match(canvas, /system-workflow__stage-content/);
@@ -112,7 +112,8 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(controller, /deleteGrid:[^\n]*grid\.id === state\.selectedGridId[^\n]*setSelectedPlacementIds\(\[\]\)/);
   assert.match(canvas, /devicePixelRatio/);
   assert.doesNotMatch(`${canvas}\n${styles}`, /system-workflow__selection-outline/);
-  assert.match(styles, /\.system-workflow__resize-handle \{[^}]*border: var\(--workflow-screen-pixel, 1px\)/s);
+  assert.match(styles, /\.system-workflow__resize-handle \{[^}]*width: 28px/s);
+  assert.match(styles, /\.system-workflow__resize-handle::after \{[^}]*border: 1px solid #fff/s);
   assert.match(styles, /\.system-workflow__progressive-media \{[^}]*overflow: visible;/s);
   assert.match(styles, /\[data-authoring-locked\] \.system-workflow__placement\[aria-pressed="true"\]:not\(\[data-viewing\]\) \.system-workflow__artwork-media \{[^}]*drop-shadow\(0 0/s);
   assert.match(styles, /\.system-workflow__placement\[data-cropped\] \{ overflow: hidden; \}/);

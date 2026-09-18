@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-export default function useDraftUndo(store, suspended, notify) {
+export default function useDraftUndo(store, suspended, notify, blockedReason = null) {
   useEffect(() => {
     if (!store || suspended) return undefined;
     const begin = () => store.beginHistoryGroup();
@@ -12,6 +12,7 @@ export default function useDraftUndo(store, suspended, notify) {
       if (!['z', 'y'].includes(letter)) return;
       const direction = letter === 'y' || event.shiftKey ? 'redo' : 'undo';
       event.preventDefault();
+      if (blockedReason) { notify(blockedReason); return; }
       const label = store.getHistory()[direction];
       if (!label) { notify(`Nothing to ${direction}.`); return; }
       const ok = store[direction]();
@@ -27,5 +28,5 @@ export default function useDraftUndo(store, suspended, notify) {
       window.removeEventListener('pointerup', finish, true); window.removeEventListener('pointercancel', finish, true);
       window.removeEventListener('blur', finish); store.endHistoryGroup();
     };
-  }, [store, suspended, notify]);
+  }, [store, suspended, notify, blockedReason]);
 }

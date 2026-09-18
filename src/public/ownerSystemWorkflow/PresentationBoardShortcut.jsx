@@ -5,6 +5,7 @@ import RackMenu from '../menus/RackMenu.jsx';
 import ProgressiveArtworkImage from './ProgressiveArtworkImage.jsx';
 import { assetForPlacement, isValidPlacementMedia } from '../../systemWorkflow/domain/placementMedia.js';
 import { PRESENTATION_BOARD_INSTANCE_STATE } from './ownerSystemWorkflowModuleState.js';
+import { snapWorkbenchCoordinate as snap } from './workbenchGrid.js';
 import {
   DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION,
   loadPresentationBoardShortcut,
@@ -12,11 +13,9 @@ import {
   presentationBoardShortcutStorageKey,
 } from './presentationBoardShortcutStorage.js';
 
-const WORKBENCH_CELL = 24;
 const MINIMUM_SHORTCUT_SIZE = { width: 82, height: 64 };
 const SHORTCUT_ICON_EDITOR_SIZE = { width: 252, height: 308 };
 const SHORTCUT_ICON_PREVIEW_SIZE = 84;
-const snap = (value, enabled) => enabled ? Math.round(value / WORKBENCH_CELL) * WORKBENCH_CELL : value;
 const shortcutIconStyle = ({ offsetX, offsetY, scale }) => ({
   transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
 });

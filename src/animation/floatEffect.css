@@ -1,0 +1,35 @@
+@keyframes inscape-float {
+  0% { translate: calc(var(--motion-x) * 0.00000) calc(var(--motion-y) * 0.00000); }
+  3.125% { translate: calc(var(--motion-x) * 0.19509) calc(var(--motion-y) * 0.38268); }
+  6.25% { translate: calc(var(--motion-x) * 0.38268) calc(var(--motion-y) * 0.70711); }
+  9.375% { translate: calc(var(--motion-x) * 0.55557) calc(var(--motion-y) * 0.92388); }
+  12.5% { translate: calc(var(--motion-x) * 0.70711) calc(var(--motion-y) * 1.00000); }
+  15.625% { translate: calc(var(--motion-x) * 0.83147) calc(var(--motion-y) * 0.92388); }
+  18.75% { translate: calc(var(--motion-x) * 0.92388) calc(var(--motion-y) * 0.70711); }
+  21.875% { translate: calc(var(--motion-x) * 0.98079) calc(var(--motion-y) * 0.38268); }
+  25% { translate: calc(var(--motion-x) * 1.00000) calc(var(--motion-y) * 0.00000); }
+  28.125% { translate: calc(var(--motion-x) * 0.98079) calc(var(--motion-y) * -0.38268); }
+  31.25% { translate: calc(var(--motion-x) * 0.92388) calc(var(--motion-y) * -0.70711); }
+  34.375% { translate: calc(var(--motion-x) * 0.83147) calc(var(--motion-y) * -0.92388); }
+  37.5% { translate: calc(var(--motion-x) * 0.70711) calc(var(--motion-y) * -1.00000); }
+  40.625% { translate: calc(var(--motion-x) * 0.55557) calc(var(--motion-y) * -0.92388); }
+  43.75% { translate: calc(var(--motion-x) * 0.38268) calc(var(--motion-y) * -0.70711); }
+  46.875% { translate: calc(var(--motion-x) * 0.19509) calc(var(--motion-y) * -0.38268); }
+  50% { translate: calc(var(--motion-x) * 0.00000) calc(var(--motion-y) * -0.00000); }
+  53.125% { translate: calc(var(--motion-x) * -0.19509) calc(var(--motion-y) * 0.38268); }
+  56.25% { translate: calc(var(--motion-x) * -0.38268) calc(var(--motion-y) * 0.70711); }
+  59.375% { translate: calc(var(--motion-x) * -0.55557) calc(var(--motion-y) * 0.92388); }
+  62.5% { translate: calc(var(--motion-x) * -0.70711) calc(var(--motion-y) * 1.00000); }
+  65.625% { translate: calc(var(--motion-x) * -0.83147) calc(var(--motion-y) * 0.92388); }
+  68.75% { translate: calc(var(--motion-x) * -0.92388) calc(var(--motion-y) * 0.70711); }
+  71.875% { translate: calc(var(--motion-x) * -0.98079) calc(var(--motion-y) * 0.38268); }
+  75% { translate: calc(var(--motion-x) * -1.00000) calc(var(--motion-y) * 0.00000); }
+  78.125% { translate: calc(var(--motion-x) * -0.98079) calc(var(--motion-y) * -0.38268); }
+  81.25% { translate: calc(var(--motion-x) * -0.92388) calc(var(--motion-y) * -0.70711); }
+  84.375% { translate: calc(var(--motion-x) * -0.83147) calc(var(--motion-y) * -0.92388); }
+  87.5% { translate: calc(var(--motion-x) * -0.70711) calc(var(--motion-y) * -1.00000); }
+  90.625% { translate: calc(var(--motion-x) * -0.55557) calc(var(--motion-y) * -0.92388); }
+  93.75% { translate: calc(var(--motion-x) * -0.38268) calc(var(--motion-y) * -0.70711); }
+  96.875% { translate: calc(var(--motion-x) * -0.19509) calc(var(--motion-y) * -0.38268); }
+  100% { translate: calc(var(--motion-x) * -0.00000) calc(var(--motion-y) * -0.00000); }
+}

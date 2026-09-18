@@ -4,7 +4,6 @@ import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, displayF
 import { createDefaultWorkbenchPresentation, createNewDisplayPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 
 export function createDisplayModuleSession(store, id) {
-  if (id === PRIMARY_DISPLAY_ID) return createSystemWorkflowAuthoringSession({ store });
   return createSystemWorkflowAuthoringSession({ store: {
     getDraft: () => projectDisplayDraft(store.getDraft(), id),
     getGeneration: () => store.getGeneration(),

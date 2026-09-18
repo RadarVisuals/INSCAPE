@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { normalizeProfileAddress, resolveWorkspaceProfile } from '../config.js';
 import { chillwhalesProfileRepository } from '../data/chillwhalesProfileRepository.js';
+import { refreshLibraryTokenMetadata } from '../data/refreshLibraryTokenMetadata.js';
 import { luksoRpcProfileRepository } from '../data/luksoRpcProfileRepository.js';
 import { luksoEnvioAttributeRepository } from '../data/luksoEnvioAttributeRepository.js';
 import { mergeProfileAssetAttributeEnrichments } from '../domain/mergeProfileAssetAttributes.js';
@@ -222,6 +223,29 @@ export const useLibraryStore = create((set, get) => ({
             });
           }
         }
+        // Publish indexed cards immediately; refresh token metadata without re-reading holdings.
+        const metadataController = new AbortController();
+        const abortMetadata = () => metadataController.abort(controller.signal.reason);
+        controller.signal.addEventListener('abort', abortMetadata, { once: true });
+        const metadataTimeout = setTimeout(() => metadataController.abort(), RPC_REPAIR_TIMEOUT_MS);
+        let metadataFailures = 0;
+        try {
+          for await (const batch of refreshLibraryTokenMetadata(get().assets, { signal: metadataController.signal })) {
+            if (controller.signal.aborted || get().loadGeneration !== generation) return;
+            metadataFailures += batch.failures;
+            set((state) => ({ assets: uniqueAssets(state.assets, batch.assets) }));
+            saveLibraryAssetCache(workspaceStorage, requestedProfileAddress, get().assets);
+          }
+        } catch (metadataError) {
+          if (controller.signal.aborted || get().loadGeneration !== generation) throw metadataError;
+          metadataFailures += 1;
+        } finally {
+          clearTimeout(metadataTimeout);
+          controller.signal.removeEventListener('abort', abortMetadata);
+        }
+        if (metadataFailures && get().loadGeneration === generation) set({
+          status: 'partial', liveError: 'Some token metadata could not be refreshed. Indexed results retained.',
+        });
       } catch (indexerSourceError) {
         if (controller.signal.aborted || get().loadGeneration !== generation) throw indexerSourceError;
         const liveMessage = indexerSourceError instanceof Error ? indexerSourceError.message : String(indexerSourceError);

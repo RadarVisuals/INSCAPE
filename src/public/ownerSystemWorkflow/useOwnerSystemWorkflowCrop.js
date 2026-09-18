@@ -114,13 +114,15 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
     if (!current || current.placementId !== placementId || event.button !== 0 || !Number.isFinite(cellSize) || cellSize <= 0) return;
     event.preventDefault();
     event.stopPropagation();
-    const point = { x: event.clientX / cellSize, y: event.clientY / cellSize };
+    const placement = controller.selectedGrid?.placements.find(item => item.id === placementId);
+    const stretchX = placement?.mediaFrameRatio === undefined ? 1 : placement.rowSpan * placement.mediaFrameRatio / placement.columnSpan;
+    const point = { x: event.clientX / cellSize * stretchX, y: event.clientY / cellSize };
     const visual = projectSystemWorkflowTransform(current.transform, current.media, current.previewCrop);
     const active = { pointerId: event.pointerId, transform: current.transform, gesture: createSystemWorkflowCropPanGesture({ ...current, media: visual.dimensions, previewCrop: visual.crop }, point) };
     const move = (pointerEvent) => {
       if (pointerEvent.pointerId !== active.pointerId) return;
       pointerEvent.preventDefault();
-      active.gesture = updateSystemWorkflowCropPanGesture(active.gesture, { x: pointerEvent.clientX / cellSize, y: pointerEvent.clientY / cellSize }, 10 / cellSize);
+      active.gesture = updateSystemWorkflowCropPanGesture(active.gesture, { x: pointerEvent.clientX / cellSize * stretchX, y: pointerEvent.clientY / cellSize }, 10 / cellSize);
       if (active.gesture.activated) setCropSession((session) => session ? {
         ...session,
         dirty: true,

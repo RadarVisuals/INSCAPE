@@ -102,9 +102,13 @@ test('fresh direct token images replace stale owned media without changing owner
   const provenance = { scope: 'tokenId', source: 'LSP4MetadataForTokenId (DIRECT LUKSO RPC)' };
   const result = projectLibraryAssetUnion({ profileAddress: PROFILE,
     ownedAssets: [owned(CONTRACT_A, { imageGroups: [{ index: 0, imageUrl: 'https://art.test/old.webp' }] })],
-    createdAssets: [created(CONTRACT_A, { imageGroups: images, fieldProvenance: { images: provenance } })],
+    createdAssets: [created(CONTRACT_A, { imageGroups: images, imageUrl: images[0].imageUrl, originalImageUrl: images[0].imageUrl,
+      thumbnailUrl: images[0].imageUrl, imageWidth: 640, imageHeight: 640, fieldProvenance: { images: provenance } })],
   });
   assert.deepEqual(result.records[0].imageGroups, images);
+  assert.equal(result.assets[0].previewSrc, images[0].imageUrl);
+  assert.equal(result.assets[0].src, images[0].imageUrl);
+  assert.equal(result.assets[0].width, 640);
   assert.deepEqual(result.records[0].fieldProvenance.images, provenance);
   assert.equal(result.records[0].isOwnedByViewedProfile, true);
 });

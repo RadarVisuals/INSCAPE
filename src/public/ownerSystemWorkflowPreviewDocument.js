@@ -12,6 +12,7 @@ export function profileDocumentV9EntryGrid(documentInput) {
 export function ownerSystemWorkflowPreviewEntryMediaUrls(previewDocument) {
   const entryGrid = profileDocumentV9EntryGrid(previewDocument);
   return [...new Set((entryGrid?.placements || [])
+    .filter(placement => placement.kind !== 'text')
     .map(({ asset }) => resolvePublishedAssetUrl(asset.media.url))
     .filter(Boolean))];
 }

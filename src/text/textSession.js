@@ -8,9 +8,47 @@ export function addTextModule(store, profile) {
   return item.id;
 }
 export function saveTextModule(store, profile, expected, next) {
-  if (store.getProfileAddress() !== profile) return false;
-  const draft = store.getDraft(), generation = store.getGeneration();
-  if (JSON.stringify(draft.texts?.find(i => i.id === expected.id)) !== JSON.stringify(expected)) return false;
-  const texts = draft.texts.map(i => i.id === expected.id ? { ...next, id: i.id } : i);
-  return validTextModules(texts) && store.commitCompletedOperation({ ...draft, texts }, { expectedGeneration: generation, historyLabel: 'Edit Text' });
+  return saveTextModuleResult(store, profile, expected, next).saved;
+}
+
+const messages = {
+  profile: 'This profile is no longer active. Your unsaved text is still here.',
+  conflict: 'This Text was changed elsewhere. Your edits are still here. Retry checks the latest saved version.',
+  missing: 'This Text was removed from the saved draft. Your unsaved text is still here.',
+  changed: 'The saved draft changed elsewhere. Retry will preserve unrelated changes.',
+  stale: 'The draft changed while saving. Retry checks the latest version.',
+  invalid: 'The draft could not be validated. Your unsaved text is still here.',
+  corrupt: 'The saved draft could not be read safely. It has not been overwritten.',
+  read_failed: 'Browser storage could not be read. Your unsaved text is still here.',
+  write_failed: 'Browser storage could not save your changes. It may be full or blocked. Your unsaved text is still here.',
+};
+export const textSaveFailure = code => ({ saved: false, reason: code, message: messages[code] || messages.write_failed });
+export function saveTextModuleResult(store, profile, expected, next, { retry = false, replace = false } = {}) {
+  let reason;
+  const failed = textSaveFailure;
+  if (store.getProfileAddress() !== profile) return failed('profile');
+  const generation = store.getGeneration();
+  const candidate = draft => {
+    const current = draft.texts?.find(item => item.id === expected.id);
+    if (!current) { reason = 'missing'; return null; }
+    const value = { ...current };
+    for (const key of ['article', 'visibility']) {
+      if (JSON.stringify(expected[key]) === JSON.stringify(next[key])) continue;
+      if (JSON.stringify(current[key]) !== JSON.stringify(expected[key]) && JSON.stringify(current[key]) !== JSON.stringify(next[key]) && !replace) {
+        reason = 'conflict'; return null;
+      }
+      value[key] = next[key];
+    }
+    if (!retry && JSON.stringify(current) !== JSON.stringify(expected)) { reason = 'conflict'; return null; }
+    const texts = draft.texts.map(item => item.id === current.id ? value : item);
+    if (!validTextModules(texts)) { reason = 'invalid'; return null; }
+    return { ...draft, texts };
+  };
+  try {
+    const options = { expectedGeneration: generation, historyLabel: 'Edit Text' };
+    const nextDraft = retry ? null : candidate(store.getDraft());
+    const saved = retry ? store.retryCompletedOperation(candidate, options) : nextDraft && store.commitCompletedOperation(nextDraft, options);
+    return saved ? { saved: true, record: store.getDraft().texts.find(item => item.id === expected.id) }
+      : failed(reason || store.getLastCommitFailure?.() || 'write_failed');
+  } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
 }

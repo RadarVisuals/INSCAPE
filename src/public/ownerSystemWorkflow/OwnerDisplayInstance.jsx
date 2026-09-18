@@ -5,9 +5,9 @@ import { createNewDisplayPresentation } from '../../profileDocument/domain/workb
 import { createProfileDocumentV9AssetResolver } from '../../profileDocument/domain/profileDocumentV9Asset.js';
 import { loadPresentationBoardShortcut } from './presentationBoardShortcutStorage.js';
 
-export default function OwnerDisplayInstance({ id, index, store, profileAddress, initialPresentation, onController,
+export default function OwnerDisplayInstance({ id, index, store, profileAddress, initialPresentation, initialView, onController,
   onPresentation, onDelete, onActivate, active, shared }) {
-  const controller = useOwnerSystemWorkflowController(profileAddress, { sharedStore: store, moduleId: id });
+  const controller = useOwnerSystemWorkflowController(profileAddress, { sharedStore: store, moduleId: id, initialGridId: initialView?.gridId });
   const displayRef = useRef(null);
   const placementRef = useRef(null);
   const shortcutRef = useRef(null);
@@ -16,7 +16,7 @@ export default function OwnerDisplayInstance({ id, index, store, profileAddress,
     name: storedShortcut?.name || `DISPLAY ${index + 1}`, open: storedShortcut?.open !== false,
   }, []);
   const [presentation, setPresentation] = useState(initial);
-  const [locked, setLocked] = useState(false);
+  const [locked, setLocked] = useState(initialView?.locked || false);
   const initialWindow = useMemo(() => ({ ...initial, shortcut: !initialPresentation && storedShortcut ? storedShortcut : { ...initial.shortcut, open: initial.open,
     iconAssetId: initial.shortcut.icon?.stableAssetId || null,
     iconMedia: initial.shortcut.icon?.media || null } }), []);
@@ -39,7 +39,7 @@ export default function OwnerDisplayInstance({ id, index, store, profileAddress,
   useEffect(() => () => { onController(id, null); onPresentation(id, undefined); }, [id, onController, onPresentation]);
   return <div className="system-workflow__display-instance" data-display-instance={id} data-active-display={active || undefined}
     onPointerDownCapture={() => onActivate(id)} onFocusCapture={() => onActivate(id)}>
-    <DisplayModule {...shared} ref={displayRef} controller={controller} placementTargetRef={placementRef} shortcutTargetRef={shortcutRef}
+    <DisplayModule {...shared} displayName={presentation.name} ref={displayRef} controller={controller} placementTargetRef={placementRef} shortcutTargetRef={shortcutRef}
       authoringLocked={locked} active={presentation.open && !shared.panelOccupied}
       onAuthoringLockToggle={() => setLocked(current => !current)}
       windowProps={{ ...shared.windowProps, onDelete, profileAddress, instanceId: id, initialPresentation: initialWindow,

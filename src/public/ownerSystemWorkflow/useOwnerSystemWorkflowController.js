@@ -1,20 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { normalizeProfileAddress } from '../../library/config.js';
-import { resolveIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { systemWorkflowGridFingerprint, systemWorkflowGridOrder } from '../../systemWorkflow/domain/systemWorkflowGrid.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
-import { createDisplayModuleSession, addDisplayModule, setDisplayModuleFormat } from '../../systemWorkflow/displayModuleSession.js';
+import { createDisplayModuleSession, setDisplayModuleFormat } from '../../systemWorkflow/displayModuleSession.js';
+import { textRecoveries, TEXT_RECOVERY_MESSAGE } from '../../text/textEditRecovery.js';
 import { PRIMARY_DISPLAY_ID } from '../../systemWorkflow/domain/displayModules.js';
 
 function browserStorage() { try { return globalThis.localStorage; } catch { return null; } }
 
-export default function useOwnerSystemWorkflowController(profileAddress, { storage, sharedStore, moduleId = PRIMARY_DISPLAY_ID } = {}) {
+export default function useOwnerSystemWorkflowController(profileAddress, { storage, sharedStore, moduleId = PRIMARY_DISPLAY_ID, initialGridId } = {}) {
   const profile = normalizeProfileAddress(profileAddress);
   const selectedStorage = storage ?? browserStorage();
   const authority = useMemo(() => {
     if (!profile) return null;
     const store = sharedStore || createSystemWorkflowDraftStore({ profileAddress: profile, storage: selectedStorage });
-    return { store, session: createDisplayModuleSession(store, moduleId) };
+    const session = createDisplayModuleSession(store, moduleId);
+    if (initialGridId && session.getState().draft.grids.some(grid => grid.id === initialGridId)) session.selectGrid(initialGridId);
+    return { store, session };
   }, [profile, selectedStorage, sharedStore, moduleId]);
   const liveAuthority = useRef(authority);
   liveAuthority.current = authority;
@@ -31,6 +33,7 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   const run = useCallback((operation) => {
     if (!authority || !mounted.current || liveAuthority.current !== authority) return false;
     try {
+      if (textRecoveries(authority.store, profile).some(entry => entry.scope.moduleId === moduleId)) throw new Error(TEXT_RECOVERY_MESSAGE);
       const result = operation(authority.session);
       setFailure(null);
       render((v) => v + 1);
@@ -40,7 +43,7 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
       render((v) => v + 1);
       return false;
     }
-  }, [authority]);
+  }, [authority, profile, moduleId]);
   const state = authority ? authority.session.getState() : { draft: null, selectedGridId: null, generation: 0 };
   const selectedGrid = state.draft?.grids.find(({ id }) => id === state.selectedGridId) || null;
   const selectionScope = useMemo(() => ({}), [authority, state.selectedGridId]);
@@ -75,22 +78,11 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   const clearError = useCallback(() => setFailure(null), []);
   const gridRequest = (grid, extra = {}) => ({ gridId: grid.id, expectedGridFingerprint: systemWorkflowGridFingerprint(grid), ...extra });
   return { ...state, store: authority?.store, moduleId, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError,
-    addDisplay: orientation => run(() => addDisplayModule(authority.store, orientation)),
     setDisplayFormat: orientation => run(() => {
       if (!setDisplayModuleFormat(authority.store, moduleId, orientation)) throw new Error('The Display format could not be saved');
       return true;
     }),
     run, selectPlacement, replaceSelection, hiddenPlacementIds, togglePlacementVisibility,
-    saveWorkbench: workbench => run(session => session.saveWorkbench(workbench)),
-    saveIdentity: ({ profile: values, card, avatar }) => run((session) => {
-      const { alias, bio, tags, avatar: expectedAvatar } = state.draft.identityPresentation;
-      const changedBio = values.description !== (bio.mode === 'inscape' ? bio.customText : '');
-      return session.setIdentityConfiguration({ expectedDetails: { alias, bio, tags, avatar: expectedAvatar },
-        expectedCard: resolveIdentityCard(state.draft.identityPresentation), card, details: {
-        avatar, alias: values.title, bio: changedBio ? { mode: values.description ? 'inscape' : 'official', customText: values.description } : bio,
-        tags: { ...tags, additional: values.tags },
-      } });
-    }),
     placeAsset: (request) => run((session) => {
       const before = new Set(session.getState().draft.grids.find(({ id }) => id === request.gridId)?.placements.map(({ id }) => id));
       const committed = session.placeAsset(request);

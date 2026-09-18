@@ -1,4 +1,8 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useReducer, useRef, useState } from 'react';
+import { hasActiveEffects } from '../../animation/effectCatalog.js';
+import AnimationModule from '../../animation/AnimationModule.jsx';
+import ModuleSurfaceControls from './ModuleSurfaceControls.jsx';
+import { WorkbenchWindow } from './DisplayInstrumentWindow.jsx';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import RackMenu from '../menus/RackMenu.jsx';
 import { PRIMARY_DISPLAY_ID } from '../../systemWorkflow/domain/displayModules.js';
@@ -8,30 +12,41 @@ import DisplayFocusViewer from './DisplayFocusViewer.jsx';
 import DisplayInspectionCues from './DisplayInspectionCues.jsx';
 import { OwnerSystemWorkflowMetadataContent } from './OwnerSystemWorkflowMetadataModule.jsx';
 import PresentationBoard from './PresentationBoard.jsx';
-import DisplayInstruments from './DisplayInstruments.jsx';
+import { useSharedDisplayTools, SharedDisplayToolContent, displayToolCommands } from './SharedDisplayTools.jsx';
 import OwnerSystemWorkflowSelectionInspector from './OwnerSystemWorkflowSelectionInspector.jsx';
-import { initialDisplayInstruments, transitionDisplayInstruments } from './displayInstrumentState.js';
 import useOwnerSystemWorkflowCrop from './useOwnerSystemWorkflowCrop.js';
 import useOwnerSystemWorkflowFocusViewer from './useOwnerSystemWorkflowFocusViewer.js';
 import { createOwnerSystemWorkflowMetadataViewModel } from './ownerSystemWorkflowMetadataViewModel.js';
+import { displayTextLabel } from '../../systemWorkflow/domain/displayText.js';
 
 // Display owns composition interaction. The host supplies assets, its accepted
 // controller and window configuration; it does not inspect selection or crop state.
-export default forwardRef(function DisplayModule({ assetsById, controller, authoringLocked, active,
-  panelOccupied, instrumentsObscured, onRevealInstruments, onInspect, onToggleLibrary,
+export default forwardRef(function DisplayModule({ assetsById, controller, authoringLocked, active, displayName,
+  panelOccupied, onRevealInstruments, onInspect, onToggleLibrary,
   onAuthoringLockToggle, registerAssetDimensions, resolveAssetDimensions, menuSurface,
   reducedMotion, workspaceSurfaceColor, windowProps, placementTargetRef, shortcutTargetRef, workspaceRef }, ref) {
-  const instrumentTriggers = useRef({});
+  const tools = useSharedDisplayTools();
+  const targetId = controller.moduleId;
+  const toolAvailable = windowProps.instanceState === 'window';
+  const toolScope = `${displayName || windowProps.initialPresentation?.name || 'Display Module'} / ${controller.selectedGrid?.title || 'Untitled Grid'}`;
+  const [motionPreview, setMotionPreview] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const appearanceTrigger = useRef(null);
   const [moduleMenu, setModuleMenu] = useState(null);
+  const [playingGrids, setPlayingGrids] = useState(false);
+  const [editingText, setEditingText] = useState(null);
+  const editText = id => setEditingText(id ? { gridId: controller.selectedGridId, id } : null);
   const formatCommands = [
     { id: 'landscape', label: 'HORIZONTAL 16:9', checkable: true, selected: controller.draft.geometry.columns > controller.draft.geometry.rows, disabled: authoringLocked },
     { id: 'portrait', label: 'VERTICAL 9:16', checkable: true, selected: controller.draft.geometry.rows > controller.draft.geometry.columns, disabled: authoringLocked },
   ];
-  const moduleCommands = [{ id: 'format', label: 'FORMAT', disabled: authoringLocked },
-    ...(onToggleLibrary ? [{ id: 'toggle-library', label: 'LIBRARY' }] : []),
-    ...(controller.moduleId !== PRIMARY_DISPLAY_ID ? [{ id: 'visibility', label: controller.store.getDraft().displays?.find(item => item.id === controller.moduleId)?.visibility === 'PUBLIC' ? 'MAKE DISPLAY PRIVATE' : 'INCLUDE DISPLAY IN PUBLICATION' }] : [])];
-  const moduleSubmenu = id => id === 'format' ? formatCommands : [];
   const moduleCommand = id => {
+    if (id === 'tool-layers' || id === 'tool-metadata') {
+      onRevealInstruments();
+      tools.command(id.slice(5), true, moduleMenu?.trigger || shortcutTargetRef.current?.node, targetId);
+    }
+    if (id === 'play-grids' && !playbackDisabled) { controller.replaceSelection([]); setPlayingGrids(current => !current); }
+    if (id === 'appearance' && !authoringLocked) { appearanceTrigger.current = moduleMenu?.trigger || document.activeElement; setAppearanceOpen(true); }
     if (id === 'toggle-library') onToggleLibrary?.();
     if ((id === 'landscape' || id === 'portrait') && !authoringLocked) controller.setDisplayFormat(id.toUpperCase());
     if (id === 'visibility') controller.run(() => {
@@ -46,6 +61,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       requestAnimationFrame(() => shortcutTargetRef.current?.node?.focus());
     }
     if (id === 'delete-module') moduleMenu?.onDelete?.();
+    moduleMenu?.trigger?.focus();
     setModuleMenu(null);
   };
   const openModuleMenu = event => {
@@ -56,14 +72,15 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       trigger: event.currentTarget.querySelector('.system-workflow__identity-strip') || event.currentTarget,
       onDelete: windowProps.onDelete });
   };
-  const [instruments, dispatchInstruments] = useReducer(transitionDisplayInstruments, initialDisplayInstruments);
-  const [playingGrids, setPlayingGrids] = useState(false);
   const [playbackTransition, setPlaybackTransition] = useState(false);
   const pauseGrids = useCallback(() => setPlayingGrids(false), []);
   const crop = useOwnerSystemWorkflowCrop({ assetsById, controller });
   const viewer = useOwnerSystemWorkflowFocusViewer({ assetsById, controller,
     onOpen: onInspect, resolveAssetDimensions });
-  const metadataPlacement = controller.selectedPlacements.length === 1 ? controller.selectedPlacements[0] : null;
+  const metadataPlacement = controller.selectedPlacements.length === 1 && controller.selectedPlacements[0].kind !== 'text' ? controller.selectedPlacements[0] : null;
+  useEffect(() => setMotionPreview(false), [tools.state.animation, tools.target, toolAvailable, controller.selectedGridId, metadataPlacement?.id, hasActiveEffects(metadataPlacement?.animation), authoringLocked, panelOccupied, viewer.placementId, Boolean(crop.cropSession), playingGrids]);
+  const previewMotion = motionPreview && hasActiveEffects(metadataPlacement?.animation) && !viewer.placementId && !crop.cropSession && !playingGrids && tools.state.animation && tools.target === targetId && toolAvailable && !authoringLocked && !panelOccupied;
+  const motionEnabled = toolAvailable && !panelOccupied && !viewer.placementId && !crop.cropSession && !reducedMotion && (authoringLocked || previewMotion || playingGrids);
   const metadataEntry = useMemo(() => metadataPlacement
     ? createOwnerSystemWorkflowMetadataViewModel(metadataPlacement, assetsById.get(metadataPlacement.stableAssetId))
     : null, [assetsById, metadataPlacement]);
@@ -92,69 +109,80 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
     transition.finished.then(cleanup, cleanup);
     return true;
   };
-  const instrumentCommand = (event) => {
-    if (event.instrument !== 'layers' || ['close', 'toggle', 'detach'].includes(event.type)) crop.cancelCrop();
-    dispatchInstruments(event);
-  };
-  const toggleInstrument = (instrument) => {
-    onRevealInstruments();
-    instrumentCommand({ type: instrumentsObscured ? 'open' : 'toggle', instrument });
-  };
   const toggleAuthoringLock = () => {
     if (!authoringLocked) crop.cancelCrop();
     onAuthoringLockToggle();
   };
-  const instrumentsVisible = !instrumentsObscured;
   const playbackDisabled = controller.draft.grids.filter((grid) => !isSystemWorkflowWorldCoverGrid(grid)).length < 2
-    || isSystemWorkflowWorldCoverGrid(controller.selectedGrid) || panelOccupied || Boolean(viewer.placementId || crop.cropSession);
+    || !toolAvailable || isSystemWorkflowWorldCoverGrid(controller.selectedGrid) || panelOccupied || Boolean(viewer.placementId || crop.cropSession);
+  const moduleCommands = [{ id: 'tools', label: 'TOOLS' },
+    ...(controller.draft.grids.filter(grid => !isSystemWorkflowWorldCoverGrid(grid)).length > 1 ? [{ id: 'play-grids', label: playingGrids ? 'PAUSE GRIDS' : 'PLAY GRIDS', disabled: playbackDisabled }] : []),{ id: 'appearance', label: 'APPEARANCE', disabled: authoringLocked }, { id: 'format', label: 'FORMAT', disabled: authoringLocked },
+    ...(onToggleLibrary ? [{ id: 'toggle-library', label: 'LIBRARY' }] : []),
+    ...(controller.moduleId !== PRIMARY_DISPLAY_ID ? [{ id: 'visibility', label: controller.store.getDraft().displays?.find(item => item.id === controller.moduleId)?.visibility === 'PUBLIC' ? 'MAKE DISPLAY PRIVATE' : 'INCLUDE DISPLAY IN PUBLICATION' }] : [])];
+  const moduleSubmenu = id => id === 'tools' ? displayToolCommands() : id === 'format' ? formatCommands : [];
   useEffect(() => {
     if (!active || playbackDisabled) pauseGrids();
   }, [active, playbackDisabled, pauseGrids]);
   useImperativeHandle(ref, () => ({
     changeGrid,
   }));
-  const selectionLabel = metadataEntry?.dossier?.title || (controller.selectedPlacements.length > 1
+  const selectionLabel = metadataEntry?.dossier?.title || (controller.selectedPlacements.length === 1 && controller.selectedPlacements[0].kind === 'text'
+    ? displayTextLabel(controller.selectedPlacements[0].text) : null) || (controller.selectedPlacements.length > 1
     ? `${controller.selectedPlacements.length} selected` : controller.selectedPlacements.length === 1
       ? 'Selected artwork' : 'No artwork selected');
   return <><PresentationBoard {...windowProps} onContextMenu={openModuleMenu}
       moduleCommands={moduleCommands} moduleSubmenu={moduleSubmenu} onModuleCommand={moduleCommand}
-      shortcutTargetRef={shortcutTargetRef} instrumentTriggers={instrumentTriggers} assetsById={assetsById} authoringLocked={authoringLocked}
-      displaySurface={controller.draft?.appearance.surfaceId}
+      shortcutTargetRef={shortcutTargetRef} assetsById={assetsById} authoringLocked={authoringLocked}
+      displaySurface={controller.draft?.appearance.surfaceId} moduleAppearance={controller.draft.appearance}
       documentGeometry={isSystemWorkflowWorldCoverGrid(controller.selectedGrid) ? { columns: 32, rows: 18 } : controller.draft?.geometry}
       inspectionAtmosphere={viewer.atmosphereActive}
-      layersOpen={instrumentsVisible && (instruments.active === 'layers' || instruments.layers === 'detached')}
-      metadataOpen={instrumentsVisible && (instruments.active === 'metadata' || instruments.metadata === 'detached')}
-      instrumentBayOpen={instrumentsVisible && Boolean(instruments.active)}
-      playing={playingGrids} playbackDisabled={playbackDisabled}
+      playing={playingGrids}
       onTogglePlayback={() => { controller.replaceSelection([]); setPlayingGrids((current) => !current); }}
       menuSurface={menuSurface}
-      onToggleLayers={() => toggleInstrument('layers')}
-      onToggleMetadata={() => toggleInstrument('metadata')}
       onInspectionCancel={viewer.close}
       renderCues={host => <DisplayInspectionCues key={`${controller.draft.profileAddress}:${controller.selectedGridId}`}
-        host={host} items={controller.selectedGrid?.placements || []} viewer={viewer}
-        editable={!authoringLocked} disabled={panelOccupied || playingGrids || playbackTransition || Boolean(crop.cropSession)}
-        getDossier={id => {
-          const placement = controller.selectedGrid?.placements.find(item => item.id === id);
-          return createOwnerSystemWorkflowMetadataViewModel(placement, assetsById.get(placement?.stableAssetId))?.dossier;
-        }} />}
+        host={host} items={controller.selectedGrid?.placements || []} viewer={viewer} contentVersion={assetsById} onSelect={id => { tools.activate(targetId); controller.replaceSelection([id]); }}
+        editable={!authoringLocked} disabled={!tools.state.metadata || panelOccupied || playingGrids || playbackTransition || Boolean(crop.cropSession)}
+        />}
       onAuthoringLockToggle={toggleAuthoringLock}
       renderInspection={viewer.placementId ? (container, controlsContainer, scene) => <DisplayFocusViewer
         scene={scene} container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}
         viewer={viewer} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
-      renderInstruments={instrumentsVisible ? (projection, overlayTop, displayName) => <DisplayInstruments menuSurface={menuSurface}
-        workspaceRef={workspaceRef} instrumentTriggers={instrumentTriggers} state={instruments} dispatch={instrumentCommand} projection={projection} overlayTop={overlayTop}
-        scope={`${displayName} / ${controller.selectedGrid?.title || 'Untitled Grid'}`} selectionLabel={selectionLabel}
-        renderLayers={() => <OwnerSystemWorkflowSelectionInspector key={controller.selectedGridId}
-          assetsById={assetsById} authoringLocked={authoringLocked || playingGrids || playbackTransition} controller={controller} crop={crop} onBeginCrop={crop.beginCrop} />}
-        renderMetadata={() => <OwnerSystemWorkflowMetadataContent dossier={metadataEntry?.dossier || null} />} /> : null}>
-    <OwnerSystemWorkflowCanvas placementTargetRef={placementTargetRef} assetsById={assetsById} authoringLocked={authoringLocked} controller={controller} crop={crop}
+>
+    <OwnerSystemWorkflowCanvas placementTargetRef={placementTargetRef} assetsById={assetsById} authoringLocked={authoringLocked} motionEnabled={motionEnabled} motionPreview={previewMotion} controller={controller} crop={crop}
+        editingTextId={editingText?.gridId === controller.selectedGridId ? editingText.id : null} onEditText={editText}
         playingGrids={playingGrids} onPauseGrids={pauseGrids} onPlaybackTransitionChange={setPlaybackTransition}
         onAssetDimensions={registerAssetDimensions} onChangeGrid={changeGrid}
-        interactionDisabled={panelOccupied || Boolean(viewer.placementId)} onOpenViewer={(placement) => viewer.open(placement.id)}
+        interactionDisabled={panelOccupied || previewMotion || Boolean(viewer.placementId)} onOpenViewer={(placement) => tools.state.metadata ? controller.replaceSelection([placement.id]) : viewer.open(placement.id)}
         onPlacementRef={viewer.registerPlacement} reducedMotion={reducedMotion}
         resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.sourcePlacementId} />
     </PresentationBoard>
+    <SharedDisplayToolContent id="layers" targetId={targetId} label={toolScope} available={toolAvailable}>
+      <OwnerSystemWorkflowSelectionInspector key={controller.selectedGridId} assetsById={assetsById}
+        authoringLocked={authoringLocked || previewMotion || playingGrids || playbackTransition} controller={controller} crop={crop}
+        onBeginCrop={crop.beginCrop} onEditText={editText}
+        onArtworkInfo={event => { onRevealInstruments(); tools.command('metadata', true, event.currentTarget, targetId); }} />
+    </SharedDisplayToolContent>
+    <SharedDisplayToolContent id="animation" targetId={targetId} label={selectionLabel} available={toolAvailable}>
+      <AnimationModule key={`${controller.selectedGridId}:${metadataPlacement?.id}`}
+        target={metadataPlacement ? { animation: metadataPlacement.animation, label: selectionLabel, scope: toolScope,
+          src: assetsById.get(metadataPlacement.stableAssetId)?.previewSrc || assetsById.get(metadataPlacement.stableAssetId)?.src
+            || assetsById.get(metadataPlacement.stableAssetId)?.thumbnailUrl || assetsById.get(metadataPlacement.stableAssetId)?.imageUrl } : null}
+        onChange={animation => metadataPlacement && controller.run(session => session.setPlacementAnimation({
+          gridId: controller.selectedGridId, placementId: metadataPlacement.id, expectedPlacement: metadataPlacement, animation }))}
+        disabled={authoringLocked || metadataPlacement?.locked || playingGrids || playbackTransition || Boolean(crop.cropSession || viewer.placementId)}
+        disabledReason={authoringLocked ? 'Unlock the Display to edit effects.' : metadataPlacement?.locked ? 'Unlock this layer to edit effects.' : 'Finish playback or inspection before editing effects.'}
+        preview={previewMotion} onPreview={setMotionPreview} reducedMotion={reducedMotion} />
+    </SharedDisplayToolContent>
+    <SharedDisplayToolContent id="metadata" targetId={targetId} label={`${toolScope} / ${selectionLabel}`} available={toolAvailable}>
+      <OwnerSystemWorkflowMetadataContent dossier={metadataEntry?.dossier || null} />
+    </SharedDisplayToolContent>
+
+    {appearanceOpen && !authoringLocked && workspaceRef.current && createPortal(<WorkbenchWindow surfaceStyle={{ zIndex: 70 }} label="Display appearance" title={windowProps.initialPresentation?.name || 'Display Module'} width={320} initialHeight={470} chrome="bevel" menuSurface={menuSurface}
+      controls={<button type="button" className="system-workflow__round-control" aria-label="Close Display appearance" onClick={() => { setAppearanceOpen(false); appearanceTrigger.current?.focus(); }}>×</button>}>
+      <ModuleSurfaceControls display value={controller.draft.appearance.edges} frame={controller.draft.appearance.frame !== false}
+        onChange={edges => controller.setAppearance({ edges })} onFrameChange={frame => controller.setAppearance({ frame })} />
+    </WorkbenchWindow>, workspaceRef.current)}
     {moduleMenu && createPortal(<RackMenu anchor={moduleMenu} commands={[...moduleCommands,
       { id: 'close-module', label: 'CLOSE MODULE' },
       ...(moduleMenu.onDelete ? [{ id: 'delete-module', label: 'DELETE MODULE' }] : []),

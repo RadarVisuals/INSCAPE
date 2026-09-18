@@ -2,8 +2,7 @@
 const plain = value => value && typeof value === 'object' && !Array.isArray(value);
 const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 export function draftChanges(before, after, path = []) {
-  if (equal(before, after) || path.join('.') === 'mobile.editor'
-    || path[0] === 'animations' && path.at(-1) === 'presentation') return [];
+  if (equal(before, after) || path.join('.') === 'mobile.editor') return [];
   if (plain(before) && plain(after)) return [...new Set([...Object.keys(before), ...Object.keys(after)])]
     .flatMap(key => draftChanges(before[key], after[key], [...path, key]));
   if (Array.isArray(before) && Array.isArray(after) && before.length === after.length
@@ -26,5 +25,5 @@ export function applyDraftChanges(draft, changes, direction) {
 }
 export function draftChangeLabel(changes) {
   const key = changes[0]?.path[0];
-  return ({ miniApps: 'Edit · Mini app', mobile: 'Edit · Mobile', animations: 'Edit · Mirror', identityPresentation: 'Edit · Identity', workbench: 'Edit · Workbench' })[key] || 'Edit · Display';
+  return ({ miniApps: 'Edit · Mini app', mobile: 'Edit · Mobile', identityPresentation: 'Edit · Identity', workbench: 'Edit · Workbench' })[key] || 'Edit · Display';
 }

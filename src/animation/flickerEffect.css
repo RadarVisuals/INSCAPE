@@ -1,0 +1,4 @@
+@keyframes inscape-flicker {
+  0%, 70%, 77%, 84%, 100% { opacity: 1; }
+  72%, 74%, 80%, 81%, 88%, 91% { opacity: var(--motion-low); }
+}

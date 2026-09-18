@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5186';
+const screenshots = await mkdtemp(join(tmpdir(), 'inscape-inspection-'));
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 async function fixture(run, width = 1280, reducedMotion = 'reduce') {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
@@ -70,13 +74,13 @@ test('inspection skips unrendered assets and closes cleanly from both modes', ()
   // Use the session action so the harness's stable Stage need not mirror state.
   await page.evaluate(() => hardening.viewer.open('one')); await settle(page);
   assert.equal(await page.evaluate(() => hardening.viewer.total), 2);
-  await page.getByRole('button', { name: 'Next artwork', exact: true }).click();
+  await page.keyboard.press('ArrowRight');
   await page.waitForFunction(() => document.querySelector('[data-lift-source]'));
   assert.equal(await page.evaluate(() => hardening.viewer.placementId), 'two');
-  await page.getByRole('button', { name: 'Next artwork', exact: true }).click(); await settle(page);
+  await page.keyboard.press('ArrowRight'); await settle(page);
   assert.equal(await page.evaluate(() => hardening.viewer.placementId), 'one');
   assert.equal(await page.locator('[data-lift-source]').count(), 0);
-  await page.locator('.system-workflow__inspection-hit-surface').click({ position: { x: 5, y: 5 } });
+  await page.locator('.system-workflow__inspection-hit-surface').click({ position: { x: 35, y: 55 } });
   await page.waitForFunction(() => !hardening.viewer.placementId);
   assert.equal(await page.locator('[data-inspection-context]').count(), 0);
   assert.equal(await page.locator('[data-inspection-phase]').count(), 0);
@@ -86,7 +90,7 @@ test('animated lift survives resize and returns without hidden sources or leftov
   await page.evaluate(() => hardening.viewer.open('two'));
   await page.waitForFunction(() => document.querySelector('[data-lift-source]'));
   const stage = page.locator('.system-workflow__stage-viewport'); await stage.hover();
-  await page.mouse.wheel(0, 120); await settle(page);
+  await page.mouse.wheel(0, -120); await settle(page);
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !hardening.viewer.placementId);
   assert.equal(await page.locator('[data-lift-source],.system-workflow__lift-artwork').count(), 0);
@@ -146,17 +150,19 @@ for (const width of [1280, 390]) test(`wheel, immersive exit, focus containment 
   const board = page.locator('.system-workflow__presentation-board');
   await stage.hover();
   const before = await board.boundingBox(); await page.mouse.wheel(0, 120); await settle(page);
-  assert.ok((await board.boundingBox()).width < before.width - 2);
+  assert.deepEqual(await board.boundingBox(), before, 'scroll down stops at the starting composition');
+  const beforeZoomChanges = await page.evaluate(() => hardening.changes.length);
   for (let i = 0; i < 20 && !(await board.getAttribute('data-immersive')); i++) {
     await stage.hover(); await page.mouse.wheel(0, -120); await page.waitForTimeout(270);
   }
   assert.equal(await board.getAttribute('data-immersive'), 'true');
+  assert.equal(await page.evaluate(() => hardening.changes.length), beforeZoomChanges, 'temporary zoom does not publish window geometry');
   const recorded = await page.evaluate(() => hardening.changes.length);
   const frame = await board.boundingBox(); assert.equal(frame.x, 0); assert.equal(frame.y, 0);
   assert.equal(frame.width, width); assert.equal(frame.height, 800);
   for (let i = 0; i < 8; i++) await page.keyboard.press('Tab');
   assert.equal(await board.evaluate(n => n.contains(document.activeElement)), true);
-  await page.screenshot({ path: `.browser-test-runtime/hardening-immersive-${width}.png` });
+  await page.screenshot({ path: join(screenshots, `hardening-immersive-${width}.png`) });
   assert.equal(await page.evaluate(() => hardening.changes.length), recorded);
   await page.keyboard.press('Escape'); await settle(page);
   assert.equal(await board.getAttribute('data-immersive'), null);

@@ -195,7 +195,17 @@ export function setContinuousPresentationBoardScale(view, scale) {
   return Object.freeze({ ...view, frame: projectScaledPresentationBoard(view.fit, viewport, safeScale), scale: safeScale });
 }
 
-export function resizePresentationBoardFromCorner(view, frame, corner, movement) {
+// Interpolate the centre with the same progress as the size. Both endpoint
+// rectangles fit the Workbench, so intermediate rectangles need no edge shove.
+export function presentationBoardWheelZoomPosition(view, origin, viewport, sidecarWidth = 0) {
+  const range = view.maximumPercentage / 100 - origin.originView.scale;
+  const progress = range > 0 ? Math.max(0, Math.min(1, (view.scale - origin.originView.scale) / range)) : 0;
+  const centerX = origin.centerX + ((viewport.width - sidecarWidth) / 2 - origin.centerX) * progress;
+  const centerY = origin.centerY + (viewport.height / 2 - origin.centerY) * progress;
+  return { left: centerX - view.frame.board.width / 2, top: centerY - view.frame.board.height / 2 };
+}
+
+export function resizePresentationBoardFromCorner(view, frame, corner, movement, gridStep = 0, snapEdge = null) {
   if (!view || !frame || !['ne', 'nw', 'se', 'sw'].includes(corner)) return null;
   const deltaX = Number(movement?.x) || 0;
   const deltaY = Number(movement?.y) || 0;
@@ -208,7 +218,36 @@ export function resizePresentationBoardFromCorner(view, frame, corner, movement)
   // both axes responsive without switching abruptly between X- and Y-derived sizes.
   const projectedWidthMovement = (signedWidthMovement + signedHeightMovement * inverseAspect)
     / (1 + inverseAspect ** 2);
-  const requestedWidth = frame.width + projectedWidthMovement;
+  let requestedWidth = frame.width + projectedWidthMovement;
+  if (gridStep > 0) {
+    // Snap the moving edge on the dominant pointer axis, keeping the opposite
+    // corner fixed and deriving the other dimension from the authored ratio.
+    if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+      requestedWidth = frame.width + signedWidthMovement;
+      const anchor = corner.endsWith('e') ? frame.left : frame.left + frame.width;
+      const edge = anchor + horizontalDirection * requestedWidth;
+      requestedWidth = (Math.round(edge / gridStep) * gridStep - anchor) * horizontalDirection;
+    } else {
+      requestedWidth = frame.width + signedHeightMovement / inverseAspect;
+      const anchor = corner.startsWith('s') ? frame.top : frame.top + frame.height;
+      const chromeHeight = frame.height - frame.width * inverseAspect;
+      const edge = anchor + verticalDirection * (requestedWidth * inverseAspect + chromeHeight);
+      requestedWidth = ((Math.round(edge / gridStep) * gridStep - anchor) * verticalDirection - chromeHeight) / inverseAspect;
+    }
+  }
+  if (snapEdge) {
+    const horizontal = Math.abs(deltaX) >= Math.abs(deltaY);
+    const side = horizontal ? (horizontalDirection === 1 ? 'right' : 'left') : (verticalDirection === 1 ? 'bottom' : 'top');
+    const edge = horizontal ? frame.left + (horizontalDirection === 1 ? frame.width : 0) + deltaX
+      : frame.top + (verticalDirection === 1 ? frame.height : 0) + deltaY;
+    const snapped = snapEdge(horizontal ? 'x' : 'y', side, edge);
+    if (snapped !== null) {
+      const chromeHeight = frame.height - frame.width * inverseAspect;
+      requestedWidth = horizontal
+        ? (snapped - (horizontalDirection === 1 ? frame.left : frame.left + frame.width)) * horizontalDirection
+        : ((snapped - (verticalDirection === 1 ? frame.top : frame.top + frame.height)) * verticalDirection - chromeHeight) / inverseAspect;
+    }
+  }
   const nextView = setContinuousPresentationBoardScale(view, requestedWidth / view.fit.stage.width);
   const width = nextView.frame.board.width;
   const height = nextView.frame.board.height;

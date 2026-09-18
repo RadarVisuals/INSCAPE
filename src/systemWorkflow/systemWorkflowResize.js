@@ -11,6 +11,7 @@ import { sameSystemWorkflowPlacementSnapshot } from './systemWorkflowRemoval.js'
 import { sameSystemWorkflowPlacementGeometry } from './systemWorkflowMovement.js';
 
 export const SYSTEM_WORKFLOW_RESIZE_CORNERS = Object.freeze(['nw', 'ne', 'se', 'sw']);
+export const SYSTEM_WORKFLOW_RESIZE_HANDLES = Object.freeze([...SYSTEM_WORKFLOW_RESIZE_CORNERS, 'n', 'e', 's', 'w']);
 export const SYSTEM_WORKFLOW_RESIZE_DEAD_ZONE = 10;
 
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
@@ -29,7 +30,7 @@ function requirePoint(point) {
 }
 
 function requireCorner(corner) {
-  if (!SYSTEM_WORKFLOW_RESIZE_CORNERS.includes(corner)) {
+  if (!SYSTEM_WORKFLOW_RESIZE_HANDLES.includes(corner)) {
     throw resizeError('SYSTEM_WORKFLOW_RESIZE_CORNER_INVALID', 'Placement resize requires a canonical corner');
   }
   return corner;
@@ -134,6 +135,8 @@ export function systemWorkflowTopBoundaryRemoveDock(placement, cellSize) {
 }
 
 function resizedGeometry(start, corner, columnDelta, rowDelta) {
+  if (corner === 'n' || corner === 's') columnDelta = 0;
+  if (corner === 'e' || corner === 'w') rowDelta = 0;
   const west = start.column;
   const east = start.column + start.columnSpan;
   const north = start.row;
@@ -269,7 +272,7 @@ export function updateSystemWorkflowResizeGesture(
   return {
     ...gesture,
     activated: true,
-    previewGeometry: (preserveRatio ? ratioPreservingGeometry : resizedGeometry)(
+    previewGeometry: (preserveRatio && gesture.corner.length === 2 ? ratioPreservingGeometry : resizedGeometry)(
       gesture.startGeometry,
       gesture.corner,
       quantizeSystemWorkflowGridCoordinate(movingColumn - gesture.movingBoundary.column),
@@ -278,8 +281,8 @@ export function updateSystemWorkflowResizeGesture(
   };
 }
 
-export function updateSystemWorkflowGroupResizeGesture(gesture, pointInput, fieldInput, deadZone) {
-  const frameGesture = updateSystemWorkflowResizeGesture(gesture.frameGesture, pointInput, fieldInput, deadZone);
+export function updateSystemWorkflowGroupResizeGesture(gesture, pointInput, fieldInput, deadZone, options) {
+  const frameGesture = updateSystemWorkflowResizeGesture(gesture.frameGesture, pointInput, fieldInput, deadZone, options);
   return {
     ...gesture,
     activated: frameGesture.activated,
@@ -344,6 +347,7 @@ function oppositeAnchor(geometry, corner) {
 
 export function createSystemWorkflowResizeCandidate(draftInput, {
   corner,
+  freeScale = false,
   destination,
   expectedPlacement,
   placementId,
@@ -367,11 +371,16 @@ export function createSystemWorkflowResizeCandidate(draftInput, {
   if (placement.locked) throw resizeError('SYSTEM_WORKFLOW_RESIZE_PLACEMENT_LOCKED', 'The canonical placement is locked');
   const start = geometryOf(placement);
   const next = geometryOf(destination);
+  if ((corner === 'e' || corner === 'w') && (next.row !== start.row || next.rowSpan !== start.rowSpan)
+    || (corner === 'n' || corner === 's') && (next.column !== start.column || next.columnSpan !== start.columnSpan)) {
+    throw resizeError('SYSTEM_WORKFLOW_RESIZE_ANCHOR_CHANGED', 'Side resize must preserve the other axis');
+  }
   if (oppositeAnchor(start, corner).column !== oppositeAnchor(next, corner).column
     || oppositeAnchor(start, corner).row !== oppositeAnchor(next, corner).row) {
     throw resizeError('SYSTEM_WORKFLOW_RESIZE_ANCHOR_CHANGED', 'Placement resize must preserve the opposite corner');
   }
   if (sameSystemWorkflowPlacementGeometry(start, next)) return null;
+  if (placement.kind !== 'text' && (corner.length === 1 || freeScale) && placement.mediaFrameRatio === undefined) placement.mediaFrameRatio = start.columnSpan / start.rowSpan;
   Object.assign(placement, next);
   return assertValidSystemWorkflowDraft(draft);
 }

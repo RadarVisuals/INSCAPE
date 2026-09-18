@@ -7,7 +7,7 @@ import useDisplayInspection from './useDisplayInspection.js';
 export default function useOwnerSystemWorkflowFocusViewer({ assetsById, controller, onOpen, resolveAssetDimensions }) {
   const placementRefs = useRef(new Map());
   const restoreSnapshotRef = useRef(null);
-  const placements = controller.selectedGrid?.placements || [];
+  const placements = useMemo(() => (controller.selectedGrid?.placements || []).filter(placement => placement.kind !== 'text'), [controller.selectedGrid?.placements]);
   const entries = useMemo(() => new Map(placements.map(placement => [placement.id,
     createOwnerSystemWorkflowFocusViewModel(placement, assetsById.get(placement.stableAssetId))])), [placements, assetsById]);
   const viewer = useDisplayInspection({

@@ -62,7 +62,14 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     const active = { target: placementTargetRef.current, asset, dimensions: ownerSystemWorkflowAssetDimensions(asset), lastPointer: null,
       moduleTarget: moduleAssetTargetRef?.current,
       pointerId: event.pointerId, moved: false, source: event.currentTarget };
+    const library = event.currentTarget.closest('.system-workflow__library');
+    const overLibraryNavigation = (pointerEvent) => {
+      const bounds = library?.querySelector('.lattice-browser-sidebar')?.getBoundingClientRect();
+      return bounds && pointerEvent.clientX >= bounds.left && pointerEvent.clientX <= bounds.right
+        && pointerEvent.clientY >= bounds.top && pointerEvent.clientY <= bounds.bottom;
+    };
     const previewAt = (pointerEvent, dimensions = active.dimensions) => {
+      if (overLibraryNavigation(pointerEvent)) return { destination: null, rectangle: null };
       const point = { x: pointerEvent.clientX, y: pointerEvent.clientY };
       const hit = document.elementFromPoint(point.x, point.y);
       const moduleTarget = active.moduleTarget?.targetAt?.(point) || active.moduleTarget;
@@ -86,18 +93,22 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       active.lastPointer = pointerEvent;
       active.source?.setAttribute('data-workflow-dragging', '');
       const preview = previewAt(pointerEvent);
-      setDragPreview({ asset, ...preview });
+      setDragPreview(overLibraryNavigation(pointerEvent) ? null : { asset, ...preview });
     };
     const finish = async (pointerEvent) => {
       if (pointerEvent.pointerId !== active.pointerId) return;
       const moved = active.moved;
-      const pendingDimensions = active.dimensionPromise;
+      if (!moved || overLibraryNavigation(pointerEvent)) { cleanup(); return; }
+      const dimensions = await active.dimensionPromise;
+      if (dragRef.current !== active) return;
+      const preview = dimensions ? previewAt(pointerEvent, dimensions) : null;
       // Resolve while drag-only drop surfaces are still visible. Cleanup removes
       // the source marker that controls those surfaces.
       const hit = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY);
       const moduleTarget = active.moduleTarget?.targetAt?.({ x: pointerEvent.clientX, y: pointerEvent.clientY }) || active.moduleTarget;
       cleanup();
       if (!moved) return;
+      if (overLibraryNavigation(pointerEvent)) return;
       if (!mounted.current || currentPlacementContext.current !== placementContext) return;
       if (moduleTarget && moduleAssetTargetRef?.current === active.moduleTarget && active.moduleTarget?.has?.(moduleTarget) !== false && moduleTarget.node?.contains(hit)) {
         if (!await moduleTarget.placeAsset(asset)) rejectDrop();
@@ -107,9 +118,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       const shortcut = shortcutTargetRef.current?.targetAt?.({ x: pointerEvent.clientX, y: pointerEvent.clientY }) || shortcutTargetRef.current;
       if (shortcut?.node?.contains(document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY))
         && shortcut.placeAsset(asset)) return;
-      const dimensions = await pendingDimensions;
       if (!mounted.current || currentPlacementContext.current !== placementContext) return;
-      const preview = dimensions ? previewAt(pointerEvent, dimensions) : null;
       if (preview?.destination) await place(asset, preview.destination, dimensions, preview.target || active.target);
       else rejectDrop();
     };
@@ -122,7 +131,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     active.dimensionPromise = Promise.resolve().then(() => resolveDimensions(asset)).then((dimensions) => {
       active.dimensions = dimensions;
       if (dragRef.current === active && active.moved && active.lastPointer && dimensions) {
-        setDragPreview({ asset, ...previewAt(active.lastPointer, active.dimensions) });
+        setDragPreview(overLibraryNavigation(active.lastPointer) ? null : { asset, ...previewAt(active.lastPointer, active.dimensions) });
       }
       return active.dimensions;
     }).catch(() => null);

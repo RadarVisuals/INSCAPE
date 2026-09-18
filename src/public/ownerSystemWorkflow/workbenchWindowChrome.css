@@ -81,6 +81,15 @@
 .system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip:focus-visible {
   outline: 1px solid var(--workflow-ink); outline-offset: -2px;
 }
+.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip { height: 12px; padding-block: 0; opacity: 0; }
+.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip .system-workflow__board-title { pointer-events: none; }
+.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip:is(:hover, :focus-within, [data-toolbar-open]) { height: 48px; padding-block: 8px; opacity: 1; }
+.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip:is(:hover, :focus-within, [data-toolbar-open]) .system-workflow__board-title { pointer-events: auto; }
+.system-workflow__toolbar-reveal { display: none; }
+@media (hover: none) {
+  .system-workflow__presentation-board > .system-workflow__toolbar-reveal { display: block; position: absolute; top: 4px; left: 4px; z-index: 43; width: 28px; height: 28px; border: 1px solid var(--workflow-border); background: var(--workflow-window-overlay); color: var(--workflow-ink); font: var(--workflow-type-control); }
+  .system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip { padding-left: 36px; }
+}
 .system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__board-title {
   max-width: 100%; gap: 4px; padding-inline: 4px;
   background: var(--workflow-window-overlay); border-radius: 4px;

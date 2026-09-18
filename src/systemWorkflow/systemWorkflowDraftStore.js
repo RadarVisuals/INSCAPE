@@ -61,6 +61,7 @@ export function createSystemWorkflowDraftStore({
   let currentDraft = null;
   let recordState = null;
   let acceptedRaw;
+  let lastCommitFailure = null;
   const listeners = new Set();
   const histories = new Map();
   let historyGroup = null;
@@ -203,14 +204,34 @@ export function createSystemWorkflowDraftStore({
       return true;
     },
 
-    commitCompletedOperation(candidate, { expectedGeneration, historyLabel, recordHistory = true } = {}) {
-      if (expectedGeneration !== generation || !currentDraft) return false;
+    getLastCommitFailure() { return lastCommitFailure; },
+    retryCompletedOperation(createCandidate, options = {}) {
+      const loaded = load(activeProfileAddress);
+      if (!loaded.draft) {
+        lastCommitFailure = loaded.state.status === SYSTEM_WORKFLOW_RECORD_STATUS.CORRUPT ? 'corrupt' : 'read_failed';
+        return false;
+      }
+      const candidate = createCandidate(detached(loaded.draft));
+      if (!candidate) return false;
+      return commit(candidate, options, loaded);
+    },
+    commitCompletedOperation(candidate, options = {}) { return commit(candidate, options); },
+  };
+  function commit(candidate, { expectedGeneration, historyLabel, recordHistory = true } = {}, recovered = null) {
+      const reject = reason => { lastCommitFailure = reason; return false; };
+      if (expectedGeneration !== generation || !currentDraft) return reject('stale');
       const draft = acceptedDraft(candidate, activeProfileAddress);
-      if (!draft || !storage?.setItem || !storageStillCurrent()) return false;
+      if (!draft) return reject('invalid');
+      if (!storage?.setItem) return reject('write_failed');
+      try {
+        if (storage.getItem(systemWorkflowDraftKey(activeProfileAddress)) !== (recovered ? recovered.raw : acceptedRaw)) return reject('changed');
+      } catch { return reject('read_failed'); }
       const raw = JSON.stringify(draft);
-      const changes = recordHistory ? draftChanges(currentDraft, draft) : [];
+      const changes = recordHistory ? draftChanges(recovered?.draft || currentDraft, draft) : [];
       try { storage.setItem(systemWorkflowDraftKey(activeProfileAddress), raw); }
-      catch { return false; }
+      catch { return reject('write_failed'); }
+      // External edits invalidate local history only after a successful recovery.
+      if (recovered && recovered.raw !== acceptedRaw) { histories.delete(activeProfileAddress); historyGroup = null; }
       if (changes.length) {
         const h = history(); h.redo = [];
         if (historyGroup?.entry && h.undo.at(-1) === historyGroup.entry) {
@@ -226,10 +247,10 @@ export function createSystemWorkflowDraftStore({
       currentDraft = deepFreeze(draft);
       recordState = Object.freeze({ status: SYSTEM_WORKFLOW_RECORD_STATUS.VALID });
       generation += 1;
+      lastCommitFailure = null;
       listeners.forEach(listener => listener());
       return true;
-    },
-  };
+  }
   function travel(direction) {
     historyGroup = null;
     const h = history(), entry = h[direction].at(-1);

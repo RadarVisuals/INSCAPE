@@ -50,12 +50,16 @@ try {
   await page.getByRole('button',{name:'Grids',exact:true}).click();
   await page.mouse.click(15,15,{button:'right'});
   await page.getByRole('menuitem',{name:'ADD',exact:true}).hover();
-  await page.getByRole('menuitem',{name:'DISPLAY MODULE',exact:true}).click();
+  assert.equal(await page.getByRole('menuitem', { name: 'MIRROR ANIMATION', exact: true }).count(), 0);
+  await page.screenshot({ path: 'output/remove-mirror-add-menu.png' });
+  await page.getByRole('menuitem',{name:'DISPLAY MODULE',exact:true}).hover();
+  await page.getByRole('menuitem',{name:'HORIZONTAL 16:9',exact:true}).click();
   await page.locator('.system-workflow__presentation-board').waitFor();
   assert.equal(await page.evaluate(()=>instances.getDraft().grids[0].placements.length),0);
   await page.mouse.click(15,15,{button:'right'});
   await page.getByRole('menuitem',{name:'ADD',exact:true}).hover();
-  await page.getByRole('menuitem',{name:'DISPLAY MODULE',exact:true}).click();
+  await page.getByRole('menuitem',{name:'DISPLAY MODULE',exact:true}).hover();
+  await page.getByRole('menuitem',{name:'HORIZONTAL 16:9',exact:true}).click();
   await page.waitForFunction(()=>instances.getDraft().displays.length===1);
   const second=page.locator('[data-display-instance]').nth(1);
   await second.getByRole('button',{name:'Minimize Display Module to shortcut',exact:true}).click();
@@ -69,14 +73,12 @@ try {
 
   for (const [label,close,shortcut,key] of [
     ['MINI APP','Close Mini App','.mini-app-shortcut','miniApps'],
-    ['MIRROR ANIMATION','Close MIRROR 01','.mirror-workbench__reopen','animations'],
     ['MOBILE MODULE','Close Mobile editor','.mobile-editor-reopen','mobile']
   ]) {
     await page.mouse.click(15,15,{button:'right'});
     await page.getByRole('menuitem',{name:'ADD',exact:true}).hover();
     await page.getByRole('menuitem',{name:label,exact:true}).click();
     if(key==='miniApps') await page.locator('[data-mini-app-id] button[aria-label^="Close "]').click();
-    else if(key==='animations') await page.locator('.mirror-workbench button[aria-label^="Close "]').first().click();
     else await page.getByRole('button',{name:close,exact:true}).click();
     if (key === 'mobile') await page.setViewportSize({width:390,height:844});
     await page.locator(shortcut).focus();

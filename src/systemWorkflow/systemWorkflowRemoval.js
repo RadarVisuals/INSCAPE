@@ -11,6 +11,7 @@ function canonicalPlacementSnapshot(placement) {
   if (!placement || typeof placement !== 'object') return null;
   return {
     id: placement.id,
+    ...(placement.kind === 'text' ? { kind: 'text', text: { ...placement.text } } : {}),
     stableAssetId: placement.stableAssetId,
     column: placement.column,
     row: placement.row,
@@ -28,6 +29,8 @@ function canonicalPlacementSnapshot(placement) {
     backing: placement.backing ? { ...placement.backing } : null,
     transparencyMode: placement.transparencyMode,
     inspectionMode: resolveInspectionMode(placement),
+    animation: placement.animation ? structuredClone(placement.animation) : null,
+    mediaFrameRatio: placement.mediaFrameRatio ?? null,
     transform: placement.transform ? { ...placement.transform } : null,
     visibility: placement.visibility,
     locked: placement.locked,

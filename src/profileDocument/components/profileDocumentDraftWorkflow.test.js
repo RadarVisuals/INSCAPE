@@ -9,7 +9,7 @@ const publicationSource = readFileSync(new URL('../../public/ownerSystemWorkflow
 const appSource = readFileSync(new URL('../../App.jsx', import.meta.url), 'utf8');
 
 test('Preview builds directly from the current isolated System Workflow draft', () => {
-  assert.match(runtimeSource, /buildOwnerSystemWorkflowPreviewDocument\(\{[\s\S]*systemWorkflowDraft: controller\.draft/u);
+  assert.match(runtimeSource, /buildOwnerSystemWorkflowPreviewDocument\(\{[\s\S]*systemWorkflowDraft: workbenchController\.draft/u);
   assert.match(runtimeSource, /<ProfileDocumentV9Preview document=\{preview\}/u);
   assert.doesNotMatch(runtimeSource, /ProfileDocumentPanel|enterPreview\(|ProfileDocumentPreview/u);
 });

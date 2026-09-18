@@ -4,7 +4,6 @@ import { createSystemWorkflowDraftStore } from './systemWorkflowDraftStore.js';
 import { removeWorkbenchModule } from './removeWorkbenchModule.js';
 import { addDisplayModule } from './displayModuleSession.js';
 import { PRIMARY_DISPLAY_ID, displayModuleIds } from './domain/displayModules.js';
-import { addMirrorModule } from './mirrorModuleSession.js';
 import { addMiniApp } from '../miniApps/miniAppSession.js';
 import { openMobileModule } from '../mobile/mobileSession.js';
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
@@ -20,8 +19,8 @@ function fixture() {
 test('delete every module, undo, persist empty desktop and recreate original Display', () => {
   const { store, storage } = fixture();
   const original = store.getDraft();
-  addDisplayModule(store); addMirrorModule(store); addMiniApp(store, profile); openMobileModule(store);
-  for (const [kind,key] of [['display','displays'],['mirror','animations'],['mini-app','miniApps'],['mobile','mobile']]) {
+  addDisplayModule(store); addMiniApp(store, profile); openMobileModule(store);
+  for (const [kind,key] of [['display','displays'],['mini-app','miniApps'],['mobile','mobile']]) {
     const before = store.getDraft();
     const record = kind === 'mobile' ? before.mobile : before[key][0];
     assert.equal(removeWorkbenchModule(store, profile, kind, record), true);

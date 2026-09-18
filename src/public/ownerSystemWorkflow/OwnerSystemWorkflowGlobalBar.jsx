@@ -1,7 +1,9 @@
 import { Bell, CloudUpload, Compass, Eye, FileText, Grid3X3, Library, Settings2, UserRound } from 'lucide-react';
 
+import { SharedDisplayToolsLauncher } from './SharedDisplayTools.jsx';
+
 export default function OwnerSystemWorkflowGlobalBar({ activePanel, onOpen,
-  onPreview, onPublish, publicationOpen = false, unreadCount }) {
+  onPreview, onPublish, menuSurface, onOpenTools, publicationOpen = false, unreadCount }) {
   const panelButton = (id, label, Icon, extra = null) => <button data-system-workflow-panel-trigger aria-label={label}
     aria-expanded={['profile', 'activity', 'grids', 'settings'].includes(id) ? activePanel === id : undefined}
     aria-pressed={['discover', 'library'].includes(id) ? activePanel === id : undefined}
@@ -13,6 +15,7 @@ export default function OwnerSystemWorkflowGlobalBar({ activePanel, onOpen,
       {panelButton('profile', 'Profile', UserRound)}
       {panelButton('library', 'Library', Library)}
       {panelButton('grids', 'Grids', Grid3X3)}
+      <SharedDisplayToolsLauncher menuSurface={menuSurface} onOpen={onOpenTools} />
       {panelButton('discover', 'Discover', Compass)}
       {panelButton('activity', 'Activity', Bell, unreadCount > 0 ? <i aria-label={`${unreadCount} unread`}>{unreadCount}</i> : null)}
       <button aria-label="Preview" onClick={onPreview} type="button"><Eye size={14} /><span>Preview</span></button>

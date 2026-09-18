@@ -1,0 +1,24 @@
+.module-surface-controls { margin: 0; padding: 12px; min-width: 0; border: 1px solid var(--workflow-border); display: flex; flex-direction: column; gap: 8px; font: var(--workflow-type-control); }
+.module-surface-controls label { display: flex; flex-direction: column; gap: 4px; }
+.module-surface-controls :is(input, select) { min-width: 0; max-width: 100%; min-height: 30px; padding: 5px 8px; border: 1px solid var(--workflow-border); border-radius: 0; background: var(--workflow-panel); color: var(--workflow-ink); font: inherit; }
+.module-surface-controls input[type="range"] { width: 100%; height: 14px; min-height: 14px; padding: 0; appearance: none; border: 0; background: transparent; }
+.module-surface-controls input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: var(--workflow-border-strong); }
+.module-surface-controls input[type="range"]::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -5px; appearance: none; border: 1px solid var(--workflow-ink); border-radius: 50%; background: var(--workflow-ink); }
+.module-surface-controls input[type="range"]::-moz-range-track { height: 2px; background: var(--workflow-border-strong); }
+.module-surface-controls input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border: 1px solid var(--workflow-ink); border-radius: 50%; background: var(--workflow-ink); }
+.module-surface-controls .module-surface-check { flex-direction: row; align-items: center; }
+.module-corner-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.module-surface-controls :focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: 2px; }
+.module-surface-grain { position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: inherit; background: url('/assets/noise-samples/grain-mono.png') repeat; background-size: var(--workflow-window-chrome-noise-size, 128px); opacity: var(--module-grain, 0); mix-blend-mode: hard-light; }
+.system-workflow__presentation-board[data-module-edges]:not([data-immersive]) { border-radius: var(--module-corners); box-shadow: var(--module-shadow); }
+.system-workflow__presentation-board[data-window-chrome][data-module-edges]:not([data-immersive]) > .system-workflow__stage-viewport { border-radius: var(--module-corners); }
+.system-workflow__presentation-board[data-module-edges]:not([data-immersive])::before,
+.system-workflow__presentation-board[data-module-edges]:not([data-immersive])::after { border-radius: var(--module-corners); }
+.system-workflow__presentation-board[data-window-chrome][data-module-edges]:not([data-immersive]) > .system-workflow__stage-border { inset: 0; border-radius: var(--module-corners); }
+.system-workflow__presentation-board[data-module-frame="off"] > .system-workflow__stage-border { display: none; }
+.system-workflow__presentation-board[data-window-chrome][data-module-frame="off"]::before { border: 0; }
+.system-workflow__presentation-board[data-window-chrome][data-module-edges]:not([data-metadata-sidecar], [data-immersive])::before { inset: 0; }
+.display-text-content[data-module-edges] { border-radius: var(--module-corners); isolation: isolate; }
+.text-module-body[data-module-edges] { position: relative; isolation: isolate; border-radius: var(--module-corners); }
+.text-module-body[data-module-edges] > .text-module-scroll { border-radius: inherit; }
+.text-module-body[data-module-edges] > .module-surface-outline { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2; }

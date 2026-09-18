@@ -60,7 +60,7 @@ export function projectSystemWorkflowPublicGrids(draftInput, assetRecords = []) 
         .map(({ locked: _locked, stableAssetId, selectedMedia, ...placement }) => ({
           ...structuredClone(placement),
           visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,
-          asset: resolveAsset(stableAssetId, selectedMedia),
+          ...(placement.kind === 'text' ? {} : { asset: resolveAsset(stableAssetId, selectedMedia) }),
         })),
     }));
   if (!grids.length && draft.grids.length) {
@@ -90,7 +90,7 @@ function projectSystemWorkflowWorldCover(draft, assetRecords) {
         .map(({ locked: _locked, stableAssetId, selectedMedia, ...placement }) => ({
           ...structuredClone(placement),
           visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,
-          asset: resolveAsset(stableAssetId, selectedMedia),
+          ...(placement.kind === 'text' ? {} : { asset: resolveAsset(stableAssetId, selectedMedia) }),
         })),
     },
   };
@@ -165,10 +165,6 @@ export function buildProfileDocumentV9({
     ...(miniApps?.length ? { miniApps } : {}),
     ...(texts?.length ? { texts } : {}),
     ...(draft.mobile?.visibility === 'PUBLIC' ? { mobile: projectMobilePresentation(draft.mobile, assetRecords) } : {}),
-    ...(draft.animations ? { animations: draft.animations.filter(item => item.visibility === 'PUBLIC').map(({ visibility, ...item }) => {
-      if (!item.asset) throw new TypeError('Choose artwork for each public Mirror module before publishing.');
-      return structuredClone(item);
-    }) } : {}),
     ...(publicWorkbench ? { workbench: publicWorkbench } : {}),
   });
 }
@@ -181,5 +177,5 @@ export function countProfileDocumentV9Assets(document) {
     + (value.workbench?.display.shortcut.icon ? 1 : 0)
     + (value.displays || []).reduce((sum, module) => sum + module.grids.reduce((count, grid) => count + grid.placements.length, 0), 0)
     + (value.workbench?.displays || []).filter(module => module.shortcut.icon).length
-    + (value.animations?.length || 0) + mobileReferenceCount(value.mobile);
+    + mobileReferenceCount(value.mobile);
 }

@@ -1,3 +1,5 @@
+import { validPlacementAnimation } from './placementAnimation.js';
+import { validModuleEdges } from './moduleSurfaceAppearance.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
 import { PROFILE_DOCUMENT_LIMITS } from '../../profileDocument/domain/constants.js';
@@ -5,9 +7,9 @@ import { isValidPlacementMedia } from './placementMedia.js';
 import { isValidIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import { isValidWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, isDisplayFormat, projectDisplayDraft } from './displayModules.js';
-import { validMirrorModules } from './mirrorModules.js';
 import { validMiniApps } from '../../miniApps/domain/miniApps.js';
 import { validTextModules } from '../../text/domain/article.js';
+import { DISPLAY_TEXT_KEYS, isTextPlacement, validDisplayText } from './displayText.js';
 import { validMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
 import { canUseMobileRenderer } from '../../mobile/domain/customPresentation.js';
 
@@ -225,8 +227,18 @@ export function isValidSystemWorkflowPlacementGeometry(value) {
 }
 
 function validatePlacement(value, path, fail) {
-  const optionalKeys = ['selectedMedia', 'inspectionMode'].filter(key => Object.hasOwn(value || {}, key));
+  if (isTextPlacement(value)) {
+    if (!exactKeys(value, [...DISPLAY_TEXT_KEYS, 'locked']) || !validDisplayText(value.text)) return fail(path, 'invalid_text_placement', 'Invalid text layer');
+    if (!safeId(value.id) || !isValidSystemWorkflowPlacementGeometry(value) || !safeInteger(value.layer) || !safeInteger(value.navigationOrder)
+      || !sets.visibility.has(value.visibility) || typeof value.locked !== 'boolean'
+      || !exactKeys(value.transform, ['quarterTurns', 'mirrorX', 'mirrorY'])
+      || ![0, 1, 2, 3].includes(value.transform.quarterTurns) || typeof value.transform.mirrorX !== 'boolean' || typeof value.transform.mirrorY !== 'boolean') fail(path, 'invalid_text_geometry', 'Invalid text layer geometry');
+    return;
+  }
+  const optionalKeys = ['selectedMedia', 'inspectionMode', 'mediaFrameRatio', 'animation'].filter(key => Object.hasOwn(value || {}, key));
   if (!exactKeys(value, [...PLACEMENT_KEYS, ...optionalKeys])) return fail(path, 'invalid_placement_structure', 'Invalid placement');
+  if (Object.hasOwn(value, 'animation') && !validPlacementAnimation(value.animation)) fail(`${path}.animation`, 'invalid_animation', 'Invalid placement animation');
+  if (Object.hasOwn(value, 'mediaFrameRatio') && (!Number.isFinite(value.mediaFrameRatio) || value.mediaFrameRatio < 1 / 512 || value.mediaFrameRatio > 512)) fail(`${path}.mediaFrameRatio`, 'invalid_media_frame_ratio', 'Invalid media frame ratio');
   if (Object.hasOwn(value, 'inspectionMode') && !['IN_PLACE', 'LIFT'].includes(value.inspectionMode)) fail(`${path}.inspectionMode`, 'invalid_inspection_mode', 'Invalid artwork inspection mode');
   if (Object.hasOwn(value, 'selectedMedia') && !isValidPlacementMedia(value.selectedMedia)) fail(`${path}.selectedMedia`, 'invalid_selected_media', 'Invalid selected image');
   if (!safeId(value.id)) fail(`${path}.id`, 'invalid_placement_id', 'Invalid placement ID');
@@ -258,14 +270,16 @@ function validatePlacement(value, path, fail) {
 export function validateSystemWorkflowDraft(input) {
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
-  if (!exactKeys(input, [...DRAFT_KEYS, ...['workbench', 'displays', 'animations', 'mobile', 'miniApps', 'texts'].filter(key => Object.hasOwn(input || {}, key))])) {
+  if (!exactKeys(input, [...DRAFT_KEYS, ...['workbench', 'displays', 'mobile', 'miniApps', 'texts'].filter(key => Object.hasOwn(input || {}, key))])) {
     fail('$', 'invalid_draft_structure', 'Invalid draft');
     return { valid: false, errors, value: null };
   }
   if (!normalizeProfileAddress(input.profileAddress) || input.profileAddress !== input.profileAddress.toLowerCase()) fail('profileAddress', 'invalid_profile_address', 'Invalid profile address');
   if (input.draftVersion !== SYSTEM_WORKFLOW_DRAFT_VERSION) fail('draftVersion', 'unsupported_draft_version', 'Unsupported draft version');
   if (!isDisplayFormat(input.artboard, input.geometry)) fail('artboard', 'invalid_artboard', 'Invalid Display format');
-  if (!exactKeys(input.appearance, APPEARANCE_KEYS)
+  if (!exactKeys(input.appearance, [...APPEARANCE_KEYS, ...['edges', 'frame'].filter(key => Object.hasOwn(input.appearance || {}, key))])
+    || input.appearance?.edges !== undefined && !validModuleEdges(input.appearance.edges)
+    || input.appearance?.frame !== undefined && typeof input.appearance.frame !== 'boolean'
     || !sets.surfaces.has(input.appearance?.surfaceId)
     || !sets.surfaces.has(input.appearance?.menuSurfaceId)
     || !sets.surfaces.has(input.appearance?.dossierSurfaceId)
@@ -281,7 +295,6 @@ export function validateSystemWorkflowDraft(input) {
   if (Array.isArray(input.workbench?.miniApps) && input.workbench.miniApps.some(item => !Array.isArray(input.miniApps)
     || !input.miniApps.some(app => app?.id === item?.id))) fail('workbench.miniApps', 'unknown_mini_app', 'Window refers to an unavailable mini app');
   if (Object.hasOwn(input, 'mobile') && (!validMobilePresentation(input.mobile) || !canUseMobileRenderer(input.mobile, input.profileAddress))) fail('mobile', 'invalid_mobile', 'Invalid Mobile presentation');
-  if (Object.hasOwn(input, 'animations') && !validMirrorModules(input.animations)) fail('animations', 'invalid_animations', 'Invalid Mirror module configuration');
   if (Object.hasOwn(input, 'displays')) {
     if (!Array.isArray(input.displays) || input.displays.length > MAX_DISPLAY_MODULES - 1) {
       fail('displays', 'invalid_display_count', 'At most eight Display Modules are supported');
@@ -303,8 +316,7 @@ export function validateSystemWorkflowDraft(input) {
     }
   }
   if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid Workbench configuration');
-  const mirrorReferences = Array.isArray(input.animations) ? input.animations.filter(item => item?.asset).length : 0;
-  const allReferences = mobileReferenceCount(input.mobile) + mirrorReferences + (Array.isArray(input.grids) ? input.grids : []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0)
+  const allReferences = mobileReferenceCount(input.mobile) + (Array.isArray(input.grids) ? input.grids : []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0)
     + (Array.isArray(input.displays) ? input.displays : []).reduce((sum, module) => sum + (Array.isArray(module?.grids) ? module.grids : []).reduce((count, grid) => count + (grid?.placements?.length || 0), 0), 0)
     + (input.identityPresentation?.avatar?.stableAssetId ? 1 : 0) + (input.workbench?.display?.shortcut?.icon ? 1 : 0)
     + (input.workbench?.displays || []).filter(item => item?.shortcut?.icon).length;

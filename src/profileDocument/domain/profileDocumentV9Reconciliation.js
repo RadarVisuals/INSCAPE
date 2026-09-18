@@ -22,8 +22,8 @@ function restoredPublicGrid(grid) {
     labelOffset: { ...grid.labelOffset },
     placements: grid.placements.map(({ asset, ...placement }) => ({
       ...structuredClone(placement),
-      stableAssetId: asset.stableAssetId,
-      ...(asset.media.url && asset.media.type === 'image' ? { selectedMedia: {
+      ...(placement.kind === 'text' ? {} : { stableAssetId: asset.stableAssetId }),
+      ...(asset?.media.url && asset.media.type === 'image' ? { selectedMedia: {
         url: asset.media.url, width: asset.media.width, height: asset.media.height,
       } } : {}),
       visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,
@@ -106,11 +106,6 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     ...(workbench ? { workbench } : {}),
     ...((document.miniApps || currentDraftInput?.miniApps) ? { miniApps } : {}),
     ...((document.texts || currentDraftInput?.texts) ? { texts } : {}),
-    ...((document.animations || currentDraftInput?.animations) ? { animations: [
-      ...(document.animations || []).map(item => ({ ...structuredClone(item), visibility: 'PUBLIC' })),
-      ...(currentDraftInput?.animations || []).filter(item => item.visibility === 'PRIVATE'
-        && !document.animations?.some(published => published.id === item.id)).map(item => structuredClone(item)),
-    ] } : {}),
     ...((document.displays || currentDraftInput?.displays) ? { displays: [...publishedDisplays, ...structuredClone(privateDisplays)] } : {}),
     ...(document.mobile ? { mobile: restoreMobilePresentation(document.mobile, currentDraftInput?.mobile) }
       : currentDraftInput?.mobile ? { mobile: { ...structuredClone(currentDraftInput.mobile), visibility: 'PRIVATE' } } : {}),

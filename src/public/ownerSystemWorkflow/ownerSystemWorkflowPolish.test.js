@@ -76,7 +76,7 @@ test('detached and sidecar Metadata share one dossier layout while detached rema
 
 test('Layers keeps placement tools with its content and shares window behavior with Metadata', () => {
   const source = read('./OwnerSystemWorkflowSelectionInspector.jsx');
-  const instruments = read('./DisplayInstruments.jsx');
+  const instruments = read('./SharedDisplayTools.jsx');
   const window = read('./DisplayInstrumentWindow.jsx');
   assert.match(source, /system-workflow__layer-controls/);
   assert.doesNotMatch(source, /TOOLBAR_POSITION_KEY|beginToolbarDrag|beginPanelResize/);

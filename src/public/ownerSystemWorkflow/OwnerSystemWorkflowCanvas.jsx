@@ -1,13 +1,18 @@
+import { placementMotionStyle } from '../../animation/placementMotion.js';
+import useSceneMotion from '../../animation/useSceneMotion.js';
 import { useContext, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { DisplayStageSizeContext } from './DisplayStageSizeContext.js';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 import { createPortal } from 'react-dom';
-import { projectCroppedMediaRectangle } from '../../lattice/rendering/latticeCrop.js';
-import { fitNativeMediaRectangle } from '../../lattice/rendering/latticeGeometry.js';
+import { nudgeSystemWorkflowResizeGeometry } from '../../systemWorkflow/systemWorkflowResize.js';
+import { placementMediaRectangle } from '../../lattice/rendering/placementMediaRectangle.js';
 import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import { projectLatticeRasterBleedRectangle, projectLatticePixelRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
 import { createSystemWorkflowDropGeometry } from '../../systemWorkflow/systemWorkflowPlacement.js';
-import { isSystemWorkflowWorldCoverGrid, systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { isSystemWorkflowWorldCoverGrid, systemWorkflowSnapStep, quantizeSystemWorkflowGridCoordinate } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { attachTextToDisplay } from '../../text/textTransfer.js';
+import { displayTextLabel } from '../../systemWorkflow/domain/displayText.js';
+import DisplayArticleEditor from '../../text/DisplayArticleEditor.jsx';
 import { adjacentSystemWorkflowGridIdInOrder } from '../../systemWorkflow/domain/systemWorkflowNavigation.js';
 import {
   projectSystemWorkflowImageRenderRectangle,
@@ -33,6 +38,7 @@ import useArtworkPicking from './useArtworkPicking.js';
 import { progressiveArtworkSources } from './progressiveArtworkSources.js';
 import useGridPlayback from './useGridPlayback.js';
 import { systemWorkflowPlacementRequest } from './systemWorkflowPlacementRequest.js';
+import DisplayTextContent from './DisplayTextContent.jsx';
 
 const sourceFor = (asset) => progressiveArtworkSources(asset).high;
 const boundsOf = (placements) => placements.length ? {
@@ -62,15 +68,22 @@ const screenPixelMetrics = (rectangle, scale) => {
     screenPixel: 1 / devicePixelRatio,
   };
 };
-const screenHandlePoint = (corner, rectangle) => ({
-  left: corner.includes('e') ? rectangle.left + rectangle.width : rectangle.left,
-  top: corner.includes('s') ? rectangle.top + rectangle.height : rectangle.top,
-});
+const screenHandlePoint = (corner, rectangle, width, height) => {
+  const left = Math.max(14, Math.min(width - 42, rectangle.left));
+  const top = Math.max(14, Math.min(height - 42, rectangle.top));
+  const right = Math.max(left + 28, Math.min(width - 14, rectangle.left + rectangle.width));
+  const bottom = Math.max(top + 28, Math.min(height - 14, rectangle.top + rectangle.height));
+  return {
+    left: corner === 'n' || corner === 's' ? (left + right) / 2 : corner.includes('e') ? right : left,
+    top: corner === 'e' || corner === 'w' ? (top + bottom) / 2 : corner.includes('s') ? bottom : top,
+  };
+};
 
 export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked = false, boardScale = 1, controller, crop, interactionDisabled = false, onAssetDimensions,
   onChangeGrid, onOpenViewer, onPlacementRef, reducedMotion = false, renderingMode = 'settled', resolveAssetDimensions,
-  placementTargetRef, selectionOverlayHost, viewerPlacementId, playingGrids = false, onPauseGrids, onPlaybackTransitionChange }) {
+  placementTargetRef, selectionOverlayHost, viewerPlacementId, motionEnabled = false, motionPreview = false, playingGrids = false, onPauseGrids, onPlaybackTransitionChange, editingTextId, onEditText }) {
   const canvasRef = useRef(null);
+  useSceneMotion(canvasRef);
   const feedbackTimerRef = useRef(null);
   const [dropFeedback, setDropFeedback] = useState(null);
   const [measuredViewport, setWorldViewport] = useState(null);
@@ -93,14 +106,32 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   const snapStep = systemWorkflowSnapStep(appearance.guideSize);
   const viewScale = Number.isFinite(boardScale) && boardScale > 0 ? boardScale : 1;
   const viewerOpen = Boolean(viewerPlacementId);
-  const placementContext = useMemo(() => ({}), [grid?.id, controller.draft.profileAddress, authoringLocked, interactionDisabled]);
+  const placementContext = useMemo(() => ({}), [grid?.id, controller.draft.profileAddress, authoringLocked, interactionDisabled, playingGrids]);
   const currentPlacementContext = useRef(placementContext);
   currentPlacementContext.current = placementContext;
   useImperativeHandle(placementTargetRef, () => {
     const isCurrent = () => currentPlacementContext.current === placementContext
-      && canvasRef.current?.isConnected && !authoringLocked && !interactionDisabled;
+      && canvasRef.current?.isConnected && !authoringLocked && !interactionDisabled && !playingGrids;
     return {
       isCurrent,
+      id: controller.moduleId,
+      get label() { return `${canvasRef.current?.closest('.system-workflow__presentation-board')?.querySelector('.system-workflow__board-title')?.textContent || 'Display'} / ${grid?.title || 'Untitled Grid'}`; },
+      get node() { return canvasRef.current; },
+      previewTextAt: (point, rectangle, explicit = false) => {
+        const canvas = canvasRef.current;
+        if (!isCurrent() || !grid || grid.visibility !== 'PUBLIC' || !explicit && !canvas.contains(document.elementFromPoint(point.x, point.y))) return null;
+        const field = createOwnerSystemWorkflowProjectedField(canvas, snapStep, viewScale, artboardMode);
+        if (!field || !ownerSystemWorkflowProjectedFieldContainsPoint(field, point)) return null;
+        const q = quantizeSystemWorkflowGridCoordinate;
+        const destination = { column: q((rectangle.left - field.left) / field.cellSize), row: q((rectangle.top - field.top) / field.cellSize),
+          columnSpan: q(rectangle.width / field.cellSize), rowSpan: q(rectangle.height / field.cellSize) };
+        return { destination, cellSize: field.cellSize, rectangle: projectLatticePixelRectangle(destination, field), label: `Move into ${grid.title || 'Display'}` };
+      },
+      attachText: (expected, preview) => {
+        if (!isCurrent()) throw new Error('Display is no longer available.');
+        const id = attachTextToDisplay(controller.store, controller.draft.profileAddress, { expected, moduleId: controller.moduleId, gridId: grid.id, ...preview });
+        controller.replaceSelection([id]); onEditText?.(id);
+      },
       placeAsset: (asset, dimensions, destination = null) => isCurrent()
         && controller.placeAsset(systemWorkflowPlacementRequest(asset, dimensions, grid.id, destination)),
       previewAt: (point, dimensions, options = {}) => {
@@ -204,7 +235,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
       if (event.target?.closest?.('[data-workbench-module]')) return;
       if (!grid || cropSession || interactionDisabled || viewerOpen || /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName)) return;
       if (event.key === 'Escape') { controller.replaceSelection([]); return; }
-      if (authoringLocked || playingGrids || playback.swipe) return;
+      if (authoringLocked || interactionDisabled || playingGrids || playback.swipe) return;
       const records = grid.placements.filter(({ id }) => controller.selectedPlacementIds.includes(id));
       if (!records.length) return;
       if (event.key === 'Delete' || event.key === 'Backspace') {
@@ -289,14 +320,16 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
         const transform = dimensions
           ? projectSystemWorkflowTransform(placement.transform, dimensions, visibleCrop)
           : projectSystemWorkflowTransform(placement.transform, { width: placement.columnSpan, height: placement.rowSpan }, visibleCrop);
-        const imageRectangle = dimensions && (transform.crop ? projectCroppedMediaRectangle(opening, transform.dimensions, transform.crop) : fitNativeMediaRectangle(opening, transform.dimensions));
+        const imageRectangle = dimensions && placementMediaRectangle(opening, transform.dimensions, transform.crop, placement.mediaFrameRatio);
         const imageRenderRectangle = projectSystemWorkflowImageRenderRectangle(
           imageRectangle && projectLatticeRasterBleedRectangle(imageRectangle, opening), transform,
         );
-        return <div aria-disabled={placement.locked || undefined} aria-label={`Select ${asset?.title || asset?.name || 'artwork'}`} aria-pressed={isSelected}
+        const textEditing = active && placement.kind === 'text' && editingTextId === placement.id && !authoringLocked;
+        return <div aria-disabled={placement.locked || undefined} aria-label={`Select ${placement.kind === 'text' ? displayTextLabel(placement.text) : asset?.title || asset?.name || 'artwork'}`} aria-pressed={isSelected}
           className="system-workflow__placement" data-cropped={Boolean(visibleCrop) || undefined} data-cropping={cropping || undefined} data-system-workflow-crop-surface={cropping || undefined} data-system-workflow-placement-id={active ? placement.id : undefined} data-locked={placement.locked || undefined}
           data-viewing={viewerPlacementId === placement.id || undefined}
           key={placement.id} onClick={(event) => {
+            if (event.target.closest('.text-editor-page, .text-tools-window, .display-text-edit-actions')) { event.stopPropagation(); return; }
             if (cropSession || interactionDisabled || interaction.clickSuppressedRef.current) return;
             const hit = pickPlacement(event);
             event.stopPropagation();
@@ -304,19 +337,22 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
             if (!hit.placement.locked) controller.selectPlacement(hit.placement.id, event.shiftKey);
           }}
           onDoubleClick={(event) => {
+            if (event.target.closest('.text-editor-page, .text-tools-window')) return;
             if (cropSession || interactionDisabled) return;
             event.stopPropagation();
             const hit = pickPlacement(event);
-            if (hit && !hit.placement.locked) onOpenViewer?.(hit.placement, hit.element);
+            if (hit && !hit.placement.locked) { if (hit.placement.kind === 'text') onEditText?.(hit.placement.id); else onOpenViewer?.(hit.placement, hit.element); }
           }}
           onKeyDown={(event) => {
+            if (event.target !== event.currentTarget) return;
             if (cropSession || placement.locked) return;
-            if (event.key === 'Enter') { event.preventDefault(); onOpenViewer?.(placement, event.currentTarget); return; }
+            if (event.key === 'Enter') { event.preventDefault(); if (placement.kind === 'text') { controller.selectPlacement(placement.id); onEditText?.(placement.id); } else onOpenViewer?.(placement, event.currentTarget); return; }
             if (event.key !== ' ') return;
             event.preventDefault();
             controller.selectPlacement(placement.id, event.shiftKey);
           }}
           onPointerDown={(event) => {
+            if (event.target.closest('.text-editor-page, .text-tools-window, .display-text-edit-actions')) { event.stopPropagation(); return; }
             if (interactionDisabled) return;
             const hit = pickPlacement(event);
             if (!hit) {
@@ -329,12 +365,15 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
             if (cropping) crop.beginCropDrag(event, placement.id, worldViewport.cellSize * viewScale);
             else if (!cropSession) interaction.beginPlacementGesture(event, hit.placement);
           }} ref={active ? (node) => onPlacementRef?.(placement.id, node) : undefined} role="button" tabIndex={!active || placement.locked ? -1 : 0}
-          style={{ ...projected, zIndex: placement.layer + 1 }}>
-          <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
+          data-placement-motion={placement.animation ? '' : undefined}
+          style={{ ...projected, zIndex: placement.layer + 1, ...placementMotionStyle(placement.animation, worldViewport.cellSize, motionEnabled && (source || incoming)) }}>
+          {textEditing ? <DisplayArticleEditor key={`${grid.id}:${placement.id}`} placement={placement} controller={controller} cellSize={worldViewport.cellSize}
+            screenCellSize={worldViewport.cellSize * viewScale} canvasRef={canvasRef} onClose={() => onEditText?.(null)} />
+            : placement.kind === 'text' ? <DisplayTextContent placement={placement} cellSize={worldViewport.cellSize} /> : <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
             {src ? <ProgressiveArtworkImage asset={asset} onSourceLoad={(dimensions) => onAssetDimensions?.(asset, dimensions)}
               style={imageRenderRectangle ? { ...imageRenderRectangle,
                 transform: renderedSystemWorkflowCssTransform(transform) } : undefined} /> : <em>Media</em>}
-          </span>
+          </span>}
         </div>;
       })}
       </div>
@@ -347,14 +386,25 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
       })}
       </div>
     </div>
-    {!authoringLocked && selectionMetrics && selectionOverlayHost && createPortal(<div className="system-workflow__selection-chrome" aria-hidden={viewerOpen || !selectionBounds || selectionNavigating}
+    {!authoringLocked && !motionPreview && selectionMetrics && selectionOverlayHost && createPortal(<div className="system-workflow__selection-chrome" aria-hidden={viewerOpen || !selectionBounds || selectionNavigating}
       data-cropping={Boolean(cropSession) || undefined} data-group={renderedSelection.count > 1 || undefined}
       data-navigating={selectionNavigating || undefined} data-selected={Boolean(selectionBounds) || undefined} data-viewing={viewerOpen || undefined}
       style={{ '--workflow-screen-pixel': `${selectionMetrics.screenPixel}px` }}>
-      {['nw', 'ne', 'se', 'sw'].map((corner) => <button aria-label={`Resize selection from ${corner}`}
+      {['nw', 'ne', 'se', 'sw', ...(renderedSelection.count > 1 || cropSession ? [] : ['n', 'e', 's', 'w'])].map((corner) => <button aria-label={`Resize selection from ${corner}`}
         className={`system-workflow__resize-handle is-${corner}`} disabled={authoringLocked || viewerOpen || !selectionBounds || selectionNavigating}
         key={corner} onPointerDown={(event) => interaction.beginPlacementGesture(event, renderedSelection.primary, 'resize', corner)}
-        type="button" style={screenHandlePoint(corner, selectionMetrics.rectangle)} />)}
+        onKeyDown={event => {
+          if (renderedSelection.count !== 1 || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+          event.preventDefault(); event.stopPropagation();
+          const step = event.altKey ? 1 / 9 : 1;
+          const destination = nudgeSystemWorkflowResizeGeometry(renderedSelection.primary, corner, {
+            column: event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0,
+            row: event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0,
+          });
+          if (destination) controller.run(session => session.resizePlacement({ gridId: grid.id,
+            placementId: renderedSelection.primary.id, expectedPlacement: renderedSelection.primary, destination, corner }));
+        }}
+        type="button" title="Resize artwork · Shift keeps proportions · Alt for fine adjustment" style={screenHandlePoint(corner, selectionMetrics.rectangle, selectionOverlayHost.clientWidth, selectionOverlayHost.clientHeight)} />)}
     </div>, selectionOverlayHost)}
     <output aria-live="polite" className="system-workflow__drop-feedback" data-visible={Boolean(dropFeedback) || undefined}>{dropFeedback}</output>
   </section>;

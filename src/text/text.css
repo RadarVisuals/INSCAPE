@@ -1,16 +1,17 @@
-@font-face { font-family: 'Inscape Article Literata'; src: url('/assets/fonts/Literata/Literata.ttf') format('truetype'); font-weight: 200 900; font-display: swap; }
-@font-face { font-family: 'Inscape Article Cormorant'; src: url('/assets/fonts/Cormorant/Cormorant.ttf') format('truetype'); font-weight: 300 700; font-display: swap; }
-@font-face { font-family: 'Inscape Article Mono'; src: url('/assets/fonts/IBM_Plex_Mono/IBMPlexMono-Regular.ttf') format('truetype'); font-weight: 400; font-display: swap; }
+@import './fonts.css';
 .text-workbench { color: var(--workflow-ink); font: var(--workflow-type-control); }
 .text-workbench .system-workflow__instrument-window { z-index: var(--text-z, 46); }
 .text-workbench .system-workflow__instrument-content { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
 .text-module-body { min-height: 0; height: 100%; display: flex; flex-direction: column; }
-.text-module-scroll { overflow: auto; min-height: 0; flex: 1; overscroll-behavior: contain; }
+/* Containment alone still permits the browser's elastic edge movement. */
+.text-module-scroll { overflow: auto; min-height: 0; flex: 1; overscroll-behavior: none; }
+.text-module-content { display: flow-root; }
+.text-module-content > .text-document:not(.text-document--compact), .text-module-content > div > .text-editor-page:not(.text-document--compact) { padding-bottom: var(--text-viewport-bottom-padding, var(--text-automatic-padding)); }
 .text-workbench :is(.text-module-scroll, .text-settings, textarea) { scrollbar-width: none; }
 .text-workbench :is(.text-module-scroll, .text-settings, textarea)::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .text-module-scroll:focus-visible { outline: 1px solid var(--workflow-border); outline-offset: -1px; }
 .text-module-rail, .text-toolbar { display: flex; gap: 0; flex-wrap: wrap; border-bottom: 1px solid var(--workflow-border); flex-shrink: 0; }
-.text-module-body :is(button, input, select, textarea), .text-shortcut { font: var(--workflow-type-control); color: inherit; background: var(--workflow-panel); border: 1px solid var(--workflow-border); border-radius: 0; min-height: 30px; padding: 5px 8px; max-width: 100%; }
+.text-module-body :is(button, input, select, textarea), .text-controls-body :is(button, input, select, textarea), .text-shortcut { font: var(--workflow-type-control); color: inherit; background: var(--workflow-panel); border: 1px solid var(--workflow-border); border-radius: 0; min-height: 30px; padding: 5px 8px; max-width: 100%; }
 .text-workbench button { cursor: pointer; }
 .text-workbench button:disabled { opacity: .5; cursor: default; }
 .text-workbench button:hover:not(:disabled) { color: var(--workflow-ink); background: var(--workflow-panel-raised, var(--workflow-panel)); }
@@ -21,26 +22,29 @@
 .text-toolbar button { font-size: 11px; }
 .text-toolbar > button { width: 32px; display: inline-flex; align-items: center; justify-content: center; padding: 6px; }
 .text-toolbar select { font-size: 11px; max-width: 190px; }
-.text-document, .text-editor-page { max-width: 66ch; margin: 0 auto; padding: 24px; font-size: 16px; line-height: 1.65; overflow-wrap: anywhere; }
-.text-editor-page .text-document { padding: 0; font-family: inherit; }
+.text-document, .text-editor-page { --text-automatic-padding: 24px; max-width: 66ch; margin: 0 auto; padding: var(--text-automatic-padding); font-size: 16px; line-height: 1.65; overflow-wrap: anywhere; }
+.text-editor-page .text-document { padding: 0; max-width: inherit; font-family: inherit; font-size: inherit; }
 .text-document :is(p, h1, h2, h3, blockquote, figure, ul, ol) { margin: 0 0 1em; }
+.text-editor-content > :last-child, .text-document > div > :last-child { margin-bottom: 0; }
 .text-document :is(h1, h2, h3) { line-height: 1.3; font-weight: 500; }
 .text-document h1 { font-size: 1.65em; } .text-document h2 { font-size: 1.35em; } .text-document h3 { font-size: 1.15em; }
 .text-document blockquote { border-left: 2px solid var(--workflow-border); padding-left: 16px; margin-left: 0; }
 .text-document a { color: inherit; text-decoration: underline; }
 .text-document img { display: block; max-width: 100%; max-height: 480px; object-fit: contain; margin: 0 auto; }
 .text-document figcaption { font-size: .85em; margin-top: 8px; }
-.text-workbench .text-document-title { font: inherit; font-size: 28px; line-height: 1.3; font-weight: 500; width: 100%; margin: 0 0 20px; padding: 0; border: 0; background: transparent; }
+.text-document .text-document-title, .text-editor-page .text-document-title { font: inherit; font-size: 28px; line-height: 1.3; font-weight: 500; width: 100%; margin: 0 0 20px; padding: 0; border: 0; background: transparent; }
 .text-workbench textarea.text-document-title { field-sizing: content; resize: none; min-height: 1.3em; max-height: 6em; }
-.text-editor-content { min-height: 180px; outline: none; white-space: pre-wrap; }
+.text-editor-content { min-height: 1lh; outline: none; white-space: pre-wrap; }
 .text-editor-content:focus-visible { outline: 1px solid var(--workflow-border); outline-offset: 6px; }
 .text-document p:empty::before { content: '\00a0'; }
 .text-status { flex-shrink: 0; border-top: 1px solid var(--workflow-border); padding: 6px 10px; margin: 0; font-family: 'Inscape IBM Plex Sans Condensed'; font-size: 12px; overflow-wrap: anywhere; }
 .text-settings, .text-inline-form { padding: 12px; border-bottom: 1px solid var(--workflow-border); display: flex; flex-direction: column; gap: 8px; }
 .text-settings label, .text-inline-form label, .text-artwork-editor label { display: flex; flex-direction: column; gap: 4px; }
+.text-padding-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.text-padding-controls input { min-width: 0; width: 100%; box-sizing: border-box; }
 .text-settings .text-visibility { flex-direction: row; align-items: center; }
 .text-settings p { margin: 0; overflow-wrap: anywhere; }
-.text-artwork-editor { border: 1px solid var(--workflow-border); padding: 8px; margin-bottom: 16px; }
+.text-artwork-editor { border: 0; padding: 0; margin: 0; }
 .text-artwork-editor.ProseMirror-selectednode { outline: 2px solid var(--workflow-ink); }
 .text-artwork-editor label { font: 12px/1.4 'Inscape IBM Plex Sans Condensed'; margin-top: 6px; }
 .text-shortcut { position: fixed; left: 24px; bottom: var(--text-shortcut-bottom); z-index: 40; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -49,8 +53,24 @@
 .text-workbench .text-window--read[data-window-chrome]:hover > .system-workflow__detached-window-titlebar,
 .text-workbench .text-window--read[data-window-chrome]:focus-within > .system-workflow__detached-window-titlebar { opacity: 1; pointer-events: auto; }
 .text-window--read > .system-workflow__instrument-content { height: 100%; flex: 1; }
-.text-window .text-settings { position: absolute; inset: 34px 8px auto; max-height: calc(100% - 46px); overflow: auto; z-index: 4; background: var(--workflow-panel); border: 1px solid var(--workflow-border); }
-.text-window .text-settings > button { align-self: flex-end; display: inline-flex; align-items: center; justify-content: center; }
-.text-window .text-status { position: absolute; inset: auto 0 0; z-index: 4; background: var(--workflow-panel); }
 @media (hover: none) { .text-workbench .text-window--read[data-window-chrome] > .system-workflow__detached-window-titlebar { opacity: 1; pointer-events: auto; } }
-@media (max-width: 600px) { .text-document, .text-editor-page { padding: 16px; } .text-toolbar select { max-width: 160px; } }
+@media (max-width: 600px) { .text-document, .text-editor-page { --text-automatic-padding: 16px; padding: var(--text-automatic-padding); } .text-toolbar select { max-width: 160px; } }
+.text-workbench .text-window[data-window-chrome] { --detached-window-gutter: 0px; border: 0; background: transparent; box-shadow: none; border-radius: 0; }
+.text-workbench .text-window[data-window-chrome] > .system-workflow__instrument-content { border-radius: 0; }
+.text-workbench .text-window[data-window-chrome]::before, .text-workbench .text-window[data-window-chrome]::after { display: none; }
+.text-controls-body { min-height: 0; overflow: auto; overscroll-behavior: contain; height: 100%; }
+.text-workbench .text-tools-window { z-index: calc(var(--text-z, 46) + 1); }
+.text-workbench .text-tools-window .text-status { position: static; }
+.text-workbench .text-window:has(.text-save-error) > .system-workflow__detached-window-titlebar { opacity: 1; pointer-events: auto; }
+.text-save-error { border: 1px solid currentColor; background: var(--workflow-panel); color: var(--workflow-ink); }
+.text-move-handle { touch-action: none; cursor: grab; }
+.text-transfer-preview { position: fixed; z-index: 10000; pointer-events: none; border: 1px dashed #ffffff; box-shadow: 0 0 0 1px #101111; box-sizing: border-box; }
+.text-transfer-preview span { position: absolute; left: 0; top: 0; color: #ffffff; background: #101111; padding: 4px 8px; font: 12px 'Inscape IBM Plex Sans Condensed'; }
+.display-text-content--article { white-space: normal; }
+.display-text-edit-actions { position: absolute; right: 2px; top: 2px; z-index: 5; display: flex; gap: 3px; }
+.display-text-authoring { position: absolute; inset: 0; }
+.display-text-authoring .text-editor-page { cursor: text; }
+.system-workflow__placement .text-document img { position: static; max-width: 100%; max-height: 480px; object-fit: contain; }
+.text-document--compact { padding: 0; line-height: 1.2; max-width: none; }
+.text-document--compact .text-document { line-height: inherit; max-width: none; }
+.text-document--compact p { margin: 0; }

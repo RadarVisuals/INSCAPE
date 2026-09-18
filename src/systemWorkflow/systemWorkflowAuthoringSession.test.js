@@ -4,6 +4,7 @@ import { resolveIdentityCard } from '../profileIdentity/domain/identityCard.js';
 import { createEmptySystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
 import { systemWorkflowGridFingerprint } from './domain/systemWorkflowGrid.js';
 import { createSystemWorkflowAuthoringSession } from './systemWorkflowAuthoringSession.js';
+import { createWorkbenchSession } from './workbenchSession.js';
 import {
   SYSTEM_WORKFLOW_RECORD_STATUS,
   createSystemWorkflowDraftStore,
@@ -77,7 +78,7 @@ test('Identity artwork saves its chosen image without changing Grids, and reject
   const storage = memoryStorage(); const store = createStore(storage);
   const session = createSystemWorkflowAuthoringSession({ store });
   const original = store.getDraft();
-  const saveAvatar = ({ expectedAvatar, avatar }) => session.setIdentityConfiguration({
+  const saveAvatar = ({ expectedAvatar, avatar }) => createWorkbenchSession({ store }).setIdentityConfiguration({
     expectedDetails: { ...identityDetails(store.getDraft()), avatar: expectedAvatar },
     details: { ...identityDetails(store.getDraft()), avatar },
     expectedCard: resolveIdentityCard(store.getDraft().identityPresentation),
@@ -271,18 +272,18 @@ test('Identity details persist separately, reject stale edits and preserve the d
   const { alias, bio, tags } = initial.identityPresentation;
   const expectedDetails = { alias, bio, tags, avatar: store.getDraft().identityPresentation.avatar };
   const details = { ...expectedDetails, alias: 'Human Underneath', bio: { mode: 'inscape', customText: 'A story from my world.' }, tags: { ...tags, additional: ['Illustration'] } };
-  assert.equal(session.setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails, details }), true);
+  assert.equal(createWorkbenchSession({ store }).setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails, details }), true);
   assert.equal(storage.activity.writes, 1);
   assert.deepEqual(store.getDraft().grids, initial.grids);
   assert.deepEqual(store.getDraft().identityPresentation.avatar, initial.identityPresentation.avatar);
   assert.equal(createStore(storage).getDraft().identityPresentation.alias, 'Human Underneath');
-  assert.throws(() => session.setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails, details: { ...details, alias: 'Stale' } }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
-  assert.equal(session.setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails: details, details }), false);
+  assert.throws(() => createWorkbenchSession({ store }).setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails, details: { ...details, alias: 'Stale' } }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
+  assert.equal(createWorkbenchSession({ store }).setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails: details, details }), false);
   assert.equal(storage.activity.writes, 1);
-  assert.throws(() => session.setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails: details, details: { ...details, alias: 'x'.repeat(81) } }));
+  assert.throws(() => createWorkbenchSession({ store }).setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails: details, details: { ...details, alias: 'x'.repeat(81) } }));
   const saved = store.getDraft();
   storage.failures.write = true;
-  assert.throws(() => session.setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails: details, details: { ...details, alias: 'Unsaved' } }), { code: 'SYSTEM_WORKFLOW_OPERATION_STALE' });
+  assert.throws(() => createWorkbenchSession({ store }).setIdentityConfiguration({ expectedCard: resolveIdentityCard(store.getDraft().identityPresentation), card: resolveIdentityCard(store.getDraft().identityPresentation), expectedDetails: details, details: { ...details, alias: 'Unsaved' } }), { code: 'SYSTEM_WORKFLOW_OPERATION_STALE' });
   assert.deepEqual(store.getDraft(), saved);
 });
 
@@ -293,16 +294,16 @@ test('Identity card saves are isolated, durable and reject stale or failed write
   const card = { ...expectedCard, background: { type: 'clouds', color: '#123456', speed: 0 }, fields: [
     { id: 'field:role', label: 'Role', type: 'list', value: ['Artist', 'Writer'] },
   ] };
-  assert.equal(session.setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard, card }), true);
+  assert.equal(createWorkbenchSession({ store }).setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard, card }), true);
   assert.equal(storage.activity.writes, 1);
   assert.deepEqual(createStore(storage).getDraft().identityPresentation.card, card);
   assert.deepEqual(store.getDraft().grids, before.grids);
   assert.deepEqual(store.getDraft().identityPresentation.avatar, before.identityPresentation.avatar);
-  assert.equal(session.setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard: card, card }), false);
-  assert.throws(() => session.setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
+  assert.equal(createWorkbenchSession({ store }).setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard: card, card }), false);
+  assert.throws(() => createWorkbenchSession({ store }).setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
   assert.equal(storage.activity.writes, 1);
   storage.failures.write = true;
-  assert.throws(() => session.setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard: card, card: { ...card, fields: [] } }), { code: 'SYSTEM_WORKFLOW_OPERATION_STALE' });
+  assert.throws(() => createWorkbenchSession({ store }).setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard: card, card: { ...card, fields: [] } }), { code: 'SYSTEM_WORKFLOW_OPERATION_STALE' });
   assert.deepEqual(store.getDraft().identityPresentation.card, card);
 });
 
@@ -312,9 +313,9 @@ test('explicitly saving the default Identity background makes it durable without
   const expectedCard = resolveIdentityCard(store.getDraft().identityPresentation);
   assert.equal(Object.hasOwn(store.getDraft().identityPresentation, 'card'), false);
   assert.equal(storage.activity.writes, 0);
-  assert.equal(session.setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard, card: expectedCard }), true);
+  assert.equal(createWorkbenchSession({ store }).setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard, card: expectedCard }), true);
   assert.deepEqual(store.getDraft().identityPresentation.card, expectedCard);
-  assert.equal(session.setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard, card: expectedCard }), false);
+  assert.equal(createWorkbenchSession({ store }).setIdentityConfiguration({ expectedDetails: identityDetails(store.getDraft()), details: identityDetails(store.getDraft()), expectedCard, card: expectedCard }), false);
   assert.equal(storage.activity.writes, 1);
 });
 
@@ -330,18 +331,18 @@ test('Identity editor commits details, artwork and card atomically and rejects s
       selectedMedia: { url: 'https://assets.example/purple.png', width: 2000, height: 2000 } } };
   const card = { ...expectedCard, fields: [{ id: 'field:role', category: 'Practice', label: 'Role', type: 'text', value: 'Illustrator' }] };
   storage.failures.write = true;
-  assert.throws(() => session.setIdentityConfiguration({ expectedDetails, expectedCard, details, card }), { code: 'SYSTEM_WORKFLOW_OPERATION_STALE' });
+  assert.throws(() => createWorkbenchSession({ store }).setIdentityConfiguration({ expectedDetails, expectedCard, details, card }), { code: 'SYSTEM_WORKFLOW_OPERATION_STALE' });
   assert.deepEqual(store.getDraft(), before);
   storage.failures.write = false;
-  assert.equal(session.setIdentityConfiguration({ expectedDetails, expectedCard, details, card }), true);
+  assert.equal(createWorkbenchSession({ store }).setIdentityConfiguration({ expectedDetails, expectedCard, details, card }), true);
   assert.deepEqual(createStore(storage).getDraft().identityPresentation.card, card);
   assert.equal(store.getDraft().identityPresentation.alias, details.alias);
   assert.deepEqual(createStore(storage).getDraft().identityPresentation.avatar, details.avatar);
   assert.equal(storage.activity.writes, 2, 'one failed attempt followed by one complete save');
   assert.deepEqual(store.getDraft().grids, before.grids);
-  assert.throws(() => session.setIdentityConfiguration({ expectedDetails, expectedCard: card, details, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
-  assert.throws(() => session.setIdentityConfiguration({ expectedDetails: details, expectedCard, details, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
-  assert.throws(() => session.setIdentityConfiguration({ expectedDetails: { ...details, avatar: expectedDetails.avatar },
+  assert.throws(() => createWorkbenchSession({ store }).setIdentityConfiguration({ expectedDetails, expectedCard: card, details, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
+  assert.throws(() => createWorkbenchSession({ store }).setIdentityConfiguration({ expectedDetails: details, expectedCard, details, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
+  assert.throws(() => createWorkbenchSession({ store }).setIdentityConfiguration({ expectedDetails: { ...details, avatar: expectedDetails.avatar },
     expectedCard: card, details, card }), { code: 'SYSTEM_WORKFLOW_IDENTITY_STALE' });
 });
 

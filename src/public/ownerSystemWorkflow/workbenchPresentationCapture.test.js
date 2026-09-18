@@ -4,7 +4,7 @@ import { captureWorkbenchPresentation } from './workbenchPresentationCapture.js'
 import { createDefaultWorkbenchPresentation, createMiniAppPresentation, assertWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../../profileDocument/domain/profileDocumentV9Asset.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
-import { createSystemWorkflowAuthoringSession } from '../../systemWorkflow/systemWorkflowAuthoringSession.js';
+import { createWorkbenchSession } from '../../systemWorkflow/workbenchSession.js';
 
 const input = overrides => ({ layout: createDefaultWorkbenchPresentation(), assetRecords: [],
   displayOpen: true, identityOpen: false, ...overrides });
@@ -34,7 +34,7 @@ test('capture is read-only; only explicit saving persists the layout through the
   assert.equal(Object.hasOwn(result.value, 'miniApps'), false);
   assert.equal(entries.size, 0);
   assert.deepEqual(store.getDraft(), before);
-  assert.equal(createSystemWorkflowAuthoringSession({ store }).saveWorkbench(result.value), true);
+  assert.equal(createWorkbenchSession({ store }).saveWorkbench(result.value), true);
   assert.deepEqual(store.getDraft(), { ...before, workbench: result.value });
 });
 

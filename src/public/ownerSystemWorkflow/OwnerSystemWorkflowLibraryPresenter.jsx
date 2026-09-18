@@ -1,10 +1,10 @@
-import { ArrowLeft, ChevronDown, ChevronRight, Folder, Images, Layers3, Plus, SquareStack, UserRound, WandSparkles } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight, Folder, Layers3, Plus, SquareStack, UserRound, WandSparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { BROWSER_ASSET_SIZE, BROWSER_VIEW_KINDS, categoryAssetIds, categoryMembershipState } from '../../lattice/browser/browserWorkspaceModel.js';
 import RackMenu from '../menus/RackMenu.jsx';
 import { clearOwnerSystemWorkflowDocumentSelection } from './ownerSystemWorkflowSelection.js';
-import OwnerSystemWorkflowLibraryImages, { libraryImageChoices } from './OwnerSystemWorkflowLibraryImages.jsx';
+import OwnerSystemWorkflowLibraryImages, { ImageChoice, libraryImageChoices, librarySourceLabel } from './OwnerSystemWorkflowLibraryImages.jsx';
 import { OwnerSystemWorkflowSidebarDeleteConfirmation, OwnerSystemWorkflowSidebarEditor } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
 
 const assetId = (asset) => asset?.stableAssetId || asset?.id;
@@ -19,7 +19,7 @@ function LazyLibraryArtwork({ asset, id, onRatio, workspace }) {
   return <img alt="" aria-hidden="true" className="lattice-browser-asset__decoded-image"
     decoding="async" draggable="false" loading="lazy" onError={() => {
       if (candidateIndex + 1 < candidates.length) setCandidateIndex(candidateIndex + 1);
-      else workspace.markAssetUnavailable(id);
+      else { setCandidateIndex(candidates.length); workspace.markAssetUnavailable(id); }
     }} onLoad={(event) => {
       const { naturalHeight: height, naturalWidth: width } = event.currentTarget;
       if (!width || !height) return;
@@ -41,7 +41,7 @@ function LibraryNavigationButton({ active, categoryId, count, draggable = false,
   </button>;
 }
 
-function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDown, onOpenImages, workspace }) {
+function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDown, onOpenImages, onImageActivate, workspace }) {
   const [decodedRatios, setDecodedRatios] = useState(() => new Map());
   if (!assets.length) return <p className="lattice-browser-status">{emptyLabel}</p>;
   const selected = new Set(workspace.selectedAssetIds);
@@ -51,7 +51,7 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
     onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
       event.preventDefault(); event.stopPropagation(); workspace.selectAllVisible();
     } }} style={{ '--lattice-browser-asset-media-max': `${Math.round(size * 1.15)}px`, '--lattice-browser-asset-min': `${size}px` }}>
-    {assets.map((asset) => {
+    {assets.flatMap((asset) => {
       const id = assetId(asset); const isSelected = selected.has(id);
       const ratio = decodedRatios.get(id)
         || (Number(asset.width) > 0 && Number(asset.height) > 0 ? `${asset.width} / ${asset.height}` : undefined);
@@ -62,7 +62,7 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
           asset.creatorRelationship === 'collection' ? 'FROM CREATED COLLECTION' : asset.created ? 'CREATED' : null,
           asset.created && !asset.owned ? 'NOT OWNED' : null].filter(Boolean);
       const imageCount = !opensCollection ? libraryImageChoices(asset).length : 0;
-      return <div className="system-workflow__library-item" key={id}><button aria-label={[asset.title || id, asset.collection].filter(Boolean).join(' / ')} aria-pressed={isSelected}
+      return [<div className="system-workflow__library-item" key={id}><button aria-label={[asset.title || id, asset.collection].filter(Boolean).join(' / ')} aria-pressed={isSelected}
         className="lattice-browser-asset" data-collection={opensCollection || undefined}
         data-multi-selected={isSelected && selected.size > 1 || undefined} data-selected={isSelected || undefined}
         draggable={!opensCollection} key={id}
@@ -81,7 +81,7 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
             const next = new Map(current); next.set(id, value); return next;
           })} />
         </span>
-        {!workspace.hideLabels && <span className="lattice-browser-asset__record"><strong>{asset.title || id}</strong>
+        {!workspace.hideLabels && <span className="lattice-browser-asset__record"><strong>{librarySourceLabel(asset) || id}</strong>
           {asset.collection && <small>{asset.collection}</small>}
           {relationships.length > 0 && <span className="lattice-browser-asset__relationships">
             {relationships.map((relationship) => <small key={relationship}>{relationship}</small>)}
@@ -90,9 +90,13 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
       </button>
         {imageCount > 1 && <button className="system-workflow__library-images-trigger" type="button"
           data-library-images-for={id}
-          aria-label={`Open ${imageCount} images of ${asset.title || id}`} onClick={(event) => onOpenImages(event, asset)}>
-          <Images size={13} />{imageCount} images</button>}
-      </div>;
+          title={`Open ${imageCount} images`} aria-label={`Open ${imageCount} images of ${asset.title || id}`} onClick={(event) => onOpenImages(event, asset)}>
+          {imageCount}</button>}
+      </div>, ...(!opensCollection ? libraryImageChoices(asset).slice(1).map((choice, index) =>
+        <div className="system-workflow__library-item" key={id + ':' + choice.sources.join('|')}>
+          <ImageChoice asset={asset} choice={choice} number={index + 2} onActivate={onImageActivate}
+            onPointerDown={onPointerDown} workspace={workspace} onContext={onContext} />
+        </div>) : [])];
     })}
   </div>;
 }
@@ -182,12 +186,12 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
     }
     closeContextMenu();
   };
-  const beginOrganizationDrag = (event, asset) => {
+  const beginOrganizationDrag = (event, asset, mediaWorkspace = workspace) => {
     if (asset.isCollection && asset.collectionRole !== 'cover') return;
     const id = assetId(asset); const selectedIds = workspace.selectedAssetIds.includes(id) ? [...workspace.selectedAssetIds] : [id];
     if (event.button !== 0) return;
-    if (selectedIds.length === 1 && workspace.isAssetRenderable(id)) {
-      onAssetPointerDown?.(event, asset, workspace, { placementPreset: 'compact' });
+    if (selectedIds.length === 1 && mediaWorkspace.isAssetRenderable(id)) {
+      onAssetPointerDown?.(event, asset, mediaWorkspace, { placementPreset: 'compact' });
     }
     const element = event.currentTarget; const pointerId = event.pointerId; const start = { x: event.clientX, y: event.clientY };
     let started = false;
@@ -203,7 +207,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
       organizationGestureRef.current = null; setOrganizationDrag(null); };
     const finish = (pointerEvent) => { const categoryId = started ? categoryAt(pointerEvent) : null;
       if (started) { pointerEvent.preventDefault(); pointerEvent.stopPropagation(); suppressSelectionRef.current = true; }
-      cleanup(); if (categoryId && workspace.areAssetsRenderable(selectedIds)
+      cleanup(); if (categoryId && selectedIds.every((selectedId) => data.assets.some((entry) => assetId(entry) === selectedId))
         && data.categories.some(({ id: category }) => category === categoryId)) categoryCommands.setCategoryAssets(categoryId, selectedIds, true);
       if (started) setTimeout(() => { suppressSelectionRef.current = false; }, 0); };
     const cancel = () => cleanup(); organizationGestureRef.current = { assetIds: selectedIds, cancel };
@@ -375,7 +379,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
           && <button className="lattice-browser-notice" onClick={data.onRetryCreated} type="button">Retry created works</button>}
         {data.createdStatus === 'loading' && <p className="lattice-browser-notice" role="status">Loading created {data.createdProgress?.resolved || 0} / {data.createdProgress?.total || 0}</p>}
         {data.collectionContext && data.status === 'loading' && <p className="lattice-browser-notice" role="status">Loading collection tokens {data.progress?.resolved || 0} / {data.progress?.total || 0}</p>}
-        <LibraryResults assets={related} emptyLabel={emptyLabel} onActivate={onAssetActivate}
+        <LibraryResults assets={related} emptyLabel={emptyLabel} onActivate={onAssetActivate} onImageActivate={onImageActivate}
           onOpenImages={(event, asset) => {
             imageReturnRef.current = { id: assetId(asset), scrollTop: resultsRef.current.scrollTop };
             setImageAsset(asset); resultsRef.current.scrollTop = 0;

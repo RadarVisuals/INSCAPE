@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createArticle, assertArticle, validTextModules } from './domain/article.js';
+import { createArticle, assertArticle, validTextModules, ARTICLE_ALIGNMENTS } from './domain/article.js';
 import { addTextModule, saveTextModule } from './textSession.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../systemWorkflow/systemWorkflowDraftStore.js';
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
@@ -17,6 +17,59 @@ function fixture() {
   return { store: createSystemWorkflowDraftStore({ profileAddress: profile, storage }), storage, entries, fail: () => { fail = true; } };
 }
 const build = draft => buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: draft, assetRecords: [] });
+
+test('title size is optional and survives draft, publication and restore independently of body size', () => {
+  const old = createArticle(), bytes = JSON.stringify(old);
+  assertArticle(old); assert.equal(JSON.stringify(old), bytes);
+  const f = fixture(); addTextModule(f.store, profile);
+  const original = f.store.getDraft().texts[0];
+  const article = createArticle(); article.title = '// ARRIVAL'; article.appearance.titleFontSize = 64;
+  assert.ok(saveTextModule(f.store, profile, original, { ...original, visibility: 'PUBLIC', article }));
+  const draft = createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft();
+  assert.deepEqual(draft.texts[0].article, article);
+  const doc = build(draft); assert.equal(validateProfileDocumentV9(doc).valid, true);
+  assert.deepEqual(doc.texts[0].article, article);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(doc, draft).texts[0].article, article);
+  for (const titleFontSize of [null, '64', 7, 301, NaN]) {
+    assert.throws(() => assertArticle({ ...article, appearance: { ...article.appearance, titleFontSize } }));
+  }
+});
+
+test('custom inner spacing survives saving, publication and restore while old articles remain unchanged', () => {
+  const old = createArticle(); const bytes = JSON.stringify(old);
+  assertArticle(old); assert.equal(JSON.stringify(old), bytes);
+  const f = fixture(); addTextModule(f.store, profile);
+  const original = f.store.getDraft().texts[0];
+  const article = createArticle(); article.appearance.padding = { top: 0, right: 12, bottom: 6, left: 32 };
+  assert.ok(saveTextModule(f.store, profile, original, { ...original, visibility: 'PUBLIC', article }));
+  const draft = createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft();
+  assert.deepEqual(draft.texts[0].article, article);
+  const doc = build(draft); assert.equal(validateProfileDocumentV9(doc).valid, true);
+  assert.deepEqual(doc.texts[0].article, article);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(doc, draft).texts[0].article, article);
+  for (const padding of [null, {}, { top: -1, right: 0, bottom: 0, left: 0 }, { top: 0, right: 0, bottom: 0, left: 513 }]) {
+    assert.throws(() => assertArticle({ ...article, appearance: { ...article.appearance, padding } }));
+  }
+});
+test('alignment is optional for old articles and survives draft, publication and restore for paragraphs and headings', () => {
+  const old = createArticle(); const bytes = JSON.stringify(old);
+  assertArticle(old); assert.equal(JSON.stringify(old), bytes);
+  for (const textAlign of ARTICLE_ALIGNMENTS) {
+    const f = fixture(); addTextModule(f.store, profile);
+    const original = f.store.getDraft().texts[0];
+    const article = createArticle();
+    article.content.content = [{ type: 'paragraph', attrs: { textAlign } }, { type: 'heading', attrs: { level: 2, textAlign } }];
+    assert.ok(saveTextModule(f.store, profile, original, { ...original, visibility: 'PUBLIC', article }));
+    const draft = createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft();
+    assert.deepEqual(draft.texts[0].article, article);
+    const doc = build(draft); assert.deepEqual(doc.texts[0].article, article);
+    assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(doc, draft).texts[0].article, article);
+  }
+  for (const textAlign of ['justify', 'invalid', {}, 4]) {
+    const article = createArticle(); article.content.content[0].attrs = { textAlign };
+    assert.throws(() => assertArticle(article));
+  }
+});
 function articleWithText(text, title = '') {
   const article = createArticle(title);
   article.content.content[0].content = [{ type: 'text', text }];

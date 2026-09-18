@@ -1,25 +1,9 @@
-import { projectCroppedMediaRectangle } from './latticeCrop.js';
+import { placementMediaRectangle } from './placementMediaRectangle.js';
 import { projectArtworkMat } from './latticeMat.js';
 import { projectSystemWorkflowTransform } from '../../systemWorkflow/systemWorkflowTransform.js';
 import { projectSystemWorkflowPlacement as projectLatticeProductionPlacement } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
 export { projectLatticeProductionPlacement };
 import { projectLatticePixelRectangle, projectLatticeRasterBleedRectangle } from './latticePixelGeometry.js';
-
-function fitNativeMediaRectangle(rectangle, media) {
-  if (!media || !Number.isFinite(media.width) || media.width <= 0
-    || !Number.isFinite(media.height) || media.height <= 0) {
-    throw new TypeError('Production media fitting requires positive native dimensions');
-  }
-  const scale = Math.min(rectangle.width / media.width, rectangle.height / media.height);
-  const width = media.width * scale;
-  const height = media.height * scale;
-  return {
-    left: rectangle.left + ((rectangle.width - width) / 2),
-    top: rectangle.top + ((rectangle.height - height) / 2),
-    width,
-    height,
-  };
-}
 
 function projectArtwork(placement, field, mediaDimensions, projectPlacement) {
   const footprint = projectPlacement(placement, field);
@@ -34,9 +18,9 @@ function projectArtwork(placement, field, mediaDimensions, projectPlacement) {
     imageTransform: 'none',
   });
   const transformed = projectSystemWorkflowTransform(placement.transform, mediaDimensions, placement.crop);
-  const imageRectangle = transformed.crop
-    ? projectCroppedMediaRectangle(mat.mediaOpeningRectangle, transformed.dimensions, transformed.crop)
-    : fitNativeMediaRectangle(mat.mediaOpeningRectangle, transformed.dimensions);
+  const imageRectangle = placementMediaRectangle(mat.mediaOpeningRectangle, transformed.dimensions, transformed.crop,
+    placement.mediaFrameRatio === undefined ? undefined : placement.mediaFrameRatio
+      * (mat.mediaOpeningRectangle.width / footprint.width) / (mat.mediaOpeningRectangle.height / footprint.height));
   const rasterRectangle = projectLatticeRasterBleedRectangle(imageRectangle, mat.mediaOpeningRectangle);
   const imageRenderRectangle = transformed.swapped ? {
     left: rasterRectangle.left + ((rasterRectangle.width - rasterRectangle.height) / 2),

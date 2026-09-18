@@ -1,3 +1,5 @@
+import { placementMotionStyle } from '../../animation/placementMotion.js';
+import useSceneMotion from '../../animation/useSceneMotion.js';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { DisplayStageSizeContext } from '../../public/ownerSystemWorkflow/DisplayStageSizeContext.js';
 import { createLatticeProductionLayerRanks } from '../../lattice/rendering/latticeProductionLayerOrder.js';
@@ -5,7 +7,8 @@ import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import {
   projectLatticeProductionArtwork,
 } from '../../lattice/rendering/latticeProductionProjection.js';
-import { projectSystemWorkflowViewport } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
+import { projectSystemWorkflowViewport, projectSystemWorkflowPlacement } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
+import DisplayTextContent from '../../public/ownerSystemWorkflow/DisplayTextContent.jsx';
 import { systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { adaptProfileDocumentV9Media, PROFILE_DOCUMENT_V9_MEDIA_STATUS } from './profileDocumentV9Media.js';
 import { resolveProfileDocumentV9ContentReference } from '../domain/profileDocumentV9ContentReferenceResolver.js';
@@ -23,7 +26,7 @@ const viewportOf = (node, bottomInset = 0) => {
   };
 };
 
-function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlacementActivate, onPointerActivate, placement, gridId, viewerSourceHidden }) {
+function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlacementActivate, onPointerActivate, placement, gridId, viewerSourceHidden, motionEnabled }) {
   const reference = placement.asset?.media?.reference || null;
   const referenceKey = reference
     ? `${placement.asset.stableAssetId}:${reference.verification.method}:${reference.verification.data}` : null;
@@ -74,7 +77,8 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
     data-frame-id={placement.frameId} data-media-state={failed ? media.status === 'ready' ? 'failed' : media.status : loaded ? 'ready' : 'loading'}
     data-placement-id={placement.id} data-placement-activatable={activatable || undefined}
     data-transparency-mode={placement.transparencyMode} data-viewer-source-hidden={viewerSourceHidden || undefined}
-    style={{ ...rectangleStyle(artwork.footprint), zIndex: layerRank }} onClick={event => event.detail === 0 ? activate(event) : onPointerActivate(event)}
+    data-placement-motion={placement.animation ? '' : undefined}
+    style={{ ...rectangleStyle(artwork.footprint), zIndex: layerRank, ...placementMotionStyle(placement.animation, field.cellSize, motionEnabled && loaded) }} onClick={event => event.detail === 0 ? activate(event) : onPointerActivate(event)}
     onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); activate(event); } }} tabIndex={activatable ? 0 : -1}>
     {artwork.backplateRectangle && <span aria-hidden="true" className="lattice-production-placement__mat" style={{ backgroundColor: artwork.mat.color }} />}
     <span className="lattice-production-placement__opening" style={{
@@ -103,6 +107,7 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
 export default function GridProductionRenderer({ document, grid, imageLoading = 'lazy', onMediaState, onPlacementActivate,
   projectionBottomInset = 0, viewerPlacementId = null }) {
   const rootRef = useRef(null);
+  useSceneMotion(rootRef);
   const picking = useArtworkPicking(rootRef, grid);
   const activatePointer = event => {
     const element = picking.pick(event, event.currentTarget.parentElement);
@@ -133,7 +138,11 @@ export default function GridProductionRenderer({ document, grid, imageLoading = 
       guideInterval={systemWorkflowSnapStep(document.appearance.guideSize)} height={projected.height}
       mode={document.appearance.guideMode} width={projected.width} />
       <span aria-hidden="true" className="lattice-production-table__authored-plane" style={rectangleStyle(projected)} />
-      <div className="visitor-grid-renderer__artwork-plane">{grid.placements.map((placement) => <GridPlacement field={projected} gridId={grid.id} imageLoading={imageLoading}
+      <div className="visitor-grid-renderer__artwork-plane">{grid.placements.map((placement) => placement.kind === 'text'
+        ? <div key={placement.id} className="display-text-placement" data-text-placement-id={placement.id}
+            style={{ ...projectSystemWorkflowPlacement(placement, projected), zIndex: layerRanks.get(placement.id) }}>
+            <DisplayTextContent placement={placement} cellSize={projected.cellSize} /></div>
+        : <GridPlacement motionEnabled={!viewerPlacementId} field={projected} gridId={grid.id} imageLoading={imageLoading}
         key={placement.id} layerRank={layerRanks.get(placement.id)} onMediaState={onMediaState}
         onPlacementActivate={onPlacementActivate} onPointerActivate={activatePointer} placement={placement} viewerSourceHidden={placement.id === viewerPlacementId} />)}</div>
     </>}

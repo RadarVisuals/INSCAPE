@@ -1,8 +1,0 @@
-{
-  "name": "@inscape/mirror",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "exports": { "./core": "./core.js", "./runtime": "./module.js" },
-  "dependencies": { "pixi.js": "8.17.1" }
-}

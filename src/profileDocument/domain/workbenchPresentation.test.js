@@ -8,7 +8,7 @@ import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 import { createEmptySystemWorkflowDraft } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from './profileDocumentV9Reconciliation.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
-import { createSystemWorkflowAuthoringSession } from '../../systemWorkflow/systemWorkflowAuthoringSession.js';
+import { createWorkbenchSession } from '../../systemWorkflow/workbenchSession.js';
 import { resolveIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 
 const profileAddress = '0x1111111111111111111111111111111111111111';
@@ -55,7 +55,7 @@ test('explicit Workbench saving uses draft storage and preserves unrelated priva
   const draft = store.getDraft();
   draft.grids.push({ ...structuredClone(draft.grids[0]), id: 'grid:private', title: 'Private study', visibility: 'PRIVATE' });
   assert.equal(store.commitCompletedOperation(draft, { expectedGeneration: store.getGeneration() }), true);
-  const session = createSystemWorkflowAuthoringSession({ store });
+  const session = createWorkbenchSession({ store });
   const workbench = createDefaultWorkbenchPresentation();
   assert.equal(session.saveWorkbench(workbench), true);
   const saved = [...records.values()][0];

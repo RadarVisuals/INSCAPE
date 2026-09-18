@@ -4,7 +4,7 @@ import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/wo
 // Deletion is one authored operation; assets in Library and publications are untouched.
 export function removeWorkbenchModule(store, profile, kind, expected) {
   if (store.getProfileAddress() !== profile || !expected) return false;
-  const keys = { display: 'displays', mirror: 'animations', mobile: 'mobile', 'mini-app': 'miniApps', text: 'texts' };
+  const keys = { display: 'displays', mobile: 'mobile', 'mini-app': 'miniApps', text: 'texts' };
   const key = keys[kind];
   if (!key) return false;
   const draft = store.getDraft(), generation = store.getGeneration();

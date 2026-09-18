@@ -1,16 +1,19 @@
+import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
+import { moduleEdgeStyle } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';
+import './moduleSurface.css';
 import { cloneElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  Info, Layers3, Lock, LockKeyhole, Maximize2, Minimize2, Minus, Play, Pause,
+  Lock, LockKeyhole, Maximize2, Minimize2, Minus, Pause,
 } from 'lucide-react';
 import './workbenchWindowChrome.css';
 import useDisplayImmersive from './useDisplayImmersive.js';
 import PresentationBoardShortcut from './PresentationBoardShortcut.jsx';
 import { DisplayStageSizeContext } from './DisplayStageSizeContext.js';
+import { snapWorkbenchPosition, WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 import { loadPresentationBoardShortcut } from './presentationBoardShortcutStorage.js';
 import { DISPLAY_DEFAULT_WINDOW_SIZES } from '../../profileDocument/domain/workbenchPresentation.js';
-import { displayInstrumentLayout } from './displayInstrumentState.js';
 import { PRESENTATION_BOARD_INSTANCE_STATE } from './ownerSystemWorkflowModuleState.js';
-import { presentationBoardInspectionFrame, presentationBoardResponsiveMetrics, projectPresentationBoardView,
+import { presentationBoardInspectionFrame, presentationBoardResponsiveMetrics, presentationBoardWheelZoomPosition, projectPresentationBoardView,
   resizePresentationBoardFromCorner, resizePresentationBoardView, setContinuousPresentationBoardScale } from './presentationBoardGeometry.js';
 
 const corners = ['nw', 'ne', 'sw', 'se'];
@@ -27,28 +30,21 @@ function BoardWindowControls({ disabled, maximized, onMaximize, onMinimize, onRe
       disabled={disabled} onClick={onMinimize} type="button"><Minus /></button>
   </span>;
 }
-function BoardWorkspaceControls({ instrumentTriggers, layersOpen, metadataOpen, onToggleLayers, onToggleMetadata, playing, playbackDisabled, onTogglePlayback, readOnly }) {
-  return <span className="system-workflow__board-workspace-controls">
-    {onTogglePlayback && <button aria-label={playing ? 'Pause Grids' : 'Play Grids'} aria-pressed={playing}
-      className="system-workflow__overlay-icon" disabled={playbackDisabled} onClick={onTogglePlayback}
-      title={playing ? 'Pause Grids' : 'Play Grids'} type="button">{playing ? <Pause /> : <Play />}</button>}
-    {!readOnly && <button aria-label="Layers" aria-pressed={layersOpen} data-instrument-trigger="layers" ref={(node) => { if (instrumentTriggers) instrumentTriggers.current.layers = node; }}
-      className="system-workflow__overlay-icon system-workflow__layers-trigger"
-      onClick={onToggleLayers} title="Layers and placement tools" type="button"><Layers3 /></button>}
-    <button aria-label="Metadata" aria-pressed={metadataOpen} data-instrument-trigger="metadata" ref={(node) => { if (instrumentTriggers) instrumentTriggers.current.metadata = node; }}
-      className="system-workflow__overlay-icon" onClick={onToggleMetadata} title="Metadata" type="button"><Info /></button>
-  </span>;
+function BoardWorkspaceControls({ playing, onTogglePlayback }) {
+  return playing ? <button aria-label="Pause Grids" className="system-workflow__overlay-icon"
+    onClick={onTogglePlayback} title="Pause Grids" type="button"><Pause /></button> : null;
 }
 export default function PresentationBoardDefinitive({ assetsById = new Map(), children, documentGeometry,
-  authoringLocked = false, displaySurface, inspectionAtmosphere = false,
-  layersOpen = false, metadataOpen = false, instrumentBayOpen = false, layoutMode = 'wide', onAuthoringLockToggle, onContextMenu,
+  authoringLocked = false, displaySurface, moduleAppearance, inspectionAtmosphere = false,
+  layoutMode = 'wide', onAuthoringLockToggle, onContextMenu,
   onInspectionCancel, onDelete, moduleCommands, moduleSubmenu, onModuleCommand,
-  onMinimize, onRestore, onToggleLayers, onToggleMetadata,
-  playing = false, playbackDisabled = true, onTogglePlayback,
+  onMinimize, onRestore,
+  playing = false, onTogglePlayback,
   instanceState = PRESENTATION_BOARD_INSTANCE_STATE.WINDOW,
-  menuSurface = null, profileAddress, instanceId, reducedMotion = false, renderInspection, renderInstruments, renderCues,
-  shortcutTargetRef, instrumentTriggers, shortcutSnap = true, initialPresentation, onWindowChange, onShortcutChange, readOnly = false }) {
+  menuSurface = null, profileAddress, instanceId, reducedMotion = false, renderInspection, renderCues,
+  shortcutTargetRef, shortcutSnap = true, windowSnap = false, initialPresentation, onWindowChange, onShortcutChange, readOnly = false }) {
   const localShortcutRef = useRef(null);
+  const [toolbarOpen, setToolbarOpen] = useState(false);
   const geometryKey = JSON.stringify(documentGeometry);
   const shortcutRef = shortcutTargetRef || localShortcutRef;
   const storedName = useMemo(() => initialPresentation?.name || (readOnly ? null : loadPresentationBoardShortcut(profileAddress, undefined, instanceId)?.name), [profileAddress, instanceId]);
@@ -56,7 +52,10 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const displayName = moduleName?.profile === profileAddress ? moduleName.name
     : storedName && storedName !== 'PRESENTATION BOARD' ? storedName : 'DISPLAY MODULE';
   const [host, setHost] = useState(null);
-  const [view, setView] = useState(null);
+  const [baseView, setView] = useState(null);
+  const [wheelZoom, setWheelZoom] = useState(null);
+  const zoom = wheelZoom?.originView === baseView ? wheelZoom : null;
+  const view = zoom?.view || baseView;
   const [boardPosition, setBoardPosition] = useState(initialPresentation?.window ? { left: initialPresentation.window.left, top: initialPresentation.window.top } : null);
   const [inspectionHost, setInspectionHost] = useState(null);
   const [inspectionControlsHost, setInspectionControlsHost] = useState(null);
@@ -69,6 +68,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const exitImmersiveRef = useRef(null);
   const [scaleRendering, setScaleRendering] = useState('settled');
   const boardNodeRef = useRef(null);
+  const placement = useWorkbenchPlacement(boardNodeRef, !readOnly && !zoom && !immersive && boardPhase === 'window' && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW);
   const inspectionSceneRef = useRef(null);
   const boardDragRef = useRef(null);
   const boardResizeRef = useRef(null);
@@ -77,14 +77,11 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const boardPhaseRef = useRef(boardPhase);
   const windowSnapshotRef = useRef(null);
   const inspectionActive = Boolean(renderInspection);
-  const instrumentLayout = displayInstrumentLayout(host?.clientWidth || 390, host?.clientHeight || 700);
-  const metadataSidecarOpen = instrumentBayOpen && instrumentLayout.attached;
   const responsiveMetrics = presentationBoardResponsiveMetrics(host?.clientWidth || 390);
-  const metadataWidth = instrumentLayout.width;
   boardPhaseRef.current = boardPhase;
   const geometryOptions = { inset: responsiveMetrics.inset,
     identityStripHeight: 0,
-    sidecarWidth: metadataSidecarOpen ? metadataWidth : 0 };
+    sidecarWidth: 0 };
 
   useLayoutEffect(() => {
     if (!host) return undefined;
@@ -102,7 +99,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       }
       // A scale constrained by an attached bay must not become a tiny Stage
       // after moving to the narrow overlay projection.
-      return next && !metadataSidecarOpen && next.frame.stage.width < Math.min(320, next.fit.stage.width)
+      return next && next.frame.stage.width < Math.min(320, next.fit.stage.width)
         ? projectPresentationBoardView(documentGeometry, viewport, Math.min(1, 320 / next.fit.stage.width), geometryOptions)
         : next;
     });
@@ -111,7 +108,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     observer?.observe(host);
     globalThis.addEventListener?.('resize', measure);
     return () => { observer?.disconnect(); globalThis.removeEventListener?.('resize', measure); };
-  }, [geometryKey, host, layoutMode, metadataSidecarOpen, metadataWidth]);
+  }, [geometryKey, host, layoutMode]);
 
   const defaultTop = layoutMode === 'narrow' ? 48 : view?.frame.board.top || 0;
   useLayoutEffect(() => {
@@ -119,10 +116,12 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   }, [view, defaultTop]);
   const clampPosition = (position, frame = view?.frame.board) => ({
     left: Math.max(8,
-      Math.min((host?.clientWidth || 0) - (frame?.width || 0) - (metadataSidecarOpen ? metadataWidth : 0) - 8, position.left)),
+      Math.min((host?.clientWidth || 0) - (frame?.width || 0) - (0) - 8, position.left)),
     top: Math.max(8, Math.min((host?.clientHeight || 0) - (frame?.height || 0) - 8, position.top)),
   });
-  const renderedPosition = view ? clampPosition(boardPosition || { left: view.frame.board.left, top: defaultTop },
+  const renderedPosition = view ? clampPosition(zoom ? presentationBoardWheelZoomPosition(view, zoom,
+    { width: host.clientWidth, height: host.clientHeight }, 0)
+    : boardPosition || { left: view.frame.board.left, top: defaultTop },
     view.frame.board) : null;
   const windowFrame = view && renderedPosition ? { ...view.frame.board, ...renderedPosition } : null;
   const maximumView = presentationBoardInspectionFrame(view, { width: host?.clientWidth, height: host?.clientHeight },
@@ -134,10 +133,10 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const displayScale = immersive && view ? Math.min(screenSize.width / view.fit.stage.width, screenSize.height / view.fit.stage.height)
     : maximized ? maximumView?.scale || 1 : view?.scale || 1;
   useEffect(() => {
-    if (renderedFrame && !immersive) onWindowChange?.({ name: displayName, window: {
+    if (renderedFrame && !immersive && !zoom) onWindowChange?.({ name: displayName, window: {
       left: renderedFrame.left, top: renderedFrame.top, width: renderedFrame.width, height: renderedFrame.height,
     } });
-  }, [displayName, renderedFrame?.left, renderedFrame?.top, renderedFrame?.width, renderedFrame?.height, onWindowChange, immersive]);
+  }, [displayName, renderedFrame?.left, renderedFrame?.top, renderedFrame?.width, renderedFrame?.height, onWindowChange, immersive, zoom]);
   const liveScaleRendering = !immersive && (scaleRendering === 'live' || boardPhase === 'maximizing' || boardPhase === 'restoring');
   const settledStageWidth = view ? view.fit.stage.width * displayScale : 0;
   const settledStageHeight = view ? view.fit.stage.height * displayScale : 0;
@@ -160,6 +159,18 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     wheelResizeRef.current = null;
     setScaleRendering('settled');
   };
+  const restoreWheelZoom = () => { stopWheelResize(); setWheelZoom(null); };
+  useEffect(() => { setWheelZoom(null); }, [baseView, instanceState]);
+  useEffect(() => {
+    if (!zoom || immersive || inspectionActive) return undefined;
+    const escape = event => {
+      const instance = boardNodeRef.current?.closest('[data-display-instance]');
+      if (event.key !== 'Escape' || event.defaultPrevented || instance && !instance.hasAttribute('data-active-display')) return;
+      event.preventDefault(); event.stopPropagation(); restoreWheelZoom();
+    };
+    globalThis.addEventListener('keydown', escape, true);
+    return () => globalThis.removeEventListener('keydown', escape, true);
+  }, [Boolean(zoom), immersive, inspectionActive]);
   useLayoutEffect(() => {
     stopWheelResize();
     setScaleRendering('settled');
@@ -167,7 +178,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       if (wheelResizeRef.current) clearTimeout(wheelResizeRef.current.timer);
       wheelResizeRef.current = null;
     };
-  }, [host, geometryKey, view?.fit.stage.width, view?.fit.stage.height, metadataSidecarOpen, metadataWidth, immersive, boardPhase, instanceState]);
+  }, [host, geometryKey, view?.fit.stage.width, view?.fit.stage.height, immersive, boardPhase, instanceState]);
 
   const leaveImmersive = () => {
     wheelRef.current.blockedUntil = performance.now() + 450;
@@ -205,19 +216,18 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       let resize = wheelResizeRef.current;
       const current = resize?.view || view;
       const next = setContinuousPresentationBoardScale(current,
-        current.scale + Math.max(-.06, Math.min(.06, -pixels * .001)));
+        Math.max(baseView.scale, current.scale + Math.max(-.06, Math.min(.06, -pixels * .001))));
+      if (next.scale <= baseView.scale) { restoreWheelZoom(); return; }
       if (next.scale === current.scale) return;
       if (!resize) {
-        resize = { centerX: windowFrame.left + windowFrame.width / 2,
-          centerY: windowFrame.top + windowFrame.height / 2, timer: null };
+        resize = { centerX: zoom?.centerX ?? windowFrame.left + windowFrame.width / 2,
+          centerY: zoom?.centerY ?? windowFrame.top + windowFrame.height / 2, timer: null };
         wheelResizeRef.current = resize;
       }
       resize.view = next;
-      setView(next);
-      setBoardPosition(clampPosition({ left: resize.centerX - next.frame.board.width / 2,
-        top: resize.centerY - next.frame.board.height / 2 }, next.frame.board));
+      setWheelZoom({ originView: baseView, view: next, centerX: resize.centerX, centerY: resize.centerY });
       clearTimeout(resize.timer);
-      // Retain the gesture's centre across wheel events. Stage dimensions and
+      // Retain the starting centre across wheel events. Stage dimensions and
       // artwork projection update together, without a bitmap-scaling handoff.
       resize.timer = setTimeout(() => {
         if (wheelResizeRef.current !== resize) return;
@@ -283,20 +293,24 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       setBoardPhase('window'); setScaleRendering('settled');
     }
   };
+  const placedPosition = (candidate, bypass) => clampPosition(placement.position(candidate, renderedPosition,
+    snapWorkbenchPosition(candidate, windowSnap && !readOnly && !bypass), bypass));
+  const edgeSnapper = bypass => (axis, side, value) => placement.edge(axis, side, value, renderedPosition, bypass);
   const beginBoardDrag = (event) => {
-    if (immersive || event.button !== 0 || !renderedPosition || boardPhase !== 'window' || event.target.closest('button')) return;
+    if (zoom || immersive || event.button !== 0 || !renderedPosition || boardPhase !== 'window' || event.target.closest('button')) return;
     stopWheelResize();
     boardDragRef.current = { id: event.pointerId, clientX: event.clientX, clientY: event.clientY, ...renderedPosition };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const moveBoardDrag = (event) => {
     const start = boardDragRef.current; if (!start || start.id !== event.pointerId) return;
-    setBoardPosition(clampPosition({ left: start.left + event.clientX - start.clientX,
-      top: start.top + event.clientY - start.clientY }));
+    if (Math.hypot(event.clientX - start.clientX, event.clientY - start.clientY) < 3) return;
+    setBoardPosition(placedPosition({ left: start.left + event.clientX - start.clientX,
+      top: start.top + event.clientY - start.clientY }, event.altKey));
   };
   const stopBoardDrag = (event) => { if (boardDragRef.current?.id === event.pointerId) boardDragRef.current = null; };
   const beginBoardResize = (corner, event) => {
-    if (event.button !== 0 || !view || !windowFrame || boardPhase !== 'window') return;
+    if (zoom || event.button !== 0 || !view || !windowFrame || boardPhase !== 'window') return;
     event.preventDefault(); event.stopPropagation();
     stopWheelResize();
     boardResizeRef.current = { corner, id: event.pointerId, clientX: event.clientX, clientY: event.clientY, frame: windowFrame, view };
@@ -305,7 +319,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const moveBoardResize = (event) => {
     const start = boardResizeRef.current; if (!start || start.id !== event.pointerId) return;
     const resized = resizePresentationBoardFromCorner(start.view, start.frame, start.corner,
-      { x: event.clientX - start.clientX, y: event.clientY - start.clientY });
+      { x: event.clientX - start.clientX, y: event.clientY - start.clientY }, windowSnap && !readOnly && !event.altKey ? WORKBENCH_GRID_STEP : 0, edgeSnapper(event.altKey));
     if (!resized) return;
     setView(resized.view); setBoardPosition(clampPosition(resized.position, resized.view.frame.board));
   };
@@ -315,13 +329,14 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   };
   const resizeBoardFromKeyboard = (corner, event) => {
     if (!['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'].includes(event.key)
-      || !view || !windowFrame || boardPhase !== 'window') return;
+      || zoom || !view || !windowFrame || boardPhase !== 'window') return;
     event.preventDefault(); event.stopPropagation();
-    const step = event.shiftKey ? 24 : 8;
+    const snapping = windowSnap && !readOnly && !event.altKey;
+    const step = snapping || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
     const resized = resizePresentationBoardFromCorner(view, windowFrame, corner, {
       x: event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0,
       y: event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0,
-    });
+    }, snapping ? WORKBENCH_GRID_STEP : 0, edgeSnapper(event.altKey));
     if (!resized) return;
     setView(resized.view);
     setBoardPosition(clampPosition(resized.position, resized.view.frame.board));
@@ -349,39 +364,40 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       shortcutSnap={shortcutSnap} shortcutTargetRef={shortcutRef} />
     {view && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW
       && <article aria-label="Display Module" className="system-workflow__presentation-board" data-window-chrome="bevel" data-menu-surface={menuSurface}
-      onContextMenu={onContextMenu}
+      onContextMenu={onContextMenu} data-module-edges={Boolean(moduleAppearance?.edges) || undefined} data-module-frame={moduleAppearance?.frame === false ? 'off' : undefined}
       popover={immersive ? 'manual' : undefined} data-immersive={immersive || undefined}
       data-authoring-locked={authoringLocked || undefined}
+      data-wheel-zoom={Boolean(zoom) || undefined}
       data-board-phase={boardPhase} data-board-scale={view.scale} data-maximized={maximized || undefined}
       data-scale-rendering={liveScaleRendering ? 'live' : 'settled'}
       data-inspecting={inspectionActive || undefined} data-inspection-atmosphere={inspectionAtmosphere || undefined}
-      data-metadata-sidecar={metadataSidecarOpen || undefined} data-instrument-bay={instrumentBayOpen || undefined}
+
       onTransitionEnd={finishBoardTransition} ref={boardNodeRef}
-      style={{ '--workflow-identity-strip-height': `${responsiveMetrics.identityStripHeight}px`,
-        '--workflow-metadata-width': `${metadataWidth}px`, height: renderedFrame.height,
+      style={{ ...moduleEdgeStyle(moduleAppearance?.edges), '--workflow-identity-strip-height': `${responsiveMetrics.identityStripHeight}px`,
+        height: renderedFrame.height,
         left: renderedFrame.left, top: renderedFrame.top, width: renderedFrame.width }}>
-      <header className="system-workflow__identity-strip" tabIndex={0} aria-label={`Move Display Module: ${displayName}`}
+      <button type="button" className="system-workflow__toolbar-reveal" aria-label={toolbarOpen ? 'Hide Display controls' : 'Show Display controls'} aria-expanded={toolbarOpen} onClick={() => setToolbarOpen(value => !value)}>···</button>
+      <header className="system-workflow__identity-strip" data-toolbar-open={toolbarOpen || undefined} tabIndex={0} aria-label={`Move Display Module: ${displayName}`}
         onKeyDown={event => {
           if (event.target === event.currentTarget && (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')) { onContextMenu?.(event); return; }
-          if (event.target !== event.currentTarget || immersive || boardPhase !== 'window' || !event.key.startsWith('Arrow')) return;
+          if (event.target !== event.currentTarget || zoom || immersive || boardPhase !== 'window' || !event.key.startsWith('Arrow')) return;
           event.preventDefault(); event.stopPropagation();
-          const step = event.shiftKey ? 24 : 8;
-          setBoardPosition(clampPosition({ left: renderedPosition.left + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0),
-            top: renderedPosition.top + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0) }));
+          const snapping = windowSnap && !readOnly && !event.altKey;
+          const step = snapping || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
+          setBoardPosition(placedPosition({ left: renderedPosition.left + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0),
+            top: renderedPosition.top + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0) }, event.altKey));
         }} onPointerCancel={stopBoardDrag} onPointerDown={beginBoardDrag}
         onPointerMove={moveBoardDrag} onPointerUp={stopBoardDrag}>
         <span className="system-workflow__board-title" title={displayName}>
           {inspectionActive && <span className="system-workflow__board-inspection-controls-host" ref={setInspectionControlsHost} />}
-          <BoardWorkspaceControls readOnly={readOnly} instrumentTriggers={instrumentTriggers} layersOpen={layersOpen} metadataOpen={metadataOpen}
-            playing={playing} playbackDisabled={playbackDisabled} onTogglePlayback={onTogglePlayback}
-            onToggleLayers={onToggleLayers} onToggleMetadata={onToggleMetadata} />
+          <BoardWorkspaceControls playing={playing} onTogglePlayback={onTogglePlayback} />
           {!readOnly && <span className="system-workflow__composition-lock-controls">
             <button aria-label={authoringLocked ? 'Unlock Display Module composition' : 'Lock Display Module composition'}
               aria-pressed={authoringLocked} className="system-workflow__overlay-icon system-workflow__composition-lock"
               onClick={onAuthoringLockToggle} type="button">{authoringLocked ? <LockKeyhole /> : <Lock />}</button>
           </span>}
-          <BoardWindowControls disabled={inspectionActive} maximized={maximized}
-            onMaximize={maximize} onMinimize={minimizeToShortcut} onRestore={restore} />
+          <BoardWindowControls disabled={inspectionActive} maximized={maximized || Boolean(zoom)}
+            onMaximize={maximize} onMinimize={minimizeToShortcut} onRestore={zoom ? restoreWheelZoom : restore} />
         </span>
       </header>
       <div aria-hidden="true" className="system-workflow__stage-border" />
@@ -404,12 +420,11 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
           </div>
         </div>
       </div>
+      {moduleAppearance?.edges?.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
       {selectionOverlayHost && renderCues?.(selectionOverlayHost)}
-      {renderInstruments?.(metadataSidecarOpen ? 'attached' : 'overlay',
-        Math.min((host?.clientHeight || 700) - 210, renderedFrame.top + renderedFrame.height + 12), displayName)}
       {immersive && <button className="system-workflow__immersive-exit" ref={exitImmersiveRef}
         aria-label="Exit immersive view" onClick={leaveImmersive} type="button"><Minimize2 size={16} /> Exit</button>}
-      {!immersive && boardPhase === 'window' && corners.map((corner) => <button aria-label={`Resize Display Module from ${corner}`}
+      {!zoom && !immersive && boardPhase === 'window' && corners.map((corner) => <button aria-label={`Resize Display Module from ${corner}`}
         className={`system-workflow__board-resize-handle is-${corner}`} key={corner}
         onPointerCancel={stopBoardResize} onPointerDown={(event) => beginBoardResize(corner, event)}
         onKeyDown={(event) => resizeBoardFromKeyboard(corner, event)} onPointerUp={stopBoardResize} type="button" />)}
