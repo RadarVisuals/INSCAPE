@@ -4,7 +4,7 @@ import { snapWorkbenchPosition } from './workbenchGrid.js';
 import { normalizeWorkbenchPreferences } from './workbenchPreferences.js';
 import { projectPresentationBoardView, resizePresentationBoardFromCorner } from './presentationBoardGeometry.js';
 
-test('Display resize snaps either moving edge while preserving ratio and opposite corner', () => {
+test('Display resize snaps its projected horizontal edge while preserving ratio and opposite corner', () => {
   for (const [columns, rows] of [[32, 18], [18, 32]]) {
     const view = projectPresentationBoardView({ columns, rows }, { width: 1440, height: 1000 }, .5, { identityStripHeight: 0 });
     const frame = { ...view.frame.board, left: 103, top: 79 };
@@ -15,7 +15,7 @@ test('Display resize snaps either moving edge while preserving ratio and opposit
       near(b.width / b.height, columns / rows);
       near(corner.endsWith('e') ? b.left : b.left + b.width, corner.endsWith('e') ? frame.left : frame.left + frame.width);
       near(corner.startsWith('s') ? b.top : b.top + b.height, corner.startsWith('s') ? frame.top : frame.top + frame.height);
-      const edge = movement.x > movement.y ? (corner.endsWith('e') ? b.left + b.width : b.left) : (corner.startsWith('s') ? b.top + b.height : b.top);
+      const edge = corner.endsWith('e') ? b.left + b.width : b.left;
       near(edge / 24, Math.round(edge / 24));
     }
   }

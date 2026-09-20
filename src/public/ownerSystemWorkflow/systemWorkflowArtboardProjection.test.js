@@ -66,6 +66,21 @@ test('Hero artboard stays compact on desktop and preserves a centered 16:9 apert
   }), true);
 });
 
+test('a resting scene offset changes editing coordinates without moving the clipped viewport', () => {
+  const node = { dataset: { stageColumns: '18', stageRows: '32' },
+    getBoundingClientRect: () => ({ left: 100, top: 60, width: 180, height: 320 }) };
+  for (const offset of [-50.25, 50.25]) {
+    const scene = { getBoundingClientRect: () => ({ left: 100 + offset, top: 60, width: 180, height: 320 }) };
+    const field = createOwnerSystemWorkflowProjectedField(node, 1, 1, OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID, scene);
+    assert.equal(field.left, 100 + offset);
+    assert.equal(field.viewportLeft, 100);
+    assert.equal(field.viewportWidth, 180);
+    assert.equal(field.cellSize, 10);
+    assert.equal((150 + offset - field.left) / field.cellSize, 5);
+    assert.equal(ownerSystemWorkflowProjectedFieldContainsPoint(field, { x: field.left + 181, y: 100 }), false);
+  }
+});
+
 test('Stage scaling keeps pointer projection proportional at 25, 75, and the safe fitted maximum', () => {
   const documentPlacement = Object.freeze({ column: 7, row: 4, columnSpan: 3, rowSpan: 2 });
   const fieldAt = (scale) => createOwnerSystemWorkflowProjectedField({

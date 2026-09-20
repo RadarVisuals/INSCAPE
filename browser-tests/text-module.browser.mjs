@@ -56,7 +56,7 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
       return { top: body.top - box.top, height: box.height - body.height };
     });
     assert.ok(readingGeometry.top < 5 && readingGeometry.height < 8, 'Read uses the full window without editor rails');
-    await text.getByRole('button', { name: 'Write', exact: true }).click();
+    await text.getByRole('button', { name: 'Write', exact: true }).focus(); await page.keyboard.press('Enter');
     assert.equal(await text.getByRole('button', { name: 'Undo', exact: true }).isEnabled(), true, 'reading preserves editing history');
     await text.getByRole('button', { name: 'Undo', exact: true }).click();
     assert.equal(await content.locator('strong').count(), 0, 'can undo formatting from before Read');
@@ -90,6 +90,7 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     await text.getByRole('combobox', { name: 'Document font', exact: true }).selectOption('literata');
     await text.getByRole('checkbox', { name: 'Include in Workbench publication' }).check();
     await page.reload(); await mount();
+    await text.getByRole('button', { name: 'Write', exact: true }).focus(); await page.keyboard.press('Enter');
     assert.equal(await text.getByRole('textbox', { name: 'Article title', exact: true }).inputValue(), 'Notes from the Lunar Desert');
     assert.equal(await content.locator('strong').innerText(), sampleText);
 

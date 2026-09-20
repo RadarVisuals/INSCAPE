@@ -1,3 +1,4 @@
+import { requireCompleteGroups, removePlacementGroups } from './domain/placementGroups.js';
 import {
   SYSTEM_WORKFLOW_VISIBILITY,
   assertValidSystemWorkflowDraft,
@@ -29,7 +30,7 @@ function canonicalPlacementSnapshot(placement) {
     backing: placement.backing ? { ...placement.backing } : null,
     transparencyMode: placement.transparencyMode,
     inspectionMode: resolveInspectionMode(placement),
-    animation: placement.animation ? structuredClone(placement.animation) : null,
+    selectedMedia: placement.selectedMedia ? { ...placement.selectedMedia } : null,
     mediaFrameRatio: placement.mediaFrameRatio ?? null,
     transform: placement.transform ? { ...placement.transform } : null,
     visibility: placement.visibility,
@@ -66,6 +67,8 @@ export function createSystemWorkflowGroupRemovalCandidate(draftInput, {
     }
     if (placement.locked) throw removalError('SYSTEM_WORKFLOW_REMOVAL_PLACEMENT_LOCKED', 'The canonical placement is locked');
   }
+  requireCompleteGroups(grid, placementIds);
+  removePlacementGroups(grid, placementIds);
   grid.placements = grid.placements.filter(({ id }) => !removalIds.has(id));
   return assertValidSystemWorkflowDraft(draft);
 }
@@ -100,6 +103,7 @@ export function createSystemWorkflowRemovalCandidate(draftInput, {
   if (placement.locked) {
     throw removalError('SYSTEM_WORKFLOW_REMOVAL_PLACEMENT_LOCKED', 'The canonical placement is locked');
   }
+  requireCompleteGroups(grid, [placementId]);
   grid.placements.splice(placementIndex, 1);
   return assertValidSystemWorkflowDraft(draft);
 }

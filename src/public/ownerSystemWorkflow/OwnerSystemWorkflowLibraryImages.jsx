@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
 import { resolvePublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 
@@ -50,17 +49,4 @@ export function librarySourceLabel(asset) {
     token = decimal.length <= 10 ? '#' + decimal : tokenId.slice(0, 8) + '…' + tokenId.slice(-4);
   }
   return [asset.title || asset.name, token].filter(Boolean).join(' · ');
-}
-
-export default function OwnerSystemWorkflowLibraryImages({ asset, onBack, onActivate, onPointerDown }) {
-  return <section className="system-workflow__library-images" aria-label={`Images of ${asset.title || asset.name}`}
-    onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onBack(); } }}>
-    <header><button type="button" autoFocus aria-label="Back to Library assets" onClick={onBack}><ArrowLeft size={14} />Back</button>
-      <strong>{asset.title || asset.name}</strong></header>
-    <p>Drag an image into the scene, or double-click to place it.</p>
-    <div className="system-workflow__library-image-options">
-      {libraryImageChoices(asset).map((choice, index) => <ImageChoice asset={asset} choice={choice} key={choice.sources[0]}
-        number={index + 1} onActivate={onActivate} onPointerDown={onPointerDown} />)}
-    </div>
-  </section>;
 }

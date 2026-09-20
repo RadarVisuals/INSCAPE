@@ -23,6 +23,8 @@ export default defineConfig(({ mode }) => {
     server: {
       watch: {
         ignored: [
+          // Standalone prototypes contain large generated trees outside this app.
+          '**/Mobile/**',
           '**/output/**',
           '**/.edge-*/**',
           '**/.browser-test-runtime*/**',

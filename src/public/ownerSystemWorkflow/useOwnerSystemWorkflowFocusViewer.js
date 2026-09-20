@@ -8,13 +8,24 @@ export default function useOwnerSystemWorkflowFocusViewer({ assetsById, controll
   const placementRefs = useRef(new Map());
   const restoreSnapshotRef = useRef(null);
   const placements = useMemo(() => (controller.selectedGrid?.placements || []).filter(placement => placement.kind !== 'text'), [controller.selectedGrid?.placements]);
-  const entries = useMemo(() => new Map(placements.map(placement => [placement.id,
-    createOwnerSystemWorkflowFocusViewModel(placement, assetsById.get(placement.stableAssetId))])), [placements, assetsById]);
+  // Inspection models are derived on demand, not during every Grid handoff.
+  // The cache belongs to this placement/asset snapshot and is discarded when
+  // either changes; it never owns authored placement or media state.
+  const getEntry = useMemo(() => {
+    const entries = new Map();
+    return id => {
+      if (!entries.has(id)) {
+        const placement = placements.find(item => item.id === id);
+        entries.set(id, placement ? createOwnerSystemWorkflowFocusViewModel(placement, assetsById.get(placement.stableAssetId)) : null);
+      }
+      return entries.get(id);
+    };
+  }, [placements, assetsById]);
   const viewer = useDisplayInspection({
     scope: controller.draft.profileAddress + ':' + controller.selectedGridId,
     items: placements,
     getElement: id => placementRefs.current.get(id),
-    getEntry: id => entries.get(id),
+    getEntry,
     prepare: async id => {
       const placement = placements.find(candidate => candidate.id === id);
       const asset = placement && assetForPlacement(assetsById.get(placement.stableAssetId), placement);

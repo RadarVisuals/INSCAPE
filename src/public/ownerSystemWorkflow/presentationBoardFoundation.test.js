@@ -62,7 +62,8 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.doesNotMatch(board, /LatticePixelGrid/);
   assert.match(runtime, /<WorkbenchAlignmentGrid/);
   assert.match(read('./WorkbenchAlignmentGrid.jsx'), /<LatticePixelGrid/);
-  assert.match(shortcut, /snap\(position\.left, shortcutSnap\)/);
+  // Shared snapping and Alt bypass are exercised in the Workbench browser tests.
+  assert.match(shortcut, /placement\.position\(candidate, shortcutPosition, fallback, event\.altKey\)/);
   assert.match(shortcut, /application\/x-inscape-asset/);
   assert.match(shortcut, /shortcutAsset \? <ProgressiveArtworkImage[^\n]+ : 'DM'/);
   assert.match(shortcut, /RENAME/);
@@ -105,7 +106,8 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(board, /selectionOverlayHost/);
   assert.match(canvas, /createPortal\([\s\S]*system-workflow__selection-chrome[\s\S]*selectionOverlayHost/);
   assert.match(canvas, /retainedSelection\.current\?\.gridId !== grid\?\.id[\s\S]*retainedSelection\.current = null/);
-  assert.match(canvas, /selectionNavigating = Boolean\(gridSwipe\)[\s\S]*data-navigating=\{selectionNavigating/);
+  // Camera motion versus resting-offset editing is exercised through the
+  // production Display in display-unlock-navigation.browser.mjs.
   assert.match(styles, /\.system-workflow__selection-chrome\[data-navigating\] \{ opacity: 0; transition: none; \}/);
   assert.match(styles, /html\[data-system-workflow-grid-direction\] \.system-workflow__selection-chrome \{ opacity: 0; transition: none; \}/);
   assert.match(controller, /createGrid:[^\n]*setSelectedPlacementIds\(\[\]\)/);
@@ -137,7 +139,7 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(board, /className="system-workflow__stage-viewport" data-surface=\{displaySurface\}/);
   assert.match(styles, /\.lattice-focus-viewer__board-controls/);
   assert.doesNotMatch(styles, /\[data-inspection-atmosphere\] \.system-workflow__stage-viewport \{[\s\S]*filter:/);
-  assert.match(styles, /\[data-inspection-atmosphere\] \.system-workflow__grid-plane--current > \.system-workflow__artwork-plane,[^{]+\{\s*filter: grayscale\(1\) contrast\(\.72\) brightness\(\.3\);/);
+  assert.match(styles, /\[data-inspection-atmosphere\] \.system-workflow__grid-plane--current > \.system-workflow__artwork-plane,[^{]+\{\s*filter: grayscale\(1\) brightness\(\.18\);/);
   assert.match(display, /inspectionAtmosphere=\{viewer\.atmosphereActive\}/);
   assert.doesNotMatch(board, /<strong>\{authoringLocked \? 'LOCKED' : 'LOCK'\}<\/strong>/);
   assert.match(board, /authoringLocked \? <LockKeyhole \/> : <Lock \/>/);

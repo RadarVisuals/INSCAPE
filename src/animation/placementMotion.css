@@ -1,8 +1,0 @@
-@import './floatEffect.css';
-@import './flickerEffect.css';
-
-.system-workflow[data-previewing] [data-placement-motion],
-[data-motion-paused="true"] [data-placement-motion] { animation-play-state: paused !important; }
-@media (prefers-reduced-motion: reduce) {
-  [data-placement-motion] { animation: none !important; }
-}

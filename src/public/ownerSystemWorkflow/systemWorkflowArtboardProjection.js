@@ -38,8 +38,11 @@ export function measureOwnerSystemWorkflowHeroArtboard(availableWidth, available
   });
 }
 
-export function createOwnerSystemWorkflowProjectedField(node, snapStep = 1, scale = 1, mode = OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID) {
+export function createOwnerSystemWorkflowProjectedField(node, snapStep = 1, scale = 1, mode = OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID, originNode = node) {
+  // The Display clips input; its translated active scene supplies authored
+  // coordinates. Keeping those origins separate permits editing at rest offsets.
   const rectangle = node?.getBoundingClientRect?.();
+  const origin = originNode?.getBoundingClientRect?.() || rectangle;
   const geometry = mode !== OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO && node?.dataset?.stageColumns ? { columns: Number(node.dataset.stageColumns), rows: Number(node.dataset.stageRows) } : SYSTEM_WORKFLOW_GEOMETRY;
   const projection = rectangle && (mode === OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO
     ? measureOwnerSystemWorkflowHeroArtboard(rectangle.width, rectangle.height)
@@ -48,8 +51,8 @@ export function createOwnerSystemWorkflowProjectedField(node, snapStep = 1, scal
   return Object.freeze({
     cellSize: projection.cellSize,
     columns: geometry.columns, rows: geometry.rows,
-    left: rectangle.left + projection.left,
-    top: rectangle.top + projection.top,
+    left: origin.left + projection.left,
+    top: origin.top + projection.top,
     snapStep,
     width: rectangle.width,
     height: rectangle.height,

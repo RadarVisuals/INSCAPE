@@ -109,7 +109,7 @@ test('resize recomputes the safe maximum, clamps only when needed, and never mut
   assert.deepEqual(documentGeometry, { columns: 32, rows: 18 });
   assert.equal(initial.scale, 0.75);
   assert.equal(resized.maximumPercentage, 100);
-  assert.equal(resized.scale, 0.75);
+  assert.equal(resized.scale, 1, 'preserved pixel width is clamped to the narrower viewport fit');
   assert.equal(resized.fit.stage.width / resized.fit.stage.height, 16 / 9);
   assert.notDeepEqual(resized.fit, initial.fit);
   assert.equal(JSON.stringify(documentGeometry), '{"columns":32,"rows":18}');
@@ -231,4 +231,40 @@ test('corner resizing has no axis-selection jump when pointer axes oppose each o
   assert.equal(beforeCrossover.position.top, frame.top);
   assert.equal(afterCrossover.position.left, frame.left);
   assert.equal(afterCrossover.position.top, frame.top);
+});
+
+test('snapped resize remains bounded when the pointer crosses the axis diagonal', () => {
+  const view = projectPresentationBoardView({ columns: 32, rows: 18 }, { width: 1440, height: 900 }, .5,
+    { inset: 24, identityStripHeight: 0 });
+  const frame = { ...view.frame.board, left: 160, top: 120 };
+  const first = resizePresentationBoardFromCorner(view, frame, 'se', { x: 100, y: -99 }, 24);
+  const second = resizePresentationBoardFromCorner(view, frame, 'se', { x: 100, y: -101 }, 24);
+  assert.ok(Math.abs(first.view.frame.board.width - second.view.frame.board.width) <= 24);
+});
+
+test('large fast resizes stop at the viewport without moving the opposite corner', () => {
+  const view = projectPresentationBoardView({ columns: 32, rows: 18 }, { width: 1440, height: 900 }, .5,
+    { inset: 24, identityStripHeight: 0 });
+  const frame = { ...view.frame.board, left: 300, top: 200 };
+  const bounds = { left: 8, top: 8, right: 1432, bottom: 892 };
+  for (const corner of ['nw', 'ne', 'sw', 'se']) {
+    const result = resizePresentationBoardFromCorner(view, frame, corner,
+      { x: corner.endsWith('e') ? 5000 : -5000, y: corner.startsWith('s') ? 5000 : -5000 }, 24, null, bounds);
+    const box = { ...result.position, ...{ width: result.view.frame.board.width, height: result.view.frame.board.height } };
+    assert.ok(box.left >= 7.999 && box.top >= 7.999 && box.left + box.width <= 1432.001 && box.top + box.height <= 892.001);
+    assert.equal(corner.endsWith('e') ? box.left : box.left + box.width, corner.endsWith('e') ? frame.left : frame.left + frame.width);
+    assert.equal(corner.startsWith('s') ? box.top : box.top + box.height, corner.startsWith('s') ? frame.top : frame.top + frame.height);
+  }
+});
+
+test('an anchored viewport limit takes priority over the preferred resize minimum', () => {
+  const view = projectPresentationBoardView({ columns: 32, rows: 18 }, { width: 1440, height: 900 }, .25,
+    { inset: 24, identityStripHeight: 0 });
+  const frame = { ...view.frame.board, left: 1300, top: 700 };
+  const bounds = { left: 8, top: 8, right: 1432, bottom: 892 };
+  const result = resizePresentationBoardFromCorner(view, frame, 'se', { x: 1000, y: 1000 }, 0, null, bounds);
+  assert.equal(result.position.left, frame.left);
+  assert.equal(result.position.top, frame.top);
+  assert.equal(result.view.frame.board.width, 132);
+  assert.ok(result.position.top + result.view.frame.board.height <= bounds.bottom);
 });

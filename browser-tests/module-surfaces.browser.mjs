@@ -100,8 +100,7 @@ test('module edges, appearance, keyboard controls and public rendering', async (
     const loadedImages = await board.locator('img').evaluateAll(images => images.filter(img => img.complete && img.naturalWidth > 0).length);
     assert.ok(loadedImages > 0, 'artwork is loaded for the visual check');
     assert.deepEqual(styles.text, ['12px 0px 0px 12px', '0.075']);
-    await page.getByRole('button', { name: 'Layers', exact: true }).click();
-    // Closing an attached bay releases its existing viewport constraint; join the final output rectangles.
+    // Join the final output rectangles; companion tools do not reserve space.
     t = await text.boundingBox(); b = await board.boundingBox();
     await drag(textHeader, b.x - t.x - t.width + 3, b.y - t.y + 3);
     t = await text.boundingBox(); near(t.x + t.width, b.x, 'final output joins flush');
@@ -114,7 +113,7 @@ test('module edges, appearance, keyboard controls and public rendering', async (
     await drag(textHeader, 8, 0);
     await page.screenshot({ path: join(screenshots, 'joined-wide.png') });
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
-    await page.getByLabel('Module gap', { exact: true }).fill('12');
+    await page.getByLabel('Space between modules', { exact: true }).fill('12');
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     t = await text.boundingBox(); b = await board.boundingBox();
     await drag(textHeader, b.x - 12 - t.width - t.x + 2, 0);
@@ -134,9 +133,9 @@ test('module edges, appearance, keyboard controls and public rendering', async (
     const tb = await tools.boundingBox(); assert.ok(tb.x >= 0 && tb.x + tb.width <= 390, 'tools fit narrow viewport');
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).focus(); await page.keyboard.press('Enter');
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
-    await page.getByLabel('Module gap', { exact: true }).scrollIntoViewIfNeeded();
-    await page.getByLabel('Module gap', { exact: true }).fill('0');
-    const gapHit = await page.getByLabel('Module gap', { exact: true }).evaluate(el => { const r = el.getBoundingClientRect(); return el === document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); });
+    await page.getByLabel('Space between modules', { exact: true }).scrollIntoViewIfNeeded();
+    await page.getByLabel('Space between modules', { exact: true }).fill('0');
+    const gapHit = await page.getByLabel('Space between modules', { exact: true }).evaluate(el => { const r = el.getBoundingClientRect(); return el === document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); });
     assert.equal(gapHit, true, 'Settings remain above Text on narrow screens');
     await page.screenshot({ path: join(screenshots, 'settings-narrow.png') });
     assert.deepEqual(errors, []);

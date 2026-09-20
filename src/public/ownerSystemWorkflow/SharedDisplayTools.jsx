@@ -57,12 +57,12 @@ function ToolWindow({ id, menuSurface, fallbackFocus }) {
     title={tools.labels[id] || (id === 'layers' ? 'Select a Display' : 'Select an artwork')}
     onClose={() => { tools.command(id, false); requestAnimationFrame(() => { const trigger = tools.triggers.current[id]; (trigger?.isConnected ? trigger : fallbackFocus?.current)?.focus({ preventScroll: true }); }); }}>
     <div ref={host} data-shared-tool={id} />
-    {!tools.labels[id] && <p role="status">{id === 'layers' ? 'Select a Display to see its layers.' : id === 'animation' ? 'Select an artwork in a Display to animate it.' : 'Select an artwork to read its information.'}</p>}
+    {!tools.labels[id] && <p role="status">{id === 'layers' ? 'Select a Display to see its layers.' : 'Select an artwork to read its information.'}</p>}
   </DisplayInstrumentWindow>;
 }
 export function SharedDisplayToolWindows({ menuSurface, readOnly = false, hidden = false, fallbackFocus }) {
   const tools = useSharedDisplayTools();
-  return <div hidden={hidden} data-shared-display-tools>{['layers', 'metadata', 'animation'].filter(id => tools.state[id] && (!readOnly || id === 'metadata')).map(id => <ToolWindow key={id} id={id} menuSurface={menuSurface} fallbackFocus={fallbackFocus} />)}</div>;
+  return <div hidden={hidden} data-shared-display-tools>{['layers', 'metadata'].filter(id => tools.state[id] && (!readOnly || id === 'metadata')).map(id => <ToolWindow key={id} id={id} menuSurface={menuSurface} fallbackFocus={fallbackFocus} />)}</div>;
 }
 export function SharedDisplayToolContent({ id, targetId, label, children, available = true }) {
   const tools = useSharedDisplayTools();

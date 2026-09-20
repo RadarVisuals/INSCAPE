@@ -1,5 +1,3 @@
-import { hasActiveEffects } from '../../animation/effectCatalog.js';
-import AnimationModule from '../../animation/AnimationModule.jsx';
 import ModuleSurfaceControls from './ModuleSurfaceControls.jsx';
 import { WorkbenchWindow } from './DisplayInstrumentWindow.jsx';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
@@ -29,7 +27,6 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
   const targetId = controller.moduleId;
   const toolAvailable = windowProps.instanceState === 'window';
   const toolScope = `${displayName || windowProps.initialPresentation?.name || 'Display Module'} / ${controller.selectedGrid?.title || 'Untitled Grid'}`;
-  const [motionPreview, setMotionPreview] = useState(false);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const appearanceTrigger = useRef(null);
   const [moduleMenu, setModuleMenu] = useState(null);
@@ -72,29 +69,29 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       trigger: event.currentTarget.querySelector('.system-workflow__identity-strip') || event.currentTarget,
       onDelete: windowProps.onDelete });
   };
-  const [playbackTransition, setPlaybackTransition] = useState(false);
+  const [playbackState, setPlaybackState] = useState({ offset: false, moving: false });
   const pauseGrids = useCallback(() => setPlayingGrids(false), []);
   const crop = useOwnerSystemWorkflowCrop({ assetsById, controller });
   const viewer = useOwnerSystemWorkflowFocusViewer({ assetsById, controller,
     onOpen: onInspect, resolveAssetDimensions });
   const metadataPlacement = controller.selectedPlacements.length === 1 && controller.selectedPlacements[0].kind !== 'text' ? controller.selectedPlacements[0] : null;
-  useEffect(() => setMotionPreview(false), [tools.state.animation, tools.target, toolAvailable, controller.selectedGridId, metadataPlacement?.id, hasActiveEffects(metadataPlacement?.animation), authoringLocked, panelOccupied, viewer.placementId, Boolean(crop.cropSession), playingGrids]);
-  const previewMotion = motionPreview && hasActiveEffects(metadataPlacement?.animation) && !viewer.placementId && !crop.cropSession && !playingGrids && tools.state.animation && tools.target === targetId && toolAvailable && !authoringLocked && !panelOccupied;
-  const motionEnabled = toolAvailable && !panelOccupied && !viewer.placementId && !crop.cropSession && !reducedMotion && (authoringLocked || previewMotion || playingGrids);
   const metadataEntry = useMemo(() => metadataPlacement
-    ? createOwnerSystemWorkflowMetadataViewModel(metadataPlacement, assetsById.get(metadataPlacement.stableAssetId))
+    ? createOwnerSystemWorkflowMetadataViewModel(metadataPlacement, assetsById.get(metadataPlacement?.stableAssetId))
     : null, [assetsById, metadataPlacement]);
   const gridTransitionRef = useRef(null);
   const changeGrid = (gridId, directionHint = null, options = {}) => {
-    if (!gridId || gridId === controller.selectedGridId || gridTransitionRef.current) return false;
+    if (!gridId || options.animate !== false && gridId === controller.selectedGridId || gridTransitionRef.current) return false;
     const grids = controller.draft?.grids || [];
     const currentIndex = grids.findIndex(({ id }) => id === controller.selectedGridId);
     const nextIndex = grids.findIndex(({ id }) => id === gridId);
     if (nextIndex < 0) return false;
     const direction = directionHint || (nextIndex > currentIndex ? 'next' : 'previous');
+    // The moving camera owns scheduling and may cross again before this view
+    // commits. Do not force an extra synchronous render from inside that action.
+    if (options.animate === false) { controller.changeGrid(gridId); return true; }
     const commit = () => flushSync(() => controller.changeGrid(gridId));
     const transitionDocument = globalThis.document;
-    if (options.animate === false || reducedMotion || typeof transitionDocument?.startViewTransition !== 'function') {
+    if (reducedMotion || typeof transitionDocument?.startViewTransition !== 'function') {
       commit();
       return true;
     }
@@ -142,37 +139,26 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       onInspectionCancel={viewer.close}
       renderCues={host => <DisplayInspectionCues key={`${controller.draft.profileAddress}:${controller.selectedGridId}`}
         host={host} items={controller.selectedGrid?.placements || []} viewer={viewer} contentVersion={assetsById} onSelect={id => { tools.activate(targetId); controller.replaceSelection([id]); }}
-        editable={!authoringLocked} disabled={!tools.state.metadata || panelOccupied || playingGrids || playbackTransition || Boolean(crop.cropSession)}
+        editable={!authoringLocked} disabled={!tools.state.metadata || panelOccupied || playingGrids || playbackState.offset || Boolean(crop.cropSession)}
         />}
       onAuthoringLockToggle={toggleAuthoringLock}
       renderInspection={viewer.placementId ? (container, controlsContainer, scene) => <DisplayFocusViewer
         scene={scene} container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}
         viewer={viewer} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
 >
-    <OwnerSystemWorkflowCanvas placementTargetRef={placementTargetRef} assetsById={assetsById} authoringLocked={authoringLocked} motionEnabled={motionEnabled} motionPreview={previewMotion} controller={controller} crop={crop}
+    <OwnerSystemWorkflowCanvas placementTargetRef={placementTargetRef} assetsById={assetsById} authoringLocked={authoringLocked} controller={controller} crop={crop}
         editingTextId={editingText?.gridId === controller.selectedGridId ? editingText.id : null} onEditText={editText}
-        playingGrids={playingGrids} onPauseGrids={pauseGrids} onPlaybackTransitionChange={setPlaybackTransition}
+        playingGrids={playingGrids} onPauseGrids={pauseGrids} onPlaybackStateChange={setPlaybackState}
         onAssetDimensions={registerAssetDimensions} onChangeGrid={changeGrid}
-        interactionDisabled={panelOccupied || previewMotion || Boolean(viewer.placementId)} onOpenViewer={(placement) => tools.state.metadata ? controller.replaceSelection([placement.id]) : viewer.open(placement.id)}
+        interactionDisabled={panelOccupied || Boolean(viewer.placementId)} onOpenViewer={(placement) => tools.state.metadata ? controller.replaceSelection([placement.id]) : viewer.open(placement.id)}
         onPlacementRef={viewer.registerPlacement} reducedMotion={reducedMotion}
-        resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.sourcePlacementId} />
+        resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.sourcePlacementId} inspectionActive={Boolean(viewer.placementId)} />
     </PresentationBoard>
     <SharedDisplayToolContent id="layers" targetId={targetId} label={toolScope} available={toolAvailable}>
       <OwnerSystemWorkflowSelectionInspector key={controller.selectedGridId} assetsById={assetsById}
-        authoringLocked={authoringLocked || previewMotion || playingGrids || playbackTransition} controller={controller} crop={crop}
+        authoringLocked={authoringLocked || playingGrids || playbackState.moving} controller={controller} crop={crop}
         onBeginCrop={crop.beginCrop} onEditText={editText}
         onArtworkInfo={event => { onRevealInstruments(); tools.command('metadata', true, event.currentTarget, targetId); }} />
-    </SharedDisplayToolContent>
-    <SharedDisplayToolContent id="animation" targetId={targetId} label={selectionLabel} available={toolAvailable}>
-      <AnimationModule key={`${controller.selectedGridId}:${metadataPlacement?.id}`}
-        target={metadataPlacement ? { animation: metadataPlacement.animation, label: selectionLabel, scope: toolScope,
-          src: assetsById.get(metadataPlacement.stableAssetId)?.previewSrc || assetsById.get(metadataPlacement.stableAssetId)?.src
-            || assetsById.get(metadataPlacement.stableAssetId)?.thumbnailUrl || assetsById.get(metadataPlacement.stableAssetId)?.imageUrl } : null}
-        onChange={animation => metadataPlacement && controller.run(session => session.setPlacementAnimation({
-          gridId: controller.selectedGridId, placementId: metadataPlacement.id, expectedPlacement: metadataPlacement, animation }))}
-        disabled={authoringLocked || metadataPlacement?.locked || playingGrids || playbackTransition || Boolean(crop.cropSession || viewer.placementId)}
-        disabledReason={authoringLocked ? 'Unlock the Display to edit effects.' : metadataPlacement?.locked ? 'Unlock this layer to edit effects.' : 'Finish playback or inspection before editing effects.'}
-        preview={previewMotion} onPreview={setMotionPreview} reducedMotion={reducedMotion} />
     </SharedDisplayToolContent>
     <SharedDisplayToolContent id="metadata" targetId={targetId} label={`${toolScope} / ${selectionLabel}`} available={toolAvailable}>
       <OwnerSystemWorkflowMetadataContent dossier={metadataEntry?.dossier || null} />

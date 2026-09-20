@@ -1,0 +1,18 @@
+.workbench-view-controls { position: fixed; z-index: 80; right: 12px; bottom: calc(var(--workflow-dock-height, 40px) + 8px); display: flex; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); }
+.workbench-view-controls button { min-width: 32px; min-height: 32px; padding: 4px 8px; border: 0; border-right: 1px solid var(--workflow-border); border-radius: 0; background: transparent; color: inherit; font: var(--workflow-type-control); cursor: pointer; }
+.workbench-view-controls button:last-child { border-right: 0; }
+.workbench-view-controls button:hover { background: var(--workflow-selection); }
+.workbench-view-controls button:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
+.workbench-view-controls button:disabled { opacity: .4; cursor: default; }
+.workbench-view-controls span { display: flex; align-items: center; padding: 4px 8px; border-right: 1px solid var(--workflow-border); font: var(--workflow-type-control); }
+.workbench-marquee, .workbench-selection { position: fixed; z-index: 79; pointer-events: none; box-sizing: border-box; border: 1px solid var(--workflow-ink); }
+.workbench-marquee { background: rgb(127 127 127 / 12%); }
+.workbench-selection { pointer-events: auto; touch-action: none; cursor: move; }
+.workbench-selection:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: 2px; }
+.workbench-selection__handle { position: absolute; pointer-events: auto; touch-action: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 0; background: transparent; transform: translate(-50%, -50%); }
+.workbench-selection__handle::after { content: ''; position: absolute; inset: 9px; border: 1px solid #ffffff; background: #111313; }
+.workbench-selection__handle.is-nw { left: 0; top: 0; cursor: nwse-resize; }
+.workbench-selection__handle.is-ne { left: 100%; top: 0; cursor: nesw-resize; }
+.workbench-selection__handle.is-sw { left: 0; top: 100%; cursor: nesw-resize; }
+.workbench-selection__handle.is-se { left: 100%; top: 100%; cursor: nwse-resize; }
+.workbench-selection__handle:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: -2px; }

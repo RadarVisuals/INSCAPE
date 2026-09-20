@@ -7,9 +7,11 @@ import { detachTextFromDisplay, saveDisplayArticleResult } from './textTransfer.
 import TextTools from './TextTools.jsx';
 import { textRecoveryScope, readTextRecovery, retainTextRecovery, clearTextRecovery } from './textEditRecovery.js';
 import TextMoveHandle from './TextMoveHandle.jsx';
+import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
 const ArticleEditor = lazy(() => import('./ArticleEditor.jsx'));
 
 export default function DisplayArticleEditor({ placement, controller, cellSize, screenCellSize, canvasRef, onClose }) {
+  const { scale: standaloneScale } = useWorkbenchView();
   const scope = textRecoveryScope(controller.draft.profileAddress, placement.id, controller.moduleId, controller.selectedGridId);
   const recovered = readTextRecovery(controller.store, scope);
   const [article, setArticle] = useState(() => recovered?.value || displayTextArticle(placement.text)), [host, setHost] = useState(null), [error, setError] = useState(recovered?.failure.message || '');
@@ -34,8 +36,8 @@ export default function DisplayArticleEditor({ placement, controller, cellSize, 
   const detach = rectangle => {
     if (!save(working.current)) return;
     detachTextFromDisplay(controller.store, controller.draft.profileAddress, { moduleId: controller.moduleId, gridId: controller.selectedGridId,
-      expected: expected.current, cellSize: screenCellSize, window: {
-        left: Math.max(8, rectangle.left), top: Math.max(8, rectangle.top), width: Math.max(240, rectangle.width), height: Math.max(180, rectangle.height),
+      expected: expected.current, cellSize: screenCellSize / standaloneScale, window: {
+        left: Math.max(8, rectangle.left / standaloneScale), top: Math.max(8, rectangle.top / standaloneScale), width: Math.max(240, rectangle.width / standaloneScale), height: Math.max(180, rectangle.height / standaloneScale),
       } });
   };
   const outside = point => { const bounds = canvasRef.current?.getBoundingClientRect(); return bounds && (point.x < bounds.left || point.x > bounds.right || point.y < bounds.top || point.y > bounds.bottom); };

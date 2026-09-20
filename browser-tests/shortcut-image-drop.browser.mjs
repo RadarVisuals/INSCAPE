@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 
-test('image chooser pointer drop replaces only the shortcut icon and survives reload', { timeout: 45000 }, async () => {
+test('expanded image pointer drop replaces only the shortcut icon and survives reload', { timeout: 45000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     for (const width of [1440, 700]) {
@@ -19,10 +19,10 @@ test('image chooser pointer drop replaces only the shortcut icon and survives re
       await page.goto('http://127.0.0.1:5173/browser-tests/library-images-fixture.html');
       const initial = await page.evaluate(() => JSON.stringify(window.__imageTest.draft()));
       await page.locator('.system-workflow__desktop-shortcut').dblclick();
-      await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).click();
-      await page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).click();
+      await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).press('Enter');
+      await page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).press('Enter');
       await page.getByRole('button', { name: 'Library', exact: true }).click();
-      await page.getByRole('button', { name: 'Open 3 images of ABYSSAL STUDY', exact: true }).click();
+      await page.getByRole('button', { name: 'Show 3 images of ABYSSAL STUDY', exact: true }).click();
       const card = page.getByRole('button', { name: 'Image 2 of ABYSSAL STUDY', exact: true });
       await page.waitForFunction(() => document.querySelector('[aria-label="Image 2 of ABYSSAL STUDY"]')?.getAttribute('aria-disabled') === 'false');
       const source = await card.boundingBox();
@@ -50,7 +50,7 @@ test('image chooser pointer drop replaces only the shortcut icon and survives re
       await page.getByRole('menuitem', { name: 'EDIT ICON', exact: true }).click();
       await page.getByRole('slider', { name: 'Shortcut icon size', exact: true }).fill('100');
       await page.getByRole('slider', { name: 'Shortcut icon zoom', exact: true }).fill('1.5');
-      await page.getByRole('button', { name: 'Done', exact: true }).click();
+      await page.getByRole('button', { name: 'Done', exact: true }).press('Enter');
       await page.reload();
       await icon.waitFor();
       assert.equal(await icon.getAttribute('src'), 'https://images.inscape.test/transparent-fallback.webp');

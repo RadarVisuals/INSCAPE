@@ -2,8 +2,9 @@ import { useLayoutEffect, useRef } from 'react';
 
 // Automatic end spacing may yield to a fitting article. Explicit article padding
 // remains authored content; genuinely long articles keep their normal scroll tail.
-export default function TextViewport({ children, automaticPadding, mode }) {
+export default function TextViewport({ children, automaticPadding, mode, resetKey = null }) {
   const viewport = useRef(null), content = useRef(null);
+  useLayoutEffect(() => { if (resetKey !== null) viewport.current.scrollTop = 0; }, [resetKey]);
   useLayoutEffect(() => {
     const scroll = viewport.current, body = content.current;
     if (!automaticPadding) {

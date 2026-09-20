@@ -20,11 +20,12 @@ export default function LatticeProductionFocusArtwork({ entry, motion }) {
   const mediaMotion = projectLatticeProductionFocusMediaMotion(entry.placement, dimensions, motion);
   const background = entry.placement.backing.enabled ? entry.placement.backing.color
     : entry.placement.transparencyMode === 'OPAQUE' ? '#d8d4ca' : 'transparent';
+  const mediaStyle = { ...mediaMotion.rectangle, transform: renderedSystemWorkflowCssTransform(mediaMotion) };
+  const fallbackMedia = !failed && <img alt={entry.accessibleLabel} className="lattice-production-focus-artwork__media" onError={() => setFailed(true)} referrerPolicy="no-referrer" src={entry.media.src} style={mediaStyle} />;
   return <div className="lattice-production-focus-artwork">
     {presentation.backplateRectangle && <span className="lattice-production-focus-artwork__mat" style={{ backgroundColor: presentation.mat.color }} />}
     <span className="lattice-production-focus-artwork__opening" style={{ ...percentRectangle(presentation.mediaOpeningRectangle, footprint), backgroundColor: background }} />
-    {!failed && <img alt={entry.accessibleLabel} className="lattice-production-focus-artwork__media" onError={() => setFailed(true)} referrerPolicy="no-referrer" src={entry.media.src}
-      style={{ ...mediaMotion.rectangle, transform: renderedSystemWorkflowCssTransform(mediaMotion) }} />}
+    {fallbackMedia}
     {failed && <span className="lattice-production-focus-artwork__unavailable">Artwork unavailable</span>}
   </div>;
 }

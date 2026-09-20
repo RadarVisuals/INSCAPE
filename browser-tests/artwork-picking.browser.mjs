@@ -185,8 +185,11 @@ for (const width of [1440, 390]) test(`visitor clicks through transparent foregr
     const back = page.locator('[data-placement-id]').first(), box = await back.boundingBox();
     await page.mouse.click(box.x + 110, box.y + 110);
     await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor();
-    assert.match(await page.getByRole('complementary', { name: 'Display Module instruments', exact: true }).innerText(), /Alpha Artwork 1 public fixture description/);
-    assert.equal(await page.locator('[data-placement-id]').last().getAttribute('data-inspection-context'), 'foreground');
+    // Metadata is now an independent window. The selected inspection source and
+    // focus recovery identify the picked artwork without opening that window.
+    assert.equal(await back.getAttribute('data-inspection-context'), 'selected');
+    // Default Lift inspection dims the remaining composition behind the lift.
+    assert.equal(await page.locator('[data-placement-id]').last().getAttribute('data-inspection-context'), 'background');
     await page.screenshot({ path: `.browser-test-runtime/transparent-picking-${width}.png` });
     await page.keyboard.press('Escape');
     await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor({ state: 'detached' });

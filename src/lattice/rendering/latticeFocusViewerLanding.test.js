@@ -32,8 +32,8 @@ test('owner metadata remains independent from artwork focus motion', () => {
   assert.doesNotMatch(ownerMetadata, /LatticeFocusViewer|originRectangle|returnLanding|createPortal/);
 });
 
-test('Visitor uses the same landing handoff while retaining its stored layer order', () => {
-  assert.match(visitor, /viewerPlacementId=\{viewer\.sourcePlacementId\}/);
+test('Visitor limits the landing handoff to the selected Grid and retains stored layer order', () => {
+  assert.match(visitor, /viewerPlacementId=\{selected \? viewer\.sourcePlacementId : null\}/);
   assert.doesNotMatch(visitor, /placement\.layer\s*=/);
 });
 

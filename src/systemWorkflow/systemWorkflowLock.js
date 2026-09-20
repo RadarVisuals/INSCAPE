@@ -1,3 +1,4 @@
+import { placementGroup } from './domain/placementGroups.js';
 import { SYSTEM_WORKFLOW_VISIBILITY, assertValidSystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
 import { sameSystemWorkflowPlacementSnapshot } from './systemWorkflowRemoval.js';
 
@@ -7,6 +8,7 @@ export function createSystemWorkflowLockCandidate(draftInput, { expectedPlacemen
   if (!sameSystemWorkflowPlacementSnapshot(placement, expectedPlacement)) throw Object.assign(new TypeError('Canonical placement changed before lock editing completed'), { code: 'SYSTEM_WORKFLOW_LOCK_STALE' });
   if (typeof locked !== 'boolean') throw Object.assign(new TypeError('A canonical lock value is required'), { code: 'SYSTEM_WORKFLOW_LOCK_INVALID' });
   if (placement.locked === locked) return null;
-  placement.locked = locked;
+  const members = placementGroup(grid, placementId)?.placementIds || [placementId];
+  for (const member of grid.placements) if (members.includes(member.id)) member.locked = locked;
   return assertValidSystemWorkflowDraft(draft);
 }

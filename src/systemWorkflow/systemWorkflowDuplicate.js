@@ -1,3 +1,4 @@
+import { requireCompleteGroups } from './domain/placementGroups.js';
 import { assertValidSystemWorkflowDraft, SYSTEM_WORKFLOW_VISIBILITY } from './domain/systemWorkflowDraft.js';
 import { createSystemWorkflowPlacementId } from './systemWorkflowPlacement.js';
 
@@ -57,7 +58,7 @@ export function createSystemWorkflowGroupDuplicateCandidate(draftInput, {
       throw duplicateError('SYSTEM_WORKFLOW_DUPLICATE_STALE_PLACEMENT', 'Canonical placement changed before duplicate');
     }
     return source;
-  });
+  }).sort((left, right) => left.layer - right.layer);
   const usedIds = new Set(draft.grids.flatMap((candidate) => candidate.placements.map(({ id }) => id)));
   const offset = groupOffset(sources);
   let layer = nextOrder(grid.placements, 'layer');
@@ -79,6 +80,12 @@ export function createSystemWorkflowGroupDuplicateCandidate(draftInput, {
     };
     return duplicate;
   });
+  requireCompleteGroups(grid, placementIds);
+  const idMap = new Map(sources.map((source, index) => [source.id, duplicates[index].id]));
+  const copiedGroups = (grid.groups || []).filter(group => group.placementIds.every(id => idMap.has(id))).map(group => ({
+    ...structuredClone(group), id: `group:${globalThis.crypto.randomUUID()}`, placementIds: group.placementIds.map(id => idMap.get(id)),
+  }));
+  if (copiedGroups.length) grid.groups.push(...copiedGroups);
   grid.placements.push(...duplicates);
   return Object.freeze({
     draft: assertValidSystemWorkflowDraft(draft),

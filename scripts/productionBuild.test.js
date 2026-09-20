@@ -132,8 +132,11 @@ test('missing manifest and graph inputs fail clearly', async () => {
 test('output validation rejects roots, profiles and unrelated directories', () => {
   const project = resolve(process.cwd());
   assert.throws(() => assertSafeOutputDirectory(project, project), /unsafe/);
-  assert.throws(() => assertSafeOutputDirectory(project, resolve(project, '..', 'unrelated-output')), /inside the project or system temporary/);
+  // A checkout may itself live under tmpdir; its sibling is then a valid output.
+  const unrelated = resolve(tmpdir(), '..', 'underneath-unrelated-output');
+  assert.throws(() => assertSafeOutputDirectory(project, unrelated), /inside the project or system temporary/);
   assert.doesNotThrow(() => assertSafeOutputDirectory(project, resolve(project, '.alternate-output')));
+  assert.doesNotThrow(() => assertSafeOutputDirectory(project, resolve(tmpdir(), 'underneath-test-output')));
 });
 
 test('authoring pruning touches only the active verified output directory', async () => {

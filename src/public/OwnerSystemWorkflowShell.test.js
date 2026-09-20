@@ -43,7 +43,7 @@ test('System Workflow production shell preserves the Phase 3 authority and isola
     'operation notices dismiss automatically instead of permanently covering the workspace');
   assert.match(runtime, /aria-label="Dismiss notification"[\s\S]*onClick=\{dismissNotice\}/,
     'operation notices clear both runtime and controller errors when clicked');
-  assert.match(productionSources.find((source) => source.includes('useOwnerSystemWorkflowController')), /clearError/);
+  assert.match(await read('./ownerSystemWorkflow/useOwnerSystemWorkflowController.js'), /clearError/);
   assert.match(preview, /buildProfileDocumentV9/);
   assert.equal([shell, runtime, ...productionSources].some((source) => /src\/prototypes|\.\.\/prototypes|prototype\/owner-shell-system/iu.test(source)), false);
   assert.equal([runtime, ...productionSources].some((source) => /localStorage\.(setItem|removeItem)|sessionStorage\.(setItem|removeItem)/u.test(source)), false);

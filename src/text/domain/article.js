@@ -1,9 +1,10 @@
 import { validateProfileDocumentV9Asset } from '../../profileDocument/domain/profileDocumentV9Asset.js';
 import { validModuleEdges, moduleEdgeStyle } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';
+import { articleSections, joinArticleSections } from '../articleSections.js';
 
 export const ARTICLE_TYPE = 'INSCAPEArticle';
 export const ARTICLE_MAX_BYTES = 192 * 1024;
-export const MAX_TEXT_MODULES = 4;
+export const MAX_TEXT_MODULES = 16;
 export const defaultTextAppearance = () => ({ background: null, opacity: 1, frame: false, scale: 1, fontSize: 16, color: '#ffffff' });
 export const textAppearance = article => article.appearance || { ...defaultTextAppearance(), background: '#101111', frame: true };
 export function textContentStyle(article) {
@@ -22,6 +23,7 @@ export function textOutputStyle(article, window) {
   if (!transform) return textSurfaceStyle(article);
   const rotated = transform.quarterTurns % 2 === 1;
   return { ...textSurfaceStyle(article), position: 'absolute', left: '50%', top: '50%',
+    '--workbench-content-width': `${rotated ? window.height : window.width}px`,
     width: rotated ? window.height : window.width, height: rotated ? window.width : window.height,
     transform: `translate(-50%, -50%) rotate(${transform.quarterTurns * 90}deg) scale(${transform.mirrorX ? -1 : 1}, ${transform.mirrorY ? -1 : 1})` };
 }
@@ -46,7 +48,7 @@ export function safeArticleLink(value) {
   if (!string(value, 2048) || /[\u0000-\u0020\u007f]/u.test(value)) return false;
   try { const u = new URL(value); return ['https:', 'mailto:'].includes(u.protocol) && !u.username && !u.password; } catch { return false; }
 }
-const blocks = ['paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'horizontalRule', 'artwork'];
+const blocks = ['paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'horizontalRule', 'artwork', 'pageBreak'];
 function validMark(mark) {
   if (['bold', 'italic', 'strike', 'underline', 'code'].includes(mark?.type)) return exact(mark, ['type']);
   if (mark?.type === 'textStyle') return exact(mark, ['type', 'attrs']) && exact(mark.attrs, ['fontFamily'])
@@ -99,7 +101,7 @@ export function assertArticle(article) {
         || node.attrs.asset.media.type !== 'image' || typeof node.attrs.asset.media.url !== 'string'
         || !string(node.attrs.alt, 1000) || !string(node.attrs.caption, 2000)) throw new Error('Invalid artwork reference.');
     } else if (node.attrs && Object.keys(node.attrs).length) throw new Error('Unsupported block attributes.');
-    if (['hardBreak', 'horizontalRule', 'artwork'].includes(type)) { if (node.content !== undefined) throw new Error('Invalid leaf block.'); return; }
+    if (['hardBreak', 'horizontalRule', 'artwork', 'pageBreak'].includes(type)) { if (node.content !== undefined) throw new Error('Invalid leaf block.'); return; }
     if (node.content !== undefined && !Array.isArray(node.content)) throw new Error('Invalid article content.');
     if (['doc', 'blockquote', 'listItem', 'bulletList', 'orderedList'].includes(type) && !node.content?.length) throw new Error('Empty article structure.');
     if (type === 'listItem' && node.content[0].type !== 'paragraph') throw new Error('A list item must start with a paragraph.');
@@ -117,8 +119,24 @@ export function validTextModules(items, published = false) {
     if (!Array.isArray(items) || items.length > MAX_TEXT_MODULES) return false;
     const ids = new Set();
     return items.every(item => {
-      if (!exact(item, ['id', 'article', ...(!published ? ['visibility'] : [])], published ? [] : ['target']) || !TEXT_ID.test(item.id) || ids.has(item.id)) return false;
+      if (!exact(item, ['id', 'article', ...(!published ? ['visibility'] : [])], published ? ['sceneLink', 'pagination'] : ['target', 'sceneLink', 'pagination']) || !TEXT_ID.test(item.id) || ids.has(item.id)) return false;
       ids.add(item.id); assertArticle(item.article);
+      if (item.pagination !== undefined && item.pagination !== 'pages') return false;
+      if (item.sceneLink !== undefined) {
+        const link = item.sceneLink;
+        const identifier = value => typeof value === 'string' && value.length > 0 && value.length <= 160;
+        if (link?.mode === 'sections') {
+          if (!exact(link, ['mode', 'displayId']) || !/^display:[A-Za-z0-9_-]+$/u.test(link.displayId) || item.pagination !== undefined) return false;
+        } else {
+          if (!exact(link, ['displayId', 'gridId', 'passages']) || !/^display:[A-Za-z0-9_-]+$/u.test(link.displayId)
+            || !identifier(link.gridId) || !Array.isArray(link.passages) || link.passages.length > 128) return false;
+          const grids = new Set([link.gridId]);
+          for (const passage of link.passages) {
+            if (!exact(passage, ['gridId', 'article']) || !identifier(passage.gridId) || grids.has(passage.gridId)) return false;
+            grids.add(passage.gridId); assertArticle(passage.article);
+          }
+        }
+      }
       return published || ['PRIVATE', 'PUBLIC'].includes(item.visibility) && (item.target == null || validLegacyTarget(item.target));
     });
   } catch { return false; }
@@ -129,8 +147,58 @@ function validLegacyTarget(t) {
     && /^0x[\da-f]{64}$/u.test(t.tokenId) && /^0x(?:[\da-f]{2})+$/iu.test(t.metadataValue) && t.metadataValue.length <= 8192
     && Number.isSafeInteger(t.assetIndex) && t.assetIndex >= -1 && t.assetIndex < 128;
 }
-export const projectTextModules = items => items.filter(i => i.visibility === 'PUBLIC').map(({ id, article }) => ({ id, article: structuredClone(article) }));
-export const restoreTextModules = (published = [], local = []) => [
-  ...published.map(i => ({ ...structuredClone(i), visibility: 'PUBLIC' })),
+export function projectTextModules(items, displays = []) {
+  return items.filter(i => i.visibility === 'PUBLIC').flatMap(item => {
+    let { article, sceneLink } = item;
+    if (sceneLink) {
+      const display = displays.find(d => d.id === sceneLink.displayId);
+      if (sceneLink.mode === 'sections') {
+        const sections = articleSections(article);
+        const selected = (display?.grids || []).flatMap((grid, index) => grid.visibility === 'PUBLIC' ? [{ index, nodes: sections[index] || [] }] : []);
+        if (!selected.length) return [];
+        article = { ...article, title: selected[0].index === 0 ? article.title : '', content: joinArticleSections(selected.map(section => section.nodes)) };
+      } else {
+        const ids = new Set(display?.grids.filter(g => g.visibility === 'PUBLIC').map(g => g.id));
+        const passages = [{ gridId: sceneLink.gridId, article }, ...sceneLink.passages].filter(p => ids.has(p.gridId));
+        if (!passages.length) return [];
+        const [first, ...rest] = passages;
+        article = first.article;
+        sceneLink = { displayId: sceneLink.displayId, gridId: first.gridId, passages: rest };
+      }
+    }
+    return [{ id: item.id, article: structuredClone(article), ...(sceneLink ? { sceneLink: structuredClone(sceneLink) } : {}),
+      ...(item.pagination ? { pagination: item.pagination } : {}) }];
+  });
+}
+export const restoreTextModules = (published = [], local = [], sectionDisplays = null) => [
+  ...published.map(i => {
+    const restored = { ...structuredClone(i), visibility: 'PUBLIC' };
+    const previous = local.find(p => p.id === i.id);
+    if (previous?.sceneLink && previous.sceneLink.displayId !== restored.sceneLink?.displayId)
+      throw new Error('This publication uses a different Text scene connection. Local passages have been preserved; restore was not applied.');
+    if (previous && (previous.sceneLink?.mode === 'sections' || restored.sceneLink?.mode === 'sections') && previous.sceneLink?.mode !== restored.sceneLink?.mode)
+      throw new Error('This publication uses a different Text linking mode. Local text has been preserved; restore was not applied.');
+    if (restored.sceneLink?.mode === 'sections' && previous) {
+      if (!sectionDisplays) throw new Error('Display order is required to restore linked Text sections without losing local text.');
+      const id = restored.sceneLink.displayId;
+      const ids = key => (sectionDisplays[key].find(d => d.id === id)?.grids || []).map(g => g.id);
+      const oldIds = ids('previous'), publicIds = ids('published'), nextIds = ids('restored');
+      const oldSections = articleSections(previous.article), newSections = articleSections(restored.article);
+      // A private first section's title was deliberately excluded from publication.
+      // Preserve it with that section if restore places public Grids before it.
+      if (previous.article.title && oldIds[0] && !publicIds.includes(oldIds[0])) {
+        if (nextIds[0] === oldIds[0]) restored.article.title = previous.article.title;
+        else oldSections[0] = [{ type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: previous.article.title }] }, ...oldSections[0]];
+      }
+      const sections = nextIds.map(gridId => publicIds.includes(gridId) ? newSections[publicIds.indexOf(gridId)] || [] : oldSections[oldIds.indexOf(gridId)] || []);
+      const retained = oldSections.filter((_, index) => index >= oldIds.length || !nextIds.includes(oldIds[index]));
+      restored.article.content = joinArticleSections([...sections, ...retained]);
+    } else if (restored.sceneLink && previous?.sceneLink?.displayId === restored.sceneLink.displayId) {
+      const retained = [{ gridId: previous.sceneLink.gridId, article: previous.article }, ...previous.sceneLink.passages]
+        .filter(p => p.gridId !== restored.sceneLink.gridId && !restored.sceneLink.passages.some(next => next.gridId === p.gridId));
+      restored.sceneLink.passages.push(...structuredClone(retained));
+    }
+    return restored;
+  }),
   ...local.filter(i => !published.some(p => p.id === i.id)).map(i => ({ ...structuredClone(i), visibility: 'PRIVATE' })),
 ];

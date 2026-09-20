@@ -20,6 +20,7 @@ function restoredPublicGrid(grid) {
     labelVisible: grid.labelVisible,
     labelAnchor: grid.labelAnchor,
     labelOffset: { ...grid.labelOffset },
+      ...(grid.groups ? { groups: structuredClone(grid.groups) } : {}),
     placements: grid.placements.map(({ asset, ...placement }) => ({
       ...structuredClone(placement),
       ...(placement.kind === 'text' ? {} : { stableAssetId: asset.stableAssetId }),
@@ -85,7 +86,13 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
       return grids.length ? [{ ...module, visibility: 'PRIVATE', grids: [...grids, createEmptySystemWorkflowWorldCoverGrid()] }] : [];
     });
   const miniApps = restoreMiniApps(document.miniApps, currentDraftInput?.miniApps);
-  const texts = restoreTextModules(document.texts, currentDraftInput?.texts);
+  const sectionDisplays = (grids, displays = []) => [{ id: 'display:primary', grids: grids || [] }, ...displays]
+    .map(d => ({ id: d.id, grids: d.grids.filter(g => g.id !== SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID) }));
+  const texts = restoreTextModules(document.texts, currentDraftInput?.texts, {
+    previous: sectionDisplays(currentDraftInput?.grids, currentDraftInput?.displays),
+    published: sectionDisplays(document.grids, document.displays),
+    restored: sectionDisplays([...document.grids, ...privateGrids], [...publishedDisplays, ...privateDisplays]),
+  });
   const privateMiniAppWindows = (currentDraftInput?.workbench?.miniApps || []).filter(window =>
     miniApps.some(app => app.id === window.id && app.visibility === 'PRIVATE'));
   let workbench = document.workbench ? structuredClone(document.workbench)

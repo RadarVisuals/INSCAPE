@@ -1,10 +1,10 @@
-import { ArrowLeft, ChevronDown, ChevronRight, Folder, Layers3, Plus, SquareStack, UserRound, WandSparkles } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight, Folder, Images, Layers3, Plus, SquareStack, UserRound, WandSparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { BROWSER_ASSET_SIZE, BROWSER_VIEW_KINDS, categoryAssetIds, categoryMembershipState } from '../../lattice/browser/browserWorkspaceModel.js';
 import RackMenu from '../menus/RackMenu.jsx';
 import { clearOwnerSystemWorkflowDocumentSelection } from './ownerSystemWorkflowSelection.js';
-import OwnerSystemWorkflowLibraryImages, { ImageChoice, libraryImageChoices, librarySourceLabel } from './OwnerSystemWorkflowLibraryImages.jsx';
+import { ImageChoice, libraryImageChoices, librarySourceLabel } from './OwnerSystemWorkflowLibraryImages.jsx';
 import { OwnerSystemWorkflowSidebarDeleteConfirmation, OwnerSystemWorkflowSidebarEditor } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
 
 const assetId = (asset) => asset?.stableAssetId || asset?.id;
@@ -41,7 +41,7 @@ function LibraryNavigationButton({ active, categoryId, count, draggable = false,
   </button>;
 }
 
-function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDown, onOpenImages, onImageActivate, workspace }) {
+function LibraryResults({ assets, emptyLabel, expandedImageIds, onActivate, onContext, onPointerDown, onToggleImages, onImageActivate, workspace }) {
   const [decodedRatios, setDecodedRatios] = useState(() => new Map());
   if (!assets.length) return <p className="lattice-browser-status">{emptyLabel}</p>;
   const selected = new Set(workspace.selectedAssetIds);
@@ -61,7 +61,9 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
         : [asset.owned ? 'OWNED' : null, asset.collectionPreviewTokenId ? 'TOKEN PREVIEW' : null,
           asset.creatorRelationship === 'collection' ? 'FROM CREATED COLLECTION' : asset.created ? 'CREATED' : null,
           asset.created && !asset.owned ? 'NOT OWNED' : null].filter(Boolean);
-      const imageCount = !opensCollection ? libraryImageChoices(asset).length : 0;
+      const choices = opensCollection ? [] : libraryImageChoices(asset);
+      const imageCount = choices.length;
+      const expanded = expandedImageIds.has(id);
       return [<div className="system-workflow__library-item" key={id}><button aria-label={[asset.title || id, asset.collection].filter(Boolean).join(' / ')} aria-pressed={isSelected}
         className="lattice-browser-asset" data-collection={opensCollection || undefined}
         data-multi-selected={isSelected && selected.size > 1 || undefined} data-selected={isSelected || undefined}
@@ -89,10 +91,12 @@ function LibraryResults({ assets, emptyLabel, onActivate, onContext, onPointerDo
         </span>}
       </button>
         {imageCount > 1 && <button className="system-workflow__library-images-trigger" type="button"
-          data-library-images-for={id}
-          title={`Open ${imageCount} images`} aria-label={`Open ${imageCount} images of ${asset.title || id}`} onClick={(event) => onOpenImages(event, asset)}>
+          data-library-images-for={id} aria-expanded={expanded}
+          title={`${expanded ? 'Fold' : 'Show'} ${imageCount} images in Library`}
+          aria-label={`${expanded ? 'Fold' : 'Show'} ${imageCount} images of ${asset.title || id}`}
+          onClick={() => onToggleImages(id)}>
           {imageCount}</button>}
-      </div>, ...(!opensCollection ? libraryImageChoices(asset).slice(1).map((choice, index) =>
+      </div>, ...(expanded ? choices.slice(1).map((choice, index) =>
         <div className="system-workflow__library-item" key={id + ':' + choice.sources.join('|')}>
           <ImageChoice asset={asset} choice={choice} number={index + 2} onActivate={onImageActivate}
             onPointerDown={onPointerDown} workspace={workspace} onContext={onContext} />
@@ -109,19 +113,14 @@ function contextAnchor(event) {
 
 export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, data, menuSurfaceId,
   onAssetActivate, onAssetPointerDown, onImageActivate, workspace }) {
-  const [imageAsset, setImageAsset] = useState(null);
-  const imageReturnRef = useRef(null);
-  const resultsRef = useRef(null);
-  const closeImages = () => {
-    setImageAsset(null);
-    requestAnimationFrame(() => {
-      if (resultsRef.current) resultsRef.current.scrollTop = imageReturnRef.current?.scrollTop || 0;
-      const trigger = [...(resultsRef.current?.querySelectorAll('[data-library-images-for]') || [])]
-        .find((node) => node.dataset.libraryImagesFor === imageReturnRef.current?.id);
-      trigger?.focus({ preventScroll: true });
-    });
-  };
-  useEffect(() => { setImageAsset(null); }, [workspace.view, workspace.query, workspace.collection]);
+  // Temporary browsing state, retained across filtering and closing the drawer.
+  // The workspace keys this presenter by profile; no authored data is changed.
+  const [expandedImageIds, setExpandedImageIds] = useState(() => new Set());
+  const toggleImages = (id) => setExpandedImageIds((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
   const categorySectionRef = useRef(null); const organizationGestureRef = useRef(null); const suppressSelectionRef = useRef(false);
   const [contextMenu, setContextMenu] = useState(null); const [organizationDrag, setOrganizationDrag] = useState(null);
   const [collapsedSections, setCollapsedSections] = useState(() => new Set());
@@ -364,10 +363,8 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         onLostPointerCapture={workspace.sidebarResize.finish} onPointerCancel={workspace.sidebarResize.finish}
         onPointerDown={workspace.sidebarResize.begin} onPointerMove={workspace.sidebarResize.update}
         onPointerUp={workspace.sidebarResize.finish} title="Resize Browser navigation" type="button" />
-      <main className="lattice-browser-results" ref={resultsRef}>
+      <main className="lattice-browser-results">
         {data.persistenceError && <div className="lattice-browser-notice" data-error role="alert">{data.persistenceError}</div>}
-        {imageAsset ? <OwnerSystemWorkflowLibraryImages asset={imageAsset} onBack={closeImages}
-          onActivate={onImageActivate} onPointerDown={onAssetPointerDown} /> : <>
         {data.collectionContext && <div className="lattice-browser-notice" role="status">
           Created / {data.collectionContext.name || 'Collection'} · {data.collectionContext.resolved || 0} / {data.collectionContext.total || 0} tokens
         </div>}
@@ -380,13 +377,9 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         {data.createdStatus === 'loading' && <p className="lattice-browser-notice" role="status">Loading created {data.createdProgress?.resolved || 0} / {data.createdProgress?.total || 0}</p>}
         {data.collectionContext && data.status === 'loading' && <p className="lattice-browser-notice" role="status">Loading collection tokens {data.progress?.resolved || 0} / {data.progress?.total || 0}</p>}
         <LibraryResults assets={related} emptyLabel={emptyLabel} onActivate={onAssetActivate} onImageActivate={onImageActivate}
-          onOpenImages={(event, asset) => {
-            imageReturnRef.current = { id: assetId(asset), scrollTop: resultsRef.current.scrollTop };
-            setImageAsset(asset); resultsRef.current.scrollTop = 0;
-          }}
+          expandedImageIds={expandedImageIds} onToggleImages={toggleImages}
           onContext={openAssetContext} onPointerDown={beginOrganizationDrag}
           workspace={{ ...workspace, selectAsset: (id, event) => { if (!suppressSelectionRef.current) workspace.selectAsset(id, event); } }} />
-        </>}
       </main>
     </div>
     {contextMenu && createPortal(<RackMenu anchor={contextMenu.anchor}

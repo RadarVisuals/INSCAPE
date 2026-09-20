@@ -10,7 +10,8 @@ Rollback baseline before the documentation reset: `64458ac`
 The Text module is a simple Tiptap editor with formatting, local saving and a
 reader. On 2026-09-16 the founder removed NFT tools and all file import/export
 from its scope. No article upload endpoint or token transaction flow remains.
-One module holds one illustrated article; the initial bound is four modules.
+One module holds one illustrated article, or a scene-linked sequence of articles
+as described below; up to 16 standalone Text modules are supported per Workbench.
 Write and Read use the same full content viewport as Visitor: no duplicate window title,
 formatting toolbar or saved-status footer reserves space. Window actions appear
 on hover or keyboard focus as an overlay, and remain available on touch.
@@ -64,47 +65,84 @@ Optional `appearance.titleFontSize` accepts 8–300 pixels and travels with the
 article through saving, Display transfer and publication. Omission retains the
 existing 28-pixel title; body Text size remains independent.
 
-## Placement Animation module
+## Scene-linked Text and reading pages
 
-The owner opens one independent Animation window through Add → Animation module.
-It has its own UI and follows one selected artwork placement in the active Display;
-it has no canvas, source-asset store, timeline or cross-Grid travel behavior.
-Workbench reuses its shared window/selection host and stores the window's open
-state and geometry locally. Closing the window leaves authored effects intact.
+A standalone Text may explicitly follow one Display through Text tools. New links
+use one full article: explicit page breaks divide it into sections, in Display
+Grid order (excluding the cover). Section one follows Grid one, regardless of the
+Grid or reading page selected when linking. Write edits the full article; Read
+and Visitor show the current section with contained scrolling for overflow.
+Resizing never changes section boundaries. Grid changes reset section scrolling;
+Text scrolling does not advance the Grid. Unmapped sections remain authored but
+are not published. New links store `sceneLink: { mode: 'sections', displayId }`
+without automatic reading-page pagination. Publication excludes private Grid
+sections; restore merges retained local sections using the respective Grid orders.
 
-The Display placement owns optional `animation`: Float supplies horizontal and
-vertical amplitudes in canvas units (0–4) and a figure-eight cycle (2–60 seconds);
-Flicker supplies depth (0–1) and a repeating opacity cycle (3–30 seconds).
-Both effects can coexist. Text placements are outside this first version.
-The window lists only applied effects. Add effect offers unused effects; one
-settings section opens at a time. Each effect has independent On/Off and Remove
-actions; Remove all effects is one undoable edit. Optional effect `enabled: false`
-keeps its parameters while suppressing playback. Omission means enabled, preserving
-existing draft-v4/public-v9 records without a migration or rewrite. Re-enabling
-retains the stored values; removing and adding again uses defaults.
+Existing passage links retain their previous behavior: their
+original article is the passage for the Grid selected when linked; additional
+Grids own separate passages within that Text record. Missing passages start empty
+with the original article's typography. Repeated scenery uses distinct Grids for
+distinct story moments. Display owns navigation and reports its current Grid and
+temporary swipe progress through a Workbench-scoped connection. Text follows that
+report without choosing or advancing the Display's Grid. A closed or missing
+Display shows an unavailable prompt and preserves its passages.
 
-A small explicit effect catalog supplies labels, parameter bounds/defaults and
-render instructions to the editor, validators and shared renderer. Effect CSS is
-kept beside its definition. Adding an effect still requires its behavior, catalog
-registration, stylesheet import and behavioral checks; this is not a plugin engine.
-The editor receives a target summary and scoped change action, not a Display
-controller or store. Display retains edit authority and temporary preview state.
-Library assets and other placements of the same artwork are not modified.
-Effect edits use the existing scoped authoring transaction, save and undo path.
+Existing passage links enable Read as pages. Automatic overflow pagination and optional authored
+page breaks divide one rich article into reading pages. Small previous/next
+controls and a page count turn only the text; the last page stops. Returning to a
+Grid starts its passage at page one. Page position is temporary and never saved.
+Read and Visitor share the reader and reduced-motion behavior. Write retains one
+continuous editor. Scene-linked Text remains on the Workbench rather than being
+transferred into a single Grid and losing its other passages.
 
-Unlocked authoring is static until Preview is enabled in Animation. Preview is
-temporary, stops on target/Grid changes or window closure, and suspends direct
-artwork manipulation. Locked Displays, Play Grids and Visitor render saved effects.
-Inspection suspends the source motion. Reduced motion disables both effects;
-offscreen scenes, hidden browser documents and the owner behind public Preview
-pause motion. CSS applies translation and opacity without changing saved geometry,
-crop, free scaling or source transforms; there is no per-frame draft write.
+Optional Text `sceneLink` and `pagination` fields extend draft v4 and public v9;
+`pageBreak` is an optional rich-text leaf. Existing records retain scrolling and
+their previous interpretation without rewriting. Publication omits passages for
+private or missing Grids and Text linked to an excluded Display. Restore retains
+missing local passages for the same linked Display. Save, recovery, and undo use
+the existing profile draft store. Window geometry remains independent of passages.
 
-Draft-v4 and public-v9 accept this optional placement field. Existing data without
-it stays static and is not rewritten. Publication, restoration and duplication
-retain it. The Animation editor is not part of the public document; effects are.
-This is separate from the removed Mirror canvas module and does not restore its
-former top-level `animations` records.
+## Removed artwork animation
+
+On 2026-09-20 the founder removed the Animation module, Float/Flicker and the
+layered-character assembly/playback experiment to focus on core Display navigation
+and authoring. This removes the Animation window, effect authoring and playback
+controls, layered source preparation, Pixi renderer and assembled-frame cache.
+Display, Visitor and inspection render ordinary selected artwork media. Layered
+characters are not assembled into a replacement static representation.
+Click-to-move is not part of current scope.
+
+The founder confirmed that no saved drafts or animation data require compatibility.
+Placement/group animation and layeredArtwork fields, authoring actions and tool
+window state are removed rather than retained as dormant compatibility code.
+Existing ordinary static compositions retain their schema and behavior; there is
+no storage-key change, migration or draft reset.
+
+Grid dragging, momentum, wraparound, Play Grids and inspection transitions remain
+Display behavior. Removing artwork animation is not proof that Grid transition
+stutter is fixed. Validate navigation with representative static compositions.
+
+## Persistent artwork groups
+
+Display supports persistent, non-nested artwork groups within one Grid. Layers
+offers Group layers for two or more ungrouped artwork placements and Ungroup for
+one complete group. Text is outside this first version. Grouping preserves exact
+placement geometry, crop, transforms, source identity and stacking order, including
+unrelated artwork between group members. Selecting a member selects its whole
+group; movement, resizing, transforms, duplication and removal reuse the existing
+multi-placement operations. Lock and temporary editor visibility act on all members.
+Individual geometry edits and composition spacing require ungrouping first.
+
+Optional Grid `groups` records own IDs and `placementIds`. Membership is stored
+once, not copied into placements. Ungroup retains the authored arrangement;
+undo restores the group. The Display owns membership, independently of the host
+and Library.
+
+Draft-v4 and public-v9 accept the optional Grid field, including World Cover and
+additional Displays. Old documents without groups retain their interpretation and
+are not rewritten on read. Save, recovery, undo, duplication, publication and
+restoration retain groups. Duplication creates independent group and member IDs.
+Dangling, overlapping, nested, private-member and partially locked groups are invalid.
 
 ## Removed Mirror module
 
@@ -322,6 +360,35 @@ are not part of that visitor experience. Module chrome is not Stage content.
 
 ## Public Workbench and visitor interaction
 
+Dragging empty Workbench space marquee-selects open Display and standalone Text
+windows. Shift-drag adds to the selection; Shift-click a window header toggles it.
+Focused window headers also toggle selection with Shift+Enter.
+The selection's corner handles scale its windows proportionally around the
+opposite corner, including text. Escape cancels a gesture or clears selection.
+Dragging anywhere inside the selection moves the selected modules together,
+including over artwork, text, headers and gaps. This temporarily takes priority
+over module interactions. Clicking outside clears selection. The focused selection
+also moves with arrow keys (one screen pixel, or ten with Shift). Group movement
+uses the same session-only view state as group scaling; Escape cancels an active
+drag and restores its starting position.
+Group movement and corner resizing respect the visible Workbench bounds above
+the dock. Moving a zoomed module individually uses those same screen-space
+limits, rather than the original unscaled window's limits. Group movement keeps
+relative spacing intact at the boundary.
+Ctrl + wheel scales the selection, or all Display and Text windows when nothing
+is selected, between 25% and 100%, including their positions, spacing and
+rendered text. Text retains its original wrapping area; the entire output shrinks.
+Dock, shortcuts, Identity and companion tools retain their normal size.
+This is session-only view state, shared by owner and Visitor rendering, never
+captured as authored geometry or publication data. Ctrl/Cmd + minus/plus and
+the visible zoom controls adjust it; Ctrl/Cmd + 0 restores 100%. Immersive Display
+continues to fill the browser area independently. Ordinary Display wheel
+enlargement and article scrolling retain their existing behavior.
+Shared module boundaries use matching layout-pixel edges at fractional zoom,
+without changing the text's wrapping area or authored dimensions. Native window
+zoom paints text at its target size; rounding the visible frame never rewrites
+the authored layout.
+
 - The maker chooses which modules and Grids enter the public snapshot. Private
   modules and private Grids are omitted from that document, not merely hidden
   by the interface. Draft work can remain private while other work is published.
@@ -529,9 +596,22 @@ internal compatibility names during this migration; do not broadly rename them.
 - Dragging the Display Stage swipes between Grids directly in Visitor mode and
   when the owner's Display composition is locked. Unlocked authoring retains
   Space-drag navigation so ordinary dragging remains available for editing.
+  The Grid follows the pointer directly. Release continues with bounded momentum
+  that gradually slows to rest, including between Grids, without spring motion
+  or automatic alignment. Taking hold interrupts momentum immediately and retains
+  the position. Manual movement and Play Grids share one temporary camera position;
+  crossing a Grid boundary changes the selected Grid without interrupting travel.
+  Reduced motion omits momentum and retains discrete Grid selection on release.
+- A resting camera may remain between Grids while the owner edits the selected
+  Grid through Layers or directly on its visible artwork. The adjacent Grid is
+  a preview, not a second editing target. Layer coordinates and selection handles
+  follow the selected Grid's displayed position. Active dragging, coasting and
+  Play Grids suspend editing; resting at an offset does not. Unlock stops motion
+  while retaining that position. Opening Layers and cropping do not align the
+  camera or change authored geometry. Lock continues to protect composition edits.
 - The Display context menu offers Play Grids when more than one Grid exists.
   While playing, its toolbar exposes Pause; otherwise no playback icon appears. Playback
-  slides continuously through the ordered Grids and wraps without a dwell.
+  slides continuously through the ordered Grids at 12 seconds per Grid and wraps without a dwell.
   Pause retains progress; Stage interaction returns to manual control. Playback
   does not change the draft schema or publication. Reduced motion uses discrete
   Grid changes instead of sliding.
@@ -866,13 +946,16 @@ arrangement remain to be specified when implementing public Workbench entry.
 
 ## Editing, public inspection, and publication
 
-- The Library retains one canonical record per token. Its browsing grid exposes
-  covers and supported attached images as individual tiles labelled with their
-  source NFT; the image chooser can still focus on one NFT. Resolution variants
+- The Library retains one canonical record and initially one cover tile per token.
+  Its circular image-count button expands or folds that NFT's supported attached
+  images directly in the browsing grid, labelled with their source NFT. Each NFT
+  expands independently, so standalone poses can remain visible while a layered
+  character stays folded. Folded attachments are not mounted or loaded by the grid.
+  Expansion is temporary profile-scoped browsing state, retained across filters
+  and closing the Library, and reset on reload or profile change. Resolution variants
   of one image remain one choice. Choosing an image does not create a new token
   identity or change Library category membership. Navigation counts count source
-  records, not their image tiles. A compact circular image-count button opens the
-  NFT's image chooser. Library category drops remain available during asset drags;
+  records, not their image tiles. Library category drops remain available during asset drags;
   the Library fades and lets asset drops reach Displays behind its content area,
   while its category sidebar remains a drop target. Metadata refresh must keep cover URLs and image
   choices consistent without changing holding or creator authority.
@@ -926,6 +1009,15 @@ Grain is optional and independent of interface noise and texture in source artwo
 These settings survive publication, restore and Text transfer into Display.
 
 Workbench owns module-edge snapping and the local gap preference (0–128 pixels).
+While moving or resizing, temporary guides identify the applied module edge,
+visible Workbench grid line, or spacing bracket. Flush joins highlight their seam.
+Guides reflect the final bounded window, disappear when the interaction ends,
+and never enter saved layouts or publication. Module edges capture within 10
+screen pixels and retain their target until pulled beyond 18 screen pixels;
+Alt immediately releases snapping and its guides. Grid guides use the visible
+24-pixel Workbench lattice, including when a module is temporarily scaled.
+Settings calls the existing gap preference “Space between modules” and shows
+a two-window spacing preview. Existing preference keys and values are retained.
 Nearby visible module edges take priority over grid snapping, including top and
 bottom alignment. Zero gap permits flush joins. Alt bypasses both kinds of snapping;
 viewport bounds still win. Display resize retains its ratio and opposite corner.
@@ -941,9 +1033,10 @@ keys. Viewport limits take priority at edges. The existing profile-local
 `shortcutSnap` preference remains the storage owner, now labelled Grid snapping;
 older values retain their meaning for shortcuts and also control these windows.
 Toggling snapping or changing guide visibility does not rearrange existing
-windows. Text snaps its moving edges. Display snaps the edge on the dominant
-resize axis and derives the other dimension from its fixed Stage ratio, retaining
-the opposite corner. Artwork placement inside Display retains its own rules.
+windows. Text snaps its moving edges. Display projects pointer movement onto its
+fixed Stage ratio, retaining the opposite corner. A module edge on either axis
+takes priority over the horizontal grid candidate; the other dimension follows
+the ratio. Artwork placement inside Display retains its own rules.
 Visitor window movement remains free and does not acquire owner preferences.
 
 INSCAPE is flat, technical, spatial, and deliberately bounded. It must not drift

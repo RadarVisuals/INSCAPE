@@ -38,7 +38,7 @@ export function readArtworkMask(image) {
 
 // The existing renderers use center-origin quarter-turn/mirror image transforms,
 // with axis-aligned Stage scaling. Invert those transforms before sampling.
-export function artworkImagePoint(image, clientX, clientY) {
+export function artworkImageCoordinates(image, clientX, clientY) {
   const style = getComputedStyle(image);
   const matrix = new DOMMatrixReadOnly(style.transform);
   const width = parseFloat(style.width), height = parseFloat(style.height);
@@ -53,7 +53,12 @@ export function artworkImagePoint(image, clientX, clientY) {
   if (!determinant) return null;
   const u = ((matrix.d * x - matrix.c * y) / determinant + width / 2) / width;
   const v = ((-matrix.b * x + matrix.a * y) / determinant + height / 2) / height;
-  return u >= 0 && u < 1 && v >= 0 && v < 1 ? { u, v } : null;
+  return { u, v };
+}
+
+export function artworkImagePoint(image, clientX, clientY) {
+  const point = artworkImageCoordinates(image, clientX, clientY);
+  return point && point.u >= 0 && point.u < 1 && point.v >= 0 && point.v < 1 ? point : null;
 }
 
 export function hitsArtwork(node, x, y) {

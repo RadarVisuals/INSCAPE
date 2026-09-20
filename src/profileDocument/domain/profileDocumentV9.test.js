@@ -388,21 +388,15 @@ test('canonical serialization and hash input are stable while content/reconcilia
   assert.throws(() => parseProfileDocumentV9Json(JSON.stringify({ ...first, version: 8 })));
 });
 
-test('optional placement animation survives publication and restoration; old documents stay static', () => {
-  const source = draft();
-  const motion = { float: { horizontal: .3, vertical: .2, period: 8 }, flicker: { depth: .8, period: 6 } };
-  source.grids[0].placements[0].animation = motion;
-  const published = document({ systemWorkflowDraft: source });
-  assert.deepEqual(published.grids[0].placements[0].animation, motion);
-  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(published, source).grids[0].placements[0].animation, motion);
-  assert.equal(document().grids[0].placements[0].animation, undefined);
-  const switchedOff = structuredClone(source);
-  switchedOff.grids[0].placements[0].animation.float.enabled = false;
-  const disabledPublic = document({ systemWorkflowDraft: switchedOff });
-  assert.deepEqual(disabledPublic.grids[0].placements[0].animation, switchedOff.grids[0].placements[0].animation);
-  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(disabledPublic, source).grids[0].placements[0].animation, switchedOff.grids[0].placements[0].animation);
-  const invalid = structuredClone(published); invalid.grids[0].placements[0].animation.float.period = -1;
-  assert.equal(validateProfileDocumentV9(invalid).valid, false);
+test('removed animation fields are outside the draft and public placement schema', () => {
+  for (const key of ['animation', 'layeredArtwork']) {
+    const source = draft(); source.grids[0].placements[0][key] = {};
+    assert.throws(() => document({ systemWorkflowDraft: source }));
+    const published = document(); published.grids[0].placements[0][key] = {};
+    assert.equal(validateProfileDocumentV9(published).valid, false);
+  }
+  const published = document();
+  assert.deepEqual(assertValidProfileDocumentV9(published), published);
 });
 
 test('v9-only reconciliation restores public draft-v4 state and preserves unrelated private Grids', () => {

@@ -1,3 +1,4 @@
+import { expandPlacementGroups } from '../../systemWorkflow/domain/placementGroups.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { systemWorkflowGridFingerprint, systemWorkflowGridOrder } from '../../systemWorkflow/domain/systemWorkflowGrid.js';
@@ -44,7 +45,7 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
       return false;
     }
   }, [authority, profile, moduleId]);
-  const state = authority ? authority.session.getState() : { draft: null, selectedGridId: null, generation: 0 };
+  const state = authority ? authority.session.getSnapshot() : { draft: null, selectedGridId: null, generation: 0 };
   const selectedGrid = state.draft?.grids.find(({ id }) => id === state.selectedGridId) || null;
   const selectionScope = useMemo(() => ({}), [authority, state.selectedGridId]);
   const liveSelectionScope = useRef(selectionScope);
@@ -52,7 +53,7 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   const [selection, setSelection] = useState(null);
   const availablePlacementIds = new Set(selectedGrid?.placements.map(({ id }) => id));
   const selectedPlacementIds = selection?.scope === selectionScope
-    ? selection.ids.filter((id) => availablePlacementIds.has(id) && !hiddenPlacementIds.has(id)) : [];
+    ? expandPlacementGroups(selectedGrid, selection.ids).filter((id) => availablePlacementIds.has(id) && !hiddenPlacementIds.has(id)) : [];
   const setSelectedPlacementIds = useCallback((update) => {
     if (!mounted.current || liveSelectionScope.current !== selectionScope) return;
     setSelection((current) => {
@@ -63,17 +64,19 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   const selectedPlacements = selectedGrid?.placements.filter(({ id }) => selectedPlacementIds.includes(id)) || [];
   const selectPlacement = useCallback((id, additive = false) => {
     if (hiddenPlacementIds.has(id)) return;
-    setSelectedPlacementIds((current) => additive ? current.includes(id) ? current.filter((value) => value !== id) : [...current, id] : id ? [id] : []);
-  }, [hiddenPlacementIds, setSelectedPlacementIds]);
-  const replaceSelection = useCallback((ids = []) => setSelectedPlacementIds([...new Set(ids.filter((id) => id && !hiddenPlacementIds.has(id)))]), [hiddenPlacementIds, setSelectedPlacementIds]);
+    const ids = expandPlacementGroups(selectedGrid, id ? [id] : []);
+    setSelectedPlacementIds(current => additive ? current.includes(id) ? current.filter(value => !ids.includes(value)) : [...new Set([...current, ...ids])] : ids);
+  }, [hiddenPlacementIds, setSelectedPlacementIds, selectedGrid]);
+  const replaceSelection = useCallback((ids = []) => setSelectedPlacementIds(expandPlacementGroups(selectedGrid, ids).filter(id => id && !hiddenPlacementIds.has(id))), [hiddenPlacementIds, setSelectedPlacementIds, selectedGrid]);
   const togglePlacementVisibility = (placement) => {
     if (!mounted.current || liveSelectionScope.current !== selectionScope || !availablePlacementIds.has(placement.id)) return;
     setLayerVisibility((current) => {
       const hidden = new Set(current.authority === authority ? current.hidden : []);
-      if (hidden.has(placement.id)) hidden.delete(placement.id); else hidden.add(placement.id);
+      const hide = !hidden.has(placement.id);
+      for (const id of expandPlacementGroups(selectedGrid, [placement.id])) { if (hide) hidden.add(id); else hidden.delete(id); }
       return { authority, hidden };
     });
-    setSelectedPlacementIds((current) => current.filter((id) => id !== placement.id));
+    setSelectedPlacementIds((current) => current.filter(id => !expandPlacementGroups(selectedGrid, [placement.id]).includes(id)));
   };
   const clearError = useCallback(() => setFailure(null), []);
   const gridRequest = (grid, extra = {}) => ({ gridId: grid.id, expectedGridFingerprint: systemWorkflowGridFingerprint(grid), ...extra });

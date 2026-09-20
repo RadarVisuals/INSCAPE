@@ -1,3 +1,4 @@
+import { placementGroup, selectedPlacementGroup } from '../../systemWorkflow/domain/placementGroups.js';
 import { useEffect, useState } from 'react';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 import PlacementSizeControls from './PlacementSizeControls.jsx';
@@ -39,6 +40,8 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
   const [gutterMessage, setGutterMessage] = useState('');
   const grid = controller.selectedGrid;
   const selected = controller.selectedPlacements;
+  const group = selectedPlacementGroup(grid, controller.selectedPlacementIds);
+  const groupRequest = group && { gridId: grid.id, groupId: group.id, expectedGroup: group, expectedPlacements: selected };
   const unlockedSelected = selected.filter(({ locked }) => !locked);
   const primary = unlockedSelected.length === 1 ? unlockedSelected[0] : null;
   const textPlacement = selected.length === 1 && selected[0].kind === 'text' ? selected[0] : null;
@@ -174,18 +177,21 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
         const hidden = controller.hiddenPlacementIds?.has(layer.id) || false;
         return <div className="system-workflow__layer-row" data-hidden={hidden || undefined} data-confirming={confirming || undefined} data-selected={controller.selectedPlacementIds.includes(layer.id) || undefined}
           draggable={!authoringLocked && !grid.placements.some(({ locked }) => locked)} key={layer.id} onDragStart={(event) => event.dataTransfer.setData('text/x-inscape-layer', layer.id)} onDragOver={(event) => { if (!authoringLocked) event.preventDefault(); }} onDrop={(event) => reorderFromDrop(event.dataTransfer.getData('text/x-inscape-layer'), layer.id)}>
-          <button className="system-workflow__layer-select" disabled={layer.locked || hidden} onClick={(event) => { controller.selectPlacement(layer.id, event.shiftKey); setRemoveCandidateId(null); }} type="button">{layer.kind === 'text' ? <span aria-hidden="true">T</span> : <img alt="" src={sourceFor(asset)} />}<span>{title}</span></button>
+          <button className="system-workflow__layer-select" disabled={layer.locked || hidden} onClick={(event) => { controller.selectPlacement(layer.id, event.shiftKey); setRemoveCandidateId(null); }} type="button">{layer.kind === 'text' ? <span aria-hidden="true">T</span> : <img alt="" src={sourceFor(asset)} />}<span>{placementGroup(grid, layer.id) ? `Group ${grid.groups.indexOf(placementGroup(grid, layer.id)) + 1} / ` : ''}{title}</span></button>
           <button aria-label={`${hidden ? 'Show' : 'Hide'} ${title} in editor`} aria-pressed={hidden} className="system-workflow__layer-visibility" disabled={authoringLocked}
             onClick={() => { controller.togglePlacementVisibility(layer); setRemoveCandidateId(null); }}
             title={`${hidden ? 'Show' : 'Hide'} in editor only; Preview and publication are unchanged`} type="button">{hidden ? <EyeOff size={13} /> : <Eye size={13} />}</button>
           <button aria-label={`${layer.locked ? 'Unlock' : 'Lock'} ${title}`} aria-pressed={layer.locked} className="system-workflow__layer-lock" disabled={authoringLocked} onClick={() => { controller.toggleLock(layer); setRemoveCandidateId(null); }} title={layer.locked ? 'Unlock placement' : 'Lock placement'} type="button"><Lock size={11} /></button>
-          <button aria-label={`Remove ${title} from Grid`} className="system-workflow__layer-remove" disabled={authoringLocked || layer.locked} onClick={() => setRemoveCandidateId(layer.id)} title="Remove from Grid" type="button"><Trash2 size={11} /></button>
+          <button aria-label={`Remove ${title} from Grid`} className="system-workflow__layer-remove" disabled={authoringLocked || layer.locked} onClick={() => { if (placementGroup(grid, layer.id) && !controller.selectedPlacementIds.includes(layer.id)) controller.selectPlacement(layer.id); setRemoveCandidateId(layer.id); }} title="Remove from Grid" type="button"><Trash2 size={11} /></button>
           {confirming && <div aria-label={removingSelectedGroup ? 'Remove selected placements from Grid' : `Remove ${title} from Grid`} className="system-workflow__remove-confirm" role="alertdialog">{layer.kind === 'text' ? <span aria-hidden="true">T</span> : <img alt="" src={sourceFor(asset)} />}<span>{removingSelectedGroup ? `Remove ${selected.length} selected?` : 'Remove from Grid?'}</span><button onClick={() => setRemoveCandidateId(null)} type="button">Cancel</button><button onClick={() => { if (removingSelectedGroup) { removeSelection(); return; } const committed = controller.run((session) => session.removePlacement({ gridId: grid.id, placementId: layer.id, expectedPlacement: layer })); if (committed !== false) controller.replaceSelection(controller.selectedPlacementIds.filter((id) => id !== layer.id)); setRemoveCandidateId(null); }} type="button">Remove</button></div>}
         </div>;
       })}</div>
     {!layers.length && <p className="system-workflow__layer-hint">Add artwork from Library or add text.</p>}
     {selected.length > 0 ? <section className="system-workflow__layer-controls" aria-label="Selection properties">
-      <h3>Selection</h3>
+      <h3>{group ? `Group / ${selected.length} layers` : 'Selection'}</h3>
+      <button className="system-workflow__add-text" type="button" disabled={!editable || (!group && (selected.length < 2 || selected.some(item => item.kind === 'text' || placementGroup(grid, item.id))))}
+        onClick={() => controller.run(session => group ? session.ungroupPlacements(groupRequest) : session.groupPlacements({ gridId: grid.id, placementIds: selected.map(item => item.id), expectedPlacements: selected }))}>{group ? 'Ungroup' : 'Group layers'}</button>
+      {group && <p className="system-workflow__layer-hint">Moves and animates together. Ungroup to edit individual layers. Ungroup removes group effects and restores individual effects.</p>}
       {selected.length === 1 && <PlacementSizeControls placement={selected[0]} controller={controller} disabled={!editable} />}
 
       {toolbar}{inspectPlacement && inspectionSelector}

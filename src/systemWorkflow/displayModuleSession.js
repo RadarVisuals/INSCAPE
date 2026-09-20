@@ -4,8 +4,19 @@ import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, displayF
 import { createDefaultWorkbenchPresentation, createNewDisplayPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 
 export function createDisplayModuleSession(store, id) {
+  let sourceSnapshot, displaySnapshot;
   return createSystemWorkflowAuthoringSession({ store: {
     getDraft: () => projectDisplayDraft(store.getDraft(), id),
+    // Derived view only: retain identity while the accepted root is unchanged.
+    // A new root (including reload/profile switch/removal) invalidates it.
+    getSnapshot: store.getSnapshot ? () => {
+      const source = store.getSnapshot();
+      if (source !== sourceSnapshot) {
+        const projected = Object.freeze(projectDisplayDraft(source, id));
+        sourceSnapshot = source; displaySnapshot = projected;
+      }
+      return displaySnapshot;
+    } : undefined,
     getGeneration: () => store.getGeneration(),
     commitCompletedOperation: (candidate, options) => store.commitCompletedOperation(
       mergeDisplayDraft(store.getDraft(), id, candidate), options),

@@ -1,4 +1,25 @@
 @import './fonts.css';
+.text-scene-viewport { flex: 1; min-height: 0; overflow: hidden; position: relative; }
+.text-scene-track, .text-scene-page, .text-authoring-viewport, .text-paged-reader { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.text-authoring-viewport[hidden] { display: none; }
+.text-scene-track { position: relative; }
+.text-scene-page { width: 100%; flex-shrink: 0; }
+.text-scene-incoming { position: absolute; top: 0; }
+.text-page-viewport { flex: 1; min-height: 0; overflow: hidden; perspective: 1000px; }
+.text-page-turn { height: 100%; transform-origin: left center; }
+.text-page-turn[data-turn] { animation: text-page-turn 220ms ease-out; }
+.text-page-turn[data-direction='previous'] { transform-origin: right center; }
+.text-page-track > article.text-document { box-sizing: border-box; width: var(--text-page-width); height: var(--text-page-height); max-width: none; margin: 0; column-count: 1; column-gap: var(--text-page-gap); column-fill: auto; }
+.text-page-track .text-page-break { break-before: column; }
+.text-page-track :is(p, li) { orphans: 2; widows: 2; }
+.text-page-track :is(figure, h1, h2, h3) { break-inside: avoid; }
+.text-page-navigation { display: flex; align-items: center; justify-content: center; flex-shrink: 0; gap: 8px; height: 30px; font: 12px 'Inscape IBM Plex Sans Condensed'; }
+.text-module-body .text-page-navigation button { border: 0; background: transparent; padding: 0 8px; min-width: 30px; }
+.text-editor-content .text-page-break { border-top: 1px dashed currentColor; margin: 12px 0; }
+.text-editor-content .text-page-break::after { content: 'Page break'; font: 11px 'Inscape IBM Plex Sans Condensed'; }
+.text-page-viewport:focus-visible { outline: 1px solid currentColor; outline-offset: -1px; }
+@keyframes text-page-turn { from { opacity: .25; transform: rotateY(-90deg); } to { opacity: 1; transform: rotateY(0); } }
+@media (prefers-reduced-motion: reduce) { .text-page-turn[data-turn] { animation: none; } .text-scene-viewport[data-settling] .text-scene-track { transition: none; } }
 .text-workbench { color: var(--workflow-ink); font: var(--workflow-type-control); }
 .text-workbench .system-workflow__instrument-window { z-index: var(--text-z, 46); }
 .text-workbench .system-workflow__instrument-content { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
@@ -6,6 +27,7 @@
 /* Containment alone still permits the browser's elastic edge movement. */
 .text-module-scroll { overflow: auto; min-height: 0; flex: 1; overscroll-behavior: none; }
 .text-module-content { display: flow-root; }
+.text-window .text-module-content { width: var(--workbench-content-width, auto); }
 .text-module-content > .text-document:not(.text-document--compact), .text-module-content > div > .text-editor-page:not(.text-document--compact) { padding-bottom: var(--text-viewport-bottom-padding, var(--text-automatic-padding)); }
 .text-workbench :is(.text-module-scroll, .text-settings, textarea) { scrollbar-width: none; }
 .text-workbench :is(.text-module-scroll, .text-settings, textarea)::-webkit-scrollbar { display: none; width: 0; height: 0; }

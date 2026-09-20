@@ -1,4 +1,4 @@
-import { validPlacementAnimation } from './placementAnimation.js';
+import { validPlacementGroups } from './placementGroups.js';
 import { validModuleEdges } from './moduleSurfaceAppearance.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
@@ -235,9 +235,8 @@ function validatePlacement(value, path, fail) {
       || ![0, 1, 2, 3].includes(value.transform.quarterTurns) || typeof value.transform.mirrorX !== 'boolean' || typeof value.transform.mirrorY !== 'boolean') fail(path, 'invalid_text_geometry', 'Invalid text layer geometry');
     return;
   }
-  const optionalKeys = ['selectedMedia', 'inspectionMode', 'mediaFrameRatio', 'animation'].filter(key => Object.hasOwn(value || {}, key));
+  const optionalKeys = ['selectedMedia', 'inspectionMode', 'mediaFrameRatio'].filter(key => Object.hasOwn(value || {}, key));
   if (!exactKeys(value, [...PLACEMENT_KEYS, ...optionalKeys])) return fail(path, 'invalid_placement_structure', 'Invalid placement');
-  if (Object.hasOwn(value, 'animation') && !validPlacementAnimation(value.animation)) fail(`${path}.animation`, 'invalid_animation', 'Invalid placement animation');
   if (Object.hasOwn(value, 'mediaFrameRatio') && (!Number.isFinite(value.mediaFrameRatio) || value.mediaFrameRatio < 1 / 512 || value.mediaFrameRatio > 512)) fail(`${path}.mediaFrameRatio`, 'invalid_media_frame_ratio', 'Invalid media frame ratio');
   if (Object.hasOwn(value, 'inspectionMode') && !['IN_PLACE', 'LIFT'].includes(value.inspectionMode)) fail(`${path}.inspectionMode`, 'invalid_inspection_mode', 'Invalid artwork inspection mode');
   if (Object.hasOwn(value, 'selectedMedia') && !isValidPlacementMedia(value.selectedMedia)) fail(`${path}.selectedMedia`, 'invalid_selected_media', 'Invalid selected image');
@@ -330,7 +329,7 @@ export function validateSystemWorkflowDraft(input) {
     if (input.workbench?.display?.shortcut?.icon) totalAssetReferences += 1;
     input.grids.forEach((grid, gridIndex) => {
       const path = `grids[${gridIndex}]`;
-      if (!exactKeys(grid, GRID_KEYS)) return fail(path, 'invalid_grid_structure', 'Invalid Grid');
+      if (!exactKeys(grid, [...GRID_KEYS, ...(Object.hasOwn(grid || {}, 'groups') ? ['groups'] : [])])) return fail(path, 'invalid_grid_structure', 'Invalid Grid');
       if (!GRID_ID.test(grid.id || '') || grid.id.length > SYSTEM_WORKFLOW_LIMITS.maxIdLength) fail(`${path}.id`, 'invalid_grid_id', 'Invalid Grid ID');
       if (gridIds.has(grid.id)) fail(`${path}.id`, 'duplicate_grid_id', 'Duplicate Grid ID');
       gridIds.add(grid.id);
@@ -344,6 +343,7 @@ export function validateSystemWorkflowDraft(input) {
       if (!Array.isArray(grid.placements) || grid.placements.length > SYSTEM_WORKFLOW_LIMITS.maxPlacementsPerGrid) {
         return fail(`${path}.placements`, 'invalid_placements', 'Invalid placements');
       }
+      if (!validPlacementGroups(grid)) fail(path, 'invalid_groups', 'Invalid placement groups');
       totalAssetReferences += grid.placements.length;
       const layers = new Set();
       const navigationOrders = new Set();

@@ -20,7 +20,7 @@ test('Escape and closing the Library cancel placement, including deferred image 
       const snapshot = () => page.evaluate(() => JSON.stringify(window.__imageTest.draft()));
       const original = await snapshot();
       await page.getByRole('button', { name: 'Library', exact: true }).click();
-      await page.getByRole('button', { name: 'Open 3 images of ABYSSAL STUDY', exact: true }).click();
+      await page.getByRole('button', { name: 'Show 3 images of ABYSSAL STUDY', exact: true }).click();
       const card = page.getByRole('button', { name: 'Image 2 of ABYSSAL STUDY', exact: true });
       await page.waitForFunction(() => document.querySelector('[aria-label="Image 2 of ABYSSAL STUDY"]')?.getAttribute('aria-disabled') === 'false');
       const source = await card.boundingBox();
@@ -60,12 +60,12 @@ test('Escape and closing the Library cancel placement, including deferred image 
       await page.evaluate(() => { window.__releasePlacementDimensions = null; });
       await card.dblclick();
       await page.waitForFunction(() => typeof window.__releasePlacementDimensions === 'function');
-      await page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).click();
+      await page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).press('Enter');
       await page.evaluate(() => window.__releasePlacementDimensions());
       await page.waitForTimeout(100);
       assert.equal(await snapshot(), original, 'a delayed decode cannot place into a closed Display');
-      await page.locator('.system-workflow__desktop-shortcut').dblclick();
       await page.getByRole('button', { name: 'Library', exact: true }).click();
+      await page.locator('.system-workflow__desktop-shortcut').dblclick();
       await page.evaluate(() => { window.__releasePlacementDimensions = null; });
       const canvas = page.locator('.system-workflow__canvas');
       await canvas.evaluate(node => {
@@ -75,7 +75,7 @@ test('Escape and closing the Library cancel placement, including deferred image 
         node.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: transfer, clientX: box.x + 40, clientY: box.y + 40 }));
       });
       await page.waitForFunction(() => typeof window.__releasePlacementDimensions === 'function');
-      await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).click();
+      await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).press('Enter');
       await page.evaluate(() => window.__releasePlacementDimensions());
       await page.waitForTimeout(100);
       assert.equal(await snapshot(), original, 'a pending native drop cannot bypass a newly enabled composition lock');

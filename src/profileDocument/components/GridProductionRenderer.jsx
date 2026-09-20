@@ -1,5 +1,3 @@
-import { placementMotionStyle } from '../../animation/placementMotion.js';
-import useSceneMotion from '../../animation/useSceneMotion.js';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { DisplayStageSizeContext } from '../../public/ownerSystemWorkflow/DisplayStageSizeContext.js';
 import { createLatticeProductionLayerRanks } from '../../lattice/rendering/latticeProductionLayerOrder.js';
@@ -26,7 +24,7 @@ const viewportOf = (node, bottomInset = 0) => {
   };
 };
 
-function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlacementActivate, onPointerActivate, placement, gridId, viewerSourceHidden, motionEnabled }) {
+function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlacementActivate, onPointerActivate, placement, gridId, viewerSourceHidden }) {
   const reference = placement.asset?.media?.reference || null;
   const referenceKey = reference
     ? `${placement.asset.stableAssetId}:${reference.verification.method}:${reference.verification.data}` : null;
@@ -73,12 +71,25 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
   }), [dimensions?.height, dimensions?.width, failed, gridId, loaded, media, onMediaState, placement.id]);
   const activatable = Boolean(onPlacementActivate && loaded && dimensions);
   const activate = (event) => activatable && onPlacementActivate({ element: event.currentTarget, placement, gridId });
+  const mediaStyle = artwork.imageRenderRectangle ? {
+    ...rectangleStyle({ left: artwork.imageRenderRectangle.left - artwork.mediaOpeningRectangle.left,
+      top: artwork.imageRenderRectangle.top - artwork.mediaOpeningRectangle.top, width: artwork.imageRenderRectangle.width,
+      height: artwork.imageRenderRectangle.height }), transform: artwork.imageTransform, transformOrigin: 'center',
+  } : undefined;
+  const fallbackMedia = ready && <img alt={media.label} className={loaded && artwork.imageRectangle ? 'is-ready' : ''} decoding="async"
+    draggable="false" key={`${media.src}:${loadState.attempt}`} loading={imageLoading}
+    onError={() => setLoadState((current) => current.src !== media.src ? current
+      : imageLoading === 'eager' && current.attempt + 1 < GRID_PRODUCTION_EAGER_MEDIA_ATTEMPTS
+        ? { ...current, attempt: current.attempt + 1 } : { ...current, status: 'failed', dimensions: null })}
+    onLoad={(event) => { const { naturalHeight: height, naturalWidth: width } = event.currentTarget;
+      if (width && height) setLoadState((current) => current.src === media.src
+        ? { ...current, status: 'loaded', dimensions: { width, height } } : current); }}
+    referrerPolicy="no-referrer" src={media.src} style={mediaStyle} />;
   return <figure aria-label={media.label} className={`lattice-production-placement${placement.mat.enabled ? ' has-mat' : ''}`}
     data-frame-id={placement.frameId} data-media-state={failed ? media.status === 'ready' ? 'failed' : media.status : loaded ? 'ready' : 'loading'}
     data-placement-id={placement.id} data-placement-activatable={activatable || undefined}
     data-transparency-mode={placement.transparencyMode} data-viewer-source-hidden={viewerSourceHidden || undefined}
-    data-placement-motion={placement.animation ? '' : undefined}
-    style={{ ...rectangleStyle(artwork.footprint), zIndex: layerRank, ...placementMotionStyle(placement.animation, field.cellSize, motionEnabled && loaded) }} onClick={event => event.detail === 0 ? activate(event) : onPointerActivate(event)}
+    style={{ ...rectangleStyle(artwork.footprint), zIndex: layerRank }} onClick={event => event.detail === 0 ? activate(event) : onPointerActivate(event)}
     onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); activate(event); } }} tabIndex={activatable ? 0 : -1}>
     {artwork.backplateRectangle && <span aria-hidden="true" className="lattice-production-placement__mat" style={{ backgroundColor: artwork.mat.color }} />}
     <span className="lattice-production-placement__opening" style={{
@@ -86,19 +97,7 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
         top: artwork.mediaOpeningRectangle.top - artwork.footprint.top, width: artwork.mediaOpeningRectangle.width,
         height: artwork.mediaOpeningRectangle.height }), backgroundColor: effectiveBackground,
     }}>
-      {ready && <img alt={media.label} className={loaded && artwork.imageRectangle ? 'is-ready' : ''} decoding="async"
-        draggable="false" key={`${media.src}:${loadState.attempt}`} loading={imageLoading}
-        onError={() => setLoadState((current) => current.src !== media.src ? current
-          : imageLoading === 'eager' && current.attempt + 1 < GRID_PRODUCTION_EAGER_MEDIA_ATTEMPTS
-            ? { ...current, attempt: current.attempt + 1 } : { ...current, status: 'failed', dimensions: null })}
-        onLoad={(event) => { const { naturalHeight: height, naturalWidth: width } = event.currentTarget;
-          if (width && height) setLoadState((current) => current.src === media.src
-            ? { ...current, status: 'loaded', dimensions: { width, height } } : current); }}
-        referrerPolicy="no-referrer" src={media.src} style={artwork.imageRenderRectangle ? {
-          ...rectangleStyle({ left: artwork.imageRenderRectangle.left - artwork.mediaOpeningRectangle.left,
-            top: artwork.imageRenderRectangle.top - artwork.mediaOpeningRectangle.top, width: artwork.imageRenderRectangle.width,
-            height: artwork.imageRenderRectangle.height }), transform: artwork.imageTransform, transformOrigin: 'center',
-        } : undefined} />}
+      {fallbackMedia}
       {!loaded && <span className="lattice-production-placement__status">{failed ? 'Artwork unavailable' : 'Loading artwork'}</span>}
     </span>
   </figure>;
@@ -107,7 +106,6 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
 export default function GridProductionRenderer({ document, grid, imageLoading = 'lazy', onMediaState, onPlacementActivate,
   projectionBottomInset = 0, viewerPlacementId = null }) {
   const rootRef = useRef(null);
-  useSceneMotion(rootRef);
   const picking = useArtworkPicking(rootRef, grid);
   const activatePointer = event => {
     const element = picking.pick(event, event.currentTarget.parentElement);
@@ -142,7 +140,7 @@ export default function GridProductionRenderer({ document, grid, imageLoading = 
         ? <div key={placement.id} className="display-text-placement" data-text-placement-id={placement.id}
             style={{ ...projectSystemWorkflowPlacement(placement, projected), zIndex: layerRanks.get(placement.id) }}>
             <DisplayTextContent placement={placement} cellSize={projected.cellSize} /></div>
-        : <GridPlacement motionEnabled={!viewerPlacementId} field={projected} gridId={grid.id} imageLoading={imageLoading}
+        : <GridPlacement field={projected} gridId={grid.id} imageLoading={imageLoading}
         key={placement.id} layerRank={layerRanks.get(placement.id)} onMediaState={onMediaState}
         onPlacementActivate={onPlacementActivate} onPointerActivate={activatePointer} placement={placement} viewerSourceHidden={placement.id === viewerPlacementId} />)}</div>
     </>}

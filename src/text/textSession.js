@@ -2,7 +2,7 @@ import { createArticle, MAX_TEXT_MODULES, validTextModules } from './domain/arti
 export function addTextModule(store, profile) {
   if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
   const draft = store.getDraft(), generation = store.getGeneration();
-  if ((draft.texts?.length || 0) >= MAX_TEXT_MODULES) throw new Error('At most four Text modules are supported.');
+  if ((draft.texts?.length || 0) >= MAX_TEXT_MODULES) throw new Error(`At most ${MAX_TEXT_MODULES} Text modules are supported.`);
   const item = { id: `text:${crypto.randomUUID()}`, article: createArticle(), visibility: 'PRIVATE' };
   if (!store.commitCompletedOperation({ ...draft, texts: [...(draft.texts || []), item] }, { expectedGeneration: generation, historyLabel: 'Add Text' })) throw new Error('Text module could not be saved.');
   return item.id;
@@ -32,7 +32,7 @@ export function saveTextModuleResult(store, profile, expected, next, { retry = f
     const current = draft.texts?.find(item => item.id === expected.id);
     if (!current) { reason = 'missing'; return null; }
     const value = { ...current };
-    for (const key of ['article', 'visibility']) {
+    for (const key of ['article', 'visibility', 'sceneLink', 'pagination']) {
       if (JSON.stringify(expected[key]) === JSON.stringify(next[key])) continue;
       if (JSON.stringify(current[key]) !== JSON.stringify(expected[key]) && JSON.stringify(current[key]) !== JSON.stringify(next[key]) && !replace) {
         reason = 'conflict'; return null;

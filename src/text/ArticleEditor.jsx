@@ -20,12 +20,16 @@ const Artwork = Node.create({ name: 'artwork', group: 'block', atom: true, dragg
   parseHTML: () => [], renderHTML: () => ['figure', { 'data-inscape-artwork': '' }],
   addNodeView: () => ReactNodeViewRenderer(ArtworkEditor),
 });
+const PageBreak = Node.create({ name: 'pageBreak', group: 'block', atom: true,
+  parseHTML: () => [{ tag: 'div[data-text-page-break]' }],
+  renderHTML: () => ['div', { 'data-text-page-break': '', class: 'text-page-break' }],
+});
 export default function ArticleEditor({ article, onChange, onEditor, disabled, controlsHost }) {
   const latest = useRef({ article, onChange }); latest.current = { article, onChange };
   const [, rerender] = useState(0), [link, setLink] = useState(null), [linkError, setLinkError] = useState('');
   const editor = useEditor({
     extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false,
-      link: { openOnClick: false, autolink: false, linkOnPaste: false, protocols: ['https', 'mailto'] } }), TextStyle, FontFamily, Artwork, ArticleAlignment],
+      link: { openOnClick: false, autolink: false, linkOnPaste: false, protocols: ['https', 'mailto'] } }), TextStyle, FontFamily, Artwork, ArticleAlignment, PageBreak],
     content: article.content, editable: !disabled,
     editorProps: { attributes: { class: 'text-document text-editor-content', 'aria-label': 'Article text', role: 'textbox', 'aria-multiline': 'true',
       spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off' },
@@ -39,12 +43,12 @@ export default function ArticleEditor({ article, onChange, onEditor, disabled, c
     onUpdate: ({ editor: current }) => latest.current.onChange({ ...latest.current.article, content: current.getJSON() }),
     onSelectionUpdate: () => rerender(n => n + 1), onTransaction: () => rerender(n => n + 1),
   });
-  useEffect(() => { onEditor?.(editor); return () => onEditor?.(null); }, [editor, onEditor]);
-  useEffect(() => { editor?.setEditable(!disabled); }, [editor, disabled]);
+  useEffect(() => { onEditor?.(editor?.isDestroyed ? null : editor); return () => onEditor?.(null); }, [editor, onEditor]);
+  useEffect(() => { if (editor && !editor.isDestroyed) editor.setEditable(!disabled); }, [editor, disabled]);
   useEffect(() => {
-    if (editor && JSON.stringify(editor.getJSON()) !== JSON.stringify(article.content)) editor.commands.setContent(article.content, { emitUpdate: false });
+    if (editor && !editor.isDestroyed && JSON.stringify(editor.getJSON()) !== JSON.stringify(article.content)) editor.commands.setContent(article.content, { emitUpdate: false });
   }, [editor, article.content]);
-  if (!editor) return <p role="status">Opening editor…</p>;
+  if (!editor || editor.isDestroyed) return <p role="status">Opening editor…</p>;
   const alignmentActive = value => editor.isActive({ textAlign: value }) || value === 'left' && editor.isActive({ textAlign: null });
   const justification = ['justify-left', 'justify-center', 'justify-right', 'justify-all'].find(alignmentActive) || '';
   const command = (name, action, active = false) => {
@@ -75,6 +79,7 @@ export default function ArticleEditor({ article, onChange, onEditor, disabled, c
         <option value="justify-left">Justify Left</option><option value="justify-center">Justify Center</option>
         <option value="justify-right">Justify Right</option><option value="justify-all">Justify All</option>
       </select>
+      <button type="button" aria-label="Insert page break" title="Insert page break" disabled={disabled} onMouseDown={e => e.preventDefault()} onClick={() => editor.chain().focus().insertContent({ type: 'pageBreak' }).run()}>↦</button>
       {command('Quote', () => editor.chain().focus().toggleBlockquote().run(), editor.isActive('blockquote'))}
       {command('Bullets', () => editor.chain().focus().toggleBulletList().run(), editor.isActive('bulletList'))}
       {command('Numbered', () => editor.chain().focus().toggleOrderedList().run(), editor.isActive('orderedList'))}

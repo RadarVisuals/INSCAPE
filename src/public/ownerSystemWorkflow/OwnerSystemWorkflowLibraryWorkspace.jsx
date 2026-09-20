@@ -161,7 +161,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       }} />}
     placing={Boolean(dragPreview)} rail={<OwnerSystemWorkflowWorkspaceRail menuSurface={menuSurface} onClose={onClose} workspace={workspace} />}
     sidebarCollapsed={workspace.sidebarWidth <= 72}>
-    <OwnerSystemWorkflowLibraryPresenter categoryCommands={categoryCommands} data={data}
+    <OwnerSystemWorkflowLibraryPresenter key={data.ownerContext} categoryCommands={categoryCommands} data={data}
       menuSurfaceId={menuSurface} onAssetActivate={(_event, asset) => asset.isCollection && asset.collectionRole !== 'cover'
         ? data.onOpenCollection?.(asset.assetRecord)
         : asset.placeable && workspace.isAssetRenderable(asset.stableAssetId || asset.id) && place(asset)}

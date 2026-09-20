@@ -1,13 +1,18 @@
 import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
+import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchView.jsx';
+import { workbenchViewStyle } from './workbenchViewScale.js';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import OwnerSystemWorkflowDetachedWindow from './OwnerSystemWorkflowDetachedWindow.jsx';
 import { snapWorkbenchCoordinate, WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 
 // View-only window behavior. The caller supplies its content and commands.
-export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizableWidth = false, initialHeight = 420, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange, snapToGrid = false, placementModule = false, surfaceStyle }) {
+export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizableWidth = false, initialHeight = 420, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, surfaceStyle }) {
+  const view = useWorkbenchView();
+  const viewTransform = viewId && !compact ? workbenchModuleTransform(view, viewId) : { scale: 1, x: 0, y: 0 };
+  const viewScale = viewTransform.scale;
   const node = useRef(null);
-  const placement = useWorkbenchPlacement(node, placementModule && !compact);
+  const placement = useWorkbenchPlacement(node, placementModule && !compact, viewScale);
   const measuredContent = useRef(null);
   const gesture = useRef(null);
   const resize = useRef(null);
@@ -17,6 +22,7 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
   const [height, setHeight] = useState(initialHeight);
   const [resizedWidth, setResizedWidth] = useState(width);
   const windowWidth = resizableWidth ? resizedWidth : width;
+  useWorkbenchViewRegistration(viewId, node, !compact, { left: position.x, top: position.y, width: windowWidth, height });
   useLayoutEffect(() => {
     if (!compact) onLayoutChange?.({ left: position.x, top: position.y, width: windowWidth, height });
   }, [position.x, position.y, windowWidth, height, onLayoutChange, Boolean(compact)]);
@@ -61,6 +67,7 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
   const start = (event) => {
     if (event.button !== 0 || event.target.closest('button, a')) return;
     event.preventDefault();
+    placement.begin(event);
     gesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY, position };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -69,9 +76,9 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
     if (origin?.id !== event.pointerId) return;
     if (Math.hypot(event.clientX - origin.x, event.clientY - origin.y) < 3) return;
     const snapping = snapToGrid && !event.altKey;
-    setPosition(placed({ x: origin.position.x + event.clientX - origin.x, y: origin.position.y + event.clientY - origin.y }, position, snapping, event.altKey));
+    setPosition(placed({ x: origin.position.x + (event.clientX - origin.x) / viewScale, y: origin.position.y + (event.clientY - origin.y) / viewScale }, position, snapping, event.altKey));
   };
-  const finish = () => { gesture.current = null; };
+  const finish = () => { gesture.current = null; placement.finish(); };
   const resizeHeight = (value, altKey) => setHeight(Math.max(180, Math.min(globalThis.innerHeight - position.y - 54,
     (placement.edge('y', 'bottom', position.y + value, { left: position.x, top: position.y }, altKey) ?? snapWorkbenchCoordinate(position.y + value, snapToGrid && !altKey)) - position.y)));
   const resizeWidth = (value, altKey) => setResizedWidth(Math.max(240, Math.min(globalThis.innerWidth - position.x - 8,
@@ -79,34 +86,38 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
   const onKeyDown = (event) => {
     if (event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
     event.preventDefault(); event.stopPropagation();
+    placement.begin(event);
     const snapping = snapToGrid && !event.altKey;
     const step = snapping || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
     setPosition((current) => placed({ x: current.x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0),
       y: current.y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0) }, current, snapping, event.altKey));
   };
-  return <OwnerSystemWorkflowDetachedWindow ariaLabel={`${label} — ${title}`} ref={node}
+  return <OwnerSystemWorkflowDetachedWindow ariaLabel={`${label} — ${title}`} ref={node} viewId={viewId}
     className={`system-workflow__instrument-window ${className}`} title={`${label} · ${title}`}
-    headerPointerProps={{ 'aria-label': `Move ${label} window`, tabIndex: 0, onKeyDown,
-      onPointerDown: start, onPointerMove: move, onPointerUp: finish, onPointerCancel: finish }}
+    headerPointerProps={{ 'aria-label': `Move ${label} window`, 'data-workbench-selectable': viewId ? true : undefined, 'aria-keyshortcuts': viewId ? 'Shift+Enter' : undefined, tabIndex: 0, onKeyDown,
+      onPointerDown: start, onPointerMove: move, onPointerUp: finish, onPointerCancel: finish, onLostPointerCapture: finish }}
     controls={controls} titleContent={titleContent} background={background} compactContent={compact?.content} chrome={chrome} menuSurface={menuSurface}
-    style={{ ...surfaceStyle, '--detached-window-width': `${windowWidth}px`, left: position.x, top: position.y, height, maxHeight: 'calc(100dvh - 70px)', ...compact?.style }}
+    style={{ ...surfaceStyle, '--detached-window-width': `${windowWidth}px`, left: position.x, top: position.y, height, maxHeight: 'calc(100dvh - 70px)', ...workbenchViewStyle(viewScale, position.x, position.y, windowWidth, height, viewTransform.x, viewTransform.y), ...compact?.style }}
     resizeHandleProps={fitContent || compact ? undefined : { 'aria-label': `Resize ${label} ${resizableWidth ? 'window' : 'height'}`, role: 'separator', tabIndex: 0,
       ...(resizableWidth ? { style: { cursor: 'nwse-resize' }, 'aria-valuetext': `${Math.round(windowWidth)} by ${Math.round(height)} pixels` } : {}),
       'aria-orientation': 'horizontal', 'aria-valuenow': Math.round(height),
       onPointerDown: (event) => {
         if (event.button !== 0) return;
         event.preventDefault();
+        placement.begin(event);
         resize.current = { id: event.pointerId, x: event.clientX, y: event.clientY, width: node.current.offsetWidth, height: node.current.offsetHeight };
         event.currentTarget.setPointerCapture(event.pointerId);
       },
       onPointerMove: (event) => {
         if (resize.current?.id === event.pointerId) {
-          resizeHeight(resize.current.height + event.clientY - resize.current.y, event.altKey);
-          if (resizableWidth) resizeWidth(resize.current.width + event.clientX - resize.current.x, event.altKey);
+          resizeHeight(resize.current.height + (event.clientY - resize.current.y) / viewScale, event.altKey);
+          if (resizableWidth) resizeWidth(resize.current.width + (event.clientX - resize.current.x) / viewScale, event.altKey);
         }
       },
-      onPointerUp: () => { resize.current = null; }, onPointerCancel: () => { resize.current = null; },
+      onPointerUp: () => { resize.current = null; placement.finish(); }, onPointerCancel: () => { resize.current = null; placement.finish(); },
+      onLostPointerCapture: () => { resize.current = null; placement.finish(); },
       onKeyDown: (event) => {
+        if (event.key.startsWith('Arrow')) placement.begin(event);
         const step = (snapToGrid && !event.altKey) || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
         if (resizableWidth && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
           event.preventDefault(); event.stopPropagation();
@@ -122,10 +133,10 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
 }
 
 export default function DisplayInstrumentWindow({ menuSurface, children, instrument, onClose, title, layout, onLayoutChange }) {
-  const label = instrument === 'animation' ? 'Animation' : instrument === 'layers' ? 'Layers' : 'Artwork info';
+  const label = instrument === 'layers' ? 'Layers' : 'Artwork info';
   return <WorkbenchWindow chrome="bevel" menuSurface={menuSurface} label={label} title={title}
-    width={layout?.width || 320} resizableWidth initialHeight={layout?.height || (instrument === 'animation' ? 640 : 480)}
-    initialX={layout?.left ?? (instrument === 'metadata' ? 18 : Math.max(8, globalThis.innerWidth - (instrument === 'animation' ? 676 : 340)))} initialY={layout?.top ?? 72}
+    width={layout?.width || 320} resizableWidth initialHeight={layout?.height || 480}
+    initialX={layout?.left ?? (instrument === 'metadata' ? 18 : Math.max(8, globalThis.innerWidth - 340))} initialY={layout?.top ?? 72}
     onLayoutChange={onLayoutChange}
     controls={<button aria-label={`Close ${label}`} className="system-workflow__window-cap"
       onClick={onClose} type="button"><X /></button>}>

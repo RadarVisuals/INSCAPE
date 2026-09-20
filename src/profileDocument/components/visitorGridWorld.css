@@ -22,18 +22,16 @@
 .visitor-grid-world[data-space-navigation] .visitor-grid-world__viewport { cursor: grab; }
 .visitor-grid-world[data-grid-dragging] .visitor-grid-world__viewport { cursor: grabbing; }
 .visitor-grid-world__grid-plane { position: absolute; inset: 0; overflow: hidden; }
+.visitor-grid-world__grid-plane--current { z-index: 1; }
 .visitor-grid-world__grid-track {
   position: absolute;
   inset: 0;
-  transform: translate3d(var(--visitor-grid-swipe-x, 0px), 0, 0);
+  /* Keep the resting scene out of a forced 3D texture: its filtered edge can
+     expose the Workbench beside an adjoining module at fractional zoom. */
+  transform: translateX(var(--visitor-grid-swipe-x, 0px));
 }
 .visitor-grid-world__grid-plane--adjacent {
-  left: var(--visitor-grid-swipe-side, 100%);
-  right: auto;
-  width: 100%;
-}
-.visitor-grid-world[data-grid-swipe-settling] > .system-workflow__workbench .visitor-grid-world__grid-track {
-  transition: transform 280ms cubic-bezier(.22, 1, .36, 1);
+  z-index: 2;
 }
 .visitor-grid-renderer { position: absolute; inset: 0; }
 /* The incoming scene already overlaps its neighbour by one pixel. Keep its
@@ -79,7 +77,5 @@
 .visitor-grid-world[data-embedded-display] > .system-workflow__workbench { background: transparent; pointer-events: none; }
 .visitor-grid-world[data-embedded-display] .system-workflow__presentation-board { pointer-events: auto; }
 .visitor-grid-world[data-embedded-display] .system-workflow__desktop-shortcut { pointer-events: auto; }
-.visitor-grid-world[data-embedded-display][data-active-display] { z-index: 2; }
-
-.visitor-grid-world[data-embedded-display] { z-index: 0; }
-.visitor-grid-world[data-embedded-display][data-active-display] { z-index: 9; }
+.visitor-grid-world[data-embedded-display] { z-index: auto; }
+.visitor-grid-world[data-active-display] > .system-workflow__workbench > .system-workflow__presentation-board:not([data-wheel-zoom]) { z-index: 3; }

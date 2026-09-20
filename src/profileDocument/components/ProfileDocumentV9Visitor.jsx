@@ -1,4 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { SceneNavigationProvider, useReportScene } from '../../text/SceneNavigation.jsx';
+import { WorkbenchViewProvider, WorkbenchViewControls } from '../../public/ownerSystemWorkflow/WorkbenchView.jsx';
 import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import { useProfileContractFacts, useProfileIdentity } from '../../profileIdentity/index.js';
 import LatticeProfileRail from '../../lattice/rendering/LatticeProfileRail.jsx';
@@ -6,11 +8,11 @@ import { latticeSurfaceColor } from '../../lattice/rendering/latticeGeometry.js'
 import GridProductionRenderer from './GridProductionRenderer.jsx';
 import { createProfileDocumentV9FocusViewModel } from './profileDocumentV9FocusViewModel.js';
 import { createPublishedIdentityRackViewModel } from './publishedIdentityRackViewModel.js';
-import { resolveVisitorGridDragDestination } from './visitorGridDragNavigation.js';
 import '../../lattice/rendering/latticeMenuSurface.css';
 import './visitorGridWorld.css';
 import PresentationBoard from '../../public/ownerSystemWorkflow/PresentationBoard.jsx';
 import useDisplayInspection from '../../public/ownerSystemWorkflow/useDisplayInspection.js';
+import { gridRailSlot } from '../../public/ownerSystemWorkflow/gridRail.js';
 import DisplayFocusViewer from '../../public/ownerSystemWorkflow/DisplayFocusViewer.jsx';
 import RackMenu from '../../public/menus/RackMenu.jsx';
 import { createPortal } from 'react-dom';
@@ -34,7 +36,7 @@ const TextWorkbench = lazy(() => import('../../text/TextWorkbench.jsx'));
 const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-6)}`;
 
 export default function ProfileDocumentV9Visitor(props) {
-  return <SharedDisplayToolsProvider key={`${props.document.profile.address}:${props.document.documentId}:${props.document.revision}`}><ProfileDocumentV9Session {...props} /></SharedDisplayToolsProvider>;
+  return <SharedDisplayToolsProvider key={`${props.document.profile.address}:${props.document.documentId}:${props.document.revision}`}><SceneNavigationProvider><WorkbenchViewProvider><ProfileDocumentV9Session {...props} /></WorkbenchViewProvider></SceneNavigationProvider></SharedDisplayToolsProvider>;
 }
 
 function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn, onConnect, embedded = false, instanceId, active = true, onActivate }) {
@@ -54,12 +56,12 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   }), [document]);
   const layout = useOwnerSystemWorkflowLayout();
   const stageRef = useRef(null);
+  const trackRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [displayMenu, setDisplayMenu] = useState(null);
   const identityControlRef = useRef(null);
   const profileDockControlRef = useRef(null);
   const gridDragRef = useRef(null);
-  const gridSwipeTimerRef = useRef(null);
   const spacePressedRef = useRef(false);
   const suppressPlacementClickRef = useRef(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -78,7 +80,6 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
         ? { url: resolvePublishedAssetUrl(icon.media.url), width: icon.media.width, height: icon.media.height } : null } };
   }, [document]);
   const [gridDragging, setGridDragging] = useState(false);
-  const [gridSwipe, setGridSwipe] = useState(null);
   const [spaceNavigation, setSpaceNavigation] = useState(false);
   const profileIdentity = useProfileIdentity(document.profile.address);
   const profileContractFacts = useProfileContractFacts(document.profile.address, { enabled: identityOpen });
@@ -119,9 +120,11 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const viewerEntry = metadataSelection?.gridId === activeGrid?.id ? entriesById.get(metadataSelection.id) : null;
   const selectMetadata = id => { tools.activate(targetId); setMetadataSelection({ gridId: activeGrid.id, id }); };
   const playback = useGridPlayback({ playing,
-    enabled: displayOpen && lastIndex > 0 && !viewer.placementId && !gridSwipe,
+    enabled: displayOpen && lastIndex > 0 && !viewer.placementId,
+    scope: `${document.profile.address}:${document.documentId}:${document.revision}`,
+    adjacentGrid: (id, direction) => document.grids[(document.grids.findIndex(grid => grid.id === id) + (direction === 'next' ? 1 : lastIndex)) % document.grids.length]?.id,
     gridId: activeGrid?.id, nextGridId: document.grids[(activeIndex + 1) % document.grids.length]?.id,
-    canvasRef: stageRef, viewScale: 1, reducedMotion,
+    canvasRef: stageRef, trackRef, viewScale: 1, reducedMotion,
     onPause: () => setPlaying(false),
     onAdvance: gridId => {
       const index = document.grids.findIndex(grid => grid.id === gridId);
@@ -132,7 +135,6 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
 
   useEffect(() => {
     setActiveIndex(0); setPlacementMedia({}); setProfileVisible(false); setIdentityOpen(Boolean(document.workbench?.identity.open));
-    globalThis.clearTimeout?.(gridSwipeTimerRef.current); gridSwipeTimerRef.current = null; setGridSwipe(null);
     rootRef.current?.focus({ preventScroll: true });
   }, [document.documentId, document.revision]);
   const closeProfile = useCallback(({ returnFocus = false } = {}) => {
@@ -175,11 +177,14 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     setGridDragging(false);
   }, []);
   const visitorInputBlocked = Boolean(viewer.placementId);
+  useEffect(() => {
+    if (!playback.isDragging()) clearGridDrag();
+  }, [displayOpen, visitorInputBlocked, activeGrid?.id, clearGridDrag]);
   const beginGridDrag = useCallback((event) => {
-    if (visitorInputBlocked || event.button !== 0 || gridDragRef.current || gridSwipeTimerRef.current !== null) return;
+    if (visitorInputBlocked || event.button !== 0 || gridDragRef.current) return;
     event.preventDefault(); event.stopPropagation();
+    playback.beginDrag(event.clientX);
     const origin = { x: event.clientX, y: event.clientY };
-    const viewportWidth = event.currentTarget.clientWidth;
     const active = { end: origin, mode: 'pending', moved: false, pointerId: event.pointerId, targetIndex: null };
     const move = (pointerEvent) => {
       if (gridDragRef.current !== active || pointerEvent.pointerId !== active.pointerId) return;
@@ -195,39 +200,18 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
         active.moved = true; setGridDragging(true);
       }
       if (active.mode === 'swipe') {
-        const directionalDelta = active.direction === 'next' ? Math.min(0, deltaX) : Math.max(0, deltaX);
-        const boundedDelta = Math.max(-viewportWidth, Math.min(viewportWidth, directionalDelta));
-        setGridSwipe({ deltaX: boundedDelta, direction: active.direction, settling: false, targetIndex: active.targetIndex });
+        playback.moveDrag(pointerEvent.clientX);
       }
     };
     const complete = (pointerEvent, cancelled = false) => {
       if (gridDragRef.current !== active || pointerEvent?.pointerId != null && pointerEvent.pointerId !== active.pointerId) return;
-      const deltaX = active.end.x - origin.x; const deltaY = active.end.y - origin.y;
       if (active.moved) {
         suppressPlacementClickRef.current = true;
         globalThis.setTimeout?.(() => { suppressPlacementClickRef.current = false; }, 0);
       }
       clearGridDrag();
-      if (active.mode !== 'swipe') return;
-      const destination = cancelled ? null
-        : resolveVisitorGridDragDestination({ activeIndex, deltaX, deltaY, lastIndex, viewportWidth });
-      const committed = destination !== null;
-      const completeSwipe = () => {
-        if (!committed) {
-          setGridSwipe(null); gridSwipeTimerRef.current = null; return;
-        }
-        selectGrid(destination);
-        gridSwipeTimerRef.current = globalThis.setTimeout?.(() => {
-          setGridSwipe(null); gridSwipeTimerRef.current = null;
-        }, 34);
-      };
-      if (reducedMotion) completeSwipe();
-      else {
-        setGridSwipe({ deltaX: committed ? (active.direction === 'next' ? -1 : 1) * (viewportWidth - 1) : 0,
-          direction: active.direction, settling: true, targetIndex: active.targetIndex });
-        globalThis.clearTimeout?.(gridSwipeTimerRef.current);
-        gridSwipeTimerRef.current = globalThis.setTimeout?.(completeSwipe, committed ? 280 : 220);
-      }
+      if (active.mode !== 'swipe') { playback.endDrag(true); return; }
+      playback.endDrag(cancelled);
     };
     active.move = move;
     active.finish = (pointerEvent) => complete(pointerEvent, false);
@@ -254,7 +238,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
       globalThis.removeEventListener?.('keydown', keydown, true);
       globalThis.removeEventListener?.('keyup', release, true);
       globalThis.removeEventListener?.('blur', release);
-      spacePressedRef.current = false; clearGridDrag(); globalThis.clearTimeout?.(gridSwipeTimerRef.current);
+      spacePressedRef.current = false; clearGridDrag();
     };
   }, [clearGridDrag, visitorInputBlocked]);
   const handlePlacementMediaState = useCallback((state) => {
@@ -281,26 +265,46 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
         : event.key === 'Home' ? 0 : event.key === 'End' ? lastIndex : null;
     if (destination === null) return; event.preventDefault(); playback.stop(); selectGrid(destination);
   };
-  const swipe = gridSwipe || playback.swipe;
+  const gridSwipe = playback.swipe;
+  const swipe = gridSwipe;
   const swipeGrid = Number.isInteger(swipe?.targetIndex) ? document.grids[swipe.targetIndex]
     : document.grids.find(grid => grid.id === swipe?.targetGridId);
-  const swipeStyle = swipe ? { '--visitor-grid-swipe-x': `${swipe.deltaX}px`,
-    '--visitor-grid-swipe-side': swipe.direction === 'next' ? 'calc(100% - 1px)' : 'calc(-100% + 1px)' } : { '--visitor-grid-swipe-x': '0px', '--visitor-grid-swipe-side': '100%' };
+  const sourceGridId = swipe?.sourceGridId || activeGrid?.id;
+  useReportScene(targetId, sourceGridId, swipeGrid?.id, swipe, displayOpen, document.grids.map(grid => grid.id));
+  // Keep a bounded neighborhood mounted, with stable scene keys. Arrival reuses
+  // the incoming media instead of loading it again in a second canonical plane.
+  // Two on either side also prepare the next handoff during drag and momentum.
+  const neighbor = offset => document.grids[((activeIndex + offset) % document.grids.length + document.grids.length) % document.grids.length];
+  const aheadId = neighbor(2)?.id, behindId = neighbor(-2)?.id;
+  const preparedIds = new Set(JSON.parse(useDeferredValue(JSON.stringify(
+    [sourceGridId, neighbor(-1)?.id, neighbor(1)?.id, aheadId, behindId, swipeGrid?.id],
+  ))));
+  // Visible/immediate neighbors stay synchronous. Far media mounts in an
+  // interruptible render, and stale preparation never chooses a current slot.
+  const preparedGridIds = new Set([activeGrid?.id, sourceGridId,
+    neighbor(-1)?.id, neighbor(1)?.id, swipeGrid?.id,
+    preparedIds.has(aheadId) ? aheadId : null,
+    preparedIds.has(behindId) ? behindId : null]);
+  const renderedGrids = document.grids.filter(grid => preparedGridIds.has(grid.id));
 
   const stage = activeGrid && <PublishedStage activeGridId={activeGrid.id} viewportRef={stageRef}
       onClickCapture={(event) => { if (suppressPlacementClickRef.current) { event.preventDefault(); event.stopPropagation(); } }}
-      onPointerDown={event => { playback.stop(); beginGridDrag(event); }}>
-      <div className="visitor-grid-world__grid-track">
-      <div className="visitor-grid-world__grid-plane visitor-grid-world__grid-plane--current">
-        <GridProductionRenderer document={document} grid={activeGrid} imageLoading={activeIndex === 0 ? 'eager' : 'lazy'}
-          onMediaState={handlePlacementMediaState} onPlacementActivate={openPlacementViewer}
-          projectionBottomInset={0}
-          viewerPlacementId={viewer.sourcePlacementId} />
-      </div>
-      {swipe && swipeGrid && <div aria-hidden="true" className="visitor-grid-world__grid-plane visitor-grid-world__grid-plane--adjacent">
-        <GridProductionRenderer document={document} grid={swipeGrid} imageLoading="eager"
-          onMediaState={handlePlacementMediaState} projectionBottomInset={0} />
-      </div>}
+      onPointerDown={beginGridDrag}>
+      <div ref={trackRef} className="visitor-grid-world__grid-track"
+        data-rail-origin={swipe?.sourceSlot || 0} style={{ willChange: swipe || playing ? 'transform' : undefined }}>
+      {renderedGrids.map(grid => {
+        const selected = grid.id === activeGrid.id, source = grid.id === sourceGridId;
+        return <div key={grid.id} aria-hidden={!selected || undefined} inert={selected ? undefined : ''} data-rendered-grid-id={grid.id}
+          className={`visitor-grid-world__grid-plane ${source ? 'visitor-grid-world__grid-plane--current' : 'visitor-grid-world__grid-plane--adjacent'}`}
+          data-rail-slot={gridRailSlot(grid.id, { sourceId: sourceGridId, targetId: swipeGrid?.id,
+              sourceSlot: swipe?.sourceSlot, direction: swipe?.direction,
+              previousId: neighbor(-1)?.id, nextId: neighbor(1)?.id, aheadId: neighbor(2)?.id, behindId: neighbor(-2)?.id })}
+          style={{ willChange: swipe || playing ? 'transform' : undefined }}>
+          <GridProductionRenderer document={document} grid={grid} imageLoading="eager"
+            onMediaState={handlePlacementMediaState} onPlacementActivate={selected ? openPlacementViewer : undefined}
+            projectionBottomInset={0} viewerPlacementId={selected ? viewer.sourcePlacementId : null} />
+        </div>;
+      })}
       </div>
     </PublishedStage>;
 
@@ -310,7 +314,8 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     data-guide-mode={document.appearance.guideMode} data-menu-surface={document.appearance.menuSurfaceId}
     data-surface={document.appearance.surfaceId} data-space-navigation={spaceNavigation || undefined}
     data-grid-dragging={gridDragging || undefined} data-grid-swipe-settling={gridSwipe?.settling || undefined}
-    onKeyDown={handleKeyDown} ref={rootRef} style={swipeStyle} tabIndex="-1">
+    onKeyDown={handleKeyDown} ref={rootRef} tabIndex="-1">
+    {!embedded && <WorkbenchViewControls hostRef={rootRef} />}
     {hasDisplay && <PresentationBoard readOnly instanceId={instanceId} initialPresentation={displayPresentation} layoutMode={layout.mode}
       documentGeometry={document.geometry} profileAddress={document.profile.address}
       instanceState={displayOpen ? 'window' : 'minimized'} onMinimize={() => setDisplayOpen(false)} onRestore={() => setDisplayOpen(true)}

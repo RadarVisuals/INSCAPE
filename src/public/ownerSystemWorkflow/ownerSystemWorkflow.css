@@ -120,9 +120,9 @@
 .system-workflow__display-instance > .system-workflow__workbench { background: transparent; pointer-events: none; }
 .system-workflow__display-instance .system-workflow__presentation-board,
 .system-workflow__display-instance .system-workflow__desktop-shortcut { pointer-events: auto; }
-.system-workflow__display-instance[data-active-display] { z-index: 2; }
-.system-workflow__display-instance:has([data-wheel-zoom]),
-.visitor-grid-world[data-embedded-display][data-workbench]:has([data-wheel-zoom]) { z-index: 51; }
+/* Raise the window, not its full-desktop wrapper and shortcut. Otherwise an
+   active Display's shortcut intercepts another window's header/corners. */
+.system-workflow__display-instance[data-active-display] > .system-workflow__workbench > .system-workflow__presentation-board:not([data-wheel-zoom]) { z-index: 3; }
 .system-workflow__presentation-board[data-wheel-zoom] { z-index: 51; }
 .system-workflow__display-instance:not([data-active-display]) :is(.system-workflow__canvas, .system-workflow__layers-trigger) { view-transition-name: none !important; }
 
@@ -131,7 +131,7 @@
   --workflow-board-radius: var(--workflow-window-chrome-radius);
   --workflow-board-frame-surface: var(--workflow-selection);
   position: absolute;
-  z-index: 1;
+  z-index: 2;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: var(--workflow-identity-strip-height) minmax(0, 1fr) auto;
@@ -492,7 +492,8 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  transform: translate3d(var(--workflow-grid-swipe-x, 0px), 0, 0);
+  /* Match Visitor: avoid a filtered 3D texture edge on the resting scene. */
+  transform: translateX(var(--workflow-grid-swipe-x, 0px));
 }
 .system-workflow__grid-plane {
   position: absolute;
@@ -533,16 +534,10 @@
 .system-workflow__grid-plane--adjacent {
   z-index: 2;
   pointer-events: none;
-  left: var(--workflow-grid-swipe-side, 100%);
-  right: auto;
-  width: 100%;
 }
 .system-workflow__canvas[data-space-navigation] { cursor: grab; }
 .system-workflow__canvas[data-swiping] { cursor: grabbing; }
 .system-workflow__canvas[data-space-navigation] .system-workflow__placement { cursor: grab; }
-.system-workflow__canvas[data-swipe-settling] .system-workflow__grid-track {
-  transition: transform 280ms cubic-bezier(.22, 1, .36, 1);
-}
 
 html[data-system-workflow-grid-direction]::view-transition-old(root),
 html[data-system-workflow-grid-direction]::view-transition-new(root) { animation: none; }
@@ -1517,15 +1512,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
   line-height: 1; white-space: nowrap;
   color: var(--workflow-ink); background: var(--workflow-panel); font: var(--workflow-type-micro); cursor: pointer;
 }
-.system-workflow__library .system-workflow__library-images-trigger:is(:hover, :focus-visible) {
+.system-workflow__library .system-workflow__library-images-trigger:is(:hover, :focus-visible, [aria-expanded="true"]) {
   color: var(--workflow-panel); background: var(--workflow-ink); border-color: var(--workflow-ink);
 }
-.system-workflow__library-images-trigger:focus-visible,
-.system-workflow__library-images button:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: -2px; }
-.system-workflow__library-images header { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--workflow-border); padding-bottom: 10px; }
-.system-workflow__library-images header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--workflow-type-control); }
-.system-workflow__library-images header button { display: flex; align-items: center; gap: 5px; padding: 6px; color: var(--workflow-ink); background: var(--workflow-panel); border: 1px solid var(--workflow-border); cursor: pointer; font: var(--workflow-type-control); }
-.system-workflow__library-images p { margin: 10px 0; color: var(--workflow-muted); font: var(--workflow-type-control); }
-.system-workflow__library-image-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); gap: 10px; }
-.system-workflow__library-image-options .lattice-browser-asset__media { aspect-ratio: 1; }
-.system-workflow__library-image-options img { width: 100%; height: 100%; object-fit: contain; }
+.system-workflow__library-images-trigger:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: -2px; }

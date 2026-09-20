@@ -14,6 +14,52 @@ function fixture() {
   const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
   return { store, storage };
 }
+
+test('render snapshots retain unchanged media, reject mutation and follow accepted edits and history', () => {
+  const { store } = fixture();
+  const session = createDisplayModuleSession(store, PRIMARY_DISPLAY_ID);
+  const before = session.getSnapshot();
+  const root = store.getSnapshot();
+  session.selectGrid(before.draft.grids.at(-1).id);
+  assert.equal(session.getSnapshot().draft, before.draft);
+  assert.equal(store.getSnapshot(), root);
+  assert.throws(() => { before.draft.grids[0].title = 'mutated'; }, TypeError);
+  const candidate = session.getState().draft;
+  candidate.grids[0].title = 'detached';
+  assert.notEqual(session.getSnapshot().draft.grids[0].title, 'detached');
+  session.createGrid();
+  const edited = session.getSnapshot();
+  assert.notEqual(edited.draft, before.draft);
+  assert.equal(edited.draft.grids.length, before.draft.grids.length + 1);
+  assert.equal(before.draft.grids, root.grids);
+  assert.ok(store.undo());
+  assert.deepEqual(session.getSnapshot().draft.grids, before.draft.grids);
+  assert.ok(session.getSnapshot().draft.grids.some(g => g.id === session.getSnapshot().selectedGridId));
+  assert.ok(store.redo());
+  assert.deepEqual(session.getSnapshot().draft.grids, edited.draft.grids);
+  const accepted = store.getSnapshot();
+  assert.equal(store.commitCompletedOperation(store.getDraft(), { expectedGeneration: -1 }), false);
+  assert.equal(store.getSnapshot(), accepted, 'rejected operations cannot replace the render snapshot');
+  const otherProfile = '0x2222222222222222222222222222222222222222';
+  assert.ok(store.setProfileAddress(otherProfile));
+  assert.equal(session.getSnapshot().draft.profileAddress, otherProfile);
+  assert.notEqual(session.getSnapshot().draft, edited.draft);
+  assert.equal(edited.draft.profileAddress, profile, 'older views remain immutable after account changes');
+});
+
+test('snapshot projection cannot outlive removal of its Display or an unavailable reload', () => {
+  const { store, storage } = fixture();
+  const id = addDisplayModule(store);
+  const session = createDisplayModuleSession(store, id);
+  session.getSnapshot();
+  const draft = store.getDraft();
+  assert.ok(store.commitCompletedOperation({ ...draft, displays: [] }, { expectedGeneration: store.getGeneration() }));
+  assert.throws(() => session.getSnapshot(), /no longer available/);
+  storage.getItem = () => { throw new Error('unavailable'); };
+  store.reload();
+  assert.throws(() => store.getSnapshot(), /unavailable/);
+  assert.throws(() => store.getDraft(), /unavailable/);
+});
 test('Display sessions edit independently through one storage generation', () => {
   const { store, storage } = fixture();
   const original = store.getDraft();

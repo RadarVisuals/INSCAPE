@@ -143,7 +143,10 @@ export function createSystemWorkflowDraftStore({
     undo() { return travel('undo'); },
     redo() { return travel('redo'); },
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
-    getDraft() {
+    // Rendering can share the already frozen, accepted document. This is the
+    // store's authoritative value, replaced on acceptance/profile/reload; it
+    // is never a writable operation candidate or a second cached document.
+    getSnapshot() {
       if (!currentDraft) {
         const unavailable = recordState.status === SYSTEM_WORKFLOW_RECORD_STATUS.UNAVAILABLE;
         throw storeError(
@@ -151,7 +154,10 @@ export function createSystemWorkflowDraftStore({
           unavailable ? 'Canonical System Workflow storage is unavailable' : 'Canonical System Workflow storage is corrupt',
         );
       }
-      return detached(currentDraft);
+      return currentDraft;
+    },
+    getDraft() {
+      return detached(api.getSnapshot());
     },
 
     getGeneration() {

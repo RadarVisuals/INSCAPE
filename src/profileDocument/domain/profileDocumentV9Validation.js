@@ -1,4 +1,4 @@
-import { validPlacementAnimation } from '../../systemWorkflow/domain/placementAnimation.js';
+import { validPlacementGroups } from '../../systemWorkflow/domain/placementGroups.js';
 import { validModuleEdges } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import {
@@ -128,8 +128,7 @@ function validatePlacement(value, path, fail) {
       || ![0, 1, 2, 3].includes(value.transform.quarterTurns) || typeof value.transform.mirrorX !== 'boolean' || typeof value.transform.mirrorY !== 'boolean') fail(path, 'invalid_text_geometry', 'Invalid public text geometry');
     return;
   }
-  if (!exactKeys(value, [...PLACEMENT_KEYS, ...['inspectionMode', 'mediaFrameRatio', 'animation'].filter(key => Object.hasOwn(value || {}, key))])) return fail(path, 'invalid_placement_structure', 'Invalid public placement');
-  if (Object.hasOwn(value, 'animation') && !validPlacementAnimation(value.animation)) fail(`${path}.animation`, 'invalid_animation', 'Invalid placement animation');
+  if (!exactKeys(value, [...PLACEMENT_KEYS, ...['inspectionMode', 'mediaFrameRatio'].filter(key => Object.hasOwn(value || {}, key))])) return fail(path, 'invalid_placement_structure', 'Invalid public placement');
   if (Object.hasOwn(value, 'mediaFrameRatio') && (!Number.isFinite(value.mediaFrameRatio) || value.mediaFrameRatio < 1 / 512 || value.mediaFrameRatio > 512)) fail(`${path}.mediaFrameRatio`, 'invalid_media_frame_ratio', 'Invalid media frame ratio');
   if (Object.hasOwn(value, 'inspectionMode') && !['IN_PLACE', 'LIFT'].includes(value.inspectionMode)) fail(`${path}.inspectionMode`, 'invalid_inspection_mode', 'Invalid artwork inspection mode');
   if (!safeId(value.id)) fail(`${path}.id`, 'invalid_placement_id', 'Invalid placement ID');
@@ -167,7 +166,7 @@ function validateWorldCover(value, fail) {
     return 0;
   }
   const grid = value.grid;
-  if (!exactKeys(grid, GRID_KEYS)
+  if (!exactKeys(grid, [...GRID_KEYS, ...(Object.hasOwn(grid || {}, 'groups') ? ['groups'] : [])])
     || grid.id !== SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID
     || grid.title !== 'WORLD COVER' || grid.subtitle !== ''
     || grid.visibility !== SYSTEM_WORKFLOW_VISIBILITY.PUBLIC
@@ -179,6 +178,7 @@ function validateWorldCover(value, fail) {
     fail('metadata.worldCover.grid', 'invalid_world_cover_grid', 'Invalid canonical World Cover Grid');
     return 0;
   }
+  if (!validPlacementGroups(grid)) fail('metadata.worldCover.grid.groups', 'invalid_groups', 'Invalid placement groups');
   const ids = new Set();
   const layers = new Set();
   const navigationOrders = new Set();
@@ -252,6 +252,18 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   validateIdentity(input.identityPresentation, fail);
   if (Object.hasOwn(input, 'miniApps') && !validMiniApps(input.miniApps, true)) fail('miniApps', 'invalid_mini_apps', 'Invalid published mini app');
   if (Object.hasOwn(input, 'texts') && !validTextModules(input.texts, true)) fail('texts', 'invalid_texts', 'Invalid published Text module');
+  if (Array.isArray(input.texts)) for (const text of input.texts) {
+    const link = text?.sceneLink;
+    if (!link) continue;
+    const display = link.displayId === PRIMARY_DISPLAY_ID ? input : Array.isArray(input.displays) ? input.displays.find(d => d?.id === link.displayId) : null;
+    const grids = new Set(Array.isArray(display?.grids) ? display.grids.map(g => g?.id) : []);
+    if (link.mode === 'sections') {
+      if (!grids.size) fail('texts.sceneLink', 'unknown_text_scene', 'Linked Text refers to an unavailable published Display');
+      continue;
+    }
+    if (!grids.has(link.gridId) || !Array.isArray(link.passages) || link.passages.some(p => !grids.has(p?.gridId)))
+      fail('texts.sceneLink', 'unknown_text_scene', 'Text passage refers to an unavailable published Grid');
+  }
   if (Array.isArray(input.workbench?.texts) && input.workbench.texts.some(item => !Array.isArray(input.texts) || !input.texts.some(text => text?.id === item?.id))) fail('workbench.texts', 'unknown_text', 'Window refers to an unavailable Text module');
   if (Array.isArray(input.workbench?.miniApps) && input.workbench.miniApps.some(item => !Array.isArray(input.miniApps)
     || !input.miniApps.some(app => app?.id === item?.id))) fail('workbench.miniApps', 'unknown_mini_app', 'Window refers to an unavailable mini app');
@@ -287,7 +299,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
     if (input.workbench?.display?.shortcut?.icon) totalAssetReferences += 1;
     input.grids.forEach((grid, gridIndex) => {
       const path = `grids[${gridIndex}]`;
-      if (!exactKeys(grid, GRID_KEYS)) return fail(path, 'invalid_grid_structure', 'Invalid public Grid');
+      if (!exactKeys(grid, [...GRID_KEYS, ...(Object.hasOwn(grid || {}, 'groups') ? ['groups'] : [])])) return fail(path, 'invalid_grid_structure', 'Invalid public Grid');
       if (!GRID_ID.test(grid.id || '') || grid.id.length > SYSTEM_WORKFLOW_LIMITS.maxIdLength) fail(`${path}.id`, 'invalid_grid_id', 'Invalid Grid ID');
       if (gridIds.has(grid.id)) fail(`${path}.id`, 'duplicate_grid_id', 'Duplicate Grid ID');
       gridIds.add(grid.id);
@@ -301,6 +313,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
       if (!Array.isArray(grid.placements) || grid.placements.length > SYSTEM_WORKFLOW_LIMITS.maxPlacementsPerGrid) {
         return fail(`${path}.placements`, 'invalid_placements', 'Invalid public placements');
       }
+      if (!validPlacementGroups(grid)) fail(path, 'invalid_groups', 'Invalid placement groups');
       totalAssetReferences += grid.placements.length;
       const layers = new Set();
       const navigationOrders = new Set();

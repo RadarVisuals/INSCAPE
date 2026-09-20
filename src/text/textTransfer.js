@@ -42,6 +42,7 @@ export function attachTextToDisplay(store, profile, { expected, moduleId = PRIMA
   const record = draft.texts?.find(item => item.id === expected.id);
   if (!same(record, expected)) throw new Error('Save the current Text before moving it into Display.');
   if (!Number.isFinite(cellSize) || cellSize <= 0) throw new Error('Display is no longer available.');
+  if (record.sceneLink) throw new Error('Scene-linked Text must stay on the Workbench so all passages are preserved.');
   const article = structuredClone(record.article);
   article.appearance = { ...textAppearance(article), scale: textAppearance(article).scale * 30 / cellSize };
   const transform = article.appearance.transform || { quarterTurns: 0, mirrorX: false, mirrorY: false };
@@ -60,7 +61,7 @@ export function detachTextFromDisplay(store, profile, { moduleId = PRIMARY_DISPL
   const { generation, draft, grid } = context(store, profile, moduleId, gridId);
   const placement = grid.placements.find(item => item.id === expected.id);
   if (!placement || placement.kind !== 'text' || placement.locked || !same(placement, expected)) throw new Error('This text layer changed or is locked. Select it again.');
-  if ((draft.texts?.length || 0) >= MAX_TEXT_MODULES) throw new Error('At most four independent Text modules are supported. The layer has not moved.');
+  if ((draft.texts?.length || 0) >= MAX_TEXT_MODULES) throw new Error(`At most ${MAX_TEXT_MODULES} independent Text modules are supported. The layer has not moved.`);
   if (!Number.isFinite(cellSize) || cellSize <= 0) throw new Error('Display is no longer available.');
   const article = structuredClone(displayTextArticle(placement.text));
   article.appearance = { ...textAppearance(article), scale: textAppearance(article).scale * cellSize / 30 };

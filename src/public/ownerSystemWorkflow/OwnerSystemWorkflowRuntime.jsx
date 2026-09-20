@@ -1,4 +1,6 @@
+import { SceneNavigationProvider } from '../../text/SceneNavigation.jsx';
 import { WorkbenchPlacement } from './WorkbenchPlacement.jsx';
+import { WorkbenchViewProvider, WorkbenchViewControls } from './WorkbenchView.jsx';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useStartupDestinationReady } from '../../startveil/StartupDestinationContext.jsx';
 import { createPortal } from 'react-dom';
@@ -83,7 +85,7 @@ function reviewIdentity(profileAddress, fixture) {
 }
 
 export default function OwnerSystemWorkflowRuntime(props) {
-  return <WorkbenchSession key={props.profileAddress?.toLowerCase()} {...props} />;
+  return <SceneNavigationProvider key={props.profileAddress?.toLowerCase()}><WorkbenchSession {...props} /></SceneNavigationProvider>;
 }
 
 function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onConnect, onDisconnect, onEnterMyWorld, onOpenDiscover, onPreviewDocumentChange,
@@ -406,7 +408,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       requestAnimationFrame(() => workspaceRef.current?.focus());
     } catch (error) { setNotice(error.message || 'Could not delete this Display'); }
   };
-  return <><SharedDisplayToolsProvider value={sharedTools} onChange={setSharedTools} targetId={activeDisplayId} onTargetChange={setActiveDisplayId}><WorkbenchPlacement enabled={workbenchPreferences.edgeSnap && !preview} gap={workbenchPreferences.moduleGap}><main tabIndex={-1} ref={workspaceRef} aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
+  return <><SharedDisplayToolsProvider value={sharedTools} onChange={setSharedTools} targetId={activeDisplayId} onTargetChange={setActiveDisplayId}><WorkbenchViewProvider key={profileAddress}><WorkbenchPlacement hostRef={workspaceRef} enabled={workbenchPreferences.edgeSnap && !preview} gridEnabled={workbenchPreferences.shortcutSnap && !preview} gap={workbenchPreferences.moduleGap}><main tabIndex={-1} ref={workspaceRef} aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
     onPointerDownCapture={event => {
       if (event.target === event.currentTarget && event.button === 0) {
         for (const display of [controller, ...Object.values(instanceRecords).map(record => record.controller)]) {
@@ -423,6 +425,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     data-lattice-menu-surface data-menu-surface={menuSurface} data-reduced-motion={layout.reducedMotion || undefined}
     data-surface={workbenchPreferences.surfaceId} data-previewing={preview ? true : undefined}
     inert={preview ? '' : undefined}>
+    <WorkbenchViewControls hostRef={workspaceRef} disabled={Boolean(preview)} />
     <SharedDisplayToolWindows fallbackFocus={workspaceRef} menuSurface={menuSurface} hidden={Boolean(preview) || instrumentsObscured} />
     <WorkbenchAlignmentGrid hostRef={workspaceRef} color={workbenchPreferences.gridColor} mode={workbenchPreferences.gridMode} />
     {hasPrimaryDisplay && <div className="system-workflow__display-instance" data-display-instance={PRIMARY_DISPLAY_ID} data-active-display={activeDisplayId === PRIMARY_DISPLAY_ID || undefined}
@@ -498,7 +501,6 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
         { disabled: !moduleAvailability.presentationBoard, id: 'presentation-board', label: 'DISPLAY MODULE' },
         { disabled: (workbenchController.draft.miniApps?.length || 0) >= MAX_MINI_APPS, id: 'mini-app', label: 'MINI APP' },
         { disabled: (workbenchController.draft.texts?.length || 0) >= MAX_TEXT_MODULES, id: 'text', label: 'TEXT' },
-        { id: 'animation', label: 'ANIMATION MODULE' },
         { id: 'mobile', label: workbenchController.draft.mobile ? 'OPEN MOBILE' : 'MOBILE MODULE' },
       ] : id === 'presentation-board' ? [
         { disabled: !moduleAvailability.presentationBoard, id: 'add-display-horizontal', label: 'HORIZONTAL 16:9' },
@@ -507,7 +509,6 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       label="Workbench commands" menuSurfaceId={menuSurface} returnFocus={workspaceRef.current} onClose={() => setWorkspaceMenu(null)}
       onCommand={(id) => {
         if (id === 'tool-layers' || id === 'tool-metadata') { revealInstruments(); setSharedTools(current => ({ ...current, [id.slice(5)]: true })); }
-        if (id === 'animation') { revealInstruments(); setSharedTools(current => ({ ...current, animation: true })); }
         if (id === 'library') toggleLibrary();
         if (id === 'identity') openIdentity(workspaceRef.current);
         if (id === 'discover') openDockPanel('discover', workspaceRef.current);
@@ -529,7 +530,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       systemWorkflowOverlay />, document.body)}
     {pendingText.length > 0 && <p className="system-workflow__recovery-notice" role="alert">{TEXT_RECOVERY_MESSAGE}</p>}
     {layoutPersistence.error && <p className="system-workflow__layout-notice" role="alert">{layoutPersistence.error} <button type="button" onClick={layoutPersistence.retry}>Save current layout</button></p>}
-  </main></WorkbenchPlacement></SharedDisplayToolsProvider>
+  </main></WorkbenchPlacement></WorkbenchViewProvider></SharedDisplayToolsProvider>
   {preview && <Suspense fallback={null}><ProfileDocumentV9Preview document={preview} onExit={closePreview} onReturn={closePreview} onConnect={onConnect}
     onOpenDirectory={() => {
       const trigger = previewReturnFocus.current;

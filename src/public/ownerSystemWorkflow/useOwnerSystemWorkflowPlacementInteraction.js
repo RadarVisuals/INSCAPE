@@ -1,3 +1,4 @@
+import { expandPlacementGroups } from '../../systemWorkflow/domain/placementGroups.js';
 import { useEffect, useRef, useState } from 'react';
 import {
   clampSystemWorkflowGroupDelta,
@@ -20,25 +21,24 @@ import { createOwnerSystemWorkflowProjectedField } from './systemWorkflowArtboar
 
 const geometry = ({ column, row, columnSpan, rowSpan }) => ({ column, row, columnSpan, rowSpan });
 
-function projectedField(node, snapStep, artboardMode) {
-  return createOwnerSystemWorkflowProjectedField(node, snapStep, 1, artboardMode);
+function projectedField(node, snapStep, artboardMode, originNode) {
+  return createOwnerSystemWorkflowProjectedField(node, snapStep, 1, artboardMode, originNode);
 }
 
 function selectedRecords(controller, grid, placement) {
   const selected = grid.placements.filter(({ id }) => controller.selectedPlacementIds.includes(id) && !grid.placements.find((entry) => entry.id === id)?.locked);
-  return selected.some(({ id }) => id === placement.id) ? selected : [placement];
+  return selected.some(({ id }) => id === placement.id) ? selected : grid.placements.filter(item => expandPlacementGroups(grid, [placement.id]).includes(item.id));
 }
 
 export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMode = 'grid', authoringDisabled = false,
-  canvasRef, canNavigateGrid = () => false, controller, cropResize = null, cropSession = null, disabled = false,
-  onNavigateGrid, reducedMotion = false, snapStep = 1, viewScale = 1 }) {
+  canvasRef, sceneRef, canNavigateGrid = () => false, controller, cropResize = null, cropSession = null, disabled = false,
+  navigation, snapStep = 1, viewScale = 1 }) {
   const [previewById, setPreviewById] = useState(new Map());
   const [marquee, setMarquee] = useState(null);
-  const [gridSwipe, setGridSwipe] = useState(null);
+  const gridSwipe = navigation.swipe;
   const [spaceNavigation, setSpaceNavigation] = useState(false);
   const gestureRef = useRef(null);
   const marqueeRef = useRef(null);
-  const gridSwipeTimerRef = useRef(null);
   const clickSuppressedRef = useRef(false);
   const spacePressedRef = useRef(false);
   const grid = controller.selectedGrid;
@@ -55,7 +55,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
   };
 
   const beginPlacementGesture = (event, placement, kind = 'move', corner = null) => {
-    if (disabled || gridSwipeTimerRef.current !== null || authoringDisabled || placement.locked || event.button !== 0 || !grid) return;
+    if (disabled || authoringDisabled || navigation.isMoving() || placement.locked || event.button !== 0 || !grid) return;
     if (spacePressedRef.current) {
       beginCanvasSelection(event, { navigationOnly: true });
       return;
@@ -66,7 +66,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     if (kind === 'move' && event.shiftKey) return;
     event.preventDefault();
     event.stopPropagation();
-    const field = projectedField(canvasRef.current, snapStep, artboardMode);
+    const field = projectedField(canvasRef.current, snapStep, artboardMode, sceneRef?.current);
     if (!field) return;
     const records = selectedRecords(controller, grid, placement);
     controller.replaceSelection(records.map(({ id }) => id));
@@ -78,7 +78,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     const update = (pointerEvent) => {
       const active = gestureRef.current;
       if (!active || pointerEvent.pointerId !== active.pointerId) return;
-      const currentField = projectedField(canvasRef.current, pointerEvent.altKey ? 1 / 9 : snapStep, artboardMode);
+      const currentField = projectedField(canvasRef.current, pointerEvent.altKey ? 1 / 9 : snapStep, artboardMode, sceneRef?.current);
       const next = active.kind === 'resize'
         ? active.records.length > 1 ? updateSystemWorkflowGroupResizeGesture(active.domainGesture, { x: pointerEvent.clientX, y: pointerEvent.clientY }, currentField, 3, { preserveRatio: pointerEvent.shiftKey }) : updateSystemWorkflowResizeGesture(
           active.domainGesture,
@@ -150,11 +150,12 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     setMarquee(null);
   };
   const beginCanvasSelection = (event, { navigationOnly = spacePressedRef.current, emptyArtworkHit = false } = {}) => {
-    if (disabled || gridSwipeTimerRef.current !== null || marqueeRef.current || authoringDisabled && !navigationOnly || event.button !== 0 || !grid
+    if (disabled || marqueeRef.current || authoringDisabled && !navigationOnly || event.button !== 0 || !grid
       || !navigationOnly && !emptyArtworkHit && event.target !== event.currentTarget) return;
     event.preventDefault();
-    if (navigationOnly) event.stopPropagation();
-    const field = projectedField(canvasRef.current, snapStep, artboardMode);
+    if (navigationOnly) { event.stopPropagation(); navigation.beginDrag(event.clientX); }
+    const field = projectedField(canvasRef.current, snapStep, artboardMode, sceneRef?.current);
+    const surface = (sceneRef?.current || canvasRef.current).getBoundingClientRect();
     const origin = { x: event.clientX, y: event.clientY };
     const move = (pointerEvent) => {
       const active = marqueeRef.current;
@@ -174,10 +175,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
       if (active.mode === 'swipe') {
         pointerEvent.preventDefault();
         active.end = { x: pointerEvent.clientX, y: pointerEvent.clientY };
-        const direction = active.direction;
-        const directionalDelta = direction === 'next' ? Math.min(0, deltaX) : Math.max(0, deltaX);
-        const boundedDelta = Math.max(-field.viewportWidth, Math.min(field.viewportWidth, directionalDelta));
-        setGridSwipe({ deltaX: boundedDelta, direction, settling: false, targetGridId: active.targetGridId });
+        navigation.moveDrag(pointerEvent.clientX);
         return;
       }
       if (active.mode === 'navigation') {
@@ -190,8 +188,8 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
       };
       active.moved ||= Math.hypot(active.end.x - origin.x, active.end.y - origin.y) > 6;
       if (active.moved) setMarquee({
-        left: (Math.min(origin.x, active.end.x) - field.viewportLeft) / viewScale,
-        top: (Math.min(origin.y, active.end.y) - field.viewportTop) / viewScale,
+        left: (Math.min(origin.x, active.end.x) - surface.left) / viewScale,
+        top: (Math.min(origin.y, active.end.y) - surface.top) / viewScale,
         width: Math.abs(active.end.x - origin.x) / viewScale,
         height: Math.abs(active.end.y - origin.y) / viewScale,
       });
@@ -204,43 +202,12 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
         globalThis.setTimeout?.(() => { clickSuppressedRef.current = false; }, 0);
       }
       if (active.mode === 'swipe') {
-        const deltaX = active.end.x - origin.x;
-        const threshold = Math.min(120, Math.max(64, field.viewportWidth * .08));
-        const direction = active.direction;
-        const directionalDelta = direction === 'next' ? Math.min(0, deltaX) : Math.max(0, deltaX);
-        const committed = Math.abs(directionalDelta) >= threshold;
-        const completeSwipe = () => {
-          if (!committed) {
-            setGridSwipe(null);
-            gridSwipeTimerRef.current = null;
-            return;
-          }
-          onNavigateGrid?.(direction, { animate: false });
-          // Keep the already-painted adjacent plane over the newly selected
-          // Grid for two frames. This avoids a blank image paint between the
-          // preview DOM and the canonical Grid DOM without introducing a fade.
-          gridSwipeTimerRef.current = globalThis.setTimeout?.(() => {
-            setGridSwipe(null);
-            gridSwipeTimerRef.current = null;
-          }, 34);
-        };
-        if (reducedMotion) completeSwipe();
-        else {
-          setGridSwipe({
-            // One local pixel of shared coverage prevents antialiasing seams;
-            // settle by the same distance so the incoming artwork lands exactly.
-            deltaX: committed ? (direction === 'next' ? -1 : 1) * (field.viewportWidth - viewScale) : 0,
-            direction,
-            settling: true,
-            targetGridId: active.targetGridId,
-          });
-          globalThis.clearTimeout?.(gridSwipeTimerRef.current);
-          gridSwipeTimerRef.current = globalThis.setTimeout?.(completeSwipe, committed ? 280 : 220);
-        }
+        navigation.endDrag();
         clearMarquee();
         return;
       }
       if (active.mode === 'navigation' || navigationOnly) {
+        navigation.endDrag(true);
         clearMarquee();
         return;
       }
@@ -254,7 +221,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
       }
       clearMarquee();
     };
-    const cancel = () => { clearMarquee(); setGridSwipe(null); };
+    const cancel = () => { clearMarquee(); navigation.endDrag(true); };
     marqueeRef.current = { cancel, end: origin, finish, mode: 'pending', move, moved: false, pointerId: event.pointerId };
     globalThis.addEventListener('pointermove', move, true);
     globalThis.addEventListener('pointerup', finish, true);
@@ -276,21 +243,14 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
   useEffect(() => () => {
     clearGesture();
     clearMarquee();
-    globalThis.clearTimeout?.(gridSwipeTimerRef.current);
   }, []);
   useEffect(() => {
-    clearGesture(); clearMarquee();
-    globalThis.clearTimeout?.(gridSwipeTimerRef.current);
-    gridSwipeTimerRef.current = null;
-    setGridSwipe(null);
+    clearGesture(); if (!navigation.isDragging()) clearMarquee();
   }, [controller.draft.profileAddress, grid?.id]);
   useEffect(() => {
     if (!disabled && !authoringDisabled) return;
     clearGesture();
     clearMarquee();
-    globalThis.clearTimeout?.(gridSwipeTimerRef.current);
-    gridSwipeTimerRef.current = null;
-    setGridSwipe(null);
   }, [authoringDisabled, disabled]);
   useEffect(() => {
     const editable = (event) => /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable;
@@ -298,6 +258,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
       const instance = canvasRef.current?.closest('[data-display-instance]');
       if (instance && !instance.hasAttribute('data-active-display')) return;
       if (event.target?.closest?.('[data-workbench-module]')) return;
+      if (event.target?.closest?.('button, [role="button"]') && !canvasRef.current?.contains(event.target)) return;
       if (event.code !== 'Space' || editable(event) || disabled || cropSession) return;
       event.preventDefault();
       spacePressedRef.current = true;
@@ -309,8 +270,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
       setSpaceNavigation(false);
       if (event?.type === 'blur') {
         clearGesture(); clearMarquee();
-        globalThis.clearTimeout?.(gridSwipeTimerRef.current);
-        gridSwipeTimerRef.current = null; setGridSwipe(null);
+        navigation.endDrag(true);
       }
     };
     globalThis.addEventListener?.('keydown', keydown, true);

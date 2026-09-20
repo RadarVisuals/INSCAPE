@@ -8,7 +8,11 @@ import { systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraf
 import { buildOwnerSystemWorkflowPreviewDocument } from '../src/public/ownerSystemWorkflowPreviewDocument.js';
 import '../src/index.css';
 
-let fixtures = assets.map((asset, index) => index ? asset : { ...asset,
+let fixtures = assets.map((asset, index) => index === 1 || index === 2 ? { ...asset,
+  imageGroups: Array.from({ length: index === 1 ? 6 : 41 }, (_, imageIndex) => ({ index: imageIndex,
+    originalImageUrl: `https://images.inscape.test/${index === 1 ? 'pose' : 'layer'}-${imageIndex}.webp`,
+  })),
+} : index ? asset : { ...asset,
   imageGroups: ['main', 'transparent', 'unavailable'].map((name, index) => ({ index,
     originalImageUrl: `https://images.inscape.test/${name}.webp`, imageUrl: `https://images.inscape.test/${name}.webp`,
     variants: name === 'transparent' ? [{ url: 'https://images.inscape.test/transparent-fallback.webp' }] : [],

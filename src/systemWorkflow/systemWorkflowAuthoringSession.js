@@ -1,4 +1,4 @@
-import { createSystemWorkflowAnimationCandidate } from './systemWorkflowAnimation.js';
+import { createPlacementGroupCandidate, ungroupPlacementsCandidate, guardGroupedOperation } from './systemWorkflowGroups.js';
 import {
   createSystemWorkflowGridCandidate,
   createSystemWorkflowGridDeleteCandidate,
@@ -73,9 +73,10 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
 
   return Object.freeze({
     getState() {
-      selectedGridId = reconcileSystemWorkflowGridSelection(store.getDraft(), selectedGridId);
+      const draft = store.getDraft();
+      selectedGridId = reconcileSystemWorkflowGridSelection(draft, selectedGridId);
       return Object.freeze({
-        draft: store.getDraft(),
+        draft,
         generation: store.getGeneration(),
         selectedGridId,
       });
@@ -130,47 +131,60 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
     },
 
     movePlacement(request) {
-      return transact((draft) => createSystemWorkflowMovementCandidate(draft, request));
+      return transact((draft) => createSystemWorkflowMovementCandidate(guardGroupedOperation(draft, request), request));
     },
 
     movePlacements(request) {
-      return transact((draft) => createSystemWorkflowGroupMovementCandidate(draft, request));
+      return transact((draft) => createSystemWorkflowGroupMovementCandidate(guardGroupedOperation(draft, request), request));
     },
 
     applyGutters(request) {
-      return transact((draft) => createSystemWorkflowGutterCandidate(draft, request));
+      return transact((draft) => {
+        if (draft.grids.find(grid => grid.id === request.gridId)?.groups?.length) throw new Error('Ungroup layers before applying composition spacing.');
+        return createSystemWorkflowGutterCandidate(draft, request);
+      });
+    },
+
+    getSnapshot() {
+      const draft = store.getSnapshot ? store.getSnapshot() : store.getDraft();
+      selectedGridId = reconcileSystemWorkflowGridSelection(draft, selectedGridId);
+      return Object.freeze({ draft, generation: store.getGeneration(), selectedGridId });
     },
 
     resizePlacement(request) {
-      return transact((draft) => createSystemWorkflowResizeCandidate(draft, request));
+      return transact((draft) => createSystemWorkflowResizeCandidate(guardGroupedOperation(draft, request), request));
     },
 
-    setPlacementAnimation(request) {
-      return transact(draft => createSystemWorkflowAnimationCandidate(draft, request));
+    groupPlacements(request) {
+      return transact(draft => createPlacementGroupCandidate(draft, request));
+    },
+
+    ungroupPlacements(request) {
+      return transact(draft => ungroupPlacementsCandidate(draft, request));
     },
 
     arrangePlacement(request) {
-      return transact(draft => createSystemWorkflowArrangeCandidate(draft, request));
+      return transact(draft => createSystemWorkflowArrangeCandidate(guardGroupedOperation(draft, request), request));
     },
 
     resizePlacements(request) {
-      return transact((draft) => createSystemWorkflowGroupResizeCandidate(draft, request));
+      return transact((draft) => createSystemWorkflowGroupResizeCandidate(guardGroupedOperation(draft, request), request));
     },
 
     cropPlacement(request) {
-      return transact((draft) => createSystemWorkflowCropCandidate(draft, request));
+      return transact((draft) => createSystemWorkflowCropCandidate(guardGroupedOperation(draft, request), request));
     },
 
     setPlacementPresentation(request) {
-      return transact((draft) => createSystemWorkflowPresentationCandidate(draft, request));
+      return transact((draft) => createSystemWorkflowPresentationCandidate(guardGroupedOperation(draft, request), request));
     },
 
     duplicatePlacement(request) {
-      return transact((draft) => createSystemWorkflowDuplicateCandidate(draft, request));
+      return transact((draft) => createSystemWorkflowDuplicateCandidate(guardGroupedOperation(draft, request), request));
     },
 
     duplicatePlacements(request) {
-      return transact((draft) => createSystemWorkflowGroupDuplicateCandidate(draft, request));
+      return transact((draft) => createSystemWorkflowGroupDuplicateCandidate(guardGroupedOperation(draft, request), request));
     },
 
     changePlacementLayer(request) {
@@ -182,19 +196,19 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
     },
 
     removePlacement(request) {
-      return transact((draft) => createSystemWorkflowRemovalCandidate(draft, request));
+      return transact((draft) => createSystemWorkflowRemovalCandidate(guardGroupedOperation(draft, request), request));
     },
 
     removePlacements(request) {
-      return transact((draft) => createSystemWorkflowGroupRemovalCandidate(draft, request));
+      return transact((draft) => createSystemWorkflowGroupRemovalCandidate(guardGroupedOperation(draft, request), request));
     },
 
     transformPlacement(request) {
-      return transact((draft) => createSystemWorkflowTransformCandidate(draft, request));
+      return transact((draft) => createSystemWorkflowTransformCandidate(guardGroupedOperation(draft, request), request));
     },
 
     transformPlacements(request) {
-      return transact((draft) => createSystemWorkflowGroupTransformCandidate(draft, request));
+      return transact((draft) => createSystemWorkflowGroupTransformCandidate(guardGroupedOperation(draft, request), request));
     },
 
     setAppearance(request) {

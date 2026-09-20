@@ -24,7 +24,8 @@ export default function useDisplayInspection(options) {
     a.navigationOrder - b.navigationOrder || a.id.localeCompare(b.id)), [options.items]);
   const active = session?.scope === options.scope ? session : null;
   const placementId = active?.placementId || null;
-  const available = items.filter(item => options.getEntry(item.id) && rectangle(options.getElement(item.id)));
+  // Only an open inspector needs its navigable artwork and screen geometry.
+  const available = active ? items.filter(item => options.getEntry(item.id) && rectangle(options.getElement(item.id))) : [];
   const position = available.findIndex(item => item.id === placementId);
   const entry = placementId ? options.getEntry(placementId) : null;
   const close = useCallback(() => {

@@ -86,9 +86,10 @@ test('owner Display and Text windows snap to the Workbench, with free movement a
     await page.getByRole('button', { name: 'Close Untitled article', exact: true }).click();
     const board = page.getByRole('article', { name: 'Display Module', exact: true });
     const boardHeader = page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true });
-    await boardHeader.focus(); await page.keyboard.press('ArrowLeft');
+    // Move into available space: the viewport inset takes priority over the grid.
+    await boardHeader.focus(); await page.keyboard.press('ArrowRight');
     assert.ok(aligned(await position(board)), 'Display keyboard movement snaps');
-    await drag(boardHeader, -37, 29);
+    await drag(boardHeader, 37, 29);
     assert.ok(aligned(await position(board)), 'Display dragging snaps');
     await drag(boardHeader, 7, 7, true);
     assert.equal(aligned(await position(board)), false, 'Alt bypasses Display snapping');
@@ -124,7 +125,7 @@ test('owner Display and Text windows snap to the Workbench, with free movement a
     for (const key of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(reversed[key] - firstZoom[key]) < .1, 'zoom out retraces the same path');
     await wheel(60); await wheel(60);
     assert.deepEqual(await board.boundingBox(), baseline, 'scroll back restores exact original rectangle across separate bursts');
-    await wheel(-60); await page.keyboard.press('Escape');
+    await boardHeader.focus(); await wheel(-60); await page.keyboard.press('Escape');
     assert.deepEqual(await board.boundingBox(), baseline, 'Escape restores original rectangle');
     await wheel(-60); await page.getByRole('button', { name: 'Restore Display Module', exact: true }).click();
     assert.deepEqual(await board.boundingBox(), baseline, 'Restore restores original rectangle');
@@ -132,6 +133,7 @@ test('owner Display and Text windows snap to the Workbench, with free movement a
     await page.getByRole('button', { name: 'Close Untitled article', exact: true }).click();
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await page.getByRole('checkbox', { name: 'Grid snapping', exact: true }).uncheck();
+    await page.getByRole('checkbox', { name: 'Module edge snapping', exact: true }).uncheck();
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
     const unsnapped = await position(board); await drag(boardHeader, 17, 13);
     assert.deepEqual(await position(board), { left: unsnapped.left + 17, top: unsnapped.top + 13 });

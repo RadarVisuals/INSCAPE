@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5191';
-test('Text tools, save recovery and drag into and out of Display', { timeout: 120000 }, async () => {
+for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into and out of Display at ${viewScale * 100}%`, { timeout: 120000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
@@ -38,10 +38,10 @@ test('Text tools, save recovery and drag into and out of Display', { timeout: 12
     assert.ok(Math.abs(writeBounds.y - readBounds.y) < 1, 'Read does not move text');
     await output.getByRole('button', { name: 'Write', exact: true }).click();
     await tools.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('colour');
-    await tools.getByRole('checkbox', { name: 'Show text frame' }).check();
+    await tools.getByRole('checkbox', { name: 'Show border', exact: true }).check();
     assert.notEqual(await output.locator('.text-module-body').evaluate(node => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
     await tools.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('none');
-    await tools.getByRole('checkbox', { name: 'Show text frame' }).uncheck();
+    await tools.getByRole('checkbox', { name: 'Show border', exact: true }).uncheck();
     // Simulate another writer updating unrelated saved data.
     await page.evaluate(() => { const draft = window.readDraft(); draft.identityPresentation.alias = 'Other tab'; localStorage.setItem(window.draftKey, JSON.stringify(draft)); });
     await body.fill('Unsaved but recoverable.');
@@ -54,6 +54,13 @@ test('Text tools, save recovery and drag into and out of Display', { timeout: 12
     await tools.locator('.text-controls-body').evaluate(node => { node.scrollTop = 0; });
     await page.screenshot({ path: '.browser-test-runtime/text-tools-wide.png' });
     await tools.getByRole('button', { name: 'Close Text tools' }).click();
+    if (viewScale === .5) {
+      for (let step = 0; step < 5; step++) {
+        await output.dispatchEvent('wheel', { ctrlKey: true, deltaY: 100, bubbles: true, cancelable: true });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+      }
+    }
+    const originalTextHeight = (await body.locator('p').boundingBox()).height;
     const unlock = page.getByRole('button', { name: 'Unlock Display Module composition', exact: true }); if (await unlock.count()) await unlock.click({ force: true });
     const canvas = page.locator('[data-system-workflow-artboard]').first(), bounds = await canvas.boundingBox();
     const handle = output.getByRole('button', { name: 'Drag Text into Display' }); await output.hover();
@@ -64,6 +71,7 @@ test('Text tools, save recovery and drag into and out of Display', { timeout: 12
     assert.equal(await text.count(), 0, 'attached text no longer has an independent window');
     const editor = canvas.getByRole('textbox', { name: 'Article text', exact: true }); await editor.waitFor();
     assert.equal(await editor.locator('strong').innerText(), 'The landscape remembers.');
+    assert.ok(Math.abs((await editor.locator('p').boundingBox()).height - originalTextHeight) < 1, 'attachment retains visible text size at the current Workbench scale');
     const externalTools = page.locator('.text-tools-window');
     assert.equal(await canvas.getByRole('toolbar').count(), 0);
     await externalTools.getByRole('textbox', { name: 'Article title', exact: true }).fill('Attached text');
@@ -79,6 +87,7 @@ test('Text tools, save recovery and drag into and out of Display', { timeout: 12
     await page.screenshot({ path: '.browser-test-runtime/text-detach-debug.png' });
     await text.waitFor({ state: 'attached' });
     assert.equal(await text.locator('.text-editor-content strong').innerText(), 'The landscape remembers.');
+    assert.ok(Math.abs((await text.locator('.text-editor-content p').boundingBox()).height - originalTextHeight) < 1, 'detachment retains visible text size at the current Workbench scale');
     assert.equal(await page.evaluate(() => window.readDraft().grids.flatMap(grid => grid.placements).filter(item => item.kind === 'text').length), 0);
     await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
     const toolBounds = await text.locator('.text-tools-window').boundingBox();

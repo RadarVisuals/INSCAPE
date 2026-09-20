@@ -6,6 +6,7 @@ import ProgressiveArtworkImage from './ProgressiveArtworkImage.jsx';
 import { assetForPlacement, isValidPlacementMedia } from '../../systemWorkflow/domain/placementMedia.js';
 import { PRESENTATION_BOARD_INSTANCE_STATE } from './ownerSystemWorkflowModuleState.js';
 import { snapWorkbenchCoordinate as snap } from './workbenchGrid.js';
+import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
 import {
   DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION,
   loadPresentationBoardShortcut,
@@ -42,6 +43,7 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
   const [shortcutIconMedia, setShortcutIconMedia] = useState(() => isValidPlacementMedia(storedShortcut?.iconMedia) ? storedShortcut.iconMedia : null);
   const shortcutNode = useRef(null);
   const [shortcutVisible, setShortcutVisible] = useState(Boolean(storedShortcut?.visible || storedShortcut?.open === false));
+  const placement = useWorkbenchPlacement(shortcutNode, !readOnly && shortcutVisible, 1, false);
   const [shortcutIconPresentation, setShortcutIconPresentation] = useState(() =>
     normalizePresentationBoardShortcutIconPresentation(storedShortcut?.iconPresentation));
   const [shortcutIconEditing, setShortcutIconEditing] = useState(false);
@@ -91,9 +93,9 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
     observer.observe(host);
     return () => observer.disconnect();
   }, [host, currentShortcutBounds.width, currentShortcutBounds.height]);
-  const clampShortcut = (position) => ({
-    left: Math.max(0, Math.min((host?.clientWidth || currentShortcutBounds.width) - currentShortcutBounds.width, snap(position.left, shortcutSnap))),
-    top: Math.max(0, Math.min((host?.clientHeight || currentShortcutBounds.height) - currentShortcutBounds.height, snap(position.top, shortcutSnap))),
+  const clampShortcut = (position, snapping = shortcutSnap) => ({
+    left: Math.max(0, Math.min((host?.clientWidth || currentShortcutBounds.width) - currentShortcutBounds.width, snap(position.left, snapping))),
+    top: Math.max(0, Math.min((host?.clientHeight || currentShortcutBounds.height) - currentShortcutBounds.height, snap(position.top, snapping))),
   });
   useEffect(() => {
     if (!host || !shortcutVisible) return;
@@ -104,15 +106,17 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
   }, [host, shortcutIconPresentation.labelSize, shortcutIconPresentation.size, shortcutSnap, shortcutVisible]);
   const beginShortcutDrag = (event) => {
     if (event.button !== 0 || renaming) return;
+    placement.begin(event);
     shortcutDragRef.current = { id: event.pointerId, clientX: event.clientX, clientY: event.clientY, ...shortcutPosition };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const moveShortcutDrag = (event) => {
     const start = shortcutDragRef.current; if (!start || start.id !== event.pointerId) return;
-    setShortcutPosition(clampShortcut({ left: start.left + event.clientX - start.clientX,
-      top: start.top + event.clientY - start.clientY }));
+    const candidate = { left: start.left + event.clientX - start.clientX, top: start.top + event.clientY - start.clientY };
+    const fallback = { left: snap(candidate.left, shortcutSnap && !event.altKey), top: snap(candidate.top, shortcutSnap && !event.altKey) };
+    setShortcutPosition(clampShortcut(placement.position(candidate, shortcutPosition, fallback, event.altKey), false));
   };
-  const stopShortcutDrag = (event) => { if (shortcutDragRef.current?.id === event.pointerId) shortcutDragRef.current = null; };
+  const stopShortcutDrag = (event) => { if (shortcutDragRef.current?.id === event.pointerId) { shortcutDragRef.current = null; placement.finish(); } };
   const commitRename = () => {
     const value = renameValue.trim(); if (value) onNameChange(value.slice(0, 48)); else setRenameValue(shortcutName);
     setRenaming(false);
@@ -147,7 +151,7 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
         if (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10') openMenu(event);
         if (event.key === 'Enter' && !renaming && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED) { event.preventDefault(); onRestore?.(); }
       }}
-      onPointerCancel={stopShortcutDrag} onPointerDown={beginShortcutDrag} onPointerMove={moveShortcutDrag}
+      onPointerCancel={stopShortcutDrag} onLostPointerCapture={stopShortcutDrag} onPointerDown={beginShortcutDrag} onPointerMove={moveShortcutDrag}
       onPointerUp={stopShortcutDrag} style={{ left: shortcutPosition.left, top: shortcutPosition.top,
         ...shortcutPresentationStyle(shortcutIconPresentation) }} type="button">
       <span aria-hidden="true" className="system-workflow__desktop-shortcut-icon" data-custom={shortcutAsset ? true : undefined}>

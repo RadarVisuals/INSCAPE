@@ -5,7 +5,7 @@ import { chromium } from 'playwright-core';
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5186';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
-test('owner Display opens, browses and returns focus through the shared inspection', { timeout: 30_000 }, async () => {
+test('owner Display opens inspection and returns focus to the inspected artwork', { timeout: 30_000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
@@ -16,12 +16,12 @@ test('owner Display opens, browses and returns focus through the shared inspecti
     const first = page.getByRole('button', { name: /Select ABYSSAL STUDY/ });
     await first.dblclick();
     await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor();
-    await page.getByRole('button', { name: 'Next artwork', exact: true }).click();
-    await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor();
+    assert.equal(await page.getByRole('group', { name: 'Artwork inspection', exact: true }).getByRole('button').count(), 1,
+      'inspection exposes only Return to composition');
     await page.screenshot({ path: '.browser-test-runtime/owner-shared-inspection.png' });
     await page.keyboard.press('Escape');
     await page.locator('.system-workflow__scene-controls').waitFor({ state: 'detached' });
-    assert.equal(await page.getByRole('button', { name: /Select MOUNTAIN SIGNAL II/ }).evaluate(node => node === document.activeElement), true);
+    assert.equal(await first.evaluate(node => node === document.activeElement), true);
     assert.equal(await page.locator('.system-workflow__placement[data-viewing]').count(), 0);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
@@ -41,11 +41,12 @@ async function withSession(run) {
       const useInspection = (await import('/src/public/ownerSystemWorkflow/useDisplayInspection.js')).default;
       const root = createRoot(document.getElementById('root'));
       const items = [{ id: 'last', navigationOrder: 3 }, { id: 'missing', navigationOrder: 2 }, { id: 'first', navigationOrder: 1 }];
-      const api = window.sessionTest = { scope: 'profile-a:grid-a', items, deferred: false, pending: [], events: [] };
+      const api = window.sessionTest = { scope: 'profile-a:grid-a', items, deferred: false, pending: [], events: [], entryReads: 0, geometryReads: 0 };
       function Harness() {
         const refs = React.useRef(new Map());
         const viewer = useInspection({ scope: api.scope, items: api.items,
-          getElement: id => refs.current.get(id), getEntry: id => id !== 'missing' ? { id } : null,
+          getElement: id => { api.geometryReads++; return refs.current.get(id); },
+          getEntry: id => { api.entryReads++; return id !== 'missing' ? { id } : null; },
           prepare: api.deferred ? () => new Promise((resolve, reject) => api.pending.push({ resolve, reject })) : undefined,
           onOpen: id => api.events.push(['open', id]), onNavigate: id => api.events.push(['navigate', id]),
           onClose: () => api.events.push(['close']),
@@ -64,6 +65,17 @@ async function withSession(run) {
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 }
+
+test('closed inspection leaves artwork models and geometry alone', () => withSession(async page => {
+  assert.deepEqual(await page.evaluate(() => [sessionTest.entryReads, sessionTest.geometryReads]), [0, 0]);
+  await page.evaluate(() => { sessionTest.scope = 'profile-a:grid-b'; sessionTest.render(); }); await settle(page);
+  assert.deepEqual(await page.evaluate(() => [sessionTest.entryReads, sessionTest.geometryReads]), [0, 0]);
+  await page.getByRole('button', { name: 'first', exact: true }).click();
+  assert.equal(await page.evaluate(() => sessionTest.viewer.total), 2, 'opening still resolves the available artwork');
+  await page.evaluate(() => { sessionTest.viewer.close(); }); await settle(page);
+  await page.evaluate(() => { sessionTest.entryReads = 0; sessionTest.geometryReads = 0; sessionTest.render(); }); await settle(page);
+  assert.deepEqual(await page.evaluate(() => [sessionTest.entryReads, sessionTest.geometryReads]), [0, 0]);
+}));
 
 test('shared inspection orders available artwork and owns the complete return lifecycle', () => withSession(async page => {
   await page.getByRole('button', { name: 'missing', exact: true }).click();

@@ -1,9 +1,8 @@
 import { normalizeDisplayInstruments, validInstrumentWindows } from './displayInstrumentState.js';
 export const defaultSharedTools = () => ({ layers: false, metadata: false, windows: {} });
 export function validSharedTools(value) {
-  return value && Object.keys(value).every(key => ['layers', 'metadata', 'windows', 'targetId', 'animation'].includes(key))
+  return value && Object.keys(value).every(key => ['layers', 'metadata', 'windows', 'targetId'].includes(key))
     && (value.targetId === undefined || value.targetId === null || typeof value.targetId === 'string')
-    && (value.animation === undefined || typeof value.animation === 'boolean')
     && typeof value.layers === 'boolean' && typeof value.metadata === 'boolean' && validInstrumentWindows(value.windows);
 }
 export function restoreSharedTools(views = {}) {

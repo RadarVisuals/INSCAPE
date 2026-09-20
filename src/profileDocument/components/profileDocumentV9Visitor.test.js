@@ -55,7 +55,8 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(renderer, /referenceResolution\.key === referenceKey/);
   assert.match(renderer, /controller\.abort\(\)/);
   assert.match(renderer, /naturalHeight: height, naturalWidth: width/);
-  assert.match(visitor, /activeIndex === 0 \? 'eager' : 'lazy'/);
+  // Neighbor readiness and retained media at arrival are exercised with actual
+  // owner/Visitor navigation in browser-tests/grid-motion.browser.mjs.
   assert.match(visitor, /DisplayFocusViewer/);
   assert.doesNotMatch(visitor, /LatticeFocusViewer|inspectionVariant="rack"/);
   assert.doesNotMatch(visitor, /gridVisible=\{document\.appearance\.guideMode !== 'NONE'\}/);
@@ -68,14 +69,12 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(visitor, /profileDockControlRef/);
   assert.match(visitor, /returnFocus/);
   assert.match(visitor, /ArrowRight/);
-  assert.match(visitor, /resolveVisitorGridDragDestination/);
+  // Continuous drag, wrapping, and Text synchronization are exercised through
+  // the shared camera in grid-motion/grid-transition.browser.mjs.
   assert.match(visitor, /event\.code !== 'Space'/);
-  assert.match(visitor, /onPointerDown=\{event => \{ playback\.stop\(\); beginGridDrag\(event\); \}\}/);
   assert.match(visitor, /suppressPlacementClickRef/);
   assert.match(visitor, /visitor-grid-world__grid-plane--current/);
   assert.match(visitor, /visitor-grid-world__grid-plane--adjacent/);
-  assert.match(visitor, /--visitor-grid-swipe-x/);
-  assert.match(visitorCss, /data-grid-swipe-settling/);
   assert.match(visitor, /Previous Grid/);
   assert.match(visitor, /Next Grid/);
   assert.match(visitor, /onOpenDirectory \|\| onReturn \|\| onExit/);

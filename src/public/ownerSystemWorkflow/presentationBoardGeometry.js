@@ -205,7 +205,7 @@ export function presentationBoardWheelZoomPosition(view, origin, viewport, sidec
   return { left: centerX - view.frame.board.width / 2, top: centerY - view.frame.board.height / 2 };
 }
 
-export function resizePresentationBoardFromCorner(view, frame, corner, movement, gridStep = 0, snapEdge = null) {
+export function resizePresentationBoardFromCorner(view, frame, corner, movement, gridStep = 0, snapEdge = null, bounds = null) {
   if (!view || !frame || !['ne', 'nw', 'se', 'sw'].includes(corner)) return null;
   const deltaX = Number(movement?.x) || 0;
   const deltaY = Number(movement?.y) || 0;
@@ -219,36 +219,40 @@ export function resizePresentationBoardFromCorner(view, frame, corner, movement,
   const projectedWidthMovement = (signedWidthMovement + signedHeightMovement * inverseAspect)
     / (1 + inverseAspect ** 2);
   let requestedWidth = frame.width + projectedWidthMovement;
+  const anchorX = horizontalDirection === 1 ? frame.left : frame.left + frame.width;
+  const anchorY = verticalDirection === 1 ? frame.top : frame.top + frame.height;
+  const chromeHeight = frame.height - frame.width * inverseAspect;
   if (gridStep > 0) {
-    // Snap the moving edge on the dominant pointer axis, keeping the opposite
-    // corner fixed and deriving the other dimension from the authored ratio.
-    if (Math.abs(deltaX) >= Math.abs(deltaY)) {
-      requestedWidth = frame.width + signedWidthMovement;
-      const anchor = corner.endsWith('e') ? frame.left : frame.left + frame.width;
-      const edge = anchor + horizontalDirection * requestedWidth;
-      requestedWidth = (Math.round(edge / gridStep) * gridStep - anchor) * horizontalDirection;
-    } else {
-      requestedWidth = frame.width + signedHeightMovement / inverseAspect;
-      const anchor = corner.startsWith('s') ? frame.top : frame.top + frame.height;
-      const chromeHeight = frame.height - frame.width * inverseAspect;
-      const edge = anchor + verticalDirection * (requestedWidth * inverseAspect + chromeHeight);
-      requestedWidth = ((Math.round(edge / gridStep) * gridStep - anchor) * verticalDirection - chromeHeight) / inverseAspect;
-    }
+    // Snap the projected moving edge, without changing the resize axis halfway
+    // through a diagonal gesture.
+    const edge = anchorX + horizontalDirection * requestedWidth;
+    requestedWidth = (Math.round(edge / gridStep) * gridStep - anchorX) * horizontalDirection;
   }
   if (snapEdge) {
-    const horizontal = Math.abs(deltaX) >= Math.abs(deltaY);
-    const side = horizontal ? (horizontalDirection === 1 ? 'right' : 'left') : (verticalDirection === 1 ? 'bottom' : 'top');
-    const edge = horizontal ? frame.left + (horizontalDirection === 1 ? frame.width : 0) + deltaX
-      : frame.top + (verticalDirection === 1 ? frame.height : 0) + deltaY;
-    const snapped = snapEdge(horizontal ? 'x' : 'y', side, edge);
-    if (snapped !== null) {
-      const chromeHeight = frame.height - frame.width * inverseAspect;
-      requestedWidth = horizontal
-        ? (snapped - (horizontalDirection === 1 ? frame.left : frame.left + frame.width)) * horizontalDirection
-        : ((snapped - (verticalDirection === 1 ? frame.top : frame.top + frame.height)) * verticalDirection - chromeHeight) / inverseAspect;
-    }
+    const x = snapEdge('x', horizontalDirection === 1 ? 'right' : 'left', anchorX + horizontalDirection * requestedWidth);
+    const y = snapEdge('y', verticalDirection === 1 ? 'bottom' : 'top',
+      anchorY + verticalDirection * (requestedWidth * inverseAspect + chromeHeight));
+    // A module edge wins over a grid candidate on either axis. Keep legacy
+    // numeric callbacks readable while the shared snapper supplies its kind.
+    const useY = y !== null && (x === null || x.kind === 'grid' && y.kind !== 'grid');
+    if (useY) requestedWidth = (((y.value ?? y) - anchorY) * verticalDirection - chromeHeight) / inverseAspect;
+    else if (x !== null) requestedWidth = ((x.value ?? x) - anchorX) * horizontalDirection;
   }
-  const nextView = setContinuousPresentationBoardScale(view, requestedWidth / view.fit.stage.width);
+  let boundedWidth = Infinity;
+  if (bounds) {
+    const availableWidth = horizontalDirection === 1 ? bounds.right - anchorX : anchorX - bounds.left;
+    const availableHeight = verticalDirection === 1 ? bounds.bottom - anchorY : anchorY - bounds.top;
+    boundedWidth = Math.max(1, Math.min(availableWidth, (availableHeight - chromeHeight) / inverseAspect));
+    requestedWidth = Math.min(requestedWidth, boundedWidth);
+  }
+  let nextView = setContinuousPresentationBoardScale(view, requestedWidth / view.fit.stage.width);
+  // Screen limits win over the preferred minimum size near an anchored edge.
+  if (nextView.frame.board.width > boundedWidth) {
+    const scale = boundedWidth / view.fit.stage.width;
+    const viewport = { width: view.frame.board.left * 2 + view.frame.board.width,
+      height: view.frame.board.top * 2 + view.frame.board.height };
+    nextView = Object.freeze({ ...view, scale, frame: projectScaledPresentationBoard(view.fit, viewport, scale) });
+  }
   const width = nextView.frame.board.width;
   const height = nextView.frame.board.height;
   return Object.freeze({

@@ -117,17 +117,22 @@ test('owner navigation drag cancels on pointer cancellation, blur and Grid chang
     const React = (await import('/@id/react')).default;
     const { createRoot } = (await import('/@id/react-dom/client')).default;
     const useInteraction = (await import('/src/public/ownerSystemWorkflow/useOwnerSystemWorkflowPlacementInteraction.js')).default;
+    const useGridPlayback = (await import('/src/public/ownerSystemWorkflow/useGridPlayback.js')).default;
     const root = createRoot(document.getElementById('root'));
     function Harness() {
-      const canvasRef = React.useRef(null);
+      const canvasRef = React.useRef(null), trackRef = React.useRef(null);
       const [gridId, setGridId] = React.useState('a'); hardening.setGridId = setGridId;
-      const interaction = useInteraction({ canvasRef, authoringDisabled: true,
+      const navigation = useGridPlayback({ canvasRef, trackRef, gridId, enabled: true, playing: false,
+        adjacentGrid: () => gridId === 'a' ? 'b' : 'a', onPause: () => {}, onAdvance: setGridId });
+      hardening.navigation = navigation;
+      const interaction = useInteraction({ canvasRef, navigation, authoringDisabled: true,
         controller: { draft: { profileAddress: 'a' }, selectedGrid: { id: gridId, placements: [] }, selectedPlacementIds: [], replaceSelection: () => {} },
-        canNavigateGrid: () => 'b', onNavigateGrid: () => {},
+        canNavigateGrid: () => 'b',
       });
       hardening.interaction = interaction;
       return React.createElement('div', { id: 'swipe-target', ref: canvasRef,
-        style: { width: 500, height: 300 }, onPointerDown: e => interaction.beginCanvasSelection(e, { navigationOnly: true }) });
+        style: { width: 500, height: 300 }, onPointerDown: e => interaction.beginCanvasSelection(e, { navigationOnly: true }) },
+        React.createElement('div', { ref: trackRef }));
     }
     root.render(React.createElement(Harness));
   });
@@ -140,7 +145,11 @@ test('owner navigation drag cancels on pointer cancellation, blur and Grid chang
       else window.dispatchEvent(kind === 'blur' ? new Event('blur') : new PointerEvent('pointercancel', { pointerId: 1 }));
     }, interruption);
     await settle(page);
-    assert.equal(await page.evaluate(() => hardening.interaction.gridSwipe), null);
+    assert.equal(await page.evaluate(() => hardening.navigation.isDragging()), false);
+    const stopped = await page.evaluate(() => hardening.interaction.gridSwipe);
+    if (interruption === 'grid') assert.equal(stopped, null, 'explicit navigation resets the camera');
+    await page.mouse.move(50, 100); await settle(page);
+    assert.deepEqual(await page.evaluate(() => hardening.interaction.gridSwipe), stopped, 'cancelled input cannot continue moving the camera');
     await page.mouse.up();
   }
 }));

@@ -37,6 +37,7 @@
 .system-workflow__inspection-selector > button:hover:not(:disabled) { background: var(--workflow-hover); }
 .system-workflow__inspection-selector > button:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -3px; }
 .system-workflow__instrument-layers .system-workflow__selection-actions {
+  box-sizing: border-box;
   position: static;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

@@ -54,6 +54,7 @@ export function projectSystemWorkflowPublicGrids(draftInput, assetRecords = []) 
       labelVisible: grid.labelVisible,
       labelAnchor: grid.labelAnchor,
       labelOffset: { ...grid.labelOffset },
+      ...(grid.groups ? { groups: structuredClone(grid.groups) } : {}),
       placements: grid.placements
         .filter(({ visibility }) => visibility === SYSTEM_WORKFLOW_VISIBILITY.PUBLIC)
         .sort((left, right) => left.navigationOrder - right.navigationOrder || left.id.localeCompare(right.id))
@@ -84,6 +85,7 @@ function projectSystemWorkflowWorldCover(draft, assetRecords) {
       labelVisible: false,
       labelAnchor: cover.labelAnchor,
       labelOffset: { ...cover.labelOffset },
+      ...(cover.groups ? { groups: structuredClone(cover.groups) } : {}),
       placements: cover.placements
         .filter(({ visibility }) => visibility === SYSTEM_WORKFLOW_VISIBILITY.PUBLIC)
         .sort((left, right) => left.navigationOrder - right.navigationOrder || left.id.localeCompare(right.id))
@@ -130,7 +132,7 @@ export function buildProfileDocumentV9({
       grids: projectSystemWorkflowPublicGrids(projectDisplayDraft(draft, module.id), assetRecords) }));
   const presentation = workbench || draft.workbench;
   const miniApps = draft.miniApps ? projectMiniApps(draft.miniApps) : undefined;
-  const texts = draft.texts ? projectTextModules(draft.texts) : undefined;
+  const texts = draft.texts ? projectTextModules(draft.texts, [{ id: 'display:primary', grids: draft.grids.filter(g => !isSystemWorkflowWorldCoverGrid(g)) }, ...(draft.displays || []).filter(d => d.visibility === 'PUBLIC').map(d => ({ ...d, grids: d.grids.filter(g => !isSystemWorkflowWorldCoverGrid(g)) }))]) : undefined;
   const publicWorkbench = presentation ? structuredClone(presentation) : null;
   if (publicWorkbench?.miniApps) publicWorkbench.miniApps = publicWorkbench.miniApps.filter(item => miniApps?.some(app => app.id === item.id));
   if (publicWorkbench?.texts) publicWorkbench.texts = publicWorkbench.texts.filter(item => texts?.some(text => text.id === item.id));

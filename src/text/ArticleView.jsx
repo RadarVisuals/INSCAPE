@@ -19,6 +19,7 @@ function renderNode(node, key) {
     if (mark.type === 'link') return <a key={id} href={mark.attrs.href} target="_blank" rel="noopener noreferrer">{text}</a>;
     return createElement(({ bold: 'strong', italic: 'em', underline: 'u', strike: 's', code: 'code' })[mark.type], { key: id }, text);
   }, node.text);
+  if (node.type === 'pageBreak') return <div key={key} className="text-page-break" />;
   if (node.type === 'artwork') return <ArticleArtwork key={key} attrs={node.attrs} />;
   const tag = ({ doc: 'div', paragraph: 'p', heading: `h${node.attrs?.level}`, bulletList: 'ul', orderedList: 'ol', listItem: 'li', blockquote: 'blockquote', horizontalRule: 'hr', hardBreak: 'br' })[node.type];
   return createElement(tag, { key, ...(['paragraph', 'heading'].includes(node.type) ? { style: articleAlignmentStyle(node.attrs?.textAlign) } : {}), ...(node.type === 'orderedList' ? { start: node.attrs?.start } : {}) },

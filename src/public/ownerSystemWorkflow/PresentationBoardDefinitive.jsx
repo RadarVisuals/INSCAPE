@@ -1,4 +1,6 @@
 import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
+import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchView.jsx';
+import { workbenchViewStyle } from './workbenchViewScale.js';
 import { moduleEdgeStyle } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';
 import './moduleSurface.css';
 import { cloneElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -62,13 +64,17 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const [selectionOverlayHost, setSelectionOverlayHost] = useState(null);
   const [boardPhase, setBoardPhase] = useState('window');
   const [immersive, setImmersive] = useState(false);
+  const workbenchView = useWorkbenchView();
+  const viewId = instanceId || 'display:primary';
+  const viewTransform = immersive ? { scale: 1, x: 0, y: 0 } : workbenchModuleTransform(workbenchView, viewId);
+  const workbenchScale = viewTransform.scale;
   const [screenSize, setScreenSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const wheelRef = useRef({ time: 0, blockedUntil: 0 });
   const wheelResizeRef = useRef(null);
   const exitImmersiveRef = useRef(null);
   const [scaleRendering, setScaleRendering] = useState('settled');
   const boardNodeRef = useRef(null);
-  const placement = useWorkbenchPlacement(boardNodeRef, !readOnly && !zoom && !immersive && boardPhase === 'window' && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW);
+  const placement = useWorkbenchPlacement(boardNodeRef, Boolean(view) && !readOnly && !zoom && !immersive && boardPhase === 'window' && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW, workbenchScale);
   const inspectionSceneRef = useRef(null);
   const boardDragRef = useRef(null);
   const boardResizeRef = useRef(null);
@@ -114,29 +120,50 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   useLayoutEffect(() => {
     if (view) setBoardPosition(current => current || { left: view.frame.board.left, top: defaultTop });
   }, [view, defaultTop]);
+  // Convert visible Workbench limits back through its temporary transform.
+  // Display movement, resizing and enlargement all use this coordinate space.
+  const viewportBounds = {
+    left: 8 - viewTransform.x / workbenchScale,
+    top: 8 - viewTransform.y / workbenchScale,
+    right: ((host?.clientWidth || 0) - 8 - viewTransform.x) / workbenchScale,
+    bottom: ((host?.clientHeight || 0) - 8 - viewTransform.y) / workbenchScale,
+  };
   const clampPosition = (position, frame = view?.frame.board) => ({
-    left: Math.max(8,
-      Math.min((host?.clientWidth || 0) - (frame?.width || 0) - (0) - 8, position.left)),
-    top: Math.max(8, Math.min((host?.clientHeight || 0) - (frame?.height || 0) - 8, position.top)),
+    left: Math.max(viewportBounds.left, Math.min(viewportBounds.right - (frame?.width || 0), position.left)),
+    top: Math.max(viewportBounds.top, Math.min(viewportBounds.bottom - (frame?.height || 0), position.top)),
   });
+  useLayoutEffect(() => {
+    if (!baseView || workbenchScale !== 1 || viewTransform.x || viewTransform.y) return;
+    setBoardPosition(position => {
+      if (!position) return position;
+      const next = clampPosition(position, baseView.frame.board);
+      return next.left === position.left && next.top === position.top ? position : next;
+    });
+  }, [baseView?.fit.stage.width, baseView?.fit.stage.height]);
   const renderedPosition = view ? clampPosition(zoom ? presentationBoardWheelZoomPosition(view, zoom,
-    { width: host.clientWidth, height: host.clientHeight }, 0)
+    { width: (host.clientWidth - 2 * viewTransform.x) / workbenchScale,
+      height: (host.clientHeight - 2 * viewTransform.y) / workbenchScale }, 0)
     : boardPosition || { left: view.frame.board.left, top: defaultTop },
     view.frame.board) : null;
   const windowFrame = view && renderedPosition ? { ...view.frame.board, ...renderedPosition } : null;
-  const maximumView = presentationBoardInspectionFrame(view, { width: host?.clientWidth, height: host?.clientHeight },
-    geometryOptions);
-  const maximumFrame = maximumView?.board || null;
+  const maximumView = presentationBoardInspectionFrame(view,
+    { width: host?.clientWidth / workbenchScale, height: host?.clientHeight / workbenchScale },
+    { ...geometryOptions, inset: geometryOptions.inset / workbenchScale });
+  const maximumFrame = maximumView ? { ...maximumView.board,
+    left: maximumView.board.left - viewTransform.x / workbenchScale,
+    top: maximumView.board.top - viewTransform.y / workbenchScale } : null;
   const maximized = boardPhase === 'maximizing' || boardPhase === 'maximized';
   const renderedFrame = immersive ? { left: 0, top: 0, width: screenSize.width, height: screenSize.height } : maximized ? maximumFrame
     : boardPhase === 'restoring' && windowSnapshotRef.current ? windowSnapshotRef.current.frame : windowFrame;
+  useWorkbenchViewRegistration(viewId, boardNodeRef, Boolean(renderedFrame) && !immersive && !zoom && boardPhase === 'window' && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW, renderedFrame);
   const displayScale = immersive && view ? Math.min(screenSize.width / view.fit.stage.width, screenSize.height / view.fit.stage.height)
     : maximized ? maximumView?.scale || 1 : view?.scale || 1;
   useEffect(() => {
-    if (renderedFrame && !immersive && !zoom) onWindowChange?.({ name: displayName, window: {
-      left: renderedFrame.left, top: renderedFrame.top, width: renderedFrame.width, height: renderedFrame.height,
+    if (baseView && boardPosition && !immersive && !zoom && boardPhase === 'window') onWindowChange?.({ name: displayName, window: {
+      left: boardPosition.left, top: boardPosition.top,
+      width: baseView.frame.board.width, height: baseView.frame.board.height,
     } });
-  }, [displayName, renderedFrame?.left, renderedFrame?.top, renderedFrame?.width, renderedFrame?.height, onWindowChange, immersive, zoom]);
+  }, [displayName, boardPosition?.left, boardPosition?.top, baseView?.frame.board.width, baseView?.frame.board.height, onWindowChange, immersive, zoom, boardPhase]);
   const liveScaleRendering = !immersive && (scaleRendering === 'live' || boardPhase === 'maximizing' || boardPhase === 'restoring');
   const settledStageWidth = view ? view.fit.stage.width * displayScale : 0;
   const settledStageHeight = view ? view.fit.stage.height * displayScale : 0;
@@ -201,7 +228,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       if (now < wheelRef.current.blockedUntil || boardDragRef.current || boardResizeRef.current) return;
       if (immersive) { if (event.deltaY > 0) leaveImmersive(); return; }
       if (!view || !windowFrame || !['window', 'maximized'].includes(boardPhase)) return;
-      if (maximized || view.scale >= view.maximumPercentage / 100 - .001) {
+      if (maximized || view.scale >= maximumView.scale - .001) {
         if (event.deltaY < 0) {
           if (paused) {
             setScreenSize({ width: window.innerWidth, height: window.innerHeight });
@@ -214,7 +241,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       }
       const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? stage.clientHeight : 1);
       let resize = wheelResizeRef.current;
-      const current = resize?.view || view;
+      const current = resize?.view || { ...view, maximumPercentage: maximumView.scale * 100 };
       const next = setContinuousPresentationBoardScale(current,
         Math.max(baseView.scale, current.scale + Math.max(-.06, Math.min(.06, -pixels * .001))));
       if (next.scale <= baseView.scale) { restoreWheelZoom(); return; }
@@ -262,12 +289,16 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   };
 
   useEffect(() => {
-    if (boardPhase !== 'restoring') return undefined;
+    if (!['restoring', 'maximizing'].includes(boardPhase)) return undefined;
     let cancelled = false;
     const finish = () => {
-      if (cancelled || boardPhaseRef.current !== 'restoring' || completedTransitionRef.current === 'restoring') return;
-      completedTransitionRef.current = 'restoring'; setBoardPosition(windowSnapshotRef.current?.position || null);
-      windowSnapshotRef.current = null; setBoardPhase('window'); setScaleRendering('settled');
+      if (cancelled || boardPhaseRef.current !== boardPhase || completedTransitionRef.current === boardPhase) return;
+      completedTransitionRef.current = boardPhase;
+      if (boardPhase === 'restoring') {
+        setBoardPosition(windowSnapshotRef.current?.position || null);
+        windowSnapshotRef.current = null; setBoardPhase('window');
+      } else setBoardPhase('maximized');
+      setScaleRendering('settled');
     };
     const frame = requestAnimationFrame(() => {
       const transitions = (boardNodeRef.current?.getAnimations?.() || [])
@@ -295,57 +326,66 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   };
   const placedPosition = (candidate, bypass) => clampPosition(placement.position(candidate, renderedPosition,
     snapWorkbenchPosition(candidate, windowSnap && !readOnly && !bypass), bypass));
-  const edgeSnapper = bypass => (axis, side, value) => placement.edge(axis, side, value, renderedPosition, bypass);
+  const edgeSnapper = (bypass, edges = true) => (axis, side, value) => placement.edgeMatch(axis, side, value, renderedPosition, bypass, edges);
+  const resizeBounds = () => viewportBounds;
   const beginBoardDrag = (event) => {
     if (zoom || immersive || event.button !== 0 || !renderedPosition || boardPhase !== 'window' || event.target.closest('button')) return;
     stopWheelResize();
+    placement.begin(event);
     boardDragRef.current = { id: event.pointerId, clientX: event.clientX, clientY: event.clientY, ...renderedPosition };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const moveBoardDrag = (event) => {
     const start = boardDragRef.current; if (!start || start.id !== event.pointerId) return;
     if (Math.hypot(event.clientX - start.clientX, event.clientY - start.clientY) < 3) return;
-    setBoardPosition(placedPosition({ left: start.left + event.clientX - start.clientX,
-      top: start.top + event.clientY - start.clientY }, event.altKey));
+    setBoardPosition(placedPosition({ left: start.left + (event.clientX - start.clientX) / workbenchScale,
+      top: start.top + (event.clientY - start.clientY) / workbenchScale }, event.altKey));
   };
-  const stopBoardDrag = (event) => { if (boardDragRef.current?.id === event.pointerId) boardDragRef.current = null; };
+  const stopBoardDrag = (event) => { if (boardDragRef.current?.id === event.pointerId) { boardDragRef.current = null; placement.finish(); } };
   const beginBoardResize = (corner, event) => {
     if (zoom || event.button !== 0 || !view || !windowFrame || boardPhase !== 'window') return;
     event.preventDefault(); event.stopPropagation();
     stopWheelResize();
+    placement.begin(event);
     boardResizeRef.current = { corner, id: event.pointerId, clientX: event.clientX, clientY: event.clientY, frame: windowFrame, view };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const moveBoardResize = (event) => {
     const start = boardResizeRef.current; if (!start || start.id !== event.pointerId) return;
     const resized = resizePresentationBoardFromCorner(start.view, start.frame, start.corner,
-      { x: event.clientX - start.clientX, y: event.clientY - start.clientY }, windowSnap && !readOnly && !event.altKey ? WORKBENCH_GRID_STEP : 0, edgeSnapper(event.altKey));
+      { x: (event.clientX - start.clientX) / workbenchScale, y: (event.clientY - start.clientY) / workbenchScale }, 0, edgeSnapper(event.altKey), resizeBounds());
     if (!resized) return;
-    setView(resized.view); setBoardPosition(clampPosition(resized.position, resized.view.frame.board));
+    setView(resized.view); setBoardPosition(resized.position);
   };
   const stopBoardResize = (event) => {
     if (boardResizeRef.current?.id !== event.pointerId) return;
-    boardResizeRef.current = null; setScaleRendering('settled');
+    boardResizeRef.current = null; placement.finish(); setScaleRendering('settled');
   };
   const resizeBoardFromKeyboard = (corner, event) => {
     if (!['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'].includes(event.key)
       || zoom || !view || !windowFrame || boardPhase !== 'window') return;
     event.preventDefault(); event.stopPropagation();
+    placement.begin(event);
     const snapping = windowSnap && !readOnly && !event.altKey;
     const step = snapping || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
     const resized = resizePresentationBoardFromCorner(view, windowFrame, corner, {
       x: event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0,
       y: event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0,
-    }, snapping ? WORKBENCH_GRID_STEP : 0, edgeSnapper(event.altKey));
+    // A small keyboard step must not be pulled straight back by the pointer's
+    // edge magnet. Grid quantization still applies when explicitly enabled.
+    }, 0, edgeSnapper(event.altKey, false), resizeBounds());
     if (!resized) return;
     setView(resized.view);
     setBoardPosition(clampPosition(resized.position, resized.view.frame.board));
   };
   useEffect(() => {
     const move = (event) => moveBoardResize(event); const stop = (event) => stopBoardResize(event);
+    const cancel = () => { boardDragRef.current = null; boardResizeRef.current = null; setScaleRendering('settled'); };
     globalThis.addEventListener?.('pointermove', move, true); globalThis.addEventListener?.('pointerup', stop, true);
     globalThis.addEventListener?.('pointercancel', stop, true);
+    globalThis.addEventListener?.('blur', cancel);
     return () => { globalThis.removeEventListener?.('pointermove', move, true); globalThis.removeEventListener?.('pointerup', stop, true);
+      globalThis.removeEventListener?.('blur', cancel);
       globalThis.removeEventListener?.('pointercancel', stop, true); };
   });
 
@@ -368,6 +408,8 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       popover={immersive ? 'manual' : undefined} data-immersive={immersive || undefined}
       data-authoring-locked={authoringLocked || undefined}
       data-wheel-zoom={Boolean(zoom) || undefined}
+      data-workbench-scale={workbenchScale}
+      data-workbench-view-id={viewId}
       data-board-phase={boardPhase} data-board-scale={view.scale} data-maximized={maximized || undefined}
       data-scale-rendering={liveScaleRendering ? 'live' : 'settled'}
       data-inspecting={inspectionActive || undefined} data-inspection-atmosphere={inspectionAtmosphere || undefined}
@@ -375,18 +417,20 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       onTransitionEnd={finishBoardTransition} ref={boardNodeRef}
       style={{ ...moduleEdgeStyle(moduleAppearance?.edges), '--workflow-identity-strip-height': `${responsiveMetrics.identityStripHeight}px`,
         height: renderedFrame.height,
-        left: renderedFrame.left, top: renderedFrame.top, width: renderedFrame.width }}>
+        left: renderedFrame.left, top: renderedFrame.top, width: renderedFrame.width,
+        ...workbenchViewStyle(workbenchScale, renderedFrame.left, renderedFrame.top, renderedFrame.width, renderedFrame.height, viewTransform.x, viewTransform.y) }}>
       <button type="button" className="system-workflow__toolbar-reveal" aria-label={toolbarOpen ? 'Hide Display controls' : 'Show Display controls'} aria-expanded={toolbarOpen} onClick={() => setToolbarOpen(value => !value)}>···</button>
-      <header className="system-workflow__identity-strip" data-toolbar-open={toolbarOpen || undefined} tabIndex={0} aria-label={`Move Display Module: ${displayName}`}
+      <header className="system-workflow__identity-strip" data-workbench-selectable aria-keyshortcuts="Shift+Enter" data-toolbar-open={toolbarOpen || undefined} tabIndex={0} aria-label={`Move Display Module: ${displayName}`}
         onKeyDown={event => {
           if (event.target === event.currentTarget && (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')) { onContextMenu?.(event); return; }
           if (event.target !== event.currentTarget || zoom || immersive || boardPhase !== 'window' || !event.key.startsWith('Arrow')) return;
           event.preventDefault(); event.stopPropagation();
+          placement.begin(event);
           const snapping = windowSnap && !readOnly && !event.altKey;
           const step = snapping || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
           setBoardPosition(placedPosition({ left: renderedPosition.left + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0),
             top: renderedPosition.top + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0) }, event.altKey));
-        }} onPointerCancel={stopBoardDrag} onPointerDown={beginBoardDrag}
+        }} onPointerCancel={stopBoardDrag} onLostPointerCapture={stopBoardDrag} onPointerDown={beginBoardDrag}
         onPointerMove={moveBoardDrag} onPointerUp={stopBoardDrag}>
         <span className="system-workflow__board-title" title={displayName}>
           {inspectionActive && <span className="system-workflow__board-inspection-controls-host" ref={setInspectionControlsHost} />}
@@ -413,7 +457,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
           <DisplayStageSizeContext.Provider value={{
             width: liveScaleRendering ? liveStage?.width || view.fit.stage.width : settledStageWidth,
             height: liveScaleRendering ? liveStage?.height || view.fit.stage.height : settledStageHeight }}>
-          {cloneElement(children, { boardScale: liveScaleRendering ? liveTransformScale : 1,
+          {cloneElement(children, { boardScale: liveScaleRendering ? liveTransformScale : 1, workbenchScale,
             interactionDisabled: children.props.interactionDisabled || boardPhase === 'maximizing' || boardPhase === 'restoring',
             renderingMode: liveScaleRendering ? 'live' : 'settled', selectionOverlayHost })}
           </DisplayStageSizeContext.Provider>
@@ -426,7 +470,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
         aria-label="Exit immersive view" onClick={leaveImmersive} type="button"><Minimize2 size={16} /> Exit</button>}
       {!zoom && !immersive && boardPhase === 'window' && corners.map((corner) => <button aria-label={`Resize Display Module from ${corner}`}
         className={`system-workflow__board-resize-handle is-${corner}`} key={corner}
-        onPointerCancel={stopBoardResize} onPointerDown={(event) => beginBoardResize(corner, event)}
+        onPointerCancel={stopBoardResize} onLostPointerCapture={stopBoardResize} onPointerDown={(event) => beginBoardResize(corner, event)}
         onKeyDown={(event) => resizeBoardFromKeyboard(corner, event)} onPointerUp={stopBoardResize} type="button" />)}
       <div className="system-workflow__board-inspection-host" ref={setInspectionHost}>
         {inspectionActive && inspectionHost && inspectionControlsHost
