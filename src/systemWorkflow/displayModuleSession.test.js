@@ -1,13 +1,65 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore } from './systemWorkflowDraftStore.js';
-import { addDisplayModule, createDisplayModuleSession, setDisplayModuleFormat } from './displayModuleSession.js';
+import { addDisplayModule, createDisplayModuleSession, setDisplayModuleFormat, setDisplayModuleVisibility } from './displayModuleSession.js';
 import { PRIMARY_DISPLAY_ID } from './domain/displayModules.js';
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
 import { validateProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Validation.js';
 import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Reconciliation.js';
 
 const profile = '0x001048331cd14cef40dd5da644a738e7324fe691';
+
+test('Grid navigation reads accepted snapshots without copying content and rejects removed targets', () => {
+  const { store } = fixture();
+  let copies = 0;
+  const session = createDisplayModuleSession({ ...store, getDraft: () => { copies++; return store.getDraft(); } }, PRIMARY_DISPLAY_ID);
+  session.createGrid();
+  const accepted = session.getSnapshot(), saved = store.getDraft(), history = store.getHistory();
+  copies = 0;
+  for (let turn = 0; turn < 20; turn++) {
+    const id = accepted.draft.grids[turn % accepted.draft.grids.length].id;
+    assert.equal(session.selectGrid(id), id);
+    assert.equal(session.getSnapshot().draft, accepted.draft);
+  }
+  assert.equal(copies, 0, 'temporary navigation must not request detached editable documents');
+  const selected = session.getSnapshot().selectedGridId;
+  assert.throws(() => session.selectGrid('grid:missing'), /does not exist/);
+  assert.equal(session.getSnapshot().selectedGridId, selected);
+  assert.deepEqual(store.getDraft(), saved);
+  assert.deepEqual(store.getHistory(), history);
+  assert.ok(store.undo());
+  const reconciled = session.getSnapshot();
+  assert.ok(reconciled.draft.grids.some(grid => grid.id === reconciled.selectedGridId));
+  assert.throws(() => session.selectGrid(accepted.draft.grids.find(grid => !reconciled.draft.grids.some(current => current.id === grid.id)).id), /does not exist/);
+});
+
+test('Display publication inclusion rejects stale menus and failed writes, preserving history and other modules', () => {
+  const { store, storage } = fixture();
+  const id = addDisplayModule(store);
+  const before = store.getDraft(), history = store.getHistory();
+  const write = storage.setItem;
+  storage.setItem = () => { throw Error('full'); };
+  assert.equal(setDisplayModuleVisibility(store, profile, id, 'PRIVATE', 'PUBLIC'), false);
+  assert.deepEqual(store.getDraft(), before);
+  assert.deepEqual(store.getHistory(), history);
+  assert.deepEqual(buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: store.getDraft() }).displays, []);
+  storage.setItem = write;
+  assert.equal(setDisplayModuleVisibility(store, profile, id, 'PRIVATE', 'PUBLIC'), true);
+  assert.equal(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft().displays[0].visibility, 'PUBLIC');
+  assert.equal(buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: store.getDraft() }).displays[0].id, id);
+  assert.deepEqual(store.getDraft().grids, before.grids);
+  const generation = store.getGeneration();
+  assert.equal(setDisplayModuleVisibility(store, profile, id, 'PRIVATE', 'PUBLIC'), false);
+  assert.equal(setDisplayModuleVisibility(store, 'another-profile', id, 'PUBLIC', 'PRIVATE'), false);
+  assert.equal(setDisplayModuleVisibility(store, profile, 'missing', 'PUBLIC', 'PRIVATE'), false);
+  assert.equal(setDisplayModuleVisibility(store, profile, PRIMARY_DISPLAY_ID, 'PUBLIC', 'PRIVATE'), false);
+  assert.equal(setDisplayModuleVisibility(store, profile, id, 'PUBLIC', 'invalid'), false);
+  assert.equal(store.getGeneration(), generation);
+  assert.ok(store.undo());
+  assert.deepEqual(store.getDraft(), before);
+  assert.ok(store.redo());
+  assert.equal(store.getDraft().displays[0].visibility, 'PUBLIC');
+});
 function fixture() {
   const records = new Map();
   const storage = { getItem: key => records.get(key) ?? null, setItem: (key, value) => records.set(key, value) };

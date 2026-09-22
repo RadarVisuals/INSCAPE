@@ -29,7 +29,7 @@ test('Grid navigation is explicitly Space-drag and both moving planes render the
   assert.match(interaction, /authoringDisabled && !navigationOnly/);
   assert.match(interaction, /navigationOnly && Math\.abs\(deltaX\)/);
   assert.doesNotMatch(interaction, /!event\.shiftKey && Math\.abs\(deltaX\)/);
-  assert.match(canvas, /renderedGrids\.map\([\s\S]*key=\{scene\.id\}[\s\S]*<LatticePixelGrid/);
+  assert.match(canvas, /renderedGrids\.map\([\s\S]*<LatticePixelGrid/);
   assert.match(pixelGrid, /createLatticePixelGuideBounds\(field, spacing \/ 2\)/);
   assert.match(pixelGrid, /<clipPath[^>]*clipPathUnits="userSpaceOnUse"[\s\S]*<rect \{\.\.\.geometry\.bounds\}/);
   assert.equal((pixelGrid.match(/clipPath=\{geometry\.bounds/g) || []).length, 2);

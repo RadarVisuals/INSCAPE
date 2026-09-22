@@ -12,6 +12,7 @@ import { OwnerSystemWorkflowMetadataContent } from './OwnerSystemWorkflowMetadat
 import PresentationBoard from './PresentationBoard.jsx';
 import { useSharedDisplayTools, SharedDisplayToolContent, displayToolCommands } from './SharedDisplayTools.jsx';
 import OwnerSystemWorkflowSelectionInspector from './OwnerSystemWorkflowSelectionInspector.jsx';
+import { useContextToolTarget } from './ContextToolbar.jsx';
 import useOwnerSystemWorkflowCrop from './useOwnerSystemWorkflowCrop.js';
 import useOwnerSystemWorkflowFocusViewer from './useOwnerSystemWorkflowFocusViewer.js';
 import { createOwnerSystemWorkflowMetadataViewModel } from './ownerSystemWorkflowMetadataViewModel.js';
@@ -19,13 +20,15 @@ import { displayTextLabel } from '../../systemWorkflow/domain/displayText.js';
 
 // Display owns composition interaction. The host supplies assets, its accepted
 // controller and window configuration; it does not inspect selection or crop state.
-export default forwardRef(function DisplayModule({ assetsById, controller, authoringLocked, active, displayName,
+export default forwardRef(function DisplayModule({ assetsById, controller, authoringLocked, suspended = false, displayName,
   panelOccupied, onRevealInstruments, onInspect, onToggleLibrary,
   onAuthoringLockToggle, registerAssetDimensions, resolveAssetDimensions, menuSurface,
   reducedMotion, workspaceSurfaceColor, windowProps, placementTargetRef, shortcutTargetRef, workspaceRef }, ref) {
   const tools = useSharedDisplayTools();
   const targetId = controller.moduleId;
+  const toolTarget = useContextToolTarget();
   const toolAvailable = windowProps.instanceState === 'window';
+  const inactive = suspended || !toolAvailable;
   const toolScope = `${displayName || windowProps.initialPresentation?.name || 'Display Module'} / ${controller.selectedGrid?.title || 'Untitled Grid'}`;
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const appearanceTrigger = useRef(null);
@@ -46,11 +49,8 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
     if (id === 'appearance' && !authoringLocked) { appearanceTrigger.current = moduleMenu?.trigger || document.activeElement; setAppearanceOpen(true); }
     if (id === 'toggle-library') onToggleLibrary?.();
     if ((id === 'landscape' || id === 'portrait') && !authoringLocked) controller.setDisplayFormat(id.toUpperCase());
-    if (id === 'visibility') controller.run(() => {
-      const draft = controller.store.getDraft();
-      return controller.store.commitCompletedOperation({ ...draft, displays: draft.displays.map(module => module.id === controller.moduleId
-        ? { ...module, visibility: module.visibility === 'PUBLIC' ? 'PRIVATE' : 'PUBLIC' } : module) }, { expectedGeneration: controller.store.getGeneration() });
-    });
+    if (id === 'include-display') controller.setDisplayVisibility('PRIVATE', 'PUBLIC');
+    if (id === 'exclude-display') controller.setDisplayVisibility('PUBLIC', 'PRIVATE');
     if (id === 'close-module') {
       viewer.close();
       shortcutTargetRef.current?.show();
@@ -111,15 +111,27 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
     onAuthoringLockToggle();
   };
   const playbackDisabled = controller.draft.grids.filter((grid) => !isSystemWorkflowWorldCoverGrid(grid)).length < 2
-    || !toolAvailable || isSystemWorkflowWorldCoverGrid(controller.selectedGrid) || panelOccupied || Boolean(viewer.placementId || crop.cropSession);
+    || inactive || isSystemWorkflowWorldCoverGrid(controller.selectedGrid) || panelOccupied || Boolean(viewer.placementId || crop.cropSession);
   const moduleCommands = [{ id: 'tools', label: 'TOOLS' },
     ...(controller.draft.grids.filter(grid => !isSystemWorkflowWorldCoverGrid(grid)).length > 1 ? [{ id: 'play-grids', label: playingGrids ? 'PAUSE GRIDS' : 'PLAY GRIDS', disabled: playbackDisabled }] : []),{ id: 'appearance', label: 'APPEARANCE', disabled: authoringLocked }, { id: 'format', label: 'FORMAT', disabled: authoringLocked },
     ...(onToggleLibrary ? [{ id: 'toggle-library', label: 'LIBRARY' }] : []),
-    ...(controller.moduleId !== PRIMARY_DISPLAY_ID ? [{ id: 'visibility', label: controller.store.getDraft().displays?.find(item => item.id === controller.moduleId)?.visibility === 'PUBLIC' ? 'MAKE DISPLAY PRIVATE' : 'INCLUDE DISPLAY IN PUBLICATION' }] : [])];
+    ...(controller.moduleId !== PRIMARY_DISPLAY_ID ? [controller.store.getSnapshot().displays?.find(item => item.id === controller.moduleId)?.visibility === 'PUBLIC'
+      ? { id: 'exclude-display', label: 'MAKE DISPLAY PRIVATE' }
+      : { id: 'include-display', label: 'INCLUDE DISPLAY IN PUBLICATION' }] : [])];
   const moduleSubmenu = id => id === 'tools' ? displayToolCommands() : id === 'format' ? formatCommands : [];
   useEffect(() => {
-    if (!active || playbackDisabled) pauseGrids();
-  }, [active, playbackDisabled, pauseGrids]);
+    if (playbackDisabled) pauseGrids();
+  }, [playbackDisabled, pauseGrids]);
+  useEffect(() => {
+    if (!inactive) return;
+    crop.cancelCrop();
+    viewer.close();
+    setModuleMenu(null);
+    setAppearanceOpen(false);
+  }, [inactive]);
+  useEffect(() => {
+    if (toolTarget !== targetId) crop.cancelCrop();
+  }, [toolTarget, targetId]);
   useImperativeHandle(ref, () => ({
     changeGrid,
   }));
@@ -139,7 +151,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       onInspectionCancel={viewer.close}
       renderCues={host => <DisplayInspectionCues key={`${controller.draft.profileAddress}:${controller.selectedGridId}`}
         host={host} items={controller.selectedGrid?.placements || []} viewer={viewer} contentVersion={assetsById} onSelect={id => { tools.activate(targetId); controller.replaceSelection([id]); }}
-        editable={!authoringLocked} disabled={!tools.state.metadata || panelOccupied || playingGrids || playbackState.offset || Boolean(crop.cropSession)}
+        editable={!authoringLocked} disabled={!tools.state.metadata || panelOccupied || playbackState.moving || playbackState.offset || Boolean(crop.cropSession)}
         />}
       onAuthoringLockToggle={toggleAuthoringLock}
       renderInspection={viewer.placementId ? (container, controlsContainer, scene) => <DisplayFocusViewer
@@ -150,16 +162,15 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
         editingTextId={editingText?.gridId === controller.selectedGridId ? editingText.id : null} onEditText={editText}
         playingGrids={playingGrids} onPauseGrids={pauseGrids} onPlaybackStateChange={setPlaybackState}
         onAssetDimensions={registerAssetDimensions} onChangeGrid={changeGrid}
-        interactionDisabled={panelOccupied || Boolean(viewer.placementId)} onOpenViewer={(placement) => tools.state.metadata ? controller.replaceSelection([placement.id]) : viewer.open(placement.id)}
+        suspended={inactive} interactionDisabled={inactive || panelOccupied || Boolean(viewer.placementId)} onOpenViewer={(placement) => tools.state.metadata ? controller.replaceSelection([placement.id]) : viewer.open(placement.id)}
         onPlacementRef={viewer.registerPlacement} reducedMotion={reducedMotion}
         resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.sourcePlacementId} inspectionActive={Boolean(viewer.placementId)} />
     </PresentationBoard>
-    <SharedDisplayToolContent id="layers" targetId={targetId} label={toolScope} available={toolAvailable}>
       <OwnerSystemWorkflowSelectionInspector key={controller.selectedGridId} assetsById={assetsById}
+        toolLabel={toolScope} available={toolAvailable && !suspended && !viewer.placementId}
         authoringLocked={authoringLocked || playingGrids || playbackState.moving} controller={controller} crop={crop}
         onBeginCrop={crop.beginCrop} onEditText={editText}
         onArtworkInfo={event => { onRevealInstruments(); tools.command('metadata', true, event.currentTarget, targetId); }} />
-    </SharedDisplayToolContent>
     <SharedDisplayToolContent id="metadata" targetId={targetId} label={`${toolScope} / ${selectionLabel}`} available={toolAvailable}>
       <OwnerSystemWorkflowMetadataContent dossier={metadataEntry?.dossier || null} />
     </SharedDisplayToolContent>

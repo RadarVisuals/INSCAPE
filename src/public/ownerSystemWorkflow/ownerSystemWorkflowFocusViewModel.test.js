@@ -5,9 +5,7 @@ import { createOwnerSystemWorkflowFocusViewModel } from './ownerSystemWorkflowFo
 const placement = {
   id: 'placement-one', stableAssetId: '42:0xasset:0x01', navigationOrder: 4,
   column: 2, row: 3, columnSpan: 5, rowSpan: 4, layer: 1,
-  crop: { x: 0.4, y: 0.6, zoom: 1.5 }, frameId: 'LINE',
-  mat: { enabled: true, color: '#111111', inset: { top: 1, right: 1, bottom: 1, left: 1 } },
-  backing: { enabled: true, color: '#eeeeee' }, transparencyMode: 'OPAQUE',
+  crop: { x: 0.4, y: 0.6, zoom: 1.5 },
   visibility: 'PUBLIC', locked: false,
   transform: { quarterTurns: 1, mirrorX: true, mirrorY: false },
 };

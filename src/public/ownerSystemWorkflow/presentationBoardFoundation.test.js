@@ -117,7 +117,8 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(styles, /\.system-workflow__resize-handle \{[^}]*width: 28px/s);
   assert.match(styles, /\.system-workflow__resize-handle::after \{[^}]*border: 1px solid #fff/s);
   assert.match(styles, /\.system-workflow__progressive-media \{[^}]*overflow: visible;/s);
-  assert.match(styles, /\[data-authoring-locked\] \.system-workflow__placement\[aria-pressed="true"\]:not\(\[data-viewing\]\) \.system-workflow__artwork-media \{[^}]*drop-shadow\(0 0/s);
+  // Selection without an image-edge halo is exercised at aligned and paused camera
+  // positions by grid-covered-wrap.browser.mjs, including actual edge pixels.
   assert.match(styles, /\.system-workflow__placement\[data-cropped\] \{ overflow: hidden; \}/);
   assert.doesNotMatch(styles, /\.system-workflow__placement::after/);
   assert.match(styles, /\.system-workflow__stage-viewport \{[^}]*overflow: clip;[^}]*background: var\(--workflow-board-frame-surface\);/s);

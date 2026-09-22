@@ -45,7 +45,6 @@
 .lattice-production-placement:is(:focus, :focus-visible) { outline: none; }
 .lattice-production-placement[data-viewer-source-hidden] { opacity: 0; }
 
-.lattice-production-placement__mat,
 .lattice-production-placement__opening,
 .lattice-production-placement__opening img {
   position: absolute;
@@ -53,7 +52,6 @@
   box-sizing: border-box;
 }
 
-.lattice-production-placement__mat { inset: 0; }
 .lattice-production-placement__opening { overflow: hidden; }
 .lattice-production-placement__opening img { max-width: none; max-height: none; opacity: 0; }
 .lattice-production-placement__opening img.is-ready { opacity: 1; }

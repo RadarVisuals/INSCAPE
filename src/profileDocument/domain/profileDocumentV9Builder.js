@@ -17,6 +17,7 @@ import { projectIdentityCard } from '../../profileIdentity/domain/identityCard.j
 import { projectDisplayDraft } from '../../systemWorkflow/domain/displayModules.js';
 import { projectMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
 import { projectMiniApps } from '../../miniApps/domain/miniApps.js';
+import { projectImageModules, imageReferenceCount } from '../../imageModule/imageModule.js';
 import { projectTextModules } from '../../text/domain/article.js';
 
 function timestamp(value, label) {
@@ -132,8 +133,10 @@ export function buildProfileDocumentV9({
       grids: projectSystemWorkflowPublicGrids(projectDisplayDraft(draft, module.id), assetRecords) }));
   const presentation = workbench || draft.workbench;
   const miniApps = draft.miniApps ? projectMiniApps(draft.miniApps) : undefined;
+  const imageModules = draft.imageModules ? projectImageModules(draft.imageModules) : undefined;
   const texts = draft.texts ? projectTextModules(draft.texts, [{ id: 'display:primary', grids: draft.grids.filter(g => !isSystemWorkflowWorldCoverGrid(g)) }, ...(draft.displays || []).filter(d => d.visibility === 'PUBLIC').map(d => ({ ...d, grids: d.grids.filter(g => !isSystemWorkflowWorldCoverGrid(g)) }))]) : undefined;
   const publicWorkbench = presentation ? structuredClone(presentation) : null;
+  if (publicWorkbench?.imageModules) publicWorkbench.imageModules = publicWorkbench.imageModules.filter(item => imageModules?.some(image => image.id === item.id));
   if (publicWorkbench?.miniApps) publicWorkbench.miniApps = publicWorkbench.miniApps.filter(item => miniApps?.some(app => app.id === item.id));
   if (publicWorkbench?.texts) publicWorkbench.texts = publicWorkbench.texts.filter(item => texts?.some(text => text.id === item.id));
   if (publicWorkbench?.displays) publicWorkbench.displays = publicWorkbench.displays.filter(module => displays?.some(content => content.id === module.id));
@@ -165,6 +168,7 @@ export function buildProfileDocumentV9({
     metadata: worldCover ? { worldCover } : {},
     ...(displays ? { displays } : {}),
     ...(miniApps?.length ? { miniApps } : {}),
+    ...(imageModules?.length ? { imageModules } : {}),
     ...(texts?.length ? { texts } : {}),
     ...(draft.mobile?.visibility === 'PUBLIC' ? { mobile: projectMobilePresentation(draft.mobile, assetRecords) } : {}),
     ...(publicWorkbench ? { workbench: publicWorkbench } : {}),
@@ -179,5 +183,5 @@ export function countProfileDocumentV9Assets(document) {
     + (value.workbench?.display.shortcut.icon ? 1 : 0)
     + (value.displays || []).reduce((sum, module) => sum + module.grids.reduce((count, grid) => count + grid.placements.length, 0), 0)
     + (value.workbench?.displays || []).filter(module => module.shortcut.icon).length
-    + mobileReferenceCount(value.mobile);
+    + imageReferenceCount(value.imageModules) + mobileReferenceCount(value.mobile);
 }

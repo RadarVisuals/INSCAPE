@@ -1,24 +1,18 @@
-import { gridRailSlot } from './gridRail.js';
+import { gridRailScenes } from './gridRail.js';
 import { useReportScene } from '../../text/SceneNavigation.jsx';
 import { useContext, useDeferredValue, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { DisplayStageSizeContext } from './DisplayStageSizeContext.js';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 import { createPortal } from 'react-dom';
 import { nudgeSystemWorkflowResizeGeometry } from '../../systemWorkflow/systemWorkflowResize.js';
-import { placementMediaRectangle } from '../../lattice/rendering/placementMediaRectangle.js';
 import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
-import { projectLatticeRasterBleedRectangle, projectLatticePixelRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
+import { projectLatticePixelRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
 import { createSystemWorkflowDropGeometry } from '../../systemWorkflow/systemWorkflowPlacement.js';
 import { isSystemWorkflowWorldCoverGrid, systemWorkflowSnapStep, quantizeSystemWorkflowGridCoordinate } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { attachTextToDisplay } from '../../text/textTransfer.js';
 import { displayTextLabel } from '../../systemWorkflow/domain/displayText.js';
 import DisplayArticleEditor from '../../text/DisplayArticleEditor.jsx';
 import { adjacentSystemWorkflowGridIdInOrder } from '../../systemWorkflow/domain/systemWorkflowNavigation.js';
-import {
-  projectSystemWorkflowImageRenderRectangle,
-  projectSystemWorkflowTransform,
-  renderedSystemWorkflowCssTransform,
-} from '../../systemWorkflow/systemWorkflowTransform.js';
 import useOwnerSystemWorkflowPlacementInteraction from './useOwnerSystemWorkflowPlacementInteraction.js';
 import {
   OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES,
@@ -33,14 +27,11 @@ import {
   ownerSystemWorkflowAssetDimensions,
 } from './ownerSystemWorkflowAssetDimensions.js';
 import { markOwnerSystemWorkflowPointerFocus } from './ownerSystemWorkflowSelection.js';
-import ProgressiveArtworkImage from './ProgressiveArtworkImage.jsx';
 import useArtworkPicking from './useArtworkPicking.js';
-import { progressiveArtworkSources } from './progressiveArtworkSources.js';
 import useGridPlayback from './useGridPlayback.js';
 import { systemWorkflowPlacementRequest } from './systemWorkflowPlacementRequest.js';
-import DisplayTextContent from './DisplayTextContent.jsx';
+import DisplayPlacementContent from './DisplayPlacementContent.jsx';
 
-const sourceFor = (asset) => progressiveArtworkSources(asset).high;
 const boundsOf = (placements) => placements.length ? {
   column: Math.min(...placements.map(({ column }) => column)),
   row: Math.min(...placements.map(({ row }) => row)),
@@ -81,7 +72,7 @@ const screenHandlePoint = (corner, rectangle, width, height) => {
 
 export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked = false, boardScale = 1, workbenchScale = 1, controller, crop, interactionDisabled = false, onAssetDimensions,
   onChangeGrid, onOpenViewer, onPlacementRef, reducedMotion = false, renderingMode = 'settled', resolveAssetDimensions,
-  placementTargetRef, selectionOverlayHost, viewerPlacementId, inspectionActive = false, playingGrids = false, onPauseGrids, onPlaybackStateChange, editingTextId, onEditText }) {
+  placementTargetRef, selectionOverlayHost, viewerPlacementId, inspectionActive = false, playingGrids = false, suspended = false, onPauseGrids, onPlaybackStateChange, editingTextId, onEditText }) {
   const canvasRef = useRef(null);
   const sceneRef = useRef(null);
   const trackRef = useRef(null);
@@ -99,9 +90,9 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     return placement ? { placement, element } : null;
   };
   const worldCover = isSystemWorkflowWorldCoverGrid(grid);
-  const worldViewport = stageSize
+  const worldViewport = useMemo(() => stageSize
     ? (worldCover ? measureOwnerSystemWorkflowHeroArtboard : measureOwnerSystemWorkflowArtboard)(stageSize.width, stageSize.height, 1, controller.draft.geometry)
-    : measuredViewport;
+    : measuredViewport, [stageSize?.width, stageSize?.height, worldCover, controller.draft.geometry, measuredViewport]);
   const artboardMode = worldCover ? OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO : OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID;
   const cropSession = crop?.cropSession || null;
   const appearance = controller.draft?.appearance;
@@ -114,7 +105,10 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   const adjacentGrid = (direction) => controller.draft && grid
     ? adjacentSystemWorkflowGridIdInOrder(gridOrder, grid.id, direction)
     : null;
-  const playback = useGridPlayback({ playing: playingGrids, suspended: Boolean(cropSession), enabled: !interactionDisabled && !worldCover && gridOrder.length > 1,
+  const playback = useGridPlayback({ playing: playingGrids,
+    // Inspection borrows the current scene; preserve its rail and camera until return.
+    suspended: suspended || viewerOpen || Boolean(cropSession),
+    enabled: (suspended || viewerOpen || !interactionDisabled) && !worldCover && gridOrder.length > 1,
     scope: controller.draft.profileAddress,
     adjacentGrid: (id, direction) => adjacentSystemWorkflowGridIdInOrder(gridOrder, id, direction),
     gridId: grid?.id, nextGridId: adjacentGrid('next'), canvasRef, trackRef, viewScale: pointerScale, reducedMotion,
@@ -174,33 +168,21 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   currentDropContext.current = dropContext;
   const sourceGridId = gridSwipe?.sourceGridId || grid?.id;
   const cameraMoving = playingGrids || Boolean(gridSwipe?.moving);
-  useEffect(() => { onPlaybackStateChange?.({ offset: Boolean(gridSwipe), moving: cameraMoving }); },
-    [Boolean(gridSwipe), cameraMoving, onPlaybackStateChange]);
+  useEffect(() => { onPlaybackStateChange?.({ offset: Boolean(gridSwipe?.offset), moving: cameraMoving }); },
+    [gridSwipe?.offset, cameraMoving, onPlaybackStateChange]);
   useEffect(() => () => onPlaybackStateChange?.({ offset: false, moving: false }), [onPlaybackStateChange]);
   const swipeGridId = gridSwipe?.targetGridId || null;
   useReportScene(controller.moduleId || 'display:primary', sourceGridId, swipeGridId, gridSwipe, !interactionDisabled && !worldCover, gridOrder);
   // Keep neighboring media mounted outside the clipped Stage before a gesture.
   // A newly mounted image can miss the first paint even when its URL is cached.
-  const previousGridId = adjacentGrid('previous');
-  const nextGridId = adjacentGrid('next');
-  // Drag and momentum have no dwell at a boundary either. Prepare two Grids
-  // on each side so a crossing never mounts its new incoming image on arrival.
-  const aheadGridId = nextGridId && adjacentSystemWorkflowGridIdInOrder(gridOrder, nextGridId, 'next');
-  const behindGridId = previousGridId && adjacentSystemWorkflowGridIdInOrder(gridOrder, previousGridId, 'previous');
-  // Replenish the far neighborhood outside the synchronous navigation commit.
-  // Immediate neighbors are always required; obsolete deferred IDs must never
-  // occupy a slot in the current rail (including after a reversal or deletion).
-  const preparedIds = new Set(JSON.parse(useDeferredValue(JSON.stringify(
-    [sourceGridId, previousGridId, nextGridId, aheadGridId, behindGridId, swipeGridId],
-  ))));
-  const preparedGridIds = new Set([grid?.id, sourceGridId, previousGridId, nextGridId, swipeGridId,
-    preparedIds.has(aheadGridId) ? aheadGridId : null,
-    preparedIds.has(behindGridId) ? behindGridId : null]);
-  // Navigation changes positions while retained media keeps a stable DOM order.
-  const renderedGrids = controller.draft.grids.filter(scene => preparedGridIds.has(scene.id));
+  const sourceSlot = gridSwipe?.sourceSlot || 0;
+  const railScenes = gridRailScenes(worldCover ? [grid] : gridOrder.map(id => controller.draft.grids.find(scene => scene.id === id)), sourceGridId, sourceSlot);
+  const preparedSlots = new Set(JSON.parse(useDeferredValue(JSON.stringify(railScenes.map(scene => scene.slot)))));
+  const renderedGrids = railScenes.filter(scene => Math.abs(scene.slot - sourceSlot) < 2 || preparedSlots.has(scene.slot));
   const selectionNavigating = cameraMoving;
   const projectedPlacements = grid?.placements.filter(({ id }) => !controller.hiddenPlacementIds?.has(id))
-    .map((placement) => ({ ...placement, ...(interaction.previewById.get(placement.id) || {}) })) || [];
+    .map(placement => interaction.previewById.has(placement.id)
+      ? { ...placement, ...interaction.previewById.get(placement.id) } : placement) || [];
   const selected = projectedPlacements.filter(({ id, locked }) => controller.selectedPlacementIds.includes(id) && !locked);
   const selectionBounds = boundsOf(selected);
   if (retainedSelection.current?.gridId !== grid?.id || controller.hiddenPlacementIds?.has(retainedSelection.current?.primary?.id)) retainedSelection.current = null;
@@ -270,7 +252,10 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
       const instance = canvasRef.current?.closest('[data-display-instance]');
       if (instance && !instance.hasAttribute('data-active-display')) return;
       if (event.target?.closest?.('[data-workbench-module]')) return;
-      if (!grid || cropSession || interactionDisabled || viewerOpen || /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName)) return;
+      if (!grid || cropSession || interactionDisabled || viewerOpen || event.defaultPrevented
+        || event.isComposing || event.ctrlKey || event.metaKey || event.altKey
+        || event.target?.isContentEditable
+        || event.target?.closest?.('input, textarea, select, button, a, [role="textbox"], [role="slider"], [data-context-tools]')) return;
       if (event.key === 'Escape') { controller.replaceSelection([]); return; }
       if (authoringLocked || interactionDisabled || playback.isMoving()) return;
       const records = grid.placements.filter(({ id }) => controller.selectedPlacementIds.includes(id));
@@ -331,40 +316,25 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
           createSystemWorkflowDropGeometry(dimensions.width, dimensions.height, point, field)));
       }}>
       <div ref={trackRef} className="system-workflow__grid-track"
-        data-rail-origin={gridSwipe?.sourceSlot || 0} style={{ willChange: gridSwipe || playingGrids ? 'transform' : undefined }}>
-      {renderedGrids.map((scene) => {
-        const active = scene.id === grid.id;
-        const source = scene.id === sourceGridId;
+        data-rail-origin={gridSwipe?.sourceSlot || 0} style={{ willChange: gridOrder.length > 1 ? 'transform' : undefined }}>
+      {renderedGrids.map(({ grid: scene, slot }) => {
+        const active = scene.id === grid.id && slot === sourceSlot;
+        const source = scene.id === sourceGridId && slot === sourceSlot;
         const scenePlacements = active ? projectedPlacements : scene.placements.filter(({ id }) => !controller.hiddenPlacementIds?.has(id));
-        return <div key={scene.id} ref={active ? sceneRef : undefined} aria-hidden={!active || undefined} inert={active ? undefined : ''}
+        return <div key={`${scene.id}:${slot}`} ref={active ? sceneRef : undefined} aria-hidden={!active || undefined} inert={active ? undefined : ''}
           data-preview-grid-id={active ? undefined : scene.id} data-rendered-grid-id={scene.id}
           className={`system-workflow__grid-plane system-workflow__grid-plane--${source ? 'current' : 'adjacent'}`}
-          data-rail-slot={gridRailSlot(scene.id, { sourceId: sourceGridId, targetId: swipeGridId,
-              sourceSlot: gridSwipe?.sourceSlot, direction: gridSwipe?.direction,
-              previousId: previousGridId, nextId: nextGridId, aheadId: aheadGridId, behindId: behindGridId })}
-          style={{ willChange: gridSwipe || playingGrids ? 'transform' : undefined }}>
+          data-rail-slot={slot}>
       {worldViewport && <LatticePixelGrid color={appearance.guideColor} field={worldViewport} guideInterval={snapStep}
         height={worldViewport.height} mode={appearance.guideMode} width={worldViewport.width} />}
       <div className="system-workflow__artwork-plane">
       {scenePlacements.slice().sort((left, right) => left.layer - right.layer).map((placement) => {
         const asset = assetForPlacement(assetsById.get(placement.stableAssetId), placement);
-        const src = sourceFor(asset);
-        const isSelected = controller.selectedPlacementIds.includes(placement.id) && !placement.locked;
-        const visibleCrop = cropSession?.placementId === placement.id ? cropSession.previewCrop : placement.crop;
-        const cropping = cropSession?.placementId === placement.id;
+        const isSelected = active && controller.selectedPlacementIds.includes(placement.id) && !placement.locked;
+        const cropping = active && cropSession?.placementId === placement.id;
+        const visibleCrop = cropping ? cropSession.previewCrop : placement.crop;
         const projected = worldViewport && projectOwnerSystemWorkflowPlacement(placement, worldViewport);
         if (!projected) return null;
-        const opening = { left: 0, top: 0, width: projected.width, height: projected.height };
-        const dimensions = ownerSystemWorkflowAssetDimensions(asset);
-        const transform = dimensions
-          ? projectSystemWorkflowTransform(placement.transform, dimensions, visibleCrop)
-          : projectSystemWorkflowTransform(placement.transform, { width: placement.columnSpan, height: placement.rowSpan }, visibleCrop);
-        const imageRectangle = dimensions && placementMediaRectangle(opening, transform.dimensions, transform.crop, placement.mediaFrameRatio);
-        const imageRenderRectangle = projectSystemWorkflowImageRenderRectangle(
-          imageRectangle && projectLatticeRasterBleedRectangle(imageRectangle, opening), transform,
-        );
-        const mediaStyle = imageRenderRectangle ? { ...imageRenderRectangle, transform: renderedSystemWorkflowCssTransform(transform) } : undefined;
-        const fallbackMedia = src ? <ProgressiveArtworkImage asset={asset} onSourceLoad={(dimensions) => onAssetDimensions?.(asset, dimensions)} style={mediaStyle} /> : <em>Media</em>;
         const textEditing = active && placement.kind === 'text' && editingTextId === placement.id && !authoringLocked;
         return <div aria-disabled={placement.locked || undefined} aria-label={`Select ${placement.kind === 'text' ? displayTextLabel(placement.text) : asset?.title || asset?.name || 'artwork'}`} aria-pressed={isSelected}
           className="system-workflow__placement" data-cropped={Boolean(visibleCrop) || undefined} data-cropping={cropping || undefined} data-system-workflow-crop-surface={cropping || undefined} data-system-workflow-placement-id={active ? placement.id : undefined} data-locked={placement.locked || undefined}
@@ -409,9 +379,8 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
           style={{ ...projected, zIndex: placement.layer + 1 }}>
           {textEditing ? <DisplayArticleEditor key={`${grid.id}:${placement.id}`} placement={placement} controller={controller} cellSize={worldViewport.cellSize}
             screenCellSize={worldViewport.cellSize * pointerScale} canvasRef={canvasRef} onClose={() => onEditText?.(null)} />
-            : placement.kind === 'text' ? <DisplayTextContent placement={placement} cellSize={worldViewport.cellSize} /> : <span data-frame={placement.frameId} style={{ background: placement.backing.enabled ? placement.backing.color : 'transparent', padding: placement.mat.enabled ? '5%' : 0 }}>
-            {fallbackMedia}
-          </span>}
+            : <DisplayPlacementContent placement={placement} asset={assetsById.get(placement.stableAssetId)} crop={visibleCrop}
+                width={projected.width} height={projected.height} cellSize={worldViewport.cellSize} onAssetDimensions={onAssetDimensions} />}
         </div>;
       })}
       </div>

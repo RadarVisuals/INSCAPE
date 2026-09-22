@@ -49,3 +49,18 @@ export function setDisplayModuleFormat(store, id, orientation) {
   return store.commitCompletedOperation(assertValidSystemWorkflowDraft(mergeDisplayDraft(draft, id, { ...scoped, ...format })),
     { expectedGeneration: store.getGeneration() });
 }
+
+// The menu supplies its observed value and explicit destination. A late action
+// must never turn into the opposite toggle after the draft changes elsewhere.
+export function setDisplayModuleVisibility(store, profile, id, expectedVisibility, visibility) {
+  if (store.getProfileAddress() !== profile || id === PRIMARY_DISPLAY_ID
+    || !['PUBLIC', 'PRIVATE'].includes(expectedVisibility) || !['PUBLIC', 'PRIVATE'].includes(visibility)) return false;
+  const generation = store.getGeneration();
+  const draft = store.getDraft();
+  const current = draft.displays?.find(module => module.id === id);
+  if (!current || current.visibility !== expectedVisibility) return false;
+  if (current.visibility === visibility) return true;
+  return store.commitCompletedOperation({ ...draft,
+    displays: draft.displays.map(module => module.id === id ? { ...module, visibility } : module),
+  }, { expectedGeneration: generation, historyLabel: 'Change Display publication inclusion' });
+}

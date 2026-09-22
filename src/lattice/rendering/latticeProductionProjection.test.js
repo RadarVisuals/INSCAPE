@@ -17,7 +17,7 @@ const placement = {
   transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
 };
 
-test('placement, native ratio, crop, and mat projection share the same cell field', () => {
+test('placement, native ratio and crop share the same cell field and opening', () => {
   const field = { cellSize: 40, width: 1280, height: 720, left: 0, top: 0 };
   assert.deepEqual(projectLatticeProductionPlacement(placement, field), {
     left: 160, top: 120, width: 320, height: 240,
@@ -32,15 +32,8 @@ test('placement, native ratio, crop, and mat projection share the same cell fiel
   assert.equal(cropped.imageRenderRectangle.left, cropped.mediaOpeningRectangle.left - 1);
   assert.equal(cropped.imageRenderRectangle.width, cropped.imageRectangle.width + 2);
 
-  const mattedPlacement = {
-    ...placement,
-    mat: { enabled: true, color: '#d8d4ca', inset: { top: 0.1, right: 0.2, bottom: 0.3, left: 0.1 } },
-  };
-  const matted = projectLatticeProductionArtwork(mattedPlacement, field, { width: 100, height: 100 });
-  assert.deepEqual(matted.backplateRectangle, { left: 160, top: 120, width: 320, height: 240 });
-  assert.deepEqual({ ...matted.mediaOpeningRectangle, height: Math.round(matted.mediaOpeningRectangle.height) }, {
-    left: 192, top: 144, width: 224, height: 144,
-  });
+  assert.deepEqual(native.mediaOpeningRectangle, native.footprint);
+  assert.deepEqual(cropped.mediaOpeningRectangle, cropped.footprint);
 });
 
 test('fractional viewport full-bleed raster projection preserves canonical geometry through mirror and rotation', () => {

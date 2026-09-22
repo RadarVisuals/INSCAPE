@@ -2,13 +2,11 @@ import { validPlacementGroups } from '../../systemWorkflow/domain/placementGroup
 import { validModuleEdges } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import {
-  SYSTEM_WORKFLOW_FRAME_IDS,
   SYSTEM_WORKFLOW_GRID_DENSITY,
   SYSTEM_WORKFLOW_GUIDE_MODES,
   SYSTEM_WORKFLOW_LABEL_ANCHORS,
   SYSTEM_WORKFLOW_LIMITS,
   SYSTEM_WORKFLOW_SURFACE_IDS,
-  SYSTEM_WORKFLOW_TRANSPARENCY_MODES,
   SYSTEM_WORKFLOW_VISIBILITY,
   SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID,
   SYSTEM_WORKFLOW_WORLD_COVER_SIZE,
@@ -25,6 +23,7 @@ import { isValidIdentityCard } from '../../profileIdentity/domain/identityCard.j
 import { isValidWorkbenchPresentation } from './workbenchPresentation.js';
 import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, isDisplayFormat } from '../../systemWorkflow/domain/displayModules.js';
 import { validMiniApps } from '../../miniApps/domain/miniApps.js';
+import { validImageModules, imageReferenceCount } from '../../imageModule/imageModule.js';
 import { validTextModules, assertArticle, ARTICLE_TYPE } from '../../text/domain/article.js';
 import { DISPLAY_TEXT_KEYS, isTextPlacement, validDisplayText } from '../../systemWorkflow/domain/displayText.js';
 import { validMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
@@ -39,7 +38,7 @@ const APPEARANCE_KEYS = ['surfaceId', 'menuSurfaceId', 'dossierSurfaceId', 'guid
 const GRID_KEYS = ['id', 'title', 'subtitle', 'visibility', 'labelVisible', 'labelAnchor', 'labelOffset', 'placements'];
 const PLACEMENT_KEYS = [
   'id', 'asset', 'column', 'row', 'columnSpan', 'rowSpan', 'layer', 'navigationOrder',
-  'crop', 'frameId', 'mat', 'backing', 'transparencyMode', 'visibility', 'transform',
+  'crop', 'visibility', 'transform',
 ];
 const IDENTITY_KEYS = ['alias', 'avatar', 'bio', 'tags', 'dossierSurface', 'visibility'];
 const WORLD_COVER_KEYS = ['width', 'height', 'grid'];
@@ -65,10 +64,8 @@ const validIsoTime = (value) => {
 };
 const sets = {
   anchors: new Set(SYSTEM_WORKFLOW_LABEL_ANCHORS),
-  frames: new Set(SYSTEM_WORKFLOW_FRAME_IDS),
   guides: new Set(SYSTEM_WORKFLOW_GUIDE_MODES),
   surfaces: new Set(SYSTEM_WORKFLOW_SURFACE_IDS),
-  transparency: new Set(SYSTEM_WORKFLOW_TRANSPARENCY_MODES),
 };
 
 function depth(value, current = 0) {
@@ -128,7 +125,7 @@ function validatePlacement(value, path, fail) {
       || ![0, 1, 2, 3].includes(value.transform.quarterTurns) || typeof value.transform.mirrorX !== 'boolean' || typeof value.transform.mirrorY !== 'boolean') fail(path, 'invalid_text_geometry', 'Invalid public text geometry');
     return;
   }
-  if (!exactKeys(value, [...PLACEMENT_KEYS, ...['inspectionMode', 'mediaFrameRatio'].filter(key => Object.hasOwn(value || {}, key))])) return fail(path, 'invalid_placement_structure', 'Invalid public placement');
+  if (!exactKeys(value, [...PLACEMENT_KEYS, ...['inspectionMode', 'mediaFrameRatio', ...REMOVED_ARTWORK_PRESENTATION_KEYS].filter(key => Object.hasOwn(value || {}, key))])) return fail(path, 'invalid_placement_structure', 'Invalid public placement');
   if (Object.hasOwn(value, 'mediaFrameRatio') && (!Number.isFinite(value.mediaFrameRatio) || value.mediaFrameRatio < 1 / 512 || value.mediaFrameRatio > 512)) fail(`${path}.mediaFrameRatio`, 'invalid_media_frame_ratio', 'Invalid media frame ratio');
   if (Object.hasOwn(value, 'inspectionMode') && !['IN_PLACE', 'LIFT'].includes(value.inspectionMode)) fail(`${path}.inspectionMode`, 'invalid_inspection_mode', 'Invalid artwork inspection mode');
   if (!safeId(value.id)) fail(`${path}.id`, 'invalid_placement_id', 'Invalid placement ID');
@@ -139,17 +136,7 @@ function validatePlacement(value, path, fail) {
   if (!safeInteger(value.layer)) fail(`${path}.layer`, 'invalid_layer', 'Invalid placement layer');
   if (!safeInteger(value.navigationOrder)) fail(`${path}.navigationOrder`, 'invalid_navigation_order', 'Invalid placement navigation order');
   if (!validCrop(value.crop)) fail(`${path}.crop`, 'invalid_crop', 'Invalid placement crop');
-  if (!sets.frames.has(value.frameId)) fail(`${path}.frameId`, 'invalid_frame', 'Invalid placement frame');
-  if (!exactKeys(value.mat, ['enabled', 'color', 'inset'])
-    || typeof value.mat?.enabled !== 'boolean' || !HEX_COLOR.test(value.mat?.color || '')
-    || !exactKeys(value.mat?.inset, ['top', 'right', 'bottom', 'left'])
-    || Object.values(value.mat?.inset || {}).some((amount) => !Number.isFinite(amount) || amount < 0 || amount > 0.45)
-    || value.mat.inset.left + value.mat.inset.right >= 1
-    || value.mat.inset.top + value.mat.inset.bottom >= 1) fail(`${path}.mat`, 'invalid_mat', 'Invalid placement mat');
-  if (!exactKeys(value.backing, ['enabled', 'color'])
-    || typeof value.backing?.enabled !== 'boolean'
-    || !HEX_COLOR.test(value.backing?.color || '')) fail(`${path}.backing`, 'invalid_backing', 'Invalid placement backing');
-  if (!sets.transparency.has(value.transparencyMode)) fail(`${path}.transparencyMode`, 'invalid_transparency', 'Invalid placement transparency');
+  if (!validRemovedArtworkPresentation(value)) fail(path, 'removed_presentation', 'Unsupported removed artwork presentation');
   if (value.visibility !== SYSTEM_WORKFLOW_VISIBILITY.PUBLIC) fail(`${path}.visibility`, 'private_placement', 'Only public placements are allowed');
   if (!exactKeys(value.transform, ['quarterTurns', 'mirrorX', 'mirrorY'])
     || !Number.isSafeInteger(value.transform?.quarterTurns)
@@ -213,7 +200,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   try { measuredSize ??= new TextEncoder().encode(JSON.stringify(input)).byteLength; } catch { measuredSize = Infinity; }
   if (measuredSize > SYSTEM_WORKFLOW_LIMITS.maxJsonBytes) fail('$', 'document_too_large', `Document exceeds ${SYSTEM_WORKFLOW_LIMITS.maxJsonBytes} bytes`);
   if (depth(input) > SYSTEM_WORKFLOW_LIMITS.maxDepth) fail('$', 'excessive_depth', 'Document nesting is too deep');
-  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'mobile', 'miniApps', 'texts'])) {
+  if (!allowedKeys(input, DOCUMENT_KEYS, ['workbench', 'displays', 'mobile', 'miniApps', 'texts', 'imageModules'])) {
     fail('$', 'unexpected_fields', 'Document contains unexpected or missing fields');
     return { valid: false, errors, value: null, size: measuredSize };
   }
@@ -252,6 +239,8 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   validateIdentity(input.identityPresentation, fail);
   if (Object.hasOwn(input, 'miniApps') && !validMiniApps(input.miniApps, true)) fail('miniApps', 'invalid_mini_apps', 'Invalid published mini app');
   if (Object.hasOwn(input, 'texts') && !validTextModules(input.texts, true)) fail('texts', 'invalid_texts', 'Invalid published Text module');
+  if (Object.hasOwn(input, 'imageModules') && !validImageModules(input.imageModules, true)) fail('imageModules', 'invalid_images', 'Invalid published Image module');
+  if (Array.isArray(input.workbench?.imageModules) && input.workbench.imageModules.some(item => !Array.isArray(input.imageModules) || !input.imageModules.some(image => image?.id === item?.id))) fail('workbench.imageModules', 'unknown_image', 'Window refers to an unavailable Image module');
   if (Array.isArray(input.texts)) for (const text of input.texts) {
     const link = text?.sceneLink;
     if (!link) continue;
@@ -274,7 +263,7 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
       fail('displays', 'invalid_display_count', 'Invalid Display count');
     } else {
       const ids = new Set([PRIMARY_DISPLAY_ID]);
-      const { displays: _displays, workbench: _workbench, mobile: _mobile, miniApps: _miniApps, texts: _texts, ...shared } = input;
+      const { displays: _displays, workbench: _workbench, mobile: _mobile, miniApps: _miniApps, texts: _texts, imageModules: _images, ...shared } = input;
       for (const module of input.displays) {
         if (!exactKeys(module, ['id', ...DISPLAY_CONTENT_KEYS]) || !/^display:[A-Za-z0-9_-]{1,80}$/u.test(module?.id) || ids.has(module.id)) {
           fail('displays', 'invalid_display', 'Invalid or duplicate Display'); continue;
@@ -345,10 +334,12 @@ export function validateProfileDocumentV9(input, { rawSize } = {}) {
   const documentAssetReferences = (input.grids || []).reduce((total, grid) => total + (grid?.placements?.length || 0), 0)
     + worldCoverAssetReferences + (input.identityPresentation?.avatar?.asset ? 1 : 0) + moduleReferences
     + (input.workbench?.display?.shortcut?.icon ? 1 : 0) + (input.workbench?.displays || []).filter(module => module.shortcut?.icon).length
-    + mobileReferenceCount(input.mobile);
+    + imageReferenceCount(input.imageModules) + mobileReferenceCount(input.mobile);
   if (documentAssetReferences > SYSTEM_WORKFLOW_LIMITS.maxTotalAssetReferences) {
     fail('metadata.worldCover', 'too_many_asset_references', 'Too many total asset references');
   }
+  // Published bytes are immutable and hash-verified. Accept legacy fields but
+  // preserve them here; renderers ignore them and draft restoration removes them.
   return { valid: errors.length === 0, errors, value: errors.length ? null : structuredClone(input), size: measuredSize };
 }
 
@@ -370,3 +361,4 @@ export function parseProfileDocumentV9Json(raw) {
   }
   return assertValidProfileDocumentV9(input, { rawSize: size });
 }
+import { REMOVED_ARTWORK_PRESENTATION_KEYS, validRemovedArtworkPresentation } from '../../systemWorkflow/domain/removedArtworkPresentation.js';

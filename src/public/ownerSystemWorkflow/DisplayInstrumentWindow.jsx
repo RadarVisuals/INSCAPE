@@ -7,7 +7,7 @@ import OwnerSystemWorkflowDetachedWindow from './OwnerSystemWorkflowDetachedWind
 import { snapWorkbenchCoordinate, WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 
 // View-only window behavior. The caller supplies its content and commands.
-export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizableWidth = false, initialHeight = 420, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, surfaceStyle }) {
+export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, controlledSize, onResizeEnd, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, surfaceStyle }) {
   const view = useWorkbenchView();
   const viewTransform = viewId && !compact ? workbenchModuleTransform(view, viewId) : { scale: 1, x: 0, y: 0 };
   const viewScale = viewTransform.scale;
@@ -22,6 +22,16 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
   const [height, setHeight] = useState(initialHeight);
   const [resizedWidth, setResizedWidth] = useState(width);
   const windowWidth = resizableWidth ? resizedWidth : width;
+  useLayoutEffect(() => {
+    if (controlledSize) { setResizedWidth(controlledSize.width); setHeight(controlledSize.height); }
+  }, [controlledSize?.width, controlledSize?.height]);
+  const finishResize = (cancelled = false) => {
+    if (!resize.current) return;
+    resize.current = null; placement.finish();
+    if (cancelled || onResizeEnd?.({ width: windowWidth, height }) === false) {
+      if (controlledSize) { setResizedWidth(controlledSize.width); setHeight(controlledSize.height); }
+    }
+  };
   useWorkbenchViewRegistration(viewId, node, !compact, { left: position.x, top: position.y, width: windowWidth, height });
   useLayoutEffect(() => {
     if (!compact) onLayoutChange?.({ left: position.x, top: position.y, width: windowWidth, height });
@@ -33,8 +43,10 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
     if (!fitContent || compact) return undefined;
     const content = measuredContent.current;
     const measure = () => {
-      const chromeHeight = node.current.offsetHeight - content.parentElement.clientHeight;
-      setHeight(Math.max(180, Math.min(globalThis.innerHeight - position.y - 54,
+      const surfaceStyle = getComputedStyle(content.parentElement);
+      const chromeHeight = node.current.offsetHeight - content.parentElement.clientHeight
+        + parseFloat(surfaceStyle.paddingTop) + parseFloat(surfaceStyle.paddingBottom);
+      setHeight(Math.max(minimumHeight, Math.min(globalThis.innerHeight - 70,
         Math.ceil(content.getBoundingClientRect().height + chromeHeight))));
     };
     const observer = new ResizeObserver(measure);
@@ -42,7 +54,7 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
     globalThis.addEventListener('resize', measure);
     measure();
     return () => { observer.disconnect(); globalThis.removeEventListener('resize', measure); };
-  }, [fitContent, position.y, Boolean(compact)]);
+  }, [fitContent, position.y, Boolean(compact), minimumHeight]);
   const clamp = (value) => ({
     x: Math.max(8, Math.min(globalThis.innerWidth - (node.current?.offsetWidth || 300) - 8, value.x)),
     y: Math.max(8, Math.min(globalThis.innerHeight - (node.current?.offsetHeight || height) - 54, value.y)),
@@ -79,9 +91,9 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
     setPosition(placed({ x: origin.position.x + (event.clientX - origin.x) / viewScale, y: origin.position.y + (event.clientY - origin.y) / viewScale }, position, snapping, event.altKey));
   };
   const finish = () => { gesture.current = null; placement.finish(); };
-  const resizeHeight = (value, altKey) => setHeight(Math.max(180, Math.min(globalThis.innerHeight - position.y - 54,
+  const resizeHeight = (value, altKey) => setHeight(Math.max(minimumHeight, Math.min(globalThis.innerHeight - position.y - 54,
     (placement.edge('y', 'bottom', position.y + value, { left: position.x, top: position.y }, altKey) ?? snapWorkbenchCoordinate(position.y + value, snapToGrid && !altKey)) - position.y)));
-  const resizeWidth = (value, altKey) => setResizedWidth(Math.max(240, Math.min(globalThis.innerWidth - position.x - 8,
+  const resizeWidth = (value, altKey) => setResizedWidth(Math.max(minimumWidth, Math.min(globalThis.innerWidth - position.x - 8,
     (placement.edge('x', 'right', position.x + value, { left: position.x, top: position.y }, altKey) ?? snapWorkbenchCoordinate(position.x + value, snapToGrid && !altKey)) - position.x)));
   const onKeyDown = (event) => {
     if (event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
@@ -98,7 +110,7 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
       onPointerDown: start, onPointerMove: move, onPointerUp: finish, onPointerCancel: finish, onLostPointerCapture: finish }}
     controls={controls} titleContent={titleContent} background={background} compactContent={compact?.content} chrome={chrome} menuSurface={menuSurface}
     style={{ ...surfaceStyle, '--detached-window-width': `${windowWidth}px`, left: position.x, top: position.y, height, maxHeight: 'calc(100dvh - 70px)', ...workbenchViewStyle(viewScale, position.x, position.y, windowWidth, height, viewTransform.x, viewTransform.y), ...compact?.style }}
-    resizeHandleProps={fitContent || compact ? undefined : { 'aria-label': `Resize ${label} ${resizableWidth ? 'window' : 'height'}`, role: 'separator', tabIndex: 0,
+    resizeHandleProps={!resizable || fitContent || compact ? undefined : { 'aria-label': `Resize ${label} ${resizableWidth ? 'window' : 'height'}`, role: 'separator', tabIndex: 0,
       ...(resizableWidth ? { style: { cursor: 'nwse-resize' }, 'aria-valuetext': `${Math.round(windowWidth)} by ${Math.round(height)} pixels` } : {}),
       'aria-orientation': 'horizontal', 'aria-valuenow': Math.round(height),
       onPointerDown: (event) => {
@@ -114,8 +126,9 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
           if (resizableWidth) resizeWidth(resize.current.width + (event.clientX - resize.current.x) / viewScale, event.altKey);
         }
       },
-      onPointerUp: () => { resize.current = null; placement.finish(); }, onPointerCancel: () => { resize.current = null; placement.finish(); },
-      onLostPointerCapture: () => { resize.current = null; placement.finish(); },
+      onPointerUp: () => finishResize(), onPointerCancel: () => finishResize(true),
+      onLostPointerCapture: () => finishResize(true),
+      onKeyUp: event => { if (event.key.startsWith('Arrow')) onResizeEnd?.({ width: windowWidth, height }); },
       onKeyDown: (event) => {
         if (event.key.startsWith('Arrow')) placement.begin(event);
         const step = (snapToGrid && !event.altKey) || event.shiftKey ? WORKBENCH_GRID_STEP : 8;

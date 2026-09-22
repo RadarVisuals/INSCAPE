@@ -72,10 +72,10 @@ test('Layers and direct editing retain an offset Grid through unlock, crop and n
       const swipe = async held => {
         await page.mouse.move(box.x + box.width * .7, box.y + box.height * .5); await page.mouse.down();
         await page.mouse.move(box.x + box.width * .5, box.y + box.height * .5, { steps: 4 });
-        if (held) await page.waitForTimeout(160);
+        if (held) { await page.waitForTimeout(160); await stage.dispatchEvent('pointercancel', { pointerId: 1 }); }
         await page.mouse.up();
       };
-      // A locked Display navigates without Space; a held release retains its offset.
+      // A locked Display navigates without Space; cancellation retains its offset.
       await lock(); await swipe(true);
       assert.ok(await offset() < -10);
       const restingOffset = await offset();
@@ -101,11 +101,12 @@ test('Layers and direct editing retain an offset Grid through unlock, crop and n
       const otherGrids = draft => draft.grids.filter(g => g.id !== 'grid:motion-0');
       assert.deepEqual(otherGrids(await page.evaluate(() => JSON.parse(localStorage.getItem(window.__motionKey)))), otherGrids(before),
         'editing targets only the selected Grid, not its visible neighbor');
-      await layers.getByRole('button', { name: 'Crop', exact: true }).click();
-      const zoom = layers.getByRole('slider', { name: 'Crop zoom' });
+      const toolbar = page.locator('[data-context-tools]');
+      await toolbar.getByRole('button', { name: 'Crop', exact: true }).click();
+      const zoom = toolbar.getByRole('slider', { name: 'Crop zoom' });
       await zoom.fill('1.2');
       assert.equal(await offset(), restingOffset, 'crop retains the offset');
-      await layers.getByRole('button', { name: 'Done', exact: true }).click();
+      await toolbar.getByRole('button', { name: 'Done', exact: true }).click();
       assert.equal(await offset(), restingOffset, 'committing crop retains the offset');
       const topLayer = layers.locator('.system-workflow__layer-row').first();
       await topLayer.locator('.system-workflow__layer-visibility').click();
@@ -137,7 +138,7 @@ test('Layers and direct editing retain an offset Grid through unlock, crop and n
       await page.waitForFunction(() => document.querySelector('[data-shared-tool="layers"] input[aria-label="Width"]')?.disabled);
       assert.equal(await page.locator('[data-resize-corner="e"]').isEnabled(), false, 'active camera movement suspends resize');
       await page.waitForTimeout(160);
-      await stage.dispatchEvent('pointerup', { pointerId: 9 }); await page.keyboard.up('Space');
+      await stage.dispatchEvent('pointercancel', { pointerId: 9 }); await page.keyboard.up('Space');
       await page.waitForFunction(() => document.querySelector('[data-shared-tool="layers"] input[aria-label="Width"]')?.disabled === false);
       await page.getByRole('button', { name: 'Close Layers', exact: true }).click();
       // Space navigation still works unlocked. Unlocking during a coast cancels it.
@@ -155,7 +156,7 @@ test('Layers and direct editing retain an offset Grid through unlock, crop and n
         const x = box.x + box.width * .5, y = box.y + box.height * .5;
         await stage.dispatchEvent('pointerdown', { button: 0, pointerId: 9, clientX: x, clientY: y });
         await page.evaluate(({ x, y }) => window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 9, clientX: x, clientY: y, bubbles: true })), { x: x + distance, y });
-        await page.waitForTimeout(160); await stage.dispatchEvent('pointerup', { pointerId: 9 }); await page.keyboard.up('Space');
+        await page.waitForTimeout(160); await stage.dispatchEvent('pointercancel', { pointerId: 9 }); await page.keyboard.up('Space');
         await page.waitForTimeout(30);
       };
       await heldMove(-box.width * 1.2);

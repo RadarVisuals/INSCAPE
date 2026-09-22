@@ -1,6 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { textRecoveryScope, retainTextRecovery, readTextRecovery, clearTextRecovery, textRecoveries, subscribeTextRecovery } from './textEditRecovery.js';
+import { bindWorkbenchTextRecovery, textRecoveryScope, retainTextRecovery, readTextRecovery, clearTextRecovery, textRecoveries, subscribeTextRecovery } from './textEditRecovery.js';
+
+test('Workbench recovery survives new stores but cannot be read or cleared by another profile', () => {
+  const profile = 'profile:remount';
+  const first = { getProfileAddress: () => profile };
+  const scope = textRecoveryScope(profile, 'text:one');
+  bindWorkbenchTextRecovery(first);
+  retainTextRecovery(first, scope, { title: 'saved' }, { title: 'pending' }, { reason: 'write_failed' });
+  const second = { getProfileAddress: () => profile };
+  bindWorkbenchTextRecovery(second);
+  assert.equal(readTextRecovery(second, scope).value.title, 'pending');
+  const other = { getProfileAddress: () => 'profile:other' };
+  bindWorkbenchTextRecovery(other);
+  assert.equal(readTextRecovery(other, scope), undefined);
+  clearTextRecovery(other, scope);
+  assert.equal(textRecoveries(other, profile).length, 0);
+  assert.equal(readTextRecovery(second, scope).expected.title, 'saved');
+  clearTextRecovery(second, scope);
+  assert.equal(textRecoveries(first, profile).length, 0);
+});
 test('failed edits survive editor disposal, stay profile/module scoped, and clear only after a confirmed save', () => {
   const profile = 'profile:a', store = { getProfileAddress: () => profile };
   const scope = textRecoveryScope(profile, 'text:one', 'display:one', 'grid:one');

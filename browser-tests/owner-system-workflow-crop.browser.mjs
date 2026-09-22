@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 
-const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+const EDGE = process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const ROOT = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
 const URL = `${ROOT}/development/owner/system-workflow`;
 const SCREENSHOT_DIR = process.env.INSCAPE_SYSTEM_WORKFLOW_SCREENSHOT_DIR ? resolve(process.env.INSCAPE_SYSTEM_WORKFLOW_SCREENSHOT_DIR) : null;
@@ -25,7 +25,7 @@ test('crop Done, Cancel, outside completion and Native Fit remain distinct canon
       await page.goto(URL, { waitUntil: 'networkidle' });
       await page.evaluate(() => { window.__workflowWrites = 0; addEventListener('inscape:review-storage-write', () => { window.__workflowWrites += 1; }); });
       const placement = page.getByRole('button', { name: new RegExp(`Select ${name}`) });
-      await placement.click();
+      await placement.focus(); await placement.press('Space');
       await page.getByRole('button', { name: 'Crop', exact: true }).click();
       await page.locator('.system-workflow__crop-controls').waitFor();
       return placement;
@@ -88,6 +88,7 @@ test('crop keyboard nudge and placement resize preview before separate completio
     await page.getByRole('button', { name: 'Crop', exact: true }).click();
     await page.getByLabel('Crop zoom').fill('1.5');
     const beforeNudge = await placement.locator('img:last-child').getAttribute('style');
+    await placement.focus();
     await page.keyboard.press('ArrowRight');
     assert.notEqual(await placement.locator('img:last-child').getAttribute('style'), beforeNudge);
     assert.equal(await page.evaluate(() => window.__workflowWrites), 0);

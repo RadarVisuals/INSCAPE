@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import LatticeProductionFocusArtwork from '../../lattice/rendering/LatticeProductionFocusArtwork.jsx';
 import { displayLiftRectangle } from './displayLiftGeometry.js';
 import { interpolateLatticeProductionFocusRectangle, latticeProductionFocusOpeningProgress,
-  latticeProductionFocusTransitionProgress } from '../../lattice/rendering/latticeProductionFocusArtworkMotion.js';
+  LATTICE_PRODUCTION_FOCUS_OPENING_MS } from '../../lattice/rendering/latticeProductionFocusArtworkMotion.js';
 
 // Presentation-only geometry in the Stage's local coordinates, including when
 // its containing window is scaled. Authored placement geometry never changes.
@@ -74,11 +74,10 @@ export default function DisplayLiftArtwork({ scene, source, entry, closing, redu
     const start = performance.now();
     // Closing can interrupt the opening animation without jumping to full size.
     const from = closing ? progressRef.current : 0;
-    const duration = closing ? 260 : 460;
+    const duration = LATTICE_PRODUCTION_FOCUS_OPENING_MS;
     const tick = now => {
       const elapsed = Math.min(1, (now - start) / duration);
-      const eased = closing ? latticeProductionFocusTransitionProgress(elapsed)
-        : latticeProductionFocusOpeningProgress(elapsed);
+      const eased = latticeProductionFocusOpeningProgress(elapsed);
       progressRef.current = closing ? from * (1 - eased) : eased;
       setProgress(progressRef.current);
       if (elapsed < 1) frame = requestAnimationFrame(tick);

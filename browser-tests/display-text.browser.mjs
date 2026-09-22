@@ -48,8 +48,8 @@ test('Display text belongs to the Grid, saves and matches Visitor at wide and na
         reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Display text review' } }));
     });
     await page.goto(`${origin}/__display_text__`); await mount();
-    await page.getByRole('button', { name: 'Layers', exact: true }).waitFor();
-    if (!await page.getByRole('button', { name: 'Add text', exact: true }).isVisible()) await page.getByRole('button', { name: 'Layers', exact: true }).click();
+    await page.getByRole('button', { name: 'Tools', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'LAYERS', exact: true }).click();
     const unlock = page.getByRole('button', { name: 'Unlock Display Module composition', exact: true });
     if (await unlock.count()) await unlock.click();
     await page.getByRole('button', { name: 'Add text', exact: true }).click();
@@ -60,8 +60,8 @@ test('Display text belongs to the Grid, saves and matches Visitor at wide and na
     await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
     const text = page.locator('.system-workflow__grid-plane--current .display-text-content');
     assert.equal(await text.innerText(), '//ARRIVAL');
-    assert.equal(await page.getByRole('button', { name: 'Crop', exact: true }).isDisabled(), true);
-    assert.equal(await page.getByRole('button', { name: 'Frame and mat', exact: true }).isDisabled(), true);
+    assert.equal(await page.getByRole('button', { name: 'Crop', exact: true }).count(), 0, 'image-only tools are absent for text');
+    assert.equal(await page.getByRole('button', { name: 'Frame and mat', exact: true }).count(), 0);
     const placement = text.locator('..'); await placement.focus();
     const before = await placement.boundingBox(); await page.keyboard.press('ArrowRight');
     assert.ok((await placement.boundingBox()).x > before.x, 'text moves through the existing selection workflow');
@@ -105,7 +105,7 @@ test('Display text belongs to the Grid, saves and matches Visitor at wide and na
       const Visitor = (await import('/src/profileDocument/components/ProfileDocumentV9Visitor.jsx')).default;
       window.reviewRoot.render(React.createElement(Visitor, { document: doc }));
     }, doc);
-    const visitorText = page.locator('.display-text-placement .display-text-content').first();
+    const visitorText = page.locator('.visitor-grid-world__grid-plane--current .display-text-placement .display-text-content');
     await visitorText.waitFor(); assert.equal(await visitorText.innerText(), '//ARRIVAL');
     await page.waitForFunction(() => [...document.querySelectorAll('.visitor-grid-renderer img')].length > 0 && [...document.querySelectorAll('.visitor-grid-renderer img')].every(img => img.complete && img.naturalWidth > 0));
     await page.waitForFunction(() => [...document.querySelectorAll('.visitor-grid-renderer img')].every(img => img.classList.contains('is-ready')));

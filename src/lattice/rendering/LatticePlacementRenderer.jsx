@@ -1,7 +1,6 @@
 import React from 'react';
 
 import { PLACEMENT_RESIZE_CORNERS } from '../controller/latticePlacementResize.js';
-import { TRANSPARENCY_MODES } from '../domain/latticeProfile.js';
 import { projectTableMediaPlacements } from './latticePlacement.js';
 import './latticePlacementRenderer.css';
 
@@ -9,29 +8,17 @@ const percentage = (value, total) => `${(value / total) * 100}%`;
 
 export function LatticeArtworkPresentation({ cropEditing = false, entry }) {
   const {
-    backing,
-    backplateRectangle,
     cropped,
     imageRectangle,
-    mat,
     media,
     mediaRectangle,
     selectionRectangle,
-    transparencyMode,
   } = entry;
 
   return <>
-    {backplateRectangle && (
-      <div
-        aria-hidden="true"
-        className="lattice-placement-backplate"
-        style={{ '--lattice-mat-color': mat.color }}
-      />
-    )}
     <div
-      className={`lattice-placement-media${cropped ? ' is-cropped' : ''}${cropEditing ? ' is-crop-editing' : ''}${transparencyMode === TRANSPARENCY_MODES.OPAQUE ? ' is-opaque' : ''}`}
+      className={`lattice-placement-media${cropped ? ' is-cropped' : ''}${cropEditing ? ' is-crop-editing' : ''}`}
       style={{
-        backgroundColor: backing.enabled ? backing.color : undefined,
         left: percentage(mediaRectangle.left - selectionRectangle.left, selectionRectangle.width),
         top: percentage(mediaRectangle.top - selectionRectangle.top, selectionRectangle.height),
         width: percentage(mediaRectangle.width, selectionRectangle.width),
@@ -50,26 +37,12 @@ export function LatticeArtworkPresentation({ cropEditing = false, entry }) {
         }}
       />
     </div>
-    {backplateRectangle && (
-      <div
-        aria-hidden="true"
-        className="lattice-placement-aperture"
-        style={{
-          left: percentage(mediaRectangle.left - selectionRectangle.left, selectionRectangle.width),
-          top: percentage(mediaRectangle.top - selectionRectangle.top, selectionRectangle.height),
-          width: percentage(mediaRectangle.width, selectionRectangle.width),
-          height: percentage(mediaRectangle.height, selectionRectangle.height),
-        }}
-      />
-    )}
   </>;
 }
 
 export default function LatticePlacementRenderer({
   arrangeEnabled = false,
   artboard,
-  artworkBackingsByPlacementId,
-  artworkMatsByPlacementId,
   assetsByStableId,
   cropEditingPlacementId = null,
   framing,
@@ -82,7 +55,7 @@ export default function LatticePlacementRenderer({
   table,
   viewport,
 }) {
-  const renderEntries = projectTableMediaPlacements({ artboard, artworkBackingsByPlacementId, artworkMatsByPlacementId, assetsByStableId, framing, table, viewport });
+  const renderEntries = projectTableMediaPlacements({ artboard, assetsByStableId, framing, table, viewport });
   const selectedEntry = arrangeEnabled
     ? renderEntries.find(({ placement }) => placement.id === selectedPlacementId)
     : null;
@@ -90,15 +63,13 @@ export default function LatticePlacementRenderer({
   return (
     <div className={`lattice-placement-layer${arrangeEnabled ? ' is-arranging' : ''}`} data-table-id={table.id}>
       {renderEntries.map((entry) => {
-        const { mat, media, placement, selectionRectangle, transparencyMode } = entry;
+        const { media, placement, selectionRectangle } = entry;
         const viewerEnabled = typeof onPlacementActivate === 'function' && !arrangeEnabled;
         return (
         <div
           aria-label={typeof media.accessibleLabel === 'string' ? media.accessibleLabel : 'Artwork placement'}
-          className={`lattice-placement${mat.enabled ? ' has-mat' : ''}${selectedPlacementId === placement.id ? ' is-selected' : ''}${focusedPlacementId === placement.id ? ' is-viewer-origin' : ''}`}
-          data-mat-enabled={mat.enabled || undefined}
+          className={`lattice-placement${selectedPlacementId === placement.id ? ' is-selected' : ''}${focusedPlacementId === placement.id ? ' is-viewer-origin' : ''}`}
           data-placement-id={placement.id}
-          data-transparency-mode={transparencyMode}
           key={placement.id}
           onContextMenu={(event) => {
             event.preventDefault();

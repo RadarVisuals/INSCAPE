@@ -8,6 +8,7 @@ import {
 import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 import { restoreMobilePresentation } from '../../mobile/domain/mobilePresentation.js';
 import { restoreMiniApps } from '../../miniApps/domain/miniApps.js';
+import { restoreImageModules } from '../../imageModule/imageModule.js';
 import { restoreTextModules } from '../../text/domain/article.js';
 import { createDefaultWorkbenchPresentation } from './workbenchPresentation.js';
 
@@ -86,6 +87,7 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
       return grids.length ? [{ ...module, visibility: 'PRIVATE', grids: [...grids, createEmptySystemWorkflowWorldCoverGrid()] }] : [];
     });
   const miniApps = restoreMiniApps(document.miniApps, currentDraftInput?.miniApps);
+  const imageModules = restoreImageModules(document.imageModules, currentDraftInput?.imageModules);
   const sectionDisplays = (grids, displays = []) => [{ id: 'display:primary', grids: grids || [] }, ...displays]
     .map(d => ({ id: d.id, grids: d.grids.filter(g => g.id !== SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID) }));
   const texts = restoreTextModules(document.texts, currentDraftInput?.texts, {
@@ -103,6 +105,11 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     workbench ||= createDefaultWorkbenchPresentation();
     workbench.texts = [...(workbench.texts || []), ...structuredClone(privateTextWindows)];
   }
+  const privateImageWindows = (currentDraftInput?.workbench?.imageModules || []).filter(w => imageModules.some(image => image.id === w.id && image.visibility === 'PRIVATE'));
+  if (privateImageWindows.length) {
+    workbench ||= createDefaultWorkbenchPresentation();
+    workbench.imageModules = [...(workbench.imageModules || []), ...structuredClone(privateImageWindows)];
+  }
   return assertValidSystemWorkflowDraft({
     profileAddress: document.profile.address,
     draftVersion: SYSTEM_WORKFLOW_DRAFT_VERSION,
@@ -112,6 +119,7 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     identityPresentation: restoredIdentity(document.identityPresentation),
     ...(workbench ? { workbench } : {}),
     ...((document.miniApps || currentDraftInput?.miniApps) ? { miniApps } : {}),
+    ...((document.imageModules || currentDraftInput?.imageModules) ? { imageModules } : {}),
     ...((document.texts || currentDraftInput?.texts) ? { texts } : {}),
     ...((document.displays || currentDraftInput?.displays) ? { displays: [...publishedDisplays, ...structuredClone(privateDisplays)] } : {}),
     ...(document.mobile ? { mobile: restoreMobilePresentation(document.mobile, currentDraftInput?.mobile) }

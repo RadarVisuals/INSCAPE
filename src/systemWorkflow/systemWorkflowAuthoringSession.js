@@ -12,7 +12,9 @@ import {
   adjacentSystemWorkflowGridId,
   firstSystemWorkflowGridId,
   reconcileSystemWorkflowGridSelection,
+  reconcileSystemWorkflowGridSelectionInGrids,
   selectSystemWorkflowGrid,
+  selectSystemWorkflowGridInGrids,
 } from './domain/systemWorkflowNavigation.js';
 import {
   createSystemWorkflowPlacementCandidate,
@@ -38,7 +40,7 @@ import {
   createSystemWorkflowLayerReorderCandidate,
 } from './systemWorkflowLayer.js';
 import { createSystemWorkflowCropCandidate } from './systemWorkflowCrop.js';
-import { createSystemWorkflowPresentationCandidate } from './systemWorkflowPresentation.js';
+import { createSystemWorkflowInspectionCandidate } from './systemWorkflowInspection.js';
 import {
   createSystemWorkflowGroupTransformCandidate,
   createSystemWorkflowTransformCandidate,
@@ -89,7 +91,9 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
     },
 
     selectGrid(gridId) {
-      selectedGridId = selectSystemWorkflowGrid(store.getDraft(), gridId);
+      selectedGridId = store.getSnapshot
+        ? selectSystemWorkflowGridInGrids(store.getSnapshot().grids, gridId)
+        : selectSystemWorkflowGrid(store.getDraft(), gridId);
       return selectedGridId;
     },
 
@@ -147,7 +151,9 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
 
     getSnapshot() {
       const draft = store.getSnapshot ? store.getSnapshot() : store.getDraft();
-      selectedGridId = reconcileSystemWorkflowGridSelection(draft, selectedGridId);
+      selectedGridId = store.getSnapshot
+        ? reconcileSystemWorkflowGridSelectionInGrids(draft.grids, selectedGridId)
+        : reconcileSystemWorkflowGridSelection(draft, selectedGridId);
       return Object.freeze({ draft, generation: store.getGeneration(), selectedGridId });
     },
 
@@ -175,8 +181,8 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
       return transact((draft) => createSystemWorkflowCropCandidate(guardGroupedOperation(draft, request), request));
     },
 
-    setPlacementPresentation(request) {
-      return transact((draft) => createSystemWorkflowPresentationCandidate(guardGroupedOperation(draft, request), request));
+    setPlacementInspection(request) {
+      return transact((draft) => createSystemWorkflowInspectionCandidate(guardGroupedOperation(draft, request), request));
     },
 
     duplicatePlacement(request) {

@@ -3,7 +3,7 @@ import test from 'node:test';
 import { chromium } from 'playwright-core';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5178';
 for (const sections of [false, true]) test(sections ? 'article sections link from Grid 2 and reading page 2, scroll and follow owner and Visitor Grids' : 'existing linked Text preserves separate passages and owner and Visitor navigation', { timeout: 120000 }, async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', e => { errors.push(e.message); console.error(e.stack); }); page.setDefaultTimeout(15000);
@@ -187,6 +187,22 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
     assert.ok(playback[0] < -.03 && playback[0] > -.08 && Math.abs(playback[0] - playback[1]) < .01, 'Text follows slower continuous playback');
     await page.getByRole('button', { name: 'Pause Grids', exact: true }).focus(); await page.keyboard.press('Enter');
     await page.getByRole('button', { name: 'Next Grid', exact: true }).click();
+    const landingGrid = await stage.getAttribute('data-active-grid-id');
+    await page.mouse.move(stageBox.x + stageBox.width * .7, stageBox.y + stageBox.height * .6); await page.mouse.down();
+    await page.mouse.move(stageBox.x + stageBox.width * .6, stageBox.y + stageBox.height * .6, { steps: 5 });
+    await page.waitForTimeout(160); await page.mouse.up(); await page.waitForTimeout(750);
+    const landingOffsets = () => page.evaluate(() => {
+      const scene = document.querySelector('.visitor-grid-world__grid-track'), text = document.querySelector('.text-scene-track');
+      return [new DOMMatrix(getComputedStyle(scene).transform).m41 + Number(scene.dataset.railOrigin || 0) * scene.clientWidth,
+        new DOMMatrix(getComputedStyle(text).transform).m41];
+    });
+    assert.ok((await landingOffsets()).every(offset => Math.abs(offset) < .05), 'Display and its existing Text follower land together at exact page origins');
+    assert.equal(await stage.getAttribute('data-active-grid-id'), landingGrid, 'a short held release returns to the same Grid');
+    await page.mouse.move(stageBox.x + stageBox.width * .8, stageBox.y + stageBox.height * .6); await page.mouse.down();
+    await page.mouse.move(stageBox.x + stageBox.width * .15, stageBox.y + stageBox.height * .6, { steps: 5 });
+    await page.waitForTimeout(160); await page.mouse.up(); await page.waitForTimeout(750);
+    assert.notEqual(await stage.getAttribute('data-active-grid-id'), landingGrid, 'a long held release lands on the next Grid');
+    assert.ok((await landingOffsets()).every(offset => Math.abs(offset) < .05), 'the incoming Text page becomes its own exact origin after landing');
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({ path: '.browser-test-runtime/text-scenes-narrow.png' });

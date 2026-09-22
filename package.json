@@ -13,6 +13,8 @@
     "test": "node --test",
     "test:lukso-standards": "node --test scripts/luksoStandards.audit.test.js",
     "test:browser": "node --test browser-tests/published-visitor.browser.mjs",
+    "test:browser:workbench-lifecycle": "node --test browser-tests/workbench-lifecycle.browser.mjs",
+    "test:browser:image-module": "node --test browser-tests/image-module.browser.mjs",
     "test:browser:routing": "node --test browser-tests/owner-profile-routing.browser.mjs",
     "test:browser:alpha-support": "node --test browser-tests/alpha-support-preview.browser.mjs",
     "test:browser:system-workflow-phase4b": "node --test browser-tests/owner-system-workflow-publication.browser.mjs",

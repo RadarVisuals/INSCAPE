@@ -11,8 +11,13 @@ export function firstSystemWorkflowGridId(draftInput) {
 }
 
 export function selectSystemWorkflowGrid(draftInput, gridId) {
-  const draft = assertValidSystemWorkflowDraft(draftInput);
-  if (!draft.grids.some(({ id }) => id === gridId)) {
+  return selectSystemWorkflowGridInGrids(assertValidSystemWorkflowDraft(draftInput).grids, gridId);
+}
+
+// Accepted store snapshots are already validated. Navigation only reads IDs;
+// callers handling untrusted documents use the validating wrappers above/below.
+export function selectSystemWorkflowGridInGrids(grids, gridId) {
+  if (!grids.some(({ id }) => id === gridId)) {
     throw navigationError('SYSTEM_WORKFLOW_GRID_UNKNOWN', 'The selected Grid does not exist');
   }
   return gridId;
@@ -38,6 +43,10 @@ export function adjacentSystemWorkflowGridIdInOrder(gridIds, gridId, direction) 
 }
 
 export function reconcileSystemWorkflowGridSelection(draftInput, selectedGridId) {
-  const draft = assertValidSystemWorkflowDraft(draftInput);
-  return draft.grids.some(({ id }) => id === selectedGridId) ? selectedGridId : navigableGrids(draft)[0]?.id ?? null;
+  return reconcileSystemWorkflowGridSelectionInGrids(assertValidSystemWorkflowDraft(draftInput).grids, selectedGridId);
+}
+
+export function reconcileSystemWorkflowGridSelectionInGrids(grids, selectedGridId) {
+  return grids.some(({ id }) => id === selectedGridId) ? selectedGridId
+    : grids.find(grid => !isSystemWorkflowWorldCoverGrid(grid))?.id ?? null;
 }

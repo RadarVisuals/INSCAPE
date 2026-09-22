@@ -77,9 +77,7 @@ test('Preview v9 retains every public placement presentation field and removes p
   const draft = createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
   const publicPlacement = {
     ...placement('public-artwork', 7), column: 8, row: 5, columnSpan: 6, rowSpan: 4, layer: 3,
-    crop: { x: 0.42, y: 0.57, zoom: 1.8 }, frameId: 'DOSSIER', transparencyMode: 'OPAQUE',
-    mat: { enabled: true, color: '#102030', inset: { top: 0.1, right: 0.2, bottom: 0.1, left: 0.2 } },
-    backing: { enabled: true, color: '#d0c0b0' },
+    crop: { x: 0.42, y: 0.57, zoom: 1.8 },
     transform: { quarterTurns: 3, mirrorX: true, mirrorY: true },
   };
   draft.grids[0].placements = [publicPlacement, { ...placement('private-artwork', 1), visibility: 'PRIVATE' }];
@@ -88,7 +86,8 @@ test('Preview v9 retains every public placement presentation field and removes p
   });
   assert.equal(preview.grids[0].placements.length, 1);
   const { asset: resolvedAsset, visibility, ...projected } = preview.grids[0].placements[0];
-  const { locked: _locked, stableAssetId: _stableAssetId, visibility: _sourceVisibility, ...expected } = publicPlacement;
+  const { locked: _locked, stableAssetId: _stableAssetId, visibility: _sourceVisibility,
+    mat: _mat, frameId: _frame, backing: _backing, transparencyMode: _transparency, ...expected } = publicPlacement;
   assert.deepEqual(projected, expected);
   assert.equal(visibility, 'PUBLIC');
   assert.equal(resolvedAsset.stableAssetId, ASSET);

@@ -50,10 +50,7 @@ import {
   updateSystemWorkflowCropPanGesture,
 } from './systemWorkflowCrop.js';
 import { projectCroppedMediaRectangle } from '../lattice/rendering/latticeCrop.js';
-import {
-  createSystemWorkflowPresentationCandidate,
-  systemWorkflowPlacementPresentation,
-} from './systemWorkflowPresentation.js';
+import { createSystemWorkflowInspectionCandidate } from './systemWorkflowInspection.js';
 import {
   SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS,
   createSystemWorkflowGroupTransformCandidate,
@@ -71,9 +68,7 @@ const FIELD = Object.freeze({ cellSize: 40, width: 1280, height: 720, left: 0, t
 const createDraft = () => createEmptySystemWorkflowDraft(PROFILE, { generateId: () => 'home' });
 const placement = (id, layer = 0, overrides = {}) => ({
   id, stableAssetId: ASSET, column: 2, row: 2, columnSpan: 4, rowSpan: 4,
-  layer, navigationOrder: layer, crop: null, frameId: 'NONE',
-  mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
-  backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO',
+  layer, navigationOrder: layer, crop: null,
   visibility: 'PUBLIC', locked: false,
   transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
   ...overrides,
@@ -110,9 +105,7 @@ test('placement creation retains canonical fit, pointer drop, IDs, bounds, and i
   });
   assert.deepEqual(candidate.grids[0].placements[0], {
     id: 'placement-a', stableAssetId: ASSET, column: 20, row: 10, columnSpan: 12, rowSpan: 8,
-    layer: 0, navigationOrder: 0, crop: null, frameId: 'NONE',
-    mat: { enabled: false, color: '#090a0a', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
-    backing: { enabled: false, color: '#d8d4ca' }, transparencyMode: 'AUTO',
+    layer: 0, navigationOrder: 0, crop: null,
     visibility: 'PUBLIC', locked: false,
     transform: { quarterTurns: 0, mirrorX: false, mirrorY: false },
   });
@@ -389,15 +382,10 @@ test('crop, presentation, and transform retain separate canonical authorities', 
     expectedPlacement: expected, gridId: 'grid:home', media: MEDIA, placementId: 'a',
   }), { code: 'SYSTEM_WORKFLOW_CROP_COVERAGE_INVALID' });
 
-  const presentation = {
-    ...systemWorkflowPlacementPresentation(expected),
-    frameId: 'DOSSIER',
-    mat: { enabled: true, color: '#A1B2C3', inset: { top: 0.1, right: 0.1, bottom: 0.1, left: 0.1 } },
-  };
-  const presented = createSystemWorkflowPresentationCandidate(draft, {
-    expectedPlacement: expected, gridId: 'grid:home', placementId: 'a', presentation,
+  const presented = createSystemWorkflowInspectionCandidate(draft, {
+    expectedPlacement: expected, gridId: 'grid:home', placementId: 'a', inspectionMode: 'IN_PLACE',
   });
-  assert.equal(presented.grids[0].placements[0].mat.color, '#a1b2c3');
+  assert.equal(presented.grids[0].placements[0].inspectionMode, 'IN_PLACE');
 
   const transformed = createSystemWorkflowTransformCandidate(draft, {
     expectedPlacement: expected,
@@ -579,8 +567,8 @@ test('group rotate and mirrors transform placement geometry around shared bounds
     entries,
     SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.ROTATE,
   ).map(({ destination }) => destination), [
-    { column: 4, row: 7, columnSpan: 2, rowSpan: 4 },
-    { column: 7, row: 1, columnSpan: 3, rowSpan: 2 },
+    { column: 8, row: 1, columnSpan: 2, rowSpan: 4 },
+    { column: 4, row: 9, columnSpan: 3, rowSpan: 2 },
   ]);
 });
 

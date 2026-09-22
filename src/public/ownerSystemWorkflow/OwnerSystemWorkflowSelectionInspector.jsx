@@ -3,21 +3,20 @@ import { useEffect, useState } from 'react';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
 import PlacementSizeControls from './PlacementSizeControls.jsx';
 import ArtworkTransformTools from './ArtworkTransformTools.jsx';
+import { ContextToolContent, useContextToolTarget } from './ContextToolbar.jsx';
+import { SharedDisplayToolContent } from './SharedDisplayTools.jsx';
 import { ownerSystemWorkflowAssetDimensions } from './ownerSystemWorkflowAssetDimensions.js';
 import { displayTextLabel } from '../../systemWorkflow/domain/displayText.js';
 import { addArticleToDisplay } from '../../text/textTransfer.js';
 import {
-  ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, Copy, Crop, Eye, EyeOff, FlipHorizontal2, FlipVertical2, Frame, Lock, RotateCw, Trash2,
+  ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, Copy, Crop, Eye, EyeOff, Lock, Trash2,
 } from 'lucide-react';
 import {
   SYSTEM_WORKFLOW_LAYER_OPERATIONS,
   systemWorkflowLayerOperationAvailability,
   systemWorkflowLayerTopologySnapshot,
 } from '../../systemWorkflow/systemWorkflowLayer.js';
-import { SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS } from '../../systemWorkflow/systemWorkflowTransform.js';
 
-const PRESENTATION_FRAMES = ['NONE', 'DOSSIER', 'CAPTION'];
-const TRANSPARENCY = ['AUTO', 'PRESERVE_ALPHA', 'OPAQUE'];
 const sourceFor = (asset) => asset?.previewSrc || asset?.src || asset?.thumbnailUrl || asset?.imageUrl;
 function reorderBlock(ids, selectedIds, direction) {
   const selected = new Set(selectedIds);
@@ -33,11 +32,11 @@ function reorderBlock(ids, selectedIds, direction) {
 }
 
 export default function OwnerSystemWorkflowSelectionInspector({ assetsById, authoringLocked = false,
-  controller, crop, onBeginCrop, onEditText, onArtworkInfo }) {
+  controller, crop, onBeginCrop, onEditText, onArtworkInfo, toolLabel = 'Display', available = true }) {
   const [removeCandidateId, setRemoveCandidateId] = useState(null);
-  const [presentation, setPresentation] = useState(null);
   const [gutter, setGutter] = useState('1');
   const [gutterMessage, setGutterMessage] = useState('');
+  const toolTarget = useContextToolTarget();
   const grid = controller.selectedGrid;
   const selected = controller.selectedPlacements;
   const group = selectedPlacementGroup(grid, controller.selectedPlacementIds);
@@ -46,8 +45,10 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
   const primary = unlockedSelected.length === 1 ? unlockedSelected[0] : null;
   const textPlacement = selected.length === 1 && selected[0].kind === 'text' ? selected[0] : null;
   useEffect(() => { if (!removeCandidateId) return undefined; const cancel = (event) => event.key === 'Escape' && setRemoveCandidateId(null); globalThis.addEventListener('keydown', cancel, true); return () => globalThis.removeEventListener('keydown', cancel, true); }, [removeCandidateId]);
-  useEffect(() => { if (authoringLocked) { setPresentation(null); setRemoveCandidateId(null); } }, [authoringLocked]);
-  useEffect(() => { if (presentation && !grid?.placements.some(({ id }) => id === presentation.placementId)) setPresentation(null); }, [grid, presentation]);
+  useEffect(() => { if (authoringLocked) setRemoveCandidateId(null); }, [authoringLocked]);
+  useEffect(() => {
+    if (!available || toolTarget !== controller.moduleId) setRemoveCandidateId(null);
+  }, [available, toolTarget, controller.moduleId]);
   if (!grid) return null;
   const addText = () => {
     if (authoringLocked) return;
@@ -105,14 +106,6 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
     controller.run((session) => session.reorderPlacementLayers({ gridId: grid.id, expectedPlacements: systemWorkflowLayerTopologySnapshot(grid), orderedPlacementIds: reorderBlock(orderedIds, unlockedSelected.map(({ id }) => id), operation) }));
   };
   const availability = primary ? systemWorkflowLayerOperationAvailability(grid, primary.id) : { BACK: editable, BACKWARD: editable, FORWARD: editable, FRONT: editable };
-  const beginPresentation = () => !authoringLocked && primary && setPresentation({ placementId: primary.id, frameId: primary.frameId, mat: structuredClone(primary.mat), backing: structuredClone(primary.backing), transparencyMode: primary.transparencyMode });
-  const applyPresentation = () => {
-    if (authoringLocked) return;
-    const placement = grid.placements.find(({ id }) => id === presentation?.placementId);
-    if (!placement) return;
-    controller.run((session) => session.setPlacementPresentation({ gridId: grid.id, placementId: placement.id, expectedPlacement: placement, presentation: { frameId: presentation.frameId, mat: presentation.mat, backing: presentation.backing, transparencyMode: presentation.transparencyMode, inspectionMode: resolveInspectionMode(placement) } }));
-    setPresentation(null);
-  };
   const reorderFromDrop = (sourceId, targetId) => {
     if (authoringLocked || !sourceId || sourceId === targetId || grid.placements.some(({ locked }) => locked)) return;
     const ids = ordered.map(({ id }) => id);
@@ -122,32 +115,22 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
     controller.run((session) => session.reorderPlacementLayers({ gridId: grid.id, expectedPlacements: systemWorkflowLayerTopologySnapshot(grid), orderedPlacementIds: ids }));
   };
 
-  const renderPanel = (content, surfaceClassName) => <section
+  const dock = content => <ContextToolContent target={controller.moduleId} label={toolLabel} available={available}>{content}</ContextToolContent>;
+  const renderPanel = (content, surfaceClassName, tools) => <>{dock(tools)}<SharedDisplayToolContent id="layers" targetId={controller.moduleId} label={toolLabel} available={available}><section
     aria-label="Selection and layers inspector" className={`system-workflow__instrument-layers ${surfaceClassName}`}
-    data-authoring-locked={authoringLocked || undefined}>{content}</section>;
+    data-authoring-locked={authoringLocked || undefined}>{content}</section></SharedDisplayToolContent></>;
 
-  if (crop?.cropSession) return renderPanel(<><div><strong>Crop / drag image</strong><output>{Math.round(crop.cropSession.controlZoom * 100)}%</output></div>
+  const cropTools = crop?.cropSession && <div className="system-workflow__crop-controls"><div><strong>Crop / drag image</strong><output>{Math.round(crop.cropSession.controlZoom * 100)}%</output></div>
       <input aria-label="Crop zoom" max="4" min="1" onChange={(event) => crop.updateCropZoom(Number(event.target.value))} step="0.05" type="range" value={crop.cropSession.controlZoom} />
       <footer><button onClick={crop.restoreNativeFit} type="button">Native fit</button><button onClick={crop.cancelCrop} type="button">Cancel</button><button onClick={crop.applyCrop} type="button">Done</button></footer>
-    </>, 'system-workflow__crop-controls');
-
-  if (presentation) return renderPanel(<><div className="system-workflow__presentation-fields">
-      <label><span>Frame</span><select value={presentation.frameId} onChange={(event) => setPresentation((current) => ({ ...current, frameId: event.target.value }))}>{PRESENTATION_FRAMES.map((value) => <option key={value}>{value}</option>)}</select></label>
-      <label><span>Mat</span><input checked={presentation.mat.enabled} onChange={(event) => setPresentation((current) => ({ ...current, mat: { ...current.mat, enabled: event.target.checked } }))} type="checkbox" /></label>
-      <label><span>Mat color</span><input value={presentation.mat.color} onChange={(event) => setPresentation((current) => ({ ...current, mat: { ...current.mat, color: event.target.value } }))} type="color" /></label>
-      <label><span>Backing</span><input checked={presentation.backing.enabled} onChange={(event) => setPresentation((current) => ({ ...current, backing: { ...current.backing, enabled: event.target.checked } }))} type="checkbox" /></label>
-      <label><span>Backing color</span><input disabled={!presentation.backing.enabled} value={presentation.backing.color} onChange={(event) => setPresentation((current) => ({ ...current, backing: { ...current.backing, color: event.target.value } }))} type="color" /></label>
-      <label><span>Transparency</span><select value={presentation.transparencyMode} onChange={(event) => setPresentation((current) => ({ ...current, transparencyMode: event.target.value }))}>{TRANSPARENCY.map((value) => <option key={value}>{value}</option>)}</select></label>
-    </div><footer><button onClick={() => setPresentation(null)} type="button">Cancel</button><button onClick={applyPresentation} type="button">Apply</button></footer>
-  </>, 'system-workflow__presentation-controls');
+    </div>;
 
   const inspectPlacement = selected.length === 1 && selected[0].kind !== 'text' ? selected[0] : null;
   const changeInspection = (inspectionMode) => {
     if (!editable || !inspectPlacement) return;
-    controller.run((session) => session.setPlacementPresentation({
+    controller.run((session) => session.setPlacementInspection({
       gridId: grid.id, placementId: inspectPlacement.id, expectedPlacement: inspectPlacement,
-      presentation: { frameId: inspectPlacement.frameId, mat: inspectPlacement.mat,
-        backing: inspectPlacement.backing, transparencyMode: inspectPlacement.transparencyMode, inspectionMode },
+      inspectionMode,
     }));
   };
   const inspectionSelector = <div className="system-workflow__inspection-selector" role="group" aria-label="Artwork inspection mode">
@@ -166,8 +149,7 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
       <button aria-label="Move backward" disabled={authoringLocked || !availability.BACKWARD} onClick={() => moveLayer(SYSTEM_WORKFLOW_LAYER_OPERATIONS.BACKWARD)} title="Move backward" type="button"><ChevronDown size={15} /></button>
       <button aria-label="Move forward" disabled={authoringLocked || !availability.FORWARD} onClick={() => moveLayer(SYSTEM_WORKFLOW_LAYER_OPERATIONS.FORWARD)} title="Move forward" type="button"><ChevronUp size={15} /></button>
       <button aria-label="Bring to front" disabled={authoringLocked || !availability.FRONT} onClick={() => moveLayer(SYSTEM_WORKFLOW_LAYER_OPERATIONS.FRONT)} title="Bring to front" type="button"><ChevronsUp size={15} /></button>
-      {!textPlacement && <><button aria-label="Crop" disabled={authoringLocked || !primary || Boolean(textPlacement)} onClick={() => onBeginCrop?.(primary)} title="Crop artwork" type="button"><Crop size={15} /></button>
-      <button aria-label="Frame and mat" disabled={authoringLocked || !primary || Boolean(textPlacement)} onClick={beginPresentation} title="Frame and mat" type="button"><Frame size={15} /></button></>}
+      {!textPlacement && <button aria-label="Crop" disabled={authoringLocked || !primary} onClick={() => onBeginCrop?.(primary)} title="Crop artwork" type="button"><Crop size={15} /></button>}
     </nav>;
   return renderPanel(<>
     <button className="system-workflow__add-text" type="button" disabled={authoringLocked} onClick={addText}>Add text</button>
@@ -194,7 +176,7 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
       {group && <p className="system-workflow__layer-hint">Moves and animates together. Ungroup to edit individual layers. Ungroup removes group effects and restores individual effects.</p>}
       {selected.length === 1 && <PlacementSizeControls placement={selected[0]} controller={controller} disabled={!editable} />}
 
-      {toolbar}{inspectPlacement && inspectionSelector}
+      {inspectPlacement && inspectionSelector}
       {primary && !textPlacement && onArtworkInfo && <button type="button" className="system-workflow__add-text" onClick={onArtworkInfo}>Artwork info</button>}
       {primary && !textPlacement && <nav aria-label="Artwork placement" className="system-workflow__selection-actions system-workflow__placement-actions">
         {[['fit', 'Fit inside Display'], ['cover', 'Cover Display'], ['centre', 'Centre']].map(([mode, label]) => <button key={mode} type="button" disabled={!editable || !primary || Boolean(crop?.cropSession)} onClick={() => controller.run(session => {
@@ -216,7 +198,7 @@ export default function OwnerSystemWorkflowSelectionInspector({ assetsById, auth
       {gutterMessage && <p className="system-workflow__gutter-message" role="status">{gutterMessage}</p>}
 
     </details>
-  </>, 'system-workflow__layers');
+  </>, 'system-workflow__layers', cropTools || (selected.length ? toolbar : <p className="system-workflow__layer-hint">Select artwork to use its tools.</p>));
 }
 
 import { resolveInspectionMode } from '../../systemWorkflow/domain/systemWorkflowDraft.js';

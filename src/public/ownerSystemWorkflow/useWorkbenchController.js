@@ -4,6 +4,7 @@ import { resolveIdentityCard } from '../../profileIdentity/domain/identityCard.j
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { createWorkbenchSession } from '../../systemWorkflow/workbenchSession.js';
 import { addDisplayModule } from '../../systemWorkflow/displayModuleSession.js';
+import { bindWorkbenchTextRecovery } from '../../text/textEditRecovery.js';
 
 function browserStorage() { try { return globalThis.localStorage; } catch { return null; } }
 
@@ -11,6 +12,7 @@ export default function useWorkbenchController(profileAddress, { storage } = {})
   const profile = normalizeProfileAddress(profileAddress), selectedStorage = storage ?? browserStorage();
   const authority = useMemo(() => {
     const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage: selectedStorage });
+    bindWorkbenchTextRecovery(store);
     return { store, session: createWorkbenchSession({ store }) };
   }, [profile, selectedStorage]);
   const live = useRef(authority), mounted = useRef(true);
@@ -24,7 +26,9 @@ export default function useWorkbenchController(profileAddress, { storage } = {})
     catch (error) { setFailure({ authority, message: error.message }); return false; }
   }, [authority]);
   const clearError = useCallback(() => setFailure(null), []);
-  const draft = authority.store.getDraft();
+  // Rendering reads the accepted immutable document. A Display navigation must
+  // not clone every sibling module or invalidate their content identities.
+  const draft = authority.store.getSnapshot();
   return { draft, store: authority.store, storage: selectedStorage, run, clearError, error: failure?.authority === authority ? failure.message : null,
     addDisplay: orientation => run(() => addDisplayModule(authority.store, orientation)),
     saveWorkbench: workbench => run(session => session.saveWorkbench(workbench)),

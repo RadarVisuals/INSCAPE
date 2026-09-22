@@ -19,13 +19,24 @@ function transformError(code, message) {
 }
 
 function applyTransform(placement, operation) {
+  placement.transform = transformArtwork(placement.transform, operation);
+}
+
+// Shared by independent artwork modules; placement geometry stays module-owned.
+export function transformArtwork(input, operation) {
+  if (!operations.has(operation)) throw new TypeError('Unknown artwork transform');
+  const transform = { ...input };
   if (operation === SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.ROTATE) {
-    placement.transform.quarterTurns = (placement.transform.quarterTurns + 1) % 4;
+    transform.quarterTurns = (transform.quarterTurns + 1) % 4;
+    // Mirrors are screen-axis operations (CSS scale precedes rotate). Rotate
+    // their axes too so mirrored members follow the group's clockwise turn.
+    [transform.mirrorX, transform.mirrorY] = [transform.mirrorY, transform.mirrorX];
   } else if (operation === SYSTEM_WORKFLOW_TRANSFORM_OPERATIONS.MIRROR_HORIZONTAL) {
-    placement.transform.mirrorX = !placement.transform.mirrorX;
+    transform.mirrorX = !transform.mirrorX;
   } else {
-    placement.transform.mirrorY = !placement.transform.mirrorY;
+    transform.mirrorY = !transform.mirrorY;
   }
+  return transform;
 }
 
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
@@ -84,10 +95,10 @@ export function transformSystemWorkflowGroupGeometries(placementsInput, operatio
   return placements.map((placement) => Object.freeze({
     placementId: placement.id,
     destination: Object.freeze({
-      column: quantizeSystemWorkflowGridCoordinate(column + placement.row - bounds.row),
-      row: quantizeSystemWorkflowGridCoordinate(
-        row + bounds.columnSpan - (placement.column - bounds.column) - placement.columnSpan,
+      column: quantizeSystemWorkflowGridCoordinate(
+        column + bounds.rowSpan - (placement.row - bounds.row) - placement.rowSpan,
       ),
+      row: quantizeSystemWorkflowGridCoordinate(row + placement.column - bounds.column),
       columnSpan: placement.rowSpan,
       rowSpan: placement.columnSpan,
     }),

@@ -5,20 +5,24 @@ import { chromium } from 'playwright-core';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5189';
 const output = process.env.INSCAPE_BROWSER_OUTPUT || '.browser-test-runtime';
+const solid = Boolean(process.env.INSCAPE_EDGE_SOLID);
+const artworkPath = process.env.INSCAPE_EDGE_ARTWORK;
 test('covered owner and Visitor Grids retain artwork across fast boundaries', { timeout: 240000 }, async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   mkdirSync(output, { recursive: true });
   try {
     const preparation = await browser.newPage();
-    const raster = Buffer.from(await preparation.evaluate(async source => {
+    const raster = Buffer.from(await preparation.evaluate(async ({ source, solid, nativeResolution }) => {
       const image = new Image(); image.src = 'data:image/jpeg;base64,' + source; await image.decode();
-      const canvas = document.createElement('canvas'); canvas.width = 4096; canvas.height = 2304;
-      canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+      const canvas = document.createElement('canvas'); canvas.width = nativeResolution ? image.width : 4096; canvas.height = nativeResolution ? image.height : 2304;
+      const context = canvas.getContext('2d');
+      if (solid) { context.fillStyle = 'rgb(128,128,128)'; context.fillRect(0, 0, canvas.width, canvas.height); }
+      else context.drawImage(image, 0, 0, canvas.width, canvas.height);
       return canvas.toDataURL('image/png').split(',')[1];
-    }, readFileSync(new URL('./fixtures/grid-landscape.jpg', import.meta.url)).toString('base64')), 'base64');
+    }, { source: readFileSync(artworkPath || new URL('./fixtures/grid-landscape.jpg', import.meta.url)).toString('base64'), solid, nativeResolution: Boolean(artworkPath) }), 'base64');
     await preparation.close();
-    for (const count of [2, 6]) for (const visitor of [false, true]) for (const width of [1440, 390]) {
-      const page = await browser.newPage({ viewport: { width, height: 1000 } });
+    for (const count of solid ? [2] : artworkPath ? [4] : [2, 6]) for (const visitor of [false, true]) for (const width of artworkPath ? [2560] : [2560, 1440, 390]) {
+      const page = await browser.newPage({ viewport: { width, height: width === 2560 ? 1305 : 1000 } });
       const cdp = await page.context().newCDPSession(page);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
@@ -26,7 +30,7 @@ test('covered owner and Visitor Grids retain artwork across fast boundaries', { 
       await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', route => route.fulfill({ contentType: 'image/webp', path: `public/${new URL(route.request().url()).pathname.split('/public/')[1]}` }));
       await page.route(`${origin}/__motion__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
       await page.goto(`${origin}/__motion__`);
-      await page.evaluate(async ({ visitor, count }) => {
+      await page.evaluate(async ({ visitor, count, width }) => {
         const refresh = (await import('/@react-refresh')).default;
         refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
         const React = (await import('/@id/react')).default, { createRoot } = (await import('/@id/react-dom/client')).default;
@@ -36,17 +40,20 @@ test('covered owner and Visitor Grids retain artwork across fast boundaries', { 
         const profile = `0x${'1'.repeat(40)}`, key = systemWorkflowDraftKey(profile);
         const storage = fixture.createOwnerSystemWorkflowReviewStorage();
         const draft = JSON.parse(storage.getItem(key));
+        draft.appearance.surfaceId = 'carbon';
         const assets = fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS.map(asset => ({ ...asset, width: 4096, height: 2304, imageWidth: 4096, imageHeight: 2304, imageUrl: 'https://motion.invalid/motion-artwork.png', originalImageUrl: 'https://motion.invalid/motion-artwork.png', thumbnailUrl: 'https://motion.invalid/motion-artwork.png', previewSrc: 'https://motion.invalid/motion-artwork.png', src: 'https://motion.invalid/motion-artwork.png' }));
         const base = draft.grids[0], retainedGrids = draft.grids.slice(1);
         draft.grids = Array.from({ length: count }, (_, gridIndex) => ({ ...base, id: `grid:motion-${gridIndex}`, title: `Motion ${gridIndex}`, visibility: 'PUBLIC',
           placements: Array.from({ length: 1 }, (_, index) => ({ ...base.placements[0], id: `motion-${gridIndex}-${index}`, stableAssetId: assets[0].id,
             column: 0, row: 0, columnSpan: 32, rowSpan: 18, layer: index, navigationOrder: index,
+            transform: { ...base.placements[0].transform, mirrorX: gridIndex % 2 === 1 },
           })) }));
         draft.grids.push(...retainedGrids);
         draft.workbench = createDefaultWorkbenchPresentation(); draft.workbench.display.open = true;
         // Fractional authored sizes expose disagreement between CSS scene slots
         // and a camera that accumulates rounded clientWidth measurements.
-        draft.workbench.display.window = { left: 20, top: 40, width: 1001.3, height: 563.23125 };
+        const displayWidth = width === 2560 ? 1632 : 1001.3;
+        draft.workbench.display.window = { left: width === 2560 ? 288 : 20, top: width === 2560 ? 24 : 40, width: displayWidth, height: displayWidth * 9 / 16 };
         localStorage.setItem(key, JSON.stringify(draft)); window.__motionSaved = localStorage.getItem(key); window.__motionKey = key;
         await import('/src/index.css');
         await import('/src/inscapeTokens.css');
@@ -56,7 +63,7 @@ test('covered owner and Visitor Grids retain artwork across fast boundaries', { 
         const props = visitor ? { document: (await import('/src/profileDocument/domain/profileDocumentV9Builder.js')).buildProfileDocumentV9({ systemWorkflowDraft: draft, profileAddress: profile, assetRecords: assets }) }
           : { profileAddress: profile, reviewStorage: localStorage, reviewAssets: assets, reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Motion measurement' } };
         createRoot(document.getElementById('root')).render(React.createElement(Component, props));
-      }, { visitor, count });
+      }, { visitor, count, width });
 
       const stage = page.locator(visitor ? '.visitor-grid-world__viewport' : '[data-system-workflow-artboard]');
       await stage.waitFor();
@@ -65,6 +72,10 @@ test('covered owner and Visitor Grids retain artwork across fast boundaries', { 
         return images.length >= minimum && images.every(image => image.complete && image.naturalWidth > 0);
       }, Math.min(3, count));
       await page.waitForTimeout(300);
+      if (!visitor) {
+        const lock = page.getByRole('button', { name: 'Lock Display Module composition', exact: true });
+        await lock.focus(); await page.keyboard.press('Enter');
+      }
       await page.addStyleTag({content: '.system-workflow__canvas, .visitor-grid-world__viewport {background:#00ff00!important}'});
       const box = await stage.boundingBox();
       await page.evaluate(() => {
@@ -86,14 +97,15 @@ test('covered owner and Visitor Grids retain artwork across fast boundaries', { 
             const bounds = node.getBoundingClientRect();
             if (bounds.right <= viewport.left || bounds.left >= viewport.right) continue;
             const id = node.dataset.renderedGridId || node.querySelector('[data-grid-id]')?.dataset.gridId;
-            const before = previous.get(id);
+            const appearance = `${id}:${node.dataset.railSlot}`;
+            const before = previous.get(appearance);
             // In a two-Grid loop an outgoing surface can exit one edge and
             // reenter the opposite edge between samples. Only artwork retained
             // in an overlapping visible region must keep its physical slot.
-            if (before && before.transform !== node.style.transform
+            if (before && before.leftStyle !== node.style.left
               && Math.min(before.right, bounds.right, viewport.right) > Math.max(before.left, bounds.left, viewport.left))
               window.railCheck.repositioned.push(id);
-            current.set(id, { transform: node.style.transform, left: bounds.left, right: bounds.right });
+            current.set(appearance, { leftStyle: node.style.left, left: bounds.left, right: bounds.right });
             if (node.className.includes('--current') && window.railCheck.sources.at(-1) !== id) window.railCheck.sources.push(id);
           }
           previous = current;
@@ -101,16 +113,44 @@ test('covered owner and Visitor Grids retain artwork across fast boundaries', { 
         };
         requestAnimationFrame(sample);
       });
-      const frames=[];
-      cdp.on('Page.screencastFrame',event=>{frames.push(event.data);void cdp.send('Page.screencastFrameAck',{sessionId:event.sessionId}).catch(() => {})});
+      const frames=[]; let capturing = true;
+      cdp.on('Page.screencastFrame',event=>{if (capturing) frames.push(event.data);void cdp.send('Page.screencastFrameAck',{sessionId:event.sessionId}).catch(() => {})});
       await cdp.send('Page.startScreencast',{format:'png',everyNthFrame:1});
-      if(!visitor) await page.keyboard.down('Space');
       for(const direction of [-1,-1,-1,-1,1,1,1,1]) {
         await page.mouse.move(box.x+box.width*(direction<0?.85:.15),box.y+box.height*.6); await page.mouse.down();
         await page.mouse.move(box.x+box.width*(direction<0?.15:.85),box.y+box.height*.6,{steps:4});
         await page.mouse.up(); await page.waitForTimeout(400);
       }
-      if(!visitor) await page.keyboard.up('Space');
+      // Pause keeps a fractional camera position: its join must remain covered
+      // after native animation hands its transform back to the resting track.
+      for (const [fraction, stopWithPointer] of [[.21, false], [.55, false], [.89, false], [.1436583333, true]]) {
+        if (stopWithPointer && visitor) continue; // A Visitor click opens inspection.
+        // Menu text overlaps this scanline at narrow sizes; record the artwork
+        // again after the menu closes, including the actual Pause handoff.
+        capturing = false;
+        if (stopWithPointer) {
+          await page.emulateMedia({ reducedMotion: 'reduce' }); await page.waitForTimeout(50);
+          await page.emulateMedia({ reducedMotion: 'no-preference' }); await page.waitForTimeout(50);
+        }
+        await page.locator('.system-workflow__presentation-board').dispatchEvent('contextmenu', { clientX: 80, clientY: 100 });
+        await page.getByText('PLAY GRIDS', { exact: true }).click();
+        await page.evaluate(fraction => {
+          const track = document.querySelector('.system-workflow__grid-track,.visitor-grid-world__grid-track');
+          track.getAnimations()[0].currentTime = 12000 * fraction;
+        }, fraction);
+        await page.waitForTimeout(60); capturing = true;
+        if (stopWithPointer) {
+          await page.mouse.click(box.x + box.width * .3, box.y + box.height * .7);
+          if (!visitor) assert.equal(await page.locator('.system-workflow__grid-plane--current .system-workflow__placement[aria-pressed="true"]').count(), 1,
+            'the stop-click also selects the background artwork, as in the reported scene');
+        } else {
+          await page.getByRole('button', { name: 'Pause Grids', exact: true }).focus(); await page.keyboard.press('Enter');
+        }
+        await page.waitForTimeout(100);
+        if (stopWithPointer && !visitor) assert.equal(await page.locator('.system-workflow__grid-plane--current .system-workflow__placement[aria-pressed="true"] img').evaluate(image => getComputedStyle(image).filter), 'none',
+          'selection remains active without changing the artwork edge at a paused join');
+        frames.push((await page.screenshot()).toString('base64'));
+      }
       await page.waitForTimeout(700); await cdp.send('Page.stopScreencast');
       assert.deepEqual(await page.evaluate(() => {
         window.preparedGridObserver.disconnect(); return window.movedPreparedGrids;
@@ -120,17 +160,23 @@ test('covered owner and Visitor Grids retain artwork across fast boundaries', { 
       assert.deepEqual(rail.repositioned, [], 'visible artwork keeps its rail position across each handoff');
       const leaks=[];
       for(let index=0;index<frames.length;index++) {
-        const count=await page.evaluate(async({data,box})=>{
+        const count=await page.evaluate(async({data,box,solid,blackSky})=>{
           const image=new Image();image.src='data:image/png;base64,'+data;await image.decode();
           const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
           const context=canvas.getContext('2d');context.drawImage(image,0,0);
           const pixels=context.getImageData(Math.max(0,Math.ceil(box.x+3)),Math.ceil(box.y+box.height*.6),Math.min(image.width-Math.ceil(box.x+3),Math.floor(box.width-6)),4).data;
-          let exposed=0;for(let p=0;p<pixels.length;p+=4)if(pixels[p+1]>190&&pixels[p]<70&&pixels[p+2]<70)exposed++;
+          let exposed=0;for(let p=0;p<pixels.length;p+=4)if(solid
+            ? [pixels[p],pixels[p+1],pixels[p+2]].some(value => Math.abs(value - 128) > 1)
+            : pixels[p+1]>pixels[p]+8&&pixels[p+1]>pixels[p+2]+8)exposed++;
+          if (blackSky) {
+            const sky = context.getImageData(Math.ceil(box.x+3), Math.ceil(box.y+box.height*.2), Math.floor(box.width-6), 1).data;
+            for (let p=0;p<sky.length;p+=4) if (Math.max(sky[p],sky[p+1],sky[p+2]) > 1) exposed++;
+          }
           return exposed;
-        },{data:frames[index],box});
+        },{data:frames[index],box,solid,blackSky: Boolean(artworkPath) && !solid});
         if(count){leaks.push({index,count});if(leaks.length<4)writeFileSync(output+'/covered-leak-'+visitor+'-'+width+'-'+index+'.png',Buffer.from(frames[index],'base64'));}
       }
-      console.log({count,visitor,width,frames:frames.length,leaks});
+      console.log({count,visitor,width,box,frames:frames.length,leaks});
       assert.ok(frames.length > 20); assert.deepEqual(leaks, []);
       assert.ok(await page.locator('.system-workflow__grid-plane, .visitor-grid-world__grid-plane').count() <= 5, 'prepare a bounded neighborhood');
       // A stationary arrival must still align after many wraps in either
@@ -140,14 +186,13 @@ test('covered owner and Visitor Grids retain artwork across fast boundaries', { 
         await page.emulateMedia({ reducedMotion: 'reduce' }); await page.waitForTimeout(50);
         await page.emulateMedia({ reducedMotion: 'no-preference' }); await page.waitForTimeout(50);
         const start = { x: box.x + box.width * .5, y: box.y + box.height * .6 };
-        if (!visitor) await page.keyboard.down('Space');
         await page.mouse.move(start.x, start.y); await page.mouse.down();
         for (const count of [1, 4, 12]) {
           await page.evaluate(({ start, direction, count }) => {
             const viewport = document.querySelector('.system-workflow__canvas, .visitor-grid-world__viewport');
             const scale = viewport.getBoundingClientRect().width / viewport.clientWidth;
             window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, bubbles: true,
-              clientX: start.x + direction * (count * (viewport.clientWidth - 1) * scale + .1), clientY: start.y }));
+              clientX: start.x + direction * (count * viewport.clientWidth * scale + .1), clientY: start.y }));
           }, { start, direction, count });
           await page.waitForTimeout(100);
           const offset = await page.evaluate(() => {
@@ -158,7 +203,14 @@ test('covered owner and Visitor Grids retain artwork across fast boundaries', { 
           assert.ok(Math.abs(offset - direction * .1) < .03,
             `stationary edge drift after ${count} crossings in direction ${direction}: ${offset}px`);
         }
-        await page.mouse.up(); if (!visitor) await page.keyboard.up('Space');
+        await page.mouse.up();
+      }
+      if (!visitor) {
+        await page.waitForFunction(() => !document.querySelector('.system-workflow__grid-track').getAnimations().length);
+        await page.mouse.click(box.x + box.width * .3, box.y + box.height * .7);
+        await page.waitForTimeout(180);
+        assert.equal(await page.locator('.system-workflow__grid-plane--current .system-workflow__placement[aria-pressed="true"] img').evaluate(image => getComputedStyle(image).filter), 'none',
+          'selection remains active without a halo after landing');
       }
       assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey) === window.__motionSaved), true);
       assert.deepEqual(errors,[]);

@@ -40,7 +40,7 @@ export default function OwnerDisplayInstance({ id, index, store, profileAddress,
   return <div className="system-workflow__display-instance" data-display-instance={id} data-active-display={active || undefined}
     onPointerDownCapture={() => onActivate(id)} onFocusCapture={() => onActivate(id)}>
     <DisplayModule {...shared} displayName={presentation.name} ref={displayRef} controller={controller} placementTargetRef={placementRef} shortcutTargetRef={shortcutRef}
-      authoringLocked={locked} active={presentation.open && !shared.panelOccupied}
+      authoringLocked={locked}
       onAuthoringLockToggle={() => setLocked(current => !current)}
       windowProps={{ ...shared.windowProps, onDelete, profileAddress, instanceId: id, initialPresentation: initialWindow,
         instanceState: presentation.open ? 'window' : 'minimized', onWindowChange: changeWindow, onShortcutChange: changeShortcut,

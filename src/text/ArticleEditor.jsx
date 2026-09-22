@@ -44,7 +44,9 @@ export default function ArticleEditor({ article, onChange, onEditor, disabled, c
     onSelectionUpdate: () => rerender(n => n + 1), onTransaction: () => rerender(n => n + 1),
   });
   useEffect(() => { onEditor?.(editor?.isDestroyed ? null : editor); return () => onEditor?.(null); }, [editor, onEditor]);
-  useEffect(() => { if (editor && !editor.isDestroyed) editor.setEditable(!disabled); }, [editor, disabled]);
+  // Read/Write and suspension change interaction, not authored content. Tiptap's
+  // default update event would otherwise save (and clear recovery) on reopening.
+  useEffect(() => { if (editor && !editor.isDestroyed) editor.setEditable(!disabled, false); }, [editor, disabled]);
   useEffect(() => {
     if (editor && !editor.isDestroyed && JSON.stringify(editor.getJSON()) !== JSON.stringify(article.content)) editor.commands.setContent(article.content, { emitUpdate: false });
   }, [editor, article.content]);

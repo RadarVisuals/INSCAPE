@@ -1,5 +1,6 @@
 import { createDefaultWorkbenchPresentation, createMiniAppPresentation, createTextPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../../profileDocument/domain/profileDocumentV9Asset.js';
+import { createImagePresentation } from '../../imageModule/imageModule.js';
 
 // Pure projection for Preview and Prepare Publication. The host supplies live
 // presentation inputs; only the existing authoring session saves the result.
@@ -7,6 +8,7 @@ import { createProfileDocumentV9AssetResolver } from '../../profileDocument/doma
 export function captureWorkbenchPresentation({
   layout, shortcut, assetRecords, displayOpen, identityOpen, hasPrimaryDisplay = true,
   displays, miniApps, texts, displayPresentations = {}, miniAppPresentations = {}, textPresentations = {},
+  imageModules, imagePresentations = {},
 }) {
   try {
     if (displays?.some(({ id }) => displayPresentations[id] === null)) {
@@ -28,9 +30,11 @@ export function captureWorkbenchPresentation({
 
     // Optional collections are rebuilt from authored membership. Saved layouts
     // and live reports are fallbacks for those IDs only, including after Undo.
-    const { displays: savedDisplays, miniApps: savedMiniApps, texts: savedTexts, ...base } = layout;
+    const { displays: savedDisplays, miniApps: savedMiniApps, texts: savedTexts, imageModules: savedImages, ...base } = layout;
     return { error: null, value: {
       ...base,
+      ...(imageModules ? { imageModules: imageModules.map((item, index) => imagePresentations[item.id]
+        || savedImages?.find(p => p.id === item.id) || createImagePresentation(item.id, index)) } : {}),
       ...(texts ? { texts: texts.map((text, index) => textPresentations[text.id]
         || savedTexts?.find(item => item.id === text.id) || createTextPresentation(text.id, index)) } : {}),
       ...(miniApps ? { miniApps: miniApps.map((app, index) => miniAppPresentations[app.id]

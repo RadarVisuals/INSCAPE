@@ -5,6 +5,42 @@ Established: 2026-08-28
 Product clarification: 2026-09-06 — public Workbench and independent modules
 Rollback baseline before the documentation reset: `64458ac`
 
+## Independent Image module
+
+The founder accepted Image as a standalone Workbench module beside Display.
+It holds one Library image per side, with no layers or nested composition.
+One side is a static image. Multiple sides expose a separate Next control:
+every flip turns in the same direction and the last side wraps to the first.
+The selected side is temporary reading state; reloading starts at side one.
+Clicking the image opens the existing Display Lift renderer, revealing its
+full media from the cropped rectangle. Return or Escape restores that crop.
+Reduced-motion users get immediate side changes and inspection transitions.
+
+Width and height are independent whole-pixel dimensions from 32 to 4096.
+The corner handle resizes the canvas; the contextual dock also offers exact
+dimensions, shared rotate/mirror actions, crop pan/zoom and Native fit.
+New artwork fills the canvas through a centred crop. Library drops append a
+side by default; Replace side retains its position in the sequence and starts
+the new artwork at its default crop/transform. Remove side is undoable.
+The first implementation supports up to sixteen modules and 32 sides each.
+The module starts private and has an explicit Include Image in publication
+choice. It shares the owner/Visitor renderer; Visitor can flip, inspect and
+move its temporary window, with no editing tools or authored resize.
+
+Optional `imageModules` extends draft v4 and public document v9. Each side
+retains the canonical resolved Library asset and source metadata, as illustrated
+Text already does, separately from crop and transform. Authored dimensions
+belong to the module. `workbench.imageModules` stores only window position and
+open state, avoiding a second saved size. Large canvases fit proportionally in
+the available viewport; viewport fitting never rewrites authored dimensions.
+Missing optional fields retain the old behavior without migrations, storage-key
+changes or resets. Older publication restore retains missing local Images as
+private. Asset-reference and document-size limits include Image content.
+The ordinary draft store owns edits, persistence errors and undo/redo; current
+Display sessions cannot overwrite Image content. Crop/drag state is scoped to
+its originating module and side and ends on target/content change, close,
+Preview suspension or disposal. Image loads lazily when present.
+
 ## Text authoring
 
 The Text module is a simple Tiptap editor with formatting, local saving and a
@@ -438,11 +474,22 @@ current layout; failed writes are reported with a retry action. Optional
 window geometry and the explicit Display target. Older per-Display instrument
 records are consolidated on read without changing authored content.
 
-Failed Text edits are retained in a profile/module-scoped recovery buffer owned
-by the live draft store, so disposing an editor does not discard them. Recovery
+Failed Text edits are retained in a profile/module-scoped, in-memory page-session
+recovery buffer. Workbench draft stores reconnect to their profile's buffer after
+internal navigation or account changes; disposing an editor or Workbench does not
+discard it. Other profiles cannot read or clear that recovery. Confirmed saves
+remove recovered edits; opening or enabling an editor does not itself save. Recovery
 blocks preview, publication preparation, draft undo and conflicting Display
-operations until saved. A leave-page warning protects pending edits, but the
+operations until saved. A leave-page warning remains active even while the affected
+Workbench is absent. The
 buffer is not durable across a forced reload when storage cannot save.
+
+Preview preparation has a visible loading/cancel state and accepts only the latest
+request for the same profile, draft generation and Workbench presentation. Changed
+input requires opening Preview again; cancellation or disposal ignores late results.
+Preview suspends every owner Display through the same module input, independently
+of focus. Display stops playback and momentum while retaining the temporary camera
+position; returning from Preview does not resume playback automatically.
 
 Existing documents without this configuration load in the shared Display window
 with runtime defaults; a subsequent preparation can save the new configuration.
@@ -518,6 +565,22 @@ that every app works unchanged here. Grid/LSP28 import and synchronization,
 app-to-app audio sharing, and a marketplace are not implemented by this host.
 See [mini app hosting](MINI_APP_HOSTING.md) for the boundaries and checks.
 
+## Removed artwork presentation panel
+
+On 2026-09-21 the founder removed the entire artwork Frame and mat panel:
+mats, artwork frames, backing colour and the Transparency override. Artwork
+always retains its source transparency. No authored mats require preservation.
+Controls, presets, inset geometry and decorative rendering are removed.
+Grid backgrounds, Display window appearance and Text appearance are independent
+and remain available. In place / Lift remains a separate inspection choice.
+
+Older writers emitted unused presentation fields automatically. The read boundary
+accepts the unused mat default and former frame, backing and transparency fields,
+then omits them from validated draft content. New saves and publications omit them.
+Published readers retain the exact old fields for canonical-byte and hash checks;
+renderers ignore them. Restoring a publication removes them at the draft boundary.
+There is no storage-key change or draft reset; reading does not rewrite storage.
+
 ## Display Module
 
 Display supports authored text layers within a Grid. Text layers share placement
@@ -529,7 +592,7 @@ upgrade when edited. Text retains its background/frame choices and follows the
 Grid and Display scale. Resizing
 the text box changes its wrapping area; font size is an explicit text setting.
 Owner and Visitor use the same text renderer. Text has no Library asset,
-creator attribution, artwork inspection, crop or artwork mat controls.
+creator attribution, artwork inspection or crop controls.
 An explicit `kind: text` placement extends draft v4 and public v9 documents;
 existing artwork placements remain unchanged. Private Grids and placements
 remain excluded from publication. Existing document and storage keys stay valid.
@@ -596,13 +659,14 @@ internal compatibility names during this migration; do not broadly rename them.
 - Dragging the Display Stage swipes between Grids directly in Visitor mode and
   when the owner's Display composition is locked. Unlocked authoring retains
   Space-drag navigation so ordinary dragging remains available for editing.
-  The Grid follows the pointer directly. Release continues with bounded momentum
-  that gradually slows to rest, including between Grids, without spring motion
-  or automatic alignment. Taking hold interrupts momentum immediately and retains
+  The Grid follows the pointer directly. Release chooses an exact Grid seam from
+  its position and velocity and lands there in one bounded motion, without spring
+  motion, overshoot or a separate final snap. A held release lands on the nearest
+  seam. Taking hold interrupts the landing immediately and retains
   the position. Manual movement and Play Grids share one temporary camera position;
   crossing a Grid boundary changes the selected Grid without interrupting travel.
   Reduced motion omits momentum and retains discrete Grid selection on release.
-- A resting camera may remain between Grids while the owner edits the selected
+- An explicitly paused or interrupted camera may remain between Grids while the owner edits the selected
   Grid through Layers or directly on its visible artwork. The adjacent Grid is
   a preview, not a second editing target. Layer coordinates and selection handles
   follow the selected Grid's displayed position. Active dragging, coasting and
@@ -625,7 +689,7 @@ internal compatibility names during this migration; do not broadly rename them.
   never write an owner draft or rewrite publication bytes.
 - **Inspect: In place | Lift** appears in Selection properties below the Layers
   list for one selected artwork. It applies to the selected, unlocked placement
-  and is not nested in Frame and mat.
+  and remains independent of crop controls.
   The choice is saved as optional `inspectionMode`
   (`IN_PLACE` or `LIFT`) in drafts and public placements. Existing drafts and
   publications without it now default to Lift; explicit IN_PLACE choices remain
@@ -634,11 +698,12 @@ internal compatibility names during this migration; do not broadly rename them.
   into the saved setting. Visitors follow the authored choice. Lift to centre
   enlarges the artwork within the Stage using its original media proportions,
   dims the other artwork, and returns it on close without changing the scene.
+  Lift opening and return share the same 460 ms duration and gentle easing.
 - Focus in place keeps the composition and camera fixed. The selected
   artwork stays visible, layers behind it dim, and foreground layers fade away;
   closing restores the scene. Pointer picking follows visible image pixels,
-  passing through transparent areas to artwork underneath. Visible backing and
-  mats remain selectable. While a transparency mask is unavailable, rectangular
+  passing through transparent areas to artwork underneath. Visible artwork
+  remains selectable. While a transparency mask is unavailable, rectangular
   picking remains available. Alt-click cycling and its Stage tooltip are removed.
   Keyboard and Layers selection remain explicit. These are temporary Display
   interactions shared by owner and visitor, not saved placement mutations.
@@ -648,6 +713,11 @@ internal compatibility names during this migration; do not broadly rename them.
   retain their own interactions. Stage artwork never displays a rectangular
   focus outline, including after keyboard interaction or focus restoration.
   Keyboard activation and focus indicators on interface controls remain available.
+  Selecting artwork does not add an image-edge halo; editing and crop handles
+  remain available. Authored Display grain stays visible over artwork during
+  inspection and immersive presentation, using the same module surface effect.
+  Opening and closing inspection preserve the current Grid camera position;
+  temporary inspection suspends navigation without resetting the retained rail.
 - Do not implement the Display Module as an HTML iframe. Use one application context with
   an isolated, clipped viewport and camera transform.
 - The Workbench hosts one shared Layers window and one shared Artwork info
@@ -686,6 +756,19 @@ internal compatibility names during this migration; do not broadly rename them.
   Text. Composition spacing is a separate collapsible section. Existing scoped
   controller actions remain authoritative; reorganizing controls adds no stored
   content, schema or publication fields.
+- The owner Workbench hosts one movable contextual artwork-tools dock,
+  independent of the Layers window. Modules supply their own controls and
+  actions for the current selection; the host owns no artwork or editing state.
+  Display supplies rotate, horizontal/vertical mirror, duplicate, stack order,
+  crop. Text selections omit image-only actions. Composition and
+  placement locks still apply. Closing Layers leaves these tools available.
+  Crop temporarily replaces the dock controls while Layers remains
+  a separate list/properties window. Changing target cancels unfinished crop
+  input; minimized, suspended and inspecting Displays offer no
+  authoring dock. The dock can move by pointer or focused-header arrow keys.
+  Its position is session-local; this introduces no saved-content or public
+  document fields. Visitor has no authoring dock. Other modules can supply
+  their own content through the same module-neutral host when integrated.
 - Long metadata scrolls inside the shared bounded window. Shared tool positions
   and selection targets are Workbench view state, never published composition
   state. Visitor Metadata has no authoring actions or Layers window.

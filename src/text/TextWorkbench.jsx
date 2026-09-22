@@ -48,12 +48,6 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   const editBlocked = suspended || (!sectionLink && (unavailable || swiping));
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   useEffect(() => {
-    if (!failed.current) return;
-    const guard = event => { event.preventDefault(); event.returnValue = ''; };
-    globalThis.addEventListener('beforeunload', guard);
-    return () => globalThis.removeEventListener('beforeunload', guard);
-  }, [error]);
-  useEffect(() => {
     if (!failed.current) { latest.current = record; setWorking(record); }
   }, [record]);
   const change = useCallback((next, options) => {

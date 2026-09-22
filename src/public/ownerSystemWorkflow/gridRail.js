@@ -1,17 +1,16 @@
 // A bounded neighborhood occupies stable slots on a continuous visual rail.
 // The viewport clips offscreen slots; entering a Grid needs no visibility toggle.
-// Incoming wins for two-Grid loops, where previous and next share one Grid ID.
-export function gridRailSlot(id, { sourceId, targetId, sourceSlot = 0, direction, previousId, nextId, aheadId, behindId }) {
-  if (id === sourceId) return sourceSlot;
-  if (id === targetId) return sourceSlot + (direction === 'previous' ? -1 : 1);
-  // In short loops the far neighbor shares an ID with the near neighbor on the
-  // other side. Prepare it in the direction of travel, beyond the incoming Grid.
-  if (direction === 'next' && id === aheadId) return sourceSlot + 2;
-  if (direction === 'previous' && id === behindId) return sourceSlot - 2;
-  if (id === previousId) return sourceSlot - 1;
-  if (id === nextId) return sourceSlot + 1;
-  return sourceSlot + (id === aheadId ? 2 : -2);
+// Short loops render separate appearances of the same authored Grid. No visible
+// scene must be recycled at the seam; only distant appearances are replenished.
+export function gridRailScenes(grids, sourceId, sourceSlot = 0) {
+  const index = grids.findIndex(grid => grid.id === sourceId);
+  if (index < 0) return [];
+  return (grids.length > 1 ? [-2, -1, 0, 1, 2] : [0]).map(offset => ({
+    grid: grids[(index + offset % grids.length + grids.length) % grids.length],
+    slot: sourceSlot + offset,
+  }));
 }
 
-// Match the existing one-pixel overlap without measuring layout during motion.
-export const gridRailTransform = slot => `translateX(calc(${slot * 100}% - ${slot}px))`;
+// Each scene occupies one full viewport. Camera and slots use the same CSS
+// percentage, including fractional widths, so neighbours stay outside at rest.
+export const gridRailTransform = slot => `translateX(${slot * 100}%)`;

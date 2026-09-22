@@ -6,7 +6,7 @@ import test from 'node:test';
 import { chromium } from 'playwright-core';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5297';
 test('one shared Layers and Metadata window follow explicit Display targets without cross-editing', { timeout: 120_000 }, async () => {
-  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     page.setDefaultTimeout(15000);
@@ -131,11 +131,71 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     await page.reload(); await mount();
     await page.locator('[data-shared-tool="layers"]').waitFor();
     assert.equal(await page.locator('[data-shared-tool="metadata"]').count(), 0);
+    // Selection actions have their own host and survive closing Layers.
+    await primary.getByLabel(/Move Display Module:/).focus();
+    await layers.getByRole('button', { name: 'MOON PURPLE', exact: true }).click();
+    const dock = page.locator('[data-context-tools]');
+    assert.equal(await layers.getByRole('button', { name: 'Rotate', exact: true }).count(), 0);
+    await page.getByRole('button', { name: 'Close Layers', exact: true }).click();
+    assert.equal(await layers.count(), 0);
+    const original = await page.evaluate(() => window.readDisplayDraft());
+    await dock.getByRole('button', { name: 'Rotate', exact: true }).click();
+    const rotated = await page.evaluate(() => window.readDisplayDraft());
+    assert.notDeepEqual(rotated.grids, original.grids);
+    assert.deepEqual(rotated.displays, original.displays);
+    await dock.getByRole('button', { name: 'Mirror horizontal', exact: true }).click();
+    await dock.getByRole('button', { name: 'Mirror vertical', exact: true }).click();
+    const transformed = await page.evaluate(() => window.readDisplayDraft());
+    await dock.getByRole('button', { name: 'Crop', exact: true }).click();
+    const zoom = dock.getByRole('slider', { name: 'Crop zoom' });
+    await zoom.focus(); await page.keyboard.press('ArrowRight');
+    assert.ok(Number(await zoom.inputValue()) > 1, 'range keeps native keyboard control during crop');
+    await zoom.fill('2');
+    await secondary.locator('.system-workflow__desktop-shortcut').click({ button: 'right' });
+    await page.keyboard.press('Escape');
+    await primary.getByLabel(/Move Display Module:/).focus();
+    assert.equal(await zoom.count(), 0, 'switching target ends the old crop');
+    assert.deepEqual(await page.evaluate(() => window.readDisplayDraft()), transformed);
+    await dock.getByRole('button', { name: 'Crop', exact: true }).click();
+    await zoom.fill('1.5');
+    await dock.getByRole('button', { name: 'Done', exact: true }).click();
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Rotate', 'finishing crop restores keyboard focus inside the dock');
+    assert.notDeepEqual((await page.evaluate(() => window.readDisplayDraft())).grids, transformed.grids);
+    assert.equal(await layers.count(), 0, 'crop does not reopen Layers');
+    const shots = await mkdtemp(join(tmpdir(), 'inscape-context-toolbar-'));
+    console.log(`Toolbar screenshots: ${shots}`);
+    await dock.getByRole('button', { name: 'Rotate', exact: true }).focus();
+    await page.screenshot({ path: join(shots, 'wide.png') });
+    const moveHandle = dock.getByLabel('Move Artwork tools window', { exact: true });
+    const bounds = await dock.locator('aside').boundingBox();
+    await moveHandle.focus(); await page.keyboard.press('ArrowRight');
+    assert.ok((await dock.locator('aside').boundingBox()).x > bounds.x, 'keyboard moves the dock');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForFunction(() => {
+      const rect = document.querySelector('.context-toolbar').getBoundingClientRect();
+      return rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight;
+    });
+    assert.equal(await dock.getByRole('button', { name: /Frame and/ }).count(), 0);
+    await dock.getByRole('button', { name: 'Crop', exact: true }).click();
+    await page.waitForFunction(() => {
+      const surface = document.querySelector('.context-toolbar .system-workflow__instrument-content');
+      return surface.scrollHeight <= surface.clientHeight + 1 && surface.getBoundingClientRect().bottom <= innerHeight - 54;
+    });
+    await page.screenshot({ path: join(shots, 'narrow-crop.png') });
+    await dock.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await dock.getByRole('button', { name: 'Rotate', exact: true }).focus();
+    await page.waitForFunction(() => {
+      const surface = document.querySelector('.context-toolbar .system-workflow__instrument-content');
+      return surface.scrollHeight <= surface.clientHeight + 1 && surface.getBoundingClientRect().bottom <= innerHeight - 54;
+    });
+    await page.screenshot({ path: join(shots, 'narrow.png') });
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.evaluate(async () => {
       const React = (await import('/@id/react')).default;
       const Visitor = (await import('/src/profileDocument/components/ProfileDocumentV9Visitor.jsx')).default;
       window.reviewRoot.render(React.createElement(Visitor, { document: await window.buildDisplayDocument() }));
     });
+    assert.equal(await dock.count(), 0, 'Visitor has no authoring dock');
     const visitorPrimary = page.locator('main.visitor-grid-world[data-display-instance="display:primary"] > .system-workflow__workbench');
     const visitorSecondary = page.locator('main.visitor-grid-world[data-embedded-display]');
     await clickControl(visitorPrimary, 'Artwork info');

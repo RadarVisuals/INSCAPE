@@ -213,7 +213,7 @@
 .system-workflow__presentation-board[data-immersive]::before,
 .system-workflow__presentation-board[data-immersive]::after { display: none !important; }
 .system-workflow__presentation-board[data-immersive]::backdrop { background: #000; }
-.system-workflow__presentation-board[data-immersive] > :not(.system-workflow__stage-viewport, .system-workflow__identity-strip, .system-workflow__immersive-exit, .system-workflow__board-inspection-host) { display: none; }
+.system-workflow__presentation-board[data-immersive] > :not(.system-workflow__stage-viewport, .system-workflow__identity-strip, .system-workflow__immersive-exit, .system-workflow__board-inspection-host, .module-surface-grain) { display: none; }
 .system-workflow__presentation-board[data-immersive] > .system-workflow__stage-viewport { border-radius: 0; grid-area: 1 / 1; }
 .system-workflow__presentation-board[data-immersive] > .system-workflow__identity-strip {
   position: absolute; inset: 0 70px auto 0; z-index: 60; opacity: 0;
@@ -241,6 +241,8 @@
     height 260ms var(--workflow-ease);
 }
 .system-workflow__board-inspection-host { position: absolute; z-index: 30; inset: var(--workflow-identity-strip-height) 0 0; overflow: hidden; border-radius: var(--workflow-board-radius); pointer-events: none; }
+/* One authored surface effect covers both composition and inspection, below controls. */
+.system-workflow__presentation-board > .module-surface-grain { z-index: 36; }
 .system-workflow__board-inspection-host:has(.lattice-focus-viewer) { pointer-events: auto; }
 .system-workflow__board-inspection-host .lattice-focus-viewer[data-contained][data-grid-visible="false"] .lattice-focus-viewer__surface {
   background-color: rgb(5 6 6 / 18%);
@@ -491,15 +493,20 @@
 .system-workflow__grid-track {
   position: absolute;
   inset: 0;
+  isolation: isolate;
   pointer-events: none;
-  /* Match Visitor: avoid a filtered 3D texture edge on the resting scene. */
+  /* One stable 2D rail; individual scenes never restart the moving texture. */
   transform: translateX(var(--workflow-grid-swipe-x, 0px));
 }
 .system-workflow__grid-plane {
   position: absolute;
-  inset: 0;
+  inset: 0 auto 0 0;
+  width: 100%;
   overflow: hidden;
   background-color: transparent;
+  /* Complementary edge coverage must add to an opaque join. Source-over
+     blending exposes the canvas between two antialiased fractional edges. */
+  mix-blend-mode: plus-lighter;
 }
 .system-workflow__grid-plane--current {
   z-index: 1;
@@ -610,6 +617,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__placement:is(:focus, :focus-visible) { outline: none; }
 
 .system-workflow__placement > span { position: absolute; inset: 0; display: block; box-sizing: border-box; pointer-events: none; }
+.system-workflow__artwork-opening { overflow: hidden; }
 .system-workflow__placement img { position: absolute; display: block; max-width: none; max-height: none; object-fit: fill; transform-origin: center; pointer-events: none; }
 .system-workflow__placement[aria-pressed="true"] { cursor: move; }
 .system-workflow__placement[data-locked] { pointer-events: none; }
@@ -617,19 +625,11 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__placement[data-cropping] { cursor: grab; outline: 1px solid color-mix(in srgb, var(--study-ink) 46%, transparent); outline-offset: 3px; }
 .system-workflow__placement[data-cropping]:active { cursor: grabbing; }
 .system-workflow__placement[data-viewing] { visibility: hidden; }
-.system-workflow__artwork-media { transition: filter 120ms ease-out; }
 .system-workflow__progressive-media { position: absolute; inset: 0; display: block; overflow: visible; }
-.system-workflow__presentation-board[data-authoring-locked] .system-workflow__placement[aria-pressed="true"]:not([data-viewing]) .system-workflow__artwork-media {
-  --workflow-locked-selection-edge: calc(1px * var(--workflow-board-inverse-scale, 1));
-  filter: drop-shadow(0 0 var(--workflow-locked-selection-edge) var(--study-ink));
-}
 .system-workflow__progressive-media > img { position: absolute; }
-.system-workflow__progressive-media > img:last-child { opacity: 0; transition: opacity 140ms ease-out; }
-.system-workflow__progressive-media[data-high-ready] > img:last-child { opacity: 1; }
-.system-workflow__focus-artwork-handoff { position: absolute; inset: 0; transition: filter 120ms ease-out; }
-.system-workflow__focus-artwork-handoff[data-selection-handoff] {
-  filter: drop-shadow(0 0 1px var(--study-ink));
-}
+.system-workflow__progressive-media > img[data-resolution="high"] { opacity: 0; }
+.system-workflow__progressive-media[data-high-ready] > img[data-resolution="high"] { opacity: 1; }
+.system-workflow__focus-artwork-handoff { position: absolute; inset: 0; }
 .system-workflow__selection-chrome { position: absolute; z-index: 20; inset: 0; opacity: 0; pointer-events: none; transition: opacity var(--workflow-motion-in) var(--workflow-ease); }
 .system-workflow__selection-chrome[data-selected] { opacity: 1; }
 .system-workflow__selection-chrome[aria-hidden="true"],
@@ -945,12 +945,6 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__layer-list img { width: 30px; height: 28px; object-fit: cover; }
 .system-workflow__layer-list span { overflow: hidden; color: inherit; font: 400 10px/1.2 "Inscape Sora", sans-serif; font-variation-settings: "wght" 400; letter-spacing: .015em; text-overflow: ellipsis; text-transform: none; white-space: nowrap; }
 .system-workflow__presentation-controls { padding: var(--workflow-panel-padding) !important; gap: var(--workflow-gap-medium) !important; }
-.system-workflow__presentation-fields { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--workflow-border); }
-.system-workflow__presentation-fields label { min-height: 40px; padding: 5px 7px; display: grid; grid-template-columns: 1fr minmax(58px, 92px); align-items: center; gap: 6px; border-right: 1px solid var(--workflow-border); border-bottom: 1px solid var(--workflow-border); font: var(--workflow-type-micro); }
-.system-workflow__presentation-fields label:nth-child(even) { border-right: 0; }
-.system-workflow__presentation-fields label:nth-last-child(-n+2) { border-bottom: 0; }
-.system-workflow__presentation-fields select, .system-workflow__presentation-fields input[type="color"] { width: 100%; height: 26px; border: 1px solid var(--workflow-border); color: inherit; background: var(--workflow-panel); font: var(--workflow-type-micro); }
-.system-workflow__presentation-fields input[type="checkbox"] { justify-self: end; }
 .system-workflow__presentation-controls > footer { display: grid; grid-template-columns: 1fr 1fr; }
 .system-workflow__presentation-controls > footer button { min-height: 30px; border: 1px solid var(--workflow-border); color: inherit; background: transparent; font: var(--workflow-type-micro); cursor: pointer; }
 .system-workflow__presentation-controls > footer button + button { border-left: 0; }

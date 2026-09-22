@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { systemWorkflowGridFingerprint, systemWorkflowGridOrder } from '../../systemWorkflow/domain/systemWorkflowGrid.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
-import { createDisplayModuleSession, setDisplayModuleFormat } from '../../systemWorkflow/displayModuleSession.js';
+import { createDisplayModuleSession, setDisplayModuleFormat, setDisplayModuleVisibility } from '../../systemWorkflow/displayModuleSession.js';
 import { textRecoveries, TEXT_RECOVERY_MESSAGE } from '../../text/textEditRecovery.js';
 import { PRIMARY_DISPLAY_ID } from '../../systemWorkflow/domain/displayModules.js';
 
@@ -81,6 +81,12 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   const clearError = useCallback(() => setFailure(null), []);
   const gridRequest = (grid, extra = {}) => ({ gridId: grid.id, expectedGridFingerprint: systemWorkflowGridFingerprint(grid), ...extra });
   return { ...state, store: authority?.store, moduleId, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError,
+    setDisplayVisibility: (expected, visibility) => run(() => {
+      if (!setDisplayModuleVisibility(authority.store, profile, moduleId, expected, visibility)) {
+        throw new Error('The Display publication choice could not be saved. Reopen its menu and try again.');
+      }
+      return true;
+    }),
     setDisplayFormat: orientation => run(() => {
       if (!setDisplayModuleFormat(authority.store, moduleId, orientation)) throw new Error('The Display format could not be saved');
       return true;

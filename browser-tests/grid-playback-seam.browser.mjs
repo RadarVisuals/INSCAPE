@@ -25,11 +25,14 @@ test('covered Visitor Grids retain dark adjoining edges during fractional playba
       await page.waitForTimeout(1800);
       await page.getByRole('button', { name: 'Pause Grids', exact: true }).focus(); await page.keyboard.press('Enter');
       const stage = await page.locator('.visitor-grid-world__viewport').boundingBox();
-      await page.waitForFunction(() => document.querySelectorAll('.visitor-grid-world__grid-plane img.is-ready').length === 2);
+      await page.waitForFunction(() => {
+        const images = [...document.querySelectorAll('.visitor-grid-world__grid-plane img')];
+        return images.length >= 2 && images.every(image => image.classList.contains('is-ready'));
+      });
       for (const fraction of [.23, .471, .719]) {
         await page.locator('.visitor-grid-world__grid-track').evaluate((node, offset) => {
           node.style.transform = `translateX(${offset}px)`;
-        }, -(stage.width - 1) * fraction);
+        }, -stage.width * fraction);
         const screenshot = await page.screenshot({ path: `.browser-test-runtime/playback-seam-${width}.png`, clip: {
           x: Math.ceil(stage.x + 10), y: Math.ceil(stage.y + stage.height * .15), width: Math.floor(stage.width - 20), height: 4,
         } });

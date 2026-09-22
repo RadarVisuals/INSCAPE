@@ -63,7 +63,7 @@ test('side pointer gestures ignore the other axis and keep their opposite edge',
     if (side === 'n') assert.equal(next.row + next.rowSpan, 9);
   }
 });
-import { createSystemWorkflowPresentationCandidate } from '../../systemWorkflow/systemWorkflowPresentation.js';
+import { createSystemWorkflowInspectionCandidate } from '../../systemWorkflow/systemWorkflowInspection.js';
 const CONTRACT = '0x2222222222222222222222222222222222222222';
 const ASSET = `42:${CONTRACT}:0x01`;
 const asset = () => ({
@@ -88,7 +88,6 @@ function draft() {
   value.grids[0].placements = [placement('public-placement', 1, {
     column: 4, row: 3, columnSpan: 8, rowSpan: 6, layer: 9, navigationOrder: 3,
     crop: { x: 0.25, y: 0.75, zoom: 2 }, frameId: 'DOSSIER',
-    mat: { enabled: true, color: '#123456', inset: { top: 0.1, right: 0.2, bottom: 0.1, left: 0.2 } },
     backing: { enabled: true, color: '#654321' }, transparencyMode: 'PRESERVE_ALPHA',
     transform: { quarterTurns: 1, mirrorX: true, mirrorY: false },
   })];
@@ -131,17 +130,15 @@ test('inspection choice round-trips through public bytes while older documents s
   }
 });
 
-test('presentation edits retain inspection choice and reject stale placement snapshots', () => {
+test('inspection edits reject stale placement snapshots and preserve unrelated content', () => {
   const input = draft(); const placement = input.grids[0].placements[0];
   placement.locked = false; placement.inspectionMode = 'LIFT';
-  const presentation = { frameId: placement.frameId, mat: placement.mat,
-    backing: placement.backing, transparencyMode: placement.transparencyMode };
-  const request = { gridId: input.grids[0].id, placementId: placement.id, expectedPlacement: placement, presentation };
-  assert.equal(createSystemWorkflowPresentationCandidate(input, request), null, 'legacy no-op does not create a revision');
-  const changed = createSystemWorkflowPresentationCandidate(input, { ...request, presentation: { ...presentation, frameId: 'NONE' } });
-  assert.equal(changed.grids[0].placements[0].inspectionMode, 'LIFT');
+  const request = { gridId: input.grids[0].id, placementId: placement.id, expectedPlacement: placement, inspectionMode: 'LIFT' };
+  assert.equal(createSystemWorkflowInspectionCandidate(input, request), null, 'no-op does not create a revision');
+  const changed = createSystemWorkflowInspectionCandidate(input, { ...request, inspectionMode: 'IN_PLACE' });
+  assert.equal(changed.grids[0].placements[0].inspectionMode, 'IN_PLACE');
   const stale = structuredClone(placement); stale.inspectionMode = 'IN_PLACE';
-  assert.throws(() => createSystemWorkflowPresentationCandidate(input, { ...request, expectedPlacement: stale }), /changed/);
+  assert.throws(() => createSystemWorkflowInspectionCandidate(input, { ...request, expectedPlacement: stale }), /changed/);
 });
 
 test('Identity chosen image survives the existing public avatar envelope and draft restoration', () => {
@@ -271,17 +268,15 @@ test('public placement projection preserves canonical asset and presentation whi
     source: 'LUKSO INDEXER / LSP4 CREATORS', scope: 'tokenId' }]);
   assert.deepEqual({
     column: value.column, row: value.row, columnSpan: value.columnSpan, rowSpan: value.rowSpan,
-    crop: value.crop, frameId: value.frameId, mat: value.mat, backing: value.backing,
-    transparencyMode: value.transparencyMode, layer: value.layer,
+    crop: value.crop, layer: value.layer,
     navigationOrder: value.navigationOrder, transform: value.transform,
   }, {
     column: 4, row: 3, columnSpan: 8, rowSpan: 6,
-    crop: { x: 0.25, y: 0.75, zoom: 2 }, frameId: 'DOSSIER',
-    mat: { enabled: true, color: '#123456', inset: { top: 0.1, right: 0.2, bottom: 0.1, left: 0.2 } },
-    backing: { enabled: true, color: '#654321' }, transparencyMode: 'PRESERVE_ALPHA', layer: 9,
+    crop: { x: 0.25, y: 0.75, zoom: 2 }, layer: 9,
     navigationOrder: 3, transform: { quarterTurns: 1, mirrorX: true, mirrorY: false },
   });
   assert.equal(Object.hasOwn(value, 'locked'), false);
+  for (const key of ['mat', 'frameId', 'backing', 'transparencyMode']) assert.equal(Object.hasOwn(value, key), false);
   assert.equal(Object.hasOwn(value, 'stableAssetId'), false);
   assert.deepEqual(input, draft(), 'projection must not mutate the canonical draft');
 });

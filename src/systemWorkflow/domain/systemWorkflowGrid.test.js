@@ -151,7 +151,7 @@ test('delete confirmation fingerprints the complete canonical serialized Grid', 
     (grid) => { grid.placements[0].column = 2; },
     (grid) => { grid.placements[0].crop = { x: 0.5, y: 0.5, zoom: 1 }; },
     (grid) => { grid.placements[0].locked = true; },
-    (grid) => { grid.placements[0].frameId = 'DOSSIER'; },
+    (grid) => { grid.placements[0].inspectionMode = 'IN_PLACE'; },
   ]) {
     const changed = structuredClone(draft);
     mutate(changed.grids[1]);

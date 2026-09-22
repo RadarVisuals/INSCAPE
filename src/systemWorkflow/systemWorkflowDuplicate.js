@@ -1,6 +1,7 @@
 import { requireCompleteGroups } from './domain/placementGroups.js';
 import { assertValidSystemWorkflowDraft, SYSTEM_WORKFLOW_VISIBILITY } from './domain/systemWorkflowDraft.js';
 import { createSystemWorkflowPlacementId } from './systemWorkflowPlacement.js';
+import { sameSystemWorkflowPlacementSnapshot } from './systemWorkflowRemoval.js';
 
 function duplicateError(code, message) {
   return Object.assign(new TypeError(message), { code });
@@ -54,7 +55,7 @@ export function createSystemWorkflowGroupDuplicateCandidate(draftInput, {
       throw duplicateError('SYSTEM_WORKFLOW_DUPLICATE_PLACEMENT_UNAVAILABLE', 'Canonical public placement is unavailable');
     }
     if (source.locked) throw duplicateError('SYSTEM_WORKFLOW_DUPLICATE_PLACEMENT_LOCKED', 'Placement is locked');
-    if (JSON.stringify(expectedById.get(placementId)) !== JSON.stringify(source)) {
+    if (!sameSystemWorkflowPlacementSnapshot(expectedById.get(placementId), source)) {
       throw duplicateError('SYSTEM_WORKFLOW_DUPLICATE_STALE_PLACEMENT', 'Canonical placement changed before duplicate');
     }
     return source;

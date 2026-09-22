@@ -57,9 +57,7 @@ test('accepted icon rail and layers operate through canonical commands', { timeo
     assert.equal(await page.locator('.system-workflow__placement').count(), 2);
 
     await page.locator('.system-workflow__placement[aria-label^="Select ABYSSAL STUDY"]').click();
-    await page.getByRole('button', { name: 'Frame and mat', exact: true }).click();
-    assert.equal(await page.getByRole('region', { name: 'Frame and mat controls' }).isVisible(), true);
-    await page.getByRole('button', { name: /^Cancel$/i }).click();
+    assert.equal(await page.getByRole('button', { name: /Frame and/ }).count(), 0);
 
     const mountain = page.locator('.system-workflow__placement[aria-label^="Select MOUNTAIN SIGNAL II"]');
     await mountain.click();

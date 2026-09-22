@@ -12,7 +12,7 @@ import '../../lattice/rendering/latticeMenuSurface.css';
 import './visitorGridWorld.css';
 import PresentationBoard from '../../public/ownerSystemWorkflow/PresentationBoard.jsx';
 import useDisplayInspection from '../../public/ownerSystemWorkflow/useDisplayInspection.js';
-import { gridRailSlot } from '../../public/ownerSystemWorkflow/gridRail.js';
+import { gridRailScenes } from '../../public/ownerSystemWorkflow/gridRail.js';
 import DisplayFocusViewer from '../../public/ownerSystemWorkflow/DisplayFocusViewer.jsx';
 import RackMenu from '../../public/menus/RackMenu.jsx';
 import { createPortal } from 'react-dom';
@@ -32,6 +32,7 @@ function PublishedStage({ children, activeGridId, onClickCapture, onPointerDown,
 
 const IdentityModule = lazy(() => import('../../public/identity/IdentityModule.jsx'));
 const MiniAppsWorkbench = lazy(() => import('../../miniApps/MiniAppsWorkbench.jsx'));
+const ImageWorkbench = lazy(() => import('../../imageModule/ImageWorkbench.jsx'));
 const TextWorkbench = lazy(() => import('../../text/TextWorkbench.jsx'));
 const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-6)}`;
 
@@ -47,7 +48,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const rootRef = useRef(null);
   const [activeDisplay, setActiveDisplay] = useState('display:primary');
   const additionalDocuments = useMemo(() => (document.displays || []).map(module => {
-    const { displays: _displays, miniApps: _miniApps, texts: _texts, ...shared } = document;
+    const { displays: _displays, miniApps: _miniApps, texts: _texts, imageModules: _images, ...shared } = document;
     const { id, ...content } = module;
     const { id: _presentationId, ...display } = document.workbench?.displays?.find(item => item.id === id) || createDefaultWorkbenchPresentation().display;
     return { id, document: { ...shared, ...content, metadata: {}, workbench: { version: 1,
@@ -56,6 +57,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   }), [document]);
   const layout = useOwnerSystemWorkflowLayout();
   const stageRef = useRef(null);
+  const activeSceneRef = useRef(null);
   const trackRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [displayMenu, setDisplayMenu] = useState(null);
@@ -106,7 +108,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     return model && decoded?.status === 'ready' && decoded.dimensions
       ? { ...model, focusDimensions: decoded.dimensions, media: { ...model.media, src: decoded.media.src } } : null;
   }).filter(Boolean), [activeGrid, placementMedia]);
-  const findPlacementElement = useCallback((placementId) => [...(stageRef.current?.querySelectorAll('[data-placement-id]') || [])]
+  const findPlacementElement = useCallback((placementId) => [...(activeSceneRef.current?.querySelectorAll('[data-placement-id]') || [])]
     .find((node) => node.dataset.placementId === placementId), []);
   const entriesById = useMemo(() => new Map(viewerEntries.map(entry => [entry.placement.id, entry])), [viewerEntries]);
   const viewer = useDisplayInspection({
@@ -120,7 +122,8 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const viewerEntry = metadataSelection?.gridId === activeGrid?.id ? entriesById.get(metadataSelection.id) : null;
   const selectMetadata = id => { tools.activate(targetId); setMetadataSelection({ gridId: activeGrid.id, id }); };
   const playback = useGridPlayback({ playing,
-    enabled: displayOpen && lastIndex > 0 && !viewer.placementId,
+    enabled: displayOpen && lastIndex > 0,
+    suspended: Boolean(viewer.placementId),
     scope: `${document.profile.address}:${document.documentId}:${document.revision}`,
     adjacentGrid: (id, direction) => document.grids[(document.grids.findIndex(grid => grid.id === id) + (direction === 'next' ? 1 : lastIndex)) % document.grids.length]?.id,
     gridId: activeGrid?.id, nextGridId: document.grids[(activeIndex + 1) % document.grids.length]?.id,
@@ -274,32 +277,21 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   // Keep a bounded neighborhood mounted, with stable scene keys. Arrival reuses
   // the incoming media instead of loading it again in a second canonical plane.
   // Two on either side also prepare the next handoff during drag and momentum.
-  const neighbor = offset => document.grids[((activeIndex + offset) % document.grids.length + document.grids.length) % document.grids.length];
-  const aheadId = neighbor(2)?.id, behindId = neighbor(-2)?.id;
-  const preparedIds = new Set(JSON.parse(useDeferredValue(JSON.stringify(
-    [sourceGridId, neighbor(-1)?.id, neighbor(1)?.id, aheadId, behindId, swipeGrid?.id],
-  ))));
-  // Visible/immediate neighbors stay synchronous. Far media mounts in an
-  // interruptible render, and stale preparation never chooses a current slot.
-  const preparedGridIds = new Set([activeGrid?.id, sourceGridId,
-    neighbor(-1)?.id, neighbor(1)?.id, swipeGrid?.id,
-    preparedIds.has(aheadId) ? aheadId : null,
-    preparedIds.has(behindId) ? behindId : null]);
-  const renderedGrids = document.grids.filter(grid => preparedGridIds.has(grid.id));
+  const sourceSlot = swipe?.sourceSlot || 0;
+  const railScenes = gridRailScenes(document.grids, sourceGridId, sourceSlot);
+  const preparedSlots = new Set(JSON.parse(useDeferredValue(JSON.stringify(railScenes.map(scene => scene.slot)))));
+  const renderedGrids = railScenes.filter(scene => Math.abs(scene.slot - sourceSlot) < 2 || preparedSlots.has(scene.slot));
 
   const stage = activeGrid && <PublishedStage activeGridId={activeGrid.id} viewportRef={stageRef}
       onClickCapture={(event) => { if (suppressPlacementClickRef.current) { event.preventDefault(); event.stopPropagation(); } }}
       onPointerDown={beginGridDrag}>
       <div ref={trackRef} className="visitor-grid-world__grid-track"
-        data-rail-origin={swipe?.sourceSlot || 0} style={{ willChange: swipe || playing ? 'transform' : undefined }}>
-      {renderedGrids.map(grid => {
-        const selected = grid.id === activeGrid.id, source = grid.id === sourceGridId;
-        return <div key={grid.id} aria-hidden={!selected || undefined} inert={selected ? undefined : ''} data-rendered-grid-id={grid.id}
+        data-rail-origin={swipe?.sourceSlot || 0} style={{ willChange: document.grids.length > 1 ? 'transform' : undefined }}>
+      {renderedGrids.map(({ grid, slot }) => {
+        const selected = grid.id === activeGrid.id && slot === sourceSlot, source = grid.id === sourceGridId && slot === sourceSlot;
+        return <div key={`${grid.id}:${slot}`} ref={selected ? activeSceneRef : undefined} aria-hidden={!selected || undefined} inert={selected ? undefined : ''} data-rendered-grid-id={grid.id}
           className={`visitor-grid-world__grid-plane ${source ? 'visitor-grid-world__grid-plane--current' : 'visitor-grid-world__grid-plane--adjacent'}`}
-          data-rail-slot={gridRailSlot(grid.id, { sourceId: sourceGridId, targetId: swipeGrid?.id,
-              sourceSlot: swipe?.sourceSlot, direction: swipe?.direction,
-              previousId: neighbor(-1)?.id, nextId: neighbor(1)?.id, aheadId: neighbor(2)?.id, behindId: neighbor(-2)?.id })}
-          style={{ willChange: swipe || playing ? 'transform' : undefined }}>
+          data-rail-slot={slot}>
           <GridProductionRenderer document={document} grid={grid} imageLoading="eager"
             onMediaState={handlePlacementMediaState} onPlacementActivate={selected ? openPlacementViewer : undefined}
             projectionBottomInset={0} viewerPlacementId={selected ? viewer.sourcePlacementId : null} />
@@ -331,7 +323,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
       onTogglePlayback={() => setPlaying(current => !current)}
       inspectionAtmosphere={viewer.atmosphereActive} onInspectionCancel={viewer.close}
       renderCues={host => <DisplayInspectionCues key={`${document.profile.address}:${activeGrid.id}`}
-        host={host} items={activeGrid.placements} viewer={viewer} contentVersion={viewerEntries} onSelect={selectMetadata} disabled={!tools.state.metadata || playing || Boolean(gridSwipe)} />}
+        host={host} items={activeGrid.placements} viewer={viewer} contentVersion={viewerEntries} onSelect={selectMetadata} disabled={!tools.state.metadata || playing || Boolean(gridSwipe?.moving || gridSwipe?.offset)} />}
       renderInspection={viewer.placementId && viewer.entry ? (container, controlsContainer, scene) => <DisplayFocusViewer
         scene={scene} container={container} controlsContainer={controlsContainer} viewer={viewer}
         menuSurface={document.appearance.menuSurfaceId} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
@@ -386,6 +378,9 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     </Suspense></div>}
     {!embedded && additionalDocuments.map(item => <ProfileDocumentV9Session key={item.id} document={item.document}
       embedded instanceId={item.id} active={activeDisplay === item.id} onActivate={() => setActiveDisplay(item.id)} />)}
+    {!embedded && document.imageModules?.length > 0 && <Suspense fallback={<p role="status">Opening Image…</p>}>
+      <ImageWorkbench records={document.imageModules} presentations={document.workbench?.imageModules} profileAddress={document.profile.address} />
+    </Suspense>}
     {!embedded && document.texts?.length > 0 && <Suspense fallback={<p role="status">Opening Text…</p>}>
       <TextWorkbench records={document.texts} presentations={document.workbench?.texts} profileAddress={document.profile.address} />
     </Suspense>}

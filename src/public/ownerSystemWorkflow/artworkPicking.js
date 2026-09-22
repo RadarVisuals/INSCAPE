@@ -63,7 +63,7 @@ export function artworkImagePoint(image, clientX, clientY) {
 
 export function hitsArtwork(node, x, y) {
   if (!node?.isConnected || !inside(node.getBoundingClientRect(), x, y)) return false;
-  // Authored backing and mats are visible surfaces too, including letterboxes.
+  // Authored backings are visible surfaces too, including letterboxes.
   if ([...node.querySelectorAll('span')].some(span => {
     const color = getComputedStyle(span).backgroundColor;
     return color && color !== 'transparent' && !/[,/]\s*0(?:\.0+)?\s*\)$/.test(color)

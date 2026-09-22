@@ -111,7 +111,7 @@ test('System Workflow dock tools cannot expand into the INSCAPE wordmark', async
   assert.doesNotMatch(board, /data-instrument-trigger=/,
     'shared tools are reached through menus, not Display toolbar icons');
   assert.match(globalBar, /SharedDisplayToolsLauncher/);
-  assert.match(await read('./ownerSystemWorkflow/DisplayModule.jsx'), /<SharedDisplayToolContent id="layers"/);
+  assert.match(await read('./ownerSystemWorkflow/OwnerSystemWorkflowSelectionInspector.jsx'), /<SharedDisplayToolContent id="layers"/);
   assert.doesNotMatch(board, /onToggleToolbar|MetadataDirectionControls/,
-    'placement tools belong inside Layers and presentation belongs to the shared bay');
+    'placement tools and properties use independent Workbench hosts');
 });

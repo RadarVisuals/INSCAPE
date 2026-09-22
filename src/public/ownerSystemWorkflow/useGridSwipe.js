@@ -5,11 +5,11 @@ const sameTransition = (left, right) => Boolean(left) === Boolean(right)
   && left?.direction === right?.direction && left?.sourceGridId === right?.sourceGridId
   && left?.sourceSlot === right?.sourceSlot && left?.targetGridId === right?.targetGridId
   && left?.targetIndex === right?.targetIndex && left?.settling === right?.settling
-  && left?.moving === right?.moving;
+  && left?.moving === right?.moving && left?.offset === right?.offset;
 
 // Only transition identity belongs in React. Pixel progress belongs to this
 // mounted Display and its explicit subscribers (currently scene-linked Text).
-export default function useGridSwipe(viewportRef, trackRef) {
+export default function useGridSwipe(viewportRef, trackRef, transportRef) {
   const [swipe, setState] = useState(null);
   const current = useRef(null), width = useRef(1);
   const committed = useRef(null);
@@ -21,28 +21,29 @@ export default function useGridSwipe(viewportRef, trackRef) {
   }
   const paint = useCallback(() => {
     const pixels = current.current?.deltaX || 0;
-    // React describes the prepared neighborhood; this camera alone paints its
-    // physical slots. In short loops a reused incoming scene must change sides
-    // before the track moves, without waiting for a content/navigation render.
-    const active = current.current;
+    // Each retained appearance keeps its physical slot through a handoff.
     for (const plane of trackRef.current?.children || []) {
       const id = plane.dataset.renderedGridId;
       if (!id) continue;
-      const slot = id === active?.sourceGridId ? active.sourceSlot
-        : id === active?.targetGridId ? active.sourceSlot + (active.direction === 'previous' ? -1 : 1)
-          : Number(plane.dataset.railSlot || 0);
-      plane.style.transform = gridRailTransform(slot);
+      const slot = Number(plane.dataset.railSlot || 0);
+      plane.style.left = `${slot * 100}%`;
     }
     // Camera and scene slots must use the same fractional CSS width. Multiplying
     // rounded clientWidth by the accumulated slot exposes an edge after wraps.
     const railPosition = current.current?.railPosition;
-    if (trackRef.current) trackRef.current.style.transform = railPosition === undefined
+    // During coast/Play the native trajectory owns this transform. A Grid
+    // commit only updates its prepared surfaces and cannot restart the motion.
+    if (trackRef.current && !transportRef.current) trackRef.current.style.transform = railPosition === undefined
       ? `translateX(${pixels}px)` : gridRailTransform(railPosition);
     // A pending React handoff must not send the new Grid's local progress to
     // subscribers still displaying the previous Grid. Its commit publishes it.
-    if (sameTransition(committed.current, current.current))
+    if (sameTransition(committed.current, current.current)) {
+      motion.current.transport = transportRef.current;
+      motion.current.sourceSlot = current.current?.sourceSlot || 0;
+      motion.current.widthRatio = 1;
       motion.current.publish(pixels / width.current, Boolean(current.current?.settling));
-  }, [trackRef]);
+    }
+  }, [trackRef, transportRef]);
   const setSwipe = useCallback(next => {
     const previous = current.current;
     current.current = next;
@@ -55,7 +56,7 @@ export default function useGridSwipe(viewportRef, trackRef) {
         const { deltaX: _pixels, railPosition: _railPosition, ...transition } = next;
         setState({ ...transition, motion: motion.current });
       } else setState(null);
-    } else if (next) paint();
+    } else paint();
   }, [paint]);
   useLayoutEffect(() => {
     if (!swipe) return;

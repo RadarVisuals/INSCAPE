@@ -7,7 +7,6 @@ import {
   cropFocusBounds,
   normalizeCropForMask,
 } from '../lattice/rendering/latticeCrop.js';
-import { projectArtworkMat } from '../lattice/rendering/latticeMat.js';
 import { sameSystemWorkflowPlacementSnapshot } from './systemWorkflowRemoval.js';
 import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop } from './systemWorkflowTransform.js';
 
@@ -63,8 +62,7 @@ export function systemWorkflowCropMask(placement) {
     || !isSystemWorkflowGridCoordinate(rowSpan) || rowSpan <= 0) {
     throw cropError('SYSTEM_WORKFLOW_CROP_GEOMETRY_INVALID', 'Crop authoring requires positive grid-native placement geometry');
   }
-  return projectArtworkMat({ left: 0, top: 0, width: placement.mediaFrameRatio === undefined ? columnSpan : rowSpan * placement.mediaFrameRatio, height: rowSpan }, placement.mat)
-    .mediaOpeningRectangle;
+  return { left: 0, top: 0, width: placement.mediaFrameRatio === undefined ? columnSpan : rowSpan * placement.mediaFrameRatio, height: rowSpan };
 }
 
 export function createSystemWorkflowCropSession(placement, mediaInput, maskInput = null) {

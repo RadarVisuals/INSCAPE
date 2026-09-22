@@ -59,8 +59,6 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
   const decodedDimensions = loadState.src === media.src && loadState.status === 'loaded' ? loadState.dimensions : null;
   const dimensions = decodedDimensions || media.dimensions;
   const artwork = projectLatticeProductionArtwork(placement, field, dimensions);
-  const effectiveBackground = placement.backing.enabled ? placement.backing.color
-    : placement.transparencyMode === 'OPAQUE' ? '#d8d4ca' : 'transparent';
   const ready = media.status === PROFILE_DOCUMENT_V9_MEDIA_STATUS.READY;
   const loaded = ready && loadState.src === media.src && loadState.status === 'loaded';
   const failed = !ready && media.status !== PROFILE_DOCUMENT_V9_MEDIA_STATUS.RESOLVING
@@ -85,17 +83,16 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
       if (width && height) setLoadState((current) => current.src === media.src
         ? { ...current, status: 'loaded', dimensions: { width, height } } : current); }}
     referrerPolicy="no-referrer" src={media.src} style={mediaStyle} />;
-  return <figure aria-label={media.label} className={`lattice-production-placement${placement.mat.enabled ? ' has-mat' : ''}`}
-    data-frame-id={placement.frameId} data-media-state={failed ? media.status === 'ready' ? 'failed' : media.status : loaded ? 'ready' : 'loading'}
+  return <figure aria-label={media.label} className="lattice-production-placement"
+    data-media-state={failed ? media.status === 'ready' ? 'failed' : media.status : loaded ? 'ready' : 'loading'}
     data-placement-id={placement.id} data-placement-activatable={activatable || undefined}
-    data-transparency-mode={placement.transparencyMode} data-viewer-source-hidden={viewerSourceHidden || undefined}
+    data-viewer-source-hidden={viewerSourceHidden || undefined}
     style={{ ...rectangleStyle(artwork.footprint), zIndex: layerRank }} onClick={event => event.detail === 0 ? activate(event) : onPointerActivate(event)}
     onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); activate(event); } }} tabIndex={activatable ? 0 : -1}>
-    {artwork.backplateRectangle && <span aria-hidden="true" className="lattice-production-placement__mat" style={{ backgroundColor: artwork.mat.color }} />}
     <span className="lattice-production-placement__opening" style={{
       ...rectangleStyle({ left: artwork.mediaOpeningRectangle.left - artwork.footprint.left,
         top: artwork.mediaOpeningRectangle.top - artwork.footprint.top, width: artwork.mediaOpeningRectangle.width,
-        height: artwork.mediaOpeningRectangle.height }), backgroundColor: effectiveBackground,
+        height: artwork.mediaOpeningRectangle.height }),
     }}>
       {fallbackMedia}
       {!loaded && <span className="lattice-production-placement__status">{failed ? 'Artwork unavailable' : 'Loading artwork'}</span>}

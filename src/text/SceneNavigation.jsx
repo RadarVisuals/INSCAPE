@@ -31,15 +31,23 @@ export function useReportScene(id, gridId, targetGridId, swipe, available = true
 // and no article/layout state changes on animation frames.
 export function useSceneProgress(scene, trackRef, open) {
   useLayoutEffect(() => {
+    let following = null, release = null, sourceSlot = null, widthRatio = null;
     const paint = progress => {
       const track = trackRef.current;
       if (!track) return;
       // Set the transition phase before the transform, in the same frame as
       // Display. A later context render must not turn a settle into a jump.
       track.parentElement.toggleAttribute('data-settling', Boolean(scene?.motion?.settling));
-      track.style.transform = `translateX(${progress * 100}%)`;
+      const transport = open ? scene?.motion?.transport : null;
+      const slot = scene?.motion?.sourceSlot || 0, ratio = scene?.motion?.widthRatio ?? 1;
+      if (transport !== following || slot !== sourceSlot || ratio !== widthRatio) {
+        release?.(); following = transport; sourceSlot = slot; widthRatio = ratio;
+        release = transport?.follow(track, position => `translateX(${(position + slot) * ratio * 100}%)`);
+      }
+      if (!release) track.style.transform = `translateX(${progress * 100}%)`;
     };
     paint(scene?.motion?.progress || 0);
-    if (open) return scene?.motion?.subscribe(paint);
+    const unsubscribe = open ? scene?.motion?.subscribe(paint) : null;
+    return () => { unsubscribe?.(); release?.(); };
   }, [scene?.motion, trackRef, open]);
 }
