@@ -16,3 +16,9 @@
 .workbench-selection__handle.is-sw { left: 0; top: 100%; cursor: nesw-resize; }
 .workbench-selection__handle.is-se { left: 100%; top: 100%; cursor: nwse-resize; }
 .workbench-selection__handle:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: -2px; }
+
+/* Translate only explicit workspace surfaces. The dock and
+   viewport menus retain their screen coordinates. Compensate native zoom. */
+[data-workbench-panned] [data-workbench-pan] { translate: calc(var(--workbench-pan-x, 0px) / var(--workbench-pan-scale, 1)) calc(var(--workbench-pan-y, 0px) / var(--workbench-pan-scale, 1)); }
+.system-workflow[data-workbench-pan-ready], .system-workflow[data-workbench-pan-ready] .system-workflow__workbench { cursor: grab; }
+.system-workflow[data-workbench-panning], .system-workflow[data-workbench-panning] .system-workflow__workbench { cursor: grabbing; user-select: none; }

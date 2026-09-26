@@ -86,6 +86,12 @@ export function decodeOwnerSystemWorkflowAssetDimensions(asset, {
   timeoutMs = 8_000,
 } = {}) {
   const accepted = ownerSystemWorkflowAssetDimensions(asset);
+  // A selected SVG keeps the dimensions decoded by the Library with its
+  // original URL. Reopening it must not depend on the gateway's XML response
+  // being accepted by HTMLImageElement again.
+  const selectedSource = asset?.selectedMedia?.url;
+  if (accepted && selectedSource === ownerSystemWorkflowAssetSource(asset)
+    && /\.svg(?:[?#]|$)/i.test(selectedSource || '')) return Promise.resolve(Object.freeze({ source: selectedSource, ...accepted }));
   if (accepted && asset?.decodedImageSource === ownerSystemWorkflowAssetSource(asset)
     && positiveDimension(asset.decodedImageWidth) && positiveDimension(asset.decodedImageHeight)) return Promise.resolve(Object.freeze({
     source: asset.decodedImageSource, ...accepted,

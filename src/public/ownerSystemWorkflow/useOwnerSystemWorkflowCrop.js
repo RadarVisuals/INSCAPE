@@ -121,7 +121,7 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
     globalThis.removeEventListener('pointercancel', active.cancel, true);
     dragRef.current = null;
   };
-  const beginCropDrag = (event, placementId, cellSize) => {
+  const beginCropDrag = (event, placementId, cellSize, rowSize = cellSize) => {
     const current = sessionRef.current;
     if (!current || current.placementId !== placementId || event.button !== 0 || !Number.isFinite(cellSize) || cellSize <= 0) return;
     cleanupDrag();
@@ -129,13 +129,13 @@ export default function useOwnerSystemWorkflowCrop({ assetsById, controller }) {
     event.stopPropagation();
     const placement = controller.selectedGrid?.placements.find(item => item.id === placementId);
     const stretchX = placement?.mediaFrameRatio === undefined ? 1 : placement.rowSpan * placement.mediaFrameRatio / placement.columnSpan;
-    const point = { x: event.clientX / cellSize * stretchX, y: event.clientY / cellSize };
+    const point = { x: event.clientX / cellSize * stretchX, y: event.clientY / rowSize };
     const visual = projectSystemWorkflowTransform(current.transform, current.media, current.previewCrop);
     const active = { pointerId: event.pointerId, transform: current.transform, gesture: createSystemWorkflowCropPanGesture({ ...current, media: visual.dimensions, previewCrop: visual.crop }, point) };
     const move = (pointerEvent) => {
       if (pointerEvent.pointerId !== active.pointerId || sessionRef.current?.operationId !== current.operationId) return;
       pointerEvent.preventDefault();
-      active.gesture = updateSystemWorkflowCropPanGesture(active.gesture, { x: pointerEvent.clientX / cellSize * stretchX, y: pointerEvent.clientY / cellSize }, 10 / cellSize);
+      active.gesture = updateSystemWorkflowCropPanGesture(active.gesture, { x: pointerEvent.clientX / cellSize * stretchX, y: pointerEvent.clientY / rowSize }, 10 / cellSize);
       if (active.gesture.activated) setCropSession((session) => session?.operationId === current.operationId ? {
         ...session,
         dirty: true,

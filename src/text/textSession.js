@@ -1,4 +1,36 @@
 import { createArticle, MAX_TEXT_MODULES, validTextModules } from './domain/article.js';
+import { createDefaultWorkbenchPresentation, createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
+
+export function prepareTextResize(draft, { expected }) {
+  if (JSON.stringify(draft.texts?.find(item => item.id === expected.id)) !== JSON.stringify(expected))
+    throw new Error('Text changed during resizing. Save your text and try again.');
+  return draft;
+}
+
+// Unlink is explicit and atomic. Legacy passages become private standalone
+// Texts so their distinct typography and content are never flattened or lost.
+export function unlinkTextModuleResult(store, profile, expected) {
+  if (store.getProfileAddress() !== profile) return textSaveFailure('profile');
+  const draft = store.getDraft(), generation = store.getGeneration();
+  const current = draft.texts?.find(item => item.id === expected.id);
+  if (!current) return textSaveFailure('missing');
+  if (JSON.stringify(current) !== JSON.stringify(expected)) return textSaveFailure('conflict');
+  if (!current.sceneLink) return { saved: true, record: current };
+  const { sceneLink, ...record } = current;
+  const passages = sceneLink.mode === 'sections' ? [] : sceneLink.passages;
+  if (draft.texts.length + passages.length > MAX_TEXT_MODULES) return { saved: false, reason: 'capacity',
+    message: `Unlinking needs ${passages.length} additional Text windows to preserve all passages. The Workbench limit is ${MAX_TEXT_MODULES}. Nothing was changed.` };
+  try {
+    const extras = passages.map(({ article }) => ({ ...record, id: `text:${crypto.randomUUID()}`, article: structuredClone(article), visibility: 'PRIVATE' }));
+    const texts = [...draft.texts.map(item => item.id === record.id ? record : item), ...extras];
+    const workbench = draft.workbench || createDefaultWorkbenchPresentation();
+    const next = { ...draft, texts, ...(extras.length ? { workbench: { ...workbench,
+      texts: [...(workbench.texts || []), ...extras.map((item, index) => createTextPresentation(item.id, draft.texts.length + index))] } } : {}) };
+    const saved = store.commitCompletedOperation(next, { expectedGeneration: generation, historyLabel: 'Unlink Text from Display' });
+    return saved ? { saved: true, record: store.getDraft().texts.find(item => item.id === record.id) }
+      : textSaveFailure(store.getLastCommitFailure?.() || 'write_failed');
+  } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
+}
 export function addTextModule(store, profile) {
   if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
   const draft = store.getDraft(), generation = store.getGeneration();

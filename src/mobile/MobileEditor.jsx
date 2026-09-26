@@ -113,7 +113,7 @@ export default function MobileEditor({ mobile, store, profileAddress, assetsById
   const disabled = suspended || locked.has(selection);
   return <div className="mobile-editor-host" data-workbench-module="mobile">
     {shortcutMenu.content}
-    {!mobile.editor.open && <button className="mobile-editor-reopen" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown} onClick={() => save(c => ({ ...c, editor: { open: true } }), null)}>MOBILE</button>}
+    {!mobile.editor.open && <button data-workbench-pan className="mobile-editor-reopen" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown} onClick={() => save(c => ({ ...c, editor: { open: true } }), null)}>MOBILE</button>}
     {mobile.editor.open && <>
       <WorkbenchWindow label="Mobile" title="PRESENTATION" width={400} initialX={100} initialY={55} initialHeight={820}
         controls={<><button aria-label="Open Mobile tools" onClick={() => setToolsOpen(true)}><Settings2 size={16} /></button><button aria-label="Close Mobile editor" onClick={() => save(c => ({ ...c, editor: { open: false } }), null)}><X size={16} /></button></>}>

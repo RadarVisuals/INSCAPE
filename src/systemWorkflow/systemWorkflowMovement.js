@@ -68,7 +68,7 @@ export function createSystemWorkflowMovementGesture(placement, fieldInput, point
     origin: { ...point },
     grabOffset: {
       column: (point.x - rectangle.left) / field.cellSize,
-      row: (point.y - rectangle.top) / field.cellSize,
+      row: (point.y - rectangle.top) / (field.rowSize ?? field.cellSize),
     },
     startGeometry: { ...startGeometry },
     previewGeometry: { ...startGeometry },
@@ -92,7 +92,7 @@ export function updateSystemWorkflowMovementGesture(
   if (!activated) return { ...gesture, activated: false };
 
   const pointerColumn = (point.x - field.left) / field.cellSize;
-  const pointerRow = (point.y - field.top) / field.cellSize;
+  const pointerRow = (point.y - field.top) / (field.rowSize ?? field.cellSize);
   const snapStep = snapStepOf(field);
   const column = clamp(
     snapCell(pointerColumn - gesture.grabOffset.column, snapStep),

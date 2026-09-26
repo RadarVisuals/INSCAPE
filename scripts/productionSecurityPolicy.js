@@ -86,7 +86,7 @@ export function createProductionContentSecurityPolicy(env = {}) {
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
-    "img-src 'self' https: data:",
+    "img-src 'self' https: data: blob:",
     `connect-src 'self' ${productionConnectOrigins(env).join(' ')}`,
     "worker-src 'none'",
     "frame-src 'self' https:",

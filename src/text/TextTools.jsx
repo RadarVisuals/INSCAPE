@@ -15,7 +15,7 @@ export default function TextTools({ article, onChange, controlsRef, onClose, dis
         <label>Title (optional)<input aria-label="Article title" spellCheck={false} autoCorrect="off" autoCapitalize="off" value={article.title} maxLength={160} disabled={disabled} onChange={e => onChange({ ...article, title: e.target.value })} /></label>
         <label>Document font<select aria-label="Document font" disabled={disabled} value={article.font} onChange={e => onChange({ ...article, font: e.target.value })}>{ARTICLE_FONTS.map(font => <option key={font.id} value={font.id}>{font.label}</option>)}</select></label>
         {article.title && <label>Title size<input aria-label="Title size" type="number" min={8} max={300} value={appearance.titleFontSize ?? 28} disabled={disabled} onChange={e => { const value = e.target.valueAsNumber; if (Number.isFinite(value) && value >= 8 && value <= 300) changeAppearance({ titleFontSize: value }); }} /></label>}
-        <label>Text size<input aria-label="Text size" type="number" min={8} max={300} value={appearance.fontSize} disabled={disabled} onChange={e => { const value = Number(e.target.value); if (value >= 8 && value <= 300) changeAppearance({ fontSize: value }); }} /></label>
+        <label>Text size<input aria-label="Text size" type="number" min={8} max={300} value={appearance.fontSize} disabled={disabled} onChange={e => { const value = Number(e.target.value); if (value >= 8 && value <= 300) changeAppearance({ fontSize: value, scale: 1 }); }} /></label>
         <label>Inner spacing<select aria-label="Text inner spacing" disabled={disabled} value={appearance.padding ? 'custom' : 'auto'} onChange={e => {
           if (e.target.value === 'auto') {
             const { padding, ...rest } = appearance;

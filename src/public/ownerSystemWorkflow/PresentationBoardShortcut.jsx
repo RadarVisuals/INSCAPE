@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import RackMenu from '../menus/RackMenu.jsx';
@@ -7,6 +7,7 @@ import { assetForPlacement, isValidPlacementMedia } from '../../systemWorkflow/d
 import { PRESENTATION_BOARD_INSTANCE_STATE } from './ownerSystemWorkflowModuleState.js';
 import { snapWorkbenchCoordinate as snap } from './workbenchGrid.js';
 import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
+import { clampWorkbenchPosition } from './workbenchSpace.js';
 import {
   DEFAULT_PRESENTATION_BOARD_SHORTCUT_ICON_PRESENTATION,
   loadPresentationBoardShortcut,
@@ -81,29 +82,9 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
   }, [shortcutIconId, shortcutVisible]);
 
   const currentShortcutBounds = shortcutBounds(shortcutIconPresentation);
-  useLayoutEffect(() => {
-    if (!host) return undefined;
-    const keepShortcutVisible = () => setShortcutPosition((position) => {
-      const left = Math.max(0, Math.min(host.clientWidth - currentShortcutBounds.width, position.left));
-      const top = Math.max(0, Math.min(host.clientHeight - currentShortcutBounds.height, position.top));
-      return left === position.left && top === position.top ? position : { left, top };
-    });
-    keepShortcutVisible();
-    const observer = new ResizeObserver(keepShortcutVisible);
-    observer.observe(host);
-    return () => observer.disconnect();
-  }, [host, currentShortcutBounds.width, currentShortcutBounds.height]);
-  const clampShortcut = (position, snapping = shortcutSnap) => ({
-    left: Math.max(0, Math.min((host?.clientWidth || currentShortcutBounds.width) - currentShortcutBounds.width, snap(position.left, snapping))),
-    top: Math.max(0, Math.min((host?.clientHeight || currentShortcutBounds.height) - currentShortcutBounds.height, snap(position.top, snapping))),
-  });
-  useEffect(() => {
-    if (!host || !shortcutVisible) return;
-    setShortcutPosition((current) => {
-      const next = clampShortcut(current);
-      return next.left === current.left && next.top === current.top ? current : next;
-    });
-  }, [host, shortcutIconPresentation.labelSize, shortcutIconPresentation.size, shortcutSnap, shortcutVisible]);
+  const clampShortcut = (position, snapping = shortcutSnap) => clampWorkbenchPosition({
+    left: snap(position.left, snapping), top: snap(position.top, snapping),
+  }, currentShortcutBounds);
   const beginShortcutDrag = (event) => {
     if (event.button !== 0 || renaming) return;
     placement.begin(event);
@@ -124,12 +105,12 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
 
   const shortcutAsset = shortcutIconId ? assetForPlacement(assetsById.get(shortcutIconId)
     || (shortcutIconMedia ? { id: shortcutIconId } : null), { selectedMedia: shortcutIconMedia }) : null;
-  const hostRectangle = host?.getBoundingClientRect();
-  const iconEditorPosition = hostRectangle ? {
+  const shortcutRectangle = shortcutNode.current?.getBoundingClientRect();
+  const iconEditorPosition = shortcutRectangle ? {
     left: Math.max(8, Math.min(globalThis.innerWidth - SHORTCUT_ICON_EDITOR_SIZE.width - 8,
-      hostRectangle.left + shortcutPosition.left + currentShortcutBounds.width + 8)),
+      shortcutRectangle.right + 8)),
     top: Math.max(8, Math.min(globalThis.innerHeight - SHORTCUT_ICON_EDITOR_SIZE.height - 8,
-      hostRectangle.top + shortcutPosition.top)),
+      shortcutRectangle.top)),
   } : { left: 8, top: 8 };
   const openMenu = event => {
     if (readOnly) return;
@@ -141,7 +122,7 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
     {shortcutVisible
       && <button aria-label={instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED
         ? `Open ${shortcutName}` : `${shortcutName} shortcut`} className="system-workflow__desktop-shortcut" ref={shortcutNode}
-      onContextMenu={openMenu}
+      data-workbench-pan onContextMenu={openMenu}
       onDoubleClick={() => { if (instanceState === PRESENTATION_BOARD_INSTANCE_STATE.MINIMIZED) onRestore?.(); }} onDragOver={(event) => { if ([...event.dataTransfer.types].includes('application/x-inscape-asset')) event.preventDefault(); }}
       onDrop={(event) => { event.preventDefault(); event.stopPropagation();
         if (readOnly) return;

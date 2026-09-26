@@ -143,35 +143,6 @@ export function resizePresentationBoardView(view, viewport, options = {}) {
   });
 }
 
-export function presentationBoardInspectionFrame(view, viewport, options = {}) {
-  const space = availablePresentationBoardSpace(viewport, options);
-  if (!view?.fit || !space) return null;
-  const inset = Math.max(0, cleanOffset(options.inset ?? 18));
-  const sidecarWidth = Math.max(0, cleanOffset(options.sidecarWidth));
-  const availableStageWidth = Math.max(1, space.width - sidecarWidth);
-  const scale = Math.min(
-    availableStageWidth / view.fit.stage.width,
-    space.stageHeight / view.fit.stage.height,
-  );
-  const stage = Object.freeze({
-    width: view.fit.stage.width * scale,
-    height: view.fit.stage.height * scale,
-  });
-  const groupWidth = stage.width + sidecarWidth;
-  const boardHeight = stage.height + space.identityStripHeight;
-  return Object.freeze({
-    board: Object.freeze({
-      left: inset + Math.max(0, (space.width - groupWidth) / 2),
-      top: inset + Math.max(0, (space.height - boardHeight) / 2),
-      width: stage.width,
-      height: boardHeight,
-    }),
-    scale,
-    sidecarWidth,
-    stage,
-  });
-}
-
 export function setPresentationBoardScale(view, scale) {
   if (!view) return null;
   const safeScale = clampPresentationBoardScale(scale, percentageScale(view.maximumPercentage), view.scale);
@@ -193,16 +164,6 @@ export function setContinuousPresentationBoardScale(view, scale) {
     height: view.frame.board.top * 2 + view.frame.board.height,
   };
   return Object.freeze({ ...view, frame: projectScaledPresentationBoard(view.fit, viewport, safeScale), scale: safeScale });
-}
-
-// Interpolate the centre with the same progress as the size. Both endpoint
-// rectangles fit the Workbench, so intermediate rectangles need no edge shove.
-export function presentationBoardWheelZoomPosition(view, origin, viewport, sidecarWidth = 0) {
-  const range = view.maximumPercentage / 100 - origin.originView.scale;
-  const progress = range > 0 ? Math.max(0, Math.min(1, (view.scale - origin.originView.scale) / range)) : 0;
-  const centerX = origin.centerX + ((viewport.width - sidecarWidth) / 2 - origin.centerX) * progress;
-  const centerY = origin.centerY + (viewport.height / 2 - origin.centerY) * progress;
-  return { left: centerX - view.frame.board.width / 2, top: centerY - view.frame.board.height / 2 };
 }
 
 export function resizePresentationBoardFromCorner(view, frame, corner, movement, gridStep = 0, snapEdge = null, bounds = null) {

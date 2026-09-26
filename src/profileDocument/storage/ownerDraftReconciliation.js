@@ -45,7 +45,8 @@ export function reconcileOwnerDraftWithPublishedProfile({ document: documentInpu
   if (!document) return Object.freeze({ status: 'NO_PUBLISHED_DOCUMENT' });
   const recordState = store?.getRecordState?.();
   if (!['absent', 'valid'].includes(recordState?.status)) {
-    return Object.freeze({ status: 'LOCAL_DRAFT_UNAVAILABLE' });
+    return Object.freeze({ status: 'LOCAL_DRAFT_UNAVAILABLE', reason: recordState?.reason,
+      issues: recordState?.issues || [], fingerprint: recordState?.fingerprint });
   }
   const localDraft = store.getDraft();
   const localFingerprint = systemWorkflowDraftFingerprint(localDraft);
@@ -64,7 +65,7 @@ export function reconcileOwnerDraftWithPublishedProfile({ document: documentInpu
   }
   if (!store.commitCompletedOperation(recordState.status === 'valid'
     ? createOwnerDraftFromPublishedProfile(document, localDraft) : importedDraft, { expectedGeneration: store.getGeneration() })) {
-    return Object.freeze({ status: 'HYDRATION_FAILED', publishedFingerprint });
+    return Object.freeze({ status: 'HYDRATION_FAILED', publishedFingerprint, reason: store.getLastCommitFailure?.() });
   }
   const importedFingerprint = systemWorkflowDraftFingerprint(store.getDraft());
   const baselineSaved = saveOwnerPublicationBaseline(storage, profileAddress, {

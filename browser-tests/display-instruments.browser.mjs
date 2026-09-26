@@ -44,12 +44,7 @@ test('Display interaction survives host window changes without draft writes', { 
     await settle(page);
     const resized = await board.boundingBox();
     assert.ok(resized.width < beforeResize.width);
-    await page.getByRole('button', { name: 'Maximize Display Module', exact: true }).click();
-    await settle(page);
-    assert.ok((await board.boundingBox()).width > resized.width);
-    await page.getByRole('button', { name: 'Restore Display Module', exact: true }).click();
-    await settle(page);
-    assert.deepEqual(await board.boundingBox(), resized);
+    assert.equal(await page.getByRole('button', { name: /Maximize Display|Restore Display/ }).count(), 0);
     await page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).click();
     await page.locator('.system-workflow__desktop-shortcut').dblclick();
     await bay.waitFor();

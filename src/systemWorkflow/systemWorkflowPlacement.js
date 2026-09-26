@@ -136,7 +136,7 @@ export function createSystemWorkflowDropGeometry(nativeWidth, nativeHeight, poin
     throw operationError('SYSTEM_WORKFLOW_PLACEMENT_DROP_TARGET_INVALID', 'A measurable active grid drop target is required');
   }
   const centerColumn = (pointer.x - rectangle.left) / rectangle.cellSize;
-  const centerRow = (pointer.y - rectangle.top) / rectangle.cellSize;
+  const centerRow = (pointer.y - rectangle.top) / (rectangle.rowSize ?? rectangle.cellSize);
   const snapStep = Number.isFinite(rectangle.snapStep) && rectangle.snapStep > 0 ? rectangle.snapStep : 1;
   const snapCell = (value) => quantizeSystemWorkflowGridCoordinate(Math.round(value / snapStep) * snapStep);
   return assertSystemWorkflowDropGeometry({

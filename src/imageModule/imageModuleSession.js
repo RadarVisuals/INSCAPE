@@ -19,3 +19,11 @@ export function saveImageModule(store, profile, expected, next) {
   if (!validImageModules(imageModules)) return false;
   return store.commitCompletedOperation({ ...draft, imageModules }, { expectedGeneration: generation, historyLabel: 'Edit Image' });
 }
+
+export function prepareImageResize(draft, { expected, width, height }) {
+  if (JSON.stringify(draft.imageModules?.find(item => item.id === expected.id)) !== JSON.stringify(expected))
+    throw new Error('An Image changed during resizing. Try the selection again.');
+  const imageModules = draft.imageModules.map(item => item.id === expected.id ? { ...item, width, height } : item);
+  if (!validImageModules(imageModules)) throw new Error('Image dimensions are outside the supported range.');
+  return { ...draft, imageModules };
+}

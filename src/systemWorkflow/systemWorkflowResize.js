@@ -214,7 +214,7 @@ export function createSystemWorkflowResizeGesture(placement, cornerInput, fieldI
     origin: { ...point },
     grabOffset: {
       column: (point.x - field.left) / field.cellSize - movingBoundary.column,
-      row: (point.y - field.top) / field.cellSize - movingBoundary.row,
+      row: (point.y - field.top) / (field.rowSize ?? field.cellSize) - movingBoundary.row,
     },
     movingBoundary,
     startRectangle: { ...rectangle },
@@ -266,7 +266,7 @@ export function updateSystemWorkflowResizeGesture(
     snapStep,
   );
   const movingRow = snapCell(
-    (point.y - field.top) / field.cellSize - gesture.grabOffset.row,
+    (point.y - field.top) / (field.rowSize ?? field.cellSize) - gesture.grabOffset.row,
     snapStep,
   );
   return {

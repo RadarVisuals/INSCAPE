@@ -358,8 +358,8 @@ test('Metadata docks, projects down and beside the Board, undocks, closes, and c
     await dropdown.waitFor({ state: 'detached' });
     await side.waitFor();
     await waitForMetadataMotion();
-    await page.getByRole('button', { name: 'Maximize Display Module' }).click();
-    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.boardPhase === 'maximized');
+    await page.getByRole('button', { name: 'Resize Display Module from se' }).focus();
+    await page.keyboard.press('ArrowRight');
     const maximizedSide = await page.evaluate(() => {
       const boardRect = document.querySelector('.system-workflow__presentation-board').getBoundingClientRect();
       const panelRect = document.querySelector('.system-workflow__metadata-projection.is-side').getBoundingClientRect();
@@ -650,16 +650,7 @@ test('Display Module resizes from its corners and preserves exact maximize, rest
     assert.ok(resized.width > initial.width + 300, JSON.stringify({ initial, resized }));
     assert.ok(closeEnough((resized.height - 38) / resized.width, 9 / 16, 0.003));
 
-    await page.getByRole('button', { name: 'Maximize Display Module' }).click();
-    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.boardPhase === 'maximized');
-    const maximized = await board.boundingBox();
-    assert.ok(maximized.width > resized.width);
-    assert.equal(await page.getByRole('button', { name: 'Restore Display Module' }).count(), 1);
-    await page.getByRole('button', { name: 'Restore Display Module' }).click();
-    await page.waitForFunction(() => document.querySelector('.system-workflow__presentation-board')?.dataset.boardPhase === 'window');
-    const restored = await board.boundingBox();
-    assert.ok(closeEnough(restored.x, resized.x) && closeEnough(restored.y, resized.y), JSON.stringify({ resized, restored }));
-    assert.ok(closeEnough(restored.width, resized.width) && closeEnough(restored.height, resized.height), JSON.stringify({ resized, restored }));
+    assert.equal(await page.getByRole('button', { name: /Maximize Display|Restore Display/ }).count(), 0);
 
     await page.getByRole('button', { name: 'Minimize Display Module to shortcut' }).click();
     await board.waitFor({ state: 'detached' });
@@ -724,7 +715,7 @@ test('artwork-only view stays inside the Board without changing its current size
     await placement.dblclick();
     await page.waitForFunction(() => document.querySelector('[data-lattice-focus-viewer]')?.dataset.phase === 'open');
     const inspecting = await board.boundingBox();
-    assert.equal(await board.getAttribute('data-board-phase'), 'window');
+    assert.equal(await board.getAttribute('data-board-phase'), null);
     assert.ok(closeEnough(inspecting.x, saved.x) && closeEnough(inspecting.y, saved.y), JSON.stringify({ inspecting, saved }));
     assert.ok(closeEnough(inspecting.width, saved.width) && closeEnough(inspecting.height, saved.height), JSON.stringify({ inspecting, saved }));
     assert.equal(await page.locator('.lattice-focus-viewer__rack').count(), 0);

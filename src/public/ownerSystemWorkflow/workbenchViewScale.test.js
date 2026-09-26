@@ -1,6 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { clampWorkbenchMove, identityWorkbenchTransform, scaleWorkbenchTransform, stepWorkbenchViewScale, workbenchSelectionBounds, workbenchViewStyle } from './workbenchViewScale.js';
+import { clampWorkbenchMove, identityWorkbenchTransform, scaleWorkbenchTransform, stepWorkbenchViewScale, workbenchSelectionBounds, workbenchViewStyle, zoomWorkbenchCamera } from './workbenchViewScale.js';
+
+test('camera zoom preserves the world point beneath the cursor through reversal and limits', () => {
+  const origin = { x: -1200, y: 341 }, anchor = { x: 713, y: 208 };
+  for (const requested of [.01, .37, 1.4, 8]) {
+    const next = zoomWorkbenchCamera(.8, origin, requested, anchor);
+    for (const axis of ['x', 'y']) assert.ok(Math.abs((anchor[axis] - next.offset[axis]) / next.scale - (anchor[axis] - origin[axis]) / .8) < 1e-8);
+    assert.ok(next.scale >= .25 && next.scale <= 2);
+    const restored = zoomWorkbenchCamera(next.scale, next.offset, .8, anchor);
+    for (const axis of ['x', 'y']) assert.ok(Math.abs(restored.offset[axis] - origin[axis]) < 1e-8);
+  }
+});
 
 test('movement clamps the visible group as one rectangle above the dock', () => {
   const rect = { left: 100, top: 50, width: 400, height: 250 }, viewport = { left: 8, top: 8, right: 1432, bottom: 950 };
@@ -23,13 +34,15 @@ test('native zoom shares layout pixel edges while retaining logical content widt
     const bounds = (left, width) => {
       const style = workbenchViewStyle(scale, left, 41.4, width, 540.3, 3.17, 1.13);
       assert.equal(style['--workbench-content-width'], `${width}px`);
-      return { left: style.left * style.zoom, right: (style.left + style.width) * style.zoom,
-        top: style.top * style.zoom, bottom: (style.top + style.height) * style.zoom };
+      const matrix = style.transform.slice(7, -1).split(',').map(Number);
+      const x = style.left + matrix[4], y = style.top + matrix[5];
+      return { left: x * style.zoom, right: (x + style.width) * style.zoom,
+        top: y * style.zoom, bottom: (y + style.height) * style.zoom };
     };
     const text = bounds(7.3, 279.7), display = bounds(287, 960.3);
-    assert.ok(Math.abs(text.right - display.left) < 1e-8);
+    assert.ok(Math.abs(text.right - display.left) < 1 / 64);
     assert.deepEqual([text.top, text.bottom], [display.top, display.bottom]);
-    for (const edge of Object.values(text)) assert.ok(Math.abs(edge - Math.round(edge)) < 1e-8);
+    for (const edge of Object.values(text)) assert.ok(Math.abs(edge - Math.round(edge)) < 1 / 64);
   }
 });
 

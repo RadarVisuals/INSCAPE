@@ -7,6 +7,8 @@ import { createOwnerSystemWorkflowReviewStorage, OWNER_SYSTEM_WORKFLOW_REVIEW_PR
 import { systemWorkflowDraftKey } from '../src/systemWorkflow/systemWorkflowDraftStore.js';
 import { buildOwnerSystemWorkflowPreviewDocument } from '../src/public/ownerSystemWorkflowPreviewDocument.js';
 import '../src/index.css';
+import { metadataImages } from '../src/library/data/metadataImages.js';
+import { selectImageGroups, selectImageUrls } from '../src/library/data/resolveContentUrl.js';
 
 let fixtures = assets.map((asset, index) => index === 1 || index === 2 ? { ...asset,
   imageGroups: Array.from({ length: index === 1 ? 6 : 41 }, (_, imageIndex) => ({ index: imageIndex,
@@ -38,6 +40,12 @@ window.__imageTest.replaceCover = (url) => {
     imageUrl: url, thumbnailUrl: url, originalImageUrl: url, src: url, previewSrc: url, previewCandidates: [url],
     imageGroups: [{ index: 0, imageUrl: url, originalImageUrl: url, variants: [] }, ...asset.imageGroups.slice(1)],
   });
+  render();
+};
+window.__imageTest.replaceMetadata = metadata => {
+  const images = metadataImages(metadata), urls = selectImageUrls(images);
+  fixtures = fixtures.map((asset, index) => index ? asset : { ...asset, ...urls,
+    src: urls.imageUrl, previewSrc: urls.imageUrl, previewCandidates: [urls.imageUrl], imageGroups: selectImageGroups(images) });
   render();
 };
 render();

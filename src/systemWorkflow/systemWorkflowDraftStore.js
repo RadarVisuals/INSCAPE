@@ -46,9 +46,12 @@ function immutableDetached(value) {
   return deepFreeze(detached(value));
 }
 
-function acceptedDraft(candidate, profileAddress) {
+function validateStoredDraft(candidate, profileAddress) {
   const validation = validateSystemWorkflowDraft(ensureSystemWorkflowWorldCoverGrid(candidate));
-  return validation.valid && validation.value.profileAddress === profileAddress ? validation.value : null;
+  if (!validation.valid) return validation;
+  return validation.value.profileAddress === profileAddress ? validation : {
+    value: null, errors: [{ path: 'profileAddress', code: 'profile_mismatch' }],
+  };
 }
 
 export function createSystemWorkflowDraftStore({
@@ -93,15 +96,20 @@ export function createSystemWorkflowDraftStore({
       draft: createEmpty(profile),
       state: Object.freeze({ status: SYSTEM_WORKFLOW_RECORD_STATUS.ABSENT }),
     };
+    let reason = 'invalid_json';
+    let issues = [];
     try {
       const candidate = JSON.parse(raw);
+      reason = 'validation_failed';
       // The removed Identity subtitle may exist in drafts written by the editor.
       // Discard only that obsolete property; all remaining data is still validated.
       const card = candidate?.identityPresentation?.card;
       if (card?.version === 1 && typeof card.subtitle === 'string' && card.subtitle.length <= 160) {
         delete card.subtitle;
       }
-      const draft = acceptedDraft(candidate, profile);
+      const validation = validateStoredDraft(candidate, profile);
+      const draft = validation.value;
+      issues = validation.errors.slice(0, 5).map(({ path, code, message }) => ({ path, code, message }));
       if (draft) return {
         raw,
         draft: deepFreeze(draft),
@@ -115,6 +123,8 @@ export function createSystemWorkflowDraftStore({
       draft: null,
       state: Object.freeze({
         status: SYSTEM_WORKFLOW_RECORD_STATUS.CORRUPT,
+        reason,
+        issues,
         fingerprint: keccak256(stringToHex(String(raw))),
       }),
     };
@@ -226,7 +236,7 @@ export function createSystemWorkflowDraftStore({
   function commit(candidate, { expectedGeneration, historyLabel, recordHistory = true } = {}, recovered = null) {
       const reject = reason => { lastCommitFailure = reason; return false; };
       if (expectedGeneration !== generation || !currentDraft) return reject('stale');
-      const draft = acceptedDraft(candidate, activeProfileAddress);
+      const draft = validateStoredDraft(candidate, activeProfileAddress).value;
       if (!draft) return reject('invalid');
       if (!storage?.setItem) return reject('write_failed');
       try {

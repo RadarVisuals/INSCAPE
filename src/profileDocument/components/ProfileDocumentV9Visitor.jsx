@@ -321,7 +321,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
       }}
       playing={playing}
       onTogglePlayback={() => setPlaying(current => !current)}
-      inspectionAtmosphere={viewer.atmosphereActive} onInspectionCancel={viewer.close}
+      inspectionAtmosphere={viewer.atmosphereActive}
       renderCues={host => <DisplayInspectionCues key={`${document.profile.address}:${activeGrid.id}`}
         host={host} items={activeGrid.placements} viewer={viewer} contentVersion={viewerEntries} onSelect={selectMetadata} disabled={!tools.state.metadata || playing || Boolean(gridSwipe?.moving || gridSwipe?.offset)} />}
       renderInspection={viewer.placementId && viewer.entry ? (container, controlsContainer, scene) => <DisplayFocusViewer

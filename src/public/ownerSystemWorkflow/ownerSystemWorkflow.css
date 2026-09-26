@@ -56,7 +56,8 @@
   position: fixed;
   inset: 0;
   isolation: isolate;
-  overflow: hidden;
+  overflow: clip;
+  outline: none;
   pointer-events: auto;
   color: var(--study-ink);
   background: var(--study-surface);
@@ -112,7 +113,7 @@
 .system-workflow__workbench {
   position: absolute;
   inset: 0 0 var(--workflow-dock-height);
-  overflow: hidden;
+  overflow: clip;
   background: color-mix(in srgb, var(--study-surface) 96%, var(--study-ink));
 }
 
@@ -122,8 +123,7 @@
 .system-workflow__display-instance .system-workflow__desktop-shortcut { pointer-events: auto; }
 /* Raise the window, not its full-desktop wrapper and shortcut. Otherwise an
    active Display's shortcut intercepts another window's header/corners. */
-.system-workflow__display-instance[data-active-display] > .system-workflow__workbench > .system-workflow__presentation-board:not([data-wheel-zoom]) { z-index: 3; }
-.system-workflow__presentation-board[data-wheel-zoom] { z-index: 51; }
+.system-workflow__display-instance[data-active-display] > .system-workflow__workbench > .system-workflow__presentation-board { z-index: 3; }
 .system-workflow__display-instance:not([data-active-display]) :is(.system-workflow__canvas, .system-workflow__layers-trigger) { view-transition-name: none !important; }
 
 .system-workflow__presentation-board {
@@ -203,43 +203,6 @@
   right: calc(-1 * var(--workflow-board-frame-gap));
 }
 
-.system-workflow__presentation-board[data-maximized] { z-index: 8; }
-.system-workflow__presentation-board[data-immersive] {
-  position: fixed; inset: 0; margin: 0; padding: 0; border: 0;
-  max-width: none; max-height: none; border-radius: 0; box-shadow: none;
-  display: grid; grid-template: 1fr / 1fr; place-items: center;
-  background: #000; overflow: hidden; z-index: 2147483647;
-}
-.system-workflow__presentation-board[data-immersive]::before,
-.system-workflow__presentation-board[data-immersive]::after { display: none !important; }
-.system-workflow__presentation-board[data-immersive]::backdrop { background: #000; }
-.system-workflow__presentation-board[data-immersive] > :not(.system-workflow__stage-viewport, .system-workflow__identity-strip, .system-workflow__immersive-exit, .system-workflow__board-inspection-host, .module-surface-grain) { display: none; }
-.system-workflow__presentation-board[data-immersive] > .system-workflow__stage-viewport { border-radius: 0; grid-area: 1 / 1; }
-.system-workflow__presentation-board[data-immersive] > .system-workflow__identity-strip {
-  position: absolute; inset: 0 70px auto 0; z-index: 60; opacity: 0;
-  background: #111; transition: opacity 180ms ease;
-}
-.system-workflow__presentation-board[data-immersive] .system-workflow__identity-strip:is(:hover, :focus-within) { opacity: 1; }
-.system-workflow__presentation-board[data-immersive] :is(.system-workflow__board-workspace-controls, .system-workflow__composition-lock-controls, .system-workflow__board-window-controls) { display: none; }
-.system-workflow__immersive-exit {
-  position: absolute; top: 0; right: 0; z-index: 61; min-height: 36px;
-  display: flex; align-items: center; gap: 6px; padding: 8px;
-  border: 0; border-radius: 0; background: #111; color: #fff;
-  font: 400 11px/1 "Inscape Sora", sans-serif; opacity: 0; cursor: pointer;
-  transition: opacity 180ms ease;
-}
-.system-workflow__immersive-exit:is(:hover, :focus-visible) { opacity: 1; }
-@media (prefers-reduced-motion: reduce) {
-  .system-workflow__immersive-exit,
-  .system-workflow__presentation-board[data-immersive] > .system-workflow__identity-strip { transition: none; }
-}
-.system-workflow__presentation-board:is([data-board-phase="maximizing"], [data-board-phase="restoring"]) {
-  transition:
-    left 260ms var(--workflow-ease),
-    top 260ms var(--workflow-ease),
-    width 260ms var(--workflow-ease),
-    height 260ms var(--workflow-ease);
-}
 .system-workflow__board-inspection-host { position: absolute; z-index: 30; inset: var(--workflow-identity-strip-height) 0 0; overflow: hidden; border-radius: var(--workflow-board-radius); pointer-events: none; }
 /* One authored surface effect covers both composition and inspection, below controls. */
 .system-workflow__presentation-board > .module-surface-grain { z-index: 36; }
@@ -248,10 +211,6 @@
   background-color: rgb(5 6 6 / 18%);
   background-image: none;
 }
-.system-workflow__presentation-board:is([data-board-phase="maximizing"], [data-board-phase="restoring"]) .system-workflow__stage-viewport {
-  transition: height 260ms var(--workflow-ease);
-}
-.system-workflow__presentation-board:is([data-board-phase="maximizing"], [data-board-phase="restoring"]) .system-workflow__stage { transition: transform 260ms var(--workflow-ease); }
 
 .system-workflow__identity-strip {
   box-sizing: border-box;
@@ -313,6 +272,10 @@
 }
 .system-workflow__inspection-scene[data-inspection-phase="active"] [data-inspection-context="background"] { filter: grayscale(1) brightness(.18); }
 .system-workflow__inspection-scene[data-inspection-phase="active"] [data-inspection-context="foreground"] { opacity: 0; }
+.system-workflow__inspection-scene[data-inspection-lift] [data-inspection-context="background"] {
+  transition: none;
+  filter: grayscale(var(--inspection-lift-progress, 0)) brightness(calc(1 - .82 * var(--inspection-lift-progress, 0)));
+}
 .system-workflow__inspection-scene [data-inspection-context="selected"] { transition: none; }
 .system-workflow__inspection-scene [data-lift-source] { visibility: hidden; }
 .system-workflow__lift-artwork { position: absolute; z-index: 35; pointer-events: none; }
@@ -504,15 +467,17 @@
   width: 100%;
   overflow: hidden;
   background-color: transparent;
-  /* Complementary edge coverage must add to an opaque join. Source-over
-     blending exposes the canvas between two antialiased fractional edges. */
-  mix-blend-mode: plus-lighter;
 }
 .system-workflow__grid-plane--current {
   z-index: 1;
   pointer-events: none;
 }
 :is(.system-workflow__artwork-plane, .visitor-grid-renderer__artwork-plane) { position: absolute; inset: 0; overflow: hidden; pointer-events: none; transition: filter 260ms var(--workflow-ease); }
+/* On the rail, the Grid plane alone owns the scene clip. Repeating that clip
+   on its artwork plane can attenuate the same fractional edge twice. Other
+   standalone artwork planes retain their own clipping. */
+.system-workflow__grid-plane > .system-workflow__artwork-plane,
+.visitor-grid-world__grid-plane .visitor-grid-renderer__artwork-plane { overflow: visible; }
 .system-workflow__grid-plane--current > .system-workflow__artwork-plane > .system-workflow__placement,
 .visitor-grid-world__grid-plane--current .visitor-grid-renderer__artwork-plane > .lattice-production-placement { pointer-events: auto; }
 .system-workflow__presentation-board[data-inspection-atmosphere] .system-workflow__grid-plane--current > .system-workflow__artwork-plane,

@@ -1,3 +1,4 @@
+import { artworkSourcePoint } from './displayArtworkOpening.js';
 // Derived, session-only alpha masks. URLs identify the decoded representation;
 // replacement URLs get new masks. LRU + expiry bound memory and stale failures.
 const masks = new Map();
@@ -53,7 +54,9 @@ export function artworkImageCoordinates(image, clientX, clientY) {
   if (!determinant) return null;
   const u = ((matrix.d * x - matrix.c * y) / determinant + width / 2) / width;
   const v = ((-matrix.b * x + matrix.a * y) / determinant + height / 2) / height;
-  return { u, v };
+  // Display's native source crop changes which source pixels occupy this box.
+  // Sample the original alpha mask, including transparent letterbox margins.
+  return artworkSourcePoint({ u, v }, style.objectViewBox);
 }
 
 export function artworkImagePoint(image, clientX, clientY) {

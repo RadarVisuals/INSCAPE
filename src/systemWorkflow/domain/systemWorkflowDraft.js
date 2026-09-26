@@ -257,8 +257,11 @@ function validatePlacement(value, path, fail) {
 export function validateSystemWorkflowDraft(input) {
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
-  if (!exactKeys(input, [...DRAFT_KEYS, ...['workbench', 'displays', 'mobile', 'miniApps', 'texts', 'imageModules'].filter(key => Object.hasOwn(input || {}, key))])) {
-    fail('$', 'invalid_draft_structure', 'Invalid draft');
+  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'displays', 'mobile', 'miniApps', 'texts', 'imageModules'];
+  if (!exactKeys(input, allowedKeys.filter(key => DRAFT_KEYS.includes(key) || Object.hasOwn(input || {}, key)))) {
+    const missing = DRAFT_KEYS.filter(key => !Object.hasOwn(input || {}, key));
+    const unexpected = record(input) ? Object.keys(input).filter(key => !allowedKeys.includes(key)) : [];
+    fail('$', 'invalid_draft_structure', `Invalid draft. Missing fields: ${missing.join(', ') || 'none'}. Unexpected fields: ${unexpected.slice(0, 20).map(key => key.slice(0, 80)).join(', ') || 'none'}.`);
     return { valid: false, errors, value: null };
   }
   if (!normalizeProfileAddress(input.profileAddress) || input.profileAddress !== input.profileAddress.toLowerCase()) fail('profileAddress', 'invalid_profile_address', 'Invalid profile address');

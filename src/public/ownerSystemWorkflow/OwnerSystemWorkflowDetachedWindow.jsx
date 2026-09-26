@@ -4,6 +4,7 @@ import './workbenchWindowChrome.css';
 const OwnerSystemWorkflowDetachedWindow = forwardRef(function OwnerSystemWorkflowDetachedWindow({
   ariaLabel,
   viewId,
+  workbenchPan = false,
   as: Element = 'aside',
   children,
   background,
@@ -21,7 +22,7 @@ const OwnerSystemWorkflowDetachedWindow = forwardRef(function OwnerSystemWorkflo
 }, ref) {
   const rootClassName = `system-workflow__detached-window${className ? ` ${className}` : ''}`;
   const contentClassName = `system-workflow__detached-window-surface${surfaceClassName ? ` ${surfaceClassName}` : ''}`;
-  return <Element aria-label={ariaLabel} className={rootClassName} data-workbench-view-id={viewId} data-window-chrome={chrome} data-menu-surface={menuSurface} data-detached-window data-floating ref={ref} style={style}>
+  return <Element aria-label={ariaLabel} className={rootClassName} data-workbench-pan={workbenchPan || undefined} data-workbench-view-id={viewId} data-window-chrome={chrome} data-menu-surface={menuSurface} data-detached-window data-floating ref={ref} style={style}>
     {background}
     <header style={compactContent ? { display: 'none' } : undefined} className="system-workflow__detached-window-titlebar" {...headerPointerProps}>
       {titleContent ?? <strong title={title}>{title}</strong>}

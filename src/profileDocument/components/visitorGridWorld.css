@@ -5,7 +5,7 @@
   position: fixed;
   z-index: 30;
   inset: 0;
-  overflow: hidden;
+  overflow: clip;
   outline: none;
   pointer-events: auto;
   background: var(--visitor-grid-surface);
@@ -21,8 +21,8 @@
 .visitor-grid-world[data-workbench] .system-workflow__workbench { position: absolute; inset: 0 0 var(--visitor-dock-height); }
 .visitor-grid-world[data-space-navigation] .visitor-grid-world__viewport { cursor: grab; }
 .visitor-grid-world[data-grid-dragging] .visitor-grid-world__viewport { cursor: grabbing; }
-/* Same edge coverage as owner: no translucent join between adjacent scenes. */
-.visitor-grid-world__grid-plane { position: absolute; inset: 0 auto 0 0; width: 100%; overflow: hidden; mix-blend-mode: plus-lighter; }
+/* Scene clips share the moving rail; no per-scene blend compensation. */
+.visitor-grid-world__grid-plane { position: absolute; inset: 0 auto 0 0; width: 100%; overflow: hidden; }
 .visitor-grid-world__grid-plane--current { z-index: 1; }
 .visitor-grid-world__grid-track {
   position: absolute;
@@ -35,6 +35,7 @@
   z-index: 2;
 }
 .visitor-grid-renderer { position: absolute; inset: 0; }
+.visitor-grid-world__grid-plane .visitor-grid-renderer__artwork-plane { overflow: visible; }
 .visitor-grid-world > .lattice-profile-rail[data-identity-only] { top: auto; bottom: calc(var(--visitor-dock-height) + 12px); left: 12px; }
 .visitor-grid-world__dock { position: fixed; z-index: 12; inset: auto 0 0; height: var(--visitor-dock-height); display: grid; grid-template-columns: minmax(0, 1fr) 112px; overflow: hidden; border-top: 1px solid var(--lattice-menu-line); color: var(--lattice-menu-ink); background: var(--lattice-menu-panel); }
 .visitor-grid-world__dock > nav { min-width: 0; display: flex; align-items: stretch; overflow-x: auto; scrollbar-width: none; }
@@ -65,4 +66,4 @@
 .visitor-grid-world[data-embedded-display] .system-workflow__presentation-board { pointer-events: auto; }
 .visitor-grid-world[data-embedded-display] .system-workflow__desktop-shortcut { pointer-events: auto; }
 .visitor-grid-world[data-embedded-display] { z-index: auto; }
-.visitor-grid-world[data-active-display] > .system-workflow__workbench > .system-workflow__presentation-board:not([data-wheel-zoom]) { z-index: 3; }
+.visitor-grid-world[data-active-display] > .system-workflow__workbench > .system-workflow__presentation-board { z-index: 3; }

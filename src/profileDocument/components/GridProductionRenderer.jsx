@@ -5,8 +5,10 @@ import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import {
   projectLatticeProductionArtwork,
 } from '../../lattice/rendering/latticeProductionProjection.js';
-import { projectSystemWorkflowViewport, projectSystemWorkflowPlacement } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
+import { projectSystemWorkflowViewport } from '../../systemWorkflow/systemWorkflowViewportProjection.js';
 import DisplayTextContent from '../../public/ownerSystemWorkflow/DisplayTextContent.jsx';
+import DisplayArtworkSurface from '../../public/ownerSystemWorkflow/DisplayArtworkSurface.jsx';
+import { projectDisplayPlacementRectangle, projectDisplayStageViewport } from '../../lattice/rendering/displayPaintGeometry.js';
 import { systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import { adaptProfileDocumentV9Media, PROFILE_DOCUMENT_V9_MEDIA_STATUS } from './profileDocumentV9Media.js';
 import { resolveProfileDocumentV9ContentReference } from '../domain/profileDocumentV9ContentReferenceResolver.js';
@@ -25,6 +27,7 @@ const viewportOf = (node, bottomInset = 0) => {
 };
 
 function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlacementActivate, onPointerActivate, placement, gridId, viewerSourceHidden }) {
+  const stageSize = useContext(DisplayStageSizeContext);
   const reference = placement.asset?.media?.reference || null;
   const referenceKey = reference
     ? `${placement.asset.stableAssetId}:${reference.verification.method}:${reference.verification.data}` : null;
@@ -58,7 +61,7 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
   }, [imageLoading, loadState.attempt, loadState.src, loadState.status, media.src, media.status]);
   const decodedDimensions = loadState.src === media.src && loadState.status === 'loaded' ? loadState.dimensions : null;
   const dimensions = decodedDimensions || media.dimensions;
-  const artwork = projectLatticeProductionArtwork(placement, field, dimensions);
+  const artwork = projectLatticeProductionArtwork(placement, field, dimensions, stageSize?.scale ?? 1);
   const ready = media.status === PROFILE_DOCUMENT_V9_MEDIA_STATUS.READY;
   const loaded = ready && loadState.src === media.src && loadState.status === 'loaded';
   const failed = !ready && media.status !== PROFILE_DOCUMENT_V9_MEDIA_STATUS.RESOLVING
@@ -94,7 +97,11 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
         top: artwork.mediaOpeningRectangle.top - artwork.footprint.top, width: artwork.mediaOpeningRectangle.width,
         height: artwork.mediaOpeningRectangle.height }),
     }}>
-      {fallbackMedia}
+      <DisplayArtworkSurface src={media.src} onReady={() => setLoadState(current => current.src === media.src
+        ? { ...current, status: 'loaded', dimensions } : current)}
+        width={artwork.mediaOpeningRectangle.width} height={artwork.mediaOpeningRectangle.height} dimensions={dimensions} mediaStyle={mediaStyle}>
+        {fallbackMedia}
+      </DisplayArtworkSurface>
       {!loaded && <span className="lattice-production-placement__status">{failed ? 'Artwork unavailable' : 'Loading artwork'}</span>}
     </span>
   </figure>;
@@ -117,7 +124,8 @@ export default function GridProductionRenderer({ document, grid, imageLoading = 
     const update = () => setViewport(viewportOf(node, projectionBottomInset)); update(); const observer = new ResizeObserver(update); observer.observe(node);
     return () => observer.disconnect(); }, [projectionBottomInset, Boolean(stageSize)]);
   const model = useMemo(() => ({ geometry: document.geometry }), [document.geometry]);
-  const projected = viewport.width > 0 && viewport.height > 0 ? projectSystemWorkflowViewport(model.geometry, viewport) : null;
+  const projected = viewport.width > 0 && viewport.height > 0
+    ? (stageSize && !projectionBottomInset ? projectDisplayStageViewport : projectSystemWorkflowViewport)(model.geometry, viewport) : null;
   const layerRanks = useMemo(() => createLatticeProductionLayerRanks(grid.placements), [grid.placements]);
   const title = grid.title.trim();
   return <section aria-label={title || `INSCAPE ${grid.id}`} className="lattice-production-table visitor-grid-renderer"
@@ -135,7 +143,7 @@ export default function GridProductionRenderer({ document, grid, imageLoading = 
       <span aria-hidden="true" className="lattice-production-table__authored-plane" style={rectangleStyle(projected)} />
       <div className="visitor-grid-renderer__artwork-plane">{grid.placements.map((placement) => placement.kind === 'text'
         ? <div key={placement.id} className="display-text-placement" data-text-placement-id={placement.id}
-            style={{ ...projectSystemWorkflowPlacement(placement, projected), zIndex: layerRanks.get(placement.id) }}>
+            style={{ ...projectDisplayPlacementRectangle(placement, projected, stageSize?.scale ?? 1), zIndex: layerRanks.get(placement.id) }}>
             <DisplayTextContent placement={placement} cellSize={projected.cellSize} /></div>
         : <GridPlacement field={projected} gridId={grid.id} imageLoading={imageLoading}
         key={placement.id} layerRank={layerRanks.get(placement.id)} onMediaState={onMediaState}

@@ -7,6 +7,8 @@ import { WorkbenchWindow } from '../ownerSystemWorkflow/DisplayInstrumentWindow.
 import OwnerSystemWorkflowDetachedWindow from '../ownerSystemWorkflow/OwnerSystemWorkflowDetachedWindow.jsx';
 import { isValidPlacementMedia } from '../../systemWorkflow/domain/placementMedia.js';
 import IdentityClouds from './IdentityClouds.jsx';
+import IdentityPortrait from './IdentityPortrait.jsx';
+import LibraryArtworkImage from '../ownerSystemWorkflow/LibraryArtworkImage.jsx';
 import { useIdentityEditor, IdentityProfileEditor, IdentityFields, IdentityAppearanceSettings } from './IdentityCardSettings.jsx';
 import { resolveIdentityCard } from '../../profileIdentity/domain/identityCard.js';
 import '../ownerSystemWorkflow/ownerSystemWorkflow.css';
@@ -224,7 +226,7 @@ export default function IdentityModule({ model, onClose, returnFocus, menuSurfac
       if (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10') openShortcutMenu(event);
       else shortcut.moveByKey(event);
     }} onClick={event => { if (event.detail === 0 || !shortcut.suppressClick.current) restore(); shortcut.suppressClick.current = false; }}>
-    {portraitUrl && !imageFailed ? <img alt="" draggable={false} src={portraitUrl} onError={() => setImageFailed(true)} /> : <UserRound />}
+    {portraitUrl && !imageFailed ? <LibraryArtworkImage key={portraitUrl} alt="" draggable={false} src={portraitUrl} onError={() => setImageFailed(true)} /> : <UserRound />}
   </button>;
   return <div className="identity-module system-workflow__token-scope" data-shortcut-shape={shortcut.position.shape} data-minimized={minimized || undefined} data-artwork={hasArtwork ? 'custom' : 'official'} data-expanded={expanded} data-editing={editing} data-workbench-module="identity" data-lattice-menu-surface
     data-menu-surface={menuSurface} onKeyDown={(event) => {
@@ -236,7 +238,7 @@ export default function IdentityModule({ model, onClose, returnFocus, menuSurfac
         return;
       }
       if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); event.stopPropagation(); if (editing) edit.cancel(); else close(); }
-    }} onPointerDown={(event) => event.stopPropagation()} onWheel={(event) => event.stopPropagation()}>
+    }} onPointerDown={(event) => event.stopPropagation()}>
     <WorkbenchWindow chrome="bevel" menuSurface={menuSurface} label="Identity" title={model.profile.displayName} width={initialWindow?.width || 840} fitContent
       compact={minimized ? { content: circle, style: { left: shortcut.position.x, top: shortcut.position.y,
         width: shortcut.position.size, height: shortcut.position.size, minHeight: 0, maxHeight: 'none',
@@ -258,7 +260,9 @@ export default function IdentityModule({ model, onClose, returnFocus, menuSurfac
       <div className="identity-module__intro">
         <div className="identity-module__portrait" ref={portraitRef} aria-label="Identity artwork">
           {portraitUrl && !imageFailed
-          ? <img alt="" draggable={false} src={portraitUrl} onError={() => setImageFailed(true)} /> : <UserRound />}
+          ? <IdentityPortrait key={`${model.address}:${portraitUrl}`} src={portraitUrl}
+              interactive={!minimized} title={`${official.name} — Identity artwork`}
+              onError={() => setImageFailed(true)} /> : <UserRound />}
           {imageFailed && <span className="identity-module__drop-hint">Artwork unavailable</span>}
         </div>
         <div className="identity-module__story">

@@ -58,7 +58,7 @@ function MiniAppInstance({ record, initialPresentation, index, store, profileAdd
   return <div className="mini-app-workbench" data-workbench-module="mini-app" data-mini-app-id={record.id}
     style={{ '--mini-app-z': active ? 49 : 45, '--mini-app-shortcut-bottom': `${64 + index * 38}px` }} onPointerDownCapture={onActivate} onFocusCapture={onActivate}>
     {shortcutMenu.content}
-    {!presentation.open && <button ref={shortcut} className="mini-app-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown} type="button" onClick={() => {
+    {!presentation.open && <button data-workbench-pan ref={shortcut} className="mini-app-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown} type="button" onClick={() => {
       setPresentation(current => ({ ...current, open: true })); onActivate();
     }}><AppWindow size={18} /><span>{record.name}</span></button>}
     {presentation.open && <WorkbenchWindow label="Mini app" title={record.name} width={presentation.window.width} resizableWidth

@@ -9,15 +9,35 @@ Rollback baseline before the documentation reset: `64458ac`
 
 The founder accepted Image as a standalone Workbench module beside Display.
 It holds one Library image per side, with no layers or nested composition.
-One side is a static image. Multiple sides expose a separate Next control:
+One side holds one artwork source. Multiple sides expose a separate Next control:
 every flip turns in the same direction and the last side wraps to the first.
 The selected side is temporary reading state; reloading starts at side one.
+Image has its own flat, borderless rectangular surface, without instrument-window
+chrome, grain, shadows or rounded corners. The original media alpha is retained.
+Canvas projection and clipping share one rectangle. Movement and snapping use
+exact Workbench geometry, never rounded DOM positions. Crop projection uses
+authored canvas dimensions independently of the camera. Only painting rounds
+the projected edges to physical pixels, so adjacent modules share a boundary
+through pan and zoom without rewriting authored geometry. Resting
+artwork is 2D. Flip faces and perspective exist only during a side transition.
 Clicking the image opens the existing Display Lift renderer, revealing its
 full media from the cropped rectangle. Return or Escape restores that crop.
 Reduced-motion users get immediate side changes and inspection transitions.
 
+Image and Display render SVG artwork through the same isolated document runtime
+as Identity. Module-owned geometry still determines crop, resize, rotation,
+mirroring and layer order. The document occupies that projected media rectangle
+inside a clipped SVG viewport; it does not receive module editing input.
+Owner, Visitor and enlarged inspection share this rendering path. Offscreen
+projected documents are disposed and restart when visible; their internal
+animation state is temporary, not saved composition data. Display selects live
+SVGs by rectangular bounds because a static alpha mask cannot describe animated
+content. Raster artwork keeps its existing renderer. Saved URLs and schemas are
+unchanged, and the runtime retains its existing restricted LUKSO RPC policy.
+
 Width and height are independent whole-pixel dimensions from 32 to 4096.
-The corner handle resizes the canvas; the contextual dock also offers exact
+The corner resizes the canvas without a visible handle mark; keyboard focus remains
+visible. The contextual dock also offers exact
 dimensions, shared rotate/mirror actions, crop pan/zoom and Native fit.
 New artwork fills the canvas through a centred crop. Library drops append a
 side by default; Replace side retains its position in the sequence and starts
@@ -122,6 +142,13 @@ distinct story moments. Display owns navigation and reports its current Grid and
 temporary swipe progress through a Workbench-scoped connection. Text follows that
 report without choosing or advancing the Display's Grid. A closed or missing
 Display shows an unavailable prompt and preserves its passages.
+Text tools always offers explicit Unlink Text from Display, including after that
+Display was removed. Section links retain the entire unchanged article as
+standalone Text. Legacy extra passages become separate private Text modules,
+preserving each complete article and appearance. This is one undoable saved
+operation; insufficient module capacity or failed persistence leaves the link
+and every passage intact. Missing Display guidance identifies removal instead
+of asking the owner to reopen a nonexistent Display. No schema migration occurs.
 
 Existing passage links enable Read as pages. Automatic overflow pagination and optional authored
 page breaks divide one rich article into reading pages. Small previous/next
@@ -400,26 +427,97 @@ Dragging empty Workbench space marquee-selects open Display and standalone Text
 windows. Shift-drag adds to the selection; Shift-click a window header toggles it.
 Focused window headers also toggle selection with Shift+Enter.
 The selection's corner handles scale its windows proportionally around the
-opposite corner, including text. Escape cancels a gesture or clears selection.
+opposite corner. Text boxes resize and reflow without scaling their letters,
+including during the drag preview. Escape cancels a gesture or clears selection.
 Dragging anywhere inside the selection moves the selected modules together,
 including over artwork, text, headers and gaps. This temporarily takes priority
 over module interactions. Clicking outside clears selection. The focused selection
 also moves with arrow keys (one screen pixel, or ten with Shift). Group movement
-uses the same session-only view state as group scaling; Escape cancels an active
+uses temporary view state during interaction; Escape cancels an active
 drag and restores its starting position.
-Group movement and corner resizing respect the visible Workbench bounds above
-the dock. Moving a zoomed module individually uses those same screen-space
-limits, rather than the original unscaled window's limits. Group movement keeps
+Group movement and corner resizing respect the 8,000 by 8,000 Workbench area,
+projected through the current view scale and pan. Moving a zoomed module
+individually uses those same bounds. Group movement keeps
 relative spacing intact at the boundary.
-Ctrl + wheel scales the selection, or all Display and Text windows when nothing
-is selected, between 25% and 100%, including their positions, spacing and
+Group resizing starts from exact module geometry, using one scale factor around
+the opposite selection corner. Moving and resizing a selection reuse Workbench
+grid and module-edge snapping on its outer bounds; selected members never snap
+individually or serve as each other's targets. Proportional resizing chooses one
+eligible edge to determine the scale, with module edges preferred over the grid.
+Alt bypasses snapping. Owner selections of editable Image, Text and Display
+modules, including mixed selections, commit real dimensions and window positions
+together through the existing draft store on release. Image uses whole-pixel
+dimensions. Both group and solo Text window resizing change available space and
+reflow text without changing article appearance or scene-linked passages.
+Display retains its Stage ratio using continuous dimensions for both group
+preview and commit; only painting rounds Display edges. Remeasuring available
+space does not grow a deliberately small Display to a 320-pixel minimum.
+Internal selection, movement, resizing and Library/Text drops reuse the rendered
+Grid/World Cover projection before camera scaling, including World Cover's
+fixed logical margins and size cap. Display resizing does not rewrite its layers.
+Grid rail ownership: scene slots and camera motion use the same continuous
+percentage width. Each scene plane owns its Grid clip; nested artwork planes on
+the rail do not repeat that clip. Full-bleed artwork inherits the exact outer
+Grid boundary; interior artwork joins use shared rounded paint endpoints.
+The isolated rail moves its scene clips without per-scene additive blend
+compensation, and hides offscreen scenes at exact resting slots. Grid geometry
+must not be replaced with arbitrary artwork overlap or resizing.
+Owner and Visitor use the same clipping rule. Saved geometry is unchanged.
+A normal Display Grid maps its authored reference directly to the painted Stage
+endpoints; it is not contained again inside the rounded Stage. Vertical input
+and guide projection use that same row spacing. Artwork fitting and crop use
+unrounded authored placement proportions before mapping into the painted opening,
+so pixel rounding cannot introduce a new native-fit margin. World Cover retains
+its intentional margins and cap; standalone Image keeps its own fitting frame.
+Image, Text and Display share one outer-edge projection: exact Workbench frame,
+module transform and camera pan are combined before shared endpoints are rounded
+to physical screen pixels. Width/height are differences of those endpoints,
+never independently rounded sizes. Text/Display consume the shared projection
+through native zoom and transform translation; Image retains its physical-pixel
+raster surface. No second CSS pan is applied to an already projected window.
+Subpixel camera movement can change painted coverage by one physical pixel;
+it never rewrites logical geometry. Text retains its logical wrapping width.
+Display's legacy exterior chrome background is removed. An explicitly enabled
+Display frame is drawn inside its bounds; companion-window chrome is unchanged.
+Visible Workbench grid marks use the same physical-pixel projection of the
+24-work-pixel snap coordinates, without a separate half-pixel pattern offset.
+Only visible rows/columns are generated. One viewport-sized canvas paints the
+grid; dots reuse a rasterized row rather than expanding SVG instances per point.
+The row exists only for the current paint lifecycle and never owns coordinates.
+Snap calculations retain exact world coordinates and module-edge priority.
+Workbench coordinates and
+module content remain separate inputs to one atomic save. Failed saving restores
+the starting view; Escape cancels before saving. Shared endpoints are rounded
+together to preserve joins. Previous temporary scaling is absorbed by the next
+explicit group resize, not by a read or reload. Image size fields then report
+the same dimensions as solo resize. Draft Undo/Redo restores saved window geometry
+with its content; local frame recovery for missing older layouts is bounded by
+the existing history limit and ends when the module unmounts.
+Visitor group interaction remains temporary. Camera zoom is always view-only.
+Existing Workbench fields carry Text window sizes through publication and restore;
+no schema, storage key, default or old-data interpretation changes. Previously
+saved article scales remain readable. Explicitly setting Text size resets the
+article scale to one, removing any earlier group magnification so the chosen
+size applies directly; opening or resizing a window does not rewrite its article.
+Workbench wheel zoom (accepted 2026-09-22) always scales the whole module view,
+independently of selection, between 25% and 200%, including positions, spacing and
 rendered text. Text retains its original wrapping area; the entire output shrinks.
+Only Ctrl + wheel zooms the Workbench, continuously around the cursor, on empty
+space and over modules. Unmodified wheel and Cmd + wheel do not zoom it.
+The world point beneath the cursor stays fixed. There are no plus/minus zoom
+buttons or Workbench zoom keyboard shortcuts.
+Selection corner handles remain a separate group-scale operation.
 Dock, shortcuts, Identity and companion tools retain their normal size.
+Companion tools (including Layers, Artwork tools and Text tools) stay in screen
+coordinates during camera pan and zoom; their manual dragging remains independent.
 This is session-only view state, shared by owner and Visitor rendering, never
-captured as authored geometry or publication data. Ctrl/Cmd + minus/plus and
-the visible zoom controls adjust it; Ctrl/Cmd + 0 restores 100%. Immersive Display
-continues to fill the browser area independently. Ordinary Display wheel
-enlargement and article scrolling retain their existing behavior.
+captured as authored geometry or publication data. The percentage reset control
+and Ctrl/Cmd + 0 restore camera zoom to 100% around the centre of the current
+visible Workbench (excluding the dock), retaining the world point at that centre.
+They preserve module positions and individual/group scale transforms. Reset view resets only
+camera pan and likewise preserves the composition. Display has no
+independent wheel zoom, maximize/restore, or immersive fullscreen mode. Article
+scrolling retains its existing behavior.
 Shared module boundaries use matching layout-pixel edges at fractional zoom,
 without changing the text's wrapping area or authored dimensions. Native window
 zoom paints text at its target size; rounding the visible frame never rewrites
@@ -461,6 +559,45 @@ The Workbench session owns saving that capture and Identity configuration.
 Display authoring sessions, including the original Display, project and merge
 only their module content through the shared profile draft store. The original
 Display's root storage envelope is retained for compatibility.
+
+Space + primary-pointer drag on empty Workbench space pans the view freely in
+both axes. Content modules and their shortcuts move together;
+Shift + wheel pans horizontally (wheel down moves the view right, content left);
+ordinary wheel pans vertically over the background and module content, including
+Image, Display and fitting or paged Text. Native readers with actual overflow
+on the requested axis retain their own scrolling, including at their ends;
+tool lists retain native scrolling too. Merely clipping artwork or paginating
+Text does not capture wheel input. Native horizontal wheel
+input (wheel tilt or trackpad deltaX) pans horizontally, without a middle
+button gesture. Both axes can move together on a trackpad.
+Ctrl + wheel retains zoom priority when both modifiers are held.
+The background colour, dock and viewport menus remain fixed. The alignment grid
+follows camera pan and scale, and snapping uses that same projected lattice. Display
+Grid navigation and editing retain their own input inside the module. The pan
+is temporary per mounted Workbench, shared by owner and Visitor, and never
+changes saved windows, draft content or publication. Reset view restores the
+starting camera offset. Ctrl/Cmd+0 changes only zoom around the current view,
+retaining module movement and scale transforms. An authored initial camera or
+spawn point remains deferred; this does not change Reset view's destination.
+Release, cancellation, focus loss, Preview suspension and disposal end the
+gesture. This change retains the current visual design.
+Image and Display Lift inspection dimming follows the artwork's shared animation
+progress in both directions, including interrupted opening and reduced motion.
+
+On 2026-09-22 the founder accepted an 8,000 by 8,000 work-pixel placement
+area, extending right and down from the existing coordinate origin. Content
+windows, instruments and movable shortcuts can leave the visible viewport;
+movement and resizing use the shared area bounds with an eight-pixel inset.
+The alignment grid is visible only inside those same placement bounds. Panning
+or zooming beyond them reveals plain background, with no extra border or overlay.
+Reset view is always visible in the Workbench controls. It resets the temporary
+pan, not the saved arrangement. Browser resizing and reload never pull saved
+positions back into the viewport. Existing Display/Image viewport size fitting
+remain separate from window placement.
+The v9 storage redesign is explicitly deferred: existing positive window
+coordinates already support the area, with no schema, storage-key or origin
+change. Older outlying layouts remain readable without rewriting their positions.
+The work area is not an 8,000-pixel render target and adds no module instances.
 
 The owner's local arrangement also survives reload independently of publication.
 A profile-scoped `inscape:workbench:layout:v1` record stores module geometry,
@@ -640,19 +777,19 @@ internal compatibility names during this migration; do not broadly rename them.
 - Pan and zoom are camera/view state. They never resize assets, mutate the Grid,
   or alter published geometry.
 - Support a fitted overview and sufficiently strong zoom for precise editing.
-- Scrolling up over the Stage temporarily enlarges Display while its centre moves
-  progressively from the original position to the available Workbench centre,
-  reserving space for the dock and attached instruments, above standalone Text.
-  Position and size follow the same progress, avoiding edge collisions and
-  abrupt recentering. Scrolling back down follows the same path and stops
-  at its exact starting size and position; Escape or Restore also returns there.
-  Temporary enlargement never updates the captured Workbench arrangement.
-  Move and resize handles apply to the restored window. Scrolling over instruments retains their own scrolling.
-  After reaching maximum size, a separate upward scroll enters an immersive
-  browser-area Stage view, with Workbench and instruments hidden and plain black
-  letterboxing to preserve the authored Stage ratio. Scroll down, Escape, or the revealed Exit control
-  restores the prior window. Immersive geometry is temporary and never captured
-  as the published window arrangement. Owner and Visitor share this behavior.
+- Display uses one Stage projection. Corner resize changes its saved window size;
+  only Workbench Ctrl-wheel zoom changes viewing scale. Independent Display
+  wheel enlargement, maximize/restore and immersive fullscreen are removed.
+  Artwork inspect, Grid navigation, composition editing and minimize-to-shortcut
+  remain. Removed modes were temporary, so old saved compositions and window
+  geometry remain readable without a storage migration or reset.
+- Display's window, Stage and artwork use shared paint boundaries at the
+  Workbench scale. This rounding is derived screen geometry, never an edit to
+  the saved composition. Owner, Visitor and Display inspect use the same native
+  image-source opening for crop, rotation and mirroring. Media retain their
+  original transparency and animation. Browsers without `object-view-box`
+  retain the prior image clipping path; its fractional-edge limitations remain
+  outside the verified Chromium rendering path.
 - Ordered Grid navigation wraps from last to first and first to last, in the
   editor and public presentation. A single Grid does not swipe to itself; the
   World Cover remains outside the editor's scene sequence.
@@ -715,7 +852,7 @@ internal compatibility names during this migration; do not broadly rename them.
   Keyboard activation and focus indicators on interface controls remain available.
   Selecting artwork does not add an image-edge halo; editing and crop handles
   remain available. Authored Display grain stays visible over artwork during
-  inspection and immersive presentation, using the same module surface effect.
+  artwork inspection, using the same module surface effect.
   Opening and closing inspection preserve the current Grid camera position;
   temporary inspection suspends navigation without resetting the retained rail.
 - Do not implement the Display Module as an HTML iframe. Use one application context with
@@ -735,8 +872,8 @@ internal compatibility names during this migration; do not broadly rename them.
   A keyboard-accessible Tools launcher in the owner and Visitor docks provides
   the same shared tools, retaining the current target. Owner Layers also offers
   Artwork info for the selected artwork.
-- The ordinary Display toolbar contains composition Lock (owner only), maximize
-  and minimize. Layers, Metadata, Play and the Inspect label/counter/arrows are
+- The ordinary Display toolbar contains composition Lock (owner only) and
+  minimize. Layers, Metadata, Play and the Inspect label/counter/arrows are
   absent. Active artwork inspection adds only Return to composition; Escape
   and existing arrow-key artwork navigation remain available.
 - The shared Display toolbar is quiet until the pointer approaches its top
@@ -800,7 +937,7 @@ drafts retain their schemas and content.
 - The identity strip is trusted publication chrome, not artistic Stage content.
 - It is derived from the official Universal Profile identity and authority.
 - Authored content cannot replace or impersonate that publication anchor.
-- The strip may collapse and may hide in an explicit immersive view. Its state
+- The strip may collapse and remains an overlay rather than reserving layout space. Its state
   never changes Stage geometry.
 - A Grid may present any fictional persona, biography, role-play identity,
   text, NFT, image, animation, or later supported primitive. That content is a
@@ -821,6 +958,21 @@ drafts retain their schemas and content.
   Copy, source and QR controls use the same muted icon weight. QR sharing
   generates the full address locally, on demand, with a declared dependency;
   it performs no upload, wallet action or publication.
+  The large Identity portrait renders SVG media as an isolated document with
+  scripts enabled, so artwork can read public events and animate itself.
+  The frame has no same-origin, wallet, popup or parent-navigation grant.
+  Its URL remains the official LSP3 image URL or the authored Library artwork's
+  selected media URL; no local substitution or profile-data rewrite occurs.
+  Extensionless URLs use their response media type.
+  Raster avatars and unresolved media types retain ordinary image rendering.
+  SVG source is fetched with a size limit, validated, and sent to the isolated
+  artwork document host. This avoids inheriting a gateway's network prohibition.
+  Only the public RPC origins `https://rpc.mainnet.lukso.network` and
+  `https://42.rpc.thirdweb.com` are allowed to receive artwork connections.
+  External scripts and general network access remain disabled. The host response
+  owns this narrow policy; the main application's script policy is unchanged.
+  Header and shortcut thumbnails remain images, and minimizing or closing
+  Identity removes the executable artwork document.
   The dock's account menu uses the official profile name and avatar as well;
   the authored title and artwork belong to the Identity presentation.
   QR sharing reuses the shared window chrome and opens beside its trigger,
@@ -857,7 +1009,7 @@ drafts retain their schemas and content.
   raised circles. One shared 65%-opaque backing maintains contrast over light and
   dark artwork;
   the remaining top strip stays draggable and keyboard movable. The Display name
-  is available on hover, with maximize/restore before minimize. Stage aspect ratio
+  is available on hover, with a minimize control. Stage aspect ratio
   and authored geometry remain unchanged; older windows retain their saved width
   and position without a data migration. Attached/overlay/detached instrument
   behaviour is retained while the standalone frame is evaluated.
@@ -1046,6 +1198,17 @@ arrangement remain to be specified when implementing public Workbench entry.
   and dimensions through draft persistence, Preview, and public projection,
   alongside the original token identity and provenance. Different placements
   of the same token may use different images.
+  Library attachment discovery accepts a .svg resource path declared as
+  application/xml or text/xml, including charset parameters. It retains the
+  original URL and declared type; unrelated XML documents remain excluded.
+  Existing cached records refresh through the ordinary metadata loader without
+  a storage-key change or a draft rewrite. Resolution variants remain one image;
+  accepted attachments have no separate per-token count cap.
+  Library thumbnails accept SVG attachments served with a generic XML media
+  type: after an image decode failure, a bounded fetch validates the SVG and
+  creates an inert image preview with the correct media type. Preview object
+  URLs are temporary and revoked on disposal; placement retains the original
+  resource URL. Library thumbnails do not execute artwork scripts.
 - Owner editing and public inspection must not silently replace or rearrange
   the application dock.
 - The canonical Display Module should make a separate full-application Preview mode
@@ -1098,12 +1261,13 @@ Guides reflect the final bounded window, disappear when the interaction ends,
 and never enter saved layouts or publication. Module edges capture within 10
 screen pixels and retain their target until pulled beyond 18 screen pixels;
 Alt immediately releases snapping and its guides. Grid guides use the visible
-24-pixel Workbench lattice, including when a module is temporarily scaled.
+24-work-pixel Workbench lattice projected through camera pan and zoom, including
+when a module is temporarily scaled.
 Settings calls the existing gap preference “Space between modules” and shows
 a two-window spacing preview. Existing preference keys and values are retained.
 Nearby visible module edges take priority over grid snapping, including top and
 bottom alignment. Zero gap permits flush joins. Alt bypasses both kinds of snapping;
-viewport bounds still win. Display resize retains its ratio and opposite corner.
+Workbench area bounds still win. Display resize retains its ratio and opposite corner.
 Only open content windows participate; instruments, shortcuts, enlarged inspection
 windows and other Workbenches are excluded. Changing preferences does not rearrange
 windows. Publication captures the resulting layout through its existing flow;
@@ -1112,7 +1276,7 @@ snapping preferences remain local and Visitor movement remains temporary.
 Workbench Grid snapping uses the existing 24-pixel guide spacing when moving or resizing
 owner Display and standalone Text windows, as well as Display shortcuts.
 Alt bypasses window snapping temporarily; focused window headers support arrow
-keys. Viewport limits take priority at edges. The existing profile-local
+keys. Workbench area limits take priority at edges. The existing profile-local
 `shortcutSnap` preference remains the storage owner, now labelled Grid snapping;
 older values retain their meaning for shortcuts and also control these windows.
 Toggling snapping or changing guide visibility does not rearrange existing

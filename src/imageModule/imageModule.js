@@ -40,8 +40,8 @@ export const restoreImageModules = (published = [], local = []) => structuredClo
   ...local.filter(item => !published.some(other => other.id === item.id)).map(item => ({ ...item, visibility: 'PRIVATE' })),
 ]);
 export const createImagePresentation = (id, index = 0) => ({ id, open: true, position: { left: 140 + index * 24, top: 100 + index * 24 } });
-export function imageFocusEntry(side, crop = side.crop) {
-  return { placement: { id: side.id, crop, transform: side.transform,
+export function imageFocusEntry(side) {
+  return { placement: { id: side.id, crop: side.crop, transform: side.transform,
     inspectionMode: 'LIFT' },
   media: { src: resolvePublishedAssetUrl(side.asset.media.url) }, focusDimensions: { width: side.asset.media.width, height: side.asset.media.height },
   accessibleLabel: side.asset.name || 'Artwork' };

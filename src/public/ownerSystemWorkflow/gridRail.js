@@ -1,5 +1,6 @@
 // A bounded neighborhood occupies stable slots on a continuous visual rail.
-// The viewport clips offscreen slots; entering a Grid needs no visibility toggle.
+// The viewport clips the moving rail. At an exact resting boundary the swipe
+// renderer suppresses offscreen slot painting to avoid fractional edge bleed.
 // Short loops render separate appearances of the same authored Grid. No visible
 // scene must be recycled at the seam; only distant appearances are replenished.
 export function gridRailScenes(grids, sourceId, sourceSlot = 0) {

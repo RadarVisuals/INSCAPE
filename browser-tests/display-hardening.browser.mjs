@@ -28,7 +28,11 @@ async function fixture(run, width = 1280, reducedMotion = 'reduce') {
       await import('/src/public/ownerSystemWorkflow/ownerSystemWorkflow.css');
       const style = document.createElement('style'); style.textContent = '.system-workflow{position:fixed;inset:0}.system-workflow__workbench{position:absolute;inset:0}'; document.head.append(style);
       const h = React.createElement;
-      const source = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><circle cx="100" cy="100" r="85" fill="purple"/></svg>');
+      // Exercise raster decoding; live SVG documents have a separate readiness path.
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 200;
+      const context = canvas.getContext('2d'); context.fillStyle = 'purple';
+      context.beginPath(); context.arc(100, 100, 85, 0, Math.PI * 2); context.fill();
+      const source = canvas.toDataURL('image/png');
       const items = ['one', 'two', 'hidden'].map((id, navigationOrder) => ({ id, navigationOrder,
         inspectionMode: id === 'two' ? 'LIFT' : 'IN_PLACE', crop: null,
         mat: { enabled: false, color: '#000000', inset: { top: 0, right: 0, bottom: 0, left: 0 } },
@@ -154,31 +158,18 @@ test('owner navigation drag cancels on pointer cancellation, blur and Grid chang
   }
 }));
 
-for (const width of [1280, 390]) test(`wheel, immersive exit, focus containment and interruption at ${width}px`, () => fixture(async page => {
+for (const width of [1280, 390]) test(`ordinary wheel retains Display geometry at ${width}px`, () => fixture(async page => {
   const stage = page.locator('.system-workflow__stage-viewport');
   const board = page.locator('.system-workflow__presentation-board');
-  await stage.hover();
-  const before = await board.boundingBox(); await page.mouse.wheel(0, 120); await settle(page);
-  assert.deepEqual(await board.boundingBox(), before, 'scroll down stops at the starting composition');
-  const beforeZoomChanges = await page.evaluate(() => hardening.changes.length);
-  for (let i = 0; i < 20 && !(await board.getAttribute('data-immersive')); i++) {
-    await stage.hover(); await page.mouse.wheel(0, -120); await page.waitForTimeout(270);
-  }
-  assert.equal(await board.getAttribute('data-immersive'), 'true');
-  assert.equal(await page.evaluate(() => hardening.changes.length), beforeZoomChanges, 'temporary zoom does not publish window geometry');
+  const before = await board.boundingBox();
   const recorded = await page.evaluate(() => hardening.changes.length);
-  const frame = await board.boundingBox(); assert.equal(frame.x, 0); assert.equal(frame.y, 0);
-  assert.equal(frame.width, width); assert.equal(frame.height, 800);
-  for (let i = 0; i < 8; i++) await page.keyboard.press('Tab');
-  assert.equal(await board.evaluate(n => n.contains(document.activeElement)), true);
-  await page.screenshot({ path: join(screenshots, `hardening-immersive-${width}.png`) });
+  for (const deltaY of [-120, 120, -500]) await stage.dispatchEvent('wheel', { deltaY, bubbles: true, cancelable: true });
+  await settle(page);
+  assert.deepEqual(await board.boundingBox(), before);
   assert.equal(await page.evaluate(() => hardening.changes.length), recorded);
-  await page.keyboard.press('Escape'); await settle(page);
-  assert.equal(await board.getAttribute('data-immersive'), null);
-  await page.waitForTimeout(470); await stage.hover(); await page.mouse.wheel(0, -120); await settle(page);
-  assert.equal(await board.getAttribute('data-immersive'), 'true');
+  assert.equal(await page.getByRole('button', { name: /Maximize Display|Restore Display/ }).count(), 0);
   await page.evaluate(() => hardening.setAvailable(false)); await settle(page);
   assert.equal(await page.locator(':popover-open').count(), 0);
   await page.evaluate(() => hardening.setAvailable(true)); await settle(page);
-  assert.equal(await board.getAttribute('data-immersive'), null);
+  assert.equal(await board.count(), 1);
 }, width));

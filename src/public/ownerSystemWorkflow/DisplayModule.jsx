@@ -148,7 +148,6 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       playing={playingGrids}
       onTogglePlayback={() => { controller.replaceSelection([]); setPlayingGrids((current) => !current); }}
       menuSurface={menuSurface}
-      onInspectionCancel={viewer.close}
       renderCues={host => <DisplayInspectionCues key={`${controller.draft.profileAddress}:${controller.selectedGridId}`}
         host={host} items={controller.selectedGrid?.placements || []} viewer={viewer} contentVersion={assetsById} onSelect={id => { tools.activate(targetId); controller.replaceSelection([id]); }}
         editable={!authoringLocked} disabled={!tools.state.metadata || panelOccupied || playbackState.moving || playbackState.offset || Boolean(crop.cropSession)}

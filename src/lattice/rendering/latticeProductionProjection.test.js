@@ -29,8 +29,7 @@ test('placement, native ratio and crop share the same cell field and opening', (
   const cropped = projectLatticeProductionArtwork(croppedPlacement, field, { width: 900, height: 1600 });
   assert.equal(cropped.imageRectangle.width, 320);
   assert.ok(cropped.imageRectangle.height > cropped.mediaOpeningRectangle.height);
-  assert.equal(cropped.imageRenderRectangle.left, cropped.mediaOpeningRectangle.left - 1);
-  assert.equal(cropped.imageRenderRectangle.width, cropped.imageRectangle.width + 2);
+  assert.deepEqual(cropped.imageRenderRectangle, cropped.imageRectangle);
 
   assert.deepEqual(native.mediaOpeningRectangle, native.footprint);
   assert.deepEqual(cropped.mediaOpeningRectangle, cropped.footprint);
@@ -66,4 +65,17 @@ test('resize changes projection only and never authored placement data', () => {
   assert.notDeepEqual(first, second);
   assert.deepEqual(placement, authored);
   assert.equal(first.width / first.height, second.width / second.height);
+});
+
+test('continuous media projection is scale invariant across the animated-to-layout handoff', () => {
+  for (const quarterTurns of [0, 1, 2, 3]) for (const crop of [null, { x: .2, y: .8, zoom: 1 }, { x: .5, y: .5, zoom: 2 }]) {
+    const item = { ...placement, crop, transform: { quarterTurns, mirrorX: true, mirrorY: false } };
+    const project = scale => projectLatticeProductionArtwork(item,
+      { cellSize: 18.731 * scale, left: 0, top: 0 }, { width: 1600, height: 900 }).imageRenderRectangle;
+    const original = project(1);
+    for (const scale of [.25, 4]) {
+      const next = project(scale);
+      for (const key of ['left', 'top', 'width', 'height']) assert.ok(Math.abs(next[key] - original[key] * scale) < 1e-8);
+    }
+  }
 });

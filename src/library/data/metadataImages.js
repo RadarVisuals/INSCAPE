@@ -14,9 +14,13 @@ export function metadataImages(root = {}, { indexed = false } = {}) {
   const seen = new Set(primary.flatMap((entry) => [entry.url, entry.src]).filter(Boolean));
   let index = primary.reduce((maximum, entry) => Math.max(maximum, entry.index), -1) + 1;
   const attachments = flatten(root.assets).filter((entry) => {
-    const type = String(entry.fileType || '').toLowerCase().split(';')[0];
+    const type = String(entry.fileType || '').split(';')[0].trim().toLowerCase();
+    const path = String(entry.url || entry.src || '').split(/[?#]/)[0];
+    // Some SVG attachments declare generic XML. Keep their original metadata
+    // and admit a .svg path; the existing thumbnail reader validates its SVG.
+    const xmlSvg = /^(application|text)\/xml$/.test(type) && /\.svg$/i.test(path);
     const image = type ? /^(image\/(png|jpeg|jpg|gif|webp|svg\+xml|avif)|png|jpe?g|gif|webp|svg|avif)$/.test(type)
-      : /\.(png|jpe?g|gif|webp|svg|avif)(?:[?#]|$)/i.test(entry.url || entry.src || '');
+      || xmlSvg : /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(path);
     if (!image || seen.has(entry.url || entry.src)) return false;
     seen.add(entry.url || entry.src); return true;
   }).map((entry) => ({ ...entry, index: index++ }));

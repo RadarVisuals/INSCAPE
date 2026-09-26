@@ -7,14 +7,14 @@ export function projectLatticePixelBoundary(field, axis, coordinate) {
   if (!Number.isFinite(origin) || !finitePositive(field?.cellSize) || !Number.isFinite(coordinate)) {
     throw new TypeError('Lattice pixel projection requires a canonical field, axis, and coordinate');
   }
-  return snapLatticePixelBoundary(origin + coordinate * field.cellSize);
+  return snapLatticePixelBoundary(origin + coordinate * (axis === 'row' ? field.rowSize ?? field.cellSize : field.cellSize));
 }
 
 export function createLatticePixelBoundaryPositions(field, axis, interval, limit, strokeWidth = 1) {
   if (!field || !finitePositive(interval) || !finitePositive(limit)) return [];
   const origin = axis === 'column' ? field.left : axis === 'row' ? field.top : NaN;
   if (!Number.isFinite(origin) || !finitePositive(field.cellSize)) return [];
-  const spacing = field.cellSize * interval;
+  const spacing = (axis === 'row' ? field.rowSize ?? field.cellSize : field.cellSize) * interval;
   const width = Math.max(1, Math.round(strokeWidth));
   const strokeOffset = width % 2 ? 0.5 : 0;
   const firstIndex = Math.ceil(-origin / spacing);

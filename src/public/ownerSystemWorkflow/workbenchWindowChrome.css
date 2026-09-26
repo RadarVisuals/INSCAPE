@@ -70,8 +70,14 @@
   grid-template-rows: minmax(0, 1fr);
 }
 .system-workflow__presentation-board[data-window-chrome="bevel"]::before {
-  border-color: var(--workflow-window-edge);
+  inset: 0;
+  background: transparent;
+  border: 0;
   box-shadow: none;
+}
+.system-workflow__presentation-board[data-window-chrome="bevel"][data-module-frame="on"]:not([data-metadata-sidecar])::before {
+  z-index: 40;
+  border: 1px solid var(--workflow-window-edge);
 }
 .system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip {
   position: absolute; inset: 0 0 auto; z-index: 41;
@@ -113,14 +119,14 @@
 }
 .system-workflow__presentation-board[data-window-chrome="bevel"][data-inspecting] > .system-workflow__identity-strip { pointer-events: none; }
 .system-workflow__presentation-board[data-window-chrome="bevel"][data-inspecting] .system-workflow__board-title { pointer-events: auto; }
-.system-workflow__presentation-board[data-window-chrome="bevel"]:not([data-immersive]) > .system-workflow__stage-viewport {
+.system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__stage-viewport {
   border-radius: calc(var(--workflow-board-radius) - 1px);
 }
 .system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__stage-border { border: 0; }
 /* Paint the standalone outline above the artwork's antialiased clip, once.
    A stroke behind that clip lets light artwork brighten the curved edge. */
 .system-workflow__presentation-board[data-window-chrome="bevel"]:not([data-metadata-sidecar])::before { border-color: transparent; }
-.system-workflow__presentation-board[data-window-chrome="bevel"]:not([data-metadata-sidecar], [data-immersive]) > .system-workflow__stage-border {
+.system-workflow__presentation-board[data-window-chrome="bevel"]:not([data-metadata-sidecar]) > .system-workflow__stage-border {
   inset: -1px; border: 1px solid var(--workflow-window-edge);
   border-radius: var(--workflow-board-radius);
 }

@@ -1,14 +1,18 @@
 import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
 import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchView.jsx';
 import { workbenchViewStyle } from './workbenchViewScale.js';
+import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import OwnerSystemWorkflowDetachedWindow from './OwnerSystemWorkflowDetachedWindow.jsx';
 import { snapWorkbenchCoordinate, WORKBENCH_GRID_STEP } from './workbenchGrid.js';
+import { clampWorkbenchPosition, WORKBENCH_BOUNDS } from './workbenchSpace.js';
+import { clampOwnerSystemWorkflowWindowPosition } from './ownerSystemWorkflowWindowGeometry.js';
 
 // View-only window behavior. The caller supplies its content and commands.
-export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, controlledSize, onResizeEnd, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, surfaceStyle }) {
+export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, controlledSize, onResizeEnd, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, surfaceStyle, resizeTarget, committedFrame }) {
   const view = useWorkbenchView();
+  const { offset } = useWorkbenchCamera();
   const viewTransform = viewId && !compact ? workbenchModuleTransform(view, viewId) : { scale: 1, x: 0, y: 0 };
   const viewScale = viewTransform.scale;
   const node = useRef(null);
@@ -16,12 +20,37 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
   const measuredContent = useRef(null);
   const gesture = useRef(null);
   const resize = useRef(null);
-  const [position, setPosition] = useState(() => ({
+  const [storedPosition, setPosition] = useState(() => ({
     x: initialX, y: initialY,
   }));
-  const [height, setHeight] = useState(initialHeight);
+  const [storedHeight, setHeight] = useState(initialHeight);
   const [resizedWidth, setResizedWidth] = useState(width);
-  const windowWidth = resizableWidth ? resizedWidth : width;
+  const previewFrame = viewTransform.frame;
+  const position = previewFrame ? { x: previewFrame.left, y: previewFrame.top } : storedPosition;
+  const height = previewFrame?.height ?? storedHeight;
+  const windowWidth = previewFrame?.width ?? (resizableWidth ? resizedWidth : width);
+  useLayoutEffect(() => {
+    if (!committedFrame) return;
+    setPosition({ x: committedFrame.left, y: committedFrame.top });
+    setResizedWidth(committedFrame.width); setHeight(committedFrame.height);
+  }, [committedFrame]);
+  // Companion tools live in screen coordinates, not in the large composition
+  // area. Recover an offscreen saved position and keep their controls reachable.
+  useLayoutEffect(() => {
+    if (viewId || compact) return undefined;
+    const keepVisible = () => {
+      const bounds = node.current?.getBoundingClientRect();
+      if (!bounds) return;
+      setPosition(current => {
+        const next = clampOwnerSystemWorkflowWindowPosition(current, bounds,
+          { width: globalThis.innerWidth, height: globalThis.innerHeight - 48 });
+        return next.x === current.x && next.y === current.y ? current : next;
+      });
+    };
+    keepVisible();
+    globalThis.addEventListener('resize', keepVisible);
+    return () => globalThis.removeEventListener('resize', keepVisible);
+  }, [viewId, Boolean(compact), windowWidth, height]);
   useLayoutEffect(() => {
     if (controlledSize) { setResizedWidth(controlledSize.width); setHeight(controlledSize.height); }
   }, [controlledSize?.width, controlledSize?.height]);
@@ -32,12 +61,12 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
       if (controlledSize) { setResizedWidth(controlledSize.width); setHeight(controlledSize.height); }
     }
   };
-  useWorkbenchViewRegistration(viewId, node, !compact, { left: position.x, top: position.y, width: windowWidth, height });
+  useWorkbenchViewRegistration(viewId, node, !compact, { left: position.x, top: position.y, width: windowWidth, height }, resizeTarget);
   useLayoutEffect(() => {
-    if (!compact) onLayoutChange?.({ left: position.x, top: position.y, width: windowWidth, height });
-  }, [position.x, position.y, windowWidth, height, onLayoutChange, Boolean(compact)]);
+    if (!compact && !previewFrame) onLayoutChange?.({ left: position.x, top: position.y, width: windowWidth, height });
+  }, [position.x, position.y, windowWidth, height, onLayoutChange, Boolean(compact), previewFrame]);
   useLayoutEffect(() => {
-    if (!fitContent && Number.isFinite(preferredHeight)) setHeight(Math.max(180, Math.min(globalThis.innerHeight - position.y - 54, preferredHeight)));
+    if (!fitContent && Number.isFinite(preferredHeight)) setHeight(Math.max(180, Math.min(WORKBENCH_BOUNDS.bottom - position.y, preferredHeight)));
   }, [preferredHeight, fitContent]);
   useLayoutEffect(() => {
     if (!fitContent || compact) return undefined;
@@ -55,22 +84,15 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
     measure();
     return () => { observer.disconnect(); globalThis.removeEventListener('resize', measure); };
   }, [fitContent, position.y, Boolean(compact), minimumHeight]);
-  const clamp = (value) => ({
-    x: Math.max(8, Math.min(globalThis.innerWidth - (node.current?.offsetWidth || 300) - 8, value.x)),
-    y: Math.max(8, Math.min(globalThis.innerHeight - (node.current?.offsetHeight || height) - 54, value.y)),
-  });
-  useLayoutEffect(() => {
-    if (compact) return undefined;
-    const update = () => setPosition((current) => {
-      const next = clamp(current);
-      return next.x === current.x && next.y === current.y ? current : next;
-    });
-    const observer = new ResizeObserver(update);
-    if (node.current) observer.observe(node.current);
-    globalThis.addEventListener('resize', update);
-    update();
-    return () => { observer.disconnect(); globalThis.removeEventListener('resize', update); };
-  }, [Boolean(compact)]);
+  // Restore saved positions verbatim, including older outlying layouts. Only
+  // an explicit movement applies the current placement boundary.
+  const clamp = value => {
+    if (!viewId) return clampOwnerSystemWorkflowWindowPosition(value,
+      node.current?.getBoundingClientRect() || { width: windowWidth, height },
+      { width: globalThis.innerWidth, height: globalThis.innerHeight - 48 });
+    const next = clampWorkbenchPosition({ left: value.x, top: value.y }, { width: windowWidth, height });
+    return { x: next.left, y: next.top };
+  };
   const placed = (candidate, current, snapping, bypass) => {
     const next = placement.position({ left: candidate.x, top: candidate.y }, { left: current.x, top: current.y },
       { left: snapWorkbenchCoordinate(candidate.x, snapping), top: snapWorkbenchCoordinate(candidate.y, snapping) }, bypass);
@@ -91,9 +113,9 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
     setPosition(placed({ x: origin.position.x + (event.clientX - origin.x) / viewScale, y: origin.position.y + (event.clientY - origin.y) / viewScale }, position, snapping, event.altKey));
   };
   const finish = () => { gesture.current = null; placement.finish(); };
-  const resizeHeight = (value, altKey) => setHeight(Math.max(minimumHeight, Math.min(globalThis.innerHeight - position.y - 54,
+  const resizeHeight = (value, altKey) => setHeight(Math.max(minimumHeight, Math.min(WORKBENCH_BOUNDS.bottom - position.y,
     (placement.edge('y', 'bottom', position.y + value, { left: position.x, top: position.y }, altKey) ?? snapWorkbenchCoordinate(position.y + value, snapToGrid && !altKey)) - position.y)));
-  const resizeWidth = (value, altKey) => setResizedWidth(Math.max(minimumWidth, Math.min(globalThis.innerWidth - position.x - 8,
+  const resizeWidth = (value, altKey) => setResizedWidth(Math.max(minimumWidth, Math.min(WORKBENCH_BOUNDS.right - position.x,
     (placement.edge('x', 'right', position.x + value, { left: position.x, top: position.y }, altKey) ?? snapWorkbenchCoordinate(position.x + value, snapToGrid && !altKey)) - position.x)));
   const onKeyDown = (event) => {
     if (event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
@@ -104,12 +126,12 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
     setPosition((current) => placed({ x: current.x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0),
       y: current.y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0) }, current, snapping, event.altKey));
   };
-  return <OwnerSystemWorkflowDetachedWindow ariaLabel={`${label} — ${title}`} ref={node} viewId={viewId}
+  return <OwnerSystemWorkflowDetachedWindow ariaLabel={`${label} — ${title}`} ref={node} viewId={viewId} workbenchPan={Boolean(viewId) && !compact}
     className={`system-workflow__instrument-window ${className}`} title={`${label} · ${title}`}
     headerPointerProps={{ 'aria-label': `Move ${label} window`, 'data-workbench-selectable': viewId ? true : undefined, 'aria-keyshortcuts': viewId ? 'Shift+Enter' : undefined, tabIndex: 0, onKeyDown,
       onPointerDown: start, onPointerMove: move, onPointerUp: finish, onPointerCancel: finish, onLostPointerCapture: finish }}
     controls={controls} titleContent={titleContent} background={background} compactContent={compact?.content} chrome={chrome} menuSurface={menuSurface}
-    style={{ ...surfaceStyle, '--detached-window-width': `${windowWidth}px`, left: position.x, top: position.y, height, maxHeight: 'calc(100dvh - 70px)', ...workbenchViewStyle(viewScale, position.x, position.y, windowWidth, height, viewTransform.x, viewTransform.y), ...compact?.style }}
+    style={{ ...surfaceStyle, '--workbench-pan-scale': viewScale, '--detached-window-width': `${windowWidth}px`, left: position.x, top: position.y, height, maxHeight: viewId ? 'none' : 'calc(100dvh - 64px)', ...(viewId && !compact ? workbenchViewStyle(viewScale, position.x, position.y, windowWidth, height, viewTransform.x, viewTransform.y, offset) : {}), ...compact?.style }}
     resizeHandleProps={!resizable || fitContent || compact ? undefined : { 'aria-label': `Resize ${label} ${resizableWidth ? 'window' : 'height'}`, role: 'separator', tabIndex: 0,
       ...(resizableWidth ? { style: { cursor: 'nwse-resize' }, 'aria-valuetext': `${Math.round(windowWidth)} by ${Math.round(height)} pixels` } : {}),
       'aria-orientation': 'horizontal', 'aria-valuenow': Math.round(height),

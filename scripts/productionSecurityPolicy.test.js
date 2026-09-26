@@ -20,7 +20,7 @@ test('production CSP contains the complete enforced directive set without placeh
   assert.equal(directive(policy, 'script-src'), "script-src 'self'");
   assert.equal(directive(policy, 'style-src'), "style-src 'self' 'unsafe-inline'");
   assert.equal(directive(policy, 'font-src'), "font-src 'self'");
-  assert.equal(directive(policy, 'img-src'), "img-src 'self' https: data:");
+  assert.equal(directive(policy, 'img-src'), "img-src 'self' https: data: blob:");
   assert.equal(directive(policy, 'worker-src'), "worker-src 'none'");
   assert.equal(directive(policy, 'frame-src'), "frame-src 'self' https:");
   assert.equal(directive(policy, 'frame-ancestors'), `frame-ancestors ${UNIVERSAL_PROFILE_PARENT_ORIGINS.join(' ')}`);

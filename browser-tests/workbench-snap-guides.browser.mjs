@@ -73,15 +73,18 @@ for (const width of [1440, 760]) test(`snap guides and release behavior at ${wid
     await page.screenshot({ path: `.browser-test-runtime/snap-grid-${width}.png` });
     await page.mouse.up(); await settle(page); assert.equal(await guide.count(), 0);
 
-    // The visible 24px grid remains the reference at half Workbench zoom.
+    // Continuous camera zoom retains the projected 24-work-pixel lattice.
     for (let i = 0; i < 5; i++) { await board.dispatchEvent('wheel', { deltaY: 100, ctrlKey: true, bubbles: true, cancelable: true }); await settle(page); }
     start = await beginDrag(board);
     await moveTo(start, 101, 221);
-    b = await board.boundingBox(); near(b.x, 96, 'zoomed grid x'); near(b.y, 216, 'zoomed grid y');
+    const spacing = await page.locator('.lattice-pixel-grid').getAttribute('data-guide-spacing');
+    b = await board.boundingBox(); near(b.x, Math.round(101 / Number(spacing)) * Number(spacing), 'zoomed grid x');
+    near(b.y, Math.round(221 / Number(spacing)) * Number(spacing), 'zoomed grid y');
     assert.equal(await guide.locator('[data-snap-kind="grid"]').count(), 2);
     await page.evaluate(() => window.dispatchEvent(new Event('blur'))); await settle(page);
     assert.equal(await guide.count(), 0, 'blur clears guides'); await page.mouse.up();
     await page.locator('main').focus(); await page.keyboard.press('Control+0'); await settle(page);
+    await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
 
     const text = page.locator('[data-workbench-view-id="text"]');
     start = await beginDrag(text); await moveTo(start, 103, 653);

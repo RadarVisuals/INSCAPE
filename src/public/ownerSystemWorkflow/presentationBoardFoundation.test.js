@@ -33,16 +33,14 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(board, /data-presentation-stage data-surface=\{displaySurface\}/);
   assert.match(runtime, /data-surface=\{workbenchPreferences\.surfaceId\}/);
   assert.match(display, /displaySurface=\{controller\.draft\?\.appearance\.surfaceId\}/);
-  assert.match(board, /transform: liveScaleRendering \? `scale\(\$\{liveTransformScale\}\)` : undefined/);
-  assert.match(board, /boardScale: liveScaleRendering \? liveTransformScale : 1/);
   assert.doesNotMatch(board, /aria-label="Board zoom"|Board zoom percentage|system-workflow__board-zoom[^\n]*type="range"/);
-  assert.match(board, /aria-label=\{maximized \? 'Restore Display Module' : 'Maximize Display Module'\}/);
   assert.match(board, /aria-label="Minimize Display Module to shortcut"/);
+  assert.doesNotMatch(board, /wheelZoom|liveScaleRendering|useDisplayImmersive|Maximize Display Module/);
+  assert.match(board, /cloneElement\(children, \{ boardScale: 1/);
   assert.match(shortcut, /instanceState === PRESENTATION_BOARD_INSTANCE_STATE\.MINIMIZED/);
   assert.match(board, /instanceState === PRESENTATION_BOARD_INSTANCE_STATE\.WINDOW/);
   assert.doesNotMatch(board, /const \[open, setOpen\]/);
   assert.match(shortcut, /shortcutName[\s\S]*onDoubleClick/);
-  assert.match(board, /cloneElement\(children, \{[\s\S]*boardScale: liveScaleRendering \? liveTransformScale : 1,[\s\S]*interactionDisabled:/);
   assert.match(board, /onContextMenu=\{onContextMenu\}/);
   assert.match(board, /beginBoardDrag[\s\S]*setBoardPosition/);
   assert.match(display, /OwnerSystemWorkflowMetadataModule/);
@@ -50,18 +48,15 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(display, /useOwnerSystemWorkflowFocusViewer/);
   assert.match(display, /<DisplayFocusViewer/);
   assert.match(display, /renderInspection=\{viewer\.placementId \? \(container, controlsContainer, scene\) => <DisplayFocusViewer[\s\S]*container=\{container\} controlsContainer=\{controlsContainer\}/);
-  assert.match(board, /'window'[\s\S]*'maximizing'[\s\S]*'maximized'[\s\S]*'restoring'/);
   assert.match(board, /resizePresentationBoardFromCorner/);
   assert.match(board, /corners\.map/);
   assert.match(board, /sidecarWidth: 0/);
-  assert.match(board, /presentationBoardInspectionFrame\(view,[\s\S]*host\?\.clientWidth[\s\S]*geometryOptions/);
   assert.match(board, /presentationBoardResponsiveMetrics/);
   assert.match(geometry, /trackWidth: 286/);
   assert.match(geometry, /gap: 8/);
   assert.doesNotMatch(board, />OWNER<|['"]OWNER['"]/);
   assert.doesNotMatch(board, /LatticePixelGrid/);
   assert.match(runtime, /<WorkbenchAlignmentGrid/);
-  assert.match(read('./WorkbenchAlignmentGrid.jsx'), /<LatticePixelGrid/);
   // Shared snapping and Alt bypass are exercised in the Workbench browser tests.
   assert.match(shortcut, /placement\.position\(candidate, shortcutPosition, fallback, event\.altKey\)/);
   assert.match(shortcut, /application\/x-inscape-asset/);
@@ -123,7 +118,6 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.doesNotMatch(styles, /\.system-workflow__placement::after/);
   assert.match(styles, /\.system-workflow__stage-viewport \{[^}]*overflow: clip;[^}]*background: var\(--workflow-board-frame-surface\);/s);
   assert.doesNotMatch(styles, /\.system-workflow__stage-viewport \{\s*transition: filter/);
-  assert.match(styles, /data-board-phase="maximizing"[\s\S]*data-board-phase="restoring"[\s\S]*\.system-workflow__stage-viewport \{[^}]*height 260ms var\(--workflow-ease\)/s);
   assert.match(styles, /data-sidecar[^}]*\.system-workflow__board-title \{ margin-left: auto; \}/);
   assert.doesNotMatch(styles, /\.system-workflow__metadata-direction\[aria-pressed="true"\] svg \{[^}]*transform:/);
   assert.doesNotMatch(styles, /\.system-workflow__metadata-direction\[aria-pressed="true"\]::after/);

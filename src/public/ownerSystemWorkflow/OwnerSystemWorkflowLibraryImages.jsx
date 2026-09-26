@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { resolvePublishedAssetUrl } from '../../profileDocument/domain/publishedAssetUrl.js';
 import { assetForPlacement } from '../../systemWorkflow/domain/placementMedia.js';
+import LibraryArtworkImage from './LibraryArtworkImage.jsx';
+import { ownerSystemWorkflowDecodedAsset } from './ownerSystemWorkflowAssetDimensions.js';
 
 export function libraryImageChoices(asset) {
   const seen = new Set();
@@ -8,7 +10,7 @@ export function libraryImageChoices(asset) {
     const sources = [...new Set([group.originalImageUrl, group.imageUrl, ...(group.variants || []).map(({ url }) => url)]
       .map(resolvePublishedAssetUrl).filter(Boolean))];
     if (!sources.length || seen.has(sources[0])) return [];
-    seen.add(sources[0]); return [{ sources, index: group.index }];
+    seen.add(sources[0]); return [{ sources, index: group.index, fileType: group.fileType }];
   });
 }
 
@@ -18,7 +20,8 @@ export function ImageChoice({ asset, choice, number, onActivate, onPointerDown, 
   const src = choice.sources[candidate];
   const id = asset.stableAssetId || asset.id;
   const selected = workspace?.selectedAssetIds.includes(id);
-  const selectedAsset = dimensions && assetForPlacement(asset, { selectedMedia: { url: src, ...dimensions } });
+  const selectedAsset = dimensions && ownerSystemWorkflowDecodedAsset(
+    assetForPlacement(asset, { selectedMedia: { url: src, ...dimensions } }), { source: src, ...dimensions });
   return <button className="lattice-browser-asset" type="button" aria-label={`Image ${number} of ${asset.title || asset.name}`}
     data-selected={selected || undefined} aria-pressed={workspace ? selected : undefined}
     onClick={(event) => workspace?.selectAsset(id, event)}
@@ -31,7 +34,7 @@ export function ImageChoice({ asset, choice, number, onActivate, onPointerDown, 
       if (event.key === 'Enter' && selectedAsset) { event.preventDefault(); onActivate(event, selectedAsset); } }}
     onPointerDown={(event) => selectedAsset && onPointerDown(event, selectedAsset, { isAssetRenderable: () => true })}>
     <span className="lattice-browser-asset__media">
-      {src ? <img alt="" draggable="false" loading="lazy" src={src} onLoad={(event) => {
+      {src ? <LibraryArtworkImage key={src} fileType={choice.fileType} alt="" draggable="false" loading="lazy" src={src} onLoad={(event) => {
         setDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight });
       }} onError={() => { setDimensions(null); setCandidate((value) => value + 1); }} /> : <span>Image unavailable</span>}
     </span>

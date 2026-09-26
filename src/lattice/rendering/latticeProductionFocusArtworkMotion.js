@@ -78,11 +78,11 @@ const renderRectangle = (rectangle, projection) => projection.swapped ? {
 export function projectLatticeProductionFocusMediaMotion(placement, dimensions, motion) {
   const projection = projectSystemWorkflowTransform(placement.transform, dimensions, placement.crop);
   const sourceOpening = motion.sourceRectangle;
-  const sourceVisual = placementMediaRectangle(sourceOpening, projection.dimensions, projection.crop, placement.mediaFrameRatio);
+  const sourceVisual = projectArtworkInRectangle(placement, sourceOpening, dimensions).imageRenderRectangle;
   const targetOpening = motion.focusedRectangle;
   const targetVisual = fitNativeMediaRectangle(targetOpening, projection.dimensions);
   const screenRectangle = interpolateLatticeProductionFocusRectangle(
-    renderRectangle(sourceVisual, projection),
+    sourceVisual,
     renderRectangle(targetVisual, projection),
     motion.progress,
   );
@@ -95,5 +95,5 @@ export function projectLatticeProductionFocusMediaMotion(placement, dimensions, 
   });
 }
 import { projectSystemWorkflowTransform } from '../../systemWorkflow/systemWorkflowTransform.js';
-import { placementMediaRectangle } from './placementMediaRectangle.js';
+import { projectArtworkInRectangle } from './latticeProductionProjection.js';
 import { fitNativeMediaRectangle } from './latticeGeometry.js';

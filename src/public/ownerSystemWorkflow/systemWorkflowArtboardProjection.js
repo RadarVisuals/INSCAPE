@@ -38,18 +38,26 @@ export function measureOwnerSystemWorkflowHeroArtboard(availableWidth, available
   });
 }
 
-export function createOwnerSystemWorkflowProjectedField(node, snapStep = 1, scale = 1, mode = OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID, originNode = node) {
+export function createOwnerSystemWorkflowProjectedField(node, snapStep = 1, scale = 1, mode = OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID, originNode = node, artboardProjection = null, screenScale = 1) {
   // The Display clips input; its translated active scene supplies authored
   // coordinates. Keeping those origins separate permits editing at rest offsets.
   const rectangle = node?.getBoundingClientRect?.();
   const origin = originNode?.getBoundingClientRect?.() || rectangle;
   const geometry = mode !== OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO && node?.dataset?.stageColumns ? { columns: Number(node.dataset.stageColumns), rows: Number(node.dataset.stageRows) } : SYSTEM_WORKFLOW_GEOMETRY;
-  const projection = rectangle && (mode === OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO
+  // Reuse the rendered logical field before applying camera zoom. Re-fitting
+  // Hero's fixed margins/cap in screen pixels produces a different artboard.
+  const projection = artboardProjection ? {
+    cellSize: artboardProjection.cellSize * screenScale,
+    rowSize: (artboardProjection.rowSize ?? artboardProjection.cellSize) * screenScale,
+    left: artboardProjection.left * screenScale,
+    top: artboardProjection.top * screenScale,
+  } : rectangle && (mode === OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO
     ? measureOwnerSystemWorkflowHeroArtboard(rectangle.width, rectangle.height)
     : measureOwnerSystemWorkflowArtboard(rectangle.width, rectangle.height, scale, geometry));
   if (!rectangle || !projection || !Number.isFinite(snapStep) || snapStep <= 0) return null;
   return Object.freeze({
     cellSize: projection.cellSize,
+    rowSize: projection.rowSize ?? projection.cellSize,
     columns: geometry.columns, rows: geometry.rows,
     left: origin.left + projection.left,
     top: origin.top + projection.top,
@@ -66,7 +74,7 @@ export function createOwnerSystemWorkflowProjectedField(node, snapStep = 1, scal
 export function ownerSystemWorkflowProjectedFieldContainsPoint(field, point) {
   if (!field || !point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
   const width = (field.columns || OWNER_SYSTEM_WORKFLOW_COLUMNS) * field.cellSize;
-  const height = (field.rows || OWNER_SYSTEM_WORKFLOW_ROWS) * field.cellSize;
+  const height = (field.rows || OWNER_SYSTEM_WORKFLOW_ROWS) * (field.rowSize ?? field.cellSize);
   return point.x >= field.left && point.x <= field.left + width
     && point.y >= field.top && point.y <= field.top + height;
 }

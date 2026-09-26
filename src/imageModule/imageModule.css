@@ -1,21 +1,26 @@
-.image-module__window.system-workflow__detached-window { grid-template-rows: minmax(0, 1fr); padding: 0; border: 0; border-radius: 0; overflow: visible; }
-.image-module__window > .system-workflow__detached-window-titlebar { position: absolute; left: 0; right: 0; top: 0; z-index: 5; opacity: 0; background: var(--workflow-panel); }
-.image-module__window > .system-workflow__detached-window-titlebar:hover, .image-module__window > .system-workflow__detached-window-titlebar:focus-within { opacity: 1; }
-.image-module__window > .system-workflow__detached-window-titlebar > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--workflow-type-control); }
-.image-module__window.system-workflow__detached-window > .system-workflow__instrument-content { width: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; overflow: hidden; }
-.image-module__window .system-workflow__detached-window-resize { left: auto; width: 20px; height: 20px; border-right: 2px solid var(--workflow-ink); border-bottom: 2px solid var(--workflow-ink); }
-.image-module__canvas { position: relative; display: block; width: 100%; height: 100%; padding: 0; border: 0; color: var(--workflow-ink); background: transparent; perspective: 1200px; cursor: zoom-in; }
+/* Keep clipping and artwork in one raster surface at the final transform scale.
+   Without compositing, fractional screen density can filter a seam into a join. */
+.image-module__window { position: fixed; z-index: 45; padding: 0; border: 0; background: transparent; color: var(--workflow-ink); will-change: transform; }
+.image-module__header, .image-module__resize, .image-module__next { zoom: var(--image-density, 1); }
+.image-module__header { position: absolute; left: 0; right: 0; top: 0; z-index: 5; height: 28px; display: flex; align-items: center; justify-content: space-between; opacity: 0; background: var(--workflow-panel); cursor: move; touch-action: none; font: var(--workflow-type-control); }
+.image-module__header:hover, .image-module__header:focus-within { opacity: 1; }
+.image-module__header > span { padding-left: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.image-module__header button { display: grid; place-items: center; flex: 0 0 28px; height: 28px; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.image-module__canvas { position: relative; display: block; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; color: var(--workflow-ink); background: transparent; cursor: zoom-in; }
+.image-module__resize { position: absolute; right: 0; bottom: 0; z-index: 6; width: 20px; height: 20px; border: 0; background: transparent; cursor: nwse-resize; touch-action: none; }
+.image-module__resize:focus-visible, .image-module__header:focus-visible, .image-module__header button:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
 .image-module__canvas:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -3px; }
 .image-module__canvas[data-cropping] { cursor: move; touch-action: none; }
 .image-module__canvas[data-lift-source] { visibility: hidden; }
-.image-module__empty { position: absolute; inset: 0; display: grid; place-items: center; border: 1px dashed var(--workflow-border-strong); font: var(--workflow-type-control); }
-.image-module__turn, .image-module__face { position: absolute; inset: 0; display: block; }
-.image-module__turn { transform-style: preserve-3d; }
-.image-module__face { backface-visibility: hidden; }
+.image-module__empty { position: absolute; inset: 0; display: grid; place-items: center; font: var(--workflow-type-control); }
+.image-module__turn, .image-module__face, .image-module__artwork { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.image-module__artwork { overflow: hidden; pointer-events: none; }
+.image-module__canvas[data-flipping] { perspective: 1200px; overflow: hidden; }
+.image-module__turn[data-flipping] .image-module__face { backface-visibility: hidden; }
 .image-module__face--back { transform: rotateY(180deg); }
-.image-module__turn[data-flipping] { animation: image-side-turn 460ms cubic-bezier(.4,0,.2,1) forwards; }
+.image-module__turn[data-flipping] { transform-style: preserve-3d; animation: image-side-turn 460ms cubic-bezier(.4,0,.2,1) forwards; }
 @keyframes image-side-turn { to { transform: rotateY(-180deg); } }
-.image-module__window .system-workflow__instrument-content > .image-module__next { position: absolute; right: 6px; bottom: 6px; z-index: 4; display: flex; align-items: center; gap: 4px; min-height: 28px; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-technical); cursor: pointer; }
+.image-module__next { position: absolute; right: 24px; bottom: 6px; z-index: 4; display: flex; align-items: center; gap: 4px; min-height: 28px; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-technical); cursor: pointer; }
 .image-module__size { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; margin: 8px 0; }
 .image-module__size label, .image-module__side-tools label { min-width: 0; font: var(--workflow-type-control); }
 .image-module__size input, .image-module__side-tools select { box-sizing: border-box; width: 100%; padding: 5px; border: 1px solid var(--workflow-border); color: var(--workflow-ink); background: var(--workflow-panel); font: inherit; }
@@ -25,7 +30,9 @@
 .context-toolbar .system-workflow__selection-actions[aria-label="Image actions"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .image-module__error { font: var(--workflow-type-control); }
 .image-module__shortcut { position: fixed; left: 24px; border: 1px solid var(--workflow-border); padding: 8px; color: var(--workflow-ink); background: var(--workflow-panel); font: var(--workflow-type-control); }
-.image-lift { position: fixed; inset: 0; z-index: 200; background: rgb(0 0 0 / .65); }
-.image-lift > button { position: absolute; right: 16px; top: 16px; z-index: 40; padding: 10px; border: 1px solid currentColor; color: #e7e3d9; background: #171717; font: 400 11px/1.4 "Inscape Sora", sans-serif; cursor: pointer; }
-@media (hover: none) { .image-module__window > .system-workflow__detached-window-titlebar { opacity: 1; } }
+.image-lift { position: fixed; inset: 0; z-index: 200; background: rgb(0 0 0 / calc(.65 * var(--inspection-lift-progress, 0))); }
+.image-module__window[data-svg-inspection] { z-index: 201; pointer-events: none; }
+.image-module__window[data-svg-inspection] > :is(.image-module__header, .image-module__resize, .image-module__next) { visibility: hidden; }
+.image-lift-return, .system-workflow > .image-lift-return { position: fixed; right: 16px; top: 16px; z-index: 202; padding: 10px; border: 1px solid currentColor; color: #e7e3d9; background: #171717; font: 400 11px/1.4 "Inscape Sora", sans-serif; cursor: pointer; }
+@media (hover: none) { .image-module__header { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .image-module__turn[data-flipping] { animation-duration: 1ms; } }

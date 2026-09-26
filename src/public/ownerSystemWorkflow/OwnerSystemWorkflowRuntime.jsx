@@ -411,8 +411,10 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       requestAnimationFrame(() => workspaceRef.current?.focus());
     } catch (error) { setNotice(error.message || 'Could not delete this Display'); }
   };
-  return <><ContextToolbarProvider target={activeModuleId}><SharedDisplayToolsProvider value={sharedTools} onChange={setSharedTools} targetId={activeModuleId} onTargetChange={setActiveModuleId}><WorkbenchViewProvider key={profileAddress}><WorkbenchPlacement hostRef={workspaceRef} enabled={workbenchPreferences.edgeSnap && !preview} gridEnabled={workbenchPreferences.shortcutSnap && !preview} gap={workbenchPreferences.moduleGap}><main tabIndex={-1} ref={workspaceRef} aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
+  return <><ContextToolbarProvider target={activeModuleId}><SharedDisplayToolsProvider value={sharedTools} onChange={setSharedTools} targetId={activeModuleId} onTargetChange={setActiveModuleId}><WorkbenchViewProvider key={profileAddress} store={workbenchController.store} profileAddress={profileAddress} presentation={workbench}><WorkbenchPlacement hostRef={workspaceRef} enabled={workbenchPreferences.edgeSnap && !preview} gridEnabled={workbenchPreferences.shortcutSnap && !preview} gap={workbenchPreferences.moduleGap}><main tabIndex={-1} ref={workspaceRef} aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
     onPointerDownCapture={event => {
+      if (event.currentTarget.hasAttribute('data-workbench-pan-ready') && (event.target === event.currentTarget
+        || event.target.matches?.('.system-workflow__workbench, .system-workflow__display-instance'))) return;
       if (event.target === event.currentTarget && event.button === 0) {
         for (const display of [controller, ...Object.values(instanceRecords).map(record => record.controller)]) {
           if (display.selectedPlacementIds.length) display.replaceSelection([]);
@@ -463,7 +465,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       records={workbenchController.draft.imageModules} store={workbenchController.store} profileAddress={profileAddress}
       presentations={[...(initialWorkbench.current?.imageModules || []), ...(workbenchController.draft.workbench?.imageModules || [])]}
       onPresentationChange={registerImagePresentation} registerTarget={registerModuleAssetTarget} onActivate={setActiveModuleId}
-      suspended={Boolean(preview)} windowSnap={workbenchPreferences.shortcutSnap} /></Suspense>}
+      suspended={Boolean(preview)} /></Suspense>}
     {workbenchController.draft.texts?.length > 0 && <Suspense fallback={<p role="status">Opening Text…</p>}><TextWorkbench
       views={restoredWorkspace.views} onViewChange={registerTextView} records={workbenchController.draft.texts} store={workbenchController.store} profileAddress={profileAddress} assets={canonicalRecords} windowSnap={workbenchPreferences.shortcutSnap}
       presentations={[...(initialWorkbench.current?.texts || []), ...(workbenchController.draft.workbench?.texts || [])]} onPresentationChange={registerTextPresentation}

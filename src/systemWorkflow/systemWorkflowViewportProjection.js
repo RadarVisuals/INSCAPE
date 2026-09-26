@@ -9,9 +9,9 @@ const positive = (value) => Number.isFinite(value) && value > 0;
 export function projectSystemWorkflowPlacement(placement, field) {
   return Object.freeze({
     left: field.left + (placement.column * field.cellSize),
-    top: field.top + (placement.row * field.cellSize),
+    top: field.top + (placement.row * (field.rowSize ?? field.cellSize)),
     width: placement.columnSpan * field.cellSize,
-    height: placement.rowSpan * field.cellSize,
+    height: placement.rowSpan * (field.rowSize ?? field.cellSize),
   });
 }
 

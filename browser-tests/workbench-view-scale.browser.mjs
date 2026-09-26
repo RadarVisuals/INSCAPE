@@ -82,7 +82,7 @@ async function zoomToHalf(page) {
   const beforeBoard = await board.boundingBox(), beforeText = await text.boundingBox();
   const joined = Math.abs(beforeText.x + beforeText.width - beforeBoard.x) < .02 && Math.abs(beforeText.y - beforeBoard.y) < .02;
   for (let i = 0; i < 5; i++) {
-    await board.dispatchEvent('wheel', { deltaY: 100, ctrlKey: true, bubbles: true, cancelable: true });
+    await board.dispatchEvent('wheel', { deltaY: Math.log(2) / .003 / 5, ctrlKey: true, bubbles: true, cancelable: true });
     await settle(page);
     if (joined) {
       const b = await board.boundingBox(), t = await text.boundingBox();
@@ -91,7 +91,7 @@ async function zoomToHalf(page) {
       if (i === 3) await page.screenshot({ path: '.browser-test-runtime/workbench-seam-67.png', clip: { x: Math.max(0, Math.floor(b.x) - 20), y: Math.floor(b.y), width: 80, height: Math.floor(Math.min(t.height, b.height)) } });
     }
   }
-  assert.equal(await board.getAttribute('data-workbench-scale'), '0.5');
+  assert.ok(Math.abs(Number(await board.getAttribute('data-workbench-scale')) - .5) < 1e-9);
 }
 
 async function measure(page) {
@@ -168,6 +168,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} scal
       await zoomToHalf(page);
       assert.deepEqual(await tools.boundingBox(), before, 'Text tools retain their size and position');
       await page.getByRole('button', { name: 'Reset Workbench zoom to 100%' }).click();
+      await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
       await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
     }
     for (const [name, viewport] of [['wide', { width: 1440, height: 1000 }], ['narrow', { width: 390, height: 844 }]]) {
@@ -187,6 +188,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} scal
       assert.equal(await page.evaluate(() => JSON.stringify({ ...localStorage })), storage, 'zoom writes no content or local layout');
       await page.screenshot({ path: `.browser-test-runtime/workbench-scale-${visitor ? 'visitor' : 'owner'}-${name}-50.png` });
       const host = page.locator('main').first(); await host.focus(); await page.keyboard.press('Control+0'); await settle(page);
+      await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
       assert.deepEqual(await measure(page), before, 'reset restores exact composition');
     }
     await page.setViewportSize({ width: 1440, height: 1000 }); await page.waitForTimeout(300);
@@ -238,7 +240,7 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} scal
       await page.mouse.move(beforeCancel.board.x + 50, beforeCancel.board.y + 50); await page.mouse.down();
       await page.mouse.move(beforeCancel.board.x + 50 + dx, beforeCancel.board.y + 50 + dy); await settle(page);
       const edge = await selection.boundingBox();
-      assert.ok(edge.x >= 7 && edge.y >= 7 && edge.x + edge.width <= 1433 && edge.y + edge.height <= 950, 'entire group remains above dock and inside viewport');
+      assert.ok(edge.x >= 7 && edge.y >= 7 && edge.x + edge.width <= 7993 && edge.y + edge.height <= 7993, 'entire group stays inside the Workbench area');
       const edgeModules = await measure(page);
       closeTo(edgeModules.board.x - edgeModules.text.x, beforeCancel.board.x - beforeCancel.text.x, 'boundary retains composition');
       await page.keyboard.press('Escape'); await page.mouse.up(); await settle(page);
@@ -255,13 +257,15 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} scal
     await selection.waitFor();
     await page.mouse.click(1400, 900); await selection.waitFor({ state: 'detached' });
     await page.locator('main').first().focus(); await page.keyboard.press('Control+0'); await page.keyboard.press('Escape'); await settle(page);
-    // Select only Text: other modules must retain their current output.
+    await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
+    // Selecting Text does not change the scope of camera zoom.
     await page.getByLabel('Move Text window', { exact: true }).focus(); await page.keyboard.press('Shift+Enter');
     await page.getByRole('group', { name: '1 selected Workbench modules', exact: true }).waitFor();
     const untouched = await board.boundingBox();
     await page.locator('.text-window').dispatchEvent('wheel', { deltaY: 100, ctrlKey: true, bubbles: true, cancelable: true }); await settle(page);
-    assert.deepEqual(await board.boundingBox(), untouched, 'wheel scales only selected windows');
+    closeTo((await board.boundingBox()).width, untouched.width * Math.exp(-.3), 'wheel zoom includes unselected modules');
     await page.locator('main').first().focus(); await page.keyboard.press('Control+0'); await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
     await zoomToHalf(page);
     for (const name of ['Move Text window', 'Move Display Module: DISPLAY MODULE']) {
       await page.getByLabel(name, { exact: true }).focus(); await page.keyboard.press('Shift+Enter');

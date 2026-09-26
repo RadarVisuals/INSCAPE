@@ -8,7 +8,6 @@ import {
   fitPresentationBoard,
   maximumPresentationBoardPercentage,
   normalizePresentationBoardPercentage,
-  presentationBoardInspectionFrame,
   presentationBoardResponsiveMetrics,
   projectPresentationBoardView,
   resizePresentationBoardFromCorner,
@@ -161,35 +160,7 @@ test('corner resize respects an active sidecar maximum while inner Metadata leav
   assert.equal(innerView.scale, 1);
 });
 
-test('inspect frame uses the safe fitted viewport without overwriting permanent Board zoom', () => {
-  const view = projectPresentationBoardView(
-    Object.freeze({ columns: 32, rows: 18 }),
-    { width: 1440, height: 806 },
-    0.3,
-    { inset: 24, identityStripHeight: 38 },
-  );
-  const inspection = presentationBoardInspectionFrame(view, { width: 1440, height: 806 },
-    { inset: 24, identityStripHeight: 38 });
 
-  assert.equal(view.scale, 0.3);
-  assert.equal(inspection.scale, 1);
-  assert.equal(inspection.board.left, 80);
-  assert.equal(inspection.board.top, 24);
-  assert.equal(inspection.board.width, 1280);
-  assert.equal(inspection.board.height, 758);
-  assert.equal(inspection.stage.width / inspection.stage.height, 16 / 9);
-  assert.equal(view.scale, 0.3);
-});
-
-test('inspect frame reserves a sidecar without distorting the canonical Stage', () => {
-  const view = projectPresentationBoardView({ columns: 32, rows: 18 }, { width: 1440, height: 806 }, 0.3,
-    { inset: 24, identityStripHeight: 38 });
-  const inspection = presentationBoardInspectionFrame(view, { width: 1440, height: 806 },
-    { inset: 24, identityStripHeight: 38, sidecarWidth: 286 });
-  assert.equal(inspection.board.width / (inspection.board.height - 38), 16 / 9);
-  assert.ok(inspection.board.left + inspection.board.width + 286 <= 1440 - 24);
-  assert.equal(inspection.stage.width / inspection.stage.height, 16 / 9);
-});
 
 test('corner resizing preserves Stage ratio and anchors the opposite corner', () => {
   const view = projectPresentationBoardView({ columns: 32, rows: 18 }, { width: 1440, height: 806 }, 0.5,

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { clampWorkbenchPosition } from '../ownerSystemWorkflow/workbenchSpace.js';
 
 export const IDENTITY_SHORTCUT_SIZES = { small: 80, medium: 128, large: 192 };
 const storageKey = address => `inscape:identity-shortcut:${address.toLowerCase()}`;
@@ -13,11 +14,10 @@ export function loadIdentityShortcut(address) {
       mode: ['window', 'minimized', 'closed'].includes(value.mode) ? value.mode : null };
   } catch { return null; }
 }
-const clamp = value => ({
-  ...value,
-  x: Math.max(8, Math.min(window.innerWidth - value.size - 8, value.x)),
-  y: Math.max(8, Math.min(window.innerHeight - value.size - 8, value.y)),
-});
+const clamp = value => {
+  const position = clampWorkbenchPosition({ left: value.x, top: value.y }, { width: value.size, height: value.size });
+  return { ...value, x: position.left, y: position.top };
+};
 
 // Local presentation only. Visitors never read or write the owner's preferences.
 export default function useIdentityShortcut(address, owner) {
@@ -36,11 +36,6 @@ export default function useIdentityShortcut(address, owner) {
   };
   const change = value => { const next = clamp(value); current.current = next; setPosition(next); return next; };
   useEffect(() => { persist(current.current); }, []);
-  useEffect(() => {
-    const resize = () => change(current.current);
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, []);
   return {
     position, suppressClick,
     setMode: mode => persist(change({ ...current.current, mode })),

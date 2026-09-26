@@ -57,7 +57,7 @@ test('owner Display and Text windows snap to the Workbench, with free movement a
     const before = await page.evaluate(() => window.readSnapDraft());
     const text = page.locator('.text-window');
     const textHeader = page.getByLabel('Move Text window', { exact: true });
-    const position = node => node.evaluate(element => ({ left: parseFloat(element.style.left), top: parseFloat(element.style.top) }));
+    const position = node => node.evaluate(element => { const box = element.getBoundingClientRect(); return { left: box.left, top: box.top }; });
     const drag = async (header, dx, dy, alt = false) => {
       const b = await header.boundingBox();
       await page.mouse.move(b.x + 18, b.y + b.height / 2);
@@ -105,30 +105,8 @@ test('owner Display and Text windows snap to the Workbench, with free movement a
       await stage.dispatchEvent('wheel', { deltaY, deltaX: 0, bubbles: true, cancelable: true });
       await page.waitForTimeout(200);
     };
-    const target = await board.evaluate(el => {
-      const host = el.closest('[data-presentation-workbench]').getBoundingClientRect();
-      const sidecar = el.hasAttribute('data-metadata-sidecar') ? parseFloat(el.style.getPropertyValue('--workflow-metadata-width')) : 0;
-      return { x: host.x + (host.width - sidecar) / 2, y: host.y + host.height / 2 };
-    });
-    const distance = b => Math.hypot(b.x + b.width / 2 - target.x, b.y + b.height / 2 - target.y);
-    await wheel(-60); const firstZoom = await board.boundingBox(); await wheel(-60);
-    assert.ok(distance(firstZoom) < distance(baseline), 'first wheel movement moves towards Workbench centre');
-    assert.ok(distance(await board.boundingBox()) < distance(firstZoom), 'successive wheel movement continues towards centre');
-    assert.ok((await board.boundingBox()).width > baseline.width, 'wheel enlarges Display');
-    assert.equal(await board.getAttribute('data-wheel-zoom'), 'true');
-    // Put Text across Display to verify the actual hit-tested stacking order.
-    await text.evaluate((el, b) => { el.style.left = `${b.x + 30}px`; el.style.top = `${b.y + 50}px`; }, await board.boundingBox());
-    assert.equal(await board.evaluate(el => { const b = el.getBoundingClientRect(); return el.contains(document.elementFromPoint(b.x + 60, b.y + 90)); }), true, 'zoomed Display is above Text');
-    await page.screenshot({ path: '.browser-test-runtime/workbench-wheel-zoom-wide.png' });
-    await wheel(60);
-    const reversed = await board.boundingBox();
-    for (const key of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(reversed[key] - firstZoom[key]) < .1, 'zoom out retraces the same path');
-    await wheel(60); await wheel(60);
-    assert.deepEqual(await board.boundingBox(), baseline, 'scroll back restores exact original rectangle across separate bursts');
-    await boardHeader.focus(); await wheel(-60); await page.keyboard.press('Escape');
-    assert.deepEqual(await board.boundingBox(), baseline, 'Escape restores original rectangle');
-    await wheel(-60); await page.getByRole('button', { name: 'Restore Display Module', exact: true }).click();
-    assert.deepEqual(await board.boundingBox(), baseline, 'Restore restores original rectangle');
+    await wheel(-60); await wheel(60);
+    assert.deepEqual(await board.boundingBox(), baseline, 'ordinary wheel does not resize Display');
     await textHeader.focus();
     await page.getByRole('button', { name: 'Close Untitled article', exact: true }).click();
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
@@ -153,10 +131,12 @@ test('owner Display and Text windows snap to the Workbench, with free movement a
         await boardResize.focus();
         for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowLeft');
         const narrowBaseline = await board.boundingBox();
+        assert.equal(await board.evaluate(el => el.closest('[data-presentation-workbench]').scrollLeft), 0, 'offscreen keyboard focus does not scroll the Workbench behind its camera');
         await wheel(-60);
-        assert.ok((await board.boundingBox()).width > narrowBaseline.width);
+        assert.equal((await board.boundingBox()).width, narrowBaseline.width, 'ordinary wheel keeps the narrow Display size');
+        assert.equal((await board.boundingBox()).y, narrowBaseline.y + 60, 'ordinary wheel pans the narrow Workbench');
         await page.screenshot({ path: '.browser-test-runtime/workbench-wheel-zoom-narrow.png' });
-        await wheel(60); await wheel(60);
+        await wheel(60);
         assert.deepEqual(await board.boundingBox(), narrowBaseline, 'narrow viewport restores its starting rectangle');
       }
     }

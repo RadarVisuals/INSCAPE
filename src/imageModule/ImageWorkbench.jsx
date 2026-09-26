@@ -1,27 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Crop, Trash2, X, ChevronRight } from 'lucide-react';
-import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
+import { Crop, Trash2, ChevronRight } from 'lucide-react';
+import ImageWindow from './ImageWindow.jsx';
+import ImageArtwork from './ImageArtwork.jsx';
 import { ContextToolContent, useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
 import ArtworkTransformTools from '../public/ownerSystemWorkflow/ArtworkTransformTools.jsx';
 import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
 import { createProfileDocumentV9AssetResolver } from '../profileDocument/domain/profileDocumentV9Asset.js';
 import { resolvePublishedAssetUrl } from '../profileDocument/domain/publishedAssetUrl.js';
 import { decodeOwnerSystemWorkflowAssetDimensions } from '../public/ownerSystemWorkflow/ownerSystemWorkflowAssetDimensions.js';
-import LatticeProductionFocusArtwork from '../lattice/rendering/LatticeProductionFocusArtwork.jsx';
 import { createSystemWorkflowCropSession, createSystemWorkflowCropPanGesture, updateSystemWorkflowCropPanGesture, setSystemWorkflowCropZoom, nudgeSystemWorkflowCrop } from '../systemWorkflow/systemWorkflowCrop.js';
 import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop, transformArtwork } from '../systemWorkflow/systemWorkflowTransform.js';
 import { createImagePresentation, imageFocusEntry, imageSize, MAX_IMAGE_SIDES, nextImageSide } from './imageModule.js';
-import { saveImageModule } from './imageModuleSession.js';
+import { saveImageModule, prepareImageResize } from './imageModuleSession.js';
+import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import ImageLift from './ImageLift.jsx';
+import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
 import './imageModule.css';
 
-function Artwork({ side, rectangle, crop }) {
-  const entry = useMemo(() => imageFocusEntry(side, crop), [side, crop]);
-  return <LatticeProductionFocusArtwork entry={entry} motion={{ sourceRectangle: rectangle, focusedRectangle: rectangle, currentRectangle: rectangle, progress: 0 }} />;
-}
-
-function ImageInstance({ record, index, store, profileAddress, registerTarget, initialPresentation, onPresentationChange, onActivate, suspended, viewport, reducedMotion, windowSnap }) {
+function ImageInstance({ record, index, store, profileAddress, registerTarget, initialPresentation, onPresentationChange, onActivate, suspended, viewport, reducedMotion }) {
   const [presentation, setPresentation] = useState(() => initialPresentation || createImagePresentation(record.id, index));
   const [sideId, setSideId] = useState(record.sides[0]?.id), [flipTarget, setFlip] = useState(null);
   const [cropState, setCrop] = useState(null), [inspect, setInspect] = useState(false), [error, setError] = useState('');
@@ -37,10 +34,21 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
   const sideIndex = record.sides.indexOf(side);
   const editable = Boolean(store) && !suspended;
   const scale = Math.min(1, (viewport.width - 16) / record.width, (viewport.height - 70) / record.height);
-  const size = { width: record.width * scale, height: record.height * scale };
-  const [rectangle, setRectangle] = useState({ left: 0, top: 0, ...size });
+  const rectangle = crop?.mask || { left: 0, top: 0, width: record.width, height: record.height };
   const liftEntry = useMemo(() => side ? imageFocusEntry(side) : null, [side]);
   const inactive = suspended || !presentation.open;
+  const prepareInspection = () => {
+    if (liftEntry && !inactive && !crop && !flip && !inspect && !reducedMotion)
+      projectedSvgArtworkFor(source.current, liftEntry.media.src)?.prepareImages();
+  };
+  const releaseInspection = () => {
+    if (liftEntry && !inspect) projectedSvgArtworkFor(source.current, liftEntry.media.src)?.releaseImages();
+  };
+  useEffect(() => {
+    const artwork = liftEntry && projectedSvgArtworkFor(source.current, liftEntry.media.src);
+    if (inactive || crop || flip) artwork?.releaseImages();
+    return () => artwork?.releaseImages();
+  }, [liftEntry, inactive, Boolean(crop), flip]);
   useEffect(() => { live.current = true; return () => { live.current = false; imageRequest.current += 1; }; }, []);
   useEffect(() => {
     setSizeFields({ width: String(record.width), height: String(record.height) });
@@ -53,11 +61,13 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
   }, [inactive, activeTarget, record.id, store]);
   useEffect(() => { imageRequest.current += 1; }, [inactive, side?.id, dropMode]);
   useEffect(() => {
-    if (!presentation.open || !source.current) return;
-    const measure = () => setRectangle({ left: 0, top: 0, width: source.current.clientWidth, height: source.current.clientHeight });
-    const observer = new ResizeObserver(measure); observer.observe(source.current); measure();
-    return () => observer.disconnect();
-  }, [presentation.open]);
+    if (reducedMotion && flip) { setSideId(flip); setFlip(null); }
+  }, [reducedMotion, flip]);
+  useEffect(() => {
+    const cancelPan = () => { drag.current = null; };
+    addEventListener('blur', cancelPan);
+    return () => removeEventListener('blur', cancelPan);
+  }, []);
   useEffect(() => { onPresentationChange?.(record.id, presentation); }, [record.id, presentation, onPresentationChange]);
   useEffect(() => () => onPresentationChange?.(record.id, null), [record.id, onPresentationChange]);
   const layout = useCallback(({ left, top }) => setPresentation(current => current.position.left === left && current.position.top === top ? current : { ...current, position: { left, top } }), []);
@@ -99,7 +109,8 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
   const shortcutMenu = useModuleShortcutMenu({ store, profileAddress, kind: 'image', record });
   const beginCrop = () => {
     if (!side || !editable) return;
-    const session = createSystemWorkflowCropSession(side, { stableAssetId: side.asset.stableAssetId, width: side.asset.media.width, height: side.asset.media.height }, rectangle);
+    const session = createSystemWorkflowCropSession(side, { stableAssetId: side.asset.stableAssetId, width: side.asset.media.width, height: side.asset.media.height },
+      { left: 0, top: 0, width: record.width, height: record.height });
     setCrop({ ...session, expected: record });
   };
   const visualCrop = crop && projectSystemWorkflowTransform(side.transform, crop.media, crop.previewCrop);
@@ -108,10 +119,12 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
   const cancelCrop = () => { setCrop(null); drag.current = null; };
   const resize = newSize => {
     cancelCrop();
-    const width = Math.max(32, Math.min(4096, Math.round(newSize.width / scale)));
-    const height = Math.max(32, Math.min(4096, Math.round(newSize.height / scale)));
-    return save({ ...record, width, height });
+    return save({ ...record, ...newSize });
   };
+  const resizeTarget = useMemo(() => ({ enabled: editable && !crop && !inspect && !flip,
+    expected: record, store, profileAddress, layoutKey: 'imageModules', commit: commitWorkbenchSelectionResize, prepare: prepareImageResize, applyFrame: layout, reportError: setError,
+    minimumSize: 32, maximumWidth: Math.min(4096, viewport.width - 16), maximumHeight: Math.min(4096, viewport.height - 70),
+  }), [editable, Boolean(crop), inspect, flip, record, store, profileAddress, layout, viewport.width, viewport.height]);
   const applySize = event => {
     event.preventDefault();
     const width = Number(sizeFields.width), height = Number(sizeFields.height);
@@ -126,15 +139,19 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
   return <div className="image-module" data-workbench-module="image" data-image-module={record.id}
     onPointerDownCapture={() => onActivate?.(record.id)} onFocusCapture={() => onActivate?.(record.id)}>
     {shortcutMenu.content}
-    {!presentation.open && <button ref={shortcut} className="image-module__shortcut" style={{ bottom: 64 + index * 38 }} onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
+    {!presentation.open && <button data-workbench-pan ref={shortcut} className="image-module__shortcut" style={{ bottom: 64 + index * 38 }} onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{record.name}</button>}
-    {presentation.open && <WorkbenchWindow label="Image" title={record.name} titleContent={<span>{record.name}</span>} chrome="bevel" className="image-module__window"
-      resizableWidth resizable={editable && !crop && !inspect} minimumWidth={32} minimumHeight={32} controlledSize={size} width={size.width} initialHeight={size.height}
-      initialX={presentation.position.left} initialY={presentation.position.top} viewId={record.id} placementModule={Boolean(store)} snapToGrid={Boolean(windowSnap)}
-      onLayoutChange={layout} onResizeEnd={editable ? resize : undefined}
-      controls={<button type="button" className="system-workflow__window-cap" aria-label={`Close ${record.name}`} onClick={() => { setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); }}><X /></button>}>
+    {presentation.open && <ImageWindow id={record.id} title={record.name} position={presentation.position}
+      size={record} fitScale={scale} editable={editable && !crop && !inspect && !flip} suspended={suspended}
+      placementModule={Boolean(store)} onPosition={layout} onResize={resize}
+      resizeTarget={resizeTarget}
+      onClose={() => { setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); }}>
+      {renderRectangle => <>
       <button type="button" ref={source} className="image-module__canvas" aria-label={crop ? 'Drag to crop Image' : side ? `Inspect ${side.asset.name || 'Image'}` : store ? 'Drop Library artwork into Image' : 'Image is empty'}
-        data-side-id={side?.id} data-cropping={Boolean(crop) || undefined} disabled={Boolean(suspended)}
+        data-side-id={side?.id} data-cropping={Boolean(crop) || undefined} data-flipping={Boolean(flip) || undefined} disabled={Boolean(suspended)}
+        onPointerEnter={event => { if (!event.buttons) prepareInspection(); }}
+        onPointerLeave={() => { if (!source.current?.matches(':focus-visible')) releaseInspection(); }}
+        onFocus={event => { if (event.currentTarget.matches(':focus-visible')) prepareInspection(); }} onBlur={releaseInspection}
         onClick={() => { if (side && !crop && !flip) setInspect(true); }}
         onKeyDown={event => {
           if (!crop) return;
@@ -147,6 +164,7 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
           }
         }}
         onPointerDown={event => {
+          if (event.button === 0 && !crop) prepareInspection();
           if (!crop || event.button !== 0) return;
           event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId);
           const bounds = event.currentTarget.getBoundingClientRect();
@@ -158,14 +176,17 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
           updateVisualCrop(drag.current.gesture.previewCrop);
         }} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { const start = drag.current?.start; if (start) setCrop(c => c && ({ ...c, previewCrop: start })); drag.current = null; }}
         onLostPointerCapture={() => { drag.current = null; }}>
-        {!side ? <span className="image-module__empty">{store ? 'Drop artwork from Library' : 'No artwork'}</span> : <span className="image-module__turn" data-flipping={Boolean(flip) || undefined}
+        {!side ? <span className="image-module__empty">{store ? 'Drop artwork from Library' : 'No artwork'}</span> : !flip
+          ? <ImageArtwork side={side} rectangle={renderRectangle} crop={crop?.previewCrop ?? side.crop} />
+          : <span className="image-module__turn" data-flipping
           onAnimationEnd={event => { if (event.target === event.currentTarget && flip) { setSideId(flip); setFlip(null); } }}>
-          <span className="image-module__face"><Artwork side={side} rectangle={rectangle} crop={crop?.previewCrop ?? side.crop} /></span>
-          {flip && <span className="image-module__face image-module__face--back"><Artwork side={record.sides.find(item => item.id === flip)} rectangle={rectangle} /></span>}
+          <span className="image-module__face"><ImageArtwork side={side} rectangle={renderRectangle} /></span>
+          <span className="image-module__face image-module__face--back"><ImageArtwork side={record.sides.find(item => item.id === flip)} rectangle={renderRectangle} /></span>
         </span>}
       </button>
       {record.sides.length > 1 && !crop && <button type="button" className="image-module__next" aria-label="Next Image side" disabled={Boolean(flip || inspect || suspended)} onClick={next}><span>{sideIndex + 1}/{record.sides.length}</span><ChevronRight size={14} /></button>}
-    </WorkbenchWindow>}
+      </>}
+    </ImageWindow>}
     {editable && <ContextToolContent target={record.id} label={`${record.name} / ${side ? `Side ${sideIndex + 1}` : 'Empty'}`} available={presentation.open && !inspect}>
       {crop ? <div className="system-workflow__crop-controls" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); cancelCrop(); } }}>
         <div><strong>Crop / drag image</strong><output>{Math.round(visualCrop.crop.zoom * 100)}%</output></div>
@@ -202,6 +223,6 @@ export default function ImageWorkbench({ records, presentations, ...props }) {
     addEventListener('resize', resize); media.addEventListener('change', motion);
     return () => { removeEventListener('resize', resize); media.removeEventListener('change', motion); };
   }, []);
-  return records.map((record, index) => <ImageInstance key={record.id} {...props} record={record} index={index} viewport={viewport} reducedMotion={reducedMotion}
+  return records.map((record, index) => <ImageInstance key={`${props.profileAddress}:${record.id}`} {...props} record={record} index={index} viewport={viewport} reducedMotion={reducedMotion}
     initialPresentation={presentations?.find(item => item.id === record.id)} />);
 }

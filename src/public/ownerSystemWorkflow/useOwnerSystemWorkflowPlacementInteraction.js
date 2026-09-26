@@ -21,10 +21,6 @@ import { createOwnerSystemWorkflowProjectedField } from './systemWorkflowArtboar
 
 const geometry = ({ column, row, columnSpan, rowSpan }) => ({ column, row, columnSpan, rowSpan });
 
-function projectedField(node, snapStep, artboardMode, originNode) {
-  return createOwnerSystemWorkflowProjectedField(node, snapStep, 1, artboardMode, originNode);
-}
-
 function selectedRecords(controller, grid, placement) {
   const selected = grid.placements.filter(({ id }) => controller.selectedPlacementIds.includes(id) && !grid.placements.find((entry) => entry.id === id)?.locked);
   return selected.some(({ id }) => id === placement.id) ? selected : grid.placements.filter(item => expandPlacementGroups(grid, [placement.id]).includes(item.id));
@@ -32,7 +28,9 @@ function selectedRecords(controller, grid, placement) {
 
 export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMode = 'grid', authoringDisabled = false,
   canvasRef, sceneRef, canNavigateGrid = () => false, controller, cropResize = null, cropSession = null, disabled = false,
-  navigation, snapStep = 1, viewScale = 1 }) {
+  navigation, snapStep = 1, viewScale = 1, artboardProjection = null }) {
+  const projectedField = (node, step, mode, originNode) =>
+    createOwnerSystemWorkflowProjectedField(node, step, 1, mode, originNode, artboardProjection, viewScale);
   const [previewById, setPreviewById] = useState(new Map());
   const [marquee, setMarquee] = useState(null);
   const gridSwipe = navigation.swipe;
@@ -215,8 +213,8 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
       else {
         const left = (Math.min(origin.x, active.end.x) - field.left) / field.cellSize;
         const right = (Math.max(origin.x, active.end.x) - field.left) / field.cellSize;
-        const top = (Math.min(origin.y, active.end.y) - field.top) / field.cellSize;
-        const bottom = (Math.max(origin.y, active.end.y) - field.top) / field.cellSize;
+        const top = (Math.min(origin.y, active.end.y) - field.top) / (field.rowSize ?? field.cellSize);
+        const bottom = (Math.max(origin.y, active.end.y) - field.top) / (field.rowSize ?? field.cellSize);
         controller.replaceSelection(grid.placements.filter((entry) => !entry.locked && entry.column < right && entry.column + entry.columnSpan > left && entry.row < bottom && entry.row + entry.rowSpan > top).map(({ id }) => id));
       }
       clearMarquee();

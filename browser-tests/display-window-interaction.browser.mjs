@@ -80,11 +80,10 @@ test('both Display windows remain movable and resizable after activation changes
     for (const delta of [3000, 12, 2000, 24]) {
       const resized = await moveResize(pointer.x + delta, pointer.y + delta);
       assert.ok(Math.abs(resized.x - initial.x) < 1 && Math.abs(resized.y - initial.y) < 1, 'opposite corner stays fixed through fast overshoot and reversal');
-      assert.ok(resized.x + resized.width <= width && resized.y + resized.height <= 1000, 'resized window stays on screen');
+      assert.ok(resized.x + resized.width <= 7993 && resized.y + resized.height <= 7993, 'resized window stays in the Workbench placement area');
     }
     await page.mouse.up();
-    // A temporary Workbench translation must not shift Display's zoom target
-    // or let the restore button leave the visible desktop.
+    // Workbench zoom must preserve movement and corner resizing.
     const stage = board.locator('.system-workflow__stage-viewport');
     for (let i = 0; i < 5; i++) {
       await board.dispatchEvent('wheel', { deltaY: 100, ctrlKey: true, bubbles: true, cancelable: true });
@@ -99,7 +98,7 @@ test('both Display windows remain movable and resizable after activation changes
     await page.mouse.move(gripX, gripY); await page.keyboard.down('Alt'); await page.mouse.down();
     await page.mouse.move(width + 1000, 2000); await page.waitForTimeout(40);
     const boundedResize = await board.boundingBox();
-    assert.ok(boundedResize.x + boundedResize.width <= width && boundedResize.y + boundedResize.height <= 1000, 'transformed resize respects screen limits');
+    assert.ok(await board.evaluate(el => parseFloat(el.style.left) + parseFloat(el.style.width) <= 7993 && parseFloat(el.style.top) + parseFloat(el.style.height) <= 7993), 'resize respects Workbench placement limits');
     await page.mouse.move(gripX - 30, gripY - 20); await page.waitForTimeout(40);
     assert.ok((await board.boundingBox()).width < resizedStart.width, 'reversing at the boundary keeps resizing responsive');
     await page.evaluate(() => window.dispatchEvent(new Event('blur')));
@@ -107,25 +106,9 @@ test('both Display windows remain movable and resizable after activation changes
     await page.waitForTimeout(500);
     const startZoom = await board.boundingBox();
     const stored = await page.evaluate(() => JSON.stringify({ ...localStorage }));
-    for (let i = 0; i < 40; i++) {
-      await stage.dispatchEvent('wheel', { deltaY: -60, bubbles: true, cancelable: true });
-      await page.waitForTimeout(20);
-      const rect = await board.boundingBox();
-      assert.ok(rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= width + 1 && rect.y + rect.height <= 1000,
-        `transformed enlargement stays visible: ${JSON.stringify(rect)}`);
-    }
-    const enlarged = await board.boundingBox();
-    assert.ok(Math.abs(enlarged.x + enlarged.width / 2 - width / 2) < 2, 'enlargement reaches the screen centre after Workbench movement');
-    await board.getByRole('button', { name: 'Restore Display Module', exact: true }).click();
-    assert.deepEqual(await board.boundingBox(), startZoom, 'restore returns to the transformed starting window');
-    assert.equal(await page.evaluate(() => JSON.stringify({ ...localStorage })), stored, 'temporary enlargement does not save geometry');
-    await board.getByRole('button', { name: 'Maximize Display Module', exact: true }).click();
-    await page.waitForFunction(id => document.querySelector(`[data-display-instance="${id}"] .system-workflow__presentation-board`)?.dataset.boardPhase === 'maximized', secondId);
-    const maximum = await board.boundingBox();
-    assert.ok(Math.abs(maximum.x + maximum.width / 2 - width / 2) < 2, 'maximize also centers the transformed window');
-    await board.getByRole('button', { name: 'Restore Display Module', exact: true }).click();
-    await page.waitForFunction(id => document.querySelector(`[data-display-instance="${id}"] .system-workflow__presentation-board`)?.dataset.boardPhase === 'window', secondId);
-    assert.deepEqual(await board.boundingBox(), startZoom, 'maximize/restore retains the starting window');
+    for (const deltaY of [-120, 120]) await stage.dispatchEvent('wheel', { deltaY, bubbles: true, cancelable: true });
+    assert.deepEqual(await board.boundingBox(), startZoom, 'ordinary wheel does not enlarge Display');
+    assert.equal(await page.evaluate(() => JSON.stringify({ ...localStorage })), stored, 'view input does not save geometry');
     assert.deepEqual(errors, []);
     await page.screenshot({ path: `.browser-test-runtime/display-windows-${visitor ? 'visitor' : 'owner'}-${width}.png` });
     await page.close();

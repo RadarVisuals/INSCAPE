@@ -5,6 +5,7 @@ import { BROWSER_ASSET_SIZE, BROWSER_VIEW_KINDS, categoryAssetIds, categoryMembe
 import RackMenu from '../menus/RackMenu.jsx';
 import { clearOwnerSystemWorkflowDocumentSelection } from './ownerSystemWorkflowSelection.js';
 import { ImageChoice, libraryImageChoices, librarySourceLabel } from './OwnerSystemWorkflowLibraryImages.jsx';
+import LibraryArtworkImage from './LibraryArtworkImage.jsx';
 import { OwnerSystemWorkflowSidebarDeleteConfirmation, OwnerSystemWorkflowSidebarEditor } from './OwnerSystemWorkflowBrowserWorkspace.jsx';
 
 const assetId = (asset) => asset?.stableAssetId || asset?.id;
@@ -16,7 +17,8 @@ function LazyLibraryArtwork({ asset, id, onRatio, workspace }) {
   useEffect(() => setCandidateIndex(0), [signature]);
   const source = candidates[candidateIndex] || null;
   if (!source) return <span>Media unavailable</span>;
-  return <img alt="" aria-hidden="true" className="lattice-browser-asset__decoded-image"
+  return <LibraryArtworkImage key={source} fileType={asset.mediaFileType || asset.assetRecord?.mediaFileType}
+    alt="" aria-hidden="true" className="lattice-browser-asset__decoded-image"
     decoding="async" draggable="false" loading="lazy" onError={() => {
       if (candidateIndex + 1 < candidates.length) setCandidateIndex(candidateIndex + 1);
       else { setCandidateIndex(candidates.length); workspace.markAssetUnavailable(id); }

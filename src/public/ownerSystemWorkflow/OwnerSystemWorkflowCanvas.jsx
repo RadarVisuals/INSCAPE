@@ -31,6 +31,7 @@ import useArtworkPicking from './useArtworkPicking.js';
 import useGridPlayback from './useGridPlayback.js';
 import { systemWorkflowPlacementRequest } from './systemWorkflowPlacementRequest.js';
 import DisplayPlacementContent from './DisplayPlacementContent.jsx';
+import { projectDisplayPlacementRectangle, projectDisplayStageViewport } from '../../lattice/rendering/displayPaintGeometry.js';
 
 const boundsOf = (placements) => placements.length ? {
   column: Math.min(...placements.map(({ column }) => column)),
@@ -71,7 +72,7 @@ const screenHandlePoint = (corner, rectangle, width, height) => {
 };
 
 export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked = false, boardScale = 1, workbenchScale = 1, controller, crop, interactionDisabled = false, onAssetDimensions,
-  onChangeGrid, onOpenViewer, onPlacementRef, reducedMotion = false, renderingMode = 'settled', resolveAssetDimensions,
+  onChangeGrid, onOpenViewer, onPlacementRef, reducedMotion = false, resolveAssetDimensions,
   placementTargetRef, selectionOverlayHost, viewerPlacementId, inspectionActive = false, playingGrids = false, suspended = false, onPauseGrids, onPlaybackStateChange, editingTextId, onEditText }) {
   const canvasRef = useRef(null);
   const sceneRef = useRef(null);
@@ -91,7 +92,8 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   };
   const worldCover = isSystemWorkflowWorldCoverGrid(grid);
   const worldViewport = useMemo(() => stageSize
-    ? (worldCover ? measureOwnerSystemWorkflowHeroArtboard : measureOwnerSystemWorkflowArtboard)(stageSize.width, stageSize.height, 1, controller.draft.geometry)
+    ? worldCover ? measureOwnerSystemWorkflowHeroArtboard(stageSize.width, stageSize.height)
+      : projectDisplayStageViewport(controller.draft.geometry, stageSize)
     : measuredViewport, [stageSize?.width, stageSize?.height, worldCover, controller.draft.geometry, measuredViewport]);
   const artboardMode = worldCover ? OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO : OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID;
   const cropSession = crop?.cropSession || null;
@@ -127,11 +129,11 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
       previewTextAt: (point, rectangle, explicit = false) => {
         const canvas = canvasRef.current;
         if (!isCurrent() || !grid || grid.visibility !== 'PUBLIC' || !explicit && !canvas.contains(document.elementFromPoint(point.x, point.y))) return null;
-        const field = createOwnerSystemWorkflowProjectedField(canvas, snapStep, viewScale, artboardMode, sceneRef.current);
+        const field = createOwnerSystemWorkflowProjectedField(canvas, snapStep, viewScale, artboardMode, sceneRef.current, worldViewport, pointerScale);
         if (!field || !ownerSystemWorkflowProjectedFieldContainsPoint(field, point)) return null;
         const q = quantizeSystemWorkflowGridCoordinate;
-        const destination = { column: q((rectangle.left - field.left) / field.cellSize), row: q((rectangle.top - field.top) / field.cellSize),
-          columnSpan: q(rectangle.width / field.cellSize), rowSpan: q(rectangle.height / field.cellSize) };
+        const destination = { column: q((rectangle.left - field.left) / field.cellSize), row: q((rectangle.top - field.top) / (field.rowSize ?? field.cellSize)),
+          columnSpan: q(rectangle.width / field.cellSize), rowSpan: q(rectangle.height / (field.rowSize ?? field.cellSize)) };
         return { destination, cellSize: field.cellSize, rectangle: projectLatticePixelRectangle(destination, field), label: `Move into ${grid.title || 'Display'}` };
       },
       attachText: (expected, preview) => {
@@ -144,7 +146,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
       previewAt: (point, dimensions, options = {}) => {
         const canvas = canvasRef.current;
         if (!isCurrent() || !dimensions || !canvas.contains(document.elementFromPoint(point.x, point.y))) return null;
-        const field = createOwnerSystemWorkflowProjectedField(canvas, snapStep, viewScale, artboardMode, sceneRef.current);
+        const field = createOwnerSystemWorkflowProjectedField(canvas, snapStep, viewScale, artboardMode, sceneRef.current, worldViewport, pointerScale);
         if (!field || !ownerSystemWorkflowProjectedFieldContainsPoint(field, point)) return null;
         const destination = createSystemWorkflowDropGeometry(dimensions.width, dimensions.height, point, field, options);
         return { destination, rectangle: projectLatticePixelRectangle(destination, field) };
@@ -160,7 +162,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   const interaction = useOwnerSystemWorkflowPlacementInteraction({
     artboardMode, authoringDisabled: authoringLocked, canvasRef, sceneRef, canNavigateGrid: adjacentGrid, controller,
     cropResize: crop?.cropResize, cropSession, disabled: interactionDisabled,
-    navigation: playback, snapStep, viewScale: pointerScale,
+    navigation: playback, snapStep, viewScale: pointerScale, artboardProjection: worldViewport,
   });
   const gridSwipe = playback.swipe;
   const dropContext = useMemo(() => ({}), [grid?.id, controller.draft.profileAddress, authoringLocked, interactionDisabled, playingGrids, gridSwipe]);
@@ -175,6 +177,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   useReportScene(controller.moduleId || 'display:primary', sourceGridId, swipeGridId, gridSwipe, !interactionDisabled && !worldCover, gridOrder);
   // Keep neighboring media mounted outside the clipped Stage before a gesture.
   // A newly mounted image can miss the first paint even when its URL is cached.
+  // The rail suppresses only their painting at an exact resting boundary.
   const sourceSlot = gridSwipe?.sourceSlot || 0;
   const railScenes = gridRailScenes(worldCover ? [grid] : gridOrder.map(id => controller.draft.grids.find(scene => scene.id === id)), sourceGridId, sourceSlot);
   const preparedSlots = new Set(JSON.parse(useDeferredValue(JSON.stringify(railScenes.map(scene => scene.slot)))));
@@ -232,7 +235,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     observer?.observe(node);
     globalThis.addEventListener?.('resize', measure);
     return () => { observer?.disconnect(); globalThis.removeEventListener?.('resize', measure); };
-  }, [renderingMode, worldCover, Boolean(stageSize)]);
+  }, [worldCover, Boolean(stageSize)]);
 
   useEffect(() => {
     const reportRejectedDrop = () => {
@@ -307,7 +310,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
         let dimensions;
         try { dimensions = await (resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions)(asset); } catch { return; }
         if (!dimensions || !canvasRef.current?.isConnected || playback.isMoving() || currentDropContext.current !== dropContext) return;
-        const field = createOwnerSystemWorkflowProjectedField(canvasRef.current, snapStep, 1, artboardMode, sceneRef.current);
+        const field = createOwnerSystemWorkflowProjectedField(canvasRef.current, snapStep, 1, artboardMode, sceneRef.current, worldViewport, pointerScale);
         if (!field || !ownerSystemWorkflowProjectedFieldContainsPoint(field, point)) {
           globalThis.dispatchEvent?.(new CustomEvent('inscape:system-workflow-drop-rejected'));
           return;
@@ -333,7 +336,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
         const isSelected = active && controller.selectedPlacementIds.includes(placement.id) && !placement.locked;
         const cropping = active && cropSession?.placementId === placement.id;
         const visibleCrop = cropping ? cropSession.previewCrop : placement.crop;
-        const projected = worldViewport && projectOwnerSystemWorkflowPlacement(placement, worldViewport);
+        const projected = worldViewport && projectDisplayPlacementRectangle(placement, worldViewport, workbenchScale);
         if (!projected) return null;
         const textEditing = active && placement.kind === 'text' && editingTextId === placement.id && !authoringLocked;
         return <div aria-disabled={placement.locked || undefined} aria-label={`Select ${placement.kind === 'text' ? displayTextLabel(placement.text) : asset?.title || asset?.name || 'artwork'}`} aria-pressed={isSelected}
@@ -373,7 +376,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
             markOwnerSystemWorkflowPointerFocus(hit.element);
             if (hit.element !== event.currentTarget) { event.preventDefault(); hit.element.focus({ preventScroll: true }); }
             if (authoringLocked) return;
-            if (cropping) crop.beginCropDrag(event, placement.id, worldViewport.cellSize * pointerScale);
+            if (cropping) crop.beginCropDrag(event, placement.id, worldViewport.cellSize * pointerScale, (worldViewport.rowSize ?? worldViewport.cellSize) * pointerScale);
             else if (!cropSession) interaction.beginPlacementGesture(event, hit.placement);
           }} ref={active ? (node) => onPlacementRef?.(placement.id, node) : undefined} role="button" tabIndex={!active || placement.locked ? -1 : 0}
           style={{ ...projected, zIndex: placement.layer + 1 }}>

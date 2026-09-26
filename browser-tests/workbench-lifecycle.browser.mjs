@@ -5,7 +5,7 @@ import { chromium } from 'playwright-core';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-const origin = 'http://127.0.0.1:5189';
+const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5189';
 test('route recovery, stale preview rejection and Display suspension share explicit lifetimes', { timeout: 90000 }, async () => {
 const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
 try {

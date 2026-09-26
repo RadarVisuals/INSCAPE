@@ -21,19 +21,26 @@ export default function useGridSwipe(viewportRef, trackRef, transportRef) {
   }
   const paint = useCallback(() => {
     const pixels = current.current?.deltaX || 0;
+    const railPosition = current.current?.railPosition ?? pixels / width.current;
+    // Holding a drag is not itself a displacement. After a Grid handoff the
+    // rail can sit at a nonzero integer slot while the pointer is held down.
+    const restingSlot = !transportRef.current
+      && Math.abs(railPosition - Math.round(railPosition)) < 1e-8 ? -Math.round(railPosition) : null;
     // Each retained appearance keeps its physical slot through a handoff.
     for (const plane of trackRef.current?.children || []) {
       const id = plane.dataset.renderedGridId;
       if (!id) continue;
       const slot = Number(plane.dataset.railSlot || 0);
       plane.style.left = `${slot * 100}%`;
+      // Keep neighbouring media mounted/decoded, but don't composite their
+      // antialiased edge into a stationary viewport at fractional browser zoom.
+      plane.style.visibility = restingSlot !== null && slot !== restingSlot ? 'hidden' : '';
     }
     // Camera and scene slots must use the same fractional CSS width. Multiplying
     // rounded clientWidth by the accumulated slot exposes an edge after wraps.
-    const railPosition = current.current?.railPosition;
     // During coast/Play the native trajectory owns this transform. A Grid
     // commit only updates its prepared surfaces and cannot restart the motion.
-    if (trackRef.current && !transportRef.current) trackRef.current.style.transform = railPosition === undefined
+    if (trackRef.current && !transportRef.current) trackRef.current.style.transform = current.current?.railPosition === undefined
       ? `translateX(${pixels}px)` : gridRailTransform(railPosition);
     // A pending React handoff must not send the new Grid's local progress to
     // subscribers still displaying the previous Grid. Its commit publishes it.

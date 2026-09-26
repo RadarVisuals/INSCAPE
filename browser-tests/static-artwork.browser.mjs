@@ -84,8 +84,8 @@ test('Static artwork tools, inspection and Visitor work without the removed anim
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.getByRole('button', { name: 'Close Layers', exact: true }).click();
-    await page.getByRole('button', { name: 'Maximize Display Module', exact: true }).focus();
-    await page.keyboard.press('Enter'); await page.waitForTimeout(400);
+    await page.getByRole('button', { name: 'Resize Display Module from se', exact: true }).focus();
+    await page.keyboard.press('ArrowRight'); await page.waitForTimeout(100);
     await artwork.focus(); await page.keyboard.press('Enter');
     await page.locator('.system-workflow__lift-artwork img').waitFor();
     await page.waitForFunction(() => document.querySelector('.system-workflow__lift-artwork')?.style.visibility === 'visible');
