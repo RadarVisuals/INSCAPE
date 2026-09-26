@@ -267,13 +267,14 @@
 .system-workflow__inspection-scene { position: relative; width: 100%; height: 100%; }
 .system-workflow__scene-controls { display: flex; align-items: center; gap: 6px; }
 .system-workflow__scene-controls > span { font-size: 10px; color: var(--workflow-muted); }
-.system-workflow__inspection-scene :is(.system-workflow__placement, .lattice-production-placement) {
+/* In place uses CSS fades. Lift owns its complete return clock, including the
+   background; removing its attributes must not start another filter transition. */
+.system-workflow__inspection-scene[data-inspection-phase]:not([data-inspection-lift]) :is(.system-workflow__placement, .lattice-production-placement) {
   transition: filter 360ms ease-in-out, opacity 360ms ease-in-out;
 }
 .system-workflow__inspection-scene[data-inspection-phase="active"] [data-inspection-context="background"] { filter: grayscale(1) brightness(.18); }
 .system-workflow__inspection-scene[data-inspection-phase="active"] [data-inspection-context="foreground"] { opacity: 0; }
 .system-workflow__inspection-scene[data-inspection-lift] [data-inspection-context="background"] {
-  transition: none;
   filter: grayscale(var(--inspection-lift-progress, 0)) brightness(calc(1 - .82 * var(--inspection-lift-progress, 0)));
 }
 .system-workflow__inspection-scene [data-inspection-context="selected"] { transition: none; }
@@ -281,7 +282,7 @@
 .system-workflow__lift-artwork { position: absolute; z-index: 35; pointer-events: none; }
 .system-workflow__presentation-board[data-inspecting] .system-workflow__stage-viewport { pointer-events: none; }
 .system-workflow__inspection-hit-surface { position: absolute; inset: 0; z-index: 40; pointer-events: auto; }
-@media (prefers-reduced-motion: reduce) { .system-workflow__inspection-scene :is(.system-workflow__placement, .lattice-production-placement) { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .system-workflow__inspection-scene[data-inspection-phase]:not([data-inspection-lift]) :is(.system-workflow__placement, .lattice-production-placement) { transition: none; } }
 .lattice-focus-viewer__board-controls {
   box-sizing: border-box;
   height: 100%;
@@ -488,11 +489,12 @@
   position: absolute;
   z-index: 18;
   box-sizing: border-box;
-  border: 2px solid var(--workflow-ink);
+  border: calc(2px * var(--workbench-content-scale, 1)) solid var(--workflow-ink);
   box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--workflow-panel) 72%, transparent);
   pointer-events: none;
 }
 .system-workflow__world-cover-aperture > span {
+  zoom: var(--workbench-content-scale, 1);
   position: absolute;
   bottom: calc(100% + 8px);
   left: -2px;
@@ -530,6 +532,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 @keyframes system-workflow-grid-in-previous { from { transform: translateX(-100%); } }
 
 .system-workflow__drop-feedback {
+  zoom: var(--workbench-content-scale, 1);
   position: absolute;
   z-index: 40;
   bottom: 12px;
@@ -600,8 +603,8 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__selection-chrome[aria-hidden="true"],
 .system-workflow__selection-chrome[data-viewing] { opacity: 0; }
 .system-workflow__selection-chrome[data-navigating] { opacity: 0; transition: none; }
-.system-workflow__resize-handle { position: absolute; box-sizing: border-box; width: 28px; min-width: 0; height: 28px; min-height: 0; padding: 0; translate: -50% -50%; border: 0; background: transparent; pointer-events: auto; touch-action: none; }
-.system-workflow__resize-handle::after { content: ''; position: absolute; inset: 9px; border: 1px solid #fff; background: #111; box-shadow: 0 0 0 1px #111; }
+.system-workflow__resize-handle { position: absolute; box-sizing: border-box; width: calc(28px * var(--workbench-content-scale, 1)); min-width: 0; height: calc(28px * var(--workbench-content-scale, 1)); min-height: 0; padding: 0; translate: -50% -50%; border: 0; background: transparent; pointer-events: auto; touch-action: none; }
+.system-workflow__resize-handle::after { content: ''; position: absolute; inset: calc(9px * var(--workbench-content-scale, 1)); border: calc(1px * var(--workbench-content-scale, 1)) solid #fff; background: #111; box-shadow: 0 0 0 calc(1px * var(--workbench-content-scale, 1)) #111; }
 .system-workflow__resize-handle:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
 .system-workflow__presentation-board:has(.system-workflow__selection-chrome[data-selected]:not([aria-hidden="true"])) > .system-workflow__board-resize-handle { pointer-events: none; }
 .system-workflow__resize-handle.is-nw,
@@ -609,7 +612,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__resize-handle.is-ne,
 .system-workflow__resize-handle.is-sw { cursor: nesw-resize; }
 .system-workflow__selection-chrome[aria-hidden="true"] .system-workflow__resize-handle { pointer-events: none; }
-.system-workflow__marquee { position: absolute; z-index: 30; border: calc(1px * var(--workflow-board-inverse-scale, 1)) solid var(--study-ink); background: rgb(17 19 19 / 8%); pointer-events: none; }
+.system-workflow__marquee { position: absolute; z-index: 30; border: calc(1px * var(--workflow-board-inverse-scale, 1) * var(--workbench-content-scale, 1)) solid var(--study-ink); background: rgb(17 19 19 / 8%); pointer-events: none; }
 
 .system-workflow__global-bar {
   position: fixed;

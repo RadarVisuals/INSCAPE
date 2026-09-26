@@ -12,15 +12,14 @@ export function projectDisplayStageViewport(geometry, viewport) {
 
 // Share rounded endpoints, never round position and width independently.
 // This is paint geometry only: authored coordinates and saved window sizes
-// remain continuous. The bias keeps Blink's 1/64-pixel layout truncation from
-// dropping an exact endpoint after division by native zoom.
+// remain continuous. A Workbench Stage already uses physical pixels (scale 1).
 export function displayPaintRectangle(rectangle, scale = 1) {
   const pixel = value => Math.round(Math.round(value * scale * 1e7) / 1e7);
   const left = pixel(rectangle.left), top = pixel(rectangle.top);
   const right = pixel(rectangle.left + rectangle.width);
   const bottom = pixel(rectangle.top + rectangle.height);
-  return { left: (left + .001) / scale, top: (top + .001) / scale,
-    width: (right - left + .001) / scale, height: (bottom - top + .001) / scale };
+  return { left: left / scale, top: top / scale,
+    width: (right - left) / scale, height: (bottom - top) / scale };
 }
 
 export function projectDisplayPlacementRectangle(placement, field, scale) {

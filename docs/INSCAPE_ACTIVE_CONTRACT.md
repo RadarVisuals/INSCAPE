@@ -449,6 +449,9 @@ modules, including mixed selections, commit real dimensions and window positions
 together through the existing draft store on release. Image uses whole-pixel
 dimensions. Both group and solo Text window resizing change available space and
 reflow text without changing article appearance or scene-linked passages.
+Text retains continuous window dimensions during group preview and commit, so
+its shared edges with Display are not quantized differently. Existing saved
+spacing is preserved; resizing does not infer or repair an intended join.
 Display retains its Stage ratio using continuous dimensions for both group
 preview and commit; only painting rounds Display edges. Remeasuring available
 space does not grow a deliberately small Display to a 320-pixel minimum.
@@ -472,9 +475,13 @@ its intentional margins and cap; standalone Image keeps its own fitting frame.
 Image, Text and Display share one outer-edge projection: exact Workbench frame,
 module transform and camera pan are combined before shared endpoints are rounded
 to physical screen pixels. Width/height are differences of those endpoints,
-never independently rounded sizes. Text/Display consume the shared projection
-through native zoom and transform translation; Image retains its physical-pixel
-raster surface. No second CSS pan is applied to an already projected window.
+never independently rounded sizes. Text, Display and Image consume the shared
+projection as integer physical-pixel surfaces mapped back by inverse density.
+Standalone Text paints its background/frame once on that outer surface; its
+transformed content uses native zoom and the authored wrapping width. Display
+projects its internal paint edges into the physical Stage; pointer input and
+logical control sizes have explicit conversions. No second CSS pan is applied
+to an already projected window.
 Subpixel camera movement can change painted coverage by one physical pixel;
 it never rewrites logical geometry. Text retains its logical wrapping width.
 Display's legacy exterior chrome background is removed. An explicitly enabled
@@ -518,10 +525,11 @@ They preserve module positions and individual/group scale transforms. Reset view
 camera pan and likewise preserves the composition. Display has no
 independent wheel zoom, maximize/restore, or immersive fullscreen mode. Article
 scrolling retains its existing behavior.
-Shared module boundaries use matching layout-pixel edges at fractional zoom,
-without changing the text's wrapping area or authored dimensions. Native window
+Shared module boundaries use matching physical-pixel edges at fractional zoom,
+without changing the text's wrapping area or authored dimensions. Native content
 zoom paints text at its target size; rounding the visible frame never rewrites
-the authored layout.
+the authored layout. Companion-window viewport constraints do not cap a scaled
+composition surface.
 
 - The maker chooses which modules and Grids enter the public snapshot. Private
   modules and private Grids are omitted from that document, not merely hidden
@@ -855,6 +863,11 @@ internal compatibility names during this migration; do not broadly rename them.
   artwork inspection, using the same module surface effect.
   Opening and closing inspection preserve the current Grid camera position;
   temporary inspection suspends navigation without resetting the retained rail.
+  Image and Display inspection also suspend Workbench pan, zoom and movement or
+  resizing of their source module until the return finishes. Closing or disposing
+  an inspector releases its temporary input lock. Native scrolling in independent
+  readers and tool windows remains available; no camera or saved-layout mutation
+  is used to enter or leave inspection.
 - Do not implement the Display Module as an HTML iframe. Use one application context with
   an isolated, clipped viewport and camera transform.
 - The Workbench hosts one shared Layers window and one shared Artwork info

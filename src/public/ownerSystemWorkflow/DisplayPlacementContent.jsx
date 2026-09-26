@@ -10,7 +10,7 @@ import DisplayArtworkSurface from './DisplayArtworkSurface.jsx';
 // Navigation changes the placement's interaction shell, not its media. Reuse
 // this render until authored content, crop, resolved asset or geometry changes.
 export default memo(function DisplayPlacementContent({ placement, asset: baseAsset, crop, width, height, cellSize, onAssetDimensions }) {
-  if (placement.kind === 'text') return <DisplayTextContent placement={placement} cellSize={cellSize} />;
+  if (placement.kind === 'text') return <DisplayTextContent placement={placement} cellSize={cellSize} width={width} height={height} />;
   const asset = assetForPlacement(baseAsset, placement);
   const dimensions = ownerSystemWorkflowAssetDimensions(asset);
   const opening = { left: 0, top: 0, width, height };

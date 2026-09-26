@@ -1,6 +1,6 @@
 import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { clampWorkbenchMove, identityWorkbenchTransform, scaleWorkbenchTransform, stepWorkbenchViewScale, workbenchSelectionBounds, zoomWorkbenchCamera } from './workbenchViewScale.js';
-import { WorkbenchCameraProvider } from './WorkbenchCamera.jsx';
+import { WorkbenchCameraProvider, useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import './workbenchView.css';
 import { useWorkbenchMovementSnap } from './WorkbenchPlacement.jsx';
 import useWorkbenchPan, { isWorkbenchBackground } from './useWorkbenchPan.js';
@@ -87,7 +87,8 @@ export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTar
 }
 
 export function WorkbenchViewControls({ hostRef, disabled = false }) {
-  const pan = useWorkbenchPan(hostRef, disabled);
+  const { locked } = useWorkbenchCamera();
+  const pan = useWorkbenchPan(hostRef, disabled || locked);
   const view = useWorkbenchView();
   const snapMovement = useWorkbenchMovementSnap();
   const { scale, setScale, transforms, setTransforms, selection = [], setSelection, entries } = view;
@@ -109,13 +110,13 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
     gesture.current = null; setMarquee(null);
   }, []);
   useEffect(() => () => cancelGesture(false), [cancelGesture]);
-  useEffect(() => { if (disabled) cancelGesture(); }, [disabled, cancelGesture]);
+  useLayoutEffect(() => { if (disabled || locked) cancelGesture(); }, [disabled, locked, cancelGesture]);
   useLayoutEffect(() => {
     const next = workbenchSelectionBounds(selected.map(id => entries.get(id).getBoundingClientRect()));
     setBounds(current => JSON.stringify(current) === JSON.stringify(next) ? current : next);
   }, [scale, transforms, selection, revision, pan.offset]);
   const zoom = (point, factor) => {
-    if (gesture.current || pan.active.current) return;
+    if (locked || gesture.current || pan.active.current) return;
     const host = hostRef.current, rect = host?.getBoundingClientRect();
     if (!rect) return;
     const anchor = { x: point.x - rect.left, y: point.y - rect.top };
@@ -204,8 +205,8 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
     const cameraOffset = { ...pan.current.current };
     // Preview and commit use the same endpoints, including Text's reflow box.
     const resizedFrame = (frame, factor, continuous = false) => {
-      // Fixed-ratio Display geometry stays continuous, just like its preview.
-      // Integer endpoints belong to Image/Text sizing, not Display's Stage.
+      // Text reflow and fixed-ratio Display keep their shared exact endpoints.
+      // Only modules with whole-pixel dimensions (Image) quantize here.
       const round = value => continuous ? value : Math.round(Math.round(value * 1e7) / 1e7);
       const edge = (value, axis) => worldAnchor[axis] + round(
         ((value - cameraOffset[axis]) / current.scale - worldAnchor[axis]) * factor);
@@ -233,7 +234,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
       appliedFactor = factor;
       setTransforms({ ...current.transforms, ...Object.fromEntries(ids.map((id, i) => {
         if (editors[i]?.reflow) {
-          return [id, { ...identityWorkbenchTransform, frame: resizedFrame(originals[i], factor) }];
+          return [id, { ...identityWorkbenchTransform, frame: resizedFrame(originals[i], factor, editors[i].continuousGeometry) }];
         }
         return [id, scaleWorkbenchTransform(current.transforms[id] || identityWorkbenchTransform, factor, worldAnchor)];
       })) });
@@ -278,6 +279,12 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
     const host = hostRef.current;
     if (!host || disabled || !setScale) return;
     const wheel = event => {
+      if (locked) {
+        if (event.ctrlKey || !hasNativeWheelScroll(event.target, host, event.deltaX, event.deltaY)) {
+          event.preventDefault(); event.stopPropagation();
+        }
+        return;
+      }
       if (!event.ctrlKey && !event.metaKey && !event.target.closest?.('[data-immersive]')) {
         const unitX = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host.clientWidth : 1;
         const unitY = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host.clientHeight : 1;
@@ -296,6 +303,12 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
     };
     const key = event => {
       const header = event.target.closest?.('header[data-workbench-selectable]');
+      if (locked) {
+        if (header === event.target || (event.ctrlKey || event.metaKey) && event.key === '0') {
+          event.preventDefault(); event.stopPropagation();
+        }
+        return;
+      }
       if (event.shiftKey && event.key === 'Enter' && header === event.target) {
         const id = header.closest('[data-workbench-view-id]')?.dataset.workbenchViewId;
         if (!entries.has(id)) return;
@@ -326,6 +339,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
       cancelGesture(); resetZoom();
     };
     const pointer = event => {
+      if (locked) return;
       if (event.button !== 0 || gesture.current || event.target.closest?.('[data-immersive]')) return;
       if (pan.begin(event)) return;
       // The selection surface covers module headers too. Resolve Shift-click
@@ -369,11 +383,11 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
     host.addEventListener('keydown', key, true);
     host.addEventListener('pointerdown', pointer, true);
     return () => { host.removeEventListener('wheel', wheel, true); host.removeEventListener('keydown', key, true); host.removeEventListener('pointerdown', pointer, true); };
-  }, [hostRef, disabled, setScale, cancelGesture, setSelection, entries]);
+  }, [hostRef, disabled, locked, setScale, cancelGesture, setSelection, entries]);
   if (disabled) return null;
   return <>
     {marquee && <div className="workbench-marquee" style={marquee} />}
-    {bounds && selected.length > 0 && <div className="workbench-selection" style={bounds} role="group" tabIndex={0}
+    {!locked && bounds && selected.length > 0 && <div className="workbench-selection" style={bounds} role="group" tabIndex={0}
       aria-label={`${selected.length} selected Workbench modules`} aria-description="Drag to move the selection. Arrow keys move it; Shift moves further. Escape clears selection."
       onPointerDown={event => { if (event.target === event.currentTarget) beginMove(event); }} onKeyDown={event => {
         if (event.target !== event.currentTarget || gesture.current || !['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(event.key)) return;
@@ -388,9 +402,9 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
         onKeyDown={event => resizeByKey(event, corner)} />)}
     </div>}
     <div className="workbench-view-controls" role="group" aria-label="Workbench zoom">
-      <button type="button" aria-label="Reset Workbench position" title="Return to the starting view" onClick={() => { pan.reset(); hostRef.current?.focus({ preventScroll: true }); }}>Reset view</button>
+      <button type="button" disabled={locked} aria-label="Reset Workbench position" title="Return to the starting view" onClick={() => { pan.reset(); hostRef.current?.focus({ preventScroll: true }); }}>Reset view</button>
       {selected.length > 0 && <span>{selected.length} selected</span>}
-      <button type="button" aria-label="Reset Workbench zoom to 100%" title="Zoom to 100% around the current view (Ctrl+0)" onClick={resetZoom}>{Math.round(scale * 100)}%</button>
+      <button type="button" disabled={locked} aria-label="Reset Workbench zoom to 100%" title="Zoom to 100% around the current view (Ctrl+0)" onClick={resetZoom}>{Math.round(scale * 100)}%</button>
       {GridSeamProbe && <Suspense fallback={null}><GridSeamProbe hostRef={hostRef} scale={scale} offset={pan.offset} /></Suspense>}
     </div>
   </>;

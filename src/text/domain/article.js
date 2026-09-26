@@ -11,20 +11,28 @@ export function textContentStyle(article) {
   const padding = article.appearance?.padding;
   return padding ? { padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`, maxWidth: 'none' } : {};
 }
-export function textSurfaceStyle(article) {
-  if (!article.appearance) return { background: 'var(--workflow-panel)', color: 'var(--workflow-ink)', boxShadow: 'inset 0 0 0 1px var(--workflow-border)' };
+export function textSurfaceStyle(article, scale = 1) {
+  if (!article.appearance) return { background: 'var(--workflow-panel)', color: 'var(--workflow-ink)', boxShadow: `inset 0 0 0 ${scale}px var(--workflow-border)` };
   const appearance = textAppearance(article);
   const hex = appearance.background;
   const background = hex ? `rgba(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}, ${appearance.opacity})` : 'transparent';
-  return { background, color: appearance.color, ...moduleEdgeStyle(appearance.edges), boxShadow: [appearance.frame ? `inset 0 0 0 1px ${appearance.color}` : '', appearance.edges?.shadow ? 'var(--workflow-window-chrome-shadow)' : ''].filter(Boolean).join(', ') || 'none' };
+  return { background, color: appearance.color, ...moduleEdgeStyle(appearance.edges, scale), boxShadow: [appearance.frame ? `inset 0 0 0 ${scale}px ${appearance.color}` : '', appearance.edges?.shadow ? 'var(--workflow-window-chrome-shadow)' : ''].filter(Boolean).join(', ') || 'none' };
+}
+// Standalone Text paints its background once, on the Workbench pixel surface.
+// Its transformed/scrolling content never owns a second background or frame.
+export function textWindowStyle(article, scale = 1) {
+  const style = textSurfaceStyle(article, scale);
+  return { ...style, borderRadius: style['--module-corners'] || 0,
+    boxShadow: article.appearance?.edges?.shadow ? 'var(--workflow-window-chrome-shadow)' : 'none' };
 }
 export function textOutputStyle(article, window) {
   const transform = article.appearance?.transform;
-  if (!transform) return textSurfaceStyle(article);
+  if (!transform) return {};
   const rotated = transform.quarterTurns % 2 === 1;
-  return { ...textSurfaceStyle(article), position: 'absolute', left: '50%', top: '50%',
+  return { position: 'absolute', left: '50%', top: '50%',
     '--workbench-content-width': `${rotated ? window.height : window.width}px`,
-    width: rotated ? window.height : window.width, height: rotated ? window.width : window.height,
+    width: rotated ? 'var(--workbench-paint-height)' : 'var(--workbench-paint-width)',
+    height: rotated ? 'var(--workbench-paint-width)' : 'var(--workbench-paint-height)',
     transform: `translate(-50%, -50%) rotate(${transform.quarterTurns * 90}deg) scale(${transform.mirrorX ? -1 : 1}, ${transform.mirrorY ? -1 : 1})` };
 }
 export const TEXT_ID = /^text:[A-Za-z0-9_-]{1,80}$/u;

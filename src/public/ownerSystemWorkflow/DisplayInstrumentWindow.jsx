@@ -139,7 +139,7 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
         if (event.button !== 0) return;
         event.preventDefault();
         placement.begin(event);
-        resize.current = { id: event.pointerId, x: event.clientX, y: event.clientY, width: node.current.offsetWidth, height: node.current.offsetHeight };
+        resize.current = { id: event.pointerId, x: event.clientX, y: event.clientY, width: windowWidth, height };
         event.currentTarget.setPointerCapture(event.pointerId);
       },
       onPointerMove: (event) => {

@@ -19,7 +19,9 @@ export default function DisplayInspectionCues({ host, items, viewer, editable = 
     const measure = () => {
       const bounds = host.getBoundingClientRect();
       if (!bounds.width || !bounds.height) return;
-      const width = host.clientWidth, height = host.clientHeight;
+      // Controls retain logical sizes inside the physical-pixel Stage.
+      const unit = Number(getComputedStyle(host).getPropertyValue('--workbench-content-scale')) || 1;
+      const width = host.clientWidth / unit, height = host.clientHeight / unit;
       const { items: placements, viewer: current, offsets: positions } = latest.current;
       const rows = placements.flatMap(item => {
         const node = current.getElement(item.id);

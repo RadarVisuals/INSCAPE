@@ -2,8 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import DisplayLiftArtwork from './DisplayLiftArtwork.jsx';
+import { useWorkbenchInspectionLock } from './WorkbenchCamera.jsx';
 
 export default function DisplayFocusViewer({ scene, controlsContainer, viewer }) {
+  useWorkbenchInspectionLock();
   const latest = useRef(viewer); latest.current = viewer;
   const closeRef = useRef(null);
   const timer = useRef(null);

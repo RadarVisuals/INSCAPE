@@ -27,7 +27,6 @@ const viewportOf = (node, bottomInset = 0) => {
 };
 
 function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlacementActivate, onPointerActivate, placement, gridId, viewerSourceHidden }) {
-  const stageSize = useContext(DisplayStageSizeContext);
   const reference = placement.asset?.media?.reference || null;
   const referenceKey = reference
     ? `${placement.asset.stableAssetId}:${reference.verification.method}:${reference.verification.data}` : null;
@@ -61,7 +60,7 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
   }, [imageLoading, loadState.attempt, loadState.src, loadState.status, media.src, media.status]);
   const decodedDimensions = loadState.src === media.src && loadState.status === 'loaded' ? loadState.dimensions : null;
   const dimensions = decodedDimensions || media.dimensions;
-  const artwork = projectLatticeProductionArtwork(placement, field, dimensions, stageSize?.scale ?? 1);
+  const artwork = projectLatticeProductionArtwork(placement, field, dimensions, 1);
   const ready = media.status === PROFILE_DOCUMENT_V9_MEDIA_STATUS.READY;
   const loaded = ready && loadState.src === media.src && loadState.status === 'loaded';
   const failed = !ready && media.status !== PROFILE_DOCUMENT_V9_MEDIA_STATUS.RESOLVING
@@ -141,13 +140,16 @@ export default function GridProductionRenderer({ document, grid, imageLoading = 
       guideInterval={systemWorkflowSnapStep(document.appearance.guideSize)} height={projected.height}
       mode={document.appearance.guideMode} width={projected.width} />
       <span aria-hidden="true" className="lattice-production-table__authored-plane" style={rectangleStyle(projected)} />
-      <div className="visitor-grid-renderer__artwork-plane">{grid.placements.map((placement) => placement.kind === 'text'
+      <div className="visitor-grid-renderer__artwork-plane">{grid.placements.map((placement) => {
+        const rectangle = placement.kind === 'text' ? projectDisplayPlacementRectangle(placement, projected) : null;
+        return placement.kind === 'text'
         ? <div key={placement.id} className="display-text-placement" data-text-placement-id={placement.id}
-            style={{ ...projectDisplayPlacementRectangle(placement, projected, stageSize?.scale ?? 1), zIndex: layerRanks.get(placement.id) }}>
-            <DisplayTextContent placement={placement} cellSize={projected.cellSize} /></div>
+            style={{ ...rectangle, zIndex: layerRanks.get(placement.id) }}>
+            <DisplayTextContent placement={placement} cellSize={projected.cellSize} width={rectangle.width} height={rectangle.height} /></div>
         : <GridPlacement field={projected} gridId={grid.id} imageLoading={imageLoading}
         key={placement.id} layerRank={layerRanks.get(placement.id)} onMediaState={onMediaState}
-        onPlacementActivate={onPlacementActivate} onPointerActivate={activatePointer} placement={placement} viewerSourceHidden={placement.id === viewerPlacementId} />)}</div>
+        onPlacementActivate={onPlacementActivate} onPointerActivate={activatePointer} placement={placement} viewerSourceHidden={placement.id === viewerPlacementId} />;
+      })}</div>
     </>}
   </section>;
 }

@@ -8,7 +8,7 @@ import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSyste
 import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../profileDocument/domain/profileDocumentV9Asset.js';
 import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
-import { assertArticle, textOutputStyle } from './domain/article.js';
+import { assertArticle, textAppearance, textOutputStyle, textWindowStyle } from './domain/article.js';
 import { saveTextModuleResult, unlinkTextModuleResult, prepareTextResize } from './textSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import TextTools from './TextTools.jsx';
@@ -44,6 +44,8 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   useSceneProgress(sectionLink && mode === 'write' ? null : scene, sceneTrack, presentation.open);
   const gridId = scene?.gridId || working.sceneLink?.gridId;
   const article = sectionLink && mode === 'write' ? working.article : passageArticle(working, gridId, scene?.gridOrder);
+  const appearance = textAppearance(article);
+  const paintScale = view.scale * (globalThis.devicePixelRatio || 1);
   const unavailable = Boolean(working.sceneLink && !scene);
   const missingDisplay = Boolean(store && working.sceneLink && !displays.some(display => display.id === working.sceneLink.displayId));
   const swiping = Boolean(scene?.targetGridId) && (!sectionLink || sectionRead);
@@ -89,7 +91,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   const applyGroupFrame = useCallback(frame => { setCommittedFrame(frame); layout(frame); }, [layout]);
   const resizeTarget = useMemo(() => {
     return { enabled: Boolean(store) && !editBlocked && !failed.current && working === record,
-      reflow: true,
+      reflow: true, continuousGeometry: true,
       expected: record, store, profileAddress, layoutKey: 'texts', commit: commitWorkbenchSelectionResize, prepare: prepareTextResize,
       applyFrame: applyGroupFrame, reportError: setError, minimumWidth: 180, minimumHeight: 100,
       maximumWidth: 7992, maximumHeight: 7992,
@@ -118,7 +120,9 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
     {!presentation.open && <button data-workbench-pan ref={shortcut} className="text-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{name}</button>}
     {presentation.open && <WorkbenchWindow label="Text" title={name} titleContent={<span />} chrome="bevel" resizableWidth viewId={record.id} snapToGrid={Boolean(store) && windowSnap}
-      surfaceStyle={article.appearance?.edges ? { boxShadow: article.appearance.edges.shadow ? 'var(--workflow-window-chrome-shadow)' : 'none', borderRadius: article.appearance.edges.corners.map(v => `${v}px`).join(' ') } : undefined} placementModule={Boolean(store)} className="text-window text-window--read"
+      surfaceStyle={textWindowStyle(article, paintScale)} placementModule={Boolean(store)} className="text-window text-window--read"
+      background={<>{appearance.edges?.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
+        {appearance.frame && <span aria-hidden="true" className="module-surface-outline" style={{ boxShadow: `inset 0 0 0 ${paintScale}px ${article.appearance ? appearance.color : 'var(--workflow-border)'}` }} />}</>}
       width={presentation.window.width} initialHeight={presentation.window.height} initialX={presentation.window.left} initialY={presentation.window.top} onLayoutChange={layout}
       resizeTarget={resizeTarget} committedFrame={committedFrame}
       controls={<>{store && <><button type="button" className="system-workflow__round-control" aria-label={mode === 'write' ? 'Read' : 'Write'} title={mode === 'write' ? 'Read' : 'Write'}
@@ -128,7 +132,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
         <button ref={toolsTrigger} type="button" className="system-workflow__round-control" aria-label="Text tools" title="Text tools" aria-expanded={settings} onClick={() => setSettings(s => !s)}><Settings /></button>
         {error && <button type="button" className="text-save-error" aria-label="Text not saved — open recovery" onClick={() => setSettings(true)}>!</button>}</>}
         <button type="button" className="system-workflow__round-control" aria-label={`Close ${name}`} onClick={close}><X /></button></>}>
-      <div className="text-module-body" data-module-edges={Boolean(article.appearance?.edges) || undefined} ref={surface} style={{ ...textOutputStyle(article, view.frame || presentation.window), ...(article.appearance?.edges ? { boxShadow: 'none' } : {}) }}>
+      <div className="text-module-body" ref={surface} style={textOutputStyle(article, view.frame || presentation.window)}>
         {unavailable && <p className="text-status" role="status">{missingDisplay ? 'The linked Display was removed. Your text is preserved. Open Text tools to unlink it.' : sectionLink ? 'Open the linked Display to read its current section. You can still edit the full article in Write.' : 'Open the linked Display to read or edit its passage.'}</p>}
         <div className="text-scene-viewport" style={unavailable && (!sectionLink || sectionRead) ? { visibility: 'hidden' } : undefined} data-settling={swiping && scene?.settling || undefined}>
           <div className="text-scene-track" ref={sceneTrack}>
@@ -149,7 +153,6 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
             </div>}
           </div>
         </div>
-        {article.appearance?.edges && <><span aria-hidden="true" className="module-surface-grain" /><span aria-hidden="true" className="module-surface-outline" style={{ boxShadow: article.appearance.frame ? `inset 0 0 0 1px ${article.appearance.color}` : undefined }} /></>}
       </div>
     </WorkbenchWindow>}
     {store && presentation.open && settings && !suspended && <TextTools article={sectionLink ? working.article : article} onChange={changeArticle}

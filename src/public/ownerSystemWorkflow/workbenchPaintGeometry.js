@@ -7,16 +7,16 @@ export function workbenchPaintGeometry(rectangle, density = 1) {
     height: pixel(rectangle.top + rectangle.height) - top };
 }
 
-// Native zoom retains logical text sizing; transform translation avoids a
-// second layout rounding of the already snapped screen origin.
+// Lay out the outer surface in physical pixels, then map it to the screen.
+// Content zoom is separate: CSS layout must not round the shared edges again.
 export function workbenchPaintStyle(rectangle, camera, offset, density = globalThis.devicePixelRatio || 1) {
   const scale = camera.scale;
   const paint = workbenchPaintGeometry({ left: rectangle.left * scale + camera.x + offset.x,
     top: rectangle.top * scale + camera.y + offset.y,
     width: rectangle.width * scale, height: rectangle.height * scale }, density);
-  return { left: 0, top: 0, zoom: scale, translate: 'none', transformOrigin: '0 0',
-    transform: `matrix(1,0,0,1,${paint.left / density / scale},${paint.top / density / scale})`,
-    // Avoid native zoom truncating an exact edge one layout unit inward.
-    width: (paint.width / density + .001) / scale,
-    height: (paint.height / density + .001) / scale };
+  return { left: 0, top: 0, zoom: 1, translate: 'none', transformOrigin: '0 0', willChange: 'transform',
+    transform: `matrix(${1 / density},0,0,${1 / density},${paint.left / density},${paint.top / density})`,
+    width: paint.width, height: paint.height, maxWidth: 'none', maxHeight: 'none',
+    '--workbench-density': density, '--workbench-content-scale': scale * density,
+    '--workbench-paint-width': `${paint.width}px`, '--workbench-paint-height': `${paint.height}px` };
 }

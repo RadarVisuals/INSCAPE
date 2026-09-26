@@ -13,11 +13,45 @@ const inspect = node => {
   return { rect: bounds(node), css: Object.fromEntries([
     'width', 'height', 'left', 'top', 'zoom', 'transform', 'translate', 'transformOrigin',
     'overflowX', 'overflowY', 'clipPath', 'mixBlendMode', 'isolation', 'opacity',
-    'visibility', 'filter', 'willChange', 'objectFit', 'objectViewBox',
+    'display', 'visibility', 'filter', 'willChange', 'objectFit', 'objectViewBox',
+    'backgroundColor', 'backgroundImage', 'borderRadius', 'boxShadow',
+    'borderLeftWidth', 'borderLeftStyle', 'borderLeftColor', 'borderRightWidth', 'borderRightStyle', 'borderRightColor',
+    'borderTopWidth', 'borderTopStyle', 'borderTopColor', 'borderBottomWidth', 'borderBottomStyle', 'borderBottomColor',
+    'outlineWidth', 'outlineStyle', 'outlineColor',
   ].map(key => [key, style[key]])) };
+};
+const decoration = (node, pseudo) => {
+  if (!node) return null;
+  const style = getComputedStyle(node, pseudo);
+  return Object.fromEntries(['content', 'display', 'inset', 'width', 'height', 'backgroundColor',
+    'borderLeftWidth', 'borderLeftStyle', 'borderLeftColor', 'borderRightWidth', 'borderRightStyle', 'borderRightColor',
+    'boxShadow', 'opacity'].map(key => [key, style[key]]));
 };
 const placements = plane => [...plane.querySelectorAll('.system-workflow__placement, .lattice-production-placement')]
   .map((node, index) => ({ node, index, rect: bounds(node) }));
+const mediaDetails = node => {
+  const image = node.querySelector('img[data-resolution="high"]') || node.querySelector('img');
+  const viewport = node.querySelector('svg');
+  const svgImage = viewport?.querySelector('image');
+  return { image: inspect(image),
+    imageReady: image?.complete ?? null,
+    naturalSize: image ? { width: image.naturalWidth, height: image.naturalHeight } : null,
+    svgViewport: viewport ? { ...inspect(viewport), viewBox: viewport.getAttribute('viewBox') } : null,
+    svgImage: svgImage ? { ...inspect(svgImage), attributes: Object.fromEntries(
+      ['x', 'y', 'width', 'height', 'transform', 'preserveAspectRatio'].map(key => [key, svgImage.getAttribute(key)])) } : null,
+    svgDocument: inspect(node.querySelector('iframe')),
+  };
+};
+const internalArtwork = (plane, clip) => placements(plane)
+  .filter(({ rect }) => rect.right > Math.max(clip.left, 0) && rect.left < Math.min(clip.right, innerWidth)
+    && rect.bottom > Math.max(clip.top, 0) && rect.top < Math.min(clip.bottom, innerHeight))
+  .map(({ node, index }) => ({
+    placement: node.dataset.systemWorkflowPlacementId || node.dataset.placementId || `rendered-${index}`,
+    placementBox: inspect(node),
+    opening: inspect(node.querySelector('.system-workflow__artwork-opening, .lattice-production-placement__opening')),
+    surface: inspect(node.querySelector('.display-artwork-surface')),
+    ...mediaDetails(node),
+  }));
 const edgeArtwork = (plane, edge, y, side, density) => placements(plane)
   .filter(item => item.rect.top <= y && item.rect.bottom >= y)
   .sort((a, b) => Math.abs(a.rect[side] - edge) - Math.abs(b.rect[side] - edge))
@@ -34,10 +68,35 @@ const edgeArtwork = (plane, edge, y, side, density) => placements(plane)
 function measure(host, scale, offset) {
   const density = globalThis.devicePixelRatio || 1;
   const tracks = [...(host?.querySelectorAll('.system-workflow__grid-track, .visitor-grid-world__grid-track') || [])];
-  return { diagnostic: 'grid-seam-v1', capturedAt: new Date().toISOString(),
+  const textWindows = [...(host?.querySelectorAll('.text-window[data-workbench-view-id]') || [])];
+  const boards = [...new Set(tracks.map(track => track.closest('[data-workbench-view-id]')).filter(Boolean))];
+  const textDisplayJoins = textWindows.flatMap(text => boards.flatMap(board => {
+    const a = bounds(text), b = bounds(board);
+    const candidates = [
+      { side: 'text-right/display-left', gap: b.left - a.right, overlap: Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) },
+      { side: 'display-right/text-left', gap: a.left - b.right, overlap: Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) },
+      { side: 'text-bottom/display-top', gap: b.top - a.bottom, overlap: Math.min(a.right, b.right) - Math.max(a.left, b.left) },
+      { side: 'display-bottom/text-top', gap: a.top - b.bottom, overlap: Math.min(a.right, b.right) - Math.max(a.left, b.left) },
+    ];
+    return candidates.filter(candidate => candidate.overlap > 0 && Math.abs(candidate.gap * density) <= 4)
+      .map(({ side, gap }) => ({ textId: text.dataset.workbenchViewId, displayId: board.dataset.workbenchViewId,
+        side, gapCssPx: gap, gapPhysicalPx: gap * density }));
+  }));
+  return { diagnostic: 'grid-seam-v3', capturedAt: new Date().toISOString(), browser: navigator.userAgent,
     workbenchScale: scale, workbenchPan: offset, devicePixelRatio: density,
     viewport: { width: innerWidth, height: innerHeight, visualScale: visualViewport?.scale ?? 1 },
     note: 'DOM geometry only. Zero geometric gap does not prove opaque pixel coverage; source transparency, clipping and compositing still require visual confirmation.',
+    texts: textWindows.map(node => ({ moduleId: node.dataset.workbenchViewId, window: inspect(node),
+      content: inspect(node.querySelector('.system-workflow__instrument-content')),
+      body: inspect(node.querySelector('.text-module-body')),
+      outline: inspect(node.querySelector('.module-surface-outline')),
+      before: decoration(node, '::before'), after: decoration(node, '::after'),
+    })),
+    textDisplayJoins,
+    images: [...(host?.querySelectorAll('.image-module__window') || [])].map(node => ({
+      moduleId: node.dataset.workbenchViewId, window: inspect(node),
+      canvas: inspect(node.querySelector('.image-module__canvas')), ...mediaDetails(node),
+    })),
     displays: tracks.map(track => {
       const board = track.closest('[data-workbench-view-id]');
       const viewport = track.parentElement, clip = bounds(viewport);
@@ -65,9 +124,13 @@ function measure(host, scale, offset) {
           }) }];
       });
       return { displayId: board?.dataset.workbenchViewId, board: inspect(board), viewport: inspect(viewport),
+        frame: board?.dataset.moduleFrame ?? 'default', border: inspect(board?.querySelector('.system-workflow__stage-border')),
+        before: decoration(board, '::before'), after: decoration(board, '::after'),
         track: inspect(track), animations: track.getAnimations().map(animation => ({
           state: animation.playState, time: animation.currentTime, playbackRate: animation.playbackRate,
-        })), visibleGridCount: planes.length, joins };
+        })), visibleGridCount: planes.length, joins,
+        grids: planes.map(({ node }) => ({ gridId: node.dataset.renderedGridId, slot: node.dataset.railSlot,
+          plane: inspect(node), artwork: internalArtwork(node, clip) })) };
     }) };
 }
 
@@ -77,6 +140,7 @@ export default function GridSeamProbe({ hostRef, scale, offset }) {
   useLayoutEffect(() => { if (report) dialog.current?.showModal(); }, [report]);
   const text = report ? JSON.stringify(report, null, 2) : '';
   const joins = report?.displays.flatMap(display => display.joins) || [];
+  const artworkCount = report?.displays.flatMap(display => display.grids).reduce((count, grid) => count + grid.artwork.length, 0) || 0;
   const close = () => { setReport(null); trigger.current?.focus({ preventScroll: true }); };
   return <>
     <button ref={trigger} type="button" onClick={() => { setStatus(''); setReport(measure(hostRef.current, scale, offset)); }}>Meet Grid-naad</button>
@@ -84,8 +148,10 @@ export default function GridSeamProbe({ hostRef, scale, offset }) {
       style={{ width: 'min(640px, 90vw)', maxHeight: '85vh', overflow: 'auto', padding: 16,
         background: 'var(--workflow-panel, #171717)', color: 'var(--workflow-ink, #eee)',
         border: '1px solid var(--workflow-border, #777)', fontFamily: 'Inscape Sora, sans-serif' }}>
+      <p>{artworkCount} artworkvlakken binnen Display, {report.images.length} Image-vensters en {report.texts.length} Text-vensters gemeten.</p>
+      {report.textDisplayJoins.map((join, index) => <p key={index}>Text/Display ({join.side}): {join.gapPhysicalPx.toFixed(6)} fysieke pixels verschil.</p>)}
       <p>{joins.length ? `${joins.length} zichtbare Grid-overgang(en) gemeten. Positief verschil = ruimte; negatief = overlap.`
-        : 'Geen interne Grid-overgang zichtbaar. Sluit dit venster, zet twee Grids gedeeltelijk in beeld en meet opnieuw.'}</p>
+        : 'Geen overgang tussen Grids zichtbaar. Het rapport bevat wel de artworkranden binnen de huidige Grid en de Image-vensters.'}</p>
       {joins.map((join, index) => <p key={index}>Overgang {index + 1}: {join.gapPhysicalPx.toFixed(6)} fysieke pixels verschil.</p>)}
       <textarea ref={field} readOnly value={text} aria-label="Meetrapport" spellCheck={false}
         style={{ width: '100%', height: '32vh', boxSizing: 'border-box', background: 'transparent', color: 'inherit', fontFamily: 'Inscape IBM Plex Sans Condensed, monospace' }} />

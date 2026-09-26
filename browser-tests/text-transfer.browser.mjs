@@ -39,7 +39,7 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     await output.getByRole('button', { name: 'Write', exact: true }).click();
     await tools.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('colour');
     await tools.getByRole('checkbox', { name: 'Show border', exact: true }).check();
-    assert.notEqual(await output.locator('.text-module-body').evaluate(node => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
+    assert.notEqual(await output.evaluate(node => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
     await tools.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('none');
     await tools.getByRole('checkbox', { name: 'Show border', exact: true }).uncheck();
     // Simulate another writer updating unrelated saved data.

@@ -2,8 +2,10 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import DisplayLiftArtwork from '../public/ownerSystemWorkflow/DisplayLiftArtwork.jsx';
 import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
+import { useWorkbenchInspectionLock } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
 
 export default function ImageLift({ source, entry, reducedMotion, onClose }) {
+  useWorkbenchInspectionLock();
   const [scene, setScene] = useState(null), [closing, setClosing] = useState(false);
   const returnButton = useRef(null), returnId = useId();
   const liveSvg = projectedSvgArtworkFor(source, entry.media.src);
@@ -18,6 +20,7 @@ export default function ImageLift({ source, entry, reducedMotion, onClose }) {
   }, [source, liveSvg]);
   useEffect(() => () => { if (source?.isConnected) source.focus({ preventScroll: true }); }, [source]);
   return createPortal(<div className="image-lift" role="dialog" aria-modal="true" aria-label="Inspect Image" aria-owns={returnId}
+    onPointerDown={event => { event.preventDefault(); event.stopPropagation(); }} onDragStart={event => event.preventDefault()}
     onClick={() => setClosing(true)} onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setClosing(true); }
       if (event.key === 'Tab') { event.preventDefault(); returnButton.current?.focus(); }

@@ -23,7 +23,11 @@
 .text-workbench { color: var(--workflow-ink); font: var(--workflow-type-control); }
 .text-workbench .system-workflow__instrument-window { z-index: var(--text-z, 46); }
 .text-workbench .system-workflow__instrument-content { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
-.text-module-body { min-height: 0; height: 100%; display: flex; flex-direction: column; }
+.text-module-body { position: relative; min-height: 0; height: 100%; display: flex; flex-direction: column; }
+.text-window .text-scene-viewport, .text-window .text-module-body > .text-status,
+.text-window > .system-workflow__detached-window-titlebar,
+.text-window > .system-workflow__detached-window-resize { zoom: var(--workbench-content-scale, 1); }
+.text-window .text-scene-viewport { width: var(--workbench-content-width); }
 /* Containment alone still permits the browser's elastic edge movement. */
 .text-module-scroll { overflow: auto; min-height: 0; flex: 1; overscroll-behavior: none; }
 .text-module-content { display: flow-root; }
@@ -78,7 +82,7 @@
 @media (hover: none) { .text-workbench .text-window--read[data-window-chrome] > .system-workflow__detached-window-titlebar { opacity: 1; pointer-events: auto; } }
 @media (max-width: 600px) { .text-document, .text-editor-page { --text-automatic-padding: 16px; padding: var(--text-automatic-padding); } .text-toolbar select { max-width: 160px; } }
 .text-workbench .text-window[data-window-chrome] { --detached-window-gutter: 0px; border: 0; background: transparent; box-shadow: none; border-radius: 0; }
-.text-workbench .text-window[data-window-chrome] > .system-workflow__instrument-content { border-radius: 0; }
+.text-workbench .text-window[data-window-chrome] > .system-workflow__instrument-content { border-radius: inherit; }
 .text-workbench .text-window[data-window-chrome]::before, .text-workbench .text-window[data-window-chrome]::after { display: none; }
 .text-controls-body { min-height: 0; overflow: auto; overscroll-behavior: contain; height: 100%; }
 .text-workbench .text-tools-window { z-index: calc(var(--text-z, 46) + 1); }
@@ -89,7 +93,8 @@
 .text-transfer-preview { position: fixed; z-index: 10000; pointer-events: none; border: 1px dashed #ffffff; box-shadow: 0 0 0 1px #101111; box-sizing: border-box; }
 .text-transfer-preview span { position: absolute; left: 0; top: 0; color: #ffffff; background: #101111; padding: 4px 8px; font: 12px 'Inscape IBM Plex Sans Condensed'; }
 .display-text-content--article { white-space: normal; }
-.display-text-edit-actions { position: absolute; right: 2px; top: 2px; z-index: 5; display: flex; gap: 3px; }
+.display-text-edit-actions { position: absolute; right: 2px; top: 2px; z-index: 5; display: flex; gap: calc(3px * var(--workbench-content-scale, 1)); }
+.display-text-edit-actions > * { zoom: var(--workbench-content-scale, 1); }
 .display-text-authoring { position: absolute; inset: 0; }
 .display-text-authoring .text-editor-page { cursor: text; }
 .system-workflow__placement .text-document img { position: static; max-width: 100%; max-height: 480px; object-fit: contain; }

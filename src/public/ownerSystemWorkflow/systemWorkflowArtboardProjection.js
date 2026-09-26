@@ -19,9 +19,9 @@ export function measureOwnerSystemWorkflowArtboard(availableWidth, availableHeig
   });
 }
 
-export function measureOwnerSystemWorkflowHeroArtboard(availableWidth, availableHeight) {
-  const width = Number(availableWidth);
-  const height = Number(availableHeight);
+export function measureOwnerSystemWorkflowHeroArtboard(availableWidth, availableHeight, contentScale = 1) {
+  const width = Number(availableWidth) / contentScale;
+  const height = Number(availableHeight) / contentScale;
   if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return null;
   const widthLimit = width * 0.84;
   const heightLimit = Math.max(1, height - 96) * (SYSTEM_WORKFLOW_GEOMETRY.columns / SYSTEM_WORKFLOW_GEOMETRY.rows);
@@ -31,11 +31,13 @@ export function measureOwnerSystemWorkflowHeroArtboard(availableWidth, available
     width: referenceWidth,
     height: referenceHeight,
   });
-  return Object.freeze({
+  // Fixed margins and the cap are authored lengths, not raster-surface pixels.
+  const field = {
     ...projection,
     left: (width - referenceWidth) / 2,
     top: (height - referenceHeight) / 2,
-  });
+  };
+  return Object.freeze(Object.fromEntries(Object.entries(field).map(([key, value]) => [key, value * contentScale])));
 }
 
 export function createOwnerSystemWorkflowProjectedField(node, snapStep = 1, scale = 1, mode = OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID, originNode = node, artboardProjection = null, screenScale = 1) {

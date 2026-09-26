@@ -64,7 +64,11 @@
 [data-window-chrome="bevel"] .system-workflow__window-cap:disabled { cursor: default; opacity: .35; }
 
 /* Display keeps its frame geometry (including the attached bay) outside Stage. */
+.system-workflow__presentation-board, .text-window {
+  --workflow-window-chrome-shadow: calc(4px * var(--workbench-content-scale, 1)) calc(6px * var(--workbench-content-scale, 1)) calc(14px * var(--workbench-content-scale, 1)) rgb(17 19 19 / 14%);
+}
 .system-workflow__presentation-board[data-window-chrome="bevel"] {
+  --workflow-board-radius: calc(var(--workflow-window-chrome-radius) * var(--workbench-content-scale, 1));
   --workflow-board-frame-gap: 0px;
   --workflow-board-frame-surface: var(--workflow-panel);
   grid-template-rows: minmax(0, 1fr);
@@ -77,8 +81,9 @@
 }
 .system-workflow__presentation-board[data-window-chrome="bevel"][data-module-frame="on"]:not([data-metadata-sidecar])::before {
   z-index: 40;
-  border: 1px solid var(--workflow-window-edge);
+  border: calc(1px * var(--workbench-content-scale, 1)) solid var(--workflow-window-edge);
 }
+.system-workflow__presentation-board > :is(.system-workflow__identity-strip, .system-workflow__toolbar-reveal, .system-workflow__board-resize-handle) { zoom: var(--workbench-content-scale, 1); }
 .system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__identity-strip {
   position: absolute; inset: 0 0 auto; z-index: 41;
   height: 48px; padding: 8px 10px;
@@ -120,14 +125,14 @@
 .system-workflow__presentation-board[data-window-chrome="bevel"][data-inspecting] > .system-workflow__identity-strip { pointer-events: none; }
 .system-workflow__presentation-board[data-window-chrome="bevel"][data-inspecting] .system-workflow__board-title { pointer-events: auto; }
 .system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__stage-viewport {
-  border-radius: calc(var(--workflow-board-radius) - 1px);
+  border-radius: calc(var(--workflow-board-radius) - 1px * var(--workbench-content-scale, 1));
 }
 .system-workflow__presentation-board[data-window-chrome="bevel"] > .system-workflow__stage-border { border: 0; }
 /* Paint the standalone outline above the artwork's antialiased clip, once.
    A stroke behind that clip lets light artwork brighten the curved edge. */
 .system-workflow__presentation-board[data-window-chrome="bevel"]:not([data-metadata-sidecar])::before { border-color: transparent; }
 .system-workflow__presentation-board[data-window-chrome="bevel"]:not([data-metadata-sidecar]) > .system-workflow__stage-border {
-  inset: -1px; border: 1px solid var(--workflow-window-edge);
+  inset: calc(-1px * var(--workbench-content-scale, 1)); border: calc(1px * var(--workbench-content-scale, 1)) solid var(--workflow-window-edge);
   border-radius: var(--workflow-board-radius);
 }
 .system-workflow__presentation-board[data-window-chrome="bevel"] .system-workflow__window-cap svg,

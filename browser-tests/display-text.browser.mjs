@@ -118,5 +118,9 @@ test('Display text belongs to the Grid, saves and matches Visitor at wide and na
     await page.getByRole('button', { name: 'Previous Grid', exact: true }).click();
     await page.locator('.visitor-grid-world__grid-plane--current .display-text-content').waitFor();
     assert.deepEqual(errors, []);
-  } finally { await browser.close(); }
+  } finally {
+    for (const context of browser.contexts()) for (const page of context.pages())
+      await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await browser.close();
+  }
 });

@@ -1,4 +1,4 @@
-.display-inspection-cues { position: absolute; inset: 0; z-index: 45; pointer-events: none; color: var(--workflow-ink); }
+.display-inspection-cues { position: absolute; inset: 0; z-index: 45; pointer-events: none; color: var(--workflow-ink); zoom: var(--workbench-content-scale, 1); }
 .display-inspection-cue { box-sizing: border-box; position: absolute; width: 30px; height: 30px; transform: translate(-50%, -50%); display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: var(--workflow-ink); pointer-events: none; opacity: 0; cursor: pointer; touch-action: none; transition: opacity 140ms ease; }
 .display-inspection-cue > span { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--workflow-border-strong); border-radius: 50%; background: color-mix(in srgb, var(--workflow-panel) 60%, transparent); font: 400 16px/1 "Inscape Sora", sans-serif; }
 .system-workflow__presentation-board:hover .display-inspection-cue,

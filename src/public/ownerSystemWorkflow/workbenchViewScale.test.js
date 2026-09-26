@@ -29,7 +29,7 @@ test('group scaling preserves relative geometry around the opposite corner and r
   assert.deepEqual(scaleWorkbenchTransform(transform, 2, anchor), identityWorkbenchTransform);
 });
 
-test('native zoom shares layout pixel edges while retaining logical content width', () => {
+test('painted windows share pixel edges while retaining logical content width', () => {
   for (const scale of [.25, .33, .5, .67, .75, .8, .9]) {
     const bounds = (left, width) => {
       const style = workbenchViewStyle(scale, left, 41.4, width, 540.3, 3.17, 1.13);

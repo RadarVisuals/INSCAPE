@@ -66,6 +66,19 @@ test('Hero artboard stays compact on desktop and preserves a centered 16:9 apert
   }), true);
 });
 
+test('Hero margins, cap and pointer projection keep their authored size on a physical Stage', () => {
+  for (const density of [1.25, 1.5, 2]) for (const zoom of [.25, .67, 1.371, 2]) {
+    const contentScale = zoom * density;
+    const logical = measureOwnerSystemWorkflowHeroArtboard(960, 540);
+    const physical = measureOwnerSystemWorkflowHeroArtboard(960 * contentScale, 540 * contentScale, contentScale);
+    for (const key of Object.keys(logical)) assert.ok(Math.abs(physical[key] / contentScale - logical[key]) < 1e-9);
+    const node = { getBoundingClientRect: () => ({ left: 41, top: 73, width: 960 * zoom, height: 540 * zoom }) };
+    const field = createOwnerSystemWorkflowProjectedField(node, 1, 1, OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO, node, physical, 1 / density);
+    assert.ok(Math.abs((field.left - 41) / zoom - logical.left) < 1e-9);
+    assert.ok(Math.abs(field.cellSize / zoom - logical.cellSize) < 1e-9);
+  }
+});
+
 test('a resting scene offset changes editing coordinates without moving the clipped viewport', () => {
   const node = { dataset: { stageColumns: '18', stageRows: '32' },
     getBoundingClientRect: () => ({ left: 100, top: 60, width: 180, height: 320 }) };

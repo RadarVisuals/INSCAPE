@@ -142,7 +142,7 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
     {!presentation.open && <button data-workbench-pan ref={shortcut} className="image-module__shortcut" style={{ bottom: 64 + index * 38 }} onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{record.name}</button>}
     {presentation.open && <ImageWindow id={record.id} title={record.name} position={presentation.position}
-      size={record} fitScale={scale} editable={editable && !crop && !inspect && !flip} suspended={suspended}
+      size={record} fitScale={scale} editable={editable && !crop && !inspect && !flip} suspended={suspended || inspect}
       placementModule={Boolean(store)} onPosition={layout} onResize={resize}
       resizeTarget={resizeTarget}
       onClose={() => { setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); }}>

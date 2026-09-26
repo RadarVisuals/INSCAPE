@@ -10,7 +10,7 @@ import TextMoveHandle from './TextMoveHandle.jsx';
 import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
 const ArticleEditor = lazy(() => import('./ArticleEditor.jsx'));
 
-export default function DisplayArticleEditor({ placement, controller, cellSize, screenCellSize, canvasRef, onClose }) {
+export default function DisplayArticleEditor({ placement, controller, cellSize, width, height, screenCellSize, canvasRef, onClose }) {
   const { scale: standaloneScale } = useWorkbenchView();
   const scope = textRecoveryScope(controller.draft.profileAddress, placement.id, controller.moduleId, controller.selectedGridId);
   const recovered = readTextRecovery(controller.store, scope);
@@ -48,7 +48,7 @@ export default function DisplayArticleEditor({ placement, controller, cellSize, 
   };
   const close = () => { if (failed.current) return; onClose(); };
   return <div ref={root} className="text-workbench display-text-authoring">
-    <DisplayTextContent placement={{ ...placement, text: { article } }} cellSize={cellSize}>
+    <DisplayTextContent placement={{ ...placement, text: { article } }} cellSize={cellSize} width={width} height={height}>
       <Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor article={article} onChange={save} controlsHost={host} disabled={placement.locked} /></Suspense>
     </DisplayTextContent>
     <div className="display-text-edit-actions" style={actions}>

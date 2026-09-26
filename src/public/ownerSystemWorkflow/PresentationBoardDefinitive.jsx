@@ -119,7 +119,9 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       width: view.frame.board.width, height: view.frame.board.height,
     } });
   }, [displayName, boardPosition?.left, boardPosition?.top, view?.frame.board.width, view?.frame.board.height, onWindowChange]);
-  const paintFrame = windowFrame ? workbenchPaintStyle(windowFrame, viewTransform, cameraOffset) : null;
+  const density = globalThis.devicePixelRatio || 1;
+  const contentScale = workbenchScale * density;
+  const paintFrame = windowFrame ? workbenchPaintStyle(windowFrame, viewTransform, cameraOffset, density) : null;
   const stageWidth = paintFrame?.width || 0;
   const stageHeight = paintFrame?.height || 0;
 
@@ -128,7 +130,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const edgeSnapper = (bypass, edges = true) => (axis, side, value) => placement.edgeMatch(axis, side, value, renderedPosition, bypass, edges);
   const resizeBounds = () => WORKBENCH_BOUNDS;
   const beginBoardDrag = (event) => {
-    if (event.button !== 0 || !renderedPosition || event.target.closest('button')) return;
+    if (inspectionActive || event.button !== 0 || !renderedPosition || event.target.closest('button')) return;
     placement.begin(event);
     boardDragRef.current = { id: event.pointerId, clientX: event.clientX, clientY: event.clientY, ...renderedPosition };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -141,7 +143,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   };
   const stopBoardDrag = (event) => { if (boardDragRef.current?.id === event.pointerId) { boardDragRef.current = null; placement.finish(); } };
   const beginBoardResize = (corner, event) => {
-    if (event.button !== 0 || !view || !windowFrame) return;
+    if (inspectionActive || event.button !== 0 || !view || !windowFrame) return;
     event.preventDefault(); event.stopPropagation();
     placement.begin(event);
     boardResizeRef.current = { corner, id: event.pointerId, clientX: event.clientX, clientY: event.clientY, frame: windowFrame, view };
@@ -160,7 +162,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   };
   const resizeBoardFromKeyboard = (corner, event) => {
     if (!['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'].includes(event.key)
-      || !view || !windowFrame) return;
+      || inspectionActive || !view || !windowFrame) return;
     event.preventDefault(); event.stopPropagation();
     placement.begin(event);
     const snapping = windowSnap && !readOnly && !event.altKey;
@@ -209,14 +211,15 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       data-inspecting={inspectionActive || undefined} data-inspection-atmosphere={inspectionAtmosphere || undefined}
 
       ref={boardNodeRef}
-      style={{ ...moduleEdgeStyle(moduleAppearance?.edges), '--workbench-pan-scale': workbenchScale, '--workflow-identity-strip-height': `${responsiveMetrics.identityStripHeight}px`,
-        ...paintFrame, zoom: workbenchScale }}>
+      style={{ ...moduleEdgeStyle(moduleAppearance?.edges, contentScale), '--workbench-pan-scale': workbenchScale, '--workflow-identity-strip-height': `${responsiveMetrics.identityStripHeight}px`,
+        ...paintFrame }}>
       <button type="button" className="system-workflow__toolbar-reveal" aria-label={toolbarOpen ? 'Hide Display controls' : 'Show Display controls'} aria-expanded={toolbarOpen} onClick={() => setToolbarOpen(value => !value)}>···</button>
       <header className="system-workflow__identity-strip" data-workbench-selectable aria-keyshortcuts="Shift+Enter" data-toolbar-open={toolbarOpen || undefined} tabIndex={0} aria-label={`Move Display Module: ${displayName}`}
         onKeyDown={event => {
           if (event.target === event.currentTarget && (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')) { onContextMenu?.(event); return; }
           if (event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
           event.preventDefault(); event.stopPropagation();
+          if (inspectionActive) return;
           placement.begin(event);
           const snapping = windowSnap && !readOnly && !event.altKey;
           const step = snapping || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
@@ -242,7 +245,8 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
         <div className="system-workflow__stage" data-presentation-stage data-surface={displaySurface}
           style={{ width: stageWidth, height: stageHeight }}>
           <div className="system-workflow__inspection-scene" ref={inspectionSceneRef}>
-          <DisplayStageSizeContext.Provider value={{ width: stageWidth, height: stageHeight, scale: workbenchScale }}>
+          <DisplayStageSizeContext.Provider value={{ width: stageWidth, height: stageHeight,
+            screenScale: 1 / density, contentScale }}>
           {cloneElement(children, { boardScale: 1, workbenchScale, selectionOverlayHost })}
           </DisplayStageSizeContext.Provider>
           </div>

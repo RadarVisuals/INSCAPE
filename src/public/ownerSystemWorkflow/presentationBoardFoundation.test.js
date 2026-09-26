@@ -109,8 +109,8 @@ test('owner Display Module reuses the existing interactive canvas inside one cli
   assert.match(controller, /deleteGrid:[^\n]*grid\.id === state\.selectedGridId[^\n]*setSelectedPlacementIds\(\[\]\)/);
   assert.match(canvas, /devicePixelRatio/);
   assert.doesNotMatch(`${canvas}\n${styles}`, /system-workflow__selection-outline/);
-  assert.match(styles, /\.system-workflow__resize-handle \{[^}]*width: 28px/s);
-  assert.match(styles, /\.system-workflow__resize-handle::after \{[^}]*border: 1px solid #fff/s);
+  // Handle dimensions and pointer conversion at fractional DPR are checked by
+  // workbench-surface-behavior.browser.mjs on the rendered production component.
   assert.match(styles, /\.system-workflow__progressive-media \{[^}]*overflow: visible;/s);
   // Selection without an image-edge halo is exercised at aligned and paused camera
   // positions by grid-covered-wrap.browser.mjs, including actual edge pixels.
