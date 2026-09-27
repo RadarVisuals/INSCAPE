@@ -14,7 +14,7 @@ const libraryPreferences = { assetSize: 150, hideLabels: false, sidebarWidth: 17
 const ownerLibraryPreviewRecords = new Map();
 
 export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = false, categoryCommands, placementScope, data, menuSurface, onClose, phase,
-  resolveAssetDimensions, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef }) {
+  resolveAssetDimensions, workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef }) {
   const workspace = useBrowserWorkspace(data, ownerLibraryPreviewRecords, libraryPreferences);
   const resolveDimensions = resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions;
   const [dragPreview, setDragPreview] = useState(null);
@@ -42,7 +42,8 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     let dimensions;
     try { dimensions = resolvedDimensions || await resolveDimensions(asset); } catch { return false; }
     if (!dimensions || !mounted.current || currentPlacementContext.current !== placementContext) return false;
-    return target?.placeAsset(asset, dimensions, destination) || false;
+    return target?.placeAsset(asset, dimensions, destination,
+      () => mounted.current && currentPlacementContext.current === placementContext) || false;
   };
   const cleanup = () => {
     const active = dragRef.current;
@@ -51,6 +52,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     globalThis.removeEventListener('pointerup', active.finish, true);
     globalThis.removeEventListener('pointercancel', active.cancel, true);
     globalThis.removeEventListener('keydown', active.escape, true);
+    globalThis.removeEventListener('blur', active.cancel);
     active.source?.removeAttribute('data-workflow-dragging');
     dragRef.current = null;
     setDragPreview(null);
@@ -83,7 +85,9 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
         const bounds = shortcut.getBoundingClientRect();
         return { destination: null, kind: 'shortcut', rectangle: { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height } };
       }
-      return active.target?.previewAt(point, dimensions, options) || { destination: null, rectangle: null };
+      return active.target?.previewAt(point, dimensions, options)
+        || workbenchImageTargetRef?.current?.previewAt(point, dimensions)
+        || { destination: null, rectangle: null };
     };
     const move = (pointerEvent) => {
       if (pointerEvent.pointerId !== active.pointerId) return;
@@ -119,7 +123,9 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       if (shortcut?.node?.contains(document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY))
         && shortcut.placeAsset(asset)) return;
       if (!mounted.current || currentPlacementContext.current !== placementContext) return;
-      if (preview?.destination) await place(asset, preview.destination, dimensions, preview.target || active.target);
+      if (preview?.destination) {
+        if (!await place(asset, preview.destination, dimensions, preview.target || active.target)) rejectDrop();
+      }
       else rejectDrop();
     };
     const cancel = () => cleanup();
@@ -137,6 +143,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     }).catch(() => null);
     globalThis.addEventListener('pointermove', move, true); globalThis.addEventListener('pointerup', finish, true); globalThis.addEventListener('pointercancel', cancel, true);
     globalThis.addEventListener('keydown', escape, true);
+    globalThis.addEventListener('blur', cancel);
   };
   useEffect(() => { cleanup(); }, [placementContext]);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; cleanup(); }; }, []);
@@ -168,7 +175,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       onAssetPointerDown={beginAssetDrag} onImageActivate={(_event, asset) => place(asset)} workspace={workspace} />
     {dragPreview?.rectangle && createPortal(<div aria-hidden="true" className="system-workflow__placement-preview" style={dragPreview.rectangle}>
       {sourceFor(dragPreview.asset) && <img alt="" src={sourceFor(dragPreview.asset)} />}
-      <span>{dragPreview.kind === 'module' ? dragPreview.label : dragPreview.kind === 'shortcut' ? 'Release to replace icon' : 'Release to add layer'}</span>
+      <span>{dragPreview.kind === 'workbench-image' ? 'Release to place Image' : dragPreview.kind === 'module' ? dragPreview.label : dragPreview.kind === 'shortcut' ? 'Release to replace icon' : 'Release to add layer'}</span>
     </div>, workspaceRef.current || document.body)}
   </OwnerSystemWorkflowWorkspaceShell>;
 }

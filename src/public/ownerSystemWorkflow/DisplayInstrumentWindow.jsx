@@ -1,167 +1,178 @@
+import { useLayoutEffect, useRef, useState } from 'react';
+import { X } from 'lucide-react';
 import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
 import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchView.jsx';
 import { workbenchViewStyle } from './workbenchViewScale.js';
+import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
-import { useLayoutEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
 import OwnerSystemWorkflowDetachedWindow from './OwnerSystemWorkflowDetachedWindow.jsx';
 import { snapWorkbenchCoordinate, WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 import { clampWorkbenchPosition, WORKBENCH_BOUNDS } from './workbenchSpace.js';
-import { clampOwnerSystemWorkflowWindowPosition } from './ownerSystemWorkflowWindowGeometry.js';
+import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, workbenchResizeControl, WORKBENCH_RESIZE_EDGES } from './ownerSystemWorkflowWindowGeometry.js';
 
-// View-only window behavior. The caller supplies its content and commands.
-export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, controlledSize, onResizeEnd, preferredHeight, initialX = 18, initialY = 72, fitContent = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, surfaceStyle, resizeTarget, committedFrame }) {
+// The host owns gestures and temporary geometry. A module's resize target owns
+// validation and persistence; companion tools retain only their screen layout.
+export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, surfaceStyle, resizeTarget, committedFrame, externalControls = false }) {
   const view = useWorkbenchView();
   const { offset } = useWorkbenchCamera();
-  const viewTransform = viewId && !compact ? workbenchModuleTransform(view, viewId) : { scale: 1, x: 0, y: 0 };
-  const viewScale = viewTransform.scale;
-  const node = useRef(null);
-  const placement = useWorkbenchPlacement(node, placementModule && !compact, viewScale);
-  const measuredContent = useRef(null);
-  const gesture = useRef(null);
-  const resize = useRef(null);
-  const [storedPosition, setPosition] = useState(() => ({
-    x: initialX, y: initialY,
-  }));
-  const [storedHeight, setHeight] = useState(initialHeight);
-  const [resizedWidth, setResizedWidth] = useState(width);
-  const previewFrame = viewTransform.frame;
-  const position = previewFrame ? { x: previewFrame.left, y: previewFrame.top } : storedPosition;
-  const height = previewFrame?.height ?? storedHeight;
-  const windowWidth = previewFrame?.width ?? (resizableWidth ? resizedWidth : width);
-  useLayoutEffect(() => {
-    if (!committedFrame) return;
-    setPosition({ x: committedFrame.left, y: committedFrame.top });
-    setResizedWidth(committedFrame.width); setHeight(committedFrame.height);
-  }, [committedFrame]);
-  // Companion tools live in screen coordinates, not in the large composition
-  // area. Recover an offscreen saved position and keep their controls reachable.
-  useLayoutEffect(() => {
-    if (viewId || compact) return undefined;
-    const keepVisible = () => {
-      const bounds = node.current?.getBoundingClientRect();
-      if (!bounds) return;
-      setPosition(current => {
-        const next = clampOwnerSystemWorkflowWindowPosition(current, bounds,
-          { width: globalThis.innerWidth, height: globalThis.innerHeight - 48 });
-        return next.x === current.x && next.y === current.y ? current : next;
-      });
-    };
-    keepVisible();
-    globalThis.addEventListener('resize', keepVisible);
-    return () => globalThis.removeEventListener('resize', keepVisible);
-  }, [viewId, Boolean(compact), windowWidth, height]);
-  useLayoutEffect(() => {
-    if (controlledSize) { setResizedWidth(controlledSize.width); setHeight(controlledSize.height); }
-  }, [controlledSize?.width, controlledSize?.height]);
-  const finishResize = (cancelled = false) => {
-    if (!resize.current) return;
-    resize.current = null; placement.finish();
-    if (cancelled || onResizeEnd?.({ width: windowWidth, height }) === false) {
-      if (controlledSize) { setResizedWidth(controlledSize.width); setHeight(controlledSize.height); }
-    }
+  const transformed = Boolean(viewId) && !compact;
+  const camera = transformed ? workbenchModuleTransform(view, viewId) : { scale: 1, x: 0, y: 0 };
+  const node = useRef(null), measuredContent = useRef(null), gesture = useRef(null), latest = useRef(null);
+  const [frame, setFrame] = useState(() => ({ left: initialX, top: initialY, width, height: initialHeight }));
+  const [preview, setPreview] = useState(null);
+  const [viewport, setViewport] = useState(() => ({ width: globalThis.innerWidth, height: globalThis.innerHeight }));
+  const base = { ...frame, width: resizableWidth ? frame.width : width };
+  if (!viewId && !compact) {
+    if (resizableWidth) base.width = Math.min(base.width, viewport.width - 16);
+    base.height = Math.min(base.height, viewport.height - 64);
+  }
+  const current = camera.frame || preview || base;
+  const density = transformed ? globalThis.devicePixelRatio || 1 : 1;
+  const screen = transformed ? { left: current.left * camera.scale + camera.x + offset.x,
+    top: current.top * camera.scale + camera.y + offset.y, width: current.width * camera.scale, height: current.height * camera.scale }
+    : { ...current, width: Math.min(current.width, viewport.width - 16) };
+  const paint = workbenchPaintGeometry(screen, density);
+  const painted = Object.fromEntries(Object.entries(paint).map(([key, value]) => [key, value / density]));
+  const placement = useWorkbenchPlacement(node, placementModule && !compact, camera.scale, true, screen);
+  useWorkbenchViewRegistration(viewId, node, !compact, base, resizeTarget);
+  const canResize = resizable && !fitContent && !compact && (!resizeTarget?.store || resizeTarget.enabled);
+  const local = transformed ? view.transforms[viewId] : null;
+  const localScale = local?.scale || 1;
+  const bounds = viewId ? {
+    left: (WORKBENCH_BOUNDS.left - (local?.x || 0)) / localScale,
+    top: (WORKBENCH_BOUNDS.top - (local?.y || 0)) / localScale,
+    right: (WORKBENCH_BOUNDS.right - (local?.x || 0)) / localScale,
+    bottom: (WORKBENCH_BOUNDS.bottom - (local?.y || 0)) / localScale,
+  } : { left: 8, top: 8, right: viewport.width - 8, bottom: viewport.height - 56 };
+  const commitResize = next => {
+    if (resizeTarget?.store) {
+      if (!resizeTarget.enabled) return false;
+      const authored = { left: next.left * localScale + (local?.x || 0), top: next.top * localScale + (local?.y || 0),
+        width: next.width * localScale, height: next.height * localScale };
+      if (!resizeTarget.commit([{ ...resizeTarget, id: viewId, ...authored, getPresentation: view.getPresentation }])) return false;
+      view.setTransforms(values => { const nextTransforms = { ...values }; delete nextTransforms[viewId]; return nextTransforms; });
+      resizeTarget.applyFrame(authored);
+      setFrame(authored);
+    } else setFrame(next);
+    return true;
   };
-  useWorkbenchViewRegistration(viewId, node, !compact, { left: position.x, top: position.y, width: windowWidth, height }, resizeTarget);
+  const finish = (cancelled = false) => {
+    const drag = gesture.current;
+    if (!drag) return;
+    gesture.current = null;
+    placement.finish();
+    if (drag.kind === 'resize') {
+      if (!cancelled && drag.next) commitResize(drag.next);
+      setPreview(null);
+    } else if (cancelled) setFrame(drag.frame);
+    if (drag.element.hasPointerCapture?.(drag.id)) drag.element.releasePointerCapture(drag.id);
+    if (!drag.element.isConnected) queueMicrotask(() => node.current?.querySelector('header')?.focus());
+  };
+  latest.current = { finish };
   useLayoutEffect(() => {
-    if (!compact && !previewFrame) onLayoutChange?.({ left: position.x, top: position.y, width: windowWidth, height });
-  }, [position.x, position.y, windowWidth, height, onLayoutChange, Boolean(compact), previewFrame]);
+    const cancel = () => latest.current.finish(true);
+    const escape = event => {
+      if (event.key !== 'Escape' || !gesture.current) return;
+      event.preventDefault(); event.stopPropagation(); cancel();
+    };
+    const resize = () => { cancel(); setViewport({ width: globalThis.innerWidth, height: globalThis.innerHeight }); };
+    document.addEventListener('keydown', escape, true);
+    globalThis.addEventListener('blur', cancel);
+    globalThis.addEventListener('resize', resize);
+    return () => {
+      document.removeEventListener('keydown', escape, true);
+      globalThis.removeEventListener('blur', cancel);
+      globalThis.removeEventListener('resize', resize);
+      cancel();
+    };
+  }, []);
+  useLayoutEffect(() => { latest.current.finish(true); }, [camera.scale, camera.x, camera.y, offset.x, offset.y, Boolean(compact), canResize, resizeTarget?.expected]);
+  useLayoutEffect(() => { if (committedFrame) setFrame(committedFrame); }, [committedFrame]);
+  // Tools belong to the viewport. Authored module positions remain in Workbench
+  // coordinates and are never rewritten just because the browser got smaller.
   useLayoutEffect(() => {
-    if (!fitContent && Number.isFinite(preferredHeight)) setHeight(Math.max(180, Math.min(WORKBENCH_BOUNDS.bottom - position.y, preferredHeight)));
-  }, [preferredHeight, fitContent]);
+    if (viewId || compact || preview) return;
+    const position = clampOwnerSystemWorkflowWindowPosition({ x: base.left, y: base.top }, base,
+      { width: viewport.width, height: viewport.height - 48 });
+    if (position.x !== frame.left || position.y !== frame.top || base.width !== frame.width || base.height !== frame.height)
+      setFrame({ ...base, left: position.x, top: position.y });
+  }, [viewId, Boolean(compact), Boolean(preview), frame.left, frame.top, base.width, base.height, viewport.width, viewport.height]);
+  useLayoutEffect(() => {
+    if (!compact && !camera.frame) onLayoutChange?.(base);
+  }, [base.left, base.top, base.width, base.height, onLayoutChange, Boolean(compact), camera.frame]);
   useLayoutEffect(() => {
     if (!fitContent || compact) return undefined;
     const content = measuredContent.current;
     const measure = () => {
-      const surfaceStyle = getComputedStyle(content.parentElement);
+      const style = getComputedStyle(content.parentElement);
       const chromeHeight = node.current.offsetHeight - content.parentElement.clientHeight
-        + parseFloat(surfaceStyle.paddingTop) + parseFloat(surfaceStyle.paddingBottom);
-      setHeight(Math.max(minimumHeight, Math.min(globalThis.innerHeight - 70,
-        Math.ceil(content.getBoundingClientRect().height + chromeHeight))));
+        + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+      const height = Math.max(minimumHeight, Math.min(globalThis.innerHeight - 70,
+        Math.ceil(content.getBoundingClientRect().height + chromeHeight)));
+      setFrame(value => value.height === height ? value : { ...value, height });
     };
     const observer = new ResizeObserver(measure);
-    observer.observe(content);
-    globalThis.addEventListener('resize', measure);
-    measure();
+    observer.observe(content); globalThis.addEventListener('resize', measure); measure();
     return () => { observer.disconnect(); globalThis.removeEventListener('resize', measure); };
-  }, [fitContent, position.y, Boolean(compact), minimumHeight]);
-  // Restore saved positions verbatim, including older outlying layouts. Only
-  // an explicit movement applies the current placement boundary.
-  const clamp = value => {
-    if (!viewId) return clampOwnerSystemWorkflowWindowPosition(value,
-      node.current?.getBoundingClientRect() || { width: windowWidth, height },
-      { width: globalThis.innerWidth, height: globalThis.innerHeight - 48 });
-    const next = clampWorkbenchPosition({ left: value.x, top: value.y }, { width: windowWidth, height });
-    return { x: next.left, y: next.top };
+  }, [fitContent, Boolean(compact), minimumHeight]);
+  const moveTo = (candidate, altKey) => {
+    const snapping = snapToGrid && !altKey;
+    const placed = placement.position(candidate, current, {
+      left: snapWorkbenchCoordinate(candidate.left, snapping), top: snapWorkbenchCoordinate(candidate.top, snapping),
+    }, altKey);
+    if (viewId) setFrame({ ...base, ...clampWorkbenchPosition(placed, base) });
+    else {
+      const position = clampOwnerSystemWorkflowWindowPosition({ x: placed.left, y: placed.top }, base,
+        { width: viewport.width, height: viewport.height - 48 });
+      setFrame({ ...base, left: position.x, top: position.y });
+    }
   };
-  const placed = (candidate, current, snapping, bypass) => {
-    const next = placement.position({ left: candidate.x, top: candidate.y }, { left: current.x, top: current.y },
-      { left: snapWorkbenchCoordinate(candidate.x, snapping), top: snapWorkbenchCoordinate(candidate.y, snapping) }, bypass);
-    return clamp({ x: next.left, y: next.top });
-  };
-  const start = (event) => {
-    if (event.button !== 0 || event.target.closest('button, a')) return;
-    event.preventDefault();
+  const resizeTo = (origin, edge, delta, altKey) => resizeWorkbenchWindow(origin, edge, delta,
+    { width: minimumWidth, height: minimumHeight }, bounds,
+    (axis, side, value) => placement.edge(axis, side, value, current, altKey) ?? snapWorkbenchCoordinate(value, snapToGrid && !altKey));
+  const begin = (event, kind, edge) => {
+    if (event.button !== 0 || kind === 'move' && event.target.closest('button, a')) return;
+    event.preventDefault(); event.stopPropagation();
+    event.currentTarget.focus();
     placement.begin(event);
-    gesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY, position };
+    gesture.current = { kind, edge, id: event.pointerId, x: event.clientX, y: event.clientY, frame: base, element: event.currentTarget };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
-  const move = (event) => {
-    const origin = gesture.current;
-    if (origin?.id !== event.pointerId) return;
-    if (Math.hypot(event.clientX - origin.x, event.clientY - origin.y) < 3) return;
-    const snapping = snapToGrid && !event.altKey;
-    setPosition(placed({ x: origin.position.x + (event.clientX - origin.x) / viewScale, y: origin.position.y + (event.clientY - origin.y) / viewScale }, position, snapping, event.altKey));
+  const move = event => {
+    const drag = gesture.current;
+    if (drag?.id !== event.pointerId) return;
+    const delta = { x: (event.clientX - drag.x) / camera.scale, y: (event.clientY - drag.y) / camera.scale };
+    if (drag.kind === 'move') moveTo({ left: drag.frame.left + delta.x, top: drag.frame.top + delta.y }, event.altKey);
+    else { drag.next = resizeTo(drag.frame, drag.edge, delta, event.altKey); setPreview(drag.next); }
   };
-  const finish = () => { gesture.current = null; placement.finish(); };
-  const resizeHeight = (value, altKey) => setHeight(Math.max(minimumHeight, Math.min(WORKBENCH_BOUNDS.bottom - position.y,
-    (placement.edge('y', 'bottom', position.y + value, { left: position.x, top: position.y }, altKey) ?? snapWorkbenchCoordinate(position.y + value, snapToGrid && !altKey)) - position.y)));
-  const resizeWidth = (value, altKey) => setResizedWidth(Math.max(minimumWidth, Math.min(WORKBENCH_BOUNDS.right - position.x,
-    (placement.edge('x', 'right', position.x + value, { left: position.x, top: position.y }, altKey) ?? snapWorkbenchCoordinate(position.x + value, snapToGrid && !altKey)) - position.x)));
-  const onKeyDown = (event) => {
+  const key = (event, edge) => {
     if (event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
-    event.preventDefault(); event.stopPropagation();
-    placement.begin(event);
-    const snapping = snapToGrid && !event.altKey;
-    const step = snapping || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
-    setPosition((current) => placed({ x: current.x + (event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0),
-      y: current.y + (event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0) }, current, snapping, event.altKey));
+    event.preventDefault(); event.stopPropagation(); placement.begin(event);
+    const step = (snapToGrid && !event.altKey) || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
+    const delta = { x: event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0,
+      y: event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0 };
+    if (edge) commitResize(resizeTo(base, edge, delta, event.altKey));
+    else moveTo({ left: base.left + delta.x, top: base.top + delta.y }, event.altKey);
+    placement.finish();
   };
+  const pointerProps = { onPointerMove: move, onPointerUp: () => finish(), onPointerCancel: () => finish(true), onLostPointerCapture: () => finish(true) };
   return <OwnerSystemWorkflowDetachedWindow ariaLabel={`${label} — ${title}`} ref={node} viewId={viewId} workbenchPan={Boolean(viewId) && !compact}
-    className={`system-workflow__instrument-window ${className}`} title={`${label} · ${title}`}
-    headerPointerProps={{ 'aria-label': `Move ${label} window`, 'data-workbench-selectable': viewId ? true : undefined, 'aria-keyshortcuts': viewId ? 'Shift+Enter' : undefined, tabIndex: 0, onKeyDown,
-      onPointerDown: start, onPointerMove: move, onPointerUp: finish, onPointerCancel: finish, onLostPointerCapture: finish }}
+    className={`system-workflow__instrument-window ${externalControls ? 'workbench-window--external-controls' : ''} ${className}`} title={`${label} · ${title}`}
+    headerPointerProps={{ 'aria-label': `Move ${label} window`, 'data-workbench-selectable': viewId ? true : undefined,
+      'data-controls-below': externalControls && painted.top < 56 || undefined, 'aria-keyshortcuts': viewId ? 'Shift+Enter' : undefined,
+      tabIndex: 0, onKeyDown: event => key(event), onPointerDown: event => begin(event, 'move'), ...pointerProps }}
     controls={controls} titleContent={titleContent} background={background} compactContent={compact?.content} chrome={chrome} menuSurface={menuSurface}
-    style={{ ...surfaceStyle, '--workbench-pan-scale': viewScale, '--detached-window-width': `${windowWidth}px`, left: position.x, top: position.y, height, maxHeight: viewId ? 'none' : 'calc(100dvh - 64px)', ...(viewId && !compact ? workbenchViewStyle(viewScale, position.x, position.y, windowWidth, height, viewTransform.x, viewTransform.y, offset) : {}), ...compact?.style }}
-    resizeHandleProps={!resizable || fitContent || compact ? undefined : { 'aria-label': `Resize ${label} ${resizableWidth ? 'window' : 'height'}`, role: 'separator', tabIndex: 0,
-      ...(resizableWidth ? { style: { cursor: 'nwse-resize' }, 'aria-valuetext': `${Math.round(windowWidth)} by ${Math.round(height)} pixels` } : {}),
-      'aria-orientation': 'horizontal', 'aria-valuenow': Math.round(height),
-      onPointerDown: (event) => {
-        if (event.button !== 0) return;
-        event.preventDefault();
-        placement.begin(event);
-        resize.current = { id: event.pointerId, x: event.clientX, y: event.clientY, width: windowWidth, height };
-        event.currentTarget.setPointerCapture(event.pointerId);
-      },
-      onPointerMove: (event) => {
-        if (resize.current?.id === event.pointerId) {
-          resizeHeight(resize.current.height + (event.clientY - resize.current.y) / viewScale, event.altKey);
-          if (resizableWidth) resizeWidth(resize.current.width + (event.clientX - resize.current.x) / viewScale, event.altKey);
-        }
-      },
-      onPointerUp: () => finishResize(), onPointerCancel: () => finishResize(true),
-      onLostPointerCapture: () => finishResize(true),
-      onKeyUp: event => { if (event.key.startsWith('Arrow')) onResizeEnd?.({ width: windowWidth, height }); },
-      onKeyDown: (event) => {
-        if (event.key.startsWith('Arrow')) placement.begin(event);
-        const step = (snapToGrid && !event.altKey) || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
-        if (resizableWidth && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
-          event.preventDefault(); event.stopPropagation();
-          resizeWidth(windowWidth + (event.key === 'ArrowRight' ? 1 : -1) * step, event.altKey); return;
-        }
-        if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
-        event.preventDefault(); event.stopPropagation();
-        resizeHeight(height + (event.key === 'ArrowDown' ? 1 : -1) * step, event.altKey);
-      } }}
+    style={{ ...surfaceStyle, '--workbench-pan-scale': camera.scale, '--workbench-control-scale': density, '--detached-window-width': `${current.width}px`,
+      left: current.left, top: current.top, height: current.height, maxHeight: viewId ? 'none' : 'calc(100dvh - 64px)',
+      ...(transformed ? workbenchViewStyle(camera.scale, current.left, current.top, current.width, current.height, camera.x, camera.y, offset) : {}), ...compact?.style }}
+    resizeHandles={canResize && WORKBENCH_RESIZE_EDGES.filter(([edge]) => resizableWidth || ['n', 's'].includes(edge)).map(([edge, name]) =>
+      <div key={edge} className={`system-workflow__detached-window-resize is-${edge}`}
+        aria-label={edge === 'se' ? `Resize ${label} window` : !resizableWidth && edge === 's' ? `Resize ${label} height` : `Resize ${label} from ${name}`}
+        role="separator" tabIndex={0} aria-orientation={['w', 'e'].includes(edge) ? 'vertical' : 'horizontal'}
+        aria-valuenow={Math.round(['w', 'e'].includes(edge) ? current.width : current.height)}
+        aria-valuetext={`${Math.round(current.width)} by ${Math.round(current.height)} pixels`}
+        style={workbenchResizeControl(edge, painted, viewport)} onKeyDown={event => key(event, edge)}
+        onPointerDown={event => begin(event, 'resize', edge)} {...pointerProps} />)}
     surfaceClassName="system-workflow__instrument-content">
     {fitContent ? <div ref={measuredContent}>{children}</div> : children}
   </OwnerSystemWorkflowDetachedWindow>;

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createArticle, assertArticle, validTextModules, ARTICLE_ALIGNMENTS } from './domain/article.js';
+import { createArticle, assertArticle, validTextModules, ARTICLE_ALIGNMENTS, textAppearance } from './domain/article.js';
+import { displayTextArticle } from '../systemWorkflow/domain/displayText.js';
 import { addTextModule, saveTextModule } from './textSession.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../systemWorkflow/systemWorkflowDraftStore.js';
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
@@ -17,6 +18,25 @@ function fixture() {
   return { store: createSystemWorkflowDraftStore({ profileAddress: profile, storage }), storage, entries, fail: () => { fail = true; } };
 }
 const build = draft => buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: draft, assetRecords: [] });
+
+test('new Text has a visible background while saved transparent and legacy articles retain their appearance', () => {
+  assert.equal(createArticle().appearance.background, '#101111');
+  const f = fixture(); addTextModule(f.store, profile);
+  const record = f.store.getDraft().texts[0], article = createArticle('Existing transparent text');
+  article.appearance.background = null;
+  assert.ok(saveTextModule(f.store, profile, record, { ...record, visibility: 'PUBLIC', article }));
+  const restored = createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft();
+  assert.deepEqual(restored.texts[0].article, article);
+  const published = build(restored);
+  assert.deepEqual(published.texts[0].article, article);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(published, restored).texts[0].article, article);
+  const legacy = createArticle(); delete legacy.appearance;
+  assertArticle(legacy); assert.equal(textAppearance(legacy).frame, true);
+  assert.equal(textAppearance(legacy).background, '#101111');
+  const display = displayTextArticle({ content: 'Existing Display label', font: 'sora', size: 20, color: '#ffffff', alignment: 'left', bold: false, italic: false });
+  assert.equal(display.appearance.background, null);
+  assert.equal(display.appearance.compact, true);
+});
 
 test('title size is optional and survives draft, publication and restore independently of body size', () => {
   const old = createArticle(), bytes = JSON.stringify(old);

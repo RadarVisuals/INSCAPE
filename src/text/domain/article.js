@@ -5,7 +5,7 @@ import { articleSections, joinArticleSections } from '../articleSections.js';
 export const ARTICLE_TYPE = 'INSCAPEArticle';
 export const ARTICLE_MAX_BYTES = 192 * 1024;
 export const MAX_TEXT_MODULES = 16;
-export const defaultTextAppearance = () => ({ background: null, opacity: 1, frame: false, scale: 1, fontSize: 16, color: '#ffffff' });
+export const defaultTextAppearance = () => ({ background: '#101111', opacity: 1, frame: false, scale: 1, fontSize: 16, color: '#ffffff' });
 export const textAppearance = article => article.appearance || { ...defaultTextAppearance(), background: '#101111', frame: true };
 export function textContentStyle(article) {
   const padding = article.appearance?.padding;

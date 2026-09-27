@@ -119,19 +119,19 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
     {shortcutMenu.content}
     {!presentation.open && <button data-workbench-pan ref={shortcut} className="text-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{name}</button>}
-    {presentation.open && <WorkbenchWindow label="Text" title={name} titleContent={<span />} chrome="bevel" resizableWidth viewId={record.id} snapToGrid={Boolean(store) && windowSnap}
+    {presentation.open && <WorkbenchWindow label="Text" title={name} titleContent={<span className="text-window-grip">Text</span>} chrome="bevel" externalControls minimumWidth={180} minimumHeight={100} resizableWidth viewId={record.id} snapToGrid={Boolean(store) && windowSnap}
       surfaceStyle={textWindowStyle(article, paintScale)} placementModule={Boolean(store)} className="text-window text-window--read"
-      background={<>{appearance.edges?.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
+      background={<><span aria-hidden="true" className="text-window-bounds" />{appearance.edges?.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
         {appearance.frame && <span aria-hidden="true" className="module-surface-outline" style={{ boxShadow: `inset 0 0 0 ${paintScale}px ${article.appearance ? appearance.color : 'var(--workflow-border)'}` }} />}</>}
       width={presentation.window.width} initialHeight={presentation.window.height} initialX={presentation.window.left} initialY={presentation.window.top} onLayoutChange={layout}
       resizeTarget={resizeTarget} committedFrame={committedFrame}
-      controls={<>{store && <><button type="button" className="system-workflow__round-control" aria-label={mode === 'write' ? 'Read' : 'Write'} title={mode === 'write' ? 'Read' : 'Write'}
+      controls={<>{store && <><button type="button" className="text-window-control" aria-label={mode === 'write' ? 'Read' : 'Write'} title={mode === 'write' ? 'Read' : 'Write'}
           onClick={() => { setMode(current => current === 'write' ? 'read' : 'write'); }}>{mode === 'write' ? <Eye /> : <Pencil />}</button>
-        <TextMoveHandle label="Drag Text into Display" disabled={suspended || Boolean(working.sceneLink)} previewAt={(point, rectangle) => placementTargets?.current?.previewTextAt?.(point, rectangle)}
+        <TextMoveHandle className="text-window-control" label="Drag Text into Display" disabled={suspended || Boolean(working.sceneLink)} previewAt={(point, rectangle) => placementTargets?.current?.previewTextAt?.(point, rectangle)}
           onDrop={preview => { if (preview) moveInto(preview); }} onKeyboardMove={() => setSettings(true)} onError={setError} />
-        <button ref={toolsTrigger} type="button" className="system-workflow__round-control" aria-label="Text tools" title="Text tools" aria-expanded={settings} onClick={() => setSettings(s => !s)}><Settings /></button>
+        <button ref={toolsTrigger} type="button" className="text-window-control" aria-label="Text tools" title="Text tools" aria-expanded={settings} onClick={() => setSettings(s => !s)}><Settings /></button>
         {error && <button type="button" className="text-save-error" aria-label="Text not saved — open recovery" onClick={() => setSettings(true)}>!</button>}</>}
-        <button type="button" className="system-workflow__round-control" aria-label={`Close ${name}`} onClick={close}><X /></button></>}>
+        <button type="button" className="text-window-control" aria-label={`Close ${name}`} onClick={close}><X /></button></>}>
       <div className="text-module-body" ref={surface} style={textOutputStyle(article, view.frame || presentation.window)}>
         {unavailable && <p className="text-status" role="status">{missingDisplay ? 'The linked Display was removed. Your text is preserved. Open Text tools to unlink it.' : sectionLink ? 'Open the linked Display to read its current section. You can still edit the full article in Write.' : 'Open the linked Display to read or edit its passage.'}</p>}
         <div className="text-scene-viewport" style={unavailable && (!sectionLink || sectionRead) ? { visibility: 'hidden' } : undefined} data-settling={swiping && scene?.settling || undefined}>
@@ -156,7 +156,12 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
       </div>
     </WorkbenchWindow>}
     {store && presentation.open && settings && !suspended && <TextTools article={sectionLink ? working.article : article} onChange={changeArticle}
-      controlsRef={setControlsHost} onClose={closeTools} disabled={editBlocked} initialX={presentation.window.left + presentation.window.width + 12} initialY={presentation.window.top}>
+      controlsRef={setControlsHost} onClose={closeTools} disabled={editBlocked} initialX={presentation.window.left + presentation.window.width + 12} initialY={presentation.window.top}
+      footer={error ? <div className="text-status" role="alert">{error}
+        {failed.current && <button type="button" onClick={() => change(workingRef.current, { retry: true })}>Retry local save</button>}
+        {reason === 'conflict' && <button type="button" onClick={() => change(workingRef.current, { retry: true, replace: true })}>Replace saved Text with my edits</button>}
+      </div> : <p className="text-save-summary" role="status">Saved in this browser</p>}
+      connection={<>
       {!working.sceneLink ? <><label>Follow Display<select aria-label="Follow Display" value={linkTarget} onChange={e => setLinkTarget(e.target.value)}>
         <option value="">Choose a Display…</option>{displays.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
       </select></label><button type="button" disabled={!scenes[linkTarget]?.gridId || failed.current} onClick={() => {
@@ -165,7 +170,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
           const next = { ...workingRef.current, sceneLink: { mode: 'sections', displayId: linkTarget } };
           delete next.pagination; change(next);
         }
-      }}>Link Text to Display</button><p>Each page break starts the next Grid’s text. Longer sections scroll inside the window.</p></> : <p>Following {displays.find(d => d.id === working.sceneLink.displayId)?.name || 'Display'} · {displays.find(d => d.id === working.sceneLink.displayId)?.grids.find(g => g.id === gridId)?.title || 'Grid unavailable'}. {sectionLink ? 'Write edits the full article. In Read, each page break starts the next Grid’s section; longer sections scroll.' : 'Change Grid in the Display to edit its passage.'}</p>}
+      }}>Link Text to Display</button><p>Page breaks follow Grids. Longer sections scroll.</p></> : <p>Following {displays.find(d => d.id === working.sceneLink.displayId)?.name || 'Display'} · {displays.find(d => d.id === working.sceneLink.displayId)?.grids.find(g => g.id === gridId)?.title || 'Grid unavailable'}. {sectionLink ? 'Write edits the full article. In Read, each page break starts the next Grid’s section; longer sections scroll.' : 'Change Grid in the Display to edit its passage.'}</p>}
       {working.sceneLink && <>
         <button type="button" disabled={suspended || failed.current} onClick={unlink}>Unlink Text from Display</button>
         <p>{sectionLink || working.sceneLink.passages.length === 0 ? 'Keeps the full article as independent Text.' : 'Keeps the original article here and opens each additional passage as a private Text window, preserving its formatting.'}</p>
@@ -174,12 +179,12 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
         const next = { ...workingRef.current, sceneLink: { mode: 'sections', displayId: working.sceneLink.displayId } };
         delete next.pagination; change(next);
       }}>Use article page breaks for Grids</button>}
+      </>}>
       {!sectionLink && <label className="text-visibility"><input type="checkbox" checked={working.pagination === 'pages'} onChange={e => {
         const next = { ...workingRef.current }; if (e.target.checked) next.pagination = 'pages'; else delete next.pagination; change(next);
       }} />Read as pages</label>}
       <label className="text-visibility"><input type="checkbox" checked={working.visibility === 'PUBLIC'} onChange={e => change({ ...workingRef.current, visibility: e.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in Workbench publication</label>
-      <label>Insert Library artwork<select aria-label="Insert Library artwork" value="" disabled={mode !== 'write' || editBlocked} onChange={e => acceptImage(assets.find(a => (a.id || a.stableAssetId) === e.target.value))}>
-        <option value="">Choose an image…</option>{assets.filter(a => a.imageUrl || a.media?.type === 'image' || a.src).map(a => <option key={a.id || a.stableAssetId} value={a.id || a.stableAssetId}>{a.name || 'Artwork'}</option>)}</select></label>
+
       {!working.sceneLink && destinations.length > 0 && <><label>Move into Display<select aria-label="Text destination" value={destination} onChange={e => setDestination(e.target.value)}>
         <option value="">Choose a Display…</option>{destinations.map(target => <option key={target.id} value={target.id}>{target.label}</option>)}</select></label>
         <button type="button" disabled={!destination} onClick={() => {
@@ -192,10 +197,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
             moveInto({ ...preview, target });
           } catch (failure) { setError(failure.message); }
         }}>Move into Display</button></>}
-      {error ? <div className="text-status" role="alert">{error}
-        {failed.current && <button type="button" onClick={() => change(workingRef.current, { retry: true })}>Retry local save</button>}
-        {reason === 'conflict' && <button type="button" onClick={() => change(workingRef.current, { retry: true, replace: true })}>Replace saved Text with my edits</button>}
-      </div> : <p className="text-save-summary" role="status">Saved in this browser</p>}
+      <p className="text-tools-hint">Drag artwork from Library into your text.</p>
     </TextTools>}
   </div>;
 }

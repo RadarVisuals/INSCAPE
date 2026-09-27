@@ -96,12 +96,18 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
 
     assert.equal(await content.locator('p').first().evaluate(n => getComputedStyle(n).textAlignLast), 'center', 'alignment survives reload');
     assert.equal(await text.getByRole('combobox', { name: 'Document font', exact: true }).inputValue(), 'literata');
-    const select = text.getByRole('combobox', { name: 'Insert Library artwork' });
-    const image = await select.locator('option').nth(1).getAttribute('value');
-    if (image) { await select.selectOption(image); await content.locator('figure img').waitFor();
-      await page.waitForFunction(() => [...document.querySelectorAll('.text-document img')].every(img => img.complete && img.naturalWidth > 0)); }
-
     await text.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await content.focus(); await page.keyboard.press('Control+End'); await page.keyboard.press('ArrowRight');
+    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    const card = page.getByRole('region', { name: 'Library workspace' }).getByRole('button', { name: 'ABYSSAL STUDY / INSCAPE STUDIES', exact: true });
+    await card.scrollIntoViewIfNeeded();
+    const from = await card.boundingBox(), target = await text.locator('.text-window').boundingBox();
+    await page.mouse.move(from.x + from.width / 2, from.y + 35); await page.mouse.down();
+    await page.mouse.move(target.x + target.width - 40, target.y + target.height - 80, { steps: 12 }); await page.mouse.up();
+    await content.locator('figure img').waitFor();
+    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    const image = true;
+    await page.waitForFunction(() => [...document.querySelectorAll('.text-document img')].every(img => img.complete && img.naturalWidth > 0));
     await page.evaluate(() => document.fonts.ready);
     const scroller = text.getByRole('region', { name: 'Article content', exact: true });
     assert.equal(await scroller.evaluate(node => getComputedStyle(node).scrollbarWidth), 'none');
@@ -113,11 +119,12 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
       await page.waitForFunction(() => document.querySelector('.text-module-scroll').scrollTop > 0);
       await scroller.evaluate(node => { node.scrollTop = 0; });
     }
+    const authoredBox = await text.locator('.text-window').boundingBox();
     for (const [name, viewport] of [['wide', { width: 1440, height: 1000 }], ['narrow', { width: 390, height: 844 }]]) {
       await page.setViewportSize(viewport); await page.waitForTimeout(150);
       await page.screenshot({ path: `.browser-test-runtime/text-${name}.png` });
       const box = await text.locator('.text-window').boundingBox();
-      assert.ok(box.x >= 0 && box.x + box.width <= viewport.width + 1, `Text window contained at ${name}`);
+      assert.deepEqual(box, authoredBox, `viewport changes preserve authored Text geometry at ${name}`);
       assert.equal(await text.locator('.text-module-scroll').evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
       assert.equal(await text.locator('.text-editor-page .text-document-title').evaluate(el => el.scrollWidth <= el.clientWidth + 1), true, 'title wraps without clipping');
     }
@@ -155,7 +162,12 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     assert.equal(await visitor.getByRole('textbox').count(), 0);
     assert.deepEqual(editorRequests, []);
     await visitor.evaluate(() => document.fonts.ready);
+    await visitor.locator('.text-document img').scrollIntoViewIfNeeded();
+    // The fixed authored canvas can extend beyond this narrow viewport. Force
+    // the lazy media request here to verify the asset independently of camera pan.
+    await visitor.locator('.text-document img').evaluate(img => { img.loading = 'eager'; });
     await visitor.waitForFunction(() => [...document.querySelectorAll('.text-document img')].every(img => img.complete && img.naturalWidth > 0));
+    await visitor.locator('.text-module-scroll').evaluate(node => { node.scrollTop = 0; });
     assert.deepEqual(await visitor.locator('.text-module-scroll').evaluate(node => ({ width: node.clientWidth, height: node.clientHeight })), ownerViewport,
       'owner Read and Visitor have identical usable dimensions');
     await visitor.screenshot({ path: '.browser-test-runtime/text-visitor-narrow.png' });

@@ -35,7 +35,7 @@ test('Image world joins survive repeated grabs, pan and continuous zoom', { time
         createRoot(document.getElementById('root')).render(React.createElement(WorkbenchViewProvider,null,React.createElement(Fixture)));
         const image=new Image();image.src='https://image.test/source.png';await image.decode();
       });
-      await page.addStyleTag({content:'body {background:#123456} .image-module__header {opacity:0 !important;outline:none !important} .image-module__resize {visibility:hidden}'});
+      await page.addStyleTag({content:'body {background:#123456} .image-module__header {opacity:0 !important;outline:none !important} .image-module__resize, .image-module__bounds {visibility:hidden}'});
       const windows=page.locator('.image-module__window'), moving=windows.nth(1), grip=moving.locator('header');
       const seamPixels = async () => {
         const png=await page.screenshot();
@@ -57,9 +57,10 @@ test('Image world joins survive repeated grabs, pan and continuous zoom', { time
       for(const zoom of [.25,.33,.67,.99,1,1.01,1.37,2]){
         await page.evaluate(zoom=>window.configure(zoom),zoom);
         await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-        const a=await windows.first().boundingBox(), b=await moving.boundingBox();
-        await page.mouse.move(b.x+10,b.y+10);await page.mouse.down();
-        await page.mouse.move(a.x+11,a.y+a.height+11,{steps:6});
+        const a=await windows.first().boundingBox(), b=await moving.boundingBox(), handle=await grip.boundingBox();
+        await grip.focus();
+        await page.mouse.move(handle.x+10,handle.y+10);await page.mouse.down();
+        await page.mouse.move(handle.x+10+a.x-b.x,handle.y+10+a.y+a.height-b.y,{steps:6});
         const aligned=await moving.boundingBox();
         assert.ok(Math.abs(aligned.y-(a.y+a.height))<1/64,`flush ${density} / ${zoom}`);
         assert.ok(Math.abs(aligned.x-a.x)<1/64,`edge ${density} / ${zoom}`);
@@ -70,7 +71,7 @@ test('Image world joins survive repeated grabs, pan and continuous zoom', { time
         const source=await moving.locator('image').evaluate(node => ['x','y','width','height'].map(key=>node.getAttribute(key)).join(','));
         // Re-grab and jitter without Alt: the captured edge cannot drift.
         for(let grab=0;grab<3;grab++){
-          const r=await moving.boundingBox();
+          const r=await grip.boundingBox();
           await page.mouse.move(r.x+12,r.y+12);await page.mouse.down();
           for(const [dx,dy] of [[1,1],[-1,2],[2,-1],[0,0]]){
             await page.mouse.move(r.x+12+dx,r.y+12+dy);
@@ -86,6 +87,7 @@ test('Image world joins survive repeated grabs, pan and continuous zoom', { time
           const source=canvas.toDataURL();
           nodes.forEach(node=>node.setAttribute('href',source));
         });
+        const beforeCamera = await page.evaluate(()=>window.readPositions());
         // Pan and zoom are view-only. Every shared edge must still paint once.
         for(const scale of [.25,.413,.671,.997,1,1.013,1.371,2]){
           await page.evaluate(scale=>window.camera(scale,13.37*scale,-7.23*scale),scale);
@@ -95,7 +97,7 @@ test('Image world joins survive repeated grabs, pan and continuous zoom', { time
           assert.ok(Math.abs(second.x-first.x)<1/64,'same left edge after camera change');
           const raster=await seamPixels();
           assert.equal(raster.bad,0,`opaque seam at density ${density}, zoom ${scale}: ${JSON.stringify(raster)}`);
-          assert.deepEqual(await page.evaluate(()=>window.readPositions()),saved,'camera never writes positions');
+          assert.deepEqual(await page.evaluate(()=>window.readPositions()),beforeCamera,'camera never writes positions');
           assert.equal(await moving.locator('image').evaluate(node => ['x','y','width','height'].map(key=>node.getAttribute(key)).join(',')),source,'camera never recomputes source crop');
         }
         await page.evaluate(zoom=>window.camera(zoom,0,0),zoom);

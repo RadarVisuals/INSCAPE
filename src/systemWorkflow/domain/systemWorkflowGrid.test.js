@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createEmptySystemWorkflowDraft } from './systemWorkflowDraft.js';
+import { assertValidSystemWorkflowDraft, createEmptySystemWorkflowDraft } from './systemWorkflowDraft.js';
+import { createArticle } from '../../text/domain/article.js';
 import {
   createSystemWorkflowGridCandidate,
   createSystemWorkflowGridDeleteCandidate,
+  createSystemWorkflowGridDuplicateCandidate,
   createSystemWorkflowGridRenameCandidate,
   createSystemWorkflowGridReorderCandidate,
   createSystemWorkflowGridVisibilityCandidate,
@@ -163,4 +165,73 @@ test('delete confirmation fingerprints the complete canonical serialized Grid', 
       gridId: 'grid:second', confirmation,
     }), { code: 'SYSTEM_WORKFLOW_GRID_DELETE_CONFIRMATION_STALE' });
   }
+});
+
+test('Grid duplicate preserves exact artwork, rich Text and groups with independent IDs', () => {
+  let draft = createSystemWorkflowGridCandidate(initial(), { generateId: () => 'second' });
+  const article = createArticle();
+  article.title = 'Scene notes';
+  article.content.content = [{ type: 'paragraph', content: [{ type: 'text', text: 'Original words', marks: [{ type: 'bold' }] }] }];
+  draft.grids[0].subtitle = 'A layered scene';
+  draft.grids[0].labelOffset = { column: 2, row: -1 };
+  draft.grids[0].placements = [
+    { ...placement(), selectedMedia: { url: 'https://example.com/selected.png', width: 1400, height: 900 },
+      crop: { x: .4, y: .6, zoom: 2 }, transform: { quarterTurns: 1, mirrorX: true, mirrorY: false },
+      mediaFrameRatio: 1.5, inspectionMode: 'IN_PLACE', locked: true },
+    { ...placement(), id: 'placement-b', layer: 2, navigationOrder: 2, column: 6, locked: true },
+    { id: 'placement-text', kind: 'text', text: { article }, column: 2, row: 5, columnSpan: 8, rowSpan: 4,
+      layer: 1, navigationOrder: 1, visibility: 'PUBLIC', locked: false, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } },
+    { ...placement(), id: 'placement-private', layer: 3, navigationOrder: 3, visibility: 'PRIVATE' },
+  ];
+  draft.grids[0].groups = [{ id: 'group:original', placementIds: ['placement-a', 'placement-b'] }];
+  draft = assertValidSystemWorkflowDraft(draft);
+  const before = structuredClone(draft), source = draft.grids[0];
+  let number = 0;
+  const result = createSystemWorkflowGridDuplicateCandidate(draft, { gridId: source.id,
+    expectedGridFingerprint: systemWorkflowGridFingerprint(source), generateId: () => 'copy',
+    generatePlacementId: () => `copied-${++number}` });
+  assert.deepEqual(draft, before, 'source input is never mutated');
+  assert.deepEqual(result.grids.map(grid => grid.id), ['grid:home', 'grid:second', 'grid:copy', 'grid:world-cover']);
+  const copy = result.grids[2];
+  assert.equal(copy.title, 'HOME copy');
+  assert.equal(copy.visibility, 'PRIVATE');
+  assert.equal(copy.subtitle, source.subtitle);
+  assert.deepEqual(copy.labelOffset, source.labelOffset);
+  const withoutId = ({ id, ...value }) => value;
+  assert.deepEqual(copy.placements.map(withoutId), source.placements.map(withoutId));
+  assert.ok(copy.placements.every(item => !source.placements.some(original => original.id === item.id)));
+  assert.notEqual(copy.groups[0].id, source.groups[0].id);
+  assert.deepEqual(copy.groups[0].placementIds, [copy.placements[0].id, copy.placements[1].id]);
+  copy.placements[2].text.article.content.content[0].content[0].text = 'Changed copy';
+  assert.equal(result.grids[0].placements[2].text.article.content.content[0].content[0].text, 'Original words');
+});
+
+test('Grid duplicate names are unique and bounded, including copies of private and legacy empty scenes', () => {
+  const draft = initial(); draft.grids[0].title = 'x'.repeat(80);
+  const source = draft.grids[0], request = { gridId: source.id, expectedGridFingerprint: systemWorkflowGridFingerprint(source) };
+  const first = createSystemWorkflowGridDuplicateCandidate(draft, { ...request, generateId: () => 'first' });
+  const second = createSystemWorkflowGridDuplicateCandidate(first, { ...request, generateId: () => 'second' });
+  assert.equal(first.grids[1].title.length, 80);
+  assert.equal(second.grids[2].title.length, 80);
+  assert.match(second.grids[2].title, / copy 2$/);
+  assert.notEqual(first.grids[1].title, second.grids[2].title);
+  const privateCopy = createSystemWorkflowGridDuplicateCandidate(first, { gridId: first.grids[1].id,
+    expectedGridFingerprint: systemWorkflowGridFingerprint(first.grids[1]), generateId: () => 'private-copy' });
+  assert.equal(privateCopy.grids[2].visibility, 'PRIVATE');
+  assert.deepEqual(privateCopy.grids[2].placements, []);
+  assert.equal(Object.hasOwn(privateCopy.grids[2], 'groups'), false);
+});
+
+test('Grid duplicate rejects stale sources, World Cover, exhausted IDs and the Grid limit', () => {
+  const draft = initial(), source = draft.grids[0];
+  const request = { gridId: source.id, expectedGridFingerprint: systemWorkflowGridFingerprint(source) };
+  assert.throws(() => createSystemWorkflowGridDuplicateCandidate(draft, { ...request, expectedGridFingerprint: 'stale' }), { code: 'SYSTEM_WORKFLOW_GRID_STALE' });
+  assert.throws(() => createSystemWorkflowGridDuplicateCandidate(draft, { ...request, gridId: 'missing' }), { code: 'SYSTEM_WORKFLOW_GRID_UNKNOWN' });
+  assert.throws(() => createSystemWorkflowGridDuplicateCandidate(draft, { gridId: 'grid:world-cover',
+    expectedGridFingerprint: systemWorkflowGridFingerprint(draft.grids[1]) }), { code: 'SYSTEM_WORKFLOW_WORLD_COVER_PROTECTED' });
+  assert.throws(() => createSystemWorkflowGridDuplicateCandidate(draft, { ...request, generateId: () => 'home' }), { code: 'SYSTEM_WORKFLOW_ID_EXHAUSTED' });
+  let full = draft;
+  for (let index = 1; index < 24; index++) full = createSystemWorkflowGridDuplicateCandidate(full, { ...request, generateId: () => `copy-${index}` });
+  assert.throws(() => createSystemWorkflowGridDuplicateCandidate(full, request), { code: 'SYSTEM_WORKFLOW_GRID_LIMIT_REACHED' });
+  assert.equal(draft.grids.length, 2);
 });

@@ -1,5 +1,38 @@
 const finite = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 
+export const WORKBENCH_RESIZE_EDGES = [['nw', 'top left'], ['n', 'top'], ['ne', 'top right'], ['e', 'right'],
+  ['se', ''], ['s', 'bottom'], ['sw', 'bottom left'], ['w', 'left']];
+
+// Screen-sized targets may move inward at a viewport boundary; their marks
+// continue to identify the exact content edge. Offscreen edges stay offscreen.
+export function workbenchResizeControl(edge, screen, viewport) {
+  const x = edge.includes('w') ? 0 : edge.includes('e') ? screen.width : screen.width / 2;
+  const y = edge.includes('n') ? 0 : edge.includes('s') ? screen.height : screen.height / 2;
+  const outsideX = edge === 'w' ? 28 : edge === 'e' ? 0 : 14;
+  const outsideY = edge.includes('n') ? 28 : edge.includes('s') ? 0 : 14;
+  const reachable = (point, outside, limit) => point < 0 || point > limit ? point - outside : Math.max(0, Math.min(limit - 28, point - outside));
+  const left = reachable(screen.left + x, outsideX, viewport.width) - screen.left;
+  const top = reachable(screen.top + y, outsideY, viewport.height) - screen.top;
+  return { left, top, '--resize-mark-x': `${x - left - 4}px`, '--resize-mark-y': `${y - top - 4}px` };
+}
+
+export function resizeWorkbenchWindow(frame, edge, delta, minimum, bounds, snap) {
+  const next = { ...frame };
+  for (const [axis, key, start, end, before, after] of [
+    ['x', 'width', 'left', 'right', 'w', 'e'], ['y', 'height', 'top', 'bottom', 'n', 's'],
+  ]) {
+    const reverse = edge.includes(before);
+    if (!reverse && !edge.includes(after)) continue;
+    const anchor = frame[start] + (reverse ? frame[key] : 0);
+    const moving = frame[start] + (reverse ? 0 : frame[key]) + delta[axis];
+    const snapped = snap?.(axis, reverse ? start : end, moving) ?? moving;
+    const available = Math.max(1, reverse ? anchor - bounds[start] : bounds[end] - anchor);
+    next[key] = Math.min(available, Math.max(Math.min(minimum[key], available), reverse ? anchor - snapped : snapped - anchor));
+    next[start] = reverse ? anchor - next[key] : anchor;
+  }
+  return next;
+}
+
 export function clampOwnerSystemWorkflowWindowPosition(position, size, viewport, margin = 8) {
   const safeMargin = Math.max(0, finite(margin, 8));
   const width = Math.max(1, finite(viewport?.width, 1));

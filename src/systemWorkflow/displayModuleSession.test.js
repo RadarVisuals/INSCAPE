@@ -6,6 +6,9 @@ import { PRIMARY_DISPLAY_ID } from './domain/displayModules.js';
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
 import { validateProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Validation.js';
 import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Reconciliation.js';
+import { systemWorkflowGridFingerprint } from './domain/systemWorkflowGrid.js';
+import { createArticle } from '../text/domain/article.js';
+import { passageArticle } from '../text/scenePassages.js';
 
 const profile = '0x001048331cd14cef40dd5da644a738e7324fe691';
 
@@ -66,6 +69,45 @@ function fixture() {
   const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
   return { store, storage };
 }
+
+for (const additional of [false, true]) test(`Grid duplication saves once, isolates its ${additional ? 'additional' : 'primary'} Display, and supports undo and reload`, () => {
+  const { store, storage } = fixture();
+  const secondary = addDisplayModule(store), id = additional ? secondary : PRIMARY_DISPLAY_ID;
+  const session = createDisplayModuleSession(store, id);
+  const seeded = store.getDraft();
+  seeded.texts = [{ id: 'text:linked', visibility: 'PUBLIC', sceneLink: { mode: 'sections', displayId: id },
+    article: { ...createArticle('Linked story'), content: { type: 'doc', content: [
+      { type: 'paragraph', content: [{ type: 'text', text: 'Original section' }] }, { type: 'pageBreak' },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Unmapped section' }] },
+    ] } } }];
+  assert.ok(store.commitCompletedOperation(seeded, { expectedGeneration: store.getGeneration() }));
+  const before = store.getDraft(), source = session.getState().draft.grids[0];
+  const request = { gridId: source.id, expectedGridFingerprint: systemWorkflowGridFingerprint(source), generateId: () => 'duplicated' };
+  const write = storage.setItem; let writes = 0;
+  storage.setItem = (...args) => { writes++; write(...args); };
+  assert.equal(session.duplicateGrid(request), true);
+  assert.equal(writes, 1);
+  assert.equal(session.getState().selectedGridId, 'grid:duplicated');
+  assert.equal(store.getHistory().undo, 'Duplicate Grid');
+  const duplicated = store.getDraft();
+  assert.deepEqual(additional ? duplicated.grids : duplicated.displays, additional ? before.grids : before.displays);
+  assert.deepEqual(duplicated.identityPresentation, before.identityPresentation);
+  assert.deepEqual(duplicated.texts, before.texts, 'standalone Text remains independently authored');
+  assert.match(JSON.stringify(passageArticle(duplicated.texts[0], source.id, [source.id, 'grid:duplicated'])), /Original section/);
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), duplicated);
+  const published = buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: duplicated });
+  assert.ok(!JSON.stringify(published).includes('grid:duplicated'), 'private copy is omitted from the public projection');
+  assert.ok(!JSON.stringify(published).includes('Unmapped section'), 'appending a private Grid does not publish unmapped Text');
+  assert.ok(store.undo()); assert.deepEqual(store.getDraft(), before);
+  assert.equal(session.getState().selectedGridId, source.id);
+  assert.ok(store.redo()); assert.deepEqual(store.getDraft(), duplicated);
+  const savedSelection = session.getState().selectedGridId, savedHistory = store.getHistory();
+  storage.setItem = () => { throw Error('full'); };
+  assert.throws(() => session.duplicateGrid({ ...request, generateId: () => 'failed' }), /could not be saved/);
+  assert.deepEqual(store.getDraft(), duplicated);
+  assert.deepEqual(store.getHistory(), savedHistory);
+  assert.equal(session.getState().selectedGridId, savedSelection);
+});
 
 test('render snapshots retain unchanged media, reject mutation and follow accepted edits and history', () => {
   const { store } = fixture();

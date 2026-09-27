@@ -73,7 +73,7 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     assert.equal(await dock.getByRole('button', { name: 'Duplicate', exact: true }).count(), 0);
     assert.equal(await page.locator('[data-shared-tool="layers"]').count(), 0);
     const resizeHandle = module.getByRole('separator', { name: 'Resize Image window' });
-    assert.equal(await resizeHandle.evaluate(el => getComputedStyle(el).borderRightWidth), '0px');
+    assert.equal(await resizeHandle.evaluate(el => getComputedStyle(el).opacity), '1');
     const resizeBounds = await resizeHandle.boundingBox();
     const beforeResize = await page.evaluate(() => window.readDraft().imageModules[0]);
     await page.mouse.move(resizeBounds.x + 10, resizeBounds.y + 10); await page.mouse.down();
@@ -145,13 +145,14 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     }
     assert.deepEqual(await page.evaluate(() => window.readDraft()), cropped);
     // Removing a side is undoable, and replacement keeps its sequence ID.
-    const beforeInterruptedInspect = await canvas.locator('svg').screenshot();
+    const artworkScreenshot = () => canvas.locator('svg').screenshot({ style: '.image-module__bounds, .image-module__resize { visibility:hidden !important; }' });
+    const beforeInterruptedInspect = await artworkScreenshot();
     await canvas.click();
     await page.waitForFunction(() => document.querySelector('.image-module__canvas')?.hasAttribute('data-lift-source'));
     await page.keyboard.press('Escape');
     await page.getByRole('dialog', { name: 'Inspect Image' }).waitFor({ state: 'detached' });
     await page.locator('body').click({ position: { x: 5, y: 5 } });
-    assert.deepEqual(await canvas.locator('svg').screenshot(), beforeInterruptedInspect, 'interrupted Lift restores the exact artwork pixels');
+    assert.ok((await artworkScreenshot()).equals(beforeInterruptedInspect), 'interrupted Lift restores the exact artwork pixels');
     await grip.focus(); await dock.getByRole('button', { name: 'Remove Image side' }).click();
     await page.waitForFunction(() => window.readDraft().imageModules[0].sides.length === 2);
     await canvas.focus(); await page.keyboard.press('Control+z');
@@ -170,7 +171,7 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     await page.locator('body').click({ position: { x: 5, y: 5 } });
     // Source transparency exposes different Workbench backgrounds. Compare
     // both presentations against the same backing, without their controls.
-    const parityStyle = await page.addStyleTag({ content: '.image-module__canvas { background:#123456; } .image-module__header, .image-module__next { visibility:hidden; }' });
+    const parityStyle = await page.addStyleTag({ content: '.image-module__canvas { background:#123456; } .image-module__header, .image-module__next, .image-module__bounds, .image-module__resize { visibility:hidden; }' });
     const ownerPixels = await canvas.locator('svg').screenshot();
     await page.getByRole('button', { name: 'Preview', exact: true }).click();
     const visitorImage = page.locator('.visitor-grid-world [data-image-module]'); await visitorImage.locator('.image-module__canvas').waitFor();

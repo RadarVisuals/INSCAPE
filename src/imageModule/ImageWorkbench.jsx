@@ -5,14 +5,13 @@ import ImageArtwork from './ImageArtwork.jsx';
 import { ContextToolContent, useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
 import ArtworkTransformTools from '../public/ownerSystemWorkflow/ArtworkTransformTools.jsx';
 import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
-import { createProfileDocumentV9AssetResolver } from '../profileDocument/domain/profileDocumentV9Asset.js';
-import { resolvePublishedAssetUrl } from '../profileDocument/domain/publishedAssetUrl.js';
-import { decodeOwnerSystemWorkflowAssetDimensions } from '../public/ownerSystemWorkflow/ownerSystemWorkflowAssetDimensions.js';
+import { resolveImageLibrarySide } from './imageLibrarySide.js';
 import { createSystemWorkflowCropSession, createSystemWorkflowCropPanGesture, updateSystemWorkflowCropPanGesture, setSystemWorkflowCropZoom, nudgeSystemWorkflowCrop } from '../systemWorkflow/systemWorkflowCrop.js';
 import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop, transformArtwork } from '../systemWorkflow/systemWorkflowTransform.js';
 import { createImagePresentation, imageFocusEntry, imageSize, MAX_IMAGE_SIDES, nextImageSide } from './imageModule.js';
 import { saveImageModule, prepareImageResize } from './imageModuleSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
+import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
 import ImageLift from './ImageLift.jsx';
 import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
@@ -28,12 +27,14 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
   const imageRequest = useRef(0);
   latest.current = record;
   const activeTarget = useContextToolTarget();
+  const { getPresentation } = useWorkbenchView();
   const side = record.sides.find(item => item.id === sideId) || record.sides[0];
   const crop = cropState?.expected === record && cropState?.placementId === side?.id ? cropState : null;
   const flip = record.sides.some(item => item.id === flipTarget) ? flipTarget : null;
   const sideIndex = record.sides.indexOf(side);
   const editable = Boolean(store) && !suspended;
-  const scale = Math.min(1, (viewport.width - 16) / record.width, (viewport.height - 70) / record.height);
+  const fitSize = size => Math.min(1, (viewport.width - 16) / size.width, (viewport.height - 70) / size.height);
+  const scale = fitSize(record);
   const rectangle = crop?.mask || { left: 0, top: 0, width: record.width, height: record.height };
   const liftEntry = useMemo(() => side ? imageFocusEntry(side) : null, [side]);
   const inactive = suspended || !presentation.open;
@@ -85,16 +86,8 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
     const request = ++imageRequest.current;
     try {
       if (dropMode === 'append' && current.sides.length >= MAX_IMAGE_SIDES) throw new Error('Image supports up to 32 sides. Remove a side or replace its artwork.');
-      const id = input.stableAssetId || input.id;
-      let asset = createProfileDocumentV9AssetResolver([{ ...(input.assetRecord || input), id }], { compactContentReference: false })(id, input.selectedMedia);
-      if (asset.media.type !== 'image' || !asset.media.url) throw new Error('Choose a Library image.');
-      if (!asset.media.width || !asset.media.height) {
-        const dimensions = await decodeOwnerSystemWorkflowAssetDimensions({ src: resolvePublishedAssetUrl(asset.media.url) });
-        if (!live.current || imageRequest.current !== request || latest.current !== current) return false;
-        if (!dimensions) throw new Error('The artwork dimensions could not be read. Try dropping the image again.');
-        asset = { ...asset, media: { ...asset.media, width: dimensions.width, height: dimensions.height } };
-      }
-      const newSide = { id: `side:${crypto.randomUUID()}`, asset, crop: { x: .5, y: .5, zoom: 1 }, transform: { quarterTurns: 0, mirrorX: false, mirrorY: false } };
+      const newSide = await resolveImageLibrarySide(input);
+      if (!live.current || imageRequest.current !== request || latest.current !== current) return false;
       const replacing = dropMode === 'replace' && current.sides.some(item => item.id === side?.id);
       if (replacing) newSide.id = side.id;
       if (!save({ ...current, sides: replacing ? current.sides.map(item => item.id === side.id ? newSide : item) : [...current.sides, newSide] }, current)) return false;
@@ -117,9 +110,11 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
   const updateVisualCrop = value => setCrop(current => current && ({ ...current, previewCrop: unprojectSystemWorkflowCrop(side.transform, value) }));
   const applyCrop = value => { if (crop && changeSide({ crop: value }, crop.expected)) { setCrop(null); drag.current = null; } };
   const cancelCrop = () => { setCrop(null); drag.current = null; };
-  const resize = newSize => {
+  const resize = (newSize, position) => {
     cancelCrop();
-    return save({ ...record, ...newSize });
+    const saved = commitWorkbenchSelectionResize([{ ...resizeTarget, id: record.id, ...position, ...newSize, getPresentation }]);
+    if (saved) layout(position);
+    return saved;
   };
   const resizeTarget = useMemo(() => ({ enabled: editable && !crop && !inspect && !flip,
     expected: record, store, profileAddress, layoutKey: 'imageModules', commit: commitWorkbenchSelectionResize, prepare: prepareImageResize, applyFrame: layout, reportError: setError,
@@ -142,7 +137,8 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
     {!presentation.open && <button data-workbench-pan ref={shortcut} className="image-module__shortcut" style={{ bottom: 64 + index * 38 }} onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{record.name}</button>}
     {presentation.open && <ImageWindow id={record.id} title={record.name} position={presentation.position}
-      size={record} fitScale={scale} editable={editable && !crop && !inspect && !flip} suspended={suspended || inspect}
+      size={record} fitScale={scale} fitSize={fitSize} editable={editable && !crop && !inspect && !flip} suspended={suspended || inspect}
+      active={activeTarget === record.id}
       placementModule={Boolean(store)} onPosition={layout} onResize={resize}
       resizeTarget={resizeTarget}
       onClose={() => { setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); }}>

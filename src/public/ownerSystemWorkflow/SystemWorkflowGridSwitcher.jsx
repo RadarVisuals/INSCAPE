@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Check, Eye, EyeOff, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { isSystemWorkflowWorldCoverGrid } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { Check, Copy, Eye, EyeOff, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { isSystemWorkflowWorldCoverGrid, SYSTEM_WORKFLOW_LIMITS } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 
 export default function SystemWorkflowGridSwitcher({ controller, onSelectGrid = controller.changeGrid, ...panelProps }) {
   const [editing, setEditing] = useState(null);
@@ -46,6 +46,7 @@ export default function SystemWorkflowGridSwitcher({ controller, onSelectGrid = 
       </form> : <button className="system-workflow__grid-activate" type="button" role="option" aria-selected={grid.id === controller.selectedGridId} onClick={() => onSelectGrid(grid.id)}><strong>{grid.title}</strong><span>{worldCover ? `Directory cover · 768 × 432 · ${grid.placements.length} placements` : `${grid.visibility === 'PUBLIC' ? 'Public' : 'Private'} · ${grid.placements.length} placements`}</span></button>}
       {!worldCover && <div className="system-workflow__grid-actions" aria-label={`${grid.title} actions`}>
         <button aria-label={`Rename ${grid.title}`} title="Rename" type="button" onClick={() => setEditing(grid.id)}><Pencil size={13} /></button>
+        <button aria-label={`Duplicate ${grid.title}`} title="Duplicate Grid" type="button" disabled={regularGrids.length >= SYSTEM_WORKFLOW_LIMITS.maxGrids} onClick={() => controller.duplicateGrid(grid)}><Copy size={13} /></button>
         <button aria-label={`Make ${grid.title} ${grid.visibility === 'PUBLIC' ? 'private' : 'public'}`} title={grid.visibility === 'PUBLIC' ? 'Make private' : 'Make public'} type="button" onClick={() => controller.setGridVisibility(grid, grid.visibility === 'PUBLIC' ? 'PRIVATE' : 'PUBLIC')}>{grid.visibility === 'PUBLIC' ? <Eye size={13} /> : <EyeOff size={13} />}</button>
         <button aria-label={`Delete ${grid.title}`} title="Delete" type="button" disabled={regularGrids.length === 1} onClick={() => setConfirming(grid.id)}><Trash2 size={13} /></button>
       </div>}

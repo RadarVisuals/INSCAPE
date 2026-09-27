@@ -8,7 +8,7 @@ import { createImagePresentation } from '../../imageModule/imageModule.js';
 export function captureWorkbenchPresentation({
   layout, shortcut, assetRecords, displayOpen, identityOpen, hasPrimaryDisplay = true,
   displays, miniApps, texts, displayPresentations = {}, miniAppPresentations = {}, textPresentations = {},
-  imageModules, imagePresentations = {},
+  imageModules, imagePresentations = {}, savedImagePresentations = [],
 }) {
   try {
     if (displays?.some(({ id }) => displayPresentations[id] === null)) {
@@ -34,7 +34,8 @@ export function captureWorkbenchPresentation({
     return { error: null, value: {
       ...base,
       ...(imageModules ? { imageModules: imageModules.map((item, index) => imagePresentations[item.id]
-        || savedImages?.find(p => p.id === item.id) || createImagePresentation(item.id, index)) } : {}),
+        || savedImages?.find(p => p.id === item.id) || savedImagePresentations.find(p => p.id === item.id)
+        || createImagePresentation(item.id, index)) } : {}),
       ...(texts ? { texts: texts.map((text, index) => textPresentations[text.id]
         || savedTexts?.find(item => item.id === text.id) || createTextPresentation(text.id, index)) } : {}),
       ...(miniApps ? { miniApps: miniApps.map((app, index) => miniAppPresentations[app.id]

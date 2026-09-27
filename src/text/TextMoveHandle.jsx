@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Move } from 'lucide-react';
 
-export default function TextMoveHandle({ label, disabled, previewAt, onDrop, onKeyboardMove, onError }) {
+export default function TextMoveHandle({ label, disabled, previewAt, onDrop, onKeyboardMove, onError, className = 'system-workflow__round-control' }) {
   const gesture = useRef(null), [preview, setPreview] = useState(null);
   const cancel = () => {
     const drag = gesture.current;
@@ -14,7 +14,7 @@ export default function TextMoveHandle({ label, disabled, previewAt, onDrop, onK
     document.addEventListener('keydown', escape, true);
     return () => { document.removeEventListener('keydown', escape, true); if (gesture.current) gesture.current.node.style.pointerEvents = gesture.current.pointerEvents; };
   }, []);
-  return <><button type="button" className="system-workflow__round-control text-move-handle" aria-label={label} title={label} disabled={disabled}
+  return <><button type="button" className={`${className} text-move-handle`} aria-label={label} title={label} disabled={disabled}
     onClick={event => { if (event.detail === 0) onKeyboardMove?.(); }}
     onPointerDown={event => {
       if (event.button !== 0 || disabled) return;

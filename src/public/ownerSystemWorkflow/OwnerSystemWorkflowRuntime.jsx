@@ -21,6 +21,7 @@ import { addTextModule } from '../../text/textSession.js';
 import { MAX_TEXT_MODULES } from '../../text/domain/article.js';
 import { addImageModule } from '../../imageModule/imageModuleSession.js';
 import { MAX_IMAGE_MODULES } from '../../imageModule/imageModule.js';
+import WorkbenchImageDropTarget from '../../imageModule/WorkbenchImageDropTarget.jsx';
 import { openMobileModule } from '../../mobile/mobileSession.js';
 import useDraftUndo from './useDraftUndo.js';
 import { removeWorkbenchModule } from '../../systemWorkflow/removeWorkbenchModule.js';
@@ -215,6 +216,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     has(target) { return identityTargetRef.current === target || [...moduleAssetTargets.current.values()].includes(target); },
   };
   const workspaceRef = useRef(null);
+  const workbenchImageTargetRef = useRef(null);
   const [decodedDimensions, setDecodedDimensions] = useState(() => new Map());
   const [workspaceMenu, setWorkspaceMenu] = useState(null);
   const [boardInstanceState, transitionBoardInstance] = useReducer(transitionPresentationBoardInstance, profileAddress,
@@ -252,7 +254,8 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     displays: workbenchController.draft.displays, miniApps: workbenchController.draft.miniApps, texts: workbenchController.draft.texts,
     displayPresentations: instancePresentations, miniAppPresentations, textPresentations,
     imageModules: workbenchController.draft.imageModules, imagePresentations,
-  }), [hasPrimaryDisplay, workbenchLayout, shortcutLayout, canonicalRecords, boardInstanceState, identityOpen, instancePresentations, workbenchController.draft.displays, workbenchController.draft.miniApps, miniAppPresentations, workbenchController.draft.texts, textPresentations, workbenchController.draft.imageModules, imagePresentations]);
+    savedImagePresentations: workbenchController.draft.workbench?.imageModules,
+  }), [hasPrimaryDisplay, workbenchLayout, shortcutLayout, canonicalRecords, boardInstanceState, identityOpen, instancePresentations, workbenchController.draft.displays, workbenchController.draft.miniApps, miniAppPresentations, workbenchController.draft.texts, textPresentations, workbenchController.draft.imageModules, workbenchController.draft.workbench?.imageModules, imagePresentations]);
   const workbench = workbenchProjection.value;
   const workspaceViews = Object.fromEntries([['workbench:tools', { ...sharedTools, targetId: activeModuleId }], [PRIMARY_DISPLAY_ID, { gridId: controller.selectedGridId, locked: workbenchPreferences.compositionLocked }],
     ...Object.entries(instanceRecords).map(([id, record]) => [id, { gridId: record.controller.selectedGridId, locked: record.locked }]), ...Object.entries(textViews)]);
@@ -434,6 +437,8 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     data-surface={workbenchPreferences.surfaceId} data-previewing={preview ? true : undefined}
     inert={preview ? '' : undefined}>
     <WorkbenchViewControls hostRef={workspaceRef} disabled={Boolean(preview)} />
+    <WorkbenchImageDropTarget targetRef={workbenchImageTargetRef} hostRef={workspaceRef}
+      suspended={Boolean(preview)} onCreated={setActiveModuleId} onError={setNotice} />
     <SharedDisplayToolWindows fallbackFocus={workspaceRef} menuSurface={menuSurface} hidden={Boolean(preview) || instrumentsObscured} />
     <ContextToolbar menuSurface={menuSurface} hidden={Boolean(preview) || instrumentsObscured} />
     <WorkbenchAlignmentGrid hostRef={workspaceRef} color={workbenchPreferences.gridColor} mode={workbenchPreferences.gridMode} />
@@ -477,7 +482,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       records={workbenchController.draft.miniApps} store={workbenchController.store} profileAddress={profileAddress}
       presentations={initialWorkbench.current?.miniApps} onPresentationChange={registerMiniAppPresentation}
       onConnect={onConnect} suspended={Boolean(preview)} /></Suspense>}
-    <OwnerSystemWorkflowPanelLayer moduleAssetTargetRef={moduleTargetsRef} placementTargetRef={allPlacementTargetsRef} shortcutTargetRef={allShortcutTargetsRef} workspaceRef={workspaceRef} activity={activity} assets={assets} assetsById={assetsById} authoringLocked={false} browser={browser}
+    <OwnerSystemWorkflowPanelLayer workbenchImageTargetRef={workbenchImageTargetRef} moduleAssetTargetRef={moduleTargetsRef} placementTargetRef={allPlacementTargetsRef} shortcutTargetRef={allShortcutTargetsRef} workspaceRef={workspaceRef} activity={activity} assets={assets} assetsById={assetsById} authoringLocked={false} browser={browser}
       connectedProfile={connectedProfile} onConnect={onConnect} onDisconnect={onDisconnect} onEnterMyWorld={onEnterMyWorld}
       controller={activeController} layout={layout} libraryData={libraryData} menuSurface={menuSurface} onChangeGrid={changeGrid}
       workspaceSurfaceColor={workspaceSurfaceColor}

@@ -208,5 +208,8 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
     await page.screenshot({ path: '.browser-test-runtime/text-scenes-narrow.png' });
     assert.equal(await text.locator('.text-page-viewport').evaluate(n => n.scrollHeight <= n.clientHeight + 1), true);
     assert.deepEqual(errors, []);
-  } finally { await browser.close(); }
+  } finally {
+    for (const context of browser.contexts()) for (const page of context.pages()) await page.unrouteAll({ behavior: 'wait' });
+    await browser.close();
+  }
 });

@@ -36,15 +36,35 @@ content. Raster artwork keeps its existing renderer. Saved URLs and schemas are
 unchanged, and the runtime retains its existing restricted LUKSO RPC policy.
 
 Width and height are independent whole-pixel dimensions from 32 to 4096.
-The corner resizes the canvas without a visible handle mark; keyboard focus remains
-visible. The contextual dock also offers exact
+Owner hover, focus or activation reveals the complete Image bounds and contrasting
+28-pixel resize targets. Corners resize both dimensions; midpoint handles resize
+one dimension around the opposite edge. Targets keep their screen size through
+zoom and sit outside the artwork where space allows. At viewport edges, hit areas
+stay reachable while their marks identify the canvas edges. Redundant handles are
+omitted on tiny canvases.
+The compact move/close strip sits outside the image beyond the resize targets,
+below it when there is no room above. Thin images remain exposed and their top
+edge resizes rather than moving the window. Position and dimensions save together
+as one undoable operation; Escape cancels the preview. Keyboard focus remains
+visible. Visitor retains the external move/close strip without editing bounds or
+resize controls. The contextual dock also offers exact
 dimensions, shared rotate/mirror actions, crop pan/zoom and Native fit.
 New artwork fills the canvas through a centred crop. Library drops append a
 side by default; Replace side retains its position in the sequence and starts
 the new artwork at its default crop/transform. Remove side is undoable.
 The first implementation supports up to sixteen modules and 32 sides each.
-The module starts private and has an explicit Include Image in publication
-choice. It shares the owner/Visitor renderer; Visitor can flip, inspect and
+Dragging Library artwork onto empty Workbench space creates one Image module at
+the preview's exact position, accounting for camera pan and zoom. The preview is
+centred on the pointer and respects the Workbench boundary. Initial whole-pixel
+dimensions follow the source proportions within a manageable 360-pixel size;
+Native fit retains the full artwork. Creation saves the artwork and open window
+position in one undoable draft operation and selects the Image tools. Drops on
+existing modules retain their own behavior; Display receives a Grid placement
+and Image appends a side unless Replace side is selected.
+An Image created by this drop is included in the next explicit publication by
+default. Empty Images created through Add remain private. Existing visibility
+choices stay unchanged, and Include Image in publication remains available.
+Nothing uploads or publishes on drop. It shares the owner/Visitor renderer; Visitor can flip, inspect and
 move its temporary window, with no editing tools or authored resize.
 
 Optional `imageModules` extends draft v4 and public document v9. Each side
@@ -70,14 +90,20 @@ One module holds one illustrated article, or a scene-linked sequence of articles
 as described below; up to 16 standalone Text modules are supported per Workbench.
 Write and Read use the same full content viewport as Visitor: no duplicate window title,
 formatting toolbar or saved-status footer reserves space. Window actions appear
-on hover or keyboard focus as an overlay, and remain available on touch.
+on hover or keyboard focus in a compact strip outside the text surface, and
+remain available on touch. Read/Write, move into Display, Text tools and close
+occupy equal cells; the strip and resize targets retain their screen size at zoom.
 Formatting, optional title, appearance, artwork captions and save recovery belong
 to a separate movable Text tools window. Save failures expose a small output
 indicator; Retry reads the latest saved draft and preserves unrelated edits.
 Conflicting text requires an explicit replacement choice. Failed recovery never
 resets the draft or reports an unconfirmed save as successful.
-New Text starts transparent and frameless. Background colour/opacity and the
+New Text starts with its dark background colour enabled and remains frameless. Background colour/opacity and the
 frame are independent authored settings; older articles retain their appearance.
+Text tools separates Text and Appearance tabs. Typography and formatting use
+compact rows; Follow Display remains in the Text tab. Edges, texture, colours and
+inner spacing belong to Appearance. Library artwork enters through direct drag
+into the text; there is no separate artwork-selection dropdown.
 Text tools offers optional per-side inner spacing in text pixels, including zero.
 Custom spacing uses the full available text width; Automatic retains the existing
 responsive padding and reading-width limit.
@@ -517,6 +543,11 @@ Selection corner handles remain a separate group-scale operation.
 Dock, shortcuts, Identity and companion tools retain their normal size.
 Companion tools (including Layers, Artwork tools and Text tools) stay in screen
 coordinates during camera pan and zoom; their manual dragging remains independent.
+Text, Text tools, Layers and Artwork info offer resize targets on all four edges
+and corners, outside their content and title bars. The opposite edge stays fixed;
+Escape restores the complete starting frame. Owner Text resizing saves through
+the existing module resize transaction and supports draft Undo/Redo. Companion
+window sizing remains temporary UI state and stays reachable after viewport resize.
 This is session-only view state, shared by owner and Visitor rendering, never
 captured as authored geometry or publication data. The percentage reset control
 and Ctrl/Cmd + 0 restore camera zoom to 100% around the centre of the current
@@ -727,6 +758,16 @@ renderers ignore them. Restoring a publication removes them at the draft boundar
 There is no storage-key change or draft reset; reading does not rewrite storage.
 
 ## Display Module
+
+The Grids menu offers Duplicate Grid for ordinary scenes in the active Display.
+It appends and selects a private copy named after the source, with a unique
+copy suffix. Artwork, embedded Text, placement geometry, media choices, crop,
+transforms, locks, labels and groups are retained; Grid, placement and group IDs
+are independent. The copy is one undoable draft operation. Failed persistence,
+stale input or the 24-Grid limit leaves the draft and selection unchanged.
+World Cover is excluded. Appending preserves existing scene-linked Text section
+indices; standalone Text articles and passages remain independently authored.
+Existing drafts and public documents require no schema or storage-key changes.
 
 Display supports authored text layers within a Grid. Text layers share placement
 geometry, ordering, selection, movement, resizing, duplication, locking and undo

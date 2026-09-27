@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
+import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5191';
 for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into and out of Display at ${viewScale * 100}%`, { timeout: 120000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
@@ -37,11 +38,13 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     const readBounds = await output.locator('article p').boundingBox();
     assert.ok(Math.abs(writeBounds.y - readBounds.y) < 1, 'Read does not move text');
     await output.getByRole('button', { name: 'Write', exact: true }).click();
+    await tools.getByRole('tab', { name: 'Appearance', exact: true }).click();
     await tools.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('colour');
     await tools.getByRole('checkbox', { name: 'Show border', exact: true }).check();
     assert.notEqual(await output.evaluate(node => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
     await tools.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('none');
     await tools.getByRole('checkbox', { name: 'Show border', exact: true }).uncheck();
+    await tools.getByRole('tab', { name: 'Text', exact: true }).click();
     // Simulate another writer updating unrelated saved data.
     await page.evaluate(() => { const draft = window.readDraft(); draft.identityPresentation.alias = 'Other tab'; localStorage.setItem(window.draftKey, JSON.stringify(draft)); });
     await body.fill('Unsaved but recoverable.');
@@ -54,12 +57,7 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     await tools.locator('.text-controls-body').evaluate(node => { node.scrollTop = 0; });
     await page.screenshot({ path: '.browser-test-runtime/text-tools-wide.png' });
     await tools.getByRole('button', { name: 'Close Text tools' }).click();
-    if (viewScale === .5) {
-      for (let step = 0; step < 5; step++) {
-        await output.dispatchEvent('wheel', { ctrlKey: true, deltaY: 100, bubbles: true, cancelable: true });
-        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
-      }
-    }
+    if (viewScale === .5) await setWorkbenchZoom(page, .5);
     const originalTextHeight = (await body.locator('p').boundingBox()).height;
     const unlock = page.getByRole('button', { name: 'Unlock Display Module composition', exact: true }); if (await unlock.count()) await unlock.click({ force: true });
     const canvas = page.locator('[data-system-workflow-artboard]').first(), bounds = await canvas.boundingBox();
@@ -76,7 +74,13 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     assert.equal(await canvas.getByRole('toolbar').count(), 0);
     await externalTools.getByRole('textbox', { name: 'Article title', exact: true }).fill('Attached text');
     await externalTools.getByRole('button', { name: 'Close Text tools' }).click();
-    await canvas.getByRole('button', { name: 'Select Attached text', exact: true }).dblclick();
+    const attached = canvas.getByRole('button', { name: 'Select Attached text', exact: true });
+    await attached.focus(); await page.keyboard.press('Enter');
+    // Move the floating toolbox aside before reaching the artwork underneath.
+    const toolGrip = externalTools.getByLabel('Move Text tools window', { exact: true });
+    const toolRect = await toolGrip.boundingBox();
+    await page.mouse.move(toolRect.x + 40, toolRect.y + 15); await page.mouse.down();
+    await page.mouse.move(60, 70, { steps: 8 }); await page.mouse.up();
     const outHandle = canvas.getByRole('button', { name: 'Drag Text out of Display' });
     const start = await outHandle.boundingBox();
     await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2); await page.mouse.down();

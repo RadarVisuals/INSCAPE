@@ -13,6 +13,7 @@ import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.j
 import { createDisplayModuleSession, addDisplayModule } from '../systemWorkflow/displayModuleSession.js';
 import { OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS as assets } from '../public/ownerSystemWorkflow/ownerSystemWorkflowDevelopmentFixture.js';
 import { projectLatticeProductionFocusMediaMotion } from '../lattice/rendering/latticeProductionFocusArtworkMotion.js';
+import { resolveImageLibrarySide } from './imageLibrarySide.js';
 const profile = `0x${'1'.repeat(40)}`;
 const asset = createProfileDocumentV9AssetResolver(assets, { compactContentReference: false })(assets[0].id);
 const side = id => ({ id: `side:${id}`, asset: structuredClone(asset), crop: { x: .4, y: .5, zoom: 2 }, transform: { quarterTurns: 1, mirrorX: true, mirrorY: false } });
@@ -22,6 +23,28 @@ function fixture() {
   return { store: createSystemWorkflowDraftStore({ profileAddress: profile, storage }), storage, entries, fail: value => { failed = value; } };
 }
 const documentFor = draft => buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: draft, assetRecords: [] });
+test('Library drop creates artwork and its exact window in one undoable operation, ready for explicit publication', async () => {
+  const f = fixture(), before = f.store.getDraft();
+  const selectedMedia = { url: 'https://images.example/selected.webp', width: 1920, height: 1080 };
+  const resolved = await resolveImageLibrarySide({ ...assets[0], selectedMedia });
+  const placed = { side: resolved, size: { width: 360, height: 203 }, position: { left: 876.123, top: 234.567 } };
+  const id = addImageModule(f.store, profile, placed);
+  const after = f.store.getDraft(), record = after.imageModules[0];
+  assert.equal(record.visibility, 'PUBLIC');
+  assert.equal(record.sides[0].asset.media.url, selectedMedia.url);
+  assert.equal(record.sides[0].asset.stableAssetId, assets[0].id);
+  assert.equal(record.sides[0].crop, null);
+  assert.deepEqual(after.workbench.imageModules, [{ id, open: true, position: placed.position }]);
+  assert.deepEqual(documentFor(after).imageModules[0].sides, record.sides);
+  assert.deepEqual(documentFor(after).workbench.imageModules, after.workbench.imageModules);
+  assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), before);
+  assert.ok(f.store.redo()); assert.deepEqual(f.store.getDraft(), after);
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft(), after);
+  f.fail(true);
+  assert.throws(() => addImageModule(f.store, profile, placed), /could not be saved/);
+  assert.deepEqual(f.store.getDraft(), after, 'failed creation leaves no empty module or window');
+  assert.throws(() => addImageModule(f.store, `0x${'2'.repeat(40)}`, placed), /no longer active/);
+});
 test('Image uses existing draft storage, rejects stale/profile/failed edits, and undo restores authored size and sides', () => {
   const f = fixture(), before = f.store.getDraft();
   assert.deepEqual(assertValidSystemWorkflowDraft(before), before);

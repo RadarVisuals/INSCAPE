@@ -2,6 +2,7 @@ import { createPlacementGroupCandidate, ungroupPlacementsCandidate, guardGrouped
 import {
   createSystemWorkflowGridCandidate,
   createSystemWorkflowGridDeleteCandidate,
+  createSystemWorkflowGridDuplicateCandidate,
   createSystemWorkflowGridRenameCandidate,
   createSystemWorkflowGridReorderCandidate,
   createSystemWorkflowGridVisibilityCandidate,
@@ -106,6 +107,13 @@ export function createSystemWorkflowAuthoringSession({ store } = {}) {
     createGrid(options) {
       const previous = new Set(systemWorkflowGridOrder(store.getDraft()));
       const committed = transact((draft) => createSystemWorkflowGridCandidate(draft, options));
+      if (committed) selectedGridId = store.getDraft().grids.find(({ id }) => !previous.has(id)).id;
+      return committed;
+    },
+
+    duplicateGrid(request) {
+      const previous = new Set(systemWorkflowGridOrder(store.getDraft()));
+      const committed = transact(draft => createSystemWorkflowGridDuplicateCandidate(draft, request), { historyLabel: 'Duplicate Grid' });
       if (committed) selectedGridId = store.getDraft().grids.find(({ id }) => !previous.has(id)).id;
       return committed;
     },

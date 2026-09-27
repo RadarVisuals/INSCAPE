@@ -36,7 +36,7 @@ test('Image joins survive Workbench capture, repeated grabs, pan and continuous 
         createRoot(document.getElementById('root')).render(React.createElement(WorkbenchViewProvider,null,React.createElement(Fixture)));
         const image=new Image();image.src='https://image.test/source.png';await image.decode();
       });
-      await page.addStyleTag({content:'body {background:#123456} .image-module__header {opacity:0 !important;outline:none !important} .image-module__resize {visibility:hidden}'});
+      await page.addStyleTag({content:'body {background:#123456} .image-module__header {opacity:0 !important;outline:none !important} .image-module__resize, .image-module__bounds {visibility:hidden}'});
       const windows=page.locator('.image-module__window'), moving=windows.nth(1), grip=moving.locator('header');
       const seamPixels = async () => {
         const png=await page.screenshot();
@@ -58,9 +58,10 @@ test('Image joins survive Workbench capture, repeated grabs, pan and continuous 
       for(const zoom of [.25,.33,.67,.99,1,1.01,1.37,2]){
         await page.evaluate(zoom=>window.configure(zoom),zoom);
         await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-        const a=await windows.first().boundingBox(), b=await moving.boundingBox();
-        await page.mouse.move(b.x+10,b.y+10);await page.mouse.down();
-        await page.mouse.move(a.x+11,a.y+a.height+11,{steps:6});
+        const a=await windows.first().boundingBox(), b=await moving.boundingBox(), handle=await grip.boundingBox();
+        await grip.focus();
+        await page.mouse.move(handle.x+10,handle.y+10);await page.mouse.down();
+        await page.mouse.move(handle.x+10+a.x-b.x,handle.y+10+a.y+a.height-b.y,{steps:6});
         const aligned=await moving.boundingBox();
         assert.ok(Math.abs(aligned.y-(a.y+a.height))<1/64,`flush ${density} / ${zoom}`);
         assert.ok(Math.abs(aligned.x-a.x)<1/64,`edge ${density} / ${zoom}`);
@@ -71,7 +72,7 @@ test('Image joins survive Workbench capture, repeated grabs, pan and continuous 
         const source=await moving.locator('image').evaluate(node => ['x','y','width','height'].map(key=>node.getAttribute(key)).join(','));
         // Re-grab and jitter without Alt: the captured edge cannot drift.
         for(let grab=0;grab<3;grab++){
-          const r=await moving.boundingBox();
+          const r=await grip.boundingBox();
           await page.mouse.move(r.x+12,r.y+12);await page.mouse.down();
           for(const [dx,dy] of [[1,1],[-1,2],[2,-1],[0,0]]){
             await page.mouse.move(r.x+12+dx,r.y+12+dy);

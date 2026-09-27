@@ -103,6 +103,7 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
     }),
     changeGrid: (id) => { run((session) => session.selectGrid(id)); setSelectedPlacementIds([]); },
     createGrid: () => { const result = run((session) => session.createGrid()); if (result !== false) setSelectedPlacementIds([]); return result; },
+    duplicateGrid: grid => { const result = run(session => session.duplicateGrid(gridRequest(grid))); if (result !== false) setSelectedPlacementIds([]); return result; },
     renameGrid: (grid, name) => run((session) => session.renameGrid(gridRequest(grid, { name }))),
     setGridVisibility: (grid, visibility) => run((session) => session.setGridVisibility(gridRequest(grid, { visibility }))),
     reorderGrid: (gridId, toIndex) => run((session) => session.reorderGrid({ gridId, toIndex, expectedOrder: systemWorkflowGridOrder(state.draft) })),

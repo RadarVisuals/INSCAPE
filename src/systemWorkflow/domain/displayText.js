@@ -18,7 +18,8 @@ export function displayTextArticle(text) {
   if (text.article) return text.article;
   const article = createArticle();
   article.font = text.font;
-  article.appearance = { ...textAppearance(article), fontSize: text.size, color: text.color, compact: true };
+  // Legacy Display text has no surface; new Text defaults must not repaint it.
+  article.appearance = { ...textAppearance(article), background: null, fontSize: text.size, color: text.color, compact: true };
   const marks = [...(text.bold ? [{ type: 'bold' }] : []), ...(text.italic ? [{ type: 'italic' }] : [])];
   const content = text.content.split('\n').flatMap((line, index) => [...(index ? [{ type: 'hardBreak' }] : []), ...(line ? [{ type: 'text', text: line, ...(marks.length ? { marks } : {}) }] : [])]);
   article.content.content = [{ type: 'paragraph', attrs: { textAlign: text.alignment }, ...(content.length ? { content } : {}) }];

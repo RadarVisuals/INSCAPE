@@ -63,6 +63,7 @@ export default function ArticleEditor({ article, onChange, onEditor, disabled, c
   return <>
     {controlsHost && createPortal(<>
     <div className="text-toolbar" role="toolbar" aria-label="Text formatting">
+      <div className="text-toolbar-row">
       <select aria-label="Paragraph style" disabled={disabled} value={editor.isActive('heading') ? editor.getAttributes('heading').level : 'paragraph'}
         onChange={e => e.target.value === 'paragraph' ? editor.chain().focus().setParagraph().run() : editor.chain().focus().setHeading({ level: Number(e.target.value) }).run()}>
         <option value="paragraph">Paragraph</option>{[1, 2, 3].map(n => <option key={n} value={n}>Heading {n}</option>)}
@@ -71,22 +72,27 @@ export default function ArticleEditor({ article, onChange, onEditor, disabled, c
         onChange={e => e.target.value ? editor.chain().focus().setFontFamily(e.target.value).run() : editor.chain().focus().unsetFontFamily().run()}>
         <option value="">Document font</option>{ARTICLE_FONTS.map(f => <option key={f.id} value={f.family}>{f.label}</option>)}
       </select>
+      </div>
+      <div className="text-toolbar-icons">
       {command('Bold', () => editor.chain().focus().toggleBold().run(), editor.isActive('bold'))}
       {command('Italic', () => editor.chain().focus().toggleItalic().run(), editor.isActive('italic'))}
       {command('Underline', () => editor.chain().focus().toggleUnderline().run(), editor.isActive('underline'))}
       {['left', 'center', 'right'].map(value => command(`Align ${value}`, () => editor.chain().focus().setArticleAlignment(value).run(), alignmentActive(value)))}
+      {command('Quote', () => editor.chain().focus().toggleBlockquote().run(), editor.isActive('blockquote'))}
+      {command('Bullets', () => editor.chain().focus().toggleBulletList().run(), editor.isActive('bulletList'))}
+      {command('Numbered', () => editor.chain().focus().toggleOrderedList().run(), editor.isActive('orderedList'))}
+      {command('Link', () => { setLink(editor.getAttributes('link').href || ''); setLinkError(''); }, editor.isActive('link'))}
+      {command('Undo', () => editor.chain().focus().undo().run())}{command('Redo', () => editor.chain().focus().redo().run())}
+      </div>
+      <div className="text-toolbar-row">
       <select aria-label="Paragraph justification" title="Paragraph justification" disabled={disabled} value={justification}
         onChange={e => editor.chain().focus().setArticleAlignment(e.target.value).run()}>
         <option value="" disabled>Justify</option>
         <option value="justify-left">Justify Left</option><option value="justify-center">Justify Center</option>
         <option value="justify-right">Justify Right</option><option value="justify-all">Justify All</option>
       </select>
-      <button type="button" aria-label="Insert page break" title="Insert page break" disabled={disabled} onMouseDown={e => e.preventDefault()} onClick={() => editor.chain().focus().insertContent({ type: 'pageBreak' }).run()}>↦</button>
-      {command('Quote', () => editor.chain().focus().toggleBlockquote().run(), editor.isActive('blockquote'))}
-      {command('Bullets', () => editor.chain().focus().toggleBulletList().run(), editor.isActive('bulletList'))}
-      {command('Numbered', () => editor.chain().focus().toggleOrderedList().run(), editor.isActive('orderedList'))}
-      {command('Link', () => { setLink(editor.getAttributes('link').href || ''); setLinkError(''); }, editor.isActive('link'))}
-      {command('Undo', () => editor.chain().focus().undo().run())}{command('Redo', () => editor.chain().focus().redo().run())}
+      <button type="button" aria-label="Insert page break" title="Insert page break" disabled={disabled} onMouseDown={e => e.preventDefault()} onClick={() => editor.chain().focus().insertContent({ type: 'pageBreak' }).run()}>Page break ↦</button>
+      </div>
     </div>
     {link !== null && <form className="text-inline-form" onSubmit={e => { e.preventDefault();
       if (link && !safeArticleLink(link)) { setLinkError('Use an HTTPS or mailto link.'); return; }

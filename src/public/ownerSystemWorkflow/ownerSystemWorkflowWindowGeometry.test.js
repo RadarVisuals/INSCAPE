@@ -4,7 +4,23 @@ import {
   clampOwnerSystemWorkflowWindowHeight,
   clampOwnerSystemWorkflowWindowPosition,
   presentationBoardAdjacentWindowGeometry,
+  resizeWorkbenchWindow,
 } from './ownerSystemWorkflowWindowGeometry.js';
+
+test('each resize edge preserves its opposite edge and enforces minimum dimensions', () => {
+  const frame = { left: 120, top: 180, width: 360, height: 420 };
+  const minimum = { width: 180, height: 100 }, bounds = { left: 8, top: 8, right: 7992, bottom: 7992 };
+  for (const edge of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) {
+    const next = resizeWorkbenchWindow(frame, edge, { x: 80, y: 40 }, minimum, bounds);
+    assert.equal(edge.includes('w') ? next.left + next.width : next.left, edge.includes('w') ? 480 : 120);
+    assert.equal(edge.includes('n') ? next.top + next.height : next.top, edge.includes('n') ? 600 : 180);
+    assert.equal(next.width, frame.width + (edge.includes('w') ? -80 : edge.includes('e') ? 80 : 0));
+    assert.equal(next.height, frame.height + (edge.includes('n') ? -40 : edge.includes('s') ? 40 : 0));
+    const smallest = resizeWorkbenchWindow(frame, edge, { x: edge.includes('w') ? 9999 : -9999, y: edge.includes('n') ? 9999 : -9999 }, minimum, bounds);
+    assert.ok(smallest.width >= 180 && smallest.height >= 100);
+  }
+  assert.deepEqual(resizeWorkbenchWindow(frame, 'nw', { x: -9999, y: -9999 }, minimum, bounds), { left: 8, top: 8, width: 472, height: 592 });
+});
 
 test('detached Workbench windows reclamp from wide to narrow using their measured size', () => {
   assert.deepEqual(clampOwnerSystemWorkflowWindowPosition(

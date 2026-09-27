@@ -1,4 +1,5 @@
 import { keccak256, stringToHex } from 'viem';
+import { createSystemWorkflowPlacementId } from '../systemWorkflowPlacement.js';
 import {
   SYSTEM_WORKFLOW_LIMITS,
   SYSTEM_WORKFLOW_VISIBILITY,
@@ -19,7 +20,7 @@ function requireGrid(draft, gridId) {
 
 function requireEditableGrid(grid) {
   if (isSystemWorkflowWorldCoverGrid(grid)) {
-    throw gridError('SYSTEM_WORKFLOW_WORLD_COVER_PROTECTED', 'The World Cover cannot be renamed, reordered, hidden, or deleted');
+    throw gridError('SYSTEM_WORKFLOW_WORLD_COVER_PROTECTED', 'The World Cover cannot be renamed, duplicated, reordered, hidden, or deleted');
   }
 }
 
@@ -54,12 +55,16 @@ export function systemWorkflowGridOrder(draftInput) {
   return assertValidSystemWorkflowDraft(draftInput).grids.filter((grid) => !isSystemWorkflowWorldCoverGrid(grid)).map(({ id }) => id);
 }
 
-export function createSystemWorkflowGridCandidate(draftInput, options = {}) {
-  const draft = assertValidSystemWorkflowDraft(draftInput);
+function requireGridCapacity(draft) {
   if (!draft.grids.length) throw gridError('SYSTEM_WORKFLOW_DISPLAY_ABSENT', 'Add a Display Module before creating a Grid');
   if (draft.grids.filter((grid) => !isSystemWorkflowWorldCoverGrid(grid)).length >= SYSTEM_WORKFLOW_LIMITS.maxGrids) {
     throw gridError('SYSTEM_WORKFLOW_GRID_LIMIT_REACHED', 'The 24 Grid safety limit is reached');
   }
+}
+
+export function createSystemWorkflowGridCandidate(draftInput, options = {}) {
+  const draft = assertValidSystemWorkflowDraft(draftInput);
+  requireGridCapacity(draft);
   const grid = {
     id: createSystemWorkflowGridId(draft.grids.map(({ id }) => id), options),
     title: nextDefaultGridTitle(draft),
@@ -72,6 +77,43 @@ export function createSystemWorkflowGridCandidate(draftInput, options = {}) {
   };
   const coverIndex = draft.grids.findIndex(isSystemWorkflowWorldCoverGrid);
   draft.grids.splice(coverIndex < 0 ? draft.grids.length : coverIndex, 0, grid);
+  return assertValidSystemWorkflowDraft(draft);
+}
+
+export function createSystemWorkflowGridDuplicateCandidate(draftInput, {
+  gridId, expectedGridFingerprint, generateId, generatePlacementId,
+} = {}) {
+  const draft = assertValidSystemWorkflowDraft(draftInput);
+  const source = requireGrid(draft, gridId);
+  requireEditableGrid(source);
+  requireExpectedGridFingerprint(source, expectedGridFingerprint);
+  requireGridCapacity(draft);
+  const titles = new Set(draft.grids.map(grid => grid.title.toUpperCase()));
+  let title;
+  for (let number = 1; number <= SYSTEM_WORKFLOW_LIMITS.maxGrids; number += 1) {
+    const suffix = number === 1 ? ' copy' : ` copy ${number}`;
+    title = `${source.title.slice(0, SYSTEM_WORKFLOW_LIMITS.maxNameLength - suffix.length).trimEnd()}${suffix}`;
+    if (!titles.has(title.toUpperCase())) break;
+  }
+  const usedIds = new Set(draft.grids.flatMap(grid => grid.placements.map(placement => placement.id)));
+  const placementIds = new Map();
+  const copy = { ...structuredClone(source),
+    id: createSystemWorkflowGridId(draft.grids.map(grid => grid.id), { generateId }),
+    title, visibility: SYSTEM_WORKFLOW_VISIBILITY.PRIVATE,
+    placements: source.placements.map(placement => {
+      const id = createSystemWorkflowPlacementId(usedIds,
+        generatePlacementId ? { generateCandidate: generatePlacementId } : undefined);
+      usedIds.add(id); placementIds.set(placement.id, id);
+      return { ...structuredClone(placement), id };
+    }),
+  };
+  if (copy.groups) copy.groups = copy.groups.map(group => ({ ...group,
+    id: `group:${globalThis.crypto.randomUUID()}`,
+    placementIds: group.placementIds.map(id => placementIds.get(id)),
+  }));
+  // Appending preserves the existing Grid-to-section mapping in linked Text.
+  const coverIndex = draft.grids.findIndex(isSystemWorkflowWorldCoverGrid);
+  draft.grids.splice(coverIndex < 0 ? draft.grids.length : coverIndex, 0, copy);
   return assertValidSystemWorkflowDraft(draft);
 }
 

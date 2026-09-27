@@ -58,11 +58,11 @@ export default function DisplayArticleEditor({ placement, controller, cellSize, 
     </div>
     {canvasRef.current && createPortal(<div className="text-workbench" style={{ '--text-z': 70 }} onPointerDown={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
       <TextTools article={article} onChange={save} controlsRef={setHost} disabled={placement.locked} onClose={close}
-        initialX={canvasRef.current.getBoundingClientRect().right + 12} initialY={canvasRef.current.getBoundingClientRect().top}>
-        <button type="button" disabled={placement.locked} onClick={detachBeside}>Move onto Workbench</button>
-        {error ? <div role="alert">{error}<button type="button" onClick={() => save(working.current, { retry: true })}>Retry local save</button>
+        initialX={canvasRef.current.getBoundingClientRect().right + 12} initialY={canvasRef.current.getBoundingClientRect().top} footer={error ? <div role="alert">{error}<button type="button" onClick={() => save(working.current, { retry: true })}>Retry local save</button>
           {reason === 'conflict' && <button type="button" onClick={() => save(working.current, { retry: true, replace: true })}>Replace saved Text with my edits</button>}
-        </div> : <p role="status">Saved in this browser</p>}
+        </div> : <p role="status">Saved in this browser</p>}>
+        <button type="button" disabled={placement.locked} onClick={detachBeside}>Move onto Workbench</button>
+
       </TextTools>
     </div>, canvasRef.current.closest('main') || document.body)}
   </div>;

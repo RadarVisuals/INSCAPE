@@ -14,7 +14,7 @@ const OwnerSystemWorkflowDetachedWindow = forwardRef(function OwnerSystemWorkflo
   className = '',
   controls,
   headerPointerProps,
-  resizeHandleProps,
+  resizeHandles,
   style,
   surfaceClassName = '',
   title,
@@ -30,7 +30,7 @@ const OwnerSystemWorkflowDetachedWindow = forwardRef(function OwnerSystemWorkflo
     </header>
     <div style={compactContent ? { display: 'none' } : undefined} className={contentClassName}>{children}</div>
     {compactContent}
-    {resizeHandleProps && <div {...resizeHandleProps} className="system-workflow__detached-window-resize" />}
+    {resizeHandles}
   </Element>;
 });
 

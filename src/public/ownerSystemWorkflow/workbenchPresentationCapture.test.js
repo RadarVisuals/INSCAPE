@@ -55,6 +55,15 @@ test('current modules use live presentation, then their saved layout, then exist
   assertWorkbenchPresentation(result.value);
 });
 
+test('a newly dropped Image retains its saved position before its lazy renderer reports a window', () => {
+  const saved = { id: 'image:dropped', open: true, position: { left: 987.25, top: 421.5 } };
+  const source = input({ imageModules: [{ id: saved.id }], savedImagePresentations: [saved] });
+  assert.deepEqual(captureWorkbenchPresentation(source).value.imageModules, [saved]);
+  const live = { ...saved, position: { left: 123, top: 456 } };
+  assert.deepEqual(captureWorkbenchPresentation({ ...source, imagePresentations: { [saved.id]: live } }).value.imageModules, [live]);
+  assert.deepEqual(captureWorkbenchPresentation({ ...source, imageModules: [] }).value.imageModules, []);
+});
+
 test('removed modules contribute neither saved layouts nor cached errors, including undo to absent collections', () => {
   const layout = createDefaultWorkbenchPresentation();
   layout.displays = [display('display:removed', 'Removed')];
