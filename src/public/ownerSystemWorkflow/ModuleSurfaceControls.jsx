@@ -1,5 +1,10 @@
 import { defaultModuleEdges } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';
 import './moduleSurface.css';
+export function ModuleGrainControl({ value = 0, onChange }) {
+  return <label className="module-grain-control">Grain strength <output>{Math.round(value * 100)}%</output>
+    <input aria-label="Grain strength" type="range" min={0} max={1} step={.01} value={value} onChange={e => onChange(Number(e.target.value))} />
+  </label>;
+}
 export default function ModuleSurfaceControls({ value, onChange, frame, onFrameChange, display = false, disabled = false }) {
   const edges = value || defaultModuleEdges(display);
   const change = patch => onChange({ ...edges, ...patch });
@@ -16,6 +21,6 @@ export default function ModuleSurfaceControls({ value, onChange, frame, onFrameC
       }} /></label>)}</div>
     <label className="module-surface-check"><input type="checkbox" checked={frame} onChange={e => onFrameChange(e.target.checked)} />Show border</label>
     <label className="module-surface-check"><input type="checkbox" checked={edges.shadow} onChange={e => change({ shadow: e.target.checked })} />Show shadow</label>
-    <label>Grain strength <output>{Math.round(edges.grain * 100)}%</output><input aria-label="Grain strength" type="range" min={0} max={1} step={.01} value={edges.grain} onChange={e => change({ grain: Number(e.target.value) })} /></label>
+    <ModuleGrainControl value={edges.grain} onChange={grain => change({ grain })} />
   </fieldset>;
 }

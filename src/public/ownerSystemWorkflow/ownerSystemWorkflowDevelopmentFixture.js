@@ -98,7 +98,7 @@ export function createOwnerSystemWorkflowReviewStorage() {
   let writeCount = 0;
   return {
     getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => { writeCount += 1; values.set(key, String(value)); globalThis.dispatchEvent?.(new CustomEvent('inscape:review-storage-write', { detail: { writeCount } })); },
+    setItem: (key, value) => { writeCount += 1; values.set(key, String(value)); globalThis.dispatchEvent?.(new CustomEvent('inscape:review-storage-write', { detail: { writeCount, key } })); },
     removeItem: (key) => values.delete(key),
     getWriteCount: () => writeCount,
   };

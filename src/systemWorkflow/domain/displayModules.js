@@ -4,6 +4,16 @@
 export const PRIMARY_DISPLAY_ID = 'display:primary';
 export const MAX_DISPLAY_MODULES = 8;
 export const DISPLAY_CONTENT_KEYS = ['artboard', 'geometry', 'appearance', 'grids'];
+export const DISPLAY_CANVAS_LIMITS = Object.freeze({ minimum: 1, maximum: 512 });
+const dimension = value => Number.isSafeInteger(value)
+  && value >= DISPLAY_CANVAS_LIMITS.minimum && value <= DISPLAY_CANVAS_LIMITS.maximum;
+const gcd = (a, b) => b ? gcd(b, a % b) : a;
+
+export function displayPreset(geometry) {
+  if (geometry?.columns === 32 && geometry?.rows === 18) return 'LANDSCAPE';
+  if (geometry?.columns === 18 && geometry?.rows === 32) return 'PORTRAIT';
+  return 'CUSTOM';
+}
 
 export function displayModuleIds(draft) {
   return [...(draft.grids.length ? [PRIMARY_DISPLAY_ID] : []), ...(draft.displays || []).map(module => module.id)];
@@ -17,7 +27,7 @@ export function displayContent(draft, id = PRIMARY_DISPLAY_ID) {
 }
 
 export function projectDisplayDraft(draft, id = PRIMARY_DISPLAY_ID) {
-  const { displays: _displays, workbench: _workbench, mobile: _mobile, miniApps: _miniApps, texts: _texts, imageModules: _images, ...shared } = draft;
+  const { displays: _displays, workbench: _workbench, mobile: _mobile, miniApps: _miniApps, texts: _texts, imageModules: _images, keeperDocks: _keepers, ...shared } = draft;
   const content = displayContent(draft, id);
   return { ...shared, ...Object.fromEntries(DISPLAY_CONTENT_KEYS.map(key => [key, content[key]])) };
 }
@@ -30,14 +40,19 @@ export function mergeDisplayDraft(draft, id, candidate) {
 }
 
 export function isDisplayFormat(artboard, geometry) {
-  return Boolean(artboard && geometry && Object.keys(artboard).length === 2 && Object.keys(geometry).length === 2
-    && ((artboard.aspectWidth === 16 && artboard.aspectHeight === 9 && geometry.columns === 32 && geometry.rows === 18)
-      || (artboard.aspectWidth === 9 && artboard.aspectHeight === 16 && geometry.columns === 18 && geometry.rows === 32)));
+  if (!artboard || !geometry || Array.isArray(artboard) || Array.isArray(geometry)
+    || Object.keys(artboard).length !== 2 || Object.keys(geometry).length !== 2
+    || !dimension(geometry.columns) || !dimension(geometry.rows)) return false;
+  const divisor = gcd(geometry.columns, geometry.rows);
+  return artboard.aspectWidth === geometry.columns / divisor && artboard.aspectHeight === geometry.rows / divisor;
 }
 
-export function displayFormat(orientation) {
-  if (!['LANDSCAPE', 'PORTRAIT'].includes(orientation)) throw new TypeError('Choose Landscape or Portrait');
-  return orientation === 'PORTRAIT'
-    ? { artboard: { aspectWidth: 9, aspectHeight: 16 }, geometry: { columns: 18, rows: 32 } }
-    : { artboard: { aspectWidth: 16, aspectHeight: 9 }, geometry: { columns: 32, rows: 18 } };
+// The existing geometry remains authoritative; artboard is its reduced ratio.
+// Old 32x18 / 18x32 documents already use exactly this representation.
+export function displayFormat(size) {
+  const { width, height } = size === 'LANDSCAPE' ? { width: 32, height: 18 }
+    : size === 'PORTRAIT' ? { width: 18, height: 32 } : size || {};
+  if (!dimension(width) || !dimension(height)) throw new TypeError('Choose whole canvas dimensions from 1 to 512 units.');
+  const divisor = gcd(width, height);
+  return { artboard: { aspectWidth: width / divisor, aspectHeight: height / divisor }, geometry: { columns: width, rows: height } };
 }

@@ -54,15 +54,15 @@ function ToolWindow({ id, menuSurface, fallbackFocus }) {
   const host = useCallback(node => tools.registerHost(id, node), [id, tools.registerHost]);
   const layout = useCallback(value => tools.setState(current => JSON.stringify(current.windows[id]) === JSON.stringify(value) ? current : { ...current, windows: { ...current.windows, [id]: value } }), [id, tools.setState]);
   return <DisplayInstrumentWindow instrument={id} menuSurface={menuSurface} layout={tools.state.windows[id]} onLayoutChange={layout}
-    title={tools.labels[id] || (id === 'layers' ? 'Select a Display' : 'Select an artwork')}
+    title={tools.labels[id] || (id === 'metadata' ? 'Select an artwork' : 'Select a Display')}
     onClose={() => { tools.command(id, false); requestAnimationFrame(() => { const trigger = tools.triggers.current[id]; (trigger?.isConnected ? trigger : fallbackFocus?.current)?.focus({ preventScroll: true }); }); }}>
     <div ref={host} data-shared-tool={id} />
-    {!tools.labels[id] && <p role="status">{id === 'layers' ? 'Select a Display to see its layers.' : 'Select an artwork to read its information.'}</p>}
+    {!tools.labels[id] && <p role="status">{id === 'layers' ? 'Select a Display to see its layers.' : id === 'appearance' ? 'Select an unlocked Display to change its appearance.' : 'Select an artwork to read its information.'}</p>}
   </DisplayInstrumentWindow>;
 }
 export function SharedDisplayToolWindows({ menuSurface, readOnly = false, hidden = false, fallbackFocus }) {
   const tools = useSharedDisplayTools();
-  return <div hidden={hidden} data-shared-display-tools>{['layers', 'metadata'].filter(id => tools.state[id] && (!readOnly || id === 'metadata')).map(id => <ToolWindow key={id} id={id} menuSurface={menuSurface} fallbackFocus={fallbackFocus} />)}</div>;
+  return <div hidden={hidden} data-shared-display-tools>{['layers', 'metadata', 'appearance'].filter(id => tools.state[id] && (!readOnly || id === 'metadata')).map(id => <ToolWindow key={id} id={id} menuSurface={menuSurface} fallbackFocus={fallbackFocus} />)}</div>;
 }
 export function SharedDisplayToolContent({ id, targetId, label, children, available = true }) {
   const tools = useSharedDisplayTools();

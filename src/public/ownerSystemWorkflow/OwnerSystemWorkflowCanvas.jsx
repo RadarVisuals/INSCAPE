@@ -1,4 +1,5 @@
 import { gridRailScenes } from './gridRail.js';
+import { ArtworkPreparationProvider } from '../../artwork/ArtworkPreparation.jsx';
 import { useReportScene } from '../../text/SceneNavigation.jsx';
 import { useContext, useDeferredValue, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { DisplayStageSizeContext } from './DisplayStageSizeContext.js';
@@ -8,7 +9,8 @@ import { nudgeSystemWorkflowResizeGeometry } from '../../systemWorkflow/systemWo
 import LatticePixelGrid from '../../lattice/rendering/LatticePixelGrid.jsx';
 import { projectLatticePixelRectangle } from '../../lattice/rendering/latticePixelGeometry.js';
 import { createSystemWorkflowDropGeometry } from '../../systemWorkflow/systemWorkflowPlacement.js';
-import { isSystemWorkflowWorldCoverGrid, systemWorkflowSnapStep, quantizeSystemWorkflowGridCoordinate } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { isSystemWorkflowWorldCoverGrid, systemWorkflowSnapStep, systemWorkflowPlacementSnapStep, quantizeSystemWorkflowGridCoordinate } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { displayGuideMode } from '../../systemWorkflow/domain/displayAppearance.js';
 import { attachTextToDisplay } from '../../text/textTransfer.js';
 import { displayTextLabel } from '../../systemWorkflow/domain/displayText.js';
 import DisplayArticleEditor from '../../text/DisplayArticleEditor.jsx';
@@ -98,7 +100,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   const artboardMode = worldCover ? OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.HERO : OWNER_SYSTEM_WORKFLOW_ARTBOARD_MODES.GRID;
   const cropSession = crop?.cropSession || null;
   const appearance = controller.draft?.appearance;
-  const snapStep = systemWorkflowSnapStep(appearance.guideSize);
+  const snapStep = systemWorkflowPlacementSnapStep(appearance);
   const viewScale = Number.isFinite(boardScale) && boardScale > 0 ? boardScale : 1;
   const pointerScale = stageSize?.screenScale ?? viewScale * workbenchScale;
   const viewerOpen = inspectionActive || Boolean(viewerPlacementId);
@@ -288,7 +290,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
 
   if (!grid) return null;
   return <section className="system-workflow__stage-content" aria-label={`${grid.title} Grid`} data-system-workflow-stage data-world-cover={worldCover || undefined}>
-    <div ref={canvasRef} data-stage-columns={controller.draft.geometry.columns} data-stage-rows={controller.draft.geometry.rows} className="system-workflow__canvas" data-guide={appearance.guideMode} data-space-navigation={interaction.spaceNavigation || undefined} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={cameraMoving || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, '--workflow-board-inverse-scale': 1 / viewScale }}
+    <div ref={canvasRef} data-stage-columns={controller.draft.geometry.columns} data-stage-rows={controller.draft.geometry.rows} className="system-workflow__canvas" data-guide={displayGuideMode(appearance)} data-space-navigation={interaction.spaceNavigation || undefined} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={cameraMoving || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, '--workflow-board-inverse-scale': 1 / viewScale }}
       onLoadCapture={picking.onLoadCapture}
       onClick={(event) => {
         if (cropSession || interaction.clickSuppressedRef.current || event.target.closest?.('[data-system-workflow-placement-id]')) return;
@@ -319,6 +321,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
         controller.placeAsset(systemWorkflowPlacementRequest(asset, dimensions, grid.id,
           createSystemWorkflowDropGeometry(dimensions.width, dimensions.height, point, field)));
       }}>
+      <ArtworkPreparationProvider viewportRef={canvasRef} enabled={!suspended}>
       <div ref={trackRef} className="system-workflow__grid-track"
         data-rail-origin={gridSwipe?.sourceSlot || 0} style={{ willChange: gridOrder.length > 1 ? 'transform' : undefined }}>
       {renderedGrids.map(({ grid: scene, slot }) => {
@@ -329,8 +332,8 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
           data-preview-grid-id={active ? undefined : scene.id} data-rendered-grid-id={scene.id}
           className={`system-workflow__grid-plane system-workflow__grid-plane--${source ? 'current' : 'adjacent'}`}
           data-rail-slot={slot}>
-      {worldViewport && <LatticePixelGrid color={appearance.guideColor} field={worldViewport} guideInterval={snapStep}
-        height={worldViewport.height} mode={appearance.guideMode} width={worldViewport.width} />}
+      {worldViewport && <LatticePixelGrid color={appearance.guideColor} field={worldViewport} guideInterval={systemWorkflowSnapStep(appearance.guideSize)}
+        height={worldViewport.height} mode={displayGuideMode(appearance)} width={worldViewport.width} />}
       <div className="system-workflow__artwork-plane">
       {scenePlacements.slice().sort((left, right) => left.layer - right.layer).map((placement) => {
         const asset = assetForPlacement(assetsById.get(placement.stableAssetId), placement);
@@ -382,7 +385,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
           }} ref={active ? (node) => onPlacementRef?.(placement.id, node) : undefined} role="button" tabIndex={!active || placement.locked ? -1 : 0}
           style={{ ...projected, zIndex: placement.layer + 1 }}>
           {textEditing ? <DisplayArticleEditor key={`${grid.id}:${placement.id}`} placement={placement} controller={controller} cellSize={worldViewport.cellSize}
-            width={projected.width} height={projected.height} screenCellSize={worldViewport.cellSize * pointerScale} canvasRef={canvasRef} onClose={() => onEditText?.(null)} />
+            width={projected.width} height={projected.height} screenCellSize={worldViewport.cellSize * pointerScale} canvasRef={canvasRef} suspended={suspended || inspectionActive} onClose={() => onEditText?.(null)} />
             : <DisplayPlacementContent placement={placement} asset={assetsById.get(placement.stableAssetId)} crop={visibleCrop}
                 width={projected.width} height={projected.height} cellSize={worldViewport.cellSize} onAssetDimensions={onAssetDimensions} />}
         </div>;
@@ -396,6 +399,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
       </div>;
       })}
       </div>
+      </ArtworkPreparationProvider>
     </div>
     {!authoringLocked && selectionMetrics && selectionOverlayHost && createPortal(<div ref={selectionChromeRef} className="system-workflow__selection-chrome" aria-hidden={viewerOpen || !selectionBounds || selectionNavigating}
       data-cropping={Boolean(cropSession) || undefined} data-group={renderedSelection.count > 1 || undefined}
@@ -407,7 +411,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
         onKeyDown={event => {
           if (renderedSelection.count !== 1 || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
           event.preventDefault(); event.stopPropagation();
-          const step = event.altKey ? 1 / 9 : 1;
+          const step = event.altKey ? 1 / 9 : snapStep;
           const destination = nudgeSystemWorkflowResizeGeometry(renderedSelection.primary, corner, {
             column: event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0,
             row: event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0,

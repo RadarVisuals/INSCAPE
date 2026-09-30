@@ -39,6 +39,9 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
   }, [workspace.assetSize, workspace.hideLabels, workspace.sidebarWidth]);
   const place = async (asset, destination = null, resolvedDimensions = null, target = placementTargetRef.current) => {
     if (authoringLocked || libraryClosed) return false;
+    // Registry wrappers follow selection. Retain the receiving module/Grid
+    // before asynchronous media work, rather than selecting again afterward.
+    target = target?.captureTarget ? target.captureTarget() : target;
     let dimensions;
     try { dimensions = resolvedDimensions || await resolveDimensions(asset); } catch { return false; }
     if (!dimensions || !mounted.current || currentPlacementContext.current !== placementContext) return false;
@@ -59,7 +62,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
   };
   const beginAssetDrag = (event, asset, workspaceState, options = {}) => {
     const id = asset?.stableAssetId || asset?.id;
-    if (libraryClosed || dragRef.current || event.button !== 0 || !asset.placeable || !workspaceState?.isAssetRenderable(id)) return;
+    if (authoringLocked || libraryClosed || dragRef.current || event.button !== 0 || !asset.placeable || !workspaceState?.isAssetRenderable(id)) return;
     const origin = { x: event.clientX, y: event.clientY };
     const active = { target: placementTargetRef.current, asset, dimensions: ownerSystemWorkflowAssetDimensions(asset), lastPointer: null,
       moduleTarget: moduleAssetTargetRef?.current,
@@ -90,7 +93,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
         || { destination: null, rectangle: null };
     };
     const move = (pointerEvent) => {
-      if (pointerEvent.pointerId !== active.pointerId) return;
+      if (pointerEvent.pointerId !== active.pointerId || active.released) return;
       active.moved ||= Math.hypot(pointerEvent.clientX - origin.x, pointerEvent.clientY - origin.y) > DRAG_THRESHOLD;
       if (!active.moved) return;
       pointerEvent.preventDefault();
@@ -100,31 +103,47 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
       setDragPreview(overLibraryNavigation(pointerEvent) ? null : { asset, ...preview });
     };
     const finish = async (pointerEvent) => {
-      if (pointerEvent.pointerId !== active.pointerId) return;
+      if (pointerEvent.pointerId !== active.pointerId || active.released) return;
       const moved = active.moved;
       if (!moved || overLibraryNavigation(pointerEvent)) { cleanup(); return; }
+      active.released = true;
+      const point = { x: pointerEvent.clientX, y: pointerEvent.clientY };
+      // Resolve routing at release while drag-only surfaces remain visible.
+      // Decoding can refine size, but must never choose another destination.
+      const hit = document.elementFromPoint(point.x, point.y);
+      const moduleTarget = active.moduleTarget?.targetAt?.(point) || active.moduleTarget;
+      const releasedModule = moduleTarget && moduleAssetTargetRef?.current === active.moduleTarget && moduleTarget.node?.contains(hit) ? moduleTarget : null;
+      const blockedModule = !releasedModule && hit?.closest('[data-workbench-module]');
+      const shortcut = shortcutTargetRef.current?.targetAt?.(point) || shortcutTargetRef.current;
+      const releasedShortcut = !releasedModule && !blockedModule && shortcut?.node?.contains(hit) ? shortcut : null;
+      const capturedDisplay = !releasedModule && !blockedModule && !releasedShortcut
+        ? active.target?.targetAt?.(point) : null;
+      const capturedWorkbench = !releasedModule && !blockedModule && !releasedShortcut && !capturedDisplay
+        ? workbenchImageTargetRef?.current?.targetAt?.(point) : null;
+      const releasedPreview = !releasedModule && !blockedModule && !releasedShortcut && !capturedDisplay && !capturedWorkbench
+        ? previewAt(pointerEvent, active.dimensions) : null;
+      const releasedTarget = capturedDisplay || capturedWorkbench || releasedPreview?.target || active.target;
       const dimensions = await active.dimensionPromise;
       if (dragRef.current !== active) return;
-      const preview = dimensions ? previewAt(pointerEvent, dimensions) : null;
-      // Resolve while drag-only drop surfaces are still visible. Cleanup removes
-      // the source marker that controls those surfaces.
-      const hit = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY);
-      const moduleTarget = active.moduleTarget?.targetAt?.({ x: pointerEvent.clientX, y: pointerEvent.clientY }) || active.moduleTarget;
+      const preview = dimensions && (capturedDisplay || capturedWorkbench || releasedPreview?.destination)
+        ? releasedTarget?.previewAt?.(point, dimensions, options) : null;
+      const currentShortcut = releasedShortcut
+        ? shortcutTargetRef.current?.targetAt?.(point) || shortcutTargetRef.current : null;
       cleanup();
-      if (!moved) return;
-      if (overLibraryNavigation(pointerEvent)) return;
       if (!mounted.current || currentPlacementContext.current !== placementContext) return;
-      if (moduleTarget && moduleAssetTargetRef?.current === active.moduleTarget && active.moduleTarget?.has?.(moduleTarget) !== false && moduleTarget.node?.contains(hit)) {
-        if (!await moduleTarget.placeAsset(asset)) rejectDrop();
+      if (releasedModule) {
+        if (moduleAssetTargetRef?.current !== active.moduleTarget || active.moduleTarget?.has?.(releasedModule) === false
+          || !releasedModule.node?.isConnected || !await releasedModule.placeAsset(asset, point)) rejectDrop();
         return;
       }
-      if (hit?.closest('[data-workbench-module]')) { rejectDrop(); return; }
-      const shortcut = shortcutTargetRef.current?.targetAt?.({ x: pointerEvent.clientX, y: pointerEvent.clientY }) || shortcutTargetRef.current;
-      if (shortcut?.node?.contains(document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY))
-        && shortcut.placeAsset(asset)) return;
+      if (blockedModule) { rejectDrop(); return; }
+      if (releasedShortcut) {
+        if (currentShortcut !== releasedShortcut || !releasedShortcut.node?.isConnected || !releasedShortcut.placeAsset(asset)) rejectDrop();
+        return;
+      }
       if (!mounted.current || currentPlacementContext.current !== placementContext) return;
       if (preview?.destination) {
-        if (!await place(asset, preview.destination, dimensions, preview.target || active.target)) rejectDrop();
+        if (!await place(asset, preview.destination, dimensions, releasedTarget)) rejectDrop();
       }
       else rejectDrop();
     };
@@ -136,7 +155,7 @@ export default function OwnerSystemWorkflowLibraryWorkspace({ authoringLocked = 
     Object.assign(active, { move, finish, cancel, escape }); dragRef.current = active;
     active.dimensionPromise = Promise.resolve().then(() => resolveDimensions(asset)).then((dimensions) => {
       active.dimensions = dimensions;
-      if (dragRef.current === active && active.moved && active.lastPointer && dimensions) {
+      if (dragRef.current === active && !active.released && active.moved && active.lastPointer && dimensions) {
         setDragPreview(overLibraryNavigation(active.lastPointer) ? null : { asset, ...previewAt(active.lastPointer, active.dimensions) });
       }
       return active.dimensions;

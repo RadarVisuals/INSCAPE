@@ -113,10 +113,14 @@ test('Persistent groups select, move and resize together across save, undo and V
       document.grids[0].placements[1].asset.media.url += '?group-late=1';
       window.reviewRoot.render(React.createElement(Visitor, { document }));
     });
-    await page.locator('figure[data-placement-id]').first().waitFor();
+    // The bounded rail also retains decoded, hidden appearances of adjacent
+    // Grids. Inspect the published starting Grid, not an offscreen duplicate.
+    const visiblePlacements = page.locator('.visitor-grid-world__grid-plane--current figure[data-placement-id]');
+    await visiblePlacements.first().waitFor();
     await page.waitForTimeout(300); assert.equal(await staticScene(), true);
-    assert.equal(await page.locator('figure[data-placement-id]').nth(1).getAttribute('data-media-state'), 'loading');
-    await page.locator('figure[data-placement-id]').nth(1).locator('img.is-ready').waitFor();
+    assert.equal(await visiblePlacements.nth(1).getAttribute('data-media-state'), 'loading');
+    await visiblePlacements.nth(1).locator('img.is-ready').waitFor();
+    assert.equal(await visiblePlacements.count(), grouped.grids[0].placements.length);
     assert.equal(await staticScene(), true);
     await page.screenshot({ path: join(shots, 'visitor.png') });
     await page.emulateMedia({ reducedMotion: 'reduce' });

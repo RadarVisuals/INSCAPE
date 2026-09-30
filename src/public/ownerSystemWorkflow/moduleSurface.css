@@ -1,11 +1,11 @@
 .module-surface-controls { margin: 0; padding: 12px; min-width: 0; border: 1px solid var(--workflow-border); display: flex; flex-direction: column; gap: 8px; font: var(--workflow-type-control); }
 .module-surface-controls label { display: flex; flex-direction: column; gap: 4px; }
 .module-surface-controls :is(input, select) { min-width: 0; max-width: 100%; min-height: 30px; padding: 5px 8px; border: 1px solid var(--workflow-border); border-radius: 0; background: var(--workflow-panel); color: var(--workflow-ink); font: inherit; }
-.module-surface-controls input[type="range"] { width: 100%; height: 14px; min-height: 14px; padding: 0; appearance: none; border: 0; background: transparent; }
-.module-surface-controls input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: var(--workflow-border-strong); }
-.module-surface-controls input[type="range"]::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -5px; appearance: none; border: 1px solid var(--workflow-ink); border-radius: 50%; background: var(--workflow-ink); }
-.module-surface-controls input[type="range"]::-moz-range-track { height: 2px; background: var(--workflow-border-strong); }
-.module-surface-controls input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border: 1px solid var(--workflow-ink); border-radius: 50%; background: var(--workflow-ink); }
+.module-grain-control input[type="range"] { width: 100%; height: 14px; min-height: 14px; padding: 0; appearance: none; border: 0; background: transparent; }
+.module-grain-control input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: var(--workflow-border-strong); }
+.module-grain-control input[type="range"]::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -5px; appearance: none; border: 1px solid var(--workflow-ink); border-radius: 50%; background: var(--workflow-ink); }
+.module-grain-control input[type="range"]::-moz-range-track { height: 2px; background: var(--workflow-border-strong); }
+.module-grain-control input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border: 1px solid var(--workflow-ink); border-radius: 50%; background: var(--workflow-ink); }
 .module-surface-controls .module-surface-check { flex-direction: row; align-items: center; }
 .module-corner-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .module-surface-controls :focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: 2px; }

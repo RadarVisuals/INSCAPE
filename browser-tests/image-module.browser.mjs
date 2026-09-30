@@ -43,7 +43,7 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     const module = page.locator('[data-image-module]'), canvas = module.locator('.image-module__canvas');
     const dock = page.locator('[data-context-tools]');
     await canvas.waitFor();
-    const grip = module.getByLabel('Move Image window', { exact: true });
+    const grip = module.locator('.image-module__window');
     const gripBounds = await grip.boundingBox();
     await page.mouse.move(gripBounds.x + 60, gripBounds.y + 14); await page.mouse.down();
     await page.mouse.move(1120, 140, { steps: 12 }); await page.mouse.up();
@@ -138,6 +138,7 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     const ids = cropped.imageModules[0].sides.map(s => s.id);
     for (const id of [ids[0], ids[1], ids[2], ids[0]]) {
+      await canvas.hover();
       await module.getByRole('button', { name: 'Next Image side' }).click();
       await page.waitForFunction(id => document.querySelector('.image-module__canvas')?.dataset.sideId === id, id);
       assert.equal(await canvas.locator('.image-module__turn').count(), 0, 'flip layers are removed after the transition');
@@ -145,7 +146,7 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     }
     assert.deepEqual(await page.evaluate(() => window.readDraft()), cropped);
     // Removing a side is undoable, and replacement keeps its sequence ID.
-    const artworkScreenshot = () => canvas.locator('svg').screenshot({ style: '.image-module__bounds, .image-module__resize { visibility:hidden !important; }' });
+    const artworkScreenshot = () => canvas.locator('svg').screenshot({ style: '.image-module__bounds, .image-module__resize, .image-module__close, .image-module__next { visibility:hidden !important; } .image-module__window, .image-module__canvas { outline:none !important; }' });
     const beforeInterruptedInspect = await artworkScreenshot();
     await canvas.click();
     await page.waitForFunction(() => document.querySelector('.image-module__canvas')?.hasAttribute('data-lift-source'));
@@ -171,7 +172,7 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     await page.locator('body').click({ position: { x: 5, y: 5 } });
     // Source transparency exposes different Workbench backgrounds. Compare
     // both presentations against the same backing, without their controls.
-    const parityStyle = await page.addStyleTag({ content: '.image-module__canvas { background:#123456; } .image-module__header, .image-module__next, .image-module__bounds, .image-module__resize { visibility:hidden; }' });
+    const parityStyle = await page.addStyleTag({ content: '.image-module__canvas { background:#123456; } .image-module__close, .image-module__next, .image-module__bounds, .image-module__resize { visibility:hidden; }' });
     const ownerPixels = await canvas.locator('svg').screenshot();
     await page.getByRole('button', { name: 'Preview', exact: true }).click();
     const visitorImage = page.locator('.visitor-grid-world [data-image-module]'); await visitorImage.locator('.image-module__canvas').waitFor();
@@ -179,6 +180,7 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     const visitorPixels = await visitorImage.locator('.image-module__artwork').screenshot();
     assert.ok(visitorPixels.equals(ownerPixels), 'Owner and Visitor paint the same saved side over the same backing');
     await parityStyle.evaluate(node => node.remove());
+    await visitorImage.locator('.image-module__canvas').hover();
     await visitorImage.getByRole('button', { name: 'Next Image side' }).click();
     await page.getByRole('button', { name: 'RETURN', exact: true }).click();
     await page.reload(); await mount(); await canvas.waitFor();

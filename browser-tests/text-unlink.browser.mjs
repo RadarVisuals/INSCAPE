@@ -61,7 +61,7 @@ test('Text can unlink after its Display was deleted, reload independently, and r
         addDisplayModule(createSystemWorkflowDraftStore({ profileAddress: `0x${'1'.repeat(40)}`, storage: localStorage }));
       });
       await page.reload(); await mount();
-      const primary = page.locator('[data-text-id="text:story"]');
+      const primary = page.locator('.text-tools-window');
       await primary.getByRole('combobox', { name: 'Follow Display', exact: true }).selectOption('display:primary');
       await primary.getByRole('button', { name: 'Link Text to Display', exact: true }).click();
       await page.waitForFunction(() => window.readUnlinkDraft().texts[0].sceneLink?.displayId === 'display:primary');

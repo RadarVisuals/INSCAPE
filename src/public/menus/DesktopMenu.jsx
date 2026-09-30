@@ -27,15 +27,18 @@ export default function DesktopMenu({ anchor, commands, label, menuSurfaceId = n
     const panel = button?.closest('[role="menu"]');
     if (event.key === 'ArrowRight' && button?.getAttribute('aria-haspopup') === 'menu') {
       event.preventDefault(); button.click();
-      requestAnimationFrame(() => panel?.querySelector('[role="menu"] button:not(:disabled)')?.focus());
+      requestAnimationFrame(() => panel?.querySelector(':scope > [role="menu"] > button:not(:disabled)')?.focus());
       return;
     }
     if (event.key === 'ArrowLeft' && panel && panel !== ref.current) {
       event.preventDefault();
       const parent = panel.parentElement.closest('[role="menu"]');
       const trigger = parent?.querySelector(':scope > button[aria-expanded="true"]');
+      // Returning focus can open the trigger's flyout. The explicit Back action
+      // closes that child after its focus handler, while retaining the parent.
+      trigger?.focus();
       setOpenPath(current => current.slice(0, Number(panel.dataset.depth) - 1));
-      trigger?.focus(); return;
+      return;
     }
     if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
     event.preventDefault(); const buttons = [...(panel || ref.current).querySelectorAll(':scope > button:not(:disabled)')];

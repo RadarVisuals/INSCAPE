@@ -1,38 +1,46 @@
 /* Keep clipping and artwork in one raster surface at the final transform scale.
    Without compositing, fractional screen density can filter a seam into a join. */
 .image-module__window { position: fixed; z-index: 45; padding: 0; border: 0; background: transparent; color: var(--workflow-ink); will-change: transform; }
-.image-module__header, .image-module__bounds, .image-module__resize, .image-module__next { zoom: var(--image-density, 1); }
-.image-module__header { position: absolute; left: 0; bottom: calc(100% + 28px); z-index: 5; box-sizing: border-box; width: max-content; min-width: 96px; max-width: 240px; height: 28px; display: flex; align-items: center; justify-content: space-between; gap: 12px; opacity: 0; border: 1px solid var(--workflow-border); background: var(--workflow-panel); cursor: move; touch-action: none; font: var(--workflow-type-control); }
-/* The bridge keeps hover continuous between the artwork and its move strip.
-   Resize targets sit above it in the stacking order and own the image edges. */
-.image-module__header::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 28px; }
-.image-module__window[data-controls-below] .image-module__header { bottom: auto; top: calc(100% + 28px); }
-.image-module__window[data-controls-below] .image-module__header::after { top: auto; bottom: 100%; }
-.image-module__window:is(:hover, :focus-within, [data-active]) > :is(.image-module__header, .image-module__bounds, .image-module__resize) { opacity: 1; }
-.image-module__header, .image-module__resize { pointer-events: none; }
-.image-module__window:is(:hover, :focus-within, [data-active]) > :is(.image-module__header, .image-module__resize) { pointer-events: auto; }
-.image-module__header > span { padding-left: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.image-module__header button { display: grid; place-items: center; flex: 0 0 28px; height: 28px; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
-.image-module__canvas { position: relative; display: block; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; color: var(--workflow-ink); background: transparent; cursor: zoom-in; }
+.image-module__bounds, .image-module__resize, .image-module__next, .image-module__close { zoom: var(--image-density, 1); }
+.image-module__window { touch-action: none; }
+.image-module__window[data-active] > :is(.image-module__bounds, .image-module__resize) { opacity: 1; }
+.image-module__resize { pointer-events: none; }
+.image-module__window[data-active] > .image-module__resize { pointer-events: auto; }
+.image-module__canvas { position: relative; display: block; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; color: var(--workflow-ink); background: transparent; cursor: grab; }
+.image-module__window[data-moving] .image-module__canvas { cursor: grabbing; }
 .image-module__bounds { position: absolute; inset: 0; z-index: 4; box-sizing: border-box; border: 1px solid #fff; box-shadow: inset 0 0 0 1px #111313; opacity: 0; pointer-events: none; }
 .image-module__resize { position: absolute; z-index: 6; width: 28px; height: 28px; padding: 0; border: 0; background: transparent; opacity: 0; cursor: nwse-resize; touch-action: none; }
 .image-module__resize::after { content: ''; position: absolute; left: var(--resize-mark-x); top: var(--resize-mark-y); box-sizing: border-box; width: 8px; height: 8px; border: 1px solid #fff; background: #111313; box-shadow: 0 0 0 1px #111313; }
 .image-module__resize:is(.is-n, .is-s) { cursor: ns-resize; }
 .image-module__resize:is(.is-ne, .is-sw) { cursor: nesw-resize; }
 .image-module__resize:is(.is-w, .is-e) { cursor: ew-resize; }
-.image-module__resize:focus-visible, .image-module__header:focus-visible, .image-module__header button:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
+.image-module__window:focus-visible, .image-module__resize:focus-visible, .image-module__close:focus-visible, .image-module__next:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
 .image-module__canvas:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -3px; }
 .image-module__canvas[data-cropping] { cursor: move; touch-action: none; }
 .image-module__canvas[data-lift-source] { visibility: hidden; }
 .image-module__empty { position: absolute; inset: 0; display: grid; place-items: center; font: var(--workflow-type-control); }
-.image-module__turn, .image-module__face, .image-module__artwork { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.image-module__sides, .image-module__side, .image-module__artwork { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.image-module__sides { pointer-events: none; }
 .image-module__artwork { overflow: hidden; pointer-events: none; }
-.image-module__canvas[data-flipping] { perspective: 1200px; overflow: hidden; }
+.image-module__side[data-preparing] { visibility: hidden; }
+.image-module__canvas[data-flipping] { perspective: 1200px; overflow: visible; }
 .image-module__turn[data-flipping] .image-module__face { backface-visibility: hidden; }
 .image-module__face--back { transform: rotateY(180deg); }
-.image-module__turn[data-flipping] { transform-style: preserve-3d; animation: image-side-turn 460ms cubic-bezier(.4,0,.2,1) forwards; }
+.image-module__turn[data-flipping] { --image-turn-duration: 600ms; transform-style: preserve-3d; will-change: transform; animation: image-side-turn var(--image-turn-duration) cubic-bezier(.45,0,.55,1) forwards; }
+/* Dark artwork otherwise compresses into a solid stripe around the edge-on
+   frame. Soften only that 60ms interval, on the flat artwork rather than the
+   preserve-3d parent; the two faces must keep their backface culling. */
+.image-module__turn[data-flipping] .image-module__artwork { animation: image-side-edge var(--image-turn-duration) linear both; }
 @keyframes image-side-turn { to { transform: rotateY(-180deg); } }
-.image-module__next { position: absolute; right: 24px; bottom: 6px; z-index: 4; display: flex; align-items: center; gap: 4px; min-height: 28px; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-technical); cursor: pointer; }
+@keyframes image-side-edge { 0%, 45%, 55%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.image-module__flip-status { position: absolute; left: 6px; bottom: 6px; max-width: calc(100% - 52px); padding: 4px 6px; font: var(--workflow-type-control); text-align: left; color: var(--workflow-ink); background: var(--workflow-panel); pointer-events: none; }
+.image-module__next, .image-module__close { position: absolute; right: 6px; z-index: 5; display: grid; place-items: center; box-sizing: border-box; width: 28px; height: 28px; padding: 0; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); cursor: pointer; opacity: 0; pointer-events: none; }
+.image-module__next { bottom: 6px; }
+.image-module__close { top: 6px; }
+.image-module__window:is(:hover, :focus-within) > :is(.image-module__next, .image-module__close) { opacity: 1; pointer-events: auto; }
+.image-module__window[data-controls-outside] > :is(.image-module__next, .image-module__close) { top: var(--image-controls-top); bottom: auto; right: auto; left: var(--image-controls-left); }
+.image-module__window[data-controls-outside] > .image-module__next { left: calc(var(--image-controls-left) + 28px); }
+.image-module__window[data-controls-outside]:is(:hover, :focus-within)::before { content: ''; position: absolute; zoom: var(--image-density, 1); left: var(--image-controls-left); top: var(--image-controls-bridge); width: 56px; height: 28px; }
 .image-module__size { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; margin: 8px 0; }
 .image-module__size label, .image-module__side-tools label { min-width: 0; font: var(--workflow-type-control); }
 .image-module__size input, .image-module__side-tools select { box-sizing: border-box; width: 100%; padding: 5px; border: 1px solid var(--workflow-border); color: var(--workflow-ink); background: var(--workflow-panel); font: inherit; }
@@ -44,7 +52,7 @@
 .image-module__shortcut { position: fixed; left: 24px; border: 1px solid var(--workflow-border); padding: 8px; color: var(--workflow-ink); background: var(--workflow-panel); font: var(--workflow-type-control); }
 .image-lift { position: fixed; inset: 0; z-index: 200; background: rgb(0 0 0 / calc(.65 * var(--inspection-lift-progress, 0))); }
 .image-module__window[data-svg-inspection] { z-index: 201; pointer-events: none; }
-.image-module__window:is([data-svg-inspection], [data-suspended]) > :is(.image-module__header, .image-module__bounds, .image-module__resize, .image-module__next) { visibility: hidden; }
+.image-module__window:is([data-svg-inspection], [data-suspended]) > :is(.image-module__close, .image-module__bounds, .image-module__resize, .image-module__next) { visibility: hidden; }
 .image-lift-return, .system-workflow > .image-lift-return { position: fixed; right: 16px; top: 16px; z-index: 202; padding: 10px; border: 1px solid currentColor; color: #e7e3d9; background: #171717; font: 400 11px/1.4 "Inscape Sora", sans-serif; cursor: pointer; }
-@media (hover: none) { .image-module__header, .image-module__bounds, .image-module__resize { opacity: 1; } .image-module__header, .image-module__resize { pointer-events: auto; } }
-@media (prefers-reduced-motion: reduce) { .image-module__turn[data-flipping] { animation-duration: 1ms; } }
+@media (hover: none) { .image-module__next, .image-module__close { opacity: 1; pointer-events: auto; } }
+@media (prefers-reduced-motion: reduce) { .image-module__turn[data-flipping] { --image-turn-duration: 1ms; } }

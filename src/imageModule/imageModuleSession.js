@@ -1,4 +1,4 @@
-import { MAX_IMAGE_MODULES, validImageModules } from './imageModule.js';
+import { MAX_IMAGE_MODULES, validImageModules, imageCropForResize } from './imageModule.js';
 import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 
 export function addImageModule(store, profile, placed = null) {
@@ -7,7 +7,7 @@ export function addImageModule(store, profile, placed = null) {
   if ((draft.imageModules?.length || 0) >= MAX_IMAGE_MODULES) throw new Error('At most sixteen Image modules are supported.');
   const record = { id: `image:${crypto.randomUUID()}`, name: 'Image',
     width: placed?.size.width ?? 360, height: placed?.size.height ?? 360,
-    sides: placed ? [{ ...placed.side, crop: null }] : [], visibility: placed ? 'PUBLIC' : 'PRIVATE' };
+    sides: placed ? [placed.side] : [], visibility: placed ? 'PUBLIC' : 'PRIVATE' };
   const next = { ...draft, imageModules: [...(draft.imageModules || []), record] };
   if (placed) {
     const workbench = placed.workbench || draft.workbench || createDefaultWorkbenchPresentation();
@@ -33,7 +33,8 @@ export function saveImageModule(store, profile, expected, next) {
 export function prepareImageResize(draft, { expected, width, height }) {
   if (JSON.stringify(draft.imageModules?.find(item => item.id === expected.id)) !== JSON.stringify(expected))
     throw new Error('An Image changed during resizing. Try the selection again.');
-  const imageModules = draft.imageModules.map(item => item.id === expected.id ? { ...item, width, height } : item);
+  const imageModules = draft.imageModules.map(item => item.id === expected.id ? { ...item, width, height,
+    sides: item.sides.map(side => ({ ...side, crop: imageCropForResize(side.crop, item, { width, height }) })) } : item);
   if (!validImageModules(imageModules)) throw new Error('Image dimensions are outside the supported range.');
   return { ...draft, imageModules };
 }

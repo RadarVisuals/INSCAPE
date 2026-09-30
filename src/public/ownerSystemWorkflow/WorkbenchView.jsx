@@ -48,11 +48,14 @@ export function WorkbenchViewProvider({ children, store, profileAddress, present
   return <WorkbenchView.Provider value={{ scale, setScale, transforms, setTransforms, selection, setSelection, entries: entries.current, frames: frames.current, resizeTargets: resizeTargets.current, store, profileAddress, getPresentation, subscribe, snapshot, register, changed }}><WorkbenchCameraProvider>{children}</WorkbenchCameraProvider></WorkbenchView.Provider>;
 }
 
-export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTarget = null) {
+export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTarget = null, onPosition = null) {
   const { register, changed, frames, resizeTargets, transforms } = useWorkbenchView();
   const previewFrame = transforms?.[id]?.frame;
   // A live reference to module-owned geometry, not a copy of painted DOM bounds.
   const currentFrame = useRef(frame); currentFrame.current = frame;
+  // The window owns its base position. Completed owner movement reports back
+  // through that same boundary as an individual drag, including local saving.
+  currentFrame.move = onPosition;
   const currentResize = useRef(resizeTarget); currentResize.current = resizeTarget;
   const savedLayout = resizeTarget?.store?.getSnapshot().workbench;
   const savedEntry = resizeTarget?.layoutKey === 'display' ? savedLayout?.display
@@ -100,14 +103,18 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
   const cancelGesture = useCallback((restore = true) => {
     const active = gesture.current;
     if (!active) return;
+    gesture.current = null;
     globalThis.removeEventListener('pointermove', active.move, true);
     globalThis.removeEventListener('pointerup', active.finish, true);
     globalThis.removeEventListener('pointercancel', active.cancel, true);
     globalThis.removeEventListener('blur', active.cancel);
+    document.removeEventListener('visibilitychange', active.hidden);
+    active.host.removeEventListener('lostpointercapture', active.lost);
+    if (active.host.hasPointerCapture(active.pointerId)) active.host.releasePointerCapture(active.pointerId);
     if (restore && active.transforms) latest.current.setTransforms(active.transforms);
     if (restore && active.selection) latest.current.setSelection(active.selection);
     snapMovement.finish();
-    gesture.current = null; setMarquee(null);
+    setMarquee(null);
   }, []);
   useEffect(() => () => cancelGesture(false), [cancelGesture]);
   useLayoutEffect(() => { if (disabled || locked) cancelGesture(); }, [disabled, locked, cancelGesture]);
@@ -134,22 +141,58 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
     zoom({ x: rect.left + rect.width / 2, y: rect.top + (rect.height - dock) / 2 }, 1 / latest.current.scale);
     host.focus({ preventScroll: true });
   };
-  const install = active => {
+  const install = (active, event) => {
+    active.pointerId = event.pointerId;
+    active.host = hostRef.current;
+    const move = active.move, finish = active.finish;
+    active.move = pointer => {
+      if (pointer.pointerId !== active.pointerId) return;
+      if (!(pointer.buttons & 1)) { cancelGesture(); return; }
+      move(pointer);
+    };
+    active.finish = pointer => {
+      if (pointer.pointerId !== active.pointerId) return;
+      try { finish(pointer); }
+      finally { if (gesture.current === active) cancelGesture(); }
+    };
+    active.lost = pointer => { if (pointer.pointerId === active.pointerId && gesture.current === active) cancelGesture(); };
+    active.hidden = () => { if (document.hidden) cancelGesture(); };
     gesture.current = active;
     globalThis.addEventListener('pointermove', active.move, true);
     globalThis.addEventListener('pointerup', active.finish, true);
     globalThis.addEventListener('pointercancel', active.cancel, true);
     globalThis.addEventListener('blur', active.cancel);
+    document.addEventListener('visibilitychange', active.hidden);
+    active.host.addEventListener('lostpointercapture', active.lost);
+    active.host.setPointerCapture(active.pointerId);
   };
   const workspaceBounds = () => projectWorkbenchBounds(latest.current.scale, pan.current.current);
+  const finishMove = (current, ids, transforms) => {
+    if (!current.store) return;
+    const next = { ...transforms };
+    for (const id of ids) {
+      const registration = current.frames.get(id), transform = transforms[id];
+      if (!registration?.move || !transform || !transform.x && !transform.y) continue;
+      const frame = registration.current;
+      // Absorb translation only. Camera zoom/pan and any independent local
+      // scale remain view state; moving cannot choose a size or crop.
+      registration.move({ left: frame.left + transform.x / transform.scale,
+        top: frame.top + transform.y / transform.scale });
+      if (transform.scale === 1) delete next[id];
+      else next[id] = { ...transform, x: 0, y: 0 };
+    }
+    setTransforms(next);
+  };
   const translate = (current, ids, rectangle, delta, bypass = false) => {
     const candidate = { ...rectangle, left: rectangle.left + delta.x, top: rectangle.top + delta.y, width: rectangle.width, height: rectangle.height };
     const snapped = snapMovement(candidate, ids.map(id => current.entries.get(id)), current.scale, bypass);
     const movement = clampWorkbenchMove(rectangle, { x: (snapped.left ?? candidate.left) - rectangle.left, y: (snapped.top ?? candidate.top) - rectangle.top }, workspaceBounds());
-    setTransforms({ ...current.transforms, ...Object.fromEntries(ids.map(id => {
+    const next = { ...current.transforms, ...Object.fromEntries(ids.map(id => {
       const transform = current.transforms[id] || identityWorkbenchTransform;
       return [id, { ...transform, x: transform.x + movement.x / current.scale, y: transform.y + movement.y / current.scale }];
-    })) });
+    })) };
+    setTransforms(next);
+    return next;
   };
   const beginMove = (event, ids = selected) => {
     if (event.button !== 0 || gesture.current) return;
@@ -160,16 +203,21 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
     snapMovement.begin(event, ids.map(id => current.entries.get(id)));
     const rectangle = snapMovement.rectangle(ids.map(id => current.entries.get(id)));
     const origin = { x: event.clientX, y: event.clientY };
+    let moved = null;
     install({ transforms: current.transforms,
       move: pointer => {
         if (pointer.pointerId !== event.pointerId) return;
         pointer.preventDefault(); pointer.stopPropagation();
         if (ids.some(id => !latest.current.entries.has(id))) { cancelGesture(); return; }
-        translate(current, ids, rectangle, { x: pointer.clientX - origin.x, y: pointer.clientY - origin.y }, pointer.altKey);
+        moved = translate(current, ids, rectangle, { x: pointer.clientX - origin.x, y: pointer.clientY - origin.y }, pointer.altKey);
       },
-      finish: pointer => { if (pointer.pointerId === event.pointerId) cancelGesture(false); },
+      finish: pointer => {
+        if (pointer.pointerId !== event.pointerId) return;
+        if (moved) finishMove(current, ids, moved);
+        cancelGesture(false);
+      },
       cancel: () => cancelGesture(),
-    });
+    }, event);
   };
   const selectionResize = (current, ids, corner) => {
     const nodes = ids.map(id => current.entries.get(id));
@@ -259,7 +307,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
       },
       finish: pointer => { if (pointer.pointerId === event.pointerId) cancelGesture(!resize.commit()); },
       cancel: () => cancelGesture(),
-    });
+    }, event);
   };
   const resizeByKey = (event, corner) => {
     if (gesture.current || pan.active.current || !['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(event.key)) return;
@@ -279,6 +327,9 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
     const host = hostRef.current;
     if (!host || disabled || !setScale) return;
     const wheel = event => {
+      // WheelEvent.buttons is zero even during a real drag in Chromium. Only
+      // recover here if the gesture also no longer owns pointer capture.
+      if (!event.buttons && gesture.current && !host.hasPointerCapture(gesture.current.pointerId)) cancelGesture();
       if (locked) {
         if (event.ctrlKey || !hasNativeWheelScroll(event.target, host, event.deltaX, event.deltaY)) {
           event.preventDefault(); event.stopPropagation();
@@ -303,14 +354,15 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
     };
     const key = event => {
       const header = event.target.closest?.('header[data-workbench-selectable]');
+      const selectable = event.target.closest?.('[data-workbench-selectable]');
       if (locked) {
-        if (header === event.target || (event.ctrlKey || event.metaKey) && event.key === '0') {
+        if (selectable === event.target || (event.ctrlKey || event.metaKey) && event.key === '0') {
           event.preventDefault(); event.stopPropagation();
         }
         return;
       }
-      if (event.shiftKey && event.key === 'Enter' && header === event.target) {
-        const id = header.closest('[data-workbench-view-id]')?.dataset.workbenchViewId;
+      if (event.shiftKey && event.key === 'Enter' && selectable === event.target) {
+        const id = selectable.closest('[data-workbench-view-id]')?.dataset.workbenchViewId;
         if (!entries.has(id)) return;
         event.preventDefault(); event.stopPropagation();
         setSelection(values => values.includes(id) ? values.filter(value => value !== id) : [...values, id]);
@@ -324,8 +376,9 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
         event.preventDefault(); event.stopPropagation();
         snapMovement.begin(event, [entries.get(headerId)]);
         const step = event.shiftKey ? 24 : 8;
-        translate(current, [headerId], snapMovement.rectangle([entries.get(headerId)]),
+        const moved = translate(current, [headerId], snapMovement.rectangle([entries.get(headerId)]),
           { x: event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0, y: event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0 }, event.altKey);
+        finishMove(current, [headerId], moved);
         return;
       }
       if (event.key === 'Escape' && (gesture.current || !editable && latest.current.selection.length)) {
@@ -340,19 +393,20 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
     };
     const pointer = event => {
       if (locked) return;
+      if (event.button === 0 && gesture.current?.pointerId === event.pointerId) cancelGesture();
       if (event.button !== 0 || gesture.current || event.target.closest?.('[data-immersive]')) return;
       if (pan.begin(event)) return;
-      // The selection surface covers module headers too. Resolve Shift-click
-      // against the underlying header to retain additive selection.
+      // Resolve Shift-click through the selection overlay to the module's own
+      // selectable surface: a window header or Image's artwork surface.
       const target = event.shiftKey && event.target.matches?.('.workbench-selection')
-        ? latest.current.selection.map(id => entries.get(id)?.querySelector('header[data-workbench-selectable]')).find(header => {
+        ? latest.current.selection.map(id => entries.get(id)?.querySelector('[data-workbench-selectable]')).find(header => {
           if (!header) return false;
           const rect = header.getBoundingClientRect();
           return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
         }) || event.target
         : event.target;
       const module = target.closest?.('[data-workbench-view-id]');
-      if (module && event.shiftKey && target.closest('header') && !target.closest('button, a')) {
+      if (module && event.shiftKey && target.closest('[data-workbench-selectable]') && !target.closest('[role="separator"], button:not([data-workbench-selectable]), a')) {
         const id = module.dataset.workbenchViewId;
         if (!entries.has(id)) return;
         event.preventDefault(); event.stopPropagation();
@@ -377,7 +431,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
         }).map(([id]) => id);
         setSelection([...new Set([...previous, ...hits])]);
       }, finish: pointer => { if (pointer.pointerId === event.pointerId) cancelGesture(false); }, cancel: () => cancelGesture() };
-      setSelection(previous); install(active);
+      setSelection(previous); install(active, event);
     };
     host.addEventListener('wheel', wheel, { passive: false, capture: true });
     host.addEventListener('keydown', key, true);
@@ -394,8 +448,10 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
         event.preventDefault(); event.stopPropagation();
         const step = event.shiftKey ? 10 : 1;
         snapMovement.begin(event, selected.map(id => entries.get(id)));
-        translate(latest.current, selected, snapMovement.rectangle(selected.map(id => entries.get(id))), { x: event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0,
+        const current = latest.current;
+        const moved = translate(current, selected, snapMovement.rectangle(selected.map(id => entries.get(id))), { x: event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0,
           y: event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0 }, event.altKey);
+        finishMove(current, selected, moved);
       }}>
       {['nw', 'ne', 'sw', 'se'].map(corner => <button key={corner} className={`workbench-selection__handle is-${corner}`} type="button"
         aria-label={`Scale selected modules from ${corner}`} onPointerDown={event => beginResize(event, corner)}

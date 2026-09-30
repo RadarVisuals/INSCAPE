@@ -1,0 +1,156 @@
+/* Text's accepted inspector design. Geometry stays with WorkbenchWindow;
+   these tokens and controls are scoped to the authoring tool, never the article. */
+.text-workbench .text-tools-window[data-window-chrome] {
+  --text-tool-surface: #fdfefd;
+  --text-tool-ink: #27332c;
+  --text-tool-muted: #67746b;
+  --text-tool-line: #e2e8e1;
+  --text-tool-field: #f1f4ef;
+  --text-tool-accent: #306746;
+  --text-tool-selected: #e5eee4;
+  --detached-window-gutter: 0px;
+  --detached-window-titlebar-height: 58px;
+  --detached-window-titlebar-padding: 18px;
+  --workflow-panel: var(--text-tool-surface);
+  --workflow-ink: var(--text-tool-ink);
+  --workflow-border: var(--text-tool-line);
+  --workflow-muted: var(--text-tool-muted);
+  color: var(--text-tool-ink);
+  background: var(--text-tool-surface);
+  border: 1px solid var(--text-tool-line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px #172b1918;
+  z-index: calc(var(--text-z, 46) + 1);
+}
+.text-workbench .text-tools-window[data-window-chrome]::before,
+.text-workbench .text-tools-window[data-window-chrome]::after { display: none; }
+.text-tools-window > .system-workflow__instrument-content { border: 0; border-radius: 0 0 10px 10px; }
+/* The inspector shell owns the fill; the inherited bevel header must not
+   paint a rectangular overlay across the shell's rounded upper corners. */
+.text-workbench .text-tools-window[data-window-chrome] > .system-workflow__detached-window-titlebar {
+  border-bottom: 0;
+  background: transparent;
+  border-radius: 9px 9px 0 0;
+}
+.text-tools-window .system-workflow__detached-window-titlebar > strong { text-transform: none; letter-spacing: -.02em; font-size: 14px; }
+.text-inspector-heading { min-width: 0; display: grid; gap: 3px; }
+.text-inspector-heading strong { font: 500 16px/1.2 'Inscape Sora',sans-serif; letter-spacing: -.03em; }
+.text-inspector-heading span { font: 12px/1.2 'Inscape IBM Plex Sans Condensed',sans-serif; color: var(--text-tool-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.text-tools-window .system-workflow__window-cap { color: var(--text-tool-muted); background: transparent; border: 0; box-shadow: none; }
+.text-tools-content { display: flex; flex-direction: column; min-height: 0; max-height: calc(100dvh - 72px - var(--detached-window-titlebar-height)); font: 12px/1.5 'Inscape Sora', sans-serif; }
+.text-tools-window [hidden] { display: none !important; }
+.text-tools-window .text-controls-body { display: block; min-height: 0; overflow: auto; overscroll-behavior: contain; flex: 1; scrollbar-width: thin; }
+.text-tools-window :is(button, input, select) { font: inherit; color: inherit; box-sizing: border-box; min-width: 0; max-width: 100%; }
+.text-tools-window .text-controls-body :is(input, select) { border: 1px solid var(--text-tool-line); border-radius: 5px; padding: 6px 8px; min-height: 32px; background: var(--text-tool-surface); }
+.text-tools-window .text-controls-body button, .text-tools-window button { border: 0; border-radius: 4px; background: transparent; min-height: 30px; padding: 5px 7px; }
+.text-workbench .text-tools-window button:hover:not(:disabled) { background: var(--text-tool-field); color: var(--text-tool-accent); }
+.text-workbench .text-tools-window button[aria-pressed=true] { box-shadow: none; color: var(--text-tool-accent); background: var(--text-tool-selected); }
+.text-workbench .text-tools-window :is(button, input, select, summary):focus-visible { outline: 2px solid var(--text-tool-accent); outline-offset: 1px; }
+.text-tools-window svg { width: 16px; height: 16px; stroke-width: 1.65; }
+.text-inspector-tabs { display: flex; flex-shrink: 0; gap: 25px; padding: 0 18px; border-bottom: 1px solid var(--text-tool-line); }
+.text-tools-window .text-inspector-tabs button { padding: 9px 0 11px; border-radius: 0; border-bottom: 2px solid transparent; color: var(--text-tool-muted); }
+.text-tools-window .text-inspector-tabs button[aria-selected=true] { border-bottom-color: var(--text-tool-accent); color: var(--text-tool-ink); }
+.text-inspector-scope { display: flex; background: var(--text-tool-field); border-radius: 6px; padding: 3px; margin: 15px 18px 0; }
+.text-tools-window .text-inspector-scope button { flex: 1; padding: 4px 2px; font-size: 11px; color: var(--text-tool-muted); }
+.text-workbench .text-tools-window .text-inspector-scope button[aria-pressed=true] { background: var(--text-tool-surface); color: var(--text-tool-ink); box-shadow: 0 1px 3px #15231512; }
+.text-inspector-context { margin: 12px 18px 8px; color: var(--text-tool-muted); font: 12px/1.4 'Inscape IBM Plex Sans Condensed', sans-serif; }
+.text-tools-window .text-toolbar { display: flex; flex-direction: column; gap: 8px; padding: 0 18px 12px; border: 0; background: transparent; }
+.text-tools-window .text-toolbar-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.text-tools-window .text-toolbar-font { display: grid; grid-template-columns: minmax(0,1fr) 100px; gap: 8px; align-items: center; }
+.text-tools-window .text-toolbar-font .text-selection-number { padding: 0; }
+.text-tools-window .text-toolbar-font .text-selection-number input { width: 100%; }
+.text-tools-window .text-toolbar-font .text-selection-number label { min-width: 0; }
+.text-tools-window .text-toolbar-font .text-selection-number button { width: 22px; flex-basis: 22px; }
+.text-tools-window .text-block-row { grid-template-columns: minmax(0,1fr) 110px; align-items: center; }
+.text-tools-window .text-toolbar :is(button, select) { border: 1px solid var(--text-tool-line); border-radius: 5px; min-height: 32px; font-size: 11px; }
+.text-tools-window .text-toolbar-icons { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 3px; padding: 2px 0; }
+.text-tools-window .text-toolbar-icons button { display: grid; place-items: center; border: 0; padding: 5px; }
+.text-tools-window .text-selection-number { display: flex; align-items: center; gap: 4px; padding: 3px 0; }
+.text-tools-window .text-selection-number label { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; font: 12px/1.4 'Inscape IBM Plex Sans Condensed', sans-serif; }
+.text-tools-window .text-selection-number input { width: 100px; font: 12px 'Inscape Sora',sans-serif; }
+.text-tools-window .text-selection-number button { display: grid; place-items: center; width: 26px; flex: 0 0 26px; border: 0; padding: 3px; }
+.text-tools-window .text-selection-number button svg { width: 12px; height: 12px; }
+.text-inspector-advanced { border-top: 1px solid var(--text-tool-line); border-bottom: 1px solid var(--text-tool-line); }
+.text-tools-window summary { cursor: pointer; padding: 10px 0; font-size: 11px; }
+.text-inspector-advanced[open] { padding-bottom: 8px; }
+.text-tools-window .text-selection-colour { display: flex; gap: 5px; align-items: center; padding: 0; }
+.text-tools-window .text-selection-colour label { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; }
+.text-tools-window .text-selection-colour button { width: 26px; padding: 3px; border: 0; }
+.text-tools-window input[type=color] { width: 36px; min-height: 28px; height: 28px; padding: 3px; justify-self: end; }
+.text-tools-window .text-toolbar .text-insert-break { border: 0; text-align: left; display: block; color: var(--text-tool-muted); padding: 4px 0; }
+.text-tools-window .text-settings { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px 9px; padding: 14px 18px; }
+.text-tools-window .text-settings label { display: flex; flex-direction: column; gap: 5px; min-width: 0; font-size: 11px; }
+.text-tools-window .text-settings :is(input:not([type=color]):not([type=checkbox]), select) { width: 100%; }
+.text-tools-window .text-settings .text-selection-number label { flex-direction: row; }
+.text-tools-window .text-settings .text-selection-number input { width: 100px; flex: 0 0 100px; }
+.text-tools-window .text-settings-wide { grid-column: 1/-1; }
+.text-tools-window .text-settings p { margin: 0; overflow-wrap: anywhere; grid-column: 1/-1; font: 12px/1.5 'Inscape IBM Plex Sans Condensed',sans-serif; color: var(--text-tool-muted); }
+.text-tools-window .text-padding-controls input { min-width: 0; width: 100%; }
+.text-tools-window .text-title-controls { display: grid; gap: 8px; }
+.text-tools-window .text-title-alignment { display: flex; gap: 4px; }
+.text-tools-window .text-title-alignment button { flex: 1; display: grid; place-items: center; }
+.text-tools-window .text-title-controls .text-selection-colour label { flex-direction: row; }
+.text-tools-window .text-padding-controls, .text-tools-window .module-corner-controls { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+.text-tools-window .module-surface-controls { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px 9px; grid-column: 1/-1; padding: 12px 0 0; border: 0; border-top: 1px solid var(--text-tool-line); margin: 0; }
+.text-tools-window .module-surface-controls legend { font: 12px 'Inscape IBM Plex Sans Condensed',sans-serif; color: var(--text-tool-muted); padding: 0 6px 0 0; }
+.text-tools-window .module-surface-controls > :not(.module-surface-check) { grid-column: 1/-1; }
+.text-tools-window .module-surface-controls .module-surface-check, .text-tools-window .text-settings .text-visibility { flex-direction: row; align-items: center; gap: 8px; }
+.text-tools-window input[type=checkbox] { width: 14px; min-height: 14px; height: 14px; margin: 0; accent-color: var(--text-tool-accent); }
+.text-tools-window input[type=range] { accent-color: var(--text-tool-accent); border: 0; background: transparent; padding: 0; }
+.text-tools-window label:has(output) { position: relative; }
+.text-tools-window label > output { position: absolute; right: 0; top: 0; color: var(--text-tool-muted); }
+.text-inspector-connections { border-top: 1px solid var(--text-tool-line); }
+.text-inspector-connections h3 { margin: 13px 18px 0; font: 500 12px/1.5 'Inscape Sora',sans-serif; }
+.text-tools-window .text-settings--connection { grid-template-columns: minmax(0,1fr); gap: 8px; padding-top: 9px; }
+.text-tools-window .text-connection-target { display: grid; grid-template-columns: minmax(0,1fr) 52px; gap: 7px; align-items: end; }
+.text-tools-window .text-connection-target > button { background: var(--text-tool-field); font-size: 11px; min-height: 32px; }
+.text-tools-window .text-settings--connection > button, .text-tools-window .text-tools-transfer > button { border: 1px solid var(--text-tool-line); background: var(--text-tool-field); font-size: 11px; }
+.text-tools-window .text-settings--options { gap: 10px; padding-top: 0; padding-bottom: 7px; }
+.text-tools-window .text-settings--options > * { grid-column: 1/-1; }
+.text-tools-window .text-tools-transfer { border-top: 1px solid var(--text-tool-line); }
+.text-tools-window .text-tools-transfer[open] { display: grid; gap: 8px; }
+.text-inspector-publication { padding: 10px 18px; border-top: 1px solid var(--text-tool-line); flex-shrink: 0; }
+.text-inspector-publication label { display: flex; align-items: center; gap: 8px; font: 12px/1.4 'Inscape IBM Plex Sans Condensed',sans-serif; }
+.text-tools-window .text-inline-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin: 0; padding: 12px 18px; border: 0; border-top: 1px solid var(--text-tool-line); }
+.text-tools-window .text-inline-form label { display: grid; gap: 5px; grid-column: 1/-1; font-size: 11px; }
+.text-tools-window .text-inline-form :is(p, button:last-child) { grid-column: 1/-1; }
+.text-tools-window .text-inline-form input { width: 100%; }
+.text-tools-window .text-paragraph-line p { font-size: 11px; }
+.text-tools-footer { flex-shrink: 0; padding: 10px 18px; border-top: 1px solid var(--text-tool-line); background: var(--text-tool-field); color: var(--text-tool-muted); font: 12px/1.4 'Inscape IBM Plex Sans Condensed',sans-serif; max-height: 35dvh; overflow: auto; }
+.text-tools-footer p { margin: 0; }
+.text-tools-footer [role=alert] { display: flex; flex-wrap: wrap; gap: 6px; }
+.text-workbench .text-tools-footer .text-status { position: static; border: 0; padding: 0; }
+.text-workbench .text-tools-window .text-tools-footer button { min-height: 30px; border: 1px solid var(--text-tool-line); border-radius: 4px; background: var(--text-tool-surface); font: inherit; }
+@media (prefers-color-scheme: dark) {
+  .text-workbench .text-tools-window[data-window-chrome] { --text-tool-surface: #222a25; --text-tool-ink: #e5ece5; --text-tool-muted: #a3afa5; --text-tool-line: #3b473e; --text-tool-field: #2d3730; --text-tool-accent: #a0d5af; --text-tool-selected: #354c3c; }
+}
+@media (pointer: coarse) {
+  .text-tools-window :is(button, summary) { min-height: 44px; }
+  .text-workbench .text-tools-window .text-tools-footer button { min-height: 44px; }
+  .text-tools-window :is(input:not([type=checkbox]), select) { min-height: 40px; font-size: 16px; }
+  .text-tools-window .text-toolbar-icons { grid-template-columns: repeat(5,minmax(0,1fr)); }
+  .text-tools-window .text-selection-number button, .text-tools-window .text-selection-colour button { min-width: 38px; }
+}
+
+.text-style-controls, .text-backup-controls, .text-article-outline { border-top: 1px solid var(--text-tool-line); }
+.text-style-controls[open], .text-backup-controls[open] { display: grid; gap: 8px; }
+.text-tools-window .text-style-controls .text-selection-colour label { flex-direction: row; }
+.text-tools-window .text-backup-controls > button, .text-tools-window .text-backup-preview button { border: 1px solid var(--text-tool-line); font-size: 11px; }
+.text-backup-preview { display: grid; gap: 8px; }
+.text-tools-window .text-backup-controls input[type=file] { font-size: 11px; padding: 6px; min-width: 0; }
+.text-article-outline summary span { float: right; color: var(--text-tool-muted); }
+.text-article-outline nav { display: grid; max-height: 180px; overflow: auto; overscroll-behavior: contain; padding: 2px; margin-bottom: 8px; }
+.text-tools-window .text-article-outline button { display: flex; gap: 8px; align-items: baseline; border: 0; text-align: left; overflow-wrap: anywhere; }
+.text-tools-window .text-article-outline button span { flex-shrink: 0; font: 11px 'Inscape IBM Plex Sans Condensed',sans-serif; color: var(--text-tool-muted); }
+.text-tools-window .text-article-outline button[aria-current] { background: var(--text-tool-selected); color: var(--text-tool-accent); }
+.text-tools-window .text-article-outline p { margin: 0 0 8px; font: 12px/1.4 'Inscape IBM Plex Sans Condensed',sans-serif; color: var(--text-tool-muted); }
+.text-article-search { border-top: 1px solid var(--text-tool-line); padding-top: 8px; }
+.text-article-search > button { width: 100%; text-align: left; }
+.text-article-search section { display: grid; gap: 8px; padding-top: 8px; }
+.text-article-search label { display: grid; gap: 4px; }
+.text-article-search input { width: 100%; }
+.text-article-search p { margin: 0; color: var(--text-tool-muted); font: 12px/1.4 'Inscape IBM Plex Sans Condensed',sans-serif; }
+.text-search-navigation { display: flex; align-items: center; gap: 5px; }
+.text-search-navigation output { flex: 1; font: 12px/1.4 'Inscape IBM Plex Sans Condensed',sans-serif; }
+.text-editor-content .text-search-match { background: #ffe17c; color: #171b17; }
+.text-editor-content .text-search-match--active { background: #b7e7c2; outline: 2px solid #287440; outline-offset: -1px; }

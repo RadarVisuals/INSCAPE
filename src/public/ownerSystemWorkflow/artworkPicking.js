@@ -1,26 +1,41 @@
 import { artworkSourcePoint } from './displayArtworkOpening.js';
 // Derived, session-only alpha masks. URLs identify the decoded representation;
 // replacement URLs get new masks. LRU + expiry bound memory and stale failures.
-const masks = new Map();
 const MAX_MASK_SIDE = 1024;
-const MAX_MASKS = 24;
+const MAX_MASK_BYTES = 24 * 1024 * 1024;
+const MAX_MASKS = 256;
 const MASK_TTL = 5 * 60_000;
 export const ARTWORK_PLACEMENT_SELECTOR = '.system-workflow__placement, .lattice-production-placement';
 const inside = (rect, x, y) => x >= rect.left && y >= rect.top && x < rect.right && y < rect.bottom;
 const sourceOf = image => image.currentSrc || image.src;
 
-function cached(source) {
-  const entry = masks.get(source);
-  if (!entry) return null;
-  if (Date.now() - entry.created > MASK_TTL) { masks.delete(source); return null; }
-  masks.delete(source); masks.set(source, entry);
-  return entry;
+// Budget the actual alpha buffers, not just source count: many small cutouts
+// must not evict one another while fitting well below the original 24 MiB cap.
+// The entry bound also limits failed-read metadata. Neither cache owns assets.
+export function createArtworkMaskCache({ maxBytes = MAX_MASK_BYTES, maxEntries = MAX_MASKS, ttl = MASK_TTL, now = Date.now } = {}) {
+  const entries = new Map();
+  let bytes = 0;
+  const size = entry => entry?.alpha?.byteLength || 0;
+  const remove = source => { bytes -= size(entries.get(source)); entries.delete(source); };
+  return {
+    read(source) {
+      const entry = entries.get(source);
+      if (!entry) return null;
+      if (now() - entry.created > ttl) { remove(source); return null; }
+      entries.delete(source); entries.set(source, entry);
+      return entry;
+    },
+    remember(source, entry) {
+      remove(source);
+      if (size(entry) > maxBytes) return;
+      entries.set(source, { ...entry, created: now() }); bytes += size(entry);
+      while (entries.size > maxEntries || bytes > maxBytes) remove(entries.keys().next().value);
+    },
+  };
 }
-
-function remember(source, entry) {
-  masks.delete(source); masks.set(source, { ...entry, created: Date.now() });
-  while (masks.size > MAX_MASKS) masks.delete(masks.keys().next().value);
-}
+const masks = createArtworkMaskCache();
+const cached = source => masks.read(source);
+const remember = (source, entry) => masks.remember(source, entry);
 
 export function readArtworkMask(image) {
   const ratio = Math.min(1, MAX_MASK_SIDE / Math.max(image.naturalWidth, image.naturalHeight));

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ArtworkSvgDocument from './ArtworkSvgDocument.jsx';
+import { useArtworkPreparation } from './ArtworkPreparation.jsx';
 
 // Each mounted artwork owns its document and keeps it in the same DOM location.
 // Lift supplies temporary projection only; the registry ends with its owner.
@@ -35,6 +36,7 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
   const loaded = useRef(false), liftReady = useRef(null);
   const documentControls = useRef(null);
   const [visible, setVisible] = useState(false);
+  const prepared = useArtworkPreparation();
   useLayoutEffect(() => {
     const home = host.current;
     let active = true, target = null;
@@ -105,7 +107,7 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
     observer.observe(root.current);
     return () => observer.disconnect();
   }, []);
-  useLayoutEffect(() => { if (!visible && !lift) loaded.current = false; }, [visible, lift]);
+  useLayoutEffect(() => { if (!visible && !prepared && !lift) loaded.current = false; }, [visible, prepared, lift]);
   const rect = mediaStyle || { left: 0, top: 0, width, height };
   // Keep the document in native media coordinates. Resizing its iframe during
   // Lift reflows SVG content/scripts instead of scaling the artwork as a unit.
@@ -120,7 +122,7 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
   return <span ref={host} className="artwork-svg-host" data-svg-artwork-host>{createPortal(
     <svg ref={root} className="artwork-svg-viewport" data-interactive-svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none">
       <foreignObject ref={media} width={viewport.width} height={viewport.height} transform={transform}>
-        {(visible || lift) && <ArtworkSvgDocument key={src} src={src} stretch paintOnly onReady={controls => {
+        {(visible || prepared || lift) && <ArtworkSvgDocument key={src} src={src} stretch paintOnly onReady={controls => {
           documentControls.current = controls;
           loaded.current = true; liftReady.current?.(); onReady?.();
         }} />}

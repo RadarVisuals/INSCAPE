@@ -73,6 +73,7 @@
 .system-workflow__metadata-sources a { color: inherit; overflow-wrap: anywhere; }
 .system-workflow__metadata-sources :is(summary, a):focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: 2px; }
 .system-workflow__instrument-window { --detached-window-width: 320px; position: fixed; z-index: 45; }
+[data-shared-display-tools] .system-workflow__instrument-window { z-index: 80; }
 .system-workflow__instrument-window .system-workflow__instrument-content { display: block; }
 .system-workflow__instrument-window header:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
 .system-workflow__instrument-window [role="separator"]:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }

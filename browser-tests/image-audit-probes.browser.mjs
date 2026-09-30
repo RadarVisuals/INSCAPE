@@ -87,10 +87,10 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
     results.small = await module.evaluate(node => {
       const canvas = node.querySelector('.image-module__canvas').getBoundingClientRect();
       const next = node.querySelector('.image-module__next').getBoundingClientRect();
-      const header = node.querySelector('.image-module__header').getBoundingClientRect();
-      return { canvas: canvas.toJSON(), next: next.toJSON(), header: header.toJSON(), nextCenterHit: document.elementFromPoint(next.x + next.width/2, next.y + next.height/2)?.outerHTML.slice(0, 160) };
+      const close = node.querySelector('.image-module__close').getBoundingClientRect();
+      return { canvas: canvas.toJSON(), next: next.toJSON(), close: close.toJSON(), nextCenterHit: document.elementFromPoint(next.x + next.width/2, next.y + next.height/2)?.outerHTML.slice(0, 160) };
     });
-    assert.ok(results.small.next.left < results.small.canvas.left);
+    assert.ok(results.small.next.top >= results.small.canvas.bottom, 'minimum canvas controls leave its artwork exposed');
     await page.screenshot({ path: `${output}/minimum-canvas-wide.png` });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({ path: `${output}/minimum-canvas-narrow.png` });

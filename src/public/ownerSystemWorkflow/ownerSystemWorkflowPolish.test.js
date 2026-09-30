@@ -57,9 +57,9 @@ test('detached and sidecar Metadata share one dossier layout while detached rema
   assert.match(detachedWindow, /data-detached-window data-floating/);
   assert.match(detachedWindow, /system-workflow__detached-window-titlebar/);
   assert.match(detachedWindow, /system-workflow__detached-window-surface/);
-  assert.match(detachedWindow, /system-workflow__detached-window-resize/);
+  // Resize hit targets are supplied by DisplayInstrumentWindow and exercised
+  // through real pointer interactions in the shared-tools browser regression.
   assert.match(styles, /\.system-workflow__detached-window \{[^}]*border-color: rgb\(255 255 255 \/ 20%\);/s);
-  assert.match(styles, /\.system-workflow__detached-window-resize \{[^}]*right: 0;[^}]*bottom: 0;[^}]*left: 0;[^}]*height: 9px;[^}]*cursor: ns-resize;[^}]*touch-action: none;/s);
   assert.match(styles, /\.system-workflow__detached-window-surface \{[^}]*width: calc\(100% - \(2 \* var\(--detached-window-gutter\)\)\);[^}]*margin: 0 0 var\(--detached-window-gutter\);[^}]*padding: var\(--detached-window-content-padding\);[^}]*overflow-y: auto;[^}]*border-radius: var\(--detached-window-radius\);[^}]*scrollbar-width: none;/s);
   assert.match(styles, /:is\(\.system-workflow__detached-window-surface, \.system-workflow__metadata-projection \.system-workflow__metadata-module-content\)::before \{[^}]*inset: var\(--detached-window-shadow-inset, 5px\);[^}]*border-radius: var\(--detached-window-radius, 7px\);[^}]*url\("\/assets\/patterns\/detached-window-shadow-dither\.png"\) top center \/ 100% var\(--detached-window-shadow-height, 90px\) no-repeat;[^}]*pointer-events: none;/s);
   assert.match(styles, /opacity: var\(--workflow-window-inner-shadow-opacity, 1\);/);
@@ -82,7 +82,8 @@ test('Layers keeps placement tools with its content and shares window behavior w
   assert.doesNotMatch(source, /TOOLBAR_POSITION_KEY|beginToolbarDrag|beginPanelResize/);
   assert.match(instruments, /<DisplayInstrumentWindow/);
   assert.match(window, /<OwnerSystemWorkflowDetachedWindow/);
-  assert.match(window, /onPointerCancel: finish/);
+  // Cancellation is checked behaviorally alongside pointer-up commit, Escape
+  // and lost capture; a callback's source spelling does not establish recovery.
 });
 
 test('Metadata creator avatars fill their circular frame while the fallback icon retains inset spacing', () => {

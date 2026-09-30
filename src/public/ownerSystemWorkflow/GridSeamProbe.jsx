@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { measureImageJoins } from './imageSeamGeometry.js';
 
 // Temporary, user-triggered diagnostics. No draft access, image URLs, canvas
 // capture, animation changes or placement writes. Remove after seam diagnosis.
@@ -70,6 +71,10 @@ function measure(host, scale, offset) {
   const tracks = [...(host?.querySelectorAll('.system-workflow__grid-track, .visitor-grid-world__grid-track') || [])];
   const textWindows = [...(host?.querySelectorAll('.text-window[data-workbench-view-id]') || [])];
   const boards = [...new Set(tracks.map(track => track.closest('[data-workbench-view-id]')).filter(Boolean))];
+  const images = [...(host?.querySelectorAll('.image-module__window') || [])].map(node => ({
+    moduleId: node.dataset.workbenchViewId, window: inspect(node),
+    canvas: inspect(node.querySelector('.image-module__canvas')), ...mediaDetails(node),
+  }));
   const textDisplayJoins = textWindows.flatMap(text => boards.flatMap(board => {
     const a = bounds(text), b = bounds(board);
     const candidates = [
@@ -93,10 +98,7 @@ function measure(host, scale, offset) {
       before: decoration(node, '::before'), after: decoration(node, '::after'),
     })),
     textDisplayJoins,
-    images: [...(host?.querySelectorAll('.image-module__window') || [])].map(node => ({
-      moduleId: node.dataset.workbenchViewId, window: inspect(node),
-      canvas: inspect(node.querySelector('.image-module__canvas')), ...mediaDetails(node),
-    })),
+    images, imageJoins: measureImageJoins(images, density),
     displays: tracks.map(track => {
       const board = track.closest('[data-workbench-view-id]');
       const viewport = track.parentElement, clip = bounds(viewport);
@@ -149,6 +151,9 @@ export default function GridSeamProbe({ hostRef, scale, offset }) {
         background: 'var(--workflow-panel, #171717)', color: 'var(--workflow-ink, #eee)',
         border: '1px solid var(--workflow-border, #777)', fontFamily: 'Inscape Sora, sans-serif' }}>
       <p>{artworkCount} artworkvlakken binnen Display, {report.images.length} Image-vensters en {report.texts.length} Text-vensters gemeten.</p>
+      {report.imageJoins.map((join, index) => <p key={`image-${index}`}>Image-naad {index + 1} ({join.axis === 'horizontal' ? 'naast elkaar' : 'boven elkaar'}): kaders {join.canvasGapPhysicalPx.toFixed(3)} fysieke pixels;
+        {' '}afbeeldingsvlakken {join.mediaRectangleGapPhysicalPx === null ? 'niet meetbaar' : `${join.mediaRectangleGapPhysicalPx.toFixed(3)} fysieke pixels`}.</p>)}
+      {report.imageJoins.length > 0 && <p>Positief = ruimte, negatief = overlap. Aansluitende kaders met ruimte tussen de afbeeldingsvlakken kunnen door Fit inside ontstaan. Transparantie in de bron is hiermee niet gemeten.</p>}
       {report.textDisplayJoins.map((join, index) => <p key={index}>Text/Display ({join.side}): {join.gapPhysicalPx.toFixed(6)} fysieke pixels verschil.</p>)}
       <p>{joins.length ? `${joins.length} zichtbare Grid-overgang(en) gemeten. Positief verschil = ruimte; negatief = overlap.`
         : 'Geen overgang tussen Grids zichtbaar. Het rapport bevat wel de artworkranden binnen de huidige Grid en de Image-vensters.'}</p>

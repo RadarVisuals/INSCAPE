@@ -43,7 +43,7 @@ test('modules move beyond the screen, remain editable after panning, and restore
       await moveWindow(page, board.locator('header').first(), 1800, 1000);
       assert.equal((await board.boundingBox()).x, initialBoard.x + 1800);
       assert.equal((await board.boundingBox()).y, initialBoard.y + 1000);
-      await moveWindow(page, image.locator('header').first(), 2200, 800);
+      await moveWindow(page, image, 2200, 800);
       assert.equal((await image.boundingBox()).x, initialImage.x + 2200);
       await pan(page, -1800, -1000);
       assert.equal((await board.boundingBox()).x, initialBoard.x);

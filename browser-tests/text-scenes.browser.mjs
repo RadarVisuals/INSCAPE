@@ -58,7 +58,7 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
       }
     }, { visitor, sections });
     await page.goto(`${origin}/__scene_review__`); console.log('Scene review loaded'); await mount(); console.log('Scene review mounted');
-    const text = page.locator('[data-workbench-module="text"]');
+    const text = page.locator('[data-workbench-module="text"]'), tools = page.locator('.text-tools-window');
     const editor = text.getByRole('textbox', { name: 'Article text', exact: true });
     const navigateOwner = async direction => {
       const stage = page.locator('[data-system-workflow-artboard]'); const box = await stage.boundingBox();
@@ -74,8 +74,10 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
       await text.getByRole('button', { name: 'Next text page', exact: true }).click();
       assert.match(await text.locator('.text-page-navigation span').innerText(), /^2 \/ /);
       const original = await page.evaluate(() => JSON.parse(localStorage.getItem(window.__sceneDraftKey)).texts[0].article);
-      await text.getByRole('combobox', { name: 'Follow Display', exact: true }).selectOption('display:primary');
-      await text.getByRole('button', { name: 'Link Text to Display', exact: true }).click();
+      await text.getByRole('button', { name: 'Text tools', exact: true }).click();
+      await tools.getByRole('combobox', { name: 'Follow Display', exact: true }).selectOption('display:primary');
+      await tools.getByRole('button', { name: 'Link Text to Display', exact: true }).click();
+      await text.getByRole('button', { name: 'Read', exact: true }).click();
       await page.waitForFunction(() => document.querySelector('.text-scene-page article')?.textContent.includes('Second section already written'));
       assert.doesNotMatch(await text.locator('.text-scene-page article').innerText(), /First section/);
       const saved = await page.evaluate(() => JSON.parse(localStorage.getItem(window.__sceneDraftKey)).texts[0]);
@@ -120,12 +122,13 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
     await editor.fill('Arrival. I lift my head.');
     await editor.blur(); await navigateOwner('next');
     await page.screenshot({ path: '.browser-test-runtime/text-scene-authoring.png' });
+    await editor.focus();
     await page.waitForFunction(() => document.querySelector('.text-controls-body')?.textContent.includes('Silence'));
     assert.equal((await editor.innerText()).trim(), '', 'new scene starts with an empty passage');
     const passage = 'There is a low pressure somewhere inside my head. Not a sound exactly. More like something running underneath one. ';
     await editor.fill(passage.repeat(20));
     await editor.press('Control+End');
-    await text.getByRole('button', { name: 'Insert page break', exact: true }).click();
+    await tools.getByRole('button', { name: 'Insert page break', exact: true }).click();
     await page.keyboard.type('I stop breathing for a moment.');
     await text.getByRole('button', { name: 'Read', exact: true }).click();
     const next = text.getByRole('button', { name: 'Next text page', exact: true }); await next.waitFor();

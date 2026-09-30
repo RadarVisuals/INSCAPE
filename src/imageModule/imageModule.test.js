@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validImageModules, createImagePresentation, imageFocusEntry, nextImageSide } from './imageModule.js';
-import { addImageModule, saveImageModule } from './imageModuleSession.js';
+import { validImageModules, createImagePresentation, imageFocusEntry, nextImageSide, imageCropForResize } from './imageModule.js';
+import { addImageModule, saveImageModule, prepareImageResize } from './imageModuleSession.js';
+import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../systemWorkflow/systemWorkflowDraftStore.js';
 import { assertValidSystemWorkflowDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
 import { buildProfileDocumentV9, countProfileDocumentV9Assets } from '../profileDocument/domain/profileDocumentV9Builder.js';
@@ -33,7 +34,7 @@ test('Library drop creates artwork and its exact window in one undoable operatio
   assert.equal(record.visibility, 'PUBLIC');
   assert.equal(record.sides[0].asset.media.url, selectedMedia.url);
   assert.equal(record.sides[0].asset.stableAssetId, assets[0].id);
-  assert.equal(record.sides[0].crop, null);
+  assert.deepEqual(record.sides[0].crop, resolved.crop, 'new Image retains the same filling crop as a Library side');
   assert.deepEqual(after.workbench.imageModules, [{ id, open: true, position: placed.position }]);
   assert.deepEqual(documentFor(after).imageModules[0].sides, record.sides);
   assert.deepEqual(documentFor(after).workbench.imageModules, after.workbench.imageModules);
@@ -62,6 +63,32 @@ test('Image uses existing draft storage, rejects stale/profile/failed edits, and
   assert.ok(f.entries.has(systemWorkflowDraftKey(profile)));
   assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft(), f.store.getDraft());
 });
+test('resizing a legacy fitted Image fills its new canvas atomically, retains authored crops and supports undo', () => {
+  const f = fixture(); addImageModule(f.store, profile);
+  const empty = f.store.getDraft().imageModules[0];
+  const fitted = { ...empty, width: 984, height: 552, sides: [{ ...side('native'), crop: null }, side('cropped')] };
+  assert.ok(saveImageModule(f.store, profile, empty, fitted));
+  const before = f.store.getDraft();
+  assert.equal(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft().imageModules[0].sides[0].crop, null, 'loading preserves older fitting');
+  assert.equal(imageCropForResize(null, fitted, fitted), null, 'a no-op resize retains native fit');
+  assert.deepEqual(imageCropForResize(null, fitted, { width: 978, height: 552 }), { x: .5, y: .5, zoom: 1 }, 'live resizing fills the preview');
+  const change = { id: fitted.id, expected: fitted, width: 978, height: 552, left: 3576, top: 1392,
+    store: f.store, profileAddress: profile, layoutKey: 'imageModules', prepare: prepareImageResize };
+  f.fail(true);
+  assert.equal(commitWorkbenchSelectionResize([change]), false);
+  assert.deepEqual(f.store.getDraft(), before);
+  f.fail(false);
+  assert.ok(commitWorkbenchSelectionResize([change]));
+  const after = f.store.getDraft(), resized = after.imageModules[0];
+  assert.deepEqual(resized.sides[0], { ...fitted.sides[0], crop: { x: .5, y: .5, zoom: 1 } });
+  assert.deepEqual(resized.sides[1], fitted.sides[1], 'custom crop and transforms remain authored');
+  assert.equal(resized.width, 978);
+  assert.equal(resized.height, 552);
+  assert.deepEqual(after.workbench.imageModules[0].position, { left: 3576, top: 1392 });
+  assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), before);
+  assert.ok(f.store.redo()); assert.deepEqual(f.store.getDraft(), after);
+});
+
 test('public Image preserves crop, transforms and provenance; older publication restore retains local modules as private', () => {
   const f = fixture(); const old = documentFor(f.store.getDraft());
   addImageModule(f.store, profile); addImageModule(f.store, profile);

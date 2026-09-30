@@ -69,13 +69,14 @@ test('SVG Lift scales a stable document in Image and owner/Visitor Display', { t
         if (kind === 'image') { await source.focus(); await page.keyboard.press('Enter'); }
         else await source.dispatchEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
         await page.locator('.system-workflow__lift-artwork').waitFor();
-        const samples = await page.evaluate(async frame => {
+        const samples = await page.evaluate(async ({ frame, kind }) => {
           const samples = [];
           const lift = document.querySelector('.system-workflow__lift-artwork');
+          const progressTarget = kind === 'image' ? lift.parentElement : document.querySelector('[data-inspection-context="selected"]').parentElement;
           const sample = () => {
             if (frame) {
               const matrix = frame.closest('foreignObject').getScreenCTM();
-              samples.push({ progress: Number(lift.parentElement.style.getPropertyValue('--inspection-lift-progress')),
+              samples.push({ progress: Number(progressTarget.style.getPropertyValue('--inspection-lift-progress')),
                 width: frame.clientWidth, height: frame.clientHeight,
                 matrix: ['a', 'b', 'c', 'd', 'e', 'f'].map(key => matrix[key]) });
             }
@@ -83,14 +84,18 @@ test('SVG Lift scales a stable document in Image and owner/Visitor Display', { t
           // Browser animations advance before RAF callbacks. Observe the
           // backdrop update so both are sampled after Lift reads that clock.
           const observer = new MutationObserver(sample);
-          observer.observe(lift.parentElement, { attributes: true, attributeFilter: ['style'] });
+          observer.observe(progressTarget, { attributes: true, attributeFilter: ['style'] });
           for (let i = 0; i < 50; i++) await new Promise(requestAnimationFrame);
           observer.disconnect();
           return samples;
-        }, documentElement);
+        }, { frame: documentElement, kind });
         assert.ok(samples.some(sample => sample.progress > 0 && sample.progress < 1), `${kind}: animated opening`);
         assert.ok(samples.every(sample => sample.width === 640 && sample.height === 480), `${kind}: document stays at native size during Lift`);
-        await page.waitForFunction(() => document.querySelector('.system-workflow__lift-artwork')?.parentElement.style.getPropertyValue('--inspection-lift-progress') === '1');
+        await page.waitForFunction(kind => {
+          const target = kind === 'image' ? document.querySelector('.system-workflow__lift-artwork')?.parentElement
+            : document.querySelector('[data-inspection-context="selected"]')?.parentElement;
+          return target?.style.getPropertyValue('--inspection-lift-progress') === '1';
+        }, kind);
         const targetMatrix = await source.locator('foreignObject').evaluate(node => {
           const matrix = node.getScreenCTM(); return ['a', 'b', 'c', 'd', 'e', 'f'].map(key => matrix[key]);
         });

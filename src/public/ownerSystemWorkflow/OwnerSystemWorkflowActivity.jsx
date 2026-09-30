@@ -7,6 +7,16 @@ const TABS = ['ALL', 'ASSETS', 'LYX', 'SOCIAL'];
 const HISTORY_FILTERS = ['ALL', 'UNREAD', 'ASSETS', 'LYX', 'SOCIAL'];
 const displayFilter = (value) => value === 'LYX' ? value : `${value.charAt(0)}${value.slice(1).toLowerCase()}`;
 
+function ActivityFeedback({ activity, empty }) {
+  return <div className="system-workflow__activity-feedback">
+    {activity.status === 'loading' && empty && <p>Syncing LUKSO activity…</p>}
+    {activity.partialError && <p role="status">Partial on-chain data · {activity.partialError}</p>}
+    {activity.persistenceError && <p role="alert">{activity.persistenceError}
+      {activity.status === 'error' && !activity.error && <button onClick={activity.retry} type="button">Retry</button>}</p>}
+    {activity.status === 'error' && (activity.error || !activity.persistenceError) && <p role="alert">{activity.error || 'Activity unavailable'} <button onClick={activity.retry} type="button">Retry</button></p>}
+  </div>;
+}
+
 export default function OwnerSystemWorkflowActivity({ activity, onClose, phase }) {
   const [tab, setTab] = useState('ALL');
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -38,10 +48,7 @@ export default function OwnerSystemWorkflowActivity({ activity, onClose, phase }
   if (historyPresence.present) return <section aria-hidden={phase === 'closing' || historyPresence.phase === 'closing' || undefined} aria-label="Full activity history"
     className="system-workflow__activity-history system-workflow__motion-panel" data-panel-phase={historyPresence.phase} inert={phase === 'closing' || historyPresence.phase === 'closing' ? '' : undefined}
     onTransitionEnd={(event) => { if (event.propertyName === 'transform') historyPresence.completeTransition(); }}>
-    <div className="system-workflow__activity-feedback">
-      {activity.partialError && <p role="status">Partial on-chain data · {activity.partialError}</p>}
-      {activity.status === 'error' && <p role="alert">{activity.error || 'Activity unavailable'} <button onClick={activity.retry} type="button">Retry</button></p>}
-    </div>
+    <ActivityFeedback activity={activity} empty={!historyEntries.length} />
     {historyEntries.length ? <ol>{historyEntries.map((entry) => <li data-unread={entry.unread || undefined} key={entry.id}>
       <i /><time><strong>{entry.date}</strong><small>{entry.time}</small></time><span><strong>{entry.label}</strong><small>{entry.detail}</small></span><em>{entry.type}</em>
       <button onClick={() => activity.markRead(entry.id)} type="button">Open →</button>
@@ -56,10 +63,7 @@ export default function OwnerSystemWorkflowActivity({ activity, onClose, phase }
   </section>;
   return <aside aria-hidden={phase === 'closing' || undefined} aria-label="Activity notifications"
     className="system-workflow__activity-drawer system-workflow__motion-panel" inert={phase === 'closing' ? '' : undefined}>
-    <div className="system-workflow__activity-feedback">
-      {activity.status === 'loading' && !drawerEntries.length && <p>Syncing LUKSO activity…</p>}
-      {activity.status === 'error' && <p role="alert">{activity.error || 'Activity unavailable'} <button onClick={activity.retry} type="button">Retry</button></p>}
-    </div>
+    <ActivityFeedback activity={activity} empty={!drawerEntries.length} />
     <ol>{drawerEntries.map((entry) => <li data-unread={entry.unread || undefined} key={entry.id}>
       <i /><time>{entry.time}</time><button onClick={() => activity.markRead(entry.id)} type="button"><b>{entry.label}</b><small>{entry.detail}</small></button>
     </li>)}</ol>

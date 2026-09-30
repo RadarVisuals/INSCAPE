@@ -1,4 +1,5 @@
 import { validSharedTools } from './sharedDisplayToolsState.js';
+import { validTextToolsView } from '../../text/sharedTextToolsState.js';
 import { isValidWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { validDisplayInstruments, validInstrumentWindows } from './displayInstrumentState.js';
 import { displayModuleIds } from '../../systemWorkflow/domain/displayModules.js';
@@ -18,16 +19,19 @@ export function loadWorkbenchLayout(profile, draft, storage) {
     const layout = { ...value.layout,
       displays: value.layout.displays?.filter(item => ids.has(item.id)),
       texts: value.layout.texts?.filter(item => draft.texts?.some(text => text.id === item.id)),
+      shapes: value.layout.shapes?.filter(item => draft.shapes?.some(shape => shape.id === item.id)),
+      keeperDocks: value.layout.keeperDocks?.filter(item => draft.keeperDocks?.some(keeper => keeper.id === item.id)),
       imageModules: value.layout.imageModules?.filter(item => draft.imageModules?.some(image => image.id === item.id)),
       miniApps: value.layout.miniApps?.filter(item => draft.miniApps?.some(app => app.id === item.id)),
     };
-    for (const name of ['displays', 'texts', 'miniApps', 'imageModules']) if (layout[name] === undefined) delete layout[name];
+    for (const name of ['displays', 'texts', 'miniApps', 'imageModules', 'shapes', 'keeperDocks']) if (layout[name] === undefined) delete layout[name];
     const views = Object.fromEntries(Object.entries(value.views).flatMap(([id, view]) => {
       if (id === 'workbench:tools' && validSharedTools(view)) return [[id, view]];
+      if (id === 'workbench:text-tools' && validTextToolsView(view)) return [[id, view]];
       if (ids.has(id) && view && typeof view.gridId === 'string' && typeof view.locked === 'boolean') return [[id, {
         gridId: view.gridId, locked: view.locked, ...(validInstrumentWindows(view.instrumentWindows) ? { instrumentWindows: view.instrumentWindows } : {}), ...(validDisplayInstruments(view.instruments) ? { instruments: view.instruments } : {}),
       }]];
-      if (draft.texts?.some(text => text.id === id) && view && ['read', 'write'].includes(view.mode) && typeof view.settings === 'boolean') return [[id, { mode: view.mode, settings: view.settings }]];
+      if (draft.texts?.some(text => text.id === id) && view && ['read', 'write'].includes(view.mode) && (view.settings === undefined || typeof view.settings === 'boolean')) return [[id, { mode: view.mode, ...(view.settings === undefined ? {} : { settings: view.settings }) }]];
       return [];
     }));
     return { layout, views };

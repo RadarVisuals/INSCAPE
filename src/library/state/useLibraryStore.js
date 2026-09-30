@@ -112,7 +112,9 @@ export const useLibraryStore = create((set, get) => ({
       profileAddress: requestedProfileAddress,
       timeoutMs: INDEXER_SOURCE_TIMEOUT_MS
     });
-    set({ loadGeneration: generation, assets: forceLive ? [] : get().assets, sourceMode: 'INDEXER', status: 'loading',
+    // Refresh the source, not the retained inventory. Only a complete successful
+    // replacement can establish that previously known assets are no longer held.
+    set({ loadGeneration: generation, sourceMode: 'INDEXER', status: 'loading',
       error: null, liveError: null, progress: { resolved: 0, total: 0, failures: 0 } });
     const consume = async (repository, signal, options = {}) => {
       const unresolvedAssetIds = []; let sourceAssets = []; let sourceFailures = 0;
@@ -137,9 +139,11 @@ export const useLibraryStore = create((set, get) => ({
         sourceAssets = uniqueAssets(sourceAssets, batch.assets);
         sourceFailures += batch.failures;
         set((state) => ({
-          assets: batch.complete && replaceOnComplete ? sourceAssets : uniqueAssets(state.assets, batch.assets),
+          assets: batch.complete && !sourceFailures && replaceOnComplete ? sourceAssets : uniqueAssets(state.assets, batch.assets),
           sourceMode: options.sourceMode || repository.source,
-          status: options.preserveProgress ? state.status : batch.complete ? 'ready' : 'loading',
+          status: options.preserveProgress ? state.status : batch.complete ? sourceFailures ? 'partial' : 'ready' : 'loading',
+          ...(batch.complete && !options.preserveProgress ? { liveError: sourceFailures
+            ? 'Some Library assets could not be loaded. The Library may be incomplete. Retry to refresh.' : null } : {}),
           progress: options.preserveProgress ? { ...state.progress, failures: sourceFailures }
             : { resolved: batch.resolved, total: batch.total, failures: (state.progress.failures || 0) + batch.failures } }));
         saveLibraryAssetCache(workspaceStorage, requestedProfileAddress, get().assets);
@@ -281,10 +285,10 @@ export const useLibraryStore = create((set, get) => ({
         sourceMode: get().sourceMode
       });
       if (get().assets.length > 0) {
-        set({ liveError: message, status: 'partial' });
+        set({ liveError: `${message} Previously loaded assets retained.`, status: 'partial' });
         return;
       }
-      set({ liveError: message, status: 'error', error: message, assets: [], progress: { resolved: 0, total: 0, failures: 0 } });
+      set({ liveError: message, status: 'error', error: message, assets: [] });
     } finally {
       if (activeLoadController === controller) activeLoadController = null;
     }

@@ -15,8 +15,8 @@ function setup() {
   addTextModule(store, profile);
   return { store, storage, entries, fail: value => { broken = value; }, record: store.getDraft().texts[0] };
 }
-const edited = record => ({ ...record, article: { ...record.article, title: 'Arrival', content: { type: 'doc', content: [
-  { type: 'paragraph', attrs: { textAlign: 'justify-center' }, content: [{ type: 'text', text: 'The landscape remembers.', marks: [{ type: 'bold' }] }] },
+const edited = record => ({ ...record, article: { ...record.article, title: 'Arrival', appearance: { ...record.article.appearance, titleGap: 12, lineHeight: 1.8, textStyles: { h2: { fontSize: 32 }, caption: { fontSize: 12, color: '#aabbcc' } } }, content: { type: 'doc', content: [
+  { type: 'paragraph', attrs: { textAlign: 'justify-center', spaceBefore: 4, spaceAfter: 20, lineHeight: 2.1 }, content: [{ type: 'text', text: 'The landscape remembers.', marks: [{ type: 'bold' }, { type: 'textStyle', attrs: { color: '#ffaa11', fontSize: 24, letterSpacing: .12 } }] }] },
 ] } } });
 test('retry rebases unrelated persisted changes, retains their data, and undoes only recovered text', () => {
   const f = setup(), next = edited(f.record);
@@ -52,7 +52,7 @@ test('retry refuses corrupt or removed records without replacing them or updatin
 test('rich Text moves atomically into each Display and out again with formatting, appearance, publication, reload and undo', () => {
   for (const additional of [false, true]) {
     const f = setup(), moduleId = additional ? addDisplayModule(f.store) : 'display:primary';
-    const next = edited(f.record); next.article.appearance = { ...next.article.appearance, background: '#123456', opacity: .4, frame: true, padding: { top: 0, right: 12, bottom: 16, left: 24 }, edges: { corners: [12, 0, 0, 12], shadow: true, grain: .2 } };
+    const next = edited(f.record); next.article.appearance = { ...next.article.appearance, columns: 2, columnGap: 32, titleAlignment: 'right', titleColor: '#ffaa11', background: '#123456', opacity: .4, frame: true, padding: { top: 0, right: 12, bottom: 16, left: 24 }, edges: { corners: [12, 0, 0, 12], shadow: true, grain: .2 } };
     assert.ok(saveTextModuleResult(f.store, profile, f.record, next).saved);
     const gridId = displayContent(f.store.getDraft(), moduleId).grids.find(grid => grid.visibility === 'PUBLIC').id;
     const request = { expected: next, moduleId, gridId, cellSize: 20, destination: { column: 2, row: 3, columnSpan: 16, rowSpan: 8 } };

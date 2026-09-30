@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Crop, Trash2, ChevronRight } from 'lucide-react';
 import ImageWindow from './ImageWindow.jsx';
-import ImageArtwork from './ImageArtwork.jsx';
+import ImageSides from './ImageSides.jsx';
 import { ContextToolContent, useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
 import ArtworkTransformTools from '../public/ownerSystemWorkflow/ArtworkTransformTools.jsx';
 import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
 import { resolveImageLibrarySide } from './imageLibrarySide.js';
 import { createSystemWorkflowCropSession, createSystemWorkflowCropPanGesture, updateSystemWorkflowCropPanGesture, setSystemWorkflowCropZoom, nudgeSystemWorkflowCrop } from '../systemWorkflow/systemWorkflowCrop.js';
 import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop, transformArtwork } from '../systemWorkflow/systemWorkflowTransform.js';
-import { createImagePresentation, imageFocusEntry, imageSize, MAX_IMAGE_SIDES, nextImageSide } from './imageModule.js';
+import { createImagePresentation, imageFocusEntry, imageSize, MAX_IMAGE_SIDES, nextImageSide, IMAGE_FILL_CROP, imageCropForResize } from './imageModule.js';
 import { saveImageModule, prepareImageResize } from './imageModuleSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
@@ -117,6 +117,7 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
     return saved;
   };
   const resizeTarget = useMemo(() => ({ enabled: editable && !crop && !inspect && !flip,
+    reflow: editable,
     expected: record, store, profileAddress, layoutKey: 'imageModules', commit: commitWorkbenchSelectionResize, prepare: prepareImageResize, applyFrame: layout, reportError: setError,
     minimumSize: 32, maximumWidth: Math.min(4096, viewport.width - 16), maximumHeight: Math.min(4096, viewport.height - 70),
   }), [editable, Boolean(crop), inspect, flip, record, store, profileAddress, layout, viewport.width, viewport.height]);
@@ -124,7 +125,7 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
     event.preventDefault();
     const width = Number(sizeFields.width), height = Number(sizeFields.height);
     if (!imageSize(width) || !imageSize(height)) { setError('Use whole-pixel dimensions from 32 to 4096.'); return; }
-    save({ ...record, width, height });
+    resize({ width, height }, presentation.position);
   };
   const next = () => {
     if (record.sides.length < 2 || crop || inspect || flip || inactive) return;
@@ -138,12 +139,14 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{record.name}</button>}
     {presentation.open && <ImageWindow id={record.id} title={record.name} position={presentation.position}
       size={record} fitScale={scale} fitSize={fitSize} editable={editable && !crop && !inspect && !flip} suspended={suspended || inspect}
+      movable={!crop && !flip}
       active={activeTarget === record.id}
       placementModule={Boolean(store)} onPosition={layout} onResize={resize}
       resizeTarget={resizeTarget}
       onClose={() => { setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); }}>
       {renderRectangle => <>
       <button type="button" ref={source} className="image-module__canvas" aria-label={crop ? 'Drag to crop Image' : side ? `Inspect ${side.asset.name || 'Image'}` : store ? 'Drop Library artwork into Image' : 'Image is empty'}
+        data-workbench-selectable={!crop && !flip && !suspended && !inspect || undefined}
         data-side-id={side?.id} data-cropping={Boolean(crop) || undefined} data-flipping={Boolean(flip) || undefined} disabled={Boolean(suspended)}
         onPointerEnter={event => { if (!event.buttons) prepareInspection(); }}
         onPointerLeave={() => { if (!source.current?.matches(':focus-visible')) releaseInspection(); }}
@@ -172,15 +175,14 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
           updateVisualCrop(drag.current.gesture.previewCrop);
         }} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { const start = drag.current?.start; if (start) setCrop(c => c && ({ ...c, previewCrop: start })); drag.current = null; }}
         onLostPointerCapture={() => { drag.current = null; }}>
-        {!side ? <span className="image-module__empty">{store ? 'Drop artwork from Library' : 'No artwork'}</span> : !flip
-          ? <ImageArtwork side={side} rectangle={renderRectangle} crop={crop?.previewCrop ?? side.crop} />
-          : <span className="image-module__turn" data-flipping
-          onAnimationEnd={event => { if (event.target === event.currentTarget && flip) { setSideId(flip); setFlip(null); } }}>
-          <span className="image-module__face"><ImageArtwork side={side} rectangle={renderRectangle} /></span>
-          <span className="image-module__face image-module__face--back"><ImageArtwork side={record.sides.find(item => item.id === flip)} rectangle={renderRectangle} /></span>
-        </span>}
+        {!side ? <span className="image-module__empty">{store ? 'Drop artwork from Library' : 'No artwork'}</span>
+          : <ImageSides side={side} nextSide={record.sides.find(item => item.id === flip)} rectangle={renderRectangle}
+            crop={crop?.previewCrop ?? imageCropForResize(side.crop, record, renderRectangle)}
+            onComplete={id => { setSideId(id); setFlip(null); }} onCancel={() => setFlip(null)} />}
       </button>
-      {record.sides.length > 1 && !crop && <button type="button" className="image-module__next" aria-label="Next Image side" disabled={Boolean(flip || inspect || suspended)} onClick={next}><span>{sideIndex + 1}/{record.sides.length}</span><ChevronRight size={14} /></button>}
+      {record.sides.length > 1 && !crop && <button type="button" className="image-module__next" aria-label="Next Image side"
+        aria-description={`Side ${sideIndex + 1} of ${record.sides.length}`} title={`Next side · ${sideIndex + 1} of ${record.sides.length}`}
+        disabled={Boolean(flip || inspect || suspended)} onClick={next}><ChevronRight size={14} /></button>}
       </>}
     </ImageWindow>}
     {editable && <ContextToolContent target={record.id} label={`${record.name} / ${side ? `Side ${sideIndex + 1}` : 'Empty'}`} available={presentation.open && !inspect}>
@@ -193,6 +195,15 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
         <nav className="system-workflow__selection-actions" aria-label="Image actions"><ArtworkTransformTools disabled={!side || Boolean(flip)} onTransform={operation => changeSide({ transform: transformArtwork(side.transform, operation) })} />
           <button type="button" aria-label="Crop" title="Crop" disabled={!side || Boolean(flip)} onClick={beginCrop}><Crop size={15} /></button>
         </nav>
+        <div className="system-workflow__inspection-selector" role="group" aria-label="Image fit">
+          <span>Fit</span>
+          <button type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side && side.crop === null)}
+            title="Show the complete image. Different proportions leave space inside the canvas."
+            onClick={() => changeSide({ crop: null })}>Fit inside</button>
+          <button type="button" disabled={!side || Boolean(flip)} aria-pressed={Boolean(side?.crop)}
+            title="Fill the canvas with a centred crop, keeping the image proportions. Edges may be cropped."
+            onClick={() => changeSide({ crop: { ...IMAGE_FILL_CROP } })}>Fill canvas</button>
+        </div>
         <form className="image-module__size" onSubmit={applySize}>
           {['width', 'height'].map(key => <label key={key}>{key === 'width' ? 'Width' : 'Height'}<input aria-label={`Image ${key}`} type="number" min="32" max="4096" step="1" value={sizeFields[key]} onChange={event => setSizeFields(fields => ({ ...fields, [key]: event.target.value }))} /></label>)}
           <button type="submit">Set size</button>

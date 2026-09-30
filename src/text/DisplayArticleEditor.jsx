@@ -1,17 +1,21 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Eye } from '../public/InscapeIcons.jsx';
 import DisplayTextContent from '../public/ownerSystemWorkflow/DisplayTextContent.jsx';
 import { displayTextArticle } from '../systemWorkflow/domain/displayText.js';
 import { detachTextFromDisplay, saveDisplayArticleResult } from './textTransfer.js';
 import TextTools from './TextTools.jsx';
+import { useSharedTextTools } from './SharedTextTools.jsx';
 import { textRecoveryScope, readTextRecovery, retainTextRecovery, clearTextRecovery } from './textEditRecovery.js';
 import TextMoveHandle from './TextMoveHandle.jsx';
 import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
+import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
+import { clampWorkbenchPosition, unprojectWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 const ArticleEditor = lazy(() => import('./ArticleEditor.jsx'));
 
-export default function DisplayArticleEditor({ placement, controller, cellSize, width, height, screenCellSize, canvasRef, onClose }) {
+export default function DisplayArticleEditor({ placement, controller, cellSize, width, height, screenCellSize, canvasRef, onClose, suspended = false }) {
+  const tools = useSharedTextTools();
   const { scale: standaloneScale } = useWorkbenchView();
+  const { offset } = useWorkbenchCamera();
   const scope = textRecoveryScope(controller.draft.profileAddress, placement.id, controller.moduleId, controller.selectedGridId);
   const recovered = readTextRecovery(controller.store, scope);
   const [article, setArticle] = useState(() => recovered?.value || displayTextArticle(placement.text)), [host, setHost] = useState(null), [error, setError] = useState(recovered?.failure.message || '');
@@ -35,10 +39,11 @@ export default function DisplayArticleEditor({ placement, controller, cellSize, 
   };
   const detach = rectangle => {
     if (!save(working.current)) return;
-    detachTextFromDisplay(controller.store, controller.draft.profileAddress, { moduleId: controller.moduleId, gridId: controller.selectedGridId,
-      expected: expected.current, cellSize: screenCellSize / standaloneScale, window: {
-        left: Math.max(8, rectangle.left / standaloneScale), top: Math.max(8, rectangle.top / standaloneScale), width: Math.max(240, rectangle.width / standaloneScale), height: Math.max(180, rectangle.height / standaloneScale),
-      } });
+    const size = { width: Math.max(240, rectangle.width / standaloneScale), height: Math.max(180, rectangle.height / standaloneScale) };
+    const position = clampWorkbenchPosition(unprojectWorkbenchPosition(rectangle, standaloneScale, offset), size);
+    const id = detachTextFromDisplay(controller.store, controller.draft.profileAddress, { moduleId: controller.moduleId, gridId: controller.selectedGridId,
+      expected: expected.current, cellSize: screenCellSize / standaloneScale, window: { ...position, ...size } });
+    tools?.activate(id); tools?.setOpen(true);
   };
   const outside = point => { const bounds = canvasRef.current?.getBoundingClientRect(); return bounds && (point.x < bounds.left || point.x > bounds.right || point.y < bounds.top || point.y > bounds.bottom); };
   const detachBeside = () => {
@@ -46,24 +51,28 @@ export default function DisplayArticleEditor({ placement, controller, cellSize, 
     try { detach({ left: bounds.right + 12, top: bounds.top, width: placement.columnSpan * screenCellSize, height: placement.rowSpan * screenCellSize }); }
     catch (failure) { setError(failure.message); }
   };
-  const close = () => { if (failed.current) return; onClose(); };
+  const close = () => {
+    if (failed.current) return false;
+    const trigger = root.current?.closest('[data-system-workflow-placement-id]');
+    onClose(); queueMicrotask(() => trigger?.isConnected && trigger.focus({ preventScroll: true }));
+  };
   return <div ref={root} className="text-workbench display-text-authoring">
     <DisplayTextContent placement={{ ...placement, text: { article } }} cellSize={cellSize} width={width} height={height}>
-      <Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor article={article} onChange={save} controlsHost={host} disabled={placement.locked} /></Suspense>
+      <Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor article={article} onChange={save} controlsHost={host} disabled={placement.locked || suspended} saveError={error}
+        onFindRequest={() => { if (!placement.locked && !suspended) { tools?.activate(controller.moduleId); tools?.setOpen(true); } }} /></Suspense>
     </DisplayTextContent>
     <div className="display-text-edit-actions" style={actions}>
       <TextMoveHandle label="Drag Text out of Display" disabled={placement.locked} previewAt={(point, rectangle) => ({ rectangle, label: outside(point) ? 'Move onto Workbench' : 'Drag outside Display to detach' })}
         onDrop={(_preview, rectangle, point) => { if (outside(point)) detach(rectangle); }} onKeyboardMove={detachBeside} onError={setError} />
       <button type="button" className="system-workflow__round-control" aria-label="Finish editing Text" onClick={close}><Eye /></button>
     </div>
-    {canvasRef.current && createPortal(<div className="text-workbench" style={{ '--text-z': 70 }} onPointerDown={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
-      <TextTools article={article} onChange={save} controlsRef={setHost} disabled={placement.locked} onClose={close}
-        initialX={canvasRef.current.getBoundingClientRect().right + 12} initialY={canvasRef.current.getBoundingClientRect().top} footer={error ? <div role="alert">{error}<button type="button" onClick={() => save(working.current, { retry: true })}>Retry local save</button>
+    {canvasRef.current && <TextTools targetId={controller.moduleId} available={!suspended} article={article} onChange={save} controlsRef={setHost} disabled={placement.locked} onClose={close}
+        backupScope={JSON.stringify(scope)} recoveryPending={failed.current}
+        anchor={canvasRef.current.getBoundingClientRect()} footer={error ? <div role="alert">{error}<button type="button" onClick={() => save(working.current, { retry: true })}>Retry local save</button>
           {reason === 'conflict' && <button type="button" onClick={() => save(working.current, { retry: true, replace: true })}>Replace saved Text with my edits</button>}
         </div> : <p role="status">Saved in this browser</p>}>
         <button type="button" disabled={placement.locked} onClick={detachBeside}>Move onto Workbench</button>
 
-      </TextTools>
-    </div>, canvasRef.current.closest('main') || document.body)}
+      </TextTools>}
   </div>;
 }

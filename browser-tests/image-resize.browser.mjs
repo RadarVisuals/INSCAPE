@@ -54,16 +54,17 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     });
     const images = page.locator('.image-module__window'), first = images.nth(0), transparent = images.nth(1);
     await first.waitFor(); await transparent.waitFor();
-    const bounds = first.locator('.image-module__bounds'), grip = first.getByLabel('Move Image window', { exact: true });
+    const bounds = first.locator('.image-module__bounds'), grip = first;
     const southeast = first.getByRole('separator', { name: 'Resize Image window', exact: true });
     await page.mouse.move(width - 10, 900); await settle(page);
     assert.equal(await opacity(bounds), '0');
     await first.locator('.image-module__canvas').hover();
-    assert.equal(await opacity(bounds), '1', 'hover over the artwork exposes the whole canvas');
+    assert.equal(await opacity(bounds), '0', 'hover does not select artwork or expose editing bounds');
+    await first.focus();
+    assert.equal(await opacity(bounds), '1', 'keyboard focus selects Image and exposes the whole canvas');
     assert.equal(await opacity(southeast), '1');
-    let art = await first.boundingBox(), bar = await grip.boundingBox();
-    assert.ok(bar.y + bar.height <= art.y - 27, 'title strip clears both artwork and top resize targets');
-    assert.ok(bar.width < art.width, 'title strip stays compact');
+    let art = await first.boundingBox();
+    assert.equal(await first.locator('header').count(), 0, 'the artwork itself is the move surface');
     for (const handle of await first.locator('.image-module__resize').all()) {
       const rect = await handle.boundingBox();
       assert.ok(rect.x >= -.01 && rect.x + rect.width <= width + .01, 'resize target stays reachable at the viewport sides');
@@ -74,7 +75,10 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     assert.equal(await opacity(bounds), '1', 'active Image stays outlined while its tools have focus');
     await page.screenshot({ path: `.browser-test-runtime/image-resize-${width}-wide.png` });
     await transparent.locator('.image-module__canvas').hover();
+    assert.equal(await opacity(transparent.locator('.image-module__bounds')), '0', 'hover does not select another Image');
+    await transparent.focus();
     assert.equal(await opacity(transparent.locator('.image-module__bounds')), '1');
+    assert.equal(await opacity(bounds), '0', 'selecting another Image clears the old editing bounds');
     await page.screenshot({ path: `.browser-test-runtime/image-resize-${width}-transparent.png` });
 
     // Every handle remains a screen-sized target with camera zoom and pan.
@@ -101,9 +105,9 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     const thin = await page.evaluate(() => window.readDraft()), writes = await page.evaluate(() => window.writes);
     const top = first.getByRole('separator', { name: 'Resize Image top', exact: true });
     const bottom = first.getByRole('separator', { name: 'Resize Image bottom', exact: true });
-    const topRect = await top.boundingBox(), bottomRect = await bottom.boundingBox(); art = await first.boundingBox(); bar = await grip.boundingBox();
+    const topRect = await top.boundingBox(), bottomRect = await bottom.boundingBox(); art = await first.boundingBox();
     assert.ok(topRect.y + topRect.height <= bottomRect.y, 'thin canvas controls never overlap');
-    assert.ok(bar.y + bar.height <= topRect.y + .01, 'move strip does not steal the top resize target');
+    assert.ok(await top.evaluate(node => { const r = node.getBoundingClientRect(); return document.elementFromPoint(r.x + 14, r.y + 20) === node; }), 'top resize target takes priority over artwork dragging');
     await page.keyboard.down('Alt');
     await page.mouse.move(topRect.x + 14, topRect.y + 20); await page.mouse.down();
     await page.mouse.move(topRect.x + 14, topRect.y - 40, { steps: 8 }); await settle(page);
@@ -162,8 +166,8 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     const visitor = page.locator('.visitor-grid-world .image-module__window').first(); await visitor.waitFor();
     assert.equal(await visitor.locator('.image-module__bounds, .image-module__resize').count(), 0);
     await visitor.locator('.image-module__canvas').hover();
-    const visitorArt = await visitor.boundingBox(), visitorBar = await visitor.locator('header').boundingBox();
-    assert.ok(visitorBar.y + visitorBar.height <= visitorArt.y || visitorBar.y >= visitorArt.y + visitorArt.height);
+    assert.equal(await visitor.locator('header').count(), 0, 'Visitor shares the same direct artwork interaction');
+    assert.equal(await opacity(visitor.locator('.image-module__close')), '1');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

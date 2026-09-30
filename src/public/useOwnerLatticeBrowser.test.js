@@ -55,7 +55,7 @@ test('Library removes creator records after every preview source is unavailable'
   assert.match(workspace, /markAssetUnavailable/);
   assert.match(presenterSource, /mediaWorkspace\.isAssetRenderable\(id\)/);
   assert.match(workspaceSource, /!workspaceState\?\.isAssetRenderable\(id\)/);
-  assert.match(workspaceSource, /cleanup\(\);\s*if \(!moved\) return/);
+  // Click-versus-drag completion is exercised in library-drop-lifecycle.browser.mjs.
   assert.match(workspaceSource, /ownerLibraryPreviewRecords/);
   assert.match(workspaceSource, /useBrowserWorkspace\(data, ownerLibraryPreviewRecords/);
 });
@@ -76,7 +76,7 @@ test('owner Browser restores the creator-attributed union without confusing crea
   assert.match(source, /createdRetained: Boolean\(createdProfileReady && createdError && createdAssets\.length\)/);
   assert.match(source, /acceptedAssetIds = union\.assets\.map/);
   assert.match(source, /createdAssets: \[activeCollection, \.\.\.collectionTokens\]/);
-  assert.match(source, /collectionData \|\| \{ \.\.\.unionData, onOpenCollection: openCollection \}/);
+  assert.match(source, /collectionData \|\| \{ \.\.\.unionData, onOpenCollection: openCollection,/);
   assert.match(source, /resolveReferencedAssets\(profile, referencedAssetKey\.split\(','\)\)/);
 });
 

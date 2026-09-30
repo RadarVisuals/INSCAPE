@@ -100,6 +100,7 @@
 
 .system-workflow__panel-presence { display: contents; }
 .system-workflow__recovery-notice, .system-workflow__layout-notice { position: fixed; z-index: 85; left: 8px; right: 8px; bottom: calc(var(--workflow-dock-height) + 8px); margin: 0; padding: 8px 12px; border: 1px solid var(--workflow-border-strong); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-control); }
+.system-workflow__recovery-notice { z-index: 80; }
 .system-workflow__recovery-notice + .system-workflow__layout-notice { bottom: calc(var(--workflow-dock-height) + 64px); }
 .system-workflow__layout-notice button { font: inherit; color: inherit; background: var(--workflow-selection); border: 1px solid var(--workflow-border); padding: 4px 8px; }
 .system-workflow__motion-panel:is([data-panel-phase="entering"], [data-panel-phase="closing"]),
@@ -464,13 +465,15 @@
 }
 .system-workflow__grid-plane {
   position: absolute;
+  /* Scene clips are disjoint. Keep their stacking order stable as the active
+     Grid changes, so the compositor retains one continuous painted rail. */
+  z-index: 0;
   inset: 0 auto 0 0;
   width: 100%;
   overflow: hidden;
   background-color: transparent;
 }
 .system-workflow__grid-plane--current {
-  z-index: 1;
   pointer-events: none;
 }
 :is(.system-workflow__artwork-plane, .visitor-grid-renderer__artwork-plane) { position: absolute; inset: 0; overflow: hidden; pointer-events: none; transition: filter 260ms var(--workflow-ease); }
@@ -506,7 +509,6 @@
   white-space: nowrap;
 }
 .system-workflow__grid-plane--adjacent {
-  z-index: 2;
   pointer-events: none;
 }
 .system-workflow__canvas[data-space-navigation] { cursor: grab; }
@@ -1041,12 +1043,15 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__instrument-window { overflow: visible; }
 .system-workflow__detached-window-resize { position: absolute; z-index: 6; width: 28px; height: 28px; padding: 0; border: 0; background: transparent; cursor: nwse-resize; touch-action: none; zoom: var(--workbench-control-scale, 1); }
 .system-workflow__detached-window-resize::after { content: ''; position: absolute; left: var(--resize-mark-x); top: var(--resize-mark-y); box-sizing: border-box; width: 8px; height: 8px; border: 1px solid #fff; background: #111313; box-shadow: 0 0 0 1px #111313; opacity: 0; }
-.system-workflow__instrument-window:is(:hover, :focus-within) > .system-workflow__detached-window-resize::after { opacity: 1; }
+.system-workflow__instrument-window:not([data-workbench-view-id]):is(:hover, :focus-within) > .system-workflow__detached-window-resize::after,
+.system-workflow__instrument-window[data-window-active] > .system-workflow__detached-window-resize::after { opacity: 1; }
+.system-workflow__instrument-window[data-workbench-view-id] > .system-workflow__detached-window-resize { pointer-events: none; }
+.system-workflow__instrument-window[data-window-active] > .system-workflow__detached-window-resize { pointer-events: auto; }
 .system-workflow__detached-window-resize:is(.is-n, .is-s) { cursor: ns-resize; }
 .system-workflow__detached-window-resize:is(.is-ne, .is-sw) { cursor: nesw-resize; }
 .system-workflow__detached-window-resize:is(.is-w, .is-e) { cursor: ew-resize; }
 .system-workflow__detached-window-resize:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
-@media (hover: none) { .system-workflow__detached-window-resize::after { opacity: 1; } }
+@media (hover: none) { .system-workflow__instrument-window:not([data-workbench-view-id]) > .system-workflow__detached-window-resize::after { opacity: 1; } }
 .system-workflow__metadata-module-content { display: grid; }
 .system-workflow__metadata-module-content > section,
 .system-workflow__metadata-module-content .system-workflow__metadata-module-traits > li { min-width: 0; }

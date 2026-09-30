@@ -30,10 +30,13 @@ test('published Workbench restores new Identity content, module layout and sessi
       const display = page.locator('[aria-label="Display Module"]');
       await display.waitFor();
       const bounds = await display.boundingBox();
-      assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width + 1, JSON.stringify(bounds));
+      // Workbench windows retain authored coordinates even beyond the viewport.
+      assert.equal(bounds.x, 40, JSON.stringify(bounds));
+      assert.equal(bounds.y, 90, JSON.stringify(bounds));
       await page.screenshot({ path: `.browser-test-runtime/published-workbench-display-${width}.png` });
       await page.getByRole('button', { name: 'Next Grid', exact: true }).click();
       await page.waitForFunction(() => document.querySelector('[data-active-grid-id]')?.dataset.activeGridId === 'grid:alpha-archive');
+      await display.locator('.system-workflow__identity-strip').focus();
       await page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).click();
       await page.getByRole('button', { name: 'Profile', exact: true }).click();
       await identity.getByRole('button', { name: 'Close Identity', exact: true }).waitFor();

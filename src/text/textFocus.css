@@ -1,0 +1,26 @@
+.text-focus-slot, .text-editor-mount { display: contents; }
+.text-focus-dialog {
+  position: fixed; inset: 0; box-sizing: border-box; width: 100%; height: 100dvh;
+  max-width: none; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0;
+  background: var(--text-tool-surface, var(--workflow-panel, #fdfefd)); color: var(--text-tool-ink, var(--workflow-ink, #27332c)); overflow: hidden;
+  font: 12px/1.5 'Inscape Sora', sans-serif;
+}
+.text-focus-dialog[open] { display: flex; flex-direction: column; }
+.text-focus-dialog::backdrop { background: #182019; }
+.text-focus-header { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--text-tool-line, var(--workflow-border, #e2e8e1)); }
+.text-focus-header > div { display: grid; min-width: 0; gap: 2px; }
+.text-focus-header strong { font-weight: 500; }
+.text-focus-header span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-tool-muted, var(--workflow-muted, #67746b)); font: 12px/1.3 'Inscape IBM Plex Sans Condensed', sans-serif; }
+.text-focus-header button { flex-shrink: 0; padding: 7px 10px; min-height: 36px; border: 1px solid var(--text-tool-line, var(--workflow-border, #e2e8e1)); border-radius: 4px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.text-focus-header button:focus-visible, .text-focus-scroll:focus-visible { outline: 2px solid var(--text-tool-accent, #306746); outline-offset: -2px; }
+.text-focus-save { flex-shrink: 0; padding: 6px 20px; border-bottom: 1px solid var(--text-tool-line, var(--workflow-border, #e2e8e1)); max-height: 25dvh; overflow: auto; font: 12px/1.4 'Inscape IBM Plex Sans Condensed', sans-serif; }
+.text-focus-save p { margin: 0; }
+.text-focus-save [role=alert] { color: #963823; }
+.text-focus-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 24px; }
+.text-focus-scroll .text-editor-page { box-sizing: border-box; width: 100%; }
+@media (max-width: 600px) {
+  .text-focus-header { padding: 10px 12px; gap: 8px; }
+  .text-focus-header button { min-height: 44px; max-width: 55%; }
+  .text-focus-save { padding-inline: 12px; }
+  .text-focus-scroll { padding: 8px; }
+}

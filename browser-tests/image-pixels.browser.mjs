@@ -49,7 +49,7 @@ test('Image paints all four edges, corners and source alpha at fractional camera
         }
         createRoot(document.getElementById('root')).render(React.createElement(WorkbenchViewProvider, null, React.createElement(Fixture)));
       });
-      await page.addStyleTag({ content: 'body { margin:0; background:#000; } .image-module__header { visibility:hidden; }' });
+      await page.addStyleTag({ content: 'body { margin:0; background:#000; } .image-module__close { visibility:hidden; }' });
       await page.locator('.image-module__artwork').waitFor();
       await page.evaluate(async () => { for (const key of ['opaque', 'alpha', 'quadrants']) { const image = new Image(); image.src = `https://image.test/${key}.png`; await image.decode(); } });
       for (const [width, height] of [[32, 32], [317, 193], [97, 511], [701, 64], [4096, 4096]]) {

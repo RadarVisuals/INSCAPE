@@ -7,8 +7,8 @@ export function imageDropGeometry(dimensions, point, host, scale, offset, densit
   const centre = imageWindowPosition({ left: point.x - host.left, top: point.y - host.top }, camera, offset);
   if (centre.left < WORKBENCH_BOUNDS.left || centre.top < WORKBENCH_BOUNDS.top
     || centre.left > WORKBENCH_BOUNDS.right || centre.top > WORKBENCH_BOUNDS.bottom) return null;
-  // Keep the first Image manageable, with its source proportions. Native fit
-  // retains the complete artwork even when the 32-pixel minimum limits one axis.
+  // Keep the first Image manageable, close to its source proportions. The same
+  // centred fill used by Library sides covers whole-pixel rounding/minimums.
   const limit = Math.max(32, Math.min(360, host.width - 16, host.height - 70));
   const factor = Math.min(1, limit / dimensions.width, limit / dimensions.height);
   const size = { width: Math.max(32, Math.round(dimensions.width * factor)),

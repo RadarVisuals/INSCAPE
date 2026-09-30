@@ -6,7 +6,8 @@ export function validModuleEdges(value) {
     && value.corners.every(v => Number.isFinite(v) && v >= 0 && v <= 64)
     && typeof value.shadow === 'boolean' && Number.isFinite(value.grain) && value.grain >= 0 && value.grain <= 1;
 }
+export const moduleGrainStyle = (grain = 0) => ({ '--module-grain': grain * .3 });
 export function moduleEdgeStyle(edges, scale = 1) {
   return edges ? { '--module-corners': edges.corners.map(v => `${v * scale}px`).join(' '),
-    '--module-shadow': edges.shadow ? 'var(--workflow-window-chrome-shadow)' : 'none', '--module-grain': edges.grain * .3 } : {};
+    '--module-shadow': edges.shadow ? 'var(--workflow-window-chrome-shadow)' : 'none', ...moduleGrainStyle(edges.grain) } : {};
 }

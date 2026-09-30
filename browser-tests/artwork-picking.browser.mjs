@@ -131,6 +131,8 @@ test('owner selection and inspection follow visible pixels in the actual Display
       const nodes = [...document.querySelectorAll('[data-system-workflow-placement-id]')];
       nodes.forEach((node, i) => {
         node.style.cssText = `position:absolute;left:50px;top:50px;width:200px;height:200px;z-index:${i}`;
+        // Match the shared raster surface geometry, whose CSS variables override image width.
+        node.querySelector('.display-artwork-surface').style.cssText = '--display-media-left:0px;--display-media-top:0px;--display-media-width:200px;--display-media-height:200px;--display-media-viewbox:inset(0%)';
         node.querySelectorAll('img').forEach(image => { image.src = i ? cutout : solid; image.style.cssText = 'position:absolute;inset:0;width:200px;height:200px;opacity:1;transform:none'; });
       });
     }, { solid: uri(solid), cutout: uri(cutout) });
@@ -165,35 +167,36 @@ for (const width of [1440, 390]) test(`visitor clicks through transparent foregr
       return route.fulfill({ contentType: 'application/json', body: '{"data":{}}' });
     });
     await page.goto(`${origin}/browser-tests/fixture.html`);
-    await page.waitForFunction(() => [...document.querySelectorAll('[data-placement-id]')].length === 2
-      && [...document.querySelectorAll('[data-placement-id]')].every(node => node.dataset.mediaState === 'ready'));
+    await page.waitForFunction(() => [...document.querySelectorAll('.visitor-grid-world__grid-plane:not([aria-hidden]) [data-placement-id]')].length === 2
+      && [...document.querySelectorAll('.visitor-grid-world__grid-plane:not([aria-hidden]) [data-placement-id]')].every(node => node.dataset.mediaState === 'ready'));
     await page.evaluate(async () => {
       const { createArtworkPicker } = await import('/src/public/ownerSystemWorkflow/artworkPicking.js');
       window.probePicker = createArtworkPicker();
-      const nodes = [...document.querySelectorAll('[data-placement-id]')];
+      const nodes = [...document.querySelectorAll('.visitor-grid-world__grid-plane:not([aria-hidden]) [data-placement-id]')];
       nodes.forEach((node, i) => {
         node.style.cssText = `position:absolute;left:10px;top:10px;width:140px;height:140px;z-index:${i}`;
         const opening = node.querySelector('.lattice-production-placement__opening');
         opening.style.cssText = 'position:absolute;inset:0;width:140px;height:140px;overflow:hidden;background:transparent';
+        node.querySelector('.display-artwork-surface').style.cssText = '--display-media-left:0px;--display-media-top:0px;--display-media-width:140px;--display-media-height:140px;--display-media-viewbox:inset(0%)';
         node.querySelector('img').style.cssText = 'position:absolute;inset:0;width:140px;height:140px;opacity:1;transform:none';
       });
     });
     await page.waitForFunction(() => {
-      const back = document.querySelector('[data-placement-id]'), box = back.getBoundingClientRect();
+      const back = document.querySelector('.visitor-grid-world__grid-plane:not([aria-hidden]) [data-placement-id]'), box = back.getBoundingClientRect();
       return probePicker.pick({ type: 'click', detail: 1, clientX: box.x + 110, clientY: box.y + 110 }, back.parentElement) === back;
     });
-    const back = page.locator('[data-placement-id]').first(), box = await back.boundingBox();
+    const back = page.locator('.visitor-grid-world__grid-plane:not([aria-hidden]) [data-placement-id]').first(), box = await back.boundingBox();
     await page.mouse.click(box.x + 110, box.y + 110);
     await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor();
     // Metadata is now an independent window. The selected inspection source and
     // focus recovery identify the picked artwork without opening that window.
     assert.equal(await back.getAttribute('data-inspection-context'), 'selected');
     // Default Lift inspection dims the remaining composition behind the lift.
-    assert.equal(await page.locator('[data-placement-id]').last().getAttribute('data-inspection-context'), 'background');
+    assert.equal(await page.locator('.visitor-grid-world__grid-plane:not([aria-hidden]) [data-placement-id]').last().getAttribute('data-inspection-context'), 'background');
     await page.screenshot({ path: `.browser-test-runtime/transparent-picking-${width}.png` });
     await page.keyboard.press('Escape');
     await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor({ state: 'detached' });
-    await page.waitForFunction(() => document.querySelector('[data-placement-id]') === document.activeElement);
+    await page.waitForFunction(() => document.querySelector('.visitor-grid-world__grid-plane:not([aria-hidden]) [data-placement-id]') === document.activeElement);
     assert.equal(await back.evaluate(node => node === document.activeElement), true);
     assert.equal(await page.evaluate(() => window.__visitorStorageOps.filter(op => ['setItem', 'removeItem', 'clear'].includes(op.method)).length), 0);
     assert.deepEqual(errors, []);

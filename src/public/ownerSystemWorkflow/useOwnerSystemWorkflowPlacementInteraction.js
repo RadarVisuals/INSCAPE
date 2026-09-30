@@ -41,13 +41,14 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
   const spacePressedRef = useRef(false);
   const grid = controller.selectedGrid;
 
-  const clearGesture = () => {
+  const clearGesture = (cancelled = true) => {
     const active = gestureRef.current;
     if (!active) return;
     globalThis.removeEventListener('pointermove', active.move, true);
     globalThis.removeEventListener('pointerup', active.finish, true);
     globalThis.removeEventListener('pointercancel', active.cancel, true);
     globalThis.removeEventListener('keydown', active.escape, true);
+    if (cancelled && active.cropResize) cropResize?.finish?.({ cancelled: true });
     gestureRef.current = null;
     setPreviewById(new Map());
   };
@@ -76,6 +77,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     const update = (pointerEvent) => {
       const active = gestureRef.current;
       if (!active || pointerEvent.pointerId !== active.pointerId) return;
+      if (pointerEvent.pointerType === 'mouse' && pointerEvent.buttons === 0) { complete(pointerEvent, true); return; }
       const currentField = projectedField(canvasRef.current, pointerEvent.altKey ? 1 / 9 : snapStep, artboardMode, sceneRef?.current);
       const next = active.kind === 'resize'
         ? active.records.length > 1 ? updateSystemWorkflowGroupResizeGesture(active.domainGesture, { x: pointerEvent.clientX, y: pointerEvent.clientY }, currentField, 3, { preserveRatio: pointerEvent.shiftKey }) : updateSystemWorkflowResizeGesture(
@@ -126,7 +128,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
         }
       }
       if (active.cropResize) cropResize?.finish?.({ cancelled });
-      clearGesture();
+      clearGesture(false);
     };
     const finish = (pointerEvent) => complete(pointerEvent, false);
     const cancel = (pointerEvent) => complete(pointerEvent, true);
@@ -271,13 +273,16 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
         navigation.endDrag(true);
       }
     };
+    const visibility = () => { if (globalThis.document?.hidden) release({ type: 'blur' }); };
     globalThis.addEventListener?.('keydown', keydown, true);
     globalThis.addEventListener?.('keyup', release, true);
     globalThis.addEventListener?.('blur', release);
+    globalThis.document?.addEventListener('visibilitychange', visibility);
     return () => {
       globalThis.removeEventListener?.('keydown', keydown, true);
       globalThis.removeEventListener?.('keyup', release, true);
       globalThis.removeEventListener?.('blur', release);
+      globalThis.document?.removeEventListener('visibilitychange', visibility);
       spacePressedRef.current = false;
     };
   }, [cropSession, disabled]);

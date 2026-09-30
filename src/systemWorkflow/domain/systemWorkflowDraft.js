@@ -1,4 +1,5 @@
 import { validPlacementGroups } from './placementGroups.js';
+import { DISPLAY_CANVAS_APPEARANCE_KEYS, validDisplayCanvasAppearance } from './displayAppearance.js';
 import { validModuleEdges } from './moduleSurfaceAppearance.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { parseCanonicalAssetId } from '../../profileDocument/domain/assetReference.js';
@@ -10,6 +11,8 @@ import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, isDispla
 import { validMiniApps } from '../../miniApps/domain/miniApps.js';
 import { validImageModules, imageReferenceCount } from '../../imageModule/imageModule.js';
 import { validTextModules } from '../../text/domain/article.js';
+import { validShapes } from '../../shapes/shapes.js';
+import { validKeeperDocks, keeperReferenceCount } from '../../keeper/keeper.js';
 import { DISPLAY_TEXT_KEYS, isTextPlacement, validDisplayText } from './displayText.js';
 import { validMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
 import { canUseMobileRenderer } from '../../mobile/domain/customPresentation.js';
@@ -74,6 +77,8 @@ export function systemWorkflowSnapStep(density) {
     ? (SYSTEM_WORKFLOW_GRID_PRECISION + density) / SYSTEM_WORKFLOW_GRID_PRECISION
     : density + 1;
 }
+export const systemWorkflowPlacementSnapStep = appearance => appearance.snapToGrid === false
+  ? 1 / SYSTEM_WORKFLOW_GRID_PRECISION : systemWorkflowSnapStep(appearance.guideSize);
 const safeText = (value, maximum, { empty = true } = {}) => typeof value === 'string'
   && (empty || value.length > 0)
   && value.length <= maximum
@@ -257,7 +262,7 @@ function validatePlacement(value, path, fail) {
 export function validateSystemWorkflowDraft(input) {
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
-  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'displays', 'mobile', 'miniApps', 'texts', 'imageModules'];
+  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'displays', 'mobile', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks'];
   if (!exactKeys(input, allowedKeys.filter(key => DRAFT_KEYS.includes(key) || Object.hasOwn(input || {}, key)))) {
     const missing = DRAFT_KEYS.filter(key => !Object.hasOwn(input || {}, key));
     const unexpected = record(input) ? Object.keys(input).filter(key => !allowedKeys.includes(key)) : [];
@@ -267,7 +272,8 @@ export function validateSystemWorkflowDraft(input) {
   if (!normalizeProfileAddress(input.profileAddress) || input.profileAddress !== input.profileAddress.toLowerCase()) fail('profileAddress', 'invalid_profile_address', 'Invalid profile address');
   if (input.draftVersion !== SYSTEM_WORKFLOW_DRAFT_VERSION) fail('draftVersion', 'unsupported_draft_version', 'Unsupported draft version');
   if (!isDisplayFormat(input.artboard, input.geometry)) fail('artboard', 'invalid_artboard', 'Invalid Display format');
-  if (!exactKeys(input.appearance, [...APPEARANCE_KEYS, ...['edges', 'frame'].filter(key => Object.hasOwn(input.appearance || {}, key))])
+  if (!exactKeys(input.appearance, [...APPEARANCE_KEYS, ...['edges', 'frame', ...DISPLAY_CANVAS_APPEARANCE_KEYS].filter(key => Object.hasOwn(input.appearance || {}, key))])
+    || !validDisplayCanvasAppearance(input.appearance)
     || input.appearance?.edges !== undefined && !validModuleEdges(input.appearance.edges)
     || input.appearance?.frame !== undefined && typeof input.appearance.frame !== 'boolean'
     || !sets.surfaces.has(input.appearance?.surfaceId)
@@ -279,7 +285,11 @@ export function validateSystemWorkflowDraft(input) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance?.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid appearance');
   validateIdentity(input.identityPresentation, fail);
+  if (Object.hasOwn(input, 'keeperDocks') && !validKeeperDocks(input.keeperDocks)) fail('keeperDocks', 'invalid_keepers', 'Invalid Keeper dock');
+  if (Array.isArray(input.workbench?.keeperDocks) && input.workbench.keeperDocks.some(item => !Array.isArray(input.keeperDocks) || !input.keeperDocks.some(keeper => keeper?.id === item?.id))) fail('workbench.keeperDocks', 'unknown_keeper', 'Dock refers to an unavailable Keeper');
   if (Object.hasOwn(input, 'texts') && !validTextModules(input.texts)) fail('texts', 'invalid_texts', 'Invalid Text module');
+  if (Object.hasOwn(input, 'shapes') && !validShapes(input.shapes)) fail('shapes', 'invalid_shapes', 'Invalid Shape');
+  if (Array.isArray(input.workbench?.shapes) && input.workbench.shapes.some(item => !Array.isArray(input.shapes) || !input.shapes.some(shape => shape?.id === item?.id))) fail('workbench.shapes', 'unknown_shape', 'Window refers to an unavailable Shape');
   if (Object.hasOwn(input, 'imageModules') && !validImageModules(input.imageModules)) fail('imageModules', 'invalid_images', 'Invalid Image module');
   if (Array.isArray(input.workbench?.imageModules) && input.workbench.imageModules.some(item => !Array.isArray(input.imageModules) || !input.imageModules.some(image => image?.id === item?.id))) fail('workbench.imageModules', 'unknown_image', 'Window refers to an unavailable Image module');
   if (Array.isArray(input.workbench?.texts) && input.workbench.texts.some(item => !Array.isArray(input.texts) || !input.texts.some(text => text?.id === item?.id))) fail('workbench.texts', 'unknown_text', 'Window refers to an unavailable Text module');
@@ -308,7 +318,7 @@ export function validateSystemWorkflowDraft(input) {
     }
   }
   if (Object.hasOwn(input, 'workbench') && !isValidWorkbenchPresentation(input.workbench)) fail('workbench', 'invalid_workbench', 'Invalid Workbench configuration');
-  const allReferences = imageReferenceCount(input.imageModules) + mobileReferenceCount(input.mobile) + (Array.isArray(input.grids) ? input.grids : []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0)
+  const allReferences = keeperReferenceCount(input.keeperDocks) + imageReferenceCount(input.imageModules) + mobileReferenceCount(input.mobile) + (Array.isArray(input.grids) ? input.grids : []).reduce((sum, grid) => sum + (grid?.placements?.length || 0), 0)
     + (Array.isArray(input.displays) ? input.displays : []).reduce((sum, module) => sum + (Array.isArray(module?.grids) ? module.grids : []).reduce((count, grid) => count + (grid?.placements?.length || 0), 0), 0)
     + (input.identityPresentation?.avatar?.stableAssetId ? 1 : 0) + (input.workbench?.display?.shortcut?.icon ? 1 : 0)
     + (input.workbench?.displays || []).filter(item => item?.shortcut?.icon).length;

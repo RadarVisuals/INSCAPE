@@ -1,0 +1,24 @@
+.keeper-workbench { display: contents; }
+.keeper-instance[data-suspended] { visibility: hidden; }
+.keeper-dock-window[data-window-chrome] { --detached-window-gutter: 0px; grid-template-rows: 16px minmax(0, 1fr); border: 1px solid var(--workflow-border); border-radius: 0; box-shadow: none; background: var(--workflow-panel); z-index: 46; }
+.keeper-dock-window[data-window-chrome]::before, .keeper-dock-window[data-window-chrome]::after { display: none; }
+.keeper-dock-window .system-workflow__detached-window-titlebar { min-height: 0; height: 16px; padding: 0 4px; border: 0; border-bottom: 1px solid var(--workflow-border); border-radius: 0; }
+.keeper-dock-window .system-workflow__detached-window-titlebar strong { font: 400 9px/1 "Inscape IBM Plex Sans Condensed", sans-serif; letter-spacing: .08em; }
+.keeper-dock-window .system-workflow__instrument-content { min-height: 0; height: 100%; padding: 0; overflow: hidden; border-radius: 0; }
+.keeper-dock, .keeper-dock > button { width: 100%; height: 100%; }
+.keeper-dock > button { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) 15px; place-items: center; padding: 3px; border: 0; border-radius: 0; background: transparent; color: var(--workflow-ink); font: 400 9px/1 "Inscape Sora", sans-serif; cursor: pointer; }
+.keeper-dock img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+.keeper-dock svg { width: 18px; height: 18px; stroke-width: 1; }
+.keeper-instance[data-keeper-phase="free"] .keeper-dock img, .keeper-instance[data-keeper-phase="returning"] .keeper-dock img { opacity: .22; }
+.keeper-dock svg.keeper-home { position: absolute; width: 14px; height: 14px; top: 5px; right: 5px; }
+.keeper-dock button:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: -3px; }
+.keeper-roamer { position: fixed; left: 0; top: 0; width: 0; height: 0; pointer-events: none; z-index: 47; will-change: transform; }
+.keeper-roamer img { position: absolute; width: var(--keeper-size, 128px); height: var(--keeper-size, 128px); object-fit: contain; backface-visibility: visible; transform: translate(-50%, -50%) perspective(calc(var(--keeper-size, 128px) * 4)) rotateY(calc((1 - var(--keeper-facing, 1)) * 90deg)); transition: transform 280ms cubic-bezier(.25, .1, .25, 1); }
+.keeper-roamer[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .keeper-roamer img { transition: none; } }
+.keeper-tools { display: grid; gap: 8px; font: var(--workflow-type-control); }
+.keeper-tools label { display: grid; gap: 4px; }
+.keeper-tools input, .keeper-tools select, .keeper-tools button { box-sizing: border-box; min-width: 0; width: 100%; padding: 5px; border: 1px solid var(--workflow-border); border-radius: 0; background: transparent; color: var(--workflow-ink); font: inherit; }
+.keeper-tools p { margin: 0; font: var(--workflow-type-panel-body); }
+.keeper-tools .keeper-check { display: flex; align-items: center; }
+.keeper-check input { width: auto; }

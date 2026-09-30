@@ -12,7 +12,7 @@ export default function OwnerDisplayInstance({ id, index, store, profileAddress,
   const placementRef = useRef(null);
   const shortcutRef = useRef(null);
   const storedShortcut = useMemo(() => loadPresentationBoardShortcut(profileAddress, undefined, id), []);
-  const initial = useMemo(() => initialPresentation || { ...createNewDisplayPresentation(controller.draft.geometry.rows > controller.draft.geometry.columns ? 'PORTRAIT' : 'LANDSCAPE', index),
+  const initial = useMemo(() => initialPresentation || { ...createNewDisplayPresentation(controller.draft.geometry, index),
     name: storedShortcut?.name || `DISPLAY ${index + 1}`, open: storedShortcut?.open !== false,
   }, []);
   const [presentation, setPresentation] = useState(initial);

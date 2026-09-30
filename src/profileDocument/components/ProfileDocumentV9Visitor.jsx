@@ -13,6 +13,7 @@ import './visitorGridWorld.css';
 import PresentationBoard from '../../public/ownerSystemWorkflow/PresentationBoard.jsx';
 import useDisplayInspection from '../../public/ownerSystemWorkflow/useDisplayInspection.js';
 import { gridRailScenes } from '../../public/ownerSystemWorkflow/gridRail.js';
+import { ArtworkPreparationProvider } from '../../artwork/ArtworkPreparation.jsx';
 import DisplayFocusViewer from '../../public/ownerSystemWorkflow/DisplayFocusViewer.jsx';
 import RackMenu from '../../public/menus/RackMenu.jsx';
 import { createPortal } from 'react-dom';
@@ -33,6 +34,8 @@ function PublishedStage({ children, activeGridId, onClickCapture, onPointerDown,
 const IdentityModule = lazy(() => import('../../public/identity/IdentityModule.jsx'));
 const MiniAppsWorkbench = lazy(() => import('../../miniApps/MiniAppsWorkbench.jsx'));
 const ImageWorkbench = lazy(() => import('../../imageModule/ImageWorkbench.jsx'));
+const ShapeWorkbench = lazy(() => import('../../shapes/ShapeWorkbench.jsx'));
+const KeeperWorkbench = lazy(() => import('../../keeper/KeeperWorkbench.jsx'));
 const TextWorkbench = lazy(() => import('../../text/TextWorkbench.jsx'));
 const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-6)}`;
 
@@ -48,7 +51,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const rootRef = useRef(null);
   const [activeDisplay, setActiveDisplay] = useState('display:primary');
   const additionalDocuments = useMemo(() => (document.displays || []).map(module => {
-    const { displays: _displays, miniApps: _miniApps, texts: _texts, imageModules: _images, ...shared } = document;
+    const { displays: _displays, miniApps: _miniApps, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, ...shared } = document;
     const { id, ...content } = module;
     const { id: _presentationId, ...display } = document.workbench?.displays?.find(item => item.id === id) || createDefaultWorkbenchPresentation().display;
     return { id, document: { ...shared, ...content, metadata: {}, workbench: { version: 1,
@@ -285,6 +288,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const stage = activeGrid && <PublishedStage activeGridId={activeGrid.id} viewportRef={stageRef}
       onClickCapture={(event) => { if (suppressPlacementClickRef.current) { event.preventDefault(); event.stopPropagation(); } }}
       onPointerDown={beginGridDrag}>
+      <ArtworkPreparationProvider viewportRef={stageRef} enabled={displayOpen}>
       <div ref={trackRef} className="visitor-grid-world__grid-track"
         data-rail-origin={swipe?.sourceSlot || 0} style={{ willChange: document.grids.length > 1 ? 'transform' : undefined }}>
       {renderedGrids.map(({ grid, slot }) => {
@@ -298,6 +302,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
         </div>;
       })}
       </div>
+      </ArtworkPreparationProvider>
     </PublishedStage>;
 
   return <main data-embedded-display={embedded || undefined} data-display-instance={instanceId || 'display:primary'} data-active-display={(embedded ? active : activeDisplay === 'display:primary') || undefined}
@@ -378,6 +383,13 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     </Suspense></div>}
     {!embedded && additionalDocuments.map(item => <ProfileDocumentV9Session key={item.id} document={item.document}
       embedded instanceId={item.id} active={activeDisplay === item.id} onActivate={() => setActiveDisplay(item.id)} />)}
+    {!embedded && document.keeperDocks?.length > 0 && <Suspense fallback={null}>
+      <KeeperWorkbench records={document.keeperDocks} presentations={document.workbench?.keeperDocks} profileAddress={document.profile.address}
+        hostRef={rootRef} reducedMotion={layout.reducedMotion} />
+    </Suspense>}
+    {!embedded && document.shapes?.length > 0 && <Suspense fallback={null}>
+      <ShapeWorkbench records={document.shapes} presentations={document.workbench?.shapes} profileAddress={document.profile.address} />
+    </Suspense>}
     {!embedded && document.imageModules?.length > 0 && <Suspense fallback={<p role="status">Opening Image…</p>}>
       <ImageWorkbench records={document.imageModules} presentations={document.workbench?.imageModules} profileAddress={document.profile.address} />
     </Suspense>}

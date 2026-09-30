@@ -27,9 +27,9 @@ test('production routing now delegates only to the exact v9 Preview and Visitor 
   assert.match(preview, /VisitorGridWorld/);
 });
 
-test('published Visitor has no Keeper handoff', () => {
+test('published Visitor does not restore the obsolete global resident handoff', () => {
   assert.doesNotMatch(`${app}\n${boundary}\n${production}\n${preview}\n${visitor}`,
-    /Keeper|keeperVisible|residentHandoff|onVisitorReady|onMoveKeeper|onDockKeeper|onReleaseKeeper/iu);
+    /keeperVisible|residentHandoff|onVisitorReady|onMoveKeeper|onDockKeeper|onReleaseKeeper/iu);
 });
 
 test('v9 Grid renderer reuses canonical contain, crop remap, swapped dimensions, and render-rectangle transforms', () => {
@@ -83,11 +83,11 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(visitorCss, /\.visitor-grid-world__dock > nav > button \{ width: 56px; min-width: 56px; flex-basis: 56px; \}/);
   assert.match(visitorCss, /\.visitor-grid-world__actions button \{ width: 60px; min-width: 60px; padding-inline: 4px; flex-basis: 60px; \}/);
   assert.match(visitorCss, /\.visitor-grid-world__navigation span \{ min-width: 52px; \}/);
-  assert.doesNotMatch(visitor, /Keeper|tables|coordinate|useLibraryStore|ownerAuthoring|wallet/iu);
+  assert.doesNotMatch(visitor, /tables|coordinate|useLibraryStore|ownerAuthoring|wallet/iu);
 });
 
 test('v9 Grid renderer projects canonical guide mode, density, and color without an obsolete Visitor plane', () => {
-  assert.match(renderer, /data-guide-mode=\{document\.appearance\.guideMode\}/);
+  assert.match(renderer, /data-guide-mode=\{displayGuideMode\(document\.appearance\)\}/);
   assert.match(renderer, /--lattice-production-guide-color/);
   assert.match(renderer, /LatticePixelGrid/);
   assert.match(renderer, /color=\{document\.appearance\.guideColor\}/);

@@ -21,6 +21,7 @@ export default function OwnerSystemWorkflowSettings({ appearance, controller, me
   onWorkbenchPreferencesChange, phase, workbenchPreferences }) {
   const signalSettings = useSignalStore((state) => state.settings);
   const signalProfile = useSignalStore((state) => state.profileAddress);
+  const signalPersistenceError = useSignalStore((state) => state.persistenceError);
   const profile = controller.draft.profileAddress;
   const updateSignalSetting = useSignalStore((state) => state.updateSetting);
   const gap = workbenchPreferences.moduleGap;
@@ -29,6 +30,7 @@ export default function OwnerSystemWorkflowSettings({ appearance, controller, me
     <section className="system-workflow__settings-section"><header><strong>Activity</strong></header>
       <div>{SIGNAL_OPTIONS.map(([key, label]) => <CheckControl checked={signalProfile === profile && signalSettings[key]} disabled={signalProfile !== profile} key={key} label={label}
         onChange={(checked) => updateSignalSetting(key, checked, profile)} />)}</div>
+      {signalProfile === profile && signalPersistenceError && <p role="alert">{signalPersistenceError}</p>}
     </section>
     <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Workbench</strong><span>Local to this device</span></header>
       <label><span>Background</span><OwnerSystemWorkflowSelectMenu label="Workbench background" menuSurface={menuSurface} onChange={(surfaceId) => onWorkbenchPreferencesChange({ surfaceId })} options={themeOptions} value={workbenchPreferences.surfaceId} /></label>
@@ -46,12 +48,6 @@ export default function OwnerSystemWorkflowSettings({ appearance, controller, me
       </svg>
       <p>Nearby module edges take priority over the grid. A zero gap joins modules flush.</p>
       <p id="workbench-gap-description">Guides show the active edge, grid line or spacing. Pull away to release a snap, or hold Alt to bypass snapping.</p>
-    </section>
-    <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Display Module</strong><span>Included when published</span></header>
-      <label><span>Background</span><OwnerSystemWorkflowSelectMenu label="Display Module background" menuSurface={menuSurface} onChange={(surfaceId) => controller.setAppearance({ surfaceId })} options={themeOptions} value={appearance.surfaceId} /></label>
-      <label><span>Grid display</span><OwnerSystemWorkflowSelectMenu label="Display Module grid display" menuSurface={menuSurface} onChange={(guideMode) => controller.setAppearance({ guideMode })} options={guideOptions} value={appearance.guideMode} /></label>
-      <label><span>Snap grid</span><span><input aria-label="Snap grid" max="8" min="-8" onChange={(event) => controller.setAppearance({ guideSize: Number(event.target.value) })} type="range" value={appearance.guideSize} /><output>{appearance.guideSize > 0 ? '+' : ''}{appearance.guideSize} {appearance.guideSize < 0 ? 'Fine' : appearance.guideSize > 0 ? 'Coarse' : 'Base'}</output></span></label>
-      <label><span>Grid color</span><input aria-label="Display Module grid color" onChange={(event) => controller.setAppearance({ guideColor: event.target.value })} type="color" value={appearance.guideColor} /></label>
     </section>
     <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Interface</strong></header>
       <label><span>Windows</span><OwnerSystemWorkflowSelectMenu label="Menu theme" menuSurface={menuSurface} onChange={(menuSurfaceId) => controller.setAppearance({ menuSurfaceId })} options={themeOptions} value={appearance.menuSurfaceId} /></label>

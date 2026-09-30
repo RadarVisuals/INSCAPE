@@ -85,6 +85,115 @@ test('emits a complete empty batch when LSP5 contains no currently owned assets'
   assert.deepEqual(batches, [{ assets: [], resolved: 0, total: 0, failures: 0, complete: true }]);
 });
 
+const success = (result) => ({ status: 'success', result });
+const failedRead = () => ({ status: 'failure', error: new Error('RPC unavailable') });
+
+test('failed, missing and malformed interface reads cannot certify an empty inventory', async (t) => {
+  for (const [name, interfaceResults] of [
+    ['both reads fail', [failedRead(), failedRead()]],
+    ['one negative and one failure', [success(false), failedRead()]],
+    ['LSP8 unresolved before LSP7 fallback', [failedRead(), success(true)]],
+    ['missing response', [success(false)]],
+    ['malformed response', [success(null), success(false)]],
+  ]) {
+    await t.test(name, async () => {
+      const repository = createLuksoRpcProfileRepository({
+        client: { multicall: async () => interfaceResults },
+        discoverContracts: async () => [lsp8],
+      });
+      const batches = [];
+      await assert.rejects(async () => {
+        for await (const batch of repository.loadProfileAssets(profile)) batches.push(batch);
+      }, /holdings could not be verified \(1 contract\)/u);
+      assert.deepEqual(batches, [{ assets: [], resolved: 0, total: 0, failures: 1, complete: false }]);
+    });
+  }
+});
+
+test('failed or malformed direct holding reads stay unknown for both LSP7 and LSP8', async (t) => {
+  for (const [name, interfaceResults, holdingResults] of [
+    ['LSP8 failure', [success(true), success(false)], [failedRead()]],
+    ['LSP7 failure', [success(false), success(true)], [failedRead()]],
+    ['missing holding', [success(true), success(false)], []],
+    ['invalid token list', [success(true), success(false)], [success([null])]],
+    ['invalid balance', [success(false), success(true)], [success(null)]],
+  ]) {
+    await t.test(name, async () => {
+      const repository = createLuksoRpcProfileRepository({
+        client: { multicall: async ({ contracts }) => contracts[0].functionName === 'supportsInterface'
+          ? interfaceResults : holdingResults }, discoverContracts: async () => [lsp8],
+      });
+      const batches = [];
+      await assert.rejects(async () => {
+        for await (const batch of repository.loadProfileAssets(profile)) batches.push(batch);
+      }, /holdings could not be verified/u);
+      assert.equal(batches.at(-1).complete, false);
+      assert.equal(batches.at(-1).failures, 1);
+    });
+  }
+});
+
+test('confirmed unsupported contracts, empty token lists and zero balances establish a true empty inventory', async () => {
+  const unsupported = '0x3333333333333333333333333333333333333333';
+  const repository = createLuksoRpcProfileRepository({
+    client: { multicall: async ({ contracts }) => contracts[0].functionName === 'supportsInterface'
+      ? [success(true), success(false), success(false), success(true), success(false), success(false)]
+      : [success([]), success(0n)] },
+    discoverContracts: async () => [lsp8, lsp7, unsupported],
+  });
+  const batches = [];
+  for await (const batch of repository.loadProfileAssets(profile)) batches.push(batch);
+  assert.deepEqual(batches, [{ assets: [], resolved: 0, total: 0, failures: 0, complete: true }]);
+});
+
+test('mixed discovery failures retain verified assets, report each failed contract once, and recover on retry', async () => {
+  const unknown = '0x3333333333333333333333333333333333333333';
+  let failing = true;
+  const repository = createLuksoRpcProfileRepository({
+    pageSize: 1,
+    client: {
+      async multicall({ contracts }) {
+        if (contracts[0].functionName === 'supportsInterface') return [
+          success(true), failedRead(), success(false), success(true),
+          ...(failing ? [failedRead(), failedRead()] : [success(false), success(false)]),
+        ];
+        return [success([tokenId, `0x${'0'.repeat(63)}2`]), failing ? failedRead() : success(0n)];
+      },
+      async readContract({ functionName }) { return functionName === 'getDataForTokenId' ? uri('token') : '0x'; },
+    },
+    discoverContracts: async () => [lsp8, lsp7, unknown],
+    fetchImpl: async () => response({ LSP4Metadata: { name: 'Verified token', images: [{ url: 'https://assets.example/token.webp' }] } }),
+  });
+  const partial = [];
+  await assert.rejects(async () => {
+    for await (const batch of repository.loadProfileAssets(profile)) partial.push(batch);
+  }, /holdings could not be verified \(2 contracts\)/u);
+  assert.equal(partial.length, 2);
+  assert.deepEqual(partial.map((batch) => batch.failures), [2, 0]);
+  assert.equal(partial.every((batch) => batch.complete === false), true);
+  assert.equal(partial.flatMap((batch) => batch.assets).length, 2);
+  failing = false;
+  const recovered = [];
+  for await (const batch of repository.loadProfileAssets(profile)) recovered.push(batch);
+  assert.equal(recovered.at(-1).complete, true);
+  assert.equal(recovered.every((batch) => batch.failures === 0), true);
+});
+
+test('cancellation during a direct holding read never yields an empty success', async () => {
+  const controller = new AbortController();
+  const repository = createLuksoRpcProfileRepository({
+    client: { async multicall({ contracts }) {
+      if (contracts[0].functionName === 'supportsInterface') return [success(true), success(false)];
+      controller.abort(); return [success([])];
+    } }, discoverContracts: async () => [lsp8],
+  });
+  const batches = [];
+  await assert.rejects(async () => {
+    for await (const batch of repository.loadProfileAssets(profile, { signal: controller.signal })) batches.push(batch);
+  }, { name: 'AbortError' });
+  assert.deepEqual(batches, []);
+});
+
 test('hydrates gallery-referenced assets before the remaining RPC inventory', async () => {
   const secondTokenId = `0x${'0'.repeat(63)}2`;
   const client = {

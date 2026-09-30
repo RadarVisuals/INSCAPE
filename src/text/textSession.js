@@ -1,5 +1,6 @@
 import { createArticle, MAX_TEXT_MODULES, validTextModules } from './domain/article.js';
 import { createDefaultWorkbenchPresentation, createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
+import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 
 export function prepareTextResize(draft, { expected }) {
   if (JSON.stringify(draft.texts?.find(item => item.id === expected.id)) !== JSON.stringify(expected))
@@ -31,12 +32,19 @@ export function unlinkTextModuleResult(store, profile, expected) {
       : textSaveFailure(store.getLastCommitFailure?.() || 'write_failed');
   } catch (error) { return { saved: false, reason: 'invalid', message: error.message }; }
 }
-export function addTextModule(store, profile) {
+export function addTextModule(store, profile, placed = null) {
   if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
   const draft = store.getDraft(), generation = store.getGeneration();
   if ((draft.texts?.length || 0) >= MAX_TEXT_MODULES) throw new Error(`At most ${MAX_TEXT_MODULES} Text modules are supported.`);
   const item = { id: `text:${crypto.randomUUID()}`, article: createArticle(), visibility: 'PRIVATE' };
-  if (!store.commitCompletedOperation({ ...draft, texts: [...(draft.texts || []), item] }, { expectedGeneration: generation, historyLabel: 'Add Text' })) throw new Error('Text module could not be saved.');
+  const next = { ...draft, texts: [...(draft.texts || []), item] };
+  if (placed) {
+    const presentation = createTextPresentation(item.id, draft.texts?.length || 0);
+    presentation.window = { ...presentation.window, ...clampWorkbenchPosition(placed.position, presentation.window) };
+    const workbench = placed.workbench || draft.workbench || createDefaultWorkbenchPresentation();
+    next.workbench = { ...workbench, texts: [...(workbench.texts || []), presentation] };
+  }
+  if (!store.commitCompletedOperation(next, { expectedGeneration: generation, historyLabel: 'Add Text' })) throw new Error('Text module could not be saved.');
   return item.id;
 }
 export function saveTextModule(store, profile, expected, next) {

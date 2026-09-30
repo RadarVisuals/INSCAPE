@@ -22,17 +22,13 @@
 .visitor-grid-world[data-space-navigation] .visitor-grid-world__viewport { cursor: grab; }
 .visitor-grid-world[data-grid-dragging] .visitor-grid-world__viewport { cursor: grabbing; }
 /* Scene clips share the moving rail; no per-scene blend compensation. */
-.visitor-grid-world__grid-plane { position: absolute; inset: 0 auto 0 0; width: 100%; overflow: hidden; }
-.visitor-grid-world__grid-plane--current { z-index: 1; }
+.visitor-grid-world__grid-plane { position: absolute; z-index: 0; inset: 0 auto 0 0; width: 100%; overflow: hidden; }
 .visitor-grid-world__grid-track {
   position: absolute;
   inset: 0;
   isolation: isolate;
   /* Keep the same 2D rail through movement, Pause and landing. */
   transform: translateX(var(--visitor-grid-swipe-x, 0px));
-}
-.visitor-grid-world__grid-plane--adjacent {
-  z-index: 2;
 }
 .visitor-grid-renderer { position: absolute; inset: 0; }
 .visitor-grid-world__grid-plane .visitor-grid-renderer__artwork-plane { overflow: visible; }

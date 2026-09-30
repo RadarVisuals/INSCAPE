@@ -44,6 +44,7 @@ export default function useOwnerSystemWorkflowActivity({ active, fixture, profil
   const status = useSignalStore((state) => state.status);
   const error = useSignalStore((state) => state.error);
   const partialError = useSignalStore((state) => state.partialError);
+  const persistenceError = useSignalStore((state) => state.persistenceError);
   const sourceMode = useSignalStore((state) => state.sourceMode);
   const setProfileAddress = useSignalStore((state) => state.setProfileAddress);
   const synchronize = useSignalStore((state) => state.synchronize);
@@ -88,6 +89,7 @@ export default function useOwnerSystemWorkflowActivity({ active, fixture, profil
     error: fixture || storeProfile !== profileAddress ? null : error,
     markRead,
     partialError: fixture || storeProfile !== profileAddress ? null : partialError,
+    persistenceError: fixture || storeProfile !== profileAddress ? null : persistenceError,
     refresh,
     retry: refresh,
     status: fixture ? fixtureStatus : storeProfile === profileAddress ? status : 'idle',

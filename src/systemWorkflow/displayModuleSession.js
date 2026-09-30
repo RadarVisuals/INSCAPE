@@ -2,6 +2,7 @@ import { createSystemWorkflowAuthoringSession } from './systemWorkflowAuthoringS
 import { createEmptySystemWorkflowDraft, assertValidSystemWorkflowDraft } from './domain/systemWorkflowDraft.js';
 import { DISPLAY_CONTENT_KEYS, MAX_DISPLAY_MODULES, PRIMARY_DISPLAY_ID, displayFormat, projectDisplayDraft, mergeDisplayDraft } from './domain/displayModules.js';
 import { createDefaultWorkbenchPresentation, createNewDisplayPresentation } from '../profileDocument/domain/workbenchPresentation.js';
+import { createSystemWorkflowAppearanceCandidate } from './systemWorkflowAppearance.js';
 
 export function createDisplayModuleSession(store, id) {
   let sourceSnapshot, displaySnapshot;
@@ -23,31 +24,37 @@ export function createDisplayModuleSession(store, id) {
   } });
 }
 
-export function addDisplayModule(store, orientation = 'LANDSCAPE') {
+export function addDisplayModule(store, orientation = 'LANDSCAPE', appearance = {}) {
   const draft = store.getDraft();
+  const format = displayFormat(orientation);
+  const nextAppearance = (createSystemWorkflowAppearanceCandidate(draft, { expectedAppearance: draft.appearance, appearance }) || draft).appearance;
   if (!draft.grids.length) {
     const empty = createEmptySystemWorkflowDraft(draft.profileAddress);
-    const candidate = { ...draft, grids: empty.grids, ...displayFormat(orientation),
-      workbench: { ...(draft.workbench || createDefaultWorkbenchPresentation()), display: createNewDisplayPresentation(orientation) } };
+    const candidate = { ...draft, appearance: nextAppearance, grids: empty.grids, ...format,
+      workbench: { ...(draft.workbench || createDefaultWorkbenchPresentation()), display: createNewDisplayPresentation(format.geometry) } };
     if (!store.commitCompletedOperation(candidate, { expectedGeneration: store.getGeneration() })) throw new Error('The new Display could not be saved');
     return PRIMARY_DISPLAY_ID;
   }
   if ((draft.displays?.length || 0) >= MAX_DISPLAY_MODULES - 1) throw new TypeError('This workbench already has eight Display Modules');
   const id = `display:${globalThis.crypto.randomUUID()}`;
-  const empty = { ...createEmptySystemWorkflowDraft(draft.profileAddress), appearance: structuredClone(draft.appearance), ...displayFormat(orientation) };
+  const empty = { ...createEmptySystemWorkflowDraft(draft.profileAddress), appearance: structuredClone(nextAppearance), ...format };
   const module = { id, visibility: 'PRIVATE', ...Object.fromEntries(DISPLAY_CONTENT_KEYS.map(key => [key, empty[key]])) };
   const candidate = assertValidSystemWorkflowDraft({ ...draft, displays: [...(draft.displays || []), module] });
   if (!store.commitCompletedOperation(candidate, { expectedGeneration: store.getGeneration() })) throw new Error('The new Display could not be saved');
   return id;
 }
 
-export function setDisplayModuleFormat(store, id, orientation) {
+export function setDisplayModuleFormat(store, id, orientation, expectedGeometry, appearance, expectedAppearance) {
   const draft = store.getDraft();
   const scoped = projectDisplayDraft(draft, id);
+  if (expectedGeometry && (expectedGeometry.columns !== scoped.geometry.columns || expectedGeometry.rows !== scoped.geometry.rows))
+    throw new Error('The canvas size changed while this form was open. Reopen Custom size to use the current dimensions.');
   const format = displayFormat(orientation);
-  if (scoped.artboard.aspectWidth === format.artboard.aspectWidth) return true;
-  return store.commitCompletedOperation(assertValidSystemWorkflowDraft(mergeDisplayDraft(draft, id, { ...scoped, ...format })),
-    { expectedGeneration: store.getGeneration() });
+  const themed = appearance && Object.keys(appearance).length
+    ? createSystemWorkflowAppearanceCandidate(scoped, { expectedAppearance: expectedAppearance || scoped.appearance, appearance }) : null;
+  if (!themed && scoped.geometry.columns === format.geometry.columns && scoped.geometry.rows === format.geometry.rows) return true;
+  return store.commitCompletedOperation(assertValidSystemWorkflowDraft(mergeDisplayDraft(draft, id, { ...(themed || scoped), ...format })),
+    { expectedGeneration: store.getGeneration(), historyLabel: themed ? 'Change Display settings' : 'Change Display canvas size' });
 }
 
 // The menu supplies its observed value and explicit destination. A late action

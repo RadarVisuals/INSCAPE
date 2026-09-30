@@ -90,7 +90,7 @@ for (const width of [1440, 700]) test(`Library creates an Image at its preview, 
     const dropped = await page.evaluate(() => window.readDraft());
     assert.equal(dropped.imageModules.length, 1); assert.equal(dropped.imageModules[0].visibility, 'PUBLIC');
     assert.equal(dropped.imageModules[0].sides[0].asset.media.url, 'https://images.inscape.test/attached.jpg');
-    assert.equal(dropped.imageModules[0].sides[0].crop, null);
+    assert.deepEqual(dropped.imageModules[0].sides[0].crop, { x: .5, y: .5, zoom: 1 }, 'new Image fills the canvas like any other Library side');
     assert.equal(await page.evaluate(() => window.draftWrites), 1);
     assert.equal(await page.getByRole('spinbutton', { name: 'Image width', exact: true }).count(), 1, 'created Image is the active tools target');
     const published = await page.evaluate(() => window.publicDocument());

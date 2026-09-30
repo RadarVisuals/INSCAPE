@@ -20,6 +20,18 @@ authored canvas dimensions independently of the camera. Only painting rounds
 the projected edges to physical pixels, so adjacent modules share a boundary
 through pan and zoom without rewriting authored geometry. Resting
 artwork is 2D. Flip faces and perspective exist only during a side transition.
+The requested side is prepared before the turn: raster media is decoded and
+SVG media waits for its live document, including extensionless sources. The
+visible side remains mounted while waiting; the prepared side retains its DOM
+and live document when it becomes the resting image. Only these two sides are
+mounted during a transition. Loading is bounded, failed preparation preserves
+the current side and offers retry through Next, and closing or changing content
+cancels obsolete preparation. The 600ms turn uses a symmetric easing curve.
+Artwork briefly fades around the edge-on midpoint (30ms either side), softening
+the dark stripe formed by compressing dark artwork. The rotating faces retain
+their backface culling; the resting artwork remains fully opaque.
+Each face retains its authored crop; the rotating plane can extend beyond the
+resting canvas instead of being clipped again by its stationary rectangle.
 Clicking the image opens the existing Display Lift renderer, revealing its
 full media from the cropped rectangle. Return or Escape restores that crop.
 Reduced-motion users get immediate side changes and inspection transitions.
@@ -28,36 +40,56 @@ Image and Display render SVG artwork through the same isolated document runtime
 as Identity. Module-owned geometry still determines crop, resize, rotation,
 mirroring and layer order. The document occupies that projected media rectangle
 inside a clipped SVG viewport; it does not receive module editing input.
-Owner, Visitor and enlarged inspection share this rendering path. Offscreen
-projected documents are disposed and restart when visible; their internal
+Owner, Visitor and enlarged inspection share this rendering path. Display
+prepares SVG documents within its existing bounded five-slot Grid rail while
+the module is visible, so incoming artwork can start before a swipe exposes it.
+Documents outside that rail, or in a hidden module, are disposed. Other offscreen
+projected documents restart when visible; their internal
 animation state is temporary, not saved composition data. Display selects live
 SVGs by rectangular bounds because a static alpha mask cannot describe animated
 content. Raster artwork keeps its existing renderer. Saved URLs and schemas are
 unchanged, and the runtime retains its existing restricted LUKSO RPC policy.
 
 Width and height are independent whole-pixel dimensions from 32 to 4096.
-Owner hover, focus or activation reveals the complete Image bounds and contrasting
+Owner selection or keyboard focus reveals the complete Image bounds and contrasting
 28-pixel resize targets. Corners resize both dimensions; midpoint handles resize
 one dimension around the opposite edge. Targets keep their screen size through
 zoom and sit outside the artwork where space allows. At viewport edges, hit areas
 stay reachable while their marks identify the canvas edges. Redundant handles are
 omitted on tiny canvases.
-The compact move/close strip sits outside the image beyond the resize targets,
-below it when there is no room above. Thin images remain exposed and their top
-edge resizes rather than moving the window. Position and dimensions save together
+The artwork itself is the move surface: clicking inspects it; dragging beyond
+five screen pixels moves its window and never inspects on release. Movement is
+temporary until release; Escape, lost capture or blur cancels it. Crop retains
+its own pan gesture. The separate floating title strip is removed. Close and a
+small Next arrow appear on hover or keyboard focus, and remain available on
+touch. The side count stays in the accessible description and tooltip rather
+than covering the artwork. On tiny or thin canvases these action targets sit
+outside the artwork and resize handles so the canvas remains grabbable.
+Shift-click or Shift+Enter on the artwork toggles Workbench selection; focused
+window arrow keys move it. Resizing saves position and dimensions together
 as one undoable operation; Escape cancels the preview. Keyboard focus remains
-visible. Visitor retains the external move/close strip without editing bounds or
-resize controls. The contextual dock also offers exact
+visible. Visitor shares direct movement, inspection and quiet controls without
+editing bounds or resize controls. The contextual dock also offers exact
 dimensions, shared rotate/mirror actions, crop pan/zoom and Native fit.
 New artwork fills the canvas through a centred crop. Library drops append a
 side by default; Replace side retains its position in the sequence and starts
 the new artwork at its default crop/transform. Remove side is undoable.
+Image resizing keeps the artwork proportions while filling the changing canvas;
+the canvas edges remain the resize and snap targets. Previously native-fitted
+sides acquire a centred filling crop during a changed-size preview and commit.
+Existing crops retain their focus and zoom. Pointer, keyboard, selection and
+numeric size edits use the same authored resize operation. Cancel restores the
+previous fit; undo restores fit, dimensions and position together. Older saved
+native-fit sides remain unchanged when opened or moved. Fit inside and Fill
+canvas expose the existing fitting choices directly in Image tools; Fit inside
+shows the full source and may leave space until the next authored resize.
 The first implementation supports up to sixteen modules and 32 sides each.
 Dragging Library artwork onto empty Workbench space creates one Image module at
 the preview's exact position, accounting for camera pan and zoom. The preview is
 centred on the pointer and respects the Workbench boundary. Initial whole-pixel
-dimensions follow the source proportions within a manageable 360-pixel size;
-Native fit retains the full artwork. Creation saves the artwork and open window
+dimensions follow the source proportions within a manageable 360-pixel size.
+The centred filling crop matches other Library additions; Fit inside remains
+available when the full source is preferred. Creation saves the artwork and open window
 position in one undoable draft operation and selects the Image tools. Drops on
 existing modules retain their own behavior; Display receives a Grid placement
 and Image appends a side unless Replace side is selected.
@@ -81,6 +113,41 @@ Display sessions cannot overwrite Image content. Crop/drag state is scoped to
 its originating module and side and ends on target/content change, close,
 Preview suspension or disposal. Image loads lazily when present.
 
+## Workbench background shapes
+
+The founder requested coloured squares and rectangles to connect or sit behind
+modules, replacing the need to use empty Text modules as background blocks.
+Workbench Add > Shape creates a 288-pixel square at the context-menu invocation
+point. The existing Workbench window host owns movement, edge/grid snapping,
+resize, camera projection and selection; Shape owns only its name, colour,
+opacity, grain and order among shapes. Shapes stay below content windows even while
+selected. Their array order is the single authored back-to-front order, with
+Lower, Raise, To back and To front actions; this is not a global reordering of
+Display, Text and Image. Shapes have no title strip over the artwork.
+
+The existing contextual tool window offers colour, opacity, grain strength, exact dimensions,
+Make square, duplication, deletion and publication inclusion. Its shape selector
+and the Workbench Shapes menu keep fully covered or hidden shapes reachable.
+Dimensions range from 8 to 7992 work pixels and up to 32 shapes are supported.
+The owner drags directly on a shape and resizes with the existing handles.
+Visitor uses the same paint and camera projection without shape editing input.
+
+Optional `shapes` extends draft v4 and public document v9. Name, colour, opacity
+and order belong to the shape collection; `workbench.shapes` owns starting
+window geometry and visibility. New shapes are included in the next explicit
+publication by default; creation itself never publishes. Private shapes and
+their layouts are excluded from public projection. Missing optional fields
+mean no shapes, with no storage-key change or data reset. Restoring an older
+publication retains local shapes as private, including their windows. The
+existing draft store owns authored edits and undo; the existing local layout
+cache retains temporary window movement and is invalidated by authored restore.
+Existing empty Text modules remain unchanged.
+Optional `shapes[].grain` stores strength from 0 to 1; omission retains the
+previous flat fill without rewriting saved shapes. Shape reuses the Text/Display
+grain texture, scale and strength control. Grain blends within the shape's fill,
+follows its opacity and cannot intercept input. Duplication, undo, publication
+and restore retain the authored strength; setting it to zero removes the texture.
+
 ## Text authoring
 
 The Text module is a simple Tiptap editor with formatting, local saving and a
@@ -88,22 +155,81 @@ reader. On 2026-09-16 the founder removed NFT tools and all file import/export
 from its scope. No article upload endpoint or token transaction flow remains.
 One module holds one illustrated article, or a scene-linked sequence of articles
 as described below; up to 16 standalone Text modules are supported per Workbench.
+Workbench Add > Text places the new module's top-left at the context-menu
+invocation point, accounting for camera pan and zoom and the Workbench boundary.
+Content and its initial window are saved together as one undoable operation.
+Existing modules and callers without a position retain their previous placement.
 Write and Read use the same full content viewport as Visitor: no duplicate window title,
 formatting toolbar or saved-status footer reserves space. Window actions appear
 on hover or keyboard focus in a compact strip outside the text surface, and
 remain available on touch. Read/Write, move into Display, Text tools and close
 occupy equal cells; the strip and resize targets retain their screen size at zoom.
-Formatting, optional title, appearance, artwork captions and save recovery belong
+Read permits direct dragging from the text surface after five screen pixels;
+links and reader buttons retain their own input. Movement commits on release,
+and Escape, blur or cancelled capture restores the starting position. Write
+retains native text selection and the separate window grip.
+The optional title is edited directly in the document; Enter continues in the
+body. It remains the existing article title, not a duplicate rich-text heading.
+An absent title reserves no space. Add title opens its inline field; leaving an
+empty field removes that temporary editing placeholder. Title alignment (left,
+centre, right) and colour are independent of paragraph formatting. The title
+inherits the document colour unless explicitly overridden.
+Write opens its tools, Read closes them, and the settings action can reopen them.
+Focus writing temporarily presents the same article editor in a full-viewport
+native modal with its title, confirmed local-save status and Return to composition.
+The same editor DOM, selection and undo history move between the composition
+and the focused viewport; there is no second article copy or saved layout change.
+The mode is available through Selection in Text tools for standalone and Display
+Text. Existing article typography is retained while content reflows to the wider
+reading area. A transparent article gets a temporary backing chosen for contrast
+with its existing body ink; authored appearance is unchanged.
+Escape and Return restore the inspector trigger and reveal the current cursor
+in the original viewport. Ctrl+F returns to the existing search controls.
+The modal contains keyboard focus and its input cannot select or move underlying
+Display layers. Disabling, suspending or disposing the editor ends the temporary
+mode. Save failures remain visible and returning exposes the existing recovery
+actions. Focus writing does not affect public presentation or publication.
+The owner has one shared Text tools window for standalone Text and Text being
+edited inside a Display. Selecting another Text retargets this window without
+moving it or changing either article's Read/Write mode. Explicit closure remains
+closed until reopened. A non-Text target, closed module or Preview hides the
+Text controls; returning to Text restores the open tool at its previous screen
+position. Its header identifies the current article. Editors, selection/undo
+history and failed-save recovery remain scoped to their originating articles.
+Within an unlocked Display, an open Text tool follows the selected Text layer.
+Formatting, appearance, artwork captions and save recovery belong
 to a separate movable Text tools window. Save failures expose a small output
 indicator; Retry reads the latest saved draft and preserves unrelated edits.
 Conflicting text requires an explicit replacement choice. Failed recovery never
 resets the draft or reports an unconfirmed save as successful.
 New Text starts with its dark background colour enabled and remains frameless. Background colour/opacity and the
 frame are independent authored settings; older articles retain their appearance.
-Text tools separates Text and Appearance tabs. Typography and formatting use
-compact rows; Follow Display remains in the Text tab. Edges, texture, colours and
-inner spacing belong to Appearance. Library artwork enters through direct drag
+On 2026-09-29 the founder accepted the compact vertical Text inspector proposal,
+with freedom to depart from the other instruments' visual chrome. Text tools
+uses Text, Layout and Appearance tabs and explicit Document, Selection and Title
+formatting targets. Selection controls keep the originating Tiptap editor and
+history mounted when another target or tab is shown. The tool has a 326-pixel
+width, no resize handles, quiet opaque surfaces and restrained green selection
+accents; it retains the bundled interface fonts. Height follows its content,
+and overflow scrolls inside the panel. It opens beside the module's visible
+screen rectangle, preferring the right side, without resizing or moving the
+article. The target title remains visible in the movable tool header. The module
+action strip remains reachable while tools are open. Typography and formatting
+use compact rows. Display connection stays available below every tab: Follow
+Display is directly visible and Move into Display remains an explicit separate
+action. Read as pages belongs to Layout. Publication inclusion and confirmed
+save/recovery status remain below the settings. Edges, texture and background
+belong to Appearance; columns and inner spacing belong to Layout. Tabs and
+formatting targets are temporary UI state, with no article schema or storage-key
+change. This redesign does not introduce automatic cloud draft sync or linked
+text-frame flow. The founder intends Text to support illustrated articles and
+artbook composition; additional authoring capabilities require concrete workflows.
+Library artwork enters through direct drag
 into the text; there is no separate artwork-selection dropdown.
+The Library passes the release point to the receiving module. Text resolves it
+against its live editor, including scroll and zoom, and inserts without replacing
+an earlier selection. Insertion starts a separate editor undo step. Library owns
+drop routing and stale-target checks; Text owns the article position and save.
 Text tools offers optional per-side inner spacing in text pixels, including zero.
 Custom spacing uses the full available text width; Automatic retains the existing
 responsive padding and reading-width limit.
@@ -119,15 +245,42 @@ offer keyboard-accessible move actions. Each move is atomic and undoable, retain
 rich formatting and appearance. A drop preview identifies the receiving Display.
 Text is owned once, either by its independent module or by its Grid placement.
 Writing uses labelled icon controls and retains its undo history across Read.
+Link validation accepts the editor's optional null `title` attribute as equivalent
+to omission. Non-null link titles remain unsupported. Existing links are not
+rewritten; the normal HTTPS/mailto checks and publication validation still apply.
 Paragraphs and headings support left, centre and right alignment, plus
 justification with the last line left, centred, right or fully justified.
 Optional block alignment is shared by Write, Read and Visitor; older articles
 without it retain their existing appearance.
+Write and Read share typography, white-space handling and font features so
+authored spaces, line breaks and ligatures cannot silently reflow at the mode
+switch. Selected text supports an explicit colour and a return to document
+colour, alongside the existing font and formatting marks.
+Text supports one continuous body arranged into one, two or three balanced
+columns with an authored gap of 0–128 text pixels (24 when omitted). The title
+spans the body width. Longer content retains the module's contained scrolling.
+This is flowing article content, not separately editable column modules.
+Optional `appearance.titleAlignment`, `titleColor`, `columns`, `columnGap` and
+`textStyle.color` are validated by the existing article boundary and retained
+through draft, Display transfer, publication and restore. Omitted fields keep
+left title alignment, inherited colour and one column; older font-only marks
+remain readable. No storage keys change and no saved content is rewritten.
 The shared Workbench window owns geometry and lifecycle. Tiptap loads only for
 authoring. Library images retain their resolved asset identity and source
 information separately from authored captions and alternative text.
 Source information remains stored with inserted artwork, but is not displayed
 as an Artwork info section in Text. Authored captions remain optional.
+
+Plain-text paste preserves authored line breaks, including CR, LF and CRLF,
+and starts its own undo step. Empty or image-only clipboard data does not erase
+the current text selection. Pasted HTML is not imported as article formatting.
+Embedded artwork uses the editor's native drag handle to reorder within the
+article. Selected artwork also offers Move artwork up/down for keyboard and touch
+use. These actions swap adjacent blocks within their existing parent, preserve
+the artwork source, caption and alternative text, and retain node selection.
+Parent constraints, including a list item's first paragraph, are respected.
+Each move is undoable through the existing editor history and saves through the
+originating module. No article schema or storage keys change.
 
 Optional `texts` extends the existing profile draft and v9 public document;
 `workbench.texts` carries starting windows. Typing saves through the existing
@@ -146,6 +299,113 @@ Text tools exposes a separate Title size when an optional title is present.
 Optional `appearance.titleFontSize` accepts 8–300 pixels and travels with the
 article through saving, Display transfer and publication. Omission retains the
 existing 28-pixel title; body Text size remains independent.
+
+Selected text also supports its own size (8–300 text pixels) and tracking
+(letter spacing from -0.1 to 1 em). These are optional numeric `textStyle.fontSize`
+and `textStyle.letterSpacing` marks on selected words, paragraphs or body
+headings, separate from document-wide size. Mixed selections show Mixed;
+clearing either override restores inherited styling without removing other
+marks. Numeric edits apply on Enter or leaving the field; Escape cancels them.
+The existing plain-text article title has independent tracking through optional
+`appearance.titleLetterSpacing`, alongside its existing title-size control.
+A small index, classification or sub-label such as ARCHIVE // 01 is an ordinary
+body line styled with these same controls, without a separate metadata field.
+Write, Read, Visitor and Display Text share these authored values. Saving,
+undo/redo, Display transfer, publication and restore retain them. Existing
+articles without these optional values keep their appearance and storage keys;
+reading them does not rewrite their content. Tracking is relative to the styled
+text's font size and follows the existing content and Workbench scaling.
+
+Text tools also offers Title gap and individual paragraph/heading space before
+and after, from 0 to 512 text pixels. A cursor targets its containing block;
+a text selection targets the covered blocks. Optional numeric `spaceBefore`
+and `spaceAfter` block attributes retain spacing alongside alignment, and
+optional `appearance.titleGap` controls space below the separate article title.
+Explicit adjacent before/after spacing adds without margin collapse. Clearing a
+value restores the existing defaults, including compact Text and the 20-pixel
+title gap. Blank paragraphs remain authored content and are never removed by
+spacing edits. Line spacing and font sizes remain independent.
+Mixed values, Enter/blur commit, Escape cancellation and reset use the existing
+numeric controls. Write, Read, Visitor and Display share the spacing projection;
+draft saving, undo, transfer, publication and restore preserve it. Missing values
+keep old layouts without rewriting saved articles or changing storage keys.
+
+When an authored line break or saved newline joins several lines in one
+paragraph, Text tools identifies that shared paragraph and offers Separate this
+line. The action isolates the cursor's line as its own paragraph or heading,
+retaining inline formatting, block alignment, surrounding text and outer
+spacing. New internal boundaries start at zero spacing. It is one undoable
+editor operation and does not change saved schemas. It is unavailable for a
+selection spanning lines or for wrapping caused only by available width;
+spacing controls continue to target real paragraphs, without automatic splits.
+
+On 2026-09-29 the founder requested line spacing and verification with longer
+illustrated articles. Optional `appearance.lineHeight` sets body line spacing
+as a unitless font-size multiplier from 1 to 3. Optional paragraph/heading
+`lineHeight` attributes override it for the cursor's block or selected blocks.
+The separate title and default heading leading remain unchanged by the body
+setting. Selection can explicitly change heading leading. Document reset removes
+the optional appearance field; block reset returns to inherited/default leading.
+Missing values preserve the existing 1.65 body, 1.2 compact body and 1.3 heading
+defaults. No storage key changes or old-data rewrite are required. New readers
+must support these optional fields to open newly authored documents. The existing
+article validator, draft store, transfer and publication boundaries retain them;
+Write, Read, Visitor and Display use the same projection. Numeric fields retain
+mixed-state indication, Enter/blur commit, Escape cancellation and undo behavior.
+Text windows remain fixed-size, resizable viewports with contained scrolling;
+this change does not introduce automatic window growth or linked text frames.
+
+The article editor also supports reusable heading and artwork-caption defaults
+under Text → Document → Heading & caption styles. Optional
+`appearance.textStyles` contains only `h1`, `h2`, `h3` and `caption` roles. Each
+role may specify a bundled `fontFamily`, `fontSize` (8–300), six-digit hex `color`,
+`lineHeight` (1–3), or `letterSpacing` (-0.1–1 em). Body defaults remain owned
+by the existing document typography controls; the separate title keeps its own
+controls. Role changes apply to all matching content without rewriting nodes.
+Explicit text marks and block spacing override role defaults. Removing an
+override restores existing stylesheet defaults. Old articles require no migration;
+readers need these optional fields to open newly styled articles. Write, Read,
+Visitor and Display share their projection; save, undo, transfer, publication and
+restore retain them.
+
+Selection includes a collapsible Outline derived from the live editor document.
+Its heading buttons move the cursor and scroll within the article. Labels,
+positions and the active heading are temporary views, never saved copies.
+
+Selection also offers Find and replace for the article body. Ctrl+F (Cmd+F on
+Mac) while the body editor is focused opens its inspector and search field;
+other page fields retain browser Find. Search is literal and ignores case,
+spans inline formatting but never crosses paragraph, hard-break or artwork
+boundaries. The title and artwork captions are excluded and labelled as such
+through the body-only scope. Matching uses document positions without changing
+authored text. The first match scrolls into view; Next/Previous and Enter/
+Shift+Enter navigate with wrapping. Escape closes search and restores focus
+to its trigger. Closing or retargeting the inspector, Read and Preview discard
+the originating editor's temporary search state and highlights.
+
+Replace match and Replace all use the existing editor save/recovery path. Each
+action is independently undoable. Replacement inherits the first matched
+character's marks; text and formatting outside matches, links outside the
+replacement, and artwork references remain untouched. Empty replacement deletes
+only the matched text. A candidate article must pass the existing validator
+before any replacement is applied. Bulk replacement is limited to 1,000 matches
+per action with an explicit refine-search message above that limit; it never
+silently replaces a subset. Highlight rendering is limited to 500 near the active
+match while the full count and navigation remain available. Search does not
+change article schemas, draft storage keys, publication or module authority.
+
+Document also offers a portable article JSON backup, including the current
+working edits when browser saving fails. Opening a backup validates it before
+an explicit Replace article action; cancellation changes nothing. Replacement
+uses the existing module save/conflict/recovery boundary and preserves the
+module's connection, visibility and geometry. A changed article invalidates the
+pending replacement; file reads belong to their originating profile, module
+and passage. Replacement is disabled while local edits need recovery. Files
+contain the article and artwork references, not image bytes, profile credentials,
+module IDs or Display connections. Download does not claim a confirmed save to
+disk. This is manual portability, not cross-device synchronization or a change
+to localStorage/IPFS publication. Failed-save memory recovery and its leave guard
+remain in place; the file provides an explicit recovery copy across reloads.
 
 ## Scene-linked Text and reading pages
 
@@ -210,6 +470,41 @@ no storage-key change, migration or draft reset.
 Grid dragging, momentum, wraparound, Play Grids and inspection transitions remain
 Display behavior. Removing artwork animation is not proof that Grid transition
 stutter is fixed. Validate navigation with representative static compositions.
+
+## Keeper dock
+
+The founder requested a focused Keeper on 2026-09-29: Add → Keeper dock,
+then drag one Library image onto it. Clicking releases the inhabitant onto
+the Workbench; clicking again recalls it. The dock remains present and movable.
+Replacing its image replaces its single inhabitant. This uses one whole artwork
+layer; it does not restore Atelier, layered rigs, or the removed Animation module.
+
+The Keeper wanders with pauses in a zone beside the pointer and leaves space
+around it. Pointer tracking is continuous, including over controls and during
+drags. Crossing the Keeper's vertical centre immediately starts a flip towards
+the pointer, independently of flight direction or a rest. The short flipcard
+turn uses the vertical axis; reduced motion switches facing immediately.
+Flight follows with damped acceleration and braking. A resting Keeper still
+responds to pointer movement; its wandering destination moves with its zone.
+The owner can identify whether the source artwork faces left or right. Roaming
+does not intercept Workbench clicks. Reduced motion disables this locomotion.
+Return/release remains available by keyboard. No speech, LSP1 reactions, minting,
+contract changes, or script execution from the artwork is introduced here.
+
+The first implementation permits four docks per profile. Optional `keeperDocks`
+records in draft v4 and public document v9 retain the name, canonical Library
+image, source facing and owner publication choice; `workbench.keeperDocks` retains
+dock positions. Optional `size` is the square artwork envelope in screen pixels,
+from 64 to 384, editable in Keeper tools and retained through undo, publication
+and restoration. New docks start at 192; older records without size retain 128
+without a rewrite. Narrow viewports fit only the temporary rendered creature
+and leave the authored size intact. Missing fields mean no Keepers, with no reset or storage-key
+change. New docks start private. Only explicitly included docks enter Preview
+and publication; their visitors use the same release/return component.
+Old-publication restoration preserves local docks privately. Roaming state is
+temporary and starts docked on reload; motion stops on disposal, preview
+suspension, page hiding or loss of window focus. Ordinary artwork media is used
+as an image; any intrinsic image animation remains the source's own behavior.
 
 ## Persistent artwork groups
 
@@ -414,8 +709,10 @@ are not part of that visitor experience. Module chrome is not Stage content.
   Display Format belongs to that Display's canvas, title-bar and shortcut menus.
   The open Display's menu also offers Close module (minimize to its shortcut)
   and Delete module through the existing undoable deletion action.
-  Add → Display Module offers Horizontal (16:9) and Vertical (9:16) when
-  creating an instance; its Format menu remains available for later changes.
+  Add → Display Module offers Horizontal (16:9), Vertical (9:16) and Custom size.
+  The Display's Format menu offers those same presets and Custom size for later
+  canvas edits, including from its shortcut. Custom size opens a bounded form
+  with independent width and height; creation waits until Create is submitted.
   New Displays start with clean shortcut artwork and names, using a 960×540
   horizontal or 405×720 vertical window constrained to the available Workbench.
   Recreating a deleted primary Display starts a fresh presentation; existing
@@ -423,6 +720,9 @@ are not part of that visitor experience. Module chrome is not Stage content.
   to the Display instance. Add and Format share the same orientation defaults.
   Format changes preserve the window's size relative to those defaults, so an
   unresized horizontal Display becomes the same size as Add → Vertical.
+  Changes involving custom dimensions retain the current viewing scale per
+  canvas unit where viewport bounds allow. New custom windows start at up to
+  30 work pixels per canvas unit, bounded by 960×720 before viewport fitting.
   Viewport bounds still apply; existing saved windows are not rewritten on read.
   Metadata is a shared Workbench tool and is not an authored Add-menu module.
   Library stays anchored to the Workbench's left edge above ordinary module
@@ -461,6 +761,12 @@ over module interactions. Clicking outside clears selection. The focused selecti
 also moves with arrow keys (one screen pixel, or ten with Shift). Group movement
 uses temporary view state during interaction; Escape cancels an active
 drag and restores its starting position.
+Completing owner group movement, including keyboard movement or moving an
+individual window while zoomed, reports its position back to each window.
+The existing local workspace layout then saves the same positions shown on
+screen. Temporary translations do not remain a second owner of placement.
+Movement never chooses new dimensions or artwork fitting; Visitor movement
+remains temporary and cannot write the maker's arrangement.
 Group movement and corner resizing respect the 8,000 by 8,000 Workbench area,
 projected through the current view scale and pan. Moving a zoomed module
 individually uses those same bounds. Group movement keeps
@@ -543,7 +849,7 @@ Selection corner handles remain a separate group-scale operation.
 Dock, shortcuts, Identity and companion tools retain their normal size.
 Companion tools (including Layers, Artwork tools and Text tools) stay in screen
 coordinates during camera pan and zoom; their manual dragging remains independent.
-Text, Text tools, Layers and Artwork info offer resize targets on all four edges
+Text, Layers and Artwork info offer resize targets on all four edges
 and corners, outside their content and title bars. The opposite edge stays fixed;
 Escape restores the complete starting frame. Owner Text resizing saves through
 the existing module resize transaction and supports draft Undo/Redo. Companion
@@ -641,7 +947,7 @@ The work area is not an 8,000-pixel render target and adds no module instances.
 The owner's local arrangement also survives reload independently of publication.
 A profile-scoped `inscape:workbench:layout:v1` record stores module geometry,
 open state and shortcuts, selected Display Grid, lock and instrument state,
-and Text Read/Write and tools state. It contains no module content. Existing
+and Text Read/Write state. It contains no module content. Existing
 drafts fall back to their saved Workbench or runtime defaults; deleted module
 IDs are ignored. A changed saved Workbench configuration invalidates the local
 record. Unreadable records are retained until the owner explicitly saves the
@@ -649,6 +955,12 @@ current layout; failed writes are reported with a retry action. Optional
 `views['workbench:tools']` retains shared Layers and Artwork info open state,
 window geometry and the explicit Display target. Older per-Display instrument
 records are consolidated on read without changing authored content.
+Optional `views['workbench:text-tools']` retains the single Text tool's open
+state; its active module uses the existing shared tool target. Old per-Text
+`settings` flags consolidate to one available Text target on read, retaining
+each article's Read/Write mode. No draft/publication schema or storage key changes.
+Optional shared Display `appearance` open state and window geometry use the
+same profile-local tool record as Layers and Metadata; omission means closed.
 
 Failed Text edits are retained in a profile/module-scoped, in-memory page-session
 recovery buffer. Workbench draft stores reconnect to their profile's buffer after
@@ -698,6 +1010,14 @@ existing publication. The Workbench owns its alignment grid independently of
 Display presence.
 Optional arrays do not rewrite older documents on read. Publications using them
 require the updated strict reader and a newly verified hash and URI.
+
+## Minting direction
+
+The founder wants both visitors minting from a creator's collection and creator
+issuance tools. Visitor minting is the first step. It uses the visiting buyer's
+wallet authority, independently of the viewed creator's authoring permissions.
+The initial interaction preview is a local simulation; live sale terms,
+supported contracts and holder-editable character settings remain to be defined.
 
 ## Hosted mini apps
 
@@ -813,14 +1133,35 @@ unchanged until the owner applies the operation.
 `presentationBoard*` implementation identifiers and persistence keys remain
 internal compatibility names during this migration; do not broadly rename them.
 
-- Each Display has a Landscape (16:9, 32 by 18 coordinates) or Portrait
-  (9:16, 18 by 32 coordinates) Stage. All Grids in an instance share its format.
-  The owner chooses the format through that Display's context menu. Resizing
-  preserves it. Format changes preserve placement coordinates and sizes; the
-  artist rearranges content for the changed clipping boundary. Existing Displays
-  remain landscape until explicitly changed. Arbitrary aspect ratios remain
-  outside current scope. The profile's World Cover remains landscape.
-- Content outside the Stage boundary is clipped and is not published.
+- Accepted direction (2026-09-28): the owner can choose a Display's canvas width
+  and height before composing and change them later, including custom aspect
+  ratios. Changing canvas dimensions preserves existing placement coordinates,
+  sizes, crops, transforms and text-box geometry across its Grids. It changes
+  the clipping boundary; the artist rearranges the composition manually. There
+  is no automatic stretching, scaling, repositioning or reflow to fit the new
+  canvas. Content beyond the boundary remains in the draft. Canvas dimensions
+  belong to Display content; Workbench viewing scale remains separate.
+  All Grids in an instance continue to share its canvas dimensions.
+  Implemented on 2026-09-29: independent whole-number width and height from
+  1 to 512 canvas units, matching the coordinate units used by layers.
+  Landscape (32×18) and Portrait (18×32) remain presets. Format → Custom size
+  submits both dimensions as one undoable operation; Cancel/Escape changes
+  nothing, and failed saving keeps the form open and the saved draft unchanged.
+  Old forms cannot overwrite dimensions changed since opening.
+  Window resizing remains proportional to the authored canvas; Workbench zoom
+  remains viewing state. All Grids in that Display share the new boundary.
+  Existing geometry and reduced artboard-ratio fields carry the dimensions in
+  draft v4 and public v9, without new storage keys, migrations or rewritten reads.
+  Existing saved Displays retain their geometry until explicitly edited, and
+  published work changes only on explicit publication. Documents with custom
+  dimensions require this updated reader; older strict readers reject them.
+  Display window validation accepts narrow fitted frames without changing the
+  minimum saved sizes of Text, Identity or Mini Apps.
+  The profile's World Cover remains landscape.
+- New public snapshots omit fully outside placements and retain valid groups
+  among the remaining members. Intersecting placements retain their geometry
+  and are clipped by the shared renderer; their underlying media is still public.
+  This projection never removes content from the draft or rewrites old publications.
 - The Display Module may move freely on the Workbench without changing published
   composition coordinates.
 - Pan and zoom are camera/view state. They never resize assets, mutate the Grid,
@@ -919,6 +1260,10 @@ internal compatibility names during this migration; do not broadly rename them.
   artwork in the targeted Display; its title identifies Display, Grid and artwork.
   A missing or minimized target shows an empty prompt, never another Display's
   content. These windows do not own or duplicate authored content.
+- Display appearance also uses one shared window, opened through the Display's
+  Appearance command. Selecting another open, unlocked Display replaces its
+  controls in place. Closed, locked or unavailable targets expose a selection
+  prompt; they never leave the previous Display editable through the window.
 - Owner tool state survives reload in the profile-local layout record; visitor
   Metadata state stays session-local. Old open sidecars migrate to shared windows.
 - Workbench and Display context menus expose Tools → Layers / Metadata; Visitor
@@ -1276,6 +1621,13 @@ arrangement remain to be specified when implementing public Workbench entry.
 
 ## Visual language
 
+Module selection outlines and resize marks follow explicit activation by click
+or keyboard focus, never pointer hover. Selecting another module clears the
+previous module's activation outline; empty Workbench space clears activation.
+Image, Text and Shape share this behavior. Unselected resize targets cannot
+intercept pointer input; keyboard access remains available. Module action strips
+keep their existing reveal behavior, separate from selection bounds.
+
 Selected artwork uses 28-pixel resize targets with contrasting corner marks.
 Single selections also have midpoint handles: left/right changes width only;
 top/bottom changes height only. Corners retain Shift-proportional dragging.
@@ -1308,6 +1660,23 @@ Square adjoining corners and rounded outer corners allow modules to read togethe
 Grain is optional and independent of interface noise and texture in source artwork.
 These settings survive publication, restore and Text transfer into Display.
 
+Display background and Grid controls live in the targeted Display's Appearance
+window, and beside dimensions in the Custom size creation/editing form. The form
+saves size and appearance together as one undoable operation; Cancel changes
+nothing. Display-specific controls no longer live in general Workbench Settings.
+Background accepts the existing surface presets or a custom six-digit hex colour.
+Snap to grid and Show grid are independent checkboxes. Hiding a Grid retains its
+Lines/Dots style and spacing; disabling snapping uses the existing ninth-unit
+placement precision without changing the visible lattice or moving content.
+These settings apply to all scenes of that Display and do not change Workbench
+background, snapping or guides. Optional Display appearance fields are
+`backgroundColor` (hex or null for the surface preset), `guideVisible` and
+`snapToGrid`. Existing draft-v4/public-v9 documents without these fields keep
+their original surface, guideMode visibility and enabled snapping, with no data
+rewrite. Existing `guideMode: NONE` stays hidden until Show grid is enabled.
+New settings survive save, undo, reload, public projection and restore; readers
+must support these optional fields to open newly authored documents using them.
+
 Workbench owns module-edge snapping and the local gap preference (0–128 pixels).
 While moving or resizing, temporary guides identify the applied module edge,
 visible Workbench grid line, or spacing bracket. Flush joins highlight their seam.
@@ -1329,6 +1698,11 @@ snapping preferences remain local and Visitor movement remains temporary.
 
 Workbench Grid snapping uses the existing 24-pixel guide spacing when moving or resizing
 owner Display and standalone Text windows, as well as Display shortcuts.
+Workbench selection, movement and group-resize gestures capture their pointer
+on the host and release it on completion. Lost capture, blur or a hidden document
+cancels temporary state. Input showing that the mouse has already been released
+clears a stale gesture instead of leaving pan and zoom blocked. This lifecycle
+belongs to the Workbench and does not change authored module content.
 Alt bypasses window snapping temporarily; focused window headers support arrow
 keys. Workbench area limits take priority at edges. The existing profile-local
 `shortcutSnap` preference remains the storage owner, now labelled Grid snapping;

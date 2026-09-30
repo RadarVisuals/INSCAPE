@@ -35,8 +35,8 @@ test('Image world joins survive repeated grabs, pan and continuous zoom', { time
         createRoot(document.getElementById('root')).render(React.createElement(WorkbenchViewProvider,null,React.createElement(Fixture)));
         const image=new Image();image.src='https://image.test/source.png';await image.decode();
       });
-      await page.addStyleTag({content:'body {background:#123456} .image-module__header {opacity:0 !important;outline:none !important} .image-module__resize, .image-module__bounds {visibility:hidden}'});
-      const windows=page.locator('.image-module__window'), moving=windows.nth(1), grip=moving.locator('header');
+      await page.addStyleTag({content:'body {background:#123456} .image-module__close {opacity:0 !important;outline:none !important} .image-module__window {outline:none !important} .image-module__resize, .image-module__bounds {visibility:hidden}'});
+      const windows=page.locator('.image-module__window'), moving=windows.nth(1), grip=moving;
       const seamPixels = async () => {
         const png=await page.screenshot();
         return page.evaluate(async png=>{
@@ -66,7 +66,7 @@ test('Image world joins survive repeated grabs, pan and continuous zoom', { time
         assert.ok(Math.abs(aligned.x-a.x)<1/64,`edge ${density} / ${zoom}`);
         await page.mouse.up();await page.mouse.move(1400,1300);
         const saved=await page.evaluate(()=>window.readPositions());
-        assert.ok(Math.abs(saved[1].top-saved[0].top-193)<1e-8,'flush belongs to world geometry');
+        assert.ok(Math.abs(saved[1].top-saved[0].top-193)<1e-8,`flush belongs to world geometry at ${density}/${zoom}: ${JSON.stringify(saved)}`);
         assert.ok(Math.abs(saved[1].left-saved[0].left)<1e-8);
         const source=await moving.locator('image').evaluate(node => ['x','y','width','height'].map(key=>node.getAttribute(key)).join(','));
         // Re-grab and jitter without Alt: the captured edge cannot drift.

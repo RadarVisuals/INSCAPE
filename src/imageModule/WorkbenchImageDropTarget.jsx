@@ -15,10 +15,16 @@ export default function WorkbenchImageDropTarget({ targetRef, hostRef, suspended
   useLayoutEffect(() => {
     let live = true, request = 0;
     const target = {
-      previewAt(point, dimensions) {
-        const { view, camera, suspended } = latest.current;
+      targetAt(point) {
+        const { camera, suspended } = latest.current;
         const host = hostRef.current;
         if (!live || suspended || camera.locked || !host || !isWorkbenchBackground(document.elementFromPoint(point.x, point.y), host)) return null;
+        return target;
+      },
+      previewAt(point, dimensions) {
+        if (!target.targetAt(point)) return null;
+        const { view, camera } = latest.current;
+        const host = hostRef.current;
         const preview = imageDropGeometry(dimensions, point, host.getBoundingClientRect(), view.scale, camera.offset, devicePixelRatio || 1);
         return preview && { ...preview, kind: 'workbench-image', target };
       },

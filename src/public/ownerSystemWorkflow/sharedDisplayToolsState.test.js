@@ -27,4 +27,8 @@ test('shared view survives local reload without entering authored layout, and re
   assert.equal(validSharedTools({ ...tools, metadata: 'yes' }), false);
   assert.equal(validSharedTools({ ...tools, animation: true }), false);
   assert.equal(validSharedTools({ ...tools, windows: { layers: { left: 0, top: 0, width: 0, height: 0 } } }), false);
+  const appearance = { ...tools, appearance: true, windows: { appearance: { left: 40, top: 80, width: 320, height: 470 } } };
+  assert.ok(saveWorkbenchLayout(profile, draft, createDefaultWorkbenchPresentation(), { 'workbench:tools': appearance }, storage));
+  assert.deepEqual(loadWorkbenchLayout(profile, draft, storage).views['workbench:tools'], appearance);
+  assert.equal(validSharedTools({ ...appearance, appearance: 'yes' }), false);
 });

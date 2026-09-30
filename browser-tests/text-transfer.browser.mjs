@@ -27,10 +27,13 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
       createRoot(document.getElementById('root')).render(React.createElement(Runtime, { profileAddress: profile, reviewStorage: localStorage, reviewAssets: fixture.OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS,
         reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Text transfer' } }));
     });
-    const text = page.locator('[data-workbench-module="text"]'), output = text.locator('.text-window'), tools = text.locator('.text-tools-window');
-    await tools.getByRole('textbox', { name: 'Article title', exact: true }).fill('Arrival');
+    const text = page.locator('[data-workbench-module="text"]'), output = text.locator('.text-window'), tools = page.locator('.text-tools-window');
+    await tools.getByRole('button', { name: 'Add title', exact: true }).click();
+    await output.getByRole('textbox', { name: 'Article title', exact: true }).fill('Arrival');
     const body = output.getByRole('textbox', { name: 'Article text', exact: true });
     await body.fill('The landscape remembers.'); await page.keyboard.press('Control+A');
+    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
+    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Selection', exact: true }).click();
     await tools.getByRole('button', { name: 'Bold', exact: true }).click();
     assert.equal(await output.getByRole('toolbar').count(), 0);
     const writeBounds = await body.locator('p').boundingBox();
@@ -38,13 +41,13 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     const readBounds = await output.locator('article p').boundingBox();
     assert.ok(Math.abs(writeBounds.y - readBounds.y) < 1, 'Read does not move text');
     await output.getByRole('button', { name: 'Write', exact: true }).click();
-    await tools.getByRole('tab', { name: 'Appearance', exact: true }).click();
+    await page.locator('.text-tools-window').getByRole('tab', { name: 'Appearance', exact: true }).click();
     await tools.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('colour');
     await tools.getByRole('checkbox', { name: 'Show border', exact: true }).check();
     assert.notEqual(await output.evaluate(node => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
+    await page.locator('.text-tools-window').getByRole('tab', { name: 'Appearance', exact: true }).click();
     await tools.getByRole('combobox', { name: 'Text background', exact: true }).selectOption('none');
     await tools.getByRole('checkbox', { name: 'Show border', exact: true }).uncheck();
-    await tools.getByRole('tab', { name: 'Text', exact: true }).click();
     // Simulate another writer updating unrelated saved data.
     await page.evaluate(() => { const draft = window.readDraft(); draft.identityPresentation.alias = 'Other tab'; localStorage.setItem(window.draftKey, JSON.stringify(draft)); });
     await body.fill('Unsaved but recoverable.');
@@ -53,6 +56,8 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     assert.equal(await page.evaluate(() => window.readDraft().identityPresentation.alias), 'Other tab');
     assert.equal(await page.evaluate(() => window.readDraft().texts[0].article.content.content[0].content[0].text), 'Unsaved but recoverable.');
     await body.fill('The landscape remembers.'); await page.keyboard.press('Control+A');
+    await page.locator('.text-tools-window').getByRole('tab', { name: 'Text', exact: true }).click();
+    await page.locator('.text-tools-window').getByRole('group', { name: 'Formatting target' }).getByRole('button', { name: 'Selection', exact: true }).click();
     if (!await body.locator('strong').count()) await tools.getByRole('button', { name: 'Bold', exact: true }).click();
     await tools.locator('.text-controls-body').evaluate(node => { node.scrollTop = 0; });
     await page.screenshot({ path: '.browser-test-runtime/text-tools-wide.png' });
@@ -72,7 +77,7 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     assert.ok(Math.abs((await editor.locator('p').boundingBox()).height - originalTextHeight) < 1, 'attachment retains visible text size at the current Workbench scale');
     const externalTools = page.locator('.text-tools-window');
     assert.equal(await canvas.getByRole('toolbar').count(), 0);
-    await externalTools.getByRole('textbox', { name: 'Article title', exact: true }).fill('Attached text');
+    await canvas.getByRole('textbox', { name: 'Article title', exact: true }).fill('Attached text');
     await externalTools.getByRole('button', { name: 'Close Text tools' }).click();
     const attached = canvas.getByRole('button', { name: 'Select Attached text', exact: true });
     await attached.focus(); await page.keyboard.press('Enter');
@@ -94,7 +99,7 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
     assert.ok(Math.abs((await text.locator('.text-editor-content p').boundingBox()).height - originalTextHeight) < 1, 'detachment retains visible text size at the current Workbench scale');
     assert.equal(await page.evaluate(() => window.readDraft().grids.flatMap(grid => grid.placements).filter(item => item.kind === 'text').length), 0);
     await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
-    const toolBounds = await text.locator('.text-tools-window').boundingBox();
+    const toolBounds = await tools.boundingBox();
     assert.ok(toolBounds.x >= 0 && toolBounds.x + toolBounds.width <= 391);
     await page.screenshot({ path: '.browser-test-runtime/text-tools-narrow.png' });
     assert.deepEqual(errors, []);

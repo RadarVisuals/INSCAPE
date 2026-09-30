@@ -87,8 +87,8 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
       }
       return true;
     }),
-    setDisplayFormat: orientation => run(() => {
-      if (!setDisplayModuleFormat(authority.store, moduleId, orientation)) throw new Error('The Display format could not be saved');
+    setDisplayFormat: (orientation, expectedGeometry = state.draft?.geometry, appearance, expectedAppearance) => run(() => {
+      if (!setDisplayModuleFormat(authority.store, moduleId, orientation, expectedGeometry, appearance, expectedAppearance)) throw new Error('The Display settings could not be saved');
       return true;
     }),
     run, selectPlacement, replaceSelection, hiddenPlacementIds, togglePlacementVisibility,

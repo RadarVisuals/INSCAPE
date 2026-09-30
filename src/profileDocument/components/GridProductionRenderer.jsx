@@ -10,6 +10,7 @@ import DisplayTextContent from '../../public/ownerSystemWorkflow/DisplayTextCont
 import DisplayArtworkSurface from '../../public/ownerSystemWorkflow/DisplayArtworkSurface.jsx';
 import { projectDisplayPlacementRectangle, projectDisplayStageViewport } from '../../lattice/rendering/displayPaintGeometry.js';
 import { systemWorkflowSnapStep } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
+import { displayGuideMode } from '../../systemWorkflow/domain/displayAppearance.js';
 import { adaptProfileDocumentV9Media, PROFILE_DOCUMENT_V9_MEDIA_STATUS } from './profileDocumentV9Media.js';
 import { resolveProfileDocumentV9ContentReference } from '../domain/profileDocumentV9ContentReferenceResolver.js';
 import '../../lattice/rendering/latticeProductionTableRenderer.css';
@@ -128,17 +129,17 @@ export default function GridProductionRenderer({ document, grid, imageLoading = 
   const layerRanks = useMemo(() => createLatticeProductionLayerRanks(grid.placements), [grid.placements]);
   const title = grid.title.trim();
   return <section aria-label={title || `INSCAPE ${grid.id}`} className="lattice-production-table visitor-grid-renderer"
-    data-grid-id={grid.id} data-guide-mode={document.appearance.guideMode}
+    data-grid-id={grid.id} data-guide-mode={displayGuideMode(document.appearance)}
     data-surface={document.appearance.surfaceId} ref={rootRef} onLoadCapture={picking.onLoadCapture}
-    style={projected ? {
+    style={{ backgroundColor: document.appearance.backgroundColor || undefined, ...(projected ? {
       '--lattice-production-guide-color': document.appearance.guideColor,
       '--lattice-production-cell-size': `${projected.cellSize}px`,
       '--lattice-production-grid-origin-x': `${projected.left}px`,
       '--lattice-production-grid-origin-y': `${projected.top}px`,
-    } : undefined}>
+    } : {}) }}>
     {projected && <><LatticePixelGrid color={document.appearance.guideColor} field={projected}
       guideInterval={systemWorkflowSnapStep(document.appearance.guideSize)} height={projected.height}
-      mode={document.appearance.guideMode} width={projected.width} />
+      mode={displayGuideMode(document.appearance)} width={projected.width} />
       <span aria-hidden="true" className="lattice-production-table__authored-plane" style={rectangleStyle(projected)} />
       <div className="visitor-grid-renderer__artwork-plane">{grid.placements.map((placement) => {
         const rectangle = placement.kind === 'text' ? projectDisplayPlacementRectangle(placement, projected) : null;

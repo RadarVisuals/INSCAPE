@@ -3,6 +3,11 @@ import { resolvePublishedAssetUrl } from '../profileDocument/domain/publishedAss
 
 export const MAX_IMAGE_MODULES = 16;
 export const MAX_IMAGE_SIDES = 32;
+export const IMAGE_FILL_CROP = Object.freeze({ x: .5, y: .5, zoom: 1 });
+// Resizing authors a new canvas. Retain an existing crop, or fill a previously
+// fitted side. Merely reading an older native-fit record must never change it.
+export const imageCropForResize = (crop, before, after) => before.width === after.width && before.height === after.height
+  ? crop : crop ?? { ...IMAGE_FILL_CROP };
 export const IMAGE_MODULE_ID = /^image:[A-Za-z0-9_-]{1,80}$/u;
 const exact = (v, keys) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
 const number = (v, min, max) => Number.isFinite(v) && v >= min && v <= max;

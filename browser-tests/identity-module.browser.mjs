@@ -4,6 +4,17 @@ import { chromium } from 'playwright-core';
 import { createAddressQrImage } from '../src/public/identity/addressQr.js';
 
 const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5174';
+
+async function observeDraftWrites(page) {
+  await page.evaluate(() => {
+    window.__identityWrites = 0;
+    addEventListener('inscape:review-storage-write', (event) => {
+      if (event.detail.key === 'inscape.system-workflow-draft.v1:0x1111111111111111111111111111111111111111') {
+        window.__identityWrites++;
+      }
+    });
+  });
+}
 test('expansion preserves the cloud program, clock and top-anchored pattern', async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true,
     args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -113,10 +124,27 @@ test('Library drops replace Identity artwork, shader animates, and Display stays
     });
     await page.goto(`${origin}/development/owner/system-workflow`);
     await page.locator('.system-workflow').waitFor();
+    await observeDraftWrites(page);
     await page.evaluate(() => {
-      window.__identityWrites = 0; addEventListener('inscape:review-storage-write', () => window.__identityWrites++);
-      window.__cloudDraws = 0; const original = WebGLRenderingContext.prototype.drawArrays;
-      WebGLRenderingContext.prototype.drawArrays = function (...args) { window.__cloudDraws++; return original.apply(this, args); };
+      window.__cloudDraws = 0;
+      const proto = WebGLRenderingContext.prototype, names = new WeakMap(), clocks = new WeakMap();
+      const original = proto.drawArrays, location = proto.getUniformLocation, uniform = proto.uniform1f;
+      proto.getUniformLocation = function(program, name) { const result = location.call(this, program, name); if (result) names.set(result, name); return result; };
+      proto.uniform1f = function(loc, value) { if (names.get(loc) === 'time') clocks.set(this, value); return uniform.call(this, loc, value); };
+      proto.drawArrays = function (...args) {
+        const result = original.apply(this, args);
+        if (this.canvas.classList.contains('identity-module__clouds')) {
+          window.__cloudDraws++;
+          const samples = [];
+          for (const x of [.2, .5, .8]) for (const y of [.2, .5, .8]) {
+            const pixel = new Uint8Array(4);
+            this.readPixels(Math.floor(this.canvas.width * x), Math.floor(this.canvas.height * y), 1, 1, this.RGBA, this.UNSIGNED_BYTE, pixel);
+            samples.push(...pixel);
+          }
+          window.__identityRenderedCloud = { time: clocks.get(this), samples };
+        }
+        return result;
+      };
     });
     await page.getByRole('button', { name: 'Profile', exact: true }).click();
     await page.locator('[data-identity-dossier-source]').click();
@@ -150,8 +178,12 @@ test('Library drops replace Identity artwork, shader animates, and Display stays
     const first = await canvas.screenshot(); await page.waitForTimeout(250);
     assert.equal((await canvas.screenshot()).equals(first), false, 'cloud pixels animate');
     await page.emulateMedia({ reducedMotion: 'reduce' }); await page.waitForTimeout(200);
-    const still = await canvas.screenshot(); await page.waitForTimeout(200);
-    assert.equal((await canvas.screenshot()).equals(still), true, 'reduced motion stays still');
+    const still = await page.evaluate(() => window.__identityRenderedCloud);
+    assert.equal(typeof still?.time, 'number');
+    await page.waitForTimeout(200);
+    // Read the renderer's clock and pixels. WebGL screenshots may clear or
+    // composite the drawing buffer even when no subsequent frame is drawn.
+    assert.deepEqual(await page.evaluate(() => window.__identityRenderedCloud), still, 'reduced motion preserves the rendered clock and pixels');
     await isolateShader.evaluate(node => node.remove());
     assert.deepEqual(await page.locator('[data-system-workflow-placement-id]').evaluateAll(nodes => nodes.map(n => n.dataset.systemWorkflowPlacementId)), placementIds);
     await page.getByRole('button', { name: 'Library', exact: true }).click();
@@ -169,14 +201,17 @@ test('Library drops replace Identity artwork, shader animates, and Display stays
     await page.locator('[data-identity-dossier-source]').click();
     assert.match(await page.locator('.identity-module__portrait img').getAttribute('src'), /skull_reaper/);
     await page.getByRole('button', { name: 'Edit Identity', exact: true }).click();
-    await page.getByText('Appearance & artwork', { exact: true }).click();
+    // Click the visible summary label; its blank row centre can sit underneath
+    // the bottom-right Workbench controls at this narrow viewport.
+    await page.getByText('Appearance & artwork', { exact: true }).click({ position: { x: 20, y: 8 } });
     await page.getByRole('button', { name: 'Use Universal Profile image' }).click();
     assert.equal(await page.locator('.identity-module__portrait img').count(), 0);
     assert.equal(await page.evaluate(() => window.__identityWrites), 1, 'reset is also a preview');
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     assert.match(await page.locator('.identity-module__portrait img').getAttribute('src'), /skull_reaper/);
     await page.getByRole('button', { name: 'Edit Identity', exact: true }).click();
-    await page.getByText('Appearance & artwork', { exact: true }).click();
+    await page.getByText('Appearance & artwork', { exact: true }).focus();
+    await page.keyboard.press('Enter');
     await page.getByRole('button', { name: 'Use Universal Profile image' }).click();
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     assert.equal(await page.evaluate(() => window.__identityWrites), 2);
@@ -221,7 +256,7 @@ test('owner opens Identity, keeps it while using Library, and closes without dra
     await page.route('**/*', (route) => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.goto(`${origin}/development/owner/system-workflow`);
     await page.locator('.system-workflow').waitFor();
-    await page.evaluate(() => { window.__identityWrites = 0; addEventListener('inscape:review-storage-write', () => window.__identityWrites++); });
+    await observeDraftWrites(page);
     await page.getByRole('button', { name: 'Profile', exact: true }).click();
     await page.locator('[data-identity-dossier-source]').click();
     const identity = page.locator('.identity-module aside');
@@ -277,9 +312,13 @@ test('owner opens Identity, keeps it while using Library, and closes without dra
     await page.evaluate(() => { navigator.clipboard.writeText = async () => { throw new Error('Denied'); }; });
     await identity.getByRole('button', { name: 'Address copied', exact: true }).click();
     await identity.getByText('Copy failed — use the full address above.', { exact: true }).waitFor();
-    assert.equal(await page.locator('.system-workflow__identity-primary').innerText(), 'DISPLAY MODULE');
+    await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).waitFor();
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.getByRole('button', { name: 'MOUNTAIN SIGNAL II', exact: true }).click();
+    await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).focus();
+    await page.keyboard.press('Shift+F10');
+    await page.getByRole('menuitem', { name: 'TOOLS', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'LAYERS', exact: true }).click();
+    await page.locator('[data-shared-tool="layers"]').getByRole('button', { name: 'MOUNTAIN SIGNAL II', exact: true }).click();
     const placements = await page.locator('[data-system-workflow-placement-id]').count();
     await page.getByLabel('Move Identity window', { exact: true }).focus();
     await page.keyboard.press('ArrowRight');
@@ -287,18 +326,28 @@ test('owner opens Identity, keeps it while using Library, and closes without dra
     await page.keyboard.press('Space');
     assert.equal(await page.locator('[data-system-workflow-placement-id]').count(), placements);
     assert.equal(await page.evaluate(() => window.__identityWrites), 0);
+    await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).focus();
     await page.getByRole('button', { name: 'Crop', exact: true }).click();
     const crop = page.getByRole('slider', { name: 'Crop zoom', exact: true });
     await crop.waitFor();
     const cropZoom = await crop.inputValue();
+    await crop.fill('1.7');
     await page.getByLabel('Move Identity window', { exact: true }).focus();
     await page.keyboard.press('ArrowRight');
-    assert.equal(await crop.inputValue(), cropZoom);
+    await crop.waitFor({ state: 'detached' });
     assert.equal(await page.evaluate(() => window.__identityWrites), 0);
+    // Changing the active module cancels temporary crop, as required by the
+    // shared contextual tools contract. Returning reads the saved crop again.
+    await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).focus();
+    await page.getByRole('button', { name: 'Crop', exact: true }).click();
+    assert.equal(await crop.inputValue(), cropZoom);
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     await page.getByRole('button', { name: 'Library', exact: true }).click();
     assert.equal(await identity.count(), 1);
     assert.equal(await page.locator('.system-workflow').getAttribute('inert'), null);
+    // Library is intentionally above ordinary module windows. Close the drawer
+    // before operating Identity's title controls underneath it.
+    await page.getByRole('button', { name: 'Library', exact: true }).click();
     await page.getByRole('button', { name: 'Close Identity', exact: true }).click();
     await identity.waitFor({ state: 'detached' });
     assert.equal(await page.evaluate(() => window.__identityWrites), 0);
@@ -310,6 +359,7 @@ test('Display title follows the existing shortcut name and survives reload', asy
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
     await page.goto(`${origin}/development/owner/system-workflow`);
+    await page.getByLabel('Move Display Module: DISPLAY MODULE', { exact: true }).focus();
     await page.getByRole('button', { name: 'Minimize Display Module to shortcut' }).click();
     const shortcut = page.locator('.system-workflow__desktop-shortcut');
     await shortcut.click({ button: 'right' });
@@ -317,9 +367,9 @@ test('Display title follows the existing shortcut name and survives reload', asy
     const input = page.getByRole('textbox', { name: 'Display Module shortcut name' });
     await input.fill('Lunar Desert'); await input.press('Enter');
     await shortcut.dblclick();
-    await page.waitForFunction(() => document.querySelector('.system-workflow__identity-primary')?.textContent === 'Lunar Desert');
+    await page.getByLabel('Move Display Module: Lunar Desert', { exact: true }).waitFor();
     await page.reload();
-    await page.waitForFunction(() => document.querySelector('.system-workflow__identity-primary')?.textContent === 'Lunar Desert');
+    await page.getByLabel('Move Display Module: Lunar Desert', { exact: true }).waitFor();
   } finally { await browser.close(); }
 });
 
@@ -333,7 +383,7 @@ test('Identity edits in place, exposes all cells with one click, and fits conten
     const identity = page.locator('.identity-module aside');
     const officialName = await identity.locator('.identity-module__story h2').innerText();
     assert.equal(await identity.getByRole('separator').count(), 0);
-    await page.evaluate(() => { window.__identityWrites = 0; addEventListener('inscape:review-storage-write', () => window.__identityWrites++); });
+    await observeDraftWrites(page);
     await identity.getByRole('button', { name: 'Edit Identity', exact: true }).click();
     const hero = identity.locator('.identity-module__story');
     assert.equal(await identity.getByRole('button', { name: 'Edit Identity', exact: true }).evaluate(n => getComputedStyle(n).transform), 'matrix(1, 0, 0, 1, 0, 1)');
@@ -510,6 +560,7 @@ test('Identity content and window are independent of the owner workspace', async
     await page.waitForTimeout(250);
     const box = await identity.boundingBox();
     assert.ok(box.x >= 0 && box.x + box.width <= 390);
+    await page.getByRole('button', { name: 'Library', exact: true }).click();
     await page.getByRole('button', { name: 'Close Identity', exact: true }).click();
     await identity.waitFor({ state: 'detached' });
   } finally { await browser.close(); }

@@ -64,6 +64,11 @@
 }
 .public-entry-portal[data-embedded] { position: fixed; z-index: 70; }
 .public-entry-portal button { color: inherit; }
+.public-entry-portal__results-rail { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; border-top: 1px solid var(--lattice-menu-line); font: var(--lattice-window-type-label); }
+.public-entry-portal__results-rail button { min-height: 40px; padding: 0 12px; border: 0; border-left: 1px solid var(--lattice-menu-line); background: transparent; font: 450 11px/1 "Inscape Sora", sans-serif; cursor: pointer; }
+.public-entry-portal__results-rail button:hover:not(:disabled) { background: var(--lattice-menu-selected); }
+.public-entry-portal__results-rail button:focus-visible { outline: 1px solid currentColor; outline-offset: -3px; }
+.public-entry-portal__results-rail button:disabled { opacity: .5; cursor: default; }
 .public-entry-portal__header {
   position: absolute;
   z-index: 10;
@@ -244,10 +249,11 @@
   right: var(--portal-grid-size);
   bottom: 28px;
   left: var(--portal-grid-size);
-  display: block;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   animation: public-entry-explore-arrive 300ms cubic-bezier(.2, .72, .2, 1) both;
 }
-.public-entry-portal__world-grid { height: 100%; min-height: 0; padding: 0 5px 22px 0; display: grid; grid-template-columns: repeat(auto-fill, calc(var(--portal-grid-size) * 6)); align-content: start; gap: var(--portal-grid-size); overflow: auto; scrollbar-color: var(--lattice-menu-line-strong) transparent; scrollbar-width: thin; }
+.public-entry-portal__world-grid { min-height: 0; padding: 0 5px 22px 0; display: grid; grid-template-columns: repeat(auto-fill, calc(var(--portal-grid-size) * 6)); align-content: start; gap: var(--portal-grid-size); overflow: auto; scrollbar-color: var(--lattice-menu-line-strong) transparent; scrollbar-width: thin; }
 .public-entry-portal__world-card[data-variant='compact'] { width: 100%; box-shadow: 5px 6px 13px rgb(17 19 19 / .09); }
 .public-entry-portal__world-card[data-variant='compact'] .public-entry-portal__world-preview { aspect-ratio: 16 / 9; }
 .public-entry-portal__world-card[data-variant='compact'] > footer { min-height: 54px; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; padding: 7px 9px; }

@@ -39,7 +39,7 @@ test('Image and Display inspection retain their source and camera through return
         await page.keyboard.down('Shift'); await page.mouse.wheel(0, 51); await page.keyboard.up('Shift');
         await page.keyboard.down('Control'); await page.mouse.wheel(0, -64); await page.keyboard.up('Control');
         await page.keyboard.press('Control+0');
-        const header = (kind === 'image' ? page.locator('.image-module__window').first() : board).locator('header[data-workbench-selectable]').first();
+        const header = kind === 'image' ? page.locator('.image-module__window').first() : board.locator('header[data-workbench-selectable]').first();
         await header.dispatchEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
         assert.deepEqual(await state(), before, `${label} ${phase} camera input`);
         assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved, `${label} ${phase} persisted data`);
@@ -47,7 +47,7 @@ test('Image and Display inspection retain their source and camera through return
       await inputs('opening');
       await page.clock.runFor(1000);
       assert.equal(await page.locator('.system-workflow__lift-artwork').count(), 1, `${label} is inspecting`);
-      assert.equal(await page.locator('.system-workflow__lift-artwork').evaluate(n => Number(n.parentElement.style.getPropertyValue('--inspection-lift-progress'))), 1, `${label} fully open`);
+      assert.equal(await page.locator('.system-workflow__lift-artwork').evaluate((n, kind) => Number(getComputedStyle(kind === 'image' ? n.parentElement : document.querySelector('[data-inspection-context="selected"]')).getPropertyValue('--inspection-lift-progress')), kind), 1, `${label} fully open`);
       await inputs('open');
       await page.screenshot({ path: `.browser-test-runtime/inspection-lock-${visitor}-${width}-${kind}-open.png` });
       if (kind === 'image') await page.getByRole('button', { name: 'Return to Image', exact: true }).click();
@@ -55,7 +55,7 @@ test('Image and Display inspection retain their source and camera through return
       await page.clock.runFor(240);
       assert.equal(await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).isDisabled(), true, `${label} closing lock`);
       await inputs('returning');
-      const header = (kind === 'image' ? page.locator('.image-module__window').first() : board).locator('header[data-workbench-selectable]').first();
+      const header = kind === 'image' ? page.locator('.image-module__window').first() : board.locator('header[data-workbench-selectable]').first();
       const rect = await header.boundingBox();
       await page.mouse.move(rect.x + 25, rect.y + 8); await page.mouse.down();
       await page.mouse.move(rect.x + 55, rect.y + 48, { steps: 3 });

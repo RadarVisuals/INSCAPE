@@ -18,6 +18,8 @@ import { projectDisplayDraft } from '../../systemWorkflow/domain/displayModules.
 import { projectMobilePresentation, mobileReferenceCount } from '../../mobile/domain/mobilePresentation.js';
 import { projectMiniApps } from '../../miniApps/domain/miniApps.js';
 import { projectImageModules, imageReferenceCount } from '../../imageModule/imageModule.js';
+import { projectShapes } from '../../shapes/shapes.js';
+import { projectKeeperDocks, keeperReferenceCount } from '../../keeper/keeper.js';
 import { projectTextModules } from '../../text/domain/article.js';
 
 function timestamp(value, label) {
@@ -47,7 +49,17 @@ export function projectSystemWorkflowPublicGrids(draftInput, assetRecords = []) 
   const grids = draft.grids
     .filter((grid) => !isSystemWorkflowWorldCoverGrid(grid)
       && grid.visibility === SYSTEM_WORKFLOW_VISIBILITY.PUBLIC)
-    .map((grid) => ({
+    .map((grid) => {
+      // Canvas edits keep off-canvas work in the draft. Public snapshots include
+      // only intersecting placements; partially visible layers retain geometry
+      // and the shared renderer clips them at the authored boundary.
+      const placements = grid.placements.filter(placement => placement.visibility === SYSTEM_WORKFLOW_VISIBILITY.PUBLIC
+        && placement.column < draft.geometry.columns && placement.row < draft.geometry.rows
+        && placement.column + placement.columnSpan > 0 && placement.row + placement.rowSpan > 0);
+      const ids = new Set(placements.map(placement => placement.id));
+      const groups = grid.groups?.map(group => ({ ...group, placementIds: group.placementIds.filter(id => ids.has(id)) }))
+        .filter(group => group.placementIds.length >= 2);
+      return {
       id: grid.id,
       title: grid.title,
       subtitle: grid.subtitle,
@@ -55,16 +67,16 @@ export function projectSystemWorkflowPublicGrids(draftInput, assetRecords = []) 
       labelVisible: grid.labelVisible,
       labelAnchor: grid.labelAnchor,
       labelOffset: { ...grid.labelOffset },
-      ...(grid.groups ? { groups: structuredClone(grid.groups) } : {}),
-      placements: grid.placements
-        .filter(({ visibility }) => visibility === SYSTEM_WORKFLOW_VISIBILITY.PUBLIC)
+      ...(groups?.length ? { groups } : {}),
+      placements: placements
         .sort((left, right) => left.navigationOrder - right.navigationOrder || left.id.localeCompare(right.id))
         .map(({ locked: _locked, stableAssetId, selectedMedia, ...placement }) => ({
           ...structuredClone(placement),
           visibility: SYSTEM_WORKFLOW_VISIBILITY.PUBLIC,
           ...(placement.kind === 'text' ? {} : { asset: resolveAsset(stableAssetId, selectedMedia) }),
         })),
-    }));
+      };
+    });
   if (!grids.length && draft.grids.length) {
     throw publicationError('INSCAPE_PROFILE_PUBLIC_GRID_REQUIRED', 'Publication requires at least one public Grid');
   }
@@ -133,9 +145,13 @@ export function buildProfileDocumentV9({
       grids: projectSystemWorkflowPublicGrids(projectDisplayDraft(draft, module.id), assetRecords) }));
   const presentation = workbench || draft.workbench;
   const miniApps = draft.miniApps ? projectMiniApps(draft.miniApps) : undefined;
+  const shapes = draft.shapes ? projectShapes(draft.shapes) : undefined;
+  const keeperDocks = draft.keeperDocks ? projectKeeperDocks(draft.keeperDocks) : undefined;
   const imageModules = draft.imageModules ? projectImageModules(draft.imageModules) : undefined;
   const texts = draft.texts ? projectTextModules(draft.texts, [{ id: 'display:primary', grids: draft.grids.filter(g => !isSystemWorkflowWorldCoverGrid(g)) }, ...(draft.displays || []).filter(d => d.visibility === 'PUBLIC').map(d => ({ ...d, grids: d.grids.filter(g => !isSystemWorkflowWorldCoverGrid(g)) }))]) : undefined;
   const publicWorkbench = presentation ? structuredClone(presentation) : null;
+  if (publicWorkbench?.keeperDocks) publicWorkbench.keeperDocks = publicWorkbench.keeperDocks.filter(item => keeperDocks?.some(keeper => keeper.id === item.id));
+  if (publicWorkbench?.shapes) publicWorkbench.shapes = publicWorkbench.shapes.filter(item => shapes?.some(shape => shape.id === item.id));
   if (publicWorkbench?.imageModules) publicWorkbench.imageModules = publicWorkbench.imageModules.filter(item => imageModules?.some(image => image.id === item.id));
   if (publicWorkbench?.miniApps) publicWorkbench.miniApps = publicWorkbench.miniApps.filter(item => miniApps?.some(app => app.id === item.id));
   if (publicWorkbench?.texts) publicWorkbench.texts = publicWorkbench.texts.filter(item => texts?.some(text => text.id === item.id));
@@ -168,6 +184,8 @@ export function buildProfileDocumentV9({
     metadata: worldCover ? { worldCover } : {},
     ...(displays ? { displays } : {}),
     ...(miniApps?.length ? { miniApps } : {}),
+    ...(shapes?.length ? { shapes } : {}),
+    ...(keeperDocks?.length ? { keeperDocks } : {}),
     ...(imageModules?.length ? { imageModules } : {}),
     ...(texts?.length ? { texts } : {}),
     ...(draft.mobile?.visibility === 'PUBLIC' ? { mobile: projectMobilePresentation(draft.mobile, assetRecords) } : {}),
@@ -183,5 +201,5 @@ export function countProfileDocumentV9Assets(document) {
     + (value.workbench?.display.shortcut.icon ? 1 : 0)
     + (value.displays || []).reduce((sum, module) => sum + module.grids.reduce((count, grid) => count + grid.placements.length, 0), 0)
     + (value.workbench?.displays || []).filter(module => module.shortcut.icon).length
-    + imageReferenceCount(value.imageModules) + mobileReferenceCount(value.mobile);
+    + keeperReferenceCount(value.keeperDocks) + imageReferenceCount(value.imageModules) + mobileReferenceCount(value.mobile);
 }

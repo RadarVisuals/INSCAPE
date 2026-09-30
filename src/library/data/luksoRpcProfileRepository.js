@@ -77,6 +77,7 @@ function resultValue(result) {
 
 async function discoverOwnedTokens(profileAddress, contracts, client, signal) {
   const holdings = [];
+  let failures = 0;
   const collectionPageSize = 12;
   for (let offset = 0; offset < contracts.length; offset += collectionPageSize) {
     throwIfAborted(signal);
@@ -88,26 +89,36 @@ async function discoverOwnedTokens(profileAddress, contracts, client, signal) {
     throwIfAborted(signal);
     const ownershipCalls = []; const ownershipMeta = [];
     page.forEach((address, index) => {
-      if (resultValue(interfaceResults[index * 2]) === true) {
+      const supportsLsp8 = resultValue(interfaceResults[index * 2]);
+      const supportsLsp7 = resultValue(interfaceResults[index * 2 + 1]);
+      if (supportsLsp8 === true) {
         ownershipMeta.push({ address, standard: 'LSP8' });
         ownershipCalls.push({ address: getAddress(address), abi: LSP8_ABI, functionName: 'tokenIdsOf', args: [getAddress(profileAddress)] });
-      } else if (resultValue(interfaceResults[index * 2 + 1]) === true) {
+      } else if (supportsLsp8 === false && supportsLsp7 === true) {
         ownershipMeta.push({ address, standard: 'LSP7' });
         ownershipCalls.push({ address: getAddress(address), abi: LSP7_ABI, functionName: 'balanceOf', args: [getAddress(profileAddress)] });
+      } else if (supportsLsp8 !== false || supportsLsp7 !== false) {
+        // Only two confirmed negatives establish an unsupported contract.
+        // A failed/missing read must not become an empty holding inventory.
+        failures += 1;
       }
     });
     if (!ownershipCalls.length) continue;
     const ownershipResults = await client.multicall({ allowFailure: true, contracts: ownershipCalls });
-    ownershipResults.forEach((result, index) => {
-      const meta = ownershipMeta[index]; const value = resultValue(result);
-      if (meta.standard === 'LSP8' && Array.isArray(value)) {
+    throwIfAborted(signal);
+    ownershipMeta.forEach((meta, index) => {
+      const value = resultValue(ownershipResults[index]);
+      if (meta.standard === 'LSP8' && Array.isArray(value)
+        && value.every((tokenId) => typeof tokenId === 'string' && /^0x[0-9a-f]{64}$/iu.test(tokenId))) {
         value.forEach((tokenId) => holdings.push({ ...meta, tokenId: String(tokenId).toLowerCase() }));
-      } else if (meta.standard === 'LSP7' && typeof value === 'bigint' && value > 0n) {
-        holdings.push({ ...meta, tokenId: null, balance: value.toString() });
+      } else if (meta.standard === 'LSP7' && typeof value === 'bigint' && value >= 0n) {
+        if (value > 0n) holdings.push({ ...meta, tokenId: null, balance: value.toString() });
+      } else {
+        failures += 1;
       }
     });
   }
-  return holdings;
+  return { holdings, failures };
 }
 
 function prioritizeHoldings(holdings, priorityAssetIds) {
@@ -308,7 +319,7 @@ export function createLuksoRpcProfileRepository({
       if (!profile) throw new TypeError('A valid Universal Profile address is required');
       const contracts = await discoverContracts(profile, { rpcUrls, signal });
       throwIfAborted(signal);
-      const discoveredHoldings = await discoverOwnedTokens(profile, contracts, publicClient, signal);
+      const { holdings: discoveredHoldings, failures: discoveryFailures } = await discoverOwnedTokens(profile, contracts, publicClient, signal);
       const requested = Array.isArray(requestedAssetIds) && requestedAssetIds.length
         ? new Set(requestedAssetIds.map((id) => String(id).toLowerCase())) : null;
       const selectedHoldings = requested ? discoveredHoldings.filter((holding) => requested.has(
@@ -338,16 +349,20 @@ export function createLuksoRpcProfileRepository({
             { fetchImpl, ipfsGateway, signal, metadataResponseMs }, facts.tokenIdFormat).catch(() => null);
           return toNormalizedAsset(holding, profile, tokenDocument, collectionDocument, facts, { ipfsGateway });
         });
+        throwIfAborted(signal);
         const assets = []; let batchFailures = 0;
         outcomes.forEach((outcome) => {
           if (outcome?.error || !outcome?.imageUrl) batchFailures += 1;
           else assets.push(outcome);
         });
         resolved += page.length;
-        yield { assets, resolved, total: holdings.length, failures: batchFailures,
-          complete: resolved >= holdings.length };
+        yield { assets, resolved, total: holdings.length, failures: batchFailures + (offset === 0 ? discoveryFailures : 0),
+          complete: !discoveryFailures && resolved >= holdings.length };
       }
-      if (!holdings.length) yield { assets: [], resolved: 0, total: 0, failures: 0, complete: true };
+      if (!holdings.length) yield { assets: [], resolved: 0, total: 0, failures: discoveryFailures, complete: !discoveryFailures };
+      if (discoveryFailures) {
+        throw new Error(`Some asset holdings could not be verified (${discoveryFailures} contract${discoveryFailures === 1 ? '' : 's'}). Retry to refresh.`);
+      }
     }
   };
 }

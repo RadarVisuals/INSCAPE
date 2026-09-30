@@ -18,7 +18,9 @@ test('Image and Display dimming follow Lift progress in both directions', { time
           const samples = [];
           for (let i = 0; i < 20; i++) {
             const lift = document.querySelector('.system-workflow__lift-artwork'); if (!lift) break;
-            const host = lift.parentElement, p = Number(getComputedStyle(host).getPropertyValue('--inspection-lift-progress'));
+            const host = lift.parentElement;
+            const progressTarget = kind === 'image' ? host : document.querySelector('[data-inspection-context="background"]');
+            const p = Number(getComputedStyle(progressTarget).getPropertyValue('--inspection-lift-progress'));
             const backdrop = kind === 'image' ? getComputedStyle(host).backgroundColor
               : getComputedStyle(document.querySelector('[data-inspection-context="background"]')).filter;
             samples.push({ p, backdrop }); await new Promise(requestAnimationFrame);

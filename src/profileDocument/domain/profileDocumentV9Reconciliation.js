@@ -9,6 +9,8 @@ import { assertValidProfileDocumentV9 } from './profileDocumentV9Validation.js';
 import { restoreMobilePresentation } from '../../mobile/domain/mobilePresentation.js';
 import { restoreMiniApps } from '../../miniApps/domain/miniApps.js';
 import { restoreImageModules } from '../../imageModule/imageModule.js';
+import { restoreShapes } from '../../shapes/shapes.js';
+import { restoreKeeperDocks } from '../../keeper/keeper.js';
 import { restoreTextModules } from '../../text/domain/article.js';
 import { createDefaultWorkbenchPresentation } from './workbenchPresentation.js';
 
@@ -87,6 +89,8 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
       return grids.length ? [{ ...module, visibility: 'PRIVATE', grids: [...grids, createEmptySystemWorkflowWorldCoverGrid()] }] : [];
     });
   const miniApps = restoreMiniApps(document.miniApps, currentDraftInput?.miniApps);
+  const shapes = restoreShapes(document.shapes, currentDraftInput?.shapes);
+  const keeperDocks = restoreKeeperDocks(document.keeperDocks, currentDraftInput?.keeperDocks);
   const imageModules = restoreImageModules(document.imageModules, currentDraftInput?.imageModules);
   const sectionDisplays = (grids, displays = []) => [{ id: 'display:primary', grids: grids || [] }, ...displays]
     .map(d => ({ id: d.id, grids: d.grids.filter(g => g.id !== SYSTEM_WORKFLOW_WORLD_COVER_GRID_ID) }));
@@ -105,7 +109,17 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     workbench ||= createDefaultWorkbenchPresentation();
     workbench.texts = [...(workbench.texts || []), ...structuredClone(privateTextWindows)];
   }
+  const privateShapeWindows = (currentDraftInput?.workbench?.shapes || []).filter(w => shapes.some(shape => shape.id === w.id && shape.visibility === 'PRIVATE'));
+  if (privateShapeWindows.length) {
+    workbench ||= createDefaultWorkbenchPresentation();
+    workbench.shapes = [...(workbench.shapes || []), ...structuredClone(privateShapeWindows)];
+  }
   const privateImageWindows = (currentDraftInput?.workbench?.imageModules || []).filter(w => imageModules.some(image => image.id === w.id && image.visibility === 'PRIVATE'));
+  const privateKeeperWindows = (currentDraftInput?.workbench?.keeperDocks || []).filter(w => keeperDocks.some(keeper => keeper.id === w.id && keeper.visibility === 'PRIVATE'));
+  if (privateKeeperWindows.length) {
+    workbench ||= createDefaultWorkbenchPresentation();
+    workbench.keeperDocks = [...(workbench.keeperDocks || []), ...structuredClone(privateKeeperWindows)];
+  }
   if (privateImageWindows.length) {
     workbench ||= createDefaultWorkbenchPresentation();
     workbench.imageModules = [...(workbench.imageModules || []), ...structuredClone(privateImageWindows)];
@@ -119,6 +133,8 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     identityPresentation: restoredIdentity(document.identityPresentation),
     ...(workbench ? { workbench } : {}),
     ...((document.miniApps || currentDraftInput?.miniApps) ? { miniApps } : {}),
+    ...((document.shapes || currentDraftInput?.shapes) ? { shapes } : {}),
+    ...((document.keeperDocks || currentDraftInput?.keeperDocks) ? { keeperDocks } : {}),
     ...((document.imageModules || currentDraftInput?.imageModules) ? { imageModules } : {}),
     ...((document.texts || currentDraftInput?.texts) ? { texts } : {}),
     ...((document.displays || currentDraftInput?.displays) ? { displays: [...publishedDisplays, ...structuredClone(privateDisplays)] } : {}),

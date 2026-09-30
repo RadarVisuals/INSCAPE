@@ -133,7 +133,7 @@ export function resizePresentationBoardView(view, viewport, options = {}) {
   const maximumPercentage = maximumPresentationBoardPercentage(fit, viewport, options);
   // Available desktop space is not a request to resize the user's window.
   // Retain its pixel width, constrained only by the new available bounds.
-  const safeScale = Math.min(view.frame.stage.width / fit.stage.width, percentageScale(maximumPercentage));
+  const safeScale = Math.min((options.width ?? view.frame.stage.width) / fit.stage.width, percentageScale(maximumPercentage));
   return Object.freeze({
     documentGeometry: view.documentGeometry,
     fit,

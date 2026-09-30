@@ -1,9 +1,11 @@
 import ModuleSurfaceControls from './ModuleSurfaceControls.jsx';
-import { WorkbenchWindow } from './DisplayInstrumentWindow.jsx';
+import DisplayCanvasControls from './DisplayCanvasControls.jsx';
+import { useSharedTextTools } from '../../text/SharedTextTools.jsx';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import RackMenu from '../menus/RackMenu.jsx';
-import { PRIMARY_DISPLAY_ID } from '../../systemWorkflow/domain/displayModules.js';
+import { PRIMARY_DISPLAY_ID, displayPreset } from '../../systemWorkflow/domain/displayModules.js';
+import DisplaySizeDialog from './DisplaySizeDialog.jsx';
 import { isSystemWorkflowWorldCoverGrid } from '../../systemWorkflow/domain/systemWorkflowDraft.js';
 import OwnerSystemWorkflowCanvas from './OwnerSystemWorkflowCanvas.jsx';
 import DisplayFocusViewer from './DisplayFocusViewer.jsx';
@@ -25,20 +27,31 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
   onAuthoringLockToggle, registerAssetDimensions, resolveAssetDimensions, menuSurface,
   reducedMotion, workspaceSurfaceColor, windowProps, placementTargetRef, shortcutTargetRef, workspaceRef }, ref) {
   const tools = useSharedDisplayTools();
+  const textTools = useSharedTextTools();
   const targetId = controller.moduleId;
   const toolTarget = useContextToolTarget();
   const toolAvailable = windowProps.instanceState === 'window';
   const inactive = suspended || !toolAvailable;
   const toolScope = `${displayName || windowProps.initialPresentation?.name || 'Display Module'} / ${controller.selectedGrid?.title || 'Untitled Grid'}`;
-  const [appearanceOpen, setAppearanceOpen] = useState(false);
-  const appearanceTrigger = useRef(null);
   const [moduleMenu, setModuleMenu] = useState(null);
+  const [sizeDialog, setSizeDialog] = useState(null);
   const [playingGrids, setPlayingGrids] = useState(false);
   const [editingText, setEditingText] = useState(null);
-  const editText = id => setEditingText(id ? { gridId: controller.selectedGridId, id } : null);
+  const editText = id => {
+    setEditingText(id ? { gridId: controller.selectedGridId, id } : null);
+    if (id) { controller.replaceSelection([id]); tools.activate(targetId); }
+    textTools?.setOpen(Boolean(id));
+  };
+  const selectedTextId = controller.selectedPlacements.length === 1 && controller.selectedPlacements[0].kind === 'text' ? controller.selectedPlacements[0].id : null;
+  useEffect(() => {
+    if (!textTools?.open || textTools.activeModuleId !== targetId || inactive || authoringLocked) return;
+    setEditingText(current => selectedTextId ? current?.id === selectedTextId && current.gridId === controller.selectedGridId
+      ? current : { gridId: controller.selectedGridId, id: selectedTextId } : null);
+  }, [textTools?.open, textTools?.activeModuleId, targetId, inactive, authoringLocked, selectedTextId, controller.selectedGridId]);
   const formatCommands = [
-    { id: 'landscape', label: 'HORIZONTAL 16:9', checkable: true, selected: controller.draft.geometry.columns > controller.draft.geometry.rows, disabled: authoringLocked },
-    { id: 'portrait', label: 'VERTICAL 9:16', checkable: true, selected: controller.draft.geometry.rows > controller.draft.geometry.columns, disabled: authoringLocked },
+    { id: 'landscape', label: 'HORIZONTAL 16:9', checkable: true, selected: displayPreset(controller.draft.geometry) === 'LANDSCAPE', disabled: authoringLocked },
+    { id: 'portrait', label: 'VERTICAL 9:16', checkable: true, selected: displayPreset(controller.draft.geometry) === 'PORTRAIT', disabled: authoringLocked },
+    { id: 'custom-size', label: 'CUSTOM SIZE…', checkable: true, selected: displayPreset(controller.draft.geometry) === 'CUSTOM', disabled: authoringLocked },
   ];
   const moduleCommand = id => {
     if (id === 'tool-layers' || id === 'tool-metadata') {
@@ -46,9 +59,13 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       tools.command(id.slice(5), true, moduleMenu?.trigger || shortcutTargetRef.current?.node, targetId);
     }
     if (id === 'play-grids' && !playbackDisabled) { controller.replaceSelection([]); setPlayingGrids(current => !current); }
-    if (id === 'appearance' && !authoringLocked) { appearanceTrigger.current = moduleMenu?.trigger || document.activeElement; setAppearanceOpen(true); }
+    if (id === 'appearance' && !authoringLocked) tools.command('appearance', true, moduleMenu?.trigger || document.activeElement, targetId);
     if (id === 'toggle-library') onToggleLibrary?.();
     if ((id === 'landscape' || id === 'portrait') && !authoringLocked) controller.setDisplayFormat(id.toUpperCase());
+    if (id === 'custom-size' && !authoringLocked) {
+      controller.clearError();
+      setSizeDialog({ geometry: controller.draft.geometry, appearance: controller.draft.appearance, trigger: moduleMenu?.trigger || shortcutTargetRef.current?.node });
+    }
     if (id === 'include-display') controller.setDisplayVisibility('PRIVATE', 'PUBLIC');
     if (id === 'exclude-display') controller.setDisplayVisibility('PUBLIC', 'PRIVATE');
     if (id === 'close-module') {
@@ -127,7 +144,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
     crop.cancelCrop();
     viewer.close();
     setModuleMenu(null);
-    setAppearanceOpen(false);
+    setSizeDialog(null);
   }, [inactive]);
   useEffect(() => {
     if (toolTarget !== targetId) crop.cancelCrop();
@@ -174,11 +191,14 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       <OwnerSystemWorkflowMetadataContent dossier={metadataEntry?.dossier || null} />
     </SharedDisplayToolContent>
 
-    {appearanceOpen && !authoringLocked && workspaceRef.current && createPortal(<WorkbenchWindow surfaceStyle={{ zIndex: 70 }} label="Display appearance" title={windowProps.initialPresentation?.name || 'Display Module'} width={320} initialHeight={470} chrome="bevel" menuSurface={menuSurface}
-      controls={<button type="button" className="system-workflow__round-control" aria-label="Close Display appearance" onClick={() => { setAppearanceOpen(false); appearanceTrigger.current?.focus(); }}>×</button>}>
+    <SharedDisplayToolContent id="appearance" targetId={targetId} label={displayName || windowProps.initialPresentation?.name || 'Display Module'} available={toolAvailable && !inactive && !authoringLocked}>
+      <DisplayCanvasControls appearance={controller.draft.appearance} onChange={controller.setAppearance} error={controller.error} />
       <ModuleSurfaceControls display value={controller.draft.appearance.edges} frame={controller.draft.appearance.frame !== false}
         onChange={edges => controller.setAppearance({ edges })} onFrameChange={frame => controller.setAppearance({ frame })} />
-    </WorkbenchWindow>, workspaceRef.current)}
+    </SharedDisplayToolContent>
+    {sizeDialog && !suspended && !authoringLocked && <DisplaySizeDialog geometry={sizeDialog.geometry} appearance={sizeDialog.appearance} menuSurface={menuSurface}
+      returnFocus={sizeDialog.trigger} error={controller.error} onClose={() => setSizeDialog(null)}
+      onConfirm={(size, appearance) => controller.setDisplayFormat(size, sizeDialog.geometry, appearance, sizeDialog.appearance)} />}
     {moduleMenu && createPortal(<RackMenu anchor={moduleMenu} commands={[...moduleCommands,
       { id: 'close-module', label: 'CLOSE MODULE' },
       ...(moduleMenu.onDelete ? [{ id: 'delete-module', label: 'DELETE MODULE' }] : []),

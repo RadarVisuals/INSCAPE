@@ -371,6 +371,9 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
           Created / {data.collectionContext.name || 'Collection'} · {data.collectionContext.resolved || 0} / {data.collectionContext.total || 0} tokens
         </div>}
         {data.error && <div className="lattice-browser-notice" data-error role="status">{data.error}</div>}
+        {!data.collectionContext && data.error && data.onRetry
+          && <button className="lattice-browser-notice" disabled={data.status === 'loading'}
+            onClick={data.onRetry} type="button">Retry assets</button>}
         {data.collectionContext && data.error && data.onRetryCollection
           && <button className="lattice-browser-notice" onClick={data.onRetryCollection} type="button">Retry collection</button>}
         {data.createdError && <div className="lattice-browser-notice" data-error role="status">Created source unavailable{data.createdRetained ? ' / retained results' : ''}</div>}

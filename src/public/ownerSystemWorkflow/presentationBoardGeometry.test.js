@@ -15,6 +15,19 @@ import {
   setPresentationBoardScale,
 } from './presentationBoardGeometry.js';
 
+test('custom canvases fit both viewports and explicit dimension changes retain unit scale below the resize minimum', () => {
+  for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+    for (const geometry of [{ columns: 24, rows: 24 }, { columns: 40, rows: 10 }, { columns: 1, rows: 512 }, { columns: 512, rows: 1 }]) {
+      const view = projectPresentationBoardView(geometry, viewport, 1, { identityStripHeight: 0 });
+      assert.ok(Math.abs(view.frame.stage.width / view.frame.stage.height - geometry.columns / geometry.rows) < 1e-8);
+      assert.ok(view.frame.board.width <= viewport.width && view.frame.board.height <= viewport.height);
+      const smaller = resizePresentationBoardView(view, viewport, { identityStripHeight: 0, width: view.frame.stage.width / 8 });
+      assert.equal(smaller.frame.stage.width, view.frame.stage.width / 8);
+      assert.deepEqual(smaller.documentGeometry, geometry);
+    }
+  }
+});
+
 test('responsive Board geometry crosses the narrow boundary without a size discontinuity', () => {
   const phone = presentationBoardResponsiveMetrics(390);
   assert.equal(phone.identityStripHeight, 34);

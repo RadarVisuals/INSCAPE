@@ -27,7 +27,7 @@ test('Lift covers the adjoining artwork edge through its final frames and leaves
       await page.waitForFunction(() => [...document.querySelectorAll('.system-workflow__presentation-board img')].every(i => i.complete && i.naturalWidth));
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
       await source.dispatchEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
-      await page.waitForFunction(() => Number(document.querySelector('.system-workflow__lift-artwork')?.parentElement.style.getPropertyValue('--inspection-lift-progress')) === 1);
+      await page.waitForFunction(() => Number((document.querySelector('[data-inspection-context="selected"]') ? getComputedStyle(document.querySelector('[data-inspection-context="selected"]')).getPropertyValue('--inspection-lift-progress') : NaN)) === 1);
       await page.clock.install(); await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
       await page.keyboard.press('Escape'); await page.clock.runFor(400);
       const frames = [];
@@ -42,7 +42,7 @@ test('Lift covers the adjoining artwork edge through its final frames and leaves
           const y = Math.round((rect.y + rect.height * .55) * devicePixelRatio);
           const pixels = [-1, 0, 1].map(offset => [...x.getImageData(edge + offset, y, 1, 1).data]);
           const lift = document.querySelector('.system-workflow__lift-artwork');
-          return { progress: lift ? Number(lift.parentElement.style.getPropertyValue('--inspection-lift-progress')) : null, pixels,
+          return { progress: lift ? Number((document.querySelector('[data-inspection-context="selected"]') ? getComputedStyle(document.querySelector('[data-inspection-context="selected"]')).getPropertyValue('--inspection-lift-progress') : NaN)) : null, pixels,
             transitions: [...document.querySelectorAll('.system-workflow__placement, .lattice-production-placement')].flatMap(n => n.getAnimations()).map(a => a.transitionProperty) };
         }, { b64: png.toString('base64'), rect });
         frames.push(data);
@@ -70,7 +70,7 @@ test('native-fit artwork outside the Stage returns without a lingering filter tr
       const source = page.locator('.system-workflow__grid-plane--current .system-workflow__placement, .visitor-grid-world__grid-plane--current .lattice-production-placement').nth(1);
       await source.waitFor();
       await source.dispatchEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
-      await page.waitForFunction(() => Number(document.querySelector('.system-workflow__lift-artwork')?.parentElement.style.getPropertyValue('--inspection-lift-progress')) === 1);
+      await page.waitForFunction(() => Number((document.querySelector('[data-inspection-context="selected"]') ? getComputedStyle(document.querySelector('[data-inspection-context="selected"]')).getPropertyValue('--inspection-lift-progress') : NaN)) === 1);
       await page.clock.install(); await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
       await page.keyboard.press('Escape'); await page.clock.runFor(496);
       assert.equal(await page.locator('.system-workflow__lift-artwork').count(), 0);

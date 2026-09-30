@@ -88,7 +88,7 @@ test('covered owner and Visitor Grids retain artwork across fast boundaries', { 
           }
         });
         window.preparedGridObserver.observe(document.getElementById('root'), { childList: true, subtree: true });
-        window.railCheck = { running: true, repositioned: [], sources: [] };
+        window.railCheck = { running: true, repositioned: [], restacked: [], sources: [] };
         const viewport = document.querySelector('.system-workflow__canvas, .visitor-grid-world__viewport').getBoundingClientRect();
         let previous = new Map();
         const sample = () => {
@@ -99,13 +99,15 @@ test('covered owner and Visitor Grids retain artwork across fast boundaries', { 
             const id = node.dataset.renderedGridId || node.querySelector('[data-grid-id]')?.dataset.gridId;
             const appearance = `${id}:${node.dataset.railSlot}`;
             const before = previous.get(appearance);
+            const zIndex = getComputedStyle(node).zIndex;
+            if (before && before.zIndex !== zIndex) window.railCheck.restacked.push(id);
             // In a two-Grid loop an outgoing surface can exit one edge and
             // reenter the opposite edge between samples. Only artwork retained
             // in an overlapping visible region must keep its physical slot.
             if (before && before.leftStyle !== node.style.left
               && Math.min(before.right, bounds.right, viewport.right) > Math.max(before.left, bounds.left, viewport.left))
               window.railCheck.repositioned.push(id);
-            current.set(appearance, { leftStyle: node.style.left, left: bounds.left, right: bounds.right });
+            current.set(appearance, { leftStyle: node.style.left, left: bounds.left, right: bounds.right, zIndex });
             if (node.className.includes('--current') && window.railCheck.sources.at(-1) !== id) window.railCheck.sources.push(id);
           }
           previous = current;
@@ -158,6 +160,7 @@ test('covered owner and Visitor Grids retain artwork across fast boundaries', { 
       const rail = await page.evaluate(() => { window.railCheck.running = false; return window.railCheck; });
       assert.ok(rail.sources.length > 2, 'exercise multiple real Grid boundaries');
       assert.deepEqual(rail.repositioned, [], 'visible artwork keeps its rail position across each handoff');
+      assert.deepEqual(rail.restacked, [], 'navigation does not reorder the clipped scenes on the moving rail');
       const leaks=[];
       for(let index=0;index<frames.length;index++) {
         const count=await page.evaluate(async({data,box,solid,blackSky})=>{

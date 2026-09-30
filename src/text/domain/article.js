@@ -5,11 +5,55 @@ import { articleSections, joinArticleSections } from '../articleSections.js';
 export const ARTICLE_TYPE = 'INSCAPEArticle';
 export const ARTICLE_MAX_BYTES = 192 * 1024;
 export const MAX_TEXT_MODULES = 16;
+export const ARTICLE_FONT_SIZE = Object.freeze({ min: 8, max: 300, step: 1 });
+export const ARTICLE_TRACKING = Object.freeze({ min: -.1, max: 1, step: .01 });
+export const ARTICLE_BLOCK_SPACING = Object.freeze({ min: 0, max: 512, step: 1 });
+export const ARTICLE_LINE_HEIGHT = Object.freeze({ min: 1, max: 3, step: .05 });
+export const validArticleLineHeight = value => Number.isFinite(value) && value >= ARTICLE_LINE_HEIGHT.min && value <= ARTICLE_LINE_HEIGHT.max;
+export const validArticleFontSize = value => Number.isFinite(value) && value >= ARTICLE_FONT_SIZE.min && value <= ARTICLE_FONT_SIZE.max;
+export const validArticleTracking = value => Number.isFinite(value) && value >= ARTICLE_TRACKING.min && value <= ARTICLE_TRACKING.max;
+export const validArticleSpacing = value => Number.isFinite(value) && value >= ARTICLE_BLOCK_SPACING.min && value <= ARTICLE_BLOCK_SPACING.max;
+export const ARTICLE_STYLE_ROLES = Object.freeze([
+  { id: 'h1', label: 'Heading 1', size: 1.65 },
+  { id: 'h2', label: 'Heading 2', size: 1.35 },
+  { id: 'h3', label: 'Heading 3', size: 1.15 },
+  { id: 'caption', label: 'Artwork caption', size: .85 },
+]);
+// Article-owned role defaults. Explicit inline/block formatting takes precedence.
+// Missing roles and properties retain the stylesheet's existing appearance.
+export function articleRoleVariables(styles = {}) {
+  return Object.fromEntries(ARTICLE_STYLE_ROLES.flatMap(({ id }) => Object.entries(styles[id] || {}).map(([key, value]) => [
+    `--text-${id}-${key}`, key === 'fontSize' ? `${value}px` : key === 'letterSpacing' ? `${value}em` : value,
+  ])));
+}
+export function articleSpacingStyle(attrs = {}) {
+  // Explicit spacing belongs to the block, avoiding collapsed sibling margins.
+  // Omitted sides retain the existing stylesheet defaults, including compact Text.
+  return { ...(attrs?.spaceBefore != null ? { marginTop: 0, paddingTop: attrs.spaceBefore } : {}),
+    ...(attrs?.spaceAfter != null ? { marginBottom: 0, paddingBottom: attrs.spaceAfter } : {}),
+    ...(attrs?.lineHeight != null ? { lineHeight: attrs.lineHeight } : {}) };
+}
+export function articleTextStyle(attrs) {
+  return { fontFamily: attrs.fontFamily || undefined, color: attrs.color || undefined,
+    fontSize: attrs.fontSize ?? undefined, letterSpacing: attrs.letterSpacing == null ? undefined : `${attrs.letterSpacing}em` };
+}
 export const defaultTextAppearance = () => ({ background: '#101111', opacity: 1, frame: false, scale: 1, fontSize: 16, color: '#ffffff' });
 export const textAppearance = article => article.appearance || { ...defaultTextAppearance(), background: '#101111', frame: true };
 export function textContentStyle(article) {
+  const appearance = textAppearance(article);
   const padding = article.appearance?.padding;
-  return padding ? { padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`, maxWidth: 'none' } : {};
+  return { fontFamily: ARTICLE_FONTS.find(f => f.id === article.font).family, fontSize: appearance.fontSize,
+    color: article.appearance ? appearance.color : 'inherit', zoom: appearance.scale,
+    '--text-columns': appearance.columns > 1 ? appearance.columns : 'auto', '--text-column-gap': `${appearance.columnGap ?? 24}px`,
+    '--text-line-height': appearance.lineHeight ?? undefined,
+    ...articleRoleVariables(appearance.textStyles),
+    ...(padding ? { padding: `${padding.top}px ${padding.right}px ${padding.bottom}px ${padding.left}px`, maxWidth: 'none' } : {}) };
+}
+export function textTitleStyle(article) {
+  const appearance = textAppearance(article);
+  return { fontSize: appearance.titleFontSize ?? 28, textAlign: appearance.titleAlignment ?? 'left',
+    marginBottom: appearance.titleGap ?? undefined,
+    color: appearance.titleColor || 'inherit', letterSpacing: appearance.titleLetterSpacing == null ? undefined : `${appearance.titleLetterSpacing}em` };
 }
 export function textSurfaceStyle(article, scale = 1) {
   if (!article.appearance) return { background: 'var(--workflow-panel)', color: 'var(--workflow-ink)', boxShadow: `inset 0 0 0 ${scale}px var(--workflow-border)` };
@@ -59,24 +103,46 @@ export function safeArticleLink(value) {
 const blocks = ['paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'horizontalRule', 'artwork', 'pageBreak'];
 function validMark(mark) {
   if (['bold', 'italic', 'strike', 'underline', 'code'].includes(mark?.type)) return exact(mark, ['type']);
-  if (mark?.type === 'textStyle') return exact(mark, ['type', 'attrs']) && exact(mark.attrs, ['fontFamily'])
-    && ARTICLE_FONTS.some(font => font.family === mark.attrs.fontFamily);
-  return mark?.type === 'link' && exact(mark, ['type', 'attrs']) && exact(mark.attrs, ['href'], ['target', 'rel', 'class'])
+  if (mark?.type === 'textStyle') return exact(mark, ['type', 'attrs']) && exact(mark.attrs, [], ['fontFamily', 'color', 'fontSize', 'letterSpacing'])
+    && Object.values(mark.attrs).some(value => value != null)
+    && (mark.attrs.fontFamily == null || ARTICLE_FONTS.some(font => font.family === mark.attrs.fontFamily))
+    && (mark.attrs.color == null || /^#[\da-f]{6}$/iu.test(mark.attrs.color))
+    && (mark.attrs.fontSize == null || validArticleFontSize(mark.attrs.fontSize))
+    && (mark.attrs.letterSpacing == null || validArticleTracking(mark.attrs.letterSpacing));
+  return mark?.type === 'link' && exact(mark, ['type', 'attrs']) && exact(mark.attrs, ['href'], ['target', 'rel', 'class', 'title'])
     && safeArticleLink(mark.attrs.href) && [undefined, null, '_blank', '_self'].includes(mark.attrs.target)
     && [undefined, null, 'noopener noreferrer nofollow', 'noopener noreferrer'].includes(mark.attrs.rel)
-    && [undefined, null].includes(mark.attrs.class);
+    && [undefined, null].includes(mark.attrs.class) && [undefined, null].includes(mark.attrs.title);
 }
 export function assertArticle(article) {
   if (!exact(article, ['documentType', 'version', 'title', 'font', 'content'], ['appearance']) || article.documentType !== ARTICLE_TYPE
     || article.version !== 1 || !string(article.title, 160) || !ARTICLE_FONTS.some(f => f.id === article.font)) throw new Error('Unsupported article format. The source has not been changed.');
   if (article.appearance !== undefined) {
     const a = article.appearance;
-    if (!exact(a, ['background', 'opacity', 'frame', 'scale', 'fontSize', 'color'], ['transform', 'compact', 'padding', 'edges', 'titleFontSize'])
+    if (!exact(a, ['background', 'opacity', 'frame', 'scale', 'fontSize', 'color'], ['transform', 'compact', 'padding', 'edges', 'titleFontSize', 'titleLetterSpacing', 'titleGap', 'titleAlignment', 'titleColor', 'columns', 'columnGap', 'lineHeight', 'textStyles'])
       || !(a.background === null || /^#[\da-f]{6}$/iu.test(a.background)) || !/^#[\da-f]{6}$/iu.test(a.color)
       || !Number.isFinite(a.opacity) || a.opacity < 0 || a.opacity > 1 || typeof a.frame !== 'boolean'
       || !Number.isFinite(a.scale) || a.scale < .01 || a.scale > 100
       || !Number.isFinite(a.fontSize) || a.fontSize < 8 || a.fontSize > 300
       || (a.titleFontSize !== undefined && (!Number.isFinite(a.titleFontSize) || a.titleFontSize < 8 || a.titleFontSize > 300))) throw new Error('Unsupported Text appearance.');
+    if (a.titleLetterSpacing !== undefined && !validArticleTracking(a.titleLetterSpacing)) throw new Error('Unsupported title tracking.');
+    if (a.lineHeight !== undefined && !validArticleLineHeight(a.lineHeight)) throw new Error('Unsupported line spacing.');
+    if (a.textStyles !== undefined) {
+      if (!exact(a.textStyles, [], ARTICLE_STYLE_ROLES.map(role => role.id))) throw new Error('Unsupported article styles.');
+      for (const style of Object.values(a.textStyles)) {
+        if (!exact(style, [], ['fontFamily', 'fontSize', 'color', 'lineHeight', 'letterSpacing'])
+          || (style.fontFamily !== undefined && !ARTICLE_FONTS.some(font => font.family === style.fontFamily))
+          || (style.fontSize !== undefined && !validArticleFontSize(style.fontSize))
+          || (style.color !== undefined && !/^#[\da-f]{6}$/iu.test(style.color))
+          || (style.lineHeight !== undefined && !validArticleLineHeight(style.lineHeight))
+          || (style.letterSpacing !== undefined && !validArticleTracking(style.letterSpacing))) throw new Error('Unsupported article style.');
+      }
+    }
+    if (a.titleGap !== undefined && !validArticleSpacing(a.titleGap)) throw new Error('Unsupported title spacing.');
+    if (a.titleAlignment !== undefined && !['left', 'center', 'right'].includes(a.titleAlignment)) throw new Error('Unsupported title alignment.');
+    if (a.titleColor !== undefined && !/^#[\da-f]{6}$/iu.test(a.titleColor)) throw new Error('Unsupported title colour.');
+    if (a.columns !== undefined && ![1, 2, 3].includes(a.columns)) throw new Error('Unsupported Text columns.');
+    if (a.columnGap !== undefined && (!Number.isFinite(a.columnGap) || a.columnGap < 0 || a.columnGap > 128)) throw new Error('Unsupported Text column spacing.');
     if (a.edges !== undefined && !validModuleEdges(a.edges)) throw new Error('Unsupported Text edges.');
     if (a.compact !== undefined && typeof a.compact !== 'boolean') throw new Error('Unsupported Text spacing.');
     if (a.padding !== undefined && (!exact(a.padding, ['top', 'right', 'bottom', 'left'])
@@ -98,9 +164,11 @@ export function assertArticle(article) {
     }
     if (node.text !== undefined || node.marks !== undefined) throw new Error('Invalid article block.');
     if (['paragraph', 'heading'].includes(type)) {
-      if (type === 'heading' && (!exact(node.attrs, ['level'], ['textAlign']) || ![1, 2, 3].includes(node.attrs.level))) throw new Error('Unsupported heading.');
-      if (type === 'paragraph' && node.attrs && !exact(node.attrs, [], ['textAlign'])) throw new Error('Unsupported paragraph attributes.');
+      if (type === 'heading' && (!exact(node.attrs, ['level'], ['textAlign', 'spaceBefore', 'spaceAfter', 'lineHeight']) || ![1, 2, 3].includes(node.attrs.level))) throw new Error('Unsupported heading.');
+      if (type === 'paragraph' && node.attrs && !exact(node.attrs, [], ['textAlign', 'spaceBefore', 'spaceAfter', 'lineHeight'])) throw new Error('Unsupported paragraph attributes.');
+      if (node.attrs?.lineHeight != null && !validArticleLineHeight(node.attrs.lineHeight)) throw new Error('Unsupported paragraph line spacing.');
       if (node.attrs?.textAlign != null && !ARTICLE_ALIGNMENTS.includes(node.attrs.textAlign)) throw new Error('Unsupported paragraph alignment.');
+      if (['spaceBefore', 'spaceAfter'].some(key => node.attrs?.[key] != null && !validArticleSpacing(node.attrs[key]))) throw new Error('Unsupported paragraph spacing.');
     }
     else if (type === 'orderedList') { if (node.attrs && (!exact(node.attrs, ['start'], ['type']) || !Number.isSafeInteger(node.attrs.start)
       || node.attrs.start < 1 || node.attrs.start > 9999 || ![undefined, null].includes(node.attrs.type))) throw new Error('Unsupported list.'); }

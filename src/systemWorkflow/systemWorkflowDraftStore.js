@@ -212,7 +212,14 @@ export function createSystemWorkflowDraftStore({
       if (!next) return false;
       if (next === activeProfileAddress) return true;
       historyGroup = null;
+      const departingHistory = histories.get(activeProfileAddress);
+      if (departingHistory) departingHistory.acceptedRaw = acceptedRaw;
       const loaded = load(next);
+      // History paths belong to the exact accepted record. A different tab may
+      // reorder Grids while this profile is inactive, so matching leaf values
+      // alone cannot establish that an old index still identifies its owner.
+      const returningHistory = histories.get(next);
+      if (returningHistory && returningHistory.acceptedRaw !== loaded.raw) histories.delete(next);
       activeProfileAddress = next;
       acceptLoaded(loaded);
       generation += 1;

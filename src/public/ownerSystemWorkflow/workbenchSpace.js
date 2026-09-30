@@ -14,3 +14,9 @@ export function projectWorkbenchBounds(scale = 1, offset = { x: 0, y: 0 }) {
   return { left: WORKBENCH_BOUNDS.left * scale + offset.x, top: WORKBENCH_BOUNDS.top * scale + offset.y,
     right: WORKBENCH_BOUNDS.right * scale + offset.x, bottom: WORKBENCH_BOUNDS.bottom * scale + offset.y };
 }
+
+// Screen input becomes authored position only after removing the temporary
+// camera. Use exact coordinates; paint rounding must not enter saved layouts.
+export function unprojectWorkbenchPosition(position, scale = 1, offset = { x: 0, y: 0 }) {
+  return { left: (position.left - offset.x) / scale, top: (position.top - offset.y) / scale };
+}

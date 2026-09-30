@@ -106,7 +106,9 @@ Use the canonical hierarchy in the active contract:
    an authored public experience as well as the owner's workspace.
 2. **Module instance**: a creative application with its own content and behavior.
 3. **Display Module**: the current composition module type; its Stage is the
-   canonical clipped 16:9 output and its Grids are scenes within that output.
+   canonical clipped output with dimensions chosen by the artist, and its Grids
+   are scenes within that output. The active contract distinguishes accepted
+   canvas-sizing direction from the currently implemented formats.
 4. **Assets and authored primitives**: material interpreted by compatible modules.
 
 Do not use `Grid` to mean a marketplace thumbnail grid. In INSCAPE, a Grid is

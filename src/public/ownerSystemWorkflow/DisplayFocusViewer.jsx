@@ -86,7 +86,8 @@ export default function DisplayFocusViewer({ scene, controlsContainer, viewer })
   });
   if (!controlsContainer) return null;
   return <>{lift && <DisplayLiftArtwork key={viewer.placementId} scene={scene} source={viewer.returnFocus}
-    entry={viewer.entry} closing={closing} reducedMotion={reducedMotion} onCloseComplete={finishClose} />}
+    entry={viewer.entry} closing={closing} reducedMotion={reducedMotion} onCloseComplete={finishClose}
+    dimmingTarget={viewer.returnFocus?.parentElement} />}
   {scene?.parentElement && createPortal(<div aria-hidden="true" className="system-workflow__inspection-hit-surface"
     onPointerDown={event => { event.preventDefault(); event.stopPropagation(); }}
     onClick={event => {

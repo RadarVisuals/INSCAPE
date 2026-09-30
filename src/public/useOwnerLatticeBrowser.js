@@ -28,6 +28,14 @@ export function canOpenCreatorCollection(profileAddress, collectionRecord) {
   return Boolean(normalizeProfileAddress(profileAddress) && collectionRecord?.isCollection === true);
 }
 
+export function retryLibraryForProfile(profileAddress, getStore = useLibraryStore.getState) {
+  const profile = normalizeProfileAddress(profileAddress);
+  const state = getStore();
+  if (!profile || state.profileAddress !== profile
+    || normalizeProfileAddress(state.workspace?.profileAddress) !== profile) return false;
+  return state.load({ forceLive: true });
+}
+
 export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled = true, referencedAssetIds = []) {
   const profile = normalizeProfileAddress(profileAddress);
   const [useRelatedCreationsStore] = useState(() => createCreationsStore({ retainOnRetry: true }));
@@ -170,6 +178,7 @@ export default function useOwnerLatticeBrowser(profileAddress, inventoryEnabled 
   const records = useMemo(() => [...new Map([...union.records, ...referencedUnion.records, ...collectionUnion.records]
     .map((record) => [record.id, record])).values()], [collectionUnion.records, referencedUnion.records, union.records]);
   return { commands: profileReady && !activeCollection ? commands : null,
-    data: { ...(collectionData || { ...unionData, onOpenCollection: openCollection }),
+    data: { ...(collectionData || { ...unionData, onOpenCollection: openCollection,
+      onRetry: profileReady ? () => retryLibraryForProfile(profile) : null }),
       persistenceError: profileReady ? persistenceError : null }, records, retryCreated };
 }

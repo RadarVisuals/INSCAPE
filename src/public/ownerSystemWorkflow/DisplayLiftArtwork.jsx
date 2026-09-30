@@ -17,8 +17,11 @@ const svgProjection = (entry, geometry, progress) => {
 
 // Presentation-only geometry in the Stage's local coordinates, including when
 // its containing window is scaled. Authored placement geometry never changes.
-export default function DisplayLiftArtwork({ scene, source, entry, closing, reducedMotion, onCloseComplete }) {
+export default function DisplayLiftArtwork({ scene, source, entry, closing, reducedMotion, onCloseComplete, dimmingTarget }) {
   const host = scene?.parentElement;
+  // Display fades only the inspected Grid's artwork plane. Image keeps its
+  // overlay backdrop on the host. Neither needs to restyle neighboring Grids.
+  const progressTarget = dimmingTarget || host;
   const liveSvg = projectedSvgArtworkFor(source, entry.media.src);
   const artworkRef = useRef(null);
   const completeRef = useRef(onCloseComplete); completeRef.current = onCloseComplete;
@@ -29,13 +32,13 @@ export default function DisplayLiftArtwork({ scene, source, entry, closing, redu
   // The backdrop follows the same clock as the artwork, including interrupted
   // opening and reduced motion. It never starts before the media is ready.
   useLayoutEffect(() => {
-    if (!liveSvg) host?.style.setProperty('--inspection-lift-progress', String(ready ? progress : 0));
-  }, [host, ready, progress, liveSvg]);
+    if (!liveSvg) progressTarget?.style.setProperty('--inspection-lift-progress', String(ready ? progress : 0));
+  }, [progressTarget, ready, progress, liveSvg]);
   useLayoutEffect(() => {
     if (!host) return;
     scene.setAttribute('data-inspection-lift', '');
-    return () => { host.style.removeProperty('--inspection-lift-progress'); scene.removeAttribute('data-inspection-lift'); };
-  }, [host, scene]);
+    return () => { progressTarget?.style.removeProperty('--inspection-lift-progress'); scene.removeAttribute('data-inspection-lift'); };
+  }, [host, scene, progressTarget]);
   useLayoutEffect(() => {
     if (!host || !source) return undefined;
     const measure = () => {
@@ -123,7 +126,7 @@ export default function DisplayLiftArtwork({ scene, source, entry, closing, redu
       progressRef.current = value;
       if (liveSvg) {
         liveSvg.paint(svgProjection(entry, geometry, value));
-        host.style.setProperty('--inspection-lift-progress', String(value));
+        progressTarget.style.setProperty('--inspection-lift-progress', String(value));
       }
       else setProgress(value);
     };
@@ -156,7 +159,7 @@ export default function DisplayLiftArtwork({ scene, source, entry, closing, redu
       // The last painted progress is already the visible pose. An interrupted
       // return resumes there without advancing an independent animation clock.
     };
-  }, [closing, reducedMotion, entry, ready, geometry, host, liveSvg]);
+  }, [closing, reducedMotion, entry, ready, geometry, host, liveSvg, progressTarget]);
 
   if (!geometry || !host) return null;
   const currentRectangle = interpolateLatticeProductionFocusRectangle(

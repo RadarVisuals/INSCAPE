@@ -30,7 +30,7 @@ export default function useWorkbenchController(profileAddress, { storage } = {})
   // not clone every sibling module or invalidate their content identities.
   const draft = authority.store.getSnapshot();
   return { draft, store: authority.store, storage: selectedStorage, run, clearError, error: failure?.authority === authority ? failure.message : null,
-    addDisplay: orientation => run(() => addDisplayModule(authority.store, orientation)),
+    addDisplay: (orientation, appearance) => run(() => addDisplayModule(authority.store, orientation, appearance)),
     saveWorkbench: workbench => run(session => session.saveWorkbench(workbench)),
     saveIdentity: ({ profile: values, card, avatar }) => run(session => {
       const { alias, bio, tags, avatar: expectedAvatar } = draft.identityPresentation;

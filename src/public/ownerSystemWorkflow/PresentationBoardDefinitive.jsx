@@ -15,7 +15,8 @@ import { DisplayStageSizeContext } from './DisplayStageSizeContext.js';
 import { workbenchPaintStyle } from './workbenchPaintGeometry.js';
 import { snapWorkbenchPosition, WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 import { loadPresentationBoardShortcut } from './presentationBoardShortcutStorage.js';
-import { DISPLAY_DEFAULT_WINDOW_SIZES } from '../../profileDocument/domain/workbenchPresentation.js';
+import { defaultDisplayWindowSize } from '../../profileDocument/domain/workbenchPresentation.js';
+import { displayPreset } from '../../systemWorkflow/domain/displayModules.js';
 import { PRESENTATION_BOARD_INSTANCE_STATE } from './ownerSystemWorkflowModuleState.js';
 import { presentationBoardResponsiveMetrics, projectPresentationBoardView,
   resizePresentationBoardFromCorner, resizePresentationBoardView, setContinuousPresentationBoardScale } from './presentationBoardGeometry.js';
@@ -31,7 +32,7 @@ function BoardWorkspaceControls({ playing, onTogglePlayback }) {
   return playing ? <button aria-label="Pause Grids" className="system-workflow__overlay-icon"
     onClick={onTogglePlayback} title="Pause Grids" type="button"><Pause /></button> : null;
 }
-export default function PresentationBoardDefinitive({ assetsById = new Map(), children, documentGeometry,
+export default function PresentationBoardDefinitive({ assetsById = new Map(), children, documentGeometry = { columns: 32, rows: 18 },
   authoringLocked = false, displaySurface, moduleAppearance, inspectionAtmosphere = false,
   layoutMode = 'wide', onAuthoringLockToggle, onContextMenu,
   onDelete, moduleCommands, moduleSubmenu, onModuleCommand,
@@ -82,12 +83,15 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       let next = current && JSON.stringify(current.documentGeometry) === geometryKey ? resizePresentationBoardView(current, viewport, geometryOptions)
         : projectPresentationBoardView(documentGeometry, viewport, 1, geometryOptions);
       if (next && (!current || JSON.stringify(current.documentGeometry) !== geometryKey)) {
-        // Preserve the user's size relative to the same defaults used by Add.
-        const targetSize = DISPLAY_DEFAULT_WINDOW_SIZES[documentGeometry?.rows > documentGeometry?.columns ? 'PORTRAIT' : 'LANDSCAPE'];
-        const previousSize = DISPLAY_DEFAULT_WINDOW_SIZES[current?.documentGeometry?.rows > current?.documentGeometry?.columns ? 'PORTRAIT' : 'LANDSCAPE'];
-        const width = current ? current.frame.stage.width / previousSize.width * targetSize.width
+        // Preserve existing preset transitions. Custom canvas edits retain the
+        // current unit scale, bounded only by available viewing space.
+        const targetSize = defaultDisplayWindowSize(documentGeometry);
+        const previousGeometry = current?.documentGeometry;
+        const presets = current && displayPreset(previousGeometry) !== 'CUSTOM' && displayPreset(documentGeometry) !== 'CUSTOM';
+        const width = current ? presets ? current.frame.stage.width / defaultDisplayWindowSize(previousGeometry).width * targetSize.width
+          : current.frame.stage.width / previousGeometry.columns * documentGeometry.columns
           : initialPresentation?.window?.width || targetSize.width;
-        next = setContinuousPresentationBoardScale(next, Math.min(1, width / next.fit.stage.width));
+        next = resizePresentationBoardView(next, viewport, { ...geometryOptions, width });
       }
       return next;
     });
@@ -109,10 +113,10 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     continuousGeometry: true,
     store: workbenchView.store, profileAddress, layoutKey: viewId === 'display:primary' ? 'display' : 'displays',
     commit: commitWorkbenchSelectionResize, prepare: prepareWindowResize, applyFrame: applyGroupFrame, reportError: setResizeError,
-    minimumWidth: Math.max(180, (view?.fit.stage.width || 0) * .25), minimumHeight: Math.max(100, (view?.fit.stage.height || 0) * .25),
+    minimumWidth: (view?.fit.stage.width || 0) * .25, minimumHeight: (view?.fit.stage.height || 0) * .25,
     maximumWidth: view?.fit.stage.width || 1, maximumHeight: view?.fit.stage.height || 1,
   }), [workbenchView.store, view, readOnly, inspectionActive, profileAddress, viewId, applyGroupFrame]);
-  useWorkbenchViewRegistration(viewId, boardNodeRef, Boolean(windowFrame) && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW, windowFrame, resizeTarget);
+  useWorkbenchViewRegistration(viewId, boardNodeRef, Boolean(windowFrame) && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW, windowFrame, resizeTarget, setBoardPosition);
   useEffect(() => {
     if (view && boardPosition) onWindowChange?.({ name: displayName, window: {
       left: boardPosition.left, top: boardPosition.top,
@@ -243,7 +247,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
         onDragStartCapture={(event) => event.preventDefault()}
         ref={setSelectionOverlayHost} style={{ width: stageWidth, height: stageHeight }}>
         <div className="system-workflow__stage" data-presentation-stage data-surface={displaySurface}
-          style={{ width: stageWidth, height: stageHeight }}>
+          style={{ width: stageWidth, height: stageHeight, '--study-surface': moduleAppearance?.backgroundColor || undefined }}>
           <div className="system-workflow__inspection-scene" ref={inspectionSceneRef}>
           <DisplayStageSizeContext.Provider value={{ width: stageWidth, height: stageHeight,
             screenScale: 1 / density, contentScale }}>

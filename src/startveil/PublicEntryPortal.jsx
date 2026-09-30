@@ -100,10 +100,11 @@ export default function PublicEntryPortal({ connectedProfile, discoveryRepositor
   const mode = controlledMode || localMode;
   const explore = () => { if (mode !== 'explore') onExplore ? onExplore() : setMode('explore'); };
   const [accountOpen, setAccountOpen] = useState(false);
+  const [visibleWorlds, setVisibleWorlds] = useState(MAX_EXPLORE_RESULTS);
   const accountRef = useRef(null);
   const discovery = useProfileDiscoveryController({ repository: discoveryRepository });
   const featured = selectFeaturedWorld(discovery.profiles);
-  const exploreResults = discovery.results.slice(0, MAX_EXPLORE_RESULTS);
+  const exploreResults = discovery.results.slice(0, visibleWorlds);
   useEffect(() => {
     if (mode !== 'explore') return undefined;
     const close = (event) => { if (event.key !== 'Escape' || accountOpen) return; (onClose || onHome) ? (onClose || onHome)() : setMode('landing'); };
@@ -131,7 +132,7 @@ export default function PublicEntryPortal({ connectedProfile, discoveryRepositor
         onClick={returnHome} type="button"><i aria-hidden="true" /></button>
       {mode === 'explore' && <label className="public-entry-portal__header-search">
         <Search aria-hidden="true" size={13} strokeWidth={2} />
-        <input aria-label="Search published worlds" autoFocus onChange={(event) => discovery.setQuery(event.target.value)}
+        <input aria-label="Search published worlds" autoFocus onChange={(event) => { setVisibleWorlds(MAX_EXPLORE_RESULTS); discovery.setQuery(event.target.value); }}
           placeholder="SEARCH WORLDS" type="search" value={discovery.query} />
       </label>}
       <nav aria-label="Public entry">
@@ -174,6 +175,11 @@ export default function PublicEntryPortal({ connectedProfile, discoveryRepositor
           {discovery.status === 'error' && <button onClick={discovery.retry} type="button">RETRY DISCOVER</button>}
         </div>}
       </section>
+      {discovery.results.length > MAX_EXPLORE_RESULTS && <div className="public-entry-portal__results-rail">
+        <span role="status">{exploreResults.length} of {discovery.results.length} worlds</span>
+        <button type="button" disabled={exploreResults.length >= discovery.results.length}
+          onClick={() => setVisibleWorlds(current => current + MAX_EXPLORE_RESULTS)}>Show more worlds</button>
+      </div>}
     </main>}
 
     <footer className="public-entry-portal__footer"><span>ALPHA · LUKSO MAINNET</span></footer>
