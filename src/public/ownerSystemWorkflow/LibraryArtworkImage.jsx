@@ -25,7 +25,7 @@ export async function readSvgArtwork(source, signal) {
   return svg;
 }
 
-async function svgPreview(source, signal) {
+export async function svgPreview(source, signal) {
   const svg = await readSvgArtwork(source, signal);
   // Percentage-sized standalone documents still need intrinsic preview dimensions.
   const box = svg.getAttribute('viewBox')?.trim().split(/[\s,]+/).map(Number);

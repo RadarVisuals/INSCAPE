@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Crop, Trash2, ChevronRight } from 'lucide-react';
+import { Copy, Crop, Trash2, ChevronRight } from 'lucide-react';
 import ImageWindow from './ImageWindow.jsx';
 import ImageSides from './ImageSides.jsx';
 import { ContextToolContent, useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
@@ -8,8 +8,8 @@ import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortc
 import { resolveImageLibrarySide } from './imageLibrarySide.js';
 import { createSystemWorkflowCropSession, createSystemWorkflowCropPanGesture, updateSystemWorkflowCropPanGesture, setSystemWorkflowCropZoom, nudgeSystemWorkflowCrop } from '../systemWorkflow/systemWorkflowCrop.js';
 import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop, transformArtwork } from '../systemWorkflow/systemWorkflowTransform.js';
-import { createImagePresentation, imageFocusEntry, imageSize, MAX_IMAGE_SIDES, nextImageSide, IMAGE_FILL_CROP, imageCropForResize } from './imageModule.js';
-import { saveImageModule, prepareImageResize } from './imageModuleSession.js';
+import { createImagePresentation, imageFocusEntry, imageSize, MAX_IMAGE_MODULES, MAX_IMAGE_SIDES, nextImageSide, IMAGE_FILL_CROP, imageCropForResize } from './imageModule.js';
+import { saveImageModule, prepareImageResize, duplicateImageModule } from './imageModuleSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
 import ImageLift from './ImageLift.jsx';
@@ -17,9 +17,9 @@ import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
 import './imageModule.css';
 
-function ImageInstance({ record, index, store, profileAddress, registerTarget, initialPresentation, onPresentationChange, onActivate, suspended, viewport, reducedMotion }) {
+function ImageInstance({ record, index, store, profileAddress, registerTarget, initialPresentation, onPresentationChange, onActivate, suspended, viewport, reducedMotion, canDuplicate, onDuplicated, initialSideIndex = 0, focusOnMount = false }) {
   const [presentation, setPresentation] = useState(() => initialPresentation || createImagePresentation(record.id, index));
-  const [sideId, setSideId] = useState(record.sides[0]?.id), [flipTarget, setFlip] = useState(null);
+  const [sideId, setSideId] = useState(record.sides[initialSideIndex]?.id), [flipTarget, setFlip] = useState(null);
   const [cropState, setCrop] = useState(null), [inspect, setInspect] = useState(false), [error, setError] = useState('');
   const [dropMode, setDropMode] = useState('append');
   const [sizeFields, setSizeFields] = useState({ width: String(record.width), height: String(record.height) });
@@ -27,7 +27,7 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
   const imageRequest = useRef(0);
   latest.current = record;
   const activeTarget = useContextToolTarget();
-  const { getPresentation } = useWorkbenchView();
+  const { getPresentation, setSelection } = useWorkbenchView();
   const side = record.sides.find(item => item.id === sideId) || record.sides[0];
   const crop = cropState?.expected === record && cropState?.placementId === side?.id ? cropState : null;
   const flip = record.sides.some(item => item.id === flipTarget) ? flipTarget : null;
@@ -51,6 +51,7 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
     return () => artwork?.releaseImages();
   }, [liftEntry, inactive, Boolean(crop), flip]);
   useEffect(() => { live.current = true; return () => { live.current = false; imageRequest.current += 1; }; }, []);
+  useEffect(() => { if (focusOnMount) source.current?.focus({ preventScroll: true }); }, [focusOnMount]);
   useEffect(() => {
     setSizeFields({ width: String(record.width), height: String(record.height) });
     imageRequest.current += 1;
@@ -80,6 +81,13 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
     } catch (e) { setError(e.message); return false; }
   }, [store, profileAddress, suspended]);
   const changeSide = (change, expected = record) => save({ ...expected, sides: expected.sides.map(item => item.id === side?.id ? { ...item, ...change } : item) }, expected);
+  const duplicate = () => {
+    if (!editable || !live.current || crop || flip || !canDuplicate) return;
+    try {
+      const id = duplicateImageModule(store, profileAddress, record, { workbench: getPresentation?.(), position: presentation.position });
+      setError(''); onDuplicated(id, Math.max(0, sideIndex)); onActivate?.(id); setSelection?.([id]);
+    } catch (failure) { setError(failure.message); }
+  };
   const acceptImage = useCallback(async input => {
     if (!editable || !presentation.open || !live.current) return false;
     const current = latest.current;
@@ -146,6 +154,11 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
       onClose={() => { setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); }}>
       {renderRectangle => <>
       <button type="button" ref={source} className="image-module__canvas" aria-label={crop ? 'Drag to crop Image' : side ? `Inspect ${side.asset.name || 'Image'}` : store ? 'Drop Library artwork into Image' : 'Image is empty'}
+        data-artwork-context-id={!inactive && !inspect && !flip && side ? `${record.id}:${side.id}:${side.asset.stableAssetId}` : undefined}
+        data-artwork-context-title={side?.asset.name || 'Untitled artwork'}
+        data-artwork-context-src={liftEntry?.media.src}
+          data-artwork-context-asset={side?.asset.stableAssetId}
+          data-artwork-context-standard={side?.asset.tokenStandard}
         data-workbench-selectable={!crop && !flip && !suspended && !inspect || undefined}
         data-side-id={side?.id} data-cropping={Boolean(crop) || undefined} data-flipping={Boolean(flip) || undefined} disabled={Boolean(suspended)}
         onPointerEnter={event => { if (!event.buttons) prepareInspection(); }}
@@ -194,6 +207,7 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
       </div> : <>
         <nav className="system-workflow__selection-actions" aria-label="Image actions"><ArtworkTransformTools disabled={!side || Boolean(flip)} onTransform={operation => changeSide({ transform: transformArtwork(side.transform, operation) })} />
           <button type="button" aria-label="Crop" title="Crop" disabled={!side || Boolean(flip)} onClick={beginCrop}><Crop size={15} /></button>
+          <button type="button" aria-label="Duplicate" title={canDuplicate ? 'Duplicate Image, keeping all sides and crops' : 'At most sixteen Image modules are supported'} disabled={!canDuplicate || Boolean(flip)} onClick={duplicate}><Copy size={15} /></button>
         </nav>
         <div className="system-workflow__inspection-selector" role="group" aria-label="Image fit">
           <span>Fit</span>
@@ -222,6 +236,8 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
 }
 
 export default function ImageWorkbench({ records, presentations, ...props }) {
+  const [duplicated, setDuplicated] = useState(null);
+  const duplicateTarget = duplicated?.profileAddress === props.profileAddress ? duplicated : null;
   const [viewport, setViewport] = useState(() => ({ width: innerWidth, height: innerHeight }));
   const [reducedMotion, setReducedMotion] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(() => {
@@ -231,5 +247,7 @@ export default function ImageWorkbench({ records, presentations, ...props }) {
     return () => { removeEventListener('resize', resize); media.removeEventListener('change', motion); };
   }, []);
   return records.map((record, index) => <ImageInstance key={`${props.profileAddress}:${record.id}`} {...props} record={record} index={index} viewport={viewport} reducedMotion={reducedMotion}
+    canDuplicate={records.length < MAX_IMAGE_MODULES} onDuplicated={(id, sideIndex) => setDuplicated({ id, sideIndex, profileAddress: props.profileAddress })}
+    initialSideIndex={duplicateTarget?.id === record.id ? duplicateTarget.sideIndex : 0} focusOnMount={duplicateTarget?.id === record.id}
     initialPresentation={presentations?.find(item => item.id === record.id)} />);
 }

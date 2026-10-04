@@ -142,9 +142,19 @@ test('NFTs expand independently and retain chosen images through drag, reload an
       assert.equal(published.asset.media.url, selected.selectedMedia.url);
       assert.equal(published.asset.stableAssetId, selected.stableAssetId);
       await page.locator(`.system-workflow__placement[data-system-workflow-placement-id="${selected.id}"]`).focus();
+      const pan = () => page.locator('main.system-workflow').evaluate(node => ({
+        x: parseFloat(node.style.getPropertyValue('--workbench-pan-x')) || 0,
+        y: parseFloat(node.style.getPropertyValue('--workbench-pan-y')) || 0,
+      }));
+      const beforePan = await pan();
+      const beforeNavigation = await page.evaluate(() => JSON.stringify(window.__imageTest.draft().grids));
+      const stage = await page.locator('.system-workflow__canvas').boundingBox();
       await page.keyboard.down('Space');
-      assert.equal(await page.locator('.system-workflow__canvas').getAttribute('data-space-navigation'), 'true', 'Space navigation still works with artwork focused');
+      await page.mouse.move(stage.x + stage.width / 2, stage.y + stage.height / 2); await page.mouse.down();
+      await page.mouse.move(stage.x + stage.width / 2 + 32, stage.y + stage.height / 2 + 18, { steps: 4 }); await page.mouse.up();
       await page.keyboard.up('Space');
+      assert.deepEqual(await pan(), { x: beforePan.x + 32, y: beforePan.y + 18 }, 'Space pans the Workbench with artwork focused');
+      assert.equal(await page.evaluate(() => JSON.stringify(window.__imageTest.draft().grids)), beforeNavigation, 'navigation preserves the artwork composition');
       await page.screenshot({ path: resolve(screenshotDir, `reopened-${width}.png`) });
       assert.deepEqual(errors, []);
       await page.close();

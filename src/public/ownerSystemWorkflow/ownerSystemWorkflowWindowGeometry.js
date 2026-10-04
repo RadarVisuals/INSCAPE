@@ -3,13 +3,15 @@ const finite = (value, fallback) => Number.isFinite(Number(value)) ? Number(valu
 export const WORKBENCH_RESIZE_EDGES = [['nw', 'top left'], ['n', 'top'], ['ne', 'top right'], ['e', 'right'],
   ['se', ''], ['s', 'bottom'], ['sw', 'bottom left'], ['w', 'left']];
 
-// Screen-sized targets may move inward at a viewport boundary; their marks
-// continue to identify the exact content edge. Offscreen edges stay offscreen.
+// Centre screen-sized targets on their visible marks. On tiny surfaces, leave
+// the middle available for movement while keeping the entire mark clickable.
+// Targets may move inward at a viewport boundary; offscreen edges stay offscreen.
 export function workbenchResizeControl(edge, screen, viewport) {
   const x = edge.includes('w') ? 0 : edge.includes('e') ? screen.width : screen.width / 2;
   const y = edge.includes('n') ? 0 : edge.includes('s') ? screen.height : screen.height / 2;
-  const outsideX = edge === 'w' ? 28 : edge === 'e' ? 0 : 14;
-  const outsideY = edge.includes('n') ? 28 : edge.includes('s') ? 0 : 14;
+  const inset = span => Math.min(14, Math.max(4, span / 4));
+  const outsideX = edge.includes('w') ? 28 - inset(screen.width) : edge.includes('e') ? inset(screen.width) : 14;
+  const outsideY = edge.includes('n') ? 28 - inset(screen.height) : edge.includes('s') ? inset(screen.height) : 14;
   const reachable = (point, outside, limit) => point < 0 || point > limit ? point - outside : Math.max(0, Math.min(limit - 28, point - outside));
   const left = reachable(screen.left + x, outsideX, viewport.width) - screen.left;
   const top = reachable(screen.top + y, outsideY, viewport.height) - screen.top;

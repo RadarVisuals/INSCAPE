@@ -15,6 +15,42 @@ for (const width of [1440, 390]) test(`Text inspector preserves editing, documen
     const tools = page.locator('.text-tools-window'), body = page.getByRole('textbox', { name: 'Article text', exact: true });
     const scope = name => tools.getByRole('group', { name: 'Formatting target' }).getByRole('button', { name, exact: true });
     const section = name => tools.getByRole('tab', { name, exact: true });
+    const originalEditor = await body.elementHandle();
+    const originalTexts = await page.evaluate(() => window.savedDraft().texts);
+    await mkdir('.browser-test-runtime', { recursive: true });
+    for (const theme of ['Carbon', 'Graphite', 'Slate', 'Ash', 'Mist', 'Paper']) {
+      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      await page.getByRole('button', { name: /^Menu theme:/ }).click();
+      await page.getByRole('option', { name: theme, exact: true }).click();
+      await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
+      await tools.waitFor();
+      const expected = await page.locator('main.system-workflow').evaluate(root => {
+        const probe = document.createElement('span');
+        probe.style.cssText = 'background:rgb(from var(--workflow-panel) r g b / 1);color:var(--workflow-ink);border:1px solid var(--workflow-border)';
+        root.append(probe);
+        const style = getComputedStyle(probe), colours = [style.backgroundColor, style.color, style.borderTopColor];
+        probe.remove(); return colours;
+      });
+      assert.deepEqual(await tools.evaluate(node => { const s = getComputedStyle(node); return [s.backgroundColor, s.color, s.borderTopColor]; }), expected, 'Text tools follow the selected system window theme');
+      assert.equal(await tools.evaluate(node => {
+        const context = document.createElement('canvas').getContext('2d');
+        context.fillStyle = getComputedStyle(node).backgroundColor; context.fillRect(0, 0, 1, 1);
+        return context.getImageData(0, 0, 1, 1).data[3];
+      }), 255, 'article content cannot show through the tool surface');
+      assert.equal(await body.evaluate((node, original) => node === original, originalEditor), true, 'theme changes preserve the editor');
+      assert.deepEqual(await page.evaluate(() => window.savedDraft().texts), originalTexts, 'system themes never author article colours or content');
+      await tools.screenshot({ path: `.browser-test-runtime/text-system-theme-${theme.toLowerCase()}-${width}.png` });
+      if (theme === 'Carbon' || theme === 'Paper') {
+        await tools.getByRole('button', { name: 'Focus writing', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'Focus writing', exact: true }); await dialog.waitFor();
+        assert.equal(await dialog.getAttribute('data-menu-surface'), theme.toLowerCase());
+        assert.deepEqual(await dialog.evaluate(node => { const s = getComputedStyle(node); return [s.backgroundColor, s.color]; }), expected.slice(0, 2), 'the portalled Focus controls retain the same system theme');
+        await dialog.getByRole('button', { name: 'Return to composition', exact: true }).focus();
+        await page.screenshot({ path: `.browser-test-runtime/text-system-focus-${theme.toLowerCase()}-${width}.png` });
+        await dialog.getByRole('button', { name: 'Return to composition', exact: true }).click();
+        await dialog.waitFor({ state: 'detached' });
+      }
+    }
     assert.equal(await tools.getByRole('combobox', { name: 'Follow Display', exact: true }).isVisible(), true);
     await body.fill('An illustrated article deserves careful typography.'); await body.press('Control+A');
     await tools.getByRole('button', { name: 'Bold', exact: true }).click();

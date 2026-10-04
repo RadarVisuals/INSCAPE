@@ -37,8 +37,11 @@ export function modulePositionMatch(rect, targets, gap = 0, previous = {}) {
 }
 
 export function gridEdgeMatch(axis, side, value, origin = 0, step = 24, previous = null) {
+  // Grid cells shrink with camera zoom. Retain some hysteresis, but release
+  // before the next cell so slow movement can reach every visible grid line.
+  const releaseDistance = Math.min(EDGE_RELEASE_DISTANCE, step * .75);
   const retained = previous?.kind === 'grid' && previous.side === side
-    && Math.abs(value - previous.value) <= EDGE_RELEASE_DISTANCE;
+    && Math.abs(value - previous.value) <= releaseDistance;
   return { axis, side, kind: 'grid', value: retained ? previous.value : origin + Math.round((value - origin) / step) * step };
 }
 

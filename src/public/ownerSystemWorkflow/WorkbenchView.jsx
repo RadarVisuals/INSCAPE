@@ -3,8 +3,10 @@ import { clampWorkbenchMove, identityWorkbenchTransform, scaleWorkbenchTransform
 import { WorkbenchCameraProvider, useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import './workbenchView.css';
 import { useWorkbenchMovementSnap } from './WorkbenchPlacement.jsx';
-import useWorkbenchPan, { isWorkbenchBackground } from './useWorkbenchPan.js';
+import useWorkbenchPan from './useWorkbenchPan.js';
 import { projectWorkbenchBounds } from './workbenchSpace.js';
+import { WORKBENCH_REFERENCE_FRAME, fitWorkbenchReferenceFrame, projectWorkbenchReferenceFrame } from './workbenchReferenceFrame.js';
+import WorkbenchReferenceFrameSize from './WorkbenchReferenceFrameSize.jsx';
 const GridSeamProbe = import.meta.env.DEV ? lazy(() => import('./GridSeamProbe.jsx')) : null;
 
 const WorkbenchView = createContext({ scale: 1, transforms: {}, entries: new Map() });
@@ -58,7 +60,8 @@ export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTar
   currentFrame.move = onPosition;
   const currentResize = useRef(resizeTarget); currentResize.current = resizeTarget;
   const savedLayout = resizeTarget?.store?.getSnapshot().workbench;
-  const savedEntry = resizeTarget?.layoutKey === 'display' ? savedLayout?.display
+  const savedEntry = resizeTarget?.parentTextId ? savedLayout?.texts?.find(item => item.id === resizeTarget.parentTextId)?.frames?.find(item => item.id === id)
+    : resizeTarget?.layoutKey === 'display' ? savedLayout?.display
     : savedLayout?.[resizeTarget?.layoutKey]?.find(item => item.id === id);
   const savedFrame = savedEntry?.window || savedEntry?.position;
   const savedKey = JSON.stringify(savedFrame ?? null);
@@ -89,15 +92,19 @@ export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTar
   useLayoutEffect(() => { if (id && enabled) changed?.(); }, [id, enabled, frame?.left, frame?.top, frame?.width, frame?.height, changed]);
 }
 
-export function WorkbenchViewControls({ hostRef, disabled = false }) {
+export function WorkbenchViewControls({ hostRef, disabled = false, referenceFrameVisible = false, onReferenceFrameVisibleChange,
+  referenceFrameSize, onReferenceFrameSizeChange }) {
   const { locked } = useWorkbenchCamera();
-  const pan = useWorkbenchPan(hostRef, disabled || locked);
   const view = useWorkbenchView();
   const snapMovement = useWorkbenchMovementSnap();
   const { scale, setScale, transforms, setTransforms, selection = [], setSelection, entries } = view;
   const revision = useSyncExternalStore(view.subscribe, view.snapshot);
   const latest = useRef(view); latest.current = view;
   const gesture = useRef(null);
+  const controlsRef = useRef(null);
+  const referenceFrameEnabled = typeof onReferenceFrameVisibleChange === 'function';
+  const referenceFrame = { ...WORKBENCH_REFERENCE_FRAME, ...referenceFrameSize };
+  const frameDimensions = referenceFrame.width + ' × ' + referenceFrame.height;
   const [marquee, setMarquee] = useState(null), [bounds, setBounds] = useState(null);
   const selected = selection.filter(id => entries.has(id));
   const cancelGesture = useCallback((restore = true) => {
@@ -116,6 +123,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
     snapMovement.finish();
     setMarquee(null);
   }, []);
+  const pan = useWorkbenchPan(hostRef, disabled || locked, cancelGesture);
   useEffect(() => () => cancelGesture(false), [cancelGesture]);
   useLayoutEffect(() => { if (disabled || locked) cancelGesture(); }, [disabled, locked, cancelGesture]);
   useLayoutEffect(() => {
@@ -139,6 +147,17 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
     // Keep the world point at the centre of the visible canvas in place.
     // Module geometry and temporary group transforms are independent of zoom.
     zoom({ x: rect.left + rect.width / 2, y: rect.top + (rect.height - dock) / 2 }, 1 / latest.current.scale);
+    host.focus({ preventScroll: true });
+  };
+  const fitReferenceFrame = () => {
+    const host = hostRef.current;
+    if (!host || locked || gesture.current || pan.active.current) return;
+    const dock = parseFloat(getComputedStyle(host).getPropertyValue('--workflow-dock-height')) || 0;
+    const next = fitWorkbenchReferenceFrame({ width: host.clientWidth,
+      height: host.clientHeight - dock - (controlsRef.current?.offsetHeight || 32) - 16 }, referenceFrame);
+    if (!next) return;
+    onReferenceFrameVisibleChange(true);
+    latest.current.setScale(next.scale); pan.update(next.offset);
     host.focus({ preventScroll: true });
   };
   const install = (active, event) => {
@@ -326,16 +345,31 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
   useEffect(() => {
     const host = hostRef.current;
     if (!host || disabled || !setScale) return;
+    // Native colour pickers can leave WheelEvent.buttons set after release;
+    // Chromium also reports zero during real drags. Only DOM pointer presses
+    // in this Workbench may block its camera, never the wheel's button mask.
+    const pressedPointers = new Set();
+    const press = event => {
+      pressedPointers.delete(event.pointerId);
+      if (host.contains(event.target)) pressedPointers.add(event.pointerId);
+    };
+    const release = event => pressedPointers.delete(event.pointerId);
+    const move = event => { if (!event.buttons) release(event); };
+    const clear = () => pressedPointers.clear();
+    const hidden = () => { if (document.hidden) clear(); };
     const wheel = event => {
-      // WheelEvent.buttons is zero even during a real drag in Chromium. Only
-      // recover here if the gesture also no longer owns pointer capture.
-      if (!event.buttons && gesture.current && !host.hasPointerCapture(gesture.current.pointerId)) cancelGesture();
+      // Capture remains authoritative for a live selection. A missed release
+      // without capture must not strand either the gesture or its press.
+      if (gesture.current && !host.hasPointerCapture(gesture.current.pointerId)) {
+        pressedPointers.delete(gesture.current.pointerId); cancelGesture();
+      }
       if (locked) {
         if (event.ctrlKey || !hasNativeWheelScroll(event.target, host, event.deltaX, event.deltaY)) {
           event.preventDefault(); event.stopPropagation();
         }
         return;
       }
+      if (event.target.closest?.('.workbench-reference-size')) { event.preventDefault(); return; }
       if (!event.ctrlKey && !event.metaKey && !event.target.closest?.('[data-immersive]')) {
         const unitX = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host.clientWidth : 1;
         const unitY = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host.clientHeight : 1;
@@ -343,12 +377,12 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
         const dy = event.shiftKey ? 0 : event.deltaY * unitY;
         if (!dx && !dy || hasNativeWheelScroll(event.target, host, dx, dy)) return;
         event.preventDefault(); event.stopPropagation();
-        if (!gesture.current && !pan.active.current && !event.buttons) pan.update({ x: pan.current.current.x - dx, y: pan.current.current.y - dy });
+        if (!gesture.current && !pan.active.current && !pressedPointers.size) pan.update({ x: pan.current.current.x - dx, y: pan.current.current.y - dy });
         return;
       }
       if (!event.ctrlKey || !event.deltaY || event.target.closest?.('[data-immersive]')) return;
       event.preventDefault(); event.stopPropagation();
-      if (gesture.current || event.buttons) return;
+      if (gesture.current || pressedPointers.size) return;
       const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host.clientHeight : 1);
       zoom({ x: event.clientX, y: event.clientY }, Math.exp(-Math.max(-120, Math.min(120, delta)) * .003));
     };
@@ -395,7 +429,6 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
       if (locked) return;
       if (event.button === 0 && gesture.current?.pointerId === event.pointerId) cancelGesture();
       if (event.button !== 0 || gesture.current || event.target.closest?.('[data-immersive]')) return;
-      if (pan.begin(event)) return;
       // Resolve Shift-click through the selection overlay to the module's own
       // selectable surface: a window header or Image's artwork surface.
       const target = event.shiftKey && event.target.matches?.('.workbench-selection')
@@ -433,13 +466,31 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
       }, finish: pointer => { if (pointer.pointerId === event.pointerId) cancelGesture(false); }, cancel: () => cancelGesture() };
       setSelection(previous); install(active, event);
     };
+    globalThis.addEventListener('pointerdown', press, true);
+    globalThis.addEventListener('pointermove', move, true);
+    for (const name of ['pointerup', 'pointercancel', 'click']) globalThis.addEventListener(name, release, true);
+    globalThis.addEventListener('blur', clear);
+    document.addEventListener('visibilitychange', hidden);
     host.addEventListener('wheel', wheel, { passive: false, capture: true });
     host.addEventListener('keydown', key, true);
     host.addEventListener('pointerdown', pointer, true);
-    return () => { host.removeEventListener('wheel', wheel, true); host.removeEventListener('keydown', key, true); host.removeEventListener('pointerdown', pointer, true); };
+    return () => {
+      clear();
+      globalThis.removeEventListener('pointerdown', press, true);
+      globalThis.removeEventListener('pointermove', move, true);
+      for (const name of ['pointerup', 'pointercancel', 'click']) globalThis.removeEventListener(name, release, true);
+      globalThis.removeEventListener('blur', clear);
+      document.removeEventListener('visibilitychange', hidden);
+      host.removeEventListener('wheel', wheel, true); host.removeEventListener('keydown', key, true); host.removeEventListener('pointerdown', pointer, true);
+    };
   }, [hostRef, disabled, locked, setScale, cancelGesture, setSelection, entries]);
   if (disabled) return null;
   return <>
+    {referenceFrameEnabled && referenceFrameVisible && !locked && <div className="workbench-reference-guide" aria-hidden="true">
+      <div className="workbench-reference-frame" style={projectWorkbenchReferenceFrame(scale, pan.offset, globalThis.devicePixelRatio || 1, referenceFrame)}>
+        <span className="workbench-reference-frame__label">Reference · {frameDimensions}</span>
+      </div>
+    </div>}
     {marquee && <div className="workbench-marquee" style={marquee} />}
     {!locked && bounds && selected.length > 0 && <div className="workbench-selection" style={bounds} role="group" tabIndex={0}
       aria-label={`${selected.length} selected Workbench modules`} aria-description="Drag to move the selection. Arrow keys move it; Shift moves further. Escape clears selection."
@@ -457,7 +508,13 @@ export function WorkbenchViewControls({ hostRef, disabled = false }) {
         aria-label={`Scale selected modules from ${corner}`} onPointerDown={event => beginResize(event, corner)}
         onKeyDown={event => resizeByKey(event, corner)} />)}
     </div>}
-    <div className="workbench-view-controls" role="group" aria-label="Workbench zoom">
+    <div ref={controlsRef} className="workbench-view-controls" role="group" aria-label="Workbench zoom">
+      {referenceFrameEnabled && <>
+        <button type="button" disabled={locked} aria-label="Show reference frame" aria-pressed={referenceFrameVisible}
+          title={'Show or hide the ' + frameDimensions + ' composition guide'} onClick={() => onReferenceFrameVisibleChange(!referenceFrameVisible)}>Frame</button>
+        {onReferenceFrameSizeChange && <WorkbenchReferenceFrameSize size={referenceFrame} disabled={locked} onChange={onReferenceFrameSizeChange} />}
+        <button type="button" disabled={locked} title={'Centre the ' + frameDimensions + ' reference frame in your view'} onClick={fitReferenceFrame}>Fit frame</button>
+      </>}
       <button type="button" disabled={locked} aria-label="Reset Workbench position" title="Return to the starting view" onClick={() => { pan.reset(); hostRef.current?.focus({ preventScroll: true }); }}>Reset view</button>
       {selected.length > 0 && <span>{selected.length} selected</span>}
       <button type="button" disabled={locked} aria-label="Reset Workbench zoom to 100%" title="Zoom to 100% around the current view (Ctrl+0)" onClick={resetZoom}>{Math.round(scale * 100)}%</button>

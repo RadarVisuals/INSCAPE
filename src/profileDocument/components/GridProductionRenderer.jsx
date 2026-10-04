@@ -89,6 +89,11 @@ function GridPlacement({ field, imageLoading, layerRank, onMediaState, onPlaceme
   return <figure aria-label={media.label} className="lattice-production-placement"
     data-media-state={failed ? media.status === 'ready' ? 'failed' : media.status : loaded ? 'ready' : 'loading'}
     data-placement-id={placement.id} data-placement-activatable={activatable || undefined}
+    data-artwork-context-id={loaded && !viewerSourceHidden ? `${gridId}:${placement.id}:${placement.asset.stableAssetId}` : undefined}
+    data-artwork-context-title={media.label || 'Untitled artwork'}
+    data-artwork-context-src={media.src}
+    data-artwork-context-asset={placement.asset.stableAssetId}
+    data-artwork-context-standard={placement.asset.tokenStandard}
     data-viewer-source-hidden={viewerSourceHidden || undefined}
     style={{ ...rectangleStyle(artwork.footprint), zIndex: layerRank }} onClick={event => event.detail === 0 ? activate(event) : onPointerActivate(event)}
     onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); activate(event); } }} tabIndex={activatable ? 0 : -1}>

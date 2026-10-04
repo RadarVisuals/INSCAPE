@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { addKeeperDock, saveKeeperDock } from './keeperSession.js';
-import { validKeeperDocks, MAX_KEEPER_DOCKS, keeperSize } from './keeper.js';
+import { validKeeperDocks, MAX_KEEPER_DOCKS, keeperSize, keeperMovement } from './keeper.js';
+import { KEEPER_SWIM_DEFAULTS, keeperSwim } from './keeperSwim.js';
 import { createSystemWorkflowDraftStore } from '../systemWorkflow/systemWorkflowDraftStore.js';
 import { validateSystemWorkflowDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
 import { buildProfileDocumentV9, countProfileDocumentV9Assets } from '../profileDocument/domain/profileDocumentV9Builder.js';
@@ -21,6 +22,55 @@ function fixture() {
   return { store: createSystemWorkflowDraftStore({ profileAddress: profile, storage }), storage, fail: value => { fail = value; } };
 }
 const build = draft => buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: draft, assetRecords: assets });
+
+test('Swim tuning is per Keeper, optional for old documents, undoable and retained through reload, publication and mode switches', () => {
+  const { store, storage } = fixture(); addKeeperDock(store, profile); addKeeperDock(store, profile);
+  assert.ok(saveKeeperDock(store, profile, store.getDraft().keeperDocks[0], { movement: 'swim', visibility: 'PUBLIC' }));
+  const old = store.getDraft(), oldDocument = build(old);
+  assert.ok(validateProfileDocumentV9(oldDocument).valid);
+  assert.equal(Object.hasOwn(oldDocument.keeperDocks[0], 'swim'), false);
+  assert.deepEqual(keeperSwim(reconcileSystemWorkflowDraftFromProfileDocumentV9(oldDocument).keeperDocks[0]), KEEPER_SWIM_DEFAULTS);
+  const swim = { speed: 650, gatherSeconds: .2, spreadSeconds: .3, turnSeconds: .25, staggerSeconds: .1 };
+  assert.ok(saveKeeperDock(store, profile, old.keeperDocks[0], { swim }));
+  assert.deepEqual(keeperSwim(store.getDraft().keeperDocks[1]), KEEPER_SWIM_DEFAULTS);
+  assert.equal(Object.hasOwn(store.getDraft().keeperDocks[1], 'swim'), false);
+  assert.ok(store.undo()); assert.deepEqual(store.getDraft(), old); assert.ok(store.redo());
+  const reopened = createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft();
+  assert.deepEqual(reopened.keeperDocks[0].swim, swim);
+  const document = build(reopened); assert.ok(validateProfileDocumentV9(document).valid);
+  assert.deepEqual(document.keeperDocks[0].swim, swim);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(document).keeperDocks[0].swim, swim);
+  for (const invalid of [null, {}, [], { ...swim, speed: '650' }, { ...swim, speed: 901 }, { ...swim, speed: 79 },
+    { ...swim, gatherSeconds: 0 }, { ...swim, spreadSeconds: Infinity }, { ...swim, turnSeconds: NaN },
+    { ...swim, staggerSeconds: -.01 }, { ...swim, staggerSeconds: .21 }, { ...swim, unexpected: true }]) {
+    assert.equal(saveKeeperDock(store, profile, store.getDraft().keeperDocks[0], { swim: invalid }), false);
+    const malformed = structuredClone(document); malformed.keeperDocks[0].swim = invalid;
+    assert.equal(validateProfileDocumentV9(malformed).valid, false);
+  }
+  assert.ok(saveKeeperDock(store, profile, store.getDraft().keeperDocks[0], { movement: 'flip' }));
+  assert.deepEqual(store.getDraft().keeperDocks[0].swim, swim);
+  assert.ok(saveKeeperDock(store, profile, store.getDraft().keeperDocks[0], { movement: 'swim', swim: { ...KEEPER_SWIM_DEFAULTS } }));
+  assert.ok(store.undo()); assert.deepEqual(store.getDraft().keeperDocks[0].swim, swim);
+});
+
+test('Movement is per Keeper, preserves old flip records, and survives undo, reload and publication', () => {
+  const { store, storage } = fixture(); addKeeperDock(store, profile); addKeeperDock(store, profile);
+  const old = store.getDraft();
+  assert.equal(keeperMovement(old.keeperDocks[0]), 'flip');
+  assert.equal(Object.hasOwn(old.keeperDocks[0], 'movement'), false);
+  assert.ok(saveKeeperDock(store, profile, old.keeperDocks[0], { movement: 'swim', visibility: 'PUBLIC' }));
+  const swimming = store.getDraft();
+  assert.equal(keeperMovement(swimming.keeperDocks[1]), 'flip');
+  assert.ok(store.undo()); assert.deepEqual(store.getDraft(), old); assert.ok(store.redo());
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), swimming);
+  const document = build(swimming); assert.ok(validateProfileDocumentV9(document).valid);
+  assert.equal(document.keeperDocks[0].movement, 'swim');
+  assert.equal(reconcileSystemWorkflowDraftFromProfileDocumentV9(document).keeperDocks[0].movement, 'swim');
+  for (const movement of [null, '', 'rotate', {}, 1])
+    assert.equal(saveKeeperDock(store, profile, store.getDraft().keeperDocks[0], { movement }), false);
+  assert.ok(saveKeeperDock(store, profile, store.getDraft().keeperDocks[0], { movement: 'flip' }));
+  assert.equal(keeperMovement(store.getDraft().keeperDocks[0]), 'flip');
+});
 
 test('Keeper size survives edit, undo, reload and publication; old records keep their original 128px size', () => {
   const { store, storage } = fixture(); addKeeperDock(store, profile);

@@ -57,6 +57,23 @@ export function selectedBlockSpacing(editor, name) {
     hasOverride: [...values].some(value => value != null), available: values.size > 0 };
 }
 
+export function captureArticleSpacing(editor, name) {
+  const { from, to, empty, $from } = editor.state.selection, blocks = [];
+  if (empty && isTextBlock($from.parent)) blocks.push({ position: $from.before(), value: $from.parent.attrs[name] });
+  else if (!empty) editor.state.doc.nodesBetween(from, to, (node, position) => {
+    if (isTextBlock(node)) blocks.push({ position, value: node.attrs[name] });
+  });
+  return () => {
+    if (editor.isDestroyed || editor.state.selection.from !== from || editor.state.selection.to !== to) return;
+    const tr = closeHistory(editor.state.tr);
+    for (const { position, value } of blocks) {
+      const node = tr.doc.nodeAt(position);
+      if (node && isTextBlock(node)) tr.setNodeMarkup(position, undefined, { ...node.attrs, [name]: value });
+    }
+    editor.view.dispatch(tr);
+  };
+}
+
 export const ArticleSpacing = Extension.create({
   name: 'articleSpacing',
   addGlobalAttributes() {

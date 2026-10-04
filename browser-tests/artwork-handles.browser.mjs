@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
+import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5297';
 test('full canvas artwork handles beat window resizing and stay reachable beyond the canvas', { timeout: 120_000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
@@ -14,7 +15,7 @@ test('full canvas artwork handles beat window resizing and stay reachable beyond
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', async route => {
       const path = new URL(route.request().url()).pathname.split('/public/')[1];
-      await route.fulfill({ response: await route.fetch({ url: `${origin}/${path}` }) });
+      await route.fulfill({ path: `public/${path}` });
     });
     await page.route(`${origin}/__display_text__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
     const mount = () => page.evaluate(async () => {
@@ -105,13 +106,24 @@ test('full canvas artwork handles beat window resizing and stay reachable beyond
     assert.deepEqual(await page.evaluate(() => window.readDisplayDraft().grids[0].placements[0]), sized);
     await page.screenshot({ path: join(shots, 'wide.png') });
     await page.setViewportSize({ width: 390, height: 844 });
+    // Workbench windows retain their world position on viewport resize; zoom
+    // out explicitly so the authored Display is within the narrow test view.
+    await setWorkbenchZoom(page, .25);
+    await page.getByRole('button', { name: 'Close Layers', exact: true }).click();
     await page.screenshot({ path: join(shots, 'narrow.png') });
     for (const corner of ['nw', 'ne', 'se', 'sw', 'n', 'e', 's', 'w']) {
-      const h = await page.getByRole('button', { name: 'Resize selection from ' + corner, exact: true }).boundingBox();
+      const grip = page.getByRole('button', { name: 'Resize selection from ' + corner, exact: true });
+      const h = await grip.boundingBox();
       assert.ok(h.x >= 0 && h.x + h.width <= 391);
+      assert.ok(Math.abs(h.width - 28) < .1, 'artwork grips retain their screen size at 25%');
+      assert.ok(await grip.evaluate(node => { const b = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)); }), `artwork ${corner} is grabbable at its visible mark`);
+      await grip.focus(); await page.keyboard.press('Shift');
+      assert.equal(await grip.evaluate(node => getComputedStyle(node).outlineStyle), 'none');
+      assert.equal(await grip.evaluate(node => getComputedStyle(node, '::after').backgroundColor), 'rgb(255, 255, 255)');
     }
     assert.deepEqual(errors, []);
-    await handle.focus(); await page.keyboard.press('Escape');
+    await artwork.focus(); await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.system-workflow__selection-chrome[data-selected]'));
     assert.equal(await page.getByRole('button', { name: 'Resize Display Module from se', exact: true }).evaluate(node => getComputedStyle(node).pointerEvents), 'auto');
     const authoredImage = await artwork.locator('img').last().boundingBox();
     const authoredFrame = await artwork.boundingBox();

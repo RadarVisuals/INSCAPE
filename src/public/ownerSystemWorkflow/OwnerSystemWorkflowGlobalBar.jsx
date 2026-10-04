@@ -2,11 +2,11 @@ import { Bell, CloudUpload, Compass, Eye, FileText, Grid3X3, Library, Settings2,
 
 import { SharedDisplayToolsLauncher } from './SharedDisplayTools.jsx';
 
-export default function OwnerSystemWorkflowGlobalBar({ activePanel, onOpen,
+export default function OwnerSystemWorkflowGlobalBar({ openPanels = [], onOpen,
   onPreview, onPublish, menuSurface, onOpenTools, publicationOpen = false, unreadCount }) {
   const panelButton = (id, label, Icon, extra = null) => <button data-system-workflow-panel-trigger aria-label={label}
-    aria-expanded={['profile', 'activity', 'grids', 'settings'].includes(id) ? activePanel === id : undefined}
-    aria-pressed={['discover', 'library'].includes(id) ? activePanel === id : undefined}
+    aria-expanded={['profile', 'activity', 'grids', 'settings'].includes(id) ? openPanels.includes(id) : undefined}
+    aria-pressed={['discover', 'library'].includes(id) ? openPanels.includes(id) : undefined}
     className={id === 'activity' ? 'system-workflow__activity-trigger' : undefined}
     onClick={(event) => onOpen(id, event.currentTarget)} type="button"><Icon size={14} /><span>{label}</span>{extra}</button>;
   return <header className="system-workflow__global-bar">
@@ -22,9 +22,9 @@ export default function OwnerSystemWorkflowGlobalBar({ activePanel, onOpen,
       <button aria-expanded={publicationOpen} aria-label="Publish" onClick={onPublish} type="button"><CloudUpload size={14} /><span>Publish</span></button>
     </nav>
     <div aria-label="Workspace tools" className="system-workflow__dock-tools" role="toolbar">
-      <button data-system-workflow-panel-trigger aria-expanded={activePanel === 'docs'} aria-label="Docs"
+      <button data-system-workflow-panel-trigger aria-expanded={openPanels.includes('docs')} aria-label="Docs"
         onClick={(event) => onOpen('docs', event.currentTarget)} title="Docs" type="button"><FileText size={14} /></button>
-      <button data-system-workflow-panel-trigger aria-expanded={activePanel === 'settings'} aria-label="Settings"
+      <button data-system-workflow-panel-trigger aria-expanded={openPanels.includes('settings')} aria-label="Settings"
         onClick={(event) => onOpen('settings', event.currentTarget)} title="Settings" type="button"><Settings2 size={14} /></button>
     </div>
   </header>;

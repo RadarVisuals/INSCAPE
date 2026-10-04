@@ -26,7 +26,7 @@ test('Workbench preferences remain profile-scoped local editor state', () => {
   }, storage);
 
   assert.deepEqual(saved, {
-    edgeSnap: true, moduleGap: 0, chromeNoise: false, compositionLocked: true, dockVisible: true, gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false, surfaceId: 'carbon',
+    edgeSnap: true, moduleGap: 0, chromeNoise: false, compositionLocked: true, dockVisible: true, referenceFrameVisible: true, referenceFrameSize: { width: 1440, height: 900 }, gridColor: '#aabbcc', gridMode: 'DOTS', shortcutSnap: false, surfaceId: 'carbon',
   });
   assert.deepEqual(loadWorkbenchPreferences(profile, 'paper', storage), saved);
   assert.equal(storage.values.size, 1);
@@ -44,6 +44,42 @@ test('old preferences show the dock; hiding it persists only for that profile', 
   saveWorkbenchPreferences('0xabc', { ...loaded, dockVisible: false }, storage);
   assert.equal(loadWorkbenchPreferences('0xabc', 'paper', storage).dockVisible, false);
   assert.equal(loadWorkbenchPreferences('0xdef', 'paper', storage).dockVisible, true);
+});
+
+test('reference guide visibility is an optional profile preference and preserves old settings', () => {
+  const storage = memoryStorage(), key = workbenchPreferencesStorageKey('0xabc');
+  const legacy = JSON.stringify({ surfaceId: 'carbon', shortcutSnap: false, dockVisible: false });
+  storage.setItem(key, legacy);
+  const loaded = loadWorkbenchPreferences('0xabc', 'paper', storage);
+  assert.equal(loaded.referenceFrameVisible, true);
+  assert.equal(storage.getItem(key), legacy, 'reading does not rewrite existing preferences');
+  saveWorkbenchPreferences('0xabc', { ...loaded, referenceFrameVisible: false }, storage);
+  const restored = loadWorkbenchPreferences('0xabc', 'paper', storage);
+  assert.equal(restored.referenceFrameVisible, false);
+  assert.equal(restored.surfaceId, 'carbon');
+  assert.equal(restored.shortcutSnap, false);
+  assert.equal(restored.dockVisible, false);
+  assert.equal(loadWorkbenchPreferences('0xdef', 'paper', storage).referenceFrameVisible, true);
+  assert.equal(normalizeWorkbenchPreferences({ referenceFrameVisible: 'false' }).referenceFrameVisible, true);
+});
+
+test('frame resolution persists for one profile and old or malformed values retain safe dimensions', () => {
+  const storage = memoryStorage(), key = workbenchPreferencesStorageKey('0xabc');
+  const legacy = JSON.stringify({ referenceFrameVisible: false, shortcutSnap: false });
+  storage.setItem(key, legacy);
+  const loaded = loadWorkbenchPreferences('0xabc', 'paper', storage);
+  assert.deepEqual(loaded.referenceFrameSize, { width: 1440, height: 900 });
+  assert.equal(storage.getItem(key), legacy);
+  saveWorkbenchPreferences('0xabc', { ...loaded, referenceFrameSize: { width: 1080, height: 1920 } }, storage);
+  const restored = loadWorkbenchPreferences('0xabc', 'paper', storage);
+  assert.deepEqual(restored.referenceFrameSize, { width: 1080, height: 1920 });
+  assert.equal(restored.referenceFrameVisible, false);
+  assert.equal(restored.shortcutSnap, false);
+  assert.deepEqual(loadWorkbenchPreferences('0xdef', 'paper', storage).referenceFrameSize, { width: 1440, height: 900 });
+  for (const width of [0, -1, 1.5, 7945, Infinity, NaN, '1920', null]) {
+    assert.deepEqual(normalizeWorkbenchPreferences({ referenceFrameSize: { width, height: 1080 } }).referenceFrameSize,
+      { width: 1440, height: 1080 });
+  }
 });
 
 test('Workbench preferences reject malformed local values and inherit the current Stage surface once', () => {

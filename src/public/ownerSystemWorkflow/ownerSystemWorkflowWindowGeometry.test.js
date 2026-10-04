@@ -5,7 +5,21 @@ import {
   clampOwnerSystemWorkflowWindowPosition,
   presentationBoardAdjacentWindowGeometry,
   resizeWorkbenchWindow,
+  workbenchResizeControl,
 } from './ownerSystemWorkflowWindowGeometry.js';
+
+test('all visible resize marks are inside their pointer targets, centred at normal sizes', () => {
+  const viewport = { width: 1440, height: 900 };
+  for (const size of [8, 32, 80, 240]) {
+    const screen = { left: 120, top: 120, width: size, height: size };
+    for (const edge of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) {
+      const control = workbenchResizeControl(edge, screen, viewport);
+      const x = parseFloat(control['--resize-mark-x']), y = parseFloat(control['--resize-mark-y']);
+      assert.ok(x >= 0 && x + 8 <= 28 && y >= 0 && y + 8 <= 28, `${edge}: ${size}px visible mark falls outside click target`);
+      if (size >= 56) assert.deepEqual([x, y], [10, 10], `${edge}: click target is centred on the visible mark`);
+    }
+  }
+});
 
 test('each resize edge preserves its opposite edge and enforces minimum dimensions', () => {
   const frame = { left: 120, top: 180, width: 360, height: 420 };

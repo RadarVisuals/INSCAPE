@@ -58,11 +58,12 @@ function createClient(primary, fallbacks) {
   const transports = urls.map((url) => http(url, { timeout: 20_000, retryCount: 2, retryDelay: 750 }));
   return createPublicClient({ chain: lukso, transport: transports.length > 1 ? fallback(transports) : transports[0] });
 }
-async function fetchDocument(pointer, { fetchImpl, ipfsGateway, signal, metadataResponseMs }) {
+async function fetchDocument(pointer, { fetchImpl, ipfsGateway, signal, metadataResponseMs, strict }) {
   const uri = pointer?.url;
   if (/^data:/iu.test(uri || '')) return decodeVerifiedOnchainJsonDataUri(uri, pointer.verification);
   const url = resolveContentUrl(uri, { ipfsGateway }); if (!url) return null;
-  return fetchMetadataJson(url, { fetchImpl, signal, timeoutMs: metadataResponseMs });
+  return fetchMetadataJson(url, { fetchImpl, signal, timeoutMs: metadataResponseMs,
+    verification: strict ? pointer.verification : null });
 }
 async function mapConcurrent(items, mapper, signal) {
   const results = new Array(items.length); let cursor = 0;
@@ -84,7 +85,7 @@ export function createLsp8CollectionMetadataResolver({
 } = {}) {
   if (typeof fetchImpl !== 'function') throw new TypeError('fetch is required');
   const publicClient = client || createClient(rpcUrl, rpcFallbackUrls); const contexts = new Map();
-  return { source: 'DIRECT LUKSO RPC', async resolve(contractAddress, tokens, { signal } = {}) {
+  async function resolve(contractAddress, tokens, { signal, strict = false, includeAssets = false } = {}) {
     throwIfAborted(signal);
     const contract = normalizeProfileAddress(contractAddress);
     const candidates = (Array.isArray(tokens) ? tokens : []).filter((token) => /^0x[0-9a-f]{64}$/iu.test(token?.tokenId));
@@ -101,24 +102,26 @@ export function createLsp8CollectionMetadataResolver({
         publicClient.readContract({ address, abi: ABI, functionName: 'getData', args: [BASE_URI_KEY] }).catch(missing),
       ]).then(([format, base]) => {
         context.expiresAt = failed ? 0 : now() + contextTtlMs;
-        return { format: decodeNumber(format), baseUri: decodeUri(base) };
+        return { format: decodeNumber(format), baseUri: decodeUri(base), failed };
       });
       contexts.set(contract, context);
       while (contexts.size > 128) contexts.delete(contexts.keys().next().value);
     }
-    const { format, baseUri } = await context.promise; throwIfAborted(signal);
+    const { format, baseUri, failed } = await context.promise; throwIfAborted(signal);
     const outcomes = await mapConcurrent(candidates, async (token) => {
       const tokenId = token.tokenId.toLowerCase(); const address = getAddress(contract);
+      let directError;
       const direct = await publicClient.readContract({ address, abi: ABI, functionName: 'getDataForTokenId',
-        args: [tokenId, METADATA_KEY] }).catch(() => null);
+        args: [tokenId, METADATA_KEY] }).catch(error => { directError = error; return null; });
+      throwIfAborted(signal);
       let pointer = decodePointer(direct); let source = pointer ? 'LSP4MetadataForTokenId' : 'LSP8TokenMetadataBaseURI';
       let tokenFormat = format; let tokenBaseUri = baseUri;
       if (!pointer && format >= 100) {
         const [tokenFormatValue, tokenBaseValue] = await Promise.all([
           publicClient.readContract({ address, abi: ABI, functionName: 'getDataForTokenId',
-            args: [tokenId, TOKEN_ID_FORMAT_KEY] }).catch(() => null),
+            args: [tokenId, TOKEN_ID_FORMAT_KEY] }).catch(error => { if (strict) throw error; return null; }),
           publicClient.readContract({ address, abi: ABI, functionName: 'getDataForTokenId',
-            args: [tokenId, BASE_URI_KEY] }).catch(() => null),
+            args: [tokenId, BASE_URI_KEY] }).catch(error => { if (strict) throw error; return null; }),
         ]);
         tokenFormat = decodeNumber(tokenFormatValue) ?? format - 100;
         const tokenSpecificBaseUri = decodeUri(tokenBaseValue);
@@ -128,16 +131,35 @@ export function createLsp8CollectionMetadataResolver({
           : 'LSP8TokenMetadataBaseURI';
       }
       if (!pointer && tokenBaseUri) pointer = { url: `${tokenBaseUri}${decodeTokenId(tokenId, tokenFormat)}`, verification: null };
-      const document = pointer ? await fetchDocument(pointer, { fetchImpl, ipfsGateway, signal, metadataResponseMs }) : null;
+      if (strict && !pointer && (directError || failed || direct && direct !== '0x'))
+        throw new Error('Token metadata could not be read.');
+      throwIfAborted(signal);
+      const document = pointer ? await fetchDocument(pointer, { fetchImpl, ipfsGateway, signal, metadataResponseMs, strict }) : null;
+      if (strict && pointer && !document) throw new Error('Token metadata is unavailable or invalid.');
       if (!document) return null;
       const metadata = metadataRoot(document);
+      if (strict && (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)
+        || metadata.assets != null && !Array.isArray(metadata.assets))) throw new Error('Token metadata has invalid assets.');
+      if (includeAssets && metadata.assets?.length > 128) throw new Error('Token metadata has too many attachments.');
       return { tokenId, name: metadata.name || metadata.title || null, description: metadata.description || '',
         images: metadataImages(document), attributes: metadataAttributes(document),
+        ...(includeAssets ? { assets: Array.isArray(metadata.assets) ? metadata.assets.slice(0, 128).map(asset => ({
+          url: asset?.url, fileType: asset?.fileType, verification: asset?.verification,
+        })) : [] } : {}),
         metadataSource: `${source} (DIRECT LUKSO RPC)`, metadataResolved: true };
     }, signal);
     throwIfAborted(signal);
+    if (strict && outcomes.some(outcome => outcome?.error)) throw outcomes.find(outcome => outcome?.error).error;
     return new Map(outcomes.filter((outcome) => outcome && !outcome.error).map((outcome) => [outcome.tokenId, outcome]));
-  } };
+  }
+  return { source: 'DIRECT LUKSO RPC', resolve,
+    async resolveAttachments(contract, tokenId, { signal } = {}) {
+      if (!normalizeProfileAddress(contract) || !/^0x[0-9a-f]{64}$/iu.test(tokenId || ''))
+        throw new Error('Token attachments require a contract and complete bytes32 token ID.');
+      const results = await resolve(contract, [{ tokenId }], { signal, strict: true, includeAssets: true });
+      return results.get(tokenId.toLowerCase())?.assets ?? [];
+    },
+  };
 }
 
 export const lsp8CollectionMetadataResolver = createLsp8CollectionMetadataResolver();

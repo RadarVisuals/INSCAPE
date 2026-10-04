@@ -10,7 +10,7 @@ const OwnerSystemWorkflowActivity = lazy(() => import('./OwnerSystemWorkflowActi
 
 function PanelPresence({ children, id, panels, retained = false }) {
   const state = panels.presence[id];
-  return <div aria-hidden={!state.present || undefined} className="system-workflow__panel-presence" data-panel-phase={state.phase} data-system-workflow-panel
+  return <div aria-hidden={!state.present || undefined} className="system-workflow__panel-presence" data-panel-phase={state.phase} data-system-workflow-panel={id}
     hidden={retained && !state.present} inert={retained && !state.present ? '' : undefined}
     onTransitionEnd={(event) => { if (event.propertyName === 'opacity') panels.completePanelTransition(id); }}>{children}</div>;
 }
@@ -28,7 +28,7 @@ export default function OwnerSystemWorkflowPanelLayer({ workbenchImageTargetRef,
       <OwnerSystemWorkflowLibraryWorkspace workbenchImageTargetRef={workbenchImageTargetRef} moduleAssetTargetRef={moduleAssetTargetRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef}
         placementScope={`${controller.draft.profileAddress}:${controller.selectedGridId}`}
         authoringLocked={authoringLocked} categoryCommands={categoryCommands} data={libraryData}
-        menuSurface={menuSurface} onClose={onClose} phase={show('library').phase}
+        menuSurface={menuSurface} onClose={() => panels.closePanel({ panelId: 'library' })} phase={show('library').phase}
         resolveAssetDimensions={resolveAssetDimensions} /></PanelPresence>}
     {show('profile').present && <PanelPresence id="profile" panels={panels}><div className="system-workflow__profile-layer"
       onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>

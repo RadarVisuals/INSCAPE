@@ -37,11 +37,17 @@ async function mount(page, { unknownDimensions = false, kind = 'display' } = {})
     const asset = { id: 'fixture:asset', stableAssetId: 'fixture:asset', title: 'Delayed image', collection: 'Fixture', placeable: true,
       src: '/assets/actors/abyssal_eye/full.webp', previewCandidates: ['/assets/actors/abyssal_eye/full.webp'], mediaType: 'image', ...(unknownDimensions ? {} : { width: 100, height: 100 }) };
     const alternate = { current: { targetAt: point => point.x > 1050 ? target : null, has: candidate => candidate === target } };
-    createRoot(document.getElementById('root')).render(React.createElement('main', { className: 'system-workflow' },
+    const root = createRoot(document.getElementById('root'));
+    const configure = (overrides = {}) => root.render(React.createElement('main', { className: 'system-workflow' },
       React.createElement(Library, { phase: 'open', placementScope: 'profile:primary-grid', placementTargetRef: targets,
         workbenchImageTargetRef: { current: { targetAt: point => kind === 'workbench' && point.x > 1050 ? target : null } },
         ...(kind === 'module' ? { moduleAssetTargetRef: alternate } : {}), shortcutTargetRef: kind === 'shortcut' ? alternate : { current: null }, workspaceRef: { current: null },
-        resolveAssetDimensions: () => new Promise(resolve => pending.push(resolve)), data: { ownerContext: 'profile', assets: [asset], categories: [], usedAssetIds: [] }, menuSurface: 'mist' })));
+        categoryCommands: { setCategoryAssets: (...args) => { calls.push({ kind: 'category', args }); return true; } },
+        resolveAssetDimensions: () => new Promise(resolve => pending.push(resolve)), data: { ownerContext: 'profile',
+          assets: [asset, { ...asset, id: 'fixture:second', stableAssetId: 'fixture:second', title: 'Second image' }],
+          categories: [{ id: 'fixture:folder', name: 'Fixture folder', assetIds: [] }], usedAssetIds: [] }, menuSurface: 'mist', ...overrides })));
+    Object.assign(window.routeProbe, { configure, unmount: () => root.unmount() });
+    configure();
   }, { unknownDimensions, kind });
   await page.getByRole('button', { name: 'Delayed image / Fixture', exact: true }).waitFor();
 }
@@ -66,6 +72,48 @@ for (const activation of ['double click', 'pointer release']) test(`Library ${ac
     assert.equal(calls[0].grid, 'second');
   } finally { await browser.close(); }
 });
+
+for (const action of ['release', 'multi release', 'Escape', 'Escape before movement', 'blur', 'hidden', 'pointercancel', 'foreign pointercancel', 'lostpointercapture', 'close', 'profile change', 'unmount']) {
+  test(`Library category drag shares cancellation: ${action}`, { timeout: 30000 }, async () => {
+    const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+      const errors = []; page.on('pageerror', error => errors.push(error.message));
+      await mount(page);
+      const card = page.getByRole('button', { name: 'Delayed image / Fixture', exact: true });
+      if (action === 'multi release') {
+        await card.click(); await page.getByRole('button', { name: 'Second image / Fixture', exact: true }).click({ modifiers: ['Control'] });
+      }
+      const source = await card.boundingBox(), category = await page.getByRole('button', { name: 'Fixture folder', exact: true }).boundingBox();
+      await page.mouse.move(source.x + source.width / 2, source.y + 40); await page.mouse.down();
+      if (action === 'Escape before movement') await page.keyboard.press('Escape');
+      await page.mouse.move(category.x + category.width / 2, category.y + category.height / 2, { steps: 8 });
+      if (action === 'Escape') await page.keyboard.press('Escape');
+      if (action === 'blur') await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+      if (action === 'hidden') await page.evaluate(() => {
+        Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+        document.dispatchEvent(new Event('visibilitychange')); delete document.hidden;
+      });
+      if (action === 'pointercancel') await card.dispatchEvent('pointercancel', { pointerId: 1, bubbles: true });
+      if (action === 'foreign pointercancel') await card.dispatchEvent('pointercancel', { pointerId: 99, bubbles: true });
+      if (action === 'lostpointercapture') await card.evaluate(node => { if (node.hasPointerCapture(1)) node.releasePointerCapture(1); });
+      if (action === 'close') await page.evaluate(() => routeProbe.configure({ phase: 'closing' }));
+      if (action === 'profile change') await page.evaluate(() => routeProbe.configure({ placementScope: 'another-profile' }));
+      if (action === 'unmount') await page.evaluate(() => routeProbe.unmount());
+      await settle(page); await page.mouse.up();
+      await page.evaluate(() => routeProbe.resolve()); await settle(page);
+      assert.deepEqual(await page.evaluate(() => routeProbe.calls), action.endsWith('release') || action === 'foreign pointercancel'
+        ? [{ kind: 'category', args: ['fixture:folder', action === 'multi release' ? ['fixture:asset', 'fixture:second'] : ['fixture:asset'], true] }]
+        : [], 'a cancelled gesture cannot file artwork on release');
+      assert.equal(await page.locator('.system-workflow__library-drag-ghost, .system-workflow__placement-preview, [data-workflow-dragging]').count(), 0);
+      if (action === 'Escape') {
+        await card.focus(); await card.press('Space');
+        assert.equal(await card.getAttribute('aria-pressed'), 'true', 'drag cancellation preserves keyboard selection');
+      }
+      assert.deepEqual(errors, []);
+    } finally { await browser.close(); }
+  });
+}
 
 for (const scenario of ['unknown dimensions', 'workbench unknown dimensions', 'navigate before release', 'cancel after release', 'module retarget', 'shortcut retarget', 'blocked module removed', 'click without movement']) test(`Library delayed drop: ${scenario}`, { timeout: 30000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });

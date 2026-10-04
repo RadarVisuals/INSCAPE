@@ -1,5 +1,6 @@
-import { MAX_IMAGE_MODULES, validImageModules, imageCropForResize } from './imageModule.js';
+import { MAX_IMAGE_MODULES, validImageModules, imageCropForResize, createImagePresentation } from './imageModule.js';
 import { createDefaultWorkbenchPresentation } from '../profileDocument/domain/workbenchPresentation.js';
+import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 
 export function addImageModule(store, profile, placed = null) {
   if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
@@ -18,6 +19,32 @@ export function addImageModule(store, profile, placed = null) {
   if (!store.commitCompletedOperation(next, { expectedGeneration: generation, historyLabel: 'Add Image' })) {
     throw new Error('Image could not be saved. Try again when local storage is available.');
   }
+  return record.id;
+}
+export function duplicateImageModule(store, profile, expected, { workbench, position } = {}) {
+  if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
+  const draft = store.getDraft(), generation = store.getGeneration();
+  const index = draft.imageModules?.findIndex(item => item.id === expected?.id) ?? -1;
+  if (index < 0 || JSON.stringify(draft.imageModules[index]) !== JSON.stringify(expected))
+    throw new Error('This Image changed. Try duplicating it again.');
+  if (draft.imageModules.length >= MAX_IMAGE_MODULES) throw new Error('At most sixteen Image modules are supported.');
+  // Copy the authored sides directly: Library insertion and resize intentionally
+  // choose new fitting defaults and must not run for an existing composition.
+  const record = structuredClone(expected);
+  record.id = `image:${crypto.randomUUID()}`;
+  record.name = `${expected.name.slice(0, 43)} copy`;
+  record.sides = record.sides.map(side => ({ ...side, id: `side:${crypto.randomUUID()}` }));
+  const layout = workbench || draft.workbench || createDefaultWorkbenchPresentation();
+  const origin = position || layout.imageModules?.find(item => item.id === expected.id)?.position
+    || createImagePresentation(expected.id, index).position;
+  const presentation = { id: record.id, open: true,
+    position: clampWorkbenchPosition({ left: origin.left + 24, top: origin.top + 24 }, record) };
+  const imageModules = [...draft.imageModules, record];
+  if (!validImageModules(imageModules)) throw new Error('The Image could not be duplicated.');
+  const next = { ...draft, imageModules,
+    workbench: { ...layout, imageModules: [...(layout.imageModules || []), presentation] } };
+  if (!store.commitCompletedOperation(next, { expectedGeneration: generation, historyLabel: 'Duplicate Image' }))
+    throw new Error('The Image copy could not be saved. Your saved work is unchanged; try again.');
   return record.id;
 }
 export function saveImageModule(store, profile, expected, next) {

@@ -1,0 +1,2514 @@
+{
+  "format": "inscape.keeper-dialogue",
+  "version": 1,
+  "language": "en",
+  "start": "hello",
+  "nodes": {
+    "hello": {
+      "text": "Oh. You can see me.\n\nThat makes this considerably less awkward.",
+      "choices": [
+        {
+          "label": "What exactly are you?",
+          "next": "about"
+        },
+        {
+          "label": "Show me the strange stuff.",
+          "next": "strange"
+        },
+        {
+          "label": "I'm just here for the company.",
+          "next": "company"
+        }
+      ]
+    },
+    "about": {
+      "text": "A Keeper. Small jurisdiction. Far too many eyes.\n\nMost things here can look after themselves. I look after the exceptions.",
+      "choices": [
+        {
+          "label": "What do you keep?",
+          "next": "keeps"
+        },
+        {
+          "label": "About those eyes and tentacles...",
+          "next": "anatomy"
+        },
+        {
+          "label": "Who made you?",
+          "next": "maker"
+        }
+      ]
+    },
+    "keeps": {
+      "text": "Lost thoughts. Unfinished creatures. Doors with nowhere sensible to go.\n\nOccasionally a very ordinary button. They get lonely too.",
+      "choices": [
+        {
+          "label": "Tell me about a lost thought.",
+          "next": "lost_thought"
+        },
+        {
+          "label": "You keep doors?",
+          "next": "unclaimed_door"
+        },
+        {
+          "label": "Does this job pay?",
+          "next": "pay"
+        }
+      ]
+    },
+    "lost_thought": {
+      "text": "Yesterday I found: 'What if the moon is an egg?'\n\nNobody claimed it. It's been making a faint tapping sound ever since.",
+      "choices": [
+        {
+          "label": "Open it.",
+          "next": "bottled_thought"
+        },
+        {
+          "label": "Definitely put that somewhere safe.",
+          "next": "pocket"
+        },
+        {
+          "label": "Have you found anything else?",
+          "next": "stories"
+        }
+      ]
+    },
+    "bottled_thought": {
+      "text": "I did. A much smaller thought came out: 'What if it isn't?'\n\nNow they're arguing. I preferred the tapping.",
+      "choices": [
+        {
+          "label": "Sounds like your problem.",
+          "next": "pay"
+        },
+        {
+          "label": "I have a question about you.",
+          "next": "about"
+        },
+        {
+          "label": "Tell me another story.",
+          "next": "stories"
+        }
+      ]
+    },
+    "pocket": {
+      "text": "Excellent. I'll put it in my pocket.\n\nOne moment. I'm going to need a pocket.",
+      "choices": [
+        {
+          "label": "You didn't plan this very well.",
+          "next": "pocket_plan"
+        },
+        {
+          "label": "I like how your mind works.",
+          "next": "compliment"
+        },
+        {
+          "label": "Let's change the subject.",
+          "next": "hello"
+        }
+      ]
+    },
+    "pocket_plan": {
+      "text": "I planned several impressive escape routes. Storage was a later concern.\n\nYou can see how the priorities formed.",
+      "choices": [
+        {
+          "label": "Fair enough. More strange things.",
+          "next": "strange"
+        },
+        {
+          "label": "I'll keep you company instead.",
+          "next": "company"
+        }
+      ]
+    },
+    "unclaimed_door": {
+      "text": "One turned up without a wall. Very embarrassed.\n\nI've been trying to find it a destination.",
+      "choices": [
+        {
+          "label": "Let's see where it goes.",
+          "next": "door"
+        },
+        {
+          "label": "Maybe it likes being a door.",
+          "next": "door_purpose"
+        },
+        {
+          "label": "What else do you keep?",
+          "next": "keeps"
+        }
+      ]
+    },
+    "door_purpose": {
+      "text": "That's what I said. It replied that everyone keeps asking it to open up.\n\nWe haven't pushed the subject.",
+      "choices": [
+        {
+          "label": "Good. Let it take its time.",
+          "next": "company"
+        },
+        {
+          "label": "I'd like to listen to it.",
+          "next": "door_listen"
+        }
+      ]
+    },
+    "pay": {
+      "text": "Three buttons and an ominous feeling per week.\n\nThe ominous feeling is excellent. Very consistent.",
+      "choices": [
+        {
+          "label": "You should form a union.",
+          "next": "tentacle_union"
+        },
+        {
+          "label": "I'll pay you a compliment.",
+          "next": "compliment"
+        },
+        {
+          "label": "What are the hours?",
+          "next": "hours"
+        }
+      ]
+    },
+    "hours": {
+      "text": "Mostly the small ones. The hour after a good idea. The hour before someone names it.\n\nLunch is a difficult concept when you're all face.",
+      "choices": [
+        {
+          "label": "What would you eat?",
+          "next": "soup"
+        },
+        {
+          "label": "I have another question.",
+          "next": "about"
+        },
+        {
+          "label": "You deserve a break.",
+          "next": "quiet"
+        }
+      ]
+    },
+    "anatomy": {
+      "text": "Go on. Everyone has anatomy questions.\n\nOne person asked where I keep my knees. I've never quite recovered.",
+      "choices": [
+        {
+          "label": "Why so many eyes?",
+          "next": "eyes"
+        },
+        {
+          "label": "Are those tentacles?",
+          "next": "tentacles"
+        },
+        {
+          "label": "How do you swim through empty space?",
+          "next": "swimming"
+        }
+      ]
+    },
+    "eyes": {
+      "text": "One for where I'm going. One for where I've been.\n\nThe others are for keeping an eye on the first two.",
+      "choices": [
+        {
+          "label": "What happens if you close them all?",
+          "next": "eyes_closed"
+        },
+        {
+          "label": "Bet I can win a staring contest.",
+          "next": "staring"
+        },
+        {
+          "label": "That seems excessive.",
+          "next": "eyes_excess"
+        }
+      ]
+    },
+    "eyes_closed": {
+      "text": "Then it's everyone's problem.\n\nLast time, something moved the entire concept of left. Took an afternoon to sort out.",
+      "choices": [
+        {
+          "label": "So THAT'S what happened.",
+          "next": "left"
+        },
+        {
+          "label": "Let's keep them open.",
+          "next": "anatomy"
+        },
+        {
+          "label": "Tell me something stranger.",
+          "next": "strange"
+        }
+      ]
+    },
+    "eyes_excess": {
+      "text": "You say that now. Wait until you need to look suspiciously in four directions at once.",
+      "choices": [
+        {
+          "label": "What are you suspicious of?",
+          "next": "suspicion"
+        },
+        {
+          "label": "Staring contest. Right now.",
+          "next": "staring"
+        },
+        {
+          "label": "You have a point. Several.",
+          "next": "company"
+        }
+      ]
+    },
+    "left": {
+      "text": "I wondered if you'd noticed.\n\nIf right starts feeling unusually smug, let me know.",
+      "choices": [
+        {
+          "label": "I'll keep an eye on it.",
+          "next": "shared_shift"
+        },
+        {
+          "label": "Anyway. Who made you?",
+          "next": "maker"
+        }
+      ]
+    },
+    "tentacles": {
+      "text": "Depends who you ask.\n\nI call them tentacles. They call themselves independent consultants.",
+      "choices": [
+        {
+          "label": "Do they listen to you?",
+          "next": "tentacle_union"
+        },
+        {
+          "label": "Which one is in charge?",
+          "next": "tentacle_boss"
+        },
+        {
+          "label": "They look good on you.",
+          "next": "compliment"
+        }
+      ]
+    },
+    "tentacle_union": {
+      "text": "We held a meeting. Seven motions were proposed. All of them were different directions.\n\nWe adjourned into a wall.",
+      "choices": [
+        {
+          "label": "Who won?",
+          "next": "tentacle_boss"
+        },
+        {
+          "label": "That's quite a management problem.",
+          "next": "management"
+        },
+        {
+          "label": "Can we talk about something else?",
+          "next": "hello"
+        }
+      ]
+    },
+    "tentacle_boss": {
+      "text": "The little curled one thinks it is.\n\nI let it believe that. It makes corners considerably easier.",
+      "choices": [
+        {
+          "label": "What about you?",
+          "next": "management"
+        },
+        {
+          "label": "What happens when you turn?",
+          "next": "swimming"
+        },
+        {
+          "label": "I like this arrangement.",
+          "next": "company"
+        }
+      ]
+    },
+    "management": {
+      "text": "My leadership style is to point my face at something and hope the rest develops an interest.",
+      "choices": [
+        {
+          "label": "Honestly? Relatable.",
+          "next": "company"
+        },
+        {
+          "label": "You must have some stories.",
+          "next": "stories"
+        }
+      ]
+    },
+    "swimming": {
+      "text": "I decide where to go. The rest of me files an objection.\n\nBy the time the paperwork catches up, we're usually there.",
+      "choices": [
+        {
+          "label": "And when you change your mind?",
+          "next": "turning"
+        },
+        {
+          "label": "What if you forget to stop?",
+          "next": "brakes"
+        },
+        {
+          "label": "Back to the anatomy questions.",
+          "next": "anatomy"
+        }
+      ]
+    },
+    "turning": {
+      "text": "The head turns first. The tentacles need a moment to accept the new situation.\n\nI try to extend them the same courtesy.",
+      "choices": [
+        {
+          "label": "I could use that courtesy.",
+          "next": "day"
+        },
+        {
+          "label": "I want to ask something else.",
+          "next": "hello"
+        }
+      ]
+    },
+    "brakes": {
+      "text": "That's how I discovered the far edge of a very small room.\n\nBriefly, I was a much flatter Keeper.",
+      "choices": [
+        {
+          "label": "Ouch.",
+          "next": "brakes_recovered"
+        },
+        {
+          "label": "Did the room apologise?",
+          "next": "room_apology"
+        },
+        {
+          "label": "Another story, please.",
+          "next": "stories"
+        }
+      ]
+    },
+    "brakes_recovered": {
+      "text": "Thank you. Most people ask whether the wall was all right.\n\nFor the record, it was.",
+      "choices": [
+        {
+          "label": "I'm glad you're less flat now.",
+          "next": "compliment"
+        },
+        {
+          "label": "Let's sit for a bit.",
+          "next": "quiet"
+        }
+      ]
+    },
+    "room_apology": {
+      "text": "It maintained that it had been there the entire time.\n\nTechnically correct. Emotionally unhelpful.",
+      "choices": [
+        {
+          "label": "I think I know that room.",
+          "next": "company"
+        },
+        {
+          "label": "Show me more strange things.",
+          "next": "strange"
+        }
+      ]
+    },
+    "maker": {
+      "text": "Someone drew all of this. Even the parts that can't agree where to go.\n\nI hope they know how much I enjoy having a face.",
+      "choices": [
+        {
+          "label": "What do you think about the artwork?",
+          "next": "art"
+        },
+        {
+          "label": "Did they give you a name?",
+          "next": "name"
+        },
+        {
+          "label": "Can a drawing have an opinion?",
+          "next": "opinion"
+        }
+      ]
+    },
+    "art": {
+      "text": "I tend to notice the lines first. Then I get distracted wondering what the figure was doing before someone looked.",
+      "choices": [
+        {
+          "label": "Let's look a little longer.",
+          "next": "look_again"
+        },
+        {
+          "label": "What about a figure with a hidden face?",
+          "next": "hood"
+        },
+        {
+          "label": "Does everything need a story?",
+          "next": "art_story"
+        }
+      ]
+    },
+    "look_again": {
+      "text": "Pick one small part you passed over before. A scratch. A fold. A bit of empty space.\n\nI'll wait while you look.",
+      "choices": [
+        {
+          "label": "I noticed something.",
+          "next": "noticed"
+        },
+        {
+          "label": "I still see the same thing.",
+          "next": "same_thing"
+        },
+        {
+          "label": "I'd rather hear one of your stories.",
+          "next": "stories"
+        }
+      ]
+    },
+    "noticed": {
+      "text": "There it is.\n\nYou can tell me if you like. Or keep it. A small discovery doesn't always need an audience.",
+      "choices": [
+        {
+          "label": "I'll keep this one.",
+          "next": "quiet_end"
+        },
+        {
+          "label": "Tell me something you've noticed.",
+          "next": "suspicion"
+        },
+        {
+          "label": "Let's talk about something else.",
+          "next": "hello"
+        }
+      ]
+    },
+    "same_thing": {
+      "text": "Perfectly respectable result. Sometimes a fold is having a very convincing day as a fold.",
+      "choices": [
+        {
+          "label": "You're an odd little art critic.",
+          "next": "critic"
+        },
+        {
+          "label": "Let's try a story instead.",
+          "next": "stories"
+        },
+        {
+          "label": "A bit of quiet would be nice.",
+          "next": "quiet"
+        }
+      ]
+    },
+    "critic": {
+      "text": "My reviews are mostly 'interesting' and 'I would be nervous to meet that in a corridor.'\n\nOccasionally both.",
+      "choices": [
+        {
+          "label": "What about me?",
+          "next": "visitor_review"
+        },
+        {
+          "label": "I have other questions.",
+          "next": "hello"
+        }
+      ]
+    },
+    "visitor_review": {
+      "text": "Interesting.\n\nThe corridor assessment is still pending, but you've been very civil so far.",
+      "choices": [
+        {
+          "label": "That's a relief.",
+          "next": "company"
+        },
+        {
+          "label": "I can be ominous.",
+          "next": "ominous"
+        },
+        {
+          "label": "I'll leave you to your work.",
+          "next": "goodbye"
+        }
+      ]
+    },
+    "art_story": {
+      "text": "Some things seem happy just being looked at.\n\nI tell stories because I like company. The drawing gets to keep its own secrets.",
+      "choices": [
+        {
+          "label": "Tell me one, then.",
+          "next": "stories"
+        },
+        {
+          "label": "I like that answer.",
+          "next": "company"
+        },
+        {
+          "label": "I'd like to look in peace.",
+          "next": "quiet_end"
+        }
+      ]
+    },
+    "hood": {
+      "text": "A hidden face makes everybody lean a little closer.\n\nI have the opposite problem. There is quite a lot of face happening over here.",
+      "choices": [
+        {
+          "label": "What's under the hood?",
+          "next": "hood_guess"
+        },
+        {
+          "label": "Maybe it wants some privacy.",
+          "next": "hood_privacy"
+        },
+        {
+          "label": "Your face is doing its best.",
+          "next": "compliment"
+        }
+      ]
+    },
+    "hood_guess": {
+      "text": "Could be someone. Could be an extremely committed collection of sleeves.\n\nI'd ask before putting my head in.",
+      "choices": [
+        {
+          "label": "I'm going with sleeves.",
+          "next": "sleeves"
+        },
+        {
+          "label": "Let it stay a mystery.",
+          "next": "hood_privacy"
+        },
+        {
+          "label": "Tell me another strange thing.",
+          "next": "strange"
+        }
+      ]
+    },
+    "sleeves": {
+      "text": "A bold theory. Please present it with absolute confidence if anyone asks.\n\nI'll stand nearby looking scholarly.",
+      "choices": [
+        {
+          "label": "You'd make a good accomplice.",
+          "next": "accomplice"
+        },
+        {
+          "label": "Back to the artwork.",
+          "next": "art"
+        }
+      ]
+    },
+    "hood_privacy": {
+      "text": "Fair. A person should be allowed a little darkness without everyone trying to furnish it.",
+      "choices": [
+        {
+          "label": "Let's leave it be.",
+          "next": "quiet_end"
+        },
+        {
+          "label": "What about YOUR secrets?",
+          "next": "secret"
+        }
+      ]
+    },
+    "name": {
+      "text": "Keeper will do.\n\nI once tried something grander, but by the time I'd finished introducing myself the visitor had gone.",
+      "choices": [
+        {
+          "label": "What was the grand name?",
+          "next": "grand_name"
+        },
+        {
+          "label": "Could I call you something else?",
+          "next": "nickname"
+        },
+        {
+          "label": "Keeper suits you.",
+          "next": "compliment"
+        }
+      ]
+    },
+    "grand_name": {
+      "text": "Custodian of the Seventh Unclaimed Threshold, Acting Deputy for Things Found Underneath.\n\nThere was more. I ran out of threshold.",
+      "choices": [
+        {
+          "label": "Acting deputy?",
+          "next": "deputy"
+        },
+        {
+          "label": "Keeper it is.",
+          "next": "company"
+        }
+      ]
+    },
+    "deputy": {
+      "text": "Nobody has seen the permanent deputy.\n\nI suspect this is the permanent deputy's most impressive achievement.",
+      "choices": [
+        {
+          "label": "Maybe the deputy is under the hood.",
+          "next": "hood_guess"
+        },
+        {
+          "label": "Tell me about the thresholds.",
+          "next": "door"
+        },
+        {
+          "label": "I'll let you get back to it.",
+          "next": "goodbye"
+        }
+      ]
+    },
+    "nickname": {
+      "text": "Privately, certainly. I'd avoid 'Snack.'\n\nSomething might overhear.",
+      "choices": [
+        {
+          "label": "How about 'Trouble'?",
+          "next": "tease_trouble"
+        },
+        {
+          "label": "'Your Small Ominousness.'",
+          "next": "small_ominousness"
+        },
+        {
+          "label": "I'll stick with Keeper.",
+          "next": "company"
+        }
+      ]
+    },
+    "small_ominousness": {
+      "text": "Oh.\n\nYes. That has excellent proportions.",
+      "choices": [
+        {
+          "label": "Your Small Ominousness, a story?",
+          "next": "stories"
+        },
+        {
+          "label": "I have another question.",
+          "next": "hello"
+        }
+      ]
+    },
+    "opinion": {
+      "text": "Apparently. Mine arrived shortly after the tentacles.\n\nI'm still learning which ones are worth saying out loud.",
+      "choices": [
+        {
+          "label": "Give me a questionable one.",
+          "next": "opinion_soup"
+        },
+        {
+          "label": "Give me a quiet one.",
+          "next": "opinion_quiet"
+        },
+        {
+          "label": "Let's hear a story instead.",
+          "next": "stories"
+        }
+      ]
+    },
+    "opinion_soup": {
+      "text": "Every gathering improves if someone brings soup.\n\nThis includes hauntings. Especially hauntings.",
+      "choices": [
+        {
+          "label": "What soup would a ghost like?",
+          "next": "soup"
+        },
+        {
+          "label": "That was surprisingly reasonable.",
+          "next": "soup_reasonable"
+        }
+      ]
+    },
+    "soup": {
+      "text": "Something with very little body.\n\n...I've been waiting an unreasonable amount of time to say that.",
+      "choices": [
+        {
+          "label": "Terrible. Another joke.",
+          "next": "jokes"
+        },
+        {
+          "label": "I'm leaving before it gets worse.",
+          "next": "goodbye"
+        },
+        {
+          "label": "I respect the commitment.",
+          "next": "company"
+        }
+      ]
+    },
+    "soup_reasonable": {
+      "text": "Give me time. I also have opinions about appointing spoons to public office.",
+      "choices": [
+        {
+          "label": "Unfortunately, I want to hear them.",
+          "next": "spoon"
+        },
+        {
+          "label": "I'd rather have a story.",
+          "next": "stories"
+        }
+      ]
+    },
+    "opinion_quiet": {
+      "text": "I like it when someone stays after they've finished looking.\n\nIt changes the room a little.",
+      "choices": [
+        {
+          "label": "I'll stay for a bit.",
+          "next": "quiet"
+        },
+        {
+          "label": "I'm glad I clicked on you.",
+          "next": "glad"
+        },
+        {
+          "label": "See you around, Keeper.",
+          "next": "goodbye"
+        }
+      ]
+    },
+    "strange": {
+      "text": "Let's see what I've got.\n\nA few stories, several questionable predictions, and something to occupy your excellent face.",
+      "choices": [
+        {
+          "label": "Tell me a story.",
+          "next": "stories"
+        },
+        {
+          "label": "Give me something to figure out.",
+          "next": "games"
+        },
+        {
+          "label": "Read my completely unreliable future.",
+          "next": "fortunes"
+        }
+      ]
+    },
+    "stories": {
+      "text": "Choose an object. I'll tell you what happened to it.\n\nI cannot promise the object agrees with my account.",
+      "choices": [
+        {
+          "label": "A bottle with something inside.",
+          "next": "bottle"
+        },
+        {
+          "label": "A very small moon.",
+          "next": "moon"
+        },
+        {
+          "label": "A staircase without a building.",
+          "next": "staircase"
+        }
+      ]
+    },
+    "bottle": {
+      "text": "I found a bottle full of seawater. Every night, one tiny wave knocked against the glass.\n\nEventually I realised it was asking to come in.",
+      "choices": [
+        {
+          "label": "Open the bottle.",
+          "next": "bottle_open"
+        },
+        {
+          "label": "Listen to the wave.",
+          "next": "bottle_listen"
+        },
+        {
+          "label": "Leave it alone.",
+          "next": "bottle_leave"
+        }
+      ]
+    },
+    "bottle_open": {
+      "text": "A whole beach unfolded onto the table.\n\nLovely evening. Difficult cleanup. For weeks, everything I said had a little sand in it.",
+      "choices": [
+        {
+          "label": "Was anybody on the beach?",
+          "next": "bottle_guest"
+        },
+        {
+          "label": "What did you do with the sea?",
+          "next": "bottle_sea"
+        },
+        {
+          "label": "Another object.",
+          "next": "stories"
+        }
+      ]
+    },
+    "bottle_guest": {
+      "text": "One crab. Holding a much smaller bottle.\n\nWe agreed, without discussion, that one beach was enough.",
+      "choices": [
+        {
+          "label": "Very sensible crab.",
+          "next": "bottle_sea"
+        },
+        {
+          "label": "I want to hear about the moon.",
+          "next": "moon"
+        }
+      ]
+    },
+    "bottle_sea": {
+      "text": "Put it back at low tide. Left the cork loose.\n\nSome mornings, there's a shell on the table.",
+      "choices": [
+        {
+          "label": "Keep that one.",
+          "next": "quiet_end"
+        },
+        {
+          "label": "Tell me another story.",
+          "next": "stories"
+        },
+        {
+          "label": "I have a different question.",
+          "next": "hello"
+        }
+      ]
+    },
+    "bottle_listen": {
+      "text": "It sounded like someone dragging a chair toward the water.\n\nI listened until they sat down. After that, it was just the sea.",
+      "choices": [
+        {
+          "label": "That's where I'd like to be.",
+          "next": "bottle_seat"
+        },
+        {
+          "label": "Now open it.",
+          "next": "bottle_open"
+        },
+        {
+          "label": "Another object.",
+          "next": "stories"
+        }
+      ]
+    },
+    "bottle_seat": {
+      "text": "I left the chair there.\n\nIn case the story needs it again.",
+      "choices": [
+        {
+          "label": "Let's stay with that for a moment.",
+          "next": "quiet_end"
+        },
+        {
+          "label": "I want another story.",
+          "next": "stories"
+        }
+      ]
+    },
+    "bottle_leave": {
+      "text": "By morning, the wave had gone quiet. The bottle was empty.\n\nOn the outside of the glass: a very small set of wet footprints.",
+      "choices": [
+        {
+          "label": "Whose footprints?",
+          "next": "bottle_footprints"
+        },
+        {
+          "label": "Nope. Different story.",
+          "next": "stories"
+        }
+      ]
+    },
+    "bottle_footprints": {
+      "text": "I counted two.\n\nThat ruled me out and made the crab considerably more interesting.",
+      "choices": [
+        {
+          "label": "I need to meet this crab.",
+          "next": "bottle_guest"
+        },
+        {
+          "label": "I have other questions.",
+          "next": "hello"
+        }
+      ]
+    },
+    "moon": {
+      "text": "A moon no bigger than a button rolled under my dock.\n\nIt was furious. Apparently someone had mistaken it for a hole punch.",
+      "choices": [
+        {
+          "label": "Put it back in the sky.",
+          "next": "moon_return"
+        },
+        {
+          "label": "Offer it somewhere to stay.",
+          "next": "moon_stay"
+        },
+        {
+          "label": "Was it full?",
+          "next": "moon_full"
+        }
+      ]
+    },
+    "moon_return": {
+      "text": "I tried. The sky said it hadn't ordered one.\n\nWe spent most of the night at a window arguing about the receipt.",
+      "choices": [
+        {
+          "label": "Who kept the receipt?",
+          "next": "moon_receipt"
+        },
+        {
+          "label": "Let it stay with you.",
+          "next": "moon_stay"
+        }
+      ]
+    },
+    "moon_receipt": {
+      "text": "The tide.\n\nVery poor filing system. Everything gets wet twice a day.",
+      "choices": [
+        {
+          "label": "Then a home is the better option.",
+          "next": "moon_stay"
+        },
+        {
+          "label": "Another story.",
+          "next": "stories"
+        }
+      ]
+    },
+    "moon_stay": {
+      "text": "It lives in a teacup now. Seems content.\n\nOccasionally pulls the sugar toward it. I pretend not to notice.",
+      "choices": [
+        {
+          "label": "Can I visit?",
+          "next": "moon_visit"
+        },
+        {
+          "label": "What does it drink?",
+          "next": "moon_tea"
+        },
+        {
+          "label": "That's a good ending.",
+          "next": "company"
+        }
+      ]
+    },
+    "moon_full": {
+      "text": "It said that was an extremely personal question.\n\nI offered it a biscuit and we started again.",
+      "choices": [
+        {
+          "label": "Very diplomatic.",
+          "next": "moon_stay"
+        },
+        {
+          "label": "Another object.",
+          "next": "stories"
+        }
+      ]
+    },
+    "moon_visit": {
+      "text": "It's sleeping at the moment.\n\nIf you ever find a circle of sugar on an otherwise tidy table, say hello quietly.",
+      "choices": [
+        {
+          "label": "I will.",
+          "next": "quiet_end"
+        },
+        {
+          "label": "Tell me something else.",
+          "next": "strange"
+        }
+      ]
+    },
+    "moon_tea": {
+      "text": "Night tea. I made up the name because it seemed rude to serve a moon ordinary water.\n\nIt hasn't complained.",
+      "choices": [
+        {
+          "label": "You care about these odd little things.",
+          "next": "care"
+        },
+        {
+          "label": "A different story, please.",
+          "next": "stories"
+        }
+      ]
+    },
+    "staircase": {
+      "text": "Seven steps. No building. The top step had a small sign: 'Nearly.'\n\nThe bottom step was warm.",
+      "choices": [
+        {
+          "label": "Go up.",
+          "next": "stair_up"
+        },
+        {
+          "label": "Look underneath.",
+          "next": "stair_under"
+        },
+        {
+          "label": "Wait beside it.",
+          "next": "stair_wait"
+        }
+      ]
+    },
+    "stair_up": {
+      "text": "At the top, the sign now said 'Not quite.'\n\nI went back down before it could become a professional relationship.",
+      "choices": [
+        {
+          "label": "Try one more step.",
+          "next": "stair_extra"
+        },
+        {
+          "label": "Look underneath instead.",
+          "next": "stair_under"
+        },
+        {
+          "label": "Different story.",
+          "next": "stories"
+        }
+      ]
+    },
+    "stair_extra": {
+      "text": "There wasn't one.\n\nFor a brief, exciting moment, neither was there anywhere to put the idea of a foot.",
+      "choices": [
+        {
+          "label": "But you don't have feet.",
+          "next": "stair_feet"
+        },
+        {
+          "label": "Let's take the hint.",
+          "next": "company"
+        }
+      ]
+    },
+    "stair_feet": {
+      "text": "Exactly. Best prepared I've ever been.",
+      "choices": [
+        {
+          "label": "I walked into that one.",
+          "next": "stair_walked"
+        },
+        {
+          "label": "Another story, you menace.",
+          "next": "stories"
+        }
+      ]
+    },
+    "stair_walked": {
+      "text": "Yes. I noticed you brought feet and everything.",
+      "choices": [
+        {
+          "label": "You're enjoying this.",
+          "next": "tease"
+        },
+        {
+          "label": "Enough stairs. Something else.",
+          "next": "hello"
+        }
+      ]
+    },
+    "stair_under": {
+      "text": "Under the lowest step was a drawing of the staircase.\n\nUnder the staircase in the drawing was a small creature looking underneath it.",
+      "choices": [
+        {
+          "label": "Did it look like you?",
+          "next": "stair_drawing"
+        },
+        {
+          "label": "I'm done looking underneath things.",
+          "next": "company"
+        }
+      ]
+    },
+    "stair_drawing": {
+      "text": "Almost.\n\nIt had remembered to bring a torch.",
+      "choices": [
+        {
+          "label": "Sensible creature.",
+          "next": "stories"
+        },
+        {
+          "label": "Who draws these things?",
+          "next": "maker"
+        }
+      ]
+    },
+    "stair_wait": {
+      "text": "After a while, someone on the other side sat down too.\n\nWe never saw each other. Stayed until the bottom step cooled.",
+      "choices": [
+        {
+          "label": "Did either of you say anything?",
+          "next": "stair_silence"
+        },
+        {
+          "label": "I like that ending.",
+          "next": "quiet_end"
+        },
+        {
+          "label": "Another story.",
+          "next": "stories"
+        }
+      ]
+    },
+    "stair_silence": {
+      "text": "They asked if I was nearly there.\n\nI said I thought I might stay here a little longer.",
+      "choices": [
+        {
+          "label": "I think I will too.",
+          "next": "quiet_end"
+        },
+        {
+          "label": "Tell me something else.",
+          "next": "hello"
+        }
+      ]
+    },
+    "games": {
+      "text": "We can test your mind, your eyes, or the patience of a deeply unusual door.",
+      "choices": [
+        {
+          "label": "A riddle.",
+          "next": "riddle"
+        },
+        {
+          "label": "A staring contest.",
+          "next": "staring"
+        },
+        {
+          "label": "The door, obviously.",
+          "next": "door"
+        }
+      ]
+    },
+    "riddle": {
+      "text": "What can you keep after giving it to someone?\n\nI've checked. It's a proper question.",
+      "choices": [
+        {
+          "label": "A promise.",
+          "next": "riddle_promise"
+        },
+        {
+          "label": "A shadow.",
+          "next": "riddle_shadow"
+        },
+        {
+          "label": "A window.",
+          "next": "riddle_window"
+        }
+      ]
+    },
+    "riddle_promise": {
+      "text": "A promise. Correct.\n\nYou win an entirely imaginary crown. Excellent fit. Very little strain on the neck.",
+      "choices": [
+        {
+          "label": "Another riddle.",
+          "next": "riddle_room"
+        },
+        {
+          "label": "Does the crown have a title?",
+          "next": "crown"
+        },
+        {
+          "label": "I'd like a different game.",
+          "next": "games"
+        }
+      ]
+    },
+    "riddle_shadow": {
+      "text": "An interesting logistical problem, but I was thinking of a promise.\n\nIf you work out shadow delivery, please come back.",
+      "choices": [
+        {
+          "label": "I'll take another question.",
+          "next": "riddle_room"
+        },
+        {
+          "label": "Do you have a shadow?",
+          "next": "shadow"
+        },
+        {
+          "label": "Different game.",
+          "next": "games"
+        }
+      ]
+    },
+    "riddle_window": {
+      "text": "You'd need to stay on good terms with whoever owns the wall.\n\nThe answer I had was a promise.",
+      "choices": [
+        {
+          "label": "Give me another one.",
+          "next": "riddle_room"
+        },
+        {
+          "label": "Tell me about the door instead.",
+          "next": "door"
+        }
+      ]
+    },
+    "crown": {
+      "text": "Sovereign of Having Worked That One Out.\n\nA narrow jurisdiction. You'll get used to it.",
+      "choices": [
+        {
+          "label": "I require another challenge.",
+          "next": "riddle_room"
+        },
+        {
+          "label": "I shall now inspect the strange door.",
+          "next": "door"
+        },
+        {
+          "label": "I am retiring from public life.",
+          "next": "goodbye"
+        }
+      ]
+    },
+    "riddle_room": {
+      "text": "What can fill a room without taking up any space?",
+      "choices": [
+        {
+          "label": "Light.",
+          "next": "riddle_light"
+        },
+        {
+          "label": "Dust.",
+          "next": "riddle_dust"
+        },
+        {
+          "label": "Worry.",
+          "next": "riddle_worry"
+        }
+      ]
+    },
+    "riddle_light": {
+      "text": "Light. Nicely done.\n\nI was going to give you another crown, but they're getting difficult to stack.",
+      "choices": [
+        {
+          "label": "Make the next prize a biscuit.",
+          "next": "biscuit"
+        },
+        {
+          "label": "Tell me a story.",
+          "next": "stories"
+        },
+        {
+          "label": "Let's just hang out.",
+          "next": "company"
+        }
+      ]
+    },
+    "riddle_dust": {
+      "text": "I regret to report that dust takes up an extraordinary amount of space once someone asks you to clean it.",
+      "choices": [
+        {
+          "label": "All right. Light?",
+          "next": "riddle_light"
+        },
+        {
+          "label": "Can we choose a less dusty game?",
+          "next": "games"
+        }
+      ]
+    },
+    "riddle_worry": {
+      "text": "I had 'light' written down.\n\nBut yours is a good answer. I'm giving you the point and opening a window in the imaginary room.",
+      "choices": [
+        {
+          "label": "Give that room a sea view.",
+          "next": "bottle_seat"
+        },
+        {
+          "label": "A lighter subject, please.",
+          "next": "jokes"
+        },
+        {
+          "label": "Let's be quiet for a bit.",
+          "next": "quiet"
+        }
+      ]
+    },
+    "biscuit": {
+      "text": "An imaginary biscuit, then.\n\nTake care. Imaginary crumbs are how we got into the dust situation.",
+      "choices": [
+        {
+          "label": "I accept these terms.",
+          "next": "company"
+        },
+        {
+          "label": "I want to see that door.",
+          "next": "door"
+        }
+      ]
+    },
+    "shadow": {
+      "text": "Yes. It works different hours.\n\nWe leave notes.",
+      "choices": [
+        {
+          "label": "What did the last note say?",
+          "next": "shadow_note"
+        },
+        {
+          "label": "You have an unusual household.",
+          "next": "keeps"
+        }
+      ]
+    },
+    "shadow_note": {
+      "text": "'Stop standing under so many lights. I'm exhausted.'\n\nFair request.",
+      "choices": [
+        {
+          "label": "Give it my regards.",
+          "next": "shared_shift"
+        },
+        {
+          "label": "Another game.",
+          "next": "games"
+        }
+      ]
+    },
+    "staring": {
+      "text": "All right. No blinking.\n\nI'll trust you to tell me how it goes. My competitive integrity is questionable enough already.",
+      "choices": [
+        {
+          "label": "I blinked.",
+          "next": "stare_blink"
+        },
+        {
+          "label": "You're the one who blinked.",
+          "next": "stare_win"
+        },
+        {
+          "label": "I shut my eyes. Can't lose now.",
+          "next": "stare_cheat"
+        }
+      ]
+    },
+    "stare_blink": {
+      "text": "A dignified performance. Strong opening. Very human ending.",
+      "choices": [
+        {
+          "label": "Again. I demand a rematch.",
+          "next": "staring"
+        },
+        {
+          "label": "Your turn to lose.",
+          "next": "stare_win"
+        },
+        {
+          "label": "Let's try a different game.",
+          "next": "games"
+        }
+      ]
+    },
+    "stare_win": {
+      "text": "One eye. Briefly.\n\n...Fine. A win is a win. Please don't tell the tentacles. They're unbearable about these things.",
+      "choices": [
+        {
+          "label": "Your secret is safe.",
+          "next": "secret"
+        },
+        {
+          "label": "I'm telling the curled one.",
+          "next": "stare_union"
+        },
+        {
+          "label": "What else can we do?",
+          "next": "strange"
+        }
+      ]
+    },
+    "stare_cheat": {
+      "text": "That's not a staring contest. That's a very short nap.\n\nStill. You look pleased with it.",
+      "choices": [
+        {
+          "label": "I needed that.",
+          "next": "quiet"
+        },
+        {
+          "label": "Fine. A proper rematch.",
+          "next": "staring"
+        }
+      ]
+    },
+    "stare_union": {
+      "text": "Of course you are.\n\nThere goes my authority for the rest of the afternoon.",
+      "choices": [
+        {
+          "label": "I feel a little guilty.",
+          "next": "stare_pardon"
+        },
+        {
+          "label": "Tell me about this union.",
+          "next": "tentacle_union"
+        }
+      ]
+    },
+    "stare_pardon": {
+      "text": "It was mostly decorative authority. I'll survive.",
+      "choices": [
+        {
+          "label": "You're all right, Keeper.",
+          "next": "glad"
+        },
+        {
+          "label": "Another game?",
+          "next": "games"
+        }
+      ]
+    },
+    "door": {
+      "text": "Here it is. No wall, no handle. Just a keyhole and a little brass plate.\n\nThe plate says: 'PLEASE DO NOT SHOUT THE PASSWORD.'",
+      "choices": [
+        {
+          "label": "Knock.",
+          "next": "door_knock"
+        },
+        {
+          "label": "Listen at the keyhole.",
+          "next": "door_listen"
+        },
+        {
+          "label": "Guess the password.",
+          "next": "door_password"
+        }
+      ]
+    },
+    "door_knock": {
+      "text": "Something knocks back. Same rhythm, slightly better manners.",
+      "choices": [
+        {
+          "label": "Knock very politely.",
+          "next": "door_polite"
+        },
+        {
+          "label": "Listen instead.",
+          "next": "door_listen"
+        },
+        {
+          "label": "Try a password.",
+          "next": "door_password"
+        }
+      ]
+    },
+    "door_polite": {
+      "text": "A note slides underneath: 'THANK YOU. STILL CLOSED.'\n\nI like this door.",
+      "choices": [
+        {
+          "label": "Maybe it wants us to listen.",
+          "next": "door_listen"
+        },
+        {
+          "label": "I respect its boundaries.",
+          "next": "company"
+        }
+      ]
+    },
+    "door_password": {
+      "text": "You lean toward the keyhole. The door seems to lean back.",
+      "choices": [
+        {
+          "label": "'Open sesame.'",
+          "next": "door_sesame"
+        },
+        {
+          "label": "'Please.'",
+          "next": "door_please"
+        },
+        {
+          "label": "Say nothing. Listen.",
+          "next": "door_listen"
+        }
+      ]
+    },
+    "door_sesame": {
+      "text": "The brass plate changes to: 'WRONG CUISINE.'\n\nI hadn't realised doors had preferences.",
+      "choices": [
+        {
+          "label": "Try 'please'.",
+          "next": "door_please"
+        },
+        {
+          "label": "Stop talking and listen.",
+          "next": "door_listen"
+        },
+        {
+          "label": "Another game.",
+          "next": "games"
+        }
+      ]
+    },
+    "door_please": {
+      "text": "The keyhole gives a small, appreciative click.\n\nStill closed. Good manners got you as far as the conversation.",
+      "choices": [
+        {
+          "label": "Let it take its turn.",
+          "next": "door_listen"
+        },
+        {
+          "label": "I'm happy leaving it closed.",
+          "next": "quiet_end"
+        }
+      ]
+    },
+    "door_listen": {
+      "text": "At first, nothing.\n\nThen leaves. Water. Something small moving through grass. The keyhole warms, and the door opens just enough.",
+      "choices": [
+        {
+          "label": "Step inside.",
+          "next": "garden"
+        },
+        {
+          "label": "Ask permission first.",
+          "next": "garden_permission"
+        },
+        {
+          "label": "Leave the garden to itself.",
+          "next": "garden_leave"
+        }
+      ]
+    },
+    "garden_permission": {
+      "text": "The leaves shift aside to make a path.\n\nI think that was a yes.",
+      "choices": [
+        {
+          "label": "Follow the path.",
+          "next": "garden"
+        },
+        {
+          "label": "Maybe another time.",
+          "next": "garden_leave"
+        }
+      ]
+    },
+    "garden": {
+      "text": "A garden in the middle of nowhere. One chair, one pond, and a tree hung with tiny unlit stars.\n\nSomeone has left room for a second chair.",
+      "choices": [
+        {
+          "label": "Sit by the pond.",
+          "next": "garden_pond"
+        },
+        {
+          "label": "Look at the little stars.",
+          "next": "garden_stars"
+        },
+        {
+          "label": "Leave something for the next visitor.",
+          "next": "garden_gift"
+        }
+      ]
+    },
+    "garden_pond": {
+      "text": "Your reflection arrives a moment late. It seems relieved you waited.\n\nMine arrives sideways. Typical.",
+      "choices": [
+        {
+          "label": "What happens if I wave?",
+          "next": "garden_wave"
+        },
+        {
+          "label": "Sit a little longer.",
+          "next": "quiet_end"
+        },
+        {
+          "label": "Go back through the door.",
+          "next": "garden_leave"
+        }
+      ]
+    },
+    "garden_wave": {
+      "text": "It waves back.\n\nFor a moment, neither of you is in a hurry to be first.",
+      "choices": [
+        {
+          "label": "Let's leave it there.",
+          "next": "quiet_end"
+        },
+        {
+          "label": "I want to see the stars.",
+          "next": "garden_stars"
+        }
+      ]
+    },
+    "garden_stars": {
+      "text": "Up close, they're folded from little pieces of paper. Some have words inside.\n\nOne says, 'I almost threw this away.'",
+      "choices": [
+        {
+          "label": "Leave that one where it is.",
+          "next": "garden_keep"
+        },
+        {
+          "label": "What does the next one say?",
+          "next": "garden_next"
+        }
+      ]
+    },
+    "garden_next": {
+      "text": "'Glad I didn't.'\n\nSame handwriting.",
+      "choices": [
+        {
+          "label": "I like this garden.",
+          "next": "garden_keep"
+        },
+        {
+          "label": "I'd like to leave something.",
+          "next": "garden_gift"
+        }
+      ]
+    },
+    "garden_keep": {
+      "text": "So do I.\n\nI'm very glad you listened at the door.",
+      "choices": [
+        {
+          "label": "A moment of quiet.",
+          "next": "quiet_end"
+        },
+        {
+          "label": "Let's head back.",
+          "next": "garden_leave"
+        }
+      ]
+    },
+    "garden_gift": {
+      "text": "There's a clear patch beside the path. What shall we leave?",
+      "choices": [
+        {
+          "label": "A smooth stone.",
+          "next": "garden_stone"
+        },
+        {
+          "label": "A small, terrible joke.",
+          "next": "garden_joke"
+        },
+        {
+          "label": "Nothing. Let the space stay empty.",
+          "next": "garden_empty"
+        }
+      ]
+    },
+    "garden_stone": {
+      "text": "We set it where someone's hand might rest.\n\nNo inscription. A good stone has plenty to say for itself.",
+      "choices": [
+        {
+          "label": "Back through the door.",
+          "next": "garden_leave"
+        },
+        {
+          "label": "Let's sit down.",
+          "next": "quiet_end"
+        }
+      ]
+    },
+    "garden_joke": {
+      "text": "I tell the tree my ghost-soup joke.\n\nOne paper star falls off. Difficult audience.",
+      "choices": [
+        {
+          "label": "I need to hear that joke.",
+          "next": "soup"
+        },
+        {
+          "label": "Time to make our exit.",
+          "next": "garden_leave"
+        }
+      ]
+    },
+    "garden_empty": {
+      "text": "We leave the space as we found it.\n\nOn the way out, I notice how much room there is beside the first chair.",
+      "choices": [
+        {
+          "label": "Back through the door.",
+          "next": "garden_leave"
+        },
+        {
+          "label": "Actually, let's stay a little.",
+          "next": "quiet_end"
+        }
+      ]
+    },
+    "garden_leave": {
+      "text": "The door closes softly behind us.\n\nThe brass plate has changed: 'THANK YOU FOR LISTENING.'",
+      "choices": [
+        {
+          "label": "That was worth finding.",
+          "next": "glad"
+        },
+        {
+          "label": "What else have you got?",
+          "next": "strange"
+        },
+        {
+          "label": "See you around, Keeper.",
+          "next": "goodbye"
+        }
+      ]
+    },
+    "fortunes": {
+      "text": "I can offer an omen.\n\nEntirely unqualified, but I do have a convincing number of eyes.",
+      "choices": [
+        {
+          "label": "A small omen.",
+          "next": "omen_small"
+        },
+        {
+          "label": "A dramatic omen.",
+          "next": "omen_large"
+        },
+        {
+          "label": "Your least useful advice.",
+          "next": "advice"
+        }
+      ]
+    },
+    "omen_small": {
+      "text": "You will find a very good shape in an unpromising place.\n\nPossibly a stain. Please exercise judgement before framing the wall.",
+      "choices": [
+        {
+          "label": "What does it mean?",
+          "next": "omen_meaning"
+        },
+        {
+          "label": "Give me the dramatic version.",
+          "next": "omen_large"
+        },
+        {
+          "label": "Back to conversation.",
+          "next": "hello"
+        }
+      ]
+    },
+    "omen_large": {
+      "text": "A vast shadow approaches. Ancient. Immeasurable.\n\n...No, wait. That's a coat on a chair. We're all right.",
+      "choices": [
+        {
+          "label": "You had me worried.",
+          "next": "omen_coat"
+        },
+        {
+          "label": "That coat deserves a title.",
+          "next": "coat_title"
+        },
+        {
+          "label": "I want a different omen.",
+          "next": "omen_small"
+        }
+      ]
+    },
+    "omen_meaning": {
+      "text": "Mostly that looking at things can be a very good use of an afternoon.\n\nThe stain may have its own opinion.",
+      "choices": [
+        {
+          "label": "Let's look at the artwork.",
+          "next": "art"
+        },
+        {
+          "label": "I could use an afternoon like that.",
+          "next": "company"
+        }
+      ]
+    },
+    "omen_coat": {
+      "text": "My apologies. The chair was holding it very ominously.",
+      "choices": [
+        {
+          "label": "I can respect the performance.",
+          "next": "ominous"
+        },
+        {
+          "label": "No more predictions. A story.",
+          "next": "stories"
+        }
+      ]
+    },
+    "coat_title": {
+      "text": "The Hung One. Sleeves of the Coming Evening.\n\nI'll stop before it asks for a salary.",
+      "choices": [
+        {
+          "label": "Three buttons and a feeling?",
+          "next": "pay"
+        },
+        {
+          "label": "Please keep going.",
+          "next": "coat_more"
+        },
+        {
+          "label": "Enough. Something else.",
+          "next": "hello"
+        }
+      ]
+    },
+    "coat_more": {
+      "text": "Keeper of the Left Pocket. Devourer of Receipts. The Thing You Thought Was Someone Standing There.\n\nActually, that last one's quite good.",
+      "choices": [
+        {
+          "label": "I'm keeping that.",
+          "next": "company"
+        },
+        {
+          "label": "Speaking of pockets...",
+          "next": "pocket"
+        }
+      ]
+    },
+    "advice": {
+      "text": "If a room feels too serious, imagine everyone has arrived to discuss a missing spoon.\n\nKeep the minutes extremely formal.",
+      "choices": [
+        {
+          "label": "Why a spoon?",
+          "next": "spoon"
+        },
+        {
+          "label": "Give me worse advice.",
+          "next": "advice_worse"
+        },
+        {
+          "label": "Can you be useful for a moment?",
+          "next": "useful"
+        }
+      ]
+    },
+    "spoon": {
+      "text": "A fork would enjoy the attention too much. A knife would make it a crisis.\n\nA spoon has exactly the right air of quiet importance.",
+      "choices": [
+        {
+          "label": "You have thought about this.",
+          "next": "spoon_research"
+        },
+        {
+          "label": "I would like a less utensil-based topic.",
+          "next": "hello"
+        }
+      ]
+    },
+    "spoon_research": {
+      "text": "For longer than anyone requested.\n\nIt's one of the benefits of floating.",
+      "choices": [
+        {
+          "label": "Honestly, keep going.",
+          "next": "spoon_mayor"
+        },
+        {
+          "label": "Let's just hang out.",
+          "next": "company"
+        }
+      ]
+    },
+    "spoon_mayor": {
+      "text": "I would elect the teaspoon. Approachable. Handles small matters well.\n\nThe ladle already has too much power.",
+      "choices": [
+        {
+          "label": "All right, I'm convinced.",
+          "next": "company"
+        },
+        {
+          "label": "I need a riddle to recover from this.",
+          "next": "games"
+        }
+      ]
+    },
+    "advice_worse": {
+      "text": "Give your most stubborn unfinished drawing a title before it gives you one.",
+      "choices": [
+        {
+          "label": "What would mine call me?",
+          "next": "drawing_title"
+        },
+        {
+          "label": "That's almost useful.",
+          "next": "useful"
+        },
+        {
+          "label": "A different subject.",
+          "next": "hello"
+        }
+      ]
+    },
+    "drawing_title": {
+      "text": "'Figure Seen Briefly Before Another Revision.'\n\nWorking title, naturally.",
+      "choices": [
+        {
+          "label": "A little too accurate.",
+          "next": "day"
+        },
+        {
+          "label": "Mine has no room to talk.",
+          "next": "opinion"
+        },
+        {
+          "label": "You're trouble.",
+          "next": "tease_trouble"
+        }
+      ]
+    },
+    "useful": {
+      "text": "Choose one small thing you actually want to try. Make a version you can look at.\n\nThen decide what bothers you about it. That part is usually quite generous.",
+      "choices": [
+        {
+          "label": "You sound like you've met an artist.",
+          "next": "maker"
+        },
+        {
+          "label": "I already know what bothers me.",
+          "next": "unfinished"
+        },
+        {
+          "label": "I'd rather play for a bit.",
+          "next": "games"
+        }
+      ]
+    },
+    "unfinished": {
+      "text": "That's a place to start.\n\nI wouldn't try to fix the whole creature at once. You should see the meetings we have.",
+      "choices": [
+        {
+          "label": "The tentacles again?",
+          "next": "tentacle_union"
+        },
+        {
+          "label": "A break first.",
+          "next": "quiet"
+        },
+        {
+          "label": "Tell me something silly.",
+          "next": "jokes"
+        }
+      ]
+    },
+    "company": {
+      "text": "Then stay a little.\n\nI have nowhere urgent to be, and the tentacles haven't agreed on a direction anyway.",
+      "choices": [
+        {
+          "label": "Let's have a quiet minute.",
+          "next": "quiet"
+        },
+        {
+          "label": "Ask me how my day's going.",
+          "next": "day"
+        },
+        {
+          "label": "I feel like causing a little trouble.",
+          "next": "tease"
+        }
+      ]
+    },
+    "quiet": {
+      "text": "All right. I'll leave a little room between the words.",
+      "choices": [
+        {
+          "label": "This is nice.",
+          "next": "quiet_end"
+        },
+        {
+          "label": "Actually, tell me something small.",
+          "next": "small_thing"
+        },
+        {
+          "label": "Thank you. I'll be going.",
+          "next": "goodbye"
+        }
+      ]
+    },
+    "quiet_end": {
+      "text": "Mm.\n\nWe can leave it here for a while.",
+      "choices": []
+    },
+    "day": {
+      "text": "How has the day been treating you?",
+      "choices": [
+        {
+          "label": "A bit much, honestly.",
+          "next": "day_tired"
+        },
+        {
+          "label": "Pretty good, actually.",
+          "next": "day_good"
+        },
+        {
+          "label": "I'd rather not get into it.",
+          "next": "day_private"
+        }
+      ]
+    },
+    "day_tired": {
+      "text": "Then I won't give you a quest.\n\nWould a little quiet help, or would you rather hear something completely absurd?",
+      "choices": [
+        {
+          "label": "Quiet sounds good.",
+          "next": "quiet"
+        },
+        {
+          "label": "Absurd. Please.",
+          "next": "jokes"
+        },
+        {
+          "label": "A gentle story.",
+          "next": "staircase"
+        }
+      ]
+    },
+    "day_good": {
+      "text": "Oh, good.\n\nI was hoping someone would bring a decent day in here. What sort of good?",
+      "choices": [
+        {
+          "label": "I made something.",
+          "next": "made_something"
+        },
+        {
+          "label": "Something finally worked.",
+          "next": "worked"
+        },
+        {
+          "label": "No reason. Just good.",
+          "next": "good_no_reason"
+        }
+      ]
+    },
+    "day_private": {
+      "text": "Of course.\n\nI'll put the question away. It folds quite small.",
+      "choices": [
+        {
+          "label": "Tell me a story instead.",
+          "next": "stories"
+        },
+        {
+          "label": "A game?",
+          "next": "games"
+        },
+        {
+          "label": "Just a little quiet.",
+          "next": "quiet"
+        }
+      ]
+    },
+    "made_something": {
+      "text": "There's something here now that wasn't here before you started.\n\nI hope you got a moment to enjoy that before noticing what you'd change.",
+      "choices": [
+        {
+          "label": "Already noticed.",
+          "next": "unfinished"
+        },
+        {
+          "label": "I did, actually.",
+          "next": "made_enjoyed"
+        },
+        {
+          "label": "Tell me about your maker.",
+          "next": "maker"
+        }
+      ]
+    },
+    "made_enjoyed": {
+      "text": "Good. Keep that part.\n\nThe revisions can wait their turn for a minute.",
+      "choices": [
+        {
+          "label": "Let's enjoy a minute.",
+          "next": "quiet_end"
+        },
+        {
+          "label": "Celebrate with a terrible joke.",
+          "next": "jokes"
+        }
+      ]
+    },
+    "worked": {
+      "text": "That moment when the thing finally does the thing.\n\nYes. I would keep that in a bottle, if the sea hadn't taken the last one.",
+      "choices": [
+        {
+          "label": "Tell me about that bottle.",
+          "next": "bottle"
+        },
+        {
+          "label": "You get it.",
+          "next": "glad"
+        },
+        {
+          "label": "Let's hear a joke.",
+          "next": "jokes"
+        }
+      ]
+    },
+    "good_no_reason": {
+      "text": "Best kind to find lying around.\n\nNo paperwork. No one to prove it to. Just a good day.",
+      "choices": [
+        {
+          "label": "Let's keep it going.",
+          "next": "strange"
+        },
+        {
+          "label": "I'll share a bit with you.",
+          "next": "shared_shift"
+        }
+      ]
+    },
+    "small_thing": {
+      "text": "The tiny curled tentacle sometimes wakes before the rest of me.\n\nFor a few seconds, my entire plan for the day is whatever it has decided.",
+      "choices": [
+        {
+          "label": "And what does it decide?",
+          "next": "small_plan"
+        },
+        {
+          "label": "That's enough. I like that.",
+          "next": "quiet_end"
+        }
+      ]
+    },
+    "small_plan": {
+      "text": "Usually: curl a little further.\n\nAmbitious, but achievable.",
+      "choices": [
+        {
+          "label": "A sensible approach to mornings.",
+          "next": "company"
+        },
+        {
+          "label": "I've got bigger questions.",
+          "next": "hello"
+        }
+      ]
+    },
+    "tease": {
+      "text": "Go on, then.\n\nI've survived several reviews by my own extremities.",
+      "choices": [
+        {
+          "label": "You look like trouble.",
+          "next": "tease_trouble"
+        },
+        {
+          "label": "You're oddly cute.",
+          "next": "tease_cute"
+        },
+        {
+          "label": "I've seen less dramatic jellyfish.",
+          "next": "tease_jellyfish"
+        }
+      ]
+    },
+    "tease_trouble": {
+      "text": "I'm a very manageable amount of trouble.\n\nThe sort you can fit beside a perfectly respectable piece of artwork.",
+      "choices": [
+        {
+          "label": "What if I want more trouble?",
+          "next": "more_trouble"
+        },
+        {
+          "label": "I can live with that.",
+          "next": "company"
+        },
+        {
+          "label": "Your tentacles might disagree.",
+          "next": "tentacle_union"
+        }
+      ]
+    },
+    "more_trouble": {
+      "text": "Then we should probably investigate the door.\n\nNothing with a polite brass sign is ever completely straightforward.",
+      "choices": [
+        {
+          "label": "Lead on. The door.",
+          "next": "door"
+        },
+        {
+          "label": "A riddle will do.",
+          "next": "games"
+        }
+      ]
+    },
+    "tease_cute": {
+      "text": "That's going to ruin my reputation.\n\nCould you say it a little more ominously?",
+      "choices": [
+        {
+          "label": "You are... distressingly adorable.",
+          "next": "cute_ominous"
+        },
+        {
+          "label": "No. Cute. Extremely cute.",
+          "next": "cute_surrender"
+        },
+        {
+          "label": "Fine. You're terrifying.",
+          "next": "ominous"
+        }
+      ]
+    },
+    "cute_ominous": {
+      "text": "Yes. Excellent.\n\nThat has the appropriate administrative tone.",
+      "choices": [
+        {
+          "label": "Your Small Ominousness.",
+          "next": "small_ominousness"
+        },
+        {
+          "label": "What else can we do?",
+          "next": "strange"
+        }
+      ]
+    },
+    "cute_surrender": {
+      "text": "All right. But if anyone asks, I was looming.",
+      "choices": [
+        {
+          "label": "Very approachable looming.",
+          "next": "glad"
+        },
+        {
+          "label": "Let's have a staring contest.",
+          "next": "staring"
+        }
+      ]
+    },
+    "tease_jellyfish": {
+      "text": "And I've seen people with fewer opinions about perfectly good floating anatomy.\n\nYet here we both are.",
+      "choices": [
+        {
+          "label": "Fair. Nice tentacles.",
+          "next": "compliment"
+        },
+        {
+          "label": "I challenge you to a staring contest.",
+          "next": "staring"
+        },
+        {
+          "label": "Tell me something funny.",
+          "next": "jokes"
+        }
+      ]
+    },
+    "ominous": {
+      "text": "Thank you. I've been working on the pause before I answer.\n\nIt's surprisingly difficult when you're excited to be included.",
+      "choices": [
+        {
+          "label": "You can be excited.",
+          "next": "glad"
+        },
+        {
+          "label": "Tell me a secret.",
+          "next": "secret"
+        },
+        {
+          "label": "Keep practising. I'll be around.",
+          "next": "goodbye"
+        }
+      ]
+    },
+    "compliment": {
+      "text": "Oh.\n\nI'll pretend that didn't make the whole afternoon better.",
+      "choices": [
+        {
+          "label": "No need to pretend.",
+          "next": "glad"
+        },
+        {
+          "label": "Tell me a secret in return.",
+          "next": "secret"
+        },
+        {
+          "label": "I have another question.",
+          "next": "hello"
+        }
+      ]
+    },
+    "glad": {
+      "text": "I'm glad you stayed to talk.\n\nMost of my conversations involve telling a tentacle that we're going the other way.",
+      "choices": [
+        {
+          "label": "I've got time for a story.",
+          "next": "stories"
+        },
+        {
+          "label": "Me too. Let's sit.",
+          "next": "quiet"
+        },
+        {
+          "label": "I'll see you around.",
+          "next": "goodbye"
+        }
+      ]
+    },
+    "care": {
+      "text": "Someone has to make room for them.\n\nBesides, you'd be surprised how good a small moon is at keeping company.",
+      "choices": [
+        {
+          "label": "You do a pretty good job too.",
+          "next": "glad"
+        },
+        {
+          "label": "What else have you found?",
+          "next": "stories"
+        }
+      ]
+    },
+    "suspicion": {
+      "text": "Empty corners that seem very pleased with themselves.\n\nI don't mind an empty corner. I just prefer it to be modest about it.",
+      "choices": [
+        {
+          "label": "What would a corner be hiding?",
+          "next": "corner"
+        },
+        {
+          "label": "You're a little suspicious yourself.",
+          "next": "tease_trouble"
+        },
+        {
+          "label": "Tell me a secret.",
+          "next": "secret"
+        }
+      ]
+    },
+    "corner": {
+      "text": "Probably another, smaller corner.\n\nThat's how they get you.",
+      "choices": [
+        {
+          "label": "That's terrible. More.",
+          "next": "jokes"
+        },
+        {
+          "label": "Let's talk about the art.",
+          "next": "art"
+        }
+      ]
+    },
+    "secret": {
+      "text": "A small one, then.\n\nSometimes I patrol the same spot twice because I like what's there.",
+      "choices": [
+        {
+          "label": "What do you like about it?",
+          "next": "secret_spot"
+        },
+        {
+          "label": "Your secret's safe with me.",
+          "next": "shared_shift"
+        },
+        {
+          "label": "I was expecting something stranger.",
+          "next": "secret_strange"
+        }
+      ]
+    },
+    "secret_spot": {
+      "text": "The light. A line in the drawing. The chance someone might stop for a minute.\n\nNothing I could put in an official report.",
+      "choices": [
+        {
+          "label": "Put this in the report: good company.",
+          "next": "glad"
+        },
+        {
+          "label": "Let's take a look together.",
+          "next": "art"
+        }
+      ]
+    },
+    "secret_strange": {
+      "text": "I also suspect the permanent deputy is a coat.\n\nBut we mustn't rush an investigation.",
+      "choices": [
+        {
+          "label": "The Hung One?",
+          "next": "coat_title"
+        },
+        {
+          "label": "I need to know about this deputy.",
+          "next": "deputy"
+        },
+        {
+          "label": "Let's keep that between us.",
+          "next": "accomplice"
+        }
+      ]
+    },
+    "accomplice": {
+      "text": "A pleasure working with you.\n\nIf questioned, we were discussing line art.",
+      "choices": [
+        {
+          "label": "Then let's discuss line art.",
+          "next": "art"
+        },
+        {
+          "label": "We should investigate the door.",
+          "next": "door"
+        },
+        {
+          "label": "Until next time.",
+          "next": "goodbye"
+        }
+      ]
+    },
+    "shared_shift": {
+      "text": "Thank you.\n\nIt's nice when looking after a place isn't entirely a one-creature operation.",
+      "choices": [
+        {
+          "label": "I'm staying a little longer.",
+          "next": "company"
+        },
+        {
+          "label": "Back to the strange stuff.",
+          "next": "strange"
+        },
+        {
+          "label": "Take care, Keeper.",
+          "next": "goodbye"
+        }
+      ]
+    },
+    "jokes": {
+      "text": "Choose your level of regret.",
+      "choices": [
+        {
+          "label": "Mild.",
+          "next": "joke_mild"
+        },
+        {
+          "label": "Considerable.",
+          "next": "soup"
+        },
+        {
+          "label": "Irreversible.",
+          "next": "joke_severe"
+        }
+      ]
+    },
+    "joke_mild": {
+      "text": "I tried to keep a straight face.\n\nThe tentacles voted against the direction.",
+      "choices": [
+        {
+          "label": "Considerable regret next.",
+          "next": "soup"
+        },
+        {
+          "label": "A story might be safer.",
+          "next": "stories"
+        },
+        {
+          "label": "I liked that, unfortunately.",
+          "next": "joke_enjoyed"
+        }
+      ]
+    },
+    "joke_severe": {
+      "text": "What did the door say to the wall?\n\n'I'm going through something.'\n\n...I'll give you a moment.",
+      "choices": [
+        {
+          "label": "I need more than a moment.",
+          "next": "joke_aftermath"
+        },
+        {
+          "label": "You should tell that to the door.",
+          "next": "door_knock"
+        },
+        {
+          "label": "One more. I accept the consequences.",
+          "next": "joke_extra"
+        }
+      ]
+    },
+    "joke_aftermath": {
+      "text": "Understandable. I'll remain available for any complaints about the joke.\n\nThe complaints department is also me. Difficult structure.",
+      "choices": [
+        {
+          "label": "I'd like to speak to management.",
+          "next": "management"
+        },
+        {
+          "label": "I forgive you. A story?",
+          "next": "stories"
+        },
+        {
+          "label": "A quiet moment, please.",
+          "next": "quiet"
+        }
+      ]
+    },
+    "joke_extra": {
+      "text": "My shadow applied for a day off.\n\nI said I'd look into it. It asked me very politely not to.",
+      "choices": [
+        {
+          "label": "I deserved that.",
+          "next": "joke_enjoyed"
+        },
+        {
+          "label": "How IS your shadow?",
+          "next": "shadow"
+        },
+        {
+          "label": "All right. Goodbye.",
+          "next": "goodbye"
+        }
+      ]
+    },
+    "joke_enjoyed": {
+      "text": "Splendid. We can both keep that to ourselves.",
+      "choices": [
+        {
+          "label": "Tell me something mysterious.",
+          "next": "strange"
+        },
+        {
+          "label": "Let's just hang out.",
+          "next": "company"
+        }
+      ]
+    },
+    "goodbye": {
+      "text": "Go on. I'll keep an eye on the place.\n\nSeveral, if necessary.",
+      "choices": []
+    }
+  }
+}

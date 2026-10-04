@@ -3,32 +3,35 @@ import { assertArticle, articleAlignmentStyle, articleSpacingStyle, articleTextS
 import { resolvePublishedAssetUrl } from '../profileDocument/domain/publishedAssetUrl.js';
 import './text.css';
 
-export function ArticleArtwork({ attrs }) {
+export function ArticleArtwork({ attrs, flowAttributes }) {
   const { asset, alt, caption } = attrs;
   const [unavailable, setUnavailable] = useState(false);
   useEffect(() => setUnavailable(false), [asset.media.url]);
-  return <figure>{unavailable ? <p role="status">Artwork unavailable.</p>
+  return <figure {...flowAttributes}>{unavailable ? <p role="status">Artwork unavailable.</p>
     : <img src={resolvePublishedAssetUrl(asset.media.url)} alt={alt} loading="lazy" onError={() => setUnavailable(true)} />}
     {caption && <figcaption>{caption}</figcaption>}
     </figure>;
 }
-function renderNode(node, key) {
+function renderNode(node, key, positions) {
+  const position = positions?.get(node);
+  const atomic = ['artwork', 'hardBreak', 'horizontalRule', 'pageBreak'].includes(node.type) || node.type !== 'doc' && !node.content?.length;
+  const range = position && atomic ? { 'data-flow-from': position.from, 'data-flow-to': position.to } : {};
   if (node.type === 'text') return (node.marks || []).reduce((text, mark, index) => {
     const id = `${key}-m${index}`;
     if (mark.type === 'textStyle') return <span key={id} style={articleTextStyle(mark.attrs)}>{text}</span>;
     if (mark.type === 'link') return <a key={id} href={mark.attrs.href} target="_blank" rel="noopener noreferrer">{text}</a>;
     return createElement(({ bold: 'strong', italic: 'em', underline: 'u', strike: 's', code: 'code' })[mark.type], { key: id }, text);
-  }, node.text);
-  if (node.type === 'pageBreak') return <div key={key} className="text-page-break" />;
-  if (node.type === 'artwork') return <ArticleArtwork key={key} attrs={node.attrs} />;
+  }, position ? <span data-flow-text="" data-flow-from={position.from} data-flow-to={position.to}>{node.text}</span> : node.text);
+  if (node.type === 'pageBreak') return <div key={key} className="text-page-break" {...range} data-flow-break={position ? '' : undefined} />;
+  if (node.type === 'artwork') return <ArticleArtwork key={key} attrs={node.attrs} flowAttributes={range} />;
   const tag = ({ doc: 'div', paragraph: 'p', heading: `h${node.attrs?.level}`, bulletList: 'ul', orderedList: 'ol', listItem: 'li', blockquote: 'blockquote', horizontalRule: 'hr', hardBreak: 'br' })[node.type];
-  return createElement(tag, { key, ...(node.type === 'doc' ? { className: 'text-document-body' } : {}), ...(['paragraph', 'heading'].includes(node.type) ? { style: { ...articleAlignmentStyle(node.attrs?.textAlign), ...articleSpacingStyle(node.attrs) } } : {}), ...(node.type === 'orderedList' ? { start: node.attrs?.start } : {}) },
-    ['hardBreak', 'horizontalRule'].includes(node.type) ? undefined : node.content?.length ? node.content.map((n, i) => renderNode(n, `${key}-${i}`)) : <br />);
+  return createElement(tag, { key, ...range, ...(node.type === 'doc' ? { className: 'text-document-body' } : {}), ...(['paragraph', 'heading'].includes(node.type) ? { style: { ...articleAlignmentStyle(node.attrs?.textAlign), ...articleSpacingStyle(node.attrs) } } : {}), ...(node.type === 'orderedList' ? { start: node.attrs?.start } : {}), ...(node.type === 'listItem' && position?.continued ? { style: { listStyleType: 'none' } } : {}) },
+    ['hardBreak', 'horizontalRule'].includes(node.type) ? undefined : node.content?.length ? node.content.map((n, i) => renderNode(n, `${key}-${i}`, positions)) : <br />);
 }
-export default function ArticleView({ article }) {
+export default function ArticleView({ article, flow }) {
   try { assertArticle(article); } catch (e) { return <p role="alert">{e.message}</p>; }
   const appearance = textAppearance(article);
   return <article className={`text-document${appearance.compact ? ' text-document--compact' : ''}`} style={textContentStyle(article)}>
-    {article.title && <h1 className="text-document-title" style={textTitleStyle(article)}>{article.title}</h1>}{renderNode(article.content, 'article')}
+    {article.title && flow?.title !== false && <h1 className="text-document-title" style={textTitleStyle(article)}>{article.title}</h1>}{renderNode(flow?.content || article.content, 'article', flow?.positions)}
   </article>;
 }

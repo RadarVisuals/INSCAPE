@@ -60,3 +60,21 @@ export function selectedTypography(editor, name) {
   return { value: values.size === 1 ? [...values][0] : null, mixed: values.size > 1,
     hasOverride: [...values].some(value => value != null) };
 }
+
+// A mixed selection cannot be restored by applying one numeric value. Retain
+// its original marks only for the lifetime of the numeric field interaction.
+export function captureArticleTypography(editor) {
+  const { from, to, empty } = editor.state.selection, type = editor.schema.marks.textStyle;
+  const stored = empty ? (editor.state.storedMarks || editor.state.selection.$from.marks()).find(mark => mark.type === type) : null;
+  const ranges = [];
+  if (!empty) editor.state.doc.nodesBetween(from, to, (node, position) => {
+    if (node.isText) ranges.push({ from: Math.max(from, position), to: Math.min(to, position + node.nodeSize), mark: node.marks.find(mark => mark.type === type) });
+  });
+  return () => {
+    if (editor.isDestroyed || editor.state.selection.from !== from || editor.state.selection.to !== to) return;
+    const tr = closeHistory(editor.state.tr);
+    if (empty) { tr.removeStoredMark(type); if (stored) tr.addStoredMark(stored); }
+    for (const range of ranges) { tr.removeMark(range.from, range.to, type); if (range.mark) tr.addMark(range.from, range.to, range.mark); }
+    editor.view.dispatch(tr);
+  };
+}

@@ -215,7 +215,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       data-inspecting={inspectionActive || undefined} data-inspection-atmosphere={inspectionAtmosphere || undefined}
 
       ref={boardNodeRef}
-      style={{ ...moduleEdgeStyle(moduleAppearance?.edges, contentScale), '--workbench-pan-scale': workbenchScale, '--workflow-identity-strip-height': `${responsiveMetrics.identityStripHeight}px`,
+      style={{ ...moduleEdgeStyle(moduleAppearance?.edges, contentScale), '--workbench-pan-scale': workbenchScale, '--workbench-control-scale': density, '--workflow-identity-strip-height': `${responsiveMetrics.identityStripHeight}px`,
         ...paintFrame }}>
       <button type="button" className="system-workflow__toolbar-reveal" aria-label={toolbarOpen ? 'Hide Display controls' : 'Show Display controls'} aria-expanded={toolbarOpen} onClick={() => setToolbarOpen(value => !value)}>···</button>
       <header className="system-workflow__identity-strip" data-workbench-selectable aria-keyshortcuts="Shift+Enter" data-toolbar-open={toolbarOpen || undefined} tabIndex={0} aria-label={`Move Display Module: ${displayName}`}

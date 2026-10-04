@@ -1,13 +1,17 @@
 import { useLayoutEffect, useRef } from 'react';
+import { TextFrameOverflow, useTextFrame, useLinkedFrameLayout } from './TextFrame.jsx';
+import ArticleView from './ArticleView.jsx';
 
 // Automatic end spacing may yield to a fitting article. Explicit article padding
 // remains authored content; genuinely long articles keep their normal scroll tail.
-export default function TextViewport({ children, automaticPadding, mode, resetKey = null }) {
+export default function TextViewport({ children, article, flow, showOverflow = false, automaticPadding, mode, resetKey = null }) {
   const viewport = useRef(null), content = useRef(null);
+  const { remainder, visible, height, onMeasure } = useLinkedFrameLayout(article, flow);
+  const { framed, overflow } = useTextFrame(viewport, article, flow ? 'read' : mode, { force: Boolean(flow), onMeasure });
   useLayoutEffect(() => { if (resetKey !== null) viewport.current.scrollTop = 0; }, [resetKey]);
   useLayoutEffect(() => {
     const scroll = viewport.current, body = content.current;
-    if (!automaticPadding) {
+    if (framed || !automaticPadding) {
       scroll.style.removeProperty('--text-viewport-bottom-padding');
       return;
     }
@@ -27,8 +31,10 @@ export default function TextViewport({ children, automaticPadding, mode, resetKe
     observer.observe(scroll); observer.observe(body);
     measure();
     return () => observer.disconnect();
-  }, [automaticPadding, mode]);
-  return <div ref={viewport} className="text-module-scroll" tabIndex={0} role="region" aria-label="Article content">
-    <div ref={content} className="text-module-content">{children}</div>
+  }, [automaticPadding, mode, framed]);
+  return <div ref={viewport} className="text-module-scroll" data-text-frame={framed || undefined} data-text-flow-frame={flow ? 1 : undefined} style={flow ? { '--text-frame-height': height } : undefined} tabIndex={0} role="region" aria-label="Article content">
+    {flow && <div className="text-flow-measure" aria-hidden="true" inert=""><ArticleView article={article} flow={remainder} /></div>}
+    <div ref={content} className={flow ? 'text-flow-visible' : 'text-module-content'}>{children}{flow && mode === 'read' && <ArticleView article={article} flow={visible} />}</div>
+    {showOverflow && overflow && !flow && <TextFrameOverflow />}
   </div>;
 }

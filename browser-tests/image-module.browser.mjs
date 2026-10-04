@@ -70,7 +70,7 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     const movedGrip = await grip.boundingBox();
     await page.mouse.move(movedGrip.x + 60, movedGrip.y + 14); await page.mouse.down();
     await page.mouse.move(700, 140, { steps: 8 }); await page.mouse.up();
-    assert.equal(await dock.getByRole('button', { name: 'Duplicate', exact: true }).count(), 0);
+    assert.equal(await dock.getByRole('button', { name: 'Duplicate', exact: true }).count(), 1);
     assert.equal(await page.locator('[data-shared-tool="layers"]').count(), 0);
     const resizeHandle = module.getByRole('separator', { name: 'Resize Image window' });
     assert.equal(await resizeHandle.evaluate(el => getComputedStyle(el).opacity), '1');
@@ -107,6 +107,18 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     assert.equal(cropped.imageModules[0].sides[2].crop.zoom, 2);
     assert.deepEqual(cropped.grids, before.grids);
     await page.screenshot({ path: join(shots, 'strip-wide.png') });
+    await dock.getByRole('button', { name: 'Duplicate', exact: true }).click();
+    await page.waitForFunction(() => window.readDraft().imageModules.length === 2);
+    const copied = (await page.evaluate(() => window.readDraft())).imageModules[1];
+    assert.deepEqual(copied.sides.map(({ id, ...side }) => side), cropped.imageModules[0].sides.map(({ id, ...side }) => side));
+    assert.equal(copied.width, 640); assert.equal(copied.height, 96);
+    const copiedCanvas = page.locator(`[data-image-module="${copied.id}"] .image-module__canvas`);
+    await copiedCanvas.waitFor();
+    assert.equal(await copiedCanvas.getAttribute('data-side-id'), copied.sides[2].id);
+    await copiedCanvas.focus(); await page.keyboard.press('Control+z');
+    await page.waitForFunction(() => window.readDraft().imageModules.length === 1);
+    assert.deepEqual(await page.evaluate(() => window.readDraft()), cropped, 'one undo removes the copy and its saved layout');
+    await grip.focus();
     // Lift uses the shared crop-to-native animation and returns to the exact saved crop.
     await canvas.click(); await page.getByRole('dialog', { name: 'Inspect Image' }).waitFor();
     await page.waitForFunction(() => document.querySelector('.image-module__canvas')?.hasAttribute('data-lift-source'));
@@ -208,7 +220,7 @@ test('independent Image: Library drop, free size, dock crop, wraparound flip, Li
     await page.locator('[data-display-instance="display:primary"]').getByLabel(/Move Display Module:/).focus();
     await grip.focus();
     assert.equal(await dock.getByRole('slider', { name: 'Crop zoom' }).count(), 0);
-    assert.equal(await dock.getByRole('button', { name: 'Duplicate', exact: true }).count(), 0);
+    assert.equal(await dock.getByRole('button', { name: 'Duplicate', exact: true }).count(), 1);
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

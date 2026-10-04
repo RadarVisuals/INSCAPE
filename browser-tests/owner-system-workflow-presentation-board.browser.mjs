@@ -1068,13 +1068,11 @@ test('Display Module composition Lock blocks authored geometry without absorbing
     const originalGridLabel = await stageContent.getAttribute('aria-label');
     const canvas = page.locator('.system-workflow__canvas');
     const canvasBox = await canvas.boundingBox();
-    await page.keyboard.down('Space');
     await page.mouse.move(canvasBox.x + canvasBox.width * .7, canvasBox.y + canvasBox.height * .7);
     await page.mouse.down();
     await page.mouse.move(canvasBox.x + canvasBox.width * .7 - 160, canvasBox.y + canvasBox.height * .7, { steps: 6 });
     assert.equal(await canvas.getAttribute('data-swiping'), 'true');
     await page.mouse.up();
-    await page.keyboard.up('Space');
     await page.waitForFunction((label) => document.querySelector('[data-system-workflow-stage]')?.getAttribute('aria-label') !== label,
       originalGridLabel);
     await page.getByRole('button', { name: 'Unlock Display Module composition' }).click();

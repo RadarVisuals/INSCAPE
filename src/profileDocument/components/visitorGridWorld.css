@@ -19,7 +19,6 @@
 .visitor-grid-world[data-surface="paper"] { --visitor-grid-surface: #d8d4ca; --visitor-grid-ink: #111313; }
 .visitor-grid-world__viewport { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
 .visitor-grid-world[data-workbench] .system-workflow__workbench { position: absolute; inset: 0 0 var(--visitor-dock-height); }
-.visitor-grid-world[data-space-navigation] .visitor-grid-world__viewport { cursor: grab; }
 .visitor-grid-world[data-grid-dragging] .visitor-grid-world__viewport { cursor: grabbing; }
 /* Scene clips share the moving rail; no per-scene blend compensation. */
 .visitor-grid-world__grid-plane { position: absolute; z-index: 0; inset: 0 auto 0 0; width: 100%; overflow: hidden; }

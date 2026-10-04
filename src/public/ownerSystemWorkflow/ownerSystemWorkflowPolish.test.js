@@ -19,13 +19,11 @@ test('Library remains mounted after first open without retaining an interactive 
   assert.match(source, /libraryMounted\.current && <PanelPresence id="library" panels=\{panels\} retained>/);
 });
 
-test('Grid navigation is explicitly Space-drag and both moving planes render their architectural grid', () => {
+test('Grid navigation and both moving planes retain their architectural grid', () => {
   const interaction = read('./useOwnerSystemWorkflowPlacementInteraction.js');
   const canvas = read('./OwnerSystemWorkflowCanvas.jsx');
   const pixelGrid = read('../../lattice/rendering/LatticePixelGrid.jsx');
   const styles = read('./ownerSystemWorkflow.css');
-  assert.match(interaction, /event\.code !== 'Space'/);
-  assert.match(interaction, /beginCanvasSelection\(event, \{ navigationOnly: true \}\)/);
   assert.match(interaction, /authoringDisabled && !navigationOnly/);
   assert.match(interaction, /navigationOnly && Math\.abs\(deltaX\)/);
   assert.doesNotMatch(interaction, /!event\.shiftKey && Math\.abs\(deltaX\)/);
@@ -34,7 +32,6 @@ test('Grid navigation is explicitly Space-drag and both moving planes render the
   assert.match(pixelGrid, /<clipPath[^>]*clipPathUnits="userSpaceOnUse"[\s\S]*<rect \{\.\.\.geometry\.bounds\}/);
   assert.equal((pixelGrid.match(/clipPath=\{geometry\.bounds/g) || []).length, 2);
   assert.doesNotMatch(styles, /grid-plane--adjacent::before/);
-  assert.match(styles, /\[data-space-navigation\] \{ cursor: grab; \}/);
 });
 
 test('Library collection filters stay viewport-bounded and scroll their option list', () => {

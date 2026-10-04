@@ -9,13 +9,13 @@ export const useSharedTextTools = () => useContext(Context);
 
 // The shared window owns only its screen position and active tool source.
 // Editors, callbacks, unsaved recovery and article content remain module-owned.
-export function SharedTextToolsProvider({ activeModuleId, onActivate, open, onOpenChange, children }) {
+export function SharedTextToolsProvider({ activeModuleId, onActivate, open, onOpenChange, menuSurface, children }) {
   const [host, setHost] = useState(null), [source, setSource] = useState(null);
   const report = useCallback(value => {
     setSource(value);
     return () => setSource(current => current?.token === value.token ? null : current);
   }, []);
-  return <Context.Provider value={{ activeModuleId, activate: onActivate, open, setOpen: onOpenChange, host, setHost, source, report }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ activeModuleId, activate: onActivate, open, setOpen: onOpenChange, menuSurface, host, setHost, source, report }}>{children}</Context.Provider>;
 }
 
 export function SharedTextToolsWindow({ hidden = false }) {

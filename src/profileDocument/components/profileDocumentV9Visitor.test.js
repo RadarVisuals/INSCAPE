@@ -71,7 +71,6 @@ test('v9 Visitor retains media state, retry/recovery, focus, identity, input own
   assert.match(visitor, /ArrowRight/);
   // Continuous drag, wrapping, and Text synchronization are exercised through
   // the shared camera in grid-motion/grid-transition.browser.mjs.
-  assert.match(visitor, /event\.code !== 'Space'/);
   assert.match(visitor, /suppressPlacementClickRef/);
   assert.match(visitor, /visitor-grid-world__grid-plane--current/);
   assert.match(visitor, /visitor-grid-world__grid-plane--adjacent/);

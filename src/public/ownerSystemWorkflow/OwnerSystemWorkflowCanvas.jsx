@@ -120,11 +120,16 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
   const placementContext = useMemo(() => ({}), [grid?.id, controller.draft.profileAddress, authoringLocked, interactionDisabled, playingGrids, playback.swipe]);
   const currentPlacementContext = useRef(placementContext);
   currentPlacementContext.current = placementContext;
-  useImperativeHandle(placementTargetRef, () => {
-    const isCurrent = () => currentPlacementContext.current === placementContext
+  const reportRejectedDrop = () => {
+    globalThis.clearTimeout?.(feedbackTimerRef.current);
+    setDropFeedback('PLACE INSIDE THE ARTBOARD');
+    feedbackTimerRef.current = globalThis.setTimeout?.(() => setDropFeedback(null), 1600);
+  };
+  const isCurrent = () => currentPlacementContext.current === placementContext
       && canvasRef.current?.isConnected && !authoringLocked && !interactionDisabled && !playingGrids && !playback.isMoving();
-    return {
+  const placementTarget = {
       isCurrent,
+      rejectDrop: () => { if (isCurrent()) reportRejectedDrop(); },
       id: controller.moduleId,
       get label() { return `${canvasRef.current?.closest('.system-workflow__presentation-board')?.querySelector('.system-workflow__board-title')?.textContent || 'Display'} / ${grid?.title || 'Untitled Grid'}`; },
       get node() { return canvasRef.current; },
@@ -153,8 +158,8 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
         const destination = createSystemWorkflowDropGeometry(dimensions.width, dimensions.height, point, field, options);
         return { destination, rectangle: projectLatticePixelRectangle(destination, field) };
       },
-    };
-  });
+  };
+  useImperativeHandle(placementTargetRef, () => placementTarget);
   const previousAuthoringLocked = useRef(authoringLocked);
   useLayoutEffect(() => {
     // Unlock returns to editing at the existing camera position.
@@ -167,9 +172,6 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     navigation: playback, snapStep, viewScale: pointerScale, artboardProjection: worldViewport,
   });
   const gridSwipe = playback.swipe;
-  const dropContext = useMemo(() => ({}), [grid?.id, controller.draft.profileAddress, authoringLocked, interactionDisabled, playingGrids, gridSwipe]);
-  const currentDropContext = useRef(dropContext);
-  currentDropContext.current = dropContext;
   const sourceGridId = gridSwipe?.sourceGridId || grid?.id;
   const cameraMoving = playingGrids || Boolean(gridSwipe?.moving);
   useEffect(() => { onPlaybackStateChange?.({ offset: Boolean(gridSwipe?.offset), moving: cameraMoving }); },
@@ -240,18 +242,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
     return () => { observer?.disconnect(); globalThis.removeEventListener?.('resize', measure); };
   }, [worldCover, Boolean(stageSize)]);
 
-  useEffect(() => {
-    const reportRejectedDrop = () => {
-      globalThis.clearTimeout?.(feedbackTimerRef.current);
-      setDropFeedback('PLACE INSIDE THE ARTBOARD');
-      feedbackTimerRef.current = globalThis.setTimeout?.(() => setDropFeedback(null), 1600);
-    };
-    globalThis.addEventListener?.('inscape:system-workflow-drop-rejected', reportRejectedDrop);
-    return () => {
-      globalThis.removeEventListener?.('inscape:system-workflow-drop-rejected', reportRejectedDrop);
-      globalThis.clearTimeout?.(feedbackTimerRef.current);
-    };
-  }, []);
+  useEffect(() => () => globalThis.clearTimeout?.(feedbackTimerRef.current), []);
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -290,7 +281,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
 
   if (!grid) return null;
   return <section className="system-workflow__stage-content" aria-label={`${grid.title} Grid`} data-system-workflow-stage data-world-cover={worldCover || undefined}>
-    <div ref={canvasRef} data-stage-columns={controller.draft.geometry.columns} data-stage-rows={controller.draft.geometry.rows} className="system-workflow__canvas" data-guide={displayGuideMode(appearance)} data-space-navigation={interaction.spaceNavigation || undefined} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={cameraMoving || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, '--workflow-board-inverse-scale': 1 / viewScale }}
+    <div ref={canvasRef} data-stage-columns={controller.draft.geometry.columns} data-stage-rows={controller.draft.geometry.rows} className="system-workflow__canvas" data-guide={displayGuideMode(appearance)} data-system-workflow-artboard data-swipe-direction={interaction.gridSwipe?.direction} data-swiping={cameraMoving || undefined} data-swipe-settling={interaction.gridSwipe?.settling || undefined} style={{ '--guide-color': appearance.guideColor, '--world-cell-size': worldViewport ? `${worldViewport.cellSize}px` : undefined, '--world-origin-x': worldViewport ? `${worldViewport.left}px` : undefined, '--world-origin-y': worldViewport ? `${worldViewport.top}px` : undefined, '--workflow-board-inverse-scale': 1 / viewScale }}
       onLoadCapture={picking.onLoadCapture}
       onClick={(event) => {
         if (cropSession || interaction.clickSuppressedRef.current || event.target.closest?.('[data-system-workflow-placement-id]')) return;
@@ -306,20 +297,17 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
       onPointerDown={(event) => { if (!cropSession) interaction.beginCanvasSelection(event); }}
       onDragOver={(event) => { if (!authoringLocked) event.preventDefault(); }}
       onDrop={async (event) => {
-        if (authoringLocked || interactionDisabled || playback.isMoving()) return;
+        const target = placementTarget;
+        if (!target.isCurrent()) return;
         const point = { x: event.clientX, y: event.clientY };
         const asset = assetsById.get(event.dataTransfer.getData('application/x-inscape-asset'));
         if (!asset) return;
+        event.preventDefault();
         let dimensions;
         try { dimensions = await (resolveAssetDimensions || decodeOwnerSystemWorkflowAssetDimensions)(asset); } catch { return; }
-        if (!dimensions || !canvasRef.current?.isConnected || playback.isMoving() || currentDropContext.current !== dropContext) return;
-        const field = createOwnerSystemWorkflowProjectedField(canvasRef.current, snapStep, 1, artboardMode, sceneRef.current, worldViewport, pointerScale);
-        if (!field || !ownerSystemWorkflowProjectedFieldContainsPoint(field, point)) {
-          globalThis.dispatchEvent?.(new CustomEvent('inscape:system-workflow-drop-rejected'));
-          return;
-        }
-        controller.placeAsset(systemWorkflowPlacementRequest(asset, dimensions, grid.id,
-          createSystemWorkflowDropGeometry(dimensions.width, dimensions.height, point, field)));
+        if (!dimensions || !target.isCurrent()) return;
+        const preview = target.previewAt(point, dimensions);
+        if (!preview?.destination || !target.placeAsset(asset, dimensions, preview.destination)) target.rejectDrop();
       }}>
       <ArtworkPreparationProvider viewportRef={canvasRef} enabled={!suspended}>
       <div ref={trackRef} className="system-workflow__grid-track"
@@ -419,7 +407,7 @@ export default function OwnerSystemWorkflowCanvas({ assetsById, authoringLocked 
           if (destination) controller.run(session => session.resizePlacement({ gridId: grid.id,
             placementId: renderedSelection.primary.id, expectedPlacement: renderedSelection.primary, destination, corner }));
         }}
-        type="button" title="Resize artwork · Shift keeps proportions · Alt for fine adjustment" style={screenHandlePoint(corner, selectionMetrics.rectangle, selectionOverlayHost.clientWidth, selectionOverlayHost.clientHeight, stageSize?.contentScale)} />)}
+        type="button" title="Resize artwork · Shift keeps proportions · Alt for fine adjustment" style={screenHandlePoint(corner, selectionMetrics.rectangle, selectionOverlayHost.clientWidth, selectionOverlayHost.clientHeight, stageSize ? 1 / stageSize.screenScale : 1)} />)}
     </div>, selectionOverlayHost)}
     <output aria-live="polite" className="system-workflow__drop-feedback" data-visible={Boolean(dropFeedback) || undefined}>{dropFeedback}</output>
   </section>;

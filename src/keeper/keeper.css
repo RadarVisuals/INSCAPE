@@ -13,12 +13,69 @@
 .keeper-dock svg.keeper-home { position: absolute; width: 14px; height: 14px; top: 5px; right: 5px; }
 .keeper-dock button:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: -3px; }
 .keeper-roamer { position: fixed; left: 0; top: 0; width: 0; height: 0; pointer-events: none; z-index: 47; will-change: transform; }
-.keeper-roamer img { position: absolute; width: var(--keeper-size, 128px); height: var(--keeper-size, 128px); object-fit: contain; backface-visibility: visible; transform: translate(-50%, -50%) perspective(calc(var(--keeper-size, 128px) * 4)) rotateY(calc((1 - var(--keeper-facing, 1)) * 90deg)); transition: transform 280ms cubic-bezier(.25, .1, .25, 1); }
+.keeper-roamer > img { position: absolute; width: var(--keeper-size, 128px); height: var(--keeper-size, 128px); object-fit: contain; backface-visibility: visible; transform: translate(-50%, -50%) perspective(calc(var(--keeper-size, 128px) * 4)) rotateY(calc((1 - var(--keeper-facing, 1)) * 90deg)) rotateZ(var(--keeper-tilt, 0rad)); transition: transform 280ms cubic-bezier(.25, .1, .25, 1); }
+.keeper-rig { position: absolute; width: var(--keeper-size, 128px); height: var(--keeper-size, 128px); transform: translate(-50%, -50%); }
+.keeper-rig__part { position: absolute; inset: 0; }
+.keeper-rig__part img { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); object-fit: contain; }
 .keeper-roamer[hidden] { display: none; }
+.keeper-head { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-sizing: border-box; min-width: 24px; min-height: 24px; padding: 0; border: 0; border-radius: 50%; background: transparent; pointer-events: auto; cursor: pointer; }
+.keeper-head:disabled { pointer-events: none; }
+.keeper-head:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: 3px; }
+.keeper-head--flip { width: calc(var(--keeper-size, 128px) * .65); height: calc(var(--keeper-size, 128px) * .65); }
+.keeper-conversation { position: fixed; z-index: 49; box-sizing: border-box; display: flex; flex-direction: column; width: min(320px, calc(100vw - 24px)); max-height: min(330px, calc(100dvh - 82px)); border: 1px solid var(--workflow-border); border-radius: 10px; background: var(--workflow-panel); color: var(--workflow-ink); pointer-events: auto; font: var(--workflow-type-control); isolation: isolate; }
+.keeper-conversation::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit; background: url('/assets/noise-samples/grain-mono.png') repeat; background-size: 128px; opacity: .12; mix-blend-mode: hard-light; }
+.keeper-conversation__tail { position: absolute; left: var(--keeper-tail-x, 75%); top: 100%; fill: var(--workflow-panel); overflow: visible; pointer-events: none; }
+.keeper-conversation[data-tail="top"] .keeper-conversation__tail { top: auto; bottom: 100%; transform: scaleY(-1); }
+.keeper-conversation[data-tail="right"] .keeper-conversation__tail { left: calc(100% - 4px); top: var(--keeper-tail-y); transform: translateY(-50%) rotate(-90deg); }
+.keeper-conversation[data-tail="left"] .keeper-conversation__tail { left: -28px; top: var(--keeper-tail-y); transform: translateY(-50%) rotate(90deg); }
+.keeper-conversation header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px 4px 12px; border-bottom: 1px solid var(--workflow-border); }
+.keeper-conversation header span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.keeper-conversation button { padding: 8px; border: 1px solid var(--workflow-border); border-radius: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.keeper-conversation header button { display: grid; place-items: center; flex-shrink: 0; width: 24px; height: 24px; padding: 4px; border: 0; }
+.keeper-conversation header svg { width: 16px; height: 16px; stroke-width: 1; }
+.keeper-conversation button:hover { background: var(--workflow-ink); color: var(--workflow-panel); }
+.keeper-conversation button:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: -3px; }
+.keeper-conversation__content { min-height: 0; padding: 10px 12px; overflow-y: auto; overscroll-behavior: contain; }
+.keeper-conversation p { margin: 0 0 12px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.keeper-conversation__passage:focus { outline: none; }
+.keeper-conversation__replies { display: grid; gap: 6px; }
+.keeper-conversation--ai { height: min(330px, calc(100dvh - 82px)); }
+.keeper-conversation--ai > .keeper-conversation__content { flex: 1; display: flex; flex-direction: column; }
+.keeper-conversation__modes { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--workflow-border); }
+.keeper-conversation__modes button { flex: 1; padding: 4px 8px; border: 0; border-bottom: 2px solid transparent; text-align: center; }
+.keeper-conversation__modes button[aria-pressed="true"] { border-bottom-color: var(--workflow-ink); }
+.keeper-ai { display: flex; flex-direction: column; gap: 6px; min-width: 0; min-height: 0; flex: 1; }
+.keeper-ai__settings { overflow-y: auto; min-height: 0; display: grid; gap: 10px; overscroll-behavior: contain; }
+.keeper-ai__toolbar { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; font: var(--workflow-type-panel-body); }
+.keeper-ai__toolbar button { border: 0; padding: 0 4px; font: inherit; }
+.keeper-ai__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.keeper-ai p { margin: 0; }
+.keeper-ai a { color: inherit; text-underline-offset: 3px; }
+.keeper-ai a:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: 2px; }
+.keeper-ai button:disabled { opacity: .5; cursor: default; }
+.keeper-ai__account { display: grid; gap: 3px; overflow-wrap: anywhere; }
+.keeper-ai__model, .keeper-ai__composer { display: grid; gap: 6px; min-width: 0; }
+.keeper-ai__composer { grid-template-columns: minmax(0, 1fr) auto; flex-shrink: 0; }
+.keeper-ai__composer .keeper-ai__actions { flex-direction: column; justify-content: center; }
+.keeper-ai select, .keeper-ai textarea { box-sizing: border-box; width: 100%; min-width: 0; padding: 8px; border: 1px solid var(--workflow-border); border-radius: 0; background: var(--workflow-panel); color: var(--workflow-ink); font: inherit; }
+.keeper-ai textarea { resize: none; height: 52px; }
+.keeper-ai select:focus-visible, .keeper-ai textarea:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: -2px; }
+.keeper-ai__transcript { flex: 1; min-height: 40px; overflow-y: auto; overscroll-behavior: contain; padding: 4px 0; }
+.keeper-ai__message + .keeper-ai__message { margin-top: 12px; }
+.keeper-ai__message > span, .keeper-ai__hint, .keeper-ai__account { font: var(--workflow-type-panel-body); }
+.keeper-ai__message > span { display: block; margin-bottom: 4px; }
+.keeper-ai__message[data-speaker="user"] { padding-left: 10px; border-left: 1px solid var(--workflow-border); }
+.keeper-ai__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.keeper-ai__options { display: grid; gap: 6px; }
+.keeper-ai__options label { display: flex; gap: 6px; align-items: center; }
+.keeper-ai__notice { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--workflow-border); }
 @media (prefers-reduced-motion: reduce) { .keeper-roamer img { transition: none; } }
 .keeper-tools { display: grid; gap: 8px; font: var(--workflow-type-control); }
 .keeper-tools label { display: grid; gap: 4px; }
 .keeper-tools input, .keeper-tools select, .keeper-tools button { box-sizing: border-box; min-width: 0; width: 100%; padding: 5px; border: 1px solid var(--workflow-border); border-radius: 0; background: transparent; color: var(--workflow-ink); font: inherit; }
 .keeper-tools p { margin: 0; font: var(--workflow-type-panel-body); }
+.keeper-swim-controls { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 8px; border: 1px solid var(--workflow-border); }
+.keeper-swim-controls legend { padding: 0 4px; }
+.keeper-swim-controls button:disabled { opacity: .5; }
 .keeper-tools .keeper-check { display: flex; align-items: center; }
 .keeper-check input { width: auto; }

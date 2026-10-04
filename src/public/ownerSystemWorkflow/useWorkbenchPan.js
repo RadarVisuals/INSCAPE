@@ -6,9 +6,11 @@ export const isWorkbenchBackground = (target, host) => target === host
 
 // A view offset owned by this mounted Workbench, never a saved window position.
 // Only the host's CSS variables change: content editors do not render per pixel.
-export default function useWorkbenchPan(hostRef, disabled) {
+export default function useWorkbenchPan(hostRef, disabled, onBegin) {
   const { offset, setOffset } = useWorkbenchCamera();
   const current = useRef(offset), active = useRef(null), space = useRef(false);
+  const suppressedPointer = useRef(null), beforeBegin = useRef(onBegin);
+  beforeBegin.current = onBegin;
   const update = useCallback(next => { current.current = next; setOffset(next); }, [setOffset]);
   const finish = useCallback((restore = false) => {
     const gesture = active.current;
@@ -40,10 +42,11 @@ export default function useWorkbenchPan(hostRef, disabled) {
       if (event.code !== 'Space' || event.isComposing || event.ctrlKey || event.metaKey || event.altKey
         || event.target?.isContentEditable || event.target?.closest?.('input, textarea, select, [role="textbox"], [role="slider"]')) return;
       if (!host.contains(event.target) && !(event.target === document.body && host.matches(':hover'))) return;
-      // Buttons keep native Space activation. A subsequent background drag
+      // Interface buttons keep native Space activation. A subsequent camera drag
       // moves focus to the host, so releasing Space does not click that button.
       space.current = true; host.dataset.workbenchPanReady = '';
-      if (isWorkbenchBackground(event.target, host) || event.target === document.body) event.preventDefault();
+      if (isWorkbenchBackground(event.target, host) || event.target === document.body
+        || event.target?.matches?.('[data-workbench-selectable]')) event.preventDefault();
     };
     const keyup = event => { if (event.code === 'Space') release(); };
     const hidden = () => { if (document.hidden) release(); };
@@ -67,10 +70,12 @@ export default function useWorkbenchPan(hostRef, disabled) {
       host?.removeAttribute('data-workbench-panned');
     };
   }, [hostRef]);
-  const begin = event => {
+  const begin = useCallback(event => {
     const host = hostRef.current;
-    if (disabled || !space.current || event.button !== 0 || active.current || !isWorkbenchBackground(event.target, host)) return false;
-    event.preventDefault(); event.stopPropagation();
+    if (disabled || !space.current || event.button !== 0 || active.current || !host?.contains(event.target)) return false;
+    event.preventDefault(); event.stopImmediatePropagation();
+    beforeBegin.current?.();
+    suppressedPointer.current = event.pointerId;
     host.focus({ preventScroll: true });
     const origin = current.current, point = { x: event.clientX, y: event.clientY };
     const gesture = { id: event.pointerId, host, origin,
@@ -91,6 +96,27 @@ export default function useWorkbenchPan(hostRef, disabled) {
     window.addEventListener('pointerup', gesture.up, true);
     window.addEventListener('pointercancel', gesture.cancel, true);
     return true;
-  };
-  return { offset, current, active, begin, update, reset: () => { finish(); update({ x: 0, y: 0 }); } };
+  }, [disabled, hostRef, finish, update]);
+  useEffect(() => {
+    if (disabled) return;
+    // Claim Space gestures before React's capture handlers can activate or move
+    // a module. Module and Grid interaction never receive this pointer press.
+    const pointer = event => {
+      suppressedPointer.current = null;
+      begin(event);
+    };
+    const click = event => {
+      if (event.pointerId !== suppressedPointer.current) return;
+      suppressedPointer.current = null;
+      event.preventDefault(); event.stopImmediatePropagation();
+    };
+    window.addEventListener('pointerdown', pointer, true);
+    window.addEventListener('click', click, true);
+    return () => {
+      window.removeEventListener('pointerdown', pointer, true);
+      window.removeEventListener('click', click, true);
+      suppressedPointer.current = null;
+    };
+  }, [begin, disabled]);
+  return { offset, current, active, update, reset: () => { finish(); update({ x: 0, y: 0 }); } };
 }

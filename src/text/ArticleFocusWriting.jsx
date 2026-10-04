@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useSharedTextTools } from './SharedTextTools.jsx';
 import './textFocus.css';
 
 const relativeLuminance = channels => channels.reduce((sum, channel, index) => {
@@ -11,6 +12,7 @@ const contrast = (first, second) => (Math.max(first, second) + 0.05) / (Math.min
 // A stable portal target keeps the article, EditorContent and node views mounted.
 // Only its DOM location changes; no second editor or document copy is created.
 export default function ArticleFocusWriting({ children, active, onClose, editor, returnFocus, title, background, saveError }) {
+  const menuSurface = useSharedTextTools()?.menuSurface;
   const [mount] = useState(() => {
     const element = document.createElement('div');
     element.className = 'text-editor-mount';
@@ -44,6 +46,7 @@ export default function ArticleFocusWriting({ children, active, onClose, editor,
   return <>
     <div ref={slot} className="text-focus-slot" />
     {createPortal(<dialog ref={dialog} className="text-focus-dialog text-workbench system-workflow__token-scope" role="dialog" aria-modal="true" aria-label="Focus writing"
+      data-lattice-menu-surface data-menu-surface={menuSurface}
       onClick={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}
       onPointerDown={event => event.stopPropagation()} onPointerUp={event => event.stopPropagation()}
       onKeyDown={event => {

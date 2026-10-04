@@ -37,58 +37,68 @@ export function useOwnerSystemWorkflowPanelPresence(open, { exitMs = 140, entran
 }
 
 export default function useOwnerSystemWorkflowPanels({ blocked = false } = {}) {
-  const [activePanel, setActivePanel] = useState(null);
+  // Library is the asset source while Grids chooses its destination. Only this
+  // pair may coexist; every other dock surface keeps its exclusive behavior.
+  const [openPanels, setOpenPanels] = useState([]);
+  const activePanel = openPanels.at(-1) || null;
+  const isPanelOpen = useCallback(panelId => openPanels.includes(panelId), [openPanels]);
   const triggers = useRef(new Map());
   const pendingFocus = useRef(null);
   const activity = useOwnerSystemWorkflowPanelPresence(activePanel === 'activity');
   const discover = useOwnerSystemWorkflowPanelPresence(activePanel === 'discover', { exitMs: 200 });
   const docs = useOwnerSystemWorkflowPanelPresence(activePanel === 'docs');
   const grids = useOwnerSystemWorkflowPanelPresence(activePanel === 'grids');
-  const library = useOwnerSystemWorkflowPanelPresence(activePanel === 'library');
+  const library = useOwnerSystemWorkflowPanelPresence(isPanelOpen('library'));
   const profile = useOwnerSystemWorkflowPanelPresence(activePanel === 'profile');
   const settings = useOwnerSystemWorkflowPanelPresence(activePanel === 'settings');
   const presence = useMemo(() => ({ activity, discover, docs, grids, library, profile, settings }), [activity, discover, docs, grids, library, profile, settings]);
 
-  const closePanel = useCallback(({ returnFocus = true } = {}) => {
+  const closePanel = useCallback(({ panelId = null, returnFocus = true } = {}) => {
     clearOwnerSystemWorkflowDocumentSelection();
-    setActivePanel((current) => {
-      if (returnFocus && current) pendingFocus.current = triggers.current.get(current) || null;
-      return null;
+    setOpenPanels((current) => {
+      const closing = panelId || current.at(-1);
+      if (!current.includes(closing)) return current;
+      pendingFocus.current = returnFocus ? { id: closing, node: triggers.current.get(closing) } : null;
+      return panelId ? current.filter(id => id !== panelId) : [];
     });
   }, []);
   const openPanel = useCallback((panelId, trigger = null) => {
     if (blocked || !OWNER_SYSTEM_WORKFLOW_PANEL_IDS.includes(panelId)) return;
     if (trigger) triggers.current.set(panelId, trigger);
     pendingFocus.current = null;
-    setActivePanel(panelId);
+    setOpenPanels(current => (panelId === 'grids' && current.includes('library')
+      || panelId === 'library' && current.includes('grids')) ? ['library', 'grids'] : [panelId]);
   }, [blocked]);
   const togglePanel = useCallback((panelId, trigger = null) => {
-    if (activePanel === panelId) closePanel();
+    if (isPanelOpen(panelId)) closePanel({ panelId });
     else openPanel(panelId, trigger);
-  }, [activePanel, closePanel, openPanel]);
+  }, [isPanelOpen, closePanel, openPanel]);
 
   useEffect(() => {
-    if (Object.values(presence).some(({ present }) => present)) return;
-    const node = pendingFocus.current;
+    const pending = pendingFocus.current;
+    if (!pending || presence[pending.id]?.present) return;
+    const node = pending.node;
     pendingFocus.current = null;
     if (node?.isConnected) requestAnimationFrame(() => node.isConnected && node.focus({ preventScroll: true }));
   }, [presence]);
 
   useEffect(() => {
     const onKeyDown = (event) => {
-      if (event.key !== 'Escape' || blocked || !activePanel || event.defaultPrevented || event.target?.closest?.('[role="listbox"], select')) return;
+      if (event.key !== 'Escape' || blocked || !activePanel || event.defaultPrevented || event.target?.closest?.('[role="listbox"]:not(.system-workflow__grid-list), select')) return;
       event.preventDefault();
-      closePanel();
+      closePanel({ panelId: activePanel });
     };
     const onPointerDown = (event) => {
-      if (blocked || !activePanel || activePanel === 'library' || event.defaultPrevented || event.target?.closest?.('[data-system-workflow-panel], [data-system-workflow-panel-trigger], [data-system-workflow-overlay]')) return;
-      closePanel();
+      if (blocked || !activePanel || activePanel === 'library' || event.defaultPrevented || event.target?.closest?.('[data-system-workflow-panel-trigger], [data-system-workflow-overlay]')) return;
+      if (activePanel === 'grids' && isPanelOpen('library')) return;
+      if (event.target?.closest?.('[data-system-workflow-panel]')) return;
+      closePanel({ panelId: activePanel });
     };
     globalThis.addEventListener?.('keydown', onKeyDown);
     globalThis.addEventListener?.('pointerdown', onPointerDown, true);
     return () => { globalThis.removeEventListener?.('keydown', onKeyDown); globalThis.removeEventListener?.('pointerdown', onPointerDown, true); };
-  }, [activePanel, blocked, closePanel]);
+  }, [activePanel, blocked, closePanel, isPanelOpen]);
 
   const completePanelTransition = useCallback((panelId) => presence[panelId]?.completeTransition(), [presence]);
-  return { activePanel, closePanel, completePanelTransition, openPanel, presence, togglePanel };
+  return { activePanel, isPanelOpen, openPanels, closePanel, completePanelTransition, openPanel, presence, togglePanel };
 }

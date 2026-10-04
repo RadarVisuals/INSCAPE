@@ -5,6 +5,7 @@ import { diagnosticsEnvironmentPlugin, productionBuildHygienePlugin } from './sc
 import { productionResponseSecurityHeaders } from './scripts/productionSecurityPolicy.js';
 import { excludeUnsupportedWalletConnectorsPlugin } from './scripts/unsupportedWalletConnectors.js';
 import { artworkDocumentHostPlugin } from './scripts/artworkDocumentHost.js';
+import { keeperChatgptPlugin } from './scripts/keeperChatgpt/service.js';
 
 export function resolveReleaseCommit(environment = process.env) {
   const candidate = environment.COMMIT_REF || environment.GITHUB_SHA || environment.VITE_COMMIT_REF || 'development';
@@ -15,7 +16,7 @@ export default defineConfig(({ mode }) => {
   const productionEnvironment = loadEnv(mode, process.cwd(), 'VITE_');
   return {
     define: { __INSCAPE_RELEASE_COMMIT__: JSON.stringify(resolveReleaseCommit({ ...process.env, ...productionEnvironment })) },
-    plugins: [artworkDocumentHostPlugin(), diagnosticsEnvironmentPlugin(), react(), excludeUnsupportedWalletConnectorsPlugin(),
+    plugins: [keeperChatgptPlugin(), artworkDocumentHostPlugin(), diagnosticsEnvironmentPlugin(), react(), excludeUnsupportedWalletConnectorsPlugin(),
       ownerRuntimeIsolationPlugin(), productionBuildHygienePlugin()],
     build: { manifest: true, rollupOptions: { input: { app: 'index.html', miniAppHost: 'mini-app-host.html' } } },
     // Audit exports and browser runtime artifacts are not application entries.

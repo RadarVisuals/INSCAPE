@@ -1,4 +1,4 @@
-import { keccak256 } from 'viem';
+import { authenticContent as authentic } from './contentVerification.js';
 
 export const ONCHAIN_DATA_URI_LIMITS = Object.freeze({
   jsonBytes: 384 * 1024,
@@ -6,25 +6,11 @@ export const ONCHAIN_DATA_URI_LIMITS = Object.freeze({
   svgUriCharacters: 384 * 1024,
 });
 
-const VERIFICATION_METHODS = new Map([
-  ['keccak256(utf8)', 'utf8'],
-  ['0x6f357c6a', 'utf8'],
-  ['keccak256(bytes)', 'bytes'],
-  ['0x8019f9b1', 'bytes'],
-]);
-const HASH = /^0x[0-9a-f]{64}$/iu;
 const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u;
 const SVG_FORBIDDEN_MARKUP = /<!DOCTYPE|<!ENTITY|<script\b|<foreignObject\b|<iframe\b|<object\b|<embed\b|<audio\b|<video\b/iu;
 const SVG_EVENT_HANDLER = /\son[a-z][a-z0-9_-]*\s*=/iu;
 const SVG_EXTERNAL_REFERENCE = /(?:href|src)\s*=\s*["']\s*(?:https?:|\/\/|data:|javascript:)/iu;
 const SVG_EXTERNAL_CSS = /(?:@import|url\s*\(\s*["']?\s*(?:https?:|\/\/|data:|javascript:))/iu;
-
-function authentic(bytes, verification) {
-  const method = VERIFICATION_METHODS.get(String(verification?.method || '').toLowerCase());
-  const expected = String(verification?.data || '').toLowerCase();
-  if (!method || !HASH.test(expected) || !(bytes instanceof Uint8Array)) return false;
-  return keccak256(bytes).toLowerCase() === expected;
-}
 
 function decodeBase64(value, maximumBytes) {
   if (!value || value.length % 4 !== 0 || !BASE64.test(value)) return null;

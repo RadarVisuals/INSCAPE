@@ -29,7 +29,8 @@ async function setNumber(page, name, value) {
     if (!await advanced.getAttribute('open').then(value => value !== null)) await advanced.locator('summary').click();
   }
   const field = page.getByRole('spinbutton', { name, exact: true });
-  await field.fill(String(value)); await field.press('Enter'); await settle(page);
+  await field.fill(String(value)); await settle(page);
+  assert.equal(await field.evaluate(node => node === document.activeElement), true, 'live formatting retains input focus without Enter');
 }
 const styleOf = locator => locator.evaluate(node => { const s = getComputedStyle(node); return [s.fontSize, s.letterSpacing, s.color]; });
 
@@ -139,13 +140,25 @@ test('selected size and tracking author a sub-label, preserve other text, undo, 
     assert.equal(await page.getByLabel('Article title', { exact: true }).evaluate(n => getComputedStyle(n).letterSpacing), '3.36px');
 
     await selectText(page, body, 'selected words');
-    await setNumber(page, 'Selected text size', 24); await setNumber(page, 'Selected text tracking', .08);
+    await setNumber(page, 'Selected text size', 24);
     const words = body.locator('span').filter({ hasText: 'selected words' });
     assert.equal((await styleOf(words))[0], '24px');
+    await setNumber(page, 'Selected text tracking', .08);
     assert.equal((await styleOf(words))[1], '1.92px');
     const field = page.getByRole('spinbutton', { name: 'Selected text size', exact: true });
-    await field.fill('999'); await field.press('Enter'); assert.equal((await styleOf(words))[0], '24px');
+    await field.fill('999'); assert.equal((await styleOf(words))[0], '24px');
+    await field.press('Enter'); assert.equal((await styleOf(words))[0], '24px');
+    await field.fill(''); await field.pressSequentially('2'); await settle(page);
+    assert.equal(await field.inputValue(), '2'); assert.equal((await styleOf(words))[0], '24px', 'an incomplete number does not overwrite the last valid size');
+    await field.pressSequentially('8'); await settle(page);
+    assert.equal((await styleOf(words))[0], '28px', 'completing a number applies immediately');
+    await field.press('ArrowUp'); await settle(page);
+    assert.equal((await styleOf(words))[0], '29px', 'spinner keys apply immediately');
+    await field.press('Escape'); assert.equal((await styleOf(words))[0], '24px');
     await field.fill('48'); await field.press('Escape'); await body.focus(); assert.equal((await styleOf(words))[0], '24px');
+    const tracking = page.getByLabel('Selected text tracking', { exact: true });
+    await tracking.fill(''); await tracking.pressSequentially('-'); await field.focus(); await settle(page);
+    assert.equal((await styleOf(words))[1], '1.92px', 'an unfinished negative number does not clear tracking on blur');
 
     await selectText(page, body, 'selected words');
     await page.getByRole('button', { name: 'Use inherited text size', exact: true }).click();
@@ -163,6 +176,15 @@ test('selected size and tracking author a sub-label, preserve other text, undo, 
 
     await body.focus(); await body.press('Control+A'); await settle(page);
     assert.equal(await field.getAttribute('placeholder'), 'Mixed'); assert.equal(await field.inputValue(), '');
+    const mixedContent = await page.evaluate(() => window.savedDraft().texts[0].article.content);
+    await field.fill('36'); await settle(page);
+    assert.equal((await styleOf(label))[0], '36px');
+    await field.press('Escape'); await settle(page);
+    assert.deepEqual(await page.evaluate(() => window.savedDraft().texts[0].article.content), mixedContent, 'Escape restores mixed sizes, colours and fonts');
+    await setNumber(page, 'Paragraph space after', 30);
+    assert.deepEqual(await body.locator('p').evaluateAll(nodes => nodes.map(n => n.style.paddingBottom)), ['30px', '30px']);
+    await page.getByLabel('Paragraph space after', { exact: true }).press('Escape'); await settle(page);
+    assert.deepEqual(await page.evaluate(() => window.savedDraft().texts[0].article.content), mixedContent, 'paragraph spacing also restores the original blocks');
     await selectText(page, body, 'ARCHIVE // 01');
     const saved = await page.evaluate(() => window.savedDraft().texts[0].article);
     assert.equal(saved.content.content[0].content[0].marks.find(m => m.type === 'textStyle').attrs.fontSize, 10);
@@ -174,8 +196,11 @@ test('selected size and tracking author a sub-label, preserve other text, undo, 
     const tools = page.locator('.text-tools-window'), box = await tools.boundingBox();
     assert.ok(box.x >= 0 && box.x + box.width <= 390.5);
     assert.equal(await tools.locator('.text-controls-body').evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
-    await field.scrollIntoViewIfNeeded(); await field.focus();
+    await field.scrollIntoViewIfNeeded(); await field.fill('30'); await settle(page);
+    assert.equal((await styleOf(label))[0], '30px');
+    assert.equal(await field.evaluate(node => node === document.activeElement), true);
     await page.screenshot({ path: '.browser-test-runtime/text-typography-narrow.png' });
+    await field.press('Escape'); assert.equal((await styleOf(label))[0], '10px');
     await page.setViewportSize({ width: 1440, height: 1100 }); await settle(page);
     await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
     const checkReader = async () => {
@@ -210,6 +235,7 @@ test('typography targets a Display heading and stays scoped when Text tools swit
     assert.deepEqual(await body.locator('h2').evaluate(n => [getComputedStyle(n).paddingTop, getComputedStyle(n).paddingBottom]), ['6px', '18px']);
     assert.equal((await styleOf(body.locator('h2 span')))[0], '32px');
     assert.equal((await styleOf(body.locator('h2 span')))[1], '3.2px');
+    await page.getByLabel('Selected text size', { exact: true }).fill('999');
     const second = page.getByRole('button', { name: 'Select Display article 2', exact: true });
     await second.focus(); await page.keyboard.press('Enter');
     const other = second.getByRole('textbox', { name: 'Article text', exact: true });
@@ -243,6 +269,10 @@ test('title and paragraph gaps control the Nomad layout, undo, reset and persist
     });
     await setNumber(page, 'Title gap', 0); const top = await point(0);
     await setNumber(page, 'Title gap', 8); assert.ok(Math.abs((await point(0)) - top - 8) < .1);
+    await setNumber(page, 'Title gap', 28);
+    assert.ok(Math.abs((await point(0)) - top - 28) < .1);
+    await page.getByLabel('Title gap', { exact: true }).press('Escape'); await settle(page);
+    assert.ok(Math.abs((await point(0)) - top - 8) < .1, 'Escape also restores document appearance fields');
     // A collapsed cursor is enough to change the containing paragraph.
     await body.focus(); await body.press('Control+Home'); await body.press('ArrowRight'); await settle(page);
     await setNumber(page, 'Paragraph space after', 0); const zeroAfter = await point(1);
@@ -264,6 +294,9 @@ test('title and paragraph gaps control the Nomad layout, undo, reset and persist
     assert.equal(await control.getAttribute('placeholder'), 'Mixed');
     await setNumber(page, 'Paragraph space before', 0);
     assert.deepEqual(await body.locator('p').evaluateAll(nodes => nodes.map(n => n.style.paddingTop)), ['0px', '0px', '0px']);
+    await control.press('Escape'); await settle(page);
+    assert.deepEqual(await body.locator('p').evaluateAll(nodes => nodes.map(n => n.style.paddingTop)), ['', '5px', ''], 'Escape restores mixed paragraph spacing');
+    await setNumber(page, 'Paragraph space before', 0);
     await page.getByRole('button', { name: 'Undo', exact: true }).click();
     assert.deepEqual(await body.locator('p').evaluateAll(nodes => nodes.map(n => n.style.paddingTop)), ['', '5px', '']);
     await selectText(page, body, 'Nomad is an inversion. A name turned inside out.');

@@ -39,16 +39,14 @@ test('panel controller phases, dismisses and restores exact trigger focus', { ti
     await grids.waitFor({ state: 'detached' });
     await page.getByRole('button', { name: /Select ABYSSAL STUDY/ }).click();
     const canvasBox = await page.locator('.system-workflow__canvas').boundingBox();
+    const cameraX = await page.locator('main.system-workflow').evaluate(node => parseFloat(node.style.getPropertyValue('--workbench-pan-x')) || 0);
     await page.keyboard.down('Space');
     await page.mouse.move(canvasBox.x + canvasBox.width * .7, canvasBox.y + canvasBox.height * .7);
     await page.mouse.down();
     await page.mouse.move(canvasBox.x + canvasBox.width * .7 - 160, canvasBox.y + canvasBox.height * .7, { steps: 4 });
-    assert.deepEqual(await page.locator('.system-workflow__selection-chrome[data-navigating]').evaluateAll((nodes) => nodes.map((node) => ({
-      handlesDisabled: [...node.querySelectorAll('.system-workflow__resize-handle')].every((handle) => handle.disabled),
-      opacity: getComputedStyle(node).opacity,
-      transition: getComputedStyle(node).transitionDuration,
-    }))), [{ handlesDisabled: true, opacity: '0', transition: '0s' }],
-    'direct Presentation Board swipe navigation hides the active selection before the Grid starts moving');
+    assert.equal(await page.locator('main.system-workflow').evaluate(node => parseFloat(node.style.getPropertyValue('--workbench-pan-x'))), cameraX - 160,
+      'Space-drag over the Display moves the Workbench camera');
+    assert.equal(await page.locator('.system-workflow__selection-chrome[data-navigating]').count(), 0);
     await page.mouse.up();
     await page.keyboard.up('Space');
     await page.waitForFunction(() => !document.querySelector('.system-workflow__canvas')?.dataset.swiping);

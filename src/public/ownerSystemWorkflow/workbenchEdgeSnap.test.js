@@ -65,6 +65,33 @@ test('grid feedback stays on the visible lattice while holding an active grid li
   assert.equal(gridEdgeMatch('x', 'left', 115).value, 120);
 });
 
+test('zoomed grid movement and resizing reach every adjacent line in both directions', () => {
+  for (const scale of [.1, .25, .33, .46, .5, 1, 2]) {
+    const step = 24 * scale, origin = 37.125;
+    for (const [axis, side] of [['x', 'left'], ['x', 'right'], ['y', 'top'], ['y', 'bottom']]) {
+      for (const direction of [-1, 1]) {
+        let match = gridEdgeMatch(axis, side, origin, origin, step);
+        for (let cell = 1; cell <= 5; cell++) {
+          const value = origin + direction * cell * step;
+          match = gridEdgeMatch(axis, side, value, origin, step, match);
+          assert.ok(Math.abs(match.value - value) < 1e-9, `${scale}: ${side} skipped cell ${direction * cell}`);
+        }
+      }
+    }
+  }
+});
+
+test('zoomed grid retains a little hysteresis without sticking through the next line', () => {
+  for (const scale of [.1, .25, .33, .46, .5, 1]) {
+    const step = 24 * scale, origin = 37.125;
+    const first = gridEdgeMatch('x', 'left', origin, origin, step);
+    for (const direction of [-1, 1]) {
+      assert.equal(gridEdgeMatch('x', 'left', origin + direction * .6 * step, origin, step, first).value, origin);
+      assert.equal(gridEdgeMatch('x', 'left', origin + direction * .8 * step, origin, step, first).value, origin + direction * step);
+    }
+  }
+});
+
 test('Display resize chooses a module edge over a grid match on the other axis', () => {
   const view = projectPresentationBoardView({ columns: 32, rows: 18 }, { width: 1440, height: 1000 }, .5, { identityStripHeight: 0 });
   const frame = { ...view.frame.board, left: 100, top: 80 };

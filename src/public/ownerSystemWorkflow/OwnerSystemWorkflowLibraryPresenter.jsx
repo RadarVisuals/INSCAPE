@@ -113,7 +113,7 @@ function contextAnchor(event) {
   return { x: bounds.left + Math.min(18, bounds.width / 2), y: bounds.bottom };
 }
 
-export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, data, menuSurfaceId,
+export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, categoryDrag, data, dropFeedback, menuSurfaceId,
   onAssetActivate, onAssetPointerDown, onImageActivate, workspace }) {
   // Temporary browsing state, retained across filtering and closing the drawer.
   // The workspace keys this presenter by profile; no authored data is changed.
@@ -123,11 +123,10 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
-  const categorySectionRef = useRef(null); const organizationGestureRef = useRef(null); const suppressSelectionRef = useRef(false);
+  const categorySectionRef = useRef(null);
   const [contextMenu, setContextMenu] = useState(null); const [organizationDrag, setOrganizationDrag] = useState(null);
   const [collapsedSections, setCollapsedSections] = useState(() => new Set());
   const [relationshipView, setRelationshipView] = useState('all');
-  useEffect(() => () => organizationGestureRef.current?.cancel?.(), []);
   const restoreFocus = (trigger) => requestAnimationFrame(() => trigger?.focus?.({ preventScroll: true }));
   const closeContextMenu = (restore = true) => { const trigger = contextMenu?.trigger; clearOwnerSystemWorkflowDocumentSelection(); setContextMenu(null); if (restore) restoreFocus(trigger); };
   const closeDialog = () => { const trigger = workspace.dialog?.trigger; clearOwnerSystemWorkflowDocumentSelection(); workspace.setDialog(null); restoreFocus(trigger); };
@@ -190,30 +189,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
   const beginOrganizationDrag = (event, asset, mediaWorkspace = workspace) => {
     if (asset.isCollection && asset.collectionRole !== 'cover') return;
     const id = assetId(asset); const selectedIds = workspace.selectedAssetIds.includes(id) ? [...workspace.selectedAssetIds] : [id];
-    if (event.button !== 0) return;
-    if (selectedIds.length === 1 && mediaWorkspace.isAssetRenderable(id)) {
-      onAssetPointerDown?.(event, asset, mediaWorkspace, { placementPreset: 'compact' });
-    }
-    const element = event.currentTarget; const pointerId = event.pointerId; const start = { x: event.clientX, y: event.clientY };
-    let started = false;
-    const categoryAt = (pointerEvent) => document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY)
-      ?.closest?.('[data-browser-category-id]')?.dataset.browserCategoryId || null;
-    const move = (pointerEvent) => {
-      if (Math.hypot(pointerEvent.clientX - start.x, pointerEvent.clientY - start.y) < 6) return;
-      const categoryId = categoryAt(pointerEvent); if (!categoryId) { if (started) setOrganizationDrag(null); return; }
-      started = true; setOrganizationDrag({ assetIds: selectedIds, categoryId, point: { x: pointerEvent.clientX, y: pointerEvent.clientY } });
-    };
-    const cleanup = () => { element.removeEventListener('pointermove', move); element.removeEventListener('pointerup', finish);
-      element.removeEventListener('pointercancel', cancel); if (element.hasPointerCapture?.(pointerId)) element.releasePointerCapture(pointerId);
-      organizationGestureRef.current = null; setOrganizationDrag(null); };
-    const finish = (pointerEvent) => { const categoryId = started ? categoryAt(pointerEvent) : null;
-      if (started) { pointerEvent.preventDefault(); pointerEvent.stopPropagation(); suppressSelectionRef.current = true; }
-      cleanup(); if (categoryId && selectedIds.every((selectedId) => data.assets.some((entry) => assetId(entry) === selectedId))
-        && data.categories.some(({ id: category }) => category === categoryId)) categoryCommands.setCategoryAssets(categoryId, selectedIds, true);
-      if (started) setTimeout(() => { suppressSelectionRef.current = false; }, 0); };
-    const cancel = () => cleanup(); organizationGestureRef.current = { assetIds: selectedIds, cancel };
-    element.setPointerCapture?.(pointerId); element.addEventListener('pointermove', move);
-    element.addEventListener('pointerup', finish); element.addEventListener('pointercancel', cancel);
+    onAssetPointerDown?.(event, asset, mediaWorkspace, { placementPreset: 'compact', assetIds: selectedIds });
   };
   const confirmDialog = (name) => {
     const dialog = workspace.dialog; if (!dialog) return;
@@ -271,7 +247,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
           onCancel={closeDialog} onConfirm={confirmDialog} /> : <LibraryNavigationButton
         active={active}
         categoryId={category.id} count={category.assetIds.filter((id) => renderableIds.has(id)).length}
-        draggable dropTarget={organizationDrag?.categoryId === category.id} label={category.name}
+        draggable dropTarget={categoryDrag?.categoryId === category.id} label={category.name}
         onClick={() => selectBuiltIn({ kind: BROWSER_VIEW_KINDS.CATEGORY, id: category.id })}
         onContextMenu={(event) => { event.preventDefault(); openCategoryContext(event, category); }}
         onDragEnd={() => setOrganizationDrag(null)}
@@ -366,6 +342,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         onPointerDown={workspace.sidebarResize.begin} onPointerMove={workspace.sidebarResize.update}
         onPointerUp={workspace.sidebarResize.finish} title="Resize Browser navigation" type="button" />
       <main className="lattice-browser-results">
+        {dropFeedback && <div className="lattice-browser-notice" data-error role="status">{dropFeedback}</div>}
         {data.persistenceError && <div className="lattice-browser-notice" data-error role="alert">{data.persistenceError}</div>}
         {data.collectionContext && <div className="lattice-browser-notice" role="status">
           Created / {data.collectionContext.name || 'Collection'} · {data.collectionContext.resolved || 0} / {data.collectionContext.total || 0} tokens
@@ -384,7 +361,7 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
         <LibraryResults assets={related} emptyLabel={emptyLabel} onActivate={onAssetActivate} onImageActivate={onImageActivate}
           expandedImageIds={expandedImageIds} onToggleImages={toggleImages}
           onContext={openAssetContext} onPointerDown={beginOrganizationDrag}
-          workspace={{ ...workspace, selectAsset: (id, event) => { if (!suppressSelectionRef.current) workspace.selectAsset(id, event); } }} />
+          workspace={workspace} />
       </main>
     </div>
     {contextMenu && createPortal(<RackMenu anchor={contextMenu.anchor}
@@ -392,8 +369,8 @@ export default function OwnerSystemWorkflowLibraryPresenter({ categoryCommands, 
       label={contextMenu.kind === 'category' ? 'Category commands' : contextMenu.kind === 'section' ? 'Section commands' : 'NFT category membership'}
       menuSurfaceId={menuSurfaceId} onClose={() => closeContextMenu()} onCommand={handleContextCommand}
       returnFocus={contextMenu.trigger} systemWorkflowOverlay />, document.body)}
-    {organizationDrag?.assetIds && createPortal(<div aria-hidden="true" className="system-workflow__library-drag-ghost"
-      data-valid={organizationDrag.categoryId ? true : undefined}
-      style={{ left: organizationDrag.point.x, top: organizationDrag.point.y }}>{organizationDrag.assetIds.length} assets</div>, document.body)}
+    {categoryDrag && createPortal(<div aria-hidden="true" className="system-workflow__library-drag-ghost"
+      data-valid={categoryDrag.categoryId ? true : undefined}
+      style={{ left: categoryDrag.point.x, top: categoryDrag.point.y }}>{categoryDrag.assetIds.length} assets</div>, document.body)}
   </div>;
 }

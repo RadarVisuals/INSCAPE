@@ -16,7 +16,13 @@ export function commitWorkbenchSelectionResize(changes) {
     for (const change of changes) {
       const id = change.id, key = change.layoutKey;
       const window = { left: change.left, top: change.top, width: change.width, height: change.height };
-      if (key === 'display') workbench = { ...workbench, display: { ...workbench.display, window } };
+      if (change.parentTextId) {
+        const text = workbench.texts?.find(item => item.id === change.parentTextId);
+        if (!text?.frames?.some(frame => frame.id === id)) throw new Error('The linked Text frame was removed.');
+        workbench = { ...workbench, texts: workbench.texts.map(item => item !== text ? item : {
+          ...item, frames: item.frames.map(frame => frame.id === id ? { ...frame, window } : frame),
+        }) };
+      } else if (key === 'display') workbench = { ...workbench, display: { ...workbench.display, window } };
       else {
         const items = workbench[key] || [];
         const previous = items.find(item => item.id === id) || { id, open: true };

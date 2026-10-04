@@ -70,6 +70,9 @@ export default function LatticePlacementRenderer({
           aria-label={typeof media.accessibleLabel === 'string' ? media.accessibleLabel : 'Artwork placement'}
           className={`lattice-placement${selectedPlacementId === placement.id ? ' is-selected' : ''}${focusedPlacementId === placement.id ? ' is-viewer-origin' : ''}`}
           data-placement-id={placement.id}
+          data-artwork-context-id={`${table.id}:${placement.id}:${placement.stableAssetId}`}
+          data-artwork-context-title={typeof media.accessibleLabel === 'string' ? media.accessibleLabel : 'Untitled artwork'}
+          data-artwork-context-src={media.src}
           key={placement.id}
           onContextMenu={(event) => {
             event.preventDefault();

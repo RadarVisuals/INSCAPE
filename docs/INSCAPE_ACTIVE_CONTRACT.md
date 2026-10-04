@@ -54,9 +54,13 @@ Width and height are independent whole-pixel dimensions from 32 to 4096.
 Owner selection or keyboard focus reveals the complete Image bounds and contrasting
 28-pixel resize targets. Corners resize both dimensions; midpoint handles resize
 one dimension around the opposite edge. Targets keep their screen size through
-zoom and sit outside the artwork where space allows. At viewport edges, hit areas
+zoom and are centred on their visible marks. Tiny surfaces keep more of the
+target outside to preserve a movement area, while the whole mark stays clickable.
+At viewport edges, hit areas
 stay reachable while their marks identify the canvas edges. Redundant handles are
 omitted on tiny canvases.
+Resize focus fills the small visible handle mark instead of outlining the larger
+transparent pointer target. Keyboard resizing retains visible focus.
 The artwork itself is the move surface: clicking inspects it; dragging beyond
 five screen pixels moves its window and never inspects on release. Movement is
 temporary until release; Escape, lost capture or blur cancels it. Crop retains
@@ -84,6 +88,12 @@ native-fit sides remain unchanged when opened or moved. Fit inside and Fill
 canvas expose the existing fitting choices directly in Image tools; Fit inside
 shows the full source and may leave space until the next authored resize.
 The first implementation supports up to sixteen modules and 32 sides each.
+Image tools offer Duplicate, creating an independent Image beside the original.
+It retains authored dimensions, publication inclusion, every side's source,
+crop and transforms, with new module and side IDs. The copy starts on the
+currently viewed side and receives selection and keyboard focus; that side
+choice remains temporary. Duplication saves the copy and its position in one
+undoable operation, observes the module limit, and never resets an existing crop.
 Dragging Library artwork onto empty Workbench space creates one Image module at
 the preview's exact position, accounting for camera pan and zoom. The preview is
 centred on the pointer and respects the Workbench boundary. Initial whole-pixel
@@ -209,8 +219,11 @@ with freedom to depart from the other instruments' visual chrome. Text tools
 uses Text, Layout and Appearance tabs and explicit Document, Selection and Title
 formatting targets. Selection controls keep the originating Tiptap editor and
 history mounted when another target or tab is shown. The tool has a 326-pixel
-width, no resize handles, quiet opaque surfaces and restrained green selection
-accents; it retains the bundled interface fonts. Height follows its content,
+width, no resize handles and quiet opaque surfaces; it retains the bundled interface
+fonts. Text tools and Focus writing controls follow the selected system window
+theme, including their selection and focus colours, rather than a separate
+green palette or operating-system light/dark preference. Authored article
+colours remain independent. Height follows its content,
 and overflow scrolls inside the panel. It opens beside the module's visible
 screen rectangle, preferring the right side, without resizing or moving the
 article. The target title remains visible in the movable tool header. The module
@@ -256,10 +269,38 @@ Write and Read share typography, white-space handling and font features so
 authored spaces, line breaks and ligatures cannot silently reflow at the mode
 switch. Selected text supports an explicit colour and a return to document
 colour, alongside the existing font and formatting marks.
-Text supports one continuous body arranged into one, two or three balanced
+Text supports one continuous body arranged into one, two or three
 columns with an authored gap of 0–128 text pixels (24 when omitted). The title
-spans the body width. Longer content retains the module's contained scrolling.
+spans the body width. In two- and three-column compositions, the available frame
+height below the title and inside the authored padding determines the column
+breaks: fill down, then continue to the right. Resizing reflows complete lines;
+extra columns are clipped at the frame edge and the owner sees “Text doesn’t fit”.
+The full article remains saved and available through Focus writing, which keeps
+its continuous editor. One-column articles retain contained scrolling; the
+explicit page reader retains its pagination. Write, Read, Visitor and Display
+share the bounded column layout. Existing multi-column articles acquire this
+height-aware layout without rewriting their content, identifiers or settings.
 This is flowing article content, not separately editable column modules.
+On 2026-09-30 the founder accepted linked, freely positioned Text frames with
+direct writing in every frame. The + action adds a continuation after that
+frame; its own position, width and height determine how much of the article
+fits. Text flows through the authored order and reflows when any frame changes.
+The title appears in the first frame. Removing a continuation preserves the
+entire article and flows it through the remaining frames. Closing the original
+Text minimizes the whole chain. The owner sees frame numbers, connection lines
+while selected, and an overflow notice on the final frame when content remains.
+There is one article, selection and editing history across the chain; typing,
+formatting and undo in a continuation act on that same document. Focus writing
+remains an optional continuous view. The initial implementation permits eight
+frames per article, sharing its typography, appearance and publication setting.
+Follow Display, Read as pages and moving Text into Display are unavailable while
+continuations are attached; remove them to use those existing workflows.
+The optional `workbench.texts[].frames` array stores only continuation identifiers
+and geometry, in reading order. The existing Text record remains the sole saved
+content. Measured break positions and editor projections are temporary, rebuilt
+when content, fonts, media or frame bounds change. Publication and restoration
+retain frame order and geometry. Older layouts without this field retain their
+existing single-frame behavior; no storage key or existing article is rewritten.
 Optional `appearance.titleAlignment`, `titleColor`, `columns`, `columnGap` and
 `textStyle.color` are validated by the existing article boundary and retained
 through draft, Display transfer, publication and restore. Omitted fields keep
@@ -305,7 +346,10 @@ Selected text also supports its own size (8–300 text pixels) and tracking
 and `textStyle.letterSpacing` marks on selected words, paragraphs or body
 headings, separate from document-wide size. Mixed selections show Mixed;
 clearing either override restores inherited styling without removing other
-marks. Numeric edits apply on Enter or leaving the field; Escape cancels them.
+marks. Valid numeric edits apply immediately while the field retains focus.
+Incomplete or out-of-range input stays local; finishing restores the last valid
+value. Clearing a field resets its override on Enter or blur. Escape restores
+the formatting from before editing that field, including mixed selections.
 The existing plain-text article title has independent tracking through optional
 `appearance.titleLetterSpacing`, alongside its existing title-size control.
 A small index, classification or sub-label such as ARCHIVE // 01 is an ordinary
@@ -325,7 +369,7 @@ Explicit adjacent before/after spacing adds without margin collapse. Clearing a
 value restores the existing defaults, including compact Text and the 20-pixel
 title gap. Blank paragraphs remain authored content and are never removed by
 spacing edits. Line spacing and font sizes remain independent.
-Mixed values, Enter/blur commit, Escape cancellation and reset use the existing
+Mixed values, immediate valid edits, Escape cancellation and reset use the existing
 numeric controls. Write, Read, Visitor and Display share the spacing projection;
 draft saving, undo, transfer, publication and restore preserve it. Missing values
 keep old layouts without rewriting saved articles or changing storage keys.
@@ -351,7 +395,7 @@ defaults. No storage key changes or old-data rewrite are required. New readers
 must support these optional fields to open newly authored documents. The existing
 article validator, draft store, transfer and publication boundaries retain them;
 Write, Read, Visitor and Display use the same projection. Numeric fields retain
-mixed-state indication, Enter/blur commit, Escape cancellation and undo behavior.
+mixed-state indication, immediate valid edits, Escape cancellation and undo behavior.
 Text windows remain fixed-size, resizable viewports with contained scrolling;
 this change does not introduce automatic window growth or linked text frames.
 
@@ -476,8 +520,11 @@ stutter is fixed. Validate navigation with representative static compositions.
 The founder requested a focused Keeper on 2026-09-29: Add → Keeper dock,
 then drag one Library image onto it. Clicking releases the inhabitant onto
 the Workbench; clicking again recalls it. The dock remains present and movable.
-Replacing its image replaces its single inhabitant. This uses one whole artwork
-layer; it does not restore Atelier, layered rigs, or the removed Animation module.
+Replacing its image replaces its single inhabitant. Ordinary characters retain
+the original whole-image Flip movement. On 2026-09-30 the founder also requested
+Layered swim for a prepared Keeper with one body and independently floating
+tentacles. These are per-character choices, not a replacement for other
+characters' flip behavior or a restoration of the removed Animation module.
 
 The Keeper wanders with pauses in a zone beside the pointer and leaves space
 around it. Pointer tracking is continuous, including over controls and during
@@ -488,12 +535,170 @@ Flight follows with damped acceleration and braking. A resting Keeper still
 responds to pointer movement; its wandering destination moves with its zone.
 The owner can identify whether the source artwork faces left or right. Roaming
 does not intercept Workbench clicks. Reduced motion disables this locomotion.
-Return/release remains available by keyboard. No speech, LSP1 reactions, minting,
-contract changes, or script execution from the artwork is introduced here.
+Return/release remains available by keyboard. On 2026-09-30 the founder also
+requested interactive text carried by the character's token. Releasing then
+clicking the head (or activating it by keyboard) opens a conversation. Automatic
+travel pauses while idle tentacle motion continues. The founder's 2026-10-01
+refinement keeps explicit click/right-button swim steering available during chat;
+arrow keys on the focused head nudge it. Manual steering cancels a reaction and
+invalidates pending AI movement, then settles at the chosen destination.
+Closing resumes ordinary movement. The upright bubble fits the viewport and offers authored replies,
+Close and Escape with focus returned to the head. Owner and Visitor share the
+same player. LSP1 reactions, minting, contract changes and script execution are
+not introduced here.
+
+On 2026-09-30 the founder requested connecting their own ChatGPT account to
+talk freely with Keeper. The first implementation is an optional AI chat mode
+in the existing conversation panel, available only in the local development
+app. Continue with ChatGPT opens OpenAI's sign-in and consent page. The local
+server owns OAuth, verifies identity, lists the account's eligible models and
+streams text replies. It uses the documented subscription-sharing route;
+there is no browser API key, paid API fallback or public hosted integration.
+The authored dialogue remains separately usable. A few bounded dialogue
+excerpts may provide character voice when a message is sent to OpenAI.
+
+Account access and the last twelve completed exchanges belong to a temporary
+server session scoped to browser, profile, dock and asset. They never enter
+the artwork, draft, undo history, publication or blockchain. Tokens remain in
+server memory; only a public installation identifier is persisted. Server
+restart clears connections and chat. Disconnect clears local access and asks
+OpenAI to revoke the token. Closing the panel stops an active reply; partial
+or failed replies are not added to history. Hosted access and persistence require
+a separate accepted design.
+
+On 2026-10-01 the founder requested conversational gestures and nearby artwork
+awareness. Each reply may request one bounded reaction: curious head tilt,
+startled spread, approach or retreat. Only Keeper moves, by at most 160 screen
+pixels, through its existing motion loop. Following the founder's 2026-10-01
+visual examples, the conversation uses a rounded, subtly grained speech bubble
+with a tail, at most 320 by 330 screen pixels. It follows actual travel but not
+idle bob or head rotation. Long replies scroll; the default view shows the latest
+reply, with History available. Account, model and sharing controls occupy a
+separate settings view within that same bound. The user can disable gestures;
+reduced motion suppresses them.
+The founder's 2026-10-01 reply-style refinement calls for concise, clean speech:
+normally one to three short sentences, with real paragraph breaks and restrained
+character humour. Metadata plus visual review defaults to two short paragraphs.
+Internal scene labels, addresses and protocol details stay out of ordinary
+conversation unless requested or needed for clarity. Explicit requests for a
+full breakdown may expand the answer. This is response guidance, not truncation
+of streamed text or a rewrite of the character's authored dialogue file.
+Closing, changing mode, focus loss, recall, asset changes and disposal cancel
+the reaction. Invalid, incomplete or stale model actions never execute.
+
+Optional Share artwork details sends up to eight rendered Image/Display
+artwork titles, relative locations and known token identities when the user sends
+a message. It defaults off. Following the founder's 2026-10-01 metadata request,
+Keeper may request one public LSP8 metadata lookup for at most two supplied
+LUKSO artwork identities per reply. The browser rechecks each visible target
+and uses the existing strict Library token metadata reader; the AI gateway does
+not fetch model-supplied URLs. Results expose bounded name, description, traits,
+token identity, read time and source. Unsupported identities, changed targets,
+failed reads and missing metadata remain distinct; they do not imply absent
+metadata or establish creator attribution, holding, issuance or control.
+The shared resolver's short-lived contract context cache remains in use; token
+metadata is read on request. Only the completed spoken answer enters temporary
+chat history, not raw tool output. Closing or replacing the conversation aborts
+the read and discards late results. The founder also requested visual recognition
+on 2026-10-01: Share artwork
+previews opts into sending at most two nearest source-artwork stills, rasterized
+to PNG with a longest side of 512 pixels. SVG uses the browser's non-scriptable
+image decoder. These are source previews, not screenshots of the workspace,
+current crops or live animation. Source access failures are visible; no preview
+is substituted silently. Previews require a model accepting image input and use
+the connected plan allowance. Bytes are sent for the current request only and
+are not retained in chat history, status, drafts or publication. There is no
+automatic capture, desktop inspection, document text or Library inventory access.
+Modules explicitly expose title/identity/source/token cues; Keeper reads only its own
+Workbench and rechecks targets before acting. Names and image text are untrusted
+content, not instructions; the same applies to metadata fields. The AI
+has no object-editing, browser, wallet, durable-memory or autonomous polling tools.
+
+An open conversation survives switching to the sign-in tab: its artwork pauses
+while the page is inactive and resumes on return. Ordinary roaming still docks
+on focus loss. Pending pointer gestures always clear when the page loses focus.
+
+Keeper dialogue is read on interaction from text/JSON attachments in the
+inhabitant's LSP8 token metadata, using the shared token metadata resolver.
+It is not a second stored draft field: existing canonical token identities work
+without re-adding the artwork. Each opened conversation reads current metadata;
+publication retains the token reference, not a frozen copy of its dialogue.
+Declared metadata/file verification hashes are checked against fetched bytes.
+The UTF-8 `.txt` file contains JSON with `format: "inscape.keeper-dialogue"`,
+`version: 1`, `language`, `start`, and `nodes`. Each node has plain `text` and
+`choices`; each choice has `label` and a valid `next` node. Empty choices finish
+a branch. No HTML, executable commands or external reply actions are accepted.
+Reads are bounded to eight text candidates, 256 KiB per file and 25 seconds for
+the conversation request; documents allow at most 512 nodes and six replies per
+node. Loading, no attached dialogue, invalid/unavailable files and Retry remain
+visible. Closing, recall, asset replacement, suspension and disposal cancel or
+ignore obsolete work. Conversation progress is temporary and never writes the
+draft or publication.
+
+Layered swim accepts the founder's prepared SVG layout: a `keeper` group with
+one `body` and numbered `tentacle-N` groups, each containing a positioned,
+cropped, embedded PNG or WebP image. The importer reads only bounded raster
+resources and numeric geometry; imported SVG markup and scripts never enter the
+application DOM. Unsupported geometry and failed loads remain explicit errors
+with Retry. This is a focused Keeper format, not a general SVG rigging editor.
+Each tentacle traces an independent, subtle figure-eight. The head leads turns
+continuously through 360 degrees; tentacles follow with different delays.
+Actual travel speed determines gathering and opening on braking. The founder's
+2026-09-30 tuning refinement requests faster travel and gather/spread response,
+plus head-first turns with tentacles regrouping one by one around the body.
+The sequence follows turn direction: for the right-facing source, clockwise
+turns begin at the top of the tentacle fan; counterclockwise turns begin at the
+bottom. Geometric order, rather than SVG group order, determines the sequence;
+left-facing sources mirror it. Each direction's delayed angular travel remains
+continuous when retargeting mid-turn, including across the angle wrap boundary.
+Keeper tools expose swim speed (80–900 px/s, default 420), gather time (0.1–3 s,
+default 0.4), spread time (0.1–3 s, default 0.55), head turn time (0.1–2 s, default
+0.4), and tentacle stagger (0–0.2 s apart, default 0.06). Response times describe
+roughly 90% approach to a settled target; travel speed and retargeting continue
+to affect the pose. Enter or leaving a field saves one undoable change and
+applies it to active swimming without resetting the creature. Reset swim tuning
+restores these defaults. Existing artwork is reused through position and rotation;
+mesh deformation and separately animated eyes/patterns are not part of this step.
+Completed clicks on empty Workbench space choose temporary swim destinations;
+controls, editing, modified clicks and left-button drags do not. Holding the
+right mouse button from empty Workbench space continuously retargets a released
+swimming Keeper to the cursor, including while crossing module windows. Release
+ends tracking and retains the last indicated destination. Only that gesture's
+context menu is suppressed; controls, modified right-clicks, docked/returning
+Keepers, chat controls and reduced motion keep ordinary context behaviour.
+Escape or pointer cancellation stops tracking; disposal, recall, mode changes,
+suspension and focus loss cannot leave a hold active. The hold is temporary,
+uses the existing swim speed, head turn and tentacle motion, and is shared by
+owner and Visitor. Flip retains its original
+pointer-following behavior. Both modes share flight, recall, bounds and cleanup.
+Reduced motion holds the layered artwork still and retains dock controls.
+
+On 2026-10-02 the founder requested a segmented snake using these same controls.
+A prepared `keeper` group marked `data-keeper-rig="snake"` contains `body`, `eye`
+and consecutive `segment-N` embedded raster groups (at least two segments, at
+most 50 total parts, with the existing decoded-pixel and dimension limits).
+Layered swim detects this artwork kind without adding a saved movement mode or
+rewriting old docks. The head follows existing click/right-hold destinations;
+the chain follows its recent path with an S ripple. Speed opens segment spacing;
+braking gathers it again. Gather/spread and head-turn controls retain their
+existing saved meanings; tentacle stagger and left/right source facing are
+irrelevant to a snake and remain preserved but hidden. Segment geometry supplies
+its source heading. The separate eye translates with the head while keeping its
+orientation; the surrounding head rotates about the eye. Flight, conversation,
+recall, reduced motion and disposal retain the existing shared lifecycle.
+Only bounded temporary path history and part poses are introduced. Raster
+conversion preserves the original vector files and embeds cropped WebPs into
+new SVG copies; no executable behavior is imported from artwork.
 
 The first implementation permits four docks per profile. Optional `keeperDocks`
 records in draft v4 and public document v9 retain the name, canonical Library
-image, source facing and owner publication choice; `workbench.keeperDocks` retains
+image, source facing and owner publication choice; optional `movement` selects
+`flip` or `swim`, with omission preserving Flip without rewriting old records.
+An optional complete `swim` record retains `speed`, `gatherSeconds`,
+`spreadSeconds`, `turnSeconds` and `staggerSeconds`. Omission reads the new swim
+defaults without rewriting old data. Flip ignores these settings but preserves
+them when switching modes. The choices use the existing undo, draft, publication and restore boundaries;
+parsed artwork and animation state are temporary. `workbench.keeperDocks` retains
 dock positions. Optional `size` is the square artwork envelope in screen pixels,
 from 64 to 384, editable in Keeper tools and retained through undo, publication
 and restoration. New docks start at 192; older records without size retain 128
@@ -731,6 +936,16 @@ are not part of that visitor experience. Module chrome is not Stage content.
   including on narrow screens. Dock visibility does not close Library or change
   the open panel. Workbench and Display context menus open the same shared
   Library without changing the active module or Grid.
+  The dock's Grids menu can open over Library without closing, suspending or
+  resetting it. Choosing a Grid keeps both panels open, with Library's search,
+  collection and scroll state intact. While both are open, Library and canvas
+  interactions do not dismiss Grids or disable the Display's existing drop
+  targets. Repeated Grid selection and asset drops need no composition-lock
+  toggling or panel reopening.
+  Each dock button reflects and toggles its own panel. Escape dismisses Grids
+  first; closing Library can leave Grids open. Other dock panels and Preview
+  retain their existing exclusive entry behavior. This is temporary panel state,
+  with no saved-draft, publication or composition-lock change.
   Dock visibility changes preserve normal Display window pixel dimensions and
   position wherever the available bounds allow. Maximized windows continue to
   fit the available Workbench. Opening Library does not reserve desktop space.
@@ -748,6 +963,25 @@ are not part of that visitor experience. Module chrome is not Stage content.
   decisions to evaluate against a concrete module, not product assumptions.
 
 ## Public Workbench and visitor interaction
+
+The owner has an optional reference frame at Workbench position (48, 48),
+defaulting to 1440 × 900. Width and height fields beside Frame set its resolution
+in whole work pixels, from 1 to 7944 on each axis so the guide stays inside the
+existing placement bounds. Enter or leaving a field applies a valid size; Escape
+or invalid input restores that field's previous size. Dimensions persist in the
+existing profile-local preferences without changing the storage key; older
+preferences retain the default size. The outline, label and Fit frame share this
+one size. It provides a viewing-area guide for arranging independent modules.
+Its outline and dimensions follow the camera while its label stays readable.
+It cannot receive pointer input, contain or clip modules, or change their geometry.
+Frame visibility defaults on and uses the existing profile-local Workbench
+preferences; old preferences retain their other values. Frame toggles visibility;
+Fit frame reveals and centres the guide with margins above the dock and camera
+controls. Fitting changes only camera pan and zoom, never module content or the
+saved arrangement. Fit may go below ordinary 25% wheel zoom on narrow viewports;
+wheel zoom continues smoothly from that fitted scale. The guide and its controls
+are owner editing aids, hidden in Preview, Visitor and enlarged inspection.
+This does not establish a published entry camera or a new composition container.
 
 Dragging empty Workbench space marquee-selects open Display and standalone Text
 windows. Shift-drag adds to the selection; Shift-click a window header toggles it.
@@ -824,6 +1058,9 @@ Only visible rows/columns are generated. One viewport-sized canvas paints the
 grid; dots reuse a rasterized row rather than expanding SVG instances per point.
 The row exists only for the current paint lifecycle and never owns coordinates.
 Snap calculations retain exact world coordinates and module-edge priority.
+Grid-line retention is capped at three quarters of the projected grid interval
+and at 18 screen pixels, so movement and resize can reach each adjacent line
+when zoomed out instead of sticking across multiple cells.
 Workbench coordinates and
 module content remain separate inputs to one atomic save. Failed saving restores
 the starting view; Escape cancels before saving. Shared endpoints are rounded
@@ -850,7 +1087,7 @@ Dock, shortcuts, Identity and companion tools retain their normal size.
 Companion tools (including Layers, Artwork tools and Text tools) stay in screen
 coordinates during camera pan and zoom; their manual dragging remains independent.
 Text, Layers and Artwork info offer resize targets on all four edges
-and corners, outside their content and title bars. The opposite edge stays fixed;
+and corners, centred on their visible edge marks. The opposite edge stays fixed;
 Escape restores the complete starting frame. Owner Text resizing saves through
 the existing module resize transaction and supports draft Undo/Redo. Companion
 window sizing remains temporary UI state and stays reachable after viewport resize.
@@ -905,8 +1142,13 @@ Display authoring sessions, including the original Display, project and merge
 only their module content through the shared profile draft store. The original
 Display's root storage envelope is retained for compatibility.
 
-Space + primary-pointer drag on empty Workbench space pans the view freely in
-both axes. Content modules and their shortcuts move together;
+Space + primary-pointer drag anywhere on the Workbench pans the view freely in
+both axes, including over Image, Display artwork, Text, shortcuts and resize
+handles. While Space is held, the Workbench claims the gesture before module
+selection, movement, cropping, resizing or Grid navigation; releasing a pan
+cannot open an image or activate the underlying control. The grab cursor marks
+this temporary mode across the Workbench. Space typed into an active editor or
+text field retains its normal meaning. Content modules and their shortcuts move together;
 Shift + wheel pans horizontally (wheel down moves the view right, content left);
 ordinary wheel pans vertically over the background and module content, including
 Image, Display and fitting or paged Text. Native readers with actual overflow
@@ -918,7 +1160,7 @@ button gesture. Both axes can move together on a trackpad.
 Ctrl + wheel retains zoom priority when both modifiers are held.
 The background colour, dock and viewport menus remain fixed. The alignment grid
 follows camera pan and scale, and snapping uses that same projected lattice. Display
-Grid navigation and editing retain their own input inside the module. The pan
+Grid navigation and editing retain their own input when Space is not held. The pan
 is temporary per mounted Workbench, shared by owner and Visitor, and never
 changes saved windows, draft content or publication. Reset view restores the
 starting camera offset. Ctrl/Cmd+0 changes only zoom around the current view,
@@ -1184,8 +1426,9 @@ internal compatibility names during this migration; do not broadly rename them.
   editor and public presentation. A single Grid does not swipe to itself; the
   World Cover remains outside the editor's scene sequence.
 - Dragging the Display Stage swipes between Grids directly in Visitor mode and
-  when the owner's Display composition is locked. Unlocked authoring retains
-  Space-drag navigation so ordinary dragging remains available for editing.
+  when the owner's Display composition is locked. Unlocked authoring keeps
+  ordinary dragging for editing and uses the Grids menu to select a scene.
+  Space-drag always belongs to the Workbench camera, including over the Stage.
   The Grid follows the pointer directly. Release chooses an exact Grid seam from
   its position and velocity and lands there in one bounded motion, without spring
   motion, overshoot or a separate final snap. A held release lands on the nearest
@@ -1627,6 +1870,12 @@ previous module's activation outline; empty Workbench space clears activation.
 Image, Text and Shape share this behavior. Unselected resize targets cannot
 intercept pointer input; keyboard access remains available. Module action strips
 keep their existing reveal behavior, separate from selection bounds.
+Image, Text, Shape and tool-window resize targets surround the visible corner
+or midpoint, so grabbing that mark always starts the corresponding resize.
+Display window corner targets also straddle their real corners and retain a
+28-screen-pixel hit area through camera zoom. Workbench group
+and Display artwork handles retain their centred geometry. Keyboard focus fills
+the small handle mark; the larger transparent hit target never gains an outline.
 
 Selected artwork uses 28-pixel resize targets with contrasting corner marks.
 Single selections also have midpoint handles: left/right changes width only;

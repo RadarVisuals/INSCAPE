@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validImageModules, createImagePresentation, imageFocusEntry, nextImageSide, imageCropForResize } from './imageModule.js';
-import { addImageModule, saveImageModule, prepareImageResize } from './imageModuleSession.js';
+import { addImageModule, saveImageModule, prepareImageResize, duplicateImageModule } from './imageModuleSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import { createSystemWorkflowDraftStore, systemWorkflowDraftKey } from '../systemWorkflow/systemWorkflowDraftStore.js';
 import { assertValidSystemWorkflowDraft } from '../systemWorkflow/domain/systemWorkflowDraft.js';
@@ -24,6 +24,63 @@ function fixture() {
   return { store: createSystemWorkflowDraftStore({ profileAddress: profile, storage }), storage, entries, fail: value => { failed = value; } };
 }
 const documentFor = draft => buildProfileDocumentV9({ profileAddress: profile, systemWorkflowDraft: draft, assetRecords: [] });
+
+test('Image duplication preserves every crop, transform, source and size through undo, reload and publication', () => {
+  const f = fixture(); addImageModule(f.store, profile);
+  const empty = f.store.getDraft().imageModules[0];
+  const original = { ...empty, name: 'Cropped creature', width: 1032, height: 264, visibility: 'PUBLIC',
+    sides: [side('cropped'), { ...side('native'), crop: null }] };
+  assert.ok(saveImageModule(f.store, profile, empty, original));
+  const before = f.store.getDraft();
+  const workbench = { ...createDefaultWorkbenchPresentation(), imageModules: [
+    { id: original.id, open: true, position: { left: 1300.25, top: 2100.5 } },
+  ] };
+  const id = duplicateImageModule(f.store, profile, original, { workbench });
+  const after = f.store.getDraft(), copy = after.imageModules[1];
+  assert.notEqual(id, original.id); assert.equal(copy.id, id);
+  assert.equal(copy.name, 'Cropped creature copy');
+  assert.equal(copy.width, original.width); assert.equal(copy.height, original.height);
+  assert.equal(copy.visibility, original.visibility);
+  assert.deepEqual(after.imageModules[0], original);
+  assert.equal(new Set([...copy.sides, ...original.sides].map(side => side.id)).size, 4);
+  for (let i = 0; i < copy.sides.length; i++) assert.deepEqual({ ...copy.sides[i], id: original.sides[i].id }, original.sides[i]);
+  assert.deepEqual(after.workbench.imageModules, [...workbench.imageModules,
+    { id, open: true, position: { left: 1324.25, top: 2124.5 } }]);
+  assert.equal(f.store.getHistory().undo, 'Duplicate Image');
+  assert.ok(f.store.undo()); assert.deepEqual(f.store.getDraft(), before);
+  assert.ok(f.store.redo()); assert.deepEqual(f.store.getDraft(), after);
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft(), after);
+  const document = documentFor(after);
+  assert.deepEqual(document.imageModules[1].sides, copy.sides);
+  assert.deepEqual(document.workbench.imageModules, after.workbench.imageModules);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(document, after).imageModules, after.imageModules);
+  const edited = structuredClone(copy); edited.sides[0].crop.x = .9;
+  assert.ok(saveImageModule(f.store, profile, copy, edited));
+  assert.deepEqual(f.store.getDraft().imageModules[0], original, 'editing the copy cannot change its source');
+});
+
+test('Image duplication rejects stale, wrong-profile and failed saves without a partial copy or history entry', () => {
+  const f = fixture(); addImageModule(f.store, profile);
+  const record = f.store.getDraft().imageModules[0], before = f.store.getDraft(), history = f.store.getHistory();
+  assert.throws(() => duplicateImageModule(f.store, `0x${'2'.repeat(40)}`, record), /no longer active/);
+  assert.throws(() => duplicateImageModule(f.store, profile, { ...record, width: 444 }), /changed/);
+  f.fail(true);
+  assert.throws(() => duplicateImageModule(f.store, profile, record), /could not be saved/);
+  assert.deepEqual(f.store.getDraft(), before); assert.deepEqual(f.store.getHistory(), history);
+  f.fail(false);
+  const id = duplicateImageModule(f.store, profile, record, { position: { left: 7990, top: 7990 } });
+  const after = f.store.getDraft(), copy = after.imageModules.find(item => item.id === id);
+  assert.equal(copy.visibility, 'PRIVATE'); assert.deepEqual(copy.sides, []);
+  assert.deepEqual(after.workbench.imageModules[0].position, { left: 7992 - copy.width, top: 7992 - copy.height });
+});
+
+test('Image duplication respects the existing sixteen-module limit', () => {
+  const f = fixture();
+  for (let i = 0; i < 16; i++) addImageModule(f.store, profile);
+  const before = f.store.getDraft();
+  assert.throws(() => duplicateImageModule(f.store, profile, before.imageModules[0]), /sixteen/);
+  assert.deepEqual(f.store.getDraft(), before);
+});
 test('Library drop creates artwork and its exact window in one undoable operation, ready for explicit publication', async () => {
   const f = fixture(), before = f.store.getDraft();
   const selectedMedia = { url: 'https://images.example/selected.webp', width: 1920, height: 1080 };

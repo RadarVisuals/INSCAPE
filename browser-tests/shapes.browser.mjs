@@ -59,7 +59,11 @@ test('Shapes create at cursor, resize, layer beneath content, recover covered sh
     await tools.getByRole('button', { name: 'Make square', exact: true }).click();
     await page.waitForFunction(id => { const w = window.savedDraft().workbench.shapes.find(s => s.id === id).window; return w.width === w.height; }, duplicate);
     // Dimensions follow pointer resize, not only numeric fields.
-    await tools.getByLabel('Choose shape').selectOption(id); await page.keyboard.press('Escape');
+    await tools.getByLabel('Choose shape').selectOption(id);
+    // The chooser also selects the Shape for proportional Workbench scaling.
+    // Clear that selection from the Workbench before testing its solo grip.
+    await page.locator('main.system-workflow').focus(); await page.keyboard.press('Escape');
+    await page.locator('.workbench-selection').waitFor({ state: 'detached' });
     const handle = shape.getByRole('separator', { name: 'Resize Shape window', exact: true });
     const box = await handle.boundingBox(); await page.keyboard.down('Alt');
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();

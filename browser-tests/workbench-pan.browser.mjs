@@ -22,9 +22,10 @@ const snapshot = page => page.evaluate(() => ({
   shortcut: document.querySelector('.system-workflow__desktop-shortcut')?.getBoundingClientRect().toJSON(),
   storage: Object.fromEntries(Object.keys(localStorage).map(key => [key, localStorage.getItem(key)])),
 }));
-async function drag(page, delta, { space = true, end = 'up', focus = true } = {}) {
+async function drag(page, delta, { space = true, end = 'up', focus = true, target = null } = {}) {
   if (focus) await page.locator('main.system-workflow').first().focus();
-  const start = await emptyPoint(page);
+  const rect = target && await target.boundingBox();
+  const start = rect ? { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 } : await emptyPoint(page);
   await page.mouse.move(start.x, start.y);
   if (space) await page.keyboard.down('Space');
   await page.mouse.down();
@@ -62,8 +63,10 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
       const page = await browser.newPage({ viewport: { width, height: 1000 } });
       page.setDefaultTimeout(12000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor, heavy: true, displayWidth: Math.min(600, width - 40) });
+      await mountGridMotionFixture(page, { origin, visitor, heavy: true, textModes: true, displayWidth: Math.min(600, width - 40) });
       await page.locator('[data-workbench-view-id]').nth(7).waitFor();
+      if (!visitor && await page.getByRole('button', { name: 'Close Text tools', exact: true }).isVisible())
+        await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
       await page.waitForTimeout(1000);
       let before = await snapshot(page);
       await drag(page, { x: 100, y: -65 });
@@ -98,20 +101,32 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
         shifted(stopped, await snapshot(page), 0, 0);
         await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
       }
-      if (width === 1440) {
-        // Space on a Display still drives its own Grid camera, not the Workbench.
-        const board = page.locator('.system-workflow__presentation-board').first();
-        await board.locator('header').first().focus();
-        const b = await board.boundingBox();
-        await page.mouse.move(b.x + b.width * .7, b.y + b.height * .6);
-        await page.keyboard.down('Space'); await page.mouse.down();
-        await page.mouse.move(b.x + b.width * .4, b.y + b.height * .6, { steps: 12 });
-        await settle(page);
-        assert.equal(await page.locator('main[data-workbench-panned]').count(), 0);
-        const rail = page.locator('.system-workflow__grid-track, .visitor-grid-world__grid-track').first();
-        assert.notEqual(await rail.evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m41), 0);
-        await page.mouse.up(); await page.keyboard.up('Space');
+      const rail = page.locator('.system-workflow__grid-track, .visitor-grid-world__grid-track').first();
+      const railBefore = await rail.evaluate(el => getComputedStyle(el).transform);
+      const image = page.locator('.image-module__canvas').first();
+      const targets = [image, page.locator('[data-system-workflow-artboard], .visitor-grid-world__viewport').first(),
+        page.locator('[data-workbench-view-id="text:fit"] .text-module-scroll')];
+      for (const target of targets) {
+        const original = await snapshot(page);
+        await drag(page, { x: 70, y: -30 }, { target });
+        shifted(original, await snapshot(page), 70, -30);
+        assert.equal(await rail.evaluate(el => getComputedStyle(el).transform), railBefore, 'Space never moves the Display Grid camera');
+        assert.equal(await page.locator('.image-lift, .system-workflow__lift-artwork').count(), 0, 'release never opens artwork');
+        await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
       }
+      // Releasing Space before the mouse, including a press with no movement,
+      // must not turn the remainder of that gesture into a module click.
+      await drag(page, { x: 0, y: 0 }, { target: image, end: 'space' });
+      assert.equal(await page.locator('.image-lift').count(), 0);
+      await image.focus(); await page.keyboard.press('Space');
+      assert.equal(await page.locator('.image-lift').count(), 0, 'Space on a focused Image remains a camera modifier');
+      await drag(page, { x: 0, y: -260 });
+      await image.click();
+      await page.getByRole('button', { name: 'Return to Image', exact: true }).waitFor();
+      await page.keyboard.press('Escape');
+      await page.locator('.image-lift').waitFor({ state: 'detached' });
+      await page.getByRole('button', { name: 'Next Image side', exact: true }).first().press('Space');
+      await page.waitForFunction(() => document.querySelector('.image-module__canvas')?.dataset.sideId === 'side:motion-1');
       assert.deepEqual(errors, []);
       await page.close();
     }
@@ -135,8 +150,8 @@ test('pan respects editable controls and clears gestures on suspension and Workb
         const ref = React.useRef(null);
         return React.createElement(WorkbenchViewProvider, null, React.createElement('main', { ref, className: 'system-workflow', tabIndex: -1 },
           React.createElement(WorkbenchViewControls, { hostRef: ref, disabled }),
-          React.createElement(WorkbenchWindow, { label: 'Text', viewId: 'text:test', title: 'Test', width: 280, initialHeight: 220, initialX: 50 },
-            React.createElement('input', { 'aria-label': 'Text entry' }), React.createElement('button', null, 'Native button')),
+          React.createElement(WorkbenchWindow, { label: 'Text', viewId: 'text:test', title: 'Test', width: 280, resizableWidth: true, initialHeight: 220, initialX: 50 },
+            React.createElement('input', { 'aria-label': 'Text entry' }), React.createElement('button', { onClick: () => { window.nativeClicks = (window.nativeClicks || 0) + 1; } }, 'Native button')),
           React.createElement(WorkbenchWindow, { label: 'Tools', title: 'Test', width: 280, initialHeight: 220, initialX: 400 }, 'Tools')));
       }
       function App() {
@@ -153,6 +168,16 @@ test('pan respects editable controls and clears gestures on suspension and Workb
     assert.equal(await page.locator('[data-workbench-pan-ready]').count(), 0);
     await page.getByRole('button', { name: 'Native button' }).focus(); await page.keyboard.press('Space');
     assert.equal(await page.locator('[data-workbench-pan-ready]').count(), 0);
+    assert.equal(await page.evaluate(() => window.nativeClicks), 1, 'ordinary keyboard button activation remains available');
+    for (const target of [page.getByRole('textbox', { name: 'Text entry' }), page.getByRole('separator', { name: 'Resize Text window', exact: true })]) {
+      const frame = page.locator('[data-workbench-view-id="text:test"]');
+      const before = await frame.boundingBox();
+      await drag(page, { x: 70, y: 35 }, { target });
+      const after = await frame.boundingBox();
+      assert.deepEqual(after, { ...before, x: before.x + 70, y: before.y + 35 }, 'armed Space overrides text and resize input without editing geometry');
+      assert.equal(await page.getByRole('textbox', { name: 'Text entry' }).inputValue(), 'Two words');
+      await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settle(page);
+    }
     const windows = page.locator('[data-workbench-pan]');
     const tools = page.getByRole('complementary', { name: 'Tools — Test', exact: true });
     const toolsBefore = await tools.boundingBox();

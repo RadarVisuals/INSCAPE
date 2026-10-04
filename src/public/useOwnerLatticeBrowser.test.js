@@ -53,9 +53,8 @@ test('Library removes creator records after every preview source is unavailable'
   assert.match(workspace, /browserAssetPreviewUnavailable/);
   assert.match(workspace, /preview\?\.status === 'unavailable' \? null : fallback/);
   assert.match(workspace, /markAssetUnavailable/);
-  assert.match(presenterSource, /mediaWorkspace\.isAssetRenderable\(id\)/);
-  assert.match(workspaceSource, /!workspaceState\?\.isAssetRenderable\(id\)/);
-  // Click-versus-drag completion is exercised in library-drop-lifecycle.browser.mjs.
+  // Placement and cancellation are exercised through gestures in
+  // library-drop-lifecycle.browser.mjs and library-images.browser.mjs.
   assert.match(workspaceSource, /ownerLibraryPreviewRecords/);
   assert.match(workspaceSource, /useBrowserWorkspace\(data, ownerLibraryPreviewRecords/);
 });

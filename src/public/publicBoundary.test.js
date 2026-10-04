@@ -63,7 +63,7 @@ test('owner inventory is profile-scoped before the Library panel opens', () => {
   const browserSource = readFileSync(new URL('./useOwnerLatticeBrowser.js', import.meta.url), 'utf8');
   assert.match(browserSource, /storeProfileAddress === profile/u);
   assert.match(browserSource, /createdProfileAddress === profile/u);
-  assert.match(runtimeSource, /useOwnerLatticeBrowser\(profileAddress, panel === 'library' && browserEnabled, referencedAssetIds\)/u);
+  assert.match(runtimeSource, /useOwnerLatticeBrowser\(profileAddress, libraryOpen && browserEnabled, referencedAssetIds\)/u);
   assert.match(runtimeSource, /const records = reviewAssets \|\| browser\.records/);
   assert.doesNotMatch(runtimeSource, /const rawAssets = useLibraryStore/);
 });

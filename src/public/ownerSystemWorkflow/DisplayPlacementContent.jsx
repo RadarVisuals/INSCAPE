@@ -16,7 +16,10 @@ export default memo(function DisplayPlacementContent({ placement, asset: baseAss
   const opening = { left: 0, top: 0, width, height };
   const artwork = projectArtworkInRectangle({ ...placement, crop }, opening, dimensions);
   const style = artwork.imageRenderRectangle ? { ...artwork.imageRenderRectangle, transform: artwork.imageTransform } : undefined;
-  return <span className="system-workflow__artwork-opening">
+  return <span className="system-workflow__artwork-opening"
+    data-artwork-context-id={progressiveArtworkSources(asset).high ? `${placement.id}:${placement.stableAssetId}` : undefined}
+    data-artwork-context-title={asset?.name || asset?.title || 'Untitled artwork'} data-artwork-context-src={progressiveArtworkSources(asset).high}
+    data-artwork-context-asset={placement.stableAssetId} data-artwork-context-standard={asset?.standard || asset?.tokenStandard}>
     {progressiveArtworkSources(asset).high
       ? <DisplayArtworkSurface src={progressiveArtworkSources(asset).high} width={width} height={height} dimensions={dimensions} mediaStyle={style}>
           <ProgressiveArtworkImage asset={asset} onSourceLoad={dimensions => onAssetDimensions?.(asset, dimensions)} style={style} />

@@ -2,14 +2,15 @@ import { Fragment } from '@tiptap/pm/model';
 import { NodeSelection } from '@tiptap/pm/state';
 import { closeHistory } from '@tiptap/pm/history';
 
-export function insertArticleArtwork(attrs, point) {
+export function insertArticleArtwork(attrs, point, inputView) {
   return ({ editor, state, tr, commands }) => {
     let position = state.selection.from;
     if (point) {
       if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
-      const bounds = editor.view.dom.getBoundingClientRect();
+      const view = inputView || editor.view;
+      const bounds = view.dom.getBoundingClientRect();
       position = point.y < bounds.top ? 0 : point.y > bounds.bottom ? state.doc.content.size
-        : editor.view.posAtCoords({ left: point.x, top: point.y })?.pos;
+        : view.posAtCoords({ left: point.x, top: point.y })?.pos;
       if (position == null) return false;
     }
     closeHistory(tr);

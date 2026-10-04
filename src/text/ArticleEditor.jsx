@@ -8,16 +8,31 @@ import { FontFamily, Color } from '@tiptap/extension-text-style';
 import { ARTICLE_FONTS, ARTICLE_FONT_SIZE, ARTICLE_TRACKING, ARTICLE_BLOCK_SPACING, ARTICLE_LINE_HEIGHT, safeArticleLink, textAppearance, textContentStyle, textTitleStyle } from './domain/article.js';
 import { ArticleArtwork } from './ArticleView.jsx';
 import { ArticleAlignment } from './articleAlignment.js';
-import { ArticleSpacing, articleLineToSeparate, selectedBlockSpacing } from './articleSpacing.js';
-import { ArticleTextStyle, ArticleTypography, selectedTypography } from './articleTypography.js';
+import { ArticleSpacing, articleLineToSeparate, selectedBlockSpacing, captureArticleSpacing } from './articleSpacing.js';
+import { ArticleTextStyle, ArticleTypography, selectedTypography, captureArticleTypography } from './articleTypography.js';
 import TextTypographyInput from './TextTypographyInput.jsx';
 import ArticleOutline from './ArticleOutline.jsx';
 import ArticleSearch from './ArticleSearch.jsx';
 import ArticleFocusWriting from './ArticleFocusWriting.jsx';
 import { ArticleSearchExtension, setArticleSearch } from './articleSearch.js';
+import { ArticleFlowFocus, createArticleFlowEditor } from './articleFlowEditor.js';
 import { insertArticleArtwork, moveArticleArtwork } from './articleArtworkEditing.js';
 import { Bold, Italic, Underline, Quote, List, ListOrdered, Link, Undo, Redo, AlignLeft, AlignCenter, AlignRight, X } from '../public/InscapeIcons.jsx';
 const formattingIcons = { Bold, Italic, Underline, Quote, Bullets: List, Numbered: ListOrdered, Link, Undo, Redo, 'Align left': AlignLeft, 'Align center': AlignCenter, 'Align right': AlignRight };
+
+export function ContinuationEditor({ controller, article, range, index }) {
+  const host = useRef(null), mounted = useRef(null);
+  useLayoutEffect(() => {
+    const item = controller.bridge.create(range.id, host.current, range.from ?? 0, range.to ?? 0);
+    item.view.setProps({ attributes: { ...controller.editor.view.props.attributes, 'aria-label': `Article text in frame ${index + 1}` } });
+    mounted.current = item;
+    return () => { mounted.current = null; item.dispose(); };
+  }, [controller, range.id, index]);
+  useLayoutEffect(() => { controller.bridge.update(range.id, range.from ?? 0, range.to ?? 0); }, [controller, range.id, range.from, range.to]);
+  return <div className={`text-editor-page${article.appearance?.compact ? ' text-document--compact' : ''}`} style={textContentStyle(article)}>
+    <div className="text-editor-body"><div ref={host} /></div>
+  </div>;
+}
 
 function ArtworkEditor({ node }) {
   return <NodeViewWrapper contentEditable={false} data-drag-handle="" className="text-artwork-editor">
@@ -34,13 +49,15 @@ const PageBreak = Node.create({ name: 'pageBreak', group: 'block', atom: true,
   parseHTML: () => [{ tag: 'div[data-text-page-break]' }],
   renderHTML: () => ['div', { 'data-text-page-break': '', class: 'text-page-break' }],
 });
-export default function ArticleEditor({ article, onChange, onEditor, onFindRequest, saveError, disabled, controlsHost }) {
+export default function ArticleEditor({ article, onChange, onEditor, onFindRequest, saveError, disabled, controlsHost, flowRange, onFlowEditor }) {
+  const [flowBridge] = useState(createArticleFlowEditor);
   const latest = useRef({ article, onChange }); latest.current = { article, onChange };
   const searchHost = useRef(controlsHost); searchHost.current = controlsHost;
   const findRequest = useRef(onFindRequest); findRequest.current = onFindRequest;
   const pendingFind = useRef(false);
   const [searchFocusRequest, requestSearchFocus] = useState(0);
   const [focusWriting, setFocusWriting] = useState(false), focusTrigger = useRef(null);
+  flowBridge.configure(Boolean(flowRange), focusWriting);
   const focusWritingRef = useRef(focusWriting); focusWritingRef.current = focusWriting;
   const titleField = useRef(null), [editingTitle, setEditingTitle] = useState(false);
   useLayoutEffect(() => { if (editingTitle && !disabled) titleField.current?.focus(); }, [editingTitle]);
@@ -48,11 +65,12 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
   const [, rerender] = useState(0), [link, setLink] = useState(null), [linkError, setLinkError] = useState('');
   const editor = useEditor({
     extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false,
-      link: { openOnClick: false, autolink: false, linkOnPaste: false, protocols: ['https', 'mailto'] } }), ArticleTextStyle, FontFamily, Color, Artwork, ArticleAlignment, ArticleSpacing, ArticleTypography, PageBreak, ArticleSearchExtension],
+      link: { openOnClick: false, autolink: false, linkOnPaste: false, protocols: ['https', 'mailto'] } }), ArticleTextStyle, FontFamily, Color, Artwork, ArticleAlignment, ArticleSpacing, ArticleTypography, PageBreak, ArticleSearchExtension, ArticleFlowFocus(flowBridge)],
     content: article.content, editable: !disabled,
-    editorProps: { attributes: { class: 'text-document text-document-body text-editor-content', 'aria-label': 'Article text', role: 'textbox', 'aria-multiline': 'true',
+    editorProps: { ...flowBridge.props('first'), attributes: { class: 'text-document text-document-body text-editor-content', 'aria-label': 'Article text', role: 'textbox', 'aria-multiline': 'true',
       spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off' },
       handleKeyDown: (_view, event) => {
+        if (_view === editor?.view && flowBridge.props('first').handleKeyDown(_view, event)) return true;
         if (event.key === 'Escape' && !event.isComposing && focusWritingRef.current) {
           event.preventDefault(); setFocusWriting(false); return true;
         }
@@ -79,6 +97,16 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
     onUpdate: ({ editor: current }) => latest.current.onChange({ ...latest.current.article, content: current.getJSON() }),
     onSelectionUpdate: () => rerender(n => n + 1), onTransaction: () => rerender(n => n + 1),
   });
+  useLayoutEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    const disconnect = flowBridge.connect(editor), unregister = flowBridge.register('first', editor.view, 0, editor.state.doc.content.size);
+    onFlowEditor?.({ editor, bridge: flowBridge });
+    return () => { onFlowEditor?.(null); unregister(); disconnect(); };
+  }, [editor, flowBridge, onFlowEditor]);
+  useLayoutEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    flowBridge.update('first', flowRange?.from || 0, flowRange?.to ?? editor.state.doc.content.size); flowBridge.refresh();
+  }, [editor, flowBridge, flowRange?.from, flowRange?.to, Boolean(flowRange), focusWriting]);
   useEffect(() => { onEditor?.(editor?.isDestroyed ? null : editor); return () => onEditor?.(null); }, [editor, onEditor]);
   // Read/Write and suspension change interaction, not authored content. Tiptap's
   // default update event would otherwise save (and clear recovery) on reopening.
@@ -96,7 +124,7 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
     }
   }, [editor, disabled, controlsHost, focusWriting]);
   useEffect(() => {
-    if (editor && !editor.isDestroyed && JSON.stringify(editor.getJSON()) !== JSON.stringify(article.content)) editor.commands.setContent(article.content, { emitUpdate: false });
+    if (editor && !editor.isDestroyed && !editor.state.doc.eq(editor.schema.nodeFromJSON(article.content))) editor.commands.setContent(article.content, { emitUpdate: false });
   }, [editor, article.content]);
   if (!editor || editor.isDestroyed) return <p role="status">Opening editor…</p>;
   const alignmentActive = value => editor.isActive({ textAlign: value }) || value === 'left' && editor.isActive({ textAlign: null });
@@ -123,6 +151,7 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
         <TextTypographyInput key={`size:${editor.state.selection.from}:${editor.state.selection.to}`} label="" accessibleLabel="Selected text size"
           {...selectedTypography(editor, 'fontSize')} limits={ARTICLE_FONT_SIZE} disabled={disabled}
           placeholder={String(appearance.fontSize)}
+          onStart={() => captureArticleTypography(editor)}
           onChange={value => editor.commands.setArticleTypography('fontSize', value)} onReturn={() => editor.commands.focus()}
           resetLabel="Use inherited text size" />
       </div>
@@ -157,10 +186,12 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
       <TextTypographyInput key={`lineHeight:${editor.state.selection.from}:${editor.state.selection.to}`} label="Line spacing (×)" accessibleLabel="Paragraph line spacing"
         {...selectedBlockSpacing(editor, 'lineHeight')} limits={ARTICLE_LINE_HEIGHT}
         disabled={disabled || !selectedBlockSpacing(editor, 'lineHeight').available}
+        onStart={() => captureArticleSpacing(editor, 'lineHeight')}
         onChange={value => editor.commands.setArticleSpacing('lineHeight', value)} onReturn={() => editor.commands.focus()}
         resetLabel="Use inherited paragraph line spacing" />
       <TextTypographyInput key={`tracking:${editor.state.selection.from}:${editor.state.selection.to}`} label="Letter spacing (em)" accessibleLabel="Selected text tracking"
         {...selectedTypography(editor, 'letterSpacing')} limits={ARTICLE_TRACKING} disabled={disabled}
+        onStart={() => captureArticleTypography(editor)}
         onChange={value => editor.commands.setArticleTypography('letterSpacing', value)} onReturn={() => editor.commands.focus()}
         resetLabel="Use inherited text tracking" />
       <div className="text-toolbar-row">
@@ -182,6 +213,7 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
           return <TextTypographyInput key={`${name}:${editor.state.selection.from}:${editor.state.selection.to}`}
             label={`Paragraph ${side.toLowerCase()} (px)`} accessibleLabel={`Paragraph space ${side.toLowerCase()}`}
             {...spacing} limits={ARTICLE_BLOCK_SPACING} disabled={disabled || !spacing.available} placeholder="Automatic"
+            onStart={() => captureArticleSpacing(editor, name)}
             onChange={value => editor.commands.setArticleSpacing(name, value)} onReturn={() => editor.commands.focus()}
             resetLabel={`Use automatic paragraph space ${side.toLowerCase()}`} />;
         })}

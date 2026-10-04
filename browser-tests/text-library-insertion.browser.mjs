@@ -6,6 +6,25 @@ import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
+for (const width of [1440, 700]) test(`Rejected Library drop onto Read mode Text does not report an error in Display at ${width}px`, { timeout: 60000 }, async () => {
+  const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
+    await mountTextToolsFixture(page, origin);
+    await page.getByRole('button', { name: 'Read', exact: true }).click();
+    const before = await page.evaluate(() => JSON.stringify(window.savedDraft()));
+    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    const card = page.getByRole('button', { name: 'ABYSSAL STUDY / INSCAPE STUDIES', exact: true });
+    const source = await card.boundingBox();
+    await page.mouse.move(source.x + source.width / 2, source.y + 35); await page.mouse.down();
+    await page.mouse.move(200, 400, { steps: 12 }); await page.mouse.up();
+    await page.getByRole('region', { name: 'Library workspace' }).getByText('This module cannot accept artwork here.', { exact: true }).waitFor();
+    assert.equal(await page.locator('.system-workflow__drop-feedback[data-visible]').count(), 0);
+    assert.equal(await page.evaluate(() => JSON.stringify(window.savedDraft())), before);
+    await page.screenshot({ path: `.browser-test-runtime/library-scoped-drop-feedback-${width}.png` });
+  } finally { await browser.close(); }
+});
+
 for (const zoom of [1, .75]) test(`Library inserts at the drop point without replacing selected text at ${zoom * 100}%`, { timeout: 90000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {

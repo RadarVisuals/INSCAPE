@@ -351,12 +351,13 @@
 .system-workflow__state-glyph.is-contained::after,
 .system-workflow__state-glyph.is-docked::after { width: 4px; height: 4px; display: block; margin: 1px; border-radius: 50%; background: currentColor; content: ""; }
 
-.system-workflow__board-resize-handle { position: absolute; z-index: 42; width: 16px; min-width: 0; height: 16px; min-height: 0; padding: 0; border: 0; outline: 0; background: transparent; touch-action: none; }
-.system-workflow__board-resize-handle.is-nw { top: 0; left: 0; cursor: nwse-resize; }
-.system-workflow__board-resize-handle.is-ne { top: 0; right: 0; cursor: nesw-resize; }
-.system-workflow__board-resize-handle.is-sw { bottom: 0; left: 0; cursor: nesw-resize; }
-.system-workflow__board-resize-handle.is-se { right: 0; bottom: 0; cursor: nwse-resize; }
-.system-workflow__board-resize-handle:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -3px; }
+.system-workflow__board-resize-handle { position: absolute; z-index: 42; width: 28px; min-width: 0; height: 28px; min-height: 0; padding: 0; border: 0; outline: 0; background: transparent; touch-action: none; }
+.system-workflow__board-resize-handle.is-nw { top: -14px; left: -14px; cursor: nwse-resize; }
+.system-workflow__board-resize-handle.is-ne { top: -14px; right: -14px; cursor: nesw-resize; }
+.system-workflow__board-resize-handle.is-sw { bottom: -14px; left: -14px; cursor: nesw-resize; }
+.system-workflow__board-resize-handle.is-se { right: -14px; bottom: -14px; cursor: nwse-resize; }
+.system-workflow .system-workflow__board-resize-handle:focus { outline: none; }
+.system-workflow__board-resize-handle:focus-visible::after { content: ''; position: absolute; inset: 10px; box-sizing: border-box; border: 1px solid #111313; background: #fff; box-shadow: 0 0 0 1px #fff; }
 
 .system-workflow__desktop-shortcut { position: absolute; z-index: 1; width: var(--workflow-shortcut-width, 82px); min-height: var(--workflow-shortcut-height, 64px); padding: 5px; display: grid; justify-items: center; align-content: start; gap: 9px; border: 1px solid transparent; color: var(--workflow-ink); background: transparent; cursor: default; }
 .system-workflow__desktop-shortcut:is(:hover, :focus-visible) { outline: 0; border-color: var(--workflow-border-strong); background: var(--workflow-selection); }
@@ -511,9 +512,7 @@
 .system-workflow__grid-plane--adjacent {
   pointer-events: none;
 }
-.system-workflow__canvas[data-space-navigation] { cursor: grab; }
 .system-workflow__canvas[data-swiping] { cursor: grabbing; }
-.system-workflow__canvas[data-space-navigation] .system-workflow__placement { cursor: grab; }
 
 html[data-system-workflow-grid-direction]::view-transition-old(root),
 html[data-system-workflow-grid-direction]::view-transition-new(root) { animation: none; }
@@ -605,9 +604,10 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__selection-chrome[aria-hidden="true"],
 .system-workflow__selection-chrome[data-viewing] { opacity: 0; }
 .system-workflow__selection-chrome[data-navigating] { opacity: 0; transition: none; }
-.system-workflow__resize-handle { position: absolute; box-sizing: border-box; width: calc(28px * var(--workbench-content-scale, 1)); min-width: 0; height: calc(28px * var(--workbench-content-scale, 1)); min-height: 0; padding: 0; translate: -50% -50%; border: 0; background: transparent; pointer-events: auto; touch-action: none; }
-.system-workflow__resize-handle::after { content: ''; position: absolute; inset: calc(9px * var(--workbench-content-scale, 1)); border: calc(1px * var(--workbench-content-scale, 1)) solid #fff; background: #111; box-shadow: 0 0 0 calc(1px * var(--workbench-content-scale, 1)) #111; }
-.system-workflow__resize-handle:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
+.system-workflow__resize-handle { position: absolute; box-sizing: border-box; width: calc(28px * var(--workbench-control-scale, 1)); min-width: 0; height: calc(28px * var(--workbench-control-scale, 1)); min-height: 0; padding: 0; translate: -50% -50%; border: 0; background: transparent; pointer-events: auto; touch-action: none; }
+.system-workflow__resize-handle::after { content: ''; position: absolute; inset: calc(9px * var(--workbench-control-scale, 1)); border: calc(1px * var(--workbench-control-scale, 1)) solid #fff; background: #111; box-shadow: 0 0 0 calc(1px * var(--workbench-control-scale, 1)) #111; }
+.system-workflow .system-workflow__resize-handle:focus { outline: none; }
+.system-workflow__resize-handle:focus-visible::after { background: #fff; border-color: #111313; }
 .system-workflow__presentation-board:has(.system-workflow__selection-chrome[data-selected]:not([aria-hidden="true"])) > .system-workflow__board-resize-handle { pointer-events: none; }
 .system-workflow__resize-handle.is-nw,
 .system-workflow__resize-handle.is-se { cursor: nwse-resize; }
@@ -775,7 +775,7 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__grid-switcher {
   container: grid-panel / inline-size;
   position: fixed;
-  z-index: 28;
+  z-index: 81;
   bottom: calc(var(--workflow-dock-height) + var(--workflow-window-inset));
   left: 50%;
   width: min(560px, calc(100vw - 36px));
@@ -1050,7 +1050,8 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__detached-window-resize:is(.is-n, .is-s) { cursor: ns-resize; }
 .system-workflow__detached-window-resize:is(.is-ne, .is-sw) { cursor: nesw-resize; }
 .system-workflow__detached-window-resize:is(.is-w, .is-e) { cursor: ew-resize; }
-.system-workflow__detached-window-resize:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
+.system-workflow__detached-window-resize:focus { outline: none; }
+.system-workflow__detached-window-resize:focus-visible::after { background: #fff; border-color: #111313; }
 @media (hover: none) { .system-workflow__instrument-window:not([data-workbench-view-id]) > .system-workflow__detached-window-resize::after { opacity: 1; } }
 .system-workflow__metadata-module-content { display: grid; }
 .system-workflow__metadata-module-content > section,

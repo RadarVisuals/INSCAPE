@@ -8,6 +8,21 @@ export function prepareTextResize(draft, { expected }) {
   return draft;
 }
 
+export function changeTextFrames(store, profile, expected, presentation, frames, workbench) {
+  if (store.getProfileAddress() !== profile) throw new Error('This profile is no longer active.');
+  const draft = store.getDraft(), generation = store.getGeneration();
+  prepareTextResize(draft, { expected });
+  if (expected.sceneLink || expected.pagination) throw new Error('Unlink Follow Display and turn off Read as pages before adding linked frames.');
+  const next = { ...presentation };
+  if (frames.length) next.frames = frames; else delete next.frames;
+  const layout = workbench || draft.workbench || createDefaultWorkbenchPresentation();
+  const texts = [...(layout.texts || []).filter(item => item.id !== expected.id), next];
+  if (!store.commitCompletedOperation({ ...draft, workbench: { ...layout, texts } }, {
+    expectedGeneration: generation, historyLabel: frames.length > (presentation.frames?.length || 0) ? 'Add linked Text frame' : 'Remove linked Text frame',
+  })) throw new Error('The linked frames could not be saved. Your text and saved layout are unchanged.');
+  return next;
+}
+
 // Unlink is explicit and atomic. Legacy passages become private standalone
 // Texts so their distinct typography and content are never flattened or lost.
 export function unlinkTextModuleResult(store, profile, expected) {

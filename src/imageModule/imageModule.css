@@ -14,7 +14,9 @@
 .image-module__resize:is(.is-n, .is-s) { cursor: ns-resize; }
 .image-module__resize:is(.is-ne, .is-sw) { cursor: nesw-resize; }
 .image-module__resize:is(.is-w, .is-e) { cursor: ew-resize; }
-.image-module__window:focus-visible, .image-module__resize:focus-visible, .image-module__close:focus-visible, .image-module__next:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
+.image-module__window:focus-visible, .image-module__close:focus-visible, .image-module__next:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -2px; }
+.image-module__resize:focus { outline: none; }
+.image-module__resize:focus-visible::after { background: #fff; border-color: #111313; }
 .image-module__canvas:focus-visible { outline: 1px solid var(--workflow-ink); outline-offset: -3px; }
 .image-module__canvas[data-cropping] { cursor: move; touch-action: none; }
 .image-module__canvas[data-lift-source] { visibility: hidden; }
@@ -47,7 +49,7 @@
 .image-module__size button, .image-module__side-tools button { border: 1px solid var(--workflow-border); color: var(--workflow-ink); background: transparent; font: var(--workflow-type-control); cursor: pointer; }
 .image-module__side-tools { display: grid; grid-template-columns: 1fr 32px; gap: 8px; margin: 8px 0; }
 .image-module__publication { display: flex; align-items: center; gap: 6px; font: var(--workflow-type-control); }
-.context-toolbar .system-workflow__selection-actions[aria-label="Image actions"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.context-toolbar .system-workflow__selection-actions[aria-label="Image actions"] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .image-module__error { font: var(--workflow-type-control); }
 .image-module__shortcut { position: fixed; left: 24px; border: 1px solid var(--workflow-border); padding: 8px; color: var(--workflow-ink); background: var(--workflow-panel); font: var(--workflow-type-control); }
 .image-lift { position: fixed; inset: 0; z-index: 200; background: rgb(0 0 0 / calc(.65 * var(--inspection-lift-progress, 0))); }

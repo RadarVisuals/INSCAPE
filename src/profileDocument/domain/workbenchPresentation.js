@@ -48,10 +48,18 @@ export function isValidWorkbenchPresentation(value) {
   }
   if (Object.hasOwn(value, 'texts')) {
     if (!Array.isArray(value.texts) || value.texts.length > MAX_TEXT_MODULES) return false;
-    const ids = new Set();
+    const ids = new Set(), frameIds = new Set();
     for (const item of value.texts) {
-      if (!exact(item, ['id', 'open', 'window']) || !TEXT_ID.test(item.id) || ids.has(item.id)
+      if (!exact(item, ['id', 'open', 'window', ...(Object.hasOwn(item || {}, 'frames') ? ['frames'] : [])]) || !TEXT_ID.test(item.id) || ids.has(item.id)
         || typeof item.open !== 'boolean' || !windowFrame(item.window, true)) return false;
+      if (item.frames !== undefined) {
+        if (!Array.isArray(item.frames) || !item.frames.length || item.frames.length > 7) return false;
+        for (const frame of item.frames) {
+          if (!exact(frame, ['id', 'window']) || !/^text-frame:[A-Za-z0-9_-]{1,80}$/u.test(frame.id)
+            || frameIds.has(frame.id) || !windowFrame(frame.window, true)) return false;
+          frameIds.add(frame.id);
+        }
+      }
       ids.add(item.id);
     }
   }

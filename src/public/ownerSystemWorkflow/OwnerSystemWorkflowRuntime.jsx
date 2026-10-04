@@ -211,19 +211,12 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       }
       return null;
     },
-    placeAsset: (...args) => (selectedInstance?.placementRef || placementTargetRef).current?.placeAsset(...args),
-    previewAt: (point, dimensions, options) => {
-      for (const ref of [placementTargetRef, ...Object.values(instanceRecords).map(record => record.placementRef)]) {
-        const target = ref.current;
-        const preview = target?.previewAt(point, dimensions, options);
-        if (preview) return { ...preview, target };
-      }
-      return null;
-    },
   };
   allShortcutTargetsRef.current = {
     targetAt: point => [shortcutTargetRef, ...Object.values(instanceRecords).map(record => record.shortcutRef)]
       .map(ref => ref.current).find(target => target?.node?.contains(document.elementFromPoint(point.x, point.y))),
+    has: target => [shortcutTargetRef, ...Object.values(instanceRecords).map(record => record.shortcutRef)]
+      .some(ref => ref.current === target),
   };
   const identityTargetRef = useRef(null);
   const moduleAssetTargets = useRef(new Map());
@@ -256,6 +249,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
   const panels = useOwnerSystemWorkflowPanels({ blocked: Boolean(preview) });
   const publicationPresence = useOwnerSystemWorkflowPanelPresence(publicationOpen);
   const panel = panels.activePanel;
+  const libraryOpen = panels.isPanelOpen('library');
   const referencedAssetIds = useMemo(() => [...[...workbenchController.draft.grids, ...(workbenchController.draft.displays || []).flatMap(module => module.grids)]
     .flatMap((grid) => grid.placements.map(({ stableAssetId }) => stableAssetId)),
     ...['background', 'mask', 'artwork'].map(slot => workbenchController.draft.mobile?.front[slot]?.stableAssetId).filter(Boolean),
@@ -264,7 +258,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       ? [workbenchController.draft.identityPresentation.avatar.stableAssetId] : []),
     ...[workbenchLayout.display, ...(workbenchController.draft.workbench?.displays || []), ...(workbenchLayout.displays || [])]
       .map(display => display.shortcut.icon?.stableAssetId).filter(Boolean)], [workbenchController.draft.grids, workbenchController.draft.displays, workbenchController.draft.identityPresentation.avatar, workbenchController.draft.workbench, workbenchController.draft.mobile, workbenchLayout]);
-  const browser = useOwnerLatticeBrowser(profileAddress, panel === 'library' && browserEnabled, referencedAssetIds);
+  const browser = useOwnerLatticeBrowser(profileAddress, libraryOpen && browserEnabled, referencedAssetIds);
   const assets = reviewAssets || browser.data.assets;
   const records = reviewAssets || browser.records;
   const refineAsset = useCallback((asset) => ownerSystemWorkflowDecodedAsset(
@@ -312,8 +306,11 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     return decoded ? registerAssetDimensions(asset, decoded) || decoded : null;
   }, [registerAssetDimensions]);
   const activity = useOwnerSystemWorkflowActivity({ active: panel === 'activity', fixture: reviewActivity, profileAddress });
-  const panelOccupied = Boolean(publicationPresence.present || (panel && panel !== 'library')
-    || Object.entries(panels.presence).some(([id, { present }]) => id !== 'library' && present));
+  // Grids acts as a destination picker alongside Library, so it must not
+  // disable the Display's existing drop targets or authoring interactions.
+  const panelBlocksAuthoring = id => id !== 'library' && !(id === 'grids' && libraryOpen);
+  const panelOccupied = Boolean(publicationPresence.present || (panel && panelBlocksAuthoring(panel))
+    || Object.entries(panels.presence).some(([id, { present }]) => panelBlocksAuthoring(id) && present));
   const dismissNotice = useCallback(() => {
     controller.clearError(); activeController.clearError(); workbenchController.clearError();
     setNotice(null);
@@ -440,10 +437,8 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       requestAnimationFrame(() => workspaceRef.current?.focus());
     } catch (error) { setNotice(error.message || 'Could not delete this Display'); }
   };
-  return <><ContextToolbarProvider target={activeModuleId}><SharedDisplayToolsProvider value={sharedTools} onChange={setSharedTools} targetId={activeModuleId} onTargetChange={setActiveModuleId}><SharedTextToolsProvider activeModuleId={activeModuleId} onActivate={setActiveModuleId} open={textToolsOpen} onOpenChange={setTextToolsOpen}><WorkbenchViewProvider key={profileAddress} store={workbenchController.store} profileAddress={profileAddress} presentation={workbench}><WorkbenchPlacement hostRef={workspaceRef} enabled={workbenchPreferences.edgeSnap && !preview} gridEnabled={workbenchPreferences.shortcutSnap && !preview} gap={workbenchPreferences.moduleGap}><main tabIndex={-1} ref={workspaceRef} aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
+  return <><ContextToolbarProvider target={activeModuleId}><SharedDisplayToolsProvider value={sharedTools} onChange={setSharedTools} targetId={activeModuleId} onTargetChange={setActiveModuleId}><SharedTextToolsProvider menuSurface={menuSurface} activeModuleId={activeModuleId} onActivate={setActiveModuleId} open={textToolsOpen} onOpenChange={setTextToolsOpen}><WorkbenchViewProvider key={profileAddress} store={workbenchController.store} profileAddress={profileAddress} presentation={workbench}><WorkbenchPlacement hostRef={workspaceRef} enabled={workbenchPreferences.edgeSnap && !preview} gridEnabled={workbenchPreferences.shortcutSnap && !preview} gap={workbenchPreferences.moduleGap}><main tabIndex={-1} ref={workspaceRef} aria-hidden={preview || undefined} className="system-workflow" data-canvas-context="canvas" data-layout={layout.mode}
     onPointerDownCapture={event => {
-      if (event.currentTarget.hasAttribute('data-workbench-pan-ready') && (event.target === event.currentTarget
-        || event.target.matches?.('.system-workflow__workbench, .system-workflow__display-instance'))) return;
       if (event.target === event.currentTarget && event.button === 0) {
         for (const display of [controller, ...Object.values(instanceRecords).map(record => record.controller)]) {
           if (display.selectedPlacementIds.length) display.replaceSelection([]);
@@ -462,7 +457,11 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     data-lattice-menu-surface data-menu-surface={menuSurface} data-reduced-motion={layout.reducedMotion || undefined}
     data-surface={workbenchPreferences.surfaceId} data-previewing={preview ? true : undefined}
     inert={preview ? '' : undefined}>
-    <WorkbenchViewControls hostRef={workspaceRef} disabled={Boolean(preview)} />
+    <WorkbenchViewControls hostRef={workspaceRef} disabled={Boolean(preview)}
+      referenceFrameVisible={workbenchPreferences.referenceFrameVisible !== false}
+      referenceFrameSize={workbenchPreferences.referenceFrameSize}
+      onReferenceFrameSizeChange={size => setWorkbenchPreferences(current => ({ ...current, referenceFrameSize: size }))}
+      onReferenceFrameVisibleChange={visible => setWorkbenchPreferences(current => ({ ...current, referenceFrameVisible: visible }))} />
     <WorkbenchImageDropTarget targetRef={workbenchImageTargetRef} hostRef={workspaceRef}
       suspended={Boolean(preview)} onCreated={setActiveModuleId} onError={setNotice} />
     <SharedDisplayToolWindows fallbackFocus={workspaceRef} menuSurface={menuSurface} hidden={Boolean(preview) || instrumentsObscured} />
@@ -475,7 +474,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       authoringLocked={authoringLocked} suspended={Boolean(preview)}
       panelOccupied={panelOccupied} instrumentsObscured={instrumentsObscured}
       onRevealInstruments={revealInstruments} onToggleLibrary={toggleLibrary}
-      onInspect={() => { if (panel !== 'library') panels.closePanel({ returnFocus: false }); }}
+      onInspect={() => { if (!panels.isPanelOpen('library')) panels.closePanel({ returnFocus: false }); }}
       onAuthoringLockToggle={() => setWorkbenchPreferences((current) => ({ ...current, compositionLocked: !current.compositionLocked }))}
       registerAssetDimensions={registerAssetDimensions} resolveAssetDimensions={resolveAssetDimensions}
       menuSurface={menuSurface} reducedMotion={layout.reducedMotion} workspaceSurfaceColor={workspaceSurfaceColor}
@@ -490,7 +489,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       onDelete={() => deleteDisplay(module)} store={workbenchController.store} profileAddress={profileAddress} initialPresentation={initialWorkbench.current?.displays?.find(item => item.id === module.id)}
       active={activeModuleId === module.id} onActivate={setActiveModuleId} onController={registerController} onPresentation={registerPresentation}
       shared={{ assetsById, suspended: Boolean(preview), panelOccupied, instrumentsObscured, onRevealInstruments: revealInstruments, onToggleLibrary: toggleLibrary,
-        onInspect: () => { if (panel !== 'library') panels.closePanel({ returnFocus: false }); },
+        onInspect: () => { if (!panels.isPanelOpen('library')) panels.closePanel({ returnFocus: false }); },
         registerAssetDimensions, resolveAssetDimensions, menuSurface, reducedMotion: layout.reducedMotion, workspaceSurfaceColor, workspaceRef,
         windowProps: { layoutMode: layout.mode, reducedMotion: layout.reducedMotion, shortcutSnap: workbenchPreferences.shortcutSnap, windowSnap: workbenchPreferences.shortcutSnap } }} />)}
     {workbenchController.draft.keeperDocks?.length > 0 && <Suspense fallback={null}><KeeperWorkbench
@@ -542,7 +541,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
         portraitChoices={resolvedAssets.filter((asset) => asset.placeable !== false && (asset.originalImageUrl || asset.imageUrl))}
         returnFocus={identityReturnFocus.current} onClose={() => setIdentityOpen(false)} />
     </Suspense>}
-    {workbenchPreferences.dockVisible && <OwnerSystemWorkflowGlobalBar activePanel={panel} menuSurface={menuSurface} onOpenTools={revealInstruments}
+    {workbenchPreferences.dockVisible && <OwnerSystemWorkflowGlobalBar openPanels={panels.openPanels} menuSurface={menuSurface} onOpenTools={revealInstruments}
       onOpen={openDockPanel} onPreview={event => openPreview(event.currentTarget)}
       onPublish={(event) => togglePublication(event.currentTarget)} publicationOpen={publicationOpen}
       unreadCount={activity.unreadCount} />}

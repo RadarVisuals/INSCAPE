@@ -81,6 +81,17 @@ for (const width of [1440, 760]) test(`snap guides and release behavior at ${wid
     b = await board.boundingBox(); near(b.x, Math.round(101 / Number(spacing)) * Number(spacing), 'zoomed grid x');
     near(b.y, Math.round(221 / Number(spacing)) * Number(spacing), 'zoomed grid y');
     assert.equal(await guide.locator('[data-snap-kind="grid"]').count(), 2);
+    // A slow drag must visit adjacent cells, not stay stuck across several
+    // screen-sized cells before jumping at the old 18px release threshold.
+    const gridStart = { x: Math.round(101 / Number(spacing)) * Number(spacing), y: Math.round(221 / Number(spacing)) * Number(spacing) };
+    for (const cell of [1, 2, 3, 2, 1, 0, -1]) {
+      const x = gridStart.x + cell * Number(spacing), y = gridStart.y + cell * Number(spacing);
+      await moveTo(start, x, y);
+      b = await board.boundingBox();
+      near(b.x, x, `zoomed adjacent grid x ${cell}`);
+      near(b.y, y, `zoomed adjacent grid y ${cell}`);
+    }
+    await page.screenshot({ path: `.browser-test-runtime/snap-grid-zoomed-${width}.png` });
     await page.evaluate(() => window.dispatchEvent(new Event('blur'))); await settle(page);
     assert.equal(await guide.count(), 0, 'blur clears guides'); await page.mouse.up();
     await page.locator('main').focus(); await page.keyboard.press('Control+0'); await settle(page);

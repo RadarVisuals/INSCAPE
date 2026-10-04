@@ -67,7 +67,6 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const identityControlRef = useRef(null);
   const profileDockControlRef = useRef(null);
   const gridDragRef = useRef(null);
-  const spacePressedRef = useRef(false);
   const suppressPlacementClickRef = useRef(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [placementMedia, setPlacementMedia] = useState({});
@@ -85,7 +84,6 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
         ? { url: resolvePublishedAssetUrl(icon.media.url), width: icon.media.width, height: icon.media.height } : null } };
   }, [document]);
   const [gridDragging, setGridDragging] = useState(false);
-  const [spaceNavigation, setSpaceNavigation] = useState(false);
   const profileIdentity = useProfileIdentity(document.profile.address);
   const profileContractFacts = useProfileContractFacts(document.profile.address, { enabled: identityOpen });
   const identityRack = useMemo(() => createPublishedIdentityRackViewModel({
@@ -228,23 +226,11 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     globalThis.addEventListener?.('pointercancel', active.cancel, true);
   }, [activeIndex, clearGridDrag, lastIndex, reducedMotion, selectGrid, visitorInputBlocked]);
   useEffect(() => {
-    const editable = (event) => /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable;
-    const keydown = (event) => {
-      if (event.code !== 'Space' || editable(event) || visitorInputBlocked || event.target?.closest?.('[data-workbench-module]')) return;
-      event.preventDefault(); spacePressedRef.current = true; setSpaceNavigation(true);
-    };
-    const release = (event) => {
-      if (event?.code && event.code !== 'Space') return;
-      spacePressedRef.current = false; setSpaceNavigation(false); gridDragRef.current?.cancel?.();
-    };
-    globalThis.addEventListener?.('keydown', keydown, true);
-    globalThis.addEventListener?.('keyup', release, true);
+    const release = () => gridDragRef.current?.cancel?.();
     globalThis.addEventListener?.('blur', release);
     return () => {
-      globalThis.removeEventListener?.('keydown', keydown, true);
-      globalThis.removeEventListener?.('keyup', release, true);
       globalThis.removeEventListener?.('blur', release);
-      spacePressedRef.current = false; clearGridDrag();
+      clearGridDrag();
     };
   }, [clearGridDrag, visitorInputBlocked]);
   const handlePlacementMediaState = useCallback((state) => {
@@ -309,7 +295,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     onFocusCapture={event => { if (event.target.closest('[data-display-instance]') === rootRef.current && !event.target.closest('.visitor-grid-world__dock, [data-shared-display-tools]')) { tools.activate(targetId); if (embedded) onActivate?.(); else setActiveDisplay('display:primary'); } }}
     onPointerDownCapture={event => { if (event.target.closest('[data-display-instance]') === rootRef.current && !event.target.closest('.visitor-grid-world__dock, [data-shared-display-tools]')) { tools.activate(targetId); if (embedded) onActivate?.(); else setActiveDisplay('display:primary'); } }} aria-label="Published INSCAPE Grid visitor" className="visitor-grid-world system-workflow" data-workbench data-layout={layout.mode} data-lattice-menu-surface
     data-guide-mode={document.appearance.guideMode} data-menu-surface={document.appearance.menuSurfaceId}
-    data-surface={document.appearance.surfaceId} data-space-navigation={spaceNavigation || undefined}
+    data-surface={document.appearance.surfaceId}
     data-grid-dragging={gridDragging || undefined} data-grid-swipe-settling={gridSwipe?.settling || undefined}
     onKeyDown={handleKeyDown} ref={rootRef} tabIndex="-1">
     {!embedded && <WorkbenchViewControls hostRef={rootRef} />}

@@ -41,6 +41,7 @@ export function attachTextToDisplay(store, profile, { expected, moduleId = PRIMA
   const { generation, draft, grid } = context(store, profile, moduleId, gridId);
   const record = draft.texts?.find(item => item.id === expected.id);
   if (!same(record, expected)) throw new Error('Save the current Text before moving it into Display.');
+  if (draft.workbench?.texts?.find(item => item.id === record.id)?.frames?.length) throw new Error('Remove the linked continuation frames before moving this article into Display. The full text will be kept.');
   if (!Number.isFinite(cellSize) || cellSize <= 0) throw new Error('Display is no longer available.');
   if (record.sceneLink) throw new Error('Scene-linked Text must stay on the Workbench so all passages are preserved.');
   const article = structuredClone(record.article);

@@ -2,15 +2,16 @@ import { useSceneNavigation, useSceneProgress } from './SceneNavigation.jsx';
 import { passageArticle, editPassage, textDisplays } from './scenePassages.js';
 import PagedArticle from './PagedArticle.jsx';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X, Settings, Eye, Pencil } from '../public/InscapeIcons.jsx';
+import { X, Settings, Eye, Pencil, Plus } from '../public/InscapeIcons.jsx';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
+import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../profileDocument/domain/profileDocumentV9Asset.js';
 import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
 import { assertArticle, textAppearance, textOutputStyle, textWindowStyle } from './domain/article.js';
-import { saveTextModuleResult, unlinkTextModuleResult, prepareTextResize } from './textSession.js';
+import { saveTextModuleResult, unlinkTextModuleResult, prepareTextResize, changeTextFrames } from './textSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import TextTools from './TextTools.jsx';
 import { SharedTextToolsProvider, SharedTextToolsWindow, useSharedTextTools } from './SharedTextTools.jsx';
@@ -18,6 +19,8 @@ import { restoreTextToolsView } from './sharedTextToolsState.js';
 import TextMoveHandle from './TextMoveHandle.jsx';
 import ArticleView from './ArticleView.jsx';
 import TextViewport from './TextViewport.jsx';
+import LinkedTextWindow, { TextFrameLinks } from './LinkedTextFrames.jsx';
+import { useArticleFlow } from './TextFrame.jsx';
 import { textRecoveryScope, readTextRecovery, retainTextRecovery, clearTextRecovery } from './textEditRecovery.js';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
 import './text.css';
@@ -25,11 +28,21 @@ const ArticleEditor = lazy(() => import('./ArticleEditor.jsx'));
 
 function TextInstance({ record, index, store, profileAddress, assets, registerTarget, placementTargets, initialPresentation, onPresentationChange, suspended, active, onActivate, windowSnap, initialView, onViewChange }) {
   const tools = useSharedTextTools();
-  const view = workbenchModuleTransform(useWorkbenchView(), record.id);
+  const workbenchView = useWorkbenchView();
+  const view = workbenchModuleTransform(workbenchView, record.id);
   const { offset } = useWorkbenchCamera();
   const scope = textRecoveryScope(profileAddress, record.id);
   const recovered = readTextRecovery(store, scope);
   const [presentation, setPresentation] = useState(() => initialPresentation || createTextPresentation(record.id, index));
+  const linked = Boolean(presentation.frames?.length);
+  const [flowEditor, setFlowEditor] = useState(null);
+  const savedFrames = store?.getSnapshot().workbench?.texts?.find(item => item.id === record.id)?.frames;
+  const savedFramesKey = JSON.stringify(savedFrames || []), previousFramesKey = useRef(savedFramesKey);
+  useEffect(() => {
+    if (previousFramesKey.current === savedFramesKey) return;
+    previousFramesKey.current = savedFramesKey;
+    setPresentation(current => { const next = { ...current }; if (savedFrames?.length) next.frames = savedFrames; else delete next.frames; return next; });
+  }, [savedFramesKey]);
   const [mode, setMode] = useState(store ? initialView?.mode || 'write' : 'read');
   const settings = Boolean(store && tools?.open && active);
   const setSettings = open => { onActivate(); tools?.setOpen(open); };
@@ -52,6 +65,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   const gridId = scene?.gridId || working.sceneLink?.gridId;
   const article = sectionLink && mode === 'write' ? working.article : passageArticle(working, gridId, scene?.gridOrder);
   const appearance = textAppearance(article);
+  const flow = useArticleFlow(article, [record.id, ...(presentation.frames || []).map(frame => frame.id)]);
   const paintScale = view.scale * (globalThis.devicePixelRatio || 1);
   const unavailable = Boolean(working.sceneLink && !scene);
   const missingDisplay = Boolean(store && working.sceneLink && !displays.some(display => display.id === working.sceneLink.displayId));
@@ -83,9 +97,9 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
     try {
       const resolved = createProfileDocumentV9AssetResolver([{ ...(asset.assetRecord || asset), id }], { compactContentReference: false })(id, asset.selectedMedia);
       if (resolved.media.type !== 'image') throw new Error('Choose a Library image.');
-      return editor.current.chain().insertArticleArtwork({ asset: resolved, alt: resolved.name || '', caption: '' }, point).focus().run();
+      return editor.current.chain().insertArticleArtwork({ asset: resolved, alt: resolved.name || '', caption: '' }, point, flowEditor?.bridge.viewAt(point)).focus().run();
     } catch (e) { setError(e.message); return false; }
-  }, [editBlocked, presentation.open, mode, gridId]);
+  }, [editBlocked, presentation.open, mode, gridId, flowEditor]);
   useEffect(() => {
     if (!store || !registerTarget || suspended || !presentation.open || mode !== 'write') return;
     registerTarget(record.id, { get node() { return surface.current; }, label: 'Insert artwork into article', placeAsset: acceptImage });
@@ -94,10 +108,16 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   useEffect(() => { onPresentationChange?.(record.id, presentation); }, [record.id, presentation, onPresentationChange]);
   useEffect(() => () => onPresentationChange?.(record.id, null), [record.id, onPresentationChange]);
   const layout = useCallback(window => setPresentation(current => JSON.stringify(current.window) === JSON.stringify(window) ? current : { ...current, window }), []);
+  const frameLayout = useCallback((id, window) => setPresentation(current => {
+    if (JSON.stringify(current.frames?.find(frame => frame.id === id)?.window) === JSON.stringify(window)) return current;
+    return { ...current, frames: current.frames?.map(frame => frame.id === id ? { ...frame, window } : frame) };
+  }), []);
   const [committedFrame, setCommittedFrame] = useState(null);
   const applyGroupFrame = useCallback(frame => { setCommittedFrame(frame); layout(frame); }, [layout]);
   const resizeTarget = useMemo(() => {
-    return { enabled: Boolean(store) && !editBlocked && !failed.current && working === record,
+    // Geometry commits clone the draft without changing this article. Keep the
+    // resize handle mounted (and focused) across those equivalent snapshots.
+    return { enabled: Boolean(store) && !editBlocked && !failed.current && (working === record || JSON.stringify(working) === JSON.stringify(record)),
       reflow: true, continuousGeometry: true,
       expected: record, store, profileAddress, layoutKey: 'texts', commit: commitWorkbenchSelectionResize, prepare: prepareTextResize,
       applyFrame: applyGroupFrame, reportError: setError, minimumWidth: 180, minimumHeight: 100,
@@ -105,6 +125,19 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
     };
   }, [store, profileAddress, editBlocked, working, record, applyGroupFrame]);
   const name = article.title || 'Untitled article';
+  const changeFrames = frames => {
+    if (editBlocked || failed.current) return;
+    try { setPresentation(changeTextFrames(store, profileAddress, latest.current, presentation, frames, workbenchView.getPresentation?.())); setError(''); return true; }
+    catch (error) { setError(error.message); return false; }
+  };
+  const addFrame = after => {
+    const frames = presentation.frames || [], index = frames.findIndex(frame => frame.id === after);
+    if (frames.length >= 7) return;
+    const previous = index < 0 ? presentation.window : frames[index].window;
+    const window = { ...previous, ...clampWorkbenchPosition({ left: previous.left + previous.width + 24, top: previous.top }, previous) };
+    const next = [...frames]; next.splice(index + 1, 0, { id: `text-frame:${crypto.randomUUID()}`, window });
+    changeFrames(next);
+  };
   const shortcutMenu = useModuleShortcutMenu({ store, profileAddress, kind: 'text', record });
   const close = () => { if (failed.current) { setSettings(true); return; } setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); };
   const closeTools = () => { setSettings(false); queueMicrotask(() => toolsTrigger.current?.focus()); };
@@ -124,9 +157,10 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   return <div className="text-workbench" data-workbench-module="text" data-text-id={record.id} data-text-tools-open={settings || undefined}
     style={{ '--text-z': active ? 49 : 46, '--text-shortcut-bottom': `${64 + index * 38}px` }} onPointerDownCapture={onActivate} onFocusCapture={onActivate}>
     {shortcutMenu.content}
+    {store && active && linked && presentation.open && workbenchView.subscribe && <TextFrameLinks ids={[record.id, ...presentation.frames.map(frame => frame.id)]} />}
     {!presentation.open && <button data-workbench-pan ref={shortcut} className="text-shortcut" onContextMenu={shortcutMenu.onContextMenu} onKeyDown={shortcutMenu.onKeyDown}
       onClick={() => setPresentation(p => ({ ...p, open: true }))}>{name}</button>}
-    {presentation.open && <WorkbenchWindow label="Text" title={name} titleContent={<span className="text-window-grip">Text</span>} chrome="bevel" externalControls minimumWidth={180} minimumHeight={100} resizableWidth viewId={record.id} active={active} snapToGrid={Boolean(store) && windowSnap}
+    {presentation.open && <WorkbenchWindow label="Text" title={name} titleContent={<span className="text-window-grip">Text{linked ? ` · 1/${flow.ranges.length}` : ''}</span>} chrome="bevel" externalControls minimumWidth={180} minimumHeight={100} resizableWidth viewId={record.id} active={active} snapToGrid={Boolean(store) && windowSnap}
       surfaceStyle={textWindowStyle(article, paintScale)} placementModule={Boolean(store)} className="text-window text-window--read"
       background={<><span aria-hidden="true" className="text-window-bounds" />{appearance.edges?.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
         {appearance.frame && <span aria-hidden="true" className="module-surface-outline" style={{ boxShadow: `inset 0 0 0 ${paintScale}px ${article.appearance ? appearance.color : 'var(--workflow-border)'}` }} />}</>}
@@ -135,9 +169,11 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
       moveFromContent={mode === 'read' && !suspended}
       controls={<>{store && <><button type="button" className="text-window-control" aria-label={mode === 'write' ? 'Read' : 'Write'} title={mode === 'write' ? 'Read' : 'Write'}
           onClick={() => { const next = mode === 'write' ? 'read' : 'write'; setMode(next); setSettings(next === 'write' || failed.current); }}>{mode === 'write' ? <Eye /> : <Pencil />}</button>
-        <TextMoveHandle className="text-window-control" label="Drag Text into Display" disabled={suspended || Boolean(working.sceneLink)} previewAt={(point, rectangle) => placementTargets?.current?.previewTextAt?.(point, rectangle)}
+        <TextMoveHandle className="text-window-control" label="Drag Text into Display" disabled={suspended || linked || Boolean(working.sceneLink)} previewAt={(point, rectangle) => placementTargets?.current?.previewTextAt?.(point, rectangle)}
           onDrop={preview => { if (preview) moveInto(preview); }} onKeyboardMove={() => setSettings(true)} onError={setError} />
         <button ref={toolsTrigger} type="button" className="text-window-control" aria-label="Text tools" title="Text tools" aria-expanded={settings} onClick={() => { if (!settings) setMode('write'); setSettings(!settings); }}><Settings /></button>
+        <button className="text-window-control" type="button" aria-label="Add linked Text frame" title={working.sceneLink || working.pagination ? 'Unlink Follow Display and turn off Read as pages first' : 'Add linked frame'}
+          disabled={editBlocked || failed.current || Boolean(working.sceneLink || working.pagination) || flow.ranges.length >= 8} onClick={() => addFrame(record.id)}><Plus /></button>
         {error && <button type="button" className="text-save-error" aria-label="Text not saved — open recovery" onClick={() => setSettings(true)}>!</button>}</>}
         <button type="button" className="text-window-control" aria-label={`Close ${name}`} onClick={close}><X /></button></>}>
       <div className="text-module-body" ref={surface} style={textOutputStyle(article, view.frame || presentation.window)}>
@@ -146,17 +182,17 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
           <div className="text-scene-track" ref={sceneTrack}>
             <div className="text-scene-page">
               <div className="text-authoring-viewport" hidden={mode === 'read' && paginated}>
-                <TextViewport resetKey={sectionRead ? gridId : null} automaticPadding={!article.appearance?.padding && !article.appearance?.compact} mode={mode}>
+                <TextViewport article={article} flow={linked ? flow : null} showOverflow={Boolean(store)} resetKey={sectionRead ? gridId : null} automaticPadding={!article.appearance?.padding && !article.appearance?.compact} mode={mode}>
                   {store && <div hidden={mode !== 'write'}><Suspense fallback={<p role="status">Opening editor…</p>}><ArticleEditor key={sectionLink ? 'article' : gridId || 'article'} article={sectionLink ? working.article : article}
-                    onChange={changeArticle} onEditor={setEditor} controlsHost={controlsHost} disabled={editBlocked || mode !== 'write'} saveError={error}
+                    onChange={changeArticle} onEditor={setEditor} onFlowEditor={setFlowEditor} flowRange={linked ? flow.ranges[0] : null} controlsHost={controlsHost} disabled={editBlocked || mode !== 'write'} saveError={error}
                     onFindRequest={() => { if (!editBlocked && mode === 'write') setSettings(true); }} /></Suspense></div>}
-                  {mode === 'read' && !paginated && <ArticleView article={article} />}
+                  {mode === 'read' && !paginated && !linked && <ArticleView article={article} />}
                 </TextViewport>
               </div>
               {mode === 'read' && paginated && <PagedArticle key={gridId || 'article'} article={article} />}
             </div>
             {swiping && <div className="text-scene-page text-scene-incoming" aria-hidden="true" inert="" style={{ left: scene.direction === 'next' ? '100%' : '-100%' }}>
-              {sectionLink ? <TextViewport automaticPadding={!article.appearance?.padding && !article.appearance?.compact} mode="read">
+              {sectionLink ? <TextViewport article={passageArticle(working, scene.targetGridId, scene.gridOrder)} automaticPadding={!article.appearance?.padding && !article.appearance?.compact} mode="read">
                 <ArticleView article={passageArticle(working, scene.targetGridId, scene.gridOrder)} />
               </TextViewport> : <PagedArticle key={scene.targetGridId} article={passageArticle(working, scene.targetGridId)} />}
             </div>}
@@ -164,6 +200,9 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
         </div>
       </div>
     </WorkbenchWindow>}
+    {presentation.open && presentation.frames?.map((frame, index) => <LinkedTextWindow key={frame.id} {...{ frame, article, flow, active, store, resizeTarget, windowSnap, mode, flowEditor }} registerTarget={!editBlocked ? registerTarget : null} acceptImage={acceptImage}
+      index={index + 1} ownerId={record.id} onLayout={frameLayout} onAdd={addFrame} onRemove={id => { if (changeFrames(presentation.frames.filter(frame => frame.id !== id))) queueMicrotask(() => toolsTrigger.current?.focus()); }}
+      onEdit={() => { setMode('write'); setSettings(true); }} onTools={() => { setMode('write'); setSettings(true); }} />)}
     {store && <TextTools targetId={record.id} available={presentation.open && !suspended} article={sectionLink ? working.article : article} onChange={changeArticle}
       backupScope={JSON.stringify([profileAddress, record.id, sectionLink ? null : gridId])} recoveryPending={failed.current}
       controlsRef={setControlsHost} onClose={closeTools} disabled={editBlocked}
@@ -174,7 +213,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
         {failed.current && <button type="button" onClick={() => change(workingRef.current, { retry: true })}>Retry local save</button>}
         {reason === 'conflict' && <button type="button" onClick={() => change(workingRef.current, { retry: true, replace: true })}>Replace saved Text with my edits</button>}
       </div> : <p className="text-save-summary" role="status">Saved in this browser</p>}
-      connection={<>
+      connection={linked ? <p>This article flows through {flow.ranges.length} linked frames. Remove the continuation frames to use Follow Display or move into Display. The full text is kept.</p> : <>
       {!working.sceneLink ? <><div className="text-connection-target"><label>Follow Display<select aria-label="Follow Display" value={linkTarget} onChange={e => setLinkTarget(e.target.value)}>
         <option value="">Choose a Display…</option>{displays.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
       </select></label><button type="button" aria-label="Link Text to Display" disabled={!scenes[linkTarget]?.gridId || failed.current} onClick={() => {
@@ -193,12 +232,12 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
         delete next.pagination; change(next);
       }}>Use article page breaks for Grids</button>}
       </>}
-      readOptions={!sectionLink && <label className="text-visibility text-settings-wide"><input type="checkbox" checked={working.pagination === 'pages'} onChange={e => {
+      readOptions={!linked && !sectionLink && <label className="text-visibility text-settings-wide"><input type="checkbox" checked={working.pagination === 'pages'} onChange={e => {
         const next = { ...workingRef.current }; if (e.target.checked) next.pagination = 'pages'; else delete next.pagination; change(next);
       }} />Read as pages</label>}
       publication={<label className="text-visibility"><input type="checkbox" checked={working.visibility === 'PUBLIC'} onChange={e => change({ ...workingRef.current, visibility: e.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in Workbench publication</label>}>
 
-      {!working.sceneLink && destinations.length > 0 && <details className="text-tools-transfer text-settings-wide"><summary>Move into Display</summary><label>Destination<select aria-label="Text destination" value={destination} onChange={e => setDestination(e.target.value)}>
+      {!linked && !working.sceneLink && destinations.length > 0 && <details className="text-tools-transfer text-settings-wide"><summary>Move into Display</summary><label>Destination<select aria-label="Text destination" value={destination} onChange={e => setDestination(e.target.value)}>
         <option value="">Choose a Display…</option>{destinations.map(target => <option key={target.id} value={target.id}>{target.label}</option>)}</select></label>
         <button type="button" disabled={!destination} onClick={() => {
           try {

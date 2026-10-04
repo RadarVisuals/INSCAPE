@@ -34,11 +34,9 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
   const [previewById, setPreviewById] = useState(new Map());
   const [marquee, setMarquee] = useState(null);
   const gridSwipe = navigation.swipe;
-  const [spaceNavigation, setSpaceNavigation] = useState(false);
   const gestureRef = useRef(null);
   const marqueeRef = useRef(null);
   const clickSuppressedRef = useRef(false);
-  const spacePressedRef = useRef(false);
   const grid = controller.selectedGrid;
 
   const clearGesture = (cancelled = true) => {
@@ -55,10 +53,6 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
 
   const beginPlacementGesture = (event, placement, kind = 'move', corner = null) => {
     if (disabled || authoringDisabled || navigation.isMoving() || placement.locked || event.button !== 0 || !grid) return;
-    if (spacePressedRef.current) {
-      beginCanvasSelection(event, { navigationOnly: true });
-      return;
-    }
     if (cropSession && (kind !== 'resize' || cropSession.placementId !== placement.id)) return;
     // Shift-click belongs to selection, not movement. Let the placement click
     // handler toggle the item without replacing the existing selection first.
@@ -149,7 +143,7 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     marqueeRef.current = null;
     setMarquee(null);
   };
-  const beginCanvasSelection = (event, { navigationOnly = spacePressedRef.current, emptyArtworkHit = false } = {}) => {
+  const beginCanvasSelection = (event, { navigationOnly = false, emptyArtworkHit = false } = {}) => {
     if (disabled || marqueeRef.current || authoringDisabled && !navigationOnly || event.button !== 0 || !grid
       || !navigationOnly && !emptyArtworkHit && event.target !== event.currentTarget) return;
     event.preventDefault();
@@ -253,38 +247,17 @@ export default function useOwnerSystemWorkflowPlacementInteraction({ artboardMod
     clearMarquee();
   }, [authoringDisabled, disabled]);
   useEffect(() => {
-    const editable = (event) => /INPUT|TEXTAREA|SELECT/.test(event.target?.tagName) || event.target?.isContentEditable;
-    const keydown = (event) => {
-      const instance = canvasRef.current?.closest('[data-display-instance]');
-      if (instance && !instance.hasAttribute('data-active-display')) return;
-      if (event.target?.closest?.('[data-workbench-module]')) return;
-      if (event.target?.closest?.('button, [role="button"]') && !canvasRef.current?.contains(event.target)) return;
-      if (event.code !== 'Space' || editable(event) || disabled || cropSession) return;
-      event.preventDefault();
-      spacePressedRef.current = true;
-      setSpaceNavigation(true);
+    const release = () => {
+      clearGesture(); clearMarquee();
+      navigation.endDrag(true);
     };
-    const release = (event) => {
-      if (event?.code && event.code !== 'Space') return;
-      spacePressedRef.current = false;
-      setSpaceNavigation(false);
-      if (event?.type === 'blur') {
-        clearGesture(); clearMarquee();
-        navigation.endDrag(true);
-      }
-    };
-    const visibility = () => { if (globalThis.document?.hidden) release({ type: 'blur' }); };
-    globalThis.addEventListener?.('keydown', keydown, true);
-    globalThis.addEventListener?.('keyup', release, true);
+    const visibility = () => { if (globalThis.document?.hidden) release(); };
     globalThis.addEventListener?.('blur', release);
     globalThis.document?.addEventListener('visibilitychange', visibility);
     return () => {
-      globalThis.removeEventListener?.('keydown', keydown, true);
-      globalThis.removeEventListener?.('keyup', release, true);
       globalThis.removeEventListener?.('blur', release);
       globalThis.document?.removeEventListener('visibilitychange', visibility);
-      spacePressedRef.current = false;
     };
   }, [cropSession, disabled]);
-  return { beginCanvasSelection, beginPlacementGesture, clickSuppressedRef, gridSwipe, marquee, nudgeSelection, previewById, spaceNavigation };
+  return { beginCanvasSelection, beginPlacementGesture, clickSuppressedRef, gridSwipe, marquee, nudgeSelection, previewById };
 }

@@ -26,8 +26,9 @@ test('populated owner and Visitor scenes move without per-frame React commits', 
         await page.getByText('PLAY GRIDS', { exact: true }).click();
       };
       await stage.waitFor();
+      if (!visitor) await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).press('Enter');
       const companion = page.locator('[data-image-module="image:motion-0"]');
-      await companion.getByRole('button', { name: 'Next Image side' }).click();
+      await companion.getByRole('button', { name: 'Next Image side' }).press('Enter');
       await page.waitForFunction(() => document.querySelector('[data-image-module="image:motion-0"] .image-module__canvas')?.dataset.sideId === 'side:motion-1');
       assert.ok((await stage.boundingBox()).width > 200, 'measure a laid-out artwork Stage');
       await page.waitForTimeout(1800);
@@ -81,7 +82,6 @@ test('populated owner and Visitor scenes move without per-frame React commits', 
         assert.equal(await offset(), paused, 'taking control retains the paused camera position');
         const box = await stage.boundingBox();
         const startDrag = async () => {
-          if (!visitor) await page.keyboard.down('Space');
           await page.mouse.move(box.x + box.width * .8, box.y + box.height * .55); await page.mouse.down();
         };
         // A held release lands on the nearest seam in the same camera.
@@ -89,19 +89,19 @@ test('populated owner and Visitor scenes move without per-frame React commits', 
         await page.mouse.move(box.x + box.width * .68, box.y + box.height * .55, { steps: 8 });
         await page.waitForTimeout(160); const held = await offset();
         assert.ok(held < paused - box.width * .1, 'drag follows the pointer directly');
-        await page.mouse.up(); if (!visitor) await page.keyboard.up('Space');
+        await page.mouse.up();
         await page.waitForTimeout(750); assert.ok(Math.abs(await offset()) < .05, 'a held release lands exactly on a seam');
         // A fresh flick continues in its release direction; grabbing interrupts
         // it immediately, without jumping back to the selected Grid.
         await startDrag();
         await page.mouse.move(box.x + box.width * .65, box.y + box.height * .55, { steps: 4 });
         const released = await offset();
-        await page.mouse.up(); if (!visitor) await page.keyboard.up('Space');
+        await page.mouse.up();
         await page.waitForTimeout(100);
         assert.ok(await offset() < released - 3, 'flick continues after release');
         await startDrag(); const grabbed = await offset();
         await page.waitForTimeout(200); assert.equal(await offset(), grabbed, 'grabbing stops momentum immediately');
-        await page.mouse.up(); if (!visitor) await page.keyboard.up('Space');
+        await page.mouse.up();
         await page.waitForTimeout(200); assert.equal(await offset(), grabbed, 'stationary release has no residual momentum');
         // Crossing a whole Grid while still holding must preserve the gesture.
         const beforeCross = await gridId();
@@ -122,7 +122,7 @@ test('populated owner and Visitor scenes move without per-frame React commits', 
           window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: x - distance, clientY: y, bubbles: true }));
         }, { x: box.x + box.width * .8, y: box.y + box.height * .55, distance: box.width * 1.25 });
         assert.ok(await offset() < crossed - box.width * .03, 'drag remains captured after crossing');
-        await page.waitForTimeout(160); await page.mouse.up(); if (!visitor) await page.keyboard.up('Space');
+        await page.waitForTimeout(160); await page.mouse.up();
         await page.waitForTimeout(750);
         // Release before a boundary with a known forward velocity. Landing
         // reaches the selected seam without a second alignment animation.
@@ -136,7 +136,7 @@ test('populated owner and Visitor scenes move without per-frame React commits', 
           move(.65 + .001 * (performance.now() - start));
           window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, bubbles: true }));
         }, { x: box.x + box.width * .8, y: box.y + box.height * .55, visitor });
-        await page.mouse.up(); if (!visitor) await page.keyboard.up('Space');
+        await page.mouse.up();
         await page.waitForTimeout(2200);
         assert.notEqual(await gridId(), releaseGrid, 'momentum crosses a Grid boundary without a new gesture');
         const resting = await offset();
@@ -147,7 +147,7 @@ test('populated owner and Visitor scenes move without per-frame React commits', 
           await startDrag();
           await page.evaluate(({ x, y }) => window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, bubbles: true, clientX: x, clientY: y })),
             { x: box.x + box.width * (.8 + fraction), y: box.y + box.height * .55 });
-          await page.waitForTimeout(160); await page.mouse.up(); if (!visitor) await page.keyboard.up('Space');
+          await page.waitForTimeout(160); await page.mouse.up();
           await page.waitForTimeout(750);
           assert.ok(Math.abs(await offset()) < .05, 'backward and short held releases also land exactly');
           assert.notEqual(await gridId(), forwardGrid, 'backward release selects the previous Grid; the short release stays there');
