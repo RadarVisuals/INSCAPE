@@ -6,20 +6,26 @@ import { projectWorkbenchBounds } from './workbenchSpace.js';
 import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
 
 export default function WorkbenchAlignmentGrid({ color, mode }) {
-  const { offset } = useWorkbenchCamera();
+  const { offset, subscribeCameraPaint } = useWorkbenchCamera();
   const { scale } = useWorkbenchView();
-  return <WorkbenchGridPattern color={color} mode={mode} offset={offset} scale={scale} />;
+  return <WorkbenchGridPattern color={color} mode={mode} offset={offset} scale={scale} subscribeCameraPaint={subscribeCameraPaint} />;
 }
 
-export function WorkbenchGridPattern({ color, mode, offset, scale }) {
+export function WorkbenchGridPattern({ color, mode, offset, scale, subscribeCameraPaint }) {
   const node = useRef(null);
+  const current = useRef(null), repaint = useRef(null);
+  current.current = { mode, offset, scale };
+  const visible = mode !== 'NONE';
   useLayoutEffect(() => {
     const canvas = node.current;
     if (!canvas) return;
     const row = document.createElement('canvas');
+    // Camera movement never resizes this viewport-sized canvas. Read its size
+    // at mount/resize only, rather than forcing layout on every camera commit.
+    let { width, height } = canvas.getBoundingClientRect();
     const paint = () => {
+      const { mode, offset, scale } = current.current;
       const density = globalThis.devicePixelRatio || 1;
-      const { width, height } = canvas.getBoundingClientRect();
       const w = Math.round(width * density), h = Math.round(height * density);
       if (canvas.width !== w) canvas.width = w;
       if (canvas.height !== h) canvas.height = h;
@@ -60,10 +66,19 @@ export function WorkbenchGridPattern({ color, mode, offset, scale }) {
       }
       context.restore();
     };
-    paint();
-    const observer = new ResizeObserver(paint); observer.observe(canvas);
-    return () => observer.disconnect();
-  });
+    repaint.current = paint;
+    const observer = new ResizeObserver(entries => {
+      const size = entries[0].contentRect;
+      if (width === size.width && height === size.height) return;
+      width = size.width; height = size.height; paint();
+    });
+    observer.observe(canvas);
+    return () => { observer.disconnect(); repaint.current = null; };
+  }, [visible]);
+  useLayoutEffect(() => { repaint.current?.(); }, [color, mode, offset, scale]);
+  useLayoutEffect(() => subscribeCameraPaint?.(camera => {
+    current.current = { ...current.current, ...camera }; repaint.current?.();
+  }), [subscribeCameraPaint]);
   if (mode === 'NONE') return null;
   return <canvas ref={node} aria-hidden="true" className="lattice-pixel-grid" data-guide-spacing={WORKBENCH_GRID_STEP * scale}
     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0, display: 'block', pointerEvents: 'none', color: color || 'var(--study-grid)' }} />;

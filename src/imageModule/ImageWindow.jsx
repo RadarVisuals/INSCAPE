@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
 import { useWorkbenchPlacement, useWorkbenchMovementSnap } from '../public/ownerSystemWorkflow/WorkbenchPlacement.jsx';
@@ -21,6 +21,10 @@ export default function ImageWindow({ id, title, position, size, fitScale, fitSi
   // commit. Render that frame so artwork fitting updates during the gesture.
   // Visitor scaling remains a view transform and never changes the fit choice.
   const currentSize = camera.frame || preview?.size || size, currentPosition = camera.frame || preview?.position || position;
+  // Camera zoom changes the window's real pixel dimensions. Its content and
+  // event handlers only change when the module or authored rectangle changes.
+  const content = useMemo(() => children({ left: 0, top: 0, width: currentSize.width, height: currentSize.height }),
+    [children, currentSize.width, currentSize.height]);
   const currentFit = fitSize?.(currentSize) ?? fitScale;
   const width = currentSize.width * currentFit, height = currentSize.height * currentFit;
   const density = globalThis.devicePixelRatio || 1;
@@ -120,7 +124,7 @@ export default function ImageWindow({ id, title, position, size, fitScale, fitSi
     style={{ '--image-density': density, '--image-controls-left': `${controlsLeft}px`, '--image-controls-top': `${controlsTop}px`,
       '--image-controls-bridge': `${controlsTop + (controlsAbove ? 28 : -28)}px`, left: 0, top: 0, width: paint.width, height: paint.height,
       transformOrigin: '0 0', transform: `matrix(${1 / density},0,0,${1 / density},${paint.left / density},${paint.top / density})` }}>
-    {children({ left: 0, top: 0, width: currentSize.width, height: currentSize.height })}
+    {content}
     {editable && <div className="image-module__bounds" aria-hidden="true" />}
     <button type="button" className="image-module__close" aria-label={`Close ${title}`} title="Close Image" onClick={onClose}><X size={14} /></button>
     {editable && WORKBENCH_RESIZE_EDGES.filter(([edge]) => gesture.current?.edge === edge || (edge.length === 2

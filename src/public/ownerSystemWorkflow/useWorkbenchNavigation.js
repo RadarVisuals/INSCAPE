@@ -20,18 +20,19 @@ function hasNativeWheelScroll(target, host, dx, dy) {
 // Navigation never receives a draft store or module transforms. Editing owns
 // its gestures and exposes only cancellation and input-ownership callbacks.
 export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible,
-  isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext }) {
-  const { offset, locked, getCamera, updateCamera } = useWorkbenchCamera();
+  isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, entries }) {
+  const camera = useWorkbenchCamera();
+  const { offset, locked, getCamera, updateCamera } = camera;
   const interaction = useRef(null);
   interaction.current = { isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext };
   const [history, setHistory] = useState([]);
   const historyRef = useRef(history);
   const remember = useCallback(next => { historyRef.current = next; setHistory(next); }, []);
   const measuredViewport = useRef(null);
-  const { start: travel, stop: stopTravel, moving } = useWorkbenchCameraMotion(getCamera, updateCamera);
+  const { start: travel, stop: stopTravel, moving } = useWorkbenchCameraMotion(camera, hostRef, entries);
   const getOffset = useCallback(() => getCamera().offset, [getCamera]);
   const panTo = useCallback(next => { stopTravel(); updateCamera({ ...getCamera(), offset: next }); }, [stopTravel, updateCamera, getCamera]);
-  const beforePan = useCallback(() => { stopTravel(); interaction.current.cancelEditing(); }, [stopTravel]);
+  const beforePan = useCallback(() => { stopTravel(true); interaction.current.cancelEditing(); }, [stopTravel]);
   const pan = useWorkbenchPan(hostRef, disabled || locked, { getOffset, update: panTo, onBegin: beforePan });
   const isPanning = useCallback(() => Boolean(pan.active.current), [pan.active]);
   const readViewport = useCallback(() => {
@@ -92,8 +93,12 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     if (!host) return;
     host.style.setProperty('--workbench-pan-x', `${offset.x}px`);
     host.style.setProperty('--workbench-pan-y', `${offset.y}px`);
+    const current = getCamera();
+    host.dataset.workbenchCameraScale = String(current.scale);
+    host.dataset.workbenchCameraX = String(current.offset.x);
+    host.dataset.workbenchCameraY = String(current.offset.y);
     host.toggleAttribute('data-workbench-panned', offset.x !== 0 || offset.y !== 0);
-  }, [hostRef, offset]);
+  }, [hostRef, offset, getCamera]);
   useLayoutEffect(() => {
     const host = hostRef.current;
     host?.toggleAttribute('data-workbench-travelling', moving);
@@ -105,6 +110,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       host?.style.removeProperty('--workbench-pan-x');
       host?.style.removeProperty('--workbench-pan-y');
       host?.removeAttribute('data-workbench-panned');
+      for (const name of ['data-workbench-camera-scale', 'data-workbench-camera-x', 'data-workbench-camera-y']) host?.removeAttribute(name);
     };
   }, [hostRef]);
   useEffect(() => {
@@ -160,7 +166,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       pressedPointers.delete(event.pointerId);
       if (host.contains(event.target)) {
         pressedPointers.add(event.pointerId);
-        stopTravel();
+        stopTravel(true);
       }
     };
     const release = event => pressedPointers.delete(event.pointerId);
@@ -197,7 +203,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     };
     const key = event => {
       // Stop before a module's keyboard editing or inspection handler runs.
-      if (!event.target.closest?.('.workbench-view-controls') && !['Shift', 'Control', 'Alt', 'Meta', 'Tab'].includes(event.key)) stopTravel();
+      if (!event.target.closest?.('.workbench-view-controls') && !['Shift', 'Control', 'Alt', 'Meta', 'Tab'].includes(event.key)) stopTravel(true);
       if (!(event.ctrlKey || event.metaKey) || event.key !== '0') return;
       if (locked) { event.preventDefault(); event.stopPropagation(); return; }
       if (event.altKey || event.target.closest?.('[data-immersive], input, textarea, select, [contenteditable="true"]')) return;
@@ -223,6 +229,6 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     };
   }, [hostRef, disabled, locked, getCamera, isPanning, panTo, zoom, resetZoom, stopTravel]);
 
-  return { offset, locked, getCamera, isPanning, resetView, resetZoom,
+  return { offset, locked, getCamera, isPanning, resetView, resetZoom, moving,
     focusDestination, goBack, canGoBack: history.length > 0, stopTravel };
 }

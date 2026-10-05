@@ -20,6 +20,11 @@
 .system-workflow .workbench-selection__handle:focus { outline: none; }
 .workbench-selection__handle:focus-visible::after { background: #fff; border-color: #111313; }
 
+/* A journey projects high-resolution live modules, just as Display Lift does.
+   This value must not inherit and restyle every descendant on each frame. */
+@property --workbench-camera-transform { syntax: '*'; inherits: false; initial-value: none; }
+[data-workbench-camera-projected] { transform: var(--workbench-camera-transform) !important; }
+
 /* Translate only explicit workspace surfaces. The dock and
    viewport menus retain their screen coordinates. Compensate native zoom. */
 [data-workbench-panned] [data-workbench-pan] { translate: calc(var(--workbench-pan-x, 0px) / var(--workbench-pan-scale, 1)) calc(var(--workbench-pan-y, 0px) / var(--workbench-pan-scale, 1)); }

@@ -105,7 +105,7 @@ export default function PresentationBoardShortcut({ assetsById, host, instanceSt
 
   const shortcutAsset = shortcutIconId ? assetForPlacement(assetsById.get(shortcutIconId)
     || (shortcutIconMedia ? { id: shortcutIconId } : null), { selectedMedia: shortcutIconMedia }) : null;
-  const shortcutRectangle = shortcutNode.current?.getBoundingClientRect();
+  const shortcutRectangle = shortcutIconEditing ? shortcutNode.current?.getBoundingClientRect() : null;
   const iconEditorPosition = shortcutRectangle ? {
     left: Math.max(8, Math.min(globalThis.innerWidth - SHORTCUT_ICON_EDITOR_SIZE.width - 8,
       shortcutRectangle.right + 8)),

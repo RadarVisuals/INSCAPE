@@ -17,9 +17,9 @@ function sameCamera(actual, expected) {
   near(actual.offset.y, expected.offset.y, 'camera y');
 }
 const camera = page => page.locator('main.system-workflow').first().evaluate(host => ({
-  scale: Number(host.querySelector('[data-workbench-scale]').dataset.workbenchScale),
-  offset: { x: parseFloat(host.style.getPropertyValue('--workbench-pan-x')) || 0,
-    y: parseFloat(host.style.getPropertyValue('--workbench-pan-y')) || 0 },
+  scale: Number(host.dataset.workbenchCameraScale ?? host.querySelector('[data-workbench-scale]').dataset.workbenchScale),
+  offset: { x: parseFloat(host.dataset.workbenchCameraX ?? host.style.getPropertyValue('--workbench-pan-x')) || 0,
+    y: parseFloat(host.dataset.workbenchCameraY ?? host.style.getPropertyValue('--workbench-pan-y')) || 0 },
 }));
 async function select(page, id) {
   await page.locator(`[data-workbench-view-id="${id}"]`).evaluate(node => {
@@ -39,13 +39,18 @@ test('owner and Visitor focus live modules, inspect them and return without chan
   try {
     for (const visitor of [false, true]) for (const width of [1440, 390]) {
       const reduced = width === 390;
-      const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: reduced ? 'reduce' : 'no-preference' });
+      const page = await browser.newPage({ viewport: { width, height: 1000 }, deviceScaleFactor: visitor ? 2 : 1, reducedMotion: reduced ? 'reduce' : 'no-preference' });
       page.setDefaultTimeout(12000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, displayWidth: 600 });
       // The production owner route loads this shared theme above the runtime.
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
       await prepareCameraTestView(page, visitor);
+      if (!reduced) {
+        for (let i = 0; i < 6; i++) await page.locator('main.system-workflow').first().dispatchEvent('wheel', {
+          ctrlKey: true, deltaY: 120, clientX: 0, clientY: 0, bubbles: true, cancelable: true });
+        await settle(page);
+      }
       await page.evaluate(() => document.fonts.ready);
       await select(page, 'image:motion-0'); await settle(page);
       await page.waitForTimeout(180);
@@ -56,10 +61,22 @@ test('owner and Visitor focus live modules, inspect them and return without chan
           .filter(key => key.startsWith('inscape:workbench:layout:')).map(key => [key, JSON.parse(localStorage.getItem(key)).layout])) };
       });
       if (!reduced) await focus(page).evaluate(button => button.addEventListener('click', () => {
+        window.__motionCommits = 0;
+        const source = document.querySelector('[data-workbench-view-id="image:motion-0"]');
+        let magnifiedBitmap = false, scaledHandles = false;
         const gaps = []; let last = performance.now(), frame;
-        const tick = time => { gaps.push(time - last); last = time; frame = requestAnimationFrame(tick); };
+        const tick = time => {
+          gaps.push(time - last); last = time;
+          if (document.querySelector('[data-workbench-travelling]')) {
+            const paintedScale = source.getBoundingClientRect().width / source.offsetWidth;
+            if (paintedScale > 1 / devicePixelRatio + .015) magnifiedBitmap = true;
+            const handle = document.querySelector('.workbench-selection__handle');
+            if (handle && Math.abs(handle.getBoundingClientRect().width - 28) > .015) scaledHandles = true;
+          }
+          frame = requestAnimationFrame(tick);
+        };
         frame = requestAnimationFrame(tick);
-        window.finishCameraSample = () => { cancelAnimationFrame(frame); return gaps; };
+        window.finishCameraSample = () => { cancelAnimationFrame(frame); return { gaps, magnifiedBitmap, scaledHandles, commits: window.__motionCommits }; };
       }, { once: true }));
       await focus(page).click();
       if (reduced) assert.equal(await page.locator('[data-workbench-travelling]').count(), 0);
@@ -70,7 +87,12 @@ test('owner and Visitor focus live modules, inspect them and return without chan
       assert.notDeepEqual(first, before);
       assert.equal(await page.evaluate(() => window.destinationNodes.every(node => node.isConnected)), true, 'live modules remain mounted');
       if (!reduced) {
-        const gaps = (await page.evaluate(() => window.finishCameraSample())).sort((a, b) => a - b);
+        const sample = await page.evaluate(() => window.finishCameraSample());
+        const gaps = sample.gaps.sort((a, b) => a - b);
+        assert.equal(sample.magnifiedBitmap, false, 'camera never magnifies beyond the prepared image resolution');
+        assert.equal(sample.scaledHandles, false, 'selection handles stay at native screen resolution');
+        assert.equal(await page.locator('[data-workbench-camera-projected]').count(), 0, 'arrival releases temporary transforms');
+        assert.ok(sample.commits < 20, 'camera motion must not render React on every frame');
         console.log(`${visitor ? 'Visitor' : 'Owner'} camera motion: ${gaps.length} frames, median ${gaps[Math.floor(gaps.length / 2)].toFixed(1)} ms, p95 ${gaps[Math.floor(gaps.length * .95)].toFixed(1)} ms`);
         assert.ok(gaps.length > 2, 'travel has intermediate frames');
       }

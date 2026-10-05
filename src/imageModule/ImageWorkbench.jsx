@@ -11,7 +11,7 @@ import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop, transformA
 import { createImagePresentation, imageFocusEntry, imageSize, MAX_IMAGE_MODULES, MAX_IMAGE_SIDES, nextImageSide, IMAGE_FILL_CROP, imageCropForResize } from './imageModule.js';
 import { saveImageModule, prepareImageResize, duplicateImageModule } from './imageModuleSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
-import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
+import { useWorkbenchActions } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
 import ImageLift from './ImageLift.jsx';
 import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
@@ -27,7 +27,7 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
   const imageRequest = useRef(0);
   latest.current = record;
   const activeTarget = useContextToolTarget();
-  const { getPresentation, setSelection } = useWorkbenchView();
+  const { getPresentation, setSelection } = useWorkbenchActions();
   const side = record.sides.find(item => item.id === sideId) || record.sides[0];
   const crop = cropState?.expected === record && cropState?.placementId === side?.id ? cropState : null;
   const flip = record.sides.some(item => item.id === flipTarget) ? flipTarget : null;

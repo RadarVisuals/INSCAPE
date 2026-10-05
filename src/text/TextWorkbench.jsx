@@ -50,7 +50,8 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   const toolsTrigger = useRef(null);
   const scenes = useSceneNavigation();
   const [linkTarget, setLinkTarget] = useState('');
-  const displays = store ? textDisplays(store.getDraft()) : [];
+  const draft = store?.getSnapshot();
+  const displays = useMemo(() => draft ? textDisplays(draft) : [], [draft]);
   useEffect(() => { onViewChange?.(record.id, { mode }); }, [record.id, mode, onViewChange]);
   useEffect(() => () => onViewChange?.(record.id, null), [record.id, onViewChange]);
   const [working, setWorking] = useState(recovered?.value || record), [error, setError] = useState(recovered?.failure.message || '');

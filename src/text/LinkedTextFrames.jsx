@@ -22,7 +22,7 @@ export function TextFrameLinks({ ids }) {
     setLines(old => JSON.stringify(old) === JSON.stringify(next) ? old : next);
   }, [key, revision, view.scale, view.transforms, offset.x, offset.y]);
   return <svg className="text-flow-links" aria-label="Linked text frame reading order" role="img">
-    {lines.map((line, index) => <g key={index}><line {...line} /><rect x={line.x1 - 2} y={line.y1 - 2} width="4" height="4" /><rect x={line.x2 - 2} y={line.y2 - 2} width="4" height="4" /></g>)}
+    {lines.map((line, index) => <g key={index} data-workbench-camera-decoration=""><line {...line} /><rect x={line.x1 - 2} y={line.y1 - 2} width="4" height="4" /><rect x={line.x2 - 2} y={line.y2 - 2} width="4" height="4" /></g>)}
   </svg>;
 }
 

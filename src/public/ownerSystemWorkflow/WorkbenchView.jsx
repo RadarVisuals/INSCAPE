@@ -1,14 +1,17 @@
-import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { clampWorkbenchMove, identityWorkbenchTransform, scaleWorkbenchTransform, stepWorkbenchViewScale, workbenchSelectionBounds } from './workbenchViewScale.js';
 import { WorkbenchCameraProvider, useWorkbenchCameraScale } from './WorkbenchCamera.jsx';
 import './workbenchView.css';
 import { useWorkbenchMovementSnap } from './WorkbenchPlacement.jsx';
 import useWorkbenchNavigation from './useWorkbenchNavigation.js';
 import { projectWorkbenchBounds } from './workbenchSpace.js';
+import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
 const GridSeamProbe = import.meta.env.DEV ? lazy(() => import('./GridSeamProbe.jsx')) : null;
 
 const WorkbenchView = createContext({ scale: 1, transforms: {}, entries: new Map() });
+const WorkbenchActions = createContext({});
 export const useWorkbenchView = () => useContext(WorkbenchView);
+export const useWorkbenchActions = () => useContext(WorkbenchActions);
 
 export function workbenchModuleTransform(view, id) {
   const local = view.transforms[id] || identityWorkbenchTransform;
@@ -30,16 +33,28 @@ function WorkbenchViewStateProvider({ children, store, profileAddress, presentat
   const resizeTargets = useRef(new Map());
   const presentationRef = useRef(presentation); presentationRef.current = presentation;
   const getPresentation = useCallback(() => presentationRef.current, []);
+  // Content that only needs commands must not subscribe to camera geometry.
+  const actions = useMemo(() => ({ getPresentation, setSelection }), [getPresentation]);
   const revision = useRef(0), listeners = useRef(new Set());
-  // Geometry reports refresh only the selection overlay, not module editors.
+  const resizeObserver = useRef(null);
+  // One observer delivers one geometry notification for all resized modules.
+  // Individual observers caused a synchronous overlay commit per module on
+  // every camera frame, followed by another layout read and bounds update.
   const changed = useCallback(() => { revision.current += 1; listeners.current.forEach(listener => listener()); }, []);
   const subscribe = useCallback(listener => { listeners.current.add(listener); return () => listeners.current.delete(listener); }, []);
   const snapshot = useCallback(() => revision.current, []);
   const register = useCallback((id, node) => {
+    const previous = entries.current.get(id);
+    if (previous) resizeObserver.current?.unobserve(previous);
     if (node) entries.current.set(id, node); else entries.current.delete(id);
+    if (node) {
+      resizeObserver.current ??= new ResizeObserver(changed);
+      resizeObserver.current.observe(node);
+    }
     changed();
   }, [changed]);
-  return <WorkbenchView.Provider value={{ scale, setScale, transforms, setTransforms, selection, setSelection, entries: entries.current, frames: frames.current, resizeTargets: resizeTargets.current, store, profileAddress, getPresentation, subscribe, snapshot, register, changed }}>{children}</WorkbenchView.Provider>;
+  useLayoutEffect(() => () => { resizeObserver.current?.disconnect(); resizeObserver.current = null; }, []);
+  return <WorkbenchView.Provider value={{ scale, setScale, transforms, setTransforms, selection, setSelection, entries: entries.current, frames: frames.current, resizeTargets: resizeTargets.current, store, profileAddress, getPresentation, subscribe, snapshot, register, changed }}><WorkbenchActions.Provider value={actions}>{children}</WorkbenchActions.Provider></WorkbenchView.Provider>;
 }
 
 export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTarget = null, onPosition = null) {
@@ -78,8 +93,7 @@ export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTar
     register(id, node.current);
     frames.set(id, currentFrame);
     resizeTargets.set(id, currentResize);
-    const observer = new ResizeObserver(changed); observer.observe(node.current);
-    return () => { observer.disconnect(); frames.delete(id); resizeTargets.delete(id); register(id, null); };
+    return () => { frames.delete(id); resizeTargets.delete(id); register(id, null); };
   }, [id, node, enabled, register, changed, frames, resizeTargets]);
   useLayoutEffect(() => { if (id && enabled) changed?.(); }, [id, enabled, frame?.left, frame?.top, frame?.width, frame?.height, changed]);
 }
@@ -128,7 +142,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     (target || hostRef.current)?.focus({ preventScroll: true });
   }, [hostRef]);
   const navigation = useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible,
-    isEditing, cancelEditing: cancelGesture, releaseAbandonedGesture, captureContext, restoreContext });
+    isEditing, cancelEditing: cancelGesture, releaseAbandonedGesture, captureContext, restoreContext, entries });
   const { locked } = navigation;
   const focusSelection = () => {
     const ids = latest.current.selection.filter(id => latest.current.entries.has(id));
@@ -153,9 +167,22 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
   useEffect(() => () => cancelGesture(false), [cancelGesture]);
   useLayoutEffect(() => { if (disabled || locked) cancelGesture(); }, [disabled, locked, cancelGesture]);
   useLayoutEffect(() => {
+    if (navigation.moving) return;
     const next = workbenchSelectionBounds(selected.map(id => entries.get(id).getBoundingClientRect()));
     setBounds(current => JSON.stringify(current) === JSON.stringify(next) ? current : next);
-  }, [scale, transforms, selection, revision, navigation.offset]);
+  }, [scale, transforms, selection, revision, navigation.offset, navigation.moving]);
+  // During camera travel the authored rectangles are stable and already known.
+  // Project them directly instead of forcing layout and a second React commit.
+  const travellingBounds = navigation.moving && workbenchSelectionBounds(selected.flatMap(id => {
+    const transform = workbenchModuleTransform(view, id);
+    const frame = transform.frame || view.frames.get(id)?.current;
+    if (!frame) return [];
+    const density = globalThis.devicePixelRatio || 1;
+    const rectangle = workbenchPaintGeometry({ left: frame.left * transform.scale + transform.x + navigation.offset.x,
+      top: frame.top * transform.scale + transform.y + navigation.offset.y,
+      width: frame.width * transform.scale, height: frame.height * transform.scale }, density);
+    return [Object.fromEntries(Object.entries(rectangle).map(([key, value]) => [key, value / density]))];
+  }));
   const install = (active, event) => {
     active.pointerId = event.pointerId;
     active.host = hostRef.current;
@@ -439,7 +466,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
   if (disabled) return null;
   return <>
     {marquee && <div className="workbench-marquee" style={marquee} />}
-    {!locked && bounds && selected.length > 0 && <div className="workbench-selection" style={bounds} role="group" tabIndex={0}
+    {!locked && bounds && selected.length > 0 && <div className="workbench-selection" style={travellingBounds || bounds} role="group" tabIndex={0}
       aria-label={`${selected.length} selected Workbench modules`} aria-description="Drag to move the selection. Arrow keys move it; Shift moves further. Escape clears selection."
       onPointerDown={event => { if (event.target === event.currentTarget) beginMove(event); }} onKeyDown={event => {
         if (event.target !== event.currentTarget || gesture.current || !['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(event.key)) return;

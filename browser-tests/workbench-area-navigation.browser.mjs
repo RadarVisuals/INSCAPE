@@ -8,9 +8,9 @@ const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5217';
 const launch = () => chromium.launch({ executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe', headless: true });
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const camera = page => page.locator('main.system-workflow').first().evaluate(host => ({
-  scale: Number(host.querySelector('[data-workbench-scale]').dataset.workbenchScale),
-  x: parseFloat(host.style.getPropertyValue('--workbench-pan-x')) || 0,
-  y: parseFloat(host.style.getPropertyValue('--workbench-pan-y')) || 0,
+  scale: Number(host.dataset.workbenchCameraScale ?? host.querySelector('[data-workbench-scale]').dataset.workbenchScale),
+  x: parseFloat(host.dataset.workbenchCameraX ?? host.style.getPropertyValue('--workbench-pan-x')) || 0,
+  y: parseFloat(host.dataset.workbenchCameraY ?? host.style.getPropertyValue('--workbench-pan-y')) || 0,
 }));
 const near = (a, b, label) => assert.ok(Math.abs(a - b) < 1e-6, `${label}: ${a} vs ${b}`);
 async function select(page, id) {
@@ -63,9 +63,9 @@ test('owner and Visitor have free camera movement without custom-frame controls,
         const sample = () => {
           if (!active) return;
           const host = document.querySelector('main.system-workflow');
-          window.cameraSamples.push({ scale: Number(host.querySelector('[data-workbench-scale]').dataset.workbenchScale),
-            x: parseFloat(host.style.getPropertyValue('--workbench-pan-x')) || 0,
-            y: parseFloat(host.style.getPropertyValue('--workbench-pan-y')) || 0 });
+          window.cameraSamples.push({ scale: Number(host.dataset.workbenchCameraScale ?? host.querySelector('[data-workbench-scale]').dataset.workbenchScale),
+            x: parseFloat(host.dataset.workbenchCameraX ?? host.style.getPropertyValue('--workbench-pan-x')) || 0,
+            y: parseFloat(host.dataset.workbenchCameraY ?? host.style.getPropertyValue('--workbench-pan-y')) || 0 });
           requestAnimationFrame(sample);
         }; requestAnimationFrame(sample);
       });
