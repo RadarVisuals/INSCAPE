@@ -1117,6 +1117,28 @@ retain their existing authoring boundaries. Navigation can cancel an editing
 gesture but never receives its draft store or changes module transforms. Pan
 updates do not notify scale-only module editors. This separation does not change
 stored layouts, publication data or storage keys.
+Workbench destination navigation starts with explicit **Focus selection** and
+**Back** controls shared by owner and Visitor. Focus frames the selected live
+module instances using their logical geometry, available space above the dock
+and camera controls, and visible floating instruments. Existing camera scale
+and reference-frame limits still apply. Focus changes only the camera; it does
+not group, move, resize, remount or save modules. Selection clears on arrival so
+the content can be used. Back restores the preceding camera and surviving
+selection, then returns keyboard focus to that selection or the Workbench.
+The session keeps at most 50 return contexts and clears them on Workbench
+disposal, profile replacement, Preview suspension or Reset view/Fit frame.
+Navigation decisions and return contexts are separate from the cancellable
+460 ms camera animation, which uses the existing inspection easing. Reduced
+motion travels immediately. New navigation replaces the active animation;
+pointer or keyboard editing, manual camera input, viewport/frame changes,
+inspection locks, window blur and hidden-document transitions stop it at its
+current position. Missing or changed destination geometry invalidates pending
+travel. Interrupted Back remains available until the return completes.
+Escape first retains existing editor, inspector, gesture and selection behavior;
+with none of those active, it returns to the preceding Workbench view. Image
+and Display inspection keep their own input lock and source-return behavior.
+This step does not change click-to-inspect, dragging, wheel ownership, schemas
+or publication data, and does not yet add Workbench groups or article reading focus.
 Existing Workbench fields carry Text window sizes through publication and restore;
 no schema, storage key, default or old-data interpretation changes. Previously
 saved article scales remain readable. Explicitly setting Text size resets the

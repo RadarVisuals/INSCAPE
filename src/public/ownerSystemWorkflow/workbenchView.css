@@ -1,6 +1,7 @@
-.workbench-view-controls { position: fixed; z-index: 80; right: 12px; bottom: calc(var(--workflow-dock-height, 40px) + 8px); display: flex; flex-wrap: wrap; max-width: calc(100% - 24px); border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); }
+.workbench-view-controls { position: fixed; z-index: 82; right: 12px; bottom: calc(var(--workflow-dock-height, 40px) + 8px); display: flex; flex-wrap: wrap; max-width: calc(100% - 24px); border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); }
 .workbench-view-controls button { min-width: 32px; min-height: 32px; padding: 4px 8px; border: 0; border-right: 1px solid var(--workflow-border); border-radius: 0; background: transparent; color: inherit; font: var(--workflow-type-control); cursor: pointer; }
 .workbench-view-controls button:last-child { border-right: 0; }
+.workbench-view-controls button[aria-label="Reset Workbench zoom to 100%"] { min-width: 56px; }
 .workbench-view-controls button:hover { background: var(--workflow-selection); }
 .workbench-view-controls button:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
 .workbench-view-controls button:disabled { opacity: .4; cursor: default; }

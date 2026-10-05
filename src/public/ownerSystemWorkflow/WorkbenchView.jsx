@@ -124,10 +124,39 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     cancelGesture();
     return pointerId;
   }, [cancelGesture]);
+  const captureContext = useCallback(() => ({ selection: [...latest.current.selection] }), []);
+  const restoreContext = useCallback(context => {
+    const current = latest.current;
+    const ids = (context?.selection || []).filter(id => current.entries.has(id));
+    current.setSelection(ids);
+    const node = current.entries.get(ids[0]);
+    const target = node?.matches('[data-workbench-selectable]') ? node : node?.querySelector('[data-workbench-selectable]');
+    (target || hostRef.current)?.focus({ preventScroll: true });
+  }, [hostRef]);
   const navigation = useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible,
     referenceFrame, referenceFrameEnabled, onReferenceFrameVisibleChange,
-    isEditing, cancelEditing: cancelGesture, releaseAbandonedGesture });
+    isEditing, cancelEditing: cancelGesture, releaseAbandonedGesture, captureContext, restoreContext });
   const { locked } = navigation;
+  const focusSelection = () => {
+    const ids = latest.current.selection.filter(id => latest.current.entries.has(id));
+    const nodes = ids.map(id => latest.current.entries.get(id));
+    if (!ids.length) return;
+    navigation.focusDestination({
+      getBounds: () => {
+        const current = latest.current;
+        if (ids.some((id, index) => current.entries.get(id) !== nodes[index] || !nodes[index].isConnected)) return null;
+        const rectangles = ids.map(id => {
+          const transform = current.transforms[id] || identityWorkbenchTransform;
+          const frame = transform.frame || current.frames.get(id)?.current;
+          return frame && { left: frame.left * transform.scale + transform.x,
+            top: frame.top * transform.scale + transform.y,
+            width: frame.width * transform.scale, height: frame.height * transform.scale };
+        });
+        return rectangles.every(Boolean) ? workbenchSelectionBounds(rectangles) : null;
+      },
+      onArrive: () => latest.current.setSelection([]),
+    });
+  };
   useEffect(() => () => cancelGesture(false), [cancelGesture]);
   useLayoutEffect(() => { if (disabled || locked) cancelGesture(); }, [disabled, locked, cancelGesture]);
   useLayoutEffect(() => {
@@ -357,6 +386,13 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
         return;
       }
     };
+    // Let module React handlers consume Escape before using it for Back. The
+    // capture handler above still owns selection and active editing gestures.
+    const backKey = event => {
+      if (event.key !== 'Escape' || event.defaultPrevented || !host.contains(event.target)
+        || event.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (navigation.goBack()) { event.preventDefault(); event.stopPropagation(); }
+    };
     const pointer = event => {
       if (locked) return;
       if (event.button === 0 && gesture.current?.pointerId === event.pointerId) cancelGesture();
@@ -399,12 +435,14 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
       setSelection(previous); install(active, event);
     };
     host.addEventListener('keydown', key, true);
+    globalThis.addEventListener('keydown', backKey);
     host.addEventListener('pointerdown', pointer, true);
     return () => {
       host.removeEventListener('keydown', key, true);
+      globalThis.removeEventListener('keydown', backKey);
       host.removeEventListener('pointerdown', pointer, true);
     };
-  }, [hostRef, disabled, locked, cancelGesture, setSelection, entries]);
+  }, [hostRef, disabled, locked, cancelGesture, setSelection, entries, navigation.goBack]);
   if (disabled) return null;
   return <>
     {referenceFrameEnabled && referenceFrameVisible && !locked && <div className="workbench-reference-guide" aria-hidden="true">
@@ -430,6 +468,10 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
         onKeyDown={event => resizeByKey(event, corner)} />)}
     </div>}
     <div ref={controlsRef} className="workbench-view-controls" role="group" aria-label="Workbench zoom">
+      <button type="button" disabled={locked || !navigation.canGoBack} aria-label="Back to previous Workbench view"
+        title="Return to the view before focusing (Escape after clearing selection)" onClick={navigation.goBack}>Back</button>
+      <button type="button" disabled={locked || !selected.length} aria-label="Focus selected Workbench modules"
+        title="Bring the selected modules into view without changing their layout" onClick={focusSelection}>Focus selection</button>
       {referenceFrameEnabled && <>
         <button type="button" disabled={locked} aria-label="Show reference frame" aria-pressed={referenceFrameVisible}
           title={'Show or hide the ' + frameDimensions + ' composition guide'} onClick={() => onReferenceFrameVisibleChange(!referenceFrameVisible)}>Frame</button>
