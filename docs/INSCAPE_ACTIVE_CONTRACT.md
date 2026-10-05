@@ -1110,6 +1110,13 @@ the same dimensions as solo resize. Draft Undo/Redo restores saved window geomet
 with its content; local frame recovery for missing older layouts is bounded by
 the existing history limit and ends when the module unmounts.
 Visitor group interaction remains temporary. Camera zoom is always view-only.
+The mounted Workbench camera owns session zoom and pan together. Its navigation
+controller owns wheel and Space input, frame constraints, fitting and reset.
+Selection, movement and resizing read that camera for coordinate projection and
+retain their existing authoring boundaries. Navigation can cancel an editing
+gesture but never receives its draft store or changes module transforms. Pan
+updates do not notify scale-only module editors. This separation does not change
+stored layouts, publication data or storage keys.
 Existing Workbench fields carry Text window sizes through publication and restore;
 no schema, storage key, default or old-data interpretation changes. Previously
 saved article scales remain readable. Explicitly setting Text size resets the

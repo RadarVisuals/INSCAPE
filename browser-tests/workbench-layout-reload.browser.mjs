@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
 import { mkdir } from 'node:fs/promises';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
+import { resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 
 const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5197';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -40,6 +41,7 @@ async function mount(page, visitor = false) {
       draft.texts = [{ id:'text:one', visibility:'PUBLIC', article:createArticle() }];
       draft.workbench.texts = [{ ...createTextPresentation('text:one'), window:{ left:1080, top:100, width:280, height:300 } }];
       store.commitCompletedOperation(draft, { expectedGeneration:store.getGeneration() });
+      localStorage.setItem(`inscape:workbench:preferences:${profileAddress}`, JSON.stringify({ referenceFrameSize: { width:4000, height:4000 } }));
     }
     window.readDraft = () => JSON.parse(storage.getItem(key));
     window.readLayout = () => JSON.parse(storage.getItem(layoutKey));
@@ -54,6 +56,8 @@ async function mount(page, visitor = false) {
   }, visitor);
   await page.locator('[data-workbench-view-id="image:three"]').waitFor();
   await page.locator('.text-window').waitFor(); await settle(page);
+  await page.evaluate(() => document.fonts.ready); await settle(page);
+  await resetCameraTestView(page, visitor);
 }
 
 test('owner module placement survives real reload after individual, zoomed and group moves', { timeout:120000 }, async () => {
@@ -94,8 +98,7 @@ test('owner module placement survives real reload after individual, zoomed and g
     await setWorkbenchZoom(page, .67);
     await drag(image(2), 97, -143);
     await image(2).focus(); await page.keyboard.press('Alt+ArrowRight'); await settle(page);
-    await page.getByRole('button', { name:'Reset Workbench zoom to 100%', exact:true }).click();
-    await page.getByRole('button', { name:'Reset Workbench position', exact:true }).click(); await settle(page);
+    await resetCameraTestView(page, false);
     const zoomed = await geometry();
     await reload(); assert.deepEqual(await geometry(), zoomed, 'moving a zoomed individual uses the same saved position path');
     assert.deepEqual(await page.evaluate(() => readDraft()), draftBeforeMove, 'local arrangement never changes module content');
@@ -143,6 +146,7 @@ test('owner module placement survives real reload after individual, zoomed and g
     await page.getByRole('button', { name:'Save current layout', exact:true }).click();
     await reload(); assert.deepEqual(await geometry(), unsaved, 'retry saves the visible mixed-module arrangement');
     await page.setViewportSize({ width:390, height:844 }); await settle(page);
+    await resetCameraTestView(page, false);
     const narrow = await geometry(); await reload();
     const narrowRestored = await geometry();
     for (const id of Object.keys(narrow)) {

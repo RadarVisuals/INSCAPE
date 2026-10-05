@@ -4,6 +4,7 @@ import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
+import { prepareCameraTestView } from './fixtures/workbench-camera-test.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5178';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -74,6 +75,7 @@ for (const secondaryDisplay of [false, true]) for (const density of [1, 1.25, 2]
     await mountGridMotionFixture(page, { origin, count: 3, textModes: true,
       adjoiningModules: { secondaryDisplay, textAppearance: { background: '#000000' } },
       artwork: { url: 'https://motion.invalid/opaque.png', width: 2560, height: 1440, contentType: 'image/png', body: Buffer.from(black, 'base64') } });
+    await prepareCameraTestView(page, false);
     await page.locator('.text-window').waitFor();
     for (const name of ['Read', 'Close Text tools']) {
       const button = page.getByRole('button', { name, exact: true });
@@ -125,6 +127,11 @@ for (const secondaryDisplay of [false, true]) for (const density of [1, 1.25, 2]
     await page.mouse.move(2531.37, 1217.13, { steps: 4 }); await page.mouse.up(); await page.keyboard.up('Space');
     await checkJoin(page, 'fractional pan'); await pixelJoin(page, 'fractional pan');
     await page.setViewportSize({ width: 1000, height: 800 }); await settle(page);
+    // Resizing the viewport recentres the camera. Bring the shared edge into
+    // view before sampling pixels; an offscreen join is not a seam failure.
+    const narrow = await geometry(page);
+    await page.locator('main').first().dispatchEvent('wheel', { deltaX: narrow.display.left - 600,
+      deltaY: narrow.text.top - 100, bubbles: true, cancelable: true }); await settle(page);
     await checkJoin(page, 'narrow viewport'); await pixelJoin(page, 'narrow viewport');
     assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved, 'camera changes never rewrite saved geometry');
     await page.screenshot({ path: `.browser-test-runtime/text-display-resize-${secondaryDisplay}-${density}-narrow.png` });

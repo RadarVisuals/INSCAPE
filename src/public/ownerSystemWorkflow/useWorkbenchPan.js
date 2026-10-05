@@ -1,21 +1,14 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
-import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
+import { useCallback, useEffect, useRef } from 'react';
 
 export const isWorkbenchBackground = (target, host) => target === host
   || Boolean(target?.matches?.('.system-workflow__workbench, .system-workflow__display-instance'));
 
-// A view offset owned by this mounted Workbench, never a saved window position.
-// Only the host's CSS variables change: content editors do not render per pixel.
-export default function useWorkbenchPan(hostRef, disabled, onBegin, constrainOffset) {
-  const { offset, setOffset } = useWorkbenchCamera();
-  const current = useRef(offset), active = useRef(null), space = useRef(false);
+// Space-drag input only. The navigation controller owns camera updates and
+// constraints; this gesture retains only the offset needed for cancellation.
+export default function useWorkbenchPan(hostRef, disabled, { getOffset, update, onBegin }) {
+  const active = useRef(null), space = useRef(false);
   const suppressedPointer = useRef(null), beforeBegin = useRef(onBegin);
   beforeBegin.current = onBegin;
-  const constraint = useRef(constrainOffset); constraint.current = constrainOffset;
-  const update = useCallback(next => {
-    const bounded = constraint.current ? constraint.current(next) : next;
-    current.current = bounded; setOffset(bounded);
-  }, [setOffset]);
   const finish = useCallback((restore = false) => {
     const gesture = active.current;
     if (!gesture) return;
@@ -28,13 +21,6 @@ export default function useWorkbenchPan(hostRef, disabled, onBegin, constrainOff
     delete gesture.host.dataset.workbenchPanning;
     if (restore) update(gesture.origin);
   }, [update]);
-  useLayoutEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    host.style.setProperty('--workbench-pan-x', `${offset.x}px`);
-    host.style.setProperty('--workbench-pan-y', `${offset.y}px`);
-    host.toggleAttribute('data-workbench-panned', offset.x !== 0 || offset.y !== 0);
-  }, [hostRef, offset]);
   useEffect(() => {
     const host = hostRef.current;
     if (!host || disabled) return;
@@ -66,14 +52,6 @@ export default function useWorkbenchPan(hostRef, disabled, onBegin, constrainOff
       document.removeEventListener('visibilitychange', hidden);
     };
   }, [hostRef, disabled, finish]);
-  useEffect(() => {
-    const host = hostRef.current;
-    return () => {
-      host?.style.removeProperty('--workbench-pan-x');
-      host?.style.removeProperty('--workbench-pan-y');
-      host?.removeAttribute('data-workbench-panned');
-    };
-  }, [hostRef]);
   const begin = useCallback(event => {
     const host = hostRef.current;
     if (disabled || !space.current || event.button !== 0 || active.current || !host?.contains(event.target)) return false;
@@ -81,7 +59,7 @@ export default function useWorkbenchPan(hostRef, disabled, onBegin, constrainOff
     beforeBegin.current?.();
     suppressedPointer.current = event.pointerId;
     host.focus({ preventScroll: true });
-    const origin = current.current, point = { x: event.clientX, y: event.clientY };
+    const origin = getOffset(), point = { x: event.clientX, y: event.clientY };
     const gesture = { id: event.pointerId, host, origin,
       move: pointer => {
         if (pointer.pointerId !== event.pointerId) return;
@@ -100,7 +78,7 @@ export default function useWorkbenchPan(hostRef, disabled, onBegin, constrainOff
     window.addEventListener('pointerup', gesture.up, true);
     window.addEventListener('pointercancel', gesture.cancel, true);
     return true;
-  }, [disabled, hostRef, finish, update]);
+  }, [disabled, hostRef, finish, update, getOffset]);
   useEffect(() => {
     if (disabled) return;
     // Claim Space gestures before React's capture handlers can activate or move
@@ -122,5 +100,5 @@ export default function useWorkbenchPan(hostRef, disabled, onBegin, constrainOff
       suppressedPointer.current = null;
     };
   }, [begin, disabled]);
-  return { offset, current, active, update, cancel: finish, reset: () => { finish(); update({ x: 0, y: 0 }); } };
+  return { active, cancel: finish };
 }

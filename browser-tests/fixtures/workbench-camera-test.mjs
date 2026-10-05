@@ -1,8 +1,9 @@
 // Interior-camera regressions deliberately use a large frame so their small
 // gestures do not hit the separately tested frame limits.
 export async function resetCameraTestView(page, visitor) {
-  await page.getByRole('button', { name: 'Reset Workbench zoom to 100%', exact: true }).click();
-  if (visitor) await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click();
+  await page.getByRole('button', { name: 'Reset Workbench zoom to 100%', exact: true }).press('Enter');
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  if (visitor) await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).press('Enter');
   else {
     const host = page.locator('main.system-workflow').first();
     const offset = await host.evaluate(el => ({ x: parseFloat(el.style.getPropertyValue('--workbench-pan-x')) || 0,

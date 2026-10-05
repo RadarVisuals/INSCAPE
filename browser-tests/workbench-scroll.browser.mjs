@@ -3,6 +3,7 @@ import test from 'node:test';
 import { chromium } from 'playwright-core';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
+import { prepareCameraTestView, resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -28,6 +29,7 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       page.setDefaultTimeout(12000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await mountGridMotionFixture(page, { origin, visitor, heavy: true, displayWidth: Math.min(600, width - 40), textModes: true });
+      await prepareCameraTestView(page, visitor);
       const host = page.locator('main.system-workflow').first();
       const board = page.locator('.system-workflow__presentation-board').first();
       const image = page.locator('[data-workbench-view-id="image:motion-0"]');
@@ -36,12 +38,13 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
       if (!visitor) {
         for (const mode of ['fit', 'overflow', 'pages']) {
           await text(mode).getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
-          await text(mode).getByRole('button', { name: 'Text tools', exact: true }).focus(); await page.keyboard.press('Enter');
         }
+        const closeTools = page.getByRole('button', { name: 'Close Text tools', exact: true });
+        if (await closeTools.isVisible()) await closeTools.click();
       }
       await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(400);
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
-      const resetPan = async () => { await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page); };
+      const resetPan = () => resetCameraTestView(page, visitor);
       const stage = board.locator('[data-presentation-stage]');
       const original = await board.boundingBox();
       await wheelOver(page, stage, 0, 65);
@@ -75,6 +78,8 @@ for (const visitor of [false, true]) for (const width of [1440, 390]) {
           if (!visitor) {
             await text(mode).getByRole('button', { name: 'Write', exact: true }).focus(); await page.keyboard.press('Enter');
             await text(mode).getByRole('textbox', { name: 'Article text', exact: true }).waitFor();
+            const closeTools = page.getByRole('button', { name: 'Close Text tools', exact: true });
+            if (await closeTools.isVisible()) await closeTools.click();
             await wheelOver(page, region, 0, 60);
             assert.ok(await region.evaluate(node => node.scrollTop > 0));
             assert.deepEqual(await camera(page), before, 'writing retains internal scroll');
