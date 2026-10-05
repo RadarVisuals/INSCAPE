@@ -1,10 +1,8 @@
 import { workbenchPaintStyle } from './workbenchPaintGeometry.js';
 export const WORKBENCH_VIEW_SCALES = [.25, .33, .5, .67, .75, .8, .9, 1];
 
-export function zoomWorkbenchCamera(scale, offset, nextScale, anchor, minimumScale = Math.min(.25, scale)) {
-  // Fit frame can start below 25% on a narrow screen. Keep wheel zoom continuous
-  // from that fitted view, without extending ordinary manual zoom's lower limit.
-  const next = Math.max(minimumScale, Math.min(2, nextScale));
+export function zoomWorkbenchCamera(scale, offset, nextScale, anchor) {
+  const next = Math.max(.25, Math.min(2, nextScale));
   const ratio = next / scale;
   return { scale: next, offset: { x: anchor.x - (anchor.x - offset.x) * ratio,
     y: anchor.y - (anchor.y - offset.y) * ratio } };

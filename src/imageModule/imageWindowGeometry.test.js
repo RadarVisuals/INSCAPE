@@ -45,9 +45,9 @@ test('Image resize snapping uses the moving edge, with bounds winning over a sna
   });
   assert.deepEqual(edges, [['x', 'left', 50.5], ['y', 'top', 150.5]]);
   assert.deepEqual(next, { position: { left: 8.5, top: 180.5 }, size: { width: 292, height: 100 } });
-  const large = resizeImageGeometry({ left: 7900, top: 7900 }, size, .47, 'se', { x: 9999, y: 9999 });
-  assert.ok(large.position.left + large.size.width * .47 <= 7992);
-  assert.ok(large.position.top + large.size.height * .47 <= 7992);
+  const large = resizeImageGeometry({ left: 3900, top: 3900 }, size, .47, 'se', { x: 9999, y: 9999 });
+  assert.ok(large.position.left + large.size.width * .47 <= 3992);
+  assert.ok(large.position.top + large.size.height * .47 <= 3992);
 });
 
 test('a viewport-fitted Image previews the committed fit without moving its opposite corner', () => {

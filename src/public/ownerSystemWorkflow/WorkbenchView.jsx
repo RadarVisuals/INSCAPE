@@ -5,8 +5,6 @@ import './workbenchView.css';
 import { useWorkbenchMovementSnap } from './WorkbenchPlacement.jsx';
 import useWorkbenchNavigation from './useWorkbenchNavigation.js';
 import { projectWorkbenchBounds } from './workbenchSpace.js';
-import { WORKBENCH_REFERENCE_FRAME, projectWorkbenchReferenceFrame } from './workbenchReferenceFrame.js';
-import WorkbenchReferenceFrameSize from './WorkbenchReferenceFrameSize.jsx';
 const GridSeamProbe = import.meta.env.DEV ? lazy(() => import('./GridSeamProbe.jsx')) : null;
 
 const WorkbenchView = createContext({ scale: 1, transforms: {}, entries: new Map() });
@@ -86,8 +84,7 @@ export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTar
   useLayoutEffect(() => { if (id && enabled) changed?.(); }, [id, enabled, frame?.left, frame?.top, frame?.width, frame?.height, changed]);
 }
 
-export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible = true, referenceFrameVisible = false, onReferenceFrameVisibleChange,
-  referenceFrameSize, onReferenceFrameSizeChange }) {
+export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible = true }) {
   const view = useWorkbenchView();
   const snapMovement = useWorkbenchMovementSnap();
   const { scale, transforms, setTransforms, selection = [], setSelection, entries } = view;
@@ -95,9 +92,6 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
   const latest = useRef(view); latest.current = view;
   const gesture = useRef(null);
   const controlsRef = useRef(null);
-  const referenceFrameEnabled = typeof onReferenceFrameVisibleChange === 'function';
-  const referenceFrame = { ...WORKBENCH_REFERENCE_FRAME, ...referenceFrameSize };
-  const frameDimensions = referenceFrame.width + ' × ' + referenceFrame.height;
   const [marquee, setMarquee] = useState(null), [bounds, setBounds] = useState(null);
   const selected = selection.filter(id => entries.has(id));
   const cancelGesture = useCallback((restore = true) => {
@@ -134,7 +128,6 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     (target || hostRef.current)?.focus({ preventScroll: true });
   }, [hostRef]);
   const navigation = useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible,
-    referenceFrame, referenceFrameEnabled, onReferenceFrameVisibleChange,
     isEditing, cancelEditing: cancelGesture, releaseAbandonedGesture, captureContext, restoreContext });
   const { locked } = navigation;
   const focusSelection = () => {
@@ -445,11 +438,6 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
   }, [hostRef, disabled, locked, cancelGesture, setSelection, entries, navigation.goBack]);
   if (disabled) return null;
   return <>
-    {referenceFrameEnabled && referenceFrameVisible && !locked && <div className="workbench-reference-guide" aria-hidden="true">
-      <div className="workbench-reference-frame" style={projectWorkbenchReferenceFrame(scale, navigation.offset, globalThis.devicePixelRatio || 1, referenceFrame)}>
-        <span className="workbench-reference-frame__label">Reference · {frameDimensions}</span>
-      </div>
-    </div>}
     {marquee && <div className="workbench-marquee" style={marquee} />}
     {!locked && bounds && selected.length > 0 && <div className="workbench-selection" style={bounds} role="group" tabIndex={0}
       aria-label={`${selected.length} selected Workbench modules`} aria-description="Drag to move the selection. Arrow keys move it; Shift moves further. Escape clears selection."
@@ -472,12 +460,6 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
         title="Return to the view before focusing (Escape after clearing selection)" onClick={navigation.goBack}>Back</button>
       <button type="button" disabled={locked || !selected.length} aria-label="Focus selected Workbench modules"
         title="Bring the selected modules into view without changing their layout" onClick={focusSelection}>Focus selection</button>
-      {referenceFrameEnabled && <>
-        <button type="button" disabled={locked} aria-label="Show reference frame" aria-pressed={referenceFrameVisible}
-          title={'Show or hide the ' + frameDimensions + ' composition guide'} onClick={() => onReferenceFrameVisibleChange(!referenceFrameVisible)}>Frame</button>
-        {onReferenceFrameSizeChange && <WorkbenchReferenceFrameSize size={referenceFrame} disabled={locked} onChange={onReferenceFrameSizeChange} />}
-        <button type="button" disabled={locked} title={'Centre the ' + frameDimensions + ' reference frame in your view'} onClick={navigation.fitFrame}>Fit frame</button>
-      </>}
       <button type="button" disabled={locked} aria-label="Reset Workbench position" title="Return to the starting view" onClick={navigation.resetView}>Reset view</button>
       {selected.length > 0 && <span>{selected.length} selected</span>}
       <button type="button" disabled={locked} aria-label="Reset Workbench zoom to 100%" title="Zoom to 100% around the current view (Ctrl+0)" onClick={navigation.resetZoom}>{Math.round(scale * 100)}%</button>

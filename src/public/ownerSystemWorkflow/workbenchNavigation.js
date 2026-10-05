@@ -46,7 +46,7 @@ export function interpolateWorkbenchCamera(start, end, progress) {
 }
 
 // Back retains the old world centre when the available viewport has changed.
-// The navigation owner applies today's frame limits after this calculation.
+// The work area never clamps a restored camera, including older outlying views.
 export function restoreWorkbenchCamera(camera, previousViewport, viewport) {
   if (!previousViewport || !viewport) return camera;
   return { scale: camera.scale, offset: {

@@ -170,7 +170,7 @@ test('Text creation saves its requested Workbench position atomically and retain
   assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage: f.storage }).getDraft().workbench, draft.workbench);
   const edge = addTextModule(f.store, profile, { position: { left: 7990, top: -100 } });
   assert.deepEqual(f.store.getDraft().workbench.texts.find(text => text.id === edge).window,
-    { left: 7272, top: 8, width: 720, height: 680 });
+    { left: 3272, top: 8, width: 720, height: 680 });
   const saved = f.store.getDraft(); f.fail();
   assert.throws(() => addTextModule(f.store, profile, { position: { left: 1000, top: 1000 } }), /could not be saved/);
   assert.deepEqual(f.store.getDraft(), saved, 'failed creation adds neither content nor a window');

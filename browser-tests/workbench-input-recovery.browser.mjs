@@ -11,11 +11,6 @@ const state = page => page.locator('main.system-workflow').evaluate(n => ({ x: n
   zoom: n.querySelector('.workbench-view-controls button[aria-label="Reset Workbench zoom to 100%"]')?.textContent }));
 
 async function prepareNavigation(page) {
-  // Recovery needs room to pan; the fitted frame deliberately prevents it.
-  for (const axis of ['width', 'height']) {
-    const field = page.getByRole('spinbutton', { name: 'Reference frame ' + axis, exact: true });
-    await field.fill('4000'); await field.press('Enter');
-  }
   await resetCameraTestView(page, false);
 }
 

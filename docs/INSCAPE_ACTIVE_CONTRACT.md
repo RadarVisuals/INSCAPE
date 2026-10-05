@@ -993,35 +993,24 @@ are not part of that visitor experience. Module chrome is not Stage content.
 
 ## Public Workbench and visitor interaction
 
-The owner has an optional reference frame at Workbench position (48, 48),
-defaulting to 1440 × 900. Width and height fields beside Frame set its resolution
-in whole work pixels, from 1 to 7944 on each axis so the guide stays inside the
-existing placement bounds. Enter or leaving a field applies a valid size; Escape
-or invalid input restores that field's previous size. Dimensions persist in the
-existing profile-local preferences without changing the storage key; older
-preferences retain the default size. The outline, label and Fit frame share this
-one size. It provides a viewing-area guide for arranging independent modules.
-Its outline and dimensions follow the camera while its label stays readable.
-It cannot receive pointer input, contain or clip modules, or change their geometry.
-Frame visibility defaults on and uses the existing profile-local Workbench
-preferences; old preferences retain their other values. Frame toggles its outline.
-The owner view initially fits and centres the frame above the dock and camera
-controls. Fit frame and Reset view restore that view; changing frame dimensions
-also refits. Resizing the viewport or showing/hiding the dock keeps a fitted
-view centred, while a zoomed view preserves its centre within the new limits.
-The owner Workbench grid is drawn only inside the frame, even when its outline
-is hidden. Module-owned grids and authored geometry remain independent.
+On 2026-10-05 the founder removed the custom reference frame and chose a fixed
+4,000 × 4,000 work-pixel area. There is no Frame toggle, width/height setup,
+reference outline or Fit frame action. The alignment grid uses the shared work
+area bounds; its line/dot/hidden mode, colour and snapping remain independent
+preferences. Module-owned grids and authored canvas dimensions are unchanged.
 
-Owner camera zoom stops at the fitted scale (which can be below 25%) and at 200%.
-At fit, panning cannot displace the frame. At larger scales, each axis that still
-fits stays centred; other axes can pan within the frame plus a margin of 25% of
-that axis's frame dimension on either side. Wheel, Space-drag, cursor zoom and
-reset share these limits. Frame or viewport changes end active camera gestures.
-These are temporary view limits, not new placement or publication bounds. No
-module is moved, resized, clipped or removed by fitting or navigation limits.
-The guide and its controls remain owner editing aids, hidden in Preview, Visitor
-and enlarged inspection. Visitor navigation is unchanged. This does not establish
-a published entry camera or a new composition container.
+Owner and Visitor start at 100% with zero camera offset. Camera movement is free
+in both axes, including when the whole work area fits on screen; manual zoom
+remains 25%–200%. The work area limits placement, not camera navigation or Focus.
+Viewport, dock and control-size changes can stop an active journey but never
+refit, clamp or recenter the camera. Reset view clears navigation history and
+restores zero pan while retaining zoom. The percentage button and Ctrl/Cmd+0
+restore 100% zoom around the view. Existing inspection locks remain authoritative.
+
+Old reference-frame preference fields are ignored. Other local preferences,
+storage keys, draft/public schemas and authored positions retain their meaning.
+Reading or reloading older 8,000-area arrangements does not move outlying modules;
+free camera navigation and Focus can still reach them beyond the visible grid.
 
 Dragging empty Workbench space marquee-selects open Display and standalone Text
 windows. Shift-drag adds to the selection; Shift-click a window header toggles it.
@@ -1041,7 +1030,7 @@ The existing local workspace layout then saves the same positions shown on
 screen. Temporary translations do not remain a second owner of placement.
 Movement never chooses new dimensions or artwork fitting; Visitor movement
 remains temporary and cannot write the maker's arrangement.
-Group movement and corner resizing respect the 8,000 by 8,000 Workbench area,
+Group movement and corner resizing respect the 4,000 by 4,000 Workbench area,
 projected through the current view scale and pan. Moving a zoomed module
 individually uses those same bounds. Group movement keeps
 relative spacing intact at the boundary.
@@ -1111,7 +1100,7 @@ with its content; local frame recovery for missing older layouts is bounded by
 the existing history limit and ends when the module unmounts.
 Visitor group interaction remains temporary. Camera zoom is always view-only.
 The mounted Workbench camera owns session zoom and pan together. Its navigation
-controller owns wheel and Space input, frame constraints, fitting and reset.
+controller owns wheel and Space input, destinations, return history and reset.
 Selection, movement and resizing read that camera for coordinate projection and
 retain their existing authoring boundaries. Navigation can cancel an editing
 gesture but never receives its draft store or changes module transforms. Pan
@@ -1120,17 +1109,20 @@ stored layouts, publication data or storage keys.
 Workbench destination navigation starts with explicit **Focus selection** and
 **Back** controls shared by owner and Visitor. Focus frames the selected live
 module instances using their logical geometry, available space above the dock
-and camera controls, and visible floating instruments. Existing camera scale
-and reference-frame limits still apply. Focus changes only the camera; it does
+and camera controls, and visible floating instruments. Camera scale remains
+between 25% and 200%; the work area does not clamp travel. Focus changes only the camera; it does
 not group, move, resize, remount or save modules. Selection clears on arrival so
 the content can be used. Back restores the preceding camera and surviving
 selection, then returns keyboard focus to that selection or the Workbench.
+Return viewport measurements exclude selection-driven toolbar wrapping so
+restoring selection cannot shift the saved camera position. Destination fitting
+still reserves the currently visible controls and instruments.
 The session keeps at most 50 return contexts and clears them on Workbench
-disposal, profile replacement, Preview suspension or Reset view/Fit frame.
+disposal, profile replacement, Preview suspension or Reset view.
 Navigation decisions and return contexts are separate from the cancellable
 460 ms camera animation, which uses the existing inspection easing. Reduced
 motion travels immediately. New navigation replaces the active animation;
-pointer or keyboard editing, manual camera input, viewport/frame changes,
+pointer or keyboard editing, manual camera input, viewport changes,
 inspection locks, window blur and hidden-document transitions stop it at its
 current position. Missing or changed destination geometry invalidates pending
 travel. Interrupted Back remains available until the return completes.
@@ -1240,8 +1232,8 @@ gesture. This change retains the current visual design.
 Image and Display Lift inspection dimming follows the artwork's shared animation
 progress in both directions, including interrupted opening and reduced motion.
 
-On 2026-09-22 the founder accepted an 8,000 by 8,000 work-pixel placement
-area, extending right and down from the existing coordinate origin. Content
+The fixed 4,000 by 4,000 work-pixel placement area extends right and down from
+the existing coordinate origin, replacing the earlier 8,000-area size. Content
 windows, instruments and movable shortcuts can leave the visible viewport;
 movement and resizing use the shared area bounds with an eight-pixel inset.
 The alignment grid is visible only inside those same placement bounds. Panning
@@ -1253,7 +1245,7 @@ remain separate from window placement.
 The v9 storage redesign is explicitly deferred: existing positive window
 coordinates already support the area, with no schema, storage-key or origin
 change. Older outlying layouts remain readable without rewriting their positions.
-The work area is not an 8,000-pixel render target and adds no module instances.
+The work area is not a 4,000-pixel render target and adds no module instances.
 
 The owner's local arrangement also survives reload independently of publication.
 A profile-scoped `inscape:workbench:layout:v1` record stores module geometry,

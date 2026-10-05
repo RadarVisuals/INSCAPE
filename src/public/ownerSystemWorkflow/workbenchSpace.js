@@ -1,6 +1,6 @@
 // Placement coordinates retain their existing origin and storage meaning.
-// The larger area is a window-placement boundary, not a rendered canvas.
-export const WORKBENCH_SIZE = 8000;
+// The fixed area guides placement and grid painting, never camera movement.
+export const WORKBENCH_SIZE = 4000;
 export const WORKBENCH_BOUNDS = Object.freeze({ left: 8, top: 8, right: WORKBENCH_SIZE - 8, bottom: WORKBENCH_SIZE - 8 });
 
 export function clampWorkbenchPosition(position, size) {

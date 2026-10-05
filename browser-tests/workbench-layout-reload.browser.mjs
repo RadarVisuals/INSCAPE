@@ -41,7 +41,6 @@ async function mount(page, visitor = false) {
       draft.texts = [{ id:'text:one', visibility:'PUBLIC', article:createArticle() }];
       draft.workbench.texts = [{ ...createTextPresentation('text:one'), window:{ left:1080, top:100, width:280, height:300 } }];
       store.commitCompletedOperation(draft, { expectedGeneration:store.getGeneration() });
-      localStorage.setItem(`inscape:workbench:preferences:${profileAddress}`, JSON.stringify({ referenceFrameSize: { width:4000, height:4000 } }));
     }
     window.readDraft = () => JSON.parse(storage.getItem(key));
     window.readLayout = () => JSON.parse(storage.getItem(layoutKey));
