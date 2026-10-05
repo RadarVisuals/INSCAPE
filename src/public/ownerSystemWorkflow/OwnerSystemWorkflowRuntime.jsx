@@ -457,7 +457,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     data-lattice-menu-surface data-menu-surface={menuSurface} data-reduced-motion={layout.reducedMotion || undefined}
     data-surface={workbenchPreferences.surfaceId} data-previewing={preview ? true : undefined}
     inert={preview ? '' : undefined}>
-    <WorkbenchViewControls hostRef={workspaceRef} disabled={Boolean(preview)}
+    <WorkbenchViewControls hostRef={workspaceRef} disabled={Boolean(preview)} dockVisible={workbenchPreferences.dockVisible}
       referenceFrameVisible={workbenchPreferences.referenceFrameVisible !== false}
       referenceFrameSize={workbenchPreferences.referenceFrameSize}
       onReferenceFrameSizeChange={size => setWorkbenchPreferences(current => ({ ...current, referenceFrameSize: size }))}
@@ -467,7 +467,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     <SharedDisplayToolWindows fallbackFocus={workspaceRef} menuSurface={menuSurface} hidden={Boolean(preview) || instrumentsObscured} />
     <ContextToolbar menuSurface={menuSurface} hidden={Boolean(preview) || instrumentsObscured} />
     <SharedTextToolsWindow hidden={Boolean(preview) || instrumentsObscured} />
-    <WorkbenchAlignmentGrid hostRef={workspaceRef} color={workbenchPreferences.gridColor} mode={workbenchPreferences.gridMode} />
+    <WorkbenchAlignmentGrid frameSize={workbenchPreferences.referenceFrameSize} color={workbenchPreferences.gridColor} mode={workbenchPreferences.gridMode} />
     {hasPrimaryDisplay && <div className="system-workflow__display-instance" data-display-instance={PRIMARY_DISPLAY_ID} data-active-display={activeModuleId === PRIMARY_DISPLAY_ID || undefined}
       onPointerDownCapture={() => setActiveModuleId(PRIMARY_DISPLAY_ID)} onFocusCapture={() => setActiveModuleId(PRIMARY_DISPLAY_ID)}>
     <DisplayModule displayName={workbenchLayout.display?.name} ref={displayRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef} assetsById={assetsById} controller={controller}

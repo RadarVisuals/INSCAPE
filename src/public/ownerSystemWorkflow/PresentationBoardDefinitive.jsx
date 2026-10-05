@@ -7,11 +7,13 @@ import './moduleSurface.css';
 import { cloneElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { commitWorkbenchSelectionResize, prepareWindowResize } from '../../systemWorkflow/resizeWorkbenchSelection.js';
 import {
-  Lock, LockKeyhole, Minus, Pause,
+  Lock, LockKeyhole, Minus, Pause, Expand, Shrink,
 } from 'lucide-react';
 import './workbenchWindowChrome.css';
 import PresentationBoardShortcut from './PresentationBoardShortcut.jsx';
 import { DisplayStageSizeContext } from './DisplayStageSizeContext.js';
+import DisplayModuleLift from './DisplayModuleLift.jsx';
+import { displayLiftRectangle } from './displayLiftGeometry.js';
 import { workbenchPaintStyle } from './workbenchPaintGeometry.js';
 import { snapWorkbenchPosition, WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 import { loadPresentationBoardShortcut } from './presentationBoardShortcutStorage.js';
@@ -22,10 +24,12 @@ import { presentationBoardResponsiveMetrics, projectPresentationBoardView,
   resizePresentationBoardFromCorner, resizePresentationBoardView, setContinuousPresentationBoardScale } from './presentationBoardGeometry.js';
 
 const corners = ['nw', 'ne', 'sw', 'se'];
-function BoardWindowControls({ disabled, onMinimize }) {
+function BoardWindowControls({ disabled, liftDisabled, enlarged, onLift, onMinimize }) {
   return <span className="system-workflow__board-window-controls">
-    <button aria-label="Minimize Display Module to shortcut" className="system-workflow__overlay-icon"
-      disabled={disabled} onClick={onMinimize} type="button"><Minus /></button>
+    <button aria-label={enlarged ? 'Restore Display' : 'Enlarge Display'} title={enlarged ? 'Restore Display' : 'Enlarge Display'} className="system-workflow__overlay-icon"
+      disabled={liftDisabled} onClick={onLift} type="button">{enlarged ? <Shrink /> : <Expand />}</button>
+    {!enlarged && <button aria-label="Minimize Display Module to shortcut" className="system-workflow__overlay-icon"
+      disabled={disabled} onClick={onMinimize} type="button"><Minus /></button>}
   </span>;
 }
 function BoardWorkspaceControls({ playing, onTogglePlayback }) {
@@ -37,12 +41,29 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   layoutMode = 'wide', onAuthoringLockToggle, onContextMenu,
   onDelete, moduleCommands, moduleSubmenu, onModuleCommand,
   onMinimize, onRestore,
-  playing = false, onTogglePlayback,
+  playing = false, onTogglePlayback, reducedMotion = false, liftDisabled = false, onLiftInspectionChange, onLiftTransitionChange, onLiftReturn,
   instanceState = PRESENTATION_BOARD_INSTANCE_STATE.WINDOW,
   menuSurface = null, profileAddress, instanceId, renderInspection, renderCues,
   shortcutTargetRef, shortcutSnap = true, windowSnap = false, initialPresentation, onWindowChange, onShortcutChange, readOnly = false }) {
   const localShortcutRef = useRef(null);
   const [toolbarOpen, setToolbarOpen] = useState(false);
+  const [lift, setLift] = useState(null);
+  const liftScope = `${profileAddress}:${instanceId || 'display:primary'}`;
+  const liftActive = Boolean(lift?.scope === liftScope && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW);
+  const liftMoving = liftActive && lift.phase !== 'open';
+  const returnLift = () => {
+    onLiftReturn?.();
+    setLift(current => current && { ...current, phase: 'closing' });
+  };
+  useLayoutEffect(() => {
+    onLiftTransitionChange?.(liftMoving);
+    return () => onLiftTransitionChange?.(false);
+  }, [liftMoving, onLiftTransitionChange]);
+  useLayoutEffect(() => {
+    onLiftInspectionChange?.(liftActive);
+    return () => onLiftInspectionChange?.(false);
+  }, [liftActive, onLiftInspectionChange]);
+  useEffect(() => { setLift(null); }, [liftScope, instanceState]);
   const geometryKey = JSON.stringify(documentGeometry);
   const shortcutRef = shortcutTargetRef || localShortcutRef;
   const storedName = useMemo(() => initialPresentation?.name || (readOnly ? null : loadPresentationBoardShortcut(profileAddress, undefined, instanceId)?.name), [profileAddress, instanceId]);
@@ -56,7 +77,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const [inspectionControlsHost, setInspectionControlsHost] = useState(null);
   const [selectionOverlayHost, setSelectionOverlayHost] = useState(null);
   const workbenchView = useWorkbenchView();
-  const { offset: cameraOffset } = useWorkbenchCamera();
+  const { offset: cameraOffset, locked: cameraLocked } = useWorkbenchCamera();
   const viewId = instanceId || 'display:primary';
   const viewTransform = workbenchModuleTransform(workbenchView, viewId);
   const workbenchScale = viewTransform.scale;
@@ -70,7 +91,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const inspectionSceneRef = useRef(null);
   const boardDragRef = useRef(null);
   const boardResizeRef = useRef(null);
-  const inspectionActive = Boolean(renderInspection);
+  const inspectionActive = Boolean(renderInspection) || liftActive;
   const responsiveMetrics = presentationBoardResponsiveMetrics(host?.clientWidth || 390);
   const geometryOptions = { inset: responsiveMetrics.inset,
     identityStripHeight: 0,
@@ -124,10 +145,16 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     } });
   }, [displayName, boardPosition?.left, boardPosition?.top, view?.frame.board.width, view?.frame.board.height, onWindowChange]);
   const density = globalThis.devicePixelRatio || 1;
-  const contentScale = workbenchScale * density;
   const paintFrame = windowFrame ? workbenchPaintStyle(windowFrame, viewTransform, cameraOffset, density) : null;
-  const stageWidth = paintFrame?.width || 0;
-  const stageHeight = paintFrame?.height || 0;
+  const liftDestination = liftActive && paintFrame ? displayLiftRectangle({ focusDimensions: paintFrame },
+    { width: globalThis.innerWidth, height: globalThis.innerHeight }) : null;
+  // Paint at the enlarged resolution from the start; the temporary transform
+  // animates this live Stage, never a magnified copy of its small surface.
+  const stageWidth = liftDestination ? liftDestination.width * density : paintFrame?.width || 0;
+  const stageHeight = liftDestination ? liftDestination.height * density : paintFrame?.height || 0;
+  const projectionScale = paintFrame ? stageWidth / paintFrame.width : 1;
+  const presentationScale = workbenchScale * projectionScale;
+  const contentScale = presentationScale * density;
 
   const placedPosition = (candidate, bypass) => clampPosition(placement.position(candidate, renderedPosition,
     snapWorkbenchPosition(candidate, windowSnap && !readOnly && !bypass), bypass));
@@ -197,7 +224,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
     shortcutRef.current?.show();
     onMinimize?.();
   };
-  return <div className="system-workflow__workbench" data-presentation-workbench ref={setHost}>
+  return <div className="system-workflow__workbench" data-presentation-workbench data-display-lift={liftActive || undefined} ref={setHost}>
     <PresentationBoardShortcut onDelete={readOnly ? undefined : onDelete} assetsById={assetsById} host={host} instanceState={instanceState}
       readOnly={readOnly} instanceId={instanceId}
       moduleCommands={moduleCommands} moduleSubmenu={moduleSubmenu} onModuleCommand={onModuleCommand}
@@ -207,18 +234,20 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
       shortcutSnap={shortcutSnap} shortcutTargetRef={shortcutRef} />
     {view && instanceState === PRESENTATION_BOARD_INSTANCE_STATE.WINDOW
       && <article aria-label="Display Module" className="system-workflow__presentation-board" data-window-chrome="bevel" data-menu-surface={menuSurface}
-      onContextMenu={onContextMenu} data-module-edges={Boolean(moduleAppearance?.edges) || undefined} data-module-frame={moduleAppearance?.frame === false ? 'off' : moduleAppearance?.frame === true ? 'on' : undefined}
-      data-authoring-locked={authoringLocked || undefined}
+      onContextMenu={liftActive ? event => { event.preventDefault(); event.stopPropagation(); } : onContextMenu} data-module-edges={Boolean(moduleAppearance?.edges) || undefined} data-module-frame={moduleAppearance?.frame === false ? 'off' : moduleAppearance?.frame === true ? 'on' : undefined}
+      data-authoring-locked={authoringLocked || undefined} data-display-lift={liftActive || undefined} data-lift-moving={liftMoving || undefined}
       data-workbench-scale={workbenchScale}
       data-workbench-view-id={viewId}
       data-workbench-pan data-board-scale={view.scale}
-      data-inspecting={inspectionActive || undefined} data-inspection-atmosphere={inspectionAtmosphere || undefined}
+      data-inspecting={Boolean(renderInspection) || liftMoving || undefined} data-inspection-atmosphere={inspectionAtmosphere || undefined}
 
       ref={boardNodeRef}
       style={{ ...moduleEdgeStyle(moduleAppearance?.edges, contentScale), '--workbench-pan-scale': workbenchScale, '--workbench-control-scale': density, '--workflow-identity-strip-height': `${responsiveMetrics.identityStripHeight}px`,
-        ...paintFrame }}>
+        ...paintFrame, '--workbench-content-scale': contentScale, width: stageWidth, height: stageHeight,
+        willChange: liftActive && !liftMoving ? 'auto' : paintFrame.willChange,
+        transform: liftActive ? `var(--display-lift-transform, ${paintFrame.transform})` : paintFrame.transform }}>
       <button type="button" className="system-workflow__toolbar-reveal" aria-label={toolbarOpen ? 'Hide Display controls' : 'Show Display controls'} aria-expanded={toolbarOpen} onClick={() => setToolbarOpen(value => !value)}>···</button>
-      <header className="system-workflow__identity-strip" data-workbench-selectable aria-keyshortcuts="Shift+Enter" data-toolbar-open={toolbarOpen || undefined} tabIndex={0} aria-label={`Move Display Module: ${displayName}`}
+      <header className="system-workflow__identity-strip" data-workbench-selectable aria-keyshortcuts="Shift+Enter" data-toolbar-open={toolbarOpen || liftActive || undefined} tabIndex={liftActive ? -1 : 0} aria-label={`Move Display Module: ${displayName}`}
         onKeyDown={event => {
           if (event.target === event.currentTarget && (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')) { onContextMenu?.(event); return; }
           if (event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
@@ -232,18 +261,21 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
         }} onPointerCancel={stopBoardDrag} onLostPointerCapture={stopBoardDrag} onPointerDown={beginBoardDrag}
         onPointerMove={moveBoardDrag} onPointerUp={stopBoardDrag}>
         <span className="system-workflow__board-title" title={displayName}>
-          {inspectionActive && <span className="system-workflow__board-inspection-controls-host" ref={setInspectionControlsHost} />}
-          <BoardWorkspaceControls playing={playing} onTogglePlayback={onTogglePlayback} />
-          {!readOnly && <span className="system-workflow__composition-lock-controls">
+          {renderInspection && <span className="system-workflow__board-inspection-controls-host" ref={setInspectionControlsHost} />}
+          <BoardWorkspaceControls playing={playing && !liftActive} onTogglePlayback={onTogglePlayback} />
+          {!readOnly && !liftActive && <span className="system-workflow__composition-lock-controls">
             <button aria-label={authoringLocked ? 'Unlock Display Module composition' : 'Lock Display Module composition'}
               aria-pressed={authoringLocked} className="system-workflow__overlay-icon system-workflow__composition-lock"
               onClick={onAuthoringLockToggle} type="button">{authoringLocked ? <LockKeyhole /> : <Lock />}</button>
           </span>}
-          <BoardWindowControls disabled={inspectionActive} onMinimize={minimizeToShortcut} />
+          <BoardWindowControls disabled={inspectionActive} enlarged={liftActive}
+            liftDisabled={liftActive ? lift.phase === 'closing' : Boolean(renderInspection) || liftDisabled || cameraLocked}
+            onLift={event => liftActive ? returnLift()
+              : setLift({ scope: liftScope, trigger: event.currentTarget, phase: 'opening' })} onMinimize={minimizeToShortcut} />
         </span>
       </header>
       <div aria-hidden="true" className="system-workflow__stage-border" />
-      <div className="system-workflow__stage-viewport" data-surface={displaySurface}
+      <div className="system-workflow__stage-viewport" data-surface={displaySurface} inert={liftMoving ? '' : undefined}
         onDragStartCapture={(event) => event.preventDefault()}
         ref={setSelectionOverlayHost} style={{ width: stageWidth, height: stageHeight }}>
         <div className="system-workflow__stage" data-presentation-stage data-surface={displaySurface}
@@ -251,22 +283,27 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
           <div className="system-workflow__inspection-scene" ref={inspectionSceneRef}>
           <DisplayStageSizeContext.Provider value={{ width: stageWidth, height: stageHeight,
             screenScale: 1 / density, contentScale }}>
-          {cloneElement(children, { boardScale: 1, workbenchScale, selectionOverlayHost })}
+          {cloneElement(children, { boardScale: 1, workbenchScale: presentationScale, selectionOverlayHost })}
           </DisplayStageSizeContext.Provider>
           </div>
         </div>
       </div>
       {moduleAppearance?.edges?.grain > 0 && <span aria-hidden="true" className="module-surface-grain" />}
-      {selectionOverlayHost && renderCues?.(selectionOverlayHost)}
+      {!liftActive && selectionOverlayHost && renderCues?.(selectionOverlayHost)}
       {corners.map((corner) => <button aria-label={`Resize Display Module from ${corner}`}
         className={`system-workflow__board-resize-handle is-${corner}`} key={corner}
         onPointerCancel={stopBoardResize} onLostPointerCapture={stopBoardResize} onPointerDown={(event) => beginBoardResize(corner, event)}
         onKeyDown={(event) => resizeBoardFromKeyboard(corner, event)} onPointerUp={stopBoardResize} type="button" />)}
       <div className="system-workflow__board-inspection-host" ref={setInspectionHost}>
         {resizeError && <p role="alert" className="system-workflow__notice">{resizeError}</p>}
-        {inspectionActive && inspectionHost && inspectionControlsHost
+        {renderInspection && inspectionHost && inspectionControlsHost
           ? renderInspection(inspectionHost, inspectionControlsHost, inspectionSceneRef.current) : null}
       </div>
     </article>}
+    {liftActive && paintFrame && boardNodeRef.current && <DisplayModuleLift source={boardNodeRef.current}
+      frame={paintFrame} destination={liftDestination} stageWidth={stageWidth} stageHeight={stageHeight}
+      nestedInspection={Boolean(renderInspection)} onPhaseChange={phase => setLift(current => current && current.phase !== phase ? { ...current, phase } : current)}
+      closing={lift.phase === 'closing'} onRequestReturn={returnLift}
+      trigger={lift.trigger} reducedMotion={reducedMotion} onClose={() => setLift(null)} />}
   </div>;
 }

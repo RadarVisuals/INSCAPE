@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
+import { prepareCameraTestView } from './fixtures/workbench-camera-test.mjs';
 import { setWorkbenchZoom } from './fixtures/workbench-zoom.mjs';
 
 test('Image and Display inspection retain their source and camera through return, then release input', { timeout: 180000 }, async () => {
@@ -14,6 +15,7 @@ test('Image and Display inspection retain their source and camera through return
       const label = `${visitor ? 'Visitor' : 'Owner'} ${width} ${kind}`;
       const errors = []; page.on('pageerror', e => errors.push(e.message));
       await mountGridMotionFixture(page, { origin: process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5207', visitor, count: 3, displayWidth: 600, seamReview: true });
+      await prepareCameraTestView(page, visitor);
       const board = page.locator('.system-workflow__presentation-board');
       await board.waitFor(); await setWorkbenchZoom(page, .56);
       const source = kind === 'image' ? page.locator('.image-module__canvas').first()

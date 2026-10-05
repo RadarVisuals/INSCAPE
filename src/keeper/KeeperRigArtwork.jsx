@@ -1,10 +1,11 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { createKeeperRigPose, stepKeeperRigPose } from './keeperRigMotion.js';
 import { createKeeperSnakePose, stepKeeperSnakePose } from './keeperSnakeMotion.js';
+import { KeeperOctopusArtwork } from './KeeperOctopusArtwork.jsx';
 
 // React owns the immutable artwork; the shared Keeper animation loop updates
 // scoped part refs directly. No React render or saved-state write per frame.
-export const KeeperRigArtwork = forwardRef(function KeeperRigArtwork({ rig, headControl }, ref) {
+const KeeperRasterArtwork = forwardRef(function KeeperRasterArtwork({ rig, headControl }, ref) {
   const nodes = useRef([]), pose = useRef(null);
   const snake = rig.kind === 'snake';
   useImperativeHandle(ref, () => ({
@@ -27,4 +28,8 @@ export const KeeperRigArtwork = forwardRef(function KeeperRigArtwork({ rig, head
         style={{ width: `${part.width * 100}%`, height: `${part.height * 100}%` }} />}
     </div>)}
   </div>;
+});
+
+export const KeeperRigArtwork = forwardRef(function KeeperRigArtwork(props, ref) {
+  return props.rig.kind === 'octopus' ? <KeeperOctopusArtwork {...props} ref={ref} /> : <KeeperRasterArtwork {...props} ref={ref} />;
 });

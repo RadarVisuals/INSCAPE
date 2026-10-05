@@ -6,12 +6,16 @@ export const isWorkbenchBackground = (target, host) => target === host
 
 // A view offset owned by this mounted Workbench, never a saved window position.
 // Only the host's CSS variables change: content editors do not render per pixel.
-export default function useWorkbenchPan(hostRef, disabled, onBegin) {
+export default function useWorkbenchPan(hostRef, disabled, onBegin, constrainOffset) {
   const { offset, setOffset } = useWorkbenchCamera();
   const current = useRef(offset), active = useRef(null), space = useRef(false);
   const suppressedPointer = useRef(null), beforeBegin = useRef(onBegin);
   beforeBegin.current = onBegin;
-  const update = useCallback(next => { current.current = next; setOffset(next); }, [setOffset]);
+  const constraint = useRef(constrainOffset); constraint.current = constrainOffset;
+  const update = useCallback(next => {
+    const bounded = constraint.current ? constraint.current(next) : next;
+    current.current = bounded; setOffset(bounded);
+  }, [setOffset]);
   const finish = useCallback((restore = false) => {
     const gesture = active.current;
     if (!gesture) return;
@@ -118,5 +122,5 @@ export default function useWorkbenchPan(hostRef, disabled, onBegin) {
       suppressedPointer.current = null;
     };
   }, [begin, disabled]);
-  return { offset, current, active, update, reset: () => { finish(); update({ x: 0, y: 0 }); } };
+  return { offset, current, active, update, cancel: finish, reset: () => { finish(); update({ x: 0, y: 0 }); } };
 }

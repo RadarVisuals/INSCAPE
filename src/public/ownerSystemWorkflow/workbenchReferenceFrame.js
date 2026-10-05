@@ -22,6 +22,26 @@ export function fitWorkbenchReferenceFrame(viewport, frame = WORKBENCH_REFERENCE
   } };
 }
 
+// Camera limits only: authored module positions still belong to the Workbench.
+// A quarter-frame margin permits edge work without an unbounded empty desktop.
+export function constrainWorkbenchFrameCamera(camera, viewport, frame = WORKBENCH_REFERENCE_FRAME) {
+  const fitted = fitWorkbenchReferenceFrame(viewport, frame);
+  if (!fitted) return camera;
+  const scale = Math.max(fitted.scale, Math.min(2, camera.scale));
+  const margin = Math.min(32, viewport.width / 4, viewport.height / 4);
+  const axis = (offset, start, size, available) => {
+    if (size * scale <= available - 2 * margin + 1e-6) return (available - size * scale) / 2 - start * scale;
+    const padding = size * .25;
+    const low = available - (start + size + padding) * scale;
+    const high = -(start - padding) * scale;
+    return low > high ? (low + high) / 2 : Math.max(low, Math.min(high, offset));
+  };
+  return { scale, offset: {
+    x: axis(camera.offset.x, frame.left, frame.width, viewport.width),
+    y: axis(camera.offset.y, frame.top, frame.height, viewport.height),
+  } };
+}
+
 export function projectWorkbenchReferenceFrame(scale, offset, density = 1, frame = WORKBENCH_REFERENCE_FRAME) {
   const pixels = workbenchPaintGeometry({ left: frame.left * scale + offset.x, top: frame.top * scale + offset.y,
     width: frame.width * scale, height: frame.height * scale }, density);

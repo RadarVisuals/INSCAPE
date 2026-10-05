@@ -37,6 +37,8 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
   const [sizeDialog, setSizeDialog] = useState(null);
   const [playingGrids, setPlayingGrids] = useState(false);
   const [editingText, setEditingText] = useState(null);
+  const [liftInspection, setLiftInspection] = useState(false);
+  const [liftMoving, setLiftMoving] = useState(false);
   const editText = id => {
     setEditingText(id ? { gridId: controller.selectedGridId, id } : null);
     if (id) { controller.replaceSelection([id]); tools.activate(targetId); }
@@ -157,6 +159,9 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
     ? `${controller.selectedPlacements.length} selected` : controller.selectedPlacements.length === 1
       ? 'Selected artwork' : 'No artwork selected');
   return <><PresentationBoard {...windowProps} onContextMenu={openModuleMenu}
+      reducedMotion={reducedMotion} onLiftInspectionChange={setLiftInspection} onLiftTransitionChange={setLiftMoving}
+      onLiftReturn={viewer.close}
+      liftDisabled={inactive || panelOccupied || Boolean(crop.cropSession || editingText || sizeDialog)}
       moduleCommands={moduleCommands} moduleSubmenu={moduleSubmenu} onModuleCommand={moduleCommand}
       shortcutTargetRef={shortcutTargetRef} assetsById={assetsById} authoringLocked={authoringLocked}
       displaySurface={controller.draft?.appearance.surfaceId} moduleAppearance={controller.draft.appearance}
@@ -174,16 +179,16 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
         scene={scene} container={container} controlsContainer={controlsContainer} menuSurface={menuSurface}
         viewer={viewer} workspaceSurfaceColor={workspaceSurfaceColor} /> : null}
 >
-    <OwnerSystemWorkflowCanvas placementTargetRef={placementTargetRef} assetsById={assetsById} authoringLocked={authoringLocked} controller={controller} crop={crop}
-        editingTextId={editingText?.gridId === controller.selectedGridId ? editingText.id : null} onEditText={editText}
+    <OwnerSystemWorkflowCanvas placementTargetRef={placementTargetRef} assetsById={assetsById} authoringLocked={authoringLocked || liftInspection} controller={controller} crop={crop}
+        editingTextId={editingText?.gridId === controller.selectedGridId ? editingText.id : null} onEditText={liftInspection ? undefined : editText}
         playingGrids={playingGrids} onPauseGrids={pauseGrids} onPlaybackStateChange={setPlaybackState}
         onAssetDimensions={registerAssetDimensions} onChangeGrid={changeGrid}
-        suspended={inactive} interactionDisabled={inactive || panelOccupied || Boolean(viewer.placementId)} onOpenViewer={(placement) => tools.state.metadata ? controller.replaceSelection([placement.id]) : viewer.open(placement.id)}
+        suspended={inactive} interactionDisabled={inactive || panelOccupied || liftMoving || Boolean(viewer.placementId)} onOpenViewer={(placement) => tools.state.metadata && !liftInspection ? controller.replaceSelection([placement.id]) : viewer.open(placement.id)}
         onPlacementRef={viewer.registerPlacement} reducedMotion={reducedMotion}
-        resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.sourcePlacementId} inspectionActive={Boolean(viewer.placementId)} />
+        resolveAssetDimensions={resolveAssetDimensions} viewerPlacementId={viewer.sourcePlacementId} inspectionActive={liftMoving || Boolean(viewer.placementId)} />
     </PresentationBoard>
       <OwnerSystemWorkflowSelectionInspector key={controller.selectedGridId} assetsById={assetsById}
-        toolLabel={toolScope} available={toolAvailable && !suspended && !viewer.placementId}
+        toolLabel={toolScope} available={toolAvailable && !suspended && !liftInspection && !viewer.placementId}
         authoringLocked={authoringLocked || playingGrids || playbackState.moving} controller={controller} crop={crop}
         onBeginCrop={crop.beginCrop} onEditText={editText}
         onArtworkInfo={event => { onRevealInstruments(); tools.command('metadata', true, event.currentTarget, targetId); }} />
@@ -191,7 +196,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
       <OwnerSystemWorkflowMetadataContent dossier={metadataEntry?.dossier || null} />
     </SharedDisplayToolContent>
 
-    <SharedDisplayToolContent id="appearance" targetId={targetId} label={displayName || windowProps.initialPresentation?.name || 'Display Module'} available={toolAvailable && !inactive && !authoringLocked}>
+    <SharedDisplayToolContent id="appearance" targetId={targetId} label={displayName || windowProps.initialPresentation?.name || 'Display Module'} available={toolAvailable && !inactive && !authoringLocked && !liftInspection}>
       <DisplayCanvasControls appearance={controller.draft.appearance} onChange={controller.setAppearance} error={controller.error} />
       <ModuleSurfaceControls display value={controller.draft.appearance.edges} frame={controller.draft.appearance.frame !== false}
         onChange={edges => controller.setAppearance({ edges })} onFrameChange={frame => controller.setAppearance({ frame })} />

@@ -63,6 +63,8 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const activeSceneRef = useRef(null);
   const trackRef = useRef(null);
   const [playing, setPlaying] = useState(false);
+  const [liftInspection, setLiftInspection] = useState(false);
+  const [liftMoving, setLiftMoving] = useState(false);
   const [displayMenu, setDisplayMenu] = useState(null);
   const identityControlRef = useRef(null);
   const profileDockControlRef = useRef(null);
@@ -124,7 +126,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const selectMetadata = id => { tools.activate(targetId); setMetadataSelection({ gridId: activeGrid.id, id }); };
   const playback = useGridPlayback({ playing,
     enabled: displayOpen && lastIndex > 0,
-    suspended: Boolean(viewer.placementId),
+    suspended: liftMoving || Boolean(viewer.placementId),
     scope: `${document.profile.address}:${document.documentId}:${document.revision}`,
     adjacentGrid: (id, direction) => document.grids[(document.grids.findIndex(grid => grid.id === id) + (direction === 'next' ? 1 : lastIndex)) % document.grids.length]?.id,
     gridId: activeGrid?.id, nextGridId: document.grids[(activeIndex + 1) % document.grids.length]?.id,
@@ -168,9 +170,9 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     };
   }, [closeProfile, profileVisible]);
   const selectGrid = useCallback((index) => {
-    if (viewer.placementId) return;
+    if (viewer.placementId || liftMoving) return;
     setActiveIndex(((index % (lastIndex + 1)) + lastIndex + 1) % (lastIndex + 1));
-  }, [lastIndex, viewer.placementId]);
+  }, [lastIndex, viewer.placementId, liftMoving]);
   const clearGridDrag = useCallback(() => {
     const active = gridDragRef.current;
     if (!active) return;
@@ -180,7 +182,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     gridDragRef.current = null;
     setGridDragging(false);
   }, []);
-  const visitorInputBlocked = Boolean(viewer.placementId);
+  const visitorInputBlocked = liftMoving || Boolean(viewer.placementId);
   useEffect(() => {
     if (!playback.isDragging()) clearGridDrag();
   }, [displayOpen, visitorInputBlocked, activeGrid?.id, clearGridDrag]);
@@ -243,14 +245,14 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     });
   }, []);
   const openPlacementViewer = ({ element, placement, gridId }) => {
-    if (gridId === activeGrid.id) { selectMetadata(placement.id); if (!tools.state.metadata) viewer.open(placement.id, element); }
+    if (gridId === activeGrid.id) { selectMetadata(placement.id); if (liftInspection || !tools.state.metadata) viewer.open(placement.id, element); }
   };
   const openIdentityRack = () => {
     if (viewer.placementId || !identityRack) return;
     setIdentityOpen(true); setProfileVisible(false);
   };
   const handleKeyDown = (event) => {
-    if (!hasDisplay || !active || !embedded && activeDisplay !== 'display:primary') return;
+    if (liftMoving || !hasDisplay || !active || !embedded && activeDisplay !== 'display:primary') return;
     if (event.target.closest?.('button,a,input,select,textarea,.identity-module') || viewer.placementId) return;
     const destination = ['ArrowRight', 'PageDown'].includes(event.key) ? activeIndex + 1
       : ['ArrowLeft', 'PageUp'].includes(event.key) ? activeIndex - 1
@@ -300,6 +302,8 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     onKeyDown={handleKeyDown} ref={rootRef} tabIndex="-1">
     {!embedded && <WorkbenchViewControls hostRef={rootRef} />}
     {hasDisplay && <PresentationBoard readOnly instanceId={instanceId} initialPresentation={displayPresentation} layoutMode={layout.mode}
+      onLiftInspectionChange={setLiftInspection} onLiftTransitionChange={setLiftMoving}
+      onLiftReturn={viewer.close}
       documentGeometry={document.geometry} profileAddress={document.profile.address}
       instanceState={displayOpen ? 'window' : 'minimized'} onMinimize={() => setDisplayOpen(false)} onRestore={() => setDisplayOpen(true)}
       menuSurface={document.appearance.menuSurfaceId} displaySurface={document.appearance.surfaceId} moduleAppearance={document.appearance} reducedMotion={reducedMotion}

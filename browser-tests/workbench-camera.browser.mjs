@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
+import { prepareCameraTestView, resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5194';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const near = (a, b, label) => assert.ok(Math.abs(a - b) < 1.1, `${label}: ${a} != ${b}`);
@@ -12,6 +13,7 @@ test('cursor camera and grid stay aligned after pan, reverse smoothly, and ignor
       const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
       const errors = []; page.on('pageerror', e => errors.push(e.message));
       await mountGridMotionFixture(page, { origin, visitor, heavy: true, displayWidth: Math.min(600, width - 40) });
+      await prepareCameraTestView(page, visitor);
       const board = page.locator('.system-workflow__presentation-board').first();
       await board.waitFor(); await page.waitForTimeout(700);
       const host = page.locator('main.system-workflow').first();
@@ -23,7 +25,7 @@ test('cursor camera and grid stay aligned after pan, reverse smoothly, and ignor
         const scrolled = await board.boundingBox();
         near(scrolled.width, initial.width, 'wheel without Ctrl never zooms');
         near(scrolled.y, initial.y - (modifiers.metaKey ? 0 : 80), 'ordinary wheel scrolls vertically');
-        await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
+        await resetCameraTestView(page, visitor); await settle(page);
       }
       for (const delta of [{ deltaX: 90, deltaY: 0 }, { deltaX: -90, deltaY: 0 }]) {
         await host.dispatchEvent('wheel', { ...delta, bubbles: true, cancelable: true }); await settle(page);
@@ -39,7 +41,7 @@ test('cursor camera and grid stay aligned after pan, reverse smoothly, and ignor
       near((await board.boundingBox()).x, initial.x - 64, 'Shift-wheel moves left/right');
       near((await board.boundingBox()).y, initial.y, 'Shift-wheel keeps vertical position');
       near((await board.boundingBox()).width, initial.width, 'Shift-wheel does not zoom');
-      await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
+      await resetCameraTestView(page, visitor); await settle(page);
       await host.focus(); await page.mouse.move(width - 30, 600); await page.keyboard.down('Space');
       assert.equal(await host.evaluate(el => getComputedStyle(el).outlineStyle), 'none', 'camera focus does not outline the entire viewport');
       await page.mouse.down(); await page.mouse.move(width - 85, 630); await page.mouse.up(); await page.keyboard.up('Space'); await settle(page);
@@ -83,7 +85,7 @@ test('cursor camera and grid stay aligned after pan, reverse smoothly, and ignor
           width: rect.width / scale, height: rect.height / scale };
       });
       await host.focus(); await page.keyboard.press('Control+0'); await settle(page);
-      await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
+      await resetCameraTestView(page, visitor); await settle(page);
       const reset = await board.boundingBox();
       for (const key of ['x', 'y']) near(reset[key], expectedReset[key], `reset preserves current module ${key}`);
       for (const key of ['width', 'height']) near(reset[key], initial[key], `reset restores native ${key}`);

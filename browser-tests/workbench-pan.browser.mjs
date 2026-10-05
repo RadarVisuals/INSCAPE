@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 import { mountGridMotionFixture } from './fixtures/grid-motion-fixture.mjs';
+import { prepareCameraTestView, resetCameraTestView } from './fixtures/workbench-camera-test.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5207';
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -64,6 +65,7 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
       page.setDefaultTimeout(12000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await mountGridMotionFixture(page, { origin, visitor, heavy: true, textModes: true, displayWidth: Math.min(600, width - 40) });
+      await prepareCameraTestView(page, visitor);
       await page.locator('[data-workbench-view-id]').nth(7).waitFor();
       if (!visitor && await page.getByRole('button', { name: 'Close Text tools', exact: true }).isVisible())
         await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
@@ -72,7 +74,7 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
       await drag(page, { x: 100, y: -65 });
       shifted(before, await snapshot(page), 100, -65);
       await page.screenshot({ path: `.browser-test-runtime/workbench-pan-${visitor}-${width}.png` });
-      await page.getByRole('button', { name: 'Reset Workbench position' }).click();
+      await resetCameraTestView(page, visitor);
       await settle(page);
       shifted(before, await snapshot(page), 0, 0);
       // Existing marquee and zoom remain separate from the camera.
@@ -87,7 +89,7 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
       await drag(page, { x: 83, y: 44 });
       shifted(zoomed, await snapshot(page), 83, 44);
       await page.keyboard.press('Control+0'); await settle(page);
-      await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
+      await resetCameraTestView(page, visitor); await settle(page);
       shifted(before, await snapshot(page), 0, 0);
       for (const end of ['escape', 'cancel']) {
         await drag(page, { x: 60, y: 35 }, { end });
@@ -99,7 +101,7 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
         shifted(before, stopped, 40, 25);
         await page.mouse.move(230, 580); await settle(page);
         shifted(stopped, await snapshot(page), 0, 0);
-        await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
+        await resetCameraTestView(page, visitor); await settle(page);
       }
       const rail = page.locator('.system-workflow__grid-track, .visitor-grid-world__grid-track').first();
       const railBefore = await rail.evaluate(el => getComputedStyle(el).transform);
@@ -112,7 +114,7 @@ test('owner and Visitor pan all modules equally at native and zoomed sizes witho
         shifted(original, await snapshot(page), 70, -30);
         assert.equal(await rail.evaluate(el => getComputedStyle(el).transform), railBefore, 'Space never moves the Display Grid camera');
         assert.equal(await page.locator('.image-lift, .system-workflow__lift-artwork').count(), 0, 'release never opens artwork');
-        await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
+        await resetCameraTestView(page, visitor); await settle(page);
       }
       // Releasing Space before the mouse, including a press with no movement,
       // must not turn the remainder of that gesture into a module click.

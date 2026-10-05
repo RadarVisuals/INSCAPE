@@ -5,7 +5,7 @@ import './workbenchView.css';
 import { useWorkbenchMovementSnap } from './WorkbenchPlacement.jsx';
 import useWorkbenchPan from './useWorkbenchPan.js';
 import { projectWorkbenchBounds } from './workbenchSpace.js';
-import { WORKBENCH_REFERENCE_FRAME, fitWorkbenchReferenceFrame, projectWorkbenchReferenceFrame } from './workbenchReferenceFrame.js';
+import { WORKBENCH_REFERENCE_FRAME, constrainWorkbenchFrameCamera, fitWorkbenchReferenceFrame, projectWorkbenchReferenceFrame } from './workbenchReferenceFrame.js';
 import WorkbenchReferenceFrameSize from './WorkbenchReferenceFrameSize.jsx';
 const GridSeamProbe = import.meta.env.DEV ? lazy(() => import('./GridSeamProbe.jsx')) : null;
 
@@ -92,7 +92,7 @@ export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTar
   useLayoutEffect(() => { if (id && enabled) changed?.(); }, [id, enabled, frame?.left, frame?.top, frame?.width, frame?.height, changed]);
 }
 
-export function WorkbenchViewControls({ hostRef, disabled = false, referenceFrameVisible = false, onReferenceFrameVisibleChange,
+export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible = true, referenceFrameVisible = false, onReferenceFrameVisibleChange,
   referenceFrameSize, onReferenceFrameSizeChange }) {
   const { locked } = useWorkbenchCamera();
   const view = useWorkbenchView();
@@ -104,6 +104,13 @@ export function WorkbenchViewControls({ hostRef, disabled = false, referenceFram
   const controlsRef = useRef(null);
   const referenceFrameEnabled = typeof onReferenceFrameVisibleChange === 'function';
   const referenceFrame = { ...WORKBENCH_REFERENCE_FRAME, ...referenceFrameSize };
+  const navigation = useRef({ viewport: null, fitted: null, frameKey: null });
+  navigation.current.enabled = referenceFrameEnabled;
+  navigation.current.frame = referenceFrame;
+  const constrainCamera = useCallback(camera => {
+    const { enabled, viewport, frame } = navigation.current;
+    return enabled && viewport ? constrainWorkbenchFrameCamera(camera, viewport, frame) : camera;
+  }, []);
   const frameDimensions = referenceFrame.width + ' × ' + referenceFrame.height;
   const [marquee, setMarquee] = useState(null), [bounds, setBounds] = useState(null);
   const selected = selection.filter(id => entries.has(id));
@@ -123,7 +130,42 @@ export function WorkbenchViewControls({ hostRef, disabled = false, referenceFram
     snapMovement.finish();
     setMarquee(null);
   }, []);
-  const pan = useWorkbenchPan(hostRef, disabled || locked, cancelGesture);
+  const pan = useWorkbenchPan(hostRef, disabled || locked, cancelGesture,
+    offset => constrainCamera({ scale: latest.current.scale, offset }).offset);
+  const applyCamera = useCallback(camera => {
+    const next = constrainCamera(camera);
+    latest.current = { ...latest.current, scale: next.scale };
+    latest.current.setScale(next.scale); pan.update(next.offset);
+  }, [constrainCamera, pan.update]);
+  useEffect(() => {
+    const host = hostRef.current, controls = controlsRef.current;
+    if (!host || !referenceFrameEnabled || disabled || locked) return;
+    const measure = () => {
+      const previous = navigation.current;
+      const dock = parseFloat(getComputedStyle(host).getPropertyValue('--workflow-dock-height')) || 0;
+      const viewport = { width: host.clientWidth, height: host.clientHeight - dock - (controls?.offsetHeight || 32) - 16 };
+      const frame = previous.frame, frameKey = frame.width + ':' + frame.height;
+      const fitted = fitWorkbenchReferenceFrame(viewport, frame);
+      if (!fitted) return;
+      if (previous.viewport?.width === viewport.width && previous.viewport?.height === viewport.height && previous.frameKey === frameKey) return;
+      const wasFitted = !previous.fitted || latest.current.scale <= previous.fitted.scale + 1e-6;
+      const sizeChanged = previous.frameKey !== frameKey;
+      const oldViewport = previous.viewport;
+      navigation.current = { ...previous, viewport, fitted, frameKey };
+      cancelGesture();
+      pan.cancel(true);
+      if (wasFitted || sizeChanged) applyCamera(fitted);
+      else applyCamera({ scale: latest.current.scale, offset: {
+        x: pan.current.current.x + (viewport.width - oldViewport.width) / 2,
+        y: pan.current.current.y + (viewport.height - oldViewport.height) / 2,
+      } });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(host);
+    if (controls) observer.observe(controls);
+    return () => observer.disconnect();
+  }, [hostRef, referenceFrameEnabled, referenceFrame.width, referenceFrame.height, dockVisible, disabled, locked, applyCamera, cancelGesture, pan.cancel]);
   useEffect(() => () => cancelGesture(false), [cancelGesture]);
   useLayoutEffect(() => { if (disabled || locked) cancelGesture(); }, [disabled, locked, cancelGesture]);
   useLayoutEffect(() => {
@@ -136,9 +178,8 @@ export function WorkbenchViewControls({ hostRef, disabled = false, referenceFram
     if (!rect) return;
     const anchor = { x: point.x - rect.left, y: point.y - rect.top };
     const current = latest.current;
-    const next = zoomWorkbenchCamera(current.scale, pan.current.current, current.scale * factor, anchor);
-    latest.current = { ...current, scale: next.scale };
-    current.setScale(next.scale); pan.update(next.offset);
+    const minimum = navigation.current.enabled ? navigation.current.fitted?.scale : undefined;
+    applyCamera(zoomWorkbenchCamera(current.scale, pan.current.current, current.scale * factor, anchor, minimum));
   };
   const resetZoom = () => {
     const host = hostRef.current, rect = host?.getBoundingClientRect();
@@ -152,12 +193,10 @@ export function WorkbenchViewControls({ hostRef, disabled = false, referenceFram
   const fitReferenceFrame = () => {
     const host = hostRef.current;
     if (!host || locked || gesture.current || pan.active.current) return;
-    const dock = parseFloat(getComputedStyle(host).getPropertyValue('--workflow-dock-height')) || 0;
-    const next = fitWorkbenchReferenceFrame({ width: host.clientWidth,
-      height: host.clientHeight - dock - (controlsRef.current?.offsetHeight || 32) - 16 }, referenceFrame);
+    const next = navigation.current.fitted;
     if (!next) return;
     onReferenceFrameVisibleChange(true);
-    latest.current.setScale(next.scale); pan.update(next.offset);
+    applyCamera(next);
     host.focus({ preventScroll: true });
   };
   const install = (active, event) => {
@@ -515,7 +554,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, referenceFram
         {onReferenceFrameSizeChange && <WorkbenchReferenceFrameSize size={referenceFrame} disabled={locked} onChange={onReferenceFrameSizeChange} />}
         <button type="button" disabled={locked} title={'Centre the ' + frameDimensions + ' reference frame in your view'} onClick={fitReferenceFrame}>Fit frame</button>
       </>}
-      <button type="button" disabled={locked} aria-label="Reset Workbench position" title="Return to the starting view" onClick={() => { pan.reset(); hostRef.current?.focus({ preventScroll: true }); }}>Reset view</button>
+      <button type="button" disabled={locked} aria-label="Reset Workbench position" title="Return to the starting view" onClick={() => { if (referenceFrameEnabled) fitReferenceFrame(); else pan.reset(); hostRef.current?.focus({ preventScroll: true }); }}>Reset view</button>
       {selected.length > 0 && <span>{selected.length} selected</span>}
       <button type="button" disabled={locked} aria-label="Reset Workbench zoom to 100%" title="Zoom to 100% around the current view (Ctrl+0)" onClick={resetZoom}>{Math.round(scale * 100)}%</button>
       {GridSeamProbe && <Suspense fallback={null}><GridSeamProbe hostRef={hostRef} scale={scale} offset={pan.offset} /></Suspense>}

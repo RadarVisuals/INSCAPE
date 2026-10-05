@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WORKBENCH_REFERENCE_FRAME, fitWorkbenchReferenceFrame, projectWorkbenchReferenceFrame } from './workbenchReferenceFrame.js';
+import { WORKBENCH_REFERENCE_FRAME, constrainWorkbenchFrameCamera, fitWorkbenchReferenceFrame, projectWorkbenchReferenceFrame } from './workbenchReferenceFrame.js';
 import { zoomWorkbenchCamera } from './workbenchViewScale.js';
 
 test('fit centres the same reference area at desktop, narrow and short viewport sizes', () => {
@@ -50,4 +50,43 @@ test('wheel zoom from a narrow fitted view never jumps to the normal 25% floor',
   assert.equal(zoomed.scale, fitted.scale * 1.04);
   const outward = zoomWorkbenchCamera(fitted.scale, fitted.offset, fitted.scale / 1.04, anchor);
   assert.deepEqual(outward, fitted);
+});
+
+test('fitted camera cannot wander or zoom out past the frame, including tiny and portrait frames', () => {
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 550 }]) {
+    for (const size of [{ width: 1440, height: 900 }, { width: 1080, height: 1920 }, { width: 1, height: 1 }, { width: 7944, height: 7944 }]) {
+      const frame = { ...WORKBENCH_REFERENCE_FRAME, ...size };
+      const fit = fitWorkbenchReferenceFrame(viewport, frame);
+      for (const offset of [{ x: -100000, y: -100000 }, { x: 100000, y: 100000 }]) {
+        assert.deepEqual(constrainWorkbenchFrameCamera({ scale: .00001, offset }, viewport, frame), fit);
+        assert.deepEqual(constrainWorkbenchFrameCamera({ scale: fit.scale, offset }, viewport, frame), fit);
+      }
+      // Returning from detail zoom must recover even a fitted scale below 25%.
+      const zoomed = zoomWorkbenchCamera(1, fit.offset, .00001, { x: 60, y: 80 }, fit.scale);
+      assert.deepEqual(constrainWorkbenchFrameCamera(zoomed, viewport, frame), fit);
+    }
+  }
+});
+
+test('zoomed navigation stops at a quarter-frame margin on every edge', () => {
+  const viewport = { width: 900, height: 600 };
+  for (const frame of [WORKBENCH_REFERENCE_FRAME, { left: 48, top: 48, width: 800, height: 1200 }]) {
+    const scale = 2;
+    const low = constrainWorkbenchFrameCamera({ scale, offset: { x: -1e6, y: -1e6 } }, viewport, frame);
+    const high = constrainWorkbenchFrameCamera({ scale, offset: { x: 1e6, y: 1e6 } }, viewport, frame);
+    assert.equal(low.offset.x, viewport.width - (frame.left + frame.width * 1.25) * scale);
+    assert.equal(low.offset.y, viewport.height - (frame.top + frame.height * 1.25) * scale);
+    assert.equal(high.offset.x, -(frame.left - frame.width * .25) * scale);
+    assert.equal(high.offset.y, -(frame.top - frame.height * .25) * scale);
+    const centred = { scale, offset: { x: (viewport.width - frame.width * scale) / 2 - frame.left * scale,
+      y: (viewport.height - frame.height * scale) / 2 - frame.top * scale } };
+    assert.deepEqual(constrainWorkbenchFrameCamera(centred, viewport, frame), centred);
+  }
+});
+
+test('a fitting axis remains centred while the other can pan for a tall frame', () => {
+  const frame = { left: 48, top: 48, width: 200, height: 1920 }, viewport = { width: 1440, height: 900 };
+  const camera = constrainWorkbenchFrameCamera({ scale: 1, offset: { x: 1e6, y: -1e6 } }, viewport, frame);
+  assert.equal(camera.offset.x, (1440 - 200) / 2 - 48);
+  assert.equal(camera.offset.y, 900 - (48 + 1920 * 1.25));
 });

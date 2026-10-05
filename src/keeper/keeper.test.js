@@ -72,6 +72,23 @@ test('Movement is per Keeper, preserves old flip records, and survives undo, rel
   assert.equal(keeperMovement(store.getDraft().keeperDocks[0]), 'flip');
 });
 
+test('SVG float is a separate persisted choice; undo, reload and publication retain all three modes', () => {
+  const { store, storage } = fixture();
+  for (let i = 0; i < 3; i++) addKeeperDock(store, profile);
+  const old = store.getDraft();
+  for (const [index, movement] of ['flip', 'swim', 'svg'].entries())
+    assert.ok(saveKeeperDock(store, profile, store.getDraft().keeperDocks[index], { movement, visibility: 'PUBLIC' }));
+  const saved = store.getDraft();
+  assert.deepEqual(saved.keeperDocks.map(keeperMovement), ['flip', 'swim', 'svg']);
+  assert.ok(store.undo()); assert.equal(keeperMovement(store.getDraft().keeperDocks[2]), 'flip');
+  assert.ok(store.redo()); assert.deepEqual(store.getDraft(), saved);
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), saved);
+  const document = build(saved); assert.ok(validateProfileDocumentV9(document).valid);
+  assert.deepEqual(reconcileSystemWorkflowDraftFromProfileDocumentV9(document).keeperDocks.map(keeperMovement), ['flip', 'swim', 'svg']);
+  assert.deepEqual(old.keeperDocks.map(keeperMovement), ['flip', 'flip', 'flip']);
+  assert.ok(old.keeperDocks.every(record => !Object.hasOwn(record, 'movement')));
+});
+
 test('Keeper size survives edit, undo, reload and publication; old records keep their original 128px size', () => {
   const { store, storage } = fixture(); addKeeperDock(store, profile);
   assert.equal(keeperSize(store.getDraft().keeperDocks[0]), 192);

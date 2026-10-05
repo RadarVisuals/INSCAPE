@@ -20,7 +20,7 @@ async function assertFits(page) {
   const bounds = await page.locator('.workbench-reference-frame').boundingBox();
   const controls = await page.getByRole('group', { name: 'Workbench zoom' }).boundingBox();
   assert.ok(bounds.x >= 0 && bounds.y >= 24, 'frame and label remain visible');
-  assert.ok(bounds.x + bounds.width <= page.viewportSize().width, 'frame fits the width');
+  assert.ok(bounds.x + bounds.width <= page.viewportSize().width, 'frame fits the width: ' + JSON.stringify({ bounds, viewport: page.viewportSize(), host: await page.locator('main.system-workflow').first().evaluate(el => ({w:el.clientWidth,h:el.clientHeight,pan:el.style.cssText,zoom:el.querySelector('[data-workbench-scale]')?.dataset.workbenchScale})) }));
   assert.ok(bounds.y + bounds.height < controls.y, 'frame clears wrapped controls and dock');
   return bounds;
 }
@@ -42,7 +42,8 @@ test('owner reference frame fits, follows the camera and persists visibility wit
     const frame = page.locator('.workbench-reference-frame');
     assert.equal(await frame.count(), 1);
     const initial = await frame.boundingBox();
-    assert.deepEqual([initial.x, initial.y, initial.width, initial.height], [48, 48, 1440, 900]);
+    await assertFits(page);
+    assert.ok(Math.abs(initial.x + initial.width / 2 - 720) < 1, 'frame starts horizontally centred');
     await page.getByRole('button', { name: 'Fit frame', exact: true }).press('Enter'); await settle(page);
     await assertFits(page);
     const fitted = await moduleGeometry(page);
@@ -57,8 +58,13 @@ test('owner reference frame fits, follows the camera and persists visibility wit
     const host = page.locator('main.system-workflow').first(), beforePan = await frame.boundingBox();
     await host.dispatchEvent('wheel', { deltaX: 45, deltaY: 70, bubbles: true, cancelable: true }); await settle(page);
     const afterPan = await frame.boundingBox();
-    assert.ok(Math.abs(afterPan.x - beforePan.x + 45) < 1);
-    assert.ok(Math.abs(afterPan.y - beforePan.y + 70) < 1);
+    assert.deepEqual(afterPan, beforePan, 'fitted view cannot drift into empty space');
+    await host.dispatchEvent('wheel', { deltaY: -120, ctrlKey: true, clientX: 720, clientY: 450, bubbles: true, cancelable: true }); await settle(page);
+    const zoomed = await frame.boundingBox();
+    await host.dispatchEvent('wheel', { deltaX: 45, deltaY: 70, bubbles: true, cancelable: true }); await settle(page);
+    const panned = await frame.boundingBox();
+    assert.ok(Math.abs(panned.x - zoomed.x + 45) < 1);
+    assert.ok(Math.abs(panned.y - zoomed.y + 70) < 1);
     assert.equal(await frame.evaluate(el => getComputedStyle(el).pointerEvents), 'none');
     assert.equal(await frame.evaluate(el => Boolean(document.elementFromPoint(Math.max(0, el.getBoundingClientRect().left), 400)?.closest('.workbench-reference-guide'))), false);
     await page.getByRole('button', { name: 'Reset Workbench zoom to 100%' }).click(); await settle(page);

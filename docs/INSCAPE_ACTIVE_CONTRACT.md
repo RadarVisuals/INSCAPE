@@ -690,10 +690,39 @@ Only bounded temporary path history and part poses are introduced. Raster
 conversion preserves the original vector files and embeds cropped WebPs into
 new SVG copies; no executable behavior is imported from artwork.
 
+On 2026-10-04 the founder requested a hybrid octopus from a Library LSP8
+artwork. A prepared `keeper` group marked `data-keeper-rig="octopus"` supplies
+one cropped embedded WebP/PNG `body`, one to eight consecutive `tentacle-N`
+vector outlines with gradient stops and root/tip coordinates, and one to four
+consecutive `eye-N` groups with separate apertures, gaze shapes and lids. This
+uses the separate SVG float movement choice (`movement: "svg"`), as refined
+by the founder after reviewing the initial Layered swim treatment. It has no
+hard-coded token ID, artwork URL or bundled production character. The importer reads bounded numeric path commands and
+hex colors into application-owned shapes; imported markup, scripts, external
+resources, styles and arbitrary transforms never enter the application DOM.
+The founder's four directional references refine SVG float: never mirror the
+artwork, keep the head level through upward travel, bank for sideways travel,
+and tilt farther for downward travel. Tentacles trail opposite actual motion,
+including above the head during a descent; braking returns to the authored
+hanging pose. Eyes look toward the destination during travel and resume pointer
+attention at rest. Source left/right facing is irrelevant to this mode and is
+preserved but hidden. Travel, gather/spread and stagger use the existing controls. Flip and Layered
+swim keep their existing behavior, including full rotation in Layered swim.
+Selecting SVG float is explicit and undoable; old docks are never auto-switched.
+It shares destination/recall and lifecycle ownership with the existing dock,
+but uses a separate artwork orientation model. Eyes look toward pointer attention
+and blink; a fixed pool of at most eight detached goo drops falls in screen space
+and fades. Animation uses the existing dock clock and temporary pose only.
+Conversation keeps gentle idle motion, recall clears droplets, inactive talking
+freezes the artwork, and reduced motion holds the authored pose. Owner/Visitor,
+Library selection, publication, viewport sizing and existing raster/snake rigs
+keep their shared boundaries. Raster conversion writes a separate 2048-square
+upload SVG and preserves the source illustration.
+
 The first implementation permits four docks per profile. Optional `keeperDocks`
 records in draft v4 and public document v9 retain the name, canonical Library
 image, source facing and owner publication choice; optional `movement` selects
-`flip` or `swim`, with omission preserving Flip without rewriting old records.
+`flip`, `swim` or `svg`, with omission preserving Flip without rewriting old records.
 An optional complete `swim` record retains `speed`, `gatherSeconds`,
 `spreadSeconds`, `turnSeconds` and `staggerSeconds`. Omission reads the new swim
 defaults without rewriting old data. Flip ignores these settings but preserves
@@ -975,13 +1004,24 @@ one size. It provides a viewing-area guide for arranging independent modules.
 Its outline and dimensions follow the camera while its label stays readable.
 It cannot receive pointer input, contain or clip modules, or change their geometry.
 Frame visibility defaults on and uses the existing profile-local Workbench
-preferences; old preferences retain their other values. Frame toggles visibility;
-Fit frame reveals and centres the guide with margins above the dock and camera
-controls. Fitting changes only camera pan and zoom, never module content or the
-saved arrangement. Fit may go below ordinary 25% wheel zoom on narrow viewports;
-wheel zoom continues smoothly from that fitted scale. The guide and its controls
-are owner editing aids, hidden in Preview, Visitor and enlarged inspection.
-This does not establish a published entry camera or a new composition container.
+preferences; old preferences retain their other values. Frame toggles its outline.
+The owner view initially fits and centres the frame above the dock and camera
+controls. Fit frame and Reset view restore that view; changing frame dimensions
+also refits. Resizing the viewport or showing/hiding the dock keeps a fitted
+view centred, while a zoomed view preserves its centre within the new limits.
+The owner Workbench grid is drawn only inside the frame, even when its outline
+is hidden. Module-owned grids and authored geometry remain independent.
+
+Owner camera zoom stops at the fitted scale (which can be below 25%) and at 200%.
+At fit, panning cannot displace the frame. At larger scales, each axis that still
+fits stays centred; other axes can pan within the frame plus a margin of 25% of
+that axis's frame dimension on either side. Wheel, Space-drag, cursor zoom and
+reset share these limits. Frame or viewport changes end active camera gestures.
+These are temporary view limits, not new placement or publication bounds. No
+module is moved, resized, clipped or removed by fitting or navigation limits.
+The guide and its controls remain owner editing aids, hidden in Preview, Visitor
+and enlarged inspection. Visitor navigation is unchanged. This does not establish
+a published entry camera or a new composition container.
 
 Dragging empty Workbench space marquee-selects open Display and standalone Text
 windows. Shift-drag adds to the selection; Shift-click a window header toggles it.
@@ -1410,11 +1450,25 @@ internal compatibility names during this migration; do not broadly rename them.
   or alter published geometry.
 - Support a fitted overview and sufficiently strong zoom for precise editing.
 - Display uses one Stage projection. Corner resize changes its saved window size;
-  only Workbench Ctrl-wheel zoom changes viewing scale. Independent Display
-  wheel enlargement, maximize/restore and immersive fullscreen are removed.
+  Workbench Ctrl-wheel zoom changes the Workbench viewing scale. Independent
+  Display wheel enlargement, editable maximize/restore and immersive fullscreen are removed.
   Artwork inspect, Grid navigation, composition editing and minimize-to-shortcut
   remain. Removed modes were temporary, so old saved compositions and window
   geometry remain readable without a storage migration or reset.
+- **Enlarge Display** temporarily lifts the live Display into a fitted inspection
+  view for owners and visitors. It reuses the Image/artwork lift's 460 ms easing
+  and Workbench input lock; reduced motion opens and returns immediately.
+  The Stage renders at the enlarged resolution, with the same mounted artwork
+  documents. This is temporary projection, never saved window or composition geometry.
+  Normal Grid navigation, Stage swiping and contained artwork inspection
+  remain usable. Composition editing, drop placement and window manipulation are
+  unavailable until return; the owner's saved composition lock is unchanged.
+  The same window button switches to Restore Display and returns to the original
+  window. Enlargement adds no dimming, modal overlay or separate navigation controls.
+  Clicking outside also restores it; clicking or swiping inside never restores
+  the window, including a swipe released outside its bounds. Escape closes a nested
+  artwork inspection first, then the enlarged Display. Focus and
+  Workbench input return after the closing animation, including interrupted opens.
 - Display's window, Stage and artwork use shared paint boundaries at the
   Workbench scale. This rounding is derived screen geometry, never an edit to
   the saved composition. Owner, Visitor and Display inspect use the same native

@@ -4,14 +4,16 @@ import { useWorkbenchView } from './WorkbenchView.jsx';
 import { WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 import { projectWorkbenchBounds } from './workbenchSpace.js';
 import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
+import { WORKBENCH_REFERENCE_FRAME, projectWorkbenchReferenceFrame } from './workbenchReferenceFrame.js';
 
-export default function WorkbenchAlignmentGrid({ color, mode }) {
+export default function WorkbenchAlignmentGrid({ color, mode, frameSize }) {
   const { offset } = useWorkbenchCamera();
   const { scale } = useWorkbenchView();
-  return <WorkbenchGridPattern color={color} mode={mode} offset={offset} scale={scale} />;
+  const frame = frameSize ? { ...WORKBENCH_REFERENCE_FRAME, ...frameSize } : null;
+  return <WorkbenchGridPattern color={color} mode={mode} offset={offset} scale={scale} frame={frame} />;
 }
 
-export function WorkbenchGridPattern({ color, mode, offset, scale }) {
+export function WorkbenchGridPattern({ color, mode, offset, scale, frame }) {
   const node = useRef(null);
   useLayoutEffect(() => {
     const canvas = node.current;
@@ -26,7 +28,10 @@ export function WorkbenchGridPattern({ color, mode, offset, scale }) {
       const context = canvas.getContext('2d');
       context.clearRect(0, 0, w, h);
       if (!w || !h) return;
-      const bounds = projectWorkbenchBounds(scale, offset), spacing = WORKBENCH_GRID_STEP * scale;
+      const projected = frame && projectWorkbenchReferenceFrame(scale, offset, density, frame);
+      const bounds = projected ? { ...projected, right: projected.left + projected.width, bottom: projected.top + projected.height }
+        : projectWorkbenchBounds(scale, offset);
+      const spacing = WORKBENCH_GRID_STEP * scale;
       const lowX = Math.max(0, bounds.left), highX = Math.min(width, bounds.right);
       const lowY = Math.max(0, bounds.top), highY = Math.min(height, bounds.bottom);
       if (lowX > highX || lowY > highY) return;

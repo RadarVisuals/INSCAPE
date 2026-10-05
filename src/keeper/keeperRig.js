@@ -1,10 +1,12 @@
+import { parseKeeperOctopusRig } from './keeperOctopusRig.js';
 const SVG = 'http://www.w3.org/2000/svg';
 const XLINK = 'http://www.w3.org/1999/xlink';
 export const KEEPER_RIG_LIMITS = Object.freeze({ parts: 50, dimension: 4096, pixels: 16 * 1024 * 1024 });
-const invalid = () => { throw new Error('Use a prepared Keeper SVG: one body with numbered tentacles, or a snake with numbered segments and a separate eye. Each part must be a cropped, embedded image.'); };
+const invalid = () => { throw new Error('Use a prepared Keeper SVG: image-layer tentacles, a segmented snake, or an octopus with a WebP head and vector tentacles and eyes.'); };
 
 // Read a deliberately small data format, never insert imported SVG markup into
-// the page. Only embedded raster pixels, geometry and role IDs reach the renderer.
+// the page. Only embedded raster pixels, bounded geometry, colors and role IDs
+// reach the renderer; octopus paths use a separate restricted reader.
 export function parseKeeperRig(svg) {
   const box = svg.getAttribute('viewBox')?.trim().split(/[\s,]+/).map(Number);
   if (svg.namespaceURI !== SVG || box?.length !== 4 || !box.every(Number.isFinite)
@@ -12,6 +14,7 @@ export function parseKeeperRig(svg) {
   const root = [...svg.children].find(node => node.localName === 'g' && node.id === 'keeper');
   if (!root || root.hasAttribute('transform') || svg.hasAttribute('transform')) invalid();
   const kind = root.getAttribute('data-keeper-rig') || 'tentacles';
+  if (kind === 'octopus') return parseKeeperOctopusRig(svg, root, box);
   if (!['tentacles', 'snake'].includes(kind)) invalid();
   const groups = [...root.children];
   if (groups.length < 2 || groups.length > (kind === 'snake' ? KEEPER_RIG_LIMITS.parts : 17)) invalid();

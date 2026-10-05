@@ -23,7 +23,7 @@ export function validKeeperDocks(items, published = false) {
       || typeof item.id !== 'string' || !KEEPER_ID.test(item.id) || ids.has(item.id)
       || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 48 || /[\u0000-\u001f\u007f]/u.test(item.name)
       || !['left', 'right'].includes(item.faces) || !validKeeperAsset(item.asset)
-      || !['flip', 'swim'].includes(keeperMovement(item)) || Object.hasOwn(item, 'movement') && item.movement == null
+      || !['flip', 'swim', 'svg'].includes(keeperMovement(item)) || Object.hasOwn(item, 'movement') && item.movement == null
       || Object.hasOwn(item, 'swim') && !validKeeperSwim(item.swim)
       || Object.hasOwn(item, 'size') && (!Number.isSafeInteger(item.size) || item.size < KEEPER_SIZE.min || item.size > KEEPER_SIZE.max)
       || !published && !['PRIVATE', 'PUBLIC'].includes(item.visibility)) return false;

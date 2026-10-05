@@ -27,8 +27,10 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
   latest.current = record;
   const editable = Boolean(store) && !suspended, active = useContextToolTarget() === record.id;
   const src = record.asset ? resolvePublishedAssetUrl(record.asset.media.url) : null;
-  const movement = keeperMovement(record), layered = useKeeperRig(src, movement === 'swim' && !suspended, attempt);
-  const status = movement === 'swim' ? layered.status : imageState.src === src ? imageState.status : 'loading';
+  const movement = keeperMovement(record), rigged = movement === 'swim' || movement === 'svg';
+  const layered = useKeeperRig(src, rigged && !suspended, attempt);
+  const wrongSvg = movement === 'svg' && layered.status === 'ready' && layered.rig?.kind !== 'octopus';
+  const status = wrongSvg ? 'failed' : rigged ? layered.status : imageState.src === src ? imageState.status : 'loading';
   const size = keeperSize(record), swim = keeperSwim(record);
   const snake = movement === 'swim' && layered.rig?.kind === 'snake';
   const { phase, toggle, settle, captureReaction, cancelReaction, nudge } = useKeeperMotion({ dock, actor, rigActor, hostRef, enabled: Boolean(src) && status === 'ready' && !suspended,
@@ -100,7 +102,7 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
       </div>
     </WorkbenchWindow>
     {src && <div ref={actor} className="keeper-roamer" hidden={phase === 'docked' || suspended}>
-      {movement === 'swim' ? layered.rig && <KeeperRigArtwork key={`${src}:${attempt}`} rig={layered.rig} ref={rigActor} headControl={headControl} />
+      {rigged ? !wrongSvg && layered.rig && <KeeperRigArtwork key={`${src}:${attempt}:${movement}`} movement={movement} rig={layered.rig} ref={rigActor} headControl={headControl} />
         : <><img key={`${src}:${attempt}`} src={src} alt="" draggable={false} /><button {...headControl} type="button" className="keeper-head keeper-head--flip" /></>}
     </div>}
     {talking && phase === 'free' && !suspended && record.asset && <KeeperConversation
@@ -114,9 +116,9 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
           onBlur={event => { const name = event.target.value.trim(); if (name && name !== record.name) change({ name }); }}
           onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }} /></label>
         <label>Movement<select aria-label="Keeper movement" value={movement} onChange={event => change({ movement: event.target.value })}>
-          <option value="flip">Flip</option><option value="swim">Layered swim</option>
+          <option value="flip">Flip</option><option value="swim">Layered swim</option><option value="svg">SVG float</option>
         </select></label>
-        {!snake && <label>Artwork faces<select aria-label="Keeper artwork faces" value={record.faces} onChange={event => change({ faces: event.target.value })}>
+        {!snake && movement !== 'svg' && <label>Artwork faces<select aria-label="Keeper artwork faces" value={record.faces} onChange={event => change({ faces: event.target.value })}>
           <option value="right">Right</option><option value="left">Left</option>
         </select></label>}
         <label>Size (px)<input aria-label="Keeper size" type="number" key={size} min={KEEPER_SIZE.min} max={KEEPER_SIZE.max} step="1" defaultValue={size}
@@ -129,9 +131,10 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
             if (event.key === 'Enter') event.currentTarget.blur();
             if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); event.currentTarget.value = String(size); event.currentTarget.blur(); }
           }} /></label>
-        {movement === 'swim' && <KeeperSwimControls value={swim} snake={snake} onChange={next => change({ swim: next }, record)} />}
+        {rigged && <KeeperSwimControls value={swim} snake={snake} onChange={next => change({ swim: next }, record)} />}
         <p>Drop an image from Library onto the dock to {record.asset ? 'replace its inhabitant' : 'give it an inhabitant'}.</p>
-        {movement === 'swim' && <p>{snake ? 'Snake chain detected. Its eye stays upright; body spacing opens with speed.' : 'Use a prepared SVG with tentacle or snake image layers.'} Release, then click empty Workbench space to swim there. Hold the right mouse button on empty space to follow your cursor; release to finish at the last point.</p>}
+        {movement === 'swim' && <p>{snake ? 'Snake chain detected. Its eye stays upright; body spacing opens with speed.' : layered.rig?.kind === 'octopus' ? 'Octopus detected. Its tentacles bend and drip; its eyes look around and blink.' : 'Use a prepared Keeper SVG with image layers or vector octopus parts.'} Release, then click empty Workbench space to swim there. Hold the right mouse button on empty space to follow your cursor; release to finish at the last point.</p>}
+        {movement === 'svg' && <p>For a prepared SVG with vector tentacles and eyes. The head stays level on upward travel and tilts through sideways and downward movement. Eyes look toward travel; tentacles trail behind and drip. Release, then click empty space or hold the right mouse button to move.</p>}
         {record.asset && <p>Release, then click the character’s head to read its attached dialogue.</p>}
         <label className="keeper-check"><input type="checkbox" checked={record.visibility === 'PUBLIC'} onChange={event => change({ visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in publication</label>
         {record.asset && <button type="button" onClick={() => change({ asset: null })}>Empty dock</button>}
@@ -142,7 +145,7 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
           } catch (failure) { setError(failure.message); }
         }}>Delete dock</button>
         {error && <p role="alert">{error}</p>}
-        {src && status === 'failed' && <p role="alert">{movement === 'swim' ? layered.error : 'The artwork could not be loaded.'} Use Retry on the dock.</p>}
+        {src && status === 'failed' && <p role="alert">{wrongSvg ? 'SVG float needs a prepared SVG with vector tentacles and eyes. Use Layered swim for image-layer tentacles or a snake.' : rigged ? layered.error : 'The artwork could not be loaded.'} Use Retry on the dock.</p>}
       </div>
     </ContextToolContent>}
   </div>;
