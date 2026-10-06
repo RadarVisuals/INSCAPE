@@ -1,3 +1,4 @@
+import { restorePublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
 import { reconcileRemovedWorkbenchMembers } from '../../systemWorkflow/domain/workbenchGroups.js';
 import {
   SYSTEM_WORKFLOW_DRAFT_VERSION,
@@ -60,7 +61,7 @@ function restoredIdentity(identity) {
  * Rebuilds draft-v4 public state from one validated v9 document. Private local
  * Grids survive, but they never influence the recovered public order.
  */
-// Workbench groups are local authoring data until group publication is added.
+// Public content restores through the same module boundaries while local private work is retained.
 export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput, currentDraftInput = null) {
   const document = assertValidProfileDocumentV9(documentInput);
   let privateGrids = [];
@@ -145,7 +146,8 @@ export function reconcileSystemWorkflowDraftFromProfileDocumentV9(documentInput,
     grids: document.grids.length || privateGrids.length
       ? [...document.grids.map(restoredPublicGrid), ...privateGrids, worldCover] : [],
   };
-  if (currentDraftInput?.workbenchGroups) restored.workbenchGroups = structuredClone(currentDraftInput.workbenchGroups);
+  const workbenchGroups = restorePublishedWorkbenchGroups(document, currentDraftInput, restored);
+  if (workbenchGroups) restored.workbenchGroups = workbenchGroups;
   return assertValidSystemWorkflowDraft(reconcileRemovedWorkbenchMembers(currentDraftInput, restored));
 }
 

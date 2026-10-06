@@ -19,6 +19,10 @@ export function editWorkbenchGroups(store, profileAddress, action) {
   } else if (action.type === 'members') {
     groups = groups.map(group => group !== original ? group : { ...group, memberIds: [...action.memberIds] });
     label = 'Edit Workbench group members';
+  } else if (action.type === 'visibility') {
+    if (!['PRIVATE', 'PUBLIC'].includes(action.visibility)) throw new Error('Choose Private or Public for this group.');
+    groups = groups.map(group => group !== original ? group : { ...group, visibility: action.visibility });
+    label = 'Change Workbench group visibility';
   } else if (action.type === 'position') {
     groups = groups.map(group => {
       if (group !== original) return group;

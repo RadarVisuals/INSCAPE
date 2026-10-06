@@ -5,6 +5,7 @@ import './workbenchView.css';
 import { moveWorkbenchGroup } from '../../systemWorkflow/moveWorkbenchGroup.js';
 import { workbenchMemberIds } from '../../systemWorkflow/domain/workbenchGroups.js';
 const WorkbenchGroups = lazy(() => import('./WorkbenchGroups.jsx'));
+const PublishedWorkbenchGroups = lazy(() => import('./PublishedWorkbenchGroups.jsx'));
 import { useWorkbenchMovementSnap } from './WorkbenchPlacement.jsx';
 import useWorkbenchNavigation from './useWorkbenchNavigation.js';
 import { projectWorkbenchBounds } from './workbenchSpace.js';
@@ -26,7 +27,7 @@ export function WorkbenchViewProvider(props) {
   return <WorkbenchCameraProvider><WorkbenchViewStateProvider {...props} /></WorkbenchCameraProvider>;
 }
 
-function WorkbenchViewStateProvider({ children, store, profileAddress, presentation }) {
+function WorkbenchViewStateProvider({ children, store, profileAddress, presentation, groupContent }) {
   // Editors need scale for projection, but panning must not render them again.
   const { scale, setScale } = useWorkbenchCameraScale();
   const [transforms, setTransforms] = useState({});
@@ -61,7 +62,7 @@ function WorkbenchViewStateProvider({ children, store, profileAddress, presentat
     changed();
   }, [changed]);
   useLayoutEffect(() => () => { resizeObserver.current?.disconnect(); resizeObserver.current = null; }, []);
-  return <WorkbenchView.Provider value={{ scale, setScale, transforms, setTransforms, presentationTransforms, setPresentationTransforms, hiddenModuleIds, setHiddenModuleIds, selection, setSelection, entries: entries.current, frames: frames.current, resizeTargets: resizeTargets.current, store, profileAddress, getPresentation, subscribe, snapshot, register, changed }}><WorkbenchActions.Provider value={actions}>{children}</WorkbenchActions.Provider></WorkbenchView.Provider>;
+  return <WorkbenchView.Provider value={{ scale, setScale, transforms, setTransforms, presentationTransforms, setPresentationTransforms, hiddenModuleIds, setHiddenModuleIds, selection, setSelection, entries: entries.current, frames: frames.current, resizeTargets: resizeTargets.current, store, profileAddress, groupContent, getPresentation, subscribe, snapshot, register, changed }}><WorkbenchActions.Provider value={actions}>{children}</WorkbenchActions.Provider></WorkbenchView.Provider>;
 }
 
 export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTarget = null, onPosition = null) {
@@ -527,6 +528,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
       {selected.length > 0 && <span>{selected.length} selected</span>}
       <button type="button" disabled={locked} aria-label="Reset Workbench zoom to 100%" title="Zoom to 100% around the current view (Ctrl+0)" onClick={navigation.resetZoom}>{Math.round(scale * 100)}%</button>
       {view.store && <Suspense fallback={null}><WorkbenchGroups view={view} hostRef={hostRef} locked={locked} dropRef={groupDrop} historyBlocked={historyBlocked} navigation={navigation} sceneRef={groupScene} disabled={disabled} /></Suspense>}
+      {!view.store && view.groupContent?.workbenchGroups?.length > 0 && <Suspense fallback={null}><PublishedWorkbenchGroups view={view} content={view.groupContent} hostRef={hostRef} navigation={navigation} sceneRef={groupScene} disabled={disabled} locked={locked} /></Suspense>}
       {GridSeamProbe && <Suspense fallback={null}><GridSeamProbe hostRef={hostRef} scale={scale} offset={navigation.offset} /></Suspense>}
     </div>
   </>;

@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
+import { clampWorkbenchPosition } from './workbenchSpace.js';
+import { WORKBENCH_GROUP_STACK_SIZE } from '../../systemWorkflow/domain/workbenchGroups.js';
 import { X } from '../InscapeIcons.jsx';
 import { WorkbenchWindow } from './DisplayInstrumentWindow.jsx';
 import { editWorkbenchGroups } from '../../systemWorkflow/workbenchGroupSession.js';
@@ -16,7 +18,7 @@ export default function WorkbenchGroups({ view, hostRef, locked, dropRef, histor
   const [name, setName] = useState(''), [error, setError] = useState('');
   const [dropTarget, setDropTarget] = useState(null);
   const trigger = useRef(null), input = useRef(null), content = useRef(null);
-  const scene = useWorkbenchGroupScene({ view, draft, hostRef, navigation, sceneRef, disabled });
+  const scene = useWorkbenchGroupScene({ view, content: draft, hostRef, navigation, sceneRef, disabled });
   const groups = draft.workbenchGroups || [], active = groups.find(group => group.id === activeId);
   const modules = workbenchGroupModules(draft), selected = workbenchMemberIds(draft, selection);
   const grouped = new Set(groups.flatMap(group => group.memberIds));
@@ -29,6 +31,13 @@ export default function WorkbenchGroups({ view, hostRef, locked, dropRef, histor
       const id = editWorkbenchGroups(store, profileAddress, action);
       setError(''); return id;
     } catch (failure) { setError(failure.message); return null; }
+  };
+  const positionGroup = (group, position) => perform({ type: 'position', id: group.id, expected: group, position });
+  const stack = group => {
+    const rect = scene.authoredBounds(group), camera = navigation.getCamera();
+    const position = clampWorkbenchPosition(rect || { left: (innerWidth / 2 - camera.offset.x) / camera.scale,
+      top: (innerHeight / 2 - camera.offset.y) / camera.scale }, WORKBENCH_GROUP_STACK_SIZE);
+    if (positionGroup(group, position)) { setSelection([]); scene.close(); }
   };
   const create = memberIds => {
     const id = perform({ type: 'create', name: name.trim() || `Group ${groups.length + 1}`, memberIds });
@@ -66,7 +75,7 @@ export default function WorkbenchGroups({ view, hostRef, locked, dropRef, histor
     return () => { dropRef.current = null; };
   });
   return <>
-    <WorkbenchGroupStacks {...{ view, draft, hostRef, scene, locked, dropTarget }} onManage={group => { setActiveId(group.id); setOpen(true); }} onError={scene.setError} />
+    <WorkbenchGroupStacks content={draft} {...{ hostRef, scene, locked, dropTarget }} onManage={group => { setActiveId(group.id); setOpen(true); }} onPosition={positionGroup} />
     {error && !open && <p className="workbench-move-error" role="alert">{error}</p>}
     <button ref={trigger} type="button" disabled={locked} aria-expanded={open} aria-label="Workbench groups" onClick={() => setOpen(value => !value)}>Groups</button>
     {open && !locked && hostRef.current && createPortal(<div data-workbench-group-tools onKeyDown={event => {
@@ -93,13 +102,16 @@ export default function WorkbenchGroups({ view, hostRef, locked, dropRef, histor
             {!groups.length && <p>No groups yet.</p>}
           </div>
           {active && <section aria-label={`Members of ${active.name}`}>
+            <label className="workbench-groups__visibility"><input type="checkbox" aria-label="Public group" checked={active.visibility === 'PUBLIC'}
+              onChange={event => perform({ type: 'visibility', id: active.id, expected: active, visibility: event.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Public group</label>
+            <p>{active.visibility === 'PUBLIC' ? 'Publish the group name, position and public members. Private members stay private.' : 'This group is private. Its name and membership stay in your draft.'}</p>
             <div className="workbench-groups__actions">
               <button type="button" disabled={!available.length} onClick={() => updateMembers([...active.memberIds, ...available])}>Add selection ({available.length})</button>
               <button type="button" disabled={Boolean(active.position) || !active.memberIds.some(id => entries.has(id))} onClick={() => { selectGroup(active); hostRef.current?.focus({ preventScroll: true }); }}>Select members</button>
             </div>
             <div className="workbench-groups__actions">
               <button type="button" disabled={!scene.bounds(active)} onClick={() => { close(); requestAnimationFrame(() => scene.open(active)); }}>Open group</button>
-              <button type="button" onClick={() => { if (active.position) perform({ type: 'position', id: active.id, expected: active, position: null }); else scene.stack(active); }}>{active.position ? 'Unstack' : 'Stack'}</button>
+              <button type="button" onClick={() => { if (active.position) { if (positionGroup(active, null)) scene.close(); } else stack(active); }}>{active.position ? 'Unstack' : 'Stack'}</button>
             </div>
             {active.position && <p>Stacked on the Workbench. Open to explore, or Unstack to edit the original layout.</p>}
             <ol className="workbench-groups__members">

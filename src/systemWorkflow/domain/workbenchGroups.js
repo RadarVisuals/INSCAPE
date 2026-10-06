@@ -36,7 +36,8 @@ export function validWorkbenchGroups(groups, draft) {
   if (!Array.isArray(groups) || groups.length > MAX_WORKBENCH_GROUPS) return false;
   const available = workbenchGroupModules(draft), ids = new Set(), members = new Set();
   return groups.every(group => {
-    if (!group || Object.keys(group).some(key => !['id', 'name', 'memberIds', 'position'].includes(key))
+    if (!group || Object.keys(group).some(key => !['id', 'name', 'memberIds', 'position', 'visibility'].includes(key))
+      || Object.hasOwn(group, 'visibility') && !['PRIVATE', 'PUBLIC'].includes(group.visibility)
       || Object.hasOwn(group, 'position') && !validWorkbenchGroupPosition(group.position) || !groupId.test(group.id) || ids.has(group.id)
       || !validWorkbenchGroupName(group.name) || !Array.isArray(group.memberIds)
       || group.memberIds.length > MAX_WORKBENCH_GROUP_MEMBERS) return false;

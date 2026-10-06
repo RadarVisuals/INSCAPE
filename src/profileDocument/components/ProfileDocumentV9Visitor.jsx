@@ -40,7 +40,7 @@ const TextWorkbench = lazy(() => import('../../text/TextWorkbench.jsx'));
 const compactAddress = (address) => `${address.slice(0, 10)}…${address.slice(-6)}`;
 
 export default function ProfileDocumentV9Visitor(props) {
-  return <SharedDisplayToolsProvider key={`${props.document.profile.address}:${props.document.documentId}:${props.document.revision}`}><SceneNavigationProvider><WorkbenchViewProvider><ProfileDocumentV9Session {...props} /></WorkbenchViewProvider></SceneNavigationProvider></SharedDisplayToolsProvider>;
+  return <SharedDisplayToolsProvider key={`${props.document.profile.address}:${props.document.documentId}:${props.document.revision}`}><SceneNavigationProvider><WorkbenchViewProvider groupContent={props.document}><ProfileDocumentV9Session {...props} /></WorkbenchViewProvider></SceneNavigationProvider></SharedDisplayToolsProvider>;
 }
 
 function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn, onConnect, embedded = false, instanceId, active = true, onActivate }) {
@@ -51,7 +51,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
   const rootRef = useRef(null);
   const [activeDisplay, setActiveDisplay] = useState('display:primary');
   const additionalDocuments = useMemo(() => (document.displays || []).map(module => {
-    const { displays: _displays, miniApps: _miniApps, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, ...shared } = document;
+    const { displays: _displays, miniApps: _miniApps, texts: _texts, imageModules: _images, shapes: _shapes, keeperDocks: _keepers, workbenchGroups: _groups, ...shared } = document;
     const { id, ...content } = module;
     const { id: _presentationId, ...display } = document.workbench?.displays?.find(item => item.id === id) || createDefaultWorkbenchPresentation().display;
     return { id, document: { ...shared, ...content, metadata: {}, workbench: { version: 1,

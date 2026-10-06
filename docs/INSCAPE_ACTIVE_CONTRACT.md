@@ -1013,7 +1013,9 @@ position edit. Drops onto group names preview the target and commit membership
 without moving the camera or the modules. Escape cancels the drop.
 
 Optional draft-v4 `workbenchGroups` records contain `id`, `name` and ordered
-`memberIds`. Membership is owned once at the Workbench level, independent of
+`memberIds`, plus optional stack `position` and opt-in `visibility`. Missing
+visibility means private, including groups created before publication support.
+Membership is owned once at the Workbench level, independent of
 Display Grid placement groups and the local window-layout cache. Up to 32 groups
 and 128 members per group are accepted; names contain 1–48 characters. A module
 belongs to at most one group. Empty groups are valid; nested groups, duplicate
@@ -1025,10 +1027,22 @@ a module removes its reference in that same undoable operation.
 Old drafts without groups retain their interpretation and are not rewritten on
 read. Group operations use the existing profile-bound draft store and undo
 history. Failed or stale saves preserve the accepted draft. Display-only editing
-receives no Workbench group data. Public v9 projection currently omits group
-names and membership; restoring a public document preserves applicable local
-groups. Group publication remains a separate boundary; private group names,
-membership and stack positions are not included in public v9 snapshots.
+receives no Workbench group data. The owner explicitly enables Public group
+through the existing draft operation and undo path. Public v9 projection filters
+these groups against already-projected public modules, retaining only eligible
+member IDs, order, name and optional anchor. Empty results are omitted. Private
+group names, member names, counts and cover sources never enter the snapshot.
+The optional public `workbenchGroups` field accepts only PUBLIC, nonempty groups
+with bounded unique membership in that same document. Old drafts and public
+documents remain valid without rewrites; private-only groups do not change the
+canonical publication bytes. New public groups require the updated v9 reader.
+
+Public restoration keeps existing private group IDs and membership authoritative
+over conflicting imported grouping. Public groups absent from the incoming
+snapshot are retained locally as private, surrendering members assigned to a
+new public group. Private members of a restored public group remain only in the
+local draft. Restoration fails explicitly if preserving local groups would exceed
+the 32-group limit; it never silently deletes them to make room.
 
 On 2026-10-06 the founder authorized continuing the grouping implementation,
 with code quality and ownership separation checked throughout. Groups now offer
@@ -1065,8 +1079,16 @@ so Back returns from reading to the group and then to the preceding Workbench vi
 Closed windows retain membership and are listed as closed in Groups; browsing
 uses open windows. Empty groups remain valid drop targets and open their management
 tools until they have a live member. Group controls occupy reserved fitting space.
-Owner tools remain absent from Visitor mode; public group browsing awaits explicit
-public projection rather than using private draft records.
+Owner tools remain absent from Visitor mode. The shared presentation hook and
+stack controls accept read-only content plus explicit actions. Only the owner
+supplies anchor-edit and management actions; shared browsing imports no draft
+store or group-edit session. Visitor receives only its validated public document
+and supports the same stacks, named routes, reading, Previous/Next and Back.
+Its camera and expanded state remain temporary. Groups with no open windows
+disable their browsing action; existing module shortcuts remain available.
+Unstack explicitly exits an expanded group and resumes its original authored
+layout in the owner view. Dimmed stacks sit behind live group windows so they
+cannot cover or intercept reading and artwork interactions.
 
 ## Public Workbench and visitor interaction
 

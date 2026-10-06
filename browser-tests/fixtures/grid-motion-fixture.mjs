@@ -1,12 +1,12 @@
 // Filled, layered Display scenes and independent Images shared by motion tests.
-export async function mountGridMotionFixture(page, { origin, visitor = false, heavy = false, count = 4, displayWidth = 1000, grain, edgeReview = false, seamReview = false, artwork, inspectionArtwork, inspectionMode, textModes = false, adjoiningModules = null }) {
+export async function mountGridMotionFixture(page, { origin, visitor = false, heavy = false, count = 4, displayWidth = 1000, grain, edgeReview = false, seamReview = false, artwork, inspectionArtwork, inspectionMode, textModes = false, adjoiningModules = null, workbenchGroups, privateModuleIds = [] }) {
   await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   await page.route('**/motion-artwork.png', route => route.fulfill({ contentType: 'image/jpeg', path: 'browser-tests/fixtures/grid-landscape.jpg' }));
   await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', route => route.fulfill({ contentType: 'image/webp', path: `public/${new URL(route.request().url()).pathname.split('/public/')[1]}` }));
   if (artwork?.body) await page.route(artwork.url, route => route.fulfill({ contentType: artwork.contentType || 'image/svg+xml', body: artwork.body }));
   await page.route(`${origin}/__motion__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
   await page.goto(`${origin}/__motion__`);
-  await page.evaluate(async ({ visitor, heavy, count, displayWidth, grain, edgeReview, seamReview, artwork, inspectionArtwork, inspectionMode, textModes, adjoiningModules }) => {
+  await page.evaluate(async ({ visitor, heavy, count, displayWidth, grain, edgeReview, seamReview, artwork, inspectionArtwork, inspectionMode, textModes, adjoiningModules, workbenchGroups, privateModuleIds }) => {
     const refresh = (await import('/@react-refresh')).default;
     refresh.injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type; window.__vite_plugin_react_preamble_installed__ = true;
     const React = (await import('/@id/react')).default, { createRoot } = (await import('/@id/react-dom/client')).default;
@@ -127,6 +127,9 @@ export async function mountGridMotionFixture(page, { origin, visitor = false, he
         draft.workbench.display = { ...draft.workbench.display, open: false };
       }
     }
+    if (workbenchGroups) draft.workbenchGroups = workbenchGroups;
+    for (const key of ['imageModules', 'texts', 'shapes', 'keeperDocks', 'displays']) for (const item of draft[key] || [])
+      if (privateModuleIds.includes(item.id)) item.visibility = 'PRIVATE';
     localStorage.setItem(key, JSON.stringify(draft)); window.__motionSaved = localStorage.getItem(key); window.__motionKey = key;
     await import('/src/index.css');
     await import('/src/inscapeTokens.css');
@@ -135,11 +138,12 @@ export async function mountGridMotionFixture(page, { origin, visitor = false, he
       : (await import('/src/public/ownerSystemWorkflow/OwnerSystemWorkflowRuntime.jsx')).default;
     const props = visitor ? { document: (await import('/src/profileDocument/domain/profileDocumentV9Builder.js')).buildProfileDocumentV9({ systemWorkflowDraft: draft, profileAddress: profile, assetRecords: assets }) }
       : { profileAddress: profile, reviewStorage: localStorage, reviewAssets: assets, reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Motion measurement' } };
+    window.__motionDocument = props.document;
     window.__motionCommits = 0; window.__motionRenderMs = 0;
     window.__motionRoot = createRoot(document.getElementById('root'));
     const render = () => window.__motionRoot.render(React.createElement(React.Profiler, { id: 'motion', onRender: (_id, _phase, duration) => { window.__motionCommits++; window.__motionRenderMs += duration; } }, React.createElement(Component, props)));
     // Owner reload checks reread storage without reseeding the fixture draft.
     window.__motionRemount = () => { window.__motionRoot.unmount(); window.__motionRoot = createRoot(document.getElementById('root')); render(); };
     render();
-  }, { visitor, heavy, count, displayWidth, grain, edgeReview, seamReview, artwork, inspectionArtwork, inspectionMode, textModes, adjoiningModules });
+  }, { visitor, heavy, count, displayWidth, grain, edgeReview, seamReview, artwork, inspectionArtwork, inspectionMode, textModes, adjoiningModules, workbenchGroups, privateModuleIds });
 }

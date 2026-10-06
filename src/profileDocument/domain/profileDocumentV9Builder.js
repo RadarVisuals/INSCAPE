@@ -1,3 +1,4 @@
+import { projectPublishedWorkbenchGroups } from './publishedWorkbenchGroups.js';
 import { normalizeProfileAddress } from '../../library/config.js';
 import {
   SYSTEM_WORKFLOW_VISIBILITY,
@@ -156,6 +157,8 @@ export function buildProfileDocumentV9({
   if (publicWorkbench?.miniApps) publicWorkbench.miniApps = publicWorkbench.miniApps.filter(item => miniApps?.some(app => app.id === item.id));
   if (publicWorkbench?.texts) publicWorkbench.texts = publicWorkbench.texts.filter(item => texts?.some(text => text.id === item.id));
   if (publicWorkbench?.displays) publicWorkbench.displays = publicWorkbench.displays.filter(module => displays?.some(content => content.id === module.id));
+  const grids = projectSystemWorkflowPublicGrids(draft, assetRecords);
+  const workbenchGroups = projectPublishedWorkbenchGroups(draft.workbenchGroups, { grids, displays, texts, imageModules, shapes, keeperDocks });
   return assertValidProfileDocumentV9({
     documentType: INSCAPE_PROFILE_DOCUMENT_TYPE,
     version: INSCAPE_PROFILE_DOCUMENT_VERSION,
@@ -180,7 +183,8 @@ export function buildProfileDocumentV9({
       dossierSurface: identity.dossierSurface,
       visibility: { ...identity.visibility },
     },
-    grids: projectSystemWorkflowPublicGrids(draft, assetRecords),
+    grids,
+    ...(workbenchGroups.length ? { workbenchGroups } : {}),
     metadata: worldCover ? { worldCover } : {},
     ...(displays ? { displays } : {}),
     ...(miniApps?.length ? { miniApps } : {}),
