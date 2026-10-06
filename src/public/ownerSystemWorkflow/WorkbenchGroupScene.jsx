@@ -38,8 +38,9 @@ export function useWorkbenchGroupScene({ view, draft, hostRef, navigation, scene
     const api = { capture: () => latest.current.active ? { id: latest.current.active.id, itemId: latest.current.focusedId } : null,
       restore: context => {
         const id = context?.id || context;
-        setOpenId(latest.current.groups.some(group => group.id === id) ? id : null);
-        setFocusedId(latest.current.view.entries.has(context?.itemId) ? context.itemId : '');
+        const group = latest.current.groups.find(group => group.id === id);
+        setOpenId(group ? id : null);
+        setFocusedId(group && latest.current.ids(group).includes(context?.itemId) ? context.itemId : '');
       },
       returnTargets: context => {
         const id = context?.id || context;
@@ -51,7 +52,10 @@ export function useWorkbenchGroupScene({ view, draft, hostRef, navigation, scene
     sceneRef.current = api;
     return () => { if (sceneRef.current === api) sceneRef.current = null; };
   }, [sceneRef]);
-  useEffect(() => { if (disabled || openId && !active) setOpenId(null); }, [disabled, openId, active]);
+  useEffect(() => {
+    if (disabled || openId && (!active || !ids(active).length)) setOpenId(null);
+    if (focusedId && (!active || !ids(active).includes(focusedId))) setFocusedId('');
+  }, [disabled, openId, active, focusedId, revision]);
   useLayoutEffect(() => {
     const hidden = new Set(disabled ? [] : groups.filter(group => group.position && group.id !== active?.id).flatMap(ids));
     view.setHiddenModuleIds(current => JSON.stringify(current) === JSON.stringify([...hidden]) ? current : [...hidden]);
@@ -75,8 +79,9 @@ export function useWorkbenchGroupScene({ view, draft, hostRef, navigation, scene
   const open = useCallback(group => {
     const current = latest.current, target = current.groups.find(item => item.id === group.id);
     if (!target || current.disabled || !current.bounds(target)) return false;
-    return current.navigation.focusDestination({ remember: current.active?.id !== target.id,
-      origins: target.position ? compactWorkbenchGroupRectangles(current.ids(target), target.position) : current.authoredRectangles(target),
+    if (current.active?.id === target.id && current.focusedId) return current.navigation.goBack();
+    return current.navigation.focusDestination({ remember: current.active?.id !== target.id, replaceHistory: current.active?.id === target.id,
+      origins: current.active?.id === target.id ? undefined : target.position ? compactWorkbenchGroupRectangles(current.ids(target), target.position) : current.authoredRectangles(target),
       prepare: () => flushSync(() => { setOpenId(target.id); setFocusedId(''); current.view.setSelection([]); }),
       getBounds: () => { const next = latest.current.groups.find(item => item.id === target.id); return next && latest.current.bounds(next); } });
   }, []);

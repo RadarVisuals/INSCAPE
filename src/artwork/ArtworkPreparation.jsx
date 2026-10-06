@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext } from 'react';
+import { useArtworkVisibility } from './useArtworkVisibility.js';
 
 const ArtworkPreparation = createContext(false);
 export const useArtworkPreparation = () => useContext(ArtworkPreparation);
@@ -8,13 +9,6 @@ export const useArtworkPreparation = () => useContext(ArtworkPreparation);
 // This is temporary readiness, not a source/document cache. Hidden modules
 // release it, and removing a rail slot destroys its own isolated documents.
 export function ArtworkPreparationProvider({ viewportRef, enabled = true, children }) {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    setVisible(false);
-    if (!enabled || !viewportRef.current) return;
-    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting));
-    observer.observe(viewportRef.current);
-    return () => observer.disconnect();
-  }, [enabled, viewportRef]);
+  const visible = useArtworkVisibility(viewportRef, enabled);
   return <ArtworkPreparation.Provider value={enabled && visible}>{children}</ArtworkPreparation.Provider>;
 }

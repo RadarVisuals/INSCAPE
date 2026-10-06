@@ -26,14 +26,17 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   const interaction = useRef(null);
   interaction.current = { isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation };
   const [history, setHistory] = useState([]);
+  const [exploring, setExploring] = useState(false);
   const historyRef = useRef(history);
   const remember = useCallback(next => { historyRef.current = next; setHistory(next); }, []);
   const measuredViewport = useRef(null);
-  const { start: travel, stop: stopTravel, moving } = useWorkbenchCameraMotion(camera, hostRef, entries);
+  const { start: travel, stop: stopTravel, moving, beginPan, panTo: previewPan, releasePan } = useWorkbenchCameraMotion(camera, hostRef, entries);
   const getOffset = useCallback(() => getCamera().offset, [getCamera]);
   const panTo = useCallback(next => { stopTravel(); updateCamera({ ...getCamera(), offset: next }); }, [stopTravel, updateCamera, getCamera]);
-  const beforePan = useCallback(() => { stopTravel(true); interaction.current.cancelEditing(); }, [stopTravel]);
-  const pan = useWorkbenchPan(hostRef, disabled || locked, { getOffset, update: panTo, onBegin: beforePan });
+  const beforePan = useCallback(() => { interaction.current.cancelEditing(); beginPan(); }, [beginPan]);
+  const afterPan = useCallback(velocity => releasePan(exploring ? velocity : null), [releasePan, exploring]);
+  const pan = useWorkbenchPan(hostRef, disabled || locked, { getOffset, update: previewPan, onBegin: beforePan, onEnd: afterPan, explore: exploring });
+  const toggleExplore = useCallback(() => { stopTravel(true); pan.cancel(); interaction.current.cancelEditing(); setExploring(value => !value); }, [stopTravel, pan.cancel]);
   const isPanning = useCallback(() => Boolean(pan.active.current), [pan.active]);
   const readViewport = useCallback(() => {
     const host = hostRef.current;
@@ -106,6 +109,11 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   }, [hostRef, offset, getCamera]);
   useLayoutEffect(() => {
     const host = hostRef.current;
+    host?.toggleAttribute('data-workbench-exploring', exploring && !disabled && !locked);
+    return () => host?.removeAttribute('data-workbench-exploring');
+  }, [hostRef, exploring, disabled, locked]);
+  useLayoutEffect(() => {
+    const host = hostRef.current;
     host?.toggleAttribute('data-workbench-travelling', moving);
     return () => host?.removeAttribute('data-workbench-travelling');
   }, [hostRef, moving]);
@@ -171,7 +179,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       pressedPointers.delete(event.pointerId);
       if (host.contains(event.target)) {
         pressedPointers.add(event.pointerId);
-        stopTravel(true);
+        if (!isPanning()) stopTravel(true);
       }
     };
     const release = event => pressedPointers.delete(event.pointerId);
@@ -208,7 +216,10 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     };
     const key = event => {
       // Stop before a module's keyboard editing or inspection handler runs.
-      if (!event.target.closest?.('.workbench-view-controls') && !['Shift', 'Control', 'Alt', 'Meta', 'Tab'].includes(event.key)) stopTravel(true);
+      if (!event.target.closest?.('.workbench-view-controls') && !['Shift', 'Control', 'Alt', 'Meta', 'Tab'].includes(event.key)) {
+        const stopped = stopTravel(true);
+        if (event.key === 'Escape' && stopped === 'coast') { event.preventDefault(); event.stopPropagation(); return; }
+      }
       if (!(event.ctrlKey || event.metaKey) || event.key !== '0') return;
       if (locked) { event.preventDefault(); event.stopPropagation(); return; }
       if (event.altKey || event.target.closest?.('[data-immersive], input, textarea, select, [contenteditable="true"]')) return;
@@ -234,6 +245,6 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     };
   }, [hostRef, disabled, locked, getCamera, isPanning, panTo, zoom, resetZoom, stopTravel]);
 
-  return { offset, locked, getCamera, isPanning, resetView, resetZoom, moving,
+  return { offset, locked, getCamera, isPanning, resetView, resetZoom, moving, exploring, toggleExplore,
     focusDestination, goBack, canGoBack: history.length > 0, stopTravel };
 }

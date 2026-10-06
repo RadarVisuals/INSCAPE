@@ -30,3 +30,5 @@
 [data-workbench-panned] [data-workbench-pan] { translate: calc(var(--workbench-pan-x, 0px) / var(--workbench-pan-scale, 1)) calc(var(--workbench-pan-y, 0px) / var(--workbench-pan-scale, 1)); }
 .system-workflow[data-workbench-pan-ready], .system-workflow[data-workbench-pan-ready] * { cursor: grab !important; }
 .system-workflow[data-workbench-panning], .system-workflow[data-workbench-panning] * { cursor: grabbing !important; user-select: none; }
+
+.system-workflow[data-workbench-exploring], .system-workflow[data-workbench-exploring] :is(.system-workflow__workbench, .system-workflow__display-instance) { cursor: grab; }

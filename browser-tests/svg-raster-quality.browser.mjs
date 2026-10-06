@@ -229,3 +229,60 @@ test('Focus, Return and subsequent zoom update Image and Display pixels without 
     }
   } finally { await browser.close(); }
 });
+
+test('live group spreading, item focus and pointer pan retain SVG pixel density without remounting artwork', { timeout: 60000 }, async () => {
+  const browser = await launch();
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1.25 });
+    page.setDefaultTimeout(10000);
+    await mountGridMotionFixture(page, { origin, count: 1, displayWidth: 400, seamReview: 'single',
+      artwork: { url: 'https://quality.invalid/keeper.svg', width: 2048, height: 2048, body: grey } });
+    await page.evaluate(() => {
+      const draft = JSON.parse(localStorage.getItem(window.__motionKey));
+      draft.workbenchGroups = [{ id: 'workbench-group:svg', name: 'SVG study', memberIds: ['image:motion-0', 'image:motion-1'], position: { left: 80, top: 240 } }];
+      localStorage.setItem(window.__motionKey, JSON.stringify(draft)); window.__motionRemount();
+    });
+    const source = page.locator('.image-module__canvas').first();
+    await source.locator('.artwork-svg-document').waitFor({ state: 'attached' });
+    await source.locator('.artwork-svg-status').waitFor({ state: 'detached' });
+    let iframe, runtime;
+    const settled = () => page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'));
+    const correctPixels = async () => {
+      const density = await source.locator('foreignObject').evaluate(node => {
+        const m = node.getScreenCTM(); return Math.max(Math.hypot(m.a, m.b), Math.hypot(m.c, m.d)) * devicePixelRatio;
+      });
+      await runtime.waitForFunction(async density => {
+        const node = document.querySelector('#body image'), image = new Image(); image.src = node.href.baseVal; await image.decode();
+        const m = node.getScreenCTM(), size = node.width.baseVal.value;
+        const pixels = size * Math.hypot(m.a, m.b) * density * 2;
+        return Math.abs(image.naturalWidth - (pixels >= size * .75 ? size : Math.ceil(pixels))) <= 2;
+      }, density);
+      assert.equal(await source.locator('iframe').evaluate((node, original) => node === original, iframe), true);
+    };
+    const routes = page.getByRole('navigation', { name: 'Workbench destinations', exact: true });
+    const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
+    for (let repeat = 0; repeat < 2; repeat++) {
+      await routes.getByRole('button', { name: 'SVG study', exact: true }).click(); await settled();
+      await source.locator('.artwork-svg-document').waitFor(); await source.locator('.artwork-svg-status').waitFor({ state: 'detached' });
+      iframe = await source.locator('iframe').elementHandle(); runtime = (await iframe.contentFrame()).childFrames()[0];
+      await correctPixels();
+      await routes.getByRole('combobox', { name: 'Group item', exact: true }).selectOption('image:motion-0'); await settled(); await correctPixels();
+      // Selecting the current named group returns to its overview, without
+      // replaying an already-open image from the compact stack origin.
+      await routes.getByRole('button', { name: 'SVG study', exact: true }).click(); await settled(); await correctPixels();
+      const bench = page.locator('main.system-workflow').first();
+      await bench.focus(); await page.keyboard.down('Space');
+      await page.mouse.move(1000, 700); await page.mouse.down();
+      await page.mouse.move(-1800, 700, { steps: 8 }); await page.waitForTimeout(100);
+      assert.equal(await source.locator('iframe').evaluate((node, original) => node === original, iframe), true, 'crossing offscreen during a live gesture must not reload the artwork');
+      await page.mouse.move(920, 660, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Space');
+      await settled(); await correctPixels();
+      await bench.dispatchEvent('wheel', { ctrlKey: true, deltaY: 120, clientX: 700, clientY: 450, bubbles: true, cancelable: true }); await correctPixels();
+      await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settled();
+      // The authored window is now below the viewport at this zoom. Its document
+      // may unload normally between journeys; the next opening prepares it again.
+      await source.locator('iframe').waitFor({ state: 'detached' });
+    }
+    assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey)), saved);
+  } finally { await browser.close(); }
+});

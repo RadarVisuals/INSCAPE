@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { workbenchPanVelocity } from './workbenchInertia.js';
 
 export const isWorkbenchBackground = (target, host) => target === host
   || Boolean(target?.matches?.('.system-workflow__workbench, .system-workflow__display-instance'));
 
-// Space-drag input only. The navigation controller owns camera updates and
-// constraints; this gesture retains only the offset needed for cancellation.
-export default function useWorkbenchPan(hostRef, disabled, { getOffset, update, onBegin }) {
+// Space-drag and explicit Explore background input. Navigation owns the camera;
+// this gesture retains its cancellation offset and bounded release samples.
+export default function useWorkbenchPan(hostRef, disabled, { getOffset, update, onBegin, onEnd, explore = false }) {
   const active = useRef(null), space = useRef(false);
   const suppressedPointer = useRef(null), beforeBegin = useRef(onBegin);
   beforeBegin.current = onBegin;
-  const finish = useCallback((restore = false) => {
+  const afterEnd = useRef(onEnd); afterEnd.current = onEnd;
+  const finish = useCallback((restore = false, releasedAt) => {
     const gesture = active.current;
     if (!gesture) return;
     active.current = null;
@@ -20,6 +22,7 @@ export default function useWorkbenchPan(hostRef, disabled, { getOffset, update, 
     if (gesture.host.hasPointerCapture(gesture.id)) gesture.host.releasePointerCapture(gesture.id);
     delete gesture.host.dataset.workbenchPanning;
     if (restore) update(gesture.origin);
+    afterEnd.current?.(releasedAt === undefined ? null : workbenchPanVelocity(gesture.samples, releasedAt));
   }, [update]);
   useEffect(() => {
     const host = hostRef.current;
@@ -54,19 +57,22 @@ export default function useWorkbenchPan(hostRef, disabled, { getOffset, update, 
   }, [hostRef, disabled, finish]);
   const begin = useCallback(event => {
     const host = hostRef.current;
-    if (disabled || !space.current || event.button !== 0 || active.current || !host?.contains(event.target)) return false;
+    if (disabled || !(space.current || explore && isWorkbenchBackground(event.target, host)) || event.button !== 0 || active.current || !host?.contains(event.target)) return false;
     event.preventDefault(); event.stopImmediatePropagation();
     beforeBegin.current?.();
     suppressedPointer.current = event.pointerId;
     host.focus({ preventScroll: true });
     const origin = getOffset(), point = { x: event.clientX, y: event.clientY };
-    const gesture = { id: event.pointerId, host, origin,
+    const samples = [{ x: event.clientX, y: event.clientY, time: event.timeStamp }];
+    const gesture = { id: event.pointerId, host, origin, samples,
       move: pointer => {
         if (pointer.pointerId !== event.pointerId) return;
         pointer.preventDefault(); pointer.stopPropagation();
+        samples.push({ x: pointer.clientX, y: pointer.clientY, time: pointer.timeStamp });
+        if (samples.length > 12) samples.shift();
         update({ x: origin.x + pointer.clientX - point.x, y: origin.y + pointer.clientY - point.y });
       },
-      up: pointer => { if (pointer.pointerId === event.pointerId) finish(); },
+      up: pointer => { if (pointer.pointerId === event.pointerId) finish(false, pointer.timeStamp); },
       cancel: pointer => { if (pointer.pointerId === event.pointerId) finish(true); },
       lost: pointer => { if (pointer.pointerId === event.pointerId) finish(); },
     };
@@ -78,10 +84,10 @@ export default function useWorkbenchPan(hostRef, disabled, { getOffset, update, 
     window.addEventListener('pointerup', gesture.up, true);
     window.addEventListener('pointercancel', gesture.cancel, true);
     return true;
-  }, [disabled, hostRef, finish, update, getOffset]);
+  }, [disabled, explore, hostRef, finish, update, getOffset]);
   useEffect(() => {
     if (disabled) return;
-    // Claim Space gestures before React's capture handlers can activate or move
+    // Claim camera gestures before React's capture handlers can activate or move
     // a module. Module and Grid interaction never receive this pointer press.
     const pointer = event => {
       suppressedPointer.current = null;

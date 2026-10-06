@@ -1183,6 +1183,27 @@ retain their existing authoring boundaries. Navigation can cancel an editing
 gesture but never receives its draft store or changes module transforms. Pan
 updates do not notify scale-only module editors. This separation does not change
 stored layouts, publication data or storage keys.
+On 2026-10-06 the founder authorized continuing the spatial implementation.
+An explicit **Explore** toggle enables primary-pointer panning from empty
+Workbench space in owner and Visitor views. It is session-only and off by default;
+with it off, background drag retains marquee selection. Module interaction and
+native Text/tool scrolling retain their own input. Space-drag remains available
+in either mode; only Explore adds release momentum.
+
+Pan gestures now use the same live-surface projection lifetime as Focus travel.
+Pointer samples paint the camera without a React state commit per sample; release
+commits the settled camera. Explore measures at most twelve recent samples, ignores
+paused releases, caps screen velocity and integrates exponential decay by elapsed
+time for at most 700 ms. It never enters authored layout or Back history. Reduced
+motion omits inertia. Escape cancels an active drag to its exact start, or stops
+coasting before any Back action. New input, locks, suspension, resize, blur and
+disposal stop active motion through the existing navigation owner.
+
+Artwork visibility is owned by the shared artwork layer. Its observer defers
+unloading during a temporary camera projection and rechecks settled clipping
+geometry afterward. This prevents a brief offscreen crossing from restarting an
+SVG document; artwork that remains offscreen still releases its document.
+
 Workbench destination navigation starts with explicit **Focus selection** and
 **Back** controls shared by owner and Visitor. Focus frames the selected live
 module instances using their logical geometry, available space above the dock

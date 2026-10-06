@@ -8,7 +8,7 @@ for (const visitor of [false, true]) test(`SVG rail prepares incoming documents 
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-    await mountFilledDisplay(page, 'http://127.0.0.1:5173', { svg: true, visitor });
+    await mountFilledDisplay(page, process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173', { svg: true, visitor });
     const stageSelector = visitor ? '.visitor-grid-world__viewport' : '.system-workflow__canvas';
     const currentSelector = visitor ? '.visitor-grid-world__grid-plane--current' : '.system-workflow__grid-plane--current';
     if (!visitor) {
@@ -62,8 +62,8 @@ for (const visitor of [false, true]) test(`SVG rail prepares incoming documents 
     assert.ok(report.maxDocuments <= 30, 'five slots bound live documents over repeated laps');
     assert.equal(visited.filter(id => id === 'grid:filled-0').length, 3, 'three full laps, including reverse');
     assert.equal(await page.evaluate(() => JSON.stringify(filledDisplay.draft())), startingDraft, 'navigation does not write authored state');
-    await page.screenshot({ path: `output/svg-wrap-${visitor ? 'visitor' : 'owner'}.png` });
-    await writeFile(`output/svg-wrap-${visitor ? 'visitor' : 'owner'}-timing.json`, JSON.stringify(report, null, 2));
+    await page.screenshot({ path: `.browser-test-runtime/svg-wrap-${visitor ? 'visitor' : 'owner'}.png` });
+    await writeFile(`.browser-test-runtime/svg-wrap-${visitor ? 'visitor' : 'owner'}-timing.json`, JSON.stringify(report, null, 2));
     // A hidden viewport must release even its prepared, offscreen neighbors.
     await page.locator(stageSelector).evaluate(node => { node.style.visibility = 'hidden'; node.style.display = 'none'; });
     await page.waitForFunction(() => !document.querySelector('.artwork-svg-document'));

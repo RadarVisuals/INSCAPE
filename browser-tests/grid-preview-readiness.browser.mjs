@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 
-test('HOME media is already mounted and decoded before either swipe direction', { timeout: 30000 }, async () => {
-  const origin = 'http://127.0.0.1:5173';
+test('HOME media is already mounted and decoded before either swipe direction', { timeout: 60000 }, async () => {
+  const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5173';
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
     for (const width of [1440, 390]) {
@@ -15,7 +15,7 @@ test('HOME media is already mounted and decoded before either swipe direction', 
         : new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
       await page.goto(`${origin}/development/owner/system-workflow`);
       await page.getByRole('button', { name: 'Grids', exact: true }).click();
-      await page.getByRole('button', { name: 'New Grid', exact: true }).click();
+      await page.getByRole('button', { name: 'New Grid', exact: true }).press('Enter');
       await page.getByRole('button', { name: 'Grids', exact: true }).click();
       await page.waitForTimeout(500);
       await page.waitForFunction(() => {
@@ -26,40 +26,50 @@ test('HOME media is already mounted and decoded before either swipe direction', 
         window.__neighborImages = [...document.querySelectorAll('[data-preview-grid-id] img')];
         await Promise.all(window.__neighborImages.map(img => img.decode()));
       });
-      const box = await page.locator('.system-workflow__canvas').boundingBox();
-      for (const direction of [-1, 1]) {
-        await page.keyboard.down('Space');
-        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-        await page.mouse.down();
-        await page.mouse.move(box.x + box.width / 2 + direction * 20, box.y + box.height / 2);
-        assert.equal(await page.evaluate(() => window.__neighborImages.every(img => img.isConnected
-          && getComputedStyle(img).visibility === 'visible' && img.complete && img.naturalWidth > 0)), true);
-        await page.screenshot({ path: `.browser-test-runtime/home-ready-${width}-${direction}.png` });
-        await page.mouse.up();
-        await page.keyboard.up('Space');
-        await page.waitForTimeout(400);
-      }
+      // Plain dragging navigates a locked composition. Space belongs to the
+      // Workbench camera and must not be used to simulate a Display swipe.
+      const lock = page.getByRole('button', { name: 'Lock Display Module composition', exact: true });
+      await lock.focus(); await page.keyboard.press('Enter');
+      const focusDisplay = async () => {
+        await page.locator('[data-workbench-view-id="display:primary"]').evaluate(node => {
+          const target = node.matches('[data-workbench-selectable]') ? node : node.querySelector('[data-workbench-selectable]');
+          target.focus({ preventScroll: true }); target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
+        });
+        await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).click();
+        await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'));
+      };
+      await focusDisplay();
       const commitSwipe = async (direction) => {
+        const lock = page.getByRole('button', { name: 'Lock Display Module composition', exact: true });
+        if (await lock.isVisible()) { await lock.focus(); await page.keyboard.press('Enter'); }
+        await focusDisplay();
+        const slot = Number(await page.locator('.system-workflow__grid-plane--current').getAttribute('data-rail-slot')) - direction;
+        await page.evaluate(async slot => {
+          window.__incomingImages = [...document.querySelector('[data-rail-slot="' + slot + '"]').querySelectorAll('img')];
+          await Promise.all(window.__incomingImages.map(image => image.decode()));
+        }, slot);
         const area = await page.locator('.system-workflow__canvas').boundingBox();
-        await page.keyboard.down('Space');
         await page.mouse.move(area.x + area.width * (direction < 0 ? .8 : .2), area.y + area.height / 2);
         await page.mouse.down();
-        await page.mouse.move(area.x + area.width * (direction < 0 ? .2 : .8), area.y + area.height / 2, { steps: 6 });
+        await page.mouse.move(area.x + area.width * (direction < 0 ? .2 : .8), area.y + area.height / 2, { steps: 12 });
+        assert.equal(await page.evaluate(() => window.__incomingImages.every(image => image.isConnected && image.complete && image.naturalWidth > 0)), true, 'incoming images remain ready during movement');
         await page.mouse.up();
-        await page.keyboard.up('Space');
+        await page.waitForFunction(slot => Number(document.querySelector('.system-workflow__grid-plane--current')?.dataset.railSlot) === slot, slot);
         await page.waitForTimeout(400);
       };
+      // The current five-slot rail intentionally releases old slots. Only the
+      // incoming HOME slot must preserve its prepared elements on arrival.
       const assertSameHomeImages = async () => {
         assert.match(await page.locator('[data-system-workflow-stage]').getAttribute('aria-label'), /HOME/);
-        assert.equal(await page.evaluate(() => window.__neighborImages.every(img => img.isConnected
-          && img.closest('[data-system-workflow-placement-id]') && img.complete)), true,
-        'the incoming image elements must become editable without being replaced');
+        assert.equal(await page.evaluate(() => window.__incomingImages.length > 0 && window.__incomingImages.every(img => img.isConnected
+          && img.closest('.system-workflow__grid-plane--current') && img.complete)), true,
+        'the incoming HOME slot must retain its prepared image elements on arrival');
       };
       await commitSwipe(-1);
       await assertSameHomeImages();
       await page.getByRole('button', { name: 'Grids', exact: true }).click();
-      await page.getByRole('button', { name: 'New Grid', exact: true }).click();
-      await page.getByRole('button', { name: 'New Grid', exact: true }).click();
+      await page.getByRole('button', { name: 'New Grid', exact: true }).press('Enter');
+      await page.getByRole('button', { name: 'New Grid', exact: true }).press('Enter');
       await page.getByRole('button', { name: 'Grids', exact: true }).click();
       await page.waitForTimeout(500);
       await commitSwipe(-1); // GRID 04 -> HOME

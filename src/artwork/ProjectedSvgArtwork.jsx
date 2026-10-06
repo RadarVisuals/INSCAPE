@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ArtworkSvgDocument from './ArtworkSvgDocument.jsx';
 import { useArtworkPreparation } from './ArtworkPreparation.jsx';
 import { useArtworkGeometry } from './ArtworkGeometry.jsx';
+import { useArtworkVisibility } from './useArtworkVisibility.js';
 
 // Each mounted artwork owns its document and keeps it in the same DOM location.
 // Lift supplies temporary projection only; the registry ends with its owner.
@@ -36,7 +37,7 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
   const viewportRef = useRef(null);
   const loaded = useRef(false), liftReady = useRef(null);
   const documentControls = useRef(null);
-  const [visible, setVisible] = useState(false);
+  const visible = useArtworkVisibility(root);
   const prepared = useArtworkPreparation();
   const geometry = useArtworkGeometry();
   const updatePixelScale = () => {
@@ -124,11 +125,6 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
       artworkHosts.delete(home); paintHost.remove();
     };
   }, [paintHost, src]);
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting));
-    observer.observe(root.current);
-    return () => observer.disconnect();
-  }, []);
   useLayoutEffect(() => { if (!visible && !prepared && !lift) loaded.current = false; }, [visible, prepared, lift]);
   const rect = mediaStyle || { left: 0, top: 0, width, height };
   // Keep the document in native media coordinates. Resizing its iframe during

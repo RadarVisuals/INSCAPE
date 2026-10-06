@@ -517,6 +517,8 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
         onKeyDown={event => resizeByKey(event, corner)} />)}
     </div>}
     <div ref={controlsRef} className="workbench-view-controls" role="group" aria-label="Workbench zoom">
+      <button type="button" disabled={locked} aria-pressed={navigation.exploring} aria-label="Explore Workbench"
+        title="Drag empty space to pan with momentum. Turn off to select with a marquee." onClick={navigation.toggleExplore}>Explore</button>
       <button type="button" disabled={locked || !navigation.canGoBack} aria-label="Back to previous Workbench view"
         title="Return to the view before focusing (Escape after clearing selection)" onClick={navigation.goBack}>Back</button>
       <button type="button" disabled={locked || !selected.length} aria-label="Focus selected Workbench modules"
