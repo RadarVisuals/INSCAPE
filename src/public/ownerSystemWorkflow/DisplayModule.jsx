@@ -1,3 +1,4 @@
+import { useWorkbenchView } from './WorkbenchView.jsx';
 import ModuleSurfaceControls from './ModuleSurfaceControls.jsx';
 import DisplayCanvasControls from './DisplayCanvasControls.jsx';
 import { useSharedTextTools } from '../../text/SharedTextTools.jsx';
@@ -22,10 +23,11 @@ import { displayTextLabel } from '../../systemWorkflow/domain/displayText.js';
 
 // Display owns composition interaction. The host supplies assets, its accepted
 // controller and window configuration; it does not inspect selection or crop state.
-export default forwardRef(function DisplayModule({ assetsById, controller, authoringLocked, suspended = false, displayName,
+export default forwardRef(function DisplayModule({ assetsById, controller, authoringLocked: editingLocked, suspended = false, displayName,
   panelOccupied, onRevealInstruments, onInspect, onToggleLibrary,
   onAuthoringLockToggle, registerAssetDimensions, resolveAssetDimensions, menuSurface,
   reducedMotion, workspaceSurfaceColor, windowProps, placementTargetRef, shortcutTargetRef, workspaceRef }, ref) {
+  const authoringLocked = editingLocked || Boolean(useWorkbenchView().presentationTransforms?.[controller.moduleId || PRIMARY_DISPLAY_ID]);
   const tools = useSharedDisplayTools();
   const textTools = useSharedTextTools();
   const targetId = controller.moduleId;

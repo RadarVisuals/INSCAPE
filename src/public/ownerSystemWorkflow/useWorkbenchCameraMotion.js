@@ -28,7 +28,7 @@ export default function useWorkbenchCameraMotion(camera, hostRef, entries) {
     applyCamera(motion.end);
     motion.onComplete?.();
   }, [applyCamera, stop]);
-  const start = useCallback((end, { onComplete, isCurrent } = {}) => {
+  const start = useCallback((end, { onComplete, isCurrent, origins, destinations } = {}) => {
     stop(true);
     const motion = { start: getCamera(), end, onComplete, isCurrent, frame: null, started: null };
     active.current = motion;
@@ -37,9 +37,9 @@ export default function useWorkbenchCameraMotion(camera, hostRef, entries) {
     // Prepare actual DOM/image resolution before shrinking to the starting
     // view, so enlargement never stretches a low-resolution starting surface.
     flushSync(() => { setMoving(true); prepareCamera(raster); });
-    const surface = createWorkbenchCameraSurfaceMotion(hostRef.current, entries, raster);
+    const surface = createWorkbenchCameraSurfaceMotion(hostRef.current, entries, raster, { origins, destinations });
     projectCamera(surface);
-    previewCamera(motion.start);
+    previewCamera(motion.start, 0);
     const tick = time => {
       if (active.current !== motion) return;
       if (!surface.isCurrent() || isCurrent && !isCurrent()) { stop(); return; }
@@ -47,7 +47,8 @@ export default function useWorkbenchCameraMotion(camera, hostRef, entries) {
       motion.started ??= time;
       const elapsed = Math.min(1, (time - motion.started) / LATTICE_PRODUCTION_FOCUS_OPENING_MS);
       if (elapsed === 1) { finish(motion); return; }
-      previewCamera(interpolateWorkbenchCamera(motion.start, end, latticeProductionFocusOpeningProgress(elapsed)));
+      const progress = latticeProductionFocusOpeningProgress(elapsed);
+      previewCamera(interpolateWorkbenchCamera(motion.start, end, progress), progress);
       motion.frame = requestAnimationFrame(tick);
     };
     motion.frame = requestAnimationFrame(tick);

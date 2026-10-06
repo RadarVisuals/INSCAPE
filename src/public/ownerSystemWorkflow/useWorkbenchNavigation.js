@@ -20,11 +20,11 @@ function hasNativeWheelScroll(target, host, dx, dy) {
 // Navigation never receives a draft store or module transforms. Editing owns
 // its gestures and exposes only cancellation and input-ownership callbacks.
 export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible,
-  isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, entries }) {
+  isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, entries }) {
   const camera = useWorkbenchCamera();
   const { offset, locked, getCamera, updateCamera } = camera;
   const interaction = useRef(null);
-  interaction.current = { isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext };
+  interaction.current = { isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation };
   const [history, setHistory] = useState([]);
   const historyRef = useRef(history);
   const remember = useCallback(next => { historyRef.current = next; setHistory(next); }, []);
@@ -45,10 +45,15 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   }, [hostRef]);
   const focusDestination = useCallback(destination => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return false;
-    const host = hostRef.current, viewport = readViewport(), bounds = destination.getBounds();
-    if (!host || !viewport || !bounds) return false;
+    const host = hostRef.current, viewport = readViewport();
+    if (!host || !viewport) return false;
+    const context = interaction.current.captureContext?.();
+    const unavailable = () => { if (destination.prepare) interaction.current.restoreContext?.(context); return false; };
+    destination.prepare?.();
+    const bounds = destination.getBounds();
+    if (!bounds) return unavailable();
     const hostRect = host.getBoundingClientRect();
-    const obstacles = [...host.querySelectorAll('[data-detached-window]:not([data-workbench-view-id])')]
+    const obstacles = [...host.querySelectorAll('[data-detached-window]:not([data-workbench-view-id]), [data-workbench-navigation-obstacle]')]
       .filter(node => node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden')
       .map(node => {
         const rect = node.getBoundingClientRect();
@@ -58,15 +63,15 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       height: viewport.height - (controlsRef.current?.offsetHeight || 32) - 16 }, obstacles);
     const camera = getCamera();
     const end = workbenchDestinationCamera(bounds, available);
-    if (!end) return false;
-    if (Math.abs(end.scale - camera.scale) < 1e-7 && Math.abs(end.offset.x - camera.offset.x) < 1e-7
+    if (!end) return unavailable();
+    if (!destination.remember && Math.abs(end.scale - camera.scale) < 1e-7 && Math.abs(end.offset.x - camera.offset.x) < 1e-7
       && Math.abs(end.offset.y - camera.offset.y) < 1e-7) {
       stopTravel(); destination.onArrive?.(); host.focus({ preventScroll: true }); return true;
     }
     const originalBounds = JSON.stringify(bounds);
     const isCurrent = () => JSON.stringify(destination.getBounds()) === originalBounds;
-    remember([...historyRef.current, { camera, viewport, context: interaction.current.captureContext?.() }].slice(-50));
-    travel(end, { isCurrent, onComplete: destination.onArrive });
+    if (!destination.replaceHistory || !historyRef.current.length) remember([...historyRef.current, { camera, viewport, context }].slice(-50));
+    travel(end, { isCurrent, onComplete: destination.onArrive, origins: destination.origins });
     host.focus({ preventScroll: true });
     return true;
   }, [disabled, locked, isPanning, hostRef, controlsRef, readViewport, getCamera, remember, travel, stopTravel]);
@@ -76,7 +81,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
     if (!previous) return false;
     const end = restoreWorkbenchCamera(previous.camera, previous.viewport, readViewport());
     hostRef.current?.focus({ preventScroll: true });
-    travel(end, { onComplete: () => {
+    travel(end, { destinations: interaction.current.returnTargets?.(previous.context), onComplete: () => {
       // An interrupted Back must remain available until its return completes.
       if (historyRef.current.at(-1) === previous) remember(historyRef.current.slice(0, -1));
       interaction.current.restoreContext?.(previous.context);
@@ -152,7 +157,7 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   }, [hostRef, zoom, getCamera]);
   const resetView = useCallback(() => {
     if (disabled || locked) return;
-    stopTravel(); remember([]); pan.cancel(); panTo({ x: 0, y: 0 });
+    stopTravel(); remember([]); interaction.current.resetPresentation?.(); pan.cancel(); panTo({ x: 0, y: 0 });
     hostRef.current?.focus({ preventScroll: true });
   }, [disabled, locked, pan.cancel, panTo, hostRef, stopTravel, remember]);
 

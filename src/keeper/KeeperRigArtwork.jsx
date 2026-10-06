@@ -1,7 +1,13 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { createKeeperRigPose, stepKeeperRigPose } from './keeperRigMotion.js';
 import { createKeeperSnakePose, stepKeeperSnakePose } from './keeperSnakeMotion.js';
+import { usePreparedRasterArtwork } from './usePreparedRasterArtwork.js';
 import { KeeperOctopusArtwork } from './KeeperOctopusArtwork.jsx';
+
+function KeeperPartImage({ part }) {
+  const ref = usePreparedRasterArtwork(part.src);
+  return <img ref={ref} src={part.src} alt="" draggable={false} style={{ width: `${part.width * 100}%`, height: `${part.height * 100}%` }} />;
+}
 
 // React owns the immutable artwork; the shared Keeper animation loop updates
 // scoped part refs directly. No React render or saved-state write per frame.
@@ -23,7 +29,7 @@ const KeeperRasterArtwork = forwardRef(function KeeperRasterArtwork({ rig, headC
     {rig.parts.map((part, index) => <div key={part.id} ref={node => { nodes.current[index] = node; }}
       className="keeper-rig__part" data-keeper-part={part.id}
       style={{ transform: `translate(${part.x * 100}%, ${part.y * 100}%)`, zIndex: part.id === 'eye' ? 2 : part.id === 'body' ? 1 : 0 }}>
-      <img src={part.src} alt="" draggable={false} style={{ width: `${part.width * 100}%`, height: `${part.height * 100}%` }} />
+      <KeeperPartImage part={part} />
       {part.id === 'body' && headControl && <button {...headControl} type="button" className="keeper-head"
         style={{ width: `${part.width * 100}%`, height: `${part.height * 100}%` }} />}
     </div>)}

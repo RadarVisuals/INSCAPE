@@ -16,7 +16,7 @@ function ShapeInstance({ record, records, index, initialPresentation, store, pro
   const [committedFrame, setCommittedFrame] = useState(null), [error, setError] = useState('');
   const active = useContextToolTarget() === record.id;
   const view = useWorkbenchView();
-  const editable = Boolean(store) && !suspended;
+  const editable = Boolean(store) && !suspended && !view.presentationTransforms?.[record.id];
   const layout = useCallback(window => setPresentation(current => JSON.stringify(current.window) === JSON.stringify(window) ? current : { ...current, window }), []);
   const applyFrame = useCallback(frame => { setCommittedFrame(frame); layout(frame); }, [layout]);
   const resizeTarget = useMemo(() => ({ enabled: editable, reflow: true, continuousGeometry: true,

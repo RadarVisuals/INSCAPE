@@ -1,3 +1,4 @@
+import { validWorkbenchGroups } from './workbenchGroups.js';
 import { validPlacementGroups } from './placementGroups.js';
 import { DISPLAY_CANVAS_APPEARANCE_KEYS, validDisplayCanvasAppearance } from './displayAppearance.js';
 import { validModuleEdges } from './moduleSurfaceAppearance.js';
@@ -262,7 +263,7 @@ function validatePlacement(value, path, fail) {
 export function validateSystemWorkflowDraft(input) {
   const errors = [];
   const fail = (path, code, message) => errors.push({ path, code, message });
-  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'displays', 'mobile', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks'];
+  const allowedKeys = [...DRAFT_KEYS, 'workbench', 'displays', 'mobile', 'miniApps', 'texts', 'imageModules', 'shapes', 'keeperDocks', 'workbenchGroups'];
   if (!exactKeys(input, allowedKeys.filter(key => DRAFT_KEYS.includes(key) || Object.hasOwn(input || {}, key)))) {
     const missing = DRAFT_KEYS.filter(key => !Object.hasOwn(input || {}, key));
     const unexpected = record(input) ? Object.keys(input).filter(key => !allowedKeys.includes(key)) : [];
@@ -285,6 +286,7 @@ export function validateSystemWorkflowDraft(input) {
     || input.appearance.guideSize > SYSTEM_WORKFLOW_GRID_DENSITY.maximum
     || !HEX_COLOR.test(input.appearance?.guideColor || '')) fail('appearance', 'invalid_appearance', 'Invalid appearance');
   validateIdentity(input.identityPresentation, fail);
+  if (Object.hasOwn(input, 'workbenchGroups') && !validWorkbenchGroups(input.workbenchGroups, input)) fail('workbenchGroups', 'invalid_workbench_groups', 'Invalid Workbench groups');
   if (Object.hasOwn(input, 'keeperDocks') && !validKeeperDocks(input.keeperDocks)) fail('keeperDocks', 'invalid_keepers', 'Invalid Keeper dock');
   if (Array.isArray(input.workbench?.keeperDocks) && input.workbench.keeperDocks.some(item => !Array.isArray(input.keeperDocks) || !input.keeperDocks.some(keeper => keeper?.id === item?.id))) fail('workbench.keeperDocks', 'unknown_keeper', 'Dock refers to an unavailable Keeper');
   if (Object.hasOwn(input, 'texts') && !validTextModules(input.texts)) fail('texts', 'invalid_texts', 'Invalid Text module');

@@ -457,7 +457,7 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     data-lattice-menu-surface data-menu-surface={menuSurface} data-reduced-motion={layout.reducedMotion || undefined}
     data-surface={workbenchPreferences.surfaceId} data-previewing={preview ? true : undefined}
     inert={preview ? '' : undefined}>
-    <WorkbenchViewControls hostRef={workspaceRef} disabled={Boolean(preview)} dockVisible={workbenchPreferences.dockVisible} />
+    <WorkbenchViewControls hostRef={workspaceRef} disabled={Boolean(preview)} dockVisible={workbenchPreferences.dockVisible} historyBlocked={pendingText.length ? TEXT_RECOVERY_MESSAGE : null} />
     <WorkbenchImageDropTarget targetRef={workbenchImageTargetRef} hostRef={workspaceRef}
       suspended={Boolean(preview)} onCreated={setActiveModuleId} onError={setNotice} />
     <SharedDisplayToolWindows fallbackFocus={workspaceRef} menuSurface={menuSurface} hidden={Boolean(preview) || instrumentsObscured} />

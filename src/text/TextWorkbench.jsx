@@ -43,7 +43,8 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
     previousFramesKey.current = savedFramesKey;
     setPresentation(current => { const next = { ...current }; if (savedFrames?.length) next.frames = savedFrames; else delete next.frames; return next; });
   }, [savedFramesKey]);
-  const [mode, setMode] = useState(store ? initialView?.mode || 'write' : 'read');
+  const [editingMode, setMode] = useState(store ? initialView?.mode || 'write' : 'read');
+  const mode = view.presented ? 'read' : editingMode;
   const settings = Boolean(store && tools?.open && active);
   const setSettings = open => { onActivate(); tools?.setOpen(open); };
   const [controlsHost, setControlsHost] = useState(null), [reason, setReason] = useState(recovered?.failure.reason || null), [destination, setDestination] = useState('');
@@ -52,7 +53,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   const [linkTarget, setLinkTarget] = useState('');
   const draft = store?.getSnapshot();
   const displays = useMemo(() => draft ? textDisplays(draft) : [], [draft]);
-  useEffect(() => { onViewChange?.(record.id, { mode }); }, [record.id, mode, onViewChange]);
+  useEffect(() => { onViewChange?.(record.id, { mode: editingMode }); }, [record.id, editingMode, onViewChange]);
   useEffect(() => () => onViewChange?.(record.id, null), [record.id, onViewChange]);
   const [working, setWorking] = useState(recovered?.value || record), [error, setError] = useState(recovered?.failure.message || '');
   const latest = useRef(recovered?.expected || record), workingRef = useRef(working), failed = useRef(Boolean(recovered)), surface = useRef(null), editor = useRef(null), shortcut = useRef(null), live = useRef(true);
@@ -71,7 +72,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   const unavailable = Boolean(working.sceneLink && !scene);
   const missingDisplay = Boolean(store && working.sceneLink && !displays.some(display => display.id === working.sceneLink.displayId));
   const swiping = Boolean(scene?.targetGridId) && (!sectionLink || sectionRead);
-  const editBlocked = suspended || (!sectionLink && (unavailable || swiping));
+  const editBlocked = view.presented || suspended || (!sectionLink && (unavailable || swiping));
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   useEffect(() => {
     if (!failed.current) { latest.current = record; setWorking(record); }
@@ -168,7 +169,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
       width={presentation.window.width} initialHeight={presentation.window.height} initialX={presentation.window.left} initialY={presentation.window.top} onLayoutChange={layout}
       resizeTarget={resizeTarget} committedFrame={committedFrame}
       moveFromContent={mode === 'read' && !suspended}
-      controls={<>{store && <><button type="button" className="text-window-control" aria-label={mode === 'write' ? 'Read' : 'Write'} title={mode === 'write' ? 'Read' : 'Write'}
+      controls={<>{store && !view.presented && <><button type="button" className="text-window-control" aria-label={mode === 'write' ? 'Read' : 'Write'} title={mode === 'write' ? 'Read' : 'Write'}
           onClick={() => { const next = mode === 'write' ? 'read' : 'write'; setMode(next); setSettings(next === 'write' || failed.current); }}>{mode === 'write' ? <Eye /> : <Pencil />}</button>
         <TextMoveHandle className="text-window-control" label="Drag Text into Display" disabled={suspended || linked || Boolean(working.sceneLink)} previewAt={(point, rectangle) => placementTargets?.current?.previewTextAt?.(point, rectangle)}
           onDrop={preview => { if (preview) moveInto(preview); }} onKeyboardMove={() => setSettings(true)} onError={setError} />

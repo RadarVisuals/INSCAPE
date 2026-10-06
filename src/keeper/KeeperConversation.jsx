@@ -3,7 +3,7 @@ import { Settings2, X } from 'lucide-react';
 
 const KeeperAIConversation = import.meta.env.DEV ? lazy(() => import('./KeeperAIConversation.jsx')) : null;
 
-export function KeeperConversation({ asset, name, anchor, onClose, conversationScope, captureReaction, cancelReaction, onPosition }) {
+export function KeeperConversation({ asset, name, anchor, dock, onClose, conversationScope, captureReaction, cancelReaction, onPosition }) {
   const panel = useRef(null), passage = useRef(null), closeButton = useRef(null), titleId = useId();
   const [attempt, setAttempt] = useState(0), [state, setState] = useState({ status: 'loading' });
   const [mode, setMode] = useState('dialogue');
@@ -15,19 +15,29 @@ export function KeeperConversation({ asset, name, anchor, onClose, conversationS
     if (!bubble || !head) return;
     const box = anchorBox.current ||= head.getBoundingClientRect(), width = bubble.offsetWidth, height = bubble.offsetHeight;
     const margin = 12, gap = 22;
-    let tail = 'bottom', left = box.left + box.width * .3 - width, top = box.top - gap - height;
-    if (top < margin && box.left - gap - width >= margin) {
-      tail = 'right'; left = box.left - gap - width; top = box.top + box.height / 2 - height / 2;
-    } else if (top < margin && box.right + gap + width <= innerWidth - margin) {
-      tail = 'left'; left = box.right + gap; top = box.top + box.height / 2 - height / 2;
-    } else if (top < margin) { tail = 'top'; top = box.bottom + gap; }
-    const x = Math.max(margin, Math.min(innerWidth - width - margin, left));
-    const y = Math.max(margin, Math.min(innerHeight - height - 58, top));
+    const dockBox = dock?.current?.getBoundingClientRect();
+    const above = box.left + box.width * .3 - width;
+    const candidates = [
+      { tail: 'bottom', left: above, top: box.top - gap - height },
+      { tail: 'right', left: box.left - gap - width, top: box.top + box.height / 2 - height / 2 },
+      { tail: 'left', left: box.right + gap, top: box.top + box.height / 2 - height / 2 },
+      { tail: 'top', left: above, top: box.bottom + gap },
+    ].map(({ tail, left, top }) => ({ tail,
+      x: Math.max(margin, Math.min(innerWidth - width - margin, left)),
+      y: Math.max(margin, Math.min(innerHeight - height - 58, top)),
+    }));
+    const overlaps = (candidate, target) => target && candidate.x < target.right + margin
+      && candidate.x + width > target.left - margin && candidate.y < target.bottom + margin
+      && candidate.y + height > target.top - margin;
+    // Keep the head and its Return control reachable without raising the dock
+    // over conversation text. Both references belong to this Keeper only.
+    const { x, y, tail } = candidates.find(candidate => !overlaps(candidate, box) && !overlaps(candidate, dockBox))
+      || candidates.find(candidate => !overlaps(candidate, box)) || candidates[0];
     bubble.style.left = `${x}px`; bubble.style.top = `${y}px`;
     bubble.dataset.tail = tail;
     bubble.style.setProperty('--keeper-tail-x', `${Math.max(18, Math.min(width - 40, box.left + box.width * .4 - x))}px`);
     bubble.style.setProperty('--keeper-tail-y', `${Math.max(24, Math.min(height - 24, box.top + box.height / 2 - y))}px`);
-  }, [anchor]);
+  }, [anchor, dock]);
   useLayoutEffect(() => { reposition(); }, [state, mode, reposition]);
   useEffect(() => {
     closeButton.current?.focus({ preventScroll: true });
@@ -70,7 +80,7 @@ export function KeeperConversation({ asset, name, anchor, onClose, conversationS
     return () => { clearTimeout(timer); controller.abort(); };
   }, [asset.stableAssetId, attempt]);
   const node = state.document?.nodes[state.node];
-  return <section ref={panel} className={`keeper-conversation${mode === 'ai' ? ' keeper-conversation--ai' : ''}`} role="dialog" aria-labelledby={titleId}
+  return <section ref={panel} data-workbench-selection-tools className={`keeper-conversation${mode === 'ai' ? ' keeper-conversation--ai' : ''}`} role="dialog" aria-labelledby={titleId}
     onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); } }}>
     <svg className="keeper-conversation__tail" width="32" height="24" aria-hidden="true"><path d="M1 0H21Q12 14 31 23Q4 20 1 0Z" /></svg>
     <header><span id={titleId}>{name}</span>

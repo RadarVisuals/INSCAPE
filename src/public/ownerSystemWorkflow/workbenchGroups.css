@@ -1,0 +1,58 @@
+.workbench-move-error { position: fixed; z-index: 85; left: 12px; bottom: calc(var(--workflow-dock-height, 40px) + 52px); max-width: calc(100% - 24px); background: var(--workflow-panel); color: var(--workflow-ink); border: 1px solid var(--workflow-border); padding: 8px; font: var(--workflow-type-control); }
+.system-workflow__instrument-window.workbench-groups { z-index: 84; max-width: calc(100dvw - 16px); }
+.workbench-groups .system-workflow__instrument-content { overflow: auto; padding: 10px; font: var(--workflow-type-control); }
+.workbench-groups__body { display: grid; gap: 10px; }
+.workbench-groups form, .workbench-groups section { display: grid; gap: 8px; }
+.workbench-groups label { display: grid; gap: 4px; }
+.workbench-groups input { width: 100%; min-width: 0; box-sizing: border-box; min-height: 32px; border: 1px solid var(--workflow-border); background: transparent; color: inherit; padding: 4px 6px; font: inherit; }
+.workbench-groups button { min-height: 32px; border: 1px solid var(--workflow-border); border-radius: 0; background: transparent; color: inherit; padding: 4px 8px; font: inherit; cursor: pointer; }
+.workbench-groups button:disabled { opacity: .4; cursor: default; }
+.workbench-groups button:hover:not(:disabled) { background: var(--workflow-hover); }
+.workbench-groups button:focus-visible, .workbench-groups input:focus-visible { outline: 1px solid currentColor; outline-offset: -3px; }
+.workbench-groups p { margin: 0; }
+.workbench-groups__actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.workbench-groups__actions > button { flex: 1; }
+.workbench-groups__list { display: grid; gap: 2px; max-height: 160px; overflow: auto; }
+.workbench-groups__list > button { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; }
+.workbench-groups__list strong, .workbench-groups__members span { overflow-wrap: anywhere; min-width: 0; }
+.workbench-groups__list > button[aria-pressed="true"] { box-shadow: inset 3px 0 var(--workflow-ink); }
+.workbench-groups__list > button[data-drop-target] { outline: 2px solid var(--workflow-ink); outline-offset: -3px; background: var(--workflow-selection); }
+.workbench-groups__members { list-style: none; padding: 0; margin: 0; }
+.workbench-groups__members li { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, 32px); gap: 2px; align-items: center; padding: 2px 0; }
+.workbench-groups footer { padding-top: 8px; border-top: 1px solid var(--workflow-border); }
+
+[data-workbench-group-hidden] { visibility: hidden !important; pointer-events: none !important; }
+[data-workbench-group-muted] { opacity: .24; }
+.keeper-instance:has([data-workbench-group-hidden]) :is(.keeper-roamer, .keeper-conversation) { visibility: hidden; pointer-events: none; }
+.workbench-group-stack { position: fixed; box-sizing: border-box; z-index: 80; display: grid; grid-template-rows: auto minmax(0, 1fr); border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); transform-origin: 0 0; }
+.workbench-group-stack::before { content: ''; position: absolute; inset: -5px 5px 5px -5px; z-index: -1; border: 1px solid var(--workflow-border); background: var(--workflow-panel); pointer-events: none; }
+.workbench-group-stack button { min-width: 0; color: inherit; border: 0; border-radius: 0; background: transparent; cursor: pointer; font: var(--workflow-type-control); }
+.workbench-group-stack button:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: -3px; }
+.workbench-group-stack button:disabled { opacity: .4; }
+.workbench-group-stack__grip { display: flex; gap: 6px; justify-content: space-between; padding: 6px; border-bottom: 1px solid var(--workflow-border) !important; cursor: move !important; touch-action: none; }
+.workbench-group-stack__grip strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 400; }
+.workbench-group-stack__open { display: grid; grid-template-rows: minmax(0, 1fr) auto; padding: 6px; text-align: left; overflow: hidden; }
+.workbench-group-stack__previews { position: relative; min-height: 0; display: grid; place-items: center; }
+.workbench-group-stack__previews img { position: absolute; width: 80%; height: 85%; object-fit: contain; pointer-events: none; }
+.workbench-group-stack__previews img:nth-child(1) { translate: -8% -4%; }
+.workbench-group-stack__previews img:nth-child(2) { translate: 4% 0; }
+.workbench-group-stack__previews img:nth-child(3) { translate: 10% 6%; }
+.workbench-group-stack__manage { position: absolute; right: 0; bottom: 0; width: 28px; height: 28px; }
+.workbench-group-stack[data-drop-target] { outline: 2px solid var(--workflow-ink); }
+.workbench-group-browsing { position: fixed; z-index: 83; top: 12px; left: 12px; max-width: calc(100% - 24px); box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px; border: 1px solid var(--workflow-border); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-control); }
+.workbench-group-browsing strong { font-weight: 400; overflow-wrap: anywhere; }
+.workbench-group-browsing button { border: 1px solid var(--workflow-border); border-radius: 0; background: transparent; color: inherit; padding: 6px 10px; font: inherit; cursor: pointer; }
+
+.workbench-group-browsing label { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.workbench-group-browsing select { min-width: 0; width: min(180px, 40vw); border: 1px solid var(--workflow-border); border-radius: 0; padding: 6px; color: inherit; background: var(--workflow-panel); font: inherit; }
+.workbench-group-browsing button:disabled { opacity: .4; cursor: default; }
+[data-workbench-group-presented] :is(.system-workflow__board-resize-handle, .system-workflow__composition-lock-controls) { display: none; }
+
+.workbench-group-browsing select:focus-visible, .workbench-group-browsing button:focus-visible { outline: 2px solid currentColor; outline-offset: -3px; }
+
+.workbench-group-browsing { display: grid; gap: 6px; }
+.workbench-group-routes { display: flex; min-width: 0; overflow-x: auto; overscroll-behavior: contain; gap: 4px; max-width: min(760px, calc(100vw - 38px)); }
+.workbench-group-routes button { flex: 0 0 auto; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workbench-group-routes button[aria-current] { box-shadow: inset 0 -2px var(--workflow-ink); }
+.workbench-group-reading { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.workbench-group-stack[data-muted] { opacity: .24; }

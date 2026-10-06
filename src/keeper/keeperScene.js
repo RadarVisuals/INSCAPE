@@ -4,7 +4,7 @@ import { keeperMetadataReference } from './keeperMetadata.js';
 // Modules explicitly expose title, source and token cues for their rendered art.
 // Read only this Keeper's Workbench at Send time; never scrape text documents,
 // account panels, private metadata or other browser tabs.
-export function captureKeeperScene(host, origin, pointer, { gestures, shareArtwork, layered, reducedMotion }) {
+export function captureKeeperScene(host, origin, pointer, { gestures, shareArtwork, layered, reducedMotion, selectedModuleIds = [] }) {
   const win = host?.ownerDocument.defaultView;
   const visible = node => {
     if (!host?.contains(node) || !node.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return null;
@@ -18,12 +18,27 @@ export function captureKeeperScene(host, origin, pointer, { gestures, shareArtwo
     }
     return box.right - box.left > 8 && box.bottom - box.top > 8 ? { x: (box.left + box.right) / 2, y: (box.top + box.bottom) / 2 } : null;
   };
-  const candidates = shareArtwork && host ? [...host.querySelectorAll('[data-artwork-context-id][data-artwork-context-title]')].slice(0, 128)
-    .flatMap(node => { const point = visible(node); return point ? [{ node, point, identity: node.dataset.artworkContextId, title: node.dataset.artworkContextTitle, src: node.dataset.artworkContextSrc,
+  const modules = new Set(shareArtwork && Array.isArray(selectedModuleIds) ? selectedModuleIds.slice(0, 128) : []);
+  const nodes = shareArtwork && host ? [...host.querySelectorAll('[data-artwork-context-id][data-artwork-context-title]')].slice(0, 128) : [];
+  // Workbench module selection takes precedence over retained selections inside
+  // other Displays. Both are read from their existing owners, only at Send time.
+  const selected = node => modules.size ? modules.has(node.closest?.('[data-workbench-view-id]')?.dataset.workbenchViewId)
+    : Boolean(node.closest?.('[data-artwork-context-selected="true"]'));
+  const selectedCount = nodes.filter(selected).length;
+  const selection = { kind: modules.size ? 'modules' : selectedCount ? 'artworks' : 'none', count: modules.size || selectedCount };
+  const candidates = nodes.flatMap(node => { const point = visible(node); return point ? [{ node, point, selected: selected(node),
+      identity: node.dataset.artworkContextId, title: node.dataset.artworkContextTitle, src: node.dataset.artworkContextSrc,
       assetId: node.dataset.artworkContextAsset, standard: node.dataset.artworkContextStandard,
       metadata: keeperMetadataReference(node.dataset.artworkContextAsset, node.dataset.artworkContextStandard) }] : []; })
-    .sort((a, b) => Math.hypot(a.point.x - origin.x, a.point.y - origin.y) - Math.hypot(b.point.x - origin.x, b.point.y - origin.y)).slice(0, 8) : [];
-  const scene = { gestures, layered, reducedMotion, pointer: Boolean(pointer), artworks: candidates.map((item, i) => ({ id: `art-${i + 1}`, title: item.title.slice(0, 120),
+    .sort((a, b) => Number(b.selected) - Number(a.selected)
+      || Math.hypot(a.point.x - origin.x, a.point.y - origin.y) - Math.hypot(b.point.x - origin.x, b.point.y - origin.y)).slice(0, 8);
+  if (selection.kind !== 'none') {
+    const shared = candidates.filter(item => item.selected);
+    const represented = new Set(shared.map(item => item.node.closest?.('[data-workbench-view-id]')?.dataset.workbenchViewId));
+    selection.complete = nodes.length < 128 && shared.length === selectedCount && (!modules.size || represented.size === modules.size);
+  }
+  const scene = { gestures, layered, reducedMotion, pointer: Boolean(pointer), ...(shareArtwork && { selection }),
+    artworks: candidates.map((item, i) => ({ id: `art-${i + 1}`, title: item.title.slice(0, 120), ...(item.selected && { selected: true }),
     direction: `${item.point.x < origin.x ? 'left' : 'right'}, ${item.point.y < origin.y ? 'above' : 'below'}`,
     distance: Math.hypot(item.point.x - origin.x, item.point.y - origin.y) < 500 ? 'near' : 'far', ...(item.metadata && { metadata: item.metadata }) })) };
   const current = item => item.node.dataset.artworkContextId === item.identity && item.node.dataset.artworkContextTitle === item.title

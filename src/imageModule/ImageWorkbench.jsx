@@ -11,7 +11,7 @@ import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop, transformA
 import { createImagePresentation, imageFocusEntry, imageSize, MAX_IMAGE_MODULES, MAX_IMAGE_SIDES, nextImageSide, IMAGE_FILL_CROP, imageCropForResize } from './imageModule.js';
 import { saveImageModule, prepareImageResize, duplicateImageModule } from './imageModuleSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
-import { useWorkbenchActions } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
+import { useWorkbenchActions, useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
 import ImageLift from './ImageLift.jsx';
 import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
@@ -32,7 +32,8 @@ function ImageInstance({ record, index, store, profileAddress, registerTarget, i
   const crop = cropState?.expected === record && cropState?.placementId === side?.id ? cropState : null;
   const flip = record.sides.some(item => item.id === flipTarget) ? flipTarget : null;
   const sideIndex = record.sides.indexOf(side);
-  const editable = Boolean(store) && !suspended;
+  const presented = Boolean(useWorkbenchView().presentationTransforms?.[record.id]);
+  const editable = Boolean(store) && !suspended && !presented;
   const fitSize = size => Math.min(1, (viewport.width - 16) / size.width, (viewport.height - 70) / size.height);
   const scale = fitSize(record);
   const rectangle = crop?.mask || { left: 0, top: 0, width: record.width, height: record.height };

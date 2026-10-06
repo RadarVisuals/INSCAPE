@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Home, Plus } from 'lucide-react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { ContextToolContent, useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
@@ -8,6 +8,7 @@ import { resolveLibraryImageAsset } from '../library/resolveLibraryImageAsset.js
 import { createKeeperPresentation, KEEPER_DOCK_SIZE, KEEPER_SIZE, keeperSize, keeperMovement } from './keeper.js';
 import { saveKeeperDock } from './keeperSession.js';
 import { useKeeperMotion } from './useKeeperMotion.js';
+import { useWorkbenchActions, useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
 import { useKeeperRig } from './useKeeperRig.js';
 import { KeeperRigArtwork } from './KeeperRigArtwork.jsx';
 import { KeeperSwimControls } from './KeeperSwimControls.jsx';
@@ -32,9 +33,11 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
   const wrongSvg = movement === 'svg' && layered.status === 'ready' && layered.rig?.kind !== 'octopus';
   const status = wrongSvg ? 'failed' : rigged ? layered.status : imageState.src === src ? imageState.status : 'loading';
   const size = keeperSize(record), swim = keeperSwim(record);
+  const { getSelection } = useWorkbenchActions();
+  const hiddenByGroup = useWorkbenchView().hiddenModuleIds?.includes(record.id);
   const snake = movement === 'swim' && layered.rig?.kind === 'snake';
-  const { phase, toggle, settle, captureReaction, cancelReaction, nudge } = useKeeperMotion({ dock, actor, rigActor, hostRef, enabled: Boolean(src) && status === 'ready' && !suspended,
-    reducedMotion, faces: record.faces, size, movement, swim, paused: talking, onPosition: conversationPosition });
+  const { phase, toggle, settle, captureReaction, cancelReaction, nudge } = useKeeperMotion({ dock, actor, rigActor, hostRef, enabled: Boolean(src) && status === 'ready' && !suspended && !hiddenByGroup,
+    reducedMotion, faces: record.faces, size, movement, swim, paused: talking, onPosition: conversationPosition, getSelection });
   useEffect(() => { setTalking(false); }, [src, record.asset?.stableAssetId, movement, suspended, phase]);
   useEffect(() => { live.current = true; return () => { live.current = false; request.current++; }; }, []);
   useEffect(() => { request.current++; setLoading(false); }, [record, suspended]);
@@ -43,6 +46,7 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
   useEffect(() => () => onPresentationChange?.(record.id, null), [record.id, onPresentationChange]);
   const layout = useCallback(({ left, top }) => setPresentation(current => current.position.left === left && current.position.top === top
     ? current : { ...current, position: { left, top } }), []);
+  const resizeTarget = useMemo(() => ({ enabled: false, store, layoutKey: 'keeperDocks', applyFrame: layout }), [store, layout]);
   const change = useCallback((changes, expected = latest.current) => {
     if (!editable || !live.current) return false;
     try {
@@ -90,9 +94,9 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
     <WorkbenchWindow label="Keeper dock" title={record.name} titleContent={<strong title={record.name}>KEEPER</strong>}
       className="keeper-dock-window" chrome="bevel" viewId={record.id} active={active} placementModule={editable} snapToGrid={editable && windowSnap}
       width={KEEPER_DOCK_SIZE.width} initialHeight={KEEPER_DOCK_SIZE.height} minimumWidth={KEEPER_DOCK_SIZE.width} minimumHeight={KEEPER_DOCK_SIZE.height}
-      resizable={false} initialX={presentation.position.left} initialY={presentation.position.top} onLayoutChange={layout}>
+      resizable={false} resizeTarget={resizeTarget} initialX={presentation.position.left} initialY={presentation.position.top} onLayoutChange={layout}>
       <div ref={dock} className="keeper-dock" aria-busy={loading || src && status === 'loading' || undefined}>
-        <button type="button" aria-label={label} title={label} onClick={event => { if (!loading && !suspended) { if (status === 'failed' && src) retry(); else toggle(event); } }}
+        <button type="button" data-workbench-selection-tools aria-label={label} title={label} onClick={event => { if (!loading && !suspended) { if (status === 'failed' && src) retry(); else toggle(event); } }}
           aria-disabled={!src || loading || status === 'loading' || suspended || undefined} aria-pressed={phase !== 'docked'}>
           {src ? <img key={`${src}:${attempt}`} src={src} alt="" draggable={false}
             onLoad={() => setImageState({ src, status: 'ready' })} onError={() => setImageState({ src, status: 'failed' })} /> : <Plus aria-hidden="true" />}
@@ -101,12 +105,12 @@ function KeeperDock({ record, index, initialPresentation, store, profileAddress,
         </button>
       </div>
     </WorkbenchWindow>
-    {src && <div ref={actor} className="keeper-roamer" hidden={phase === 'docked' || suspended}>
+    {src && <div ref={actor} className="keeper-roamer" data-workbench-selection-tools hidden={phase === 'docked' || suspended}>
       {rigged ? !wrongSvg && layered.rig && <KeeperRigArtwork key={`${src}:${attempt}:${movement}`} movement={movement} rig={layered.rig} ref={rigActor} headControl={headControl} />
         : <><img key={`${src}:${attempt}`} src={src} alt="" draggable={false} /><button {...headControl} type="button" className="keeper-head keeper-head--flip" /></>}
     </div>}
     {talking && phase === 'free' && !suspended && record.asset && <KeeperConversation
-      key={record.asset.stableAssetId} asset={record.asset} name={record.name} anchor={head} onClose={closeConversation}
+      key={record.asset.stableAssetId} asset={record.asset} name={record.name} anchor={head} dock={dock} onClose={closeConversation}
       captureReaction={captureReaction} cancelReaction={cancelReaction}
       onPosition={conversationPosition}
       conversationScope={JSON.stringify([profileAddress, record.id, record.asset.stableAssetId])} />}

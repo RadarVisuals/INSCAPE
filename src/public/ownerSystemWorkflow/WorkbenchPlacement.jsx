@@ -27,7 +27,7 @@ const exactRectangle = (host, node) => {
 const movementRectangle = (host, nodes) => workbenchSelectionBounds(nodes.filter(node => node?.isConnected)
   .map(node => exactRectangle(host, node) || node.getBoundingClientRect()));
 const targets = (host, excluded) => [...(host?.entries.values() || [])].map(ref => ref.current)
-  .filter(node => node?.isConnected && !excluded.includes(node)).map(node => ({ id: node, ...(exactRectangle(host, node) || rectangle([node])) }));
+  .filter(node => node?.isConnected && !excluded.includes(node) && !node.hasAttribute('data-workbench-group-hidden')).map(node => ({ id: node, ...(exactRectangle(host, node) || rectangle([node])) }));
 function positionMatch(host, rect, nodes, scale, bypass, edges = true) {
   if (bypass) { host?.clearMatches(); return rect; }
   if (!host) return rect;

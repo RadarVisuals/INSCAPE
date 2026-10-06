@@ -197,12 +197,14 @@ test('gesture requests use one namespaced tool and return only a validated compl
     const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jZV8AAAAASUVORK5CYII=';
     const result = await (await fixture.call('message', { name: 'Octo', message: 'Back away from that painting.', passages: [], model: 'test-model',
       images: [{ id: 'art-1', dataUrl: png }],
-      scene: { gestures: true, artworks: [{ id: 'art-1', title: 'Abyssal study', url: 'DO_NOT_SEND' }], secret: 'DO_NOT_SEND' } })).text();
+      scene: { gestures: true, selection: { kind: 'modules', count: 1, complete: true, moduleIds: ['DO_NOT_SEND'] }, artworks: [{ id: 'art-1', title: 'Abyssal study', selected: true, url: 'DO_NOT_SEND' }], secret: 'DO_NOT_SEND' } })).text();
     assert.match(result, /"done":true,"action":\{"gesture":"retreat","target":"art-1"\}/);
     assert.equal(requested.tools[0].name, 'keeper'); assert.equal(requested.tool_choice, 'required'); assert.equal(requested.parallel_tool_calls, false);
     assert.ok(!JSON.stringify(requested).includes('DO_NOT_SEND'));
     assert.equal(requested.input.at(-1).content.at(-1).image_url, png);
     assert.match(requested.instructions, /source-artwork stills/);
+    assert.ok(requested.instructions.includes('"selection":{"kind":"modules","count":1,"complete":true}'));
+    assert.ok(requested.instructions.includes('"selected":true'));
     const history = (await (await fixture.call('status')).json()).history;
     assert.equal(history.length, 2); assert.equal(history[1].role, 'assistant'); assert.ok(!history[1].content.includes('function_call'));
     assert.ok(!JSON.stringify(history).includes('data:image'), 'image bytes are never retained in history');

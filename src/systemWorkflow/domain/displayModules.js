@@ -27,7 +27,7 @@ export function displayContent(draft, id = PRIMARY_DISPLAY_ID) {
 }
 
 export function projectDisplayDraft(draft, id = PRIMARY_DISPLAY_ID) {
-  const { displays: _displays, workbench: _workbench, mobile: _mobile, miniApps: _miniApps, texts: _texts, imageModules: _images, keeperDocks: _keepers, ...shared } = draft;
+  const { workbenchGroups: _workbenchGroups, displays: _displays, workbench: _workbench, mobile: _mobile, miniApps: _miniApps, texts: _texts, imageModules: _images, keeperDocks: _keepers, ...shared } = draft;
   const content = displayContent(draft, id);
   return { ...shared, ...Object.fromEntries(DISPLAY_CONTENT_KEYS.map(key => [key, content[key]])) };
 }

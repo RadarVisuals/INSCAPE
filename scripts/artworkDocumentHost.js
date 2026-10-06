@@ -1,3 +1,5 @@
+import { prepareRasterArtwork } from '../src/artwork/prepareRasterArtwork.js';
+
 // An opaque-origin document for self-contained SVG artwork. Network access is
 // restricted to the two public LUKSO RPCs used by the supported artwork.
 // No wallet bridge, storage access, external scripts or general network access.
@@ -14,13 +16,18 @@ export const ARTWORK_DOCUMENT_HEADERS = Object.freeze({
 // Runs inside the opaque SVG document, where its image cache lives. Preparing
 // the same URLs in the outer host does not warm this cache. Only an explicit
 // inspection request allocates full-size decodes; ordinary thumbnails do not.
-function prepareSvgInspection() {
+function prepareSvgInspection(prepareRasterArtwork) {
+  let density = 1, inspecting = false;
+  const rasters = [...document.querySelectorAll('image')]
+    .filter(node => /^data:image\/(png|jpe?g|webp)[;,]/i.test(node.href.baseVal)).slice(0, 50)
+    .map(node => ({ source: node.href.baseVal, paint: prepareRasterArtwork(node, node.href.baseVal, { scale: density }) }));
+  addEventListener('pagehide', () => rasters.forEach(raster => raster.paint.dispose()), { once: true });
   let request = null, pending = null;
   const retained = new Set();
   const prepare = () => {
     if (pending) return pending;
     pending = (async () => {
-      const urls = [...new Set([...document.querySelectorAll('image')].map(node => node.href.baseVal))]
+      const urls = [...new Set(rasters.map(raster => raster.source))]
         .filter(url => /^data:image\/(png|jpe?g|webp)[;,]/i.test(url)).slice(0, 16);
       const images = await Promise.all(urls.map(url => new Promise(resolve => {
         const image = new Image();
@@ -41,8 +48,19 @@ function prepareSvgInspection() {
   };
   addEventListener('message', async event => {
     if (event.source !== parent) return;
+    if (event.data?.type === 'inscape:inspect-artwork') {
+      inspecting = true; rasters.forEach(raster => raster.paint.setScale(Infinity)); return;
+    }
+    if (event.data?.type === 'inscape:artwork-density') {
+      const value = event.data.scale;
+      if (Number.isFinite(value) && value > 0 && value <= 64) {
+        density = value;
+        if (!inspecting) rasters.forEach(raster => raster.paint.setScale(density));
+      }
+      return;
+    }
     if (event.data?.type === 'inscape:release-artwork') {
-      request = null; retained.clear(); return;
+      request = null; inspecting = false; retained.clear(); rasters.forEach(raster => raster.paint.setScale(density)); return;
     }
     if (event.data?.type !== 'inscape:prepare-artwork' || !Number.isSafeInteger(event.data.requestId)) return;
     const id = request = event.data.requestId;
@@ -56,27 +74,31 @@ export const ARTWORK_DOCUMENT_HTML = `<!doctype html>
 <style>html,body,iframe{margin:0;width:100%;height:100%;border:0;overflow:hidden;background:transparent;color-scheme:normal}iframe{display:block}</style>
 </head><body><script>
 (() => {
-  let url, frame;
+  let url, frame, density;
   addEventListener('message', event => {
     if (event.source === frame?.contentWindow && event.data?.type === 'inscape:artwork-prepared'
       && Number.isSafeInteger(event.data.requestId)) {
       parent.postMessage({ type: 'inscape:artwork-prepared', requestId: event.data.requestId }, '*'); return;
     }
-    if (event.source === parent && ['inscape:prepare-artwork', 'inscape:release-artwork'].includes(event.data?.type)) {
+    if (event.source === parent && ['inscape:prepare-artwork', 'inscape:release-artwork', 'inscape:artwork-density', 'inscape:inspect-artwork'].includes(event.data?.type)) {
+      if (event.data.type === 'inscape:artwork-density') density = event.data;
       frame?.contentWindow.postMessage(event.data, '*'); return;
     }
     if (event.source !== parent || event.data?.type !== 'inscape:artwork-source'
       || typeof event.data.svg !== 'string' || event.data.svg.length > 8 * 1024 * 1024 || url) return;
     const svg = new DOMParser().parseFromString(event.data.svg, 'image/svg+xml');
     const preparation = svg.createElementNS('http://www.w3.org/2000/svg', 'script');
-    preparation.textContent = ${JSON.stringify(`(${prepareSvgInspection.toString()})();`)};
+    preparation.textContent = ${JSON.stringify(`(${prepareSvgInspection.toString()})(${prepareRasterArtwork.toString()});`)};
     svg.documentElement.append(preparation);
     url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], {type:'image/svg+xml'}));
     frame = document.createElement('iframe');
     frame.title = 'Interactive artwork';
     frame.sandbox = 'allow-scripts';
     frame.referrerPolicy = 'no-referrer';
-    frame.addEventListener('load', () => parent.postMessage({type:'inscape:artwork-loaded'}, '*'), {once:true});
+    frame.addEventListener('load', () => {
+      if (density) frame.contentWindow.postMessage(density, '*');
+      parent.postMessage({type:'inscape:artwork-loaded'}, '*');
+    }, {once:true});
     frame.src = url;
     document.body.append(frame);
   });

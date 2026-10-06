@@ -1,3 +1,4 @@
+import { reconcileRemovedWorkbenchMembers } from './domain/workbenchGroups.js';
 import { keccak256, stringToHex } from 'viem';
 import { normalizeProfileAddress } from '../library/config.js';
 import { draftChanges, applyDraftChanges, draftChangeLabel } from './draftHistory.js';
@@ -243,7 +244,7 @@ export function createSystemWorkflowDraftStore({
   function commit(candidate, { expectedGeneration, historyLabel, recordHistory = true } = {}, recovered = null) {
       const reject = reason => { lastCommitFailure = reason; return false; };
       if (expectedGeneration !== generation || !currentDraft) return reject('stale');
-      const draft = validateStoredDraft(candidate, activeProfileAddress).value;
+      const draft = validateStoredDraft(reconcileRemovedWorkbenchMembers(recovered?.draft || currentDraft, candidate), activeProfileAddress).value;
       if (!draft) return reject('invalid');
       if (!storage?.setItem) return reject('write_failed');
       try {

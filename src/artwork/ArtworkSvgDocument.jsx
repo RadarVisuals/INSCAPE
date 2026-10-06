@@ -12,10 +12,10 @@ export default function ArtworkSvgDocument({ src, title = 'Interactive artwork',
   const [attempt, setAttempt] = useState(0);
   const releaseInspection = () => {
     const current = inspection.current;
+    frame.current?.contentWindow.postMessage({ type: 'inscape:release-artwork' }, '*');
     if (!current) return;
     inspection.current = null;
     clearTimeout(current.timer); current.resolve(false);
-    current.window.postMessage({ type: 'inscape:release-artwork' }, '*');
   };
   useEffect(() => releaseInspection, [src, attempt]);
   useEffect(() => {
@@ -42,6 +42,8 @@ export default function ArtworkSvgDocument({ src, title = 'Interactive artwork',
         setStatus('ready');
         readyCallback.current?.({
           releaseInspection,
+          beginInspection() { window.postMessage({ type: 'inscape:inspect-artwork' }, '*'); },
+          setPixelScale(scale) { window.postMessage({ type: 'inscape:artwork-density', scale }, '*'); },
           prepareInspection() {
             if (frame.current?.contentWindow !== window) return Promise.resolve(false);
             if (inspection.current?.window === window) return inspection.current.promise;

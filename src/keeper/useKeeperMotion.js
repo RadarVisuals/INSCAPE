@@ -4,7 +4,7 @@ import { captureKeeperScene } from './keeperScene.js';
 
 // The module owns this temporary animation. The Workbench only supplies its host
 // and dock geometry; no animation frame writes into the draft or layout cache.
-export function useKeeperMotion({ dock, actor, rigActor, hostRef, enabled, reducedMotion, faces, size, movement = 'flip', swim, paused = false, onPosition }) {
+export function useKeeperMotion({ dock, actor, rigActor, hostRef, enabled, reducedMotion, faces, size, movement = 'flip', swim, paused = false, onPosition, getSelection }) {
   // SVG float shares destination/recall ownership, with its own artwork pose.
   const rigged = movement === 'swim' || movement === 'svg';
   const [phase, setPhase] = useState('docked');
@@ -46,14 +46,14 @@ export function useKeeperMotion({ dock, actor, rigActor, hostRef, enabled, reduc
     cancelReaction();
     const expected = motion.current, version = reactionVersion.current;
     const snapshot = captureKeeperScene(hostRef.current, expected || home(), attention.current,
-      { ...options, layered: rigged, reducedMotion });
+      { ...options, selectedModuleIds: options.shareArtwork ? getSelection?.() : undefined, layered: rigged, reducedMotion });
     return { scene: snapshot.scene, previews: snapshot.previews, metadata: snapshot.metadata, perform(action) {
       if (!enabled || reducedMotion || !interaction.current.paused || !expected || motion.current !== expected
         || reactionVersion.current !== version || expected.steering || document.hidden || !document.hasFocus()) return false;
       const target = snapshot.resolve(action);
       return Boolean(target && beginKeeperReaction(expected, target.action.gesture, target.point, keeperViewport(size, innerWidth, innerHeight).bounds, size));
     } };
-  }, [cancelReaction, hostRef, home, rigged, reducedMotion, enabled, size]);
+  }, [cancelReaction, hostRef, home, rigged, reducedMotion, enabled, size, getSelection]);
   useEffect(() => { if (!enabled) settle(); }, [enabled, settle]);
   useEffect(() => {
     if (phase === 'docked' || !enabled) return;

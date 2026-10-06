@@ -2,8 +2,11 @@ import { forwardRef, useId, useImperativeHandle, useRef } from 'react';
 import { createKeeperOctopusPose, stepKeeperOctopusPose, OCTOPUS_DROP_LIMIT } from './keeperOctopusMotion.js';
 import { stepKeeperSvgPose } from './keeperSvgMotion.js';
 
+import { usePreparedRasterArtwork } from './usePreparedRasterArtwork.js';
+
 const Shape = ({ part, ...props }) => <path d={part.d} fill={part.fill} fillOpacity={part.opacity} {...props} />;
 export const KeeperOctopusArtwork = forwardRef(function KeeperOctopusArtwork({ rig, headControl, movement }, ref) {
+  const raster = usePreparedRasterArtwork(rig.body.src);
   const id = useId().replace(/:/g, ''), body = useRef(null), control = useRef(null), tentacles = useRef([]), gradients = useRef([]), clips = useRef([]), gaze = useRef([]), drops = useRef([]), pose = useRef(null);
   useImperativeHandle(ref, () => ({
     reset() { pose.current = null; drops.current.forEach(node => { if (node) node.style.display = 'none'; }); },
@@ -49,7 +52,7 @@ export const KeeperOctopusArtwork = forwardRef(function KeeperOctopusArtwork({ r
       </defs>
       {rig.tentacles.map((t, i) => <path key={t.id} ref={node => { tentacles.current[i] = node; }} data-keeper-part={t.id} d={t.d} fill={`url(#${id}-goo-${i})`} />)}
       <g ref={body} data-keeper-part="body">
-        <image href={rig.body.src} x={rig.body.x} y={rig.body.y} width={rig.body.width} height={rig.body.height} />
+        <image ref={raster} href={rig.body.src} x={rig.body.x} y={rig.body.y} width={rig.body.width} height={rig.body.height} />
         {rig.eyes.map((eye, i) => <g key={eye.id} data-keeper-eye={eye.id}>
           <g clipPath={`url(#${id}-eye-${i})`}>
             <Shape part={eye.aperture} />

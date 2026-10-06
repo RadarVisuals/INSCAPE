@@ -7,13 +7,16 @@ const text = (value, limit) => typeof value === 'string' ? value.slice(0, limit)
 export function keeperReactionContext(value) {
   if (!value || typeof value !== 'object') return null;
   const seen = new Set();
+  const selection = value.selection && ['modules', 'artworks'].includes(value.selection.kind)
+    && Number.isSafeInteger(value.selection.count) && value.selection.count > 0
+    ? { kind: value.selection.kind, count: Math.min(128, value.selection.count), complete: value.selection.complete === true } : { kind: 'none', count: 0 };
   return { gestures: value.gestures === true, layered: value.layered === true, reducedMotion: value.reducedMotion === true,
-    pointer: value.pointer === true,
+    pointer: value.pointer === true, ...(value.selection && { selection }),
     artworks: (Array.isArray(value.artworks) ? value.artworks : []).slice(0, 8).flatMap(item => {
       if (!item || !/^art-[1-8]$/.test(item.id) || seen.has(item.id)) return [];
       seen.add(item.id);
       const metadata = keeperMetadataReference(item.metadata?.stableAssetId, item.metadata?.tokenStandard);
-      return [{ id: item.id, title: text(item.title, 120), direction: text(item.direction, 30), distance: item.distance === 'near' ? 'near' : 'far', ...(metadata && { metadata }) }];
+      return [{ id: item.id, title: text(item.title, 120), direction: text(item.direction, 30), distance: item.distance === 'near' ? 'near' : 'far', ...(selection.count && item.selected === true && { selected: true }), ...(metadata && { metadata }) }];
     }) };
 }
 

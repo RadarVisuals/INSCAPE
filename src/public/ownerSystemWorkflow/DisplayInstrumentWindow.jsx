@@ -36,7 +36,7 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
   const placement = useWorkbenchPlacement(node, placementModule && !compact, camera.scale, true, screen);
   useWorkbenchViewRegistration(viewId, node, !compact, base, resizeTarget,
     position => setFrame(current => ({ ...current, ...position })));
-  const canResize = resizable && !fitContent && !compact && (!resizeTarget?.store || resizeTarget.enabled);
+  const canResize = !camera.presented && resizable && !fitContent && !compact && (!resizeTarget?.store || resizeTarget.enabled);
   const local = transformed ? view.transforms[viewId] : null;
   const localScale = local?.scale || 1;
   const bounds = viewId ? {
@@ -134,7 +134,7 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
     { width: minimumWidth, height: minimumHeight }, bounds,
     (axis, side, value) => placement.edge(axis, side, value, current, altKey) ?? snapWorkbenchCoordinate(value, snapToGrid && !altKey));
   const begin = (event, kind, edge) => {
-    if (event.button !== 0 || kind !== 'resize' && event.target.closest('button, a, input, select, textarea')) return;
+    if (camera.presented || event.button !== 0 || kind !== 'resize' && event.target.closest('button, a, input, select, textarea')) return;
     event.preventDefault(); event.stopPropagation();
     if (kind === 'content-move') node.current.querySelector('header')?.focus({ preventScroll: true });
     else event.currentTarget.focus();
@@ -154,7 +154,7 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
     else { drag.next = resizeTo(drag.frame, drag.edge, delta, event.altKey); setPreview(drag.next); }
   };
   const key = (event, edge) => {
-    if (event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
+    if (camera.presented || event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
     event.preventDefault(); event.stopPropagation(); placement.begin(event);
     const step = (snapToGrid && !event.altKey) || event.shiftKey ? WORKBENCH_GRID_STEP : 8;
     const delta = { x: event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0,

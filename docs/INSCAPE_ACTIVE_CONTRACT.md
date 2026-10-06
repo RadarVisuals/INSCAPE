@@ -601,7 +601,7 @@ metadata is read on request. Only the completed spoken answer enters temporary
 chat history, not raw tool output. Closing or replacing the conversation aborts
 the read and discards late results. The founder also requested visual recognition
 on 2026-10-01: Share artwork
-previews opts into sending at most two nearest source-artwork stills, rasterized
+previews opts into sending at most two source-artwork stills, selected first then nearest, rasterized
 to PNG with a longest side of 512 pixels. SVG uses the browser's non-scriptable
 image decoder. These are source previews, not screenshots of the workspace,
 current crops or live animation. Source access failures are visible; no preview
@@ -613,6 +613,16 @@ Modules explicitly expose title/identity/source/token cues; Keeper reads only it
 Workbench and rechecks targets before acting. Names and image text are untrusted
 content, not instructions; the same applies to metadata fields. The AI
 has no object-editing, browser, wallet, durable-memory or autonomous polling tools.
+
+On 2026-10-06 the founder continued with Keeper selection awareness. With Share
+artwork details enabled, each Send reads the existing Workbench module selection
+or, when none is selected, the Display artwork selection. The bounded scene
+identifies selection scope/count and prioritizes selected visible artwork for
+its eight references and two optional previews. Selecting a Display module does
+not mean one particular artwork inside it; ambiguous, hidden or unsupported
+selections require clarification. Opening, using and closing Keeper conversation
+preserves Workbench selection. Selection remains temporary and is not copied
+into chat history, saved drafts or publication. Sharing defaults remain off.
 
 An open conversation survives switching to the sign-in tab: its artwork pauses
 while the page is inactive and resumes on return. Ordinary roaming still docks
@@ -991,6 +1001,73 @@ are not part of that visitor experience. Module chrome is not Stage content.
   ratio, or renderer. Runtime technology and isolation are implementation
   decisions to evaluate against a concrete module, not product assumptions.
 
+## Named Workbench groups
+
+On 2026-10-05 the founder approved the next spatial-navigation step: saved,
+named groups of Workbench modules. The owner Groups tool creates a group from
+selection or an empty group, renames it, adds/removes members, changes member
+order and ungroups without deleting or rearranging content. Selecting a saved
+group selects its open windows; Focus and Back remain separate navigation actions.
+A selected group can move through the existing selection gesture as one undoable
+position edit. Drops onto group names preview the target and commit membership
+without moving the camera or the modules. Escape cancels the drop.
+
+Optional draft-v4 `workbenchGroups` records contain `id`, `name` and ordered
+`memberIds`. Membership is owned once at the Workbench level, independent of
+Display Grid placement groups and the local window-layout cache. Up to 32 groups
+and 128 members per group are accepted; names contain 1–48 characters. A module
+belongs to at most one group. Empty groups are valid; nested groups, duplicate
+membership and unknown references are invalid. Display, Image, Text, Shape and
+Keeper windows participate. Linked Text frames belong to their parent Text
+module and are selected together. Closing a window retains membership; deleting
+a module removes its reference in that same undoable operation.
+
+Old drafts without groups retain their interpretation and are not rewritten on
+read. Group operations use the existing profile-bound draft store and undo
+history. Failed or stale saves preserve the accepted draft. Display-only editing
+receives no Workbench group data. Public v9 projection currently omits group
+names and membership; restoring a public document preserves applicable local
+groups. Group publication remains a separate boundary; private group names,
+membership and stack positions are not included in public v9 snapshots.
+
+On 2026-10-06 the founder authorized continuing the grouping implementation,
+with code quality and ownership separation checked throughout. Groups now offer
+Stack and Unstack. Optional group `position: { left, top }` records the compact
+stack's Workbench anchor; omission preserves the original module arrangement.
+The 180 by 160 work-pixel stack stays inside the existing 4,000 work area.
+Dragging its grip or using arrow keys saves only that anchor as one undoable
+operation. Escape, cancellation and focus loss restore the prior anchor. Stacking,
+moving, membership drops and unstacking never move the camera or rewrite members.
+The stack remains after reload; unstacking restores the original arrangement.
+
+Open group is a temporary browsing action. Registered live module windows remain
+mounted while compacted. Hidden windows are inert and excluded from selection
+and snapping; hidden Keepers settle at their docks. Opening derives an ordered,
+proportion-preserving row layout from module-owned frames, with 32-work-pixel gaps
+and one column on narrow screens. Surrounding modules and other stacks dim.
+Image inspection, Display scene interaction and native Text reading remain in
+their existing modules. Group presentation disables window movement/resizing and
+uses Text's existing read mode without replacing its editor or saving a mode change.
+Unstacking is the explicit way to resume authoring the original window layout.
+
+The temporary projection is separate from authoring transforms and layout reports.
+It is derived again when membership, live frames or viewport width change and is
+discarded on return, reset, suspension or disposal. Opening and returning reuse
+the camera's high-resolution live-surface animation, with bounded rectangle
+inputs; navigation receives no draft store or group schema. Reduced motion is
+immediate. Interrupted travel settles the presentation while leaving the camera
+at the interruption point. No animation frame enters draft history or publication.
+
+A bounded, horizontally scrolling named destination strip opens saved groups.
+Within an open group, an item selector and Previous/Next follow saved member order
+and stop at the ends. Item focus keeps one return context for the group overview,
+so Back returns from reading to the group and then to the preceding Workbench view.
+Closed windows retain membership and are listed as closed in Groups; browsing
+uses open windows. Empty groups remain valid drop targets and open their management
+tools until they have a live member. Group controls occupy reserved fitting space.
+Owner tools remain absent from Visitor mode; public group browsing awaits explicit
+public projection rather than using private draft records.
+
 ## Public Workbench and visitor interaction
 
 On 2026-10-05 the founder removed the custom reference frame and chose a fixed
@@ -1130,7 +1207,8 @@ Escape first retains existing editor, inspector, gesture and selection behavior;
 with none of those active, it returns to the preceding Workbench view. Image
 and Display inspection keep their own input lock and source-return behavior.
 This step does not change click-to-inspect, dragging, wheel ownership, schemas
-or publication data, and does not yet add Workbench groups or article reading focus.
+or publication data. Named Workbench groups extend this same navigation path with
+temporary spreading and item reading, as specified in their section above.
 Existing Workbench fields carry Text window sizes through publication and restore;
 no schema, storage key, default or old-data interpretation changes. Previously
 saved article scales remain readable. Explicitly setting Text size resets the

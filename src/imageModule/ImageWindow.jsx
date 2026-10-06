@@ -15,6 +15,7 @@ export default function ImageWindow({ id, title, position, size, fitScale, fitSi
   const [preview, setPreview] = useState(null);
   const view = useWorkbenchView();
   const camera = workbenchModuleTransform(view, id);
+  if (camera.presented) { editable = false; movable = false; }
   const { offset } = useWorkbenchCamera();
   const snapMovement = useWorkbenchMovementSnap();
   // Authored selection resizing supplies the same whole-pixel frame it will

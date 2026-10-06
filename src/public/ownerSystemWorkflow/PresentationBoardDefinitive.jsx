@@ -161,7 +161,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   const edgeSnapper = (bypass, edges = true) => (axis, side, value) => placement.edgeMatch(axis, side, value, renderedPosition, bypass, edges);
   const resizeBounds = () => WORKBENCH_BOUNDS;
   const beginBoardDrag = (event) => {
-    if (inspectionActive || event.button !== 0 || !renderedPosition || event.target.closest('button')) return;
+    if (viewTransform.presented || inspectionActive || event.button !== 0 || !renderedPosition || event.target.closest('button')) return;
     placement.begin(event);
     boardDragRef.current = { id: event.pointerId, clientX: event.clientX, clientY: event.clientY, ...renderedPosition };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -174,7 +174,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   };
   const stopBoardDrag = (event) => { if (boardDragRef.current?.id === event.pointerId) { boardDragRef.current = null; placement.finish(); } };
   const beginBoardResize = (corner, event) => {
-    if (inspectionActive || event.button !== 0 || !view || !windowFrame) return;
+    if (viewTransform.presented || inspectionActive || event.button !== 0 || !view || !windowFrame) return;
     event.preventDefault(); event.stopPropagation();
     placement.begin(event);
     boardResizeRef.current = { corner, id: event.pointerId, clientX: event.clientX, clientY: event.clientY, frame: windowFrame, view };
@@ -193,7 +193,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
   };
   const resizeBoardFromKeyboard = (corner, event) => {
     if (!['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'].includes(event.key)
-      || inspectionActive || !view || !windowFrame) return;
+      || viewTransform.presented || inspectionActive || !view || !windowFrame) return;
     event.preventDefault(); event.stopPropagation();
     placement.begin(event);
     const snapping = windowSnap && !readOnly && !event.altKey;
@@ -252,7 +252,7 @@ export default function PresentationBoardDefinitive({ assetsById = new Map(), ch
           if (event.target === event.currentTarget && (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')) { onContextMenu?.(event); return; }
           if (event.target !== event.currentTarget || !event.key.startsWith('Arrow')) return;
           event.preventDefault(); event.stopPropagation();
-          if (inspectionActive) return;
+          if (viewTransform.presented || inspectionActive) return;
           placement.begin(event);
           const snapping = windowSnap && !readOnly && !event.altKey;
           const step = snapping || event.shiftKey ? WORKBENCH_GRID_STEP : 8;

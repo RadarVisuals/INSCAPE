@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useInsertionEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import { ArtworkGeometry } from '../../artwork/ArtworkGeometry.jsx';
+
 const Camera = createContext({ offset: { x: 0, y: 0 } });
 const CameraScale = createContext({ scale: 1 });
 export const useWorkbenchCamera = () => useContext(Camera);
@@ -16,14 +18,19 @@ export function WorkbenchCameraProvider({ children }) {
   const [camera, setCamera] = useState({ scale: 1, offset: { x: 0, y: 0 } });
   const current = useRef(camera);
   const projection = useRef(null), painters = useRef(new Set());
+  const geometryListeners = useRef(new Set());
+  const artworkGeometry = useMemo(() => ({
+    subscribe(listener) { geometryListeners.current.add(listener); return () => geometryListeners.current.delete(listener); },
+    isProjected: () => Boolean(projection.current),
+  }), []);
   const getCamera = useCallback(() => current.current, []);
   const subscribeCameraPaint = useCallback(listener => { painters.current.add(listener); return () => painters.current.delete(listener); }, []);
   const prepareCamera = useCallback(rasterCamera => setCamera(rasterCamera), []);
   const projectCamera = useCallback(surface => { projection.current = surface; }, []);
-  const previewCamera = useCallback(next => {
+  const previewCamera = useCallback((next, progress) => {
     current.current = next;
     painters.current.forEach(paint => paint(next));
-    projection.current?.paint(next);
+    projection.current?.paint(next, progress);
   }, []);
   const updateCamera = useCallback(update => {
     const previous = current.current;
@@ -35,6 +42,9 @@ export function WorkbenchCameraProvider({ children }) {
   // Temporary style overrides retire before layout effects read the settled
   // DOM. The camera reference remains authoritative throughout the projection.
   useInsertionEffect(() => { projection.current?.dispose(); projection.current = null; }, [camera]);
+  // Runs after module layout and retiring temporary transforms, both when
+  // preparing the largest surface and when finishing/cancelling a journey.
+  useLayoutEffect(() => { geometryListeners.current.forEach(update => update()); }, [camera]);
   useLayoutEffect(() => () => { projection.current?.dispose(); projection.current = null; }, []);
   const setScale = useCallback(update => updateCamera(previous => ({ ...previous,
     scale: typeof update === 'function' ? update(previous.scale) : update,
@@ -50,6 +60,6 @@ export function WorkbenchCameraProvider({ children }) {
     return () => setLocks(current => { const next = new Set(current); next.delete(token); return next; });
   }, []);
   return <Camera.Provider value={{ ...camera, getCamera, updateCamera, prepareCamera, projectCamera, previewCamera, subscribeCameraPaint, setOffset, locked: locks.size > 0, lock }}>
-    <CameraScale.Provider value={scale}>{children}</CameraScale.Provider>
+    <CameraScale.Provider value={scale}><ArtworkGeometry.Provider value={artworkGeometry}>{children}</ArtworkGeometry.Provider></CameraScale.Provider>
   </Camera.Provider>;
 }

@@ -12,7 +12,7 @@
 .keeper-instance[data-keeper-phase="free"] .keeper-dock img, .keeper-instance[data-keeper-phase="returning"] .keeper-dock img { opacity: .22; }
 .keeper-dock svg.keeper-home { position: absolute; width: 14px; height: 14px; top: 5px; right: 5px; }
 .keeper-dock button:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: -3px; }
-.keeper-roamer { position: fixed; left: 0; top: 0; width: 0; height: 0; pointer-events: none; z-index: 47; will-change: transform; }
+.keeper-roamer { position: fixed; left: 0; top: 0; width: 0; height: 0; pointer-events: none; z-index: 80; will-change: transform; }
 .keeper-roamer > img { position: absolute; width: var(--keeper-size, 128px); height: var(--keeper-size, 128px); object-fit: contain; backface-visibility: visible; transform: translate(-50%, -50%) perspective(calc(var(--keeper-size, 128px) * 4)) rotateY(calc((1 - var(--keeper-facing, 1)) * 90deg)) rotateZ(var(--keeper-tilt, 0rad)); transition: transform 280ms cubic-bezier(.25, .1, .25, 1); }
 .keeper-rig { position: absolute; width: var(--keeper-size, 128px); height: var(--keeper-size, 128px); transform: translate(-50%, -50%); }
 .keeper-rig__part { position: absolute; inset: 0; }
@@ -23,7 +23,7 @@
 .keeper-head:disabled { pointer-events: none; }
 .keeper-head:focus-visible { outline: 2px solid var(--workflow-ink); outline-offset: 3px; }
 .keeper-head--flip { width: calc(var(--keeper-size, 128px) * .65); height: calc(var(--keeper-size, 128px) * .65); }
-.keeper-conversation { position: fixed; z-index: 49; box-sizing: border-box; display: flex; flex-direction: column; width: min(320px, calc(100vw - 24px)); max-height: min(330px, calc(100dvh - 82px)); border: 1px solid var(--workflow-border); border-radius: 10px; background: var(--workflow-panel); color: var(--workflow-ink); pointer-events: auto; font: var(--workflow-type-control); isolation: isolate; }
+.keeper-conversation { position: fixed; z-index: 81; box-sizing: border-box; display: flex; flex-direction: column; width: min(320px, calc(100vw - 24px)); max-height: min(330px, calc(100dvh - 82px)); border: 1px solid var(--workflow-border); border-radius: 10px; background: var(--workflow-panel); color: var(--workflow-ink); pointer-events: auto; font: var(--workflow-type-control); isolation: isolate; }
 .keeper-conversation::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit; background: url('/assets/noise-samples/grain-mono.png') repeat; background-size: 128px; opacity: .12; mix-blend-mode: hard-light; }
 .keeper-conversation__tail { position: absolute; left: var(--keeper-tail-x, 75%); top: 100%; fill: var(--workflow-panel); overflow: visible; pointer-events: none; }
 .keeper-conversation[data-tail="top"] .keeper-conversation__tail { top: auto; bottom: 100%; transform: scaleY(-1); }
@@ -46,7 +46,7 @@
 .keeper-conversation__modes button { flex: 1; padding: 4px 8px; border: 0; border-bottom: 2px solid transparent; text-align: center; }
 .keeper-conversation__modes button[aria-pressed="true"] { border-bottom-color: var(--workflow-ink); }
 .keeper-ai { display: flex; flex-direction: column; gap: 6px; min-width: 0; min-height: 0; flex: 1; }
-.keeper-ai__settings { overflow-y: auto; min-height: 0; display: grid; gap: 10px; overscroll-behavior: contain; }
+.keeper-ai__settings { overflow-y: auto; min-height: 0; display: grid; grid-auto-rows: max-content; gap: 10px; overscroll-behavior: contain; }
 .keeper-ai__toolbar { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; font: var(--workflow-type-panel-body); }
 .keeper-ai__toolbar button { border: 0; padding: 0 4px; font: inherit; }
 .keeper-ai__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

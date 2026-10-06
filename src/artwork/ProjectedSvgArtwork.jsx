@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ArtworkSvgDocument from './ArtworkSvgDocument.jsx';
 import { useArtworkPreparation } from './ArtworkPreparation.jsx';
+import { useArtworkGeometry } from './ArtworkGeometry.jsx';
 
 // Each mounted artwork owns its document and keeps it in the same DOM location.
 // Lift supplies temporary projection only; the registry ends with its owner.
@@ -37,6 +38,26 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
   const documentControls = useRef(null);
   const [visible, setVisible] = useState(false);
   const prepared = useArtworkPreparation();
+  const geometry = useArtworkGeometry();
+  const updatePixelScale = () => {
+    // Camera motion has already prepared its largest layout. Measuring its
+    // temporary shrinking transform would replace those pixels with a thumbnail.
+    if (geometry.isProjected()) return;
+    const matrix = media.current?.getScreenCTM();
+    if (matrix) documentControls.current?.setPixelScale(Math.max(Math.hypot(matrix.a, matrix.b), Math.hypot(matrix.c, matrix.d)) * (devicePixelRatio || 1));
+  };
+  // Module geometry changes at resize/zoom endpoints; never resample per motion
+  // frame. Inspection uses original pixels until its explicit release.
+  useLayoutEffect(updatePixelScale);
+  useLayoutEffect(() => geometry.subscribe(updatePixelScale), [geometry]);
+  useLayoutEffect(() => {
+    // Image content is memoized in authored coordinates; zoom resizes its outer
+    // viewport without rendering this component. Measure that real viewport.
+    const observer = new ResizeObserver(updatePixelScale);
+    observer.observe(root.current);
+    addEventListener('resize', updatePixelScale);
+    return () => { observer.disconnect(); removeEventListener('resize', updatePixelScale); };
+  }, [geometry]);
   useLayoutEffect(() => {
     const home = host.current;
     let active = true, target = null;
@@ -60,6 +81,7 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
         target = destination;
         const prepare = async () => {
           if (prepareImages) await documentControls.current?.prepareInspection();
+          if (active && liftReady.current === prepare) documentControls.current?.beginInspection();
           if (active && liftReady.current === prepare) onReady();
         };
         liftReady.current = prepare;
@@ -123,7 +145,7 @@ export default function ProjectedSvgArtwork({ src, width, height, dimensions, me
     <svg ref={root} className="artwork-svg-viewport" data-interactive-svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="none">
       <foreignObject ref={media} width={viewport.width} height={viewport.height} transform={transform}>
         {(visible || prepared || lift) && <ArtworkSvgDocument key={src} src={src} stretch paintOnly onReady={controls => {
-          documentControls.current = controls;
+          documentControls.current = controls; updatePixelScale();
           loaded.current = true; liftReady.current?.(); onReady?.();
         }} />}
       </foreignObject>
