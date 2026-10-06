@@ -129,13 +129,18 @@ async function navigate(address = profileA, runtime = 'grid') {
     lifecycleDiagnostic('bootstrap:document-loaded');
     await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(address)} && window.__fixture?.ready === true && window.__fixture?.runtime === ${JSON.stringify(runtime)}`, 'published fixture');
     lifecycleDiagnostic('bootstrap:fixture-mounted');
+    if (activeViewport.touch && activeViewport.width < 768) {
+      await page.getByRole('button', { name: 'Open desktop experience', exact: true }).waitFor();
+      await page.screenshot({ path: '.browser-test-runtime/mobile-entry-' + activeViewport.width + '.png' });
+      await page.getByRole('button', { name: 'Open desktop experience', exact: true }).click();
+    }
     await waitFor(`document.querySelector('.visitor-grid-world') && window.__fixture`, 'v9 published visitor world');
     lifecycleDiagnostic('bootstrap:published-ready');
   } catch (error) {
     await collectBootstrapDiagnostics(error, fixtureUrl);
     throw error;
   }
-  await waitFor(`document.querySelectorAll('.visitor-grid-renderer').length === 1`, 'one active ordered Grid projection');
+  await waitFor(`document.querySelectorAll('.visitor-grid-world__grid-plane--current .visitor-grid-renderer').length === 1`, 'one active ordered Grid projection');
   await waitFor(`document.querySelector('.visitor-grid-world__viewport')?.dataset.activeGridId?.endsWith('-home')`, 'first public Grid visitor entry');
 }
 
@@ -216,11 +221,11 @@ before(async () => runBrowserSetupWithCleanup(async () => {
     lateVite.httpServer?.closeAllConnections?.();
     void lateVite.close().catch(() => {});
   }).catch(() => {});
-  vite = await withinDeadline(viteCreation, BROWSER_LIFECYCLE_TIMEOUTS.resourceCloseMs, 'Vite creation deadline exceeded', () => { viteCreationExpired = true; });
+  vite = await withinDeadline(viteCreation, BROWSER_LIFECYCLE_TIMEOUTS.serverSetupMs, 'Vite creation deadline exceeded', () => { viteCreationExpired = true; });
   resources.vite = vite;
   signal.throwIfAborted();
   lifecycleDiagnostic('setup:vite-create:complete');
-  await withinDeadline(vite.listen(), BROWSER_LIFECYCLE_TIMEOUTS.resourceCloseMs, 'Test-owned Vite listen deadline exceeded', () => {
+  await withinDeadline(vite.listen(), BROWSER_LIFECYCLE_TIMEOUTS.serverSetupMs, 'Test-owned Vite listen deadline exceeded', () => {
     vite.httpServer?.closeAllConnections?.();
     void vite.close().catch(() => {});
   });
@@ -287,8 +292,12 @@ after(async () => {
 
 test('exact v9 mounts one semantic ordered-Grid surface without owner, Library, or legacy topology', async () => {
   await viewport(1280, 720, false); await navigate();
-  const state = await evaluate(`(()=>({runtime:window.__fixture.runtime,worlds:document.querySelectorAll('.visitor-grid-world').length,renderers:document.querySelectorAll('.visitor-grid-renderer').length,active:document.querySelector('.visitor-grid-renderer')?.dataset.gridId,legacy:document.querySelectorAll('.visitor-lattice-world,.published-home-world,[data-table-id]').length,ownerControls:document.querySelectorAll('[data-owner-route="true"],[data-resize-control]').length}))()`);
+  const state = await evaluate(`(()=>({runtime:window.__fixture.runtime,worlds:document.querySelectorAll('.visitor-grid-world').length,renderers:document.querySelectorAll('.visitor-grid-world__grid-plane--current .visitor-grid-renderer').length,active:document.querySelector('.visitor-grid-world__grid-plane--current .visitor-grid-renderer')?.dataset.gridId,legacy:document.querySelectorAll('.visitor-lattice-world,.published-home-world,[data-table-id]').length,ownerControls:document.querySelectorAll('[data-owner-route="true"],[data-resize-control]').length}))()`);
   assert.deepEqual(state, { runtime: 'grid', worlds: 1, renderers: 1, active: 'grid:alpha-home', legacy: 0, ownerControls: 0 });
+  const rail = await page.locator('[data-rail-slot]').evaluateAll(nodes => ({ count: nodes.length,
+    inactive: nodes.filter(node => node.getAttribute('aria-hidden') === 'true' && node.inert).length }));
+  assert.ok(rail.count >= 3 && rail.count <= 5, 'only the bounded neighborhood is mounted');
+  assert.equal(rail.inactive, rail.count - 1, 'preloaded appearances cannot receive input');
 });
 
 test('Directory visits a published workspace, Close remains Close, and Return restores the connected workspace', async () => {
@@ -318,17 +327,18 @@ test('Directory visits a published workspace, Close remains Close, and Return re
   await waitFor(`document.querySelector('[data-browser-fixture]')?.dataset.profileAddress === ${JSON.stringify(profileA)}`, 'connected workspace return');
 });
 
-test('canonical Grid placement opens the focus viewer, hides its source, and restores exact focus', async () => {
+test('canonical Grid placement opens the shared inspector, hides its decoded lift source, and restores exact focus', async () => {
   await viewport(1280, 720, false); await navigate();
-  await waitFor(`document.querySelector('[data-placement-id="art:Alpha:https"]')?.dataset.mediaState === 'ready'`, 'canonical placement media');
-  await click('[data-placement-id="art:Alpha:https"]');
-  await page.locator('.lattice-focus-viewer').waitFor({ state: 'visible', timeout: 10_000 });
-  await waitFor(`document.querySelector('.lattice-focus-viewer')?.dataset.phase === 'open'`, 'production focus viewer open phase');
-  assert.equal(await evaluate(`document.querySelector('.lattice-focus-viewer').getAttribute('aria-label')`), 'Artwork focus viewer');
-  assert.equal(await evaluate(`document.querySelector('[data-placement-id="art:Alpha:https"]').hasAttribute('data-viewer-source-hidden')`), true);
+  await waitFor(`document.querySelector('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"]')?.dataset.mediaState === 'ready'`, 'canonical placement media');
+  await click('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"]');
+  const inspector = page.getByRole('group', { name: 'Artwork inspection', exact: true });
+  await inspector.waitFor();
+  await waitFor(`document.querySelector('.system-workflow__inspection-scene')?.dataset.inspectionPhase === 'active'`, 'shared inspection is active');
+  await waitFor(`document.querySelector('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"]')?.hasAttribute('data-lift-source')`, 'decoded lift hides its original');
+  assert.equal(await evaluate(`document.querySelector('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"]').hasAttribute('data-lift-source')`), true);
   await pressKey('Escape');
-  await waitFor(`!document.querySelector('.lattice-focus-viewer')`, 'production focus viewer closes');
-  await waitFor(`!document.querySelector('[data-placement-id="art:Alpha:https"]').hasAttribute('data-viewer-source-hidden')`, 'placement source restored');
+  await inspector.waitFor({ state: 'detached' });
+  await waitFor(`!document.querySelector('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"]').hasAttribute('data-lift-source')`, 'placement source restored');
   assert.equal(await evaluate(`document.activeElement?.dataset.placementId`), 'art:Alpha:https');
 });
 
@@ -384,49 +394,43 @@ test('React StrictMode reuses one factory provider while cleanup, replacement, a
   await navigate();
 });
 
-test('semantic controls and owned keyboard input navigate dynamic ordered Grids', async () => {
-  await viewport(1280, 720, false); await navigate();
-  await click('[aria-label="Next Grid"]');
-  await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-archive'`, 'next ordered Grid');
-  await evaluate(`document.querySelector('.visitor-grid-world').focus()`); await pressKey('ArrowLeft');
-  await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-home'`, 'keyboard returns to entry Grid');
-  const leftDrag = await point('.visitor-grid-world__viewport', .72, .5);
-  await page.keyboard.down('Space');
-  await waitFor(`document.querySelector('.visitor-grid-world')?.dataset.spaceNavigation === 'true'`, 'visitor Space navigation ownership');
-  await page.mouse.move(leftDrag.x, leftDrag.y); await page.mouse.down();
-  await page.mouse.move(leftDrag.x - 180, leftDrag.y + 4, { steps: 8 });
-  const liveSwipe = await evaluate(`(()=>{const planes=[...document.querySelectorAll('.visitor-grid-world__grid-plane')];return {count:planes.length,currentLeft:planes[0]?.getBoundingClientRect().left,adjacentLeft:planes[1]?.getBoundingClientRect().left,viewportWidth:document.querySelector('.visitor-grid-world__viewport')?.clientWidth}})()`);
-  assert.equal(liveSwipe.count, 2, 'the adjacent Grid is painted during the gesture');
-  assert.ok(liveSwipe.currentLeft < -100, `the current Grid follows the pointer: ${JSON.stringify(liveSwipe)}`);
-  assert.ok(liveSwipe.adjacentLeft > 0 && liveSwipe.adjacentLeft < liveSwipe.viewportWidth,
-    `the adjacent Grid enters the viewport: ${JSON.stringify(liveSwipe)}`);
-  await page.mouse.up();
-  assert.equal(await evaluate(`document.querySelector('.visitor-grid-world')?.dataset.gridSwipeSettling`), 'true',
-    'release settles the moving Grid planes before navigation commits');
-  await page.keyboard.up('Space');
-  await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-archive'`, 'Space-drag advances the published Grid');
-  await waitFor(`document.querySelector('.visitor-grid-world')?.dataset.gridSwipeSettling !== 'true'`, 'forward Space-drag settles before the next gesture');
-  assert.equal(await evaluate(`document.querySelectorAll('.lattice-focus-viewer').length`), 0,
-    'Space-drag must not activate the artwork beneath the pointer');
-  const rightDrag = await point('.visitor-grid-world__viewport', .28, .5);
-  await page.keyboard.down('Space'); await page.mouse.move(rightDrag.x, rightDrag.y); await page.mouse.down();
-  await page.mouse.move(rightDrag.x + 180, rightDrag.y - 4, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Space');
-  await waitFor(`document.querySelector('.visitor-grid-renderer')?.dataset.gridId === 'grid:alpha-home'`, 'reverse Space-drag returns to the entry Grid');
-  await waitFor(`document.querySelector('.visitor-grid-world')?.dataset.gridSwipeSettling !== 'true'`, 'reverse Space-drag settles');
-  assert.equal(await evaluate(`document.querySelectorAll('.visitor-grid-renderer').length`), 1);
+test('semantic controls, keyboard and reduced-motion Display drags navigate ordered Grids', async () => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  try {
+    await viewport(1280, 720, false); await navigate();
+    const active = id => waitFor(`document.querySelector('[data-active-grid-id]')?.dataset.activeGridId === '${id}'`, 'ordered Grid ' + id);
+    await click('[aria-label="Next Grid"]'); await active('grid:alpha-archive');
+    await evaluate(`document.querySelector('.visitor-grid-world').focus()`); await pressKey('ArrowLeft');
+    await active('grid:alpha-home');
+    for (const direction of [-1, 1]) {
+      const target = await point('.visitor-grid-world__viewport', direction < 0 ? .72 : .28, .5);
+      await page.mouse.move(target.x, target.y); await page.mouse.down();
+      await page.mouse.move(target.x + direction * 180, target.y + 4, { steps: 8 }); await page.mouse.up();
+      await active(direction < 0 ? 'grid:alpha-archive' : 'grid:alpha-home');
+      assert.equal(await page.getByRole('group', { name: 'Artwork inspection', exact: true }).count(), 0,
+        'Display drag must not inspect artwork beneath the pointer');
+      const rail = await page.locator('[data-rail-slot]').evaluateAll(nodes => ({ count: nodes.length,
+        current: nodes.filter(node => !node.inert).length }));
+      assert.ok(rail.count <= 5); assert.equal(rail.current, 1);
+    }
+  } finally { await page.emulateMedia({ reducedMotion: 'no-preference' }); }
 });
 
 test('canonical published HTTPS and IPFS media render with no referrer', async () => {
   await viewport(1280, 720, false); await navigate();
-  await waitFor(`document.querySelectorAll('.visitor-grid-renderer [data-media-state="ready"]').length === 2`, 'canonical published images');
-  const policy = await evaluate(`[...document.querySelectorAll('.visitor-grid-renderer img')].map((image)=>image.referrerPolicy)`);
+  await waitFor(`document.querySelectorAll('.visitor-grid-world__grid-plane--current .visitor-grid-renderer [data-media-state="ready"]').length === 2`, 'canonical published images');
+  const policy = await evaluate(`[...document.querySelectorAll('.visitor-grid-world__grid-plane--current .visitor-grid-renderer img')].map((image)=>image.referrerPolicy)`);
   assert.equal(policy.length, 2); assert.ok(policy.every((value) => value === 'no-referrer'));
   assert.ok(imageRequests.some((url) => url.includes('/ipfs/') && url.includes('space-Alpha.png')), 'IPFS media used the configured HTTPS gateway');
-  assert.equal(await evaluate(`document.querySelector('[data-placement-id="art:Alpha:https"] img').loading`), 'eager');
-  const transformed = await evaluate(`(()=>{const n=document.querySelector('[data-placement-id="art:Alpha:ipfs"] img');return {transform:n.style.transform}})()`);
+  assert.equal(await evaluate(`document.querySelector('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"] img').loading`), 'eager');
+  const transformed = await evaluate(`(()=>{const n=document.querySelector('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:ipfs"] img');return {transform:n.style.transform}})()`);
   assert.match(transformed.transform, /scale\(-1, 1\) rotate\(90deg\)/);
-  const fit = await evaluate(`(()=>{const dimensions=(id)=>{const p=document.querySelector('[data-placement-id="'+id+'"]');const opening=p.querySelector('.lattice-production-placement__opening');const o=opening.getBoundingClientRect();const i=p.querySelector('img').getBoundingClientRect();return {opening:{w:o.width,h:o.height,overflow:getComputedStyle(opening).overflow},image:{w:i.width,h:i.height}}};return {native:dimensions('art:Alpha:https'),cropped:dimensions('art:Alpha:ipfs')}})()`);
-  assert.equal(fit.native.opening.overflow, 'hidden');
+  const fit = await evaluate(`(()=>{const dimensions=(id)=>{const p=document.querySelector('.visitor-grid-world__grid-plane--current [data-placement-id="'+id+'"]');const opening=p.querySelector('.lattice-production-placement__opening');const o=opening.getBoundingClientRect();const i=p.querySelector('img').getBoundingClientRect();return {opening:{w:o.width,h:o.height,overflow:getComputedStyle(opening).overflow},image:{w:i.width,h:i.height}}};return {native:dimensions('art:Alpha:https'),cropped:dimensions('art:Alpha:ipfs')}})()`);
+  const clipping = await page.locator('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:ipfs"] img').evaluate(image => ({
+    supported: CSS.supports('object-view-box', 'inset(0%)'), viewBox: getComputedStyle(image).objectViewBox,
+    crop: image.closest('.display-artwork-surface').style.getPropertyValue('--display-media-viewbox') }));
+  if (clipping.supported) { assert.match(clipping.viewBox, /^inset\(/); assert.match(clipping.crop, /^inset\(/); }
+  else assert.equal(fit.native.opening.overflow, 'hidden');
   assert.ok(fit.native.image.w <= fit.native.opening.w + 2 && fit.native.image.h <= fit.native.opening.h + 2,
     `native no-crop media is contained: ${JSON.stringify(fit.native)}`);
   assert.ok(fit.cropped.image.w >= fit.cropped.opening.w - 1 && fit.cropped.image.h >= fit.cropped.opening.h - 1,
@@ -436,10 +440,10 @@ test('canonical published HTTPS and IPFS media render with no referrer', async (
 test('canonical broken media reaches fallback after retries and recovers on a new source', async () => {
   await navigate();
   await evaluate(`window.__fixture.setArtworkUrl('https://published-images.invalid/broken-art.png')`);
-  await waitFor(`document.querySelector('[data-placement-id="art:Alpha:https"]')?.dataset.mediaState === 'failed'`, 'canonical broken media fallback');
-  assert.match(await evaluate(`document.querySelector('[data-placement-id="art:Alpha:https"] .lattice-production-placement__status').textContent`), /Artwork unavailable/);
+  await waitFor(`document.querySelector('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"]')?.dataset.mediaState === 'failed'`, 'canonical broken media fallback');
+  assert.match(await evaluate(`document.querySelector('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"] .lattice-production-placement__status').textContent`), /Artwork unavailable/);
   await evaluate(`window.__fixture.setArtworkUrl('https://published-images.invalid/recovered-art.png')`);
-  await waitFor(`document.querySelector('[data-placement-id="art:Alpha:https"]')?.dataset.mediaState === 'ready'`, 'canonical media recovery');
+  await waitFor(`document.querySelector('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"]')?.dataset.mediaState === 'ready'`, 'canonical media recovery');
 });
 
 test('an actual CSP response header blocks disallowed canonical media and exposes fallback', async () => {
@@ -448,7 +452,7 @@ test('an actual CSP response header blocks disallowed canonical media and expose
   try {
     await viewport(1280, 720, false); await navigateCsp();
     await evaluate(`window.__fixture.setArtworkUrl('https://csp-blocked.invalid/art.png')`);
-    await page.locator('[data-placement-id="art:Alpha:https"][data-media-state="failed"]').waitFor({ state: 'visible', timeout: 10_000 });
+    await page.locator('.visitor-grid-world__grid-plane--current [data-placement-id="art:Alpha:https"][data-media-state="failed"]').waitFor({ state: 'visible', timeout: 10_000 });
     await page.waitForTimeout(100);
   } finally {
     acceptingExpectedCspProblems = false;
@@ -457,12 +461,19 @@ test('an actual CSP response header blocks disallowed canonical media and expose
   assert.equal(imageRequests.some((url) => url.startsWith('https://csp-blocked.invalid/')), false, 'CSP stopped media before an outbound request');
 });
 
-test('narrow visitor mode keeps Directory and Return reachable without desktop authoring parity', async () => {
+test('narrow mobile entry offers the desktop experience with Directory and Return reachable', async () => {
   await viewport(390, 844, true); await navigate(profileB);
   const commands = await evaluate(`[...document.querySelectorAll('.visitor-grid-world__actions button')].map((button)=>({text:button.textContent.trim(),rect:button.getBoundingClientRect().toJSON()}))`);
   assert.equal(commands.length, 2);
+  await page.screenshot({ path: '.browser-test-runtime/visitor-routing-390.png' });
   assert.ok(commands.every(({ rect }) => rect.left >= 0 && rect.right <= 390 && rect.top >= 0 && rect.bottom <= 844),
     `narrow commands escaped the viewport: ${JSON.stringify(commands)}`);
+  await viewport(320, 844, true);
+  const narrowBounds = await page.locator('.visitor-grid-world__dock button').evaluateAll(buttons => buttons.map(button => {
+    const rect = button.getBoundingClientRect(); return rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight;
+  }));
+  assert.ok(narrowBounds.every(Boolean), 'all dock actions remain on screen at 320px');
+  await page.screenshot({ path: '.browser-test-runtime/visitor-routing-320.png' });
   await click('.visitor-grid-world__actions button:first-child');
   await waitFor(`!!document.querySelector('.public-entry-portal[data-embedded]')`, 'narrow directory opens');
   await click('[aria-label="Return to workspace"]');
@@ -472,7 +483,7 @@ test('narrow visitor mode keeps Directory and Return reachable without desktop a
   assert.equal(await evaluate(`document.querySelectorAll('[data-resize-control]').length`), 0, 'narrow mode exposes no desktop resize control');
 });
 
-test('390px narrow accessibility tree exposes no misleading resize control', async () => {
+test('390px desktop opt-in exposes no misleading resize control', async () => {
   await viewport(390, 844, true); await navigate();
   assert.equal(await evaluate(`document.querySelectorAll('[data-resize-control]').length`), 0);
   const tree = await pageCdp.send('Accessibility.getFullAXTree');

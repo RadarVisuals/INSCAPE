@@ -5,6 +5,7 @@ const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolve
 
 export const BROWSER_LIFECYCLE_TIMEOUTS = Object.freeze({
   setupOverallMs: 60_000,
+  serverSetupMs: 15_000,
   commandMs: 3_000,
   processInventoryMs: 3_000,
   processTerminationMs: 4_000,

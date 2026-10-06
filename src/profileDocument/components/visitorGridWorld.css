@@ -55,6 +55,17 @@
   .visitor-grid-world__actions button { width: 60px; min-width: 60px; padding-inline: 4px; flex-basis: 60px; }
   .visitor-grid-world__navigation span { min-width: 52px; }
   .visitor-grid-world__brand { display: none; }
+  /* Reserve a second dock row for profile routing when present. Long Grid
+     titles must never push Return or Discover beyond a narrow viewport. */
+  .visitor-grid-world[data-workbench]:has(> .visitor-grid-world__dock .visitor-grid-world__actions) {
+    --visitor-dock-height: 84px; --workflow-dock-height: 84px;
+  }
+  .visitor-grid-world[data-workbench] .visitor-grid-world__dock > nav { flex-wrap: wrap; }
+  .visitor-grid-world[data-workbench] .visitor-grid-world__dock > nav > button,
+  .visitor-grid-world[data-workbench] .visitor-grid-world__navigation { height: 41px; }
+  .visitor-grid-world[data-workbench] .visitor-grid-world__navigation { flex: 1; min-width: 0; }
+  .visitor-grid-world[data-workbench] .visitor-grid-world__navigation span { flex: 1; min-width: 0; }
+  .visitor-grid-world[data-workbench] .visitor-grid-world__actions { flex: 0 0 100%; height: 42px; justify-content: flex-end; box-sizing: border-box; border-top: 1px solid var(--lattice-menu-line); }
 }
 .visitor-grid-world[data-embedded-display] { position: absolute; inset: 0; background: transparent; pointer-events: none; }
 .visitor-grid-world[data-embedded-display] > .system-workflow__workbench { background: transparent; pointer-events: none; }

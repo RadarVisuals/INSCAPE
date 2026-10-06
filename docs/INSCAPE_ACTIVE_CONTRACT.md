@@ -844,6 +844,7 @@ Owner preview and Mobile Visitor use the same renderer. Phone visitors enter the
 Mobile presentation without loading the desktop Workbench; desktop visitors do
 not load the Mobile renderer or editor. A profile without a published Mobile
 presentation has an explicit unavailable state and an optional desktop action.
+Both Mobile entry surfaces own pointer input within the application shell.
 Theme persists across the card, Index and viewer. The founder's Steyra renderer
 and separate Through the Eye / seven-layer experiment are curated custom work,
 not a default template for other profiles. Executable imported themes, LSP8
@@ -1091,6 +1092,12 @@ layout in the owner view. Dimmed stacks sit behind live group windows so they
 cannot cover or intercept reading and artwork interactions.
 
 ## Public Workbench and visitor interaction
+
+At narrow desktop widths, Visitor profile-routing actions occupy a separate
+dock row when present. Discover, Return and Exit stay reachable without
+horizontal scrolling. The camera reserves the resulting dock height; long Grid
+titles shrink within their own row. Mobile entry still requires the explicit
+desktop action before opening this Workbench.
 
 On 2026-10-05 the founder removed the custom reference frame and chose a fixed
 4,000 × 4,000 work-pixel area. There is no Frame toggle, width/height setup,
