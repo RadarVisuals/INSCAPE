@@ -44,7 +44,7 @@ test('Text scrolls only when content exceeds its viewport in Write and Read', as
           key: JSON.stringify({ write, count, scale, height, width, padding, paragraphs, title, fontSize }), label: 'Text', title: '', chrome: 'bevel', className: 'text-window text-window--read',
           initialX: 24, initialY: 48, width, initialHeight: height, resizableWidth: true,
         }, h('div', { className: 'text-module-body', style: { background: '#000000', color: '#ffffff' } },
-          h(Viewport, { automaticPadding: !padding, mode: write ? 'write' : 'read' }, write ? h('div', {}, h(Editor, { article, onChange: () => {} })) : h(View, { article }))
+          h(Viewport, { article, automaticPadding: !padding, mode: write ? 'write' : 'read' }, write ? h('div', {}, h(Editor, { article, onChange: () => {} })) : h(View, { article }))
         )))));
       };
       window.showActualText = () => {
@@ -73,7 +73,7 @@ test('Text scrolls only when content exceeds its viewport in Write and Read', as
         assert.deepEqual(await page.locator('.text-document p').first().boundingBox(), initialParagraph, 'fitting text stays in place in both wheel directions');
       }
       await page.screenshot({ path: join(screenshots, `text-fit-${width}-${write ? 'write' : 'read'}.png`) });
-      await page.evaluate(options => window.showScrollFixture(options), { write, count: 4, height: 210 });
+      await page.evaluate(options => window.showScrollFixture(options), { write, count: 4, height: write ? 270 : 210 });
       await page.locator('.text-document p').first().waitFor();
       assert.equal(await scroll.evaluate(el => el.scrollHeight - el.clientHeight), 0, 'last paragraph adds no trailing paragraph gap');
       await page.evaluate(options => window.showScrollFixture(options), { write, count: 20 });
@@ -92,17 +92,19 @@ test('Text scrolls only when content exceeds its viewport in Write and Read', as
       "My legs get me upright. I wipe my mouth on the cloth. Being left alive doesn’t mean I was spared.Shit is full of living things.",
     ];
     for (const write of [true, false]) {
-      await page.evaluate(o => window.showScrollFixture(o), { write, width: 696, height: 336, paragraphs });
+      // Write also reserves its optional inline title field; Read omits it.
+      const height = write ? 400 : 336;
+      await page.evaluate(o => window.showScrollFixture(o), { write, width: 696, height, paragraphs });
       await page.locator('.text-document p').first().waitFor();
       await page.waitForTimeout(60);
       const measured = await page.locator('.text-module-scroll').evaluate(el => ({ client: el.clientHeight, scroll: el.scrollHeight, last: el.querySelector('.text-document p:last-child').getBoundingClientRect().bottom - el.getBoundingClientRect().top }));
       assert.ok(measured.last < measured.client && measured.scroll === measured.client, `automatic bottom padding yields when the writing fits: ${JSON.stringify({ write, measured })}`);
-      await page.evaluate(o => window.showScrollFixture(o), { write, width: 696, height: 336, paragraphs, padding: { top: 24, right: 24, bottom: 16, left: 24 } });
+      await page.evaluate(o => window.showScrollFixture(o), { write, width: 696, height, paragraphs, padding: { top: 24, right: 24, bottom: 16, left: 24 } });
       await page.locator('.text-document p').first().waitFor();
       assert.equal(await page.locator('.text-module-scroll').evaluate(el => el.scrollHeight - el.clientHeight), 0, 'video text fits without reserved bottom spacing');
       await page.locator('.text-module-scroll').hover(); await page.mouse.wheel(0, 300); await page.waitForTimeout(100);
       assert.equal(await page.locator('.text-module-scroll').evaluate(el => el.scrollTop), 0);
-      await page.evaluate(o => window.showScrollFixture(o), { write, width: 696, height: 336, paragraphs, padding: { top: 24, right: 24, bottom: 48, left: 24 } });
+      await page.evaluate(o => window.showScrollFixture(o), { write, width: 696, height, paragraphs, padding: { top: 24, right: 24, bottom: 48, left: 24 } });
       await page.locator('.text-document p').first().waitFor();
       assert.ok(await page.locator('.text-module-scroll').evaluate(el => el.scrollHeight > el.clientHeight), 'explicit bottom spacing stays authored and scrollable');
     }

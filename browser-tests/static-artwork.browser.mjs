@@ -97,7 +97,7 @@ test('Static artwork tools, inspection and Visitor work without the removed anim
       const Visitor = (await import('/src/profileDocument/components/ProfileDocumentV9Visitor.jsx')).default;
       window.reviewRoot.render(React.createElement(Visitor, { document: await window.buildDisplayDocument() }));
     });
-    await page.waitForFunction(() => document.querySelectorAll('figure[data-placement-id] img.is-ready').length === 2);
+    await page.waitForFunction(() => document.querySelectorAll('.visitor-grid-world__grid-plane--current figure[data-placement-id] img.is-ready').length === 2);
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 1000 });
       await page.screenshot({ path: join(shots, `visitor-${width}.png`) });

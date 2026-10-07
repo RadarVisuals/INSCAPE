@@ -19,6 +19,17 @@ export function createWorkbenchSession({ store }) {
     return true;
   }
   return Object.freeze({
+    setMenuSurface({ expected, menuSurfaceId }) {
+      return transact(draft => {
+        if (draft.appearance.menuSurfaceId !== expected) {
+          throw failure('SYSTEM_WORKFLOW_APPEARANCE_STALE', 'The window theme changed. Reopen Settings before saving.');
+        }
+        if (menuSurfaceId === expected) return null;
+        // The v4 envelope stores the shared chrome theme with primary appearance.
+        // Its owner is the Workbench, regardless of the selected Display.
+        return assertValidSystemWorkflowDraft({ ...draft, appearance: { ...draft.appearance, menuSurfaceId } });
+      });
+    },
     saveWorkbench(workbench) {
       return transact(draft => assertValidSystemWorkflowDraft({ ...draft, workbench: structuredClone(workbench) }), { recordHistory: false });
     },

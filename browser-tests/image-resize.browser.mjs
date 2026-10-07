@@ -74,8 +74,26 @@ for (const width of [1440, 390]) test(`Image resize controls expose transparent,
     await page.getByRole('spinbutton', { name: 'Image width', exact: true }).focus();
     assert.equal(await opacity(bounds), '1', 'active Image stays outlined while its tools have focus');
     await page.screenshot({ path: `.browser-test-runtime/image-resize-${width}-wide.png` });
-    await transparent.locator('.image-module__canvas').hover();
+    const transparentCanvas = transparent.locator('.image-module__canvas');
+    // Companion tools may cover this fixture's centre on a narrow Workbench.
+    // Hover a real exposed part of the canvas; never bypass its hit testing.
+    const hoverPoint = await transparentCanvas.evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      for (const fraction of [.5, .25]) {
+        const point = { x: rect.width / 2, y: rect.height * fraction };
+        if (node.contains(document.elementFromPoint(rect.x + point.x, rect.y + point.y))) return point;
+      }
+      return null;
+    });
+    assert.ok(hoverPoint, 'the second Image has an exposed canvas point that receives pointer input');
+    await transparentCanvas.evaluate(node => {
+      window.__imageCanvasPointerMove = false;
+      node.addEventListener('pointermove', () => { window.__imageCanvasPointerMove = true; }, { once: true });
+    });
+    await transparentCanvas.hover({ position: hoverPoint });
+    assert.equal(await page.evaluate(() => window.__imageCanvasPointerMove), true, 'the second Image canvas receives the real pointer movement');
     assert.equal(await opacity(transparent.locator('.image-module__bounds')), '0', 'hover does not select another Image');
+    await page.screenshot({ path: `.browser-test-runtime/image-resize-${width}-hover.png` });
     await transparent.focus();
     assert.equal(await opacity(transparent.locator('.image-module__bounds')), '1');
     assert.equal(await opacity(bounds), '0', 'selecting another Image clears the old editing bounds');

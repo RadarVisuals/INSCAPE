@@ -40,7 +40,7 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     await menu.getByRole('menuitem', { name: 'ADD', exact: true }).click(); await menu.getByRole('menuitem', { name: 'TEXT', exact: true }).click();
     await page.waitForTimeout(1500);
     const text = page.locator('[data-workbench-module="text"]'), tools = page.locator('.text-tools-window');
-    await tools.getByRole('button', { name: 'Add title', exact: true }).click();
+    assert.equal(await text.getByRole('textbox', { name: 'Article title', exact: true }).getAttribute('placeholder'), 'Title');
     assert.equal(await text.getByRole('textbox', { name: 'Article title', exact: true }).evaluate(node => node.tagName), 'TEXTAREA');
     await text.getByRole('textbox', { name: 'Article title', exact: true }).fill('Notes from the Lunar Desert');
     const content = text.getByRole('textbox', { name: 'Article text', exact: true });
@@ -145,7 +145,8 @@ test('Text module authors, reloads, renders and contains content at wide/narrow 
     }
     assert.equal(await text.getByRole('button', { name: /NFT|Import|Export/i }).count(), 0);
     assert.equal(await text.locator('input[type=file]').count(), 0);
-    await text.getByRole('button', { name: 'Read', exact: true }).click();
+    // The authored window can extend beyond the narrow camera viewport; use its keyboard action.
+    await text.getByRole('button', { name: 'Read', exact: true }).press('Enter');
     await page.screenshot({ path: '.browser-test-runtime/text-narrow-read.png' });
     const ownerViewport = await text.locator('.text-module-scroll').evaluate(node => ({ width: node.clientWidth, height: node.clientHeight }));
     const records = await page.evaluate(async () => {

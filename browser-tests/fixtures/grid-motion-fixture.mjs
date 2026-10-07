@@ -4,6 +4,7 @@ export async function mountGridMotionFixture(page, { origin, visitor = false, he
   await page.route('**/motion-artwork.png', route => route.fulfill({ contentType: 'image/jpeg', path: 'browser-tests/fixtures/grid-landscape.jpg' }));
   await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', route => route.fulfill({ contentType: 'image/webp', path: `public/${new URL(route.request().url()).pathname.split('/public/')[1]}` }));
   if (artwork?.body) await page.route(artwork.url, route => route.fulfill({ contentType: artwork.contentType || 'image/svg+xml', body: artwork.body }));
+  if (inspectionArtwork?.body) await page.route(inspectionArtwork.url, route => route.fulfill({ contentType: inspectionArtwork.contentType || 'image/svg+xml', body: inspectionArtwork.body }));
   await page.route(`${origin}/__motion__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
   await page.goto(`${origin}/__motion__`);
   await page.evaluate(async ({ visitor, heavy, count, displayWidth, grain, edgeReview, seamReview, artwork, inspectionArtwork, inspectionMode, textModes, adjoiningModules, workbenchGroups, privateModuleIds }) => {

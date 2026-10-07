@@ -15,6 +15,8 @@ test('released swipe keeps adjacent edges sealed at fractional sizes and pixel d
       await page.getByRole('button', { name: 'Make GRID 02 public', exact: true }).click();
       await page.getByRole('button', { name: 'Grids', exact: true }).click();
       await page.waitForTimeout(500);
+      await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).focus();
+      await page.keyboard.press('Enter');
       // High-contrast paint isolates a real compositor seam from artwork and guide lines.
       await page.addStyleTag({ content: `
         .system-workflow__canvas, .visitor-grid-world__viewport { background: magenta !important; }
@@ -28,12 +30,10 @@ test('released swipe keeps adjacent edges sealed at fractional sizes and pixel d
         }
         const selector = mode === 'editor' ? '.system-workflow__canvas' : '.visitor-grid-world__viewport';
         const box = await page.locator(selector).boundingBox();
-        await page.keyboard.down('Space');
         await page.mouse.move(box.x + box.width * .8, box.y + box.height * .5);
         await page.mouse.down();
         await page.mouse.move(box.x + box.width * .55, box.y + box.height * .5, { steps: 5 });
         await page.mouse.up();
-        await page.keyboard.up('Space');
         const track = mode === 'editor' ? '.system-workflow__grid-track' : '.visitor-grid-world__grid-track';
         await page.locator(track).evaluate(node => node.getAnimations().forEach(animation => animation.pause()));
         for (const time of [35, 110, 210]) {

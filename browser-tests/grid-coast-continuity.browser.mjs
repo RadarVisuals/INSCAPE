@@ -15,7 +15,7 @@ test('released and playing layered scenes cross seams while the editor thread is
       const page = await browser.newPage({ viewport: { width, height: 1000 } });
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      await mountGridMotionFixture(page, { origin, visitor, heavy: true, count });
+      await mountGridMotionFixture(page, { origin, visitor, heavy: true, count, displayWidth: Math.min(1000, width - 40) });
       const stage = page.locator(visitor ? '.visitor-grid-world__viewport' : '[data-system-workflow-artboard]');
       await stage.waitFor();
       await page.waitForFunction(() => {
@@ -46,7 +46,10 @@ test('released and playing layered scenes cross seams while the editor thread is
         });
       } else {
         const x = box.x + box.width * .8, y = box.y + box.height * .6;
-        if (!visitor) await page.keyboard.down('Space');
+        if (!visitor) {
+          await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).focus();
+          await page.keyboard.press('Enter');
+        }
         await page.mouse.move(x, y); await page.mouse.down();
         await page.evaluate(async ({ x, y, visitor }) => {
           const node = document.querySelector(visitor ? '.visitor-grid-world__viewport' : '[data-system-workflow-artboard]');
@@ -71,7 +74,7 @@ test('released and playing layered scenes cross seams while the editor thread is
         }, kind === 'coast' ? Math.max(0, animation.effect.getTiming().duration - 220) : 100);
       }, kind);
       await page.waitForTimeout(1300);
-      await page.mouse.up(); if (!visitor) await page.keyboard.up('Space');
+      await page.mouse.up();
       await cdp.send('Page.stopScreencast');
       const blocked = await page.evaluate(() => window.__blocked), inspected = [];
       for (const frame of frames) {

@@ -84,6 +84,8 @@ test('owner and Visitor focus live modules, inspect them and return without chan
       assert.equal(await focus(page).isDisabled(), true, 'arrival releases selection for content interaction');
       assert.equal(await back(page).isEnabled(), true);
       const first = await camera(page);
+      assert.equal(await page.getByRole('button', { name: 'Reset Workbench zoom to 100%', exact: true }).textContent(),
+        `${Math.round(first.scale * 100)}%`, 'zoom readout matches the focused camera');
       assert.notDeepEqual(first, before);
       assert.equal(await page.evaluate(() => window.destinationNodes.every(node => node.isConnected)), true, 'live modules remain mounted');
       if (!reduced) {
@@ -115,6 +117,8 @@ test('owner and Visitor focus live modules, inspect them and return without chan
       sameCamera(await camera(page), secondOrigin);
       await back(page).click(); await arrived(page);
       sameCamera(await camera(page), before);
+      assert.equal(await page.getByRole('button', { name: 'Reset Workbench zoom to 100%', exact: true }).textContent(),
+        `${Math.round(before.scale * 100)}%`, 'zoom readout matches the restored camera');
       assert.equal(await back(page).isDisabled(), true);
       assert.equal(await page.locator('[data-workbench-view-id="image:motion-0"]').evaluate(node => node === document.activeElement || node.contains(document.activeElement)), true);
       const restored = await page.evaluate(() => ({ draft: localStorage.getItem(window.__motionKey), layouts: Object.fromEntries(Object.keys(localStorage)
@@ -268,5 +272,55 @@ test('camera journeys retarget, retain interrupted Back, and stop for input, loc
     sameCamera(await read(page), original);
     assert.equal(await back(page).isDisabled(), true);
     assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test('zoom percentage follows Focus, wheel, reset, Back and interrupted travel', { timeout: 60000 }, async () => {
+  const browser = await launch();
+  try {
+    for (const width of [1200, 390]) for (const reducedMotion of ['no-preference', 'reduce']) {
+      const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion });
+      const errors = []; page.on('pageerror', error => errors.push(error.message));
+      await mountLifetime(page);
+      const mismatches = [];
+      const check = async label => {
+        const actual = await page.evaluate(() => ({
+          scale: window.destinationCamera().scale,
+          label: document.querySelector('[aria-label="Reset Workbench zoom to 100%"]')?.textContent,
+        }));
+        const expected = `${Math.round(actual.scale * 100)}%`;
+        if (actual.label !== expected) mismatches.push({ action: label, expected, ...actual });
+      };
+      const wheel = async deltaY => {
+        await page.locator('main').dispatchEvent('wheel', {
+          ctrlKey: true, deltaY, clientX: width / 2, clientY: 350, bubbles: true, cancelable: true,
+        });
+        await advance(page, 32);
+      };
+      const initial = await read(page);
+      await check('initial');
+      await begin(page); await advance(page, 160); await check('during focus');
+      await advance(page); await check('after focus');
+      const focused = await read(page);
+      assert.notDeepEqual(focused, initial, 'Focus must actually move the camera');
+      await wheel(120); await check('wheel after focus');
+      assert.notEqual((await read(page)).scale, focused.scale, 'wheel still changes the camera');
+      await page.getByRole('button', { name: 'Reset Workbench zoom to 100%', exact: true }).dispatchEvent('click');
+      await advance(page, 32); await check('percentage reset');
+      near((await read(page)).scale, 1, 'reset restores native zoom');
+      await back(page).dispatchEvent('click'); await advance(page, 160); await check('during Back');
+      await advance(page); await check('after Back');
+      await wheel(90); await check('wheel after Back');
+      await begin(page); await advance(page, 160);
+      await wheel(70); await check('wheel interrupts focus');
+      await advance(page); await check('interrupted focus stays settled');
+      await page.locator('main').focus(); await page.keyboard.press('Control+0');
+      await advance(page, 32); await check('keyboard reset');
+      near((await read(page)).scale, 1, 'reset restores native zoom');
+      await page.screenshot({ path: `.browser-test-runtime/zoom-readout-${width}-${reducedMotion}.png` });
+      assert.deepEqual(mismatches, [], `${width}px / ${reducedMotion}: displayed zoom must track the camera`);
+      assert.deepEqual(errors, []);
+      await page.close();
+    }
   } finally { await browser.close(); }
 });

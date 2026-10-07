@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { captureWorkbenchPresentation } from './workbenchPresentationCapture.js';
+import { captureDisplayPresentation, restoreDisplayPresentation } from './displayPresentation.js';
+import { isValidPlacementMedia } from '../../systemWorkflow/domain/placementMedia.js';
 import { createDefaultWorkbenchPresentation, createMiniAppPresentation, assertWorkbenchPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../../profileDocument/domain/profileDocumentV9Asset.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
 import { createWorkbenchSession } from '../../systemWorkflow/workbenchSession.js';
 
-const input = overrides => ({ layout: createDefaultWorkbenchPresentation(), assetRecords: [],
-  displayOpen: true, identityOpen: false, ...overrides });
+const input = overrides => ({ layout: createDefaultWorkbenchPresentation(), identityOpen: false, ...overrides });
 const display = (id, name) => ({ id, ...createDefaultWorkbenchPresentation().display, name });
 const contractAddress = '0x2222222222222222222222222222222222222222';
 const asset = { id: `42:${contractAddress}:0x01`, chainId: 42, contractAddress, tokenId: '0x01', standard: 'LSP8',
@@ -23,7 +24,7 @@ test('capture is read-only; only explicit saving persists the layout through the
   const storage = { getItem: key => entries.get(key) ?? null, setItem: (key, value) => entries.set(key, value) };
   const store = createSystemWorkflowDraftStore({ profileAddress: '0x1111111111111111111111111111111111111111', storage });
   const before = store.getDraft();
-  const source = freeze(input({ displayOpen: false, identityOpen: true }));
+  const source = freeze(input({ displayPresentations: { 'display:primary': { ...createDefaultWorkbenchPresentation().display, open: false } }, identityOpen: true }));
   const result = captureWorkbenchPresentation(source);
   assert.equal(result.error, null);
   assertWorkbenchPresentation(result.value);
@@ -83,38 +84,42 @@ test('removed modules contribute neither saved layouts nor cached errors, includ
   assert.match(active.error, /shortcut artwork.*unavailable/);
 });
 
-test('saved shortcut artwork remains usable without Library records until its selected media changes', () => {
-  const layout = createDefaultWorkbenchPresentation();
-  const icon = createProfileDocumentV9AssetResolver([asset], { compactContentReference: false })(asset.id, selectedMedia);
-  layout.display.shortcut.icon = icon;
-  const shortcut = { ...layout.display.shortcut, iconAssetId: asset.id, iconMedia: selectedMedia,
-    position: { left: 220, top: 170 }, visible: false };
-  const source = freeze(input({ layout, shortcut }));
-  const same = captureWorkbenchPresentation(source);
-  assert.equal(same.error, null);
-  assert.deepEqual(same.value.display.shortcut.icon, icon);
-  assert.deepEqual(same.value.display.shortcut.position, shortcut.position);
-  assert.equal(same.value.display.shortcut.visible, false);
-  assert.equal(captureWorkbenchPresentation({ ...source, shortcut: { ...shortcut, iconMedia: null } }).error, null);
-  const changed = { ...source, shortcut: { ...shortcut, iconMedia: { ...selectedMedia, width: 640 } } };
-  assert.equal(captureWorkbenchPresentation(changed).value, null);
-  const recovered = captureWorkbenchPresentation({ ...changed, assetRecords: [asset] });
-  assert.equal(recovered.error, null);
-  assert.equal(recovered.value.display.shortcut.icon.media.width, 640);
-  assert.equal(recovered.value.display.shortcut.icon.media.url, selectedMedia.url);
-  assertWorkbenchPresentation(recovered.value);
-});
-
-test('missing shortcut artwork blocks capture; loading its record or resetting the icon recovers', () => {
-  const source = input();
-  source.shortcut = { ...source.layout.display.shortcut, iconAssetId: asset.id, iconMedia: selectedMedia };
-  const missing = captureWorkbenchPresentation(source);
-  assert.equal(missing.value, null);
-  assert.match(missing.error, /Open Library.*reset its icon/);
-  const loaded = captureWorkbenchPresentation({ ...source, assetRecords: [asset] });
-  assert.equal(loaded.error, null);
-  assert.equal(loaded.value.display.shortcut.icon.media.url, selectedMedia.url);
-  const reset = captureWorkbenchPresentation({ ...source, shortcut: { ...source.shortcut, iconAssetId: null } });
-  assert.equal(reset.error, null);
-  assert.equal(reset.value.display.shortcut.icon, null);
-});
+for (const id of ['display:primary', 'display:second']) {
+  const capture = ({ layout, shortcut, assetRecords = [], ...options }) => captureWorkbenchPresentation(input({ layout,
+    displays: id === 'display:primary' ? [] : [{ id }],
+    displayPresentations: { [id]: captureDisplayPresentation(layout.display, shortcut, assetRecords) }, ...options }));
+  const resultDisplay = result => id === 'display:primary' ? result.value.display : result.value.displays[0];
+  test(id + ': saved shortcut stays usable until its selected media changes, then resolves or resets', () => {
+    const layout = createDefaultWorkbenchPresentation();
+    const icon = createProfileDocumentV9AssetResolver([asset], { compactContentReference: false })(asset.id, selectedMedia);
+    layout.display.shortcut.icon = icon;
+    const restored = restoreDisplayPresentation(layout.display);
+    assert.equal(isValidPlacementMedia(restored.shortcut.iconMedia), true, 'reload restores the selected image through the editable media contract');
+    assert.deepEqual(restored.shortcut.iconMedia, selectedMedia);
+    assert.deepEqual(captureDisplayPresentation(layout.display, restored.shortcut, []).shortcut.icon, icon);
+    const shortcut = { ...layout.display.shortcut, iconAssetId: asset.id, iconMedia: selectedMedia,
+      position: { left: 220, top: 170 }, visible: false };
+    const source = freeze({ layout, shortcut });
+    const same = capture(source);
+    assert.equal(same.error, null);
+    assert.deepEqual(resultDisplay(same).shortcut.icon, icon);
+    assert.deepEqual(resultDisplay(same).shortcut.position, shortcut.position);
+    assert.equal(resultDisplay(same).shortcut.visible, false);
+    assert.equal(capture({ ...source, shortcut: { ...shortcut, iconMedia: null } }).error, null);
+    const changed = { ...source, shortcut: { ...shortcut, iconMedia: { ...selectedMedia, width: 640 } } };
+    assert.equal(capture(changed).value, null);
+    const recovered = capture({ ...changed, assetRecords: [asset] });
+    assert.equal(recovered.error, null);
+    assert.equal(resultDisplay(recovered).shortcut.icon.media.width, 640);
+    assert.equal(resultDisplay(recovered).shortcut.icon.media.url, selectedMedia.url);
+    assertWorkbenchPresentation(recovered.value);
+    const missing = { layout: createDefaultWorkbenchPresentation(), shortcut };
+    assert.match(capture(missing).error, /Open Library.*reset its icon/);
+    const reset = capture({ ...missing, shortcut: { ...shortcut, iconAssetId: null } });
+    assert.equal(reset.error, null);
+    assert.equal(resultDisplay(reset).shortcut.icon, null);
+    const removed = capture({ ...missing, hasPrimaryDisplay: false, displays: [] });
+    assert.equal(removed.error, null);
+    assert.equal(removed.value.display.open, false);
+  });
+}

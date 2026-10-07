@@ -101,7 +101,7 @@ for (const width of [1440, 390]) test(`Text columns, inline title and module res
     let box = await text.boundingBox(), strip = await grip.boundingBox();
     assert.ok(strip.y + strip.height <= box.y - 27, 'action strip is clear of content and resize handles');
     const buttons = await grip.locator('button').all();
-    assert.equal(buttons.length, 4);
+    assert.equal(buttons.length, 5);
     for (const button of buttons) { const rect = await button.boundingBox(); near(rect.width, 32, 'equal action cells'); }
     for (const zoom of [.5, 1.37, 1]) {
       await setWorkbenchZoom(page, zoom);

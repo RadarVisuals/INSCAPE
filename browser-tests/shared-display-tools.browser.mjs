@@ -188,7 +188,8 @@ test('one shared Layers and Metadata window follow explicit Display targets with
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForFunction(() => {
       const rect = document.querySelector('.context-toolbar').getBoundingClientRect();
-      return rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight;
+      const controls = document.querySelector('.workbench-view-controls').getBoundingClientRect();
+      return rect.left >= 0 && rect.right <= innerWidth && rect.bottom <= controls.top - 7;
     });
     assert.equal(await dock.getByRole('button', { name: /Frame and/ }).count(), 0);
     await dock.getByRole('button', { name: 'Crop', exact: true }).click();

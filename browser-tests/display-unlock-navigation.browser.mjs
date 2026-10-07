@@ -3,6 +3,7 @@ import { mkdirSync } from 'node:fs';
 
 import test from 'node:test';
 import { chromium } from 'playwright-core';
+import { openDisplayMenu, activate } from './fixtures/display-controls.mjs';
 
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5178';
 test('Layers and direct editing retain an offset Grid through unlock, crop and navigation', { timeout: 240000 }, async () => {
@@ -131,19 +132,20 @@ test('Layers and direct editing retain an offset Grid through unlock, crop and n
       assert.equal(await offset(), restingOffset);
       await page.getByRole('button', { name: 'Tools', exact: true }).click();
       await page.getByRole('menuitem', { name: 'LAYERS', exact: true }).click();
-      await placement.focus(); await page.keyboard.down('Space');
-      await stage.dispatchEvent('pointerdown', { button: 0, pointerId: 9, clientX: box.x + box.width * .7, clientY: box.y + box.height * .5 });
-      await page.evaluate(({ x, y }) => window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 9, clientX: x, clientY: y, bubbles: true })),
-        { x: box.x + box.width * .6, y: box.y + box.height * .5 });
-      await page.waitForFunction(() => document.querySelector('[data-shared-tool="layers"] input[aria-label="Width"]')?.disabled);
-      assert.equal(await page.locator('[data-resize-corner="e"]').isEnabled(), false, 'active camera movement suspends resize');
+      // Grid playback suspends editing even while the Display is unlocked.
+      // Space is reserved for Workbench pan and does not drive this camera.
+      await openDisplayMenu(page, page.getByRole('article', { name: 'Display Module', exact: true }));
+      await page.getByRole('menuitem', { name: 'PLAY GRIDS', exact: true }).click();
+      await layers.locator('[data-authoring-locked]').waitFor();
+      assert.equal(await page.locator('[data-resize-corner="e"]').isEnabled(), false, 'Grid movement disables resize targets');
+      assert.equal(await layers.locator('.system-workflow__layer-visibility').first().isDisabled(), true, 'moving Grids cannot be edited');
       await page.waitForTimeout(160);
-      await stage.dispatchEvent('pointercancel', { pointerId: 9 }); await page.keyboard.up('Space');
-      await page.waitForFunction(() => document.querySelector('[data-shared-tool="layers"] input[aria-label="Width"]')?.disabled === false);
+      await activate(page, page.getByRole('button', { name: 'Pause Grids', exact: true }));
+      await layers.locator('[data-authoring-locked]').waitFor({ state: 'detached' });
+      await layers.locator('.system-workflow__layer-select').first().click();
+      assert.equal(await layers.getByRole('spinbutton', { name: 'Width', exact: true }).isEnabled(), true, 'Pause restores editing at the retained offset');
       await page.getByRole('button', { name: 'Close Layers', exact: true }).click();
-      // Space navigation still works unlocked. Unlocking during a coast cancels it.
-      await placement.focus(); await page.keyboard.down('Space'); await swipe(true); await page.keyboard.up('Space');
-      assert.ok(await offset() < -10);
+      // Unlocking during a coast cancels it without resetting the position.
       await lock(); await swipe(false); await unlock();
       await page.waitForTimeout(50); const stoppedOffset = await offset();
       await page.waitForTimeout(350); assert.equal(await offset(), stoppedOffset, 'old momentum cannot restart after unlock');
@@ -152,11 +154,12 @@ test('Layers and direct editing retain an offset Grid through unlock, crop and n
       const currentGrid = () => stage.locator('.system-workflow__grid-plane--current').getAttribute('data-rendered-grid-id');
       const previousGrid = await currentGrid();
       const heldMove = async distance => {
-        await stage.locator('[data-system-workflow-placement-id]').last().focus(); await page.keyboard.down('Space');
+        await lock();
         const x = box.x + box.width * .5, y = box.y + box.height * .5;
         await stage.dispatchEvent('pointerdown', { button: 0, pointerId: 9, clientX: x, clientY: y });
         await page.evaluate(({ x, y }) => window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 9, clientX: x, clientY: y, bubbles: true })), { x: x + distance, y });
-        await page.waitForTimeout(160); await stage.dispatchEvent('pointercancel', { pointerId: 9 }); await page.keyboard.up('Space');
+        await page.waitForTimeout(160); await stage.dispatchEvent('pointercancel', { pointerId: 9 });
+        await unlock();
         await page.waitForTimeout(30);
       };
       await heldMove(-box.width * 1.2);

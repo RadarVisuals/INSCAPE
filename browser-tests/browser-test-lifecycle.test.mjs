@@ -56,18 +56,23 @@ describe('Playwright browser lifecycle', () => {
       '.browser-test-runtime-published-visitor-1234-1785847105764-01234567-89ab-4cde-8fab-0123456789ab');
     const uniqueOwnerRoutingRuntimePath = resolve(workspaceRoot,
       '.browser-test-runtime-owner-routing-1234-1785847105764-01234567-89ab-4cde-8fab-0123456789ab');
+    const uniqueOwnerIdentityRuntimePath = resolve(workspaceRoot,
+      '.browser-test-runtime-owner-identity-1234-1785847105764-01234567-89ab-4cde-8fab-0123456789ab');
     assert.equal(validateBrowserRuntimePath(task4aRuntimePath, workspaceRoot), task4aRuntimePath);
     assert.equal(validateBrowserRuntimePath(isolationRuntimePath, workspaceRoot), isolationRuntimePath);
     assert.equal(validateBrowserRuntimePath(uniqueTask4aRuntimePath, workspaceRoot), uniqueTask4aRuntimePath);
     assert.equal(validateBrowserRuntimePath(uniqueSystemCharacterizationRuntimePath, workspaceRoot), uniqueSystemCharacterizationRuntimePath);
     assert.equal(validateBrowserRuntimePath(uniquePublishedVisitorRuntimePath, workspaceRoot), uniquePublishedVisitorRuntimePath);
     assert.equal(validateBrowserRuntimePath(uniqueOwnerRoutingRuntimePath, workspaceRoot), uniqueOwnerRoutingRuntimePath);
+    assert.equal(validateBrowserRuntimePath(uniqueOwnerIdentityRuntimePath, workspaceRoot), uniqueOwnerIdentityRuntimePath);
     for (const unsafe of [workspaceRoot, resolve(workspaceRoot, 'other'), resolve(runtimePath, '.browser-test-runtime-task4a'),
       resolve(workspaceRoot, '..', '.browser-test-runtime'),
       resolve(workspaceRoot, '.browser-test-runtime-task4a-arbitrary'),
       resolve(workspaceRoot, '.browser-test-runtime-system-characterization-arbitrary'),
       resolve(workspaceRoot, '.browser-test-runtime-published-visitor-arbitrary'),
       resolve(workspaceRoot, '.browser-test-runtime-owner-routing-arbitrary'),
+      resolve(workspaceRoot, '.browser-test-runtime-owner-identity-arbitrary'),
+      resolve(workspaceRoot, 'nested', '.browser-test-runtime-owner-identity-1234-1785847105764-01234567-89ab-4cde-8fab-0123456789ab'),
       resolve(workspaceRoot, '.browser-test-runtime-task4a-1234-1785847105764-01234567-89ab-3cde-8fab-0123456789ab')]) {
       assert.throws(() => validateBrowserRuntimePath(unsafe, workspaceRoot), /Refusing browser runtime cleanup/);
     }

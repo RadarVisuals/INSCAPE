@@ -122,7 +122,7 @@ function ProfileDocumentV9Session({ document, onExit, onOpenDirectory, onReturn,
     onOpen: id => setMetadataSelection({ gridId: activeGrid.id, id }),
     onNavigate: id => setMetadataSelection({ gridId: activeGrid.id, id }),
   });
-  const viewerEntry = metadataSelection?.gridId === activeGrid?.id ? entriesById.get(metadataSelection.id) : null;
+  const viewerEntry = metadataSelection && metadataSelection.gridId === activeGrid?.id ? entriesById.get(metadataSelection.id) : null;
   const selectMetadata = id => { tools.activate(targetId); setMetadataSelection({ gridId: activeGrid.id, id }); };
   const playback = useGridPlayback({ playing,
     enabled: displayOpen && lastIndex > 0,

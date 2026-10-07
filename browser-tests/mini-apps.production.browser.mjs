@@ -5,13 +5,14 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { productionResponseSecurityHeaders } from '../scripts/productionSecurityPolicy.js';
 
-const origin = 'http://127.0.0.1:5193', appOrigin = 'https://new-mini-app.test';
+const appOrigin = 'https://new-mini-app.test';
 const secondOrigin = 'https://another-mini-app.test', radarOrigin = 'https://radar725.netlify.app';
 const profile = `0x${'1'.repeat(40)}`, account = `0x${'2'.repeat(40)}`;
 const headers = productionResponseSecurityHeaders();
 const bundle = await build({ entryPoints: ['browser-tests/mini-app-fixture.js'], bundle: true, write: false, format: 'iife' });
 await mkdir('output/mini-apps', { recursive: true });
-const server = await preview({ configFile: false, build: { outDir: 'dist' }, preview: { host: '127.0.0.1', port: 5193, strictPort: true, headers } });
+const server = await preview({ configFile: false, build: { outDir: 'dist' }, preview: { host: '127.0.0.1', port: 0, strictPort: true, headers } });
+const origin = `http://127.0.0.1:${server.httpServer.address().port}`;
 let browser;
 try {
   browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true,

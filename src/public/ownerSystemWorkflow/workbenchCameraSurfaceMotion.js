@@ -16,7 +16,6 @@ export function createWorkbenchCameraSurfaceMotion(host, entries, rasterCamera, 
   const overlay = host.querySelector('.workbench-selection');
   const selection = overlay?.getBoundingClientRect();
   const shortcuts = [...host.querySelectorAll('[data-workbench-pan]:not([data-workbench-view-id])')];
-  const zoom = host.querySelector('[aria-label="Reset Workbench zoom to 100%"]');
   for (const { node } of surfaces) node.setAttribute('data-workbench-camera-projected', '');
   return {
     isCurrent: () => entries.size === registered.size && [...registered].every(([id, node]) => entries.get(id) === node && node.isConnected),
@@ -51,7 +50,6 @@ export function createWorkbenchCameraSurfaceMotion(host, entries, rasterCamera, 
       host.dataset.workbenchCameraScale = String(camera.scale);
       host.dataset.workbenchCameraX = String(camera.offset.x);
       host.dataset.workbenchCameraY = String(camera.offset.y);
-      if (zoom) zoom.textContent = `${Math.round(camera.scale * 100)}%`;
     },
     dispose() {
       for (const { node } of surfaces) {

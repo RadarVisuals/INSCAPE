@@ -28,7 +28,7 @@ for (const viewScale of [1, .5]) test(`Text tools, save recovery and drag into a
         reviewCategories: [], reviewActivity: [], reviewDiscovery: [], reviewProfile: { name: 'Text transfer' } }));
     });
     const text = page.locator('[data-workbench-module="text"]'), output = text.locator('.text-window'), tools = page.locator('.text-tools-window');
-    await tools.getByRole('button', { name: 'Add title', exact: true }).click();
+    assert.equal(await output.getByRole('textbox', { name: 'Article title', exact: true }).getAttribute('placeholder'), 'Title');
     await output.getByRole('textbox', { name: 'Article title', exact: true }).fill('Arrival');
     const body = output.getByRole('textbox', { name: 'Article text', exact: true });
     await body.fill('The landscape remembers.'); await page.keyboard.press('Control+A');

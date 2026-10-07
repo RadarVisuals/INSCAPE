@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import RackMenu from '../menus/RackMenu.jsx';
-import { useWorkbenchView } from './WorkbenchView.jsx';
+import { useWorkbenchView } from './WorkbenchViewContext.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { unprojectWorkbenchPosition } from './workbenchSpace.js';
 

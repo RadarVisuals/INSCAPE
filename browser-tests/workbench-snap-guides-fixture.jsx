@@ -37,8 +37,7 @@ export function mount(width) {
           initialX={60} initialY={690} width={240} initialHeight={200} snapToGrid={preferences.shortcutSnap}>
           <p>A window can align to an edge, a grid line, or the chosen space between modules.</p>
         </WorkbenchWindow>
-        {settings && <Settings appearance={{ surfaceId: 'carbon', guideMode: 'NONE', guideSize: 0, guideColor: '#888888' }}
-          controller={{ draft: { profileAddress: 'snap-test' }, setAppearance() {} }} phase="open" workbenchPreferences={preferences}
+        {settings && <Settings profileAddress="snap-test" menuSurface="carbon" onMenuSurfaceChange={() => {}} phase="open" workbenchPreferences={preferences}
           onWorkbenchPreferencesChange={patch => setPreferences(p => ({ ...p, ...patch }))} onClose={() => setSettings(false)} />}
       </main>
     </WorkbenchPlacement></WorkbenchViewProvider>;

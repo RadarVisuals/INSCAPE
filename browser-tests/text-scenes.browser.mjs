@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
+import { activate } from './fixtures/display-controls.mjs';
 const origin = process.env.INSCAPE_TEXT_ROOT || 'http://127.0.0.1:5178';
 for (const sections of [false, true]) test(sections ? 'article sections link from Grid 2 and reading page 2, scroll and follow owner and Visitor Grids' : 'existing linked Text preserves separate passages and owner and Visitor navigation', { timeout: 120000 }, async () => {
   const browser = await chromium.launch({ executablePath: process.env.INSCAPE_BROWSER_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
@@ -62,10 +63,10 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
     const editor = text.getByRole('textbox', { name: 'Article text', exact: true });
     const navigateOwner = async direction => {
       const stage = page.locator('[data-system-workflow-artboard]'); const box = await stage.boundingBox();
-      await page.mouse.click(box.x + box.width * .8, box.y + box.height * .4);
-      await page.locator('main.system-workflow').focus();
-      await page.keyboard.down('Space'); await page.mouse.move(box.x + box.width * .7, box.y + box.height * .4); await page.mouse.down();
-      await page.mouse.move(box.x + box.width * (direction === 'next' ? .1 : .9), box.y + box.height * .4, { steps: 8 }); await page.mouse.up(); await page.keyboard.up('Space');
+      const lock = page.getByRole('button', { name: 'Lock Display Module composition', exact: true });
+      if (await lock.count()) await activate(page, lock);
+      await page.mouse.move(box.x + box.width * (direction === 'next' ? .8 : .2), box.y + box.height * .4); await page.mouse.down();
+      await page.mouse.move(box.x + box.width * (direction === 'next' ? .2 : .8), box.y + box.height * .4, { steps: 8 }); await page.mouse.up();
     };
     if (sections) {
       await editor.waitFor();
@@ -123,7 +124,7 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
     await editor.blur(); await navigateOwner('next');
     await page.screenshot({ path: '.browser-test-runtime/text-scene-authoring.png' });
     await editor.focus();
-    await page.waitForFunction(() => document.querySelector('.text-controls-body')?.textContent.includes('Silence'));
+    await page.waitForFunction(() => document.querySelector('.text-tools-window')?.textContent.includes('Silence'));
     assert.equal((await editor.innerText()).trim(), '', 'new scene starts with an empty passage');
     const passage = 'There is a low pressure somewhere inside my head. Not a sound exactly. More like something running underneath one. ';
     await editor.fill(passage.repeat(20));

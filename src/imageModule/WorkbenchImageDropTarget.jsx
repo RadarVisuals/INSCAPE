@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
+import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
 import { isWorkbenchBackground } from '../public/ownerSystemWorkflow/useWorkbenchPan.js';
 import { imageDropGeometry } from './imageDropGeometry.js';

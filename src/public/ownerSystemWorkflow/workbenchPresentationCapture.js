@@ -1,5 +1,5 @@
 import { createDefaultWorkbenchPresentation, createMiniAppPresentation, createTextPresentation } from '../../profileDocument/domain/workbenchPresentation.js';
-import { createProfileDocumentV9AssetResolver } from '../../profileDocument/domain/profileDocumentV9Asset.js';
+import { PRIMARY_DISPLAY_ID } from '../../systemWorkflow/domain/displayModules.js';
 import { createImagePresentation } from '../../imageModule/imageModule.js';
 import { createShapePresentation } from '../../shapes/shapes.js';
 import { createKeeperPresentation } from '../../keeper/keeper.js';
@@ -8,28 +8,16 @@ import { createKeeperPresentation } from '../../keeper/keeper.js';
 // presentation inputs; only the existing authoring session saves the result.
 // The current draft's module lists determine membership, never cached layouts.
 export function captureWorkbenchPresentation({
-  layout, shortcut, assetRecords, displayOpen, identityOpen, hasPrimaryDisplay = true,
+  layout, identityOpen, hasPrimaryDisplay = true,
   displays, miniApps, texts, displayPresentations = {}, miniAppPresentations = {}, textPresentations = {},
   imageModules, imagePresentations = {}, savedImagePresentations = [],
   shapes, shapePresentations = {}, savedShapePresentations = [],
   keeperDocks, keeperPresentations = {}, savedKeeperPresentations = [],
 }) {
   try {
-    if (displays?.some(({ id }) => displayPresentations[id] === null)) {
+    if (hasPrimaryDisplay && displayPresentations[PRIMARY_DISPLAY_ID] === null
+      || displays?.some(({ id }) => displayPresentations[id] === null)) {
       throw new Error('A Display shortcut is unresolved');
-    }
-
-    let capturedShortcut = layout.display.shortcut;
-    if (shortcut && hasPrimaryDisplay) {
-      const existing = capturedShortcut.icon;
-      const sameMedia = !shortcut.iconMedia || existing
-        && shortcut.iconMedia.url === existing.media.url
-        && shortcut.iconMedia.width === existing.media.width
-        && shortcut.iconMedia.height === existing.media.height;
-      const icon = !shortcut.iconAssetId ? null
-        : existing?.stableAssetId === shortcut.iconAssetId && sameMedia ? existing
-          : createProfileDocumentV9AssetResolver(assetRecords, { compactContentReference: false })(shortcut.iconAssetId, shortcut.iconMedia);
-      capturedShortcut = { position: shortcut.position, visible: shortcut.visible, icon, iconPresentation: shortcut.iconPresentation };
     }
 
     // Optional collections are rebuilt from authored membership. Saved layouts
@@ -52,7 +40,7 @@ export function captureWorkbenchPresentation({
         || savedMiniApps?.find(item => item.id === app.id) || createMiniAppPresentation(app.id, index)) } : {}),
       ...(displays ? { displays: displays.map(({ id }) => ({ id, ...(displayPresentations[id]
         || savedDisplays?.find(item => item.id === id) || createDefaultWorkbenchPresentation().display) })) } : {}),
-      display: hasPrimaryDisplay ? { ...layout.display, shortcut: capturedShortcut, open: displayOpen }
+      display: hasPrimaryDisplay ? displayPresentations[PRIMARY_DISPLAY_ID] || layout.display
         : { ...createDefaultWorkbenchPresentation().display, open: false },
       identity: { ...layout.identity, open: identityOpen },
     } };

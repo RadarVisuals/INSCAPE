@@ -4,13 +4,13 @@ import PagedArticle from './PagedArticle.jsx';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { X, Settings, Eye, Pencil, Plus } from '../public/InscapeIcons.jsx';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
-import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
+import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';
 import { clampWorkbenchPosition } from '../public/ownerSystemWorkflow/workbenchSpace.js';
 import { createTextPresentation } from '../profileDocument/domain/workbenchPresentation.js';
 import { createProfileDocumentV9AssetResolver } from '../profileDocument/domain/profileDocumentV9Asset.js';
 import useModuleShortcutMenu from '../public/ownerSystemWorkflow/useModuleShortcutMenu.jsx';
-import { assertArticle, textAppearance, textOutputStyle, textWindowStyle } from './domain/article.js';
+import { textAppearance, textOutputStyle, textWindowStyle } from './domain/article.js';
 import { saveTextModuleResult, unlinkTextModuleResult, prepareTextResize, changeTextFrames } from './textSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import TextTools from './TextTools.jsx';
@@ -21,10 +21,13 @@ import ArticleView from './ArticleView.jsx';
 import TextViewport from './TextViewport.jsx';
 import LinkedTextWindow, { TextFrameLinks } from './LinkedTextFrames.jsx';
 import { useArticleFlow } from './TextFrame.jsx';
-import { textRecoveryScope, readTextRecovery, retainTextRecovery, clearTextRecovery } from './textEditRecovery.js';
+import { textRecoveryScope } from './textEditRecovery.js';
+import useTextEditSession from './useTextEditSession.js';
 import '../public/ownerSystemWorkflow/displayInstruments.css';
 import './text.css';
 const ArticleEditor = lazy(() => import('./ArticleEditor.jsx'));
+const textValue = record => record;
+const saveText = (store, scope, expected, next, options) => saveTextModuleResult(store, scope.profile, expected, next, options);
 
 function TextInstance({ record, index, store, profileAddress, assets, registerTarget, placementTargets, initialPresentation, onPresentationChange, suspended, active, onActivate, windowSnap, initialView, onViewChange }) {
   const tools = useSharedTextTools();
@@ -32,7 +35,8 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   const view = workbenchModuleTransform(workbenchView, record.id);
   const { offset } = useWorkbenchCamera();
   const scope = textRecoveryScope(profileAddress, record.id);
-  const recovered = readTextRecovery(store, scope);
+  const { value: working, failed, error, reason, session: edit } = useTextEditSession({ store, scope, record, valueOf: textValue, saveRecord: saveText });
+  const { save: change, setError } = edit;
   const [presentation, setPresentation] = useState(() => initialPresentation || createTextPresentation(record.id, index));
   const linked = Boolean(presentation.frames?.length);
   const [flowEditor, setFlowEditor] = useState(null);
@@ -47,7 +51,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   const mode = view.presented ? 'read' : editingMode;
   const settings = Boolean(store && tools?.open && active);
   const setSettings = open => { onActivate(); tools?.setOpen(open); };
-  const [controlsHost, setControlsHost] = useState(null), [reason, setReason] = useState(recovered?.failure.reason || null), [destination, setDestination] = useState('');
+  const [controlsHost, setControlsHost] = useState(null), [destination, setDestination] = useState('');
   const toolsTrigger = useRef(null);
   const scenes = useSceneNavigation();
   const [linkTarget, setLinkTarget] = useState('');
@@ -55,9 +59,7 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   const displays = useMemo(() => draft ? textDisplays(draft) : [], [draft]);
   useEffect(() => { onViewChange?.(record.id, { mode: editingMode }); }, [record.id, editingMode, onViewChange]);
   useEffect(() => () => onViewChange?.(record.id, null), [record.id, onViewChange]);
-  const [working, setWorking] = useState(recovered?.value || record), [error, setError] = useState(recovered?.failure.message || '');
-  const latest = useRef(recovered?.expected || record), workingRef = useRef(working), failed = useRef(Boolean(recovered)), surface = useRef(null), editor = useRef(null), shortcut = useRef(null), live = useRef(true);
-  workingRef.current = working;
+  const surface = useRef(null), editor = useRef(null), shortcut = useRef(null);
   const scene = working.sceneLink ? scenes[working.sceneLink.displayId] : null;
   const sectionLink = working.sceneLink?.mode === 'sections';
   const sectionRead = sectionLink && mode === 'read';
@@ -73,35 +75,19 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   const missingDisplay = Boolean(store && working.sceneLink && !displays.some(display => display.id === working.sceneLink.displayId));
   const swiping = Boolean(scene?.targetGridId) && (!sectionLink || sectionRead);
   const editBlocked = view.presented || suspended || (!sectionLink && (unavailable || swiping));
-  useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
-  useEffect(() => {
-    if (!failed.current) { latest.current = record; setWorking(record); }
-  }, [record]);
-  const change = useCallback((next, options) => {
-    try {
-      assertArticle(next.article); setWorking(next); workingRef.current = next;
-      if (!live.current) return false;
-      const result = saveTextModuleResult(store, profileAddress, latest.current, next, options);
-      setReason(result.reason || null);
-      if (!result.saved) { retainTextRecovery(store, scope, latest.current, next, result); throw new Error(result.message); }
-      clearTextRecovery(store, scope);
-      latest.current = result.record; workingRef.current = result.record; setWorking(result.record);
-      failed.current = false; setError(''); return true;
-    } catch (e) { failed.current = true; setError(e.message); return false; }
-  }, [store, profileAddress, record.id]);
   const changeArticle = value => {
-    if (!editBlocked) change(editPassage(workingRef.current, gridId, value));
+    if (!editBlocked) change(editPassage(edit.getSnapshot().value, gridId, value));
   };
   const setEditor = useCallback(value => { editor.current = value; }, []);
   const acceptImage = useCallback((asset, point) => {
-    if (!live.current || !editor.current || editBlocked || !presentation.open || mode !== 'write') return false;
+    if (!edit.isCurrent() || !editor.current || editBlocked || !presentation.open || mode !== 'write') return false;
     const id = asset.stableAssetId || asset.id;
     try {
       const resolved = createProfileDocumentV9AssetResolver([{ ...(asset.assetRecord || asset), id }], { compactContentReference: false })(id, asset.selectedMedia);
       if (resolved.media.type !== 'image') throw new Error('Choose a Library image.');
       return editor.current.chain().insertArticleArtwork({ asset: resolved, alt: resolved.name || '', caption: '' }, point, flowEditor?.bridge.viewAt(point)).focus().run();
     } catch (e) { setError(e.message); return false; }
-  }, [editBlocked, presentation.open, mode, gridId, flowEditor]);
+  }, [edit, editBlocked, presentation.open, mode, gridId, flowEditor]);
   useEffect(() => {
     if (!store || !registerTarget || suspended || !presentation.open || mode !== 'write') return;
     registerTarget(record.id, { get node() { return surface.current; }, label: 'Insert artwork into article', placeAsset: acceptImage });
@@ -119,17 +105,17 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
   const resizeTarget = useMemo(() => {
     // Geometry commits clone the draft without changing this article. Keep the
     // resize handle mounted (and focused) across those equivalent snapshots.
-    return { enabled: Boolean(store) && !editBlocked && !failed.current && (working === record || JSON.stringify(working) === JSON.stringify(record)),
+    return { enabled: Boolean(store) && !editBlocked && !failed && (working === record || JSON.stringify(working) === JSON.stringify(record)),
       reflow: true, continuousGeometry: true,
       expected: record, store, profileAddress, layoutKey: 'texts', commit: commitWorkbenchSelectionResize, prepare: prepareTextResize,
       applyFrame: applyGroupFrame, reportError: setError, minimumWidth: 180, minimumHeight: 100,
       maximumWidth: 7992, maximumHeight: 7992,
     };
-  }, [store, profileAddress, editBlocked, working, record, applyGroupFrame]);
+  }, [store, profileAddress, editBlocked, failed, working, record, applyGroupFrame]);
   const name = article.title || 'Untitled article';
   const changeFrames = frames => {
-    if (editBlocked || failed.current) return;
-    try { setPresentation(changeTextFrames(store, profileAddress, latest.current, presentation, frames, workbenchView.getPresentation?.())); setError(''); return true; }
+    if (editBlocked || failed) return;
+    try { setPresentation(changeTextFrames(store, profileAddress, edit.getSnapshot().record, presentation, frames, workbenchView.getPresentation?.())); setError(''); return true; }
     catch (error) { setError(error.message); return false; }
   };
   const addFrame = after => {
@@ -141,20 +127,19 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
     changeFrames(next);
   };
   const shortcutMenu = useModuleShortcutMenu({ store, profileAddress, kind: 'text', record });
-  const close = () => { if (failed.current) { setSettings(true); return; } setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); };
+  const close = () => { if (failed) { setSettings(true); return; } setPresentation(p => ({ ...p, open: false })); queueMicrotask(() => shortcut.current?.focus()); };
   const closeTools = () => { setSettings(false); queueMicrotask(() => toolsTrigger.current?.focus()); };
   const moveInto = preview => {
     if (!preview?.target?.isCurrent()) throw new Error('Choose an open, unlocked Display.');
-    if (!change(workingRef.current, { retry: true })) return;
-    preview.target.attachText(latest.current, { ...preview, cellSize: preview.cellSize / view.scale });
+    if (!change(edit.getSnapshot().value, { retry: true })) return;
+    preview.target.attachText(edit.getSnapshot().record, { ...preview, cellSize: preview.cellSize / view.scale });
   };
   const destinations = placementTargets?.current?.textTargets?.() || [];
   const unlink = () => {
-    if (suspended || failed.current) return;
-    const result = unlinkTextModuleResult(store, profileAddress, latest.current);
-    if (!result.saved) { setReason(result.reason); setError(result.message); return; }
-    latest.current = result.record; workingRef.current = result.record; setWorking(result.record);
-    setReason(null); setError(''); setLinkTarget(''); setMode('write');
+    if (suspended || failed) return;
+    const result = unlinkTextModuleResult(store, profileAddress, edit.getSnapshot().record);
+    if (!result.saved) { setError(result.message, result.reason); return; }
+    edit.accept(result.record); setLinkTarget(''); setMode('write');
   };
   return <div className="text-workbench" data-workbench-module="text" data-text-id={record.id} data-text-tools-open={settings || undefined}
     style={{ '--text-z': active ? 49 : 46, '--text-shortcut-bottom': `${64 + index * 38}px` }} onPointerDownCapture={onActivate} onFocusCapture={onActivate}>
@@ -170,12 +155,12 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
       resizeTarget={resizeTarget} committedFrame={committedFrame}
       moveFromContent={mode === 'read' && !suspended}
       controls={<>{store && !view.presented && <><button type="button" className="text-window-control" aria-label={mode === 'write' ? 'Read' : 'Write'} title={mode === 'write' ? 'Read' : 'Write'}
-          onClick={() => { const next = mode === 'write' ? 'read' : 'write'; setMode(next); setSettings(next === 'write' || failed.current); }}>{mode === 'write' ? <Eye /> : <Pencil />}</button>
+          onClick={() => { const next = mode === 'write' ? 'read' : 'write'; setMode(next); setSettings(next === 'write' || failed); }}>{mode === 'write' ? <Eye /> : <Pencil />}</button>
         <TextMoveHandle className="text-window-control" label="Drag Text into Display" disabled={suspended || linked || Boolean(working.sceneLink)} previewAt={(point, rectangle) => placementTargets?.current?.previewTextAt?.(point, rectangle)}
           onDrop={preview => { if (preview) moveInto(preview); }} onKeyboardMove={() => setSettings(true)} onError={setError} />
         <button ref={toolsTrigger} type="button" className="text-window-control" aria-label="Text tools" title="Text tools" aria-expanded={settings} onClick={() => { if (!settings) setMode('write'); setSettings(!settings); }}><Settings /></button>
         <button className="text-window-control" type="button" aria-label="Add linked Text frame" title={working.sceneLink || working.pagination ? 'Unlink Follow Display and turn off Read as pages first' : 'Add linked frame'}
-          disabled={editBlocked || failed.current || Boolean(working.sceneLink || working.pagination) || flow.ranges.length >= 8} onClick={() => addFrame(record.id)}><Plus /></button>
+          disabled={editBlocked || failed || Boolean(working.sceneLink || working.pagination) || flow.ranges.length >= 8} onClick={() => addFrame(record.id)}><Plus /></button>
         {error && <button type="button" className="text-save-error" aria-label="Text not saved — open recovery" onClick={() => setSettings(true)}>!</button>}</>}
         <button type="button" className="text-window-control" aria-label={`Close ${name}`} onClick={close}><X /></button></>}>
       <div className="text-module-body" ref={surface} style={textOutputStyle(article, view.frame || presentation.window)}>
@@ -206,38 +191,38 @@ function TextInstance({ record, index, store, profileAddress, assets, registerTa
       index={index + 1} ownerId={record.id} onLayout={frameLayout} onAdd={addFrame} onRemove={id => { if (changeFrames(presentation.frames.filter(frame => frame.id !== id))) queueMicrotask(() => toolsTrigger.current?.focus()); }}
       onEdit={() => { setMode('write'); setSettings(true); }} onTools={() => { setMode('write'); setSettings(true); }} />)}
     {store && <TextTools targetId={record.id} available={presentation.open && !suspended} article={sectionLink ? working.article : article} onChange={changeArticle}
-      backupScope={JSON.stringify([profileAddress, record.id, sectionLink ? null : gridId])} recoveryPending={failed.current}
+      backupScope={JSON.stringify([profileAddress, record.id, sectionLink ? null : gridId])} recoveryPending={failed}
       controlsRef={setControlsHost} onClose={closeTools} disabled={editBlocked}
       anchor={{ left: (view.frame || presentation.window).left * view.scale + view.x + offset.x,
         right: ((view.frame || presentation.window).left + (view.frame || presentation.window).width) * view.scale + view.x + offset.x,
         top: (view.frame || presentation.window).top * view.scale + view.y + offset.y }}
       footer={error ? <div className="text-status" role="alert">{error}
-        {failed.current && <button type="button" onClick={() => change(workingRef.current, { retry: true })}>Retry local save</button>}
-        {reason === 'conflict' && <button type="button" onClick={() => change(workingRef.current, { retry: true, replace: true })}>Replace saved Text with my edits</button>}
+        {failed && <button type="button" onClick={() => change(edit.getSnapshot().value, { retry: true })}>Retry local save</button>}
+        {reason === 'conflict' && <button type="button" onClick={() => change(edit.getSnapshot().value, { retry: true, replace: true })}>Replace saved Text with my edits</button>}
       </div> : <p className="text-save-summary" role="status">Saved in this browser</p>}
       connection={linked ? <p>This article flows through {flow.ranges.length} linked frames. Remove the continuation frames to use Follow Display or move into Display. The full text is kept.</p> : <>
       {!working.sceneLink ? <><div className="text-connection-target"><label>Follow Display<select aria-label="Follow Display" value={linkTarget} onChange={e => setLinkTarget(e.target.value)}>
         <option value="">Choose a Display…</option>{displays.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-      </select></label><button type="button" aria-label="Link Text to Display" disabled={!scenes[linkTarget]?.gridId || failed.current} onClick={() => {
+      </select></label><button type="button" aria-label="Link Text to Display" disabled={!scenes[linkTarget]?.gridId || failed} onClick={() => {
         const target = scenes[linkTarget];
         if (target) {
-          const next = { ...workingRef.current, sceneLink: { mode: 'sections', displayId: linkTarget } };
+          const next = { ...edit.getSnapshot().value, sceneLink: { mode: 'sections', displayId: linkTarget } };
           delete next.pagination; change(next);
         }
       }}>Link</button></div><p>Page breaks follow Grids.</p></> : <p>Following {displays.find(d => d.id === working.sceneLink.displayId)?.name || 'Display'} · {displays.find(d => d.id === working.sceneLink.displayId)?.grids.find(g => g.id === gridId)?.title || 'Grid unavailable'}. {sectionLink ? 'Write edits the full article. In Read, each page break starts the next Grid’s section; longer sections scroll.' : 'Change Grid in the Display to edit its passage.'}</p>}
       {working.sceneLink && <>
-        <button type="button" disabled={suspended || failed.current} onClick={unlink}>Unlink Text from Display</button>
+        <button type="button" disabled={suspended || failed} onClick={unlink}>Unlink Text from Display</button>
         <p>{sectionLink || working.sceneLink.passages.length === 0 ? 'Keeps the full article as independent Text.' : 'Keeps the original article here and opens each additional passage as a private Text window, preserving its formatting.'}</p>
       </>}
-      {working.sceneLink && !sectionLink && working.sceneLink.passages.length === 0 && <button type="button" disabled={failed.current} onClick={() => {
-        const next = { ...workingRef.current, sceneLink: { mode: 'sections', displayId: working.sceneLink.displayId } };
+      {working.sceneLink && !sectionLink && working.sceneLink.passages.length === 0 && <button type="button" disabled={failed} onClick={() => {
+        const next = { ...edit.getSnapshot().value, sceneLink: { mode: 'sections', displayId: working.sceneLink.displayId } };
         delete next.pagination; change(next);
       }}>Use article page breaks for Grids</button>}
       </>}
       readOptions={!linked && !sectionLink && <label className="text-visibility text-settings-wide"><input type="checkbox" checked={working.pagination === 'pages'} onChange={e => {
-        const next = { ...workingRef.current }; if (e.target.checked) next.pagination = 'pages'; else delete next.pagination; change(next);
+        const next = { ...edit.getSnapshot().value }; if (e.target.checked) next.pagination = 'pages'; else delete next.pagination; change(next);
       }} />Read as pages</label>}
-      publication={<label className="text-visibility"><input type="checkbox" checked={working.visibility === 'PUBLIC'} onChange={e => change({ ...workingRef.current, visibility: e.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in Workbench publication</label>}>
+      publication={<label className="text-visibility"><input type="checkbox" checked={working.visibility === 'PUBLIC'} onChange={e => change({ ...edit.getSnapshot().value, visibility: e.target.checked ? 'PUBLIC' : 'PRIVATE' })} />Include in Workbench publication</label>}>
 
       {!linked && !working.sceneLink && destinations.length > 0 && <details className="text-tools-transfer text-settings-wide"><summary>Move into Display</summary><label>Destination<select aria-label="Text destination" value={destination} onChange={e => setDestination(e.target.value)}>
         <option value="">Choose a Display…</option>{destinations.map(target => <option key={target.id} value={target.id}>{target.label}</option>)}</select></label>

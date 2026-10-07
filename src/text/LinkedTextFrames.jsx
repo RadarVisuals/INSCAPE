@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import ArticleView from './ArticleView.jsx';
 import { TextFrameOverflow, useTextFrame, useLinkedFrameLayout } from './TextFrame.jsx';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
-import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
+import { useWorkbenchView, workbenchModuleTransform } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { textAppearance, textOutputStyle, textWindowStyle } from './domain/article.js';
 import { Plus, Pencil, Settings, X } from '../public/InscapeIcons.jsx';
 import { useWorkbenchCamera } from '../public/ownerSystemWorkflow/WorkbenchCamera.jsx';

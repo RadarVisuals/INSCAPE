@@ -209,12 +209,14 @@ before(async () => runBrowserSetupWithCleanup(async () => {
   baseUrl = `http://127.0.0.1:${vitePort}`;
   cleanupBrowserTest = createBrowserTestCleanup({ runtimePath: runtimeDir, workspaceRoot: root, diagnostic: lifecycleDiagnostic });
   lifecycleDiagnostic('setup:vite-create:start');
-  const viteCreation = createViteServer({ root, logLevel: 'error', define: { 'import.meta.env.VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL': JSON.stringify('https://published-images.invalid/ipfs/') }, plugins: [{ name: 'published-csp-browser-fixture', configureServer(server) {
+  // The fixture never edits source. Avoid scanning the user's workspace and
+  // sharing optimizer state with an already running development server.
+  const viteCreation = createViteServer({ root, cacheDir: resolve(runtimeDir, 'vite-cache'), logLevel: 'error', define: { 'import.meta.env.VITE_PROFILE_DOCUMENT_IPFS_GATEWAY_URL': JSON.stringify('https://published-images.invalid/ipfs/') }, plugins: [{ name: 'published-csp-browser-fixture', configureServer(server) {
     server.middlewares.use((request, response, next) => {
       if (request.url?.startsWith('/browser-tests/fixture.html') && request.url.includes('csp=1')) response.setHeader('Content-Security-Policy', "default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://published-images.invalid; connect-src 'self' ws:; frame-ancestors 'self'");
       next();
     });
-  } }], server: { host: '127.0.0.1', port: vitePort, strictPort: true } });
+  } }], server: { host: '127.0.0.1', port: vitePort, strictPort: true, watch: null } });
   let viteCreationExpired = false;
   viteCreation.then((lateVite) => {
     if (!viteCreationExpired) return;

@@ -11,7 +11,7 @@ import { projectSystemWorkflowTransform, unprojectSystemWorkflowCrop, transformA
 import { createImagePresentation, imageFocusEntry, imageSize, MAX_IMAGE_MODULES, MAX_IMAGE_SIDES, nextImageSide, IMAGE_FILL_CROP, imageCropForResize } from './imageModule.js';
 import { saveImageModule, prepareImageResize, duplicateImageModule } from './imageModuleSession.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
-import { useWorkbenchActions, useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
+import { useWorkbenchActions, useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import ImageLift from './ImageLift.jsx';
 import { projectedSvgArtworkFor } from '../artwork/ProjectedSvgArtwork.jsx';
 import '../public/ownerSystemWorkflow/displayInstruments.css';

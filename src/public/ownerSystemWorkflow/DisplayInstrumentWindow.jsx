@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
-import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchView.jsx';
+import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchViewContext.js';
 import { workbenchViewStyle } from './workbenchViewScale.js';
 import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
@@ -12,7 +12,7 @@ import { clampOwnerSystemWorkflowWindowPosition, resizeWorkbenchWindow, workbenc
 
 // The host owns gestures and temporary geometry. A module's resize target owns
 // validation and persistence; companion tools retain only their screen layout.
-export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, moveFromContent = false }) {
+export function WorkbenchWindow({ children, background, compact, chrome, menuSurface, className = '', label, controls, title, titleContent, width = 320, resizable = true, resizableWidth = false, initialHeight = 420, minimumHeight = 180, minimumWidth = 240, initialX = 18, initialY = 72, fitContent = false, fitContentFromTop = false, onLayoutChange, snapToGrid = false, placementModule = false, viewId, active, surfaceStyle, resizeTarget, committedFrame, externalControls = false, moveFromContent = false }) {
   const view = useWorkbenchView();
   const { offset } = useWorkbenchCamera();
   const transformed = Boolean(viewId) && !compact;
@@ -21,10 +21,17 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
   const [frame, setFrame] = useState(() => ({ left: initialX, top: initialY, width, height: initialHeight }));
   const [preview, setPreview] = useState(null);
   const [viewport, setViewport] = useState(() => ({ width: globalThis.innerWidth, height: globalThis.innerHeight }));
+  const toolViewportBottom = Math.min(viewport.height, view.toolViewportBottom ?? viewport.height - 48);
+  // An anchored inspector keeps its chosen top while content scrolls below it.
+  // Other floating tools retain their existing fit-to-viewport placement.
+  const contentFromTop = fitContent && fitContentFromTop && !viewId && !compact;
+  const toolTop = contentFromTop ? Math.max(8, Math.min(frame.top, toolViewportBottom - minimumHeight - 8)) : 8;
+  const toolMaximumHeight = Math.max(1, toolViewportBottom - toolTop - 8);
   const base = { ...frame, width: resizableWidth ? frame.width : width };
   if (!viewId && !compact) {
     if (resizableWidth) base.width = Math.min(base.width, viewport.width - 16);
-    base.height = Math.min(base.height, viewport.height - 64);
+    if (contentFromTop) base.top = toolTop;
+    base.height = Math.min(base.height, toolMaximumHeight);
   }
   const current = camera.frame || preview || base;
   const density = transformed ? globalThis.devicePixelRatio || 1 : 1;
@@ -44,7 +51,7 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
     top: (WORKBENCH_BOUNDS.top - (local?.y || 0)) / localScale,
     right: (WORKBENCH_BOUNDS.right - (local?.x || 0)) / localScale,
     bottom: (WORKBENCH_BOUNDS.bottom - (local?.y || 0)) / localScale,
-  } : { left: 8, top: 8, right: viewport.width - 8, bottom: viewport.height - 56 };
+  } : { left: 8, top: 8, right: viewport.width - 8, bottom: toolViewportBottom - 8 };
   const commitResize = next => {
     if (resizeTarget?.store) {
       if (!resizeTarget.enabled) return false;
@@ -97,10 +104,10 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
   useLayoutEffect(() => {
     if (viewId || compact || preview) return;
     const position = clampOwnerSystemWorkflowWindowPosition({ x: base.left, y: base.top }, base,
-      { width: viewport.width, height: viewport.height - 48 });
+      { width: viewport.width, height: toolViewportBottom });
     if (position.x !== frame.left || position.y !== frame.top || base.width !== frame.width || base.height !== frame.height)
       setFrame({ ...base, left: position.x, top: position.y });
-  }, [viewId, Boolean(compact), Boolean(preview), frame.left, frame.top, base.width, base.height, viewport.width, viewport.height]);
+  }, [viewId, Boolean(compact), Boolean(preview), frame.left, frame.top, base.width, base.height, viewport.width, toolViewportBottom]);
   useLayoutEffect(() => {
     if (!compact && !camera.frame) onLayoutChange?.(base);
   }, [base.left, base.top, base.width, base.height, onLayoutChange, Boolean(compact), camera.frame]);
@@ -111,22 +118,23 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
       const style = getComputedStyle(content.parentElement);
       const chromeHeight = node.current.offsetHeight - content.parentElement.clientHeight
         + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-      const height = Math.max(minimumHeight, Math.min(globalThis.innerHeight - 70,
+      const height = Math.min(toolMaximumHeight, Math.max(minimumHeight,
         Math.ceil(content.getBoundingClientRect().height + chromeHeight)));
       setFrame(value => value.height === height ? value : { ...value, height });
     };
     const observer = new ResizeObserver(measure);
     observer.observe(content); globalThis.addEventListener('resize', measure); measure();
     return () => { observer.disconnect(); globalThis.removeEventListener('resize', measure); };
-  }, [fitContent, Boolean(compact), minimumHeight]);
+  }, [fitContent, Boolean(compact), minimumHeight, toolMaximumHeight]);
   const positionFor = (candidate, altKey) => {
     const snapping = snapToGrid && !altKey;
     const placed = placement.position(candidate, current, {
       left: snapWorkbenchCoordinate(candidate.left, snapping), top: snapWorkbenchCoordinate(candidate.top, snapping),
     }, altKey);
     if (viewId) return { ...base, ...clampWorkbenchPosition(placed, base) };
-    const position = clampOwnerSystemWorkflowWindowPosition({ x: placed.left, y: placed.top }, base,
-      { width: viewport.width, height: viewport.height - 48 });
+    const size = contentFromTop ? { ...base, height: Math.min(base.height, minimumHeight) } : base;
+    const position = clampOwnerSystemWorkflowWindowPosition({ x: placed.left, y: placed.top }, size,
+      { width: viewport.width, height: toolViewportBottom });
     return { ...base, left: position.x, top: position.y };
   };
   const moveTo = (candidate, altKey) => setFrame(positionFor(candidate, altKey));
@@ -173,7 +181,8 @@ export function WorkbenchWindow({ children, background, compact, chrome, menuSur
     contentPointerProps={moveFromContent ? { 'data-content-move': true, 'data-workbench-selectable': Boolean(viewId) || undefined,
       onPointerDown: event => begin(event, 'content-move'), ...pointerProps } : undefined}
     style={{ ...surfaceStyle, '--workbench-pan-scale': camera.scale, '--workbench-control-scale': density, '--detached-window-width': `${current.width}px`,
-      left: current.left, top: current.top, height: current.height, maxHeight: viewId ? 'none' : 'calc(100dvh - 64px)',
+      '--workbench-tool-maximum-height': `${toolMaximumHeight}px`,
+      left: current.left, top: current.top, height: current.height, maxHeight: viewId ? 'none' : toolMaximumHeight,
       ...(transformed ? workbenchViewStyle(camera.scale, current.left, current.top, current.width, current.height, camera.x, camera.y, offset) : {}), ...compact?.style }}
     resizeHandles={canResize && WORKBENCH_RESIZE_EDGES.filter(([edge]) => resizableWidth || ['n', 's'].includes(edge)).map(([edge, name]) =>
       <div key={edge} className={`system-workflow__detached-window-resize is-${edge}`}

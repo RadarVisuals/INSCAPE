@@ -54,19 +54,28 @@ test('module edges, appearance, keyboard controls and public rendering', async (
     });
     const text = page.locator('.text-window'), board = page.getByRole('article', { name: 'Display Module', exact: true });
     const tools = page.getByRole('complementary', { name: /Text tools/ });
+    await tools.getByRole('tab', { name: 'Appearance', exact: true }).click();
     await tools.getByLabel('Module corners', { exact: true }).selectOption('custom');
     await tools.getByLabel('Top left corner radius', { exact: true }).fill('12');
     await tools.getByLabel('Bottom left corner radius', { exact: true }).fill('12');
     await tools.getByLabel('Grain strength', { exact: true }).fill('0.25');
     assert.deepEqual(await page.evaluate(() => window.readSurfaceDraft().texts[0].article.appearance.edges), { corners: [12, 0, 0, 12], shadow: false, grain: .25 });
     await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
-    await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+    await tools.waitFor({ state: 'detached' });
     const textHeader = page.getByLabel('Move Text window', { exact: true });
     const drag = async (handle, dx, dy, alt = false) => {
-      const b = await handle.boundingBox();
-      await page.mouse.move(b.x + 10, b.y + b.height / 2);
+      await handle.focus();
+      const { x, y } = await handle.evaluate(node => {
+        const b = node.getBoundingClientRect(), y = b.top + b.height / 2;
+        for (let x = b.left + 16; x < b.right - 8; x += 8) {
+          const hit = document.elementFromPoint(x, y);
+          if (hit === node || (node.contains(hit) && !hit.closest('button,input,[role="separator"]'))) return { x, y };
+        }
+        throw new Error('No unobstructed drag surface');
+      });
+      await page.mouse.move(x, y);
       if (alt) await page.keyboard.down('Alt');
-      await page.mouse.down(); await page.mouse.move(b.x + 10 + dx, b.y + b.height / 2 + dy, { steps: 5 }); await page.mouse.up();
+      await page.mouse.down(); await page.mouse.move(x + dx, y + dy, { steps: 5 }); await page.mouse.up();
       if (alt) await page.keyboard.up('Alt');
     };
     const near = (a, b, message) => assert.ok(Math.abs(a - b) < 1, `${message}: ${a} != ${b}`);
@@ -92,7 +101,7 @@ test('module edges, appearance, keyboard controls and public rendering', async (
     await page.getByRole('button', { name: 'Close Display appearance', exact: true }).click();
     const surfaceStyles = async () => ({
       board: await board.evaluate(el => { const s = getComputedStyle(el); return [s.borderRadius, s.boxShadow, getComputedStyle(el.querySelector('.system-workflow__stage-viewport')).borderRadius]; }),
-      text: await text.locator('.text-module-body').evaluate(el => { const s = getComputedStyle(el); return [s.borderRadius, getComputedStyle(el.querySelector('.module-surface-grain')).opacity]; }),
+      text: await text.evaluate(el => [getComputedStyle(el).borderRadius, getComputedStyle(el.querySelector('.module-surface-grain')).opacity]),
     });
     let styles = await surfaceStyles();
     assert.deepEqual(styles.board, ['0px', 'none', '0px']);
@@ -115,6 +124,9 @@ test('module edges, appearance, keyboard controls and public rendering', async (
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await page.getByLabel('Space between modules', { exact: true }).fill('12');
     await page.getByRole('button', { name: 'Close Settings', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Settings', exact: true }).waitFor({ state: 'detached' });
+    // Approach the new gap from outside the retained edge snap distance.
+    await drag(textHeader, -40, 0, true);
     t = await text.boundingBox(); b = await board.boundingBox();
     await drag(textHeader, b.x - 12 - t.width - t.x + 2, 0);
     t = await text.boundingBox(); near(b.x - t.x - t.width, 12, 'custom gap');

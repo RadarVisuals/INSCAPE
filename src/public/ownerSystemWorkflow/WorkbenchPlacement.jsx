@@ -3,7 +3,7 @@ import { gridEdgeMatch, moduleEdgeMatch, modulePositionMatch } from './workbench
 import WorkbenchSnapGuides from './WorkbenchSnapGuides.jsx';
 import { WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
-import { useWorkbenchView, workbenchModuleTransform } from './WorkbenchView.jsx';
+import { useWorkbenchView, workbenchModuleTransform } from './WorkbenchViewContext.js';
 import { scaleWorkbenchRectangle, workbenchSelectionBounds } from './workbenchViewScale.js';
 const Placement = createContext(null);
 const rectangle = nodes => {

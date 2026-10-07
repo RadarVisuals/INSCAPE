@@ -16,17 +16,19 @@ function PanelPresence({ children, id, panels, retained = false }) {
 }
 
 export default function OwnerSystemWorkflowPanelLayer({ workbenchImageTargetRef, moduleAssetTargetRef, placementTargetRef, shortcutTargetRef, workspaceRef, activity, assets, assetsById, authoringLocked = false, categoryCommands, browser, connectedProfile, controller, discoveryCommands, discoveryGroups, layout, libraryData,
-  menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onOpenIdentity, onEnterMyWorld, onVisitProfile, panelOccupied, panels, profileIdentity, profileModel,
+  profileAddress, onMenuSurfaceChange, menuSurface, onChangeGrid, onClose, onConnect, onDisconnect, onOpenIdentity, onEnterMyWorld, onVisitProfile, panelOccupied, panels, profileIdentity, profileModel,
   resolveAssetDimensions, reviewDiscovery, workspaceSurfaceColor, workbenchPreferences, onWorkbenchPreferencesChange }) {
   const show = (id) => panels.presence[id];
   const libraryMounted = useRef(false);
   if (show('library').present) libraryMounted.current = true;
   return <>
-    {show('grids').present && <PanelPresence id="grids" panels={panels}><SystemWorkflowGridSwitcher controller={controller} data-layout={layout.mode} onSelectGrid={onChangeGrid} /></PanelPresence>}
+    {show('grids').present && <PanelPresence id="grids" panels={panels}>{controller
+      ? <SystemWorkflowGridSwitcher controller={controller} data-layout={layout.mode} onSelectGrid={onChangeGrid} />
+      : <aside className="system-workflow__grid-switcher system-workflow__motion-panel" aria-label="Grids"><p role="status">Add a Display to manage its Grids.</p></aside>}</PanelPresence>}
     {show('docs').present && <PanelPresence id="docs" panels={panels}><OwnerSystemWorkflowManual onClose={onClose} /></PanelPresence>}
     {libraryMounted.current && <PanelPresence id="library" panels={panels} retained>
       <OwnerSystemWorkflowLibraryWorkspace workbenchImageTargetRef={workbenchImageTargetRef} moduleAssetTargetRef={moduleAssetTargetRef} placementTargetRef={placementTargetRef} shortcutTargetRef={shortcutTargetRef} workspaceRef={workspaceRef}
-        placementScope={`${controller.draft.profileAddress}:${controller.selectedGridId}`}
+        placementScope={`${profileAddress}:${controller?.moduleId || ''}:${controller?.selectedGridId || ''}`}
         authoringLocked={authoringLocked} categoryCommands={categoryCommands} data={libraryData}
         menuSurface={menuSurface} onClose={() => panels.closePanel({ panelId: 'library' })} phase={show('library').phase}
         resolveAssetDimensions={resolveAssetDimensions} /></PanelPresence>}
@@ -43,7 +45,7 @@ export default function OwnerSystemWorkflowPanelLayer({ workbenchImageTargetRef,
         onEnterMyWorld={() => { onClose(); onEnterMyWorld?.(); }}
         onVisitProfile={(address) => { panels.closePanel({ returnFocus: false }); onVisitProfile?.(address); }} /></PanelPresence>}
     {show('settings').present && <PanelPresence id="settings" panels={panels}>
-      <OwnerSystemWorkflowSettings appearance={controller.draft.appearance} controller={controller} menuSurface={menuSurface}
+      <OwnerSystemWorkflowSettings profileAddress={profileAddress} onMenuSurfaceChange={onMenuSurfaceChange} menuSurface={menuSurface}
         onClose={onClose} onWorkbenchPreferencesChange={onWorkbenchPreferencesChange}
         phase={show('settings').phase} workbenchPreferences={workbenchPreferences} /></PanelPresence>}
   </>;

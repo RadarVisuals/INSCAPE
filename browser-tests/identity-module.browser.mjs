@@ -201,10 +201,9 @@ test('Library drops replace Identity artwork, shader animates, and Display stays
     await page.locator('[data-identity-dossier-source]').click();
     assert.match(await page.locator('.identity-module__portrait img').getAttribute('src'), /skull_reaper/);
     await page.getByRole('button', { name: 'Edit Identity', exact: true }).click();
-    // Click the visible summary label; its blank row centre can sit underneath
-    // the bottom-right Workbench controls at this narrow viewport.
-    await page.getByText('Appearance & artwork', { exact: true }).click({ position: { x: 20, y: 8 } });
-    await page.getByRole('button', { name: 'Use Universal Profile image' }).click();
+    await page.getByText('Appearance & artwork', { exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await page.getByRole('button', { name: 'Use Universal Profile image' }).focus(); await page.keyboard.press('Enter');
     assert.equal(await page.locator('.identity-module__portrait img').count(), 0);
     assert.equal(await page.evaluate(() => window.__identityWrites), 1, 'reset is also a preview');
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -212,7 +211,7 @@ test('Library drops replace Identity artwork, shader animates, and Display stays
     await page.getByRole('button', { name: 'Edit Identity', exact: true }).click();
     await page.getByText('Appearance & artwork', { exact: true }).focus();
     await page.keyboard.press('Enter');
-    await page.getByRole('button', { name: 'Use Universal Profile image' }).click();
+    await page.getByRole('button', { name: 'Use Universal Profile image' }).focus(); await page.keyboard.press('Enter');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     assert.equal(await page.evaluate(() => window.__identityWrites), 2);
     await page.unrouteAll({ behavior: 'wait' });

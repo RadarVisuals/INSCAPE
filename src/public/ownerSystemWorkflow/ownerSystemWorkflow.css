@@ -98,7 +98,11 @@
     transform var(--workflow-motion-in) var(--workflow-ease);
 }
 
-.system-workflow__panel-presence { display: contents; }
+/* Dock panels share a screen layer above camera/selection controls. Their own
+   legacy z-indices only order content within that layer. */
+.system-workflow__panel-presence { position: relative; z-index: 83; }
+/* Grids can open while Library stays visible for choosing a drop destination. */
+.system-workflow__panel-presence[data-system-workflow-panel="grids"] { z-index: 84; }
 .system-workflow__recovery-notice, .system-workflow__layout-notice { position: fixed; z-index: 85; left: 8px; right: 8px; bottom: calc(var(--workflow-dock-height) + 8px); margin: 0; padding: 8px 12px; border: 1px solid var(--workflow-border-strong); background: var(--workflow-panel); color: var(--workflow-ink); font: var(--workflow-type-control); }
 .system-workflow__recovery-notice { z-index: 80; }
 .system-workflow__recovery-notice + .system-workflow__layout-notice { bottom: calc(var(--workflow-dock-height) + 64px); }
@@ -1462,9 +1466,13 @@ html[data-system-workflow-grid-direction="previous"]::view-transition-new(inscap
 .system-workflow__library .lattice-browser-results {
   margin-block: var(--workflow-gap-medium);
 }
-.system-workflow__library .system-workflow__workspace-rail-controls {
-  grid-template-columns: minmax(90px, 1fr) 65px 100px 75px 65px 38px;
+.system-workflow:not([data-layout="narrow"]) .system-workflow__library .system-workflow__workspace-rail-controls {
+  /* Keep the two-row rail inside the Library's existing 300px minimum. */
+  grid-template-columns: 65px minmax(75px, 1fr) 65px 50px 38px;
   padding-right: 5px;
+}
+.system-workflow:not([data-layout="narrow"]) .system-workflow__library .system-workflow__workspace-rail-controls > .system-workflow__rail-select {
+  gap: 3px; padding-inline: 5px;
 }
 .system-workflow__library .system-workflow__workspace-size {
   grid-template-columns: auto minmax(0, 1fr); gap: 6px; padding-inline: 8px;

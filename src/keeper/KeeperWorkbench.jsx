@@ -8,7 +8,7 @@ import { resolveLibraryImageAsset } from '../library/resolveLibraryImageAsset.js
 import { createKeeperPresentation, KEEPER_DOCK_SIZE, KEEPER_SIZE, keeperSize, keeperMovement } from './keeper.js';
 import { saveKeeperDock } from './keeperSession.js';
 import { useKeeperMotion } from './useKeeperMotion.js';
-import { useWorkbenchActions, useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
+import { useWorkbenchActions, useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { useKeeperRig } from './useKeeperRig.js';
 import { KeeperRigArtwork } from './KeeperRigArtwork.jsx';
 import { KeeperSwimControls } from './KeeperSwimControls.jsx';

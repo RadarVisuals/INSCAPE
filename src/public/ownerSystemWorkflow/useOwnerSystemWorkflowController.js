@@ -1,5 +1,5 @@
 import { expandPlacementGroups } from '../../systemWorkflow/domain/placementGroups.js';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { normalizeProfileAddress } from '../../library/config.js';
 import { systemWorkflowGridFingerprint, systemWorkflowGridOrder } from '../../systemWorkflow/domain/systemWorkflowGrid.js';
 import { createSystemWorkflowDraftStore } from '../../systemWorkflow/systemWorkflowDraftStore.js';
@@ -8,6 +8,8 @@ import { textRecoveries, TEXT_RECOVERY_MESSAGE } from '../../text/textEditRecove
 import { PRIMARY_DISPLAY_ID } from '../../systemWorkflow/domain/displayModules.js';
 
 function browserStorage() { try { return globalThis.localStorage; } catch { return null; } }
+const noSubscription = () => () => {};
+const emptySnapshot = () => null;
 
 export default function useOwnerSystemWorkflowController(profileAddress, { storage, sharedStore, moduleId = PRIMARY_DISPLAY_ID, initialGridId } = {}) {
   const profile = normalizeProfileAddress(profileAddress);
@@ -17,14 +19,25 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
     const store = sharedStore || createSystemWorkflowDraftStore({ profileAddress: profile, storage: selectedStorage });
     const session = createDisplayModuleSession(store, moduleId);
     if (initialGridId && session.getState().draft.grids.some(grid => grid.id === initialGridId)) session.selectGrid(initialGridId);
-    return { store, session };
+    let snapshot;
+    const getSnapshot = () => {
+      const draft = session.getSnapshot().draft;
+      const visibility = moduleId === PRIMARY_DISPLAY_ID ? null
+        : store.getSnapshot().displays?.find(module => module.id === moduleId)?.visibility;
+      if (!snapshot || snapshot.draft !== draft || snapshot.visibility !== visibility) snapshot = { draft, visibility };
+      return snapshot;
+    };
+    return { store, session, getSnapshot };
   }, [profile, selectedStorage, sharedStore, moduleId]);
   const liveAuthority = useRef(authority);
   liveAuthority.current = authority;
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [, render] = useState(0);
-  useEffect(() => authority?.store.subscribe(() => render(v => v + 1)), [authority]);
+  // The store remains the transaction/undo owner. React observes only this
+  // Display's content and publication choice, including undo and external reload.
+  const snapshot = useSyncExternalStore(authority?.store.subscribe || noSubscription,
+    authority?.getSnapshot || emptySnapshot, authority?.getSnapshot || emptySnapshot);
   const [failure, setFailure] = useState(null);
   const error = failure?.authority === authority ? failure.message : null;
   // View-only visibility: never committed to the draft or browser storage.
@@ -80,7 +93,7 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
   };
   const clearError = useCallback(() => setFailure(null), []);
   const gridRequest = (grid, extra = {}) => ({ gridId: grid.id, expectedGridFingerprint: systemWorkflowGridFingerprint(grid), ...extra });
-  return { ...state, store: authority?.store, moduleId, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError,
+  return { ...state, visibility: snapshot?.visibility, store: authority?.store, moduleId, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError,
     setDisplayVisibility: (expected, visibility) => run(() => {
       if (!setDisplayModuleVisibility(authority.store, profile, moduleId, expected, visibility)) {
         throw new Error('The Display publication choice could not be saved. Reopen its menu and try again.');

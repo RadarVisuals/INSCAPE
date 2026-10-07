@@ -19,7 +19,7 @@ function hasNativeWheelScroll(target, host, dx, dy) {
 
 // Navigation never receives a draft store or module transforms. Editing owns
 // its gestures and exposes only cancellation and input-ownership callbacks.
-export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible,
+export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible, onControlsTopChange,
   isEditing, cancelEditing, releaseAbandonedGesture, captureContext, restoreContext, returnTargets, resetPresentation, entries }) {
   const camera = useWorkbenchCamera();
   const { offset, locked, getCamera, updateCamera } = camera;
@@ -128,8 +128,11 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
   }, [hostRef]);
   useEffect(() => {
     const host = hostRef.current, controls = controlsRef.current;
-    if (!host || disabled || locked) return;
+    if (!host || disabled) { onControlsTopChange?.(null); return; }
     const measure = () => {
+      // The same live chrome measurement also bounds companion tools. Their
+      // screen space must account for wrapping controls and the current dock.
+      onControlsTopChange?.(controls?.getBoundingClientRect().top ?? null);
       const previous = measuredViewport.current;
       const viewport = readViewport();
       if (!viewport || viewport.width <= 0 || viewport.height <= 0) return;
@@ -138,14 +141,14 @@ export default function useWorkbenchNavigation({ hostRef, controlsRef, disabled,
       measuredViewport.current = { ...viewport, controlsHeight };
       // Changing the free viewport invalidates travel, but never recentres the
       // camera or moves authored windows to fit a screen or composition frame.
-      stopTravel();
+      if (!locked) stopTravel();
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(host);
     if (controls) observer.observe(controls);
     return () => observer.disconnect();
-  }, [hostRef, controlsRef, dockVisible, disabled, locked, readViewport, stopTravel]);
+  }, [hostRef, controlsRef, dockVisible, disabled, locked, readViewport, stopTravel, onControlsTopChange]);
 
   const zoom = useCallback((point, factor) => {
     if (disabled || locked || interaction.current.isEditing() || isPanning()) return;

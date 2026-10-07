@@ -180,8 +180,10 @@ and Escape, blur or cancelled capture restores the starting position. Write
 retains native text selection and the separate window grip.
 The optional title is edited directly in the document; Enter continues in the
 body. It remains the existing article title, not a duplicate rich-text heading.
-An absent title reserves no space. Add title opens its inline field; leaving an
-empty field removes that temporary editing placeholder. Title alignment (left,
+Write always shows an inline optional title field with the placeholder “Title”,
+above the body, without a separate Add title action. An empty title remains empty
+in saved content and reserves no heading space in Read or Visitor. Linked-frame
+measurement accounts for the editing placeholder only while writing. Title alignment (left,
 centre, right) and colour are independent of paragraph formatting. The title
 inherits the document colour unless explicitly overridden.
 Write opens its tools, Read closes them, and the settings action can reopen them.

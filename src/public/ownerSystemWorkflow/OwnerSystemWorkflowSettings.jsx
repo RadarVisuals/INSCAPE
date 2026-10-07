@@ -17,12 +17,11 @@ function CheckControl({ checked, disabled = false, label, onChange }) {
     <input checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} type="checkbox" /><i aria-hidden="true">{checked && <Check size={12} />}</i></label>;
 }
 
-export default function OwnerSystemWorkflowSettings({ appearance, controller, menuSurface, onClose,
+export default function OwnerSystemWorkflowSettings({ profileAddress: profile, onMenuSurfaceChange, menuSurface, onClose,
   onWorkbenchPreferencesChange, phase, workbenchPreferences }) {
   const signalSettings = useSignalStore((state) => state.settings);
   const signalProfile = useSignalStore((state) => state.profileAddress);
   const signalPersistenceError = useSignalStore((state) => state.persistenceError);
-  const profile = controller.draft.profileAddress;
   const updateSignalSetting = useSignalStore((state) => state.updateSetting);
   const gap = workbenchPreferences.moduleGap;
   return <aside aria-hidden={phase === 'closing' || undefined} aria-label="Settings"
@@ -50,7 +49,7 @@ export default function OwnerSystemWorkflowSettings({ appearance, controller, me
       <p id="workbench-gap-description">Guides show the active edge, grid line or spacing. Pull away to release a snap, or hold Alt to bypass snapping.</p>
     </section>
     <section className="system-workflow__settings-section system-workflow__settings-theme"><header><strong>Interface</strong></header>
-      <label><span>Windows</span><OwnerSystemWorkflowSelectMenu label="Menu theme" menuSurface={menuSurface} onChange={(menuSurfaceId) => controller.setAppearance({ menuSurfaceId })} options={themeOptions} value={appearance.menuSurfaceId} /></label>
+      <label><span>Windows</span><OwnerSystemWorkflowSelectMenu label="Menu theme" menuSurface={menuSurface} onChange={onMenuSurfaceChange} options={themeOptions} value={menuSurface} /></label>
       <CheckControl checked={workbenchPreferences.chromeNoise} label="Chrome noise"
         onChange={(chromeNoise) => onWorkbenchPreferencesChange({ chromeNoise })} />
     </section>

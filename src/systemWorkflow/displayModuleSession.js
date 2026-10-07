@@ -8,13 +8,16 @@ export function createDisplayModuleSession(store, id) {
   let sourceSnapshot, displaySnapshot;
   return createSystemWorkflowAuthoringSession({ store: {
     getDraft: () => projectDisplayDraft(store.getDraft(), id),
-    // Derived view only: retain identity while the accepted root is unchanged.
-    // A new root (including reload/profile switch/removal) invalidates it.
+    // Derived view only. Re-read every accepted root to detect removal/reload,
+    // but unrelated module edits must not replace this Display's snapshot.
     getSnapshot: store.getSnapshot ? () => {
       const source = store.getSnapshot();
       if (source !== sourceSnapshot) {
-        const projected = Object.freeze(projectDisplayDraft(source, id));
-        sourceSnapshot = source; displaySnapshot = projected;
+        const projected = projectDisplayDraft(source, id);
+        if (!displaySnapshot || Object.keys(projected).some(key => projected[key] !== displaySnapshot[key])) {
+          displaySnapshot = Object.freeze(projected);
+        }
+        sourceSnapshot = source;
       }
       return displaySnapshot;
     } : undefined,

@@ -1,6 +1,8 @@
-import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { WorkbenchView, WorkbenchActions, useWorkbenchView, workbenchModuleTransform } from './WorkbenchViewContext.js';
+export { useWorkbenchView, useWorkbenchActions, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchViewContext.js';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { clampWorkbenchMove, identityWorkbenchTransform, scaleWorkbenchTransform, stepWorkbenchViewScale, workbenchSelectionBounds } from './workbenchViewScale.js';
-import { WorkbenchCameraProvider, useWorkbenchCameraScale } from './WorkbenchCamera.jsx';
+import { WorkbenchCameraProvider, useWorkbenchCamera, useWorkbenchCameraScale } from './WorkbenchCamera.jsx';
 import './workbenchView.css';
 import { moveWorkbenchGroup } from '../../systemWorkflow/moveWorkbenchGroup.js';
 import { workbenchMemberIds } from '../../systemWorkflow/domain/workbenchGroups.js';
@@ -11,16 +13,6 @@ import useWorkbenchNavigation from './useWorkbenchNavigation.js';
 import { projectWorkbenchBounds } from './workbenchSpace.js';
 import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';
 const GridSeamProbe = import.meta.env.DEV ? lazy(() => import('./GridSeamProbe.jsx')) : null;
-
-const WorkbenchView = createContext({ scale: 1, transforms: {}, entries: new Map() });
-const WorkbenchActions = createContext({});
-export const useWorkbenchView = () => useContext(WorkbenchView);
-export const useWorkbenchActions = () => useContext(WorkbenchActions);
-
-export function workbenchModuleTransform(view, id) {
-  const local = view.presentationTransforms?.[id] || view.transforms[id] || identityWorkbenchTransform;
-  return { scale: view.scale * local.scale, x: view.scale * local.x, y: view.scale * local.y, frame: local.frame, presented: Boolean(view.presentationTransforms?.[id]) };
-}
 
 // Session-only view transforms, never module content or publication geometry.
 export function WorkbenchViewProvider(props) {
@@ -34,6 +26,7 @@ function WorkbenchViewStateProvider({ children, store, profileAddress, presentat
   const [presentationTransforms, setPresentationTransforms] = useState({});
   const [hiddenModuleIds, setHiddenModuleIds] = useState([]);
   const [selection, setSelection] = useState([]);
+  const [toolViewportBottom, setToolViewportBottom] = useState(null);
   const entries = useRef(new Map());
   const frames = useRef(new Map());
   const resizeTargets = useRef(new Map());
@@ -62,48 +55,21 @@ function WorkbenchViewStateProvider({ children, store, profileAddress, presentat
     changed();
   }, [changed]);
   useLayoutEffect(() => () => { resizeObserver.current?.disconnect(); resizeObserver.current = null; }, []);
-  return <WorkbenchView.Provider value={{ scale, setScale, transforms, setTransforms, presentationTransforms, setPresentationTransforms, hiddenModuleIds, setHiddenModuleIds, selection, setSelection, entries: entries.current, frames: frames.current, resizeTargets: resizeTargets.current, store, profileAddress, groupContent, getPresentation, subscribe, snapshot, register, changed }}><WorkbenchActions.Provider value={actions}>{children}</WorkbenchActions.Provider></WorkbenchView.Provider>;
+  return <WorkbenchView.Provider value={{ scale, setScale, transforms, setTransforms, presentationTransforms, setPresentationTransforms, hiddenModuleIds, setHiddenModuleIds, selection, setSelection, toolViewportBottom, setToolViewportBottom, entries: entries.current, frames: frames.current, resizeTargets: resizeTargets.current, store, profileAddress, groupContent, getPresentation, subscribe, snapshot, register, changed }}><WorkbenchActions.Provider value={actions}>{children}</WorkbenchActions.Provider></WorkbenchView.Provider>;
 }
 
-export function useWorkbenchViewRegistration(id, node, enabled, frame, resizeTarget = null, onPosition = null) {
-  const { register, changed, frames, resizeTargets, transforms } = useWorkbenchView();
-  const previewFrame = transforms?.[id]?.frame;
-  // A live reference to module-owned geometry, not a copy of painted DOM bounds.
-  const currentFrame = useRef(frame); currentFrame.current = frame;
-  // The window owns its base position. Completed owner movement reports back
-  // through that same boundary as an individual drag, including local saving.
-  currentFrame.move = onPosition;
-  const currentResize = useRef(resizeTarget); currentResize.current = resizeTarget;
-  const savedLayout = resizeTarget?.store?.getSnapshot().workbench;
-  const savedEntry = resizeTarget?.parentTextId ? savedLayout?.texts?.find(item => item.id === resizeTarget.parentTextId)?.frames?.find(item => item.id === id)
-    : resizeTarget?.layoutKey === 'display' ? savedLayout?.display
-    : savedLayout?.[resizeTarget?.layoutKey]?.find(item => item.id === id);
-  const savedFrame = savedEntry?.window || savedEntry?.position;
-  const savedKey = JSON.stringify(savedFrame ?? null);
-  // Remember the local frame for an older draft without a saved entry. Undoing
-  // the first authored resize can then restore it without migrating that draft.
-  const savedFrames = useRef(new Map()), previousSavedKey = useRef(savedKey);
-  useLayoutEffect(() => {
-    if (!frame || !resizeTarget || previewFrame) return;
-    if (previousSavedKey.current !== savedKey) {
-      const restored = savedFrames.current.get(savedKey) || savedFrame;
-      if (restored) resizeTarget.applyFrame(restored);
-      previousSavedKey.current = savedKey;
-    } else {
-      savedFrames.current.set(savedKey, frame);
-      // Match the draft history's bounded lifetime; this is only undo recovery
-      // for local frames, never an alternative persisted layout.
-      while (savedFrames.current.size > 51) savedFrames.current.delete(savedFrames.current.keys().next().value);
-    }
-  }, [savedKey, frame?.left, frame?.top, frame?.width, frame?.height, resizeTarget, previewFrame]);
-  useLayoutEffect(() => {
-    if (!id || !enabled || !node.current || !register) return;
-    register(id, node.current);
-    frames.set(id, currentFrame);
-    resizeTargets.set(id, currentResize);
-    return () => { frames.delete(id); resizeTargets.delete(id); register(id, null); };
-  }, [id, node, enabled, register, changed, frames, resizeTargets]);
-  useLayoutEffect(() => { if (id && enabled) changed?.(); }, [id, enabled, frame?.left, frame?.top, frame?.width, frame?.height, changed]);
+function WorkbenchZoomControl({ disabled, onClick }) {
+  const { getCamera, subscribeCameraPaint } = useWorkbenchCamera();
+  const node = useRef(null);
+  const paint = useCallback(({ scale }) => {
+    if (node.current) node.current.textContent = `${Math.round(scale * 100)}%`;
+  }, []);
+  // This control alone owns its text. Read the live camera after commits and
+  // during projection, never the temporarily prepared artwork resolution.
+  useLayoutEffect(() => { paint(getCamera()); });
+  useLayoutEffect(() => subscribeCameraPaint(paint), [subscribeCameraPaint, paint]);
+  return <button ref={node} type="button" disabled={disabled} aria-label="Reset Workbench zoom to 100%"
+    title="Zoom to 100% around the current view (Ctrl+0)" onClick={onClick} />;
 }
 
 export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible = true, historyBlocked = null }) {
@@ -153,6 +119,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
     (target || hostRef.current)?.focus({ preventScroll: true });
   }, [hostRef]);
   const navigation = useWorkbenchNavigation({ hostRef, controlsRef, disabled, dockVisible,
+    onControlsTopChange: view.setToolViewportBottom,
     isEditing, cancelEditing: cancelGesture, releaseAbandonedGesture, captureContext, restoreContext, returnTargets: context => groupScene.current?.returnTargets(context?.group), resetPresentation: () => groupScene.current?.restore(null), entries });
   const { locked } = navigation;
   const focusSelection = () => {
@@ -526,7 +493,7 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
         title="Bring the selected modules into view without changing their layout" onClick={focusSelection}>Focus selection</button>
       <button type="button" disabled={locked} aria-label="Reset Workbench position" title="Return to the starting view" onClick={navigation.resetView}>Reset view</button>
       {selected.length > 0 && <span>{selected.length} selected</span>}
-      <button type="button" disabled={locked} aria-label="Reset Workbench zoom to 100%" title="Zoom to 100% around the current view (Ctrl+0)" onClick={navigation.resetZoom}>{Math.round(scale * 100)}%</button>
+      <WorkbenchZoomControl disabled={locked} onClick={navigation.resetZoom} />
       {view.store && <Suspense fallback={null}><WorkbenchGroups view={view} hostRef={hostRef} locked={locked} dropRef={groupDrop} historyBlocked={historyBlocked} navigation={navigation} sceneRef={groupScene} disabled={disabled} /></Suspense>}
       {!view.store && view.groupContent?.workbenchGroups?.length > 0 && <Suspense fallback={null}><PublishedWorkbenchGroups view={view} content={view.groupContent} hostRef={hostRef} navigation={navigation} sceneRef={groupScene} disabled={disabled} locked={locked} /></Suspense>}
       {GridSeamProbe && <Suspense fallback={null}><GridSeamProbe hostRef={hostRef} scale={scale} offset={navigation.offset} /></Suspense>}

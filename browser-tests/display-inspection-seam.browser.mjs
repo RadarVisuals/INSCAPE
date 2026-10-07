@@ -14,13 +14,13 @@ test('inspection lands on the original shared artwork edge at fractional sizes',
       for (const zoom of [1, .73, .41]) {
         await setWorkbenchZoom(page, zoom);
         await placement.dispatchEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
-        await page.waitForFunction(() => Number(document.querySelector('.system-workflow__lift-artwork')?.parentElement.style.getPropertyValue('--inspection-lift-progress')) === 1);
+        await page.waitForFunction(() => Number(document.querySelector('[data-lift-source]')?.parentElement.style.getPropertyValue('--inspection-lift-progress')) === 1);
         await page.evaluate(() => {
           window.landing = null;
           const sample = () => {
             const lift = document.querySelector('.system-workflow__lift-artwork');
             if (!lift) return;
-            if (Number(lift.parentElement.style.getPropertyValue('--inspection-lift-progress')) === 0) {
+            if (Number(document.querySelector('[data-lift-source]')?.parentElement.style.getPropertyValue('--inspection-lift-progress')) === 0) {
               const source = document.querySelector('[data-lift-source]').getBoundingClientRect(), target = lift.getBoundingClientRect();
               window.landing = Object.fromEntries(['left', 'top', 'right', 'bottom'].map(key => [key, target[key] - source[key]]));
               const sourceImage = document.querySelector('[data-lift-source] img[data-resolution="high"], [data-lift-source] img').getBoundingClientRect();

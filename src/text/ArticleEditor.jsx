@@ -59,9 +59,6 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
   const [focusWriting, setFocusWriting] = useState(false), focusTrigger = useRef(null);
   flowBridge.configure(Boolean(flowRange), focusWriting);
   const focusWritingRef = useRef(focusWriting); focusWritingRef.current = focusWriting;
-  const titleField = useRef(null), [editingTitle, setEditingTitle] = useState(false);
-  useLayoutEffect(() => { if (editingTitle && !disabled) titleField.current?.focus(); }, [editingTitle]);
-  useEffect(() => { if (disabled) setEditingTitle(false); }, [disabled]);
   const [, rerender] = useState(0), [link, setLink] = useState(null), [linkError, setLinkError] = useState('');
   const editor = useEditor({
     extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false,
@@ -141,7 +138,6 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
     <div className="text-toolbar" role="toolbar" aria-label="Text formatting">
       <button ref={focusTrigger} type="button" disabled={disabled} onMouseDown={event => event.preventDefault()}
         onClick={() => { setArticleSearch(editor, { close: true }); setFocusWriting(true); }}>Focus writing</button>
-      {!article.title && <button type="button" disabled={disabled} onClick={() => setEditingTitle(true)}>Add title</button>}
       <div className="text-toolbar-font">
       <select aria-label="Selected text font" disabled={disabled} value={editor.getAttributes('textStyle').fontFamily || ''}
         onChange={e => e.target.value ? editor.chain().focus().setFontFamily(e.target.value).run() : editor.chain().focus().unsetFontFamily().run()}>
@@ -241,10 +237,9 @@ export default function ArticleEditor({ article, onChange, onEditor, onFindReque
     <ArticleFocusWriting active={focusWriting} onClose={() => setFocusWriting(false)} editor={editor} returnFocus={focusTrigger}
       title={article.title} background={article.appearance?.background} saveError={saveError}>
     <div className={`text-editor-page${appearance.compact ? ' text-document--compact' : ''}`} style={textContentStyle(article)}>
-      {(article.title || editingTitle) && <textarea ref={titleField} className="text-document-title" aria-label="Article title" placeholder="Title (optional)" rows={1}
+      {(article.title || !disabled) && <textarea className="text-document-title" aria-label="Article title" placeholder="Title" rows={1}
         spellCheck={false} autoCorrect="off" autoCapitalize="off" maxLength={160} disabled={disabled}
         style={textTitleStyle(article)} value={article.title}
-        onFocus={() => setEditingTitle(true)} onBlur={() => setEditingTitle(false)}
         onChange={event => latest.current.onChange({ ...latest.current.article, title: event.target.value.replace(/[\r\n]+/g, ' ') })}
         onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); editor.commands.focus('start'); } }} />}
       <div className={`text-editor-body${!disabled && editor.isEmpty ? ' text-editor-body--empty' : ''}`}>

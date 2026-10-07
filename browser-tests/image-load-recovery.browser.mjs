@@ -55,7 +55,8 @@ test('Image first raster reports failure and recovers on reopen without authorin
       const beforeRetry = requests; fail = false;
       await page.locator('.image-module__window').focus();
       await page.getByRole('button', { name: 'Close Loading test', exact: true }).click();
-      await page.getByRole('button', { name: 'Loading test', exact: true }).click();
+      await page.getByRole('button', { name: 'Loading test', exact: true }).focus();
+      await page.keyboard.press('Enter');
       await page.locator('.image-module__artwork[data-media-state="ready"]').waitFor();
       assert.ok(requests > beforeRetry, 'reopening genuinely retries the source');
       assert.equal(await page.getByRole('status').filter({ hasText: 'Artwork unavailable' }).count(), 0);

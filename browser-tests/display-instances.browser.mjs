@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
-const origin = 'http://127.0.0.1:5186';
+const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5186';
 const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -35,10 +35,12 @@ try {
   await page.mouse.click(15, 15, { button: 'right' });
   await page.getByRole('menuitem', { name: 'ADD', exact: true }).hover();
   await page.getByRole('menuitem', { name: 'DISPLAY MODULE', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'HORIZONTAL 16:9', exact: true }).click();
   await page.waitForFunction(() => document.querySelectorAll('.system-workflow__presentation-board').length === 2);
   const second = page.locator('[data-display-instance]').nth(1);
   await second.locator('.system-workflow__identity-strip').click({ button: 'right' });
-  await page.getByRole('menuitem', { name: 'PORTRAIT 9:16', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'FORMAT', exact: true }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'VERTICAL 9:16', exact: true }).click();
   await page.waitForFunction(() => instances.getDraft().displays?.[0].geometry.columns === 18);
   await page.waitForTimeout(200);
   const ratios = await page.locator('.system-workflow__stage').evaluateAll(nodes => nodes.map(node => { const r = node.getBoundingClientRect(); return r.width / r.height; }));
@@ -54,7 +56,8 @@ try {
   assert.ok(Math.abs(placement.row + placement.rowSpan / 2 - 16) <= .5);
   await page.getByRole('button', { name: 'Library', exact: true }).click();
   await page.screenshot({ path: 'output/display-instances-wide.png' });
-  await second.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).click();
+  await second.locator('.system-workflow__identity-strip').focus();
+  await second.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).press('Enter');
   await second.getByRole('button', { name: 'Open DISPLAY 2', exact: true }).dblclick();
   await second.locator('.system-workflow__presentation-board').waitFor();
   await second.locator('.system-workflow__identity-strip').click({ button: 'right' });
@@ -78,13 +81,19 @@ try {
   await page.waitForTimeout(250);
   const visitorRatios = await page.locator('.system-workflow__stage').evaluateAll(nodes => nodes.map(node => { const r = node.getBoundingClientRect(); return r.width / r.height; }));
   assert.ok(visitorRatios.some(ratio => Math.abs(ratio - 9 / 16) < .01));
-  assert.equal(await page.locator('[data-embedded-display] .system-workflow__identity-primary strong').isVisible(), true);
+    await page.locator('[data-embedded-display] .system-workflow__identity-strip').focus();
+    assert.equal(await page.locator('[data-embedded-display] .system-workflow__board-title').getAttribute('title'), 'PORTRAIT');
   await page.screenshot({ path: 'output/display-instances-visitor-wide.png' });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(150);
+  const portrait = page.locator('[data-embedded-display] .system-workflow__presentation-board');
+  assert.equal((await portrait.boundingBox()).x, 870, 'a narrow viewport preserves the saved placement');
+  await portrait.getByLabel(/Move Display Module:/).focus(); await page.keyboard.press('Shift+Enter');
+  await page.getByRole('button', { name: 'Focus selected Workbench modules', exact: true }).focus(); await page.keyboard.press('Enter');
+  await page.waitForFunction(() => !document.querySelector('[data-workbench-travelling]'));
+  const box = await portrait.boundingBox();
+  assert.ok(box.x >= 0 && box.x + box.width <= 391 && box.y >= 0 && box.y + box.height <= 845, JSON.stringify(box));
   await page.screenshot({ path: 'output/display-instances-visitor-narrow.png' });
-  const boxes = await page.locator('.system-workflow__presentation-board').evaluateAll(nodes => nodes.map(node => { const r = node.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; }));
-  assert.ok(boxes.every(box => box.left >= 0 && box.right <= 391 && box.top >= 0 && box.bottom <= 845), JSON.stringify(boxes));
   assert.deepEqual(errors, []);
   console.log('Owner add and portrait passed', ratios);
 } finally { await browser.close(); }

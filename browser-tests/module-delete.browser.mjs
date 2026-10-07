@@ -4,7 +4,7 @@ const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:517
 const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
-  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  const errors = []; page.on('pageerror', error => { errors.push(error.message); console.error(error.stack); });
   await page.route('https://raw.githubusercontent.com/**', route => {
     const path = new URL(route.request().url()).pathname.split('/public/')[1];
     return route.fulfill({ path: `public/${path}` });
@@ -36,8 +36,9 @@ try {
   });
 
   await page.locator('.system-workflow__presentation-board').waitFor();
+  await page.locator('header.system-workflow__identity-strip').focus();
   await page.getByRole('button', { name: 'Minimize Display Module to shortcut', exact: true }).click();
-  await page.locator('.system-workflow__desktop-shortcut').click({button:'right'});
+  await page.locator('.system-workflow__desktop-shortcut').press('Shift+F10');
   await page.getByRole('menuitem',{name:'DELETE',exact:true}).click();
   await page.waitForFunction(() => instances.getDraft().grids.length === 0);
   assert.equal(await page.locator('.system-workflow__desktop-shortcut').count(),0);
@@ -62,12 +63,14 @@ try {
   await page.getByRole('menuitem',{name:'HORIZONTAL 16:9',exact:true}).click();
   await page.waitForFunction(()=>instances.getDraft().displays.length===1);
   const second=page.locator('[data-display-instance]').nth(1);
+  await second.locator('header.system-workflow__identity-strip').focus();
   await second.getByRole('button',{name:'Minimize Display Module to shortcut',exact:true}).click();
-  await second.locator('.system-workflow__desktop-shortcut').click({button:'right'});
+  await second.locator('.system-workflow__desktop-shortcut').press('Shift+F10');
   await page.getByRole('menuitem',{name:'DELETE',exact:true}).click();
   await page.waitForFunction(()=>instances.getDraft().displays.length===0);
+  await page.locator('header.system-workflow__identity-strip').focus();
   await page.getByRole('button',{name:'Minimize Display Module to shortcut',exact:true}).click();
-  await page.locator('.system-workflow__desktop-shortcut').click({button:'right'});
+  await page.locator('.system-workflow__desktop-shortcut').press('Shift+F10');
   await page.getByRole('menuitem',{name:'DELETE',exact:true}).click();
   await page.waitForFunction(()=>instances.getDraft().grids.length===0);
 
@@ -100,6 +103,7 @@ try {
     const Visitor=(await import('/src/profileDocument/components/ProfileDocumentV9Visitor.jsx')).default;
     instances.root.render(React.createElement(Visitor,{document:buildProfileDocumentV9({profileAddress:instances.profile,systemWorkflowDraft:instances.getDraft(),assetRecords:[]})}));
   });
+  assert.deepEqual(errors, []);
   await page.locator('.visitor-grid-world').waitFor();
   assert.equal(await page.locator('.system-workflow__presentation-board').count(),0);
   await page.setViewportSize({width:390,height:844});

@@ -1,4 +1,4 @@
-import { useWorkbenchView } from './WorkbenchView.jsx';
+import { useWorkbenchView } from './WorkbenchViewContext.js';
 import ModuleSurfaceControls from './ModuleSurfaceControls.jsx';
 import DisplayCanvasControls from './DisplayCanvasControls.jsx';
 import { useSharedTextTools } from '../../text/SharedTextTools.jsx';
@@ -136,7 +136,7 @@ export default forwardRef(function DisplayModule({ assetsById, controller, autho
   const moduleCommands = [{ id: 'tools', label: 'TOOLS' },
     ...(controller.draft.grids.filter(grid => !isSystemWorkflowWorldCoverGrid(grid)).length > 1 ? [{ id: 'play-grids', label: playingGrids ? 'PAUSE GRIDS' : 'PLAY GRIDS', disabled: playbackDisabled }] : []),{ id: 'appearance', label: 'APPEARANCE', disabled: authoringLocked }, { id: 'format', label: 'FORMAT', disabled: authoringLocked },
     ...(onToggleLibrary ? [{ id: 'toggle-library', label: 'LIBRARY' }] : []),
-    ...(controller.moduleId !== PRIMARY_DISPLAY_ID ? [controller.store.getSnapshot().displays?.find(item => item.id === controller.moduleId)?.visibility === 'PUBLIC'
+    ...(controller.moduleId !== PRIMARY_DISPLAY_ID ? [controller.visibility === 'PUBLIC'
       ? { id: 'exclude-display', label: 'MAKE DISPLAY PRIVATE' }
       : { id: 'include-display', label: 'INCLUDE DISPLAY IN PUBLICATION' }] : [])];
   const moduleSubmenu = id => id === 'tools' ? displayToolCommands() : id === 'format' ? formatCommands : [];

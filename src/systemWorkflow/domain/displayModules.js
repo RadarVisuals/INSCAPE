@@ -27,9 +27,19 @@ export function displayContent(draft, id = PRIMARY_DISPLAY_ID) {
 }
 
 export function projectDisplayDraft(draft, id = PRIMARY_DISPLAY_ID) {
-  const { workbenchGroups: _workbenchGroups, displays: _displays, workbench: _workbench, mobile: _mobile, miniApps: _miniApps, texts: _texts, imageModules: _images, keeperDocks: _keepers, ...shared } = draft;
   const content = displayContent(draft, id);
-  return { ...shared, ...Object.fromEntries(DISPLAY_CONTENT_KEYS.map(key => [key, content[key]])) };
+  // The existing authoring validator needs this envelope, including identity.
+  // Enumerate it so adding a Workbench module cannot expand Display's input.
+  // mergeDisplayDraft accepts only the four Display-owned content fields.
+  return {
+    profileAddress: draft.profileAddress,
+    draftVersion: draft.draftVersion,
+    artboard: content.artboard,
+    geometry: content.geometry,
+    appearance: content.appearance,
+    identityPresentation: draft.identityPresentation,
+    grids: content.grids,
+  };
 }
 
 export function mergeDisplayDraft(draft, id, candidate) {

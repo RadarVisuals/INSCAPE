@@ -93,7 +93,8 @@ test('owner and Visitor have free camera movement without custom-frame controls,
       for (const width of [390, 1440]) {
         await page.setViewportSize({ width, height: 900 }); await settle(page);
         assert.deepEqual(await camera(page), beforeResize, 'viewport changes do not refit the camera');
-        await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).click(); await settle(page);
+        await page.getByRole('button', { name: 'Reset Workbench position', exact: true }).focus();
+        await page.keyboard.press('Enter'); await settle(page);
         await page.screenshot({ path: `.browser-test-runtime/workbench-area-${visitor}-${width}.png` });
         await wheel({ deltaX: -beforeResize.x, deltaY: -beforeResize.y });
       }

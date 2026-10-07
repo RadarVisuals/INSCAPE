@@ -80,7 +80,6 @@
 
 .system-workflow .system-workflow__library .system-workflow__workspace-rail-controls {
   height: 76px;
-  grid-template-columns: 65px minmax(75px, 1fr) 75px 65px 38px;
   grid-template-rows: repeat(2, 38px);
 }
 .system-workflow .system-workflow__library .system-workflow__workspace-rail-controls > :first-child { grid-column: 1 / -1; }

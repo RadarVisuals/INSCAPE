@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSystemWorkflowDraftStore } from './systemWorkflowDraftStore.js';
 import { addDisplayModule, createDisplayModuleSession, setDisplayModuleFormat, setDisplayModuleVisibility } from './displayModuleSession.js';
-import { PRIMARY_DISPLAY_ID } from './domain/displayModules.js';
+import { PRIMARY_DISPLAY_ID, projectDisplayDraft } from './domain/displayModules.js';
+import { addShape, editShape } from '../shapes/shapeSession.js';
 import { buildProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Builder.js';
 import { validateProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Validation.js';
 import { reconcileSystemWorkflowDraftFromProfileDocumentV9 } from '../profileDocument/domain/profileDocumentV9Reconciliation.js';
@@ -69,6 +70,71 @@ function fixture() {
   const store = createSystemWorkflowDraftStore({ profileAddress: profile, storage });
   return { store, storage };
 }
+
+test('Display input excludes other modules, including unknown future Workbench fields', () => {
+  const { store } = fixture();
+  const secondary = addDisplayModule(store);
+  addShape(store, profile);
+  const source = { ...store.getDraft(), futureModule: { content: 'not Display content' } };
+  for (const id of [PRIMARY_DISPLAY_ID, secondary]) {
+    const projected = projectDisplayDraft(source, id);
+    assert.deepEqual(Object.keys(projected).sort(), [
+      'profileAddress', 'draftVersion', 'artboard', 'geometry', 'appearance', 'identityPresentation', 'grids',
+    ].sort());
+    const session = createDisplayModuleSession(store, id);
+    const shapes = store.getDraft().shapes;
+    session.createGrid();
+    assert.deepEqual(store.getDraft().shapes, shapes, 'Display edits preserve the excluded modules');
+  }
+});
+
+test('Shape edits and sibling Display edits preserve unrelated snapshots through save, undo and redo', () => {
+  const { store, storage } = fixture();
+  const secondary = addDisplayModule(store);
+  addShape(store, profile);
+  const primary = createDisplayModuleSession(store, PRIMARY_DISPLAY_ID);
+  const sibling = createDisplayModuleSession(store, secondary);
+  const before = store.getSnapshot();
+  const primaryBefore = primary.getSnapshot().draft, siblingBefore = sibling.getSnapshot().draft;
+  editShape(store, profile, before.shapes[0], { color: '#abcdef' });
+  const changedShape = store.getSnapshot();
+  assert.notEqual(changedShape.shapes, before.shapes);
+  assert.equal(changedShape.grids, before.grids);
+  assert.equal(changedShape.displays, before.displays);
+  assert.equal(primary.getSnapshot().draft, primaryBefore);
+  assert.equal(sibling.getSnapshot().draft, siblingBefore);
+  assert.deepEqual(createSystemWorkflowDraftStore({ profileAddress: profile, storage }).getDraft(), changedShape);
+  assert.throws(() => { changedShape.shapes[0].color = '#ffffff'; }, TypeError);
+  assert.throws(() => { changedShape.grids[0].title = 'mutated'; }, TypeError);
+  assert.ok(store.undo());
+  assert.equal(store.getSnapshot().shapes[0].color, before.shapes[0].color);
+  assert.equal(primary.getSnapshot().draft, primaryBefore);
+  assert.ok(store.redo());
+  assert.equal(store.getSnapshot().shapes[0].color, '#abcdef');
+  assert.equal(sibling.getSnapshot().draft, siblingBefore);
+
+  const primaryGrids = store.getSnapshot().grids, stableShapes = store.getSnapshot().shapes;
+  sibling.createGrid();
+  const siblingAfter = sibling.getSnapshot().draft;
+  assert.notEqual(siblingAfter, siblingBefore);
+  assert.equal(primary.getSnapshot().draft, primaryBefore);
+  assert.equal(store.getSnapshot().grids, primaryGrids);
+  assert.equal(store.getSnapshot().shapes, stableShapes);
+  assert.ok(store.undo());
+  assert.equal(primary.getSnapshot().draft, primaryBefore);
+  assert.deepEqual(sibling.getSnapshot().draft.grids, siblingBefore.grids);
+  assert.ok(store.redo());
+  assert.equal(primary.getSnapshot().draft, primaryBefore);
+  assert.deepEqual(sibling.getSnapshot().draft.grids, siblingAfter.grids);
+
+  const accepted = store.getSnapshot(), generation = store.getGeneration(), history = store.getHistory();
+  storage.setItem = () => { throw Error('full'); };
+  assert.throws(() => editShape(store, profile, accepted.shapes[0], { opacity: 0.5 }), /could not be saved/);
+  assert.equal(store.getSnapshot(), accepted);
+  assert.equal(store.getGeneration(), generation);
+  assert.deepEqual(store.getHistory(), history);
+  assert.equal(primary.getSnapshot().draft, primaryBefore);
+});
 
 for (const additional of [false, true]) test(`Grid duplication saves once, isolates its ${additional ? 'additional' : 'primary'} Display, and supports undo and reload`, () => {
   const { store, storage } = fixture();

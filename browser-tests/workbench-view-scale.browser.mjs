@@ -118,7 +118,7 @@ test('fractional adjoining windows leave no painted seam while zooming and scrol
       await mount(page, visitor, true);
       if (!visitor) {
         await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
-        await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+        await page.locator('.text-tools-window').waitFor({ state: 'detached' });
         await page.locator('main').first().focus();
       }
       // A contrasting Workbench exposes even a partially transparent raster gap.
@@ -163,13 +163,12 @@ for (const visitor of [false, true]) test(`${visitor ? 'Visitor' : 'Owner'} scal
     const errors = []; page.on('pageerror', error => { errors.push(error.message); console.error(error.stack); });
     await mount(page, visitor);
     if (!visitor) {
-      await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
       const tools = page.locator('.text-tools-window'); const before = await tools.boundingBox();
       await zoomToHalf(page);
       assert.deepEqual(await tools.boundingBox(), before, 'Text tools retain their size and position');
       await page.getByRole('button', { name: 'Reset Workbench zoom to 100%' }).click();
       await page.getByRole('button', { name: 'Reset Workbench position' }).click(); await settle(page);
-      await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+      await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
     }
     for (const [name, viewport] of [['wide', { width: 1440, height: 1000 }], ['narrow', { width: 390, height: 844 }]]) {
       await page.setViewportSize(viewport); await page.waitForTimeout(350);

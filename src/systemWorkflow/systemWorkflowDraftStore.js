@@ -47,6 +47,24 @@ function immutableDetached(value) {
   return deepFreeze(detached(value));
 }
 
+// Compare only detached, validated candidates with the accepted immutable draft.
+// Reuse unchanged branches without changing key order or the serialized record.
+// This is structural sharing, not another document cache or storage authority.
+function reuseUnchanged(previous, next) {
+  if (Object.is(previous, next)) return previous;
+  if (!previous || !next || typeof previous !== 'object' || typeof next !== 'object'
+    || Array.isArray(previous) !== Array.isArray(next)) return next;
+  const previousKeys = Object.keys(previous), nextKeys = Object.keys(next);
+  let unchanged = previousKeys.length === nextKeys.length
+    && (!Array.isArray(next) || previous.length === next.length);
+  for (let index = 0; index < nextKeys.length; index++) {
+    const key = nextKeys[index];
+    next[key] = reuseUnchanged(previous[key], next[key]);
+    if (previousKeys[index] !== key || !Object.is(previous[key], next[key])) unchanged = false;
+  }
+  return unchanged ? previous : next;
+}
+
 function validateStoredDraft(candidate, profileAddress) {
   const validation = validateSystemWorkflowDraft(ensureSystemWorkflowWorldCoverGrid(candidate));
   if (!validation.valid) return validation;
@@ -268,7 +286,7 @@ export function createSystemWorkflowDraftStore({
         while (h.undo.length > 50 || h.undo.length > 1 && JSON.stringify(h.undo).length > 4_000_000) h.undo.shift();
       }
       acceptedRaw = raw;
-      currentDraft = deepFreeze(draft);
+      currentDraft = deepFreeze(reuseUnchanged(currentDraft, draft));
       recordState = Object.freeze({ status: SYSTEM_WORKFLOW_RECORD_STATUS.VALID });
       generation += 1;
       lastCommitFailure = null;

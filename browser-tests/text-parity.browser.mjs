@@ -73,6 +73,7 @@ const measure = (page, write) => page.evaluate(write => {
 function compare(write, read) {
   for (const key of ['title', 'images', 'blocks', 'text']) {
     if (write[key] === null) { assert.equal(read[key], null); continue; }
+    assert.notEqual(read[key], null, `${key} remains present in Read`);
     const a = write[key].flat(), b = read[key].flat();
     assert.equal(a.length, b.length, `${key} count`);
     a.forEach((v, i) => typeof v === 'number' ? near(v, b[i], `${key}[${i}]`) : assert.equal(v, b[i]));
@@ -86,7 +87,7 @@ test('illustrated Text has matching title, glyph positions and line breaks in Wr
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mountTextToolsFixture(page, origin);
     for (const options of [{}, { font: 'literata', width: 640 }, { font: 'plex', title: 'A long title that wraps onto several lines at this width' },
-      { font: 'cormorant', scale: 1.2, padding: { top: 8, left: 12, right: 36, bottom: 0 } }, { font: 'mono', compact: true, title: '' },
+      { font: 'cormorant', scale: 1.2, padding: { top: 8, left: 12, right: 36, bottom: 0 } }, { font: 'mono', compact: true },
       { columns: 2, columnGap: 32, width: 760, title: 'Archive in two columns' }, { columns: 3, width: 760, title: 'Archive in three columns' },
       { typography: true, width: 600 }, { spacing: true, width: 640 }, { spacing: true, compact: true, width: 640 },
       { spacing: true, columns: 2, width: 760 }, { lineHeight: 2, width: 600 }, { lineHeight: 1.4, compact: true, width: 600 }]) {
@@ -106,6 +107,15 @@ test('illustrated Text has matching title, glyph positions and line breaks in Wr
         assert.equal(await page.getByRole('button', { name: 'Write', exact: true }).count(), 0);
       }
     }
+    // The optional empty title is an editing affordance. Read and Visitor omit
+    // its placeholder and reserved height, while retaining the complete body.
+    await seed(page, { title: '', compact: true });
+    const emptyTitleBody = await page.locator('.text-editor-content').innerText();
+    assert.equal(await page.getByRole('textbox', { name: 'Article title', exact: true }).getAttribute('placeholder'), 'Title');
+    await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
+    assert.equal(await page.locator('article .text-document-title').count(), 0);
+    assert.equal(await page.locator('article.text-document > div').innerText(), emptyTitleBody);
+    assert.equal(await page.evaluate(() => savedDraft().texts[0].article.title), '');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });

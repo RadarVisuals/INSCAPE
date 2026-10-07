@@ -33,7 +33,7 @@ test('Settings follows the owner profile while Activity is closed', () => withPa
     function Harness({ profile }) {
       const activity = useActivity({ active: false, profileAddress: profile });
       return React.createElement(React.Fragment, null, React.createElement('output', { id: 'unread' }, activity.unreadCount),
-        React.createElement(Settings, { phase: 'open', controller: { draft: { profileAddress: profile } },
+        React.createElement(Settings, { phase: 'open', profileAddress: profile, menuSurface: 'paper', onMenuSurfaceChange() {},
           appearance: { surfaceId: 'paper', guideMode: 'NONE', guideSize: 0, guideColor: '#000000', menuSurfaceId: 'paper' },
           workbenchPreferences: { surfaceId: 'paper', gridMode: 'NONE', shortcutSnap: true, chromeNoise: false }, onClose() {}, onWorkbenchPreferencesChange() {} }));
     }
@@ -53,7 +53,7 @@ test('Settings follows the owner profile while Activity is closed', () => withPa
 test('owner startup preserves a private draft when its publication baseline is missing', () => withPage(async page => {
   // Keep the runtime beyond the reconciliation boundary inert; all storage,
   // document validation and startup reconciliation below are production code.
-  await page.route('**/OwnerSystemWorkflowRuntime.jsx', route => route.fulfill({
+  await page.route('**/OwnerSystemWorkflowRuntime.jsx*', route => route.fulfill({
     contentType: 'text/javascript', body: 'export default function Runtime() { return "Owner ready"; }',
   }));
   await page.evaluate(async () => {

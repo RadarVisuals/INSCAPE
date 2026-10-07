@@ -1,5 +1,5 @@
 import { useWorkbenchPlacement } from './WorkbenchPlacement.jsx';
-import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchView.jsx';
+import { useWorkbenchView, workbenchModuleTransform, useWorkbenchViewRegistration } from './WorkbenchViewContext.js';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
 import { clampWorkbenchPosition, WORKBENCH_BOUNDS } from './workbenchSpace.js';
 import { moduleEdgeStyle } from '../../systemWorkflow/domain/moduleSurfaceAppearance.js';

@@ -123,7 +123,7 @@ test('Owner and Visitor share in-scene inspection without an extra artwork rende
   const runtime = read('./OwnerSystemWorkflowRuntime.jsx');
   const visitor = read('../../profileDocument/components/ProfileDocumentV9Visitor.jsx');
   const profile = read('./OwnerSystemWorkflowProfile.jsx');
-  assert.match(runtime, /<DisplayModule/);
+  assert.match(runtime, /<OwnerDisplayInstance/);
   assert.match(read('./DisplayModule.jsx'), /useOwnerSystemWorkflowFocusViewer/);
   assert.match(visitor, /DisplayFocusViewer/);
   assert.doesNotMatch(read('./DisplayFocusViewer.jsx'), /LatticeFocusViewer|LatticeProductionFocusArtwork|LatticePixelGrid/);

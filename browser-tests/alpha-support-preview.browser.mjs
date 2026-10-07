@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { runOwnerProductionPreviewGate } from './owner-production-preview-harness.mjs';
 
-const previewUrl = 'http://127.0.0.1:4173';
 const expectedRelease = String(process.env.EXPECTED_RELEASE_COMMIT || '').toLowerCase();
 
 test('publication rack keeps technical support evidence out of the normal path', async () => {
@@ -41,7 +40,6 @@ test('publication rack keeps technical support evidence out of the normal path',
     label: 'alpha-support-preview',
     ownerMainSelector: 'main.system-workflow',
     ownerNavigationName: 'System Workflow',
-    previewUrl,
     expectedControlledConsoleErrors: [
       '[wallet-permission-check] (intermediate value).getPermissions is not a function',
       '[wallet-permission-check] erc725.getPermissions is not a function',

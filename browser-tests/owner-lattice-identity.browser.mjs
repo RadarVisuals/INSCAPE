@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { access } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { createServer } from 'node:net';
@@ -10,7 +11,7 @@ import { createBrowserTestCleanup, createLifecycleDiagnostics, withinDeadline,
 import { createPlaywrightRouteController, launchPlaywrightEdge } from './playwright-browser-adapter.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const runtimeDir = resolve(root, '.browser-test-runtime');
+const runtimeDir = resolve(root, `.browser-test-runtime-owner-identity-${process.pid}-${Date.now()}-${randomUUID()}`);
 const profile = '0x1111111111111111111111111111111111111111';
 const rpcOrigin = 'https://rpc.mainnet.lukso.network';
 
@@ -62,7 +63,7 @@ test('production owner Identity Dossier owns focus, scrolling, modules, and resp
   let cleanup = createBrowserTestCleanup({ runtimePath: runtimeDir, workspaceRoot: root, diagnostic });
   try {
     const port = await availablePort(); const baseUrl = `http://127.0.0.1:${port}`;
-    resources.vite = await createViteServer({ root, logLevel: 'error', server: { host: '127.0.0.1', port, strictPort: true } });
+    resources.vite = await createViteServer({ root, cacheDir: resolve(runtimeDir, 'vite-cache'), optimizeDeps: { entries: ['index.html'] }, logLevel: 'error', server: { host: '127.0.0.1', port, strictPort: true, watch: null } });
     await resources.vite.listen();
     const routeController = createPlaywrightRouteController({
       loopbackOrigin: baseUrl,
@@ -90,7 +91,7 @@ test('production owner Identity Dossier owns focus, scrolling, modules, and resp
       onOwnedProcess: ({ rootPid, processTree }) => { cleanup = createBrowserTestCleanup({ rootPid, processTree,
         runtimePath: runtimeDir, workspaceRoot: root, diagnostic }); } });
     const page = launched.page;
-    page.setDefaultTimeout(20_000); page.setDefaultNavigationTimeout(10_000);
+    page.setDefaultTimeout(20_000); page.setDefaultNavigationTimeout(30_000);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
     await setAuthority(page);

@@ -21,11 +21,12 @@ for (const visitor of [false, true]) for (const density of [1.25, 1.5]) {
       const text = page.locator('.text-window'); await text.waitFor();
       if (!visitor) {
         await page.getByRole('button', { name: 'Read', exact: true }).focus(); await page.keyboard.press('Enter');
-        await page.getByRole('button', { name: 'Close Text tools', exact: true }).click();
+        await page.locator('.text-tools-window').waitFor({ state: 'detached' });
       }
       await page.addStyleTag({ content: '.system-workflow,.visitor-grid-world,.system-workflow__workbench{background:#00ff00!important;background-image:none!important}' });
       await page.evaluate(async () => { document.activeElement?.blur(); await document.fonts.ready; });
       await page.mouse.move(1500, 950);
+      await page.mouse.click(1500, 950);
       const measure = () => text.evaluate(n => {
         const paragraph = n.querySelector('.text-document p'), range = document.createRange(); range.selectNodeContents(paragraph);
         return { box: n.getBoundingClientRect().toJSON(), body: n.querySelector('.text-module-body').getBoundingClientRect().toJSON(),
@@ -58,6 +59,7 @@ for (const visitor of [false, true]) for (const density of [1.25, 1.5]) {
       }
       assert.deepEqual(colors.rounded, [0, 255, 0, 255], 'authored rounded corner stays transparent');
       if (!visitor) {
+        await text.getByLabel('Move Text window', { exact: true }).focus();
         const start = await text.boundingBox();
         const handle = await page.getByRole('separator', { name: 'Resize Text window', exact: true }).boundingBox();
         await page.keyboard.down('Alt'); await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2); await page.mouse.down();
@@ -70,7 +72,7 @@ for (const visitor of [false, true]) for (const density of [1.25, 1.5]) {
         const placement = page.locator('[data-system-workflow-placement-id]').nth(1);
         await placement.click({ position: { x: (await placement.boundingBox()).width / 2, y: 60 } });
         const east = page.getByRole('button', { name: 'Resize selection from e', exact: true });
-        const h = await east.boundingBox(); near(h.width, 28 * .67, .5, 'selection handle retains its intended visible size');
+        const h = await east.boundingBox(); near(h.width, 28, .5, 'selection handle retains its screen-sized pointer target through camera zoom');
         const readPlacement = () => page.evaluate(() => JSON.parse(localStorage.getItem(window.__motionKey)).grids[0].placements[1]);
         const authored = await readPlacement();
         await page.keyboard.down('Alt'); await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2); await page.mouse.down();

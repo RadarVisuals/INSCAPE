@@ -44,7 +44,7 @@ test('Grid handoffs retain the moving camera and linked Text in both directions'
             window.handoffs.push(window.readHandoff());
             if (window.movingCamera) window.synchronousHandoffs.push(window.readHandoff());
           });
-          return React.createElement('div', { ref: canvasRef, style: { width: 1001, height: 500 } }, React.createElement('div', { ref: trackRef }));
+          return React.createElement('div', { ref: canvasRef, style: { width: 1000, height: 500 } }, React.createElement('div', { ref: trackRef }));
         }
         function LinkedText() {
           const scene = useSceneNavigation()['display:test'], trackRef = React.useRef(null);
@@ -84,7 +84,7 @@ test('Grid handoffs retain the moving camera and linked Text in both directions'
         for (const passage of observations.passages) {
           assert.equal(passage.grid, grid);
           assert.equal(passage.target, target, 'linked Text keeps its incoming passage');
-          assert.ok(Math.abs(passage.progress * 1001 - residual) < .001, 'linked Text retains Display progress');
+          assert.ok(Math.abs(passage.progress * 1000 - residual) < .001, 'linked Text retains Display progress');
         }
       }
       assert.deepEqual(await page.evaluate(() => window.synchronousHandoffs), [],
@@ -94,7 +94,9 @@ test('Grid handoffs retain the moving camera and linked Text in both directions'
       assert.equal(await page.evaluate(() => window.readHandoff().x), -1000, 'exact arrival retains the rail while held');
       await page.evaluate(() => window.camera.endDrag(true));
       await page.waitForTimeout(30);
-      assert.equal(await page.evaluate(() => window.readHandoff().x), 0, 'a canonical stop clears both the local and physical offsets');
+      assert.equal(await page.evaluate(() => window.readHandoff().localX), 0, 'a canonical stop has no Grid-local offset');
+      const retainedRail = await page.evaluate(() => window.readHandoff().x);
+      assert.equal(retainedRail, -1000, 'stopping retains the prepared rail without rebasing it');
       const startGrid = await page.evaluate(() => window.readHandoff().grid);
       await page.evaluate(() => {
         window.camera.beginDrag(0);
@@ -106,9 +108,9 @@ test('Grid handoffs retain the moving camera and linked Text in both directions'
       const latest = await page.evaluate(() => ({ camera: window.readHandoff(), text: window.readPassage() }));
       assert.equal(latest.camera.grid, startGrid);
       assert.equal(latest.camera.source, startGrid);
-      assert.ok(Math.abs(latest.camera.x - 100) < .001, 'late commits cannot reset a newer camera movement');
+      assert.ok(Math.abs(latest.camera.x - retainedRail - 100) < .001, 'late commits cannot reset a newer camera movement');
       assert.equal(latest.text.grid, startGrid);
-      assert.ok(Math.abs(latest.text.progress * 1001 - 100) < .001);
+      assert.ok(Math.abs(latest.text.progress * 1000 - 100) < .001);
       await page.evaluate(() => {
         window.camera.moveDrag(-1100);
         window.jumpToGrid('3');

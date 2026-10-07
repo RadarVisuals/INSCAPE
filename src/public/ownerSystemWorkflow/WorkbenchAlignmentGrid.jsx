@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import { useWorkbenchCamera } from './WorkbenchCamera.jsx';
-import { useWorkbenchView } from './WorkbenchView.jsx';
+import { useWorkbenchView } from './WorkbenchViewContext.js';
 import { WORKBENCH_GRID_STEP } from './workbenchGrid.js';
 import { projectWorkbenchBounds } from './workbenchSpace.js';
 import { workbenchPaintGeometry } from './workbenchPaintGeometry.js';

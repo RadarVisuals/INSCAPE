@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { WorkbenchWindow } from '../public/ownerSystemWorkflow/DisplayInstrumentWindow.jsx';
 import { ContextToolContent, useContextToolTarget } from '../public/ownerSystemWorkflow/ContextToolbar.jsx';
-import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchView.jsx';
+import { useWorkbenchView } from '../public/ownerSystemWorkflow/WorkbenchViewContext.js';
 import { commitWorkbenchSelectionResize } from '../systemWorkflow/resizeWorkbenchSelection.js';
 import { removeWorkbenchModule } from '../systemWorkflow/removeWorkbenchModule.js';
 import { ModuleGrainControl } from '../public/ownerSystemWorkflow/ModuleSurfaceControls.jsx';

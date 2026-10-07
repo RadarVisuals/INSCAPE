@@ -21,7 +21,7 @@ export function renderSettings(root) {
   } });
   window.signalState = () => useSignalStore.getState();
   root.render(<main className="system-workflow" data-menu-surface="mist">
-    <Settings appearance={{ menuSurfaceId: 'mist' }} controller={{ draft: { profileAddress: profile }, setAppearance() {} }}
+    <Settings profileAddress={profile} onMenuSurfaceChange={() => {}}
       menuSurface="mist" phase="open" workbenchPreferences={DEFAULT_WORKBENCH_PREFERENCES} onClose={() => {}} onWorkbenchPreferencesChange={() => {}} />
   </main>);
 }

@@ -111,13 +111,18 @@ test('owner and Visitor clip adjacent media identically and canonical alpha repl
   try {
     for (const [width, dpr] of [[800, 1], [390, 1.25], [800, 2]]) {
       const { page, errors } = await setup(browser, width, dpr);
+      const images = await page.evaluate(() => Object.fromEntries(['red', 'green', 'alpha'].map(name => {
+        const canvas = document.createElement('canvas'); canvas.width = canvas.height = 200;
+        const context = canvas.getContext('2d'); context.fillStyle = name === 'red' ? 'red' : 'lime';
+        if (name === 'alpha') { context.beginPath(); context.arc(100, 100, 40, 0, 2 * Math.PI); context.fill(); }
+        else context.fillRect(0, 0, 200, 200);
+        return [name, canvas.toDataURL('image/png').split(',')[1]];
+      })));
       await page.route('https://repair.invalid/**', async route => {
         const name = new URL(route.request().url()).pathname;
         if (name.includes('fail')) return route.abort();
         if (name.includes('alpha')) await new Promise(resolve => setTimeout(resolve, 100));
-        const shape = name.includes('alpha') ? '<circle cx="100" cy="100" r="40" fill="lime"/>'
-          : `<rect width="200" height="200" fill="${name.includes('red') ? 'red' : 'lime'}"/>`;
-        return route.fulfill({ contentType: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">${shape}</svg>` });
+        return route.fulfill({ contentType: 'image/png', body: Buffer.from(images[name.slice(1, -4)], 'base64') });
       });
       await page.evaluate(async () => {
         const Owner = (await import('/src/public/ownerSystemWorkflow/DisplayPlacementContent.jsx')).default;
@@ -129,8 +134,8 @@ test('owner and Visitor clip adjacent media identically and canonical alpha repl
         const h = React.createElement;
         const low = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="red"/></svg>');
         const assets = ['red', 'green', 'alpha'].map((name, index) => ({ ...OWNER_SYSTEM_WORKFLOW_REVIEW_ASSETS[index],
-          imageUrl: `https://repair.invalid/${name}.svg`, originalImageUrl: `https://repair.invalid/${name}.svg`,
-          src: `https://repair.invalid/${name}.svg`, previewSrc: undefined, thumbnailUrl: name === 'alpha' ? low : `https://repair.invalid/${name}.svg`,
+          imageUrl: `https://repair.invalid/${name}.png`, originalImageUrl: `https://repair.invalid/${name}.png`,
+          src: `https://repair.invalid/${name}.png`, previewSrc: undefined, thumbnailUrl: name === 'alpha' ? low : `https://repair.invalid/${name}.png`,
           width: 200, height: 200, imageWidth: 200, imageHeight: 200 }));
         const placements = assets.map((asset, index) => ({ id: `p${index}`, stableAssetId: asset.id, column: index * 10, row: 0,
           columnSpan: 10, rowSpan: 10, layer: index, navigationOrder: index, crop: null,
@@ -162,11 +167,11 @@ test('owner and Visitor clip adjacent media identically and canonical alpha repl
       assert.deepEqual(pixels.ownerAlpha, [0, 0, 255, 255]); assert.deepEqual(pixels.ownerAlpha, pixels.visitorAlpha);
       // A changed source and failed high-resolution image must restore a visible fallback.
       await page.evaluate(() => {
-        const asset = pixelReview.assets[2]; pixelReview.assets[2] = { ...asset, imageUrl: 'https://repair.invalid/fail.svg',
-          originalImageUrl: 'https://repair.invalid/fail.svg', src: 'https://repair.invalid/fail.svg' }; pixelReview.render();
+        const asset = pixelReview.assets[2]; pixelReview.assets[2] = { ...asset, imageUrl: 'https://repair.invalid/fail.png',
+          originalImageUrl: 'https://repair.invalid/fail.png', src: 'https://repair.invalid/fail.png' }; pixelReview.render();
       });
       await page.waitForFunction(() => {
-        const media = document.querySelector('#owner .system-workflow__progressive-media');
+        const media = document.querySelector('#owner > :last-child .system-workflow__progressive-media');
         return media && !media.hasAttribute('data-high-ready') && media.querySelectorAll('img').length === 1
           && getComputedStyle(media.querySelector('img')).opacity === '1';
       });
@@ -190,13 +195,15 @@ test('reduced motion advances exactly once on release in owner and Visitor', { t
           id: track.querySelector('[class*=grid-plane--current]')?.dataset.renderedGridId };
       });
       const before = await state();
-      if (!visitor) await page.keyboard.down('Space');
+      if (!visitor) {
+        await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).focus();
+        await page.keyboard.press('Enter');
+      }
       await stage.dispatchEvent('pointerdown', { button: 0, pointerId: 77, clientX: box.x + box.width * .7, clientY: box.y + box.height * .5 });
       await page.evaluate(({ x, y }) => dispatchEvent(new PointerEvent('pointermove', { pointerId: 77, clientX: x, clientY: y, bubbles: true })),
         { x: box.x - box.width * 1.7, y: box.y + box.height * .5 });
       await settle(page); assert.deepEqual(await state(), before);
       await page.evaluate(() => dispatchEvent(new PointerEvent('pointerup', { pointerId: 77, bubbles: true })));
-      if (!visitor) await page.keyboard.up('Space');
       await settle(page);
       const after = await state(); assert.equal(after.x, 0); assert.notEqual(after.id, before.id);
       const oldIndex = Number(before.id.split('-').at(-1)); assert.equal(after.id, `grid:motion-${(oldIndex + 1) % 4}`);

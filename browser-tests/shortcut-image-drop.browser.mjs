@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
+const origin = process.env.INSCAPE_SYSTEM_WORKFLOW_ROOT || 'http://127.0.0.1:5173';
 
 test('expanded image pointer drop replaces only the shortcut icon and survives reload', { timeout: 45000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
@@ -16,7 +17,7 @@ test('expanded image pointer drop replaces only the shortcut icon and survives r
       await page.route('https://images.inscape.test/**', route => route.request().url().endsWith('/transparent.webp')
         ? route.fulfill({ status: 404, body: '' })
         : route.fulfill({ contentType: 'image/webp', path: 'public/assets/actors/skull_reaper/full.webp' }));
-      await page.goto('http://127.0.0.1:5173/browser-tests/library-images-fixture.html');
+      await page.goto(`${origin}/browser-tests/library-images-fixture.html`);
       const initial = await page.evaluate(() => JSON.stringify(window.__imageTest.draft()));
       await page.locator('.system-workflow__desktop-shortcut').dblclick();
       await page.getByRole('button', { name: 'Lock Display Module composition', exact: true }).press('Enter');
