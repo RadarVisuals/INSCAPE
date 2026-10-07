@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
+import { openDisplayTool } from './fixtures/display-controls.mjs';
+import { routeOpaqueWorkflowArtwork } from './fixtures/legacy-workflow-artwork.mjs';
 
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const URL = process.env.INSCAPE_SYSTEM_WORKFLOW_URL || 'http://127.0.0.1:5173/development/owner/system-workflow';
@@ -9,6 +11,7 @@ test('panel controller phases, dismisses and restores exact trigger focus', { ti
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
+    await routeOpaqueWorkflowArtwork(page);
     await page.goto(URL, { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: /Select ABYSSAL STUDY/ }).click();
     const gridsTrigger = page.getByRole('button', { name: /^Grids$/i });
@@ -39,12 +42,12 @@ test('panel controller phases, dismisses and restores exact trigger focus', { ti
     await grids.waitFor({ state: 'detached' });
     await page.getByRole('button', { name: /Select ABYSSAL STUDY/ }).click();
     const canvasBox = await page.locator('.system-workflow__canvas').boundingBox();
-    const cameraX = await page.locator('main.system-workflow').evaluate(node => parseFloat(node.style.getPropertyValue('--workbench-pan-x')) || 0);
+    const cameraX = await page.locator('main.system-workflow').evaluate(node => Number(node.dataset.workbenchCameraX));
     await page.keyboard.down('Space');
     await page.mouse.move(canvasBox.x + canvasBox.width * .7, canvasBox.y + canvasBox.height * .7);
     await page.mouse.down();
     await page.mouse.move(canvasBox.x + canvasBox.width * .7 - 160, canvasBox.y + canvasBox.height * .7, { steps: 4 });
-    assert.equal(await page.locator('main.system-workflow').evaluate(node => parseFloat(node.style.getPropertyValue('--workbench-pan-x'))), cameraX - 160,
+    assert.equal(await page.locator('main.system-workflow').evaluate(node => Number(node.dataset.workbenchCameraX)), cameraX - 160,
       'Space-drag over the Display moves the Workbench camera');
     assert.equal(await page.locator('.system-workflow__selection-chrome[data-navigating]').count(), 0);
     await page.mouse.up();
@@ -91,6 +94,7 @@ test('reduced motion keeps lifecycle semantics without transition delay', { time
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 390, height: 720 }, reducedMotion: 'reduce' });
+    await routeOpaqueWorkflowArtwork(page);
     await page.goto(URL, { waitUntil: 'networkidle' });
     const trigger = page.getByRole('button', { name: /^Grids$/i });
     await trigger.click();
@@ -103,10 +107,11 @@ test('reduced motion keeps lifecycle semantics without transition delay', { time
   }
 });
 
-test('normal motion preserves Profile, Activity, and focus-viewer source continuity', { timeout: 60_000 }, async () => {
+test('normal motion preserves Profile, Activity, and contained inspection source continuity', { timeout: 60_000 }, async () => {
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
+    await routeOpaqueWorkflowArtwork(page);
     await page.goto(URL, { waitUntil: 'networkidle' });
 
     const profileTrigger = page.getByRole('button', { name: /^Profile$/i });
@@ -137,12 +142,12 @@ test('normal motion preserves Profile, Activity, and focus-viewer source continu
     const placement = page.locator('.system-workflow__placement').first();
     await placementTrigger.click();
     await placementTrigger.dblclick();
-    const viewer = page.getByRole('dialog', { name: 'ABYSSAL STUDY focus viewer' });
+    const viewer = page.getByRole('group', { name: 'Artwork inspection', exact: true });
     await viewer.waitFor();
-    assert.equal(await placement.getAttribute('data-viewing'), 'true');
+    assert.equal(await placement.getAttribute('data-inspection-context'), 'selected');
     await page.getByRole('button', { name: 'Close artwork viewer' }).click();
     await viewer.waitFor({ state: 'detached' });
-    assert.equal(await placement.getAttribute('data-viewing'), null);
+    assert.equal(await placement.getAttribute('data-inspection-context'), null);
     assert.equal(await placementTrigger.evaluate((node) => node === document.activeElement), true);
 
   } finally {
@@ -154,14 +159,27 @@ test('Layers remains mounted while artwork inspection is open', { timeout: 60_00
   const browser = await chromium.launch({ executablePath: EDGE, headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
+    await routeOpaqueWorkflowArtwork(page);
     await page.goto(URL, { waitUntil: 'networkidle' });
     const placement = page.locator('.system-workflow__placement').first();
     await placement.click();
+    await openDisplayTool(page, page.locator('.system-workflow__presentation-board'), 'LAYERS');
     const inspector = page.getByRole('region', { name: 'Selection and layers inspector' });
     await inspector.waitFor();
+    const window = page.locator('[data-shared-tool="layers"]').locator('xpath=ancestor::aside');
+    const before = await window.boundingBox();
+    const rows = await inspector.locator('.system-workflow__layer-row').allTextContents();
     await placement.dblclick();
-    await page.getByRole('dialog', { name: 'ABYSSAL STUDY focus viewer' }).waitFor();
-    assert.equal(await inspector.isVisible(), true);
+    await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor();
+    assert.equal(await window.isVisible(), true, 'the shared Layers window remains open during inspection');
+    assert.deepEqual(await window.boundingBox(), before, 'inspection does not move or resize Layers');
+    assert.equal(await inspector.count(), 0, 'inspection suspends authoring controls');
+    await page.getByRole('button', { name: 'Close artwork viewer' }).click();
+    await page.getByRole('group', { name: 'Artwork inspection', exact: true }).waitFor({ state: 'detached' });
+    await inspector.waitFor();
+    assert.deepEqual(await inspector.locator('.system-workflow__layer-row').allTextContents(), rows,
+      'returning restores the exact targeted Grid layers');
+    assert.deepEqual(await window.boundingBox(), before);
   } finally {
     await browser.close();
   }

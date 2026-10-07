@@ -374,7 +374,9 @@ export function WorkbenchViewControls({ hostRef, disabled = false, dockVisible =
       const header = event.target.closest?.('header[data-workbench-selectable]');
       const selectable = event.target.closest?.('[data-workbench-selectable]');
       if (locked) {
-        if (selectable === event.target) {
+        // Inspection locks editing, while titles retain menu and focus access.
+        const accessKey = ['Tab', 'Escape', 'ContextMenu'].includes(event.key) || event.shiftKey && event.key === 'F10';
+        if (selectable === event.target && !accessKey) {
           event.preventDefault(); event.stopPropagation();
         }
         return;

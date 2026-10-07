@@ -68,9 +68,15 @@ export default function useWorkbenchCameraMotion(camera, hostRef, entries) {
   }, [getCamera, prepare, stop]);
   const panTo = useCallback(offset => {
     const next = { ...getCamera(), offset }, motion = active.current;
-    if (motion?.kind === 'pan' && motion.surface.isCurrent()) previewCamera(next);
+    if (motion?.kind === 'pan') {
+      // A lazy module can register while the pointer gesture is still active.
+      // Rebase once at the live camera, then keep painting subsequent samples.
+      // The gesture owner retains the original Escape/cancellation offset.
+      if (!motion.surface.isCurrent()) prepare({ kind: 'pan', start: getCamera(), frame: null });
+      previewCamera(next);
+    }
     else { stop(); applyCamera(next); }
-  }, [getCamera, previewCamera, stop, applyCamera]);
+  }, [getCamera, prepare, previewCamera, stop, applyCamera]);
   const releasePan = useCallback(velocity => {
     stop();
     if (preference?.matches) return;

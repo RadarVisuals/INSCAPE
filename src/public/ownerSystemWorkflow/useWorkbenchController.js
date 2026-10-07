@@ -25,7 +25,7 @@ export default function useWorkbenchController(profileAddress, { storage } = {})
     try { const result = operation(authority.session); setFailure(null); return result; }
     catch (error) { setFailure({ authority, message: error.message }); return false; }
   }, [authority]);
-  const clearError = useCallback(() => setFailure(null), []);
+  const clearError = useCallback(() => setFailure(current => current === failure ? null : current), [failure]);
   // Rendering reads the accepted immutable document. A Display navigation must
   // not clone every sibling module or invalidate their content identities.
   const draft = authority.store.getSnapshot();

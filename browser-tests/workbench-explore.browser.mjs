@@ -18,6 +18,7 @@ test('Explore pans live owner and Visitor scenes without per-frame React commits
       await mountGridMotionFixture(page, { origin, visitor, heavy: true, count: 3, textModes: true, displayWidth: 600 });
       await page.evaluate(() => import('/src/lattice/rendering/latticeMenuSurface.css'));
       const toggle = page.getByRole('button', { name: 'Explore Workbench', exact: true }); await toggle.waitFor();
+      await page.waitForFunction(() => document.querySelectorAll('[data-workbench-view-id^="text:"]').length === 3);
       await page.evaluate(() => document.fonts.ready); await settle(page);
       const host = page.locator('main.system-workflow').first();
       const saved = await page.evaluate(() => localStorage.getItem(window.__motionKey));
@@ -32,12 +33,20 @@ test('Explore pans live owner and Visitor scenes without per-frame React commits
       await toggle.click(); await settle(page);
       await page.mouse.move(700, 420); await page.mouse.down(); await settle(page);
       const dragCommits = await page.evaluate(() => window.__motionCommits);
-      for (let step = 1; step <= 10; step++) { await page.mouse.move(700 + step * 14, 420 + step * 6); await page.waitForTimeout(10); }
-      assert.equal(await page.locator('.workbench-marquee').count(), 0);
-      const dragged = await camera(page), afterDragCommits = await page.evaluate(() => window.__motionCommits);
+      // Snapshot at release: assertion roundtrips before mouseup can themselves
+      // turn a moving release into a deliberately paused one (the 64ms cutoff).
+      await page.evaluate(() => document.addEventListener('pointerup', () => {
+        const node = document.querySelector('main.system-workflow');
+        window.__exploreRelease = { camera: { scale: Number(node.dataset.workbenchCameraScale || 1),
+          x: Number(node.dataset.workbenchCameraX || 0), y: Number(node.dataset.workbenchCameraY || 0) },
+        commits: window.__motionCommits, marquees: document.querySelectorAll('.workbench-marquee').length };
+      }, { once: true, capture: true }));
+      for (let step = 1; step <= 10; step++) { await page.mouse.move(700 + step * 14, 420 + step * 6); if (step < 10) await page.waitForTimeout(10); }
+      await page.mouse.up();
+      const { camera: dragged, commits: afterDragCommits, marquees } = await page.evaluate(() => window.__exploreRelease);
+      assert.equal(marquees, 0);
       assert.deepEqual(dragged, { ...before, x: before.x + 140, y: before.y + 60 });
       assert.ok(afterDragCommits - dragCommits <= 4, 'pointer samples must not render module editors');
-      await page.mouse.up();
       await page.waitForFunction(() => document.querySelector('[data-workbench-travelling]'));
       const coastCommits = await page.evaluate(() => window.__motionCommits);
       await page.waitForTimeout(130);

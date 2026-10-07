@@ -33,7 +33,7 @@ export default function OwnerDisplayInstance({ id, index, store, profileAddress,
   // The host's leave handler must see the state already shown in this paint.
   useLayoutEffect(() => { onPresentation(id, projectedPresentation); }, [id, projectedPresentation, onPresentation]);
   useLayoutEffect(() => { onController(id, { controller, displayRef, placementRef, shortcutRef, locked }); },
-    [id, controller.generation, controller.selectedGridId, controller.selectedPlacementIds.join(','), controller.hiddenPlacementIds, controller.error, locked, onController]);
+    [id, controller.generation, controller.selectedGridId, controller.selectedPlacementIds.join(','), controller.hiddenPlacementIds, controller.error, controller.clearError, locked, onController]);
   useLayoutEffect(() => () => { onController(id, null); onPresentation(id, undefined); }, [id, onController, onPresentation]);
   return <div className="system-workflow__display-instance" data-display-instance={id} data-active-display={active || undefined}
     onPointerDownCapture={() => onActivate(id)} onFocusCapture={() => onActivate(id)}>

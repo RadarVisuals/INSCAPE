@@ -11,7 +11,7 @@ for (const sections of [false, true]) test(sections ? 'article sections link fro
     await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', async route => {
       const path = new URL(route.request().url()).pathname.split('/public/')[1];
-      await route.fulfill({ response: await route.fetch({ url: `${origin}/${path}` }) });
+      await route.fulfill({ path: `public/${path}` });
     });
     await page.route(`${origin}/__scene_review__`, route => route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }));
     const mount = async (visitor = false) => page.evaluate(async ({ visitor, sections }) => {

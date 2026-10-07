@@ -134,7 +134,6 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       setActiveModuleId(null);
   }, [activeModuleId, hasPrimaryDisplay, workbenchController.draft.displays, workbenchController.draft.imageModules, workbenchController.draft.shapes, workbenchController.draft.keeperDocks, workbenchController.draft.texts]);
   const activeController = selectedInstance?.controller;
-  const currentError = activeController?.error || workbenchController.error;
   const initialWorkbench = useRef(restoredWorkspace.layout || workbenchController.draft.workbench || null);
   const [workbenchLayout, setWorkbenchLayout] = useState(() => initialWorkbench.current || createDefaultWorkbenchPresentation());
   const changeIdentityWindow = useCallback(({ left, top, width }) => setWorkbenchLayout(current => {
@@ -148,7 +147,9 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
     profileAddress, workbenchController.draft?.appearance.surfaceId,
   ));
   const [publicationOpen, setPublicationOpen] = useState(false);
-  const [notice, setNotice] = useState(null);
+  const [notice, setNoticeState] = useState(null);
+  const setNotice = useCallback(message => setNoticeState(message ? { message } : null), []);
+  const dismissHostNotice = useCallback(() => setNoticeState(current => current === notice ? null : current), [notice]);
   const previewSession = useWorkbenchPreview(workbenchController.store, setNotice);
   const { preview, close: closePreview, returnFocus: previewReturnFocus } = previewSession;
   useDraftUndo(workbenchController.store, Boolean(preview), setNotice, pendingText.length ? TEXT_RECOVERY_MESSAGE : null);
@@ -285,16 +286,14 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
   const panelBlocksAuthoring = id => id !== 'library' && !(id === 'grids' && libraryOpen);
   const panelOccupied = Boolean(publicationPresence.present || (panel && panelBlocksAuthoring(panel))
     || Object.entries(panels.presence).some(([id, { present }]) => panelBlocksAuthoring(id) && present));
-  const dismissNotice = useCallback(() => {
-    for (const id of displayIds) instanceRecords[id]?.controller.clearError();
-    workbenchController.clearError();
-    setNotice(null);
-  }, [instanceRecords, workbenchController.clearError]);
+  const noticeMessage = activeController?.error || workbenchController.error || notice?.message;
+  const dismissNotice = activeController?.error ? activeController.clearError
+    : workbenchController.error ? workbenchController.clearError : dismissHostNotice;
   useEffect(() => {
-    if (!currentError && !notice) return undefined;
+    if (!noticeMessage) return undefined;
     const timeout = globalThis.setTimeout(dismissNotice, 4_500);
     return () => globalThis.clearTimeout(timeout);
-  }, [currentError, dismissNotice, notice]);
+  }, [noticeMessage, dismissNotice]);
   useEffect(() => {
     if (workbenchPreferencesProfileRef.current !== profileAddress) {
       workbenchPreferencesProfileRef.current = profileAddress;
@@ -505,8 +504,8 @@ function WorkbenchSession({ connectedProfile, getWalletPublicationContext, onCon
       onOpen={openDockPanel} onPreview={event => openPreview(event.currentTarget)}
       onPublish={(event) => togglePublication(event.currentTarget)} publicationOpen={publicationOpen}
       unreadCount={activity.unreadCount} />}
-    {(currentError || notice) && <button aria-label="Dismiss notification" className="system-workflow__notice"
-      type="button" onClick={dismissNotice}>{currentError || notice}</button>}
+    {noticeMessage && <button aria-label="Dismiss notification" className="system-workflow__notice"
+      type="button" onClick={dismissNotice}>{noticeMessage}</button>}
     {previewSession.preparing && <p className="system-workflow__layout-notice" role="status">Preparing preview… <button type="button" onClick={() => closePreview()}>Cancel preview</button></p>}
     {workspaceMenu && createPortal(<WorkbenchCommandMenu key={`${workspaceMenu.x}:${workspaceMenu.y}`} anchor={workspaceMenu}
       commands={[{ id: 'tools', label: 'TOOLS' }, { id: 'add', label: 'ADD' }, ...(workbenchController.draft.shapes?.length ? [{ id: 'shapes', label: 'SHAPES' }] : []), { id: 'identity', label: 'IDENTITY' }, { id: 'library', label: 'LIBRARY' },

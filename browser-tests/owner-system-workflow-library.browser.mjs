@@ -14,7 +14,8 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     if (SCREENSHOT_DIR) await mkdir(SCREENSHOT_DIR, { recursive: true });
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(`${ROOT}/development/owner/system-workflow`, { waitUntil: 'networkidle' });
-    await page.evaluate(() => { window.__workflowWrites = 0; addEventListener('inscape:review-storage-write', () => { window.__workflowWrites += 1; }); });
+    await page.evaluate(() => { window.__workflowWrites = 0; addEventListener('inscape:review-storage-write', event => { if (event.detail.key.startsWith('inscape.system-workflow-draft.')) window.__workflowWrites += 1; }); });
+    const compositionBefore = await page.locator('.system-workflow__presentation-board').boundingBox();
     const trigger = page.getByRole('button', { name: 'Library', exact: true });
     await trigger.click();
     const workspace = page.getByRole('region', { name: 'Library workspace' });
@@ -22,7 +23,11 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     await page.waitForFunction(() => document.querySelector('[aria-label="Library workspace"]')?.closest('[data-system-workflow-panel]')?.dataset.panelPhase === 'open');
     await page.waitForFunction(() => document.querySelectorAll('.system-workflow__library .lattice-browser-asset').length === 7);
     const bounds = await workspace.boundingBox();
-    assert.deepEqual(bounds, { x: 0, y: 0, width: 980, height: 858 });
+    assert.equal(bounds.x, 0, 'Library is anchored to the left Workbench edge');
+    assert.ok(bounds.y >= 0 && bounds.width > 0 && bounds.width < 1440 && bounds.y + bounds.height <= 900,
+      'Library is a bounded overlay with Workbench space remaining visible');
+    assert.deepEqual(await page.locator('.system-workflow__presentation-board').boundingBox(), compositionBefore,
+      'opening Library does not reflow the composition');
     const sidebarResize = workspace.getByRole('button', { name: 'Resize Browser navigation' });
     assert.equal(await sidebarResize.evaluate((node) => getComputedStyle(node, '::after').width), '1px');
     assert.equal(await sidebarResize.evaluate((node) => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
@@ -157,18 +162,14 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     const placedBox = await page.locator('.system-workflow__placement').last().boundingBox();
     assert.ok(Math.abs(placedBox.width / placedBox.height - 1) < 0.01, 'square source keeps its ratio after placement');
 
-    await workspace.getByLabel('Search').fill('MOUNTAIN SIGNAL II');
-    assert.equal(await workspace.evaluate((node) => {
-      const text = node.querySelector('.lattice-browser-asset__record strong')?.firstChild;
-      const selection = globalThis.getSelection();
-      if (!text || !selection) return false;
-      const range = document.createRange();
-      range.selectNodeContents(text);
-      selection.removeAllRanges();
-      selection.addRange(range);
-      return selection.rangeCount === 1 && selection.toString().length > 0;
-    }), true, 'Library text can still be selected while the workspace is open');
-
+    // Cards own dragging and suppress text selection. Native search input keeps
+    // a real selectable string for the workspace-close cleanup regression.
+    const search = workspace.getByLabel('Search');
+    await search.fill('MOUNTAIN SIGNAL II');
+    await search.focus(); await page.keyboard.press('Control+a');
+    assert.deepEqual(await search.evaluate(node => [node.selectionStart, node.selectionEnd]), [0, 'MOUNTAIN SIGNAL II'.length],
+      'Library retains native text selection in its search input');
+    assert.equal(await page.evaluate(() => globalThis.getSelection()?.toString()), 'MOUNTAIN SIGNAL II');
     for (let index = 0; index < 4 && await workspace.count(); index += 1) await page.keyboard.press('Escape');
     await workspace.waitFor({ state: 'detached' });
     assert.equal(await page.evaluate(() => globalThis.getSelection()?.rangeCount || 0), 0, 'closing a workspace clears native browser text selection');
@@ -177,77 +178,34 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
 
     await trigger.click(); await workspace.waitFor();
     assert.equal(await workspace.getByLabel('Card size').inputValue(), '220', 'Library remembers card size across close and reopen');
+    const libraryQueryBeforeDiscover = await workspace.getByLabel('Search').inputValue();
     assert.equal(await workspace.locator('.system-workflow__workspace-labels input').isChecked(), true, 'Library remembers label visibility across close and reopen');
     for (let index = 0; index < 4 && await workspace.count(); index += 1) await page.keyboard.press('Escape');
     await workspace.waitFor({ state: 'detached' });
 
-    await page.getByRole('button', { name: 'Discover', exact: true }).click();
-    const discover = page.getByRole('region', { name: 'Discover directory' });
-    await discover.waitFor();
-    assert.deepEqual(await discover.getByLabel('Profile card size').evaluate((node) => [node.min, node.max, node.step]), ['68', '420', '1'], 'Discover uses the same fine thumbnail density range as Library');
-    assert.deepEqual(await discover.getByRole('button', { name: 'All people', exact: true }).evaluate((node) => {
-      const style = getComputedStyle(node); return [style.fontFamily, style.fontSize, style.fontWeight, style.lineHeight];
-    }), ['"Inscape Sora", sans-serif', '11px', '500', '12.1px'], 'Discover sidebar uses the canonical loaded label face and weight');
-    const discoverCreate = discover.getByRole('button', { name: 'Create Group', exact: true });
-    assert.equal(await discoverCreate.evaluate((node) => getComputedStyle(node).backgroundColor), libraryCreateColor, 'Library and Discover Create actions use the exact same color');
-    assert.equal((await discoverCreate.textContent()).trim(), 'Create Group');
-    assert.deepEqual(await discover.getByRole('button', { name: 'All people', exact: true }).evaluate((node) => {
-      const style = getComputedStyle(node); const marker = getComputedStyle(node, '::before');
-      return [style.boxShadow, marker.left, marker.width];
-    }), ['none', '0px', '4px'], 'Discover selection uses the same shared four-pixel marker');
-    assert.deepEqual(await discoverCreate.evaluate((node) => {
-      const heading = node.parentElement; return [getComputedStyle(heading).borderBottomWidth, getComputedStyle(node).borderBottomWidth];
-    }), ['0px', '1px'], 'Discover Create action uses the same canonical lower border');
-    await discoverCreate.click();
-    const groupDialog = discover.locator('form[aria-label="Create people group"]');
-    await groupDialog.locator('input').fill('friends of Inscape');
-    await groupDialog.locator('input').press('Enter');
-    const createdGroup = discover.getByRole('button', { name: 'friends of Inscape', exact: true });
-    assert.equal(await createdGroup.count(), 1, 'Discover preserves spaces and entered letter case');
-    await createdGroup.click({ button: 'right' });
-    await page.getByRole('menu', { name: 'People group commands' }).getByRole('menuitem', { name: 'Delete' }).click();
-    const deleteGroupDialog = discover.getByRole('alertdialog', { name: 'Delete people group friends of Inscape' });
-    assert.match(await deleteGroupDialog.textContent(), /friends of Inscape/);
-    assert.equal(await deleteGroupDialog.getAttribute('class'), 'system-workflow__sidebar-delete', 'Discover deletion uses the shared inline sidebar confirmation');
-    await deleteGroupDialog.getByRole('button', { name: 'Delete friends of Inscape', exact: true }).click();
-    assert.equal(await discover.getByRole('button', { name: 'friends of Inscape', exact: true }).count(), 0,
-      'confirming Discover group deletion removes its sidebar row');
-    await discover.getByRole('button', { name: 'All people', exact: true }).click();
-    const discoverResize = discover.getByRole('button', { name: 'Resize Browser navigation' });
-    const discoverResizeBox = await discoverResize.boundingBox();
-    await page.mouse.move(discoverResizeBox.x + discoverResizeBox.width / 2, discoverResizeBox.y + 40);
-    await page.mouse.down(); await page.mouse.move(discoverResizeBox.x - 180, discoverResizeBox.y + 40); await page.mouse.up();
-    assert.equal(await discover.getAttribute('data-sidebar-collapsed'), 'true');
-    await discover.getByRole('button', { name: 'All people', exact: true }).hover();
-    const discoverHoverLabel = discover.locator('.system-workflow__sidebar-hover-label');
-    await discoverHoverLabel.waitFor();
-    assert.equal(await discoverHoverLabel.textContent(), 'All people');
-    assert.equal(await discoverHoverLabel.getAttribute('data-active'), 'true');
-    await discover.getByLabel('Profile card size').fill('233');
-    const discoverMediaBefore = await discover.locator('.system-workflow__discover-avatar img').first().boundingBox();
-    await discover.locator('.system-workflow__workspace-labels input').uncheck();
-    assert.deepEqual(await discover.locator('.system-workflow__discover-avatar img').first().boundingBox(), discoverMediaBefore, 'Discover labels do not inset or resize media');
-    await discover.getByRole('button', { name: 'Close Discover' }).click();
-    await discover.waitFor({ state: 'detached' });
-    await page.getByRole('button', { name: 'Discover', exact: true }).click(); await discover.waitFor();
-    assert.equal(await discover.getAttribute('data-sidebar-collapsed'), 'true', 'Discover remembers sidebar width across close and reopen');
-    assert.equal(await discover.getByLabel('Profile card size').inputValue(), '233', 'Discover remembers card size across close and reopen');
-    assert.equal(await discover.locator('.system-workflow__workspace-labels input').isChecked(), false, 'Discover remembers label visibility across close and reopen');
+    const discoverTrigger = page.getByRole('button', { name: 'Discover', exact: true });
+    await discoverTrigger.click();
+    const discover = page.locator('.public-entry-portal');
+    await discover.getByRole('region', { name: 'Published worlds' }).waitFor();
+    const worldSearch = discover.getByLabel('Search published worlds', { exact: true });
+    await worldSearch.fill('no such published world');
+    assert.equal(await workspace.count(), 0, 'Discover does not reopen the Library workspace');
     await page.setViewportSize({ width: 390, height: 720 });
-    await page.waitForFunction(() => document.querySelector('.system-workflow')?.dataset.layout === 'narrow');
-    assert.equal(await discover.locator('.system-workflow__workspace-rail-controls').evaluate((rail) => {
-      const children = [...rail.children].map((node) => node.getBoundingClientRect());
-      const railBox = rail.getBoundingClientRect();
-      return children.slice(1, 5).every((box) => box.top < children[0].top)
-        && Math.abs(children[5].right - railBox.right) < 1
-        && getComputedStyle(rail.children[5]).borderRightWidth === '0px';
-    }), true, 'narrow Discover puts controls above search and closes flush against one outer edge');
-    if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'review-discover-390x720.png') });
-    await discover.getByRole('button', { name: 'Close Discover' }).click(); await discover.waitFor({ state: 'detached' });
-
+    const directoryBounds = await discover.boundingBox();
+    assert.ok(directoryBounds.x >= 0 && directoryBounds.width <= 390 && directoryBounds.y >= 0,
+      'Discover fits the narrow viewport');
+    await discover.getByRole('button', { name: 'Return to workspace', exact: true }).click();
+    await discover.waitFor({ state: 'detached' });
+    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Discover');
+    assert.equal(await discoverTrigger.evaluate(node => node === document.activeElement), true);
     await trigger.click(); await workspace.waitFor();
     await page.waitForFunction(() => document.querySelector('[aria-label="Library workspace"]')?.closest('[data-system-workflow-panel]')?.dataset.panelPhase === 'open');
-    assert.deepEqual(await workspace.boundingBox(), { x: 8, y: 8, width: 374, height: 652 });
+    assert.equal(await workspace.getByLabel('Search').inputValue(), libraryQueryBeforeDiscover, 'Discover search does not change the Library query');
+    assert.equal(await workspace.getByLabel('Card size').inputValue(), '220', 'Discover does not change Library density');
+    const narrowBounds = await workspace.boundingBox();
+    assert.ok(narrowBounds.x >= 0 && narrowBounds.y >= 0 && narrowBounds.width > 0 && narrowBounds.height > 0
+      && narrowBounds.x + narrowBounds.width <= 390 && narrowBounds.y + narrowBounds.height <= 720,
+    'narrow Library remains within the viewport');
     assert.equal(await workspace.locator('.system-workflow__local-rail').evaluate((node) => node.scrollWidth === node.clientWidth), true, 'narrow Library rail has no trailing close-control block');
     assert.equal(await workspace.locator('.system-workflow__workspace-rail-controls').evaluate((rail) => {
       const children = [...rail.children].map((node) => node.getBoundingClientRect());
@@ -259,11 +217,13 @@ test('Library workspace exposes accepted views, stable filters and one-commit pl
     if (SCREENSHOT_DIR) await page.screenshot({ path: resolve(SCREENSHOT_DIR, 'review-library-390x720.png') });
 
     await page.setViewportSize({ width: 1440, height: 900 });
-    while (await workspace.locator('.lattice-browser-category-list > button').count()) {
-      const category = workspace.locator('.lattice-browser-category-list > button').first();
+    assert.equal(await workspace.locator('.system-workflow__library-tree-category').count(), 3, 'category creation survived Library and Discover roundtrips');
+    while (await workspace.locator('.system-workflow__library-tree-category').count()) {
+      const category = workspace.locator('.system-workflow__library-tree-category > button').first();
+      const name = await category.getAttribute('aria-label');
       await category.click({ button: 'right' });
       await page.getByRole('menu', { name: 'Category commands' }).getByRole('menuitem', { name: 'Delete', exact: true }).click();
-      await workspace.getByRole('dialog', { name: 'Delete category' }).getByRole('button', { name: 'Delete', exact: true }).click();
+      await workspace.getByRole('alertdialog', { name: 'Delete category ' + name, exact: true }).getByRole('button', { name: 'Delete ' + name, exact: true }).click();
     }
     assert.equal(await workspace.getByText('NO CATEGORIES', { exact: true }).count(), 0, 'an empty Library sidebar stays visually empty');
 

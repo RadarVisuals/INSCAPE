@@ -1,6 +1,6 @@
 // Filled, layered Display scenes and independent Images shared by motion tests.
 export async function mountGridMotionFixture(page, { origin, visitor = false, heavy = false, count = 4, displayWidth = 1000, grain, edgeReview = false, seamReview = false, artwork, inspectionArtwork, inspectionMode, textModes = false, adjoiningModules = null, workbenchGroups, privateModuleIds = [] }) {
-  await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+  await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.fallback() : route.abort());
   await page.route('**/motion-artwork.png', route => route.fulfill({ contentType: 'image/jpeg', path: 'browser-tests/fixtures/grid-landscape.jpg' }));
   await page.route('https://raw.githubusercontent.com/RadarVisuals/INSCAPE/**', route => route.fulfill({ contentType: 'image/webp', path: `public/${new URL(route.request().url()).pathname.split('/public/')[1]}` }));
   if (artwork?.body) await page.route(artwork.url, route => route.fulfill({ contentType: artwork.contentType || 'image/svg+xml', body: artwork.body }));

@@ -81,15 +81,21 @@ for (const separate of [false, true]) for (const visitor of [false, true]) for (
       assert.ok(resting.red > box.width - 10 && resting.blue === 0, 'the source is cropped to the red half, without a blue stripe or transparent margin');
       await openDisplayMenu(page, page.getByRole('article', { name: 'Display Module', exact: true }));
       await page.getByRole('menuitem', { name: 'PLAY GRIDS', exact: true }).click();
+      const track = page.locator('.system-workflow__grid-track,.visitor-grid-world__grid-track');
+      const originalAnimation = await track.evaluateHandle(node => node.getAnimations()[0]);
       const samples = [];
       // Cross both source halves and the wrap, which puts the source image's
-      // outer edges together instead of its interior crop boundaries.
-      for (const fraction of [.213, .5037, .819, 1.213, 1.5037, 1.819]) {
-        await page.evaluate(async fraction => {
+      // outer edges together instead of its interior crop boundaries. Continue
+      // beyond five slots so every prepared plane must have been replenished.
+      for (const fraction of [.213, .5037, .819, 1.213, 1.5037, 1.819, 2.213, 2.819, 3.5037, 4.213, 4.819, 5.5037, 6.213, 6.819]) {
+        const retainedAnimation = await page.evaluate(async ({ fraction, originalAnimation }) => {
           const animation = document.querySelector('.system-workflow__grid-track,.visitor-grid-world__grid-track').getAnimations()[0];
           animation.play(); await animation.ready; animation.currentTime = 12000 * fraction;
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        }, fraction);
+          return document.querySelector('.system-workflow__grid-track,.visitor-grid-world__grid-track').getAnimations()[0] === originalAnimation;
+        }, { fraction, originalAnimation });
+        assert.equal(retainedAnimation, true, 'handoffs retain the original native animation');
+        assert.ok(await track.locator(':scope > div').count() <= 5, 'repeated wraps keep at most five prepared planes');
         const sample = await inspect(String(fraction));
         assert.ok(sample.red > 10 && sample.blue > 10, 'the crossing displays both fully opaque source crops');
         samples.push({ fraction, ...sample });
@@ -97,6 +103,7 @@ for (const separate of [false, true]) for (const visitor of [false, true]) for (
       const pause = page.getByRole('button', { name: 'Pause Grids', exact: true });
       await pause.focus(); await page.keyboard.press('Enter');
       samples.push({ paused: true, ...await inspect('paused') });
+      await originalAnimation.dispose();
       await writeFile(`${output}/color-seam-${label}.json`, JSON.stringify({ label, source: separate ? 'two opaque PNGs, physically cropped to 1280x720 each' : 'opaque PNG 2560x720, two 1280x720 halves', box, resting, samples }, null, 2));
       assert.deepEqual(errors, []);
       if (!visitor) assert.equal(await page.evaluate(() => localStorage.getItem(window.__motionKey) === window.__motionSaved), true);

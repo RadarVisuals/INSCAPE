@@ -91,7 +91,8 @@ export default function useOwnerSystemWorkflowController(profileAddress, { stora
     });
     setSelectedPlacementIds((current) => current.filter(id => !expandPlacementGroups(selectedGrid, [placement.id]).includes(id)));
   };
-  const clearError = useCallback(() => setFailure(null), []);
+  // A notice may outlive the operation it describes. Dismiss only that failure.
+  const clearError = useCallback(() => setFailure(current => current === failure ? null : current), [failure]);
   const gridRequest = (grid, extra = {}) => ({ gridId: grid.id, expectedGridFingerprint: systemWorkflowGridFingerprint(grid), ...extra });
   return { ...state, visibility: snapshot?.visibility, store: authority?.store, moduleId, selectedGrid, selectedPlacements, selectedPlacementIds, error, clearError,
     setDisplayVisibility: (expected, visibility) => run(() => {

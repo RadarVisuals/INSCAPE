@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
 import { mkdir, writeFile } from 'node:fs/promises';
 
-// Audit probes describe observed defects, not desired regression behavior.
+// Regression coverage for module-scoped interaction, media failure and small controls.
 const origin = process.env.INSCAPE_IMAGE_ROOT || 'http://127.0.0.1:5189';
 test('Image audit: independent commits, unavailable media and minimum-size controls', { timeout: 60000 }, async () => {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   const results = {};
-  const output = 'output/image-audit-2026-09-22';
+  const output = process.env.INSCAPE_SYSTEM_WORKFLOW_SCREENSHOT_DIR || '.browser-test-runtime/image-audit';
   await mkdir(output, { recursive: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 800 }, reducedMotion: 'reduce' });
@@ -63,19 +63,24 @@ test('Image audit: independent commits, unavailable media and minimum-size contr
     assert.equal(await canvas.getAttribute('data-cropping'), 'true');
     const savedBefore = await page.evaluate(() => window.auditStore.getDraft().imageModules[0]);
     await page.evaluate(() => window.auditUnrelated());
-    await page.waitForFunction(() => !document.querySelector('.image-module__canvas').hasAttribute('data-cropping'));
+    assert.equal(await canvas.getAttribute('data-cropping'), 'true', 'an unrelated module commit preserves the active crop');
+    assert.equal(await dock.getByRole('slider', { name: 'Crop zoom' }).inputValue(), '2');
     assert.deepEqual(await page.evaluate(() => window.auditStore.getDraft().imageModules[0]), savedBefore);
-    results.unrelatedCommit = { cropCancelled: true, authoredImageUnchanged: true };
+    results.unrelatedCommit = { cropPreserved: true, authoredImageUnchanged: true };
+    await dock.getByRole('button', { name: 'Cancel', exact: true }).click();
     await canvas.click();
     await page.getByRole('dialog', { name: 'Inspect Image' }).waitFor();
     await page.evaluate(() => window.auditUnrelated());
+    assert.equal(await page.getByRole('dialog', { name: 'Inspect Image' }).isVisible(), true,
+      'an unrelated Image commit preserves inspection');
+    results.unrelatedCommit.inspectionPreserved = true;
+    await page.keyboard.press('Escape');
     await page.getByRole('dialog', { name: 'Inspect Image' }).waitFor({ state: 'detached' });
-    results.unrelatedCommit.inspectionClosed = true;
 
     await page.evaluate(() => { const d = window.auditStore.getDraft(); d.imageModules[0].sides[0].asset.media.url = 'https://audit.test/missing.png'; window.auditCommit({ sides: d.imageModules[0].sides }); });
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await module.getByRole('status').filter({ hasText: 'Artwork unavailable' }).waitFor();
     results.unavailable = { alerts: await module.getByRole('alert').count(), status: await module.getByRole('status').count(), label: await canvas.getAttribute('aria-label') };
-    assert.equal(results.unavailable.alerts + results.unavailable.status, 0);
+    assert.equal(results.unavailable.status, 1, 'missing media is distinguished from successful loading');
     await canvas.click();
     await page.getByRole('dialog', { name: 'Inspect Image' }).waitFor();
     await page.screenshot({ path: `${output}/missing-media.png` });

@@ -81,6 +81,8 @@ test('Layers selection uses the shared authoring dock and Library remains an ove
     assert.deepEqual(await board.boundingBox(), before);
     assert.equal(await layers.count(), 1);
     await page.getByRole('button', { name: 'Close workspace', exact: true }).click();
+    await page.getByRole('region', { name: 'Library workspace', exact: true }).waitFor({ state: 'hidden' });
+    await page.waitForFunction(() => document.activeElement?.matches('[data-system-workflow-panel-trigger][aria-label="Library"]'));
     await activate(page, board.getByRole('button', { name: 'Unlock Display Module composition', exact: true }));
     assert.equal(await dock.getByRole('button', { name: 'Rotate', exact: true }).isEnabled(), true);
     assert.equal(await page.evaluate(() => window.__instrumentWrites), 1);
